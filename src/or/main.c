@@ -17,6 +17,7 @@ static struct pollfd poll_array[MAXCONNECTIONS];
 static int nfds=0; /* number of connections currently active */
 
 static int please_dumpstats=0; /* whether we should dump stats during the loop */
+static int please_fetch_directory=0; /* whether we should fetch a new directory */
 
 /* private key */
 static crypto_pk_env_t *privatekey;
@@ -438,6 +439,17 @@ int do_main_loop(void) {
   for(;;) {
     if(please_dumpstats) {
       dumpstats();
+      please_dumpstats = 0;
+    }
+    if(please_fetch_directory) {
+      if(options.Role & ROLE_DIR_SERVER) {
+        if(router_get_list_from_file(options.RouterFile, options.ORPort) < 0) {
+          log(LOG_ERR,"Error reloading router list. Continuing with old list.");
+        }
+      } else {
+        directory_initiate_fetch(router_pick_directory_server());
+      }
+      please_fetch_directory = 0;
     }
     if(prepare_for_poll(&timeout) < 0) {
       log(LOG_DEBUG,"do_main_loop(): prepare_for_poll failed, exiting.");
@@ -483,16 +495,23 @@ int do_main_loop(void) {
   }
 }
 
-void catchint () {
-  errno = 0; /* netcat does this. it looks fun. */
+static void catch(int the_signal) {
 
-  log(LOG_NOTICE,"Catching ^c, exiting cleanly.");
-   
-  exit(0);
-}
-
-void catchusr1 () {
-  please_dumpstats = 1;
+  switch(the_signal) {
+    case SIGABRT:
+    case SIGTERM:
+    case SIGINT:
+      log(LOG_NOTICE,"Catching signal %d, exiting cleanly.", the_signal);
+      exit(0);
+    case SIGHUP:
+      please_fetch_directory = 1;
+      break;
+    case SIGUSR1:
+      please_dumpstats = 1;
+      break;
+    default:
+      log(LOG_ERR,"Caught signal that we can't handle??");
+  }
 }
 
 void dumpstats (void) { /* dump stats to stdout */
@@ -515,7 +534,6 @@ void dumpstats (void) { /* dump stats to stdout */
     printf("\n");
   }
 
-  please_dumpstats = 0;
 }
 
 int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
@@ -583,8 +601,11 @@ void dump_directory_to_string(char *s, int maxlen) {
 int main(int argc, char *argv[]) {
   int retval = 0;
 
-  signal (SIGINT, catchint); /* to catch ^c so we can exit cleanly */
-  signal (SIGUSR1, catchusr1); /* to dump stats to stdout */
+  signal (SIGINT, catch); /* catch kills so we can exit cleanly */
+  signal (SIGABRT, catch);
+  signal (SIGTERM, catch);
+  signal (SIGUSR1, catch); /* to dump stats to stdout */
+  signal (SIGHUP, catch); /* to reload directory */
 
   if ( getoptions(argc,argv,&options) ) exit(1);
   log(options.loglevel,NULL);         /* assign logging severity level from options */

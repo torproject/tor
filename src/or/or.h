@@ -602,8 +602,6 @@ int prepare_for_poll(int *timeout);
 
 int do_main_loop(void);
 
-void catchint();
-void catchusr1();
 void dumpstats(void);
 void dump_directory_to_string(char *s, int maxlen);
 
