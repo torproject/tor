@@ -2032,9 +2032,9 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
  * <b>address</b> is provided, set *<b>address</b> to a copy of the
  * host portion of the string.  If <b>addr</b> is provided, try to
  * resolve the host portion of the string and store it into
- * *<b>addr</b>.  If <b>port</b> is provided, store the port number
- * into *<b>port</b>, or 0 if no port is given.  Return 0 on success,
- * -1 on failure.
+ * *<b>addr</b> (in network byte order).  If <b>port</b> is provided,
+ * store the port number into *<b>port</b>, or 0 if no port is given.
+ * Return 0 on success, -1 on failure.
  */
 int
 parse_addr_port(const char *addrport, char **address, uint32_t *addr,
