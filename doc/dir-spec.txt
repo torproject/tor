@@ -169,6 +169,8 @@ Piece three: (optional)
 5. Regarding "Blossom: an unstructured overlay network for end-to-end
 connectivity."
 
+SECTION 5A: Blossom Architecture
+
 Define "transport domain" as a set of nodes who can all mutually name each
 other directly, using transport-layer (e.g. HOST:PORT) naming.
 
@@ -284,4 +286,70 @@ surprises to the client.  All routers should be careful to define their exit
 policies carefully, with the knowledge that clients from potentially any
 transport domain could access that which is not explicitly restricted.
 
+SECTION 5B: Tor+Blossom desiderata
+
+The interests of Blossom would be best served by implementing the following
+modifications to Tor:
+
+I. CLIENTS
+
+Objectives: Ultimately, we want Blossom requests to be indistinguishable in
+format from non-Blossom .exit requests, i.e. hostname.forwarder.exit.
+
+Proposal: Blossom is a process that manipulates Tor, so it should be
+implemented as a Tor Control, extending control-spec.txt.  For each request,
+Tor uses the control protocol to ask the Blossom process whether it (the
+Blossom process) wants to build or assign a particular circuit to service the
+request.  Blossom chooses one of the following responses:
+
+a. (Blossom exit node, circuit cached) "use this circuit" -- provides a circuit
+ID
+
+b. (Blossom exit node, circuit not cached) "I will build one" -- provides a
+list of routers, gets a circuit ID.
+
+c. (Regular (non-Blossom) exit node) "No, do it yourself" -- provides nothing.
+
+II. ROUTERS
+
+Objectives: Blossom routers are like regular Tor routers, except that Blossom
+routers need these features as well:
+
+a. the ability to open peresistent connections,
+
+b. the ability to know whwther they should use a persistent connection to reach
+another router,
+
+c. the ability to define a set of routers to which to establish persistent
+connections, as readable from a configuration file, and
+
+d. the ability to tell a directory server that (1) it is Blossom-enabled, and
+(2) it can be reached by some set of routers to which it explicitly establishes
+persistent connections.
+
+Proposal: Address the aforementioned points as follows.
+
+a. need the ability to open a specified number of persistent connections.  This
+can be accomplished by implementing a generic should_i_close_this_conn() and
+which_conns_should_i_try_to_open_even_when_i_dont_need_them().
+
+b. The Tor design already supports this, but we must be sure to establish the
+persistent connections explicitly, re-establish them when they are lost, and
+not close them unnecessarily.
+
+c. We must modify Tor to add a new configuration option, allowing either (a)
+explicit specification of the set of routers to which to establish persistent
+connections, or (b) a random choice of some nodes to which to establish
+persistent connections, chosen from the set of nodes local to the transport
+domain of the specified directory server (for example).
+
+III. DIRSERVERS
+
+Objective: Blossom directory servers may provide extra
+fields in their network-status pages.  Blossom directory servers may
+communicate with Blossom clients/routers in nonstandard ways in addition to
+standard ways.
+
+Proposal: Geoff should be able to implement a directory server according to the
+Tor specification (dir-spec.txt).
 
