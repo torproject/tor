@@ -77,11 +77,6 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
       return 0;
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
-      if (conn->package_window <= 0) {
-        /* XXX this is still getting called rarely :( */
-        log_fn(LOG_WARN,"called with package_window %d. Tell Roger.", conn->package_window);
-        return 0;
-      }
       if (connection_edge_package_raw_inbuf(conn, package_partial) < 0) {
         connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
         connection_mark_for_close(conn);
