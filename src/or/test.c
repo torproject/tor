@@ -23,27 +23,11 @@ int have_failed = 0;
 /* These functions are file-local, but are exposed so we can test. */
 void add_fingerprint_to_dir(const char *nickname, const char *fp);
 void get_platform_str(char *platform, size_t len);
-
-void
-dump_hex(char *s, size_t len)
-{
-  static const char TABLE[] = "0123456789ABCDEF";
-  unsigned char *d = s;
-  size_t i;
-  int j, nyb;
-  for(i=0;i<len;++i) {
-    for (j=1;j>=0;--j) {
-      nyb = (((int) d[i]) >> (j*4)) & 0x0f;
-      tor_assert(0 <= nyb);
-      tor_assert(nyb <= 15);
-      putchar(TABLE[nyb]);
-    }
-  }
-}
+int is_obsolete_version(const char *myversion, const char *start);
 
 static char temp_dir[256];
 
-void
+static void
 setup_directory(void)
 {
   static int is_setup = 0;
@@ -64,7 +48,7 @@ setup_directory(void)
   is_setup = 1;
 }
 
-const char *
+static const char *
 get_fname(const char *name)
 {
   static char buf[1024];
@@ -73,7 +57,7 @@ get_fname(const char *name)
   return buf;
 }
 
-void
+static void
 remove_directory(void)
 {
   DIR *dirp;
@@ -97,7 +81,7 @@ remove_directory(void)
   rmdir(temp_dir);
 }
 
-void
+static void
 test_buffers(void) {
 #define MAX_BUF_SIZE 1024*1024
   char str[256];
@@ -223,7 +207,7 @@ test_buffers(void) {
   buf_free(buf);
 }
 
-void
+static void
 test_crypto_dh(void)
 {
   crypto_dh_env_t *dh1, *dh2;
@@ -258,7 +242,7 @@ test_crypto_dh(void)
   crypto_dh_free(dh2);
 }
 
-void
+static void
 test_crypto(void)
 {
   crypto_cipher_env_t *env1, *env2;
@@ -494,7 +478,7 @@ test_crypto(void)
   free(data3);
 }
 
-void
+static void
 test_util(void) {
   struct timeval start, end;
   struct tm a_time;
@@ -694,7 +678,7 @@ test_util(void) {
   smartlist_free(sl);
 }
 
-void
+static void
 test_gzip(void)
 {
   char *buf1, *buf2=NULL, *buf3=NULL;
@@ -729,7 +713,8 @@ test_gzip(void)
   tor_free(buf1);
 }
 
-static void* _squareAndRemoveK4(const char *key, void*val, void *data)
+static void * 
+_squareAndRemoveK4(const char *key, void*val, void *data)
 {
   int *ip = (int*)data;
   intptr_t v;
@@ -741,7 +726,8 @@ static void* _squareAndRemoveK4(const char *key, void*val, void *data)
   return (void*)(v*v);
 }
 
-void test_strmap(void)
+static void
+test_strmap(void)
 {
   strmap_t *map;
   strmap_iter_t *iter;
@@ -815,7 +801,8 @@ void test_strmap(void)
   strmap_free(map,NULL);
 }
 
-void test_onion(void)
+static void 
+test_onion(void)
 {
 #if 0
   char **names;
@@ -833,7 +820,7 @@ void test_onion(void)
 #endif
 }
 
-void
+static void
 test_onion_handshake(void)
 {
   /* client-side */
@@ -876,10 +863,8 @@ test_onion_handshake(void)
   crypto_free_pk_env(pk);
 }
 
-/* from routerparse.c */
-int is_obsolete_version(const char *myversion, const char *start);
 
-void
+static void
 test_dir_format(void)
 {
   char buf[8192], buf2[8192];
@@ -925,7 +910,7 @@ test_dir_format(void)
   get_platform_str(platform, sizeof(platform));
   memset(&r1,0,sizeof(r1));
   memset(&r2,0,sizeof(r2));
-  r1.address = "testaddr1.foo.bar";
+  r1.address = tor_strdup("testaddr1.foo.bar");
   r1.addr = 0xc0a80001u; /* 192.168.0.1 */
   r1.published_on = 0;
   r1.or_port = 9000;
@@ -937,7 +922,7 @@ test_dir_format(void)
   r1.bandwidthburst = 5000;
   r1.bandwidthcapacity = 10000;
   r1.exit_policy = NULL;
-  r1.nickname = "Magri";
+  r1.nickname = tor_strdup("Magri");
   r1.platform = tor_strdup(platform);
 
   ex1.policy_type = EXIT_POLICY_ACCEPT;
@@ -951,7 +936,7 @@ test_dir_format(void)
   ex2.msk = 0xFF000000u;
   ex2.prt_min = ex2.prt_max = 24;
   ex2.next = NULL;
-  r2.address = "tor.tor.tor";
+  r2.address = tor_strdup("tor.tor.tor");
   r2.addr = 0x0a030201u; /* 10.3.2.1 */
   r2.platform = tor_strdup(platform);
   r2.published_on = 5;
@@ -962,7 +947,7 @@ test_dir_format(void)
   r2.identity_pkey = pk1;
   r2.bandwidthrate = r2.bandwidthburst = r2.bandwidthcapacity = 3000;
   r2.exit_policy = &ex1;
-  r2.nickname = "Fred";
+  r2.nickname = tor_strdup("Fred");
 
   bw_lines = rep_hist_get_bandwidth_lines();
   test_assert(bw_lines);
@@ -1062,7 +1047,7 @@ test_dir_format(void)
   test_assert(router_dump_router_to_string(buf, 2048, &r2, pk1)>0);
   cp = buf;
   test_eq(dirserv_add_descriptor((const char**)&cp), 1);
-  options.Nickname = "DirServer";
+  options.Nickname = tor_strdup("DirServer");
   test_assert(!dirserv_dump_directory_to_string(buf,8192,pk3));
   cp = buf;
   test_assert(!router_parse_routerlist_from_directory(buf, &dir1, pk3, 1));
@@ -1128,7 +1113,8 @@ test_dir_format(void)
 
 }
 
-void test_rend_fns(void)
+static void
+test_rend_fns(void)
 {
   char address1[] = "fooaddress.onion";
   char address2[] = "aaaaaaaaaaaaaaaa.onion";
@@ -1182,7 +1168,7 @@ main(int c, char**v){
   atexit(remove_directory);
 
 //  puts("========================== Buffers =========================");
-//  test_buffers();
+  if (0) test_buffers();
   puts("\n========================== Crypto ==========================");
   // add_stream_log(LOG_DEBUG, LOG_ERR, "<stdout>", stdout);
   test_crypto();

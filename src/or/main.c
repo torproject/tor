@@ -1019,7 +1019,7 @@ static int network_init(void)
 
 /** Called by exit() as we shut down the process.
  */
-void exit_function(void)
+static void exit_function(void)
 {
 /* XXX if we ever daemonize, this gets called immediately */
 #ifdef MS_WINDOWS
@@ -1096,7 +1096,7 @@ void tor_cleanup(void) {
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */
-void do_list_fingerprint(void)
+static void do_list_fingerprint(void)
 {
   char buf[FINGERPRINT_LEN+1];
   crypto_pk_env_t *k;

@@ -1038,13 +1038,6 @@ circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest);
 void circuit_reset_failure_count(int timeout);
 int connection_ap_handshake_attach_circuit(connection_t *conn);
 
-int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data,int reverse);
-int circuit_finish_handshake(circuit_t *circ, char *reply);
-int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
-
-void assert_cpath_layer_ok(const crypt_path_t *c);
-void assert_circuit_ok(const circuit_t *c);
-
 /********************************* command.c ***************************/
 
 void command_process_cell(cell_t *cell, connection_t *conn);
@@ -1270,6 +1263,8 @@ int proxy_mode(void);
 
 void handle_signals(int is_parent);
 void tor_cleanup(void);
+
+int tor_main(int argc, char *argv[]);
 
 /********************************* onion.c ***************************/
 

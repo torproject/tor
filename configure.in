@@ -5,8 +5,6 @@ AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST
 
-CFLAGS="$CFLAGS -Wall -g -O2"
-
 if test -f /etc/redhat-release; then
     CFLAGS="$CFLAGS -I/usr/kerberos/include"
 fi
@@ -232,6 +230,13 @@ AC_SUBST(BINDIR)
 
 LOCALSTATEDIR=`eval echo $localstatedir`
 AC_SUBST(LOCALSTATEDIR)
+
+# Set CFLAGS _after_ all the above checks, since our warnings are stricter
+# than autoconf's macros like.
+CFLAGS="$CFLAGS -Wall -W -Wno-unused-parameter -Wfloat-equal -Wdeclaration-after-statement -Wundef -Wendif-labels -Wpointer-arith -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wredundant-decls -g -O2"
+
+# Add these in when you feel like fun.
+# -Wbad-function-cast -Werror
 
 echo "confdir: $CONFDIR"
 

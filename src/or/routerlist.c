@@ -737,7 +737,8 @@ void router_mark_as_down(const char *digest) {
  * will either be inserted into the routerlist or freed.  Returns 0 if the
  * router was added; -1 if it was not.
  */
-int router_add_to_routerlist(routerinfo_t *router) {
+static int
+router_add_to_routerlist(routerinfo_t *router) {
   int i;
   routerinfo_t *r;
   char id_digest[DIGEST_LEN];

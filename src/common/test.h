@@ -108,7 +108,7 @@ extern int have_failed;
 
 #define test_memeq(expr1, expr2, len)                           \
   STMT_BEGIN                                                    \
-    void *v1=(expr1), *v2=(expr2);                              \
+    const void *v1=(expr1), *v2=(expr2);                        \
     if(!memcmp(v1,v2,(len))) { printf("."); fflush(stdout); } else {  \
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n", \

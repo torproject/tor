@@ -26,12 +26,6 @@
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
-#if _MSC_VER > 1300
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#elif defined(_MSC_VER)
-#include <winsock.h>
-#endif
 
 #include <assert.h>
 #include <stdlib.h>
