@@ -24,10 +24,10 @@ typedef struct rend_service_port_config_t {
 #define NUM_INTRO_POINTS 3
 
 /** If we can't build our intro circuits, don't retry for this long. */
-#define INTRO_CIRC_RETRY_PERIOD 60*15
+#define INTRO_CIRC_RETRY_PERIOD 60*10
 /** Don't try to build more than this many circuits before giving up
  * for a while.*/
-#define MAX_INTRO_CIRCS_PER_PERIOD 20
+#define MAX_INTRO_CIRCS_PER_PERIOD 10
 
 /** Represents a single hidden service running at this OP. */
 typedef struct rend_service_t {
