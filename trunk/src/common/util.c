@@ -609,6 +609,11 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
   return n;
 }
 
+/** Allocate and return a new string containing the concatenation of
+ * the elements of <b>sl</b>, in order, separated by <b>join</b>.  If
+ * <b>terminate</b> is true, also terminate the string with <b>join</b>.
+ * Requires that every element of <b>sl</b> is NUL-terminated string.
+ */
 char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate)
 {
   int i;
