@@ -222,8 +222,12 @@ handle_control_setconf(connection_t *conn, uint16_t len, char *body)
     return 0;
   }
 
-  set_options(options); /* put the new one into place */
   config_free_lines(lines);
+  set_options(options); /* put the new one into place */
+  if (options_act() < 0) { /* acting on them failed. die. */
+    log_fn(LOG_ERR,"Acting on config options left us in a broken state. Dying.");
+    exit(1);
+  }
   send_control_done(conn);
   return 0;
 }

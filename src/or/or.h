@@ -1093,13 +1093,14 @@ struct config_line_t {
 
 or_options_t *get_options(void);
 void set_options(or_options_t *new_val);
+int options_act(void);
 
 int config_get_lines(char *string, struct config_line_t **result);
 void config_free_lines(struct config_line_t *front);
 int config_trial_assign(or_options_t **options, struct config_line_t *list, int reset);
 int resolve_my_address(const char *address, uint32_t *addr);
 void options_init(or_options_t *options);
-int getconfig(int argc, char **argv);
+int init_from_config(int argc, char **argv);
 int config_init_logs(or_options_t *options);
 void config_parse_exit_policy(struct config_line_t *cfg,
                               struct exit_policy_t **dest);

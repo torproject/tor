@@ -14,7 +14,6 @@
 /********* PROTOTYPES **********/
 
 static void dumpstats(int severity); /* log stats */
-static int init_from_config(int argc, char **argv);
 
 /********* START VARIABLES **********/
 
@@ -689,72 +688,6 @@ static int prepare_for_poll(void) {
   return (1000 - (now.tv_usec / 1000)); /* how many milliseconds til the next second? */
 }
 
-/** Configure the Tor process from the command line arguments and from the
- * configuration file.
- */
-static int init_from_config(int argc, char **argv) {
-  or_options_t *options;
-
-  /* read the configuration file. init and assign options. */
-  if(getconfig(argc,argv) < 0) {
-    log_fn(LOG_ERR,"Reading config failed--see warnings above. For usage, try -h.");
-    return -1;
-  }
-
-  options = get_options();
-
-  /* Setuid/setgid as appropriate */
-  if(options->User || options->Group) {
-    if(switch_id(options->User, options->Group) != 0) {
-      return -1;
-    }
-  }
-
-  /* Ensure data directory is private; create if possible. */
-  if (get_data_directory() &&
-      check_private_dir(get_data_directory(), 1) != 0) {
-    log_fn(LOG_ERR, "Couldn't access/create private data directory %s",
-           get_data_directory());
-    return -1;
-  }
-
-  /* Bail out at this point if we're not going to be a server: we want
-   * to not fork, and to log stuff to stderr. */
-  if (options->command != CMD_RUN_TOR)
-    return 0;
-
-  /* Configure the log(s) */
-  if (config_init_logs(options)<0)
-    return -1;
-  /* Close the temporary log we used while starting up, if it isn't already
-   * gone. */
-  close_temp_logs();
-  add_callback_log(LOG_WARN, LOG_ERR, control_event_logmsg);
-
-  /* Start backgrounding the process, if requested. */
-  if (options->RunAsDaemon) {
-    start_daemon(get_data_directory());
-  }
-
-  /* Set up our buckets */
-  connection_bucket_init();
-  stats_prev_global_read_bucket = global_read_bucket;
-  stats_prev_global_write_bucket = global_write_bucket;
-
-  /* Finish backgrounding the process */
-  if(options->RunAsDaemon) {
-    /* XXXX Can we delay this any more? */
-    finish_daemon();
-  }
-
-  /* Write our pid to the pid file. If we do not have write permissions we
-   * will log a warning */
-  if(options->PidFile)
-    write_pidfile(options->PidFile);
-
-  return 0;
-}
-
 /** Called when we get a SIGHUP: reload configuration files and keys,
  * retry all connections, re-upload all descriptors, and so on. */
 static int do_hup(void) {
@@ -766,17 +699,11 @@ static int do_hup(void) {
   /* first, reload config variables, in case they've changed */
   /* no need to provide argc/v, they've been cached inside init_from_config */
   if (init_from_config(0, NULL) < 0) {
+    log_fn(LOG_ERR,"Reading config failed--see warnings above. For usage, try -h.");
     return -1;
   }
-  /* reload keys as needed for rendezvous services. */
-  if (rend_service_load_keys()<0) {
-    log_fn(LOG_ERR,"Error reloading rendezvous service keys");
-    return -1;
-  }
-  if(retry_all_listeners(1) < 0) {
-    log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
-    return -1;
-  }
+/*XXX this should move to options_act, but only once it's been
+ * removed from init_keys() */
   if(authdir_mode(get_options())) {
     /* reload the approved-routers file */
     tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", get_data_directory());
@@ -816,11 +743,17 @@ static int do_main_loop(void) {
 
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */
-  if (init_keys() < 0 || rend_service_load_keys() < 0) {
+  if (init_keys() < 0) {
     log_fn(LOG_ERR,"Error initializing keys; exiting");
     return -1;
   }
 
+  /* Set up our buckets */
+  connection_bucket_init();
+  stats_prev_global_read_bucket = global_read_bucket;
+  stats_prev_global_write_bucket = global_write_bucket;
+
+/*XXX move to options_act? */
   /* Set up accounting */
   if (get_options()->AccountingMaxKB)
     configure_accounting(time(NULL));
@@ -838,12 +771,6 @@ static int do_main_loop(void) {
   if(server_mode(get_options())) {
     /* launch cpuworkers. Need to do this *after* we've read the onion key. */
     cpu_init();
-  }
-
-  /* start up the necessary listeners based on which ports are non-zero. */
-  if(retry_all_listeners(1) < 0) {
-    log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
-    return -1;
   }
 
   for(;;) {
@@ -1079,8 +1006,10 @@ static int tor_init(int argc, char *argv[]) {
   }
   atexit(exit_function);
 
-  if (init_from_config(argc,argv) < 0)
+  if (init_from_config(argc,argv) < 0) {
+    log_fn(LOG_ERR,"Reading config failed--see warnings above. For usage, try -h.");
     return -1;
+  }
 
 #ifndef MS_WINDOWS
   if(geteuid()==0)
@@ -1090,14 +1019,9 @@ static int tor_init(int argc, char *argv[]) {
   if(server_mode(get_options())) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
-  if(proxy_mode(get_options())) {
-    client_dns_init(); /* init the client dns cache */
-  }
+  client_dns_init(); /* Init the client dns cache. Do it always, since it's cheap. */
 
   handle_signals(1);
-
-  if (set_max_file_descriptors(get_options()->MaxConn) < 0)
-    return -1;
 
   crypto_global_init();
   crypto_seed_rng();

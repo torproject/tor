@@ -204,26 +204,95 @@ get_options(void) {
  */
 void
 set_options(or_options_t *new_val) {
-  struct config_line_t *cl;
-
   if (global_options)
     options_free(global_options);
   global_options = new_val;
+}
+
+/** Fetch the active option list, and take actions based on it. All
+ * of the things we do should survive being done repeatedly.
+ * Return 0 if all goes well, return -1 if it's time to die.
+ */
+int
+options_act(void) {
+  struct config_line_t *cl;
+  or_options_t *options = get_options();
 
   clear_trusted_dir_servers();
-  for (cl = new_val->DirServers; cl; cl = cl->next) {
+  for (cl = options->DirServers; cl; cl = cl->next) {
     if (parse_dir_server_line(cl->value, 0)<0) {
       log_fn(LOG_ERR,
              "Previously validated DirServer line could not be added!");
-      tor_assert(0);
+      return -1;
     }
   }
 
-  if (rend_config_services(new_val, 0)<0) {
+  if (rend_config_services(options, 0)<0) {
     log_fn(LOG_ERR,
            "Previously validated hidden services line could not be added!");
-    tor_assert(0);
+    return -1;
   }
+
+  /* Setuid/setgid as appropriate */
+  if(options->User || options->Group) {
+    if(switch_id(options->User, options->Group) != 0) {
+      return -1;
+    }
+  }
+
+/*XXX in options_validate, we should check if this is going to fail */
+  /* Ensure data directory is private; create if possible. */
+  if (get_data_directory() &&
+      check_private_dir(get_data_directory(), 1) != 0) {
+    log_fn(LOG_ERR, "Couldn't access/create private data directory %s",
+           get_data_directory());
+    return -1;
+  }
+
+  /* Bail out at this point if we're not going to be a server: we want
+   * to not fork, and to log stuff to stderr. */
+  if (options->command != CMD_RUN_TOR)
+    return 0;
+
+  if (set_max_file_descriptors(get_options()->MaxConn) < 0)
+    return -1;
+
+  /* Configure the log(s) */
+  if (config_init_logs(options)<0)
+    return -1;
+  /* Close the temporary log we used while starting up, if it isn't already
+   * gone. */
+  close_temp_logs();
+  add_callback_log(LOG_WARN, LOG_ERR, control_event_logmsg);
+
+  /* Start backgrounding the process, if requested. */
+  if (options->RunAsDaemon) {
+    start_daemon(get_data_directory());
+  }
+
+  /* Finish backgrounding the process */
+  if(options->RunAsDaemon) {
+    /* XXXX Can we delay this any more? */
+    finish_daemon();
+  }
+
+  /* Write our pid to the pid file. If we do not have write permissions we
+   * will log a warning */
+  if(options->PidFile)
+    write_pidfile(options->PidFile);
+
+  /* reload keys as needed for rendezvous services. */
+  if (rend_service_load_keys()<0) {
+    log_fn(LOG_ERR,"Error reloading rendezvous service keys");
+    return -1;
+  }
+
+  if(retry_all_listeners(1) < 0) {
+    log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
+    return -1;
+  }
+
+  return 0;
 }
 
 /*
@@ -612,7 +681,6 @@ config_trial_assign(or_options_t **options, struct config_line_t *list, int rese
     return -3;
   }
 
-  set_options(trial_options);
   return 0;
 }
 
@@ -1219,9 +1287,10 @@ static int check_nickname_list(const char *lst, const char *name)
 
 /** Read a configuration file into <b>options</b>, finding the configuration
  * file location based on the command line.  After loading the options,
- * validate them for consistency. Return 0 if success, <0 if failure. */
+ * validate them for consistency, then take actions based on them.
+ * Return 0 if success, -1 if failure. */
 int
-getconfig(int argc, char **argv)
+init_from_config(int argc, char **argv)
 {
   or_options_t *oldoptions, *newoptions;
   struct config_line_t *cl;
@@ -1318,21 +1387,25 @@ getconfig(int argc, char **argv)
       goto err;
   }
 
-/* go through command-line variables too */
+  /* Go through command-line variables too */
   cl = config_get_commandlines(argc,argv);
   retval = config_assign(newoptions,cl,0);
   config_free_lines(cl);
   if (retval < 0)
     goto err;
 
-/* Validate newoptions */
+  /* Validate newoptions */
   if (options_validate(newoptions) < 0)
     goto err;
 
   if (options_transition_allowed(oldoptions, newoptions) < 0)
     goto err;
 
-  set_options(newoptions);
+  set_options(newoptions); /* frees and replaces old options */
+  if (options_act() < 0) { /* acting on them failed. die. */
+    log_fn(LOG_ERR,"Acting on config options left us in a broken state. Dying.");
+    exit(1);
+  }
   return 0;
  err:
   options_free(newoptions);
