@@ -1,18 +1,5 @@
-Issues identified while writing paper:
     - Rotate tls-level connections -- make new ones, expire old ones.
-    - Dirserver shouldn't put you in running-routers list if you haven't
-      uploaded a descriptor recently
-    - Look at having smallcells and largecells
-    - separate trying to rebuild a circuit because you have none from trying 
-      to rebuild a circuit because the current one is stale
-
-<nickm> If I compromise a node, and streamIDs are sequential, I learn
-how many streams have been open and closed on this circuit at this point.
-> hm. you learn this for circuits too, do you not?
-<nickm> True.  But how-many-circuits-from-A-to-B only leaks how long
-the connection from A to B has been alive and how much use it's seen.
-> ok. needs more investigation.
-
+      Nick, can you remember why we wanted to do this?
 
 Legend:
 SPEC!!  - Not specified
@@ -27,28 +14,36 @@ ARMA    - arma claims
         X Abandoned
 
 Short-term:
-        - Rename ACI to circID
+        - Make tls connections tls_close intentionally
+        o Rename ACI to circID
         . integrate rep_ok functions, see what breaks
         - update tor faq
         o obey SocksBindAddress, ORBindAddress
         - warn if we're running as root
         o make connection_flush_buf() more obviously obsolete
-        . let hup reread the config file, eg so we can get new exit
+        .* let hup reread the config file, eg so we can get new exit
           policies without restarting
         - use times(2) rather than gettimeofday to measure how long it
           takes to process a cell
-        . Exit policies
+        - Separate trying to rebuild a circuit because you have none from trying 
+          to rebuild a circuit because the current one is stale
+        - Continue reading from socks port even while waiting for connect.
+        .* Exit policies
                 o Spec how to write the exit policies
-                - Path selection algorithms
-                        - Let user request certain nodes
+                -* More flexible policies (18.*, 18.0.0.0/8)
+                -* Path selection algorithms
+                        -* Choose path more incrementally
+                        -* Let user request first/last node
                         - And disallow certain nodes
                         D Choose path by jurisdiction, etc?
-                - Make relay end cells have failure status and payload attached
-                - Streams that fail due to exit policy must reextend to new node
-                - Add extend_wait state to edge connections, thumb through them
+                . Make relay end cells have failure status and payload attached
+                -* Streams that fail due to exit policy must reextend to new node
+                -* Add extend_wait state to edge connections, thumb through them
                   when the AP get an extended cell.
-        - let non-approved routers handshake.
-        - just list approved routers in directory.
+        -* let non-approved routers handshake.
+        -* just list approved routers in directory.
+        - Dirserver shouldn't put you in running-routers list if you haven't
+          uploaded a descriptor recently
         . migrate to using nickname rather than addr:port for routers
                 o decide_aci_type
                 - generate onion skins
@@ -66,18 +61,19 @@ Short-term:
                 - connection_or_init_conn_from_router
                 - tag_pack, tag_unpack, connection_cpu_process_inbuf
                 - directory_initiate_command
-        . Move from onions to ephemeral DH
+        .* Move from onions to ephemeral DH
                 o incremental path building
                 o transition circuit-level sendmes to hop-level sendmes
                 o implement truncate, truncated
                 o move from 192byte DH to 128byte DH, so it isn't so damn slow
-                - exiting from not-last hop
-                        - OP logic to decide to extend/truncate a path
-                        - make sure exiting from the not-last hop works
-                        - logic to find last *open* hop, not last hop, in cpath
-                        - choose exit nodes by exit policies
-        - Remember address and port when beginning. 
+                -* exiting from not-last hop
+                        -* OP logic to decide to extend/truncate a path
+                        -* make sure exiting from the not-last hop works
+                        -* logic to find last *open* hop, not last hop, in cpath
+                        -* choose exit nodes by exit policies
+        o Remember address and port when beginning. 
         - Extend by nickname/hostname/something, not by IP.
+        - Need a relay teardown cell, separate from one-way ends.
 
 On-going
         . Better comments for functions!
@@ -86,6 +82,9 @@ On-going
         . Unit tests
 
 Mid-term:
+        - Are there anonymity issues with sequential streamIDs? Sequential
+          circIDs? Eg an attacker can learn how many there have been.
+        - Look at having smallcells and largecells
         . Redo scheduler
                 o fix SSL_read bug for buffered records
                 - make round-robining more fair
