@@ -628,13 +628,13 @@ int tor_main(int argc, char *argv[]) {
   add_stream_log(LOG_INFO, "<stdout>", stdout);
   log_fn(LOG_WARN,"Tor v%s. This is experimental software. Do not use it if you need anonymity.",VERSION);
 
+  if (init_from_config(argc,argv) < 0)
+    return -1;
+
 #ifndef MS_WINDOWS
   if(geteuid()==0)
     log_fn(LOG_WARN,"You are running Tor as root. You don't need to, and you probably shouldn't.");
 #endif
-
-  if (init_from_config(argc,argv) < 0)
-    return -1;
 
   if (options.RunAsDaemon) {
     start_daemon();
