@@ -189,12 +189,14 @@
 #define RELAY_COMMAND_TRUNCATED 9
 #define RELAY_COMMAND_DROP 10
 
+#define _MIN_END_STREAM_REASON 1
 #define END_STREAM_REASON_MISC 1
 #define END_STREAM_REASON_RESOLVEFAILED 2
 #define END_STREAM_REASON_CONNECTFAILED 3
 #define END_STREAM_REASON_EXITPOLICY 4
 #define END_STREAM_REASON_DESTROY 5
 #define END_STREAM_REASON_DONE 6
+#define _MAX_END_STREAM_REASON 6
 
 /* default cipher function */
 #define DEFAULT_CIPHER CRYPTO_CIPHER_AES_CTR
@@ -450,6 +452,9 @@ typedef struct {
 struct circuit_t {
   uint32_t magic; /* for memory debugging. */
 
+  int marked_for_close; /* Should we close this circuit at the end of the main
+                         * loop? */
+
   uint32_t n_addr;
   uint16_t n_port;
   connection_t *p_conn;
@@ -630,6 +635,16 @@ int getconfig(int argc, char **argv, or_options_t *options);
 connection_t *connection_new(int type);
 void connection_free(connection_t *conn);
 void connection_free_all(void);
+
+int _connection_mark_for_close(connection_t *conn, char reason);
+
+#define connection_mark_for_close(c,r)                                  \
+  do {                                                                  \
+    if (_connection_mark_for_close(c,r)<0) {                            \
+      log(LOG_WARN,"Duplicate call to connection_mark_for_close at %s:%d", \
+          __FILE__,__LINE__);                                           \
+    }                                                                   \
+  } while (0)
 
 int connection_create_listener(char *bindaddress, uint16_t bindport, int type);
 
