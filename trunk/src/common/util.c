@@ -476,14 +476,6 @@ void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2) {
     smartlist_remove(sl1, sl2->list[i]);
 }
 
-/** Return a randomly chosen element of sl; or NULL if sl is empty.
- */
-void *smartlist_choose(const smartlist_t *sl) {
-  if(sl->num_used)
-    return sl->list[crypto_pseudo_rand_int(sl->num_used)];
-  return NULL; /* no elements to choose from */
-}
-
 /** Return the <b>idx</b>th element of sl.
  */
 void *smartlist_get(const smartlist_t *sl, int idx)
@@ -2401,6 +2393,60 @@ void tor_mutex_release(tor_mutex_t *m)
 }
 
 #endif
+
+void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
+{
+  const char *end;
+  char *cp;
+
+  tor_assert(destlen >= srclen*2+1);
+
+  cp = dest;
+  end = src+srclen;
+  while (src<end) {
+    sprintf(cp,"%02X",*(const uint8_t*)src);
+    ++src;
+    cp += 2;
+  }
+  *cp = '\0';
+}
+
+static const char HEX_DIGITS[] = "0123456789ABCDEFabcdef";
+
+static INLINE int hex_decode_digit(char c)
+{
+  const char *cp;
+  int n;
+  cp = strchr(HEX_DIGITS, c);
+  if (!cp)
+    return -1;
+  n = cp-HEX_DIGITS;
+  if (n<=15)
+    return n; /* digit or uppercase */
+  else
+    return n-6; /* lowercase */
+}
+
+int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
+{
+  const char *end;
+  int v1,v2;
+  if ((srclen % 2) != 0)
+    return -1;
+  if (destlen < srclen/2)
+    return -1;
+  end = src+srclen;
+  while (src<end) {
+    v1 = hex_decode_digit(*src);
+    v2 = hex_decode_digit(*(src+1));
+    if(v1<0||v2<0)
+      return -1;
+    *(uint8_t*)dest = (v1<<4)|v2;
+    ++dest;
+    src+=2;
+  }
+  return 0;
+}
 
 /*
   Local Variables:
