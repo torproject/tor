@@ -51,7 +51,7 @@ int onion_pending_add(circuit_t *circ) {
   assert(!ol_tail->next);
 
   if(ol_length >= options.MaxOnionsPending) {
-    log_fn(LOG_WARNING,"Already have %d onions queued. Closing.", ol_length);
+    log_fn(LOG_WARN,"Already have %d onions queued. Closing.", ol_length);
     free(tmp);
     return -1;
   }
@@ -141,13 +141,13 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
 
   if (!(circ->n_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys,iv,0))) {
-    log_fn(LOG_WARNING,"Cipher initialization failed (n).");
+    log_fn(LOG_WARN,"Cipher initialization failed (n).");
     return -1;
   }
 
   if (!(circ->p_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys+16,iv,1))) {
-    log_fn(LOG_WARNING,"Cipher initialization failed (p).");
+    log_fn(LOG_WARN,"Cipher initialization failed (p).");
     return -1;
   }
 
@@ -193,7 +193,7 @@ static unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len,
 
   *routelen = chooselen(cw);
   if (*routelen == -1) {
-    log_fn(LOG_WARNING,"Choosing route length failed.");
+    log_fn(LOG_WARN,"Choosing route length failed.");
     return NULL;
   }
   log_fn(LOG_DEBUG,"Chosen route length %d (%d routers available).",*routelen, rarray_len);
@@ -211,7 +211,7 @@ static unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len,
   }
 
   if(*routelen < 1) {
-    log_fn(LOG_WARNING,"Didn't find any acceptable routers. Failing.");
+    log_fn(LOG_WARN,"Didn't find any acceptable routers. Failing.");
     return NULL;
   }
 

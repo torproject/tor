@@ -70,7 +70,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       connection_stop_writing(conn);
       return 0;
     default:
-      log_fn(LOG_WARNING,"BUG: called in unexpected state.");
+      log_fn(LOG_WARN,"BUG: called in unexpected state.");
       return 0;
   }
 }
@@ -96,7 +96,7 @@ connection_t *connection_or_connect(routerinfo_t *router) {
   assert(router);
 
   if(options.Nickname && !strcmp(router->nickname,options.Nickname)) {
-    log_fn(LOG_WARNING,"You asked me to connect to myself! Failing.");
+    log_fn(LOG_WARN,"You asked me to connect to myself! Failing.");
     return NULL;
   }
 
@@ -148,7 +148,7 @@ int connection_tls_start_handshake(connection_t *conn, int receiving) {
   conn->state = OR_CONN_STATE_HANDSHAKING;
   conn->tls = tor_tls_new(conn->s, receiving);
   if(!conn->tls) {
-    log_fn(LOG_WARNING,"tor_tls_new failed. Closing.");
+    log_fn(LOG_WARN,"tor_tls_new failed. Closing.");
     return -1;
   }
   connection_start_reading(conn);
@@ -189,20 +189,20 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     if(tor_tls_peer_has_cert(conn->tls)) { /* it's another OR */
       pk = tor_tls_verify(conn->tls);
       if(!pk) {
-        log_fn(LOG_WARNING,"Other side (%s:%d) has a cert but it's invalid. Closing.",
+        log_fn(LOG_WARN,"Other side (%s:%d) has a cert but it's invalid. Closing.",
                conn->address, conn->port);
         return -1;
       }
       router = router_get_by_link_pk(pk);
       if (!router) {
-        log_fn(LOG_WARNING,"Unrecognized public key from peer (%s:%d). Closing.",
+        log_fn(LOG_WARN,"Unrecognized public key from peer (%s:%d). Closing.",
                conn->address, conn->port);
         crypto_free_pk_env(pk);
         return -1;
       }
       if(conn->link_pkey) { /* I initiated this connection. */
         if(crypto_pk_cmp_keys(conn->link_pkey, pk)) {
-          log_fn(LOG_WARNING,"We connected to '%s' but he gave us a different key. Closing.",
+          log_fn(LOG_WARN,"We connected to '%s' but he gave us a different key. Closing.",
                  router->nickname);
           crypto_free_pk_env(pk);
           return -1;
@@ -221,24 +221,24 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     }
   } else { /* I'm a client */
     if(!tor_tls_peer_has_cert(conn->tls)) { /* it's a client too?! */
-      log_fn(LOG_WARNING,"Neither peer sent a cert! Closing.");
+      log_fn(LOG_WARN,"Neither peer sent a cert! Closing.");
       return -1;
     }
     pk = tor_tls_verify(conn->tls);
     if(!pk) {
-      log_fn(LOG_WARNING,"Other side (%s:%d) has a cert but it's invalid. Closing.",
+      log_fn(LOG_WARN,"Other side (%s:%d) has a cert but it's invalid. Closing.",
              conn->address, conn->port);
       return -1;
     }
     router = router_get_by_link_pk(pk);
     if (!router) {
-      log_fn(LOG_WARNING,"Unrecognized public key from peer (%s:%d). Closing.",
+      log_fn(LOG_WARN,"Unrecognized public key from peer (%s:%d). Closing.",
              conn->address, conn->port);
       crypto_free_pk_env(pk);
       return -1;
     }
     if(crypto_pk_cmp_keys(conn->link_pkey, pk)) {
-      log_fn(LOG_WARNING,"We connected to '%s' but he gave us a different key. Closing.",
+      log_fn(LOG_WARN,"We connected to '%s' but he gave us a different key. Closing.",
              router->nickname);
       crypto_free_pk_env(pk);
       return -1;

@@ -22,7 +22,7 @@ void directory_initiate_command(routerinfo_t *router, int command) {
   connection_t *conn;
 
   if(!router) { /* i guess they didn't have one in mind for me to use */
-    log_fn(LOG_WARNING,"No running dirservers known. This is really bad.");
+    log_fn(LOG_WARN,"No running dirservers known. This is really bad.");
     /* XXX never again will a directory fetch work. Should we exit here, or what? */
     return;
   }
@@ -50,7 +50,7 @@ void directory_initiate_command(routerinfo_t *router, int command) {
   if (router->identity_pkey)
     conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
   else {
-    log_fn(LOG_WARNING, "No signing key known for dirserver %s; signature won't be checked", conn->address);
+    log_fn(LOG_WARN, "No signing key known for dirserver %s; signature won't be checked", conn->address);
     conn->identity_pkey = NULL;
     /* XXX is there really any situation where router doesn't have an identity_pkey? */
   }
@@ -96,7 +96,7 @@ static int directory_send_command(connection_t *conn, int command) {
     case DIR_CONN_STATE_CONNECTING_UPLOAD:
       s = router_get_my_descriptor();
       if(!s) {
-        log_fn(LOG_WARNING,"Failed to get my descriptor.");
+        log_fn(LOG_WARN,"Failed to get my descriptor.");
         return -1;
       }
       snprintf(tmp, sizeof(tmp), "POST / HTTP/1.0\r\nContent-Length: %d\r\n\r\n%s",
@@ -119,7 +119,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
         switch(fetch_from_buf_http(conn->inbuf,
                                    NULL, 0, the_directory, MAX_DIR_SIZE)) {
           case -1: /* overflow */
-            log_fn(LOG_WARNING,"'fetch' response too large. Failing.");
+            log_fn(LOG_WARN,"'fetch' response too large. Failing.");
             return -1;
           case 0:
             log_fn(LOG_INFO,"'fetch' response not all here, but we're at eof. Closing.");
@@ -173,7 +173,7 @@ static int directory_handle_command(connection_t *conn) {
   switch(fetch_from_buf_http(conn->inbuf,
                              headers, sizeof(headers), body, sizeof(body))) {
     case -1: /* overflow */
-      log_fn(LOG_WARNING,"input too large. Failing.");
+      log_fn(LOG_WARN,"input too large. Failing.");
       return -1;
     case 0:
       log_fn(LOG_DEBUG,"command not all here yet.");
@@ -189,7 +189,7 @@ static int directory_handle_command(connection_t *conn) {
     dlen = dirserv_get_directory(&cp);
 
     if(dlen == 0) {
-      log_fn(LOG_WARNING,"My directory is empty. Closing.");
+      log_fn(LOG_WARN,"My directory is empty. Closing.");
       return -1; /* XXX send some helpful http error code */
     }
 
@@ -205,7 +205,7 @@ static int directory_handle_command(connection_t *conn) {
     log_fn(LOG_DEBUG,"Received POST command.");
     cp = body;
     if(dirserv_add_descriptor(&cp) < 0) {
-      log_fn(LOG_WARNING,"dirserv_add_descriptor() failed. Dropping.");
+      log_fn(LOG_WARN,"dirserv_add_descriptor() failed. Dropping.");
       return -1; /* XXX should write an http failed code */
     }
     dirserv_get_directory(&cp); /* rebuild and write to disk */
@@ -214,7 +214,7 @@ static int directory_handle_command(connection_t *conn) {
     return 0;
   }
 
-  log_fn(LOG_WARNING,"Got headers with unknown command. Closing.");
+  log_fn(LOG_WARN,"Got headers with unknown command. Closing.");
   return -1;
 }
 
@@ -255,7 +255,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
       log_fn(LOG_INFO,"Finished writing server response. Closing.");
       return -1; /* kill it */
     default:
-      log_fn(LOG_WARNING,"BUG: called in unexpected state.");
+      log_fn(LOG_WARN,"BUG: called in unexpected state.");
       return -1;
   }
   return 0;

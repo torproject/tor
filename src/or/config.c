@@ -125,7 +125,7 @@ static int config_compare(struct config_line *c, char *key, int type, void *arg)
     case CONFIG_TYPE_BOOL:
       i = atoi(c->value);
       if (i != 0 && i != 1) {
-        log(LOG_WARNING, "Boolean keyword '%s' expects 0 or 1", c->key);
+        log(LOG_WARN, "Boolean keyword '%s' expects 0 or 1", c->key);
         return 0;
       }
       *(int *)arg = i;
@@ -182,7 +182,7 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     ) {
       /* then we're ok. it matched something. */
     } else {
-      log_fn(LOG_WARNING,"Ignoring unknown keyword '%s'.",list->key);
+      log_fn(LOG_WARN,"Ignoring unknown keyword '%s'.",list->key);
     }
 
     list = list->next;
@@ -227,7 +227,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   cf = config_open(fname);
   if(!cf) {
-    log(LOG_WARNING, "Unable to open configuration file '%s'.",fname);
+    log(LOG_WARN, "Unable to open configuration file '%s'.",fname);
     return -1;
   }
 
@@ -247,76 +247,76 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   if(options->LogLevel) {
     if(!strcmp(options->LogLevel,"err"))
       options->loglevel = LOG_ERR;
-    else if(!strncmp(options->LogLevel,"warn",4))
-      options->loglevel = LOG_WARNING;
+    else if(!strcmp(options->LogLevel,"warn"))
+      options->loglevel = LOG_WARN;
     else if(!strcmp(options->LogLevel,"info"))
       options->loglevel = LOG_INFO;
     else if(!strcmp(options->LogLevel,"debug"))
       options->loglevel = LOG_DEBUG;
     else {
-      log(LOG_WARNING,"LogLevel must be one of err|warning|info|debug.");
+      log(LOG_WARN,"LogLevel must be one of err|warn|info|debug.");
       result = -1;
     }
   }
 
   if(options->RouterFile == NULL) {
-    log(LOG_WARNING,"RouterFile option required, but not found.");
+    log(LOG_WARN,"RouterFile option required, but not found.");
     result = -1;
   }
 
   if(options->ORPort < 0) {
-    log(LOG_WARNING,"ORPort option can't be negative.");
+    log(LOG_WARN,"ORPort option can't be negative.");
     result = -1;
   }
 
   if(options->OnionRouter && options->ORPort == 0) {
-    log(LOG_WARNING,"If OnionRouter is set, then ORPort must be positive.");
+    log(LOG_WARN,"If OnionRouter is set, then ORPort must be positive.");
     result = -1;
   }
 
   if(options->OnionRouter && options->DataDirectory == NULL) {
-    log(LOG_WARNING,"DataDirectory option required for OnionRouter, but not found.");
+    log(LOG_WARN,"DataDirectory option required for OnionRouter, but not found.");
     result = -1;
   }
 
   if(options->OnionRouter && options->Nickname == NULL) {
-    log_fn(LOG_WARNING,"Nickname required for OnionRouter, but not found.");
+    log_fn(LOG_WARN,"Nickname required for OnionRouter, but not found.");
     result = -1;
   }
 
   if(options->APPort < 0) {
-    log(LOG_WARNING,"APPort option can't be negative.");
+    log(LOG_WARN,"APPort option can't be negative.");
     result = -1;
   }
 
   if(options->DirPort < 0) {
-    log(LOG_WARNING,"DirPort option can't be negative.");
+    log(LOG_WARN,"DirPort option can't be negative.");
     result = -1;
   }
 
   if(options->APPort > 1 &&
      (options->CoinWeight < 0.0 || options->CoinWeight >= 1.0)) {
-    log(LOG_WARNING,"CoinWeight option must be >=0.0 and <1.0.");
+    log(LOG_WARN,"CoinWeight option must be >=0.0 and <1.0.");
     result = -1;
   }
 
   if(options->MaxConn < 1) {
-    log(LOG_WARNING,"MaxConn option must be a non-zero positive integer.");
+    log(LOG_WARN,"MaxConn option must be a non-zero positive integer.");
     result = -1;
   }
 
   if(options->MaxConn >= MAXCONNECTIONS) {
-    log(LOG_WARNING,"MaxConn option must be less than %d.", MAXCONNECTIONS);
+    log(LOG_WARN,"MaxConn option must be less than %d.", MAXCONNECTIONS);
     result = -1;
   }
 
   if(options->DirFetchPostPeriod < 1) {
-    log(LOG_WARNING,"DirFetchPostPeriod option must be positive.");
+    log(LOG_WARN,"DirFetchPostPeriod option must be positive.");
     result = -1;
   }
 
   if(options->KeepalivePeriod < 1) {
-    log(LOG_WARNING,"KeepalivePeriod option must be positive.");
+    log(LOG_WARN,"KeepalivePeriod option must be positive.");
     result = -1;
   }
 

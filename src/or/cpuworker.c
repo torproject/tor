@@ -58,7 +58,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_CPUWORKER);
 
   if(conn->inbuf_reached_eof) {
-    log_fn(LOG_WARNING,"Read eof. Worker dying.");
+    log_fn(LOG_WARN,"Read eof. Worker dying.");
     if(conn->state != CPUWORKER_STATE_IDLE) {
       /* XXX the circ associated with this cpuworker will wait forever. Oops. */
       num_cpuworkers_busy--;
@@ -87,12 +87,12 @@ int connection_cpu_process_inbuf(connection_t *conn) {
     }
     assert(circ->p_conn);
     if(*buf == 0) {
-      log_fn(LOG_WARNING,"decoding onionskin failed. Closing.");
+      log_fn(LOG_WARN,"decoding onionskin failed. Closing.");
       circuit_close(circ);
       goto done_processing;
     }
     if(onionskin_answer(circ, buf+1+TAG_LEN, buf+1+TAG_LEN+DH_KEY_LEN) < 0) {
-      log_fn(LOG_WARNING,"onionskin_answer failed. Closing.");
+      log_fn(LOG_WARN,"onionskin_answer failed. Closing.");
       circuit_close(circ);
       goto done_processing;
     }
@@ -145,7 +145,7 @@ int cpuworker_main(void *data) {
       if(onion_skin_server_handshake(question, get_onion_key(),
         reply_to_proxy, keys, 32) < 0) {
         /* failure */
-        log_fn(LOG_WARNING,"onion_skin_server_handshake failed.");
+        log_fn(LOG_WARN,"onion_skin_server_handshake failed.");
         memset(buf,0,LEN_ONION_RESPONSE); /* send all zeros for failure */
       } else {
         /* success */
@@ -187,7 +187,7 @@ static int spawn_cpuworker(void) {
   conn->address = tor_strdup("localhost");
 
   if(connection_add(conn) < 0) { /* no space, forget it */
-    log_fn(LOG_WARNING,"connection_add failed. Giving up.");
+    log_fn(LOG_WARN,"connection_add failed. Giving up.");
     connection_free(conn); /* this closes fd[0] */
     return -1;
   }
@@ -208,7 +208,7 @@ static void spawn_enough_cpuworkers(void) {
 
   while(num_cpuworkers < num_cpuworkers_needed) {
     if(spawn_cpuworker() < 0) {
-      log_fn(LOG_WARNING,"spawn failed!");
+      log_fn(LOG_WARN,"spawn failed!");
       return;
     }
     num_cpuworkers++;
@@ -227,7 +227,7 @@ static void process_pending_task(connection_t *cpuworker) {
   if(!circ)
     return;
   if(assign_to_cpuworker(cpuworker, CPUWORKER_TASK_ONION, circ) < 0)
-    log_fn(LOG_WARNING,"assign_to_cpuworker failed. Ignoring.");
+    log_fn(LOG_WARN,"assign_to_cpuworker failed. Ignoring.");
 }
 
 /* if cpuworker is defined, assert that he's idle, and use him. else,

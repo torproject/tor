@@ -160,7 +160,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
 
   if(!dnsconn) {
-    log_fn(LOG_WARNING,"no idle dns workers. Failing.");
+    log_fn(LOG_WARN,"no idle dns workers. Failing.");
     dns_cancel_pending_resolve(exitconn->address, NULL);
     return -1;
   }
@@ -190,7 +190,7 @@ void dns_cancel_pending_resolve(char *question, connection_t *onlyconn) {
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
-    log_fn(LOG_WARNING,"Question '%s' is not pending. Dropping.", question);
+    log_fn(LOG_WARN,"Question '%s' is not pending. Dropping.", question);
     return;
   }
 
@@ -255,7 +255,7 @@ static void dns_found_answer(char *question, uint32_t answer) {
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
-    log_fn(LOG_WARNING,"Answer to unasked question '%s'? Dropping.", question);
+    log_fn(LOG_WARN,"Answer to unasked question '%s'? Dropping.", question);
     return;
   }
 
@@ -293,7 +293,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_DNSWORKER);
 
   if(conn->inbuf_reached_eof) {
-    log_fn(LOG_WARNING,"Read eof. Worker dying.");
+    log_fn(LOG_WARN,"Read eof. Worker dying.");
     if(conn->state == DNSWORKER_STATE_BUSY) {
       dns_cancel_pending_resolve(conn->address, NULL);
       num_dnsworkers_busy--;
@@ -384,7 +384,7 @@ static int spawn_dnsworker(void) {
   conn->address = tor_strdup("localhost");
 
   if(connection_add(conn) < 0) { /* no space, forget it */
-    log_fn(LOG_WARNING,"connection_add failed. Giving up.");
+    log_fn(LOG_WARN,"connection_add failed. Giving up.");
     connection_free(conn); /* this closes fd[0] */
     return -1;
   }
@@ -422,7 +422,7 @@ static void spawn_enough_dnsworkers(void) {
 
   while(num_dnsworkers < num_dnsworkers_needed) {
     if(spawn_dnsworker() < 0) {
-      log(LOG_WARNING,"spawn_enough_dnsworkers(): spawn failed!");
+      log(LOG_WARN,"spawn_enough_dnsworkers(): spawn failed!");
       return;
     }
     num_dnsworkers++;

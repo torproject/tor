@@ -231,7 +231,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   log_fn(LOG_DEBUG,"direction %d, streamid %d before crypt.", cell_direction, *(int*)(cell->payload+1));
 
   if(relay_crypt(circ, buf, 1+CELL_PAYLOAD_SIZE, cell_direction, &layer_hint, &recognized, &conn) < 0) {
-    log_fn(LOG_WARNING,"relay crypt failed. Dropping connection.");
+    log_fn(LOG_WARN,"relay crypt failed. Dropping connection.");
     return -1;
   }
 
@@ -281,7 +281,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
       thishop = circ->cpath;
       if(thishop->state != CPATH_STATE_OPEN) {
-        log_fn(LOG_WARNING,"Relay cell before first created cell?");
+        log_fn(LOG_WARN,"Relay cell before first created cell?");
         return -1;
       }
       do { /* Remember: cpath is in forward order, that is, first hop first. */
@@ -290,7 +290,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
         log_fn(LOG_DEBUG,"before decrypt: %d",*(int*)(in+2));
         /* decrypt */
         if(crypto_cipher_decrypt(thishop->b_crypto, in, inlen, out)) {
-          log_fn(LOG_WARNING,"Error performing onion decryption: %s", crypto_perror());
+          log_fn(LOG_WARN,"Error performing onion decryption: %s", crypto_perror());
           return -1;
         }
         memcpy(in,out,inlen);
@@ -309,7 +309,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
 
       log_fn(LOG_DEBUG,"before encrypt: %d",*(int*)(in+2));
       if(crypto_cipher_encrypt(circ->p_crypto, in, inlen, out)) {
-        log_fn(LOG_WARNING,"Onion encryption failed for ACI %u: %s",
+        log_fn(LOG_WARN,"Onion encryption failed for ACI %u: %s",
             circ->p_aci, crypto_perror());
         return -1;
       }
@@ -330,7 +330,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
 
         log_fn(LOG_DEBUG,"before encrypt: %d",*(int*)(in+2));
         if(crypto_cipher_encrypt(thishop->f_crypto, in, inlen, out)) {
-          log_fn(LOG_WARNING,"Error performing encryption: %s", crypto_perror());
+          log_fn(LOG_WARN,"Error performing encryption: %s", crypto_perror());
           return -1;
         }
         memcpy(in,out,inlen);
@@ -341,7 +341,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
     } else { /* we're in the middle. Just one crypt. */
 
       if(crypto_cipher_decrypt(circ->n_crypto,in, inlen, out)) {
-        log_fn(LOG_WARNING,"Decryption failed for ACI %u: %s",
+        log_fn(LOG_WARN,"Decryption failed for ACI %u: %s",
                circ->n_aci, crypto_perror());
         return -1;
       }
@@ -729,7 +729,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     cell.length = DH_ONIONSKIN_LEN;
 
     if(onion_skin_create(circ->n_conn->onion_pkey, &(circ->cpath->handshake_state), cell.payload) < 0) {
-      log_fn(LOG_WARNING,"onion_skin_create (first hop) failed.");
+      log_fn(LOG_WARN,"onion_skin_create (first hop) failed.");
       return -1;
     }
 
@@ -753,7 +753,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
 
     router = router_get_by_addr_port(hop->addr,hop->port);
     if(!router) {
-      log_fn(LOG_WARNING,"couldn't lookup router %d:%d",hop->addr,hop->port);
+      log_fn(LOG_WARN,"couldn't lookup router %d:%d",hop->addr,hop->port);
       return -1;
     }
 
@@ -767,14 +767,14 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     *(uint32_t*)(cell.payload+RELAY_HEADER_SIZE) = htonl(hop->addr);
     *(uint16_t*)(cell.payload+RELAY_HEADER_SIZE+4) = htons(hop->port);
     if(onion_skin_create(router->onion_pkey, &(hop->handshake_state), cell.payload+RELAY_HEADER_SIZE+6) < 0) {
-      log_fn(LOG_WARNING,"onion_skin_create failed.");
+      log_fn(LOG_WARN,"onion_skin_create failed.");
       return -1;
     }
 
     log_fn(LOG_DEBUG,"Sending extend relay cell.");
     /* send it to hop->prev, because it will transfer it to a create cell and then send to hop */
     if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, hop->prev) < 0) {
-      log_fn(LOG_WARNING,"failed to deliver extend cell. Closing.");
+      log_fn(LOG_WARN,"failed to deliver extend cell. Closing.");
       return -1;
     }
     hop->state = CPATH_STATE_AWAITING_KEYS;
@@ -792,7 +792,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   cell_t newcell;
 
   if(circ->n_conn) {
-    log_fn(LOG_WARNING,"n_conn already set. Bug/attack. Closing.");
+    log_fn(LOG_WARN,"n_conn already set. Bug/attack. Closing.");
     return -1;
   }
 
@@ -825,7 +825,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   log_fn(LOG_DEBUG,"aci_type = %u.",aci_type);
   circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, aci_type);
   if(!circ->n_aci) {
-    log_fn(LOG_WARNING,"failed to get unique aci.");
+    log_fn(LOG_WARN,"failed to get unique aci.");
     return -1;
   }
   log_fn(LOG_DEBUG,"Chosen ACI %u.",circ->n_aci);
@@ -856,14 +856,14 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
         hop != circ->cpath && hop->state == CPATH_STATE_OPEN;
         hop=hop->next) ;
     if(hop == circ->cpath) { /* got an extended when we're all done? */
-      log_fn(LOG_WARNING,"got extended when circ already built? Closing.");
+      log_fn(LOG_WARN,"got extended when circ already built? Closing.");
       return -1;
     }
   }
   assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
   if(onion_skin_client_handshake(hop->handshake_state, reply, keys, 32) < 0) {
-    log_fn(LOG_WARNING,"onion_skin_client_handshake failed.");
+    log_fn(LOG_WARN,"onion_skin_client_handshake failed.");
     return -1;
   }
 
@@ -873,13 +873,13 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   log_fn(LOG_DEBUG,"hop %d init cipher forward %d, backward %d.", (uint32_t)hop, *(uint32_t*)keys, *(uint32_t*)(keys+16));
   if (!(hop->f_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys,iv,1))) {
-    log(LOG_WARNING,"forward cipher initialization failed.");
+    log(LOG_WARN,"forward cipher initialization failed.");
     return -1;
   }
 
   if (!(hop->b_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys+16,iv,0))) {
-    log(LOG_WARNING,"backward cipher initialization failed.");
+    log(LOG_WARN,"backward cipher initialization failed.");
     return -1;
   }
 
