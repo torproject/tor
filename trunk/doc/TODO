@@ -19,9 +19,9 @@ Flag-day changes: (things which are backward incompatible)
           if you decrypted it correctly
 	o Rotate onion keys as needed
 	- Rotate TLS connections [arma]
-	- Set expiration times on X509 certs [nickm]
-        . add bandwidthrate and bandwidthburst to server descriptor [nickm]
-        - directories need to say who signed them. [nickm]
+	o Set expiration times on X509 certs [nickm]
+        o add bandwidthrate and bandwidthburst to server descriptor [nickm]
+        o directories need to say who signed them. [nickm]
         - what other pieces of the descriptors need to change?
           maybe add a section for who's connected to a given router?
           add a flexible section for reputation info?
