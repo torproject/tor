@@ -735,6 +735,10 @@ int getconfig(int argc, char **argv, or_options_t *options) {
       log_fn(LOG_WARN, "Nickname '%s' contains illegal characters.", options->Nickname);
       result = -1;
     }
+    if (strlen(options->Nickname) == 0) {
+      log_fn(LOG_WARN, "Nickname must have at least one character");
+      result = -1;
+    }
     if (strlen(options->Nickname) > MAX_NICKNAME_LEN) {
       log_fn(LOG_WARN, "Nickname '%s' has more than %d characters.",
              options->Nickname, MAX_NICKNAME_LEN);

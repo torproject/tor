@@ -758,6 +758,26 @@ test_dir_format()
   test_assert(! crypto_pk_generate_key(pk2));
   test_assert(! crypto_pk_generate_key(pk3));
 
+  test_assert( is_legal_nickname("a"));
+  test_assert(!is_legal_nickname(""));
+  test_assert(!is_legal_nickname("abcdefghijklmnopqrst")); /* 20 chars */
+  test_assert(!is_legal_nickname("abcdefghijklmnopqrst")); /* 20 chars */
+  test_assert(!is_legal_nickname("hyphen-")); /* bad char */
+  test_assert( is_legal_nickname("abcdefghijklmnopqrs")); /* 19 chars */
+  test_assert(!is_legal_nickname("$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+  /* valid */
+  test_assert( is_legal_nickname_or_hexdigest(
+                                 "$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+  /* too short */
+  test_assert(!is_legal_nickname_or_hexdigest(
+                                 "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+  /* illegal char */
+  test_assert(!is_legal_nickname_or_hexdigest(
+                                 "$AAAAAAzAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+  test_assert(is_legal_nickname_or_hexdigest("xyzzy"));
+  test_assert(is_legal_nickname_or_hexdigest("abcdefghijklmnopqrs"));
+  test_assert(!is_legal_nickname_or_hexdigest("abcdefghijklmnopqrst"));
+
   get_platform_str(platform, sizeof(platform));
 
   r1.address = "testaddr1.foo.bar";

@@ -681,13 +681,8 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
 
   if (tok->n_args == 2 || tok->n_args == 5 || tok->n_args == 6) {
     router->nickname = tor_strdup(tok->args[0]);
-    if (strlen(router->nickname) > MAX_NICKNAME_LEN) {
-      log_fn(LOG_WARN,"Router nickname too long.");
-      goto err;
-    }
-    if (strspn(router->nickname, LEGAL_NICKNAME_CHARACTERS) !=
-        strlen(router->nickname)) {
-      log_fn(LOG_WARN, "Router nickname contains illegal characters.");
+    if (!is_legal_nickname(router->nickname)) {
+      log_fn(LOG_WARN,"Router nickname is invalid");
       goto err;
     }
     router->address = tor_strdup(tok->args[1]);

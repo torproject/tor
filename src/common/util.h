@@ -81,6 +81,8 @@ struct timeval {
 #define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/ "
 #endif
 
+#define HEX_CHARACTERS "0123456789ABCDEFabcdef"
+
 size_t strlcat(char *dst, const char *src, size_t siz);
 size_t strlcpy(char *dst, const char *src, size_t siz);
 
