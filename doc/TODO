@@ -11,7 +11,7 @@ ARMA    - arma claims
         X Abandoned
 
 For 0.0.9:
-N&R- bring tor-spec up to date
+N&R. bring tor-spec up to date
    o cache and serve running-routers on other nodes?
      o cache running-routers
      o download running-routers from servers running rc5-cvs or later
