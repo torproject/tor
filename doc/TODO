@@ -11,39 +11,11 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-For scalability:
-        - Slightly smarter bandwidth management: use link capacity
-          intelligently.
-        - Handle full buffers without totally borking
-
-For 0.0.8:
-
-      milestone 2:
+      misc:
         . refer to things by key:
-          o extend cells need ip:port:identitykeyhash.
-          o Lookup routers and connections by key digest; accept hex
-            key digest in place of nicknames.
-          o Audit all uses of lookup-by-hostname and lookup-by-addr-port
-            to search by digest when appropriate.
-          o make sure to use addr/port in cpuworker tasks, because
-            OPs don't have keys.
-          o and fix the function comments in rephist
-          o Rep-hist functions need to store info by keyid
           - also use this in intro points and rendezvous points, and
             hidserv descs.  [XXXX This isn't enough.]
           - figure out what to do about ip:port:differentkey
-        o ORs connect on demand. attach circuits to new connections, keep
-          create cells around somewhere, send destroy if fail.
-        o nickname defaults to first piece of hostname
-        o running-routers list refers to nickname if verified, else
-          hash-base64'ed.
-        o Mark routers as verified or unverified based on whether
-          running-routers list includes nickname or id hash.
-        o put OR uptime in descriptor
-        o name the secret-key directory something to discourage people
-          from mailing their identity key to tor-ops
-
-      milestone 3:
         - users can set their bandwidth, or we auto-detect it:
           - advertised bandwidth defaults to 10KB
           o advertised bandwidth is the min of max seen in each direction
@@ -63,50 +35,54 @@ NICK    - Reputation info needs to give better weight to recent events than
         - Have clients and dirservers preserve reputation info over
           reboots.
         - clients choose nodes proportional to advertised bandwidth
-        o authdirserver includes descriptor.
         -  and lists as running iff:
           - he can connect to you
           - he has successfully extended to you
           - you have sufficient mean-time-between-failures
-        - Don't accept ORs with nicknames same as verified ORs' nicknames.
-        - add new "Middleman 1" config variable?
-          o if torrc not found, exitpolicy reject *:*
-        o change if(options.ORPort) to what we really mean.
-        o same with socksport.
-        o get contrib/tor_resolve into the tarball and installed
-          o and working
 
-      post pre1:
-        - Possible to get autoconf to easily install things into ~/.tor?
-        o when we sigint tor, the dns/cpuworkers don't intercept sigint?
-        - "AcceptOnlyVerifiedRouters" config option?
-        - why does common/util.c build-depend on or/or.h ?
-        - ORs use uniquer default nicknames
-        - Tors deal appropriately when a newly-verified router has the
-          same nickname as another router they know about
-        X 007 can't extend to unverified 008. they will never be able to.
-        - if a begin failed due to exit policy, but we believe the IP
-          should have been allowed, switch that router to exitpolicy
-          reject *:* until we get our next directory.
-        - make advertised_server_mode() ORs fetch dirs more often.
-        - should the running-routers list put unverified routers at the
-          end?
-        - tor-resolve needs a man page
-        o tor-resolve should make use of cached answers?
-        - defining an ORPort isn't necessary anymore, if you use
-          ORAddress:port. Same with DirPort, SocksPort.
-        - requiredentrynode vs preferredentrynode
-        - per-month byte allowances
-        o if using not-socks4a then warn, once.
-        o if unverified server then warn, once.
-        - add a listener for a ui
-          - and a basic gui
+      docs:
         - faq and doc-wiki
           - knoppix distro
           - win32 installer using privoxy's installer
 
-        o win32 problems with pre1
-        o asn.1 issues?
+      bug fixes, necessary:
+        - Why is the first entry of kill -USR1 a router with a 0 key?
+        - why does common/util.c build-depend on or/or.h ?
+
+      bug fixes, might be handy:
+        - put expiry date on onion-key, so people don't keep trying
+          old ones that they could know are expired?
+        - should the running-routers list put unverified routers at the
+          end?
+        - make advertised_server_mode() ORs fetch dirs more often.
+        - if a begin failed due to exit policy, but we believe the IP
+          should have been allowed, switch that router to exitpolicy
+          reject *:* until we get our next directory.
+        - Tors deal appropriately when a newly-verified router has the
+          same nickname as another router they know about
+        - ORs use uniquer default nicknames
+        - Handle full buffers without totally borking
+        - Add '[...truncated]' or similar to truncated log entries (like the directory
+          in connection_dir_process_inbuf()).
+
+      more features, easy:
+        - check the date in the http headers, compare for clock skew.
+        - requiredentrynode vs preferredentrynode
+        - per-month byte allowances
+        - tor-resolve needs a man page
+        - "AllowUnverifiedRouters" config option
+          - Parse it into a bitvector
+          - Consider it when picking nodes for your path
+        - have a pool of circuits available, cannibalize them
+          for your purposes (e.g. rendezvous, etc).
+
+      more features, complex:
+        - defining an ORPort isn't necessary anymore, if you use
+          ORAddress:port. Same with DirPort, SocksPort.
+        - compress the directory. client sends http header
+          "accept-transfer-encoding: gzip", server might send http header
+          "transfer-encoding: gzip". ta-da.
+          - grow a zlib dependency. keep a cached compressed directory.
         - Switch dirservers entries to config lines:
           - read in and parse each TrustedDir config line.
           - stop reading dirservers file.
@@ -124,17 +100,11 @@ NICK    - Reputation info needs to give better weight to recent events than
             - which means keeping track of which ones are "up"
           - if you don't need a trusted one, choose from the routerinfo
             list if you have one, else from the trusteddir list.
-        - compress the directory. client sends http header
-          "accept-transfer-encoding: gzip", server might send http header
-          "transfer-encoding: gzip". ta-da.
-          - grow a zlib dependency. keep a cached compressed directory.
-        - Why is the first entry of kill -USR1 a router with a 0 key?
-        o don't warn about being unverified if you're not in the
-          running-routers list at all.
-        - put expiry date on onion-key, so people don't keep trying
-          old ones that they could know are expired?
-        - check the date in the http headers, compare for clock skew.
+        - add a listener for a ui
+          - and a basic gui
 
+      blue sky:
+        - Possible to get autoconf to easily install things into ~/.tor?
 
       ongoing:
         . rename/rearrange functions for what file they're in
@@ -162,7 +132,7 @@ NICK    . Windows port
             - (need to not hardcode dirservers file in config.c)
           . correct, update, polish spec
           - document the exposed function api?
-          - document what we mean by socks.
+          o document what we mean by socks.
 
 NICK    . packages
           . rpm
@@ -174,8 +144,9 @@ NICK    . packages
           o extend socks4 to do resolves?
           o make script to ask tor for resolves
           - tsocks
-            - gather patches, submit to maintainer
-            - intercept gethostbyname and others, do resolve via tor
+            o gather patches, submit to maintainer
+            - intercept gethostbyname and others
+            o do resolve via tor
           - redesign and thorough code revamp, with particular eye toward:
             - support half-open tcp connections
             - conn key rotation
@@ -187,8 +158,6 @@ Other details and small and hard things:
         - tor should be able to have a pool of outgoing IP addresses
           that it is able to rotate through. (maybe)
         - tie into squid
-        - buffer size pool, to let a few buffers grow huge or many buffers
-          grow a bit
         - hidserv offerers shouldn't need to define a SocksPort
         - when the client fails to pick an intro point for a hidserv,
           it should refetch the hidserv desc.
@@ -196,8 +165,6 @@ Other details and small and hard things:
           e.g. clock skew.
         - should retry exitpolicy end streams even if the end cell didn't
           resolve the address for you
-        - Add '[...truncated]' or similar to truncated log entries (like the directory
-          in connection_dir_process_inbuf()).
         . Make logs handle it better when writing to them fails.
         o Dirserver shouldn't put you in running-routers list if you haven't
           uploaded a descriptor recently
@@ -207,7 +174,6 @@ Other details and small and hard things:
         . Scrubbing proxies
                 - Find an smtp proxy?
                 . Get socks4a support into Mozilla
-        - Extend by hostname, not by IP.
         - Need a relay teardown cell, separate from one-way ends.
         - Make it harder to circumvent bandwidth caps: look at number of bytes
           sent across sockets, not number sent inside TLS stream.
