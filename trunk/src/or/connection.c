@@ -913,9 +913,7 @@ loop_again:
     /* There's a read error; kill the connection.*/
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
     if (CONN_IS_EDGE(conn)) {
-      connection_edge_end(conn, (char)(connection_state_is_open(conn) ?
-                  END_STREAM_REASON_MISC : END_STREAM_REASON_CONNECTREFUSED),
-                  conn->cpath_layer);
+      connection_edge_end_errno(conn, conn->cpath_layer);
     }
     connection_mark_for_close(conn);
     return -1;
@@ -1083,7 +1081,7 @@ int connection_handle_write(connection_t *conn) {
     if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0) {
       log_fn(LOG_WARN,"getsockopt() syscall failed?! Please report to tor-ops.");
       if (CONN_IS_EDGE(conn))
-        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+        connection_edge_end_errno(conn, conn->cpath_layer);
       connection_mark_for_close(conn);
       return -1;
     }
@@ -1092,8 +1090,7 @@ int connection_handle_write(connection_t *conn) {
       if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
         log_fn(LOG_INFO,"in-progress connect failed. Removing.");
         if (CONN_IS_EDGE(conn))
-          connection_edge_end(conn, END_STREAM_REASON_CONNECTREFUSED,
-                              conn->cpath_layer);
+          connection_edge_end_errno(conn, conn->cpath_layer);
 
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
@@ -1157,11 +1154,9 @@ int connection_handle_write(connection_t *conn) {
   } else {
     result = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
     if (result < 0) {
-      /* XXXX Is this right? -NM
       if (CONN_IS_EDGE(conn))
-        connection_edge_end(conn, END_STREAM_REASON_MISC,
-                            conn->cpath_layer);
-      */
+        connection_edge_end_errno(conn, conn->cpath_layer);
+
       connection_close_immediate(conn); /* Don't flush; connection is dead. */
       conn->has_sent_end = 1;
       connection_mark_for_close(conn);

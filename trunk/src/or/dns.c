@@ -154,7 +154,7 @@ static void purge_expired_resolves(uint32_t now) {
         /* Connections should only be pending if they have no socket. */
         tor_assert(pend->conn->s == -1);
         pendconn = pend->conn;
-        connection_edge_end(pendconn, END_STREAM_REASON_MISC,
+        connection_edge_end(pendconn, END_STREAM_REASON_TIMEOUT,
                             pendconn->cpath_layer);
         circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
         connection_free(pendconn);
