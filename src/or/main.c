@@ -862,6 +862,9 @@ static int do_main_loop(void) {
         return -1;
       } else {
         log_fn(LOG_DEBUG,"poll interrupted.");
+        /* You can't trust the results of this poll(). Go back to the
+         * top of the big for loop. */
+        continue;
       }
     }
 
