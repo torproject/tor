@@ -357,7 +357,7 @@ int dnsworker_main(void *data) {
   for(;;) {
 
     if(read(fd, &question_len, 1) != 1) {
-      log_fn(LOG_ERR,"read length failed. Child exiting.");
+      log_fn(LOG_INFO,"read length failed. Child exiting.");
       spawn_exit();
     }
     assert(question_len > 0);
@@ -436,7 +436,7 @@ static void spawn_enough_dnsworkers(void) {
     dnsconn = connection_get_by_type_state_lastwritten(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_BUSY);
     assert(dnsconn);
 
-    log_fn(LOG_DEBUG, "Max DNS workers spawned; all are busy. Killing one.");
+    log_fn(LOG_WARN, "%d DNS workers are spawned; all are busy. Killing one.", MAX_DNSWORKERS);
     /* tell the exit connection that it's failed */
     dns_cancel_pending_resolve(dnsconn->address, NULL);
 
@@ -460,6 +460,8 @@ static void spawn_enough_dnsworkers(void) {
 
   while(num_dnsworkers > num_dnsworkers_needed+MAX_IDLE_DNSWORKERS) { /* too many idle? */
     /* cull excess workers */
+    log_fn(LOG_WARN,"%d of %d dnsworkers are idle. Killing one.",
+           num_dnsworkers-num_dnsworkers_needed, num_dnsworkers);
     dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
     assert(dnsconn);
     dnsconn->marked_for_close = 1;
