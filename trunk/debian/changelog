@@ -2,6 +2,7 @@ tor (0.0.9.2-1) unstable; urgency=low
 
   * New upstream version.
   * Update debian/copyright (it's 2005).
+  * Add sharedscripts tor logrotate.d/tor.
 
  -- Peter Palfrader <weasel@debian.org>  Tue,  4 Jan 2005 11:14:03 +0100
 
