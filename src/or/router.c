@@ -75,11 +75,6 @@ void rotate_onion_key(void)
    */
   lastonionkey = onionkey;
   set_onion_key(prkey);
-  if (router_rebuild_descriptor() <0) {
-    goto error;
-  }
-  router_upload_dir_desc_to_dirservers();
-  /* Mark all CPU workers to close. */
   return;
  error:
   log_fn(LOG_WARN, "Couldn't rotate onion key.");
