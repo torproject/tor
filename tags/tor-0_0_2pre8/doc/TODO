@@ -1,0 +1,185 @@
+
+Legend:
+SPEC!!  - Not specified
+SPEC    - Spec not finalized
+NICK    - nick claims
+ARMA    - arma claims
+        - Not done
+        * Top priority
+        . Partially done
+        o Done
+        D Deferred
+        X Abandoned
+
+
+        . streams / circuits
+                o Implement streams
+                o Rotate circuits after N minutes?
+                X Circuits should expire when circuit->expire triggers
+NICK            . Handle half-open connections
+                        o Figure out what causes connections to close, standardize
+                          when we mark a connection vs when we tear it down
+                o Look at what ssl does to keep from mutating data streams
+ARMA    - Reduce streamid footprint from 7 bytes to 2 bytes
+                - Check for collisions in streamid (now possible with
+                  just 2 bytes), and back up & replace with padding if so
+                - Use the 3 saved bytes to put pseudorandomness in each relay cell
+                - Use the 4 reserved bytes in each cell header to keep 1/5
+                  of a sha1 of the relay payload (move into stream header)
+                - Move length into the stream header too
+                - Spec the stream_id stuff. Clarify that nobody on the backward
+                  stream should look at stream_id.
+ARMA    . Exit policies
+                o Spec how to write the exit policies
+                - Path selection algorithms
+                        - Let user request certain nodes
+                        - And disallow certain nodes
+                        D Choose path by jurisdiction, etc?
+                - Make relay end cells have failure status and payload attached
+                - Streams that fail due to exit policy must reextend to new node
+                - Add extend_wait state to edge connections, thumb through them
+                  when the AP get an extended cell.
+SPEC!!  D Non-clique topologies
+        D Implement our own memory management, at least for common structs
+        . Appropriate logging
+                - Come up with convention for what log level means what
+                - Make code follow convention
+        . Put CPU workers in separate processes
+                o Handle multiple cpu workers (one for each cpu, plus one)
+                o Queue for pending tasks if all workers full
+                o Support the 'process this onion' task
+NICK            - Support the 'decrypt this RSA blob' handshake1 task
+                        - Merge dnsworkers and cpuworkers to some extent
+                - Handle cpuworkers dying
+                D Support later handshake parts
+        o Simple directory servers
+                o Include key in source; sign directories
+                        o Signed directory backend
+                        o Document
+                        o Integrate
+                o Add versions to code
+                o Have directories list recommended-versions
+                        o Include (unused) line in directories
+                        o Check for presence of line.
+                        o Quit if running the wrong version
+                        o Command-line option to override quit
+                o Add more information to directory server entries
+                        o Exit policies
+        - More directory servers
+                - Add in long-term nicknames
+                - Give normal routers signing keys
+                - Let dirservers keep only {nickname, signingkey} in routers.or
+                        - dirport needs to accept 'post' requests
+                          for routers submitting (signed) new entries
+                        - routers submit new entries periodically
+                        - dirserver checks signature
+                        D client checks signature?
+        D Advanced directory servers
+                D Automated reputation management
+SPEC!!          D Figure out how to do threshold directory servers
+                D jurisdiction info in dirserver entries? other info?
+        . Scrubbing proxies
+                - Find an smtp proxy?
+                        - Check the old smtp proxy code
+                o Find an ftp proxy? wget --passive
+                D Wait until there are packet redirectors for Linux
+                . Get socks4a support into Mozilla
+        . Get tor to act like a socks server
+                o socks4, socks4a
+                D socks5
+SPEC!!          - Handle socks commands other than connect, eg, bind?
+        . Develop rendezvous points
+                o Design
+                - Spec
+                - Implement
+        D Deploy and manage open source development site.
+        . Documentation
+                o Discussion of socks, tsocks, etc
+                o On-the-network protocol
+                        o Onions
+                        o Cells
+                . Better comments for functions!
+        - Tests
+                o Testing harness/infrastructure
+NICK            . Unit tests
+                D System tests (how?)
+                - Performance tests, so we know when we've improved
+                        . webload infrastructure (Bruce)
+                        . httperf infrastructure (easy to set up)
+                        . oprofile (installed in RH >8.0)
+        D Deploy a widespread network
+        D Load balancing between router twins
+                D Keep track of load over links/nodes, to
+                  know who's hosed
+NICK    . Daemonize and package
+                o Teach it to fork and background
+                - Red Hat spec file
+                - Debian spec file equivalent
+        . Autoconf
+                . Which .h files are we actually using?
+                . Port to:
+                        o Linux
+                        o BSD
+                        . Solaris
+                        o Cygwin
+                        o Win32
+                        o OS X
+                o openssl randomness
+                o inet_ntoa
+                . stdint.h
+                - Make a script to set up a local network on your machine
+        D Move away from openssl
+                o Abstract out crypto calls
+                D Look at nss, others? Just include code?
+        o Clearer bandwidth management 
+                o Do we want to remove bandwidth from OR handshakes?
+                o What about OP handshakes?
+        - More flexibility in node addressing
+                D Support IPv6 rather than just 4
+                - Handle multihomed servers (config variable to set IP)
+        . Move from onions to ephemeral DH
+                o incremental path building
+                o transition circuit-level sendmes to hop-level sendmes
+                o implement truncate, truncated
+                o move from 192byte DH to 128byte DH, so it isn't so damn slow
+                - exiting from not-last hop
+                        - OP logic to decide to extend/truncate a path
+                        - make sure exiting from the not-last hop works
+                        - logic to find last *open* hop, not last hop, in cpath
+                        - choose exit nodes by exit policies
+
+Older (done) todo stuff:
+
+        o Use a stronger cipher
+                o aes now, by including the code ourselves
+        X On the fly compression of each stream
+        o Clean up the event loop (optimize and sanitize)
+        o Remove that awful concept of 'roles'
+        o Terminology
+                o Circuits, topics, cells stay named that
+                o 'Connection' gets divided, or renamed, or something?
+        o DNS farm
+                o Distribute queries onto the farm, get answers
+                o Preemptively grow a new worker before he's needed
+                o Prune workers when too many are idle
+                o DNS cache   
+                        o Clear DNS cache over time  
+                        D Honor DNS TTL info (how??)
+                o Have strategy when all workers are busy
+                o Keep track of which connections are in dns_wait
+                o Need to cache positives/negatives on the tor side
+                        o Keep track of which queries have been asked
+                o Better error handling when
+                        o An address doesn't resolve
+                        o We have max workers running
+                o Consider taking the master out of the loop?
+        D Implement reply onions
+        o Total rate limiting
+        o Look at OR handshake in more detail
+                o Spec it
+                o Merge OR and OP handshakes
+                o rearrange connection_or so it doesn't suck so much to read
+                D Periodic link key rotation. Spec?
+        o wrap malloc with something that explodes when it fails
+        o Clean up the number of places that get to look at prkey
+

@@ -1,0 +1,128 @@
+'tor' is an implementation of The Onion Routing system, as
+described in a bit more detail at http://www.onion-router.net/. You
+can read list archives, and subscribe to the mailing list, at
+http://archives.seul.org/or/dev/.
+
+Is your question in the FAQ? Should it be?
+
+**************************************************************************
+
+Quickstart version for users:
+
+0) Download the absolute newest version. No, really.
+  http://freehaven.net/tor/ (unfortunately they're all unreadable now,
+  so you must skip this step)
+1) tar xvf it, and then cd into the directory.
+2) ./configure (or do the two-line version below, if you're on bsd)
+3) make
+4) cd src/config
+5) ../or/or -f oprc
+6) point your mozilla (or whatever) to socks4 proxy at localhost port 9050
+  In mozilla, this is in edit|preferences|advanced|proxies. This allows you
+  to test to make sure tor is installed correctly.
+7) make sure you've set it up correctly: go to
+  http://www.junkbusters.com/cgi-bin/privacy and see what IP it says
+  you're coming from. If it works, you should probably go on to step 8,
+  to get better privacy.
+
+8) Optionally, install privoxy (www.privoxy.org), and add the line
+  "forward-socks4a / localhost:9050 ." (without the quotes) to its config
+  file. Then change your mozilla to http proxy at localhost port 8118 (and
+  no socks proxy). This step will give you good html scrubbing as well.
+
+If this works for you, you can stop reading. Otherwise, below is a more
+detailed version.
+
+**************************************************************************
+
+Dependencies:
+
+  For tor itself, you're going to need openssl (0.9.5 or later
+  -- including the dev stuff and includes). If you're on Linux,
+  everything will probably work fine. OS X and BSD (but see below under
+  troubleshooting) may work too. Let us know if you get it working
+  elsewhere.
+
+If you got the source from cvs:
+
+  Run "./autogen.sh", which will run the various auto* programs and then
+  run ./configure for you. From there, you should be able to run 'make'
+  and you'll be on your way.
+
+If you got the source from a tarball:
+
+  Run ./configure and make as usual. There isn't much point in 
+  'make install' yet.
+
+If this doesn't work for you / troubleshooting:
+
+  If you have problems finding libraries, try 
+    CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
+    ./configure
+  rather than simply ./configure.
+
+  Check out the list archives at http://archives.seul.org/or/dev/ and see
+  if somebody else has reported your problem. If not, please subscribe
+  and let us know what you did to fix it, or give us the details and
+  we'll see what we can do.
+
+Do you want to run a tor server or a tor client?
+
+  If you want to run a local onion proxy (that is, you're a user, not
+  a node operator), go into src/config and look at the oprc file. (You
+  shouldn't have to edit any of it.) You can run an onion proxy with
+  "../or/or -f oprc". See below for how to use it.
+
+  If you want to run a node in the tor network, use the orkeygen program
+  (included) to generate a keypair:
+    orkeygen file-for-privkey file-for-pubkey
+  Then set up a config file for your node (start with sample-orrc
+  and edit the top portion). Then take a look at the routers.or file,
+  and mail arma@mit.edu an entry for your new router. You can start up
+  your router with "../or/or -f you-orrc". Remember that you won't be
+  able to authenticate to the other tor nodes until I've added you to
+  the directory.
+
+How to use it for web browsing:
+
+  Download privoxy (www.privoxy.org). Install it. Add the following
+  line to your 'config' file (it might be in /etc/privoxy/config) :
+    forward-socks4a / localhost:9050 .
+  Don't forget the . at the end.
+
+  From here, you can point your browser/etc to localhost port 8118 (as
+  an http proxy) and your traffic will go through Privoxy, then through
+  the onion proxy, to the onion routing network.
+
+  You can also ignore the whole privoxy thing and set your Mozilla to
+  use localhost 9050 directly as a socks4 server. But see doc/CLIENTS
+  for why this may not give you the anonymity you want.
+
+  For more convenient command-line use, I recommend making a ~/.wgetrc
+  with the line
+    http_proxy=http://localhost:8118
+  Then you can do things like "wget seul.org" and watch as it downloads
+  from the onion routing network.
+
+  For fun, you can wget a very large file (a megabyte or more), and
+  then ^z the wget a little bit in. The onion routers will continue
+  talking for a while, queueing around 500k in the kernel-level buffers.
+  When the kernel buffers are full, and the outbuf for the AP connection
+  also fills, the internal congestion control will kick in and the exit
+  connection will stop reading from the webserver. The circuit will
+  wait until you fg the wget -- and other circuits will work just fine
+  throughout. Then try ^z'ing the onion routers, and watch how well it
+  recovers. Then try ^z'ing several of them at once. :)
+
+How to use it for ssh:
+
+  Download tsocks (tsocks.sourceforge.net) and configure it to talk to
+  localhost:9050 as a socks4 server. My /etc/tsocks.conf simply has:
+    server_port = 9050
+    server = 127.0.0.1
+  (I had to "cd /usr/lib; ln -s /lib/libtsocks.so" to get the tsocks
+   library working after install, since my libpath didn't include /lib.)
+  Then you can do "tsocks ssh arma@moria.mit.edu". But note that since
+  ssh is suid root, you either need to do this as root, or cp a local
+  version of ssh that isn't suid.
+

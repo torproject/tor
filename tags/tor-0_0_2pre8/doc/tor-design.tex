@@ -1,0 +1,196 @@
+
+\documentclass[times,10pt,twocolumn]{article}
+\usepackage{latex8}
+\usepackage{times}
+\usepackage{url}
+\usepackage{graphics}
+\usepackage{amsmath}
+
+\pagestyle{empty}
+
+\renewcommand\url{\begingroup \def\UrlLeft{<}\def\UrlRight{>}\urlstyle{tt}\Url}
+\newcommand\emailaddr{\begingroup \def\UrlLeft{<}\def\UrlRight{>}\urlstyle{tt}\Url}
+
+% If an URL ends up with '%'s in it, that's because the line *in the .bib/.tex
+% file* is too long, so break it there (it doesn't matter if the next line is
+% indented with spaces). -DH
+
+%\newif\ifpdf
+%\ifx\pdfoutput\undefined
+%   \pdffalse
+%\else
+%   \pdfoutput=1
+%   \pdftrue
+%\fi
+
+\begin{document}
+
+%% Use dvipdfm instead. --DH
+%\ifpdf
+%  \pdfcompresslevel=9
+%  \pdfpagewidth=\the\paperwidth
+%  \pdfpageheight=\the\paperheight
+%\fi
+
+\title{Tor: Design of a Next-generation Onion Router}
+
+\author{Roger Dingledine \\ The Free Haven Project \\ arma@freehaven.net \and
+Nick Mathewson \\ The Free Haven Project \\ nickm@freehaven.net \and
+Paul Syverson \\ Naval Research Lab \\ syverson@itd.nrl.navy.mil}
+
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+We present Tor, a connection-based anonymous communication system based
+on onion routing.
+Tor works in a real-world Internet environment,
+requires little synchronization or coordination between nodes, and
+protects against known anonymity-breaking attacks as well
+as or better than other systems with similar design parameters.
+\end{abstract}
+
+%\begin{center}
+%\textbf{Keywords:} anonymity, peer-to-peer, remailer, nymserver, reply block
+%\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Section{Overview}
+\label{sec:intro}
+
+Onion routing is a TCP-based anonymous communication system
+The onion routing project published a number of papers several years
+ago \cite{x,y,z}, but because the only implementation was a fragile
+proof-of-concept that ran on a single machine, many critical design issues
+were not considered or addressed. Here we describe Tor, a protocol for
+asynchronous, loosely federated onion routers that provides the following
+improvements over the old onion routing design:
+
+\begin{itemize}
+\item \textbf{Congestion control:} Foo
+
+\item \textbf{No mixing or traffic shaping:}
+
+\item \textbf{Applications talk to the onion proxy via socks:} 
+
+\item \textbf{Directory servers:}
+
+\item \textbf{Forward security:}
+
+\item \textbf{Many applications can share one circuit:}
+
+\item \textbf{End-to-end integrity checking:}
+
+\item \textbf{Robustness to node failure:} router twins
+
+\item \textbf{Exit policies:}
+Tor provides a consistent mechanism for each node to specify and
+advertise an exit policy.
+
+\item \textbf{Rendezvous points:}
+location-protected servers
+
+\end{itemize}
+
+We review mixes and mix-nets in Section \ref{sec:background},
+describe our goals and assumptions in Section \ref{sec:assumptions},
+and then address the above list of improvements in Sections
+\ref{sec:design}-\ref{sec:nymservers}. We then summarize how our design
+stands up to known attacks, and conclude with a list of open problems.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Section{Threat model and background}
+\label{sec:background}
+
+anonymizer
+pipenet
+freedom
+onion routing
+isdn-mixes
+crowds
+real-time mixes, web mixes
+anonnet (marc rennhard's stuff)
+morphmix
+P5
+gnunet
+rewebbers
+tarzan
+herbivore
+
+\SubSection{Known attacks against low-latency anonymity systems}
+
+
+
+We discuss each of these attacks in more detail below, along with the
+aspects of the Tor design that provide defense. We provide a summary
+of the attacks and our defenses against them in Section \ref{sec:attacks}.
+
+\Section{Design goals and assumptions}
+\label{sec:assumptions}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Section{The Tor Design}
+\label{sec:design}
+
+
+\Section{Other design decisions}
+
+\SubSection{Exit policies and abuse}
+\label{subsec:exitpolicies}
+
+\SubSection{Directory Servers}
+\label{subsec:dir-servers}
+
+\Section{Rendezvous points: pseudonyms with responder anonymity}
+\label{sec:rendezvous}
+
+\Section{Maintaining anonymity sets}
+\label{sec:maintaining-anonymity}
+
+\SubSection{Using a circuit many times}
+\label{subsec:many-messages}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Section{Attacks and Defenses}
+\label{sec:attacks}
+
+Below we summarize a variety of attacks and how well our design withstands
+them.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Section{Future Directions and Open Problems}
+\label{sec:conclusion}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Section{Acknowledgments}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliographystyle{latex8}
+\bibliography{minion-design}
+
+\end{document}
+
+% Style guide:
+%     U.S. spelling
+%     avoid contractions (it's, can't, etc.)
+%     'mix', 'mixes' (as noun)
+%     'mix-net'
+%     'mix', 'mixing' (as verb)
+%     'Mixminion Project'
+%     'Mixminion' (meaning the protocol suite or the network)
+%     'Mixmaster' (meaning the protocol suite or the network)
+%     'middleman'  [Not with a hyphen; the hyphen has been optional
+%         since Middle English.]
+%     'nymserver'
+%     'Cypherpunk', 'Cypherpunks', 'Cypherpunk remailer'
+%
+%     'Whenever you are tempted to write 'Very', write 'Damn' instead, so
+%     your editor will take it out for you.'  -- Misquoted from Mark Twain
+
