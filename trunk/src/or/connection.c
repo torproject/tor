@@ -434,20 +434,10 @@ void connection_send_cell(connection_t *conn) {
     connection_write_cell_to_buf(&cell, conn);
   }
 
-  /* ???? If we might not have added a cell above, why are we
-   * ???? increasing outbuf_flushlen? -NM */
   /* The connection_write_cell_to_buf() call doesn't increase the flushlen
    * (if link padding is on). So if there isn't a whole cell waiting-but-
    * not-yet-flushed, we add a padding cell. Thus in any case the gap between
-   * outbuf_datalen and outbuf_flushlen is at least sizeof(cell_t). -RD
-   */
-  /* XXXX actually, there are some subtle bugs lurking in here. They
-   * have to do with the fact that we don't handle connection failure
-   * cleanly. Sometimes we mark things to be closed later. Inside
-   * connection_write_cell_to_buf, it returns successfully without
-   * writing if the connection has been marked for close. We need to
-   * look at all our failure cases more carefully and make sure they do
-   * the right thing.
+   * outbuf_datalen and outbuf_flushlen is at least sizeof(cell_t).
    */
   conn->outbuf_flushlen += sizeof(cell_t); /* instruct it to send a cell */
   connection_start_writing(conn);
