@@ -23,23 +23,23 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad /home/weasel/projects/tor/cvs/contrib/torify.1 cvs/contrib/torify.1
---- /home/weasel/projects/tor/cvs/contrib/torify.1	2004-02-17 01:45:25.000000000 +0100
-+++ cvs/contrib/torify.1	2004-05-07 01:12:57.000000000 +0200
+diff -urNad tor-0.0.9pre5/contrib/torify.1 /tmp/dpep.fOA3Mm/tor-0.0.9pre5/contrib/torify.1
+--- tor-0.0.9pre5/contrib/torify.1	2004-11-10 03:27:09.608843380 +0100
++++ /tmp/dpep.fOA3Mm/tor-0.0.9pre5/contrib/torify.1	2004-11-10 03:28:29.621248723 +0100
 @@ -18,6 +18,6 @@
- binaries.
+ to suid binaries.
  
  .SH SEE ALSO
 -.BR tor (1),
 +.BR tor (8),
  .BR tsocks (1),
  .BR tsocks.conf (5).
-diff -urNad /home/weasel/projects/tor/cvs/doc/tor.1.in cvs/doc/tor.1.in
---- /home/weasel/projects/tor/cvs/doc/tor.1.in	2004-04-18 20:40:42.000000000 +0200
-+++ cvs/doc/tor.1.in	2004-05-07 01:12:12.000000000 +0200
+diff -urNad tor-0.0.9pre5/doc/tor.1.in /tmp/dpep.fOA3Mm/tor-0.0.9pre5/doc/tor.1.in
+--- tor-0.0.9pre5/doc/tor.1.in	2004-11-10 03:28:29.263327434 +0100
++++ /tmp/dpep.fOA3Mm/tor-0.0.9pre5/doc/tor.1.in	2004-11-10 03:28:29.622248503 +0100
 @@ -1,4 +1,4 @@
--.TH TOR 1 "November 2003" "TOR"
-+.TH TOR 8 "November 2003" "TOR"
+-.TH TOR 1 "November 2004" "TOR"
++.TH TOR 8 "November 2004" "TOR"
  .SH NAME
  tor \- The second-generation onion router
  .SH SYNOPSIS
