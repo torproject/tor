@@ -22,14 +22,14 @@ static char answerstring[] = "HTTP/1.0 200 OK\r\n\r\n";
 
 void directory_initiate_fetch(routerinfo_t *router) {
   connection_t *conn;
-  struct sockaddr_in router_addr;
-  int s;
 
   if(!router) /* i guess they didn't have one in mind for me to use */
     return;
 
-  if(connection_get_by_type(CONN_TYPE_DIR)) /* there's already a fetch running */
+  if(connection_get_by_type(CONN_TYPE_DIR)) { /* there's already a fetch running */
+    log_fn(LOG_DEBUG,"Canceling fetch, dir conn already active.");
     return;
+  }
 
   log_fn(LOG_DEBUG,"initiating directory fetch");
 
@@ -50,55 +50,27 @@ void directory_initiate_fetch(routerinfo_t *router) {
     conn->pkey = NULL;
   }
 
-  s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
-  if(s < 0) { 
-    log_fn(LOG_ERR,"Error creating network socket.");
-    connection_free(conn);
-    return;
-  }
-  set_socket_nonblocking(s);
-
-  memset((void *)&router_addr,0,sizeof(router_addr));
-  router_addr.sin_family = AF_INET;
-  router_addr.sin_port = htons(router->dir_port);
-  router_addr.sin_addr.s_addr = htonl(router->addr);
-
-  log_fn(LOG_DEBUG,"Trying to connect to %s:%u.",router->address,router->dir_port);
-
-  if(connect(s,(struct sockaddr *)&router_addr,sizeof(router_addr)) < 0){
-    if(!ERRNO_CONN_EINPROGRESS(errno)) {
-      /* yuck. kill it. */
-      router_forget_router(conn->addr, conn->port); /* don't try him again */
-      connection_free(conn);
-      return;
-    } else {
-      /* it's in progress. set state appropriately and return. */
-      conn->s = s;
-
-      if(connection_add(conn) < 0) { /* no space, forget it */
-        connection_free(conn);
-        return;
-      }
-
-      log_fn(LOG_DEBUG,"connect in progress.");
-      connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
-      /* writable indicates finish, readable indicates broken link,
-         error indicates broken link in windowsland. */
-      conn->state = DIR_CONN_STATE_CONNECTING;
-      return;
-    }
-  }
-
-  /* it succeeded. we're connected. */
-  conn->s = s;
-
   if(connection_add(conn) < 0) { /* no space, forget it */
     connection_free(conn);
     return;
   }
 
-  log_fn(LOG_DEBUG,"Connection to router %s:%u established.",router->address,router->dir_port);
+  switch(connection_connect(conn, router->address, router->addr, router->dir_port)) {
+    case -1:
+      router_forget_router(conn->addr, conn->port); /* don't try him again */
+      connection_free(conn);
+      return;
+    case 0:
+      connection_set_poll_socket(conn);
+      connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
+      /* writable indicates finish, readable indicates broken link,
+         error indicates broken link in windowsland. */
+      conn->state = DIR_CONN_STATE_CONNECTING;
+      return;
+    /* case 1: fall through */
+  }
 
+  connection_set_poll_socket(conn);
   if(directory_send_command(conn) < 0) {
     connection_remove(conn);
     connection_free(conn);

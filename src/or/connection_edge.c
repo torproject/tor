@@ -643,53 +643,26 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
 }
 
 int connection_exit_connect(connection_t *conn) {
-  int s; /* for the new socket */
-  struct sockaddr_in dest_addr;
 
   if(router_compare_to_exit_policy(conn) < 0) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.", conn->address, conn->port);
     return -1;
   }
 
-  /* all the necessary info is here. Start the connect() */
-  s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
-  if (s < 0) {
-    log_fn(LOG_ERR,"Error creating network socket.");
-    return -1;
-  }
-  set_socket_nonblocking(s);
-
-  memset((void *)&dest_addr,0,sizeof(dest_addr));
-  dest_addr.sin_family = AF_INET;
-  dest_addr.sin_port = htons(conn->port);
-  dest_addr.sin_addr.s_addr = htonl(conn->addr);
-
-  log_fn(LOG_DEBUG,"Connecting to %s:%u.",conn->address,conn->port); 
-
-  if(connect(s,(struct sockaddr *)&dest_addr,sizeof(dest_addr)) < 0) {
-    if(!ERRNO_CONN_EINPROGRESS(errno)) {
-      /* yuck. kill it. */
-      perror("connect");
-      log_fn(LOG_DEBUG,"Connect failed.");
+  switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
+    case -1:
       return -1;
-    } else {
-      /* it's in progress. set state appropriately and return. */
-      conn->s = s;
+    case 0:
       connection_set_poll_socket(conn);
       conn->state = EXIT_CONN_STATE_CONNECTING;
 
-      log_fn(LOG_DEBUG,"connect in progress, socket %d.",s);
       connection_watch_events(conn, POLLOUT | POLLIN | POLLERR);
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link in windowsland. */
       return 0;
-    }
+    /* case 1: fall through */
   }
 
-  /* it succeeded. we're connected. */
-  log_fn(LOG_DEBUG,"Connection to %s:%u established.",conn->address,conn->port);
-
-  conn->s = s;
   connection_set_poll_socket(conn);
   conn->state = EXIT_CONN_STATE_OPEN;
   if(connection_wants_to_flush(conn)) { /* in case there are any queued data cells */

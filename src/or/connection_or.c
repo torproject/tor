@@ -73,7 +73,6 @@ int connection_or_finished_flushing(connection_t *conn) {
 #endif
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
         if(!ERRNO_CONN_EINPROGRESS(errno)){
-          /* yuck. kill it. */
           log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
           return -1;
         } else {
@@ -123,8 +122,6 @@ int connection_or_finished_flushing(connection_t *conn) {
 
 connection_t *connection_or_connect(routerinfo_t *router) {
   connection_t *conn;
-  struct sockaddr_in router_addr;
-  int s;
 
   assert(router);
 
@@ -152,35 +149,18 @@ connection_t *connection_or_connect(routerinfo_t *router) {
   conn->pkey = crypto_pk_dup_key(router->pkey);
   conn->address = strdup(router->address);
 
-  s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
-  if (s < 0) {
-    log(LOG_ERR,"Error creating network socket.");
+  if(connection_add(conn) < 0) { /* no space, forget it */
     connection_free(conn);
     return NULL;
   }
-  set_socket_nonblocking(s);
 
-  memset((void *)&router_addr,0,sizeof(router_addr));
-  router_addr.sin_family = AF_INET;
-  router_addr.sin_port = htons(router->or_port);
-  router_addr.sin_addr.s_addr = htonl(router->addr);
-
-  log(LOG_DEBUG,"connection_or_connect() : Trying to connect to %s:%u.",router->address,router->or_port);
-  if(connect(s,(struct sockaddr *)&router_addr,sizeof(router_addr)) < 0){
-    if(!ERRNO_CONN_EINPROGRESS(errno)) {
-      /* yuck. kill it. */
+  switch(connection_connect(conn, router->address, router->addr, router->or_port)) {
+    case -1:
+      connection_remove(conn);
       connection_free(conn);
       return NULL;
-    } else {
-      /* it's in progress. set state appropriately and return. */
-      conn->s = s;
-
-      if(connection_add(conn) < 0) { /* no space, forget it */
-        connection_free(conn);
-        return NULL;
-      }
-
-      log(LOG_DEBUG,"connection_or_connect() : connect in progress.");
+    case 0:
+      connection_set_poll_socket(conn);
       connection_watch_events(conn, POLLIN | POLLOUT | POLLERR); 
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link on windows */
@@ -190,19 +170,10 @@ connection_t *connection_or_connect(routerinfo_t *router) {
       conn->state = OR_CONN_STATE_CLIENT_CONNECTING;
 #endif
       return conn;
-    }
+    /* case 1: fall through */
   }
 
-  /* it succeeded. we're connected. */
-  conn->s = s;
-
-  if(connection_add(conn) < 0) { /* no space, forget it */
-    connection_free(conn);
-    return NULL;
-  }
-
-  log(LOG_DEBUG,"connection_or_connect() : Connection to router %s:%u established.",
-      router->address, router->or_port);
+  connection_set_poll_socket(conn);
 
 #ifdef USE_TLS
   if(connection_tls_start_handshake(conn, 0) >= 0)

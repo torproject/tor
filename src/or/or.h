@@ -569,19 +569,15 @@ int getconfig(int argc, char **argv, or_options_t *options);
 
 /********************************* connection.c ***************************/
 
-int tv_cmp(struct timeval *a, struct timeval *b);
-
 connection_t *connection_new(int type);
-
 void connection_free(connection_t *conn);
 
 int connection_create_listener(struct sockaddr_in *bindaddr, int type);
-
 int connection_handle_listener_read(connection_t *conn, int new_type);
 
 int connection_tls_start_handshake(connection_t *conn, int receiving);
 
-/* start all connections that should be up but aren't */
+int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
 int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
 
 int connection_handle_read(connection_t *conn);
@@ -596,12 +592,8 @@ int connection_flush_buf(connection_t *conn);
 int connection_handle_write(connection_t *conn);
 
 int connection_write_to_buf(char *string, int len, connection_t *conn);
-void connection_send_cell(connection_t *conn);
 
 int connection_receiver_bucket_should_increase(connection_t *conn);
-
-void connection_increment_send_timeval(connection_t *conn);
-void connection_init_timeval(connection_t *conn);
 
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 int connection_is_listener(connection_t *conn);
