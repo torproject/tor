@@ -186,10 +186,10 @@ Set this to 0 if you don't want to allow application connections. (Default:
 9050)
 .TP
 \fBSOCKSBindAddress \fR\fIIP\fP
-Bind to this address to listen for connections from socks-speaking applications. (Default: 127.0.0.1) You can also specify a port (e.g. 192.168.0.1:9100). This directive can be specified multiple times to bind to multiple addresses/ports.
+Bind to this address to listen for connections from SOCKS-speaking applications. (Default: 127.0.0.1) You can also specify a port (e.g. 192.168.0.1:9100). This directive can be specified multiple times to bind to multiple addresses/ports.
 .TP
 \fBSOCKSPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
-Set an entrance policy for this server, to limit who can connect to the socks ports. The policies have the same form as exit policies below.
+Set an entrance policy for this server, to limit who can connect to the SOCKS ports. The policies have the same form as exit policies below.
 
 .SH SERVER OPTIONS
 .PP

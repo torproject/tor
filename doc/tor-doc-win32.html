@@ -9,10 +9,10 @@
 
 <body>
 
-<h1><a href="http://tor.freehaven.net/">Tor</a> for Win32</h1>
+<h1>Running <a href="http://tor.freehaven.net/">Tor</a> on Win32</h1>
 
 <a name="installing"></a>
-<h2>Installing Tor</h2>
+<h2>Step One: Download and Install Tor</h2>
 
 <p>
 The latest stable release of Tor for Windows 32 is <a
@@ -51,8 +51,8 @@ src="http://tor.freehaven.net/img/screenshot-dos-window.jpg" />
 default configuration file, and most people won't need to change any of
 the settings. Tor is now installed.</p>
 
-<a name="using"></a>
-<h2>Configuring your applications to use Tor</h2>
+<a name="privoxy"></a>
+<h2>Step Two: Install Privoxy for Web Browsing</h2>
 
 <p>After installing Tor, you need to configure your applications to use it.
 The first step is to set up web browsing. Start by installing <a
@@ -83,7 +83,11 @@ the file. Be sure to save.
 <img border="1" alt="privoxy points to tor"
 src="http://tor.freehaven.net/img/screenshot-privoxy-edit.jpg" />
 
-<p>Then change your browser to http proxy at localhost port 8118.
+<a name="using"></a>
+<h2>Step three: Configure your applications to use Tor</h2>
+
+<p>Then change your browser to HTTP proxy at localhost port 8118.
+(That's where Privoxy listens.)
 In Mozilla, this is in Edit|Preferences|Advanced|Proxies. In IE, it's
 Tools|Internet Options|Connections|LAN Settings|Advanced.
 You should also set your SSL proxy (IE calls it "Secure") to the same
@@ -94,9 +98,9 @@ src="http://tor.freehaven.net/img/screenshot-ie-lan.jpg" />
 <img alt="Proxy settings in IE"
 src="http://tor.freehaven.net/img/screenshot-ie-proxies.jpg" />
 
-<p>Using privoxy is <b>necessary</b> because <a
+<p>Using privoxy is <strong>necessary</strong> because <a
 href="http://tor.freehaven.net/cvs/tor/doc/CLIENTS">browsers leak your
-DNS requests when they use a socks proxy directly</a>, which is bad for
+DNS requests when they use a SOCKS proxy directly</a>, which is bad for
 your anonymity. Privoxy also removes certain dangerous headers from your
 web requests, and blocks obnoxious ad sites like Doubleclick.</p>
 
@@ -114,16 +118,17 @@ For more troubleshooting suggestions, see <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>.
 </p>
 
-<p>To Torify an application that supports http, just point it at Privoxy
-(that is, localhost port 8118). To use socks directly (for example, for
+<p>To Torify another application that supports HTTP, just point it at Privoxy
+(that is, localhost port 8118). To use SOCKS directly (for example, for
 instant messaging, Jabber, IRC, etc), point your application directly at
-Tor (localhost port 9050). For applications that support neither socks
-nor http, take a look at <a
+Tor (localhost port 9050). For applications that support neither SOCKS
+nor HTTP, take a look at <a
 href="http://www.socks.permeo.com/Download/SocksCapDownload/index.asp">SocksCap</a>,
 <a href="http://www.freecap.ru/eng/">FreeCap</a>,
 or the <a
 href="http://www.hummingbird.com/products/nc/socks/index.html?cks=y">Hummingbird</a>
-SOCKS client. Let us know if you get them working so we can add better
+SOCKS client. (FreeCap is free software; the others are proprietary.)
+Let us know if you get them working so we can add better
 instructions here.</p>
 
 <p>If you have suggestions for improving this document, please <a
@@ -131,4 +136,3 @@ href="mailto:tor-bugs@freehaven.net">send them to us</a>. Thanks!</p>
 
 </body>
 </html>
-
