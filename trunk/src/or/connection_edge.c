@@ -1136,7 +1136,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
 
   if(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
     n_stream->address = tor_strdup("(rendezvous)");
-    strcpy(n_stream->rend_query, "yes"); /* XXX kludge */
+    strcpy(n_stream->rend_query, circ->rend_query);
     if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {
       log_fn(LOG_WARN,"Didn't find rendezvous service (port %d)",n_stream->port);
       connection_mark_for_close(n_stream,0 /* XXX */);
