@@ -11,58 +11,12 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-For 0.0.2pre17:
-        o Put a H(K | handshake) into the onionskin response
-        o Make cells 512 bytes
-        o Reduce streamid footprint from 7 bytes to 2 bytes
-          X Check for collisions in streamid (now possible with
-            just 2 bytes), and back up & replace with padding if so
-        o Use the 4 reserved bytes in each cell header to keep 1/5
-          of a sha1 of the ongoing relay payload (move into stream header)
-        o Move length into the stream header too
-        o Make length 2 bytes
-        D increase DH key length
-        D increase RSA key length
-        D Spec the stream_id stuff. Clarify that nobody on the backward
-          stream should look at stream_id.
-
-Cell:
-        ACI (anonymous circuit identifier)    [2 bytes]
-        Command                               [1 byte]
-        Payload (padded with 0 bytes)         [509 bytes]
-
-Relay payload:
-        Relay command           [1 byte]
-        Stream ID               [7 bytes]
-        Partial SHA-1           [4 bytes]
-        Length                  [2 bytes]
-        Relay payload           [495 bytes]
-
-For 0.0.2pre15:
-        o don't pick exit nodes which will certainly reject all things.
-        o don't pick nodes that the directory says are down
-        o choose randomly from running dirservers, not just first one
-        o install the man page
-        o warn when client-side tries an address/port which no router in the dir accepts.
-
-For 0.0.2pre14:
-        o More flexible exit policies (18.*, 18.0.0.0/8)
-        o Work to succeed in the precense of exit policy violation
-                o Replace desired_path_len with opaque path-selection specifier
-                o Client-side DNS caching
-                o Add entries to client DNS cache based on END cells
-                o Remove port from END_REASON_EXITPOLICY cells
-                o Start building new circuits when we get an exit-policy
-                  failure.  (Defer exiting from the middle of existing
-                  circuits or extending existing circuits for later.)
-                o Implement function to check whether a routerinfo_t 
-                  supports a given exit addr.
-                o Choose the exit node of an in-progress circuit based on
-                  pending AP connections.
-                o Choose the exit node _first_, then beginning, then
-                  middle nodes.
-
 Short-term:
+        - if you specify a non-dirserver as exitnode or entrynode, when it
+          makes the first few circuits it hasn't yet fetched the directory,
+          so it warns that it doesn't know the node.
+        - when you hup, rewrite the router.desc file (and maybe others)
+        - consider handling broken socks4 implementations
         - improve how it behaves when i remove a line from the approved-routers files
         - Make tls connections tls_close intentionally
         o Rename ACI to circID
@@ -212,6 +166,58 @@ SPEC!!          D Figure out how to do threshold directory servers
 
 Older (done) todo stuff:
 
+For 0.0.2pre17:
+        o Put a H(K | handshake) into the onionskin response
+        o Make cells 512 bytes
+        o Reduce streamid footprint from 7 bytes to 2 bytes
+          X Check for collisions in streamid (now possible with
+            just 2 bytes), and back up & replace with padding if so
+        o Use the 4 reserved bytes in each cell header to keep 1/5
+          of a sha1 of the ongoing relay payload (move into stream header)
+        o Move length into the stream header too
+        o Make length 2 bytes
+        D increase DH key length
+        D increase RSA key length
+        D Spec the stream_id stuff. Clarify that nobody on the backward
+          stream should look at stream_id.
+
+Cell:
+        ACI (anonymous circuit identifier)    [2 bytes]
+        Command                               [1 byte]
+        Payload (padded with 0 bytes)         [509 bytes]
+
+Relay payload:
+        Relay command           [1 byte]
+        Stream ID               [7 bytes]
+        Partial SHA-1           [4 bytes]
+        Length                  [2 bytes]
+        Relay payload           [495 bytes]
+
+For 0.0.2pre15:
+        o don't pick exit nodes which will certainly reject all things.
+        o don't pick nodes that the directory says are down
+        o choose randomly from running dirservers, not just first one
+        o install the man page
+        o warn when client-side tries an address/port which no router in the dir accepts.
+
+For 0.0.2pre14:
+        o More flexible exit policies (18.*, 18.0.0.0/8)
+        o Work to succeed in the precense of exit policy violation
+                o Replace desired_path_len with opaque path-selection specifier
+                o Client-side DNS caching
+                o Add entries to client DNS cache based on END cells
+                o Remove port from END_REASON_EXITPOLICY cells
+                o Start building new circuits when we get an exit-policy
+                  failure.  (Defer exiting from the middle of existing
+                  circuits or extending existing circuits for later.)
+                o Implement function to check whether a routerinfo_t 
+                  supports a given exit addr.
+                o Choose the exit node of an in-progress circuit based on
+                  pending AP connections.
+                o Choose the exit node _first_, then beginning, then
+                  middle nodes.
+
+Previous:
         o Get tor to act like a socks server
                 o socks4, socks4a
                 o socks5
