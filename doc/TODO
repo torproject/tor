@@ -11,6 +11,18 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
+Flag-day changes: (things which are backward incompatible)
+        . remove link key from directories, from connection_t.
+          (just get it from the tls cert)
+        . make onion keys include oaep padding, so you can tell
+          if you decrypted it correctly
+        . add bandwidthrate and bandwidthburst to server descriptor
+        - directories need to say who signed them.
+        - what other pieces of the descriptors need to change?
+          maybe add a section for who's connected to a given router?
+          add a flexible section for reputation info?
+
+
 Bugs:
         o we call signal(), but we should be calling sigaction()
         o send socks rejects when things go bad ?
