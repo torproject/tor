@@ -1,4 +1,4 @@
-/* Copyright 2001,2002,2003 Roger Dingledine, Matej Pfajfar. */
+/* Copyright 2001,2002,2003,2004 Roger Dingledine, Matej Pfajfar. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 
@@ -897,21 +897,25 @@ static int prepare_for_poll(void) {
 
   tor_gettimeofday(&now);
 
-  /* Check how much bandwidth we've consumed, and increment the token
-   * buckets. */
-  stats_n_bytes_read += stats_prev_global_read_bucket - global_read_bucket;
-  stats_n_bytes_read_in_interval += stats_prev_global_read_bucket - global_read_bucket;
-  stats_n_bytes_written += stats_prev_global_write_bucket - global_write_bucket;
-  stats_n_bytes_written_in_interval += stats_prev_global_write_bucket - global_write_bucket;
+  if(now.tv_sec > current_second) {
+    /* the second has rolled over. check more stuff. */
+    size_t bytes_written;
+    size_t bytes_read;
+    bytes_written = stats_prev_global_write_bucket - global_write_bucket;
+    bytes_read = stats_prev_global_read_bucket - global_read_bucket;
+    stats_n_bytes_read += bytes_read;
+    stats_n_bytes_read_in_interval += bytes_read;
+    stats_n_bytes_written += bytes_written;
+    stats_n_bytes_written_in_interval += bytes_written;
+    control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
 
-  connection_bucket_refill(&now);
-  stats_prev_global_read_bucket = global_read_bucket;
-  stats_prev_global_write_bucket = global_write_bucket;
-
-  if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
+    connection_bucket_refill(&now);
+    stats_prev_global_read_bucket = global_read_bucket;
+    stats_prev_global_write_bucket = global_write_bucket;
 
     if(current_second)
       stats_n_seconds_uptime += (now.tv_sec - current_second);
+
     assert_all_pending_dns_resolves_ok();
     run_scheduled_events(now.tv_sec);
     assert_all_pending_dns_resolves_ok();
@@ -1242,11 +1246,11 @@ static void dumpstats(int severity) {
 
   if (stats_n_seconds_uptime)
     log(severity,
-        "Average bandwidth used: "U64_FORMAT"/%ld = %d bytes/sec", 
+        "Average bandwidth used: "U64_FORMAT"/%ld = %d bytes/sec",
         U64_PRINTF_ARG(stats_n_bytes_read),
         stats_n_seconds_uptime,
         (int) (stats_n_bytes_read/stats_n_seconds_uptime));
-  
+
   rep_hist_dump_stats(now,severity);
   rend_service_dump_stats(severity);
 }

@@ -695,28 +695,18 @@ static void connection_read_bucket_decrement(connection_t *conn, int num_read) {
   }
 }
 
-/** Keep a timeval to know when time has passed enough to refill buckets */
-static struct timeval current_time;
-
 /** Initiatialize the global read bucket to options.BandwidthBurst,
  * and current_time to the current time. */
 void connection_bucket_init(void) {
-  tor_gettimeofday(&current_time);
   global_read_bucket = options.BandwidthBurst; /* start it at max traffic */
   global_write_bucket = options.BandwidthBurst; /* start it at max traffic */
 }
 
-/** Some time has passed; increment buckets appropriately. */
+/** A second has rolled over; increment buckets appropriately. */
 void connection_bucket_refill(struct timeval *now) {
   int i, n;
   connection_t *conn;
   connection_t **carray;
-
-  if(now->tv_sec <= current_time.tv_sec)
-    return; /* wait until the second has rolled over */
-
-  current_time.tv_sec = now->tv_sec; /* update current_time */
-  /* (ignore usecs for now) */
 
   /* refill the global buckets */
   if(global_read_bucket < options.BandwidthBurst) {
