@@ -481,7 +481,7 @@ try_next_line:
   do {
     *s = 0;
     s--;
-  } while (isspace(*s));
+  } while (s >= line && isspace(*s));
 
   key = line;
   while(isspace(*key))
