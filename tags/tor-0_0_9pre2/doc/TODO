@@ -1,0 +1,348 @@
+
+Legend:
+SPEC!!  - Not specified
+SPEC    - Spec not finalized
+NICK    - nick claims
+ARMA    - arma claims
+        - Not done
+        * Top priority
+        . Partially done
+        o Done
+        D Deferred
+        X Abandoned
+
+      0.0.9pre2:
+R       . bandwidth buckets for write as well as read.
+N       - switch dirservers entries to config lines.
+N       - add three default dirplaces if we parse the whole torrc and
+          no dirplaces are specified.
+N       - Handle rendezvousing with unverified nodes.
+          - Specify: Stick rendezvous point's key in INTRODUCE cell.
+            Bob should _always_ use key from INTRODUCE cell.
+          - Implement.
+N       - node 'groups' that are known to be in the same zone of control.
+          - Nodes can list their coadministrated nodes.
+            - If A lists B, it only counts if B also lists A
+          - Users can list other coadministrated nodes if they like.
+          . Never choose two coadministrated nodes in the same circuit.
+R       - figure out enclaves, e.g. so we know what to recommend that people
+          do, and so running a tor server on your website is helpful.
+          - Do enclaves for same IP only.
+          - Resolve first, then if IP is an OR, connect to next guy.
+N       - let tor servers use proxies for port 80 exits
+          - Use generic port redirector for IP/bits:Port->IP:Port .
+          - Make use of them when we're doing exit connections.
+
+      0.0.9pre3:
+N       - per-month byte allowances.
+          - Based on bandwidth and per-month allowance, choose a
+            window within month to be up.  Stay up until allowance is
+            used.  Adjust next month's window based on outcome.  Hibernate
+            when we're not up.
+          - Hibernate means "stop accepting connections, and start sleeping"
+N       - Pure C tor_resolve
+N       - the user interface interface
+          - Skeleton only.
+          - Implement parts along with trivial fun gui.
+N       - add ipv6 support.
+          - Spec issue: if a resolve returns an IP4 and an IP6 address,
+            which to use?
+R       - learn from ben about his openssl-reinitialization-trick to
+          rotate tls keys without making new connections.
+          - (Roger grabs Ben next time he sees him on IRC) 
+
+        D let tor clients use http proxies for dir fetching
+          - have a config entry to specify where to go
+        D nt services on win32.
+
+      0.0.8:
+        - fix sprintf's to snprintf's?
+        o Make it work on win32 with no $home
+                o Don't crash.
+                o Put files someplace reasonable.
+        o Why is the first entry of kill -USR1 a router with a 0 key?
+        o Tors deal appropriately when a newly-verified router has the
+          same nickname as another router they know about
+        X put ip:port:keyhash in intro points, rendezvous points,
+          and hidserv descriptors.
+        . Make intro points and rendezvous points accept $KEYID in addition
+          to nicknames.
+                o Specify
+                o Implement parsing
+                - Generate new formats (Not till 007 is dead)
+NICK    . unify similar config entries that need to be split. put them
+          into a smartlist, and have things take a smartlist.
+
+        - figure out what to do when somebody asks to extend to
+          ip:port:differentkey
+* reject it. assuming this is as dumb as it sounds.
+        - make loglevel info less noisy
+
+      bug fixes, might be handy:
+        - the directory servers complain a lot about people using the
+          old key. does 0.0.7 use dirservers before it's pulled down
+          the directory?
+        - put expiry date on onion-key, so people don't keep trying
+          old ones that they could know are expired?
+* Leave on todo list, see if pre3 onion fixes helped enough.
+        - should the running-routers list put unverified routers at the
+          end?
+* Cosmetic, don't do it yet.
+        - make advertised_server_mode() ORs fetch dirs more often.
+* not necessary yet.
+        - Add a notion of nickname->Pubkey binding that's not 'verification'
+* eventually, only when needed
+        - ORs use uniquer default nicknames
+* Don't worry about this for now
+        - Handle full buffers without totally borking
+* do this eventually, no rush.
+
+      more features, easy:
+        - per-month byte allowances
+* nick will spec something.
+        - have a pool of circuits available, cannibalize them
+          for your purposes (e.g. rendezvous, etc).
+* hold off on that.
+        - node 'groups' that are known to be in the same zone of control
+* nick and roger will talk about it
+        - do resolve before trying to attach the stream
+* don't do this for now.
+        - if destination IP is running a tor node, extend a circuit there
+          before sending begin.
+* don't do this for now. figure out how enclaves work. but do enclaves soon.
+        - Track max ten-second b/w ever seen, to show operator
+
+      more features, complex:
+        - compress the directory. client sends http header
+          "accept-transfer-encoding: gzip", server might send http header
+          "transfer-encoding: gzip". ta-da.
+          - grow a zlib dependency. keep a cached compressed directory.
+* nick will look into this. not critical priority.
+        - Switch dirservers entries to config lines:
+          - read in and parse each TrustedDir config line.
+          - stop reading dirservers file.
+          - add some default TrustedDir lines if none defined, or if
+            no torrc.
+          - remove notion of ->is_trusted_dir from the routerlist. that's
+            no longer where you look.
+            - clean up router parsing flow, since it's simpler now?
+          - when checking signature on a directory, look it up in
+            options.TrustedDirs, and make sure there's a descriptor
+            with that nickname, whose key hashes to the fingerprint,
+            and who correctly signed the directory.
+* nick will do the above
+          - when fetching a directory, if you want a trusted one,
+            choose from the trusteddir list.
+            - which means keeping track of which ones are "up"
+          - if you don't need a trusted one, choose from the routerinfo
+            list if you have one, else from the trusteddir list.
+* roger will do the above
+        - add a listener for a ui
+* nick chats with weasel
+          - and a basic gui
+        - Have clients and dirservers preserve reputation info over
+          reboots.
+* continue not doing until we have something we need to preserve
+        - users can set their bandwidth, or we auto-detect it:
+          - advertised bandwidth defaults to 10KB
+          o advertised bandwidth is the min of max seen in each direction
+            in the past N seconds.
+            o calculate this
+          o not counting "local" connections
+          - round detected bandwidth up to nearest 10KB
+        - client software not upload descriptor until:
+          - you've been running for an hour
+          - it's sufficiently satisfied with its bandwidth
+          - it decides it is reachable
+          - start counting again if your IP ever changes.
+          - never regenerate identity keys, for now.
+          - you can set a bit for not-being-an-OR.
+* no need to do this yet. few people define their ORPort.
+        - authdirserver lists you as running iff:
+          - he can connect to you
+          - he has successfully extended to you
+          - you have sufficient mean-time-between-failures
+* keep doing nothing for now.
+
+      blue sky:
+        - Possible to get autoconf to easily install things into ~/.tor?
+
+      ongoing:
+        . rename/rearrange functions for what file they're in
+        - generalize our transport: add transport.c in preparation for
+          http, airhook, etc transport.
+NICK    - investigate sctp for alternate transport.
+
+For September:
+NICK    . Windows port
+          o works as client
+            - deal with pollhup / reached_eof on all platforms
+          . robust as a client
+          . works as server
+            - can be configured
+          - robust as a server
+          . Usable as NT service
+          - docs for building in win
+          - installer
+
+        - Docs
+          . FAQ
+          o overview of tor. how does it work, what's it do, pros and
+            cons of using it, why should I use it, etc.
+          - a howto tutorial with examples
+* put a stub on the wiki
+          o tutorial: how to set up your own tor network
+            - (need to not hardcode dirservers file in config.c)
+* this will be solved when we put dirservers in config lines
+          - port forwarding howto for ipchains, etc
+* roger add to wiki of requests
+          . correct, update, polish spec
+          - document the exposed function api?
+          o document what we mean by socks.
+
+NICK    . packages
+          . rpm
+* nick will look at the spec file
+          - find a long-term rpm maintainer
+* roger will start guilting people
+
+        - code
+          - better warn/info messages
+          o let tor do resolves.
+          o extend socks4 to do resolves?
+          o make script to ask tor for resolves
+          - write howto for setting up tsocks, socat.
+            - including on osx and win32
+          - freecap handling
+          - tsocks
+            o gather patches, submit to maintainer
+* send him a reminder mail and see what's up.
+            - intercept gethostbyname and others
+* add this to tsocks
+            o do resolve via tor
+          - redesign and thorough code revamp, with particular eye toward:
+            - support half-open tcp connections
+            - conn key rotation
+            - other transports -- http, airhook
+            - modular introduction mechanism
+            - allow non-clique topology
+
+Other details and small and hard things:
+        - tor should be able to have a pool of outgoing IP addresses
+          that it is able to rotate through. (maybe)
+        - tie into squid
+        - hidserv offerers shouldn't need to define a SocksPort
+* figure out what breaks for this, and do it.
+        - when the client fails to pick an intro point for a hidserv,
+          it should refetch the hidserv desc.
+        . should maybe make clients exit(1) when bad things happen?
+          e.g. clock skew.
+        - should retry exitpolicy end streams even if the end cell didn't
+          resolve the address for you
+        . Make logs handle it better when writing to them fails.
+        o Dirserver shouldn't put you in running-routers list if you haven't
+          uploaded a descriptor recently
+        . Refactor: add own routerinfo to routerlist.  Right now, only
+          router_get_by_nickname knows about 'this router', as a hack to
+          get circuit_launch_new to do the right thing.
+        . Scrubbing proxies
+                - Find an smtp proxy?
+                . Get socks4a support into Mozilla
+        - Need a relay teardown cell, separate from one-way ends.
+        - Make it harder to circumvent bandwidth caps: look at number of bytes
+          sent across sockets, not number sent inside TLS stream.
+        - fix router_get_by_* functions so they can get ourselves too,
+          and audit everything to make sure rend and intro points are
+          just as likely to be us as not.
+
+
+***************************Future tasks:****************************
+
+Rendezvous and hidden services:
+  make it fast:
+    - preemptively build and start rendezvous circs.
+    - preemptively build n-1 hops of intro circs?
+    - cannibalize general circs?
+  make it reliable:
+    - standby/hotswap/redundant services.
+    - store stuff to disk? dirservers forget service descriptors when
+      they restart; nodes offering hidden services forget their chosen
+      intro points when they restart.
+  make it robust:
+    - auth mechanisms to let midpoint and bob selectively choose
+      connection requests.
+  make it scalable:
+    - right now the hidserv store/lookup system is run by the dirservers;
+      this won't scale.
+
+Tor scalability:
+  Relax clique assumptions.
+  Redesign how directories are handled.
+    - Separate running-routers lookup from descriptor list lookup.
+    - Resolve directory agreement somehow.
+    - Cache directory on all servers.
+  Find and remove bottlenecks
+    - Address linear searches on e.g. circuit and connection lists.
+  Reputation/memory system, so dirservers can measure people,
+    and so other people can verify their measurements.
+    - Need to measure via relay, so it's not distinguishable.
+  Bandwidth-aware path selection. So people with T3's are picked
+    more often than people with DSL.
+  Reliability-aware node selection. So people who are stable are
+    preferred for long-term circuits such as intro and rend circs,
+    and general circs for irc, aim, ssh, etc.
+  Let dissidents get to Tor servers via Tor users. ("Backbone model")
+
+Anonymity improvements:
+  Is abandoning the circuit the only option when an extend fails, or
+    can we do something without impacting anonymity too much?
+  Is exiting from the middle of the circuit always a bad idea?
+  Helper nodes. Decide how to use them to improve safety.
+  DNS resolution: need to make tor support resolve requests. Need to write
+    a script and an interface (including an extension to the socks
+    protocol) so we can ask it to do resolve requests. Need to patch
+    tsocks to intercept gethostbyname, else we'll continue leaking it.
+  Improve path selection algorithms based on routing-zones paper. Be sure
+    to start and end circuits in different ASs. Ideally, consider AS of
+    source and destination -- maybe even enter and exit via nearby AS.
+  Intermediate model, with some delays and mixing.
+  Add defensive dropping regime?
+
+Make it more correct:
+  Handle half-open connections: right now we don't support all TCP
+    streams, at least according to the protocol. But we handle all that
+    we've seen in the wild.
+  Support IPv6.
+
+Efficiency/speed/robustness:
+  Congestion control. Is our current design sufficient once we have heavy
+    use? Need to measure and tweak, or maybe overhaul.
+  Allow small cells and large cells on the same network?
+  Cell buffering and resending. This will allow us to handle broken
+    circuits as long as the endpoints don't break, plus will allow
+    connection (tls session key) rotation.
+  Implement Morphmix, so we can compare its behavior, complexity, etc.
+  Use cpuworker for more heavy lifting.
+    - Signing (and verifying) hidserv descriptors
+    - Signing (and verifying) intro/rend requests
+    - Signing (and verifying) router descriptors
+    - Signing (and verifying) directories
+    - Doing TLS handshake (this is very hard to separate out, though)
+  Buffer size pool: allocate a maximum size for all buffers, not
+    a maximum size for each buffer. So we don't have to give up as
+    quickly (and kill the thickpipe!) when there's congestion.
+  Exit node caching: tie into squid or other caching web proxy.
+  Other transport. HTTP, udp, rdp, airhook, etc. May have to do our own
+    link crypto, unless we can bully openssl into it.
+
+P2P Tor:
+  Do all the scalability stuff above, first.
+  Incentives to relay. Not so hard.
+  Incentives to allow exit. Possibly quite hard.
+  Sybil defenses without having a human bottleneck.
+  How to gather random sample of nodes.
+  How to handle nodelist recommendations.
+  Consider incremental switches: a p2p tor with only 50 users has
+    different anonymity properties than one with 10k users, and should
+    be treated differently.
+
