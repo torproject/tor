@@ -38,6 +38,13 @@ A token bucket limits the average incoming bandwidth on this node to NUM bytes p
 \fBbandwidthburst \fR\fINUM\fP
 Limit the maximum token bucket size (also known as the burst) to NUM bytes. (Default: 10000000)
 .TP
+\fBdirserver \fR\fIaddress:port fingerprint\fP
+Use a nonstandard authoritative directory server at the provided
+address and port, with the specified key fingerprint.  This option can
+be repeated many times, for multiple authoritative directory
+servers. If no \fBdirserver\fP line is given, Tor will use the default
+directory servers: moria1, moria2, and tor26.
+.TP
 \fBdebuglogfile \fR\fIFILE\fP
 In addition to other logging, we will log to FILE at log-level debug.
 .TP
@@ -58,9 +65,6 @@ of Tor's outgoing connections to use a single one.
 .TP
 \fBpidfile \fR\fIFILE\fP
 On startup, write our PID to FILE. On clean shutdown, remove FILE.
-.TP
-\fBrouterfile \fR\fIFILE\fP
-FILE contains a list of directory servers, to bootstrap into the network. (Default: @CONFDIR@/dirservers)
 .TP
 \fBrunasdaemon \fR\fI0|1\fP
 If 1, Tor forks and daemonizes to the background. (Default: 0)
@@ -117,6 +121,11 @@ fascistfirewall is set. (Default: 80, 443.)
 \fB 
 \fBnewcircuitperiod \fR\fINUM\fP
 Every NUM seconds consider whether to build a new circuit. (Default: 60)
+.TP
+\fBnodefamily \fR\fInickname,nickname,...\fP
+The named Tor servers constitute a "family" of similar or
+co-administared servers, so never use any two of them in the same
+circuit.  This option can be used multiple times.
 .TP
 \fBpathlencoinweight \fR\fI0.0-1.0\fP
 Paths are 3 hops plus a geometric distribution centered around this coinweight. Must be >=0.0 and <1.0. (Default: 0.3) NOT USED CURRENTLY
@@ -193,6 +202,12 @@ space. The default exit policy is:
 \fBmaxonionspending \fR\fINUM\fP
 If you have more than this number of onionskins queued for decrypt, reject new ones. (Default: 100)
 .TP
+\fBmyfamily \fR\fInickname,nickname,...\fP
+Declare that this Tor server is controlled or administered by a group
+or organization identical or similar to that of the other named servers.  
+When two servers both declare that they are in the same 'family', Tor clients
+will not use them in the same circuit.
+.TP
 \fBnickname \fR\fIname\fP
 Set the server's nickname to 'name'.
 .TP
@@ -204,6 +219,14 @@ Bind to this port to listen for connections from Tor clients and servers.
 .TP
 \fBorbindaddress \fR\fIIP\fP
 Bind to this address to listen for connections from Tor clients and servers. (Default: 0.0.0.0)
+.TP
+\fBredirectexit \fR\fIpattern address:port\fP
+Whenever an outgoing connection tries to connect to one of a given set
+of addresses, connect to \fIaddress:port\fP instead.  The address
+pattern is given in the same format as for an exit policy.  The
+address translation applies after exit policies are applied.  Multiple
+\fBredirectexit\fP options can be used: once any one has matched
+successfully, no subsequent rules are considered.
 
 .SH DIRECTORY SERVER OPTIONS
 .PP
@@ -227,7 +250,11 @@ Bind the directory service to this port.
 Bind the directory service to this address. (Default: 0.0.0.0)
 .TP
 \fBrecommendedversions \fR\fISTRING\fP
-STRING is a command-separated list of Tor versions currently believed to be safe. The list is included in each directory, and nodes which pull down the directory learn whether they need to upgrade.
+STRING is a command-separated list of Tor versions currently believed
+to be safe. The list is included in each directory, and nodes which
+pull down the directory learn whether they need to upgrade.  This
+option can appear multiple times: the values from multiple lines are
+spliced together.
 .TP
 \fBruntesting \fR\fI0|1\fP
 If set to 1, Tor tries to build circuits through all of the servers it
