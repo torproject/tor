@@ -220,8 +220,10 @@ static void conn_close_if_marked(int i) {
       } else {
         flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
       }
-      if(connection_wants_to_flush(conn)) /* not done flushing */
-        log_fn(LOG_WARN,"Conn (socket %d) still wants to flush. Losing %d bytes!",conn->s, (int)buf_datalen(conn->inbuf));
+      if(connection_wants_to_flush(conn) && buf_datalen(conn->outbuf)) {
+        log_fn(LOG_WARN,"Conn (socket %d) still wants to flush. Losing %d bytes!",
+               conn->s, (int)buf_datalen(conn->outbuf));
+      }
     }
     connection_remove(conn);
     connection_free(conn);
@@ -606,11 +608,11 @@ static void dumpstats(int severity) {
   if (stats_n_data_cells_packaged)
     log(severity,"Average outgoing cell fullness: %2.3f%%",
            100*(((double)stats_n_data_bytes_packaged) /
-                (stats_n_data_cells_packaged*(CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE))) );
+                (stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
   if (stats_n_data_cells_received)
     log(severity,"Average incoming cell fullness: %2.3f%%",
            100*(((double)stats_n_data_bytes_received) /
-                (stats_n_data_cells_received*(CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE))) );
+                (stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
   if (stats_n_seconds_reading)
     log(severity,"Average bandwidth used: %d bytes/sec",
