@@ -15,6 +15,7 @@ static void connection_edge_consider_sending_sendme(connection_t *conn);
 
 static uint32_t client_dns_lookup_entry(const char *address);
 static void client_dns_set_entry(const char *address, uint32_t val);
+static int client_dns_incr_failures(const char *address);
 
 void relay_header_pack(char *dest, const relay_header_t *src) {
   *(uint8_t*)(dest) = src->command;
@@ -216,23 +217,46 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   return 0;
 }
 
+#define MAX_RESOLVE_FAILURES 3
+
 int connection_edge_process_relay_cell_not_open(
     relay_header_t *rh, cell_t *cell, circuit_t *circ,
     connection_t *conn, crypt_path_t *layer_hint) {
   uint32_t addr;
+  int reason;
 
   if(rh->command == RELAY_COMMAND_END) {
+    reason = *(cell->payload+RELAY_HEADER_SIZE);
+    /* We have to check this here, since we aren't connected yet. */
+    if (rh->length >= 5 && reason == END_STREAM_REASON_EXITPOLICY) {
+      addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
+      client_dns_set_entry(conn->socks_request->address, addr);
+      conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+      if(connection_ap_handshake_attach_circuit(conn) >= 0)
+        return 0;
+      /* else, conn will get closed below */
+    } else if (rh->length && reason == END_STREAM_REASON_RESOLVEFAILED) {
+      if (client_dns_incr_failures(conn->socks_request->address)
+          < MAX_RESOLVE_FAILURES) {
+        /* We haven't retried too many times; reattach the connection. */
+        conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+        if(connection_ap_handshake_attach_circuit(conn) >= 0)
+          return 0;
+        /* else, conn will get closed below */
+      }
+    }
     log_fn(LOG_INFO,"Edge got end (%s) before we're connected. Marking for close.",
       connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh->length));
     if(CIRCUIT_IS_ORIGIN(circ))
       circuit_log_path(LOG_INFO,circ);
     conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
     connection_mark_for_close(conn, 0);
-    /* XXX This is where we should check if reason is EXITPOLICY, and reattach */
     /* XXX here we should send a socks reject back if necessary, and hold
      * open til flushed */
     return 0;
   }
+
+
   if(conn->type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_CONNECTED) {
     if(conn->state != AP_CONN_STATE_CONNECT_WAIT) {
       log_fn(LOG_WARN,"Got 'connected' while not in state connect_wait. Dropping.");
@@ -269,7 +293,6 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                                        connection_t *conn,
                                        crypt_path_t *layer_hint) {
   static int num_seen=0;
-  uint32_t addr;
   relay_header_t rh;
 
   assert(cell && circ);
@@ -338,23 +361,6 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         log_fn(LOG_INFO,"end cell (%s) dropped, unknown stream.",
           connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
         return 0;
-      }
-      if(rh.length >= 5 &&
-         *(cell->payload+RELAY_HEADER_SIZE) == END_STREAM_REASON_EXITPOLICY) {
-
-        /* XXX this will never be reached, since we're in 'connect_wait' state
-         * but this is only reached when we're in 'open' state. Put it higher. */
-
-        /* No need to close the connection. We'll hold it open while
-         * we try a new exit node.
-         * cell->payload+RELAY_HEADER_SIZE+1 holds the destination addr.
-         */
-        addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
-        client_dns_set_entry(conn->socks_request->address, addr);
-        conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-        if(connection_ap_handshake_attach_circuit(conn) >= 0)
-          return 0;
-        /* else, conn will get closed below */
       }
 /* XXX add to this log_fn the exit node's nickname? */
       log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
@@ -1256,6 +1262,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
 struct client_dns_entry {
   uint32_t addr;
   time_t expires;
+  int n_failures;
 };
 static int client_dns_size = 0;
 static strmap_t *client_dns_map = NULL;
@@ -1263,6 +1270,20 @@ static strmap_t *client_dns_map = NULL;
 void client_dns_init(void) {
   client_dns_map = strmap_new();
   client_dns_size = 0;
+}
+
+static struct client_dns_entry *
+_get_or_create_ent(const char *address)
+{
+  struct client_dns_entry *ent;
+  ent = strmap_get_lc(client_dns_map,address);
+  if (!ent) {
+    ent = tor_malloc_zero(sizeof(struct client_dns_entry));
+    ent->expires = time(NULL)+MAX_DNS_ENTRY_AGE;
+    strmap_set_lc(client_dns_map,address,ent);
+    ++client_dns_size;
+  }
+  return ent;
 }
 
 static uint32_t client_dns_lookup_entry(const char *address)
@@ -1279,7 +1300,7 @@ static uint32_t client_dns_lookup_entry(const char *address)
     return ntohl(in.s_addr);
   }
   ent = strmap_get_lc(client_dns_map,address);
-  if (!ent) {
+  if (!ent && !ent->addr) {
     log_fn(LOG_DEBUG, "No entry found for address %s", address);
     return 0;
   } else {
@@ -1298,6 +1319,13 @@ static uint32_t client_dns_lookup_entry(const char *address)
   }
 }
 
+static int client_dns_incr_failures(const char *address)
+{
+  struct client_dns_entry *ent;
+  ent = _get_or_create_ent(address);
+  return ++ent->n_failures;
+}
+
 static void client_dns_set_entry(const char *address, uint32_t val)
 {
   struct client_dns_entry *ent;
@@ -1310,23 +1338,13 @@ static void client_dns_set_entry(const char *address, uint32_t val)
   if (tor_inet_aton(address, &in))
     return;
   now = time(NULL);
-  ent = strmap_get_lc(client_dns_map, address);
-  if (ent) {
-    in.s_addr = htonl(val);
-    log_fn(LOG_DEBUG, "Updating entry for address %s: %s", address,
-           inet_ntoa(in));
-    ent->addr = val;
-    ent->expires = now+MAX_DNS_ENTRY_AGE;
-  } else {
-    in.s_addr = htonl(val);
-    log_fn(LOG_DEBUG, "Caching result for address %s: %s", address,
-           inet_ntoa(in));
-    ent = tor_malloc(sizeof(struct client_dns_entry));
-    ent->addr = val;
-    ent->expires = now+MAX_DNS_ENTRY_AGE;
-    strmap_set_lc(client_dns_map, address, ent);
-    ++client_dns_size;
-  }
+  ent = _get_or_create_ent(address);
+  in.s_addr = htonl(val);
+  log_fn(LOG_DEBUG, "Updating entry for address %s: %s", address,
+         inet_ntoa(in));
+  ent->addr = val;
+  ent->expires = now+MAX_DNS_ENTRY_AGE;
+  ent->n_failures = 0;
 }
 
 static void* _remove_if_expired(const char *addr,
