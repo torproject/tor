@@ -838,6 +838,11 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
 /* ***** Client DNS code ***** */
 
 /* XXX Perhaps this should get merged with the dns.c code somehow. */
+/* XXX But we can't just merge them, because then nodes that act as
+ *     both OR and OP could be attacked: people could rig the dns cache
+ *     by answering funny things to stream begin requests, and later
+ *     other clients would reuse those funny addr's. Hm.
+ */
 struct client_dns_entry {
   SPLAY_ENTRY(client_dns_entry) node;
   char *address;
