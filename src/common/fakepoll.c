@@ -46,10 +46,8 @@ tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
         return poll(ufds,nfds,timeout);
 }
 #else
-/* by default, windows handles only 64 fd's */
-#if defined(MS_WINDOWS) && !defined(FD_SETSIZE)
+
 #define FD_SETSIZE MAXCONNECTIONS
-#endif
 
 int
 tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
