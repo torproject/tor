@@ -41,6 +41,7 @@ void *tor_realloc(void *ptr, size_t size);
 char *tor_strdup(const char *s);
 char *tor_strndup(const char *s, size_t n);
 #define tor_free(p) do {if(p) {free(p); (p)=NULL;}} while(0)
+void tor_strlower(char *s);
 
 typedef struct {
   void **list;
@@ -66,9 +67,11 @@ strmap_t* strmap_new(void);
 void* strmap_set(strmap_t *map, const char *key, void *val);
 void* strmap_get(strmap_t *map, const char *key);
 void* strmap_remove(strmap_t *map, const char *key);
-void strmap_foreach(strmap_t *map,
-		    void* (*fn)(const char *key, void *val, void *data),
-		    void *data);
+void* strmap_set_lc(strmap_t *map, const char *key, void *val);
+void* strmap_get_lc(strmap_t *map, const char *key);
+void* strmap_remove_lc(strmap_t *map, const char *key);
+typedef void* (*strmap_foreach_fn)(const char *key, void *val, void *data);
+void strmap_foreach(strmap_t *map, strmap_foreach_fn fn, void *data);
 void strmap_free(strmap_t *map, void (*free_val)(void*));
 
 strmap_iter_t *strmap_iter_init(strmap_t *map);
