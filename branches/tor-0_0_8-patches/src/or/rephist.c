@@ -287,7 +287,7 @@ void rep_hist_dump_stats(time_t now, int severity)
           break;
         }
       }
-      log(severity, buffer);
+      log(severity, "%s", buffer);
     }
   }
 }
