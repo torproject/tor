@@ -153,20 +153,17 @@ server <a href="#server">below</a>.</p>
 <a name="installing"></a>
 <h2>Installing Tor</h2>
 
-<p>Win32 users can use our Tor installer. See <a
-href="tor-doc-win32.html">these instructions</a> for help with
-installing, configuring, and using Tor on Win32.
-<br />
-Mac OS X users can use our Tor installer. See <a
-href="tor-doc-osx.html">these instructions</a> for help with
-installing, configuring, and using Tor on Mac OS X.
+<p>We have installers for Windows and Mac OS X.  For help with installing,
+  configuring, and using Tor on these operating systems, consult the
+  <a href="tor-doc-win32.html">Windows instructions</a> or the
+  <a href="tor-doc-osx.html">Mac OS X instructions</a>.
 </p>
 
 <p>You can get the latest releases <a
 href="http://tor.eff.org/dist/">here</a>.</p>
 
 <p>If you got Tor from a tarball, unpack it: <tt>tar xzf
-tor-0.0.9.1.tar.gz; cd tor-0.0.9.1</tt>. Run <tt>./configure</tt>, then
+tor-0.0.9.5.tar.gz; cd tor-0.0.9.5</tt>. Run <tt>./configure</tt>, then
 <tt>make</tt>, and then <tt>make install</tt> (as root if necessary). Then
 you can launch tor from the command-line by running <tt>tor</tt>.
 Otherwise, if you got it prepackaged (e.g. in the <a
@@ -251,14 +248,22 @@ href="#client-or-server">the section above</a>.
 </p>
 
 <p>To set up a Tor server, do the following steps after installing Tor.
-(These instructions are Unix-centric; but Tor 0.0.9.2 is running as a
+(These instructions are Unix-centric; but Tor 0.0.9.5 is running as a
 server on Windows now as well.)
 </p>
 
 <ul>
 <li>1. Edit the bottom part of your torrc (if you installed from source,
 you will need to copy torrc.sample to torrc first. Look for them in
-/usr/local/etc/tor/ on Unix). Create the DataDirectory if necessary, and make
+/usr/local/etc/tor/ on Unix).  If you installed a package, you should look
+ for torrc:
+<ul><li>in <tt>/etc/torrc</tt> on Unix.</li>
+    <li>in <tt>/Library/Tor/torrc</tt> on Macintosh OS X.</li>
+    <li>in <tt>\Application Data\tor\torrc</tt> or in
+        <tt>\Application Data\</tt><i>username</i><tt>\tor\torrc</tt>
+        on Windows.</li>
+</ul>
+Create the DataDirectory if necessary, and make
 sure it's owned by the user that will be running tor. Fix your system
 clock so it's not too far off. Make sure name resolution works.
 <li>2. If you are using a firewall, open a hole in your firewall so
@@ -269,7 +274,7 @@ exit policy allows.
 <li>3. Start your server: if you installed from source you can just
 run <tt>tor</tt>, whereas packages typically launch Tor from their
 initscripts or startup scripts. If it logs any warnings, address them. (By
-default Tor logs to stdout, but some packages log to /var/log/tor/
+default Tor logs to stdout, but some packages log to <tt>/var/log/tor/</tt>
 instead. You can edit your torrc to configure log locations.)
 <li>4. <b>Register your server.</b>  Send mail to <a
 href="mailto:tor-ops@freehaven.net">tor-ops@freehaven.net</a> with the
@@ -284,6 +289,30 @@ and</li>
 </ul>
 If possible, sign your mail using PGP.
 </ul>
+</p>
+
+<p>Here's where Tor puts its files on many common platforms:</p>
+<table borderwidth="3 px">
+<tr><th></th><th>Unix</th><th>Windows</th><th>Mac OS X</th></tr>
+<tr><th>Configuration</th>
+    <td><tt>/etc/torrc</tt> <br />or <tt>/usr/local/etc/torrc</tt></td>
+    <td><tt>\Application&nbsp;Data\</tt><i>username</i><tt>\tor\torrc</tt> <br />or
+        <tt>\Application&nbsp;Data\tor\torrc</tt></td>
+    <td><tt>/Library/Tor/torrc</tt></td></tr>
+<tr><th>Fingerprint</th>
+    <td><tt>/var/lib/tor/fingerprint</tt>
+    or <tt>/usr/local/var/lib/tor/fingerprint</tt></td>
+    <td><tt>/Application&nbsp;Data\</tt><i>username</i><tt>\tor\fingerprint</tt>
+       or <tt>/Application&nbsp;Data\tor\fingerprint</tt></td>
+    <td><tt>/Library/Tor/var/lib/tor/fingerprint</tt></td></tr>
+<tr><th>Logs</th>
+    <td><tt>/var/log/tor</tt>
+    or <tt>/usr/local/var/log/tor</tt></td>
+    <td><tt>/Application&nbsp;Data\</tt><i>username</i><tt>\tor\log</tt>
+       or <tt>/Application&nbsp;Data\tor\log</tt></td>
+    <td><tt>/var/log/tor</tt></td></tr>
+</table>
+
 
 <p>
 Optionally, we recommend the following steps as well:
@@ -360,7 +389,7 @@ servers, and you need to configure each client and server so it knows
 about your directory servers rather than the default ones.
 
 <ul>
-<li>1: Grab the latest release. Use at least 0.0.9.
+<li>1: Grab the latest release. Use at least 0.0.9.5.
 <li>2: For each directory server you want,
 <ul>
 <li>2a: Set it up as a server (see <a href="#server">"setting up a

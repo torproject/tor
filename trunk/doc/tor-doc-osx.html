@@ -16,7 +16,9 @@
 <a name="installing"></a>
 <h2>Step One: Download and Install Tor</h2>
 <p>
-<b>Note that this is the installation instructions for running a client on Mac OS X. If you want to run a server, please read the "Configuring a server" section in <a href="./tor-doc.html">tor-doc.html</a>.</b>
+<b>Note that this is the installation instructions for running a client on
+  Mac OS X. If you want to run a server, please read the "Configuring a
+  server" section in <a href="./tor-doc.html">tor-doc.html</a>.</b>
 </p>
 
 <p>
@@ -37,27 +39,17 @@ src="http://tor.eff.org/img/screenshot-osx-installer-splash.png"
 border="1">
 
 <p>
-By default, Tor is not configured to run at startup.
-<!--We highly recommend that you enable that feature, however. -->
-You can enable this by selecting "Customize" in the Installer.</p>
-
-<img alt="select components to install"
-src="http://tor.eff.org/img/screenshot-osx-installer-customize.png"
-border="1">
-
-<P>
-And then checking the "Tor Startup Script" box as shown below.
-Be sure to leave the other boxes checked.
+By default, Tor is configured to run at startup.  If you do not want Tor to
+run on startup, you can disable this by selecting "Customize" in the
+Installer, and then un-checking the "Tor Startup Script" box. Be sure to
+leave the other boxes checked.
 </p>
-
-<img alt="select components to install"
-src="http://tor.eff.org/img/screenshot-osx-installer-components.png"
-border="1">
 
 <p>Once the installer is finished and your computer restarts, Tor will
 start automatically.  Tor comes configured as a client by default. It
-uses a built-in default configuration file, and most people won't need
-to change any of the settings. Tor is now installed.</p>
+uses a built-in default configuration file in <tt>/Library/Tor/torrc</tt>,
+but most people won't need to change any of the settings. Tor is now
+installed.</p>
 
 <p>Privoxy is installed as part of the Tor bundle package
 installer. Privoxy is a filtering web proxy that integrates well with
