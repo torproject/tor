@@ -1101,6 +1101,7 @@ static int tor_init(int argc, char *argv[]) {
   /* only spawn dns handlers if we're a router */
   if (server_mode(get_options()) && get_options()->command == CMD_RUN_TOR) {
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
+    /* XXX really, this should get moved to do_main_loop */
   }
 
   handle_signals(1);
