@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.3  2002/07/10 10:11:13  badbytes
+ * Bugfix - the list of valid characters in a filename didn't include an n .
+ *
  * Revision 1.2  2002/07/03 16:31:22  montrose
  * Added getoptions() and made minor adjustment to poptReadDefaultOptions()
  *
@@ -58,7 +61,7 @@
 #define CONFIG_VALUE_MAXLEN 255
 
 /* legal characters in a filename */
-#define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
+#define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
 
 typedef struct
 {
