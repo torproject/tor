@@ -317,7 +317,7 @@ options_act(void) {
   add_callback_log(LOG_NOTICE, LOG_ERR, control_event_logmsg);
 
   options->_ConnLimit =
-    set_max_file_descriptors(options->ConnLimit, MAXCONNECTIONS);
+    set_max_file_descriptors((unsigned)options->ConnLimit, MAXCONNECTIONS);
   if (options->_ConnLimit < 0)
     return -1;
 
@@ -1183,7 +1183,7 @@ config_dump_options(or_options_t *options, int minimal)
 }
 
 static int
-validate_ports_csv(smartlist_t *sl, char *name) {
+validate_ports_csv(smartlist_t *sl, const char *name) {
   int i;
   int result = 0;
   tor_assert(name);
@@ -1316,6 +1316,12 @@ options_validate(or_options_t *options)
 
   if (options->AuthoritativeDir && options->ClientOnly) {
     log(LOG_WARN, "Running as authoritative directory, but ClientOnly also set.");
+    result = -1;
+  }
+
+  if (options->ConnLimit <= 0) {
+    log(LOG_WARN, "ConnLimit must be greater than 0, but was set to %d",
+        options->ConnLimit);
     result = -1;
   }
 

@@ -40,6 +40,7 @@ static void conn_write_callback(int fd, short event, void *_conn);
 static void signal_callback(int fd, short events, void *arg);
 static void second_elapsed_callback(int fd, short event, void *args);
 static int conn_close_if_marked(int i);
+void tor_free_all(void);
 
 /********* START VARIABLES **********/
 
