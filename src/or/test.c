@@ -1030,7 +1030,6 @@ test_dir_format(void)
   r1.addr = 0xc0a80001u; /* 192.168.0.1 */
   r1.published_on = 0;
   r1.or_port = 9000;
-  r1.socks_port = 9002;
   r1.dir_port = 9003;
   r1.onion_pkey = pk1;
   r1.identity_pkey = pk2;
@@ -1057,7 +1056,6 @@ test_dir_format(void)
   r2.platform = tor_strdup(platform);
   r2.published_on = 5;
   r2.or_port = 9005;
-  r2.socks_port = 0;
   r2.dir_port = 0;
   r2.onion_pkey = pk2;
   r2.identity_pkey = pk1;
@@ -1109,7 +1107,6 @@ test_dir_format(void)
   test_assert(rp1);
   test_streq(rp1->address, r1.address);
   test_eq(rp1->or_port, r1.or_port);
-  test_eq(rp1->socks_port, r1.socks_port);
   test_eq(rp1->dir_port, r1.dir_port);
   test_eq(rp1->bandwidthrate, r1.bandwidthrate);
   test_eq(rp1->bandwidthburst, r1.bandwidthburst);
@@ -1133,7 +1130,6 @@ test_dir_format(void)
   test_assert(rp2);
   test_streq(rp2->address, r2.address);
   test_eq(rp2->or_port, r2.or_port);
-  test_eq(rp2->socks_port, r2.socks_port);
   test_eq(rp2->dir_port, r2.dir_port);
   test_eq(rp2->bandwidth, r2.bandwidth);
   test_assert(crypto_pk_cmp_keys(rp2->onion_pkey, pk2) == 0);
