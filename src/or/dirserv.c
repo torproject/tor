@@ -166,6 +166,20 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
   }
 }
 
+/* Return true iff any router named 'nickname' is in the fingerprint
+ * list. */
+static int
+router_nickname_is_approved(const char *nickname)
+{
+  int i;
+  for (i=0;i<n_fingerprints;++i) {
+    if (!strcasecmp(nickname,fingerprint_list[i].nickname)) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 /* Clear the current fingerprint list. */
 void
 dirserv_free_fingerprint_list()
@@ -406,10 +420,8 @@ list_running_servers(char **nicknames_out)
       continue; /* only list successfully handshaked OR's. */
     if(!conn->nickname) /* it's an OP, don't list it */
       continue;
-    /* XXX if conn->nickname not approved, continue. otherwise when you
-     * remove them from the approved list and hup, their descriptor is
-     * taken out of the directory, but they're still in the running-routers
-     * line. */
+    if (!router_nickname_is_approved(conn->nickname))
+      continue; /* If we removed them from the approved list, don't list it.*/
     nickname_lst[n++] = conn->nickname;
   }
   length = n + 1; /* spaces + EOS + 1. */
