@@ -119,6 +119,14 @@ dirserv_parse_fingerprint_file(const char *fname)
              nickname, fingerprint);
       continue;
     }
+    if (0==strcasecmp(ent->nickname, DEFAULT_CLIENT_NICKNAME)) {
+      /* If you approved an OR called "client", then clients who use
+       * the default nickname could all be rejected.  That's no good. */
+      log(LOG_WARN,
+          "Authorizing a nickname '%s' would break many clients; skipping.",
+          DEFAULT_CLIENT_NICKNAME);
+      continue;
+    }
     for (i = 0; i < smartlist_len(fingerprint_list_new); ++i) {
       ent = smartlist_get(fingerprint_list_new, i);
       if (0==strcasecmp(ent->nickname, nickname)) {
@@ -388,8 +396,7 @@ dirserv_add_descriptor(const char **desc)
   ent->desc_len = desc_len;
   ent->descriptor = tor_strndup(start,desc_len);
   ent->router = ri;
-  /* XXX008 is ent->verified useful/used for anything? */
-  ent->verified = verified; /* XXXX008 support other possibilities. */
+  ent->verified = verified;
   smartlist_add(descriptor_list, ent);
 
   *desc = end;
@@ -692,7 +699,9 @@ static char *cached_directory_z = NULL;
 static size_t cached_directory_z_len = 0;
 static time_t cached_directory_published = 0;
 
-/** DOCDOC */
+/** If we have no cached directory, or it is older than <b>when</b>, then
+ * replace it with <b>directory</b>, published at <b>when</b>.
+ */
 void dirserv_set_cached_directory(const char *directory, time_t when)
 {
   time_t now;

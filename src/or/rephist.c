@@ -511,9 +511,11 @@ int rep_hist_bandwidth_assess(void) {
 }
 
 /**
- * DOCDOC
+ * Allocate and return lines for representing this server's bandwidth
+ * history in its descriptor.
  */
-char *rep_hist_get_bandwidth_lines(void)
+char *
+rep_hist_get_bandwidth_lines(void)
 {
   char *buf, *cp;
   char t[ISO_TIME_LEN+1];
@@ -521,7 +523,7 @@ char *rep_hist_get_bandwidth_lines(void)
   bw_array_t *b;
   size_t len;
 
-  /* opt (read|write)-history yyyy-mm-dd HH:MM:SS (xxx s) n,n,n,n,n... */
+  /* opt (read|write)-history yyyy-mm-dd HH:MM:SS (n s) n,n,n,n,n... */
   len = (60+12*NUM_TOTALS)*2;
   buf = tor_malloc_zero(len);
   cp = buf;

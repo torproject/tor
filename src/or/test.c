@@ -727,6 +727,19 @@ test_util(void) {
   test_streq(v, "val");
   test_streq(cp, "");
 
+  /* Test for strcmpstart and strcmpend. */
+  test_assert(strcmpstart("abcdef", "abcdef")==0);
+  test_assert(strcmpstart("abcdef", "abc")==0);
+  test_assert(strcmpstart("abcdef", "abd")<0);
+  test_assert(strcmpstart("abcdef", "abb")>0);
+  test_assert(strcmpstart("ab", "abb")<0);
+
+  test_assert(strcmpend("abcdef", "abcdef")==0);
+  test_assert(strcmpend("abcdef", "def")==0);
+  test_assert(strcmpend("abcdef", "deg")<0);
+  test_assert(strcmpend("abcdef", "dee")>0);
+  test_assert(strcmpend("ab", "abb")<0);
+
   /* XXXX test older functions. */
   smartlist_free(sl);
 }

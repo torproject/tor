@@ -1058,7 +1058,8 @@ static void do_list_fingerprint(void)
   printf("%s %s\n", nickname?nickname:"client", buf);
 }
 
-/** DOCDOC **/
+/** Entry point for password hashing: take the desired password from
+ * the command line, and print its salted hash to stdout. **/
 static void do_hash_password(void)
 {
 

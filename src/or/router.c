@@ -247,8 +247,7 @@ int init_keys(void) {
     if (crypto_pk_generate_key(prkey))
       return -1;
     set_identity_key(prkey);
-    /* XXX NM: do we have a convention for what client's Nickname is?
-     * No.  Let me propose one: */
+    /* Create a TLS context; default the client nickname to "client". */
     if (tor_tls_context_new(get_identity_key(), 1,
                             options->Nickname ? options->Nickname : "client",
                             MAX_SSL_KEY_LIFETIME) < 0) {

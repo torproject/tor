@@ -13,6 +13,8 @@
 #include "tree.h"
 
 static struct exit_policy_t *socks_policy = NULL;
+/* List of exit_redirect_t */
+static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
 static void parse_socks_policy(void);
@@ -896,7 +898,8 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
  * address, but <em>only</em> if it's a general exit stream. (Rendezvous
  * streams must not reveal what IP they connected to.)
  */
-void connection_exit_connect(connection_t *conn) {
+void
+connection_exit_connect(connection_t *conn) {
   unsigned char connected_payload[4];
   uint32_t addr;
   uint16_t port;
@@ -913,7 +916,8 @@ void connection_exit_connect(connection_t *conn) {
 
   addr = conn->addr;
   port = conn->port;
-  SMARTLIST_FOREACH(options->RedirectExitList, exit_redirect_t *, r,
+  if (redirect_exit_list) {
+    SMARTLIST_FOREACH(redirect_exit_list, exit_redirect_t *, r,
     {
       if ((addr&r->mask)==(r->addr&r->mask) &&
           (r->port_min <= port) && (port <= r->port_max)) {
@@ -928,6 +932,7 @@ void connection_exit_connect(connection_t *conn) {
         break;
       }
     });
+  }
 
   log_fn(LOG_DEBUG,"about to try connecting");
   switch(connection_connect(conn, conn->address, addr, port)) {
@@ -1196,6 +1201,19 @@ void client_dns_clean(void)
     return;
   now = time(NULL);
   strmap_foreach(client_dns_map, (strmap_foreach_fn)_remove_if_expired, &now);
+}
+
+
+/** Make connection redirection follow the provided list of
+ * exit_redirect_t */
+void
+set_exit_redirects(smartlist_t *lst)
+{
+  if (redirect_exit_list) {
+    SMARTLIST_FOREACH(redirect_exit_list, exit_redirect_t *, p, tor_free(p));
+    smartlist_free(redirect_exit_list);
+  }
+  redirect_exit_list = lst;
 }
 
 /*

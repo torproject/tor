@@ -47,6 +47,7 @@ char *tor_strndup(const char *s, size_t n);
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
 void tor_strlower(char *s);
 int strcmpstart(const char *s1, const char *s2);
+int strcmpend(const char *s1, const char *s2);
 int tor_strstrip(char *s, const char *strip);
 typedef enum {
   ALWAYS_TERMINATE, NEVER_TERMINATE, TERMINATE_IF_EVEN
