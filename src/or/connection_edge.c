@@ -248,8 +248,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
       conn->package_window += STREAMWINDOW_INCREMENT;
       connection_start_reading(conn);
-      connection_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
-      circuit_consider_stop_edge_reading(circ, edge_type, layer_hint);
+      if(!circuit_consider_stop_edge_reading(circ, edge_type, layer_hint))
+        connection_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
       break;
     default:
       log_fn(LOG_DEBUG,"unknown relay command %d.",relay_command);
