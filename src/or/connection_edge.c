@@ -253,7 +253,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
          * we try a new exit node.
          * cell->payload+RELAY_HEADER_SIZE+1 holds the destination addr.
          */
-        addr = ntohl(*cell->payload+RELAY_HEADER_SIZE+1);
+        addr = ntohl(*(uint32_t*)(cell->payload+RELAY_HEADER_SIZE+1));
         client_dns_set_entry(conn->socks_request->address, addr);
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
         if(connection_ap_handshake_attach_circuit(conn) < 0)
@@ -328,7 +328,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
       log_fn(LOG_INFO,"Connected! Notifying application.");
       if (cell->length-RELAY_HEADER_SIZE == 4) {
-        addr = htonl(*(uint32_t*)(cell->payload + RELAY_HEADER_SIZE));
+        addr = ntohl(*(uint32_t*)(cell->payload + RELAY_HEADER_SIZE));
         client_dns_set_entry(conn->socks_request->address, addr);
       }
       if(connection_ap_handshake_socks_reply(conn, NULL, 0, 1) < 0) {
@@ -365,6 +365,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
 }
 
 int connection_edge_finished_flushing(connection_t *conn) {
+  unsigned char connected_payload[4];
   int e, len=sizeof(e);
 
   assert(conn);
@@ -392,6 +393,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
       if(connection_wants_to_flush(conn)) /* in case there are any queued relay cells */
         connection_start_writing(conn);
       /* deliver a 'connected' relay cell back through the circuit. */
+      *(uint32_t*)connected_payload = htonl(conn->addr);
       if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
          RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
         return 0; /* circuit is closed, don't continue */
@@ -592,6 +594,7 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
   /* add it into the linked list of streams on this circuit */
   log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
   conn->next_stream = circ->p_streams;
+  /* assert_connection_ok(conn, time(NULL)); */
   circ->p_streams = conn;
 
   assert(circ->cpath && circ->cpath->prev);
@@ -879,7 +882,9 @@ static void client_dns_set_entry(const char *address, uint32_t val)
   now = time(NULL);
   ent = SPLAY_FIND(client_dns_tree, &client_dns_root, &search);
   if (ent) {
-    log_fn(LOG_DEBUG, "Updating entry for address %s", address);
+    in.s_addr = htonl(val);
+    log_fn(LOG_DEBUG, "Updating entry for address %s: %s", address,
+           inet_ntoa(in));
     ent->addr = val;
     ent->expires = now+MAX_DNS_ENTRY_AGE;
   } else {
