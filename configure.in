@@ -214,6 +214,25 @@ if test $tor_cv_null_is_zero = yes; then
             [Define to 1 iff memset(0) sets pointers to NULL])
 fi
 
+# Whether we should use the dmalloc memory allocation debugging library.
+AC_MSG_CHECKING(wether to use dmalloc (debug memory allocation library))
+AC_ARG_WITH(dmalloc,
+[  --with-dmalloc        Use debug memory allocation library. ],
+[if [[ "$withval" = "yes" ]]; then
+  dmalloc=1
+  AC_MSG_RESULT(yes)
+else
+  dmalloc=1
+  AC_MSG_RESULT(no)
+fi], [ dmalloc=0; AC_MSG_RESULT(no) ]
+)
+
+if [[ $dmalloc -eq 1 ]]; then
+  AC_SEARCH_LIBS(dmalloc_malloc, [dmalloc], , AC_MSG_ERROR(Libdmalloc library not found. If you enable it you better have it installed.))
+  AC_DEFINE(USE_DMALLOC, 1, [Debug memory allocation library])
+  AC_DEFINE(DMALLOC_FUNC_CHECK, 1, [Enable dmalloc's malloc function check])
+fi
+
 # $prefix stores the value of the --prefix command line option, or
 # NONE if the option wasn't set.  In the case that it wasn't set, make
 # it be the default, so that we can use it to expand directories now.

@@ -88,19 +88,30 @@ const char util_c_id[] = "$Id$";
 /* =====
  * Memory management
  * ===== */
+#ifdef USE_DMALLOC
+ #include <dmalloc.h>
+#else
+ #define dmalloc_strdup(file, line, string, xalloc_b) strdup(string)
+
+ #define dmalloc_malloc(file, line, size, func_id, alignment, xalloc_b) malloc(size)
+ #define DMALLOC_FUNC_MALLOC 0
+
+ #define dmalloc_realloc(file, line, old_pnt, new_size, func_id, xalloc_b) realloc((old_pnt), (new_size))
+ #define DMALLOC_FUNC_REALLOC 0
+#endif
 
 /** Allocate a chunk of <b>size</b> bytes of memory, and return a pointer to
  * result.  On error, log and terminate the process.  (Same as malloc(size),
  * but never returns NULL.)
  */
-void *tor_malloc(size_t size) {
+void *_tor_malloc(const char *file, const int line, size_t size) {
   void *result;
 
   /* Some libcs don't do the right thing on size==0. Override them. */
   if (size==0) {
     size=1;
   }
-  result = malloc(size);
+  result = dmalloc_malloc(file, line, size, DMALLOC_FUNC_MALLOC, 0, 0);
 
   if (!result) {
     log_fn(LOG_ERR, "Out of memory. Dying.");
@@ -114,8 +125,8 @@ void *tor_malloc(size_t size) {
  * zero bytes, and return a pointer to the result.  Log and terminate
  * the process on error.  (Same as calloc(size,1), but never returns NULL.)
  */
-void *tor_malloc_zero(size_t size) {
-  void *result = tor_malloc(size);
+void *_tor_malloc_zero(const char *file, const int line, size_t size) {
+  void *result = _tor_malloc(file, line, size);
   memset(result, 0, size);
   return result;
 }
@@ -124,10 +135,10 @@ void *tor_malloc_zero(size_t size) {
  * bytes long; return the new memory block.  On error, log and
  * terminate. (Like realloc(ptr,size), but never returns NULL.)
  */
-void *tor_realloc(void *ptr, size_t size) {
+void *_tor_realloc(const char *file, const int line, void *ptr, size_t size) {
   void *result;
 
-  result = realloc(ptr, size);
+  result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
   if (!result) {
     log_fn(LOG_ERR, "Out of memory. Dying.");
     exit(1);
@@ -139,11 +150,11 @@ void *tor_realloc(void *ptr, size_t size) {
  * error, log and terminate.  (Like strdup(s), but never returns
  * NULL.)
  */
-char *tor_strdup(const char *s) {
+char *_tor_strdup(const char *file, const int line, const char *s) {
   char *dup;
   tor_assert(s);
 
-  dup = strdup(s);
+  dup = dmalloc_strdup(file, line, s, 0);
   if (!dup) {
     log_fn(LOG_ERR,"Out of memory. Dying.");
     exit(1);
@@ -157,10 +168,10 @@ char *tor_strdup(const char *s) {
  * always NUL-terminated.  (Like strndup(s,n), but never returns
  * NULL.)
  */
-char *tor_strndup(const char *s, size_t n) {
+char *_tor_strndup(const char *file, const int line, const char *s, size_t n) {
   char *dup;
   tor_assert(s);
-  dup = tor_malloc(n+1);
+  dup = _tor_malloc(file, line, n+1);
   /* Performance note: Ordinarily we prefer strlcpy to strncpy.  But
    * this function gets called a whole lot, and platform strncpy is
    * much faster than strlcpy when strlen(s) is much longer than n.
