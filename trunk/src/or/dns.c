@@ -474,6 +474,7 @@ int dnsworker_main(void *data) {
     }
     address[address_len] = 0; /* null terminate it */
 
+    /* XXX isn't this non-aligned uint32 going to cause problems? */
     switch (tor_lookup_hostname(address, (uint32_t*)answer+1)) {
       case 1:
         log_fn(LOG_INFO,"Could not resolve dest addr %s (transient).",address);
@@ -482,9 +483,11 @@ int dnsworker_main(void *data) {
       case -1:
         log_fn(LOG_INFO,"Could not resolve dest addr %s (permanent).",address);
         answer[0] = DNS_RESOLVE_FAILED_PERMANENT;
+        break;
       case 0:
         log_fn(LOG_INFO,"Resolved address '%s'.",address);
         answer[0] = DNS_RESOLVE_SUCCEEDED;
+        break;
     }
     if(write_all(fd, answer, 5, 1) != 5) {
       log_fn(LOG_ERR,"writing answer failed. Child exiting.");

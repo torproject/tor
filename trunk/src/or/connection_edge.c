@@ -834,6 +834,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
         log_fn(LOG_WARN,"Advertised intro point '%s' is not known. Closing.", exitname);
         return -1;
       }
+      /* XXX if we failed, then refetch the descriptor */
       log_fn(LOG_INFO,"Chose %s as intro point for %s.", exitname, conn->rend_query);
     }
 
