@@ -377,6 +377,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
       conn->socks_request->has_finished = 1;
+      conn->has_sent_end = 1;
       connection_mark_for_close(conn);
       return 0;
     }
@@ -385,6 +386,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
                                              (char*)&answer);
       conn->socks_request->has_finished = 1;
+      conn->has_sent_end = 1;
       connection_mark_for_close(conn);
       return 0;
     }
