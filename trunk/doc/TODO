@@ -154,13 +154,13 @@ Rendezvous service:
           don't count failed rend circs toward Bob's total, or Alice
           can bork him.)
         o deal with edge_type in connection_edge.c
-        - retry end for certain reasons (resolvefailed, policyfailed)
+        o retry end for certain reasons (resolvefailed, policyfailed)
         - preemptively build and start rendezvous circs
         - preemptively build n-1 hops of intro circs?
-        - (n)ack introduction requests?
+        o (n)ack introduction requests?
         - cannibalize general circs?
         - how to set up multiple locations for a hidden service?
-        - make bob publish only established intro circs?
+        o make bob publish only established intro circs?
 
 On-going
         . Better comments for functions!
