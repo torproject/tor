@@ -342,6 +342,22 @@ rend_service_get_by_pk_digest(const char* digest)
   return NULL;
 }
 
+/** Return 1 if any virtual port in <b>service</b> wants a circuit
+ * to have good uptime. Else return 0.
+ */
+static int
+rend_service_requires_uptime(rend_service_t *service) {
+  int i;
+  rend_service_port_config_t *p;
+
+  for (i=0; i < smartlist_len(service->ports); ++i) {
+    p = smartlist_get(service->ports, i);
+    if (smartlist_string_num_isin(get_options()->LongLivedPorts, p->virtual_port))
+      return 1;
+  }
+  return 0;
+}
+
 /******
  * Handle cells
  ******/
@@ -458,7 +474,8 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   /* Launch a circuit to alice's chosen rendezvous point.
    */
   for (i=0;i<MAX_REND_FAILURES;i++) {
-    launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname, 0, 1);
+    launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname,
+                                           rend_service_requires_uptime(service), 1);
     if (launched)
       break;
   }
@@ -806,7 +823,7 @@ void rend_services_introduce(void) {
   exclude_routers = smartlist_create();
   now = time(NULL);
 
-  for (i=0; i< smartlist_len(rend_service_list); ++i) {
+  for (i=0; i < smartlist_len(rend_service_list); ++i) {
     smartlist_clear(intro_routers);
     service = smartlist_get(rend_service_list, i);
 
@@ -824,7 +841,7 @@ void rend_services_introduce(void) {
     }
 
     /* Find out which introduction points we have in progress for this service. */
-    for (j=0;j< smartlist_len(service->intro_nodes); ++j) {
+    for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       intro = smartlist_get(service->intro_nodes, j);
       router = router_get_by_nickname(intro);
       if (!router || !find_intro_circuit(router,service->pk_digest)) {
@@ -906,7 +923,7 @@ rend_consider_services_upload(time_t now) {
   rend_service_t *service;
   int rendpostperiod = get_options()->RendPostPeriod;
 
-  for (i=0; i< smartlist_len(rend_service_list); ++i) {
+  for (i=0; i < smartlist_len(rend_service_list); ++i) {
     service = smartlist_get(rend_service_list, i);
     if (!service->next_upload_time) { /* never been uploaded yet */
       service->next_upload_time =
