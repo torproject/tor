@@ -24,29 +24,12 @@ Do you want to run a tor server?
   be able to authenticate to the other tor nodes until I've added you
   to the directory.
 
-Command-line web browsing:
+Configuring tsocks:
 
-  (First, install and configure Privoxy as described in INSTALL.)
-  For more convenient command-line use, I recommend making a ~/.wgetrc
-  with the line
-    http_proxy=http://localhost:8118
-  Then you can do things like "wget seul.org" and watch as it downloads
-  from the onion routing network.
-
-  For fun, you can wget a very large file (a megabyte or more), and
-  then ^z the wget a little bit in. The onion routers will continue
-  talking for a while, queueing around 500k in the kernel-level buffers.
-  When the kernel buffers are full, and the outbuf for the AP connection
-  also fills, the internal congestion control will kick in and the exit
-  connection will stop reading from the webserver. The circuit will
-  wait until you fg the wget -- and other circuits will work just fine
-  throughout. Then try ^z'ing the onion routers, and watch how well it
-  recovers. Then try ^z'ing several of them at once. :)
-
-How to use it for ssh:
-
-  Download tsocks (tsocks.sourceforge.net) and configure it to talk to
-  localhost:9050 as a socks4 server. My /etc/tsocks.conf simply has:
+  If you want to use Tor for protocols that can't use Privoxy, or
+  with applications that are not socksified, then download tsocks
+  (tsocks.sourceforge.net) and configure it to talk to localhost:9050
+  as a socks4 server. My /etc/tsocks.conf simply has:
     server_port = 9050
     server = 127.0.0.1
   (I had to "cd /usr/lib; ln -s /lib/libtsocks.so" to get the tsocks
