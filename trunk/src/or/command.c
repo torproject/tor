@@ -28,8 +28,8 @@ void command_time_process_cell(cell_t *cell, connection_t *conn,
 }
 
 void command_process_cell(cell_t *cell, connection_t *conn) {
-  static int num_create=0, num_created=0, num_relay=0, num_destroy=0, num_sendme=0;
-  static int create_time=0, created_time=0, relay_time=0, destroy_time=0, sendme_time=0;
+  static int num_create=0, num_created=0, num_relay=0, num_destroy=0;
+  static int create_time=0, created_time=0, relay_time=0, destroy_time=0;
   static long current_second = 0; /* from previous calls to gettimeofday */
   struct timeval now;
 
@@ -42,11 +42,10 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
     log(LOG_INFO,"Created:   %d (%d ms)", num_created, created_time/1000);
     log(LOG_INFO,"Relay:     %d (%d ms)", num_relay, relay_time/1000);
     log(LOG_INFO,"Destroy:   %d (%d ms)", num_destroy, destroy_time/1000);
-    log(LOG_INFO,"Sendme:    %d (%d ms)", num_sendme, sendme_time/1000);
 
     /* zero out stats */
-    num_create = num_created = num_relay = num_destroy = num_sendme = 0;
-    create_time = created_time = relay_time = destroy_time = sendme_time = 0;
+    num_create = num_created = num_relay = num_destroy = 0;
+    create_time = created_time = relay_time = destroy_time = 0;
 
     /* remember which second it is, for next time */
     current_second = now.tv_sec; 
@@ -71,10 +70,6 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
     case CELL_DESTROY:
       command_time_process_cell(cell, conn, &num_destroy, &destroy_time,
                                 command_process_destroy_cell);
-      break;
-    case CELL_SENDME:
-      command_time_process_cell(cell, conn, &num_sendme, &sendme_time,
-                                command_process_sendme_cell);
       break;
     default:
       log(LOG_DEBUG,"Cell of unknown type (%d) received. Dropping.", cell->command);
@@ -161,63 +156,6 @@ void command_process_created_cell(cell_t *cell, connection_t *conn) {
   return;
 }
 
-void command_process_sendme_cell(cell_t *cell, connection_t *conn) {
-  circuit_t *circ;
-
-  circ = circuit_get_by_aci_conn(cell->aci, conn);
-
-  if(!circ) {
-    log(LOG_DEBUG,"command_process_sendme_cell(): unknown circuit %d. Dropping.", cell->aci);
-    return;
-  }
-
-#if 0
-  if(circ->state == CIRCUIT_STATE_ONION_WAIT) {
-    log(LOG_DEBUG,"command_process_sendme_cell(): circuit in onion_wait. Dropping.");
-    return;
-  }
-  if(circ->state == CIRCUIT_STATE_OR_WAIT) {
-    log(LOG_DEBUG,"command_process_sendme_cell(): circuit in or_wait. Dropping.");
-    return;
-  }
-#endif
-
-  /* at this point both circ->n_conn and circ->p_conn are guaranteed to be set */
-
-  if(cell->length != CIRCWINDOW_INCREMENT) {
-    log(LOG_WARNING,"command_process_sendme_cell(): non-standard sendme value %d.",cell->length);
-  }
-
-  if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
-    circ->n_receive_circwindow += cell->length;
-    assert(circ->n_receive_circwindow <= CIRCWINDOW_START);
-    log(LOG_DEBUG,"command_process_sendme_cell(): n_receive_circwindow for aci %d is %d.",circ->n_aci,circ->n_receive_circwindow);
-    if(!circ->n_conn || circ->n_conn->type == CONN_TYPE_EXIT) {
-      circuit_resume_edge_reading(circ, EDGE_EXIT);
-    } else {
-      cell->aci = circ->n_aci; /* switch it */
-      if(connection_write_cell_to_buf(cell, circ->n_conn) < 0) {
-        circuit_close(circ);
-        return;
-      }
-    }
-  } else { /* it's an ingoing cell */
-    assert(cell->aci == circ->n_aci);
-    circ->p_receive_circwindow += cell->length;
-    log(LOG_DEBUG,"command_process_sendme_cell(): p_receive_circwindow for aci %d is %d.",circ->p_aci,circ->p_receive_circwindow);
-    assert(circ->p_receive_circwindow <= CIRCWINDOW_START);
-    if(!circ->p_conn || circ->p_conn->type == CONN_TYPE_AP) {
-      circuit_resume_edge_reading(circ, EDGE_AP);
-    } else {
-      cell->aci = circ->p_aci; /* switch it */
-      if(connection_write_cell_to_buf(cell, circ->p_conn) < 0) {
-        circuit_close(circ);
-        return;
-      }
-    }
-  } 
-}
-
 void command_process_relay_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
@@ -234,6 +172,7 @@ void command_process_relay_cell(cell_t *cell, connection_t *conn) {
     return;
   }
 
+#if 0
   if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
     if(--circ->p_receive_circwindow < 0) { /* is it less than 0 after decrement? */
       log(LOG_INFO,"command_process_relay_cell(): Too many relay cells for out circuit (aci %d). Closing.", circ->p_aci);
@@ -251,6 +190,7 @@ void command_process_relay_cell(cell_t *cell, connection_t *conn) {
     }
     log(LOG_DEBUG,"command_process_relay_cell(): n_receive_circwindow for aci %d is %d.",circ->n_aci,circ->n_receive_circwindow);
   }
+#endif
 
 #if 0
   if(circ->state == CIRCUIT_STATE_ONION_WAIT) {

@@ -50,7 +50,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
     case EXIT_CONN_STATE_OPEN:
       if(connection_package_raw_inbuf(conn) < 0)
         return -1;
-      circuit_consider_stop_edge_reading(circuit_get_by_conn(conn), EDGE_AP);
+      circuit_consider_stop_edge_reading(circuit_get_by_conn(conn), conn->type == CONN_TYPE_AP ? EDGE_AP : EDGE_EXIT, conn->cpath_layer);
       return 0;
     case EXIT_CONN_STATE_CONNECTING:
       log(LOG_DEBUG,"connection_edge_process_inbuf(): text from server while in 'connecting' state at exit. Leaving it on buffer.");
@@ -90,7 +90,8 @@ int connection_edge_send_command(connection_t *conn, circuit_t *circ, int relay_
   return 0;
 }
 
-int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn, int edge_type) {
+int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn,
+                                       int edge_type, crypt_path_t *layer_hint) {
   int relay_command;
   static int num_seen=0;
 
@@ -102,8 +103,6 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
 //  log(LOG_DEBUG,"connection_edge_process_relay_cell(): command %d stream %d", relay_command, stream_id);
   num_seen++;
   log(LOG_DEBUG,"connection_edge_process_relay_cell(): Now seen %d relay cells here.", num_seen);
-
-  circuit_consider_sending_sendme(circ, edge_type);
 
   /* either conn is NULL, in which case we've got a control cell, or else
    * conn points to the recognized stream. */
@@ -130,13 +129,23 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
       return connection_exit_begin_conn(cell, circ);
     case RELAY_COMMAND_DATA:
+      if((edge_type == EDGE_AP && --layer_hint->deliver_window < 0) ||
+         (edge_type == EDGE_EXIT && --circ->deliver_window < 0)) {
+        log(LOG_DEBUG,"connection_edge_process_relay_cell(): circ deliver_window below 0. Killing.");
+        return -1; /* XXX kill the whole circ? */
+      }
+      log(LOG_DEBUG,"connection_edge_process_relay_cell(): circ deliver_window now %d.", edge_type == EDGE_AP ? layer_hint->deliver_window : circ->deliver_window);
+
+      if(circuit_consider_sending_sendme(circ, edge_type, layer_hint) < 0)
+        return -1;
+
       if(!conn) {
         log(LOG_DEBUG,"connection_edge_process_relay_cell(): relay cell dropped, unknown stream %d.",*(int*)conn->stream_id);
         return 0;
       }
-      if((edge_type == EDGE_AP && --conn->n_receive_streamwindow < 0) ||
-         (edge_type == EDGE_EXIT && --conn->p_receive_streamwindow < 0)) { /* is it below 0 after decrement? */
-        log(LOG_DEBUG,"connection_edge_process_relay_cell(): receive_streamwindow below 0. Killing.");
+
+      if(--conn->deliver_window < 0) { /* is it below 0 after decrement? */
+        log(LOG_DEBUG,"connection_edge_process_relay_cell(): conn deliver_window below 0. Killing.");
         return -1; /* somebody's breaking protocol. kill the whole circuit. */
       }
 
@@ -206,16 +215,23 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       break;
     case RELAY_COMMAND_SENDME:
       if(!conn) {
-        log(LOG_DEBUG,"connection_edge_process_relay_cell(): sendme cell dropped, unknown stream %d.",*(int*)conn->stream_id);
+        if(edge_type == EDGE_AP) {
+          assert(layer_hint);
+          layer_hint->package_window += CIRCWINDOW_INCREMENT;
+          log(LOG_DEBUG,"connection_edge_process_relay_cell(): circ-level sendme at AP, packagewindow %d.", layer_hint->package_window);
+          circuit_resume_edge_reading(circ, EDGE_AP, layer_hint);
+        } else {
+          assert(!layer_hint);
+          circ->package_window += CIRCWINDOW_INCREMENT;
+          log(LOG_DEBUG,"connection_edge_process_relay_cell(): circ-level sendme at exit, packagewindow %d.", circ->package_window);
+          circuit_resume_edge_reading(circ, EDGE_EXIT, layer_hint);
+        }
         return 0;
       }
-      if(edge_type == EDGE_AP)
-        conn->p_receive_streamwindow += STREAMWINDOW_INCREMENT;
-      else
-        conn->n_receive_streamwindow += STREAMWINDOW_INCREMENT;
+      conn->package_window += STREAMWINDOW_INCREMENT;
       connection_start_reading(conn);
       connection_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
-      circuit_consider_stop_edge_reading(circ, edge_type);
+      circuit_consider_stop_edge_reading(circ, edge_type, layer_hint);
       break;
     default:
       log(LOG_DEBUG,"connection_edge_process_relay_cell(): unknown relay command %d.",relay_command);

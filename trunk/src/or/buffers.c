@@ -10,15 +10,13 @@ extern or_options_t options; /* command-line and config-file options */
 
 /* Create a new buf of size MAX_BUF_SIZE. Write a pointer to it
  * into *buf, write MAX_BUF_SIZE into *buflen, and initialize
- * *buf_datalen to 0. Return 0 if success, or -1 if malloc fails.
+ * *buf_datalen to 0. Return 0.
  */
 int buf_new(char **buf, int *buflen, int *buf_datalen) {
 
   assert(buf && buflen && buf_datalen);
 
-  *buf = (char *)malloc(MAX_BUF_SIZE);
-  if(!*buf)
-    return -1;
+  *buf = (char *)tor_malloc(MAX_BUF_SIZE);
 //  memset(*buf,0,MAX_BUF_SIZE);
   *buflen = MAX_BUF_SIZE;
   *buf_datalen = 0;
@@ -139,9 +137,7 @@ int write_to_buf(char *string, int string_len,
 z_stream *zstream_new(int compression)
 {
   z_stream* stream;
-  stream = malloc(sizeof(z_stream));
-  if (!stream)
-    return NULL;
+  stream = tor_malloc(sizeof(z_stream));
   memset(stream, 0, sizeof(z_stream));
   if (compression) {
     if (deflateInit(stream, Z_DEFAULT_COMPRESSION) != Z_OK) {

@@ -224,7 +224,7 @@ int directory_handle_reading(connection_t *conn) {
     amt = connection_find_on_inbuf("\r\n\r\n", 4, conn);
     if(amt < 0) /* not there yet */
       return 0;
-    headers = malloc(amt+1);
+    headers = tor_malloc(amt+1);
     if(connection_fetch_from_buf(headers,amt,conn) < 0) {
       log(LOG_DEBUG,"directory_handle_reading(): fetch_from_buf failed (reading headers).");
       return -1;

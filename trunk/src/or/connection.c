@@ -70,9 +70,7 @@ connection_t *connection_new(int type) {
 
   my_gettimeofday(&now);
 
-  conn = (connection_t *)malloc(sizeof(connection_t));
-  if(!conn)
-    return NULL;
+  conn = (connection_t *)tor_malloc(sizeof(connection_t));
   memset(conn,0,sizeof(connection_t)); /* zero it out to start */
 
   conn->type = type;
@@ -655,7 +653,7 @@ int connection_package_raw_inbuf(connection_t *conn) {
 
   assert(conn);
   assert(!connection_speaks_cells(conn));
-  /* this function should never get called if the receive_streamwindow is 0 */
+  /* this function should never get called if either package_window is 0 */
  
 repeat_connection_package_raw_inbuf:
 
@@ -713,13 +711,8 @@ repeat_connection_package_raw_inbuf:
       circuit_close(circ);
       return 0;
     }
-    assert(conn->n_receive_streamwindow > 0);
-    if(--conn->n_receive_streamwindow <= 0) { /* is it 0 after decrement? */
-      connection_stop_reading(conn);
-      log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_streamwindow at exit reached 0.");
-      return 0; /* don't process the inbuf any more */
-    }
-    log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_streamwindow at exit is %d",conn->n_receive_streamwindow);
+    assert(circ->package_window > 0);
+    circ->package_window--;
   } else { /* send it forward. we're an AP */
     assert(conn->type == CONN_TYPE_AP);
     cell.aci = circ->n_aci;
@@ -728,14 +721,23 @@ repeat_connection_package_raw_inbuf:
       circuit_close(circ);
       return 0;
     }
-    assert(conn->p_receive_streamwindow > 0);
-    if(--conn->p_receive_streamwindow <= 0) { /* is it 0 after decrement? */
-      connection_stop_reading(conn);
-      log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_streamwindow at AP reached 0.");
-      return 0; /* don't process the inbuf any more */
-    }
-    log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_streamwindow at AP is %d",conn->p_receive_streamwindow);
+    assert(conn->cpath_layer->package_window > 0);
+    conn->cpath_layer->package_window--;
   }
+
+  if(circuit_consider_stop_edge_reading(circ,
+     conn->type == CONN_TYPE_EXIT ? EDGE_EXIT : EDGE_AP, conn->cpath_layer))
+    return 0;
+
+  assert(conn->package_window > 0);
+  if(--conn->package_window <= 0) { /* is it 0 after decrement? */
+    connection_stop_reading(conn);
+    log(LOG_DEBUG,"connection_package_raw_inbuf(): conn->package_window reached 0.");
+    return 0; /* don't process the inbuf any more */
+  }
+  log(LOG_DEBUG,"connection_package_raw_inbuf(): conn->package_window is %d",conn->package_window);
+
+
   /* handle more if there's more, or return 0 if there isn't */
   goto repeat_connection_package_raw_inbuf;
 }
@@ -760,32 +762,23 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
   SET_CELL_STREAM_ID(cell, conn->stream_id);
   cell.length += RELAY_HEADER_SIZE;
 
-  if(edge_type == EDGE_EXIT) { /* we're at an exit */
-    if(conn->p_receive_streamwindow < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
-      log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing stream sendme back.", conn->outbuf_flushlen);
-      conn->p_receive_streamwindow += STREAMWINDOW_INCREMENT;
-      cell.aci = circ->p_aci;
-      if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type, NULL) < 0) {
-        log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_relay_cell_from_edge (backward) failed. Closing.");
-        circuit_close(circ);
-        return 0;
-      }
-    }
-  } else { /* we're at an AP */
-    assert(edge_type == EDGE_AP);
-    if(conn->n_receive_streamwindow < STREAMWINDOW_START-STREAMWINDOW_INCREMENT) {
-      log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing stream sendme forward.", conn->outbuf_flushlen);
-      conn->n_receive_streamwindow += STREAMWINDOW_INCREMENT;
-      cell.aci = circ->n_aci;
-      if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type, conn->cpath_layer) < 0) {
-        log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_relay_cell_from_edge (forward) failed. Closing.");
-        circuit_close(circ);
-        return 0;
-      }
+  if(edge_type == EDGE_EXIT)
+    cell.aci = circ->p_aci;
+  else
+    cell.aci = circ->n_aci;
+
+  while(conn->deliver_window < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
+    log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing stream sendme.", conn->outbuf_flushlen);
+    conn->deliver_window += STREAMWINDOW_INCREMENT;
+    if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type, conn->cpath_layer) < 0) {
+      log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_relay_cell_from_edge failed. Closing.");
+      circuit_close(circ);
+      return 0;
     }
   }
+
   return 0;
-} 
+}
 
 int connection_finished_flushing(connection_t *conn) {
 

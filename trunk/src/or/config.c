@@ -43,7 +43,7 @@ struct config_line *config_get_commandlines(int argc, char **argv) {
       continue;
     }
 
-    new = malloc(sizeof(struct config_line));
+    new = tor_malloc(sizeof(struct config_line));
     s = argv[i];
     while(*s == '-')
       s++;
@@ -107,7 +107,7 @@ struct config_line *config_get_lines(FILE *f) {
     *end = 0; /* null it out */
 
     /* prepare to parse the string into key / value */
-    new = malloc(sizeof(struct config_line));
+    new = tor_malloc(sizeof(struct config_line));
     new->key = strdup(start);
     new->value = strdup(s);
 

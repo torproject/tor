@@ -652,11 +652,7 @@ build_directory(directory_t *dir) {
   routerinfo_t *router;
   int i, n = 0;
 
-  routers = (routerinfo_t**) malloc(sizeof(routerinfo_t*) * (nfds+1));
-  if (!routers) {
-    log(LOG_ERR, "build_directory(): couldn't allocate space for routerinfo");
-    return -1;
-  }
+  routers = (routerinfo_t **)tor_malloc(sizeof(routerinfo_t*) * (nfds+1));
   if (my_routerinfo) {
     log(LOG_INFO, "build_directory(): adding self (%s:%d)", 
         my_routerinfo->address, my_routerinfo->or_port);

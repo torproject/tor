@@ -5,9 +5,10 @@
 #include "or.h"
 
 int ap_handshake_process_socks(connection_t *conn) {
-  char c;
   socks4_t socks4_info; 
   circuit_t *circ;
+  char tmpbuf[512];
+  int amt;
 
   assert(conn);
 
@@ -49,48 +50,44 @@ int ap_handshake_process_socks(connection_t *conn) {
        socks4_info.destip[2] ||
        !socks4_info.destip[3]) { /* not 0.0.0.x */
       log(LOG_NOTICE,"ap_handshake_process_socks(): destip not in form 0.0.0.x.");
-      sprintf(conn->dest_tmp, "%d.%d.%d.%d", socks4_info.destip[0],
+      sprintf(tmpbuf, "%d.%d.%d.%d", socks4_info.destip[0],
         socks4_info.destip[1], socks4_info.destip[2], socks4_info.destip[3]);
-      conn->dest_addr = strdup(conn->dest_tmp);
+      conn->dest_addr = strdup(tmpbuf);
       log(LOG_DEBUG,"ap_handshake_process_socks(): Successfully read destip (%s)", conn->dest_addr);
     }
 
   }
 
   if(!conn->read_username) { /* the socks spec says we've got to read stuff until we get a null */
-    for(;;) {
-      if(!conn->inbuf_datalen)
-        return 0; /* maybe next time */
-      if(connection_fetch_from_buf((char *)&c,1,conn) < 0)
-        return -1;
-      if(!c) {
-        conn->read_username = 1;
-        log(LOG_DEBUG,"ap_handshake_process_socks(): Successfully read username.");
-        break;
-      }
+    amt = connection_find_on_inbuf("\0", 1, conn);
+    if(amt < 0) /* not there yet */
+      return 0;
+    if(amt > 500) {
+      log(LOG_NOTICE,"ap_handshake_process_socks(): username too long.");    
+      ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
+      return -1;
     }
+    if(connection_fetch_from_buf(tmpbuf,amt,conn) < 0)
+      return -1;
+    conn->read_username = 1;
+    log(LOG_DEBUG,"ap_handshake_process_socks(): Successfully read username.");
   }
 
   if(!conn->dest_addr) { /* no dest_addr found yet */
-
-    for(;;) {
-      if(!conn->inbuf_datalen)
-        return 0; /* maybe next time */
-      if(connection_fetch_from_buf((char *)&c,1,conn) < 0)
-        return -1;
-      conn->dest_tmp[conn->dest_tmplen++] = c;
-      if(conn->dest_tmplen > 500) {
-        log(LOG_NOTICE,"ap_handshake_process_socks(): dest_addr too long!");
-        ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
-        return -1;
-      }
-      if(!c) { /* we found the null; we're done */
-        conn->dest_addr = strdup(conn->dest_tmp);
-        log(LOG_NOTICE,"ap_handshake_process_socks(): successfully read dest addr '%s'",
-          conn->dest_addr);
-        break;
-      }
+    amt = connection_find_on_inbuf("\0", 1, conn);
+    if(amt < 0) /* not there yet */
+      return 0;
+    if(amt > 500) {
+      log(LOG_NOTICE,"ap_handshake_process_socks(): dest_addr too long.");    
+      ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
+      return -1;
     }
+    if(connection_fetch_from_buf(tmpbuf,amt,conn) < 0)
+      return -1;
+
+    conn->dest_addr = strdup(tmpbuf);
+    log(LOG_NOTICE,"ap_handshake_process_socks(): successfully read dest addr '%s'",
+      conn->dest_addr);
   }
 
   /* find the circuit that we should use, if there is one. */
@@ -143,8 +140,8 @@ int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ) {
     log(LOG_DEBUG,"ap_handshake_send_begin(): failed to deliver begin cell. Closing.");
     return -1;
   }
-  ap_conn->n_receive_streamwindow = STREAMWINDOW_START;
-  ap_conn->p_receive_streamwindow = STREAMWINDOW_START;
+  ap_conn->package_window = STREAMWINDOW_START;
+  ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_OPEN;
   log(LOG_INFO,"ap_handshake_send_begin(): Address/port sent, ap socket %d, n_aci %d",ap_conn->s,circ->n_aci);
   return 0;

@@ -38,8 +38,8 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   n_conn->receiver_bucket = -1; /* edge connections don't do receiver buckets */
   n_conn->bandwidth = -1;
   n_conn->s = -1; /* not yet valid */
-  n_conn->n_receive_streamwindow = STREAMWINDOW_START;
-  n_conn->p_receive_streamwindow = STREAMWINDOW_START;
+  n_conn->package_window = STREAMWINDOW_START;
+  n_conn->deliver_window = STREAMWINDOW_START;
   if(connection_add(n_conn) < 0) { /* no space, forget it */
     log(LOG_DEBUG,"connection_exit_begin_conn(): connection_add failed. Dropping.");
     connection_free(n_conn);
