@@ -58,6 +58,8 @@ int connection_edge_process_inbuf(connection_t *conn) {
     /* eof reached, kill it. */
     log_fn(LOG_INFO,"conn (fd %d) reached eof. Closing.", conn->s);
     connection_mark_for_close(conn, END_STREAM_REASON_DONE);
+    conn->hold_open_until_flushed = 1; /* just because we shouldn't read
+                                          doesn't mean we shouldn't write */
     return 0;
 #endif
   }

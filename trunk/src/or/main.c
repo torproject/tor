@@ -205,9 +205,9 @@ static void conn_write(int i) {
     return; /* this conn doesn't want to write */
 
   conn = connection_array[i];
+  log_fn(LOG_DEBUG,"socket %d wants to write.",conn->s);
   if (conn->marked_for_close)
     return;
-  log_fn(LOG_DEBUG,"socket %d wants to write.",conn->s);
 
   assert_connection_ok(conn, time(NULL));
 
@@ -225,43 +225,48 @@ static void conn_write(int i) {
 
 static void conn_close_if_marked(int i) {
   connection_t *conn;
+  int retval;
 
   conn = connection_array[i];
   assert_connection_ok(conn, time(NULL));
-  if(conn->marked_for_close) {
-    if (conn->hold_open_until_flushed && conn->s >= 0 &&
-        connection_wants_to_flush(conn))
-      return;
+  if(!conn->marked_for_close)
+    return; /* nothing to see here, move along */
 
-    log_fn(LOG_INFO,"Cleaning up connection (fd %d).",conn->s);
-    if(conn->s >= 0 && connection_wants_to_flush(conn)) {
-      /* -1 means it's an incomplete edge connection, or that the socket
-       * has already been closed as unflushable. */
-      /* FIXME there's got to be a better way to check for this -- and make other checks? */
+  log_fn(LOG_INFO,"Cleaning up connection (fd %d).",conn->s);
+  if(conn->s >= 0 && connection_wants_to_flush(conn)) {
+    /* -1 means it's an incomplete edge connection, or that the socket
+     * has already been closed as unflushable. */
+    if(!conn->hold_open_until_flushed)
       log_fn(LOG_WARN,
-             "Conn (fd %d, type %d, state %d) marked for close, but wants to flush %d bytes. "
-             "Marked at %s:%d",
-             conn->s, conn->type, conn->state,
-             conn->outbuf_flushlen, conn->marked_for_close_file, conn->marked_for_close);
-      /* XXX change the above to 'warn', and go through and fix all the complaints */
-      if(connection_speaks_cells(conn)) {
-        if(conn->state == OR_CONN_STATE_OPEN) {
-          flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
-        }
-      } else {
-        flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
-      }
-      if(connection_wants_to_flush(conn) && buf_datalen(conn->outbuf)) {
-        log_fn(LOG_WARN,"Conn (fd %d) still wants to flush. Losing %d bytes!",
-               conn->s, (int)buf_datalen(conn->outbuf));
-      }
+        "Conn (fd %d, type %d, state %d) marked, but wants to flush %d bytes. "
+        "(Marked at %s:%d)",
+        conn->s, conn->type, conn->state,
+        conn->outbuf_flushlen, conn->marked_for_close_file, conn->marked_for_close);
+    if(connection_speaks_cells(conn)) {
+      if(conn->state == OR_CONN_STATE_OPEN) {
+        retval = flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
+        /* XXX actually, some non-zero results are maybe ok. which ones? */
+      } else
+        retval = -1;
+    } else {
+      retval = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
     }
-    connection_remove(conn);
-    connection_free(conn);
-    if(i<nfds) { /* we just replaced the one at i with a new one.
-                    process it too. */
-      conn_close_if_marked(i);
+    if(retval == 0 &&
+       conn->hold_open_until_flushed && connection_wants_to_flush(conn)) {
+      log_fn(LOG_INFO,"Holding conn (fd %d) open for more flushing.",conn->s);
+      /* XXX should we reset timestamp_lastwritten here? */
+      return;
     }
+    if(connection_wants_to_flush(conn)) {
+      log_fn(LOG_WARN,"Conn (fd %d) still wants to flush. Losing %d bytes!",
+             conn->s, (int)buf_datalen(conn->outbuf));
+    }
+  }
+  connection_remove(conn);
+  connection_free(conn);
+  if(i<nfds) { /* we just replaced the one at i with a new one.
+                  process it too. */
+    conn_close_if_marked(i);
   }
 }
 
