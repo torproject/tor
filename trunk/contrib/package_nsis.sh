@@ -15,8 +15,8 @@ mkdir win_tmp/src
 mkdir win_tmp/src/config
 mkdir win_tmp/tmp
 
-cp Win32Build/vc6/tor/Debug/tor.exe win_tmp/bin
-cp Win32Build/vc6/tor_resolve/Debug/tor_resolve.exe win_tmp/bin
+cp Win32Build/vc7/Tor/Debug/Tor.exe win_tmp/bin/tor.exe
+cp Win32Build/vc7/tor_resolve/Debug/tor_resolve.exe win_tmp/bin
 cp c:/windows/system32/libeay32.dll win_tmp/bin
 cp c:/windows/system32/ssleay32.dll win_tmp/bin
 
