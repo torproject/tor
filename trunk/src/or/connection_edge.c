@@ -115,6 +115,7 @@ int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
   conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
   connection_mark_for_close(conn);
   conn->hold_open_until_flushed = 1;
+  conn->cpath_layer = NULL;
   return 0;
 }
 
@@ -139,6 +140,12 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
     tor_assert(0);
 #endif
     return -1;
+  }
+
+  if (conn->marked_for_close) {
+    log_fn(LOG_WARN,"Bug: called on conn that's already marked for close at %s:%d.",
+           conn->marked_for_close_file, conn->marked_for_close);
+    return 0;
   }
 
   payload[0] = reason;

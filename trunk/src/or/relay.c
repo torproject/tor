@@ -407,6 +407,12 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   relay_header_t rh;
   int cell_direction;
 
+  if (fromconn->marked_for_close) {
+    log_fn(LOG_WARN,"Bug: called on conn that's already marked for close at %s:%d.",
+           fromconn->marked_for_close_file, fromconn->marked_for_close);
+    return 0;
+  }
+
   if (!circ) {
     log_fn(LOG_WARN,"no circ. Closing conn.");
     tor_assert(fromconn);
@@ -974,6 +980,11 @@ int connection_edge_package_raw_inbuf(connection_t *conn, int package_partial) {
 
   tor_assert(conn);
   tor_assert(!connection_speaks_cells(conn));
+  if (conn->marked_for_close) {
+    log_fn(LOG_WARN,"Bug: called on conn that's already marked for close at %s:%d.",
+           conn->marked_for_close_file, conn->marked_for_close);
+    return 0;
+  }
 
 repeat_connection_edge_package_raw_inbuf:
 
