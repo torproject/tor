@@ -51,7 +51,7 @@
 #define ERR_UNAUTHORIZED            0x0007
 #define ERR_REJECTED_AUTHENTICATION 0x0008
 
-/* Recongized asynchonous event types. */
+/* Recognized asynchronous event types. */
 #define _EVENT_MIN            0x0001
 #define EVENT_CIRCUIT_STATUS  0x0001
 #define EVENT_STREAM_STATUS   0x0002
@@ -77,7 +77,7 @@ static const char * CONTROL_COMMANDS[] = {
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
  * connection is interested in events of type <b>e</b>.  We use this
  * so that we can decide to skip generating event messages that nobody
- * is interest in without having to walk over the global connection
+ * has interest in without having to walk over the global connection
  * list to find out.
  **/
 static uint32_t global_event_mask = 0;

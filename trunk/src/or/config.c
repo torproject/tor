@@ -191,9 +191,9 @@ get_options(void) {
   return global_options;
 }
 
-/** Change the current global options tocontain <b>new</b> instead of
- * their current value; free the old value as necessary.  Where
- * <b>new</b> is different from the old value, update the process to
+/** Change the current global options to contain <b>new_val</b> instead
+ * of their current value; free the old value as necessary.  Where
+ * <b>new_val</b> is different from the old value, update the process to
  * use the new value instead.
  *
  * Note 1: <b>new_val</b> must have previously been validated with
@@ -1037,6 +1037,11 @@ options_validate(or_options_t *options)
 
   if (options->KeepalivePeriod < 1) {
     log(LOG_WARN,"KeepalivePeriod option must be positive.");
+    result = -1;
+  }
+
+  if (2*options->BandwidthRateBytes >= options->BandwidthBurstBytes) {
+    log(LOG_WARN,"BandwidthBurstBytes must be more than twice BandwidthRateBytes.");
     result = -1;
   }
 

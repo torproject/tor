@@ -367,7 +367,7 @@ int add_syslog_log(int loglevelMin, int loglevelMax)
 {
   logfile_t *lf;
   if (syslog_count++ == 0)
-    /* This is the the first syslog. */
+    /* This is the first syslog. */
     openlog("Tor", LOG_NDELAY, LOG_DAEMON);
 
   lf = tor_malloc_zero(sizeof(logfile_t));
