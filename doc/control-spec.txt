@@ -250,12 +250,12 @@ the message.
   ERROR message.
 
   The client may decline to provide a body for the original address, and
-  instead send a special null address (0.0.0.0 for IPv4, ::0 for IPv6, or "."
-  for hostname).  This signifies that the server should choose the original
+  instead send a special null address ("0.0.0.0" for IPv4, "::0" for IPv6, or
+  "." for hostname), signifying that the server should choose the original
   address itself, and return that address in the DONE message.  The server
-  should ensure that an element of address space that is unlikely to be in
-  actual use.  If there is already an address mapped to the destination
-  address, the server may reuse that mapping.
+  should ensure that it returns an element of address space that is unlikely
+  to be in actual use.  If there is already an address mapped to the
+  destination address, the server may reuse that mapping.
 
   If the original address is already mapped to a different address, the old
   mapping is removed.  If the original address and the destination address
