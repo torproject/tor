@@ -134,6 +134,7 @@ tor_gzip_compress(char **out, size_t *out_len,
   return -1;
 }
 
+/* DOCDOC -- sets *out to NULL on failure. */
 int
 tor_gzip_uncompress(char **out, size_t *out_len,
                     const char *in, size_t in_len,
@@ -224,3 +225,18 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   return -1;
 }
 
+/** Try to tell whether the <b>in_len</b>-byte string in <b>in</b> is likely
+ * to be compressed or not.  If it is, return the likeliest compression method.
+ * Otherwise, return 0.
+ */
+int detect_compression_method(const char *in, size_t in_len)
+{
+  if (in_len > 2 && in[0] == 0x1f && in[1] == 0x8b) {
+    return GZIP_METHOD;
+  } else if (in_len > 2 && (in[0] & 0x0f) == 8 &&
+             get_uint16(in) % 31 == 0) {
+    return ZLIB_METHOD;
+  } else {
+    return 0;
+  }
+}
