@@ -440,43 +440,37 @@ void router_mark_as_down(const char *digest) {
 int router_add_to_routerlist(routerinfo_t *router) {
   int i;
   routerinfo_t *r;
+  char id_digest[DIGEST_LEN];
+
+  crypto_pk_get_digest(router->identity_pkey, id_digest);
+
   /* If we have a router with this name, and the identity key is the same,
    * choose the newer one. If the identity key has changed, drop the router.
    */
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
     r = smartlist_get(routerlist->routers, i);
-    /* XXXX008 should just compare digests instead. */
-    if (!strcasecmp(router->nickname, r->nickname)) {
-      if (!crypto_pk_cmp_keys(router->identity_pkey, r->identity_pkey)) {
-        if (router->published_on > r->published_on) {
-          log_fn(LOG_DEBUG, "Replacing entry for router '%s'",
-                 router->nickname);
-          /* Remember whether we trust this router as a dirserver. */
-          if (r->is_trusted_dir)
-            router->is_trusted_dir = 1;
-          /* If the address hasn't changed; no need to re-resolve. */
-          if (!strcasecmp(r->address, router->address))
-            router->addr = r->addr;
-          routerinfo_free(r);
-          smartlist_set(routerlist->routers, i, router);
-          return 0;
-        } else {
-          log_fn(LOG_DEBUG, "Skipping old entry for router '%s'",
-                 router->nickname);
-          /* If we now trust 'router', then we trust the one in the routerlist
-           * too. */
-          if (router->is_trusted_dir)
-            r->is_trusted_dir = 1;
-          /* Update the is_running status to whatever we were told. */
-          r->is_running = router->is_running;
-          routerinfo_free(router);
-          return -1;
-        }
+    if (!crypto_pk_cmp_keys(router->identity_pkey, r->identity_pkey)) {
+      if (router->published_on > r->published_on) {
+        log_fn(LOG_DEBUG, "Replacing entry for router '%s/%s' [%s]",
+               router->nickname, r->nickname, hex_str(id_digest,DIGEST_LEN));
+        /* Remember whether we trust this router as a dirserver. */
+        if (r->is_trusted_dir)
+          router->is_trusted_dir = 1;
+        /* If the address hasn't changed; no need to re-resolve. */
+        if (!strcasecmp(r->address, router->address))
+          router->addr = r->addr;
+        routerinfo_free(r);
+        smartlist_set(routerlist->routers, i, router);
+        return 0;
       } else {
-        /* XXXX008 It's okay to have two keys for a nickname as soon as
-         * all the 007 clients are dead. */
-        log_fn(LOG_WARN, "Identity key mismatch for router '%s'",
+        log_fn(LOG_DEBUG, "Skipping old entry for router '%s'",
                router->nickname);
+        /* If we now trust 'router', then we trust the one in the routerlist
+         * too. */
+        if (router->is_trusted_dir)
+          r->is_trusted_dir = 1;
+        /* Update the is_running status to whatever we were told. */
+        r->is_running = router->is_running;
         routerinfo_free(router);
         return -1;
       }
