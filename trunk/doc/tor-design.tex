@@ -1,4 +1,3 @@
-
 \documentclass[twocolumn]{article}
 \usepackage{usenix}
 
@@ -10,14 +9,13 @@
 \usepackage{amsmath}
 \usepackage{epsfig}
 
-\pagestyle{plain}
+\pagestyle{empty}
 
 \renewcommand\url{\begingroup \def\UrlLeft{<}\def\UrlRight{>}\urlstyle{tt}\Url}
 \newcommand\emailaddr{\begingroup \def\UrlLeft{<}\def\UrlRight{>}\urlstyle{tt}\Url}
 
 \newcommand{\workingnote}[1]{}        % The version that hides the note.
 %\newcommand{\workingnote}[1]{(**#1)}   % The version that makes the note visible.
-
 
 % If an URL ends up with '%'s in it, that's because the line *in the .bib/.tex
 % file* is too long, so break it there (it doesn't matter if the next line is
@@ -75,7 +73,7 @@ Internet, requires no special privileges or kernel modifications, requires
 little synchronization or coordination between nodes, and provides a
 reasonable tradeoff between anonymity, usability, and efficiency.
 We briefly describe our experiences with an international network of
-more than a dozen hosts. % that has been running for several months.
+more than 30 nodes. % that has been running for several months.
 We close with a list of open problems in anonymous communication.
 \end{abstract}
 
@@ -234,10 +232,9 @@ earlier versions of Onion Routing.
 We have deployed a wide-area alpha network
 to test the design, to get more experience with usability
 and users, and to provide a research platform for experimentation.
-As of this writing, the network stands at eighteen nodes in thirteen
-distinct administrative domains on two continents.
-% XXXX This has probably changed.  I count 20 nodes in the directory
-% XXXX now. -NM
+As of this writing, the network stands at 32 nodes %in thirteen
+%distinct administrative domains
+spread over two continents.
 
 We review previous work in Section~\ref{sec:related-work}, describe
 our goals and assumptions in Section~\ref{sec:assumptions},
@@ -288,15 +285,8 @@ These
 protocols are similarly vulnerable to an active adversary who introduces
 timing patterns into traffic entering the network and looks
 for correlated patterns among exiting traffic.
-Although some work has been done to frustrate
-these attacks, %\footnote{
-%  The most common approach is to pad and limit communication to a constant
-%  rate, or to limit
-%  the variation in traffic shape.  Doing so can have prohibitive bandwidth
-%  costs and/or performance limitations.
-%}
-% Point in the footnote is covered above, yes? -PS
- most designs protect primarily against traffic analysis rather than traffic
+Although some work has been done to frustrate these attacks, most designs
+protect primarily against traffic analysis rather than traffic
 confirmation (see Section~\ref{subsec:threat-model}).
 
 The simplest low-latency designs are single-hop proxies such as the
@@ -426,7 +416,7 @@ patches, or separate proxies for every protocol).  We also cannot
 require non-anonymous parties (such as websites)
 to run our software.  (Our rendezvous point design does not meet
 this goal for non-anonymous users talking to hidden servers,
-however; see Section~\ref{subsec:rendezvous}.)
+however; see Section~\ref{sec:rendezvous}.)
 
 \textbf{Usability:} A hard-to-use system has fewer users---and because
 anonymity systems hide users among users, a system with fewer users
@@ -556,8 +546,8 @@ establish circuits across the network,
 and handle connections from user applications.  These onion proxies accept
 TCP streams and multiplex them across the circuits. The onion
 router on the other side
-of the circuit connects to the destinations of
-the TCP streams and relays data.
+of the circuit connects to the requested destinations
+and relays data.
 
 Each onion router maintains a long-term identity key and a short-term
 onion key. The identity
@@ -598,7 +588,7 @@ and consists of a header and a payload. The header includes a circuit
 identifier (circID) that specifies which circuit the cell refers to
 (many circuits can be multiplexed over the single TLS connection), and
 a command to describe what to do with the cell's payload.  (Circuit
-identifiers are connection-specific: each single circuit has a different
+identifiers are connection-specific: each circuit has a different
 circID on each OP/OR or OR/OR connection it traverses.)
 Based on their command, cells are either \emph{control} cells, which are
 always interpreted by the node that receives them, or \emph{relay} cells,
@@ -607,8 +597,8 @@ which carry end-to-end stream data.   The control cell commands are:
 padding); \emph{create} or \emph{created} (used to set up a new circuit);
 and \emph{destroy} (to tear down a circuit).
 
-Relay cells have an additional header (the relay header) after the
-cell header, containing a streamID (stream identifier: many streams can
+Relay cells have an additional header (the relay header) at the front
+of the payload, containing a streamID (stream identifier: many streams can
 be multiplexed over a circuit); an end-to-end checksum for integrity
 checking; the length of the relay payload; and a relay command.
 The entire contents of the relay header and the relay cell payload
@@ -648,9 +638,9 @@ open many TCP streams.
 In Tor, each circuit can be shared by many TCP streams.  To avoid
 delays, users construct circuits preemptively.  To limit linkability
 among their streams, users' OPs build a new circuit
-periodically if the previous one has been used,
+periodically if the previous ones have been used,
 and expire old used circuits that no longer have any open streams.
-OPs consider making a new circuit once a minute: thus
+OPs consider rotating to a new circuit once a minute: thus
 even heavy users spend negligible time
 building circuits, but a limited number of requests can be linked
 to each other through a given exit node. Also, because circuits are built
@@ -730,42 +720,45 @@ traditional Dolev-Yao model.\\
 %\subsubsection{Relay cells}
 %
 Once Alice has established the circuit (so she shares keys with each
-OR on the circuit), she can send relay cells.  Recall that every relay
-cell has a streamID that indicates to which
-stream the cell belongs.  %This streamID allows a relay cell to be
+OR on the circuit), she can send relay cells.
+%Recall that every relay cell has a streamID that indicates to which
+%stream the cell belongs.  %This streamID allows a relay cell to be
 %addressed to any OR on the circuit.  
 Upon receiving a relay
 cell, an OR looks up the corresponding circuit, and decrypts the relay
 header and payload with the session key for that circuit.
-If the cell is headed away from Alice the OR then checks
-whether the decrypted streamID is recognized---either because it
-corresponds to an open stream at this OR for the given circuit, or because
-it is the control streamID (zero).  If the OR recognizes the
-streamID, it accepts the relay cell and processes it as described
+If the cell is headed away from Alice the OR then checks whether the
+decrypted cell has a valid digest (as an optimization, the first
+two bytes of the integrity check are zero, so we only need to compute
+the hash if the first two bytes are zero).
+%is recognized---either because it
+%corresponds to an open stream at this OR for the given circuit, or because
+%it is the control streamID (zero).
+If valid, it accepts the relay cell and processes it as described
 below.  Otherwise,
 the OR looks up the circID and OR for the
 next step in the circuit, replaces the circID as appropriate, and
 sends the decrypted relay cell to the next OR.  (If the OR at the end
 of the circuit receives an unrecognized relay cell, an error has
-occurred, and the cell is discarded.)
+occurred, and the circuit is torn down.)
 
 OPs treat incoming relay cells similarly: they iteratively unwrap the
 relay header and payload with the session keys shared with each
-OR on the circuit, from the closest to farthest. % (Because we use a
-%stream cipher, encryption operations may be inverted in any order.)
-If at any stage the OP recognizes the streamID, the cell must have
+OR on the circuit, from the closest to farthest.
+If at any stage the digest is valid, the cell must have
 originated at the OR whose encryption has just been removed.
 
-To construct a relay cell addressed to a given OR, Alice iteratively
+To construct a relay cell addressed to a given OR, Alice assigns the
+digest, and then iteratively
 encrypts the cell payload (that is, the relay header and payload) with
-the symmetric key of each hop up to that OR.  Because the streamID is
+the symmetric key of each hop up to that OR.  Because the digest is
 encrypted to a different value at each step, only at the targeted OR
 will it have a meaningful value.\footnote{
   % Should we just say that 2^56 is itself negligible?
   % Assuming 4-hop circuits with 10 streams per hop, there are 33
   % possible bad streamIDs before the last circuit.  This still
   % gives an error only once every 2 million terabytes (approx).
-With 48 bits of streamID per cell, the probability of an accidental
+With 48 bits of digest per cell, the probability of an accidental
 collision is far lower than the chance of hardware failure.}
 This \emph{leaky pipe} circuit topology
 allows Alice's streams to exit at different ORs on a single circuit.
@@ -804,9 +797,8 @@ none is available), and chooses a suitable OR on that circuit to be the
 exit node (usually the last node, but maybe others due to exit policy
 conflicts; see Section~\ref{subsec:exitpolicies}.) The OP then opens
 the stream by sending a \emph{relay begin} cell to the exit node,
-using a streamID of zero (so the OR will recognize it), containing as
-its relay payload a new random streamID, the destination
-address, and the destination port.  Once the
+using a new random streamID, with the destination address and port in
+the relay payload. Once the
 exit node connects to the remote host, it responds
 with a \emph{relay connected} cell.  Upon receipt, the OP sends a
 SOCKS reply to notify the application of its success. The OP
@@ -829,11 +821,12 @@ But a portable general solution, such as is needed for
 SSH, is
 an open problem. Modifying or replacing the local nameserver
 can be invasive, brittle, and unportable. Forcing the resolver
-library to do resolution via TCP rather than UDP is
-hard, and also has portability problems. We could also provide a
-tool similar to \emph{dig} to perform a private lookup through the
-Tor network. Currently, we encourage the use of
-privacy-aware proxies like Privoxy wherever possible.
+library to do resolution via TCP rather than UDP is hard, and also has
+portability problems. Dynamically intercepting system calls to the
+resolver library seems a promising direction. We could also provide
+a tool similar to \emph{dig} to perform a private lookup through the
+Tor network. Currently, we encourage the use of privacy-aware proxies
+like Privoxy wherever possible.
 
 Closing a Tor stream is analogous to closing a TCP stream: it uses a
 two-step handshake for normal operation, or a one-step handshake for
@@ -856,15 +849,15 @@ checking, traffic was
 vulnerable to a malleability attack: though the attacker could not
 decrypt cells, any changes to encrypted data
 would create corresponding changes to the data leaving the network.
-This weakness allowed an adversary to change a padding cell to a destroy
+This weakness allowed an adversary who could guess the encrypted content
+to change a padding cell to a destroy
 cell; change the destination address in a \emph{relay begin} cell to the
 adversary's webserver; or change an FTP command from
-{\tt dir} to {\tt rm~*}. Any adversary who could guess the encrypted
-content could introduce such corruption in a stream. (Even an external
+{\tt dir} to {\tt rm~*}. (Even an external
 adversary could do this, because the link encryption similarly used a
 stream cipher.)
 
-Tor uses TLS on its links---its integrity checking
+Tor uses TLS on its links---the integrity checking in TLS
 protects data from modification by external adversaries.
 Addressing the insider malleability attack, however, is
 more complex.
@@ -878,10 +871,12 @@ path length. Second, these solutions can only verify traffic coming
 from Alice: ORs would not be able to produce suitable hashes for
 the intermediate hops, since the ORs on a circuit do not know the
 other ORs' session keys. Third, we have already accepted that our design
-is vulnerable to end-to-end timing attacks; tagging attacks performed
+is vulnerable to end-to-end timing attacks; so tagging attacks performed
 within the circuit provide no additional information to the attacker.
 
-Thus, we check integrity only at the edges of each stream. When Alice
+Thus, we check integrity only at the edges of each stream (remember that
+we use a leaky-pipe circuit topology, so a stream's edge could be any hop
+in the circuit). When Alice
 negotiates a key with a new hop, they each initialize a SHA-1
 digest with a derivative of that key,
 thus beginning with randomness that only the two of them know. From
@@ -902,7 +897,7 @@ bytes per cell to minimize overhead; the chance that an adversary will
 correctly guess a valid hash
 %, plus the payload the current cell,
 is
-acceptably low, given that Alice or Bob tear down the circuit if they
+acceptably low, given that the OP or OR tear down the circuit if they
 receive a bad hash.
 
 \subsection{Rate limiting and fairness}
@@ -1156,7 +1151,7 @@ described for use in ISDN telephony~\cite{jerichow-jsac98,isdn-mixes}.
 Later low-latency designs used rendezvous points for hiding location
 of mobile phones and low-power location
 trackers~\cite{federrath-ih96,reed-protocols97}.  Rendezvous for
-low-latency
+anonymizing low-latency
 Internet connections was suggested in early Onion Routing
 work~\cite{or-ih96}, but the first published design was by Ian
 Goldberg~\cite{ian-thesis}. His design differs from
@@ -1472,11 +1467,9 @@ but it might be beyond a limited observer's capabilities.
 
 \emph{End-to-end size correlation.} Simple packet counting
 will also be effective in confirming
-endpoints of a stream. However, even without padding, we have some
+endpoints of a stream. However, even without padding, we may have some
 limited protection: the leaky pipe topology means different numbers
 of packets may enter one end of a circuit than exit at the other.
-% XXXX Add a statement to the effect that we have no real proof that this
-% XXXX does in fact help? -NM
 
 \emph{Website fingerprinting.} All the effective passive
 attacks above are traffic confirmation attacks,
@@ -1529,9 +1522,7 @@ harder---this phenomenon is commonly called ``jurisdictional
 arbitrage.'' The Java Anon Proxy project recently experienced the
 need for this approach, when
 a German court forced them to add a backdoor to
-all of their nodes~\cite{jap-backdoor}.
-% XXXX Is this 100% accurate? I think I remember hearing that some
-% XXXX independantly run nodes didn't upgrade to the backdoored version. -NM
+their nodes~\cite{jap-backdoor}.
 
 \emph{Run a recipient.} An adversary running a webserver
 trivially learns the timing patterns of users connecting to it, and
@@ -1693,15 +1684,14 @@ with a session key shared by Alice and Bob.
 \section{Early experiences: Tor in the Wild}
 \label{sec:in-the-wild}
 
-% XXXX Update this. -NM
-As of mid-January 2004, the Tor network consists of 18 nodes
-(16 in the US, 2 in Europe), and more are joining each week as the code
+As of mid-May 2004, the Tor network consists of 32 nodes
+(24 in the US, 8 in Europe), and more are joining each week as the code
 matures.\footnote{For comparison, the current remailer network
-has about 30 reliable nodes. We haven't asked PlanetLab to provide
-Tor nodes, since their AUP wouldn't allow exit nodes (see
-also~\cite{darkside}) and because we aim to build a long-term community of
-node operators and developers.} Each node has at least a 768Kb/768Kb
-connection, and
+has about 30 reliable nodes.} % We haven't asked PlanetLab to provide
+%Tor nodes, since their AUP wouldn't allow exit nodes (see
+%also~\cite{darkside}) and because we aim to build a long-term community of
+%node operators and developers.}
+Each node has at least a 768Kb/768Kb connection, and
 many have 10Mb. The number of users varies (and of course, it's hard to
 tell for sure), but we sometimes have several hundred users---administrators at
 several companies have begun sending their entire departments' web
@@ -1711,7 +1701,7 @@ the network for web browsing, FTP, IRC, AIM, Kazaa, and SSH.
 
 Each Tor node currently processes roughly 800,000 relay
 cells (a bit under half a gigabyte) per week. On average, about 80\%
-of each 500-byte payload is full for cells going back to the client,
+of each 498-byte payload is full for cells going back to the client,
 whereas about 40\% is full for cells coming from the client. (The difference
 arises because most of the network's traffic is web browsing.) Interactive
 traffic like SSH brings down the average a lot---once we have more
@@ -1744,19 +1734,19 @@ nodes on the same machine (a heavily loaded 1GHz Athlon). We downloaded a 60
 megabyte file from {\tt debian.org} every 30 minutes for 54 hours (108 sample
 points). It arrived in about 300 seconds on average, compared to 210s for a
 direct download. We ran a similar test on the production Tor network,
-fetching the front page of {\tt cnn.com} (55 kilobytes): %every 10 minutes for
-%26 hours (156 sample points):
+fetching the front page of {\tt cnn.com} (55 kilobytes):
+% every 20 seconds for 8952 data points
 while a direct
-download consistently took about 0.3s, the performance through Tor was highly
-variable. Some downloads were as fast as 0.6s, with a median at 2.7s, and
-80\% finishing within 5.7s.  It seems that as the network expands, the chance
+download consistently took about 0.3s, the performance through Tor varied.
+Some downloads were as fast as 0.4s, with a median at 2.8s, and
+90\% finishing within 5.3s.  It seems that as the network expands, the chance
 of building a slow circuit (one that includes a slow or heavily loaded node
 or link) is increasing.  On the other hand, as our users remain satisfied
 with this increased latency, we can address our performance incrementally as we
-proceed with development.\footnote{For example, we have just begun pushing
-a pipelining patch to the production network that seems to decrease
-latency for medium-to-large files; we will present revised benchmarks
-as they become available.}
+proceed with development. %\footnote{For example, we have just begun pushing
+%a pipelining patch to the production network that seems to decrease
+%latency for medium-to-large files; we will present revised benchmarks
+%as they become available.}
 
 %With the current network's topology and load, users can typically get 1-2
 %megabits sustained transfer rate, which is good enough for now.
