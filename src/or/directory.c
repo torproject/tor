@@ -223,7 +223,7 @@ directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
 /** Called when we are unable to complete our connection to a
  * directory server: Mark the router as down and try again if possible.
  */
-int
+void
 connection_dir_connect_failed(connection_t *conn)
 {
   router_mark_as_down(conn->identity_digest); /* don't try him again */
