@@ -1373,10 +1373,3 @@ int tor_main(int argc, char *argv[]) {
 #endif
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

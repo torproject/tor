@@ -99,10 +99,3 @@ void _log_fn(int severity, const char *format, ...);
 # define __LOG_H
 #endif
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

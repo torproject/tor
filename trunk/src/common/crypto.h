@@ -159,10 +159,3 @@ void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 
 #endif
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -315,10 +315,3 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   return 0;
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -617,10 +617,3 @@ int strmap_isempty(strmap_t *map)
   return SPLAY_EMPTY(&map->head);
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -379,10 +379,3 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
   return 0;
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -810,10 +810,3 @@ void _assert_no_tls_errors(const char *fname, int line)
   tor_assert(0);
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -339,10 +339,3 @@ void rend_process_relay_cell(circuit_t *circ, int command, size_t length,
   }
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -287,10 +287,3 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len)
   return -1;
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

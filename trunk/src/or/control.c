@@ -604,10 +604,3 @@ init_cookie_authentication(int enabled)
   return 0;
 }
 
-/*
-  Local Variabls:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

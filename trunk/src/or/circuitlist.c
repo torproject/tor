@@ -503,10 +503,3 @@ void assert_circuit_ok(const circuit_t *c)
   }
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -227,10 +227,3 @@ the message.
   If you ask for lots of events, and 16MB of them queue up on the buffer,
   the Tor process will close the socket.
 
------------
-(for emacs)
-  Local Variables:
-  mode:text
-  indent-tabs-mode:nil
-  fill-column:77
-  End:

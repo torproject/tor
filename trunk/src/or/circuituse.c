@@ -866,10 +866,3 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   }
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

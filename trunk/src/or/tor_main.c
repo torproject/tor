@@ -17,10 +17,3 @@ int main(int argc, char *argv[])
   return tor_main(argc, argv);
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

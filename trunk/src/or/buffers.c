@@ -690,10 +690,3 @@ void assert_buf_ok(buf_t *buf)
   tor_assert(buf->datalen <= buf->len);
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

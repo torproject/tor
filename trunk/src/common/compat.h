@@ -183,10 +183,3 @@ void tor_mutex_free(tor_mutex_t *m);
 
 #endif
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

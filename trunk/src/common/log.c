@@ -452,10 +452,3 @@ void switch_logs_debug(void)
   }
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

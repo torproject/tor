@@ -992,10 +992,3 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
   return -1;
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -1614,10 +1614,3 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
   crypto_free_digest_env(d);
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -993,10 +993,3 @@ int connection_dir_finished_connecting(connection_t *conn)
   return 0;
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

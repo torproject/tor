@@ -792,10 +792,3 @@ static void spawn_enough_dnsworkers(void) {
   }
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -115,10 +115,3 @@ void finish_daemon(void);
 void write_pidfile(char *filename);
 
 #endif
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/
