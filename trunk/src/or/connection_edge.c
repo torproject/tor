@@ -216,6 +216,53 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   return 0;
 }
 
+int connection_edge_process_relay_cell_not_open(
+    relay_header_t *rh, cell_t *cell, circuit_t *circ,
+    connection_t *conn, crypt_path_t *layer_hint) {
+  uint32_t addr;
+
+  if(rh->command == RELAY_COMMAND_END) {
+    log_fn(LOG_INFO,"Edge got end (%s) before we're connected. Marking for close.",
+      connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh->length));
+    if(CIRCUIT_IS_ORIGIN(circ))
+      circuit_log_path(LOG_INFO,circ);
+    conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
+    connection_mark_for_close(conn, 0);
+    /* XXX This is where we should check if reason is EXITPOLICY, and reattach */
+    /* XXX here we should send a socks reject back if necessary, and hold
+     * open til flushed */
+    return 0;
+  }
+  if(conn->type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_CONNECTED) {
+    if(conn->state != AP_CONN_STATE_CONNECT_WAIT) {
+      log_fn(LOG_WARN,"Got 'connected' while not in state connect_wait. Dropping.");
+      return 0;
+    }
+//    log_fn(LOG_INFO,"Connected! Notifying application.");
+    conn->state = AP_CONN_STATE_OPEN;
+    if (rh->length >= 4) {
+      addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
+      client_dns_set_entry(conn->socks_request->address, addr);
+    }
+    log_fn(LOG_INFO,"'connected' received after %d seconds.",
+           (int)(time(NULL) - conn->timestamp_lastread));
+    circuit_log_path(LOG_INFO,circ);
+    connection_ap_handshake_socks_reply(conn, NULL, 0, 1);
+    conn->socks_request->has_finished = 1;
+    /* handle anything that might have queued */
+    if (connection_edge_package_raw_inbuf(conn) < 0) {
+      connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+      return 0;
+    }
+    return 0;
+  } else {
+    log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
+           rh->command, conn->state, conn_state_to_string[conn->type][conn->state]);
+    connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+    return -1;
+  }
+}
+
 /* an incoming relay cell has arrived. return -1 if you want to tear down the
  * circuit, else 0. */
 int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
@@ -235,47 +282,11 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   /* either conn is NULL, in which case we've got a control cell, or else
    * conn points to the recognized stream. */
 
-  if(conn && conn->state != AP_CONN_STATE_OPEN && conn->state != EXIT_CONN_STATE_OPEN) {
-    if(rh.command == RELAY_COMMAND_END) {
-      log_fn(LOG_INFO,"Edge got end (%s) before we're connected. Marking for close.",
-        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
-      if(CIRCUIT_IS_ORIGIN(circ))
-        circuit_log_path(LOG_INFO,circ);
-      conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
-      connection_mark_for_close(conn, 0);
-      /* XXX This is where we should check if reason is EXITPOLICY, and reattach */
-      /* XXX here we should send a socks reject back if necessary, and hold
-       * open til flushed */
-      return 0;
-    }
-    if(conn->type == CONN_TYPE_AP && rh.command == RELAY_COMMAND_CONNECTED) {
-      if(conn->state != AP_CONN_STATE_CONNECT_WAIT) {
-        log_fn(LOG_WARN,"Got 'connected' while not in state connect_wait. Dropping.");
-        return 0;
-      }
-//      log_fn(LOG_INFO,"Connected! Notifying application.");
-      conn->state = AP_CONN_STATE_OPEN;
-      if (rh.length >= 4) {
-        addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
-        client_dns_set_entry(conn->socks_request->address, addr);
-      }
-      log_fn(LOG_INFO,"'connected' received after %d seconds.",
-             (int)(time(NULL) - conn->timestamp_lastread));
-      circuit_log_path(LOG_INFO,circ);
-      connection_ap_handshake_socks_reply(conn, NULL, 0, 1);
-      conn->socks_request->has_finished = 1;
-      /* handle anything that might have queued */
-      if (connection_edge_package_raw_inbuf(conn) < 0) {
-        connection_mark_for_close(conn, END_STREAM_REASON_MISC);
-        return 0;
-      }
-      return 0;
-    } else {
-      log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
-             rh.command, conn->state, conn_state_to_string[conn->type][conn->state]);
-      connection_mark_for_close(conn, END_STREAM_REASON_MISC);
-      return -1;
-    }
+  if(conn &&
+     conn->state != AP_CONN_STATE_OPEN &&
+     conn->state != EXIT_CONN_STATE_OPEN) {
+    return connection_edge_process_relay_cell_not_open(
+             &rh, cell, circ, conn, layer_hint);
   }
 
   switch(rh.command) {
@@ -1146,7 +1157,8 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     return 0;
   }
   n_stream->address = tor_strdup(cell->payload + RELAY_HEADER_SIZE);
-  n_stream->state = EXIT_CONN_STATE_RESOLVING;
+  n_stream->state = EXIT_CONN_STATE_RESOLVEFAILED;
+  /* default to failed, change in dns_resolve if it turns out not to fail */
 
   /* send it off to the gethostbyname farm */
   switch(dns_resolve(n_stream)) {
@@ -1155,9 +1167,6 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
       return 0;
     case -1: /* resolve failed */
       log_fn(LOG_INFO,"Resolve failed (%s).", n_stream->address);
-      /* Set the state so that we don't try to remove n_stream from a DNS
-       * pending list. */
-      n_stream->state = EXIT_CONN_STATE_RESOLVEFAILED;
       connection_mark_for_close(n_stream, END_STREAM_REASON_RESOLVEFAILED);
       break;
     case 0: /* resolve added to pending list */
