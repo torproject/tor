@@ -238,7 +238,7 @@ static void conn_close_if_marked(int i) {
              conn->s, conn->type, conn->state);
 
       if(connection_speaks_cells(conn)) {
-        if(conn->state == OR_CONN_STATE_OPEN && conn->outbuf_flushlen) {
+        if(conn->state == OR_CONN_STATE_OPEN) {
           flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
         }
       } else {
