@@ -6,4 +6,8 @@ Legend:
         D Deferred
         X Abandoned
 
-= nothing yet =
+
+- Add a README.Debian file which explains how to configure privoxy,
+  maybe also add a sample configuration for privoxy.
+- Add a torify script, which wraps around tsocks and sets its own
+  configuration file.  Requires dependency on tsocks.
