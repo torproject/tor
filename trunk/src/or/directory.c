@@ -4,8 +4,8 @@
 
 #include "or.h"
 
-static void directory_send_command(connection_t *conn,
-                                   int purpose, const char *payload);
+static void directory_send_command(connection_t *conn, int purpose,
+                                   const char *payload, int payload_len);
 static int directory_handle_command(connection_t *conn);
 
 /********* START VARIABLES **********/
@@ -18,23 +18,18 @@ extern int has_fetched_directory;
 
 /********* END VARIABLES ************/
 
-void directory_initiate_command(routerinfo_t *router, int purpose, const char *payload) {
+void directory_initiate_command(routerinfo_t *router, int purpose,
+                                const char *payload, int payload_len) {
   connection_t *conn;
 
-  switch(purpose) {
-    case DIR_PURPOSE_FETCH_DIR:
-      log_fn(LOG_DEBUG,"initiating directory fetch");
-      break;
-    case DIR_PURPOSE_FETCH_HIDSERV:
-      log_fn(LOG_DEBUG,"initiating hidden-service descriptor fetch");
-      break;
-    case DIR_PURPOSE_UPLOAD_DIR:
-      log_fn(LOG_DEBUG,"initiating server descriptor upload");
-      break;
-    case DIR_PURPOSE_UPLOAD_HIDSERV:
-      log_fn(LOG_DEBUG,"initiating hidden-service descriptor upload");
-      break;
-  }
+  if(purpose == DIR_PURPOSE_FETCH_DIR)
+    log_fn(LOG_DEBUG,"initiating directory fetch");
+  if(purpose == DIR_PURPOSE_FETCH_HIDSERV)
+    log_fn(LOG_DEBUG,"initiating hidden-service descriptor fetch");
+  if(purpose == DIR_PURPOSE_UPLOAD_DIR)
+    log_fn(LOG_DEBUG,"initiating server descriptor upload");
+  if(purpose == DIR_PURPOSE_UPLOAD_HIDSERV)
+    log_fn(LOG_DEBUG,"initiating hidden-service descriptor upload");
 
   if (!router) { /* i guess they didn't have one in mind for me to use */
     log_fn(LOG_WARN,"No running dirservers known. Not trying. (purpose %d)", purpose);
@@ -59,7 +54,7 @@ void directory_initiate_command(routerinfo_t *router, int purpose, const char *p
   }
 
   /* queue the command on the outbuf */
-  directory_send_command(conn, purpose, payload);
+  directory_send_command(conn, purpose, payload, payload_len);
 
   if(purpose == DIR_PURPOSE_FETCH_DIR ||
      purpose == DIR_PURPOSE_UPLOAD_DIR) {
@@ -86,14 +81,20 @@ void directory_initiate_command(routerinfo_t *router, int purpose, const char *p
      *   populate it and add it at the right state
      * socketpair and hook up both sides
      */
+    conn->s = connection_ap_make_bridge(conn->address, conn->port);
+    if(conn->s < 0) {
+      log_fn(LOG_WARN,"Making AP bridge to dirserver failed.");
+      connection_mark_for_close(conn, 0);
+      return;
+    }
 
     conn->state = DIR_CONN_STATE_CLIENT_SENDING; 
     connection_set_poll_socket(conn);
   }
 }
 
-static void directory_send_command(connection_t *conn,
-                                   int purpose, const char *payload) {
+static void directory_send_command(connection_t *conn, int purpose,
+                                   const char *payload, int payload_len) {
   char fetchstring[] = "GET / HTTP/1.0\r\n\r\n";
   char tmp[8192];
 
@@ -107,7 +108,7 @@ static void directory_send_command(connection_t *conn,
     case DIR_PURPOSE_UPLOAD_DIR:
       assert(payload);
       snprintf(tmp, sizeof(tmp), "POST / HTTP/1.0\r\nContent-Length: %d\r\n\r\n%s",
-               (int)strlen(payload), payload);
+               payload_len, payload);
       connection_write_to_buf(tmp, strlen(tmp), conn);
       break;
     case DIR_PURPOSE_FETCH_HIDSERV:
@@ -118,9 +119,10 @@ static void directory_send_command(connection_t *conn,
     case DIR_PURPOSE_UPLOAD_HIDSERV:
       assert(payload);
       snprintf(tmp, sizeof(tmp),
-        "POST /hidserv/ HTTP/1.0\r\nContent-Length: %d\r\n\r\n%s",
-        (int)strlen(payload), payload);
+        "POST /hidserv/ HTTP/1.0\r\nContent-Length: %d\r\n\r\n", payload_len);
       connection_write_to_buf(tmp, strlen(tmp), conn);
+      /* could include nuls, need to write it separately */
+      connection_write_to_buf(payload, payload_len, conn);
       break;
   }
 }
@@ -230,7 +232,10 @@ int connection_dir_process_inbuf(connection_t *conn) {
       } else {
         log_fn(LOG_INFO,"updated routers.");
       }
-      has_fetched_directory=1;
+      if (has_fetched_directory==0) {
+        has_fetched_directory=1;
+        directory_has_arrived(); /* do things we've been waiting to do */
+      }
       if(options.ORPort) { /* connect to them all */
         router_retry_connections();
       }

@@ -255,7 +255,7 @@ void router_upload_desc_to_dirservers(void) {
   for(i=0;i<rl->n_routers;i++) {
     router = rl->routers[i];
     if(router->dir_port > 0)
-      directory_initiate_command(router, DIR_PURPOSE_UPLOAD_DIR, s);
+      directory_initiate_command(router, DIR_PURPOSE_UPLOAD_DIR, s, strlen(s));
   }
 }
 
