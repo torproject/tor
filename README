@@ -5,24 +5,33 @@ http://archives.seul.org/or/dev/.
 
 Is your question in the FAQ? Should it be?
 
+**************************************************************************
+
 Quickstart version for users:
 
 0) Download the absolute newest version. No, really.
-  http://freehaven.net/or/.
-1) ./configure (or do the two-line version below, if you're on bsd)
-2) make
-3) cd src/config
-4) ../or/or -f oprc -l debug&
-5) download privoxy (www.privoxy.org), and add the line
-  "forward-socks4a / localhost:9050 ." (without the quotes) to its
-  config file.
-6) point your mozilla (or whatever) to http proxy at localhost:8118 (this
-  points it through Privoxy, so you now get good data-scrubbing too.)
+  http://freehaven.net/tor/ (unfortunately they're all unreadable now,
+  so you must skip this step)
+1) tar xvf it, and then cd into the directory.
+2) ./configure (or do the two-line version below, if you're on bsd)
+3) make
+4) cd src/config
+5) ../or/or -f oprc &
+6) point your mozilla (or whatever) to socks4 proxy at localhost port 9050
+  In mozilla, this is in edit|preferences|advanced|proxies.
 7) make sure you've set it up correctly: go to
   http://www.junkbusters.com/cgi-bin/privacy and see what IP it says
-  you're coming from.
+  you're coming from. If it works, you're set.
 
-More detailed version:
+8) Optionally, install privoxy (www.privoxy.org), and add the line
+  "forward-socks4a / localhost:9050 ." (without the quotes) to its config
+  file. Then change your mozilla to http proxy at localhost port 8118.
+  This step will give you good html scrubbing as well.
+
+If this works for you, you can stop reading. Otherwise, below is a more
+detailed version.
+
+**************************************************************************
 
 Dependencies:
 
@@ -83,7 +92,7 @@ How to use it for web browsing:
   Don't forget the . at the end.
 
   From here, you can point your browser/etc to localhost:8118 (as an
-  httpd proxy) and your traffic will go through Privoxy, then through
+  http proxy) and your traffic will go through Privoxy, then through
   the onion proxy, to the onion routing network.
 
   You can also ignore the whole privoxy thing and set your Mozilla to
@@ -112,6 +121,8 @@ How to use it for ssh:
   localhost:9050 as a socks4 server. My /etc/tsocks.conf simply has:
     server_port = 9050
     server = 127.0.0.1
+  (I had to "cd /usr/lib; ln -s /lib/libtsocks.so" to get the tsocks
+   library working after install, since my libpath didn't include /lib.)
   Then you can do "tsocks ssh arma@moria.mit.edu". But note that since
   ssh is suid root, you either need to do this as root, or cp a local
   version of ssh that isn't suid.
