@@ -339,7 +339,22 @@ static void run_scheduled_events(time_t now) {
   static time_t last_uploaded_services = 0;
   int i;
 
-  /* 1. Every DirFetchPostPeriod seconds, we get a new directory and upload
+
+  /* 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
+   *  shut down and restart all cpuworkers, and update the directory if
+   *  necessary.
+   */
+  if (options.ORPort && get_onion_key_set_at()+MIN_ONION_KEY_LIFETIME < now) {
+    rotate_onion_key();
+    cpuworkers_rotate();
+    if (router_rebuild_descriptor()<0) {
+      log_fn(LOG_WARN, "Couldn't rebuild router descriptor");
+    }
+    router_rebuild_descriptor();
+    router_upload_dir_desc_to_dirservers();
+  }
+
+  /* 1b. Every DirFetchPostPeriod seconds, we get a new directory and upload
    *    our descriptor (if any). */
   if(time_to_fetch_directory < now) {
     /* it's time to fetch a new directory and/or post our descriptor */
@@ -362,6 +377,7 @@ static void run_scheduled_events(time_t now) {
     rend_cache_clean(); /* should this go elsewhere? */
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
   }
+
 
   /* 2. Every second, we examine pending circuits and prune the
    *    ones which have been pending for more than a few seconds.

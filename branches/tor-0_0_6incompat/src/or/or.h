@@ -109,6 +109,8 @@
 #define MAX_DNS_ENTRY_AGE (15*60)
 #endif
 
+#define MIN_ONION_KEY_LIFETIME (120*60)
+
 #define CIRC_ID_TYPE_LOWER 0
 #define CIRC_ID_TYPE_HIGHER 1
 
@@ -963,6 +965,7 @@ cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
 void set_onion_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_onion_key(void);
 crypto_pk_env_t *get_previous_onion_key(void);
+time_t get_onion_key_set_at(void);
 void set_identity_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_identity_key(void);
 int init_keys(void);

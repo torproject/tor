@@ -11,12 +11,14 @@ extern or_options_t options; /* command-line and config-file options */
 /************************************************************/
 
 /* private keys */
+static time_t onionkey_set_at=0;
 static crypto_pk_env_t *onionkey=NULL;
 static crypto_pk_env_t *lastonionkey=NULL;
 static crypto_pk_env_t *identitykey=NULL;
 
 void set_onion_key(crypto_pk_env_t *k) {
   onionkey = k;
+  onionkey_set_at = time(NULL);
 }
 
 crypto_pk_env_t *get_onion_key(void) {
@@ -26,6 +28,10 @@ crypto_pk_env_t *get_onion_key(void) {
 
 crypto_pk_env_t *get_previous_onion_key(void) {
   return lastonionkey;
+}
+
+time_t get_onion_key_set_at(void) {
+  return onionkey_set_at;
 }
 
 void set_identity_key(crypto_pk_env_t *k) {
@@ -68,7 +74,7 @@ void rotate_onion_key(void)
   /* XXXX WINDOWS on windows, we need to protect this next bit with a lock.
    */
   lastonionkey = onionkey;
-  onionkey = prkey;
+  set_onion_key(prkey);
   if (router_rebuild_descriptor() <0) {
     goto error;
   }
