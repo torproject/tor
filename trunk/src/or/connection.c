@@ -160,6 +160,7 @@ void connection_close_immediate(connection_t *conn)
 int
 _connection_mark_for_close(connection_t *conn, char reason)
 {
+  int retval = 0;
   assert_connection_ok(conn,0);
 
   if (conn->marked_for_close) {
@@ -185,7 +186,7 @@ _connection_mark_for_close(connection_t *conn, char reason)
         connection_dns_remove(conn);
       if (!conn->has_sent_end && reason &&
           connection_edge_end(conn, reason, conn->cpath_layer) < 0)
-        return -1;
+        retval = -1;
       break;
     case CONN_TYPE_DNSWORKER:
       if (conn->state == DNSWORKER_STATE_BUSY) {
@@ -197,7 +198,7 @@ _connection_mark_for_close(connection_t *conn, char reason)
       ;
     }
   conn->marked_for_close = 1;
-  return 0;
+  return retval;
 }
 
 int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
