@@ -124,6 +124,21 @@ void rotate_onion_key(void)
   log_fn(LOG_WARN, "Couldn't rotate onion key.");
 }
 
+/** The last calculated bandwidth usage for our node. */
+static int advertised_bw = 0;
+
+/** Tuck <b>bw</b> away so we can produce it when somebody
+ * calls router_get_advertised_bandwidth() below.
+ */
+void router_set_advertised_bandwidth(int bw) {
+  advertised_bw = bw;
+}
+
+/** Return the value we tucked away above, or zero by default. */
+int router_get_advertised_bandwidth(void) {
+  return advertised_bw;
+}
+
 /* Read an RSA secret key key from a file that was once named fname_old,
  * but is now named fname_new.  Rename the file from old to new as needed.
  */
@@ -513,6 +528,7 @@ int router_rebuild_descriptor(void) {
   ri->platform = tor_strdup(platform);
   ri->bandwidthrate = options.BandwidthRate;
   ri->bandwidthburst = options.BandwidthBurst;
+  ri->advertisedbandwidth = router_get_advertised_bandwidth();
   ri->exit_policy = NULL; /* zero it out first */
   router_add_exit_policy_from_config(ri);
   ri->is_trusted_dir = authdir_mode();
