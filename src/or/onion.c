@@ -100,8 +100,8 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, size_t rarray_len, siz
   unsigned int *route = NULL;
   unsigned int oldchoice, choice;
   
-  if ( (cw >= 0) && (cw < 1) && (rarray) && (rlen) ) /* valid parameters */
-  {
+  assert((cw >= 0) && (cw < 1) && (rarray) && (rlen) ); /* valid parameters */
+
     routelen = chooselen(cw);
     if (routelen == -1)
     {
@@ -109,6 +109,9 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, size_t rarray_len, siz
       return NULL;
     }
     log(LOG_DEBUG,"new_route(): Chosen route length %u.",routelen);
+
+    /* FIXME need to figure out how many routers we can actually choose from.
+     * We can get into an infinite loop if there are too few. */
   
     /* allocate memory for the new route */
     route = (unsigned int *)malloc(routelen * sizeof(unsigned int));
@@ -132,8 +135,11 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, size_t rarray_len, siz
       choice = choice % (rarray_len);
       log(LOG_DEBUG,"new_route() : Chosen router %u.",choice);
       if (choice == oldchoice ||
-        (oldchoice < rarray_len && !pkey_cmp(rarray[choice]->pkey, rarray[oldchoice]->pkey))) {
-        /* same router, or router twin. try again. */
+        (oldchoice < rarray_len && !pkey_cmp(rarray[choice]->pkey, rarray[oldchoice]->pkey)) ||
+        !connection_twin_get_by_addr_port(rarray[choice]->addr, rarray[choice]->or_port)) {
+        /* Same router as last choice, or router twin,
+         *   or no routers with that key are connected to us.
+         * Try again. */
 	i--;
 	continue;
       }
@@ -143,9 +149,6 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, size_t rarray_len, siz
    
     *rlen = routelen;
     return route;
-  } /* valid parameters */
-  else /* invalid parameters */
-    return NULL;
 }
 
 /* creates a new onion from route, stores it and its length into bufp and lenp respectively */
