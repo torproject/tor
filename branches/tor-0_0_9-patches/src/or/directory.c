@@ -484,7 +484,7 @@ parse_http_url(char *headers, char **url)
 
 /** Parse an HTTP response string <b>headers</b> of the form
  * "HTTP/1.\%d \%d\%s\r\n...".
- * If it's well-formed, assign *<b>code</b>, point  and return 0.
+ * If it's well-formed, assign *<b>code</b>, point and return 0.
  * If <b>date</b> is provided, set *date to the Date header in the
  * http headers, or 0 if no such header is found.
  * Otherwise, return -1.
@@ -518,7 +518,7 @@ parse_http_response(const char *headers, int *code, time_t *date,
       if (!strcmpstart(s, "Date: ")) {
         strlcpy(datestr, s+6, sizeof(datestr));
         /* This will do nothing on failure, so we don't need to check
-           the result.   We shouldn't warn, since there are many other valid
+           the result.  We shouldn't warn, since there are many other valid
            date formats besides the one we use. */
         parse_rfc1123_time(datestr, date);
         break;
@@ -554,6 +554,8 @@ static int
 body_is_plausible(const char *body, size_t len, int purpose)
 {
   int i;
+  if (len == 0)
+    return 1; /* empty bodies don't need decompression */
   if (len < 32)
     return 0;
   if (purpose != DIR_PURPOSE_FETCH_RENDDESC) {
