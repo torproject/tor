@@ -224,17 +224,17 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     }
     log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
   } else {
+    if(connection_exact_get_by_addr_port(router->addr,router->or_port)) {
+      log_fn(LOG_INFO,"Router %s is already connected. Dropping.", router->nickname);
+      crypto_free_pk_env(pk);
+      return -1;
+    }
     connection_or_init_conn_from_router(conn, router);
   }
   crypto_free_pk_env(pk);
   if (strcmp(conn->nickname, nickname)) {
     log_fn(LOG_WARN,"Other side claims to be '%s', but we wanted '%s'",
            nickname, conn->nickname);
-    return -1;
-  }
-  otherconn = connection_exact_get_by_addr_port(router->addr,router->or_port);
-  if(otherconn && connection_state_is_open(otherconn)) {
-    log_fn(LOG_INFO,"Router %s is already connected. Dropping.", router->nickname);
     return -1;
   }
   if (!options.OnionRouter) { /* If I'm an OP... */
