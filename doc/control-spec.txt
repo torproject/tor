@@ -300,8 +300,16 @@ the message.
 
     "desc/all-ids" -- a comma-separated list of all known OR identities.
 
-    "addr-mappings" -- a NL-terminated list of address mappings, each in
-      the form of "from-address" SP "to-address".
+    "addr-mappings/all"
+    "addr-mappings/config"
+    "addr-mappings/cache"
+    "addr-mappings/control" -- a NL-terminated list of address mappings, each
+      in the form of "from-address" SP "to-address".  The 'config' key
+      returns those address mappings set in the configuration; the 'cache'
+      key returns the mappings in the client-side DNS cache; the 'control'
+      key returns the mappings set via the control interface; the 'all'
+      target returns the mappings set through any mechanism.
+
 
 3.13 INFOVALUE (Type 0x000C)
 
