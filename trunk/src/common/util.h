@@ -84,6 +84,8 @@ void spawn_exit();
 
 int tor_socketpair(int family, int type, int protocol, int fd[2]);
 
+int is_internal_IP(uint32_t ip);
+
 const char *get_uname(void);
 
 /* Start putting the process into daemon mode: fork and drop all resources

@@ -686,6 +686,18 @@ try_next_line:
   return 1;
 }
 
+int is_internal_IP(uint32_t ip) {
+
+  if (((ip & 0xff000000) == 0xa0000000) || /*       10/8 */
+      ((ip & 0xff000000) == 0x00000000) || /*        0/8 */
+      ((ip & 0xff000000) == 0x7f000000) || /*      127/8 */
+      ((ip & 0xffff0000) == 0xa9fe0000) || /* 169.254/16 */
+      ((ip & 0xfff00000) == 0xac100000) || /*  172.16/12 */
+      ((ip & 0xffff0000) == 0xc0a80000))   /* 192.168/16 */
+    return 1;
+  return 0;
+}
+
 static char uname_result[256];
 static int uname_result_is_set = 0;
 
