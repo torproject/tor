@@ -65,14 +65,16 @@ void circuit_close_all_marked()
     global_circuitlist = tmp;
   }
 
-  if(!global_circuitlist)
-    return;
-
-  for (tmp = global_circuitlist; tmp->next; tmp=tmp->next) {
-    while (tmp->next && tmp->next->marked_for_close) {
+  tmp = global_circuitlist;
+  while (tmp && tmp->next) {
+    if (tmp->next->marked_for_close) {
       m = tmp->next->next;
       circuit_free(tmp->next);
       tmp->next = m;
+      /* Need to check new tmp->next; don't advance tmp. */
+    } else {
+      /* Advance tmp. */
+      tmp = tmp->next;
     }
   }
 }
@@ -1266,7 +1268,7 @@ void assert_circuit_ok(const circuit_t *c)
   assert(c);
   assert(c->magic == CIRCUIT_MAGIC);
 
-  return 0; /* XXX fix the rest of this. */
+  return;
 
   assert(c->n_addr);
   assert(c->n_port);
