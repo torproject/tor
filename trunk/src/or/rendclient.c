@@ -385,7 +385,7 @@ void rend_client_desc_fetched(char *query, int success) {
         connection_mark_for_close(conn);
       }
     } else { /* 404, or fetch didn't get that far */
-      log_fn(LOG_WARN,"service id '%s' fetched failed, and not in cache. Closing conn.", query);
+      log_fn(LOG_WARN,"Failed to fetch service id '%s', and not in cache. Closing conn.", query);
       conn->has_sent_end = 1;
       connection_mark_for_close(conn);
     }
