@@ -75,6 +75,8 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
   circ->package_window = CIRCWINDOW_START;
   circ->deliver_window = CIRCWINDOW_START;
 
+  circ->next_stream_id = crypto_pseudo_rand_int(1<<16);
+
   circuit_add(circ);
 
   return circ;
