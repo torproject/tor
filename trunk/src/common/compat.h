@@ -65,7 +65,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #ifdef MS_WINDOWS
 #define U64_PRINTF_ARG(a) (a)
 #define U64_SCANF_ARG(a) (a)
-#dfeine U64_FORMAT "%I64u"
+#define U64_FORMAT "%I64u"
 #else
 #define U64_PRINTF_ARG(a) ((long long unsigned int)a)
 #define U64_SCANF_ARG(a) ((long long unsigned int*)a)
