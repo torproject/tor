@@ -2,8 +2,23 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+#include "orconfig.h"
+
 #include <stdlib.h>
 #include <limits.h>
+#if _MSC_VER > 1300
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#elif defined(_MSC_VER)
+#include <winsock.h>
+#endif
+#ifdef HAVE_SYS_FCNTL_H
+#include <sys/fcntl.h>
+#endif
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+
 #include "util.h"
 #include "log.h"
 
@@ -23,12 +38,18 @@ void *tor_malloc(size_t size) {
 void 
 my_gettimeofday(struct timeval *timeval) 
 {
+#ifdef HAVE_GETTIMEOFDAY
   if (gettimeofday(timeval, NULL)) {
     log_fn(LOG_ERR, "gettimeofday failed.");
     /* If gettimeofday dies, we have either given a bad timezone (we didn't),
        or segfaulted.*/
     exit(1);
   }
+#elif defined(HAVE_FTIME)
+  ftime(timeval);
+#else
+#error "No way to get time."
+#endif
   return;
 }
 
@@ -74,4 +95,15 @@ void tv_addms(struct timeval *a, long ms) {
   a->tv_usec += (ms * 1000) % 1000000;
   a->tv_sec += ((ms * 1000) / 1000000) + (a->tv_usec / 1000000);
   a->tv_usec %= 1000000;
+}
+
+void set_socket_nonblocking(int socket)
+{
+#ifdef _MSC_VER
+	/* Yes means no and no means yes.  Do you not want to be nonblocking? */
+	int nonblocking = 0;
+	ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
+#else
+	fcntl(socket, F_SETFL, O_NONBLOCK);
+#endif
 }

@@ -6,13 +6,24 @@
  * Nick Mathewson <nickm@freehaven.net>
  */
 
-#include "fakepoll.h"
-
+#include "orconfig.h"
 #ifdef USE_FAKE_POLL
-#include <sys/time.h>
 #include <sys/types.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+#ifdef HAVE_STRING_H
 #include <string.h>
+#endif
+#if _MSC_VER > 1300
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#elif defined(_MSC_VER)
+#include <winsock.h>
+#endif
+
+#include "fakepoll.h"
+#include "util.h"
 
 int
 poll(struct pollfd *ufds, unsigned int nfds, int timeout)

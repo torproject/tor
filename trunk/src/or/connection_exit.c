@@ -76,7 +76,7 @@ int connection_exit_connect(connection_t *conn) {
     log_fn(LOG_ERR,"Error creating network socket.");
     return -1;
   }
-  fcntl(s, F_SETFL, O_NONBLOCK); /* set s to non-blocking */
+  set_socket_nonblocking(s);
 
   memset((void *)&dest_addr,0,sizeof(dest_addr));
   dest_addr.sin_family = AF_INET;

@@ -10,11 +10,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+#ifdef HAVE_STRING_H
 #include <string.h>
+#endif
+#ifdef HAVE_SIGNAL_H
 #include <signal.h>
+#endif
+#ifdef HAVE_NETDB_H
 #include <netdb.h>
+#endif
+#ifdef HAVE_CTYPE_H
 #include <ctype.h>
+#endif
 #include "../common/torint.h"
 #ifdef HAVE_SYS_POLL_H
 #include <sys/poll.h>
@@ -23,17 +33,59 @@
 #else
 #include "../common/fakepoll.h"
 #endif
+#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_FCNTL_H
 #include <sys/fcntl.h>
+#endif
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+#ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#endif
+#ifdef HAVE_ERRNO_H
 #include <errno.h>
+#endif
+#ifdef HAVE_ASSERT_H
 #include <assert.h>
+#endif
+#ifdef HAVE_TIME_H
 #include <time.h>
+#endif
+#ifdef HAVE_WINSOCK_H
+#include <winsock.h>
+#endif
+#if _MSC_VER > 1300
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#elif defined(_MSC_VER)
+#include <winsock.h>
+#endif
+
+#ifdef _MSC_VER
+#include <io.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#define snprintf
+#endif
+
 
 #include "../common/crypto.h"
 #include "../common/log.h"

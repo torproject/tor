@@ -10,12 +10,18 @@
 #define STMT_BEGIN  do {
 #define STMT_END    } while (0)
 
+#ifdef __GNUC__
+#define PRETTY_FUNCTION __PRETTY_FUNCTION__
+#else
+#define PRETTY_FUNCTION ""
+#endif
+
 #define test_fail()                                             \
   STMT_BEGIN                                                    \
     printf("\nFile %s: line %d (%s): assertion failed.",        \
       __FILE__,                                                 \
       __LINE__,                                                 \
-      __PRETTY_FUNCTION__);                                     \
+      PRETTY_FUNCTION);                                     \
     return;                                                     \
   STMT_END
 
@@ -25,7 +31,7 @@
     printf("\nFile %s: line %d (%s): assertion failed: (%s)\n", \
       __FILE__,                                                 \
       __LINE__,                                                 \
-      __PRETTY_FUNCTION__,                                      \
+      PRETTY_FUNCTION,                                      \
       #expr);                                                   \
     return;                                                     \
   } STMT_END
@@ -38,7 +44,7 @@
            "      (%ld != %ld)\n",                              \
       __FILE__,                                                 \
       __LINE__,                                                 \
-      __PRETTY_FUNCTION__,                                      \
+      PRETTY_FUNCTION,                                      \
       #expr1, #expr2,                                           \
       v1, v2);                                                  \
     return;                                                     \
@@ -52,7 +58,7 @@
            "      (%ld == %ld)\n",                              \
       __FILE__,                                                 \
       __LINE__,                                                 \
-      __PRETTY_FUNCTION__,                                      \
+      PRETTY_FUNCTION,                                      \
       #expr1, #expr2,                                           \
       v1, v2);                                                  \
     return;                                                     \
@@ -66,7 +72,7 @@
            "      (\"%s\" != \"%s\")\n",                        \
       __FILE__,                                                 \
       __LINE__,                                                 \
-      __PRETTY_FUNCTION__,                                      \
+      PRETTY_FUNCTION,                                      \
       #expr1, #expr2,                                           \
       v1, v2);                                                  \
     return;                                                     \
@@ -80,7 +86,7 @@
            "      (\"%s\" == \"%s\")\n",                        \
       __FILE__,                                                 \
       __LINE__,                                                 \
-      __PRETTY_FUNCTION__,                                      \
+      PRETTY_FUNCTION,                                      \
       #expr1, #expr2,                                           \
       v1, v2);                                                  \
     return;                                                     \
@@ -93,7 +99,7 @@
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n", \
       __FILE__,                                                 \
       __LINE__,                                                 \
-      __PRETTY_FUNCTION__,                                      \
+      PRETTY_FUNCTION,                                      \
       #expr1, #expr2);                                          \
     return;                                                     \
   } STMT_END
@@ -105,7 +111,7 @@
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n", \
       __FILE__,                                                 \
       __LINE__,                                                 \
-      __PRETTY_FUNCTION__,                                      \
+      PRETTY_FUNCTION,                                      \
       #expr1, #expr2);                                          \
     return;                                                     \
   } STMT_END
