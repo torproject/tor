@@ -412,18 +412,16 @@ test_crypto()
    *        [00110101 01100011 01101000 01110010 01110011]
    * By 5s: [00110 10101 10001 10110 10000 11100 10011 10011]
    */
-  i = base32_encode(data2, 9, data1, 5);
+  base32_encode(data2, 9, data1, 5);
   test_streq(data2, "gvrwq4tt");
 
   strcpy(data1, "\xFF\xF5\x6D\x44\xAE\x0D\x5C\xC9\x62\xC4");
-  i = base32_encode(data2, 30, data1, 10);
-  test_eq(i,0);
+  base32_encode(data2, 30, data1, 10);
   test_streq(data2, "772w2rfobvomsywe");
 
   /* Base16 tests */
   strcpy(data1, "6chrs\xff");
-  i = base16_encode(data2, 13, data1, 6);
-  test_eq(i,0);
+  base16_encode(data2, 13, data1, 6);
   test_streq(data2, "3663687273FF");
 
   strcpy(data1, "f0d678affc000100");

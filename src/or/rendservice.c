@@ -353,10 +353,8 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   char serviceid[REND_SERVICE_ID_LEN+1];
   char hexcookie[9];
 
-  if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
-                    circuit->rend_pk_digest,10)) {
-    return -1;
-  }
+  base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
+                circuit->rend_pk_digest,10);
   log_fn(LOG_INFO, "Received INTRODUCE2 cell for service %s on circ %d",
          serviceid, circuit->n_circ_id);
 
@@ -382,9 +380,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
     return -1;
   }
   if (memcmp(circuit->rend_pk_digest, request, DIGEST_LEN)) {
-    if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1, request, 10)) {
-      return -1;
-    }
+    base32_encode(serviceid, REND_SERVICE_ID_LEN+1, request, 10);
     log_fn(LOG_WARN, "Got an INTRODUCE2 cell for the wrong service (%s)",
            serviceid);
     return -1;
@@ -552,10 +548,8 @@ rend_service_intro_has_opened(circuit_t *circuit)
   tor_assert(circuit->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
   tor_assert(CIRCUIT_IS_ORIGIN(circuit) && circuit->cpath);
 
-  if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
-                    circuit->rend_pk_digest,10)) {
-    tor_assert(0);
-  }
+  base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
+                circuit->rend_pk_digest,10);
 
   service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);
   if (!service) {
@@ -644,10 +638,8 @@ rend_service_rendezvous_has_opened(circuit_t *circuit)
   tor_assert(hop);
 
   hex_encode(circuit->rend_cookie, 4, hexcookie);
-  if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
-                    circuit->rend_pk_digest,10)) {
-    tor_assert(0);
-  }
+  base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
+                circuit->rend_pk_digest,10);
 
   log_fn(LOG_INFO,
        "Done building circuit %d to rendezvous with cookie %s for service %s",
@@ -933,11 +925,8 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
 
   tor_assert(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
   log_fn(LOG_DEBUG,"beginning to hunt for addr/port");
-  if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
-                    circ->rend_pk_digest,10)) {
-    log_fn(LOG_WARN,"bug: base32 failed");
-    return -1;
-  }
+  base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
+                circ->rend_pk_digest,10);
   service = rend_service_get_by_pk_digest(circ->rend_pk_digest);
   if (!service) {
     log_fn(LOG_WARN, "Couldn't find any service associated with pk %s on rendezvous circuit %d; closing",

@@ -146,8 +146,7 @@ int rend_get_service_id(crypto_pk_env_t *pk, char *out)
   tor_assert(pk);
   if (crypto_pk_get_digest(pk, buf) < 0)
     return -1;
-  if (base32_encode(out, REND_SERVICE_ID_LEN+1, buf, 10) < 0)
-    return -1;
+  base32_encode(out, REND_SERVICE_ID_LEN+1, buf, 10);
   return 0;
 }
 

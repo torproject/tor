@@ -1254,6 +1254,7 @@ int check_private_dir(const char *dirname, int create)
 {
   int r;
   struct stat st;
+  tor_assert(dirname);
   if (stat(dirname, &st)) {
     if (errno != ENOENT) {
       log(LOG_WARN, "Directory %s cannot be read: %s", dirname,
