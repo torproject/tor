@@ -58,6 +58,26 @@ void smartlist_intersect(smartlist_t *sl1, smartlist_t *sl2);
 void smartlist_subtract(smartlist_t *sl1, smartlist_t *sl2);
 void *smartlist_choose(smartlist_t *sl);
 
+/* Map from const char * to void*. Implemented with a splay tree. */
+typedef struct strmap_t strmap_t;
+typedef struct strmap_entry_t strmap_entry_t;
+typedef struct strmap_entry_t strmap_iter_t;
+strmap_t* strmap_new(void);
+void* strmap_set(strmap_t *map, const char *key, void *val);
+void* strmap_get(strmap_t *map, const char *key);
+void* strmap_remove(strmap_t *map, const char *key);
+void strmap_foreach(strmap_t *map,
+		    void* (*fn)(const char *key, void *val, void *data),
+		    void *data);
+void strmap_free(strmap_t *map, void (*free_val)(void*));
+
+strmap_iter_t *strmap_iter_init(strmap_t *map);
+strmap_iter_t *strmap_iter_next(strmap_t *map, strmap_iter_t *iter);
+strmap_iter_t *strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter);
+void strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp);
+
+int strmap_iter_done(strmap_iter_t *iter);
+
 const char *eat_whitespace(const char *s);
 const char *eat_whitespace_no_nl(const char *s);
 const char *find_whitespace(const char *s);
