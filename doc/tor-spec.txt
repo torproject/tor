@@ -695,8 +695,8 @@ The items' formats are as follows:
        line. At most one of dircacheport and the directory port in the router
        line may be non-zero.
 
-       [Obsolete; will go away once 0.0.8 is dead. Older version of Tor
-       did poorly when non-authoritative directories has a non-zero directory
+       [Obsolete; will go away once 0.0.8 is dead.  Older versions of Tor
+       did poorly when non-authoritative directories had a non-zero directory
        port.  To transition, Tor 0.0.8 used dircacheport for
        nonauthoritative directories.]
 
