@@ -971,7 +971,7 @@ option_is_same(or_options_t *o1, or_options_t *o2, config_var_t *var)
 
   v1 = ((char*)o1) + var-> var_offset;
   v2 = ((char*)o2) + var-> var_offset;
-  switch (var->type) 
+  switch (var->type)
     {
     case CONFIG_TYPE_UINT:
     case CONFIG_TYPE_BOOL:
