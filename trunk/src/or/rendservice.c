@@ -458,6 +458,7 @@ rend_service_intro_is_ready(circuit_t *circuit)
   char buf[RELAY_PAYLOAD_SIZE];
   char auth[DIGEST_LEN + 10];
   char hexid[9];
+  char hexdigest[DIGEST_LEN*2+1];
 
   assert(circuit->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
   assert(circuit->cpath);
@@ -480,9 +481,15 @@ rend_service_intro_is_ready(circuit_t *circuit)
   set_uint16(buf, len);
   len += 2;
   memcpy(auth, circuit->cpath->prev->handshake_digest, DIGEST_LEN);
+  /* XXXX remove me once we've debugged this; this info should not be logged.
+   */
+  hex_encode(circuit->cpath->prev->handshake_digest, DIGEST_LEN, hexdigest);
+  log_fn(LOG_INFO,"Handshake information is: %s", hexdigest);
   memcpy(auth+DIGEST_LEN, "INTRODUCE", 9);
   if (crypto_digest(auth, DIGEST_LEN+9, buf+len))
     goto err;
+  hex_encode(buf+len, DIGEST_LEN, hexdigest);
+  log_fn(LOG_INFO,"Authentication is: %s", hexdigest);
   len += 20;
   r = crypto_pk_private_sign_digest(service->private_key, buf, len, buf+len);
   if (r<0) {
