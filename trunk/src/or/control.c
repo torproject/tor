@@ -2,8 +2,33 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/**
+ * /file control.c
+ *
+ * /brief Implementation for Tor's control-socket interface.
+ */
+
 #include "or.h"
 
+/* Protocol outline: a bidirectional stream, over which each side
+ * sends a series of messages.  Each message has a two-byte typecode,
+ * a two-byte length field, and a variable-length body whose length is
+ * given in the length field.
+ *
+ * By default, the server only sends messages in response to client messages.
+ * Every client message gets a message in response.  The client may, however,
+ * _request_ that other messages be delivered asynchronously.
+ *
+ *
+ * Every message type is either client-only or server-only, and every
+ * server message type is either synchronous-only (only occurs in
+ * response to a client request) or asynchronous-only (never is an
+ * answer to a client request.
+ *
+ * See control-spec.txt for full details.
+ */
+
+/* Recognized message type codes. */
 #define CONTROL_CMD_ERROR        0x0000
 #define CONTROL_CMD_DONE         0x0001
 #define CONTROL_CMD_SETCONF      0x0002
@@ -14,6 +39,7 @@
 #define CONTROL_CMD_AUTHENTICATE 0x0007
 #define _CONTROL_CMD_MAX_RECOGNIZED 0x0007
 
+/* Recognized error codes. */
 #define ERR_UNSPECIFIED             0x0000
 #define ERR_UNRECOGNIZED_TYPE       0x0001
 #define ERR_UNRECOGNIZED_CONFIG_KEY 0x0002
@@ -22,6 +48,7 @@
 #define ERR_UNAUTHORIZED_USER       0x0005
 #define ERR_FAILED_AUTHENTICATION   0x0006
 
+/* Recongized asynchonous event types. */
 #define _EVENT_MIN            0x0001
 #define EVENT_CIRCUIT_STATUS  0x0001
 #define EVENT_STREAM_STATUS   0x0002
@@ -30,9 +57,9 @@
 #define EVENT_WARNING         0x0005
 #define _EVENT_MAX            0x0005
 
-#define EVENT_IS_INTERESTING(e) (global_event_mask & (1<<(e)))
-
-static const char *CONTROL_COMMANDS[] = {
+/** Array mapping from message type codes to human-readable message
+ * type names.  */
+static const char * CONTROL_COMMANDS[] = {
   "error",
   "done",
   "setconf",
@@ -43,9 +70,24 @@ static const char *CONTROL_COMMANDS[] = {
   "authenticate",
 };
 
+/** Bitfield: The bit 1&lt;&lt;e is be set if <b>any</b> open control
+ * connection is interested in events of type <b>e</b>.  We use this
+ * so that we can decide to skip generating event messages that nobody
+ * is interest in without having to walk over the global connection
+ * list to find out.
+ **/
 static uint32_t global_event_mask = 0;
 
+/** Macro: true if any control connection is interested in events of type
+ * <b>e</b>. */
+#define EVENT_IS_INTERESTING(e) (global_event_mask & (1<<(e)))
+
+/** If we're using cookie-type authentication, how long should our cookies be?
+ */
 #define AUTHENTICATION_COOKIE_LEN 32
+
+/** If true, we've set authentication_cookie to a secret code and
+ * stored it to disk. */
 static int authentication_cookie_is_set = 0;
 static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
@@ -65,12 +107,16 @@ static int handle_control_setevents(connection_t *conn, uint16_t len,
 static int handle_control_authenticate(connection_t *conn, uint16_t len,
                                        const char *body);
 
+/** Given a possibly invalid message type code <b>cmd</b>, return a
+ * human-readable string equivalent. */
 static INLINE const char *
 control_cmd_to_string(uint16_t cmd)
 {
   return (cmd<=_CONTROL_CMD_MAX_RECOGNIZED) ? CONTROL_COMMANDS[cmd] : "Unknown";
 }
 
+/** Set <b>global_event_mask</b> to the bitwise OR of each live control
+ * connection's event_mask field. */
 static void update_global_event_mask(void)
 {
   connection_t **conns;
@@ -86,6 +132,8 @@ static void update_global_event_mask(void)
   }
 }
 
+/** Send a message of type <b>type</b> containing <b>len</b> bytes
+ * from <b>body</b> along the control connection <b>conn</b> */
 static void
 send_control_message(connection_t *conn, uint16_t type, uint16_t len,
                      const char *body)
@@ -101,12 +149,15 @@ send_control_message(connection_t *conn, uint16_t type, uint16_t len,
     connection_write_to_buf(body, len, conn);
 }
 
+/** Send a "DONE" message down the control connection <b>conn</b> */
 static void
 send_control_done(connection_t *conn)
 {
   send_control_message(conn, CONTROL_CMD_DONE, 0, NULL);
 }
 
+/** Send an error message with error code <b>error</b> and body
+ * <b>message</b> down the connection <b>conn</b> */
 static void
 send_control_error(connection_t *conn, uint16_t error, const char *message)
 {
@@ -119,6 +170,9 @@ send_control_error(connection_t *conn, uint16_t error, const char *message)
   send_control_message(conn, CONTROL_CMD_ERROR, (uint16_t)(len+2), buf);
 }
 
+/** Send an 'event' message of event type <b>event</b>, containing
+ * <b>len</b> bytes in <b>body</b> to every control connection that
+ * is interested in it. */
 static void
 send_control_event(uint16_t event, uint16_t len, const char *body)
 {
@@ -135,9 +189,10 @@ send_control_event(uint16_t event, uint16_t len, const char *body)
   }
 }
 
+/** Called when we receive a SETCONF message: parse the body and try
+ * to update our configuration.  Reply with a DONE or ERROR message. */
 static int
-handle_control_setconf(connection_t *conn, uint16_t len,
-                       char *body)
+handle_control_setconf(connection_t *conn, uint16_t len, char *body)
 {
   struct config_line_t *lines=NULL;
   or_options_t *options = get_options();
@@ -161,9 +216,10 @@ handle_control_setconf(connection_t *conn, uint16_t len,
   return 0;
 }
 
+/** Called when we receive a GETCONF message.  Parse the request, and
+ * reply with a CONFVALUE or an ERROR message */
 static int
-handle_control_getconf(connection_t *conn, uint16_t body_len,
-                                  const char *body)
+handle_control_getconf(connection_t *conn, uint16_t body_len, const char *body)
 {
   smartlist_t *questions = NULL;
   smartlist_t *answers = NULL;
@@ -212,8 +268,10 @@ handle_control_getconf(connection_t *conn, uint16_t body_len,
   return 0;
 }
 
-static int handle_control_setevents(connection_t *conn, uint16_t len,
-                                    const char *body)
+/** Called when we get a SETEVENTS message: update conn->event_mask,
+ * and reply with DONE or ERROR. */
+static int
+handle_control_setevents(connection_t *conn, uint16_t len, const char *body)
 {
   uint16_t event_code;
   uint32_t event_mask = 0;
@@ -240,8 +298,12 @@ static int handle_control_setevents(connection_t *conn, uint16_t len,
   return 0;
 }
 
-static int handle_control_authenticate(connection_t *conn, uint16_t len,
-                                       const char *body)
+/** Called when we get an AUTHENTICATE message.  Check whether the
+ * authentication is valid, and if so, update the connection's state to
+ * OPEN.  Reply with DONE or ERROR.
+ */
+static int
+handle_control_authenticate(connection_t *conn, uint16_t len, const char *body)
 {
   or_options_t *options = get_options();
   if (len == AUTHENTICATION_COOKIE_LEN &&
@@ -277,7 +339,9 @@ static int handle_control_authenticate(connection_t *conn, uint16_t len,
   return 0;
 }
 
-int connection_control_finished_flushing(connection_t *conn) {
+/** Called when <b>conn</b> has no more bytes left on its outbuf. */
+int
+connection_control_finished_flushing(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_CONTROL);
 
@@ -285,7 +349,10 @@ int connection_control_finished_flushing(connection_t *conn) {
   return 0;
 }
 
-int connection_control_process_inbuf(connection_t *conn) {
+/** Called when <b>conn</b> has received more bytes on its inbuf, or has
+ * gotten its socket closed. */
+int
+connection_control_process_inbuf(connection_t *conn) {
   uint16_t body_len, command_type;
   char *body;
 
@@ -299,6 +366,7 @@ int connection_control_process_inbuf(connection_t *conn) {
   }
 
  again:
+  /* Try to suck a control message from the buffer. */
   switch(fetch_from_buf_control(conn->inbuf, &body_len, &command_type, &body))
     {
     case -1:
@@ -325,6 +393,7 @@ int connection_control_process_inbuf(connection_t *conn) {
     goto again;
   }
 
+  /* Okay, we're willing to process the command. */
   switch(command_type)
     {
     case CONTROL_CMD_SETCONF:
@@ -363,7 +432,10 @@ int connection_control_process_inbuf(connection_t *conn) {
   goto again; /* There might be more data. */
 }
 
-int control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
+/** Something has happened to circuit <b>circ</b>: tell any interested
+ * control connections. */
+int
+control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
 {
   char *path, *msg;
   size_t path_len;
@@ -385,7 +457,10 @@ int control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
   return 0;
 }
 
-int control_event_stream_status(connection_t *conn, stream_status_event_t tp)
+/** Something has happened to the stream associated with AP connection
+ * <b>conn</b>: tell any interested control connections. */
+int
+control_event_stream_status(connection_t *conn, stream_status_event_t tp)
 {
   char *msg;
   size_t len;
@@ -406,7 +481,10 @@ int control_event_stream_status(connection_t *conn, stream_status_event_t tp)
   return 0;
 }
 
-int control_event_or_conn_status(connection_t *conn,or_conn_status_event_t tp)
+/** Something has happened to the OR connection <b>conn</b>: tell any
+ * interested control connections. */
+int
+control_event_or_conn_status(connection_t *conn,or_conn_status_event_t tp)
 {
   char buf[HEX_DIGEST_LEN+3]; /* status, dollar, identity, NUL */
   size_t len;
@@ -423,7 +501,10 @@ int control_event_or_conn_status(connection_t *conn,or_conn_status_event_t tp)
   return 0;
 }
 
-int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
+/** A second or more has elapsed: tell any interested control
+ * connections how much bandwidth we used. */
+int
+control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
 {
   char buf[8];
 
@@ -437,7 +518,9 @@ int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
   return 0;
 }
 
-void control_event_logmsg(int severity, const char *msg)
+/** We got a log message: tell any interested control connections. */
+void
+control_event_logmsg(int severity, const char *msg)
 {
   size_t len;
   if (severity > LOG_WARN) /* Less important than warning? ignore for now. */
@@ -449,7 +532,11 @@ void control_event_logmsg(int severity, const char *msg)
   send_control_event(EVENT_WARNING, (uint16_t)(len+1), msg);
 }
 
-int init_cookie_authentication(void)
+/** Choose a random authentication cookie and write it to disk.
+ * Anybody who can read the cookie from disk will be considered
+ * authorized to use the control connection. */
+int
+init_cookie_authentication(void)
 {
   char fname[512];
 
