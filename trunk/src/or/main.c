@@ -25,6 +25,7 @@ static int nfds=0; /* number of connections currently active */
 
 static int please_dumpstats=0; /* whether we should dump stats during the loop */
 static int please_fetch_directory=0; /* whether we should fetch a new directory */
+static int please_reap_children=0; /* whether we should waitpid for exited children*/
 
 /* private key */
 static crypto_pk_env_t *privatekey=NULL;
@@ -527,6 +528,10 @@ static int do_main_loop(void) {
       }
       please_fetch_directory = 0;
     }
+    if(please_reap_children) {
+      while(waitpid(-1,NULL,WNOHANG)) ; /* keep reaping until no more zombies */
+      please_reap_children = 0;
+    }
     if(prepare_for_poll(&timeout) < 0) {
       log(LOG_DEBUG,"do_main_loop(): prepare_for_poll failed, exiting.");
       return -1;
@@ -591,6 +596,8 @@ static void catch(int the_signal) {
     case SIGUSR1:
       please_dumpstats = 1;
       break;
+    case SIGCHLD:
+      please_reap_children = 1;
     default:
       log(LOG_ERR,"Caught signal that we can't handle??");
   }
@@ -845,6 +852,7 @@ int tor_main(int argc, char *argv[]) {
   signal (SIGTERM, catch);
   signal (SIGUSR1, catch); /* to dump stats to stdout */
   signal (SIGHUP,  catch); /* to reload directory */
+  signal (SIGCHLD, catch); /* for exiting dns/cpu workers */
 
   crypto_global_init();
   crypto_seed_rng();
