@@ -52,7 +52,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
     return 0;
 #else
     /* eof reached, kill it. */
-    log_fn(LOG_INFO,"conn (fd %d) reached eof. Closing.", conn->s);
+    log_fn(LOG_INFO,"conn (fd %d) reached eof (stream size %d). Closing.", conn->s, (int)conn->stream_size);
     connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
     if(!conn->marked_for_close) {
       /* only mark it if not already marked. it's possible to
