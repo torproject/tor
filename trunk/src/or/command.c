@@ -88,7 +88,7 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
   if(circ) {
-    log_fn(LOG_WARNING,"received CREATE cell for known circ. Dropping.");
+    log_fn(LOG_WARNING,"received CREATE cell (aci %d) for known circ. Dropping.", cell->aci);
     return;
   }
 
@@ -118,7 +118,7 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
   if(!circ) {
-    log_fn(LOG_WARNING,"received CREATED cell for unknown circ. Dropping.");
+    log_fn(LOG_WARNING,"received CREATED cell (aci %d) for unknown circ. Dropping.", cell->aci);
     return;
   }
 

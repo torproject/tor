@@ -273,12 +273,6 @@ struct connection_t {
 
   long timestamp_created; /* when was this connection_t created? */
 
-  uint32_t bandwidth; /* connection bandwidth. Set to -1 for non-OR conns. */
-  int receiver_bucket; /* when this hits 0, stop receiving. Every second we
-                        * add 'bandwidth' to this, capping it at 10*bandwidth.
-			* Set to -1 for non-OR conns.
-                        */
-
   uint32_t addr; /* these two uniquely identify a router. Both in host order. */
   uint16_t port; /* if non-zero, they identify the guy on the other end
                   * of the connection. */
@@ -293,6 +287,12 @@ struct connection_t {
   tor_tls *tls;
   uint16_t next_aci; /* Which ACI do we try to use next on this connection? 
                       * This is always in the range 0..1<<15-1.*/
+
+  /* bandwidth and receiver_bucket only used by ORs in OPEN state: */
+  uint32_t bandwidth; /* connection bandwidth. */
+  int receiver_bucket; /* when this hits 0, stop receiving. Every second we
+                        * add 'bandwidth' to this, capping it at 10*bandwidth.
+                        */
 
 /* Used only by edge connections: */
   char stream_id[STREAM_ID_SIZE];

@@ -29,7 +29,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
     conn->done_receiving = 1;
     shutdown(conn->s, 0); /* XXX check return, refactor NM */
     if (conn->done_sending)
-      conn->marked_for_close = 1;
+/*ENDCLOSE*/  conn->marked_for_close = 1;
 
     /* XXX Factor out common logic here and in circuit_about_to_close NM */
     circ = circuit_get_by_conn(conn);
@@ -51,17 +51,17 @@ int connection_edge_process_inbuf(connection_t *conn) {
 #else 
     /* eof reached, kill it. */
     log_fn(LOG_INFO,"conn (fd %d) reached eof. Closing.", conn->s);
-    return -1;
+/*ENDCLOSE*/ return -1;
 #endif
   }
 
   switch(conn->state) {
     case AP_CONN_STATE_SOCKS_WAIT:
-      return connection_ap_handshake_process_socks(conn);
+/*ENDCLOSE*/  return connection_ap_handshake_process_socks(conn);
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       if(connection_package_raw_inbuf(conn) < 0)
-        return -1;
+/*ENDCLOSE*/  return -1;
       return 0;
     case EXIT_CONN_STATE_CONNECTING:
       log_fn(LOG_INFO,"text from server while in 'connecting' state at exit. Leaving it on buffer.");
@@ -133,10 +133,11 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         log_fn(LOG_INFO,"...and informing resolver we don't want the answer anymore.");
         dns_cancel_pending_resolve(conn->address, conn);
       }
+      return 0;
     } else {
-      log_fn(LOG_WARNING,"Got an unexpected relay cell, not in 'open' state. Dropping.");
+      log_fn(LOG_WARNING,"Got an unexpected relay cell, not in 'open' state. Closing.");
+      return -1;
     }
-    return 0;
   }
 
   switch(relay_command) {
@@ -174,11 +175,11 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
 //      printf("New text for buf (%d bytes): '%s'", cell->length - RELAY_HEADER_SIZE, cell->payload + RELAY_HEADER_SIZE);
       if(connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
                                  cell->length - RELAY_HEADER_SIZE, conn) < 0) {
-        conn->marked_for_close = 1;
+/*ENDCLOSE*/    conn->marked_for_close = 1;
         return 0;
       }
       if(connection_consider_sending_sendme(conn, edge_type) < 0)
-        conn->marked_for_close = 1;
+/*ENDCLOSE*/    conn->marked_for_close = 1;
       return 0;
     case RELAY_COMMAND_END:
       if(!conn) {
@@ -191,9 +192,9 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */
       if (conn->done_receiving)
-        conn->marked_for_close = 1;
+/*ENDCLOSE*/  conn->marked_for_close = 1;
 #endif
-      conn->marked_for_close = 1;
+/*ENDCLOSE*/  conn->marked_for_close = 1;
       break;
     case RELAY_COMMAND_EXTEND:
       if(conn) {
@@ -240,7 +241,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
       log_fn(LOG_INFO,"Connected! Notifying application.");
       if(connection_ap_handshake_socks_reply(conn, SOCKS4_REQUEST_GRANTED) < 0) {
-        conn->marked_for_close = 1;
+/*ENDCLOSE*/    conn->marked_for_close = 1;
       }
       break;
     case RELAY_COMMAND_SENDME:
@@ -331,7 +332,7 @@ repeat_connection_package_raw_inbuf:
     return 0;
  
   if(conn->package_window <= 0) {
-    log_fn(LOG_WARNING,"called with package_window 0. Tell Roger.");
+    log_fn(LOG_WARNING,"called with package_window %d. Tell Roger.", conn->package_window);
     connection_stop_reading(conn);
     return 0;
   }
@@ -526,7 +527,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char result) 
   return connection_flush_buf(conn); /* try to flush it, in case we're about to close the conn */
 }
 
-static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
+/*ENDCLOSE*/ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   connection_t *n_stream;
   char *colon;
 
@@ -553,8 +554,6 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   n_stream->address = strdup(cell->payload + RELAY_HEADER_SIZE + STREAM_ID_SIZE);
   n_stream->port = atoi(colon+1);
   n_stream->state = EXIT_CONN_STATE_RESOLVING;
-  n_stream->receiver_bucket = -1; /* edge connections don't do receiver buckets */
-  n_stream->bandwidth = -1;
   n_stream->s = -1; /* not yet valid */
   n_stream->package_window = STREAMWINDOW_START;
   n_stream->deliver_window = STREAMWINDOW_START;

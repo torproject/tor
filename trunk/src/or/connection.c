@@ -83,9 +83,6 @@ connection_t *connection_new(int type) {
   conn->inbuf = buf_new();
   conn->outbuf = buf_new();
 
-  conn->receiver_bucket = 50000; /* should be enough to do the handshake */
-  conn->bandwidth = conn->receiver_bucket / 10; /* give it a default */
-
   conn->timestamp_created = now.tv_sec;
   conn->timestamp_lastread = now.tv_sec;
   conn->timestamp_lastwritten = now.tv_sec;
@@ -149,8 +146,6 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
 
   conn = connection_new(type);
   conn->s = s;
-  conn->receiver_bucket = -1; /* non-cell connections don't do receiver buckets */
-  conn->bandwidth = -1;
 
   if(connection_add(conn) < 0) { /* no space, forget it */
     log_fn(LOG_WARNING,"connection_add failed. Giving up.");
@@ -196,11 +191,6 @@ int connection_handle_listener_read(connection_t *conn, int new_type) {
 
   newconn = connection_new(new_type);
   newconn->s = news;
-
-  if(!connection_speaks_cells(newconn)) {
-    newconn->receiver_bucket = -1;
-    newconn->bandwidth = -1;
-  }
 
   newconn->address = strdup(inet_ntoa(remote.sin_addr)); /* remember the remote address */
   newconn->addr = ntohl(remote.sin_addr.s_addr);
@@ -305,7 +295,7 @@ static int connection_tls_finish_handshake(connection_t *conn) {
       }
       crypto_free_pk_env(pk);
     } else { /* it's an OP */
-      conn->bandwidth = DEFAULT_BANDWIDTH_OP;
+      conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
     }
   } else { /* I'm a client */
     if(!tor_tls_peer_has_cert(conn->tls)) { /* it's a client too?! */
@@ -330,7 +320,7 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     }
     log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
     crypto_free_pk_env(pk);
-    conn->bandwidth = DEFAULT_BANDWIDTH_OP;
+    conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
     circuit_n_conn_open(conn); /* send the pending create */
   }
   return 0;
@@ -446,10 +436,6 @@ int connection_handle_read(connection_t *conn) {
     //log_fn(LOG_DEBUG,"connection_process_inbuf returned %d.",retval);
     return -1;
   }
-  if(!connection_state_is_open(conn) && conn->receiver_bucket == 0) {
-    log_fn(LOG_WARNING,"receiver bucket reached 0 before handshake finished. Closing.");
-    return -1;
-  }
   return 0;
 }
 
@@ -457,9 +443,6 @@ int connection_handle_read(connection_t *conn) {
 int connection_read_to_buf(connection_t *conn) {
   int result;
   int at_most;
-
-  assert((connection_speaks_cells(conn) && conn->receiver_bucket >= 0) ||
-         (!connection_speaks_cells(conn) && conn->receiver_bucket < 0));
 
   if(options.LinkPadding) {
     at_most = global_read_bucket;
@@ -477,14 +460,13 @@ int connection_read_to_buf(connection_t *conn) {
       at_most = global_read_bucket;
   }
 
-  if(conn->receiver_bucket >= 0 && at_most > conn->receiver_bucket)
-    at_most = conn->receiver_bucket;
-
   if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
     if(conn->state == OR_CONN_STATE_HANDSHAKING)
       return connection_tls_continue_handshake(conn);
 
     /* else open, or closing */
+    if(at_most > conn->receiver_bucket)
+      at_most = conn->receiver_bucket;
     result = read_to_buf_tls(conn->tls, at_most, conn->inbuf);
 
     switch(result) {
@@ -510,13 +492,20 @@ int connection_read_to_buf(connection_t *conn) {
   }
 
   global_read_bucket -= result; assert(global_read_bucket >= 0);
-  if(connection_speaks_cells(conn))
-    conn->receiver_bucket -= result;
-  if(conn->receiver_bucket == 0 || global_read_bucket == 0) {
-    log_fn(LOG_DEBUG,"buckets (%d, %d) exhausted. Pausing.", global_read_bucket, conn->receiver_bucket);
+  if(global_read_bucket == 0) {
+    log_fn(LOG_DEBUG,"global bucket exhausted. Pausing.");
     conn->wants_to_read = 1;
     connection_stop_reading(conn);
     return 0;
+  }
+  if(connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
+    conn->receiver_bucket -= result; assert(conn->receiver_bucket >= 0);
+    if(conn->receiver_bucket == 0) {
+      log_fn(LOG_DEBUG,"receiver bucket exhausted. Pausing.");
+      conn->wants_to_read = 1;
+      connection_stop_reading(conn);
+      return 0;
+    }
   }
   if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING)
     if(result == at_most)
@@ -627,7 +616,10 @@ int connection_receiver_bucket_should_increase(connection_t *conn) {
 
   if(!connection_speaks_cells(conn))
     return 0; /* edge connections don't use receiver_buckets */
+  if(conn->state != OR_CONN_STATE_OPEN)
+    return 0; /* only open connections play the rate limiting game */  
 
+  assert(conn->bandwidth > 0);
   if(conn->receiver_bucket > 9*conn->bandwidth)
     return 0;
 
@@ -660,7 +652,7 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
 
   if(!connection_speaks_cells(conn)) {
      log_fn(LOG_INFO,"Aci %d: At an edge. Marking connection for close.", aci);
-     conn->marked_for_close = 1;
+/*ENDCLOSE*/ conn->marked_for_close = 1;
      return 0;
   }
 
@@ -746,13 +738,13 @@ void assert_connection_ok(connection_t *conn, time_t now)
 #endif
 
   if (conn->type != CONN_TYPE_OR) {
-    assert(conn->bandwidth == -1);
-    assert(conn->receiver_bucket == -1);
     assert(!conn->tls);
   } else {
-    assert(conn->bandwidth);
-    assert(conn->receiver_bucket >= 0);
-    assert(conn->receiver_bucket <= 10*conn->bandwidth);
+    if(conn->state == OR_CONN_STATE_OPEN) {
+      assert(conn->bandwidth > 0);
+      assert(conn->receiver_bucket >= 0);
+      assert(conn->receiver_bucket <= 10*conn->bandwidth);
+    }
     assert(conn->addr && conn->port);
     assert(conn->address);
     if (conn->state != OR_CONN_STATE_CONNECTING)

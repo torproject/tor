@@ -48,8 +48,6 @@ void directory_initiate_command(routerinfo_t *router, int command) {
   conn->addr = router->addr;
   conn->port = router->dir_port;
   conn->address = strdup(router->address);
-  conn->receiver_bucket = -1; /* edge connections don't do receiver buckets */
-  conn->bandwidth = -1;
   if (router->identity_pkey)
     conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
   else {

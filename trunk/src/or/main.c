@@ -391,7 +391,8 @@ static int prepare_for_poll(void) {
 
       if(conn->wants_to_read == 1 /* it's marked to turn reading back on now */
          && global_read_bucket > 0 /* and we're allowed to read */
-         && conn->receiver_bucket != 0) { /* and either an edge conn or non-empty bucket */
+         && (!connection_speaks_cells(conn) || conn->receiver_bucket > 0)) {
+         /* and either a non-cell conn or a cell conn with non-empty bucket */
         conn->wants_to_read = 0;
         connection_start_reading(conn);
 	if(conn->wants_to_write == 1) {
