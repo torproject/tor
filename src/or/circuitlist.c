@@ -395,14 +395,15 @@ int _circuit_mark_for_close(circuit_t *circ) {
  */
 void assert_cpath_layer_ok(const crypt_path_t *cp)
 {
-  tor_assert(cp->f_crypto);
-  tor_assert(cp->b_crypto);
 //  tor_assert(cp->addr); /* these are zero for rendezvous extra-hops */
 //  tor_assert(cp->port);
   switch(cp->state)
     {
-    case CPATH_STATE_CLOSED:
     case CPATH_STATE_OPEN:
+      tor_assert(cp->f_crypto);
+      tor_assert(cp->b_crypto);
+      /* fall through */
+    case CPATH_STATE_CLOSED:
       tor_assert(!cp->handshake_state);
       break;
     case CPATH_STATE_AWAITING_KEYS:
