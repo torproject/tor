@@ -146,7 +146,6 @@ start_of_accounting_period_containing(time_t now)
   return tor_timegm(tm);
 }
 
-
 /** Return the start of the accounting period that comes after the one
  * containing the time <b>now</b>. */
 static time_t
@@ -160,7 +159,6 @@ start_of_accounting_period_after(time_t now)
   incr_month(tm, 1);
   return tor_timegm(tm);
 }
-
 
 /** Initialize the accounting subsystem. */
 void

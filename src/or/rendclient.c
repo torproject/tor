@@ -235,7 +235,6 @@ rend_client_introduction_acked(circuit_t *circ,
   return 0;
 }
 
-
 /** If we are not currently fetching a rendezvous service descriptor
  * for the service ID <b>query</b>, start a directory connection to fetch a
  * new one.

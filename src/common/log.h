@@ -27,7 +27,7 @@
 /* XXXX Note: The code was originally written to refer to severities,
  * with 0 being the least severe; while syslog's logging code refers to
  * priorities, with 0 being the most important.  Thus, all our comparisons
- * needed to be reversed when we added syslog support.  
+ * needed to be reversed when we added syslog support.
  *
  * The upshot of this is that comments about log levels may be messed
  * up: for "maximum severity" read "most severe" and "numerically

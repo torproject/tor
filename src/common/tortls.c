@@ -257,7 +257,6 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   return x509;
 }
 
-
 #ifdef EVERYONE_HAS_AES
 /* Everybody is running OpenSSL 0.9.7 or later, so no backward compatibility
  * is needed. */

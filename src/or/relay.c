@@ -526,8 +526,8 @@ connection_edge_process_relay_cell_not_open(
       if(connection_ap_can_use_exit(conn, exitrouter)) {
         log_fn(LOG_WARN,"Exitrouter %s seems to be more restrictive than its exit policy. Not using this router as exit for now,", exitrouter->nickname);
         exit_policy_free(exitrouter->exit_policy);
-        exitrouter->exit_policy = 
-          router_parse_exit_policy_from_string("reject *:*"); 
+        exitrouter->exit_policy =
+          router_parse_exit_policy_from_string("reject *:*");
       }
 
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;

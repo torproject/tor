@@ -209,7 +209,6 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request, size_t reque
   circ->purpose = CIRCUIT_PURPOSE_REND_POINT_WAITING;
   memcpy(circ->rend_cookie, request, REND_COOKIE_LEN);
 
-
   base16_encode(hexid,9,request,4);
 
   log_fn(LOG_INFO, "Established rendezvous point on circuit %d for cookie %s",

@@ -2,7 +2,6 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-
 /* This is required on rh7 to make strptime not complain.
  */
 #define _GNU_SOURCE
@@ -488,7 +487,6 @@ void spawn_exit()
 #endif
 }
 
-
 /** Set *timeval to the current time of day.  On error, log and terminate.
  * (Same as gettimeofday(timeval,NULL), but never returns -1.)
  */
@@ -559,7 +557,6 @@ void tor_mutex_release(tor_mutex_t *m)
   }
 }
 #endif
-
 
 /**
  * On Windows, WSAEWOULDBLOCK is not always correct: when you see it,

@@ -801,7 +801,6 @@ int is_legal_nickname_or_hexdigest(const char *s)
   return len == HEX_DIGEST_LEN+1 && strspn(s+1,HEX_CHARACTERS)==len-1;
 }
 
-
 /*
   Local Variables:
   mode:c

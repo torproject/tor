@@ -119,7 +119,7 @@ dirserv_parse_fingerprint_file(const char *fname)
              nickname, fingerprint);
       continue;
     }
-    if (0==strcasecmp(ent->nickname, DEFAULT_CLIENT_NICKNAME)) {
+    if (0==strcasecmp(nickname, DEFAULT_CLIENT_NICKNAME)) {
       /* If you approved an OR called "client", then clients who use
        * the default nickname could all be rejected.  That's no good. */
       log(LOG_WARN,
@@ -465,7 +465,7 @@ dirserv_load_from_directory_string(const char *dir)
 /**
  * Allocate and return a description of the status of the server <b>desc</b>,
  * for use in a running-routers line (if <b>rr_format</b> is true), or in a
- * router-status line (if <b>rr_format</b> is false.  The server is listed 
+ * router-status line (if <b>rr_format</b> is false.  The server is listed
  * as running iff <b>is_live</b> is true.
  */
 static char *
@@ -617,14 +617,14 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
     struct config_line_t *ln;
     versions = smartlist_create();
     for (ln = get_options()->RecommendedVersions; ln; ln = ln->next) {
-      smartlist_split_string(versions, ln->value, ",", 
+      smartlist_split_string(versions, ln->value, ",",
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     }
     recommended_versions = smartlist_join_strings(versions,",",0,NULL);
     SMARTLIST_FOREACH(versions,char *,s,tor_free(s));
     smartlist_free(versions);
   }
-  
+
   dirserv_remove_old_servers(ROUTER_MAX_AGE);
   published_on = time(NULL);
   format_iso_time(published, published_on);

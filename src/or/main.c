@@ -372,7 +372,6 @@ void directory_has_arrived(time_t now) {
   }
 }
 
-
 /** Perform regular maintenance tasks for a single connection.  This
  * function gets run once per second per connection by run_housekeeping.
  */
@@ -594,7 +593,6 @@ static void run_scheduled_events(time_t now) {
    *     state to be picked up by the new circuit.
    */
   connection_ap_expire_beginning();
-
 
   /** 3c. And expire connections that we've held open for too long.
    */
@@ -989,7 +987,6 @@ void handle_signals(int is_parent)
     sigaction(SIGCHLD, &action, NULL); /* handle dns/cpu workers that exit */
 #endif /* signal stuff */
 }
-
 
 /** Main entry point for the Tor command-line client.
  */

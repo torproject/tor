@@ -280,7 +280,7 @@ void rep_hist_dump_stats(time_t now, int severity)
           name2 = "(unknown)";
 
         link_history = (link_history_t*) link_history_p;
-        
+
         ret = tor_snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
                         link_history->n_extend_ok,
                         link_history->n_extend_ok+link_history->n_extend_fail);
@@ -555,7 +555,6 @@ rep_hist_get_bandwidth_lines(void)
   }
   return buf;
 }
-
 
 /*
   Local Variables:

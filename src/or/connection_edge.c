@@ -203,7 +203,6 @@ int connection_edge_finished_connecting(connection_t *conn)
   tor_assert(conn->type == CONN_TYPE_EXIT);
   tor_assert(conn->state == EXIT_CONN_STATE_CONNECTING);
 
-
   log_fn(LOG_INFO,"Exit connection to %s:%u established.",
          conn->address,conn->port);
 
@@ -858,7 +857,6 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
   assert_circuit_ok(circ);
   relay_header_unpack(&rh, cell->payload);
 
-
   /* This 'dummy_conn' only exists to remember the stream ID
    * associated with the resolve request; and to make the
    * implementation of dns.c more uniform.  (We really only need to
@@ -880,7 +878,7 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
   /* send it off to the gethostbyname farm */
   switch(dns_resolve(dummy_conn)) {
     case 1: /* The result was cached; a resolved cell was sent. */
-    case -1: 
+    case -1:
       circuit_detach_stream(circuit_get_by_conn(dummy_conn), dummy_conn);
       connection_free(dummy_conn);
       return 0;
@@ -1202,7 +1200,6 @@ void client_dns_clean(void)
   now = time(NULL);
   strmap_foreach(client_dns_map, (strmap_foreach_fn)_remove_if_expired, &now);
 }
-
 
 /** Make connection redirection follow the provided list of
  * exit_redirect_t */

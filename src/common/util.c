@@ -295,7 +295,6 @@ int strcmpend(const char *s1, const char *s2)
     return strncmp(s1+(n1-n2), s2, n2);
 }
 
-
 /** Return a pointer to the first char of s that is not whitespace and
  * not a comment, or to the terminating NUL if no such character exists.
  */
@@ -351,8 +350,7 @@ const char *find_whitespace(const char *s) {
  err:                                                   \
   if (ok) *ok = 0;                                      \
   if (next) *next = endptr;                             \
-  return 0;                                             \
-
+  return 0;
 
 /** Extract a long from the start of s, in the given numeric base.  If
  * there is unconverted data and next is provided, set *next to the
@@ -413,8 +411,6 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
   CHECK_STRTOX_RESULT();
 }
 
-
-
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   const char *end;
@@ -468,7 +464,6 @@ int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   }
   return 0;
 }
-
 
 /* =====
  * Time
@@ -526,7 +521,6 @@ void tv_addms(struct timeval *a, long ms) {
   a->tv_sec += ((ms * 1000) / 1000000) + (a->tv_usec / 1000000);
   a->tv_usec %= 1000000;
 }
-
 
 #define IS_LEAPYEAR(y) (!(y % 4) && ((y % 100) || !(y % 400)))
 static int n_leapdays(int y1, int y2) {
@@ -789,8 +783,9 @@ int
 write_str_to_file(const char *fname, const char *str, int bin)
 {
 #ifdef MS_WINDOWS
-  if (strchr(str, '\r')) {
-    log_fn(LOG_WARN, "How odd. Writing a string that does contain CR already.");
+  if (!bin && strchr(str, '\r')) {
+    log_fn(LOG_WARN,
+           "How odd. Writing a string that does contain CR already.");
   }
 #endif
   return write_bytes_to_file(fname, str, strlen(str), bin);
@@ -865,7 +860,7 @@ char *read_file_to_str(const char *filename, int bin) {
     return NULL;
   }
   string[r] = '\0'; /* NUL-terminate the result. */
-  
+
   if (bin && r != statbuf.st_size) {
     /* If we're in binary mode, then we'd better have an exact match for
      * size.  Otherwise, win32 encoding may throw us off, and that's okay. */
@@ -878,7 +873,7 @@ char *read_file_to_str(const char *filename, int bin) {
 #ifdef MS_WINDOWS
   if (!bin && strchr(string, '\r')) {
     log_fn(LOG_DEBUG, "We didn't convert CRLF to LF as well as we hoped when reading %s. Coping.",
-           filename);  
+           filename);
     tor_strstrip(string, "\r");
   }
 #endif

@@ -765,7 +765,7 @@ option_reset(or_options_t *options, config_var_t *var)
   }
 }
 
-/** Set <b>options</b>-&gt;DirServers to contain the default directory 
+/** Set <b>options</b>-&gt;DirServers to contain the default directory
  * servers. */
 static void
 add_default_trusted_dirservers(or_options_t *options)
@@ -1317,7 +1317,6 @@ static int check_nickname_list(const char *lst, const char *name)
   return r;
 }
 
-
 /** Read a configuration file into <b>options</b>, finding the configuration
  * file location based on the command line.  After loading the options,
  * validate them for consistency, then take actions based on them.
@@ -1840,7 +1839,6 @@ parse_dir_server_line(const char *line, int validate_only)
   return r;
 }
 
-
 /** Adjust or the value of options->DataDirectory, or fill it in if it's
  * absent. Return 0 on success, -1 on failure. */
 static int
@@ -1893,7 +1891,6 @@ validate_data_directory(or_options_t *options) {
   }
   return 0;
 }
-
 
 /*
   Local Variables:
