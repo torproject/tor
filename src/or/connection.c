@@ -350,10 +350,11 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
 }
 
 static void listener_close_if_present(int type) {
+  connection_t *conn;
   assert(type == CONN_TYPE_OR_LISTENER ||
          type == CONN_TYPE_AP_LISTENER ||
          type == CONN_TYPE_DIR_LISTENER);
-  connection_t *conn = connection_get_by_type(type);
+  conn = connection_get_by_type(type);
   if (conn) {
     close(conn->s);
     conn->s = -1;
@@ -736,10 +737,6 @@ int connection_send_destroy(uint16_t circ_id, connection_t *conn) {
   if(!connection_speaks_cells(conn)) {
      log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.",
             circ_id);
-     if(conn->type == CONN_TYPE_EXIT && conn->state == EXIT_CONN_STATE_RESOLVING) {
-       log_fn(LOG_INFO,"...and informing resolver we don't want the answer anymore.");
-       dns_cancel_pending_resolve(conn->address, conn);
-     }
      connection_mark_for_close(conn, END_STREAM_REASON_DESTROY);
      return 0;
   }

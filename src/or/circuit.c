@@ -64,8 +64,6 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
 
   circ->timestamp_created = time(NULL);
 
-  circ->marked_for_close = 0;
-
   circ->p_circ_id = p_circ_id;
   circ->p_conn = p_conn;
 
