@@ -128,6 +128,12 @@
 #include "../common/util.h"
 #include "../common/torgzip.h"
 
+#if (SIZEOF_CELL_T != 0)
+/* On Irix, stdlib.h defines a cell_t type, so we need to make sure
+ * that our stuff always calls cell_t something different. */
+#define cell_t tor_cell_t
+#endif
+
 /** Define this if you want Tor to crash when any problem comes up,
  * so you can get a coredump and track things down. */
 #undef TOR_FRAGILE
