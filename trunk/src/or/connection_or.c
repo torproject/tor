@@ -212,7 +212,7 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   }
   router = router_get_by_link_pk(pk);
   if (!router) {
-    log_fn(LOG_WARN,"Unrecognized public key from peer '%s' (%s:%d). Closing.",
+    log_fn(LOG_INFO,"Unrecognized public key from peer '%s' (%s:%d). Closing.",
            nickname, conn->address, conn->port);
     crypto_free_pk_env(pk);
     return -1;
