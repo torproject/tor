@@ -82,11 +82,11 @@
 #include <winsock.h>
 #endif
 
-#ifdef _MSC_VER
+#ifdef MS_WINDOWS
 #include <io.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#define snprintf
+#define snprintf _snprintf
 #endif
 
 

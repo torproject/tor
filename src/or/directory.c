@@ -181,7 +181,7 @@ int directory_handle_command(connection_t *conn) {
 
   assert(conn && conn->type == CONN_TYPE_DIR);
 
-  if(conn->inbuf_datalen < strlen(getstring)) { /* entire response available? */
+  if(conn->inbuf_datalen < (int)strlen(getstring)) { /* entire response available? */
     log_fn(LOG_DEBUG,"Entire command not here yet. Waiting.");
     return 0; /* not yet */
   }
