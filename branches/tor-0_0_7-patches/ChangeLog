@@ -1,3 +1,8 @@
+Changes in version 0.0.7.2 - 2004-07-07
+  o A better fix for the 0.0.0.0 problem, that will hopefully
+    eliminate the remaining related assertion failures.
+
+
 Changes in version 0.0.7.1 - 2004-07-04
   o When an address resolves to 0.0.0.0, treat it as a failed resolve,
     since internally we use 0.0.0.0 to signify "not yet resolved".
