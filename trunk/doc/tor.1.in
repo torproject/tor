@@ -108,7 +108,7 @@ the first hop of a circuit.
 If 1, Tor will only create outgoing connections to ORs running on ports that
 your firewall allows (defaults to 80 and 443; see firewallports).  This will
 allow you to run Tor as a client behind a firewall with restrictive policies,
-but will not allow you server behind such a firewall.
+but will not allow you to run as a server behind such a firewall.
 .TP
 \fBfirewallports \fR\fIPORTS\fP
 A list of ports that your firewall allows you to connect to.  Only used when
