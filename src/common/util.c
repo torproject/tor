@@ -2,41 +2,7 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-#include "orconfig.h"
-
-#include <stdlib.h>
-#include <limits.h>
-#if _MSC_VER > 1300
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#elif defined(_MSC_VER)
-#include <winsock.h>
-#endif
-#ifdef HAVE_SYS_FCNTL_H
-#include <sys/fcntl.h>
-#endif
-#ifdef HAVE_FCNTL_H
-#include <fcntl.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef HAVE_ARPA_INET_H
-#include <arpa/inet.h>
-#endif
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-#include <assert.h>
-#include <errno.h>
-#include <string.h>
-
+#include "../or/or.h"
 #include "util.h"
 #include "log.h"
 
