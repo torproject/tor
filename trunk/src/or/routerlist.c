@@ -402,6 +402,7 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
                                        struct exit_policy_t *policy)
 {
   int maybe_reject = 0;
+  int maybe_accept = 0;
   int match = 0;
   struct in_addr in;
   struct exit_policy_t *tmpe;
@@ -413,10 +414,13 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
       if (tmpe->msk == 0 && (port >= tmpe->prt_min && port <= tmpe->prt_max)) {
         /* The exit policy is accept/reject *:port */
         match = 1;
-      } else if (port >= tmpe->prt_min && port <= tmpe->prt_max &&
-                 tmpe->policy_type == EXIT_POLICY_REJECT) {
-        /* The exit policy is reject ???:port */
-        maybe_reject = 1;
+      } else if (port >= tmpe->prt_min && port <= tmpe->prt_max)
+        if (tmpe->policy_type == EXIT_POLICY_REJECT) {
+          /* The exit policy is reject ???:port */
+          maybe_reject = 1;
+        } else {
+          /* The exit policy is acccept ???:port */
+          maybe_accept = 1;
       }
     } else {
       /* Address is known */
@@ -430,16 +434,17 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
       in.s_addr = htonl(addr);
       log_fn(LOG_INFO,"Address %s:%d matches exit policy '%s'",
              inet_ntoa(in), port, tmpe->string);
-      if(tmpe->policy_type == EXIT_POLICY_ACCEPT)
-        return 0;
-      else
-        return -1;
+      if(tmpe->policy_type == EXIT_POLICY_ACCEPT) {
+        /* If we already hit a clause that might trigger a 'reject', than we
+         * can't be sure of this certain 'accept'.*/
+        return maybe_reject ? ADDR_POLICY_UNKNOWN : ADDR_POLICY_ACCEPTED;
+      } else {
+        return maybe_accept ? ADDR_POLICY_UNKNOWN : ADDR_POLICY_REJECTED;
+      }
     }
   }
-  if (maybe_reject)
-    return 1;
-  else
-    return 0; /* accept all by default. */
+  /* accept all by default. */
+  return maybe_reject ? ADDR_POLICY_UNKNOWN : ADDR_POLICY_ACCEPTED;
 }
 
 /* return 1 if all running routers will reject addr:port, return 0 if
@@ -450,18 +455,16 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
 
   for (i=0;i<routerlist->n_routers;i++) {
     router = routerlist->routers[i];
-    if (router->is_running && router_compare_addr_to_exit_policy(addr,
-        port, router->exit_policy) >= 0)
+    if (router->is_running && router_compare_addr_to_exit_policy(
+             addr, port, router->exit_policy) != ADDR_POLICY_REJECTED)
       return 0; /* this one could be ok. good enough. */
   }
   return 1; /* all will reject. */
 }
 
 int router_exit_policy_rejects_all(routerinfo_t *router) {
-  if (router_compare_addr_to_exit_policy(0, 0, router->exit_policy) < 0)
-    return 1; /* yes, rejects all */
-  else
-    return 0; /* no, might accept some */
+  return router_compare_addr_to_exit_policy(0, 0, router->exit_policy) 
+    == ADDR_POLICY_REJECTED;
 }
 
 /* Helper function: parse a directory from 's' and, when done, store the

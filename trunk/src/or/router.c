@@ -286,19 +286,17 @@ static void router_add_exit_policy_from_config(routerinfo_t *router) {
   }
 }
 
-/* Return 0 if my exit policy says to allow connection to conn.
- * Else return -1.
+/* Return false if my exit policy says to allow connection to conn.
+ * Else return true.
  */
 int router_compare_to_my_exit_policy(connection_t *conn) {
   assert(desc_routerinfo);
   assert(conn->addr); /* make sure it's resolved to something. this
                          way we can't get a 'maybe' below. */
 
-  if (router_compare_addr_to_exit_policy(conn->addr, conn->port,
-                                         desc_routerinfo->exit_policy) == 0)
-    return 0;
-  else
-    return -1;
+  return router_compare_addr_to_exit_policy(conn->addr, conn->port, 
+                   desc_routerinfo->exit_policy) == ADDR_POLICY_ACCEPTED;
+    
 }
 
 const char *router_get_my_descriptor(void) {
