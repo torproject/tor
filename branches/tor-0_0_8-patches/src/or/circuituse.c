@@ -776,6 +776,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
       return retval;
 
     /* We have found a suitable circuit for our conn. Hurray. */
+    tor_assert(circ);
 
     log_fn(LOG_DEBUG,"Attaching apconn to general circ %d (stream %d sec old).",
            circ->n_circ_id, conn_age);
@@ -802,9 +803,9 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
     retval = circuit_get_open_circ_or_launch(conn, CIRCUIT_PURPOSE_C_REND_JOINED, &rendcirc);
     if(retval < 0) return -1; /* failed */
-    tor_assert(rendcirc);
 
     if(retval > 0) {
+      tor_assert(rendcirc);
       /* one is already established, attach */
       log_fn(LOG_INFO,"rend joined circ %d already here. attaching. (stream %d sec old)",
              rendcirc->n_circ_id, conn_age);
@@ -814,7 +815,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
       return 1;
     }
 
-    if(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
+    if(rendcirc && rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
       log_fn(LOG_INFO,"pending-join circ %d already here, with intro ack. Stalling. (stream %d sec old)", rendcirc->n_circ_id, conn_age);
       return 0;
     }
@@ -822,21 +823,21 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
     /* it's on its way. find an intro circ. */
     retval = circuit_get_open_circ_or_launch(conn, CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT, &introcirc);
     if(retval < 0) return -1; /* failed */
-    tor_assert(introcirc);
 
     if(retval > 0) {
+      tor_assert(introcirc);
       /* one has already sent the intro. keep waiting. */
       log_fn(LOG_INFO,"Intro circ %d present and awaiting ack (rend %d). Stalling. (stream %d sec old)",
-             introcirc->n_circ_id, rendcirc->n_circ_id, conn_age);
+             introcirc->n_circ_id, rendcirc ? rendcirc->n_circ_id : 0, conn_age);
       return 0;
     }
 
-    /* now both rendcirc and introcirc are defined, and neither is finished */
+    /* now rendcirc and introcirc are each either undefined or not finished */
 
-    if(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
+    if(rendcirc && introcirc && rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
       log_fn(LOG_INFO,"ready rend circ %d already here (no intro-ack yet on intro %d). (stream %d sec old)",
-             rendcirc->n_circ_id, introcirc->n_circ_id, conn_age);
-      /* look around for any new intro circs that should introduce */
+                     introcirc ? introcirc->n_circ_id : 0,
+                     rendcirc ? rendcirc->n_circ_id : 0, conn_age);
 
       tor_assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
       if(introcirc->state == CIRCUIT_STATE_OPEN) {
