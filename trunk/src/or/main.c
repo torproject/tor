@@ -333,7 +333,8 @@ static void run_scheduled_events(time_t now) {
    *    our descriptor (if any). */
   if(time_to_fetch_directory < now) {
     /* it's time to fetch a new directory and/or post our descriptor */
-    rend_services_init(); /* make new intro points and re-upload if necessary */
+    if(has_fetched_directory)
+      rend_services_init(); /* make new intro points and re-upload if necessary */
     if(options.ORPort) {
       router_rebuild_descriptor();
       router_upload_dir_desc_to_dirservers();
