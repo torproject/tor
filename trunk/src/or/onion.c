@@ -47,7 +47,7 @@ int onion_pending_add(circuit_t *circ) {
 
   if(ol_length >= options.MaxOnionsPending) {
     log_fn(LOG_WARN,"Already have %d onions queued. Closing.", ol_length);
-    free(tmp);
+    tor_free(tmp);
     return -1;
   }
 
@@ -109,7 +109,7 @@ void onion_pending_remove(circuit_t *circ) {
 
   /* now victim points to the element that needs to be removed */
 
-  free(victim);
+  tor_free(victim);
 }
 
 /*----------------------------------------------------------------------*/

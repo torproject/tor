@@ -540,7 +540,7 @@ void routerinfo_free(routerinfo_t *router)
   if (router->identity_pkey)
     crypto_free_pk_env(router->identity_pkey);
   exit_policy_free(router->exit_policy);
-  free(router);
+  tor_free(router);
 }
 
 /** Allocate a fresh copy of <b>router</b> */
@@ -717,12 +717,12 @@ int router_load_routerlist_from_file(char *routerfile, int trusted)
 
   if(router_load_routerlist_from_string(string, trusted) < 0) {
     log_fn(LOG_WARN,"The routerfile itself was corrupt.");
-    free(string);
+    tor_free(string);
     return -1;
   }
   /* dump_onion_keys(LOG_NOTICE); */
 
-  free(string);
+  tor_free(string);
   return 0;
 }
 

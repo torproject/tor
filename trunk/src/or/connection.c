@@ -158,7 +158,7 @@ void connection_free(connection_t *conn) {
     tor_close_socket(conn->s);
   }
   memset(conn, 0xAA, sizeof(connection_t)); /* poison memory */
-  free(conn);
+  tor_free(conn);
 }
 
 /** Call connection_free() on every connection in our array.

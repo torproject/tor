@@ -400,7 +400,7 @@ connection_dir_client_reached_eof(connection_t *conn)
   if(parse_http_response(headers, &status_code, NULL, &date_header,
                          &compression) < 0) {
     log_fn(LOG_WARN,"Unparseable headers. Closing.");
-    free(body); free(headers);
+    tor_free(body); tor_free(headers);
     return -1;
   }
   if (date_header > 0) {
@@ -433,17 +433,17 @@ connection_dir_client_reached_eof(connection_t *conn)
     log_fn(LOG_INFO,"Received directory (size %d):\n%s", body_len, body);
     if(status_code == 503 || body_len == 0) {
       log_fn(LOG_INFO,"Empty directory. Ignoring.");
-      free(body); free(headers);
+      tor_free(body); tor_free(headers);
       return 0;
     }
     if(status_code != 200) {
       log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
              status_code);
-      free(body); free(headers);
+      tor_free(body); tor_free(headers);
       return -1;
     }
     if(router_load_routerlist_from_directory(body, NULL) < 0){
-      log_fn(LOG_INFO,"...but parsing failed. Ignoring.");
+      log_fn(LOG_WARN,"I failed to parse the directory I fetched from %s:%d. Ignoring.", conn->address, conn->port);
     } else {
       log_fn(LOG_INFO,"updated routers.");
     }
@@ -458,12 +458,12 @@ connection_dir_client_reached_eof(connection_t *conn)
     if(status_code != 200) {
       log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
              status_code);
-      free(body); free(headers);
+      tor_free(body); tor_free(headers);
       return -1;
     }
     if (!(rrs = router_parse_runningrouters(body))) {
       log_fn(LOG_WARN, "Can't parse runningrouters list");
-      free(body); free(headers);
+      tor_free(body); tor_free(headers);
       return -1;
     }
     router_get_routerlist(&rl);
@@ -526,7 +526,7 @@ connection_dir_client_reached_eof(connection_t *conn)
         break;
     }
   }
-  free(body); free(headers);
+  tor_free(body); tor_free(headers);
   return 0;
 }
 

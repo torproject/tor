@@ -872,7 +872,7 @@ router_parse_exit_policy_from_string(const char *s)
  err:
   r = NULL;
  done:
-  free(tmp);
+  tor_free(tmp);
   token_free(tok);
   return r;
 }
@@ -1009,7 +1009,7 @@ policy_read_failed:
   tor_assert(newe->string);
   log_fn(LOG_WARN,"Couldn't parse line '%s'. Dropping", newe->string);
   tor_free(newe->string);
-  free(newe);
+  tor_free(newe);
   return NULL;
 }
 

@@ -114,9 +114,9 @@ static void config_free_lines(struct config_line_t *front) {
     tmp = front;
     front = tmp->next;
 
-    free(tmp->key);
-    free(tmp->value);
-    free(tmp);
+    tor_free(tmp->key);
+    tor_free(tmp->value);
+    tor_free(tmp);
   }
 }
 

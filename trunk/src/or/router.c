@@ -767,7 +767,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
            s);
     return -1;
   }
-  free(s_dup);
+  tor_free(s_dup);
   routerinfo_free(ri_tmp);
 #endif
 
