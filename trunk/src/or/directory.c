@@ -45,6 +45,8 @@ char rend_fetch_url[] = "/rendezvous/";
 #define MAX_HEADERS_SIZE 50000
 #define MAX_BODY_SIZE 500000
 
+#define ALLOW_DIRECTORY_TIME_SKEW 30*60
+
 /********* END VARIABLES ************/
 
 /** Start a connection to every known directory server, using
@@ -281,12 +283,16 @@ parse_http_url(char *headers, char **url)
  * If it's well-formed, assign *<b>code</b>, point *<b>message</b> to the first
  * non-space character after code if there is one and message is non-NULL
  * (else leave it alone), and return 0.
+ * If <b>date</b> is provided, set *date to the Date header in the
+ * http headers, or 0 if no such header is found.
  * Otherwise, return -1.
  */
 static int
-parse_http_response(char *headers, int *code, char **message)
+parse_http_response(char *headers, int *code, char **message, time_t *date)
 {
   int n1, n2;
+  const char *cp;
+  char datestr[RFC1123_TIME_LEN+1];
   tor_assert(headers && code);
 
   while(isspace((int)*headers)) headers++; /* tolerate leading whitespace */
@@ -301,6 +307,23 @@ parse_http_response(char *headers, int *code, char **message)
   if(message) {
     /* XXX should set *message correctly */
   }
+  if (date) {
+    cp = headers;
+    *date = 0;
+    while (cp && (cp = strchr(cp, '\n'))) {
+      ++cp;
+      strlcpy(datestr, cp, 7);
+      if (strncmp(cp, "Date: ", 6) == 0) {
+        strlcpy(datestr, cp+6, sizeof(datestr));
+        /* This will do nothing on failure, so we don't need to check
+           the result.   We shouldn't warn, since there are many other valid
+           date formats besides the one we use. */
+        parse_rfc1123_time(datestr, date);
+        break;
+      }
+    }
+  }
+
   return 0;
 }
 
@@ -317,6 +340,8 @@ connection_dir_client_reached_eof(connection_t *conn)
   char *headers;
   int body_len=0;
   int status_code;
+  time_t now, date_header=0;
+  int delta;
 
   switch(fetch_from_buf_http(conn->inbuf,
                              &headers, MAX_HEADERS_SIZE,
@@ -330,10 +355,21 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* case 1, fall through */
   }
 
-  if(parse_http_response(headers, &status_code, NULL) < 0) {
+  if(parse_http_response(headers, &status_code, NULL, &date_header) < 0) {
     log_fn(LOG_WARN,"Unparseable headers. Closing.");
     free(body); free(headers);
     return -1;
+  }
+  if (date_header > 0) {
+    now = time(NULL);
+    delta = now-date_header;
+    if (abs(delta)>ALLOW_DIRECTORY_TIME_SKEW) {
+      log_fn(LOG_WARN, "Received directory with skewed time: we are %d minutes %s, or the directory is %d minutes %s.",
+             abs(delta)/60, delta>0 ? "ahead" : "behind",
+             abs(delta)/60, delta>0 ? "behind" : "ahead");
+    } else {
+      log_fn(LOG_INFO, "Time on received directory is within tolerance; we are %d seconds skewed.  (That's okay.)", delta);
+    }
   }
 
   if(conn->purpose == DIR_PURPOSE_FETCH_DIR) {
@@ -519,7 +555,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
     }
 
     log_fn(LOG_DEBUG,"Dumping directory to client.");
-    snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
+    format_rfc1123_time(date, time(NULL));
+    snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
+             date,
              (int)dlen);
     connection_write_to_buf(tmp, strlen(tmp), conn);
     connection_write_to_buf(cp, strlen(cp), conn);
