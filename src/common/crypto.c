@@ -53,6 +53,9 @@
 #define RETURN_SSL_OUTCOME(exp) return !(exp)
 #endif
 
+#define PUBLIC_KEY_OK(k) ((k) && (k)->key && (k)->key->n)
+#define PRIVATE_KEY_OK(k) ((k) && (k)->key && (k)->key->p)
+
 struct crypto_pk_env_t
 {
   int refs; /* reference counting; so we don't have to copy keys */
@@ -372,6 +375,8 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   long len;
   char *s;
   int r;
+
+  assert(PRIVATE_KEY_OK(env));
 
   if (!(bio = BIO_new(BIO_s_mem())))
     return -1;
