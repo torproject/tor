@@ -18,6 +18,7 @@ static addr_policy_t *socks_policy = NULL;
 static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
+static int address_is_in_virtual_range(const char *addr);
 
 /** There was an EOF. Send an end and mark the connection for close.
  */
@@ -365,10 +366,13 @@ typedef struct {
 
 /** The tree of client-side address rewrite instructions. */
 static strmap_t *addressmap;
+/** Tree mapping addresses to which virtual address we assigned them to. */
+static strmap_t *virtaddress_reversemap;
 
 /** Initialize addressmap. */
 void addressmap_init(void) {
   addressmap = strmap_new();
+  virtaddress_reversemap = strmap_new();
 }
 
 /** Free the memory associated with the addressmap entry <b>_ent</b>. */
@@ -378,6 +382,20 @@ addressmap_ent_free(void *_ent) {
   tor_free(ent->new_address);
   tor_free(ent);
 }
+
+static void
+addressmap_ent_remove(const char *addr, addressmap_entry_t *ent)
+{
+  if (ent && address_is_in_virtual_range(ent->new_address)) {
+    if (!strcasecmp(addr,
+                    strmap_get(virtaddress_reversemap, ent->new_address))) {
+      char *a = strmap_remove(virtaddress_reversemap, ent->new_address);
+      tor_free(a);
+    }
+  }
+  addressmap_ent_free(ent);
+}
+
 
 /** A helper function for addressmap_clean() below. If ent is too old,
  * then remove it from the tree and return NULL, else return ent.
@@ -389,7 +407,7 @@ _addressmap_remove_if_expired(const char *addr,
   if (ent->expires && ent->expires < *nowp) {
     log(LOG_INFO, "Addressmap: expiring remap (%s to %s)",
            addr, ent->new_address);
-    addressmap_ent_free(ent);
+    addressmap_ent_remove(addr,ent);
     return NULL;
   } else {
     return ent;
@@ -409,6 +427,7 @@ void addressmap_clean(time_t now) {
 void addressmap_free_all(void) {
   strmap_free(addressmap, addressmap_ent_free);
   addressmap = NULL;
+  strmap_free(virtaddress_reversemap, free);
 }
 
 /** Look at address, and rewrite it until it doesn't want any
@@ -458,15 +477,21 @@ void addressmap_register(const char *address, char *new_address, time_t expires)
     return;
   }
   if (!new_address || !strcasecmp(address,new_address)) {
+    /* Remove the mapping, if any. */
     tor_free(new_address);
-    /* Remove the old mapping, if any. */
     if (ent) {
-      addressmap_ent_free(ent);
+      addressmap_ent_remove(address,ent);
       strmap_remove(addressmap, address);
     }
     return;
   }
   if (ent) { /* we'll replace it */
+    if (address_is_in_virtual_range(ent->new_address) &&
+        !strcasecmp(address,
+                    strmap_get(virtaddress_reversemap, ent->new_address))) {
+      char *a = strmap_remove(virtaddress_reversemap, ent->new_address);
+      tor_free(a);
+    }
     tor_free(ent->new_address);
   } else { /* make a new one and register it */
     ent = tor_malloc_zero(sizeof(addressmap_entry_t));
@@ -546,10 +571,10 @@ void client_dns_set_addressmap(const char *address, uint32_t val, const char *ex
 
 /**
  * Return true iff <b>addr</b> is likely to have been returned by
- * client_dns_get_unmapped_address.
+ * client_dns_get_unused_address.
  **/
 static int
-address_is_in_unmapped_range(const char *addr)
+address_is_in_virtual_range(const char *addr)
 {
   struct in_addr in;
   tor_assert(addr);
@@ -567,8 +592,8 @@ address_is_in_unmapped_range(const char *addr)
  * (one of RESOLVED_TYPE_{IPV4|HOSTNAME}) that has not yet been mapped,
  * and that is very unlikely to be the address of any real host.
  */
-char *
-client_dns_get_unmapped_address(int type)
+static char *
+addressmap_get_virtual_address(int type)
 {
   char buf[64];
   static uint32_t next_ipv4 = MIN_UNUSED_IPV4;
@@ -603,6 +628,28 @@ client_dns_get_unmapped_address(int type)
            type);
     return NULL;
   }
+}
+
+/* DOCDOC */
+char *
+addressmap_register_virtual_address(int type, char *new_address)
+{
+  char *addr;
+  tor_assert(new_address);
+
+  if ((addr = strmap_get(virtaddress_reversemap, new_address))) {
+    addressmap_entry_t *ent = strmap_get(addressmap, addr);
+    if (!strcasecmp(new_address, ent->new_address))
+      return tor_strdup(addr);
+    else
+      log_fn(LOG_WARN, "Internal confusion: I thought that '%s' was mapped to by '%s', but '%s' really maps to '%s'. This is a harmless bug.",
+             new_address, addr, addr, ent->new_address);
+  }
+
+  addr = addressmap_get_virtual_address(type);
+  strmap_set(virtaddress_reversemap, new_address, tor_strdup(addr));
+  addressmap_register(addr, new_address, 0);
+  return addr;
 }
 
 /** Return 1 if <b>address</b> has funny characters in it like
@@ -664,7 +711,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   /* For address map controls, remap the address */
   addressmap_rewrite(socks->address, sizeof(socks->address));
 
-  if (address_is_in_unmapped_range(socks->address)) {
+  if (address_is_in_virtual_range(socks->address)) {
     /* This address was probably handed out by client_dns_get_unmapped_address,
      * but the mapping was discarded for some reason.  We *don't* want to send
      * the address through tor; that's likely to fail, and may leak

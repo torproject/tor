@@ -56,12 +56,13 @@ N  . Implement pending controller features.
         o Need to remember descriptors for all routers.
         o Replace everything else that remembers serverdescs with
           routerinfo.
-      - List of address mappings (all, or mapaddress+config,
-                                  or just mapadddress?)
+      - List of address mappings
     o POSTDESCRIPTOR
-    o MAPADDRESS
+    . MAPADDRESS
       o Map A->B.
       o Map DontCare->B.
+        o Reuse mappings when asked to map DontCare->B for the same B.
+          - But only when the DontCare is of the same type. :/
     o Way to handle overlong messages
       o Specify fragmented format
       o Implement fragmented format
