@@ -31,8 +31,9 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 
 ##################### Below is just for location-hidden services ###
 
-## This stuff is so bleeding-edge that my teeth hurt just thinking
-## about it.
+## Look in /tmp/hidden_service/hostname for the url to tell people.
+## HiddenServicePort x y:z says to redirect a port x request from the
+## client to y:z.
 
 #HiddenServiceDir /tmp/hidden_service/
 #HiddenServicePort 80 127.0.0.1:80
