@@ -34,7 +34,10 @@ int connection_edge_reached_eof(connection_t *conn) {
   }
   return 0;
 #else
-  /* eof reached, kill it. */
+  if(buf_datalen(conn->inbuf)) {
+    /* it still has stuff to process. don't let it die yet. */
+    return 0;
+  }
   log_fn(LOG_INFO,"conn (fd %d) reached eof (stream size %d). Closing.", conn->s, (int)conn->stream_size);
   connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
   if(!conn->marked_for_close) {
