@@ -86,6 +86,10 @@ void tv_addms(struct timeval *a, long ms) {
 
 connection_t *connection_new(int type) {
   connection_t *conn;
+  struct timeval now;
+
+  if(gettimeofday(&now,NULL) < 0)
+    return NULL;
 
   conn = (connection_t *)malloc(sizeof(connection_t));
   if(!conn)
@@ -99,6 +103,7 @@ connection_t *connection_new(int type) {
 
   conn->receiver_bucket = 10240; /* should be enough to do the handshake */
   conn->bandwidth = conn->receiver_bucket / 10; /* give it a default */
+  conn->timestamp_created = now.tv_sec;
   
   if (connection_speaks_cells(conn)) {
     conn->f_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
@@ -320,6 +325,7 @@ connection_t *connection_connect_to_router_as_op(routerinfo_t *router, uint16_t 
 
 int connection_read_to_buf(connection_t *conn) {
   int read_result;
+  struct timeval now;
 
   if(connection_speaks_cells(conn)) {
     assert(conn->receiver_bucket >= 0);
@@ -327,6 +333,11 @@ int connection_read_to_buf(connection_t *conn) {
   if(!connection_speaks_cells(conn)) {
     assert(conn->receiver_bucket < 0);
   }
+
+  if(gettimeofday(&now,NULL) < 0)
+    return -1;
+  conn->timestamp_lastread = now.tv_sec;
+
   read_result = read_to_buf(conn->s, conn->receiver_bucket, &conn->inbuf, &conn->inbuflen,
                             &conn->inbuf_datalen, &conn->inbuf_reached_eof);
 //  log(LOG_DEBUG,"connection_read_to_buf(): read_to_buf returned %d.",read_result);
@@ -369,8 +380,15 @@ int connection_flush_buf(connection_t *conn) {
 }
 
 int connection_write_to_buf(char *string, int len, connection_t *conn) {
+  struct timeval now;
+
+  if(gettimeofday(&now,NULL) < 0)
+    return -1;
+
   if(!len)
     return 0;
+
+  conn->timestamp_lastwritten = now.tv_sec;
 
   if( (!connection_speaks_cells(conn)) ||
       (!connection_state_is_open(conn)) ||

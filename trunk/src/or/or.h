@@ -188,11 +188,15 @@ typedef struct
   int inbuflen;
   int inbuf_datalen;
   int inbuf_reached_eof;
+  long timestamp_lastread;
 
   char *outbuf;
   int outbuflen; /* how many bytes are allocated for the outbuf? */
   int outbuf_flushlen; /* how much data should we try to flush from the outbuf? */
   int outbuf_datalen; /* how much data is there total on the outbuf? */
+  long timestamp_lastwritten;
+
+  long timestamp_created;
 
 //  uint16_t aci; /* anonymous connection identifier */
 
@@ -357,6 +361,7 @@ typedef struct
    int LinkPadding;
    int DirRebuildPeriod;
    int DirFetchPeriod;
+   int KeepalivePeriod;
    int Role;
    int loglevel;
 } or_options_t;

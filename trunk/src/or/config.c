@@ -99,6 +99,8 @@ RETURN VALUE: 0 on success, non-zero on error
          0, "how many seconds between directory rebuilds",     "<rebuildperiod>" },
       { "DirFetchPeriod",  'F',  POPT_ARG_INT,     &options->DirFetchPeriod,
          0, "how many seconds between directory fetches",     "<fetchperiod>" },
+      { "KeepalivePeriod", 'K',  POPT_ARG_INT,     &options->KeepalivePeriod,
+         0, "how many seconds between keepalives",            "<keepaliveperiod>" },
 //      { "ReconnectPeriod", 'e',  POPT_ARG_INT,     &options->ReconnectPeriod,
 //         0, "how many seconds between retrying all OR connections", "<reconnectperiod>" },
       { "Role",            'R',  POPT_ARG_INT,     &options->Role,
@@ -122,6 +124,7 @@ RETURN VALUE: 0 on success, non-zero on error
    options->LinkPadding = 0;
    options->DirRebuildPeriod = 600;
    options->DirFetchPeriod = 6000;
+   options->KeepalivePeriod = 300;
 //   options->ReconnectPeriod = 6001;
    options->Role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
 
@@ -170,9 +173,10 @@ RETURN VALUE: 0 on success, non-zero on error
              options->MaxConn,
              options->TrafficShaping,
              options->LinkPadding);
-      printf("DirRebuildPeriod=%d, DirFetchPeriod=%d\n",
+      printf("DirRebuildPeriod=%d, DirFetchPeriod=%d KeepalivePeriod=%d\n",
              options->DirRebuildPeriod,
-             options->DirFetchPeriod);
+             options->DirFetchPeriod,
+             options->KeepalivePeriod);
    }
 
    /* Validate options */
@@ -284,6 +288,12 @@ RETURN VALUE: 0 on success, non-zero on error
    if ( options->DirFetchPeriod < 1)
    {
       log(LOG_ERR,"DirFetchPeriod option must be positive.");
+      code = -1;
+   }
+
+   if ( options->KeepalivePeriod < 1)
+   {
+      log(LOG_ERR,"KeepalivePeriod option must be positive.");
       code = -1;
    }
 
