@@ -7,6 +7,12 @@
  * \brief Functions for processing incoming cells
  **/
 
+/* In-points to command.c:
+ *
+ * - command_process_cell(), called from
+ *   connection_or_process_cells_from_inbuf() in connection_or.c.
+ */
+
 #include "or.h"
 
 extern or_options_t options; /* command-line and config-file options */
