@@ -542,7 +542,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                     "router %s %s %d %d %d\n"
                     "platform %s\n"
                     "published %s\n"
-                    "bandwidth %d %d\n"
+                    "bandwidth %d %d %d\n"
                     "onion-key\n%s"
                     "signing-key\n%s",
     router->nickname,
@@ -557,6 +557,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     published,
     (int) router->bandwidthrate,
     (int) router->bandwidthburst,
+    (int) router->advertisedbandwidth,
     onion_pkey, identity_pkey);
 
   tor_free(onion_pkey);

@@ -578,6 +578,8 @@ typedef struct {
   uint32_t bandwidthrate; /**< How many bytes does this OR add to its token
                            * bucket per second? */
   uint32_t bandwidthburst; /**< How large is this OR's token bucket? */
+  /** How many bytes/s is this router known to handle? */
+  uint32_t advertisedbandwidth;
   struct exit_policy_t *exit_policy; /**< What streams will this OR permit
                                       * to exit? */
   /* local info */
