@@ -696,31 +696,97 @@ get_uname(void)
   return uname_result;
 }
 
-void daemonize(void) {
-#ifdef HAVE_DAEMON
-  if (daemon(0 /* chdir to / */,
-             0 /* Redirect std* to /dev/null */)) {
-    log_fn(LOG_ERR, "Daemon returned an error: %s", strerror(errno));
+#ifndef MS_WINDOWS
+/* Based on code contributed by christian grothoff */
+static int start_daemon_called = 0;
+static int finish_daemon_called = 0;
+static int daemon_filedes[2];
+void start_daemon(void)
+{
+  pid_t pid;
+
+  if (start_daemon_called)
+    return;
+  start_daemon_called = 1;
+
+   /* Don't hold the wrong FS mounted */
+  if (chdir("/") < 0) {
+    perror("chdir");
     exit(1);
   }
-#elif ! defined(MS_WINDOWS)
-  /* Fork; parent exits. */
-  if (fork())
-    exit(0);
 
-  /* Create new session; make sure we never get a terminal */
-  setsid();
-  if (fork())
-    exit(0);
+  pipe(daemon_filedes);
+  pid = fork();
+  if (pid < 0) {
+    perror("fork");
+    exit(1);
+  }
+  if (pid) {  /* Parent */
+    int ok;
+    char c;
 
-  chdir("/");
-  umask(000);
+    close(daemon_filedes[1]); /* we only read */
+    ok = -1;
+    while (0 < read(daemon_filedes[0], &c, sizeof(char))) {
+      if (c == '.')
+        ok = 1;
+    }
+    fflush(stdout);
+    if (ok == 1)
+      exit(0);
+    else
+      exit(1); /* child reported error */
+  } else { /* Child */
+    close(daemon_filedes[0]); /* we only write */
 
-  fclose(stdin);
-  fclose(stdout);
-  fclose(stderr);
-#endif
+    pid = setsid(); /* Detach from controlling terminal */
+    /*
+     * Fork one more time, so the parent (the session group leader) can exit. 
+     * This means that we, as a non-session group leader, can never regain a
+     * controlling terminal.   This part is recommended by Stevens's
+     * _Advanced Programming in the Unix Environment_.
+     */     
+    if (fork() != 0) {
+      exit(0);
+    }
+    return;
+  }
 }
+
+void finish_daemon(void)
+{
+  int nullfd;
+  char c = '.';
+  if (finish_daemon_called)
+    return;
+  if (!start_daemon_called)
+    start_daemon();
+  finish_daemon_called = 1;
+
+  nullfd = open("/dev/null",
+		O_CREAT | O_RDWR | O_APPEND);
+  if (nullfd < 0) {
+    perror("/dev/null");
+    exit(1);
+  }
+  /* close fds linking to invoking terminal, but
+   * close usual incoming fds, but redirect them somewhere
+   * useful so the fds don't get reallocated elsewhere.
+   */
+  if (dup2(nullfd,0) < 0 ||
+      dup2(nullfd,1) < 0 ||
+      dup2(nullfd,2) < 0) {
+    perror("dup2"); /* Should never happen... */
+    exit(1);
+  }
+  write(daemon_filedes[1], &c, sizeof(char)); /* signal success */
+  close(daemon_filedes[1]);
+}
+#else
+/* defined(MS_WINDOWS) */
+void start_daemon(void) {}
+void finish_daemon(void) {}
+#endif
 
 void write_pidfile(char *filename) {
 #ifndef MS_WINDOWS
