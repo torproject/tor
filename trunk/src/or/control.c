@@ -736,7 +736,7 @@ static int handle_control_attachstream(connection_t *conn, uint32_t len,
   if (!circ_id) {
     ap_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
     if (connection_ap_handshake_attach_circuit(ap_conn)<0)
-      connection_mark_for_close(ap_conn);
+      connection_close_unattached_ap(ap_conn, END_STREAM_REASON_MISC);
     send_control_done(conn);
     return 0;
   }
@@ -802,7 +802,6 @@ handle_control_closestream(connection_t *conn, uint32_t len,
   uint32_t conn_id;
   connection_t *ap_conn;
   uint8_t reason;
-  int hold_open;
 
   if (len < 6) {
     send_control_error(conn, ERR_SYNTAX, "closestream message too short");
@@ -811,7 +810,6 @@ handle_control_closestream(connection_t *conn, uint32_t len,
 
   conn_id = ntohl(get_uint32(body));
   reason = *(uint8_t*)(body+4);
-  hold_open = (*(uint8_t*)(body+5)) & 1;
 
   if (!(ap_conn = connection_get_by_global_id(conn_id))
       || ap_conn->state != CONN_TYPE_AP
@@ -820,19 +818,11 @@ handle_control_closestream(connection_t *conn, uint32_t len,
                        "No AP connection found with given ID");
     return 0;
   }
-
-  if (!ap_conn->socks_request->has_finished) {
-    socks5_reply_status_t status =
-      connection_edge_end_reason_socks5_response(reason);
-    connection_ap_handshake_socks_reply(ap_conn, NULL, 0, status);
-  }
-  if (hold_open)
-    ap_conn->hold_open_until_flushed = 1;
-  connection_mark_for_close(ap_conn);
-
+  connection_close_unattached_ap(ap_conn, reason);
   send_control_done(conn);
   return 0;
 }
+
 static int
 handle_control_closecircuit(connection_t *conn, uint32_t len,
                             const char *body)

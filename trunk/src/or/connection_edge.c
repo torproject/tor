@@ -20,6 +20,26 @@ static smartlist_t *redirect_exit_list = NULL;
 static int connection_ap_handshake_process_socks(connection_t *conn);
 static int address_is_in_virtual_range(const char *addr);
 
+/** An AP stream has failed/finished. If it hasn't already sent back
+ * a socks reply, send one now (based on endreason). Also set
+ * has_sent_end to 1, and mark the conn.
+ */
+void
+connection_close_unattached_ap(connection_t *conn, int endreason) {
+  tor_assert(conn->type == CONN_TYPE_AP);
+  conn->has_sent_end = 1; /* no circ yet */
+  if (!conn->socks_request->has_finished) {
+    socks5_reply_status_t socksreason =
+      connection_edge_end_reason_socks5_response(endreason);
+    if (conn->socks_request->command == SOCKS_COMMAND_CONNECT)
+      connection_ap_handshake_socks_reply(conn, NULL, 0, socksreason);
+    else
+      connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
+  }
+  connection_mark_for_close(conn);
+  conn->hold_open_until_flushed = 1;
+}
+
 /** There was an EOF. Send an end and mark the connection for close.
  */
 int connection_edge_reached_eof(connection_t *conn) {
@@ -45,9 +65,9 @@ int connection_edge_reached_eof(connection_t *conn) {
     /* only mark it if not already marked. it's possible to
      * get the 'end' right around when the client hangs up on us. */
     connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
+    if (conn->socks_request) /* eof, so don't send a socks reply back */
+      conn->socks_request->has_finished = 1;
     connection_mark_for_close(conn);
-//    conn->hold_open_until_flushed = 1; /* just because we shouldn't read
-//                                          doesn't mean we shouldn't write */
   }
   return 0;
 #endif
@@ -70,9 +90,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
   switch (conn->state) {
     case AP_CONN_STATE_SOCKS_WAIT:
       if (connection_ap_handshake_process_socks(conn) < 0) {
-        conn->has_sent_end = 1; /* no circ yet */
-        connection_mark_for_close(conn);
-        conn->hold_open_until_flushed = 1; /* redundant but shouldn't hurt */
+        connection_close_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
         return -1;
       }
       return 0;
@@ -113,9 +131,13 @@ int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
     return 0; /* already marked; probably got an 'end' */
   log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.",
          circ_id);
-  conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
-  connection_mark_for_close(conn);
-  conn->hold_open_until_flushed = 1;
+  if (conn->type == CONN_TYPE_AP) {
+    connection_close_unattached_ap(conn, END_STREAM_REASON_DESTROY);
+  } else {
+    conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
+    connection_mark_for_close(conn);
+    conn->hold_open_until_flushed = 1;
+  }
   conn->cpath_layer = NULL;
   return 0;
 }
@@ -280,7 +302,7 @@ void connection_ap_expire_beginning(void) {
     if (conn->state == AP_CONN_STATE_CONTROLLER_WAIT) {
       if (now - conn->timestamp_lastread >= 120) {
         log_fn(LOG_NOTICE, "Closing unattached stream.");
-        connection_mark_for_close(conn);
+        connection_close_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       }
       continue;
     }
@@ -294,8 +316,7 @@ void connection_ap_expire_beginning(void) {
     if (!circ) { /* it's vanished? */
       log_fn(LOG_INFO,"Conn is waiting (address %s), but lost its circ.",
              conn->socks_request->address);
-      conn->has_sent_end = 1; /* No circuit to receive end cell. */
-      connection_mark_for_close(conn);
+      connection_close_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       continue;
     }
     if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
@@ -303,7 +324,7 @@ void connection_ap_expire_beginning(void) {
         log_fn(LOG_NOTICE,"Rend stream is %d seconds late. Giving up on address '%s'.",
                (int)(now - conn->timestamp_lastread), conn->socks_request->address);
         connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
-        connection_mark_for_close(conn);
+        connection_close_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       }
       continue;
     }
@@ -324,10 +345,7 @@ void connection_ap_expire_beginning(void) {
     conn->timestamp_lastread += 15;
     /* move it back into 'pending' state, and try to attach. */
     if (connection_ap_detach_retriable(conn, circ)<0) {
-      /* it will never work */
-      /* Don't need to send end -- we're not connected */
-      conn->has_sent_end = 1;
-      connection_mark_for_close(conn);
+      connection_close_unattached_ap(conn, END_STREAM_REASON_MISC);
     }
   } /* end for */
 }
@@ -350,10 +368,7 @@ void connection_ap_attach_pending(void)
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
     if (connection_ap_handshake_attach_circuit(conn) < 0) {
-      /* -1 means it will never work */
-      /* Don't send end; there is no 'other side' yet */
-      conn->has_sent_end = 1;
-      connection_mark_for_close(conn);
+      connection_close_unattached_ap(conn, END_STREAM_REASON_MISC);
     }
   }
 }
@@ -911,9 +926,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
         answer = in.s_addr;
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
                                                (char*)&answer);
-        conn->has_sent_end = 1;
-        connection_mark_for_close(conn);
-        conn->hold_open_until_flushed = 1;
+        connection_close_unattached_ap(conn, END_STREAM_REASON_DONE);
         return 0;
       }
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
@@ -1016,9 +1029,7 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
-    /* Don't send end: there is no 'other side' yet */
-    ap_conn->has_sent_end = 1;
-    connection_mark_for_close(ap_conn);
+    connection_close_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
     circuit_mark_for_close(circ);
     return -1;
   }
@@ -1038,7 +1049,8 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_CONNECT_WAIT;
-  log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
+  log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",
+         ap_conn->s, circ->n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT);
   return 0;
 }
@@ -1061,9 +1073,7 @@ int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
-    /* Don't send end: there is no 'other side' yet */
-    ap_conn->has_sent_end = 1;
-    connection_mark_for_close(ap_conn);
+    connection_close_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
     circuit_mark_for_close(circ);
     return -1;
   }
@@ -1079,7 +1089,8 @@ int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
     return -1; /* circuit is closed, don't continue */
 
   ap_conn->state = AP_CONN_STATE_RESOLVE_WAIT;
-  log_fn(LOG_INFO,"Address sent for resolve, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
+  log_fn(LOG_INFO,"Address sent for resolve, ap socket %d, n_circ_id %d",
+         ap_conn->s, circ->n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_RESOLVE);
   return 0;
 }
@@ -1133,8 +1144,7 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
 
   /* attaching to a dirty circuit is fine */
   if (connection_ap_handshake_attach_circuit(conn) < 0) {
-    conn->has_sent_end = 1; /* no circ to send to */
-    connection_mark_for_close(conn);
+    connection_close_unattached_ap(conn, END_STREAM_REASON_MISC);
     tor_close_socket(fd[1]);
     return -1;
   }
@@ -1202,7 +1212,6 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
           (answer_type == RESOLVED_TYPE_IPV4 ||
            answer_type == RESOLVED_TYPE_IPV6) ?
                                SOCKS5_SUCCEEDED : SOCKS5_HOST_UNREACHABLE);
-  conn->socks_request->has_finished = 1;
 }
 
 /** Send a socks reply to stream <b>conn</b>, using the appropriate

@@ -741,7 +741,10 @@ hibernate_go_dormant(time_t now) {
       connection_edge_end(conn, END_STREAM_REASON_HIBERNATING,
                           conn->cpath_layer);
     log_fn(LOG_INFO,"Closing conn type %d", conn->type);
-    connection_mark_for_close(conn);
+    if (conn->type == CONN_TYPE_AP) /* send socks failure if needed */
+      connection_close_unattached_ap(conn, END_STREAM_REASON_HIBERNATING);
+    else
+      connection_mark_for_close(conn);
   }
 
   accounting_record_bandwidth_usage(now);

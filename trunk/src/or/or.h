@@ -1308,6 +1308,7 @@ int connection_or_nonopen_was_started_here(connection_t *conn);
 
 /********************************* connection_edge.c ***************************/
 
+void connection_close_unattached_ap(connection_t *conn, int endreason);
 int connection_edge_reached_eof(connection_t *conn);
 int connection_edge_process_inbuf(connection_t *conn, int package_partial);
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn);

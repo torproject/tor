@@ -416,8 +416,12 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   if (!circ) {
     log_fn(LOG_WARN,"no circ. Closing conn.");
     tor_assert(fromconn);
-    fromconn->has_sent_end = 1; /* no circ to send to */
-    connection_mark_for_close(fromconn);
+    if (fromconn->type == CONN_TYPE_AP) {
+      connection_close_unattached_ap(fromconn, END_STREAM_REASON_INTERNAL);
+    } else {
+      fromconn->has_sent_end = 1; /* no circ to send to */
+      connection_mark_for_close(fromconn);
+    }
     return -1;
   }
 
@@ -496,13 +500,13 @@ connection_edge_end_reason_socks5_response(int reason)
     case END_STREAM_REASON_CONNECTREFUSED:
       return SOCKS5_CONNECTION_REFUSED;
     case END_STREAM_REASON_EXITPOLICY:
-      return SOCKS5_CONNECTION_REFUSED;
+      return SOCKS5_CONNECTION_REFUSED; // XXX should be SOCKS5_NOT_ALLOWED ?
     case END_STREAM_REASON_DESTROY:
       return SOCKS5_GENERAL_ERROR;
     case END_STREAM_REASON_DONE:
       return SOCKS5_SUCCEEDED;
     case END_STREAM_REASON_TIMEOUT:
-      return SOCKS5_TTL_EXPIRED;
+      return SOCKS5_TTL_EXPIRED; // XXX is this correct?
     case END_STREAM_REASON_RESOURCELIMIT:
       return SOCKS5_GENERAL_ERROR;
     case END_STREAM_REASON_HIBERNATING:
@@ -603,8 +607,7 @@ connection_edge_process_relay_cell_not_open(
       } else {
         log_fn(LOG_INFO,"Address '%s' resolved to 0.0.0.0. Closing,",
                conn->socks_request->address);
-        conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
-        connection_mark_for_close(conn);
+        connection_close_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return 0;
       }
       client_dns_set_addressmap(conn->socks_request->address, addr,
@@ -658,12 +661,13 @@ connection_edge_process_relay_cell_not_open(
                                           rh->length));
     if (CIRCUIT_IS_ORIGIN(circ))
       circuit_log_path(LOG_INFO,circ);
-    conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
-    if (conn->type == CONN_TYPE_AP)
-      connection_ap_handshake_socks_reply(conn, NULL, 0,
-        connection_edge_end_reason_socks5_response(*(char *)
-          (cell->payload+RELAY_HEADER_SIZE)));
-    connection_mark_for_close(conn);
+    if (conn->type == CONN_TYPE_AP) {
+      connection_close_unattached_ap(conn,
+        *(char *)(cell->payload+RELAY_HEADER_SIZE));
+    } else {
+      conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
+      connection_mark_for_close(conn);
+    }
     return 0;
   }
 
@@ -681,7 +685,7 @@ connection_edge_process_relay_cell_not_open(
       if (!addr) {
         log_fn(LOG_INFO,"...but it claims the IP address was 0.0.0.0. Closing.");
         connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL, conn->cpath_layer);
-        connection_mark_for_close(conn);
+        connection_close_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return 0;
       }
       client_dns_set_addressmap(conn->socks_request->address, addr,
@@ -705,17 +709,14 @@ connection_edge_process_relay_cell_not_open(
     tor_assert(conn->socks_request->command == SOCKS_COMMAND_RESOLVE);
     if (rh->length < 2 || cell->payload[RELAY_HEADER_SIZE+1]+2>rh->length) {
       log_fn(LOG_WARN, "Dropping malformed 'resolved' cell");
-      conn->has_sent_end = 1;
-      connection_mark_for_close(conn);
+      connection_close_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return 0;
     }
     connection_ap_handshake_socks_resolved(conn,
                    cell->payload[RELAY_HEADER_SIZE], /*answer_type*/
                    cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
                    cell->payload+RELAY_HEADER_SIZE+2); /* answer */
-    conn->has_sent_end = 1;
-    connection_mark_for_close(conn);
-    conn->hold_open_until_flushed = 1;
+    connection_close_unattached_ap(conn, END_STREAM_REASON_DONE);
     return 0;
   }
 
