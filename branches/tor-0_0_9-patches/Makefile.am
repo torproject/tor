@@ -24,6 +24,10 @@ dist-rpm: dist
 	mv $$RPM_BUILD_DIR/RPMS/*/* .;                          \
 	rm -rf $$RPM_BUILD_DIR
 
+dist-osx:
+	$(MAKE) all
+	VERSION=$(VERSION) sh ./contrib/osx/package.sh
+
 doxygen:
 	doxygen && cd doc/doxygen/latex && make
 
