@@ -661,6 +661,7 @@ static int dnsworker_main(void *data) {
       result = -1;
     switch (result) {
       case 1:
+/* XXX008 result can never be 1, because we set it to -1 above on error */
         log_fn(LOG_INFO,"Could not resolve dest addr %s (transient).",address);
         answer[0] = DNS_RESOLVE_FAILED_TRANSIENT;
         break;
