@@ -886,6 +886,11 @@ router_load_single_router(const char *s)
   if (router_add_to_routerlist(ri)<0) {
     log_fn(LOG_WARN, "Couldn't add router to list; dropping.");
     return -1;
+  } else {
+    smartlist_t *changed = smartlist_create();
+    smartlist_add(changed, ri);
+    control_event_descriptors_changed(changed);
+    smartlist_free(changed);
   }
   log_fn(LOG_DEBUG, "Added router to list");
   return 0;
@@ -914,16 +919,23 @@ int router_load_routerlist_from_directory(const char *s,
     return -1;
   }
   if (routerlist) {
+    smartlist_t *changed = smartlist_create();
     SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
-                      router_add_to_routerlist(r));
+    {
+      if (router_add_to_routerlist(r)==0)
+        smartlist_add(changed, r);
+    });
     smartlist_clear(new_list->routers);
     routerlist->published_on = new_list->published_on;
     tor_free(routerlist->software_versions);
     routerlist->software_versions = new_list->software_versions;
     new_list->software_versions = NULL;
     routerlist_free(new_list);
+    control_event_descriptors_changed(changed);
+    smartlist_free(changed);
   } else {
     routerlist = new_list;
+    control_event_descriptors_changed(routerlist->routers);
   }
   if (router_resolve_routerlist(routerlist)) {
     log_fn(LOG_WARN, "Error resolving routerlist");

@@ -1362,7 +1362,8 @@ typedef enum stream_status_event_t {
   STREAM_EVENT_SENT_RESOLVE = 1,
   STREAM_EVENT_SUCCEEDED    = 2,
   STREAM_EVENT_FAILED       = 3,
-  STREAM_EVENT_CLOSED       = 4
+  STREAM_EVENT_CLOSED       = 4,
+  STREAM_EVENT_NEW          = 5
 } stream_status_event_t;
 
 typedef enum or_conn_status_event_t {
@@ -1381,6 +1382,7 @@ int control_event_stream_status(connection_t *conn, stream_status_event_t e);
 int control_event_or_conn_status(connection_t *conn, or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 void control_event_logmsg(int severity, const char *msg);
+int control_event_descriptors_changed(smartlist_t *routers);
 
 int init_cookie_authentication(int enabled);
 int decode_hashed_password(char *buf, const char *hashed);

@@ -871,6 +871,31 @@ control_event_logmsg(int severity, const char *msg)
   send_control_event(EVENT_WARNING, (uint32_t)(len+1), msg);
 }
 
+/** DOCDOC */
+int control_event_descriptors_changed(smartlist_t *routers)
+{
+  size_t len;
+  char *msg;
+  smartlist_t *identities;
+  char buf[HEX_DIGEST_LEN+1];
+
+  if (!EVENT_IS_INTERESTING(EVENT_NEW_DESC))
+    return 0;
+  identities = smartlist_create();
+  SMARTLIST_FOREACH(routers, routerinfo_t *, r,
+  {
+    base16_encode(buf,sizeof(buf),r->identity_digest,DIGEST_LEN);
+    smartlist_add(identities, tor_strdup(buf));
+  });
+  msg = smartlist_join_strings(identities, ",", 1, &len);
+  send_control_event(EVENT_NEW_DESC, len+1, msg);
+
+  SMARTLIST_FOREACH(identities, char *, cp, tor_free(cp));
+  smartlist_free(identities);
+  tor_free(msg);
+  return 0;
+}
+
 /** Choose a random authentication cookie and write it to disk.
  * Anybody who can read the cookie from disk will be considered
  * authorized to use the control connection. */
