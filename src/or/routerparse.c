@@ -546,8 +546,10 @@ router_parse_runningrouters(const char *str)
 
   goto done;
  err:
-  running_routers_free(new_list);
-  new_list = NULL;
+  if (new_list) {
+    running_routers_free(new_list);
+    new_list = NULL;
+  }
  done:
   if (declared_key) crypto_free_pk_env(declared_key);
   if (tokens) {
