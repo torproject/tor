@@ -109,7 +109,32 @@ For example, "reject 127.0.0.1:*,reject 192.168.1.0/24:*,accept *:*" would
 reject any traffic destined for localhost and any 192.168.1.* address, but
 accept anything else.
 
-This directive can be specified multiple times so you don't have to put it all on one line.
+This directive can be specified multiple times so you don't have to put
+it all on one line.
+
+See RFC 3330 for more details about internal and reserved IP address
+space. The default exit policy is:
+.PD 0
+.RS 12
+.IP "reject 0.0.0.0/8" 0
+.IP "reject 169.254.0.0/16" 4
+.IP "reject 127.0.0.0/8"
+.IP "reject 192.168.0.0/16"
+.IP "reject 10.0.0.0/8"
+.IP "reject 172.16.0.0/12"
+.IP "accept *:20-22"
+.IP "accept *:53"
+.IP "accept *:79-81"
+.IP "accept *:110"
+.IP "accept *:143"
+.IP "accept *:443"
+.IP "accept *:873"
+.IP "accept *:993"
+.IP "accept *:995" 4
+.IP "accept *:1024-65535"
+.IP "reject *:*"
+.RE
+.PD
 .TP
 \fBmaxonionspending \fR\fINUM\fP
 If you have more than this number of onionskins queued for decrypt, reject new ones. (Default: 100)
