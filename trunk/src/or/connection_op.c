@@ -27,7 +27,6 @@ int connection_op_process_inbuf(connection_t *conn) {
   }
 
   return 0;
-
 }
 
 int op_handshake_process_keys(connection_t *conn) {
@@ -90,7 +89,7 @@ int op_handshake_process_keys(connection_t *conn) {
   connection_init_timeval(conn);
   connection_watch_events(conn, POLLIN);
 
-  return 0;
+  return connection_process_inbuf(conn); /* in case they sent some cells along with the keys */
 }
 
 int connection_op_finished_flushing(connection_t *conn) {
