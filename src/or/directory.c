@@ -290,14 +290,145 @@ parse_http_response(char *headers, int *code, char **message)
   return 0;
 }
 
-/** Read handler for directory connections.  (That's connections <em>to</em>
- * directory servers and connections <em>at</em> directory servers.)
+/** We are a client, and we've finished reading the server's
+ * response. Parse and it and act appropriately.
+ *
+ * Return -1 if an error has occurred, or 0 normally. The caller
+ * will take care of marking the connection for close.
  */
-int connection_dir_process_inbuf(connection_t *conn) {
+static int
+connection_dir_client_finished_reading(connection_t *conn)
+{
   char *body;
   char *headers;
   int body_len=0;
   int status_code;
+
+  switch(fetch_from_buf_http(conn->inbuf,
+                             &headers, MAX_HEADERS_SIZE,
+                             &body, &body_len, MAX_DIR_SIZE)) {
+    case -1: /* overflow */
+      log_fn(LOG_WARN,"'fetch' response too large. Failing.");
+      return -1;
+    case 0:
+      log_fn(LOG_INFO,"'fetch' response not all here, but we're at eof. Closing.");
+      return -1;
+    /* case 1, fall through */
+  }
+
+  if(parse_http_response(headers, &status_code, NULL) < 0) {
+    log_fn(LOG_WARN,"Unparseable headers. Closing.");
+    free(body); free(headers);
+    return -1;
+  }
+
+  if(conn->purpose == DIR_PURPOSE_FETCH_DIR) {
+    /* fetch/process the directory to learn about new routers. */
+    log_fn(LOG_INFO,"Received directory (size %d):\n%s", body_len, body);
+    if(status_code == 503 || body_len == 0) {
+      log_fn(LOG_INFO,"Empty directory. Ignoring.");
+      free(body); free(headers);
+      return 0;
+    }
+    if(status_code != 200) {
+      log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
+             status_code);
+      free(body); free(headers);
+      return -1;
+    }
+    if(router_load_routerlist_from_directory(body, NULL) < 0){
+      log_fn(LOG_INFO,"...but parsing failed. Ignoring.");
+    } else {
+      log_fn(LOG_INFO,"updated routers.");
+    }
+    directory_has_arrived(); /* do things we've been waiting to do */
+  }
+
+  if(conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
+    running_routers_t *rrs;
+    routerlist_t *rl;
+    /* just update our list of running routers, if this list is new info */
+    log_fn(LOG_INFO,"Received running-routers list (size %d):\n%s", body_len, body);
+    if(status_code != 200) {
+      log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
+             status_code);
+      free(body); free(headers);
+      return -1;
+    }
+    if (!(rrs = router_parse_runningrouters(body))) {
+      log_fn(LOG_WARN, "Can't parse runningrouters list");
+      free(body); free(headers);
+      return -1;
+    }
+    router_get_routerlist(&rl);
+    routerlist_update_from_runningrouters(rl,rrs);
+    running_routers_free(rrs);
+  }
+
+  if(conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {
+    switch(status_code) {
+      case 200:
+        log_fn(LOG_INFO,"eof (status 200) after uploading server descriptor: finished.");
+        break;
+      case 400:
+        log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver. Malformed server descriptor?");
+        break;
+      case 403:
+        log_fn(LOG_WARN,"http status 403 (unapproved server) response from dirserver. Is your clock skewed? Have you mailed us your identity fingerprint? Are you using the right key? See README.");
+        break;
+      default:
+        log_fn(LOG_WARN,"http status %d response unrecognized.", status_code);
+        break;
+    }
+  }
+
+  if(conn->purpose == DIR_PURPOSE_FETCH_RENDDESC) {
+    log_fn(LOG_INFO,"Received rendezvous descriptor (size %d, status code %d)",
+           body_len, status_code);
+    switch(status_code) {
+      case 200:
+        if(rend_cache_store(body, body_len) < 0) {
+          log_fn(LOG_WARN,"Failed to store rendezvous descriptor.");
+          /* alice's ap_stream will notice when connection_mark_for_close
+           * cleans it up */
+        } else {
+          /* success. notify pending connections about this. */
+          rend_client_desc_fetched(conn->rend_query, 1);
+          conn->purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
+        }
+        break;
+      case 404:
+        /* not there. pending connections will be notified when
+         * connection_mark_for_close cleans it up. */
+        break;
+      case 400:
+        log_fn(LOG_WARN,"http status 400 (bad request). Dirserver didn't like our rendezvous query?");
+        break;
+    }
+  }
+
+  if(conn->purpose == DIR_PURPOSE_UPLOAD_RENDDESC) {
+    switch(status_code) {
+      case 200:
+        log_fn(LOG_INFO,"eof (status 200) after uploading rendezvous descriptor: finished.");
+        break;
+      case 400:
+        log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver. Malformed rendezvous descriptor?");
+        break;
+      default:
+        log_fn(LOG_WARN,"http status %d response unrecognized.", status_code);
+        break;
+    }
+  }
+  free(body); free(headers);
+  return 0;
+}
+
+/** Read handler for directory connections.  (That's connections <em>to</em>
+ * directory servers and connections <em>at</em> directory servers.)
+ */
+int connection_dir_process_inbuf(connection_t *conn) {
+  int retval;
 
   tor_assert(conn && conn->type == CONN_TYPE_DIR);
 
@@ -314,133 +445,9 @@ int connection_dir_process_inbuf(connection_t *conn) {
       return -1;
     }
 
-    switch(fetch_from_buf_http(conn->inbuf,
-                               &headers, MAX_HEADERS_SIZE,
-                               &body, &body_len, MAX_DIR_SIZE)) {
-      case -1: /* overflow */
-        log_fn(LOG_WARN,"'fetch' response too large. Failing.");
-        connection_mark_for_close(conn);
-        return -1;
-      case 0:
-        log_fn(LOG_INFO,"'fetch' response not all here, but we're at eof. Closing.");
-        connection_mark_for_close(conn);
-        return -1;
-      /* case 1, fall through */
-    }
-
-    if(parse_http_response(headers, &status_code, NULL) < 0) {
-      log_fn(LOG_WARN,"Unparseable headers. Closing.");
-      free(body); free(headers);
-      connection_mark_for_close(conn);
-      return -1;
-    }
-
-    if(conn->purpose == DIR_PURPOSE_FETCH_DIR) {
-      /* fetch/process the directory to learn about new routers. */
-      log_fn(LOG_INFO,"Received directory (size %d):\n%s", body_len, body);
-      if(status_code == 503 || body_len == 0) {
-        log_fn(LOG_INFO,"Empty directory. Ignoring.");
-        free(body); free(headers);
-        connection_mark_for_close(conn);
-        return 0;
-      }
-      if(status_code != 200) {
-        log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
-               status_code);
-        free(body); free(headers);
-        connection_mark_for_close(conn);
-        return -1;
-      }
-      if(router_load_routerlist_from_directory(body, NULL) < 0){
-        log_fn(LOG_INFO,"...but parsing failed. Ignoring.");
-      } else {
-        log_fn(LOG_INFO,"updated routers.");
-      }
-      directory_has_arrived(); /* do things we've been waiting to do */
-    }
-
-    if(conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
-      running_routers_t *rrs;
-      routerlist_t *rl;
-      /* just update our list of running routers, if this list is new info */
-      log_fn(LOG_INFO,"Received running-routers list (size %d):\n%s", body_len, body);
-      if(status_code != 200) {
-        log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
-               status_code);
-        free(body); free(headers);
-        connection_mark_for_close(conn);
-        return -1;
-      }
-      if (!(rrs = router_parse_runningrouters(body))) {
-        log_fn(LOG_WARN, "Can't parse runningrouters list");
-        free(body); free(headers);
-        connection_mark_for_close(conn);
-        return -1;
-      }
-      router_get_routerlist(&rl);
-      routerlist_update_from_runningrouters(rl,rrs);
-      running_routers_free(rrs);
-    }
-
-    if(conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {
-      switch(status_code) {
-        case 200:
-          log_fn(LOG_INFO,"eof (status 200) after uploading server descriptor: finished.");
-          break;
-        case 400:
-          log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver. Malformed server descriptor?");
-          break;
-        case 403:
-          log_fn(LOG_WARN,"http status 403 (unapproved server) response from dirserver. Is your clock skewed? Have you mailed us your identity fingerprint? Are you using the right key? See README.");
-
-          break;
-        default:
-          log_fn(LOG_WARN,"http status %d response unrecognized.", status_code);
-          break;
-      }
-    }
-
-    if(conn->purpose == DIR_PURPOSE_FETCH_RENDDESC) {
-      log_fn(LOG_INFO,"Received rendezvous descriptor (size %d, status code %d)",
-             body_len, status_code);
-      switch(status_code) {
-        case 200:
-          if(rend_cache_store(body, body_len) < 0) {
-            log_fn(LOG_WARN,"Failed to store rendezvous descriptor.");
-            /* alice's ap_stream will notice when connection_mark_for_close
-             * cleans it up */
-          } else {
-            /* success. notify pending connections about this. */
-            rend_client_desc_fetched(conn->rend_query, 1);
-            conn->purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
-          }
-          break;
-        case 404:
-          /* not there. pending connections will be notified when
-           * connection_mark_for_close cleans it up. */
-          break;
-        case 400:
-          log_fn(LOG_WARN,"http status 400 (bad request). Dirserver didn't like our rendezvous query?");
-          break;
-      }
-    }
-
-    if(conn->purpose == DIR_PURPOSE_UPLOAD_RENDDESC) {
-      switch(status_code) {
-        case 200:
-          log_fn(LOG_INFO,"eof (status 200) after uploading rendezvous descriptor: finished.");
-          break;
-        case 400:
-          log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver. Malformed rendezvous descriptor?");
-          break;
-        default:
-          log_fn(LOG_WARN,"http status %d response unrecognized.", status_code);
-          break;
-      }
-    }
-    free(body); free(headers);
+    retval = connection_dir_client_finished_reading(conn);
     connection_mark_for_close(conn);
-    return 0;
+    return retval;
   } /* endif 'reached eof' */
 
   /* If we're on the dirserver side, look for a command. */
