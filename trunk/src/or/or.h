@@ -26,13 +26,7 @@
 #include <ctype.h>
 #endif
 #include "../common/torint.h"
-#ifdef HAVE_SYS_POLL_H
-#include <sys/poll.h>
-#elif HAVE_POLL_H
-#include <poll.h>
-#else
 #include "../common/fakepoll.h"
-#endif
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h> /* Must be included before sys/stat.h for Ultrix */
 #endif
