@@ -172,7 +172,6 @@ connection_edge_end_errno(connection_t *conn, crypt_path_t *cpath_layer)
   return connection_edge_end(conn, reason, cpath_layer);
 }
 
-
 /** Connection <b>conn</b> has finished writing and has no bytes left on
  * its outbuf.
  *
@@ -357,7 +356,6 @@ connection_ap_detach_retriable(connection_t *conn, circuit_t *circ)
     return 0;
   }
 }
-
 
 /** A client-side struct to remember requests to rewrite addresses
  * to new addresses. These structs make up a tree, with addressmap

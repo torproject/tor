@@ -101,7 +101,7 @@ void dns_init(void) {
 
 static void
 _free_cached_resolve(struct cached_resolve *r) {
-  while(r->pending_connections) {
+  while (r->pending_connections) {
     struct pending_connection_t *victim = r->pending_connections;
     r->pending_connections = victim->next;
     tor_free(victim);

@@ -645,7 +645,6 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   }
 }
 
-
 #define CONTROL_CMD_FRAGMENTHEADER 0x0010
 #define CONTROL_CMD_FRAGMENT       0x0011
 /** If there is a complete control message waiting on buf, then store
@@ -759,4 +758,3 @@ void assert_buf_ok(buf_t *buf)
   tor_assert(buf->mem);
   tor_assert(buf->datalen <= buf->len);
 }
-

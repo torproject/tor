@@ -767,7 +767,6 @@ void tor_gettimeofday(struct timeval *timeval) {
   return;
 }
 
-
 #if defined(TOR_IS_MULTITHREADED) && !defined(MS_WINDOWS)
 #define TIME_FNS_NEED_LOCKS
 #endif
