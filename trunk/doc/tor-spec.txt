@@ -521,7 +521,7 @@ Every Item begins with a KeywordLine, followed by one or more Objects. A
 KeywordLine begins with a Keyword, optionally followed by a space and more
 non-newline characters, and ends with a newline.  A Keyword is a sequence of
 one or more characters in the set [A-Za-z0-9-].  An Object is a block of
-PGP-encrypted data in Open-PGP-style armor.
+encoded data in pseudo-Open-PGP-style armor. (cf. RFC 2440)
 
 More formally:
 
