@@ -234,6 +234,7 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
   int best_support_idx = -1;
   int best_maybe_support_idx = -1;
   int n_best_support=0, n_best_maybe_support=0;
+  int n_running_routers=0;
   
   get_connection_array(&carray, &n_connections);
 
@@ -257,8 +258,11 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
   n_maybe_supported = tor_malloc(sizeof(int)*dir->n_routers);
   for (i = 0; i < dir->n_routers; ++i) {   /* iterate over routers */
     n_supported[i] = n_maybe_supported[i] = 0;
-    if(!dir->routers[i]->is_running)
+    if(!dir->routers[i]->is_running) {
+      n_supported[i] = n_maybe_supported[i] = -1;
       continue; /* skip routers which are known to be down */
+    }
+    ++n_running_routers;
     for (j = 0; j < n_connections; ++j) { /* iterate over connections */
       if (carray[j]->type != CONN_TYPE_AP || 
           carray[j]->state == AP_CONN_STATE_CIRCUIT_WAIT ||
@@ -297,7 +301,7 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
          n_best_maybe_support, best_maybe_support, n_pending_connections);
   /* If any routers definitely support any pending connections, choose one
    * at random. */
-  if (best_support) {
+  if (best_support > 0) {
     i = crypto_pseudo_rand_int(n_best_support);
     /* Iterate over the routers, until we find the i-th one such that
      * n_supported[j] == best_support
@@ -317,7 +321,7 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
   }
   /* If any routers _maybe_ support pending connections, choose one at
    * random, as above.  */
-  if (best_maybe_support) {
+  if (best_maybe_support > 0) {
     i = crypto_pseudo_rand_int(n_best_maybe_support);
     for (j = best_maybe_support_idx; j < dir->n_routers; ++j) {
       if (n_maybe_supported[j] == best_maybe_support) {
@@ -334,9 +338,23 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
   }
   /* Either there are no pending connections, or no routers even seem to
    * possibly support any of them.  Choose a router at random. */
-  /* XXX should change to not choose non-running routers */
   tor_free(n_supported); tor_free(n_maybe_supported);
-  i = crypto_pseudo_rand_int(dir->n_routers);
+  if (!n_running_routers) {
+    log_fn(LOG_WARN, "No routers seem to be running; can't choose an exit.");
+    return NULL;
+  }
+  i = crypto_pseudo_rand_int(n_running_routers);
+  /* Iterate over the routers, till we find the i'th one that has ->is_running
+   */
+  for (j = 0; j < dir->n_routers; ++j) {
+    if (dir->routers[j]->is_running) {
+      if (i) {
+        --i;
+      } else {
+        return dir->routers[j];
+      }
+    }
+  }
   log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[i]->nickname);
   return dir->routers[i];
 }
