@@ -553,13 +553,6 @@ static int do_main_loop(void) {
   int timeout;
   int poll_result;
 
-  /* load the routers file */
-  if(options.RouterFile &&
-     router_set_routerlist_from_file(options.RouterFile) < 0) {
-    log_fn(LOG_ERR,"Error loading router list.");
-    return -1;
-  }
-
   /* Initialize the history structures. */
   rep_hist_init();
   /* Intialize the service cache. */
@@ -569,6 +562,13 @@ static int do_main_loop(void) {
    * TLS context. */
   if (init_keys() < 0 || rend_service_init_keys() < 0) {
     log_fn(LOG_ERR,"Error initializing keys; exiting");
+    return -1;
+  }
+
+  /* load the routers file */
+  if(options.RouterFile &&
+     router_set_routerlist_from_file(options.RouterFile) < 0) {
+    log_fn(LOG_ERR,"Error loading router list.");
     return -1;
   }
 
