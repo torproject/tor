@@ -1324,7 +1324,12 @@ int connection_or_nonopen_was_started_here(connection_t *conn);
 
 /********************************* connection_edge.c ***************************/
 
-void connection_close_unattached_ap(connection_t *conn, int endreason);
+#define connection_mark_unattached_ap(conn, endreason) \
+  do { _connection_mark_unattached_ap(conn, endreason, __LINE__, _SHORT_FILE_);\
+  } while (0)
+
+void _connection_mark_unattached_ap(connection_t *conn, int endreason,
+                                    int line, const char *file);
 int connection_edge_reached_eof(connection_t *conn);
 int connection_edge_process_inbuf(connection_t *conn, int package_partial);
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn);
