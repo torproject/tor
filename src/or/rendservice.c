@@ -342,7 +342,9 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
     return -1;
   }
   if (!memcmp(circuit->rend_pk_digest, request, 20)) {
-    log_fn(LOG_WARN, "Got an INTRODUCE2 cell for the wrong service");
+    hex_encode(request, 4, hexid);
+    log_fn(LOG_WARN, "Got an INTRODUCE2 cell for the wrong service (%s)",
+           hexid);
     return -1;
   }
 
