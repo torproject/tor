@@ -136,6 +136,8 @@ test_buffers() {
 
   close(s);
 
+
+#if 0
   /****
    * find_on_inbuf
    ****/
@@ -156,6 +158,7 @@ test_buffers() {
   test_eq(-1, find_on_inbuf("AX", 2, buf));
   /* Make sure we use the string length */
   test_eq(((int)'d')+1, find_on_inbuf("abcdX", 4, buf));
+#endif
 
   /****
    * fetch_from_buf

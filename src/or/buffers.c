@@ -2,16 +2,18 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/* buffers.c */
+/*****
+ * buffers.c: Abstractions for buffered IO.
+ *****/
 
 #include "or.h"
 
 #define BUFFER_MAGIC 0xB0FFF312u
 struct buf_t {
-  uint32_t magic; /* for debugging */
-  char *mem;
-  size_t len;
-  size_t datalen;
+  uint32_t magic; /* Magic cookie for debugging: Must be set to BUFFER_MAGIC */
+  char *mem;      /* Storage for data in the buffer */
+  size_t len;     /* Maximum amount of data that 'mem' can hold. */
+  size_t datalen; /* Number of bytes currently in 'mem'. */
 };
 
 /* Size, in bytes, for newly allocated buffers.  Should be a power of 2. */
@@ -23,7 +25,7 @@ struct buf_t {
  * than this size. */
 #define MIN_BUF_SHRINK_SIZE (16*1024)
 
-/* Change a buffer's capacity.  Must only be called when */
+/* Change a buffer's capacity.  new_capacity must be <= buf->datalen. */
 static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
 {
   tor_assert(buf->datalen <= new_capacity);
@@ -88,33 +90,42 @@ static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
   buf_shrink_if_underfull(buf);
 }
 
-/* Find the first instance of str on buf.  If none exists, return -1.
- * Otherwise, return index of the first character in buf _after_ the
- * first instance of str.
+/* Find the first instance of the str_len byte string 'sr' on the
+ * buf_len byte string 'bufstr'.  Strings are not necessary
+ * NUL-terminated. If none exists, return -1.  Otherwise, return index
+ * of the first character in bufstr _after_ the first instance of str.
  */
-static int find_str_in_str(const char *str, int str_len,
-                           const char *buf, int buf_len)
+/* XXXX The way this function is used, we could always get away with
+ * XXXX assuming that str is NUL terminated, and use strstr instead. */
+static int find_mem_in_mem(const char *str, int str_len,
+                           const char *bufstr, int buf_len)
 {
   const char *location;
-  const char *last_possible = buf + buf_len - str_len;
+  const char *last_possible = bufstr + buf_len - str_len;
 
-  tor_assert(str && str_len > 0 && buf);
+  tor_assert(str && str_len > 0 && bufstr);
 
   if(buf_len < str_len)
     return -1;
 
-  for(location = buf; location <= last_possible; location++)
+  for(location = bufstr; location <= last_possible; location++)
     if((*location == *str) && !memcmp(location+1, str+1, str_len-1))
-      return location-buf+str_len;
+      return location-bufstr+str_len;
 
   return -1;
 }
 
-int find_on_inbuf(char *string, int string_len, buf_t *buf) {
-  return find_str_in_str(string, string_len, buf->mem, buf->datalen);
+#if 0
+/* Find the first occurence of the string_len byte string 'str' on the
+ * buffer 'buf'.  If none exists, return -1.  Otherwise, return index
+ * of the first character on the buffer _after_ the first instance of str.
+ */
+int find_on_inbuf(char *str, int string_len, buf_t *buf) {
+  return find_mem_in_mem(str, string_len, buf->mem, buf->datalen);
 }
+#endif
 
-/* Create and return a new buf of size 'size'
+/* Create and return a new buf with capacity 'capacity'.
  */
 buf_t *buf_new_with_capacity(size_t size) {
   buf_t *buf;
@@ -129,31 +140,40 @@ buf_t *buf_new_with_capacity(size_t size) {
   return buf;
 }
 
+/* Allocate and return a new buffer with default capacity. */
 buf_t *buf_new()
 {
   return buf_new_with_capacity(INITIAL_BUF_SIZE);
 }
 
+/* Remove all data from 'buf' */
 void buf_clear(buf_t *buf)
 {
   buf->datalen = 0;
 }
 
+/* Return the number of bytes stored in 'buf' */
 size_t buf_datalen(const buf_t *buf)
 {
   return buf->datalen;
 }
 
+/* Return the maximum bytes that can be stored in 'buf' before buf
+ * needs to resize. */
 size_t buf_capacity(const buf_t *buf)
 {
   return buf->len;
 }
 
+/* For testing only: Return a pointer to the raw memory stored in 'buf'.
+ */
 const char *_buf_peek_raw_buffer(const buf_t *buf)
 {
   return buf->mem;
 }
 
+/* Release storage held by 'buf'.
+ */
 void buf_free(buf_t *buf) {
   assert_buf_ok(buf);
   buf->magic = 0xDEADBEEF;
@@ -161,12 +181,11 @@ void buf_free(buf_t *buf) {
   tor_free(buf);
 }
 
-/* read from socket s, writing onto end of buf.
- * read at most 'at_most' bytes, and in any case don't read more than
- * will fit based on buflen.
- * If read() returns 0, set *reached_eof to 1 and return 0. If you want
- * to tear down the connection return -1, else return the number of
- * bytes read.
+/* Read from socket s, writing onto end of buf.  Read at most
+ * 'at_most' bytes, resizing the buffer as necessary.  If read()
+ * returns 0, set *reached_eof to 1 and return 0. Return -1 on error;
+ * else return the number of bytes read.  Return 0 if read() would
+ * block.
  */
 int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof) {
 
@@ -190,7 +209,7 @@ int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof) {
     if(!ERRNO_IS_EAGAIN(tor_socket_errno(s))) { /* it's a real error */
       return -1;
     }
-    return 0;
+    return 0; /* would block. */
   } else if (read_result == 0) {
     log_fn(LOG_DEBUG,"Encountered eof");
     *reached_eof = 1;
@@ -203,6 +222,8 @@ int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof) {
   }
 }
 
+/* As read_to_buf, but reads from a TLS connection.
+ */
 int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
   int r;
   tor_assert(tls);
@@ -233,9 +254,13 @@ int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
   return r;
 }
 
+/* Write data from 'buf' to the socket 's'.  Write at most
+ * *buf_flushlen bytes, and decrement *buf_flushlen by the number of
+ * bytes actually written.  Return the number of bytes written on
+ * success, -1 on failure.  Returns 0 if write() would block.
+ */
 int flush_buf(int s, buf_t *buf, int *buf_flushlen)
 {
-
   /* push from buf onto s
    * then memmove to front of buf
    * return -1 or how many bytes you just flushed */
@@ -267,6 +292,8 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
   }
 }
 
+/* As flush_buf, but writes data to a TLS connection.
+ */
 int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen)
 {
   int r;
@@ -286,6 +313,9 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen)
   return r;
 }
 
+/* Append string_len bytes from 'string' to the end of 'buf'.
+ * Return the new length of the buffer on success, -1 on failure.
+ */
 int write_to_buf(const char *string, int string_len, buf_t *buf) {
 
   /* append string to buf (growing as needed, return -1 if "too big")
@@ -306,6 +336,11 @@ int write_to_buf(const char *string, int string_len, buf_t *buf) {
   return buf->datalen;
 }
 
+
+/* Remove string_len bytes from the front of 'buf', and store them
+ * into 'string'.  Returns the new buffer size.  string_len must be <=
+ * the number of bytes on the buffer.
+ */
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf) {
 
   /* There must be string_len bytes in buf; write them onto string,
@@ -346,7 +381,7 @@ int fetch_from_buf_http(buf_t *buf,
   assert_buf_ok(buf);
 
   headers = buf->mem;
-  i = find_on_inbuf("\r\n\r\n", 4, buf);
+  i = find_mem_in_mem("\r\n\r\n", 4, buf->mem, buf->datalen);
   if(i < 0) {
     log_fn(LOG_DEBUG,"headers not all here yet.");
     return 0;
@@ -366,7 +401,7 @@ int fetch_from_buf_http(buf_t *buf,
   }
 
 #define CONTENT_LENGTH "\r\nContent-Length: "
-  i = find_str_in_str(CONTENT_LENGTH, strlen(CONTENT_LENGTH),
+  i = find_mem_in_mem(CONTENT_LENGTH, strlen(CONTENT_LENGTH),
                       headers, headerlen);
   if(i > 0) {
     contentlen = atoi(headers+i);
@@ -585,7 +620,8 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   }
 }
 
-
+/* Log an error and exit if 'buf' is corrupted.
+ */
 void assert_buf_ok(buf_t *buf)
 {
   tor_assert(buf);
