@@ -180,7 +180,6 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   crypto_pk_env_t *pk;
   routerinfo_t *router;
   char nickname[MAX_NICKNAME_LEN+1];
-  connection_t *otherconn;
 
   conn->state = OR_CONN_STATE_OPEN;
   directory_set_dirty();
