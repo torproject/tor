@@ -21,6 +21,7 @@ int tor_tls_context_new(crypto_pk_env_t *rsa, int isServer, const char *nickname
 tor_tls *tor_tls_new(int sock, int isServer);
 void tor_tls_free(tor_tls *tls);
 int tor_tls_peer_has_cert(tor_tls *tls);
+int tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen);
 crypto_pk_env_t *tor_tls_verify(tor_tls *tls);
 int tor_tls_read(tor_tls *tls, char *cp, int len);
 int tor_tls_write(tor_tls *tls, char *cp, int n);
