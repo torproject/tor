@@ -319,6 +319,7 @@ typedef enum {
   K_LINK_KEY,
   K_ROUTER_SIGNATURE,
   K_PUBLISHED,
+  K_RUNNING_ROUTERS,
   _SIGNATURE, 
   _PUBLIC_KEY, 
   _ERR, 
@@ -339,10 +340,11 @@ static struct token_table_ent token_table[] = {
   { "link-key", K_LINK_KEY },
   { "router-signature", K_ROUTER_SIGNATURE },
   { "published", K_PUBLISHED },
+  { "running-routers", K_RUNNING_ROUTERS },
   { NULL, -1 }
 };
 
-#define MAX_ARGS 8
+#define MAX_ARGS 1024
 struct directory_token {
   directory_keyword tp;
   union {
@@ -495,6 +497,7 @@ router_dump_token(directory_token_t *tok) {
     case K_LINK_KEY: printf("Link-key"); break;
     case K_ROUTER_SIGNATURE: printf("Router-signature"); break;
     case K_PUBLISHED: printf("Published"); break;
+    case K_RUNNING_ROUTERS: printf("Running-routers"); break;
     default:
       printf("?????? %d\n", tok->tp); return;
     }
@@ -551,7 +554,7 @@ static char *find_whitespace(char *s) {
 
 int router_get_list_from_string(char *s) 
 {
-  if (router_get_list_from_string_impl(&s, &directory)) {
+  if (router_get_list_from_string_impl(&s, &directory, -1, NULL)) {
     log(LOG_WARNING, "Error parsing router file");
     return -1;
   }
@@ -653,6 +656,10 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   char signed_digest[128];
   directory_t *new_dir = NULL;
   char *versions;
+  struct tm published;
+  time_t published_on;
+  const char *good_nickname_lst[1024];
+  int n_good_nicknames;
   
 #define NEXT_TOK()                                                      \
   do {                                                                  \
@@ -676,6 +683,18 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   TOK_IS(K_SIGNED_DIRECTORY, "signed-directory");
 
   NEXT_TOK();
+  TOK_IS(K_PUBLISHED, "published");
+  if (tok.val.cmd.n_args != 2) {
+    log_fn(LOG_WARNING, "Invalid published line");
+    goto err;
+  }
+  tok.val.cmd.args[1][-1] = ' ';
+  if (!strptime(tok.val.cmd.args[0], "%Y-%m-%d %H:%M:%S", &published)) {
+    log_fn(LOG_WARNING, "Published time was unparseable"); goto err;
+  }
+  published_on = timegm(&published);  
+
+  NEXT_TOK();
   TOK_IS(K_RECOMMENDED_SOFTWARE, "recommended-software");
   if (tok.val.cmd.n_args != 1) {
     log_fn(LOG_WARNING, "Invalid recommded-software line");
@@ -683,11 +702,18 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   }
   versions = strdup(tok.val.cmd.args[0]);
   
-  if (router_get_list_from_string_impl(&s, &new_dir)) {
+  NEXT_TOK();
+  TOK_IS(K_RUNNING_ROUTERS, "running-routers");
+  n_good_nicknames = tok.val.cmd.n_args;
+  memcpy(good_nickname_lst, tok.val.cmd.args, n_good_nicknames);
+
+  if (router_get_list_from_string_impl(&s, &new_dir,
+                                       n_good_nicknames, good_nickname_lst)) {
     log_fn(LOG_WARNING, "Error reading routers from directory");
     goto err;
   }
   new_dir->software_versions = versions;
+  new_dir->published_on = published_on;
 
   NEXT_TOK();
   TOK_IS(K_DIRECTORY_SIGNATURE, "directory-signature");
@@ -725,11 +751,14 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
 #undef TOK_IS
 }
 
-int router_get_list_from_string_impl(char **s, directory_t **dest)
+int router_get_list_from_string_impl(char **s, directory_t **dest, 
+                                     int n_good_nicknames, 
+                                     const char **good_nickname_lst)
 {
   routerinfo_t *router;
   routerinfo_t **rarray;
   int rarray_len = 0;
+  int i, router_is_running;
 
   assert(s);
 
@@ -749,6 +778,15 @@ int router_get_list_from_string_impl(char **s, directory_t **dest)
       routerinfo_free(router);
       continue;
     } 
+    if (n_good_nicknames>=0) {
+      router->is_running = 0;
+      for (i = 0; i < n_good_nicknames; ++i) {
+        if (0==strcasecmp(good_nickname_lst[i], router->nickname)) {
+          router->is_running = 1;
+          break;
+        }
+      }
+    }
     rarray[rarray_len++] = router;
   }
  
@@ -846,31 +884,38 @@ routerinfo_t *router_get_entry_from_string(char**s) {
      thank me for this someday. */
   router->onion_pkey = router->identity_pkey = router->link_pkey = NULL; 
 
-  if (tok->val.cmd.n_args != 5) {
+  if (tok->val.cmd.n_args != 6) {
     log_fn(LOG_WARNING,"Wrong # of arguments to \"router\"");
     goto err;
   }
-
+  if (!(router->nickname = strdup(ARGS[0])))
+    goto err;
+  if (strlen(router->nickname) > MAX_NICKNAME_LEN)
+    goto err;
+  if (strspn(router->nickname, LEGAL_NICKNAME_CHARACTERS) != 
+      strlen(router->nickname))
+    goto err;
+  
   /* read router.address */
-  if (!(router->address = strdup(ARGS[0])))
+  if (!(router->address = strdup(ARGS[1])))
     goto err;
   router->addr = 0;
 
   /* Read router->or_port */
-  router->or_port = atoi(ARGS[1]);
+  router->or_port = atoi(ARGS[2]);
   if(!router->or_port) {
     log_fn(LOG_WARNING,"or_port unreadable or 0. Failing.");
     goto err;
   }
   
   /* Router->ap_port */
-  router->ap_port = atoi(ARGS[2]);
+  router->ap_port = atoi(ARGS[3]);
   
   /* Router->dir_port */
-  router->dir_port = atoi(ARGS[3]);
+  router->dir_port = atoi(ARGS[4]);
 
   /* Router->bandwidth */
-  router->bandwidth = atoi(ARGS[4]);
+  router->bandwidth = atoi(ARGS[5]);
   if (!router->bandwidth) {
     log_fn(LOG_WARNING,"bandwidth unreadable or 0. Failing.");
   }
@@ -885,8 +930,8 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   if (tok->val.cmd.n_args != 2) {
     log_fn(LOG_WARNING, "Wrong number of arguments to published"); goto err;
   }
-  tok->val.cmd.args[1][-1] = ' '; /* Re-insert space. */
-  if (!strptime(tok->val.cmd.args[0], "%Y-%m-%d %H:%M:%S", &published)) {
+  ARGS[1][-1] = ' '; /* Re-insert space. */
+  if (!strptime(ARGS[0], "%Y-%m-%d %H:%M:%S", &published)) {
     log_fn(LOG_WARNING, "Published time was unparseable"); goto err;
   }
   router->published_on = timegm(&published);
@@ -1072,127 +1117,6 @@ int router_compare_to_exit_policy(connection_t *conn) {
 
   return 0; /* accept all by default. */
 }
-
-/*** Fingerprint handling code. ***/
-typedef struct fingerprint_entry_t {
-  char *nickname;
-  char *fingerprint;
-} fingerprint_entry_t;
-
-static fingerprint_entry_t fingerprint_list[MAX_ROUTERS_IN_DIR];
-static int n_fingerprints = 0;
-/* return 0 on success, -1 on failure */
-int directory_parse_fingerprint_file(const char *fname)
-{
-  FILE *file;
-#define BUF_LEN (FINGERPRINT_LEN+MAX_NICKNAME_LEN+20)
-  char buf[BUF_LEN+1];
-  char *cp, *nickname, *fingerprint;
-  fingerprint_entry_t fingerprint_list_tmp[MAX_ROUTERS_IN_DIR];
-  int n_fingerprints_tmp = 0;
-  int lineno=0;
-  int i;
-  if (!(file = fopen(fname, "r"))) {
-    log(LOG_WARNING, "Cannot open fingerprint file %s", fname);
-    goto err;
-  }
-  while (1) {
-    cp = fgets(buf, BUF_LEN, file);
-    ++lineno;
-    if (!cp) {
-      if (feof(file))
-        break;
-      else {
-        log(LOG_WARNING, "Error reading from fingerprint file");
-        goto err;
-      }
-    }
-    buf[BUF_LEN]='\0';
-    cp = buf;
-    while (isspace(*cp))
-      ++cp;
-    if (*cp == '#' || *cp == '\0') 
-      continue;
-    nickname = cp;
-    cp = strchr(cp, ' ');
-    if (!cp) {
-      log(LOG_WARNING, "Bad line %d of fingerprint file", lineno);
-      goto err;
-    }
-    *cp++ = '\0';
-    while (isspace(*cp))
-      ++cp;
-    if (strlen(cp) < FINGERPRINT_LEN) {
-      log(LOG_WARNING, "Bad line %d of fingerprint file", lineno);
-      goto err;
-    }
-    fingerprint = cp;
-    cp[FINGERPRINT_LEN] = '\0';
-    if (strlen(nickname) > MAX_NICKNAME_LEN) {
-      log(LOG_WARNING, "Nickname too long on line %d of fingerprint file",
-          lineno);
-      goto err;
-    }
-    if (!crypto_pk_check_fingerprint_syntax(fingerprint)) {
-      log(LOG_WARNING, "Invalid fingerprint on line %d of fingerprint file",
-          lineno);
-      goto err;
-    }
-    for (i = 0; i < n_fingerprints_tmp; ++i) {
-      if (0==strcasecmp(fingerprint_list_tmp[i].nickname, nickname)) {
-        log(LOG_WARNING, "Duplicate nickname on line %d of fingerprint file", lineno);
-        goto err;
-      }
-    }
-    fingerprint_list_tmp[n_fingerprints_tmp].nickname = strdup(nickname);
-    fingerprint_list_tmp[n_fingerprints_tmp].fingerprint = strdup(fingerprint);
-    ++n_fingerprints_tmp;
-  }
-  /* replace the global fingerprints list. */
-  for (i = 0; i < n_fingerprints; ++i) {
-    free(fingerprint_list[i].nickname);
-    free(fingerprint_list[i].fingerprint);
-  }
-  memcpy(fingerprint_list, fingerprint_list_tmp, 
-         sizeof(fingerprint_entry_t)*n_fingerprints_tmp);
-  n_fingerprints = n_fingerprints_tmp;
-  return 0; 
-
- err:
-  for (i = 0; i < n_fingerprints_tmp; ++i) {
-    free(fingerprint_list_tmp[i].nickname);
-    free(fingerprint_list_tmp[i].fingerprint);
-  }
-  return -1;
-#undef BUF_LEN
-}    
-
-/* return 1 if router's identity and nickname match. */
-int
-directory_check_router_identity(const routerinfo_t *router)
-{
-  int i;
-  char fp[FINGERPRINT_LEN+1];
-  if (crypto_pk_get_fingerprint(router->identity_pkey, fp)) {
-    /* XXX Error computing fingerprint: log */
-    return 0;
-  }
-  for (i=0;i<n_fingerprints;++i) {
-    if (0==strcasecmp(fingerprint_list[i].nickname,router->nickname)) {
-      /* Right nickname... */
-      if (0==strcasecmp(fingerprint_list[i].fingerprint, fp)) {
-        /* Right fingerprint. */
-        return 1;
-      } else {
-        /* Wrong fingerprint. */
-        return 0;
-      }
-    }
-  }
-  /* No match found. XXX log. */
-  return 0;
-}
-
 
 
 /*

@@ -4,22 +4,17 @@
 
 #include "or.h"
 
-#define MAX_DIR_SIZE 50000 /* XXX, big enough? */
-
 static int directory_send_command(connection_t *conn, int command);
-static void directory_rebuild(void);
 static int directory_handle_command(connection_t *conn);
 
 /********* START VARIABLES **********/
 
 extern or_options_t options; /* command-line and config-file options */
 
-static char the_directory[MAX_DIR_SIZE+1];
-static int directorylen=0;
-static int directory_dirty=1;
-
 static char fetchstring[] = "GET / HTTP/1.0\r\n\r\n";
 static char answerstring[] = "HTTP/1.0 200 OK\r\n\r\n";
+static char the_directory[MAX_DIR_SIZE+1];
+static int directorylen=0;
 
 /********* END VARIABLES ************/
 
@@ -115,25 +110,6 @@ static int directory_send_command(connection_t *conn, int command) {
   return 0;
 }
 
-void directory_set_dirty(void) {
-  directory_dirty = 1;
-}
-
-static void directory_rebuild(void) {
-  if(directory_dirty) {
-    if (dump_signed_directory_to_string(the_directory, MAX_DIR_SIZE,
-                                        get_identity_key())) {
-      log(LOG_WARNING, "Error creating directory");
-      return;
-    }
-    directorylen = strlen(the_directory);
-    log(LOG_INFO,"New directory (size %d):\n%s",directorylen,the_directory);
-    directory_dirty = 0;
-  } else {
-    log(LOG_INFO,"Directory still clean, reusing.");
-  }
-}
-
 int connection_dir_process_inbuf(connection_t *conn) {
 
   assert(conn && conn->type == CONN_TYPE_DIR);
@@ -191,6 +167,8 @@ int connection_dir_process_inbuf(connection_t *conn) {
 static int directory_handle_command(connection_t *conn) {
   char headers[1024];
   char body[50000]; /* XXX */
+  size_t dl;
+  const char *cp;
 
   assert(conn && conn->type == CONN_TYPE_DIR);
 
@@ -209,16 +187,16 @@ static int directory_handle_command(connection_t *conn) {
   if(!strncasecmp(headers,"GET",3)) {
     /* XXX should check url and http version */
 
-    directory_rebuild(); /* rebuild it now, iff it's dirty */
+    dl = dirserv_get_directory(&cp);
 
-    if(directorylen == 0) {
+    if(dl == 0) {
       log_fn(LOG_WARNING,"My directory is empty. Closing.");
       return -1;
     }
 
     log_fn(LOG_DEBUG,"Dumping directory to client."); 
     if((connection_write_to_buf(answerstring, strlen(answerstring), conn) < 0) ||
-       (connection_write_to_buf(the_directory, directorylen, conn) < 0)) {
+       (connection_write_to_buf(cp, dl, conn) < 0)) {
       log_fn(LOG_WARNING,"Failed to write answerstring+directory to outbuf.");
       return -1;
     }

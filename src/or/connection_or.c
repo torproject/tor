@@ -81,6 +81,7 @@ void connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *route
   conn->onion_pkey = crypto_pk_dup_key(router->onion_pkey);
   conn->link_pkey = crypto_pk_dup_key(router->link_pkey);
   conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
+  conn->nickname = strdup(router->nickname);
   if(conn->address)
     free(conn->address);
   conn->address = strdup(router->address);
