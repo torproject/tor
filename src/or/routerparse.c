@@ -240,7 +240,7 @@ get_recommended_software_from_directory(const char *str)
 
   if (!found_newer) {
     if (!warned_too_new) {
-      log_fn(LOG_WARN, "This version of Tor (%s) is newer than any on the recommended list (%s)",
+      log(LOG_WARN, "This version of Tor (%s) is newer than any on the recommended list (%s)",
              myversion, versionlist);
       warned_too_new=1;
     }
