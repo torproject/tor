@@ -3,6 +3,7 @@
  * Copyright 2004 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
+const char config_c_id[] = "$Id$";
 
 /**
  * /file config.c
@@ -15,6 +16,7 @@
 #ifdef MS_WINDOWS
 #include <shlobj.h>
 #endif
+#include "../common/aes.h"
 
 /** Enumeration of types which option values can take */
 typedef enum config_type_t {
@@ -193,6 +195,7 @@ static int write_configuration_file(const char *fname, or_options_t *options);
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
+static void print_cvs_version(void);
 
 /*
  * Functions to read and write the global options pointer.
@@ -1578,6 +1581,9 @@ init_from_config(int argc, char **argv)
 
   if (argc > 1 && (!strcmp(argv[1],"--version"))) {
     printf("Tor version %s.\n",VERSION);
+    if (argc > 2 && (!strcmp(argv[2],"--version"))) {
+      print_cvs_version();
+    }
     exit(0);
   }
 
@@ -2334,3 +2340,91 @@ config_parse_interval(const char *s, int *ok) {
   return (int)r;
 }
 
+static void
+print_cvs_version(void)
+{
+  extern const char aes_c_id[];
+  extern const char compat_c_id[];
+  extern const char container_c_id[];
+  extern const char crypto_c_id[];
+  extern const char fakepoll_c_id[];
+  extern const char log_c_id[];
+  extern const char torgzip_c_id[];
+  extern const char tortls_c_id[];
+  extern const char util_c_id[];
+
+  extern const char buffers_c_id[];
+  extern const char circuitbuild_c_id[];
+  extern const char circuitlist_c_id[];
+  extern const char circuituse_c_id[];
+  extern const char command_c_id[];
+  extern const char config_c_id[];
+  extern const char connection_c_id[];
+  extern const char connection_edge_c_id[];
+  extern const char connection_or_c_id[];
+  extern const char control_c_id[];
+  extern const char cpuworker_c_id[];
+  extern const char directory_c_id[];
+  extern const char dirserv_c_id[];
+  extern const char dns_c_id[];
+  extern const char hibernate_c_id[];
+  extern const char main_c_id[];
+  extern const char onion_c_id[];
+  extern const char relay_c_id[];
+  extern const char rendclient_c_id[];
+  extern const char rendcommon_c_id[];
+  extern const char rendmid_c_id[];
+  extern const char rendservice_c_id[];
+  extern const char rephist_c_id[];
+  extern const char router_c_id[];
+  extern const char routerlist_c_id[];
+  extern const char routerparse_c_id[];
+
+  puts(AES_H_ID);
+  puts(COMPAT_H_ID);
+  puts(CONTAINER_H_ID);
+  puts(CRYPTO_H_ID);
+  puts(FAKEPOLL_H_ID);
+  puts(LOG_H_ID);
+  puts(TORGZIP_H_ID);
+  puts(TORINT_H_ID);
+  puts(TORTLS_H_ID);
+  puts(UTIL_H_ID);
+  puts(aes_c_id);
+  puts(compat_c_id);
+  puts(container_c_id);
+  puts(crypto_c_id);
+  puts(fakepoll_c_id);
+  puts(log_c_id);
+  puts(torgzip_c_id);
+  puts(tortls_c_id);
+  puts(util_c_id);
+
+  puts(OR_H_ID);
+  puts(buffers_c_id);
+  puts(circuitbuild_c_id);
+  puts(circuitlist_c_id);
+  puts(circuituse_c_id);
+  puts(command_c_id);
+  puts(config_c_id);
+  puts(connection_c_id);
+  puts(connection_edge_c_id);
+  puts(connection_or_c_id);
+  puts(control_c_id);
+  puts(cpuworker_c_id);
+  puts(directory_c_id);
+  puts(dirserv_c_id);
+  puts(dns_c_id);
+  puts(hibernate_c_id);
+  puts(main_c_id);
+  puts(onion_c_id);
+  puts(relay_c_id);
+  puts(rendclient_c_id);
+  puts(rendcommon_c_id);
+  puts(rendmid_c_id);
+  puts(rendservice_c_id);
+  puts(rephist_c_id);
+  puts(router_c_id);
+  puts(routerlist_c_id);
+  puts(routerparse_c_id);
+}

@@ -1,9 +1,8 @@
 /* Copyright 2001-2004 Roger Dingledine.
  * Copyright 2004 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
-
-/* See LICENSE for licensing information */
 /* $Id$ */
+const char directory_c_id[] = "$Id$";
 
 #include "or.h"
 

@@ -4,6 +4,7 @@
 
 #ifndef __COMPAT_H
 #define __COMPAT_H
+#define COMPAT_H_ID "$Id$"
 
 #include "orconfig.h"
 #include "torint.h"

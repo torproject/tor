@@ -4,6 +4,7 @@
 
 #ifndef __FAKEPOLL_H
 #define __FAKEPOLL_H
+#define FAKEPOLL_H_ID "$Id$"
 
 /**
  * \file fakepoll.h

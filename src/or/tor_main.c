@@ -1,6 +1,7 @@
 /* Copyright 2001-2004 Roger Dingledine. */
 /* See LICENSE for licensing information */
 /* $Id$ */
+const char tor_main_c_id[] = "$Id$";
 
 /**
  * \file tor_main.c

@@ -4,6 +4,7 @@
 
 #ifndef _TORTLS_H
 #define _TORTLS_H
+#define TORTLS_H_ID "$Id$"
 
 /**
  * \file tortls.h

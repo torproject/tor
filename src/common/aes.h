@@ -6,6 +6,7 @@
 
 #ifndef __AES_H
 #define __AES_H
+#define AES_H_ID "$Id$"
 
 /**
  * \file aes.h

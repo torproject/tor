@@ -1,6 +1,7 @@
 /* Copyright 2004 Roger Dingledine */
 /* See LICENSE for licensing information */
 /* $Id$ */
+const char torgzip_c_id[] = "$Id$";
 
 /**
  * \file torgzip.c

@@ -1,6 +1,7 @@
 /* Copyright 2002,2003 Nick Mathewson, Roger Dingledine */
 /* See LICENSE for licensing information */
 /* $Id$ */
+const char fakepoll_c_id[] = "$Id$";
 
 /**
  * \file fakepoll.c

@@ -1,6 +1,7 @@
 /* Copyright 2003 Roger Dingledine. */
 /* See LICENSE for licensing information */
 /* $Id$ */
+const char tortls_c_id[] = "$Id$";
 
 /**
  * \file tortls.c

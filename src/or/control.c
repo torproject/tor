@@ -1,6 +1,7 @@
 /* Copyright 2004 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
+const char control_c_id[] = "$Id$";
 
 /**
  * /file control.c
