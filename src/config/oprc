@@ -1,23 +1,12 @@
-# Configuration file for a typical or client
+# Configuration file for a typical tor client
 # (listen for applications only)
 
 # List of routers. Tor nodes only know about the directory servers
 # at the beginning, and from them they get a list of currently up nodes.
 RouterFile ../config/dirservers
 
-# A file containing this node's private key, if applicable
-# (No need to specify one, since we're just a client)
-#PrivateKeyFile foo
-
-# Should paths tend to be very long (CoinWeight close to 1) or
-# quite short (CoinWeight close to 0)?
-CoinWeight 0.01
-
 # Ports for various services. Comment out if you're not running that
 # service.
 #ORPort 9001
 APPort 9050
-
-# Maximum number of sockets (of any sort) this node can have open
-MaxConn 900
 

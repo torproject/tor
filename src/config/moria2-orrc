@@ -1,19 +1,13 @@
-# Configuration file for or
-
-OnionRouter 1
-
-# List of routers
-RouterFile ../config/routers.or
 
 DataDirectory moria2
 Nickname moria2
-
-CoinWeight 0.01
 
 ORPort 9002
 APPort 9022
 DirPort 9032
 
-# Maximum number of connections.
-MaxConn 900
+OnionRouter 1
+
+# List of routers
+RouterFile ../config/dirservers
 
