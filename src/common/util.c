@@ -92,6 +92,17 @@ void smartlist_add(smartlist_t *sl, void *element) {
     log_fn(LOG_WARN,"We've already got %d elements, discarding.",sl->max);
 }
 
+void smartlist_remove(smartlist_t *sl, void *element) {
+  int i;
+  if(element == NULL)
+    return;
+  for(i=0; i < sl->num_used; i++)
+    if(sl->list[i] == element) {
+      sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
+      i--; /* so we process the new i'th element */
+    }
+}
+
 int smartlist_isin(smartlist_t *sl, void *element) {
   int i;
   for(i=0; i < sl->num_used; i++)
@@ -116,6 +127,13 @@ void smartlist_intersect(smartlist_t *sl1, smartlist_t *sl2) {
       sl1->list[i] = sl1->list[--sl1->num_used]; /* swap with the end */
       i--; /* so we process the new i'th element */
     }
+}
+
+/* remove all elements of sl2 from sl1 */
+void smartlist_subtract(smartlist_t *sl1, smartlist *sl2) {
+  int i;
+  for(i=0; i < sl2->num_used; i++)
+    smartlist_remove(sl1, sl2->list[i]);
 }
 
 void *smartlist_choose(smartlist_t *sl) {
