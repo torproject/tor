@@ -99,7 +99,7 @@ RETURN VALUE: 0 on success, non-zero on error
    options->LogLevel = "debug";
    options->loglevel = LOG_DEBUG;
    options->CoinWeight = 0.8;
-   options->LinkPadding = 1;
+   options->LinkPadding = 0;
    options->Role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
 
    code = poptGetNextOpt(optCon);         /* first we handle command-line args */
