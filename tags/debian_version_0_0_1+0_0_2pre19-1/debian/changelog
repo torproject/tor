@@ -1,0 +1,6 @@
+tor (0.0.1+0.0.2pre19-1) unstable; urgency=low
+
+  * Initial Release  (closes: #216611).
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 10 Jan 2004 11:20:06 +0100
+
