@@ -10,6 +10,7 @@ TORPID=/var/run/tor/tor.pid
 DEFAULTSFILE=/etc/default/$NAME
 WAITFORDAEMON=10
 ARGS=""
+MAX_FILEDESCRIPTORS=4096
 
 test -x $DAEMON || exit 0
 
@@ -49,6 +50,7 @@ case "$1" in
 		echo "Not starting $DESC (Disabled in $DEFAULTSFILE)."
 	else
 		echo "Starting $DESC: $NAME..."
+		ulimit -n $MAX_FILEDESCRIPTORS
 		start-stop-daemon --start --quiet --oknodo \
 			--chuid debian-tor:debian-tor \
 			--pidfile $TORPID \
