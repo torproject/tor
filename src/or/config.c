@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.8  2002/07/11 18:38:15  montrose
+ * added new option GlobalRole to getoptions()
+ *
  * Revision 1.7  2002/07/11 14:50:26  montrose
  * cleaned up some, added validation to getoptions()
  *
@@ -90,27 +93,29 @@ RETURN VALUE: 0 on success, non-zero on error
    char *cmd;
    struct poptOption opt_tab[] =
    {
-      { "APPort",          'a', POPT_ARG_INT,      &options->APPort,
+      { "APPort",          'a',  POPT_ARG_INT,     &options->APPort,
          0, "application proxy port",                          "<port>" },
-      { "CoinWeight",      'w', POPT_ARG_FLOAT,    &options->CoinWeight,
+      { "CoinWeight",      'w',  POPT_ARG_FLOAT,   &options->CoinWeight,
          0, "coin weight used in determining routes",          "<weight>" },
-      { "ConfigFile",      'f', POPT_ARG_STRING,   &ConfigFile,
+      { "ConfigFile",      'f',  POPT_ARG_STRING,  &ConfigFile,
          0, "user specified configuration file",               "<file>" },
-      { "LogLevel",        'l', POPT_ARG_STRING,   &options->LogLevel,
+      { "LogLevel",        'l',  POPT_ARG_STRING,  &options->LogLevel,
          0, "emerg|alert|crit|err|warning|notice|info|debug",  "<level>" },
-      { "MaxConn",         'm', POPT_ARG_INT,      &options->MaxConn,
+      { "MaxConn",         'm',  POPT_ARG_INT,     &options->MaxConn,
          0, "maximum number of incoming connections",          "<max>" },
-      { "OPPort",          'o', POPT_ARG_INT,      &options->OPPort,
+      { "OPPort",          'o',  POPT_ARG_INT,     &options->OPPort,
          0, "onion proxy port",                                "<port>" },
-      { "ORPort",          'p', POPT_ARG_INT,      &options->ORPort,
+      { "ORPort",          'p',  POPT_ARG_INT,     &options->ORPort,
          0, "onion router port",                               "<port>" },
-      { "PrivateKeyFile",  'k', POPT_ARG_STRING,   &options->PrivateKeyFile,
+      { "PrivateKeyFile",  'k',  POPT_ARG_STRING,  &options->PrivateKeyFile,
          0, "maximum number of incoming connections",          "<max>" },
-      { "RouterFile",      'r', POPT_ARG_STRING,   &options->RouterFile,
+      { "RouterFile",      'r',  POPT_ARG_STRING,  &options->RouterFile,
          0, "local port on which the onion proxy is running",  "<port>" },
-      { "TrafficShaping",  't', POPT_ARG_INT,      &options->TrafficShaping,
+      { "TrafficShaping",  't',  POPT_ARG_INT,     &options->TrafficShaping,
          0, "which traffic shaping policy to use",             "<policy>" },
-      { "Verbose",         'v', POPT_ARG_NONE,     &Verbose,
+      { "GlobalRole",      'g',  POPT_ARG_INT,     &options->GlobalRole,
+         0, "4-bit global role id",                            "<role>" },
+      { "Verbose",         'v',  POPT_ARG_NONE,    &Verbose,
          0, "display options selected before execution",       NULL },
       POPT_AUTOHELP  /* handles --usage and --help automatically */
       POPT_TABLEEND  /* marks end of table */
@@ -120,7 +125,12 @@ RETURN VALUE: 0 on success, non-zero on error
 
    poptReadDefaultConfig(optCon,0);       /* read <popt> alias definitions */
 
-   bzero(options,sizeof(or_options_t));   /* zero out options initially */
+   /* assign default option values */
+
+   bzero(options,sizeof(or_options_t));
+   options->loglevel = LOG_DEBUG;
+   options->CoinWeight = 0.8;
+   options->GlobalRole = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
 
    code = poptGetNextOpt(optCon);         /* first we handle command-line args */
    if ( code == -1 )
@@ -139,7 +149,9 @@ RETURN VALUE: 0 on success, non-zero on error
    case -1:
       if ( Verbose )                      /* display options upon user request */
       {
-         printf("LogLevel=%s\n",options->LogLevel);
+         printf("LogLevel=%s, GlobalRole=%d\n",
+                options->LogLevel,
+                options->GlobalRole);
          printf("RouterFile=%s, PrivateKeyFile=%s\n",
                 options->RouterFile,
                 options->PrivateKeyFile);
@@ -235,6 +247,12 @@ RETURN VALUE: 0 on success, non-zero on error
    if ( options->TrafficShaping != 0 && options->TrafficShaping != 1 )
    {
       log(LOG_ERR,"TrafficShaping option must be either 0 or 1.");
+      code = -1;
+   }
+
+   if ( options->GlobalRole < 0 || options->GlobalRole > 15 )
+   {
+      log(LOG_ERR,"GlobalRole option must be an integer between 0 and 15 (inclusive).");
       code = -1;
    }
 

@@ -295,6 +295,7 @@ typedef struct
    int APPort;
    int MaxConn;
    int TrafficShaping;
+   int GlobalRole;
    int loglevel;
 } or_options_t;
 
