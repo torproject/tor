@@ -568,7 +568,12 @@ void connection_ap_expire_beginning(void) {
        */
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
       circuit_detach_stream(circ, conn);
-      /* give it another 15 seconds to try */
+      /* kludge to make us not try this circuit again, yet to allow
+       * current streams on it to survive if they can: make it
+       * unattractive to use for new streams */
+      assert(circ->timestamp_dirty);
+      circ->timestamp_dirty -= options.NewCircuitPeriod;
+      /* give our stream another 15 seconds to try */
       conn->timestamp_lastread += 15;
       if(connection_ap_handshake_attach_circuit(conn)<0) {
         /* it will never work */
