@@ -472,7 +472,7 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
   struct exit_policy_t *tmpe;
 
   for(tmpe=policy; tmpe; tmpe=tmpe->next) {
-    log_fn(LOG_DEBUG,"Considering exit policy %s", tmpe->string);
+//    log_fn(LOG_DEBUG,"Considering exit policy %s", tmpe->string);
     maybe = 0;
     if (!addr) {
       /* Address is unknown. */
@@ -506,7 +506,7 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
     }
     if (match) {
       in.s_addr = htonl(addr);
-      log_fn(LOG_INFO,"Address %s:%d matches exit policy '%s'",
+      log_fn(LOG_DEBUG,"Address %s:%d matches exit policy '%s'",
              inet_ntoa(in), port, tmpe->string);
       if(tmpe->policy_type == EXIT_POLICY_ACCEPT) {
         /* If we already hit a clause that might trigger a 'reject', than we
