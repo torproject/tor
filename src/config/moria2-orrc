@@ -11,6 +11,7 @@ CoinWeight 0.0001
 ORPort 9002
 OPPort 9012
 APPort 9022
+DirPort 9032
 
 # Maximum number of connections.
 MaxConn 100
