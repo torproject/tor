@@ -362,20 +362,7 @@ static void run_connection_housekeeping(int i, time_t now) {
      !conn->marked_for_close &&
      conn->timestamp_lastwritten + 5*60 < now) {
     log_fn(LOG_WARN,"Expiring wedged directory conn (fd %d, purpose %d)", conn->s, conn->purpose);
-    if (connection_wants_to_flush(conn)) {
-      if(flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen) < 0) {
-        log_fn(LOG_WARN,"flushing expired directory conn failed.");
-        connection_close_immediate(conn);
-        connection_mark_for_close(conn);
-        /*  */
-      } else {
-        /* XXXX Does this next part make sense, really? */
-        connection_mark_for_close(conn);
-        conn->hold_open_until_flushed = 1; /* give it a last chance */
-      }
-    } else {
-      connection_mark_for_close(conn);
-    }
+    connection_mark_for_close(conn);
     return;
   }
 
