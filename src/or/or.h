@@ -1194,6 +1194,10 @@ void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
 
 void directory_has_arrived(void);
+int clique_mode(void);
+int server_mode(void);
+int exit_server_mode(void);
+int proxy_mode(void);
 
 int main(int argc, char *argv[]);
 

@@ -679,22 +679,20 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
-  if (options->ORPort) {
-    if (options->Nickname == NULL) {
-      if (!(options->Nickname = get_default_nickname()))
-        return -1;
-      log_fn(LOG_INFO, "Choosing default nickname %s", options->Nickname);
-    } else {
-      if (strspn(options->Nickname, LEGAL_NICKNAME_CHARACTERS) !=
-                 strlen(options->Nickname)) {
-        log_fn(LOG_WARN, "Nickname '%s' contains illegal characters.", options->Nickname);
-        result = -1;
-      }
-      if (strlen(options->Nickname) > MAX_NICKNAME_LEN) {
-        log_fn(LOG_WARN, "Nickname '%s' has more than %d characters.",
-               options->Nickname, MAX_NICKNAME_LEN);
-        result = -1;
-      }
+  if (options->Nickname == NULL) {
+    if (!(options->Nickname = get_default_nickname()))
+      return -1;
+    log_fn(LOG_INFO, "Choosing default nickname %s", options->Nickname);
+  } else {
+    if (strspn(options->Nickname, LEGAL_NICKNAME_CHARACTERS) !=
+        strlen(options->Nickname)) {
+      log_fn(LOG_WARN, "Nickname '%s' contains illegal characters.", options->Nickname);
+      result = -1;
+    }
+    if (strlen(options->Nickname) > MAX_NICKNAME_LEN) {
+      log_fn(LOG_WARN, "Nickname '%s' has more than %d characters.",
+             options->Nickname, MAX_NICKNAME_LEN);
+      result = -1;
     }
   }
 
@@ -732,7 +730,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   /* XXX008 if AuthDir and ClientOnly then fail */
 
-  if(options->SocksPort > 1 &&
+  if(options->SocksPort >= 1 &&
      (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0)) {
     log(LOG_WARN,"PathlenCoinWeight option must be >=0.0 and <1.0.");
     result = -1;

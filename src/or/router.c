@@ -217,10 +217,24 @@ int init_keys(void) {
   if (!key_lock)
     key_lock = tor_mutex_new();
 
-  /* OP's don't need keys.  Just initialize the TLS context.*/
-  if (!options.ORPort) {
+  /* OP's don't need persistant keys; just make up an identity and
+   * initialize the TLS context. */
+  if (!server_mode()) {
     tor_assert(!options.DirPort);
-    if (tor_tls_context_new(NULL, 0, NULL, 0)<0) {
+#if 0
+    /* XXXX008 enable this once we make ORs tolerate unknown routers. */
+    if (!(prkey = crypto_new_pk_env()))
+      return -1;
+    if (crypto_pk_generate_key(prkey))
+      return -1;
+    set_identity_key(prkey);
+    if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
+                            MAX_SSL_KEY_LIFETIME) < 0) {
+      log_fn(LOG_ERR, "Error creating TLS context for OP.");
+      return -1;
+    }
+#endif
+    if (tor_tls_context_new(NULL, 0, NULL, MAX_SSL_KEY_LIFETIME)<0) {
       log_fn(LOG_ERR, "Error creating TLS context for OP.");
       return -1;
     }
@@ -435,7 +449,7 @@ int router_is_me(routerinfo_t *router)
  * necessary.  Return NULL on error, or if called on an OP. */
 routerinfo_t *router_get_my_routerinfo(void)
 {
-  if (!options.ORPort)
+  if (!server_mode())
     return NULL;
 
   if (!desc_routerinfo) {

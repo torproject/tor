@@ -345,7 +345,7 @@ void directory_has_arrived(void) {
 
   has_fetched_directory=1;
 
-  if(options.ORPort) { /* connect to them all */
+  if(clique_mode()) { /* connect to them all */
     router_retry_connections();
   }
 }
@@ -370,7 +370,7 @@ static void run_connection_housekeeping(int i, time_t now) {
      the connection or send a keepalive, depending. */
   if(connection_speaks_cells(conn) &&
      now >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
-    if((!options.ORPort && !circuit_get_by_conn(conn)) ||
+    if((!clique_mode() && !circuit_get_by_conn(conn)) ||
        (!connection_state_is_open(conn))) {
       /* we're an onion proxy, with no circuits;
        * or our handshake has expired. kill it. */
@@ -380,7 +380,7 @@ static void run_connection_housekeeping(int i, time_t now) {
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else {
-      /* either a full router, or we've got a circuit. send a padding cell. */
+      /* either in clique mode, or we've got a circuit. send a padding cell. */
       log_fn(LOG_DEBUG,"Sending keepalive to (%s:%d)",
              conn->address, conn->port);
       memset(&cell,0,sizeof(cell_t));
@@ -393,7 +393,7 @@ static void run_connection_housekeeping(int i, time_t now) {
 #define MIN_BW_TO_PUBLISH_DESC 5000 /* 5000 bytes/s sustained */
 #define MIN_UPTIME_TO_PUBLISH_DESC (30*60) /* half an hour */
 
-/** Decide if we're a server or just a client. We are a server if:
+/** Decide if we're a publishable server or just a client. We are a server if:
  * - We have the AuthoritativeDirectory option set.
  * or
  * - We don't have the ClientOnly option set; and
@@ -402,7 +402,7 @@ static void run_connection_housekeeping(int i, time_t now) {
  * - We have processed some suitable minimum bandwidth recently; and
  * - We believe we are reachable from the outside.
  */
-static int decide_if_server(time_t now) {
+static int decide_if_publishable_server(time_t now) {
 
   if(options.AuthoritativeDir)
     return 1;
@@ -420,6 +420,30 @@ static int decide_if_server(time_t now) {
   return 1;
 }
 
+/** Return true iff we try to stay connected to all ORs at once.  This
+ * option should go away as Tor becomes more P2P.
+ */
+int clique_mode(void) {
+  return (options.ORPort != 0);
+}
+
+/** Return true iff we are trying to be a server.
+ */
+int server_mode(void) {
+  return (options.ORPort != 0);
+}
+
+/** Return true iff we are trying to be an exit server.
+ */
+int exit_server_mode(void) {
+  return (options.ORPort != 0);
+}
+
+/** Return true iff we are trying to be a socks proxy. */
+int proxy_mode(void) {
+  return (options.SocksPort != 0);
+}
+
 /** Perform regular maintenance tasks.  This function gets run once per
  * second by prepare_for_poll.
  */
@@ -433,7 +457,7 @@ static void run_scheduled_events(time_t now) {
    *  shut down and restart all cpuworkers, and update the directory if
    *  necessary.
    */
-  if (options.ORPort && get_onion_key_set_at()+MIN_ONION_KEY_LIFETIME < now) {
+  if (server_mode() && get_onion_key_set_at()+MIN_ONION_KEY_LIFETIME < now) {
     log_fn(LOG_INFO,"Rotating onion key.");
     rotate_onion_key();
     cpuworkers_rotate();
@@ -446,7 +470,10 @@ static void run_scheduled_events(time_t now) {
   /** 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */
   if (!last_rotated_certificate)
     last_rotated_certificate = now;
-  if (options.ORPort && last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
+  /*XXXX008 we should remove the server_mode() check once OPs also use
+   * identity keys (which they can't do until the known-router check in
+   * connection_or.c is removed. */
+  if (server_mode() && last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
     log_fn(LOG_INFO,"Rotating tls context.");
     if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
                             MAX_SSL_KEY_LIFETIME) < 0) {
@@ -461,7 +488,7 @@ static void run_scheduled_events(time_t now) {
    *    our descriptor (if we've passed our internal checks). */
   if(time_to_fetch_directory < now) {
 
-    if(decide_if_server(now)) {
+    if(decide_if_publishable_server(now)) {
       router_rebuild_descriptor();
       router_upload_dir_desc_to_dirservers();
     }
@@ -665,11 +692,12 @@ static int do_hup(void) {
     /* fetch a new directory */
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
   }
-  if(options.ORPort) {
+  if(server_mode()) {
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate();
-    dnsworkers_rotate();
+    if (exit_server_mode())
+      dnsworkers_rotate();
     /* Rebuild fresh descriptor as needed. */
     router_rebuild_descriptor();
     sprintf(keydir,"%s/router.desc", get_data_directory(&options));
@@ -713,7 +741,7 @@ static int do_main_loop(void) {
     directory_has_arrived();
   }
 
-  if(options.ORPort) {
+  if(server_mode()) {
     cpu_init(); /* launch cpuworkers. Need to do this *after* we've read the onion key. */
   }
 
@@ -922,10 +950,10 @@ int tor_init(int argc, char *argv[]) {
     log_fn(LOG_WARN,"You are running Tor as root. You don't need to, and you probably shouldn't.");
 #endif
 
-  if(options.ORPort) { /* only spawn dns handlers if we're a router */
+  if(exit_server_mode()) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
-  if(options.SocksPort) {
+  if(proxy_mode()) {
     client_dns_init(); /* init the client dns cache */
   }
 
