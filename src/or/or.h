@@ -1647,6 +1647,11 @@ void clear_trusted_dir_servers(void);
  * 0.1.1.7-cvs, 0.1.1.8-rc, 0.1.1.9-cvs.  Eventually, we release 0.1.1.10.
  * The stable CVS repository gets the version 0.1.1.11-maint_cvs; the
  * next patch release is 0.1.1.12.
+ *
+ * XXXX(Alternatively, we could go: 0.1.1.1-alpha, 0.1.1.1-alpha_cvs,
+ * 0.1.1.2-alpha, 0.1.1.2-alpha_cvs .  This wouldn't violate our
+ * only-one-release-per-number rule, since CVS versions aren't
+ * released. Roger?)
  */
 typedef struct tor_version_t {
   int major;
