@@ -1158,109 +1158,120 @@ inefficiencies of tunneling TCP over TCP \cite{tcp-over-tcp-is-bad}.
 \SubSection{Exit policies and abuse}
 \label{subsec:exitpolicies}
 
-Exit abuse is a serious barrier to wide-scale Tor deployment --- we
-must block or limit attacks and other abuse that users can do through
+Exit abuse is a serious barrier to wide-scale Tor deployment.  Not
+only does anonymity present would-be vandals and abusers with an
+opportunity to hide the origins of their activities---but also,
+existing sanctions against abuse present an easy way for attackers to
+harm the Tor network by implicating exit servers for their abuse.
+Thus, must block or limit attacks and other abuse that travel through
 the Tor network.
 
-Each onion router's \emph{exit policy} describes to which external
-addresses and ports the router will permit stream connections. On one end
-of the spectrum are \emph{open exit} nodes that will connect anywhere;
-on the other end are \emph{middleman} nodes that only relay traffic to
-other Tor nodes, and \emph{private exit} nodes that only connect locally
-or to addresses internal to that node's organization. 
-This private exit
-node configuration is more secure for clients --- the adversary cannot
-see plaintext traffic leaving the network (e.g. to a webserver), so he
-is less sure of Alice's destination. More generally, nodes can require
-a variety of forms of traffic authentication \cite{or-discex00}.
-Most onnion routers will function as \emph{limited exits} that permit
-connections to the world at large, but restrict access to certain abuse-prone
-addresses and services.
+Also, applications that commonly use IP-based authentication (such
+institutional mail or web servers) can be fooled by the fact that
+anonymous connections appear to originate at the exit OR.  Rather than
+expose a private service, an administrator may prefer to prevent Tor
+users from connecting to those services from a local OR.
 
-Tor offers more reliability than the high-latency fire-and-forget
-anonymous email networks, because the sender opens a TCP stream
-with the remote mail server and receives an explicit confirmation of
-acceptance. But ironically, the private exit node model works poorly for
-email, when Tor nodes are run on volunteer machines that also do other
-things, because it's quite hard to configure mail transport agents so
-normal users can send mail normally, but the Tor process can only deliver
-mail locally. Further, most organizations have specific hosts that will
-deliver mail on behalf of certain IP ranges; Tor operators must be aware
-of these hosts and consider putting them in the Tor exit policy.
+To mitigate abuse issues, in Tor, each onion router's \emph{exit
+  policy} describes to which external addresses and ports the router
+will permit stream connections. On one end of the spectrum are
+\emph{open exit} nodes that will connect anywhere.  As a compromise,
+most onion routers will function as \emph{restricted exits} that
+permit connections to the world at large, but prevent access to
+certain abuse-prone addresses and services.  on the other end are
+\emph{middleman} nodes that only relay traffic to other Tor nodes, and
+\emph{private exit} nodes that only connect to a local host or
+network.  (Using a private exit (if one exists) is a more secure way
+for a client to connect to a given host or network---an external
+adversary cannot eavesdrop traffic between the private exit and the
+final destination, and so is less sure of Alice's destination and
+activities.)  is less sure of Alice's destination. More generally,
+nodes can require a variety of forms of traffic authentication
+\cite{or-discex00}.
 
-The abuse issues on closed (e.g. military) networks are different
-from the abuse on open networks like the Internet. While these IP-based
-access controls are still commonplace on the Internet, on closed networks,
-nearly all participants will be honest, and end-to-end authentication
-can be assumed for anything important.
+%Tor offers more reliability than the high-latency fire-and-forget
+%anonymous email networks, because the sender opens a TCP stream
+%with the remote mail server and receives an explicit confirmation of
+%acceptance. But ironically, the private exit node model works poorly for
+%email, when Tor nodes are run on volunteer machines that also do other
+%things, because it's quite hard to configure mail transport agents so
+%normal users can send mail normally, but the Tor process can only deliver
+%mail locally. Further, most organizations have specific hosts that will
+%deliver mail on behalf of certain IP ranges; Tor operators must be aware
+%of these hosts and consider putting them in the Tor exit policy.
 
-Tor is harder than minion because tcp doesn't include an abuse
-address. you could reach inside the http stream and change the agent
-or something, but that's a specific case and probably won't help
-much anyway.
-And volunteer nodes don't resolve to anonymizer.mit.edu so it never
-even occurs to people that it wasn't you.
+%The abuse issues on closed (e.g. military) networks are different
+%from the abuse on open networks like the Internet. While these IP-based
+%access controls are still commonplace on the Internet, on closed networks,
+%nearly all participants will be honest, and end-to-end authentication
+%can be assumed for important traffic.
 
-Preventing abuse of open exit nodes is an unsolved problem. Princeton's
-CoDeeN project \cite{darkside} gives us a glimpse of what we're in for.
-% This is more speculative than a description of our design. 
-
-but their solutions, which mainly involve rate limiting and blacklisting
-nodes which do bad things, don't translate directly to Tor. Rate limiting
-still works great, but Tor intentionally separates sender from recipient,
-so it's hard to know which sender was the one who did the bad thing,
-without just making the whole network wide open.
-
-even limiting most nodes to allow http, ssh, and aim to exit and reject
-all other stuff is sketchy, because plenty of abuse can happen over
-port 80. but it's a surprisingly good start, because it blocks most things,
-and because people are more used to the concept of port 80 abuse not
+Many administrators will use port restrictions to support only a
+limited set of well-known services, such as HTTP, SSH, or AIM.
+This is not a complete solution, since abuse opportunities for these
+protocols are still well known.  Nonetheless, the benefits are real,
+since administrators seem used to  the concept of port 80 abuse not
 coming from the machine's owner.
 
-we could also run intrusion detection system (IDS) modules at each tor
-node, to dynamically monitor traffic streams for attack signatures. it
-can even react when it sees a signature by closing the stream. but IDS's
-don't actually work most of the time, and besides, how do you write a
-signature for "is sending a mean mail"?
+A further solution may be to use proxies to clean traffic for certain
+protocols as it leaves the network.  For example, much abusive HTTP
+behavior (such as exploiting buffer overflows or well-known script
+vulnerabilities) can be detected in a straightforward manner.
+Similarly, one could run automatic spam filtering software (such as
+SpamAssassin) on email exiting the OR network.  A generic
+intrusion detection system (IDS) could be adapted to these purposes.
 
-we should run a squid at each exit node, to provide comparable anonymity
-to private exit nodes for cache hits, to speed everything up, and to
-have a buffer for funny stuff coming out of port 80. we could similarly
-have other exit proxies for other protocols, like mail, to check
-delivered mail for being spam.
+ORs may also choose to rewrite exiting traffic in order to append
+headers or other information to indicate that the traffic has passed
+through an anonymity service.  This approach is commonly used, to some
+success, by email-only anonymity systems.  When possible, ORs can also
+run on servers with hostnames such as {\it anonymous}, to further
+alert abuse targets to the nature of the anonymous traffic.
 
-[XXX Um, I'm uncomfortable with this for several reasons.
-It's not good for keeping honest nodes honest about discarding
-state after it's no longer needed. Granted it keeps an external
-observer from noticing how often sites are visited, but it also
-allows fishing expeditions. ``We noticed you went to this prohibited
-site an hour ago. Kindly turn over your caches to the authorities.''
-I previously elsewhere suggested bulk transfer proxies to carve
-up big things so that they could be downloaded in less noticeable
-pieces over several normal looking connections. We could suggest
-similarly one or a handful of squid nodes that might serve up
-some of the more sensitive but common material, especially if
-the relevant sites didn't want to or couldn't run their own OR.
-This would be better than having everyone run a squid which would
-just help identify after the fact the different history of that
-node's activity. All this kind of speculation needs to move to
-future work section I guess. -PS]
+%we should run a squid at each exit node, to provide comparable anonymity
+%to private exit nodes for cache hits, to speed everything up, and to
+%have a buffer for funny stuff coming out of port 80. we could similarly
+%have other exit proxies for other protocols, like mail, to check
+%delivered mail for being spam.
+
+%[XXX Um, I'm uncomfortable with this for several reasons.
+%It's not good for keeping honest nodes honest about discarding
+%state after it's no longer needed. Granted it keeps an external
+%observer from noticing how often sites are visited, but it also
+%allows fishing expeditions. ``We noticed you went to this prohibited
+%site an hour ago. Kindly turn over your caches to the authorities.''
+%I previously elsewhere suggested bulk transfer proxies to carve
+%up big things so that they could be downloaded in less noticeable
+%pieces over several normal looking connections. We could suggest
+%similarly one or a handful of squid nodes that might serve up
+%some of the more sensitive but common material, especially if
+%the relevant sites didn't want to or couldn't run their own OR.
+%This would be better than having everyone run a squid which would
+%just help identify after the fact the different history of that
+%node's activity. All this kind of speculation needs to move to
+%future work section I guess. -PS]
 
 A mixture of open and restricted exit nodes will allow the most
 flexibility for volunteers running servers. But while a large number
 of middleman nodes is useful to provide a large and robust network,
-a small number of exit nodes still simplifies traffic analysis because
-there are fewer nodes the adversary needs to monitor, and also puts a
-greater burden on the exit nodes.
-The JAP cascade model is really nice because they only need one node to
-take the heat per cascade. On the other hand, a hydra scheme could work
-better (it's still hard to watch all the clients).
+having only a small number of exit nodes reduces the number of nodes
+an adversary needs to monitor for traffic analysis, and places a
+greater burden on the exit nodes.  This tension can be seen in the JAP
+cascade model, wherein only one node in each cascade needs to handle
+abuse complaints---but an adversary only needs to observe the entry
+and exit of a cascade to perform traffic analysis on all that
+cascade's users.  The Hydra model (many entries, few exits) presents a
+different compromise: only a few exit nodes are needed, but an
+adversary needs to work harder to watch all the clients.
 
-Discuss importance of public perception, and how abuse affects it.
-``Usability is a security parameter''.  ``Public Perception is also a
-security parameter.''
-
-Discuss smear attacks.
+Finally, we note that exit abuse must not be dismissed as a peripheral
+issue: when a system's public image suffers, it can reduce the number
+and diversity of that system's users, and thereby reduce the anonymity
+of the system itself.  Like usability, public perception is also a
+security parameter.  Sadly, preventing abuse of open exit nodes is an
+unsolved problem, and will probably remain an arms race for the
+forseeable future.  The abuse problems faced by Princeton's CoDeeN
+project \cite{darkside} give us a glimpse of likely issues.
 
 \SubSection{Directory Servers}
 \label{subsec:dirservers}
@@ -1270,30 +1281,40 @@ First-generation Onion Routing designs \cite{or-jsac98,freedom2-arch} did
 in-band network status updates: each router flooded a signed statement
 to its neighbors, which propagated it onward. But anonymizing networks
 have different security goals than typical link-state routing protocols.
-For example, we worry more about delays (accidental or intentional)
+For example, delays (accidental or intentional)
 that can cause different parts of the network to have different pictures
-of link-state and topology. We also worry about attacks to deceive a
+of link-state and topology are not only inconvenient---they give
+attackers an opportunity to exploit differences in client knowledge.
+We also worry about attacks to deceive a
 client about the router membership list, topology, or current network
 state. Such \emph{partitioning attacks} on client knowledge help an
 adversary with limited resources to efficiently deploy those resources
 when attacking a target.
 
-Instead, Tor uses a small group of redundant directory servers to
-track network topology and node state such as current keys and exit
-policies. The directory servers are normal onion routers, but there are
-only a few of them and they are more trusted. They listen on a separate
-port as an HTTP server, both so participants can fetch current network
-state and router lists (a \emph{directory}), and so other onion routers
-can upload their router descriptors.
+Instead of flooding, Tor uses a small group of redundant, well-known
+directory servers to track changes in network topology and node state,
+including keys and exit policies.  Directory servers are a small group
+of well-known, mostly-trusted onion routers.  They listen on a
+separate port as an HTTP server, so that participants can fetch
+current network state and router lists (a \emph{directory}), and so
+that other onion routers can upload their router descriptors.  Onion
+routers now periodically publish signed statements of their state to
+the directories only.  The directories themselves combine this state
+information with their own views of network liveness, and generate a
+signed description of the entire network state whenever its contents
+have changed.  Client software is pre-loaded with a list of the
+directory servers and their keys, and uses this information to
+bootstrap each client's view of the network.
 
-[[mention that descriptors are signed with long-term keys; ORs publish
-    regularly to dirservers; policies for generating directories; key
-    rotation (link, onion, identity); Everybody already know directory
-    keys; how to approve new nodes (advogato, sybil, captcha (RTT));
-    policy for handling connections with unknown ORs; diff-based
-    retrieval; diff-based consensus; separate liveness from descriptor
-    list]]
-
+When a directory receives a signed statement from and onion router, it
+recognizes the onion router by its identity (signing) key.
+Directories do not automatically advertise ORs that they do not
+recognize.  (If they did, an adversary could take over the network by
+creating many servers \cite{sybil}.)  Instead, new nodes must be
+approved by the directory administrator before they are included.
+Mechanisms for automated node approval are an area of active research,
+and are discussed more in section~\ref{sec:maintaining-anonymity}.
+  
 Of course, a variety of attacks remain. An adversary who controls a
 directory server can track certain clients by providing different
 information --- perhaps by listing only nodes under its control
@@ -1308,17 +1329,18 @@ software is distributed with the signature public key of each directory
 server, and directories must be signed by a threshold of these keys.
 
 The directory servers in Tor are modeled after those in Mixminion
-\cite{minion-design}, but our situation is easier. Firstly, we make the
-simplifying assumption that all participants agree on who the directory
-servers are. Secondly, Mixminion needs to predict node behavior ---
-that is, build a reputation system for guessing future performance of
-nodes based on past performance, and then figure out a way to build
-a threshold consensus of these predictions. Tor just needs to get a
-threshold consensus of the current state of the network.
+\cite{minion-design}, but our situation is easier. First, we make the
+simplifying assumption that all participants agree on who the
+directory servers are. Second, Mixminion needs to predict node
+behavior, whereas Tor only needs a threshold consensus of the current
+state of the network.
+% Cite dir-spec or dir-agreement?
 
 The threshold consensus can be reached with standard Byzantine agreement
-techniques \cite{castro-liskov}.
+techniques \cite{castro-liskov}.  
 % Should I just stop the section here? Is the rest crap? -RD
+% IMO this graf makes me uncomfortable.  It picks a fight with the
+% Byzantine people for no good reason. -NM
 But this library, while more efficient than previous Byzantine agreement
 systems, is still complex and heavyweight for our purposes: we only need
 to compute a single algorithm, and we do not require strict in-order
@@ -1361,15 +1383,18 @@ their existence to any central point.
 % the dirservers but discard all other traffic.
 % in some sense they're like reputation servers in \cite{mix-acc} -RD
 
+
 \Section{Rendezvous points: location privacy}
 \label{sec:rendezvous}
 
-Rendezvous points are a building block for \emph{location-hidden services}
-(aka responder anonymity) in the Tor network. Location-hidden services
-means Bob can offer a TCP service, such as a webserver, without revealing
-the IP of that service. One motivation for location privacy is to provide
-protection against DDoS attacks: attackers are forced to attack the
-onion routing network as a whole rather than just Bob's IP.
+Rendezvous points are a building block for \emph{location-hidden
+services} (also known as ``responder anonymity'') in the Tor
+network.  Location-hidden services allow a server Bob to a TCP
+service, such as a webserver, without revealing the IP of his service.
+Besides allowing Bob to provided services anonymously, location
+privacy also seeks to provide some protection against DDoS attacks:
+attackers are forced to attack the onion routing network as a whole
+rather than just Bob's IP.
 
 \subsection{Goals for rendezvous points}
 \label{subsec:rendezvous-goals}
@@ -1392,51 +1417,57 @@ properties in our design for location-hidden servers:
 \end{tightlist}
 
 \subsection{Rendezvous design}
-We provide location-hiding for Bob by allowing him to advertise several onion
-routers (his \emph{Introduction Points}) as his public location.  (He may do
-this on any robust efficient distributed key-value lookup system with
-authenticated updates, such as CFS \cite{cfs:sosp01}.)
-Alice, the client, chooses a node for her \emph{Meeting
-Point}. She connects to one of Bob's introduction points, informs him
-about her rendezvous point, and then waits for him to connect to the
-rendezvous
-point. This extra level of indirection means Bob's introduction points
-don't open themselves up to abuse by serving files directly, eg if Bob
-chooses a node in France to serve material distateful to the French,
-%
-% We need a more legitimate-sounding reason here.
-%
-or if Bob's service tends to get DDoS'ed by script kiddies.
+We provide location-hiding for Bob by allowing him to advertise
+several onion routers (his \emph{Introduction Points}) as his public
+location.  (He may do this on any robust efficient distributed
+key-value lookup system with authenticated updates, such as CFS
+\cite{cfs:sosp01}\footnote{
+Each onion router could run a node in this lookup
+system; also note that as a stopgap measure, we can start by running a
+simple lookup system on the directory servers.})  
+Alice, the client, chooses a node for her
+\emph{Meeting Point}. She connects to one of Bob's introduction
+points, informs him about her rendezvous point, and then waits for him
+to connect to the rendezvous point. This extra level of indirection
+helps Bob's introduction points avoid problems associated with serving
+unpopular files directly, as could occur, for example, if Bob chooses
+an introduction point in Texas to serve anti-ranching propaganda,
+or if Bob's service tends to get DDoS'ed by network vandals.
 The extra level of indirection also allows Bob to respond to some requests
 and ignore others.
 
-We provide the necessary glue so that Alice can view webpages from Bob's
-location-hidden webserver with minimal invasive changes. Both Alice and
-Bob must run local onion proxies.
-
-The steps of a rendezvous:
+The steps of a rendezvous as follows.  These steps are performed on
+behalf of Alice and Bob by their local onion proxies, which they both
+must run; application integration is described more fully below.
 \begin{tightlist}
-\item Bob chooses some Introduction Points, and advertises them on a
-      Distributed Hash Table (DHT).
-\item Bob establishes onion routing connections to each of his
+\item Bob chooses some introduction ppoints, and advertises them via
+      CFS (or some other distributed key-value publication system).
+\item Bob establishes a Tor virtual circuit to each of his
       Introduction Points, and waits.
 \item Alice learns about Bob's service out of band (perhaps Bob told her,
       or she found it on a website). She looks up the details of Bob's
-      service from the DHT.
-\item Alice chooses and establishes a Rendezvous Point (RP) for this
-      transaction.
-\item Alice goes to one of Bob's Introduction Points, and gives it a blob
-      (encrypted for Bob) which tells him about herself, the RP
-      she chose, and the first half of an ephemeral key handshake. The
-      Introduction Point sends the blob to Bob.
-\item Bob chooses whether to ignore the blob, or to onion route to RP.
-      Let's assume the latter.
-\item RP plugs together Alice and Bob. Note that RP can't recognize Alice,
+      service from CFS.
+\item Alice chooses an OR to serve as a Rendezvous Point (RP) for this
+      transaction. She establishes a virtual circuit to her RP, and
+      tells it to wait for connections. [XXX how?]
+\item Alice opens an anonymous stream to one of Bob's Introduction
+      Points, and gives it message (encrypted for Bob) which tells him
+      about herself, her chosen RP, and the first half of an ephemeral
+      key handshake. The Introduction Point sends the message to Bob.
+\item Bob may decide to ignore Alice's request.  [XXX Based on what?]
+      Otherwise, he creates a new virtual circuit to Alice's RP, and
+      authenticates himself. [XXX how?]
+\item If the authentication is successful, the RP connects Alice's
+      virtual circuit to Bob's. Note that RP can't recognize Alice,
       Bob, or the data they transmit (they share a session key).
-\item Alice sends a Begin cell along the circuit. It arrives at Bob's
+\item Alice now sends a Begin cell along the circuit. It arrives at Bob's
       onion proxy. Bob's onion proxy connects to Bob's webserver.
-\item Data goes back and forth as usual.
+\item An anonymous stream has been established, and Alice and Bob
+      communicate as normal.
 \end{tightlist}
+
+[XXX We need to modify the above to refer people down to these next
+  paragraphs. -NM]
 
 When establishing an introduction point, Bob provides the onion router
 with a public ``introduction'' key.  The hash of this public key
@@ -1445,7 +1476,7 @@ messages) prevents anybody else from usurping Bob's introduction point
 in the future. Bob uses the same public key when establishing the other
 introduction points for that service.
 
-The blob that Alice gives the introduction point includes a hash of Bob's
+The message that Alice gives the introduction point includes a hash of Bob's
 public key to identify the service, an optional initial authentication
 token (the introduction point can do prescreening, eg to block replays),
 and (encrypted to Bob's public key) the location of the rendezvous point,
@@ -1458,55 +1489,55 @@ other half of the DH key exchange.
 The authentication tokens can be used to provide selective access to users
 proportional to how important it is that they main uninterrupted access
 to the service. During normal situations, Bob's service might simply be
-offered directly from mirrors; Bob also gives out authentication cookies
-to special users. When those mirrors are knocked down by DDoS attacks,
-those special users can switch to accessing Bob's service via the Tor
+offered directly from mirrors; Bob can also give out authentication cookies
+to high-priority users. If those mirrors are knocked down by DDoS attacks,
+those users can switch to accessing Bob's service via the Tor
 rendezvous system.
 
 \SubSection{Integration with user applications}
 
 For each service Bob offers, he configures his local onion proxy to know
-the local IP and port of the server, a strategy for authorizating Alices,
-and a public key. (Each onion router could run a node in this lookup
-system; also note that as a stopgap measure, we can just run a simple
-lookup system on the directory servers.)  Bob publishes into the DHT
-(indexed by the hash of the public key) the public key, an expiration
-time (``not valid after''), and the current introduction points for that
-service. Note that Bob's webserver is unmodified, and doesn't even know
+the local IP and port of the server, a strategy for authorizing Alices,
+and a public key.   Bob publishes
+the public key, an expiration
+time (``not valid after''), and the current introduction points for
+his
+service into CFS, all indexed by the hash of the public key
+Note that Bob's webserver is unmodified, and doesn't even know
 that it's hidden behind the Tor network.
 
-As far as Alice's experience goes, we require that her client interface
-remain a SOCKS proxy, and we require that she shouldn't have to modify
-her applications. Thus we encode all of the necessary information into
-the hostname (more correctly, fully qualified domain name) that Alice
-uses, eg when clicking on a url in her browser. Location-hidden services
-use the special top level domain called `.onion': thus hostnames take the
-form x.y.onion where x encodes the hash of PK, and y is the authentication
-cookie. Alice's onion proxy examines hostnames and recognizes when they're
-destined for a hidden server. If so, it decodes the PK and starts the
-rendezvous as described in the table above.
+Because Alice's applications must work unchanged, her client interface
+remains a SOCKS proxy.  Thus we must encode all of the necessary
+information into the fully qualified domain name Alice uses when
+establishing her connections.  Location-hidden services use a virtual
+top level domain called `.onion': thus hostnames take the form
+x.y.onion where x encodes the hash of PK, and y is the authentication
+cookie. Alice's onion proxy examines hostnames and recognizes when
+they're destined for a hidden server. If so, it decodes the PK and
+starts the rendezvous as described in the table above.
 
 \subsection{Previous rendezvous work}
 
 Ian Goldberg developed a similar notion of rendezvous points for
-low-latency anonymity systems \cite{ian-thesis}. His ``service tag''
-is the same concept as our ``hash of service's public key''. We make it
-a hash of the public key so it can be self-authenticating, and so the
-client can recognize the same service with confidence later on. His
-design differs from ours in the following ways though. Firstly, Ian
-suggests that the client should manually hunt down a current location of
-the service via Gnutella; whereas our use of the DHT makes lookup faster,
-more robust, and transparent to the user. Secondly, in Tor the client
-and server can share ephemeral DH keys, so at no point in the path is
-the plaintext
-exposed. Thirdly, our design is much more practical for deployment in a
-volunteer network, in terms of getting volunteers to offer introduction
-and rendezvous point services. The introduction points do not output any
-bytes to the clients, and the rendezvous points don't know the client,
-the server, or the stuff being transmitted. The indirection scheme
-is also designed with authentication/authorization in mind -- if the
-client doesn't include the right cookie with its request for service,
-the server doesn't even acknowledge its existence.
+low-latency anonymity systems \cite{ian-thesis}. His ``service tags''
+play the same role in his design as the hashes of services' public
+keys play in ours.  We use public key hashes so that they can be
+self-authenticating, and so the client can recognize the same service
+with confidence later on. His design also differs from ours in the
+following ways: First, Goldberg suggests that the client should
+manually hunt down a current location of the service via Gnutella;
+whereas our use of the DHT makes lookup faster, more robust, and
+transparent to the user. Second, in Tor the client and server
+negotiate ephemeral keys via Diffie-Hellman, so at no point in the
+path is the plaintext exposed. Third, our design tries to minimize the
+exposure associated with running the service, so as to make volunteers
+more willing to offer introduction and rendezvous point services.
+Tor's introduction points do not output any bytes to the clients, and
+the rendezvous points don't know the client, the server, or the data
+being transmitted. The indirection scheme is also designed to include
+authentication/authorization---if the client doesn't include the right
+cookie with its request for service, the server need not even
+acknowledge its existence.
 
 \Section{Analysis}
 \label{sec:analysis}
@@ -1544,6 +1575,9 @@ Pull attacks and defenses into analysis as a subsection
 
 \Section{Open Questions in Low-latency Anonymity}
 \label{sec:maintaining-anonymity}
+ 
+
+
 
 % There must be a better intro than this! -NM
 In addition to the open problems discussed in
@@ -1644,19 +1678,24 @@ for low-latency anonymity systems to support far more servers than Tor
 currently anticipates.  This introduces several issues.  First, if
 approval by a centralized set of directory servers is no longer
 feasible, what mechanism should be used to prevent adversaries from
-signing up many spurious servers?  (Tarzan and Morphmix present
-possible solutions.)  Second, if clients can no longer have a complete
-picture of the network at all times how do we prevent attackers from
-manipulating client knowledge?  Third, if there are to many servers
+signing up many spurious servers? 
+Second, if clients can no longer have a complete
+picture of the network at all times, how can should they perform
+discovery while preventing attackers from manipulating or exploiting
+gaps in client knowledge?  Third, if there are to many servers
 for every server to constantly communicate with every other, what kind
-of non-clique topology should the network use?  [XXX cite george's
-  restricted-routes paper] (Whatever topology we choose, we need some
-way to keep attackers from manipulating their position within it.)
+of non-clique topology should the network use?   Restricted-route
+topologies promise comparable anonymity with better scalability
+\cite{danezis-pets03}, but whatever topology we choose, we need some
+way to keep attackers from manipulating their position within it.
 Fourth, since no centralized authority is tracking server reliability,
 How do we prevent unreliable servers from rendering the network
 unusable?  Fifth, do clients receive so much anonymity benefit from
 running their own servers that we should expect them all to do so, or
 do we need to find another incentive structure to motivate them?
+(Tarzan and Morphmix present possible solutions.)
+
+[[ XXX how to approve new nodes (advogato, sybil, captcha (RTT));]
 
 Alternatively, it may be the case that one of these problems proves
 intractable, or that the drawbacks to many-server systems prove
@@ -1791,7 +1830,7 @@ keys)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Section{Future Directions and Open Problems}
+\Section{Future Directions}
 \label{sec:conclusion}
 
 % Mention that we need to do TCP over tor for reliability.
@@ -1801,39 +1840,53 @@ a unified deployable system. But there are still several attacks that
 work quite well, as well as a number of sustainability and run-time
 issues remaining to be ironed out. In particular:
 
+% Many of these (Scalability, cover traffic) are duplicates from open problems.
+%
 \begin{itemize}
-\item \emph{Scalability:} Since Tor's emphasis currently is on simplicity
-of design and deployment, the current design won't easily handle more
-than a few hundred servers, because of its clique topology. Restricted
-route topologies \cite{danezis-pets03} promise comparable anonymity
-with much better scaling properties, but we must solve problems like
-how to randomly form the network without introducing net attacks.
-% [cascades are a restricted route topology too. we must mention
-% earlier why we're not satisfied with the cascade approach.]-RD
-% [We do. At least 
+\item \emph{Scalability:} Tor's emphasis on design simplicity and
+  deployability has led us to adopt a clique topology, a
+  semi-centralized model for directories and trusts, and a
+  full-network-visibility model for client knowledge.  None of these
+  properties will scale to more than a few hundred servers, at most.
+  Promising approaches to better scalability exist (see
+  section~\ref{sec:maintaining-anonymity}), but more deployment
+  experience would be helpful in learning the relative importance of
+  these bottlenecks.
 \item \emph{Cover traffic:} Currently we avoid cover traffic because
-it introduces clear performance and bandwidth costs, but and its
-security properties are not well understood. With more research
-\cite{SS03,defensive-dropping}, the price/value ratio may change, both for
-link-level cover traffic and also long-range cover traffic. In particular,
-we expect restricted route topologies to reduce the cost of cover traffic
-because there are fewer links to cover.
+  of its clear costs in performance and bandwidth, and because its
+  security benefits have not well understood. With more research
+  \cite{SS03,defensive-dropping}, the price/value ratio may change,
+  both for link-level cover traffic and also long-range cover traffic.
 \item \emph{Better directory distribution:} Even with the threshold
-directory agreement algorithm described in \ref{subsec:dirservers},
-the directory servers are still trust bottlenecks. We must find more
-decentralized yet practical ways to distribute up-to-date snapshots of
-network status without introducing new attacks.
+  directory agreement algorithm described in \ref{subsec:dirservers},
+  the directory servers are still trust bottlenecks. We must find more
+  decentralized yet practical ways to distribute up-to-date snapshots of
+  network status without introducing new attacks.  Also, directory
+  retrieval presents a scaling problem, since clients currently
+  download a description of the entire network state every 15
+  minutes.  As the state grows larger and clients more numerous, we
+  may need to move to a solution in which clients only receive
+  incremental updates to directory state, or where directories are
+  cached at the ORs to avoid high loads on the directory servers.
 \item \emph{Implementing location-hidden servers:} While
-Section~\ref{sec:rendezvous} provides a design for rendezvous points and
-location-hidden servers, this feature has not yet been implemented.
-We will likely encounter additional issues, both in terms of usability
-and anonymity, that must be resolved.
+  Section~\ref{sec:rendezvous} describes a design for rendezvous
+  points and location-hidden servers, these feature has not yet been
+  implemented.  While doing so, will likely encounter additional
+  issues, both in terms of usability and anonymity, that must be
+  resolved.
+\item \emph{Further specification review:} Although we have a public,
+  byte-level specification for the Tor protocols, this protocol has
+  not received extensive external review.  We hope that as Tor
+  becomes more widely deployed, more people will become interested in
+  examining our specification.
 \item \emph{Wider-scale deployment:} The original goal of Tor was to
-gain experience in deploying an anonymizing overlay network, and learn
-from having actual users. We are now at the point where we can start
-deploying a wider network. We will see what happens!
-% ok, so that's hokey. fix it. -RD
-\item \emph{Further specification review:} Foo.
+  gain experience in deploying an anonymizing overlay network, and
+  learn from having actual users.  We are now at the point in design
+  and development where we can start deploying a wider network.  Once
+  we have are ready for actual users, we will doubtlessly be better
+  able to evaluate some of our design decisions, including our
+  robustness/latency tradeoffs, our abuse-prevention mechanisms, and
+  our overall usability.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1865,6 +1918,8 @@ deploying a wider network. We will see what happens!
 %     'Onion Routing design', 'onion router' [note capitalization]
 %     'SOCKS'
 %     Try not to use \cite as a noun.  
+%     'Authorizating' sounds great, but it isn't a word.
+%     'First, second, third', not 'Firstly, secondly, thridly'.
 %
 %     'Substitute ``Damn'' every time you're inclined to write ``very;'' your
 %     editor will delete it and the writing will be just as it should be.'
