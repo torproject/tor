@@ -1,7 +1,10 @@
 
-\documentclass[times,10pt,twocolumn]{article}
-\usepackage{latex8}
-\usepackage{times}
+\documentclass[twocolumn]{article}
+\usepackage{usenix}
+
+%\documentclass[times,10pt,twocolumn]{article}
+%\usepackage{latex8}
+%\usepackage{times}
 \usepackage{url}
 \usepackage{graphics}
 \usepackage{amsmath}
@@ -81,7 +84,7 @@ We close with a list of open problems in anonymous communication.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Section{Overview}
+\section{Overview}
 \label{sec:intro}
 
 Onion Routing is a distributed overlay network designed to anonymize
@@ -245,7 +248,7 @@ Routing project in Section~\ref{sec:conclusion}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Section{Related work}
+\section{Related work}
 \label{sec:related-work}
 
 Modern anonymity systems date to Chaum's {\bf Mix-Net}
@@ -398,7 +401,7 @@ Eternity and Free~Haven.
 % didn't include rewebbers. No clear place to put them, so I'll leave
 % them out for now. -RD
 
-\Section{Design goals and assumptions}
+\section{Design goals and assumptions}
 \label{sec:assumptions}
 
 \noindent{\large\bf Goals}\\
@@ -483,7 +486,7 @@ provided by an external service if appropriate.
 \textbf{Not steganographic:} Tor does not try to conceal who is connected
 to the network.
 
-\SubSection{Threat Model}
+\subsection{Threat Model}
 \label{subsec:threat-model}
 
 A global passive adversary is the most commonly assumed threat when
@@ -529,7 +532,7 @@ each of these attacks.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Section{The Tor Design}
+\section{The Tor Design}
 \label{sec:design}
 
 The Tor network is an overlay network; each onion router (OR)
@@ -575,7 +578,7 @@ Finally,
 Section~\ref{subsec:congestion} talks about congestion control and
 fairness issues.
 
-\SubSection{Cells}
+\subsection{Cells}
 \label{subsec:cells}
 
 Onion routers communicate with one another, and with users' OPs, via
@@ -628,7 +631,7 @@ in more detail below.
 \end{picture}
 \end{figure}
 
-\SubSection{Circuits and streams}
+\subsection{Circuits and streams}
 \label{subsec:circuits}
 
 Onion Routing originally built one circuit for each
@@ -786,7 +789,7 @@ node can send a \emph{relay truncated} cell back to Alice.  Thus the
 ``break a node and see which circuits go down''
 attack~\cite{freedom21-security} is weakened.
 
-\SubSection{Opening and closing streams}
+\subsection{Opening and closing streams}
 \label{subsec:tcp}
 
 When Alice's application wants a TCP connection to a given
@@ -840,7 +843,7 @@ connections.
 % such as broken HTTP clients that close their side of the
 %stream after writing but are still willing to read.
 
-\SubSection{Integrity checking on streams}
+\subsection{Integrity checking on streams}
 \label{subsec:integrity-checking}
 
 Because the old Onion Routing design used a stream cipher without integrity
@@ -897,7 +900,7 @@ is
 acceptably low, given that Alice or Bob tear down the circuit if they
 receive a bad hash.
 
-\SubSection{Rate limiting and fairness}
+\subsection{Rate limiting and fairness}
 \label{subsec:rate-limit}
 
 Volunteers are more willing to run services that can limit
@@ -934,7 +937,7 @@ attack, but an adversary observing both
 ends of the stream can already learn this information through timing
 attacks.
 
-\SubSection{Congestion control}
+\subsection{Congestion control}
 \label{subsec:congestion}
 
 Even with bandwidth rate limiting, we still need to worry about
@@ -995,7 +998,7 @@ to be flushed is under some threshold (currently 10 cells' worth).
 These arbitrarily chosen parameters seem to give tolerable throughput
 and delay; see Section~\ref{sec:in-the-wild}.
 
-\SubSection{Rendezvous Points and hidden services}
+\subsection{Rendezvous Points and hidden services}
 \label{subsec:rendezvous}
 
 Rendezvous points are a building block for \emph{location-hidden
@@ -1043,10 +1046,10 @@ In Appendix~\ref{sec:rendezvous-specifics} we provide a more detailed
 description of the rendezvous protocol, integration issues, attacks,
 and related rendezvous work.
 
-\Section{Other design decisions}
+\section{Other design decisions}
 \label{sec:other-design}
 
-\SubSection{Resource management and denial-of-service}
+\subsection{Resource management and denial-of-service}
 \label{subsec:dos}
 
 Providing Tor as a public service creates many opportunities for
@@ -1094,7 +1097,7 @@ disrupted. This solution would require more buffering at the network
 edges, however, and the performance and anonymity implications from this
 extra complexity still require investigation.
 
-\SubSection{Exit policies and abuse}
+\subsection{Exit policies and abuse}
 \label{subsec:exitpolicies}
 
 % originally, we planned to put the "users only know the hostname,
@@ -1189,7 +1192,7 @@ unsolved problem, and will probably remain an arms race for the
 foreseeable future.  The abuse problems faced by Princeton's CoDeeN
 project~\cite{darkside} give us a glimpse of likely issues.
 
-\SubSection{Directory Servers}
+\subsection{Directory Servers}
 \label{subsec:dirservers}
 
 First-generation Onion Routing designs~\cite{freedom2-arch,or-jsac98} used
@@ -1295,7 +1298,7 @@ forcing clients to periodically announce their existence to any
 central point.
 
 
-\Section{Attacks and Defenses}
+\section{Attacks and Defenses}
 \label{sec:attacks}
 
 Below we summarize a variety of attacks, and discuss how well our
@@ -1521,7 +1524,7 @@ servers must actively test ORs by building circuits and streams as
 appropriate.  The tradeoffs of a similar approach are discussed
 in~\cite{mix-acc}.\\
 
-\Section{Early experiences: Tor in the Wild}
+\section{Early experiences: Tor in the Wild}
 \label{sec:in-the-wild}
 
 As of mid-January 2004, the Tor network consists of 18 nodes
@@ -1610,7 +1613,7 @@ nodes and maybe 10,000 users before we're forced to become
 more distributed. With luck, the experience we gain running the current
 topology will help us choose among alternatives when the time comes.
 
-\Section{Open Questions in Low-latency Anonymity}
+\section{Open Questions in Low-latency Anonymity}
 \label{sec:maintaining-anonymity}
 
 In addition to the non-goals in
@@ -1718,7 +1721,7 @@ a higher churn rate.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Section{Future Directions}
+\section{Future Directions}
 \label{sec:conclusion}
 
 Tor brings together many innovations into a unified deployable system. The
@@ -1823,7 +1826,7 @@ our overall usability.
 \newpage
 \appendix
 
-\Section{Rendezvous points and hidden services}
+\section{Rendezvous points and hidden services}
 \label{sec:rendezvous-specifics}
 
 In this appendix we provide specifics about the rendezvous points
@@ -1910,7 +1913,7 @@ for consulting the DHT\@. All of these approaches
 limit exposure even when
 some selected users collude in the DoS\@.
 
-\SubSection{Integration with user applications}
+\subsection{Integration with user applications}
 
 Bob configures his onion proxy to know the local IP address and port of his
 service, a strategy for authorizing clients, and a public key. Bob
