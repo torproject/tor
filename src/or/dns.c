@@ -568,7 +568,10 @@ int connection_dns_finished_flushing(connection_t *conn) {
 int connection_dns_reached_eof(connection_t *conn) {
   log_fn(LOG_WARN,"Read eof. Worker died unexpectedly.");
   if (conn->state == DNSWORKER_STATE_BUSY) {
-    dns_cancel_pending_resolve(conn->address);
+    /* don't cancel the resolve here -- it would be cancelled in
+     * connection_about_to_close_connection(), since conn is still
+     * in state BUSY
+     */
     num_dnsworkers_busy--;
   }
   num_dnsworkers--;
