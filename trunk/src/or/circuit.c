@@ -359,9 +359,11 @@ void circuit_about_to_close_connection(connection_t *conn) {
   while((circ = circuit_get_by_conn(conn))) {
     circuit_remove(circ);
     if(circ->n_conn == conn) /* it's closing in front of us */
+      /* circ->p_conn should always be set */
       connection_send_destroy(circ->p_aci, circ->p_conn);
     if(circ->p_conn == conn) /* it's closing behind us */
-      connection_send_destroy(circ->n_aci, circ->n_conn);
+      if(circ->n_conn)
+        connection_send_destroy(circ->n_aci, circ->n_conn);
     circuit_free(circ);
   }  
 }

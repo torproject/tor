@@ -87,23 +87,25 @@ int onion_pending_check(void) {
 
 void onion_pending_process_one(void) {
   struct data_queue_t *tmpd;
+  circuit_t *circ; 
 
   if(!ol_list)
     return; /* no onions pending, we're done */
 
   assert(ol_list->circ && ol_list->circ->p_conn);
   assert(ol_length > 0);
+  circ = ol_list->circ;
 
-  if(onion_process(ol_list->circ) < 0) {
+  if(onion_process(circ) < 0) {
     log(LOG_DEBUG,"onion_pending_process_one(): Failed. Closing.");
-    onion_pending_remove(ol_list->circ);
-    circuit_close(ol_list->circ);
+    onion_pending_remove(circ);
+    circuit_close(circ);
   } else {
     log(LOG_DEBUG,"onion_pending_process_one(): Succeeded. Delivering queued data cells.");
     for(tmpd = ol_list->data_cells; tmpd; tmpd=tmpd->next) {
-      command_process_data_cell(tmpd->cell, ol_list->circ->p_conn); 
+      command_process_data_cell(tmpd->cell, circ->p_conn); 
     }
-    onion_pending_remove(ol_list->circ);
+    onion_pending_remove(circ);
   }
   return;
 }
