@@ -507,6 +507,7 @@ connection_tls_finish_handshake(connection_t *conn) {
         log_fn(LOG_WARN, "Identity key not as expected for router at %s:%d: wanted %s but got %s",
                conn->address, conn->port, conn->nickname, d);
         control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
+        // XXX if we're an authdir_mode, forget about nickname's descriptor
         return -1;
       }
     } else if (strcasecmp(conn->nickname, nickname)) {
@@ -515,7 +516,13 @@ connection_tls_finish_handshake(connection_t *conn) {
              "Other side (%s:%d) is '%s', but we tried to connect to '%s'",
              conn->address, conn->port, nickname, conn->nickname);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
+      // XXX if we're an authdir_mode, forget about nickname's descriptor
       return -1;
+    }
+    if (authdir_mode(options)) {
+      /* I got exactly the guy I wanted. Now go through and blow away
+       * descriptors for exactly this Address:ORPort that aren't this guy. */
+      //XXX
     }
   } else {
     if ((c=connection_get_by_identity_digest(digest_rcvd, CONN_TYPE_OR))) {
