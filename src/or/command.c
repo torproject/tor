@@ -113,7 +113,7 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
     circ->n_port = n_conn->port;
 
     circ->n_conn = n_conn;
-    log(LOG_DEBUG,"command_process_create_cell(): n_conn is %s:%u",n_conn->address,ntohs(n_conn->port));
+    log(LOG_DEBUG,"command_process_create_cell(): n_conn is %s:%u",n_conn->address,n_conn->port);
 
     /* send the CREATE cells on to the next hop  */
     pad_onion(circ->onion,circ->onionlen, sizeof(onion_layer_t));

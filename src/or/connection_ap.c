@@ -125,7 +125,7 @@ int ap_handshake_process_ss(connection_t *conn) {
 
     if(connection_fetch_from_buf(conn->dest_port,conn->dest_port_len,conn) < 0)
       return -1;
-    log(LOG_DEBUG,"ap_handshake_process_ss(): Read dest_port (network order) '%s'.",conn->dest_port);
+    log(LOG_DEBUG,"ap_handshake_process_ss(): Read dest_port '%s'.",conn->dest_port);
 
     conn->dest_port_received = conn->dest_port_len;
   }
@@ -202,7 +202,7 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
   circ->cpathlen = routelen;
 
   log(LOG_DEBUG,"ap_handshake_establish_circuit(): Looking for firsthop '%s:%u'",
-      firsthop->address,ntohs(firsthop->or_port));
+      firsthop->address,firsthop->or_port);
   n_conn = connection_twin_get_by_addr_port(firsthop->addr,firsthop->or_port);
   if(!n_conn) { /* not currently connected */
     circ->n_addr = firsthop->addr;
@@ -257,7 +257,7 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit
 
   circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, ACI_TYPE_BOTH);
   circ->n_conn = n_conn;
-  log(LOG_DEBUG,"ap_handshake_send_onion(): n_conn is %s:%u",n_conn->address,ntohs(n_conn->port));
+  log(LOG_DEBUG,"ap_handshake_send_onion(): n_conn is %s:%u",n_conn->address,n_conn->port);
 
   /* deliver the onion as one or more create cells */
   cell.command = CELL_CREATE;
@@ -267,9 +267,7 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit
   tmpbuf = malloc(tmpbuflen);
   if(!tmpbuf)
     return -1;
-  circ->onionlen = htonl(circ->onionlen);
-  memcpy(tmpbuf,&circ->onionlen,4);
-  circ->onionlen = ntohl(circ->onionlen);
+  *(uint32_t*)tmpbuf = htonl(circ->onionlen);
   memcpy(tmpbuf+4, circ->onion, circ->onionlen);
 
   dataleft = tmpbuflen;

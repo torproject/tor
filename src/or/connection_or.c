@@ -57,7 +57,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       /* the connect has finished. */
 
       log(LOG_DEBUG,"connection_or_finished_flushing() : OP connection to router %s:%u established.",
-          conn->address,ntohs(conn->port));
+          conn->address,conn->port);
 
       return or_handshake_op_send_keys(conn);
     case OR_CONN_STATE_OP_SENDING_KEYS:
@@ -75,7 +75,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       /* the connect has finished. */
 
       log(LOG_DEBUG,"connection_or_finished_flushing() : OR connection to router %s:%u established.",
-          conn->address,ntohs(conn->port));
+          conn->address,conn->port);
 
       return or_handshake_client_send_auth(conn);
     case OR_CONN_STATE_CLIENT_SENDING_AUTH:
@@ -171,10 +171,10 @@ connection_t *connection_or_connect(routerinfo_t *router, crypto_pk_env_t *prkey
 
   memset((void *)&router_addr,0,sizeof(router_addr));
   router_addr.sin_family = AF_INET;
-  router_addr.sin_port = port;
+  router_addr.sin_port = htons(port);
   router_addr.sin_addr.s_addr = router->addr;
 
-  log(LOG_DEBUG,"connection_or_connect() : Trying to connect to %s:%u.",inet_ntoa(*(struct in_addr *)&router->addr),ntohs(port));
+  log(LOG_DEBUG,"connection_or_connect() : Trying to connect to %s:%u.",inet_ntoa(*(struct in_addr *)&router->addr),port);
 
   if(connect(s,(struct sockaddr *)&router_addr,sizeof(router_addr)) < 0){
     if(errno != EINPROGRESS){
@@ -206,7 +206,7 @@ connection_t *connection_or_connect(routerinfo_t *router, crypto_pk_env_t *prkey
     return NULL;
   }
 
-  log(LOG_DEBUG,"connection_or_connect() : Connection to router %s:%u established.",router->address,ntohs(port));
+  log(LOG_DEBUG,"connection_or_connect() : Connection to router %s:%u established.",router->address,port);
 
   *result = 2; /* connection finished */
   return(conn);
@@ -224,7 +224,7 @@ connection_t *connection_or_connect_as_op(routerinfo_t *router, crypto_pk_env_t 
 
   assert(router && prkey && local);
 
-  if(router->addr == local->sin_addr.s_addr && router->or_port == local->sin_port) {
+  if(router->addr == local->sin_addr.s_addr && router->or_port == ntohs(local->sin_port)) {
     /* this is me! don't connect to me. */
     return NULL;
   }
@@ -343,7 +343,7 @@ connection_t *connection_or_connect_as_or(routerinfo_t *router, crypto_pk_env_t 
 
   assert(router && prkey && local);
 
-  if(router->addr == local->sin_addr.s_addr && router->or_port == local->sin_port) {
+  if(router->addr == local->sin_addr.s_addr && router->or_port == ntohs(local->sin_port)) {
     /* this is me! don't connect to me. */
     log(LOG_DEBUG,"connection_or_connect_as_or(): This is me. Skipping.");
     return NULL;
@@ -390,7 +390,7 @@ int or_handshake_client_send_auth(connection_t *conn) {
   *(uint32_t*)buf = htonl(conn->local.sin_addr.s_addr); /* local address */
   *(uint16_t*)(buf+4) = conn->local.sin_port; /* local port, already network order */
   *(uint32_t*)(buf+6) = htonl(conn->addr); /* remote address */
-  *(uint16_t*)(buf+10) = conn->port; /* remote port, already network order */
+  *(uint16_t*)(buf+10) = htons(conn->port); /* remote port */
   memcpy(buf+12,conn->f_crypto->key,8); /* keys */
   memcpy(buf+20,conn->b_crypto->key,8);
   *(uint32_t *)(buf+28) = htonl(conn->bandwidth); /* max link utilisation */
@@ -400,7 +400,7 @@ int or_handshake_client_send_auth(connection_t *conn) {
   retval = crypto_pk_public_encrypt(conn->pkey, buf, 36, cipher,RSA_PKCS1_PADDING);
   if (retval == -1) /* error */
   { 
-    log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,ntohs(conn->port));
+    log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,conn->port);
     log(LOG_DEBUG,"or_handshake_client_send_auth() : Reason : %s.",crypto_perror());
     return -1;
   }
@@ -453,7 +453,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
   if (retval == -1)
   { 
     log(LOG_ERR,"Public-key decryption failed during authentication to %s:%u.",
-        conn->address,ntohs(conn->port));
+        conn->address,conn->port);
     log(LOG_DEBUG,"or_handshake_client_process_auth() : Reason : %s.",
         crypto_perror());
     return -1;
@@ -461,7 +461,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
   else if (retval != 44)
   { 
     log(LOG_ERR,"Received an incorrect response from router %s:%u during authentication.",
-        conn->address,ntohs(conn->port));
+        conn->address,conn->port);
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_client_process_auth() : Decrypted response.");
@@ -469,11 +469,11 @@ int or_handshake_client_process_auth(connection_t *conn) {
   if ( (ntohl(*(uint32_t*)buf) != conn->local.sin_addr.s_addr) || /* local address */
         (*(uint16_t*)(buf+4) != conn->local.sin_port) || /* local port, keep network order */
        (ntohl(*(uint32_t*)(buf+6)) != conn->addr) || /* remote address */
-        (*(uint16_t*)(buf+10) != conn->port) || /* remote port, keep network order */
+       (ntohs(*(uint16_t*)(buf+10)) != conn->port) || /* remote port */
        (memcmp(conn->f_crypto->key, buf+12, 8)) || /* keys */
        (memcmp(conn->b_crypto->key, buf+20, 8)) )
   { /* incorrect response */
-    log(LOG_ERR,"Router %s:%u failed to authenticate. Either the key I have is obsolete or they're doing something they're not supposed to.",conn->address,ntohs(conn->port));
+    log(LOG_ERR,"Router %s:%u failed to authenticate. Either the key I have is obsolete or they're doing something they're not supposed to.",conn->address,conn->port);
     return -1;
   }
 
@@ -492,7 +492,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
   retval = crypto_pk_public_encrypt(conn->pkey, buf, 20, cipher,RSA_PKCS1_PADDING);
   if (retval == -1) /* error */
   { 
-    log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,ntohs(conn->port));
+    log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,conn->port);
     log(LOG_DEBUG,"or_handshake_client_process_auth() : Reason : %s.",crypto_perror());
     return -1;
   }
@@ -574,7 +574,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
 
   /* identify the router */
   addr = ntohl(*(uint32_t*)buf); /* save the IP address */
-  port = *(uint16_t*)(buf+4); /* save the port  *IN NETWORK ORDER* */
+  port = ntohs(*(uint16_t*)(buf+4)); /* save the port */
 
   router = router_get_by_addr_port(addr,port);
   if (!router)
@@ -583,7 +583,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Router identified as %s:%u.",
-      router->address,ntohs(router->or_port));
+      router->address,router->or_port);
 
   if(connection_exact_get_by_addr_port(addr,port)) {
     log(LOG_DEBUG,"or_handshake_server_process_auth(): That router is already connected. Dropping.");
@@ -624,7 +624,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
   retval = crypto_pk_public_encrypt(conn->pkey, buf, 44, cipher,RSA_PKCS1_PADDING);
   if (retval == -1) /* error */
   {
-    log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,ntohs(conn->port));
+    log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,conn->port);
     log(LOG_DEBUG,"or_handshake_server_process_auth() : Reason : %s.",crypto_perror());
     return -1;
   }
@@ -677,7 +677,7 @@ int or_handshake_server_process_nonce(connection_t *conn) {
   if (retval == -1)
   {
     log(LOG_ERR,"Public-key decryption failed during authentication to %s:%u.",
-        conn->address,ntohs(conn->port));
+        conn->address,conn->port);
     log(LOG_DEBUG,"or_handshake_server_process_nonce() : Reason : %s.",
         crypto_perror());
     return -1;
@@ -685,19 +685,19 @@ int or_handshake_server_process_nonce(connection_t *conn) {
   else if (retval != 20)
   { 
     log(LOG_ERR,"Received an incorrect response from router %s:%u during authentication.",
-        conn->address,ntohs(conn->port));
+        conn->address,conn->port);
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_server_process_nonce() : Response decrypted.");
 
   /* check validity */
   if ((ntohl(*(uint32_t*)buf) != conn->addr) || /* remote address */
-       (*(uint16_t*)(buf+4) != conn->port) || /* remote port, network order */ 
+      (ntohs(*(uint16_t*)(buf+4)) != conn->port) || /* remote port */ 
       (ntohl(*(uint32_t*)(buf+6)) != conn->local.sin_addr.s_addr) || /* local address */
        (*(uint16_t*)(buf+10) != conn->local.sin_port) || /* local port, network order */
       (memcmp(conn->nonce,buf+12,8))) /* nonce */
   { 
-    log(LOG_ERR,"Router %s:%u failed to authenticate. Either the key I have is obsolete or they're doing something they're not supposed to.",conn->address,ntohs(conn->port));
+    log(LOG_ERR,"Router %s:%u failed to authenticate. Either the key I have is obsolete or they're doing something they're not supposed to.",conn->address,conn->port);
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_server_process_nonce() : Response valid. Authentication complete.");

@@ -131,7 +131,7 @@ int circuit_init(circuit_t *circ, int aci_type) {
   log(LOG_DEBUG,"circuit_init(): starting");
   circ->n_addr = ol->addr;
   circ->n_port = ol->port;
-  log(LOG_DEBUG,"circuit_init(): Set port to %u.",ntohs(ol->port));
+  log(LOG_DEBUG,"circuit_init(): Set port to %u.",ol->port);
   circ->p_f = ol->backf;
   log(LOG_DEBUG,"circuit_init(): Set BACKF to %u.",ol->backf);
   circ->n_f = ol->forwf;

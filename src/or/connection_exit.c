@@ -47,7 +47,7 @@ int connection_exit_finished_flushing(connection_t *conn) {
       /* the connect has finished. */
 
       log(LOG_DEBUG,"connection_exit_finished_flushing() : Connection to %s:%u established.",
-          conn->address,ntohs(conn->port));
+          conn->address,conn->port);
       
       conn->state = EXIT_CONN_STATE_OPEN;
       if(connection_wants_to_flush(conn)) /* in case there are any queued data cells */
@@ -125,10 +125,10 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
       
         memset((void *)&dest_addr,0,sizeof(dest_addr));
         dest_addr.sin_family = AF_INET;
-        dest_addr.sin_port = conn->port;
+        dest_addr.sin_port = htons(conn->port);
         memcpy((void *)&dest_addr.sin_addr, &conn->addr, sizeof(uint32_t));
       
-        log(LOG_DEBUG,"connection_exit_process_data_cell(): Connecting to %s:%u.",conn->address,ntohs(conn->port)); 
+        log(LOG_DEBUG,"connection_exit_process_data_cell(): Connecting to %s:%u.",conn->address,conn->port); 
 
         if(connect(s,(struct sockaddr *)&dest_addr,sizeof(dest_addr)) < 0){
           if(errno != EINPROGRESS){
@@ -148,7 +148,7 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
         }
 
         /* it succeeded. we're connected. */
-        log(LOG_DEBUG,"connection_exit_process_data_cell(): Connection to %s:%u established.",conn->address,ntohs(conn->port));
+        log(LOG_DEBUG,"connection_exit_process_data_cell(): Connection to %s:%u established.",conn->address,conn->port);
 
         conn->s = s;
         connection_set_poll_socket(conn);
