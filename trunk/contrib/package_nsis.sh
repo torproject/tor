@@ -28,7 +28,7 @@ clean_newlines() {
 }
 
 for fn in CLIENTS tor-spec.txt HACKING rend-spec.txt control-spec.txt \
-   tor-doc.html tor-doc.css; do
+   tor-doc.html tor-doc.css version-spec.txt; do
     clean_newlines doc/$fn win_tmp/doc/$fn
 done
 
