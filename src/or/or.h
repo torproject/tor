@@ -962,7 +962,6 @@ typedef struct {
                                 * the control system. */
 } or_options_t;
 
-/* XXX are these good enough defaults? */
 #define MAX_SOCKS_REPLY_LEN 1024
 #define MAX_SOCKS_ADDR_LEN 256
 #define SOCKS_COMMAND_CONNECT 0x01
