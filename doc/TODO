@@ -112,7 +112,9 @@ N - Clean up NT service code even more.  Document it. Enable it by default.
  Documentation
 N - Document new version system.
 r - Correct and clarify the wiki entry on port forwarding.
-N - Document where OSX, windows logs go, where stuff is installed.
+  o Document where OSX logs and torrc go.
+  o Document where windows logs and torrc go.
+    - (Make sure they actually go there.)
 
  Installers
 N - Vet all pending installer patches
@@ -121,7 +123,7 @@ N - Vet all pending installer patches
   o Make OSX man pages go into man directory.
 N . Make logs go into platform default locations.
     o OSX
-    - 
+    - Windows. (?)
 
  Correctness
    - Mark bugs for 010 or post 010 in bugtracker.
