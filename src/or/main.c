@@ -12,7 +12,7 @@ const char main_c_id[] = "$Id$";
 
 #include "or.h"
 
-/* These signals are defined to help control_singal_act work. */
+/* These signals are defined to help control_signal_act work. */
 #ifndef SIGHUP
 #define SIGHUP 1
 #endif
