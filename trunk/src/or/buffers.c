@@ -52,9 +52,14 @@ int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, i
 
   if(!options.LinkPadding && at_most > 10*sizeof(cell_t)) {
     /* if no linkpadding: do a rudimentary round-robin so one
-     * connection can't hog an outgoing connection
+     * connection can't hog a thickpipe
      */
-    at_most = 10*sizeof(cell_t); /* FIXME should be 10* size of usable payload */
+    at_most = 10*(CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE);
+    /* XXX this still isn't perfect. now we read 10 data payloads per read --
+     * but if we're reading from a connection that speaks cells, we always
+     * read a partial cell from the network and can't process it yet. Good
+     * enough for now though. (And maybe best, to stress our code more.)
+     */
   }
 
 //  log(LOG_DEBUG,"read_to_buf(): reading at most %d bytes.",at_most);
