@@ -60,10 +60,10 @@ perfect forward secrecy, congestion control, directory servers, data
 integrity, configurable exit policies, and location-hidden services using
 rendezvous points.  Tor works on the real-world Internet, requires no special
 privileges or kernel modifications, requires little synchronization or
-coordination between nodes, and provides a reasonable tradeoff between
+coordination between nodes, and provides a reasonable trade-off between
 anonymity, usability, and efficiency.
 
-We first deployed a public Tor network in October 2003; since then it has
+We deployed the public Tor network in October 2003; since then it has
 grown to over a hundred volunteer-operated nodes
 and as much as 80 megabits of
 average traffic per second.  Tor's research strategy has focused on deploying
@@ -159,7 +159,7 @@ IP packets; it only anonymizes TCP streams and DNS requests
 %connections via SOCKS
 (but see Section~\ref{subsec:tcp-vs-ip}).
 
-Most node operators do not want to allow arbitary TCP traffic.% to leave
+Most node operators do not want to allow arbitrary TCP traffic. % to leave
 %their server.
 To address this, Tor provides \emph{exit policies} so
 each exit node can block the IP addresses and ports it is unwilling to allow.
@@ -176,7 +176,7 @@ to join.
 
 Tor research and development has been funded by ONR and DARPA
 for use in securing government
-communications, and by the Electronic Frontier Foundation, for use
+communications, and by the Electronic Frontier Foundation for use
 in maintaining civil liberties for ordinary citizens online. The Tor
 protocol is one of the leading choices
 for anonymizing layer in the European Union's PRIME directive to
@@ -201,7 +201,7 @@ anonymity.\footnote{This is not the only possible
 direction in anonymity research: designs exist that provide more anonymity
 than Tor at the expense of significantly increased resource requirements, or
 decreased flexibility in application support (typically because of increased
-latency).  Such research does not typically abandon aspirations towards
+latency).  Such research does not typically abandon aspirations toward
 deployability or utility, but instead tries to maximize deployability and
 utility subject to a certain degree of structural anonymity (structural because
 usability and practicality affect usage which affects the actual anonymity
@@ -260,7 +260,7 @@ adversaries and our dispersal goals.
 % foolish. -NM
 More powerful attacks may exist. In \cite{hintz-pet02} it was
 shown that an attacker who can catalog data volumes of popular
-responder destinations (say, websites with consistant data volumes) may not
+responder destinations (say, websites with consistent data volumes) may not
 need to
 observe both ends of a stream to learn source-destination links for those
 responders.
@@ -279,7 +279,7 @@ cataloged~\cite{back01} to connect endpoints.
 % Hintz stuff and the Back et al. stuff from Info Hiding 01. I've
 % separated the two and added the references. -PFS
 It has not yet been shown whether these attacks will succeed or fail
-in the presence of the varaibility and volume quantization introduced by the
+in the presence of the variability and volume quantization introduced by the
 Tor network, but it seems likely that these factors will at best delay
 rather than halt the attacks in the cases where they succeed.
 %likely to entail high variability and massive storage since
@@ -397,9 +397,9 @@ more scalable peer-to-peer designs like Tarzan~\cite{tarzan:ccs02} and
 MorphMix~\cite{morphmix:fc04} have been proposed in the literature, but
 have not yet been fielded. These systems differ somewhat
 in threat model and presumably practical resistance to threats.
-Morphmix is close to Tor in circuit setup, and, by separating
+MorphMix is close to Tor in circuit setup, and, by separating
 node discovery from route selection from circuit setup, Tor is
-flexible enough to potentially contain a Morphmix experiment within
+flexible enough to potentially contain a MorphMix experiment within
 it. We direct the interested reader
 to~\cite{tor-design} for a more in-depth review of related work.
 
@@ -412,7 +412,7 @@ browsing.  Commercial single-hop
 proxies~\cite{anonymizer} present a single point of failure, where
 a single compromise can expose all users' traffic, and a single-point
 eavesdropper can perform traffic analysis on the entire network.
-Also, their proprietary implementations place any infrastucture that
+Also, their proprietary implementations place any infrastructure that
 depends on these single-hop solutions at the mercy of their providers'
 financial health as well as network security.
 
@@ -526,12 +526,12 @@ So the more cancer survivors on Tor, the better for the human rights
 activists. The more malicious hackers, the worse for the normal users. Thus,
 reputability is an anonymity issue for two reasons. First, it impacts
 the sustainability of the network: a network that's always about to be
-shut down has difficulty attracting and keeping adquate nodes.
+shut down has difficulty attracting and keeping adequate nodes.
 Second, a disreputable network is more vulnerable to legal and
 political attacks, since it will attract fewer supporters.
 
 While people therefore have an incentive for the network to be used for
-``more reputable'' activities than their own, there are still tradeoffs
+``more reputable'' activities than their own, there are still trade-offs
 involved when it comes to anonymity. To follow the above example, a
 network used entirely by cancer survivors might welcome file sharers
 onto the network, though of course they'd prefer a wider
@@ -805,7 +805,7 @@ time.
 
 \section{Design choices}
 
-In addition to social issues, Tor also faces some design tradeoffs that must
+In addition to social issues, Tor also faces some design trade-offs that must
 be investigated as the network develops.
 
 \subsection{Transporting the stream vs transporting the packets}
@@ -931,7 +931,7 @@ It has long been thought that the best anonymity comes from running your
 own node~\cite{tor-design,or-ih96,or-pet00}. This is called using Tor in an
 \emph{enclave} configuration. By running Tor clients only on Tor nodes
 at the enclave perimeter, enclave configuration can also permit anonymity
-protection even when policy or other requiremnts prevent individual machines
+protection even when policy or other requirements prevent individual machines
 within the enclave from running Tor clients~\cite{or-jsac98,or-discex00}.
 
 Of course, Tor's default path length of
