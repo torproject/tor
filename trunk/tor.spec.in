@@ -6,7 +6,7 @@
 # This should be incremented whenever the spec file changes, but
 # can drop back to zero at a new Tor version
 
-%define specver 3
+%define specver 0
 
 ## Things users may want to change
 #
@@ -95,7 +95,7 @@ Version: %{version}
 Release: %{release}
 
 Summary: Anonymizing overlay network for TCP (The onion router)
-URL: http://freehaven.net/%{name}/
+URL: http://tor.eff.org/
 Group: System Environment/Daemons
 
 License: BSD-like
@@ -107,7 +107,7 @@ BuildRequires: openssl-devel >= 0.9.6, rpm-build >= 4.0
 Requires(pre): shadow-utils, /usr/bin/id, /bin/date, /bin/sh
 Requires(pre): %{_sbindir}/useradd, %{_sbindir}/groupadd
 
-Source0: http://freehaven.net/%{name}/dist/%{name}-%{native_version}.tar.gz
+Source0: http://tor.eff.org/dist/%{name}-%{native_version}.tar.gz
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
