@@ -963,7 +963,7 @@ static void dumpstats(int severity) {
                 (stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
   if (stats_n_seconds_uptime)
-    log(severity,"Average bandwidth used: %d/%d = %d bytes/sec",
+    log(severity,"Average bandwidth used: %llu/%ld = %d bytes/sec",
            stats_n_bytes_read, stats_n_seconds_uptime,
            (int) (stats_n_bytes_read/stats_n_seconds_uptime));
 
