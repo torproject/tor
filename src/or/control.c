@@ -589,8 +589,10 @@ init_cookie_authentication(int enabled)
 {
   char fname[512];
 
-  if (!enabled)
+  if (!enabled) {
     authentication_cookie_is_set = 0;
+    return 0;
+  }
 
   tor_snprintf(fname, sizeof(fname), "%s/control_auth_cookie",
                get_options()->DataDirectory);
