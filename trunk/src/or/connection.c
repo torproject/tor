@@ -167,9 +167,7 @@ _connection_mark_for_close(connection_t *conn, char reason)
     case CONN_TYPE_AP:
       if (conn->state == EXIT_CONN_STATE_RESOLVING)
         dns_cancel_pending_resolve(conn->address, conn);
-      if (reason < _MIN_END_STREAM_REASON || reason > _MAX_END_STREAM_REASON)
-        reason = END_STREAM_REASON_MISC;
-      if (!conn->has_sent_end &&
+      if (!conn->has_sent_end && reason &&
           connection_edge_end(conn, reason, conn->cpath_layer) < 0)
         return -1;
       break;
