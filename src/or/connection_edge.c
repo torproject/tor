@@ -365,7 +365,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       connection_ap_handshake_socks_reply(conn, socks->reply, socks->replylen, 0);
     } else if(sockshere == -1) { /* send normal reject */
       log_fn(LOG_WARN,"Fetching socks handshake failed. Closing.");
-      connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
+      connection_ap_handshake_socks_reply(conn, NULL, 0, -1);
     } else {
       log_fn(LOG_DEBUG,"socks handshake not all here yet.");
     }
@@ -675,35 +675,39 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
     }
   }
   connection_ap_handshake_socks_reply(conn, buf, replylen,
-                                      answer_type == RESOLVED_TYPE_IPV4 ||
-                                      answer_type == RESOLVED_TYPE_IPV6);
+                                      (answer_type == RESOLVED_TYPE_IPV4 ||
+                                      answer_type == RESOLVED_TYPE_IPV6) ? 1 : -1);
 }
 
 /** Send a socks reply to stream <b>conn</b>, using the appropriate
  * socks version, etc.
  *
- * If <b>reply</b> is defined, then write <b>replylen</b> bytes of it
- * to conn and return.
+ * Status can be 1 (succeeded), -1 (failed), or 0 (not sure yet).
  *
- * Otherwise, send back a reply based on whether <b>success</b> is 1 or 0.
+ * If <b>reply</b> is defined, then write <b>replylen</b> bytes of it
+ * to conn and return, else reply based on <b>status</b>.
+ *
+ * If <b>reply</b> is undefined, <b>status</b> can't be 0.
  */
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
-                                         size_t replylen, int success) {
+                                         size_t replylen, int status) {
   char buf[256];
 
-  control_event_stream_status(conn,
-                       success ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED);
+  if(status) /* it's either 1 or -1 */
+    control_event_stream_status(conn,
+                       status==1 ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED);
 
   if(replylen) { /* we already have a reply in mind */
     connection_write_to_buf(reply, replylen, conn);
     return;
   }
   tor_assert(conn->socks_request);
+  tor_assert(status == 1 || status == -1);
   if(conn->socks_request->socks_version == 4) {
     memset(buf,0,SOCKS4_NETWORK_LEN);
 #define SOCKS4_GRANTED          90
 #define SOCKS4_REJECT           91
-    buf[1] = (success ? SOCKS4_GRANTED : SOCKS4_REJECT);
+    buf[1] = (status==1 ? SOCKS4_GRANTED : SOCKS4_REJECT);
     /* leave version, destport, destip zero */
     connection_write_to_buf(buf, SOCKS4_NETWORK_LEN, conn);
   }
@@ -711,7 +715,7 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     buf[0] = 5; /* version 5 */
 #define SOCKS5_SUCCESS          0
 #define SOCKS5_GENERIC_ERROR    1
-    buf[1] = success ? SOCKS5_SUCCESS : SOCKS5_GENERIC_ERROR;
+    buf[1] = status==1 ? SOCKS5_SUCCESS : SOCKS5_GENERIC_ERROR;
     buf[2] = 0;
     buf[3] = 1; /* ipv4 addr */
     memset(buf+4,0,6); /* Set external addr/port to 0.

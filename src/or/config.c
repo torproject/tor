@@ -430,6 +430,7 @@ config_get_assigned_option(or_options_t *options, const char *key)
     default:
       tor_free(result->key);
       tor_free(result);
+      log_fn(LOG_WARN,"Bug: unknown type %d for known key %s", var->type, key);
       return NULL;
     }
 
@@ -1032,7 +1033,7 @@ getconfig(int argc, char **argv, or_options_t *options)
   }
 
   if (options->AccountingStart < 0 || options->AccountingStart > 31) {
-    log(LOG_WARN,"Monthy accounting must start on a day of the month, and no months have %d days.",
+    log(LOG_WARN,"Monthly accounting must start on a day of the month, and no months have %d days.",
         options->AccountingStart);
     result = -1;
   } else if (options->AccountingStart > 28) {

@@ -1371,6 +1371,8 @@ static void do_list_fingerprint(void)
     log_fn(LOG_ERR, "Error computing fingerprint");
     return;
   }
+  /*XXX is options.Nickname for-sure defined yet here? */
+  printf("%s %s\n", options.Nickname, buf);
 }
 
 /** DOCDOC **/

@@ -212,7 +212,7 @@ void connection_about_to_close_connection(connection_t *conn)
     case CONN_TYPE_AP:
       if (conn->socks_request->has_finished == 0) {
         log_fn(LOG_INFO,"Cleaning up AP -- sending socks reject.");
-        connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
+        connection_ap_handshake_socks_reply(conn, NULL, 0, -1);
         conn->socks_request->has_finished = 1;
         conn->hold_open_until_flushed = 1;
       } else {
