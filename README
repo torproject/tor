@@ -3,8 +3,12 @@ described in a bit more detail at http://www.onion-router.net/. You
 can read list archives, and subscribe to the mailing list, at
 http://archives.seul.org/or/dev/.
 
+Is your question in the FAQ? Should it be?
+
 Quickstart version:
 
+0) Download the absolute newest version. No, really.
+  http://freehaven.net/or/.
 1) ./configure (or do the two-line version below, if you're on bsd)
 2) make
 3) cd src/config
@@ -12,9 +16,11 @@ Quickstart version:
 5) download privoxy (www.privoxy.org), and add the line
   "forward-socks4a / localhost:9050 ." (without the quotes) to its
   config file.
-6) point your mozilla (or whatever) to proxy at localhost:8118 (this
+6) point your mozilla (or whatever) to http proxy at localhost:8118 (this
   points it through Privoxy, so you now get good data-scrubbing too.)
-7) browse some web pages
+7) make sure you've set it up correctly: go to
+  http://www.junkbusters.com/cgi-bin/privacy and see what IP it says
+  you're coming from.
 
 More detailed version:
 
@@ -23,10 +29,11 @@ Dependencies:
   You're going to need Privoxy (www.privoxy.org) installed, and configured
   to point at a socks4a proxy -- see below.
 
-  For tor itself, you're going to need openssl (0.9.5 or later) and popt
-  (1.6 or later). If you're on Linux, everything will probably work
-  fine. OS X and BSD (but see below under troubleshooting) now work
-  too. Let us know if you get it working elsewhere.
+  For tor itself, you're going to need openssl (0.9.5 or later
+  -- including the dev stuff and includes). If you're on Linux,
+  everything will probably work fine. OS X and BSD (but see below under
+  troubleshooting) now work too. Let us know if you get it working
+  elsewhere.
 
 If you got the source from cvs:
 
@@ -41,10 +48,10 @@ If you got the source from a tarball:
 
 If this doesn't work for you / troubleshooting:
 
-  If you couldn't find popt (eg you're on BSD), try
+  If you have problems finding libraries, try 
     CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
     ./configure
-  rather than simply ./configure. And install popt if you don't have it.
+  rather than simply ./configure.
 
   Check out the list archives at http://archives.seul.org/or/dev/ and see
   if somebody else has reported your problem. If not, please subscribe

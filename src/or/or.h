@@ -37,7 +37,6 @@
 #include <assert.h>
 #include <time.h>
 
-#include "../common/config.h"
 #include "../common/crypto.h"
 #include "../common/log.h"
 #include "../common/ss.h"
@@ -146,6 +145,24 @@
 
 #define CELL_PAYLOAD_SIZE 120
 #define CELL_NETWORK_SIZE 128
+
+/* enumeration of types which option values can take */
+#define CONFIG_TYPE_STRING  0
+#define CONFIG_TYPE_CHAR    1
+#define CONFIG_TYPE_INT     2
+#define CONFIG_TYPE_LONG    3
+#define CONFIG_TYPE_DOUBLE  4
+
+#define CONFIG_LINE_MAXLEN 1024
+
+/* legal characters in a filename */
+#define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
+
+struct config_line {
+  char *key;
+  char *value;
+  struct config_line *next;
+};
 
 typedef uint16_t aci_t;
 
@@ -348,7 +365,7 @@ typedef struct
    char *LogLevel;
    char *RouterFile;
    char *PrivateKeyFile;
-   float CoinWeight;
+   double CoinWeight;
    int ORPort;
    int OPPort;
    int APPort;
@@ -444,11 +461,28 @@ void command_process_connected_cell(cell_t *cell, connection_t *conn);
 
 /********************************* config.c ***************************/
 
-/* loads the configuration file */
-int getconfig(char *filename, config_opt_t *options);
+const char *basename(const char *filename);
 
-/* create or_options_t from command-line args and config files(s) */
-int getoptions(int argc, char **argv, or_options_t *options);
+/* open configuration file for reading */
+FILE *config_open(const unsigned char *filename);
+
+/* close configuration file */
+int config_close(FILE *f);
+
+struct config_line *config_get_commandlines(int argc, char **argv);
+
+/* parse the config file and strdup into key/value strings. Return list.
+ *  *  * Warn and ignore mangled lines. */
+struct config_line *config_get_lines(FILE *f);
+
+void config_free_lines(struct config_line *front);
+
+int config_compare(struct config_line *c, char *key, int type, void *arg);
+
+void config_assign(or_options_t *options, struct config_line *list);
+
+/* return 0 if success, <0 if failure. */
+int getconfig(int argc, char **argv, or_options_t *options);
 
 /********************************* connection.c ***************************/
 
