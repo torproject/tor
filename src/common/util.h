@@ -7,6 +7,8 @@
 
 #include <sys/time.h>
 
+void *tor_malloc(size_t size);
+
 /* Same as gettimeofday, but no need to check exit value. */
 void my_gettimeofday(struct timeval *timeval);
 /* Returns the number of microseconds between start and end.  Requires that

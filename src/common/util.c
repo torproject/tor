@@ -7,6 +7,19 @@
 #include "util.h"
 #include "log.h"
 
+void *tor_malloc(size_t size) {
+  void *result;
+
+  result = malloc(size);
+
+  if(!result) {
+    log(LOG_ERR,"tor_malloc(): Out of memory. Dying.");
+    exit(1);
+  }
+
+  return result;
+}
+
 void 
 my_gettimeofday(struct timeval *timeval) 
 {

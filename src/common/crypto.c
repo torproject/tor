@@ -91,9 +91,7 @@ crypto_pk_env_t *crypto_new_pk_env(int type)
 {
   crypto_pk_env_t *env;
   
-  env = (crypto_pk_env_t *)malloc(sizeof(crypto_pk_env_t));
-  if (!env)
-    return 0;
+  env = (crypto_pk_env_t *)tor_malloc(sizeof(crypto_pk_env_t));
   
   env->type = type;
   env->refs = 1;
@@ -185,9 +183,7 @@ crypto_cipher_env_t *crypto_new_cipher_env(int type)
   crypto_cipher_env_t *env;
   int iv_len, key_len;
   
-  env = (crypto_cipher_env_t *)malloc(sizeof(crypto_cipher_env_t));
-  if (!env)
-    return NULL;
+  env = (crypto_cipher_env_t *)tor_malloc(sizeof(crypto_cipher_env_t));
   
   env->type = type;
   env->key = NULL;
@@ -201,15 +197,15 @@ crypto_cipher_env_t *crypto_new_cipher_env(int type)
     /* This is not an openssl cipher */
     goto err;
   else {
-    env->aux = (unsigned char *)malloc(sizeof(EVP_CIPHER_CTX));
+    env->aux = (unsigned char *)tor_malloc(sizeof(EVP_CIPHER_CTX));
     EVP_CIPHER_CTX_init((EVP_CIPHER_CTX *)env->aux);
   }
 
-  if (iv_len && !(env->iv = (unsigned char *)malloc(iv_len)))
-    goto err;
+  if(iv_len)
+    env->iv = (unsigned char *)tor_malloc(iv_len);
 
-  if (key_len && !(env->key = (unsigned char *)malloc(key_len)))
-    goto err;
+  if(key_len)
+    env->key = (unsigned char *)tor_malloc(key_len);
   
   return env;
 err:
@@ -367,9 +363,7 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int 
         BIO_set_close(b, BIO_NOCLOSE); /* so BIO_free doesn't free buf */
         BIO_free(b);
 
-        *dest = malloc(buf->length+1);
-        if(!*dest)
-          return -1;
+        *dest = tor_malloc(buf->length+1);
         memcpy(*dest, buf->data, buf->length);
         (*dest)[buf->length] = 0; /* null terminate it */
         *len = buf->length;
@@ -453,25 +447,6 @@ int crypto_pk_check_key(crypto_pk_env_t *env)
     default:
       return -1;
   }
-}
-
-int crypto_pk_set_key(crypto_pk_env_t *env, unsigned char *key)
-{
-  assert(env && key);
-  
-  switch(env->type) {
-    case CRYPTO_PK_RSA:
-    if (!env->key)
-      return -1;
-    /* XXX BUG XXX you can't memcpy an RSA, it's got a bunch of subpointers */
-    assert(0);
-    memcpy((void *)env->key, (void *)key, sizeof(RSA));
-    break;
-    default :
-    return -1;
-  }
-  
-  return 0;
 }
 
 int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b) {
@@ -734,8 +709,7 @@ crypto_dh_env_t *crypto_dh_new()
   if (!dh_param_p)
     init_dh_param();
     
-  if (!(res = malloc(sizeof(crypto_dh_env_t))))
-    goto err;
+  res = tor_malloc(sizeof(crypto_dh_env_t));
   res->dh = NULL;
 
   if (!(res->dh = DH_new()))
