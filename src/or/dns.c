@@ -185,9 +185,10 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   return 0;
 }
 
-/* if onlyconn is NULL, cancel the whole thing. if onlyconn is defined,
- * then remove onlyconn from the pending list, and if the pending list
- * is now empty, cancel the whole thing.
+
+/* If onlyconn is NULL, cancel all pending connections. If onlyconn is
+ * defined, then remove onlyconn from the pending list.  Does not cancel the
+ * resolve itself, or remove the 'struct cached_resolve' from the cache.
  */
 void dns_cancel_pending_resolve(char *address, connection_t *onlyconn) {
   struct pending_connection_t *pend, *victim;
@@ -214,7 +215,6 @@ void dns_cancel_pending_resolve(char *address, connection_t *onlyconn) {
       if(resolve->pending_connections) {/* more pending, don't cancel it */
         log_fn(LOG_DEBUG, "Connection (fd %d) no longer waiting for resolve of '%s'",
                onlyconn->s, address);
-        return;
       }
     } else {
       for( ; pend->next; pend = pend->next) {
@@ -240,26 +240,6 @@ void dns_cancel_pending_resolve(char *address, connection_t *onlyconn) {
       free(pend);
     }
   }
-
-  /* remove resolve from the linked list */
-  if(resolve == oldest_cached_resolve) {
-    oldest_cached_resolve = resolve->next;
-    if(oldest_cached_resolve == NULL)
-      newest_cached_resolve = NULL;
-  } else {
-    /* FFFF make it a doubly linked list if this becomes too slow */
-    for(tmp=oldest_cached_resolve; tmp && tmp->next != resolve; tmp=tmp->next) ;
-    assert(tmp); /* it's got to be in the list, or we screwed up somewhere else */
-    tmp->next = resolve->next; /* unlink it */
-
-    if(newest_cached_resolve == resolve)
-      newest_cached_resolve = tmp;
-  }
-
-  /* remove resolve from the tree */
-  SPLAY_REMOVE(cache_tree, &cache_root, resolve);
-
-  free(resolve);
 }
 
 static void dns_found_answer(char *address, uint32_t addr) {
