@@ -142,7 +142,7 @@ crypto_log_errors(int severity, const char *doing)
   }
 }
 
-/** Initialize the crypto library.
+/** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
 int crypto_global_init()
 {
@@ -153,7 +153,7 @@ int crypto_global_init()
   return 0;
 }
 
-/** Uninitialize the crypto library.
+/** Uninitialize the crypto library. Return 0 on success, -1 on failure.
  */
 int crypto_global_cleanup()
 {
@@ -318,6 +318,7 @@ int crypto_pk_generate_key(crypto_pk_env_t *env)
 }
 
 /** Read a PEM-encoded private key from the string <b>s</b> into <b>env</b>.
+ * Return 0 on success, -1 on failure.
  */
 static int crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
                                                   const char *s)
@@ -502,10 +503,9 @@ int crypto_pk_DER64_encode_public_key(crypto_pk_env_t *env, char **out)
  */
 crypto_pk_env_t *crypto_pk_DER64_decode_public_key(const char *in)
 {
-  char buf1[PK_BYTES*2 + PK_BYTES/64 + 2];
+  char partitioned[PK_BYTES*2 + 16];
   char buf[PK_BYTES*2];
   int len;
-  int i;
   tor_assert(in);
   len = strlen(in);
 
@@ -514,11 +514,11 @@ crypto_pk_env_t *crypto_pk_DER64_decode_public_key(const char *in)
   }
   /* base64_decode doesn't work unless we insert linebreaks every 64
    * characters.  how dumb. */
-  for(i=0;i*64<len;i+=1) {
-    strncpy(buf1+(64+1)*i, in+64*i, 64);
-    strcpy(buf1+(64+1)*i + 64, "\n");
-  }
-  len = base64_decode(buf, sizeof(buf), buf1, strlen(buf1));
+  if (tor_strpartition(partitioned, sizeof(partitioned), in, "\n", 64))
+    return NULL;
+  if (strlcat(partitioned, "\n",sizeof(partitioned))>=sizeof(partitioned))
+    return NULL;
+  len = base64_decode(buf, sizeof(buf), partitioned, strlen(partitioned));
   if (len<0) {
     log_fn(LOG_WARN,"Error base-64 decoding key");
     return NULL;
@@ -567,7 +567,7 @@ int crypto_pk_keysize(crypto_pk_env_t *env)
   return RSA_size(env->key);
 }
 
-/** Increase the reference count of <b>env</b>.
+/** Increase the reference count of <b>env</b>, and return it.
  */
 crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *env) {
   tor_assert(env && env->key);
@@ -874,6 +874,7 @@ crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len)
 
 /** Given a private or public key <b>pk</b>, put a SHA1 hash of the
  * public key into <b>digest_out</b> (must have DIGEST_LEN bytes of space).
+ * Return 0 on success, -1 on failure.
  */
 int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
 {
@@ -900,7 +901,7 @@ int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
 
 /** Given a private or public key <b>pk</b>, put a fingerprint of the
  * public key into <b>fp_out</b> (must have at least FINGERPRINT_LEN+1 bytes of
- * space).  
+ * space).  Return 0 on success, -1 on failure.
  *
  * Fingerprints are computed as the SHA1 digest of the ASN.1 encoding
  * of the public key, converted to hexadecimal, in upper case, with a
@@ -911,29 +912,17 @@ int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
 int
 crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out, int add_space)
 {
-  unsigned char *bufp;
   unsigned char digest[DIGEST_LEN];
-  unsigned char buf[FINGERPRINT_LEN+1];
-  int i;
+  unsigned char hexdigest[HEX_DIGEST_LEN+1];
   if (crypto_pk_get_digest(pk, digest)) {
     return -1;
   }
-  bufp = buf;
-  for (i = 0; i < DIGEST_LEN; ++i) {
-    sprintf(bufp,"%02X",digest[i]);
-    bufp += 2;
-    if (add_space) {
-      if (i%2 && i != 19) {
-        *bufp++ = ' ';
-      }
-    }
-  }
-  *bufp = '\0';
+  base16_encode(hexdigest,sizeof(hexdigest),digest,DIGEST_LEN);
   if (add_space) {
-    tor_assert(strlen(buf) == FINGERPRINT_LEN);
-    tor_assert(crypto_pk_check_fingerprint_syntax(buf));
+    tor_strpartition(fp_out, FINGERPRINT_LEN+1, hexdigest, " ", 4);
+  } else {
+    strcpy(fp_out, hexdigest);
   }
-  strcpy(fp_out, buf);
   return 0;
 }
 
@@ -968,6 +957,7 @@ int crypto_cipher_generate_key(crypto_cipher_env_t *env)
 
 /** Set the symmetric key for the cipher in <b>env</b> to the first
  * CIPHER_KEY_LEN bytes of <b>key</b>. Does not initialize the cipher.
+ * Return 0 on success, -1 on failure.
  */
 int crypto_cipher_set_key(crypto_cipher_env_t *env, const unsigned char *key)
 {
@@ -988,7 +978,8 @@ const unsigned char *crypto_cipher_get_key(crypto_cipher_env_t *env)
   return env->key;
 }
 
-/** Initialize the cipher in <b>env</b> for encryption.
+/** Initialize the cipher in <b>env</b> for encryption.  Return 0 on
+ * success, -1 on failure.
  */
 int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
 {
@@ -998,7 +989,8 @@ int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
   return 0;
 }
 
-/** Initialize the cipher in <b>env</b> for decryption.
+/** Initialize the cipher in <b>env</b> for decryption. Return 0 on
+ * success, -1 on failure.
  */
 int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
 {
@@ -1033,6 +1025,7 @@ int crypto_cipher_decrypt(crypto_cipher_env_t *env, const unsigned char *from, u
 }
 
 /** Move the position of the cipher stream backwards by <b>delta</b> bytes.
+ * Return 0 on suuccess, -1 on failure.
  */
 int
 crypto_cipher_rewind(crypto_cipher_env_t *env, long delta)
@@ -1041,6 +1034,7 @@ crypto_cipher_rewind(crypto_cipher_env_t *env, long delta)
 }
 
 /** Move the position of the cipher stream forwards by <b>delta</b> bytes.
+ * Return 0 on suuccess, -1 on failure.
  */
 int
 crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
@@ -1053,6 +1047,7 @@ crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
 
 /** Compute the SHA1 digest of <b>len</b> bytes in data stored in
  * <b>m</b>.  Write the DIGEST_LEN byte result into <b>digest</b>.
+ * Return 0 on suuccess, -1 on failure.
  */
 int crypto_digest(const unsigned char *m, int len, unsigned char *digest)
 {
@@ -1269,9 +1264,10 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
 #undef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
 /** Given a DH key exchange object, and our peer's value of g^y (as a
- * <b>pubkey_len</b> byte value in <b>pubkey</b>) generate
+ * <b>pubkey_len</b>-byte value in <b>pubkey</b>) generate
  * <b>secret_bytes_out</b> bytes of shared key material and write them
- * to <b>secret_out</b>.
+ * to <b>secret_out</b>.  Return the number of bytes generated on suuccess,
+ * or -1 on failure.
  *
  * (We generate key material by computing
  *         SHA1( g^xy || "\x00" ) || SHA1( g^xy || "\x01" ) || ...
@@ -1324,7 +1320,7 @@ void crypto_dh_free(crypto_dh_env_t *dh)
 /* random numbers */
 
 /** Seed OpenSSL's random number generator with DIGEST_LEN bytes from the
- * operating system.
+ * operating system.  Return 0 on suuccess, -1 on failure.
  */
 int crypto_seed_rng()
 {
