@@ -764,7 +764,7 @@ static int do_hup(void) {
     router_rebuild_descriptor();
     sprintf(keydir,"%s/router.desc", get_data_directory(&options));
     log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
-    if (write_str_to_file(keydir, router_get_my_descriptor())) {
+    if (write_str_to_file(keydir, router_get_my_descriptor(), 0)) {
       return -1;
     }
   }

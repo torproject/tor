@@ -317,7 +317,7 @@ int rend_service_load_keys(void)
       return -1;
     }
     sprintf(buf, "%s.onion\n", s->service_id);
-    if (write_str_to_file(fname,buf)<0)
+    if (write_str_to_file(fname,buf,0)<0)
       return -1;
   }
   return 0;

@@ -345,7 +345,7 @@ int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *k
   tor_assert(env && keyfile);
 
   /* open the keyfile */
-  f_pr=fopen(keyfile,"rb");
+  f_pr=fopen(keyfile,"r");
   if (!f_pr)
     return -1;
 
@@ -449,7 +449,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   s = tor_malloc(len+1);
   strncpy(s, cp, len);
   s[len] = '\0';
-  r = write_str_to_file(fname, s);
+  r = write_str_to_file(fname, s, 0);
   BIO_free(bio);
   free(s);
   return r;
