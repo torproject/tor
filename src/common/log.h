@@ -30,6 +30,11 @@
 
 void log_set_severity(int severity);
 
+void add_stream_log(int loglevel, const char *name, FILE *stream);
+void add_file_log(int severity, const char *filename);
+void close_logs();
+void reset_logs();
+
 /* Outputs a message to stdout */
 void log(int severity, const char *format, ...) CHECK_PRINTF(2,3);
 
