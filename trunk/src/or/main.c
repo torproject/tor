@@ -292,7 +292,7 @@ static void run_connection_housekeeping(int i, time_t now) {
     return;
 
   if(now >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
-    if((!options.OnionRouter && !circuit_get_by_conn(conn)) ||
+    if((!options.ORPort && !circuit_get_by_conn(conn)) ||
        (!connection_state_is_open(conn))) {
       /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
       log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
@@ -322,7 +322,7 @@ static void run_scheduled_events(time_t now) {
    *    our descriptor (if any). */
   if(time_to_fetch_directory < now) {
     /* it's time to fetch a new directory and/or post our descriptor */
-    if(options.OnionRouter) {
+    if(options.ORPort) {
       router_rebuild_descriptor();
       router_upload_desc_to_dirservers();
     }
@@ -485,7 +485,7 @@ static int init_keys(void)
   crypto_pk_env_t *prkey;
 
   /* OP's don't need keys.  Just initialize the TLS context.*/
-  if (!options.OnionRouter) {
+  if (!options.ORPort) {
     assert(!options.DirPort);
     if (tor_tls_context_new(NULL, 0, NULL)<0) {
       log_fn(LOG_ERR, "Error creating TLS context for OP.");
@@ -652,7 +652,7 @@ static int do_main_loop(void) {
     return -1;
   }
 
-  if(options.OnionRouter) {
+  if(options.ORPort) {
     cpu_init(); /* launch cpuworkers. Need to do this *after* we've read the onion key. */
     router_upload_desc_to_dirservers(); /* upload our descriptor to all dirservers */
   }
@@ -674,7 +674,7 @@ static int do_main_loop(void) {
       please_dumpstats = 0;
     }
     if(please_reset) {
-      log_fn(LOG_INFO,"Hupped. Reloading config.");
+      log_fn(LOG_WARN,"Received sighup. Reloading config.");
       /* first, reload config variables, in case they've changed */
       if (init_from_config(0, NULL) < 0) {
         /* no need to provide argc/v, they've been cached inside init_from_config */
@@ -828,7 +828,7 @@ int tor_main(int argc, char *argv[]) {
   if (init_from_config(argc,argv) < 0)
     return -1;
 
-  if(options.OnionRouter) { /* only spawn dns handlers if we're a router */
+  if(options.ORPort) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
   if(options.SocksPort) {

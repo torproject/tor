@@ -386,7 +386,7 @@ static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
       log_fn(LOG_DEBUG,"Nope, the directory says %d is not running.",i);
       goto next_i_loop;
     }
-    if(options.OnionRouter) {
+    if(options.ORPort) {
       conn = connection_exact_get_by_addr_port(rarray[i]->addr, rarray[i]->or_port);
       if(!conn || conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN) {
         log_fn(LOG_DEBUG,"Nope, %d is not connected.",i);
@@ -457,6 +457,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     return -1;
   }
  start:
+  /* XXX through each of these, don't pick nodes that are down */
   if(cur_len == 0) { /* picking entry node */
     log_fn(LOG_DEBUG, "Contemplating first hop: random choice.");
     choice = rarray[crypto_pseudo_rand_int(rarray_len)];
@@ -474,7 +475,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
       !strcasecmp(choice->nickname, state->chosen_exit)) {
     goto again;
   }
-    
+
   for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {
     r = router_get_by_addr_port(cpath->addr, cpath->port);
     if ((r && !crypto_pk_cmp_keys(r->onion_pkey, choice->onion_pkey))
@@ -482,7 +483,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
             !strcasecmp(choice->nickname, state->chosen_exit))
         || (cpath->addr == choice->addr && 
             cpath->port == choice->or_port)
-        || (options.OnionRouter && 
+        || (options.ORPort &&
             !(connection_twin_get_by_addr_port(choice->addr,
                                                choice->or_port)))) {
       goto again;
