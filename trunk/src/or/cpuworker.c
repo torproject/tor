@@ -58,7 +58,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_CPUWORKER);
 
   if(conn->inbuf_reached_eof) {
-    log_fn(LOG_WARN,"Read eof. Worker dying.");
+    log_fn(LOG_WARN,"Read eof. Worker has died.");
     if(conn->state != CPUWORKER_STATE_IDLE) {
       /* the circ associated with this cpuworker will have to wait until
        * it gets culled in run_connection_housekeeping(), since we have

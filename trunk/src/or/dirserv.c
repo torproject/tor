@@ -52,7 +52,7 @@ dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
 }
 
 /* return 0 on success, -1 on failure */
-int 
+int
 dirserv_parse_fingerprint_file(const char *fname)
 {
   FILE *file;
@@ -172,7 +172,7 @@ static void free_descriptor_entry(descriptor_entry_t *desc)
   free(desc);
 }
 
-void 
+void
 dirserv_free_descriptors()
 {
   int i;
@@ -311,7 +311,7 @@ dirserv_init_from_directory_string(const char *dir)
   return 0;
 }
 
-static int 
+static int
 list_running_servers(char **nicknames_out)
 {
   char *nickname_lst[MAX_ROUTERS_IN_DIR];
@@ -323,7 +323,7 @@ list_running_servers(char **nicknames_out)
   int length;
   *nicknames_out = NULL;
   nickname_lst[n++] = options.Nickname;
-  
+
   get_connection_array(&connection_array, &n_conns);
   for (i = 0; i<n_conns; ++i) {
     conn = connection_array[i];
@@ -348,7 +348,6 @@ list_running_servers(char **nicknames_out)
   }
   return 0;
 }
-
 
 int
 dirserv_dump_directory_to_string(char *s, int maxlen,
@@ -400,8 +399,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
       ((int)digest[0])&0xff,((int)digest[1])&0xff,
       ((int)digest[2])&0xff,((int)digest[3])&0xff);
 
-  strncpy(cp, 
-          "-----BEGIN SIGNATURE-----\n", maxlen-i);
+  strncpy(cp, "-----BEGIN SIGNATURE-----\n", maxlen-i);
 
   i = strlen(s);
   cp = s+i;

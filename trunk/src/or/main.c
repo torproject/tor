@@ -481,8 +481,9 @@ static int do_main_loop(void) {
         /* no need to provide argc/v, they've been cached inside init_from_config */
         exit(1);
       }
-      if(options.ORPort) {
-        router_retry_connections();
+      if(retry_all_connections() < 0) {
+        log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
+        return -1;
       }
       if(options.DirPort) {
         /* reload the fingerprint file */
