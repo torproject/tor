@@ -597,7 +597,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
     cached_directory = tor_strdup(directory);
     cached_directory_len = strlen(cached_directory);
     cached_directory_published = when;
-    sprintf(filename,"%s/cached-directory", options.DataDirectory);
+    sprintf(filename,"%s/cached-directory", get_data_directory(&options));
     if(write_str_to_file(filename,cached_directory) < 0) {
       log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
     }
@@ -643,7 +643,7 @@ size_t dirserv_get_directory(const char **directory)
       exit(0);
     }
     free(new_directory);
-    sprintf(filename,"%s/cached-directory", options.DataDirectory);
+    sprintf(filename,"%s/cached-directory", get_data_directory(&options));
     if(write_str_to_file(filename,the_directory) < 0) {
       log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
     }

@@ -98,7 +98,7 @@ void rotate_onion_key(void)
 {
   char fname[512];
   crypto_pk_env_t *prkey;
-  sprintf(fname,"%s/keys/onion.key",options.DataDirectory);
+  sprintf(fname,"%s/keys/onion.key",get_data_directory(&options));
   if (!(prkey = crypto_new_pk_env())) {
     log(LOG_ERR, "Error creating crypto environment.");
     goto error;
@@ -183,7 +183,7 @@ int init_keys(void) {
   char keydir[512];
   char fingerprint[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3];
   char *cp;
-  const char *tmp, *mydesc;
+  const char *tmp, *mydesc, *datadir;
   crypto_pk_env_t *prkey;
 
   if (!key_lock)
@@ -199,16 +199,17 @@ int init_keys(void) {
     return 0;
   }
   /* Make sure DataDirectory exists, and is private. */
-  tor_assert(options.DataDirectory);
-  if (strlen(options.DataDirectory) > (512-128)) {
+  datadir = get_data_directory(&options);
+  tor_assert(datadir);
+  if (strlen(datadir) > (512-128)) {
     log_fn(LOG_ERR, "DataDirectory is too long.");
     return -1;
   }
-  if (check_private_dir(options.DataDirectory, 1)) {
+  if (check_private_dir(datadir, 1)) {
     return -1;
   }
   /* Check the key directory. */
-  sprintf(keydir,"%s/keys",options.DataDirectory);
+  sprintf(keydir,"%s/keys", datadir);
   if (check_private_dir(keydir, 1)) {
     return -1;
   }
@@ -249,13 +250,13 @@ int init_keys(void) {
     log(LOG_ERR, "Unable to add own descriptor to directory.");
     return -1;
   }
-  sprintf(keydir,"%s/router.desc", options.DataDirectory);
+  sprintf(keydir,"%s/router.desc", datadir);
   log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
   if (write_str_to_file(keydir, mydesc)) {
     return -1;
   }
   /* 5. Dump fingerprint to 'fingerprint' */
-  sprintf(keydir,"%s/fingerprint", options.DataDirectory);
+  sprintf(keydir,"%s/fingerprint", datadir);
   log_fn(LOG_INFO,"Dumping fingerprint to %s...",keydir);
   tor_assert(strlen(options.Nickname) <= MAX_NICKNAME_LEN);
   strcpy(fingerprint, options.Nickname);
@@ -271,14 +272,14 @@ int init_keys(void) {
   if(!options.DirPort)
     return 0;
   /* 6. [dirserver only] load approved-routers file */
-  sprintf(keydir,"%s/approved-routers", options.DataDirectory);
+  sprintf(keydir,"%s/approved-routers", datadir);
   log_fn(LOG_INFO,"Loading approved fingerprints from %s...",keydir);
   if(dirserv_parse_fingerprint_file(keydir) < 0) {
     log_fn(LOG_ERR, "Error loading fingerprints");
     return -1;
   }
   /* 7. [dirserver only] load old directory, if it's there */
-  sprintf(keydir,"%s/cached-directory", options.DataDirectory);
+  sprintf(keydir,"%s/cached-directory", datadir);
   log_fn(LOG_INFO,"Loading cached directory from %s...",keydir);
   cp = read_file_to_str(keydir);
   if(!cp) {
@@ -286,12 +287,13 @@ int init_keys(void) {
   } else {
     if(options.AuthoritativeDir && dirserv_load_from_directory_string(cp) < 0){
       log_fn(LOG_ERR, "Cached directory %s is corrupt", keydir);
-      free(cp);
+      tor_free(cp);
       return -1;
     }
     /* set time to 1 so it will be replaced on first download.
      */
     dirserv_set_cached_directory(cp, 1);
+    tor_free(cp);
   }
   /* success */
   return 0;
