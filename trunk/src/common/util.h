@@ -67,6 +67,7 @@ file_status_t file_status(const char *filename);
  */
 int check_private_dir(const char *dirname, int create);
 int write_str_to_file(const char *fname, const char *str);
+char *read_file_to_str(const char *filename);
 
 /* Minimalist interface to run a void function in the background.  On
    unix calls fork, on win32 calls beginthread.  Returns -1 on failure.

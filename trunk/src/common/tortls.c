@@ -78,6 +78,7 @@ tor_tls_get_error(tor_tls *tls, int r, int extra,
     case SSL_ERROR_SYSCALL:
       if (extra&CATCH_SYSCALL)
 	return _TOR_TLS_SYSCALL;
+      assert(severity != LOG_ERR); /* XXX remove me when the bug is found */
       log(severity, "TLS error: <syscall error>.");
       return TOR_TLS_ERROR;
     case SSL_ERROR_ZERO_RETURN:
@@ -485,7 +486,7 @@ tor_tls_verify(tor_tls *tls)
 }
 
 int 
-tor_tls_get_pending_bytees(tor_tls *tls)
+tor_tls_get_pending_bytes(tor_tls *tls)
 {
   assert(tls);
   return SSL_pending(tls->ssl);
