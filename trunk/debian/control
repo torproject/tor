@@ -7,7 +7,7 @@ Standards-Version: 3.6.1
 
 Package: tor
 Architecture: any
-Depends: ${shlibs:Depends}
+Depends: ${shlibs:Depends}, adduser
 Recommends: privoxy, tsocks
 Suggests: mixmaster, mixminion, anon-proxy
 Description: anonymous communication system
