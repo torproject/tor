@@ -1115,6 +1115,7 @@ void dirserv_remove_old_servers(void);
 void dns_init(void);
 int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
+void dnsworkers_rotate(void);
 void connection_dns_remove(connection_t *conn);
 void assert_connection_edge_not_dns_pending(connection_t *conn);
 void assert_all_pending_dns_resolves_ok(void);
