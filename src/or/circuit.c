@@ -683,7 +683,7 @@ static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
 //  log_fn(LOG_DEBUG,"before crypt: %d",rh.recognized);
   if(( encrypt_mode && crypto_cipher_encrypt(cipher, in, CELL_PAYLOAD_SIZE, out)) ||
      (!encrypt_mode && crypto_cipher_decrypt(cipher, in, CELL_PAYLOAD_SIZE, out))) {
-    log_fn(LOG_WARN,"Error during crypt: %s", crypto_perror());
+    log_fn(LOG_WARN,"Error during relay encryption");
     return -1;
   }
   memcpy(in,out,CELL_PAYLOAD_SIZE);

@@ -25,6 +25,15 @@
 #ifdef HAVE_CTYPE_H
 #include <ctype.h>
 #endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+#ifdef HAVE_SYS_FCNTL_H
+#include <sys/fcntl.h>
+#endif
 
 #include "crypto.h"
 #include "log.h"
@@ -97,6 +106,25 @@ crypto_get_rsa_padding(int padding) {
 
 static int _crypto_global_initialized = 0;
 
+
+/* errors */
+static void
+crypto_log_errors(int severity, const char *doing)
+{
+  int err;
+  const char *msg, *lib, *func;
+  while ((err = ERR_get_error()) != 0) {
+    msg = (const char*)ERR_reason_error_string(err);
+    lib = (const char*)ERR_lib_error_string(err);
+    func = (const char*)ERR_func_error_string(err);
+    if (!msg) msg = "(null)";
+    if (doing) {
+      log(severity, "crypto error while %s: %s (in %s:%s)", doing, msg, lib,func);
+    } else {
+      log(severity, "crypto error: %s (in %s:%s)", msg, lib, func);
+    }
+  }
+}
 int crypto_global_init()
 {
   if (!_crypto_global_initialized) {
@@ -199,12 +227,12 @@ crypto_create_init_cipher(const char *key, const char *iv, int encrypt_mode)
   }
 
   if (crypto_cipher_set_key(crypto, key)) {
-    log_fn(LOG_WARN, "Unable to set key: %s", crypto_perror());
+    crypto_log_errors(LOG_WARN, "setting symmetric key");
     goto error;
   }
 
   if (crypto_cipher_set_iv(crypto, iv)) {
-    log_fn(LOG_WARN, "Unable to set iv: %s", crypto_perror());
+    crypto_log_errors(LOG_WARN, "setting IV");
     goto error;
   }
 
@@ -213,10 +241,8 @@ crypto_create_init_cipher(const char *key, const char *iv, int encrypt_mode)
   else
     r = crypto_cipher_decrypt_init_cipher(crypto);
 
-  if (r) {
-    log_fn(LOG_WARN, "Unable to initialize cipher: %s", crypto_perror());
+  if (r)
     goto error;
-  }
   return crypto;
 
  error:
@@ -251,21 +277,26 @@ int crypto_pk_generate_key(crypto_pk_env_t *env)
   if (env->key)
     RSA_free(env->key);
   env->key = RSA_generate_key(PK_BITS,65537, NULL, NULL);
-  if (!env->key)
+  if (!env->key) {
+    crypto_log_errors(LOG_WARN, "generating RSA key");
     return -1;
+  }
 
   return 0;
 }
 
-int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env, FILE *src)
+static int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env,
+                                                FILE *src)
 {
   tor_assert(env && src);
 
   if (env->key)
     RSA_free(env->key);
   env->key = PEM_read_RSAPrivateKey(src, NULL, NULL, NULL);
-  if (!env->key)
+  if (!env->key) {
+    crypto_log_errors(LOG_WARN, "reading private key from file");
     return -1;
+  }
 
   return 0;
 }
@@ -288,33 +319,13 @@ int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *k
 
   /* read the private key */
   if(crypto_pk_read_private_key_from_file(env, f_pr) < 0) {
-    log_fn(LOG_WARN,"Error reading private key : %s",crypto_perror());
     fclose(f_pr);
     return -1;
   }
   fclose(f_pr);
 
   /* check the private key */
-  switch(crypto_pk_check_key(env)) {
-    case 0:
-      log_fn(LOG_WARN,"Private key read but is invalid : %s.", crypto_perror());
-      return -1;
-    case -1:
-      log_fn(LOG_WARN,"Private key read but validity checking failed : %s",crypto_perror());
-      return -1;
-    /* case 1: fall through */
-  }
-  return 0;
-}
-
-int crypto_pk_read_public_key_from_file(crypto_pk_env_t *env, FILE *src)
-{
-  tor_assert(env && src);
-
-  if(env->key)
-    RSA_free(env->key);
-  env->key = PEM_read_RSAPublicKey(src, NULL, NULL, NULL);
-  if (!env->key)
+  if (crypto_pk_check_key(env) <= 0)
     return -1;
 
   return 0;
@@ -331,8 +342,10 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int 
   /* Now you can treat b as if it were a file.  Just use the
    * PEM_*_bio_* functions instead of the non-bio variants.
    */
-  if(!PEM_write_bio_RSAPublicKey(b, env->key))
+  if(!PEM_write_bio_RSAPublicKey(b, env->key)) {
+    crypto_log_errors(LOG_WARN, "writing public key to string");
     return -1;
+  }
 
   BIO_get_mem_ptr(b, &buf);
   BIO_set_close(b, BIO_NOCLOSE); /* so BIO_free doesn't free buf */
@@ -360,8 +373,10 @@ int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src,
     RSA_free(env->key);
   env->key = PEM_read_bio_RSAPublicKey(b, NULL, NULL, NULL);
   BIO_free(b);
-  if(!env->key)
+  if(!env->key) {
+    crypto_log_errors(LOG_WARN, "reading public key from string");
     return -1;
+  }
 
   return 0;
 }
@@ -382,6 +397,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
     return -1;
   if (PEM_write_bio_RSAPrivateKey(bio, env->key, NULL,NULL,0,NULL,NULL)
       == 0) {
+    crypto_log_errors(LOG_WARN, "writing private key");
     BIO_free(bio);
     return -1;
   }
@@ -395,34 +411,15 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   return r;
 }
 
-int crypto_pk_write_private_key_to_file(crypto_pk_env_t *env, FILE *dest)
-{
-  tor_assert(env && dest);
-
-  if (!env->key)
-    return -1;
-  if (PEM_write_RSAPrivateKey(dest, env->key, NULL, NULL, 0,0, NULL) == 0)
-    return -1;
-
-  return 0;
-}
-int crypto_pk_write_public_key_to_file(crypto_pk_env_t *env, FILE *dest)
-{
-  tor_assert(env && dest);
-
-  if (!env->key)
-    return -1;
-  if (PEM_write_RSAPublicKey(dest, env->key) == 0)
-    return -1;
-
-  return 0;
-}
-
 int crypto_pk_check_key(crypto_pk_env_t *env)
 {
+  int r;
   tor_assert(env);
 
-  return RSA_check_key(env->key);
+  r = RSA_check_key(env->key);
+  if (r <= 0)
+    crypto_log_errors(LOG_WARN,"checking RSA key");
+  return r;
 }
 
 int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b) {
@@ -459,37 +456,54 @@ crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *env) {
 
 int crypto_pk_public_encrypt(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to, int padding)
 {
+  int r;
   tor_assert(env && from && to);
 
-  return RSA_public_encrypt(fromlen, (unsigned char*)from, to, env->key,
+  r = RSA_public_encrypt(fromlen, (unsigned char*)from, to, env->key,
                             crypto_get_rsa_padding(padding));
+  if (r<0)
+    crypto_log_errors(LOG_WARN, "performing RSA encryption");
+  return r;
 }
 
 int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to, int padding)
 {
+  int r;
   tor_assert(env && from && to && env->key);
   if (!env->key->p)
     /* Not a private key */
     return -1;
 
-  return RSA_private_decrypt(fromlen, (unsigned char*)from, to, env->key,
+  r = RSA_private_decrypt(fromlen, (unsigned char*)from, to, env->key,
                              crypto_get_rsa_padding(padding));
+  if (r<0)
+    crypto_log_errors(LOG_WARN, "performing RSA decryption");
+  return r;
 }
 
 int crypto_pk_public_checksig(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
 {
+  int r;
   tor_assert(env && from && to);
-  return RSA_public_decrypt(fromlen, (unsigned char*)from, to, env->key, RSA_PKCS1_PADDING);
+  r = RSA_public_decrypt(fromlen, (unsigned char*)from, to, env->key, RSA_PKCS1_PADDING);
+
+  if (r<0)
+    crypto_log_errors(LOG_WARN, "checking RSA signature");
+  return r;
 }
 
 int crypto_pk_private_sign(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
 {
+  int r;
   tor_assert(env && from && to);
   if (!env->key->p)
     /* Not a private key */
     return -1;
 
-  return RSA_private_encrypt(fromlen, (unsigned char*)from, to, env->key, RSA_PKCS1_PADDING);
+  r = RSA_private_encrypt(fromlen, (unsigned char*)from, to, env->key, RSA_PKCS1_PADDING);
+  if (r<0)
+    crypto_log_errors(LOG_WARN, "generating RSA signature");
+  return r;
 }
 
 /* Return 0 if sig is a correct signature for SHA1(data).  Else return -1.
@@ -667,6 +681,7 @@ int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
   cp = buf = tor_malloc(len+1);
   len = i2d_RSAPublicKey(pk->key, &cp);
   if (len < 0) {
+    crypto_log_errors(LOG_WARN,"encoding public key");
     tor_free(buf);
     return -1;
   }
@@ -696,8 +711,10 @@ crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len)
   memcpy(buf,str,len);
   rsa = d2i_RSAPublicKey(NULL, &cp, len);
   tor_free(buf);
-  if (!rsa)
-    return NULL; /* XXXX log openssl error */
+  if (!rsa) {
+    crypto_log_errors(LOG_WARN,"decoding public key");
+    return NULL;
+  }
   return _crypto_new_pk_env_rsa(rsa);
 }
 
@@ -715,6 +732,7 @@ int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
   buf = bufp = tor_malloc(len+1);
   len = i2d_RSAPublicKey(pk->key, &bufp);
   if (len < 0) {
+    crypto_log_errors(LOG_WARN,"encoding public key");
     free(buf);
     return -1;
   }
@@ -987,6 +1005,7 @@ crypto_dh_env_t *crypto_dh_new()
 
   return res;
  err:
+  crypto_log_errors(LOG_WARN, "creating DH object");
   if (res && res->dh) DH_free(res->dh); /* frees p and g too */
   if (res) free(res);
   return NULL;
@@ -998,8 +1017,10 @@ int crypto_dh_get_bytes(crypto_dh_env_t *dh)
 }
 int crypto_dh_generate_public(crypto_dh_env_t *dh)
 {
-  if (!DH_generate_key(dh->dh))
+  if (!DH_generate_key(dh->dh)) {
+    crypto_log_errors(LOG_WARN, "generating DH key");
     return -1;
+  }
   return 0;
 }
 int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
@@ -1007,7 +1028,7 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
   int bytes;
   tor_assert(dh);
   if (!dh->dh->pub_key) {
-    if (!DH_generate_key(dh->dh))
+    if (crypto_dh_generate_public(dh)<0)
       return -1;
   }
 
@@ -1053,6 +1074,7 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
  error:
   secret_len = -1;
  done:
+  crypto_log_errors(LOG_WARN, "completing DH handshake");
   if (pubkey_bn)
     BN_free(pubkey_bn);
   tor_free(secret_tmp);
@@ -1104,16 +1126,16 @@ int crypto_seed_rng()
   static char *filenames[] = {
     "/dev/srandom", "/dev/urandom", "/dev/random", NULL
   };
+  int fd;
   int i, n;
   char buf[DIGEST_LEN+1];
-  FILE *f;
 
   for (i = 0; filenames[i]; ++i) {
-    f = fopen(filenames[i], "rb");
-    if (!f) continue;
+    fd = open(filenames[i], O_RDONLY, 0);
+    if (fd<0) continue;
     log_fn(LOG_INFO, "Seeding RNG from %s", filenames[i]);
-    n = fread(buf, 1, DIGEST_LEN, f);
-    fclose(f);
+    n = read(fd, buf, DIGEST_LEN);
+    close(fd);
     if (n != DIGEST_LEN) {
       log_fn(LOG_WARN, "Error reading from entropy source");
       return -1;
@@ -1129,8 +1151,12 @@ int crypto_seed_rng()
 
 int crypto_rand(unsigned int n, unsigned char *to)
 {
+  int r;
   tor_assert(to);
-  return (RAND_bytes(to, n) != 1);
+  r = RAND_bytes(to, n);
+  if (r == 0)
+    crypto_log_errors(LOG_WARN, "generating random data");
+  return (r != 1);
 }
 
 void crypto_pseudo_rand(unsigned int n, unsigned char *to)
@@ -1138,6 +1164,7 @@ void crypto_pseudo_rand(unsigned int n, unsigned char *to)
   tor_assert(to);
   if (RAND_pseudo_bytes(to, n) == -1) {
     log_fn(LOG_ERR, "RAND_pseudo_bytes failed unexpectedly.");
+    crypto_log_errors(LOG_WARN, "generating random data");
     exit(1);
   }
 }
@@ -1159,12 +1186,6 @@ int crypto_pseudo_rand_int(unsigned int max) {
     if (val < cutoff)
       return val % max;
   }
-}
-
-/* errors */
-const char *crypto_perror()
-{
-  return (const char *)ERR_reason_error_string(ERR_get_error());
 }
 
 int
