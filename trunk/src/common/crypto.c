@@ -351,6 +351,7 @@ int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src,
   if (env->key)
     RSA_free(env->key);
   env->key = PEM_read_bio_RSAPublicKey(b, NULL, NULL, NULL);
+  BIO_free(b);
   if(!env->key)
     return -1;
 
@@ -708,6 +709,7 @@ int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
     free(buf);
     return -1;
   }
+  free(buf);
   return 0;
 }
 
