@@ -221,25 +221,58 @@ get_recommended_software_from_directory(const char *str)
 #undef REC
 }
 
-/** Return 1 if myversion is in versionlist. Else return 0.
- * (versionlist is a comma-separated list of versions.) */
-/* static */ int is_recommended_version(const char *myversion,
+/** Return 1 if <b>myversion</b> is not in <b>versionlist</b>, and if at least
+ * one version of Tor on <b>versionlist</b> is newer than <b>myversion</b>.
+ * Otherwise return 0.
+ * (versionlist is a comma-separated list of version strings,
+ * optionally prefixed with "Tor".  Versions that can't be parsed are
+ * ignored.) */
+/* static */ int is_obsolete_version(const char *myversion,
                            const char *versionlist) {
-  int len_myversion = strlen(myversion);
-  char *comma;
-  const char *end = versionlist + strlen(versionlist);
+  char *version, *comma, *cp;
+  tor_version_t mine, other;
+  int found_newer = 0, r;
 
   log_fn(LOG_DEBUG,"checking '%s' in '%s'.", myversion, versionlist);
 
+  if (tor_version_parse(myversion, &mine)) {
+    log_fn(LOG_ERR, "I couldn't parse my own version (%s)", myversion);
+    tor_assert(0);
+  }
+
   for(;;) {
     comma = strchr(versionlist, ',');
-    if( ((comma ? comma : end) - versionlist == len_myversion) &&
-       !strncmp(versionlist, myversion, len_myversion))
-      /* only do strncmp if the length matches */
-      return 1; /* success, it's there */
-    if(!comma)
-      return 0; /* nope */
-    versionlist = comma+1;
+    version = tor_strndup(versionlist,
+                          comma?(comma-versionlist):strlen(versionlist));
+    cp = version;
+    while (isspace(*cp))
+      ++cp;
+    if (!strncmp(cp, "Tor ", 4))
+      cp += 4;
+
+    if (tor_version_parse(cp, &other)) {
+      /* Couldn't parse other; it can't be a match. */
+    } else {
+      r = tor_version_compare(&mine, &other);
+      if (r==0) {
+        tor_free(version);
+        return 0; /* It's a match. */
+      } else if (r<0) {
+        found_newer = 1;
+      }
+    }
+    tor_free(version);
+    if (comma)
+      versionlist = comma+1;
+    else
+      break;
+  }
+  if (!found_newer) {
+    log_fn(LOG_WARN, "This version of Tor (%s) is newer than any on the recommended list (%s)",
+           myversion, versionlist);
+    return 0;
+  } else {
+    return 1;
   }
 }
 
@@ -254,11 +287,7 @@ int check_software_version_against_directory(const char *directory,
     log_fn(LOG_WARN, "No recommended-versions string found in directory");
     return -1;
   }
-  /* Look for versions of the form "0.1.0" and of the form "Tor 0.1.0".
-   * Eventually, we should deprecate the first form.
-   */
-  if (is_recommended_version(VERSION, v) ||
-      is_recommended_version("Tor "VERSION, v)) {
+  if (!is_obsolete_version(VERSION, v)) {
     tor_free(v);
     return 0;
   }
@@ -1376,30 +1405,6 @@ int tor_version_compare(tor_version_t *a, tor_version_t *b)
   else
     return 0;
 }
-
-static tor_version_t *my_tor_version=NULL;
-
-/** 1 for unequal, newer or can't tell; 0 for equal, -1 for older. */
-int tor_version_compare_to_mine(const char *s)
-{
-  tor_version_t v;
-
-  if (!my_tor_version) {
-    my_tor_version = tor_malloc(sizeof(tor_version_t));
-    if (tor_version_parse(VERSION, my_tor_version)) {
-      log_fn(LOG_ERR, "I couldn't parse my own version ("VERSION")");
-      exit(1);
-    }
-  }
-
-  if (tor_version_parse(s,&v)) {
-    log_fn(LOG_WARN, "Unparseable tor version %s", s);
-    return 1;
-  }
-
-  return tor_version_compare(my_tor_version, &v);
-}
-
 
 /*
   Local Variables:

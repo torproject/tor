@@ -647,7 +647,7 @@ test_onion_handshake() {
 }
 
 /* from routerparse.c */
-int is_recommended_version(const char *myversion, const char *start);
+int is_obsolete_version(const char *myversion, const char *start);
 
 void
 test_dir_format()
@@ -816,16 +816,6 @@ test_dir_format()
   tor_free(dir1); /* XXXX And more !*/
   tor_free(dir2); /* And more !*/
 
-  /* make sure is_recommended_version() works */
-  test_eq(1, is_recommended_version("abc", "abc"));
-  test_eq(1, is_recommended_version("abc", "ab,abd,abde,abc,abcde"));
-  test_eq(1, is_recommended_version("abc", "ab,abd,abde,abcde,abc"));
-  test_eq(1, is_recommended_version("abc", "abc,abd,abde,abc,abcde"));
-  test_eq(1, is_recommended_version("a", "a,ab,abd,abde,abc,abcde"));
-  test_eq(0, is_recommended_version("a", "ab,abd,abde,abc,abcde"));
-  test_eq(0, is_recommended_version("abb", "ab,abd,abde,abc,abcde"));
-  test_eq(0, is_recommended_version("a", ""));
-
   /* Try out version parsing functionality */
   test_eq(0, tor_version_parse("0.3.4pre2-cvs", &ver1));
   test_eq(0, ver1.major);
@@ -855,6 +845,16 @@ test_dir_format()
   test_eq(VER_RELEASE, ver1.status);
   test_eq(999, ver1.patchlevel);
   test_eq(IS_NOT_CVS, ver1.cvs);
+
+  /* make sure is_obsolete_version() works */
+  test_eq(1, is_obsolete_version("0.0.1", "Tor 0.0.2"));
+  test_eq(1, is_obsolete_version("0.0.1", "0.0.2, Tor 0.0.3"));
+  test_eq(1, is_obsolete_version("0.0.1", "0.0.2,Tor 0.0.3"));
+  test_eq(1, is_obsolete_version("0.0.1", "0.0.3,BetterTor 0.0.1"));
+  test_eq(0, is_obsolete_version("0.0.2", "Tor 0.0.2,Tor 0.0.3"));
+  test_eq(1, is_obsolete_version("0.0.2", "Tor 0.0.2pre1,Tor 0.0.3"));
+  test_eq(0, is_obsolete_version("0.1.0", "Tor 0.0.2,Tor 0.0.3"));
+  test_eq(0, is_obsolete_version("0.0.7rc2", "0.0.7,Tor 0.0.7rc2,Tor 0.0.8"));
 }
 
 void test_rend_fns()
