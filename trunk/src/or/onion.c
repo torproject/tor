@@ -523,6 +523,9 @@ onion_skin_server_handshake(char *onion_skin, /* DH_ONIONSKIN_LEN bytes long */
   memcpy(key_out, buf+len-key_out_len, key_out_len);
 
 #ifdef DEBUG_ONION_SKINS
+  printf("Server: key material:");
+  PA(buf, DH_KEY_LEN);
+  puts("");
   printf("Server: keys out:");
   PA(key_out, key_out_len);
   puts("");
@@ -573,6 +576,9 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   memcpy(key_out, key_material+len-key_out_len, key_out_len);
 
 #ifdef DEBUG_ONION_SKINS
+  printf("Client: key material:");
+  PA(key_material, DH_KEY_LEN);
+  puts("");
   printf("Client: keys out:");
   PA(key_out, key_out_len);
   puts("");
