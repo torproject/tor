@@ -17,9 +17,6 @@
 /****************************************************************************/
 
 static routerlist_t *routerlist = NULL; /* router array */
-static routerinfo_t *desc_routerinfo = NULL; /* my descriptor */
-static char descriptor[8192]; /* string representation of my descriptor */
-
 extern or_options_t options; /* command-line and config-file options */
 
 /****************************************************************************/
@@ -34,20 +31,6 @@ static int router_add_exit_policy(routerinfo_t *router,
 static int router_resolve_routerlist(routerlist_t *dir);
 
 /****************************************************************************/
-
-void router_retry_connections(void) {
-  int i;
-  routerinfo_t *router;
-
-  for (i=0;i<routerlist->n_routers;i++) {
-    router = routerlist->routers[i];
-    if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { 
-      /* not in the list */
-      log_fn(LOG_DEBUG,"connecting to OR %s:%u.",router->address,router->or_port);
-      connection_or_connect(router);
-    }
-  }
-}
 
 routerinfo_t *router_pick_directory_server(void) {
   /* pick a random running router with a positive dir_port */
@@ -125,25 +108,6 @@ routerinfo_t *router_pick_randomly_from_running(void) {
   return NULL;
 }
 
-void router_upload_desc_to_dirservers(void) {
-  int i;
-  routerinfo_t *router;
-
-  if(!routerlist)
-    return;
-
-  if (!router_get_my_descriptor()) {
-    log_fn(LOG_WARN, "No descriptor; skipping upload");
-    return;
-  }
-
-  for(i=0;i<routerlist->n_routers;i++) {
-    router = routerlist->routers[i];
-    if(router->dir_port > 0)
-      directory_initiate_command(router, DIR_CONN_STATE_CONNECTING_UPLOAD);
-  }
-}
-
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   int i;
   routerinfo_t *router;
@@ -218,7 +182,7 @@ void routerinfo_free(routerinfo_t *router)
   free(router);
 }
 
-void routerlist_free(routerlist_t *rl)
+static void routerlist_free(routerlist_t *rl)
 {
   int i;
   for (i = 0; i < rl->n_routers; ++i)
@@ -473,7 +437,7 @@ router_get_next_token(char **s, directory_token_t *tok) {
 
 /* read routerinfo elements from s, and throw out the ones that
  * don't parse and resolve. */
-int router_set_routerlist_from_string(char *s)
+static int router_set_routerlist_from_string(char *s)
 {
   if (router_get_list_from_string_impl(&s, &routerlist, -1, NULL)) {
     log(LOG_WARN, "Error parsing router file");
@@ -572,8 +536,9 @@ int router_set_routerlist_from_directory(char *s, crypto_pk_env_t *pkey)
   return 0;
 }
 
-int router_get_routerlist_from_directory_impl(char *s, routerlist_t **dest,
-                                              crypto_pk_env_t *pkey)
+static int
+router_get_routerlist_from_directory_impl(char *s, routerlist_t **dest,
+                                          crypto_pk_env_t *pkey)
 {
   directory_token_t tok;
   char digest[20];
@@ -682,9 +647,10 @@ int router_get_routerlist_from_directory_impl(char *s, routerlist_t **dest,
 #undef TOK_IS
 }
 
-int router_get_list_from_string_impl(char **s, routerlist_t **dest,
-                                     int n_good_nicknames,
-                                     const char **good_nickname_lst)
+static int
+router_get_list_from_string_impl(char **s, routerlist_t **dest,
+                                 int n_good_nicknames,
+                                 const char **good_nickname_lst)
 {
   routerinfo_t *router;
   routerinfo_t **rarray;
@@ -947,42 +913,8 @@ routerinfo_t *router_get_entry_from_string(char**s) {
 #undef NEXT_TOKEN
 }
 
-void router_add_exit_policy_from_config(routerinfo_t *router) {
-  char *s = options.ExitPolicy, *e;
-  int last=0;
-  char line[1024];
-
-  if(!s) {
-    log_fn(LOG_INFO,"No exit policy configured. Ok.");
-    return; /* nothing to see here */
-  }
-  if(!*s) {
-    log_fn(LOG_INFO,"Exit policy is empty. Ok.");
-    return; /* nothing to see here */
-  }
-
-  for(;;) {
-    e = strchr(s,',');
-    if(!e) {
-      last = 1;
-      strncpy(line,s,1023); 
-    } else {
-      memcpy(line,s, ((e-s)<1023)?(e-s):1023); 
-      line[e-s] = 0;
-    }
-    line[1023]=0;
-    log_fn(LOG_DEBUG,"Adding new entry '%s'",line);
-    if(router_add_exit_policy_from_string(router,line) < 0)
-      log_fn(LOG_WARN,"Malformed exit policy %s; skipping.", line);
-    if(last)
-      return;
-    s = e+1;
-  }
-}
-
-static int
-router_add_exit_policy_from_string(routerinfo_t *router,
-                                   char *s)
+int
+router_add_exit_policy_from_string(routerinfo_t *router, char *s)
 {
   directory_token_t tok;
   char *tmp, *cp;
@@ -1172,21 +1104,6 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
     return 0; /* accept all by default. */
 }
 
-/* Return 0 if my exit policy says to allow connection to conn.
- * Else return -1.
- */
-int router_compare_to_my_exit_policy(connection_t *conn) {
-  assert(desc_routerinfo);
-  assert(conn->addr); /* make sure it's resolved to something. this
-                         way we can't get a 'maybe' below. */
-
-  if (router_compare_addr_to_exit_policy(conn->addr, conn->port,
-                                         desc_routerinfo->exit_policy) == 0)
-    return 0;
-  else
-    return -1;
-}
-
 /* return 1 if all running routers will reject addr:port, return 0 if
    any might accept it. */
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
@@ -1207,213 +1124,6 @@ int router_exit_policy_rejects_all(routerinfo_t *router) {
     return 1; /* yes, rejects all */
   else
     return 0; /* no, might accept some */
-}
-
-const char *router_get_my_descriptor(void) {
-  if (!desc_routerinfo) {
-    if (router_rebuild_descriptor())
-      return NULL;
-  }
-  log_fn(LOG_DEBUG,"my desc is '%s'",descriptor);
-  return descriptor;
-}
-
-int router_rebuild_descriptor(void) {
-  routerinfo_t *ri;
-  char localhostname[256];
-  char *address = options.Address;
-
-  if(!address) { /* if not specified in config, we find a default */
-    if(gethostname(localhostname,sizeof(localhostname)) < 0) {
-      log_fn(LOG_WARN,"Error obtaining local hostname");
-      return -1;
-    }
-    address = localhostname;
-    if(!strchr(address,'.')) {
-      log_fn(LOG_WARN,"fqdn '%s' has only one element. Misconfigured machine?",address);
-      log_fn(LOG_WARN,"Try setting the Address line in your config file.");
-      return -1;
-    }
-  }
-  ri = tor_malloc(sizeof(routerinfo_t));
-  ri->address = tor_strdup(address);
-  ri->nickname = tor_strdup(options.Nickname);
-  /* No need to set addr. */
-  ri->or_port = options.ORPort;
-  ri->socks_port = options.SocksPort;
-  ri->dir_port = options.DirPort;
-  ri->published_on = time(NULL);
-  ri->onion_pkey = crypto_pk_dup_key(get_onion_key());
-  ri->link_pkey = crypto_pk_dup_key(get_link_key());
-  ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
-  ri->bandwidth = options.TotalBandwidth;
-  ri->exit_policy = NULL; /* zero it out first */
-  router_add_exit_policy_from_config(ri);
-  if (desc_routerinfo)
-    routerinfo_free(desc_routerinfo);
-  desc_routerinfo = ri;
-  if (router_dump_router_to_string(descriptor, 8192, ri, get_identity_key())<0) {
-    log_fn(LOG_WARN, "Couldn't dump router to string.");
-    return -1;
-  }
-  return 0;
-}
-
-static void get_platform_str(char *platform, int len)
-{
-  snprintf(platform, len-1, "Tor %s on %s", VERSION, get_uname());
-  platform[len-1] = '\0';
-  return;
-}
-
-/* XXX need to audit this thing and count fenceposts. maybe
- *     refactor so we don't have to keep asking if we're
- *     near the end of maxlen?
- */
-#define DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
-int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
-                                 crypto_pk_env_t *ident_key) {
-  char *onion_pkey;
-  char *link_pkey;
-  char *identity_pkey;
-  struct in_addr in;
-  char platform[256];
-  char digest[20];
-  char signature[128];
-  char published[32];
-  int onion_pkeylen, link_pkeylen, identity_pkeylen;
-  int written;
-  int result=0;
-  struct exit_policy_t *tmpe;
-#ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
-  char *s_tmp, *s_dup;
-  routerinfo_t *ri_tmp;
-#endif
-  
-  get_platform_str(platform, sizeof(platform));
-
-  if (crypto_pk_cmp_keys(ident_key, router->identity_pkey)) {
-    log_fn(LOG_WARN,"Tried to sign a router with a private key that didn't match router's public key!");
-    return -1;
-  }
-
-  if(crypto_pk_write_public_key_to_string(router->onion_pkey,
-                                          &onion_pkey,&onion_pkeylen)<0) {
-    log_fn(LOG_WARN,"write onion_pkey to string failed!");
-    return -1;
-  }
-
-  if(crypto_pk_write_public_key_to_string(router->identity_pkey,
-                                          &identity_pkey,&identity_pkeylen)<0) {
-    log_fn(LOG_WARN,"write identity_pkey to string failed!");
-    return -1;
-  }
-
-  if(crypto_pk_write_public_key_to_string(router->link_pkey,
-                                          &link_pkey,&link_pkeylen)<0) {
-    log_fn(LOG_WARN,"write link_pkey to string failed!");
-    return -1;
-  }
-  strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&router->published_on));
-  
-  result = snprintf(s, maxlen, 
-                    "router %s %s %d %d %d %d\n"
-                    "platform %s\n"
-                    "published %s\n"
-                    "onion-key\n%s"
-                    "link-key\n%s"
-                    "signing-key\n%s",
-    router->nickname,
-    router->address,
-    router->or_port,
-    router->socks_port,
-    router->dir_port,
-    router->bandwidth,
-    platform,
-    published,
-    onion_pkey, link_pkey, identity_pkey);
-
-  free(onion_pkey);
-  free(link_pkey);
-  free(identity_pkey);
-
-  if(result < 0 || result >= maxlen) {
-    /* apparently different glibcs do different things on snprintf error.. so check both */
-    return -1;
-  }
-  written = result;
-
-  for(tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
-    in.s_addr = htonl(tmpe->addr);
-    result = snprintf(s+written, maxlen-written, "%s %s",
-        tmpe->policy_type == EXIT_POLICY_ACCEPT ? "accept" : "reject",
-        tmpe->msk == 0 ? "*" : inet_ntoa(in));
-    if(result < 0 || result+written > maxlen) {
-      /* apparently different glibcs do different things on snprintf error.. so check both */
-      return -1;
-    }
-    written += result;
-    if (tmpe->msk != 0xFFFFFFFFu && tmpe->msk != 0) {
-      in.s_addr = htonl(tmpe->msk);
-      result = snprintf(s+written, maxlen-written, "/%s", inet_ntoa(in));
-      if (result<0 || result+written > maxlen)
-        return -1;
-      written += result;
-    }
-    if (tmpe->prt) {
-      result = snprintf(s+written, maxlen-written, ":%d\n", tmpe->prt);
-      if (result<0 || result+written > maxlen)
-        return -1;
-      written += result;
-    } else {
-      if (written > maxlen-4)
-        return -1;
-      strcat(s+written, ":*\n");
-      written += 3;
-    }
-  } /* end for */
-  if (written > maxlen-256) /* Not enough room for signature. */
-    return -1;
-
-  strcat(s+written, "router-signature\n");
-  written += strlen(s+written);
-  s[written] = '\0';
-  if (router_get_router_hash(s, digest) < 0)
-    return -1;
-
-  if (crypto_pk_private_sign(ident_key, digest, 20, signature) < 0) {
-    log_fn(LOG_WARN, "Error signing digest");
-    return -1;
-  }
-  strcat(s+written, "-----BEGIN SIGNATURE-----\n");
-  written += strlen(s+written);
-  if (base64_encode(s+written, maxlen-written, signature, 128) < 0) {
-    log_fn(LOG_WARN, "Couldn't base64-encode signature");
-    return -1;
-  }
-  written += strlen(s+written);
-  strcat(s+written, "-----END SIGNATURE-----\n");
-  written += strlen(s+written);
-  
-  if (written > maxlen-2) 
-    return -1;
-  /* include a last '\n' */
-  s[written] = '\n';
-  s[written+1] = 0;
-
-#ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
-  s_tmp = s_dup = tor_strdup(s);
-  ri_tmp = router_get_entry_from_string(&s_tmp);
-  if (!ri_tmp) {
-    log_fn(LOG_ERR, "We just generated a router descriptor we can't parse: <<%s>>", 
-           s);
-    return -1;
-  }
-  free(s_dup);
-  routerinfo_free(ri_tmp);
-#endif
-
-  return written+1;
 }
 
 /*

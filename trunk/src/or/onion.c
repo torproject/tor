@@ -383,16 +383,16 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
 }
 
 cpath_build_state_t *onion_new_cpath_build_state(void) {
-  routerlist_t *dir;
+  routerlist_t *rl;
   int r;
   cpath_build_state_t *info;
   routerinfo_t *exit;
 
-  router_get_routerlist(&dir);
-  r = new_route_len(options.PathlenCoinWeight, dir->routers, dir->n_routers);
+  router_get_routerlist(&rl);
+  r = new_route_len(options.PathlenCoinWeight, rl->routers, rl->n_routers);
   if (r < 0) 
     return NULL;
-  exit = choose_good_exit_server(dir);
+  exit = choose_good_exit_server(rl);
   if(!exit)
     return NULL;
   info = tor_malloc(sizeof(cpath_build_state_t));
