@@ -17,7 +17,7 @@
    extra level of indirection also allows Bob to choose which requests
    to respond to, and which to ignore.
 
-   We also provide the necessary glue code so that Alice can view webpages
+   We provide the necessary glue code so that Alice can view webpages
    on a location-hidden webserver, and Bob can run a location-hidden
    server, with minimal invasive changes (see Section 3). Both Alice
    and Bob must run local onion proxies (OPs) -- software that knows
