@@ -426,7 +426,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
       /* deliver a 'connected' relay cell back through the circuit. */
       *(uint32_t*)connected_payload = htonl(conn->addr);
       if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
-         RELAY_COMMAND_CONNECTED, NULL, 0, NULL) < 0)
+         RELAY_COMMAND_CONNECTED, connected_payload, 4, NULL) < 0)
         return 0; /* circuit is closed, don't continue */
       assert(conn->package_window > 0);
       return connection_edge_process_inbuf(conn); /* in case the server has written anything */
