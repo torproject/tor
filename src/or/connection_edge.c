@@ -855,19 +855,17 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
   dummy_conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
   dummy_conn->purpose = EXIT_PURPOSE_RESOLVE;
 
+  dummy_conn->next_stream = circ->resolving_streams;
+  circ->resolving_streams = dummy_conn;
+
   /* send it off to the gethostbyname farm */
   switch(dns_resolve(dummy_conn)) {
-    case 1: /* resolve worked; resolved cell was sent. */
+    case 1: /* The result was cached; a resolved cell was sent. */
+    case -1: 
+      circuit_detach_stream(circuit_get_by_conn(dummy_conn), dummy_conn);
       connection_free(dummy_conn);
       return 0;
-    case -1: /* resolve failed; resolved cell was sent. */
-      log_fn(LOG_INFO,"Resolve failed (%s).",dummy_conn->address);
-      connection_free(dummy_conn);
-      break;
     case 0: /* resolve added to pending list */
-      /* add it into the linked list of resolving_streams on this circuit */
-      dummy_conn->next_stream = circ->resolving_streams;
-      circ->resolving_streams = dummy_conn;
       assert_circuit_ok(circ);
       ;
   }
