@@ -80,11 +80,13 @@ tor_tls_get_error(tor_tls *tls, int r, int extra,
 	return _TOR_TLS_SYSCALL;
       assert(severity != LOG_ERR); /* XXX remove me when the bug is found */
       log(severity, "TLS error: <syscall error>.");
+      tls_log_error(severity, doing);
       return TOR_TLS_ERROR;
     case SSL_ERROR_ZERO_RETURN:
       if (extra&CATCH_ZERO)
 	return _TOR_TLS_ZERORETURN;
       log(severity, "TLS error: Zero return");
+      tls_log_error(severity, doing);
       return TOR_TLS_ERROR;
     default:
       tls_log_error(severity, doing);
