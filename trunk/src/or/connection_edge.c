@@ -906,8 +906,10 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
 
   /* send it off to the gethostbyname farm */
   switch (dns_resolve(dummy_conn)) {
-    case 1: /* The result was cached; a resolved cell was sent. */
     case -1: /* Impossible to resolve; a resolved cell was sent. */
+      /* Connection freed; don't touch it. */
+      return 0;
+    case 1: /* The result was cached; a resolved cell was sent. */
       connection_free(dummy_conn);
       return 0;
     case 0: /* resolve added to pending list */
