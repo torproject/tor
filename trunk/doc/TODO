@@ -26,10 +26,11 @@ N  - clients now have certs, which means we warn when their certs have
 R  - fix print_usage()
    - Download and use running-routers
 R  - document signals in man page
-N  - Document all undocumented configuration options.
-     - Accounting
-     - Control interface authentication
-     - ... ?
+N  - Check for hibernation on startup, hup, etc.
+     - Test hibernation a lot.
+   o Document all undocumented configuration options.
+     o Accounting
+     o Control interface authentication
 N  - RPMs
      o Merge changes from jbash
      - Figure out versioning
@@ -43,6 +44,9 @@ Beyond 0.0.9:
    - controller should have 'getinfo' command to query about rephist,
      about rendezvous status, etc.
    - weasel wants to say 50GB rather than 50000000 in config ints.
+   - Better hibernation flexibility
+     - Add hibernation intervals for weeks, days.
+     - Start at a time other than 0:00 GMT.
    - allow transition from ORPort to !ORPort, and back
 R  . bandwidth buckets for write as well as read.
    - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
