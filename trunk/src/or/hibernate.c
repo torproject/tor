@@ -310,6 +310,10 @@ accounting_set_wakeup_time(void)
 
   interval_wakeup_time = interval_start_time +
     24*60*60 * (unsigned char)digest[0];
+
+  format_iso_time(buf, interval_wakeup_time);
+  log_fn(LOG_INFO, "Configured hibernation interval: Decided to wake up %d days into the interval, at %s GMT",
+         (int)(unsigned char)digest[0], buf);
 }
 
 /* XXXX009 This should also get called on HUP and shutdown. */
@@ -511,13 +515,16 @@ we_are_hibernating(void) {
 /** If we aren't currently dormant, close all connections and become
  * dormant. */
 static void
-hibernate_go_dormant(void) {
+hibernate_go_dormant(time_t now) {
   connection_t *conn;
 
   if (hibernate_state == HIBERNATE_STATE_DORMANT)
     return;
+  else if (hibernate_state == HIBERNATE_STATE_LOWBANDWIDTH)
+    hibernate_state = HIBERNATE_STATE_DORMANT;
+  else
+    hibernate_begin(HIBERNATE_STATE_DORMANT, now);
 
-  hibernate_state = HIBERNATE_STATE_DORMANT;
   log_fn(LOG_NOTICE,"Going dormant. Blowing away remaining connections.");
 
   /* Close all OR/AP/exit conns. Leave dir conns because we still want
@@ -539,6 +546,8 @@ hibernate_go_dormant(void) {
 static void
 hibernate_end_time_elapsed(time_t now)
 {
+  char buf[ISO_TIME_LEN+1];
+
   /* The interval has ended, or it is wakeup time.  Find out which. */
   accounting_run_housekeeping(now);
   if (interval_wakeup_time <= now) {
@@ -549,9 +558,14 @@ hibernate_end_time_elapsed(time_t now)
   } else {
     /* The interval has changed, and it isn't time to wake up yet. */
     hibernate_end_time = interval_wakeup_time;
-    if (hibernate_state != HIBERNATE_STATE_DORMANT)
+    format_iso_time(buf,interval_wakeup_time);
+    if (hibernate_state != HIBERNATE_STATE_DORMANT) {
       /* We weren't sleeping before; we should sleep now. */
-      hibernate_go_dormant();
+      log_fn(LOG_NOTICE, "Accounting period ended. Commencing hibernation until %s GMT",buf);
+      hibernate_go_dormant(now);
+    } else {
+      log_fn(LOG_NOTICE, "Accounting period ended. This period, we will hibernate until %s GMT",buf);
+    }
   }
 }
 
@@ -559,6 +573,8 @@ hibernate_end_time_elapsed(time_t now)
  * to start/stop hibernating.
  */
 void consider_hibernation(time_t now) {
+  int accounting_enabled = get_options()->AccountingMaxKB != 0;
+  char buf[ISO_TIME_LEN+1];
 
   /* If we're in 'exiting' mode, then we just shut down after the interval
    * elapses. */
@@ -575,7 +591,7 @@ void consider_hibernation(time_t now) {
   if(hibernate_state == HIBERNATE_STATE_DORMANT) {
     /* We've been hibernating because of bandwidth accounting. */
     tor_assert(hibernate_end_time);
-    if (hibernate_end_time > now) {
+    if (hibernate_end_time > now && accounting_enabled) {
       /* If we're hibernating, don't wake up until it's time, regardless of
        * whether we're in a new interval. */
       return ;
@@ -586,19 +602,25 @@ void consider_hibernation(time_t now) {
 
   /* Else, we aren't hibernating. See if it's time to start hibernating, or to
    * go dormant. */
-  if (hibernate_state == HIBERNATE_STATE_LIVE &&
-      hibernate_soft_limit_reached()) {
-    log_fn(LOG_NOTICE,"Bandwidth soft limit reached; commencing hibernation.");
-    hibernate_begin(HIBERNATE_STATE_LOWBANDWIDTH, now);
+  if (hibernate_state == HIBERNATE_STATE_LIVE) {
+    if (hibernate_soft_limit_reached()) {
+      log_fn(LOG_NOTICE,"Bandwidth soft limit reached; commencing hibernation.");
+      hibernate_begin(HIBERNATE_STATE_LOWBANDWIDTH, now);
+    } else if (accounting_enabled && now < interval_wakeup_time) {
+      format_iso_time(buf,interval_wakeup_time);
+      log_fn(LOG_NOTICE, "Commencing hibernation. We will wake up at %s GMT",buf);
+      hibernate_go_dormant(now);
+    }
   }
 
   if (hibernate_state == HIBERNATE_STATE_LOWBANDWIDTH) {
-    if (hibernate_hard_limit_reached()) {
-      hibernate_go_dormant();
+    if (!accounting_enabled) {
+      hibernate_end_time_elapsed(now);
+    } else if (hibernate_hard_limit_reached()) {
+      hibernate_go_dormant(now);
     } else if (hibernate_end_time <= now) {
       /* The hibernation period ended while we were still in lowbandwidth.*/
       hibernate_end_time_elapsed(now);
     }
   }
 }
-
