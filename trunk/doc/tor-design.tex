@@ -316,10 +316,10 @@ calls for padding between end users and the head of the
 cascade~\cite{web-mix}. However, it is not demonstrated whether the current
 implementation's padding policy improves anonymity.
 
-{\bf PipeNet}~\cite{back01, pipenet}, another low-latency design proposed at
-about the same time as Onion Routing, provided
-stronger anonymity at the cost of allowing a single user to shut
-down the network simply by not sending. Systems like {\bf ISDN
+{\bf PipeNet}~\cite{back01, pipenet}, another low-latency design proposed
+around the same time as Onion Routing, gave
+stronger anonymity but allowed a single user to shut
+down the network by not sending. Systems like {\bf ISDN
 mixes}~\cite{isdn-mixes} were designed for other environments with
 different assumptions.
 %XXX please can we fix this sentence to something less demeaning
@@ -340,15 +340,15 @@ These systems are designed primarily for communication between peers,
 although Herbivore users can make external connections by
 requesting a peer to serve as a proxy.
 
-Systems like {\bf Freedom} and the original Onion Routing build the circuit
+Systems like {\bf Freedom} and the original Onion Routing build circuits
 all at once, using a layered ``onion'' of public-key encrypted messages,
-each layer of which provides a set of session keys and the address of the
+each layer of which provides session keys and the address of the
 next server in the circuit. Tor as described herein, Tarzan, MorphMix,
 {\bf Cebolla}~\cite{cebolla}, and Rennhard's {\bf Anonymity Network}~\cite{anonnet}
-build the circuit
-in stages, extending it one hop at a time.
+build circuits
+in stages, extending them one hop at a time.
 Section~\ref{subsubsec:constructing-a-circuit} describes how this
-approach makes perfect forward secrecy feasible.
+approach enables perfect forward secrecy.
 
 Circuit-based anonymity designs must choose which protocol layer
 to anonymize. They may choose to intercept IP packets directly, and
@@ -1311,11 +1311,13 @@ itself may be hostile). While filtering content is not a primary goal
 of Onion Routing, Tor can directly use Privoxy and related
 filtering services to anonymize application data streams.
 
-\emph{Option distinguishability.} We allow clients to choose local
+\emph{Option distinguishability.} We allow clients to choose
 configuration options. For example, clients concerned about request
 linkability should rotate circuits more often than those concerned
-about traceability. There is economic incentive to attract users by
-allowing this choice; but at the same time, a set of clients who are
+about traceability. Allowing choice may attract users with different 
+%There is economic incentive to attract users by
+%allowing this choice; 
+needs; but clients who are
 in the minority may lose more anonymity by appearing distinct than they
 gain by optimizing their behavior~\cite{econymics}.
 
@@ -1558,7 +1560,7 @@ all its CPU time in AES, which is fast.  Current latency is attributable
 to two factors. First, network latency is critical: we are
 intentionally bouncing traffic around the world several times. Second,
 our end-to-end congestion control algorithm focuses on protecting
-volunteer servers from accidental DoS rather than optimizing
+volunteer servers from accidental DoS rather than on optimizing
 performance. % Right now the first $500 \times 500\mbox{B}=250\mbox{KB}$
 %of the stream arrives
 %quickly, and after that throughput depends on the rate that \emph{relay
@@ -1819,8 +1821,10 @@ our overall usability.
 
 In this appendix we provide more specifics about the rendezvous points
 of Section~\ref{subsec:rendezvous}. We also describe integration
-issues, related work, and how well the rendezvous point design
-withstands various attacks.
+issues and related work.
+%, and how well the rendezvous point design
+%withstands various attacks.
+%    (Not any more; it's currently commented out. -NM)
 
 \SubSection{Rendezvous protocol overview}
 
@@ -1841,9 +1845,9 @@ application integration is described more fully below.
       rendezvous cookie to recognize Bob.
 \item Alice opens an anonymous stream to one of Bob's introduction
       points, and gives it a message (encrypted to Bob's public key)
-      that tells him
-      about herself, her chosen RP and the rendezvous cookie, and the
-      first half of a DH
+      telling it about herself,
+      her RP and rendezvous cookie, and the
+      start of a DH
       handshake. The introduction point sends the message to Bob.
 \item If Bob wants to talk to Alice, he builds a circuit to Alice's
       RP and sends the rendezvous cookie, the second half of the DH
@@ -1853,8 +1857,8 @@ application integration is described more fully below.
       shares the key only with Bob.
 \item The RP connects Alice's circuit to Bob's. Note that RP can't
       recognize Alice, Bob, or the data they transmit.
-\item Alice now sends a \emph{relay begin} cell along the circuit. It
-      arrives at Bob's onion proxy. Bob's onion proxy connects to Bob's
+\item Alice sends a \emph{relay begin} cell along the circuit. It
+      arrives at Bob's OP, which connects to Bob's
       webserver.
 \item An anonymous stream has been established, and Alice and Bob
       communicate as normal.
@@ -1890,11 +1894,11 @@ introduction connections open or risking such an attack. In this case,
 he can provide selected users
 with a current list and/or future schedule of introduction points that
 are not advertised in the DHT\@. This is most likely to be practical
-if there is a relatively stable and large group of introduction points
+if there is a stable and large group of introduction points
 available. Alternatively, Bob could give secret public keys
 to selected users for consulting the DHT\@. All of these approaches
 have the advantage of limiting exposure even when
-some of the selected high-priority users collude in the DoS\@.
+some of the selected users collude in the DoS\@.
 
 \SubSection{Integration with user applications}
 
