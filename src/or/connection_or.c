@@ -180,6 +180,7 @@ int connection_tls_continue_handshake(connection_t *conn) {
 static int connection_tls_finish_handshake(connection_t *conn) {
   crypto_pk_env_t *pk;
   routerinfo_t *router;
+  char nickname[255];
 
   conn->state = OR_CONN_STATE_OPEN;
   directory_set_dirty();
@@ -187,6 +188,12 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   log_fn(LOG_DEBUG,"tls handshake done. verifying.");
   if(options.OnionRouter) { /* I'm an OR */
     if(tor_tls_peer_has_cert(conn->tls)) { /* it's another OR */
+      if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, 256)) {
+        log_fn(LOG_WARN,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
+               conn->address, conn->port);
+        return -1;
+      }
+      log_fn(LOG_DEBUG,"Other side claims to be \"%s\"",nickname);
       pk = tor_tls_verify(conn->tls);
       if(!pk) {
         log_fn(LOG_WARN,"Other side (%s:%d) has a cert but it's invalid. Closing.",
