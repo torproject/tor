@@ -650,6 +650,7 @@ int main(int argc, char *argv[]) {
   }
 
   init_tracked_tree(); /* initialize the replay detection tree */
+  init_cache_tree(); /* initialize the dns resolve tree */
 
   signal (SIGINT,  catch); /* catch kills so we can exit cleanly */
   signal (SIGTERM, catch);
