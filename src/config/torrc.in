@@ -22,7 +22,7 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 ## A comma-separated list of exit policies. If you want to *replace*
 ## the default exit policy, end this with either a reject *:* or an
 ## accept *:*. Otherwise, you're *augmenting* (prepending to) the
-## default exit policy.
+## default exit policy. Leave commented to just use the default.
 #ExitPolicy accept 18.244.0.188:25,accept 18.244.0.114:25
 #ExitPolicy reject *:*
 
