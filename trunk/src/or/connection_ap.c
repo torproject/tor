@@ -388,7 +388,6 @@ int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ) {
   num_seen++;
   log(LOG_DEBUG,"connection_ap_process_data_cell(): Now seen %d data cells here.", num_seen);
 
-
   circuit_consider_sending_sendme(circ, EDGE_AP);
 
   for(conn = circ->p_conn; conn && conn->topic_id != topic_id; conn = conn->next_topic) ;
@@ -420,8 +419,8 @@ int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ) {
 
 #ifdef USE_ZLIB
       if(connection_decompress_to_buf(cell->payload + TOPIC_HEADER_SIZE,
-				      cell->length - TOPIC_HEADER_SIZE, 
-				      conn, Z_SYNC_FLUSH) < 0) {
+                                      cell->length - TOPIC_HEADER_SIZE, 
+                                      conn, Z_SYNC_FLUSH) < 0) {
         log(LOG_INFO,"connection_exit_process_data_cell(): write to buf failed. Marking for close.");
         conn->marked_for_close = 1;
         return 0;
@@ -455,7 +454,7 @@ int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ) {
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */
       if (conn->done_receiving)
-	conn->marked_for_close = 1;
+        conn->marked_for_close = 1;
 #endif
       conn->marked_for_close = 1;
       break;
@@ -493,6 +492,10 @@ int connection_ap_finished_flushing(connection_t *conn) {
     case AP_CONN_STATE_OPEN:
       /* FIXME down the road, we'll clear out circuits that are pending to close */
       connection_stop_writing(conn);
+#ifdef USE_ZLIB
+      if (connection_decompress_to_buf(NULL, 0, conn, Z_SYNC_FLUSH) < 0)
+        return 0;
+#endif
       return connection_consider_sending_sendme(conn, EDGE_AP);
     default:
       log(LOG_DEBUG,"Bug: connection_ap_finished_flushing() called in unexpected state.");
@@ -511,4 +514,3 @@ int connection_ap_handle_listener_read(connection_t *conn) {
   log(LOG_NOTICE,"AP: Received a connection request. Waiting for socksinfo.");
   return connection_handle_listener_read(conn, CONN_TYPE_AP, AP_CONN_STATE_SOCKS_WAIT);
 } 
-

@@ -261,7 +261,7 @@ connection_t *connection_or_connect_as_op(routerinfo_t *router) {
 int or_handshake_op_send_keys(connection_t *conn) {
   //int x;
   uint32_t bandwidth = DEFAULT_BANDWIDTH_OP;
-  unsigned char message[20]; /* bandwidth(32bits), forward key(64bits), backward key(64bits) */
+  unsigned char message[36]; /* bandwidth(32bits), forward key(128bits), backward key(128bits) */
   unsigned char cipher[128];
   int retval;
 
@@ -270,29 +270,29 @@ int or_handshake_op_send_keys(connection_t *conn) {
   /* generate random keys */
   if(crypto_cipher_generate_key(conn->f_crypto) ||
      crypto_cipher_generate_key(conn->b_crypto)) {
-    log(LOG_ERR,"Cannot generate a secure DES key.");
+    log(LOG_ERR,"Cannot generate a secure 3DES key.");
     return -1;
   }
-  log(LOG_DEBUG,"or_handshake_op_send_keys() : Generated DES keys.");
+  log(LOG_DEBUG,"or_handshake_op_send_keys() : Generated 3DES keys.");
   /* compose the message */
   *(uint32_t *)message = htonl(bandwidth);
-  memcpy((void *)(message + 4), (void *)conn->f_crypto->key, 8);
-  memcpy((void *)(message + 12), (void *)conn->b_crypto->key, 8);
+  memcpy((void *)(message + 4), (void *)conn->f_crypto->key, 16);
+  memcpy((void *)(message + 20), (void *)conn->b_crypto->key, 16);
 
 #if 0
   printf("f_session_key: ");
-  for(x=0;x<8;x++) {
+  for(x=0;x<16;x++) {
     printf("%d ",conn->f_crypto->key[x]);
   }
   printf("\nb_session_key: ");
-  for(x=0;x<8;x++) {
+  for(x=0;x<16;x++) {
     printf("%d ",conn->b_crypto->key[x]);
   }
   printf("\n");
 #endif
 
   /* encrypt with RSA */
-  if(crypto_pk_public_encrypt(conn->pkey, message, 20, cipher, RSA_PKCS1_PADDING) < 0) {
+  if(crypto_pk_public_encrypt(conn->pkey, message, 36, cipher, RSA_PKCS1_PADDING) < 0) {
     log(LOG_ERR,"or_handshake_op_send_keys(): Public key encryption failed.");
     return -1;
   }
@@ -375,7 +375,7 @@ connection_t *connection_or_connect_as_or(routerinfo_t *router) {
 
 int or_handshake_client_send_auth(connection_t *conn) {
   int retval;
-  char buf[44];
+  char buf[46];
   char cipher[128];
   struct sockaddr_in me; /* my router identity */
 
@@ -397,13 +397,13 @@ int or_handshake_client_send_auth(connection_t *conn) {
   *(uint16_t*)(buf+4) = me.sin_port; /* local port, network order */
   *(uint32_t*)(buf+6) = htonl(conn->addr); /* remote address */
   *(uint16_t*)(buf+10) = htons(conn->port); /* remote port */
-  memcpy(buf+12,conn->f_crypto->key,8); /* keys */
-  memcpy(buf+20,conn->b_crypto->key,8);
-  *(uint32_t *)(buf+28) = htonl(conn->bandwidth); /* max link utilisation */
+  memcpy(buf+12,conn->f_crypto->key,16); /* keys */
+  memcpy(buf+28,conn->b_crypto->key,16);
+  *(uint32_t *)(buf+44) = htonl(conn->bandwidth); /* max link utilisation */
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated first authentication message.");
 
   /* encrypt message */
-  retval = crypto_pk_public_encrypt(conn->pkey, buf, 32, cipher,RSA_PKCS1_PADDING);
+  retval = crypto_pk_public_encrypt(conn->pkey, buf, 48, cipher,RSA_PKCS1_PADDING);
   if (retval == -1) /* error */
   { 
     log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,conn->port);
@@ -439,7 +439,7 @@ int or_handshake_client_send_auth(connection_t *conn) {
 }
 
 int or_handshake_client_process_auth(connection_t *conn) {
-  char buf[128]; /* only 40 of this is expected to be used */
+  char buf[128]; /* only 48 of this is expected to be used */
   char cipher[128];
   uint32_t bandwidth;
   int retval;
@@ -468,7 +468,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
         crypto_perror());
     return -1;
   }
-  else if (retval != 40)
+  else if (retval != 48)
   { 
     log(LOG_ERR,"Received an incorrect response from router %s:%u during authentication.",
         conn->address,conn->port);
@@ -480,8 +480,8 @@ int or_handshake_client_process_auth(connection_t *conn) {
         (*(uint16_t*)(buf+4) != me.sin_port) || /* local port, network order */
        (ntohl(*(uint32_t*)(buf+6)) != conn->addr) || /* remote address */
        (ntohs(*(uint16_t*)(buf+10)) != conn->port) || /* remote port */
-       (memcmp(conn->f_crypto->key, buf+12, 8)) || /* keys */
-       (memcmp(conn->b_crypto->key, buf+20, 8)) )
+       (memcmp(conn->f_crypto->key, buf+12, 16)) || /* keys */
+       (memcmp(conn->b_crypto->key, buf+28, 16)) )
   { /* incorrect response */
     log(LOG_ERR,"Router %s:%u failed to authenticate. Either the key I have is obsolete or they're doing something they're not supposed to.",conn->address,conn->port);
     return -1;
@@ -490,7 +490,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_client_process_auth() : Response valid.");
 
   /* update link info */
-  bandwidth = ntohl(*(uint32_t *)(buf+28));
+  bandwidth = ntohl(*(uint32_t *)(buf+44));
 
   if (conn->bandwidth > bandwidth)
     conn->bandwidth = bandwidth;
@@ -545,7 +545,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
 int or_handshake_server_process_auth(connection_t *conn) {
   int retval;
 
-  char buf[128]; /* only 32 of this is expected to be used */
+  char buf[128]; /* only 48 of this is expected to be used */
   char cipher[128];
 
   uint32_t addr;
@@ -575,7 +575,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
         crypto_perror());
     return -1;
   }
-  else if (retval != 32)
+  else if (retval != 48)
   { 
     log(LOG_ERR,"Received an incorrect authentication request.");
     return -1;
@@ -602,10 +602,10 @@ int or_handshake_server_process_auth(connection_t *conn) {
 
   /* save keys */
   crypto_cipher_set_key(conn->b_crypto,buf+12);
-  crypto_cipher_set_key(conn->f_crypto,buf+20);
+  crypto_cipher_set_key(conn->f_crypto,buf+28);
 
   /* update link info */
-  bandwidth = ntohl(*(uint32_t *)(buf+28));
+  bandwidth = ntohl(*(uint32_t *)(buf+44));
 
   conn->bandwidth = router->bandwidth;
 
@@ -627,11 +627,11 @@ int or_handshake_server_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Nonce generated.");
 
   /* generate message */
-  memcpy(buf+32,conn->nonce,8); /* append the nonce to the end of the message */
+  memcpy(buf+48,conn->nonce,8); /* append the nonce to the end of the message */
   *(uint32_t *)(buf+28) = htonl(conn->bandwidth); /* send max link utilisation */
 
   /* encrypt message */
-  retval = crypto_pk_public_encrypt(conn->pkey, buf, 40, cipher,RSA_PKCS1_PADDING);
+  retval = crypto_pk_public_encrypt(conn->pkey, buf, 56, cipher,RSA_PKCS1_PADDING);
   if (retval == -1) /* error */
   {
     log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,conn->port);

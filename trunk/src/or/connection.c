@@ -111,12 +111,12 @@ connection_t *connection_new(int type) {
   conn->timestamp_lastwritten = now.tv_sec;
 
   if (connection_speaks_cells(conn)) {
-    conn->f_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
+    conn->f_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_3DES);
     if (!conn->f_crypto) {
       free((void *)conn);
       return NULL;
     }
-    conn->b_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
+    conn->b_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_3DES);
     if (!conn->b_crypto) {
       crypto_free_cipher_env(conn->f_crypto);
       free((void *)conn);
@@ -385,6 +385,8 @@ int connection_decompress_to_buf(char *string, int len, connection_t *conn,
 				 int flush) {
   int n;
   struct timeval now;
+
+  assert(conn);
 
   if (len) {
     if (write_to_buf(string, len, 
