@@ -6,14 +6,14 @@
 
 %define  initdir /etc/rc.d/init.d
 
-Summary: tor: The Onion Router; patent-free Onion Routing
+Summary: tor: anonymizing overlay network for TCP
 Name: tor
 Version: @VERSION@
 Vendor: R. Dingledine <arma@seul.org>
 Release: %{release}
 License: BSD-like
 Group: Applications/Internet
-URL: http://freehaven.net/tor
+URL: http://freehaven.net/tor/
 
 Source0: http://freehaven.net/tor/dist/tor-%{version}.tar.gz
 
@@ -23,15 +23,34 @@ Requires(pre): %{_sbindir}/useradd, %{_sbindir}/groupadd
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{relbase}-root
 
 %description
-Tor is a system that conceals the sources of TCP connections
-by relaying those connections through multiple independently administered
-forwarding nodes; it is a "cascaded mix" system. Among older systems,
-Tor is most similar to Onion Routing. The basic concept of Tor is also
-similar to that of the Zero Knowledge Freedom system or the Java Anonymous
-Proxy. The "onions" used in Tor are similar in concept to the reply blocks
-used with type I "cypherpunks" anonymous remailers. Feeding phrases
-from this paragraph into search engines should give you more background
-information than you really want.
+Tor is a connection-based low-latency anonymous communication system which
+addresses many flaws in the original onion routing design.
+
+In brief, Onion Routing is a connection-oriented anonymizing communication
+service. Users choose a source-routed path through a set of nodes, and
+negotiate a "virtual circuit" through the network, in which each node
+knows its predecessor and successor, but no others. Traffic flowing down
+the circuit is unwrapped by a symmetric key at each node, which reveals
+the downstream node.
+
+Basically Tor provides a distributed network of servers ("onion
+routers"). Users bounce their tcp streams (web traffic, ftp, ssh, etc)
+around the routers, and recipients, observers, and even the routers
+themselves have difficulty tracking the source of the stream.
+
+Note that Tor does no protocol cleaning.  That means there is a danger that
+application protocols and associated programs can be induced to reveal
+information about the initiator.  Tor depends on Privoxy and similar protocol
+cleaners to solve this problem.
+
+Client applications can use the Tor network by connecting to the local
+onion proxy.  If the application itself does not come with socks support
+you can use a socks client such as tsocks.  Some web browsers like mozilla
+and web proxies like privoxy come with socks support, so you don't need an
+extra socks client if you want to use Tor with them.
+
+Remember that this is alpha code, and the network is very small -- Tor will
+not provide anonymity currently.
 
 This package provides the "tor" program, which serves as both a client
 and a relay node. Scripts will automatically create a "tor" user and
