@@ -208,6 +208,12 @@ test_crypto()
   data3 = tor_malloc(1024);
   test_assert(data1 && data2 && data3);
 
+  /* Try out RNG. */
+  crypto_seed_rng();
+  crypto_rand(100, data1);
+  crypto_rand(100, data2);
+  test_memneq(data1,data2,100);
+  
   /* Try out identity ciphers. */
   env1 = crypto_new_cipher_env(CRYPTO_CIPHER_IDENTITY);
   test_neq(env1, 0);
@@ -415,7 +421,7 @@ test_onion_handshake() {
   /* server-side */
   char s_buf[DH_KEY_LEN];
   char s_keys[40];
-
+  
   /* shared */
   crypto_pk_env_t *pk = NULL;
 
@@ -436,12 +442,16 @@ test_onion_handshake() {
   test_assert(! onion_skin_client_handshake(c_dh, s_buf, c_keys, 40));
   
   crypto_dh_free(c_dh);
-  crypto_free_pk_env(pk);
 
   /* FIXME sometimes (infrequently) the following fails! Why? */
+  if (memcmp(c_keys, s_keys, 40)) {
+    puts("Aiiiie");
+    exit(1);
+  }
   test_memeq(c_keys, s_keys, 40);
   memset(s_buf, 0, 40);
   test_memneq(c_keys, s_buf, 40);
+  crypto_free_pk_env(pk);
 }
 
 /* from main.c */
@@ -584,15 +594,25 @@ main(int c, char**v) {
   log(LOG_ERR,NULL);         /* make logging quieter */
 
   setup_directory();
+#ifndef DEBUG_ONION_SKINS
   puts("========================== Buffers =========================");
   test_buffers();
   puts("========================== Crypto ==========================");
-  test_crypto_dh();
   test_crypto();
+  test_crypto_dh();
   puts("\n========================= Util ============================");
   test_util();
   puts("\n========================= Onion Skins =====================");
-  test_onion_handshake();
+#endif
+#ifdef DEBUG_ONION_SKINS
+  crypto_seed_rng();
+  while(1) {
+#endif
+    test_onion_handshake();
+#ifdef DEBUG_ONION_SKINS
+    fflush(NULL);
+  }
+#endif
   puts("\n========================= Directory Formats ===============");
   test_dir_format();
   puts("");
