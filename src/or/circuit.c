@@ -8,6 +8,12 @@
 
 static circuit_t *global_circuitlist=NULL;
 
+char *circuit_state_to_string[] = {
+  "receiving the onion",    /* 0 */
+  "connecting to firsthop", /* 1 */
+  "open"                    /* 2 */
+};
+
 /********* END VARIABLES ************/
 
 void circuit_add(circuit_t *circ) {
@@ -397,5 +403,20 @@ void circuit_about_to_close_connection(connection_t *conn) {
       connection_send_destroy(circ->n_aci, circ->n_conn);
     circuit_free(circ);
   }  
+}
+
+void circuit_dump_by_conn(connection_t *conn) {
+  circuit_t *circ;
+
+  for(circ=global_circuitlist;circ;circ = circ->next) {
+    if(circ->p_conn == conn) {
+      printf("Conn %d has App-ward circuit:  aci %d (other side %d), state %d (%s)\n",
+        conn->poll_index, circ->p_aci, circ->n_aci, circ->state, circuit_state_to_string[circ->state]);
+    }
+    if(circ->n_conn == conn) {
+      printf("Conn %d has Exit-ward circuit: aci %d (other side %d), state %d (%s)\n",
+        conn->poll_index, circ->n_aci, circ->p_aci, circ->state, circuit_state_to_string[circ->state]);
+    }
+  }
 }
 

@@ -386,6 +386,8 @@ void circuit_close(circuit_t *circ);
 void circuit_about_to_close_connection(connection_t *conn);
   /* flush and send destroys for all circuits using conn */
 
+void circuit_dump_by_conn(connection_t *conn);
+
 /********************************* command.c ***************************/
 
 void command_process_cell(cell_t *cell, connection_t *conn);
@@ -439,6 +441,7 @@ void connection_increment_send_timeval(connection_t *conn);
 void connection_init_timeval(connection_t *conn);
 
 int connection_speaks_cells(connection_t *conn);
+int connection_is_listener(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 
 int connection_send_destroy(aci_t aci, connection_t *conn);
@@ -554,6 +557,10 @@ void check_conn_write(int i);
 int prepare_for_poll(int *timeout);
 
 int do_main_loop(void);
+
+void catchint();
+void catchusr1();
+void dumpstats(void);
 
 int main(int argc, char *argv[]);
 
