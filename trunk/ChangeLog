@@ -35,6 +35,8 @@ Changes so far in 0.0.7:
     - Check directory signatures based on name of signer, not on whom
       we got the directory from. This will let us cache directories more
       easily.
+    - Rotate dnsworkers and cpuworkers on SIGHUP, so they get new config
+      settings too.
   o Features:
     - Doxygen markup on all functions and global variables.
     - Make directory functions update routerlist, not replace it. So
