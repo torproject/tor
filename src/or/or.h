@@ -689,7 +689,7 @@ void circuit_log_path(int severity, circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 
 void circuit_expire_unused_circuits(void);
-int circuit_launch_new(uint8_t purpose);
+circuit_t *circuit_launch_new(uint8_t purpose);
 void circuit_increment_failure_count(void);
 void circuit_reset_failure_count(void);
 void circuit_n_conn_open(connection_t *or_conn);
@@ -929,7 +929,8 @@ int init_keys(void);
 crypto_pk_env_t *init_key_from_file(const char *fname);
 
 void router_retry_connections(void);
-void router_upload_desc_to_dirservers(void);
+void router_upload_dir_desc_to_dirservers(void);
+void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload_len);
 int router_compare_to_my_exit_policy(connection_t *conn);
 const char *router_get_my_descriptor(void);
 int router_rebuild_descriptor(void);
@@ -1018,6 +1019,7 @@ int rend_parse_rendezvous_address(char *address);
 
 int rend_config_services(or_options_t *options);
 int rend_service_init_keys(void);
+int rend_services_init(void);
 
 #endif
 

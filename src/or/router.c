@@ -236,26 +236,30 @@ void router_retry_connections(void) {
   }
 }
 
-void router_upload_desc_to_dirservers(void) {
-  int i;
-  routerinfo_t *router;
-  routerlist_t *rl;
+void router_upload_dir_desc_to_dirservers(void) {
   const char *s;
-
-  router_get_routerlist(&rl);
-  if(!rl)
-    return;
 
   s = router_get_my_descriptor();
   if (!s) {
     log_fn(LOG_WARN, "No descriptor; skipping upload");
     return;
   }
+  router_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, s, strlen(s));
+}
+
+void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload_len) {
+  int i;
+  routerinfo_t *router;
+  routerlist_t *rl;
+
+  router_get_routerlist(&rl);
+  if(!rl)
+    return;
 
   for(i=0;i<rl->n_routers;i++) {
     router = rl->routers[i];
     if(router->dir_port > 0)
-      directory_initiate_command(router, DIR_PURPOSE_UPLOAD_DIR, s, strlen(s));
+      directory_initiate_command(router, purpose, payload, payload_len);
   }
 }
 

@@ -229,3 +229,39 @@ int rend_service_init_keys(void)
   }
   return 0;
 }
+
+
+#define NUM_INTRO_POINTS 3
+int rend_services_init(void) {
+  int i;
+  routerinfo_t *router;
+  routerlist_t *rl;
+  circuit_t *circ;
+
+  router_get_routerlist(&rl);
+
+  //for each of bob's services,
+
+    /* The directory is now here. Pick three ORs as intro points. */
+    for (i=0;i<rl->n_routers;i++) {
+      router = rl->routers[i];
+      //...
+      // maybe built a smartlist of all of them, then pick at random
+      // until you have three? or something smarter.
+    }
+
+    /* build a service descriptor out of them, and tuck it away
+     * somewhere so we don't lose it */
+
+    /* post it to the dirservers */
+    //call router_post_to_dirservers(DIR_PURPOSE_UPLOAD_HIDSERV, desc, desc_len);
+
+    // for each intro point,
+    {
+      circ = circuit_launch_new(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
+      // tell circ which hidden service this is about
+    }
+
+    // anything else?
+}
+
