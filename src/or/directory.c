@@ -58,12 +58,12 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
   /* queue the command on the outbuf */
   directory_send_command(conn, purpose, payload, payload_len);
 
+  /* give it an initial state */
+  conn->state = DIR_CONN_STATE_CONNECTING;
+
   if(purpose == DIR_PURPOSE_FETCH_DIR ||
      purpose == DIR_PURPOSE_UPLOAD_DIR) {
-
     /* then we want to connect directly */
-    conn->state = DIR_CONN_STATE_CONNECTING;
-
     switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
       case -1:
         router_mark_as_down(conn->nickname); /* don't try him again */
