@@ -424,10 +424,10 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
     log_fn(LOG_DEBUG,"Considering exit policy %s", tmpe->string);
     if (!addr) {
       /* Address is unknown. */
-      if (tmpe->msk == 0 && (!tmpe || port == tmpe->prt)) {
+      if (tmpe->msk == 0 && (port >= tmpe->prt_min && port <= tmpe->prt_max)) {
         /* The exit policy is accept/reject *:port */
         match = 1;
-      } else if ((!tmpe->prt || port == tmpe->prt) && 
+      } else if (port >= tmpe->prt_min && port <= tmpe->prt_max && 
                  tmpe->policy_type == EXIT_POLICY_REJECT) {
         /* The exit policy is reject ???:port */
         maybe_reject = 1;
@@ -435,7 +435,7 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
     } else {
       /* Address is known */
       if ( (addr & tmpe->msk) == (tmpe->addr & tmpe->msk) &&
-           (!tmpe->prt || port == tmpe->prt) ) {
+           (port >= tmpe->prt_min && port <= tmpe->prt_max) ) {
         /* Exact match for the policy */
         match = 1;
       }
@@ -947,23 +947,34 @@ static int router_add_exit_policy(routerinfo_t *router,
     }
   }
   if (strcmp(port, "*") == 0) {
-    newe->prt = 0;
+    newe->prt_min = 1;
+    newe->prt_max = 65535;
   } else {
     endptr = NULL;
-    newe->prt = strtol(port, &endptr, 10);
-    if (*endptr) {
+    newe->prt_min = strtol(port, &endptr, 10);
+    if (*endptr == '-') {
+      port = endptr+1;
+      endptr = NULL;
+      newe->prt_max = strtol(port, &endptr, 10);
+      if (*endptr) {
+      log_fn(LOG_WARN, "Malformed port %s on exit policy; rejecting.",
+             port);
+      }
+    } else if (*endptr) {
       log_fn(LOG_WARN, "Malformed port %s on exit policy; rejecting.",
              port);
       goto policy_read_failed;
+    } else {
+      newe->prt_max = newe->prt_min;
     }
   }
 
   in.s_addr = htonl(newe->addr);
   address = tor_strdup(inet_ntoa(in));
   in.s_addr = htonl(newe->msk);
-  log_fn(LOG_DEBUG,"%s %s/%s:%d",
+  log_fn(LOG_DEBUG,"%s %s/%s:%d-%d",
          newe->policy_type == EXIT_POLICY_REJECT ? "reject" : "accept",
-         address, inet_ntoa(in), newe->prt);
+         address, inet_ntoa(in), newe->prt_min, newe->prt_max);
   tor_free(address);
 
   /* now link newe onto the end of exit_policy */

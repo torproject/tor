@@ -560,12 +560,12 @@ test_dir_format()
   ex1.string = NULL;
   ex1.addr = 0;
   ex1.msk = 0;
-  ex1.prt = 80;
+  ex1.prt_min = ex1.prt_max = 80;
   ex1.next = &ex2;
   ex2.policy_type = EXIT_POLICY_REJECT;
   ex2.addr = 18 << 24;
   ex2.msk = 0xFF000000u;
-  ex2.prt = 24;
+  ex2.prt_min = ex1.prt_max = 24;
   ex2.next = NULL;
   r2.address = "tor.tor.tor";
   r2.addr = 0x0a030201u; /* 10.3.2.1 */
