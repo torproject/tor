@@ -722,7 +722,10 @@ test_dir_format()
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
 
   strcpy(buf2, "router Magri testaddr1.foo.bar 9000 9002 9003\n"
-         "platform Tor "VERSION" on ");
+         "platform Tor "VERSION" (up 0 sec) on ");
+  /* XXX the "0" above is hardcoded, but even if we made it reflect
+   * uptime, that still wouldn't make it right, because the two
+   * descriptors might be made on different seconds... hm. */
   strcat(buf2, get_uname());
   strcat(buf2, "\n"
          "published 1970-01-01 00:00:00\n"
