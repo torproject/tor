@@ -119,7 +119,7 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
 
   /* first check if it's there exactly */
   conn = connection_exact_get_by_addr_port(addr,port);
-  if(conn && connection_state_is_open(conn)) {
+  if(conn && connection_state_is_open(conn) && !conn->marked_for_close) {
     log(LOG_INFO,"connection_twin_get_by_addr_port(): Found exact match.");
     return conn;
   }
@@ -150,7 +150,7 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
     assert(conn);
-    if(conn->addr == addr && conn->port == port)
+    if(conn->addr == addr && conn->port == port && !conn->marked_for_close)
        return conn;
   }
   return NULL;
@@ -162,7 +162,7 @@ connection_t *connection_get_by_type(int type) {
 
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
-    if(conn->type == type)
+    if(conn->type == type && !conn->marked_for_close)
        return conn;
   }
   return NULL;
@@ -174,7 +174,7 @@ connection_t *connection_get_by_type_state(int type, int state) {
 
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
-    if(conn->type == type && conn->state == state)
+    if(conn->type == type && conn->state == state && !conn->marked_for_close)
        return conn;
   }
   return NULL;
