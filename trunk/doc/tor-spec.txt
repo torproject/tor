@@ -592,14 +592,14 @@ line, they must appear in "bandwidth" and "ports" lines.
 A Directory begins with a "signed-directory" item, followed by one each of
 the following, in any order: "recommended-software", "published",
 "running-routers".  It may include any number of "opt" items.  After these
-items, a directory includes any number of router descriptors, and a singer
+items, a directory includes any number of router descriptors, and a single
 "directory-signature" item.
 
     "signed-directory"
     "published" YYYY-MM-DD HH:MM:SS
     "recommended-software"  comma-separated-version-list
     "running-routers" comma-separated-nickname-list
-    "directory-signature" NL Signature
+    "directory-signature" nickname-of-dirserver NL Signature
 
 Note:  The router descriptor for the directory server must appear first.
 The signature is computed by computing the SHA-1 hash of the
