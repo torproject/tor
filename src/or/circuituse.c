@@ -817,18 +817,22 @@ circuit_get_open_circ_or_launch(connection_t *conn,
 
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
       /* need to pick an intro point */
+try_an_intro_point:
       exitname = rend_client_get_random_intro(conn->rend_query);
       if (!exitname) {
-        log_fn(LOG_WARN,"Couldn't get an intro point for '%s'. Closing.",
+        log_fn(LOG_INFO,"No intro points for '%s': refetching service descriptor.",
                conn->rend_query);
-        return -1;
+        rend_client_refetch_renddesc(conn->rend_query);
+        conn->state = AP_CONN_STATE_RENDDESC_WAIT;
+        return 0;
       }
       if (!router_get_by_nickname(exitname)) {
-        log_fn(LOG_WARN,"Advertised intro point '%s' is not known. Closing.", exitname);
+        log_fn(LOG_NOTICE,"Advertised intro point '%s' is not recognized for '%s'. Skipping over.",
+               exitname, conn->rend_query);
+        rend_client_remove_intro_point(exitname, conn->rend_query);
         tor_free(exitname);
-        return -1;
+        goto try_an_intro_point;
       }
-      /* XXX if we failed, then refetch the descriptor */
       log_fn(LOG_INFO,"Chose %s as intro point for %s.", exitname, conn->rend_query);
     }
 
@@ -839,7 +843,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       if (conn->chosen_exit_name) {
         exitname = tor_strdup(conn->chosen_exit_name);
         if (!router_get_by_nickname(exitname)) {
-          log_fn(LOG_WARN,"Requested exit point '%s' is not known. Closing.", exitname);
+          log_fn(LOG_NOTICE,"Requested exit point '%s' is not known. Closing.", exitname);
           tor_free(exitname);
           return -1;
         }

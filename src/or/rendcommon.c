@@ -242,7 +242,9 @@ int rend_cache_lookup_desc(const char *query, const char **desc, size_t *desc_le
 /** Parse *desc, calculate its service id, and store it in the cache.
  * If we have a newer descriptor with the same ID, ignore this one.
  * If we have an older descriptor with the same ID, replace it.
- * Returns -1 if it's malformed or otherwise rejected, else return 0.
+ * Return -1 if it's malformed or otherwise rejected; return 0 if
+ * it's the same or older than one we've already got; return 1 if
+ * it's novel.
  */
 int rend_cache_store(const char *desc, size_t desc_len)
 {
@@ -250,6 +252,7 @@ int rend_cache_store(const char *desc, size_t desc_len)
   rend_service_descriptor_t *parsed;
   char query[REND_SERVICE_ID_LEN+1];
   time_t now;
+
   tor_assert(rend_cache);
   parsed = rend_parse_service_descriptor(desc,desc_len);
   if (!parsed) {
@@ -298,7 +301,7 @@ int rend_cache_store(const char *desc, size_t desc_len)
   memcpy(e->desc, desc, desc_len);
 
   log_fn(LOG_INFO,"Successfully stored rend desc '%s', len %d", query, (int)desc_len);
-  return 0;
+  return 1;
 }
 
 /** Called when we get a rendezvous-related relay cell on circuit

@@ -1206,7 +1206,7 @@ connection_t *connection_get_by_identity_digest(const char *digest, int type);
 connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_lastwritten(int type, int state);
-connection_t *connection_get_by_type_rendquery(int type, const char *rendquery);
+connection_t *connection_get_by_type_state_rendquery(int type, int state, const char *rendquery);
 
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 #define connection_has_pending_tls_data(conn) \
@@ -1495,7 +1495,7 @@ void rend_client_refetch_renddesc(const char *query);
 int rend_client_remove_intro_point(char *failed_intro, const char *query);
 int rend_client_rendezvous_acked(circuit_t *circ, const char *request, size_t request_len);
 int rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t request_len);
-void rend_client_desc_fetched(char *query, int status);
+void rend_client_desc_here(char *query);
 
 char *rend_client_get_random_intro(char *query);
 

@@ -227,7 +227,7 @@ static int cpuworker_main(void *data) {
       if (r == 0) {
         log_fn(LOG_INFO,"CPU worker exiting because Tor process closed connection (either rotated keys or died).");
       } else {
-        log_fn(LOG_INFO,"CPU worker editing because of error on connection To Tor process.");
+        log_fn(LOG_INFO,"CPU worker editing because of error on connection to Tor process.");
         log_fn(LOG_INFO,"(Error on %d was %s)", fd, tor_socket_strerror(tor_socket_errno(fd)));
       }
       goto end;
