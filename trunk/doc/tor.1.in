@@ -383,8 +383,9 @@ Tor clients behave as with SIGTERM; but Tor servers will do a controlled
 slow shutdown, closing listeners and waiting 30 seconds before exiting.
 .TP
 \fBSIGHUP\fR
-The signal instructs Tor to reload its configuration, fetch a new
-directory, and kill and restart its helper processes if applicable.
+The signal instructs Tor to reload its configuration (including closing
+and reopening logs), fetch a new directory, and kill and restart its
+helper processes if applicable.
 .TP
 \fBSIGUSR1\fR
 Log statistics about current connections, past connections, and
