@@ -1150,19 +1150,24 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     return 0;
   }
 
+  log_fn(LOG_DEBUG,"finished adding conn");
+
   /* add it into the linked list of streams on this circuit */
   n_stream->next_stream = circ->n_streams;
   circ->n_streams = n_stream;
 
   if(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
+    log_fn(LOG_DEBUG,"begin is for rendezvous. configuring stream.");
     n_stream->address = tor_strdup("(rendezvous)");
     n_stream->state = EXIT_CONN_STATE_CONNECTING;
     strcpy(n_stream->rend_query, circ->rend_query);
+    assert(n_stream->rend_query[0]);
     if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {
       log_fn(LOG_WARN,"Didn't find rendezvous service (port %d)",n_stream->port);
       connection_mark_for_close(n_stream,0 /* XXX */);
       return 0;
     }
+    log_fn(LOG_DEBUG,"Finished assigning addr/port");
     n_stream->cpath_layer = circ->cpath->prev; /* link it */
     connection_exit_connect(n_stream);
     return 0;
@@ -1196,6 +1201,7 @@ void connection_exit_connect(connection_t *conn) {
     return;
   }
 
+  log_fn(LOG_DEBUG,"about to try connecting");
   switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
     case -1:
       connection_mark_for_close(conn, END_STREAM_REASON_CONNECTFAILED);
