@@ -5,7 +5,6 @@
 #include "or.h"
 
 extern int global_role; /* from main.c */
-static const char socks_userid[] = "anonymous";
 
 int connection_ap_process_inbuf(connection_t *conn) {
 
@@ -34,8 +33,6 @@ int connection_ap_process_inbuf(connection_t *conn) {
 int ap_handshake_process_socks(connection_t *conn) {
   char c;
   socks4_t socks4_info; 
-  static char destaddr[512]; /* XXX there's a race condition waiting to happen here */
-  static int destlen=0;
 
   assert(conn);
 
@@ -85,7 +82,9 @@ int ap_handshake_process_socks(connection_t *conn) {
   }
 
   if(!conn->read_username) { /* the socks spec says we've got to read stuff until we get a null */
-    while(conn->inbuf_datalen) {
+    for(;;) {
+      if(!conn->inbuf_datalen)
+        return 0; /* maybe next time */
       if(connection_fetch_from_buf((char *)&c,1,conn) < 0)
         return -1;
       if(!c) {
@@ -98,19 +97,19 @@ int ap_handshake_process_socks(connection_t *conn) {
 
   if(!conn->dest_addr) { /* no dest_addr found yet */
 
-    while(conn->inbuf_datalen) {
+    for(;;) {
+      if(!conn->inbuf_datalen)
+        return 0; /* maybe next time */
       if(connection_fetch_from_buf((char *)&c,1,conn) < 0)
         return -1;
-      destaddr[destlen++] = c;
-      if(destlen > 500) {
+      conn->dest_tmp[conn->dest_tmplen++] = c;
+      if(conn->dest_tmplen > 500) {
         log(LOG_NOTICE,"ap_handshake_process_socks(): dest_addr too long!");
         ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
-        destlen = 0;
         return -1;
       }
       if(!c) { /* we found the null; we're done */
-        conn->dest_addr = strdup(destaddr);
-        destlen = 0;
+        conn->dest_addr = strdup(conn->dest_tmp);
         log(LOG_NOTICE,"ap_handshake_process_socks(): successfully read dest addr '%s'",
           conn->dest_addr);
         break;
