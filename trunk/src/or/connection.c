@@ -840,9 +840,13 @@ void assert_connection_ok(connection_t *conn, time_t now)
     assert(!conn->tls);
   } else {
     if(conn->state == OR_CONN_STATE_OPEN) {
-      assert(conn->bandwidth > 0);
+      /* assert(conn->bandwidth > 0); */
+      /* the above isn't necessarily true: if we just did a TLS
+       * handshake but we didn't recognize the other peer, or it
+       * gave a bad cert/etc, then we won't have assigned bandwidth,
+       * yet it will be open. -RD
+       */
       assert(conn->receiver_bucket >= 0);
-//      assert(conn->receiver_bucket <= 10*conn->bandwidth);
     }
     assert(conn->addr && conn->port);
     assert(conn->address);
