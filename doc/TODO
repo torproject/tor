@@ -17,10 +17,17 @@ For 0.0.9:
      C:\Documents and Settings\Nick Mathewson\My Documents\src\tor .
 N&R. bring tor-spec up to date
 N&R. make loglevels info,debug less noisy
-N  . OS X package (and bundle?)
-N  . Working RPMs
-N  - Get win32 servers working, or find out why it isn't happening now.
-     - Why can't win32 find a cpuworker?
+   o OS X package (and bundle?)
+   o Working RPMs
+   o Get win32 servers working, or find out why it isn't happening now.
+     o Why can't win32 find a cpuworker?
+
+For 0.0.9.3:
+   - All tasks marked for 0093 in flyspray.
+   - Backport performance improvement (stop calling getttimeofday for
+     each cell)
+   - Setup instructions for OSX.
+   - Server instructions for OSX and Windows operators.
 
 ************************ For Post 0.0.9 *****************************
 
