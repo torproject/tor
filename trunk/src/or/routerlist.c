@@ -445,34 +445,13 @@ int router_load_routerlist_from_string(const char *s, int trusted)
   return 0;
 }
 
-/** Return 1 if myversion is in versionlist. Else return 0.
- * (versionlist is a comma-separated list of versions.) */
-int is_recommended_version(const char *myversion,
-                           const char *versionlist) {
-  int len_myversion = strlen(myversion);
-  char *comma;
-  const char *end = versionlist + strlen(versionlist);
-
-  log_fn(LOG_DEBUG,"checking '%s' in '%s'.", myversion, versionlist);
-
-  for(;;) {
-    comma = strchr(versionlist, ',');
-    if( ((comma ? comma : end) - versionlist == len_myversion) &&
-       !strncmp(versionlist, myversion, len_myversion))
-      /* only do strncmp if the length matches */
-      return 1; /* success, it's there */
-    if(!comma)
-      return 0; /* nope */
-    versionlist = comma+1;
-  }
-}
-
 /** Add to the current routerlist each router stored in the
  * signed directory <b>s</b>.  If pkey is provided, make sure that <b>s</b> is
  * signed with pkey. */
 int router_load_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
 {
   routerlist_t *new_list = NULL;
+  check_software_version_against_directory(s, options.IgnoreVersion);
   if (router_parse_routerlist_from_directory(s, &new_list, pkey)) {
     log_fn(LOG_WARN, "Couldn't parse directory.");
     return -1;
@@ -492,19 +471,6 @@ int router_load_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
   if (router_resolve_routerlist(routerlist)) {
     log_fn(LOG_WARN, "Error resolving routerlist");
     return -1;
-  }
-  if (!is_recommended_version(VERSION, routerlist->software_versions)) {
-    log(options.IgnoreVersion ? LOG_WARN : LOG_ERR,
-     "You are running Tor version %s, which will not work with this network.\n"
-     "Please use %s%s.",
-        VERSION, strchr(routerlist->software_versions,',') ? "one of " : "",
-        routerlist->software_versions);
-    if(options.IgnoreVersion) {
-      log(LOG_WARN, "IgnoreVersion is set. If it breaks, we told you so.");
-    } else {
-      fflush(0);
-      exit(0);
-    }
   }
   return 0;
 }
