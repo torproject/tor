@@ -91,7 +91,7 @@ crypto_pk_env_t *get_identity_key(void) {
   return identitykey;
 }
 
-/** Return truf iff the identity key has been set. */
+/** Return true iff the identity key has been set. */
 int identity_key_is_set(void) {
   return identitykey != NULL;
 }
