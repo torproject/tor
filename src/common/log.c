@@ -29,6 +29,7 @@ typedef struct logfile_t {
   int max_loglevel; /**< Highest severity level to send to this stream. */
   int is_temporary; /**< Boolean: close after initializing logging subsystem.*/
   int is_syslog; /**< Boolean: send messages to syslog. */
+  log_callback callback; /**< If not num, send messages to this function. */
 } logfile_t;
 
 /** Helper: map a log severity to descriptive string. */
@@ -156,7 +157,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
       lf = lf->next;
       continue;
     }
-    if (! (lf->file || lf->is_syslog)) {
+    if (! (lf->file || lf->is_syslog || lf->callback)) {
       lf = lf->next;
       continue;
     }
@@ -170,6 +171,10 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
 #ifdef HAVE_SYSLOG_H
       syslog(severity, "%s", end_of_prefix);
 #endif
+      lf = lf->next;
+      continue;
+    } else if (lf->callback) {
+      lf->callback(severity, end_of_prefix);
       lf = lf->next;
       continue;
     }
@@ -298,6 +303,19 @@ void add_temp_log(void)
 {
   add_stream_log(LOG_INFO, LOG_ERR, "<temp>", stdout);
   logfiles->is_temporary = 1;
+}
+
+int add_callback_log(int loglevelMin, int loglevelMax, log_callback cb)
+{
+  logfile_t *lf;
+  lf = tor_malloc_zero(sizeof(logfile_t));
+  lf->loglevel = loglevelMin;
+  lf->max_loglevel = loglevelMax;
+  lf->filename = tor_strdup("callback>");
+  lf->callback = cb;
+  lf->next = logfiles;
+  logfiles = lf;
+  return 0;
 }
 
 /** Close any log handlers added by add_temp_log or marked by mark_logs_temp */

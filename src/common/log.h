@@ -53,12 +53,15 @@
 #define LOG_ERR     3
 #endif
 
+typedef void (*log_callback)(int severity, const char *msg);
+
 int parse_log_level(const char *level);
 void add_stream_log(int severityMin, int severityMax, const char *name, FILE *stream);
 int add_file_log(int severityMin, int severityMax, const char *filename);
 #ifdef HAVE_SYSLOG_H
 int add_syslog_log(int loglevelMin, int loglevelMax);
 #endif
+int add_callback_log(int loglevelMin, int loglevelMax, log_callback cb);
 int get_min_log_level(void);
 void close_logs(void);
 void reset_logs(void);
