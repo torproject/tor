@@ -156,6 +156,8 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
     return -1;
   }
 
+  memcpy(circ->handshake_digest, cell.payload+DH_KEY_LEN, CRYPTO_SHA1_DIGEST_LEN);
+
   connection_or_write_cell_to_buf(&cell, circ->p_conn);
   log_fn(LOG_DEBUG,"Finished sending 'created' cell.");
 
@@ -465,6 +467,19 @@ static void remove_twins_from_smartlist(smartlist_t *sl, routerinfo_t *twin) {
   }
 }
 
+void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
+{
+  if (*head_ptr) {
+    new_hop->next = (*head_ptr);
+    new_hop->prev = (*head_ptr)->prev;
+    (*head_ptr)->prev->next = new_hop;
+    (*head_ptr)->prev = new_hop;
+  } else {
+    *head_ptr = new_hop;
+    new_hop->prev = new_hop->next = new_hop;
+  }
+}
+
 int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, routerinfo_t **router_out)
 {
   int cur_len;
@@ -554,15 +569,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   hop = (crypt_path_t *)tor_malloc_zero(sizeof(crypt_path_t));
 
   /* link hop into the cpath, at the end. */
-  if (*head_ptr) {
-    hop->next = (*head_ptr);
-    hop->prev = (*head_ptr)->prev;
-    (*head_ptr)->prev->next = hop;
-    (*head_ptr)->prev = hop;
-  } else {
-    *head_ptr = hop;
-    hop->prev = hop->next = hop;
-  }
+  onion_append_to_cpath(head_ptr, hop);
 
   hop->state = CPATH_STATE_CLOSED;
 
