@@ -1,26 +1,34 @@
-%define  rellevel 2
-%define  relbase std.%{rellevel}
-%define  rhrel %([ -f /etc/redhat-release ] && (sed -e 's/^Red Hat Linux release //' -e 's/ .*$//' -e 's/\\./_/g' -e 's/^.*$/.rh&/' < /etc/redhat-release))
+# TODO:
+# Add /etc/logrotate.d/tor
+# 
+
 %define  blddate %(date -u +"%Y%m%d%H%M")
-%define  release %{relbase}%{rhrel}.%{blddate}
 
-%define  initdir /etc/rc.d/init.d
+%define  version       0.0.7
+%define  version_extra rc2
+%define  vepoch        0.1
+%define  tor_version   %{version}%{version_extra}
+# not quite right XXXXX
+%define  release 0.std.%{vepoch}.%{version_extra}
 
-Summary: tor: anonymizing overlay network for TCP
 Name: tor
-Version: @VERSION@
-Vendor: R. Dingledine <arma@seul.org>
+Version: %{version}
 Release: %{release}
+Summary: Anonymizing overlay network for TCP
+Vendor: R. Dingledine <arma@seul.org>
+Packager: Nick Mathewson <nickm@seul.org>
 License: BSD-like
 Group: Applications/Internet
 URL: http://freehaven.net/tor/
 
-Source0: http://freehaven.net/tor/dist/tor-%{version}.tar.gz
+Source0: http://freehaven.net/tor/dist/tor-%{tor_version}.tar.gz
 
+Requires: openssl >= 0.9.6
+BuildRequires: openssl-devel >= 0.9.6
 Requires(pre): shadow-utils, /usr/bin/id, /bin/date, /bin/sh
 Requires(pre): %{_sbindir}/useradd, %{_sbindir}/groupadd
 
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{relbase}-root
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %description
 Tor is a connection-based low-latency anonymous communication system which
@@ -58,7 +66,7 @@ group, set tor up to run as a daemon, and automatically start it at
 installation time.
 
 %prep
-%setup -q
+%setup -q -n tor-%{tor_version}
 
 # Patch the startup script to use the right user and group IDs. Force
 # the use of /bin/sh as the shell for the "tor" account.
@@ -80,19 +88,19 @@ q
 %makeinstall
 
 # Install init script.
-%__mkdir_p ${RPM_BUILD_ROOT}%{initdir}
-%__install -m 755 contrib/tor.sh ${RPM_BUILD_ROOT}%{initdir}/tor
+%__mkdir_p ${RPM_BUILD_ROOT}%{_initrddir}
+%__install -p -m 755 contrib/tor.sh ${RPM_BUILD_ROOT}%{_initrddir}/tor
 
 # Directories that don't have any preinstalled files
-%__mkdir_p -m 700 ${RPM_BUILD_ROOT}/var/lib/tor
-%__mkdir_p -m 755 ${RPM_BUILD_ROOT}/var/run/tor
-%__mkdir_p -m 755 ${RPM_BUILD_ROOT}/var/log/tor
+%__mkdir_p -m 700 ${RPM_BUILD_ROOT}%{_localstatedir}/lib/tor
+%__mkdir_p -m 755 ${RPM_BUILD_ROOT}%{_localstatedir}/run/tor
+%__mkdir_p -m 755 ${RPM_BUILD_ROOT}%{_localstatedir}/log/tor
 
 %clean
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
 
 %pre
-[ -f %{initdir}/tor  ] && /sbin/service tor stop
+[ -f %{_initrddir}/tor  ] && /sbin/service tor stop
 if [ ! -n "`/usr/bin/id -g tor 2>/dev/null`" ]; then
     # One would like to default the GID, but doing that properly would
     # require thought.
@@ -118,20 +126,25 @@ fi
 
 %files
 %defattr(-,root,root)
-%doc AUTHORS INSTALL LICENSE README
+%doc AUTHORS INSTALL LICENSE README ChangeLog doc/HACKING doc/TODO doc/FAQ
+#%{_mandir}/man1/tor.1.gz
+#%{_mandir}/man1/torify.1.gz
 %{_mandir}/man*/*
 %{_bindir}/tor
 %{_bindir}/torify
-%{initdir}/tor
+%config %{_initrddir}/tor
 %dir %{_sysconfdir}/tor/
-%config(noreplace) %{_sysconfdir}/tor/torrc
+%config(noreplace) %{_sysconfdir}/tor/torrc.sample
 %config(noreplace) %{_sysconfdir}/tor/dirservers
 %config(noreplace) %{_sysconfdir}/tor/tor-tsocks.conf
-%attr(-,tor,tor) %dir /var/lib/tor
-%attr(-,tor,tor) %dir /var/run/tor
-%attr(-,tor,tor) %dir /var/log/tor
+%attr(0700,tor,tor) %dir %{_localstatedir}/lib/tor
+%attr(0755,tor,tor) %dir %{_localstatedir}/run/tor
+%attr(0755,tor,tor) %dir %{_localstatedir}/log/tor
 
 %changelog
+* Mon Jun 06 2004 Nick Mathewson <nickm@freehaven.net> 0.0.7-0.std.0.1.rc2
+- Make spec file more happy with fc2 packaging 
+
 * Sat Jan 17 2004 John Bashinski <jbash@velvet.com>
 - Basic spec file; tested with Red Hat 9.
 

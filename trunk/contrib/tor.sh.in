@@ -2,8 +2,8 @@
 #
 #tor    The Onion Router
 #
-#chkconfig:2345 90 10
-#description: Onion Router
+# chkconfig: 2345 90 10
+# description: Onion Router
 
 TORUSER=
 TORGROUP=
@@ -61,6 +61,22 @@ case "$1" in
     fi
     ;;
 
+    reload)
+    if [ -f $TORPID ]; then
+        echo -n "Sending HUP to tor..."
+        kill -HUP `cat $TORPID`
+        RETVAL=$?
+        if [ $RETVAL -eq 0 ]; then
+            echo " ok"
+        else
+            echo " ERROR!"
+        fi
+    else
+        echo "Unable to kill tor: $TORPID does not exist"
+        RETVAL=1
+    fi
+    ;;
+
     restart)
     $0 stop
     if [ -f $TORPID ]; then
@@ -68,6 +84,7 @@ case "$1" in
     fi
     $0 start
     ;;
+
 
     status)
     PID=`cat $TORPID 2>/dev/null`
