@@ -115,7 +115,7 @@ static struct {
   { "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ,  DIR_ONLY },
   { "uptime",              K_UPTIME,              ARGS,    NO_OBJ,  RTR_ONLY },
   { "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK,  DIR_ONLY },
-  { NULL, -1 }
+  { NULL, -1, NO_ARGS, NO_OBJ, ANY }
 };
 
 /* static function prototypes */
@@ -1003,7 +1003,7 @@ router_parse_exit_policy(directory_token_t *tok) {
   struct exit_policy_t*newe;
   struct in_addr in;
   char *arg, *address, *mask, *port, *endptr;
-  int bits, ok;
+  int bits;
 
   tor_assert(tok->tp == K_REJECT || tok->tp == K_ACCEPT);
 
