@@ -223,8 +223,9 @@ and/or performance limitations. One can also use a cascade (fixed
 shared route) with a relatively fixed set of users. This assumes a
 significant degree of agreement and provides an easier target for an active
 attacker since the endpoints are generally known. However, a practical
-network with both of these features has been run for many years
-(the Java Anon Proxy, aka Web MIXes, \cite{web-mix}).
+network with both of these features and thousands of active users has
+been run for many years (the Java Anon Proxy, aka Web MIXes,
+\cite{web-mix}).
 
 Another low latency design that was proposed independently and at
 about the same time as onion routing was PipeNet \cite{pipenet}.
@@ -313,128 +314,29 @@ communication.  Crowds and [XXX] provide anonymity for HTTP requests; [...]
 
 
 
-anonymizer%
-pipenet%
-freedom v1%
-freedom v2%
-onion routing v1%
-isdn-mixes%
-crowds%
-real-time mixes, web mixes%
-anonnet (marc rennhard's stuff)%
-morphmix%
-P5%
-gnunet%
-rewebbers%
-tarzan%
-herbivore%
-hordes%
-cebolla (?)%
+anonymizer\\
+pipenet\\
+freedom v1\\
+freedom v2\\
+onion routing v1\\
+isdn-mixes\\
+crowds\\
+real-time mixes, web mixes\\
+anonnet (marc rennhard's stuff)\\
+morphmix\\
+P5\\
+gnunet\\
+rewebbers\\
+tarzan\\
+herbivore\\
+hordes\\
+cebolla (?)\\
 
 [XXX Close by mentioning where Tor fits.]
 
-\SubSection{Our threat model}
-\label{subsec:threat-model}
-
-Like all practical low-latency systems, Tor is broken against a global
-passive adversary, the most commonly assumed adversary for analysis of
-theoretical anonymous communication designs. The adversary we assume
-is weaker than global with respect to distribution, but it is not
-merely passive. We assume a threat model derived largely from that of
-\cite{or-pet00}.
-
-[XXX The following is cut in from the OR analysis paper from PET 2000.
-I've already changed it a little, but didn't get very far.
-And, much if not all will eventually
-go. But I thought it a useful starting point. -PS]
-
-The basic adversary components we consider are:
-\begin{description}
-\item[Observer:] can observe a connection (e.g., a sniffer on an
-  Internet router), but cannot initiate connections.
-\item[Disrupter:] can delay (indefinitely) or corrupt traffic on a
-  link.
-\item[Hostile initiator:] can initiate (destroy) connections with
-  specific routes as well as varying the timing and content of traffic
-  on the connections it creates.
-\item[Hostile responder:] can vary the traffic on the connections made
-  to it including refusing them entirely, intentionally modifying what
-  it sends and at what rate, and selectively closing them.
-\item[Compromised Tor-node:] can arbitrarily manipulate the connections
-  under its control, as well as creating new connections (that pass
-  through itself).
-\end{description}
-
-
-All feasible adversaries can be composed out of these basic
-adversaries. This includes combinations such as one or more
-compromised network nodes cooperating with disrupters of links on
-which those nodes are not adjacent, or such as combinations of hostile
-outsiders and observers.  However, we are able to restrict our
-analysis of adversaries to just one class, the compromised Tor-node.
-We now justify this claim.
-
-Especially in light of our assumption that the network forms a clique,
-a hostile outsider can perform a subset of the actions that a
-compromised COR can do. Also, while a compromised COR cannot disrupt
-or observe a link unless it is adjacent to it, any adversary that
-replaces some or all observers and/or disrupters with a compromised
-COR adjacent to the relevant link is more powerful than the adversary
-it replaces. And, in the presence of adequate link padding or bandwidth
-limiting even collaborating observers can gain no useful information about
-connections within the network. They may be able to gain information
-by observing connections to the network (in the remote-COR configuration),
-but again this is less than what the COR to which such connection is made
-can learn. Thus, by considering adversaries consisting of
-collections of compromised CORs we cover the worst case of all
-combinations of basic adversaries. Our analysis focuses on this most
-capable adversary, one or more compromised CORs.
-
-The possible distributions of adversaries are
-\begin{itemize}
-\item{\bf single adversary}
-\item{\bf multiple adversary:} A fixed, randomly distributed subset of
-  Tor-nodes is compromised.
-\item{\bf roving adversary:} A fixed-bound size subset of Tor-nodes is
-  compromised at any one time. At specific intervals, other CORs can
-  become compromised or uncompromised.
-\item{\bf global adversary:} All nodes are compromised.
-\end{itemize}
-
-Onion Routing provides no protection against a global adversary.  If
-all the CORs are compromised, they can know exactly who is talking to
-whom. The content of what was sent will be revealed as it emerges
-from the OR network, unless it has been end-to-end encrypted outside the
-OR network. Even a firewall-to-firewall connection is exposed
-if, as assumed above, our goal is to hide which local-COR is talking to
-which local-COR.
-
-\SubSection{Known attacks against low-latency anonymity systems}
-\label{subsec:known-attacks}
-
-We discuss each of these attacks in more detail below, along with the
-aspects of the Tor design that provide defense. We provide a summary
-of the attacks and our defenses against them in Section \ref{sec:attacks}.
-
-Passive attacks:
-simple observation,
-timing correlation,
-size correlation,
-option distinguishability,
-
-Active attacks:
-key compromise,
-iterated subpoena,
-run recipient,
-run a hostile node,
-compromise entire path,
-selectively DOS servers,
-introduce timing into messages,
-directory attacks,
-tagging attacks
-
 \Section{Design goals and assumptions}
 \label{sec:assumptions}
+
 
 \subsection{Goals}
 % Are these really our goals? ;) -NM
@@ -500,13 +402,129 @@ provided by an external service.
 Tor is not steganographic. It doesn't try to conceal which users are
 sending or receiving communications via Tor.
 
-\subsection{Assumptions}
+
+\SubSection{Adversary Model}
+\label{subsec:adversary-model}
+
+Like all practical low-latency systems, Tor is broken against a global
+passive adversary, the most commonly assumed adversary for analysis of
+theoretical anonymous communication designs. The adversary we assume
+is weaker than global with respect to distribution, but it is not
+merely passive.
+We assume a threat model that expands on that from \cite{or-pet00}.
+
+
+The basic adversary components we consider are:
+\begin{description}
+\item[Observer:] can observe a connection (e.g., a sniffer on an
+  Internet router), but cannot initiate connections. Observations may
+  include timing and/or volume of packets as well as appearance of
+  individual packets (including headers and content).
+\item[Disrupter:] can delay (indefinitely) or corrupt traffic on a
+  link. Can change all those things that an observer can observe up to
+  the limits of computational ability (e.g., cannot forge signatures
+  unless a key is compromised).
+\item[Hostile initiator:] can initiate (destroy) connections with
+  specific routes as well as varying the timing and content of traffic
+  on the connections it creates. A special case of the disrupter with
+  additional abilities appropriate to its role in forming connections.
+\item[Hostile responder:] can vary the traffic on the connections made
+  to it including refusing them entirely, intentionally modifying what
+  it sends and at what rate, and selectively closing them. Also a
+  special case of the disrupter.
+\item[Key breaker:] can break the longterm private decryption key of a
+  Tor-node.
+\item[Compromised Tor-node:] can arbitrarily manipulate the connections
+  under its control, as well as creating new connections (that pass
+  through itself).
+\end{description}
+
+
+All feasible adversaries can be composed out of these basic
+adversaries. This includes combinations such as one or more
+compromised Tor-nodes cooperating with disrupters of links on which
+those nodes are not adjacent, or such as combinations of hostile
+outsiders and link observers (who watch links between adjacent
+Tor-nodes).  Note that one type of observer might be a Tor-node. This
+is sometimes called an honest-but-curious adversary. While an observer
+Tor-node will perform only correct protocol interactions, it might
+share information about connections and cannot be assumed to destroy
+session keys at end of a session.  Note that a compromised Tor-node is
+stronger than any other adversary component in the sense that
+replacing a component of any adversary with a compromised Tor-node
+results in a stronger overall adversary (assuming that the compromised
+Tor-node retains the same signature keys and other private
+state-information as the component it replaces).
+
+
+In general we are more focused on traffic analysis attacks than
+traffic confirmation attacks. A user who runs a Tor proxy on his own
+machine, connects to some remote Tor-node and makes a connection to an
+open Internet site, such as a public web server, is vulnerable to
+traffic confirmation. That is, an active attacker who suspects that
+the particular client is communicating with the particular server will
+be able to confirm this if she can attack and observe both the
+connection between the Tor network and the client and that between the
+Tor network and the server. Even a purely passive attacker will be
+able to confirm if the timing and volume properties of the traffic on
+the connnection are unique enough.  This is not to say that Tor offers
+no resistance to traffic confirmation; it does.  We defer discussion
+of this point and of particular attacks until Section~\ref{sec:attacks},
+after we have described Tor in more detail. However, we note here some
+basic assumptions that affect the threat model.
+
+[XXX I think this next subsection should be cut, leaving its points
+for the attacks section. But I'm leaving it here for now. The above
+line refers to the immediately following SubSection.-PS]
+
+
+\SubSection{Known attacks against low-latency anonymity systems}
+\label{subsec:known-attacks}
+
+We discuss each of these attacks in more detail below, along with the
+aspects of the Tor design that provide defense. We provide a summary
+of the attacks and our defenses against them in Section~\ref{sec:attacks}.
+
+Passive attacks:
+simple observation,
+timing correlation,
+size correlation,
+option distinguishability,
+
+Active attacks:
+key compromise,
+iterated subpoena,
+run recipient,
+run a hostile node,
+compromise entire path,
+selectively DOS servers,
+introduce timing into messages,
+directory attacks,
+tagging attacks
+
+
+\SubSection{Assumptions}
+
+All dirservers are honest and trusted.
+
+Somewhere between ten percent and twenty percent of nodes
+are compromised. In some circumstances, e.g., if the Tor network
+is running on a hardened network where all operators have had careful
+background checks, the percent of compromised nodes might be much
+lower. Also, it may be worthwhile to consider cases where many
+of the `bad' nodes are not fully compromised but simply (passive)
+observing adversaries. We assume that all adversary components,
+regardless of their capabilities are collaborating and are connected
+in an offline clique.
+
+
 - Threat model
 - Mostly reliable nodes: not trusted.
 - Small group of trusted dirserv ops
 - Many users of diff bandwidth come and go.
 
 [XXX what else?]
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -744,11 +762,12 @@ issues remaining to be ironed out. In particular:
 \item \emph{Scalability:} Since Tor's emphasis currently is on simplicity
 of design and deployment, the current design won't easily handle more
 than a few hundred servers, because of its clique topology. Restricted
-route topologies \cite{danezis:pet2003} promise comparable anonymity
+route topologies \cite{danezis-pets03} promise comparable anonymity
 with much better scaling properties, but we must solve problems like
 how to randomly form the network without introducing net attacks.
-% cascades are a restricted route topology too. we must mention
-% earlier why we're not satisfied with the cascade approach.
+% [cascades are a restricted route topology too. we must mention
+% earlier why we're not satisfied with the cascade approach.]-RD
+% [We do. At least 
 \item \emph{Cover traffic:} Currently we avoid cover traffic because
 it introduces clear performance and bandwidth costs, but and its
 security properties are not well understood. With more research
