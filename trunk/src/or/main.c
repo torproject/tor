@@ -593,7 +593,8 @@ static void run_scheduled_events(time_t now) {
     time_to_fetch_directory = now + options->DirFetchPostPeriod;
   }
 
-  /* 2b. Once per minute, regenerate and upload the descriptor if it is wrong */
+  /* 2b. Once per minute, regenerate and upload the descriptor if the old
+   * one is inaccurate. */
   if (time_to_check_descriptor < now) {
     time_to_check_descriptor = now + CHECK_DESCRIPTOR_INTERVAL;
     if (decide_if_publishable_server(now)) {
