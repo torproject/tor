@@ -746,8 +746,8 @@ connection_dir_client_reached_eof(connection_t *conn)
            * cleans it up */
         } else {
           /* success. notify pending connections about this. */
-          rend_client_desc_fetched(conn->rend_query, 1);
           conn->purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
+          rend_client_desc_here(conn->rend_query);
         }
         break;
       case 404:

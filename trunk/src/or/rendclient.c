@@ -239,7 +239,7 @@ rend_client_introduction_acked(circuit_t *circ,
 void
 rend_client_refetch_renddesc(const char *query)
 {
-  if (connection_get_by_type_rendquery(CONN_TYPE_DIR, query)) {
+  if (connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query)) {
     log_fn(LOG_INFO,"Would fetch a new renddesc here (for %s), but one is already in progress.", query);
   } else {
     /* not one already; initiate a dir rend desc lookup */
@@ -258,6 +258,7 @@ rend_client_remove_intro_point(char *failed_intro, const char *query)
 {
   int i, r;
   rend_cache_entry_t *ent;
+  connection_t *conn;
 
   r = rend_cache_lookup_entry(query, &ent);
   if (r<0) {
@@ -282,6 +283,13 @@ rend_client_remove_intro_point(char *failed_intro, const char *query)
   if (!ent->parsed->n_intro_points) {
     log_fn(LOG_INFO,"No more intro points remain for %s. Re-fetching descriptor.", query);
     rend_client_refetch_renddesc(query);
+
+    /* move all pending streams back to renddesc_wait */
+    while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
+                                   AP_CONN_STATE_CIRCUIT_WAIT, query))) {
+      conn->state = AP_CONN_STATE_RENDDESC_WAIT;
+    }
+
     return 0;
   }
   log_fn(LOG_INFO,"%d options left for %s.", ent->parsed->n_intro_points, query);
@@ -366,30 +374,21 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
 }
 
 /** Find all the apconns in state AP_CONN_STATE_RENDDESC_WAIT that
- * are waiting on query. If status==1, move them to the next state.
- * If status==0, fail them.
+ * are waiting on query. If there's a working cache entry here
+ * with at least one intro point, move them to the next state;
+ * else fail them.
  */
-void rend_client_desc_fetched(char *query, int status) {
-  connection_t **carray;
+void rend_client_desc_here(char *query) {
   connection_t *conn;
-  int n, i;
   rend_cache_entry_t *entry;
 
-  get_connection_array(&carray, &n);
-
-  for (i = 0; i < n; ++i) {
-    conn = carray[i];
-    if (conn->type != CONN_TYPE_AP ||
-        conn->state != AP_CONN_STATE_RENDDESC_WAIT)
-      continue;
-    if (rend_cmp_service_ids(conn->rend_query, query))
-      continue;
-    /* great, this guy was waiting */
-    if (status!=0 ||
-       rend_cache_lookup_entry(conn->rend_query, &entry) == 1) {
+  while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
+                                 AP_CONN_STATE_RENDDESC_WAIT, query))) {
+    if (rend_cache_lookup_entry(conn->rend_query, &entry) == 1 &&
+        entry->parsed->n_intro_points > 0) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
-      log_fn(LOG_INFO,"Rend desc retrieved. Launching circuits.");
+      log_fn(LOG_INFO,"Rend desc is usable. Launching circuits.");
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
         /* it will never work */
@@ -397,8 +396,9 @@ void rend_client_desc_fetched(char *query, int status) {
         conn->has_sent_end = 1;
         connection_mark_for_close(conn);
       }
+      tor_assert(conn->state != AP_CONN_STATE_RENDDESC_WAIT); /* avoid loop */
     } else { /* 404, or fetch didn't get that far */
-      log_fn(LOG_NOTICE,"Failed to fetch service id '%s', and not in cache. Closing conn.", query);
+      log_fn(LOG_NOTICE,"Closing stream for '%s.onion': hidden service is unavailable (try again later).", query);
       conn->has_sent_end = 1;
       connection_mark_for_close(conn);
     }

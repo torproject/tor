@@ -219,7 +219,7 @@ void connection_about_to_close_connection(connection_t *conn)
         connection_dir_connect_failed(conn);
       }
       if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
-        rend_client_desc_fetched(conn->rend_query, 0);
+        rend_client_desc_here(conn->rend_query); /* give it a try */
       break;
     case CONN_TYPE_OR:
       /* Remember why we're closing this connection. */
@@ -1243,9 +1243,11 @@ connection_t *connection_get_by_type_state_lastwritten(int type, int state) {
 }
 
 /** Return a connection of type <b>type</b> that has rendquery equal
- * to <b>rendquery</b>, and that is not marked for close.
+ * to <b>rendquery</b>, and that is not marked for close. If state
+ * is non-zero, conn must be of that state too.
  */
-connection_t *connection_get_by_type_rendquery(int type, const char *rendquery) {
+connection_t *
+connection_get_by_type_state_rendquery(int type, int state, const char *rendquery) {
   int i, n;
   connection_t *conn;
   connection_t **carray;
@@ -1255,6 +1257,7 @@ connection_t *connection_get_by_type_rendquery(int type, const char *rendquery) 
     conn = carray[i];
     if (conn->type == type &&
         !conn->marked_for_close &&
+        (!state || state == conn->state) &&
         !rend_cmp_service_ids(rendquery, conn->rend_query))
       return conn;
   }
