@@ -997,12 +997,18 @@ static void dumpstats(int severity) {
            100*(((double)stats_n_data_bytes_received) /
                 (stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
-  if (stats_n_seconds_uptime)
+  if (stats_n_seconds_uptime) {
     log(severity,
-        "Average bandwidth used: "U64_FORMAT"/%ld = %d bytes/sec",
+        "Average bandwidth: "U64_FORMAT"/%ld = %d bytes/sec reading",
         U64_PRINTF_ARG(stats_n_bytes_read),
         stats_n_seconds_uptime,
         (int) (stats_n_bytes_read/stats_n_seconds_uptime));
+    log(severity,
+        "Average bandwidth: "U64_FORMAT"/%ld = %d bytes/sec writing",
+        U64_PRINTF_ARG(stats_n_bytes_written),
+        stats_n_seconds_uptime,
+        (int) (stats_n_bytes_written/stats_n_seconds_uptime));
+  }
 
   rep_hist_dump_stats(now,severity);
   rend_service_dump_stats(severity);
