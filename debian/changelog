@@ -1,3 +1,10 @@
+tor (0.0.7-1) unstable; urgency=low
+
+  * New upstream version
+    closes: #249893: FTBFS on ia64
+
+ -- Peter Palfrader <weasel@debian.org>  Mon,  7 Jun 2004 21:46:08 +0200
+
 tor (0.0.6.2-1) unstable; urgency=medium
 
   * New upstream release (breaks backwards compatibility yet again).
