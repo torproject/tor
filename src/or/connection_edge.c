@@ -40,10 +40,10 @@ int connection_edge_reached_eof(connection_t *conn) {
     return 0;
   }
   log_fn(LOG_INFO,"conn (fd %d) reached eof (stream size %d). Closing.", conn->s, (int)conn->stream_size);
-  connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
   if (!conn->marked_for_close) {
     /* only mark it if not already marked. it's possible to
      * get the 'end' right around when the client hangs up on us. */
+    connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
     connection_mark_for_close(conn);
     conn->hold_open_until_flushed = 1; /* just because we shouldn't read
                                           doesn't mean we shouldn't write */
