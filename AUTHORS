@@ -21,3 +21,6 @@ the tor.sh initscripts shell script.
 Steven Hazel <sah@thalassocracy.org> made 'make install' do the right
 thing.
 
+Jason Holt <jason@lunkwill.org> contributed patches to the instructions
+and the man page.
+
