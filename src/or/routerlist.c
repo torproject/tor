@@ -62,7 +62,7 @@ routerinfo_t *router_pick_directory_server(void) {
  * routerlist. */
 static routerinfo_t *router_pick_directory_server_impl(void) {
   int i;
-  routerinfo_t *router, *dirserver=NULL;
+  routerinfo_t *router;
   smartlist_t *sl;
 
   if(!routerlist)
@@ -87,17 +87,38 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
 
   /* No running dir servers found? go through and mark them all as up,
    * so we cycle through the list again. */
+  sl = smartlist_create();
   for(i=0; i < smartlist_len(routerlist->routers); i++) {
     router = smartlist_get(routerlist->routers, i);
     if(router->is_trusted_dir) {
       tor_assert(router->dir_port > 0);
       router->is_running = 1;
-      dirserver = router;
+      smartlist_add(sl, router);
     }
   }
-  if(!dirserver)
+  router = smartlist_choose(sl);
+  smartlist_free(sl);
+  if(!router)
     log_fn(LOG_WARN,"No dirservers in directory! Returning NULL.");
-  return dirserver;
+  return router;
+}
+
+/** Return 0 if \exists an authoritative dirserver that's currently
+ * thought to be running, else return 1.
+ */
+int all_directory_servers_down(void) {
+  int i;
+  routerinfo_t *router;
+  if(!routerlist)
+    return 1; /* if no dirservers, I guess they're all down */
+  for(i=0;i< smartlist_len(routerlist->routers); i++) {
+    router = smartlist_get(routerlist->routers, i);
+    if(router->is_running && router->is_trusted_dir) {
+      tor_assert(router->dir_port > 0);
+      return 0;
+    }
+  }
+  return 1;
 }
 
 /** Given a comma-and-whitespace separated list of nicknames, see which
