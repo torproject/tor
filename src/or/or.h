@@ -924,9 +924,12 @@ typedef struct {
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
   int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
   smartlist_t *FirewallPorts; /** Which ports our firewall allows. */
-  int DirFetchPostPeriod; /**< How often do we fetch new directories
-                           * and post server descriptros to the directory
-                           * server? */
+  int DirFetchPeriod; /**< How often do we fetch new directories? */
+  int DirPostPeriod; /**< How often do we post our server descriptor to the
+                      * authoritative directory servers? */
+  int RendPostPeriod; /**< How often do we post each rendezvous service
+                       * descriptor? Remember to publish them independently. */
+  int StatusFetchPeriod; /**< How often do we fetch running-routers lists? */
   int KeepalivePeriod; /**< How often do we send padding cells to keep
                         * connections alive? */
   int MaxOnionsPending; /**< How many circuit CREATE requests do we allow
@@ -1480,7 +1483,7 @@ int rend_config_services(or_options_t *options, int validate_only);
 int rend_service_load_keys(void);
 void rend_services_init(void);
 void rend_services_introduce(void);
-void rend_services_upload(int force);
+void rend_consider_services_upload(time_t now);
 
 void rend_service_intro_has_opened(circuit_t *circuit);
 int rend_service_intro_established(circuit_t *circuit, const char *request, size_t request_len);
