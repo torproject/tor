@@ -11,7 +11,7 @@ ARMA    - arma claims
         X Abandoned
 
 0.0.9pre5/6: ("Launch" version)
-   - "tor --list-fingerprint" to print fingerprint and exit.
+   o "tor --list-fingerprint" to print fingerprint and exit.
    - Oct 20 16:45:10.237 [warn] parse_addr_port(): Port '0' out of range
    o add and document DirPolicy config option
    - clean up parse_*_policy code

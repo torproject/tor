@@ -706,6 +706,11 @@ static int init_from_config(int argc, char **argv) {
     return -1;
   }
 
+  /* Bail out at this point if we're not going to be a server: we want
+   * to not fork, and to log stuff to stderr. */
+  if (options.command != CMD_RUN_TOR)
+    return 0;
+
   /* Configure the log(s) */
   if (config_init_logs(&options)<0)
     return -1;
@@ -1095,9 +1100,29 @@ static int tor_init(int argc, char *argv[]) {
 void tor_cleanup(void) {
   /* Remove our pid file. We don't care if there was an error when we
    * unlink, nothing we could do about it anyways. */
-  if(options.PidFile)
+  if(options.PidFile && options.command == CMD_RUN_TOR)
     unlink(options.PidFile);
   crypto_global_cleanup();
+}
+
+/** Read/create keys as needed, and echo our fingerprint to stdout. */
+void do_list_fingerprint(void)
+{
+  char buf[FINGERPRINT_LEN+1];
+  crypto_pk_env_t *k;
+  if (init_keys() < 0) {
+    log_fn(LOG_ERR,"Error initializing keys; exiting");
+    return;
+  }
+  if (!(k = get_identity_key())) {
+    log_fn(LOG_ERR,"Error: missing identity key.");
+    return;
+  }    
+  if (crypto_pk_get_fingerprint(k, buf, 1)<0) {
+    log_fn(LOG_ERR, "Error computing fingerprint");
+    return;
+  }
+  printf("%s %s\n", options.Nickname, buf);
 }
 
 #ifdef MS_WINDOWS_SERVICE
@@ -1169,7 +1194,17 @@ int tor_main(int argc, char *argv[]) {
 #else
   if (tor_init(argc, argv)<0)
     return -1;
-  do_main_loop();
+  switch (options.command) {
+  case CMD_RUN_TOR:
+    do_main_loop();
+    break;
+  case CMD_LIST_FINGERPRINT:
+    do_list_fingerprint();
+    break;
+  default:
+    log_fn(LOG_ERR, "Illegal command number %d: internal error.",
+           options.command);
+  }
   tor_cleanup();
   return -1;
 #endif

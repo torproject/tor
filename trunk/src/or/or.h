@@ -832,6 +832,10 @@ typedef struct exit_redirect_t {
 
 /** Configuration options for a Tor process */
 typedef struct {
+  /** What should the tor process actually do? */
+  enum {
+    CMD_RUN_TOR=0, CMD_LIST_FINGERPRINT
+  } command;
   struct config_line_t *LogOptions; /**< List of configuration lines
                                      * for logfiles */
 
