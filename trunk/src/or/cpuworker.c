@@ -146,7 +146,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
      * case there are multiple connections.) */
     p_conn = connection_exact_get_by_addr_port(addr,port);
     if (p_conn)
-      circ = circuit_get_by_circ_id_conn(circ_id, p_conn);
+      circ = circuit_get_by_circid_orconn(circ_id, p_conn);
 
     if (success == 0) {
       log_fn(LOG_INFO,"decoding onionskin failed. Closing.");

@@ -898,7 +898,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
       if (circ->n_conn) {
         connection_send_destroy(circ->n_circ_id, circ->n_conn);
-        circ->n_conn = NULL;
+        circuit_set_circid_orconn(circ, 0, NULL, N_CONN_CHANGED);
       }
       log_fn(LOG_DEBUG, "Processed 'truncate', replying.");
       connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
