@@ -223,14 +223,15 @@ that have at least 1Mbit each way. Currently we don't use all of that,
 but we want it available for burst traffic.</p>
 
 <p>(The Tor server doesn't need to be run as root, and doesn't
-need any special system permissions or kernel mods. If you're
-the paranoid sort, feel free to <a
+need any special system permissions or kernel mods. You should probably
+run it as its own user though, especially if you run an identd service
+too. If you're the paranoid sort, feel free to <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorInChroot">put it
 into a chroot jail</a>.)</p>
 
 <p>First, copy torrc.sample to torrc (by default it's in
 /usr/local/etc/tor/), and edit the middle part. Create the DataDirectory,
-and make sure it's owned by whoever will be running tor. Fix your system
+and make sure it's owned by the uid/gid that will be running tor. Fix your system
 clock so it's not too far off. Make sure name resolution works. Open a
 hole in your firewall so outsiders can connect to your ORPort.</p>
 
@@ -241,11 +242,6 @@ tor-ops@freehaven.net.</p>
 <p>In that mail, be sure to tell us who you are, so we know whom to contact
 if there's any problem.  Also describe what kind of connectivity the new
 server will have. If possible, PGP sign your mail.</p>
-
-<p>NOTE: You won't be able to use tor as a client or server
-in this configuration until you've been added to the directory
-and can authenticate to the other nodes. (This is no longer the case
-for 0.0.8 and after.)</p>
 
 <p>Once your fingerprint has been approved, you can click <a
 href="http://moria.seul.org:9031/">here</a> or <a
@@ -319,7 +315,7 @@ the latest cvs version may not compile or work right). Then:
 <li>4a: Edit src/or/config.c and change the default_dirservers_string array
 so that it reflects the contents of the new dirservers file instead
 of the old one. Be sure to get the quotes and newlines and semicolons
-right. (This step sucks. We plan to have it solved by the release of 0.0.8.)
+right. (This step sucks. We plan to have it solved by the release of 0.0.9.)
 <li>4b: Replace the dirservers file in your sandbox (in src/config/)
 with the one from step 3.
 <li>4c: edit configure.in, change the AM_INIT_AUTOMAKE(tor, 0.0.8)
