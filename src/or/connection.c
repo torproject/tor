@@ -734,8 +734,8 @@ int connection_handle_read(connection_t *conn) {
     /* There's a read error; kill the connection.*/
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
     if(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
-      connection_edge_end(conn, connection_state_is_open(conn) ?
-                          END_STREAM_REASON_MISC : END_STREAM_REASON_CONNECTFAILED,
+      connection_edge_end(conn, (char)(connection_state_is_open(conn) ?
+                          END_STREAM_REASON_MISC : END_STREAM_REASON_CONNECTFAILED),
                           conn->cpath_layer);
     }
     connection_mark_for_close(conn);
