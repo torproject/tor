@@ -674,7 +674,7 @@ int connection_outbuf_too_full(connection_t *conn) {
   return (conn->outbuf_flushlen > 10*CELL_PAYLOAD_SIZE);
 }
 
-/* return -1 if you want to break the conn, else return 0 */
+/* mark and return -1 if you want to break the conn, else return 0 */
 int connection_handle_write(connection_t *conn) {
 
   tor_assert(!connection_is_listener(conn));
@@ -732,8 +732,10 @@ int connection_handle_write(connection_t *conn) {
   }
 
   if(!connection_wants_to_flush(conn)) /* it's done flushing */
-    if(connection_finished_flushing(conn) < 0) /* ...and get handled here. */
+    if(connection_finished_flushing(conn) < 0) { /* ...and get handled here. */
+      /* already marked */
       return -1;
+    }
 
   return 0;
 }
@@ -762,7 +764,7 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
     conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
     if(connection_handle_write(conn) < 0) {
       log_fn(LOG_WARN,"flushing failed.");
-      connection_mark_for_close(conn,0);
+      return;
     }
   }
   if(len > 0) { /* if there's any left over */
