@@ -297,7 +297,9 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   char nn2[1024];
   int client_only;
   SSL_CTX **ctx;
-  sprintf(nn2, "%s <identity>", nickname ? nickname : "null");
+  if (!nickname)
+    nickname = "null";
+  sprintf(nn2, "%s <identity>", nickname);
 
   tor_tls_init();
 
