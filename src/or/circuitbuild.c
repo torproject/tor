@@ -1144,7 +1144,7 @@ static routerinfo_t *choose_good_middle_server(cpath_build_state_t *state,
   int i;
   routerinfo_t *r, *choice;
   crypt_path_t *cpath;
-  smartlist_t *excluded = smartlist_create();
+  smartlist_t *excluded;
 
   log_fn(LOG_DEBUG, "Contemplating intermediate hop: random choice.");
   excluded = smartlist_create();
