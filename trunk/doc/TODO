@@ -11,19 +11,19 @@ ARMA    - arma claims
         X Abandoned
 
       0.0.9pre4:
-        - Don't use FascistFirewall if you're going via Tor, or if
+o       - Don't use FascistFirewall if you're going via Tor, or if
           you're going via HttpProxy.
-        - make RecommendedVersions a CONFIG_TYPE_LINELIST option
+N       - make RecommendedVersions a CONFIG_TYPE_LINELIST option
 R       . bandwidth buckets for write as well as read.
 N       - Handle rendezvousing with unverified nodes.
           - Specify: Stick rendezvous point's key in INTRODUCE cell.
             Bob should _always_ use key from INTRODUCE cell.
           - Implement.
-N       - node 'groups' that are known to be in the same zone of control.
-          - Nodes can list their coadministrated nodes.
-            - If A lists B, it only counts if B also lists A
-          - Users can list other coadministrated nodes if they like.
-          . Never choose two coadministrated nodes in the same circuit.
+        o node 'groups' that are known to be in the same zone of control.
+          o Nodes can list their coadministrated nodes.
+            o If A lists B, it only counts if B also lists A
+N         - Users can list other coadministrated nodes if they like.
+          o Never choose two coadministrated nodes in the same circuit.
 R       - figure out enclaves, e.g. so we know what to recommend that people
           do, and so running a tor server on your website is helpful.
           - Do enclaves for same IP only.
