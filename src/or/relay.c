@@ -739,8 +739,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         /* only mark it if not already marked. it's possible to
          * get the 'end' right around when the client hangs up on us. */
         connection_mark_for_close(conn);
+        conn->hold_open_until_flushed = 1;
       }
-      conn->hold_open_until_flushed = 1;
 #endif
       return 0;
     case RELAY_COMMAND_EXTEND:
