@@ -260,7 +260,7 @@ void init_options(or_options_t *options) {
   options->ExitNodes = tor_strdup("");
   options->EntryNodes = tor_strdup("");
   options->ExcludedNodes = tor_strdup("");
-  options->ExitPolicy = tor_strdup("reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,accept *:20-22,accept *:53,accept *:79-80,accept *:110,accept *:143,accept *:443,accept *:873,accept *:1024-65535,reject *:*");
+  options->ExitPolicy = tor_strdup("reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,accept *:20-22,accept *:53,accept *:79-80,accept *:110,accept *:143,accept *:443,accept *:873,accept *:993,accept *:995,accept *:1024-65535,reject *:*");
   options->ExitPolicyPrepend = tor_strdup("");
   options->SocksBindAddress = tor_strdup("127.0.0.1");
   options->ORBindAddress = tor_strdup("0.0.0.0");
