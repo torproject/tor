@@ -87,8 +87,8 @@ static int connection_handle_listener_read(connection_t *conn, int new_type);
 static int connection_receiver_bucket_should_increase(connection_t *conn);
 static int connection_finished_flushing(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
-static int connection_read_to_buf(connection_t *conn);
-static int connection_process_inbuf(connection_t *conn);
+static int connection_read_to_buf(connection_t *conn, int *max_to_read);
+static int connection_process_inbuf(connection_t *conn, int package_partial);
 static int connection_bucket_read_limit(connection_t *conn);
 
 /**************************************************************/
@@ -803,6 +803,7 @@ static int connection_receiver_bucket_should_increase(connection_t *conn) {
  * return 0.
  */
 int connection_handle_read(connection_t *conn) {
+  int max_to_read=-1, try_to_read;
 
   conn->timestamp_lastread = time(NULL);
 
@@ -817,16 +818,19 @@ int connection_handle_read(connection_t *conn) {
       return connection_handle_listener_read(conn, CONN_TYPE_CONTROL);
   }
 
-  if(connection_read_to_buf(conn) < 0) {
+loop_again:
+  try_to_read = max_to_read;
+  tor_assert(!conn->marked_for_close);
+  if (connection_read_to_buf(conn, &max_to_read) < 0) {
     /* There's a read error; kill the connection.*/
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
-    if(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
+    if (conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
       connection_edge_end(conn, (char)(connection_state_is_open(conn) ?
                           END_STREAM_REASON_MISC : END_STREAM_REASON_CONNECTFAILED),
                           conn->cpath_layer);
     }
     connection_mark_for_close(conn);
-    if(conn->type == CONN_TYPE_DIR &&
+    if (conn->type == CONN_TYPE_DIR &&
        conn->state == DIR_CONN_STATE_CONNECTING) {
        /* it's a directory server and connecting failed: forget about this router */
        /* XXX I suspect pollerr may make Windows not get to this point. :( */
@@ -839,8 +843,17 @@ int connection_handle_read(connection_t *conn) {
     }
     return -1;
   }
-  if(connection_process_inbuf(conn) < 0) {
-//    log_fn(LOG_DEBUG,"connection_process_inbuf returned -1.");
+  if (CONN_IS_EDGE(conn) &&
+      try_to_read != max_to_read) {
+    /* instruct it not to try to package partial cells. */
+    if (connection_process_inbuf(conn, 0) < 0) {
+      return -1;
+    }
+    if (connection_is_reading(conn) && !conn->inbuf_reached_eof)
+      goto loop_again; /* try reading again, in case more is here now */
+  }
+  /* one last try, packaging partial cells and all. */
+  if (connection_process_inbuf(conn, 1) < 0) {
     return -1;
   }
   return 0;
@@ -850,14 +863,19 @@ int connection_handle_read(connection_t *conn) {
  * directly or via TLS. Reduce the token buckets by the number of
  * bytes read.
  *
+ * If *max_to_read is -1, then decide it ourselves, else go with the
+ * value passed to us. When returning, if it's changed, subtract the
+ * number of bytes we read from *max_to_read.
+ *
  * Return -1 if we want to break conn, else return 0.
  */
-static int connection_read_to_buf(connection_t *conn) {
-  int result;
-  int at_most;
+static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
+  int result, at_most = *max_to_read;
 
-  /* how many bytes are we allowed to read? */
-  at_most = connection_bucket_read_limit(conn);
+  if(at_most == -1) { /* we need to initialize it */
+    /* how many bytes are we allowed to read? */
+    at_most = connection_bucket_read_limit(conn);
+  }
 
   if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
     if(conn->state == OR_CONN_STATE_HANDSHAKING) {
@@ -898,7 +916,11 @@ static int connection_read_to_buf(connection_t *conn) {
       return -1;
   }
 
-  if(result > 0 && !is_local_IP(conn->addr)) { /* remember it */
+  if (result > 0) { /* change *max_to_read */
+    *max_to_read = at_most - result;
+  }
+
+  if (result > 0 && !is_local_IP(conn->addr)) { /* remember it */
     rep_hist_note_bytes_read(result, time(NULL));
     connection_read_bucket_decrement(conn, result);
   }
@@ -1250,9 +1272,10 @@ int connection_send_destroy(uint16_t circ_id, connection_t *conn) {
 /** Process new bytes that have arrived on conn-\>inbuf.
  *
  * This function just passes conn to the connection-specific
- * connection_*_process_inbuf() function.
+ * connection_*_process_inbuf() function. It also passes in
+ * package_partial if wanted.
  */
-static int connection_process_inbuf(connection_t *conn) {
+static int connection_process_inbuf(connection_t *conn, int package_partial) {
 
   tor_assert(conn);
 
@@ -1261,7 +1284,7 @@ static int connection_process_inbuf(connection_t *conn) {
       return connection_or_process_inbuf(conn);
     case CONN_TYPE_EXIT:
     case CONN_TYPE_AP:
-      return connection_edge_process_inbuf(conn);
+      return connection_edge_process_inbuf(conn, package_partial);
     case CONN_TYPE_DIR:
       return connection_dir_process_inbuf(conn);
     case CONN_TYPE_DNSWORKER:

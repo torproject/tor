@@ -298,11 +298,13 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
 
 /** Find circuits that are waiting on <b>or_conn</b> to become open,
  * if any, and get them to send their create cells forward.
+ *
+ * Status is 1 if connect succeeded, or 0 if connect failed.
  */
-void circuit_n_conn_done(connection_t *or_conn, int success) {
+void circuit_n_conn_done(connection_t *or_conn, int status) {
   circuit_t *circ;
 
-  log_fn(LOG_DEBUG,"or_conn to %s, success=%d", or_conn->nickname, success);
+  log_fn(LOG_DEBUG,"or_conn to %s, status=%d", or_conn->nickname, status);
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
     if (circ->marked_for_close)
@@ -312,7 +314,7 @@ void circuit_n_conn_done(connection_t *or_conn, int success) {
        circ->n_port == or_conn->port &&
        !memcmp(or_conn->identity_digest, circ->n_conn_id_digest, DIGEST_LEN)) {
       tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
-      if(!success) { /* or_conn failed; close circ */
+      if(!status) { /* or_conn failed; close circ */
         log_fn(LOG_INFO,"or_conn failed. Closing circ.");
         circuit_mark_for_close(circ);
         continue;
