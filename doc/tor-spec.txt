@@ -366,7 +366,7 @@ which reveals the downstream node.
    Because TCP connections can be half-open, we follow an equivalent
    to TCP's FIN/FIN-ACK/ACK protocol to close streams.
 
-   A exit conneection can have a TCP stream in one of three states:
+   An exit connection can have a TCP stream in one of three states:
    'OPEN', 'DONE_PACKAGING', and 'DONE_DELIVERING'.  For the purposes
    of modeling transitions, we treat 'CLOSED' as a fourth state,
    although connections in this state are not, in fact, tracked by the
