@@ -40,7 +40,13 @@ const char control_c_id[] = "$Id$";
 #define CONTROL_CMD_AUTHENTICATE 0x0007
 #define CONTROL_CMD_SAVECONF     0x0008
 #define CONTROL_CMD_SIGNAL       0x0009
-#define _CONTROL_CMD_MAX_RECOGNIZED 0x0009
+#define CONTROL_CMD_MAPADDRESS   0x000A
+#define CONTROL_CMD_GETINFO      0x000B
+#define CONTROL_CMD_INFOVALUE    0x000C
+#define CONTROL_CMD_EXTENDCIRCUIT  0x000D
+#define CONTROL_CMD_ATTACHSTREAM   0x000E
+#define CONTROL_CMD_POSTDESCRIPTOR 0x000F
+#define _CONTROL_CMD_MAX_RECOGNIZED 0x000F
 
 /* Recognized error codes. */
 #define ERR_UNSPECIFIED             0x0000
@@ -52,6 +58,7 @@ const char control_c_id[] = "$Id$";
 #define ERR_UNRECOGNIZED_EVENT_CODE 0x0006
 #define ERR_UNAUTHORIZED            0x0007
 #define ERR_REJECTED_AUTHENTICATION 0x0008
+#define ERR_RESOURCE_EXHAUSETED     0x0009
 
 /* Recognized asynchronous event types. */
 #define _EVENT_MIN            0x0001
@@ -60,11 +67,12 @@ const char control_c_id[] = "$Id$";
 #define EVENT_OR_CONN_STATUS  0x0003
 #define EVENT_BANDWIDTH_USED  0x0004
 #define EVENT_WARNING         0x0005
-#define _EVENT_MAX            0x0005
+#define EVENT_NEW_DESC        0x0006
+#define _EVENT_MAX            0x0006
 
 /** Array mapping from message type codes to human-readable message
  * type names.  */
-static const char * CONTROL_COMMANDS[] = {
+static const char * CONTROL_COMMANDS[_CONTROL_CMD_MAX_RECOGNIZED+1] = {
   "error",
   "done",
   "setconf",
@@ -74,6 +82,13 @@ static const char * CONTROL_COMMANDS[] = {
   "events",
   "authenticate",
   "saveconf",
+  "signal",
+  "mapaddress",
+  "getinfo",
+  "infovalue",
+  "extendcircuit",
+  "attachstream",
+  "postdescriptor"
 };
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -116,6 +131,16 @@ static int handle_control_saveconf(connection_t *conn, uint16_t len,
                                    const char *body);
 static int handle_control_signal(connection_t *conn, uint16_t len,
                                  const char *body);
+static int handle_control_mapaddress(connection_t *conn, uint16_t len,
+                                     const char *body);
+static int handle_control_getinfo(connection_t *conn, uint16_t len,
+                                  const char *body);
+static int handle_control_extendcircuit(connection_t *conn, uint16_t len,
+                                        const char *body);
+static int handle_control_attachstream(connection_t *conn, uint16_t len,
+                                        const char *body);
+static int handle_control_postdescriptor(connection_t *conn, uint16_t len,
+                                         const char *body);
 
 /** Given a possibly invalid message type code <b>cmd</b>, return a
  * human-readable string equivalent. */
@@ -416,6 +441,39 @@ handle_control_signal(connection_t *conn, uint16_t len,
   return 0;
 }
 
+static int
+handle_control_mapaddress(connection_t *conn, uint16_t len, const char *body)
+{
+  send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
+  return 0;
+}
+static int
+handle_control_getinfo(connection_t *conn, uint16_t len, const char *body)
+{
+  send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
+  return 0;
+}
+static int
+handle_control_extendcircuit(connection_t *conn, uint16_t len,
+                             const char *body)
+{
+  send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
+  return 0;
+}
+static int handle_control_attachstream(connection_t *conn, uint16_t len,
+                                        const char *body)
+{
+  send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
+  return 0;
+}
+static int
+handle_control_postdescriptor(connection_t *conn, uint16_t len,
+                              const char *body)
+{
+  send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
+  return 0;
+}
+
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
 connection_control_finished_flushing(connection_t *conn) {
@@ -499,10 +557,31 @@ connection_control_process_inbuf(connection_t *conn) {
       if (handle_control_signal(conn, body_len, body))
         return -1;
       break;
+    case CONTROL_CMD_MAPADDRESS:
+      if (handle_control_mapaddress(conn, body_len, body))
+        return -1;
+      break;
+    case CONTROL_CMD_GETINFO:
+      if (handle_control_getinfo(conn, body_len, body))
+        return -1;
+      break;
+    case CONTROL_CMD_EXTENDCIRCUIT:
+      if (handle_control_extendcircuit(conn, body_len, body))
+        return -1;
+      break;
+    case CONTROL_CMD_ATTACHSTREAM:
+      if (handle_control_attachstream(conn, body_len, body))
+        return -1;
+      break;
+    case CONTROL_CMD_POSTDESCRIPTOR:
+      if (handle_control_postdescriptor(conn, body_len, body))
+        return -1;
+      break;
     case CONTROL_CMD_ERROR:
     case CONTROL_CMD_DONE:
     case CONTROL_CMD_CONFVALUE:
     case CONTROL_CMD_EVENT:
+    case CONTROL_CMD_INFOVALUE:
       log_fn(LOG_WARN, "Received client-only '%s' command; ignoring.",
              control_cmd_to_string(command_type));
       send_control_error(conn, ERR_UNRECOGNIZED_TYPE,
