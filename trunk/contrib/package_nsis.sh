@@ -11,14 +11,14 @@ mkdir win_tmp/contrib
 mkdir win_tmp/doc
 mkdir win_tmp/doc/design-paper
 mkdir win_tmp/doc/contrib
-mkdir win_tmp/tmp
 mkdir win_tmp/src
 mkdir win_tmp/src/config
+mkdir win_tmp/tmp
 
-#cp Win32Build/vc6/tor/Debug/tor.exe win_tmp/bin
-#cp Win32Build/vc6/tor_resolve/Debug/tor_resolve.exe win_tmp/bin
-#cp c:/windows/system32/libeay32.dll win_tmp/bin
-#cp c:/windows/system32/ssleay32.dll win_tmp/bin
+cp Win32Build/vc6/tor/Debug/tor.exe win_tmp/bin
+cp Win32Build/vc6/tor_resolve/Debug/tor_resolve.exe win_tmp/bin
+cp c:/windows/system32/libeay32.dll win_tmp/bin
+cp c:/windows/system32/ssleay32.dll win_tmp/bin
 
 man2html doc/tor.1.in > win_tmp/tmp/tor-reference.html
 man2html doc/tor-resolve.1 > win_tmp/tmp/tor-resolve.html
@@ -32,11 +32,13 @@ for fn in CLIENTS tor-spec.txt HACKING rend-spec.txt control-spec.txt \
     clean_newlines doc/$fn win_tmp/doc/$fn
 done
 
+cp doc/design-paper/tor-design.pdf win_tmp/doc/design-paper/tor-design.pdf
+
 for fn in tor-reference.html tor-resolve.html; do \
-    clean_newlines win_tmp/$fn win_tmp/doc/$fn
+    clean_newlines win_tmp/tmp/$fn win_tmp/doc/$fn
 done
 
-for fn in README AUTHORS ChangeLog; do \
+for fn in README AUTHORS ChangeLog LICENSE; do \
     clean_newlines $fn win_tmp/$fn
 done
 
