@@ -52,7 +52,7 @@
 %  \pdfpageheight=\the\paperheight
 %\fi
 
-\title{Tor: The Second-Generation Onion Router\\DRAFT VERSION}
+\title{Tor: The Second-Generation Onion Router} %\\DRAFT VERSION}
 % Putting the 'Private' back in 'Virtual Private Network'
 
 \author{Roger Dingledine \\ The Free Haven Project \\ arma@freehaven.net \and
@@ -644,6 +644,13 @@ building circuits, but a limited number of requests can be linked
 to each other through a given exit node. Also, because circuits are built
 in the background, OPs can recover from failed circuit creation
 without delaying streams and thereby harming user experience.\\
+
+\begin{figure}[h]
+\centering
+\mbox{\epsfig{figure=interaction,width=8cm}}
+\caption{Alice builds a two-hop circuit and begins fetching a web page.}
+\label{fig:interaction}
+\end{figure}
 
 \noindent{\large\bf Constructing a circuit}\label{subsubsec:constructing-a-circuit}\\
 %\subsubsection{Constructing a circuit}
