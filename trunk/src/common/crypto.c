@@ -208,6 +208,7 @@ crypto_cipher_env_t *crypto_new_cipher_env(int type)
   if (key_len && !(env->key = (unsigned char *)malloc(key_len)))
     goto err;
   
+  return env;
 err:
   if (env->key)
     free(env->key);
