@@ -298,7 +298,12 @@ connection_tls_finish_handshake(connection_t *conn) {
   return 0;
 }
 
-/** Pack <b>cell</b> into wire-format, and write it onto <b>conn</b>'s outbuf. */
+/** Pack <b>cell</b> into wire-format, and write it onto <b>conn</b>'s
+ * outbuf.
+ *
+ * (Commented out) If it's an OR conn, and an entire TLS record is
+ * ready, then try to flush the record now.
+ */
 void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
   char networkcell[CELL_NETWORK_SIZE];
   char *n = networkcell;
@@ -309,6 +314,30 @@ void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
   cell_pack(n, cell);
 
   connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
+
+#if 0 /* commented out -- can we get away with not doing this,
+       * because we're already round-robining in handle_read?
+       */
+#define MIN_TLS_FLUSHLEN 15872
+/* openssl tls record size is 16383, this is close. The goal here is to
+ * push data out as soon as we know there's enough for a tls record, so
+ * during periods of high load we won't read the entire megabyte from
+ * input before pushing any data out. */
+  if(conn->outbuf_flushlen-CELL_NETWORK_SIZE < MIN_TLS_FLUSHLEN &&
+     conn->outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
+    int extra = conn->outbuf_flushlen - MIN_TLS_FLUSHLEN;
+    conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
+    if(connection_handle_write(conn) < 0) {
+      log_fn(LOG_WARN,"flushing failed.");
+      return;
+    }
+    if(extra) {
+      conn->outbuf_flushlen += extra;
+      connection_start_writing(conn);
+    }
+  }
+#endif
+
 }
 
 /** Process cells from <b>conn</b>'s inbuf.
