@@ -565,7 +565,7 @@ config_get_assigned_option(or_options_t *options, const char *key)
   if (var->type == CONFIG_TYPE_LINELIST ||
       var->type == CONFIG_TYPE_LINELIST_V) {
     /* Linelist requires special handling: we just copy and return it. */
-    const struct config_line_t *next_in = value;
+    const struct config_line_t *next_in = *(const struct config_line_t**)value;
     struct config_line_t **next_out = &result;
     while (next_in) {
       *next_out = tor_malloc(sizeof(struct config_line_t));
