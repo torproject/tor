@@ -415,7 +415,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
 
   news = accept(conn->s,(struct sockaddr *)&remote,&remotelen);
   if (!SOCKET_IS_POLLABLE(news)) {
-    /* accept() error, or two many conns to poll */
+    /* accept() error, or too many conns to poll */
     int e;
     if (news>=0) {
       /* Too many conns to poll. */
