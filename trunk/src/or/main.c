@@ -953,8 +953,13 @@ static int do_main_loop(void) {
       int e = errno;
       /* let the program survive things like ^z */
       if (e != EINTR) {
-        log_fn(LOG_ERR,"event poll failed: %s [%d]",
+#ifdef HAVE_EVENT_GET_METHOD
+        log_fn(LOG_ERR,"libevent poll with %s failed: %s [%d]",
+               event_get_method(), tor_socket_strerror(e), e);
+#else
+        log_fn(LOG_ERR,"libevent poll failed: %s [%d]",
                tor_socket_strerror(e), e);
+#endif
         return -1;
       } else {
         log_fn(LOG_DEBUG,"event poll interrupted.");
