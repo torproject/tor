@@ -159,5 +159,5 @@ AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(__int64)
 
-AC_OUTPUT(Makefile src/Makefile src/common/Makefile src/orkeygen/Makefile src/or/Makefile)
+AC_OUTPUT(Makefile src/Makefile src/common/Makefile src/or/Makefile)
 
