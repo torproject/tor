@@ -69,6 +69,18 @@ int router_reload_router_list(void)
   return 0;
 }
 
+/* Set *<b>outp</b> to a smartlist containing a list of
+ * trusted_dir_server_t * for all known trusted dirservers.  Callers
+ * must not modify the list or its contents.
+ */
+void router_get_trusted_dir_servers(smartlist_t **outp)
+{
+  if (!trusted_dir_servers)
+    trusted_dir_servers = smartlist_create();
+
+  *outp = trusted_dir_servers;
+}
+
 /** Try to find a running dirserver. If there are no running dirservers
  * in our routerlist, set all the authoritative ones as running again,
  * and pick one. If there are no dirservers at all in our routerlist,
