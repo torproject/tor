@@ -15,6 +15,12 @@ tor (0.1.0.1-rc-cvs-200503310807-1) UNRELEASED; urgency=low
 
  -- Peter Palfrader <weasel@debian.org>  Thu, 31 Mar 2005 10:12:11 +0200
 
+tor (0.0.9.7-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  1 Apr 2005 09:52:12 +0200
+
 tor (0.0.9.6-1) unstable; urgency=low
 
   * New upstream version.
