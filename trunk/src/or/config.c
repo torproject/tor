@@ -1310,6 +1310,14 @@ options_validate(or_options_t *options)
     log(LOG_WARN,"BandwidthBurst must be more than twice BandwidthRate.");
     result = -1;
   }
+  if (options->BandwidthRate > INT_MAX) {
+    log(LOG_WARN,"BandwidthRate must be less than %d",INT_MAX);
+    result = -1;
+  }
+  if (options->BandwidthBurst > INT_MAX) {
+    log(LOG_WARN,"BandwidthBurst must be less than %d",INT_MAX);
+    result = -1;
+  }
 
   if (options->_MonthlyAccountingStart) {
     if (options->AccountingStart) {
@@ -2325,7 +2333,7 @@ config_parse_interval(const char *s, int *ok) {
     *ok = 0;
     return -1;
   }
-  return r;
+  return (int)r;
 }
 
 /*
