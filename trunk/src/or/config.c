@@ -595,7 +595,7 @@ init_options(or_options_t *options)
   options->RendExcludeNodes = tor_strdup("");
   /* options->PidFile = tor_strdup("tor.pid"); */
   options->PathlenCoinWeight = 0.3;
-  options->MaxConn = 900;
+  options->MaxConn = 1024;
   options->DirFetchPostPeriod = 600;
   options->KeepalivePeriod = 300;
   options->MaxOnionsPending = 100;
