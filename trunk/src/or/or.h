@@ -509,9 +509,18 @@ void assert_cpath_ok(const crypt_path_t *c);
 void assert_cpath_layer_ok(const crypt_path_t *c);
 void assert_circuit_ok(const circuit_t *c);
 
+extern unsigned long stats_n_relay_cells_relayed;
+extern unsigned long stats_n_relay_cells_delivered;
+
 /********************************* command.c ***************************/
 
 void command_process_cell(cell_t *cell, connection_t *conn);
+
+extern unsigned long stats_n_padding_cells_processed;
+extern unsigned long stats_n_create_cells_processed;
+extern unsigned long stats_n_created_cells_processed;
+extern unsigned long stats_n_relay_cells_processed;
+extern unsigned long stats_n_destroy_cells_processed;
 
 /********************************* config.c ***************************/
 
@@ -572,6 +581,11 @@ int connection_package_raw_inbuf(connection_t *conn);
 int connection_consider_sending_sendme(connection_t *conn, int edge_type);
 
 int connection_exit_connect(connection_t *conn);
+
+extern uint64_t stats_n_data_cells_packaged;
+extern uint64_t stats_n_data_bytes_packaged;
+extern uint64_t stats_n_data_cells_received;
+extern uint64_t stats_n_data_bytes_received;
 
 /********************************* connection_or.c ***************************/
 

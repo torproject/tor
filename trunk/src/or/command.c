@@ -6,6 +6,12 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+unsigned long stats_n_padding_cells_processed = 0;
+unsigned long stats_n_create_cells_processed = 0;
+unsigned long stats_n_created_cells_processed = 0;
+unsigned long stats_n_relay_cells_processed = 0;
+unsigned long stats_n_destroy_cells_processed = 0;
+
 static void command_process_create_cell(cell_t *cell, connection_t *conn);
 static void command_process_created_cell(cell_t *cell, connection_t *conn);
 static void command_process_relay_cell(cell_t *cell, connection_t *conn);
@@ -31,6 +37,8 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn,
   }
   *time += time_passed;
 }
+
+
 
 void command_process_cell(cell_t *cell, connection_t *conn) {
   static int num_create=0, num_created=0, num_relay=0, num_destroy=0;
@@ -58,21 +66,26 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
 
   switch(cell->command) {
     case CELL_PADDING:
+      ++stats_n_padding_cells_processed;
       /* do nothing */
       break;
     case CELL_CREATE:
+      ++stats_n_create_cells_processed;
       command_time_process_cell(cell, conn, &num_create, &create_time,
                                 command_process_create_cell);
       break;
     case CELL_CREATED:
+      ++stats_n_created_cells_processed;
       command_time_process_cell(cell, conn, &num_created, &created_time,
                                 command_process_created_cell);
       break;
     case CELL_RELAY:
+      ++stats_n_relay_cells_processed;
       command_time_process_cell(cell, conn, &num_relay, &relay_time,
                                 command_process_relay_cell);
       break;
     case CELL_DESTROY:
+      ++stats_n_destroy_cells_processed;
       command_time_process_cell(cell, conn, &num_destroy, &destroy_time,
                                 command_process_destroy_cell);
       break;

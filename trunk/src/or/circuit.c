@@ -10,6 +10,9 @@ static void circuit_free_cpath(crypt_path_t *cpath);
 static void circuit_free_cpath_node(crypt_path_t *victim);
 static aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type);  
 
+unsigned long stats_n_relay_cells_relayed = 0;
+unsigned long stats_n_relay_cells_delivered = 0;
+
 /********* START VARIABLES **********/
 
 static circuit_t *global_circuitlist=NULL;
@@ -240,15 +243,18 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
 
   if(recognized) {
     if(cell_direction == CELL_DIRECTION_OUT) {
+      ++stats_n_relay_cells_delivered;
       log_fn(LOG_DEBUG,"Sending to exit.");
       return connection_edge_process_relay_cell(cell, circ, conn, EDGE_EXIT, NULL);
     }
     if(cell_direction == CELL_DIRECTION_IN) {
+      ++stats_n_relay_cells_delivered;
       log_fn(LOG_DEBUG,"Sending to AP.");
       return connection_edge_process_relay_cell(cell, circ, conn, EDGE_AP, layer_hint);
     }
   }
 
+  ++stats_n_relay_cells_relayed;
   /* not recognized. pass it on. */
   if(cell_direction == CELL_DIRECTION_OUT)
     conn = circ->n_conn;

@@ -16,6 +16,10 @@ extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 or_options_t options; /* command-line and config-file options */
 int global_read_bucket; /* max number of bytes I can read this second */
 
+static int stats_prev_global_read_bucket;
+static uint64_t stats_n_bytes_read = 0;
+static long stats_n_seconds_reading = 0;
+
 static connection_t *connection_array[MAXCONNECTIONS] =
         { NULL };
 
@@ -270,6 +274,8 @@ static int prepare_for_poll(void) {
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
+    ++stats_n_seconds_reading;
+
     if(time_to_fetch_directory < now.tv_sec) {
       /* it's time to fetch a new directory and/or post our descriptor */
       if(options.OnionRouter) {
@@ -296,10 +302,12 @@ static int prepare_for_poll(void) {
       time_to_new_circuit = now.tv_sec + options.NewCircuitPeriod;
     }
 
+    stats_n_bytes_read += stats_prev_global_read_bucket-global_read_bucket;
     if(global_read_bucket < 9*options.TotalBandwidth) {
       global_read_bucket += options.TotalBandwidth;
       log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
     }
+    stats_prev_global_read_bucket = global_read_bucket;
 
     /* do housekeeping for each connection */
     for(i=0;i<nfds;i++) {
@@ -670,6 +678,33 @@ static void dumpstats(void) { /* dump stats to stdout */
     circuit_dump_by_conn(conn); /* dump info about all the circuits using this conn */
     printf("\n");
   }
+  printf("Cells processed: % 10lud padding\n"
+         "                 % 10lud create\n"
+         "                 % 10lud created\n"
+         "                 % 10lud relay\n"
+         "                        (% 10lud relayed)\n"
+         "                        (% 10lud delivered)\n"
+         "                 % 10lud destroy\n",
+         stats_n_padding_cells_processed,
+         stats_n_create_cells_processed,
+         stats_n_created_cells_processed,
+         stats_n_relay_cells_processed,
+         stats_n_relay_cells_relayed,
+         stats_n_relay_cells_delivered,
+         stats_n_destroy_cells_processed);
+  if (stats_n_data_cells_packaged)
+    printf("Average outgoing cell fullness: %2.3f%%\n",
+           100*(((double)stats_n_data_bytes_packaged) / 
+                (stats_n_data_cells_packaged*(CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE))) );
+  if (stats_n_data_cells_packaged)
+    printf("Average incomoing cell fullness: %2.3f%%\n",
+           100*(((double)stats_n_data_bytes_received) / 
+                (stats_n_data_cells_received*(CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE))) );
+  
+  if (stats_n_seconds_reading)
+    printf("Average bandwidth used: %d bytes/sec\n",
+           (int) (stats_n_bytes_read/stats_n_seconds_reading));
+
 }
 
 void daemonize(void) {
@@ -700,6 +735,7 @@ int tor_main(int argc, char *argv[]) {
   }
   log_set_severity(options.loglevel);     /* assign logging severity level from options */
   global_read_bucket = options.TotalBandwidth; /* start it at 1 second of traffic */
+  stats_prev_global_read_bucket = global_read_bucket;
 
   if(options.Daemon)
     daemonize();
