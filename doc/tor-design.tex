@@ -80,8 +80,8 @@ is sent in fixed-size \emph{cells}, which are unwrapped by a symmetric key
 at each node (like the layers of an onion) and relayed downstream. The
 original Onion Routing project published several design and analysis
 papers
-\cite{or-jsac98,or-discex00,or-ih96,or-pet00}. While there was briefly
-a wide area Onion Routing network,
+\cite{or-jsac98,or-discex00,or-ih96,or-pet00}. While there was
+a wide area Onion Routing network for a several weeks,
 % how long is briefly? a day, a month? -RD
 the only long-running and publicly accessible
 implementation was a fragile proof-of-concept that ran on a single
@@ -400,9 +400,9 @@ enable connections between mutually anonymous entities, also
 facilitate connections to hidden servers.  These building blocks to
 censorship resistance and other capabilities are described in
 Section~\ref{sec:rendezvous}.  Location-hidden servers are an
-essential component for anonymous publishing systems such as
-Publius\cite{publius}, Free Haven\cite{freehaven-berk}, and
-Tangler\cite{tangler}.
+essential component for the anonymous publishing systems such as
+Eternity\cite{eternity}, Publius\cite{publius},
+Free Haven\cite{freehaven-berk}, and Tangler\cite{tangler}.
 
 
 STILL NOT MENTIONED:
@@ -410,9 +410,6 @@ real-time mixes\\
 rewebbers\\
 cebolla\\
 
-Rewebber was mentioned in an earlier version along with Eternity,
-which *must* be mentioned if we cite anything at all
-in censorship resistance.
 
 [XXX Close by mentioning where Tor fits.]
 
@@ -444,6 +441,16 @@ Tor's evolution.
 %     for Alice if she's using some other http proxy somewhere. I guess the
 %     external http proxy should route through a Tor client, which automatically
 %     translates the foo.onion address? -RD
+%
+%  1. Such clients do benefit from anonymity: they can reach the server.
+%  Recall that our goal for location hidden servers is to continue to
+%  provide service to priviliged clients when a DoS is happening or
+%  to provide access to a location sensitive service. I see no contradiction.
+%  2. A good idiot check is whether what we require people to download
+%  and use is more extreme than downloading the anonymizer toolbar or
+%  privacy manager. I don't think so, though I'm not claiming we've already
+%  got the installation and running of a client down to that simplicity
+%  at this time. -PS
 \item[Usability:] A hard-to-use system has fewer users---and because
   anonymity systems hide users among users, a system with fewer users
   provides less anonymity.  Usability is not only a convenience for Tor:
@@ -459,7 +466,12 @@ Tor's evolution.
   solved by Tor; it would be beneficial if future systems were not forced to
   reinvent Tor's design decisions.  (But note that while a flexible design
   benefits researchers, there is a danger that differing choices of
-  extensions will render users distinguishable.  Thus, implementations should
+  extensions will render users distinguishable.  Thus, experiments
+  on extensions should be limited and should not significantly affect
+  the distinguishability of ordinary users.
+  % To run an experiment researchers must file an
+  % anonymity impact statement -PS
+  of implementations should
   not permit different protocol extensions to coexist in a single deployed
   network.)
 \item[Conservative design:] The protocol's design and security parameters
@@ -1376,6 +1388,30 @@ client doesn't include the right cookie with its request for service,
 the server doesn't even acknowledge its existence.
 
 \Section{Analysis}
+\label{sec:analysis}
+
+In this section, we discuss how well Tor meets our stated design goals
+and its resistance to attacks.
+
+Goals:
+\begin{description}
+\item [Basic Anonymity:] Because traffic is encrypted, changing in
+  appearance, and can flow from anywhere to anywhere within the
+  network, a simple observer that cannot see both the initiator
+  activity and the corresponding activity where the responder talks to
+  the network will not be able to link the initiator and responder.
+  Nor is it possible to directly correlate any two communication
+  sessions as coming from a single source without additional
+  information. Resistance to specific anonymity threats will be discussed
+  below.
+
+\item[Deployability:]
+
+\item[Usability:] 
+\item[Flexibility:] 
+\item[Conservative design:] 
+\end{description}
+Basic 
 
 How well do we resist chosen adversary?
 
@@ -1497,26 +1533,57 @@ them.
 \begin{enumerate}
 \item \textbf{Passive attacks}
 \begin{itemize}
-\item \emph{Simple observation.}
+\item \emph{Observing user behavior.}
 \item \emph{Timing correlation.}
 \item \emph{Size correlation.}
-\item \emph{Option distinguishability.}
+\item \emph{Option distinguishability.} User configuration options.
+A: We standardize on how clients behave. cite econymics.
+
+\item sub of the above on exit policy\\
+Partitioning based on exit policy.
+
+Run a rare exit server/something other people won't allow.
+
+DOS three of the 4 who would allow a certain exit.
+
+\item Content analysis. Not our main thing, but, Privoxy to
+  anonymization of data stream.
+
+
 \end{itemize}
 
 \item \textbf{Active attacks}
 \begin{itemize}
-\item \emph{Key compromise.}
-\item \emph{Iterated subpoena.}
-\item \emph{Run recipient.}
-\item \emph{Run a hostile node.}
-\item \emph{Compromise entire path.}
-\item \emph{Selectively DoS servers.}
+\item \emph{Key compromise.} Talk about all three keys. 3 bullets
+\item \emph{Iterated subpoena.} Legal roving adversary. Works bad against
+this because of ephemeral keys. Criticize pets paper in section 2 for
+failing to consider this when describing roving adversary.
+\item \emph{Run recipient.} Be the Web server.
+\item \emph{Run a hostile node.} 
+\item \emph{Compromise entire path.} Directory servers controlling admission
+to network. But if you do compromise it, we're toast.
+\item \emph{Selectively DoS OR.} Flood the pipe. We're toast. Rate limiting.
+We can't stop flooding creates through all your neighbors. Router twins
+is a useful fallback, makes you hit all the twins.
 \item \emph{Introduce timing into messages.}
 \item \emph{Tagging attacks.}
+Integrity checking stops this.
+
+Subcase of running a hostile node: 
 the exit node can change the content you're getting to try to
 trick you. similarly, when it rejects you due to exit policy,
 it could give you a bad IP that sends you somewhere else.
 \end{itemize}
+\item \emph{replaying traffic} Can't in Tor. NonSSL anonymizer.
+
+\item Do bad things with the Tor network, so we are hated and
+get shut down. Now the user you want to watch has to use anonymizer.
+
+Exit policy's are a start.
+
+\item Send spam through the network. Exit policy (no open relay) and
+  rate limiting. We won't send to more than 8 people at a time.  See
+  section 5.1.
 
 we rely on DNS being globally consistent. if people in africa resolve
 IPs differently, then asking to extend a circuit to a certain IP can
