@@ -49,8 +49,11 @@ the specified number of bytes per second. (Default: 780 KB)
 Limit the maximum token bucket size (also known as the burst) to the given number of bytes. (Default: 48 MB)
 .TP
 \fBMaxAdvertisedBandwidth \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
-If set, we will not advertise more than this amount of bandwidth, no
-matter how much we think we actually have.
+If set, we will not advertise more than this amount of bandwidth for our
+BandwidthRate. Server operators who want to reduce the number of clients
+who ask to build circuits through them (since this is proportional to
+advertised bandwidth rate) can thus reduce the CPU demands on their
+server without impacting network performance.
 .TP
 \fBDataDirectory \fR\fIDIR\fP
 Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
