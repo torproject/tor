@@ -120,7 +120,9 @@ Tor Rendezvous Spec
    KL is the length of PK, in octets.  (Currently, KL must be 128.)
    TS is the number of seconds elapsed since Jan 1, 1970.
 
-   He must list at least one introduction point.
+   [It's ok for Bob to advertise 0 introduction points. He might want
+    to do that if he previously advertised some introduction points,
+    and now he doesn't have any. -RD]
 
    [Shouldn't the nicknames be hostname:port's instead?  That way, Alice's
    directory servers don't need to know Bob's chosen introduction points.
