@@ -7,9 +7,8 @@ Nickname moria4
 
 # Ports for various services. Comment out or set to 0 if you're not
 # offering that service.
-ORPort 9004
-OPPort 9014
-APPort 9024
+ORPort 9004 # listening for cell-speaking connections
+APPort 9024 # listening for socks-speaking connections
 #DirPort 0
 
 # Leave this set, or we'll be treated like a client.
