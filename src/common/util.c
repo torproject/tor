@@ -1712,7 +1712,7 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
   if (!*name) {
     /* Empty address is an error. */
     return -1;
-  } if (tor_inet_aton(name, &iaddr)) {
+  } else if (tor_inet_aton(name, &iaddr)) {
     /* It's an IP. */
     memcpy(addr, &iaddr.s_addr, 4);
     return 0;
