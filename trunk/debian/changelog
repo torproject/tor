@@ -8,8 +8,9 @@ tor (0.0.7.2+0.0.8pre3-0) unstable; urgency=low
     With nodoc the build will not need tetex-{bin,extra}, transfig, and gs.
   * Support DEB_BUILD_OPTIONS option 'nocheck' to skip unittests
     ('notest' is an alias')
+  * Enable coredumps by default, this is still development code.
 
- -- Peter Palfrader <weasel@debian.org>  Fri,  6 Aug 2004 23:27:55 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sat,  7 Aug 2004 00:35:41 +0200
 
 tor (0.0.7.2+0.0.8pre2-1) unstable; urgency=low
 
