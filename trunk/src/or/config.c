@@ -861,6 +861,7 @@ add_default_trusted_dirservers(or_options_t *options)
   /* tor26 */
   options->DirServers = config_line_prepend(options->DirServers, "DirServer",
      "62.116.124.106:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
+//  "tor.noreply.org:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
 }
 
 /** Print a usage message for tor. */
@@ -2099,7 +2100,7 @@ parse_dir_server_line(const char *line, int validate_only)
     goto err;
   }
   if (!port) {
-    log_fn(LOG_WARN, "Missing port in DirServe address '%s'",addrport);
+    log_fn(LOG_WARN, "Missing port in DirServer address '%s'",addrport);
     goto err;
   }
 
@@ -2394,7 +2395,7 @@ print_cvs_version(void)
   extern const char circuitlist_c_id[];
   extern const char circuituse_c_id[];
   extern const char command_c_id[];
-  extern const char config_c_id[];
+//  extern const char config_c_id[];
   extern const char connection_c_id[];
   extern const char connection_edge_c_id[];
   extern const char connection_or_c_id[];

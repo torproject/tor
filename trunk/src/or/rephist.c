@@ -247,7 +247,7 @@ void rep_hist_note_extend_failed(const char *from_id, const char *to_id)
   hist->changed = time(NULL);
 }
 
-/** Log all the reliability data we have rememberred, with the chosen
+/** Log all the reliability data we have remembered, with the chosen
  * severity.
  */
 void rep_hist_dump_stats(time_t now, int severity)
