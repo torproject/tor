@@ -32,6 +32,7 @@ Bugs:
         . fix buffer unit test so it passes
 
 Short-term:
+        - add in 'notice' log level
         - make recommendedversions different for clients and servers.
           e.g. C0.0.3 vs S0.0.3?
         o put IP into the descriptor, so clients don't need to resolve things
@@ -102,19 +103,19 @@ Rendezvous service:
                 - Joined to another circuit at the rendezvous point.
               (We should also enumerate all the states that these operations
               can be in.) [NM]
-	    - Add circuit metadata [NM]
-        - Code to configure hidden services [NM]
+            - Add circuit metadata [NM] 3 hours
+        - Code to configure hidden services [NM] 4 hours
         - Service descriptors
-            - OPs need to maintain identity keys for hidden services [NM]
-            - Code to generate and parse service descriptors [NM]
+            - OPs need to maintain identity keys for hidden services [NM] 1 hour
+            - Code to generate and parse service descriptors [NM] 4 hours
         - Advertisement
-            - Generate y.onion hostnames [NM]
+            - Generate y.onion hostnames [NM] 1 hour
             - Code to do an HTTP connection over Tor from within Tor [RD]
             - Publish service descriptors to directory [RD]
             - Directory accepts and remembers service descriptors, and
               delivers them as requested
                 - Frontend [RD]
-		- Backend [NM]
+                - Backend [NM] 1 hour
             - Code for OPs to retrieve (and cache?) service descriptors [RD]
         - Rendezvous
             - Code as needed to generate and parse all rendezvous-related
