@@ -739,7 +739,7 @@ int connection_handle_read(connection_t *conn) {
        /* XXX I suspect pollerr may make Windows not get to this point. :( */
        router_mark_as_down(conn->identity_digest);
        if(conn->purpose == DIR_PURPOSE_FETCH_DIR && !all_directory_servers_down()) {
-         log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->nickname);
+         log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->address);
          directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
        }
     }

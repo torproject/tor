@@ -200,6 +200,7 @@ const char *dirserv_get_nickname_by_digest(const char *digest)
   return NULL;
 }
 
+#if 0
 /** Return true iff any router named <b>nickname</b> with <b>digest</b>
  * is in the verified fingerprint list. */
 static int
@@ -213,6 +214,7 @@ router_nickname_is_approved(const char *nickname, const char *digest)
   else
     return 0;
 }
+#endif
 
 /** Clear the current fingerprint list. */
 void
