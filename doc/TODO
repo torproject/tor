@@ -19,10 +19,10 @@ N  - clients now have certs, which means we warn when their certs have
      o stop calling a *_policy an exit_policy_t
    o Regenerate our server descriptor when a relevant option is changed from
      control.c.
-   . Writing out the machine-readable torrc file
+   o Writing out the machine-readable torrc file
      o Function to check whether an option has changed.
      o Function to generate the contents for a torrc file.
-     - Function to safely replace a torrc file.
+     o Function to safely replace a torrc file.
 R  - fix print_usage()
    - Download and use running-routers
 R  - document signals in man page
