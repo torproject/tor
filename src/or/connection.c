@@ -317,20 +317,37 @@ void connection_expire_held_open(void)
 /** Bind a new non-blocking socket listening to
  * <b>bindaddress</b>:<b>bindport</b>, and add this new connection
  * (of type <b>type</b>) to the connection array.
+ *
+ * If <b>bindaddress</b> includes a port, we bind on that port; otherwise, we
+ * use bindport.
  */
 int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
   struct sockaddr_in bindaddr; /* where to bind */
   connection_t *conn;
+  char *hostname, *cp;
+  int usePort;
   int s; /* the socket we're going to make */
   int one=1;
 
+
+  cp = strchr(bindaddress, ':');
+  if (cp) {
+    hostname = tor_strndup(bindaddress, cp-bindaddress);
+    usePort = atoi(cp+1);
+  } else {
+    hostname = tor_strdup(bindaddress);
+    usePort = bindport;
+  }
+
   memset(&bindaddr,0,sizeof(struct sockaddr_in));
   bindaddr.sin_family = AF_INET;
-  bindaddr.sin_port = htons(bindport);
-  if(tor_lookup_hostname(bindaddress, &(bindaddr.sin_addr.s_addr)) != 0) {
-    log_fn(LOG_WARN,"Can't resolve BindAddress %s",bindaddress);
+  bindaddr.sin_port = htons(usePort);
+  if(tor_lookup_hostname(hostname, &(bindaddr.sin_addr.s_addr)) != 0) {
+    log_fn(LOG_WARN,"Can't resolve BindAddress %s",hostname);
+    tor_free(hostname);
     return -1;
   }
+  tor_free(hostname);
 
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
@@ -341,13 +358,13 @@ int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one, sizeof(one));
 
   if(bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
-    log_fn(LOG_WARN,"Could not bind to port %u: %s",bindport,
+    log_fn(LOG_WARN,"Could not bind to port %u: %s",usePort,
            tor_socket_strerror(tor_socket_errno(s)));
     return -1;
   }
 
   if(listen(s,SOMAXCONN) < 0) {
-    log_fn(LOG_WARN,"Could not listen on port %u: %s",bindport,
+    log_fn(LOG_WARN,"Could not listen on port %u: %s",usePort,
            tor_socket_strerror(tor_socket_errno(s)));
     return -1;
   }
@@ -363,7 +380,7 @@ int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
     return -1;
   }
 
-  log_fn(LOG_DEBUG,"%s listening on port %u.",conn_type_to_string[type], bindport);
+  log_fn(LOG_DEBUG,"%s listening on port %u.",conn_type_to_string[type], usePort);
 
   conn->state = LISTENER_STATE_READY;
   connection_start_reading(conn);
