@@ -13,15 +13,19 @@ ARMA    - arma claims
 
 For 0.0.7:
         o allow multiple log files
-        o the keep-trying-to-build-intropoints-always bug.
-        - *bindaddress
+        o *bindaddress
           o include the port
           o allow multiple of them
-          - have an allow/deny series for them
+          o have an allow/deny series for socks
         o break exitpolicy into multiple config lines
-        - have the OP forget routers it hasn't heard about in 24 hours
-        - rename/rearrange functions for what file they're in
-        - try to break apart the main clump of functions better.
+        o have the OP forget routers it hasn't heard about in 24 hours
+        . rename/rearrange functions for what file they're in
+        D try to break apart the main clump of functions better.
+        o rend_services_introduce should check if it's failed a lot
+          recently, and not try for a while if so
+        - check tor version as soon as you get the recommended-versions
+          string, regardless of whether parsing the directory succeeded.
+        - make all ORs serve the directory too.
 
 
 For September:
@@ -66,10 +70,6 @@ For September:
             - allow non-clique topology
 
 Other details and small and hard things:
-        - rend_services_introduce should check if it's failed a lot
-          recently, and not try for a while if so
-        - check tor version as soon as you get the recommended-versions
-          string, regardless of whether parsing the directory succeeded.
         - tor should be able to have a pool of outgoing IP addresses
           that it is able to rotate through. (maybe)
         - tie into squid
@@ -85,7 +85,7 @@ Other details and small and hard things:
         - Add '[...truncated]' or similar to truncated log entries (like the directory
           in connection_dir_process_inbuf()).
         . Make logs handle it better when writing to them fails.
-        - Dirserver shouldn't put you in running-routers list if you haven't
+        o Dirserver shouldn't put you in running-routers list if you haven't
           uploaded a descriptor recently
         . Refactor: add own routerinfo to routerlist.  Right now, only
           router_get_by_nickname knows about 'this router', as a hack to
