@@ -233,6 +233,7 @@ space. The default exit policy is:
 .IP "accept *:110"
 .IP "accept *:143"
 .IP "accept *:443"
+.IP "accept *:706"
 .IP "accept *:873"
 .IP "accept *:993"
 .IP "accept *:995" 4
