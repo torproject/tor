@@ -774,18 +774,20 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
   }
 }
 
+/* get the conn to addr/port that has the most recent timestamp_created */
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
   int i, n;
-  connection_t *conn;
+  connection_t *conn, *best=NULL;
   connection_t **carray;
 
   get_connection_array(&carray,&n);
   for(i=0;i<n;i++) {
     conn = carray[i];
-    if(conn->addr == addr && conn->port == port && !conn->marked_for_close)
-      return conn;
+    if(conn->addr == addr && conn->port == port && !conn->marked_for_close &&
+       (!best || best->timestamp_created < conn->timestamp_created))
+      best = conn;
   }
-  return NULL;
+  return best;
 }
 
 connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {

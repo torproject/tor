@@ -102,16 +102,17 @@ int connection_cpu_process_inbuf(connection_t *conn) {
     if(p_conn)
       circ = circuit_get_by_circ_id_conn(circ_id, p_conn);
 
+    if(success == 0) {
+      log_fn(LOG_WARN,"decoding onionskin failed. Closing.");
+      if(circ)
+        circuit_mark_for_close(circ);
+      goto done_processing;
+    }
     if(!circ) {
       log_fn(LOG_INFO,"processed onion for a circ that's gone. Dropping.");
       goto done_processing;
     }
     assert(circ->p_conn);
-    if(success == 0) {
-      log_fn(LOG_WARN,"decoding onionskin failed. Closing.");
-      circuit_mark_for_close(circ);
-      goto done_processing;
-    }
     if(onionskin_answer(circ, buf+TAG_LEN, buf+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
       log_fn(LOG_WARN,"onionskin_answer failed. Closing.");
       circuit_mark_for_close(circ);
