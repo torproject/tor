@@ -946,7 +946,7 @@ void circuit_expire_unused_circuits(void) {
   smartlist_t *unused_open_circs;
   int i;
 
-  unused_open_circs = smartlist_create(circuitlist_len);
+  unused_open_circs = smartlist_create();
 
   for (circ = global_circuitlist; circ; circ = circ->next) {
     if (circ->marked_for_close)
