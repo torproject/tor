@@ -840,6 +840,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   if (sockshere == 0) {
     if (socks->replylen) {
       connection_write_to_buf(socks->reply, socks->replylen, conn);
+      socks->replylen = 0; /* zero it out so we can do another round of negotiation */
     } else {
       log_fn(LOG_DEBUG,"socks handshake not all here yet.");
     }
@@ -1238,8 +1239,7 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     buf[1] = (status==SOCKS5_SUCCEEDED ? SOCKS4_GRANTED : SOCKS4_REJECT);
     /* leave version, destport, destip zero */
     connection_write_to_buf(buf, SOCKS4_NETWORK_LEN, conn);
-  }
-  if (conn->socks_request->socks_version == 5) {
+  } else if (conn->socks_request->socks_version == 5) {
     buf[0] = 5; /* version 5 */
     buf[1] = (char)status;
     buf[2] = 0;
