@@ -48,7 +48,7 @@ done
 
 ### Make Tor package.
 make install DESTDIR=$BUILD_DIR/tor_packageroot
-mv $BUILD_DIR/tor_packageroot/Library/Tor/torrc.sample $BUILD_DIR/tor_packageroot/Library/Tor/torrc
+#mv $BUILD_DIR/tor_packageroot/Library/Tor/torrc.sample $BUILD_DIR/tor_packageroot/Library/Tor/torrc
 cp contrib/osx/ReadMe.rtf $BUILD_DIR/tor_resources
 #cp contrib/osx/License.rtf $BUILD_DIR/tor_resources
 cp contrib/osx/TorPostflight $BUILD_DIR/tor_resources/postflight
