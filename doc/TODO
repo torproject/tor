@@ -36,7 +36,7 @@ NICK  pre1:
           o actually make the clients use this sometimes.
           o distinguish directory-is-dirty from runninglist-is-dirty
           - ORs keep this too, and serve it
-	  - Design: do we need running and non-running lists?
+          o Design: do we need running and non-running lists?
         o tor remembers descriptor-lists across reboots.
         . Packages define datadir as /var/lib/tor/. If no datadir is defined,
           then choose, make, and secure ~/.tor as datadir.
@@ -60,15 +60,14 @@ NICK  pre1:
           - also use this in intro points and rendezvous points, and
             hidserv descs.  [XXXX This isn't enough.]
           - figure out what to do about ip:port:differentkey
-ARMA    - ORs connect on demand. attach circuits to new connections, keep
+        o ORs connect on demand. attach circuits to new connections, keep
           create cells around somewhere, send destroy if fail.
         - nickname defaults to first piece of hostname
         - running-routers list refers to nickname if verified, else
           hash-base64'ed.
-        - put OR uptime in descriptor
+        o put OR uptime in descriptor
         - name the secret-key directory something to discourage people
           from mailing their identity key to tor-ops
-
 
       pre3:
         - users can set their bandwidth, or we auto-detect it:
@@ -90,7 +89,7 @@ ARMA    - ORs connect on demand. attach circuits to new connections, keep
           - he has successfully extended to you
           - he has sufficient mean-time-between-failures
         - add new "Middleman 1" config variable?
-          - if torrc not found, exitpolicy reject *:*
+          o if torrc not found, exitpolicy reject *:*
 
       ongoing:
         . rename/rearrange functions for what file they're in
