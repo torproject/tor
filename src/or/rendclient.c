@@ -284,6 +284,10 @@ char *rend_client_get_random_intro(char *query) {
     smartlist_add(sl,entry->parsed->intro_points[i]);
 
   choice = smartlist_choose(sl);
+  if(!choice) {
+    smartlist_free(sl);
+    return NULL;
+  }
   nickname = tor_strdup(choice);
   smartlist_free(sl);
   return nickname;
