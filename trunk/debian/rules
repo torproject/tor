@@ -13,6 +13,9 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 CFLAGS = -Wall -g
 
+export PACKAGE=tor
+include /usr/share/dpatch/dpatch.make
+
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O0
 else
@@ -22,6 +25,7 @@ endif
 #	INSTALL_PROGRAM += -s
 #endif
 
+configure: patch-stamp
 config.status: configure
 	dh_testdir
 	CFLAGS="$(CFLAGS)" ./configure \
@@ -47,7 +51,7 @@ build-stamp:  config.status
 
 	touch build-stamp
 
-clean:
+clean: unpatch
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp
