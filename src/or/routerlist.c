@@ -748,6 +748,10 @@ int router_load_routerlist_from_string(const char *s, int trusted)
     log(LOG_WARN, "Error parsing router file");
     return -1;
   }
+  if (*s) {
+    log(LOG_WARN, "Extraneous text at start of router file");
+    return -1;
+  }
   if (trusted) {
     int i;
     if (!trusted_dir_digests)
