@@ -1000,6 +1000,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
       if (router)
         break;
     }
+    SMARTLIST_FOREACH(needed_ports, char *, cp, tor_free(cp));
     smartlist_free(needed_ports);
   }
 
