@@ -994,7 +994,7 @@ static int tor_init(int argc, char *argv[]) {
 
   /* give it somewhere to log to initially */
   add_temp_log();
-  log_fn(LOG_NOTICE,"Tor v%s. This is experimental software. Do not use it if you need anonymity.",VERSION);
+  log_fn(LOG_NOTICE,"Tor v%s. This is experimental software. Do not rely on it for strong anonymity.",VERSION);
 
   if (network_init()<0) {
     log_fn(LOG_ERR,"Error initializing network; exiting.");
