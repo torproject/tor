@@ -795,7 +795,7 @@ static int do_main_loop(void) {
 
   if(authdir_mode()) {
     /* the directory is already here, run startup things */
-    directory_has_arrived();
+    router_retry_connections();
   }
 
   if(server_mode()) {
