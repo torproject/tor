@@ -1586,6 +1586,7 @@ typedef struct rend_cache_entry_t {
 
 void rend_cache_init(void);
 void rend_cache_clean(void);
+void rend_cache_free_all(void);
 int rend_valid_service_id(const char *query);
 int rend_cache_lookup_desc(const char *query, const char **desc, size_t *desc_len);
 int rend_cache_lookup_entry(const char *query, rend_cache_entry_t **entry_out);

@@ -1255,6 +1255,7 @@ void tor_free_all(void)
   free_dir_policy();
   dirserv_free_all();
   rend_service_free_all();
+  rend_cache_free_all();
   rep_hist_free_all();
   dns_free_all();
   clear_pending_onions();
