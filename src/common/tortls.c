@@ -57,8 +57,11 @@ tls_log_error(int severity, const char *doing)
   }
 }
 
+#define CATCH_SYSCALL 1
+#define CATCH_ZERO    2
+
 static int
-tor_tls_get_error(tor_tls *tls, int r, int extra, 
+tor_tls_get_error(tor_tls *tls, int r, int extra,
 		  const char *doing, int severity)
 {
   int err = SSL_get_error(tls->ssl, r);
@@ -70,13 +73,15 @@ tor_tls_get_error(tor_tls *tls, int r, int extra,
     case SSL_ERROR_WANT_WRITE:
       return TOR_TLS_WANTWRITE;
     case SSL_ERROR_SYSCALL:
-      /* This is oververbose XXX */
-      tls_log_error(severity, doing);
-      return extra ? _TOR_TLS_SYSCALL : TOR_TLS_ERROR;
+      if (extra&CATCH_SYSCALL)
+	return _TOR_TLS_SYSCALL;
+      log(severity, "TLS error: <syscall error>.");
+      return TOR_TLS_ERROR;
     case SSL_ERROR_ZERO_RETURN:
-      /* This is oververbose XXX */
-      tls_log_error(severity, doing);
-      return extra ? _TOR_TLS_ZERORETURN : TOR_TLS_ERROR;
+      if (extra&CATCH_ZERO)
+	return _TOR_TLS_ZERORETURN;
+      log(severity, "TLS error: Zero return");
+      return TOR_TLS_ERROR;
     default:
       tls_log_error(severity, doing);
       return TOR_TLS_ERROR;
@@ -299,11 +304,8 @@ tor_tls_read(tor_tls *tls, char *cp, int len)
   r = SSL_read(tls->ssl, cp, len);
   if (r > 0)
     return r;
-  err = tor_tls_get_error(tls, r, 1, "reading", LOG_ERR);
-  if (err == _TOR_TLS_SYSCALL) {
-    log(LOG_ERR, "TLS error while reading: syscall error");
-    return TOR_TLS_ERROR;
-  } else if (err == _TOR_TLS_ZERORETURN) {
+  err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_ERR);
+  if (err == _TOR_TLS_ZERORETURN) {
     tls->state = TOR_TLS_ST_CLOSED;
     return TOR_TLS_CLOSE;
   } else {
@@ -326,8 +328,7 @@ tor_tls_write(tor_tls *tls, char *cp, int n)
   if (n == 0)
     return 0;
   r = SSL_write(tls->ssl, cp, n);
-  err = tor_tls_get_error(tls, r, 1, "writing", LOG_ERR);
-  assert(err != _TOR_TLS_ZERORETURN);
+  err = tor_tls_get_error(tls, r, 0, "writing", LOG_ERR);
   if (err == TOR_TLS_DONE) {
     return r;
   } else {
@@ -376,13 +377,12 @@ tor_tls_shutdown(tor_tls *tls)
       do {
 	r = SSL_read(tls->ssl, buf, 128);
       } while (r>0);
-      err = tor_tls_get_error(tls, r, 1, "reading to shut down", LOG_ERR);
+      err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading to shut down", 
+			      LOG_ERR);
       if (err == _TOR_TLS_ZERORETURN) {
 	tls->state = TOR_TLS_ST_GOTCLOSE;
 	/* fall through... */
       } else {
-	if (err == _TOR_TLS_SYSCALL)
-	  err = TOR_TLS_ERROR;
 	return err;
       }
     }
@@ -393,7 +393,8 @@ tor_tls_shutdown(tor_tls *tls)
       tls->state = TOR_TLS_ST_CLOSED;
       return TOR_TLS_DONE;
     }
-    err = tor_tls_get_error(tls, r, 1, "shutting down", LOG_ERR);
+    err = tor_tls_get_error(tls, r, CATCH_SYSCALL|CATCH_ZERO, "shutting down", 
+			    LOG_ERR);
     if (err == _TOR_TLS_SYSCALL) {
       /* The underlying TCP connection closed while we were shutting down. */
       tls->state = TOR_TLS_ST_CLOSED; 
