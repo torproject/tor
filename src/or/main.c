@@ -607,6 +607,24 @@ void dump_directory_to_string(char *s, int maxlen) {
 
 }
 
+void daemonize() {
+  /* Fork; parent exits. */
+  if (fork())
+    exit(0);
+
+  /* Create new session; make sure we never get a terminal */
+  setsid();
+  if (fork())
+    exit(0);
+
+  chdir("/");
+  umask(000);
+
+  fclose(stdin);
+  fclose(stdout);
+  fclose(stderr);
+}
+
 int main(int argc, char *argv[]) {
   int retval = 0;
 
@@ -614,6 +632,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   log(options.loglevel,NULL);         /* assign logging severity level from options */
   global_role = options.Role;   /* assign global_role from options. FIXME: remove from global namespace later. */
+
+  if (options.Daemon)
+    daemonize();
 
   if(options.Role & ROLE_OR_LISTEN) { /* only spawn dns handlers if we're a router */
     if(dns_master_start() < 0) {
