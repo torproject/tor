@@ -297,16 +297,19 @@ static void dns_found_answer(char *address, uint32_t addr) {
 
   while(resolve->pending_connections) {
     pend = resolve->pending_connections;
-    assert_connection_ok(pend->conn,0);
+    assert_connection_ok(pend->conn,time(NULL));
     pend->conn->addr = resolve->addr;
     if(resolve->state == CACHE_STATE_FAILED) {
+      /* This calls dns_cancel_pending_resolve, which removes pend
+       * from the list, so we don't have to do it.  Beware of
+       * modify-while-iterating bugs hereabouts! */
       connection_mark_for_close(pend->conn, END_STREAM_REASON_RESOLVEFAILED);
+      assert(resolve->pending_connections != pend);
     } else {
-      assert_connection_ok(pend->conn, time(NULL));
       connection_exit_connect(pend->conn);
+      resolve->pending_connections = pend->next;
+      free(pend);
     }
-    resolve->pending_connections = pend->next;
-    free(pend);
   }
 }
 
