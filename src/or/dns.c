@@ -243,7 +243,6 @@ int dns_resolve(connection_t *exitconn) {
   /* add us to the pending list */
   pending_connection = tor_malloc_zero(sizeof(struct pending_connection_t));
   pending_connection->conn = exitconn;
-  pending_connection->next = NULL;
   resolve->pending_connections = pending_connection;
   exitconn->state = EXIT_CONN_STATE_RESOLVING;
 

@@ -718,9 +718,8 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
 
   if (*dest)
     routerlist_free(*dest);
-  *dest = tor_malloc(sizeof(routerlist_t));
+  *dest = tor_malloc_zero(sizeof(routerlist_t));
   (*dest)->routers = routers;
-  (*dest)->software_versions = NULL;
 
   return 0;
 }
@@ -770,8 +769,6 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   }
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
-  router->onion_pkey = router->identity_pkey = NULL;
-  router->declared_family = NULL;
   ports_set = bw_set = 0;
 
   if (tok->n_args == 2 || tok->n_args == 5 || tok->n_args == 6) {
@@ -1122,7 +1119,6 @@ router_parse_exit_policy(directory_token_t *tok) {
          address, inet_ntoa(in), newe->prt_min, newe->prt_max);
   tor_free(address);
 
-  newe->next = NULL;
   return newe;
 
 policy_read_failed:

@@ -547,7 +547,6 @@ int router_rebuild_descriptor(void) {
   ri->bandwidthrate = options.BandwidthRate;
   ri->bandwidthburst = options.BandwidthBurst;
   ri->bandwidthcapacity = router_get_bandwidth_capacity();
-  ri->exit_policy = NULL; /* zero it out first */
   router_add_exit_policy_from_config(ri);
   ri->is_trusted_dir = authdir_mode();
   if(desc_routerinfo) /* inherit values */
@@ -556,8 +555,6 @@ int router_rebuild_descriptor(void) {
     ri->declared_family = smartlist_create();
     smartlist_split_string(ri->declared_family, options.MyFamily, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  } else {
-    ri->declared_family = NULL;
   }
 
   if (desc_routerinfo)
@@ -684,7 +681,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     (int) router->bandwidthcapacity,
     onion_pkey, identity_pkey,
     family_line, bandwidth_usage);
-
+  tor_free(family_line);
   tor_free(onion_pkey);
   tor_free(identity_pkey);
   tor_free(bandwidth_usage);

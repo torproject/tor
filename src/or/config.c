@@ -492,22 +492,13 @@ static void
 init_options(or_options_t *options)
 {
   memset(options,0,sizeof(or_options_t));
-  options->LogOptions = NULL;
   options->ExitNodes = tor_strdup("");
   options->EntryNodes = tor_strdup("");
   options->StrictEntryNodes = options->StrictExitNodes = 0;
   options->ExcludeNodes = tor_strdup("");
   options->RendNodes = tor_strdup("");
   options->RendExcludeNodes = tor_strdup("");
-  options->ExitPolicy = NULL;
-  options->SocksPolicy = NULL;
-  options->SocksBindAddress = NULL;
-  options->ORBindAddress = NULL;
-  options->DirBindAddress = NULL;
-  options->OutboundBindAddress = NULL;
-  options->RecommendedVersions = NULL;
-  options->PidFile = NULL; // tor_strdup("tor.pid");
-  options->DataDirectory = NULL;
+  /* options->PidFile = tor_strdup("tor.pid"); */
   options->PathlenCoinWeight = 0.3;
   options->MaxConn = 900;
   options->DirFetchPostPeriod = 600;
@@ -517,11 +508,6 @@ init_options(or_options_t *options)
   options->BandwidthRate = 800000; /* at most 800kB/s total sustained incoming */
   options->BandwidthBurst = 10000000; /* max burst on the token bucket */
   options->NumCpus = 1;
-  options->RendConfigLines = NULL;
-  options->FirewallPorts = NULL;
-  options->DirServers = NULL;
-  options->MyFamily = NULL;
-  options->NodeFamilies = NULL;
 }
 
 static char *
