@@ -299,7 +299,7 @@ void circuit_build_needed_circs(time_t now) {
   if(time_to_new_circuit < now) {
     circuit_reset_failure_count();
     time_to_new_circuit = now + options.NewCircuitPeriod;
-    if(options.SocksPort)
+    if(proxy_mode())
       client_dns_clean();
     circuit_expire_old_circuits();
 

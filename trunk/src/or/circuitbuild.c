@@ -113,7 +113,7 @@ void circuit_rep_hist_note_result(circuit_t *circ) {
      */
     return;
   }
-  if (options.ORPort) {
+  if (server_mode()) {
     prev_digest = router_get_my_routerinfo()->identity_digest;
   }
   do {
@@ -1014,7 +1014,7 @@ static int count_acceptable_routers(smartlist_t *routers) {
       log_fn(LOG_DEBUG,"Nope, the directory says %d is not running.",i);
       goto next_i_loop;
     }
-    if(options.ORPort) {
+    if(clique_mode()) {
       conn = connection_get_by_identity_digest(r->identity_digest,
                                                CONN_TYPE_OR);
       if(!conn || conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN) {

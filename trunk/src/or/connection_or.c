@@ -272,7 +272,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   connection_watch_events(conn, POLLIN);
   log_fn(LOG_DEBUG,"tls handshake done. verifying.");
   if (! tor_tls_peer_has_cert(conn->tls)) { /* It's an OP. */
-    if (options.ORPort) { /* I'm an OR; good. */
+    if (server_mode()) { /* I'm an OR; good. */
       conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
       return 0;
     } else { /* Neither side sent a certificate: ouch. */
@@ -323,7 +323,7 @@ connection_tls_finish_handshake(connection_t *conn) {
     connection_or_init_conn_from_router(conn,router);
   }
 
-  if (!options.ORPort) { /* If I'm an OP... */
+  if (!server_mode()) { /* If I'm an OP... */
     conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
   }
   directory_set_dirty();

@@ -545,7 +545,7 @@ static int retry_listeners(int type, struct config_line_t *cfg,
  *  - Relaunch listeners for each port you have open.
  */
 int retry_all_connections(void) {
-  if(options.ORPort) {
+  if(clique_mode()) {
     router_retry_connections();
   }
 
