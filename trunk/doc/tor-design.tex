@@ -300,8 +300,8 @@ approach aggregates users into larger anonymity sets, but again an
 attacker only needs to observe both ends of the cascade to bridge all
 the system's traffic.  The Java Anon Proxy's design provides
 protection by padding between end users and the head of the cascade
-\cite{web-mix}. However, it is not demonstrated whether current
-implementation's padding policy hinders bridging.
+\cite{web-mix}. However, it is not demonstrated whether the current
+implementation's padding policy improves anonymity.
 
 PipeNet \cite{back01, pipenet}, another low-latency design proposed at
 about the same time as the original Onion Routing design, provided
@@ -1036,51 +1036,46 @@ attackers an opportunity to exploit differences in client knowledge.
 We also worry about attacks to deceive a
 client about the router membership list, topology, or current network
 state. Such \emph{partitioning attacks} on client knowledge help an
-adversary with limited resources to efficiently deploy those resources
+adversary to efficiently deploy resources
 when attacking a target.
 
-Instead of flooding, Tor uses a small group of redundant, well-known
-directory servers to track changes in network topology and node state,
-including keys and exit policies.  Directory servers are a small group
-of well-known, mostly-trusted onion routers.  They listen on a
-separate port as an HTTP server, so that participants can fetch
-current network state and router lists (a \emph{directory}), and so
-that other onion routers can upload their router descriptors.  Onion
-routers now periodically publish signed statements of their state to
-the directories only.  The directories themselves combine this state
-information with their own views of network liveness, and generate a
-signed description of the entire network state whenever its contents
-have changed.  Client software is pre-loaded with a list of the
-directory servers and their keys, and uses this information to
-bootstrap each client's view of the network.
+Tor uses a small group of redundant, well-known onion routers to
+track changes in network topology and node state, including keys and
+exit policies.  Each such \emph{directory server} also acts as an HTTP
+server, so participants can fetch current network state and router
+lists (a \emph{directory}), and so other onion routers can upload
+their router descriptors.  Onion routers periodically publish signed
+statements of their state to each directory server, which combines this
+state information with its own view of network liveness, and generates
+a signed description of the entire network state. Client software is
+pre-loaded with a list of the directory servers and their keys; it uses
+this information to bootstrap each client's view of the network.
 
-When a directory receives a signed statement from and onion router, it
-recognizes the onion router by its identity (signing) key.
-Directories do not automatically advertise ORs that they do not
-recognize.  (If they did, an adversary could take over the network by
-creating many servers \cite{sybil}.)  Instead, new nodes must be
-approved by the directory administrator before they are included.
-Mechanisms for automated node approval are an area of active research,
-and are discussed more in section~\ref{sec:maintaining-anonymity}.
+When a directory server receives a signed statement from an onion
+router, it recognizes the onion router by its identity key. Directory
+servers do not automatically advertise unrecognized ORs. (If they did,
+an adversary could take over the network by creating many servers
+\cite{sybil}.) Instead, new nodes must be approved by the directory
+server administrator before they are included. Mechanisms for automated
+node approval are an area of active research, and are discussed more
+in Section~\ref{sec:maintaining-anonymity}.
   
-Of course, a variety of attacks remain. An adversary who controls a
-directory server can track certain clients by providing different
-information---perhaps by listing only nodes under its control
-as working, or by informing only certain clients about a given
-node. Moreover, an adversary without control of a directory server can
-still exploit differences among client knowledge. If Eve knows that
-node $M$ is listed on server $D_1$ but not on $D_2$, she can use this
-knowledge to link traffic through $M$ to clients who have queried $D_1$.
+Of course, a variety of attacks remain. An adversary who controls
+a directory server can track certain clients by providing different
+information---perhaps by listing only nodes under its control, or by
+informing only certain clients about a given node. Even an external
+adversary can exploit differences in client knowledge: clients who use
+a node listed on one directory server but not the others are vulnerable.
 
-Thus these directory servers must be synchronized and redundant. The
-software is distributed with the signature public key of each directory
-server, and directories must be signed by a threshold of these keys.
+Thus these directory servers must be synchronized and redundant.
+Valid directories are those signed by a threshold of the directory
+servers.
 
 The directory servers in Tor are modeled after those in Mixminion
 \cite{minion-design}, but our situation is easier. First, we make the
-simplifying assumption that all participants agree on who the
-directory servers are. Second, Mixminion needs to predict node
-behavior, whereas Tor only needs a threshold consensus of the current
+simplifying assumption that all participants agree on the set of
+directory servers. Second, while Mixminion needs to predict node
+behavior, Tor only needs a threshold consensus of the current
 state of the network.
 
 Tor directory servers build a consensus directory through a simple
@@ -1089,7 +1084,7 @@ signs its current opinion, and broadcasts it to the other directory
 servers; then in round two, each server rebroadcasts all the signed
 opinions it has received.  At this point all directory servers check
 to see whether any server has signed multiple opinions in the same
-period. If so, the server is either broken or cheating, so the protocol
+period. Such a server is either broken or cheating, so the protocol
 stops and notifies the administrators, who either remove the cheater
 or wait for the broken server to be fixed.  If there are no
 discrepancies, each directory server then locally computes an algorithm
@@ -1101,26 +1096,21 @@ signatures.  If any directory server drops out of the network, its
 signature is not included on the final directory.
 
 The rebroadcast steps ensure that a directory server is heard by
-either all of the other servers or none of them, assuming that any two
-directory servers can talk directly, or via a third directory server
-(some of the
-links between directory servers may be down). Broadcasts are feasible
-because there are relatively few directory servers (currently 3, but we expect
-to transition to 9 as the network scales). The actual local algorithm
-for computing the shared directory is a straightforward threshold
-voting process: we include an OR if a majority of directory servers
-believe it to be good.
+either all of the other servers or none of them, even when some links
+are down (assuming that any two directory servers can talk directly or
+via a third). Broadcasts are feasible because there are relatively few
+directory servers (currently 3, but we expect as many as 9 as the network
+scales). Computing the shared directory locally is a straightforward
+threshold voting process: we include an OR if a majority of directory
+servers believe it to be good.
 
 To avoid attacks where a router connects to all the directory servers
 but refuses to relay traffic from other routers, the directory servers
 must build circuits and use them to anonymously test router reliability
 \cite{mix-acc}.
 
-When Alice retrieves a consensus directory, she uses it if it
-is signed by a majority of the directory servers she knows.
-
-Using directory servers rather than flooding provides simplicity and
-flexibility. For example, they don't complicate the analysis when we
+Using directory servers is simpler and more flexible than flooding.
+For example, flooding complicates the analysis when we
 start experimenting with non-clique network topologies. And because
 the directories are signed, they can be cached by other onion routers.
 Thus directory servers are not a performance
@@ -1769,7 +1759,7 @@ signing up many spurious servers?
 Second, if clients can no longer have a complete
 picture of the network at all times, how can should they perform
 discovery while preventing attackers from manipulating or exploiting
-gaps in client knowledge?  Third, if there are to many servers
+gaps in client knowledge?  Third, if there are too many servers
 for every server to constantly communicate with every other, what kind
 of non-clique topology should the network use?   Restricted-route
 topologies promise comparable anonymity with better scalability
