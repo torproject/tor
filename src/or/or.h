@@ -168,8 +168,7 @@ struct config_line {
 typedef uint16_t aci_t;
 
 /* cell definition */
-typedef struct
-{ 
+typedef struct { 
   aci_t aci; /* Anonymous Connection Identifier */
   unsigned char command;
   unsigned char length; /* of payload if data cell, else value of sendme */
@@ -192,8 +191,7 @@ typedef struct {
    /* dest host follows, terminated by a NULL */
 } socks4_t;
 
-typedef struct
-{ 
+typedef struct { 
 
 /* Used by all types: */
 
@@ -267,8 +265,7 @@ typedef struct
 } connection_t;
 
 /* config stuff we know about the other ORs in the network */
-typedef struct
-{
+typedef struct {
   char *address;
  
   uint32_t addr; /* all host order */
@@ -293,8 +290,7 @@ typedef struct
   void *next;
 } routerinfo_t;
 
-typedef struct
-{ 
+typedef struct { 
   unsigned int forwf;
   unsigned int backf;
   char digest2[20]; /* second SHA output for onion_layer_t.keyseed */
@@ -307,8 +303,7 @@ typedef struct
 } crypt_path_t;
 
 /* per-anonymous-connection struct */
-typedef struct
-{
+typedef struct {
 #if 0
   uint32_t p_addr; /* all in network order */
   uint16_t p_port;
@@ -343,6 +338,7 @@ typedef struct
   void *next;
 } circuit_t;
 
+#if 0
 typedef struct
 { 
   int zero:1;
@@ -354,17 +350,19 @@ typedef struct
   uint32_t expire;
   unsigned char keyseed[16];
 } onion_layer_t;
+#endif
 
-typedef struct
-{ 
+#define ONION_LAYER_SIZE 28
+#define ONION_PADDING_SIZE (128-ONION_LAYER_SIZE)
+
+typedef struct { 
   uint32_t expire;
   char digest[20]; /* SHA digest of the onion */
   void *prev;
   void *next;
 } tracked_onion_t;
 
-typedef struct
-{
+typedef struct {
    char *LogLevel;
    char *RouterFile;
    char *PrivateKeyFile;
@@ -386,7 +384,6 @@ typedef struct
 
 
     /* all the function prototypes go here */
-
 
 /********************************* buffers.c ***************************/
 
@@ -677,22 +674,22 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
 
 /* encrypts 128 bytes of the onion with the specified public key, the rest with 
  * DES OFB with the key as defined in the outter layer */
-unsigned char *encrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_env_t *pkey);
+int encrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *pkey);
 
 /* decrypts the first 128 bytes using RSA and prkey, decrypts the rest with DES OFB with key1 */
-unsigned char *decrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_env_t *prkey);
+int decrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *prkey);
 
 /* delete first n bytes of the onion and pads the end with n bytes of random data */
 void pad_onion(unsigned char *onion, uint32_t onionlen, int n);
 
 /* create a new tracked_onion entry */
-tracked_onion_t *new_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t **tracked_onions, tracked_onion_t **last_tracked_onion);
+int add_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t **tracked_onions, tracked_onion_t **last_tracked_onion);
 
 /* delete a tracked onion entry */
 void remove_tracked_onion(tracked_onion_t *to, tracked_onion_t **tracked_onions, tracked_onion_t **last_tracked_onion);
 
 /* find a tracked onion in the linked list of tracked onions */
-tracked_onion_t *id_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t *tracked_onions);
+tracked_onion_t *find_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t *tracked_onions);
 
 /* create a cipher by onion cipher type. */
 crypto_cipher_env_t *create_onion_cipher(int cipher_type, char *key, char *iv, int encrypt_mode);
