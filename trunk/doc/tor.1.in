@@ -63,6 +63,12 @@ On startup, setuid to this user.
 .PP
 The following options are useful only for clients (that is, if \fBsocksport\fP is non-zero):
 .TP
+\fBentrynodes \fR\fInickname,nickname,...\fP
+A list of preferred nodes to use for the first hop in the circuit, if possible.
+.TP
+\fBexitnodes \fR\fInickname,nickname,...\fP
+A list of preferred nodes to use for the last hop in the circuit, if possible.
+.TP
 \fBnewcircuitperiod \fR\fINUM\fP
 Every NUM seconds consider whether to build a new circuit. (Default: 60)
 .TP
