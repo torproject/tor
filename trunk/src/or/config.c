@@ -164,7 +164,7 @@ static int options_validate(or_options_t *options);
 static int options_transition_allowed(or_options_t *old, or_options_t *new);
 static int check_nickname_list(const char *lst, const char *name);
 
-static int parse_dir_server_line(const char *line);
+static int parse_dir_server_line(const char *line, int validate_only);
 static int parse_redirect_line(or_options_t *options,
                                struct config_line_t *line);
 static int parse_log_severity_range(const char *range, int *min_out,
@@ -184,12 +184,46 @@ static int normalize_log_options(or_options_t *options);
 /** Command-line and config-file options. */
 static or_options_t *global_options=NULL;
 
-or_options_t *get_options(void) {
+/** Return the currently configured options. */
+or_options_t *
+get_options(void) {
   tor_assert(global_options);
   return global_options;
 }
-void set_options(or_options_t *new) {
-  global_options = new;
+
+/** Change the current global options tocontain <b>new</b> instead of
+ * their current value; free the old value as necessary.  Where
+ * <b>new</b> is different from the old value, update the process to
+ * use the new value instead.
+ *
+ * Note 1: <b>new_val</b> must have previously been validated with
+ * options_validate(), or Tor may freak out and exit.
+ *
+ * Note 2: We haven't moved all the "act on new configuration" logic
+ * here yet.  Some is still in do_hup() and other places.
+ */
+void
+set_options(or_options_t *new_val) {
+  struct config_line_t *cl;
+
+  if (global_options)
+    options_free(global_options);
+  global_options = new_val;
+
+  clear_trusted_dir_servers();
+  for (cl = new_val->DirServers; cl; cl = cl->next) {
+    if (parse_dir_server_line(cl->value, 0)<0) {
+      log_fn(LOG_ERR,
+             "Previously validated DirServer line could not be added!");
+      tor_assert(0);
+    }
+  }
+
+  if (rend_config_services(new_val, 0)<0) {
+    log_fn(LOG_ERR,
+           "Previously validated hidden services line could not be added!");
+    tor_assert(0);
+  }
 }
 
 /*
@@ -578,10 +612,7 @@ config_trial_assign(or_options_t **options, struct config_line_t *list, int rese
     return -3;
   }
 
-  /* XXX now act on options */
-
-  options_free(*options);
-  *options = trial_options;
+  set_options(trial_options);
   return 0;
 }
 
@@ -632,18 +663,20 @@ option_reset(or_options_t *options, config_var_t *var)
   }
 }
 
+/** Set <b>options</b>-&gt;DirServers to contain the default directory 
+ * servers. */
 static void
-add_default_trusted_dirservers(void)
+add_default_trusted_dirservers(or_options_t *options)
 {
   /* moria1 */
-  parse_dir_server_line("18.244.0.188:9031 "
-                        "FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441");
+  options->DirServers = config_line_prepend(options->DirServers, "DirServer",
+       "18.244.0.188:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441");
   /* moria2 */
-  parse_dir_server_line("18.244.0.114:80 "
-                        "719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF");
+  options->DirServers = config_line_prepend(options->DirServers, "DirServer",
+         "18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF");
   /* tor26 */
-  parse_dir_server_line("62.116.124.106:9030 "
-                        "847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
+  options->DirServers = config_line_prepend(options->DirServers, "DirServer",
+     "62.116.124.106:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
 }
 
 /** Print a usage message for tor. */
@@ -719,6 +752,8 @@ resolve_my_address(const char *address, uint32_t *addr)
   return 0;
 }
 
+/** Called when we don't have a nickname set.  Try to guess a good
+ * nickname based on the hostname, and return it. */
 static char *
 get_default_nickname(void)
 {
@@ -840,6 +875,9 @@ options_init(or_options_t *options)
   }
 }
 
+/** Return 0 if every setting in <b>options</b> is reasonable.  Else
+ * warn and return -1.  Should have no side effects, except for
+ * normalizing the contents of <b>options</b>. */
 static int
 options_validate(or_options_t *options)
 {
@@ -873,6 +911,14 @@ options_validate(or_options_t *options)
              options->Nickname, MAX_NICKNAME_LEN);
       result = -1;
     }
+  }
+
+  if (normalize_log_options(options))
+    return -1;
+
+  /* Special case if no options are given. */
+  if (!options->Logs) {
+    options->Logs = config_line_prepend(NULL, "Log", "notice-err stdout");
   }
 
   if (server_mode(options)) {
@@ -1044,16 +1090,17 @@ options_validate(or_options_t *options)
       result = -1;
   }
 
-/* XXX bug: this parsing shouldn't have side effects */
-  clear_trusted_dir_servers();
   if (!options->DirServers) {
-    add_default_trusted_dirservers();
+    add_default_trusted_dirservers(options);
   } else {
     for (cl = options->DirServers; cl; cl = cl->next) {
-      if (parse_dir_server_line(cl->value)<0)
+      if (parse_dir_server_line(cl->value, 1)<0)
         result = -1;
     }
   }
+
+  if (rend_config_services(options, 1) < 0)
+    result = -1;
 
   return result;
 }
@@ -1085,6 +1132,8 @@ options_transition_allowed(or_options_t *old, or_options_t *new) {
 }
 
 #ifdef MS_WINDOWS
+/** Return the directory on windows where we expect to find our application
+ * data. */
 static char *get_windows_conf_root(void)
 {
   static int is_set = 0;
@@ -1124,6 +1173,7 @@ static char *get_windows_conf_root(void)
 }
 #endif
 
+/** Return the default location for our torrc file. */
 static char *
 get_default_conf_file(void)
 {
@@ -1278,12 +1328,6 @@ getconfig(int argc, char **argv)
   if (options_transition_allowed(oldoptions, newoptions) < 0)
     goto err;
 
-  /* XXX now act on options */
-  if (rend_config_services(newoptions) < 0)
-    goto err;
-
-  if(oldoptions)
-    options_free(oldoptions);
   set_options(newoptions);
   return 0;
  err:
@@ -1291,6 +1335,12 @@ getconfig(int argc, char **argv)
   return -1;
 }
 
+/** If <b>range</b> is of the form MIN-MAX, for MIN and MAX both
+ * recognized log severity levels, set *<b>min_out</b> to MIN and
+ * *<b>max_out</b> to MAX and return 0.  Else, if <b>range<b> is of
+ * the form MIN, act as if MIN-err had been specified.  Else, warn and
+ * return -1.
+ */
 static int
 parse_log_severity_range(const char *range, int *min_out, int *max_out)
 {
@@ -1337,6 +1387,9 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
   return 0;
 }
 
+/** Try to convert a pair of old-style logging options [LogLevel, and
+ * (LogFile/Syslog)] to a new-style option, and add the new option to
+ * options->Logs. */
 static int
 convert_log_option(or_options_t *options, struct config_line_t *level_opt,
                    struct config_line_t *file_opt, int isDaemon)
@@ -1380,13 +1433,6 @@ config_init_logs(or_options_t *options)
   struct config_line_t *opt;
   int ok;
   smartlist_t *elts;
-  if (normalize_log_options(options))
-    return -1;
-
-  /* Special case if no options are given. */
-  if (!options->Logs) {
-    options->Logs = config_line_prepend(NULL, "Log", "notice-err stdout");
-  }
 
   ok = 1;
   elts = smartlist_create();
@@ -1440,6 +1486,7 @@ config_init_logs(or_options_t *options)
   return ok?0:-1;
 }
 
+/** Add a single option of the form Log min-max <type> [fname] to options. */
 static int
 add_single_log_option(or_options_t *options, int minSeverity, int maxSeverity,
                       const char *type, const char *fname)
@@ -1461,6 +1508,8 @@ add_single_log_option(or_options_t *options, int minSeverity, int maxSeverity,
   return 0;
 }
 
+/** Convert all old-style logging options to new-style Log options. Return 0
+ * on success, -1 on faulure. */
 static int
 normalize_log_options(or_options_t *options)
 {
@@ -1555,7 +1604,9 @@ config_parse_exit_policy(struct config_line_t *cfg,
   smartlist_free(entries);
 }
 
-void exit_policy_free(struct exit_policy_t *p) {
+/** Release all storage held by <b>p</b> */
+void
+exit_policy_free(struct exit_policy_t *p) {
   struct exit_policy_t *e;
 
   while (p) {
@@ -1566,8 +1617,11 @@ void exit_policy_free(struct exit_policy_t *p) {
   }
 }
 
-static int parse_redirect_line(or_options_t *options,
-                               struct config_line_t *line)
+/** Parse a single RedirectExit line's contents from <b>line</b>.  If they are
+ *  valid, add an element to <b>options</b>-&gt;RedirectExitList and return 0.
+ *  Else return -1. */
+static int
+parse_redirect_line(or_options_t *options, struct config_line_t *line)
 {
   smartlist_t *elements = NULL;
   exit_redirect_t *r;
@@ -1614,7 +1668,12 @@ static int parse_redirect_line(or_options_t *options,
   }
 }
 
-static int parse_dir_server_line(const char *line)
+/** Read the contents of a DirServer line from <b>line</b>.  Return 0
+ * if the line is well-formed, and 0 if it isn't.  If
+ * <b>validate_only</b> is 0, and the line is well-formed, then add
+ * the dirserver desribed in the line as a valid server. */
+static int
+parse_dir_server_line(const char *line, int validate_only)
 {
   smartlist_t *items = NULL;
   int r;
@@ -1650,9 +1709,11 @@ static int parse_dir_server_line(const char *line)
     goto err;
   }
 
-  log_fn(LOG_DEBUG, "Trusted dirserver at %s:%d (%s)", address, (int)port,
-         (char*)smartlist_get(items,1));
-  add_trusted_dir_server(address, port, digest);
+  if (!validate_only) {
+    log_fn(LOG_DEBUG, "Trusted dirserver at %s:%d (%s)", address, (int)port,
+           (char*)smartlist_get(items,1));
+    add_trusted_dir_server(address, port, digest);
+  }
 
   r = 0;
   goto done;
@@ -1667,6 +1728,8 @@ static int parse_dir_server_line(const char *line)
   return r;
 }
 
+/** Return the place where we are currently configured to store and read all
+ * of our persistant data. */
 const char *
 get_data_directory(void)
 {
