@@ -98,7 +98,7 @@ TODO: (very soon)
    proxies is a fixed-width "cell".  Each cell contains the following
    fields:
 
-        CircID                               [2 bytes]
+        CircID                                [2 bytes]
         Command                               [1 byte]
         Payload (padded with 0 bytes)         [509 bytes]
                                          [Total size: 512 bytes]
@@ -146,23 +146,29 @@ TODO: (very soon)
    which instructs the last node in the circuit to send a CREATE cell
    to extend the circuit.
 
-   The payload for a CREATE cell is an 'onion skin', consisting of:
-         RSA-encrypted data            [128 bytes]
-         Symmetrically-encrypted data  [16 bytes]
+   The payload for a CREATE cell is an 'onion skin', which consists
+   of the first step of the DH handshake data (also known as g^x).
 
-   The RSA-encrypted portion contains:
+   The data is encrypted to Bob's PK as follows: Suppose Bob's PK is
+   L octets long.  If the data to be encrypted is shorter than L-42,
+   then it is encrypted directly (with OAEP padding).  If the data is at
+   least as long as L-42, then a randomly generated 16-byte symmetric
+   key is prepended to the data, after which the first L-16-42 bytes
+   of the data are encrypted with Bob's PK; and the rest of the data is
+   encrypted with the symmetric key.
+
+   So in this case, the onion skin on the wire looks like:
+       RSA-encrypted:
+         OAEP padding                  [42 bytes]
          Symmetric key                 [16 bytes]
-         First part of DH data (g^x)   [112 bytes]
-   The symmetrically encrypted portion contains:
-         Second part of DH data (g^x)  [16 bytes]
-
-   The two parts of DH data, once decrypted and concatenated, form
-   g^x as calculated by the client.
+         First part of g^x             [70 bytes]
+       Symmetrically encrypted:
+         Second part of g^x            [58 bytes]
 
    The relay payload for an EXTEND relay cell consists of:
          Address                       [4 bytes]
          Port                          [2 bytes]
-         Onion skin                    [144 bytes]
+         Onion skin                    [186 bytes]
 
    The port and address field denote the IPV4 address and port of the
    next onion router in the circuit.
