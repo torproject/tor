@@ -268,6 +268,7 @@ static int spawn_cpuworker(void) {
   if(tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
     log(LOG_ERR, "Couldn't construct socketpair: %s",
         tor_socket_strerror(tor_socket_errno(-1)));
+    tor_cleanup();
     exit(1);
   }
 

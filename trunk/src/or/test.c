@@ -858,6 +858,8 @@ test_dir_format()
   test_eq(1, is_obsolete_version("0.0.2", "Tor 0.0.2pre1,Tor 0.0.3"));
   test_eq(0, is_obsolete_version("0.1.0", "Tor 0.0.2,Tor 0.0.3"));
   test_eq(0, is_obsolete_version("0.0.7rc2", "0.0.7,Tor 0.0.7rc2,Tor 0.0.8"));
+  test_eq(0, is_obsolete_version("0.0.5", "0.0.5-cvs"));
+  test_eq(0, is_obsolete_version("0.0.5.1-cvs", "0.0.5"));
 }
 
 void test_rend_fns()

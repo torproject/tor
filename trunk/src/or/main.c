@@ -496,6 +496,7 @@ static void run_scheduled_events(time_t now) {
    */
   if(shutting_down && shutting_down <= now) {
     log(LOG_NOTICE,"Clean shutdown finished. Exiting.");
+    tor_cleanup();
     exit(0);
   }
 
@@ -722,11 +723,13 @@ static int do_hup(void) {
   /* first, reload config variables, in case they've changed */
   /* no need to provide argc/v, they've been cached inside init_from_config */
   if (init_from_config(0, NULL) < 0) {
+    tor_cleanup();
     exit(1);
   }
   /* reload keys as needed for rendezvous services. */
   if (rend_service_load_keys()<0) {
     log_fn(LOG_ERR,"Error reloading rendezvous service keys");
+    tor_cleanup();
     exit(1);
   }
   if(retry_all_listeners() < 0) {
@@ -815,10 +818,12 @@ static int do_main_loop(void) {
     if(please_shutdown) {
       if(!server_mode()) { /* do it now */
         log(LOG_NOTICE,"Interrupt: exiting cleanly.");
+        tor_cleanup();
         exit(0);
       }
       if(shutting_down) { /* we've already been asked. do it now. */
         log(LOG_NOTICE,"Second sigint received; exiting now.");
+        tor_cleanup();
         exit(0);
       } else {
         log(LOG_NOTICE,"Interrupt: will shut down in %d seconds. Interrupt again to exit now.", SHUTDOWN_WAIT_LENGTH);
@@ -885,6 +890,7 @@ static void catch(int the_signal) {
 //    case SIGABRT:
     case SIGTERM:
       log(LOG_ERR,"Catching signal %d, exiting cleanly.", the_signal);
+      tor_cleanup();
       exit(0);
     case SIGINT:
       please_shutdown = 1;
@@ -966,7 +972,7 @@ static void dumpstats(int severity) {
 /** Called before we make any calls to network-related functions.
  * (Some operating systems require their network libraries to be
  * initialized.) */
-int network_init(void)
+static int network_init(void)
 {
 #ifdef MS_WINDOWS
   /* This silly exercise is necessary before windows will allow gethostbyname to work.
@@ -987,10 +993,7 @@ int network_init(void)
  */
 void exit_function(void)
 {
-  /* Remove our pid file. We don't care if there was an error when we
-   * unlink, nothing we could do about it anyways. */
-  if(options.PidFile)
-    unlink(options.PidFile);
+/* XXX if we ever daemonize, this gets called immediately */
 #ifdef MS_WINDOWS
   WSACleanup();
 #endif
@@ -998,7 +1001,7 @@ void exit_function(void)
 
 /** Main entry point for the Tor command-line client.
  */
-int tor_init(int argc, char *argv[]) {
+static int tor_init(int argc, char *argv[]) {
 
   /* give it somewhere to log to initially */
   add_temp_log();
@@ -1046,7 +1049,12 @@ int tor_init(int argc, char *argv[]) {
   return 0;
 }
 
+/** Do whatever cleanup is necessary before shutting Tor down. */
 void tor_cleanup(void) {
+  /* Remove our pid file. We don't care if there was an error when we
+   * unlink, nothing we could do about it anyways. */
+  if(options.PidFile)
+    unlink(options.PidFile);
   crypto_global_cleanup();
 }
 
@@ -1061,7 +1069,7 @@ void nt_service_control(DWORD request)
           service_status.dwCurrentState = SERVICE_STOPPED;
           return;
   }
-  SetServiceStatus(hStatus, &service_status);     
+  SetServiceStatus(hStatus, &service_status);
 }
 
 void nt_service_body(int argc, char **argv)
