@@ -18,6 +18,7 @@ const char util_c_id[] = "$Id$";
 #include "util.h"
 #include "log.h"
 #include "crypto.h"
+#include "torint.h"
 
 #ifdef MS_WINDOWS
 #include <io.h>
@@ -218,6 +219,8 @@ int tor_strpartition(char *dest, size_t dest_len,
   tor_assert(s);
   tor_assert(insert);
   tor_assert(n > 0);
+  tor_assert(n < SIZE_T_CEILING);
+  tor_assert(dest_len < SIZE_T_CEILING);
   len_in = strlen(s);
   len_ins = strlen(insert);
   len_out = len_in + (len_in/n)*len_ins;
@@ -444,6 +447,7 @@ void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
   char *cp;
 
   tor_assert(destlen >= srclen*2+1);
+  tor_assert(destlen < SIZE_T_CEILING);
 
   cp = dest;
   end = src+srclen;
@@ -477,7 +481,7 @@ int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   int v1,v2;
   if ((srclen % 2) != 0)
     return -1;
-  if (destlen < srclen/2)
+  if (destlen < srclen/2 || destlen > SIZE_T_CEILING)
     return -1;
   end = src+srclen;
   while (src<end) {
@@ -702,6 +706,9 @@ int write_all(int fd, const char *buf, size_t count, int isSocket) {
 int read_all(int fd, char *buf, size_t count, int isSocket) {
   size_t numread = 0;
   int result;
+
+  if (count > SIZE_T_CEILING)
+    return -1;
 
   while (numread != count) {
     if (isSocket)
