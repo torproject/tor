@@ -309,14 +309,13 @@ static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
     circuit_mark_for_close(circ);
   } else { /* the destroy came from ahead */
     circ->n_conn = NULL;
-#if 0
-    if (!CIRCUIT_IS_ORIGIN(circ)) {
+    if (CIRCUIT_IS_ORIGIN(circ)) {
+      circuit_mark_for_close(circ);
+    } else {
       log_fn(LOG_DEBUG, "Delivering 'truncated' back.");
       connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
                                    NULL, 0, NULL);
     }
-#endif
-    circuit_mark_for_close(circ);
   }
 }
 
