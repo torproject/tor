@@ -1097,7 +1097,8 @@ static int tor_init(int argc, char *argv[]) {
     log_fn(LOG_WARN,"You are running Tor as root. You don't need to, and you probably shouldn't.");
 #endif
 
-  if (server_mode(get_options())) { /* only spawn dns handlers if we're a router */
+  /* only spawn dns handlers if we're a router */
+  if (server_mode(get_options()) && get_options()->command == CMD_RUN_TOR) {
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
 
