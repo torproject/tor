@@ -838,12 +838,14 @@ typedef struct {
 
   struct config_line_t *ExitPolicy; /**< Lists of exit policy components. */
   struct config_line_t *SocksPolicy; /**< Lists of socks policy components */
+  /** Addresses to bind for listening for SOCKS connections. */
   struct config_line_t *SocksBindAddress;
-  /**< Addresses to bind for listening for SOCKS connections. */
+  /** Addresses to bind for listening for OR connections. */
   struct config_line_t *ORBindAddress;
-  /**< Addresses to bind for listening for OR connections. */
+  /** Addresses to bind for listening for directory connections. */
   struct config_line_t *DirBindAddress;
-  /**< Addresses to bind for listening for directory connections. */
+  /** Local address to bind outbound sockets */
+  char *OutboundBindAddress;
   char *RecommendedVersions; /**< Directory server only: which versions of
                               * Tor should we tell users to run? */
   char *User; /**< Name of user to run Tor as. */
@@ -1021,6 +1023,7 @@ struct config_line_t {
 };
 
 int config_assign_default_dirservers(void);
+int resolve_my_address(const char *address, uint32_t *addr);
 int getconfig(int argc, char **argv, or_options_t *options);
 int config_init_logs(or_options_t *options);
 void config_parse_exit_policy(struct config_line_t *cfg,

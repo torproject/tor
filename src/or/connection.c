@@ -482,6 +482,25 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
            tor_socket_strerror(tor_socket_errno(-1)));
     return -1;
   }
+
+  if (options.OutboundBindAddress) {
+    struct sockaddr_in ext_addr;
+
+    memset(&ext_addr, 0, sizeof(ext_addr));
+    ext_addr.sin_family = AF_INET;
+    ext_addr.sin_port = 0;
+    if (!tor_inet_aton(options.OutboundBindAddress, &ext_addr.sin_addr)) {
+      log_fn(LOG_WARN,"Outbound bind address '%s' didn't parse. Ignoring.",
+             options.OutboundBindAddress);
+    } else {
+      if(bind(s, (struct sockaddr*)&ext_addr, sizeof(ext_addr) < 0)) {
+        log_fn(LOG_WARN,"Error binding network socket: %s",
+               tor_socket_strerror(tor_socket_errno(s)));
+        return -1;
+      }
+    }
+  }
+
   set_socket_nonblocking(s);
 
   memset(&dest_addr,0,sizeof(dest_addr));

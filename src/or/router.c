@@ -510,17 +510,20 @@ const char *router_get_my_descriptor(void) {
  */
 int router_rebuild_descriptor(void) {
   routerinfo_t *ri;
-  struct in_addr addr;
+  uint32_t addr;
   char platform[256];
-  if (!tor_inet_aton(options.Address, &addr)) {
-    log_fn(LOG_ERR, "options.Address didn't hold an IP.");
+  struct in_addr in;
+
+  if(resolve_my_address(options.Address, &addr) < 0) {
+    log_fn(LOG_WARN,"options.Address didn't resolve into an IP.");
     return -1;
   }
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
-  ri->address = tor_strdup(options.Address);
+  in.s_addr = htonl(addr);
+  ri->address = tor_strdup(inet_ntoa(in));
   ri->nickname = tor_strdup(options.Nickname);
-  ri->addr = (uint32_t) ntohl(addr.s_addr);
+  ri->addr = addr;
   ri->or_port = options.ORPort;
   ri->socks_port = options.SocksPort;
   ri->dir_port = options.DirPort;
