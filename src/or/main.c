@@ -16,7 +16,7 @@ static int init_from_config(int argc, char **argv);
 
 /********* START VARIABLES **********/
 
-/** declared in connection.c */
+/* declared in connection.c */
 extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 or_options_t options; /**< command-line and config-file options */

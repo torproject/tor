@@ -13,7 +13,7 @@
 
 extern or_options_t options; /**< command-line and config-file options */
 
-/** Array of strings to make conn->type human-readable */
+/** Array of strings to make conn-\>type human-readable */
 char *conn_type_to_string[] = {
   "",            /* 0 */
   "OP listener", /* 1 */
@@ -29,7 +29,7 @@ char *conn_type_to_string[] = {
   "CPU worker",  /* 11 */
 };
 
-/** Array of string arrays to make {conn->type,conn->state} human-readable */
+/** Array of string arrays to make {conn-\>type,conn-\>state} human-readable */
 char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
   { NULL }, /* no type associated with 0 */
   { NULL }, /* op listener, obsolete */
@@ -82,7 +82,7 @@ static int connection_receiver_bucket_should_increase(connection_t *conn);
 /** Allocate space for a new connection_t. This function just initializes
  * conn; you must call connection_add() to link it into the main array.
  *
- * Set conn->type to 'type'. Set conn->s and conn->poll_index to
+ * Set conn-\>type to <b>type</b>. Set conn-\>s and conn-\>poll_index to
  * -1 to signify they are not yet assigned.
  *
  * If conn is not a listener type, allocate buffers for it. If it's
@@ -357,7 +357,7 @@ int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
 }
 
 /** The listener connection <b>conn</b> told poll() it wanted to read.
- * Call accept() on conn->s, and add the new connection if necessary.
+ * Call accept() on conn-\>s, and add the new connection if necessary.
  */
 static int connection_handle_listener_read(connection_t *conn, int new_type) {
   int news; /* the new socket */
@@ -421,11 +421,11 @@ static int connection_init_accepted_conn(connection_t *conn) {
 
 /** Take conn, make a nonblocking socket; try to connect to
  * addr:port (they arrive in *host order*). If fail, return -1. Else
- * assign s to conn->s: if connected return 1, if eagain return 0.
+ * assign s to conn->\s: if connected return 1, if EAGAIN return 0.
  *
  * address is used to make the logs useful.
  *
- * On success, add 'conn' to the list of polled connections.
+ * On success, add conn to the list of polled connections.
  */
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port) {
   int s;
@@ -522,7 +522,7 @@ int retry_all_connections(void) {
   return 0;
 }
 
-extern int global_read_bucket; /**< from main.c */
+extern int global_read_bucket;
 
 /** How many bytes at most can we read onto this connection? */
 int connection_bucket_read_limit(connection_t *conn) {
@@ -643,7 +643,7 @@ static int connection_receiver_bucket_should_increase(connection_t *conn) {
   return 1;
 }
 
-/** Read bytes from conn->s and process them.
+/** Read bytes from conn->\s and process them.
  *
  * This function gets called from conn_read() in main.c, either
  * when poll() has declared that conn wants to read, or (for OR conns)
@@ -687,7 +687,7 @@ int connection_handle_read(connection_t *conn) {
   return 0;
 }
 
-/** Pull in new bytes from conn->s onto conn->inbuf, either
+/** Pull in new bytes from conn-\>s onto conn-\>inbuf, either
  * directly or via TLS. Reduce the token buckets by the number of
  * bytes read.
  *
@@ -745,7 +745,7 @@ int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
   return fetch_from_buf(string, len, conn->inbuf);
 }
 
-/** Return conn->outbuf_flushlen: how many bytes conn wants to flush
+/** Return conn-\>outbuf_flushlen: how many bytes conn wants to flush
  * from its outbuf. */
 int connection_wants_to_flush(connection_t *conn) {
   return conn->outbuf_flushlen;
@@ -759,13 +759,13 @@ int connection_outbuf_too_full(connection_t *conn) {
   return (conn->outbuf_flushlen > 10*CELL_PAYLOAD_SIZE);
 }
 
-/** Try to flush more bytes onto conn->s.
+/** Try to flush more bytes onto conn-\>s.
  *
  * This function gets called either from conn_write() in main.c
  * when poll() has declared that conn wants to write, or below
  * from connection_write_to_buf() when an entire TLS record is ready.
  *
- * Update conn->timestamp_lastwritten to now, and call flush_buf
+ * Update conn-\>timestamp_lastwritten to now, and call flush_buf
  * or flush_buf_tls appropriately. If it succeeds and there no more
  * more bytes on conn->outbuf, then call connection_finished_flushing
  * on it too.
@@ -895,7 +895,7 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
 
 /** Find a connection to the router described by addr and port,
  * or alternately any router with the same identity key.
- * This connection *must* be in 'open' state.
+ * This connection <em>must</em> be in an "open" state.
  * If not, return NULL.
  */
 /* XXX this twin thing is busted, now that we're rotating onion
@@ -1013,7 +1013,7 @@ int connection_is_listener(connection_t *conn) {
   return 0;
 }
 
-/** Return 1 if <b>conn</b> is in state 'open' and is not marked
+/** Return 1 if <b>conn</b> is in state "open" and is not marked
  * for close, else return 0.
  */
 int connection_state_is_open(connection_t *conn) {
@@ -1030,7 +1030,7 @@ int connection_state_is_open(connection_t *conn) {
   return 0;
 }
 
-/** Write a 'destroy' cell with circ ID <b>circ_id</b> onto OR connection
+/** Write a destroy cell with circ ID <b>circ_id</b> onto OR connection
  * <b>conn</b>.
  *
  * Return 0.
@@ -1049,7 +1049,7 @@ int connection_send_destroy(uint16_t circ_id, connection_t *conn) {
   return 0;
 }
 
-/** Process new bytes that have arrived on conn->inbuf.
+/** Process new bytes that have arrived on conn-\>inbuf.
  *
  * This function just passes conn to the connection-specific
  * connection_*_process_inbuf() function.
@@ -1076,7 +1076,7 @@ int connection_process_inbuf(connection_t *conn) {
   }
 }
 
-/** We just finished flushing bytes from conn->outbuf, and there
+/** We just finished flushing bytes from conn-\>outbuf, and there
  * are no more bytes remaining.
  *
  * This function just passes conn to the connection-specific

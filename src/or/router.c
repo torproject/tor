@@ -27,7 +27,7 @@ static crypto_pk_env_t *onionkey=NULL;
 static crypto_pk_env_t *lastonionkey=NULL;
 static crypto_pk_env_t *identitykey=NULL;
 
-/** Replace the current onion key with 'k'.  Does not affect lastonionkey;
+/** Replace the current onion key with <b>k</b>.  Does not affect lastonionkey;
  * to update onionkey correctly, call rotate_onion_key().
  */
 void set_onion_key(crypto_pk_env_t *k) {
@@ -108,9 +108,9 @@ void rotate_onion_key(void)
   log_fn(LOG_WARN, "Couldn't rotate onion key.");
 }
 
-/** Try to read an RSA key from 'fname'.  If 'fname' doesn't exist, create a new
- * RSA key and save it in 'fname'.  Return the read/created key, or NULL on
- * error.
+/** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist,
+ * create a new RSA key and save it in <b>fname</b>.  Return the read/created
+ * key, or NULL on error.
  */
 crypto_pk_env_t *init_key_from_file(const char *fname)
 {
@@ -277,9 +277,9 @@ int init_keys(void) {
   return 0;
 }
 
-/*****
+/*
  * Clique maintenance
- *****/
+ */
 
 /** OR only: try to open connections to all of the other ORs we know about.
  */
@@ -301,9 +301,9 @@ void router_retry_connections(void) {
   }
 }
 
-/*****
+/*
  * OR descriptor generation.
- *****/
+ */
 
 /** my routerinfo. */
 static routerinfo_t *desc_routerinfo = NULL;
@@ -347,8 +347,8 @@ void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload
   }
 }
 
-/** Append the comma-separated sequence of exit policies in 's' to the
- * exit policy in 'router'. */
+/** Append the comma-separated sequence of exit policies in <b>s</b> to the
+ * exit policy in <b>router</b>. */
 static void router_add_exit_policy_from_config_helper(const char *s, routerinfo_t *router) {
   char *e;
   int last=0;
@@ -384,9 +384,9 @@ static void router_add_exit_policy_from_config_helper(const char *s, routerinfo_
 
 #define DEFAULT_EXIT_POLICY "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,accept *:20-22,accept *:53,accept *:79-81,accept *:110,accept *:143,accept *:443,accept *:873,accept *:993,accept *:995,accept *:1024-65535,reject *:*"
 
-/** Set the exit policy on 'router' to match the exit policy in the current
- * configuration file.  If the exit policy doesn't have a catch-all rule,
- * then append the default exit policy as well.
+/** Set the exit policy on <b>router</b> to match the exit policy in the
+ * current configuration file.  If the exit policy doesn't have a catch-all
+ * rule, then append the default exit policy as well.
  */
 static void router_add_exit_policy_from_config(routerinfo_t *router) {
   router_add_exit_policy_from_config_helper(options.ExitPolicy, router);
@@ -413,8 +413,8 @@ int router_compare_to_my_exit_policy(connection_t *conn)
 
 }
 
-/** Return true iff 'router' has the same nickname as this OR.  (For an OP,
- * always returns false.)
+/** Return true iff <b>router</b> has the same nickname as this OR.  (For an
+ * OP, always returns false.)
  */
 int router_is_me(routerinfo_t *router)
 {
@@ -486,8 +486,8 @@ int router_rebuild_descriptor(void) {
   return 0;
 }
 
-/** Set 'platform' (max length 'len') to a NUL-terminated short string
- * describing the version of Tor and the operating system we're
+/** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short
+ * string describing the version of Tor and the operating system we're
  * currently running on.
  */
 void get_platform_str(char *platform, int len)
@@ -503,10 +503,10 @@ void get_platform_str(char *platform, int len)
  */
 #define DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
 
-/** OR only: Given a routerinfo for this router, and an identity key to
- * sign with, encode the routerinfo as a signed server descriptor and
- * write the result into 's', using at most 'maxlen' bytes.  Return -1
- * on failure, and the number of bytes used on success.
+/** OR only: Given a routerinfo for this router, and an identity key to sign
+ * with, encode the routerinfo as a signed server descriptor and write the
+ * result into <b>s</b>, using at most <b>maxlen</b> bytes.  Return -1 on
+ * failure, and the number of bytes used on success.
  */
 int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key) {

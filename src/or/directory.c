@@ -27,14 +27,14 @@ char rend_fetch_url[] = "/rendezvous/";
 
 /********* END VARIABLES ************/
 
-/** Launch a new connection to the directory server 'router' to upload
- * or download a service or rendezvous descriptor. 'purpose' determines what
+/** Launch a new connection to the directory server <b>router</b> to upload or
+ * download a service or rendezvous descriptor. <b>purpose</b> determines what
  * kind of directory connection we're launching, and must be one of
  * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC}.
  *
- * When uploading, 'payload' and 'payload_len' determine the content
- * of the HTTP post.  When fetching a rendezvous descriptor, 'payload'
- * and 'payload_len' are the service ID we want to fetch.
+ * When uploading, <b>payload</b> and <b>payload_len</b> determine the content
+ * of the HTTP post.  When fetching a rendezvous descriptor, <b>payload</b>
+ * and <b>payload_len</b> are the service ID we want to fetch.
  */
 void directory_initiate_command(routerinfo_t *router, int purpose,
                                 const char *payload, int payload_len) {
@@ -118,8 +118,8 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
   }
 }
 
-/** Queue an appropriate HTTP command on conn->outbuf.  The args
- * 'purpose', 'payload', and 'payload_len' are as in
+/** Queue an appropriate HTTP command on conn-\>outbuf.  The args
+ * <b>purpose</b>, <b>payload</b>, and <b>payload_len</b> are as in
  * directory_initiate_command.
  */
 static void directory_send_command(connection_t *conn, int purpose,
@@ -164,8 +164,8 @@ static void directory_send_command(connection_t *conn, int purpose,
   }
 }
 
-/** Parse an HTTP request string 'headers' of the form "%s %s HTTP/1..."
- * If it's well-formed, point *url to the second %s,
+/** Parse an HTTP request string <b>headers</b> of the form "\%s \%s HTTP/1..."
+ * If it's well-formed, point *<b>url</b> to the second \%s,
  * null-terminate it (this modifies headers!) and return 0.
  * Otherwise, return -1.
  */
@@ -186,8 +186,9 @@ int parse_http_url(char *headers, char **url) {
   return 0;
 }
 
-/** Parse an HTTP response string 'headers' of the form "HTTP/1.%d %d%s\r\n...".
- * If it's well-formed, assign *code, point *message to the first
+/** Parse an HTTP response string <b>headers</b> of the form
+ * "HTTP/1.\%d \%d\%s\r\n...".
+ * If it's well-formed, assign *<b>code</b>, point *<b>message</b> to the first
  * non-space character after code if there is one and message is non-NULL
  * (else leave it alone), and return 0.
  * Otherwise, return -1.
@@ -211,8 +212,8 @@ int parse_http_response(char *headers, int *code, char **message) {
   return 0;
 }
 
-/** Read handler for directory connections.  (That's connections *to*
- * directory servers and connections *at* directory servers.)
+/** Read handler for directory connections.  (That's connections <em>to</em>
+ * directory servers and connections <em>at</em> directory servers.)
  */
 int connection_dir_process_inbuf(connection_t *conn) {
   char *body;
@@ -365,7 +366,7 @@ static char answer503[] = "HTTP/1.0 503 Directory unavailable\r\n\r\n";
 /** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
  * service descriptor.  On finding one, write a response into
- * conn->outbuf.  If the request is unrecognized, send a 404.
+ * conn-\>outbuf.  If the request is unrecognized, send a 404.
  * Always return 0. */
 static int directory_handle_command_get(connection_t *conn,
                                         char *headers, char *body,
@@ -431,7 +432,7 @@ static int directory_handle_command_get(connection_t *conn,
 /** Helper function: called when a dirserver gets a complete HTTP POST
  * request.  Look for an uploaded server descriptor or rendezvous
  * service descriptor.  On finding one, process it and write a
- * response into conn->outbuf.  If the request is unrecognized, send a
+ * response into conn-\>outbuf.  If the request is unrecognized, send a
  * 404.  Always return 0. */
 static int directory_handle_command_post(connection_t *conn,
                                          char *headers, char *body,
