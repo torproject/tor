@@ -55,7 +55,7 @@ N   - Realize that unrecognized end reasons are probably features rather than
 N   - Start recognizing, but maybe not yet generating, more reasons and
       needed -- aim to eliminate misc. (backport to 009x)
 N - Feed end reason back into SOCK5 as reasonable.
-R - cache .foo.exit names better, or differently, or not.
+R o cache .foo.exit names better, or differently, or not.
 N - make !advertised_server_mode() ORs fetch dirs less often.
 N - Clean up NT service code even more.  Document it. Enable it by default.
     Make sure it works.
