@@ -291,7 +291,7 @@ int write_to_buf(const char *string, int string_len, buf_t *buf) {
   assert(string && BUF_OK(buf));
 
   if (buf_ensure_capacity(buf, buf->datalen+string_len)) {
-    log_fn(LOG_WARN, "buflen too small, can't hold %d bytes.",buf->datalen+string_len);
+    log_fn(LOG_WARN, "buflen too small, can't hold %d bytes.", (int)buf->datalen+string_len);
     return -1;
   }
 
@@ -453,7 +453,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           tmpbuf = inet_ntoa(in);
           if(strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
             log_fn(LOG_WARN,"socks5 IP takes %d bytes, which doesn't fit in %d",
-                   strlen(tmpbuf)+1,MAX_SOCKS_ADDR_LEN);
+                   (int)strlen(tmpbuf)+1,(int)MAX_SOCKS_ADDR_LEN);
             return -1;
           }
           strcpy(req->address,tmpbuf);
@@ -502,7 +502,8 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         in.s_addr = htonl(destip);
         tmpbuf = inet_ntoa(in);
         if(strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
-          log_fn(LOG_WARN,"socks4 addr (%d bytes) too long.", strlen(tmpbuf));
+          log_fn(LOG_WARN,"socks4 addr (%d bytes) too long.",
+                 (int)strlen(tmpbuf));
           return -1;
         }
         log_fn(LOG_DEBUG,"socks4: successfully read destip (%s)", tmpbuf);
