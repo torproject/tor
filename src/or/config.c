@@ -20,10 +20,8 @@
 typedef enum config_type_t {
   CONFIG_TYPE_STRING = 0,   /**< An arbitrary string. */
   CONFIG_TYPE_UINT,         /**< A non-negative integer less than MAX_INT */
-  /* DOCDOC */
-  CONFIG_TYPE_INTERVAL,     /**< A non-negative integer less than MAX_INT */
-  /* DOCDOC */
-  CONFIG_TYPE_MEMUNIT,       /**< A non-negative integer less than MAX_INT */
+  CONFIG_TYPE_INTERVAL,     /**< A number of seconds, with optional units*/
+  CONFIG_TYPE_MEMUNIT,      /**< A number of bytes, with optional units*/
   CONFIG_TYPE_DOUBLE,       /**< A floating-point value */
   CONFIG_TYPE_BOOL,         /**< A boolean value, expressed as 0 or 1. */
   CONFIG_TYPE_CSV,          /**< A list of strings, separated by commas and optional
@@ -93,6 +91,7 @@ typedef struct config_var_t {
  */
 static config_var_t config_vars[] = {
   VAR("Address",             STRING,   Address,              NULL),
+  VAR("AccountingStart",     STRING,   AccountingStart,      NULL),
   VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, "middle,rendezvous"),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "780 KB"),
@@ -136,7 +135,7 @@ static config_var_t config_vars[] = {
   OBSOLETE("LinkPadding"),
   VAR("MaxConn",             UINT,     MaxConn,              "1024"),
   VAR("MaxOnionsPending",    UINT,     MaxOnionsPending,     "100"),
-  VAR("MonthlyAccountingStart",UINT,   AccountingStart,      "1"),
+  VAR("MonthlyAccountingStart",UINT,   _MonthlyAccountingStart,"0"),
   VAR("AccountingMaxKB",     UINT,     _AccountingMaxKB,     "0"),
   VAR("AccountingMax",       MEMUNIT,   AccountingMax,        "0 bytes"),
   VAR("Nickname",            STRING,   Nickname,             NULL),
@@ -325,6 +324,10 @@ options_act(void) {
   }
 
   /* Set up accounting */
+  if (accounting_parse_options(options, 0)<0) {
+    log_fn(LOG_ERR,"Error in accouting options");
+    return -1;
+  }
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
 
@@ -1308,12 +1311,23 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
-  if (options->AccountingStart < 0 || options->AccountingStart > 31) {
-    log(LOG_WARN,"Monthly accounting must start on a day of the month, and no months have %d days.",
-        options->AccountingStart);
-    result = -1;
-  } else if (options->AccountingStart > 28) {
-    log(LOG_WARN,"Not every month has %d days.",options->AccountingStart);
+  if (options->_MonthlyAccountingStart) {
+    if (options->AccountingStart) {
+      log(LOG_WARN,"Can't specify AccountingStart and MonthlyAccountingStart");
+      result = -1;
+    } else {
+      options->AccountingStart = tor_malloc(32);
+      if (tor_snprintf(options->AccountingStart, 32, "month %d 0:00",
+                       options->_MonthlyAccountingStart)<0) {
+        log_fn(LOG_WARN,"Error translating MonthlyAccountingStart");
+        result = -1;
+      } else {
+        log_fn(LOG_WARN,"MonthlyAccountingStart is deprecated.  Use 'AccountingStart %s' instead.", options->AccountingStart);
+      }
+    }
+  }
+
+  if (accounting_parse_options(options, 1)<0) {
     result = -1;
   }
 
@@ -2215,9 +2229,9 @@ struct unit_table_t {
 };
 
 static struct unit_table_t memory_units[] = {
+  { "b",         1<< 0 },
   { "byte",      1<< 0 },
   { "bytes",     1<< 0 },
-  { "k",         1<<10 },
   { "kb",        1<<10 },
   { "kilobyte",  1<<10 },
   { "kilobytes", 1<<10 },
@@ -2225,11 +2239,9 @@ static struct unit_table_t memory_units[] = {
   { "mb",        1<<20 },
   { "megabyte",  1<<20 },
   { "megabytes", 1<<20 },
-  { "g",         1<<30 },
   { "gb",        1<<30 },
   { "gigabyte",  1<<30 },
   { "gigabytes", 1<<30 },
-  { "t",         U64_LITERAL(1)<<40 },
   { "tb",        U64_LITERAL(1)<<40 },
   { "terabyte",  U64_LITERAL(1)<<40 },
   { "terabytes", U64_LITERAL(1)<<40 },
@@ -2237,18 +2249,10 @@ static struct unit_table_t memory_units[] = {
 };
 
 static struct unit_table_t time_units[] = {
-  { "s",        1 },
-  { "sec",      1 },
-  { "secs",     1 },
-  { "second",   1 },
+  { "second",  1 },
   { "seconds",  1 },
-  { "min",      60 },
-  { "mins",     60 },
   { "minute",   60 },
   { "minutes",  60 },
-  { "h",        60*60 },
-  { "hr",       60*60 },
-  { "hrs",      60*60 },
   { "hour",     60*60 },
   { "hours",    60*60 },
   { "day",      24*60*60 },

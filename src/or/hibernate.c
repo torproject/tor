@@ -36,7 +36,7 @@ static int hibernate_state = HIBERNATE_STATE_LIVE;
 static time_t hibernate_end_time = 0;
 
 typedef enum {
-  UNIT_MONTH, UNIT_WEEK, UNIT_DAY,
+  UNIT_MONTH=1, UNIT_WEEK=2, UNIT_DAY=3,
 } time_unit_t;
 
 /* Fields for accounting logic.  Accounting overview:
@@ -80,6 +80,13 @@ static time_t interval_end_time = 0;
 static time_t interval_wakeup_time = 0;
 /** How much bandwidth do we 'expect' to use per minute? */
 static uint32_t expected_bandwidth_usage = 0;
+/** What unit are we using for our accounting? */
+static time_unit_t cfg_unit = UNIT_MONTH;
+/** How many days,hours,minutes into each unit does our accounting interval
+ * start? */
+static int cfg_start_day = 0;
+static int cfg_start_hour = 0;
+static int cfg_start_min = 0;
 
 static void reset_accounting(time_t now);
 static int read_bandwidth_usage(void);
@@ -90,6 +97,112 @@ static void accounting_set_wakeup_time(void);
 /* ************
  * Functions for bandwidth accounting.
  * ************/
+
+/** Configure accounting start/end time settings based on
+ * options->AccountingStart.  Return 0 on success, -1 on failure. If
+ * <b>validate_only</b> is true, do not change the current settings. */
+int
+accounting_parse_options(or_options_t *options, int validate_only)
+{
+  time_unit_t unit;
+  int ok, idx;
+  long d,h,m;
+  smartlist_t *items;
+  const char *v = options->AccountingStart;
+  const char *s;
+  char *cp;
+
+  if (!v) {
+    if (!validate_only) {
+      cfg_unit = UNIT_MONTH;
+      cfg_start_day = 1;
+      cfg_start_hour = 0;
+      cfg_start_min = 0;
+    }
+    return 0;
+  }
+
+  items = smartlist_create();
+  smartlist_split_string(items, v, " ", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK,0);
+  if (smartlist_len(items)<2) {
+    log_fn(LOG_WARN, "Too few arguments to AccountingStart");
+    goto err;
+  }
+  s = smartlist_get(items,0);
+  if (0==strcasecmp(s, "month")) {
+    unit = UNIT_MONTH;
+  } else if (0==strcasecmp(s, "week")) {
+    unit = UNIT_WEEK;
+  } else if (0==strcasecmp(s, "day")) {
+    unit = UNIT_DAY;
+  } else {
+    log_fn(LOG_WARN, "Unrecognized accounting unit '%s': only 'month', 'week', and 'day' are supported.", s);
+    goto err;
+  }
+
+  switch (unit) {
+  case UNIT_WEEK:
+    d = tor_parse_long(smartlist_get(items,1), 10, 1, 7, &ok, NULL);
+    if (!ok) {
+      log_fn(LOG_WARN, "Weekly accounting must start begin on a day between 1(Monday) and 7 (Sunday)");
+      goto err;
+    }
+    break;
+  case UNIT_MONTH:
+    d = tor_parse_long(smartlist_get(items,1), 10, 1, 28, &ok, NULL);
+    if (!ok) {
+      log_fn(LOG_WARN, "Monthy accounting must start begin on a day between 1 and 28");
+      goto err;
+    }
+    break;
+  case UNIT_DAY:
+    d = 0;
+    break;
+  default:
+    tor_assert(0);
+  }
+
+  idx = unit==UNIT_DAY?1:2;
+  if (smartlist_len(items) != (idx+1)) {
+    log_fn(LOG_WARN, "Accounting unit '%s' requires %d arguments",
+           s, idx+1);
+    goto err;
+  }
+  s = smartlist_get(items, idx);
+  h = tor_parse_long(s, 10, 0, 23, &ok, &cp);
+  if (!ok) {
+    log_fn(LOG_WARN, "Accounting start time not parseable: bad hour.");
+    goto err;
+  }
+  if (!cp || *cp!=':') {
+    log_fn(LOG_WARN,"Accounting start time not parseable: not in HH:MM format");
+    goto err;
+  }
+  m = tor_parse_long(cp+1, 10, 0, 59, &ok, &cp);
+  if (!ok) {
+    log_fn(LOG_WARN, "Accounting start time not parseable: bad minute");
+    goto err;
+  }
+  if (!cp || *cp!='\0') {
+    log_fn(LOG_WARN,"Accounting start time not parseable: not in HH:MM format");
+    goto err;
+  }
+
+  if (!validate_only) {
+    cfg_unit = unit;
+    cfg_start_day = (int)d;
+    cfg_start_hour = (int)h;
+    cfg_start_min = (int)m;
+  }
+  SMARTLIST_FOREACH(items, char *, s, tor_free(s));
+  smartlist_free(items);
+  return 0;
+ err:
+  SMARTLIST_FOREACH(items, char *, s, tor_free(s));
+  smartlist_free(items);
+  return -1;
+}
+
 
 /** If we want to manage the accounting system and potentially
  * hibernate, return 1, else return 0.
@@ -113,49 +226,75 @@ accounting_add_bytes(size_t n_read, size_t n_written, int seconds)
   n_seconds_active_in_interval += (seconds < 10) ? seconds : 0;
 }
 
-/** Increment the month field of <b>tm</b> by <b>delta</b> months. */
-static INLINE void
-incr_month(struct tm *tm, unsigned int delta)
+/** If get_end, return the end of the accounting period that contains
+ * the time <b>now</b>.  Else, return the start of the accounting
+ * period that contains the time <b>now</b> */
+static time_t
+edge_of_accounting_period_containing(time_t now, int get_end)
 {
-  tm->tm_mon += delta;
-  /* officially, we don't have to do this, but some platforms are rumored
-   * to have broken implementations. */
-  while (tm->tm_mon > 11) {
-    ++tm->tm_year;
-    tm->tm_mon -= 12;
+  int before;
+  struct tm *tm;
+  tm = localtime(&now);
+
+  /* Set 'before' to true iff the current time is before the hh:mm
+   * changeover time for today. */
+  before = tm->tm_hour < cfg_start_hour ||
+    (tm->tm_hour == cfg_start_hour && tm->tm_min < cfg_start_min);
+
+  /* Dispatch by unit.  First, find the start day of the given period;
+   * then, if get_end is true, increment to the end day. */
+  switch (cfg_unit)
+    {
+    case UNIT_MONTH: {
+      /* If this is before the Nth, we want the Nth of last month. */
+      if (tm->tm_mday < cfg_start_day ||
+          (tm->tm_mday < cfg_start_day && before)) {
+        --tm->tm_mon;
+      }
+      /* Otherwise, the month is correct. */
+      tm->tm_mday = cfg_start_day;
+      if (get_end)
+        ++tm->tm_mon;
+      break;
+    }
+    case UNIT_WEEK: {
+      /* What is the 'target' day of the week in struct tm format? (We
+         say Sunday==7; struct tm says Sunday==0.) */
+      int wday = cfg_start_day % 7;
+      /* How many days do we subtract from today to get to the right day? */
+      int delta = (7+tm->tm_wday-wday)%7;
+      /* If we are on the right day, but the changeover hasn't happened yet,
+       * then subtract a whole week. */
+      if (delta == 0 && before)
+        delta = 7;
+      tm->tm_mday -= delta;
+      if (get_end)
+        tm->tm_mday += 7;
+      break;
+    }
+    case UNIT_DAY:
+      if (before)
+        --tm->tm_mday;
+      if (get_end)
+        ++tm->tm_mday;
+      break;
+    default:
+      tor_assert(0);
   }
+
+  tm->tm_hour = cfg_start_hour;
+  tm->tm_min = cfg_start_min;
+  tm->tm_sec = 0;
+  tm->tm_isdst = -1; /* Autodetect DST */
+  return mktime(tm);
 }
 
-/** Decrement the month field of <b>tm</b> by <b>delta</b> months. */
-static INLINE void
-decr_month(struct tm *tm, unsigned int delta)
-{
-  tm->tm_mon -= delta;
-  while (tm->tm_mon < 0) {
-    --tm->tm_year;
-    tm->tm_mon += 12;
-  }
-}
-
-/** Return the start of the accounting period that contains the time
- * <b>now</b> */
+/** Return the start of the accounting period containing the time
+ * <b>now</b>. */
 static time_t
 start_of_accounting_period_containing(time_t now)
 {
-  struct tm *tm;
-  /* Only months are supported. */
-  tm = gmtime(&now);
-  /* If this is before the Nth, we want the Nth of last month. */
-  if (tm->tm_mday < get_options()->AccountingStart) {
-    decr_month(tm, 1);
-  }
-  /* Otherwise, the month and year are correct.*/
-
-  tm->tm_mday = get_options()->AccountingStart;
-  tm->tm_hour = 0;
-  tm->tm_min = 0;
-  tm->tm_sec = 0;
-  return tor_timegm(tm);
+  return edge_of_accounting_period_containing(now, 0);
 }
 
 /** Return the start of the accounting period that comes after the one
@@ -163,13 +302,7 @@ start_of_accounting_period_containing(time_t now)
 static time_t
 start_of_accounting_period_after(time_t now)
 {
-  time_t start;
-  struct tm *tm;
-  start = start_of_accounting_period_containing(now);
-
-  tm = gmtime(&start);
-  incr_month(tm, 1);
-  return tor_timegm(tm);
+  return edge_of_accounting_period_containing(now, 1);
 }
 
 /** Initialize the accounting subsystem. */
@@ -186,7 +319,7 @@ configure_accounting(time_t now)
      * for this interval. Start a new interval. */
     log_fn(LOG_INFO, "Starting new accounting interval.");
     reset_accounting(now);
-  } if (interval_start_time ==
+  } else if (interval_start_time ==
         start_of_accounting_period_containing(interval_start_time)) {
     log_fn(LOG_INFO, "Continuing accounting interval.");
     /* We are in the interval we thought we were in. Do nothing.*/
@@ -283,13 +416,13 @@ accounting_run_housekeeping(time_t now)
 static void
 accounting_set_wakeup_time(void)
 {
-  struct tm *tm;
   char buf[ISO_TIME_LEN+1];
   char digest[DIGEST_LEN];
-  crypto_digest_env_t *d;
-  int n_days_in_interval;
-  int n_days_to_exhaust_bw;
-  int n_days_to_consider;
+  crypto_digest_env_t *d_env;
+  int time_in_interval;
+  int time_to_exhaust_bw;
+  int time_to_consider;
+  int d,h,m;
 
   if (! identity_key_is_set()) {
     if (init_keys() < 0) {
@@ -301,36 +434,55 @@ accounting_set_wakeup_time(void)
   format_iso_time(buf, interval_start_time);
   crypto_pk_get_digest(get_identity_key(), digest);
 
-  d = crypto_new_digest_env();
-  crypto_digest_add_bytes(d, buf, ISO_TIME_LEN);
-  crypto_digest_add_bytes(d, digest, DIGEST_LEN);
-  crypto_digest_get_digest(d, digest, DIGEST_LEN);
-  crypto_free_digest_env(d);
+  d_env = crypto_new_digest_env();
+  crypto_digest_add_bytes(d_env, buf, ISO_TIME_LEN);
+  crypto_digest_add_bytes(d_env, digest, DIGEST_LEN);
+  crypto_digest_get_digest(d_env, digest, DIGEST_LEN);
+  crypto_free_digest_env(d_env);
 
   if (expected_bandwidth_usage)
-    n_days_to_exhaust_bw =
-      (get_options()->AccountingMax/expected_bandwidth_usage)/(24*60);
+    time_to_exhaust_bw =
+      (get_options()->AccountingMax/expected_bandwidth_usage)*60;
   else
-    n_days_to_exhaust_bw = 1;
+    time_to_exhaust_bw = 24*60*60;
 
-  tm = gmtime(&interval_start_time);
-  if (++tm->tm_mon > 11) { tm->tm_mon = 0; ++tm->tm_year; }
-  n_days_in_interval = (tor_timegm(tm)-interval_start_time+1)/(24*60*60);
+  time_in_interval = interval_end_time - interval_start_time;
+  time_to_consider = time_in_interval - time_to_exhaust_bw;
+  if (time_to_consider<=0) {
+    interval_wakeup_time = interval_start_time;
+    d=h=m=0;
+  } else {
+    /* XXX can we simplify this just by picking a random (non-deterministic)
+     * time to be up? If we go down and come up, then we pick a new one. Is
+     * that good enough? -RD */
 
-  n_days_to_consider = n_days_in_interval - n_days_to_exhaust_bw;
+    /* This is not a perfectly unbiased conversion, but it is good enough:
+     * in the worst case, the first half of the day is 0.06 percent likelier
+     * to be chosen than the last half. */
+    interval_wakeup_time = interval_start_time +
+      (get_uint32(digest) % time_to_consider);
 
-  /* XXX can we simplify this just by picking a random (non-deterministic)
-   * time to be up? If we go down and come up, then we pick a new one. Is
-   * that good enough? -RD */
-  while (((unsigned char)digest[0]) > n_days_to_consider)
-    crypto_digest(digest, digest, DIGEST_LEN);
+    format_iso_time(buf, interval_wakeup_time);
+  }
+  {
+    char buf1[ISO_TIME_LEN+1];
+    char buf2[ISO_TIME_LEN+1];
+    char buf3[ISO_TIME_LEN+1];
+    char buf4[ISO_TIME_LEN+1];
+    time_t down_time = interval_wakeup_time+time_to_exhaust_bw;
+    if (down_time>interval_end_time)
+      down_time = interval_end_time;
+    format_local_iso_time(buf1, interval_start_time);
+    format_local_iso_time(buf2, interval_wakeup_time);
+    format_local_iso_time(buf3, down_time);
+    format_local_iso_time(buf4, interval_end_time);
 
-  interval_wakeup_time = interval_start_time +
-    24*60*60 * (unsigned char)digest[0];
-
-  format_iso_time(buf, interval_wakeup_time);
-  log_fn(LOG_INFO, "Configured hibernation interval: Decided to wake up %d days into the interval, at %s GMT",
-         (int)(unsigned char)digest[0], buf);
+    log_fn(LOG_NOTICE, "Configured hibernation.  This interval begins at %s; "
+           "we will hibernate until %s; "
+           "we expect to stay up until approximatly %s; "
+           "we will start a new interval at %s (all times local)",
+           buf1, buf2, buf3, buf4);
+  }
 }
 
 #define BW_ACCOUNTING_VERSION 1
@@ -436,7 +588,6 @@ read_bandwidth_usage(void)
   interval_start_time = t1;
   expected_bandwidth_usage = expected_bw;
 
-  accounting_set_wakeup_time();
   return 0;
  err:
   SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));

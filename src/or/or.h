@@ -963,15 +963,16 @@ typedef struct {
   struct config_line_t *RedirectExit; /**< List of config lines for simple
                                        * addr/port redirection */
   smartlist_t *RedirectExitList; /**< List of exit_redirect_t */
-  int AccountingStart; /**< At what offset within the accounting interval
-                        * do we begin measuring?  (Currently only day-of-month
-                        * is supported.) */
+  int _MonthlyAccountingStart; /**< Deprecated: day of month when accounting
+                                * interval starts */
+  char *AccountingStart; /** How long is the accounting interval, and when
+                          * does it start? */
   uint64_t AccountingMax; /**< How many bytes do we allow per accounting
                            * interval before hibernation?  0 for "never
                            * hibernate." */
   int _AccountingMaxKB; /**< How many KB do we allow per accounting
                          * interval before hibernation?  0 for "never
-                         * hibernate." */
+                         * hibernate."  (Based on a deprecated option)*/
 
   char *HashedControlPassword; /**< Base64-encoded hash of a password for
                                 * the control system. */
@@ -1341,6 +1342,7 @@ int dns_resolve(connection_t *exitconn);
 
 /********************************* hibernate.c **********************/
 
+int accounting_parse_options(or_options_t *options, int validate_only);
 int accounting_is_enabled(or_options_t *options);
 void configure_accounting(time_t now);
 void accounting_run_housekeeping(time_t now);
