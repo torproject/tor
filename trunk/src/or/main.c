@@ -251,7 +251,7 @@ static void conn_close_if_marked(int i) {
     } else {
       retval = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
     }
-    if(retval == 0 &&
+    if(retval >= 0 &&
        conn->hold_open_until_flushed && connection_wants_to_flush(conn)) {
       log_fn(LOG_INFO,"Holding conn (fd %d) open for more flushing.",conn->s);
       /* XXX should we reset timestamp_lastwritten here? */
