@@ -52,7 +52,22 @@ AllowUnverifiedNodes middle,rendezvous
 ## things in $HOME/.tor on Unix, and in Application Data\tor on Windows.
 #DataDirectory @LOCALSTATEDIR@/lib/tor
 
-##################### Below is just for servers #####################
+############### This section is just for location-hidden services ###
+
+## Look in .../hidden_service/hostname for the address to tell people.
+## HiddenServicePort x y:z says to redirect a port x request from the
+## client to y:z.
+
+#HiddenServiceDir @LOCALSTATEDIR@/lib/tor/hidden_service/
+#HiddenServicePort 80 127.0.0.1:80
+
+#HiddenServiceDir @LOCALSTATEDIR@/lib/tor/other_hidden_service/
+#HiddenServicePort 80 127.0.0.1:80
+#HiddenServicePort 22 127.0.0.1:22
+#HiddenServiceNodes moria1,moria2
+#HiddenServiceExcludeNodes bad,otherbad
+
+################ This section is just for servers #####################
 
 ## NOTE: If you enable these, you should consider mailing your identity
 ## key fingerprint to the tor-ops, so we can add you to the list of
@@ -87,19 +102,4 @@ AllowUnverifiedNodes middle,rendezvous
 #ExitPolicy accept *:6660-6667
 #ExitPolicy reject 192.168.0.1:*
 #ExitPolicy reject *:*
-
-##################### Below is just for location-hidden services ###
-
-## Look in .../hidden_service/hostname for the url to tell people.
-## HiddenServicePort x y:z says to redirect a port x request from the
-## client to y:z.
-
-#HiddenServiceDir @LOCALSTATEDIR@/lib/tor/hidden_service/
-#HiddenServicePort 80 127.0.0.1:80
-
-#HiddenServiceDir @LOCALSTATEDIR@/lib/tor/other_hidden_service/
-#HiddenServicePort 80 127.0.0.1:80
-#HiddenServicePort 22 127.0.0.1:22
-#HiddenServiceNodes moria1,moria2
-#HiddenServiceExcludeNodes bad,otherbad
 
