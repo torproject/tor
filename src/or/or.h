@@ -671,12 +671,10 @@ routerinfo_t *router_pick_directory_server(void);
 void router_upload_desc_to_dirservers(void);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk);
-#if 0
-routerinfo_t *router_get_by_identity_pk(crypto_pk_env_t *pk);
-#endif
+routerinfo_t *router_get_by_nickname(char *nickname);
 void router_get_directory(directory_t **pdirectory);
 int router_is_me(uint32_t addr, uint16_t port);
-void router_forget_router(uint32_t addr, uint16_t port);
+void router_mark_as_down(char *nickname);
 int router_get_list_from_file(char *routerfile);
 int router_get_router_hash(char *s, char *digest);
 int router_get_dir_hash(char *s, char *digest);
