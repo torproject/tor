@@ -1369,6 +1369,7 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_nickname(const char *nickname);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
+int router_digest_is_trusted_dir(const char *digest);
 void router_get_routerlist(routerlist_t **prouterlist);
 void routerlist_free(routerlist_t *routerlist);
 void routerlist_clear_trusted_directories(void);
