@@ -1,6 +1,6 @@
 
 AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.0.6pre5)
+AM_INIT_AUTOMAKE(tor, 0.0.6pre5-cvs)
 AM_CONFIG_HEADER(orconfig.h)
 
 CFLAGS="$CFLAGS -Wall -g -O2 -I/usr/kerberos/include"
