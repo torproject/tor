@@ -676,12 +676,12 @@ static void dumpstats(void) { /* dump stats to stdout */
     circuit_dump_by_conn(conn); /* dump info about all the circuits using this conn */
     printf("\n");
   }
-  printf("Cells processed: %10lud padding\n"
-         "                 %10lud create\n"
-         "                 %10lud created\n"
-         "                 %10lud relay\n"
-         "                        (%10lud relayed)\n"
-         "                        (%10lud delivered)\n"
+  printf("Cells processed: %10lu padding\n"
+         "                 %10lu create\n"
+         "                 %10lu created\n"
+         "                 %10lu relay\n"
+         "                        (%10lu relayed)\n"
+         "                        (%10lu delivered)\n"
          "                 %10lud destroy\n",
          stats_n_padding_cells_processed,
          stats_n_create_cells_processed,
@@ -695,7 +695,7 @@ static void dumpstats(void) { /* dump stats to stdout */
            100*(((double)stats_n_data_bytes_packaged) / 
                 (stats_n_data_cells_packaged*(CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE))) );
   if (stats_n_data_cells_packaged)
-    printf("Average incomoing cell fullness: %2.3f%%\n",
+    printf("Average incoming cell fullness: %2.3f%%\n",
            100*(((double)stats_n_data_bytes_received) / 
                 (stats_n_data_cells_received*(CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE))) );
   

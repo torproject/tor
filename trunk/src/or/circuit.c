@@ -543,10 +543,8 @@ void circuit_about_to_close_connection(connection_t *conn) {
     log_fn(LOG_ERR,"edge conn not in circuit's list?");
     assert(0); /* should never get here */
 send_end:
-    if(connection_edge_send_command(conn, circ, RELAY_COMMAND_END) < 0) {
-      log_fn(LOG_DEBUG,"sending end failed. Closing.");
-      circuit_close(circ);
-    }
+    connection_edge_send_command(conn, circ, RELAY_COMMAND_END,
+                                 NULL, 0, conn->cpath_layer);
     return;
   }
 

@@ -122,7 +122,6 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
 
 static void command_process_created_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
-  cell_t newcell;
 
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
@@ -152,21 +151,9 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
       return;
     }
   } else { /* pack it into an extended relay cell, and send it. */
-    memset(&newcell, 0, sizeof(cell_t));
-    newcell.command = CELL_RELAY;
-    newcell.aci = circ->p_aci;
-    SET_CELL_RELAY_COMMAND(newcell, RELAY_COMMAND_EXTENDED);
-    SET_CELL_STREAM_ID(newcell, ZERO_STREAM);
-
-    newcell.length = RELAY_HEADER_SIZE + cell->length;
-    memcpy(newcell.payload+RELAY_HEADER_SIZE, cell->payload, DH_KEY_LEN);
-
     log_fn(LOG_INFO,"Converting created cell to extended relay cell, sending.");
-    if(circuit_deliver_relay_cell(&newcell, circ, CELL_DIRECTION_IN, NULL) < 0) {
-      log_fn(LOG_WARNING,"failed to deliver extended cell. Closing.");
-      circuit_close(circ);
-      return;
-    }
+    connection_edge_send_command(NULL, circ, RELAY_COMMAND_EXTENDED,
+                                 cell->payload, DH_KEY_LEN, NULL);
   }
 }
 
@@ -225,7 +212,8 @@ static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   } else { /* the destroy came from ahead */
     circ->n_conn = NULL;
     log_fn(LOG_DEBUG, "Delivering 'truncated' back.");
-    connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED);
+    connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
+                                 NULL, 0, NULL);
   }
 }
 

@@ -575,7 +575,9 @@ void assert_connection_ok(connection_t *conn, time_t now);
 /********************************* connection_edge.c ***************************/
 
 int connection_edge_process_inbuf(connection_t *conn);
-int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command);
+void connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command,
+                                  void *payload, int payload_len, crypt_path_t *cpath_layer);
+
 int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn,
                                        int edge_type, crypt_path_t *layer_hint);
 int connection_edge_finished_flushing(connection_t *conn);
