@@ -621,7 +621,7 @@ void circuit_expire_unused_circuits(void) {
   while(circ) {
     tmpcirc = circ;
     circ = circ->next;
-    if(tmpcirc != youngest && !tmpcirc->p_conn) {
+    if(tmpcirc != youngest && !tmpcirc->p_conn && !tmpcirc->p_streams) {
       log(LOG_DEBUG,"circuit_expire_unused_circuits(): Closing n_aci %d",tmpcirc->n_aci);
       circuit_close(tmpcirc);
     }
