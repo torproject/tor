@@ -20,17 +20,15 @@ AllowUnverifiedNodes middle,rendezvous
 # Logs go to stdout unless redirected by something else, like one of
 # the below lines, or --logfile on the command line.
 ### Send all messages of level 'warn' or higher to @LOCALSTATEDIR@/log/tor/warnings
-#LogFile @LOCALSTATEDIR@/log/tor/warnings
-#LogLevel warn
+#Log warn file @LOCALSTATEDIR@/log/tor/warnings
 ### Send all debug and info messages to @LOCALSTATEDIR@/log/tor/debug
-#LogFile @LOCALSTATEDIR@/log/tor/debug
-#LogLevel debug-info
+#Log debug-info file @LOCALSTATEDIR@/log/tor/debug
 ### Send all debug messages ONLY to @LOCALSTATEDIR@/log/tor/debug
-#LogFile @LOCALSTATEDIR@/log/tor/debug
-#LogLevel debug-debug
+#Log debug-debug file @LOCALSTATEDIR@/log/tor/debug
 ### To use the system log instead of Tor's logfiles, uncomment these lines:
-#SysLog
-#LogLevel notice
+#Log notice syslog
+### To send all messages to stderr:
+#Log debug-err stderr
 
 # Uncomment this to start the process in the background... or use
 # --runasdaemon 1 on the command line.

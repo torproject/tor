@@ -28,16 +28,18 @@ Other options can be specified either on the commandline (\fI--option
 value\fR), or in the configuration file (\fIoption value\fR).
 Options are case-insensitive.
 .TP
-\fBLogLevel debug|info|notice|warn|err\fP
-Set the verboseness level of the primary log.  (Default: warn.  Abbreviation:
--l.)
+\fBLog \fR\fIminSeverity\fR-\fImaxSeverity\fR \fBstderr\fR|\fBstdout\fR|\fBsyslog\fR\fP
+Send all messages between \fIminSeverity\fR and \fImaxSeverity\fR to
+the standard output stream, the standard error strem, or to the system
+log. (The "syslog" value is only supported on Unix.)  Recognized
+severity levels are debug, info, notice, warn, and err.  If only one
+severity level is given, all messages of that level or higher will be
+sent to the listed destination.
 .TP
-\fBLogFile \fR\fIFILE\fP
-Rather than logging to stdout, log to FILE.
-.TP
-\fBSysLog 1\fP
-Rather than logging to stdout, send messages to the system log. (Not
-supported on all platforms)
+\fBLog \fR\fIminSeverity\fR-\fImaxSeverity\fR \fBfile\fR \fIFILENAME\fP
+As above, but send log messages to the listed filename.  The "Log"
+option may appear more than once in a configuration file.  Messages
+messaes are sent to all the logs that match their severity level.
 .TP
 \fBBandwidthRate \fR\fINUM\fP
 A token bucket limits the average incoming bandwidth on this node to NUM bytes per second. (Default: 800000)
@@ -51,10 +53,6 @@ address and port, with the specified key fingerprint.  This option can
 be repeated many times, for multiple authoritative directory
 servers. If no \fBdirserver\fP line is given, Tor will use the default
 directory servers: moria1, moria2, and tor26.
-.TP
-\fBDebugLogFile \fR\fIFILE\fP
-In addition to other logging, we will log to FILE at log-level debug.
-(Deprecated; use LogFile and LogLevel instead.)
 .TP
 \fBGroup \fR\fIGID\fP
 On startup, setgid to this user.
