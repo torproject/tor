@@ -1,7 +1,67 @@
 Changes so far in 0.0.9:
+pre6:
+  o Bugfixes on 0.0.8.1:
+    - Fix assert failure on malformed socks4a requests.
+    - Use identity comparison, not nickname comparison, to choose which
+      half of circuit-ID-space each side gets to use. This is needed
+      because sometimes we think of a router as a nickname, and sometimes
+      as a hex ID, and we can't predict what the other side will do.
+    - Catch and ignore SIGXFSZ signals when log files exceed 2GB; our
+      write() call will fail and we handle it there.
+
+  o Bugfixes on 0.0.9pre5:
+    - Fix a bug in read_all that was corrupting config files on windows.
+    - When we're raising the max number of open file descriptors to
+      'unlimited', don't log that we just raised it to '-1'.
+    - Include event code with events, as required by control-spec.txt.
+    - Don't give a fingerprint when clients do --list-fingerprint:
+      it's misleading, because it will never be the same again.
+    - Stop using strlcpy in tor_strndup, since it was slowing us
+      down a lot.
+    - Add a FAST_SMARTLIST define to optionally inline smartlist_get
+      and smartlist_len, which are two major profiling offenders.
+    - Remove warn on startup about missing cached-directory file.
+    - Make kill -USR1 work again.
+    - Hibernate if we start tor during the "wait for wakeup-time" phase
+      of an accounting interval. Log our hibernation plans better.
+    - Authoritative dirservers now also cache their directory, so they
+      have it on start-up.
+
+  o Features:
+    - Fetch running-routers; cache running-routers; compress
+      running-routers; serve compressed running-routers.z
+    - Add NSI installer script contributed by J Doe.
+    - Commit VC6 and VC7 workspace/project files.
+    - Commit a tor.spec for making RPM files, with help from jbash.
+    - Add contrib/torctl.in contributed by Glenn Fink.
+    - Implement the control-spec's SAVECONF command, to write your
+      configuration to torrc.
+    - Get cookie authentication for the controller closer to working.
+    - Include control-spec.txt in the tarball.
+    - When set_conf changes our server descriptor, upload a new copy.
+      But don't upload it too often if there are frequent changes.
+    - Document authentication config in man page, and document signals
+      we catch.
+    - Clean up confusing parts of man page and torrc.sample.
+    - Make expand_filename handle ~ and ~username.
+    - Use autoconf to enable largefile support where necessary. Use
+      ftello where available, since ftell can fail at 2GB.
+    - Distinguish between TOR_TLS_CLOSE and TOR_TLS_ERROR, so we can
+      log more informatively.
+    - Give a slightly more useful output for "tor -h".
+    - Refuse application socks connections to port 0.
+    - Check clock skew for verified servers, but allow unverified
+      servers and clients to have any clock skew.
+    - Break DirFetchPostPeriod into:
+      - DirFetchPeriod for fetching full directory,
+      - StatusFetchPeriod for fetching running-routers,
+      - DirPostPeriod for posting server descriptor,
+      - RendPostPeriod for posting hidden service descriptors.
+    - Make sure the hidden service descriptors are at a random offset
+      from each other, to hinder linkability.
+
 pre5:
-  o Bugfixes on 0.0.9pre4:
-    - Fix a seg fault in unit tests (doesn't affect main program).
+  o Bugfixes on 0.0.8.1:
     - Fix an assert bug where a hidden service provider would fail if
       the first hop of his rendezvous circuit was down.
     - Hidden service operators now correctly handle version 1 style
@@ -11,8 +71,6 @@ pre5:
     - Handle more errnos from accept() without closing the listener.
       Some OpenBSD machines were closing their listeners because
       they ran out of file descriptors.
-    - Send resolve cells to exit routers that are running a new
-      enough version of the resolve code to work right.
     - Better handling of winsock includes on non-MSV win32 compilers.
     - Some people had wrapped their tor client/server in a script
       that would restart it whenever it died. This did not play well
@@ -20,6 +78,11 @@ pre5:
       don't fetch a new directory if their local cached version is
       recent enough.
     - Make our autogen.sh work on ksh as well as bash.
+
+  o Bugfixes on 0.0.9pre4:
+    - Fix a seg fault in unit tests (doesn't affect main program).
+    - Send resolve cells to exit routers that are running a new
+      enough version of the resolve code to work right.
 
   o Major Features:
     - Hibernation: New config option "AccountingMaxKB" lets you
