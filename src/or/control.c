@@ -538,37 +538,25 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
   return 0;
 }
 
-static char *
-handle_getinfo_helper(const char *question)
+/** Lookup the 'getinfo' entry <b>question</b>, and return
+ * the answer in <b>*answer</b> (or NULL if key not recognized).
+ * Return 0 if success, or -1 if internal error. */
+static int
+handle_getinfo_helper(const char *question, char **answer)
 {
+  *answer = NULL; /* unrecognized key by default */
   if (!strcmp(question, "version")) {
-    return tor_strdup(VERSION);
+    *answer = tor_strdup(VERSION);
   } else if (!strcmpstart(question, "desc/id/")) {
     routerinfo_t *ri = router_get_by_hexdigest(question+strlen("desc/id/"));
-    if (!ri)
-      return NULL;
-    if (!ri->signed_descriptor)
-      return NULL;
-    return tor_strdup(ri->signed_descriptor);
-  } else if (!strcmp(question, "desc/all-ids")) {
-    routerlist_t *rl;
-    char *answer, *cp;
-    router_get_routerlist(&rl);
-    if (!rl)
-      return tor_strdup("");
-    answer = tor_malloc(smartlist_len(rl->routers)*(HEX_DIGEST_LEN+1)+1);
-    cp = answer;
-    SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
-    {
-      base16_encode(cp, HEX_DIGEST_LEN+1, r->identity_digest, DIGEST_LEN);
-      cp += HEX_DIGEST_LEN;
-      *cp++ = ',';
-    });
-    return answer;
+    if (ri && ri->signed_descriptor)
+      *answer = tor_strdup(ri->signed_descriptor);
+  } else if (!strcmp(question, "network-status")) {
+    if (list_server_status(NULL, answer) < 0)
+      return -1;
   } else if (!strcmpstart(question, "addr-mappings/")) {
     time_t min_e, max_e;
     smartlist_t *mappings;
-    char *answer;
     if (!strcmp(question, "addr-mappings/all")) {
       min_e = 0; max_e = TIME_MAX;
     } else if (!strcmp(question, "addr-mappings/cache")) {
@@ -578,18 +566,15 @@ handle_getinfo_helper(const char *question)
     } else if (!strcmp(question, "addr-mappings/control")) {
       min_e = 1; max_e = 1;
     } else {
-      return NULL;
+      return 0;
     }
     mappings = smartlist_create();
     addressmap_get_mappings(mappings, min_e, max_e);
-    answer = smartlist_join_strings(mappings, "\n", 1, NULL);
+    *answer = smartlist_join_strings(mappings, "\n", 1, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
-    return answer;
-  } else {
-    /* unrecognized key */
-    return NULL;
   }
+  return 0;
 }
 
 static int
@@ -607,15 +592,16 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
   msg_len = 0;
   SMARTLIST_FOREACH(questions, const char *, q,
   {
-    ans = handle_getinfo_helper(q);
-    if (!ans) {
+    if (handle_getinfo_helper(q, &ans) < 0) {
+      send_control_error(conn, ERR_INTERNAL, body);
+      goto done;
+    } if (!ans) {
       send_control_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, body);
       goto done;
-    } else {
-      smartlist_add(answers, tor_strdup(q));
-      smartlist_add(answers, ans);
-      msg_len += 2 + strlen(ans) + strlen(q);
     }
+    smartlist_add(answers, tor_strdup(q));
+    smartlist_add(answers, ans);
+    msg_len += 2 + strlen(ans) + strlen(q);
   });
 
   msg = smartlist_join_strings2(answers, "\0", 1, 1, &msg_len);
