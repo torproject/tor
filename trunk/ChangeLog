@@ -1,34 +1,41 @@
 Changes so far in 0.0.7pre1:
-  o Bugfixes:
+  o Fixes for crashes and other obnoxious bugs:
     - Fix an epipe bug: sometimes when directory connections failed
       to connect, we would give them a chance to flush before closing
       them.
+    - When we detached from a circuit because of resolvefailed, we
+      would immediately try the same circuit twice more, and then
+      give up on the resolve thinking we'd tried three different
+      exit nodes.
+    - Limit the number of intro circuits we'll attempt to build for a
+      hidden service per 15-minute period.
+    - Check recommended-software string *early*, before actually parsing
+      the directory. Thus we can detect an obsolete version and exit,
+      even if the new directory format doesn't parse.
+  o Fixes for security bugs:
+    - Remember which nodes are dirservers when you startup, and if a
+      random OR enables his dirport, don't automatically assume he's
+      a trusted dirserver.
+  o Other bugfixes:
     - Directory connections were asking the wrong poll socket to
       start writing, and not asking themselves to start writing.
     - When we detached from a circuit because we sent a begin but
       didn't get a connected, we would use it again the first time;
       but after that we would correctly switch to a different one.
-    - When we detached from a circuit because of resolvefailed, we
-      would immediately try the same circuit twice more, and then
-      give up on the resolve thinking we'd tried three different
-      exit nodes.
     - Stop warning when the first onion decrypt attempt fails; they
       will sometimes legitimately fail now that we rotate keys.
     - Override unaligned-access-ok check when $host_cpu is ia64 or
       arm. Apparently they allow it but the kernel whines.
     - Dirservers try to reconnect periodically too, in case connections
-      have failed
-    - Remember which nodes are dirservers when you startup, and if a
-      random OR enables his dirport, don't automatically assume he's
-      a trusted dirserver.
-    - Limit the number of intro circuits we'll attempt to build for a
-      hidden service per 15-minute period.
-    - Fix some memory leaks.
+      have failed.
+    - Fix some memory leaks in directory servers.
     - Allow backslash in Win32 filenames.
+    - Made Tor build complain-free on FreeBSD, hopefully without
+      breaking other BSD builds. We'll see.
   o Features:
-    - Doxygen markup on all functions.
+    - Doxygen markup on all functions and global variables.
     - Make directory functions update routerlist, not replace it. So
-      now directory skew is not so critical a problem.
+      now directory disagreements are not so critical a problem.
     - Remove the upper limit on number of descriptors in a dirserver's
       directory (not that we were anywhere close).
     - Allow multiple logfiles at different severity ranges.
