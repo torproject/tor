@@ -147,7 +147,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
   if(!circ) {
     log_fn(LOG_WARN,"no circ. Closing.");
     assert(fromconn);
-    connection_mark_for_close(fromconn,0);
+    connection_mark_for_close(fromconn, 0);
     return -1;
   }
 
@@ -204,7 +204,6 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
     if(rh.command == RELAY_COMMAND_END) {
       log_fn(LOG_INFO,"Exit got end (%s) before we're connected. Marking for close.",
         connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
-      conn->has_sent_end = 1; /* So we don't send an end cell. */
       connection_mark_for_close(conn, 0);
       return 0;
     }
@@ -306,11 +305,9 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */
       if (conn->done_receiving) {
-        conn->has_sent_end = 1; /* no need to send end, we just got one! */
-        connection_mark_for_close(conn, END_STREAM_REASON_DONE);
+        connection_mark_for_close(conn, 0);
       }
 #else
-      conn->has_sent_end = 1; /* no need to send end, we just got one! */
       connection_mark_for_close(conn, 0);
 #endif
       return 0;
@@ -534,7 +531,7 @@ void connection_ap_expire_beginning(void) {
       conn->timestamp_lastread += 15;
       if(connection_ap_handshake_attach_circuit(conn)<0) {
         /* it will never work */
-        conn->has_sent_end = 1; /* Don't need to send end -- why? */
+        /* Don't need to send end -- why? */
 /* XXX you're right, there's a bug. we should send an end cell
  * above, right before circuit_detach_stream. But if attach_circuit()
  * fails, then in fact we should mark without sending an end, because
@@ -561,8 +558,7 @@ void connection_ap_attach_pending(void)
       continue;
     if(connection_ap_handshake_attach_circuit(conn) < 0) {
       /* it will never work */
-      conn->has_sent_end = 1; /* because there is no 'other end' of the stream */
-/* (XXX maybe has_sent_end should be called no_need_to_send_end or something) */
+      /* Don't send end; there is no 'other end' of the stream */
       connection_mark_for_close(conn,0);
     }
   }
@@ -728,7 +724,7 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
-    ap_conn->has_sent_end = 1; /* there is no 'other side' yet */
+    /* Don't send end: there is no 'other side' yet */
     connection_mark_for_close(ap_conn, 0);
     return;
   }
