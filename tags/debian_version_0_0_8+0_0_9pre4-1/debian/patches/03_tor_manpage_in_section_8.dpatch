@@ -1,0 +1,45 @@
+#! /bin/sh -e
+## 02_tor_manpage_in_section_8.dpatch by  <weasel@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+if [ $# -lt 1 ]; then
+    echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+    exit 1
+fi
+
+[ -f debian/patches/00patch-opts ] && . debian/patches/00patch-opts
+patch_opts="${patch_opts:--f --no-backup-if-mismatch} ${2:+-d $2}"
+
+case "$1" in
+    -patch) patch -p1 ${patch_opts} < $0;;
+    -unpatch) patch -R -p1 ${patch_opts} < $0;;
+    *)
+        echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+        exit 1;;
+esac
+
+exit 0
+
+@DPATCH@
+diff -urNad /home/weasel/projects/tor/cvs/contrib/torify.1 cvs/contrib/torify.1
+--- /home/weasel/projects/tor/cvs/contrib/torify.1	2004-02-17 01:45:25.000000000 +0100
++++ cvs/contrib/torify.1	2004-05-07 01:12:57.000000000 +0200
+@@ -18,6 +18,6 @@
+ binaries.
+ 
+ .SH SEE ALSO
+-.BR tor (1),
++.BR tor (8),
+ .BR tsocks (1),
+ .BR tsocks.conf (5).
+diff -urNad /home/weasel/projects/tor/cvs/doc/tor.1.in cvs/doc/tor.1.in
+--- /home/weasel/projects/tor/cvs/doc/tor.1.in	2004-04-18 20:40:42.000000000 +0200
++++ cvs/doc/tor.1.in	2004-05-07 01:12:12.000000000 +0200
+@@ -1,4 +1,4 @@
+-.TH TOR 1 "November 2003" "TOR"
++.TH TOR 8 "November 2003" "TOR"
+ .SH NAME
+ tor \- The second-generation onion router
+ .SH SYNOPSIS
