@@ -36,7 +36,7 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssldir, [
         for ssldir in $tryssldir "" /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/pkg /opt /opt/openssl ; do
                 CPPFLAGS="$saved_CPPFLAGS"
                 LDFLAGS="$saved_LDFLAGS"
-                LIBS="$saved_LIBS -lcrypto"
+                LIBS="$saved_LIBS -lcrypto -lssl"
                 
                 # Skip directories if they don't exist
                 if test ! -z "$ssldir" -a ! -d "$ssldir" ; then
@@ -126,7 +126,7 @@ if (test ! -z "$ac_cv_openssldir" && test "x$ac_cv_openssldir" != "x(system)") ;
                 fi
         fi
 fi
-LIBS="$saved_LIBS -lcrypto"
+LIBS="$saved_LIBS -lcrypto -lssl"
 
 dnl The warning message here is no longer strictly accurate.
 

@@ -696,11 +696,6 @@ int crypto_SHA_digest(unsigned char *m, int len, unsigned char *digest)
   return (SHA1(m,len,digest) == NULL);
 }
 
-
-struct crypto_dh_env_st {
-  DH *dh;
-};
-
 static BIGNUM *dh_param_p = NULL;
 static BIGNUM *dh_param_g = NULL;
 
@@ -735,6 +730,7 @@ static void init_dh_param() {
      supposedly it equals:
         2^1024 - 2^960 - 1 + 2^64 * { [2^894 pi] + 129093 }.
   */
+  /* See also rfc 3536 */
   r = BN_hex2bn(&p,
 		"FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"

@@ -86,6 +86,23 @@ int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, i
   }
 }
 
+int read_to_buf_tls(tor_tls *tls, int at_most, char **buf, int *buflen, int *buf_datalen) {
+  int r;
+  assert(tls && *buf && buflen && buf_datalen);
+  
+  if (at_most > *buflen - *buf_datalen)
+    at_most = *buflen - *buf_datalen;
+
+  if (at_most == 0)
+    return 0;
+  
+  r = tor_tls_read(tls, *buf+*buf_datalen, at_most);
+  if (r<0) 
+    return r;
+  *buf_datalen += r;
+  return r;
+} 
+
 int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen) {
 
   /* push from buf onto s
@@ -125,6 +142,22 @@ int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datale
 //       write_result,*buf_flushlen,*buf_datalen);
     return *buf_flushlen;
   }
+}
+
+int flush_buf_tls(tor_tls *tls, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen)
+{
+  int r;
+  assert(tls && *buf && buflen && buf_datalen);
+  if (*buf_flushlen == 0)
+    return 0;
+  r = tor_tls_write(tls, *buf, *buf_flushlen);
+  if (r < 0) {
+    return r;
+  }
+  *buf_datalen -= r;
+  *buf_flushlen -= r;
+  memmove(*buf, *buf+r, *buf_datalen);
+  return r;
 }
 
 int write_to_buf(char *string, int string_len,

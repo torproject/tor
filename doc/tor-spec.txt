@@ -42,160 +42,32 @@ each node knows its predecessor and successor, but no others. Traffic
 flowing down the circuit is unwrapped by a symmetric key at each node,
 which reveals the downstream node.
 
-
 2. Connections
 
-2.1. Establishing connections to onion routers (ORs)
-
    There are two ways to connect to an OR. The first is as an onion
-   proxy (OP), which allows any node to connect without providing any
-   authentication or name. The second is as another OR, which allows
-   strong authentication. In both cases the initiating party (called
-   the 'client') sets up shared keys with the listening OR (called the
-   'server').
+   proxy (OP), which allows the OP to authenticate the OR without
+   authenticating itself.  The second is as another OR, which allows
+   mutual authentication.
 
-   Before the handshake begins, assume all parties know the {(1024-bit)
-   public key, IPV4 address, and port} triplet of each OR.
+   Tor uses TLS for link encryption, using the cipher suite
+   "TLS_DHE_RSA_WITH_AES_128_CBC_SHA".  An OR always sends a
+   self-signed X.509 certificate whose commonName is the server's
+   nickname, and whose public key is in the server directory.
+   
+   All parties receiving certificates must confirm that the public
+   key is as it appears in the server directory, and close the
+   connection if it does not.
 
-     1. Client connects to server:
+   Once a TLS connection is established, the two sides send cells
+   (specified below) to one another.  Cells are sent serially.  All
+   cells are 256 bytes long.  Cells may be sent embedded in TLS
+   records of any size or divided across TLS records, but the framing
+   of TLS records should not leak information about the type or
+   contents of the cells.
 
-        The client generates a pair of 16-byte symmetric keys (one
-        [K_f] for the 'forward' stream from client to server, and one
-        [K_b] for the 'backward' stream from server to client) to be
-        used for link encryption.
-
-        The client then generates a 'Client authentication' message [M]
-        containing: 
-
-        (If client is an OP)
-           The number 1 to signify OP handshake [2 bytes]
-           Forward link key [K_f]               [16 bytes]
-           Backward link key [K_b]              [16 bytes]
-                                             [Total: 34 bytes]
-
-        (If client is an OR)
-           The number 2 to signify OR handshake [2 bytes]
-           The client's published IPV4 address  [4 bytes]
-           The client's published port          [2 bytes]
-           The server's published IPV4 address  [4 bytes]
-           The server's published port          [2 bytes]
-           The forward key [K_f]                [16 bytes]
-           The backward key [K_b]               [16 bytes]
-                                             [Total: 46 bytes] 
-
-        The client then RSA-encrypts [M] with the server's public key
-        and PKCS1 padding to give an encrypted message.
-
-        The client then opens a TCP connection to the server, sends
-        the 128-byte RSA-encrypted data to the server, and waits for a
-        reply.
-
-     2. The server receives the first handshake:
-
-        The OR waits for 128 bytes of data, and decrypts the resulting
-        data with its private key, checking the PKCS1 padding. If
-        the padding is invalid, it closes the connection. If the tag
-        indicates the client is an OP, and the message is 34 bytes long,
-        it performs step 2a. If the tag indicates the client is an OR,
-        and the message is 46 bytes long, it performs step 2b. Else,
-        it closes the connection.
-
-     2a. If client is an OP:
-
-        The connection is established, and the OR is ready to receive
-        cells. The server sets its keys for this connection, setting K_f
-        to the client's K_b, and K_b to the client's K_f. The handshake
-        is complete.
-
-     2b. If the client is an OR:
-
-        The server checks the list of known ORs for one with the address
-        and port given in the client's authentication. If no such OR
-        is known, or if the server is already connected to that OR, the
-        server closes the current TCP connection and stops handshaking.
-
-        The server sets its keys for this connection, setting K_f to
-        the client's K_b, and K_b to the client's K_f.
-
-        The server then creates a server authentication message [M2] as
-        follows: 
-               Client's handshake [M]                 [44 bytes]
-               A random nonce [N]                     [8 bytes]
-                                                  [Total: 52 bytes]
-
-        The server encrypts M2 with the client's public key (found
-        from the list of known routers), using PKCS1 padding.
-
-        The server sends the 128-byte encrypted message to the client,
-        and waits for a reply.
-
-     3. Client authenticates to server.
-
-        Once the client has received 128 bytes, it decrypts them with
-        its public key, and checks the PKCS1 padding.  If the padding
-        is invalid, or the decrypted message's length is other than 52
-        bytes, the client closes the TCP connection.
-
-        The client checks that the addresses and keys in the reply
-        message are the same as the ones it originally sent.  If not,
-        it closes the TCP connection.
-
-        The client generates the following authentication message [M3]:
-           The client's published IPV4 address    [4 bytes]
-           The client's published port            [2 bytes]
-           The server's published IPV4 address    [4 bytes]
-           The server's published port            [2 bytes]
-           The server-generated nonce [N]         [8 bytes]
-                                             [Total: 20 bytes]
-
-        Once again, the client encrypts this message using the
-        server's public key and PKCS1 padding, and sends the resulting
-        128-byte message to the server.
-
-     4. Server checks client authentication
-
-        The server once again waits to receive 128 bytes from the
-        client, decrypts the message with its private key, and checks
-        the PKCS1 padding.  If the padding is incorrect, or if the
-        message's length is other than 20 bytes, the server closes the
-        TCP connection and stops handshaking.
-
-        If the addresses in the decrypted message M3 match those in M
-        and M2, and if the nonce in M3 is the same as in M2, the
-        handshake is complete, and the client and server begin sending
-        cells to one another.  Otherwise, the server closes the TCP
-        connection.
-
-2.2. Sending cells and link encryption
-
-   Once the handshake is complete, the two sides send cells
-   (specified below) to one another.  Cells are sent serially,
-   encrypted with the AES-CTR keystream specified by the handshake
-   protocol.  Over a connection, communicants encrypt outgoing cells
-   with the connection's K_f, and decrypt incoming cells with the
-   connection's K_b.
-
-   [Commentary: This means that OR/OP->OR connections are malleable; I
-    can flip bits in cells as they go across the wire, and see flipped
-    bits coming out the cells as they are decrypted at the next
-    server.  I need to look more at the data format to see whether
-    this is exploitable, but if there's no integrity checking there
-    either, I suspect we may have an attack here. -NM]
-   [Yes, this protocol is open to tagging attacks. The payloads are
-    encrypted inside the network, so it's only at the edge node and beyond
-    that it's a worry. But adversaries can already count packets and
-    observe/modify timing. It's not worth putting in hashes; indeed, it
-    would be quite hard, because one of the sides of the circuit doesn't
-    know the keys that are used for de/encrypting at each hop, so couldn't
-    craft hashes anyway. See the Bandwidth Throttling (threat model)
-    thread on http://archives.seul.org/or/dev/Jul-2002/threads.html. -RD]
-   [Even if I don't control both sides of the connection, I can still
-    do evil stuff.  For instance, if I can guess that a cell is a
-    TOPIC_COMMAND_BEGIN cell to www.slashdot.org:80 , I can change the
-    address and port to point to a machine I control. -NM]
-   [We're going to address this tagging issue with e2e-only hashes.
-    See TODO file. -RD]
-
+   OR-to-OR connections are never deliberately closed.  OP-to-OR
+   connections are closed when the OP has no more circuits running
+   over a connection, and an amount of time (????) has passed.
 
 3. Cell Packet format
 
