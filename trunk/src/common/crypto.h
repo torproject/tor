@@ -26,7 +26,8 @@
 /* Bytes added for PKCS1-OAEP padding. */
 #define PKCS1_OAEP_PADDING_OVERHEAD 42
 
-/* Length of encoded public key fingerprints, including space and NUL. */
+/* Length of encoded public key fingerprints, including space; but not
+ * including terminating NUL. */
 #define FINGERPRINT_LEN 49
 
 

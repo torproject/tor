@@ -724,7 +724,8 @@ void strmap_free(strmap_t *map, void (*free_val)(void*))
  */
 
 /* Return a pointer to the first char of s that is not whitespace and
- * not a comment. */
+ * not a comment, or to the terminating NUL if no such character exists.
+ */
 const char *eat_whitespace(const char *s) {
   tor_assert(s);
 
@@ -741,14 +742,17 @@ const char *eat_whitespace(const char *s) {
   return s;
 }
 
-/* Return a pointer to the first char of s that is not a space or a tab. */
+/* Return a pointer to the first char of s that is not a space or a tab,
+ * or to the terminating NUL if no such character exists. */
 const char *eat_whitespace_no_nl(const char *s) {
   while(*s == ' ' || *s == '\t')
     ++s;
   return s;
 }
 
-/* Return a pointer to the first char of s that is whitespace or '#' or '\0 */
+/* Return a pointer to the first char of s that is whitespace or '#',
+ * or to the terminating NUL if no such character exists. */
+ */
 const char *find_whitespace(const char *s) {
   tor_assert(s);
 
