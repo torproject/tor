@@ -9,7 +9,7 @@ be implemented in a future version of Tor.  It is not part of the Tor onion
 routing protocol.
 
 The protocol described in this document is used for other programs (such as
-frontend user-interfaces) to communicate with a locally running Tor protocol.
+frontend user-interfaces) to communicate with a locally running Tor process.
 
 We're trying to be pretty extensible here, but not infinitely
 forward-compatible.
