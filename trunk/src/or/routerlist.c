@@ -659,6 +659,7 @@ void routerinfo_free(routerinfo_t *router)
   if (!router)
     return;
 
+  tor_free(router->signed_descriptor);
   tor_free(router->address);
   tor_free(router->nickname);
   tor_free(router->platform);
@@ -713,6 +714,7 @@ void routerlist_free(routerlist_t *rl)
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                     routerinfo_free(r));
   smartlist_free(rl->routers);
+  running_routers_free(rl->running_routers);
   tor_free(rl->software_versions);
   tor_free(rl);
 }
@@ -856,6 +858,29 @@ routerlist_remove_old_routers(int age)
 /*
  * Code to parse router descriptors and directories.
  */
+int
+router_load_single_router(const char *s)
+{
+  routerinfo_t *ri;
+
+  if (!(ri = router_parse_entry_from_string(s, NULL))) {
+    log_fn(LOG_WARN, "Error parsing router descriptor; dropping.");
+    return -1;
+  }
+  if (routerlist && routerlist->running_routers) {
+    running_routers_t *rr = routerlist->running_routers;
+    router_update_status_from_smartlist(ri,
+                                        rr->published_on,
+                                        rr->running_routers,
+                                        rr->is_running_routers_format);
+  }
+  if (router_add_to_routerlist(ri)<0) {
+    log_fn(LOG_WARN, "Couldn't add router to list; dropping.");
+    return -1;
+  }
+  log_fn(LOG_DEBUG, "Added router to list");
+  return 0;
+}
 
 /** Add to the current routerlist each router stored in the
  * signed directory <b>s</b>.  If pkey is provided, check the signature against
@@ -1137,12 +1162,24 @@ int router_exit_policy_rejects_all(routerinfo_t *router) {
 /** Release all space held in <b>rr</b>. */
 void running_routers_free(running_routers_t *rr)
 {
-  tor_assert(rr);
+  if (!rr)
+    return;
   if (rr->running_routers) {
     SMARTLIST_FOREACH(rr->running_routers, char *, s, tor_free(s));
     smartlist_free(rr->running_routers);
   }
   tor_free(rr);
+}
+
+/** DOCDOC*/
+void
+routerlist_set_runningrouters(routerlist_t *list, running_routers_t *rr)
+{
+  routerlist_update_from_runningrouters(list,rr);
+  if (list->running_routers != rr) {
+    running_routers_free(list->running_routers);
+    list->running_routers = rr;
+  }
 }
 
 /** Update the running/not-running status of every router in <b>list</b>, based
