@@ -8,8 +8,11 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/06/28 18:14:55  montrose
+ * Added poptReadOptions() and poptReadDefaultOptions()
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.7  2002/04/02 14:27:11  badbytes
  * Final finishes.
@@ -40,6 +43,8 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
+#include <popt.h>
+#include <limits.h>
 
 #include "config.h"
 #include "log.h"
@@ -345,3 +350,58 @@ int parse_config(FILE *f, config_opt_t *option)
   
   return retval;
 }
+
+int poptReadOptions(poptContext optCon, const unsigned char *fname)
+/**
+poptReadOptions reads popt-style options from the specified filename.
+RETURN VALUE: INT_MIN = problem opening config file, else standard poptGetNextOpt() return value
+**/
+{
+   FILE *fp;
+   int argc, c;
+   char **argv;
+   char line[256];
+   line[0] = line[1] = '-';  /* prepend expected long name option flag */
+   fp = open_config(fname);
+   if ( fp == NULL ) return INT_MIN;
+   c = 0;
+   /**
+   this loop skips over all leading whitespace and blank lines then returns all text
+   from that point to the next newline.
+   **/
+   while ( c >= -1 && fscanf(fp,"%*[ \n]%[^\n]",&line[2]) == 1 )
+   {
+      switch ( line[2] )
+      {
+      case '#':   /* comments begin with this */
+      case '[':   /* section header. ignore for now. maybe do something special in future version... */
+         continue;/* ignore */
+      default:    /* we got a bite, lets reel it in now */
+         poptParseArgvString(line,&argc,(const char ***)&argv); /* Argv-ify what we found */
+         poptStuffArgs(optCon,(const char **)argv);   /* stuff new arguments so they can be interpreted */
+         free(argv);                                  /* free storage allocated by poptParseArgvString */
+         c = poptGetNextOpt(optCon);                  /* interpret option read from config file */
+      }
+   }
+   close_config(fp);
+   return c;
+}
+
+int poptReadDefaultOptions(const char *cmd, poptContext optCon)
+/**
+reads popt-style options from /etc/<cmd>rc and ~/.<cmd>rc
+RETURN VALUE: same as poptReadOptions()
+**/
+{
+   char fname[256];
+   int c;
+   sprintf(fname,"/etc/%src",cmd);
+   c = poptReadOptions(optCon,fname);
+   if ( c == INT_MIN || c >= -1 )
+   {
+      sprintf(fname,"~/.%src",cmd);
+      c = poptReadOptions(optCon,fname);
+   }
+   return c;
+}
+
