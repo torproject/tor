@@ -24,6 +24,11 @@ int tor_tls_read(tor_tls *tls, char *cp, int len);
 int tor_tls_write(tor_tls *tls, char *cp, int n);
 int tor_tls_handshake(tor_tls *tls);
 /* XXXX we need a function to check for validated, verified peer certs. */
+/* XXXX i would also very much like a function to tell me who i just
+ * handshaked with. maybe a nickname, and from there i can look
+ * up a router entry? and maybe one day a function to make sure the cert
+ * doesn't disagree too much with the router entry.
+ */
 int tor_tls_shutdown(tor_tls *tls);
 
 #endif
