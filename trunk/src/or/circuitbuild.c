@@ -858,10 +858,11 @@ router_handles_some_port(routerinfo_t *router, smartlist_t *needed_ports) {
   uint16_t port;
 
   for (i = 0; i < smartlist_len(needed_ports); ++i) {
+    addr_policy_result_t r;
     port = *(uint16_t *)smartlist_get(needed_ports, i);
     tor_assert(port);
-    if (router_compare_addr_to_addr_policy(0, port, router->exit_policy) !=
-          ADDR_POLICY_REJECTED)
+    r = router_compare_addr_to_addr_policy(0, port, router->exit_policy);
+    if (r != ADDR_POLICY_REJECTED && r != ADDR_POLICY_PROBABLY_REJECTED)
       return 1;
   }
   return 0;

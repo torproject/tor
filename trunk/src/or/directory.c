@@ -100,11 +100,10 @@ int dir_policy_permits_address(uint32_t addr)
   if (!dir_policy) /* 'no dir policy' means 'accept' */
     return 1;
   a = router_compare_addr_to_addr_policy(addr, 1, dir_policy);
-  if (a==-1)
+  if (a==ADDR_POLICY_REJECTED)
     return 0;
-  else if (a==0)
+  else if (a==ADDR_POLICY_ACCEPTED)
     return 1;
-  tor_assert(a==1);
   log_fn(LOG_WARN, "Bug: got unexpected 'maybe' answer from dir policy");
   return 0;
 }

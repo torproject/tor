@@ -291,13 +291,19 @@ int circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min) 
          circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now)) {
       exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
       if (exitrouter &&
-          (!need_uptime || circ->build_state->need_uptime) &&
-          ((conn && connection_ap_can_use_exit(conn, exitrouter)) ||
-           (!conn &&
-            router_compare_addr_to_addr_policy(0, port, exitrouter->exit_policy) !=
-              ADDR_POLICY_REJECTED))) {
-        if (++num >= min)
-          return 1;
+          (!need_uptime || circ->build_state->need_uptime)) {
+        int ok;
+        if (conn) {
+          ok = connection_ap_can_use_exit(conn, exitrouter);
+        } else {
+          addr_policy_result_t r =
+           router_compare_addr_to_addr_policy(0, port, exitrouter->exit_policy);
+          ok = r != ADDR_POLICY_REJECTED && r != ADDR_POLICY_PROBABLY_REJECTED;
+        }
+        if (ok) {
+          if (++num >= min)
+            return 1;
+        }
       }
     }
   }

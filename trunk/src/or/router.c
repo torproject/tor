@@ -581,8 +581,8 @@ static void router_add_exit_policy_from_config(routerinfo_t *router) {
   config_parse_addr_policy(&default_policy, &router->exit_policy);
 }
 
-/** OR only: Return false if my exit policy says to allow connection to
- * conn.  Else return true.
+/** OR only: Check whether my exit policy says to allow connection to
+ * conn.  Return false if we accept; true if we reject.
  */
 int router_compare_to_my_exit_policy(connection_t *conn)
 {
@@ -594,9 +594,10 @@ int router_compare_to_my_exit_policy(connection_t *conn)
     return -1;
 
   return router_compare_addr_to_addr_policy(conn->addr, conn->port,
-                   desc_routerinfo->exit_policy);
+                   desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
 
 }
+
 
 /** Return true iff <b>router</b> has the same nickname as this OR.  (For an
  * OP, always returns false.)
