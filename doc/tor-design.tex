@@ -294,10 +294,6 @@ these attacks,\footnote{
   rate, or to limit
   the variation in traffic shape.  Doing so can have prohibitive bandwidth
   costs and/or performance limitations.
-  %One can also use a cascade (fixed
-  %shared route) with a relatively fixed set of users. This assumes a
-  %significant degree of agreement and provides an easier target for an active
-  %attacker since the endpoints are generally known.
 } most designs protect primarily against traffic analysis rather than traffic
 confirmation \cite{or-jsac98}---that is, they assume that the attacker is
 attempting to learn who is talking to whom, not to confirm a prior suspicion
@@ -333,85 +329,61 @@ current implementation does no padding and thus remains vulnerable
 to both active and passive bridging.
 %XXX fix, yes it does, sort of.
 
-%XXX do a paragraph on p2p vs client-server
-\cite{tarzan:ccs02}
-\cite{morphmix:fc04}
-
-Systems such as Freedom and the original Onion Routing
-build the anonymous channel all at once, using a layered ``onion'' of
-public-key encrypted messages, each layer of which provides a set of session
-keys and the address of the next server in the channel.  Tor as described
-herein, Tarzan, Morphmix, Cebolla \cite{cebolla}, and AnonNet
-\cite{anonnet} build the
-channel in stages, extending it one hop at a time. This approach
-makes perfect forward secrecy feasible.
-
-Distributed-trust anonymizing systems differ in how they prevent attackers
-from controlling too many servers and thus compromising too many user paths.
-Some protocols rely on a centrally maintained set of well-known anonymizing
-servers.  The current Tor design falls into this category.
-Others (such as Tarzan and MorphMix) allow unknown users to run
-servers, while using a limited resource (DHT space for Tarzan; IP space for
-MorphMix) to prevent an attacker from owning too much of the network.
-Crowds uses a centralized ``blender'' to enforce Crowd membership
-policy. For small crowds it is suggested that familiarity with all
-members is adequate. For large diverse crowds, limiting accounts in
-control of any one party is more complex: 
-``(e.g., the blender administrator sets up an account for a user only
-after receiving a written, notarized request from that user) and each
-account to one jondo, and by monitoring and limiting the number of
-jondos on any one net- work (using IP address), the attacker would be
-forced to launch jondos using many different identities and on many
-different networks to succeed'' \cite{crowds-tissec}.
-
 PipeNet \cite{back01, pipenet}, another low-latency design proposed at
 about the same time as the original Onion Routing design, provided
 stronger anonymity at the cost of allowing a single user to shut
 down the network simply by not sending.  Low-latency anonymous
-communication has also been designed for other environments, including
-ISDN \cite{isdn-mixes}
-% and mobile applications such as telephones and
-%active badging systems \cite{federrath-ih96,reed-protocols97}.
+communication has also been designed for other environments such as
+ISDN \cite{isdn-mixes}.
 
-Some systems, such as Crowds \cite{crowds-tissec}, do not rely on changing the
-appearance of packets to hide the path; rather they try to prevent an
-intermediary from knowing whether it is talking to an initiator
-or just another intermediary.  Crowds uses no public-key
-encryption, but the responder and all data are visible to all
-nodes on the path; so anonymity of the connection initiator depends on
-filtering all identifying information from the data stream. Crowds only
-supports HTTP traffic.
+In P2P designs like Tarzan \cite{tarzan:ccs02} and MorphMix
+\cite{morphmix:fc04}, all participants both generate traffic and relay
+traffic for others. Rather than aiming to hide the originator within a
+group of other originators, these systems instead aim to prevent a peer
+or observer from knowing whether a given peer originated the request
+or just relayed it from another peer. While Tarzan and MorphMix use
+layered encryption as above, Crowds \cite{crowds-tissec} simply assumes
+an adversary who cannot observe the initiator: it uses no public-key
+encryption, so nodes on a circuit can read that circuit's traffic. The
+anonymity of the initiator relies on filtering all identifying information
+from the data stream.
 
 Hordes \cite{hordes-jcs} is based on Crowds but also uses multicast
-responses to hide the initiator. Herbivore \cite{herbivore} and
-P5 \cite{p5} go even further, requiring broadcast.
-Each uses broadcast in different ways, and trade-offs are made to
-make broadcast more practical. Both Herbivore and P5 are designed primarily
-for communication between communicating peers, although Herbivore
-permits external connections by requesting a peer to serve as a proxy.
-Allowing easy connections to nonparticipating responders or recipients
-is a practical requirement for many users, e.g., to visit
-nonparticipating Web sites or to exchange mail with nonparticipating
-recipients.
+responses to hide the initiator. Herbivore \cite{herbivore} and P5
+\cite{p5} go even further, requiring broadcast.  Each uses broadcast
+in different ways, and trade-offs are made to make broadcast more
+practical. Both Herbivore and P5 are designed primarily for communication
+between peers, although Herbivore permits external connections by
+requesting a peer to serve as a proxy.  Allowing easy connections to
+nonparticipating responders or recipients is important for usability,
+for example so users can visit nonparticipating Web sites or exchange
+mail with nonparticipating recipients.
 
-Tor is not primarily designed for censorship resistance but rather
-for anonymous communication. However, Tor's rendezvous points, which
-enable connections between mutually anonymous entities, also
-facilitate connections to hidden servers.  These building blocks to
-censorship resistance and other capabilities are described in
-Section~\ref{sec:rendezvous}.  Location-hidden servers are an
-essential component for the anonymous publishing systems such as
-Eternity\cite{eternity}, Publius\cite{publius},
-Free Haven\cite{freehaven-berk}, and Tangler\cite{tangler}.
+Systems like Freedom and the original Onion Routing build the circuit
+all at once, using a layered ``onion'' of public-key encrypted messages,
+each layer of which provides a set of session keys and the address of the
+next server in the circuit. Tor as described herein, Tarzan, MorphMix,
+Cebolla \cite{cebolla}, and AnonNet \cite{anonnet} build the circuit
+in stages, extending it one hop at a time. This approach makes perfect
+forward secrecy feasible.
 
+Distributed-trust anonymizing systems need to prevent attackers from
+adding too many servers and thus compromising too many user paths.
+Tor relies on a centrally maintained set of well-known servers. Tarzan
+and MorphMix allow unknown users to run servers, and limit an attacker
+from becoming too much of the network based on a limited resource such
+as number of IPs controlled. Crowds suggests requiring written, notarized
+requests from potential crowd members.
 
-STILL NOT MENTIONED:
-real-time mixes\\
-rewebbers\\
-cebolla\\
+Anonymous communication is an essential component of censorship-resistant
+systems like Eternity \cite{eternity}, Free Haven \cite{freehaven-berk},
+Publius \cite{publius}, and Tangler \cite{tangler}. Tor's rendezvous
+points enable connections between mutually anonymous entities; they
+are a building block for location-hidden servers, which are needed by
+Eternity and Free Haven.
 
-
-[XXX Close by mentioning where Tor fits.]
+% didn't include rewebbers. No clear place to put them, so I'll leave
+% them out for now. -RD
 
 \Section{Design goals and assumptions}
 \label{sec:assumptions}
@@ -493,7 +465,7 @@ or because they present an area of active research lacking a generally
 accepted solution.
 
 \begin{tightlist}
-\item[Not Peer-to-peer:] Tarzan and Morphmix aim to
+\item[Not Peer-to-peer:] Tarzan and MorphMix aim to
   scale to completely decentralized peer-to-peer environments with thousands
   of short-lived servers, many of which may be controlled by an adversary.
   Because of the many open problems in this approach, Tor uses a more
@@ -1136,15 +1108,15 @@ however, and its network properties still need to be investigated. [XXX
 
 Channel-based anonymity designs must choose which protocol layer to
 anonymize.  They may choose to intercept IP packets directly, and relay
-them whole (stripping the source address) as the contents of their
-anonymous channels \cite{tarzan:ccs02,freedom2-arch}.  Alternatively,
+them whole (stripping the source address) as the contents of the
+circuit \cite{tarzan:ccs02,freedom2-arch}.  Alternatively,
 they may
 accept TCP streams and relay the data in those streams along the
-channel, ignoring the breakdown of that data into TCP frames. (Tor
+circuit, ignoring the breakdown of that data into TCP frames. (Tor
 takes this approach, as does Rennhard's anonymity network \cite{anonnet}
-and Morphmix \cite{morphmix:fc04}.)  Finally, they may accept
+and MorphMix \cite{morphmix:fc04}.)  Finally, they may accept
 application-level protocols (such as HTTP) and relay the application
-requests themselves along their anonymous channels.
+requests themselves along the circuit.
 
 This protocol-layer decision represents a compromise between flexibility
 and anonymity.  For example, a system that understands HTTP can strip
@@ -1586,7 +1558,7 @@ and its resistance to attacks.
   runs on top of TCP, so design options that could not easily do so
   would be difficult to test on the current network. However, most
   low-latency protocols are designed to run over TCP. We are currently
-  discussing with the designers of Morphmix interoperability of the
+  discussing with the designers of MorphMix interoperability of the
   two systems, which seems to be relatively straightforward. This will
   allow testing and direct comparison of the two rather different
   designs.
@@ -1972,7 +1944,7 @@ How do we prevent unreliable servers from rendering the network
 unusable?  Fifth, do clients receive so much anonymity benefit from
 running their own servers that we should expect them all to do so, or
 do we need to find another incentive structure to motivate them?
-(Tarzan and Morphmix present possible solutions.)
+(Tarzan and MorphMix present possible solutions.)
 
 [[ XXX how to approve new nodes (advogato, sybil, captcha (RTT));]
 
@@ -2111,7 +2083,8 @@ issues remaining to be ironed out. In particular:
 %     'SOCKS'
 %     Try not to use \cite as a noun.  
 %     'Authorizating' sounds great, but it isn't a word.
-%     'First, second, third', not 'Firstly, secondly, thridly'.
+%     'First, second, third', not 'Firstly, secondly, thirdly'.
+%     'circuit', not 'channel'
 %
 %     'Substitute ``Damn'' every time you're inclined to write ``very;'' your
 %     editor will delete it and the writing will be just as it should be.'
