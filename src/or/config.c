@@ -841,8 +841,9 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
-  if(options->DirFetchPostPeriod < 1) {
-    log(LOG_WARN,"DirFetchPostPeriod option must be positive.");
+#define MIN_DIRFETCHPOSTPERIOD 60
+  if(options->DirFetchPostPeriod < MIN_DIRFETCHPOSTPERIOD) {
+    log(LOG_WARN,"DirFetchPostPeriod option must be at least %d.", MIN_DIRFETCHPOSTPERIOD);
     result = -1;
   }
   if(options->DirFetchPostPeriod > MIN_ONION_KEY_LIFETIME/2) {
