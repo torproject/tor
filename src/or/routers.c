@@ -191,7 +191,8 @@ void router_forget_router(uint32_t addr, uint16_t port) {
 
   assert(i != rarray_len); /* if so then router_get_by_addr_port should have returned null */
 
-  free(router);
+//  free(router); /* don't actually free; we'll free it when we free the whole thing */
+
 //  log(LOG_DEBUG,"router_forget_router(): Forgot about router %d:%d",addr,port);
   for(; i<rarray_len-1;i++)
     router_array[i] = router_array[i+1];
