@@ -384,6 +384,7 @@ tor_parse_ulong(const char *s, int base, unsigned long min,
   CHECK_STRTOX_RESULT();
 }
 
+/** Only base 10 is guaranteed to work for now. */
 uint64_t
 tor_parse_uint64(const char *s, int base, uint64_t min,
                  uint64_t max, int *ok, char **next)
@@ -394,7 +395,15 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
 #ifdef HAVE_STRTOULL
   r = (uint64_t)strtoull(s, &endptr, base);
 #elif defined(MS_WINDOWS)
+#if _MSC_VER < 1300
+  tor_assert(base <= 10);
+  r = (uint64_t)_atoi64(s);
+  endptr = (char*)s;
+  while(isspace(*endptr)) endptr++;
+  while(isdigit(*endptr)) endptr++;
+#else
   r = (uint64_t)_strtoui64(s, &endptr, base);
+#endif
 #elif SIZEOF_LONG == 8
   r = (uint64_t)strtoul(s, &endptr, base);
 #else
@@ -779,6 +788,11 @@ int check_private_dir(const char *dirname, cpd_check_t check)
 int
 write_str_to_file(const char *fname, const char *str, int bin)
 {
+#ifdef MS_WINDOWS
+  if (strchr(str, '\r')) {
+    log_fn(LOG_WARN, "How odd. Writing a string that does contain CR already.");
+  }
+#endif
   return write_bytes_to_file(fname, str, strlen(str), bin);
 }
 
@@ -849,7 +863,10 @@ char *read_file_to_str(const char *filename, int bin) {
     tor_free(string);
     close(fd);
     return NULL;
-  } else if (bin && r != statbuf.st_size) {
+  }
+  string[r] = '\0'; /* NUL-terminate the result. */
+  
+  if (bin && r != statbuf.st_size) {
     /* If we're in binary mode, then we'd better have an exact match for
      * size.  Otherwise, win32 encoding may throw us off, and that's okay. */
     log_fn(LOG_WARN,"Could read only %d of %ld bytes of file '%s'.",
@@ -858,9 +875,17 @@ char *read_file_to_str(const char *filename, int bin) {
     close(fd);
     return NULL;
   }
+#ifdef MS_WINDOWS
+  if (!bin && strchr(string, '\r')) {
+    if (strchr(string, '\r')) {
+      log_fn(LOG_DEBUG, "We didn't convert CRLF to LF as well as we hoped when reading %s. Coping.",
+             filename);  
+      tor_strstrip(string, "\r");
+    }
+  }
+#endif
   close(fd);
 
-  string[statbuf.st_size] = 0; /* null terminate it */
   return string;
 }
 
