@@ -5,14 +5,17 @@
 #include "or.h"
 
 extern int global_role; /* from main.c */
+extern or_options_t options; /* command-line and config-file options */
 
 /********* START VARIABLES **********/
 
-tracked_onion_t *tracked_onions = NULL; /* linked list of tracked onions */
-tracked_onion_t *last_tracked_onion = NULL;
+static tracked_onion_t *tracked_onions = NULL; /* linked list of tracked onions */
+static tracked_onion_t *last_tracked_onion = NULL;
 
 /********* END VARIABLES ************/
 
+static int onion_process(circuit_t *circ);
+static int onion_deliver_to_conn(aci_t aci, unsigned char *onion, uint32_t onionlen, connection_t *conn);
 
 int decide_aci_type(uint32_t local_addr, uint16_t local_port,
                     uint32_t remote_addr, uint16_t remote_port) {
@@ -27,7 +30,201 @@ int decide_aci_type(uint32_t local_addr, uint16_t local_port,
    return ACI_TYPE_LOWER; 
 }
 
-int process_onion(circuit_t *circ, connection_t *conn) {
+struct data_queue_t {
+  cell_t *cell;
+  struct data_queue_t *next;
+};
+
+struct onion_queue_t {
+  circuit_t *circ;
+  struct data_queue_t *data_cells;
+  struct onion_queue_t *next;
+};
+
+/* global (within this file) variables used by the next few functions */
+static struct onion_queue_t *ol_list=NULL;
+static struct onion_queue_t *ol_tail=NULL;
+static int ol_length=0;
+
+int onion_pending_add(circuit_t *circ) {
+  struct onion_queue_t *tmp;
+
+  tmp = malloc(sizeof(struct onion_queue_t));
+  memset(tmp, 0, sizeof(struct onion_queue_t));
+  tmp->circ = circ;
+
+  if(!ol_tail) {
+    assert(!ol_list);
+    assert(!ol_length);
+    ol_list = tmp;
+    ol_tail = tmp;
+    ol_length++;
+    return 0;
+  }
+
+  assert(ol_list);
+  assert(!ol_tail->next);
+
+  if(ol_length >= options.MaxOnionsPending) {
+    log(LOG_INFO,"onion_pending_add(): Already have %d onions queued. Closing.", ol_length);
+    free(tmp);
+    return -1;
+  }
+
+  ol_length++;
+  ol_tail->next = tmp;
+  ol_tail = tmp;
+  return 0;
+
+}
+
+int onion_pending_check(void) {
+  if(ol_list)
+    return 1;
+  else
+    return 0;
+}
+
+void onion_pending_process_one(void) {
+  struct data_queue_t *tmpd;
+
+  if(!ol_list)
+    return; /* no onions pending, we're done */
+
+  assert(ol_list->circ && ol_list->circ->p_conn);
+  assert(ol_length > 0);
+
+  if(onion_process(ol_list->circ) < 0) {
+    log(LOG_DEBUG,"onion_pending_process_one(): Failed. Closing.");
+    onion_pending_remove(ol_list->circ);
+    circuit_close(ol_list->circ);
+  } else {
+    log(LOG_DEBUG,"onion_pending_process_one(): Succeeded. Delivering queued data cells.");
+    for(tmpd = ol_list->data_cells; tmpd; tmpd=tmpd->next) {
+      command_process_data_cell(tmpd->cell, ol_list->circ->p_conn); 
+    }
+    onion_pending_remove(ol_list->circ);
+  }
+  return;
+}
+
+/* go through ol_list, find the element which points to circ, remove and
+ * free that element. leave circ itself alone.
+ */
+void onion_pending_remove(circuit_t *circ) {
+  struct onion_queue_t *tmpo, *victim;
+  struct data_queue_t *tmpd;
+
+  if(!ol_list)
+    return; /* nothing here. */
+
+  /* first check to see if it's the first entry */
+  tmpo = ol_list;
+  if(tmpo->circ == circ) {
+    /* it's the first one. remove it from the list. */
+    ol_list = tmpo->next;
+    if(!ol_list)
+      ol_tail = NULL;
+    ol_length--;
+    victim = tmpo;
+  } else { /* we need to hunt through the rest of the list */
+    for( ;tmpo->next && tmpo->next->circ != circ; tmpo=tmpo->next) ;
+    if(!tmpo->next) {
+      log(LOG_WARNING,"onion_pending_remove(): circ (p_aci %d), not in list!",circ->p_aci);
+      return;
+    }
+    /* now we know tmpo->next->circ == circ */
+    victim = tmpo->next;
+    tmpo->next = victim->next;
+    if(ol_tail == victim)
+      ol_tail = tmpo;
+    ol_length--;
+  }
+
+  /* now victim points to the element that needs to be removed */
+
+  /* first dump the attached data cells too, if any */
+  while(victim->data_cells) {
+    tmpd = victim->data_cells;
+    victim->data_cells = tmpd->next;
+    free(tmpd->cell);
+    free(tmpd);
+  }
+ 
+  free(victim); 
+
+}
+
+/* a data cell has arrived for a circuit which is still pending. Find
+ * the right entry in ol_list, and add it to the end of the 'data_cells'
+ * list.
+ */
+void onion_pending_data_add(circuit_t *circ, cell_t *cell) {
+  struct onion_queue_t *tmpo;
+  struct data_queue_t *tmpd, *newd;
+
+  newd = malloc(sizeof(struct data_queue_t));
+  memset(newd, 0, sizeof(struct data_queue_t));
+  newd->cell = malloc(sizeof(cell_t));
+  memcpy(newd->cell, cell, sizeof(cell_t));
+
+  for(tmpo=ol_list; tmpo; tmpo=tmpo->next) {
+    if(tmpo->circ == circ) {
+      if(!tmpo->data_cells) {
+        tmpo->data_cells = newd;
+        return;
+      }
+      for(tmpd = tmpo->data_cells; tmpd->next; tmpd=tmpd->next) ;
+      /* now tmpd->next is null */
+      tmpd->next = newd;
+      return;
+    }
+  }
+}
+
+/* helper function for onion_process */
+static int onion_deliver_to_conn(aci_t aci, unsigned char *onion, uint32_t onionlen, connection_t *conn) {
+  char *buf;
+  int buflen, dataleft;
+  cell_t cell;
+ 
+  assert(aci && onion && onionlen);
+ 
+  buflen = onionlen+4;
+  buf = malloc(buflen);
+  if(!buf)
+    return -1;
+ 
+  log(LOG_DEBUG,"onion_deliver_to_conn(): Setting onion length to %u.",onionlen);
+  *(uint32_t*)buf = htonl(onionlen);
+  memcpy((void *)(buf+4),(void *)onion,onionlen);
+ 
+  dataleft = buflen;
+  while(dataleft > 0) {
+    memset(&cell,0,sizeof(cell_t));
+    cell.command = CELL_CREATE;
+    cell.aci = aci;
+    if(dataleft >= CELL_PAYLOAD_SIZE)
+      cell.length = CELL_PAYLOAD_SIZE;
+    else
+      cell.length = dataleft;
+    memcpy(cell.payload, buf+buflen-dataleft, cell.length);
+    dataleft -= cell.length;
+ 
+    log(LOG_DEBUG,"onion_deliver_to_conn(): Delivering create cell, payload %d bytes.",cell.length);
+    if(connection_write_cell_to_buf(&cell, conn) < 0) {
+      log(LOG_DEBUG,"onion_deliver_to_conn(): Could not buffer new create cells. Closing.");
+      free(buf);
+      return -1;
+    }
+  }
+  free(buf);
+  return 0;
+}
+
+static int onion_process(circuit_t *circ) {
+  connection_t *n_conn;
+  int retval;
   aci_t aci_type;
   struct sockaddr_in me; /* my router identity */
 
@@ -66,6 +263,55 @@ int process_onion(circuit_t *circ, connection_t *conn) {
     log(LOG_DEBUG,"process_onion(): Onion tracking failed. Will ignore.");
   }
 
+  /* now we must send create cells to the next router */
+  if(circ->n_addr && circ->n_port) {
+    n_conn = connection_twin_get_by_addr_port(circ->n_addr,circ->n_port);
+    if(!n_conn || n_conn->type != CONN_TYPE_OR) {
+      /* i've disabled making connections through OPs, but it's definitely
+       * possible here. I'm not sure if it would be a bug or a feature. -RD
+       */
+      /* note also that this will close circuits where the onion has the same
+       * router twice in a row in the path. i think that's ok. -RD
+       */
+      log(LOG_DEBUG,"command_process_create_cell(): Next router not connected. Closing.");
+      return -1;
+    }
+
+    circ->n_addr = n_conn->addr; /* these are different if we found a twin instead */
+    circ->n_port = n_conn->port;
+
+    circ->n_conn = n_conn;
+    log(LOG_DEBUG,"command_process_create_cell(): n_conn is %s:%u",n_conn->address,n_conn->port);
+
+    /* send the CREATE cells on to the next hop  */
+    pad_onion(circ->onion,circ->onionlen, sizeof(onion_layer_t));
+    log(LOG_DEBUG,"command_process_create_cell(): Padded the onion with random data.");
+
+    retval = onion_deliver_to_conn(circ->n_aci, circ->onion, circ->onionlen, n_conn); 
+    free((void *)circ->onion);
+    circ->onion = NULL;
+    if (retval == -1) {
+      log(LOG_DEBUG,"command_process_create_cell(): Could not deliver the onion to next conn. Closing.");
+      return -1;
+    }
+  } else { /* this is destined for an exit */
+    log(LOG_DEBUG,"command_process_create_cell(): Creating new exit connection.");
+    n_conn = connection_new(CONN_TYPE_EXIT);
+    if(!n_conn) {
+      log(LOG_DEBUG,"command_process_create_cell(): connection_new failed. Closing.");
+      return -1;
+    }
+    n_conn->state = EXIT_CONN_STATE_CONNECTING_WAIT;
+    n_conn->receiver_bucket = -1; /* edge connections don't do receiver buckets */
+    n_conn->bandwidth = -1;
+    n_conn->s = -1; /* not yet valid */
+    if(connection_add(n_conn) < 0) { /* no space, forget it */
+      log(LOG_DEBUG,"command_process_create_cell(): connection_add failed. Closing.");
+      connection_free(n_conn);
+      return -1;
+    }
+    circ->n_conn = n_conn;
+  }
   return 0;
 }
 

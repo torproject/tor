@@ -301,7 +301,7 @@ void check_conn_marked(int i) {
 
 int prepare_for_poll(int *timeout) {
   int i;
-  int need_to_wake_soon = 0;
+//  int need_to_wake_soon = 0;
   connection_t *conn = NULL;
   connection_t *tmpconn;
   struct timeval now, soonest;
@@ -436,6 +436,11 @@ int prepare_for_poll(int *timeout) {
     }
   }
 
+  if(onion_pending_check()) {
+    /* there's an onion pending. check for new things to do, but don't wait any time */
+    *timeout = 0;
+  }
+
   return 0;
 }
 
@@ -497,7 +502,7 @@ int do_main_loop(void) {
      */
 
     /* if the timeout is less than 10, set it to 10 */
-    if(timeout >= 0 && timeout < 10)
+    if(timeout > 0 && timeout < 10)
       timeout = 10;
 
     /* poll until we have an event, or it's time to do something */
@@ -510,6 +515,11 @@ int do_main_loop(void) {
         return -1;
     }
 #endif
+
+    if(poll_result == 0) { 
+      /* poll timed out without anything to do. process a pending onion, if any. */
+      onion_pending_process_one();
+    }
 
     if(poll_result > 0) { /* we have at least one connection to deal with */
       /* do all the reads first, so we can detect closed sockets */

@@ -114,12 +114,13 @@
 #define DIR_CONN_STATE_COMMAND_WAIT 3
 #define DIR_CONN_STATE_WRITING 4
 
-#define CIRCUIT_STATE_OPEN_WAIT 0 /* receiving/processing the onion */
-#define CIRCUIT_STATE_OR_WAIT 1 /* I'm at the beginning of the path, my firsthop is still connecting */
-#define CIRCUIT_STATE_OPEN 2 /* onion processed, ready to send data along the connection */
-#define CIRCUIT_STATE_CLOSE_WAIT1 3 /* sent two "destroy" signals, waiting for acks */
-#define CIRCUIT_STATE_CLOSE_WAIT2 4 /* received one ack, waiting for one more 
-				       (or if just one was sent, waiting for that one */
+#define CIRCUIT_STATE_ONION_WAIT 0 /* receiving the onion */
+#define CIRCUIT_STATE_ONION_PENDING 1 /* waiting to process the onion */
+#define CIRCUIT_STATE_OR_WAIT 2 /* I'm at the beginning of the path, my firsthop is still connecting */
+#define CIRCUIT_STATE_OPEN 3 /* onion processed, ready to send data along the connection */
+//#define CIRCUIT_STATE_CLOSE_WAIT1 4 /* sent two "destroy" signals, waiting for acks */
+//#define CIRCUIT_STATE_CLOSE_WAIT2 5 /* received one ack, waiting for one more 
+//                                       (or if just one was sent, waiting for that one */
 //#define CIRCUIT_STATE_CLOSE 4 /* both acks received, connection is dead */ /* NOT USED */
 
 /* available cipher functions */
@@ -378,7 +379,7 @@ typedef struct
    int DirRebuildPeriod;
    int DirFetchPeriod;
    int KeepalivePeriod;
-   int OnionsPerSecond;
+   int MaxOnionsPending;
    int Role;
    int loglevel;
 } or_options_t;
@@ -656,7 +657,11 @@ int main(int argc, char *argv[]);
 int decide_aci_type(uint32_t local_addr, uint16_t local_port,
                     uint32_t remote_addr, uint16_t remote_port);
 
-int process_onion(circuit_t *circ, connection_t *conn);
+int onion_pending_add(circuit_t *circ);
+int onion_pending_check(void);
+void onion_pending_process_one(void);
+void onion_pending_remove(circuit_t *circ);
+void onion_pending_data_add(circuit_t *circ, cell_t *cell);
 
 /* uses a weighted coin with weight cw to choose a route length */
 int chooselen(double cw);
