@@ -385,8 +385,10 @@ int fetch_from_buf_http(buf_t *buf,
       log_fn(LOG_DEBUG,"body not all here yet.");
       return 0; /* not all there yet */
     }
-    bodylen = contentlen;
-    log_fn(LOG_DEBUG,"bodylen reduced to %d.",bodylen);
+    if(bodylen > contentlen) {
+      bodylen = contentlen;
+      log_fn(LOG_DEBUG,"bodylen reduced to %d.",bodylen);
+    }
   }
   /* all happy. copy into the appropriate places, and return 1 */
   if(headers_out) {
