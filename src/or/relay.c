@@ -520,9 +520,11 @@ connection_edge_end_reason_sock5_response(char *payload, uint16_t length) {
 
 #ifdef MS_WINDOWS
 #define E_CASE(s) case s: case WSA ## s
+#define S_CASE(s) case WSA ## s
 #define W_CASE(s) case s:
 #else
 #define E_CASE(s) case s
+#define S_CASE(s) case s
 #define W_CASE(s)
 #endif
 
@@ -530,28 +532,28 @@ int
 errno_to_end_reason(int e)
 {
   switch (e) {
-    E_CASE(EPIPE):
+    case EPIPE:
       return END_STREAM_REASON_DONE;
     E_CASE(EBADF):
     E_CASE(EFAULT):
     E_CASE(EINVAL):
-    E_CASE(EISCONN):
-    E_CASE(ENOTSOCK):
-    E_CASE(EPROTONOSUPPORT):
-    E_CASE(EAFNOSUPPORT):
+    S_CASE(EISCONN):
+    S_CASE(ENOTSOCK):
+    S_CASE(EPROTONOSUPPORT):
+    S_CASE(EAFNOSUPPORT):
     E_CASE(EACCES):
-    E_CASE(ENOTCONN):
-    E_CASE(ENETUNREACH):
+    S_CASE(ENOTCONN):
+    S_CASE(ENETUNREACH):
       return END_STREAM_REASON_INTERNAL;
-    E_CASE(ECONNREFUSED):
+    S_CASE(ECONNREFUSED):
       return END_STREAM_REASON_CONNECTREFUSED;
-    E_CASE(ECONNRESET):
+    S_CASE(ECONNRESET):
       return END_STREAM_REASON_CONNRESET;
-    E_CASE(ETIMEDOUT):
+    S_CASE(ETIMEDOUT):
       return END_STREAM_REASON_TIMEOUT;
-    E_CASE(ENOBUFS):
-    E_CASE(ENOMEM):
-    E_CASE(ENFILE):
+    S_CASE(ENOBUFS):
+    case ENOMEM:
+    case ENFILE:
     E_CASE(EMFILE):
       return END_STREAM_REASON_RESOURCELIMIT;
     default:
