@@ -13,6 +13,7 @@
 /********* START VARIABLES **********/
 
 extern or_options_t options; /* command-line and config-file options */
+extern int shutting_down; /* whether we should refuse new connections */
 
 /** Array of strings to make conn-\>type human-readable. */
 char *conn_type_to_string[] = {
@@ -401,6 +402,13 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
     return -1;
   }
   log(LOG_INFO,"Connection accepted on socket %d (child of fd %d).",news, conn->s);
+
+  if(shutting_down && new_type != CONN_TYPE_DIR) {
+    /* allow directory connections even while we're shutting down */
+    log(LOG_INFO,"But we're shutting down, so closing (type %d).", new_type);
+    tor_close_socket(news);
+    return 0;
+  }
 
   set_socket_nonblocking(news);
 
