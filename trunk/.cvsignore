@@ -12,6 +12,7 @@ config.guess
 config.sub
 conftest*
 stamp-h
+stamp-h.in
 stamp-h1
 tor.sh
 tor.spec
