@@ -1,0 +1,26 @@
+
+Main authors:
+-------------
+
+Matej Pfajfar <badbytes@freehaven.net> wrote the first version of the code
+(called OR) in 2001-2002.
+
+Roger Dingledine <arma@freehaven.net> overhauled all of the code, did
+a bunch of new design work, etc.
+
+Nick Mathewson <nickm@freehaven.net> wrote lots of stuff too, in
+particular the router and descriptor parsing, and the crypto and tls
+wrappers.
+
+Contributors:
+-------------
+
+Aaron Turner <aturner@netscreen.com> contributed the first version of
+the tor.sh initscripts shell script.
+
+Steven Hazel <sah@thalassocracy.org> made 'make install' do the right
+thing.
+
+Jason Holt <jason@lunkwill.org> contributed patches to the instructions
+and the man page.
+
