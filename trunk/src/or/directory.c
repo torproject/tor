@@ -11,7 +11,6 @@ static int directory_handle_command(connection_t *conn);
 /********* START VARIABLES **********/
 
 extern or_options_t options; /* command-line and config-file options */
-extern int has_fetched_directory;
 
 char rend_publish_string[] = "/rendezvous/publish";
 char rend_fetch_url[] = "/rendezvous/";
@@ -243,13 +242,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
       } else {
         log_fn(LOG_INFO,"updated routers.");
       }
-      if(options.ORPort) { /* connect to them all */
-        router_retry_connections();
-      }
-      if (has_fetched_directory==0) {
-        has_fetched_directory=1;
-        directory_has_arrived(); /* do things we've been waiting to do */
-      }
+      directory_has_arrived(); /* do things we've been waiting to do */
     }
 
     if(conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {
