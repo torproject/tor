@@ -19,7 +19,7 @@
 
 void log_set_severity(int severity);
 
-/* Outputs a message to stdout and also logs the same message using syslog. */
+/* Outputs a message to stdout */
 void log(int severity, const char *format, ...) CHECK_PRINTF(2,3);
 
 #ifdef __GNUC__
