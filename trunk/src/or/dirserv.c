@@ -799,8 +799,8 @@ static size_t runningrouters_len=0;
 /** Replace the current running-routers list with a newly generated one. */
 static int generate_runningrouters(crypto_pk_env_t *private_key)
 {
-  char *s, *cp;
-  char *router_status;
+  char *s=NULL, *cp;
+  char *router_status=NULL;
   char digest[DIGEST_LEN];
   char signature[PK_BYTES];
   int i;
@@ -811,8 +811,9 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
 
   len = 1024+(MAX_HEX_NICKNAME_LEN+2)*smartlist_len(descriptor_list);
   s = tor_malloc_zero(len);
-  if (list_server_status(NULL, &router_status))
-    return -1;
+  if (list_server_status(NULL, &router_status)) {
+    goto err;
+  }
   /* ASN.1-encode the public key.  This is a temporary measure; once
    * everyone is running 0.0.9pre3 or later, we can shift to using a
    * PEM-encoded key instead.
@@ -820,14 +821,13 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
 #if 1
   if(crypto_pk_DER64_encode_public_key(private_key, &identity_pkey)<0) {
     log_fn(LOG_WARN,"write identity_pkey to string failed!");
-    tor_free(cp);
-    return -1;
+    goto err;
   }
 #else
   { int l;
     if(crypto_pk_write_public_key_to_string(private_key, &identity_pkey, &l)<0){
       log_fn(LOG_WARN,"write identity_pkey to string failed!");
-      return -1;
+      goto err;
     }
   }
 #endif
@@ -844,21 +844,21 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   tor_free(identity_pkey);
   if (router_get_runningrouters_hash(s,digest)) {
     log_fn(LOG_WARN,"couldn't compute digest");
-    return -1;
+    goto err;
   }
   if (crypto_pk_private_sign(private_key, digest, 20, signature) < 0) {
     log_fn(LOG_WARN,"couldn't sign digest");
-    return -1;
+    goto err;
   }
 
   i = strlen(s);
   cp = s+i;
   if (base64_encode(cp, len-i, signature, 128) < 0) {
     log_fn(LOG_WARN,"couldn't base64-encode signature");
-    return -1;
+    goto err;
   }
   if (strlcat(s, "-----END SIGNATURE-----\n", len) >= len) {
-    return -1;
+    goto err;
   }
 
   tor_free(runningrouters_string);
@@ -866,6 +866,10 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   runningrouters_len = strlen(s);
   runningrouters_is_dirty = 0;
   return 0;
+ err:
+  tor_free(s);
+  tor_free(router_status);
+  return -1;
 }
 
 /** Set *<b>rr</b> to the most recently generated encoded signed
