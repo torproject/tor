@@ -369,10 +369,10 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
 }
 
 /** Find all the apconns in state AP_CONN_STATE_RENDDESC_WAIT that
- * are waiting on query. If success==1, move them to the next state.
- * If success==0, fail them.
+ * are waiting on query. If status==1, move them to the next state.
+ * If status==0, fail them.
  */
-void rend_client_desc_fetched(char *query, int success) {
+void rend_client_desc_fetched(char *query, int status) {
   connection_t **carray;
   connection_t *conn;
   int n, i;
@@ -388,7 +388,7 @@ void rend_client_desc_fetched(char *query, int success) {
     if (rend_cmp_service_ids(conn->rend_query, query))
       continue;
     /* great, this guy was waiting */
-    if(success ||
+    if(status!=0 ||
        rend_cache_lookup_entry(conn->rend_query, &entry) == 1) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */

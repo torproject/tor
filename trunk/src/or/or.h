@@ -180,6 +180,8 @@ typedef enum {
 #define CONN_TYPE_CONTROL 13
 #define _CONN_TYPE_MAX 13
 
+#define CONN_IS_EDGE(x) ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
+
 /** State for any listener connection. */
 #define LISTENER_STATE_READY 0
 
@@ -1034,7 +1036,7 @@ void circuit_rep_hist_note_result(circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 circuit_t *circuit_establish_circuit(uint8_t purpose,
                                      const char *exit_digest);
-void circuit_n_conn_done(connection_t *or_conn, int success);
+void circuit_n_conn_done(connection_t *or_conn, int status);
 int circuit_send_next_onion_skin(circuit_t *circ);
 int circuit_extend(cell_t *cell, circuit_t *circ);
 int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse);
@@ -1193,7 +1195,7 @@ int connection_or_nonopen_was_started_here(connection_t *conn);
 
 /********************************* connection_edge.c ***************************/
 
-int connection_edge_process_inbuf(connection_t *conn);
+int connection_edge_process_inbuf(connection_t *conn, int package_partial);
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn);
 int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer);
 int connection_edge_finished_flushing(connection_t *conn);
@@ -1204,7 +1206,7 @@ int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
 
 int connection_ap_make_bridge(char *address, uint16_t port);
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
-                                         size_t replylen, int success);
+                                         size_t replylen, int status);
 void connection_ap_handshake_socks_resolved(connection_t *conn,
                                             int answer_type,
                                             size_t answer_len,
@@ -1405,7 +1407,7 @@ void relay_header_unpack(relay_header_t *dest, const char *src);
 int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
                                  int relay_command, const char *payload,
                                  size_t payload_len, crypt_path_t *cpath_layer);
-int connection_edge_package_raw_inbuf(connection_t *conn);
+int connection_edge_package_raw_inbuf(connection_t *conn, int package_partial);
 void connection_edge_consider_sending_sendme(connection_t *conn);
 
 extern uint64_t stats_n_data_cells_packaged;
@@ -1439,7 +1441,7 @@ void rend_client_refetch_renddesc(const char *query);
 int rend_client_remove_intro_point(char *failed_intro, const char *query);
 int rend_client_rendezvous_acked(circuit_t *circ, const char *request, size_t request_len);
 int rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t request_len);
-void rend_client_desc_fetched(char *query, int success);
+void rend_client_desc_fetched(char *query, int status);
 
 char *rend_client_get_random_intro(char *query);
 int rend_parse_rendezvous_address(char *address);

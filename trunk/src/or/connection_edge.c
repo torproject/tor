@@ -32,7 +32,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn);
  * Mark and return -1 if there was an unexpected error with the conn,
  * else return 0.
  */
-int connection_edge_process_inbuf(connection_t *conn) {
+int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
@@ -81,7 +81,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
         log_fn(LOG_WARN,"called with package_window %d. Tell Roger.", conn->package_window);
         return 0;
       }
-      if(connection_edge_package_raw_inbuf(conn) < 0) {
+      if(connection_edge_package_raw_inbuf(conn, package_partial) < 0) {
         connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
         connection_mark_for_close(conn);
         return -1;
@@ -221,7 +221,8 @@ int connection_edge_finished_connecting(connection_t *conn)
       return 0; /* circuit is closed, don't continue */
   }
   tor_assert(conn->package_window > 0);
-  return connection_edge_process_inbuf(conn); /* in case the server has written anything */
+  /* in case the server has written anything */
+  return connection_edge_process_inbuf(conn, 1);
 }
 
 /** How many times do we retry a general-purpose stream (detach it from

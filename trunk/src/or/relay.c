@@ -590,7 +590,7 @@ connection_edge_process_relay_cell_not_open(
     connection_ap_handshake_socks_reply(conn, NULL, 0, 1);
     conn->socks_request->has_finished = 1;
     /* handle anything that might have queued */
-    if (connection_edge_package_raw_inbuf(conn) < 0) {
+    if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
       connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
       connection_mark_for_close(conn);
       return 0;
@@ -803,7 +803,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       conn->package_window += STREAMWINDOW_INCREMENT;
       log_fn(LOG_DEBUG,"stream-level sendme, packagewindow now %d.", conn->package_window);
       connection_start_reading(conn);
-      connection_edge_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
+      connection_edge_package_raw_inbuf(conn, 1); /* handle whatever might still be on the inbuf */
       return 0;
     case RELAY_COMMAND_RESOLVE:
       if (layer_hint) {
@@ -854,7 +854,7 @@ uint64_t stats_n_data_bytes_received = 0;
  *
  * Return -1 if conn should be marked for close, else return 0.
  */
-int connection_edge_package_raw_inbuf(connection_t *conn) {
+int connection_edge_package_raw_inbuf(connection_t *conn, int package_partial) {
   size_t amount_to_process, length;
   char payload[CELL_PAYLOAD_SIZE];
   circuit_t *circ;
@@ -881,10 +881,13 @@ repeat_connection_edge_package_raw_inbuf:
 
   amount_to_process = buf_datalen(conn->inbuf);
 
-  if(!amount_to_process)
+  if (!amount_to_process)
     return 0;
 
-  if(amount_to_process > RELAY_PAYLOAD_SIZE) {
+  if (!package_partial && amount_to_process < RELAY_PAYLOAD_SIZE)
+    return 0;
+
+  if (amount_to_process > RELAY_PAYLOAD_SIZE) {
     length = RELAY_PAYLOAD_SIZE;
   } else {
     length = amount_to_process;
@@ -982,7 +985,7 @@ circuit_resume_edge_reading_helper(connection_t *conn,
        (layer_hint && conn->package_window > 0 && conn->cpath_layer == layer_hint)) {
       connection_start_reading(conn);
       /* handle whatever might still be on the inbuf */
-      connection_edge_package_raw_inbuf(conn);
+      connection_edge_package_raw_inbuf(conn, 1);
 
       /* If the circuit won't accept any more data, return without looking
        * at any more of the streams. Any connections that should be stopped
