@@ -567,7 +567,7 @@ ORport ::= port where the router listens for routers/proxies (speaking cells)
 SocksPort ::=  where the router listens for applications (speaking socks)
 DirPort ::= where the router listens for directory download requests
 bandwidth ::= maximum bandwidth, in bytes/s
-nickname ::= between 1 and 32 alphanumeric characters.  case-insensitive.
+nickname ::= between 1 and 19 alphanumeric characters, case-insensitive.
 
 Bandwidth and ports are required; if they are not included in the router
 line, they must appear in "bandwidth" and "ports" lines.
