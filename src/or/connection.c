@@ -130,20 +130,10 @@ connection_t *connection_new(int type) {
   if (type == CONN_TYPE_AP || type == CONN_TYPE_EXIT)  {
     if (buf_new(&conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen) < 0)
       return NULL;
-    if (! (conn->compression = malloc(sizeof(z_stream))))
+    if (! (conn->compression = compression_new()))
       return NULL;
-    if (! (conn->decompression = malloc(sizeof(z_stream))))
+    if (! (conn->decompression = decompression_new()))
       return NULL;
-    memset(conn->compression, 0, sizeof(z_stream));
-    memset(conn->decompression, 0, sizeof(z_stream));
-    if (deflateInit(conn->compression, Z_DEFAULT_COMPRESSION) != Z_OK) {
-      log(LOG_ERR, "Error initializing zlib: %s", conn->compression->msg);
-      return NULL;
-    }
-    if (inflateInit(conn->decompression) != Z_OK) {
-      log(LOG_ERR, "Error initializing zlib: %s", conn->decompression->msg);
-      return NULL;
-    }
   } else {
     conn->compression = conn->decompression = NULL;
   }
@@ -181,14 +171,8 @@ void connection_free(connection_t *conn) {
   }
 #ifdef USE_ZLIB
   if (conn->compression) {
-    if (inflateEnd(conn->decompression) != Z_OK)
-      log(LOG_ERR,"connection_free(): while closing zlib: %s",
-          conn->decompression->msg);
-    if (deflateEnd(conn->compression) != Z_OK)
-      log(LOG_ERR,"connection_free(): while closing zlib: %s",
-          conn->compression->msg);
-    free(conn->compression);
-    free(conn->decompression);
+    decompression_free(conn->decompression);
+    compression_free(conn->compression);
     buf_free(conn->z_outbuf);
   }
 #endif

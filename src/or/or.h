@@ -36,11 +36,11 @@
 #include <errno.h>
 #include <assert.h>
 #include <time.h>
-#ifdef USE_ZLIB
+
 #define free_func zlib_free_func
 #include <zlib.h>
 #undef free_func
-#endif
+
 
 #include "../common/crypto.h"
 #include "../common/log.h"
@@ -173,6 +173,9 @@
 
 /* legal characters in a filename */
 #define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
+
+typedef z_stream z_compression;
+typedef z_stream z_decompression;
 
 struct config_line {
   char *key;
@@ -446,10 +449,14 @@ int fetch_from_buf(char *string, int string_len,
    * then memmove buf back (that is, remove them from buf)
    */
 
-#ifdef USE_ZLIB
+z_compression* compression_new();
+z_decompression* decompression_new();
+void compression_free(z_compression *);
+void decompression_free(z_decompression *);
+
 int compress_from_buf(char *string, int string_len, 
 		      char **buf_in, int *buflen_in, int *buf_datalen_in,
-		      z_stream *zstream, int flush);
+		      z_compression *compression, int flush);
   /* read and compress as many characters as possible from buf, writing up to
    * string_len of them onto string, then memmove buf back.  Return number of
    * characters written.
@@ -457,10 +464,9 @@ int compress_from_buf(char *string, int string_len,
 
 int decompress_buf_to_buf(char **buf_in, int *buflen_in, int *buf_datalen_in,
 			  char **buf_out, int *buflen_out, int *buf_datalen_out,
-			  z_stream *zstream, int flush);
+			  z_decompression *decompression, int flush);
   /* XXX document this NM
    */
-#endif
 
 int find_on_inbuf(char *string, int string_len,
                   char *buf, int buf_datalen);
