@@ -380,7 +380,7 @@ Eternity and Free~Haven.
 \Section{Design goals and assumptions}
 \label{sec:assumptions}
 
-\noindent {\large Goals}\\
+\noindent{\large\bf Goals}\\
 Like other low-latency anonymity designs, Tor seeks to frustrate
 attackers from linking communication partners, or from linking
 multiple communications to or from a single user.  Within this
@@ -429,7 +429,7 @@ deployability, readability, and ease of security analysis. Tor aims to
 deploy a simple and stable system that integrates the best well-understood
 approaches to protecting anonymity.\\
 
-\noindent {\large Non-goals}\\
+\noindent{\large\bf Non-goals}\\
 \label{subsec:non-goals}
 In favoring simple, deployable designs, we have explicitly deferred
 several possible goals, either because they are solved elsewhere, or because
@@ -515,11 +515,12 @@ each of these attacks.
 \Section{The Tor Design}
 \label{sec:design}
 
-The Tor network is an overlay network; onion routers run as normal
-user-level processes without needing any special privileges.
+The Tor network is an overlay network; each onion router (OR) 
+runs as a normal
+user-level processes without any special privileges.
 Each onion router maintains a long-term TLS \cite{TLS}
 connection to every other onion router.
-%(We further discuss this clique-topology assumption in
+%(We discuss alternatives to this clique-topology assumption in
 %Section~\ref{sec:maintaining-anonymity}.)
 % A subset of the ORs also act as
 %directory servers, tracking which routers are in the network;
@@ -528,42 +529,41 @@ Each user
 runs local software called an onion proxy (OP) to fetch directories,
 establish circuits across the network,
 and handle connections from user applications.  These onion proxies accept
-TCP streams and multiplex them across the circuit. The onion
+TCP streams and multiplex them across the circuits. The onion
 router on the other side 
 of the circuit connects to the destinations of
 the TCP streams and relays data.
 
 Each onion router uses three public keys: a long-term identity key, a
 short-term onion key, and a short-term link key.  The identity
-(signing) key is used to sign TLS certificates, to sign its router
-descriptor (a summary of its keys, address, bandwidth, exit policy,
-etc), and to sign directories if it is a directory server. Changing
+key is used to sign TLS certificates, to sign the OR's \emph{router
+descriptor} (a summary of its keys, address, bandwidth, exit policy,
+and so on), and (by directory servers) to sign directories. Changing
 the identity key of a router is considered equivalent to creating a
-new router. The onion (decryption) key is used for decrypting requests
+new router. The onion key is used to decrypt requests
 from users to set up a circuit and negotiate ephemeral keys. Finally,
 link keys are used by the TLS protocol when communicating between
 onion routers. Each short-term key is rotated periodically and
 independently, to limit the impact of key compromise.
 
-Section~\ref{subsec:cells} discusses the structure of the fixed-size
+Section~\ref{subsec:cells} discusses the fixed-size
 \emph{cells} that are the unit of communication in Tor. We describe
 in Section~\ref{subsec:circuits} how circuits are
 built, extended, truncated, and destroyed. Section~\ref{subsec:tcp}
-describes how TCP streams are routed through the network, and finally
+describes how TCP streams are routed through the network.  We address
+integrity checking in Section~\ref{subsec:integrity-checking},
+and resource limiting in Section~\ref{subsec:rate-limit}.
+Finally,
 Section~\ref{subsec:congestion} talks about congestion control and
 fairness issues.
-% NICK
-% XXX \ref{subsec:integrity-checking} is missing
-% XXX \ref{xubsec:rate-limit is missing.
 
 \SubSection{Cells}
 \label{subsec:cells}
 
-Onion routers communicate with one another, and with users' OPs, via TLS
-connections with ephemeral keys.  This prevents an attacker from
-impersonating an OR, conceals the contents of the connection with
-perfect forward secrecy, and prevents an attacker from modifying data
-on the wire.
+Onion routers communicate with one another, and with users' OPs, via
+TLS connections with ephemeral keys.  Using TLS conceals the data on
+the connection with perfect forward secrecy, and prevents an attacker
+from modifying data on the wire or impersonating an OR.
 
 Traffic passes along these connections in fixed-size cells.  Each cell
 is 256 bytes (but see Section~\ref{sec:conclusion} for a discussion of
@@ -582,7 +582,7 @@ padding); \emph{create} or \emph{created} (used to set up a new circuit);
 and \emph{destroy} (to tear down a circuit).
 
 Relay cells have an additional header (the relay header) after the
-cell header, containing the stream identifier (many streams can
+cell header, containing a stream identifier (many streams can
 be multiplexed over a circuit); an end-to-end checksum for integrity
 checking; the length of the relay payload; and a relay command.  
 The entire contents of the relay header and the relay cell payload 
@@ -607,7 +607,7 @@ We describe each of these cell types and commands in more detail below.
 
 Onion Routing originally built one circuit for each
 TCP stream.  Because building a circuit can take several tenths of a
-second (due to public-key cryptography delays and network latency),
+second (due to public-key cryptography and network latency),
 this design imposed high costs on applications like web browsing that
 open many TCP streams.
 
@@ -617,23 +617,23 @@ among their streams, users' OPs build a new circuit
 periodically if the previous one has been used,
 and expire old used circuits that no longer have any open streams.
 OPs consider making a new circuit once a minute: thus
-even heavy users spend a negligible amount of time and CPU in
+even heavy users spend a negligible amount of time
 building circuits, but only a limited number of requests can be linked
 to each other through a given exit node. Also, because circuits are built
 in the background, OPs can recover from failed circuit creation
 without delaying streams and thereby harming user experience.\\
 
-\noindent {\large Constructing a circuit}\\
+\noindent{\large\bf Constructing a circuit}\\
 %\subsubsection{Constructing a circuit}
 \label{subsubsec:constructing-a-circuit}
 %
-A user's OP constructs a circuit incrementally, negotiating a
+A user's OP constructs circuits incrementally, negotiating a
 symmetric key with each OR on the circuit, one hop at a time. To begin
 creating a new circuit, the OP (call her Alice) sends a
 \emph{create} cell to the first node in her chosen path (call him Bob).  
 (She chooses a new
 circID $C_{AB}$ not currently used on the connection from her to Bob.)
-This cell's
+The \emph{create} cell's
 payload contains the first half of the Diffie-Hellman handshake
 ($g^x$), encrypted to the onion key of the OR (call him Bob). Bob
 responds with a \emph{created} cell containing the second half of the
@@ -664,44 +664,43 @@ extend one hop further.
 
 This circuit-level handshake protocol achieves unilateral entity
 authentication (Alice knows she's handshaking with the OR, but
-the OR doesn't care who is opening the circuit---Alice has no key
+the OR doesn't care who is opening the circuit---Alice uses no public key
 and is trying to remain anonymous) and unilateral key authentication
 (Alice and the OR agree on a key, and Alice knows the OR is the
-only other entity who should know it). It also achieves forward
+only other entity who knows it). It also achieves forward
 secrecy and key freshness. More formally, the protocol is as follows
 (where $E_{PK_{Bob}}(\cdot)$ is encryption with Bob's public key,
 $H$ is a secure hash function, and $|$ is concatenation):
-
-\begin{equation}
+\begin{equation*}
 \begin{aligned}
 \mathrm{Alice} \rightarrow \mathrm{Bob}&: E_{PK_{Bob}}(g^x) \\
 \mathrm{Bob} \rightarrow \mathrm{Alice}&: g^y, H(K | \mathrm{``handshake"}) \\
 \end{aligned}
-\end{equation}
+\end{equation*}
 
-In the second step, Bob proves that it was he who who received $g^x$,
-and who came up with $y$. We use PK encryption in the first step
+In the second step, Bob proves that it was he who received $g^x$,
+and who chose $y$. We use PK encryption in the first step
 (rather than, say, using the first two steps of STS, which has a
 signature in the second step) because a single cell is too small to
 hold both a public key and a signature. Preliminary analysis with the
-NRL protocol analyzer \cite{meadows96} shows the above protocol to be
-secure (including providing perfect forward secrecy) under the
+NRL protocol analyzer \cite{meadows96} shows this protocol to be
+secure (including perfect forward secrecy) under the
 traditional Dolev-Yao model.\\
 
-\noindent {\large Relay cells}\\
+\noindent{\large\bf Relay cells}\\
 %\subsubsection{Relay cells}
 %
 Once Alice has established the circuit (so she shares keys with each
 OR on the circuit), she can send relay cells.  Recall that every relay
-cell has a streamID in the relay header that indicates to which
+cell has a streamID that indicates to which
 stream the cell belongs.  This streamID allows a relay cell to be
-addressed to any of the ORs on the circuit.  Upon receiving a relay
+addressed to any OR on the circuit.  Upon receiving a relay
 cell, an OR looks up the corresponding circuit, and decrypts the relay
-header and payload with the appropriate session key for that circuit.
-If the cell is headed downstream (away from Alice) it then checks
+header and payload with the session key for that circuit.
+If the cell is headed downstream (away from Alice) the OR then checks
 whether the decrypted streamID is recognized---either because it
-corresponds to an open stream at this OR for the circuit, or because
-it is equal to the control streamID (zero).  If the OR recognizes the
+corresponds to an open stream at this OR for the given circuit, or because
+it is the control streamID (zero).  If the OR recognizes the
 streamID, it accepts the relay cell and processes it as described
 below.  Otherwise, 
 the OR looks up the circID and OR for the
@@ -711,7 +710,7 @@ of the circuit receives an unrecognized relay cell, an error has
 occurred, and the cell is discarded.)
 
 OPs treat incoming relay cells similarly: they iteratively unwrap the
-relay header and payload with the session key shared with each
+relay header and payload with the session keys shared with each
 OR on the circuit, from the closest to farthest.  (Because we use a
 stream cipher, encryption operations may be inverted in any order.)
 If at any stage the OP recognizes the streamID, the cell must have
@@ -732,11 +731,11 @@ This \emph{leaky pipe} circuit topology
 allows Alice's streams to exit at different ORs on a single circuit.  
 Alice may choose different exit points because of their exit policies,
 or to keep the ORs from knowing that two streams
-originate at the same person.
+originate from the same person.
 
-When an OR later replies to Alice with a relay cell, it only needs to
-encrypt the cell's relay header and payload with the single key it
-shares with Alice, and send the cell back toward Alice along the
+When an OR later replies to Alice with a relay cell, it 
+encrypts the cell's relay header and payload with the single key it
+shares with Alice, and sends the cell back toward Alice along the
 circuit.  Subsequent ORs add further layers of encryption as they
 relay the cell back to Alice.
 
@@ -744,12 +743,12 @@ To tear down a whole circuit, Alice sends a \emph{destroy} control
 cell. Each OR in the circuit receives the \emph{destroy} cell, closes
 all open streams on that circuit, and passes a new \emph{destroy} cell
 forward. But just as circuits are built incrementally, they can also
-be torn down incrementally: Alice can instead send a \emph{relay
-truncate} cell to a single OR on the circuit. That node then sends a
+be torn down incrementally: Alice can send a \emph{relay
+truncate} cell to a single OR on the circuit. That OR then sends a
 \emph{destroy} cell forward, and acknowledges with a
 \emph{relay truncated} cell. Alice can then extend the circuit to
 different nodes, all without signaling to the intermediate nodes (or
-somebody observing them) that she has changed her circuit.
+an observer) that she has changed her circuit.
 Similarly, if a node on the circuit goes down, the adjacent
 node can send a \emph{relay truncated} cell back to Alice.  Thus the
 ``break a node and see which circuits go down'' attack
@@ -758,19 +757,19 @@ node can send a \emph{relay truncated} cell back to Alice.  Thus the
 \SubSection{Opening and closing streams}
 \label{subsec:tcp}
 
-When Alice's application wants to open a TCP connection to a given
+When Alice's application wants a TCP connection to a given
 address and port, it asks the OP (via SOCKS) to make the
 connection. The OP chooses the newest open circuit (or creates one if
-none is available), chooses a suitable OR on that circuit to be the
+none is available), and chooses a suitable OR on that circuit to be the
 exit node (usually the last node, but maybe others due to exit policy
-conflicts; see Section~\ref{subsec:exitpolicies}), chooses a new
-random streamID for the stream, and sends a \emph{relay begin} cell
-to that exit node.  The OP uses a streamID of zero for this cell
-(so the OR will recognize it), and uses the new streamID, destination
-address, and port as the contents of the cell's relay payload.  Once the
+conflicts; see Section~\ref{subsec:exitpolicies}.  The OP then opens
+the stream by sending a \emph{relay begin} cell to the exit node,
+using a streamID of zero (so the OR will recognize it), containing as
+its relay payload a new randomly generated streamID, the destination
+address, and the destination port.  Once the
 exit node completes the connection to the remote host, it responds
 with a \emph{relay connected} cell.  Upon receipt, the OP sends a
-SOCKS reply to the application notifying it of success. The OP
+SOCKS reply to notify the application of its success. The OP
 now accepts data from the application's TCP stream, packaging it into
 \emph{relay data} cells and sending those cells along the circuit to
 the chosen OR.
@@ -778,18 +777,18 @@ the chosen OR.
 There's a catch to using SOCKS, however---some applications pass the
 alphanumeric hostname to the proxy, while others resolve it into an IP
 address first and then pass the IP address to the proxy.  If the
-application does the DNS resolution first, Alice will thereby
-broadcast her destination to the DNS server.  Common applications
+application does DNS resolution first, Alice will thereby
+reveal her destination to the DNS server.  Common applications
 like Mozilla and SSH have this flaw.
 
-In the case of Mozilla, the flaw is easy to address: the filtering web
+In the case of Mozilla, the flaw is easy to address: the filtering HTTP
 proxy called Privoxy does the SOCKS call safely, and Mozilla talks to
 Privoxy safely. But a portable general solution, such as is needed for
 SSH, is
 an open problem. Modifying or replacing the local nameserver
 can be invasive, brittle, and not portable. Forcing the resolver
 library to do resolution via TCP rather than UDP is
-hard, and also has portability problems. We could provide a
+hard, and also has portability problems. We could also provide a
 tool similar to \emph{dig} to perform a private lookup through the
 Tor network. Our current answer is to encourage the use of
 privacy-aware proxies like Privoxy wherever possible.
@@ -799,28 +798,29 @@ two-step handshake for normal operation, or a one-step handshake for
 errors. If the stream closes abnormally, the adjacent node simply sends a
 \emph{relay teardown} cell. If the stream closes normally, the node sends
 a \emph{relay end} cell down the circuit. When the other side has sent
-back its own \emph{relay end}, the stream can be torn down.  Because
+back its own \emph{relay end} cell, the stream can be torn down.  Because
 all relay cells use layered encryption, only the destination OR knows
 that a given relay cell is a request to close a stream.  This two-step
-handshake allows for TCP-based applications that use half-closed
-connections, such as broken HTTP clients that close their side of the
-stream after writing but are still willing to read.
+handshake allows Tor to support TCP-based applications that use half-closed
+connections.
+% such as broken HTTP clients that close their side of the
+%stream after writing but are still willing to read.
 
 \SubSection{Integrity checking on streams}
 \label{subsec:integrity-checking}
 
 Because the old Onion Routing design used a stream cipher, traffic was
-vulnerable to a malleability attack: even though the attacker could not
-decrypt cells, he could make changes to an encrypted
-cell to create corresponding changes to the data leaving the network.
+vulnerable to a malleability attack: though the attacker could not
+decrypt cells, any changes to encrypted data
+would create corresponding changes to the data leaving the network.
 (Even an external adversary could do this, despite link encryption, by
 inverting bits on the wire.)
 
 This weakness allowed an adversary to change a padding cell to a destroy
-cell; change the destination address in a relay begin cell to the
-adversary's webserver; or change a user on an ftp connection from
-typing ``dir'' to typing ``delete~*''. Any node or external adversary
-along the circuit could introduce such corruption in a stream---if it
+cell; change the destination address in a \emph{relay begin} cell to the
+adversary's webserver; or change an FTP command from
+{\tt dir} to {\tt rm~*}. Any OR or external adversary
+along the circuit could introduce such corruption in a stream, if it
 knew or could guess the encrypted content.
 
 Tor prevents external adversaries from mounting this attack by
@@ -841,13 +841,13 @@ is vulnerable to end-to-end timing attacks; tagging attacks performed
 within the circuit provide no additional information to the attacker.
 
 Thus, we check integrity only at the edges of each stream. When Alice
-negotiates a key with a new hop, they both initialize a pair of SHA-1
-digests with a derivative of that key,
+negotiates a key with a new hop, they each initialize a SHA-1
+digest with a derivative of that key,
 thus beginning with randomness that only the two of them know. From
-then on they each incrementally add to the SHA-1 digests the contents of 
-all relay cells they create or accept (one digest is for cells
-created; one is for cells accepted), and include with each relay cell
-the first 4 bytes of the current value of the hash of cells created.
+then on they each incrementally add to the SHA-1 digest the contents of 
+all relay cells they create, and include with each relay cell the
+first four bytes of the current digest.  Each also keeps a SHA-1
+digest of data received, to verify that the received hashes are correct.
 
 To be sure of removing or modifying a cell, the attacker must be able
 to either deduce the current digest state (which depends on all
@@ -858,7 +858,9 @@ end-to-end encrypted across the circuit.  The computational overhead
 of computing the digests is minimal compared to doing the AES
 encryption performed at each hop of the circuit. We use only four
 bytes per cell to minimize overhead; the chance that an adversary will
-correctly guess a valid hash, plus the payload the current cell, is
+correctly guess a valid hash
+%, plus the payload the current cell, 
+is
 acceptably low, given that Alice or Bob tear down the circuit if they
 receive a bad hash.
 
@@ -866,7 +868,7 @@ receive a bad hash.
 \label{subsec:rate-limit}
 
 Volunteers are generally more willing to run services that can limit
-their bandwidth usage. To accommodate them, Tor servers use a
+their own bandwidth usage. To accommodate them, Tor servers use a
 token bucket approach \cite{tannenbaum96} to 
 enforce a long-term average rate of incoming bytes, while still
 permitting short-term bursts above the allowed bandwidth. Current bucket
@@ -893,9 +895,9 @@ Further, inspired by Rennhard et al's design in \cite{anonnet}, a
 circuit's edges heuristically distinguish interactive streams from bulk
 streams by comparing the frequency with which they supply cells.  We can
 provide good latency for interactive streams by giving them preferential
-service, while still getting good overall throughput to the bulk
+service, while still giving good overall throughput to the bulk
 streams. Such preferential treatment presents a possible end-to-end
-attack, but an adversary who can observe both
+attack, but an adversary observing both
 ends of the stream can already learn this information through timing
 attacks.
 
@@ -905,13 +907,14 @@ attacks.
 Even with bandwidth rate limiting, we still need to worry about
 congestion, either accidental or intentional. If enough users choose the
 same OR-to-OR connection for their circuits, that connection can become
-saturated. For example, an adversary could make a large HTTP PUT request
-through the onion routing network to a webserver he runs, and then
+saturated. For example, an attacker could send a large file
+through the Tor network to a webserver he runs, and then
 refuse to read any of the bytes at the webserver end of the
 circuit. Without some congestion control mechanism, these bottlenecks
 can propagate back through the entire network. We don't need to
 reimplement full TCP windows (with sequence numbers,
-the ability to drop cells when we're full and retransmit later, etc),
+the ability to drop cells when we're full and retransmit later, and so
+on),
 because TCP already guarantees in-order delivery of each
 cell. 
 %But we need to investigate further the effects of the current
@@ -922,7 +925,7 @@ We describe our response below.
 \textbf{Circuit-level throttling:}
 To control a circuit's bandwidth usage, each OR keeps track of two
 windows. The \emph{packaging window} tracks how many relay data cells the OR is
-allowed to package (from outside TCP streams) for transmission back to the OP,
+allowed to package (from incoming TCP streams) for transmission back to the OP,
 and the \emph{delivery window} tracks how many relay data cells it is willing
 to deliver to TCP streams outside the network. Each window is initialized
 (say, to 1000 data cells). When a data cell is packaged or delivered,
@@ -960,14 +963,14 @@ can't send a \emph{relay sendme} cell when its packaging window is empty.
 \SubSection{Resource management and denial-of-service}
 \label{subsec:dos}
 
-Providing Tor as a public service provides many opportunities for an
-attacker to mount denial-of-service attacks against the network.  While
+Providing Tor as a public service provides many opportunities for
+denial-of-service attacks against the network.  While
 flow control and rate limiting (discussed in
 Section~\ref{subsec:congestion}) prevent users from consuming more
 bandwidth than routers are willing to provide, opportunities remain for
 users to
 consume more network resources than their fair share, or to render the
-network unusable for other users.
+network unusable for others.
 
 First of all, there are several CPU-consuming denial-of-service
 attacks wherein an attacker can force an OR to perform expensive
@@ -1022,18 +1025,18 @@ at the exit OR.
 We stress that Tor does not enable any new class of abuse. Spammers
 and other attackers already have access to thousands of misconfigured
 systems worldwide, and the Tor network is far from the easiest way
-to launch these antisocial or illegal attacks.
+to launch antisocial or illegal attacks.
 %Indeed, because of its limited
 %anonymity, Tor is probably not a good way to commit crimes.
 But because the
 onion routers can easily be mistaken for the originators of the abuse,
 and the volunteers who run them may not want to deal with the hassle of
-repeatedly explaining anonymity networks, we must block or limit attacks
-and other abuse that travel through the Tor network.
+repeatedly explaining anonymity networks, we must block or limit
+the abuse that travels through the Tor network.
 
 To mitigate abuse issues, in Tor, each onion router's \emph{exit policy}
-describes to which external addresses and ports the router will permit
-stream connections. On one end of the spectrum are \emph{open exit}
+describes to which external addresses and ports the router will
+connect. On one end of the spectrum are \emph{open exit}
 nodes that will connect anywhere. On the other end are \emph{middleman}
 nodes that only relay traffic to other Tor nodes, and \emph{private exit}
 nodes that only connect to a local host or network.  Using a private
@@ -1042,7 +1045,10 @@ given host or network---an external adversary cannot eavesdrop traffic
 between the private exit and the final destination, and so is less sure of
 Alice's destination and activities. Most onion routers will function as
 \emph{restricted exits} that permit connections to the world at large,
-but prevent access to certain abuse-prone addresses and services. In
+but prevent access to certain abuse-prone addresses and services. 
+% XXX This next sentence makes no sense to me in context; must
+% XXX revisit. -NM
+In
 general, nodes can require a variety of forms of traffic authentication
 \cite{or-discex00}.
 
@@ -1053,7 +1059,7 @@ general, nodes can require a variety of forms of traffic authentication
 %can be assumed for important traffic.
 
 Many administrators will use port restrictions to support only a
-limited set of well-known services, such as HTTP, SSH, or AIM.
+limited set of services, such as HTTP, SSH, or AIM.
 This is not a complete solution, of course, since abuse opportunities for these
 protocols are still well known.
 
@@ -1064,16 +1070,16 @@ vulnerabilities) can be detected in a straightforward manner.
 Similarly, one could run automatic spam filtering software (such as
 SpamAssassin) on email exiting the OR network.
 
-ORs may also choose to rewrite exiting traffic in order to append
-headers or other information to indicate that the traffic has passed
+ORs may also rewrite exiting traffic to append
+headers or other information indicating that the traffic has passed
 through an anonymity service.  This approach is commonly used
-by email-only anonymity systems.  When possible, ORs can also
-run on servers with hostnames such as {\it anonymous}, to further
+by email-only anonymity systems.  ORs can also
+run on servers with hostnames like {\tt anonymous} to further
 alert abuse targets to the nature of the anonymous traffic.
 
-A mixture of open and restricted exit nodes will allow the most
-flexibility for volunteers running servers. But while many
-middleman nodes help provide a large and robust network,
+A mixture of open and restricted exit nodes allows the most
+flexibility for volunteers running servers. But while having many
+middleman nodes provides a large and robust network,
 having only a few exit nodes reduces the number of points
 an adversary needs to monitor for traffic analysis, and places a
 greater burden on the exit nodes.  This tension can be seen in the
@@ -1089,7 +1095,7 @@ Section~\ref{sec:conclusion}.
 Finally, we note that exit abuse must not be dismissed as a peripheral
 issue: when a system's public image suffers, it can reduce the number
 and diversity of that system's users, and thereby reduce the anonymity
-of the system itself.  Like usability, public perception is also a
+of the system itself.  Like usability, public perception is a
 security parameter.  Sadly, preventing abuse of open exit nodes is an
 unsolved problem, and will probably remain an arms race for the
 forseeable future.  The abuse problems faced by Princeton's CoDeeN
@@ -1103,30 +1109,31 @@ in-band network status updates: each router flooded a signed statement
 to its neighbors, which propagated it onward. But anonymizing networks
 have different security goals than typical link-state routing protocols.
 For example, delays (accidental or intentional)
-that can cause different parts of the network to have different pictures
-of link-state and topology are not only inconvenient---they give
+that can cause different parts of the network to have different views
+of link-state and topology are not only inconvenient: they give
 attackers an opportunity to exploit differences in client knowledge.
 We also worry about attacks to deceive a
 client about the router membership list, topology, or current network
 state. Such \emph{partitioning attacks} on client knowledge help an
 adversary to efficiently deploy resources
-when attacking a target \cite{minion-design}.
+against a target \cite{minion-design}.
 
 
 Tor uses a small group of redundant, well-known onion routers to
 track changes in network topology and node state, including keys and
-exit policies.  Each such \emph{directory server} also acts as an HTTP
+exit policies.  Each such \emph{directory server} acts as an HTTP
 server, so participants can fetch current network state and router
-lists (a \emph{directory}), and so other onion routers can upload
-their router descriptors.  Onion routers periodically publish signed
+lists, and so other ORs can upload
+state information.  Onion routers periodically publish signed
 statements of their state to each directory server, which combines this
 state information with its own view of network liveness, and generates
-a signed description of the entire network state. Client software is
+a signed description (a \emph{directory}) of the entire network
+state. Client software is
 pre-loaded with a list of the directory servers and their keys; it uses
 this information to bootstrap each client's view of the network.
 
-When a directory server receives a signed statement from an onion
-router, it recognizes the onion router by its identity key. Directory
+When a directory server receives a signed statement for an OR, it
+checks whether the OR's identity key is recognized. Directory
 servers do not automatically advertise unrecognized ORs. (If they did,
 an adversary could take over the network by creating many servers
 \cite{sybil}.) Instead, new nodes must be approved by the directory
@@ -1135,14 +1142,15 @@ node approval are an area of active research, and are discussed more
 in Section~\ref{sec:maintaining-anonymity}.
   
 Of course, a variety of attacks remain. An adversary who controls
-a directory server can track certain clients by providing different
+a directory server can track clients by providing them different
 information---perhaps by listing only nodes under its control, or by
 informing only certain clients about a given node. Even an external
 adversary can exploit differences in client knowledge: clients who use
 a node listed on one directory server but not the others are vulnerable.
 
-Thus these directory servers must be synchronized and redundant.
-Directories are valid if they are signed by a threshold of the directory
+Thus these directory servers must be synchronized and redundant, so
+that they can agree on a common directory.  Clients should only trust
+this directory if it is signed by a threshold of the directory
 servers.
 
 The directory servers in Tor are modeled after those in Mixminion
@@ -1184,9 +1192,10 @@ must build circuits and use them to anonymously test router reliability
 \cite{mix-acc}.
 
 Using directory servers is simpler and more flexible than flooding.
-For example, flooding complicates the analysis when we
-start experimenting with non-clique network topologies. And because
-the directories are signed, they can be cached by other onion routers.
+Flooding is expensive, and complicates the analysis when we
+start experimenting with non-clique network topologies. Signed
+directories are less expensive, because they can be cached by other
+onion routers.
 Thus directory servers are not a performance
 bottleneck when we have many users, and do not aid traffic analysis by
 forcing clients to periodically announce their existence to any
@@ -1224,44 +1233,46 @@ points. He may do this on any robust efficient
 key-value lookup system with authenticated updates, such as a
 distributed hash table (DHT) like CFS \cite{cfs:sosp01}\footnote{
 Rather than rely on an external infrastructure, the Onion Routing network
-can run the DHT; to begin, we can run a simple lookup system on the
+can run the DHT itself.  At first, we can simply run a simple lookup
+system on the
 directory servers.} Alice, the client, chooses an OR as her
 \emph{rendezvous point}. She connects to one of Bob's introduction
-points, informs him about her rendezvous point, and then waits for him
+points, informs him of her rendezvous point, and then waits for him
 to connect to the rendezvous point. This extra level of indirection
 helps Bob's introduction points avoid problems associated with serving
-unpopular files directly (for example, if Bob chooses
-an introduction point in Texas to serve anti-ranching propaganda,
+unpopular files directly (for example, if Bob serves
+material that the introduction point's neighbors find objectionable,
 or if Bob's service tends to get attacked by network vandals).
 The extra level of indirection also allows Bob to respond to some requests
 and ignore others.
 
-We give an overview of the steps of a rendezvous. These steps are
-performed on behalf of Alice and Bob by their local onion proxies;
+We give an overview of the steps of a rendezvous. These are
+performed on behalf of Alice and Bob by their local OPs;
 application integration is described more fully below.
 
 \begin{tightlist}
 \item Bob chooses some introduction points, and advertises them on
       the DHT.  He can add more later.
-\item Bob establishes a Tor circuit to each of his introduction points,
-      and waits.  No data is transmitted until a request is received.
+\item Bob builds a circuit to each of his introduction points,
+      and waits.  No data is yet transmitted.
 \item Alice learns about Bob's service out of band (perhaps Bob told her,
       or she found it on a website). She retrieves the details of Bob's
       service from the DHT.
-\item Alice chooses an OR to serve as the rendezvous point (RP) for this
-      transaction. She establishes a circuit to RP, and gives it a
-      rendezvous cookie, which it will use to recognize Bob.
+\item Alice chooses an OR to be the rendezvous point (RP) for this
+      transaction. She builds a circuit to RP, and gives it a
+      rendezvous cookie that it will use to recognize Bob.
 \item Alice opens an anonymous stream to one of Bob's introduction
-      points, and gives it a message (encrypted to Bob's public key) which tells him
+      points, and gives it a message (encrypted to Bob's public key)
+      which tells him 
       about herself, her chosen RP and the rendezvous cookie, and the
-      first half of an ephemeral
-      key handshake. The introduction point sends the message to Bob.
-\item If Bob wants to talk to Alice, he builds a new circuit to Alice's
-      RP and provides the rendezvous cookie and the second half of the DH
-      handshake (along with a hash of the session
-      key they now share---by the same argument as in
+      first half of a DH
+      handshake. The introduction point sends the message to Bob.
+\item If Bob wants to talk to Alice, he builds a circuit to Alice's
+      RP and provides the rendezvous cookie, the second half of the DH
+      handshake, and a hash of the session
+      key they now share. By the same argument as in
       Section~\ref{subsubsec:constructing-a-circuit}, Alice knows she
-      shares the key only with the intended Bob).
+      shares the key only with Bob.
 \item The RP connects Alice's circuit to Bob's. Note that RP can't
       recognize Alice, Bob, or the data they transmit.
 \item Alice now sends a \emph{relay begin} cell along the circuit. It
@@ -1319,9 +1330,11 @@ can choose whether to respond.
 The authentication tokens can be used to provide selective access:
 important users get tokens to ensure uninterrupted access to the
 service. During normal situations, Bob's service might simply be offered
-directly from mirrors, and Bob gives out tokens to high-priority users. If
-the mirrors are knocked down by distributed DoS attacks or even
-physical attack, those users can switch to accessing Bob's service via
+directly from mirrors, while Bob gives out tokens to high-priority users. If
+the mirrors are knocked down,
+%by distributed DoS attacks or even
+%physical attack, 
+those users can switch to accessing Bob's service via
 the Tor rendezvous system.
 
 Since Bob's introduction points might themselves be subject to DoS he
@@ -1333,7 +1346,7 @@ are not advertised in the DHT\@. This is most likely to be practical
 if there is a relatively stable and large group of introduction points
 generally available. Alternatively, Bob could give secret public keys
 to selected users for consulting the DHT\@. All of these approaches
-have the advantage of limiting the damage that can be done even if
+have the advantage of limiting exposure even when
 some of the selected high-priority users collude in the DoS\@.
 
 \SubSection{Integration with user applications}
@@ -1341,18 +1354,19 @@ some of the selected high-priority users collude in the DoS\@.
 Bob configures his onion proxy to know the local IP address and port of his
 service, a strategy for authorizing clients, and a public key. Bob
 publishes the public key, an expiration time (``not valid after''), and
-the current introduction points for his service into the DHT, all indexed
-by the hash of the public key. Note that Bob's webserver is unmodified,
+the current introduction points for his service into the DHT, indexed
+by the hash of the public key.  Bob's webserver is unmodified,
 and doesn't even know that it's hidden behind the Tor network.
 
 Alice's applications also work unchanged---her client interface
 remains a SOCKS proxy. We encode all of the necessary information
 into the fully qualified domain name Alice uses when establishing her
 connection. Location-hidden services use a virtual top level domain
-called `.onion': thus hostnames take the form x.y.onion where x is the
-authentication cookie, and y encodes the hash of PK. Alice's onion proxy
+called {\tt .onion}: thus hostnames take the form {\tt x.y.onion} where
+{\tt x} is the authentication cookie, and {\tt y} encodes the hash of
+the public key. Alice's onion proxy
 examines addresses; if they're destined for a hidden server, it decodes
-the PK and starts the rendezvous as described in the table above.
+the key and starts the rendezvous as described above.
 
 \subsection{Previous rendezvous work}
 
@@ -1368,8 +1382,8 @@ points for low-latency Internet connections was by Ian Goldberg
 ours in three ways. First, Goldberg suggests that Alice should manually
 hunt down a current location of the service via Gnutella; our approach
 makes lookup transparent to the user, as well as faster and more robust.
-Second, in Tor the client and server negotiate ephemeral keys
-via Diffie-Hellman, so plaintext is not exposed at any point. Third,
+Second, in Tor the client and server negotiate session keys
+via Diffie-Hellman, so plaintext is not exposed at the rendezvous point. Third,
 our design tries to minimize the exposure associated with running the
 service, to encourage volunteers to offer introduction and rendezvous
 point services. Tor's introduction points do not output any bytes to the
@@ -1385,7 +1399,7 @@ acknowledge his existence.
 %Below we summarize a variety of attacks, and discuss how well our
 %design withstands them.\\
 
-\noindent{\large Passive attacks}\\
+\noindent{\large\bf Passive attacks}\\
 \emph{Observing user traffic patterns.} Observing the connection
 from the user will not reveal her destination or data, but it will
 reveal traffic patterns (both sent and received). Profiling via user
@@ -1453,7 +1467,7 @@ these are in principle feasible and surprises are always possible,
 these constitute a much more complicated attack, and there is no
 current evidence of their practicality.}\\
 
-\noindent {\large Active attacks}\\
+\noindent{\large\bf Active attacks}\\
 \emph{Compromise keys.} An attacker who learns the TLS session key can
 see control cells and encrypted relay cells on every circuit on that
 connection; learning a circuit
@@ -1580,7 +1594,7 @@ releases in source code form, encourage source audits, and
 frequently warn our users never to trust any software (even from
 us!) that comes without source.\\
 
-\noindent{\large Directory attacks}\\
+\noindent{\large\bf Directory attacks}\\
 \emph{Destroy directory servers.}  If a few directory
 servers drop out of operation, the others still arrive at a final
 directory.  So long as any directory servers remain in operation,
@@ -1628,7 +1642,7 @@ servers must actively test ORs by building circuits and streams as
 appropriate.  The tradeoffs of a similar approach are discussed in
 \cite{mix-acc}.\\
   
-\noindent {\large Attacks against rendezvous points}\\
+\noindent{\large\bf Attacks against rendezvous points}\\
 \emph{Make many introduction requests.}  An attacker could
 try to deny Bob service by flooding his Introduction Point with
 requests.  Because the introduction point can block requests that
