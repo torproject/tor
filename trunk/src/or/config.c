@@ -1231,7 +1231,7 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
              "err|warn|notice|info|debug", range);
       return -1;
     }
-    levelMax = levelMin;
+    levelMax = LOG_ERR;
   }
 
   *min_out = levelMin;
