@@ -533,7 +533,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
       return 0;
     }
     dlen = dirserv_get_runningrouters(&cp);
-    if(dlen < 0) { /* we failed to create cp */
+    if(!dlen) { /* we failed to create cp */
       connection_write_to_buf(answer503, strlen(answer503), conn);
       return 0;
     }
