@@ -28,6 +28,9 @@ ARMA    - arma claims
 	    autoconf, and then rely on it in the code.
 
       0.0.9pre5/6:
+        o Replace running-routers with a router-status line that can be used
+          without a list of router descriptors.
+        o Add a log handler that sends stuff to syslog.
         - per-month byte allowances.
 N         - Based on bandwidth and per-month allowance, choose a
             window within month to be up.  Stay up until allowance is
@@ -83,8 +86,6 @@ R       - learn from ben about his openssl-reinitialization-trick to
           on by default for hidden services.
         - Make command-line strict about checking options; make only certain
           option prefixes work.
-        - Split running-routers into 2 lines: verified-routers and
-          live-routers.
         - Rate-limit OR and directory connections overall and per-IP and
           maybe per subnet.
         - put expiry date on onion-key, so people don't keep trying
