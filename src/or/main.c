@@ -338,10 +338,10 @@ static void conn_close_if_marked(int i) {
   int retval;
 
   conn = connection_array[i];
-  assert_connection_ok(conn, time(NULL));
-  assert_all_pending_dns_resolves_ok();
   if (!conn->marked_for_close)
     return; /* nothing to see here, move along */
+  assert_connection_ok(conn, time(NULL));
+  assert_all_pending_dns_resolves_ok();
 
   log_fn(LOG_INFO,"Cleaning up connection (fd %d).",conn->s);
   if (conn->s >= 0 && connection_wants_to_flush(conn)) {
