@@ -291,12 +291,15 @@ int check_software_version_against_directory(const char *directory,
 /** Parse a directory from <b>str</b> and, when done, store the
  * resulting routerlist in *<b>dest</b>, freeing the old value if necessary.
  * If <b>pkey</b> is provided, we check the directory signature with pkey.
+ *
+ * DOCDOC check_version, write_to_cache.
  */
 int /* Should be static; exposed for unit tests */
 router_parse_routerlist_from_directory(const char *str,
                                        routerlist_t **dest,
                                        crypto_pk_env_t *pkey,
-                                       int check_version)
+                                       int check_version,
+                                       int write_to_cache)
 {
   directory_token_t *tok;
   char digest[DIGEST_LEN];
@@ -394,7 +397,7 @@ router_parse_routerlist_from_directory(const char *str,
 
   /* Now that we know the signature is okay, and we have a
    * publication time, cache the directory. */
-  if (!get_options()->AuthoritativeDir)
+  if (!get_options()->AuthoritativeDir && write_to_cache)
     dirserv_set_cached_directory(str, published_on, 0);
 
   if (!(tok = find_first_by_keyword(tokens, K_RECOMMENDED_SOFTWARE))) {
@@ -480,7 +483,7 @@ router_parse_routerlist_from_directory(const char *str,
 
 /* DOCDOC */
 running_routers_t *
-router_parse_runningrouters(const char *str)
+router_parse_runningrouters(const char *str, int write_to_cache)
 {
   char digest[DIGEST_LEN];
   running_routers_t *new_list = NULL;
@@ -520,7 +523,7 @@ router_parse_runningrouters(const char *str)
 
   /* Now that we know the signature is okay, and we have a
    * publication time, cache the list. */
-  if (!get_options()->AuthoritativeDir)
+  if (!get_options()->AuthoritativeDir && write_to_cache)
     dirserv_set_cached_directory(str, published_on, 1);
 
   if (!(tok = find_first_by_keyword(tokens, K_ROUTER_STATUS))) {

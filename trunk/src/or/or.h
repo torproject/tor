@@ -1611,7 +1611,7 @@ routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_mark_as_down(const char *digest);
 void routerlist_remove_old_routers(int age);
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey,
-                                          int check_version);
+                                        int dir_is_recent, int dir_is_cached);
 int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
                                        addr_policy_t *policy);
 #define ADDR_POLICY_ACCEPTED 0
@@ -1696,8 +1696,10 @@ int router_parse_list_from_string(const char **s,
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
                                            crypto_pk_env_t *pkey,
-                                           int check_version);
-running_routers_t *router_parse_runningrouters(const char *str);
+                                           int check_version,
+                                           int write_to_cache);
+running_routers_t *router_parse_runningrouters(const char *str,
+                                               int write_to_cache);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 addr_policy_t *router_parse_addr_policy_from_string(const char *s);
