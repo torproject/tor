@@ -4,6 +4,10 @@
 
 #include "or.h"
 
+/*****
+ * directory.c: Implement directory HTTP protocol.
+ *****/
+
 static void directory_send_command(connection_t *conn, int purpose,
                                    const char *payload, int payload_len);
 static int directory_handle_command(connection_t *conn);
@@ -12,7 +16,9 @@ static int directory_handle_command(connection_t *conn);
 
 extern or_options_t options; /* command-line and config-file options */
 
+/* URL for publishing rendezvous descriptors. */
 char rend_publish_string[] = "/rendezvous/publish";
+/* Prefix for downloading rendezvous descriptors. */
 char rend_fetch_url[] = "/rendezvous/";
 
 #define MAX_HEADERS_SIZE 2048
@@ -20,18 +26,37 @@ char rend_fetch_url[] = "/rendezvous/";
 
 /********* END VARIABLES ************/
 
+/* Launch a new connection to the directory server 'router' to upload
+ * or download a service or rendezvous descriptor. 'purpose' determines what
+ * kind of directory connection we're launching, and must be one of
+ * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC}.
+ *
+ * When uploading, 'payload' and 'payload_len' determine the content
+ * of the HTTP post.  When fetching a rendezvous descriptor, 'payload'
+ * and 'payload_len' are the service ID we want to fetch.
+ */
 void directory_initiate_command(routerinfo_t *router, int purpose,
                                 const char *payload, int payload_len) {
   connection_t *conn;
 
-  if(purpose == DIR_PURPOSE_FETCH_DIR)
-    log_fn(LOG_DEBUG,"initiating directory fetch");
-  if(purpose == DIR_PURPOSE_FETCH_RENDDESC)
-    log_fn(LOG_DEBUG,"initiating hidden-service descriptor fetch");
-  if(purpose == DIR_PURPOSE_UPLOAD_DIR)
-    log_fn(LOG_DEBUG,"initiating server descriptor upload");
-  if(purpose == DIR_PURPOSE_UPLOAD_RENDDESC)
-    log_fn(LOG_DEBUG,"initiating hidden-service descriptor upload");
+  switch (purpose)
+    {
+    case DIR_PURPOSE_FETCH_DIR:
+      log_fn(LOG_DEBUG,"initiating directory fetch");
+      break;
+    case DIR_PURPOSE_FETCH_RENDDESC:
+      log_fn(LOG_DEBUG,"initiating hidden-service descriptor fetch");
+      break;
+    case DIR_PURPOSE_UPLOAD_DIR:
+      log_fn(LOG_DEBUG,"initiating server descriptor upload");
+      break;
+    case DIR_PURPOSE_UPLOAD_RENDDESC:
+      log_fn(LOG_DEBUG,"initiating hidden-service descriptor upload");
+      break;
+    default:
+      log_fn(LOG_ERR, "Unrecognized directory connection purpose.");
+      tor_assert(0);
+    }
 
   if (!router) { /* i guess they didn't have one in mind for me to use */
     log_fn(LOG_WARN,"No running dirservers known. Not trying. (purpose %d)", purpose);
@@ -90,6 +115,10 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
   }
 }
 
+/* Queue an appropriate HTTP command on conn->outbuf.  The args
+ * 'purpose', 'payload', and 'payload_len' are as in
+ * directory_initiate_command.
+ */
 static void directory_send_command(connection_t *conn, int purpose,
                                    const char *payload, int payload_len) {
   char fetchstring[] = "GET / HTTP/1.0\r\n\r\n";
@@ -114,6 +143,7 @@ static void directory_send_command(connection_t *conn, int purpose,
 
       /* this must be true or we wouldn't be doing the lookup */
       tor_assert(payload_len <= REND_SERVICE_ID_LEN);
+      /* This breaks the function abstraction. */
       memcpy(conn->rend_query, payload, payload_len);
       conn->rend_query[payload_len] = 0;
 
@@ -131,7 +161,7 @@ static void directory_send_command(connection_t *conn, int purpose,
   }
 }
 
-/* Parse "%s %s HTTP/1..."
+/* Parse an HTTP request string 'headers' of the form "%s %s HTTP/1..."
  * If it's well-formed, point *url to the second %s,
  * null-terminate it (this modifies headers!) and return 0.
  * Otherwise, return -1.
@@ -153,7 +183,7 @@ int parse_http_url(char *headers, char **url) {
   return 0;
 }
 
-/* Parse "HTTP/1.%d %d%s\r\n".
+/* Parse an HTTP response string 'headers' of the form "HTTP/1.%d %d%s\r\n...".
  * If it's well-formed, assign *code, point *message to the first
  * non-space character after code if there is one and message is non-NULL
  * (else leave it alone), and return 0.
@@ -178,6 +208,9 @@ int parse_http_response(char *headers, int *code, char **message) {
   return 0;
 }
 
+/* Read handler for directory connections.  (That's connections *to*
+ * directory servers and connections *at* directory servers.)
+ */
 int connection_dir_process_inbuf(connection_t *conn) {
   char *body;
   char *headers;
@@ -186,6 +219,11 @@ int connection_dir_process_inbuf(connection_t *conn) {
 
   tor_assert(conn && conn->type == CONN_TYPE_DIR);
 
+  /* Directory clients write, then read data until they receive EOF;
+   * directory servers read data until they get an HTTP command, then
+   * write their response, mark the conn for close (?) and hold the
+   * conn open till it's flushed. (??)XXXXNMNM
+   */
   if(conn->inbuf_reached_eof) {
     if(conn->state != DIR_CONN_STATE_CLIENT_READING) {
       log_fn(LOG_INFO,"conn reached eof, not reading. Closing.");
@@ -298,8 +336,9 @@ int connection_dir_process_inbuf(connection_t *conn) {
     free(body); free(headers);
     connection_mark_for_close(conn,0);
     return 0;
-  }
+  } /* endif 'reached eof' */
 
+  /* If we're on the dirserver side, look for a command. */
   if(conn->state == DIR_CONN_STATE_SERVER_COMMAND_WAIT) {
     if (directory_handle_command(conn) < 0) {
       connection_mark_for_close(conn,0);
@@ -320,7 +359,11 @@ static char answer403[] = "HTTP/1.0 403 Unapproved server\r\n\r\n";
 static char answer404[] = "HTTP/1.0 404 Not found\r\n\r\n";
 static char answer503[] = "HTTP/1.0 503 Directory unavailable\r\n\r\n";
 
-/* always returns 0 */
+/* Helper function: called when a dirserver gets a complete HTTP GET
+ * request.  Looks for a request for a directory or for a rendezvous
+ * service descriptor.  On finding one, writes a response into
+ * conn->outbuf.  If the request is unrecognized, send a 404.
+ * Always returns 0. */
 static int directory_handle_command_get(connection_t *conn,
                                         char *headers, char *body,
                                         int body_len) {
@@ -382,7 +425,11 @@ static int directory_handle_command_get(connection_t *conn,
   return 0;
 }
 
-/* always returns 0 */
+/* Helper function: called when a dirserver gets a complete HTTP GET
+ * request.  Looks for an uploaded server descriptor or rendezvous
+ * service descriptor.  On finding one, processes it and writes a
+ * response into conn->outbuf.  If the request is unrecognized, sends a
+ * 404.  Always returns 0. */
 static int directory_handle_command_post(connection_t *conn,
                                          char *headers, char *body,
                                          int body_len) {
@@ -432,6 +479,11 @@ static int directory_handle_command_post(connection_t *conn,
   return 0;
 }
 
+/* Called when a dirserver receives data on a directory connection;
+ * looks for an HTTP request.  If the request is complete, remove it
+ * from the inbuf, try to process it; otherwise, leave it on the
+ * buffer.  Return a 0 on success, or -1 on error.
+ */
 static int directory_handle_command(connection_t *conn) {
   char *headers=NULL, *body=NULL;
   int body_len=0;
@@ -466,6 +518,10 @@ static int directory_handle_command(connection_t *conn) {
   return r;
 }
 
+/* Write handler for directory connections; called when all data has
+ * been flushed.  Handle a completed connection; close the connection,
+ * or wait for a response as appropriate.
+ */
 int connection_dir_finished_flushing(connection_t *conn) {
   int e, len=sizeof(e);
 
