@@ -534,11 +534,13 @@ int crypto_pk_private_sign_digest(crypto_pk_env_t *env, const unsigned char *fro
  *   The beginning of the source data prefixed with a 16-symmetric key,
  *   padded and encrypted with the public key; followed by the rest of
  *   the source data encrypted in AES-CTR mode with the symmetric key.
+ *
+ * DOCDOC force.
  */
 int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
                                     const unsigned char *from,
                                     int fromlen, unsigned char *to,
-                                    int padding)
+                                    int padding, int force)
 {
   int overhead, pkeylen, outlen, r, symlen;
   crypto_cipher_env_t *cipher = NULL;
@@ -552,7 +554,7 @@ int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
   if (padding == PK_NO_PADDING && fromlen < pkeylen)
     return -1;
 
-  if (fromlen+overhead <= pkeylen) {
+  if (!force && fromlen+overhead <= pkeylen) {
     /* It all fits in a single encrypt. */
     return crypto_pk_public_encrypt(env,from,fromlen,to,padding);
   }

@@ -64,7 +64,7 @@ int crypto_pk_public_checksig(crypto_pk_env_t *env, const unsigned char *from, i
 int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const unsigned char *data, int datalen, const unsigned char *sig, int siglen);
 int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
                                     const unsigned char *from, int fromlen,
-                                    unsigned char *to, int padding);
+                                    unsigned char *to, int padding, int force);
 int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
                                      const unsigned char *from, int fromlen,
                                      unsigned char *to,int padding);
