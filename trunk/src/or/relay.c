@@ -613,7 +613,6 @@ connection_edge_process_relay_cell_not_open(
                    cell->payload[RELAY_HEADER_SIZE], /*answer_type*/
                    cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
                    cell->payload+RELAY_HEADER_SIZE+2); /* answer */
-    conn->socks_request->has_finished = 1;
     conn->has_sent_end = 1;
     connection_mark_for_close(conn);
     conn->hold_open_until_flushed = 1;
