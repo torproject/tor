@@ -1511,6 +1511,7 @@ crypto_pk_env_t *get_previous_onion_key(void);
 time_t get_onion_key_set_at(void);
 void set_identity_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_identity_key(void);
+int identity_key_is_set(void);
 void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last);
 int init_keys(void);
 crypto_pk_env_t *init_key_from_file(const char *fname);

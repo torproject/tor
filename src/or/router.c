@@ -91,6 +91,12 @@ crypto_pk_env_t *get_identity_key(void) {
   return identitykey;
 }
 
+/** Return truf iff the identity key has been set. */
+int identity_key_is_set(void) {
+  return identitykey != NULL;
+}
+
+
 /** Replace the previous onion key with the current onion key, and generate
  * a new previous onion key.  Immediately after calling this function,
  * the OR should:
@@ -228,6 +234,12 @@ crypto_pk_env_t *init_key_from_file(const char *fname)
  * On OPs, this only initializes the tls context.
  */
 int init_keys(void) {
+  /* XXX009 Two problems with how this is called:
+   * 1. It should be idempotent for servers, so we can call init_keys
+   *    as much as we need to.
+   * 2. Clients should rotate their identity keys at least whenever
+   *    their IPs change.
+   */
   char keydir[512];
   char keydir2[512];
   char fingerprint[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3];

@@ -784,9 +784,11 @@ static int do_main_loop(void) {
 
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */
-  if (init_keys() < 0) {
-    log_fn(LOG_ERR,"Error initializing keys; exiting");
-    return -1;
+  if (! identity_key_is_set()) {
+    if (init_keys() < 0) {
+      log_fn(LOG_ERR,"Error initializing keys; exiting");
+      return -1;
+    }
   }
 
   /* Set up our buckets */
