@@ -158,7 +158,7 @@ EVEN LATER:
 
    Once the handshake between the OP and an OR is completed, both
    servers can now calculate g^xy with ordinary DH.  From the base key
-   material g^xy, they compute derivate key material as follows.
+   material g^xy, they compute derivative key material as follows.
    First, the server represents g^xy as a big-endian unsigned integer.
    Next, the server computes 60 bytes of key data as K = SHA1(g^xy |
    [00]) | SHA1(g^xy | [01]) | SHA1(g^xy | [02]) where "00" is a single
