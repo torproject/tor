@@ -1009,6 +1009,7 @@ void crypto_pseudo_rand(unsigned int n, unsigned char *to)
   }
 }
 
+/* return a pseudo random number between 0 and max-1 */
 int crypto_pseudo_rand_int(unsigned int max) {
   unsigned int val;
   unsigned int cutoff;
