@@ -245,6 +245,12 @@ int connection_tls_continue_handshake(connection_t *conn) {
   return 0;
 }
 
+static int digest_is_nonzero(const char *id) {
+  char ZERO_DIGEST[DIGEST_LEN];
+  memset(ZERO_DIGEST, 0, DIGEST_LEN);
+  return !memcmp(ZERO_DIGEST, id, DIGEST_LEN);
+}
+
 /** The tls handshake is finished.
  *
  * Make sure we are happy with the person we just handshaked with:
@@ -270,6 +276,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   char nickname[MAX_NICKNAME_LEN+1];
   connection_t *c;
   crypto_pk_env_t *identity_rcvd=NULL;
+  char digest_rcvd[DIGEST_LEN];
 
   conn->state = OR_CONN_STATE_OPEN;
   connection_watch_events(conn, POLLIN);
@@ -291,32 +298,24 @@ connection_tls_finish_handshake(connection_t *conn) {
   }
   log_fn(LOG_DEBUG, "Other side (%s:%d) claims to be '%s'", conn->address,
          conn->port, nickname);
-  router = router_get_by_nickname(nickname);
-  /* XXX008 here we need to tolerate unknown routers, so ORs can
-   * connect to us even when we don't know they're verified. This
-   * should probably be a call to router_get_by_digest() now, since
-   * we can't trust the nickname some guy shows up with. */
-  if (!router) {
-    log_fn(LOG_INFO, "Unrecognized router with nickname '%s' at %s:%d",
-           nickname, conn->address, conn->port);
-    return -1;
-  }
-  if(tor_tls_verify(conn->tls, &identity_rcvd)<0) {
+
+  if(tor_tls_verify(conn->tls, &identity_rcvd) < 0) {
     log_fn(LOG_WARN,"Other side '%s' (%s:%d) has a cert but it's invalid. Closing.",
            nickname, conn->address, conn->port);
     return -1;
   }
   log_fn(LOG_DEBUG,"The router's cert is valid.");
-  if(crypto_pk_cmp_keys(identity_rcvd, router->identity_pkey) != 0) {
-    crypto_free_pk_env(identity_rcvd);
+  crypto_pk_get_digest(identity_rcvd, digest_rcvd);
+  crypto_free_pk_env(identity_rcvd);
+
+  router = router_get_by_nickname(nickname);
+  if(router && /* we know this nickname; make sure it's the right guy */
+     memcmp(digest_rcvd, router->identity_digest, DIGEST_LEN) != 0) {
     log_fn(LOG_WARN, "Identity key not as expected for %s", nickname);
     return -1;
   }
-  crypto_free_pk_env(identity_rcvd);
 
-  /* XXXX008 This isn't right; fix this one we launch by identity digest
-   * XXXX008 rather than by nickname */
-  if (conn->nickname) {
+  if (digest_is_nonzero(conn->identity_digest)) {
     /* I initiated this connection. */
     if (strcasecmp(conn->nickname, nickname)) {
       log_fn(options.DirPort ? LOG_WARN : LOG_INFO,
@@ -325,11 +324,11 @@ connection_tls_finish_handshake(connection_t *conn) {
       return -1;
     }
   } else {
-    if((c=connection_get_by_identity_digest(router->identity_digest, CONN_TYPE_OR))) {
-      log_fn(LOG_INFO,"Router %s is already connected on fd %d. Dropping fd %d.", router->nickname, c->s, conn->s);
+    if((c=connection_get_by_identity_digest(digest_rcvd, CONN_TYPE_OR))) {
+      log_fn(LOG_INFO,"Router %s is already connected on fd %d. Dropping fd %d.", nickname, c->s, conn->s);
       return -1;
     }
-    connection_or_init_conn_from_router(conn,router);
+    connection_or_init_conn_from_address(conn,conn->addr,conn->port,digest_rcvd);
   }
 
   if (!server_mode()) { /* If I'm an OP... */

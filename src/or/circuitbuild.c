@@ -957,7 +957,7 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
 }
 
 /** Allocate a cpath_build_state_t, populate it based on
- * <b>purpose</b> and <b>exit_nickname</b> (if specified), and
+ * <b>purpose</b> and <b>exit_digest</b> (if specified), and
  * return it.
  */
 static cpath_build_state_t *
