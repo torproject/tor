@@ -554,7 +554,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 
   if (router->dir_port && !router->is_trusted_dir) {
     /* dircacheport wasn't recognized before 0.0.8pre.  (When 0.0.7 is gone,
-     * we can fold this back into dirport anyway.)
+     * we can fold this back into dirport anyway.) */
     result = snprintf(s+written,maxlen-written, "opt dircacheport %d\n",
                       router->dir_port);
     if (result<0 || result+written > maxlen)
