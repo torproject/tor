@@ -180,8 +180,7 @@ int replace_file(const char *from, const char *to)
 void set_socket_nonblocking(int socket)
 {
 #ifdef MS_WINDOWS
-  /* Yes means no and no means yes.  Do you not want to be nonblocking? */
-  int nonblocking = 0;
+  int nonblocking = 1;
   ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
 #else
   fcntl(socket, F_SETFL, O_NONBLOCK);
