@@ -664,7 +664,7 @@ static int prepare_for_poll(void) {
 static int init_from_config(int argc, char **argv) {
   /* read the configuration file. */
   if(getconfig(argc,argv,&options)) {
-    log_fn(LOG_ERR,"Reading config failed. For usage, try -h.");
+    log_fn(LOG_ERR,"Reading config failed--see warnings above. For usage, try -h.");
     return -1;
   }
 
