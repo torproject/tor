@@ -1297,6 +1297,113 @@ static int router_get_hash_impl(const char *s, char *digest,
   return 0;
 }
 
+int tor_version_parse(const char *s, tor_version_t *out)
+{
+  char *eos=NULL, *cp=NULL;
+  /* Format is:
+   *   NUM dot NUM dot NUM [ ( pre | rc | dot ) NUM [ -cvs ] ]
+   */
+  tor_assert(s && out);
+  memset(out, 0, sizeof(tor_version_t));
+
+  /* Get major. */
+  out->major = strtol(s,&eos,10);
+  if (!eos || eos==s || *eos != '.') return -1;
+  cp = eos+1;
+
+  /* Get minor */
+  out->minor = strtol(cp,&eos,10);
+  if (!eos || eos==cp || *eos != '.') return -1;
+  cp = eos+1;
+
+  /* Get micro */
+  out->micro = strtol(cp,&eos,10);
+  if (!eos || eos==cp) return -1;
+  if (!*eos) {
+    out->status = VER_RELEASE;
+    out->patchlevel = 0;
+    out->cvs = IS_NOT_CVS;
+    return 0;
+  }
+  cp = eos;
+
+  /* Get status */
+  if (*cp == '.') {
+    out->status = VER_RELEASE;
+    ++cp;
+  } else if (0==strncmp(cp, "pre", 3)) {
+    out->status = VER_PRE;
+    cp += 3;
+  } else if (0==strncmp(cp, "rc", 2)) {
+    out->status = VER_RC;
+    cp += 2;
+  } else {
+    return -1;
+  }
+
+  /* Get patchlevel */
+  out->patchlevel = strtol(cp,&eos,10);
+  if (!eos || eos==cp) return -1;
+  cp = eos;
+
+  /* Get cvs status. */
+  if (!*eos) {
+    out->cvs = IS_NOT_CVS;
+  } else if (0==strcmp(cp, "-cvs")) {
+    out->cvs = IS_CVS;
+  } else {
+    return -1;
+  }
+
+  return 0;
+}
+
+/** Compare two tor versions; Return <0 if a < b; 0 if a ==b, >0 if a >
+ * b. */
+int tor_version_compare(tor_version_t *a, tor_version_t *b)
+{
+  int i;
+  tor_assert(a && b);
+  if ((i = a->major - b->major))
+    return i;
+  else if ((i = a->minor - b->minor))
+    return i;
+  else if ((i = a->micro - b->micro))
+    return i;
+  else if ((i = a->status - b->status))
+    return i;
+  else if ((i = a->patchlevel - b->patchlevel))
+    return i;
+  else if ((i = a->cvs - b->cvs))
+    return i;
+  else
+    return 0;
+}
+
+static tor_version_t *my_tor_version=NULL;
+
+/** 1 for unequal, newer or can't tell; 0 for equal, -1 for older. */
+int tor_version_compare_to_mine(const char *s)
+{
+  tor_version_t v;
+
+  if (!my_tor_version) {
+    my_tor_version = tor_malloc(sizeof(tor_version_t));
+    if (tor_version_parse(VERSION, my_tor_version)) {
+      log_fn(LOG_ERR, "I couldn't parse my own version ("VERSION")");
+      exit(1);
+    }
+  }
+
+  if (tor_version_parse(s,&v)) {
+    log_fn(LOG_WARN, "Unparseable tor version %s", s);
+    return 1;
+  }
+
+  return tor_version_compare(my_tor_version, &v);
+}
+
+
 /*
   Local Variables:
   mode:c
