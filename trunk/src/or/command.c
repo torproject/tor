@@ -14,24 +14,14 @@ void command_time_process_cell(cell_t *cell, connection_t *conn,
 
   *num += 1;
 
-  if(gettimeofday(&start,NULL) < 0) {
-    log(LOG_ERR,"command_time_process_cell(): gettimeofday failed.");
-    return;
-  }
+  my_gettimeofday(&start);
 
   (*func)(cell, conn);
 
-  if(gettimeofday(&end,NULL) < 0) {
-    log(LOG_ERR,"command_time_process_cell(): gettimeofday failed.");
-    return;
-  }
+  my_gettimeofday(&end);
+  time_passed = tv_udiff(&start, &end) ;
 
-  if(end.tv_usec < start.tv_usec) {
-    end.tv_sec--;
-    end.tv_usec += 1000000;
-  }
-  time_passed = ((end.tv_sec - start.tv_sec)*1000000) + (end.tv_usec - start.tv_usec);
-  if(time_passed > 5000) { /* more than 5ms */
+  if (time_passed > 5000) { /* more than 5ms */
     log(LOG_INFO,"command_time_process_cell(): That call just took %d ms.",time_passed/1000);
   }
   *time += time_passed;
@@ -43,10 +33,7 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
   static long current_second = 0; /* from previous calls to gettimeofday */
   struct timeval now;
 
-  if(gettimeofday(&now,NULL) < 0) {
-    log(LOG_ERR,"command_process_cell(): gettimeofday failed.");
-    return;
-  }
+  my_gettimeofday(&now);
 
   if(now.tv_sec > current_second) { /* the second has rolled over */
     /* print stats */

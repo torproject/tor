@@ -61,31 +61,6 @@ char *conn_state_to_string[][15] = {
 
 /********* END VARIABLES ************/
 
-/**************************************************************/
-
-int tv_cmp(struct timeval *a, struct timeval *b) {
-        if (a->tv_sec > b->tv_sec)
-                return 1;
-        if (a->tv_sec < b->tv_sec)
-                return -1;
-        if (a->tv_usec > b->tv_usec)
-                return 1;
-        if (a->tv_usec < b->tv_usec)
-                return -1;
-        return 0;
-}
-
-void tv_add(struct timeval *a, struct timeval *b) {
-        a->tv_usec += b->tv_usec;
-        a->tv_sec += b->tv_sec + (a->tv_usec / 1000000);
-        a->tv_usec %= 1000000;
-}
-
-void tv_addms(struct timeval *a, long ms) {
-        a->tv_usec += (ms * 1000) % 1000000;
-        a->tv_sec += ((ms * 1000) / 1000000) + (a->tv_usec / 1000000);
-        a->tv_usec %= 1000000;
-}
 
 /**************************************************************/
 
@@ -93,8 +68,7 @@ connection_t *connection_new(int type) {
   connection_t *conn;
   struct timeval now;
 
-  if(gettimeofday(&now,NULL) < 0)
-    return NULL;
+  my_gettimeofday(&now);
 
   conn = (connection_t *)malloc(sizeof(connection_t));
   if(!conn)
@@ -328,8 +302,8 @@ int connection_read_to_buf(connection_t *conn) {
     assert(conn->receiver_bucket < 0);
   }
 
-  if(gettimeofday(&now,NULL) < 0)
-    return -1;
+  my_gettimeofday(&now);
+
   conn->timestamp_lastread = now.tv_sec;
 
   read_result = read_to_buf(conn->s, conn->receiver_bucket, &conn->inbuf, &conn->inbuflen,
@@ -395,8 +369,7 @@ int connection_decompress_to_buf(char *string, int len, connection_t *conn,
   if (n < 0)
     return -1;
 
-  if(gettimeofday(&now,NULL) < 0)
-    return -1;
+  my_gettimeofday(&now,NULL);
   
   if(!n)
     return 0;
@@ -430,8 +403,7 @@ int connection_flush_buf(connection_t *conn) {
 int connection_write_to_buf(char *string, int len, connection_t *conn) {
   struct timeval now;
 
-  if(gettimeofday(&now,NULL) < 0)
-    return -1;
+  my_gettimeofday(&now);
 
   if(!len)
     return 0;
@@ -585,8 +557,7 @@ void connection_init_timeval(connection_t *conn) {
 
   assert(conn);
 
-  if(gettimeofday(&conn->send_timeval,NULL) < 0)
-    return;
+  my_gettimeofday(&conn->send_timeval);
 
   connection_increment_send_timeval(conn);
 }

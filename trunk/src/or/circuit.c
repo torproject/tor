@@ -53,8 +53,7 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
   circuit_t *circ; 
   struct timeval now;
 
-  if(gettimeofday(&now,NULL) < 0)
-    return NULL;
+  my_gettimeofday(&now);
 
   circ = (circuit_t *)malloc(sizeof(circuit_t));
   if(!circ)
@@ -157,7 +156,7 @@ int circuit_init(circuit_t *circ, int aci_type, onion_layer_t *layer) {
 
   log(LOG_DEBUG,"circuit_init(): aci_type = %u.",aci_type);
 
-  gettimeofday(&start,NULL);
+  my_gettimeofday(&start);
 
   circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, aci_type);
   if(!circ->n_aci) {
@@ -165,18 +164,11 @@ int circuit_init(circuit_t *circ, int aci_type, onion_layer_t *layer) {
     return -1;
   }
 
-  gettimeofday(&end,NULL);
+  my_gettimeofday(&end);
 
-  if(end.tv_usec < start.tv_usec) {
-    end.tv_sec--;
-    end.tv_usec += 1000000;
-  }
-  time_passed = ((end.tv_sec - start.tv_sec)*1000000) + (end.tv_usec - start.tv_usec);
-  if(time_passed > 1000) { /* more than 1ms */
+  if (tv_udiff(&start, &end) > 1000) {/* more than 1ms */
     log(LOG_NOTICE,"circuit_init(): get_unique_aci just took %d us!",time_passed);
   }
-
-
 
   log(LOG_DEBUG,"circuit_init(): Chosen ACI %u.",circ->n_aci);
 
