@@ -390,7 +390,7 @@ static void run_connection_housekeeping(int i, time_t now) {
   }
 }
 
-#define MIN_BW_TO_PUBLISH_DESC 5000 /* 5000 bytes sustained */
+#define MIN_BW_TO_PUBLISH_DESC 5000 /* 5000 bytes/s sustained */
 #define MIN_UPTIME_TO_PUBLISH_DESC (30*60) /* half an hour */
 
 /** Decide if we're a server or just a client. We are a server if:
@@ -542,7 +542,6 @@ static void run_scheduled_events(time_t now) {
 static int prepare_for_poll(void) {
   static long current_second = 0; /* from previous calls to gettimeofday */
   connection_t *conn;
-  int bytes_read;
   struct timeval now;
   int i;
 
@@ -550,12 +549,8 @@ static int prepare_for_poll(void) {
 
   /* Check how much bandwidth we've consumed, and increment the token
    * buckets. */
-  bytes_read = stats_prev_global_read_bucket - global_read_bucket;
-  stats_n_bytes_read += bytes_read;
+  stats_n_bytes_read += stats_prev_global_read_bucket - global_read_bucket;
   connection_bucket_refill(&now);
-  if (bytes_read > 0) {
-    rep_hist_note_bytes_read(bytes_read, now.tv_sec);
-  }
   stats_prev_global_read_bucket = global_read_bucket;
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
