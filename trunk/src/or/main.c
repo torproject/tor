@@ -70,7 +70,7 @@ int connection_add(connection_t *conn) {
   nfds++;
 
   log(LOG_INFO,"connection_add(): new conn type %s, socket %d, nfds %d.",
-	  CONN_TYPE_TO_STRING(conn->type), conn->s, nfds);
+      CONN_TYPE_TO_STRING(conn->type), conn->s, nfds);
 
   return 0;
 }
@@ -90,7 +90,7 @@ int connection_remove(connection_t *conn) {
   assert(nfds>0);
 
   log_fn(LOG_INFO,"removing socket %d (type %s), nfds now %d",
-	  conn->s, CONN_TYPE_TO_STRING(conn->type), nfds-1);
+         conn->s, CONN_TYPE_TO_STRING(conn->type), nfds-1);
   /* if it's an edge conn, remove it from the list
    * of conn's on this circuit. If it's not on an edge,
    * flush and send destroys for all circuits on this conn
@@ -711,8 +711,8 @@ int network_init(void)
   int r;
   r = WSAStartup(0x101,&WSAData);
   if (r) {
-	  log_fn(LOG_WARN,"Error initializing windows network layer: code was %d",r);
-	  return -1;
+    log_fn(LOG_WARN,"Error initializing windows network layer: code was %d",r);
+    return -1;
   }
   /* XXXX We should call WSACleanup on exit, I think. */
 #endif
@@ -733,8 +733,8 @@ int tor_main(int argc, char *argv[]) {
   log_fn(LOG_WARN,"Tor v%s. This is experimental software. Do not use it if you need anonymity.",VERSION);
 
   if (network_init()<0) {
-	log_fn(LOG_ERR,"Error initializing network; exiting.");
-	return 1;
+    log_fn(LOG_ERR,"Error initializing network; exiting.");
+    return 1;
   }
   atexit(exit_function);
 
