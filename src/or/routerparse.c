@@ -340,6 +340,10 @@ router_parse_routerlist_from_directory(const char *str,
     goto err;
 
   /* now we know tok->n_args == 1, so it's safe to access tok->args[0] */
+  if (!is_legal_nickname(tok->args[0])) {
+    log_fn(LOG_WARN, "Directory nickname '%s' is misformed", tok->args[0]);
+    goto err;
+  }
   strlcpy(dirnickname, tok->args[0], sizeof(dirnickname));
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));

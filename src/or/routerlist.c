@@ -311,8 +311,8 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_do
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
 
   SMARTLIST_FOREACH(nickname_list, const char *, nick, {
-    if (strlen(nick) > MAX_HEX_NICKNAME_LEN) {
-      log_fn(LOG_WARN,"Nickname too long; skipping");
+    if (!is_legal_nickname_or_hexdigest(nick)) {
+      log_fn(LOG_WARN,"Nickname %s is misformed; skipping", nick);
       continue;
     }
     router = router_get_by_nickname(nick);

@@ -240,7 +240,8 @@ int init_keys(void) {
    */
   char keydir[512];
   char keydir2[512];
-  char fingerprint[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3];
+  char fingerprint[FINGERPRINT_LEN+1];
+  char fingerprint_line[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3];/*nickname fp\n\0 */
   char *cp;
   const char *tmp, *mydesc, *datadir;
   crypto_pk_env_t *prkey;
@@ -333,16 +334,17 @@ int init_keys(void) {
   /* 5. Dump fingerprint to 'fingerprint' */
   tor_snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
   log_fn(LOG_INFO,"Dumping fingerprint to %s...",keydir);
-  tor_assert(strlen(options->Nickname) <= MAX_NICKNAME_LEN);
-  strlcpy(fingerprint, options->Nickname, sizeof(fingerprint));
-  strlcat(fingerprint, " ", sizeof(fingerprint));
-  if (crypto_pk_get_fingerprint(get_identity_key(),
-                                fingerprint+strlen(fingerprint), 1)<0) {
+  if (crypto_pk_get_fingerprint(get_identity_key(), fingerprint, 1)<0) {
     log_fn(LOG_ERR, "Error computing fingerprint");
     return -1;
   }
-  strlcat(fingerprint, "\n", sizeof(fingerprint));
-  if (write_str_to_file(keydir, fingerprint, 0))
+  tor_assert(strlen(options->Nickname) <= MAX_NICKNAME_LEN);
+  if (tor_snprintf(fingerprint_line, sizeof(fingerprint_line),
+                   "%s %s\n",options->Nickname, fingerprint) < 0) {
+    log_fn(LOG_ERR, "Error writing fingerprint line");
+    return -1;
+  }
+  if (write_str_to_file(keydir, fingerprint_line, 0))
     return -1;
   if (!authdir_mode(options))
     return 0;
