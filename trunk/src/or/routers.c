@@ -1198,6 +1198,10 @@ static void get_platform_str(char *platform, int len)
   return;
 }
 
+/* XXX need to audit this thing and count fenceposts. maybe
+ *     refactor so we don't have to keep asking if we're
+ *     near the end of maxlen?
+ */
 #define DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
 int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key) {
@@ -1251,7 +1255,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                     "onion-key\n%s"
                     "link-key\n%s"
                     "signing-key\n%s",
-    router->nickname,             
+    router->nickname,
     router->address,
     router->or_port,
     router->socks_port,
@@ -1294,11 +1298,15 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
         return -1;
       written += result;
     } else {
-      if (written > maxlen-3)
+      if (written > maxlen-4)
         return -1;
       strcat(s+written, ":*");
     }
-  }
+    if(written > maxlen-1)
+      return -1;
+    strcat(s+written, "\n");
+    written++;
+  } /* end for */
   if (written > maxlen-256) /* Not enough room for signature. */
     return -1;
 
