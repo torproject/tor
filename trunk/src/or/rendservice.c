@@ -593,6 +593,12 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
 
   /* Append the cpath entry. */
   hop->state = CPATH_STATE_OPEN;
+  /* set the windows to default. these are the windows
+   * that bob thinks alice has.
+   */
+  hop->package_window = CIRCWINDOW_START;
+  hop->deliver_window = CIRCWINDOW_START;
+
   onion_append_to_cpath(&circuit->cpath, hop);
   circuit->build_state->pending_final_cpath = NULL; /* prevent double-free */
 
