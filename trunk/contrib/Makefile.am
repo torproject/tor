@@ -4,6 +4,6 @@ EXTRA_DIST = tor-tsocks.conf torify.1 tor-control.py
 
 conf_DATA = tor-tsocks.conf
 
-bin_SCRIPTS = torify tor-control.py
+bin_SCRIPTS = torify
 
 man_MANS = torify.1
