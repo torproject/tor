@@ -3,31 +3,9 @@
 
 /********* START VARIABLES **********/
 
-/* valid command-line options */
-static char *args = "hf:e:n:l:";
-
-int loglevel = LOG_DEBUG; /* global variable */
-
-//int global_role = ROLE_AP_LISTEN;
-int global_role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
-/* FIXME defaulting to all roles for now. should make it a config option though */
-
-/* valid config file options */
-config_opt_t options[] =
-{
-  {"RouterFile", CONFIG_TYPE_STRING, {0}, 0},
-  {"PrivateKeyFile", CONFIG_TYPE_STRING, {0}, 0},
-  {"APPort", CONFIG_TYPE_INT, {0}, 0},
-  {"OPPort", CONFIG_TYPE_INT, {0}, 0},
-  {"ORPort", CONFIG_TYPE_INT, {0}, 0},
-  {"CoinWeight", CONFIG_TYPE_DOUBLE, {0}, 0},
-  {"MaxConn", CONFIG_TYPE_INT, {0}, 0},
-  {"TrafficShaping", CONFIG_TYPE_INT, {0}, 0},
-  {0}
-};
-enum opts {
-  RouterFile=0, PrivateKeyFile, APPort, OPPort, ORPort, CoinWeight, MaxConn, TrafficShaping
-};
+static or_options_t options; /* command-line and config-file options */
+int loglevel;
+int global_role;
 
 static connection_t *connection_array[MAXCONNECTIONS] =
         { NULL };
@@ -185,7 +163,7 @@ routerinfo_t *router_get_first_in_route(unsigned int *route, size_t routelen) {
 
 /* a wrapper around new_route. put all these in routers.c perhaps? */
 unsigned int *router_new_route(size_t *rlen) {
-  return new_route(options[CoinWeight].r.d, router_array,rarray_len, rlen);
+  return new_route(options.CoinWeight, router_array,rarray_len, rlen);
 }
 
 /* a wrapper around create_onion */
@@ -198,7 +176,7 @@ unsigned char *router_create_onion(unsigned int *route, size_t routelen, size_t 
 
 
 connection_t *connect_to_router_as_op(routerinfo_t *router) {
-  return connection_connect_to_router_as_op(router, prkey, options[ORPort].r.i);
+  return connection_connect_to_router_as_op(router, prkey, options.ORPort);
 }
 
 void connection_watch_events(connection_t *conn, short events) {
@@ -302,7 +280,7 @@ int do_main_loop(void) {
   int i;
 
   /* load the routers file */
-  router_array = getrouters(options[RouterFile].r.str,&rarray_len, options[ORPort].r.i);
+  router_array = getrouters(options.RouterFile,&rarray_len, options.ORPort);
   if (!router_array)
   {
     log(LOG_ERR,"Error loading router list.");
@@ -310,7 +288,7 @@ int do_main_loop(void) {
   }
 
   /* load the private key */
-  prkey = load_prkey(options[PrivateKeyFile].r.str);
+  prkey = load_prkey(options.PrivateKeyFile);
   if (!prkey)
   {
     log(LOG_ERR,"Error loading private key.");
@@ -320,9 +298,8 @@ int do_main_loop(void) {
 
   /* start-up the necessary connections based on global_role. This is where we
    * try to connect to all the other ORs, and start the listeners */
-  retry_all_connections(global_role, router_array, rarray_len, prkey, 
-		        options[ORPort].r.i,options[OPPort].r.i,
-			options[APPort].r.i);
+  retry_all_connections(options.GlobalRole, router_array, rarray_len, prkey, 
+		        options.ORPort, options.OPPort, options.APPort);
 
   for(;;) {
     poll(poll_array, nfds, -1); /* poll until we have an event */
@@ -352,59 +329,12 @@ void catch () {
 int main(int argc, char *argv[]) {
   int retval = 0;
 
-  char *conf_filename = NULL; /* configuration file */
   signal (SIGINT, catch); /* to catch ^c so we can exit cleanly */
 
-  /* get command-line arguments */
-  retval = getargs(argc,argv,args,&conf_filename,&loglevel);
-  if (retval == -1)
-  {
-    log(LOG_ERR,"Error processing command-line arguments.");
-    exit(1);
-  }
-
-  /* load config file */
-  retval = getconfig(conf_filename,options);
-  if (retval == -1)
-  {
-    log(LOG_ERR,"Error loading configuration file.");
-    exit(1);
-  }
-  else if (options[RouterFile].err != 1)
-  { 
-    log(LOG_ERR,"RouterFile option required, but not found.");
-    exit(1);
-  }
-  else if (options[PrivateKeyFile].err != 1)
-  { 
-    log(LOG_ERR,"PrivateKeyFile option required but not found.");
-    exit(1);
-  }
-  else if (options[CoinWeight].err != 1)
-  {
-    log(LOG_ERR,"Error reading the CoinWeight option.");
-    exit(1);
-  }
-  else if (options[APPort].err != 1)
-  { 
-    log(LOG_ERR,"APPort option required but not found.");
-    exit(1);
-  }
-  else if (options[OPPort].err != 1)
-  { 
-    log(LOG_ERR,"OPPort option required but not found.");
-    exit(1);
-  }
-  else if (options[ORPort].err != 1)
-  { 
-    log(LOG_ERR,"ORPort option required but not found.");
-    exit(1);
-  }
-  else if (options[MaxConn].err != 1)
-  { 
-    log(LOG_ERR,"MaxConn option required but not found.");
-    exit(1);
-  }
+  if ( getoptions(argc,argv,&options) ) exit(1);
+  /* assign global vars from options. maybe get rid of these globals later */
+  loglevel = options.loglevel;
+  global_role = options.GlobalRole;
 
   ERR_load_crypto_strings();
   retval = do_main_loop();
