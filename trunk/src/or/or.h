@@ -1428,6 +1428,7 @@ void rep_hist_note_bytes_read(int num_bytes, time_t when);
 void rep_hist_note_bytes_written(int num_bytes, time_t when);
 int rep_hist_bandwidth_assess(void);
 char *rep_hist_get_bandwidth_lines(void);
+void rep_history_clean(time_t before);
 
 /********************************* rendclient.c ***************************/
 
