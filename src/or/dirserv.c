@@ -990,6 +990,10 @@ dirserv_free_all(void)
   tor_free(the_directory_z);
   the_directory_len = 0;
   the_directory_z_len = 0;
+  tor_free(the_runningrouters);
+  tor_free(the_runningrouters_z);
+  the_runningrouters_len = 0;
+  the_runningrouters_z_len = 0;
   tor_free(cached_directory.dir);
   tor_free(cached_directory.dir_z);
   tor_free(cached_runningrouters.dir);
