@@ -704,8 +704,6 @@ static int do_hup(void) {
     return -1;
   }
   options = get_options();
-/*XXX this should move to options_act, but only once it's been
- * removed from init_keys() */
   if(authdir_mode(options)) {
     /* reload the approved-routers file */
     tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", options->DataDirectory);
