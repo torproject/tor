@@ -677,7 +677,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
     }
     cached_directory_published = when;
     if(get_data_directory(&options)) {
-      sprintf(filename,"%s/cached-directory", get_data_directory(&options));
+      snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
       if(write_str_to_file(filename,cached_directory,0) < 0) {
         log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
       }
@@ -751,7 +751,7 @@ static int dirserv_regenerate_directory(void)
   }
   free(new_directory);
   if(get_data_directory(&options)) {
-    sprintf(filename,"%s/cached-directory", get_data_directory(&options));
+    snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
     if(write_str_to_file(filename,the_directory,0) < 0) {
       log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
     }
