@@ -23,9 +23,9 @@ pre5:
 
   o Major Features:
     - Hibernation: New config option "AccountingMaxKB" lets you
-      set how many KB per month you want to allow your server to
+      set how many KBytes per month you want to allow your server to
       consume. Rather than spreading those bytes out evenly over the
-      month, we instead hibernate for most of the month and pop up
+      month, we instead hibernate for some of the month and pop up
       at a deterministic time, work until the bytes are consumed, then
       hibernate again. Config option "MonthlyAccountingStart" lets you
       specify which day of the month your billing cycle starts on.
@@ -40,7 +40,7 @@ pre5:
       use in authenticating to the control interface.
     - New log format in config:
       "Log minsev[-maxsev] stdout|stderr|syslog" or
-      "Log minsev[-maxsev] file /foo"
+      "Log minsev[-maxsev] file /var/foo"
 
   o Minor Features:
     - DirPolicy config option, to let people reject incoming addresses
