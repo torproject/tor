@@ -508,6 +508,9 @@ config_free_lines(struct config_line_t *front)
 static config_var_t *config_find_option(const char *key)
 {
   int i;
+  size_t keylen = strlen(key);
+  if(!keylen)
+    return NULL; /* if they say "--" on the commandline, it's not an option */
   /* First, check for an exact (case-insensitive) match */
   for (i=0; config_vars[i].name; ++i) {
     if (!strcasecmp(key, config_vars[i].name))
@@ -515,7 +518,7 @@ static config_var_t *config_find_option(const char *key)
   }
   /* If none, check for an abbreviated match */
   for (i=0; config_vars[i].name; ++i) {
-    if (!strncasecmp(key, config_vars[i].name, strlen(key))) {
+    if (!strncasecmp(key, config_vars[i].name, keylen)) {
       log_fn(LOG_WARN, "The abbreviation '%s' is deprecated. "
           "Tell Nick and Roger to make it official, or just use '%s' instead",
              key, config_vars[i].name);
