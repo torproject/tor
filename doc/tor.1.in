@@ -338,7 +338,7 @@ When the number of bytes is exhausted, Tor will hibernate until some
 time in the next accounting period.  To prevent all servers from
 waking at the same time, Tor will also wait until a random point in
 each period before waking up.  If you have bandwidth cost issues,
-using this option is preferable to setting a low bandwidth, since it
+enabling hibernation is preferable to setting a low bandwidth, since it
 provides users with a collection of fast servers that are up some of
 the time, which is more useful than a set of slow servers that are
 always "available".
