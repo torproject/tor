@@ -58,6 +58,8 @@ static config_abbrev_t config_abbrevs[] = {
   PLURAL(HiddenServiceExcludeNode),
   PLURAL(RendNode),
   PLURAL(RendExcludeNode),
+  PLURAL(StrictEntryNode),
+  PLURAL(StrictExitNode),
   { "l", "Log", 1},
   { "BandwidthRateBytes", "BandwidthRate", 0},
   { "BandwidthBurstBytes", "BandwidthBurst", 0},
