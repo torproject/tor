@@ -129,9 +129,6 @@ uploaded whenever it changes.  (Default: 20 minutes.)
 .PP
 The following options are useful only for clients (that is, if \fBSOCKSPort\fP is non-zero):
 .TP
-\fBMapAddress\fR \fIaddress\fR \fInewaddress\fR
-When a request for address arrives to Tor, it will rewrite it to newaddress before processing it. For example, if you always want connections to www.indymedia.org to exit via yourtorserver, use "MapAddress www.indymedia.org www.indymedia.org.yourtorserver.exit".
-.TP
 \fBAllowUnverifiedNodes\fR \fBentry\fR|\fBexit\fR|\fBmiddle\fR|\fBintroduction\fR|\fBrendezvous\fR|...\fP
 Where on our circuits should we allow Tor servers that the directory
 servers haven't authenticated as "verified"?  (Default: middle,rendezvous.)
@@ -158,23 +155,6 @@ the last hop of a circuit.
 If 1, Tor will never use any nodes besides those listed in "entrynodes" for
 the first hop of a circuit.
 .TP
-\fBTrackHostExits \fR\fIhost1\fR,\fI.domain1\fR|\fI.\fR\fP
-For each value in the comma separated list, Tor will track recent connections
-to hosts that match this value and attempt to
-reuse the same exit node for each. If the value is prepended with a '.', it is
-treated as matching an entire domain. If one of the values is just a '.', it
-means match everything. This option is useful if you frequently connect to
-sites that will expire all your authentication cookies (ie log you out) if
-your IP address changes. Note that this option does have the disadvantage of
-making it more clear that a given history is
-associated with a single user. However, most people who would wish to observe
-this will observe it through cookies or other protocol-specific means anyhow.
-.TP
-\fBTrackHostExitsExpire \fR\fINUM\fP
-Since exit servers go up and down, it is desirable to expire the association
-between host and exit server after NUM seconds of inactivity. The default
-is 1800 seconds (30 minutes).
-.TP
 \fBFascistFirewall \fR\fB0\fR|\fB1\fR\fP
 If 1, Tor will only create outgoing connections to ORs running on ports that
 your firewall allows (defaults to 80 and 443; see \fBFirewallPorts\fR).  This will
@@ -190,6 +170,9 @@ A list of ports for services that tend to have long-running connections
 (e.g. chat and interactive shells). Circuits for streams that use these
 ports will contain only high-uptime nodes, to reduce the chance that a
 node will go down before the stream is finished.
+.TP
+\fBMapAddress\fR \fIaddress\fR \fInewaddress\fR
+When a request for address arrives to Tor, it will rewrite it to newaddress before processing it. For example, if you always want connections to www.indymedia.org to exit via yourtorserver, use "MapAddress www.indymedia.org www.indymedia.org.yourtorserver.exit".
 .TP
 \fBNewCircuitPeriod \fR\fINUM\fP
 Every NUM seconds consider whether to build a new circuit. (Default: 60)
@@ -219,6 +202,23 @@ Bind to this address to listen for connections from SOCKS-speaking applications.
 .TP
 \fBSOCKSPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
 Set an entrance policy for this server, to limit who can connect to the SOCKS ports. The policies have the same form as exit policies below.
+.TP
+\fBTrackHostExits \fR\fIhost1\fR,\fI.domain1\fR|\fI.\fR\fP
+For each value in the comma separated list, Tor will track recent connections
+to hosts that match this value and attempt to
+reuse the same exit node for each. If the value is prepended with a '.', it is
+treated as matching an entire domain. If one of the values is just a '.', it
+means match everything. This option is useful if you frequently connect to
+sites that will expire all your authentication cookies (ie log you out) if
+your IP address changes. Note that this option does have the disadvantage of
+making it more clear that a given history is
+associated with a single user. However, most people who would wish to observe
+this will observe it through cookies or other protocol-specific means anyhow.
+.TP
+\fBTrackHostExitsExpire \fR\fINUM\fP
+Since exit servers go up and down, it is desirable to expire the association
+between host and exit server after NUM seconds of inactivity. The default
+is 1800 seconds (30 minutes).
 
 .SH SERVER OPTIONS
 .PP
