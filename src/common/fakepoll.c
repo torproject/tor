@@ -26,6 +26,7 @@
 #elif defined(_MSC_VER)
 #include <winsock.h>
 #endif
+#include <assert.h>
 
 /* by default, windows handles only 64 fd's */
 #if defined(MS_WINDOWS) && !defined(FD_SETSIZE)
