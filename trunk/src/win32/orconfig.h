@@ -148,7 +148,7 @@
 #define STDC_HEADERS
 
 /* Version number of package */
-#define VERSION "0.0.2pre6"
+#define VERSION "0.0.2pre26"
 
 /* XXXX WWWW */
 #define CONFDIR ""

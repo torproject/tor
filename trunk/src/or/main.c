@@ -695,11 +695,41 @@ static void dumpstats(int severity) {
            (int) (stats_n_bytes_read/stats_n_seconds_reading));
 }
 
+int network_init(void)
+{
+#ifdef MS_WINDOWS
+  /* This silly exercise is necessary before windows will allow gethostbyname to work.
+   */
+  WSADATA WSAData;
+  int r;
+  r = WSAStartup(0x101,&WSAData);
+  if (r) {
+	  log_fn(LOG_WARN,"Error initializing windows network layer: code was %d",r);
+	  return -1;
+  }
+  /* XXXX We should call WSACleanup on exit, I think. */
+#endif
+  return 0;
+}
+
+void exit_function(void)
+{
+#ifdef MS_WINDOWS
+  WSACleanup();
+#endif
+}
+
 int tor_main(int argc, char *argv[]) {
 
   /* give it somewhere to log to initially */
   add_stream_log(LOG_INFO, "<stdout>", stdout);
   log_fn(LOG_WARN,"Tor v%s. This is experimental software. Do not use it if you need anonymity.",VERSION);
+
+  if (network_init()<0) {
+	log_fn(LOG_ERR,"Error initializing network; exiting.");
+	return 1;
+  }
+  atexit(exit_function);
 
   if (init_from_config(argc,argv) < 0)
     return -1;
@@ -708,7 +738,7 @@ int tor_main(int argc, char *argv[]) {
   if(geteuid()==0)
     log_fn(LOG_WARN,"You are running Tor as root. You don't need to, and you probably shouldn't.");
 #endif
-
+  
   if(options.ORPort) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
