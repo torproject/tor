@@ -20,6 +20,7 @@ N&R. make loglevels info,debug less noisy
 N  . OS X package (and bundle?)
 N  . Working RPMs
 N  - Get win32 servers working, or find out why it isn't happening now.
+     - Why can't win32 find a cpuworker?
 
 ************************ For Post 0.0.9 *****************************
 
@@ -63,6 +64,9 @@ N    - Make millisecond accuracy work on win32
 
    - Code cleanup
      - Make more configuration variables into CSVs.
+     - Make configure.in handle cross-compilation
+       - Have NULL_REP_IS_ZERO_BYTES default to 1.
+       - Make with-ssl-dir disable search for ssl.
 
    - Support
      - Bug tracker.
