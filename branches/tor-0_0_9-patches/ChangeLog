@@ -7,7 +7,12 @@ Changes in version 0.0.9.6 - 2005-03-24
       blowing away the circuit that conn->cpath_layer points to, then
       checking to see if the circ is well-formed. Backport check to make
       sure we dont use the cpath on a closed connection
+    - Prevent circuit_resume_edge_reading_helper() from trying to package
+      inbufs for marked-for-close streams.
     - Don't crash on hup if your options->address has become unresolvable.
+    - Some systems (like OS X) sometimes accept() a connection and tell
+      you the remote host is 0.0.0.0:0. If this happens, due to some
+      other mis-features, we get confused; so refuse the conn for now.
 
   o Bugfixes on 0.0.9.x (other):
     - Fix harmless but scary "Unrecognized content encoding" warn message.
