@@ -728,13 +728,14 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     return connection_ap_handshake_attach_circuit(conn);
   } else {
     /* it's a hidden-service request */
-    const char *descp;
-    int desc_len;
+    rend_cache_entry_t *entry;
 
     strcpy(conn->rend_query, socks->address); /* this strcpy is safe -RD */
     log_fn(LOG_INFO,"Got a hidden service request for ID '%s'", conn->rend_query);
     /* see if we already have it cached */
-    if (rend_cache_lookup_desc(conn->rend_query, &descp, &desc_len) == 1) {
+    if (rend_cache_lookup_entry(conn->rend_query, &entry) == 1 &&
+#define NUM_SECONDS_BEFORE_REFETCH (60*15)
+      entry->received + NUM_SECONDS_BEFORE_REFETCH < time(NULL)) {
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
       return connection_ap_handshake_attach_circuit(conn);
     } else {

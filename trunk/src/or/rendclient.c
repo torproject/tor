@@ -46,31 +46,24 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
  */
 int
 rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
-  const char *descp;
-  int desc_len, payload_len, r;
+  int payload_len, r;
   char payload[RELAY_PAYLOAD_SIZE];
   char tmp[(MAX_NICKNAME_LEN+1)+REND_COOKIE_LEN+DH_KEY_LEN];
-  rend_service_descriptor_t *parsed=NULL;
+  rend_cache_entry_t *entry;
   crypt_path_t *cpath;
 
   assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   assert(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY);
   assert(!rend_cmp_service_ids(introcirc->rend_query, rendcirc->rend_query));
 
-  if(rend_cache_lookup_desc(introcirc->rend_query, &descp, &desc_len) < 1) {
+  if(rend_cache_lookup_entry(introcirc->rend_query, &entry) < 1) {
     log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.",
            introcirc->rend_query);
     goto err;
   }
 
-  parsed = rend_parse_service_descriptor(descp,desc_len);
-  if (!parsed) {
-    log_fn(LOG_WARN,"Couldn't parse service descriptor");
-    goto err;
-  }
-
   /* first 20 bytes of payload are the hash of bob's pk */
-  if (crypto_pk_get_digest(parsed->pk, payload)<0) {
+  if (crypto_pk_get_digest(entry->parsed->pk, payload)<0) {
     log_fn(LOG_WARN, "Couldn't hash public key.");
     goto err;
   }
@@ -97,7 +90,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
     goto err;
   }
 
-  r = crypto_pk_public_hybrid_encrypt(parsed->pk, tmp,
+  r = crypto_pk_public_hybrid_encrypt(entry->parsed->pk, tmp,
                            MAX_NICKNAME_LEN+1+REND_COOKIE_LEN+DH_KEY_LEN,
                                       payload+DIGEST_LEN,
                                       PK_PKCS1_OAEP_PADDING, 0);
@@ -107,8 +100,6 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   }
 
   payload_len = DIGEST_LEN + r;
-
-  rend_service_descriptor_free(parsed);
 
   if (connection_edge_send_command(NULL, introcirc,
                                    RELAY_COMMAND_INTRODUCE1,
@@ -124,8 +115,6 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
 
   return 0;
 err:
-  if(parsed)
-    rend_service_descriptor_free(parsed);
   circuit_mark_for_close(introcirc);
   circuit_mark_for_close(rendcirc);
   return -1;
@@ -239,6 +228,7 @@ void rend_client_desc_fetched(char *query, int success) {
   connection_t **carray;
   connection_t *conn;
   int n, i;
+  rend_cache_entry_t *entry;
 
   get_connection_array(&carray, &n);
 
@@ -250,7 +240,10 @@ void rend_client_desc_fetched(char *query, int success) {
     if (rend_cmp_service_ids(conn->rend_query, query))
       continue;
     /* great, this guy was waiting */
-    if(success) {
+    if(success ||
+       rend_cache_lookup_entry(conn->rend_query, &entry) == 1) {
+      /* either this fetch worked, or it failed but there was a
+       * valid entry from before which we should reuse */
       log_fn(LOG_INFO,"Rend desc retrieved. Launching circuits.");
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
@@ -258,8 +251,8 @@ void rend_client_desc_fetched(char *query, int success) {
         log_fn(LOG_WARN,"attaching to a rend circ failed. Closing conn.");
         connection_mark_for_close(conn,0);
       }
-    } else { /* 404 */
-      log_fn(LOG_WARN,"service id '%s' not found. Closing conn.", query);
+    } else { /* 404, or fetch didn't get that far */
+      log_fn(LOG_WARN,"service id '%s' fetched failed, and not in cache. Closing conn.", query);
       connection_mark_for_close(conn,0);
     }
   }

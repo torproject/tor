@@ -178,8 +178,11 @@ _connection_mark_for_close(connection_t *conn, char reason)
     case CONN_TYPE_AP_LISTENER:
     case CONN_TYPE_DIR_LISTENER:
     case CONN_TYPE_CPUWORKER:
-    case CONN_TYPE_DIR:
       /* No special processing needed. */
+      break;
+    case CONN_TYPE_DIR:
+      if(conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
+        rend_client_desc_fetched(conn->rend_query, 0);
       break;
     case CONN_TYPE_OR:
       /* Remember why we're closing this connection. */
