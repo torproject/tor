@@ -23,9 +23,9 @@
 #include <openssl/bio.h>
 
 /* How long do certificates live? (sec) */
-#define CERT_LIFETIME  (2*24*60*60)
+#define CERT_LIFETIME  (365*24*60*60)
 /* How much clock skew do we tolerate when checking certificates? (sec) */
-#define CERT_ALLOW_SKEW (3*60)
+#define CERT_ALLOW_SKEW (30*60)
 
 struct tor_tls_context_st {
   SSL_CTX *ctx;
@@ -46,7 +46,7 @@ static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                         const char *nickname); 
 
 /* global tls context, keep it here because nobody else needs to touch it */
-static tor_tls_context *global_tls_context=NULL;
+static tor_tls_context *global_tls_context = NULL;
 static int tls_library_is_initialized = 0;
 
 #define _TOR_TLS_SYSCALL    -6
@@ -269,6 +269,13 @@ tor_tls_context_new(crypto_pk_env_t *rsa,
                      always_accept_verify_cb);
   /* let us realloc bufs that we're writing from */
   SSL_CTX_set_mode(result->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);  
+
+  /* Free the old context if one exists. */
+  if (global_tls_context) {
+    /* This is safe even if there are open connections: OpenSSL does
+     * reference counting with SSL and SSL_CTX objects. */
+    SSL_CTX_free(global_tls_context);
+  }
   global_tls_context = result;
   return 0;
 
