@@ -119,7 +119,7 @@ AllowUnverifiedNodes middle,rendezvous
 ## the default exit policy, end this with either a reject *:* or an
 ## accept *:*. Otherwise, you're *augmenting* (prepending to) the
 ## default exit policy. Leave commented to just use the default, which is
-## available in the man page or at http://tor.eff.org/tor-manual.html
+## available in the man page or at http://tor.eff.org/documentation.html
 ##
 ## Look at http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#Abuse
 ## for issues you might encounter if you use the default exit policy.
