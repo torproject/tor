@@ -290,7 +290,7 @@ int retry_all_connections(int role, uint16_t or_listenport,
       connection_or_create_listener(&local);
     }
   }
-      
+
   if(role & ROLE_OP_LISTEN) {
     local.sin_port = htons(op_listenport);
     if(!connection_get_by_type(CONN_TYPE_OP_LISTENER)) {
@@ -561,16 +561,25 @@ int connection_send_connected(aci_t aci, connection_t *conn) {
 }
 
 int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn) {
+  char networkcell[CELL_NETWORK_SIZE];
+  char *n = networkcell;
  
-  if(connection_encrypt_cell(cellp,conn)<0) {
+  memset(n,0,CELL_NETWORK_SIZE); /* zero it out to start */
+  *(aci_t *)n = htons(cellp->aci);
+  *(n+2) = cellp->command;
+  *(n+3) = cellp->length;
+  /* seq is reserved, leave zero */
+  memcpy(n+8,cellp->payload,CELL_PAYLOAD_SIZE);
+
+  if(connection_encrypt_cell(n,conn)<0) {
     return -1;
   }
 
-  return connection_write_to_buf((char *)cellp, sizeof(cell_t), conn);
+  return connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
 }
 
-int connection_encrypt_cell(cell_t *cellp, connection_t *conn) {
-  cell_t newcell;
+int connection_encrypt_cell(char *cellp, connection_t *conn) {
+  char cryptcell[CELL_NETWORK_SIZE];
 #if 0
   int x;
   char *px;
@@ -583,7 +592,7 @@ int connection_encrypt_cell(cell_t *cellp, connection_t *conn) {
   printf("\n");
 #endif
 
-  if(crypto_cipher_encrypt(conn->f_crypto, (char *)cellp, sizeof(cell_t), (char *)&newcell)) {
+  if(crypto_cipher_encrypt(conn->f_crypto, cellp, CELL_NETWORK_SIZE, cryptcell)) {
     log(LOG_ERR,"Could not encrypt cell for connection %s:%u.",conn->address,conn->port);
     return -1;
   }
@@ -596,7 +605,7 @@ int connection_encrypt_cell(cell_t *cellp, connection_t *conn) {
   printf("\n");
 #endif
 
-  memcpy(cellp,&newcell,sizeof(cell_t));
+  memcpy(cellp,cryptcell,CELL_NETWORK_SIZE);
   return 0;
 }
 
@@ -750,15 +759,15 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   /* check if there's a whole cell there.
    * if yes, pull it off, decrypt it, and process it.
    */
-  char crypted[128];
+  char crypted[CELL_NETWORK_SIZE];
   char outbuf[1024];
 //  int x;
-  cell_t *cellp;
+  cell_t cell;
 
-  if(conn->inbuf_datalen < 128) /* entire response available? */
+  if(conn->inbuf_datalen < CELL_NETWORK_SIZE) /* entire response available? */
     return 0; /* not yet */
 
-  if(connection_fetch_from_buf(crypted,128,conn) < 0) {
+  if(connection_fetch_from_buf(crypted,CELL_NETWORK_SIZE,conn) < 0) {
     return -1;
   }
 
@@ -770,7 +779,7 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   printf("\n");
 #endif
   /* decrypt */
-  if(crypto_cipher_decrypt(conn->b_crypto,crypted,sizeof(cell_t),(unsigned char *)outbuf)) {
+  if(crypto_cipher_decrypt(conn->b_crypto,crypted,CELL_NETWORK_SIZE,outbuf)) {
     log(LOG_ERR,"connection_process_cell_from_inbuf(): Decryption failed, dropping.");
     return connection_process_inbuf(conn); /* process the remainder of the buffer */
   }
@@ -783,11 +792,15 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   printf("\n");
 #endif
 
-  /* copy the rest of the cell */
-//  memcpy((char *)outbuf+8, (char *)crypted+8, sizeof(cell_t)-8);
-  cellp = (cell_t *)outbuf;
+  /* retrieve cell info from outbuf (create the struct from the string) */
+  memset(&cell,0,sizeof(cell_t)); /* zero it out to start */
+  cell.aci = ntohs(*(aci_t *)outbuf);
+  cell.command = *(outbuf+2);
+  cell.length = *(outbuf+3);
+  memcpy(cell.payload, outbuf+8, CELL_PAYLOAD_SIZE);
+
 //  log(LOG_DEBUG,"connection_process_cell_from_inbuf(): Decrypted cell is of type %u (ACI %u).",cellp->command,cellp->aci);
-  command_process_cell(cellp, conn);
+  command_process_cell(&cell, conn);
 
   return connection_process_inbuf(conn); /* process the remainder of the buffer */
 }
