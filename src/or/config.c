@@ -1395,10 +1395,10 @@ config_init_logs(or_options_t *options)
       log_fn(LOG_WARN, "Bad syntax on Log option 'Log %s'", opt->value);
       ok = 0; goto cleanup;
     }
-    if (parse_log_severity_range(smartlist_get(elts,0), &levelMin, &levelMin)) {
+    if (parse_log_severity_range(smartlist_get(elts,0), &levelMin, &levelMax)) {
       ok = 0; goto cleanup;
     }
-    if (smartlist_len(elts) < 2) {
+    if (smartlist_len(elts) < 2) { /* only loglevels were provided */
       add_stream_log(levelMin, levelMax, "<stdout>", stdout);
       goto cleanup;
     }
