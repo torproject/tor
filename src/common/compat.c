@@ -65,6 +65,9 @@ const char compat_c_id[] = "$Id$";
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#ifdef HAVE_PTHREAD_H
+#include <pthread.h>
+#endif
 
 #include "log.h"
 #include "util.h"
@@ -601,6 +604,25 @@ get_uname(void)
  *   Process control
  */
 
+#if defined(USE_PTHREADS)
+struct tor_pthread_data_t {
+  int (*func)(void *);
+  void *data;
+};
+static void *
+tor_pthread_helper_fn(void *_data)
+{
+  struct tor_pthread_data_t *data = _data;
+  int (*func)(void*);
+  void *arg;
+  func = data->func;
+  arg = data->data;
+  tor_free(_data);
+  func(arg);
+  return NULL;
+}
+#endif
+
 /** Minimalist interface to run a void function in the background.  On
  * unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
  * func should not return, but rather should call spawn_exit.
@@ -613,10 +635,21 @@ get_uname(void)
 int
 spawn_func(int (*func)(void *), void *data)
 {
-#ifdef MS_WINDOWS
+#if defined(USE_WIN32_THREADS)
   int rv;
   rv = _beginthread(func, 0, data);
   if (rv == (unsigned long) -1)
+    return -1;
+  return 0;
+#elif defined(USE_PTHREADS)
+  pthread_t thread;
+  struct tor_pthread_data_t *d;
+  d = tor_malloc(sizeof(struct tor_pthread_data_t));
+  d->data = data;
+  d->func = func;
+  if (pthread_create(&thread,NULL,tor_pthread_helper_fn,d))
+    return -1;
+  if (pthread_detach(thread))
     return -1;
   return 0;
 #else
@@ -640,8 +673,10 @@ spawn_func(int (*func)(void *), void *data)
  */
 void spawn_exit()
 {
-#ifdef MS_WINDOWS
+#if defined(USE_WIN32_THREADS)
   _endthread();
+#elif defined(USE_PTHREADS)
+  pthread_exit(NULL);
 #else
   exit(0);
 #endif
@@ -669,14 +704,7 @@ void tor_gettimeofday(struct timeval *timeval) {
   return;
 }
 
-#ifndef MS_WINDOWS
-struct tor_mutex_t {
-};
-tor_mutex_t *tor_mutex_new(void) { return NULL; }
-void tor_mutex_acquire(tor_mutex_t *m) { }
-void tor_mutex_release(tor_mutex_t *m) { }
-void tor_mutex_free(tor_mutex_t *m) { }
-#else
+#ifdef USE_WIN32_THREADS
 struct tor_mutex_t {
   HANDLE handle;
 };
@@ -716,6 +744,39 @@ void tor_mutex_release(tor_mutex_t *m)
     log_fn(LOG_WARN, "Failed to release mutex: %d", GetLastError());
   }
 }
+#elif defined(USE_PTHREADS)
+struct tor_mutex_t {
+  pthread_mutex_t mutex;
+};
+tor_mutex_t *tor_mutex_new(void)
+{
+  tor_mutex_t *mutex = tor_malloc_zero(sizeof(tor_mutex_t));
+  pthread_mutex_init(&mutex->mutex, NULL);
+  return mutex;
+}
+void tor_mutex_acquire(tor_mutex_t *m)
+{
+  tor_assert(m);
+  pthread_mutex_lock(&m->mutex);
+}
+void tor_mutex_release(tor_mutex_t *m)
+{
+  tor_assert(m);
+  pthread_mutex_unlock(&m->mutex);
+}
+void tor_mutex_free(tor_mutex_t *m)
+{
+  tor_assert(m);
+  pthread_mutex_destroy(&m->mutex);
+  tor_free(m);
+}
+#else
+struct tor_mutex_t {
+};
+tor_mutex_t *tor_mutex_new(void) { return NULL; }
+void tor_mutex_acquire(tor_mutex_t *m) { }
+void tor_mutex_release(tor_mutex_t *m) { }
+void tor_mutex_free(tor_mutex_t *m) { }
 #endif
 
 /**
