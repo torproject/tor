@@ -11,6 +11,18 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
+For 0.0.7:
+        - allow multiple log files
+        - the keep-trying-to-build-intropoints-always bug.
+        - *bindaddress
+          - include the port
+          - allow multiple of them
+          - have an allow/deny series for them
+        - break exitpolicy into multiple config lines
+        - have the OP forget routers it hasn't heard about in 24 hours
+        - rename/rearrange functions for what file they're in
+
+
 For September:
         . Windows port
           o works as client
