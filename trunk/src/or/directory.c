@@ -429,9 +429,8 @@ parse_http_url(char *headers, char **url)
 
   if(s-start < 5 || strcmpstart(start,"/tor/")) { /* need to rewrite it */
     *url = tor_malloc(s - start + 5);
-    strcpy(*url,"/tor");
-    strlcpy((*url)+4, start, s-start+1);
-    (*url)[s-start+4] = 0; /* null terminate it */
+    strlcpy(*url,"/tor", s-start+5);
+    strlcat((*url)+4, start, s-start+1);
   } else {
     *url = tor_strndup(start, s-start);
   }

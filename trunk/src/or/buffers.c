@@ -506,7 +506,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
                    (int)strlen(tmpbuf)+1,(int)MAX_SOCKS_ADDR_LEN);
             return -1;
           }
-          strcpy(req->address,tmpbuf);
+          strlcpy(req->address,tmpbuf,sizeof(req->address));
           req->port = ntohs(*(uint16_t*)(buf->mem+8));
           buf_remove_from_front(buf, 10);
           if(!have_warned_about_unsafe_socks) {
@@ -594,7 +594,8 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         }
       }
       log_fn(LOG_DEBUG,"socks4: Everything is here. Success.");
-      strcpy(req->address, socks4_prot == socks4 ? tmpbuf : startaddr);
+      strlcpy(req->address, socks4_prot == socks4 ? tmpbuf : startaddr,
+              sizeof(req->address));
       /* XXX on very old netscapes (socks4) the next line triggers an
        * assert, because next-buf->mem+1 is greater than buf->datalen.
        */
@@ -605,7 +606,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
     case 'H': /* head */
     case 'P': /* put/post */
     case 'C': /* connect */
-      strcpy(req->reply,
+      strlcpy(req->reply,
 "HTTP/1.0 501 Tor is not an HTTP Proxy\r\n"
 "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
 "<html>\n"
@@ -625,7 +626,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
 "</p>\n"
 "</body>\n"
 "</html>\n"
-);
+             , MAX_SOCKS_REPLY_LEN);
       req->replylen = strlen(req->reply)+1;
       /* fall through */
     default: /* version is not socks4 or socks5 */

@@ -267,7 +267,7 @@ void rep_hist_dump_stats(time_t now, int severity)
         upt, upt+downt, uptime*100.0);
 
     if (!strmap_isempty(or_history->link_history_map)) {
-      strcpy(buffer, "    Good extend attempts: ");
+      strlcpy(buffer, "    Good extend attempts: ", sizeof(buffer));
       len = strlen(buffer);
       for (lhist_it = strmap_iter_init(or_history->link_history_map);
            !strmap_iter_done(lhist_it);

@@ -1115,7 +1115,7 @@ int routers_update_status_from_entry(smartlist_t *routers,
              strlen(cp), s);
       return -1;
     }
-    strcpy(hexdigest, cp);
+    strlcpy(hexdigest, cp, sizeof(hexdigest));
     if (base16_decode(digest, DIGEST_LEN, hexdigest, HEX_DIGEST_LEN)<0) {
       log_fn(LOG_WARN, "Invalid digest in router status entry (%s)", s);
       return -1;

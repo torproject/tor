@@ -1847,13 +1847,12 @@ get_uname(void)
 #ifdef HAVE_UNAME
     if (uname(&u) != -1) {
       /* (linux says 0 is success, solaris says 1 is success) */
-      tor_snprintf(uname_result, 255, "%s %s %s",
+      tor_snprintf(uname_result, sizeof(uname_result), "%s %s %s",
                u.sysname, u.nodename, u.machine);
-      uname_result[255] = '\0';
     } else
 #endif
       {
-        strcpy(uname_result, "Unknown platform");
+        strlcpy(uname_result, "Unknown platform", sizeof(uname_result));
       }
     uname_result_is_set = 1;
   }

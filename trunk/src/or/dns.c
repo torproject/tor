@@ -159,7 +159,7 @@ static void send_resolved_cell(connection_t *conn, uint8_t answer_type)
     case RESOLVED_TYPE_ERROR_TRANSIENT:
     case RESOLVED_TYPE_ERROR:
       buf[1] = 24; /* length of "error resolving hostname" */
-      strcpy(buf+2, "error resolving hostname");
+      strlcpy(buf+2, "error resolving hostname", buf-2);
       buflen = 26;
       break;
     default:
