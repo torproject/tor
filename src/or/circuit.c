@@ -439,7 +439,7 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
 
   if(!conn) {
     log_fn(LOG_WARN,"Didn't recognize cell, but circ stops here! Dropping.");
-    return 0; /* XXX if this warning never triggers, then return -1 */
+    return -1;
   }
 
   log_fn(LOG_DEBUG,"Passing on unrecognized cell.");
