@@ -472,6 +472,7 @@ connection_edge_end_reason(char *payload, uint16_t length) {
     case END_STREAM_REASON_INTERNAL:       return "internal error at server";
     case END_STREAM_REASON_RESOURCELIMIT:  return "server out of resources";
     case END_STREAM_REASON_CONNRESET:      return "connection reset";
+    case END_STREAM_REASON_TORPROTOCOL:    return "Tor protocol error";
     default:
       log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
       return "unknown";
