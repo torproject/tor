@@ -67,6 +67,7 @@ int op_handshake_process_keys(connection_t *conn) {
 
   crypto_cipher_set_key(conn->b_crypto, auth_plain+4);
   crypto_cipher_set_key(conn->f_crypto, auth_plain+12);
+#if 0
   printf("f_session_key: ");
   for(x=0;x<8;x++) {
     printf("%d ",conn->f_crypto->key[x]);
@@ -76,8 +77,9 @@ int op_handshake_process_keys(connection_t *conn) {
     printf("%d ",conn->b_crypto->key[x]);
   }
   printf("\n");
+#endif
   
-  memset((void *)iv, 0, 16);
+  memset(iv, 0, 16);
   crypto_cipher_set_key(conn->b_crypto, iv);
   crypto_cipher_set_key(conn->f_crypto, iv);
 
