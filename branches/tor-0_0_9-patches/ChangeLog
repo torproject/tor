@@ -23,6 +23,9 @@ Changes in version 0.0.9.6 - 2005-03-24
       resolves a bug where a Tor server would refuse to cache a directory
       because all the directories it gets are too far in the future;
       yet the Tor server never logs any complaints about clock skew.
+    - Mac packaging magic: make man pages useable, and do not overwrite
+      existing torrc files.
+    - Make OS X log happily to /var/log/tor/tor.log
 
 
 Changes in version 0.0.9.5 - 2005-02-22
