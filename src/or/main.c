@@ -585,7 +585,7 @@ void directory_all_unreachable(time_t now) {
   }
 }
 
-INLINE int
+static INLINE int
 get_dir_fetch_period(or_options_t *options)
 {
   if (options->DirFetchPeriod)
@@ -599,7 +599,7 @@ get_dir_fetch_period(or_options_t *options)
     return 40*60;
 }
 
-INLINE int
+static INLINE int
 get_status_fetch_period(or_options_t *options)
 {
   if (options->StatusFetchPeriod)
