@@ -292,7 +292,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     argc = backup_argc;
 
     /* record some previous values, so we can fail if they change */
-    previous_pidfile = tor_strdup(options->PidFile);
+    if(options->PidFile)
+      previous_pidfile = tor_strdup(options->PidFile);
     previous_runasdaemon = options->RunAsDaemon;
     free_options(options);
   }
