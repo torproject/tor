@@ -61,6 +61,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
       connection_remove(n_stream);
       connection_free(n_stream);
     case 0: /* resolve added to pending list */
+      ;
   }
   return 0;
 }
