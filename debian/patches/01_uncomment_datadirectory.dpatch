@@ -23,15 +23,15 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad /home/weasel/projects/tor/cvs/src/config/torrc.sample.in cvs/src/config/torrc.sample.in
---- /home/weasel/projects/tor/cvs/src/config/torrc.sample.in	2004-03-01 23:41:26.000000000 +0100
-+++ cvs/src/config/torrc.sample.in	2004-03-03 13:47:25.000000000 +0100
-@@ -11,7 +11,7 @@
- ##################### Below is just for servers #####################
+diff -urNad tor-0.0.9pre5/src/config/torrc.sample.in /tmp/dpep.bt2Xog/tor-0.0.9pre5/src/config/torrc.sample.in
+--- tor-0.0.9pre5/src/config/torrc.sample.in	2004-11-09 21:04:18.000000000 +0100
++++ /tmp/dpep.bt2Xog/tor-0.0.9pre5/src/config/torrc.sample.in	2004-11-10 03:23:26.072988347 +0100
+@@ -45,7 +45,7 @@
  
- ## The directory for keeping all the keys/etc for this server
+ # The directory for keeping all the keys/etc. By default, we store
+ # things in $HOME/.tor on Unix, and in Application Data\tor on Windows.
 -#DataDirectory @LOCALSTATEDIR@/lib/tor
 +DataDirectory @LOCALSTATEDIR@/lib/tor
  
- #Nickname moria # A unique handle for this server
- #Address moria.seul.org # The fqdn for this server
+ ##################### Below is just for servers #####################
+ 
