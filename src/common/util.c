@@ -838,35 +838,42 @@ write_str_to_file(const char *fname, const char *str, int bin)
 int write_bytes_to_file(const char *fname, const char *str, size_t len,
                         int bin)
 {
-  char tempname[1024];
+  size_t tempname_len;
+  char *tempname;
   int fd;
   int result;
-  if ((strlcpy(tempname,fname,1024) >= 1024) ||
-      (strlcat(tempname,".tmp",1024) >= 1024)) {
-    log(LOG_WARN, "Filename %s.tmp too long (>1024 chars)", fname);
-    return -1;
+  tempname_len = strlen(fname)+16;
+  tor_assert(tempname_len > strlen(fname)); /*check for overflow*/
+  tempname = tor_malloc(tempname_len);
+  if (tor_snprintf(tempname, tempname_len, "%s.tmp", fname)<0) {
+    log(LOG_WARN, "Failed to generate filename");
+    goto err;
   }
   if ((fd = open(tempname, O_WRONLY|O_CREAT|O_TRUNC|(bin?O_BINARY:O_TEXT), 0600))
       < 0) {
     log(LOG_WARN, "Couldn't open %s for writing: %s", tempname,
         strerror(errno));
-    return -1;
+    goto err;
   }
   result = write_all(fd, str, len, 0);
   if (result < 0 || (size_t)result != len) {
     log(LOG_WARN, "Error writing to %s: %s", tempname, strerror(errno));
     close(fd);
-    return -1;
+    goto err;
   }
   if (close(fd)) {
     log(LOG_WARN,"Error flushing to %s: %s", tempname, strerror(errno));
-    return -1;
+    goto err;
   }
   if (replace_file(tempname, fname)) {
     log(LOG_WARN, "Error replacing %s: %s", fname, strerror(errno));
-    return -1;
+    goto err;
   }
+  tor_free(tempname);
   return 0;
+ err:
+  tor_free(tempname);
+  return -1;
 }
 
 /** Read the contents of <b>filename</b> into a newly allocated string; return the
