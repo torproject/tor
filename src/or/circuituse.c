@@ -35,6 +35,9 @@ static int circuit_is_acceptable(circuit_t *circ,
                                  time_t now)
 {
   routerinfo_t *exitrouter;
+  tor_assert(circ);
+  tor_assert(conn);
+  tor_assert(conn->socks_request);
 
   if (!CIRCUIT_IS_ORIGIN(circ))
     return 0; /* this circ doesn't start at us */
@@ -61,40 +64,36 @@ static int circuit_is_acceptable(circuit_t *circ,
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL)
     if (circ->timestamp_dirty &&
-       circ->timestamp_dirty+get_options()->NewCircuitPeriod <= now)
+       circ->timestamp_dirty+get_options()->MaxCircuitDirtiness <= now)
       return 0;
 
-  if (conn) {
-    /* decide if this circ is suitable for this conn */
+  /* decide if this circ is suitable for this conn */
 
-    /* for rend circs, circ->cpath->prev is not the last router in the
-     * circuit, it's the magical extra bob hop. so just check the nickname
-     * of the one we meant to finish at.
-     */
-    exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
+  /* for rend circs, circ->cpath->prev is not the last router in the
+   * circuit, it's the magical extra bob hop. so just check the nickname
+   * of the one we meant to finish at.
+   */
+  exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
 
-    if (!exitrouter) {
-      log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
-      return 0; /* this circuit is screwed and doesn't know it yet */
-    }
+  if (!exitrouter) {
+    log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
+    return 0; /* this circuit is screwed and doesn't know it yet */
+  }
 
-    if (!circ->build_state->need_uptime &&
-        smartlist_string_num_isin(get_options()->LongLivedPorts,
-                                  conn->socks_request->port))
-      return 0;
+  if (!circ->build_state->need_uptime &&
+      smartlist_string_num_isin(get_options()->LongLivedPorts,
+                                conn->socks_request->port))
+    return 0;
 
-    if (conn->socks_request &&
-        conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
-    } else if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+  if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
+    if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       if (!connection_ap_can_use_exit(conn, exitrouter)) {
         /* can't exit from this router */
         return 0;
       }
     } else { /* not general */
-      if (rend_cmp_service_ids(conn->rend_query, circ->rend_query) &&
-          (circ->rend_query[0] || purpose != CIRCUIT_PURPOSE_C_REND_JOINED)) {
-        /* this circ is not for this conn, and it's not suitable
-         * for cannibalizing either */
+      if (rend_cmp_service_ids(conn->rend_query, circ->rend_query)) {
+        /* this circ is not for this conn */
         return 0;
       }
     }
@@ -178,9 +177,8 @@ circuit_get_best(connection_t *conn, int must_be_open, uint8_t purpose)
   return best;
 }
 
-/** Circuits that were born at the end of their second might be expired
- * after 30.1 seconds; circuits born at the beginning might be expired
- * after closer to 31 seconds.
+/** If we find a circuit that isn't open yet and was born this many
+ * seconds ago, then assume something went wrong, and cull it.
  */
 #define MIN_SECONDS_BEFORE_EXPIRING_CIRC 30
 
@@ -289,7 +287,7 @@ int circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min) 
         !circ->marked_for_close &&
         circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
         (!circ->timestamp_dirty ||
-         circ->timestamp_dirty + get_options()->NewCircuitPeriod < now)) {
+         circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now)) {
       exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
       if (exitrouter &&
           (!need_uptime || circ->build_state->need_uptime) &&
@@ -305,6 +303,65 @@ int circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min) 
   return 0;
 }
 
+/** Don't keep more than 10 unused open circuits around. */
+#define MAX_UNUSED_OPEN_CIRCUITS 10
+
+/** Figure out how many circuits we have open that are clean. Make
+ * sure it's enough for all the upcoming behaviors we predict we'll have.
+ * But if we have too many, close the not-so-useful ones.
+ */
+static void
+circuit_predict_and_launch_new(void)
+{
+  circuit_t *circ;
+  int num=0, num_internal=0, num_uptime_internal=0;
+  int hidserv_needs_uptime=0, hidserv_needs_capacity=1;
+  int port_needs_uptime=0, port_needs_capacity=1;
+  int need_ports, need_hidserv;
+  time_t now = time(NULL);
+
+  /* check if we know of a port that's been requested recently
+   * and no circuit is currently available that can handle it. */
+  need_ports = !circuit_all_predicted_ports_handled(now, &port_needs_uptime,
+                                                    &port_needs_capacity);
+
+  need_hidserv = rep_hist_get_predicted_hidserv(now, &hidserv_needs_uptime,
+                                                &hidserv_needs_capacity);
+
+  for (circ=global_circuitlist;circ;circ = circ->next) {
+    if (!CIRCUIT_IS_ORIGIN(circ))
+      continue;
+    if (circ->marked_for_close)
+      continue; /* don't mess with marked circs */
+    if (circ->timestamp_dirty)
+      continue; /* only count clean circs */
+    if (circ->purpose != CIRCUIT_PURPOSE_C_GENERAL)
+      continue; /* only pay attention to general-purpose circs */
+    num++;
+    if (circ->build_state->is_internal)
+      num_internal++;
+    if (circ->build_state->need_uptime && circ->build_state->is_internal)
+      num_uptime_internal++;
+  }
+
+  if (num < MAX_UNUSED_OPEN_CIRCUITS) {
+    /* perhaps we want another */
+    if (need_ports) {
+      log_fn(LOG_INFO,"Have %d clean circs (%d internal), need another exit circ.",
+        num, num_internal);
+      circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL,
+                               port_needs_uptime, port_needs_capacity, 0);
+    } else if (need_hidserv &&
+               ((num_uptime_internal<2 && hidserv_needs_uptime) ||
+                num_internal<2)) {
+      log_fn(LOG_INFO,"Have %d clean circs (%d uptime-internal, %d internal),"
+        " need another hidserv circ.", num, num_uptime_internal, num_internal);
+      circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL,
+                               hidserv_needs_uptime, hidserv_needs_capacity, 1);
+    }
+  }
+}
+
 /** Build a new test circuit every 5 minutes */
 #define TESTING_CIRCUIT_INTERVAL 300
 
@@ -315,8 +372,6 @@ int circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min) 
  */
 void circuit_build_needed_circs(time_t now) {
   static long time_to_new_circuit = 0;
-  circuit_t *circ;
-  int need_uptime=0, need_capacity=1;
 
   /* launch a new circ for any pending streams that need one */
   connection_ap_attach_pending();
@@ -325,8 +380,6 @@ void circuit_build_needed_circs(time_t now) {
   if (has_fetched_directory)
     rend_services_introduce();
 
-  circ = circuit_get_youngest_clean_open(CIRCUIT_PURPOSE_C_GENERAL);
-
   if (time_to_new_circuit < now) {
     circuit_reset_failure_count(1);
     time_to_new_circuit = now + get_options()->NewCircuitPeriod;
@@ -334,37 +387,17 @@ void circuit_build_needed_circs(time_t now) {
       client_dns_clean();
     circuit_expire_old_circuits();
 
+#if 0 /* disable for now, until predict-and-launch-new can cull leftovers */
+    circ = circuit_get_youngest_clean_open(CIRCUIT_PURPOSE_C_GENERAL);
     if (get_options()->RunTesting &&
         circ &&
         circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
       log_fn(LOG_INFO,"Creating a new testing circuit.");
-      circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL, 0, 0);
+      circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL, 0, 0, 0);
     }
-  }
-
-#if 0
-/** How many simultaneous in-progress general-purpose circuits do we
- * want to be building at once, if there are no open general-purpose
- * circuits?
- */
-#define CIRCUIT_MIN_BUILDING_GENERAL 5
-  /* if there's no open circ, and less than 5 are on the way,
-   * go ahead and try another. */
-  if (!circ && circuit_count_building(CIRCUIT_PURPOSE_C_GENERAL)
-               < CIRCUIT_MIN_BUILDING_GENERAL) {
-    circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL);
-  }
 #endif
-
-  /* if we know of a port that's been requested recently and no
-   * circuit is currently available that can handle it, start one
-   * for that too. */
-  if (!circuit_all_predicted_ports_handled(now, &need_uptime, &need_capacity)) {
-    circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL,
-                               need_uptime, need_capacity);
   }
-
-  /* XXX count idle rendezvous circs and build more */
+  circuit_predict_and_launch_new();
 }
 
 /** If the stream <b>conn</b> is a member of any of the linked
@@ -469,24 +502,14 @@ void circuit_about_to_close_connection(connection_t *conn) {
   } /* end switch */
 }
 
-/** Don't keep more than 10 unused open circuits around. */
-#define MAX_UNUSED_OPEN_CIRCUITS 10
-
 /** Find each circuit that has been dirty for too long, and has
  * no streams on it: mark it for close.
- *
- * Also, if there are more than MAX_UNUSED_OPEN_CIRCUITS open and
- * unused circuits, then mark the excess circs for close.
  */
 static void
 circuit_expire_old_circuits(void)
 {
   circuit_t *circ;
   time_t now = time(NULL);
-  smartlist_t *unused_open_circs;
-  int i;
-
-  unused_open_circs = smartlist_create();
 
   for (circ = global_circuitlist; circ; circ = circ->next) {
     if (circ->marked_for_close)
@@ -495,8 +518,8 @@ circuit_expire_old_circuits(void)
      * on it, mark it for close.
      */
     if (circ->timestamp_dirty &&
-        circ->timestamp_dirty + get_options()->NewCircuitPeriod < now &&
-        !circ->p_conn && /* we're the origin */
+        circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now &&
+        CIRCUIT_IS_ORIGIN(circ) &&
         !circ->p_streams /* nothing attached */ ) {
       log_fn(LOG_DEBUG,"Closing n_circ_id %d (dirty %d secs ago, purp %d)",circ->n_circ_id,
              (int)(now - circ->timestamp_dirty), circ->purpose);
@@ -512,23 +535,9 @@ circuit_expire_old_circuits(void)
         log_fn(LOG_DEBUG,"Closing circuit that has been unused for %d seconds.",
                (int)(now - circ->timestamp_created));
         circuit_mark_for_close(circ);
-      } else {
-        /* Also, gather a list of open unused general circuits that we created.
-         * Because we add elements to the front of global_circuitlist,
-         * the last elements of unused_open_circs will be the oldest
-         * ones.
-         */
-        smartlist_add(unused_open_circs, circ);
       }
     }
   }
-  for (i = MAX_UNUSED_OPEN_CIRCUITS; i < smartlist_len(unused_open_circs); ++i) {
-    circuit_t *circ = smartlist_get(unused_open_circs, i);
-    log_fn(LOG_DEBUG,"Expiring excess clean circ (n_circ_id %d, purp %d)",
-           circ->n_circ_id, circ->purpose);
-    circuit_mark_for_close(circ);
-  }
-  smartlist_free(unused_open_circs);
 }
 
 /** The circuit <b>circ</b> has just become open. Take the next
@@ -646,11 +655,50 @@ static int did_circs_fail_last_period = 0;
 
 circuit_t *
 circuit_launch_by_identity(uint8_t purpose, const char *exit_digest,
-                           int need_uptime, int need_capacity)
+                           int need_uptime, int need_capacity, int internal)
 {
+  circuit_t *circ;
+
   if (!has_fetched_directory) {
     log_fn(LOG_DEBUG,"Haven't fetched directory yet; canceling circuit launch.");
     return NULL;
+  }
+
+  if (purpose != CIRCUIT_PURPOSE_C_GENERAL) {
+    /* see if there are appropriate circs available to cannibalize. */
+    if ((circ = circuit_get_clean_open(CIRCUIT_PURPOSE_C_GENERAL, need_uptime,
+                                       need_capacity, internal))) {
+      log_fn(LOG_INFO,"Cannibalizing circ '%s' for purpose %d",
+             circ->build_state->chosen_exit_name, purpose);
+      circ->purpose = purpose;
+      /* reset the birth date of this circ, else expire_building
+       * will see it and think it's been trying to build since it
+       * began. */
+      circ->timestamp_created = time(NULL);
+      switch (purpose) {
+        case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
+          /* it's ready right now */
+          /* XXX should we call control_event_circuit_status() here? */
+          rend_client_rendcirc_has_opened(circ);
+          break;
+        case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
+          /* it's ready right now */
+          rend_service_intro_has_opened(circ);
+          break;
+        case CIRCUIT_PURPOSE_C_INTRODUCING:
+        case CIRCUIT_PURPOSE_S_CONNECT_REND:
+          /* need to add a new hop */
+          tor_assert(exit_digest);
+          if (circuit_append_new_hop(circ, NULL, exit_digest) < 0)
+            return NULL;
+          break;
+        default:
+          log_fn(LOG_WARN,"Bug: unexpected purpose %d when cannibalizing a general circ.",
+                 purpose);
+          return NULL;
+      }
+      return circ;
+    }
   }
 
   if (did_circs_fail_last_period &&
@@ -662,13 +710,13 @@ circuit_launch_by_identity(uint8_t purpose, const char *exit_digest,
 
   /* try a circ. if it fails, circuit_mark_for_close will increment n_circuit_failures */
   return circuit_establish_circuit(purpose, exit_digest,
-                                   need_uptime, need_capacity);
+                                   need_uptime, need_capacity, internal);
 }
 
 /** Launch a new circuit and return a pointer to it. Return NULL if you failed. */
 circuit_t *
 circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
-                           int need_uptime, int need_capacity)
+                           int need_uptime, int need_capacity, int internal)
 {
   const char *digest = NULL;
 
@@ -681,7 +729,7 @@ circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
     digest = r->identity_digest;
   }
   return circuit_launch_by_identity(purpose, digest,
-                                    need_uptime, need_capacity);
+                                    need_uptime, need_capacity, internal);
 }
 
 /** Record another failure at opening a general circuit. When we have
@@ -762,6 +810,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
   if (!circ) {
     char *exitname=NULL;
     uint8_t new_circ_purpose;
+    int is_internal;
 
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
       /* need to pick an intro point */
@@ -801,13 +850,18 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     else
       new_circ_purpose = desired_circuit_purpose;
 
-    circ = circuit_launch_by_nickname(new_circ_purpose, exitname, need_uptime, 1);
+    is_internal = (new_circ_purpose != CIRCUIT_PURPOSE_C_GENERAL || is_resolve);
+    circ = circuit_launch_by_nickname(new_circ_purpose, exitname, need_uptime,
+                                      1, is_internal);
     tor_free(exitname);
 
-    if (circ &&
-        desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL) {
-      /* then write the service_id into circ */
-      strlcpy(circ->rend_query, conn->rend_query, sizeof(circ->rend_query));
+    if (desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL) {
+      /* help predict this next time */
+      rep_hist_note_used_hidserv(time(NULL), need_uptime, 1);
+      if (circ) {
+        /* write the service_id into circ */
+        strlcpy(circ->rend_query, conn->rend_query, sizeof(circ->rend_query));
+      }
     }
   }
   if (!circ)
@@ -914,6 +968,12 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
       /* one is already established, attach */
       log_fn(LOG_INFO,"rend joined circ %d already here. attaching. (stream %d sec old)",
              rendcirc->n_circ_id, conn_age);
+      /* Mark rendezvous circuits as 'newly dirty' every time you use
+       * them, since the process of rebuilding a rendezvous circ is so
+       * expensive. There is a tradeoffs between linkability and
+       * feasibility, at this point.
+       */
+      rendcirc->timestamp_dirty = time(NULL);
       link_apconn_to_circ(conn, rendcirc);
       if (connection_ap_handshake_send_begin(conn, rendcirc) < 0)
         return 0; /* already marked, let them fade away */
@@ -947,7 +1007,6 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
       if (introcirc->state == CIRCUIT_STATE_OPEN) {
         log_fn(LOG_INFO,"found open intro circ %d (rend %d); sending introduction. (stream %d sec old)",
                introcirc->n_circ_id, rendcirc->n_circ_id, conn_age);
-        /* XXX here we should cannibalize the rend circ if it's a zero service id */
         if (rend_client_send_introduction(introcirc, rendcirc) < 0) {
           return -1;
         }

@@ -145,6 +145,7 @@ static config_var_t config_vars[] = {
   VAR("AccountingMax",       MEMUNIT,   AccountingMax,        "0 bytes"),
   VAR("Nickname",            STRING,   Nickname,             NULL),
   VAR("NewCircuitPeriod",    INTERVAL, NewCircuitPeriod,     "30 seconds"),
+  VAR("MaxCircuitDirtiness", INTERVAL, MaxCircuitDirtiness,  "10 minutes"),
   VAR("NumCpus",             UINT,     NumCpus,              "1"),
   VAR("ORPort",              UINT,     ORPort,               "0"),
   VAR("ORBindAddress",       LINELIST, ORBindAddress,        NULL),

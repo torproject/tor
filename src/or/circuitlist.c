@@ -292,41 +292,29 @@ circuit_t *circuit_get_rendezvous(const char *cookie)
   return NULL;
 }
 
-/** Count the number of circs originating here that aren't open, and
- * that have the specified <b>purpose</b>. */
-int circuit_count_building(uint8_t purpose) {
-  circuit_t *circ;
-  int num=0;
-
-  for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (CIRCUIT_IS_ORIGIN(circ) &&
-       circ->state != CIRCUIT_STATE_OPEN &&
-       circ->purpose == purpose &&
-       !circ->marked_for_close)
-      num++;
-  }
-  return num;
-}
-
-/** Return the circuit that is open, has specified <b>purpose</b>,
- * has a timestamp_dirty value of 0, and was created most recently,
- * or NULL if no circuit fits this description.
+/** Return a circuit that is open, has specified <b>purpose</b>,
+ * has a timestamp_dirty value of 0, and is uptime/capacity/internal
+ * if required; or NULL if no circuit fits this description.
  */
 circuit_t *
-circuit_get_youngest_clean_open(uint8_t purpose) {
+circuit_get_clean_open(uint8_t purpose, int need_uptime,
+                       int need_capacity, int internal) {
   circuit_t *circ;
-  circuit_t *youngest=NULL;
 
-  for (circ=global_circuitlist;circ;circ = circ->next) {
+  log_fn(LOG_DEBUG,"Hunting for a circ to cannibalize: purpose %d, uptime %d, capacity %d, internal %d", purpose, need_uptime, need_capacity, internal);
+
+  for (circ=global_circuitlist; circ; circ = circ->next) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
         circ->state == CIRCUIT_STATE_OPEN &&
         !circ->marked_for_close &&
         circ->purpose == purpose &&
         !circ->timestamp_dirty &&
-        (!youngest || youngest->timestamp_created < circ->timestamp_created))
-      youngest = circ;
+        (!need_uptime || circ->build_state->need_uptime) &&
+        (!need_capacity || circ->build_state->need_capacity) &&
+        (!internal || circ->build_state->is_internal))
+      return circ;
   }
-  return youngest;
+  return NULL;
 }
 
 /** Mark <b>circ</b> to be closed next time we call

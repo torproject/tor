@@ -50,7 +50,7 @@ typedef struct rend_service_t {
   int n_intro_circuits_launched; /**< count of intro circuits we have
                                   * established in this period. */
   rend_service_descriptor_t *desc;
-  int desc_is_dirty;
+  time_t desc_is_dirty;
   time_t next_upload_time;
 } rend_service_t;
 
@@ -363,7 +363,7 @@ rend_service_requires_uptime(rend_service_t *service) {
  ******/
 
 /** Respond to an INTRODUCE2 cell by launching a circuit to the chosen
- * rendezvous points.
+ * rendezvous point.
  */
 int
 rend_service_introduce(circuit_t *circuit, const char *request, size_t request_len)
@@ -381,6 +381,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   char hexcookie[9];
   int version;
   size_t nickname_field_len;
+  int circ_needs_uptime;
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                 circuit->rend_pk_digest,10);
@@ -452,6 +453,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   /* Okay, now we know that a nickname is at the start of the buffer. */
   ptr = rp_nickname+nickname_field_len;
   len -= nickname_field_len;
+  len -= rp_nickname - buf; /* also remove header space used by version, if any */
   if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
     log_fn(LOG_WARN, "Bad length %u for INTRODUCE2 cell.", (int)len);
     return -1;
@@ -471,11 +473,16 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
     goto err;
   }
 
+  circ_needs_uptime = rend_service_requires_uptime(service);
+
+  /* help predict this next time */
+  rep_hist_note_used_hidserv(time(NULL), circ_needs_uptime, 1);
+
   /* Launch a circuit to alice's chosen rendezvous point.
    */
   for (i=0;i<MAX_REND_FAILURES;i++) {
     launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname,
-                                           rend_service_requires_uptime(service), 1);
+                                          circ_needs_uptime, 1, 1);
     if (launched)
       break;
   }
@@ -540,7 +547,7 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
          oldstate->chosen_exit_name);
 
   newcirc = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND,
-                               oldstate->chosen_exit_name, 0, 1);
+                               oldstate->chosen_exit_name, 0, 1, 1);
   if (!newcirc) {
     log_fn(LOG_WARN,"Couldn't relaunch rendezvous circuit to %s",
            oldstate->chosen_exit_name);
@@ -568,8 +575,10 @@ rend_service_launch_establish_intro(rend_service_t *service, const char *nicknam
   log_fn(LOG_INFO, "Launching circuit to introduction point %s for service %s",
          nickname, service->service_id);
 
+  rep_hist_note_used_hidserv(time(NULL), 1, 0);
+
   ++service->n_intro_circuits_launched;
-  launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, nickname, 1, 0);
+  launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, nickname, 1, 0, 1);
   if (!launched) {
     log_fn(LOG_WARN, "Can't launch circuit to establish introduction at '%s'",
            nickname);
@@ -661,7 +670,7 @@ rend_service_intro_established(circuit_t *circuit, const char *request, size_t r
            circuit->n_circ_id);
     goto err;
   }
-  service->desc_is_dirty = 1;
+  service->desc_is_dirty = time(NULL);
   circuit->purpose = CIRCUIT_PURPOSE_S_INTRO;
 
   return 0;
@@ -849,7 +858,8 @@ void rend_services_introduce(void) {
                 intro, service->service_id);
         tor_free(intro);
         smartlist_del(service->intro_nodes,j--);
-        changed = service->desc_is_dirty = 1;
+        changed = 1;
+        service->desc_is_dirty = now;
       }
       smartlist_add(intro_routers, router);
     }
@@ -931,9 +941,9 @@ rend_consider_services_upload(time_t now) {
     }
     if (service->next_upload_time < now ||
         (service->desc_is_dirty &&
-         service->next_upload_time < now-5)) {
+         service->desc_is_dirty < now-5)) {
       /* if it's time, or if the directory servers have a wrong service
-       * descriptor and this has been the case for 5 seconds, upload a
+       * descriptor and ours has been stable for 5 seconds, upload a
        * new one. */
       upload_service_descriptor(service);
       service->next_upload_time = now + rendpostperiod;

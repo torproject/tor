@@ -666,7 +666,7 @@ void rep_hist_note_used_port(uint16_t port, time_t now) {
   add_predicted_port(port, now);
 }
 
-#define PREDICTED_PORTS_RELEVANCE_TIME (6*3600) /* 6 hours */
+#define PREDICTED_CIRCS_RELEVANCE_TIME (3600) /* 1 hour */
 
 /** Return a pointer to the list of port numbers that
  * are likely to be asked for in the near future.
@@ -684,7 +684,7 @@ smartlist_t *rep_hist_get_predicted_ports(time_t now) {
   /* clean out obsolete entries */
   for (i = 0; i < smartlist_len(predicted_ports_list); ++i) {
     tmp_time = smartlist_get(predicted_ports_times, i);
-    if (*tmp_time + PREDICTED_PORTS_RELEVANCE_TIME < now) {
+    if (*tmp_time + PREDICTED_CIRCS_RELEVANCE_TIME < now) {
       tmp_port = smartlist_get(predicted_ports_list, i);
       log_fn(LOG_DEBUG, "Expiring predicted port %d", *tmp_port);
       smartlist_del(predicted_ports_list, i);
@@ -696,4 +696,37 @@ smartlist_t *rep_hist_get_predicted_ports(time_t now) {
   }
   return predicted_ports_list;
 }
+
+/** The last time at which we needed an internal circ. */
+static time_t predicted_hidserv_time = 0;
+/** The last time we needed an internal circ with good uptime. */
+static time_t predicted_hidserv_uptime_time = 0;
+/** The last time we needed an internal circ with good capacity. */
+static time_t predicted_hidserv_capacity_time = 0;
+
+/** Remember that we used an internal circ at time <b>now</b>. */
+void rep_hist_note_used_hidserv(time_t now, int need_uptime, int need_capacity) {
+  predicted_hidserv_time = now;
+  if (need_uptime)
+    predicted_hidserv_uptime_time = now;
+  if (need_capacity)
+    predicted_hidserv_capacity_time = now;
+}
+
+/** Return 1 if we've used an internal circ recently; else return 0. */
+int rep_hist_get_predicted_hidserv(time_t now, int *need_uptime, int *need_capacity) {
+  if (!predicted_hidserv_time) /* initialize it */
+    predicted_hidserv_time = now;
+  if (predicted_hidserv_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
+    return 0; /* too long ago */
+  if (predicted_hidserv_uptime_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
+    *need_uptime = 1;
+  if (predicted_hidserv_capacity_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
+    *need_capacity = 1;
+  return 1;
+}
+
+/* not used yet */
+void rep_hist_note_used_resolve(time_t now) { }
+int rep_hist_get_predicted_resolve(time_t now) { return 0; }
 

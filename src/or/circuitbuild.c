@@ -23,7 +23,7 @@ static int
 circuit_deliver_create_cell(circuit_t *circ, char *payload);
 static cpath_build_state_t *
 onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest,
-                            int need_uptime, int need_capacity);
+                            int need_uptime, int need_capacity, int internal);
 static int onion_extend_cpath(crypt_path_t **head_ptr,
                        cpath_build_state_t *state, routerinfo_t **router_out);
 static int count_acceptable_routers(smartlist_t *routers);
@@ -82,7 +82,9 @@ circuit_list_path(circuit_t *circ, int verbose)
   elements = smartlist_create();
 
   if (verbose) {
-    tor_snprintf(buf, sizeof(buf)-1, "circ (length %d, exit %s):",
+    tor_snprintf(buf, sizeof(buf)-1, "%s%s circ (length %d, exit %s):",
+                 circ->build_state->is_internal ? "internal" : "exit",
+                 circ->build_state->need_uptime ? " (high-uptime)" : "",
                  circ->build_state->desired_path_len,
                  circ->build_state->chosen_exit_name);
     smartlist_add(elements, tor_strdup(buf));
@@ -236,7 +238,7 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
  */
 circuit_t *
 circuit_establish_circuit(uint8_t purpose, const char *exit_digest,
-                          int need_uptime, int need_capacity) {
+                          int need_uptime, int need_capacity, int internal) {
   routerinfo_t *firsthop;
   connection_t *n_conn;
   circuit_t *circ;
@@ -244,7 +246,7 @@ circuit_establish_circuit(uint8_t purpose, const char *exit_digest,
   circ = circuit_new(0, NULL); /* sets circ->p_circ_id and circ->p_conn */
   circ->state = CIRCUIT_STATE_OR_WAIT;
   circ->build_state = onion_new_cpath_build_state(purpose, exit_digest,
-                                                  need_uptime, need_capacity);
+                                 need_uptime, need_capacity, internal);
   circ->purpose = purpose;
 
   if (! circ->build_state) {
@@ -951,6 +953,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       if (carray[j]->type != CONN_TYPE_AP ||
           carray[j]->state != AP_CONN_STATE_CIRCUIT_WAIT ||
           carray[j]->marked_for_close ||
+          connection_edge_is_rendezvous_stream(carray[j]) ||
           circuit_stream_is_being_handled(carray[j], 0, MIN_CIRCUITS_HANDLING_STREAM))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
       if (connection_ap_can_use_exit(carray[j], router)) {
@@ -1080,7 +1083,7 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
  */
 static cpath_build_state_t *
 onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest,
-                            int need_uptime, int need_capacity)
+                            int need_uptime, int need_capacity, int internal)
 {
   routerlist_t *rl;
   int r;
@@ -1097,6 +1100,7 @@ onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest,
   info->desired_path_len = r;
   info->need_uptime = need_uptime;
   info->need_capacity = need_capacity;
+  info->is_internal = internal;
   if (exit_digest) { /* the circuit-builder pre-requested one */
     memcpy(info->chosen_exit_digest, exit_digest, DIGEST_LEN);
     exit = router_get_by_digest(exit_digest);
@@ -1119,6 +1123,35 @@ onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest,
     info->chosen_exit_name = tor_strdup(exit->nickname);
   }
   return info;
+}
+
+/** Take the open circ originating here, give it a new exit destination
+ * to exit_digest (use nickname directly if it's provided, else strdup
+ * out of router->nickname), and get it to send the next extend cell.
+ */
+int
+circuit_append_new_hop(circuit_t *circ, char *nickname, const char *exit_digest) {
+  routerinfo_t *exit = router_get_by_digest(exit_digest);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+  circ->state = CIRCUIT_STATE_BUILDING;
+  tor_free(circ->build_state->chosen_exit_name);
+  if (nickname) {
+    circ->build_state->chosen_exit_name = nickname;
+  } else if (exit) {
+    circ->build_state->chosen_exit_name = tor_strdup(exit->nickname);
+  } else {
+    circ->build_state->chosen_exit_name = tor_malloc(HEX_DIGEST_LEN+1);
+    base16_encode(circ->build_state->chosen_exit_name, HEX_DIGEST_LEN+1,
+                  exit_digest, DIGEST_LEN);
+  }
+  memcpy(circ->build_state->chosen_exit_digest, exit_digest, DIGEST_LEN);
+  ++circ->build_state->desired_path_len;
+  if (circuit_send_next_onion_skin(circ)<0) {
+    log_fn(LOG_WARN, "Couldn't extend circuit to new point '%s'.",                                    circ->build_state->chosen_exit_name);
+    circuit_mark_for_close(circ);
+    return -1;
+  }
+  return 0;
 }
 
 /** Return the number of routers in <b>routers</b> that are currently up

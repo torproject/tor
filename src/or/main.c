@@ -528,8 +528,8 @@ void directory_all_unreachable(time_t now) {
   while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
     conn->has_sent_end = 1; /* it's not connected anywhere, so no need to end */
-    log_fn(LOG_NOTICE,"Network down? Failing connection to '%s'.",
-           conn->socks_request->address);
+    log_fn(LOG_NOTICE,"Network down? Failing connection to '%s:%d'.",
+           conn->socks_request->address, conn->socks_request->port);
     connection_mark_for_close(conn);
   }
 }
@@ -818,7 +818,7 @@ static void run_scheduled_events(time_t now) {
 
   /** 4. Every second, we try a new circuit if there are no valid
    *    circuits. Every NewCircuitPeriod seconds, we expire circuits
-   *    that became dirty more than NewCircuitPeriod seconds ago,
+   *    that became dirty more than MaxCircuitDirtiness seconds ago,
    *    and we make a new circ if there are no clean circuits.
    */
   if (has_fetched_directory && !we_are_hibernating())
@@ -833,7 +833,7 @@ static void run_scheduled_events(time_t now) {
   circuit_close_all_marked();
 
   /** 7. And upload service descriptors if necessary. */
-  if (!we_are_hibernating())
+  if (has_fetched_directory && !we_are_hibernating())
     rend_consider_services_upload(now);
 
   /** 8. and blow away any connections that need to die. have to do this now,
