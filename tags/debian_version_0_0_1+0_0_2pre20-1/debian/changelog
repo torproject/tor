@@ -1,0 +1,26 @@
+tor (0.0.1+0.0.2pre20-1) unstable; urgency=low
+
+  * New upstream version.
+    - various design paper updates
+    - resolve cygwin warnings
+    - split the token bucket into "rate" and "burst" params
+    - try to resolve discrepency between bytes transmitted over TLS and actual
+      bandwidth use
+    - setuid to user _before_ complaining about running as root
+    - fix several memleaks and double frees
+    - minor logging fixes
+    - add more debugging for logs.
+    - various documentation fixes and improvements
+    - for perforcmance testing, paths are always 3 hops, not "3 or more"
+      (this will go away at a later date again)
+  * Add dependency on adduser which was previously missing.
+  * Change short description to a nicer one.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 31 Jan 2004 10:10:45 +0100
+
+tor (0.0.1+0.0.2pre19-1) unstable; urgency=low
+
+  * Initial Release  (closes: #216611).
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 10 Jan 2004 11:20:06 +0100
+
