@@ -18,6 +18,8 @@ ARMA    - arma claims
      - when you hup, they're not getting re-parsed
      - stop calling a *_policy an exit_policy_t
    - stop calling running-routers running-routers?
+   - Replace syslog/debuglogfile/logfile/loglevel with a new option,
+     "log (minlevel)?-(maxlevel)? (syslog|stderr|stdout|file (.*))".
    o Replace running-routers with a router-status line that can be used
      without a list of router descriptors.
    o Add a log handler that sends stuff to syslog.
@@ -43,11 +45,14 @@ N    - Make it build on win32
 N  - RPMs
 N  - Windows installer
    - Review website; make important info more prominent.
+   - Implement control-spec.txt
+     - Ability to dump minimal set of options to torrc.
 
 Beyond 0.0.9:
    o Check getrlimit(RLIMIT_[N]OFILE), sysconf(OPEN_MAX) on start-up, and
      warn if we're running as a server with a low limit.
    - Implement If-Modified-Since for directories.
+   - Make more configuration variables into CSVs.
 N  - Handle rendezvousing with unverified nodes.
      - Specify: Stick rendezvous point's key in INTRODUCE cell.
        Bob should _always_ use key from INTRODUCE cell.
@@ -57,7 +62,6 @@ R  - figure out enclaves, e.g. so we know what to recommend that people
      - Do enclaves for same IP only.
      - Resolve first, then if IP is an OR, connect to next guy.
 N  - the user interface interface
-     - Skeleton only.
      - Implement parts along with trivial fun gui.
 N  - add ipv6 support.
      - Spec issue: if a resolve returns an IP4 and an IP6 address,
