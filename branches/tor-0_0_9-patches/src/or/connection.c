@@ -200,7 +200,7 @@ void connection_about_to_close_connection(connection_t *conn)
 
   if (conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
     if (!conn->has_sent_end)
-      log_fn(LOG_WARN,"Harmless bug: Edge connection hasn't sent end yet?");
+      log_fn(LOG_WARN,"Harmless bug: Edge connection (marked at %s:%d) hasn't sent end yet?", conn->marked_for_close_file, conn->marked_for_close);
   }
 
   switch (conn->type) {
