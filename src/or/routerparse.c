@@ -577,17 +577,12 @@ static crypto_pk_env_t *find_dir_signing_key(const char *str)
 static int dir_signing_key_is_trusted(crypto_pk_env_t *key)
 {
   char digest[DIGEST_LEN];
-  routerinfo_t *r;
   if (!key) return 0;
   if (crypto_pk_get_digest(key, digest) < 0) {
     log_fn(LOG_WARN, "Error computing dir-signing-key digest");
     return 0;
   }
-  if (!(r = router_get_by_digest(digest))) {
-    log_fn(LOG_WARN, "No router known with given dir-signing-key digest");
-    return 0;
-  }
-  if (! r->is_trusted_dir) {
+  if(!router_digest_is_trusted_dir(digest)) {
     log_fn(LOG_WARN, "Listed dir-signing-key is not trusted");
     return 0;
   }

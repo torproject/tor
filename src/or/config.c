@@ -34,6 +34,7 @@ static int config_get_lines(FILE *f, struct config_line_t **result);
 static void config_free_lines(struct config_line_t *front);
 static int config_compare(struct config_line_t *c, const char *key, config_type_t type, void *arg);
 static int config_assign(or_options_t *options, struct config_line_t *list);
+static int parse_dir_server_line(const char *line);
 
 /** Helper: Read a list of configuration options from the command line. */
 static struct config_line_t *config_get_commandlines(int argc, char **argv) {
@@ -205,6 +206,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
     config_compare(list, "DirPort",        CONFIG_TYPE_INT, &options->DirPort) ||
     config_compare(list, "DirBindAddress", CONFIG_TYPE_LINELIST, &options->DirBindAddress) ||
     config_compare(list, "DirFetchPostPeriod",CONFIG_TYPE_INT, &options->DirFetchPostPeriod) ||
+    config_compare(list, "DirServer",      CONFIG_TYPE_LINELIST, &options->DirServers) ||
 
     config_compare(list, "ExitNodes",      CONFIG_TYPE_STRING, &options->ExitNodes) ||
     config_compare(list, "EntryNodes",     CONFIG_TYPE_STRING, &options->EntryNodes) ||
@@ -387,6 +389,11 @@ int config_assign_default_dirservers(void) {
     log_fn(LOG_WARN,"Bug: the default dirservers internal string is corrupt.");
     return -1;
   }
+#if 0
+  parse_dir_server_line("18.244.0.188:9031 XXXX");
+  parse_dir_server_line("18.244.0.188:9032 XXXX");
+  parse_dir_server_line("62.116.124.106:9030 XXXX");
+#endif
   return 0;
 }
 
@@ -535,6 +542,7 @@ static void free_options(or_options_t *options) {
   config_free_lines(options->DirBindAddress);
   config_free_lines(options->ExitPolicy);
   config_free_lines(options->SocksPolicy);
+  config_free_lines(options->DirServers);
   if (options->FirewallPorts) {
     SMARTLIST_FOREACH(options->FirewallPorts, char *, cp, tor_free(cp));
     smartlist_free(options->FirewallPorts);
@@ -573,6 +581,7 @@ static void init_options(or_options_t *options) {
   options->NumCpus = 1;
   options->RendConfigLines = NULL;
   options->FirewallPorts = NULL;
+  options->DirServers = NULL;
 }
 
 static char *get_default_conf_file(void)
@@ -856,6 +865,11 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
+  for (cl = options->DirServers; cl; cl = cl->next) {
+    if (parse_dir_server_line(cl->value)<0)
+      return -1;
+  }
+
   /* XXX look at the various nicknamelists and make sure they're
    * valid and don't have hostnames that are too long.
    */
@@ -1023,6 +1037,49 @@ void exit_policy_free(struct exit_policy_t *p) {
     tor_free(e->string);
     tor_free(e);
   }
+}
+
+static int parse_dir_server_line(const char *line)
+{
+  smartlist_t *items = NULL;
+  int r;
+  char *addrport, *address=NULL;
+  uint16_t port;
+  char digest[DIGEST_LEN];
+  items = smartlist_create();
+  smartlist_split_string(items, line, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
+  if (smartlist_len(items) < 2) {
+    log_fn(LOG_WARN, "Too few arguments to DirServer line."); goto err;
+  }
+  addrport = smartlist_get(items, 0);
+  if (parse_addr_port(addrport, &address, NULL, &port)<0) {
+    log_fn(LOG_WARN, "Error parsing DirServer address '%s'", addrport);goto err;
+  }
+  if (!port) {
+    log_fn(LOG_WARN, "Missing port in DirServe address '%s'",addrport);goto err;
+  }
+
+  tor_strstrip(smartlist_get(items, 1), " ");
+  if (strlen(smartlist_get(items, 1)) != HEX_DIGEST_LEN) {
+    log_fn(LOG_WARN, "Key digest for DirServer is wrong length."); goto err;
+  }
+  if (base16_decode(digest, DIGEST_LEN,
+                    smartlist_get(items,1), HEX_DIGEST_LEN)<0) {
+    log_fn(LOG_WARN, "Unable to decode DirServer key digest."); goto err;
+  }
+
+  add_trusted_dir_server(address, port, digest);
+
+  r = 0;
+  goto done;
+ err:
+  r = -1;
+ done:
+  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+  smartlist_free(items);
+  if (address) tor_free(address);
+  return r;
 }
 
 const char *get_data_directory(or_options_t *options) {

@@ -900,6 +900,9 @@ typedef struct {
   uint32_t HttpProxyAddr; /**< Parsed IPv4 addr for http proxy, if any */
   uint16_t HttpProxyPort; /**< Parsed port for http proxy, if any */
 
+  struct config_line_t *DirServers; /**< List of configuration lines
+                                     * for directory servers. */
+
 } or_options_t;
 
 /* XXX are these good enough defaults? */
@@ -1397,8 +1400,17 @@ int is_legal_nickname_or_hexdigest(const char *s);
 
 /********************************* routerlist.c ***************************/
 
+typedef struct trusted_dir_server_t {
+  char *address;
+  uint32_t addr;
+  uint16_t dir_port;
+  char digest[DIGEST_LEN];
+  int is_running;
+} trusted_dir_server_t;
+
 int router_reload_router_list(void);
 routerinfo_t *router_pick_directory_server(int requireauth, int requireothers);
+trusted_dir_server_t *router_pick_trusteddirserver(int requireothers);
 int all_directory_servers_down(void);
 struct smartlist_t;
 void routerlist_add_friends(struct smartlist_t *sl, routerinfo_t *router);
@@ -1440,6 +1452,7 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
 int router_update_status_from_smartlist(routerinfo_t *r,
                                         time_t list_time,
                                         smartlist_t *running_list);
+void add_trusted_dir_server(const char *addr, uint16_t port,const char *digest);
 
 /********************************* routerparse.c ************************/
 
