@@ -377,7 +377,7 @@ static void init_options(or_options_t *options) {
   options->SocksBindAddress = tor_strdup("127.0.0.1");
   options->ORBindAddress = tor_strdup("0.0.0.0");
   options->DirBindAddress = tor_strdup("0.0.0.0");
-  options->RecommendedVersions = tor_strdup("none");
+  options->RecommendedVersions = tor_strdup("[no recommended versions defined -- the dirserver must define this]");
   options->loglevel = LOG_INFO;
   options->PidFile = NULL; // tor_strdup("tor.pid");
   options->DataDirectory = NULL;
