@@ -263,6 +263,19 @@ void assert_connection_edge_not_dns_pending(connection_t *conn) {
   }
 }
 
+void assert_all_pending_dns_resolves_ok(void) {
+  struct pending_connection_t *pend;
+  struct cached_resolve *resolve;
+
+  SPLAY_FOREACH(resolve, cache_tree, &cache_root) {
+    for(pend = resolve->pending_connections;
+        pend;
+        pend = pend->next) {
+      assert_connection_ok(pend->conn, 0);
+    }
+  }
+}
+
 /* Cancel all pending connections. Then cancel the resolve itself,
  * and remove the 'struct cached_resolve' from the cache.
  */
@@ -344,6 +357,7 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
   if (resolve->state != CACHE_STATE_PENDING) {
     log_fn(LOG_WARN, "Resolved '%s' which was already resolved; ignoring",
            address);
+    assert(resolve->pending_connections == NULL);
     return;
   }
   /* Removed this assertion: in fact, we'll sometimes get a double answer
