@@ -1,4 +1,3 @@
-improve how it behaves when i remove a line from the approved-routers files
 
 Legend:
 SPEC!!  - Not specified
@@ -15,14 +14,16 @@ ARMA    - arma claims
 For 0.0.2pre17:
         o Put a H(K | handshake) into the onionskin response
         o Make cells 512 bytes
-        - Reduce streamid footprint from 7 bytes to 2 bytes
-          - Check for collisions in streamid (now possible with
+        o Reduce streamid footprint from 7 bytes to 2 bytes
+          X Check for collisions in streamid (now possible with
             just 2 bytes), and back up & replace with padding if so
-        - Use the 4 reserved bytes in each cell header to keep 1/5
+        o Use the 4 reserved bytes in each cell header to keep 1/5
           of a sha1 of the ongoing relay payload (move into stream header)
         o Move length into the stream header too
         o Make length 2 bytes
-        - Spec the stream_id stuff. Clarify that nobody on the backward
+        D increase DH key length
+        D increase RSA key length
+        D Spec the stream_id stuff. Clarify that nobody on the backward
           stream should look at stream_id.
 
 Cell:
@@ -62,6 +63,7 @@ For 0.0.2pre14:
                   middle nodes.
 
 Short-term:
+        - improve how it behaves when i remove a line from the approved-routers files
         - Make tls connections tls_close intentionally
         o Rename ACI to circID
         . integrate rep_ok functions, see what breaks
@@ -123,11 +125,12 @@ On-going
         . Go through log messages, reduce confusing error messages.
         . make the logs include more info (fd, etc)
         . Unit tests
+        . Update the spec so it matches the code
 
 Mid-term:
         - Rotate tls-level connections -- make new ones, expire old ones.
           So we get actual key rotation, not just symmetric key rotation
-        - Are there anonymity issues with sequential streamIDs? Sequential
+        o Are there anonymity issues with sequential streamIDs? Sequential
           circIDs? Eg an attacker can learn how many there have been.
           The fix is to initialize them randomly rather than at 1.
         - Look at having smallcells and largecells
@@ -161,7 +164,7 @@ NICK            . Handle half-open connections
                 o Design
                 - Spec
                 - Implement
-        - Tests
+        . Tests
                 o Testing harness/infrastructure
                 D System tests (how?)
                 - Performance tests, so we know when we've improved

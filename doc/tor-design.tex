@@ -160,7 +160,7 @@ or flooding and send less data until the congestion subsides.
 
 \textbf{Directory servers:} The earlier Onion Routing design
 planned to flood link-state information through the network---an approach
-that can be unreliable and open to partitioning attacks.
+that can be unreliable and complex. % open to partitioning attacks.
 Tor takes a simplified view toward distributing such
 information. Certain more trusted nodes act as \emph{directory
 servers}: they provide signed directories that describe known
@@ -703,8 +703,8 @@ occurred, and the cell is discarded.)
 
 OPs treat incoming relay cells similarly: they iteratively unwrap the
 relay header and payload with the session keys shared with each
-OR on the circuit, from the closest to farthest.  (Because we use a
-stream cipher, encryption operations may be inverted in any order.)
+OR on the circuit, from the closest to farthest. % (Because we use a
+%stream cipher, encryption operations may be inverted in any order.)
 If at any stage the OP recognizes the streamID, the cell must have
 originated at the OR whose encryption has just been removed.
 
@@ -842,7 +842,7 @@ first four bytes of the current digest.  Each also keeps a SHA-1
 digest of data received, to verify that the received hashes are correct.
 
 To be sure of removing or modifying a cell, the attacker must be able
-to either deduce the current digest state (which depends on all
+to deduce the current digest state (which depends on all
 traffic between Alice and Bob, starting with their negotiated key).
 Attacks on SHA-1 where the adversary can incrementally add to a hash
 to produce a new valid hash don't work, because all hashes are
@@ -1188,7 +1188,7 @@ must build circuits and use them to anonymously test router reliability
 Using directory servers is simpler and more flexible than flooding.
 Flooding is expensive, and complicates the analysis when we
 start experimenting with non-clique network topologies. Signed
-directories are less expensive, because they can be cached by other
+directories can be cached by other
 onion routers.
 Thus directory servers are not a performance
 bottleneck when we have many users, and do not aid traffic analysis by
@@ -1656,7 +1656,7 @@ confirmation will immediately and automatically defeat a low-latency
 anonymity system. Even high-latency anonymity systems can be
 vulnerable to end-to-end traffic confirmation, if the traffic volumes
 are high enough, and if users' habits are sufficiently distinct
-\cite{limits-open,statistical-disclosure}. Can anything be done to
+\cite{statistical-disclosure,limits-open}. Can anything be done to
 make low-latency systems resist these attacks as well as high-latency
 systems? Tor already makes some effort to conceal the starts and ends of
 streams by wrapping long-range control commands in identical-looking
