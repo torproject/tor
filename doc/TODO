@@ -25,12 +25,14 @@ N&R. bring tor-spec up to date
 N&R. make loglevels info,debug less noisy
    D fix dfc/weasel's intro point bug
    o add goodell's .exit tld
+N  - Get win32 servers working, or find out why it isn't happening now.
 
 Beyond 0.0.9:
    - server descriptor declares min log level, clients avoid servers
      that are too loggy.
 N  - Clean up NT service code
 N  - OS X package (and bundle?)
+N  - Reverse DNS: specify and implement.
    - controller should have 'getinfo' command to query about rephist,
      about rendezvous status, etc.
    - allow transition from ORPort to !ORPort, and back
