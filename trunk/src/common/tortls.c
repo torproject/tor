@@ -121,7 +121,7 @@ tor_tls_get_error(tor_tls *tls, int r, int extra,
       else {
         int e = tor_socket_errno(tls->socket);
         log(severity, "TLS error: <syscall error while %s> (errno=%d: %s)",
-            doing, e, strerror(e));
+            doing, e, tor_socket_strerror(e));
       }
       tls_log_errors(severity, doing);
       return TOR_TLS_ERROR;

@@ -1067,7 +1067,8 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   log_fn(LOG_INFO,"Making AP bridge to %s:%d ...",address,port);
 
   if(tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
-    log(LOG_WARN, "Couldn't construct socketpair (%s). Network down? Delaying.", strerror(errno));
+    log(LOG_WARN,"Couldn't construct socketpair (%s). Network down? Delaying.",
+        tor_socket_strerror(tor_socket_errno(-1)));
     return -1;
   }
 

@@ -279,13 +279,13 @@ int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
 
   if(bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
     log_fn(LOG_WARN,"Could not bind to port %u: %s",bindport,
-           strerror(tor_socket_errno(s)));
+           tor_socket_strerror(tor_socket_errno(s)));
     return -1;
   }
 
   if(listen(s,SOMAXCONN) < 0) {
     log_fn(LOG_WARN,"Could not listen on port %u: %s",bindport,
-           strerror(tor_socket_errno(s)));
+           tor_socket_strerror(tor_socket_errno(s)));
     return -1;
   }
 
@@ -392,7 +392,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
     if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(s))) {
       /* yuck. kill it. */
       log_fn(LOG_INFO,"Connect() to %s:%u failed: %s",address,port,
-             strerror(tor_socket_errno(s)));
+             tor_socket_strerror(tor_socket_errno(s)));
       tor_close_socket(s);
       return -1;
     } else {
