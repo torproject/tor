@@ -588,6 +588,9 @@ static void run_scheduled_events(time_t now) {
     if (time_to_fetch_running_routers < now + options->StatusFetchPeriod) {
       time_to_fetch_running_routers = now + options->StatusFetchPeriod;
     }
+
+    /* Also, take this chance to remove old information from rephist. */
+    rep_history_clean(now-24*60*60);
   }
 
   if (time_to_fetch_running_routers < now) {

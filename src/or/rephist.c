@@ -15,6 +15,8 @@ static void bw_arrays_init(void);
 typedef struct link_history_t {
   /** When did we start tracking this list? */
   time_t since;
+  /** When did we most recently note a change to this link */
+  time_t changed;
   /** How many times did extending from OR1 to OR2 succeeed? */
   unsigned long n_extend_ok;
   /** How many times did extending from OR1 to OR2 fail? */
@@ -25,6 +27,8 @@ typedef struct link_history_t {
 typedef struct or_history_t {
   /** When did we start tracking this OR? */
   time_t since;
+  /** When did we most recently note a change to this OR? */
+  time_t changed;
   /** How many times did we successfully connect? */
   unsigned long n_conn_ok;
   /** How many times did we try to connect and fail?*/
@@ -62,7 +66,7 @@ static or_history_t *get_or_history(const char* id)
   if (!hist) {
     hist = tor_malloc_zero(sizeof(or_history_t));
     hist->link_history_map = strmap_new();
-    hist->since = time(NULL);
+    hist->since = hist->changed = time(NULL);
     strmap_set(history_map, hexid, hist);
   }
   return hist;
@@ -87,10 +91,23 @@ static link_history_t *get_link_history(const char *from_id,
   lhist = (link_history_t*) strmap_get(orhist->link_history_map, to_hexid);
   if (!lhist) {
     lhist = tor_malloc_zero(sizeof(link_history_t));
-    lhist->since = time(NULL);
+    lhist->since = lhist->changed = time(NULL);
     strmap_set(orhist->link_history_map, to_hexid, lhist);
   }
   return lhist;
+}
+
+static void
+_free_link_history(void *val)
+{
+  tor_free(val);
+}
+
+static void
+free_or_history(or_history_t *hist)
+{
+  strmap_free(hist->link_history_map, _free_link_history);
+  tor_free(hist);
 }
 
 /** Update an or_history_t object <b>hist</b> so that its uptime/downtime
@@ -133,6 +150,7 @@ void rep_hist_note_connect_failed(const char* id, time_t when)
   }
   if (!hist->down_since)
     hist->down_since = when;
+  hist->changed = when;
 }
 
 /** Remember that an attempt to connect to the OR with identity digest
@@ -151,6 +169,7 @@ void rep_hist_note_connect_succeeded(const char* id, time_t when)
   }
   if (!hist->up_since)
     hist->up_since = when;
+  hist->changed = when;
 }
 
 /** Remember that we intentionally closed our connection to the OR
@@ -167,6 +186,7 @@ void rep_hist_note_disconnect(const char* id, time_t when)
     hist->uptime += (when - hist->up_since);
     hist->up_since = 0;
   }
+  hist->changed = when;
 }
 
 /** Remember that our connection to the OR with identity digest
@@ -192,6 +212,7 @@ void rep_hist_note_connection_died(const char* id, time_t when)
   }
   if (!hist->down_since)
     hist->down_since = when;
+  hist->changed = when;
 }
 
 /** Remember that we successfully extended from the OR with identity
@@ -207,6 +228,7 @@ void rep_hist_note_extend_succeeded(const char *from_id,
   if (!hist)
     return;
   ++hist->n_extend_ok;
+  hist->changed = time(NULL);
 }
 
 /** Remember that we tried to extend from the OR with identity digest
@@ -221,6 +243,7 @@ void rep_hist_note_extend_failed(const char *from_id, const char *to_id)
   if (!hist)
     return;
   ++hist->n_extend_fail;
+  hist->changed = time(NULL);
 }
 
 /** Log all the reliability data we have rememberred, with the chosen
@@ -240,6 +263,8 @@ void rep_hist_dump_stats(time_t now, int severity)
   int ret;
   unsigned long upt, downt;
   routerinfo_t *r;
+
+  rep_history_clean(now-24*60*60);
 
   log(severity, "--------------- Dumping history information:");
 
@@ -291,6 +316,40 @@ void rep_hist_dump_stats(time_t now, int severity)
       }
       log(severity, "%s", buffer);
     }
+  }
+}
+
+/** Remove history info for routers/links that haven't changed since
+ * <b>before</b> */
+void rep_history_clean(time_t before)
+{
+  or_history_t *or_history;
+  link_history_t *link_history;
+  void *or_history_p, *link_history_p;
+  strmap_iter_t *orhist_it, *lhist_it;
+  const char *hd1, *hd2;
+
+  orhist_it = strmap_iter_init(history_map);
+  while (!strmap_iter_done(orhist_it)) {
+    strmap_iter_get(orhist_it, &hd1, &or_history_p);
+    or_history = or_history_p;
+    if (or_history->changed < before) {
+      free_or_history(or_history);
+      orhist_it = strmap_iter_next_rmv(history_map, orhist_it);
+      continue;
+    }
+    for (lhist_it = strmap_iter_init(or_history->link_history_map);
+         !strmap_iter_done(lhist_it); ) {
+      strmap_iter_get(lhist_it, &hd2, &link_history_p);
+      link_history = link_history_p;
+      if (link_history->changed < before) {
+        tor_free(link_history);
+        lhist_it = strmap_iter_next_rmv(or_history->link_history_map,lhist_it);
+        continue;
+      }
+      lhist_it = strmap_iter_next(or_history->link_history_map,lhist_it);
+    }
+    orhist_it = strmap_iter_next(history_map, orhist_it);
   }
 }
 
