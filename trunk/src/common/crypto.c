@@ -80,7 +80,7 @@ crypto_get_rsa_padding_overhead(int padding) {
     case RSA_NO_PADDING: return 0;
     case RSA_PKCS1_OAEP_PADDING: return 42;
     case RSA_PKCS1_PADDING: return 11;
-    default: assert(0); return -1;
+    default: tor_assert(0); return -1;
     }
 }
 
@@ -91,7 +91,7 @@ crypto_get_rsa_padding(int padding) {
     case PK_NO_PADDING: return RSA_NO_PADDING;
     case PK_PKCS1_PADDING: return RSA_PKCS1_PADDING;
     case PK_PKCS1_OAEP_PADDING: return RSA_PKCS1_OAEP_PADDING;
-    default: assert(0); return -1;
+    default: tor_assert(0); return -1;
     }
 }
 
@@ -116,7 +116,7 @@ int crypto_global_cleanup()
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa)
 {
   crypto_pk_env_t *env;
-  assert(rsa);
+  tor_assert(rsa);
   env = tor_malloc(sizeof(crypto_pk_env_t));
   env->refs = 1;
   env->key = rsa;
@@ -134,7 +134,7 @@ EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private)
 {
   RSA *key = NULL;
   EVP_PKEY *pkey = NULL;
-  assert(env->key);
+  tor_assert(env->key);
   if (private) {
     if (!(key = RSAPrivateKey_dup(env->key)))
       goto error;
@@ -171,7 +171,7 @@ crypto_pk_env_t *crypto_new_pk_env(void)
 
 void crypto_free_pk_env(crypto_pk_env_t *env)
 {
-  assert(env);
+  tor_assert(env);
 
   if(--env->refs > 0)
     return;
@@ -236,9 +236,9 @@ crypto_cipher_env_t *crypto_new_cipher_env()
 
 void crypto_free_cipher_env(crypto_cipher_env_t *env)
 {
-  assert(env);
+  tor_assert(env);
 
-  assert(env->cipher);
+  tor_assert(env->cipher);
   aes_free_cipher(env->cipher);
   tor_free(env);
 }
@@ -246,7 +246,7 @@ void crypto_free_cipher_env(crypto_cipher_env_t *env)
 /* public key crypto */
 int crypto_pk_generate_key(crypto_pk_env_t *env)
 {
-  assert(env);
+  tor_assert(env);
 
   if (env->key)
     RSA_free(env->key);
@@ -259,7 +259,7 @@ int crypto_pk_generate_key(crypto_pk_env_t *env)
 
 int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env, FILE *src)
 {
-  assert(env && src);
+  tor_assert(env && src);
 
   if (env->key)
     RSA_free(env->key);
@@ -274,7 +274,7 @@ int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *k
 {
   FILE *f_pr;
 
-  assert(env && keyfile);
+  tor_assert(env && keyfile);
 
   if(strspn(keyfile,CONFIG_LEGAL_FILENAME_CHARACTERS) != strlen(keyfile)) {
     /* filename contains nonlegal characters */
@@ -309,7 +309,7 @@ int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *k
 
 int crypto_pk_read_public_key_from_file(crypto_pk_env_t *env, FILE *src)
 {
-  assert(env && src);
+  tor_assert(env && src);
 
   if(env->key)
     RSA_free(env->key);
@@ -324,7 +324,7 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int 
   BUF_MEM *buf;
   BIO *b;
 
-  assert(env && env->key && dest);
+  tor_assert(env && env->key && dest);
 
   b = BIO_new(BIO_s_mem()); /* Create a memory BIO */
 
@@ -350,7 +350,7 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int 
 int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src, int len) {
   BIO *b;
 
-  assert(env && src);
+  tor_assert(env && src);
 
   b = BIO_new(BIO_s_mem()); /* Create a memory BIO */
 
@@ -376,7 +376,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   char *s;
   int r;
 
-  assert(PRIVATE_KEY_OK(env));
+  tor_assert(PRIVATE_KEY_OK(env));
 
   if (!(bio = BIO_new(BIO_s_mem())))
     return -1;
@@ -397,7 +397,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
 
 int crypto_pk_write_private_key_to_file(crypto_pk_env_t *env, FILE *dest)
 {
-  assert(env && dest);
+  tor_assert(env && dest);
 
   if (!env->key)
     return -1;
@@ -408,7 +408,7 @@ int crypto_pk_write_private_key_to_file(crypto_pk_env_t *env, FILE *dest)
 }
 int crypto_pk_write_public_key_to_file(crypto_pk_env_t *env, FILE *dest)
 {
-  assert(env && dest);
+  tor_assert(env && dest);
 
   if (!env->key)
     return -1;
@@ -420,7 +420,7 @@ int crypto_pk_write_public_key_to_file(crypto_pk_env_t *env, FILE *dest)
 
 int crypto_pk_check_key(crypto_pk_env_t *env)
 {
-  assert(env);
+  tor_assert(env);
 
   return RSA_check_key(env->key);
 }
@@ -434,7 +434,8 @@ int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b) {
   if (!a->key || !b->key)
     return -1;
 
-  assert((a->key)->n && (a->key)->e && (b->key)->n && (b->key)->e);
+  tor_assert(PUBLIC_KEY_OK(a));
+  tor_assert(PUBLIC_KEY_OK(b));
   result = BN_cmp((a->key)->n, (b->key)->n);
   if (result)
     return result;
@@ -444,13 +445,13 @@ int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b) {
 /* return the size of the public key modulus in 'env', in bytes. */
 int crypto_pk_keysize(crypto_pk_env_t *env)
 {
-  assert(env && env->key);
+  tor_assert(env && env->key);
 
   return RSA_size(env->key);
 }
 
 crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *env) {
-  assert(env && env->key);
+  tor_assert(env && env->key);
 
   env->refs++;
   return env;
@@ -458,7 +459,7 @@ crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *env) {
 
 int crypto_pk_public_encrypt(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to, int padding)
 {
-  assert(env && from && to);
+  tor_assert(env && from && to);
 
   return RSA_public_encrypt(fromlen, (unsigned char*)from, to, env->key,
                             crypto_get_rsa_padding(padding));
@@ -466,7 +467,7 @@ int crypto_pk_public_encrypt(crypto_pk_env_t *env, const unsigned char *from, in
 
 int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to, int padding)
 {
-  assert(env && from && to && env->key);
+  tor_assert(env && from && to && env->key);
   if (!env->key->p)
     /* Not a private key */
     return -1;
@@ -477,13 +478,13 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, i
 
 int crypto_pk_public_checksig(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
 {
-  assert(env && from && to);
+  tor_assert(env && from && to);
   return RSA_public_decrypt(fromlen, (unsigned char*)from, to, env->key, RSA_PKCS1_PADDING);
 }
 
 int crypto_pk_private_sign(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
 {
-  assert(env && from && to);
+  tor_assert(env && from && to);
   if (!env->key->p)
     /* Not a private key */
     return -1;
@@ -499,7 +500,7 @@ int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const unsigned char *
   char buf[PK_BYTES+1];
   int r;
 
-  assert(env && data && sig);
+  tor_assert(env && data && sig);
 
   if (crypto_digest(data,datalen,digest)<0) {
     log_fn(LOG_WARN, "couldn't compute digest");
@@ -557,7 +558,7 @@ int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
   crypto_cipher_env_t *cipher = NULL;
   char buf[PK_BYTES+1];
 
-  assert(env && from && to);
+  tor_assert(env && from && to);
 
   overhead = crypto_get_rsa_padding_overhead(crypto_get_rsa_padding(padding));
   pkeylen = crypto_pk_keysize(env);
@@ -748,8 +749,8 @@ crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out)
     }
   }
   *bufp = '\0';
-  assert(strlen(buf) == FINGERPRINT_LEN);
-  assert(crypto_pk_check_fingerprint_syntax(buf));
+  tor_assert(strlen(buf) == FINGERPRINT_LEN);
+  tor_assert(crypto_pk_check_fingerprint_syntax(buf));
   strcpy(fp_out, buf);
   return 0;
 }
@@ -772,14 +773,14 @@ crypto_pk_check_fingerprint_syntax(const char *s)
 /* symmetric crypto */
 int crypto_cipher_generate_key(crypto_cipher_env_t *env)
 {
-  assert(env);
+  tor_assert(env);
 
   return crypto_rand(CIPHER_KEY_LEN, env->key);
 }
 
 int crypto_cipher_set_iv(crypto_cipher_env_t *env, const unsigned char *iv)
 {
-  assert(env && (CIPHER_IV_LEN==0 || iv));
+  tor_assert(env && (CIPHER_IV_LEN==0 || iv));
 
   if (!CIPHER_IV_LEN)
     return 0;
@@ -794,7 +795,7 @@ int crypto_cipher_set_iv(crypto_cipher_env_t *env, const unsigned char *iv)
 
 int crypto_cipher_set_key(crypto_cipher_env_t *env, const unsigned char *key)
 {
-  assert(env && key);
+  tor_assert(env && key);
 
   if (!env->key)
     return -1;
@@ -811,7 +812,7 @@ const unsigned char *crypto_cipher_get_key(crypto_cipher_env_t *env)
 
 int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
 {
-  assert(env);
+  tor_assert(env);
 
   aes_set_key(env->cipher, env->key, CIPHER_KEY_LEN*8);
   return 0;
@@ -819,7 +820,7 @@ int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
 
 int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
 {
-  assert(env);
+  tor_assert(env);
 
   aes_set_key(env->cipher, env->key, CIPHER_KEY_LEN*8);
   return 0;
@@ -827,7 +828,7 @@ int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
 
 int crypto_cipher_encrypt(crypto_cipher_env_t *env, const unsigned char *from, unsigned int fromlen, unsigned char *to)
 {
-  assert(env && env->cipher && from && fromlen && to);
+  tor_assert(env && env->cipher && from && fromlen && to);
 
   aes_crypt(env->cipher, from, fromlen, to);
   return 0;
@@ -835,7 +836,7 @@ int crypto_cipher_encrypt(crypto_cipher_env_t *env, const unsigned char *from, u
 
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, const unsigned char *from, unsigned int fromlen, unsigned char *to)
 {
-  assert(env && from && to);
+  tor_assert(env && from && to);
 
   aes_crypt(env->cipher, from, fromlen, to);
   return 0;
@@ -857,7 +858,7 @@ crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
 /* SHA-1 */
 int crypto_digest(const unsigned char *m, int len, unsigned char *digest)
 {
-  assert(m && digest);
+  tor_assert(m && digest);
   return (SHA1(m,len,digest) == NULL);
 }
 
@@ -883,8 +884,8 @@ void
 crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
                         size_t len)
 {
-  assert(digest);
-  assert(data);
+  tor_assert(digest);
+  tor_assert(data);
   SHA1_Update(&digest->d, (void*)data, len);
 }
 
@@ -892,8 +893,8 @@ void crypto_digest_get_digest(crypto_digest_env_t *digest,
                               char *out, size_t out_len)
 {
   static char r[DIGEST_LEN];
-  assert(digest && out);
-  assert(out_len <= DIGEST_LEN);
+  tor_assert(digest && out);
+  tor_assert(out_len <= DIGEST_LEN);
   SHA1_Final(r, &digest->d);
   memcpy(out, r, out_len);
 }
@@ -902,7 +903,7 @@ crypto_digest_env_t *
 crypto_digest_dup(const crypto_digest_env_t *digest)
 {
   crypto_digest_env_t *r;
-  assert(digest);
+  tor_assert(digest);
   r = tor_malloc(sizeof(crypto_digest_env_t));
   memcpy(r,digest,sizeof(crypto_digest_env_t));
   return r;
@@ -912,7 +913,7 @@ void
 crypto_digest_assign(crypto_digest_env_t *into,
                      const crypto_digest_env_t *from)
 {
-  assert(into && from);
+  tor_assert(into && from);
   memcpy(into,from,sizeof(crypto_digest_env_t));
 }
 
@@ -928,7 +929,7 @@ static void init_dh_param() {
 
   p = BN_new();
   g = BN_new();
-  assert(p && g);
+  tor_assert(p && g);
 
 #if 0
   /* This is from draft-ietf-ipsec-ike-modp-groups-05.txt.  It's a safe
@@ -957,10 +958,10 @@ static void init_dh_param() {
                 "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
                 "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
                 "49286651ECE65381FFFFFFFFFFFFFFFF");
-  assert(r);
+  tor_assert(r);
 
   r = BN_set_word(g, 2);
-  assert(r);
+  tor_assert(r);
   dh_param_p = p;
   dh_param_g = g;
 }
@@ -992,7 +993,7 @@ crypto_dh_env_t *crypto_dh_new()
 }
 int crypto_dh_get_bytes(crypto_dh_env_t *dh)
 {
-  assert(dh);
+  tor_assert(dh);
   return DH_size(dh->dh);
 }
 int crypto_dh_generate_public(crypto_dh_env_t *dh)
@@ -1004,13 +1005,13 @@ int crypto_dh_generate_public(crypto_dh_env_t *dh)
 int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
 {
   int bytes;
-  assert(dh);
+  tor_assert(dh);
   if (!dh->dh->pub_key) {
     if (!DH_generate_key(dh->dh))
       return -1;
   }
 
-  assert(dh->dh->pub_key);
+  tor_assert(dh->dh->pub_key);
   bytes = BN_num_bytes(dh->dh->pub_key);
   if (pubkey_len < bytes)
     return -1;
@@ -1032,8 +1033,8 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
   BIGNUM *pubkey_bn = NULL;
   int secret_len;
   int i;
-  assert(dh);
-  assert(secret_bytes_out/DIGEST_LEN <= 255);
+  tor_assert(dh);
+  tor_assert(secret_bytes_out/DIGEST_LEN <= 255);
 
   if (!(pubkey_bn = BN_bin2bn(pubkey, pubkey_len, NULL)))
     goto error;
@@ -1059,7 +1060,7 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
 }
 void crypto_dh_free(crypto_dh_env_t *dh)
 {
-  assert(dh && dh->dh);
+  tor_assert(dh && dh->dh);
   DH_free(dh->dh);
   free(dh);
 }
@@ -1128,13 +1129,13 @@ int crypto_seed_rng()
 
 int crypto_rand(unsigned int n, unsigned char *to)
 {
-  assert(to);
+  tor_assert(to);
   return (RAND_bytes(to, n) != 1);
 }
 
 void crypto_pseudo_rand(unsigned int n, unsigned char *to)
 {
-  assert(to);
+  tor_assert(to);
   if (RAND_pseudo_bytes(to, n) == -1) {
     log_fn(LOG_ERR, "RAND_pseudo_bytes failed unexpectedly.");
     exit(1);
@@ -1145,8 +1146,8 @@ void crypto_pseudo_rand(unsigned int n, unsigned char *to)
 int crypto_pseudo_rand_int(unsigned int max) {
   unsigned int val;
   unsigned int cutoff;
-  assert(max < UINT_MAX);
-  assert(max > 0); /* don't div by 0 */
+  tor_assert(max < UINT_MAX);
+  tor_assert(max > 0); /* don't div by 0 */
 
   /* We ignore any values that are >= 'cutoff,' to avoid biasing the
    * distribution with clipping at the upper end of unsigned int's

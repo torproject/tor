@@ -105,7 +105,7 @@ void *tor_realloc(void *ptr, size_t size) {
 
 char *tor_strdup(const char *s) {
   char *dup;
-  assert(s);
+  tor_assert(s);
 
   dup = strdup(s);
   if(!dup) {
@@ -117,7 +117,7 @@ char *tor_strdup(const char *s) {
 
 char *tor_strndup(const char *s, size_t n) {
   char *dup;
-  assert(s);
+  tor_assert(s);
   dup = tor_malloc(n+1);
   strncpy(dup, s, n);
   dup[n] = 0;
@@ -160,7 +160,7 @@ void hex_encode(const char *from, int fromlen, char *to)
 {
   const unsigned char *fp = from;
   static const char TABLE[] = "0123456789abcdef";
-  assert(from && fromlen>=0 && to);
+  tor_assert(from && fromlen>=0 && to);
   while (fromlen--) {
     *to++ = TABLE[*fp >> 4];
     *to++ = TABLE[*fp & 7];
@@ -222,7 +222,7 @@ void smartlist_clear(smartlist_t *sl) {
 
 void smartlist_truncate(smartlist_t *sl, int len)
 {
-  assert(len <= sl->num_used);
+  tor_assert(len <= sl->num_used);
   sl->num_used = len;
 }
 
@@ -293,13 +293,13 @@ void *smartlist_choose(const smartlist_t *sl) {
 
 void *smartlist_get(const smartlist_t *sl, int idx)
 {
-  assert(sl && idx>=0 && idx < sl->num_used);
+  tor_assert(sl && idx>=0 && idx < sl->num_used);
   return sl->list[idx];
 }
 void *smartlist_set(smartlist_t *sl, int idx, void *val)
 {
   void *old;
-  assert(sl && idx>=0 && idx < sl->num_used);
+  tor_assert(sl && idx>=0 && idx < sl->num_used);
   old = sl->list[idx];
   sl->list[idx] = val;
   return old;
@@ -307,7 +307,7 @@ void *smartlist_set(smartlist_t *sl, int idx, void *val)
 void *smartlist_del(smartlist_t *sl, int idx)
 {
   void *old;
-  assert(sl && idx>=0 && idx < sl->num_used);
+  tor_assert(sl && idx>=0 && idx < sl->num_used);
   old = sl->list[idx];
   sl->list[idx] = sl->list[--sl->num_used];
   return old;
@@ -315,7 +315,7 @@ void *smartlist_del(smartlist_t *sl, int idx)
 void *smartlist_del_keeporder(smartlist_t *sl, int idx)
 {
   void *old;
-  assert(sl && idx>=0 && idx < sl->num_used);
+  tor_assert(sl && idx>=0 && idx < sl->num_used);
   old = sl->list[idx];
   --sl->num_used;
   if (idx < sl->num_used)
@@ -328,7 +328,7 @@ int smartlist_len(const smartlist_t *sl)
 }
 void smartlist_insert(smartlist_t *sl, int idx, void *val)
 {
-  assert(sl && idx >= 0 && idx <= sl->num_used);
+  tor_assert(sl && idx >= 0 && idx <= sl->num_used);
   if (idx == sl->num_used) {
     smartlist_add(sl, val);
   } else {
@@ -388,7 +388,7 @@ void* strmap_set(strmap_t *map, const char *key, void *val)
   strmap_entry_t *resolve;
   strmap_entry_t search;
   void *oldval;
-  assert(map && key && val);
+  tor_assert(map && key && val);
   search.key = (char*)key;
   resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
   if (resolve) {
@@ -411,7 +411,7 @@ void* strmap_get(strmap_t *map, const char *key)
 {
   strmap_entry_t *resolve;
   strmap_entry_t search;
-  assert(map && key);
+  tor_assert(map && key);
   search.key = (char*)key;
   resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
   if (resolve) {
@@ -432,7 +432,7 @@ void* strmap_remove(strmap_t *map, const char *key)
   strmap_entry_t *resolve;
   strmap_entry_t search;
   void *oldval;
-  assert(map && key);
+  tor_assert(map && key);
   search.key = (char*)key;
   resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
   if (resolve) {
@@ -510,7 +510,7 @@ void strmap_foreach(strmap_t *map,
                     void *data)
 {
   strmap_entry_t *ptr, *next;
-  assert(map && fn);
+  tor_assert(map && fn);
   for (ptr = SPLAY_MIN(strmap_tree, &map->head); ptr != NULL; ptr = next) {
     /* This remove-in-place usage is specifically blessed in tree(3). */
     next = SPLAY_NEXT(strmap_tree, &map->head, ptr);
@@ -549,14 +549,14 @@ void strmap_foreach(strmap_t *map,
  */
 strmap_iter_t *strmap_iter_init(strmap_t *map)
 {
-  assert(map);
+  tor_assert(map);
   return SPLAY_MIN(strmap_tree, &map->head);
 }
 /* Advance the iterator 'iter' for map a single step to the next entry.
  */
 strmap_iter_t *strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
 {
-  assert(map && iter);
+  tor_assert(map && iter);
   return SPLAY_NEXT(strmap_tree, &map->head, iter);
 }
 /* Advance the iterator 'iter' a single step to the next entry, removing
@@ -565,7 +565,7 @@ strmap_iter_t *strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
 strmap_iter_t *strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
 {
   strmap_iter_t *next;
-  assert(map && iter);
+  tor_assert(map && iter);
   next = SPLAY_NEXT(strmap_tree, &map->head, iter);
   SPLAY_REMOVE(strmap_tree, &map->head, iter);
   tor_free(iter->key);
@@ -576,7 +576,7 @@ strmap_iter_t *strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
  */
 void strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
 {
-  assert(iter && keyp && valp);
+  tor_assert(iter && keyp && valp);
   *keyp = iter->key;
   *valp = iter->val;
 }
@@ -599,7 +599,7 @@ void strmap_free(strmap_t *map, void (*free_val)(void*))
     if (free_val)
       tor_free(ent->val);
   }
-  assert(SPLAY_EMPTY(&map->head));
+  tor_assert(SPLAY_EMPTY(&map->head));
   tor_free(map);
 }
 
@@ -609,7 +609,7 @@ void strmap_free(strmap_t *map, void (*free_val)(void*))
 
 /* return the first char of s that is not whitespace and not a comment */
 const char *eat_whitespace(const char *s) {
-  assert(s);
+  tor_assert(s);
 
   while(isspace((int)*s) || *s == '#') {
     while(isspace((int)*s))
@@ -632,7 +632,7 @@ const char *eat_whitespace_no_nl(const char *s) {
 
 /* return the first char of s that is whitespace or '#' or '\0 */
 const char *find_whitespace(const char *s) {
-  assert(s);
+  tor_assert(s);
 
   while(*s && !isspace((int)*s) && *s != '#')
     s++;
@@ -722,8 +722,8 @@ time_t tor_timegm (struct tm *tm) {
   unsigned long year, days, hours, minutes;
   int i;
   year = tm->tm_year + 1900;
-  assert(year >= 1970);
-  assert(tm->tm_mon >= 0 && tm->tm_mon <= 11);
+  tor_assert(year >= 1970);
+  tor_assert(tm->tm_mon >= 0 && tm->tm_mon <= 11);
   days = 365 * (year-1970) + n_leapdays(1970,year);
   for (i = 0; i < tm->tm_mon; ++i)
     days += days_per_month[i];
@@ -812,7 +812,7 @@ int spawn_func(int (*func)(void *), void *data)
   if (pid==0) {
     /* Child */
     func(data);
-    assert(0); /* Should never reach here. */
+    tor_assert(0); /* Should never reach here. */
     return 0; /* suppress "control-reaches-end-of-non-void" warning. */
   } else {
     /* Parent */
@@ -941,7 +941,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 int correct_socket_errno(int s)
 {
   int optval, optvallen=sizeof(optval);
-  assert(errno == WSAEWOULDBLOCK);
+  tor_assert(errno == WSAEWOULDBLOCK);
   if (getsockopt(s, SOL_SOCKET, SO_ERROR, (void*)&optval, &optvallen))
     return errno;
   if (optval)
@@ -1065,7 +1065,7 @@ char *read_file_to_str(const char *filename) {
   struct stat statbuf;
   char *string;
 
-  assert(filename);
+  tor_assert(filename);
 
   if(strcspn(filename,CONFIG_LEGAL_FILENAME_CHARACTERS) != 0) {
     log_fn(LOG_WARN,"Filename %s contains illegal characters.",filename);
@@ -1352,7 +1352,7 @@ int tor_inet_aton(const char *c, struct in_addr* addr)
   return inet_aton(c, addr);
 #else
   uint32_t r;
-  assert(c && addr);
+  tor_assert(c && addr);
   if (strcmp(c, "255.255.255.255") == 0) {
     addr->s_addr = 0xFFFFFFFFu;
     return 1;
