@@ -9,7 +9,7 @@
 extern or_options_t options; /* command-line and config-file options */
 
 struct buf_t {
-  char *buf;
+  char *mem;
   size_t len;
   size_t datalen;
 };
@@ -21,13 +21,13 @@ struct buf_t {
  * out smaller than this, but they will never autoshrink to less
  * than this size. */
 #define MIN_BUF_SHRINK_SIZE (16*1024)
-#define BUF_OK(b) ((b) && (b)->buf && (b)->datalen <= (b)->len)
+#define BUF_OK(b) ((b) && (b)->mem && (b)->datalen <= (b)->len)
 
 /* Change a buffer's capacity.  Must only be called when */
 static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
 {
   assert(buf->datalen <= new_capacity);
-  buf->buf = tor_realloc(buf->buf, new_capacity);
+  buf->mem = tor_realloc(buf->mem, new_capacity);
   buf->len = new_capacity;
 }
 
@@ -83,7 +83,7 @@ static INLINE void buf_shrink_if_underfull(buf_t *buf) {
 static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
   assert(buf->datalen >= n);
   buf->datalen -= n;
-  memmove(buf->buf, buf->buf+n, buf->datalen);
+  memmove(buf->mem, buf->mem+n, buf->datalen);
   buf_shrink_if_underfull(buf);
 }
 
@@ -110,7 +110,7 @@ static int find_str_in_str(const char *str, int str_len,
 }
 
 int find_on_inbuf(char *string, int string_len, buf_t *buf) {
-  return find_str_in_str(string, string_len, buf->buf, buf->datalen);
+  return find_str_in_str(string, string_len, buf->mem, buf->datalen);
 }
 
 /* Create and return a new buf of size 'size'
@@ -118,10 +118,10 @@ int find_on_inbuf(char *string, int string_len, buf_t *buf) {
 buf_t *buf_new_with_capacity(size_t size) {
   buf_t *buf;
   buf = (buf_t*)tor_malloc(sizeof(buf_t));
-  buf->buf = (char *)tor_malloc(size);
+  buf->mem = (char *)tor_malloc(size);
   buf->len = size;
   buf->datalen = 0;
-//  memset(buf->buf,0,size);
+//  memset(buf->mem,0,size);
 
   assert(BUF_OK(buf));
   return buf;
@@ -145,12 +145,12 @@ size_t buf_capacity(const buf_t *buf)
 
 const char *_buf_peek_raw_buffer(const buf_t *buf)
 {
-  return buf->buf;
+  return buf->mem;
 }
 
 void buf_free(buf_t *buf) {
-  assert(buf && buf->buf);
-  free(buf->buf);
+  assert(buf && buf->mem);
+  free(buf->mem);
   free(buf);
 }
 
@@ -180,7 +180,7 @@ int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof) {
     return 0; /* we shouldn't read anything */
 
 //  log_fn(LOG_DEBUG,"reading at most %d bytes.",at_most);
-  read_result = read(s, buf->buf+buf->datalen, at_most);
+  read_result = read(s, buf->mem+buf->datalen, at_most);
   if (read_result < 0) {
     if(!ERRNO_EAGAIN(errno)) { /* it's a real error */
       return -1;
@@ -217,7 +217,7 @@ int read_to_buf_tls(tor_tls *tls, int at_most, buf_t *buf) {
   if (at_most == 0)
     return 0;
   
-  r = tor_tls_read(tls, buf->buf+buf->datalen, at_most);
+  r = tor_tls_read(tls, buf->mem+buf->datalen, at_most);
   if (r<0) 
     return r;
   buf->datalen += r;
@@ -242,7 +242,7 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
   if(*buf_flushlen == 0) /* nothing to flush */
     return 0;
 
-  write_result = write(s, buf->buf, *buf_flushlen);
+  write_result = write(s, buf->mem, *buf_flushlen);
   if (write_result < 0) {
     if(!ERRNO_EAGAIN(errno)) { /* it's a real error */
       return -1;
@@ -273,7 +273,7 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen)
 
   /* we want to let tls write even if flushlen is zero, because it might
    * have a partial record pending */
-  r = tor_tls_write(tls, buf->buf, *buf_flushlen);
+  r = tor_tls_write(tls, buf->mem, *buf_flushlen);
   if (r < 0) {
     return r;
   }
@@ -302,7 +302,7 @@ int write_to_buf(const char *string, int string_len, buf_t *buf) {
     return -1;
   }
 
-  memcpy(buf->buf+buf->datalen, string, string_len);
+  memcpy(buf->mem+buf->datalen, string, string_len);
   buf->datalen += string_len;
   log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",string_len, (int)buf->datalen);
   return buf->datalen;
@@ -318,7 +318,7 @@ int fetch_from_buf(char *string, int string_len, buf_t *buf) {
   assert(string && BUF_OK(buf));
   assert(string_len <= buf->datalen); /* make sure we don't ask for too much */
 
-  memcpy(string,buf->buf,string_len);
+  memcpy(string,buf->mem,string_len);
   buf_remove_from_front(buf, string_len);
   return buf->datalen;
 }
@@ -344,13 +344,13 @@ int fetch_from_buf_http(buf_t *buf,
 
   assert(BUF_OK(buf));
 
-  headers = buf->buf;
+  headers = buf->mem;
   i = find_on_inbuf("\r\n\r\n", 4, buf);
   if(i < 0) {
     log_fn(LOG_DEBUG,"headers not all here yet.");
     return 0;
   }
-  body = buf->buf+i;
+  body = buf->mem+i;
   headerlen = body-headers; /* includes the CRLFCRLF */
   bodylen = buf->datalen - headerlen;
   log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.",headerlen,bodylen);
@@ -380,11 +380,11 @@ int fetch_from_buf_http(buf_t *buf,
   }
   /* all happy. copy into the appropriate places, and return 1 */
   if(headers_out) {
-    memcpy(headers_out,buf->buf,headerlen);
+    memcpy(headers_out,buf->mem,headerlen);
     headers_out[headerlen] = 0; /* null terminate it */
   }
   if(body_out) {
-    memcpy(body_out,buf->buf+headerlen,bodylen);
+    memcpy(body_out,buf->mem+headerlen,bodylen);
     body_out[bodylen] = 0; /* null terminate it */
   }
   buf_remove_from_front(buf, headerlen+bodylen);
@@ -419,17 +419,17 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
 
   if(buf->datalen < 2) /* version and another byte */
     return 0;
-  switch(*(buf->buf)) { /* which version of socks? */
+  switch(*(buf->mem)) { /* which version of socks? */
 
     case 5: /* socks5 */
 
       if(*socks_version != 5) { /* we need to negotiate a method */
-        unsigned char nummethods = (unsigned char)*(buf->buf+1);
+        unsigned char nummethods = (unsigned char)*(buf->mem+1);
         assert(!*socks_version);
         log_fn(LOG_DEBUG,"socks5: learning offered methods");
         if(buf->datalen < 2+nummethods)
           return 0;
-        if(!nummethods || !memchr(buf->buf+2, 0, nummethods)) {
+        if(!nummethods || !memchr(buf->mem+2, 0, nummethods)) {
           log_fn(LOG_WARN,"socks5: offered methods don't include 'no auth'. Rejecting.");
           *replylen = 2; /* 2 bytes of response */
           *reply = 5; /* socks5 reply */
@@ -449,16 +449,16 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
       log_fn(LOG_DEBUG,"socks5: checking request");
       if(buf->datalen < 8) /* basic info plus >=2 for addr plus 2 for port */
         return 0; /* not yet */
-      if(*(buf->buf+1) != 1) { /* not a connect? we don't support it. */
-        log_fn(LOG_WARN,"socks5: command %d not '1'.",*(buf->buf+1));
+      if(*(buf->mem+1) != 1) { /* not a connect? we don't support it. */
+        log_fn(LOG_WARN,"socks5: command %d not '1'.",*(buf->mem+1));
         return -1;
       }
-      switch(*(buf->buf+3)) { /* address type */
+      switch(*(buf->mem+3)) { /* address type */
         case 1: /* IPv4 address */
           log_fn(LOG_DEBUG,"socks5: ipv4 address type");
           if(buf->datalen < 10) /* ip/port there? */
             return 0; /* not yet */
-          destip = ntohl(*(uint32_t*)(buf->buf+4));
+          destip = ntohl(*(uint32_t*)(buf->mem+4));
           in.s_addr = htonl(destip);
           tmpbuf = inet_ntoa(in);
           if(strlen(tmpbuf)+1 > max_addrlen) {
@@ -467,12 +467,12 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
             return -1;
           }
           strcpy(addr_out,tmpbuf);
-          *port_out = ntohs(*(uint16_t*)(buf->buf+8));
+          *port_out = ntohs(*(uint16_t*)(buf->mem+8));
           buf_remove_from_front(buf, 10);
           return 1;
         case 3: /* fqdn */
           log_fn(LOG_DEBUG,"socks5: fqdn address type");
-          len = (unsigned char)*(buf->buf+4);
+          len = (unsigned char)*(buf->mem+4);
           if(buf->datalen < 7+len) /* addr/port there? */
             return 0; /* not yet */
           if(len+1 > max_addrlen) {
@@ -480,13 +480,13 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
                    len+1,max_addrlen);
             return -1;
           }
-          memcpy(addr_out,buf->buf+5,len);
+          memcpy(addr_out,buf->mem+5,len);
           addr_out[len] = 0;
-          *port_out = ntohs(*(uint16_t*)(buf->buf+5+len));
+          *port_out = ntohs(*(uint16_t*)(buf->mem+5+len));
           buf_remove_from_front(buf, 5+len+2);
           return 1;
         default: /* unsupported */
-          log_fn(LOG_WARN,"socks5: unsupported address type %d",*(buf->buf+3));
+          log_fn(LOG_WARN,"socks5: unsupported address type %d",*(buf->mem+3));
           return -1;
       }
       assert(0);
@@ -496,13 +496,13 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
       if(buf->datalen < SOCKS4_NETWORK_LEN) /* basic info available? */
         return 0; /* not yet */
 
-      if(*(buf->buf+1) != 1) { /* not a connect? we don't support it. */
-        log_fn(LOG_WARN,"socks4: command %d not '1'.",*(buf->buf+1));
+      if(*(buf->mem+1) != 1) { /* not a connect? we don't support it. */
+        log_fn(LOG_WARN,"socks4: command %d not '1'.",*(buf->mem+1));
         return -1;
       }
 
-      *port_out = ntohs(*(uint16_t*)(buf->buf+2));
-      destip = ntohl(*(uint32_t*)(buf->buf+4));
+      *port_out = ntohs(*(uint16_t*)(buf->mem+2));
+      destip = ntohl(*(uint32_t*)(buf->mem+4));
       if(!*port_out || !destip) {
         log_fn(LOG_WARN,"socks4: Port or DestIP is zero.");
         return -1;
@@ -519,7 +519,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
         socks4_prot = socks4;
       }
 
-      next = memchr(buf->buf+SOCKS4_NETWORK_LEN, 0, buf->datalen);
+      next = memchr(buf->mem+SOCKS4_NETWORK_LEN, 0, buf->datalen);
       if(!next) {
         log_fn(LOG_DEBUG,"Username not here yet.");
         return 0;
@@ -527,7 +527,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
 
       startaddr = next+1;
       if(socks4_prot == socks4a) {
-        next = memchr(startaddr, 0, buf->buf+buf->datalen-startaddr);
+        next = memchr(startaddr, 0, buf->mem+buf->datalen-startaddr);
         if(!next) {
           log_fn(LOG_DEBUG,"Destaddr not here yet.");
           return 0;
@@ -539,11 +539,11 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
       }
       log_fn(LOG_DEBUG,"Everything is here. Success.");
       strcpy(addr_out, socks4_prot == socks4 ? tmpbuf : startaddr);
-      buf_remove_from_front(buf, next-buf->buf+1); /* next points to the final \0 on inbuf */
+      buf_remove_from_front(buf, next-buf->mem+1); /* next points to the final \0 on inbuf */
       return 1;
 
     default: /* version is not socks4 or socks5 */
-      log_fn(LOG_WARN,"Socks version %d not recognized. (Tor is not an httpd proxy.)",*(buf->buf));
+      log_fn(LOG_WARN,"Socks version %d not recognized. (Tor is not an httpd proxy.)",*(buf->mem));
       return -1;
   }
 }
