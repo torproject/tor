@@ -389,11 +389,17 @@ int config_assign_default_dirservers(void) {
     log_fn(LOG_WARN,"Bug: the default dirservers internal string is corrupt.");
     return -1;
   }
-#if 0
-  parse_dir_server_line("18.244.0.188:9031 XXXX");
-  parse_dir_server_line("18.244.0.188:9032 XXXX");
-  parse_dir_server_line("62.116.124.106:9030 XXXX");
-#endif
+
+  /* moria1 */
+  parse_dir_server_line("18.244.0.188:9031 "
+                        "FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441");
+  /* moria2 */
+  parse_dir_server_line("18.244.0.188:9032 "
+                        "719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF");
+  /* tor26 */
+  parse_dir_server_line("62.116.124.106:9030 "
+                        "847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
+
   return 0;
 }
 
