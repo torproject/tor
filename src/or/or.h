@@ -786,6 +786,8 @@ typedef struct {
   struct crypt_path_t *pending_final_cpath;
   /** How many times has building a circuit for this task failed? */
   int failure_count;
+  /** At what time should we give up on this task? */
+  time_t expiry_time;
 } cpath_build_state_t;
 
 #define CIRCUIT_MAGIC 0x35315243u
