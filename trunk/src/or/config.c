@@ -377,7 +377,7 @@ static void init_options(or_options_t *options) {
   options->SocksBindAddress = tor_strdup("127.0.0.1");
   options->ORBindAddress = tor_strdup("0.0.0.0");
   options->DirBindAddress = tor_strdup("0.0.0.0");
-  options->RecommendedVersions = tor_strdup("[no recommended versions defined -- the dirserver must define this]");
+  options->RecommendedVersions = NULL;
   options->loglevel = LOG_INFO;
   options->PidFile = NULL; // tor_strdup("tor.pid");
   options->DataDirectory = NULL;
@@ -572,6 +572,11 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   if(options->DirPort < 0) {
     log(LOG_WARN,"DirPort option can't be negative.");
+    result = -1;
+  }
+
+  if(options->DirPort && options->RecommendedVersions == NULL) {
+    log(LOG_WARN,"Directory servers must configure RecommendedVersions.");
     result = -1;
   }
 
