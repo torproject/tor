@@ -8,6 +8,8 @@ orconfig.h.in
 config.cache
 config.log
 config.status
+config.guess
+config.sub
 conftest*
 stamp-h
 stamp-h1

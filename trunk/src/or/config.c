@@ -28,7 +28,7 @@ static int config_close(FILE *f);
 static struct config_line_t *config_get_commandlines(int argc, char **argv);
 static struct config_line_t *config_get_lines(FILE *f);
 static void config_free_lines(struct config_line_t *front);
-static int config_compare(struct config_line_t *c, char *key, config_type_t type, void *arg);
+static int config_compare(struct config_line_t *c, const char *key, config_type_t type, void *arg);
 static int config_assign(or_options_t *options, struct config_line_t *list);
 
 /** Open a configuration file for reading */
@@ -131,11 +131,16 @@ static void config_free_lines(struct config_line_t *front) {
  * the result in <b>arg</b>.  If the option is misformatted, log a warning and
  * skip it.
  */
-static int config_compare(struct config_line_t *c, char *key, config_type_t type, void *arg) {
+static int config_compare(struct config_line_t *c, const char *key, config_type_t type, void *arg) {
   int i;
 
   if(strncasecmp(c->key,key,strlen(c->key)))
     return 0;
+
+  if(strcasecmp(c->key,key)) {
+    tor_free(c->key);
+    c->key = tor_strdup(key);
+  }
 
   /* it's a match. cast and assign. */
   log_fn(LOG_DEBUG,"Recognized keyword '%s' as %s, using value '%s'.",c->key,key,c->value);
@@ -204,8 +209,8 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
 
     config_compare(list, "KeepalivePeriod",CONFIG_TYPE_INT, &options->KeepalivePeriod) ||
 
-    config_compare(list, "LogLevel",       CONFIG_TYPE_STRING, &options->LogLevel) ||
-    config_compare(list, "LogFile",        CONFIG_TYPE_STRING, &options->LogFile) ||
+    config_compare(list, "LogLevel",       CONFIG_TYPE_LINELIST, &options->LogOptions) ||
+    config_compare(list, "LogFile",        CONFIG_TYPE_LINELIST, &options->LogOptions) ||
     config_compare(list, "LinkPadding",    CONFIG_TYPE_BOOL, &options->LinkPadding) ||
 
     config_compare(list, "MaxConn",        CONFIG_TYPE_INT, &options->MaxConn) ||
@@ -460,8 +465,7 @@ static int resolve_my_address(or_options_t *options) {
 
 /** Release storage held by <b>options</b> */
 static void free_options(or_options_t *options) {
-  tor_free(options->LogLevel);
-  tor_free(options->LogFile);
+  config_free_lines(options->LogOptions);
   tor_free(options->DebugLogFile);
   tor_free(options->DataDirectory);
   tor_free(options->RouterFile);
@@ -487,7 +491,7 @@ static void free_options(or_options_t *options) {
 static void init_options(or_options_t *options) {
 /* give reasonable values for each option. Defaults to zero. */
   memset(options,0,sizeof(or_options_t));
-  options->LogLevel = tor_strdup("notice");
+  options->LogOptions = NULL;
   options->ExitNodes = tor_strdup("");
   options->EntryNodes = tor_strdup("");
   options->ExcludeNodes = tor_strdup("");
@@ -498,7 +502,6 @@ static void init_options(or_options_t *options) {
   options->ORBindAddress = tor_strdup("0.0.0.0");
   options->DirBindAddress = tor_strdup("0.0.0.0");
   options->RecommendedVersions = NULL;
-  options->loglevel = LOG_INFO;
   options->PidFile = NULL; // tor_strdup("tor.pid");
   options->DataDirectory = NULL;
   options->PathlenCoinWeight = 0.3;
@@ -616,23 +619,6 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     return -1;
   }
 
-  if(options->LogLevel) {
-    if(!strcmp(options->LogLevel,"err"))
-      options->loglevel = LOG_ERR;
-    else if(!strcmp(options->LogLevel,"warn"))
-      options->loglevel = LOG_WARN;
-    else if(!strcmp(options->LogLevel,"notice"))
-      options->loglevel = LOG_NOTICE;
-    else if(!strcmp(options->LogLevel,"info"))
-      options->loglevel = LOG_INFO;
-    else if(!strcmp(options->LogLevel,"debug"))
-      options->loglevel = LOG_DEBUG;
-    else {
-      log(LOG_WARN,"LogLevel must be one of err|warn|notice|info|debug.");
-      result = -1;
-    }
-  }
-
   if(options->ORPort < 0) {
     log(LOG_WARN,"ORPort option can't be negative.");
     result = -1;
@@ -725,6 +711,101 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   }
 
   return result;
+}
+
+static void add_single_log(struct config_line_t *level_opt,
+                           struct config_line_t *file_opt,
+                           int isDaemon)
+{
+  int levelMin=-1, levelMax=-1;
+  char *cp, *tmp_sev;
+
+  if (level_opt) {
+    cp = strchr(level_opt->value, '-');
+    if (cp) {
+      tmp_sev = tor_strndup(level_opt->value, cp - level_opt->value);
+      levelMin = parse_log_level(tmp_sev);
+      if (levelMin<0) {
+        log_fn(LOG_WARN, "Unrecognized log severity %s: must be one of err|warn|notice|info|debug", tmp_sev);
+      }
+      tor_free(tmp_sev);
+      levelMax = parse_log_level(cp+1);
+      if (levelMax<0) {
+        log_fn(LOG_WARN, "Unrecognized log severity %s: must be one of err|warn|notice|info|debug", cp+1);
+      }
+    } else {
+      levelMin = parse_log_level(level_opt->value);
+      if (levelMin<0) {
+        log_fn(LOG_WARN, "Unrecognized log severity %s: must be one of err|warn|notice|info|debug", level_opt->value);
+      }
+    }
+  }
+  if (levelMin < 0 && levelMax < 0) {
+    levelMin = LOG_NOTICE;
+    levelMax = LOG_ERR;
+  } else if (levelMin < 0) {
+    levelMin = levelMax;
+  } else {
+    levelMax = LOG_ERR;
+  }
+  if (file_opt) {
+    if (add_file_log(levelMin, levelMax, file_opt->value) < 0) {
+      /* opening the log file failed!  Use stderr and log a warning */
+      add_stream_log(levelMin, levelMax, "<stderr>", stderr);
+      log_fn(LOG_WARN, "Cannot write to LogFile '%s': %s.", file_opt->value,
+             strerror(errno));
+    }
+    log_fn(LOG_NOTICE, "Successfully opened LogFile '%s', redirecting output.",
+           file_opt->value);
+  } else if (!isDaemon) {
+    add_stream_log(levelMin, levelMax, "<stderr>", stderr);
+  }
+}
+
+/**
+ * Initialize the logs based on the configuration file.
+ */
+void config_init_logs(or_options_t *options)
+{
+  /* The order of options is:  Level? (File Level?)+
+   */
+  struct config_line_t *opt = options->LogOptions;
+
+  /* Special case for if first option is LogLevel. */
+  if (opt && !strcasecmp(opt->key, "LogLevel")) {
+    if (opt->next && !strcasecmp(opt->next->key, "LogFile")) {
+      add_single_log(opt, opt->next, options->RunAsDaemon);
+      opt = opt->next->next;
+    } else if (!opt->next) {
+      add_single_log(opt, NULL, options->RunAsDaemon);
+      return;
+    } else {
+      opt = opt->next;
+    }
+  }
+
+  while (opt) {
+    if (!strcasecmp(opt->key, "LogLevel")) {
+      log_fn(LOG_WARN, "Two LogLevel options in a row without intervening LogFile");
+      opt = opt->next;
+    } else {
+      assert(!strcasecmp(opt->key, "LogFile"));
+      if (opt->next && !strcasecmp(opt->next->key, "LogLevel")) {
+        /* LogFile followed by LogLevel */
+        add_single_log(opt->next, opt, options->RunAsDaemon);
+        opt = opt->next->next;
+      } else {
+        /* LogFile followed by LogFile or end of list. */
+        add_single_log(NULL, opt, options->RunAsDaemon);
+        opt = opt->next;
+      }
+    }
+  }
+
+  if (options->DebugLogFile) {
+    log_fn(LOG_WARN, "DebugLogFile is deprecated; use LogFile and LogLevel instead");
+    add_file_log(LOG_DEBUG, LOG_ERR, options->DebugLogFile);
+  }
 }
 
 /*

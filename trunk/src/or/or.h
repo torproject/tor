@@ -753,6 +753,9 @@ typedef struct circuit_t circuit_t;
 
 /** Configuration options for a Tor process */
 typedef struct {
+  struct config_line_t *LogOptions; /**< List of configuration lines
+                                     * for logfiles */
+
   char *LogLevel; /**< Verbosity of log: minimal level of messages to report. */
   char *LogFile; /**< Where to send normal log messages. */
   char *DebugLogFile; /**< Where to send verbose log messages. */
@@ -811,8 +814,6 @@ typedef struct {
   int BandwidthBurst; /**< How much bandwidth, at maximum, are we willing to
                        * use in a second? */
   int NumCpus; /**< How many CPUs should we try to use? */
-  int loglevel; /**< How verbose should we be?  Log messages less severe than
-                 * this will be ignored. */
   int RunTesting; /**< If true, create testing circuits to measure how well the
                    * other ORs are running. */
   struct config_line_t *RendConfigLines; /**< List of configuration lines
@@ -951,6 +952,7 @@ struct config_line_t {
 
 int config_assign_default_dirservers(void);
 int getconfig(int argc, char **argv, or_options_t *options);
+void config_init_logs(or_options_t *options);
 
 /********************************* connection.c ***************************/
 
