@@ -42,8 +42,8 @@ Paul Syverson \\ Naval Research Lab \\ syverson@itd.nrl.navy.mil}
 \thispagestyle{empty}
 
 \begin{abstract}
-We present Tor, a connection-based anonymous communication system based
-on onion routing.
+We present Tor, a connection-based low-latency anonymous communication
+system which addresses many flaws in the original onion routing design.
 Tor works in a real-world Internet environment,
 requires little synchronization or coordination between nodes, and
 protects against known anonymity-breaking attacks as well
@@ -59,26 +59,53 @@ as or better than other systems with similar design parameters.
 \Section{Overview}
 \label{sec:intro}
 
-Onion routing is a TCP-based anonymous communication system
-The onion routing project published a number of papers several years
-ago \cite{x,y,z}, but because the only implementation was a fragile
-proof-of-concept that ran on a single machine, many critical design issues
-were not considered or addressed. Here we describe Tor, a protocol for
-asynchronous, loosely federated onion routers that provides the following
-improvements over the old onion routing design:
+Onion routing is a distributed overlay network designed to anonymize
+low-latency TCP-based applications such as web browsing, secure
+shell, and instant messaging. Users choose a path through the
+network and build a \emph{virtual circuit}, in which each node in
+the path knows its predecessor and successor, but no others. Traffic
+flowing down the circuit is unwrapped by a symmetric key at each
+node which reveals the downstream node. The original onion routing
+project published several design and analysis papers several years
+ago \cite{or-journal,or-discex,or-ih,or-pet}, but because the only
+implementation was a fragile proof-of-concept that ran on a single
+machine, many critical design and deployment issues were not considered
+or addressed. Here we describe Tor, a protocol for asynchronous, loosely
+federated onion routers that provides the following improvements over
+the old onion routing design:
 
 \begin{itemize}
-\item \textbf{Congestion control:} Foo
 
-\item \textbf{No mixing or traffic shaping:}
+\item \textbf{Applications talk to the onion proxy via Socks:}
+The original onion routing design required a separate proxy for each
+supported application protocol, resulting in a lot of extra code (most
+of which was never written) and also meaning that a lot of TCP-based
+applications were not supported. Tor uses the unified and standard Socks
+\cite{socks4,socks5} interface, allowing us to support any TCP-based
+program without modification.
 
-\item \textbf{Applications talk to the onion proxy via socks:} 
+\item \textbf{No mixing or traffic shaping:} The original onion routing
+design called for full link padding both between onion routers and between
+onion proxies (that is, users) and onion routers \cite{or-journal}. The
+later analysis paper \cite{or-pet} suggested \emph{traffic shaping}
+schemes that would provide similar protection but use less bandwidth,
+but did not go into detail. However, recent research \cite{econymics}
+and deployment experience \cite{freedom2-arch} indicate that this level
+of resource use is not practical or economical, especially if.
 
-\item \textbf{Directory servers:}
+\item \textbf{Directory servers:} Traditional link state
+
+\item \textbf{Congestion control:} Traditional flow control solutions
+ Our decentralized ack-based congestion control
+allows nodes at the edges of the network to detect incidental congestion
+or flooding attacks and send less data until the congestion subsides.
+
 
 \item \textbf{Forward security:}
 
 \item \textbf{Many applications can share one circuit:}
+
+leaky pipes
 
 \item \textbf{End-to-end integrity checking:}
 
