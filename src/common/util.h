@@ -94,6 +94,10 @@ typedef enum {
 int tor_strpartition(char *dest, size_t dest_len,
                      const char *s, const char *insert, size_t n,
                      part_finish_rule_t rule);
+long tor_parse_long(const char *s, int base, long min,
+                    long max, int *ok, char **next);
+unsigned long tor_parse_ulong(const char *s, int base, unsigned long min,
+                              unsigned long max, int *ok, char **next);
 
 
 /* Some platforms segfault when you try to access a multi-byte type

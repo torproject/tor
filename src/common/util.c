@@ -2051,10 +2051,9 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
   colon = strchr(addrport, ':');
   if (colon) {
     _address = tor_strndup(addrport, colon-addrport);
-    _port = atoi(colon+1);
-    if (_port<1 || _port>65535) {
+    _port = (int) tor_parse_long(colon+1,10,1,65535,NULL,NULL);
+    if (!_port) {
       log_fn(LOG_WARN, "Port '%s' out of range", colon+1);
-      _port = 0;
       ok = 0;
     }
   } else {
@@ -2082,6 +2081,68 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
     *port =  ok ? ((uint16_t) _port) : 0;
 
   return ok ? 0 : -1;
+}
+
+/** Extract a long from the start of s, in the given numeric base.  If
+ * there is unconverted data and next is provided, set *next to the
+ * first unconverted character.  An error has occurred if no characters
+ * are converted; or if there are unconverted characters and next is NULL; or
+ * if the parsed value is not between min and max.  When no error occurs,
+ * return the parsed value and set *ok (if provided) to 1.  When an error
+ * ocurs, return 0 and set *ok (if provided) to 0.
+ */
+long
+tor_parse_long(const char *s, int base, long min, long max,
+               int *ok, char **next)
+{
+  char *endptr;
+  long r;
+
+  r = strtol(s, &endptr, base);
+  /* Was at least one character converted? */
+  if (endptr == s)
+    goto err;
+  /* Were there unexpected unconverted characters? */
+  if (!next && *endptr)
+    goto err;
+  /* Is r within limits? */
+  if (r < min || r > max)
+    goto err;
+
+  if (ok) *ok = 1;
+  if (next) *next = endptr;
+  return r;
+ err:
+  if (ok) *ok = 0;
+  if (next) *next = endptr;
+  return 0;
+}
+
+unsigned long
+tor_parse_ulong(const char *s, int base, unsigned long min,
+                unsigned long max, int *ok, char **next)
+{
+  char *endptr;
+  unsigned long r;
+
+  r = strtol(s, &endptr, base);
+  /* Was at least one character converted? */
+  if (endptr == s)
+    goto err;
+  /* Were there unexpected unconverted characters? */
+  if (!next && *endptr)
+    goto err;
+  /* Is r within limits? */
+  if (r < min || r > max)
+    goto err;
+
+  if (ok) *ok = 1;
+  if (next) *next = endptr;
+  return r;
+ err:
+  if (ok) *ok = 0;
+  if (next) *next = endptr;
+  return 0;
 }
 
 #ifndef MS_WINDOWS
