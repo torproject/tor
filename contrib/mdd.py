@@ -1,4 +1,4 @@
-#!/home/nickm/bin/python2.3
+#!/usr/bin/env python2.3
 
 import re, sys
 import textwrap
@@ -10,17 +10,25 @@ functionCalls = {}
 funcCalledByFile = {}
 funcCalledByFunc = {}
 
+cpp_re = re.compile(r'//.*$')
+c_re = re.compile(r'/[*]+(?:[^*]+|[*]+[^/*])*[*]+/', re.M|re.S)
+
 for fname in files:
     f = open(fname, 'r')
     curFunc = "???"
     functionCalls.setdefault(curFunc,{})
     lineno = 0
-    for line in f.xreadlines():
+    body = f.read()
+    body = cpp_re.sub(" ",body)
+    body = c_re.sub(" ",body)
+    #if fname == 'dns.c': print body
+    for line in body.split("\n"):
         lineno += 1
         m = re.match(r'^[^\s/].*\s(\w+)\([^;]*$', line)
         if m:
             #print line, "->", m.group(1)
             curFunc = m.group(1)
+            if curFunc[0] == '_': curFunc = curFunc[1:]
             functionCalls.setdefault(curFunc,{})
             funcDeclaredIn[m.group(1)] = fname
             fileDeclares.setdefault(fname, {})[m.group(1)] = 1
@@ -29,6 +37,7 @@ for fname in files:
         if m:
             #print line, "->", m.group(1)
             curFunc = m.group(1)
+            if curFunc[0] == '_': curFunc = curFunc[1:]
             functionCalls.setdefault(curFunc,{})
             funcDeclaredIn[m.group(1)] = fname
             fileDeclares.setdefault(fname, {})[m.group(1)] = 1
@@ -36,7 +45,10 @@ for fname in files:
         while line:
             m = re.search(r'(\w+)\(', line)
             if not m: break
-            #print line, "->", m.group(1)
+            #print fname, line, curFunc, "->", m.group(1)
+            fn = m.group(1)
+            if fn[0] == '_':
+                fn = fn[1:]
             functionCalls[curFunc][m.group(1)] = 1
             #if curFunc == "???":
             #    print ">>!!!!! at %s:%s"%(fname,lineno)
@@ -92,7 +104,8 @@ if 1:
         callers = [c for c in funcCalledByFunc.get(func,{}).keys()
                    if c != "???"]
         callers.sort()
-        called = [c for c in functionCalls[func].keys() if c != "???"]
+        called = [c for c in functionCalls[func].keys() if c != "???" and
+                  c in funcnames]
         called.sort()
         print wrap(" ".join(callers),
                    "  Called by:")
