@@ -321,6 +321,8 @@ routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
       routerlist_sl_remove_unreliable_routers(sl);
     if(preferbandwidth)
       choice = routerlist_sl_choose_by_bandwidth(sl);
+    else
+      choice = smartlist_choose(sl);
     smartlist_free(sl);
   }
   smartlist_free(excludednodes);
