@@ -397,6 +397,10 @@ int config_assign_default_dirservers(void) {
     return -1;
   }
 
+  return 0;
+}
+
+static void add_default_trusted_dirservers(void) {
   /* moria1 */
   parse_dir_server_line("18.244.0.188:9031 "
                         "FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441");
@@ -406,8 +410,6 @@ int config_assign_default_dirservers(void) {
   /* tor26 */
   parse_dir_server_line("62.116.124.106:9030 "
                         "847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
-
-  return 0;
 }
 
 /** Set <b>options</b> to a reasonable default.
@@ -892,9 +894,15 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     }
   }
 
-  for (cl = options->DirServers; cl; cl = cl->next) {
-    if (parse_dir_server_line(cl->value)<0)
-      return -1;
+  
+  clear_trusted_dir_servers();
+  if (!options->DirServers) {
+    add_default_trusted_dirservers();
+  } else {
+    for (cl = options->DirServers; cl; cl = cl->next) {
+      if (parse_dir_server_line(cl->value)<0)
+        return -1;
+    }
   }
 
   /* XXX look at the various nicknamelists and make sure they're
