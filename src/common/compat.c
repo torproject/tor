@@ -72,6 +72,10 @@ const char compat_c_id[] = "$Id$";
 #include "log.h"
 #include "util.h"
 
+#ifdef TOR_IS_MULTITHREADED
+#include <openssl/crypto.h>
+#endif
+
 /* Inline the strl functions if the platform doesn't have them. */
 #ifndef HAVE_STRLCPY
 #include "strlcpy.c"
@@ -774,6 +778,11 @@ void tor_mutex_release(tor_mutex_t *m)
     log_fn(LOG_WARN, "Failed to release mutex: %d", GetLastError());
   }
 }
+unsigned long
+tor_get_thread_id(void)
+{
+  return (unsigned long)GetCurrentThreadId();
+}
 #elif defined(USE_PTHREADS)
 struct tor_mutex_t {
   pthread_mutex_t mutex;
@@ -800,6 +809,11 @@ void tor_mutex_free(tor_mutex_t *m)
   pthread_mutex_destroy(&m->mutex);
   tor_free(m);
 }
+unsigned long
+tor_get_thread_id(void)
+{
+  return (unsigned long)pthread_self();
+}
 #else
 struct tor_mutex_t {
   int _unused;
@@ -808,6 +822,7 @@ tor_mutex_t *tor_mutex_new(void) { return NULL; }
 void tor_mutex_acquire(tor_mutex_t *m) { }
 void tor_mutex_release(tor_mutex_t *m) { }
 void tor_mutex_free(tor_mutex_t *m) { }
+unsigned long tor_get_thread_id(void) { return 1; }
 #endif
 
 /**

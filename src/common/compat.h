@@ -199,6 +199,7 @@ tor_mutex_t *tor_mutex_new(void);
 void tor_mutex_acquire(tor_mutex_t *m);
 void tor_mutex_release(tor_mutex_t *m);
 void tor_mutex_free(tor_mutex_t *m);
+unsigned long tor_get_thread_id(void);
 
 #if defined(MS_WINDOWS)
 #define USE_WIN32_THREADS
