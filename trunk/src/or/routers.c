@@ -19,11 +19,11 @@
 
 /****************************************************************************/
 
-/* router array */
-static directory_t *directory = NULL;
+static directory_t *directory = NULL; /* router array */
+static routerinfo_t *desc_routerinfo = NULL; /* my descriptor */
+static char descriptor[8192]; /* string representation of my descriptor */
 
 extern or_options_t options; /* command-line and config-file options */
-static routerinfo_t *my_routerinfo;
 
 /****************************************************************************/
 
@@ -41,42 +41,6 @@ static int router_add_exit_policy(routerinfo_t *router,
 static int router_resolve_directory(directory_t *dir);
 
 /****************************************************************************/
-
-int learn_my_address(struct sockaddr_in *me) {
-  /* local host information */
-  char localhostname[256];
-  struct hostent *localhost;
-  static struct sockaddr_in answer;
-  static int already_learned=0;
-
-  if(!already_learned) {
-    /* obtain local host information */
-    if(gethostname(localhostname,sizeof(localhostname)) < 0) {
-      log_fn(LOG_WARNING,"Error obtaining local hostname");
-      return -1;
-    }
-    log_fn(LOG_DEBUG,"localhostname is '%s'.",localhostname);
-    localhost = gethostbyname(localhostname);
-    if (!localhost) {
-      log_fn(LOG_WARNING,"Error obtaining local host info.");
-      /* XXX maybe this is worse than warning? bad things happen when we don't know ourselves */
-      return -1;
-    }
-    memset(&answer,0,sizeof(struct sockaddr_in));
-    answer.sin_family = AF_INET;
-    memcpy((void *)&answer.sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
-    answer.sin_port = htons((uint16_t) options.ORPort);
-    log_fn(LOG_DEBUG,"chose address as '%s'.",inet_ntoa(answer.sin_addr));
-    if (!strncmp("127.",inet_ntoa(answer.sin_addr), 4) &&
-        strcasecmp(localhostname, "localhost")) {
-      /* We're a loopback IP but we're not called localhost.  Uh oh! */
-      log_fn(LOG_WARNING, "Got a loopback address: /etc/hosts may be wrong");
-    }
-    already_learned = 1;
-  }
-  memcpy(me,&answer,sizeof(struct sockaddr_in));
-  return 0;
-}
 
 void router_retry_connections(void) {
   int i;
@@ -173,30 +137,6 @@ routerinfo_t *router_get_by_nickname(char *nickname)
 
 void router_get_directory(directory_t **pdirectory) {
   *pdirectory = directory;
-}
-
-/* return 1 if addr and port corresponds to my addr and my or_listenport. else 0,
- * or -1 for failure.
- */
-int router_is_me(uint32_t addr, uint16_t port)
-{
-  /* XXXX Should this check the key too? */
-  struct sockaddr_in me; /* my router identity */
-
-  if(!options.OnionRouter) {
-    /* we're not an OR. This obviously isn't us. */
-    return 0;
-  }
- 
-  if(learn_my_address(&me) < 0)
-    return -1;
-    /* XXX people call this function like a boolean. that's bad news: -1 is true. */
-
-  if(ntohl(me.sin_addr.s_addr) == addr && ntohs(me.sin_port) == port)
-    return 1;
-
-  return 0;
-
 }
 
 /* delete a list of routers from memory */
@@ -806,8 +746,7 @@ router_resolve_directory(directory_t *dir)
              dir->routers[i]->address);
       remove = 1;
       routerinfo_free(dir->routers[i]);
-    } else if (router_is_me(dir->routers[i]->addr, dir->routers[i]->or_port)) {
-      my_routerinfo = dir->routers[i];
+    } else if (options.Nickname && !strcmp(dir->routers[i]->nickname, options.Nickname)) {
       remove = 1;
     }
     if (remove) {
@@ -1068,12 +1007,9 @@ policy_read_failed:
 int router_compare_to_exit_policy(connection_t *conn) {
   struct exit_policy_t *tmpe;
 
-  if(!my_routerinfo) {
-    log_fn(LOG_WARNING, "my_routerinfo undefined! Rejected.");
-    return -1;
-  }
+  assert(desc_routerinfo);
 
-  for(tmpe=my_routerinfo->exit_policy; tmpe; tmpe=tmpe->next) {
+  for(tmpe=desc_routerinfo->exit_policy; tmpe; tmpe=tmpe->next) {
     assert(tmpe->address);
     assert(tmpe->port);
 
@@ -1093,10 +1029,6 @@ int router_compare_to_exit_policy(connection_t *conn) {
   return 0; /* accept all by default. */
 }
 
-
-static char descriptor[8192];
-/* XXX should this replace my_routerinfo? */
-static routerinfo_t *desc_routerinfo = NULL; 
 const char *router_get_my_descriptor(void) {
   if (!desc_routerinfo) {
     if (router_rebuild_descriptor())

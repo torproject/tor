@@ -789,7 +789,6 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
 int circuit_extend(cell_t *cell, circuit_t *circ) {
   connection_t *n_conn;
   aci_t aci_type;
-  struct sockaddr_in me; /* my router identity */
   cell_t newcell;
 
   if(circ->n_conn) {
@@ -799,9 +798,6 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
 
   circ->n_addr = ntohl(*(uint32_t*)(cell->payload+RELAY_HEADER_SIZE));
   circ->n_port = ntohs(*(uint16_t*)(cell->payload+RELAY_HEADER_SIZE+4));
-
-  if(learn_my_address(&me) < 0)
-    return -1;
 
   n_conn = connection_twin_get_by_addr_port(circ->n_addr,circ->n_port);
   if(!n_conn || n_conn->type != CONN_TYPE_OR) {
@@ -824,8 +820,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   circ->n_conn = n_conn;
   log_fn(LOG_DEBUG,"n_conn is %s:%u",n_conn->address,n_conn->port);
 
-  aci_type = decide_aci_type(ntohl(me.sin_addr.s_addr), ntohs(me.sin_port),
-                             circ->n_addr, circ->n_port);
+  aci_type = decide_aci_type(options.Nickname, n_conn->nickname);
 
   log_fn(LOG_DEBUG,"aci_type = %u.",aci_type);
   circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, aci_type);
