@@ -13,12 +13,6 @@
 
 static void dumpstats(int severity); /* log stats */
 static int init_from_config(int argc, char **argv);
-static int read_bandwidth_usage(void);
-static int record_bandwidth_usage(time_t now);
-static void configure_accounting(time_t now);
-static time_t start_of_accounting_period_after(time_t now);
-static time_t start_of_accounting_period_containing(time_t now);
-static void accounting_set_wakeup_time(void);
 
 /********* START VARIABLES **********/
 
@@ -39,16 +33,6 @@ static uint64_t stats_n_bytes_written = 0;
 long stats_n_seconds_uptime = 0;
 /** When do we next download a directory? */
 static time_t time_to_fetch_directory = 0;
-
-/** How many bytes have we read/written in this accounting interval? */
-static uint64_t stats_n_bytes_read_in_interval = 0;
-static uint64_t stats_n_bytes_written_in_interval = 0;
-/** When did this accounting interval start? */
-static time_t interval_start_time = 0;
-/** When will this accounting interval end? */
-static time_t interval_end_time = 0;
-/** How far into the accounting interval should we hibernate? */
-static time_t interval_wakeup_time = 0;
 
 /** Array of all open connections; each element corresponds to the element of
  * poll_array in the same position.  The first nfds elements are valid. */
@@ -387,236 +371,6 @@ void directory_has_arrived(time_t now) {
   }
 }
 
-/* ************
- * Functions for bandwidth accounting.
- * ************/
-static time_t start_of_accounting_period_containing(time_t now)
-{
-  struct tm *tm;
-  /* Only months are supported. */
-  tm = gmtime(&now);
-  /* If this is before the Nth, we want the Nth of last month. */
-  if (tm->tm_mday < options.AccountingStart) {
-    if (--tm->tm_mon < 0) {
-      tm->tm_mon = 11;
-      --tm->tm_year;
-    }
-  }
-  /* Otherwise, the month and year are correct.*/
-
-  tm->tm_mday = options.AccountingStart;
-  tm->tm_hour = 0;
-  tm->tm_min = 0;
-  tm->tm_sec = 0;
-  return tor_timegm(tm);
-}
-static time_t start_of_accounting_period_after(time_t now)
-{
-  time_t start;
-  struct tm *tm;
-  start = start_of_accounting_period_containing(now);
-
-  tm = gmtime(&start);
-  if (++tm->tm_mon > 11) {
-    tm->tm_mon = 0;
-    ++tm->tm_year;
-  }
-  return tor_timegm(tm);
-}
-
-static void configure_accounting(time_t now)
-{
-  if (!interval_start_time)
-    read_bandwidth_usage(); /* XXXX009 check warning? */
-  if (!interval_start_time ||
-      start_of_accounting_period_after(interval_start_time) <= now) {
-    /* We start a new interval. */
-    log_fn(LOG_INFO, "Starting new accounting interval.");
-    interval_start_time = start_of_accounting_period_containing(now);
-    interval_end_time = start_of_accounting_period_after(interval_start_time);
-    stats_n_bytes_read_in_interval = 0;
-    stats_n_bytes_written_in_interval = 0;
-  } if (interval_start_time ==
-        start_of_accounting_period_containing(interval_start_time)) {
-    log_fn(LOG_INFO, "Continuing accounting interval.");
-    /* We are in the interval we thought we were in. Do nothing.*/
-  } else {
-    /* XXXX009 We are in an incompatible interval; we must have
-     * changed our configuration.  Do we reset the interval, or
-     * what? */
-    log_fn(LOG_INFO, "Mismatched accounting interval.");
-  }
-  accounting_set_wakeup_time();
-}
-
-static INLINE int time_to_record_bandwidth_usage(time_t now)
-{
-  /* Note every 5 minutes */
-#define NOTE_INTERVAL (5*60)
-  /* Or every 20 megabytes */
-#define NOTE_BYTES 20*(1024*1024)
-  static uint64_t last_read_bytes_noted = 0;
-  static uint64_t last_written_bytes_noted = 0;
-  static time_t last_time_noted = 0;
-
-  if ((options.AccountingMaxKB || 1)&&
-      (last_time_noted + NOTE_INTERVAL <= now ||
-       last_read_bytes_noted + NOTE_BYTES <= stats_n_bytes_read_in_interval ||
-       last_written_bytes_noted + NOTE_BYTES <=
-           stats_n_bytes_written_in_interval ||
-       (interval_end_time && interval_end_time <= now))) {
-    last_time_noted = now;
-    last_read_bytes_noted = stats_n_bytes_read_in_interval;
-    last_written_bytes_noted = stats_n_bytes_written_in_interval;
-    return 1;
-  }
-  return 0;
-}
-
-void accounting_set_wakeup_time(void)
-{
-  struct tm *tm;
-  char buf[ISO_TIME_LEN+1];
-  char digest[DIGEST_LEN];
-  crypto_digest_env_t *d;
-  int n_days_in_interval;
-
-  format_iso_time(buf, interval_start_time);
-  crypto_pk_get_digest(get_identity_key(), digest);
-
-  d = crypto_new_digest_env();
-  crypto_digest_add_bytes(d, buf, ISO_TIME_LEN);
-  crypto_digest_add_bytes(d, digest, DIGEST_LEN);
-  crypto_digest_get_digest(d, digest, DIGEST_LEN);
-  crypto_free_digest_env(d);
-
-  /* XXXX009 This logic is  wrong.  Instead of choosing randomly
-   * from the days in the interval, we should avoid days so close to the end
-   * that we won't use up all our bandwidth.  This could potentially waste
-   * 50% of all donated bandwidth.
-   */
-  tm = gmtime(&interval_start_time);
-  if (++tm->tm_mon > 11) { tm->tm_mon = 0; ++tm->tm_year; }
-  n_days_in_interval = (tor_timegm(tm)-interval_start_time+1)/(24*60*60);
-
-  while (((unsigned char)digest[0]) > n_days_in_interval)
-    crypto_digest(digest, digest, DIGEST_LEN);
-
-  interval_wakeup_time = interval_start_time +
-    24*60*60 * (unsigned char)digest[0];
-}
-
-static int record_bandwidth_usage(time_t now)
-{
-  char buf[128];
-  char fname[512];
-  char *cp = buf;
-
-  *cp++ = '0';
-  *cp++ = ' ';
-  format_iso_time(cp, interval_start_time);
-  cp += ISO_TIME_LEN;
-  *cp++ = ' ';
-  format_iso_time(cp, now);
-  cp += ISO_TIME_LEN;
-  tor_snprintf(cp, sizeof(buf)-ISO_TIME_LEN*2-3,
-               " "U64_FORMAT" "U64_FORMAT"\n",
-               U64_PRINTF_ARG(stats_n_bytes_read_in_interval),
-               U64_PRINTF_ARG(stats_n_bytes_written_in_interval));
-  tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
-               get_data_directory(&options));
-
-  return write_str_to_file(fname, buf, 0);
-}
-
-static int read_bandwidth_usage(void)
-{
-  char *s = NULL;
-  char fname[512];
-  time_t scratch_time;
-
-  /*
-  if (!options.AccountingMaxKB)
-    return 0;
-  */
-  tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
-               get_data_directory(&options));
-  if (!(s = read_file_to_str(fname, 0))) {
-    return 0;
-  }
-  /* version, space, time, space, time, space, bw, space, bw, nl. */
-  if (strlen(s) < ISO_TIME_LEN*2+6) {
-    log_fn(LOG_WARN,
-           "Recorded bandwidth usage file seems truncated or corrupted");
-    goto err;
-  }
-  if (s[0] != '0' || s[1] != ' ') {
-    log_fn(LOG_WARN, "Unrecognized version on bandwidth usage file");
-    goto err;
-  }
-  if (parse_iso_time(s+2, &interval_start_time)) {
-    log_fn(LOG_WARN, "Error parsing bandwidth usage start time.");
-    goto err;
-  }
-  if (s[ISO_TIME_LEN+2] != ' ') {
-    log_fn(LOG_WARN, "Expected space after start time.");
-    goto err;
-  }
-  if (parse_iso_time(s+ISO_TIME_LEN+3, &scratch_time)) {
-    log_fn(LOG_WARN, "Error parsing bandwidth usage last-written time");
-    goto err;
-  }
-  if (s[ISO_TIME_LEN+3+ISO_TIME_LEN] != ' ') {
-    log_fn(LOG_WARN, "Expected space after last-written time.");
-    goto err;
-  }
-  if (sscanf(s+ISO_TIME_LEN*2+4, U64_FORMAT" "U64_FORMAT,
-             U64_SCANF_ARG(&stats_n_bytes_read_in_interval),
-             U64_SCANF_ARG(&stats_n_bytes_written_in_interval))<2) {
-    log_fn(LOG_WARN, "Error reading bandwidth usage.");
-    goto err;
-  }
-
-  tor_free(s);
-  accounting_set_wakeup_time();
-  return 0;
- err:
-  tor_free(s);
-  return -1;
-}
-
-int accounting_hard_limit_reached(void)
-{
-  uint64_t hard_limit = options.AccountingMaxKB<<10;
-  if (!hard_limit)
-    return 0;
-  return stats_n_bytes_read_in_interval >= hard_limit
-    || stats_n_bytes_written_in_interval >= hard_limit;
-}
-
-int accounting_soft_limit_reached(void)
-{
-  uint64_t soft_limit = (uint64_t) ((options.AccountingMaxKB<<10) * .99);
-  if (!soft_limit)
-    return 0;
-  return stats_n_bytes_read_in_interval >= soft_limit
-    || stats_n_bytes_written_in_interval >= soft_limit;
-}
-
-time_t accounting_get_wakeup_time(void)
-{
-  if (interval_wakeup_time > time(NULL))
-    return interval_wakeup_time;
-  else
-    /*XXXX009 this means that callers must check for wakeup time again
-    * at the start of the next interval.  Not right! */
-    return interval_end_time;
-}
-
-int accounting_should_hibernate(void)
-{
-  return accounting_hard_limit_reached() || interval_wakeup_time > time(NULL);
-}
 
 /** Perform regular maintenance tasks for a single connection.  This
  * function gets run once per second per connection by run_housekeeping.
@@ -782,15 +536,7 @@ static void run_scheduled_events(time_t now) {
 
   /** 1c. If we have to change the accounting interval or record
    * bandwidth used in this accounting interval, do so. */
-  if (now >= interval_end_time) {
-    configure_accounting(now);
-  }
-  if (time_to_record_bandwidth_usage(now)) {
-    if (record_bandwidth_usage(now)) {
-      log_fn(LOG_WARN, "Couldn't record bandwidth usage!");
-      /* XXXX009 should this exit? */
-    }
-  }
+  accounting_run_housekeeping(now);
 
   /** 2. Every DirFetchPostPeriod seconds, we get a new directory and upload
    *    our descriptor (if we've passed our internal checks). */
@@ -901,20 +647,20 @@ static int prepare_for_poll(void) {
     /* the second has rolled over. check more stuff. */
     size_t bytes_written;
     size_t bytes_read;
+    int seconds_elapsed;
     bytes_written = stats_prev_global_write_bucket - global_write_bucket;
     bytes_read = stats_prev_global_read_bucket - global_read_bucket;
+    seconds_elapsed = current_second ? (now.tv_sec - current_second) : 0;
     stats_n_bytes_read += bytes_read;
-    stats_n_bytes_read_in_interval += bytes_read;
     stats_n_bytes_written += bytes_written;
-    stats_n_bytes_written_in_interval += bytes_written;
+    accounting_add_bytes(bytes_read, bytes_written, seconds_elapsed);
     control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
 
     connection_bucket_refill(&now);
     stats_prev_global_read_bucket = global_read_bucket;
     stats_prev_global_write_bucket = global_write_bucket;
 
-    if(current_second)
-      stats_n_seconds_uptime += (now.tv_sec - current_second);
+    stats_n_seconds_uptime += seconds_elapsed;
 
     assert_all_pending_dns_resolves_ok();
     run_scheduled_events(now.tv_sec);
