@@ -1,3 +1,10 @@
+Changes in version 0.0.2pre27 - 2004-03-14
+  o Bugfixes:
+    - Allow internal tor networks (we were rejecting internal IPs,
+      now we allow them if they're set explicitly).
+    - And fix a few endian issues.
+
+
 Changes in version 0.0.2pre26 - 2004-03-14
   o New features:
     - If a stream times out after 15s without a connected cell, don't
