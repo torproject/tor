@@ -7,7 +7,7 @@
 extern or_options_t options; /* command-line and config-file options */
 
 static void circuit_free_cpath_node(crypt_path_t *victim);
-static circ_id_t get_unique_circ_id_by_addr_port(uint32_t addr, uint16_t port, int circ_id_type);  
+static circ_id_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type);  
 
 unsigned long stats_n_relay_cells_relayed = 0;
 unsigned long stats_n_relay_cells_delivered = 0;
@@ -121,17 +121,12 @@ static void circuit_free_cpath_node(crypt_path_t *victim) {
 }
 
 /* return 0 if can't get a unique circ_id. */
-static circ_id_t get_unique_circ_id_by_addr_port(uint32_t addr, uint16_t port, int circ_id_type) {
+static circ_id_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type) {
   circ_id_t test_circ_id;
-  connection_t *conn;
   uint16_t high_bit;
+  assert(conn && conn->type == CONN_TYPE_OR);
 
   high_bit = (circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
-  conn = connection_exact_get_by_addr_port(addr,port);
-  /* XXX race condition: if conn is marked_for_close it won't be noticed */
-  if (!conn)
-    return (1|high_bit); /* No connection exists; conflict is impossible. */
-
   do {
     /* Sequentially iterate over test_circ_id=1...1<<15-1 until we find an
      * circID such that (high_bit|test_circ_id) is not already used. */
@@ -771,9 +766,10 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   assert(circ && circ->cpath);
 
   if(circ->cpath->state == CPATH_STATE_CLOSED) {
-
+    assert(circ->n_conn && circ->n_conn->type == CONN_TYPE_OR);
+    
     log_fn(LOG_DEBUG,"First skin; sending create cell.");
-    circ->n_circ_id = get_unique_circ_id_by_addr_port(circ->n_addr, circ->n_port, CIRC_ID_TYPE_BOTH);
+    circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn, CIRC_ID_TYPE_BOTH);
 
     memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_CREATE;
@@ -875,7 +871,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   circ_id_type = decide_circ_id_type(options.Nickname, n_conn->nickname);
 
   log_fn(LOG_DEBUG,"circ_id_type = %u.",circ_id_type);
-  circ->n_circ_id = get_unique_circ_id_by_addr_port(circ->n_addr, circ->n_port, circ_id_type);
+  circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn, circ_id_type);
   if(!circ->n_circ_id) {
     log_fn(LOG_WARN,"failed to get unique circID.");
     return -1;
