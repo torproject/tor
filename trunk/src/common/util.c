@@ -324,6 +324,25 @@ const char *find_whitespace(const char *s) {
   return s;
 }
 
+#define CHECK_STRTOX_RESULT()                           \
+  /* Was at least one character converted? */           \
+  if (endptr == s)                                      \
+    goto err;                                           \
+  /* Were there unexpected unconverted characters? */   \
+  if (!next && *endptr)                                 \
+    goto err;                                           \
+  /* Is r within limits? */                             \
+  if (r < min || r > max)                               \
+    goto err;                                           \
+  if (ok) *ok = 1;                                      \
+  if (next) *next = endptr;                             \
+  return r;                                             \
+ err:                                                   \
+  if (ok) *ok = 0;                                      \
+  if (next) *next = endptr;                             \
+  return 0;                                             \
+
+
 /** Extract a long from the start of s, in the given numeric base.  If
  * there is unconverted data and next is provided, set *next to the
  * first unconverted character.  An error has occurred if no characters
@@ -340,26 +359,9 @@ tor_parse_long(const char *s, int base, long min, long max,
   long r;
 
   r = strtol(s, &endptr, base);
-  /* Was at least one character converted? */
-  if (endptr == s)
-    goto err;
-  /* Were there unexpected unconverted characters? */
-  if (!next && *endptr)
-    goto err;
-  /* Is r within limits? */
-  if (r < min || r > max)
-    goto err;
-
-  if (ok) *ok = 1;
-  if (next) *next = endptr;
-  return r;
- err:
-  if (ok) *ok = 0;
-  if (next) *next = endptr;
-  return 0;
+  CHECK_STRTOX_RESULT();
 }
 
-#if 0
 unsigned long
 tor_parse_ulong(const char *s, int base, unsigned long min,
                 unsigned long max, int *ok, char **next)
@@ -367,26 +369,31 @@ tor_parse_ulong(const char *s, int base, unsigned long min,
   char *endptr;
   unsigned long r;
 
-  r = strtol(s, &endptr, base);
-  /* Was at least one character converted? */
-  if (endptr == s)
-    goto err;
-  /* Were there unexpected unconverted characters? */
-  if (!next && *endptr)
-    goto err;
-  /* Is r within limits? */
-  if (r < min || r > max)
-    goto err;
-
-  if (ok) *ok = 1;
-  if (next) *next = endptr;
-  return r;
- err:
-  if (ok) *ok = 0;
-  if (next) *next = endptr;
-  return 0;
+  r = strtoul(s, &endptr, base);
+  CHECK_STRTOX_RESULT();
 }
+
+uint64_t
+tor_parse_uint64(const char *s, int base, uint64_t min,
+                 uint64_t max, int *ok, char **next)
+{
+  char *endptr;
+  uint64_t r;
+
+#ifdef HAVE_STRTOULL
+  r = (uint64_t)strtoull(s, &endptr, base);
+#elif defined(MS_WINDOWS)
+  r = (uint64_t)_strtoui64(s, &endptr, base);
+#elif SIZEOF_LONG == 8
+  r = (uint64_t)strtoul(s, &endptr, base);
+#else
+#error "I don't know how to parse 64-bit numbers."
 #endif
+
+  CHECK_STRTOX_RESULT();
+}
+
+
 
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
