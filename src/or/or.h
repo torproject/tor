@@ -97,7 +97,20 @@
 #include <time.h>
 #endif
 
+/** Upper bound on maximum simultaneous connections; can be lowered by
+ * config file. */
+#define MAXCONNECTIONS 15000
+
 #ifdef MS_WINDOWS
+/* This trick makes winsock resize fd_set, which defaults to the
+ * insanely low 64. */
+#define FD_SETSIZE MAXCONNECTIONS
+/* XXXX But Windows FD_SET and FD_CLR are tremendously ugly, and linear in
+ *   the total number of sockets set! Perhaps we should eventually use
+ *   WSAEventSelect and WSAWaitForMultipleEvents instead of select? -NM
+ *   I'm told these funcs have an unchangeable 64 conn limit on 95/98,
+ *   so maybe not. -RD */
+
 #if (_MSC_VER <= 1300)
 #include <winsock.h>
 #else
@@ -137,10 +150,6 @@
 /** Define this if you want Tor to crash when any problem comes up,
  * so you can get a coredump and track things down. */
 #undef TOR_FRAGILE
-
-/** Upper bound on maximum simultaneous connections; can be lowered by
- * config file. */
-#define MAXCONNECTIONS 15000
 
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 #define MAX_NICKNAME_LEN 19
