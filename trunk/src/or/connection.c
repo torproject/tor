@@ -41,8 +41,10 @@ const char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
   { "ready" }, /* or listener, 0 */
   { "",                         /* OR, 0 */
     "connect()ing",                 /* 1 */
-    "handshaking",                  /* 2 */
-    "open" },                       /* 3 */
+    "proxy flushing",               /* 2 */
+    "proxy reading",                /* 3 */
+    "handshaking",                  /* 4 */
+    "open" },                       /* 5 */
   { "",                          /* exit, 0 */
     "waiting for dest info",           /* 1 */
     "connecting",                      /* 2 */
