@@ -664,8 +664,8 @@ int getconfig(int argc, char **argv, or_options_t *options);
 
 /********************************* connection.c ***************************/
 
-#define CONN_TYPE_TO_STRING(t) (((t) < _CONN_TYPE_MIN || (t) > _CONN_TYPE_MAX) ? "Unknown" : \
-	                            conn_type_to_string[(t)])
+#define CONN_TYPE_TO_STRING(t) (((t) < _CONN_TYPE_MIN || (t) > _CONN_TYPE_MAX) ? \
+  "Unknown" : conn_type_to_string[(t)])
 
 extern char *conn_type_to_string[];
 
@@ -711,13 +711,11 @@ connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_lastwritten(int type, int state);
 
-int connection_receiver_bucket_should_increase(connection_t *conn);
-
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 #define connection_has_pending_tls_data(conn) \
   ((conn)->type == CONN_TYPE_OR && \
    (conn)->state == OR_CONN_STATE_OPEN && \
-   tor_tls_get_pending_bytes(conn->tls))
+   tor_tls_get_pending_bytes((conn)->tls))
 int connection_is_listener(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 

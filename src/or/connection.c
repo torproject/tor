@@ -8,8 +8,6 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
-extern int global_read_bucket;
-
 char *conn_type_to_string[] = {
   "",            /* 0 */
   "OP listener", /* 1 */
@@ -72,6 +70,7 @@ char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
 
 static int connection_init_accepted_conn(connection_t *conn);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
+static int connection_receiver_bucket_should_increase(connection_t *conn);
 
 /**************************************************************/
 
@@ -444,6 +443,121 @@ int retry_all_connections(void) {
   return 0;
 }
 
+extern int global_read_bucket;
+
+/* how many bytes at most can we read onto this connection? */
+int connection_bucket_read_limit(connection_t *conn) {
+  int at_most;
+
+  if(options.LinkPadding) {
+    at_most = global_read_bucket;
+  } else {
+    /* do a rudimentary round-robin so one circuit can't hog a connection */
+    if(connection_speaks_cells(conn)) {
+      at_most = 32*(CELL_NETWORK_SIZE);
+    } else {
+      at_most = 32*(RELAY_PAYLOAD_SIZE);
+    }
+
+    if(at_most > global_read_bucket)
+      at_most = global_read_bucket;
+  }
+
+  if(connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN)
+    if(at_most > conn->receiver_bucket)
+      at_most = conn->receiver_bucket;
+
+  return at_most;
+}
+
+/* we just read num_read onto conn. Decrement buckets appropriately. */
+void connection_bucket_decrement(connection_t *conn, int num_read) {
+  global_read_bucket -= num_read; assert(global_read_bucket >= 0);
+  if(connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
+    conn->receiver_bucket -= num_read; assert(conn->receiver_bucket >= 0);
+  }
+  if(global_read_bucket == 0) {
+    log_fn(LOG_DEBUG,"global bucket exhausted. Pausing.");
+    conn->wants_to_read = 1;
+    connection_stop_reading(conn);
+    return;
+  }
+  if(connection_speaks_cells(conn) &&
+     conn->state == OR_CONN_STATE_OPEN &&
+     conn->receiver_bucket == 0) {
+      log_fn(LOG_DEBUG,"receiver bucket exhausted. Pausing.");
+      conn->wants_to_read = 1;
+      connection_stop_reading(conn);
+  }
+}
+
+/* keep a timeval to know when time has passed enough to refill buckets */
+static struct timeval current_time;
+
+void connection_bucket_init() {
+  tor_gettimeofday(&current_time);
+  global_read_bucket = options.BandwidthBurst; /* start it at max traffic */
+}
+
+/* some time has passed; increment buckets appropriately. */
+void connection_bucket_refill(struct timeval *now) {
+  int i, n;
+  connection_t *conn;
+  connection_t **carray;
+
+  if(now->tv_sec <= current_time.tv_sec)
+    return; /* wait until the second has rolled over */
+
+  current_time.tv_sec = now->tv_sec; /* update current_time */
+  /* (ignore usecs for now) */
+
+  /* refill the global bucket */
+  if(global_read_bucket < options.BandwidthBurst) {
+    global_read_bucket += options.BandwidthRate;
+    log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
+  }
+
+  /* refill the per-connection buckets */
+  get_connection_array(&carray,&n);
+  for(i=0;i<n;i++) {
+    conn = carray[i];
+
+    if(connection_receiver_bucket_should_increase(conn)) {
+      conn->receiver_bucket += conn->bandwidth;
+      //log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i, conn->receiver_bucket);
+    }
+
+    if(conn->wants_to_read == 1 /* it's marked to turn reading back on now */
+       && global_read_bucket > 0 /* and we're allowed to read */
+       && (!connection_speaks_cells(conn) ||
+           conn->state != OR_CONN_STATE_OPEN ||
+           conn->receiver_bucket > 0)) {
+      /* and either a non-cell conn or a cell conn with non-empty bucket */
+      conn->wants_to_read = 0;
+      connection_start_reading(conn);
+      if(conn->wants_to_write == 1) {
+        conn->wants_to_write = 0;
+        connection_start_writing(conn);
+      }
+    }
+  }
+}
+
+static int connection_receiver_bucket_should_increase(connection_t *conn) {
+  assert(conn);
+
+  if(!connection_speaks_cells(conn))
+    return 0; /* edge connections don't use receiver_buckets */
+  if(conn->state != OR_CONN_STATE_OPEN)
+    return 0; /* only open connections play the rate limiting game */
+
+  assert(conn->bandwidth > 0);
+  if(conn->receiver_bucket > 9*conn->bandwidth)
+    return 0;
+
+  return 1;
+}
+
 int connection_handle_read(connection_t *conn) {
 
   conn->timestamp_lastread = time(NULL);
@@ -482,27 +596,14 @@ int connection_read_to_buf(connection_t *conn) {
   int result;
   int at_most;
 
-  if(options.LinkPadding) {
-    at_most = global_read_bucket;
-  } else {
-    /* do a rudimentary round-robin so one connection can't hog a thickpipe */
-    if(connection_speaks_cells(conn)) {
-      at_most = 32*(CELL_NETWORK_SIZE);
-    } else {
-      at_most = 32*(RELAY_PAYLOAD_SIZE);
-    }
-
-    if(at_most > global_read_bucket)
-      at_most = global_read_bucket;
-  }
+  /* how many bytes are we allowed to read? */
+  at_most = connection_bucket_read_limit(conn);
 
   if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
     if(conn->state == OR_CONN_STATE_HANDSHAKING)
       return connection_tls_continue_handshake(conn);
 
     /* else open, or closing */
-    if(at_most > conn->receiver_bucket)
-      at_most = conn->receiver_bucket;
     result = read_to_buf_tls(conn->tls, at_most, conn->inbuf);
 
     switch(result) {
@@ -527,22 +628,7 @@ int connection_read_to_buf(connection_t *conn) {
       return -1;
   }
 
-  global_read_bucket -= result; assert(global_read_bucket >= 0);
-  if(global_read_bucket == 0) {
-    log_fn(LOG_DEBUG,"global bucket exhausted. Pausing.");
-    conn->wants_to_read = 1;
-    connection_stop_reading(conn);
-    return 0;
-  }
-  if(connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
-    conn->receiver_bucket -= result; assert(conn->receiver_bucket >= 0);
-    if(conn->receiver_bucket == 0) {
-      log_fn(LOG_DEBUG,"receiver bucket exhausted. Pausing.");
-      conn->wants_to_read = 1;
-      connection_stop_reading(conn);
-      return 0;
-    }
-  }
+  connection_bucket_decrement(conn, result);
   return 0;
 }
 
@@ -752,21 +838,6 @@ connection_t *connection_get_by_type_state_lastwritten(int type, int state) {
         best = conn;
   }
   return best;
-}
-
-int connection_receiver_bucket_should_increase(connection_t *conn) {
-  assert(conn);
-
-  if(!connection_speaks_cells(conn))
-    return 0; /* edge connections don't use receiver_buckets */
-  if(conn->state != OR_CONN_STATE_OPEN)
-    return 0; /* only open connections play the rate limiting game */
-
-  assert(conn->bandwidth > 0);
-  if(conn->receiver_bucket > 9*conn->bandwidth)
-    return 0;
-
-  return 1;
 }
 
 int connection_is_listener(connection_t *conn) {
