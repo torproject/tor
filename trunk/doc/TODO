@@ -15,7 +15,7 @@ For 0.0.7:
         o allow multiple log files
         o the keep-trying-to-build-intropoints-always bug.
         - *bindaddress
-          - include the port
+          o include the port
           - allow multiple of them
           - have an allow/deny series for them
         - break exitpolicy into multiple config lines
