@@ -753,14 +753,18 @@ void tor_gettimeofday(struct timeval *timeval) {
   return;
 }
 
+
+#if defined(TOR_IS_MULTITHREADED) && !defined(MS_WINDOWS)
+#define TIME_FNS_NEED_LOCKS
+#endif
+
 #ifndef HAVE_LOCALTIME_R
+#ifdef TIME_FNS_NEED_LOCKS
 struct tm *tor_localtime_r(const time_t *timep, struct tm *result)
 {
   struct tm *r;
-#ifdef TOR_IS_MULTITHREADED
   static tor_mutex_t *m=NULL;
   if (!m) { m=tor_mutex_new(); }
-#endif
   tor_assert(result);
   tor_mutex_acquire(m);
   r = localtime(timep);
@@ -768,16 +772,25 @@ struct tm *tor_localtime_r(const time_t *timep, struct tm *result)
   tor_mutex_release(m);
   return result;
 }
+#else
+struct tm *tor_localtime_r(const time_t *timep, struct tm *result)
+{
+  struct tm *r;
+  tor_assert(result);
+  r = localtime(timep);
+  memcpy(result, r, sizeof(struct tm));
+  return result;
+}
+#endif
 #endif
 
 #ifndef HAVE_GMTIME_R
+#ifdef TIME_FNS_NEED_LOCKS
 struct tm *tor_gmtime_r(const time_t *timep, struct tm *result)
 {
   struct tm *r;
-#ifdef TOR_IS_MULTITHREADED
   static tor_mutex_t *m=NULL;
   if (!m) { m=tor_mutex_new(); }
-#endif
   tor_assert(result);
   tor_mutex_acquire(m);
   r = gmtime(timep);
@@ -785,6 +798,16 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result)
   tor_mutex_release(m);
   return result;
 }
+#else
+struct tm *tor_gmtime_r(const time_t *timep, struct tm *result)
+{
+  struct tm *r;
+  tor_assert(result);
+  r = gmtime(timep);
+  memcpy(result, r, sizeof(struct tm));
+  return result;
+}
+#endif
 #endif
 
 #ifdef USE_WIN32_THREADS
