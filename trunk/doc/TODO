@@ -14,402 +14,96 @@ ARMA    - arma claims
 Flag-day changes: (things which are backward incompatible)
         o remove link key from directories, from connection_t.
           (just get it from the tls cert)
-	o Generate link keys on startup; don't store them to disk.
+        o Generate link keys on startup; don't store them to disk.
         o make onion keys include oaep padding, so you can tell
           if you decrypted it correctly
-	o Rotate onion keys as needed
-	- Rotate TLS connections [arma]
-	o Set expiration times on X509 certs [nickm]
+        o Rotate onion keys as needed
+        D Rotate TLS connections [arma]
+        o Set expiration times on X509 certs [nickm]
         o add bandwidthrate and bandwidthburst to server descriptor [nickm]
         o directories need to say who signed them. [nickm]
         - remove assumption that 0.0.5 doesn't do rendezvous?
-        - what other pieces of the descriptors need to change?
+        D what other pieces of the descriptors need to change?
           maybe add a section for who's connected to a given router?
           add a flexible section for reputation info?
 
-Bugs:
-        o we call signal(), but we should be calling sigaction()
-        o send socks rejects when things go bad ?
-        o on solaris, need to build with
-          LDFLAGS="-lsocket -lnsl" ./configure
-        o on solaris, we HAVE_UNAME but the uname() call fails?
+For September:
+        - Windows port
+          - works as client
+            - deal with pollhup / reached_eof on all platforms
+          - robust as a client
+          - works as server
+            - can be configured
+          - robust as a server
+          - docs for building in win
+          - installer?
+
+        - Docs
+          - FAQ
+          - overview of tor. how does it work, what's it do, pros and
+            cons of using it, why should I use it, etc.
+          - a howto tutorial with examples
+          - tutorial: how to set up your own tor network
+            - (need to not hardcore dirservers file in config.c)
+          - correct, update, polish spec
+          - document the exposed function api?
+          - document what we mean by socks.
+
+        - packages
+          - rpm
+          - find a long-term rpm maintainer
+
+        - code
+          - better warn/info messages
+          - let tor do resolves.
+          - extend socks4 to do resolves?
+          - make script to ask tor for resolves
+          - tsocks
+            - gather patches, submit to maintainer
+            - intercept gethostbyname and others, do resolve via tor
+          - redesign and thorough code revamp, with particular eye toward:
+            - support half-open tcp connections
+            - conn key rotation
+            - other transports -- http, airhook
+            - modular introduction mechanism
+            - allow non-clique topology
+
+Other details and small things:
         . should maybe make clients exit(1) when bad things happen?
           e.g. clock skew.
-        o client-side dns cache doesn't appear to be getting populated
-          by 'connected' cells. In fact, the 'connected' cells don't even
-          include the IP.
-        o When it can't resolve any dirservers, it is useless from then on.
-          We should make it reload the RouterFile if it has no dirservers.
-        o Sometimes it picks a middleman node as the exit for a circuit.
-        o if you specify a non-dirserver as exitnode or entrynode, when it
-          makes the first few circuits it hasn't yet fetched the directory,
-          so it warns that it doesn't know the node.
-        o make 'make test' exit(1) if a test fails.
-        . fix buffer unit test so it passes
-
-Short-term:
         - should retry exitpolicy end streams even if the end cell didn't
           resolve the address for you
-        o add in 'notice' log level
-        X make recommendedversions different for clients and servers.
-          e.g. C0.0.3 vs S0.0.3?
-        o put IP into the descriptor, so clients don't need to resolve things
-        o when you hup, rewrite the router.desc file (and maybe others)
-        - consider handling broken socks4 implementations
-        o improve how it behaves when i remove a line from the approved-routers files
-        - Make tls connections tls_close intentionally
         - Add '[...truncated]' or similar to truncated log entries (like the directory
           in connection_dir_process_inbuf()).
         . Make logs handle it better when writing to them fails.
-        o leave server descriptor out of directory if it's too old
-        o Rename ACI to circID
-        o integrate rep_ok functions, see what breaks
-        - update tor faq
-        o obey SocksBindAddress, ORBindAddress
-        o warn if we're running as root
-        o make connection_flush_buf() more obviously obsolete
-        o let hup reread the config file, eg so we can get new exit
-          policies without restarting
-        o Put recommended_versions in a config entry
-        X use times(2) rather than gettimeofday to measure how long it
-          takes to process a cell
-        o Separate trying to rebuild a circuit because you have none from trying 
-          to rebuild a circuit because the current one is stale
-        X Continue reading from socks port even while waiting for connect.
-        o Exit policies
-                o Spec how to write the exit policies
-                o Path selection algorithms
-                        o Choose path more incrementally
-                        o Let user request first/last node
-                        o And disallow certain nodes
-                        D Choose path by jurisdiction, etc?
-                o Make relay end cells have failure status and payload attached
-        X let non-approved routers handshake.
-        X Dirserver shouldn't put you in running-routers list if you haven't
+        - Dirserver shouldn't put you in running-routers list if you haven't
           uploaded a descriptor recently
-        X migrate to using nickname rather than addr:port for routers
-        - migrate to using IPv6 sizes everywhere
-        o Move from onions to ephemeral DH
-                o incremental path building
-                o transition circuit-level sendmes to hop-level sendmes
-                o implement truncate, truncated
-                o move from 192byte DH to 128byte DH, so it isn't so damn slow
-                X exiting from not-last hop
-                        X OP logic to decide to extend/truncate a path
-                        X make sure exiting from the not-last hop works
-                        X logic to find last *open* hop, not last hop, in cpath
-        o Remember address and port when beginning. 
-        - Extend by nickname/hostname/something, not by IP.
-        - Need a relay teardown cell, separate from one-way ends.
-        X remove per-connection rate limiting
-        - Make it harder to circumvent bandwidth caps: look at number of bytes
-          sent across sockets, not number sent inside TLS stream.
-        o Audit users of connnection_remove and connection_free outside of
-          main.c; many should use mark_for_close instead.
+        . Refactor: add own routerinfo to routerlist.  Right now, only
+          router_get_by_nickname knows about 'this router', as a hack to
+          get circuit_launch_new to do the right thing.
 
 Rendezvous service:
-        o Design and specify protocol
-        o Possible preliminary refactoring:
-            o Should we break circuits up into "circuit-with-cpath" and
-              "circuit-without-cpath"?
-            o We need a way to tag circuits as special-purpose circuits for:
-                o Connecting from Bob's OP to the introduction point
-                o Sending introduction requests from the IPoint to Bob
-                o Connecting from Alice to the rendezvous point for Bob
-                o Connecting from Bob to the rendezvous point for Alice
-                o Waiting at a rendezvous point to be joined
-                o Joined to another circuit at the rendezvous point.
-              (We should also enumerate all the states that these operations
-              can be in.) [NM]
-            o Add circuit metadata [NM]
-        o Code to configure hidden services [NM] 4 hours
-        o Service descriptors
-            o OPs need to maintain identity keys for hidden services [NM]
-            o Code to generate and parse service descriptors [NM]
-        o Advertisement
-            o Generate y.onion hostnames [NM]
-                o Store y.onion hostnames to disk. [NM]
-            o Code to do an HTTP connection over Tor from within Tor [RD]
-            o Publish service descriptors to directory [RD]
-            o Directory accepts and remembers service descriptors, and
-              delivers them as requested
-                o Frontend [RD]
-                o Backend [NM]
-            o Code for OPs to retrieve (and cache?) service descriptors [RD]
-        o Rendezvous
-            o Code as needed to generate and parse all rendezvous-related
-              cell types, and do all handshaking [NM]
-            o ORs implement introduction points
-            o OPs with hidden services establish introduction points
-            o ORs implement rendezvous points
-            o OPs notice y.onion URLs, and:
-                o Retrieve service descriptors
-                o Establish rendezvous points
-                o Send introduction requests to introduction points
-        o Communication
-            o OPs remember which circuits are used for which rendezvous
-              points, and can look up circuits by location-hidden service
-            o OPs send/handle BEGIN cells for location-hidden services
-            o End-to-end communication for location-hidden services
-        o a section in the man pages: how to configure hidden services
-        o let bob use himself as a rendezvous point
-        o let bob choose himself as intro point
-        o let bob replenish his intro points and republish
-        o alice retries introduction and rendezvous a few times?
-        o ORs should not pick themselves while building general circs
-        o should alice ever try to refresh her service desc cache entries?
-          should she expire them after e.g. 15 mins?
-        o race condition: alice has the serverdesc in her cache, she opens
-          the circs, serverdesc expires and is flushed, then she goes
-          to send the intro cell. should serverdesc cache have a
-          last-touched field? are there better fixes?
-        o backward compatibility: when only certain nodes know about rend
-          protocol, how do we deal? have nodes parse the tor version field?
-          force an upgrade? simply be more robust against useless nodes?
-        o should expire rend streams when too much time has passed
-        o should make failed rend/intro circs count toward alice's
-          num_failed circs, to prevent madness when we're offline (But
-          don't count failed rend circs toward Bob's total, or Alice
-          can bork him.)
-        o deal with edge_type in connection_edge.c
-        o retry end for certain reasons (resolvefailed, policyfailed)
         - preemptively build and start rendezvous circs
         - preemptively build n-1 hops of intro circs?
-        o (n)ack introduction requests?
         - cannibalize general circs?
-        D how to set up multiple locations for a hidden service?
-        o make bob publish only established intro circs?
-        o when bob tries to connect to alice's chosen rend point, but
-          can't, but it's not the fault of the last hop in the rend
-          circ, then he should retry?
         - fix router_get_by_* functions so they can get ourselves too,
           and audit everything to make sure rend and intro points are
           just as likely to be us as not.
 
-On-going
-        . Better comments for functions!
-        . Go through log messages, reduce confusing error messages.
-        . make the logs include more info (fd, etc)
-        . Unit tests
-        . Update the spec so it matches the code
-
-Mid-term:
-        o Refactor: add own routerinfo to routerlist.  Right now, only
-          router_get_by_nickname knows about 'this router', as a hack to
-          get circuit_launch_new to do the right thing.
-        - Rotate tls-level connections -- make new ones, expire old ones.
-          So we get actual key rotation, not just symmetric key rotation
-        - And learn to transfer a circuit from one conn to another, so we
-          can empty conns to expire them.
-        o Are there anonymity issues with sequential streamIDs? Sequential
-          circIDs? Eg an attacker can learn how many there have been.
-          The fix is to initialize them randomly rather than at 1.
-        - Look at having smallcells and largecells
-        . Redo scheduler
-                o fix SSL_read bug for buffered records
-                - make round-robining more fair
-        - What happens when a circuit's length is 1? What breaks?
-        . streams / circuits
-                o Implement streams
-                o Rotate circuits after N minutes?
-                X Circuits should expire when circuit->expire triggers
-NICK            . Handle half-open connections
-                        o openssh is an application that uses half-open connections
-                        o Figure out what causes connections to close, standardize
-                          when we mark a connection vs when we tear it down
-                o Look at what ssl does to keep from mutating data streams
-        o Put CPU workers in separate processes
-                o Handle multiple cpu workers (one for each cpu, plus one)
-                o Queue for pending tasks if all workers full
-                o Support the 'process this onion' task
-                D Merge dnsworkers and cpuworkers to some extent
-                o Handle cpuworkers dying
+In the distant future:
         . Scrubbing proxies
                 - Find an smtp proxy?
-                        - Check the old smtp proxy code
-                o Find an ftp proxy? wget --passive
-                D Wait until there are packet redirectors for Linux
                 . Get socks4a support into Mozilla
-        . Tests
-                o Testing harness/infrastructure
-                D System tests (how?)
-                - Performance tests, so we know when we've improved
-                        . webload infrastructure (Bruce)
-                        . httperf infrastructure (easy to set up)
-                        . oprofile (installed in RH >8.0)
-NICK    . Daemonize and package
-                o Teach it to fork and background
-                . Red Hat spec file
-                o Debian spec file equivalent
-        . Portability
-                . Which .h files are we actually using?
-                . Port to:
-                        o Linux
-                        o BSD
-                        o Solaris
-                        o Cygwin
-                        . Win32
-                        o OS X
-                - deal with pollhup / reached_eof on all platforms
-                o openssl randomness
-                o inet_ntoa
-                o stdint.h
-                - Make a script to set up a local network on your machine
-        o More flexibility in node addressing
-                D Support IPv6 rather than just 4
-                o Handle multihomed servers (config variable to set IP)
-
-In the distant future:
-        D tunnel tor cell protocol over http, for people who need to
-          do http
-        D better transport than tcp: reliable is necessary, but
-          out-of-order delivery is fine (to some extent).
-        D Load balancing between router twins
-                D Keep track of load over links/nodes, to
-                  know who's hosed
-SPEC!!  D Non-clique topologies
+        - migrate to using IPv6 sizes everywhere
+        - handle half-open tcp conns
+        - Extend by nickname/hostname/something, not by IP.
+        - Need a relay teardown cell, separate from one-way ends.
+        - Make it harder to circumvent bandwidth caps: look at number of bytes
+          sent across sockets, not number sent inside TLS stream.
+        - Look at having smallcells and largecells
         D Advanced directory servers
                 D Automated reputation management
-SPEC!!          D Figure out how to do threshold directory servers
+                D Figure out how to do threshold directory servers
                 D jurisdiction info in dirserver entries? other info?
-
-Older (done) todo stuff:
-
-For 0.0.2pre17:
-        o Put a H(K | handshake) into the onionskin response
-        o Make cells 512 bytes
-        o Reduce streamid footprint from 7 bytes to 2 bytes
-          X Check for collisions in streamid (now possible with
-            just 2 bytes), and back up & replace with padding if so
-        o Use the 4 reserved bytes in each cell header to keep 1/5
-          of a sha1 of the ongoing relay payload (move into stream header)
-        o Move length into the stream header too
-        o Make length 2 bytes
-        D increase DH key length
-        D increase RSA key length
-        D Spec the stream_id stuff. Clarify that nobody on the backward
-          stream should look at stream_id.
-
-For 0.0.2pre15:
-        o don't pick exit nodes which will certainly reject all things.
-        o don't pick nodes that the directory says are down
-        o choose randomly from running dirservers, not just first one
-        o install the man page
-        o warn when client-side tries an address/port which no router in the dir accepts.
-
-For 0.0.2pre14:
-        o More flexible exit policies (18.*, 18.0.0.0/8)
-        o Work to succeed in the precense of exit policy violation
-                o Replace desired_path_len with opaque path-selection specifier
-                o Client-side DNS caching
-                o Add entries to client DNS cache based on END cells
-                o Remove port from END_REASON_EXITPOLICY cells
-                o Start building new circuits when we get an exit-policy
-                  failure.  (Defer exiting from the middle of existing
-                  circuits or extending existing circuits for later.)
-                o Implement function to check whether a routerinfo_t 
-                  supports a given exit addr.
-                o Choose the exit node of an in-progress circuit based on
-                  pending AP connections.
-                o Choose the exit node _first_, then beginning, then
-                  middle nodes.
-
-Previous:
-        o Get tor to act like a socks server
-                o socks4, socks4a
-                o socks5
-        o routers have identity key, link key, onion key.
-                o link key certs are
-                  D signed by identity key
-                  D not in descriptor
-                  o not in config
-                  D not on disk
-                o identity and onion keys are in descriptor (and disk)
-        o upon boot, if it doesn't find identity key, generate it and write it.
-        o also write a file with the identity key fingerprint in it
-        o router generates descriptor: flesh out router_get_my_descriptor()
-        o Routers sign descriptors with identity key
-        o routers put version number in descriptor
-        o routers should maybe have `uname -a` in descriptor?
-        o Give nicknames to routers
-                o in config
-                o in descriptors
-        o router posts descriptor
-                o when it boots
-                o every DirFetchPostPeriod seconds
-                D when it changes
-        o change tls stuff so certs don't get written to disk, or read from disk
-        o make directory.c 'thread'safe
-        o dirserver parses descriptor
-        o dirserver checks signature
-        D client checks signature?
-        o dirserver writes directory to file
-          o reads that file upon boot
-        o directory includes all routers, up and down
-        o add "up" line to directory, listing nicknames
-        o instruments ORs to report stats
-          o average cell fullness
-          o average bandwidth used
-        o configure log files. separate log file, separate severities.
-        o what assumptions break if we fclose(0) when we daemonize?
-        o make buffer struct elements opaque outside buffers.c
-        o add log convention to the HACKING file
-        o make 'make install' do the right thing
-        o change binary name to tor
-        o change config files so you look at commandline, else look in
-          /etc/torrc. no cascading.
-        o have an absolute datadir with fixed names for files, and fixed-name
-          keydir under that with fixed names
-        o Move (most of) the router/directory code out of main.c
-        o Simple directory servers
-                o Include key in source; sign directories
-                        o Signed directory backend
-                        o Document
-                        o Integrate
-                o Add versions to code
-                o Have directories list recommended-versions
-                        o Include line in directories
-                        o Check for presence of line.
-                        o Quit if running the wrong version
-                        o Command-line option to override quit
-                o Add more information to directory server entries
-                        o Exit policies
-        o Clearer bandwidth management 
-                o Do we want to remove bandwidth from OR handshakes?
-                o What about OP handshakes?
-        X Move away from openssl
-                o Abstract out crypto calls
-                X Look at nss, others? Just include code?
-        o Use a stronger cipher
-                o aes now, by including the code ourselves
         X On the fly compression of each stream
-        o Clean up the event loop (optimize and sanitize)
-        o Remove that awful concept of 'roles'
-        o Terminology
-                o Circuits, topics, cells stay named that
-                o 'Connection' gets divided, or renamed, or something?
-        o DNS farm
-                o Distribute queries onto the farm, get answers
-                o Preemptively grow a new worker before he's needed
-                o Prune workers when too many are idle
-                o DNS cache   
-                        o Clear DNS cache over time  
-                        D Honor DNS TTL info (how??)
-                o Have strategy when all workers are busy
-                o Keep track of which connections are in dns_wait
-                o Need to cache positives/negatives on the tor side
-                        o Keep track of which queries have been asked
-                o Better error handling when
-                        o An address doesn't resolve
-                        o We have max workers running
-                o Consider taking the master out of the loop?
-        X Implement reply onions
-        o Total rate limiting
-        o Look at OR handshake in more detail
-                o Spec it
-                o Merge OR and OP handshakes
-                o rearrange connection_or so it doesn't suck so much to read
-                D Periodic link key rotation. Spec?
-        o wrap malloc with something that explodes when it fails
-        o Clean up the number of places that get to look at prkey
 
