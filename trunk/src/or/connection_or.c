@@ -157,7 +157,9 @@ connection_or_init_conn_from_address(connection_t *conn,
   }
   tor_free(conn->address);
   in.s_addr = htonl(addr);
-  conn->address = tor_strdup(inet_ntoa(in));
+
+  conn->address = tor_malloc(INET_NTOA_BUF_LEN);
+  tor_inet_ntoa(&in,conn->address,INET_NTOA_BUF_LEN);
 }
 
 void

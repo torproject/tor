@@ -174,6 +174,7 @@ main(int argc, char **argv)
   int n_args;
   struct in_addr a;
   uint32_t result;
+  char buf[INET_NTOA_BUF_LEN];
 
   arg = &argv[1];
   n_args = argc-1;
@@ -225,6 +226,7 @@ main(int argc, char **argv)
     return 1;
 
   a.s_addr = htonl(result);
-  printf("%s\n", inet_ntoa(a));
+  tor_inet_ntoa(&a, buf, sizeof(buf));
+  printf("%s\n", buf);
   return 0;
 }

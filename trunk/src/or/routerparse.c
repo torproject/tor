@@ -1054,8 +1054,10 @@ static addr_policy_t *
 router_parse_addr_policy(directory_token_t *tok) {
 
   addr_policy_t *newe;
-  struct in_addr in;
-  char *arg, *address;
+//  struct in_addr in;
+  char *arg;
+//  char *address;
+//  char buf[INET_NTOA_BUF_LEN];
 
   tor_assert(tok->tp == K_REJECT || tok->tp == K_ACCEPT);
 
@@ -1076,13 +1078,14 @@ router_parse_addr_policy(directory_token_t *tok) {
                                 &newe->prt_min, &newe->prt_max))
     goto policy_read_failed;
 
-  in.s_addr = htonl(newe->addr);
-  address = tor_strdup(inet_ntoa(in));
+//  in.s_addr = htonl(newe->addr);
+//  tor_inet_ntoa(&in, buf, sizeof(buf));
+//  address = tor_strdup(buf);
 //  in.s_addr = htonl(newe->msk);
 //  log_fn(LOG_DEBUG,"%s %s/%s:%d-%d",
 //         newe->policy_type == ADDR_POLICY_REJECT ? "reject" : "accept",
 //         address, inet_ntoa(in), newe->prt_min, newe->prt_max);
-  tor_free(address);
+//  tor_free(address);
 
   return newe;
 

@@ -503,9 +503,11 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
      * router twice in a row in the path. I think that's ok.
      */
     struct in_addr in;
+    char tmpbuf[INET_NTOA_BUF_LEN];
     in.s_addr = htonl(circ->n_addr);
+    tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
     log_fn(LOG_INFO,"Next router (%s:%d) not connected. Connecting.",
-           inet_ntoa(in), circ->n_port);
+           tmpbuf, circ->n_port);
 
     memcpy(circ->onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
     circ->state = CIRCUIT_STATE_OR_WAIT;

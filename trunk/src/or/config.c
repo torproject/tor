@@ -928,6 +928,7 @@ resolve_my_address(const char *address, uint32_t *addr)
   struct hostent *rent;
   char hostname[256];
   int explicit_ip=1;
+  char tmpbuf[INET_NTOA_BUF_LEN];
 
   tor_assert(addr);
 
@@ -957,14 +958,15 @@ resolve_my_address(const char *address, uint32_t *addr)
     memcpy(&in.s_addr, rent->h_addr, rent->h_length);
   }
 
+  tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
   if (!explicit_ip && is_internal_IP(htonl(in.s_addr))) {
     log_fn(LOG_WARN,"Address '%s' resolves to private IP '%s'. "
            "Please set the Address config option to be the IP you want to use.",
-           hostname, inet_ntoa(in));
+           hostname, tmpbuf);
     return -1;
   }
 
-  log_fn(LOG_DEBUG, "Resolved Address to %s.", inet_ntoa(in));
+  log_fn(LOG_DEBUG, "Resolved Address to %s.", tmpbuf);
   *addr = ntohl(in.s_addr);
   return 0;
 }

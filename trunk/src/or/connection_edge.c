@@ -482,13 +482,16 @@ int client_dns_incr_failures(const char *address)
 void client_dns_set_addressmap(const char *address, uint32_t val)
 {
   struct in_addr in;
+  char *addr;
 
   tor_assert(address); tor_assert(val);
 
   if (tor_inet_aton(address, &in))
     return; /* don't set an addressmap back to ourselves! */
   in.s_addr = htonl(val);
-  addressmap_register(address, strdup(inet_ntoa(in)),
+  addr = tor_malloc(INET_NTOA_BUF_LEN);
+  tor_inet_ntoa(&in,addr,INET_NTOA_BUF_LEN);
+  addressmap_register(address, addr,
                       time(NULL) + MAX_DNS_ENTRY_AGE);
 }
 
@@ -1109,11 +1112,13 @@ connection_exit_connect(connection_t *conn) {
           (r->port_min <= port) && (port <= r->port_max)) {
         struct in_addr in;
         if (r->is_redirect) {
+          char tmpbuf[INET_NTOA_BUF_LEN];
           addr = r->addr_dest;
           port = r->port_dest;
           in.s_addr = htonl(addr);
+          tor_inet_ntoa(&in, tmpbuf, sizeof(tmpbuf));
           log_fn(LOG_DEBUG, "Redirecting connection from %s:%d to %s:%d",
-                 conn->address, conn->port, inet_ntoa(in), port);
+                 conn->address, conn->port, tmpbuf, port);
         }
         break;
       }

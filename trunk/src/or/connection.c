@@ -462,6 +462,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   struct sockaddr_in remote;
   /* length of the remote address. Must be an int, since accept() needs that. */
   int remotelen = sizeof(struct sockaddr_in);
+  char tmpbuf[INET_NTOA_BUF_LEN];
 
   news = accept(conn->s,(struct sockaddr *)&remote,&remotelen);
   if (!SOCKET_IS_POLLABLE(news)) {
@@ -495,8 +496,9 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   if (new_type == CONN_TYPE_AP) {
     /* check sockspolicy to see if we should accept it */
     if (socks_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
+      tor_inet_ntoa(&remote.sin_addr, tmpbuf, sizeof(tmpbuf));
       log_fn(LOG_NOTICE,"Denying socks connection from untrusted address %s.",
-             inet_ntoa(remote.sin_addr));
+             tmpbuf);
       tor_close_socket(news);
       return 0;
     }
@@ -504,8 +506,9 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   if (new_type == CONN_TYPE_DIR) {
     /* check dirpolicy to see if we should accept it */
     if (dir_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
+      tor_inet_ntoa(&remote.sin_addr, tmpbuf, sizeof(tmpbuf));
       log_fn(LOG_NOTICE,"Denying dir connection from address %s.",
-             inet_ntoa(remote.sin_addr));
+             tmpbuf);
       tor_close_socket(news);
       return 0;
     }
@@ -514,7 +517,10 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   newconn = connection_new(new_type);
   newconn->s = news;
 
-  newconn->address = tor_strdup(inet_ntoa(remote.sin_addr)); /* remember the remote address */
+  /* remember the remote address */
+  newconn->address = tor_malloc(INET_NTOA_BUF_LEN);
+  tor_inet_ntoa(&remote.sin_addr, newconn->address, INET_NTOA_BUF_LEN);
+
   newconn->addr = ntohl(remote.sin_addr.s_addr);
   newconn->port = ntohs(remote.sin_port);
 
