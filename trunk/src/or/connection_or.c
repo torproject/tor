@@ -33,7 +33,6 @@ int connection_or_process_inbuf(connection_t *conn) {
   }
 
   return 0;
-
 }
 
 int connection_or_finished_flushing(connection_t *conn) {
@@ -89,14 +88,6 @@ int connection_or_finished_flushing(connection_t *conn) {
 
 /*********************/
 
-connection_t *connection_or_new(void) {
-  return connection_new(CONN_TYPE_OR);
-}
-
-connection_t *connection_or_new_listener(void) {
-  return connection_new(CONN_TYPE_OR_LISTENER);
-}
-
 void conn_or_init_crypto(connection_t *conn) {
   int x;
 
@@ -132,15 +123,14 @@ int connect_to_router(routerinfo_t *router, RSA *prkey, struct sockaddr_in *loca
   struct sockaddr_in router_addr;
   int s;
 
-  if ((!router) || (!prkey) || (!local))
-    return -1;
+  assert(router && prkey && local);
 
   if(router->addr == local->sin_addr.s_addr && router->port == local->sin_port) {
     /* this is me! don't connect to me. */
     return 0;
   }
 
-  conn = connection_or_new();
+  conn = connection_new(CONN_TYPE_OR);
 
   /* set up conn so it's got all the data we need to remember */
   conn->addr = router->addr, conn->port = router->port;

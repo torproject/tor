@@ -242,9 +242,9 @@ int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, connection_t *conn,
     return -1;
   }
 
-  if(conn->type == CONN_TYPE_APP) { /* send payload directly */
-    log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to application.");
-    if(connection_app_process_data_cell(cell, conn) < 0) {
+  if(conn->type == CONN_TYPE_EXIT) { /* send payload directly */
+    log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to exit.");
+    if(connection_exit_process_data_cell(cell, conn) < 0) {
       return -1;
     }
   } else { /* send it as a cell */
