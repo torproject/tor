@@ -111,6 +111,7 @@ connection_t *connection_or_connect(routerinfo_t *router) {
 
   /* set up conn so it's got all the data we need to remember */
   connection_or_init_conn_from_router(conn, router);
+  conn->state = OR_CONN_STATE_CONNECTING;
 
   if(connection_add(conn) < 0) { /* no space, forget it */
     connection_free(conn);
@@ -126,7 +127,6 @@ connection_t *connection_or_connect(routerinfo_t *router) {
       connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link on windows */
-      conn->state = OR_CONN_STATE_CONNECTING;
       return conn;
     /* case 1: fall through */
   }
