@@ -339,6 +339,11 @@ int connection_exit_connect(connection_t *conn) {
   int s; /* for the new socket */
   struct sockaddr_in dest_addr;
 
+  if(router_compare_to_exit_policy(conn) < 0) {
+    log(LOG_INFO,"connection_exit_connect(): %s:%d failed exit policy. Closing.", conn->address, conn->port);
+    return -1;
+  }
+
   /* all the necessary info is here. Start the connect() */
   s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {

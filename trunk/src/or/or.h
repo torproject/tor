@@ -779,6 +779,8 @@ void router_forget_router(uint32_t addr, uint16_t port);
 int router_get_list_from_file(char *routerfile);
 int router_get_list_from_string(char *s);
 
+int router_compare_to_exit_policy(connection_t *conn);
+
 #endif
 
 /*

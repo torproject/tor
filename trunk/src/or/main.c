@@ -547,12 +547,15 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
   char *pkey;
   int pkeylen;
   int written;
+  int result=0;
+  struct exit_policy_t *tmpe;
 
   if(crypto_pk_write_public_key_to_string(router->pkey,&pkey,&pkeylen)<0) {
     log(LOG_ERR,"dump_router_to_string(): write pkey to string failed!");
     return 0;
   }
-  written = snprintf(s, maxlen, "%s %d %d %d %d %d\n%s\n",
+
+  result = snprintf(s, maxlen, "%s %d %d %d %d %d\n%s",
     router->address,
     router->or_port,
     router->op_port,
@@ -563,7 +566,35 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
 
   free(pkey);
 
-  return written;
+  if(result < 0 || result > maxlen) {
+    /* apparently different glibcs do different things on snprintf error.. so check both */
+    return -1;
+  }
+  written = result;
+
+  for(tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
+    result = snprintf(s+written, maxlen-written, "%s %s:%s\n", 
+      tmpe->policy_type == EXIT_POLICY_ACCEPT ? "accept" : "reject",
+      tmpe->address, tmpe->port);
+    if(result < 0 || result+written > maxlen) {
+      /* apparently different glibcs do different things on snprintf error.. so check both */
+      return -1;
+    }
+    written += result;
+  }
+
+  if(written > maxlen-2) {
+    return -1; /* not enough space for \n\0 */
+  }
+  /* XXX count fenceposts here. They're probably wrong. In general,
+   * we need a better way to handle overruns in building the directory
+   * string, and a better way to handle directory string size in general. */
+
+  /* include a last '\n' */
+  s[written] = '\n';
+  s[written+1] = 0;
+  return written+1;
+
 }
 
 void dump_directory_to_string(char *s, int maxlen) {
@@ -595,13 +626,12 @@ void dump_directory_to_string(char *s, int maxlen) {
 
     written = dump_router_to_string(s, maxlen, router);
 
-    if(written < 0 || written > maxlen) { 
-      /* apparently different glibcs do different things on error.. so check both */
+    if(written < 0) { 
       log(LOG_ERR,"dump_directory_to_string(): tried to exceed string length.");
       s[maxlen-1] = 0; /* make sure it's null terminated */
       return;
     }
-  
+
     maxlen -= written;
     s += written;
   }
