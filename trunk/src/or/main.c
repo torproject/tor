@@ -608,6 +608,15 @@ static int do_main_loop(void) {
     if(please_reset) {
       /* fetch a new directory */
       if(options.DirPort) {
+
+        /* reload the fingerprint file */
+        char keydir[512]; 
+        sprintf(keydir,"%s/approved-routers", options.DataDirectory);
+        log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
+        if(dirserv_parse_fingerprint_file(keydir) < 0) {
+          log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
+        }
+
         if(router_get_list_from_file(options.RouterFile) < 0) {
           log(LOG_WARN,"Error reloading router list. Continuing with old list.");
         }
