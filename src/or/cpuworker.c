@@ -213,8 +213,9 @@ static int cpuworker_main(void *data) {
 #ifndef TOR_IS_MULTITHREADED
   tor_close_socket(fdarray[0]); /* this is the side of the socketpair the parent uses */
   connection_free_all(); /* so the child doesn't hold the parent's fd's open */
-#endif
   handle_signals(0); /* ignore interrupts from the keyboard, etc */
+#endif
+  tor_free(data);
 
   dup_onion_keys(&onion_key, &last_onion_key);
 
@@ -270,33 +271,38 @@ static int cpuworker_main(void *data) {
 /** Launch a new cpuworker.
  */
 static int spawn_cpuworker(void) {
-  int fd[2];
+  int *fdarray;
+  int fd;
   connection_t *conn;
 
-  if (tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
+  fdarray = tor_malloc(sizeof(int)*2);
+  if (tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray) < 0) {
     log(LOG_ERR, "Couldn't construct socketpair: %s",
         tor_socket_strerror(tor_socket_errno(-1)));
     tor_cleanup();
+    tor_free(fdarray);
     exit(1);
   }
 
-  spawn_func(cpuworker_main, (void*)fd);
+  fd = fdarray[0];
+  spawn_func(cpuworker_main, (void*)fdarray);
   log_fn(LOG_DEBUG,"just spawned a worker.");
 #ifndef TOR_IS_MULTITHREADED
-  tor_close_socket(fd[1]); /* we don't need the worker's side of the pipe */
+  tor_close_socket(fdarray[1]); /* we don't need the worker's side of the pipe */
+  tor_free(fdarray);
 #endif
 
   conn = connection_new(CONN_TYPE_CPUWORKER);
 
-  set_socket_nonblocking(fd[0]);
+  set_socket_nonblocking(fd);
 
   /* set up conn so it's got all the data we need to remember */
-  conn->s = fd[0];
+  conn->s = fd;
   conn->address = tor_strdup("localhost");
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_fn(LOG_WARN,"connection_add failed. Giving up.");
-    connection_free(conn); /* this closes fd[0] */
+    connection_free(conn); /* this closes fd */
     return -1;
   }
 
