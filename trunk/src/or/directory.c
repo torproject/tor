@@ -28,21 +28,21 @@
 
 static void
 directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
-                                  const char *payload, int payload_len);
+                                  const char *payload, size_t payload_len);
 static void
 directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
-                      uint8_t purpose, const char *payload, int payload_len);
+                      uint8_t purpose, const char *payload, size_t payload_len);
 
 static void
 directory_initiate_command(const char *address, uint32_t addr, uint16_t port,
                            const char *platform,
                            const char *digest, uint8_t purpose,
-                           const char *payload, int payload_len);
+                           const char *payload, size_t payload_len);
 
 static void
 directory_send_command(connection_t *conn, const char *platform,
                        uint16_t dir_port, int purpose,
-                       const char *payload, int payload_len);
+                       const char *payload, size_t payload_len);
 static int directory_handle_command(connection_t *conn);
 
 /********* START VARIABLES **********/
@@ -71,7 +71,7 @@ char rend_fetch_url[] = "/tor/rendezvous/";
  */
 void
 directory_post_to_dirservers(uint8_t purpose, const char *payload,
-                             int payload_len)
+                             size_t payload_len)
 {
   int i;
   routerinfo_t *router;
@@ -97,7 +97,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
  */
 void
 directory_get_from_dirserver(uint8_t purpose, const char *payload,
-                             int payload_len)
+                             size_t payload_len)
 {
   routerinfo_t *r = NULL;
   trusted_dir_server_t *ds = NULL;
@@ -139,7 +139,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *payload,
  */
 static void
 directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
-                                  const char *payload, int payload_len)
+                                  const char *payload, size_t payload_len)
 {
   directory_initiate_command(router->address, router->addr, router->dir_port,
                              router->platform, router->identity_digest,
@@ -148,7 +148,7 @@ directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
 
 static void
 directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
-                      uint8_t purpose, const char *payload, int payload_len)
+                      uint8_t purpose, const char *payload, size_t payload_len)
 {
   directory_initiate_command(dirserv->address, dirserv->addr,dirserv->dir_port,
                         NULL, dirserv->digest, purpose, payload, payload_len);
@@ -158,7 +158,7 @@ static void
 directory_initiate_command(const char *address, uint32_t addr,
                            uint16_t dir_port, const char *platform,
                            const char *digest, uint8_t purpose,
-                           const char *payload, int payload_len)
+                           const char *payload, size_t payload_len)
 {
   connection_t *conn;
 
@@ -257,7 +257,7 @@ directory_initiate_command(const char *address, uint32_t addr,
 static void
 directory_send_command(connection_t *conn, const char *platform,
                        uint16_t dir_port, int purpose,
-                       const char *payload, int payload_len) {
+                       const char *payload, size_t payload_len) {
   char tmp[8192];
   char proxystring[128];
   char hoststring[128];
@@ -466,7 +466,7 @@ connection_dir_client_reached_eof(connection_t *conn)
 {
   char *body;
   char *headers;
-  int body_len=0;
+  size_t body_len=0;
   int status_code;
   time_t now, date_header=0;
   int delta;
@@ -512,7 +512,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
     tor_free(body);
     body = new_body;
-    body_len = (int)new_len;
+    body_len = new_len;
   }
 
   if(conn->purpose == DIR_PURPOSE_FETCH_DIR) {
@@ -671,7 +671,7 @@ static char answer503[] = "HTTP/1.0 503 Directory unavailable\r\n\r\n";
  * Always return 0. */
 static int
 directory_handle_command_get(connection_t *conn, char *headers,
-                             char *body, int body_len)
+                             char *body, size_t body_len)
 {
   size_t dlen;
   const char *cp;
@@ -738,7 +738,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
   if(!strcmpstart(url,"/tor/rendezvous/")) {
     /* rendezvous descriptor fetch */
     const char *descp;
-    int desc_len;
+    size_t desc_len;
 
     if(!authdir_mode()) {
       /* We don't hand out rend descs. In fact, it could be a security
@@ -755,7 +755,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
         format_rfc1123_time(date, time(NULL));
         snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
                  date,
-                 desc_len); /* can't include descp here, because it's got nuls */
+                 (int)desc_len); /* can't include descp here, because it's got nuls */
         connection_write_to_buf(tmp, strlen(tmp), conn);
         connection_write_to_buf(descp, desc_len, conn);
         break;
@@ -783,7 +783,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
  * 400.  Always return 0. */
 static int
 directory_handle_command_post(connection_t *conn, char *headers,
-                                         char *body, int body_len)
+                                         char *body, size_t body_len)
 {
   const char *cp;
   char *url;
@@ -848,7 +848,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
  */
 static int directory_handle_command(connection_t *conn) {
   char *headers=NULL, *body=NULL;
-  int body_len=0;
+  size_t body_len=0;
   int r;
 
   tor_assert(conn && conn->type == CONN_TYPE_DIR);
@@ -858,6 +858,7 @@ static int directory_handle_command(connection_t *conn) {
                              &body, &body_len, MAX_BODY_SIZE)) {
     case -1: /* overflow */
       log_fn(LOG_WARN,"input too large. Failing.");
+/*XXX009 needs a better warn message */
       return -1;
     case 0:
       log_fn(LOG_DEBUG,"command not all here yet.");

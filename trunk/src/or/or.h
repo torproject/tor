@@ -913,7 +913,7 @@ typedef struct {
 struct socks_request_t {
   char socks_version; /**< Which version of SOCKS did the client use? */
   int command; /**< What has the user requested? One of CONNECT or RESOLVE. */
-  int replylen; /**< Length of <b>reply</b>. */
+  size_t replylen; /**< Length of <b>reply</b>. */
   char reply[MAX_SOCKS_REPLY_LEN]; /**< Write an entry into this string if
                                     * we want to specify our own socks reply,
                                     * rather than using the default socks4 or
@@ -941,14 +941,14 @@ const char *_buf_peek_raw_buffer(const buf_t *buf);
 int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof);
 int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf);
 
-int flush_buf(int s, buf_t *buf, int *buf_flushlen);
-int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen);
+int flush_buf(int s, buf_t *buf, size_t *buf_flushlen);
+int flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen);
 
-int write_to_buf(const char *string, int string_len, buf_t *buf);
+int write_to_buf(const char *string, size_t string_len, buf_t *buf);
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
 int fetch_from_buf_http(buf_t *buf,
-                        char **headers_out, int max_headerlen,
-                        char **body_out, int *body_used, int max_bodylen);
+                        char **headers_out, size_t max_headerlen,
+                        char **body_out, size_t *body_used, size_t max_bodylen);
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
 
 void assert_buf_ok(buf_t *buf);
@@ -1083,12 +1083,12 @@ void connection_bucket_refill(struct timeval *now);
 
 int connection_handle_read(connection_t *conn);
 
-int connection_fetch_from_buf(char *string, int len, connection_t *conn);
+int connection_fetch_from_buf(char *string, size_t len, connection_t *conn);
 
 int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);
 int connection_handle_write(connection_t *conn);
-void connection_write_to_buf(const char *string, int len, connection_t *conn);
+void connection_write_to_buf(const char *string, size_t len, connection_t *conn);
 
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_get_by_identity_digest(const char *digest, int type);
@@ -1125,10 +1125,10 @@ int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
 
 int connection_ap_make_bridge(char *address, uint16_t port);
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
-                                         int replylen, int success);
+                                         size_t replylen, int success);
 void connection_ap_handshake_socks_resolved(connection_t *conn,
                                             int answer_type,
-                                            int answer_len,
+                                            size_t answer_len,
                                             const char *answer);
 
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
@@ -1175,9 +1175,9 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
 /********************************* directory.c ***************************/
 
 void directory_post_to_dirservers(uint8_t purpose, const char *payload,
-                                  int payload_len);
+                                  size_t payload_len);
 void directory_get_from_dirserver(uint8_t purpose, const char *payload,
-                                  int payload_len);
+                                  size_t payload_len);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
@@ -1254,12 +1254,12 @@ int onion_skin_server_handshake(char *onion_skin,
                                 crypto_pk_env_t *prev_private_key,
                                 char *handshake_reply_out,
                                 char *key_out,
-                                int key_out_len);
+                                size_t key_out_len);
 
 int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                              char *handshake_reply,
                              char *key_out,
-                             int key_out_len);
+                             size_t key_out_len);
 
 /********************************* relay.c ***************************/
 
@@ -1273,7 +1273,7 @@ void relay_header_pack(char *dest, const relay_header_t *src);
 void relay_header_unpack(relay_header_t *dest, const char *src);
 int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
                                  int relay_command, const char *payload,
-                                 int payload_len, crypt_path_t *cpath_layer);
+                                 size_t payload_len, crypt_path_t *cpath_layer);
 int connection_edge_package_raw_inbuf(connection_t *conn);
 void connection_edge_consider_sending_sendme(connection_t *conn);
 
@@ -1302,11 +1302,11 @@ char *rep_hist_get_bandwidth_lines(void);
 
 void rend_client_introcirc_has_opened(circuit_t *circ);
 void rend_client_rendcirc_has_opened(circuit_t *circ);
-int rend_client_introduction_acked(circuit_t *circ, const char *request, int request_len);
+int rend_client_introduction_acked(circuit_t *circ, const char *request, size_t request_len);
 void rend_client_refetch_renddesc(const char *query);
 int rend_client_remove_intro_point(char *failed_intro, const char *query);
-int rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_len);
-int rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request_len);
+int rend_client_rendezvous_acked(circuit_t *circ, const char *request, size_t request_len);
+int rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t request_len);
 void rend_client_desc_fetched(char *query, int success);
 
 char *rend_client_get_random_intro(char *query);
@@ -1325,19 +1325,19 @@ typedef struct rend_service_descriptor_t {
 
 int rend_cmp_service_ids(const char *one, const char *two);
 
-void rend_process_relay_cell(circuit_t *circ, int command, int length,
+void rend_process_relay_cell(circuit_t *circ, int command, size_t length,
                              const char *payload);
 
 void rend_service_descriptor_free(rend_service_descriptor_t *desc);
 int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
                                    crypto_pk_env_t *key,
                                    char **str_out,
-                                   int *len_out);
-rend_service_descriptor_t *rend_parse_service_descriptor(const char *str, int len);
+                                   size_t *len_out);
+rend_service_descriptor_t *rend_parse_service_descriptor(const char *str, size_t len);
 int rend_get_service_id(crypto_pk_env_t *pk, char *out);
 
 typedef struct rend_cache_entry_t {
-  int len; /* Length of desc */
+  size_t len; /* Length of desc */
   time_t received; /* When did we get the descriptor? */
   char *desc; /* Service descriptor */
   rend_service_descriptor_t *parsed; /* Parsed value of 'desc' */
@@ -1346,9 +1346,9 @@ typedef struct rend_cache_entry_t {
 void rend_cache_init(void);
 void rend_cache_clean(void);
 int rend_valid_service_id(const char *query);
-int rend_cache_lookup_desc(const char *query, const char **desc, int *desc_len);
+int rend_cache_lookup_desc(const char *query, const char **desc, size_t *desc_len);
 int rend_cache_lookup_entry(const char *query, rend_cache_entry_t **entry_out);
-int rend_cache_store(const char *desc, int desc_len);
+int rend_cache_store(const char *desc, size_t desc_len);
 
 /********************************* rendservice.c ***************************/
 
@@ -1359,18 +1359,18 @@ void rend_services_introduce(void);
 void rend_services_upload(int force);
 
 void rend_service_intro_has_opened(circuit_t *circuit);
-int rend_service_intro_established(circuit_t *circuit, const char *request, int request_len);
+int rend_service_intro_established(circuit_t *circuit, const char *request, size_t request_len);
 void rend_service_rendezvous_has_opened(circuit_t *circuit);
-int rend_service_introduce(circuit_t *circuit, const char *request, int request_len);
+int rend_service_introduce(circuit_t *circuit, const char *request, size_t request_len);
 void rend_service_relaunch_rendezvous(circuit_t *oldcirc);
 int rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ);
 void rend_service_dump_stats(int severity);
 
 /********************************* rendmid.c *******************************/
-int rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len);
-int rend_mid_introduce(circuit_t *circ, const char *request, int request_len);
-int rend_mid_establish_rendezvous(circuit_t *circ, const char *request, int request_len);
-int rend_mid_rendezvous(circuit_t *circ, const char *request, int request_len);
+int rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_len);
+int rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len);
+int rend_mid_establish_rendezvous(circuit_t *circ, const char *request, size_t request_len);
+int rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len);
 
 /********************************* router.c ***************************/
 
@@ -1395,7 +1395,7 @@ routerinfo_t *router_get_my_routerinfo(void);
 const char *router_get_my_descriptor(void);
 int router_is_me(routerinfo_t *router);
 int router_rebuild_descriptor(void);
-int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
+int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
 int is_legal_nickname(const char *s);
 int is_legal_nickname_or_hexdigest(const char *s);

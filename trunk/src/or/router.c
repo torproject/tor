@@ -13,7 +13,7 @@
 extern or_options_t options; /* command-line and config-file options */
 extern long stats_n_seconds_uptime;
 
-/** Exposed for test.c. */ void get_platform_str(char *platform, int len);
+/** Exposed for test.c. */ void get_platform_str(char *platform, size_t len);
 
 /************************************************************/
 
@@ -571,7 +571,7 @@ int router_rebuild_descriptor(void) {
  * string describing the version of Tor and the operating system we're
  * currently running on.
  */
-void get_platform_str(char *platform, int len)
+void get_platform_str(char *platform, size_t len)
 {
   snprintf(platform, len-1, "Tor %s on %s",
            VERSION, get_uname());
@@ -590,7 +590,7 @@ void get_platform_str(char *platform, int len)
  * result into <b>s</b>, using at most <b>maxlen</b> bytes.  Return -1 on
  * failure, and the number of bytes used on success.
  */
-int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
+int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key) {
   char *onion_pkey; /* Onion key, PEM-encoded. */
   char *identity_pkey; /* Identity key, PEM-encoded. */
@@ -599,8 +599,8 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   char published[32];
   char fingerprint[FINGERPRINT_LEN+1];
   struct in_addr in;
-  int onion_pkeylen, identity_pkeylen;
-  int written;
+  size_t onion_pkeylen, identity_pkeylen;
+  size_t written;
   int result=0;
   struct exit_policy_t *tmpe;
   char *bandwidth_usage;
@@ -675,7 +675,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   tor_free(identity_pkey);
   tor_free(bandwidth_usage);
 
-  if(result < 0 || result >= maxlen) {
+  if(result < 0 || (size_t)result >= maxlen) {
     /* apparently different glibcs do different things on snprintf error.. so check both */
     return -1;
   }

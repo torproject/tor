@@ -335,20 +335,21 @@ rend_service_get_by_pk_digest(const char* digest)
  * rendezvous points.
  */
 int
-rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
+rend_service_introduce(circuit_t *circuit, const char *request, size_t request_len)
 {
   char *ptr, *rp_nickname, *r_cookie;
   char buf[RELAY_PAYLOAD_SIZE];
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN]; /* Holds KH, Df, Db, Kf, Kb */
   rend_service_t *service;
-  int len, keylen;
+  int r;
+  size_t len, keylen;
   crypto_dh_env_t *dh = NULL;
   circuit_t *launched = NULL;
   crypt_path_t *cpath = NULL;
   char serviceid[REND_SERVICE_ID_LEN+1];
   char hexcookie[9];
   int version;
-  int nickname_field_len;
+  size_t nickname_field_len;
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                 circuit->rend_pk_digest,10);
@@ -389,13 +390,14 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
     return -1;
   }
   /* Next N bytes is encrypted with service key */
-  len = crypto_pk_private_hybrid_decrypt(
+  r = crypto_pk_private_hybrid_decrypt(
        service->private_key,request+DIGEST_LEN,request_len-DIGEST_LEN,buf,
        PK_PKCS1_OAEP_PADDING,1);
-  if (len<0) {
+  if (r<0) {
     log_fn(LOG_WARN, "Couldn't decrypt INTRODUCE2 cell");
     return -1;
   }
+  len = r;
   if (*buf == 1) {
     rp_nickname = buf+1;
     nickname_field_len = HEX_DIGEST_LEN+2;
@@ -420,7 +422,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   ptr = rp_nickname+nickname_field_len;
   len -= nickname_field_len;
   if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
-    log_fn(LOG_WARN, "Bad length for INTRODUCE2 cell.");
+    log_fn(LOG_WARN, "Bad length %u for INTRODUCE2 cell.", len);
     return -1;
   }
   r_cookie = ptr;
@@ -547,7 +549,8 @@ void
 rend_service_intro_has_opened(circuit_t *circuit)
 {
   rend_service_t *service;
-  int len, r;
+  size_t len;
+  int r;
   char buf[RELAY_PAYLOAD_SIZE];
   char auth[DIGEST_LEN + 9];
   char serviceid[REND_SERVICE_ID_LEN+1];
@@ -603,7 +606,7 @@ rend_service_intro_has_opened(circuit_t *circuit)
  * live introduction point, and note that the service descriptor is
  * now out-of-date.*/
 int
-rend_service_intro_established(circuit_t *circuit, const char *request, int request_len)
+rend_service_intro_established(circuit_t *circuit, const char *request, size_t request_len)
 {
   rend_service_t *service;
 
@@ -741,7 +744,7 @@ static void
 upload_service_descriptor(rend_service_t *service)
 {
   char *desc;
-  int desc_len;
+  size_t desc_len;
   if (!service->desc_is_dirty)
     return;
 

@@ -236,7 +236,7 @@ void rep_hist_dump_stats(time_t now, int severity)
   void *or_history_p, *link_history_p;
   double uptime;
   char buffer[2048];
-  int len;
+  size_t len;
   unsigned long upt, downt;
   routerinfo_t *r;
 
@@ -279,6 +279,7 @@ void rep_hist_dump_stats(time_t now, int severity)
           name2 = "(unknown)";
 
         link_history = (link_history_t*) link_history_p;
+/* XXX009 snprintf can return -1 for error also. need to detect. */
         len += snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
                         link_history->n_extend_ok,
                         link_history->n_extend_ok+link_history->n_extend_fail);

@@ -39,17 +39,19 @@ void rend_service_descriptor_free(rend_service_descriptor_t *desc)
 int
 rend_encode_service_descriptor(rend_service_descriptor_t *desc,
                                crypto_pk_env_t *key,
-                               char **str_out, int *len_out)
+                               char **str_out, size_t *len_out)
 {
   char *buf, *cp, *ipoint;
-  int i, keylen, asn1len;
+  int i;
+  size_t keylen, asn1len;
   keylen = crypto_pk_keysize(desc->pk);
   buf = tor_malloc(keylen*2); /* Too long, but that's okay. */
-  asn1len = crypto_pk_asn1_encode(desc->pk, buf, keylen*2);
-  if (asn1len<0) {
+  i = crypto_pk_asn1_encode(desc->pk, buf, keylen*2);
+  if (i<0) {
     tor_free(buf);
     return -1;
   }
+  asn1len = i;
   *len_out = 2 + asn1len + 4 + 2 + keylen;
   for (i = 0; i < desc->n_intro_points; ++i) {
     *len_out += strlen(desc->intro_points[i]) + 1;
@@ -75,7 +77,7 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
     return -1;
   }
   cp += i;
-  tor_assert(*len_out == (cp-*str_out));
+  tor_assert(*len_out == (size_t)(cp-*str_out));
   return 0;
 }
 
@@ -84,10 +86,11 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
  * return NULL.
  */
 rend_service_descriptor_t *rend_parse_service_descriptor(
-                           const char *str, int len)
+                           const char *str, size_t len)
 {
   rend_service_descriptor_t *result = NULL;
-  int keylen, asn1len, i;
+  int i;
+  size_t keylen, asn1len;
   const char *end, *cp, *eos;
 
   result = tor_malloc_zero(sizeof(rend_service_descriptor_t));
@@ -96,7 +99,7 @@ rend_service_descriptor_t *rend_parse_service_descriptor(
   if (end-cp < 2) goto truncated;
   asn1len = ntohs(get_uint16(cp));
   cp += 2;
-  if (end-cp < asn1len) goto truncated;
+  if ((size_t)(end-cp) < asn1len) goto truncated;
   result->pk = crypto_pk_asn1_decode(cp, asn1len);
   if (!result->pk) goto truncated;
   cp += asn1len;
@@ -115,8 +118,9 @@ rend_service_descriptor_t *rend_parse_service_descriptor(
     cp = eos+1;
   }
   keylen = crypto_pk_keysize(result->pk);
-  if (end-cp < keylen) goto truncated;
-  if (end-cp > keylen) {
+  tor_assert(end-cp >= 0);
+  if ((size_t)(end-cp) < keylen) goto truncated;
+  if ((size_t)(end-cp) > keylen) {
     log_fn(LOG_WARN, "Signature too long on service descriptor");
     goto error;
   }
@@ -224,7 +228,7 @@ int rend_cache_lookup_entry(const char *query, rend_cache_entry_t **e)
  * Note: calls to rend_cache_clean or rend_cache_store may invalidate
  * *desc.
  */
-int rend_cache_lookup_desc(const char *query, const char **desc, int *desc_len)
+int rend_cache_lookup_desc(const char *query, const char **desc, size_t *desc_len)
 {
   rend_cache_entry_t *e;
   int r;
@@ -240,7 +244,7 @@ int rend_cache_lookup_desc(const char *query, const char **desc, int *desc_len)
  * If we have an older descriptor with the same ID, replace it.
  * Returns -1 if it's malformed or otherwise rejected, else return 0.
  */
-int rend_cache_store(const char *desc, int desc_len)
+int rend_cache_store(const char *desc, size_t desc_len)
 {
   rend_cache_entry_t *e;
   rend_service_descriptor_t *parsed;
@@ -299,7 +303,7 @@ int rend_cache_store(const char *desc, int desc_len)
 
 /** Called when we get a rendezvous-related relay cell on circuit
  * <b>circ</b>.  Dispatch on rendezvous relay command. */
-void rend_process_relay_cell(circuit_t *circ, int command, int length,
+void rend_process_relay_cell(circuit_t *circ, int command, size_t length,
                              const char *payload)
 {
   int r;

@@ -404,7 +404,7 @@ void relay_header_unpack(relay_header_t *dest, const char *src) {
  */
 int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
                                  int relay_command, const char *payload,
-                                 int payload_len, crypt_path_t *cpath_layer) {
+                                 size_t payload_len, crypt_path_t *cpath_layer) {
   cell_t cell;
   relay_header_t rh;
   int cell_direction;
@@ -853,7 +853,7 @@ uint64_t stats_n_data_bytes_received = 0;
  * Return -1 if conn should be marked for close, else return 0.
  */
 int connection_edge_package_raw_inbuf(connection_t *conn) {
-  int amount_to_process, length;
+  size_t amount_to_process, length;
   char payload[CELL_PAYLOAD_SIZE];
   circuit_t *circ;
 

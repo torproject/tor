@@ -350,7 +350,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   int r;
   char payload[2+4+DIGEST_LEN+ONIONSKIN_CHALLENGE_LEN];
   char *onionskin;
-  int payload_len;
+  size_t payload_len;
 
   tor_assert(circ && CIRCUIT_IS_ORIGIN(circ));
 

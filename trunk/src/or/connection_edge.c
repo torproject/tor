@@ -129,7 +129,7 @@ int
 connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
 {
   char payload[5];
-  int payload_len=1;
+  size_t payload_len=1;
   circuit_t *circ;
 
   if(conn->has_sent_end) {
@@ -625,11 +625,11 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
 
 void connection_ap_handshake_socks_resolved(connection_t *conn,
                                             int answer_type,
-                                            int answer_len,
+                                            size_t answer_len,
                                             const char *answer)
 {
   char buf[256];
-  int replylen;
+  size_t replylen;
 
   if (answer_type == RESOLVED_TYPE_IPV4) {
     uint32_t a = get_uint32(answer);
@@ -686,7 +686,7 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
  * Otherwise, send back a reply based on whether <b>success</b> is 1 or 0.
  */
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
-                                         int replylen, int success) {
+                                         size_t replylen, int success) {
   char buf[256];
 
   if(replylen) { /* we already have a reply in mind */

@@ -376,8 +376,10 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
 static int connection_handle_listener_read(connection_t *conn, int new_type) {
   int news; /* the new socket */
   connection_t *newconn;
-  struct sockaddr_in remote; /* information about the remote peer when connecting to other routers */
-  int remotelen = sizeof(struct sockaddr_in); /* length of the remote address */
+  /* information about the remote peer when connecting to other routers */
+  struct sockaddr_in remote;
+  /* length of the remote address. Must be an int, since accept() needs that. */
+  int remotelen = sizeof(struct sockaddr_in);
 
   news = accept(conn->s,(struct sockaddr *)&remote,&remotelen);
   if (news == -1) { /* accept() error */
@@ -811,7 +813,7 @@ static int connection_read_to_buf(connection_t *conn) {
 }
 
 /** A pass-through to fetch_from_buf. */
-int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
+int connection_fetch_from_buf(char *string, size_t len, connection_t *conn) {
   return fetch_from_buf(string, len, conn->inbuf);
 }
 
@@ -953,7 +955,7 @@ int connection_handle_write(connection_t *conn) {
 /** Append <b>len</b> bytes of <b>string</b> onto <b>conn</b>'s
  * outbuf, and ask it to start writing.
  */
-void connection_write_to_buf(const char *string, int len, connection_t *conn) {
+void connection_write_to_buf(const char *string, size_t len, connection_t *conn) {
 
   if(!len || conn->marked_for_close)
     return;
