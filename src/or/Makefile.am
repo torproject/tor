@@ -7,7 +7,7 @@ bin_PROGRAMS = or
 
 or_LDADD = -L../common -lor
 
-or_SOURCES = buffers.c cell.c circuit.c command.c connection.c \
+or_SOURCES = buffers.c circuit.c command.c connection.c \
              connection_exit.c connection_ap.c connection_op.c connection_or.c config.c \
              main.c onion.c routers.c directory.c
 

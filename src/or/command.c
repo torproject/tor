@@ -31,13 +31,50 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
   }
 }
 
+/* helper function for command_process_create_cell */
+static int deliver_onion_to_conn(aci_t aci, unsigned char *onion, uint32_t onionlen, connection_t *conn) {
+  char *buf;
+  int buflen, dataleft;
+  cell_t cell;
+ 
+  assert(aci && onion && onionlen);
+ 
+  buflen = onionlen+4;
+  buf = malloc(buflen);
+  if(!buf)
+    return -1;
+ 
+  log(LOG_DEBUG,"deliver_onion_to_conn(): Setting onion length to %u.",onionlen);
+  *(uint32_t*)buf = htonl(onionlen);
+  memcpy((void *)(buf+4),(void *)onion,onionlen);
+ 
+  dataleft = buflen;
+  while(dataleft > 0) {
+    memset(&cell,0,sizeof(cell_t));
+    cell.command = CELL_CREATE;
+    cell.aci = aci;
+    if(dataleft >= CELL_PAYLOAD_SIZE)
+      cell.length = CELL_PAYLOAD_SIZE;
+    else
+      cell.length = dataleft;
+    memcpy(cell.payload, buf+buflen-dataleft, cell.length);
+    dataleft -= cell.length;
+ 
+    log(LOG_DEBUG,"deliver_onion_to_conn(): Delivering create cell, payload %d bytes.",cell.length);
+    if(connection_write_cell_to_buf(&cell, conn) < 0) {
+      log(LOG_DEBUG,"deliver_onion_to_conn(): Could not buffer new create cells. Closing.");
+      free(buf);
+      return -1;
+    }
+  }
+  free(buf);
+  return 0;
+}
+
 void command_process_create_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
   connection_t *n_conn;
-  unsigned char *cellbuf; /* array of cells */
-  int cellbuflen; /* size of cellbuf in bytes */
-  cell_t *tmpcell; /* pointer to an arbitrary cell */
-  int retval, i;
+  int retval;
 
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
@@ -122,30 +159,14 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
     pad_onion(circ->onion,circ->onionlen, sizeof(onion_layer_t));
     log(LOG_DEBUG,"command_process_create_cell(): Padded the onion with random data.");
 
-    retval = pack_create(circ->n_aci, circ->onion, circ->onionlen, &cellbuf, &cellbuflen);
+    retval = deliver_onion_to_conn(circ->n_aci, circ->onion, circ->onionlen, n_conn); 
+//    retval = pack_create(circ->n_aci, circ->onion, circ->onionlen, &cellbuf, &cellbuflen);
     free((void *)circ->onion);
     circ->onion = NULL;
-    if (retval == -1) /* pack_create() error */
-    {
-      log(LOG_DEBUG,"command_process_create_cell(): Could not pack the onion into CREATE cells. Closing the connection.");
+    if (retval == -1) {
+      log(LOG_DEBUG,"command_process_create_cell(): Could not deliver the onion to next conn. Closing.");
       circuit_close(circ);
-      return;
     }
-    log(LOG_DEBUG,"command_process_create_cell(): Onion packed into CREATE cells. Buffering the cells.");
-    /* queue the create cells for transmission to the next hop */
-    tmpcell = (cell_t *)cellbuf;
-    for (i=0;i<cellbuflen/sizeof(cell_t);i++)
-    {
-      retval = connection_write_cell_to_buf(tmpcell, n_conn);
-      if (retval == -1) /* buffering failed, drop the connection */
-      {
-        log(LOG_DEBUG,"command_process_create_cell(): Could not buffer new create cells. Closing.");
-        circuit_close(circ);
-        return;
-      }
-      tmpcell++;
-    }
-    free((void *)cellbuf);
     return;
 
   } else { /* this is destined for an exit */

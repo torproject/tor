@@ -10,7 +10,10 @@
  */
 
 #include "or.h"
-#include <string.h>
+
+#ifndef POPT_TABLEEND /* handle popt 1.6 before 1.6.2 */
+#define POPT_TABLEEND { NULL, '\0', 0, 0, 0, NULL, NULL }
+#endif
 
 const char * 
 basename(const char *filename)
