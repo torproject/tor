@@ -12,6 +12,9 @@
 #include "./util.h"
 #include "./log.h"
 
+/* Copied from or.h */
+#define LEGAL_NICKNAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
 #include <assert.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -132,7 +135,6 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   EVP_PKEY *pkey = NULL;
   X509 *x509 = NULL;
   X509_NAME *name = NULL;
-  BIO *out = NULL;
   int nid;
   int err;
   
@@ -178,8 +180,6 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
  error:
   err = 1;
  done:
-  if (out)
-    BIO_free(out);
   if (x509 && err)
     X509_free(x509);
   if (pkey)
@@ -459,6 +459,36 @@ tor_tls_peer_has_cert(tor_tls *tls)
     return 0;
   X509_free(cert);
   return 1;
+}
+
+int
+tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen)
+{
+  X509 *cert = NULL;
+  X509_NAME *name = NULL;
+  int nid;
+  int lenout;
+  int i;
+  
+  if (!(cert = SSL_get_peer_certificate(tls->ssl))) {
+    log_fn(LOG_ERR, "Peer has no certificate");
+    return -1;
+  }
+  if (!(name = X509_get_subject_name(cert))) {
+    log_fn(LOG_ERR, "Peer certificate has no subject name");
+    return -1;
+  }
+  if ((nid = OBJ_txt2nid("commonName")) == NID_undef)
+    return -1;
+  
+  lenout = X509_NAME_get_text_by_NID(name, nid, buf, buflen);
+  if (lenout == -1)
+    return -1;
+  if (strspn(buf, LEGAL_NICKNAME_CHARACTERS) != lenout) {
+    log_fn(LOG_ERR, "Peer certificate nickname has illegal characters.");
+    return -1;
+  }
+  return 0;
 }
 
 /* If the provided tls connection is authenticated and has a
