@@ -60,7 +60,7 @@ int router_reload_router_list(void)
     stat(filename, &st); /* if s is true, stat probably worked */
     log_fn(LOG_INFO, "Loading cached directory from %s", filename);
     is_recent = st.st_mtime > time(NULL) - 60*15;
-    if (router_load_routerlist_from_directory(s, NULL, is_recent) < 0) {
+    if (router_load_routerlist_from_directory(s, NULL, is_recent, 1) < 0) {
       log_fn(LOG_WARN, "Cached directory at '%s' was unparseable; ignoring.", filename);
     }
     if (routerlist &&
@@ -846,14 +846,19 @@ routerlist_remove_old_routers(int age)
 
 /** Add to the current routerlist each router stored in the
  * signed directory <b>s</b>.  If pkey is provided, check the signature against
- * pkey; else check against the pkey of the signing directory server. */
+ * pkey; else check against the pkey of the signing directory server.
+ *
+ * DOCDOC dir_is_recent/cached
+ */
 int router_load_routerlist_from_directory(const char *s,
                                           crypto_pk_env_t *pkey,
-                                          int dir_is_recent)
+                                          int dir_is_recent,
+                                          int dir_is_cached)
 {
   routerlist_t *new_list = NULL;
   if (router_parse_routerlist_from_directory(s, &new_list, pkey,
-                                             dir_is_recent)) {
+                                             dir_is_recent,
+                                             !dir_is_cached)) {
     log_fn(LOG_WARN, "Couldn't parse directory.");
     return -1;
   }
