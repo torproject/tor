@@ -1,3 +1,20 @@
+Changes so far in version 0.0.9.2
+  o Bugfixes on 0.0.9:
+    - Due to a fencepost error, we were blowing away the \n when reporting
+      confvalue items in the controller. So asking for multiple config
+      values at once couldn't work.
+    - Workaround for brain-damaged __FILE__ handling on MSVC: keep Nick's
+      name out of the warning/assert messages.
+    - Make tor-resolve.c work on win32 by calling network_init().
+    - Fix an assert on startup when the disk is full and you're logging
+      to a file.
+    - If you do socks4 with an IP of 0.0.0.x but *don't* provide a socks4a
+      style address, then we'd crash.
+    - When listing circuits that are pending on an opening OR connection,
+      if we're an OR we were listing circuits that *end* at us as
+      being pending on every listener, dns/cpu worker, etc. Stop that.
+
+
 Changes in version 0.0.9.1 - 2004-12-15
   o Bugfixes on 0.0.9:
     - Make hibernation actually work.
