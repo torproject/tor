@@ -146,10 +146,10 @@ send_control_message(connection_t *conn, uint16_t type, uint16_t len,
 {
   char buf[4];
   tor_assert(conn);
-  tor_assert(len || !body || !strlen(body));
+  tor_assert(len || !body);
   tor_assert(type <= _CONTROL_CMD_MAX_RECOGNIZED);
-  set_uint32(buf, htons(len));
-  set_uint32(buf+2, htons(type));
+  set_uint16(buf, htons(len));
+  set_uint16(buf+2, htons(type));
   connection_write_to_buf(buf, 4, conn);
   if (len)
     connection_write_to_buf(body, len, conn);
@@ -544,7 +544,7 @@ control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
     return 0;
 
   set_uint32(buf, htonl(n_read));
-  set_uint32(buf+4, htonl(n_read));
+  set_uint32(buf+4, htonl(n_written));
   send_control_event(EVENT_BANDWIDTH_USED, 8, buf);
 
   return 0;
