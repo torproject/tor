@@ -487,6 +487,12 @@ which reveals the downstream node.
    cells, echo their contents to the corresponding TCP stream.  
    [XXX Mention zlib encoding. -NM]
 
+5.2. Closing connections
+
+   [Note -- TCP streams can only be half-closed for reading.  Our
+   Bickford's conversation was incorrect. -NM]
+
+
    When one side of the TCP stream is closed, the corresponding edge
    node sends a RELAY_END cell along the circuit; upon receiving a
    RELAY_END cell, the edge node closes its side of the corresponding
