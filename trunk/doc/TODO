@@ -21,6 +21,8 @@ Tor 0.0.9rc1:
    . make loglevels info,debug less noisy
 
 Beyond 0.0.9:
+   - server descriptor declares min log level, clients avoid servers
+     that are too loggy.
 N  - Clean up NT service code
 N  - OS X package (and bundle?)
    - controller should have 'getinfo' command to query about rephist,
@@ -38,15 +40,14 @@ R  - figure out enclaves, e.g. so we know what to recommend that people
      do, and so running a tor server on your website is helpful.
      - Do enclaves for same IP only.
      - Resolve first, then if IP is an OR, connect to next guy.
-N  - the user interface interface
+N  . the user interface interface
      - Implement a trivial fun gui.
 N  - add ipv6 support.
      - Spec issue: if a resolve returns an IP4 and an IP6 address,
        which to use?
 N&R  - Update Spec
-R  - learn from ben about his openssl-reinitialization-trick to
+R  X learn from ben about his openssl-reinitialization-trick to
      rotate tls keys without making new connections.
-     - (Roger grabs Ben next time he sees him on IRC)
    - christian grothoff's attack of infinite-length circuit.
      the solution is to have a separate 'extend-data' cell type
      which is used for the first N data cells, and only
@@ -90,24 +91,6 @@ R  - learn from ben about his openssl-reinitialization-trick to
 
    more features, complex:
    - password protection for on-disk identity key
-   . Switch dirservers entries to config lines:
-     o read in and parse each TrustedDir config line.
-     o stop reading dirservers file.
-     o add some default TrustedDir lines if none defined, or if
-       no torrc.
-     o remove notion of ->is_trusted_dir from the routerlist. that's
-       no longer where you look.
-       o clean up router parsing flow, since it's simpler now?
-     o when checking signature on a directory, look it up in
-       options.TrustedDirs, and make sure there's a descriptor
-       with that nickname, whose key hashes to the fingerprint,
-       and who correctly signed the directory.
-     o when fetching a directory, if you want a trusted one,
-       choose from the trusteddir list.
-       o which means keeping track of which ones are "up"
-     ? if you don't need a trusted one, choose from the routerinfo
-       list if you have one, else from the trusteddir list.
-       * roger will do the above
    - Have clients and dirservers preserve reputation info over
      reboots.
      * continue not doing until we have something we need to preserve
@@ -146,33 +129,27 @@ N    . Windows port
      - robust as a server
      . Usable as NT service
      - docs for building in win
-     - installer, including all needed libs.
+     o installer, including all needed libs.
+       - and including privoxy
+       - and including a sockscap equivalent
 
    - Docs
      . FAQ
-     o overview of tor. how does it work, what's it do, pros and
-       cons of using it, why should I use it, etc.
      - a howto tutorial with examples
        * put a stub on the wiki
      o tutorial: how to set up your own tor network
        o (need to not hardcode dirservers file in config.c)
        o Make tutorial reflect this.
      . port forwarding howto for ipchains, etc
-       * roger add to wiki of requests
      . correct, update, polish spec
      - document the exposed function api?
-     o document what we mean by socks.
      - Document where we differ from tor-design
 
    . packages
-R    - find a long-term rpm maintainer
-       * roger will start guilting people
+     . find a long-term rpm maintainer
 
    - code
      - better warn/info messages
-     o let tor do resolves.
-     o extend socks4 to do resolves?
-     o make script to ask tor for resolves
      - write howto for setting up tsocks, socat.
        - including on osx and win32
      - freecap handling
@@ -201,7 +178,7 @@ Other details and small and hard things:
      e.g. clock skew.
    - should retry exitpolicy end streams even if the end cell didn't
      resolve the address for you
-   . Make logs handle it better when writing to them fails.
+   o Make logs handle it better when writing to them fails.
    o Dirserver shouldn't put you in running-routers list if you haven't
      uploaded a descriptor recently
    . Refactor: add own routerinfo to routerlist.  Right now, only
@@ -239,9 +216,9 @@ Rendezvous and hidden services:
 Tor scalability:
   Relax clique assumptions.
   Redesign how directories are handled.
-    - Separate running-routers lookup from descriptor list lookup.
+    o Separate running-routers lookup from descriptor list lookup.
     - Resolve directory agreement somehow.
-    - Cache directory on all servers.
+    o Cache directory on all servers.
   Find and remove bottlenecks
     - Address linear searches on e.g. circuit and connection lists.
   Reputation/memory system, so dirservers can measure people,
