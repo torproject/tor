@@ -383,7 +383,7 @@ static int can_reach_dir_port = 0;
 
 /** Return 1 if or port is known reachable; else return 0. */
 int check_whether_orport_reachable(void) {
-  return can_reach_or_port;
+  return clique_mode(get_options()) || can_reach_or_port;
 }
 /** Return 1 if we don't have a dirport configured, or if it's reachable. */
 int check_whether_dirport_reachable(void) {
@@ -413,7 +413,8 @@ void consider_testing_reachability(void) {
 /** Annotate that we found our ORPort reachable. */
 void router_orport_found_reachable(void) {
   if (!can_reach_or_port) {
-    log_fn(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent. Publishing server descriptor.");
+    if (!clique_mode(get_options()))
+      log_fn(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent. Publishing server descriptor.");
     can_reach_or_port = 1;
   }
 }
