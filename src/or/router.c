@@ -561,8 +561,8 @@ int router_rebuild_descriptor(int force) {
   }
   get_platform_str(platform, sizeof(platform));
   ri->platform = tor_strdup(platform);
-  ri->bandwidthrate = options->BandwidthRate;
-  ri->bandwidthburst = options->BandwidthBurst;
+  ri->bandwidthrate = (int)options->BandwidthRate;
+  ri->bandwidthburst = (int)options->BandwidthBurst;
   ri->bandwidthcapacity = router_get_bandwidth_capacity();
   router_add_exit_policy_from_config(ri);
   if(desc_routerinfo) /* inherit values */

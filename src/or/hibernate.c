@@ -336,8 +336,8 @@ configure_accounting(time_t now)
 static void
 update_expected_bandwidth(void)
 {
-  uint64_t used;
-  uint32_t max_configured = (get_options()->BandwidthRate * 60);
+  uint64_t used, expected;
+  uint64_t max_configured = (get_options()->BandwidthRate * 60);
 
   if (n_seconds_active_in_interval < 1800) {
     /* If we haven't gotten enough data last interval, guess that
@@ -346,15 +346,17 @@ update_expected_bandwidth(void)
      * up until we send Max bytes.  Next interval, we'll choose
      * our starting time based on how much we sent this interval.
      */
-    expected_bandwidth_usage = max_configured;
+    expected = max_configured;
   } else {
     used = n_bytes_written_in_interval < n_bytes_read_in_interval ?
       n_bytes_read_in_interval : n_bytes_written_in_interval;
-    expected_bandwidth_usage = (uint32_t)
-      (used / (n_seconds_active_in_interval / 60));
-    if (expected_bandwidth_usage > max_configured)
-      expected_bandwidth_usage = max_configured;
+    expected = (used / (n_seconds_active_in_interval / 60));
+    if (expected > max_configured)
+      expected = max_configured;
   }
+  if (expected > UINT32_MAX)
+    expected = UINT32_MAX;
+  expected_bandwidth_usage = (uint32_t) expected;
 }
 
 /** Called at the start of a new accounting interval: reset our
@@ -440,7 +442,7 @@ accounting_set_wakeup_time(void)
   crypto_free_digest_env(d_env);
 
   if (expected_bandwidth_usage)
-    time_to_exhaust_bw =
+    time_to_exhaust_bw = (int)
       (get_options()->AccountingMax/expected_bandwidth_usage)*60;
   else
     time_to_exhaust_bw = 24*60*60;
