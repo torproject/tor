@@ -713,7 +713,7 @@ router_resolve_directory(directory_t *dir)
   for (i = 0; i < max; ++i) {
     remove = 0;
     if (router_resolve(dir->routers[i])) {
-      log_fn(LOG_WARN, "Couldn't resolve router %s; removing",
+      log_fn(LOG_WARN, "Couldn't resolve router %s; not using",
              dir->routers[i]->address);
       remove = 1;
     } else if (options.Nickname &&
