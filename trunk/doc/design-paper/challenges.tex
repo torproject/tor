@@ -1,8 +1,24 @@
-\documentclass[twocolumn]{article}
+\documentclass{llncs}
+
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{epsfig}
+
+\newenvironment{tightlist}{\begin{list}{$\bullet$}{
+  \setlength{\itemsep}{0mm}
+    \setlength{\parsep}{0mm}
+    %  \setlength{\labelsep}{0mm}
+    %  \setlength{\labelwidth}{0mm}
+    %  \setlength{\topsep}{0mm}
+    }}{\end{list}}
+
+\begin{document}
 
 \title{Challenges in bringing low-latency stream anonymity to the masses (DRAFT)}
 
-\begin{document}
+\author{Roger Dingledine and Nick Mathewson}
+\institute{The Free Haven Project\\
+\email{\{arma,nickm\}@freehaven.net}}
 
 \section{Introduction}
 
@@ -171,6 +187,37 @@ need to discuss how we take the approach of building the thing, and then
 assuming that, how much anonymity can we get. we're not here to model or
 to simulate or to produce equations and formulae. but those have their
 roles too.
+
+
+
+
+
+%%%
+
+
+TCP vs UDP
+argument 1: we need to do IP-level packet normalization, to block things like ip
+fingerprinting.
+argument 2: we still need to be easy to integrate with applications, so they can do
+application-level scrubbing.
+argument 3: we need a block-level encryption approach that can provide security despite
+packet loss and out-of-order delivery. i believe you that such a thing can be created,
+but no thing has yet been specified. so specify it for me if you want me to believe it.
+(freedom and cebolla are vulnerable to tagging and malleability attacks i believe.)
+argument 4: we still need to play with parameters for throughput, congestion control,
+etc -- since we need sequence numbers and maybe more to do replay detection,
+and just to handle duplicate frames. so we would be reimplementing some subset of tcp
+anyway.
+argument 5: tls over udp is not implemented or even specified.
+argument 6: exit policies over arbitrary IP packets seems to be an IDS-hard problem. i
+don't want to build an IDS into tor.
+argument 7: certain protocols are going to leak information at the IP layer anyway. for
+example, if we anonymizer your dns requests, but they still go to comcast's dns servers,
+that's bad.
+argument 8: hidden services, .exit addresses, etc are broken unless we have some way to
+reach into the application-level protocol and decide the hostname it's trying to get.
+
+\bibliographystyle{plain} \bibliography{tor-design}
 
 \end{document}
 
