@@ -548,6 +548,7 @@ static void free_options(or_options_t *options) {
   if (options->FirewallPorts) {
     SMARTLIST_FOREACH(options->FirewallPorts, char *, cp, tor_free(cp));
     smartlist_free(options->FirewallPorts);
+    options->FirewallPorts = NULL;
   }
 }
 
@@ -800,8 +801,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   if(options->FascistFirewall && !options->FirewallPorts) {
     options->FirewallPorts = smartlist_create();
-    smartlist_add(options->FirewallPorts, "80");
-    smartlist_add(options->FirewallPorts, "443");
+    smartlist_add(options->FirewallPorts, tor_strdup("80"));
+    smartlist_add(options->FirewallPorts, tor_strdup("443"));
   }
   if(options->FirewallPorts) {
     SMARTLIST_FOREACH(options->FirewallPorts, const char *, cp,
