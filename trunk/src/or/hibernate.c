@@ -291,6 +291,13 @@ accounting_set_wakeup_time(void)
   int n_days_to_exhaust_bw;
   int n_days_to_consider;
 
+  if (! identity_key_is_set()) {
+    if (init_keys() < 0) {
+      log_fn(LOG_ERR, "Error initializing keys");
+      tor_assert(0);
+    }
+  }
+
   format_iso_time(buf, interval_start_time);
   crypto_pk_get_digest(get_identity_key(), digest);
 
