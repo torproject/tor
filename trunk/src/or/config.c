@@ -486,8 +486,27 @@ static void init_options(or_options_t *options) {
 static char *get_default_conf_file(void)
 {
 #ifdef MS_WINDOWS
+  LPITEMIDLIST idl;
+  IMalloc *m;
+  HRESULT result;
   char *path = tor_malloc(MAX_PATH);
-  if (!SUCCEEDED(SHGetSpecialFolderPath(NULL, path, CSIDL_APPDATA, 1))) {
+  /* Find X:\documents and settings\username\applicatation data\ .
+   * We would use SHGetSpecialFolder path, but that wasn't added until IE4.
+   */
+  if (!SUCCEEDED(SHGetSpecialFolderLocation(NULL, CSIDL_APPDATA,
+                                            &idl))) {
+    tor_free(path);
+    return NULL;
+  }
+  /* Convert the path from an "ID List" (whatever that is!) to a path. */
+  result = SHGetPathFromIDList(idl, path);
+  /* Now we need to free the */
+  SHGetMalloc(&m);
+  if (m) {
+    m->lpVtbl->Free(m, idl);
+    m->lpVtbl->Release(m);
+  }
+  if (!SUCCEEDED(result)) {
     tor_free(path);
     return NULL;
   }
