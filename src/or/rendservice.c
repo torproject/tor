@@ -77,13 +77,11 @@ static void rend_service_free(rend_service_t *service)
   tor_free(service);
 }
 
-/** Release all the storage held in rend_service_list, and allocate a new,
- * empty rend_service_list.
+/** Release all the storage held in rend_service_list.
  */
 void rend_service_free_all(void)
 {
   if (!rend_service_list) {
-    rend_service_list = smartlist_create();
     return;
   }
   SMARTLIST_FOREACH(rend_service_list, rend_service_t*, ptr,
