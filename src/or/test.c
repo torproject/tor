@@ -418,7 +418,7 @@ test_crypto()
         continue;
       p = (i==0)?PK_NO_PADDING:
         (i==1)?PK_PKCS1_PADDING:PK_PKCS1_OAEP_PADDING;
-      len = crypto_pk_public_hybrid_encrypt(pk1,data1,j,data2,p);
+      len = crypto_pk_public_hybrid_encrypt(pk1,data1,j,data2,p,0);
       test_assert(len>=0);
       len = crypto_pk_private_hybrid_decrypt(pk1,data2,len,data3,p);
       test_eq(len,j);

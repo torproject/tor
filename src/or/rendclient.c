@@ -100,7 +100,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   r = crypto_pk_public_hybrid_encrypt(parsed->pk, tmp,
                            MAX_NICKNAME_LEN+1+REND_COOKIE_LEN+DH_KEY_LEN,
                                       payload+DIGEST_LEN,
-                                      PK_PKCS1_OAEP_PADDING);
+                                      PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
     log_fn(LOG_WARN,"hybrid pk encrypt failed.");
     goto err;
