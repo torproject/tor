@@ -88,7 +88,7 @@ static void log_tor_version(logfile_t *lf, int reset)
      * need to log again. */
     return;
   n = _log_prefix(buf, 250, LOG_NOTICE);
-  n += snprintf(buf+n, 250-n, "Tor %s opening %slog file\n", VERSION,
+  n += snprintf(buf+n, 250-n, "Tor %s opening %slog file.\n", VERSION,
                 is_new?"new ":"");
   if (n>250)
     n = 250;
