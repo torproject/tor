@@ -794,11 +794,6 @@ time.
 %continued use of identification by IP number as long as there is no
 %workable alternative.
 
-%Fortunately, our modular design separates
-%routing from node discovery; so we could implement Morphmix in Tor just
-%by implementing the Morphmix-specific node discovery and path selection
-%pieces.
-
 %[XXX Mention correct DNS-RBL implementation. -NM]
 
 \section{Design choices}
@@ -942,14 +937,14 @@ order). Using randomized path lengths may help some, since the attacker
 will never be certain he has identified all nodes in the path, but as
 long as the network remains small this attack will still be feasible.
 
-Helper nodes also help Tor clients, because choosing entry and exit points
+Helper nodes also aim to help Tor clients, because choosing entry and exit points
 randomly and changing them frequently allows an attacker who controls
 even a few nodes to eventually link some of their destinations. The goal
 is to take the risk once and for all about choosing a bad entry node,
 rather than taking a new risk for each new circuit. (Choosing fixed
 exit nodes is less useful, since even an honest exit node still doesn't
 protect against a hostile website.) But obstacles still remain before
-we can implement helper nodes.
+we can implement them.
 For one, the literature does not describe how to choose helpers from a list
 of nodes that changes over time.  If Alice is forced to choose a new entry
 helper every $d$ days and $c$ of the $n$ nodes are bad, she can expect
@@ -1325,7 +1320,7 @@ much traffic they have been able to transfer recently) and include this
 information in the descriptors they upload to the directory. Clients
 choose servers weighted by their bandwidth, neglecting really slow
 servers and capping the influence of really fast ones.
-
+%
 This is, of course, eminently cheatable.  A malicious node can get a
 disproportionate amount of traffic simply by claiming to have more bandwidth
 than it does.  But better mechanisms have their problems.  If bandwidth data
