@@ -455,6 +455,7 @@ list_running_servers(char **nicknames_out)
       continue; /* only list successfully handshaked OR's. */
     if(!conn->nickname) /* it's an OP, don't list it */
       continue;
+    /* XXX008 need to change this to list "!nickname" for down routers */
     if (!router_nickname_is_approved(conn->nickname))
       continue; /* If we removed them from the approved list, don't list it.*/
     smartlist_add(nicknames, conn->nickname);
@@ -580,7 +581,7 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
 /** Most recently generated encoded signed directory. */
 static char *the_directory = NULL;
 static int the_directory_len = -1;
-static char *cached_directory = NULL;
+static char *cached_directory = NULL; /* used only by non-auth dirservers */
 static time_t cached_directory_published = 0;
 static int cached_directory_len = -1;
 
@@ -588,8 +589,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
 {
   time_t now;
   char filename[512];
-  if (!options.AuthoritativeDir)
-    return;
+  tor_assert(!options.AuthoritativeDir);
   now = time(NULL);
   if (when>cached_directory_published &&
       when<now+ROUTER_ALLOW_SKEW) {

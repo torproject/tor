@@ -477,11 +477,13 @@ int router_load_routerlist_from_directory(const char *s,
     log_fn(LOG_WARN, "Error resolving routerlist");
     return -1;
   }
-  /* Remember the directory, if we're nonauthoritative.*/
-  dirserv_set_cached_directory(s, routerlist->published_on);
-  /* Learn about the descriptors in the directory, if we're authoritative */
-  if (options.AuthoritativeDir)
+  if (options.AuthoritativeDir) {
+    /* Learn about the descriptors in the directory. */
     dirserv_load_from_directory_string(s);
+  } else {
+    /* Remember the directory. */
+    dirserv_set_cached_directory(s, routerlist->published_on);
+  }
   return 0;
 }
 
@@ -657,16 +659,17 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
     router = smartlist_get(list->routers, i);
     for (j=0; j<n_names; ++j) {
       name = smartlist_get(rr->running_routers, j);
-      if (!strcmp(name, router->nickname)) {
-        running=1;
+      if (!strcasecmp(name, router->nickname)) {
+        router->is_running = 1;
+        break;
+      }
+      if (*name == '!' && strcasecmp(name+1, router->nickname)) {
+        router->is_running = 0;
         break;
       }
     }
-    router->is_running = 1; /* arma: is this correct? */
   }
   list->running_routers_updated_on = rr->published_on;
-  /* XXXX008 Should there also be a list of which are down, so that we
-   * don't mark merely unknown routers as down? */
 }
 
 /*
