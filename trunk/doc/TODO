@@ -54,6 +54,8 @@ For September:
             - allow non-clique topology
 
 Other details and small and hard things:
+        - check tor version as soon as you get the recommended-versions
+          string, regardless of whether parsing the directory succeeded.
         - tor should be able to have a pool of outgoing IP addresses
           that it is able to rotate through. (maybe)
         - tie into squid
