@@ -1597,7 +1597,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
     }
 //    tor_assert(conn->addr && conn->port);
     tor_assert(conn->address);
-    if (conn->state != OR_CONN_STATE_CONNECTING)
+    if (conn->state > OR_CONN_STATE_PROXY_READING)
       tor_assert(conn->tls);
   }
 
