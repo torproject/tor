@@ -331,8 +331,8 @@ int strcasecmpend(const char *s1, const char *s2)
 const char *eat_whitespace(const char *s) {
   tor_assert(s);
 
-  while (isspace((int)*s) || *s == '#') {
-    while (isspace((int)*s))
+  while (TOR_ISSPACE(*s) || *s == '#') {
+    while (TOR_ISSPACE(*s))
       s++;
     if (*s == '#') { /* read to a \n or \0 */
       while (*s && *s != '\n')
@@ -358,7 +358,7 @@ const char *eat_whitespace_no_nl(const char *s) {
 const char *find_whitespace(const char *s) {
   tor_assert(s);
 
-  while (*s && !isspace((int)*s) && *s != '#')
+  while (*s && !TOR_ISSPACE(*s) && *s != '#')
     s++;
 
   return s;
@@ -427,8 +427,8 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
   tor_assert(base <= 10);
   r = (uint64_t)_atoi64(s);
   endptr = (char*)s;
-  while (isspace(*endptr)) endptr++;
-  while (isdigit(*endptr)) endptr++;
+  while (TOR_ISSPACE(*endptr)) endptr++;
+  while (TOR_ISDIGIT(*endptr)) endptr++;
 #else
   r = (uint64_t)_strtoui64(s, &endptr, base);
 #endif
@@ -936,7 +936,7 @@ parse_line_from_str(char *line, char **key_out, char **value_out)
   *key_out = *value_out = key = val = NULL;
   /* Skip until the first keyword. */
   while (1) {
-    while (isspace(*line))
+    while (TOR_ISSPACE(*line))
       ++line;
     if (*line == '#') {
       while (*line && *line != '\n')
@@ -953,7 +953,7 @@ parse_line_from_str(char *line, char **key_out, char **value_out)
 
   /* Skip until the next space. */
   key = line;
-  while (*line && !isspace(*line) && *line != '#')
+  while (*line && !TOR_ISSPACE(*line) && *line != '#')
     ++line;
 
   /* Skip until the value */
@@ -969,7 +969,7 @@ parse_line_from_str(char *line, char **key_out, char **value_out)
   else {
     cp = line-1;
   }
-  while (cp>=val && isspace(*cp))
+  while (cp>=val && TOR_ISSPACE(*cp))
     *cp-- = '\0';
 
   if (*line == '#') {

@@ -2348,7 +2348,7 @@ config_parse_units(const char *val, struct unit_table_t *u, int *ok)
     *ok = 1;
     return v;
   }
-  while (isspace(*cp))
+  while (TOR_ISSPACE(*cp))
     ++cp;
   for ( ;u->unit;++u) {
     if (!strcasecmp(u->unit, cp)) {

@@ -472,7 +472,7 @@ parse_http_response(const char *headers, int *code, time_t *date,
   tor_assert(headers);
   tor_assert(code);
 
-  while (isspace((int)*headers)) headers++; /* tolerate leading whitespace */
+  while (TOR_ISSPACE(*headers)) headers++; /* tolerate leading whitespace */
 
   if (sscanf(headers, "HTTP/1.%d %d", &n1, &n2) < 2 ||
       (n1 != 0 && n1 != 1) ||

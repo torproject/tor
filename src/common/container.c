@@ -262,7 +262,7 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
   cp = str;
   while (1) {
     if (flags&SPLIT_SKIP_SPACE) {
-      while (isspace((int)*cp)) ++cp;
+      while (TOR_ISSPACE(*cp)) ++cp;
     }
 
     if (max>0 && n == max-1) {
@@ -279,7 +279,7 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
     }
 
     if (flags&SPLIT_SKIP_SPACE) {
-      while (end > cp && isspace((int)*(end-1)))
+      while (end > cp && TOR_ISSPACE(*(end-1)))
         --end;
     }
     if (end != cp || !(flags&SPLIT_IGNORE_BLANK)) {
