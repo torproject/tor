@@ -439,6 +439,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     case RELAY_COMMAND_INTRODUCE2:
     case RELAY_COMMAND_RENDEZVOUS1:
     case RELAY_COMMAND_RENDEZVOUS2:
+    case RELAY_COMMAND_INTRO_ESTABLISHED:
+    case RELAY_COMMAND_RENDEZVOUS_ESTABLISHED:
       rend_process_relay_cell(circ, rh.command, rh.length,
                               cell->payload+RELAY_HEADER_SIZE);
       return 0;
