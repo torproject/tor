@@ -215,6 +215,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
     if(rh.command == RELAY_COMMAND_END) {
       log_fn(LOG_INFO,"Exit got end (%s) before we're connected. Marking for close.",
         connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
+      conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
       connection_mark_for_close(conn, 0);
       return 0;
     }
