@@ -1,6 +1,6 @@
 
 AC_INIT
-AM_INIT_AUTOMAKE(or, 0.0.0)
+AM_INIT_AUTOMAKE(tor, 0.0.0)
 AM_CONFIG_HEADER(orconfig.h)
 
 CFLAGS="-Wall -O2"
