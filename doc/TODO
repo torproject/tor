@@ -104,6 +104,7 @@ NICK    - Reputation info needs to give better weight to recent events than
         - faq and doc-wiki
           - knoppix distro
           - win32 installer using privoxy's installer
+
         o win32 problems with pre1
         . asn.1 issues?
         o Switch dirservers entries to config lines:
@@ -127,6 +128,7 @@ NICK    - Reputation info needs to give better weight to recent events than
           "accept-transfer-encoding: gzip", server might send http header
           "transfer-encoding: gzip". ta-da.
           - grow a zlib dependency. keep a cached compressed directory.
+	- Why is the first entry of kill -USR1 a router with a 0 key?
 
 
       ongoing:
