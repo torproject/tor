@@ -408,10 +408,14 @@ int router_load_routerlist_from_string(const char *s, int trusted)
     SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
                       if (r->dir_port) r->is_trusted_dir = 1);
   }
-  SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
-                    router_add_to_routerlist(r));
-  smartlist_clear(new_list->routers);
-  routerlist_free(new_list);
+  if (routerlist) {
+    SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
+                      router_add_to_routerlist(r));
+    smartlist_clear(new_list->routers);
+    routerlist_free(new_list);
+  } else {
+    routerlist = new_list;
+  }
   if (router_resolve_routerlist(routerlist)) {
     log(LOG_WARN, "Error resolving routerlist");
     return -1;
@@ -453,18 +457,22 @@ int router_load_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
     log_fn(LOG_WARN, "Couldn't parse directory.");
     return -1;
   }
-  SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
-                    router_add_to_routerlist(r));
-  smartlist_clear(new_list->routers);
+  if (routerlist) {
+    SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
+                      router_add_to_routerlist(r));
+    smartlist_clear(new_list->routers);
+    routerlist->published_on = new_list->published_on;
+    tor_free(routerlist->software_versions);
+    routerlist->software_versions = new_list->software_versions;
+    new_list->software_versions = NULL;
+    routerlist_free(new_list);
+  } else {
+    routerlist = new_list;
+  }
   if (router_resolve_routerlist(routerlist)) {
     log_fn(LOG_WARN, "Error resolving routerlist");
     return -1;
   }
-  routerlist->published_on = new_list->published_on;
-  tor_free(routerlist->software_versions);
-  routerlist->software_versions = new_list->software_versions;
-  new_list->software_versions = NULL;
-  routerlist_free(new_list);
   if (!is_recommended_version(VERSION, routerlist->software_versions)) {
     log(options.IgnoreVersion ? LOG_WARN : LOG_ERR,
      "You are running Tor version %s, which will not work with this network.\n"
@@ -519,7 +527,7 @@ router_resolve_routerlist(routerlist_t *rl)
       remove = 1;
     } else if (r->addr) {
       /* already resolved. */
-    } else if (!router_resolve(r)) {
+    } else if (router_resolve(r)) {
       log_fn(LOG_WARN, "Couldn't resolve router %s; not using", r->address);
       remove = 1;
     }
