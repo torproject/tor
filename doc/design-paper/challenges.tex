@@ -7,11 +7,10 @@
 \usepackage{epsfig}
 
 \setlength{\textwidth}{6in}
-\setlength{\textheight}{9in}
+\setlength{\textheight}{8in}
 \setlength{\topmargin}{0in}
-\setlength{\oddsidemargin}{.1in}
-\setlength{\evensidemargin}{.1in}
-
+\setlength{\oddsidemargin}{1cm}
+\setlength{\evensidemargin}{1cm}
 
 \newenvironment{tightlist}{\begin{list}{$\bullet$}{
   \setlength{\itemsep}{0mm}
@@ -23,7 +22,7 @@
 
 \begin{document}
 
-\title{Challenges in deploying low-latency anonymity (DRAFT)}
+\title{Challenges in deploying low-latency anonymity}
 
 \author{Roger Dingledine\inst{1} \and Nick Mathewson\inst{1} \and Paul Syverson\inst{2}}
 \institute{The Free Haven Project \email{<\{arma,nickm\}@freehaven.net>} \and
@@ -36,7 +35,7 @@ Naval Research Lab \email{<syverson@itd.nrl.navy.mil>}}
 \begin{abstract}
   There are many unexpected or unexpectedly difficult obstacles to
   deploying anonymous communications.  Drawing on our experiences deploying
-  Tor (the next-generation onion routing network), we describe social
+  Tor (the second-generation onion routing network), we describe social
   challenges and technical issues that must be faced
   in building, deploying, and sustaining a scalable, distributed, low-latency
   anonymity network.
@@ -362,6 +361,7 @@ collaboratively blend the traffic from many organizations and private
 citizens, so that an eavesdropper can't tell which users are which,
 and who is looking for what information.  By bringing more users onto
 the network, all users become more secure~\cite{econymics}.
+[XXX I feel uncomfortable saying this last sentence now. -RD]
 
 Naturally, organizations will not want to depend on others for their
 security.  If most participating providers are reliable, Tor tolerates
@@ -371,9 +371,6 @@ the Tor design includes an enclave approach that lets data be encrypted
 hasn't been read or modified.  This even works for Internet services that
 don't have built-in encryption and authentication, such as unencrypted
 HTTP or chat, and it requires no modification of those services.
-
-%Tor doesn't try to provide steg (but see Section~\ref{subsec:china}), or
-%the other non-goals listed in tor-design.
 
 \subsection{Related work}
 Tor is not the only anonymity system that aims to be practical and useful.
@@ -629,7 +626,7 @@ abuse complaints.
 %One potentially problematical area with deploying Tor has been our response
 %to file-sharing applications.
 Once users have configured their applications to work with Tor, the largest
-remaining usability issues is performance.  Users begin to suffer
+remaining usability issue is performance.  Users begin to suffer
 when websites ``feel slow''.
 Clients currently try to build their connections through nodes that they
 guess will have enough bandwidth.  But even if capacity is allocated
@@ -746,7 +743,7 @@ to shut it down in order to get unblocked themselves.
 % up in the standoff!]
 %[XXX Mention: it's not dumb, it's strategic!]
 %[XXX Mention: for some servops, any blacklist is a blacklist too many,
-%  because it is risky.  (Guy lives in apt with one IP.)]
+%  because it is risky.  (Guy lives in apt _building_ with one IP.)]
 
 Problems of abuse occur mainly with services such as IRC networks and
 Wikipedia, which rely on IP blocking to ban abusive users.  While at first
@@ -814,11 +811,11 @@ be addressed as the network develops.
 \label{subsec:stream-vs-packet}
 \label{subsec:tcp-vs-ip}
 
-Tor transports streams; it does not tunnel packets. We periodically
-run into developers of the old Freedom network~\cite{freedom21-security}
-who tell us that anonymizing IP addresses should ``obviously'' be done
-at the IP layer. Here are the issues that need to be resolved before
-we'll be ready to switch Tor over to arbitrary IP traffic.
+Tor transports streams; it does not tunnel packets.
+Developers of the old Freedom network~\cite{freedom21-security}
+keep telling us that IP addresses should ``obviously'' be anonymized
+at the IP layer. These issues need to be resolved before
+Tor will be ready to carry arbitrary IP traffic:
 
 \begin{enumerate}
 \setlength{\itemsep}{0mm}
@@ -831,8 +828,8 @@ Tor to be easy to integrate with user-level application-specific proxies
 such as Privoxy. So it's not just a matter of capturing packets and
 anonymizing them at the IP layer.
 \item \emph{Certain protocols will still leak information.} For example,
-DNS requests destined for my local DNS servers need to be rewritten
-to be delivered to some other unlinkable DNS server. This requires
+we must rewrite DNS requests destined for local DNS servers to
+be delivered to some unlinkable DNS server. This requires
 understanding the protocols we are transporting.
 \item \emph{The crypto is unspecified.} First we need a block-level encryption
 approach that can provide security despite
@@ -843,7 +840,7 @@ specified, though some early work has begun on that~\cite{dtls}.
 \item \emph{We'll still need to tune network parameters}. Since the above
 encryption system will likely need sequence numbers (and maybe more) to do
 replay detection, handle duplicate frames, etc., we will be reimplementing
-some subset of TCP anyway.
+a subset of TCP anyway.
 \item \emph{Exit policies for arbitrary IP packets mean building a secure
 IDS\@.}  Our node operators tell us that exit policies are one of
 the main reasons they're willing to run Tor.
@@ -853,8 +850,8 @@ as evidenced by the entire field of IDS and counter-IDS papers. Many
 potential abuse issues are resolved by the fact that Tor only transports
 valid TCP streams (as opposed to arbitrary IP including malformed packets
 and IP floods), so exit policies become even \emph{more} important as
-we become able to transport IP packets. We also need a way to compactly
-characterize the exit policies and let clients parse them to predict
+we become able to transport IP packets. We also need to compactly
+describe exit policies so clients can predict
 which nodes will allow which packets to exit.
 \item \emph{The Tor-internal name spaces would need to be redesigned.} We
 support hidden service {\tt{.onion}} addresses, and other special addresses
@@ -862,32 +859,29 @@ like {\tt{.exit}} for the user to request a particular exit node,
 by intercepting the addresses when they are passed to the Tor client.
 \end{enumerate}
 
-This list is discouragingly long right now, but we recognize that it
-would be good to investigate each of these items in further depth and to
-understand which are actual roadblocks and which are easier to resolve
-than we think. Greater flexibility to transport various protocols obviously
-has some advantages.
+This list is discouragingly long, but being able to transport more
+protocols obviously has some advantages. It would be good to learn which
+items are actual roadblocks and which are easier to resolve than we think.
 
-To be fair, Tor's stream-based approach has run into practical
+To be fair, Tor's stream-based approach has run into
 stumbling blocks as well. While Tor supports the SOCKS protocol,
 which provides a standardized interface for generic TCP proxies, many
-applications do not support SOCKS\@. Supporting such applications requires
-replacing the networking system calls with SOCKS-aware
-versions, or running a SOCKS tunnel locally, neither of which is
-easy for the average user---even with good instructions.
+applications do not support SOCKS\@. For them we must
+replace the networking system calls with SOCKS-aware
+versions, or run a SOCKS tunnel locally, neither of which is
+easy for the average user. %---even with good instructions.
 Even when applications do use SOCKS, they often make DNS requests
-themselves.  (The various versions of the SOCKS protocol include some where
-the application tells the proxy an IP address, and some where it sends a
-hostname.)  By connecting to the DNS server directly, the application breaks
-the user's anonymity and advertises where it is about to connect.
+themselves before handing the address to Tor, which advertises
+where the user is about to connect.
+We are still working on usable solutions.
 
-So in order to actually provide good anonymity, we need to make sure that
-users have a practical way to use Tor anonymously.  Possibilities include
-writing wrappers for applications to anonymize them automatically; improving
-the applications' support for SOCKS; writing libraries to help application
-writers use Tor properly; and implementing a local DNS proxy to reroute DNS
-requests to Tor so that applications can simply point their DNS resolvers at
-localhost and continue to use SOCKS for data only.
+%So in order to actually provide good anonymity, we need to make sure that
+%users have a practical way to use Tor anonymously.  Possibilities include
+%writing wrappers for applications to anonymize them automatically; improving
+%the applications' support for SOCKS; writing libraries to help application
+%writers use Tor properly; and implementing a local DNS proxy to reroute DNS
+%requests to Tor so that applications can simply point their DNS resolvers at
+%localhost and continue to use SOCKS for data only.
 
 \subsection{Mid-latency}
 \label{subsec:mid-latency}
