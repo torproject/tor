@@ -17,6 +17,12 @@ const char log_c_id[] = "$Id$";
 #include "./util.h"
 #include "./log.h"
 
+#ifdef HAVE_EVENT_H
+#include <event.h>
+#else
+#error "Tor requires libevent to build."
+#endif
+
 #define TRUNCATED_STR "[...truncated]"
 #define TRUNCATED_STR_LEN 14
 
@@ -475,3 +481,31 @@ void switch_logs_debug(void)
   }
 }
 
+#ifdef HAVE_EVENT_SET_LOG_CALLBACK
+void libevent_logging_callback(int severity, const char *msg)
+{
+  switch (severity) {
+    case _EVENT_LOG_DEBUG:
+      log(LOG_DEBUG, "Message from libevent: %s", msg);
+      break;
+    case _EVENT_LOG_MSG:
+      log(LOG_INFO, "Message from libevent: %s", msg);
+      break;
+    case _EVENT_LOG_WARN:
+      log(LOG_WARN, "Warning from libevent: %s", msg);
+      break;
+    case _EVENT_LOG_ERR:
+      log(LOG_ERR, "Error from libevent: %s", msg);
+      break;
+    default:
+      log(LOG_WARN, "Message [%d] from libevent: %s", severity, msg);
+      break;
+  }
+}
+void configure_libevent_logging(void)
+{
+  event_set_log_callback(libevent_logging_callback);
+}
+#else
+void configure_libevent_logging(void) {}
+#endif
