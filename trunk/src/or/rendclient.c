@@ -56,7 +56,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   size_t payload_len;
   int r;
   char payload[RELAY_PAYLOAD_SIZE];
-  char tmp[(MAX_NICKNAME_LEN+1)+REND_COOKIE_LEN+DH_KEY_LEN];
+  char tmp[1+(MAX_HEX_NICKNAME_LEN+1)+REND_COOKIE_LEN+DH_KEY_LEN];
   rend_cache_entry_t *entry;
   crypt_path_t *cpath;
 
@@ -92,17 +92,20 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   }
 
   /* write the remaining items into tmp */
-  strncpy(tmp, rendcirc->build_state->chosen_exit_name, (MAX_NICKNAME_LEN+1)); /* nul pads */
-  memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_cookie, REND_COOKIE_LEN);
+  tmp[0] = 1; /* version 1 of the cell format */
+  strncpy(tmp+1, rendcirc->build_state->chosen_exit_name, (MAX_HEX_NICKNAME_LEN+1)); /* nul pads */
+  memcpy(tmp+1+MAX_HEX_NICKNAME_LEN+1, rendcirc->rend_cookie, REND_COOKIE_LEN);
   if (crypto_dh_get_public(cpath->handshake_state,
-                           tmp+MAX_NICKNAME_LEN+1+REND_COOKIE_LEN,
+                           tmp+1+MAX_HEX_NICKNAME_LEN+1+REND_COOKIE_LEN,
                            DH_KEY_LEN)<0) {
     log_fn(LOG_WARN, "Couldn't extract g^x");
     goto err;
   }
 
+  /*XXX maybe give crypto_pk_public_hybrid_encrypt a max_len arg,
+   * to avoid buffer overflows? */
   r = crypto_pk_public_hybrid_encrypt(entry->parsed->pk, tmp,
-                           MAX_NICKNAME_LEN+1+REND_COOKIE_LEN+DH_KEY_LEN,
+                           1+MAX_HEX_NICKNAME_LEN+1+REND_COOKIE_LEN+DH_KEY_LEN,
                                       payload+DIGEST_LEN,
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
