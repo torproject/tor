@@ -345,9 +345,11 @@ router_parse_routerlist_from_directory(const char *str,
   smartlist_free(tokens);
   tokens = NULL;
 
-  /* Now that we know the signature is okay, cache the directory. */
-  /* XXXX009 extract published time if possible. */
-  dirserv_set_cached_directory(str, time(NULL));
+  if(!get_options()->AuthoritativeDir) {
+    /* Now that we know the signature is okay, cache the directory. */
+    /* XXXX009 extract published time if possible. */
+    dirserv_set_cached_directory(str, time(NULL));
+  }
 
   /* Now that we know the signature is okay, check the version. */
   if (check_version)
