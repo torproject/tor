@@ -21,7 +21,7 @@ extern or_options_t options; /* command-line and config-file options */
 #define MAX_ADDRESSLEN 256
 
 /** Maximum DNS processes to spawn. */
-#define MAX_DNSWORKERS 50
+#define MAX_DNSWORKERS 100
 /** Minimum DNS processes to spawn. */
 #define MIN_DNSWORKERS 3
 
