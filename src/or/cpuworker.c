@@ -125,6 +125,9 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_CPUWORKER);
 
+  if (!buf_datalen(conn->inbuf))
+    return 0;
+
   if (conn->state == CPUWORKER_STATE_BUSY_ONION) {
     if (buf_datalen(conn->inbuf) < LEN_ONION_RESPONSE) /* entire answer available? */
       return 0; /* not yet */
@@ -206,9 +209,9 @@ static int cpuworker_main(void *data) {
   char tag[TAG_LEN];
   crypto_pk_env_t *onion_key = NULL, *last_onion_key = NULL;
 
-  tor_close_socket(fdarray[0]); /* this is the side of the socketpair the parent uses */
   fd = fdarray[1]; /* this side is ours */
 #ifndef MS_WINDOWS
+  tor_close_socket(fdarray[0]); /* this is the side of the socketpair the parent uses */
   connection_free_all(); /* so the child doesn't hold the parent's fd's open */
 #endif
   handle_signals(0); /* ignore interrupts from the keyboard, etc */
