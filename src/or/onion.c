@@ -747,8 +747,8 @@ int compare_tracked_onions(struct tracked_onion *a, struct tracked_onion *b) {
   return memcmp(a->digest, b->digest, 20);
 }
 
-RB_PROTOTYPE(tracked_tree, tracked_onion, node, compare_tracked_onions);
-RB_GENERATE(tracked_tree, tracked_onion, node, compare_tracked_onions);
+RB_PROTOTYPE(tracked_tree, tracked_onion, node, compare_tracked_onions)
+RB_GENERATE(tracked_tree, tracked_onion, node, compare_tracked_onions)
 
 void init_tracked_tree(void) {
   RB_INIT(&tracked_root);
