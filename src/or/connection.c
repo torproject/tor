@@ -1616,8 +1616,10 @@ void assert_connection_ok(connection_t *conn, time_t now)
     tor_assert(conn->socks_request);
     if (conn->state == AP_CONN_STATE_OPEN) {
       tor_assert(conn->socks_request->has_finished);
-      tor_assert(conn->cpath_layer);
-      assert_cpath_layer_ok(conn->cpath_layer);
+      if (!conn->marked_for_close) {
+        tor_assert(conn->cpath_layer);
+        assert_cpath_layer_ok(conn->cpath_layer);
+      }
     }
   } else {
     tor_assert(!conn->socks_request);
