@@ -59,7 +59,7 @@ int router_reload_router_list(void)
       if (router_load_routerlist_from_directory(s, NULL, 0) < 0) {
         log_fn(LOG_WARN, "Cached directory '%s' was unparseable; ignoring.", filename);
       }
-      if( routerlist && routerlist->published_on > time(NULL) - OLD_MIN_ONION_KEY_LIFETIME/2) {
+      if(routerlist && routerlist->published_on > time(NULL) - OLD_MIN_ONION_KEY_LIFETIME/2) {
         /* XXX use new onion key lifetime when 0.0.8 servers are obsolete */
         directory_has_arrived(); /* do things we've been waiting to do */
       }
@@ -448,7 +448,8 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   int i;
   routerinfo_t *router;
 
-  tor_assert(routerlist);
+  if (!routerlist)
+    return NULL;
 
   for(i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
@@ -653,6 +654,7 @@ int router_add_to_routerlist(routerinfo_t *router) {
   routerinfo_t *r;
   char id_digest[DIGEST_LEN];
 
+  tor_assert(routerlist);
   crypto_pk_get_digest(router->identity_pkey, id_digest);
 
   /* If we have a router with this name, and the identity key is the same,
@@ -989,6 +991,7 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
   int i;
   routerinfo_t *router;
+  if (!routerlist) return 1;
 
   for (i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);

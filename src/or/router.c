@@ -386,6 +386,7 @@ void router_retry_connections(void) {
   tor_assert(server_mode());
 
   router_get_routerlist(&rl);
+  if (!rl) return;
   for (i=0;i < smartlist_len(rl->routers);i++) {
     router = smartlist_get(rl->routers, i);
     if(router_is_me(router))
