@@ -453,16 +453,22 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
         return -1;
       written += result;
     }
-    if (tmpe->prt) {
-      result = snprintf(s+written, maxlen-written, ":%d\n", tmpe->prt);
-      if (result<0 || result+written > maxlen)
-        return -1;
-      written += result;
-    } else {
+    if (tmpe->prt_min == 1 && tmpe->prt_max == 65535) {
       if (written > maxlen-4)
         return -1;
       strcat(s+written, ":*\n");
       written += 3;
+    } else if (tmpe->prt_min == tmpe->prt_max) {
+      result = snprintf(s+written, maxlen-written, ":%d\n", tmpe->prt_min);
+      if (result<0 || result+written > maxlen)
+        return -1;
+      written += result;
+    } else {
+      result = snprintf(s+written, maxlen-written, ":%d-%d\n", tmpe->prt_min,
+                        tmpe->prt_max);
+      if (result<0 || result+written > maxlen)
+        return -1;
+      written += result;
     }
   } /* end for */
   if (written > maxlen-256) /* Not enough room for signature. */

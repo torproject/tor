@@ -329,7 +329,8 @@ struct exit_policy_t {
   char *string;
   uint32_t addr;
   uint32_t msk;
-  uint16_t prt;
+  uint16_t prt_min;
+  uint16_t prt_max;
 
   struct exit_policy_t *next;
 };
