@@ -231,6 +231,14 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
   n_supported = tor_malloc(sizeof(int)*smartlist_len(dir->routers));
   for (i = 0; i < smartlist_len(dir->routers); ++i) { /* iterate over routers */
     router = smartlist_get(dir->routers, i);
+    if(router_is_me(router)) {
+      n_supported[i] = -1;
+      log_fn(LOG_DEBUG,"Skipping node %s -- it's me.", router->nickname);
+      /* XXX there's probably a reverse predecessor attack here, but
+       * it's slow. should we take this out? -RD
+       */
+      continue;
+    }
     if(!router->is_running) {
       n_supported[i] = -1;
       log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- directory says it's not running.",
@@ -474,6 +482,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     add_nickname_list_to_smartlist(sl,options.EntryNodes);
     /* XXX one day, consider picking chosen_exit knowing what's in EntryNodes */
     remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
+    remove_twins_from_smartlist(sl,router_get_my_routerinfo());
     smartlist_subtract(sl,excludednodes);
     choice = smartlist_choose(sl);
     smartlist_free(sl);
@@ -481,6 +490,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
       sl = smartlist_create();
       router_add_running_routers_to_smartlist(sl);
       remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
+      remove_twins_from_smartlist(sl,router_get_my_routerinfo());
       smartlist_subtract(sl,excludednodes);
       choice = smartlist_choose(sl);
       smartlist_free(sl);
@@ -495,6 +505,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     sl = smartlist_create();
     router_add_running_routers_to_smartlist(sl);
     remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
+    remove_twins_from_smartlist(sl,router_get_my_routerinfo());
     for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {
       r = router_get_by_addr_port(cpath->addr, cpath->port);
       assert(r);
