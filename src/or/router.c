@@ -709,17 +709,15 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   tor_free(identity_pkey);
   tor_free(bandwidth_usage);
 
-  if (result < 0 || (size_t)result >= maxlen) {
-    /* apparently different glibcs do different things on tor_snprintf error.. so check both */
+  if (result < 0)
     return -1;
-  }
   /* From now on, we use 'written' to remember the current length of 's'. */
   written = result;
 
   if (get_options()->ContactInfo && strlen(get_options()->ContactInfo)) {
     result = tor_snprintf(s+written,maxlen-written, "opt contact %s\n",
                       get_options()->ContactInfo);
-    if (result<0 || result+written > maxlen)
+    if (result<0)
       return -1;
     written += result;
   }
@@ -731,36 +729,34 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     result = tor_snprintf(s+written, maxlen-written, "%s %s",
         tmpe->policy_type == ADDR_POLICY_ACCEPT ? "accept" : "reject",
         tmpe->msk == 0 ? "*" : inet_ntoa(in));
-    if (result < 0 || result+written > maxlen) {
-      /* apparently different glibcs do different things on tor_snprintf error.. so check both */
+    if (result < 0)
       return -1;
-    }
     written += result;
     if (tmpe->msk != 0xFFFFFFFFu && tmpe->msk != 0) {
       /* Write "/255.255.0.0" */
       in.s_addr = htonl(tmpe->msk);
       result = tor_snprintf(s+written, maxlen-written, "/%s", inet_ntoa(in));
-      if (result<0 || result+written > maxlen)
+      if (result<0)
         return -1;
       written += result;
     }
     if (tmpe->prt_min <= 1 && tmpe->prt_max == 65535) {
       /* There is no port set; write ":*" */
-      if (written > maxlen-4)
+      if (written+4 > maxlen)
         return -1;
       strlcat(s+written, ":*\n", maxlen-written);
       written += 3;
     } else if (tmpe->prt_min == tmpe->prt_max) {
       /* There is only one port; write ":80". */
       result = tor_snprintf(s+written, maxlen-written, ":%d\n", tmpe->prt_min);
-      if (result<0 || result+written > maxlen)
+      if (result<0)
         return -1;
       written += result;
     } else {
       /* There is a range of ports; write ":79-80". */
       result = tor_snprintf(s+written, maxlen-written, ":%d-%d\n", tmpe->prt_min,
                         tmpe->prt_max);
-      if (result<0 || result+written > maxlen)
+      if (result<0)
         return -1;
       written += result;
     }
@@ -768,7 +764,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
       /* This was a catch-all rule, so future rules are irrelevant. */
       break;
   } /* end for */
-  if (written > maxlen-256) /* Not enough room for signature. */
+  if (written+256 > maxlen) /* Not enough room for signature. */
     return -1;
 
   /* Sign the directory */
@@ -792,7 +788,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   strlcat(s+written, "-----END SIGNATURE-----\n", maxlen-written);
   written += strlen(s+written);
 
-  if (written > maxlen-2)
+  if (written+2 > maxlen)
     return -1;
   /* include a last '\n' */
   s[written] = '\n';
