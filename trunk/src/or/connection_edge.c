@@ -133,7 +133,7 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
   circuit_t *circ;
 
   if (conn->has_sent_end) {
-    log_fn(LOG_WARN,"Bug: Calling connection_edge_end on an already ended stream?");
+    log_fn(LOG_WARN,"Harmless bug: Calling connection_edge_end (reason %d) on an already ended stream?", reason);
 #ifdef TOR_FRAGILE
     tor_assert(0);
 #endif
