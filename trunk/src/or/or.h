@@ -1097,7 +1097,7 @@ int options_act(void);
 
 int config_get_lines(char *string, struct config_line_t **result);
 void config_free_lines(struct config_line_t *front);
-int config_trial_assign(or_options_t **options, struct config_line_t *list, int reset);
+int config_trial_assign(or_options_t *options, struct config_line_t *list, int reset);
 int resolve_my_address(const char *address, uint32_t *addr);
 void options_init(or_options_t *options);
 int init_from_config(int argc, char **argv);

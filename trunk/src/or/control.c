@@ -202,7 +202,6 @@ handle_control_setconf(connection_t *conn, uint16_t len, char *body)
 {
   int r;
   struct config_line_t *lines=NULL;
-  or_options_t *options = get_options();
 
   if (config_get_lines(body, &lines) < 0) {
     log_fn(LOG_WARN,"Controller gave us config lines we can't parse.");
@@ -210,7 +209,7 @@ handle_control_setconf(connection_t *conn, uint16_t len, char *body)
     return 0;
   }
 
-  if ((r=config_trial_assign(&options, lines, 1)) < 0) {
+  if ((r=config_trial_assign(get_options(), lines, 1)) < 0) {
     log_fn(LOG_WARN,"Controller gave us config lines that didn't validate.");
     if (r==-1) {
       send_control_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY,
@@ -223,7 +222,6 @@ handle_control_setconf(connection_t *conn, uint16_t len, char *body)
   }
 
   config_free_lines(lines);
-  set_options(options); /* put the new one into place */
   if (options_act() < 0) { /* acting on them failed. die. */
     log_fn(LOG_ERR,"Acting on config options left us in a broken state. Dying.");
     exit(1);

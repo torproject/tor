@@ -681,10 +681,10 @@ config_assign(or_options_t *options, struct config_line_t *list, int reset)
  * keys, -2 on bad values, -3 on bad transition.
  */
 int
-config_trial_assign(or_options_t **options, struct config_line_t *list, int reset)
+config_trial_assign(or_options_t *options, struct config_line_t *list, int reset)
 {
   int r;
-  or_options_t *trial_options = options_dup(*options);
+  or_options_t *trial_options = options_dup(options);
 
   if ((r=config_assign(trial_options, list, reset)) < 0) {
     options_free(trial_options);
@@ -696,12 +696,12 @@ config_trial_assign(or_options_t **options, struct config_line_t *list, int rese
     return -2;
   }
 
-  if (options_transition_allowed(*options, trial_options) < 0) {
+  if (options_transition_allowed(options, trial_options) < 0) {
     options_free(trial_options);
     return -3;
   }
 
-  *options = trial_options;
+  set_options(trial_options); /* we liked it. put it in place. */
   return 0;
 }
 
