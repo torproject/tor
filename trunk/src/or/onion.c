@@ -475,7 +475,8 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   add_nickname_list_to_smartlist(excludednodes,options.ExcludedNodes);
 
   if(cur_len == state->desired_path_len - 1) { /* Picking last node */
-    log_fn(LOG_DEBUG, "Contemplating last hop: choice already made.");
+    log_fn(LOG_DEBUG, "Contemplating last hop: choice already made: %s",
+           state->chosen_exit);
     choice = router_get_by_nickname(state->chosen_exit);
     if(!choice) {
       log_fn(LOG_WARN,"Our chosen exit %s is no longer in the directory? Failing.",
