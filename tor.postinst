@@ -47,6 +47,18 @@ if [ "$2" = "" ]; then
 	chmod -R 700 /var/$i/tor
 	find /var/$i/tor -type f -exec chmod 600 '{}' ';'
     done
+    chgrp -R adm  /var/log/tor
+    chmod -R g+rX /var/log/tor
+    chmod    g+s  /var/log/tor
+else
+    # fix permissions of logs after 0.0.8+0.0.9pre5-1
+    if [ "$1" = "configure" ]; then
+        if dpkg --compare-versions "$2" le "0.0.8+0.0.9pre5-1" ; then
+            chgrp -R adm  /var/log/tor
+            chmod -R g+rX /var/log/tor
+            chmod    g+s  /var/log/tor
+        fi
+    fi
 fi
 
 #DEBHELPER#
