@@ -1,7 +1,7 @@
 # Configuration file for a typical tor user
 
 # Replace this with "SocksPort 0" if you don't want clients to connect.
-SocksPort 9050
+SocksPort 9050 # what port to advertise for application connections
 SocksBindAddress 127.0.0.1 # accept connections only from localhost
 #SocksBindAddress 192.168.0.1:9100 # listen on a chosen IP/port
 
@@ -60,13 +60,13 @@ DirServer 62.116.124.106:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D
 #Address noname.example.com        # The IP or fqdn for this server
 #ContactInfo 1234D/FFFFFFFF Random Person <nobody@example.com>
 
-#ORPort 9001 # where to listen for tor connections
+#ORPort 9001 # what port to advertise for tor connections
 # If you want to listen on a port other than the one advertised
 # in ORPort, uncomment the line below.
 #ORBindAddress 0.0.0.0:9090
 
 # Uncomment this to mirror the directory for others (please do)
-#DirPort 9030
+#DirPort 9030 # what port to advertise for directory connections
 # If you want to listen on a port other than the one advertised
 # in DirPort, uncomment the line below.
 #DirBindAddress 0.0.0.0:9091
