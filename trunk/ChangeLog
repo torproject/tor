@@ -1,4 +1,25 @@
 Changes so far in 0.0.9:
+pre4:
+  o Bugfixes on 0.0.9pre3:
+    - Ignore fascistfirewall when uploading/downloading hidden service
+      descriptors, since we go through Tor for those; and when using
+      an HttpProxy, since we assume it can reach them all.
+    - When looking for an authoritative dirserver, use only the ones
+      configured at boot. Don't bother looking in the directory.
+    - If the server doesn't specify an exit policy, use the real default
+      exit policy, not reject *:*.
+    - The rest of the fix for get_default_conf_file() on older win32.
+    - Make 'Routerfile' config option obsolete.
+
+  o Features:
+    - New 'MyFamily nick1,...' config option for a server to
+      specify other servers that shouldn't be used in the same circuit
+      with it. Only believed if nick1 also specifies us.
+    - New 'NodeFamily nick1,nick2,...' config option for a client to
+      specify nodes that it doesn't want to use in the same circuit.
+    - New 'Redirectexit pattern address:port' config option for a
+      server to redirect exit connections, e.g. to a local squid.
+
 pre3:
   o Bugfixes on 0.0.8.1:
     - Better torrc example lines for dirbindaddress and orbindaddress.
