@@ -1204,6 +1204,7 @@ int server_mode(void);
 int advertised_server_mode(void);
 int proxy_mode(void);
 
+void handle_signals(int is_parent);
 void tor_cleanup(void);
 
 /********************************* onion.c ***************************/

@@ -1002,6 +1002,26 @@ void exit_function(void)
 #endif
 }
 
+/** Set up the signal handlers for either parent or child. */
+void handle_signals(int is_parent)
+{
+#ifndef MS_WINDOWS /* do signal stuff only on unix */
+  struct sigaction action;
+  action.sa_flags = 0;
+  sigemptyset(&action.sa_mask);
+
+  action.sa_handler = is_parent ? catch : SIG_IGN;
+  sigaction(SIGINT,  &action, NULL); /* do a controlled slow shutdown */
+  sigaction(SIGTERM, &action, NULL); /* to terminate now */
+  sigaction(SIGPIPE, &action, NULL); /* otherwise sigpipe kills us */
+  sigaction(SIGUSR1, &action, NULL); /* dump stats */
+  sigaction(SIGHUP,  &action, NULL); /* to reload config, retry conns, etc */
+  if(is_parent)
+    sigaction(SIGCHLD, &action, NULL); /* handle dns/cpu workers that exit */
+#endif /* signal stuff */
+}
+
+
 /** Main entry point for the Tor command-line client.
  */
 static int tor_init(int argc, char *argv[]) {
@@ -1031,21 +1051,7 @@ static int tor_init(int argc, char *argv[]) {
     client_dns_init(); /* init the client dns cache */
   }
 
-#ifndef MS_WINDOWS /* do signal stuff only on unix */
-{
-  struct sigaction action;
-  action.sa_flags = 0;
-  sigemptyset(&action.sa_mask);
-
-  action.sa_handler = catch;
-  sigaction(SIGINT,  &action, NULL); /* do a controlled slow shutdown */
-  sigaction(SIGTERM, &action, NULL); /* to terminate now */
-  sigaction(SIGPIPE, &action, NULL); /* otherwise sigpipe kills us */
-  sigaction(SIGUSR1, &action, NULL); /* dump stats */
-  sigaction(SIGHUP,  &action, NULL); /* to reload config, retry conns, etc */
-  sigaction(SIGCHLD, &action, NULL); /* handle dns/cpu workers that exit */
-}
-#endif /* signal stuff */
+  handle_signals(1);
 
   crypto_global_init();
   crypto_seed_rng();

@@ -641,6 +641,7 @@ static int dnsworker_main(void *data) {
 #ifndef MS_WINDOWS
   connection_free_all(); /* so the child doesn't hold the parent's fd's open */
 #endif
+  handle_signals(0); /* ignore interrupts from the keyboard, etc */
 
   for(;;) {
 
