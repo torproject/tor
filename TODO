@@ -15,13 +15,14 @@ SPEC    - Spec not finalized
                 - Rotate circuits after N minutes?
                 - Circuits should expire when circuit->expire triggers
                 - Handle half-open connections
+        - On the fly compression of each stream
         . Clean up the event loop (optimize and sanitize)
         - Exit policies
                 - Path selection algorithms
                         - Let user request certain nodes
                         - And disallow certain nodes
                         - Choose path by jurisdiction, etc?
-        - Implement our own memory management, at least for common structs
+        D Implement our own memory management, at least for common structs
         . Appropriate logging
                 - Come up with convention for what log level means what
                 - Make code follow convention
@@ -38,6 +39,7 @@ SPEC    - Spec not finalized
                 . Better error handling when
                         . An address doesn't resolve
                         - We have max workers running
+                - Consider taking the master out of the loop?
         . Directory servers
                 - Automated reputation management
                 - Include key in source; sign directories
@@ -103,5 +105,5 @@ SPEC!!  - Non-clique topologies, clearer bandwidth management
                 - Spec it
                 - Merge OR and OP handshakes?
                 - Periodic link key rotation. Spec?
-
+        - Support IPv6 rather than just 4
 
