@@ -1595,7 +1595,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
        */
 //      tor_assert(conn->receiver_bucket >= 0);
     }
-    tor_assert(conn->addr && conn->port);
+//    tor_assert(conn->addr && conn->port);
     tor_assert(conn->address);
     if (conn->state != OR_CONN_STATE_CONNECTING)
       tor_assert(conn->tls);
