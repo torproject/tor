@@ -58,7 +58,7 @@ and a practical design for rendezvous points. Tor works on the real-world
 Internet, requires no special privileges or kernel modifications, requires
 little synchronization or coordination between nodes, and provides a
 reasonable trade-off between anonymity, usability, and efficiency. We
-close with a list of open problems in anonymous communication systems.
+close with a list of open problems in anonymous communication.
 \end{abstract}
 
 %\begin{center}
@@ -690,53 +690,43 @@ traditional Dolev-Yao model.
 
 Once Alice has established the circuit (so she shares keys with each
 OR on the circuit), she can send relay cells.  Recall that every relay
-cell has a stream ID in the relay header that indicates to which
-stream the cell belongs.  This stream ID allows a relay cell to be
+cell has a streamID in the relay header that indicates to which
+stream the cell belongs.  This streamID allows a relay cell to be
 addressed to any of the ORs on the circuit.  Upon receiving a relay
 cell, an OR looks up the corresponding circuit, and decrypts the relay
 header and payload with the appropriate session key for that circuit.
 If the cell is headed downstream (away from Alice) it then checks
-whether the decrypted stream ID is recognized---either because it
+whether the decrypted streamID is recognized---either because it
 corresponds to an open stream at this OR for the circuit, or because
-it is equal to the control stream ID zero.  If the OR recognizes the
-stream ID, it accepts the relay cell and processes it as described
-below.  Otherwise, the relay cell must be intended for another OR on
-the circuit.  In this case, the OR looks up the circID and OR for the
+it is equal to the control streamID (zero).  If the OR recognizes the
+streamID, it accepts the relay cell and processes it as described
+below.  Otherwise, 
+%the relay cell must be intended for another OR on
+%the circuit.  In this case, 
+the OR looks up the circID and OR for the
 next step in the circuit, replaces the circID as appropriate, and
 sends the decrypted relay cell to the next OR.  (If the OR at the end
 of the circuit receives an unrecognized relay cell, an error has
 occurred, and the cell is discarded.)
 
 OPs treat incoming relay cells similarly: they iteratively unwrap the
-relay header and payload with each of the session keys shared with the 
-ORs on the circuit, from the closest to farthest.  (Because we use a
+relay header and payload with the session key shared with each
+OR on the circuit, from the closest to farthest.  (Because we use a
 stream cipher, encryption operations may be inverted in any order.)
-If at any stage the OP recognizes the stream ID, the cell must have
+If at any stage the OP recognizes the streamID, the cell must have
 originated at the OR whose encryption has just been removed.
 
 To construct a relay cell addressed to a given OR, Alice iteratively
 encrypts the cell payload (that is, the relay header and payload) with
-the symmetric key of each hop up to that OR.  Because the stream ID is
+the symmetric key of each hop up to that OR.  Because the streamID is
 encrypted to a different value at each step, only at the targeted OR
 will it have a meaningful value.\footnote{
   % XXX Should we just say that 2^56 is itself negligible?  
   % XXX Assuming 4-hop circuits with 10 streams per hop, there are 33 
-  % XXX possible bad stream IDs before the last circuit.  This still
+  % XXX possible bad streamIDs before the last circuit.  This still
   % XXX gives an error only once every 2 million terabytes (approx).
-  There is a small probability ($\approx 2^56$ per cell, since stream
-  IDs are seven bytes long) that an encrypted stream ID will
-  accidentally correspond to a real stream.  If such a cell were sent
-  along the circuit, it would be recognized by an earlier OR than
-  intended, which would then erroneously act upon the cell's encrypted
-  contents.  To prevent this case, when the OP notices that such a
-  collision is about to occur, it sends a padding cell instead to
-  advance the circuit's stream ciphers, and tries again.  The chances
-  of two such collisions in a row are negligible.  To prevent stream
-  ID collision on relay cells moving \emph{toward} Alice, ORs ignore
-  stream IDs on those cells---all of them are for Alice's OP.
-  % XXX But what if there is a collision _at_ Alice's OP?  Nothing we
-  % XXX can do.  Then why do we do anything in this case? -NM 
-}
+With 56 bits of streamID per cell, the probability of an accidental
+collision is far lower than the chance of hardware failure.}
 This \emph{leaky pipe} circuit topology
 allows Alice's streams to exit at different ORs on a single circuit.  
 Alice may choose different exit points because of their exit policies,
@@ -745,7 +735,7 @@ originate at the same person.
 
 When an OR later replies to Alice with a relay cell, it only needs to
 encrypt the cell's relay header and payload with the single key it
-shares with Alice, and send the cell back towards Alice along the
+shares with Alice, and send the cell back toward Alice along the
 circuit.  Subsequent ORs add further layers of encryption as they
 relay the cell back to Alice.
 
@@ -755,15 +745,17 @@ all open streams on that circuit, and passes a new \emph{destroy} cell
 forward. But just as circuits are built incrementally, they can also
 be torn down incrementally: Alice can instead send a \emph{relay
 truncate} cell to a single OR on the circuit. That node then sends a
-\emph{destroy} cell forward, and replies with an acknowledgment (a
-\emph{relay truncated} cell).  By truncating a circuit, Alice could
-later extend it to different nodes without signaling to the first few
-nodes (or somebody observing them) that she was changing her
-circuit. Nodes in the middle of a circuit are not even aware that the
-circuit has been truncated, because they see only the encrypted relay
-cells.  Similarly, if a node on the circuit goes down, the adjacent
+\emph{destroy} cell forward, and acknowledges with a
+\emph{relay truncated} cell. Alice can then extend the circuit to
+different nodes, all without signaling to the intermediate nodes (or
+somebody observing them) that she has changed her circuit.
+%---because
+%nodes in the middle of a circuit see only the encrypted relay cells,
+%they are not even aware that the circuit has been truncated.
+Similarly, if a node on the circuit goes down, the adjacent
 node can send a \emph{relay truncated} cell back to Alice.  Thus the
-``break a node and see which circuits go down'' attack is weakened.
+``break a node and see which circuits go down'' attack
+\cite{freedom21-security} is weakened.
 
 \SubSection{Opening and closing streams}
 \label{subsec:tcp}
@@ -774,14 +766,15 @@ connection. The OP chooses the newest open circuit (or creates one if
 none is available), chooses a suitable OR on that circuit to be the
 exit node (usually the last node, but maybe others due to exit policy
 conflicts; see Section~\ref{subsec:exitpolicies}), chooses a new
-random stream ID for the stream, and sends a \emph{relay begin} cell
-to that exit node.  The OP uses a stream ID of zero for the begin cell
-(so the OR will recognize it), and uses that stream ID, destination
-address, and port as the contents of the cell's payload.  Once the
+random streamID for the stream, and sends a \emph{relay begin} cell
+to that exit node.  The OP uses a streamID of zero for the begin cell
+(so the OR will recognize it), and uses that streamID, destination
+address, and port as the contents of the cell's relay payload.  Once the
 exit node completes the connection to the remote host, it responds
-with a \emph{relay connected} cell.  Upon receipt, the OP begins
-accepting data from the application's TCP stream, packaging into
-\emph{relay data} cells, and sending those cells along the circuit to
+with a \emph{relay connected} cell.  Upon receipt, the OP sends a
+SOCKS reply to the application notifying it of success. The OP
+now accepts data from the application's TCP stream, packaging it into
+\emph{relay data} cells and sending those cells along the circuit to
 the chosen OR.
 
 There's a catch to using SOCKS, however---some applications pass the
@@ -795,9 +788,9 @@ In the case of Mozilla, the flaw is easy to address: the filtering web
 proxy called Privoxy does the SOCKS call safely, and Mozilla talks to
 Privoxy safely. But a portable general solution, such as is needed for
 SSH, is
-an open problem. We could modify the local nameserver, but this approach
-is invasive, brittle, and not portable.  We could encourage the resolver
-library to do its resolution via TCP rather than UDP, but this approach is
+an open problem. Modifying the local nameserver
+is invasive, brittle, and not portable. Forcing the resolver
+library to do its resolution via TCP rather than UDP is
 hard to do right, and also has portability problems. We could provide a
 tool similar to \emph{dig} to perform a private lookup through the
 Tor network. Our current answer is to encourage the use of
@@ -805,16 +798,15 @@ privacy-aware proxies like Privoxy wherever possible.
 
 Closing a Tor stream is analogous to closing a TCP stream: it uses a
 two-step handshake for normal operation, or a one-step handshake for
-errors. If one side of the stream closes abnormally, that node simply
-sends a \emph{relay teardown} cell, and tears down the stream. If one
-side of the stream closes the connection normally, that node sends a
-\emph{relay end} cell down the circuit. When the other side has sent
+errors. If the stream closes abnormally, the adjacent node simply sends a
+\emph{relay teardown} cell. If the stream closes normally, the node sends
+a \emph{relay end} cell down the circuit. When the other side has sent
 back its own \emph{relay end}, the stream can be torn down.  Because
 all relay cells use layered encryption, only the destination OR knows
 that a given relay cell is a request to close a stream.  This two-step
-handshake allows for TCP-based applications that use half-open
-connections, such as HTTP clients that close their side of the stream
-after writing, but are still willing to read.
+handshake allows for TCP-based applications that use half-closed
+connections, such as broken HTTP clients that close their side of the
+stream after writing, but are still willing to read.
 
 \SubSection{Integrity checking on streams}
 
@@ -838,17 +830,18 @@ Addressing the insider malleability attack, however, is
 more complex.
 
 We could do integrity checking of the relay cells at each hop, either
-by including hashes or by using an authenticating cipher mode like EAX
-\cite{eax}, but these approaches would impose a 
-message-expansion overhead at each hop, and we don't want to
-leak the path length or force a maximum path length.\footnote{
-  Also note that these solutions would only check traffic coming from
-  Alice; ORs would not be able to include suitable hashes for the
-  intermediate hops, since the ORs on a circuit do not share session
-  keys.}
-Because we have already accepted that our design is vulnerable to end-to-end
-timing attacks, we can perform integrity checking only at the edges of
-each stream, without introducing any new anonymity-breaking attacks. When Alice
+by including hashes or by using an authenticating cipher mode like
+EAX \cite{eax}, but there are some problems. First, these approaches
+impose a message-expansion overhead at each hop, and we would have to
+either leak the path length or waste bytes by padding to a maximum
+path length. Second, these solutions can only verify traffic coming
+from Alice: ORs would not be able to include suitable hashes for
+the intermediate hops, since the ORs on a circuit do not know the
+other session keys. Third, we have already accepted that our design
+is vulnerable to end-to-end timing attacks; tagging attacks performed
+within the circuit provide no additional information to the attacker.
+
+Thus, we check integrity only at the edges of each stream. When Alice
 negotiates a key with a new hop, they both initialize a pair of SHA-1 
 digests with a derivative of that key,
 thus beginning with randomness that only the two of them know. From
@@ -873,29 +866,29 @@ receive a bad hash.
 \SubSection{Rate limiting and fairness}
 
 Volunteers are generally more willing to run services that can limit
-their bandwidth usage.  To accommodate them, Tor servers use a ``token
-bucket'' approach to limit the number of bytes they
-% XXX cite token bucket? -RD
-% XXX No.  -RD, later, via NM.
-receive. Tokens are added to the bucket each second; when the bucket is
-full, new tokens are discarded. Each token represents permission to
-accept one byte from the network---to accept a byte, the connection
-must remove a token from the bucket. Thus if the bucket is empty, that
-connection must wait until more tokens arrive. The number of tokens we
-add enforces a long-term average rate of incoming bytes, while still
+their bandwidth usage. To accommodate them, Tor servers use a
+token bucket approach \cite{tannenbaum96} to 
+%limit the number of bytes they receive.
+%Tokens are added to the bucket each second; when the bucket is
+%full, new tokens are discarded. Each token represents permission to
+%accept one byte from the network---to accept a byte, the connection
+%must remove a token from the bucket. Thus if the bucket is empty, that
+%connection must wait until more tokens arrive. The number of tokens we
+%add 
+enforce a long-term average rate of incoming bytes, while still
 permitting short-term bursts above the allowed bandwidth. Current bucket
 sizes are set to ten seconds' worth of traffic.
 
-Further, we want to avoid starving any Tor streams. Entire circuits
-could starve if we read greedily from connections and one connection
-uses all the remaining bandwidth. We solve this by dividing the number
-of tokens in the bucket by the number of connections that want to read,
-and reading at most that number of bytes from each connection. We iterate
-this procedure until the number of tokens in the bucket is under some
-threshold (currently 10KB), at which point we greedily read from connections.
+%Further, we want to avoid starving any Tor streams. Entire circuits
+%could starve if we read greedily from connections and one connection
+%uses all the remaining bandwidth. We solve this by dividing the number
+%of tokens in the bucket by the number of connections that want to read,
+%and reading at most that number of bytes from each connection. We iterate
+%this procedure until the number of tokens in the bucket is under some
+%threshold (currently 10KB), at which point we greedily read from connections.
 
 Because the Tor protocol generates roughly the same number of outgoing
-bytes as incoming bytes, it is generally sufficient in practice to rate-limit
+bytes as incoming bytes, it is sufficient in practice to limit only
 incoming bytes.
 % Is it?  Fun attack: I send you lots of 1-byte-at-a-time TCP segments.
 % In response, you send lots of 256 byte cells.  Can I use this to 
@@ -903,11 +896,14 @@ incoming bytes.
 % Can we resolve this by, when reading from edge connections, rounding up
 % the bytes read (wrt buckets) to the nearest multiple of 256? -RD
 % How's this? -NM
-With TCP connections, however, the correspondence is not one-to-one:
+With TCP streams, however, the correspondence is not one-to-one:
 relaying a single incoming byte can require an entire 256-byte cell.
-(If we waited too long for more bytes to fill the cell, we might stall
-the protocol while the local application waits for a response to the
-byte we never deliver.) Therefore, we treat this case as if the entire
+(We can't just wait for more bytes, because the local application may
+be waiting for a reply.)
+%(If we waited too long for more bytes to fill the cell, we might stall
+%the protocol while the local application waits for a response to the
+%byte we never deliver.)
+Therefore, we treat this case as if the entire
 cell size had been read, regardless of the fullness of the cell.
 
 Further, inspired by Rennhard et al's design in \cite{anonnet}, a
@@ -930,8 +926,15 @@ saturated. For example, an adversary could make a large HTTP PUT request
 through the onion routing network to a webserver he runs, and then
 refuse to read any of the bytes at the webserver end of the
 circuit. Without some congestion control mechanism, these bottlenecks
-can propagate back through the entire network.  We describe our
-responses below.
+can propagate back through the entire network. We don't need to
+reimplement full TCP windows (with sequence numbers,
+the ability to drop cells when we're full and retransmit later, etc),
+because TCP already guarantees in-order delivery of each
+cell. 
+%But we need to investigate further the effects of the current
+%parameters on throughput and latency, while also keeping privacy in mind;
+%see Section~\ref{sec:maintaining-anonymity} for more discussion.
+We describe our response below.
 
 \subsubsection{Circuit-level throttling}
 
@@ -943,7 +946,7 @@ to deliver to TCP streams outside the network. Each window is initialized
 (say, to 1000 data cells). When a data cell is packaged or delivered,
 the appropriate window is decremented. When an OR has received enough
 data cells (currently 100), it sends a \emph{relay sendme} cell towards the OP,
-with stream ID zero. When an OR receives a \emph{relay sendme} cell with stream
+with streamID zero. When an OR receives a \emph{relay sendme} cell with stream
 ID zero, it increments its packaging window. Either of these cells
 increments the corresponding window by 100. If the packaging window
 reaches 0, the OR stops reading from TCP connections for all streams
@@ -964,23 +967,12 @@ and increments the window by a fixed value (50) upon receiving a \emph{relay
 sendme} cell. Rather than always returning a \emph{relay sendme} cell as soon
 as enough cells have arrived, the stream-level congestion control also
 has to check whether data has been successfully flushed onto the TCP
-stream; it sends a \emph{relay sendme} only when the number of bytes pending
-to be flushed is under some threshold (currently 10 cells worth).
+stream; it sends the \emph{relay sendme} cell only when the number of bytes pending
+to be flushed is under some threshold (currently 10 cells' worth).
 
 Currently, non-data relay cells do not affect the windows. Thus we
 avoid potential deadlock issues, for example, arising because a stream
 can't send a \emph{relay sendme} cell when its packaging window is empty.
-
-% XXX Bad heading
-% XXX Incorporate this section elsewhere.
-\subsubsection{Needs more research}
-
-We don't need to reimplement full TCP windows (with sequence numbers,
-the ability to drop cells when we're full and retransmit later, etc),
-because the TCP streams already guarantee in-order delivery of each
-cell. But we need to investigate further the effects of the current
-parameters on throughput and latency, while also keeping privacy in mind;
-see Section~\ref{sec:maintaining-anonymity} for more discussion.
 
 \Section{Other design decisions}
 
