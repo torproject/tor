@@ -41,6 +41,7 @@ typedef enum {
   K_NETWORK_STATUS,
   K_UPTIME,
   K_DIR_SIGNING_KEY,
+  K_FAMILY,
   _UNRECOGNIZED,
   _ERR,
   _EOF,
@@ -115,6 +116,7 @@ static struct {
   { "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ,  DIR_ONLY },
   { "uptime",              K_UPTIME,              ARGS,    NO_OBJ,  RTR_ONLY },
   { "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK,  DIR_ONLY },
+  { "family",              K_FAMILY,              ARGS,    NO_OBJ,  RTR_ONLY },
   { NULL, -1, NO_ARGS, NO_OBJ, ANY }
 };
 
@@ -769,6 +771,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
   router->onion_pkey = router->identity_pkey = NULL;
+  router->declared_family = NULL;
   ports_set = bw_set = 0;
 
   if (tok->n_args == 2 || tok->n_args == 5 || tok->n_args == 6) {
@@ -876,6 +879,19 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
                       log_fn(LOG_WARN,"Error in exit policy"); goto err;}
                     );
 
+
+  if ((tok = find_first_by_keyword(tokens, K_FAMILY)) && tok->n_args) {
+    int i;
+    router->declared_family = smartlist_create();
+    for (i=0;i<tok->n_args;++i) {
+      if (!is_legal_nickname_or_hexdigest(tok->args[i])) {
+        log_fn(LOG_WARN, "Illegal nickname %s in family line", tok->args[i]);
+        goto err;
+      }
+      smartlist_add(router->declared_family, tor_strdup(tok->args[i]));
+    }
+  }
+  
   if (!(tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE))) {
     log_fn(LOG_WARN, "Missing router signature"); goto err;
   }

@@ -244,6 +244,7 @@ config_assign(or_options_t *options, struct config_line_t *list)
 
       config_compare(list, "FascistFirewall",CONFIG_TYPE_BOOL, &options->FascistFirewall) ||
       config_compare(list, "FirewallPorts",CONFIG_TYPE_CSV, &options->FirewallPorts) ||
+      config_compare(list, "MyFamily",      CONFIG_TYPE_STRING, &options->MyFamily) ||
 
       config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
 
@@ -517,6 +518,7 @@ init_options(or_options_t *options)
   options->RendConfigLines = NULL;
   options->FirewallPorts = NULL;
   options->DirServers = NULL;
+  options->MyFamily = NULL;
 }
 
 static char *
@@ -552,6 +554,30 @@ get_default_conf_file(void)
 #else
   return tor_strdup(CONFDIR "/torrc");
 #endif
+}
+
+/** Verify whether lst is a string containing valid-looking space-separated
+ * nicknames, or NULL. Return 0 on success. Warn and return -1 on failure.
+ */
+static int check_nickname_list(const char *lst, const char *name)
+{ 
+  int r = 0;
+  smartlist_t *sl;
+
+  if (!lst)
+    return 0;
+  sl = smartlist_create();
+  smartlist_split_string(sl, lst, ",", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH(sl, const char *, s,
+    {
+      if (!is_legal_nickname_or_hexdigest(s)) {
+        log_fn(LOG_WARN, "Invalid nickname '%s' in %s line", s, name);
+        r = -1;
+      }
+    });
+  SMARTLIST_FOREACH(sl, char *, s, tor_free(s));
+  smartlist_free(sl); 
+  return r;
 }
 
 /** Read a configuration file into <b>options</b>, finding the configuration
@@ -838,6 +864,19 @@ getconfig(int argc, char **argv, or_options_t *options)
     }
   }
 
+  if (check_nickname_list(options->ExitNodes, "ExitNodes"))
+    return -1;
+  if (check_nickname_list(options->EntryNodes, "EntryNodes"))
+    return -1;
+  if (check_nickname_list(options->ExcludeNodes, "ExcludeNodes"))
+    return -1;
+  if (check_nickname_list(options->RendNodes, "RendNodes"))
+    return -1;
+  if (check_nickname_list(options->RendNodes, "RendExcludeNodes"))
+    return -1;
+  if (check_nickname_list(options->MyFamily, "MyFamily"))
+    return -1;
+  
   clear_trusted_dir_servers();
   if (!options->DirServers) {
     add_default_trusted_dirservers();
@@ -847,10 +886,6 @@ getconfig(int argc, char **argv, or_options_t *options)
         return -1;
     }
   }
-
-  /* XXX look at the various nicknamelists and make sure they're
-   * valid and don't have hostnames that are too long.
-   */
 
   if (rend_config_services(options) < 0) {
     result = -1;

@@ -597,6 +597,8 @@ typedef struct {
   int is_verified; /**< Has a trusted dirserver validated this OR? */
   int is_trusted_dir; /**< Do we trust this OR as a directory server? */
 
+  smartlist_t *declared_family; /**< Nicknames of router which this router
+                                 * claims are its family. */
 } routerinfo_t;
 
 /** Contents of a directory of onion routers. */
@@ -890,8 +892,6 @@ typedef struct {
   int NumCpus; /**< How many CPUs should we try to use? */
   int RunTesting; /**< If true, create testing circuits to measure how well the
                    * other ORs are running. */
-  struct config_line_t *TrustedDirs; /**< List of fingerprints of keys that are
-                                          allowed to sign directories. */
   struct config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
   char *ContactInfo; /**< Contact info to be published in the directory */
@@ -902,6 +902,7 @@ typedef struct {
 
   struct config_line_t *DirServers; /**< List of configuration lines
                                      * for directory servers. */
+  char *MyFamily; /**< Declared family for this OR. */
 } or_options_t;
 
 /* XXX are these good enough defaults? */
@@ -1415,7 +1416,7 @@ routerinfo_t *router_pick_directory_server(int requireothers);
 trusted_dir_server_t *router_pick_trusteddirserver(int requireothers);
 int all_trusted_directory_servers_down(void);
 struct smartlist_t;
-void routerlist_add_friends(struct smartlist_t *sl, routerinfo_t *router);
+void routerlist_add_family(struct smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list, int warn_if_down);
 routerinfo_t *routerlist_find_my_routerinfo(void);
 int router_nickname_matches(routerinfo_t *router, const char *nickname);
