@@ -307,7 +307,7 @@ char *smartlist_join_strings(smartlist_t *sl, const char *join,
   return smartlist_join_strings2(sl,join,strlen(join),terminate,len_out);
 }
 
-/** As smartlist_join_strings2, but instead of separating/terminated with a
+/** As smartlist_join_strings, but instead of separating/terminated with a
  * NUL-terminated string <b>join</b>, uses the <b>join_len</b>-byte sequence
  * at <b>join</b>.  (Useful for generating a sequence of NUL-terminated
  * strings.)
