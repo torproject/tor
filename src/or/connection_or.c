@@ -215,7 +215,7 @@ static int connection_tls_finish_handshake(connection_t *conn) {
 
   if (conn->nickname) {
     /* I initiated this connection. */
-    if (strcmp(conn->nickname, nickname)) {
+    if (strcasecmp(conn->nickname, nickname)) {
       log_fn(options.DirPort ? LOG_WARN : LOG_INFO,
              "Other side is '%s', but we tried to connect to '%s'",
              nickname, conn->nickname);
