@@ -125,7 +125,7 @@ static void purge_expired_resolves(uint32_t now) {
         pendconn = pend->conn;
         connection_edge_end(pendconn, END_STREAM_REASON_MISC,
                             pendconn->cpath_layer);
-        connection_mark_for_close(pendconn);
+        circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
         connection_free(pendconn);
         tor_free(pend);
       }
@@ -360,15 +360,13 @@ void dns_cancel_pending_resolve(char *address) {
          address);
   while(resolve->pending_connections) {
     pend = resolve->pending_connections;
-    /* So that mark_for_close doesn't double-remove the connection. */
     pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
-    pendconn = pend->conn; /* don't pass complex things to the
-                              connection_mark_for_close macro */
+    pendconn = pend->conn;
     tor_assert(pendconn->s == -1);
     if(!pendconn->marked_for_close) {
       connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
-      connection_mark_for_close(pendconn);
     }
+    circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
     connection_free(pendconn);
     resolve->pending_connections = pend->next;
     tor_free(pend);
@@ -460,7 +458,6 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
       pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
       circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
       connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
-      connection_mark_for_close(pendconn);
       connection_free(pendconn);
     } else {
       /* prevent double-remove. */
