@@ -252,7 +252,7 @@ void init_options(or_options_t *options) {
   options->LogLevel = tor_strdup("warn");
   options->ExitNodes = tor_strdup("");
   options->EntryNodes = tor_strdup("");
-  options->ExitPolicy = tor_strdup("reject 127.0.0.1:*");
+  options->ExitPolicy = tor_strdup("reject *:25,accept *:*");
   options->SocksBindAddress = tor_strdup("127.0.0.1");
   options->ORBindAddress = tor_strdup("0.0.0.0");
   options->DirBindAddress = tor_strdup("0.0.0.0");
