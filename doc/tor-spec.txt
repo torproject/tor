@@ -357,7 +357,7 @@ which reveals the downstream node.
           begin queueing CREATE cells for this circuit.
 
           Otherwise, we have a half-open circuit.  If the total payload
-          length of the CREATE cells for this circuit is at exactly equal
+          length of the CREATE cells for this circuit is exactly equal
           to the onion length specified in the first cell (minus 4), then
           process the onion. If it is more, then tear down the circuit.
   
