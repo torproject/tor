@@ -283,6 +283,7 @@ int retry_all_connections(uint16_t or_listenport,
   if(ap_listenport) {
     bindaddr.sin_port = htons(ap_listenport);
     inet_aton("127.0.0.1", &(bindaddr.sin_addr)); /* the AP listens only on localhost! */
+    /* XXX inet_aton is missing on solaris. use something simpler? */
     if(!connection_get_by_type(CONN_TYPE_AP_LISTENER)) {
       connection_ap_create_listener(&bindaddr);
     }
@@ -652,7 +653,7 @@ int connection_package_raw_inbuf(connection_t *conn) {
 
   assert(conn);
   assert(!connection_speaks_cells(conn));
-  /* this function should never get called if the receive_topicwindow is 0 */
+  /* this function should never get called if the receive_streamwindow is 0 */
  
 repeat_connection_package_raw_inbuf:
 
@@ -670,21 +671,21 @@ repeat_connection_package_raw_inbuf:
    *       compressing.
    *    2) 
    */
-  len = connection_compress_from_buf(cell.payload+TOPIC_HEADER_SIZE,
-                                     CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE,
+  len = connection_compress_from_buf(cell.payload+RELAY_HEADER_SIZE,
+                                     CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE,
                                      conn, Z_SYNC_FLUSH);
   if (len < 0)
     return -1;
 
   cell.length = len;    
 #else 
-  if(amount_to_process > CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE) {
-    cell.length = CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE;
+  if(amount_to_process > CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE) {
+    cell.length = CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE;
   } else {
     cell.length = amount_to_process;
   }
 
-  if(connection_fetch_from_buf(cell.payload+TOPIC_HEADER_SIZE, 
+  if(connection_fetch_from_buf(cell.payload+RELAY_HEADER_SIZE, 
                                cell.length, conn) < 0)
     return -1;
 #endif
@@ -698,40 +699,40 @@ repeat_connection_package_raw_inbuf:
   log(LOG_DEBUG,"connection_package_raw_inbuf(): (%d) Packaging %d bytes (%d waiting).",conn->s,cell.length, conn->inbuf_datalen);
 
 
-  cell.command = CELL_DATA;
-  SET_CELL_TOPIC_COMMAND(cell, TOPIC_COMMAND_DATA);
-  SET_CELL_TOPIC_ID(cell, conn->topic_id);
-  cell.length += TOPIC_HEADER_SIZE;
+  cell.command = CELL_RELAY;
+  SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_DATA);
+  SET_CELL_STREAM_ID(cell, conn->stream_id);
+  cell.length += RELAY_HEADER_SIZE;
 
   if(conn->type == CONN_TYPE_EXIT) {
     cell.aci = circ->p_aci;
-    if(circuit_deliver_data_cell_from_edge(&cell, circ, EDGE_EXIT) < 0) {
-      log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_data_cell_from_edge (backward) failed. Closing.");
+    if(circuit_deliver_relay_cell_from_edge(&cell, circ, EDGE_EXIT) < 0) {
+      log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_relay_cell_from_edge (backward) failed. Closing.");
       circuit_close(circ);
       return 0;
     }
-    assert(conn->n_receive_topicwindow > 0);
-    if(--conn->n_receive_topicwindow <= 0) { /* is it 0 after decrement? */
+    assert(conn->n_receive_streamwindow > 0);
+    if(--conn->n_receive_streamwindow <= 0) { /* is it 0 after decrement? */
       connection_stop_reading(conn);
-      log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at exit reached 0.");
+      log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_streamwindow at exit reached 0.");
       return 0; /* don't process the inbuf any more */
     }
-    log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at exit is %d",conn->n_receive_topicwindow);
+    log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_streamwindow at exit is %d",conn->n_receive_streamwindow);
   } else { /* send it forward. we're an AP */
     assert(conn->type == CONN_TYPE_AP);
     cell.aci = circ->n_aci;
-    if(circuit_deliver_data_cell_from_edge(&cell, circ, EDGE_AP) < 0) {
-      log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_data_cell_from_edge (forward) failed. Closing.");
+    if(circuit_deliver_relay_cell_from_edge(&cell, circ, EDGE_AP) < 0) {
+      log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_relay_cell_from_edge (forward) failed. Closing.");
       circuit_close(circ);
       return 0;
     }
-    assert(conn->p_receive_topicwindow > 0);
-    if(--conn->p_receive_topicwindow <= 0) { /* is it 0 after decrement? */
+    assert(conn->p_receive_streamwindow > 0);
+    if(--conn->p_receive_streamwindow <= 0) { /* is it 0 after decrement? */
       connection_stop_reading(conn);
-      log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at AP reached 0.");
+      log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_streamwindow at AP reached 0.");
       return 0; /* don't process the inbuf any more */
     }
-    log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at AP is %d",conn->p_receive_topicwindow);
+    log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_streamwindow at AP is %d",conn->p_receive_streamwindow);
   }
   /* handle more if there's more, or return 0 if there isn't */
   goto repeat_connection_package_raw_inbuf;
@@ -752,30 +753,30 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
   }
 
   memset(&cell, 0, sizeof(cell_t));
-  cell.command = CELL_DATA;
-  SET_CELL_TOPIC_COMMAND(cell, TOPIC_COMMAND_SENDME);
-  SET_CELL_TOPIC_ID(cell, conn->topic_id);
-  cell.length += TOPIC_HEADER_SIZE;
+  cell.command = CELL_RELAY;
+  SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_SENDME);
+  SET_CELL_STREAM_ID(cell, conn->stream_id);
+  cell.length += RELAY_HEADER_SIZE;
 
   if(edge_type == EDGE_EXIT) { /* we're at an exit */
-    if(conn->p_receive_topicwindow < TOPICWINDOW_START - TOPICWINDOW_INCREMENT) {
-      log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing topic sendme back.", conn->outbuf_flushlen);
-      conn->p_receive_topicwindow += TOPICWINDOW_INCREMENT;
+    if(conn->p_receive_streamwindow < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
+      log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing stream sendme back.", conn->outbuf_flushlen);
+      conn->p_receive_streamwindow += STREAMWINDOW_INCREMENT;
       cell.aci = circ->p_aci;
-      if(circuit_deliver_data_cell_from_edge(&cell, circ, edge_type) < 0) {
-        log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_data_cell_from_edge (backward) failed. Closing.");
+      if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type) < 0) {
+        log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_relay_cell_from_edge (backward) failed. Closing.");
         circuit_close(circ);
         return 0;
       }
     }
   } else { /* we're at an AP */
     assert(edge_type == EDGE_AP);
-    if(conn->n_receive_topicwindow < TOPICWINDOW_START-TOPICWINDOW_INCREMENT) {
-      log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing topic sendme forward.", conn->outbuf_flushlen);
-      conn->n_receive_topicwindow += TOPICWINDOW_INCREMENT;
+    if(conn->n_receive_streamwindow < STREAMWINDOW_START-STREAMWINDOW_INCREMENT) {
+      log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing stream sendme forward.", conn->outbuf_flushlen);
+      conn->n_receive_streamwindow += STREAMWINDOW_INCREMENT;
       cell.aci = circ->n_aci;
-      if(circuit_deliver_data_cell_from_edge(&cell, circ, edge_type) < 0) {
-        log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_data_cell_from_edge (forward) failed. Closing.");
+      if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type) < 0) {
+        log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_relay_cell_from_edge (forward) failed. Closing.");
         circuit_close(circ);
         return 0;
       }

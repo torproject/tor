@@ -70,7 +70,7 @@ int onion_pending_check(void) {
 }
 
 void onion_pending_process_one(void) {
-  struct data_queue_t *tmpd;
+  struct relay_queue_t *tmpd;
   circuit_t *circ; 
 
   if(!ol_list)
@@ -85,9 +85,9 @@ void onion_pending_process_one(void) {
     onion_pending_remove(circ);
     circuit_close(circ);
   } else {
-    log(LOG_DEBUG,"onion_pending_process_one(): Succeeded. Delivering queued data cells.");
-    for(tmpd = ol_list->data_cells; tmpd; tmpd=tmpd->next) {
-      command_process_data_cell(tmpd->cell, circ->p_conn); 
+    log(LOG_DEBUG,"onion_pending_process_one(): Succeeded. Delivering queued relay cells.");
+    for(tmpd = ol_list->relay_cells; tmpd; tmpd=tmpd->next) {
+      command_process_relay_cell(tmpd->cell, circ->p_conn); 
     }
     onion_pending_remove(circ);
   }
@@ -99,7 +99,7 @@ void onion_pending_process_one(void) {
  */
 void onion_pending_remove(circuit_t *circ) {
   struct onion_queue_t *tmpo, *victim;
-  struct data_queue_t *tmpd;
+  struct relay_queue_t *tmpd;
 
   if(!ol_list)
     return; /* nothing here. */
@@ -129,10 +129,10 @@ void onion_pending_remove(circuit_t *circ) {
 
   /* now victim points to the element that needs to be removed */
 
-  /* first dump the attached data cells too, if any */
-  while(victim->data_cells) {
-    tmpd = victim->data_cells;
-    victim->data_cells = tmpd->next;
+  /* first dump the attached relay cells too, if any */
+  while(victim->relay_cells) {
+    tmpd = victim->relay_cells;
+    victim->relay_cells = tmpd->next;
     free(tmpd->cell);
     free(tmpd);
   }
@@ -141,11 +141,11 @@ void onion_pending_remove(circuit_t *circ) {
 
 }
 
-struct data_queue_t *data_queue_add(struct data_queue_t *list, cell_t *cell) {
-  struct data_queue_t *tmpd, *newd;
+struct relay_queue_t *relay_queue_add(struct relay_queue_t *list, cell_t *cell) {
+  struct relay_queue_t *tmpd, *newd;
 
-  newd = malloc(sizeof(struct data_queue_t));
-  memset(newd, 0, sizeof(struct data_queue_t));
+  newd = malloc(sizeof(struct relay_queue_t));
+  memset(newd, 0, sizeof(struct relay_queue_t));
   newd->cell = malloc(sizeof(cell_t));
   memcpy(newd->cell, cell, sizeof(cell_t));
 
@@ -158,16 +158,16 @@ struct data_queue_t *data_queue_add(struct data_queue_t *list, cell_t *cell) {
   return list;
 }
 
-/* a data cell has arrived for a circuit which is still pending. Find
- * the right entry in ol_list, and add it to the end of the 'data_cells'
+/* a relay cell has arrived for a circuit which is still pending. Find
+ * the right entry in ol_list, and add it to the end of the 'relay_cells'
  * list.
  */
-void onion_pending_data_add(circuit_t *circ, cell_t *cell) {
+void onion_pending_relay_add(circuit_t *circ, cell_t *cell) {
   struct onion_queue_t *tmpo;
 
   for(tmpo=ol_list; tmpo; tmpo=tmpo->next) {
     if(tmpo->circ == circ) {
-      tmpo->data_cells = data_queue_add(tmpo->data_cells, cell);
+      tmpo->relay_cells = relay_queue_add(tmpo->relay_cells, cell);
       return;
     }
   }
