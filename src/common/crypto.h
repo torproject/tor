@@ -59,6 +59,13 @@ int crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *from, int from
 int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding);
 int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
 int crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
+int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env, unsigned char *from,
+				    int fromlen, unsigned char *to,
+				    int padding);
+int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env, unsigned char *from,
+				    int fromlen, unsigned char *to,
+				    int padding);
+
 #define FINGERPRINT_LEN 49
 int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len);
 crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len);
