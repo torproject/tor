@@ -32,7 +32,7 @@ Dependencies:
   For tor itself, you're going to need openssl (0.9.5 or later
   -- including the dev stuff and includes). If you're on Linux,
   everything will probably work fine. OS X and BSD (but see below under
-  troubleshooting) now work too. Let us know if you get it working
+  troubleshooting) may work too. Let us know if you get it working
   elsewhere.
 
 If you got the source from cvs:
@@ -90,7 +90,7 @@ How to use it:
 
   For more convenient command-line use, I recommend making a ~/.wgetrc
   with the line
-    http_proxy=localhost:8118
+    http_proxy=http://localhost:8118
   Then you can do things like "wget seul.org" and watch as it downloads
   from the onion routing network.
 
