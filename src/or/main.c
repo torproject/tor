@@ -737,14 +737,12 @@ static int do_hup(void) {
   /* first, reload config variables, in case they've changed */
   /* no need to provide argc/v, they've been cached inside init_from_config */
   if (init_from_config(0, NULL) < 0) {
-    tor_cleanup();
-    exit(1);
+    return -1;
   }
   /* reload keys as needed for rendezvous services. */
   if (rend_service_load_keys()<0) {
     log_fn(LOG_ERR,"Error reloading rendezvous service keys");
-    tor_cleanup();
-    exit(1);
+    return -1;
   }
   if(retry_all_listeners() < 0) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
@@ -848,7 +846,11 @@ static int do_main_loop(void) {
       please_dumpstats = 0;
     }
     if(please_reset) {
-      do_hup();
+      if (do_hup() < 0) {
+        log_fn(LOG_WARN,"Restart failed (config error?). Exiting.");
+        tor_cleanup();
+        exit(1);
+      }
       please_reset = 0;
     }
     if(please_reap_children) {
