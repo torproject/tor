@@ -1,10 +1,9 @@
 $Id$
 
-                                  Tor Spec
+                         Tor Protocol Specification
 
                               Roger Dingledine
                                Nick Mathewson
-                           (who else wrote this?)
 
 Note: This is an attempt to specify Tor as it exists as implemented in
 mid-August, 2004.  It is not recommended that others implement this
