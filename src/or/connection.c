@@ -315,10 +315,14 @@ static int connection_tls_finish_handshake(connection_t *conn) {
         log_fn(LOG_INFO,"Other side has a cert but it's bad. Closing.");
         return -1;
       }
-      router = look up which router I just connected to. /* XXX */
+      router = router_get_by_pk(pk);
+      if (!router) {
+        log_fn(LOG_INFO,"Unrecognized public key from peer. Closing.");
+        crypto_free_pk_env(pk);
+      }
       conn->bandwidth = router->bandwidth;
       conn->addr = router->addr, conn->port = router->or_port;
-      conn->pkey = crypto_pk_dup_key(router->pkey);
+      conn->pkey = pk;
       if(conn->address)
         free(conn->address);
       conn->address = strdup(router->address);
@@ -326,6 +330,7 @@ static int connection_tls_finish_handshake(connection_t *conn) {
       conn->bandwidth = DEFAULT_BANDWIDTH_OP;
     }
   } else { /* I'm a client */
+    /* XXX Clients should also verify certificates. */
     conn->bandwidth = DEFAULT_BANDWIDTH_OP;
     circuit_n_conn_open(conn); /* send the pending create */
   }
