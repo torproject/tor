@@ -9,7 +9,8 @@ extern or_options_t options; /* command-line and config-file options */
 static int onion_process(circuit_t *circ);
 static int onion_deliver_to_conn(aci_t aci, unsigned char *onion, uint32_t onionlen, connection_t *conn);
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len);
-static int find_tracked_onion(unsigned char *onion, uint32_t onionlen);
+static int find_tracked_onion(unsigned char *onion, uint32_t onionlen,
+                              int expire);
 
 int decide_aci_type(uint32_t local_addr, uint16_t local_port,
                     uint32_t remote_addr, uint16_t remote_port) {
@@ -245,7 +246,7 @@ static int onion_process(circuit_t *circ) {
   }
 
   /* check for replay. at the same time, add it to the pile of tracked onions. */
-  if(find_tracked_onion(circ->onion, circ->onionlen)) {
+  if(find_tracked_onion(circ->onion, circ->onionlen, layer.expire)) {
     log(LOG_NOTICE,"process_onion(): I have just received a replayed onion. This could be a replay attack.");
     return -1;
   }
@@ -756,7 +757,8 @@ void init_tracked_tree(void) {
 /* see if this onion has been seen before. if so, return 1, else
  * return 0 and add the sha1 of this onion to the tree.
  */
-static int find_tracked_onion(unsigned char *onion, uint32_t onionlen) {
+static int find_tracked_onion(unsigned char *onion, uint32_t onionlen,
+                              int expire) {
   static struct tracked_onion *head_tracked_onions = NULL; /* linked list of tracked onions */
   static struct tracked_onion *tail_tracked_onions = NULL;
 
@@ -791,7 +793,7 @@ static int find_tracked_onion(unsigned char *onion, uint32_t onionlen) {
   
   /* this is a new onion. add it to the list. */
 
-  to->expire = ntohl(*(uint32_t *)(onion+7)); /* set the expiration date */
+  to->expire = expire; /* set the expiration date */
   to->next = NULL;
 
   if (!head_tracked_onions) {

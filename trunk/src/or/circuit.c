@@ -144,7 +144,7 @@ int circuit_init(circuit_t *circ, int aci_type, onion_layer_t *layer) {
   unsigned char digest1[20];
   unsigned char digest2[20];
   struct timeval start, end;
-  int time_passed; 
+  int time_passed;
 
   assert(circ && circ->onion);
 
@@ -166,7 +166,8 @@ int circuit_init(circuit_t *circ, int aci_type, onion_layer_t *layer) {
 
   my_gettimeofday(&end);
 
-  if (tv_udiff(&start, &end) > 1000) {/* more than 1ms */
+  time_passed = tv_udiff(&start, &end);
+  if (time_passed > 1000) {/* more than 1ms */
     log(LOG_NOTICE,"circuit_init(): get_unique_aci just took %d us!",time_passed);
   }
 
