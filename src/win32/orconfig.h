@@ -190,4 +190,4 @@ ine to the address where bug reports for this package should be sent. */
 #define UNALIGNED_INT_ACCESS_OK
 
 /* Version number of package */
-#define VERSION "0.0.6rc3"
+#define VERSION "0.0.6rc4"
