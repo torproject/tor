@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.3  2003/05/09 02:41:27  nickm
+ * One is the language; the other is the compiler
+ *
  * Revision 1.2  2003/05/09 02:25:37  nickm
  * work on versioning; new log_fn function
  *
@@ -39,7 +42,7 @@
 /* Outputs a message to stdout and also logs the same message using syslog. */
 void log(int severity, const char *format, ...);
 
-#ifdef __GNUCC__
+#ifdef __GNUC__
 #define log_fn(severity, format, args...) \
   log((severity), __PRETTY_FUNCTION__ # "(): " # format, ##args)
 #else
