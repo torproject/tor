@@ -478,7 +478,8 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
 
   s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
-    log_fn(LOG_WARN,"Error creating network socket.");
+    log_fn(LOG_WARN,"Error creating network socket: %s",
+           tor_socket_strerror(tor_socket_errno(-1)));
     return -1;
   }
   set_socket_nonblocking(s);

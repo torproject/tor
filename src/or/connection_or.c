@@ -167,6 +167,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
 
   /* this function should never be called if we're already connected to
    * id_digest, but check first to be sure */
+/*XXX008 this is getting called, at least by dirservers. */
   conn = connection_get_by_identity_digest(id_digest, CONN_TYPE_OR);
   if(conn) {
     tor_assert(conn->nickname);
