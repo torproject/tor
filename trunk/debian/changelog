@@ -1,3 +1,11 @@
+tor (0.0.8+0.0.9rc2-1) unstable; urgency=low
+
+  * New upstream release (candidate).
+  * Nick's patch is now part of upstream, remove it from
+    the debian diff.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 24 Nov 2004 09:03:13 +0100
+
 tor (0.0.8+0.0.9rc1-1) unstable; urgency=low
 
   * New upstream release (candidate).
