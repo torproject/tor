@@ -1256,6 +1256,23 @@ connection_t *connection_get_by_type_state(int type, int state) {
   return NULL;
 }
 
+/** Return a connection of type <b>type</b> that has purpose <b>purpose</b>,
+ * and that is not marked for close.
+ */
+connection_t *connection_get_by_type_purpose(int type, int purpose) {
+  int i, n;
+  connection_t *conn;
+  connection_t **carray;
+
+  get_connection_array(&carray,&n);
+  for (i=0;i<n;i++) {
+    conn = carray[i];
+    if (conn->type == type && conn->purpose == purpose && !conn->marked_for_close)
+      return conn;
+  }
+  return NULL;
+}
+
 /** Return the connection of type <b>type</b> that is in state
  * <b>state</b>, that was written to least recently, and that is not
  * marked for close.
