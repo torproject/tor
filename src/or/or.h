@@ -425,6 +425,7 @@ typedef enum {
 #define END_STREAM_REASON_INTERNAL 10
 #define END_STREAM_REASON_RESOURCELIMIT 11
 #define END_STREAM_REASON_CONNRESET 12
+#define END_STREAM_REASON_TORPROTOCOL 13
 
 #define RESOLVED_TYPE_IPV4 4
 #define RESOLVED_TYPE_IPV6 6
@@ -1286,6 +1287,7 @@ int connection_edge_reached_eof(connection_t *conn);
 int connection_edge_process_inbuf(connection_t *conn, int package_partial);
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn);
 int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer);
+int connection_edge_end_errno(connection_t *conn, crypt_path_t *cpath_layer);
 int connection_edge_finished_flushing(connection_t *conn);
 int connection_edge_finished_connecting(connection_t *conn);
 
@@ -1527,9 +1529,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
 int connection_edge_package_raw_inbuf(connection_t *conn, int package_partial);
 void connection_edge_consider_sending_sendme(connection_t *conn);
 socks5_reply_status_t connection_edge_end_reason_sock5_response(char *payload, uint16_t length);
-int errno_to_end_reasaon(int e);
-
-
+int errno_to_end_reason(int e);
 
 extern uint64_t stats_n_data_cells_packaged;
 extern uint64_t stats_n_data_bytes_packaged;

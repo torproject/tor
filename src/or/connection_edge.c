@@ -78,6 +78,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       if (connection_edge_package_raw_inbuf(conn, package_partial) < 0) {
+        /* XXXX We can't tell *why* package failed. -NM */
         connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
         connection_mark_for_close(conn);
         return -1;
@@ -96,7 +97,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
 #ifdef TOR_FRAGILE
   tor_assert(0);
 #endif
-  connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+  connection_edge_end(conn, END_STREAM_REASON_INTERNAL, conn->cpath_layer);
   connection_mark_for_close(conn);
   return -1;
 }
@@ -160,6 +161,17 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
   conn->has_sent_end = 1;
   return 0;
 }
+
+/** DOCDOC **/
+int
+connection_edge_end_errno(connection_t *conn, crypt_path_t *cpath_layer)
+{
+  uint8_t reason;
+  tor_assert(conn);
+  reason = (uint8_t)errno_to_end_reason(tor_socket_errno(conn->s));
+  return connection_edge_end(conn, reason, cpath_layer);
+}
+
 
 /** Connection <b>conn</b> has finished writing and has no bytes left on
  * its outbuf.
@@ -1036,7 +1048,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   /* default to failed, change in dns_resolve if it turns out not to fail */
 
   if (we_are_hibernating()) {
-    connection_edge_end(n_stream, END_STREAM_REASON_EXITPOLICY, n_stream->cpath_layer);
+    connection_edge_end(n_stream, END_STREAM_REASON_HIBERNATING, n_stream->cpath_layer);
     connection_free(n_stream);
     return 0;
   }
@@ -1156,8 +1168,7 @@ connection_exit_connect(connection_t *conn) {
   log_fn(LOG_DEBUG,"about to try connecting");
   switch (connection_connect(conn, conn->address, addr, port)) {
     case -1:
-      connection_edge_end(conn, END_STREAM_REASON_CONNECTREFUSED,
-                          conn->cpath_layer);
+      connection_edge_end_errno(conn, conn->cpath_layer);
       circuit_detach_stream(circuit_get_by_conn(conn), conn);
       connection_free(conn);
       return;

@@ -474,6 +474,7 @@ connection_edge_end_reason_str(char *payload, uint16_t length) {
     case END_STREAM_REASON_INTERNAL:       return "internal error at server";
     case END_STREAM_REASON_RESOURCELIMIT:  return "server out of resources";
     case END_STREAM_REASON_CONNRESET:      return "connection reset";
+    case END_STREAM_REASON_TORPROTOCOL:    return "Tor protocol error";
     default:
       log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
       return "unknown";
@@ -509,6 +510,8 @@ connection_edge_end_reason_sock5_response(char *payload, uint16_t length) {
       return SOCKS5_GENERAL_ERROR;
     case END_STREAM_REASON_CONNRESET:
       return SOCKS5_CONNECTION_REFUSED;
+    case END_STREAM_REASON_TORPROTOCOL:
+      return SOCKS5_GENERAL_ERROR;
     default:
       log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
       return SOCKS5_GENERAL_ERROR;
@@ -524,7 +527,7 @@ connection_edge_end_reason_sock5_response(char *payload, uint16_t length) {
 #endif
 
 int
-errno_to_end_reasaon(int e)
+errno_to_end_reason(int e)
 {
   switch (e) {
     E_CASE(EPIPE):
@@ -668,7 +671,7 @@ connection_edge_process_relay_cell_not_open(
       addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
       if (!addr) {
         log_fn(LOG_INFO,"...but it claims the IP address was 0.0.0.0. Closing.");
-        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+        connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL, conn->cpath_layer);
         connection_mark_for_close(conn);
         return 0;
       }
@@ -680,6 +683,7 @@ connection_edge_process_relay_cell_not_open(
     conn->socks_request->has_finished = 1;
     /* handle anything that might have queued */
     if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
+      /* XXXX we can't tell why package failed. -NM */
       connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
       connection_mark_for_close(conn);
       return 0;
@@ -710,7 +714,7 @@ connection_edge_process_relay_cell_not_open(
 
   log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
          rh->command, conn->state, conn_state_to_string[conn->type][conn->state]);
-  connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+  connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL, conn->cpath_layer);
   connection_mark_for_close(conn);
   return -1;
 }
@@ -771,7 +775,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       if (( layer_hint && --layer_hint->deliver_window < 0) ||
           (!layer_hint && --circ->deliver_window < 0)) {
         log_fn(LOG_WARN,"(relay data) circ deliver_window below 0. Killing.");
-        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+        connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL, conn->cpath_layer);
         connection_mark_for_close(conn);
         return -1;
       }

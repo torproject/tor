@@ -72,15 +72,20 @@ R . HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
   o Changes for forward compatibility
     o If a version is later than the last in its series, but a version
       in the next series is recommended, that doesn't mean it's bad.
-  - Do end reasons better
+N . Do end reasons better
     . Start using RESOURCELIMIT more.
-    . Try to use MISC a lot less.
-      - bug: if the exit node fails to create a socket (e.g. because it
+    o Try to use MISC a lot less.
+      o bug: if the exit node fails to create a socket (e.g. because it
         has too many open), we will get a generic stream end response.
-      . niels's "did it fail because conn refused or timeout or what"
+        o Fix on platforms with set_max_file_descriptors.
+      o niels's "did it fail because conn refused or timeout or what"
         relay end feature.
     o Realize that unrecognized end reasons are probably features rather than
       bugs. (backport to 009x)
+    - Check for anyplace where we can close an edge connection without
+      sending an end; see if we should send an end.
+    - Get some kind of sane return code from package_raw_inbuf, or maybe
+      push the work of sending the end cell deeper into package_raw_inbuf.
 N . Feed end reason back into SOCK5 as reasonable.
 R o cache .foo.exit names better, or differently, or not.
 N - make !advertised_server_mode() ORs fetch dirs less often.
