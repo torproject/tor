@@ -772,6 +772,8 @@ static void catch(int the_signal) {
 #endif /* signal stuff */
 }
 
+/* Write all statistics to the log, with log level 'severity'.  Called
+ * in response to a SIGUSR1. */
 static void dumpstats(int severity) {
   int i;
   connection_t *conn;
@@ -826,6 +828,9 @@ static void dumpstats(int severity) {
   rend_service_dump_stats(severity);
 }
 
+/* Called before we make any calls to network-related functions.
+ * (Some operating systems require their network libraries to be
+ * initialized.) */
 int network_init(void)
 {
 #ifdef MS_WINDOWS
@@ -843,6 +848,8 @@ int network_init(void)
   return 0;
 }
 
+/* Called by exit() as we shut down the process.
+ */
 void exit_function(void)
 {
 #ifdef MS_WINDOWS
@@ -850,6 +857,8 @@ void exit_function(void)
 #endif
 }
 
+/* Main entry point for the Tor command-line client.
+ */
 int tor_main(int argc, char *argv[]) {
 
   /* give it somewhere to log to initially */
