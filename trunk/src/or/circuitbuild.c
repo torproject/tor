@@ -633,8 +633,8 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
  * just give up: for circ to close, and return 0.
  */
 int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
-  crypt_path_t *victim;
-  connection_t *stream;
+//  crypt_path_t *victim;
+//  connection_t *stream;
 
   tor_assert(circ && CIRCUIT_IS_ORIGIN(circ));
   tor_assert(layer);
@@ -646,6 +646,7 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
   circuit_mark_for_close(circ);
   return 0;
 
+#if 0
   while(layer->next != circ->cpath) {
     /* we need to clear out layer->next */
     victim = layer->next;
@@ -668,6 +669,7 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
 
   log_fn(LOG_INFO, "finished");
   return 0;
+#endif
 }
 
 /** Decide whether the first bit of the circuit ID will be
