@@ -159,7 +159,7 @@ SOCKS (see section \ref{subsec:tcp-vs-ip}).
 
 Tor differs from other deployed systems for traffic analysis resistance
 in its security and flexibility.  Mix networks such as
-Mixmaster~\cite{mixmaster} or its successor Mixminion~\cite{minion-design}
+Mixmaster~\cite{mixmaster-spec} or its successor Mixminion~\cite{minion-design}
 gain the highest degrees of anonymity at the expense of introducing highly
 variable delays, thus making them unsuitable for applications such as web
 browsing that require quick response times.  Commercial single-hop
@@ -206,7 +206,7 @@ Tor is not the only anonymity system that aims to be practical and useful.
 Commercial single-hop proxies~\cite{anonymizer}, as well as unsecured
 open proxies around the Internet~\cite{open-proxies}, can provide good
 performance and some security against a weaker attacker. Dresden's Java
-Anon Proxy~\cite{jap} provides similar functionality to Tor but only
+Anon Proxy~\cite{web-mix} provides similar functionality to Tor but only
 handles web browsing rather than arbitrary TCP. Also, JAP's network
 topology uses cascades (fixed routes through the network); since without
 end-to-end padding it is just as vulnerable as Tor to end-to-end timing
@@ -219,8 +219,8 @@ that it could transport arbitrary IP packets, and it also supported
 pseudonymous access rather than just anonymous access; but it had
 a different approach to sustainability (collecting money from users
 and paying ISPs to run servers), and has shut down due to financial
-load.  Finally, more scalable designs like Tarzan~\cite{tarzan} and
-MorphMix~\cite{morphmix} have been proposed in the literature, but
+load.  Finally, more scalable designs like Tarzan~\cite{tarzan:ccs02} and
+MorphMix~\cite{morphmix:fc04} have been proposed in the literature, but
 have not yet been fielded. We direct the interested reader to Section
 2 of~\cite{tor-design} for a more indepth review of related work.
 
@@ -531,7 +531,7 @@ approach that can provide security despite
 packet loss and out-of-order delivery. Freedom allegedly had one, but it was
 never publicly specified, and we believe it's likely vulnerable to tagging
 attacks \cite{tor-design}. Also, TLS over UDP is not implemented or even
-specified, though some early work has begun on that \cite{ben-tls-udp}.
+specified, though some early work has begun on that \cite{dtls}.
 \item \emph{We'll still need to tune network parameters}. Since the above
 encryption system will likely need sequence numbers and maybe more to do
 replay detection, handle duplicate frames, etc, we will be reimplementing
@@ -593,11 +593,11 @@ granularity.  If servers forward these chunks in roughly synchronous
 fashion, it will increase the similarity of data stream timing
 signatures. By experimenting with the granularity of data chunks and
 of synchronization we can attempt once again to optimize for both
-usability and anonymity. Unlike in \cite{sync-batch}, it may be
+usability and anonymity. Unlike in \cite{sync-batching}, it may be
 impractical to synchronize on network batches by dropping chunks from
 a batch that arrive late at a given node---unless Tor moves away from
 stream processing to a more loss-tolerant processing of traffic (cf.\ 
-section~\ref{subsec:stream-vs-packet}). In other words, there would
+Section~\ref{subsec:stream-vs-packet}). In other words, there would
 probably be no direct attempt to synchronize on batches of data
 entering the Tor network at the same time. Rather, it is the link
 level batching that will add noise to the traffic patterns exiting the
@@ -918,6 +918,7 @@ style doesn't work because we don't want just *one* path. Point to
 Geoff's stuff.
 
 \subsection{Location diversity and ISP-class adversaries}
+\label{subsec:routing-zones}
 
 Anonymity networks have long relied on diversity of node location for
 protection against attacks---typically an adversary who can observe a
@@ -930,7 +931,7 @@ distributed trust to spread each transaction over multiple jurisdictions.
 But how do we decide whether two nodes are in related locations?
 
 Feamster and Dingledine defined a \emph{location diversity} metric
-in \cite{routing-zones}, and began investigating a variant of location
+in \cite{feamster:wpes2004}, and began investigating a variant of location
 diversity based on the fact that the Internet is divided into thousands of
 independently operated networks called {\em autonomous systems} (ASes).
 The key insight from this paper is that while we typically think of a
@@ -954,8 +955,8 @@ Many open questions remain. First, it will be an immense engineering
 challenge to get an entire BGP routing table to each Tor client, or at
 least summarize it sufficiently. Without a local copy, clients won't be
 able to safely predict what ASes will be traversed on the various paths
-through the Tor network to the final destination. Tarzan~\cite{tarzan}
-and MorphMix~\cite{morphmix} suggest that we compare IP prefixes to
+through the Tor network to the final destination. Tarzan~\cite{tarzan:ccs02}
+and MorphMix~\cite{morphmix:fc04} suggest that we compare IP prefixes to
 determine location diversity; but the above paper showed that in practice
 many of the Mixmaster nodes that share a single AS have entirely different
 IP prefixes. When the network has scaled to thousands of nodes, does IP
@@ -1011,7 +1012,7 @@ addresses (or having them donated), abandoning old addresses as they are
 anonymizing networks again have an advantage here, in that we already
 have tens of thousands of separate IP addresses whose users might
 volunteer to provide this service since they've already installed and use
-the software for their own privacy~\cite{koepsell-wpes2004}. Because
+the software for their own privacy~\cite{koepsell:wpes2004}. Because
 the Tor protocol separates routing from network discovery (see Section
 \ref{do-we-discuss-this?}), volunteers could configure their Tor clients
 to generate server descriptors and send them to a special directory
