@@ -1,0 +1,75 @@
+#! /bin/sh
+
+TORBIN=@BINDIR@/tor
+TORPID=@LOCALSTATEDIR@/run/tor.pid
+TORLOG=@LOCALSTATEDIR@/log/tor/tor.log
+TORCONF=@CONFDIR@/torrc
+RETVAL=0
+
+case "$1" in
+
+    start)
+    if [ -f $TORPID ]; then
+        echo "tor appears to be already running (pid file exists)"
+        echo "Maybe you should run: $0 restart ?"
+        RETVAL=1
+    else 
+        echo -n "Starting tor..."
+        $TORBIN -f $TORCONF -l warning >$TORLOG 2>&1 &
+        RETVAL=$?
+        if [ $RETVAL -eq 0 ]; then
+            echo " ok"
+        else
+            echo " ERROR!"
+        fi
+    fi
+    ;;
+
+    stop)
+    if [ -f $TORPID ]; then
+        echo -n "Killing tor..."
+        kill `cat $TORPID`
+        RETVAL=$?
+        if [ $RETVAL -eq 0 ]; then
+            echo " ok"
+        else
+            echo " ERROR!"
+        fi
+    else
+        echo "Unable to kill tor: $TORPID does not exist"
+        RETVAL=1
+    fi
+    ;;
+
+    restart)
+    $0 stop
+    if [ -f $TORPID ]; then
+            rm -f $TORPID
+    fi
+    $0 start
+    ;;
+
+    status)
+    PID=`cat $TORPID 2>/dev/null`
+    if [ "$PID" != "" ]; then
+        torstat=`ps -p $PID | grep -c "^$PID"`
+        if [ $torstat ]; then
+            echo "tor is running ($PID)"
+        else
+            echo "tor is not running (looks like it crashed, look for core?  $PID)"
+        fi
+    else
+        echo "tor is not running (exited gracefully)"
+    fi
+    ;;
+
+    log)
+    cat $TORLOG
+    ;;
+    
+    *)
+    echo "Usage: $0 (start|stop|restart|status|log)"
+    exit 1
+esac
+
+exit $RETVAL

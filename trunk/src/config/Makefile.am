@@ -1,3 +1,5 @@
+confdir = $(sysconfdir)/tor
 
-EXTRA_DIST = dirservers oprc sample-orrc
+EXTRA_DIST = dirservers
 
+conf_DATA = dirservers torrc sample-server-torrc

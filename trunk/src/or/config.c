@@ -220,8 +220,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   }
   if(i < argc-1) { /* we found one */
     fname = argv[i+1];
-  } else { /* didn't find one, try /etc/torrc */
-    fname = "/etc/torrc";
+  } else { /* didn't find one, try CONFDIR */
+    fname = CONFDIR "/torrc";
   }
   log(LOG_DEBUG,"Opening config file '%s'",fname);
 
