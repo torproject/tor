@@ -7,7 +7,7 @@
 
 #include "orconfig.h"
 
-#define USE_TLS
+//#define USE_TLS
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -613,28 +613,13 @@ int connection_state_is_open(connection_t *conn);
 
 int connection_send_destroy(aci_t aci, connection_t *conn);
 int connection_send_connected(aci_t aci, connection_t *conn);
-#ifndef USE_TLS
-int connection_encrypt_cell(char *cellp, connection_t *conn);
-#endif
-int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn);
 
 int connection_process_inbuf(connection_t *conn);
-int connection_package_raw_inbuf(connection_t *conn);
-int connection_process_cell_from_inbuf(connection_t *conn);
 
-int connection_consider_sending_sendme(connection_t *conn, int edge_type);
 int connection_finished_flushing(connection_t *conn);
 
 void cell_pack(char *dest, const cell_t *src);
 void cell_unpack(cell_t *dest, const char *src);
-
-/********************************* connection_ap.c ****************************/
-
-int ap_handshake_process_socks(connection_t *conn);
-
-int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
-
-int ap_handshake_socks_reply(connection_t *conn, char result);
 
 /********************************* connection_edge.c ***************************/
 
@@ -643,10 +628,8 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
 int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn, int edge_type, crypt_path_t *layer_hint);
 int connection_edge_finished_flushing(connection_t *conn);
 
-/********************************* connection_exit.c ***************************/
-
-int connection_exit_send_connected(connection_t *conn);
-int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
+int connection_package_raw_inbuf(connection_t *conn);
+int connection_consider_sending_sendme(connection_t *conn, int edge_type);
 
 int connection_exit_connect(connection_t *conn);
 
@@ -656,6 +639,12 @@ int connection_or_process_inbuf(connection_t *conn);
 int connection_or_finished_flushing(connection_t *conn);
 
 connection_t *connection_or_connect(routerinfo_t *router);
+
+int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn);
+int connection_process_cell_from_inbuf(connection_t *conn);
+#ifndef USE_TLS
+int connection_encrypt_cell(char *cellp, connection_t *conn);
+#endif
 
 /********************************* cpuworker.c *****************************/
 

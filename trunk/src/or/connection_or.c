@@ -683,6 +683,106 @@ conn_or_init_crypto(connection_t *conn) {
 }
 #endif
 
+int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
+  char networkcell[CELL_NETWORK_SIZE];
+  char *n = networkcell;
+
+  cell_pack(n, cellp);
+ 
+#ifndef USE_TLS
+  if(connection_encrypt_cell(n,conn)<0) {
+    return -1;
+  }
+#endif
+ 
+  return connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
+}
+
+int connection_process_cell_from_inbuf(connection_t *conn) {
+  /* check if there's a whole cell there.
+   *    * if yes, pull it off, decrypt it if we're not doing TLS, and process it.
+   *       */
+#ifndef USE_TLS
+  char networkcell[CELL_NETWORK_SIZE];
+#endif
+  char buf[CELL_NETWORK_SIZE];
+//  int x;
+  cell_t cell;
+ 
+  if(conn->inbuf_datalen < CELL_NETWORK_SIZE) /* entire response available? */
+    return 0; /* not yet */
+ 
+#ifdef USE_TLS
+  connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, conn);
+#else
+  connection_fetch_from_buf(networkcell, CELL_NETWORK_SIZE, conn);
+#if 0
+  printf("Cell header crypttext: ");
+  for(x=0;x<8;x++) {
+    printf("%u ",crypted[x]);
+  }
+  printf("\n");
+#endif
+  /* decrypt */
+  if(crypto_cipher_decrypt(conn->b_crypto, networkcell, CELL_NETWORK_SIZE, buf)) {
+    log_fn(LOG_ERR,"Decryption failed, dropping.");
+    return connection_process_inbuf(conn); /* process the remainder of the buffer */
+  }
+//  log_fn(LOG_DEBUG,"Cell decrypted (%d bytes).",outlen);
+#if 0
+  printf("Cell header plaintext: ");
+  for(x=0;x<8;x++) {
+    printf("%u ",outbuf[x]);
+  }
+  printf("\n");
+#endif
+#endif
+ 
+  /* retrieve cell info from buf (create the host-order struct from the network-order string) */
+  cell_unpack(&cell, buf);
+ 
+//  log_fn(LOG_DEBUG,"Decrypted cell is of type %u (ACI %u).",cellp->command,cellp->aci);
+  command_process_cell(&cell, conn);
+ 
+  return connection_process_inbuf(conn); /* process the remainder of the buffer */
+}
+
+
+#ifndef USE_TLS
+int connection_encrypt_cell(char *cellp, connection_t *conn) {
+  char cryptcell[CELL_NETWORK_SIZE];
+#if 0
+  int x;
+  char *px;
+ 
+  printf("Sending: Cell header plaintext: ");
+  px = (char *)cellp;
+  for(x=0;x<8;x++) {
+    printf("%u ",px[x]);
+  }#
+  printf("\n");
+#endif
+ 
+  assert(conn);
+ 
+  if(crypto_cipher_encrypt(conn->f_crypto, cellp, CELL_NETWORK_SIZE, cryptcell)) {
+    log(LOG_ERR,"Could not encrypt cell for connection %s:%u.",conn->address,conn->port);
+    return -1;
+  }
+#if 0
+  printf("Sending: Cell header crypttext: ");
+  px = (char *)&newcell;
+  for(x=0;x<8;x++) {
+    printf("%u ",px[x]);
+  }
+  printf("\n");
+#endif
+
+  memcpy(cellp,cryptcell,CELL_NETWORK_SIZE);
+  return 0;
+}
+#endif
+
 
 
 /*

@@ -287,29 +287,6 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   config_assign(options,cl);
   config_free_lines(cl);
 
-/* print config */
-/* XXX this section is rotting. Should maybe remove it sometime. */
-  if (options->loglevel == LOG_DEBUG) {
-    printf("LogLevel=%s\n",
-           options->LogLevel);
-    printf("RouterFile=%s, PrivateKeyFile=%s, SigningPrivateKeyFile=%s\n",
-           options->RouterFile ? options->RouterFile : "(undefined)",
-           options->PrivateKeyFile ? options->PrivateKeyFile : "(undefined)",
-           options->SigningPrivateKeyFile ? options->SigningPrivateKeyFile : "(undefined)");
-    printf("ORPort=%d, APPort=%d DirPort=%d\n",
-           options->ORPort,
-           options->APPort,options->DirPort);
-    printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d, LinkPadding=%d\n",
-           options->CoinWeight,
-           options->MaxConn,
-           options->TrafficShaping,
-           options->LinkPadding);
-    printf("DirFetchPeriod=%d KeepalivePeriod=%d\n",
-           options->DirFetchPeriod,
-           options->KeepalivePeriod);
-    printf("Daemon=%d\n", options->Daemon);
-  }
-
 /* Validate options */
 
   if(options->LogLevel) {
