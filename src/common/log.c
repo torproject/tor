@@ -8,6 +8,11 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.3  2002/09/04 00:39:33  arma
+ * the logs now include a timestamp and severity
+ *
+ * the implementation is sort of a kludge..you're welcome to fix it up
+ *
  * Revision 1.2  2002/07/12 18:14:16  montrose
  * removed loglevel from global namespace. severity level is set using log() with a NULL format argument now. example: log(LOG_ERR,NULL);
  *
@@ -55,12 +60,53 @@
 #include <syslog.h>
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
+#include <time.h>
 #include "log.h"
+
+/* FIXME this whole thing is hacked together. feel free to make it clean. */
+size_t sev_to_string(char *buf, int max, int severity) {
+  assert(max > 20);
+
+  switch(severity) {
+    case LOG_DEBUG:
+      strcpy(buf,"debug");  
+      break;
+    case LOG_INFO:
+      strcpy(buf,"info");
+      break;
+    case LOG_NOTICE:
+      strcpy(buf,"notice");
+      break;
+    case LOG_WARNING:
+      strcpy(buf,"warn");
+      break;
+    case LOG_ERR:
+      strcpy(buf,"err");
+      break;
+    case LOG_CRIT:
+      strcpy(buf,"crit");
+      break;
+    case LOG_ALERT:
+      strcpy(buf,"alert");
+      break;
+    case LOG_EMERG: 
+      strcpy(buf,"emerg");
+      break;
+    default:
+      strcpy(buf,"UNKNOWN");
+      break;
+  }
+
+  return strlen(buf)+1;
+}
 
 /* Outputs a message to stdout */
 void log(int severity, const char *format, ...)
 {
   static int loglevel = LOG_DEBUG;
+  char buf[201];
+  time_t t;
   va_list ap;
 
   if ( format )
@@ -70,6 +116,11 @@ void log(int severity, const char *format, ...)
   
     if (severity <= loglevel)
     {
+      t = time(NULL);
+      strftime(buf, 200, "%b %d %H:%M:%S", localtime(&t));
+      printf("%s ", buf);
+      sev_to_string(buf, 200, severity);
+      printf("[%s] ", buf);
       vprintf(format,ap);
       printf("\n");
     }
@@ -79,3 +130,4 @@ void log(int severity, const char *format, ...)
   else
     loglevel = severity;
 }
+
