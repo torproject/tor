@@ -1105,7 +1105,7 @@ int routers_update_status_from_entry(smartlist_t *routers,
     /* 'end' now points on character beyond the end of the nickname */
     if (end == cp || end-cp > MAX_NICKNAME_LEN) {
       log_fn(LOG_WARN, "Bad nickname length (%d) in router status entry (%s)",
-             end-cp, s);
+             (int)(end-cp), s);
       return -1;
     }
     memcpy(nickname, cp, end-cp);
