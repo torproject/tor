@@ -124,10 +124,11 @@ int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ) {
   /* deliver the dest_addr in a data cell */
   cell.command = CELL_DATA;
   cell.aci = circ->n_aci;
-  crypto_pseudo_rand(2, cell.payload+2); /* bytes 0-1 is blank, bytes 2-3 are random */
+  cell.topic_command = TOPIC_COMMAND_BEGIN;
+  crypto_pseudo_rand(2, (char*)&cell.topic_id);
   /* FIXME check for collisions */
-  ap_conn->topic_id = ntohs(*(uint16_t *)(cell.payload+2));
-  cell.payload[0] = TOPIC_COMMAND_BEGIN;
+  ap_conn->topic_id = cell.topic_id;
+
   snprintf(cell.payload+4, CELL_PAYLOAD_SIZE-4, "%s:%d", ap_conn->dest_addr, ap_conn->dest_port);
   cell.length = strlen(cell.payload+TOPIC_HEADER_SIZE)+1+TOPIC_HEADER_SIZE;
   log(LOG_DEBUG,"ap_handshake_send_begin(): Sending data cell to begin topic %d.", ap_conn->topic_id);
