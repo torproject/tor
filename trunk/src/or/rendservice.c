@@ -884,6 +884,7 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
   char serviceid[REND_SERVICE_ID_LEN];
 
   assert(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
+  log_fn(LOG_DEBUG,"beginning to hunt for addr/port");
   if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                     circ->rend_pk_digest,10)) {
     return -1;
