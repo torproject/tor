@@ -70,14 +70,14 @@ AllowUnverifiedNodes middle,rendezvous
 
 ##################### Below is just for location-hidden services ###
 
-## Look in /tmp/hidden_service/hostname for the url to tell people.
+## Look in .../hidden_service/hostname for the url to tell people.
 ## HiddenServicePort x y:z says to redirect a port x request from the
 ## client to y:z.
 
-#HiddenServiceDir /tmp/hidden_service/
+#HiddenServiceDir @LOCALSTATEDIR@/lib/tor/hidden_service/
 #HiddenServicePort 80 127.0.0.1:80
 
-#HiddenServiceDir /tmp/other_hidden_service/
+#HiddenServiceDir @LOCALSTATEDIR@/lib/tor/other_hidden_service/
 #HiddenServicePort 80 127.0.0.1:80
 #HiddenServicePort 22 127.0.0.1:22
 #HiddenServiceNodes moria1,moria2
