@@ -14,17 +14,30 @@
 <a name="installing"></a>
 <h2>Installing Tor</h2>
 
-<p>You can get the latest releases <a
-href="http://tor.freehaven.net/dist/win32/">here</a>. Look for the
-highest version (most recent date) that includes "-win32.exe".
+<p>
+The latest release of Tor for Windows 32 is <a
+href="http://tor.freehaven.net/dist/win32/tor-0.0.9.1-win32.exe">0.0.9.1</a>.
+Download it by clicking the link. You may also be able to find other
+versions <a href="http://tor.freehaven.net/dist/win32/">here</a>.
 </p>
 
 <p>Our Tor installer should make everything pretty simple:
 </p>
 
-[screenshot for Tor installer that looks comforting]
+<img alt="tor installer splash page"
+src="http://tor.freehaven.net/img/NGCS_005.jpg" />
 
-<p>It will run Tor in a dos window so you can see its logs and
+<p>
+By default, Tor is not configured to run at startup.
+<!--We highly recommend that you enable that feature, however. -->
+You can enable this by checking the "Run at startup" box as shown below.
+Be sure to leave the other boxes checked.
+</p>
+
+<img alt="select components to install"
+src="http://tor.freehaven.net/img/NGCS_008.jpg" />
+
+<p>It will run Tor in a DOS window so you can see its logs and
 errors. (You can minimize this window, but do not close it.)
 </p>
 
@@ -37,20 +50,25 @@ the settings. Tor is now installed.</p>
 <p>After installing Tor, you should install <a
 href="http://www.privoxy.org/">Privoxy</a> (click on 'recent releases',
 then scroll down to the Win32 installer packages). Privoxy is a filtering
-web proxy that integrates well with Tor. It will appear in your system
-tray:
+web proxy that integrates well with Tor. Once it's installed, it should
+appear in your system tray, as pictured below:
 </p>
 
 <img alt="privoxy icon in the system tray" src="http://tor.freehaven.net/img/GCS_004.jpg" />
 
-<p>You need to configure Privoxy to use Tor. Open Privoxy's main config file:</p>
+<p>You need to configure Privoxy to use Tor.
+Open Privoxy's main config file by selecting it from "Start Menu"|"All
+Programs":
+</p>
 
 <img border="1" alt="editing privoxy config" src="http://tor.freehaven.net/img/GCS_053.jpg" />
 
 <p>Add the line <br>
 <tt>forward-socks4a / localhost:9050 .</tt><br>
-(don't forget the dot) to privoxy's config file (you can just add it to the
-top):</p>
+to Privoxy's config file. Don't forget to add the dot at the end.
+The easiest way is to select the above line and copy/paste it into
+the file. Be sure to save.
+</p>
 
 <img border="1" alt="privoxy points to tor" src="http://tor.freehaven.net/img/GCS_006.jpg" />
 
@@ -58,10 +76,10 @@ top):</p>
 In Mozilla, this is in Edit|Preferences|Advanced|Proxies. In IE, it's
 Tools|Internet Options|Connections|LAN Settings|Advanced.
 You should also set your SSL proxy (IE calls it "Secure") to the same
-thing, to hide your SSL traffic:</p>
+thing, to hide your SSL traffic. In IE, this looks something like:</p>
 
-<img alt="privoxy points to tor" src="http://tor.freehaven.net/img/GCS_001.jpg" />
-<img alt="privoxy points to tor" src="http://tor.freehaven.net/img/GCS_002.jpg" />
+<img alt="LAN settings in IE" src="http://tor.freehaven.net/img/GCS_001.jpg" />
+<img alt="Proxy settings in IE" src="http://tor.freehaven.net/img/GCS_002.jpg" />
 
 <p>Using privoxy is <b>necessary</b> because <a
 href="http://tor.freehaven.net/cvs/tor/doc/CLIENTS">browsers leak your
@@ -92,27 +110,8 @@ href="http://www.hummingbird.com/products/nc/socks/index.html?cks=y">Hummingbird
 SOCKS client. Let us know if you get them working so we can add better
 instructions here.</p>
 
-<a name="hidden-service"></a>
-<h2>Configuring a hidden service</h2>
-
-<p>Tor allows clients and servers to offer <em>hidden services</em>. That
-is, you can offer an apache, sshd, etc, without revealing your IP to its
-users. This works via Tor's rendezvous point design: both sides build
-a Tor circuit out, and they meet in the middle.</p>
-
-<p>Once you've installed Tor and Privoxy, you can <a
-href="http://6sxoyfb3h2nvok2d.onion/">go to the hidden wiki</a> to see
-hidden services in action.</p>
-
-<p>To set up a hidden service, edit your torrc:</p>
-
-[screenshot here of clicking on tor|torrc]
-
-<p>Edit the middle part to enable your service. Then restart Tor. It will
-create each HiddenServiceDir you have configured, and it will create a
-'hostname' file which specifies the url (xyz.onion) for that service. You
-can tell people the url, and they can connect to it via their Tor client,
-assuming they're also using Tor and Privoxy.</p>
+<p>If you have suggestions for improving this document, please <a
+href="mailto:tor-bugs@freehaven.net">send them</a>. Thanks!</p>
 
 </body>
 </html>
