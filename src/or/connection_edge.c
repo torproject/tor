@@ -1134,13 +1134,13 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
 
   if(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
     n_stream->address = tor_strdup("(rendezvous)");
+    n_stream->state = EXIT_CONN_STATE_CONNECTING;
     strcpy(n_stream->rend_query, circ->rend_query);
     if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {
       log_fn(LOG_WARN,"Didn't find rendezvous service (port %d)",n_stream->port);
       connection_mark_for_close(n_stream,0 /* XXX */);
       return 0;
     }
-    n_stream->state = EXIT_CONN_STATE_CONNECTING;
     n_stream->cpath_layer = circ->cpath->prev; /* link it */
     connection_exit_connect(n_stream);
     return 0;
