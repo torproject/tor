@@ -1,3 +1,9 @@
+tor (0.0.1+0.0.2pre19-1.unreleased) unreleased; urgency=low
+
+  * Depend on adduser.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 15 Jan 2004 23:54:08 +0100
+
 tor (0.0.1+0.0.2pre19-1) unstable; urgency=low
 
   * Initial Release  (closes: #216611).
