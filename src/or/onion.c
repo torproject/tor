@@ -9,6 +9,7 @@ extern or_options_t options; /* command-line and config-file options */
 
 static int onion_process(circuit_t *circ);
 static int onion_deliver_to_conn(aci_t aci, unsigned char *onion, uint32_t onionlen, connection_t *conn);
+static int find_tracked_onion(unsigned char *onion, uint32_t onionlen);
 
 int decide_aci_type(uint32_t local_addr, uint16_t local_port,
                     uint32_t remote_addr, uint16_t remote_port) {
@@ -756,7 +757,7 @@ void init_tracked_tree(void) {
 /* see if this onion has been seen before. if so, return 1, else
  * return 0 and add the sha1 of this onion to the tree.
  */
-int find_tracked_onion(unsigned char *onion, uint32_t onionlen) {
+static int find_tracked_onion(unsigned char *onion, uint32_t onionlen) {
   static struct tracked_onion *head_tracked_onions = NULL; /* linked list of tracked onions */
   static struct tracked_onion *tail_tracked_onions = NULL;
 
@@ -764,7 +765,7 @@ int find_tracked_onion(unsigned char *onion, uint32_t onionlen) {
   struct tracked_onion *to;
 
   /* first take this opportunity to see if there are any expired
-   * onions in the tree. we know this in O(1) because the linked list
+   * onions in the tree. we know this is fast because the linked list
    * 'tracked_onions' is ordered by when they were seen.
    */
   while(head_tracked_onions && (head_tracked_onions->expire < now)) {

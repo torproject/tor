@@ -32,11 +32,11 @@ SPEC    - Spec not finalized
                 o Distribute queries onto the farm, get answers
                 o Preemptively grow a new worker before he's needed
                 - Prune workers when too many are idle
-                - Keep track of which connections are in dns_wait
-                - Need to cache positives/negatives on the tor side
-                        - Keep track of which queries have been asked
-                - Better error handling when
-                        - An address doesn't resolve
+                o Keep track of which connections are in dns_wait
+                o Need to cache positives/negatives on the tor side
+                        o Keep track of which queries have been asked
+                . Better error handling when
+                        . An address doesn't resolve
                         - We have max workers running
         . Directory servers
                 - Automated reputation management

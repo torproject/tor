@@ -4,6 +4,8 @@
 
 #include "or.h"
 
+#define MAX_ADDRESSLEN 256
+
 #define MAX_DNSSLAVES 50
 #define MIN_DNSSLAVES 3 /* 1 for the tor process, 3 slaves */
 
@@ -11,9 +13,9 @@ struct slave_data_t {
   int fd; /* socket to talk on */
   int num_processed; /* number of times we've used this slave */
   char busy; /* whether this slave currently has a task */
-  char question[256]; /* the hostname that we're resolving */
+  char question[MAX_ADDRESSLEN]; /* the hostname that we're resolving */
   unsigned char question_len; /* how many bytes in question */
-  char answer[256]; /* the answer to the question */
+  char answer[MAX_ADDRESSLEN]; /* the answer to the question */
   unsigned char answer_len; /* how many bytes in answer */
 };
 
@@ -29,6 +31,8 @@ static int dns_find_idle_slave(int max);
 static int dns_assign_to_slave(int from, int to);
 static int dns_master_to_tor(int from, int to);
 static void dns_master_main(int fd);
+static int dns_tor_to_master(connection_t *exitconn);
+static int dns_found_answer(char *question, uint32_t answer, uint32_t valid);
 
 int connection_dns_finished_flushing(connection_t *conn) {
 
@@ -41,9 +45,9 @@ int connection_dns_finished_flushing(connection_t *conn) {
 
 int connection_dns_process_inbuf(connection_t *conn) {
   unsigned char length;
-  char buf[256];
+  char buf[MAX_ADDRESSLEN];
   char *question;
-  connection_t *exitconn;
+  uint32_t answer;
 
   assert(conn && conn->type == CONN_TYPE_DNSMASTER);
   assert(conn->state == DNSMASTER_STATE_OPEN);
@@ -75,24 +79,11 @@ int connection_dns_process_inbuf(connection_t *conn) {
   question = buf+1;
   log(LOG_DEBUG,"connection_dns_process_inbuf(): length %d, question '%s', strlen question %d", length, question, strlen(question));
   assert(length == 4 + strlen(question) + 1);
-  
-  /* find the conn that question refers to. */
-  exitconn = connection_get_pendingresolve_by_address(question);
 
-  if(!exitconn) {
-    log(LOG_DEBUG,"connection_dns_process_inbuf(): No conn -- question no longer relevant? Dropping.");
-    return connection_process_inbuf(conn); /* process the remainder of the buffer */
-  }
-  memcpy((char *)&exitconn->addr, buf+1+length-4,4);
-  exitconn->addr = ntohl(exitconn->addr); /* get it back to host order */
-
-  if(connection_exit_connect(exitconn) < 0) {
-    exitconn->marked_for_close = 1;
-  }
-
+  answer = *(uint32_t *)(buf+1+length-4);
+  dns_found_answer(question, answer, (answer != 0));
   return connection_process_inbuf(conn); /* process the remainder of the buffer */
 }
-
 
 /* return -1 if error, else the fd that can talk to the dns master */
 int dns_master_start(void) {
@@ -149,7 +140,7 @@ int dns_master_start(void) {
 }
 
 static void dns_slave_main(int fd) {
-  char question[256];
+  char question[MAX_ADDRESSLEN];
   unsigned char question_len;
   struct hostent *rent;
 
@@ -316,7 +307,7 @@ static int dns_assign_to_slave(int from, int to) {
 }
 
 static int dns_master_to_tor(int from, int to) {
-  char tmp[256];
+  char tmp[MAX_ADDRESSLEN*2];
   unsigned char len;
 
   len = slave_data[from].question_len+1+slave_data[from].answer_len;
@@ -336,52 +327,6 @@ static int dns_master_to_tor(int from, int to) {
     return -1;
   }
 
-  return 0;
-}
-
-int dns_tor_to_master(connection_t *exitconn) {
-  connection_t *conn;
-  unsigned char len;
-
-#ifdef DO_DNS_DIRECTLY
-  /* new version which does it all right here */
-  struct hostent *rent;
-  rent = gethostbyname(exitconn->address);
-  if (!rent) {
-    return -1;
-  }
-
-  memcpy((char *)&exitconn->addr, rent->h_addr, rent->h_length);
-  exitconn->addr = ntohl(exitconn->addr); /* get it back to host order */
-
-  if(connection_exit_connect(exitconn) < 0) {
-    exitconn->marked_for_close = 1;
-  }
-  return 0;
-#endif
-
-
-
-  /* old version which actually uses the dns farm */
-  conn = connection_get_by_type(CONN_TYPE_DNSMASTER);
-  if(!conn) {
-    log(LOG_ERR,"dns_tor_to_master(): dns master nowhere to be found!");
-    /* XXX should do gethostbyname right here */
-    return -1;
-  }
-
-  len = strlen(exitconn->address);
-  if(connection_write_to_buf(&len, 1, conn) < 0) {
-    log(LOG_DEBUG,"dns_tor_to_master(): Couldn't write length.");
-    return -1;
-  }
-
-  if(connection_write_to_buf(exitconn->address, len, conn) < 0) {
-    log(LOG_DEBUG,"dns_tor_to_master(): Couldn't write address.");
-    return -1;
-  }
-
-//  log(LOG_DEBUG,"dns_tor_to_master(): submitted '%s'", address);
   return 0;
 }
 
@@ -453,5 +398,165 @@ static void dns_master_main(int fd) {
 
   }
   assert(0); /* should never get here */
+}
+
+
+
+#include "tree.h"
+
+struct pending_connection_t {
+  struct connection_t *conn;
+  struct pending_connection_t *next;
+};
+
+struct cached_resolve {
+  SPLAY_ENTRY(cached_resolve) node;
+  char question[MAX_ADDRESSLEN]; /* the hostname to be resolved */
+  uint32_t answer; /* in host order. I know I'm horrible for assuming ipv4 */
+  char state; /* 0 is pending; 1 means answer is valid; 2 means resolve failed */
+#define CACHE_STATE_PENDING 0
+#define CACHE_STATE_VALID 1
+#define CACHE_STATE_FAILED 2
+  uint32_t expire; /* remove untouched items from cache after some time? */
+  struct pending_connection_t *pending_connections;
+  struct cached_resolve *next;
+};
+
+SPLAY_HEAD(cache_tree, cached_resolve) cache_root;
+
+static int compare_cached_resolves(struct cached_resolve *a, struct cached_resolve *b) {
+  /* make this smarter one day? */
+  return strncasecmp(a->question, b->question, MAX_ADDRESSLEN);
+}
+
+SPLAY_PROTOTYPE(cache_tree, cached_resolve, node, compare_cached_resolves);
+SPLAY_GENERATE(cache_tree, cached_resolve, node, compare_cached_resolves);
+
+void init_cache_tree(void) {
+  SPLAY_INIT(&cache_root);
+}
+
+
+/* see if the question 'exitconn->address' has been answered. if so,
+ * if resolve valid, put it into exitconn->addr and call
+ * connection_exit_connect directly. If resolve failed, return -1.
+ *
+ * Else, if seen before and pending, add conn to the pending list,
+ * and return 0.
+ *
+ * Else, if not seen before, add conn to pending list, hand to
+ * dns farm, and return 0.
+ */
+int dns_resolve(connection_t *exitconn) {
+  struct cached_resolve *new_resolve;
+  struct cached_resolve *resolve;
+  struct pending_connection_t *pending_connection;
+
+  new_resolve = malloc(sizeof(struct cached_resolve));
+  memset(new_resolve, 0, sizeof(struct cached_resolve));
+  strncpy(new_resolve->question, exitconn->address, MAX_ADDRESSLEN);
+
+  /* try adding it to the tree. if it's already there it will
+   * return it. */
+  resolve = SPLAY_INSERT(cache_tree, &cache_root, new_resolve);
+  if(resolve) { /* already there. free up new_resolve */
+    free(new_resolve);
+    switch(resolve->state) {
+      case CACHE_STATE_PENDING:
+        /* add us to the pending list */
+        pending_connection = malloc(sizeof(struct pending_connection_t));
+        pending_connection->conn = exitconn;
+        pending_connection->next = new_resolve->pending_connections;
+        new_resolve->pending_connections = pending_connection;
+
+        return dns_tor_to_master(exitconn);
+      case CACHE_STATE_VALID:
+        exitconn->addr = resolve->answer;
+        return connection_exit_connect(exitconn);
+      case CACHE_STATE_FAILED:
+        return -1;
+    }
+  } else { /* this was newly added to the tree. ask the dns farm. */
+    new_resolve->state = CACHE_STATE_PENDING;
+
+    /* add us to the pending list */
+    pending_connection = malloc(sizeof(struct pending_connection_t));
+    pending_connection->conn = exitconn;
+    pending_connection->next = new_resolve->pending_connections;
+    new_resolve->pending_connections = pending_connection;
+
+    return dns_tor_to_master(exitconn);
+  }
+
+  assert(0);
+  return 0; /* not reached; keep gcc happy */
+}
+
+static int dns_tor_to_master(connection_t *exitconn) {
+  connection_t *dnsconn;
+  unsigned char len;
+  int do_dns_directly=0;
+
+  dnsconn = connection_get_by_type(CONN_TYPE_DNSMASTER);
+
+  if(!dnsconn) {
+    log(LOG_ERR,"dns_tor_to_master(): dns master nowhere to be found!");
+  }
+
+  if(!dnsconn || do_dns_directly) {
+    /* new version which does it all right here */
+    struct hostent *rent;
+    rent = gethostbyname(exitconn->address);
+    if (!rent) {
+      return dns_found_answer(exitconn->address, 0, 0);
+    }
+    return dns_found_answer(exitconn->address, *(uint32_t *)rent->h_addr, 1);
+  }
+
+  len = strlen(exitconn->address);
+  if(connection_write_to_buf(&len, 1, dnsconn) < 0) {
+    log(LOG_DEBUG,"dns_tor_to_master(): Couldn't write length.");
+    return -1;
+  }
+
+  if(connection_write_to_buf(exitconn->address, len, dnsconn) < 0) {
+    log(LOG_DEBUG,"dns_tor_to_master(): Couldn't write address.");
+    return -1;
+  }
+
+//  log(LOG_DEBUG,"dns_tor_to_master(): submitted '%s'", address);
+  return 0;
+}
+
+static int dns_found_answer(char *question, uint32_t answer, uint32_t valid) {
+  struct pending_connection_t *pend;
+  struct cached_resolve search;
+  struct cached_resolve *resolve;
+
+  strncpy(search.question, question, MAX_ADDRESSLEN);
+
+  resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
+  if(!resolve) {
+    log(LOG_ERR,"dns_found_answer(): Answer to unasked question '%s'? Dropping.", question);
+    return 0;
+  }
+
+  assert(resolve->state == CACHE_STATE_PENDING);
+
+  if(valid)
+    resolve->state = CACHE_STATE_VALID;
+  else
+    resolve->state = CACHE_STATE_FAILED;
+
+  while(resolve->pending_connections) {
+    pend = resolve->pending_connections;
+    pend->conn->addr = ntohl(answer);
+    if(resolve->state == CACHE_STATE_FAILED || connection_exit_connect(pend->conn) < 0) {
+      pend->conn->marked_for_close = 1;
+    }
+    resolve->pending_connections = pend->next;
+    free(pend);
+  }
+  return 0;
 }
 

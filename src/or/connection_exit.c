@@ -150,7 +150,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   circ->n_conn = n_conn;
 
   /* send it off to the gethostbyname farm */
-  if(dns_tor_to_master(n_conn) < 0) {
+  if(dns_resolve(n_conn) < 0) {
     log(LOG_DEBUG,"connection_exit_begin_conn(): Couldn't queue resolve request.");
     connection_remove(n_conn);
     connection_free(n_conn);

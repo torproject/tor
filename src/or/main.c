@@ -159,24 +159,6 @@ connection_t *connection_get_by_type(int type) {
   return NULL;
 }
 
-connection_t *connection_get_pendingresolve_by_address(char *address) {
-  int i;
-  connection_t *conn;
-
-  for(i=0;i<nfds;i++) {
-    conn = connection_array[i];
-    if(conn->type == CONN_TYPE_EXIT &&
-       conn->state == EXIT_CONN_STATE_RESOLVING &&
-       !strcmp(conn->address, address)) {
-         return conn;
-    }
-  }
-  return NULL;
-}
-
-
-
-
 void connection_watch_events(connection_t *conn, short events) {
 
   assert(conn && conn->poll_index < nfds);
