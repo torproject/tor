@@ -3,7 +3,7 @@ Quickstart version for users:
 0) Download the absolute newest version. No, really.
   http://freehaven.net/tor/dist/
 1) tar xvf it, and then cd into the directory.
-2) ./configure (or do the two-line version in the README, if you're on bsd)
+2) ./configure (or do the two-line version below, if you're on bsd)
 3) make
 4) make install
 5) tor (if it doesn't work, give it the whole path or fix your path)
@@ -15,8 +15,8 @@ Quickstart version for users:
   allows you to test to make sure tor is installed correctly.
   (If you have a personal firewall, be sure to allow connections to
    localhost port 9050.)
-  (If you're using Safari as your browser, keep in mind that it claims
-   to support socks but does not. You must do step 8.)
+  (If you're using Safari as your browser, keep in mind that OS X before
+   10.3 claims to support socks but does not. You must do step 8.)
 7) make sure you've set it up correctly: go to
   http://www.junkbusters.com/cgi-bin/privacy and see what IP it says
   you're coming from. If it works, you should probably go on to step 8,
