@@ -87,11 +87,11 @@ dirservers.  Your node will not generate its own directory, instead
 it will provide the one it fetched from an authoritative dirserver.
 
 If you run a very reliable node, you plan to be around for a long time,
-and you want to spend some time ensuring that router operators are
-people we know and like, we may want you to run an authoritative directory
-server too. We must manually add you to the 'dirservers' file that's part of
-the distribution; users will only know about you when they upgrade to
-a new version.
+and you want to spend some time ensuring that router operators do in
+fact have enough bandwidth and stable machines, we may want you to run
+an authoritative directory server too. We must manually add you to the
+'dirservers' file that's part of the distribution; users will only know
+about you when they upgrade to a new version.
 
 
 4. Development.
