@@ -20,7 +20,7 @@ MAX_FILEDESCRIPTORS=4096
 # on adm64.
 #
 # If tor does not work at all for you, i.e. connection attempts
-# through tor just have forever and never finish, then consider
+# through tor just hang forever and never finish, then consider
 # setting EVENT_NOEPOLL, so libevent does not use epoll.  If that
 # happens to fix it for you, please let the mainainer (weasel@debian.org)
 # know, mentioning your kernel version, libevent version, and architecture.
