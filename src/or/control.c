@@ -485,7 +485,7 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
   reply = smartlist_create();
   smartlist_split_string(lines, body, "\n",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH(lines, const char *, line,
+  SMARTLIST_FOREACH(lines, char *, line,
   {
     tor_strlower(line);
     smartlist_split_string(elts, line, " ", 0, 2);
