@@ -567,7 +567,9 @@ static int init_from_config(int argc, char **argv) {
   close_logs(); /* we'll close, then open with correct loglevel if necessary */
 
   /* Configure the log(s) */
-  config_init_logs(&options);
+  if (config_init_logs(&options)<0)
+    return -1;
+  close_temp_logs();
 
   /* Set up our buckets */
   connection_bucket_init();
@@ -853,7 +855,7 @@ void exit_function(void)
 int tor_main(int argc, char *argv[]) {
 
   /* give it somewhere to log to initially */
-  add_stream_log(LOG_NOTICE, LOG_ERR, "<stdout>", stdout);
+  add_temp_log();
   log_fn(LOG_NOTICE,"Tor v%s. This is experimental software. Do not use it if you need anonymity.",VERSION);
 
   if (network_init()<0) {

@@ -716,7 +716,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   return result;
 }
 
-static void add_single_log(struct config_line_t *level_opt,
+static int add_single_log(struct config_line_t *level_opt,
                            struct config_line_t *file_opt,
                            int isDaemon)
 {
@@ -729,17 +729,21 @@ static void add_single_log(struct config_line_t *level_opt,
       tmp_sev = tor_strndup(level_opt->value, cp - level_opt->value);
       levelMin = parse_log_level(tmp_sev);
       if (levelMin<0) {
-        log_fn(LOG_WARN, "Unrecognized log severity %s: must be one of err|warn|notice|info|debug", tmp_sev);
+        log_fn(LOG_WARN, "Unrecognized log severity '%s': must be one of err|warn|notice|info|debug", tmp_sev);
+        return -1;
       }
       tor_free(tmp_sev);
       levelMax = parse_log_level(cp+1);
       if (levelMax<0) {
-        log_fn(LOG_WARN, "Unrecognized log severity %s: must be one of err|warn|notice|info|debug", cp+1);
+        log_fn(LOG_WARN, "Unrecognized log severity '%s': must be one of err|warn|notice|info|debug", cp+1);
+        return -1;
       }
     } else {
       levelMin = parse_log_level(level_opt->value);
       if (levelMin<0) {
-        log_fn(LOG_WARN, "Unrecognized log severity %s: must be one of err|warn|notice|info|debug", level_opt->value);
+        log_fn(LOG_WARN, "Unrecognized log severity '%s': must be one of err|warn|notice|info|debug", level_opt->value);
+        return -1;
+
       }
     }
   }
@@ -753,44 +757,47 @@ static void add_single_log(struct config_line_t *level_opt,
   }
   if (file_opt) {
     if (add_file_log(levelMin, levelMax, file_opt->value) < 0) {
-      /* opening the log file failed!  Use stderr and log a warning */
-      add_stream_log(levelMin, levelMax, "<stderr>", stderr);
       log_fn(LOG_WARN, "Cannot write to LogFile '%s': %s.", file_opt->value,
              strerror(errno));
-      return;
+      return -1;
     }
     log_fn(LOG_NOTICE, "Successfully opened LogFile '%s', redirecting output.",
            file_opt->value);
   } else if (!isDaemon) {
     add_stream_log(levelMin, levelMax, "<stdout>", stdout);
+    close_temp_logs();
   }
+  return 0;
 }
 
 /**
  * Initialize the logs based on the configuration file.
  */
-void config_init_logs(or_options_t *options)
+int config_init_logs(or_options_t *options)
 {
   /* The order of options is:  Level? (File Level?)+
    */
   struct config_line_t *opt = options->LogOptions;
 
-  /* Special case if nothing is specified. */
-  if(!opt) {
-    add_single_log(NULL, NULL, options->RunAsDaemon);
+  /* Special case if no options are given. */
+  if (!opt) {
+    add_stream_log(LOG_NOTICE, LOG_ERR, "<stdout>", stdout);
+    close_temp_logs();
     /* don't return yet, in case we want to do a debuglogfile below */
   }
 
   /* Special case for if first option is LogLevel. */
   if (opt && !strcasecmp(opt->key, "LogLevel")) {
     if (opt->next && !strcasecmp(opt->next->key, "LogFile")) {
-      add_single_log(opt, opt->next, options->RunAsDaemon);
+      if (add_single_log(opt, opt->next, options->RunAsDaemon)<0)
+        return -1;
       opt = opt->next->next;
     } else if (!opt->next) {
-      add_single_log(opt, NULL, options->RunAsDaemon);
-      return;
-    } else {
+      if (add_single_log(opt, NULL, options->RunAsDaemon)<0)
+        return -1;
       opt = opt->next;
+    } else {
+      ; /* give warning below */
     }
   }
 
@@ -802,11 +809,13 @@ void config_init_logs(or_options_t *options)
       tor_assert(!strcasecmp(opt->key, "LogFile"));
       if (opt->next && !strcasecmp(opt->next->key, "LogLevel")) {
         /* LogFile followed by LogLevel */
-        add_single_log(opt->next, opt, options->RunAsDaemon);
+        if (add_single_log(opt->next, opt, options->RunAsDaemon)<0)
+          return -1;
         opt = opt->next->next;
       } else {
         /* LogFile followed by LogFile or end of list. */
-        add_single_log(NULL, opt, options->RunAsDaemon);
+        if (add_single_log(NULL, opt, options->RunAsDaemon)<0)
+          return -1;
         opt = opt->next;
       }
     }
@@ -814,8 +823,10 @@ void config_init_logs(or_options_t *options)
 
   if (options->DebugLogFile) {
     log_fn(LOG_WARN, "DebugLogFile is deprecated; use LogFile and LogLevel instead");
-    add_file_log(LOG_DEBUG, LOG_ERR, options->DebugLogFile);
+    if (add_file_log(LOG_DEBUG, LOG_ERR, options->DebugLogFile)<0)
+      return -1;
   }
+  return 0;
 }
 
 void

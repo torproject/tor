@@ -52,6 +52,8 @@ int add_file_log(int severityMin, int severityMax, const char *filename);
 int get_min_log_level(void);
 void close_logs();
 void reset_logs();
+void add_temp_log(void);
+void close_temp_logs(void);
 
 /* Outputs a message to stdout */
 void _log(int severity, const char *format, ...) CHECK_PRINTF(2,3);
