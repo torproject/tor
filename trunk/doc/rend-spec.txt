@@ -108,13 +108,13 @@ Tor Rendezvous Spec
 
          KL    Key length                            [2 octets]
          PK    Bob's public key                      [KL octets]
-         TS    A timestamp                           [8 octets]
+         TS    A timestamp                           [4 octets]
          NI    Number of introduction points         [2 octets]
          Ipt   A list of NUL-terminated OR nicknames [variable]
          SIG   Signature of above fields             [KL octets]
 
    KL is the length of PK, in octets.  (Currently, KL must be 128.)
-   TS is the number of milliseconds elapsed since Jan 1, 1970.
+   TS is the number of seconds elapsed since Jan 1, 1970.
 
    [Shouldn't the nicknames be hostname:port's instead?  That way, Alice's
    directory servers don't need to know Bob's chosen introduction points.

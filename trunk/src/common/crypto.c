@@ -569,6 +569,7 @@ int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b) {
   }
 }
 
+/* return the size of the public key modulus in 'env', in bytes. */
 int crypto_pk_keysize(crypto_pk_env_t *env)
 {
   assert(env && env->key);
