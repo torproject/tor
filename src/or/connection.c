@@ -144,7 +144,7 @@ void connection_free_all(void) {
 }
 
 /* Close the underlying socket for conn, so we don't try to flush it.
- * Must be used in conjunction with connection_mark_for_close
+ * Must be used in conjunction with (right before) connection_mark_for_close
  */
 void connection_close_immediate(connection_t *conn)
 {
@@ -227,7 +227,7 @@ void connection_expire_held_open(void)
       assert(conn->marked_for_close);
       if (now - conn->timestamp_lastwritten >= 15) {
         log_fn(LOG_WARN,"Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %d).", 
-			conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state);
+               conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state);
         conn->hold_open_until_flushed = 0;
       }
     }
@@ -419,8 +419,8 @@ int retry_all_connections(void) {
 
   if(options.ORPort) {
     listener_close_if_present(CONN_TYPE_OR_LISTENER);
-    if(connection_create_listener(options.ORBindAddress, 
-		                          (uint16_t) options.ORPort,
+    if(connection_create_listener(options.ORBindAddress,
+                                  (uint16_t) options.ORPort,
                                   CONN_TYPE_OR_LISTENER) < 0)
       return -1;
   }
@@ -428,7 +428,7 @@ int retry_all_connections(void) {
   if(options.DirPort) {
     listener_close_if_present(CONN_TYPE_DIR_LISTENER);
     if(connection_create_listener(options.DirBindAddress, 
-		                          (uint16_t) options.DirPort,
+                                  (uint16_t) options.DirPort,
                                   CONN_TYPE_DIR_LISTENER) < 0)
       return -1;
   }
@@ -436,7 +436,7 @@ int retry_all_connections(void) {
   if(options.SocksPort) {
     listener_close_if_present(CONN_TYPE_AP_LISTENER);
     if(connection_create_listener(options.SocksBindAddress,
-		                          (uint16_t) options.SocksPort,
+                                  (uint16_t) options.SocksPort,
                                   CONN_TYPE_AP_LISTENER) < 0)
       return -1;
   }
