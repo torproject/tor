@@ -283,7 +283,7 @@ void directory_has_arrived(void) {
 
   /* just for testing */
   directory_initiate_command(router_pick_directory_server(),
-                             DIR_PURPOSE_FETCH_HIDSERV, "foo", 3);
+                             DIR_PURPOSE_FETCH_RENDDESC, "foo", 3);
 
   rend_services_init(); /* get bob to initialize all his hidden services */
 

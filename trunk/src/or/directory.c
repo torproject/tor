@@ -24,11 +24,11 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
 
   if(purpose == DIR_PURPOSE_FETCH_DIR)
     log_fn(LOG_DEBUG,"initiating directory fetch");
-  if(purpose == DIR_PURPOSE_FETCH_HIDSERV)
+  if(purpose == DIR_PURPOSE_FETCH_RENDDESC)
     log_fn(LOG_DEBUG,"initiating hidden-service descriptor fetch");
   if(purpose == DIR_PURPOSE_UPLOAD_DIR)
     log_fn(LOG_DEBUG,"initiating server descriptor upload");
-  if(purpose == DIR_PURPOSE_UPLOAD_HIDSERV)
+  if(purpose == DIR_PURPOSE_UPLOAD_RENDDESC)
     log_fn(LOG_DEBUG,"initiating hidden-service descriptor upload");
 
   if (!router) { /* i guess they didn't have one in mind for me to use */
@@ -111,12 +111,18 @@ static void directory_send_command(connection_t *conn, int purpose,
                payload_len, payload);
       connection_write_to_buf(tmp, strlen(tmp), conn);
       break;
-    case DIR_PURPOSE_FETCH_HIDSERV:
+    case DIR_PURPOSE_FETCH_RENDDESC:
       assert(payload);
+
+      /* this must be true or we wouldn't be doing the lookup */
+      assert(payload_len <= REND_SERVICE_ID_LEN);
+      memcpy(conn->rend_query, payload, payload_len);
+      conn->rend_query[payload_len] = 0;
+
       snprintf(tmp, sizeof(tmp), "GET /hidserv/%s HTTP/1.0\r\n\r\n", payload);
       connection_write_to_buf(tmp, strlen(tmp), conn);
       break;
-    case DIR_PURPOSE_UPLOAD_HIDSERV:
+    case DIR_PURPOSE_UPLOAD_RENDDESC:
       assert(payload);
       snprintf(tmp, sizeof(tmp),
         "POST /hidserv/ HTTP/1.0\r\nContent-Length: %d\r\n\r\n", payload_len);
@@ -175,9 +181,9 @@ int parse_http_response(char *headers, int *code, char **message) {
 }
 
 int connection_dir_process_inbuf(connection_t *conn) {
-  char *directory;
+  char *body;
   char *headers;
-  int dir_len=0;
+  int body_len=0;
   int status_code;
 
   assert(conn && conn->type == CONN_TYPE_DIR);
@@ -192,7 +198,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
 
     switch(fetch_from_buf_http(conn->inbuf,
                                &headers, MAX_HEADERS_SIZE,
-                               &directory, &dir_len, MAX_DIR_SIZE)) {
+                               &body, &body_len, MAX_DIR_SIZE)) {
       case -1: /* overflow */
         log_fn(LOG_WARN,"'fetch' response too large. Failing.");
         connection_mark_for_close(conn,0);
@@ -206,28 +212,28 @@ int connection_dir_process_inbuf(connection_t *conn) {
 
     if(parse_http_response(headers, &status_code, NULL) < 0) {
       log_fn(LOG_WARN,"Unparseable headers. Closing.");
-      free(directory); free(headers);
+      free(body); free(headers);
       connection_mark_for_close(conn,0);
       return -1;
     }
 
     if(conn->purpose == DIR_PURPOSE_FETCH_DIR) {
       /* fetch/process the directory to learn about new routers. */
-      log_fn(LOG_INFO,"Received directory (size %d):\n%s", dir_len, directory);
-      if(status_code == 503 || dir_len == 0) {
+      log_fn(LOG_INFO,"Received directory (size %d):\n%s", body_len, body);
+      if(status_code == 503 || body_len == 0) {
         log_fn(LOG_INFO,"Empty directory. Ignoring.");
-        free(directory); free(headers);
+        free(body); free(headers);
         connection_mark_for_close(conn,0);
         return 0;
       }
       if(status_code != 200) {
         log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
                status_code);
-        free(directory); free(headers);
+        free(body); free(headers);
         connection_mark_for_close(conn,0);
         return -1;
       }
-      if(router_set_routerlist_from_directory(directory, conn->identity_pkey) < 0){
+      if(router_set_routerlist_from_directory(body, conn->identity_pkey) < 0){
         log_fn(LOG_INFO,"...but parsing failed. Ignoring.");
       } else {
         log_fn(LOG_INFO,"updated routers.");
@@ -239,18 +245,15 @@ int connection_dir_process_inbuf(connection_t *conn) {
       if(options.ORPort) { /* connect to them all */
         router_retry_connections();
       }
-      free(directory); free(headers);
-      connection_mark_for_close(conn,0);
-      return 0;
     }
 
     if(conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {
       switch(status_code) {
         case 200:
-          log_fn(LOG_INFO,"eof (status 200) while reading upload response: finished.");
+          log_fn(LOG_INFO,"eof (status 200) after uploading server descriptor: finished.");
           break;
         case 400:
-          log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver.");
+          log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver. Malformed server descriptor?");
           break;
         case 403:
           log_fn(LOG_WARN,"http status 403 (unapproved server) response from dirserver. Is your clock skewed? Have you mailed arma your identity fingerprint? Are you using the right key?");
@@ -260,21 +263,46 @@ int connection_dir_process_inbuf(connection_t *conn) {
           log_fn(LOG_WARN,"http status %d response unrecognized.", status_code);
           break;
       }
-      free(directory); free(headers);
-      connection_mark_for_close(conn,0);
-      return 0;
     }
 
-    if(conn->purpose == DIR_PURPOSE_FETCH_HIDSERV) {
-
-
+    if(conn->purpose == DIR_PURPOSE_FETCH_RENDDESC) {
+      log_fn(LOG_INFO,"Received rendezvous descriptor (size %d, status code %d)",
+             body_len, status_code);
+      switch(status_code) {
+        case 200:
+          if(rend_cache_store(body, body_len) < 0) {
+            log_fn(LOG_WARN,"Failed to store rendezvous descriptor. Abandoning stream.");
+            /* alice's ap_stream is just going to have to time out. */
+          } else {
+            /* success. notify pending connections about this. */
+            //alice_notify_desc_fetched(conn->rend_query);
+          }
+          break;
+        case 404:
+          //alice_notify_desc_not_fetched(conn->rend_query);
+          break;
+        case 400:
+          log_fn(LOG_WARN,"http status 400 (bad request). Dirserver didn't like our rendezvous query?");
+          break;
+      }
     }
 
-    if(conn->purpose == DIR_PURPOSE_UPLOAD_HIDSERV) {
-
-
+    if(conn->purpose == DIR_PURPOSE_UPLOAD_RENDDESC) {
+      switch(status_code) {
+        case 200:
+          log_fn(LOG_INFO,"eof (status 200) after uploading rendezvous descriptor: finished.");
+          break;
+        case 400:
+          log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver. Malformed rendezvous descriptor?");
+          break;
+        default:
+          log_fn(LOG_WARN,"http status %d response unrecognized.", status_code);
+          break;
+      }
     }
-    assert(0); /* never reached */
+    free(body); free(headers);
+    connection_mark_for_close(conn,0);
+    return 0;
   }
 
   if(conn->state == DIR_CONN_STATE_SERVER_COMMAND_WAIT) {
