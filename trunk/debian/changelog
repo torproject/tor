@@ -1,8 +1,10 @@
 tor (0.0.8+0.0.9rc1-1) unstable; urgency=low
 
   * New upstream release (candidate).
+  * Apply nick's patch against config.c (1.267) to handle
+    absense of units in BandwidthRate.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 23 Nov 2004 11:17:15 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 23 Nov 2004 11:57:49 +0100
 
 tor (0.0.8+0.0.9pre6-1) unstable; urgency=low
 
