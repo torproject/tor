@@ -350,11 +350,11 @@ void circuit_n_conn_done(connection_t *or_conn, int status) {
   for (circ=global_circuitlist;circ;circ = circ->next) {
     if (circ->marked_for_close)
       continue;
-    if (!circ->n_conn &&
+    if (circ->state == CIRCUIT_STATE_OR_WAIT &&
+        !circ->n_conn &&
         circ->n_addr == or_conn->addr &&
         circ->n_port == or_conn->port &&
         !memcmp(or_conn->identity_digest, circ->n_conn_id_digest, DIGEST_LEN)) {
-      tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
       if (!status) { /* or_conn failed; close circ */
         log_fn(LOG_INFO,"or_conn failed. Closing circ.");
         circuit_mark_for_close(circ);
