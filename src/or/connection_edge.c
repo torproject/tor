@@ -392,7 +392,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
         return -1;
       }
       if (tor_inet_aton(socks->address, &in)) /* see if it's an IP already */
-        answer = ntohl(in.s_addr);
+        answer = in.s_addr;
       if (!answer && !conn->chosen_exit_name) /* if it's not .exit, check cache */
         answer = htonl(client_dns_lookup_entry(socks->address));
       if (answer) {
