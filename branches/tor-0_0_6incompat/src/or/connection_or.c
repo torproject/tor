@@ -217,13 +217,14 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     log_fn(LOG_INFO,"Router %s is already connected on fd %d. Dropping fd %d.", router->nickname, c->s, conn->s);
     return -1;
   }
-
-  if (strcmp(conn->nickname, nickname)) {
+  if (conn->nickname && strcmp(conn->nickname, nickname)) {
     log_fn(options.DirPort ? LOG_WARN : LOG_INFO,
-           "Other side claims to be '%s', but we expected '%s'",
+           "Other side is '%s', but we tried to connect to '%s'",
            nickname, conn->nickname);
     return -1;
   }
+  connection_or_init_conn_from_router(conn,router);
+
   if (!options.ORPort) { /* If I'm an OP... */
     conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
   }

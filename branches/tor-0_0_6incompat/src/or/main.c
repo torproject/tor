@@ -53,6 +53,7 @@ int has_completed_circuit=0;
 ****************************************************************************/
 
 int connection_add(connection_t *conn) {
+  assert(conn);
 
   if(nfds >= options.MaxConn-1) {
     log_fn(LOG_WARN,"failing because nfds is too high.");
