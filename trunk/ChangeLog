@@ -1,3 +1,12 @@
+Changes in version 0.0.2pre25 - 2004-03-04
+  o New features:
+    - Put the OR's IP in its router descriptor, not its fqdn. That way
+      we'll stop being stalled by gethostbyname for nodes with flaky dns,
+      e.g. poblano.
+  o Bugfixes:
+    - If the user typed in an address that didn't resolve, the server
+      crashed.
+
 Changes in version 0.0.2pre24 - 2004-03-03
   o Bugfixes:
     - Fix an assertion failure in dns.c, where we were trying to dequeue
