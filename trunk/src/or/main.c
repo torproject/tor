@@ -181,13 +181,14 @@ static void conn_read(int i) {
   log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
 
   assert_connection_ok(conn, time(NULL));
+  assert_all_pending_dns_resolves_ok();
 
   if(
-      /* XXX does POLLHUP also mean it's definitely broken? */
+    /* XXX does POLLHUP also mean it's definitely broken? */
 #ifdef MS_WINDOWS
-      (poll_array[i].revents & POLLERR) ||
+    (poll_array[i].revents & POLLERR) ||
 #endif
-      connection_handle_read(conn) < 0) {
+    connection_handle_read(conn) < 0) {
       if (!conn->marked_for_close) {
         /* this connection is broken. remove it */
         /* XXX This shouldn't ever happen anymore. */
@@ -196,8 +197,9 @@ static void conn_read(int i) {
                CONN_TYPE_TO_STRING(conn->type), conn->s);
         connection_mark_for_close(conn,0);
       }
-    }
-    assert_connection_ok(conn, time(NULL));
+  }
+  assert_connection_ok(conn, time(NULL));
+  assert_all_pending_dns_resolves_ok();
 }
 
 static void conn_write(int i) {
@@ -212,6 +214,7 @@ static void conn_write(int i) {
     return;
 
   assert_connection_ok(conn, time(NULL));
+  assert_all_pending_dns_resolves_ok();
 
   if (connection_handle_write(conn) < 0) {
     if (!conn->marked_for_close) {
@@ -223,6 +226,7 @@ static void conn_write(int i) {
     }
   }
   assert_connection_ok(conn, time(NULL));
+  assert_all_pending_dns_resolves_ok();
 }
 
 static void conn_close_if_marked(int i) {
@@ -231,6 +235,7 @@ static void conn_close_if_marked(int i) {
 
   conn = connection_array[i];
   assert_connection_ok(conn, time(NULL));
+  assert_all_pending_dns_resolves_ok();
   if(!conn->marked_for_close)
     return; /* nothing to see here, move along */
 
@@ -446,7 +451,9 @@ static int prepare_for_poll(void) {
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
     ++stats_n_seconds_reading;
+    assert_all_pending_dns_resolves_ok();
     run_scheduled_events(now.tv_sec);
+    assert_all_pending_dns_resolves_ok();
 
     current_second = now.tv_sec; /* remember which second it is, for next time */
   }
