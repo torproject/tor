@@ -1,3 +1,11 @@
+tor (0.0.8+0.0.9pre4-1) unstable; urgency=low
+
+  * New upstream (pre)release.
+  * Apply patch from cvs to fix a segfault in src/or/test
+    (test.c, 1.131).
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 17 Oct 2004 19:04:31 +0200
+
 tor (0.0.8+0.0.9pre3-1) unstable; urgency=high
 
   * New upstream (pre)release.
