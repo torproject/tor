@@ -529,6 +529,7 @@ repeat_connection_edge_package_raw_inbuf:
 void connection_ap_expire_beginning(void) {
   connection_t **carray;
   connection_t *conn;
+  circuit_t *circ;
   int n, i;
   time_t now = time(NULL);
 
@@ -542,6 +543,8 @@ void connection_ap_expire_beginning(void) {
     if (now - conn->timestamp_lastread >= 15) {
       log_fn(LOG_WARN,"Stream is %d seconds late. Retrying.",
              (int)(now - conn->timestamp_lastread));
+      circ = circuit_get_by_conn(conn);
+      circuit_log_path(LOG_WARN, circ);
       /* send an end down the circuit */
       connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
       /* un-mark it as ending, since we're going to reuse it */
@@ -550,7 +553,7 @@ void connection_ap_expire_beginning(void) {
        * reattach to this same circuit, but that's good enough for now.
        */
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-      circuit_detach_stream(circuit_get_by_conn(conn), conn);
+      circuit_detach_stream(circ, conn);
       /* give it another 15 seconds to try */
       conn->timestamp_lastread += 15;
       if(connection_ap_handshake_attach_circuit(conn)<0) {
