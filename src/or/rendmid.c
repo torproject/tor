@@ -123,8 +123,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
     goto err;
   }
 
-/* change MAX_NICKNAME_LEN to MAX_HEX_NICKNAME_LEN when 0.0.8.1 and
- * 0.0.9pre3-4 are obsolete. */
+  /* change to MAX_HEX_NICKNAME_LEN once 0.0.9.x is obsolete */
   if (request_len < (DIGEST_LEN+(MAX_NICKNAME_LEN+1)+REND_COOKIE_LEN+
                      DH_KEY_LEN+CIPHER_KEY_LEN+PKCS1_OAEP_PADDING_OVERHEAD)) {
     log_fn(LOG_WARN,
