@@ -40,10 +40,10 @@ build-stamp:  config.status
 	dh_testdir
 
 	$(MAKE)
-	@echo "Expect one assertion failure during test_buffers."
-	# Right now test doesn't even fail when tests fail, so
-	# no - needed.
+	@echo
+	@echo
 	src/or/test
+	@echo
 
 	touch build-stamp
 
