@@ -194,7 +194,7 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
 }
 
 /* Find the newest circ that conn can use, preferably one which is
- * dirty and not too old.
+ * dirty. Circ must not be too old.
  * If !conn, return newest.
  *
  * If must_be_open, ignore circs not in CIRCUIT_STATE_OPEN.
@@ -303,6 +303,35 @@ int circuit_stream_is_being_handled(connection_t *conn) {
   return 0;
 }
 
+/* update digest from the payload of cell. assign integrity part to cell. */
+void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
+  uint32_t integrity;
+
+  crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
+  crypto_digest_get_digest(digest, (char *)&integrity, 4);
+  SET_CELL_RELAY_INTEGRITY(*cell, integrity);
+}
+
+/* update digest from the payload of cell (with the integrity part set
+ * to 0). If the integrity part is valid return 0, else return -1.
+ */
+int relay_check_digest(crypto_digest_env_t *digest, cell_t *cell) {
+  uint32_t received_integrity, calculated_integrity;
+
+  received_integrity = CELL_RELAY_INTEGRITY(*cell);
+  SET_CELL_RELAY_INTEGRITY(*cell, 0);
+
+  crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
+  crypto_digest_get_digest(digest, (char *)&calculated_integrity, 4);
+
+  if(received_integrity != calculated_integrity) {
+    log_fn(LOG_WARN,"Integrity check on cell payload failed. Bug or attack. (%d vs %d).",
+           received_integrity, calculated_integrity);
+    return -1;
+  }
+  return 0;
+}
+
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint) {
   connection_t *conn=NULL;
@@ -321,12 +350,10 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
 
   if(recognized) {
     if(cell_direction == CELL_DIRECTION_OUT) {
-#if 0
-       if(relay_update_digest(circ->n_digest, cell) < 0) {
+       if(relay_check_digest(circ->n_digest, cell) < 0) {
         log_fn(LOG_WARN,"outgoing cell failed integrity check. Closing circ.");
         return -1;
       }
-#endif
       ++stats_n_relay_cells_delivered;
       log_fn(LOG_DEBUG,"Sending to exit.");
       if (connection_edge_process_relay_cell(cell, circ, conn, EDGE_EXIT, NULL) < 0) {
@@ -335,12 +362,10 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
       }
     }
     if(cell_direction == CELL_DIRECTION_IN) {
-#if 0
-      if(relay_update_digest(layer_hint->p_digest, cell) < 0) {
+      if(relay_check_digest(layer_hint->b_digest, cell) < 0) {
         log_fn(LOG_WARN,"outgoing cell failed integrity check. Closing circ.");
         return -1;
       }
-#endif
       ++stats_n_relay_cells_delivered;
       log_fn(LOG_DEBUG,"Sending to AP.");
       if (connection_edge_process_relay_cell(cell, circ, conn, EDGE_AP, layer_hint) < 0) {
@@ -545,39 +570,20 @@ int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type, crypt_pat
   return 1;
 }
 
-int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t *layer_hint) {
-  cell_t cell;
-
-  assert(circ);
-
-  memset(&cell, 0, sizeof(cell_t));
-  cell.command = CELL_RELAY;
-  SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_SENDME);
-  SET_CELL_STREAM_ID(cell, ZERO_STREAM);
-  SET_CELL_RELAY_LENGTH(cell, 0);
-
-  if(edge_type == EDGE_AP) { /* i'm the AP */
-    cell.circ_id = circ->n_circ_id;
-    while(layer_hint->deliver_window < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
-      log_fn(LOG_DEBUG,"deliver_window %d, Queueing sendme forward.", layer_hint->deliver_window);
+void circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t *layer_hint) {
+  while((edge_type == EDGE_AP ? layer_hint->deliver_window : circ->deliver_window) <
+         CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
+    log_fn(LOG_DEBUG,"Queueing circuit sendme.");
+    if(edge_type == EDGE_AP)
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
-      if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, layer_hint) < 0) {
-        log_fn(LOG_WARN,"At AP: circuit_deliver_relay_cell failed.");
-        return -1;
-      }
-    }
-  } else if(edge_type == EDGE_EXIT) { /* i'm the exit */
-    cell.circ_id = circ->p_circ_id;
-    while(circ->deliver_window < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
-      log_fn(LOG_DEBUG,"deliver_window %d, Queueing sendme back.", circ->deliver_window);
+    else
       circ->deliver_window += CIRCWINDOW_INCREMENT;
-      if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_IN, layer_hint) < 0) {
-        log_fn(LOG_WARN,"At exit: circuit_deliver_relay_cell failed.");
-        return -1;
-      }
+    if(connection_edge_send_command(NULL, circ, RELAY_COMMAND_SENDME,
+                                    NULL, 0, layer_hint) < 0) {
+      log_fn(LOG_WARN,"connection_edge_send_command failed. Returning.");
+      return; /* the circuit's closed, don't continue */
     }
   }
-  return 0;
 }
 
 void circuit_close(circuit_t *circ) {
@@ -602,6 +608,8 @@ void circuit_close(circuit_t *circ) {
   if (circ->state == CIRCUIT_STATE_BUILDING ||
       circ->state == CIRCUIT_STATE_OR_WAIT) {
     /* If we never built the circuit, note it as a failure. */
+    /* Note that we can't just check circ->cpath here, because if
+     * circuit-building failed immediately, it won't be set yet. */
     circuit_increment_failure_count();
   }
   circuit_free(circ);

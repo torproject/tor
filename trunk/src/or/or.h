@@ -250,9 +250,17 @@ typedef uint16_t circ_id_t;
 
 #define CELL_RELAY_COMMAND_END_REASON(c) (*(uint8_t)((c).payload+1))
 
+/* integrity is the first 32 bits (in network order) of a sha-1 of all
+ * cell payloads that are relay cells that have been sent / delivered
+ * to the hop on the * circuit (the integrity is zeroed while doing
+ * each calculation)
+ */
+#define CELL_RELAY_INTEGRITY(c)       (ntohl(*(uint32_t*)((c).payload+1+STREAM_ID_SIZE)))
+#define SET_CELL_RELAY_INTEGRITY(c,i) (*(uint32_t*)((c).payload+1+STREAM_ID_SIZE) = htonl(i))
+
 /* relay length is how many bytes are used in the cell payload past relay_header_size */
-#define CELL_RELAY_LENGTH(c)         (*(uint16_t*)((c).payload+1+STREAM_ID_SIZE+4))
-#define SET_CELL_RELAY_LENGTH(c,len) (*(uint16_t*)((c).payload+1+STREAM_ID_SIZE+4) = (len))
+#define CELL_RELAY_LENGTH(c)         (ntohs(*(uint16_t*)((c).payload+1+STREAM_ID_SIZE+4)))
+#define SET_CELL_RELAY_LENGTH(c,len) (*(uint16_t*)((c).payload+1+STREAM_ID_SIZE+4) = htons(len))
 
 #define CELL_PAYLOAD_SIZE 509
 #define CELL_NETWORK_SIZE 512
@@ -544,6 +552,8 @@ void circuit_expire_building(void);
 int circuit_count_building(void);
 int circuit_stream_is_being_handled(connection_t *conn);
 
+void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell);
+int relay_check_digest(crypto_digest_env_t *digest, cell_t *cell);
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);
 int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
@@ -552,7 +562,7 @@ int relay_check_recognized(circuit_t *circ, int cell_direction, char *stream, co
 
 void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
 int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
-int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
+void circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
 
 void circuit_close(circuit_t *circ);
 void circuit_about_to_close_connection(connection_t *conn);

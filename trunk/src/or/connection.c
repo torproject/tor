@@ -371,7 +371,7 @@ int connection_read_to_buf(connection_t *conn) {
     if(connection_speaks_cells(conn)) {
       at_most = 30*(CELL_NETWORK_SIZE);
     } else {
-      at_most = 30*(CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE);
+      at_most = 30*(RELAY_PAYLOAD_SIZE);
     }
 
     if(at_most > global_read_bucket)
