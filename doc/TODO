@@ -67,7 +67,7 @@ NICK    - Reputation info needs to give better weight to recent events than
         -  and lists as running iff:
           - he can connect to you
           - he has successfully extended to you
-          - he has sufficient mean-time-between-failures
+          - you have sufficient mean-time-between-failures
         - Don't accept ORs with nicknames same as verified ORs' nicknames.
         - add new "Middleman 1" config variable?
           o if torrc not found, exitpolicy reject *:*
@@ -92,8 +92,8 @@ NICK    - Reputation info needs to give better weight to recent events than
         - should the running-routers list put unverified routers at the
           end?
         - tor-resolve needs a man page
-        - tor-resolve should make use of cached answers?
-        - defining an ORPort isn't necessary anymore, if you more
+        o tor-resolve should make use of cached answers?
+        - defining an ORPort isn't necessary anymore, if you use
           ORAddress:port. Same with DirPort, SocksPort.
         - requiredentrynode vs preferredentrynode
         - per-month byte allowances
@@ -107,7 +107,7 @@ NICK    - Reputation info needs to give better weight to recent events than
 
         o win32 problems with pre1
         . asn.1 issues?
-        o Switch dirservers entries to config lines:
+        - Switch dirservers entries to config lines:
           - read in and parse each TrustedDir config line.
           - stop reading dirservers file.
           - add some default TrustedDir lines if none defined, or if
@@ -128,7 +128,7 @@ NICK    - Reputation info needs to give better weight to recent events than
           "accept-transfer-encoding: gzip", server might send http header
           "transfer-encoding: gzip". ta-da.
           - grow a zlib dependency. keep a cached compressed directory.
-	- Why is the first entry of kill -USR1 a router with a 0 key?
+        - Why is the first entry of kill -USR1 a router with a 0 key?
 
 
       ongoing:

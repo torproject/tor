@@ -26,7 +26,7 @@ FILE contains further "option value" pairs. (Default: @CONFDIR@/torrc)
 .TP
 Other options can be specified either on the commandline (\fI--option value\fR), or in the configuration file (\fIoption value\fR).
 .TP
-\fBloglevel debug|info|warn|err\fP
+\fBloglevel debug|info|notice|warn|err\fP
 Set the verboseness level of the primary log. (Default: warn)
 .TP
 \fBlogfile \fR\fIFILE\fP
@@ -76,7 +76,7 @@ A list of nodes to never use when building a circuit.
 Every NUM seconds consider whether to build a new circuit. (Default: 60)
 .TP
 \fBpathlencoinweight \fR\fI0.0-1.0\fP
-Paths are 3 hops plus a geometric distribution centered around this coinweight. Must be >=0.0 and <1.0. (Default: 0.3)
+Paths are 3 hops plus a geometric distribution centered around this coinweight. Must be >=0.0 and <1.0. (Default: 0.3) NOT USED CURRENTLY
 .TP
 \fBsocksport \fR\fIPORT\fP
 Bind to this port to listen for connections from socks-speaking applications.
@@ -85,14 +85,14 @@ Bind to this port to listen for connections from socks-speaking applications.
 Bind to this address to listen for connections from socks-speaking applications. (Default: 127.0.0.1) You can also specify a port (e.g. 192.168.0.1:9100). This directive can be specified multiple times to bind to multiple addresses/ports.
 .TP
 \fBsockspolicy \fR\fIpolicy,policy,...\fP
-Set an entrance policy for this server, so limit who can connect to the socks ports. The policies have the same form as exit policies below.
+Set an entrance policy for this server, to limit who can connect to the socks ports. The policies have the same form as exit policies below.
 
 .SH SERVER OPTIONS
 .PP
 The following options are useful only for servers (that is, if \fBorport\fP is non-zero):
 .TP
-\fBaddress address\fP
-The fqdn of this server (e.g. moria.mit.edu).
+\fBaddress \fR\fIaddress\fP
+The IP or fqdn of this server (e.g. moria.mit.edu).
 .TP
 \fBdatadirectory \fR\fIDIR\fP
 Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
@@ -197,7 +197,7 @@ The configuration file, which contains "option value" pairs.
 A list of directory servers, to bootstrap into the network.
 .TP
 .I @LOCALSTATEDIR@/lib/tor/
-The tor server stores keys/etc here.
+The tor process stores keys and other data here.
 
 .SH SEE ALSO
 .BR privoxy (1),
@@ -208,5 +208,5 @@ The tor server stores keys/etc here.
 .SH BUGS
 Plenty, probably. It's still in alpha. Please report them.
 .SH AUTHORS
-Roger Dingledine <arma@mit.edu>.
+Roger Dingledine <arma@mit.edu>, Nick Mathewson <nickm@alum.mit.edu>.
 
