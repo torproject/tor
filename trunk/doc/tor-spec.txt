@@ -511,62 +511,90 @@ TODO: (very soon)
 
 7. Directories and routers
 
+7.1. Extensible information format
+
+Router descriptors and directories both obey the following lightweight
+extensible information format.
+
+The highest level object is a Document, which consists of one or more Items.
+Every Item begins with a KeywordLine, followed by one or more Objects. A
+KeywordLine begins with a Keyword, optionally followed by a space and more
+non-newline characters, and ends with a newline.  A Keyword is a sequence of
+one or more characters in the set [A-Za-z0-9-].  An Object is a block of
+PGP-encrypted data in Open-PGP-style armor.
+
+More formally:
+
+    Document ::= (Item | NL)+
+    Item ::= KeywordLine Object*
+    KeywordLine ::= Keyword NL | Keyword SP ArgumentsChar+ NL
+    Keyword = KeywordChar+
+    KeywordChar ::= 'A' ... 'Z' | 'a' ... 'z' | '0' ... '9' | '-'
+    ArgumentChar ::= any printing ASCII character except NL.
+    Object ::= BeginLine Base-64-encoded-data EndLine
+    BeginLine ::= "-----BEGIN " Keyword "-----" NL
+    EndLine ::= "-----END " Keyword "-----" NL
+
+    The BeginLine and EndLine of an Object must use the same keyword.
+
+When interpreting a Document, software MUST reject any document containing a
+KeywordLine that starts with a keyword it doesn't recognize.
+
 7.1. Router descriptor format.
 
-(Unless otherwise noted, tokens on the same line are space-separated.)
+Every router descriptor MUST start with a "router" Item; MUST end with a
+"router-signature" Item and an extra NL; and MUST contain exactly one
+instance of each of the following Items: "published" "onion-key" "link-key"
+"signing-key".  Additionally, a router descriptor MAY contain any number of
+"accept", "reject", and "opt" Items.
 
-Router ::= Router-Line  Date-Line Onion-Key Link-Key Signing-Key  Exit-Policy Router-Signature NL
-Router-Line ::= "router" nickname address ORPort SocksPort DirPort bandwidth NL
-Date-Line ::= "published" YYYY-MM-DD HH:MM:SS NL
-Onion-key ::= "onion-key"  NL  a public key in PEM format   NL
-Link-key ::= "link-key"  NL  a public key in PEM format  NL
-Signing-Key ::= "signing-key"  NL  a public key in PEM format   NL
-Exit-Policy ::= Exit-Line*
-Exit-Line ::= ("accept"|"reject")  string  NL
-Router-Signature ::= "router-signature"  NL  Signature
-Signature ::= "-----BEGIN SIGNATURE-----" NL
-              Base-64-encoded-signature NL "-----END SIGNATURE-----" NL
+The items' formats are as follows:
+   "router" nickname address (ORPort SocksPort DirPort bandwidth)?
+   "ports" ORPort SocksPort DirPort
+   "bandwidth" bandwidth
+   "platform" string
+   "published" YYYY-MM-DD HH:MM:SS
+   "onion-key" NL a public key in PEM format
+   "link-key" NL a public key in PEM format
+   "signing-key" NL a public key in PEM format
+   "accept" string
+   "reject" string
+   "router-signature" NL "-----BEGIN SIGNATURE-----" NL Signature NL
+                      "-----END SIGNATURE-----"
+   "opt" SP keyword string? NL,Object?
 
 ORport ::= port where the router listens for routers/proxies (speaking cells)
 SocksPort ::=  where the router listens for applications (speaking socks)
 DirPort ::= where the router listens for directory download requests
 bandwidth ::= maximum bandwidth, in bytes/s
-
 nickname ::= between 1 and 32 alphanumeric characters.  case-insensitive.
 
-Example:
-router moria1 moria.mit.edu 9001 9021 9031 100000
-published 2003-09-24 19:36:05
------BEGIN RSA PUBLIC KEY-----
-MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
-7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
-nZ7kVMRoiXCbjL6VAtNa4Zy1Af/GOm0iCIDpholeujQ95xew7rQnAgMA//8=
------END RSA PUBLIC KEY-----
-signing-key
------BEGIN RSA PUBLIC KEY-----
-7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
-MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
-f/GOm0iCIDpholeujQ95xew7rnZ7kVMRoiXCbjL6VAtNa4Zy1AQnAgMA//8=
------END RSA PUBLIC KEY-----
-reject 18.0.0.0/24
+Bandwidth and ports are required; if they are not included in the router
+line, they must appear in "bandwidth" and "ports" lines.
 
-Note: The extra newline at the end of the router block is intentional.
+"opt" is reserved for non-critical future extensions.
 
 7.2. Directory format
 
-Directory ::= Directory-Header  Directory-Router  Router*  Signature
-Directory-Header ::= "signed-directory" NL Software-Line NL
-Software-Line: "recommended-software"  comma-separated-version-list
-Directory-Router ::= Router
-Directory-Signature ::= "directory-signature"  NL  Signature
-Signature ::= "-----BEGIN SIGNATURE-----" NL
-              Base-64-encoded-signature NL "-----END SIGNATURE-----" NL
+A Directory begins with a "signed-directory" item, followed by one each of
+the following, in any order: "recommended-software".  It may include any
+number of "opt" items.  After these items, a directory includes any number
+of router descriptors, and a singer "directory-signature" item.
 
-Note:  The router block for the directory server must appear first.
+    "signed-directory"
+    "recommended-software"  comma-separated-version-list
+    "directory-signature" NL Signature
+
+Note:  The router descriptor for the directory server must appear first.
 The signature is computed by computing the SHA-1 hash of the
 directory, from the characters "signed-directory", through the newline
 after "directory-signature".  This digest is then padded with PKCS.1,
 and signed with the directory server's signing key.
+
+If software encounters an unrecognized keyword in a single router descriptor,
+it should reject only that router descriptor, and continue using the
+others.  If it encounters an unrecognized keyword in the directory header,
+it should reject the entire directory.
 
 7.3. Behavior of a directory server
 
