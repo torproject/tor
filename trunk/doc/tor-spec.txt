@@ -625,12 +625,18 @@ The items' formats are as follows:
       directory-related HTTP connections.  If any port is not supported, the
       value 0 is given instead of a port number.
 
-   "bandwidth" bandwidth-avg bandwidth-burst
+   "bandwidth" bandwidth-avg bandwidth-burst bandwidth-observed
 
       Estimated bandwidth for this router, in bytes per second.  The
-      "average" bandwidth is the volume per second that the OR is willing to
-      sustain over long periods; the "burst" bandwidth is the volume that
-      the OR is willing to sustain in very short intervals.
+      "average" bandwidth is the volume per second that the OR is willing
+      to sustain over long periods; the "burst" bandwidth is the volume
+      that the OR is willing to sustain in very short intervals.  The
+      "observed" value is an estimate of the capacity this server can
+      handle.  The server remembers the max bandwidth sustained output
+      over any ten second period in the past day, and another sustained
+      input.  The "observed" value is the lesser of these two numbers.
+
+      [bandwidth-observed was not present before 0.0.8.]
 
    "platform" string
 
