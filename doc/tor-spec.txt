@@ -275,6 +275,7 @@ EVEN LATER:
    [We'll have to reevaluate this section once we figure out cleaner
     circuit/connection killing conventions. Possibly the right answer
     is to not use most of the extensions. -RD]
+   [Correct. We should specify that OPs must not send truncate cells. -RD]
 
 4.5. Routing relay cells
 
@@ -300,7 +301,7 @@ EVEN LATER:
    relay cell at the end of the circuit must be allowed for now;
    we can reexamine this once we've designed full tcp-style close
    handshakes. -RD [No longer true, an unrecognized relay cell at
-   the end can be met with a destroy cell -- I think. -RD]]
+   the end is met with a destroy cell. -RD]]
 
    Otherwise, if the data cell is coming from the OP edge of the
    circuit, the OP decrypts the length and payload fields with AES/CTR as
