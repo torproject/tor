@@ -215,7 +215,6 @@ int connection_or_handle_listener_read(connection_t *conn) {
 /* Helper functions to implement handshaking */
 
 #define FLAGS_LEN 2
-#define BANDWIDTH_LEN 4
 #define KEY_LEN 16
 #define ADDR_LEN 4
 #define PORT_LEN 2
@@ -223,7 +222,7 @@ int connection_or_handle_listener_read(connection_t *conn) {
 
 static int 
 or_handshake_op_send_keys(connection_t *conn) {
-  unsigned char message[FLAGS_LEN + BANDWIDTH_LEN + KEY_LEN + KEY_LEN];
+  unsigned char message[FLAGS_LEN + KEY_LEN + KEY_LEN];
   unsigned char cipher[PKEY_LEN];
   int retval;
 
@@ -240,10 +239,9 @@ or_handshake_op_send_keys(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_op_send_keys() : Generated symmetric keys.");
   /* compose the message */
   *(uint16_t *)(message) = htons(HANDSHAKE_AS_OP);
-  *(uint32_t *)(message+FLAGS_LEN) = htonl(conn->bandwidth);
-  memcpy((void *)(message+FLAGS_LEN+BANDWIDTH_LEN), 
+  memcpy((void *)(message+FLAGS_LEN), 
          (void *)conn->f_crypto->key, 16);
-  memcpy((void *)(message+FLAGS_LEN+BANDWIDTH_LEN+KEY_LEN), 
+  memcpy((void *)(message+FLAGS_LEN+KEY_LEN), 
          (void *)conn->b_crypto->key, 16);
 
   /* encrypt with RSA */
@@ -291,7 +289,7 @@ static int
 or_handshake_client_send_auth(connection_t *conn) {
   int retval;
   char buf[FLAGS_LEN+ADDR_LEN+PORT_LEN+ADDR_LEN+
-           PORT_LEN+KEY_LEN+KEY_LEN+BANDWIDTH_LEN];
+           PORT_LEN+KEY_LEN+KEY_LEN];
   char cipher[PKEY_LEN];
   struct sockaddr_in me; /* my router identity */
 
@@ -318,8 +316,6 @@ or_handshake_client_send_auth(connection_t *conn) {
          conn->f_crypto->key,16); /* keys */
   memcpy(buf+FLAGS_LEN+ADDR_LEN+PORT_LEN+ADDR_LEN+PORT_LEN+KEY_LEN,
          conn->b_crypto->key,16);
-  *(uint32_t *)(buf+FLAGS_LEN+ADDR_LEN+PORT_LEN+ADDR_LEN+PORT_LEN+
-                KEY_LEN+KEY_LEN) = htonl(conn->bandwidth); /* max link utilisation */
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated first authentication message.");
 
   /* encrypt message */
@@ -360,9 +356,8 @@ or_handshake_client_send_auth(connection_t *conn) {
 
 static int 
 or_handshake_client_process_auth(connection_t *conn) {
-  char buf[128]; /* only 56 of this is expected to be used */
+  char buf[128]; /* only 52 of this is expected to be used */
   char cipher[128];
-  uint32_t bandwidth;
   int retval;
   struct sockaddr_in me; /* my router identity */
 
@@ -387,7 +382,7 @@ or_handshake_client_process_auth(connection_t *conn) {
         crypto_perror());
     return -1;
   }
-  else if (retval != 56)
+  else if (retval != 52)
   { 
     log(LOG_ERR,"client_process_auth: incorrect response from router %s:%u.",
         conn->address,conn->port);
@@ -410,14 +405,8 @@ or_handshake_client_process_auth(connection_t *conn) {
 
   log(LOG_DEBUG,"or_handshake_client_process_auth() : Response valid.");
 
-  /* update link info */
-  bandwidth = ntohl(*(uint32_t *)(buf+44));
-
-  if (conn->bandwidth > bandwidth)
-    conn->bandwidth = bandwidth;
-
   /* reply is just local addr/port, remote addr/port, nonce */
-  memcpy(buf+12, buf+48, 8);
+  memcpy(buf+12, buf+44, 8);
 
   /* encrypt reply */
   retval = crypto_pk_public_encrypt(conn->pkey, buf, 20, cipher,RSA_PKCS1_PADDING);
@@ -452,7 +441,6 @@ or_handshake_client_process_auth(connection_t *conn) {
   conn_or_init_crypto(conn);
   connection_or_set_open(conn);
   return connection_process_inbuf(conn); /* process the rest of the inbuf */
-
 }
 
 /*
@@ -473,7 +461,6 @@ or_handshake_server_process_auth(connection_t *conn) {
   uint32_t addr;
   uint16_t port;
 
-  uint32_t bandwidth;
   routerinfo_t *router;
 
   assert(conn);
@@ -495,7 +482,7 @@ or_handshake_server_process_auth(connection_t *conn) {
     return -1;
   }
 
-  if (retval == 50) {
+  if (retval == 46) {
 
     log(LOG_DEBUG,"or_handshake_server_process_auth(): Decrypted OR-style auth message.");
     if(ntohs(*(uint16_t*)buf) != HANDSHAKE_AS_OR) {
@@ -524,13 +511,7 @@ or_handshake_server_process_auth(connection_t *conn) {
     crypto_cipher_set_key(conn->b_crypto,buf+14);
     crypto_cipher_set_key(conn->f_crypto,buf+30);
 
-    /* update link info */
-    bandwidth = ntohl(*(uint32_t *)(buf+46));
-
     conn->bandwidth = router->bandwidth;
-
-    if (conn->bandwidth > bandwidth)
-      conn->bandwidth = bandwidth;
 
     /* copy all relevant info to conn */
     conn->addr = router->addr, conn->port = router->or_port;
@@ -548,11 +529,10 @@ or_handshake_server_process_auth(connection_t *conn) {
     log(LOG_DEBUG,"or_handshake_server_process_auth(): Nonce generated.");
 
     memmove(buf, buf+2, 44);
-    *(uint32_t *)(buf+44) = htonl(conn->bandwidth); /* send max link utilisation */
-    memcpy(buf+48,conn->nonce,8); /* append the nonce to the end of the message */
+    memcpy(buf+44,conn->nonce,8); /* append the nonce to the end of the message */
 
     /* encrypt message */
-    retval = crypto_pk_public_encrypt(conn->pkey, buf, 56, cipher,RSA_PKCS1_PADDING);
+    retval = crypto_pk_public_encrypt(conn->pkey, buf, 52, cipher,RSA_PKCS1_PADDING);
     if (retval == -1) { /* error */
       log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,conn->port);
       log(LOG_DEBUG,"or_handshake_server_process_auth() : Reason : %s.",crypto_perror());
@@ -585,18 +565,15 @@ or_handshake_server_process_auth(connection_t *conn) {
     return 0;
   }
 
-  if(retval == 38) {
+  if(retval == 34) {
     log(LOG_DEBUG,"or_handshake_server_process_auth(): Decrypted OP-style auth message.");
     if(ntohs(*(uint16_t*)buf) != HANDSHAKE_AS_OP) {
       log(LOG_DEBUG,"or_handshake_server_process_auth(): ...but wasn't labelled OP. Dropping.");
       return -1;
     }
 
-    conn->bandwidth = ntohl(*((uint32_t *)(buf+2)));
-    log(LOG_DEBUG,"or_handshake_server_process_auth(): Bandwidth %d requested.",conn->bandwidth);
-
-    crypto_cipher_set_key(conn->b_crypto, buf+6);
-    crypto_cipher_set_key(conn->f_crypto, buf+22);
+    crypto_cipher_set_key(conn->b_crypto, buf+2);
+    crypto_cipher_set_key(conn->f_crypto, buf+18);
 
     memset(iv, 0, 16);
     crypto_cipher_set_iv(conn->b_crypto, iv);
