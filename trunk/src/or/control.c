@@ -494,14 +494,14 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
       if (!is_plausible_address(from)) {
         log_fn(LOG_WARN,"Skipping invalid argument '%s' in MapAddress msg",from);
       } else if (!is_plausible_address(to)) {
-        log_fn(LOG_WARN,"Skipping invalid argument '%s' in AddressMap msg",to);
+        log_fn(LOG_WARN,"Skipping invalid argument '%s' in MapAddress msg",to);
       } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
         char *addr = addressmap_register_virtual_address(
                strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
                tor_strdup(to));
         if (!addr) {
           log_fn(LOG_WARN,
-                 "Unable to allocate address for '%s' in AdressMap msg", line);
+                 "Unable to allocate address for '%s' in MapAddress msg",line);
         } else {
           size_t anslen = strlen(addr)+strlen(to)+2;
           char *ans = tor_malloc(anslen);
