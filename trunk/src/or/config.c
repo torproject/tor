@@ -958,6 +958,11 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
+  if (validate_data_directory(options)<0) {
+    log(LOG_WARN, "Invalid DataDirectory");
+    result = -1;
+  }
+
   if (options->Nickname == NULL) {
     if (server_mode(options)) {
       if (!(options->Nickname = get_default_nickname()))
@@ -1205,7 +1210,7 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val) {
        (!new_val->DataDirectory ||
         strcmp(old->DataDirectory,new_val->DataDirectory)!=0)) ||
       (!old->DataDirectory && new_val->DataDirectory)) {
-    log_fn(LOG_WARN,"During reload, changing DataDirectory is not allowed. Failing.");
+    log_fn(LOG_WARN,"During reload, changing DataDirectory (%s->%s) is not allowed. Failing.", old->DataDirectory, new_val->DataDirectory);
     return -1;
   }
 
@@ -1818,12 +1823,14 @@ parse_dir_server_line(const char *line, int validate_only)
 const char *
 get_data_directory(void)
 {
-  const char *d;
-  or_options_t *options = get_options();
+  return get_options()->DataDirectory;
+}
 
-  if (options->DataDirectory) {
-    d = options->DataDirectory;
-  } else {
+static int
+validate_data_directory(or_options_t *options) {
+  const char *d;
+
+  if (!options->DataDirectory) {
 #ifdef MS_WINDOWS
     char *p;
     p = tor_malloc(MAX_PATH);
@@ -1832,19 +1839,20 @@ get_data_directory(void)
     return p;
 #else
     d = "~/.tor";
+  }
 #endif
-  }
 
-  if (d && strncmp(d,"~/",2) == 0) {
-    char *fn = expand_filename(d);
-    if (!fn) {
-      log_fn(LOG_ERR,"Failed to expand filename '%s'. Exiting.", d);
-      exit(1);
-    }
-    tor_free(options->DataDirectory);
-    options->DataDirectory = fn;
-  }
-  return options->DataDirectory;
+ if (d && strncmp(d,"~/",2) == 0) {
+   char *fn = expand_filename(d);
+   if (!fn) {
+     log_fn(LOG_ERR,"Failed to expand filename '%s'. Exiting.", d);
+     exit(1);
+   }
+   tor_free(options->DataDirectory);
+   options->DataDirectory = fn;
+ }
+
+ return 0;
 }
 
 /*
