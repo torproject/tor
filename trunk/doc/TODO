@@ -13,10 +13,11 @@ ARMA    - arma claims
 Tor 0.0.9rc1:
    o Weasel wants to say 50GB rather than 50000000 in config ints.
    o Nick wants to say "1 hour" instead of 3600 in config ints.
-   - Better hibernation flexibility
-     - Add hibernation intervals for weeks, days.
-     - Start at a time other than 0:00 GMT.
-   - Integrate NT service patch
+   o Better hibernation flexibility
+     o Add hibernation intervals for weeks, days.
+     o Start at a time other than 0:00 GMT.
+     o Document
+   o Integrate NT service patch
    - make loglevels info,debug less noisy
 
 Beyond 0.0.9:
