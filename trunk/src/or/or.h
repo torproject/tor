@@ -897,11 +897,6 @@ int circuit_count_building(uint8_t purpose);
 int circuit_stream_is_being_handled(connection_t *conn);
 void circuit_build_needed_circs(time_t now);
 
-int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
-                               int cell_direction);
-int circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
-                               int cell_direction, crypt_path_t *layer_hint);
-
 void circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
 int circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
 void circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint);
@@ -927,9 +922,6 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
 void assert_cpath_ok(const crypt_path_t *c);
 void assert_cpath_layer_ok(const crypt_path_t *c);
 void assert_circuit_ok(const circuit_t *c);
-
-extern unsigned long stats_n_relay_cells_relayed;
-extern unsigned long stats_n_relay_cells_delivered;
 
 /********************************* command.c ***************************/
 
@@ -1090,6 +1082,20 @@ int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
 
+/********************************* dirserv.c ***************************/
+int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
+int dirserv_parse_fingerprint_file(const char *fname);
+int dirserv_router_fingerprint_is_known(const routerinfo_t *router);
+void dirserv_free_fingerprint_list();
+int dirserv_add_descriptor(const char **desc);
+int dirserv_init_from_directory_string(const char *dir);
+void dirserv_free_descriptors();
+int dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
+                                     crypto_pk_env_t *private_key);
+void directory_set_dirty(void);
+size_t dirserv_get_directory(const char **cp);
+void dirserv_remove_old_servers(void);
+
 /********************************* dns.c ***************************/
 
 void dns_init(void);
@@ -1155,82 +1161,15 @@ int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
                                                  const char *exit_nickname);
 
-/********************************* router.c ***************************/
+/********************************* relay.c ***************************/
 
-void set_onion_key(crypto_pk_env_t *k);
-crypto_pk_env_t *get_onion_key(void);
-crypto_pk_env_t *get_previous_onion_key(void);
-time_t get_onion_key_set_at(void);
-void set_identity_key(crypto_pk_env_t *k);
-crypto_pk_env_t *get_identity_key(void);
-int init_keys(void);
-crypto_pk_env_t *init_key_from_file(const char *fname);
-void rotate_onion_key(void);
+extern unsigned long stats_n_relay_cells_relayed;
+extern unsigned long stats_n_relay_cells_delivered;
 
-void router_retry_connections(void);
-void router_upload_dir_desc_to_dirservers(void);
-void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload_len);
-int router_compare_to_my_exit_policy(connection_t *conn);
-routerinfo_t *router_get_my_routerinfo(void);
-const char *router_get_my_descriptor(void);
-int router_is_me(routerinfo_t *router);
-int router_rebuild_descriptor(void);
-int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
-                                 crypto_pk_env_t *ident_key);
-
-/********************************* routerlist.c ***************************/
-
-routerinfo_t *router_pick_directory_server(void);
-struct smartlist_t;
-routerinfo_t *router_choose_random_node(routerlist_t *dir,
-                                        char *preferred, char *excluded,
-                                        struct smartlist_t *excludedsmartlist);
-routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
-routerinfo_t *router_get_by_nickname(char *nickname);
-void router_get_routerlist(routerlist_t **prouterlist);
-void routerlist_free(routerlist_t *routerlist);
-void routerinfo_free(routerinfo_t *router);
-routerinfo_t *routerinfo_copy(const routerinfo_t *router);
-void router_mark_as_down(char *nickname);
-int router_set_routerlist_from_file(char *routerfile);
-int router_set_routerlist_from_string(const char *s);
-int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey);
-int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
-                                       struct exit_policy_t *policy);
-#define ADDR_POLICY_ACCEPTED 0
-#define ADDR_POLICY_REJECTED -1
-#define ADDR_POLICY_UNKNOWN 1
-int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port);
-int router_exit_policy_rejects_all(routerinfo_t *router);
-
-/********************************* routerparse.c ************************/
-
-int router_get_router_hash(const char *s, char *digest);
-int router_get_dir_hash(const char *s, char *digest);
-int router_parse_list_from_string(const char **s,
-                                       routerlist_t **dest,
-                                       int n_good_nicknames,
-                                       const char **good_nickname_lst);
-int router_parse_routerlist_from_directory(const char *s,
-                                           routerlist_t **dest,
-                                           crypto_pk_env_t *pkey);
-routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
-int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
-
-/********************************* dirserv.c ***************************/
-int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
-int dirserv_parse_fingerprint_file(const char *fname);
-int dirserv_router_fingerprint_is_known(const routerinfo_t *router);
-void dirserv_free_fingerprint_list();
-int dirserv_add_descriptor(const char **desc);
-int dirserv_init_from_directory_string(const char *dir);
-void dirserv_free_descriptors();
-int dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
-                                     crypto_pk_env_t *private_key);
-void directory_set_dirty(void);
-size_t dirserv_get_directory(const char **cp);
-void dirserv_remove_old_servers(void);
-
+int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
+                               int cell_direction);
+int circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
+                               int cell_direction, crypt_path_t *layer_hint);
 
 /********************************* rephist.c ***************************/
 
@@ -1317,6 +1256,68 @@ int rend_mid_establish_intro(circuit_t *circ, const char *request, int request_l
 int rend_mid_introduce(circuit_t *circ, const char *request, int request_len);
 int rend_mid_establish_rendezvous(circuit_t *circ, const char *request, int request_len);
 int rend_mid_rendezvous(circuit_t *circ, const char *request, int request_len);
+
+/********************************* router.c ***************************/
+
+void set_onion_key(crypto_pk_env_t *k);
+crypto_pk_env_t *get_onion_key(void);
+crypto_pk_env_t *get_previous_onion_key(void);
+time_t get_onion_key_set_at(void);
+void set_identity_key(crypto_pk_env_t *k);
+crypto_pk_env_t *get_identity_key(void);
+int init_keys(void);
+crypto_pk_env_t *init_key_from_file(const char *fname);
+void rotate_onion_key(void);
+
+void router_retry_connections(void);
+void router_upload_dir_desc_to_dirservers(void);
+void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload_len);
+int router_compare_to_my_exit_policy(connection_t *conn);
+routerinfo_t *router_get_my_routerinfo(void);
+const char *router_get_my_descriptor(void);
+int router_is_me(routerinfo_t *router);
+int router_rebuild_descriptor(void);
+int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
+                                 crypto_pk_env_t *ident_key);
+
+/********************************* routerlist.c ***************************/
+
+routerinfo_t *router_pick_directory_server(void);
+struct smartlist_t;
+routerinfo_t *router_choose_random_node(routerlist_t *dir,
+                                        char *preferred, char *excluded,
+                                        struct smartlist_t *excludedsmartlist);
+routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
+routerinfo_t *router_get_by_nickname(char *nickname);
+void router_get_routerlist(routerlist_t **prouterlist);
+void routerlist_free(routerlist_t *routerlist);
+void routerinfo_free(routerinfo_t *router);
+routerinfo_t *routerinfo_copy(const routerinfo_t *router);
+void router_mark_as_down(char *nickname);
+int router_set_routerlist_from_file(char *routerfile);
+int router_set_routerlist_from_string(const char *s);
+int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey);
+int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
+                                       struct exit_policy_t *policy);
+#define ADDR_POLICY_ACCEPTED 0
+#define ADDR_POLICY_REJECTED -1
+#define ADDR_POLICY_UNKNOWN 1
+int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port);
+int router_exit_policy_rejects_all(routerinfo_t *router);
+
+/********************************* routerparse.c ************************/
+
+int router_get_router_hash(const char *s, char *digest);
+int router_get_dir_hash(const char *s, char *digest);
+int router_parse_list_from_string(const char **s,
+                                       routerlist_t **dest,
+                                       int n_good_nicknames,
+                                       const char **good_nickname_lst);
+int router_parse_routerlist_from_directory(const char *s,
+                                           routerlist_t **dest,
+                                           crypto_pk_env_t *pkey);
+routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
+int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 
 #endif
 

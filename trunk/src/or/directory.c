@@ -527,7 +527,6 @@ static int directory_handle_command(connection_t *conn) {
  * appropriate.
  */
 int connection_dir_finished_flushing(connection_t *conn) {
-  int e, len=sizeof(e);
 
   tor_assert(conn && conn->type == CONN_TYPE_DIR);
 

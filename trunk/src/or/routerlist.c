@@ -211,6 +211,7 @@ routerinfo_t *router_get_by_nickname(char *nickname)
   int i;
   routerinfo_t *router;
 
+  tor_assert(nickname);
   tor_assert(routerlist);
 
   for(i=0;i<smartlist_len(routerlist->routers);i++) {
@@ -290,7 +291,9 @@ void routerlist_free(routerlist_t *rl)
 
 /** Mark the router named <b>nickname</b> as non-running in our routerlist. */
 void router_mark_as_down(char *nickname) {
-  routerinfo_t *router = router_get_by_nickname(nickname);
+  routerinfo_t *router;
+  tor_assert(nickname);
+  router = router_get_by_nickname(nickname);
   if(!router) /* we don't seem to know about him in the first place */
     return;
   log_fn(LOG_DEBUG,"Marking %s as down.",router->nickname);

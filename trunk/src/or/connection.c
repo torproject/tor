@@ -852,11 +852,12 @@ int connection_handle_write(connection_t *conn) {
     }
   }
 
-  if(!connection_wants_to_flush(conn)) /* it's done flushing */
-    if(connection_finished_flushing(conn) < 0) { /* ...and get handled here. */
+  if(!connection_wants_to_flush(conn)) { /* it's done flushing */
+    if(connection_finished_flushing(conn) < 0) {
       /* already marked */
       return -1;
     }
+  }
 
   return 0;
 }
@@ -1053,6 +1054,7 @@ int connection_state_is_open(connection_t *conn) {
   return 0;
 }
 
+/** Return 1 if conn is in 'connecting' state, else return 0. */
 int connection_state_is_connecting(connection_t *conn) {
   tor_assert(conn);
 
