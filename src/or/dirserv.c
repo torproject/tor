@@ -429,9 +429,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
     log_fn(LOG_WARN,"couldn't sign digest");
     return -1;
   }
-  log(LOG_DEBUG,"generated directory digest begins with %02x:%02x:%02x:%02x",
-      ((int)digest[0])&0xff,((int)digest[1])&0xff,
-      ((int)digest[2])&0xff,((int)digest[3])&0xff);
+  log(LOG_DEBUG,"generated directory digest begins with %s",hex_str(digest,4));
 
   if (strlcat(cp, "-----BEGIN SIGNATURE-----\n", maxlen) >= maxlen)
     goto truncated;

@@ -1149,10 +1149,15 @@ static void circuit_failed(circuit_t *circ) {
  */
 static int n_circuit_failures = 0;
 
+/* Don't retry launching a new circuit if we try this many times with no
+ * success. */
+#define MAX_CIRCUIT_FAILURES 5
+
 /* Launch a new circuit and return a pointer to it. Return NULL if you failed. */
 circuit_t *circuit_launch_new(uint8_t purpose, const char *exit_nickname) {
 
-  if(n_circuit_failures > 5) { /* too many failed circs in a row. don't try. */
+  if (n_circuit_failures > MAX_CIRCUIT_FAILURES) {
+    /* too many failed circs in a row. don't try. */
 //    log_fn(LOG_INFO,"%d failures so far, not trying.",n_circuit_failures);
     return NULL;
   }
@@ -1265,7 +1270,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   routerinfo_t *router;
   int r;
   int circ_id_type;
-  char payload[6+ONIONSKIN_CHALLENGE_LEN];
+  char payload[2+4+ONIONSKIN_CHALLENGE_LEN];
 
   assert(circ && circ->cpath);
 
@@ -1388,7 +1393,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   newcell.command = CELL_CREATE;
   newcell.circ_id = circ->n_circ_id;
 
-  memcpy(newcell.payload, cell->payload+RELAY_HEADER_SIZE+6,
+  memcpy(newcell.payload, cell->payload+RELAY_HEADER_SIZE+2+4,
          ONIONSKIN_CHALLENGE_LEN);
 
   connection_or_write_cell_to_buf(&newcell, circ->n_conn);
@@ -1426,11 +1431,13 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
 
   log_fn(LOG_DEBUG,"hop init cipher forward 0x%.8x, backward 0x%.8x.",
          (unsigned int)*(uint32_t*)(key_data+40), (unsigned int)*(uint32_t*)(key_data+40+16));
-  if (!(cpath->f_crypto = crypto_create_init_cipher(key_data+40,iv,1))) {
+  if (!(cpath->f_crypto =
+        crypto_create_init_cipher(key_data+(2*DIGEST_LEN),iv,1))) {
     log(LOG_WARN,"forward cipher initialization failed.");
     return -1;
   }
-  if (!(cpath->b_crypto = crypto_create_init_cipher(key_data+40+16,iv,0))) {
+  if (!(cpath->b_crypto =
+     crypto_create_init_cipher(key_data+(2*DIGEST_LEN)+CIPHER_KEY_LEN,iv,0))) {
     log(LOG_WARN,"backward cipher initialization failed.");
     return -1;
   }
@@ -1465,7 +1472,8 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   }
   assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
-  if(onion_skin_client_handshake(hop->handshake_state, reply, keys, 40+32) < 0) {
+  if(onion_skin_client_handshake(hop->handshake_state, reply, keys,
+                                 DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
     log_fn(LOG_WARN,"onion_skin_client_handshake failed.");
     return -1;
   }

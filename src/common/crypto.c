@@ -560,6 +560,12 @@ int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
   if (!cipher) return -1;
   if (crypto_cipher_generate_key(cipher)<0)
     goto err;
+  /* You can't just run around RSA-encrypting any bitstream: if it's
+   * greater than the RSA key, then OpenSSL will happily encrypt, and
+   * later decrypt to the wrong value.  So we set the first bit of
+   * 'cipher->key' to 0 if we aren't padding.  This means that our
+   * symmetric key is really only 127 bits.
+   */
   if (padding == PK_NO_PADDING)
     cipher->key[0] &= 0x7f;
   if (crypto_cipher_encrypt_init_cipher(cipher)<0)

@@ -663,9 +663,7 @@ router_get_routerlist_from_directory_impl(const char *str,
     log_fn(LOG_WARN, "Unable to compute digest of directory");
     goto err;
   }
-  log(LOG_DEBUG,"Received directory hashes to %02x:%02x:%02x:%02x",
-      ((int)digest[0])&0xff,((int)digest[1])&0xff,
-      ((int)digest[2])&0xff,((int)digest[3])&0xff);
+  log(LOG_DEBUG,"Received directory hashes to %s",hex_str(digest,4));
 
   if ((end = strstr(str,"\nrouter "))) {
     ++end;
@@ -760,9 +758,8 @@ router_get_routerlist_from_directory_impl(const char *str,
       log_fn(LOG_WARN, "Error reading directory: invalid signature.");
       goto err;
     }
-    log(LOG_DEBUG,"Signed directory hash starts %02x:%02x:%02x:%02x",
-        ((int)signed_digest[0])&0xff,((int)signed_digest[1])&0xff,
-        ((int)signed_digest[2])&0xff,((int)signed_digest[3])&0xff);
+    log(LOG_DEBUG,"Signed directory hash starts %s", hex_str(signed_digest,4));
+
     if (memcmp(digest, signed_digest, 20)) {
       log_fn(LOG_WARN, "Error reading directory: signature does not match.");
       goto err;
