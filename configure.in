@@ -195,6 +195,21 @@ if test $tor_cv_unaligned_ok = yes; then
             [Define to 1 iff unaligned int access is allowed])
 fi
 
+# Now make sure that NULL can be represented as zero bytes.
+AC_CACHE_CHECK([whether memset(0) sets pointers to NULL], tor_cv_null_is_zero,
+[AC_RUN_IFELSE([AC_LANG_SOURCE(
+[[#include <stdlib.h>
+int main () { char *p1,*p2; p1=NULL; memset(&p2,0,sizeof(p2));
+return memcmp(&p1,&p2,sizeof(char*)); }]])],
+       [tor_cv_null_is_zero=yes],
+       [tor_cv_null_is_zero=no],
+       [tor_cv_null_is_zero=cross])])
+
+if test $tor_cv_null_is_zero = yes; then
+  AC_DEFINE([NULL_REP_IS_ZERO_BYTES], 1,
+            [Define to 1 iff memset(0) sets pointers to NULL])
+fi
+
 # $prefix stores the value of the --prefix command line option, or
 # NONE if the option wasn't set.  In the case that it wasn't set, make
 # it be the default, so that we can use it to expand directories now.

@@ -124,11 +124,13 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to 1 iff unaligned int access is allowed */
+#define NULL_REP_IS_ZERO_BYTES 1
+
 /* Name of package */
 #define PACKAGE "tor"
 
-/* Def
-ine to the address where bug reports for this package should be sent. */
+/* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 
 /* Define to the full name of this package. */
