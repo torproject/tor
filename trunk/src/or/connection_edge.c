@@ -772,6 +772,10 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
 {
   uint32_t addr;
 
+  assert(conn);
+  assert(conn->type == CONN_TYPE_AP);
+  assert(conn->socks_request);
+
   addr = client_dns_lookup_entry(conn->socks_request->address);
   return router_supports_exit_address(addr, conn->port, exit);
 }

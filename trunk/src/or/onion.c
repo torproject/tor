@@ -245,10 +245,10 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
   n_maybe_supported = tor_malloc(sizeof(int)*dir->n_routers);
   for (i = 0; i < dir->n_routers; ++i) {
     n_supported[i] = n_maybe_supported[i] = 0;
-    for (j = 0; j < n_pending_connections; ++j) {
-      if (carray[i]->type != CONN_TYPE_AP || 
-          carray[i]->state == AP_CONN_STATE_CIRCUIT_WAIT ||
-          carray[i]->marked_for_close)
+    for (j = 0; j < n_connections; ++j) {
+      if (carray[j]->type != CONN_TYPE_AP || 
+          carray[j]->state == AP_CONN_STATE_CIRCUIT_WAIT ||
+          carray[j]->marked_for_close)
         continue;
       switch (connection_ap_can_use_exit(carray[j], dir->routers[i])) 
         {
