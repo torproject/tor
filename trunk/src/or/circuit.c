@@ -494,7 +494,7 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type) {
 
   if(edge_type == EDGE_AP) { /* i'm the AP */
     while(circ->n_receive_circwindow < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
-      log(LOG_INFO,"circuit_consider_sending_sendme(): n_receive_circwindow %d, Queueing sendme forward.", circ->n_receive_circwindow);
+      log(LOG_DEBUG,"circuit_consider_sending_sendme(): n_receive_circwindow %d, Queueing sendme forward.", circ->n_receive_circwindow);
       circ->n_receive_circwindow += CIRCWINDOW_INCREMENT;
       sendme.aci = circ->n_aci;
       if(connection_write_cell_to_buf(&sendme, circ->n_conn) < 0) {
@@ -503,7 +503,7 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type) {
     }
   } else if(edge_type == EDGE_EXIT) { /* i'm the exit */
     while(circ->p_receive_circwindow < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
-      log(LOG_INFO,"circuit_consider_sending_sendme(): p_receive_circwindow %d, Queueing sendme back.", circ->p_receive_circwindow);
+      log(LOG_DEBUG,"circuit_consider_sending_sendme(): p_receive_circwindow %d, Queueing sendme back.", circ->p_receive_circwindow);
       circ->p_receive_circwindow += CIRCWINDOW_INCREMENT;
       sendme.aci = circ->p_aci;
       if(connection_write_cell_to_buf(&sendme, circ->p_conn) < 0) {
