@@ -606,7 +606,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
 "client accordingly.\n"
 "</p>\n"
 "<p>\n"
-"See <a href=\"http://freehaven.net/tor/cvs/INSTALL\">http://freehaven.net/tor/cvs/INSTALL</a> for more information.\n"
+"See <a href=\"http://freehaven.net/tor/doc/tor-doc.html\">http://freehaven.net/tor/doc/tor-doc.html</a> for more information.\n"
 "<!-- Plus this comment, to make the body response more than 512 bytes, so IE will be willing to display it. Comment comment comment comment comment comment comment comment comment comment comment comment.-->\n"
 "</p>\n"
 "</body>\n"
