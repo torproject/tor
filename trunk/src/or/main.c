@@ -775,6 +775,7 @@ static void second_elapsed_callback(int fd, short event, void *args)
   size_t bytes_written;
   size_t bytes_read;
   int seconds_elapsed;
+  or_options_t *options = get_options();
   if (!timeout_event) {
     timeout_event = tor_malloc_zero(sizeof(struct event));
     evtimer_set(timeout_event, second_elapsed_callback, NULL);
@@ -797,13 +798,24 @@ static void second_elapsed_callback(int fd, short event, void *args)
   seconds_elapsed = current_second ? (now.tv_sec - current_second) : 0;
   stats_n_bytes_read += bytes_read;
   stats_n_bytes_written += bytes_written;
-  if (accounting_is_enabled(get_options()))
+  if (accounting_is_enabled(options))
     accounting_add_bytes(bytes_read, bytes_written, seconds_elapsed);
   control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
 
   connection_bucket_refill(&now);
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
+
+#define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60) /* 20 minutes */
+  if (server_mode(options) &&
+      stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
+      stats_n_seconds_working+seconds_elapsed >=
+        TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
+      !check_whether_ports_reachable()) {
+    routerinfo_t *me = router_get_my_routerinfo();
+    tor_assert(me);
+    log_fn(LOG_WARN,"Your server (%s:%d) has not managed to confirm that it is reachable. Please check your firewalls, ports, address, etc.", me->address, me->or_port);
+  }
 
   /* if more than 10s have elapsed, probably the clock jumped: doesn't count. */
   if (seconds_elapsed < 100)
@@ -932,11 +944,11 @@ static int do_main_loop(void) {
       int e = errno;
       /* let the program survive things like ^z */
       if (e != EINTR) {
-        log_fn(LOG_ERR,"poll failed: %s [%d]",
+        log_fn(LOG_ERR,"event poll failed: %s [%d]",
                tor_socket_strerror(e), e);
         return -1;
       } else {
-        log_fn(LOG_DEBUG,"poll interrupted.");
+        log_fn(LOG_DEBUG,"event poll interrupted.");
         /* You can't trust the results of this poll(). Go back to the
          * top of the big for loop. */
         continue;

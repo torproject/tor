@@ -463,9 +463,14 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       log_fn(LOG_INFO,"circuit built!");
       circuit_reset_failure_count(0);
       if (!has_completed_circuit) {
+        or_options_t *options = get_options();
         has_completed_circuit=1;
         log_fn(LOG_NOTICE,"Tor has successfully opened a circuit. Looks like it's working.");
         /* XXX009 Log a count of known routers here */
+        if (server_mode(options) && !check_whether_ports_reachable())
+          log_fn(LOG_NOTICE,"Now checking whether ORPort %s %s reachable...",
+                 options->DirPort ? "and DirPort" : "",
+                 options->DirPort ? "are" : "is");
       }
       circuit_rep_hist_note_result(circ);
       circuit_has_opened(circ); /* do other actions as necessary */
