@@ -581,7 +581,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
   }
 
   if(!strcmp(url,"/") || !strcmp(url,"/dir.z")) { /* directory fetch */
-    dlen = dirserv_get_directory(&cp, !strcmp(url,"/dir.z"));
+    int deflated = !strcmp(url,"/dir.z");
+    dlen = dirserv_get_directory(&cp, deflated);
 
     if(dlen == 0) {
       log_fn(LOG_WARN,"My directory is empty. Closing.");
@@ -589,12 +590,13 @@ directory_handle_command_get(connection_t *conn, char *headers,
       return 0;
     }
 
-    log_fn(LOG_DEBUG,"Dumping directory to client.");
+    log_fn(LOG_DEBUG,"Dumping %sdirectory to client.", 
+           deflated?"deflated ":"");
     format_rfc1123_time(date, time(NULL));
     snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\nContent-Encoding: %s\r\n\r\n",
              date,
              (int)dlen,
-             strcmp(url,"/dir.z")?"identity":"deflate");
+             deflated?"deflate":"identity");
     connection_write_to_buf(tmp, strlen(tmp), conn);
     connection_write_to_buf(cp, strlen(cp), conn);
     return 0;
