@@ -484,3 +484,9 @@ tor_tls_verify(tor_tls *tls)
   return r;
 }
 
+int 
+tor_tls_get_pending_bytees(tor_tls *tls)
+{
+  assert(tls);
+  return SSL_pending(tls->ssl);
+}

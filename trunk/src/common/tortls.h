@@ -26,5 +26,6 @@ int tor_tls_read(tor_tls *tls, char *cp, int len);
 int tor_tls_write(tor_tls *tls, char *cp, int n);
 int tor_tls_handshake(tor_tls *tls);
 int tor_tls_shutdown(tor_tls *tls);
+int tor_tls_get_pending_bytees(tor_tls *tls);
 
 #endif
