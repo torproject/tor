@@ -782,7 +782,7 @@ int router_exit_policy_rejects_all(routerinfo_t *router) {
     == ADDR_POLICY_REJECTED;
 }
 
-/* Release all space held in <b>rr</b>. */
+/** Release all space held in <b>rr</b>. */
 void running_routers_free(running_routers_t *rr)
 {
   tor_assert(rr);
@@ -793,8 +793,10 @@ void running_routers_free(running_routers_t *rr)
   tor_free(rr);
 }
 
-/* Update the running/not-running status of every router in <b>list</b>, based
+/** Update the running/not-running status of every router in <b>list</b>, based
  * on the contents of <b>rr</b>. */
+/* Note: this function is not yet used, since nobody publishes just
+ * running-router lists yet. */
 void routerlist_update_from_runningrouters(routerlist_t *list,
                                            running_routers_t *rr)
 {
@@ -807,10 +809,11 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
   if (list->running_routers_updated_on >= rr->published_on)
     return;
 
-  if(me) /* learn if the dirservers think I'm verified */
+  if(me) { /* learn if the dirservers think I'm verified */
     router_update_status_from_smartlist(me,
                                         rr->published_on,
                                         rr->running_routers);
+  }
   n_routers = smartlist_len(list->routers);
   for (i=0; i<n_routers; ++i) {
     router = smartlist_get(list->routers, i);
