@@ -143,12 +143,6 @@ int rend_get_service_id(crypto_pk_env_t *pk, char *out)
 #define REND_CACHE_MAX_AGE 24*60*60
 #define REND_CACHE_MAX_SKEW 60*60
 
-typedef struct rend_cache_entry_t {
-  int len; /* Length of desc */
-  char *desc; /* Service descriptor */
-  rend_service_descriptor_t *parsed; /* Parsed value of 'desc' */
-} rend_cache_entry_t;
-
 static strmap_t *rend_cache = NULL;
 
 /* Initializes the service descriptor cache.
@@ -193,25 +187,34 @@ int rend_valid_service_id(char *query) {
   return 1;
 }
 
+int rend_cache_lookup_entry(char *query, rend_cache_entry_t **e)
+{
+  assert(rend_cache);
+  if (!rend_valid_service_id(query))
+    return -1;
+  *e = strmap_get_lc(rend_cache, query);
+  if (!*e)
+    return 0;
+  return 1;
+}
+
 /* 'query' is a base-32'ed service id. If it's malformed, return -1.
  * Else look it up.
  *   If it is found, point *desc to it, and write its length into
  *   *desc_len, and return 1.
  *   If it is not found, return 0.
  */
-int rend_cache_lookup(char *query, const char **desc, int *desc_len)
+int rend_cache_lookup_desc(char *query, const char **desc, int *desc_len)
 {
   rend_cache_entry_t *e;
-  assert(rend_cache);
-  if (!rend_valid_service_id(query))
-    return -1;
-  e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, query);
-  if (!e)
-    return 0;
+  int r;
+  r = rend_cache_lookup_entry(query,&e);
+  if (r <= 0) return r;
   *desc = e->desc;
   *desc_len = e->len;
   return 1;
 }
+
 
 /* Calculate desc's service id, and store it.
  * Return -1 if it's malformed or otherwise rejected, else return 0.
@@ -252,6 +255,7 @@ int rend_cache_store(char *desc, int desc_len)
   }
   if (e && e->len == desc_len && !memcmp(desc,e->desc,desc_len)) {
     log_fn(LOG_WARN,"We already have this service descriptor");
+    e->received = time(NULL);
     rend_service_descriptor_free(parsed);
     return -1;
   }
@@ -262,6 +266,7 @@ int rend_cache_store(char *desc, int desc_len)
     rend_service_descriptor_free(e->parsed);
     tor_free(e->desc);
   }
+  e->received = time(NULL);
   e->parsed = parsed;
   e->len = desc_len;
   e->desc = tor_malloc(desc_len);

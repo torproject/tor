@@ -369,7 +369,7 @@ static int directory_handle_command_get(connection_t *conn,
     const char *descp;
     int desc_len;
 
-    switch(rend_cache_lookup(url+strlen(rend_fetch_url), &descp, &desc_len)) {
+    switch(rend_cache_lookup_desc(url+strlen(rend_fetch_url), &descp, &desc_len)) {
       case 1: /* valid */
         snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n",
                  desc_len); /* can't include descp here, because it's got nuls */
