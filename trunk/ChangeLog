@@ -1,4 +1,9 @@
 Changes so far in 0.0.9:
+pre2:
+  o Bugfixes on pre1:
+    - Make fetching a cached directory work for 64-bit platforms too.
+    - Make zlib.h a required header, not an optional header.
+
 pre1:
   o Bugfixes:
     - Stop using separate defaults for no-config-file and
