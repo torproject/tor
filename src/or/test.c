@@ -594,7 +594,7 @@ main(int c, char**v){
   if(getconfig(c,v,&options))
     exit(1);
 #endif
-  log(LOG_ERR,NULL);         /* make logging quieter */
+  log_set_severity(LOG_ERR);         /* make logging quieter */
 
   crypto_seed_rng();
 

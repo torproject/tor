@@ -792,7 +792,7 @@ int tor_main(int argc, char *argv[]) {
 
   if(getconfig(argc,argv,&options))
     exit(1);
-  log(options.loglevel,NULL);         /* assign logging severity level from options */
+  log_set_severity(options.loglevel);     /* assign logging severity level from options */
 
   if(options.Daemon)
     daemonize();

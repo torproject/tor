@@ -42,33 +42,36 @@ size_t sev_to_string(char *buf, int max, int severity) {
   return strlen(buf)+1;
 }
 
+static int loglevel = LOG_DEBUG;
+
 static void 
 logv(int severity, const char *funcname, const char *format, va_list ap)
 {
-  static int loglevel = LOG_DEBUG;
   char buf[201];
   time_t t;
   struct timeval now;
   
-  if (format) {
+  assert(format);
+  if (severity > loglevel)
+    return;
+  if (gettimeofday(&now,NULL) < 0)
+    return;
 
-    if (severity > loglevel)
-      return;
-    if (gettimeofday(&now,NULL) < 0)
-      return;
+  t = time(NULL);
+  strftime(buf, 200, "%b %d %H:%M:%S", localtime(&t));
+  printf("%s.%.3ld ", buf, (long)now.tv_usec / 1000);
+  sev_to_string(buf, 200, severity);
+  printf("[%s] ", buf);
+  if (funcname)
+    printf("%s(): ", funcname);
+  vprintf(format,ap);
+  printf("\n");
+}
 
-    t = time(NULL);
-    strftime(buf, 200, "%b %d %H:%M:%S", localtime(&t));
-    printf("%s.%.3ld ", buf, (long)now.tv_usec / 1000);
-    sev_to_string(buf, 200, severity);
-    printf("[%s] ", buf);
-    if (funcname)
-      printf("%s(): ", funcname);
-    vprintf(format,ap);
-    printf("\n");
-  } else
-    loglevel = severity;
-
+void 
+log_set_severity(int severity)
+{
+  loglevel = severity;
 }
 
 /* Outputs a message to stdout */

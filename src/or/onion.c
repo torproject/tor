@@ -329,7 +329,7 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
     log(LOG_DEBUG,"onion_generate_cpath(): %u : %s:%u, %u/%u",routelen-i,
         inet_ntoa(netaddr),
         (rarray[route[i]])->or_port,
-        (rarray[route[i]])->pkey,
+        (int) (rarray[route[i]])->pkey,
         crypto_pk_keysize((rarray[route[i]])->pkey));
   }
 
