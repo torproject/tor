@@ -1616,7 +1616,7 @@ char *expand_filename(const char *filename)
     const char *home = getenv("HOME");
     char *result;
     if (!home) {
-      log_fn(LOG_ERR, "Couldn't find $HOME environment variable while expanding %s", filename);
+      log_fn(LOG_WARN, "Couldn't find $HOME environment variable while expanding %s", filename);
       return NULL;
     }
     /* minus two characters for ~/, plus one for /, plus one for NUL. */
