@@ -277,6 +277,7 @@ config_assign(or_options_t *options, struct config_line_t *list)
       config_compare(list, "PidFile",        CONFIG_TYPE_STRING, &options->PidFile) ||
       config_compare(list, "PathlenCoinWeight",CONFIG_TYPE_DOUBLE, &options->PathlenCoinWeight) ||
 
+      config_compare(list, "RedirectExit",   CONFIG_TYPE_LINELIST, &options->RedirectExit) ||
       config_compare(list, "RouterFile",     CONFIG_TYPE_OBSOLETE, NULL) ||
       config_compare(list, "RunAsDaemon",    CONFIG_TYPE_BOOL, &options->RunAsDaemon) ||
       config_compare(list, "RunTesting",     CONFIG_TYPE_BOOL, &options->RunTesting) ||
@@ -478,6 +479,12 @@ free_options(or_options_t *options)
   config_free_lines(options->DirServers);
   config_free_lines(options->RecommendedVersions);
   config_free_lines(options->NodeFamilies);
+  config_free_lines(options->RedirectExit);
+  if (options->RedirectExitList) {
+    SMARTLIST_FOREACH(options->RedirectExit,exit_redirect_t *, p, tor_free(p));
+    smartlist_free(options->RedirectExit);
+    options->RedirectExit = NULL;                      
+  }
   if (options->FirewallPorts) {
     SMARTLIST_FOREACH(options->FirewallPorts, char *, cp, tor_free(cp));
     smartlist_free(options->FirewallPorts);
@@ -868,6 +875,13 @@ getconfig(int argc, char **argv, or_options_t *options)
       return -1;
   }
 
+  if (!options->RedirectExitList)
+    options->RedirectExitList = smartlist_create();
+  for (cl = options->RedirectExit; cl; cl = cl->next) {
+    if (parse_redirect_line(options, cl)<0)
+      return -1;
+  }
+
   clear_trusted_dir_servers();
   if (!options->DirServers) {
     add_default_trusted_dirservers();
@@ -1048,6 +1062,48 @@ void exit_policy_free(struct exit_policy_t *p) {
     p = p->next;
     tor_free(e->string);
     tor_free(e);
+  }
+}
+
+static int parse_redirect_line(or_options_t *options, 
+                               struct config_line_t *line)
+{
+  smartlist_t *elements = NULL;
+  exit_redirect_t *r;
+
+  tor_assert(options);
+  tor_assert(options->RedirectExitList);
+  tor_assert(line);
+
+  r = tor_malloc_zero(sizeof(exit_redirect_t));
+  smartlist_split_string(elements, line->value, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  if (smartlist_len(elements) != 2) {
+    log_fn(LOG_WARN, "Wrong number of elements in RedirectExit line");
+    goto err;
+  }
+  if (parse_addr_and_port_range(smartlist_get(elements,0),&r->addr,&r->mask,
+                                &r->port_min,&r->port_max)) {
+    log_fn(LOG_WARN, "Error parsing source address in RedirectExit line");
+    goto err;
+  }
+  if (parse_addr_port(smartlist_get(elements,1),NULL,&r->addr_dest,
+                      &r->port_dest)) {
+    log_fn(LOG_WARN, "Error parseing dest address in RedirectExit line");
+    goto err;
+  }
+
+  goto done;
+ err:
+  tor_free(r);
+ done:
+  SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
+  smartlist_free(elements);
+  if (r) {
+    smartlist_add(options->RedirectExitList, r);
+    return 0;
+  } else {
+    return -1;
   }
 }
 
