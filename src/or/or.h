@@ -1027,6 +1027,8 @@ void rend_client_desc_fetched(char *query, int success);
 int rend_cmp_service_ids(char *one, char *two);
 int rend_parse_rendezvous_address(char *address);
 
+int rend_client_send_establish_rendezvous(circuit_t *circ);
+
 /********************************* rendcommon.c ***************************/
 
 typedef struct rend_service_descriptor_t {
