@@ -337,7 +337,6 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 
   tor_assert(sl);
   tor_assert(join);
-  join_len = strlen(join);
   for (i = 0; i < sl->num_used; ++i) {
     n += strlen(sl->list[i]);
     n += join_len;
