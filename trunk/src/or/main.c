@@ -198,6 +198,7 @@ void connection_stop_reading(connection_t *conn) {
 
   assert(conn && conn->poll_index < nfds);
 
+  log(LOG_DEBUG,"connection_stop_reading() called.");
   if(poll_array[conn->poll_index].events & POLLIN)
     poll_array[conn->poll_index].events -= POLLIN;
 }
@@ -208,6 +209,22 @@ void connection_start_reading(connection_t *conn) {
 
   poll_array[conn->poll_index].events |= POLLIN;
 }
+
+void connection_stop_writing(connection_t *conn) {
+
+  assert(conn && conn->poll_index < nfds);
+
+  if(poll_array[conn->poll_index].events & POLLOUT)
+    poll_array[conn->poll_index].events -= POLLOUT;
+}
+
+void connection_start_writing(connection_t *conn) {
+
+  assert(conn && conn->poll_index < nfds);
+
+  poll_array[conn->poll_index].events |= POLLOUT;
+}
+
 
 void check_conn_read(int i) {
   int retval;
@@ -257,7 +274,7 @@ void check_conn_write(int i) {
   if(poll_array[i].revents & POLLOUT) { /* something to write */
 
     conn = connection_array[i];
-    log(LOG_DEBUG,"check_conn_write(): socket %d wants to write.",conn->s);
+//    log(LOG_DEBUG,"check_conn_write(): socket %d wants to write.",conn->s);
 
     if(conn->type == CONN_TYPE_OP_LISTENER ||
        conn->type == CONN_TYPE_OR_LISTENER) {
@@ -277,7 +294,7 @@ void check_conn_write(int i) {
       connection_free(conn);
       if(i<nfds) { /* we just replaced the one at i with a new one.
                       process it too. */
-        check_conn_read(i);
+        check_conn_write(i);
       }
     }
   }
@@ -327,8 +344,9 @@ int prepare_for_poll(int *timeout) {
 
   if(need_to_refill_buckets) {
     if(now.tv_sec > current_second) { /* the second has already rolled over! */
-      log(LOG_DEBUG,"prepare_for_poll(): The second has rolled over, immediately refilling.");
-      increment_receiver_buckets();
+//      log(LOG_DEBUG,"prepare_for_poll(): The second has rolled over, immediately refilling.");
+      for(i=0;i<nfds;i++)
+        connection_increment_receiver_bucket(connection_array[i]);
       current_second = now.tv_sec; /* remember which second it is, for next time */
     }
     *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
@@ -339,7 +357,7 @@ int prepare_for_poll(int *timeout) {
     /* now check which conn wants to speak soonest */
     for(i=0;i<nfds;i++) {
       tmpconn = connection_array[i];
-      if(tmpconn->type != CONN_TYPE_OR && tmpconn->type != CONN_TYPE_OP)
+      if(!connection_speaks_cells(tmpconn))
         continue; /* this conn type doesn't send cells */
       if(!connection_state_is_open(tmpconn))
         continue; /* only conns in state 'open' have a valid send_timeval */ 
@@ -370,13 +388,6 @@ int prepare_for_poll(int *timeout) {
   }
 
   return 0;
-}
-
-void increment_receiver_buckets(void) {
-  int i;
-
-  for(i=0;i<nfds;i++)
-    connection_increment_receiver_bucket(connection_array[i]);
 }
 
 int do_main_loop(void) {

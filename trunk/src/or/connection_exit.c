@@ -50,12 +50,14 @@ int connection_exit_finished_flushing(connection_t *conn) {
           conn->address,ntohs(conn->port));
       
       conn->state = EXIT_CONN_STATE_OPEN;
-      connection_flush_buf(conn); /* in case there are any queued data cells */
-      connection_watch_events(conn, POLLIN);
+      if(connection_wants_to_flush(conn)) /* in case there are any queued data cells */
+        connection_start_writing(conn);
+      connection_start_reading(conn);
       return 0;
     case EXIT_CONN_STATE_OPEN:
       /* FIXME down the road, we'll clear out circuits that are pending to close */
-      connection_watch_events(conn, POLLIN);
+      connection_stop_writing(conn);
+      connection_consider_sending_sendme(conn);
       return 0;
     default:
       log(LOG_DEBUG,"Bug: connection_exit_finished_flushing() called in unexpected state.");
@@ -101,7 +103,7 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
           return -1;
         }
         memcpy(&conn->addr, rent->h_addr,rent->h_length); 
-	log(LOG_DEBUG,"connection_exit_process_data_cell(): addr %s resolves to %d.",cell->payload,conn->addr);
+	log(LOG_DEBUG,"connection_exit_process_data_cell(): addr is %s.",cell->payload);
       } else if (!conn->port) { /* this cell contains the dest port */
         if(!memchr(cell->payload,'\0',cell->length)) {
           log(LOG_DEBUG,"connection_exit_process_data_cell(): dest_port cell has no \\0. Closing.");
@@ -139,7 +141,6 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
             connection_set_poll_socket(conn);
             conn->state = EXIT_CONN_STATE_CONNECTING;
       
-            /* i think only pollout is needed, but i'm curious if pollin ever gets caught -RD */
             log(LOG_DEBUG,"connection_exit_process_data_cell(): connect in progress, socket %d.",s);
             connection_watch_events(conn, POLLOUT | POLLIN);
             return 0;
@@ -161,11 +162,12 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
       return 0;
     case EXIT_CONN_STATE_CONNECTING:
       log(LOG_DEBUG,"connection_exit_process_data_cell(): Data receiving while connecting. Queueing.");
-      /* this sets us to POLLOUT | POLLIN, which is ok because we need to keep listening for
-       * writable for connect() to finish */
-      return connection_write_to_buf(cell->payload, cell->length, conn);
+      /* we stay listening for writable, so connect() can finish */
+      /* fall through to the next state -- write the cell and consider sending back a sendme */
     case EXIT_CONN_STATE_OPEN:
-      return connection_write_to_buf(cell->payload, cell->length, conn);
+      if(connection_write_to_buf(cell->payload, cell->length, conn) < 0)
+        return -1;
+      return connection_consider_sending_sendme(conn);
   }
 
   return 0;

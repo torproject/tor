@@ -101,9 +101,7 @@ void connection_free(connection_t *conn) {
   if(conn->dest_port)
     free(conn->dest_port);
 
- /* FIXME should we do these for all connections, or just ORs, or what */
-  if(conn->type == CONN_TYPE_OR ||
-     conn->type == CONN_TYPE_OP) {
+  if(connection_speaks_cells(conn)) {
     EVP_CIPHER_CTX_cleanup(&conn->f_ctx);
     EVP_CIPHER_CTX_cleanup(&conn->b_ctx);
   }
@@ -158,7 +156,7 @@ int connection_create_listener(RSA *prkey, struct sockaddr_in *local, int type) 
   log(LOG_DEBUG,"connection_create_listener(): Listening on local port %u.",ntohs(local->sin_port));
 
   conn->state = LISTENER_STATE_READY;
-  connection_watch_events(conn, POLLIN);
+  connection_start_reading(conn);
 
   return 0;
 }
@@ -185,6 +183,11 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   newconn = connection_new(new_type);
   newconn->s = news;
 
+  if(!connection_speaks_cells(newconn)) {
+    newconn->receiver_bucket = -1;
+    newconn->bandwidth = -1;
+  }
+
   /* learn things from parent, so we can perform auth */
   memcpy(&newconn->local,&conn->local,sizeof(struct sockaddr_in));
   newconn->prkey = conn->prkey;
@@ -197,7 +200,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
 
   log(LOG_DEBUG,"connection_handle_listener_read(): socket %d entered state %d.",newconn->s, new_state);
   newconn->state = new_state;
-  connection_watch_events(newconn, POLLIN);
+  connection_start_reading(newconn);
 
   return 0;
 }
@@ -284,13 +287,20 @@ connection_t *connection_connect_to_router_as_op(routerinfo_t *router, RSA *prke
 int connection_read_to_buf(connection_t *conn) {
   int read_result;
 
+  if(connection_speaks_cells(conn)) {
+    assert(conn->receiver_bucket >= 0);
+  }
+  if(!connection_speaks_cells(conn)) {
+    assert(conn->receiver_bucket < 0);
+  }
   read_result = read_to_buf(conn->s, conn->receiver_bucket, &conn->inbuf, &conn->inbuflen,
                             &conn->inbuf_datalen, &conn->inbuf_reached_eof);
-  log(LOG_DEBUG,"connection_read_to_buf(): read_to_buf returned %d.",read_result);
-  if(read_result >= 0) {
+//  log(LOG_DEBUG,"connection_read_to_buf(): read_to_buf returned %d.",read_result);
+  if(read_result >= 0 && connection_speaks_cells(conn)) {
     conn->receiver_bucket -= read_result;
     if(conn->receiver_bucket <= 0) {
 
+//      log(LOG_DEBUG,"connection_read_to_buf() stopping reading, receiver bucket full.");
       connection_stop_reading(conn);
 
       /* If we're not in 'open' state here, then we're never going to finish the
@@ -308,6 +318,14 @@ int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
   return fetch_from_buf(string, len, &conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen);
 }
 
+int connection_wants_to_flush(connection_t *conn) {
+  return conn->outbuf_flushlen;
+}
+
+int connection_outbuf_too_full(connection_t *conn) {
+  return (conn->outbuf_flushlen > 10*CELL_PAYLOAD_SIZE);
+}
+
 int connection_flush_buf(connection_t *conn) {
   return flush_buf(conn->s, &conn->outbuf, &conn->outbuflen, &conn->outbuf_flushlen, &conn->outbuf_datalen);
 }
@@ -321,7 +339,7 @@ int connection_write_to_buf(char *string, int len, connection_t *conn) {
       (options.LinkPadding == 0) ) {
     /* connection types other than or and op, or or/op not in 'open' state, should flush immediately */
     /* also flush immediately if we're not doing LinkPadding, since otherwise it will never flush */
-    connection_watch_events(conn, POLLOUT | POLLIN);
+    connection_start_writing(conn);
     conn->outbuf_flushlen += len;
   }
 
@@ -330,6 +348,9 @@ int connection_write_to_buf(char *string, int len, connection_t *conn) {
 
 int connection_receiver_bucket_should_increase(connection_t *conn) {
   assert(conn);
+
+  if(!connection_speaks_cells(conn))
+    return 0; /* edge connections don't use receiver_buckets */
 
   if(conn->receiver_bucket > 10*conn->bandwidth)
     return 0;
@@ -348,6 +369,15 @@ void connection_increment_receiver_bucket (connection_t *conn) {
       connection_start_reading(conn);
     }
   }
+}
+
+int connection_speaks_cells(connection_t *conn) {
+  assert(conn);
+
+  if(conn->type == CONN_TYPE_OR || conn->type == CONN_TYPE_OP)
+    return 1;
+
+  return 0;
 }
 
 int connection_state_is_open(connection_t *conn) {
@@ -371,7 +401,7 @@ void connection_send_cell(connection_t *conn) {
 
   assert(conn);
 
-  if(conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_OP) {
+  if(!connection_speaks_cells(conn)) {
     /* this conn doesn't speak cells. do nothing. */
     return;
   }
@@ -385,7 +415,7 @@ void connection_send_cell(connection_t *conn) {
 #if 0 /* use to send evenly spaced cells, but not padding */
   if(conn->outbuf_datalen - conn->outbuf_flushlen >= sizeof(cell_t)) {
     conn->outbuf_flushlen += sizeof(cell_t); /* instruct it to send a cell */
-    connection_watch_events(conn, POLLOUT | POLLIN);
+    connection_start_writing(conn);
   }
 #endif
 
@@ -408,7 +438,7 @@ void connection_send_cell(connection_t *conn) {
   }
 
   conn->outbuf_flushlen += sizeof(cell_t); /* instruct it to send a cell */
-  connection_watch_events(conn, POLLOUT | POLLIN);
+  connection_start_writing(conn);
 
 }
 
@@ -434,15 +464,11 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
 
   assert(conn);
 
-  if(conn->type == CONN_TYPE_OP ||
-     conn->type == CONN_TYPE_AP ||
-     conn->type == CONN_TYPE_EXIT) {
+  if(!connection_speaks_cells(conn)) {
      log(LOG_DEBUG,"connection_send_destroy(): At an edge. Marking connection for close.");
      conn->marked_for_close = 1;
      return 0;
   }
-
-  assert(conn->type == CONN_TYPE_OR);
 
   cell.aci = aci;
   cell.command = CELL_DESTROY;
@@ -452,7 +478,6 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
 }
 
 int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn) {
-  /* FIXME in the future, we should modify windows, etc, here */
  
   if(connection_encrypt_cell_header(cellp,conn)<0) {
     return -1;
@@ -464,10 +489,10 @@ int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn) {
 int connection_encrypt_cell_header(cell_t *cellp, connection_t *conn) {
   char newheader[8];
   int newsize;
+#if 0
   int x;
   char *px;
 
-#if 0
   printf("Sending: Cell header plaintext: ");
   px = (char *)cellp;
   for(x=0;x<8;x++) {
@@ -517,7 +542,8 @@ int connection_package_raw_inbuf(connection_t *conn) {
   circuit_t *circ;
 
   assert(conn);
-  assert(conn->type == CONN_TYPE_EXIT || conn->type == CONN_TYPE_AP);
+  assert(!connection_speaks_cells(conn));
+  /* this function should never get called if the receiver_window is 0 */
 
   amount_to_process = conn->inbuf_datalen;
 
@@ -548,6 +574,13 @@ int connection_package_raw_inbuf(connection_t *conn) {
       circuit_close(circ);
       return 0;
     }
+    assert(circ->n_receive_window > 0);
+    if(--circ->n_receive_window <= 0) { /* is it 0 after decrement? */
+      connection_stop_reading(circ->n_conn);
+      log(LOG_DEBUG,"connection_raw_package_inbuf(): receive_window at exit reached 0.");
+      return 0; /* don't process the inbuf any more */
+    }
+    log(LOG_DEBUG,"connection_raw_package_inbuf(): receive_window at exit is %d",circ->n_receive_window);
   } else { /* send it forward. we're an AP */
     cell.aci = circ->n_aci;
     cell.command = CELL_DATA;
@@ -557,17 +590,58 @@ int connection_package_raw_inbuf(connection_t *conn) {
       circuit_close(circ);
       return 0;
     }
+    assert(circ->p_receive_window > 0);
+    if(--circ->p_receive_window <= 0) { /* is it 0 after decrement? */
+      connection_stop_reading(circ->p_conn);
+      log(LOG_DEBUG,"connection_raw_package_inbuf(): receive_window at AP reached 0.");
+      return 0; /* don't process the inbuf any more */
+    }
+    log(LOG_DEBUG,"connection_raw_package_inbuf(): receive_window at AP is %d",circ->p_receive_window);
   }
   if(amount_to_process > CELL_PAYLOAD_SIZE)
+    log(LOG_DEBUG,"connection_raw_package_inbuf(): recursing.");
     return connection_package_raw_inbuf(conn);
   return 0;
 }
+
+int connection_consider_sending_sendme(connection_t *conn) {
+  circuit_t *circ;
+  cell_t sendme;
+
+  if(connection_outbuf_too_full(conn))
+    return 0;
+
+  circ = circuit_get_by_conn(conn);
+  if(!circ) {
+    log(LOG_DEBUG,"connection_consider_sending_sendme(): Bug: no circuit associated with conn. Closing.");
+    return -1;
+  }
+  sendme.command = CELL_SENDME;
+  sendme.length = RECEIVE_WINDOW_INCREMENT;
+
+  if(circ->n_conn == conn) { /* we're at an exit */
+    if(circ->p_receive_window < RECEIVE_WINDOW_START-RECEIVE_WINDOW_INCREMENT) {
+      log(LOG_DEBUG,"connection_consider_sending_sendme(): Queueing sendme back.");
+      circ->p_receive_window += RECEIVE_WINDOW_INCREMENT;
+      sendme.aci = circ->p_aci;
+      return connection_write_cell_to_buf(&sendme, circ->p_conn); /* (clobbers sendme) */
+    }
+  } else { /* we're at an AP */
+    if(circ->n_receive_window < RECEIVE_WINDOW_START-RECEIVE_WINDOW_INCREMENT) {
+      log(LOG_DEBUG,"connection_consider_sending_sendme(): Queueing sendme forward.");
+      circ->n_receive_window += RECEIVE_WINDOW_INCREMENT;
+      sendme.aci = circ->n_aci;
+      return connection_write_cell_to_buf(&sendme, circ->n_conn); /* (clobbers sendme) */
+    }
+  }
+  return 0;
+} 
 
 int connection_finished_flushing(connection_t *conn) {
 
   assert(conn);
 
-  log(LOG_DEBUG,"connection_finished_flushing() entered. Socket %u.", conn->s);
+//  log(LOG_DEBUG,"connection_finished_flushing() entered. Socket %u.", conn->s);
 
   switch(conn->type) {
     case CONN_TYPE_AP:
@@ -591,7 +665,7 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   char crypted[128];
   char outbuf[1024];
   int outlen;
-  int x;
+//  int x;
   cell_t *cellp;
 
   if(conn->inbuf_datalen < 128) /* entire response available? */
@@ -613,7 +687,7 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
     log(LOG_ERR,"connection_process_cell_from_inbuf(): Decryption failed, dropping.");
     return connection_process_inbuf(conn); /* process the remainder of the buffer */
   }
-  log(LOG_DEBUG,"connection_process_cell_from_inbuf(): Cell decrypted (%d bytes).",outlen);
+//  log(LOG_DEBUG,"connection_process_cell_from_inbuf(): Cell decrypted (%d bytes).",outlen);
 #if 0
   printf("Cell header plaintext: ");
   for(x=0;x<8;x++) {
@@ -625,7 +699,7 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   /* copy the rest of the cell */
   memcpy((char *)outbuf+8, (char *)crypted+8, sizeof(cell_t)-8);
   cellp = (cell_t *)outbuf;
-  log(LOG_DEBUG,"connection_process_cell_from_inbuf(): Decrypted cell is of type %u (ACI %u).",cellp->command,cellp->aci);
+//  log(LOG_DEBUG,"connection_process_cell_from_inbuf(): Decrypted cell is of type %u (ACI %u).",cellp->command,cellp->aci);
   command_process_cell(cellp, conn);
 
   return connection_process_inbuf(conn); /* process the remainder of the buffer */
