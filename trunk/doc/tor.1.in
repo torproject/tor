@@ -90,7 +90,8 @@ The following options are useful only for clients (that is, if \fBSOCKSPort\fP i
 \fBAllowUnverifiedNodes\fR \fBentry\fR|\fBexit\fR|\fBmiddle\fR|\fBintroduction\fR|\fBrendezvous\fR|...\fP
 Where on our circuits should we allow Tor servers that the directory
 servers haven't authenticated as "verified"?  (Default: middle,rendezvous.)
-\fBdirfetchpostperiod \fR\fIseconds\fP
+.TP
+\fBDirFetchPostPeriod \fR\fIseconds\fP
 Every N seconds, Tor downloads a fresh directory, and re-uploads
 information about hidden services to the directory servers.  If
 running as a server, Tor also re-uploads information about itself to
