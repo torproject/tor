@@ -808,6 +808,11 @@ struct circuit_t {
 
 typedef struct circuit_t circuit_t;
 
+#define ALLOW_UNVERIFIED_ENTRY  1
+#define ALLOW_UNVERIFIED_EXIT   2
+#define ALLOW_UNVERIFIED_MIDDLE 4
+
+
 /** Configuration options for a Tor process */
 typedef struct {
   struct config_line_t *LogOptions; /**< List of configuration lines
@@ -836,6 +841,8 @@ typedef struct {
   char *RendExcludeNodes; /**< Comma-separated list of nicknames not to use
                            * as introduction points. */
 
+  smartlist_t *AllowUnverifiedNodes; /**< List of "entry", "middle", "exit" */
+  int _AllowUnverified; /**< Bitmask; derived from AllowUnverifiedNodes; */
   struct config_line_t *ExitPolicy; /**< Lists of exit policy components. */
   struct config_line_t *SocksPolicy; /**< Lists of socks policy components */
   /** Addresses to bind for listening for SOCKS connections. */

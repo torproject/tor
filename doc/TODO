@@ -24,8 +24,8 @@ NICK    . put ip:port:keyhash in intro points, rendezvous points,
 NICK    - unify similar config entries that need to be split. put them
           into a smartlist, and have things take a smartlist.
 
-        - "AllowUnverifiedRouters" config option
-NICK      - Parse it into 3 bits
+        . "AllowUnverifiedRouters" config option
+        o Parse it into 3 bits
 ARMA      - Consider it when picking nodes for your path
 ARMA    - if there's only one entrynode preference and multiple exit node
           choices, don't pick the desired entrynode as exit.
