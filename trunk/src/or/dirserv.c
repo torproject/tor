@@ -20,6 +20,7 @@ static int runningrouters_is_dirty = 1;
 
 static int list_running_servers(char **nicknames_out);
 static void directory_remove_unrecognized(void);
+static int dirserv_regenerate_directory(void);
 
 /************** Fingerprint handling code ************/
 
@@ -616,13 +617,19 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
 /** Most recently generated encoded signed directory. */
 static char *the_directory = NULL;
 static int the_directory_len = -1;
+static char *the_directory_z = NULL;
+static int the_directory_z_len = -1;
+
 static char *cached_directory = NULL; /* used only by non-auth dirservers */
-static time_t cached_directory_published = 0;
 static int cached_directory_len = -1;
+static char *cached_directory_z = NULL;
+static int cached_directory_z_len = -1;
+static time_t cached_directory_published = 0;
 
 void dirserv_set_cached_directory(const char *directory, time_t when)
 {
   time_t now;
+  size_t z_len;
   tor_assert(!options.AuthoritativeDir);
   now = time(NULL);
   if (when>cached_directory_published &&
@@ -630,61 +637,89 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
     tor_free(cached_directory);
     cached_directory = tor_strdup(directory);
     cached_directory_len = strlen(cached_directory);
+    tor_free(cached_directory_z);
+    if (tor_gzip_compress(&cached_directory_z, &z_len,
+                          cached_directory, cached_directory_len,
+                          ZLIB_METHOD)) {
+      log_fn(LOG_WARN,"Error compressing cached directory");
+    }
     cached_directory_published = when;
   }
 }
 
 /** Set *<b>directory</b> to the most recently generated encoded signed
  * directory, generating a new one as necessary. */
-size_t dirserv_get_directory(const char **directory)
+size_t dirserv_get_directory(const char **directory, int deflate)
 {
-  char *new_directory;
-  char filename[512];
   if (!options.AuthoritativeDir) {
-    if (cached_directory) {
-      *directory = cached_directory;
-      return (size_t) cached_directory_len;
+    if (deflate?cached_directory:cached_directory_z) {
+      *directory = deflate?cached_directory:cached_directory_z;
+      return (size_t) (deflate?cached_directory_len:cached_directory_z_len);
     } else {
       /* no directory yet retrieved */
       return 0;
     }
   }
   if (the_directory_is_dirty) {
-    new_directory = tor_malloc(MAX_DIR_SIZE);
-    if (dirserv_dump_directory_to_string(new_directory, MAX_DIR_SIZE,
-                                         get_identity_key())) {
-      log(LOG_WARN, "Error creating directory.");
-      free(new_directory);
+    if (dirserv_regenerate_directory())
       return 0;
-    }
-    tor_free(the_directory);
-    the_directory = new_directory;
-    the_directory_len = strlen(the_directory);
-    log_fn(LOG_INFO,"New directory (size %d):\n%s",the_directory_len,
-           the_directory);
-    /* Now read the directory we just made in order to update our own
-     * router lists.  This does more signature checking than is strictly
-     * necessary, but safe is better than sorry. */
-    new_directory = tor_strdup(the_directory);
-    /* use a new copy of the dir, since get_dir_from_string scribbles on it */
-    if (router_load_routerlist_from_directory(new_directory, get_identity_key())) {
-      log_fn(LOG_ERR, "We just generated a directory we can't parse. Dying.");
-      tor_cleanup();
-      exit(0);
-    }
-    free(new_directory);
-    if(get_data_directory(&options)) {
-      sprintf(filename,"%s/cached-directory", get_data_directory(&options));
-      if(write_str_to_file(filename,the_directory) < 0) {
-        log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
-      }
-    }
-    the_directory_is_dirty = 0;
   } else {
     log(LOG_INFO,"Directory still clean, reusing.");
   }
-  *directory = the_directory;
-  return the_directory_len;
+  *directory = deflate ? the_directory : the_directory_z;
+  return deflate ? the_directory_len : the_directory_z_len;
+}
+
+/**
+ * Generate a fresh directory (authdirservers only.)
+ */
+static int dirserv_regenerate_directory(void)
+{
+  char *new_directory;
+  char filename[512];
+
+  size_t z_dir_len;
+  new_directory = tor_malloc(MAX_DIR_SIZE);
+  if (dirserv_dump_directory_to_string(new_directory, MAX_DIR_SIZE,
+                                       get_identity_key())) {
+    log(LOG_WARN, "Error creating directory.");
+    tor_free(new_directory);
+    return -1;
+  }
+  tor_free(the_directory);
+  the_directory = new_directory;
+  the_directory_len = strlen(the_directory);
+  log_fn(LOG_INFO,"New directory (size %d):\n%s",the_directory_len,
+         the_directory);
+  tor_free(the_directory_z);
+  if (tor_gzip_compress(&the_directory_z, &z_dir_len,
+                        the_directory, the_directory_len,
+                        ZLIB_METHOD)) {
+    log_fn(LOG_WARN, "Error gzipping directory.");
+    return -1;
+  }
+  the_directory_z_len = (int)z_dir_len;
+
+  /* Now read the directory we just made in order to update our own
+   * router lists.  This does more signature checking than is strictly
+   * necessary, but safe is better than sorry. */
+  new_directory = tor_strdup(the_directory);
+  /* use a new copy of the dir, since get_dir_from_string scribbles on it */
+  if (router_load_routerlist_from_directory(new_directory, get_identity_key())) {
+    log_fn(LOG_ERR, "We just generated a directory we can't parse. Dying.");
+    tor_cleanup();
+    exit(0);
+  }
+  free(new_directory);
+  if(get_data_directory(&options)) {
+    sprintf(filename,"%s/cached-directory", get_data_directory(&options));
+    if(write_str_to_file(filename,the_directory) < 0) {
+      log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
+    }
+  }
+  the_directory_is_dirty = 0;
+
+  return 0;
 }
 
 static char *runningrouters_string=NULL;

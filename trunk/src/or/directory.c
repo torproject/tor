@@ -313,7 +313,7 @@ parse_http_response(char *headers, int *code, char **message, time_t *date)
     while (cp && (cp = strchr(cp, '\n'))) {
       ++cp;
       strlcpy(datestr, cp, 7);
-      if (strncmp(cp, "Date: ", 6) == 0) {
+      if (strcmpstart(cp, "Date: ") == 0) {
         strlcpy(datestr, cp+6, sizeof(datestr));
         /* This will do nothing on failure, so we don't need to check
            the result.   We shouldn't warn, since there are many other valid
@@ -546,7 +546,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
   }
 
   if(!strcmp(url,"/")) { /* directory fetch */
-    dlen = dirserv_get_directory(&cp);
+    dlen = dirserv_get_directory(&cp, 0);
 
     if(dlen == 0) {
       log_fn(LOG_WARN,"My directory is empty. Closing.");
@@ -664,7 +664,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
         connection_write_to_buf(answer403, strlen(answer403), conn);
         break;
       case 1:
-        dirserv_get_directory(&cp); /* rebuild and write to disk */
+        dirserv_get_directory(&cp, 0); /* rebuild and write to disk */
         connection_write_to_buf(answer200, strlen(answer200), conn);
         break;
     }
