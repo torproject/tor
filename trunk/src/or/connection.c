@@ -709,16 +709,20 @@ int connection_handle_read(connection_t *conn) {
   }
 
   if(connection_read_to_buf(conn) < 0) {
+    /* There's a read error; kill the connection.*/
+    connection_close_immediate(conn); /* Don't flush; connection is dead. */
+    conn->has_sent_end = 1;
+    connection_mark_for_close(conn);
     if(conn->type == CONN_TYPE_DIR &&
        conn->state == DIR_CONN_STATE_CONNECTING) {
        /* it's a directory server and connecting failed: forget about this router */
        /* XXX I suspect pollerr may make Windows not get to this point. :( */
        router_mark_as_down(conn->identity_digest);
+       if(conn->purpose == DIR_PURPOSE_FETCH_DIR && !all_directory_servers_down()) {
+         log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->nickname);
+         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
+       }
     }
-    /* There's a read error; kill the connection.*/
-    connection_close_immediate(conn); /* Don't flush; connection is dead. */
-    conn->has_sent_end = 1;
-    connection_mark_for_close(conn);
     return -1;
   }
   if(connection_process_inbuf(conn) < 0) {
