@@ -272,7 +272,7 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
       ++n_best_maybe_support;
     }
   }
-  log_fn(LOG_WARN, "Found %d servers that will definitely support %d/%d pending connections, and %d that might support %d/%d.",
+  log_fn(LOG_INFO, "Found %d servers that will definitely support %d/%d pending connections, and %d that might support %d/%d.",
          n_best_support, best_support, n_pending_connections,
          n_best_maybe_support, best_maybe_support, n_pending_connections);
   if (best_support) {

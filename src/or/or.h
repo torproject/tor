@@ -273,13 +273,13 @@ struct connection_t {
 
   buf_t *inbuf;
   int inbuf_reached_eof; /* did read() return 0 on this conn? */
-  long timestamp_lastread; /* when was the last time poll() said we could read? */
+  time_t timestamp_lastread; /* when was the last time poll() said we could read? */
 
   buf_t *outbuf;
   int outbuf_flushlen; /* how much data should we try to flush from the outbuf? */
-  long timestamp_lastwritten; /* when was the last time poll() said we could write? */
+  time_t timestamp_lastwritten; /* when was the last time poll() said we could write? */
 
-  long timestamp_created; /* when was this connection_t created? */
+  time_t timestamp_created; /* when was this connection_t created? */
 
   uint32_t addr; /* these two uniquely identify a router. Both in host order. */
   uint16_t port; /* if non-zero, they identify the guy on the other end
@@ -418,8 +418,8 @@ struct circuit_t {
   crypt_path_t *cpath;
 
   char onionskin[DH_ONIONSKIN_LEN]; /* for storage while onionskin pending */
-  long timestamp_created;
-  long timestamp_dirty; /* when the circuit was first used, or 0 if clean */
+  time_t timestamp_created;
+  time_t timestamp_dirty; /* when the circuit was first used, or 0 if clean */
 
   uint8_t state;
 
