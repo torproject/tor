@@ -220,7 +220,7 @@ static unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len,
  
   oldchoice = rarray_len;
   for(i=0;i<*routelen;i++) {
-    log_fn(LOG_DEBUG,"Choosing hop %u.",i);
+//    log_fn(LOG_DEBUG,"Choosing hop %u.",i);
     if (CRYPTO_PSEUDO_RAND_INT(choice)) {
       free((void *)route);
       return NULL;

@@ -7,39 +7,13 @@ http://archives.seul.org/or/dev/.
 Is your question in the FAQ? Should it be?
 
 **************************************************************************
-See the INSTALL file for a quickstart. This is all you will probably need.
+See the INSTALL file for a quickstart. That is all you will probably need.
 **************************************************************************
 
 **************************************************************************
 You only need to look beyond this point if the quickstart in the INSTALL
 doesn't work for you.
 **************************************************************************
-
-Dependencies:
-
-  For tor itself, you're going to need openssl (0.9.5 or later
-  -- including the dev stuff and includes). If you're on Linux,
-  everything will probably work fine. OS X and BSD (but see below under
-  troubleshooting) may work too. Let us know if you get it working
-  elsewhere.
-
-If you got the source from cvs:
-
-  Run "./autogen.sh", which will run the various auto* programs and then
-  run ./configure for you. From there, start at step 3 in the quickstart
-  list above.
-
-If the quickstart doesn't work for you:
-
-  If you have problems finding libraries, try 
-    CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
-    ./configure
-  rather than simply ./configure.
-
-  Check out the list archives at http://archives.seul.org/or/dev/ and see
-  if somebody else has reported your problem. If not, please subscribe
-  and let us know what you did to fix it, or give us the details and
-  we'll see what we can do.
 
 Do you want to run a tor server?
 

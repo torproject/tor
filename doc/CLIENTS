@@ -43,15 +43,15 @@ socks server is a tor process (running either locally or elsewhere).
 In general this works quite well for command-line processes like finger,
 ssh, etc. But there are a couple of catches: A) tsocks doesn't intercept
 calls to gethostbyname. So unless you specify an IP rather than hostname,
-you'll be giving yourself away. B) Programs which are suid root (or
-anybody else) don't let you intercept the system calls -- ssh falls into
-this category. But you can make a local copy of ssh and use that. C)
-Probably tsocks doesn't behave well for behemoths like Mozilla.
+you'll be giving yourself away. B) Programs which are suid don't let you
+intercept the system calls -- ssh falls into this category. But you can
+make a local copy of ssh and use that. C) Probably tsocks doesn't behave
+well for behemoths like Mozilla.
 
 
     Part three: applications which support tor correctly
 
-http: Mozilla: set your socks4 proxy to be the onion proxy
+http: Mozilla: set your socks4 proxy to be the onion proxy (but see above)
       privoxy: set your socks4a proxy to be the onion proxy
 ssh: tsocks ssh arma@18.244.0.188
 ftp: tsocks wget ftp://18.244.0.188/quux.tar --passive
