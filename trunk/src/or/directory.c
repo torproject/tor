@@ -20,10 +20,14 @@ extern int has_fetched_directory;
 void directory_initiate_command(routerinfo_t *router, int command) {
   connection_t *conn;
 
-  if (command == DIR_CONN_STATE_CONNECTING_FETCH)
-    log_fn(LOG_DEBUG,"initiating directory fetch");
-  else
-    log_fn(LOG_DEBUG,"initiating directory upload");
+  switch(command) {
+    case DIR_CONN_STATE_CONNECTING_FETCH:
+      log_fn(LOG_DEBUG,"initiating directory fetch");
+      break;
+    case DIR_CONN_STATE_CONNECTING_UPLOAD:
+      log_fn(LOG_DEBUG,"initiating directory upload");
+      break;
+  }
 
   if (!router) { /* i guess they didn't have one in mind for me to use */
     log_fn(LOG_WARN,"No running dirservers known. Not trying.");
