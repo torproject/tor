@@ -154,8 +154,8 @@ Tor attempts to anonymize the transport layer, not the application layer, so
 application protocols that include personally identifying information need
 additional application-level scrubbing proxies, such as
 Privoxy~\cite{privoxy} for HTTP.  Furthermore, Tor does not permit arbitrary
-IP packets; it only anonymizes TCP and DNS, and only supports cconnections
-SOCKS (see section \ref{subsec:tcp-vs-ip}).
+IP packets; it only anonymizes TCP and DNS, and only supports connections via
+SOCKS (see Section \ref{subsec:tcp-vs-ip}).
 
 Tor differs from other deployed systems for traffic analysis resistance
 in its security and flexibility.  Mix networks such as
@@ -496,6 +496,7 @@ access abuse-prone services.  One conceivable approach would be to require
 would-be IRC users, for instance, to register accounts if they wanted to
 access the IRC network from Tor.  But in practise, this would not
 significantly impede abuse if creating new accounts were easily automatable;
+% XXX captcha
 this is why services use IP blocking.  In order to deter abuse, pseudonymous
 identities need to impose a significant switching cost in resources or human
 time.
@@ -556,7 +557,7 @@ logging verbosely? Would that actually solve any attacks?
 \label{sec:crossroads-design}
 
 \subsection{Transporting the stream vs transporting the packets}
-\ref{subsec:stream-vs-packet}
+\label{subsec:tcp-vs-ip}
 
 We periodically run into ex ZKS employees who tell us that the process of
 anonymizing IPs should ``obviously'' be done at the IP layer. Here are
@@ -568,8 +569,7 @@ over to arbitrary IP traffic.
 \setlength{\parsep}{0mm}
 \item \emph{IP packets reveal OS characteristics.} We still need to do
 IP-level packet normalization, to stop things like IP fingerprinting
-\cite{ip-fingerprinting}. There exist libraries \cite{ip-normalizing}
-that can help with this.
+attacks. There likely exist libraries that can help with this.
 \item \emph{Application-level streams still need scrubbing.} We still need
 Tor to be easy to integrate with user-level application-specific proxies
 such as Privoxy. So it's not just a matter of capturing packets and
@@ -581,17 +581,18 @@ understanding the protocols we are transporting.
 \item \emph{The crypto is unspecified.} First we need a block-level encryption
 approach that can provide security despite
 packet loss and out-of-order delivery. Freedom allegedly had one, but it was
-never publicly specified, and we believe it's likely vulnerable to tagging
-attacks \cite{tor-design}. Also, TLS over UDP is not implemented or even
-specified, though some early work has begun on that \cite{dtls}.
+never publicly specified. %, and we believe it's likely vulnerable to tagging
+%attacks \cite{tor-design}.
+Also, TLS over UDP is not implemented or even
+specified, though some early work has begun on that~\cite{dtls}.
 \item \emph{We'll still need to tune network parameters}. Since the above
-encryption system will likely need sequence numbers and maybe more to do
+encryption system will likely need sequence numbers (and maybe more) to do
 replay detection, handle duplicate frames, etc, we will be reimplementing
-some subset of TCP anyway to manage throughput, congestion control, etc.
+some subset of TCP anyway.
 \item \emph{Exit policies for arbitrary IP packets mean building a secure
 IDS.}  Our server operators tell us that exit policies are one of
-the main reasons they're willing to run Tor over previous attempts
-at anonymizing networks.  Adding an IDS to handle exit policies would
+the main reasons they're willing to run Tor.
+Adding an Intrusion Detection System to handle exit policies would
 increase the security complexity of Tor, and would likely not work anyway,
 as evidenced by the entire field of IDS and counter-IDS papers. Many
 potential abuse issues are resolved by the fact that Tor only transports
@@ -640,7 +641,7 @@ low or mid latency on servers as they are set up. Low-latency traffic
 would be processed as now.  Packets on circuits that are mid-latency
 would be sent in uniform size chunks at synchronized intervals.  To
 some extent the chunking is already done because traffic moves through
-the network in uniform size cells, but this would occur at a courser
+the network in uniform size cells, but this would occur at a coarser
 granularity.  If servers forward these chunks in roughly synchronous
 fashion, it will increase the similarity of data stream timing
 signatures. By experimenting with the granularity of data chunks and
@@ -649,7 +650,7 @@ usability and anonymity. Unlike in \cite{sync-batching}, it may be
 impractical to synchronize on network batches by dropping chunks from
 a batch that arrive late at a given node---unless Tor moves away from
 stream processing to a more loss-tolerant processing of traffic (cf.\ 
-Section~\ref{subsec:stream-vs-packet}). In other words, there would
+Section~\ref{subsec:tcp-vs-ip}). In other words, there would
 probably be no direct attempt to synchronize on batches of data
 entering the Tor network at the same time. Rather, it is the link
 level batching that will add noise to the traffic patterns exiting the
@@ -661,15 +662,20 @@ especially in bursty environments. This is another way in which it
 would be fairly practical to set up a mid-latency option within the
 existing Tor network. Other padding regimens might supplement the
 mid-latency option; however, we should continue the caution with which
-we have always approached padding lest the overhead cost us either
-performance or volunteers.
+we have always approached padding lest the overhead cost us too much
+performance or too many volunteers.
 
 The distinction between traffic confirmation and traffic analysis is
-not as practically cut and dried as we might wish. In \cite{} it was
+not as practically cut and dried as we might wish. In \cite{hintz-pet02} it was
 shown that if latencies to and/or data volumes of various popular
 responder destinations are catalogued, it may not be necessary to
 observe both ends of a stream to confirm a source-destination link.
 These are likely to entail high variability and massive storage since
+% XXX hintz-pet02 just looked at data volumes of the sites. this
+% doesn't require much variability or storage. I think it works
+% quite well actually. Also, \cite{kesdogan:pet2002} takes the
+% attack another level further, to narrow down where you could be
+% based on an intersection attack on subpages in a website. -RD
 routes through the network to each site will be random even if they
 have relatively unique latency or volume characteristics. So these do
 not seem an immediate practical threat. Further along similar lines, in
@@ -986,7 +992,7 @@ Feamster and Dingledine defined a \emph{location diversity} metric
 in \cite{feamster:wpes2004}, and began investigating a variant of location
 diversity based on the fact that the Internet is divided into thousands of
 independently operated networks called {\em autonomous systems} (ASes).
-The key insight from this paper is that while we typically think of a
+The key insight from their paper is that while we typically think of a
 connection as going directly from the Tor client to her first Tor node,
 actually it traverses many different ASes on each hop. An adversary at
 any of these ASes can monitor or influence traffic. Specifically, given
@@ -1187,6 +1193,7 @@ network at all."
 
 \bibliographystyle{plain} \bibliography{tor-design}
 
+\clearpage
 \appendix
 
 \begin{figure}[t]
