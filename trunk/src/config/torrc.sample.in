@@ -18,11 +18,11 @@ AllowUnverifiedNodes middle,rendezvous
 
 ## Logs go to stdout unless redirected by something else, like one of
 ## the below lines.
-## Send all messages of level 'warn' or higher to @LOCALSTATEDIR@/log/tor/warnings
+## Send all messages of level 'warn' or higher to @LOCALSTATEDIR@/log/tor/warnings.log
 #Log warn file @LOCALSTATEDIR@/log/tor/warnings.log
-## Send all debug and info messages to @LOCALSTATEDIR@/log/tor/debug
+## Send all debug and info messages to @LOCALSTATEDIR@/log/tor/debug.log
 #Log debug-info file @LOCALSTATEDIR@/log/tor/debug.log
-## Send all debug messages ONLY to @LOCALSTATEDIR@/log/tor/debug
+## Send all debug messages ONLY to @LOCALSTATEDIR@/log/tor/debug.log
 #Log debug-debug file @LOCALSTATEDIR@/log/tor/debug.log
 ## To use the system log instead of Tor's logfiles, uncomment these lines:
 #Log notice syslog
