@@ -290,9 +290,10 @@ int write_to_buf(const char *string, int string_len, buf_t *buf) {
 
   assert(string && BUF_OK(buf));
 
-  if (buf_ensure_capacity(buf, buf->datalen+string_len))
+  if (buf_ensure_capacity(buf, buf->datalen+string_len)) {
     log_fn(LOG_WARN, "buflen too small, can't hold %d bytes.",buf->datalen+string_len);
     return -1;
+  }
 
   memcpy(buf->mem+buf->datalen, string, string_len);
   buf->datalen += string_len;
