@@ -335,19 +335,21 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
 
 static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
 {
-  if(purpose == CIRCUIT_PURPOSE_C_GENERAL)
-    return choose_good_exit_server_general(dir);
-  else if (purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
-           purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
-    smartlist_t *obsolete_routers;
-    routerinfo_t *r;
-    obsolete_routers = smartlist_create();
-    router_add_nonrendezvous_to_list(obsolete_routers);
-    r = router_choose_random_node(dir, options.RendNodes, options.RendExcludeNodes, obsolete_routers);
-    smartlist_free(obsolete_routers);
-    return r;
-  } else
-    return router_choose_random_node(dir, options.RendNodes, options.RendExcludeNodes, NULL);
+  smartlist_t *obsolete_routers;
+  routerinfo_t *r;
+  switch(purpose) {
+    case CIRCUIT_PURPOSE_C_GENERAL:
+      return choose_good_exit_server_general(dir);
+    case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
+      obsolete_routers = smartlist_create();
+      router_add_nonrendezvous_to_list(obsolete_routers);
+      r = router_choose_random_node(dir, options.RendNodes, options.RendExcludeNodes, obsolete_routers);
+      smartlist_free(obsolete_routers);
+      return r;
+    default:
+      log_fn(LOG_WARN,"unhandled purpose %d", purpose);
+      assert(0);
+  }
 }
 
 cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
