@@ -504,7 +504,8 @@ connection_tls_finish_handshake(connection_t *conn) {
       char d[HEX_DIGEST_LEN+1];
       base16_encode(d, HEX_DIGEST_LEN+1, digest_rcvd, DIGEST_LEN);
       if (strcasecmp(d,conn->nickname+1)) {
-        log_fn(LOG_WARN, "Identity key not as expected for router at %s:%d: wanted %s but got %s",
+        log_fn(severity,
+               "Identity key not as expected for router at %s:%d: wanted %s but got %s",
                conn->address, conn->port, conn->nickname, d);
         control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
         // XXX if we're an authdir_mode, forget about nickname's descriptor
