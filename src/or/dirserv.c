@@ -4,19 +4,20 @@
 
 #include "or.h"
 
-/*****
- * dirserv.c: Directory server core implementation.
+/**
+ * \file dirserv.c
+ * \brief Directory server core implementation.
  *****/
 
-/* How old do we allow a router to get before removing it? (seconds) */
+/** How old do we allow a router to get before removing it? (seconds) */
 #define ROUTER_MAX_AGE (60*60*24)
 
-/* How far in the future do we allow a router to get? (seconds) */
+/** How far in the future do we allow a router to get? (seconds) */
 #define ROUTER_ALLOW_SKEW (30*60)
 
-extern or_options_t options; /* command-line and config-file options */
+extern or_options_t options; /**< command-line and config-file options */
 
-/* Do we need to regenerate the directory when someone asks for it? */
+/** Do we need to regenerate the directory when someone asks for it? */
 static int the_directory_is_dirty = 1;
 
 static int list_running_servers(char **nicknames_out);
@@ -29,12 +30,12 @@ typedef struct fingerprint_entry_t {
   char *fingerprint;
 } fingerprint_entry_t;
 
-/* List of nickname->identity fingerprint mappings for all the routers
+/** List of nickname->identity fingerprint mappings for all the routers
  * that we recognize. Used to prevent Sybil attacks. */
 static fingerprint_entry_t fingerprint_list[MAX_ROUTERS_IN_DIR];
 static int n_fingerprints = 0;
 
-/* Add the fingerprint 'fp' for the nickname 'nickname' to the global
+/** Add the fingerprint 'fp' for the nickname 'nickname' to the global
  * list of recognized identity key fingerprints.
  */
 void /* Should be static; exposed for testing */
@@ -53,7 +54,7 @@ add_fingerprint_to_dir(const char *nickname, const char *fp)
   ++n_fingerprints;
 }
 
-/* Add the nickname and fingerprint for this OR to the recognized list.
+/** Add the nickname and fingerprint for this OR to the recognized list.
  */
 int
 dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
@@ -67,7 +68,7 @@ dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
   return 0;
 }
 
-/* Parse the nickname->fingerprint mappings stored in the file named
+/** Parse the nickname->fingerprint mappings stored in the file named
  * 'fname'.  The file format is line-based, with each non-blank
  * holding one nickname, some space, and a fingerprint for that
  * nickname.  On success, replace the current fingerprint list with
@@ -129,7 +130,7 @@ dirserv_parse_fingerprint_file(const char *fname)
   return -1;
 }
 
-/* Check whether 'router' has a nickname/identity key combination that
+/** Check whether 'router' has a nickname/identity key combination that
  * we recognize from the fingerprint list.  Return 1 if router's
  * identity and nickname match, -1 if we recognize the nickname but
  * the identity key is wrong, and 0 if the nickname is not known. */
@@ -166,7 +167,7 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
   }
 }
 
-/* Return true iff any router named 'nickname' is in the fingerprint
+/** Return true iff any router named 'nickname' is in the fingerprint
  * list. */
 static int
 router_nickname_is_approved(const char *nickname)
@@ -180,7 +181,7 @@ router_nickname_is_approved(const char *nickname)
   return 0;
 }
 
-/* Clear the current fingerprint list. */
+/** Clear the current fingerprint list. */
 void
 dirserv_free_fingerprint_list()
 {
@@ -196,7 +197,7 @@ dirserv_free_fingerprint_list()
  *    Descriptor list
  */
 
-/* A directory server's view of a server descriptor.  Contains both
+/** A directory server's view of a server descriptor.  Contains both
  * parsed and unparsed versions. */
 typedef struct descriptor_entry_t {
   char *nickname;
@@ -206,11 +207,11 @@ typedef struct descriptor_entry_t {
   routerinfo_t *router;
 } descriptor_entry_t;
 
-/* List of all server descriptors that this dirserv is holding. */
+/** List of all server descriptors that this dirserv is holding. */
 static descriptor_entry_t *descriptor_list[MAX_ROUTERS_IN_DIR];
 static int n_descriptors = 0;
 
-/* Release the storage held by 'desc' */
+/** Release the storage held by 'desc' */
 static void free_descriptor_entry(descriptor_entry_t *desc)
 {
   tor_free(desc->descriptor);
@@ -219,7 +220,7 @@ static void free_descriptor_entry(descriptor_entry_t *desc)
   free(desc);
 }
 
-/* Release all storage that the dirserv is holding for server
+/** Release all storage that the dirserv is holding for server
  * descriptors. */
 void
 dirserv_free_descriptors()
@@ -231,7 +232,7 @@ dirserv_free_descriptors()
   n_descriptors = 0;
 }
 
-/* Parse the server descriptor at *desc and maybe insert it into the
+/** Parse the server descriptor at *desc and maybe insert it into the
  * list of service descriptors, and (if the descriptor is well-formed)
  * advance *desc immediately past the descriptor's end.
  *
@@ -349,7 +350,7 @@ dirserv_add_descriptor(const char **desc)
   return 1;
 }
 
-/* Remove all descriptors whose nicknames or fingerprints we don't
+/** Remove all descriptors whose nicknames or fingerprints we don't
  * recognize.  (Descriptors that used to be good can become
  * unrecognized when we reload the fingerprint list.)
  */
@@ -367,7 +368,7 @@ directory_remove_unrecognized(void)
   }
 }
 
-/* Mark the directory as 'dirty' -- when we're next asked for a
+/** Mark the directory as 'dirty' -- when we're next asked for a
  * directory, we will rebuild it instead of reusing the most recently
  * generated one.
  */
@@ -377,7 +378,7 @@ directory_set_dirty()
   the_directory_is_dirty = 1;
 }
 
-/* Load all descriptors from an earlier directory stored in the string
+/** Load all descriptors from an earlier directory stored in the string
  * 'dir'.
  */
 int
@@ -396,7 +397,7 @@ dirserv_init_from_directory_string(const char *dir)
   return 0;
 }
 
-/* Set *nicknames_out to a comma-separated list of all the ORs that we
+/** Set *nicknames_out to a comma-separated list of all the ORs that we
  * believe are currently running (because we have open connections to
  * them).  Return 0 on success; -1 on error.
  */
@@ -440,7 +441,7 @@ list_running_servers(char **nicknames_out)
   return 0;
 }
 
-/* Remove any descriptors from the directory that are more than ROUTER_MAX_AGE
+/** Remove any descriptors from the directory that are more than ROUTER_MAX_AGE
  * seconds old.
  */
 void
@@ -461,7 +462,7 @@ dirserv_remove_old_servers(void)
   }
 }
 
-/* Dump all routers currently in the directory into the string <s>, using
+/** Dump all routers currently in the directory into the string <s>, using
  * at most <maxlen> characters, and signing the directory with <private_key>.
  * Return 0 on success, -1 on failure.
  */
@@ -535,9 +536,11 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
   return -1;
 }
 
+/** XXX */
 static char *the_directory = NULL;
 static int the_directory_len = -1;
 
+/** XXX */
 size_t dirserv_get_directory(const char **directory)
 {
   char *new_directory;

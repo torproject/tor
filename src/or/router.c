@@ -4,14 +4,15 @@
 
 #include "or.h"
 
-/*****
- * router.c: OR functionality, including key maintenance, generating
+/**
+ * \file router.c
+ * \brief OR functionality, including key maintenance, generating
  * and uploading server descriptors, retrying OR connections.
- *****/
+ **/
 
 extern or_options_t options; /* command-line and config-file options */
 
-/* exposed for test.c */ void get_platform_str(char *platform, int len);
+/** exposed for test.c */ void get_platform_str(char *platform, int len);
 
 /************************************************************/
 
@@ -19,14 +20,14 @@ extern or_options_t options; /* command-line and config-file options */
  * Key management: ORs only.
  *****/
 
-/* Private keys for this OR.  There is also an SSL key managed by tortls.c.
+/** Private keys for this OR.  There is also an SSL key managed by tortls.c.
  */
 static time_t onionkey_set_at=0; /* When was onionkey last changed? */
 static crypto_pk_env_t *onionkey=NULL;
 static crypto_pk_env_t *lastonionkey=NULL;
 static crypto_pk_env_t *identitykey=NULL;
 
-/* Replace the current onion key with 'k'.  Does not affect lastonionkey;
+/** Replace the current onion key with 'k'.  Does not affect lastonionkey;
  * to update onionkey correctly, call rotate_onion_key().
  */
 void set_onion_key(crypto_pk_env_t *k) {
@@ -34,14 +35,14 @@ void set_onion_key(crypto_pk_env_t *k) {
   onionkey_set_at = time(NULL);
 }
 
-/* Return the current onion key.  Requires that the onion key has been
+/** Return the current onion key.  Requires that the onion key has been
  * loaded or generated. */
 crypto_pk_env_t *get_onion_key(void) {
   tor_assert(onionkey);
   return onionkey;
 }
 
-/* Return the onion key that was current before the most recent onion
+/** Return the onion key that was current before the most recent onion
  * key rotation.  If no rotation has been performed since this process
  * started, return NULL.
  */
@@ -49,7 +50,7 @@ crypto_pk_env_t *get_previous_onion_key(void) {
   return lastonionkey;
 }
 
-/* Return the time when the onion key was last set.  This is either the time
+/** Return the time when the onion key was last set.  This is either the time
  * when the process launched, or the time of the most recent key rotation since
  * the process launched.
  */
@@ -57,13 +58,13 @@ time_t get_onion_key_set_at(void) {
   return onionkey_set_at;
 }
 
-/* Set the current identity key to k.
+/** Set the current identity key to k.
  */
 void set_identity_key(crypto_pk_env_t *k) {
   identitykey = k;
 }
 
-/* Returns the current identity key; requires that the identity key has been
+/** Returns the current identity key; requires that the identity key has been
  * set.
  */
 crypto_pk_env_t *get_identity_key(void) {
@@ -71,12 +72,12 @@ crypto_pk_env_t *get_identity_key(void) {
   return identitykey;
 }
 
-/* Replace the previous onion key with the current onion key, and generate
+/** Replace the previous onion key with the current onion key, and generate
  * a new previous onion key.  Immediately after calling this function,
  * the OR should:
- *     a) schedule all previous cpuworkers to shut down _after_ processing
- *        pending work.  (This will cause fresh cpuworkers to be generated.)
- *     b) generate and upload a fresh routerinfo.
+ *   - schedule all previous cpuworkers to shut down _after_ processing
+ *     pending work.  (This will cause fresh cpuworkers to be generated.)
+ *   - generate and upload a fresh routerinfo.
  */
 void rotate_onion_key(void)
 {
@@ -107,7 +108,7 @@ void rotate_onion_key(void)
   log_fn(LOG_WARN, "Couldn't rotate onion key.");
 }
 
-/* Try to read an RSA key from 'fname'.  If 'fname' doesn't exist, create a new
+/** Try to read an RSA key from 'fname'.  If 'fname' doesn't exist, create a new
  * RSA key and save it in 'fname'.  Return the read/created key, or NULL on
  * error.
  */
@@ -160,7 +161,7 @@ crypto_pk_env_t *init_key_from_file(const char *fname)
   return NULL;
 }
 
-/* Initialize all OR private keys, and the TLS context, as necessary.
+/** Initialize all OR private keys, and the TLS context, as necessary.
  * On OPs, this only initializes the tls context.
  */
 int init_keys(void) {
@@ -280,7 +281,7 @@ int init_keys(void) {
  * Clique maintenance
  *****/
 
-/* OR only: try to open connections to all of the otehr ORs we know about.
+/** OR only: try to open connections to all of the other ORs we know about.
  */
 void router_retry_connections(void) {
   int i;
@@ -304,12 +305,12 @@ void router_retry_connections(void) {
  * OR descriptor generation.
  *****/
 
-/* my routerinfo. */
+/** my routerinfo. */
 static routerinfo_t *desc_routerinfo = NULL;
-/* string representation of my descriptor, signed by me. */
+/** string representation of my descriptor, signed by me. */
 static char descriptor[8192];
 
-/* OR only: try to upload our signed descriptor to all the directory servers
+/** OR only: try to upload our signed descriptor to all the directory servers
  * we know about.
  */
 void router_upload_dir_desc_to_dirservers(void) {
@@ -323,7 +324,7 @@ void router_upload_dir_desc_to_dirservers(void) {
   router_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, s, strlen(s));
 }
 
-/* Start a connection to every known directory server, using
+/** Start a connection to every known directory server, using
  * connection purpose 'purpose' and uploading the payload 'payload'
  * (length 'payload_len').  The purpose should be one of
  * 'DIR_PURPOSE_UPLOAD_DIR' or 'DIR_PURPOSE_UPLOAD_RENDDESC'.
@@ -346,7 +347,7 @@ void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload
   }
 }
 
-/* Append the comma-separated sequence of exit policies in 's' to the
+/** Append the comma-separated sequence of exit policies in 's' to the
  * exit policy in 'router'. */
 static void router_add_exit_policy_from_config_helper(const char *s, routerinfo_t *router) {
   char *e;
@@ -383,7 +384,7 @@ static void router_add_exit_policy_from_config_helper(const char *s, routerinfo_
 
 #define DEFAULT_EXIT_POLICY "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,accept *:20-22,accept *:53,accept *:79-81,accept *:110,accept *:143,accept *:443,accept *:873,accept *:993,accept *:995,accept *:1024-65535,reject *:*"
 
-/* Set the exit policy on 'router' to match the exit policy in the current
+/** Set the exit policy on 'router' to match the exit policy in the current
  * configuration file.  If the exit policy doesn't have a catch-all rule,
  * then append the default exit policy as well.
  */
@@ -398,7 +399,7 @@ static void router_add_exit_policy_from_config(routerinfo_t *router) {
   }
 }
 
-/* OR only: Return false if my exit policy says to allow connection to
+/** OR only: Return false if my exit policy says to allow connection to
  * conn.  Else return true.
  */
 int router_compare_to_my_exit_policy(connection_t *conn)
@@ -412,7 +413,7 @@ int router_compare_to_my_exit_policy(connection_t *conn)
 
 }
 
-/* Return true iff 'router' has the same nickname as this OR.  (For an OP,
+/** Return true iff 'router' has the same nickname as this OR.  (For an OP,
  * always returns false.)
  */
 int router_is_me(routerinfo_t *router)
@@ -421,7 +422,7 @@ int router_is_me(routerinfo_t *router)
   return options.Nickname && !strcasecmp(router->nickname, options.Nickname);
 }
 
-/* Return a routerinfo for this OR, rebuilding a fresh one if
+/** Return a routerinfo for this OR, rebuilding a fresh one if
  * necessary.  Return NULL on error, or if called on an OP. */
 routerinfo_t *router_get_my_routerinfo(void)
 {
@@ -435,7 +436,7 @@ routerinfo_t *router_get_my_routerinfo(void)
   return desc_routerinfo;
 }
 
-/* OR only: Return a signed server descriptor for this OR, rebuilding a fresh
+/** OR only: Return a signed server descriptor for this OR, rebuilding a fresh
  * one if necessary.  Return NULL on error.
  */
 const char *router_get_my_descriptor(void) {
@@ -447,7 +448,7 @@ const char *router_get_my_descriptor(void) {
   return descriptor;
 }
 
-/* Rebuild a fresh routerinfo and signed server descriptor for this
+/** Rebuild a fresh routerinfo and signed server descriptor for this
  * OR.  Return 0 on success, -1 on error.
  */
 int router_rebuild_descriptor(void) {
@@ -485,7 +486,7 @@ int router_rebuild_descriptor(void) {
   return 0;
 }
 
-/* Set 'platform' (max length 'len') to a NUL-terminated short string
+/** Set 'platform' (max length 'len') to a NUL-terminated short string
  * describing the version of Tor and the operating system we're
  * currently running on.
  */
@@ -502,7 +503,7 @@ void get_platform_str(char *platform, int len)
  */
 #define DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
 
-/* OR only: Given a routerinfo for this router, and an identity key to
+/** OR only: Given a routerinfo for this router, and an identity key to
  * sign with, encode the routerinfo as a signed server descriptor and
  * write the result into 's', using at most 'maxlen' bytes.  Return -1
  * on failure, and the number of bytes used on success.

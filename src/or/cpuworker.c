@@ -2,26 +2,34 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/*****
- * cpuworker.c: Run computation-intensive tasks (generally for crypto) in
+/**
+ * \file cpuworker.c
+ * \brief Run computation-intensive tasks (generally for crypto) in
  * a separate execution context. [OR only.]
  *
  * Right now, we only use this for processing onionskins.
- *****/
+ **/
 
 #include "or.h"
-extern or_options_t options; /* command-line and config-file options */
+extern or_options_t options; /**< command-line and config-file options */
 
+/** The maximum number of cpuworker processes we will keep around */
 #define MAX_CPUWORKERS 16
+/** The minimum number of cpuworker processes we will keep around */
 #define MIN_CPUWORKERS 1
 
+/** The tag specifies which circuit this onionskin was from */
 #define TAG_LEN 8
+/** How many bytes are sent from tor to the cpuworker? */
 #define LEN_ONION_QUESTION (1+TAG_LEN+ONIONSKIN_CHALLENGE_LEN)
+/** How many bytes are sent from the cpuworker back to tor? */
 #define LEN_ONION_RESPONSE (1+TAG_LEN+ONIONSKIN_REPLY_LEN+40+32)
 
+/** How many cpuworkers we have running right now */
 static int num_cpuworkers=0;
+/** How many of the running cpuworkers have an assigned task right now */
 static int num_cpuworkers_busy=0;
-/* We need to spawn new cpuworkers whenever we rotate the onion keys
+/** We need to spawn new cpuworkers whenever we rotate the onion keys
  * on platforms where execution contexts==processes.  This variable stores
  * the last time we got a key rotation event.*/
 static time_t last_rotation_time=0;
@@ -31,21 +39,21 @@ static int spawn_cpuworker(void);
 static void spawn_enough_cpuworkers(void);
 static void process_pending_task(connection_t *cpuworker);
 
-/* Initialize the cpuworker subsystem.
+/** Initialize the cpuworker subsystem.
  */
 void cpu_init(void) {
   last_rotation_time=time(NULL);
   spawn_enough_cpuworkers();
 }
 
-/* Called when we're done sending a request to a cpuworker. */
+/** Called when we're done sending a request to a cpuworker. */
 int connection_cpu_finished_flushing(connection_t *conn) {
   tor_assert(conn && conn->type == CONN_TYPE_CPUWORKER);
   connection_stop_writing(conn);
   return 0;
 }
 
-/* Pack addr,port,and circ_id; set *tag to the result. (See note on
+/** Pack addr,port,and circ_id; set *tag to the result. (See note on
  * cpuworker_main for wire format.) */
 static void tag_pack(char *tag, uint32_t addr, uint16_t port, uint16_t circ_id) {
   *(uint32_t *)tag     = addr;
@@ -53,7 +61,7 @@ static void tag_pack(char *tag, uint32_t addr, uint16_t port, uint16_t circ_id) 
   *(uint16_t *)(tag+6) = circ_id;
 }
 
-/* Unpack 'tag' into addr, port, and circ_id.
+/** Unpack 'tag' into addr, port, and circ_id.
  */
 static void tag_unpack(const char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ_id) {
   struct in_addr in;
@@ -66,7 +74,7 @@ static void tag_unpack(const char *tag, uint32_t *addr, uint16_t *port, uint16_t
   log_fn(LOG_DEBUG,"onion was from %s:%d, circ_id %d.", inet_ntoa(in), *port, *circ_id);
 }
 
-/* Called when the onion key has changed and we need to spawn new
+/** Called when the onion key has changed and we need to spawn new
  * cpuworkers.  Close all currently idle cpuworkers, and mark the last
  * rotation time as now.
  */
@@ -82,7 +90,7 @@ void cpuworkers_rotate(void)
   spawn_enough_cpuworkers();
 }
 
-/* Called when we get data from a cpuworker.  If the answer is not complete,
+/** Called when we get data from a cpuworker.  If the answer is not complete,
  * wait for a complete answer.  If the cpuworker closes the connection,
  * mark it as closed and spawn a new one as needed.  If the answer is complete,
  * process it as appropriate.
@@ -162,8 +170,7 @@ done_processing:
   return 0;
 }
 
-
-/* Implement a cpuworker.  'data' is an fdarray as returned by socketpair.
+/** Implement a cpuworker.  'data' is an fdarray as returned by socketpair.
  * Read and writes from fdarray[1].  Reads requests, writes answers.
  *
  *   Request format:
@@ -249,7 +256,7 @@ int cpuworker_main(void *data) {
   return 0; /* windows wants this function to return an int */
 }
 
-/* Launch a new cpuworker.
+/** Launch a new cpuworker.
  */
 static int spawn_cpuworker(void) {
   int fd[2];
@@ -285,7 +292,7 @@ static int spawn_cpuworker(void) {
   return 0; /* success */
 }
 
-/* If we have too few or too many active cpuworkers, try to spawn new ones
+/** If we have too few or too many active cpuworkers, try to spawn new ones
  * or kill idle ones.
  */
 static void spawn_enough_cpuworkers(void) {
@@ -305,7 +312,7 @@ static void spawn_enough_cpuworkers(void) {
   }
 }
 
-/* Take a pending task from the queue and assign it to 'cpuworker' */
+/** Take a pending task from the queue and assign it to 'cpuworker' */
 static void process_pending_task(connection_t *cpuworker) {
   circuit_t *circ;
 
@@ -320,7 +327,7 @@ static void process_pending_task(connection_t *cpuworker) {
     log_fn(LOG_WARN,"assign_to_cpuworker failed. Ignoring.");
 }
 
-/* if cpuworker is defined, assert that he's idle, and use him. else,
+/** if cpuworker is defined, assert that he's idle, and use him. else,
  * look for an idle cpuworker and use him. if none idle, queue task onto
  * the pending onion list and return.
  * If question_type is CPUWORKER_TASK_ONION then task is a circ.
@@ -371,4 +378,3 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
   c-basic-offset:2
   End:
 */
-

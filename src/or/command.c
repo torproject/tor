@@ -2,26 +2,31 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/**
+ * \file command.c
+ * \brief Functions for processing incoming cells
+ **/
+
 #include "or.h"
 
-extern or_options_t options; /* command-line and config-file options */
+extern or_options_t options; /**< command-line and config-file options */
 
-/* keep statistics about how many of each type of cell we've received */
+/** keep statistics about how many of each type of cell we've received */
 unsigned long stats_n_padding_cells_processed = 0;
 unsigned long stats_n_create_cells_processed = 0;
 unsigned long stats_n_created_cells_processed = 0;
 unsigned long stats_n_relay_cells_processed = 0;
 unsigned long stats_n_destroy_cells_processed = 0;
 
-/* These are the main four functions for processing cells */
+/** These are the main four functions for processing cells */
 static void command_process_create_cell(cell_t *cell, connection_t *conn);
 static void command_process_created_cell(cell_t *cell, connection_t *conn);
 static void command_process_relay_cell(cell_t *cell, connection_t *conn);
 static void command_process_destroy_cell(cell_t *cell, connection_t *conn);
 
-/* This is a wrapper function around the actual function that processes
- * 'cell' that just arrived on 'conn'. Increment *time by the number of
- * microseconds used by the call to *func(cell, conn).
+/** This is a wrapper function around the actual function that processes the
+ * <b>cell</b> that just arrived on <b>conn</b>. Increment <b>*time</b>
+ * by the number of microseconds used by the call to <b>*func(cell, conn)</b>.
  */
 static void command_time_process_cell(cell_t *cell, connection_t *conn, int *time,
                                void (*func)(cell_t *, connection_t *)) {
@@ -41,7 +46,7 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn, int *tim
   *time += time_passed;
 }
 
-/* Process a cell that was just received on conn. Keep internal
+/** Process a <b>cell</b> that was just received on <b>conn</b>. Keep internal
  * statistics about how many of each cell we've processed so far
  * this second, and the total number of microseconds it took to
  * process each type of cell.
@@ -107,7 +112,7 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
   }
 }
 
-/* Process a 'create' cell that just arrived from conn. Make a new circuit
+/** Process a 'create' <b>cell</b> that just arrived from <b>conn</b>. Make a new circuit
  * with the p_circ_id specified in cell. Put the circuit in state
  * onionskin_pending, and pass the onionskin to the cpuworker. Circ will
  * get picked up again when the cpuworker finishes decrypting it.
@@ -137,9 +142,9 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
   log_fn(LOG_DEBUG,"success: handed off onionskin.");
 }
 
-/* Process a 'created' cell that just arrived from conn. Find the circuit
- * that it's intended for. If you're not the origin of the circuit, package
- * the 'created' cell in an 'extended' relay cell and pass it back. If you
+/** Process a 'created' <b>cell</b> that just arrived from <b>conn</b>. Find the circuit
+ * that it's intended for. If we're not the origin of the circuit, package
+ * the 'created' cell in an 'extended' relay cell and pass it back. If we
  * are the origin of the circuit, send it to circuit_finish_handshake() to
  * finish processing keys, and then call circuit_send_next_onion_skin() to
  * extend to the next hop in the circuit if necessary.
@@ -180,7 +185,7 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
   }
 }
 
-/* Process a 'relay' cell that just arrived from conn. Make sure
+/** Process a 'relay' <b>cell</b> that just arrived from <b>conn</b>. Make sure
  * it came in with a recognized circ_id. Pass it on to
  * circuit_receive_relay_cell() for actual processing.
  */
@@ -216,8 +221,8 @@ static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
   }
 }
 
-/* Process a 'destroy' cell that just arrived from conn. Find the
- * circ that it refers to (if any).
+/** Process a 'destroy' <b>cell</b> that just arrived from
+ * <b>conn</b>. Find the circ that it refers to (if any).
  *
  * If the circ is in state
  * onionskin_pending, then call onion_pending_remove() to remove it

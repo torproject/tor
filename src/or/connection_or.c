@@ -2,17 +2,23 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/**
+ * \file connection_or.c
+ * \brief Functions to handle OR connections, TLS handshaking, and
+ * cells on the network.
+ **/
+
 #include "or.h"
 
-extern or_options_t options; /* command-line and config-file options */
+extern or_options_t options; /**< command-line and config-file options */
 
 static int connection_tls_finish_handshake(connection_t *conn);
 static int connection_or_process_cells_from_inbuf(connection_t *conn);
 
 /**************************************************************/
 
-/* Pack the cell_t host-order structure 'src' into network-order
- * in the buffer 'dest'. See tor-spec.txt for details about the
+/** Pack the cell_t host-order structure <b>src</b> into network-order
+ * in the buffer <b>dest</b>. See tor-spec.txt for details about the
  * wire format.
  */
 static void cell_pack(char *dest, const cell_t *src) {
@@ -21,8 +27,8 @@ static void cell_pack(char *dest, const cell_t *src) {
   memcpy(dest+3, src->payload, CELL_PAYLOAD_SIZE);
 }
 
-/* Unpack the network-order buffer 'src' into a host-order
- * cell_t structure 'dest'.
+/** Unpack the network-order buffer <b>src</b> into a host-order
+ * cell_t structure <b>dest</b>.
  */
 static void cell_unpack(cell_t *dest, const char *src) {
   dest->circ_id = ntohs(*(uint16_t*)(src));
@@ -30,9 +36,7 @@ static void cell_unpack(cell_t *dest, const char *src) {
   memcpy(dest->payload, src+3, CELL_PAYLOAD_SIZE);
 }
 
-/**************************************************************/
-
-/* Handle any new bytes that have come in on connection 'conn'.
+/** Handle any new bytes that have come in on connection <b>conn</b>.
  * If conn is in 'open' state, hand it to
  * connection_or_process_cells_from_inbuf()
  * (else do nothing).
@@ -52,7 +56,7 @@ int connection_or_process_inbuf(connection_t *conn) {
   return connection_or_process_cells_from_inbuf(conn);
 }
 
-/* Connection 'conn' has finished writing and has no bytes left on
+/** Connection <b>conn</b> has finished writing and has no bytes left on
  * its outbuf.
  *
  * If it's in state 'connecting', then take a look at the socket, and
@@ -68,7 +72,8 @@ int connection_or_finished_flushing(connection_t *conn) {
 
   switch(conn->state) {
     case OR_CONN_STATE_CONNECTING:
-      if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
+      if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0) {
+        /* not yet */
         if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(conn->s))) {
           log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
           connection_mark_for_close(conn,0);
@@ -97,9 +102,7 @@ int connection_or_finished_flushing(connection_t *conn) {
   }
 }
 
-/*********************/
-
-/* Initialize conn to include all the relevant data from router.
+/** Initialize <b>conn</b> to include all the relevant data from <b>router</b>.
  * This function is called either from connection_or_connect(), if
  * we initiated the connect, or from connection_tls_finish_handshake()
  * if the other side initiated it.
@@ -115,11 +118,11 @@ connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router) {
   conn->address = tor_strdup(router->address);
 }
 
-/* Launch a new OR connection to 'router'.
+/** Launch a new OR connection to <b>router</b>.
  *
- * If router is me, do nothing. If we're already connected to router,
+ * If <b>router</b> is me, do nothing. If we're already connected to <b>router</b>,
  * return that connection. If the connect is in progress, set conn's
- * state to 'connecting' and return. If connect to router succeeds, call
+ * state to 'connecting' and return. If connect to <b>router</b> succeeds, call
  * connection_tls_start_handshake() on it.
  *
  * This function is called from router_retry_connections(), for
@@ -170,13 +173,13 @@ connection_t *connection_or_connect(routerinfo_t *router) {
   return NULL;
 }
 
-/* Begin the tls handshake with conn. 'receiving' is 0 if we initiated
- * the connection, else it's 1.
+/** Begin the tls handshake with <b>conn</b>. <b>receiving</b> is 0 if
+ * we initiated the connection, else it's 1.
  *
- * Assign a new tls object to conn->tls, begin reading on conn, and pass
- * conn to connection_tls_continue_handshake().
+ * Assign a new tls object to conn->tls, begin reading on <b>conn</b>, and pass
+ * <b>conn</b> to connection_tls_continue_handshake().
  *
- * Return -1 if conn is broken, else return 0.
+ * Return -1 if <b>conn</b> is broken, else return 0.
  */
 int connection_tls_start_handshake(connection_t *conn, int receiving) {
   conn->state = OR_CONN_STATE_HANDSHAKING;
@@ -193,10 +196,10 @@ int connection_tls_start_handshake(connection_t *conn, int receiving) {
   return 0;
 }
 
-/* Move forward with the tls handshake. If it finishes, hand
- * conn to connection_tls_finish_handshake().
+/** Move forward with the tls handshake. If it finishes, hand
+ * <b>conn</b> to connection_tls_finish_handshake().
  *
- * Return -1 if conn is broken, else return 0.
+ * Return -1 if <b>conn</b> is broken, else return 0.
  */
 int connection_tls_continue_handshake(connection_t *conn) {
   switch(tor_tls_handshake(conn->tls)) {
@@ -217,7 +220,7 @@ int connection_tls_continue_handshake(connection_t *conn) {
   return 0;
 }
 
-/* The tls handshake is finished.
+/** The tls handshake is finished.
  *
  * Make sure we are happy with the person we just handshaked with:
  * If it's an OP (that is, it has no certificate), make sure I'm an OR.
@@ -301,7 +304,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   return 0;
 }
 
-/* Pack 'cell' into wire-format, and write it onto conn's outbuf. */
+/** Pack <b>cell</b> into wire-format, and write it onto <b>conn</b>'s outbuf. */
 void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
   char networkcell[CELL_NETWORK_SIZE];
   char *n = networkcell;
@@ -314,8 +317,11 @@ void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
   connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
 }
 
-/* Process cells from conn's inbuf. Loop: while inbuf contains a cell, pull
- * it off the inbuf, unpack it, and hand it to command_process_cell().
+/** Process cells from <b>conn</b>'s inbuf.
+ *
+ * Loop: while inbuf contains a cell, pull it off the inbuf, unpack it,
+ * and hand it to command_process_cell().
+ *
  * Always return 0.
  */
 static int connection_or_process_cells_from_inbuf(connection_t *conn) {

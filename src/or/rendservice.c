@@ -2,15 +2,16 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/*****
- * rendservice.c: The hidden-service side of rendezvous functionality.
- *****/
+/**
+ * \file rendservice.c
+ * \brief The hidden-service side of rendezvous functionality.
+ **/
 
 #include "or.h"
 
 static circuit_t *find_intro_circuit(routerinfo_t *router, const char *pk_digest);
 
-/* Represents the mapping from a virtual port of a rendezvous service to
+/** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
  */
 typedef struct rend_service_port_config_t {
@@ -19,33 +20,31 @@ typedef struct rend_service_port_config_t {
   uint32_t real_address;
 } rend_service_port_config_t;
 
-/* Try to maintain this many intro points per service if possible.
- */
+/** Try to maintain this many intro points per service if possible. */
 #define NUM_INTRO_POINTS 3
 
-/* Represents a single hidden service running at this OP.
- */
+/** Represents a single hidden service running at this OP. */
 typedef struct rend_service_t {
-  /* Fields specified in config file */
-  char *directory; /* where in the filesystem it stores it */
-  smartlist_t *ports; /* List of rend_service_port_config_t */
-  char *intro_prefer_nodes; /* comma-separated list of nicknames */
-  char *intro_exclude_nodes; /* comma-separated list of nicknames */
+  /** Fields specified in config file */
+  char *directory; /**< where in the filesystem it stores it */
+  smartlist_t *ports; /**< List of rend_service_port_config_t */
+  char *intro_prefer_nodes; /**< comma-separated list of nicknames */
+  char *intro_exclude_nodes; /**< comma-separated list of nicknames */
   /* Other fields */
   crypto_pk_env_t *private_key;
   char service_id[REND_SERVICE_ID_LEN+1];
   char pk_digest[DIGEST_LEN];
-  smartlist_t *intro_nodes; /* list of nicknames for intro points we have,
+  smartlist_t *intro_nodes; /**< list of nicknames for intro points we have,
                              * or are trying to establish. */
   rend_service_descriptor_t *desc;
   int desc_is_dirty;
 } rend_service_t;
 
-/* A list of rend_service_t's for services run on this OP.
+/** A list of rend_service_t's for services run on this OP.
  */
 static smartlist_t *rend_service_list = NULL;
 
-/* Release the storage held by 'service'.
+/** Release the storage held by 'service'.
  */
 static void rend_service_free(rend_service_t *service)
 {
@@ -64,7 +63,7 @@ static void rend_service_free(rend_service_t *service)
   tor_free(service);
 }
 
-/* Release all the storage held in rend_service_list, and allocate a new,
+/** Release all the storage held in rend_service_list, and allocate a new,
  * empty rend_service_list.
  */
 static void rend_service_free_all(void)
@@ -79,7 +78,7 @@ static void rend_service_free_all(void)
   rend_service_list = smartlist_create();
 }
 
-/* Validate 'service' and add it to rend_service_list if possible.
+/** Validate 'service' and add it to rend_service_list if possible.
  */
 static void add_service(rend_service_t *service)
 {
@@ -108,7 +107,7 @@ static void add_service(rend_service_t *service)
   }
 }
 
-/* Parses a real-port to virtual-port mapping and returns a new
+/** Parses a real-port to virtual-port mapping and returns a new
  * rend_service_port_config_t.
  *
  * The format is: VirtualPort (IP|RealPort|IP:RealPort)?
@@ -176,7 +175,7 @@ static rend_service_port_config_t *parse_port_config(const char *string)
   return result;
 }
 
-/* Set up rend_service_list, based on the values of HiddenServiceDir and
+/** Set up rend_service_list, based on the values of HiddenServiceDir and
  * HiddenServicePort in 'options'.  Return 0 on success and -1 on
  * failure.
  */
@@ -230,7 +229,7 @@ int rend_config_services(or_options_t *options)
   return 0;
 }
 
-/* Replace the old value of service->desc with one that reflects
+/** Replace the old value of service->desc with one that reflects
  * the other fields in service.
  */
 static void rend_service_update_descriptor(rend_service_t *service)
@@ -260,7 +259,7 @@ static void rend_service_update_descriptor(rend_service_t *service)
   }
 }
 
-/* Load and/or generate private keys for all hidden services.  Return 0 on
+/** Load and/or generate private keys for all hidden services.  Return 0 on
  * success, -1 on failure.
  */
 int rend_service_load_keys(void)
@@ -311,7 +310,7 @@ int rend_service_load_keys(void)
   return 0;
 }
 
-/* Return the service whose public key has a digest of 'digest'. Return
+/** Return the service whose public key has a digest of 'digest'. Return
  * NULL if no such service exists.
  */
 static rend_service_t *
@@ -326,7 +325,7 @@ rend_service_get_by_pk_digest(const char* digest)
  * Handle cells
  ******/
 
-/* Respond to an INTRODUCE2 cell by launching a circuit to the chosen
+/** Respond to an INTRODUCE2 cell by launching a circuit to the chosen
  * rendezvous points.
  */
 int
@@ -459,9 +458,11 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   return -1;
 }
 
-
+/** How many times will a hidden service operator attempt to connect to
+ * a requested rendezvous point before giving up? */
 #define MAX_REND_FAILURES 3
-/* Called when we fail building a rendezvous circuit at some point other
+
+/** Called when we fail building a rendezvous circuit at some point other
  * than the last hop: launches a new circuit to the same rendezvous point.
  */
 void
@@ -501,7 +502,7 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
   memcpy(newcirc->rend_cookie, oldcirc->rend_cookie, REND_COOKIE_LEN);
 }
 
-/* Launch a circuit to serve as an introduction point for the service
+/** Launch a circuit to serve as an introduction point for the service
  * 'service' at the introduction point 'nickname'
  */
 static int
@@ -524,7 +525,7 @@ rend_service_launch_establish_intro(rend_service_t *service, const char *nicknam
   return 0;
 }
 
-/* Called when we're done building a circuit to an introduction point:
+/** Called when we're done building a circuit to an introduction point:
  *  sends a RELAY_ESTABLISH_INTRO cell.
  */
 void
@@ -585,7 +586,7 @@ rend_service_intro_is_ready(circuit_t *circuit)
   circuit_mark_for_close(circuit);
 }
 
-/* Called when we get an INTRO_ESTABLISHED cell; mark the circuit as a
+/** Called when we get an INTRO_ESTABLISHED cell; mark the circuit as a
  * live introduction point, and note that the service descriptor is
  * now out-of-date.*/
 int
@@ -612,7 +613,7 @@ rend_service_intro_established(circuit_t *circuit, const char *request, int requ
   return -1;
 }
 
-/* Called once a circuit to a rendezvous point is established: sends a
+/** Called once a circuit to a rendezvous point is established: sends a
  *  RELAY_COMMAND_RENDEZVOUS1 cell.
  */
 void
@@ -690,7 +691,7 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
  * Manage introduction points
  ******/
 
-/* Return the (possibly non-open) introduction circuit ending at
+/** Return the (possibly non-open) introduction circuit ending at
  * 'router' for the service whose public key is 'pk_digest'.  Return
  * NULL if no such service is found.
  */
@@ -720,7 +721,7 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   return NULL;
 }
 
-/* If the directory servers don't have an up-to-date descriptor for
+/** If the directory servers don't have an up-to-date descriptor for
  * 'service', Encode and sign the service descriptor for 'service',
  * and upload it to all the dirservers.
  */
@@ -748,12 +749,11 @@ upload_service_descriptor(rend_service_t *service)
   service->desc_is_dirty = 0;
 }
 
-
 /* XXXX Make this longer once directories remember service descriptors across
  * restarts.*/
 #define MAX_SERVICE_PUBLICATION_INTERVAL (15*60)
 
-/* For every service, check how many intro points it currently has, and:
+/** For every service, check how many intro points it currently has, and:
  *  - Pick new intro points as necessary.
  *  - Launch circuits to any new intro points.
  */
@@ -840,7 +840,7 @@ void rend_services_introduce(void) {
   smartlist_free(exclude_routers);
 }
 
-/* Regenerate and upload rendezvous service descriptors for all
+/** Regenerate and upload rendezvous service descriptors for all
  * services.  If 'force' is false, skip services where we've already
  * uploaded an up-to-date copy; if 'force' is true, regenerate and
  * upload everything.
@@ -860,7 +860,7 @@ rend_services_upload(int force)
   }
 }
 
-/* Log the status of introduction points for all rendezvous services
+/** Log the status of introduction points for all rendezvous services
  * at log severity 'serverity'.
  */
 void
@@ -893,7 +893,7 @@ rend_service_dump_stats(int severity)
   }
 }
 
-/* 'conn' is a rendezvous exit stream. Look up the hidden service for
+/** 'conn' is a rendezvous exit stream. Look up the hidden service for
  * 'circ', and look up the port and address based on conn->port.
  * Assign the actual conn->addr and conn->port. Return -1 if failure,
  * or 0 for success.
