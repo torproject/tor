@@ -634,6 +634,8 @@ test_dir_format()
   /* puts(buf); */
   
   test_assert(! router_get_dir_from_string_impl(buf, &dir2, pk1));
+  test_eq(2, dir2->n_routers);
+  
 
   if (pk1_str) free(pk1_str);
   if (pk2_str) free(pk2_str);
