@@ -79,7 +79,7 @@ typedef struct config_var_t {
  */
 static config_var_t config_vars[] = {
   VAR("Address",             STRING,   Address,              NULL),
-  VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, NULL),
+  VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, "middle,rendezvous"),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
   VAR("BandwidthRateBytes",  UINT,     BandwidthRateBytes,   "800000"),
   VAR("BandwidthBurstBytes", UINT,     BandwidthBurstBytes,  "50000000"),
@@ -134,7 +134,7 @@ static config_var_t config_vars[] = {
   VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
   VAR("RendNodes",           STRING,   RendNodes,            NULL),
   VAR("RendExcludeNodes",    STRING,   RendExcludeNodes,     NULL),
-  VAR("SocksPort",           UINT,     SocksPort,            "0"),
+  VAR("SocksPort",           UINT,     SocksPort,            "9050"),
   VAR("SocksBindAddress",    LINELIST, SocksBindAddress,     NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
   VAR("SysLog",              LINELIST, LogOptions,           NULL),
@@ -249,10 +249,9 @@ config_get_lines(FILE *f, struct config_line_t **result)
   if (r < 0) {
     *result = NULL;
     return -1;
-  } else {
-    *result = front;
-    return 0;
   }
+  *result = front;
+  return 0;
 }
 
 /**
@@ -440,7 +439,7 @@ config_get_assigned_option(or_options_t *options, const char *key)
   return result;
 }
 
-/** Iterate through the linked list of options <b>list</b>.
+/** Iterate through the linked list of requested options <b>list</b>.
  * For each item, convert as appropriate and assign to <b>options</b>.
  * If an item is unrecognized, return -1 immediately,
  * else return 0 for success. */
@@ -473,26 +472,6 @@ add_default_trusted_dirservers(void)
   /* tor26 */
   parse_dir_server_line("62.116.124.106:9030 "
                         "847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
-}
-
-/** Set <b>options</b> to a reasonable default.
- *
- * Call this function before we parse the torrc file.
- */
-static int
-config_assign_defaults(or_options_t *options)
-{
-  /* set them up as a client only */
-  options->SocksPort = 9050;
-
-  options->AllowUnverifiedNodes = smartlist_create();
-  smartlist_add(options->AllowUnverifiedNodes, tor_strdup("middle"));
-  smartlist_add(options->AllowUnverifiedNodes, tor_strdup("rendezvous"));
-
-  config_free_lines(options->ExitPolicy);
-  options->ExitPolicy = NULL;
-
-  return 0;
 }
 
 /** Print a usage message for tor. */
@@ -610,48 +589,39 @@ get_default_nickname(void)
 static void
 free_options(or_options_t *options)
 {
-  config_free_lines(options->LogOptions);
-  tor_free(options->ContactInfo);
-  tor_free(options->DebugLogFile);
-  tor_free(options->DataDirectory);
-  tor_free(options->Nickname);
-  tor_free(options->Address);
-  tor_free(options->PidFile);
-  tor_free(options->ExitNodes);
-  tor_free(options->EntryNodes);
-  tor_free(options->ExcludeNodes);
-  tor_free(options->RendNodes);
-  tor_free(options->RendExcludeNodes);
-  tor_free(options->OutboundBindAddress);
-  tor_free(options->User);
-  tor_free(options->Group);
-  tor_free(options->HttpProxy);
-  config_free_lines(options->RendConfigLines);
-  config_free_lines(options->SocksBindAddress);
-  config_free_lines(options->ORBindAddress);
-  config_free_lines(options->DirBindAddress);
-  config_free_lines(options->ExitPolicy);
-  config_free_lines(options->SocksPolicy);
-  config_free_lines(options->DirPolicy);
-  config_free_lines(options->DirServers);
-  config_free_lines(options->RecommendedVersions);
-  config_free_lines(options->NodeFamilies);
-  config_free_lines(options->RedirectExit);
+  int i;
+  void *lvalue;
+
+  for (i=0; config_vars[i].name; ++i) {
+    lvalue = ((char*)options) + config_vars[i].var_offset;
+    switch(config_vars[i].type) {
+      case CONFIG_TYPE_UINT:
+      case CONFIG_TYPE_BOOL:
+      case CONFIG_TYPE_DOUBLE:
+      case CONFIG_TYPE_OBSOLETE:
+        break; /* nothing to free for these config types */
+      case CONFIG_TYPE_STRING:
+        tor_free(*(char **)lvalue);
+        break;
+      case CONFIG_TYPE_LINELIST:
+        config_free_lines(*(struct config_line_t**)lvalue);
+        *(struct config_line_t**)lvalue = NULL;
+        break;
+      case CONFIG_TYPE_CSV:
+        if (*(smartlist_t**)lvalue) {
+          SMARTLIST_FOREACH(*(smartlist_t**)lvalue, char *, cp, tor_free(cp));
+          smartlist_free(*(smartlist_t**)lvalue);
+          *(smartlist_t**)lvalue = NULL;
+        }
+        break;
+    }
+  }
+  /* XXX this last part is an exception. can we make it not needed? */
   if (options->RedirectExitList) {
     SMARTLIST_FOREACH(options->RedirectExitList,
                       exit_redirect_t *, p, tor_free(p));
     smartlist_free(options->RedirectExitList);
     options->RedirectExitList = NULL;
-  }
-  if (options->FirewallPorts) {
-    SMARTLIST_FOREACH(options->FirewallPorts, char *, cp, tor_free(cp));
-    smartlist_free(options->FirewallPorts);
-    options->FirewallPorts = NULL;
-  }
-  if (options->AllowUnverifiedNodes) {
-    SMARTLIST_FOREACH(options->AllowUnverifiedNodes, char *, cp, tor_free(cp));
-    smartlist_free(options->AllowUnverifiedNodes);
-    options->AllowUnverifiedNodes = NULL;
   }
 }
 
@@ -660,16 +630,21 @@ free_options(or_options_t *options)
 static void
 init_options(or_options_t *options)
 {
+  int i;
+  struct config_line_t *c;
+  config_var_t *var;
+
   memset(options,0,sizeof(or_options_t));
-  options->PathlenCoinWeight = 0.3;
-  options->MaxConn = 1024;
-  options->DirFetchPostPeriod = 600;
-  options->KeepalivePeriod = 300;
-  options->MaxOnionsPending = 100;
-  options->NewCircuitPeriod = 30; /* twice a minute */
-  options->BandwidthRateBytes = 800000; /* at most 800kB/s total sustained incoming */
-  options->BandwidthBurstBytes = 10000000; /* max burst on the token bucket */
-  options->NumCpus = 1;
+  for (i=0; config_vars[i].name; ++i) {
+    var = &config_vars[i];
+    if(!var->initvalue)
+      continue; /* defaults to NULL or 0 */
+    c = tor_malloc(sizeof(struct config_line_t));
+    c->key = tor_strdup(var->name);
+    c->value = tor_strdup(var->initvalue);
+    config_assign_line(options,c);
+    config_free_lines(c);
+  }
 }
 
 #ifdef MS_WINDOWS
@@ -815,7 +790,6 @@ getconfig(int argc, char **argv, or_options_t *options)
       options->command_arg = tor_strdup( (i < argc-1) ? argv[i+1] : "");
       ++i;
     }
-
   }
 
   if (using_default_torrc) {
@@ -837,10 +811,6 @@ getconfig(int argc, char **argv, or_options_t *options)
   }
   tor_assert(fname);
   log(LOG_DEBUG, "Opening config file '%s'", fname);
-
-  if (config_assign_defaults(options) < 0) {
-    return -1;
-  }
 
   cf = fopen(fname, "r");
   if (!cf) {
