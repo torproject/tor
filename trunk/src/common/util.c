@@ -693,7 +693,7 @@ int read_all(int fd, char *buf, size_t count, int isSocket) {
       break;
     numread += result;
   }
-  return count;
+  return numread;
 }
 
 /*
