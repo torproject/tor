@@ -14,13 +14,13 @@ ARMA    - arma claims
 
         . Use a stronger cipher
                 o 3des for now
-                - aes when we everybody has openssl 0.9.7
+                - aes now, by including the code ourselves
         . Topics / circuits
                 o Implement topics
                 o Rotate circuits after N minutes?
                 X Circuits should expire when circuit->expire triggers
 NICK            . Handle half-open connections
-                        - Figure out what causes connections to close, standardize
+                        o Figure out what causes connections to close, standardize
                           when we mark a connection vs when we tear it down
                 o Look at what ssl does to keep from mutating data streams
         X On the fly compression of each stream
@@ -41,31 +41,31 @@ SPEC!!  D Non-clique topologies
         o Terminology
                 o Circuits, topics, cells stay named that
                 o 'Connection' gets divided, or renamed, or something?
-        . DNS farm
+        o DNS farm
                 o Distribute queries onto the farm, get answers
                 o Preemptively grow a new worker before he's needed
-                - Prune workers when too many are idle
-                - DNS cache   
-                        - Clear DNS cache over time  
-                        - Honor DNS TTL info
-                - Have strategy when all workers are busy
+                o Prune workers when too many are idle
+                o DNS cache   
+                        o Clear DNS cache over time  
+                        D Honor DNS TTL info (how??)
+                o Have strategy when all workers are busy
                 o Keep track of which connections are in dns_wait
                 o Need to cache positives/negatives on the tor side
                         o Keep track of which queries have been asked
-                . Better error handling when
-                        . An address doesn't resolve
-                        - We have max workers running
-                - Consider taking the master out of the loop?
+                o Better error handling when
+                        o An address doesn't resolve
+                        o We have max workers running
+                o Consider taking the master out of the loop?
         . Directory servers
                 D Automated reputation management
-                . Include key in source; sign directories
-		        o Signed directory backend
-			o Document
-ARMA			- Integrate
+                o Include key in source; sign directories
+                        o Signed directory backend
+                        o Document
+                        o Integrate
                 - Add versions to code
-NICK            . Have directories list recommended-versions
-		        o Include (unused) line in directories
-			o Check for presence of line.
+                . Have directories list recommended-versions
+                        o Include (unused) line in directories
+                        o Check for presence of line.
                         - Quit if running the wrong version
                         - Command-line option to override quit
                 . Add more information to directory server entries
@@ -82,7 +82,9 @@ SPEC!!          D Figure out how to do threshold directory servers
                 o socks4, socks4a
                 - socks5
 SPEC!!          - Handle socks commands other than connect, eg, bind?
-        - Develop rendezvous points
+        . Develop rendezvous points
+                . Spec (still needs step-by-step instructions)
+                - Implement
         D Implement reply onions
         D Deploy and manage open source development site.
         . Documentation
@@ -105,7 +107,7 @@ NICK            . Unit tests
                 D Load balancing between twins
                         - Keep track of load over links/nodes, to
                           know who's hosed
-NICK    - Daemonize and package
+NICK    . Daemonize and package
                 o Teach it to fork and background
                 - Red Hat spec file
                 - Debian spec file equivalent
@@ -115,9 +117,10 @@ NICK    - Daemonize and package
                         o BSD
                         . Solaris
                         . Windows
-NICK                    . OS X
-                - openssl randomness
-                - inet_ntoa, stdint.h
+                        o OS X
+                o openssl randomness
+                o inet_ntoa
+                - stdint.h
                 - Make a script to set up a local network on your machine
         D Move away from openssl
                 o Abstract out crypto calls
@@ -125,13 +128,13 @@ NICK                    . OS X
 
         . transition addr to sin_addr (huh?)
 
-        . Clean up the number of places that get to look at prkey
+        o Clean up the number of places that get to look at prkey
         . Clearer bandwidth management 
         - Total rate limiting
         . Look at OR handshake in more detail
                 o Spec it
                 o Merge OR and OP handshakes
-                - rearrange connection_or so it doesn't suck so much to read
+                . rearrange connection_or so it doesn't suck so much to read
                 D Periodic link key rotation. Spec?
         - More flexibility in node addressing
                 D Support IPv6 rather than just 4
@@ -139,7 +142,7 @@ NICK                    . OS X
         . Move from onions to ephemeral DH
                 o incremental path building
                 o transition circuit-level sendmes to hop-level sendmes
-                - implement truncate, truncated
+                o implement truncate, truncated
                 o move from 192byte DH to 128byte DH, so it isn't so damn slow
                 - exiting from not-last hop
                         - OP logic to decide to extend/truncate a path
