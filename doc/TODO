@@ -24,19 +24,19 @@ For 0.0.7:
           recently, and not try for a while if so
         o check tor version as soon as you get the recommended-versions
           string, regardless of whether parsing the directory succeeded.
-NICK    - Check directory signature based on signer ID, not on who
-	  we got it from
-ARMA	- Increase all the scalability constants
+NICK    o Check directory signature based on signer ID, not on who
+          we got it from
+ARMA    o Increase all the scalability constants
 
 For scalability:
-	- Slightly smarter bandwidth management: use link capacity
-	  intelligently.
-	- Handle full buffers without totally borking
+        - Slightly smarter bandwidth management: use link capacity
+          intelligently.
+        - Handle full buffers without totally borking
 
 For 0.0.8:
 NICK    . rename/rearrange functions for what file they're in
 ARMA    - make all ORs serve the directory too.
-	- Contact info, pgp fingerprint, comments in router desc.
+        - Contact info, pgp fingerprint, comments in router desc.
 
 For September:
 NICK    . Windows port
