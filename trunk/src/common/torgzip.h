@@ -10,7 +10,7 @@
 #ifndef __TORGZIP_H
 #define __TORGZIP_H
 
-typedef enum { GZIP_METHOD, ZLIB_METHOD } compress_method_t;
+typedef enum { GZIP_METHOD=1, ZLIB_METHOD=2 } compress_method_t;
 
 int
 tor_gzip_compress(char **out, size_t *out_len,
