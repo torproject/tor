@@ -913,7 +913,7 @@ see Section~\ref{sec:maintaining-anonymity} for more discussion.
 
 \Section{Other design decisions}
 
-\SubSection{Resource management and denial-of-service prevention}
+\SubSection{Resource management and denial-of-service}
 \label{subsec:dos}
 
 Providing Tor as a public service provides many opportunities for an
@@ -935,14 +935,14 @@ fake the start of a TLS handshake, forcing the OR to carry out its
 cost to the attacker.
 
 Several approaches exist to address these attacks. First, ORs may
-demand proof-of-computation tokens \cite{hashcash} before beginning new
+require clients to solve a puzzle \cite{puzzles-tls} while beginning new
 TLS handshakes or accepting \emph{create} cells.  So long as these
 tokens are easy to verify and computationally expensive to produce, this
-approach limits the DoS attack multiplier.  Additionally, ORs may limit
+approach limits the attack multiplier.  Additionally, ORs may limit
 the rate at which they accept create cells and TLS connections, so that
 the computational work of processing them does not drown out the (comparatively
 inexpensive) work of symmetric cryptography needed to keep cells
-flowing.  This rate limiting could, however, allows an attacker
+flowing.  This rate limiting could, however, allow an attacker
 to slow down other users when they build new circuits.
 
 % What about link-to-link rate limiting?
