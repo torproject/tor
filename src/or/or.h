@@ -440,6 +440,7 @@ typedef struct {
   char *PidFile;
   char *ExitNodes;
   char *EntryNodes;
+  char *ExcludedNodes;
   char *ExitPolicy;
   char *SocksBindAddress;
   char *ORBindAddress;
