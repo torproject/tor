@@ -1,3 +1,9 @@
+tor (0.0.9.1-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 16 Dec 2004 00:16:47 +0100
+
 tor (0.0.8+0.0.9rc7-1) unstable; urgency=medium
 
   * New upstream release (candidate).
