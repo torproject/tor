@@ -56,7 +56,7 @@ static int circuit_is_acceptable(circuit_t *circ,
 
   if(purpose == CIRCUIT_PURPOSE_C_GENERAL)
     if(circ->timestamp_dirty &&
-       circ->timestamp_dirty+options.NewCircuitPeriod < now)
+       circ->timestamp_dirty+options.NewCircuitPeriod <= now)
       return 0;
 
   if(conn) {

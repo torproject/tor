@@ -1149,8 +1149,6 @@ extern unsigned long stats_n_relay_cells_delivered;
 
 int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction);
-int circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
-                               int cell_direction, crypt_path_t *layer_hint);
 
 void relay_header_pack(char *dest, const relay_header_t *src);
 void relay_header_unpack(relay_header_t *dest, const char *src);
