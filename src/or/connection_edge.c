@@ -104,6 +104,7 @@ static char *connection_edge_end_reason(char *payload, uint16_t length) {
     case END_STREAM_REASON_EXITPOLICY:     return "exit policy failed";
     case END_STREAM_REASON_DESTROY:        return "destroyed";
     case END_STREAM_REASON_DONE:           return "closed normally";
+    case END_STREAM_REASON_TIMEOUT:        return "gave up (timeout)";
   }
   assert(0);
   return "";
@@ -531,6 +532,10 @@ void connection_ap_expire_beginning(void) {
     if (now - conn->timestamp_lastread >= 15) {
       log_fn(LOG_WARN,"Stream is %d seconds late. Retrying.",
              (int)(now - conn->timestamp_lastread));
+      /* send an end down the circuit */
+      connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
+      /* un-mark it as ending, since we're going to reuse it */
+      conn->has_sent_end = 0;
       /* move it back into 'pending' state. It's possible it will
        * reattach to this same circuit, but that's good enough for now.
        */
@@ -540,11 +545,7 @@ void connection_ap_expire_beginning(void) {
       conn->timestamp_lastread += 15;
       if(connection_ap_handshake_attach_circuit(conn)<0) {
         /* it will never work */
-        /* Don't need to send end -- why? */
-/* XXX you're right, there's a bug. we should send an end cell
- * above, right before circuit_detach_stream. But if attach_circuit()
- * fails, then in fact we should mark without sending an end, because
- * we're not connected to anything. -RD */
+        /* Don't need to send end -- we're not connected */
         connection_mark_for_close(conn, 0);
       }
     }
@@ -567,7 +568,7 @@ void connection_ap_attach_pending(void)
       continue;
     if(connection_ap_handshake_attach_circuit(conn) < 0) {
       /* -1 means it will never work */
-      /* Don't send end; there is no 'other end' of the stream */
+      /* Don't send end; there is no 'other side' yet */
       connection_mark_for_close(conn,0);
     }
   }
