@@ -575,9 +575,8 @@ static int check_directory_signature(const char *digest,
              tok->args[0]);
       return -1;
     }
-  } else if (tok->n_args > 1) {
-/* XXX008 Nick: shouldn't we check for <1 too? */
-    log_fn(LOG_WARN, "Too many arguments to directory-signature");
+  } else {
+    log_fn(LOG_WARN, "Too many or too few arguments to directory-signature");
     return -1;
   }
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
