@@ -84,6 +84,7 @@
 
 #ifdef MS_WINDOWS
 #include <io.h>
+#include <process.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #define snprintf _snprintf
@@ -301,6 +302,7 @@ struct connection_t {
                         */
 
 /* Used only by edge connections: */
+  char socks_version;
   char stream_id[STREAM_ID_SIZE];
   struct connection_t *next_stream; /* points to the next stream at this edge, if any */
   struct crypt_path_t *cpath_layer; /* a pointer to which node in the circ this conn exits at */
@@ -465,7 +467,8 @@ int fetch_from_buf(char *string, int string_len, buf_t *buf);
 int fetch_from_buf_http(buf_t *buf,
                         char *headers_out, int max_headerlen,
                         char *body_out, int max_bodylen);
-int fetch_from_buf_socks(buf_t *buf,
+int fetch_from_buf_socks(buf_t *buf, char *socks_version,
+                         char *reply, int *replylen,
                          char *addr_out, int max_addrlen,
                          uint16_t *port_out);
 
