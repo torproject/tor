@@ -677,9 +677,25 @@ crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out)
   }
   *bufp = '\0';
   assert(strlen(buf) == FINGERPRINT_LEN);
+  assert(crypto_pk_check_fingerprint_syntax(buf));
   strcpy(fp_out, buf);
   free(buf);
   return 0;
+}
+
+int 
+crypto_pk_check_fingerprint_syntax(const char *s)
+{
+  int i;
+  for (i = 0; i < FINGERPRINT_LEN; ++i) {
+    if ((i%5) == 4) {
+      if (!isspace(s[i])) return 0;
+    } else {
+      if (!isxdigit(s[i])) return 0;
+    }
+  }
+  if (s[FINGERPRINT_LEN]) return 0;
+  return 1;
 }
 
 /* symmetric crypto */

@@ -56,6 +56,7 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromle
 int crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
 #define FINGERPRINT_LEN 49
 int crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out);
+int crypto_pk_check_fingerprint_syntax(const char *s);
 
 int base64_encode(char *dest, int destlen, char *src, int srclen);
 int base64_decode(char *dest, int destlen, char *src, int srclen);
