@@ -34,7 +34,7 @@ R    - Hibernate means "stop accepting connections, and start sleeping"
        will shut-down-in-30-seconds state.
    - Rendezvous service bug: can we nail it down?
 R  . bandwidth buckets for write as well as read.
-N  - Make watchdogged clients check cached-directory mtime to avoid
+   o Make watchdogged clients check cached-directory mtime to avoid
      fetching directory in a tight loop.
 N  - Pure C tor_resolve
 N  - RPMs
