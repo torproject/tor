@@ -537,8 +537,8 @@ parse_http_response(const char *headers, int *code, time_t *date,
     } else if (!strcmp(enc, "gzip") || !strcmp(enc, "x-gzip")) {
       *compression = GZIP_METHOD;
     } else {
-      log_fn(LOG_WARN, "Unrecognized content encoding: '%s'", enc);
-      *compression = 0;
+      log_fn(LOG_INFO, "Unrecognized content encoding: '%s'. Trying to deal.", enc);
+      *compression = -1;
     }
   }
   SMARTLIST_FOREACH(parsed_headers, char *, s, tor_free(s));
