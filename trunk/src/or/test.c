@@ -280,15 +280,15 @@ test_crypto() {
     crypto_cipher_set_iv(env2, "12345678901234567890");
     crypto_cipher_encrypt_init_cipher(env1);
     crypto_cipher_decrypt_init_cipher(env2);
-    
+
     /* Try encrypting 512 chars. */
     crypto_cipher_encrypt(env1, data1, 512, data2);
     crypto_cipher_decrypt(env2, data2, 512, data3);
     test_memeq(data1, data3, 512);
-    if (str_ciphers[i] != CRYPTO_CIPHER_IDENTITY) {
-      test_memneq(data1, data2, 512);
-    } else {
+    if (str_ciphers[i] == CRYPTO_CIPHER_IDENTITY) {
       test_memeq(data1, data2, 512);
+    } else {
+      test_memneq(data1, data2, 512);
     }
     /* Now encrypt 1 at a time, and get 1 at a time. */
     for (j = 512; j < 560; ++j) {
@@ -399,13 +399,53 @@ test_crypto() {
 
 }
 
+void 
+test_util() {
+  struct timeval start, end;
+
+  start.tv_sec = 5;
+  start.tv_usec = 5000;
+
+  end.tv_sec = 5;
+  end.tv_usec = 5000;
+
+  test_eq(0L, tv_udiff(&start, &end));
+
+  end.tv_usec = 7000;
+
+  test_eq(2000L, tv_udiff(&start, &end));
+
+  end.tv_sec = 6;
+
+  test_eq(1002000L, tv_udiff(&start, &end));
+
+  end.tv_usec = 0;
+
+  test_eq(995000L, tv_udiff(&start, &end));
+
+  end.tv_sec = 4;
+
+  test_eq(0L, tv_udiff(&start, &end));
+
+}
+
 int 
 main(int c, char**v) {
+#if 0
+  or_options_t options; /* command-line and config-file options */
+
+  if(getconfig(c,v,&options))
+    exit(1);
+#endif
+  log(LOG_ERR,NULL);         /* make logging quieter */
+
   setup_directory();
-  puts("========================= Buffers ==========================");
+  puts("========================== Buffers =========================");
   test_buffers();
   puts("========================== Crypto ==========================");
-  test_crypto();
+  test_crypto(); /* this seg faults :( */
+  puts("========================== Util ============================");
+  test_util();
   puts("");
   return 0;
 }

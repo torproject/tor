@@ -222,6 +222,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->loglevel = LOG_DEBUG;
   options->CoinWeight = 0.8;
   options->LinkPadding = 0;
+  options->MaxConn = 900;
   options->DirFetchPeriod = 600;
   options->KeepalivePeriod = 300;
   options->MaxOnionsPending = 10;
