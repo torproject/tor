@@ -27,7 +27,6 @@ static trusted_dir_server_t *
 router_pick_trusteddirserver_impl(int requireother, int fascistfirewall);
 static void mark_all_trusteddirservers_up(void);
 static int router_resolve_routerlist(routerlist_t *dir);
-static void clear_trusted_dir_servers(void);
 
 /****************************************************************************/
 
@@ -1162,7 +1161,7 @@ void add_trusted_dir_server(const char *addr, uint16_t port, const char *digest)
   smartlist_add(trusted_dir_servers, ent);
 }
 
-static void clear_trusted_dir_servers(void)
+void clear_trusted_dir_servers(void)
 {
   if (trusted_dir_servers) {
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
