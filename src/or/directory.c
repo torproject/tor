@@ -585,7 +585,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     } else {
       log_fn(LOG_INFO,"updated routers.");
     }
-    directory_has_arrived(); /* do things we've been waiting to do */
+    directory_has_arrived(time(NULL)); /* do things we've been waiting to do */
   }
 
   if(conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
