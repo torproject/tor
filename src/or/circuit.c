@@ -677,13 +677,40 @@ void circuit_close(circuit_t *circ) {
   circuit_free(circ);
 }
 
+void circuit_detach_stream(circuit_t *circ, connection_t *conn) {
+  connection_t *prevconn;
+
+  assert(circ);
+  assert(conn);
+
+  if(conn == circ->p_streams) {
+    circ->p_streams = conn->next_stream;
+    return;
+  }
+  if(conn == circ->n_streams) {
+    circ->n_streams = conn->next_stream;
+    return;
+  }
+  for(prevconn = circ->p_streams; prevconn && prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
+  if(prevconn && prevconn->next_stream) {
+    prevconn->next_stream = conn->next_stream;
+    return;
+  }
+  for(prevconn = circ->n_streams; prevconn && prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
+  if(prevconn && prevconn->next_stream) {
+    prevconn->next_stream = conn->next_stream;
+    return;
+  }
+  log_fn(LOG_ERR,"edge conn not in circuit's list?");
+  assert(0); /* should never get here */
+}
+
 void circuit_about_to_close_connection(connection_t *conn) {
   /* send destroys for all circuits using conn */
   /* currently, we assume it's too late to flush conn's buf here.
    * down the road, maybe we'll consider that eof doesn't mean can't-write
    */
   circuit_t *circ;
-  connection_t *prevconn;
 
   switch(conn->type) {
     case CONN_TYPE_OR:
@@ -714,26 +741,8 @@ void circuit_about_to_close_connection(connection_t *conn) {
           log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
       }
 
-      if(conn == circ->p_streams) {
-        circ->p_streams = conn->next_stream;
-        return;
-      }
-      if(conn == circ->n_streams) {
-        circ->n_streams = conn->next_stream;
-        return;
-      }
-      for(prevconn = circ->p_streams; prevconn && prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
-      if(prevconn && prevconn->next_stream) {
-        prevconn->next_stream = conn->next_stream;
-        return;
-      }
-      for(prevconn = circ->n_streams; prevconn && prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
-      if(prevconn && prevconn->next_stream) {
-        prevconn->next_stream = conn->next_stream;
-        return;
-      }
-      log_fn(LOG_ERR,"edge conn not in circuit's list?");
-      assert(0); /* should never get here */
+      circuit_detach_stream(circ, conn);
+
   } /* end switch */
 }
 
