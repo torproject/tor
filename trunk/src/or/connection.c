@@ -665,10 +665,6 @@ int connection_process_inbuf(connection_t *conn) {
       return connection_or_process_inbuf(conn);
     case CONN_TYPE_EXIT:
     case CONN_TYPE_AP:
-      if(conn->package_window <= 0) {
-        log_fn(LOG_WARN,"called with package_window %d. Tell Roger.", conn->package_window);
-        return 0;
-      }
       return connection_edge_process_inbuf(conn);
     case CONN_TYPE_DIR:
       return connection_dir_process_inbuf(conn);
