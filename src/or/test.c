@@ -311,7 +311,6 @@ test_crypto() {
     crypto_free_cipher_env(env2);
 
     memset(data3, 0, 1024);
-
     env2 = crypto_new_cipher_env(str_ciphers[i]);
     test_neq(env2, 0);
     if (str_ciphers[i] != CRYPTO_CIPHER_IDENTITY) {
@@ -319,7 +318,7 @@ test_crypto() {
     }
     crypto_cipher_set_iv(env2, "12345678901234567890");
     crypto_cipher_encrypt_init_cipher(env2);
-    for (j = 0; j < 1024; j += 17) {
+    for (j = 0; j < 1024-16; j += 17) {
       crypto_cipher_encrypt(env2, data1+j, 17, data3+j);
     }
     for (j= 0; j < 1024-16; ++j) {
@@ -328,7 +327,6 @@ test_crypto() {
       }
     }
     test_memeq(data2, data3, 1024-16);
-    
     crypto_free_cipher_env(env1);
     crypto_free_cipher_env(env2);
   }
@@ -444,7 +442,7 @@ main(int c, char**v) {
   test_buffers();
   puts("========================== Crypto ==========================");
   test_crypto(); /* this seg faults :( */
-  puts("========================== Util ============================");
+  puts("\n========================== Util ============================");
   test_util();
   puts("");
   return 0;
