@@ -471,9 +471,14 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   newconn = connection_new(new_type);
   newconn->s = news;
 
-  newconn->address = tor_strdup(inet_ntoa(remote.sin_addr)); /* remember the remote address */
+  /* remember the remote address */
+  newconn->address = tor_strdup(inet_ntoa(remote.sin_addr));
   newconn->addr = ntohl(remote.sin_addr.s_addr);
   newconn->port = ntohs(remote.sin_port);
+  if (!newconn->addr || !newconn->port) {
+    log_fn(LOG_WARN,"New conn (type %d) has zero addr/port: addr %s, port %d.",
+           new_type, newconn->address, newconn->port);
+  }
 
   if (connection_add(newconn) < 0) { /* no space, forget it */
     connection_free(newconn);
@@ -1459,7 +1464,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
        */
       tor_assert(conn->receiver_bucket >= 0);
     }
-    tor_assert(conn->addr && conn->port);
+//    tor_assert(conn->addr && conn->port);
     tor_assert(conn->address);
     if (conn->state != OR_CONN_STATE_CONNECTING)
       tor_assert(conn->tls);
@@ -1533,6 +1538,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->state <= _CONTROL_CONN_STATE_MAX);
       break;
     default:
+      log_fn(LOG_WARN,"Unexpected conn type %d", conn->type);
       tor_assert(0);
   }
 }
