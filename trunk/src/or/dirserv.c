@@ -23,6 +23,7 @@ static int runningrouters_is_dirty = 1;
 static int list_running_servers(char **nicknames_out);
 static void directory_remove_unrecognized(void);
 static int dirserv_regenerate_directory(void);
+static void encode_digest_to_fingerprint(char *fp, const char *digest);
 
 /************** Fingerprint handling code ************/
 
@@ -181,17 +182,32 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
   }
 }
 
-/** Return true iff any router named <b>nickname</b> with <b>digest</b>
- * is in the verified fingerprint list. */
-static int
-router_nickname_is_approved(const char *nickname, const char *digest)
+/** If we are an authoritative directory, and the list of approved
+ * servers contains one whose identity key digest is <b>digest</b>,
+ * return that router's nickname.  Otherwise return NULL. */
+const char *dirserv_get_nickname_by_digest(const char *digest)
 {
-  int i,j;
-  fingerprint_entry_t *ent;
   char fp[FINGERPRINT_LEN+1];
-  char hexdigest[HEX_DIGEST_LEN+1];
   if (!fingerprint_list)
-    return 0;
+    return NULL;
+  tor_assert(digest);
+  encode_digest_to_fingerprint(fp, digest);
+
+  SMARTLIST_FOREACH(fingerprint_list, fingerprint_entry_t*, ent,
+                    { if (!strcasecmp(fp, ent->fingerprint))
+                         return ent->nickname; } );
+  return NULL;
+}
+
+/** Set fp to contain the hex encoding of <b>digest</b>, with every 4
+ * hex digits separated by a space.  The digest must be DIGEST_LEN bytes long;
+ * fp must have FINGERPRINT_LEN+1 bytes free. */
+static void encode_digest_to_fingerprint(char *fp, const char *digest)
+{
+  char hexdigest[HEX_DIGEST_LEN+1];
+  int i,j;
+
+  tor_assert(fp&&digest);
 
   base16_encode(hexdigest, sizeof(hexdigest), digest, DIGEST_LEN);
   for (i=j=0;j<HEX_DIGEST_LEN;++i,++j) {
@@ -200,15 +216,20 @@ router_nickname_is_approved(const char *nickname, const char *digest)
       fp[++i]=' ';
   }
   fp[i]='\0';
+}
 
-  for (i=0;i<smartlist_len(fingerprint_list);++i) {
-    ent = smartlist_get(fingerprint_list, i);
-    if (!strcasecmp(nickname,ent->nickname) &&
-        !strcasecmp(fp,ent->fingerprint)) {
-      return 1;
-    }
-  }
-  return 0;
+/** Return true iff any router named <b>nickname</b> with <b>digest</b>
+ * is in the verified fingerprint list. */
+static int
+router_nickname_is_approved(const char *nickname, const char *digest)
+{
+  const char *n;
+
+  n = dirserv_get_nickname_by_digest(digest);
+  if (n && !strcasecmp(n,nickname))
+    return 1;
+  else
+    return 0;
 }
 
 /** Clear the current fingerprint list. */

@@ -120,6 +120,7 @@ connection_or_init_conn_from_address(connection_t *conn,
 {
   routerinfo_t *r;
   struct in_addr in;
+  const char *n;
   r = router_get_by_digest(id_digest);
   if (r) {
     connection_or_init_conn_from_router(conn,r);
@@ -130,9 +131,16 @@ connection_or_init_conn_from_address(connection_t *conn,
   /* This next part isn't really right, but it's good enough for now. */
   conn->receiver_bucket = conn->bandwidth = options.BandwidthBurst;
   memcpy(conn->identity_digest, id_digest, DIGEST_LEN);
-  conn->nickname = tor_malloc(HEX_DIGEST_LEN+1);
-  base16_encode(conn->nickname, HEX_DIGEST_LEN+1,
-                conn->identity_digest, DIGEST_LEN);
+  /* If we're an authoritative directory server, we may know a
+   * nickname for this router. */
+  n = dirserv_get_nickname_by_digest(id_digest);
+  if (n) {
+    conn->nickname = tor_strdup(n);
+  } else {
+    conn->nickname = tor_malloc(HEX_DIGEST_LEN+1);
+    base16_encode(conn->nickname, HEX_DIGEST_LEN+1,
+                  conn->identity_digest, DIGEST_LEN);
+  }
   tor_free(conn->address);
   in.s_addr = htonl(addr);
   conn->address = tor_strdup(inet_ntoa(in));
