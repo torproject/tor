@@ -922,10 +922,10 @@ typedef struct {
                          * them? */
   int NewCircuitPeriod; /**< How long do we use a circuit before building
                          * a new one? */
-  int BandwidthRate; /**< How much bandwidth, on average, are we willing to
-                      * use in a second? */
-  int BandwidthBurst; /**< How much bandwidth, at maximum, are we willing to
-                       * use in a second? */
+  int BandwidthRateBytes; /**< How much bandwidth, on average, are we willing to
+                           * use in a second? */
+  int BandwidthBurstBytes; /**< How much bandwidth, at maximum, are we willing to
+                            * use in a second? */
   int NumCpus; /**< How many CPUs should we try to use? */
   int RunTesting; /**< If true, create testing circuits to measure how well the
                    * other ORs are running. */

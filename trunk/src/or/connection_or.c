@@ -132,7 +132,7 @@ connection_or_init_conn_from_address(connection_t *conn,
   conn->addr = addr;
   conn->port = port;
   /* This next part isn't really right, but it's good enough for now. */
-  conn->receiver_bucket = conn->bandwidth = options.BandwidthBurst;
+  conn->receiver_bucket = conn->bandwidth = options.BandwidthBurstBytes;
   memcpy(conn->identity_digest, id_digest, DIGEST_LEN);
   /* If we're an authoritative directory server, we may know a
    * nickname for this router. */
