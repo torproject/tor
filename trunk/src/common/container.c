@@ -23,6 +23,7 @@
  */
 #define SMARTLIST_DEFAULT_CAPACITY 32
 
+#ifndef FAST_SMARTLIST
 struct smartlist_t {
   /** <b>list</b> has enough capacity to store exactly <b>capacity</b> elements
    * before it needs to be resized.  Only the first <b>num_used</b> (\<=
@@ -32,6 +33,7 @@ struct smartlist_t {
   int num_used;
   int capacity;
 };
+#endif
 
 /** Allocate and return an empty smartlist.
  */
@@ -160,6 +162,7 @@ void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2) {
     smartlist_remove(sl1, sl2->list[i]);
 }
 
+#ifndef FAST_SMARTLIST
 /** Return the <b>idx</b>th element of sl.
  */
 void *smartlist_get(const smartlist_t *sl, int idx)
@@ -169,6 +172,14 @@ void *smartlist_get(const smartlist_t *sl, int idx)
   tor_assert(idx < sl->num_used);
   return sl->list[idx];
 }
+/** Return the number of items in sl.
+ */
+int smartlist_len(const smartlist_t *sl)
+{
+  return sl->num_used;
+}
+#endif
+
 /** Change the value of the <b>idx</b>th element of sl to <b>val</b>; return the old
  * value of the <b>idx</b>th element.
  */
@@ -182,6 +193,7 @@ void *smartlist_set(smartlist_t *sl, int idx, void *val)
   sl->list[idx] = val;
   return old;
 }
+
 /** Remove the <b>idx</b>th element of sl; if idx is not the last
  * element, swap the last element of sl into the <b>idx</b>th space.
  * Return the old value of the <b>idx</b>th element.
@@ -211,12 +223,6 @@ void *smartlist_del_keeporder(smartlist_t *sl, int idx)
   if (idx < sl->num_used)
     memmove(sl->list+idx, sl->list+idx+1, sizeof(void*)*(sl->num_used-idx));
   return old;
-}
-/** Return the number of items in sl.
- */
-int smartlist_len(const smartlist_t *sl)
-{
-  return sl->num_used;
 }
 /** Insert the value <b>val</b> as the new <b>idx</b>th element of
  * <b>sl</b>, moving all items previously at <b>idx</b> or later
