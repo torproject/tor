@@ -1003,7 +1003,7 @@ void circuit_has_opened(circuit_t *circ);
 void circuit_build_failed(circuit_t *circ);
 circuit_t *circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname);
 circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest);
-void circuit_reset_failure_count(void);
+void circuit_reset_failure_count(int timeout);
 int connection_ap_handshake_attach_circuit(connection_t *conn);
 
 int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data,int reverse);
