@@ -950,6 +950,8 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
         }
         rendcirc->timestamp_dirty = time(NULL);
         introcirc->timestamp_dirty = time(NULL);
+        assert_circuit_ok(rendcirc);
+        assert_circuit_ok(introcirc);
         return 0;
       }
     }
