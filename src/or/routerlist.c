@@ -233,8 +233,8 @@ void routerlist_add_family(smartlist_t *sl, routerinfo_t *router) {
   if (!router->declared_family)
     return;
   
-  /* Add every r such that router declares familyhip with r, and r
-   * declares familyhip with router. */
+  /* Add every r such that router declares familyness with r, and r
+   * declares familyhood with router. */
   SMARTLIST_FOREACH(router->declared_family, const char *, n,
     {
       if (!(r = router_get_by_nickname(n)))
