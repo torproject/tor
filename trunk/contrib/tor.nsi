@@ -6,7 +6,8 @@
 ; How to make an installer:
 ;   Step 0. If you are a Tor maintainer, make sure that tor.nsi and
 ;           src/win32/orconfig.h all have the correct version number.
-;   Step 1. Download and install OpenSSL.
+;   Step 1. Download and install OpenSSL.  Make sure that the OpenSSL
+;           version listed below matches the one you downloaded.
 ;   Step 2. Download and install NSIS (http://nsis.sourceforge.net)
 ;   Step 3. Make a directory under the main tor directory called "bin".
 ;   Step 4. Copy ssleay32.dll and libeay32.dll from OpenSSL into "bin".
@@ -30,7 +31,6 @@
 ;       privoxy too. (Check privoxy license on this; be sure to include
 ;       all privoxy documents.)
 ;   - The filename should probably have a revision number.
-
 
 !include "MUI.nsh"
 
@@ -110,7 +110,7 @@ Section "Tor" Tor
    File /oname=$configfile "..\src\config\torrc.sample"
 SectionEnd
 
-Section "OpenSSL 0.9.7d" OpenSSL
+Section "OpenSSL 0.9.7e" OpenSSL
    SetOutPath $INSTDIR
    File "${BIN}\libeay32.dll"
    File "${BIN}\ssleay32.dll"
