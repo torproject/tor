@@ -1,0 +1,34 @@
+AUTOMAKE_OPTIONS = foreign
+ # else it keeps trying to put COPYING back in
+
+SUBDIRS = src doc contrib
+
+DIST_SUBDIRS = src doc contrib
+
+EXTRA_DIST = INSTALL README AUTHORS LICENSE ChangeLog tor.spec tor.spec.in
+
+#install-data-local:
+#	$(INSTALL) -m 755 -d $(LOCALSTATEDIR)/lib/tor
+
+dist-rpm: dist
+	rm -rf /tmp/tor-rpm-build
+	mkdir /tmp/tor-rpm-build
+	for subdir in BUILD RPMS SOURCES SPECS SRPMS; do \
+	    mkdir /tmp/tor-rpm-build/$$subdir;		 \
+	done
+	cp tor-$(VERSION).tar.gz /tmp/tor-rpm-build/SOURCES
+	rpmbuild -ba --define '_topdir /tmp/tor-rpm-build' tor.spec
+	mv /tmp/tor-rpm-build/SRPMS/* .
+	mv /tmp/tor-rpm-build/RPMS/*/* .
+	rm -rf /tmp/tor-rpm-build
+
+doxygen:
+	doxygen && cd doc/doxygen/latex && make
+
+# Avoid strlcpy.c, strlcat.c, tree.h
+check-spaces:
+	./contrib/checkSpace.pl                \
+	        src/common/*.h                 \
+		src/common/[^s]*.c             \
+		src/or/[^t]*.[ch] src/or/t*.c
+
