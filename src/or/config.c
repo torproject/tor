@@ -538,7 +538,10 @@ static char *get_windows_conf_root(void)
    */
   if (!SUCCEEDED(SHGetSpecialFolderLocation(NULL, CSIDL_APPDATA,
                                             &idl))) {
-    return NULL;
+    GetCurrentDirectory(MAX_PATH, path);
+    is_set = 1;
+    log_fn(LOG_WARN, "I couldn't find your application data folder: are you running an ancient version of Windows 95? Defaulting to '%s'", path);
+    return path;
   }
   /* Convert the path from an "ID List" (whatever that is!) to a path. */
   result = SHGetPathFromIDList(idl, path);
@@ -551,6 +554,7 @@ static char *get_windows_conf_root(void)
   if (!SUCCEEDED(result)) {
     return NULL;
   }
+  strlcat(p,"\\tor",MAX_PATH);
   is_set = 1;
   return path;
 }
@@ -562,7 +566,7 @@ get_default_conf_file(void)
 #ifdef MS_WINDOWS
   char *path = tor_malloc(MAX_PATH);
   strlcpy(path, get_windows_conf_root(), MAX_PATH);
-  strlcat(path,"\\tor\\torrc",MAX_PATH);
+  strlcat(path,"\\torrc",MAX_PATH);
   return path;
 #else
   return tor_strdup(CONFDIR "/torrc");
@@ -1199,7 +1203,6 @@ get_data_directory(or_options_t *options)
     char *p;
     p = tor_malloc(MAX_PATH);
     strlcpy(p,get_windows_conf_root(),MAX_PATH);
-    strlcat(p,"\\tor",MAX_PATH);
     options->DataDirectory = p;
     return p;
 #else
