@@ -16,17 +16,19 @@ Quickstart version for users:
 2) ./configure (or do the two-line version below, if you're on bsd)
 3) make
 4) cd src/config
-5) ../or/or -f oprc &
+5) ../or/or -f oprc
 6) point your mozilla (or whatever) to socks4 proxy at localhost port 9050
-  In mozilla, this is in edit|preferences|advanced|proxies.
+  In mozilla, this is in edit|preferences|advanced|proxies. This allows you
+  to test to make sure tor is installed correctly.
 7) make sure you've set it up correctly: go to
   http://www.junkbusters.com/cgi-bin/privacy and see what IP it says
-  you're coming from. If it works, you're set.
+  you're coming from. If it works, you should probably go on to step 8,
+  to get better privacy.
 
 8) Optionally, install privoxy (www.privoxy.org), and add the line
   "forward-socks4a / localhost:9050 ." (without the quotes) to its config
-  file. Then change your mozilla to http proxy at localhost port 8118.
-  This step will give you good html scrubbing as well.
+  file. Then change your mozilla to http proxy at localhost port 8118 (and
+  no socks proxy). This step will give you good html scrubbing as well.
 
 If this works for you, you can stop reading. Otherwise, below is a more
 detailed version.
@@ -34,9 +36,6 @@ detailed version.
 **************************************************************************
 
 Dependencies:
-
-  You're going to need Privoxy (www.privoxy.org) installed, and configured
-  to point at a socks4a proxy -- see below.
 
   For tor itself, you're going to need openssl (0.9.5 or later
   -- including the dev stuff and includes). If you're on Linux,
@@ -87,12 +86,12 @@ Do you want to run a tor server or a tor client?
 How to use it for web browsing:
 
   Download privoxy (www.privoxy.org). Install it. Add the following
-  line to your 'config' file:
+  line to your 'config' file (it might be in /etc/privoxy/config) :
     forward-socks4a / localhost:9050 .
   Don't forget the . at the end.
 
-  From here, you can point your browser/etc to localhost:8118 (as an
-  http proxy) and your traffic will go through Privoxy, then through
+  From here, you can point your browser/etc to localhost port 8118 (as
+  an http proxy) and your traffic will go through Privoxy, then through
   the onion proxy, to the onion routing network.
 
   You can also ignore the whole privoxy thing and set your Mozilla to
