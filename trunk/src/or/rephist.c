@@ -55,6 +55,9 @@ static or_history_t *get_or_history(const char* id)
   char hexid[HEX_DIGEST_LEN+1];
   base16_encode(hexid, HEX_DIGEST_LEN+1, id, DIGEST_LEN);
 
+  if (!strcmp(hexid, "0000000000000000000000000000000000000000"))
+    return NULL;
+
   hist = (or_history_t*) strmap_get(history_map, hexid);
   if (!hist) {
     hist = tor_malloc_zero(sizeof(or_history_t));
@@ -76,7 +79,11 @@ static link_history_t *get_link_history(const char *from_id,
   link_history_t *lhist;
   char to_hexid[HEX_DIGEST_LEN+1];
   orhist = get_or_history(from_id);
+  if (!orhist)
+    return NULL;
   base16_encode(to_hexid, HEX_DIGEST_LEN+1, to_id, DIGEST_LEN);
+  if (!strcmp(hexid, "0000000000000000000000000000000000000000"))
+    return NULL;
   lhist = (link_history_t*) strmap_get(orhist->link_history_map, to_hexid);
   if (!lhist) {
     lhist = tor_malloc_zero(sizeof(link_history_t));
@@ -117,6 +124,8 @@ void rep_hist_note_connect_failed(const char* id, time_t when)
 {
   or_history_t *hist;
   hist = get_or_history(id);
+  if (!hist)
+    return;
   ++hist->n_conn_fail;
   if (hist->up_since) {
     hist->uptime += (when - hist->up_since);
@@ -133,6 +142,8 @@ void rep_hist_note_connect_succeeded(const char* id, time_t when)
 {
   or_history_t *hist;
   hist = get_or_history(id);
+  if (!hist)
+    return;
   ++hist->n_conn_ok;
   if (hist->down_since) {
     hist->downtime += (when - hist->down_since);
@@ -149,6 +160,8 @@ void rep_hist_note_disconnect(const char* id, time_t when)
 {
   or_history_t *hist;
   hist = get_or_history(id);
+  if (!hist)
+    return;
   ++hist->n_conn_ok;
   if (hist->up_since) {
     hist->uptime += (when - hist->up_since);
@@ -171,6 +184,8 @@ void rep_hist_note_connection_died(const char* id, time_t when)
     return;
   }
   hist = get_or_history(id);
+  if (!hist)
+    return;
   if (hist->up_since) {
     hist->uptime += (when - hist->up_since);
     hist->up_since = 0;
@@ -189,6 +204,8 @@ void rep_hist_note_extend_succeeded(const char *from_id,
   link_history_t *hist;
   /* log_fn(LOG_WARN, "EXTEND SUCCEEDED: %s->%s",from_name,to_name); */
   hist = get_link_history(from_id, to_id);
+  if (!hist)
+    return;
   ++hist->n_extend_ok;
 }
 
@@ -201,6 +218,8 @@ void rep_hist_note_extend_failed(const char *from_id, const char *to_id)
   link_history_t *hist;
   /* log_fn(LOG_WARN, "EXTEND FAILED: %s->%s",from_name,to_name); */
   hist = get_link_history(from_id, to_id);
+  if (!hist)
+    return;
   ++hist->n_extend_fail;
 }
 
@@ -247,7 +266,9 @@ void rep_hist_dump_stats(time_t now, int severity)
         or_history->n_conn_ok, or_history->n_conn_fail+or_history->n_conn_ok,
         upt, upt+downt, uptime*100.0);
 
-    strcpy(buffer, "    Good extend attempts: ");
+    if (!strmap_isempty(or_history->link_history_map)) {
+      strcpy(buffer, "    Good extend attempts: ");
+    }
     len = strlen(buffer);
     for (lhist_it = strmap_iter_init(or_history->link_history_map);
          !strmap_iter_done(lhist_it);
