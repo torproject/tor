@@ -39,7 +39,6 @@ static void router_free_exit_policy(routerinfo_t *router);
 static int router_add_exit_policy(routerinfo_t *router, 
                                   directory_token_t *tok);
 static int router_resolve_directory(directory_t *dir);
-static int init_descriptor(void);
 
 /****************************************************************************/
 
@@ -1100,7 +1099,7 @@ static char descriptor[8192];
 static routerinfo_t *desc_routerinfo = NULL; 
 const char *router_get_my_descriptor(void) {
   if (!desc_routerinfo) {
-    if (init_descriptor())
+    if (router_rebuild_descriptor())
       return NULL;
   }
   log_fn(LOG_DEBUG,"my desc is '%s'",descriptor);
@@ -1108,13 +1107,13 @@ const char *router_get_my_descriptor(void) {
 }
 const routerinfo_t *router_get_desc_routerinfo(void) {
   if (!desc_routerinfo) {
-    if (init_descriptor()) 
+    if (router_rebuild_descriptor()) 
       return NULL;
   }
   return desc_routerinfo;
 }
 
-static int init_descriptor(void) {
+int router_rebuild_descriptor(void) {
   routerinfo_t *ri;
   char localhostname[256];
   char *address = options.Address;

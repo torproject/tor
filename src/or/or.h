@@ -694,6 +694,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
 const routerinfo_t *router_get_desc_routerinfo(void);
 const char *router_get_my_descriptor(void);
+int router_rebuild_descriptor(void);
 
 /********************************* dirserv.c ***************************/
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);

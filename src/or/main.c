@@ -274,7 +274,8 @@ static int prepare_for_poll(void) {
     if(time_to_fetch_directory < now.tv_sec) {
       /* it's time to fetch a new directory and/or post our descriptor */
       if(options.OnionRouter) {
-           router_upload_desc_to_dirservers();
+        router_rebuild_descriptor();
+        router_upload_desc_to_dirservers();
       }
       if(!options.DirPort) {
         /* NOTE directory servers do not currently fetch directories.
