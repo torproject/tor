@@ -7,6 +7,8 @@
 
 #include "orconfig.h"
 
+#define USE_TLS
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -351,6 +353,7 @@ struct exit_policy_t {
 /* config stuff we know about the other ORs in the network */
 typedef struct {
   char *address;
+  char *nickname;
  
   uint32_t addr; /* all host order */
   uint16_t or_port;
