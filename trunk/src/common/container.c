@@ -118,17 +118,18 @@ void smartlist_remove(smartlist_t *sl, void *element) {
     }
 }
 
-/** If there are any string in sl equal to element, remove the first.
+/** If there are any strings in sl equal to element, remove them.
  * Does not preserve order. */
 void
 smartlist_string_remove(smartlist_t *sl, const char *element)
 {
   int i;
-  size_t len = smartlist_len(sl);
-  for (i = 0; i < len; ++i) {
-    if (!strcmp(element, smartlist_get(sl, i))) {
-      smartlist_del(sl, i);
-      return;
+  tor_assert(sl);
+  tor_assert(element);
+  for (i = 0; i < sl->num_used; ++i) {
+    if (!strcmp(element, sl->list[i]) {
+      sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
+      i--; /* so we process the new i'th element */
     }
   }
 }
