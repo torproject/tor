@@ -64,7 +64,7 @@ int connection_edge_reached_eof(connection_t *conn) {
 int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
 
   tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
+  tor_assert(CONN_IS_EDGE(conn));
 
   switch (conn->state) {
     case AP_CONN_STATE_SOCKS_WAIT:
@@ -105,7 +105,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
  * Mark it for close and return 0.
  */
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
-  tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
+  tor_assert(CONN_IS_EDGE(conn));
 
   if (conn->marked_for_close)
     return 0; /* already marked; probably got an 'end' */
@@ -173,7 +173,7 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
  */
 int connection_edge_finished_flushing(connection_t *conn) {
   tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
+  tor_assert(CONN_IS_EDGE(conn));
 
   switch (conn->state) {
     case AP_CONN_STATE_OPEN:
@@ -1148,8 +1148,8 @@ connection_exit_connect(connection_t *conn) {
       conn->state = EXIT_CONN_STATE_CONNECTING;
 
       connection_watch_events(conn, EV_WRITE | EV_READ);
-      /* writable indicates finish, readable indicates broken link,
-         error indicates broken link in windowsland. */
+      /* writable indicates finish;
+       * readable/error indicates broken link in windowsland. */
       return;
     /* case 1: fall through */
   }
