@@ -346,7 +346,8 @@ int ap_handshake_socks_reply(connection_t *conn, char result) {
   socks4_info.destport[0] = socks4_info.destport[1] = 0;
   socks4_info.destip[0] = socks4_info.destip[1] = socks4_info.destip[2] = socks4_info.destip[3] = 0;
 
-  connection_write_to_buf((char *)&socks4_info, sizeof(socks4_t), conn); 
+  if(connection_write_to_buf((char *)&socks4_info, sizeof(socks4_t), conn) < 0)
+    return -1;
   return connection_flush_buf(conn); /* try to flush it, in case we're about to close the conn */
 }
 

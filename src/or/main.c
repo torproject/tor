@@ -347,13 +347,10 @@ int prepare_for_poll(int *timeout) {
     tmpconn = connection_array[i];
     if(!connection_speaks_cells(tmpconn))
       continue; /* this conn type doesn't send cells */
-    if(!connection_state_is_open(tmpconn)) {
-      continue; /* only conns in state 'open' need a keepalive */
-      /* XXX should time-out unfinished connections someday too */
-    }    
     if(now.tv_sec >= tmpconn->timestamp_lastwritten + options.KeepalivePeriod) {
-      if(!(options.Role & ROLE_OR_CONNECT_ALL) && !circuit_get_by_conn(tmpconn)) {
-        /* we're an onion proxy, with no circuits. kill it. */
+      if((!(options.Role & ROLE_OR_CONNECT_ALL) && !circuit_get_by_conn(tmpconn)) ||
+         (!connection_state_is_open(tmpconn))) {
+        /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
         log(LOG_DEBUG,"prepare_for_poll(): Expiring connection to %d (%s:%d).",
             i,tmpconn->address, tmpconn->port);
         tmpconn->marked_for_close = 1;
@@ -363,7 +360,8 @@ int prepare_for_poll(int *timeout) {
 //            tmpconn->address, tmpconn->port);
         memset(&cell,0,sizeof(cell_t));
         cell.command = CELL_PADDING;
-        connection_write_cell_to_buf(&cell, tmpconn);
+        if(connection_write_cell_to_buf(&cell, tmpconn) < 0)
+          tmpconn->marked_for_close = 1;
       }
     }
     if(!tmpconn->marked_for_close &&
@@ -603,10 +601,11 @@ void dump_directory_to_string(char *s, int maxlen) {
   int written;
 
   /* first write my own info */
-  /* XXX should check for errors here too */
-  written = dump_router_to_string(s, maxlen, my_routerinfo);
-  maxlen -= written;
-  s += written;
+  if(my_routerinfo) {
+    written = dump_router_to_string(s, maxlen, my_routerinfo);
+    maxlen -= written;
+    s += written;
+  }
 
   /* now write info for other routers */
   for(i=0;i<nfds;i++) {
@@ -614,10 +613,12 @@ void dump_directory_to_string(char *s, int maxlen) {
 
     if(conn->type != CONN_TYPE_OR)
       continue; /* we only want to list ORs */
+    if(conn->state != OR_CONN_STATE_OPEN)
+      continue; /* we only want to list ones that successfully handshaked */
     router = router_get_by_addr_port(conn->addr,conn->port);
     if(!router) {
       log(LOG_ERR,"dump_directory_to_string(): couldn't find router %d:%d!",conn->addr,conn->port);
-      return;
+      continue;
     }
 
     written = dump_router_to_string(s, maxlen, router);
