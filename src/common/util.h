@@ -24,6 +24,9 @@
 #error "It seems your platform does not represent NULL as zero. We can't cope."
 #endif
 
+#ifdef HAVE_WINSOCK_H
+#include <winsock.h>
+#endif
 #if _MSC_VER > 1300
 #include <winsock2.h>
 #include <ws2tcpip.h>
