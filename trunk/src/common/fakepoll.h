@@ -1,10 +1,6 @@
-/*
- * fakepoll.h
- *
- * On systems where 'poll' doesn't exist, fake it with 'select'.
- *
- * Nick Mathewson <nickm@freehaven.net>
- */
+/* Copyright 2002,2003 Nick Mathewson, Roger Dingledine, Naval Research Lab. */
+/* See LICENSE for licensing information */
+/* $Id$ */
 
 #ifndef __FAKEPOLL_H
 #define __FAKEPOLL_H
@@ -16,9 +12,9 @@
 #define USE_FAKE_POLL
 
 struct pollfd {
-	int fd;
-	short events;
-	short revents;
+  int fd;
+  short events;
+  short revents;
 };
 
 #define POLLIN   0x0001
