@@ -746,19 +746,34 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   } else {
     /* it's a hidden-service request */
     rend_cache_entry_t *entry;
+    int r;
 
     strcpy(conn->rend_query, socks->address); /* this strcpy is safe -RD */
     log_fn(LOG_INFO,"Got a hidden service request for ID '%s'", conn->rend_query);
     /* see if we already have it cached */
-    if (rend_cache_lookup_entry(conn->rend_query, &entry) == 1 &&
-#define NUM_SECONDS_BEFORE_REFETCH (60*15)
-      entry->received + NUM_SECONDS_BEFORE_REFETCH < time(NULL)) {
-      conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-      return connection_ap_handshake_attach_circuit(conn);
-    } else {
+    r = rend_cache_lookup_entry(conn->rend_query, &entry);
+    if(r<0) {
+      log_fn(LOG_WARN,"Invalid service descriptor %s", conn->rend_query);
+      return -1;
+    }
+    if(r==0) {
       conn->state = AP_CONN_STATE_RENDDESC_WAIT;
+      log_fn(LOG_INFO, "Unknown descriptor %s. Fetching.", conn->rend_query);
       rend_client_refetch_renddesc(conn->rend_query);
       return 0;
+    }
+    if(r>0) {
+#define NUM_SECONDS_BEFORE_REFETCH (60*15)
+      if(time(NULL) - entry->received < NUM_SECONDS_BEFORE_REFETCH) {
+        conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+        log_fn(LOG_INFO, "Descriptor is here and fresh enough. Great.");
+        return connection_ap_handshake_attach_circuit(conn);
+      } else {
+        conn->state = AP_CONN_STATE_RENDDESC_WAIT;
+        log_fn(LOG_INFO, "Stale descriptor %s. Refetching.", conn->rend_query);
+        rend_client_refetch_renddesc(conn->rend_query);
+        return 0;
+      }
     }
   }
   return 0;
