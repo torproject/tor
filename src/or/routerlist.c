@@ -414,13 +414,14 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
       if (tmpe->msk == 0 && (port >= tmpe->prt_min && port <= tmpe->prt_max)) {
         /* The exit policy is accept/reject *:port */
         match = 1;
-      } else if (port >= tmpe->prt_min && port <= tmpe->prt_max)
+      } else if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
         if (tmpe->policy_type == EXIT_POLICY_REJECT) {
           /* The exit policy is reject ???:port */
           maybe_reject = 1;
         } else {
           /* The exit policy is acccept ???:port */
           maybe_accept = 1;
+        }
       }
     } else {
       /* Address is known */
