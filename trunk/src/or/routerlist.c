@@ -193,7 +193,7 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
 
 void add_nickname_list_to_smartlist(smartlist_t *sl, char *list) {
   char *start,*end;
-  char nick[MAX_NICKNAME_LEN];
+  char nick[MAX_NICKNAME_LEN+1];
   routerinfo_t *router;
 
   assert(sl);
@@ -918,7 +918,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
     }
     router->address = tor_strdup(tok->args[1]);
     router->addr = 0;
-    
+
     if (tok->n_args == 6) {
       router->or_port = atoi(tok->args[2]);
       router->socks_port = atoi(tok->args[3]);

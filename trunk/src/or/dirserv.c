@@ -206,7 +206,7 @@ dirserv_add_descriptor(const char **desc)
 
   start = strstr(*desc, "router ");
   if (!start) {
-    log(LOG_WARN, "no descriptor found.");
+    log_fn(LOG_WARN, "no 'router' line found. This is not a descriptor.");
     return -1;
   }
   if ((end = strstr(start+6, "\nrouter "))) {

@@ -596,10 +596,17 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     if (options->Nickname == NULL) {
       log_fn(LOG_WARN,"Nickname required if ORPort is set, but not found.");
       result = -1;
-    } else if (strspn(options->Nickname, LEGAL_NICKNAME_CHARACTERS) !=
-               strlen(options->Nickname)) {
-      log_fn(LOG_WARN, "Nickname '%s' contains illegal characters.", options->Nickname);
-      result = -1;
+    } else {
+      if (strspn(options->Nickname, LEGAL_NICKNAME_CHARACTERS) !=
+                 strlen(options->Nickname)) {
+        log_fn(LOG_WARN, "Nickname '%s' contains illegal characters.", options->Nickname);
+        result = -1;
+      }
+      if (strlen(options->Nickname) > MAX_NICKNAME_LEN) {
+        log_fn(LOG_WARN, "Nickname '%s' has more than %d characters.",
+               options->Nickname, MAX_NICKNAME_LEN);
+        result = -1;
+      }
     }
   }
 
@@ -653,6 +660,10 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     log(LOG_WARN,"KeepalivePeriod option must be positive.");
     result = -1;
   }
+
+  /* XXX look at the various nicknamelists and make sure they're
+   * valid and don't have hostnames that are too long.
+   */
 
   if (rend_config_services(options) < 0) {
     result = -1;
