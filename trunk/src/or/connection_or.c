@@ -20,11 +20,25 @@ static void conn_or_init_crypto(connection_t *conn);
 static void connection_or_set_open(connection_t *conn);
 #endif
 
-/*
- *
- * these two functions are the main ways 'in' to connection_or
- *
- */
+/**************************************************************/
+
+static void cell_pack(char *dest, const cell_t *src) {
+  *(uint16_t*)dest     = htons(src->aci);
+  *(uint8_t*)(dest+2)  = src->command;
+  *(uint8_t*)(dest+3)  = src->length;
+  *(uint32_t*)(dest+4) = 0; /* Reserved */
+  memcpy(dest+8, src->payload, CELL_PAYLOAD_SIZE);
+}
+
+static void cell_unpack(cell_t *dest, const char *src) {
+  dest->aci     = ntohs(*(uint16_t*)(src));
+  dest->command = *(uint8_t*)(src+2);
+  dest->length  = *(uint8_t*)(src+3);
+  dest->seq     = ntohl(*(uint32_t*)(src+4));
+  memcpy(dest->payload, src+8, CELL_PAYLOAD_SIZE);
+}
+
+/**************************************************************/
 
 int connection_or_process_inbuf(connection_t *conn) {
 
@@ -424,14 +438,8 @@ or_handshake_client_process_auth(connection_t *conn) {
   return connection_process_inbuf(conn); /* process the rest of the inbuf */
 }
 
-/*
- * 
- * auth handshake, as performed by OR *receiving* the connection
- *
- */
-
-static int 
-or_handshake_server_process_auth(connection_t *conn) {
+/* auth handshake, as performed by OR *receiving* the connection */
+static int or_handshake_server_process_auth(connection_t *conn) {
   int retval;
 
   char buf[128]; /* 50 of this is expected to be used for OR, 38 for OP */
@@ -639,7 +647,6 @@ connection_or_set_open(connection_t *conn) {
 
 static void 
 conn_or_init_crypto(connection_t *conn) {
-  //int x;
   unsigned char iv[16];
 
   assert(conn);
@@ -718,21 +725,9 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   return connection_process_inbuf(conn); /* process the remainder of the buffer */
 }
 
-
 #ifndef USE_TLS
 int connection_encrypt_cell(char *cellp, connection_t *conn) {
   char cryptcell[CELL_NETWORK_SIZE];
-#if 0
-  int x;
-  char *px;
- 
-  printf("Sending: Cell header plaintext: ");
-  px = (char *)cellp;
-  for(x=0;x<8;x++) {
-    printf("%u ",px[x]);
-  }#
-  printf("\n");
-#endif
  
   assert(conn);
  
@@ -740,14 +735,6 @@ int connection_encrypt_cell(char *cellp, connection_t *conn) {
     log(LOG_ERR,"Could not encrypt cell for connection %s:%u.",conn->address,conn->port);
     return -1;
   }
-#if 0
-  printf("Sending: Cell header crypttext: ");
-  px = (char *)&newcell;
-  for(x=0;x<8;x++) {
-    printf("%u ",px[x]);
-  }
-  printf("\n");
-#endif
 
   memcpy(cellp,cryptcell,CELL_NETWORK_SIZE);
   return 0;

@@ -155,8 +155,7 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
 }
 
 /* uses a weighted coin with weight cw to choose a route length */
-int chooselen(double cw)
-{
+static int chooselen(double cw) {
   int len = 2;
   uint8_t coin;
   
@@ -181,8 +180,7 @@ int chooselen(double cw)
  * int cw is the coin weight to use when choosing the route 
  * order of routers is from last to first
  */
-unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *routelen)
-{
+static unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *routelen) {
   int i;
   int num_acceptable_routers;
   unsigned int *route;

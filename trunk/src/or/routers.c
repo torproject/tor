@@ -34,6 +34,8 @@ static int router_get_list_from_string_tok(char **s, directory_t **dest,
                                            directory_token_t *tok);
 static int router_add_exit_policy(routerinfo_t *router, 
                                   directory_token_t *tok);
+static int 
+router_resolve_directory(directory_t *dir);
 
 /****************************************************************************/
 
@@ -667,7 +669,6 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
 #undef TOK_IS
 }
 
-
 static int router_get_list_from_string_tok(char **s, directory_t **dest,
                                            directory_token_t *tok)
 {
@@ -702,7 +703,7 @@ static int router_get_list_from_string_tok(char **s, directory_t **dest,
   return 0;
 }
 
-int 
+static int 
 router_resolve(routerinfo_t *router)
 {
   struct hostent *rent;
@@ -719,7 +720,7 @@ router_resolve(routerinfo_t *router)
   return 0;
 }
 
-int 
+static int 
 router_resolve_directory(directory_t *dir)
 {
   int i, max, remove;
