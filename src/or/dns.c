@@ -66,7 +66,7 @@ static void purge_expired_resolves(uint32_t now);
 static int assign_to_dnsworker(connection_t *exitconn);
 static void dns_purge_resolve(struct cached_resolve *resolve);
 static void dns_found_answer(char *address, uint32_t addr, char outcome);
-int dnsworker_main(void *data);
+static int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
 static void spawn_enough_dnsworkers(void);
 
@@ -532,7 +532,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
  * The dnsworker runs indefinitely, until its connection is closed or an error
  * occurs.
  */
-int dnsworker_main(void *data) {
+static int dnsworker_main(void *data) {
   char address[MAX_ADDRESSLEN];
   unsigned char address_len;
   char answer[5];

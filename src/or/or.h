@@ -867,7 +867,6 @@ void assert_buf_ok(buf_t *buf);
 extern char *circuit_state_to_string[];
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 void circuit_close_all_marked(void);
-void circuit_free(circuit_t *circ);
 void circuit_free_cpath(crypt_path_t *cpath);
 int _circuit_mark_for_close(circuit_t *circ);
 
@@ -980,7 +979,6 @@ void connection_bucket_init(void);
 void connection_bucket_refill(struct timeval *now);
 
 int connection_handle_read(connection_t *conn);
-int connection_read_to_buf(connection_t *conn);
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn);
 
@@ -1007,8 +1005,6 @@ int connection_state_is_open(connection_t *conn);
 int connection_state_is_connecting(connection_t *conn);
 
 int connection_send_destroy(uint16_t circ_id, connection_t *conn);
-
-int connection_process_inbuf(connection_t *conn);
 
 void assert_connection_ok(connection_t *conn, time_t now);
 
@@ -1071,7 +1067,6 @@ void cpu_init(void);
 void cpuworkers_rotate(void);
 int connection_cpu_finished_flushing(connection_t *conn);
 int connection_cpu_process_inbuf(connection_t *conn);
-int cpuworker_main(void *data);
 int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
                         void *task);
 
@@ -1195,7 +1190,6 @@ int rend_client_rendezvous_acked(circuit_t *circ, const char *request, int reque
 int rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request_len);
 void rend_client_desc_fetched(char *query, int success);
 
-int rend_cmp_service_ids(const char *one, const char *two);
 char *rend_client_get_random_intro(char *query);
 int rend_parse_rendezvous_address(char *address);
 
@@ -1210,6 +1204,8 @@ typedef struct rend_service_descriptor_t {
   int n_intro_points;
   char **intro_points;
 } rend_service_descriptor_t;
+
+int rend_cmp_service_ids(const char *one, const char *two);
 
 void rend_process_relay_cell(circuit_t *circ, int command, int length,
                              const char *payload);

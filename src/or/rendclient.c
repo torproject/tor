@@ -24,7 +24,7 @@ rend_client_introcirc_is_open(circuit_t *circ)
 /** Send the establish-rendezvous cell along a rendezvous circuit. if
  * it fails, mark the circ for close and return -1. else return 0.
  */
-int
+static int
 rend_client_send_establish_rendezvous(circuit_t *circ)
 {
   tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
@@ -387,11 +387,6 @@ void rend_client_desc_fetched(char *query, int success) {
       connection_mark_for_close(conn,0);
     }
   }
-}
-
-/** Return 0 if one and two are the same service ids, else -1 or 1 */
-int rend_cmp_service_ids(const char *one, const char *two) {
-  return strcasecmp(one,two);
 }
 
 /** strdup a nickname for a random introduction
