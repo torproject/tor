@@ -818,21 +818,10 @@ add_default_trusted_dirservers(or_options_t *options)
 static void
 print_usage(void)
 {
-  printf("tor -f <torrc> [args]\n"
-         "See man page for more options. This -h is obsolete.\n");
-#if 0
-         "-b <bandwidth>\t\tbytes/second rate limiting\n"
-         "-d <file>\t\tDebug file\n"
-         "-l <level>\t\tLog level\n"
-         "-r <file>\t\tList of known routers\n");
-  printf("\nClient options:\n"
-         "-e \"nick1 nick2 ...\"\t\tExit nodes\n"
-         "-s <IP>\t\t\tPort to bind to for Socks\n");
-  printf("\nServer options:\n"
-         "-n <nick>\t\tNickname of router\n"
-         "-o <port>\t\tOR port to bind to\n"
-         "-p <file>\t\tPID file\n");
-#endif
+  printf(
+"Copyright 2001-2004 Roger Dingledine, Nick Mathewson, Matej Pfajfar.\n\n"
+"tor -f <torrc> [args]\n"
+"See man page for options, or http://freehaven.net/tor/ for documentation.\n");
 }
 
 /**
