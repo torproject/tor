@@ -636,7 +636,7 @@ static int do_main_loop(void) {
         log_fn(LOG_ERR,"poll failed.");
         return -1;
       } else {
-        log_fn(LOG_DEBUG,"poll interrupted."):
+        log_fn(LOG_DEBUG,"poll interrupted.");
       }
     }
 

@@ -498,7 +498,7 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t
 void circuit_close(circuit_t *circ);
 void circuit_about_to_close_connection(connection_t *conn);
 
-void circuit_dump_by_conn(connection_t *conn);
+void circuit_dump_by_conn(connection_t *conn, int severity);
 
 void circuit_expire_unused_circuits(void);
 void circuit_launch_new(int failure_status);
