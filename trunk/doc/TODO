@@ -138,13 +138,14 @@ Rendezvous service:
         o let bob choose himself as intro point
         o let bob replenish his intro points and republish
         o alice retries introduction and rendezvous a few times?
-        - should alice ever try to refresh her service desc cache entries?
+        o ORs should not pick themselves while building general circs
+        o should alice ever try to refresh her service desc cache entries?
           should she expire them after e.g. 15 mins?
-        - race condition: alice has the serverdesc in her cache, she opens
+        o race condition: alice has the serverdesc in her cache, she opens
           the circs, serverdesc expires and is flushed, then she goes
           to send the intro cell. should serverdesc cache have a
           last-touched field? are there better fixes?
-        - backward compatibility: when only certain nodes know about rend
+        o backward compatibility: when only certain nodes know about rend
           protocol, how do we deal? have nodes parse the tor version field?
           force an upgrade? simply be more robust against useless nodes?
         o should expire rend streams when too much time has passed
