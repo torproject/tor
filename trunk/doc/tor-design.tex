@@ -127,7 +127,7 @@ every request, and also presented
 a threat to anonymity (see Section~\ref{maintaining-anonymity}).
 \footnote{The first Onion Routing design \cite{or-ih96} protected against
 this threat to some
-extent by encouraging users to hide network access behind an onion
+extent by requiring users to hide network access behind an onion
 router/firewall that was also forwarding traffic from other nodes.
 However, it is desirable for users to
 benefit from Onion Routing even when they can't run their own 
@@ -295,10 +295,7 @@ variation in traffic shape. This can have prohibitive bandwidth costs
 and/or performance limitations. One can also use a cascade (fixed
 shared route) with a relatively fixed set of users. This assumes a
 significant degree of agreement and provides an easier target for an active
-attacker since the endpoints are generally known. However, a practical
-network with both of these features and thousands of active users has
-been run for many years (the Java Anon Proxy, aka Web MIXes,
-\cite{web-mix}).
+attacker since the endpoints are generally known.
 
 The simplest low-latency designs are single-hop proxies such as the
 Anonymizer \cite{anonymizer}, wherein a single trusted server removes
@@ -314,9 +311,24 @@ requires public-key cryptography, whereas relaying packets along a tunnel is
 comparatively inexpensive.  Because a tunnel crosses several servers, no
 single server can learn the user's communication partners.
 
+The Java Anon Proxy (aka JAP aka WebMIXes) is based on the cascade
+approach mentioned above. Like a single-hop proxy a single cascade has
+the advantage of concentrating all the concurrent users in one
+communication pipe, making for potentially large anonymity sets.
+Also, like a single-hop proxy, it is easy to know where any
+communication is entering or leaving the network. Thus, though there
+is no single trusted server, it is potentially easy to simply bridge
+the entire cascade, i.e., to obviate its purpose. The design prevents
+this by padding between end users and the head of the cascade
+\cite{web-mix}. However, the current implementation does not do such
+padding and thus remains vulnerable to both active and passive
+bridging.
+
 %[Ouch: We haven't said what an onion is yet, but we use the word here! -NM]
 Systems such as earlier versions of Freedom and the original Onion Routing
-build the anonymous channel all at once (using an onion). 
+build the anonymous channel all at once (using an onion of public-key
+encrypted messages, each layer of which provided a session key and pointer
+to the address corresponding to the next layer's key). 
 Later designs of Freedom and Tor as described herein build
 the channel in stages, as does AnonNet
 \cite{anonnet}. Amongst other things, this makes perfect forward
@@ -361,12 +373,15 @@ jondos on any one net- work (using IP address), the attacker would be
 forced to launch jondos using many different identities and on many
 different networks to succeed'' \cite{crowds-tissec}.
 
-Another low latency design that was proposed independently and at
+Another low-latency design that was proposed independently and at
 about the same time as the original Onion Routing was PipeNet
 \cite{pipenet}.  It provided anonymity protections that were stronger
 than Onion Routing's, but at the cost of allowing a single user to
 shut down the network simply by not sending. It was also never
-implemented or formally published.
+implemented or formally published. Low-latency anonymous communication
+has also been designed for other types of systems, including
+ISDN \cite{isdn-mixes}, and mobile applications such as telephones and
+active badging systems \cite{federrath-ih96,reed-protocols97}.
 
 Tor is not primarily designed for censorship resistance but rather
 for anonymous communication. However, Tor's rendezvous points, which
@@ -390,10 +405,14 @@ communication.  Crowds and [XXX] provide anonymity for HTTP requests; [...]
 [XXX Mention error recovery?]
 
 STILL NOT MENTIONED:
-isdn-mixes\\
 real-time mixes\\
 rewebbers\\
 cebolla\\
+
+Rewebber was mentioned in an earlier version along with Eternity,
+which *must* be mentioned if we cite anything at all
+in censorship resistance.
+
 
 [XXX Close by mentioning where Tor fits.]
 
