@@ -335,6 +335,7 @@ static void run_connection_housekeeping(int i, time_t now) {
  */
 static void run_scheduled_events(time_t now) {
   static long time_to_fetch_directory = 0;
+  static time_t last_uploaded_services = 0;
   int i;
 
   /* 1. Every DirFetchPostPeriod seconds, we get a new directory and upload
@@ -356,6 +357,7 @@ static void run_scheduled_events(time_t now) {
     }
     /* Force an upload of our descriptors every DirFetchPostPeriod seconds. */
     rend_services_upload(1);
+    last_uploaded_services = now;
     rend_cache_clean(); /* should this go elsewhere? */
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
   }
@@ -397,7 +399,10 @@ static void run_scheduled_events(time_t now) {
 
   /* 6. And upload service descriptors for any services whose intro points
    *    have changed in the last second. */
-  rend_services_upload(0);
+  if (last_uploaded_services < now-5) {
+    rend_services_upload(0);
+    last_uploaded_services = now;
+  }
 
 #if 0
   /* 6. and blow away any connections that need to die. can't do this later
