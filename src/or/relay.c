@@ -538,6 +538,10 @@ connection_edge_process_relay_cell_not_open(
       log_fn(LOG_INFO,"Giving up on retrying (from exitpolicy); conn can't be handled.");
       /* else, conn will get closed below */
     } else if (rh->length && reason == END_STREAM_REASON_RESOLVEFAILED) {
+      if (conn->type != CONN_TYPE_AP) {
+        log_fn(LOG_WARN,"Got an end because of resolvefailed, but we're not an AP. Closing.");
+        return -1;
+      }
       if (client_dns_incr_failures(conn->socks_request->address)
           < MAX_RESOLVE_FAILURES) {
         /* We haven't retried too many times; reattach the connection. */
