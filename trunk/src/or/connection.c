@@ -429,10 +429,6 @@ int connection_outbuf_too_full(connection_t *conn) {
   return (conn->outbuf_flushlen > 10*CELL_PAYLOAD_SIZE);
 }
 
-int connection_flush_buf(connection_t *conn) {
-  return flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
-}
-
 /* return -1 if you want to break the conn, else return 0 */
 int connection_handle_write(connection_t *conn) {
 

@@ -23,10 +23,10 @@ Do you want to run a tor server?
   resolution works. Make sure other people can reliably resolve the
   Address you chose.
 
-  Then run tor to generate keys. One of the generated files is your
-  'fingerprint' file. Mail it to arma@mit.edu. Remember that you won't
-  be able to authenticate to the other tor nodes until I've added you
-  to the directory.
+  Then run tor to generate keys. One of the files generated
+  in your DataDirectory is your 'fingerprint' file. Mail it to
+  arma@mit.edu. Remember that you won't be able to authenticate to the
+  other tor nodes until I've added you to the directory.
 
 Configuring tsocks:
 

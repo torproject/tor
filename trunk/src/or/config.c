@@ -213,7 +213,7 @@ void print_usage(void) {
          "-e <policy>\t\tExit policy\n"
          "-l <level>\t\tLog level\n"
          "-m <max>\t\tMax number of connections\n"
-         "-s <IP>\t\t\tAddress to bind to for Socks\n"
+         "-s <IP>\t\t\tPort to bind to for Socks\n"
          );
   /* split things up to be ANSI compliant */
   printf("-n <nick>\t\tNickname of router\n"
@@ -352,6 +352,11 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     log(LOG_WARN,"SocksPort option can't be negative.");
     result = -1;
   }
+
+  if(options->SocksPort == 0 && options->ORPort == 0) {
+    log(LOG_WARN,"SocksPort and ORPort are both undefined? Quitting.");
+    result = -1;
+  } 
 
   if(options->DirPort < 0) {
     log(LOG_WARN,"DirPort option can't be negative.");

@@ -55,7 +55,7 @@ void router_retry_connections(void) {
 routerinfo_t *router_pick_directory_server(void) {
   /* pick the first running router with a positive dir_port */
   int i;
-  routerinfo_t *router;
+  routerinfo_t *router, *dirserver=NULL;
   
   if(!directory)
     return NULL;
@@ -66,7 +66,18 @@ routerinfo_t *router_pick_directory_server(void) {
       return router;
   }
 
-  return NULL;
+  log_fn(LOG_WARN,"No dirservers are up. Giving them all another chance.");
+  /* no running dir servers found? go through and mark them all as up,
+   * and we'll cycle through the list again. */
+  for(i=0;i<directory->n_routers;i++) {
+    router = directory->routers[i];
+    if(router->dir_port > 0) {
+      router->is_running = 1;
+      dirserver = router;
+    }
+  }
+
+  return dirserver;
 }
 
 void router_upload_desc_to_dirservers(void) {

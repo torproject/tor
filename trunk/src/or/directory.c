@@ -21,24 +21,15 @@ static int directorylen=0;
 void directory_initiate_command(routerinfo_t *router, int command) {
   connection_t *conn;
 
-  if(!router) { /* i guess they didn't have one in mind for me to use */
-    log_fn(LOG_WARN,"No running dirservers known. This is really bad.");
-    /* XXX never again will a directory fetch work. Should we exit here, or what? */
-    return;
-  }
-
-#if 0 /* there's no problem with parallel get/posts now. whichever 'get' ends
-         last is the directory. */
-  if(connection_get_by_type(CONN_TYPE_DIR)) { /* there's already a dir conn running */
-    log_fn(LOG_DEBUG,"Canceling connect, dir conn already active.");
-    return;
-  }
-#endif
-
-  if(command == DIR_CONN_STATE_CONNECTING_FETCH)
+  if (command == DIR_CONN_STATE_CONNECTING_FETCH)
     log_fn(LOG_DEBUG,"initiating directory fetch");
   else
     log_fn(LOG_DEBUG,"initiating directory upload");
+
+  if (!router) { /* i guess they didn't have one in mind for me to use */
+    log_fn(LOG_WARN,"No running dirservers known. Not trying.");
+    return;
+  }
 
   conn = connection_new(CONN_TYPE_DIR);
 
@@ -47,13 +38,8 @@ void directory_initiate_command(routerinfo_t *router, int command) {
   conn->port = router->dir_port;
   conn->address = tor_strdup(router->address);
   conn->nickname = tor_strdup(router->nickname);
-  if (router->identity_pkey)
-    conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
-  else {
-    log_fn(LOG_WARN, "No signing key known for dirserver %s; signature won't be checked", conn->address);
-    conn->identity_pkey = NULL;
-    /* XXX is there really any situation where router doesn't have an identity_pkey? */
-  }
+  assert(router->identity_pkey);
+  conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
 
   if(connection_add(conn) < 0) { /* no space, forget it */
     connection_free(conn);

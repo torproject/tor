@@ -449,7 +449,7 @@ test_util() {
   test_eq(0L, tv_udiff(&start, &end));
 
   /* The test values here are confirmed to be correct on a platform
-   * with a working timgm. */
+   * with a working timegm. */
   a_time.tm_year = 2003-1900;
   a_time.tm_mon = 7;
   a_time.tm_mday = 30;
