@@ -66,7 +66,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
 
   for(i=0; i < smartlist_len(rl->routers); i++) {
     router = smartlist_get(rl->routers, i);
-    if(router->dir_port > 0)
+    if(router->is_trusted_dir)
       directory_initiate_command(router, purpose, payload, payload_len);
   }
 }
@@ -122,6 +122,8 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
     log_fn(LOG_WARN,"No running dirservers known. Not trying. (purpose %d)", purpose);
     return;
   }
+
+  tor_assert(router->dir_port);
 
   conn = connection_new(CONN_TYPE_DIR);
 
@@ -183,7 +185,8 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
  */
 static void directory_send_command(connection_t *conn, int purpose,
                                    const char *payload, int payload_len) {
-  char fetchstring[] = "GET / HTTP/1.0\r\n\r\n";
+  char fetchwholedir[] = "GET / HTTP/1.0\r\n\r\n";
+  char fetchrunninglist[] = "GET /running-routers HTTP/1.0\r\n\r\n";
   char tmp[8192];
 
   tor_assert(conn && conn->type == CONN_TYPE_DIR);
@@ -191,7 +194,11 @@ static void directory_send_command(connection_t *conn, int purpose,
   switch(purpose) {
     case DIR_PURPOSE_FETCH_DIR:
       tor_assert(payload == NULL);
-      connection_write_to_buf(fetchstring, strlen(fetchstring), conn);
+      connection_write_to_buf(fetchwholedir, strlen(fetchwholedir), conn);
+      break;
+    case DIR_PURPOSE_FETCH_RUNNING_LIST:
+      tor_assert(payload == NULL);
+      connection_write_to_buf(fetchrunninglist, strlen(fetchrunninglist), conn);
       break;
     case DIR_PURPOSE_UPLOAD_DIR:
       tor_assert(payload);
@@ -344,6 +351,19 @@ int connection_dir_process_inbuf(connection_t *conn) {
       directory_has_arrived(); /* do things we've been waiting to do */
     }
 
+    if(conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
+      /* just update our list of running routers, if this list is new info */
+      log_fn(LOG_INFO,"Received running-routers list (size %d):\n%s", body_len, body);
+      if(status_code != 200) {
+        log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
+               status_code);
+        free(body); free(headers);
+        connection_mark_for_close(conn);
+        return -1;
+      }
+      /* XXX008 hand 'body' to something that parses a running-routers list. */
+    }
+
     if(conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {
       switch(status_code) {
         case 200:
@@ -459,6 +479,16 @@ directory_handle_command_get(connection_t *conn, char *headers,
     }
 
     log_fn(LOG_DEBUG,"Dumping directory to client.");
+    snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
+             (int)dlen);
+    connection_write_to_buf(tmp, strlen(tmp), conn);
+    connection_write_to_buf(cp, strlen(cp), conn);
+    return 0;
+  }
+
+  if(!strcmp(url,"/running-routers")) { /* running-routers fetch */
+    dlen = dirserv_get_runningrouters(&cp);
+
     snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
              (int)dlen);
     connection_write_to_buf(tmp, strlen(tmp), conn);

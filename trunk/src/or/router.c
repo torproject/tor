@@ -533,6 +533,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     router->or_port,
     router->socks_port,
     router->dir_port,
+    /* XXX008 only use dir_port here if authoritative server, else use opt line below */
     router->platform,
     published,
     (int) router->bandwidthrate,

@@ -58,7 +58,7 @@ routerinfo_t *router_pick_directory_server(void) {
   return choice;
 }
 
-/** Pick a random running router with a positive dir_port from our
+/** Pick a random running router that's a trusted dirserver from our
  * routerlist. */
 static routerinfo_t *router_pick_directory_server_impl(void) {
   int i;
@@ -72,8 +72,10 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
   sl = smartlist_create();
   for(i=0;i< smartlist_len(routerlist->routers); i++) {
     router = smartlist_get(routerlist->routers, i);
-    if(router->dir_port > 0 && router->is_running && router->is_trusted_dir)
+    if(router->is_running && router->is_trusted_dir) {
+      tor_assert(router->dir_port > 0);
       smartlist_add(sl, router);
+    }
   }
 
   router = smartlist_choose(sl);
@@ -87,7 +89,8 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
    * so we cycle through the list again. */
   for(i=0; i < smartlist_len(routerlist->routers); i++) {
     router = smartlist_get(routerlist->routers, i);
-    if(router->dir_port > 0 && router->is_trusted_dir) {
+    if(router->is_trusted_dir) {
+      tor_assert(router->dir_port > 0);
       router->is_running = 1;
       dirserver = router;
     }
