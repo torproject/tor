@@ -96,7 +96,7 @@ static config_var_t config_vars[] = {
   VAR("AccountingStart",     STRING,   AccountingStart,      NULL),
   VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, "middle,rendezvous"),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
-  VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "780 KB"),
+  VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "1 MB"),
   VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "48 MB"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
