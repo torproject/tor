@@ -640,6 +640,13 @@ static void predicted_ports_init(void) {
   add_predicted_port(80, time(NULL)); /* add one to kickstart us */
 }
 
+static void predicted_ports_free(void) {
+  SMARTLIST_FOREACH(predicted_ports_list, char *, cp, tor_free(cp));
+  smartlist_free(predicted_ports_list);
+  SMARTLIST_FOREACH(predicted_ports_times, char *, cp, tor_free(cp));
+  smartlist_free(predicted_ports_times);
+}
+
 /** Remember that <b>port</b> has been asked for as of time <b>now</b>.
  * This is used for predicting what sorts of streams we'll make in the
  * future and making circuits to anticipate that.
@@ -736,4 +743,5 @@ void rep_hist_free_all(void)
   strmap_free(history_map, free_or_history);
   tor_free(read_array);
   tor_free(write_array);
+  predicted_ports_free();
 }
