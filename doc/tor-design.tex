@@ -73,61 +73,54 @@ close with a list of open problems in anonymous communication systems.
 Onion Routing is a distributed overlay network designed to anonymize
 low-latency TCP-based applications such as web browsing, secure shell,
 and instant messaging. Clients choose a path through the network and
-build a \emph{virtual circuit}, in which each node (or ``onion router'') 
-in the path knows its
-predecessor and successor, but no other nodes in the circuit. 
-Traffic flowing down the circuit
-is sent in fixed-size \emph{cells}, which are unwrapped by a symmetric key
-at each node (like the layers of an onion) and relayed downstream. The
-original Onion Routing project published several design and analysis
-papers
-\cite{or-ih96,or-jsac98,or-discex00,or-pet00}. While
-a wide area Onion Routing network was deployed for some weeks,
-the only long-running and publicly accessible
-implementation of the original design was a fragile proof-of-concept
-that ran on a single machine. Even this simple deployment processed tens
-of thousands of connections daily from thousands of users worldwide. But
-many critical design and deployment issues were never resolved, and the
-design has not been updated in several years. Here we describe Tor, a
-protocol for asynchronous, loosely federated onion routers that provides
-the following improvements over the old Onion Routing design:
+build a \emph{virtual circuit}, in which each node (or ``onion router'')
+in the path knows its predecessor and successor, but no other nodes in
+the circuit.  Traffic flowing down the circuit is sent in fixed-size
+\emph{cells}, which are unwrapped by a symmetric key at each node
+(like the layers of an onion) and relayed downstream. The original
+Onion Routing project published several design and analysis papers
+\cite{or-ih96,or-jsac98,or-discex00,or-pet00}. While a wide area Onion
+Routing network was deployed for some weeks, the only long-running and
+publicly accessible implementation of the original design was a fragile
+proof-of-concept that ran on a single machine. Even this simple deployment
+processed tens of thousands of connections daily from thousands of users
+worldwide. But many critical design and deployment issues were never
+resolved, and the design has not been updated in several years. Here
+we describe Tor, a protocol for asynchronous, loosely federated onion
+routers that provides the following improvements over the old Onion
+Routing design:
 
 \begin{tightlist}
 
 \item \textbf{Perfect forward secrecy:} The original Onion Routing
-design was vulnerable to a single hostile node recording traffic and later
-compromising successive nodes in the circuit and forcing them to
-decrypt it. 
-Rather than using a single onion to lay each circuit,
-Tor now uses an incremental or \emph{telescoping}
-path-building design, where the initiator negotiates session keys with
-each successive hop in the circuit.  Once these keys are deleted,
-subsequently compromised nodes cannot decrypt old traffic.
-As a side benefit, onion replay detection is no longer
-necessary, and the process of building circuits is more reliable, since
-the initiator knows when a hop fails and can then try extending to a new node.
+design was vulnerable to a single hostile node recording traffic and
+later compromising successive nodes in the circuit and forcing them
+to decrypt it.  Rather than using a single onion to lay each circuit,
+Tor now uses an incremental or \emph{telescoping} path-building design,
+where the initiator negotiates session keys with each successive hop in
+the circuit.  Once these keys are deleted, subsequently compromised nodes
+cannot decrypt old traffic.  As a side benefit, onion replay detection
+is no longer necessary, and the process of building circuits is more
+reliable, since the initiator knows when a hop fails and can then try
+extending to a new node.
 
 \item \textbf{Separation of protocol cleaning from anonymity:}
 The original Onion Routing design required a separate ``application
-proxy'' for each
-supported application protocol---most
-of which were never written, so many applications were never supported.
-Tor uses the standard and near-ubiquitous SOCKS
-\cite{socks4} proxy interface, allowing us to support most TCP-based
-programs without modification.  This design change allows Tor to
-use the filtering features of privacy-enhancing
-application-level proxies such as Privoxy \cite{privoxy} without having to
-incorporate those features itself.
+proxy'' for each supported application protocol---most of which were
+never written, so many applications were never supported.  Tor uses the
+standard and near-ubiquitous SOCKS \cite{socks4} proxy interface, allowing
+us to support most TCP-based programs without modification.  This design
+change allows Tor to use the filtering features of privacy-enhancing
+application-level proxies such as Privoxy \cite{privoxy} without having
+to incorporate those features itself.
 
-\item \textbf{Many TCP streams can share one circuit:} The original
-Onion Routing design built a separate circuit for each application-level
-request.
-This hurt performance by requiring multiple public key operations for
-every request, and also presented
+\item \textbf{Many TCP streams can share one circuit:} The
+original Onion Routing design built a separate circuit for each
+application-level request.  This hurt performance by requiring
+multiple public key operations for every request, and also presented
 a threat to anonymity from building so many different circuits; see
-Section~\ref{sec:maintaining-anonymity}.
-Tor multiplexes multiple TCP streams along each virtual
-circuit, to improve efficiency and anonymity.
+Section~\ref{sec:maintaining-anonymity}.  Tor multiplexes multiple TCP
+streams along each virtual circuit, to improve efficiency and anonymity.
 
 \item \textbf{Leaky-pipe circuit topology:} Through in-band signalling
 within the circuit, Tor initiators can direct traffic to nodes partway
@@ -138,101 +131,91 @@ application, allows traffic to exit the circuit from the middle---thus
 frustrating traffic shape and volume attacks based on observing the end
 of the circuit.
 
-\item \textbf{No mixing, padding, or traffic shaping:} The original
-Onion Routing design called for batching and reordering the cells arriving
-from each circuit. It also included padding between onion routers and,
-in a later design, between onion
-proxies (that is, users) and onion routers \cite{or-ih96,or-jsac98}.
-The trade-off between padding protection and cost was discussed, but no
-general padding scheme was suggested. In
+\item \textbf{No mixing, padding, or traffic shaping:} The original Onion
+Routing design called for batching and reordering the cells arriving from
+each circuit. It also included padding between onion routers and, in a
+later design, between onion proxies (that is, users) and onion routers
+\cite{or-ih96,or-jsac98}.  The trade-off between padding protection
+and cost was discussed, but no general padding scheme was suggested. In
 \cite{or-pet00} it was theorized \emph{traffic shaping} would generally
-be used, but details were not provided.
-Recent research \cite{econymics} and deployment
-experience \cite{freedom21-security} suggest that this level of resource
-use is not practical or economical; and even full link padding is still
-vulnerable \cite{defensive-dropping}. Thus, until we have a proven and
-convenient design for traffic shaping or low-latency mixing that
-will improve anonymity against a realistic adversary, we leave these
-strategies out.
+be used, but details were not provided.  Recent research \cite{econymics}
+and deployment experience \cite{freedom21-security} suggest that this
+level of resource use is not practical or economical; and even full link
+padding is still vulnerable \cite{defensive-dropping}. Thus, until we
+have a proven and convenient design for traffic shaping or low-latency
+mixing that will improve anonymity against a realistic adversary, we
+leave these strategies out.
 
 \item \textbf{Congestion control:} Earlier anonymity designs do not
-address traffic bottlenecks. Unfortunately, typical approaches to load
-balancing and flow control in overlay networks involve inter-node control
-communication and global views of traffic. Tor's decentralized congestion
-control uses end-to-end acks to maintain reasonable anonymity while
-allowing nodes
-at the edges of the network to detect congestion or flooding attacks
-and send less data until the congestion subsides.
+address traffic bottlenecks. Unfortunately, typical approaches to
+load balancing and flow control in overlay networks involve inter-node
+control communication and global views of traffic. Tor's decentralized
+congestion control uses end-to-end acks to maintain reasonable anonymity
+while allowing nodes at the edges of the network to detect congestion
+or flooding attacks and send less data until the congestion subsides.
 
 \item \textbf{Directory servers:} The original Onion Routing design
-planned to flood link-state information through the network---an
-approach that can be unreliable and
-open to partitioning attacks or outright deception. Tor takes a simplified
-view toward distributing link-state information. Certain more trusted
-onion routers also act as directory servers: they provide signed
-\emph{directories} that describe known routers and their availability.
-Users periodically download these directories via HTTP.
+planned to flood link-state information through the network---an approach
+that can be unreliable and open to partitioning attacks or outright
+deception. Tor takes a simplified view toward distributing link-state
+information. Certain more trusted onion routers also act as directory
+servers: they provide signed \emph{directories} that describe known
+routers and their availability.  Users periodically download these
+directories via HTTP.
+
+\item \textbf{Variable exit policies:} Tor provides a consistent mechanism
+for each node to specify and advertise a policy describing the hosts
+and ports to which it will connect. These exit policies are critical
+in a volunteer-based distributed infrastructure, because each operator
+is comfortable with allowing different types of traffic to exit the Tor
+network from his node.
 
 \item \textbf{End-to-end integrity checking:} The original Onion Routing
-design did no integrity checking on data. Any onion router on the circuit
-could change the contents of data cells as they passed by---for example, to
-alter a
-connection request on the fly so it would connect to a different
-webserver, or to
-`tag' encrypted traffic and look for corresponding corrupted traffic
-at the network
-edges \cite{minion-design}.  Tor hampers these attacks by checking data
-integrity before it leaves the network.
+design did no integrity checking on data. Any onion router on the
+circuit could change the contents of data cells as they passed by---for
+example, to alter a connection request on the fly so it would connect
+to a different webserver, or to `tag' encrypted traffic and look for
+corresponding corrupted traffic at the network edges \cite{minion-design}.
+Tor hampers these attacks by checking data integrity before it leaves
+the network.
 
-\item \textbf{Improved robustness to failed nodes:} A failed node in
-the old design
-meant that circuit-building failed, but thanks to Tor's step-by-step
-circuit building, users can notice failed
-nodes while building circuits and route around them.  Additionally,
-liveness information from directories allows users to avoid
-unreliable nodes in the first place.
-
-\item \textbf{Variable exit policies:} Tor provides a consistent
-mechanism for
-each node to specify and advertise a policy describing the hosts and
-ports to which it will connect. These exit policies
-are critical in a volunteer-based distributed infrastructure, because
-each operator is comfortable with allowing different types of traffic
-to exit the Tor network from his node.
-
-\item \textbf{Implementable in user-space:} Unlike other anonymity systems
-like Freedom \cite{freedom2-arch}, Tor only attempts to anonymize TCP
-streams. Thus it does not require patches to an operating system's network
-stack (or built-in support) to operate.  Although this approach is less
-flexible, it has proven valuable to Tor's portability and deployability.
+\item \textbf{Improved robustness to failed nodes:} A failed node
+in the old design meant that circuit-building failed, but thanks to
+Tor's step-by-step circuit building, users can notice failed nodes
+while building circuits and route around them. Additionally, liveness
+information from directories allows users to avoid unreliable nodes in
+the first place.
 
 \item \textbf{Rendezvous points and location-protected servers:}
 Tor provides an integrated mechanism for responder anonymity via
 location-protected servers.  Previous Onion Routing designs included
 long-lived ``reply onions'' that could be used to build virtual circuits
 to a hidden server, but these reply onions did not provide forward
-security, and would become useless if any node in
-the path went down or rotated its keys.
-In Tor, clients negotiate {\it
-rendezvous points} to connect with hidden servers; reply onions are no
-longer required.
+security, and would become useless if any node in the path went down
+or rotated its keys.  In Tor, clients negotiate {\it rendezvous points}
+to connect with hidden servers; reply onions are no longer required.
 \end{tightlist}
 
+Unlike anonymity systems like Freedom \cite{freedom2-arch}, Tor only
+attempts to anonymize TCP streams. Because it does not require patches
+(or built-in support) in an operating system's network stack, this
+approach has proven valuable to Tor's portability and deployability.
+
 We have implemented most of the above features. Our source code is
-available under a free license, and we believe it to be
-unencumbered by patents. We have
-recently begun deploying a widespread alpha network to test
-the design in practice, to get more experience with usability and users,
-and to provide a research platform for experimenting with new ideas.
+available under a free license, and we believe it to be unencumbered by
+patents. We have recently begun deploying a widespread alpha network
+to test the design in practice, to get more experience with usability
+and users, and to provide a research platform for experimenting with
+new ideas.
 
 We review previous work in Section~\ref{sec:related-work}, describe
 our goals and assumptions in Section~\ref{sec:assumptions},
 and then address the above list of improvements in
-Sections~\ref{sec:design}-\ref{sec:rendezvous}. We
-summarize in Section~\ref{sec:analysis}
-how our design stands up to known attacks, and conclude with a list of
-open problems in Section~\ref{sec:maintaining-anonymity} and future
-work for the Onion Routing project in Section~\ref{sec:conclusion}.
+Sections~\ref{sec:design}-\ref{sec:rendezvous}. We summarize
+in Section~\ref{sec:analysis} how our design stands up to
+known attacks, and conclude with a list of open problems in
+Section~\ref{sec:maintaining-anonymity} and future work for the Onion
+Routing project in Section~\ref{sec:conclusion}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1241,13 +1224,15 @@ with a public ``introduction'' key. The hash of this public key
 identifies a unique service, and (since Bob is required to sign his
 messages) prevents anybody else from usurping Bob's introduction point
 in the future. Bob uses the same public key when establishing the other
-introduction points for that service. The message that Alice gives
+introduction points for that service. Bob periodically refreshes his
+entry in the DHT.
+
+The message that Alice gives
 the introduction point includes a hash of Bob's public key to identify
 the service, along with an optional initial authentication token (the
 introduction point can do prescreening, for example to block replays). Her
 message to Bob may include an end-to-end authentication token so Bob
 can choose whether to respond.
-
 The authentication tokens can be used to provide selective access:
 important users get tokens to ensure uninterrupted access to the
 service. During normal situations, Bob's service might simply be offered
