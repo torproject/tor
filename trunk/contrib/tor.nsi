@@ -1,0 +1,163 @@
+;tor.nsi - A basic win32 installer for Tor
+; Originally written by J Doe.
+; Copyright 2004 Roger Dingledine, Nick Mathewson
+; See LICENSE for licencing information
+;-----------------------------------------
+;
+;NSIS will be needed to create an installer from this script:
+;http://nsis.sourceforge.net/
+
+!include "MUI.nsh"
+
+!define VERSION "0.0.9pre4"
+!define INSTALLER "tor-${VERSION}-win32.exe"
+!define WEBSITE "http://freehaven.net/tor/"
+
+!define LICENSE "..\..\License"
+;BIN is where it expects to find tor.exe, libeay32.dll, ssleay32.dll
+!define BIN "..\..\bin"
+
+SetCompressor lzma
+;SetCompressor zlib
+OutFile ${INSTALLER}
+InstallDir $PROGRAMFILES\Tor
+SetOverWrite ifnewer
+
+Name "Tor"
+Caption "Tor ${VERSION} Setup"
+BrandingText "The Onion Router"
+CRCCheck on
+
+;Use upx on the installer header to shrink the size.
+!packhdr header.dat "upx --best header.dat"
+
+!define MUI_WELCOMEPAGE_TITLE "Welcome to the Tor ${VERSION} Setup Wizard"
+!define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of Tor ${VERSION}.\r\n\r\nIf you have previously installed Tor and it is currently running, please exit Tor first before continuing this installation.\r\n\r\n$_CLICK"
+!define MUI_ABORTWARNING
+!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\win-install.ico"
+!define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\win-uninstall.ico"
+!define MUI_HEADERIMAGE_BITMAP "${NSISDIR}\Contrib\Graphics\Header\win.bmp"
+!define MUI_HEADERIMAGE
+!define MUI_FINISHPAGE_RUN "$INSTDIR\tor.exe"
+!define MUI_FINISHPAGE_LINK "Visit the Tor website for the latest updates."
+!define MUI_FINISHPAGE_LINK_LOCATION ${WEBSITE}
+
+!insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_LICENSE "${LICENSE}"
+!insertmacro MUI_PAGE_COMPONENTS
+!insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_PAGE_FINISH
+!insertmacro MUI_UNPAGE_WELCOME
+!insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_UNPAGE_FINISH
+!insertmacro MUI_LANGUAGE "English"
+
+Var configdir
+Var configfile
+
+;Sections
+;--------
+
+Section "Tor" Tor
+;Files that have to be installed for tor to run and that the user
+;cannot choose not to install
+   SectionIn RO
+   SetOutPath $INSTDIR
+   File "${BIN}\tor.exe"
+   WriteIniStr "$INSTDIR\Tor Website.url" "InternetShortcut" "URL" ${WEBSITE}
+
+   StrCpy $configfile "torrc"
+   StrCpy $configdir $APPDATA\Tor
+;   ;If $APPDATA isn't valid here (Early win95 releases with no updated
+;   ; shfolder.dll) then we put it in the program directory instead.
+;   StrCmp $APPDATA "" "" +2
+;      StrCpy $configdir $INSTDIR
+   SetOutPath $configdir
+   ;If there's already a torrc config file, ask if they want to
+   ;overwrite it with the new one.
+   IfFileExists "$configdir\torrc" "" +5
+      MessageBox MB_ICONQUESTION|MB_YESNO "You already have a Tor config file.$\r$\nDo you want to overwrite it with the default sample config file?" IDNO +3
+      Delete $configdir\torrc
+      Goto +2
+         StrCpy $configfile "torrc.sample"
+   File /oname=$configfile "..\config\torrc.sample.in"
+SectionEnd
+
+Section "OpenSSL 0.9.7d" OpenSSL
+   SetOutPath $INSTDIR
+   File "${BIN}\libeay32.dll"
+   File "${BIN}\ssleay32.dll"
+SectionEnd
+
+Section "Documents" Docs
+   SetOutPath "$INSTDIR\Documents"
+   File "..\..\doc\*.*"
+SectionEnd
+
+SubSection /e "Shortcuts" Shortcuts
+
+Section "Start Menu" StartMenu
+   SetOutPath $INSTDIR
+   IfFileExists "$SMPROGRAMS\Tor\*.*" "" +2
+      RMDir /r "$SMPROGRAMS\Tor"
+   CreateDirectory "$SMPROGRAMS\Tor"
+   CreateShortCut "$SMPROGRAMS\Tor\Tor.lnk" "$INSTDIR\tor.exe"
+   CreateShortCut "$SMPROGRAMS\Tor\Torrc.lnk" "Notepad.exe" "$configdir\torrc"
+   CreateShortCut "$SMPROGRAMS\Tor\Tor Website.lnk" "$INSTDIR\Tor Website.url"
+   CreateShortCut "$SMPROGRAMS\Tor\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+   IfFileExists "$INSTDIR\Documents\*.*" "" +4
+      CreateDirectory "$SMPROGRAMS\Tor\Documents"
+      CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Documentation.lnk" "$INSTDIR\Documents\tor-doc.html"
+      CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Specification.lnk" "$INSTDIR\Documents\tor-spec.txt"
+SectionEnd
+
+Section "Desktop" Desktop
+   SetOutPath $INSTDIR
+   CreateShortCut "$DESKTOP\Tor.lnk" "$INSTDIR\tor.exe"
+SectionEnd
+
+Section /o "Run at startup" Startup
+   SetOutPath $INSTDIR
+   CreateShortCut "$SMSTARTUP\Tor.lnk" "$INSTDIR\tor.exe" "" "" 0 SW_SHOWMINIMIZED
+SectionEnd
+
+SubSectionEnd
+
+Section "Uninstall"
+   Delete "$DESKTOP\Tor.lnk"
+   Delete "$INSTDIR\libeay32.dll"
+   Delete "$INSTDIR\ssleay32.dll"
+   Delete "$INSTDIR\tor.exe"
+   Delete "$INSTDIR\Tor Website.url"
+   Delete "$INSTDIR\torrc"
+   Delete "$INSTDIR\torrc.sample"
+   StrCmp $configdir $INSTDIR +2 ""
+      RMDir /r $configdir
+   Delete "$INSTDIR\Uninstall.exe"
+   RMDir /r "$INSTDIR\Documents"
+   RMDir $INSTDIR
+   RMDir /r "$SMPROGRAMS\Tor"
+   Delete "$SMSTARTUP\Tor.lnk"
+   DeleteRegKey HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Tor"
+SectionEnd
+
+Section -End
+    WriteUninstaller "$INSTDIR\Uninstall.exe"
+    ;The registry entries simply add the Tor uninstaller to the Windows
+    ;uninstall list.
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Tor" "DisplayName" "Tor (remove only)"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Tor" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+SectionEnd
+
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+  !insertmacro MUI_DESCRIPTION_TEXT ${Tor} "The core executable and config files needed for Tor to run."
+  !insertmacro MUI_DESCRIPTION_TEXT ${OpenSSL} "OpenSSL libraries required by Tor."
+  !insertmacro MUI_DESCRIPTION_TEXT ${Docs} "Documentation about Tor."
+  !insertmacro MUI_DESCRIPTION_TEXT ${ShortCuts} "Shortcuts to easily start Tor"
+  !insertmacro MUI_DESCRIPTION_TEXT ${StartMenu} "Shortcuts to access Tor and it's documentation from the Start Menu"
+  !insertmacro MUI_DESCRIPTION_TEXT ${Desktop} "A shortcut to start Tor from the desktop"
+  !insertmacro MUI_DESCRIPTION_TEXT ${Startup} "Launches Tor automatically at startup in a minimized window"
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
+
