@@ -13,7 +13,7 @@ CoinWeight 0.01
 APPort 9050
 
 # Maximum number of connections.
-MaxConn 100
+MaxConn 900
 
 Role 8
 # Which traffic shaping policy to use.
