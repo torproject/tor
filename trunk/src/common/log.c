@@ -349,6 +349,7 @@ void close_temp_logs(void)
   for (p = &logfiles; *p; ) {
     if ((*p)->is_temporary) {
       lf = *p;
+      /* we use *p here to handle the edge case of the head of the list */
       *p = (*p)->next;
       close_log(lf);
       tor_free(lf->filename);
