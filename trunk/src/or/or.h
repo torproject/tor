@@ -864,7 +864,6 @@ void assert_buf_ok(buf_t *buf);
 extern char *circuit_state_to_string[];
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 void circuit_close_all_marked(void);
-void circuit_free_cpath(crypt_path_t *cpath);
 int _circuit_mark_for_close(circuit_t *circ);
 
 #define circuit_mark_for_close(c)                                       \
@@ -1069,8 +1068,10 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
 
 /********************************* directory.c ***************************/
 
-void directory_initiate_command(routerinfo_t *router, int purpose,
-                                const char *payload, int payload_len);
+void directory_post_to_dirservers(uint8_t purpose, const char *payload,
+                                  int payload_len);
+void directory_get_from_dirserver(uint8_t purpose, const char *payload,
+                                  int payload_len);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
@@ -1190,7 +1191,6 @@ void rend_client_desc_fetched(char *query, int success);
 char *rend_client_get_random_intro(char *query);
 int rend_parse_rendezvous_address(char *address);
 
-int rend_client_send_establish_rendezvous(circuit_t *circ);
 int rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc);
 
 /********************************* rendcommon.c ***************************/
@@ -1265,7 +1265,6 @@ void rotate_onion_key(void);
 
 void router_retry_connections(void);
 void router_upload_dir_desc_to_dirservers(void);
-void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload_len);
 int router_compare_to_my_exit_policy(connection_t *conn);
 routerinfo_t *router_get_my_routerinfo(void);
 const char *router_get_my_descriptor(void);

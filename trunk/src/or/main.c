@@ -330,10 +330,6 @@ void directory_has_arrived(void) {
 
   log_fn(LOG_INFO, "A directory has arrived.");
 
-  /* just for testing */
-//  directory_initiate_command(router_pick_directory_server(),
-//                             DIR_PURPOSE_FETCH_RENDDESC, "foo", 3);
-
   has_fetched_directory=1;
 
   if(options.ORPort) { /* connect to them all */
@@ -445,8 +441,7 @@ static void run_scheduled_events(time_t now) {
     if(!options.DirPort) {
       /* NOTE directory servers do not currently fetch directories.
        * Hope this doesn't bite us later. */
-      directory_initiate_command(router_pick_directory_server(),
-                                 DIR_PURPOSE_FETCH_DIR, NULL, 0);
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
     } else {
       /* We're a directory; dump any old descriptors. */
       dirserv_remove_old_servers();
@@ -641,8 +636,7 @@ static int do_hup(void) {
     rend_services_introduce();
   } else {
     /* fetch a new directory */
-    directory_initiate_command(router_pick_directory_server(),
-                               DIR_PURPOSE_FETCH_DIR, NULL, 0);
+    directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
   }
   if(options.ORPort) {
     router_rebuild_descriptor();

@@ -744,7 +744,7 @@ upload_service_descriptor(rend_service_t *service)
   }
 
   /* Post it to the dirservers */
-  router_post_to_dirservers(DIR_PURPOSE_UPLOAD_RENDDESC, desc, desc_len);
+  directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_RENDDESC, desc, desc_len);
   tor_free(desc);
 
   service->desc_is_dirty = 0;
