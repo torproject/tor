@@ -11,10 +11,14 @@ TORBIN=@BINDIR@/tor
 TORPID=@LOCALSTATEDIR@/run/tor/tor.pid
 TORLOG=@LOCALSTATEDIR@/log/tor/tor.log
 TORCONF=@CONFDIR@/torrc
-if [ "x$TORUSER" -eq "x" ]; then
-    TORARGS="--pidfile $TORPID --logfile $TORLOG --runasdaemon 1"
-else
-    TORARGS="--pidfile $TORPID --logfile $TORLOG --runasdaemon 1 --user $TORUSER --group $TORGROUP"
+# Strictly speaking, we don't need to su if we have --user and --group.
+# "Belt and suspenders," says jbash.
+TORARGS="--pidfile $TORPID --logfile $TORLOG --runasdaemon 1"
+if [ "x$TORUSER" != "x" ]; then
+    TORARGS="$TORARGS --user $TORUSER"
+fi
+if [ "x$TORGROUP" != "x" ]; then
+    TORARGS="$TORARGS --group $TORGROUP"
 fi
 RETVAL=0
 
@@ -27,7 +31,7 @@ case "$1" in
         RETVAL=1
     else 
         echo -n "Starting tor..."
-        if  [ "x$TORUSER" -eq "x" ]; then
+        if  [ "x$TORUSER" = "x" ]; then
             $TORBIN -f $TORCONF $TORARGS
         else 
             /bin/su -c "$TORBIN -f $TORCONF $TORARGS" $TORUSER
