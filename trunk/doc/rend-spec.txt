@@ -128,17 +128,18 @@ Tor Rendezvous Spec
    introduction.  To establish the introduction, Bob sends a
    RELAY_ESTABLISH_INTRO cell, containing:
 
-        KL   Key length                             [2 octets
+        KL   Key length                             [2 octets]
         PK   Bob's public key                       [KL octets]
         HS   Hash of session info                   [20 octets]
         SIG  Signature of above information         [KL octets]
 
    To prevent replay attacks, the HS field contains a SHA-1 hash based on the
-   shared secret g^xy between Bob's OP and the introduction point, as
+   shared secret KH between Bob's OP and the introduction point, as
    follows:
-       HS = H(g^xy | "INTRODUCE")
+       HS = H(KH | "INTRODUCE")
    That is:
-       HS = H(g^xy | [49 4E 54 52 4F 44 55 43 45])
+       HS = H(KH | [49 4E 54 52 4F 44 55 43 45])
+   (KH, as specified in tor-spec.txt, is H(g^xy | [00]) .)
 
    Upon receiving such a cell, the OR first checks that the signature is
    correct with the included public key.  If so, it checks whether HS is
@@ -268,7 +269,7 @@ Tor Rendezvous Spec
    point, and sends a RELAY_RENDEZVOUS1 cell along this circuit, containing:
        RC       Rendezvous cookie  [20 octets]
        g^y      Diffie-Hellman     [128 octets]
-       H(KH)    Handshake digest   [20 octets]
+       KH       Handshake digest   [20 octets]
 
    (Bob's OP MUST NOT use this circuit for any other purpose.)
 
@@ -276,7 +277,7 @@ Tor Rendezvous Spec
    corresponding circuit in a RELAY_RENDEZVOUS2 cell, containing:
 
        g^y      Diffie-Hellman     [128 octets]
-       H(KH)    Handshake digest   [20 octets]
+       KH       Handshake digest   [20 octets]
 
    (If the RP does not recognize the RC, it discards the cell and
    tears down the circuit.)
