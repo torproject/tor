@@ -209,6 +209,27 @@ _connection_mark_for_close(connection_t *conn, char reason)
   return retval;
 }
 
+void connection_expire_held_open(void)
+{
+  connection_t **carray, *conn;
+  int n, i;
+  time_t now;
+
+  now = time(NULL);
+
+  get_connection_array(&carray, &n);
+  for (i = 0; i < n; ++i) {
+    conn = carray[i];
+    /* If we've been holding the connection open, but we haven't written
+     * for 15 seconds...
+     */
+    if (conn->marked_for_close && conn->hold_open_until_flushed &&
+        now - conn->timestamp_lastwritten >= 15) {
+      conn->hold_open_until_flushed = 0;
+    }
+  }
+}
+
 int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
   struct sockaddr_in bindaddr; /* where to bind */
   struct hostent *rent;
