@@ -26,11 +26,16 @@ If this doesn't work for you:
 Once you've got it compiled:
 
   It's a bit hard to figure out what to do with the binaries. If you
-  want to set up your own test network, go into src/config/ and look
-  at the routers.or file. Also in that directory are public and private
-  keys for various nodes (*-public, *-private) and configuration files
-  for the nodes (*-orrc). You can generate your own keypairs with the
-  orkeygen program, or use the provided ones for testing.
+  want to just run a local onion proxy, go into src/config and look at
+  the oprc file. You can run an onion proxy by "../or/or -f oprc". In
+  another window, run something like "../httpap/httpap -f httpaprc -p
+  9051". See below for how to use it.
+
+  If you want to set up your own test network, go into src/config/ and
+  look at the routers.or file. Also in that directory are public and
+  private keys for various nodes (*-public, *-private) and configuration
+  files for the nodes (*-orrc). You can generate your own keypairs with
+  the orkeygen program, or use the provided ones for testing.
 
   Once you've got your config files ready, you're ready to start up your
   network. I recommend using a screen session (man screen), or some
@@ -38,6 +43,8 @@ Once you've got it compiled:
   onion router, go into the src/config directory, and run something like
   "../or/or -f moria2-orrc". In yet another window, I run something like
   "../httpap/httpap -f httpaprc -p 9051". 
+
+How to use it:
 
   From here, you can point your browser/etc at localhost:9051 and treat
   it as a web proxy. As a first test, you might telnet to it and enter
