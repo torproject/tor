@@ -10,24 +10,14 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-0.0.9pre4:
-   o Don't use FascistFirewall if you're going via Tor, or if
-     you're going via HttpProxy.
-   o make RecommendedVersions a CONFIG_TYPE_LINELIST option
-   o node 'groups' that are known to be in the same zone of control.
-   o Nodes can list their coadministrated nodes.
-   o If A lists B, it only counts if B also lists A
-   o Users can list other coadministrated nodes if they like.
-   o Never choose two coadministrated nodes in the same circuit.
-   o let tor servers use proxies for port 80 exits
-   o Use generic port redirector for IP/bits:Port->IP:Port .
-   o Make use of them when we're doing exit connections.
-   X We should set things in options to NULL, not rely on memset(...0)
-     being equivalent.
-   o We should check for memset(0) setting things to NULL with
-     autoconf, and then rely on it in the code.
-
 0.0.9pre5/6: ("Launch" version)
+   - "tor --list-fingerprint" to print fingerprint and exit.
+   - Oct 20 16:45:10.237 [warn] parse_addr_port(): Port '0' out of range
+   o add and document DirPolicy config option
+   - clean up parse_*_policy code
+     - when you hup, they're not getting re-parsed
+     - stop calling a *_policy an exit_policy_t
+   - stop calling running-routers running-routers?
    o Replace running-routers with a router-status line that can be used
      without a list of router descriptors.
    o Add a log handler that sends stuff to syslog.
@@ -51,7 +41,7 @@ N  - RPMs
 N  - Windows installer
    - Review website; make important info more prominent.
 
-0.0.9pre6/7:
+Beyond 0.0.9:
    - Implement If-Modified-Since for directories.
 N  - Handle rendezvousing with unverified nodes.
      - Specify: Stick rendezvous point's key in INTRODUCE cell.
@@ -81,7 +71,6 @@ R  - learn from ben about his openssl-reinitialization-trick to
    - Once we have a trusted directory on port 80, stop falling back to
      forbidden ports when fascistfirewall blocks all good dirservers.
 
-   0.0.9 and beyond:
    o fix sprintf's to snprintf's?
    . Make intro points and rendezvous points accept $KEYID in addition
      to nicknames.
@@ -95,23 +84,21 @@ R  - learn from ben about his openssl-reinitialization-trick to
      option prefixes work.
    - Rate-limit OR and directory connections overall and per-IP and
      maybe per subnet.
-   - put expiry date on onion-key, so people don't keep trying
+   D put expiry date on onion-key, so people don't keep trying
      old ones that they could know are expired?
      * Leave on todo list, see if pre3 onion fixes helped enough.
-   - should the running-routers list put unverified routers at the
+   D should the running-routers list put unverified routers at the
      end?
      * Cosmetic, don't do it yet.
-   - make advertised_server_mode() ORs fetch dirs more often.
+   D make advertised_server_mode() ORs fetch dirs more often.
      * not necessary yet.
-   - Add a notion of nickname->Pubkey binding that's not 'verification'
+   D Add a notion of nickname->Pubkey binding that's not 'verification'
      * eventually, only when needed
-   - ORs use uniquer default nicknames
+   D ORs use uniquer default nicknames
      * Don't worry about this for now
-   - Handle full buffers without totally borking
+   D Handle full buffers without totally borking
      * do this eventually, no rush.
-   - do resolve before trying to attach the stream
-     * don't do this for now.
-   - if destination IP is running a tor node, extend a circuit there
+   D if destination IP is running a tor node, extend a circuit there
      before sending begin.
      * don't do this for now. figure out how enclaves work. but do
        enclaves soon.
@@ -137,7 +124,6 @@ R  - learn from ben about his openssl-reinitialization-trick to
      ? if you don't need a trusted one, choose from the routerinfo
        list if you have one, else from the trusteddir list.
        * roger will do the above
-   - add a listener for a ui, and a basic GUI
    - Have clients and dirservers preserve reputation info over
      reboots.
      * continue not doing until we have something we need to preserve
@@ -185,8 +171,8 @@ N    . Windows port
        * put a stub on the wiki
      o tutorial: how to set up your own tor network
        o (need to not hardcode dirservers file in config.c)
-       - Make tutorial reflect this.
-     - port forwarding howto for ipchains, etc
+       o Make tutorial reflect this.
+     . port forwarding howto for ipchains, etc
        * roger add to wiki of requests
      . correct, update, polish spec
      - document the exposed function api?
