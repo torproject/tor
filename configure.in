@@ -163,6 +163,19 @@ AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(__int64)
 
+# Now, let's see about alignment requirements
+AC_CACHE_CHECK([whether unaligned int access is allowed], tor_cv_unaligned_ok,
+[AC_RUN_IFELSE([AC_LANG_SOURCE(
+[[int main () { char s[] = "A\x00\x00\x00\x00\x00\x00\x00";
+return *(int*)(&s[1]); }]])],
+       [tor_cv_unaligned_ok=yes],
+       [tor_cv_unaligned_ok=no],
+       [tor_cv_unaligned_ok=cross])])
+if test tor_cv_unaligned_ok = yes; then
+  AC_DEFINE([UNALIGNED_INT_ACCESS_OK], 1,
+            [Define to 1 iff unaligned int access is allowed])
+fi
+
 # $prefix stores the value of the --prefix command line option, or
 # NONE if the option wasn't set.  In the case that it wasn't set, make
 # it be the default, so that we can use it to expand directories now.
