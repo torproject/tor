@@ -4,6 +4,8 @@
 
 #include "or.h"
 
+extern or_options_t options; /* command-line and config-file options */
+
 static int the_directory_is_dirty = 1;
 static char *the_directory = NULL;
 static int the_directory_len = -1;
@@ -155,7 +157,7 @@ dirserv_add_descriptor(const char **desc)
   routerinfo_t *ri = NULL;
   int i;
   char *start, *end;
-  char *desc_tmp = NULL;
+  char *desc_tmp = NULL, *cp;
   size_t desc_len;
 
   start = strstr(*desc, "router ");
@@ -170,12 +172,12 @@ dirserv_add_descriptor(const char **desc)
     end = start+strlen(start);
   }
   desc_len = end-start;
-  desc_tmp = tor_malloc(desc_len+1);
+  cp = desc_tmp = tor_malloc(desc_len+1);
   strncpy(desc_tmp, start, desc_len);
   desc_tmp[desc_len]='\0';
 
   /* Check: is the descriptor syntactically valid? */
-  ri = router_get_entry_from_string(&desc_tmp);
+  ri = router_get_entry_from_string(&cp);
   if (!ri) {
     log(LOG_WARNING, "Couldn't parse descriptor");
     goto err;
@@ -198,6 +200,7 @@ dirserv_add_descriptor(const char **desc)
     /* if so, decide whether to update it. */
     if ((*desc_ent_ptr)->published > ri->published_on) {
       /* We already have a newer descriptor */
+      log_fn(LOG_INFO,"We already have a newer desc for nickname %s. Ignoring.",ri->nickname);
       goto err;
     }
     /* We don't have a newer one; we'll update this one. */
@@ -278,7 +281,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
   for (i = 0; i < n_descriptors; ++i) {
     strncat(cp, descriptor_list[i]->descriptor, descriptor_list[i]->desc_len);
     cp += descriptor_list[i]->desc_len;
-    assert(!cp);
+    assert(!*cp);
   }
   /* These multiple strlen calls are inefficient, but dwarfed by the RSA
      signature.
@@ -322,6 +325,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
 size_t dirserv_get_directory(const char **directory)
 {
   char *new_directory;
+  char filename[512];
   if (the_directory_is_dirty) {
     new_directory = tor_malloc(MAX_DIR_SIZE);
     if (dirserv_dump_directory_to_string(new_directory, MAX_DIR_SIZE,
@@ -341,11 +345,16 @@ size_t dirserv_get_directory(const char **directory)
      * router lists.  This does more signature checking than is strictly
      * necessary, but safe is better than sorry. */
     new_directory = strdup(the_directory);
+    /* use a new copy of the dir, since get_dir_from_string scribbles on it */
     if (router_get_dir_from_string(new_directory, get_identity_key())) {
       log_fn(LOG_ERR, "We just generated a directory we can't parse. Dying.");
       exit(0);
     }
     free(new_directory);
+    sprintf(filename,"%s/cached-directory", options.DataDirectory);
+    if(write_str_to_file(filename,the_directory) < 0) {
+      log_fn(LOG_WARNING, "Couldn't write cached directory to disk. Ignoring.");
+    }
   } else {
     log(LOG_INFO,"Directory still clean, reusing.");
   }

@@ -502,7 +502,8 @@ static int init_keys(void)
   crypto_pk_env_t *prkey;
 
   /* OP's don't need keys.  Just initialize the TLS context.*/
-  if (!options.OnionRouter && !options.DirPort) {
+  if (!options.OnionRouter) {
+    assert(!options.DirPort);
     if (tor_tls_context_new(NULL, 0, NULL)<0) {
       log_fn(LOG_ERR, "Error creating TLS context for OP.");
       return -1;
@@ -514,32 +515,31 @@ static int init_keys(void)
     log_fn(LOG_ERR, "DataDirectory is too long.");
     return -1;
   }
-  strcpy(keydir, options.DataDirectory);
-  if (check_private_dir(keydir, 1)) {
+  if (check_private_dir(options.DataDirectory, 1)) {
     return -1;
   }
-  strcat(keydir, "/keys");
+  sprintf(keydir,"%s/keys",options.DataDirectory);
   if (check_private_dir(keydir, 1)) {
     return -1;
   }
   cp = keydir + strlen(keydir); /* End of string. */
-  assert(!*cp);
   
   /* 1. Read identity key. Make it if none is found. */
-  strcat(keydir, "/identity.key");
+  strcpy(cp, "/identity.key");
+  log_fn(LOG_INFO,"Reading/making identity key %s...",keydir);
   prkey = init_key_from_file(keydir);
   if (!prkey) return -1;
   set_identity_key(prkey);
   /* 2. Read onion key.  Make it if none is found. */
-  *cp = '\0';
-  strcat(keydir, "/onion.key");
+  strcpy(cp, "/onion.key");
+  log_fn(LOG_INFO,"Reading/making onion key %s...",keydir);
   prkey = init_key_from_file(keydir);
   if (!prkey) return -1;
   set_onion_key(prkey);
   
   /* 3. Initialize link key and TLS context. */
-  *cp = '\0';
-  strcat(keydir, "/link.key");
+  strcpy(cp, "/link.key");
+  log_fn(LOG_INFO,"Reading/making link key %s...",keydir);
   prkey = init_key_from_file(keydir);
   if (!prkey) return -1;
   set_link_key(prkey);
@@ -553,14 +553,14 @@ static int init_keys(void)
     log_fn(LOG_ERR, "Error initializing descriptor.");
     return -1;
   }
-  strcpy(keydir, options.DataDirectory);
-  strcat(keydir, "/router.desc");
+  sprintf(keydir,"%s/router.desc", options.DataDirectory);
+  log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
   if (write_str_to_file(keydir, router_get_my_descriptor())) {
     return -1;
   }
   /* 5. Dump fingerprint to 'fingerprint' */
-  strcpy(keydir, options.DataDirectory);
-  strcat(keydir, "/fingerprint");
+  sprintf(keydir,"%s/fingerprint", options.DataDirectory);
+  log_fn(LOG_INFO,"Dumping fingerprint to %s...",keydir);
   assert(strlen(options.Nickname) <= MAX_NICKNAME_LEN);
   strcpy(fingerprint, options.Nickname);
   strcat(fingerprint, " ");
@@ -572,6 +572,30 @@ static int init_keys(void)
   strcat(fingerprint, "\n");
   if (write_str_to_file(keydir, fingerprint))
     return -1;
+  if(!options.DirPort)
+    return 0;
+  /* 6. [dirserver only] load approved-routers file */
+  sprintf(keydir,"%s/approved-routers", options.DataDirectory);
+  log_fn(LOG_INFO,"Loading approved fingerprints from %s...",keydir);
+  if(dirserv_parse_fingerprint_file(keydir) < 0) {
+    log_fn(LOG_ERR, "Error loading fingerprints");
+    return -1;
+  }
+  /* 7. [dirserver only] load old directory, if it's there */
+  sprintf(keydir,"%s/cached-directory", options.DataDirectory);
+  log_fn(LOG_INFO,"Loading cached directory from %s...",keydir);
+  cp = read_file_to_str(keydir);
+  if(!cp) {
+    log_fn(LOG_INFO,"Cached directory %s not present. Ok.",keydir);
+  } else {
+    if(dirserv_init_from_directory_string(cp) < 0) {
+      log_fn(LOG_ERR, "Cached directory %s is corrupt", keydir);
+      free(cp);
+      return -1;
+    }
+    free(cp);
+  }
+  /* success */
   return 0;
 }
 
@@ -829,6 +853,8 @@ list_running_servers(char **nicknames_out)
     conn = connection_array[i];
     if (conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN)
       continue; /* only list successfully handshaked OR's. */
+    if(!conn->nickname) /* it's an OP, don't list it */
+      continue;
     nickname_lst[n++] = conn->nickname;
   }
   length = n + 1; /* spaces + EOS + 1. */

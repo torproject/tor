@@ -186,6 +186,7 @@ static int directory_handle_command(connection_t *conn) {
   log_fn(LOG_DEBUG,"headers '%s', body '%s'.",headers,body);
   if(!strncasecmp(headers,"GET",3)) {
     /* XXX should check url and http version */
+    log_fn(LOG_DEBUG,"Received GET command.");
 
     dlen = dirserv_get_directory(&cp);
 
@@ -206,7 +207,7 @@ static int directory_handle_command(connection_t *conn) {
 
   if(!strncasecmp(headers,"POST",4)) {
     /* XXX should check url and http version */
-    log_fn(LOG_DEBUG,"Received POST command, body '%s'", body);
+    log_fn(LOG_DEBUG,"Received POST command.");
     cp = body;
     if(dirserv_add_descriptor(&cp) < 0) {
       log_fn(LOG_WARNING,"dirserv_add_descriptor() failed. Dropping.");

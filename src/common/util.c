@@ -405,7 +405,7 @@ char *read_file_to_str(const char *filename) {
   }
   
   if(stat(filename, &statbuf) < 0) {
-    log_fn(LOG_WARNING,"Could not stat %s.",filename);
+    log_fn(LOG_INFO,"Could not stat %s.",filename);
     return NULL;
   }
 

@@ -93,6 +93,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
       formatted = 1;
     }
     fputs(buf, lf->file);
+    /* XXX check for EOF */
   }
 }
 

@@ -118,7 +118,7 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
   if(!circ) {
-    log_fn(LOG_WARNING,"received CREATED cell (aci %d) for unknown circ. Dropping.", cell->aci);
+    log_fn(LOG_INFO,"(aci %d) unknown circ (probably got a destroy earlier). Dropping.", cell->aci);
     return;
   }
 
