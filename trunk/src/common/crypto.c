@@ -777,7 +777,7 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
   if (secret_len == -1)
     return -1;
 
-  return 0;
+  return secret_len;
 }
 void crypto_dh_free(crypto_dh_env_t *dh)
 {

@@ -474,6 +474,7 @@ onion_skin_server_handshake(char *onion_skin, /* DH_ONIONSKIN_LEN bytes long */
   crypto_dh_env_t *dh = NULL;
   crypto_cipher_env_t *cipher = NULL;
   int pkbytes;
+  int len;
   
   memset(iv, 0, 16);
   pkbytes = crypto_pk_keysize(private_key);
@@ -515,10 +516,11 @@ onion_skin_server_handshake(char *onion_skin, /* DH_ONIONSKIN_LEN bytes long */
   puts("");
 #endif
 
-  if (crypto_dh_compute_secret(dh, buf+16, DH_KEY_LEN, buf))
+  len = crypto_dh_compute_secret(dh, buf+16, DH_KEY_LEN, buf);
+  if (len < 0)
     goto err;
 
-  memcpy(key_out, buf+DH_KEY_LEN-key_out_len, key_out_len);
+  memcpy(key_out, buf+len-key_out_len, key_out_len);
 
 #ifdef DEBUG_ONION_SKINS
   printf("Server: keys out:");
@@ -550,6 +552,7 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                             int key_out_len) 
 {
   char key_material[DH_KEY_LEN];
+  int len;
   assert(crypto_dh_get_bytes(handshake_state) == DH_KEY_LEN);
   
   memset(key_material, 0, DH_KEY_LEN);
@@ -562,11 +565,12 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   puts("");
 #endif
 
-  if (crypto_dh_compute_secret(handshake_state, handshake_reply, DH_KEY_LEN,
-                               key_material))
+  len = crypto_dh_compute_secret(handshake_state, handshake_reply, DH_KEY_LEN,
+                                 key_material);
+  if (len < 0)
     return -1;
   
-  memcpy(key_out, key_material+DH_KEY_LEN-key_out_len, key_out_len);
+  memcpy(key_out, key_material+len-key_out_len, key_out_len);
 
 #ifdef DEBUG_ONION_SKINS
   printf("Client: keys out:");
