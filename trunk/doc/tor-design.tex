@@ -10,6 +10,10 @@
 \renewcommand\url{\begingroup \def\UrlLeft{<}\def\UrlRight{>}\urlstyle{tt}\Url}
 \newcommand\emailaddr{\begingroup \def\UrlLeft{<}\def\UrlRight{>}\urlstyle{tt}\Url}
 
+\newcommand{\workingnote}[1]{}        % The version that hides the note.
+%\newcommand{\workingnote}[1]{(**#1)}   % The version that makes the note visible.
+
+
 % If an URL ends up with '%'s in it, that's because the line *in the .bib/.tex
 % file* is too long, so break it there (it doesn't matter if the next line is
 % indented with spaces). -DH
@@ -57,7 +61,7 @@ control, directory servers, integrity checking, variable exit policies,
 and a practical design for rendezvous points. Tor works on the real-world
 Internet, requires no special privileges or kernel modifications, requires
 little synchronization or coordination between nodes, and provides a
-reasonable trade-off between anonymity, usability, and efficiency. We
+reasonable tradeoff between anonymity, usability, and efficiency. We
 close with a list of open problems in anonymous communication.
 \end{abstract}
 
@@ -73,14 +77,14 @@ close with a list of open problems in anonymous communication.
 Onion Routing is a distributed overlay network designed to anonymize
 low-latency TCP-based applications such as web browsing, secure shell,
 and instant messaging. Clients choose a path through the network and
-build a \emph{circuit}, in which each node (or ``onion router'')
+build a \emph{circuit}, in which each node (or ``onion router'' or ``OR'')
 in the path knows its predecessor and successor, but no other nodes in
 the circuit.  Traffic flowing down the circuit is sent in fixed-size
 \emph{cells}, which are unwrapped by a symmetric key at each node
-(like the layers of an onion) and relayed downstream. The original
+(like the layers of an onion) and relayed downstream. The 
 Onion Routing project published several design and analysis papers
 \cite{or-ih96,or-jsac98,or-discex00,or-pet00}. While a wide area Onion
-Routing network was deployed for some weeks, the only long-running and
+Routing network was deployed briefly, the only long-running and
 publicly accessible implementation was a fragile
 proof-of-concept that ran on a single machine. Even this simple deployment
 processed connections from over sixty thousand distinct IP addresses from
@@ -91,10 +95,8 @@ we describe Tor, a protocol for asynchronous, loosely federated onion
 routers that provides the following improvements over the old Onion
 Routing design:
 
-\begin{tightlist}
-
-\item \textbf{Perfect forward secrecy:} The original Onion Routing
-design was vulnerable to a single hostile node recording traffic and
+\textbf{Perfect forward secrecy:} Onion Routing
+was originally vulnerable to a single hostile node recording traffic and
 later compromising successive nodes in the circuit and forcing them
 to decrypt it. Rather than using a single multiply encrypted data
 structure (an \emph{onion}) to lay each circuit,
@@ -106,8 +108,8 @@ is no longer necessary, and the process of building circuits is more
 reliable, since the initiator knows when a hop fails and can then try
 extending to a new node.
 
-\item \textbf{Separation of ``protocol cleaning'' from anonymity:}
-The original Onion Routing design required a separate ``application
+\textbf{Separation of ``protocol cleaning'' from anonymity:}
+Onion Routing originally required a separate ``application
 proxy'' for each supported application protocol---most of which were
 never written, so many applications were never supported.  Tor uses the
 standard and near-ubiquitous SOCKS \cite{socks4} proxy interface, allowing
@@ -116,40 +118,38 @@ relies on the filtering features of privacy-enhancing
 application-level proxies such as Privoxy \cite{privoxy}, without trying
 to duplicate those features itself.
 
-\item \textbf{No mixing, padding, or traffic shaping yet:} The original
-Onion
-Routing design called for batching and reordering cells arriving from
-each source. It also included padding between onion routers and, in a
+\textbf{No mixing, padding, or traffic shaping yet:} Onion
+Routing originally called for batching and reordering cells arriving from
+each source, and assumed padding between ORs and, in a
 later design, between onion proxies (users) and onion routers
-\cite{or-ih96,or-jsac98}.  The trade-off between padding protection
-and cost was discussed, but no general padding scheme was suggested. In
-\cite{or-pet00} it was theorized \emph{traffic shaping} would generally
-be used, but details were not provided.  Recent research \cite{econymics}
+\cite{or-ih96,or-jsac98}.  Tradeoffs between padding protection
+and cost were discussed, but no general padding scheme was suggested.
+It was theorized, \cite{or-pet00}, but not described how \emph{traffic
+ shaping} would generally be used.  Recent research \cite{econymics}
 and deployment experience \cite{freedom21-security} suggest that this
-level of resource use is not practical or economical; and even full link
-padding is still vulnerable \cite{defensive-dropping}. Thus, until we
-have a proven and convenient design for traffic shaping or low-latency
-mixing that will improve anonymity against a realistic adversary, we
-leave these strategies out.
+level of resource use is not practical or economical; and even full
+link padding is still vulnerable \cite{defensive-dropping}. Thus,
+until we have a proven and convenient design for traffic shaping or
+low-latency mixing that will improve anonymity against a realistic
+adversary, we leave these strategies out.
 
-\item \textbf{Many TCP streams can share one circuit:} The
-original Onion Routing design built a separate circuit for each
-application-level request.  This hurt performance by requiring
-multiple public key operations for every request, and also presented
+\textbf{Many TCP streams can share one circuit:} Onion Routing originally
+built a separate circuit for each
+application-level request, requiring
+multiple public key operations for every request, and also presenting
 a threat to anonymity from building so many different circuits; see
 Section~\ref{sec:maintaining-anonymity}.  Tor multiplexes multiple TCP
 streams along each circuit to improve efficiency and anonymity.
 
-\item \textbf{Leaky-pipe circuit topology:} Through in-band signaling
+\textbf{Leaky-pipe circuit topology:} Through in-band signaling
 within the circuit, Tor initiators can direct traffic to nodes partway
-down the circuit. This novel approach allows for long-range padding if
-future research indicates that it can frustrate traffic shape and volume
-attacks at the initiator \cite{defensive-dropping}, and
-also allows traffic to exit the circuit from the middle---again possibly
+down the circuit. This novel approach 
+allows traffic to exit the circuit from the middle---possibly
 frustrating traffic shape and volume attacks based on observing the end
-of the circuit.
+of the circuit. (It also allows for long-range padding if
+future research shows this to be worthwhile.)
 
-\item \textbf{Congestion control:} Earlier anonymity designs do not
+\textbf{Congestion control:} Earlier anonymity designs do not
 address traffic bottlenecks. Unfortunately, typical approaches to
 load balancing and flow control in overlay networks involve inter-node
 control communication and global views of traffic. Tor's decentralized
@@ -157,24 +157,24 @@ congestion control uses end-to-end acks to maintain anonymity
 while allowing nodes at the edges of the network to detect congestion
 or flooding and send less data until the congestion subsides.
 
-\item \textbf{Directory servers:} The original Onion Routing design
+\textbf{Directory servers:} Earlier Onion Routing design
 planned to flood link-state information through the network---an approach
 that can be unreliable and open to partitioning attacks or
 deception. Tor takes a simplified view toward distributing link-state
-information. Certain more trusted onion routers act as \emph{directory
+information. Certain more trusted nodes act as \emph{directory
 servers}: they provide signed directories that describe known
 routers and their availability.  Users periodically download these
 directories via HTTP.
 
-\item \textbf{Variable exit policies:} Tor provides a consistent mechanism
+\textbf{Variable exit policies:} Tor provides a consistent mechanism
 for each node to advertise a policy describing the hosts
 and ports to which it will connect. These exit policies are critical
 in a volunteer-based distributed infrastructure, because each operator
 is comfortable with allowing different types of traffic to exit the Tor
 network from his node.
 
-\item \textbf{End-to-end integrity checking:} The original Onion Routing
-design did no integrity checking on data. Any onion router on the
+\textbf{End-to-end integrity checking:} The original Onion Routing
+design did no integrity checking on data. Any OR on the
 circuit could change the contents of data cells as they passed by---for
 example, to alter a connection request on the fly so it would connect
 to a different webserver, or to `tag' encrypted traffic and look for
@@ -182,14 +182,14 @@ corresponding corrupted traffic at the network edges \cite{minion-design}.
 Tor hampers these attacks by checking data integrity before it leaves
 the network.
 
-\item \textbf{Improved robustness to failed nodes:} A failed node
+\textbf{Improved robustness to failed nodes:} A failed node
 in the old design meant that circuit building failed, but thanks to
 Tor's step-by-step circuit building, users notice failed nodes
 while building circuits and route around them. Additionally, liveness
 information from directories allows users to avoid unreliable nodes in
 the first place.
 
-\item \textbf{Rendezvous points and location-protected servers:}
+\textbf{Rendezvous points and location-protected servers:}
 Tor provides an integrated mechanism for responder anonymity via
 location-protected servers.  Previous Onion Routing designs included
 long-lived ``reply onions'' that could be used to build circuits
@@ -197,12 +197,12 @@ to a hidden server, but these reply onions did not provide forward
 security, and became useless if any node in the path went down
 or rotated its keys.  In Tor, clients negotiate {\it rendezvous points}
 to connect with hidden servers; reply onions are no longer required.
-\end{tightlist}
 
-Unlike Freedom \cite{freedom2-arch}, Tor only
-attempts to anonymize TCP streams. Because it does not require patches
-(or built-in support) in an operating system's network stack, this
-approach has proven valuable to Tor's portability and deployability.
+
+Unlike Freedom \cite{freedom2-arch}, Tor only tries to anonymize
+TCP streams. It does not require patches (or built-in support) in an
+operating system's network stack, which has been valuable to Tor's
+portability and deployability.
 
 We have implemented most of the above features. Our source code is
 available under a free license, and, as far as we know, is unencumbered by
@@ -227,13 +227,13 @@ Routing project in Section~\ref{sec:conclusion}.
 Modern anonymity systems date to Chaum's {\bf Mix-Net} design
 \cite{chaum-mix}. Chaum
 proposed hiding the correspondence between sender and recipient by
-wrapping messages in layers of public key cryptography, and relaying them
-through a path composed of ``Mixes.''  Each of these mixes in turn
+wrapping messages in layers of public-key cryptography, and relaying them
+through a path composed of ``mixes.''  Each of these in turn
 decrypts, delays, and re-orders messages, before relaying them toward
 their destinations.
 
 Subsequent relay-based anonymity designs have diverged in two
-principal directions.  Some have attempted to maximize anonymity at
+main directions.  Some have tried to maximize anonymity at
 the cost of introducing comparatively large and variable latencies,
 including {\bf Babel} \cite{babel}, {\bf Mixmaster}
 \cite{mixmaster-spec}, and
@@ -244,12 +244,12 @@ but introduce too much lag for interactive tasks like web browsing,
 internet chat, or SSH connections.
 
 Tor belongs to the second category: \emph{low-latency} designs that
-attempt to anonymize interactive network traffic. These systems handle
+try to anonymize interactive network traffic. These systems handle
 a variety of bidirectional protocols.
-% They also provide more convenient
-%mail delivery than the high-latency fire-and-forget anonymous email
-%networks, because the remote mail server provides explicit delivery
-%confirmation.
+They also provide more convenient
+mail delivery than the high-latency anonymous email
+networks, because the remote mail server provides explicit and timely
+delivery confirmation.
 But because these designs typically
 involve many packets that must be delivered quickly, it is
 difficult for them to prevent an attacker who can eavesdrop both ends of the
@@ -260,15 +260,15 @@ adversary introduces timing patterns into traffic entering the network and
 looks
 for correlated patterns among exiting traffic.
 Although some work has been done to frustrate
-these attacks,\footnote{
-  The most common approach is to pad and limit communication to a constant
-  rate, or to limit
-  the variation in traffic shape.  Doing so can have prohibitive bandwidth
-  costs and/or performance limitations.
-} most designs protect primarily against traffic analysis rather than traffic
-confirmation \cite{or-jsac98}---that is, they assume that the attacker is
-attempting to learn who is talking to whom, not to confirm a prior suspicion
-about who is talking to whom.
+these attacks,%\footnote{
+%  The most common approach is to pad and limit communication to a constant
+%  rate, or to limit
+%  the variation in traffic shape.  Doing so can have prohibitive bandwidth
+%  costs and/or performance limitations.
+%}
+% Point in the footnote is covered above, yes? -PS
+ most designs protect primarily against traffic analysis rather than traffic
+confirmation (cf.\ Section~\ref{subsec:threat-model}).
 
 The simplest low-latency designs are single-hop proxies such as the
 {\bf Anonymizer} \cite{anonymizer}, wherein a single trusted server strips the
@@ -299,10 +299,11 @@ calls for padding between end users and the head of the cascade
 implementation's padding policy improves anonymity.
 
 {\bf PipeNet} \cite{back01, pipenet}, another low-latency design proposed at
-about the same time as the original Onion Routing design, provided
+about the same time as Onion Routing, provided
 stronger anonymity at the cost of allowing a single user to shut
 down the network simply by not sending.  Low-latency anonymous
-communication has also been designed for other environments such as
+communication has also been designed for different environments with
+different assumptions, such as
 ISDN \cite{isdn-mixes}.
 
 In P2P designs like {\bf Tarzan} \cite{tarzan:ccs02} and {\bf MorphMix}
@@ -379,7 +380,7 @@ Eternity and Free~Haven.
 \Section{Design goals and assumptions}
 \label{sec:assumptions}
 
-\SubSection{Goals}
+\noindent {\large Goals}\\
 Like other low-latency anonymity designs, Tor seeks to frustrate
 attackers from linking communication partners, or from linking
 multiple communications to or from a single user.  Within this
@@ -426,13 +427,13 @@ parameters must be well-understood. Additional features impose implementation
 and complexity costs; adding unproven techniques to the design threatens
 deployability, readability, and ease of security analysis. Tor aims to
 deploy a simple and stable system that integrates the best well-understood
-approaches to protecting anonymity.
+approaches to protecting anonymity.\\
 
-\SubSection{Non-goals}
+\noindent {\large Non-goals}\\
 \label{subsec:non-goals}
 In favoring simple, deployable designs, we have explicitly deferred
 several possible goals, either because they are solved elsewhere, or because
-their solution is an open research problem.
+they are not yet solved.
 
 \textbf{Not peer-to-peer:} Tarzan and MorphMix aim to scale to completely
 decentralized peer-to-peer environments with thousands of short-lived
@@ -606,7 +607,7 @@ We describe each of these cell types and commands in more detail below.
 \SubSection{Circuits and streams}
 \label{subsec:circuits}
 
-The original Onion Routing design built one circuit for each
+Onion Routing originally built one circuit for each
 TCP stream.  Because building a circuit can take several tenths of a
 second (due to public-key cryptography delays and network latency),
 this design imposed high costs on applications like web browsing that
@@ -918,8 +919,7 @@ cell.
 %see Section~\ref{sec:maintaining-anonymity} for more discussion.
 We describe our response below.
 
-\subsubsection{Circuit-level throttling}
-
+\textbf{Circuit-level throttling:}
 To control a circuit's bandwidth usage, each OR keeps track of two
 windows. The \emph{packaging window} tracks how many relay data cells the OR is
 allowed to package (from outside TCP streams) for transmission back to the OP,
@@ -939,8 +939,7 @@ The OP behaves identically, except that it must track a packaging window
 and a delivery window for every OR in the circuit. If a packaging window
 reaches 0, it stops reading from streams destined for that OR.
 
-\subsubsection{Stream-level throttling}
-
+\textbf{Stream-level throttling}:
 The stream-level congestion control mechanism is similar to the
 circuit-level mechanism above. ORs and OPs use \emph{relay sendme} cells
 to implement end-to-end flow control for individual streams across
@@ -1240,6 +1239,7 @@ and ignore others.
 We give an overview of the steps of a rendezvous. These steps are
 performed on behalf of Alice and Bob by their local onion proxies;
 application integration is described more fully below.
+
 \begin{tightlist}
 \item Bob chooses some introduction points, and advertises them on
       the DHT.  He can add more later.
@@ -1270,6 +1270,37 @@ application integration is described more fully below.
 \item An anonymous stream has been established, and Alice and Bob
       communicate as normal.
 \end{tightlist}
+
+\workingnote{
+\noindent$\bullet$ Bob chooses some introduction points, and advertises them on
+      the DHT.  He can add more later.\\
+$\bullet$ Bob establishes a Tor circuit to each of his introduction points,
+      and waits.  No data is transmitted until a request is received.\\
+$\bullet$ Alice learns about Bob's service out of band (perhaps Bob told her,
+      or she found it on a website). She retrieves the details of Bob's
+      service from the DHT.\\
+$\bullet$ Alice chooses an OR to serve as the rendezvous point (RP) for this
+      transaction. She establishes a circuit to RP, and gives it a
+      rendezvous cookie, which it will use to recognize Bob.\\
+$\bullet$ Alice opens an anonymous stream to one of Bob's introduction
+      points, and gives it a message (encrypted to Bob's public key) which tells him
+      about herself, her chosen RP and the rendezvous cookie, and the
+      first half of an ephemeral
+      key handshake. The introduction point sends the message to Bob.\\
+$\bullet$ If Bob wants to talk to Alice, he builds a new circuit to Alice's
+      RP and provides the rendezvous cookie and the second half of the DH
+      handshake (along with a hash of the session
+      key they now share---by the same argument as in
+      Section~\ref{subsubsec:constructing-a-circuit}, Alice knows she
+      shares the key only with the intended Bob).\\
+$\bullet$ The RP connects Alice's circuit to Bob's. Note that RP can't
+      recognize Alice, Bob, or the data they transmit.\\
+$\bullet$ Alice now sends a \emph{relay begin} cell along the circuit. It
+      arrives at Bob's onion proxy. Bob's onion proxy connects to Bob's
+      webserver.\\
+$\bullet$ An anonymous stream has been established, and Alice and Bob
+      communicate as normal.
+}
 
 When establishing an introduction point, Bob provides the onion router
 with a public ``introduction'' key. The hash of this public key
@@ -1419,7 +1450,7 @@ such fingerprinting should not be confused with the latency attacks
 of \cite{back01}. Those require a fingerprint of the latencies of
 all circuits through the network, combined with those from the
 network edges to the targeted user and the responder website. While
-these are in principal feasible and surprises are always possible,
+these are in principle feasible and surprises are always possible,
 these constitute a much more complicated attack, and there is no
 current evidence of their practicality.}
 
@@ -1486,8 +1517,7 @@ other nodes. Its ability to directly DoS a neighbor is now limited
 by bandwidth throttling. Nonetheless, in order to compromise the
 anonymity of the endpoints of a circuit by its observations, a
 hostile node must be immediately adjacent to that endpoint. 
-  
-\emph{Run multiple hostile nodes.}  If an adversary is able to
+If an adversary is able to
 run multiple ORs, and is able to persuade the directory servers
 that those ORs are trustworthy and independant, then occasionally
 some user will choose one of those ORs for the start and another
@@ -1574,10 +1604,9 @@ cases will occur in practice, however, remains to be seen.
 \emph{Subvert a majority of directory servers.}  If the
 adversary controls more than half of the directory servers, he can
 decide on a final directory, and thus can include as many
-compromised ORs in the final directory as he wishes.  Other than
-trying to ensure that directory server operators are truly
-independent and resistant to attack, Tor does not address this
-possibility.
+compromised ORs in the final directory as he wishes. 
+Tor does not address this possibility, except to try to ensure that
+directory server operators are independent and attack resistant.
 
 \emph{Encourage directory server dissent.}  The directory
 agreement protocol requires that directory server operators agree on 
@@ -1589,22 +1618,23 @@ this attack.
 
 \emph{Trick the directory servers into listing a hostile OR.}
 Our threat model explicitly assumes directory server operators will
-be able to filter out most hostile ORs.  If this is not true, an
-attacker can flood the directory with compromised servers.
+be able to filter out most hostile ORs. 
+% If this is not true, an
+% attacker can flood the directory with compromised servers.
 
 \emph{Convince the directories that a malfunctioning OR is
 working.}  In the current Tor implementation, directory servers
-assume that if they can start a TLS connection to an an OR, that OR
-must be running correctly.  It would be easy for a hostile OR to
-subvert this test by only accepting TLS connections from ORs, and
-ignoring all cells. Thus, directory servers must actively test ORs
-by building circuits and streams as appropriate.  The benefits and
-hazards of a similar approach are discussed in \cite{mix-acc}.
+assume that an OR is running correctly if they can start a TLS
+connection to it.  A hostile OR could easily subvert this test by
+accepting TLS connections from ORs but ignoring all cells. Directory
+servers must actively test ORs by building circuits and streams as
+appropriate.  The tradeoffs of a similar approach are discussed in
+\cite{mix-acc}.
   
 \subsubsection*{Attacks against rendezvous points}
 
 \emph{Make many introduction requests.}  An attacker could
-attempt to deny Bob service by flooding his Introduction Point with
+try to deny Bob service by flooding his Introduction Point with
 requests.  Because the introduction point can block requests that
 lack authentication tokens, however, Bob can restrict the volume of
 requests he receives, or require a certain amount of computation for
@@ -1615,8 +1645,7 @@ disrupt a location-hidden service by disabling its introduction
 point.  But because a service's identity is attached to its public
 key, not its introduction point, the service can simply re-advertise
 itself at a different introduction point.
-
-\emph{Attack multiple introduction points.}  If an attacker is
+If an attacker is
 able to disable all of the introduction points for a given service,
 he can block access to the service. However, re-advertisement of
 introduction points can still be done secretly so that only
@@ -1653,7 +1682,7 @@ predecessor attacks \cite{wright03}, but infrequent rotation makes the
 user's traffic linkable. Along with opening a fresh circuit, clients can
 also limit linkability by exiting from a middle point of the circuit,
 or by truncating and re-extending the circuit; but more analysis is
-needed to determine the proper trade-off.
+needed to determine the proper tradeoff.
 
 A similar question surrounds timing of directory operations: how often
 should directories be updated?  Clients that update infrequently receive
@@ -1812,7 +1841,7 @@ learn from having actual users.  We are now at a point in design
 and development where we can start deploying a wider network.  Once
 we have many actual users, we will doubtlessly be better
 able to evaluate some of our design decisions, including our
-robustness/latency trade-offs, our performance trade-offs (including
+robustness/latency tradeoffs, our performance tradeoffs (including
 cell size), our abuse-prevention mechanisms, and
 our overall usability.
 
