@@ -516,7 +516,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
     conn->address = strdup(router->address);
 
     /* generate a nonce */
-    retval = crypto_pseudo_rand(8, conn->nonce);
+    retval = crypto_rand(8, conn->nonce);
     if (retval) { /* error */
       log(LOG_ERR,"Cannot generate a nonce.");
       return -1;
