@@ -274,7 +274,8 @@ tor_tls_context_new(crypto_pk_env_t *rsa,
   if (global_tls_context) {
     /* This is safe even if there are open connections: OpenSSL does
      * reference counting with SSL and SSL_CTX objects. */
-    SSL_CTX_free(global_tls_context);
+    SSL_CTX_free(global_tls_context->ctx);
+    free(global_tls_context);
   }
   global_tls_context = result;
   return 0;
