@@ -79,9 +79,7 @@ int flush_buf(int s, char **buf, size_t *buflen, size_t *buf_flushlen, size_t *b
 
   /* this is the point where you would grow the buffer, if you want to */
 
-  write_result = write(s, *buf, *buf_flushlen > 10240 ? 10240 : *buf_flushlen);
-    /* try to flush at most 10240 bytes at a time. otherwise write() can hang for
-     * quite a while trying to get it all out. that's bad. */
+  write_result = write(s, *buf, *buf_flushlen);
   if (write_result < 0) {
     if(errno!=EAGAIN) { /* it's a real error */
       return -1;

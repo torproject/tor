@@ -38,7 +38,7 @@ int connection_add(connection_t *conn) {
 
   if(nfds >= MAXCONNECTIONS-2) { /* 2, for some breathing room. should count the fenceposts. */
     /* FIXME should use the 'max connections' option */
-    log(LOG_DEBUG,"connection_add(): failing because nfds is too high.");
+    log(LOG_INFO,"connection_add(): failing because nfds is too high.");
     return -1;
   }
 
@@ -52,7 +52,7 @@ int connection_add(connection_t *conn) {
 
   nfds++;
 
-  log(LOG_DEBUG,"connection_add(): new conn type %d, socket %d, nfds %d.",conn->type, conn->s, nfds);
+  log(LOG_INFO,"connection_add(): new conn type %d, socket %d, nfds %d.",conn->type, conn->s, nfds);
 
   return 0;
 
@@ -74,7 +74,7 @@ int connection_remove(connection_t *conn) {
   if(current_index == nfds-1) { /* this is the end */
 //    connection_free(conn);
     nfds--;
-    log(LOG_DEBUG,"connection_remove(): nfds now %d.",nfds);  
+    log(LOG_INFO,"connection_remove(): nfds now %d.",nfds);  
     return 0;
   } 
 
@@ -86,7 +86,7 @@ int connection_remove(connection_t *conn) {
   connection_array[current_index] = connection_array[nfds];
   connection_array[current_index]->poll_index = current_index;
 
-  log(LOG_DEBUG,"connection_remove(): nfds now %d.",nfds);
+  log(LOG_INFO,"connection_remove(): nfds now %d.",nfds);
 
   return 0;  
 }

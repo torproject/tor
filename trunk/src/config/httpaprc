@@ -4,7 +4,7 @@
 OnionProxy 9021
 
 # maximum number of incoming connections
-MaxConn 100
+MaxConn 500
 
 # run in anonymizing mode (0=no/1=yes)
 Anonimize 0
