@@ -871,7 +871,7 @@ print_usage(void)
   printf(
 "Copyright 2001-2004 Roger Dingledine, Nick Mathewson, Matej Pfajfar.\n\n"
 "tor -f <torrc> [args]\n"
-"See man page for options, or http://freehaven.net/tor/ for documentation.\n");
+"See man page for options, or http://tor.eff.org/ for documentation.\n");
 }
 
 /**
