@@ -113,10 +113,10 @@ try_again:
 
   crypto_pseudo_rand(2, (unsigned char *)&test_aci);
 
-  if(aci_type == ACI_TYPE_LOWER && test_aci >= (2<<15))
-    test_aci -= (2<<15);
-  if(aci_type == ACI_TYPE_HIGHER && test_aci < (2<<15))
-    test_aci += (2<<15);
+  if(aci_type == ACI_TYPE_LOWER && test_aci >= (1<<15))
+    test_aci -= (1<<15);
+  if(aci_type == ACI_TYPE_HIGHER && test_aci < (1<<15))
+    test_aci += (1<<15);
   /* if aci_type == ACI_BOTH, don't filter any of it */
 
   if(test_aci == 0)
@@ -489,6 +489,7 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type) {
 
   assert(circ);
 
+  memset(&sendme, 0, sizeof(cell_t));
   sendme.command = CELL_SENDME;
   sendme.length = CIRCWINDOW_INCREMENT;
 
