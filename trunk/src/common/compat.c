@@ -530,10 +530,29 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
     return (err == EAI_AGAIN) ? 1 : -1;
 #else
     struct hostent *ent;
-#ifdef HAVE_GETHOSTBYNAME_R
-    ent = gethostbyname_r(name);
+    int err;
+#ifdef HAVE_GETHOSTBYNAME_R_6_ARG
+    char buf[2048];
+    struct hostent hostent;
+    int r;
+    r = gethostbyname_r(name, &hostent, buf, sizeof(buf), &ent, &err);
+#elif defined(HAVE_GETHOSTBYNAME_R_5_ARG);
+    char buf[2048];
+    struct hostent hostent;
+    ent = gethostbyname_r(name, &hostent, buf, sizeof(buf), &err);
+#elif defined(HAVE_GETHOSTBYNAME_R_3_ARG);
+    struct hostent_data data;
+    struct hostent hent;
+    memset(&data, 0, sizeof(data));
+    err = gethostbyname_r(name, &hent, &data);
+    ent = err ? NULL : &hent;
 #else
     ent = gethostbyname(name);
+#ifdef MS_WINDOWS
+    err = WSAGetLastError();
+#else
+    err = h_errno;
+#endif
 #endif
     if (ent) {
       /* break to remind us if we move away from IPv4 */
@@ -543,9 +562,9 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
     }
     memset(addr, 0, 4);
 #ifdef MS_WINDOWS
-    return (WSAGetLastError() == WSATRY_AGAIN) ? 1 : -1;
+    return (err == WSATRY_AGAIN) ? 1 : -1;
 #else
-    return (h_errno == TRY_AGAIN) ? 1 : -1;
+    return (err == TRY_AGAIN) ? 1 : -1;
 #endif
 #endif
   }
