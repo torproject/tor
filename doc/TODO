@@ -74,11 +74,11 @@ NICK    - Reputation info needs to give better weight to recent events than
         o change if(options.ORPort) to what we really mean.
         o same with socksport.
         o get contrib/tor_resolve into the tarball and installed
-          - and working
+          o and working
 
       post pre1:
         - Possible to get autoconf to easily install things into ~/.tor?
-        - when we sigint tor, the dns/cpuworkers don't intercept sigint?
+        o when we sigint tor, the dns/cpuworkers don't intercept sigint?
         - "AcceptOnlyVerifiedRouters" config option?
         - why does common/util.c build-depend on or/or.h ?
         - ORs use uniquer default nicknames
@@ -106,7 +106,7 @@ NICK    - Reputation info needs to give better weight to recent events than
           - win32 installer using privoxy's installer
 
         o win32 problems with pre1
-        . asn.1 issues?
+        o asn.1 issues?
         - Switch dirservers entries to config lines:
           - read in and parse each TrustedDir config line.
           - stop reading dirservers file.
@@ -133,6 +133,7 @@ NICK    - Reputation info needs to give better weight to recent events than
           running-routers list at all.
         - put expiry date on onion-key, so people don't keep trying
           old ones that they could know are expired?
+        - check the date in the http headers, compare for clock skew.
 
 
       ongoing:
