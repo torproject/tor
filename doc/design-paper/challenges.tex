@@ -30,11 +30,22 @@ foo
 \section{Introduction}
 
 Tor is a low-latency anonymous communication overlay network designed
-to be practical and usable for securing TCP streams over the Internet
-\cite{tor-design}. We have been operating a publicly deployed Tor network
-since October 2003 that has grown to over a hundred nodes and carries
-over 70 megabits per second of average traffic.
+to be practical and usable for protecting TCP streams over the
+Internet~\cite{tor-design}. We have been operating a publicly deployed
+Tor network since October 2003 that has grown to over a hundred volunteer
+nodes and carries over 70 megabits per second of average traffic.
 
+Tor has a weaker threat model than many anonymity designs in the
+literature, because we aim primarily to provide a
+practical and useful network. Given that fixed assumption, we then
+provide as much anonymity as we can. In particular, because we
+want to support interactive communications, we fall prey to a variety
+of intra-network~\cite{danezis-oakland,flow-correlation04,bar} and
+end-to-end~\cite{danezis-pet2004,SS03} anonymity breaking attacks.
+
+Tor's defense lies in having a diverse enough network that its adversaries
+are unlikely to be in the right places to attack both ends of a user's
+stream. Specifically,
 Tor aims to resist observers and insiders by distributing each transaction
 over several nodes in the network.  This ``distributed trust'' approach
 means the Tor network can be safely operated and used by a wide variety
@@ -58,28 +69,23 @@ their popular Java Anon Proxy anonymizing client. This wide variety of
 interests helps maintain both the stability and the security of the
 network.
 
-Tor has a weaker threat model than many anonymity designs in the
-literature, because our primary requirements are to have a
-practical and useful network. Given that fixed assumption, we then aim
-to provide as much anonymity as we can.
-
-%need to discuss how we take the approach of building the thing, and then
-%assuming that, how much anonymity can we get. we're not here to model or
-%to simulate or to produce equations and formulae. but those have their
-%roles too.
-
-This paper aims to give the reader enough information to understand the
-technical and policy issues that Tor faces as we continue deployment,
-and to lay a research agenda for others to help in addressing some of
-these issues. Section \ref{sec:what-is-tor} gives an overview of the Tor
-design and ours goals. We go on in Section \ref{sec:related} to describe
-Tor's context in the anonymity space. Sections \ref{sec:crossroads-policy}
-and \ref{sec:crossroads-technical} describe the practical challenges,
+While~\cite{tor-design} gives an overall view of the Tor design and goals,
+this paper describes the policy and technical issues that Tor faces are
+we continue deployment. We aim to lay a research agenda for others to
+help in addressing these issues. Section~\ref{sec:what-is-tor} gives an
+overview of the Tor
+design and ours goals. We go on in Section~\ref{sec:related} to describe
+Tor's context in the anonymity space. Sections~\ref{sec:crossroads-policy}
+and~\ref{sec:crossroads-technical} describe the practical challenges,
 both policy and technical respectively, that stand in the way of moving
 from a practical useful network to a practical useful anonymous network.
 
 \section{What Is Tor}
 \label{sec:what-is-tor}
+
+Here we give a basic overview of the Tor design and its properties. For
+details on the design, assumptions, and security arguments, we refer
+the reader to~\cite{tor-design}.
 
 \subsection{Distributed trust: safety in numbers}
 
@@ -88,30 +94,47 @@ Internet sites without revealing their logical or physical locations
 to those sites or to observers.  It also provides \emph{location-hidden
 services}, so that critical servers can support authorized users without
 giving adversaries an effective vector for physical or online attacks.
-Our design provides this protection even when a portion of its own
+The design provides this protection even when a portion of its own
 infrastructure is controlled by an adversary.
 
-To make private connections in Tor, users incrementally build a path or
-\emph{circuit} of encrypted connections through servers on the network,
-extending it one step at a time so that each server in the circuit only
-learns which server extended to it and which server it has been asked
-to extend to.  The client negotiates a separate set of encryption keys
-for each step along the circuit.
+To create a private network pathway with Tor, the user's software (client)
+incrementally builds a \emph{circuit} of encrypted connections through
+servers on the network. The circuit is extended one hop at a time, and
+each server along the way knows only which server gave it data and which
+server it is giving data to. No individual server ever knows the complete
+path that a data packet has taken. The client negotiates a separate set
+of encryption keys for each hop along the circuit to ensure that each
+hop can't trace these connections as they pass through.
 
-Once a circuit has been established, the client software waits for
-applications to request TCP connections, and directs these application
-streams along the circuit.  Many streams can be multiplexed along a single
-circuit, so applications don't need to wait for keys to be negotiated
-every time they open a connection.  Because each server sees no
-more than one end of the connection, a local eavesdropper or a compromised
-server cannot use traffic analysis to link the connection's source and
-destination.  The Tor client software rotates circuits periodically
-to prevent long-term linkability between different actions by a
-single user.
+Once a circuit has been established, many kinds of data can be exchanged
+and several different sorts of software applications can be deployed over
+the Tor network. Because each server sees no more than one hop in the
+circuit, neither an eavesdropper nor a compromised server can use traffic
+analysis to link the connection's source and destination. Tor only works
+for TCP streams and can be used by any application with SOCKS support.
+
+For efficiency, the Tor software uses the same circuit for connections
+that happen within the same minute or so. Later requests are given a new
+circuit, to prevent long-term linkability between different actions by
+a single user.
+
+Tor also makes it possible for users to hide their locations while
+offering various kinds of services, such as web publishing or an instant
+messaging server. Using Tor ``rendezvous points'', other Tor users can
+connect to these hidden services, each without knowing the other's network
+identity.
+%This hidden service functionality could allow Tor users to
+%set up a website where people publish material without worrying about
+%censorship. Nobody would be able to determine who was offering the site,
+%and nobody who offered the site would know who was posting to it.
+
+tor works for tcp on socks (see section \ref{subsec:tcp-vs-ip}). it
+only anonymizes the channel, so you need application-level scrubbers
+like privoxy.
 
 Tor differs from other deployed systems for traffic analysis resistance
-in its security and flexibility.  Mix networks such as Mixmaster or its
-successor Mixminion \cite{minion-design}
+in its security and flexibility.  Mix networks such as
+Mixmaster~\cite{mixmaster} or its successor Mixminion~\cite{minion-design}
 gain the highest degrees of anonymity at the expense of introducing highly
 variable delays, thus making them unsuitable for applications such as web
 browsing that require quick response times.  Commercial single-hop proxies
@@ -120,10 +143,7 @@ a single compromise can expose all users' traffic, and a single-point
 eavesdropper can perform traffic analysis on the entire network.
 Also, their proprietary implementations place any infrastucture that
 depends on these single-hop solutions at the mercy of their providers'
-financial health.  Tor can handle any TCP-based protocol, such as web
-browsing, instant messaging and chat, and secure shell login; and it is
-the only implemented anonymizing design with an integrated system for
-secure location-hidden services.
+financial health as well as network security.
 
 No organization can achieve this security on its own.  If a single
 corporation or government agency were to build a private network to
@@ -148,9 +168,8 @@ HTTP or chat, and it requires no modification of those services to do so.
 
 weasel's graph of \# nodes and of bandwidth, ideally from week 0.
 
-Tor has the following goals.
-
-and we made these assumptions when trying to design the thing.
+Tor doesn't try to provide steg (but see Sec \ref{china}), or
+the other non-goals listed in tor-design.
 
 \section{Tor's position in the anonymity field}
 \label{sec:related}
@@ -241,6 +260,9 @@ snipe them?
 
 because only at the exit is it evident what port or protocol a given
 tor stream is, you can't choose not to carry file-sharing traffic.
+
+hibernation vs rate-limiting: do we want diversity or throughput? i
+think we're shifting back to wanting diversity.
 
 \subsection{Tor and blacklists}
 
@@ -675,6 +697,11 @@ Stefan's paper, and talk about how we need to route through clients,
 and we maybe we should start with a time-release IP publishing system +
 advogato based reputation system, to bound the number of IPs leaked to the
 adversary.
+
+\cite{infranet}
+\cite{koepsell-wpes2004}
+\cite{advogato}
+\cite{berkman}
 
 \section{The Future}
 \label{sec:conclusion}
