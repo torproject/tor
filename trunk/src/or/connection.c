@@ -220,7 +220,7 @@ void connection_about_to_close_connection(connection_t *conn)
 
   assert(conn->marked_for_close);
 
-  if (conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
+  if (CONN_IS_EDGE(conn)) {
     if (!conn->has_sent_end) {
       log_fn(LOG_WARN,"Harmless bug: Edge connection hasn't sent end yet?");
 #ifdef TOR_FRAGILE
@@ -903,10 +903,10 @@ loop_again:
   if (connection_read_to_buf(conn, &max_to_read) < 0) {
     /* There's a read error; kill the connection.*/
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
-    if (conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
+    if (CONN_IS_EDGE(conn)) {
       connection_edge_end(conn, (char)(connection_state_is_open(conn) ?
-                          END_STREAM_REASON_MISC : END_STREAM_REASON_CONNECTFAILED),
-                          conn->cpath_layer);
+                  END_STREAM_REASON_MISC : END_STREAM_REASON_CONNECTFAILED),
+                  conn->cpath_layer);
     }
     connection_mark_for_close(conn);
     return -1;
@@ -1073,7 +1073,8 @@ int connection_handle_write(connection_t *conn) {
   if (connection_state_is_connecting(conn)) {
     if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0) {
       log_fn(LOG_WARN,"getsockopt() syscall failed?! Please report to tor-ops.");
-      connection_close_immediate(conn);
+      if (CONN_IS_EDGE(conn))
+        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
       connection_mark_for_close(conn);
       return -1;
     }
@@ -1081,6 +1082,10 @@ int connection_handle_write(connection_t *conn) {
       /* some sort of error, but maybe just inprogress still */
       if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
         log_fn(LOG_INFO,"in-progress connect failed. Removing.");
+        if (CONN_IS_EDGE(conn))
+          connection_edge_end(conn, END_STREAM_REASON_CONNECTFAILED,
+                              conn->cpath_layer);
+
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
         /* it's safe to pass OPs to router_mark_as_down(), since it just
@@ -1143,6 +1148,11 @@ int connection_handle_write(connection_t *conn) {
   } else {
     result = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
     if (result < 0) {
+      /* XXXX Is this right? -NM
+      if (CONN_IS_EDGE(conn))
+        connection_edge_end(conn, END_STREAM_REASON_MISC,
+                            conn->cpath_layer);
+      */
       connection_close_immediate(conn); /* Don't flush; connection is dead. */
       conn->has_sent_end = 1;
       connection_mark_for_close(conn);
@@ -1177,7 +1187,7 @@ void connection_write_to_buf(const char *string, size_t len, connection_t *conn)
     return;
 
   if (write_to_buf(string, len, conn->outbuf) < 0) {
-    if (conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
+    if (CONN_IS_EDGE(conn)) {
       /* if it failed, it means we have our package/delivery windows set
          wrong compared to our max outbuf size. close the whole circuit. */
       log_fn(LOG_WARN,"write_to_buf failed. Closing circuit (fd %d).", conn->s);
@@ -1566,7 +1576,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->tls);
   }
 
-  if (conn->type != CONN_TYPE_EXIT && conn->type != CONN_TYPE_AP) {
+  if (CONN_IS_EDGE(conn)) {
     tor_assert(!conn->stream_id);
     tor_assert(!conn->next_stream);
     tor_assert(!conn->cpath_layer);
