@@ -334,7 +334,7 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   smartlist_free(sl);
   tor_free(n_supported);
   if(router) {
-    log_fn(LOG_WARN, "Chose exit server '%s'", router->nickname);
+    log_fn(LOG_INFO, "Chose exit server '%s'", router->nickname);
     return router;
   }
   log_fn(LOG_WARN, "No exit routers seem to be running; can't choose an exit.");
