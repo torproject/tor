@@ -69,27 +69,27 @@ uint32_t get_uint32(char *cp);
 void set_uint16(char *cp, uint16_t v);
 void set_uint32(char *cp, uint32_t v);
 #else
-#define get_uint16(cp)				\
-  ( ((*(((uint8_t*)(cp))+0))<<8) +		\
+#define get_uint16(cp)                          \
+  ( ((*(((uint8_t*)(cp))+0))<<8) +              \
     ((*(((uint8_t*)(cp))+1))   ) )
-#define get_uint32(cp)				\
-  ( ((*(((uint8_t*)(cp))+0))<<24) +		\
-    ((*(((uint8_t*)(cp))+1))<<16) +		\
-    ((*(((uint8_t*)(cp))+2))<<8 ) +		\
+#define get_uint32(cp)                          \
+  ( ((*(((uint8_t*)(cp))+0))<<24) +             \
+    ((*(((uint8_t*)(cp))+1))<<16) +             \
+    ((*(((uint8_t*)(cp))+2))<<8 ) +             \
     ((*(((uint8_t*)(cp))+3))    ) )
-#define set_uint16(cp,v)			\
-  do {						\
-    uint16_t u16v = (v);			\
-    *(((uint8_t*)(cp))+0) = (v >> 8)&0xff;	\
-    *(((uint8_t*)(cp))+1) = (v >> 0)&0xff;	\
+#define set_uint16(cp,v)                        \
+  do {                                          \
+    uint16_t u16v = (v);                        \
+    *(((uint8_t*)(cp))+0) = (v >> 8)&0xff;      \
+    *(((uint8_t*)(cp))+1) = (v >> 0)&0xff;      \
   } while (0)
-#define set_uint32(cp,val)			\
-  do {						\
-    uint32_t u32v = (v);			\
-    *(((uint8_t*)(cp))+0) = s32 >> 24)&0xff;	\
-    *(((uint8_t*)(cp))+1) = s32 >> 16)&0xff;	\
-    *(((uint8_t*)(cp))+2) = s32 >> 8)&0xff;	\
-    *(((uint8_t*)(cp))+3) = s32 >> 0)&0xff;	\
+#define set_uint32(cp,val)                      \
+  do {                                          \
+    uint32_t u32v = (v);                        \
+    *(((uint8_t*)(cp))+0) = s32 >> 24)&0xff;    \
+    *(((uint8_t*)(cp))+1) = s32 >> 16)&0xff;    \
+    *(((uint8_t*)(cp))+2) = s32 >> 8)&0xff;     \
+    *(((uint8_t*)(cp))+3) = s32 >> 0)&0xff;     \
   } while (0)
 #endif
 #endif
@@ -112,13 +112,13 @@ void *smartlist_get(smartlist_t *sl, int idx);
 void *smartlist_set(smartlist_t *sl, int idx, void *val);
 void *smartlist_del(smartlist_t *sl, int idx);
 int smartlist_len(smartlist_t *sl);
-#define SMARTLIST_FOREACH(sl, type, var, cmd)			\
-  do {								\
-    int sl_idx, sl_len=smartlist_len(sl);			\
-    type var;							\
-    for(sl_idx = 0; sl_idx < sl_len; ++sl_idx) {		\
-      var = smartlist_get((sl),sl_idx);				\
-      do {cmd;} while(0);					\
+#define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
+  do {                                                          \
+    int sl_idx, sl_len=smartlist_len(sl);                       \
+    type var;                                                   \
+    for(sl_idx = 0; sl_idx < sl_len; ++sl_idx) {                \
+      var = smartlist_get((sl),sl_idx);                         \
+      do {cmd;} while(0);                                       \
     } } while (0)
 
 /* Map from const char * to void*. Implemented with a splay tree. */
