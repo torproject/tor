@@ -825,10 +825,12 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
  *     <li> $<b>hexdigest</b> -- router is running and unverified.
  *     <li> !$<b>hexdigest</b> -- router is not-running and unverified.
  * </ol>
+ *
+ * Return 1 if we found router in running_list, else return 0.
  */
-void router_update_status_from_smartlist(routerinfo_t *router,
-                                         time_t list_time,
-                                         smartlist_t *running_list)
+int router_update_status_from_smartlist(routerinfo_t *router,
+                                        time_t list_time,
+                                        smartlist_t *running_list)
 {
   int n_names, i, running, approved;
   const char *name;
@@ -863,7 +865,7 @@ void router_update_status_from_smartlist(routerinfo_t *router,
           router->is_running = 1;
         }
         router->is_verified = (name[0] != '$');
-        return;
+        return 1;
       }
     } else { /* *name == '!' */
       name++;
@@ -873,10 +875,11 @@ void router_update_status_from_smartlist(routerinfo_t *router,
           router->is_running = 0;
         }
         router->is_verified = (name[0] != '$');
-        return;
+        return 1;
       }
     }
   }
+  return 0;
 }
 
 /*
