@@ -246,7 +246,7 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
      * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
      */
     return circ;
-  } else { /* it (or a twin) is already open. use it. */
+  } else { /* it's already open. use it. */
     circ->n_addr = n_conn->addr;
     circ->n_port = n_conn->port;
     circ->n_conn = n_conn;
@@ -1015,13 +1015,12 @@ onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest)
 }
 
 /** Return the number of routers in <b>routers</b> that are currently up
- * and available for building circuits through. Count sets of twins only
- * once.
+ * and available for building circuits through.
  */
 static int count_acceptable_routers(smartlist_t *routers) {
-  int i, j, n;
+  int i, n;
   int num=0;
-  routerinfo_t *r, *r2;
+  routerinfo_t *r;
 
   n = smartlist_len(routers);
   for(i=0;i<n;i++) {
@@ -1036,14 +1035,6 @@ static int count_acceptable_routers(smartlist_t *routers) {
       log_fn(LOG_DEBUG,"Nope, the directory says %d is not verified.",i);
       goto next_i_loop; /* XXX008 */
     }
-    for(j=0;j<i;j++) {
-      r2 = smartlist_get(routers, j);
-      if(!crypto_pk_cmp_keys(r->onion_pkey, r2->onion_pkey)) {
-        /* these guys are twins. so we've already counted him. */
-        log_fn(LOG_DEBUG,"Nope, %d is a twin of %d.",i,j);
-        goto next_i_loop;
-      }
-    }
     num++;
     log_fn(LOG_DEBUG,"I like %d. num_acceptable_routers now %d.",i, num);
     next_i_loop:
@@ -1052,26 +1043,6 @@ static int count_acceptable_routers(smartlist_t *routers) {
 
   return num;
 }
-
-#if 0
-/** Go through smartlist <b>sl</b> of routers, and remove all elements that
- * have the same onion key as twin.
- */
-static void remove_twins_from_smartlist(smartlist_t *sl, routerinfo_t *twin) {
-  int i;
-  routerinfo_t *r;
-
-  if(twin == NULL)
-    return;
-
-  for(i=0; i < smartlist_len(sl); i++) {
-    r = smartlist_get(sl,i);
-    if (!crypto_pk_cmp_keys(r->onion_pkey, twin->onion_pkey)) {
-      smartlist_del(sl,i--);
-    }
-  }
-}
-#endif
 
 /** Add <b>new_hop</b> to the end of the doubly-linked-list <b>head_ptr</b>.
  *
