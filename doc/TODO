@@ -16,9 +16,9 @@ For scalability:
           intelligently.
         - Handle full buffers without totally borking
 
-For dtor:
+For 0.0.8:
 
-NICK  pre1:
+NICK  milestone 1:
         o make all ORs serve the directory too.
           o "AuthoritativeDir 1" for dirservers
           o non-authorative servers with dirport publish opt dircacheport
@@ -36,23 +36,27 @@ NICK  pre1:
         o tor remembers descriptor-lists across reboots.
         . Packages define datadir as /var/lib/tor/. If no datadir is defined,
           then choose, make, and secure ~/.tor as datadir.
-	  o Adjust tor
-	  o Change torrc.sample
-	  D Change packages (not till 0.0.8 packages!)
-	  - Look in ~/.torrc if no */etc/torrc is found?
+          o Adjust tor
+          o Change torrc.sample
+          D Change packages (not till 0.0.8 packages!)
+NICK      - Look in ~/.tor/ if no */etc/torrc is found?
+NICK      - Possible to get autoconf to easily install things into ~/.tor?
         o Contact info, pgp fingerprint, comments in router desc.
           o Add a ContactInfo line to torrc, which gets published in
             descriptor (as opt)
         o write tor version at the top of each log file
 
-      pre2:
+      milestone 2:
         . refer to things by key:
           o extend cells need ip:port:identitykeyhash.
-	  o Lookup routers and connections by key digest; accept hex
+          o Lookup routers and connections by key digest; accept hex
             key digest in place of nicknames.
           o Audit all uses of lookup-by-hostname and lookup-by-addr-port
             to search by digest when appropriate.
-	  o Rep-hist functions need to store info by keyid
+NICK      - make sure to use addr/port in cpuworker tasks, because
+            OPs don't have keys.
+NICK      - and fix the function comments in rephist
+          o Rep-hist functions need to store info by keyid
           - also use this in intro points and rendezvous points, and
             hidserv descs.  [XXXX This isn't enough.]
           - figure out what to do about ip:port:differentkey
@@ -61,18 +65,19 @@ NICK  pre1:
         o nickname defaults to first piece of hostname
         o running-routers list refers to nickname if verified, else
           hash-base64'ed.
-	- Mark routers as verified or unverified based on whether
+        - Mark routers as verified or unverified based on whether
           running-routers list includes nickname or id hash.
         o put OR uptime in descriptor
         o name the secret-key directory something to discourage people
           from mailing their identity key to tor-ops
 
-      pre3:
+      milestone 3:
         - users can set their bandwidth, or we auto-detect it:
           - advertised bandwidth defaults to 10KB
           - advertised bandwidth is the min of max seen in each direction
             in the past N seconds.
-          - not counting "local" connections
+NICK        - calculate this
+          o not counting "local" connections
           - round detected bandwidth up to nearest 10KB
         - client software not upload descriptor until:
           - you've been running for an hour
@@ -81,8 +86,8 @@ NICK  pre1:
           - start counting again if your IP ever changes.
           - never regenerate identity keys, for now.
           - you can set a bit for not-being-an-OR.
-	- Reputation info needs to give better weight to recent events than
-	  very old ones.
+NICK    - Reputation info needs to give better weight to recent events than
+          very old ones.
         - Have clients and dirservers preserve reputation info over
           reboots.
         - clients choose nodes proportional to advertised bandwidth
@@ -92,6 +97,8 @@ NICK  pre1:
           - he has sufficient mean-time-between-failures
         - add new "Middleman 1" config variable?
           o if torrc not found, exitpolicy reject *:*
+NICK    - change if(options.ORPort) to what we really mean.
+NICK    - same with socksport.
 
       ongoing:
         . rename/rearrange functions for what file they're in
