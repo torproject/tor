@@ -2,3 +2,4 @@ etc/tor
 var/lib/tor
 var/log/tor
 var/run/tor
+usr/share/lintian/overrides

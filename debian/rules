@@ -67,6 +67,8 @@ install: build
 	install -m 644 contrib/torify.1 $(CURDIR)/debian/tor/usr/share/man/man1
 	install -m 644 contrib/tor-tsocks.conf $(CURDIR)/debian/tor/etc/tor
 
+	install -m 644 debian/tor.lintian-override $(CURDIR)/debian/tor/usr/share/lintian/overrides/tor
+
 
 # Build architecture-independent files here.
 binary-indep: build install
