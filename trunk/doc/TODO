@@ -13,18 +13,18 @@ ARMA    - arma claims
 
 Short-term:
         o routers have identity key, link key, onion key.
-                . link key certs are
-                  - signed by identity key
-                  - not in descriptor
+                o link key certs are
+                  D signed by identity key
+                  D not in descriptor
                   o not in config
-                  - not on disk
+                  D not on disk
                 o identity and onion keys are in descriptor (and disk)
         o upon boot, if it doesn't find identity key, generate it and write it.
         o also write a file with the identity key fingerprint in it
         o router generates descriptor: flesh out router_get_my_descriptor()
         o Routers sign descriptors with identity key
         o routers put version number in descriptor
-	o routers should maybe have `uname -a` in descriptor?
+        o routers should maybe have `uname -a` in descriptor?
         o Give nicknames to routers
                 o in config
                 o in descriptors
@@ -49,9 +49,9 @@ NICK    - instruments ORs to report stats
 ARMA    - configure log files. separate log file, separate severities.
 ARMA    - what assumptions break if we fclose(0) when we daemonize?
         o make buffer struct elements opaque outside buffers.c
-ARMA    - Go through log messages, reduce confusing error messages.
-ARMA    - make the logs include more info (fd, etc)
-ARMA    - add log convention to the HACKING file
+ARMA    . Go through log messages, reduce confusing error messages.
+ARMA    . make the logs include more info (fd, etc)
+ARMA    . add log convention to the HACKING file
         - make 'make install' do the right thing
         o change binary name to tor
         o change config files so you look at commandline, else look in
@@ -63,6 +63,9 @@ ARMA    - tor faq
 NICK    - Move (most of) the router/directory code out of main.c
 
 Mid-term:
+        . Redo scheduler
+                o fix SSL_read bug for buffered records
+                - make round-robining more fair
         - What happens when a circuit's length is 1? What breaks?
         . streams / circuits
                 o Implement streams
