@@ -309,7 +309,8 @@ connection_tls_finish_handshake(connection_t *conn) {
   crypto_free_pk_env(identity_rcvd);
 
   router = router_get_by_nickname(nickname);
-  if(router && /* we know this nickname; make sure it's the right guy */
+  if(router && /* we know this nickname */
+     router->is_verified && /* make sure it's the right guy */
      memcmp(digest_rcvd, router->identity_digest, DIGEST_LEN) != 0) {
     log_fn(LOG_WARN, "Identity key not as expected for %s", nickname);
     return -1;
