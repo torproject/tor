@@ -1,4 +1,4 @@
-/* Copyright 2001,2002,2003 Roger Dingledine, Matej Pfajfar. */
+/* Copyright 2001 Matej Pfajfar, 2001-2004 Roger Dingledine. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 
@@ -6,24 +6,27 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+/* keep statistics about how many of each type of cell we've received */
 unsigned long stats_n_padding_cells_processed = 0;
 unsigned long stats_n_create_cells_processed = 0;
 unsigned long stats_n_created_cells_processed = 0;
 unsigned long stats_n_relay_cells_processed = 0;
 unsigned long stats_n_destroy_cells_processed = 0;
 
+/* These are the main four functions for processing cells */
 static void command_process_create_cell(cell_t *cell, connection_t *conn);
 static void command_process_created_cell(cell_t *cell, connection_t *conn);
 static void command_process_relay_cell(cell_t *cell, connection_t *conn);
 static void command_process_destroy_cell(cell_t *cell, connection_t *conn);
 
-static void command_time_process_cell(cell_t *cell, connection_t *conn,
-                               int *num, int *time,
+/* This is a wrapper function around the actual function that processes
+ * 'cell' that just arrived on 'conn'. Increment *time by the number of
+ * microseconds used by the call to *func(cell, conn).
+ */
+static void command_time_process_cell(cell_t *cell, connection_t *conn, int *time,
                                void (*func)(cell_t *, connection_t *)) {
   struct timeval start, end;
   long time_passed;
-
-  *num += 1;
 
   tor_gettimeofday(&start);
 
@@ -38,10 +41,19 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn,
   *time += time_passed;
 }
 
+/* Process a cell that was just received on conn. Keep internal
+ * statistics about how many of each cell we've processed so far
+ * this second, and the total number of microseconds it took to
+ * process each type of cell.
+ */
 void command_process_cell(cell_t *cell, connection_t *conn) {
+  /* how many of each cell have we seen so far this second? needs better
+   * name. */
   static int num_create=0, num_created=0, num_relay=0, num_destroy=0;
+  /* how long has it taken to process each type of cell? */
   static int create_time=0, created_time=0, relay_time=0, destroy_time=0;
   static time_t current_second = 0; /* from previous calls to time */
+
   time_t now = time(NULL);
 
   if(now > current_second) { /* the second has rolled over */
@@ -67,22 +79,26 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
       break;
     case CELL_CREATE:
       ++stats_n_create_cells_processed;
-      command_time_process_cell(cell, conn, &num_create, &create_time,
+      ++num_create;
+      command_time_process_cell(cell, conn, &create_time,
                                 command_process_create_cell);
       break;
     case CELL_CREATED:
       ++stats_n_created_cells_processed;
-      command_time_process_cell(cell, conn, &num_created, &created_time,
+      ++num_created;
+      command_time_process_cell(cell, conn, &created_time,
                                 command_process_created_cell);
       break;
     case CELL_RELAY:
       ++stats_n_relay_cells_processed;
-      command_time_process_cell(cell, conn, &num_relay, &relay_time,
+      ++num_relay;
+      command_time_process_cell(cell, conn, &relay_time,
                                 command_process_relay_cell);
       break;
     case CELL_DESTROY:
       ++stats_n_destroy_cells_processed;
-      command_time_process_cell(cell, conn, &num_destroy, &destroy_time,
+      ++num_destroy;
+      command_time_process_cell(cell, conn, &destroy_time,
                                 command_process_destroy_cell);
       break;
     default:
@@ -91,6 +107,11 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
   }
 }
 
+/* Process a 'create' cell that just arrived from conn. Make a new circuit
+ * with the p_circ_id specified in cell. Put the circuit in state
+ * onionskin_pending, and pass the onionskin to the cpuworker. Circ will
+ * get picked up again when the cpuworker finishes decrypting it.
+ */
 static void command_process_create_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
@@ -116,6 +137,13 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
   log_fn(LOG_DEBUG,"success: handed off onionskin.");
 }
 
+/* Process a 'created' cell that just arrived from conn. Find the circuit
+ * that it's intended for. If you're not the origin of the circuit, package
+ * the 'created' cell in an 'extended' relay cell and pass it back. If you
+ * are the origin of the circuit, send it to circuit_finish_handshake() to
+ * finish processing keys, and then call circuit_send_next_onion_skin() to
+ * extend to the next hop in the circuit if necessary.
+ */
 static void command_process_created_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
@@ -152,6 +180,10 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
   }
 }
 
+/* Process a 'relay' cell that just arrived from conn. Make sure
+ * it came in with a recognized circ_id. Pass it on to
+ * circuit_receive_relay_cell() for actual processing.
+ */
 static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
@@ -184,6 +216,19 @@ static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
   }
 }
 
+/* Process a 'destroy' cell that just arrived from conn. Find the
+ * circ that it refers to (if any).
+ *
+ * If the circ is in state
+ * onionskin_pending, then call onion_pending_remove() to remove it
+ * from the pending onion list (note that if it's already being
+ * processed by the cpuworker, it won't be in the list anymore; but
+ * when the cpuworker returns it, the circuit will be gone, and the
+ * cpuworker response will be dropped).
+ *
+ * Then mark the circuit for close (which marks all edges for close,
+ * and passes the destroy cell onward if necessary).
+ */
 static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
