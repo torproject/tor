@@ -1,3 +1,10 @@
+tor (0.0.3-1) unstable; urgency=low
+
+  * New upstream release.
+  * Also mention that tree.h is by Niels Provos in debian/copyright.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 26 Mar 2004 20:36:08 +0100
+
 tor (0.0.2-1) unstable; urgency=low
 
   * New upstream release.
