@@ -51,7 +51,7 @@ int op_handshake_process_keys(connection_t *conn) {
   log(LOG_DEBUG,"op_handshake_process_keys() : Received auth.");
 
   /* decrypt response */
-  retval = crypto_pk_private_decrypt(getprivatekey(), auth_cipher, 128, auth_plain,RSA_PKCS1_PADDING);
+  retval = crypto_pk_private_decrypt(get_privatekey(), auth_cipher, 128, auth_plain,RSA_PKCS1_PADDING);
   if (retval == -1)
   { 
     log(LOG_ERR,"Decrypting keys from new OP failed.");

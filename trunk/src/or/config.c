@@ -176,6 +176,7 @@ void config_assign(or_options_t *options, struct config_line *list) {
     /* string options */
     config_compare(list, "LogLevel",       CONFIG_TYPE_STRING, &options->LogLevel) ||
     config_compare(list, "PrivateKeyFile", CONFIG_TYPE_STRING, &options->PrivateKeyFile) ||
+    config_compare(list, "SigningPrivateKeyFile", CONFIG_TYPE_STRING, &options->SigningPrivateKeyFile) ||
     config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
 
     /* int options */
@@ -271,9 +272,10 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   if (options->loglevel == LOG_DEBUG) {
     printf("LogLevel=%s\n",
            options->LogLevel);
-    printf("RouterFile=%s, PrivateKeyFile=%s\n",
+    printf("RouterFile=%s, PrivateKeyFile=%s, SigningPrivateKeyFile=%s\n",
            options->RouterFile ? options->RouterFile : "(undefined)",
-           options->PrivateKeyFile ? options->PrivateKeyFile : "(undefined)");
+           options->PrivateKeyFile ? options->PrivateKeyFile : "(undefined)",
+           options->SigningPrivateKeyFile ? options->SigningPrivateKeyFile : "(undefined)");
     printf("ORPort=%d, OPPort=%d, APPort=%d DirPort=%d\n",
            options->ORPort,options->OPPort,
            options->APPort,options->DirPort);
@@ -325,6 +327,11 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   if(options->ORPort > 0 && options->PrivateKeyFile == NULL) {
     log(LOG_ERR,"PrivateKeyFile option required for OR, but not found.");
+    result = -1;
+  }
+
+  if(options->DirPort > 0 && options->SigningPrivateKeyFile == NULL) {
+    log(LOG_ERR,"SigningPrivateKeyFile option required for DirServer, but not found.");
     result = -1;
   }
 

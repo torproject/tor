@@ -464,7 +464,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_client_process_auth() : Received auth.");
 
   /* decrypt response */
-  retval = crypto_pk_private_decrypt(getprivatekey(), cipher, 128, buf, RSA_PKCS1_PADDING);
+  retval = crypto_pk_private_decrypt(get_privatekey(), cipher, 128, buf, RSA_PKCS1_PADDING);
   if (retval == -1)
   { 
     log(LOG_ERR,"Public-key decryption failed during authentication to %s:%u.",
@@ -572,7 +572,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Received auth.");
 
   /* decrypt response */
-  retval = crypto_pk_private_decrypt(getprivatekey(), cipher, 128, buf, RSA_PKCS1_PADDING);
+  retval = crypto_pk_private_decrypt(get_privatekey(), cipher, 128, buf, RSA_PKCS1_PADDING);
   if (retval == -1)
   { 
     log(LOG_ERR,"or_handshake_server_process_auth: Public-key decryption failed.");
@@ -691,7 +691,7 @@ int or_handshake_server_process_nonce(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_nonce() : Received auth.");
 
   /* decrypt response */
-  retval = crypto_pk_private_decrypt(getprivatekey(), cipher, 128, buf,RSA_PKCS1_PADDING);
+  retval = crypto_pk_private_decrypt(get_privatekey(), cipher, 128, buf,RSA_PKCS1_PADDING);
   if (retval == -1)
   {
     log(LOG_ERR,"Public-key decryption failed during authentication to %s:%u.",
