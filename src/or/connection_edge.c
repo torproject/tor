@@ -156,21 +156,11 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         return -1; /* somebody's breaking protocol. kill the whole circuit. */
       }
 
-#ifdef USE_ZLIB
-      if(connection_decompress_to_buf(cell->payload + RELAY_HEADER_SIZE,
-                                      cell->length - RELAY_HEADER_SIZE, 
-                                      conn, Z_SYNC_FLUSH) < 0) {
-        log(LOG_INFO,"connection_edge_process_relay_cell(): write to buf failed. Marking for close.");
-        conn->marked_for_close = 1;
-        return 0;
-      }
-#else
       if(connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
                                  cell->length - RELAY_HEADER_SIZE, conn) < 0) {
         conn->marked_for_close = 1;
         return 0;
       }
-#endif
       if(connection_consider_sending_sendme(conn, edge_type) < 0)
         conn->marked_for_close = 1;
       return 0;
@@ -296,10 +286,6 @@ int connection_edge_finished_flushing(connection_t *conn) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       connection_stop_writing(conn);
-#ifdef USE_ZLIB
-      if (connection_decompress_to_buf(NULL, 0, conn, Z_SYNC_FLUSH) < 0)
-        return 0;
-#endif
       return connection_consider_sending_sendme(conn, conn->type);
     default:
       log(LOG_DEBUG,"Bug: connection_edge_finished_flushing() called in unexpected state.");

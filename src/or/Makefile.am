@@ -9,14 +9,14 @@ or_SOURCES = buffers.c circuit.c command.c connection.c \
              onion.c routers.c directory.c dns.c connection_edge.c \
              main.c tor_main.c
 
-or_LDADD = ../common/libor.a -lz
+or_LDADD = ../common/libor.a
 
 test_SOURCES = buffers.c circuit.c command.c connection.c \
              connection_exit.c connection_ap.c connection_or.c config.c \
              onion.c routers.c directory.c dns.c connection_edge.c \
              main.c test.c
 
-test_LDADD = ../common/libor.a -lz
+test_LDADD = ../common/libor.a
 
 noinst_HEADERS = or.h tree.h
 

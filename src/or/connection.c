@@ -98,18 +98,6 @@ connection_t *connection_new(int type) {
       return NULL;
     }
   }
-#ifdef USE_ZLIB
-  if (type == CONN_TYPE_AP || type == CONN_TYPE_EXIT)  {
-    if (buf_new(&conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen) < 0)
-      return NULL;
-    if (! (conn->compression = compression_new()))
-      return NULL;
-    if (! (conn->decompression = decompression_new()))
-      return NULL;
-  } else {
-    conn->compression = conn->decompression = NULL;
-  }
-#endif
   conn->done_sending = conn->done_receiving = 0;
   return conn;
 }
@@ -141,13 +129,6 @@ void connection_free(connection_t *conn) {
   if(conn->type == CONN_TYPE_OR) {
     directory_set_dirty();
   }
-#ifdef USE_ZLIB
-  if (conn->compression) {
-    decompression_free(conn->decompression);
-    compression_free(conn->compression);
-    buf_free(conn->z_outbuf);
-  }
-#endif
   free(conn);
 }
 
@@ -321,58 +302,6 @@ int connection_read_to_buf(connection_t *conn) {
 int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
   return fetch_from_buf(string, len, &conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen);
 }
-
-#ifdef USE_ZLIB
-int connection_compress_from_buf(char *string, int len, connection_t *conn,
-                                 int flush) {
-  return compress_from_buf(string, len,
-                           &conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen,
-                           conn->compression, flush);
-}
-
-int connection_decompress_to_buf(char *string, int len, connection_t *conn,
-                                 int flush) {
-  int n;
-  struct timeval now;
-
-  assert(conn);
-
-  if (len) {
-    if (write_to_buf(string, len, 
-        &conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen) < 0)
-      return -1;
-  }
-
-  /* If we have more that 10 payloads worth of data waiting in outbuf, 
-   * don't uncompress any more; queue this data in z_outbuf.
-   *
-   * This check should may be different.
-   */
-  if (connection_outbuf_too_full(conn))
-    return 0;
-  
-  n = decompress_buf_to_buf(
-        &conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen,
-        &conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen,
-        conn->decompression, flush);
-
-  if (n < 0)
-    return -1;
-
-  my_gettimeofday(&now,NULL);
-  
-  if(!n)
-    return 0;
-
-  if(conn->marked_for_close)
-    return 0;
-
-  conn->timestamp_lastwritten = now.tv_sec;
-  conn->outbuf_flushlen += n;
-
-  return n;
-}
-#endif
 
 int connection_find_on_inbuf(char *string, int len, connection_t *conn) {
   return find_on_inbuf(string, len, conn->inbuf, conn->inbuf_datalen);
@@ -625,7 +554,7 @@ int connection_process_inbuf(connection_t *conn) {
 }
 
 int connection_package_raw_inbuf(connection_t *conn) {
-  int amount_to_process, len;
+  int amount_to_process;
   cell_t cell;
   circuit_t *circ;
 
@@ -643,20 +572,6 @@ repeat_connection_package_raw_inbuf:
   /* Initialize the cell with 0's */
   memset(&cell, 0, sizeof(cell_t));
 
-#ifdef USE_ZLIB
-  /* This compression logic is not necessarily optimal:
-   *    1) Maybe we should try to read as much as we can onto the inbuf before
-   *       compressing.
-   *    2) 
-   */
-  len = connection_compress_from_buf(cell.payload+RELAY_HEADER_SIZE,
-                                     CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE,
-                                     conn, Z_SYNC_FLUSH);
-  if (len < 0)
-    return -1;
-
-  cell.length = len;    
-#else 
   if(amount_to_process > CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE) {
     cell.length = CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE;
   } else {
@@ -666,7 +581,6 @@ repeat_connection_package_raw_inbuf:
   if(connection_fetch_from_buf(cell.payload+RELAY_HEADER_SIZE, 
                                cell.length, conn) < 0)
     return -1;
-#endif
 
   circ = circuit_get_by_conn(conn);
   if(!circ) {
