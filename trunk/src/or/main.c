@@ -1194,7 +1194,7 @@ void handle_signals(int is_parent)
 #ifdef SIGXFSZ
     SIGXFSZ, /* handle file-too-big resource exhaustion */
 #endif
-    SIGCHLD, /* /* handle dns/cpu workers that exit */
+    SIGCHLD, /* handle dns/cpu workers that exit */
     -1 };
   static struct event signal_events[16]; /* bigger than it has to be. */
   if (is_parent) {
