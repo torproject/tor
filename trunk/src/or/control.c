@@ -736,7 +736,7 @@ static int handle_control_attachstream(connection_t *conn, uint32_t len,
   if (!circ_id) {
     ap_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
     if (connection_ap_handshake_attach_circuit(ap_conn)<0)
-      connection_close_unattached_ap(ap_conn, END_STREAM_REASON_MISC);
+      connection_close_unattached_ap(ap_conn, END_STREAM_REASON_CANT_ATTACH);
     send_control_done(conn);
     return 0;
   }

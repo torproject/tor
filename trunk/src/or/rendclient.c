@@ -394,7 +394,7 @@ void rend_client_desc_here(char *query) {
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
         /* it will never work */
         log_fn(LOG_WARN,"attaching to a rend circ failed. Closing conn.");
-        connection_close_unattached_ap(conn, END_STREAM_REASON_MISC);
+        connection_close_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
       }
       tor_assert(conn->state != AP_CONN_STATE_RENDDESC_WAIT); /* avoid loop */
     } else { /* 404, or fetch didn't get that far */

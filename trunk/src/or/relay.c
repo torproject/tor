@@ -500,13 +500,13 @@ connection_edge_end_reason_socks5_response(int reason)
     case END_STREAM_REASON_CONNECTREFUSED:
       return SOCKS5_CONNECTION_REFUSED;
     case END_STREAM_REASON_EXITPOLICY:
-      return SOCKS5_CONNECTION_REFUSED; // XXX should be SOCKS5_NOT_ALLOWED ?
+      return SOCKS5_NOT_ALLOWED;
     case END_STREAM_REASON_DESTROY:
       return SOCKS5_GENERAL_ERROR;
     case END_STREAM_REASON_DONE:
       return SOCKS5_SUCCEEDED;
     case END_STREAM_REASON_TIMEOUT:
-      return SOCKS5_TTL_EXPIRED; // XXX is this correct?
+      return SOCKS5_TTL_EXPIRED;
     case END_STREAM_REASON_RESOURCELIMIT:
       return SOCKS5_GENERAL_ERROR;
     case END_STREAM_REASON_HIBERNATING:
@@ -517,6 +517,13 @@ connection_edge_end_reason_socks5_response(int reason)
       return SOCKS5_CONNECTION_REFUSED;
     case END_STREAM_REASON_TORPROTOCOL:
       return SOCKS5_GENERAL_ERROR;
+
+    case END_STREAM_REASON_ALREADY_SOCKS_REPLIED:
+      return SOCKS5_SUCCEEDED; /* never used */
+    case END_STREAM_REASON_CANT_ATTACH:
+      return SOCKS5_GENERAL_ERROR;
+    case END_STREAM_REASON_NET_UNREACHABLE:
+      return SOCKS5_NET_UNREACHABLE;
     default:
       log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",reason);
       return SOCKS5_GENERAL_ERROR;
@@ -716,7 +723,7 @@ connection_edge_process_relay_cell_not_open(
                    cell->payload[RELAY_HEADER_SIZE], /*answer_type*/
                    cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
                    cell->payload+RELAY_HEADER_SIZE+2); /* answer */
-    connection_close_unattached_ap(conn, END_STREAM_REASON_DONE);
+    connection_close_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
     return 0;
   }
 
