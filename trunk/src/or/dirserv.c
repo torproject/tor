@@ -853,7 +853,6 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   time_t published_on;
   char *identity_pkey; /* Identity key, DER64-encoded. */
 
-  /* For each descriptor we know, we might */
   if (list_server_status(NULL, &router_status)) {
     goto err;
   }
