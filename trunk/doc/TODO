@@ -51,15 +51,20 @@ NICK  pre1:
 
       pre2:
         - refer to things by key:
-          - extend cells need ip:port:identitykeyhash.
+          o extend cells need ip:port:identitykeyhash.
+	  . Lookup routers and connections by key digest; accept hex
+            key digest in place of nicknames.
+          - Audit all uses of lookup-by-hostname and lookup-by-addr-port
+            to search by digest when appropriate.
           - also use this in intro points and rendezvous points, and
-            hidserv descs.
+            hidserv descs.  [XXXX This isn't enough.]
           - figure out what to do about ip:port:differentkey
 ARMA    - ORs connect on demand. attach circuits to new connections, keep
           create cells around somewhere, send destroy if fail.
         - nickname defaults to first piece of hostname
         - running-routers list refers to nickname if verified, else
           hash-base64'ed.
+
 
       pre3:
         - users can set their bandwidth, or we auto-detect it:
