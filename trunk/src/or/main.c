@@ -417,7 +417,7 @@ void directory_all_unreachable(time_t now) {
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
     conn->has_sent_end = 1; /* it's not connected anywhere, so no need to end */
     log_fn(LOG_NOTICE,"Network down? Failing connection to '%s'.",
-           conn->socks_address->address);
+           conn->socks_request->address);
     connection_mark_for_close(conn);
   }
 }
