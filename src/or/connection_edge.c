@@ -153,7 +153,7 @@ int connection_edge_process_data_cell(cell_t *cell, circuit_t *circ, int edge_ty
       }
 
 #ifdef USE_ZLIB
-      if(connection_decompress_to_buf(cell->payload,
+      if(connection_decompress_to_buf(cell->payload + TOPIC_HEADER_SIZE,
                                       cell->length - TOPIC_HEADER_SIZE, 
                                       conn, Z_SYNC_FLUSH) < 0) {
         log(LOG_INFO,"connection_edge_process_data_cell(): write to buf failed. Marking for close.");
@@ -161,7 +161,7 @@ int connection_edge_process_data_cell(cell_t *cell, circuit_t *circ, int edge_ty
         return 0;
       }
 #else
-      if(connection_write_to_buf(cell->payload,
+      if(connection_write_to_buf(cell->payload + TOPIC_HEADER_SIZE,
                                  cell->length - TOPIC_HEADER_SIZE, conn) < 0) {
         conn->marked_for_close = 1;
         return 0;
