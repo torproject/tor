@@ -423,8 +423,7 @@ financial health as well as network security.
 % this para should probably move to the scalability / directory system. -RD
 % Nope. Cut for space, except for small comment added above -PFS
 
-\section{Crossroads: Policy issues}
-\label{sec:crossroads-policy}
+\section{Policy issues}
 
 Many of the issues the Tor project needs to address extend beyond
 system design and technology development. In particular, the
@@ -802,8 +801,7 @@ time.
 
 %[XXX Mention correct DNS-RBL implementation. -NM]
 
-\section{Crossroads: Design choices}
-\label{sec:crossroads-design}
+\section{Design choices}
 
 In addition to social issues, Tor also faces some design challenges that must
 be addressed as the network develops.
@@ -969,15 +967,15 @@ reveal the path taken by large traffic flows under low-usage circumstances.
 \label{subsec:helper-nodes}
 
 It has been thought for some time that the best anonymity protection
-comes from running your own node~\cite{or-pet00,tor-design}.
-(In fact, in Onion Routing's first design, this was the only option
-possible~\cite{or-ih96}.)  While the first implementation
+comes from running your own node~\cite{tor-design,or-pet00}.
+(In fact, this was the only option in the earliest Onion Routing
+design~\cite{or-ih96}.)  While the first implementation
 had a fixed path length of five nodes, first generation
-Onion Routing design included random length routes chosen 
+Onion Routing design included random length routes chosen
 to simultaneously maximize efficiency and unpredictability in routes.
 If one followed Tor's three node default
 path length, an enclave-to-enclave communication (in which the entry and
-exit nodes were run by enclaves themselves) 
+exit nodes were run by enclaves themselves)
 would be completely compromised by the
 middle node. Thus for enclave-to-enclave communication, four is the fewest
 number of nodes that preserves the $\frac{c^2}{n^2}$ degree of protection
@@ -1188,8 +1186,7 @@ trust decisions than the Tor developers.
 %RIAA; less so if threat is to application data or individuals or...
 
 \section{Scaling}
-%\label{sec:crossroads-scaling}
-%P2P + anonymity issues:
+\label{sec:scaling}
 
 Tor is running today with hundreds of nodes and tens of thousands of
 users, but it will certainly not scale to millions.
@@ -1486,16 +1483,16 @@ this stage if the developers stopped actively working on it. We may get
 an unexpected boon from the fact that we're a general-purpose overlay
 network: as Tor grows more popular, other groups who need an overlay
 network on the Internet are starting to adapt Tor to their needs.
-
+%
 Second, Tor is only one of many components that preserve privacy online.
 To keep identifying information out of application traffic, we must build
 more and better protocol-aware proxies that are usable by ordinary people.
-
+%
 Third, we need to gain a reputation for social good, and learn how to
 coexist with the variety of Internet services and their established
 authentication mechanisms. We can't just keep escalating the blacklist
 standoff forever.
-
+%
 Fourth, as described in Section~\ref{sec:scaling}, the current Tor
 architecture does not scale even to handle current user demand. We must
 find designs and incentives to let clients relay traffic too, without
