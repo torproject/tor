@@ -1022,6 +1022,14 @@ test_dir_format()
   test_eq(0, is_obsolete_version("0.0.7rc2", "0.0.7,Tor 0.0.7rc2,Tor 0.0.8"));
   test_eq(0, is_obsolete_version("0.0.5", "0.0.5-cvs"));
   test_eq(0, is_obsolete_version("0.0.5.1-cvs", "0.0.5"));
+
+  test_eq(0, tor_version_as_new_as("Tor 0.0.5", "0.0.9pre1-cvs"));
+  test_eq(0, tor_version_as_new_as("Tor 0.0.5", "0.0.9pre1-cvs"));
+  test_eq(1, tor_version_as_new_as(
+          "Tor 0.0.8 on Darwin 64-121-192-100.c3-0.sfpo-ubr1.sfrn-sfpo.ca.cable.rcn.com Power Macintosh", "0.0.8rc2"));
+  test_eq(0, tor_version_as_new_as(
+          "Tor 0.0.8 on Darwin 64-121-192-100.c3-0.sfpo-ubr1.sfrn-sfpo.ca.cable.rcn.com Power Macintosh", "0.0.8.2"));
+
 }
 
 void test_rend_fns()

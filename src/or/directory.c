@@ -214,20 +214,22 @@ static void directory_send_command(connection_t *conn, int purpose,
   char fetchrunninglist[] = "GET /tor/running-routers HTTP/1.0\r\n\r\n";
   char tmp[8192];
   routerinfo_t *router;
+  int use_newer = 0;
 
   tor_assert(conn && conn->type == CONN_TYPE_DIR);
 
   router = router_get_by_digest(conn->identity_digest);
   tor_assert(router); /* the func that calls us found it, so we should too */
 
+  use_newer = tor_version_as_new_as(router->platform, "0.0.9pre1");
+
   switch(purpose) {
     case DIR_PURPOSE_FETCH_DIR:
       tor_assert(payload == NULL);
-      if (!strcmpstart(router->platform, "Tor 0.0.7") ||
-          !strcmpstart(router->platform, "Tor 0.0.8"))
-        connection_write_to_buf(fetchwholedir, strlen(fetchwholedir), conn);
-      else
+      if(use_newer)
         connection_write_to_buf(fetchwholedir_z, strlen(fetchwholedir_z), conn);
+      else
+        connection_write_to_buf(fetchwholedir, strlen(fetchwholedir), conn);
       break;
     case DIR_PURPOSE_FETCH_RUNNING_LIST:
       tor_assert(payload == NULL);
@@ -236,7 +238,7 @@ static void directory_send_command(connection_t *conn, int purpose,
     case DIR_PURPOSE_UPLOAD_DIR:
       tor_assert(payload);
       snprintf(tmp, sizeof(tmp), "POST %s/ HTTP/1.0\r\nContent-Length: %d\r\n\r\n",
-               strcmpstart(router->platform, "Tor 0.0.8") ? "/tor" : "",
+               use_newer ? "/tor" : "",
                payload_len);
       connection_write_to_buf(tmp, strlen(tmp), conn);
       connection_write_to_buf(payload, payload_len, conn);
