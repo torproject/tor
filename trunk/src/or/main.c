@@ -534,7 +534,8 @@ static int do_hup(void) {
     log_fn(LOG_ERR,"Error reloading rendezvous service keys");
     exit(1);
   }
-  /* XXX also call rend_services_init ?? */
+  /* We'll re-call rend_services_init after the new directory arrives.
+   * XXXX but what if we're the the directory? */
   if(retry_all_connections() < 0) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
