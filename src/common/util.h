@@ -26,7 +26,7 @@
 #elif defined(_MSC_VER)
 #include <winsock.h>
 #endif
-#ifndef HAVE_STRUCT_TIMEVAL_TV_SEC
+#if !defined(HAVE_GETTIMEOFDAY) && !defined(HAVE_STRUCT_TIMEVAL_TV_SEC)
 struct timeval {
   time_t tv_sec;
   unsigned int tv_usec;
