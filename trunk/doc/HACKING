@@ -6,108 +6,113 @@ the code, add features, fix bugs, etc.
 
 Read the README file first, so you can get familiar with the basics.
 
-1. The programs.
+The pieces.
 
-1.1. "or". This is the main program here. It functions as either a server
-or a client, depending on which config file you give it.
+  Routers. Onion routers, as far as the 'tor' program is concerned,
+  are a bunch of data items that are loaded into the router_array when
+  the program starts. Periodically it downloads a new set of routers
+  from a directory server, and updates the router_array. When a new OR
+  connection is started (see below), the relevant information is copied
+  from the router struct to the connection struct.
 
-1.2. "orkeygen". Use "orkeygen file-for-privkey file-for-pubkey" to
-generate key files for an onion router.
+  Connections. A connection is a long-standing tcp socket between
+  nodes. A connection is named based on what it's connected to -- an "OR
+  connection" has an onion router on the other end, an "OP connection" has
+  an onion proxy on the other end, an "exit connection" has a website or
+  other server on the other end, and an "AP connection" has an application
+  proxy (and thus a user) on the other end.
 
-2. The pieces.
+  Circuits. A circuit is a path over the onion routing
+  network. Applications can connect to one end of the circuit, and can
+  create exit connections at the other end of the circuit. AP and exit
+  connections have only one circuit associated with them (and thus these
+  connection types are closed when the circuit is closed), whereas OP and
+  OR connections multiplex many circuits at once, and stay standing even
+  when there are no circuits running over them.
 
-2.1. Routers. Onion routers, as far as the 'or' program is concerned,
-are a bunch of data items that are loaded into the router_array when
-the program starts. Periodically it downloads a new set of routers
-from a directory server, and updates the router_array. When a new OR
-connection is started (see below), the relevant information is copied
-from the router struct to the connection struct.
+  Streams. Streams are specific conversations between an AP and an exit.
+  Streams are multiplexed over circuits.
 
-2.2. Connections. A connection is a long-standing tcp socket between
-nodes. A connection is named based on what it's connected to -- an "OR
-connection" has an onion router on the other end, an "OP connection" has
-an onion proxy on the other end, an "exit connection" has a website or
-other server on the other end, and an "AP connection" has an application
-proxy (and thus a user) on the other end.
+  Cells. Some connections, specifically OR and OP connections, speak
+  "cells". This means that data over that connection is bundled into 256
+  byte packets (8 bytes of header and 248 bytes of payload). Each cell has
+  a type, or "command", which indicates what it's for.
 
-2.3. Circuits. A circuit is a path over the onion routing
-network. Applications can connect to one end of the circuit, and can
-create exit connections at the other end of the circuit. AP and exit
-connections have only one circuit associated with them (and thus these
-connection types are closed when the circuit is closed), whereas OP and
-OR connections multiplex many circuits at once, and stay standing even
-when there are no circuits running over them.
+Robustness features.
 
-2.4. Topics. Topics are specific conversations between an AP and an exit.
-Topics are multiplexed over circuits.
+[XXX no longer up to date]
+ Bandwidth throttling. Each cell-speaking connection has a maximum
+  bandwidth it can use, as specified in the routers.or file. Bandwidth
+  throttling can occur on both the sender side and the receiving side. If
+  the LinkPadding option is on, the sending side sends cells at regularly
+  spaced intervals (e.g., a connection with a bandwidth of 25600B/s would
+  queue a cell every 10ms). The receiving side protects against misbehaving
+  servers that send cells more frequently, by using a simple token bucket:
 
-2.4. Cells. Some connections, specifically OR and OP connections, speak
-"cells". This means that data over that connection is bundled into 256
-byte packets (8 bytes of header and 248 bytes of payload). Each cell has
-a type, or "command", which indicates what it's for.
+  Each connection has a token bucket with a specified capacity. Tokens are
+  added to the bucket each second (when the bucket is full, new tokens
+  are discarded.) Each token represents permission to receive one byte
+  from the network --- to receive a byte, the connection must remove a
+  token from the bucket. Thus if the bucket is empty, that connection must
+  wait until more tokens arrive. The number of tokens we add enforces a
+  longterm average rate of incoming bytes, yet we still permit short-term
+  bursts above the allowed bandwidth. Currently bucket sizes are set to
+  ten seconds worth of traffic.
 
+  The bandwidth throttling uses TCP to push back when we stop reading.
+  We extend it with token buckets to allow more flexibility for traffic
+  bursts.
 
-3. Important parameters in the code.
+ Data congestion control. Even with the above bandwidth throttling,
+  we still need to worry about congestion, either accidental or intentional.
+  If a lot of people make circuits into same node, and they all come out
+  through the same connection, then that connection may become saturated
+  (be unable to send out data cells as quickly as it wants to). An adversary
+  can make a 'put' request through the onion routing network to a webserver
+  he owns, and then refuse to read any of the bytes at the webserver end
+  of the circuit. These bottlenecks can propagate back through the entire
+  network, mucking up everything.
 
+  (See the tor-spec.txt document for details of how congestion control
+  works.)
 
+  In practice, all the nodes in the circuit maintain a receive window
+  close to maximum except the exit node, which stays around 0, periodically
+  receiving a sendme and reading more data cells from the webserver.
+  In this way we can use pretty much all of the available bandwidth for
+  data, but gracefully back off when faced with multiple circuits (a new
+  sendme arrives only after some cells have traversed the entire network),
+  stalled network connections, or attacks.
 
-4. Robustness features.
+  We don't need to reimplement full tcp windows, with sequence numbers,
+  the ability to drop cells when we're full etc, because the tcp streams
+  already guarantee in-order delivery of each cell. Rather than trying
+  to build some sort of tcp-on-tcp scheme, we implement this minimal data
+  congestion control; so far it's enough.
 
-4.1. Bandwidth throttling. Each cell-speaking connection has a maximum
-bandwidth it can use, as specified in the routers.or file. Bandwidth
-throttling can occur on both the sender side and the receiving side. If
-the LinkPadding option is on, the sending side sends cells at regularly
-spaced intervals (e.g., a connection with a bandwidth of 25600B/s would
-queue a cell every 10ms). The receiving side protects against misbehaving
-servers that send cells more frequently, by using a simple token bucket:
+ Router twins. In many cases when we ask for a router with a given
+  address and port, we really mean a router who knows a given key. Router
+  twins are two or more routers that share the same private key. We thus
+  give routers extra flexibility in choosing the next hop in the circuit: if
+  some of the twins are down or slow, it can choose the more available ones.
 
-Each connection has a token bucket with a specified capacity. Tokens are
-added to the bucket each second (when the bucket is full, new tokens
-are discarded.) Each token represents permission to receive one byte
-from the network --- to receive a byte, the connection must remove a
-token from the bucket. Thus if the bucket is empty, that connection must
-wait until more tokens arrive. The number of tokens we add enforces a
-longterm average rate of incoming bytes, yet we still permit short-term
-bursts above the allowed bandwidth. Currently bucket sizes are set to
-ten seconds worth of traffic.
+  Currently the code tries for the primary router first, and if it's down,
+  chooses the first available twin.
 
-The bandwidth throttling uses TCP to push back when we stop reading.
-We extend it with token buckets to allow more flexibility for traffic
-bursts.
+Coding conventions:
 
-4.2. Data congestion control. Even with the above bandwidth throttling,
-we still need to worry about congestion, either accidental or intentional.
-If a lot of people make circuits into same node, and they all come out
-through the same connection, then that connection may become saturated
-(be unable to send out data cells as quickly as it wants to). An adversary
-can make a 'put' request through the onion routing network to a webserver
-he owns, and then refuse to read any of the bytes at the webserver end
-of the circuit. These bottlenecks can propagate back through the entire
-network, mucking up everything.
+ Log convention: use only these four log severities.
 
-(See the tor-spec.txt document for details of how congestion control
-works.)
-
-In practice, all the nodes in the circuit maintain a receive window
-close to maximum except the exit node, which stays around 0, periodically
-receiving a sendme and reading more data cells from the webserver.
-In this way we can use pretty much all of the available bandwidth for
-data, but gracefully back off when faced with multiple circuits (a new
-sendme arrives only after some cells have traversed the entire network),
-stalled network connections, or attacks.
-
-We don't need to reimplement full tcp windows, with sequence numbers,
-the ability to drop cells when we're full etc, because the tcp streams
-already guarantee in-order delivery of each cell. Rather than trying
-to build some sort of tcp-on-tcp scheme, we implement this minimal data
-congestion control; so far it's enough.
-
-4.3. Router twins. In many cases when we ask for a router with a given
-address and port, we really mean a router who knows a given key. Router
-twins are two or more routers that share the same private key. We thus
-give routers extra flexibility in choosing the next hop in the circuit: if
-some of the twins are down or slow, it can choose the more available ones.
-
-Currently the code tries for the primary router first, and if it's down,
-chooses the first available twin.
+  ERR is if something fatal just happened.
+  WARNING is something bad happened, but we're still running. The
+    bad thing is either a bug in the code, an attack or buggy
+    protocol/implementation of the remote peer, etc. The operator should
+    examine the bad thing and try to correct it.
+  (No error or warning messages should be expected. I expect most people
+    to run on -l warning eventually. If a library function is currently
+    called such that failure always means ERR, then the library function
+    should log WARNING and let the caller log ERR.)
+  INFO means something happened (maybe bad, maybe ok), but there's nothing
+    you need to (or can) do about it.
+  DEBUG is for everything louder than INFO.
 
