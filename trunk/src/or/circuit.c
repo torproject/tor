@@ -276,6 +276,10 @@ static int circuit_is_acceptable(circuit_t *circ,
        circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
        circ->purpose != CIRCUIT_PURPOSE_C_REND_JOINED)
       return 0;
+  } else if (purpose == CIRCUIT_PURPOSE_C_INTRODUCING) {
+    if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCING &&
+        circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT)
+      return 0;
   } else {
     if(purpose != circ->purpose)
       return 0;

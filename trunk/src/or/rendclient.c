@@ -110,8 +110,8 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
     return -1;
   }
 
-  /* we don't need it anymore, plus it's been used. send the destroy. */
-  circuit_mark_for_close(introcirc);
+  /* Now, we wait for an ACK or NAK on this circuit. */
+  introcirc->purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT;
 
   return 0;
 err:
@@ -140,15 +140,32 @@ rend_client_rendcirc_is_open(circuit_t *circ)
 /* Called when get an ACK or a NAK for a REND_INTRODUCE1 cell.
  */
 int
-rend_client_introduction_acked(circuit_t *introcirc,
+rend_client_introduction_acked(circuit_t *circ,
                                const char *request, int request_len)
 {
+  if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
+    log_fn(LOG_WARN, "Recieved REND_INTRODUCE_ACK on unexpected circuit %d",
+           circ->n_circ_id);
+    circuit_mark_for_close(circ);
+    return -1;
+  }
+
   if (request_len == 0) {
     /* It's an ACK; the introduction point relayed our introduction request. */
-    /* XXXX writeme */
+    /* So close the circuit; we won't need it any more. */
+    circuit_mark_for_close(circ);
   } else {
     /* It's a NAK; the introduction point didn't relay our request. */
-    /* XXXX writeme */
+    circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
+    /* XXXX
+     * Now become non-open, extend to another one of Bob's
+     * introduction points, and try again.  Maybe mark the service as
+     * non-functional at the first intro point somehow?
+     *
+     * Or re-fetch the service descriptor? Hm....
+     *
+     * XXXX writeme
+     */
   }
   return 0;
 }
