@@ -286,6 +286,7 @@ static int dns_find_idle_slave(int max) {
     }
 
   assert(0); /* should never get here */
+  return 0;
 }
 
 static int dns_assign_to_slave(int from, int to) {

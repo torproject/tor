@@ -685,8 +685,8 @@ repeat_connection_package_raw_inbuf:
 
   if(conn->type == CONN_TYPE_EXIT) {
     cell.aci = circ->p_aci;
-    if(circuit_deliver_relay_cell_from_edge(&cell, circ, EDGE_EXIT, NULL) < 0) {
-      log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_relay_cell_from_edge (backward) failed. Closing.");
+    if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_IN, NULL) < 0) {
+      log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_relay_cell (backward) failed. Closing.");
       circuit_close(circ);
       return 0;
     }
@@ -695,8 +695,8 @@ repeat_connection_package_raw_inbuf:
   } else { /* send it forward. we're an AP */
     assert(conn->type == CONN_TYPE_AP);
     cell.aci = circ->n_aci;
-    if(circuit_deliver_relay_cell_from_edge(&cell, circ, EDGE_AP, conn->cpath_layer) < 0) {
-      log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_relay_cell_from_edge (forward) failed. Closing.");
+    if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, conn->cpath_layer) < 0) {
+      log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_relay_cell (forward) failed. Closing.");
       circuit_close(circ);
       return 0;
     }
@@ -749,8 +749,8 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
   while(conn->deliver_window < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
     log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing stream sendme.", conn->outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
-    if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type, conn->cpath_layer) < 0) {
-      log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_relay_cell_from_edge failed. Closing.");
+    if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION(edge_type), conn->cpath_layer) < 0) {
+      log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_relay_cell failed. Closing.");
       circuit_close(circ);
       return 0;
     }

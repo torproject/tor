@@ -147,7 +147,7 @@ void command_process_created_cell(cell_t *cell, connection_t *conn) {
     memcpy(newcell.payload+RELAY_HEADER_SIZE, cell->payload, DH_KEY_LEN);
 
     log(LOG_DEBUG,"command_process_created_cell(): Sending extended relay cell.");
-    if(circuit_deliver_relay_cell_from_edge(&newcell, circ, EDGE_EXIT, NULL) < 0) {
+    if(circuit_deliver_relay_cell(&newcell, circ, CELL_DIRECTION_IN, NULL) < 0) {
       log(LOG_DEBUG,"command_process_created_cell(): failed to deliver extended cell. Closing.");
       circuit_close(circ);
       return;
