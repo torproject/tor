@@ -72,7 +72,8 @@ int base64_decode(char *dest, int destlen, char *src, int srclen);
 
 /* Key negotiation */
 typedef struct crypto_dh_env_st crypto_dh_env_t;
-#define CRYPTO_DH_SIZE (1536 / 8)
+/* #define CRYPTO_DH_SIZE (1536 / 8) */
+#define CRYPTO_DH_SIZE (1024 / 8)
 crypto_dh_env_t *crypto_dh_new();
 int crypto_dh_get_bytes(crypto_dh_env_t *dh);
 int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey_out, 

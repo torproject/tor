@@ -631,7 +631,6 @@ main(int c, char**v) {
   log(LOG_ERR,NULL);         /* make logging quieter */
 
   setup_directory();
-#if 0
   puts("========================== Buffers =========================");
   test_buffers();
   puts("========================== Crypto ==========================");
@@ -641,7 +640,6 @@ main(int c, char**v) {
   test_util();
   puts("\n========================= Onion Skins =====================");
   test_onion_handshake();
-#endif
   puts("\n========================= Directory Formats ===============");
   test_dir_format();
   puts("");
