@@ -37,6 +37,9 @@
 #ifdef HAVE_SYS_LIMITS_H
 #include <sys/limits.h>
 #endif
+#ifdef HAVE_MACHINE_LIMITS_H
+#include <machine/limits.h>
+#endif
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h> /* Must be included before sys/stat.h for Ultrix */
 #endif
