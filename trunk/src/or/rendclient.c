@@ -266,35 +266,26 @@ int rend_cmp_service_ids(char *one, char *two) {
  * point of query. return NULL if error.
  */
 char *rend_client_get_random_intro(char *query) {
-  const char *descp;
-  int desc_len;
   int i;
   smartlist_t *sl;
-  rend_service_descriptor_t *parsed;
   char *choice;
   char *nickname;
+  rend_cache_entry_t *entry;
 
-  if(rend_cache_lookup_desc(query, &descp, &desc_len) < 1) {
+  if(rend_cache_lookup_entry(query, &entry) < 1) {
     log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.", query);
-    return NULL;
-  }
-
-  parsed = rend_parse_service_descriptor(descp,desc_len);
-  if (!parsed) {
-    log_fn(LOG_WARN,"Couldn't parse service descriptor");
     return NULL;
   }
 
   sl = smartlist_create();
 
   /* add the intro point nicknames */
-  for(i=0;i<parsed->n_intro_points;i++)
-    smartlist_add(sl,parsed->intro_points[i]);
+  for(i=0;i<entry->parsed->n_intro_points;i++)
+    smartlist_add(sl,entry->parsed->intro_points[i]);
 
   choice = smartlist_choose(sl);
   nickname = tor_strdup(choice);
   smartlist_free(sl);
-  rend_service_descriptor_free(parsed);
   return nickname;
 }
 
