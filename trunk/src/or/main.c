@@ -327,7 +327,7 @@ int prepare_for_poll(int *timeout) {
       circuit_launch_new(-1); /* tell it to forget about previous failures */
       circ = circuit_get_newest_by_edge_type(EDGE_AP);
       if(!circ || circ->dirty) {
-        log(LOG_INFO,"prepare_for_poll(): Youngest circuit missing or dirty; launching replacement.");
+        log(LOG_INFO,"prepare_for_poll(): Youngest circuit %s; launching replacement.", circ ? "dirty" : "missing");
         circuit_launch_new(0); /* make an onion and lay the circuit */
       }
       time_to_new_circuit = now.tv_sec + options.NewCircuitPeriod;
