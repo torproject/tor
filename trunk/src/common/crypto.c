@@ -36,6 +36,42 @@
 #define RETURN_SSL_OUTCOME(exp) return !(exp)
 #endif
 
+static inline int 
+crypto_cipher_iv_length(int type) {
+  switch(type) 
+    {
+    case CRYPTO_CIPHER_IDENTITY: return 0;
+    case CRYPTO_CIPHER_DES: return 8;
+    case CRYPTO_CIPHER_RC4: return 16;
+    case CRYPTO_CIPHER_3DES: return 8;
+    default: assert(0); return -1;
+    }
+}
+
+static inline int
+crypto_cipher_key_length(int type) {
+  switch(type) 
+    {
+    case CRYPTO_CIPHER_IDENTITY: return 0;
+    case CRYPTO_CIPHER_DES: return 8;
+    case CRYPTO_CIPHER_RC4: return 16;
+    case CRYPTO_CIPHER_3DES: return 16;
+    default: assert(0); return -1;
+    }
+}
+
+static inline EVP_CIPHER *
+crypto_cipher_evp_cipher(int type, int enc) {
+  switch(type) 
+    {
+    case CRYPTO_CIPHER_IDENTITY: return EVP_enc_null();
+    case CRYPTO_CIPHER_DES: return EVP_des_ofb();
+    case CRYPTO_CIPHER_RC4: return EVP_rc4();
+    case CRYPTO_CIPHER_3DES: return EVP_des_ede_ofb();
+    default: return NULL;
+    }
+}
+
 int crypto_global_init() 
 {
   ERR_load_crypto_strings();
@@ -144,6 +180,7 @@ crypto_create_init_cipher(int cipher_type, char *key, char *iv, int encrypt_mode
 crypto_cipher_env_t *crypto_new_cipher_env(int type)
 {
   crypto_cipher_env_t *env;
+  int iv_len, key_len;
   
   env = (crypto_cipher_env_t *)malloc(sizeof(crypto_cipher_env_t));
   if (!env)
@@ -153,102 +190,54 @@ crypto_cipher_env_t *crypto_new_cipher_env(int type)
   env->key = NULL;
   env->iv = NULL;
   env->aux = NULL;
+
+  iv_len = crypto_cipher_iv_length(type);
+  key_len = crypto_cipher_key_length(type);
   
-  switch(type) {
-    case CRYPTO_CIPHER_IDENTITY:
+  if (! crypto_cipher_evp_cipher(type,0))
+    /* This is not an openssl cipher */
+    goto err;
+  else {
     env->aux = (unsigned char *)malloc(sizeof(EVP_CIPHER_CTX));
-    if (!env->aux) {
-      free((void *)env);
-      return NULL;
-    }
     EVP_CIPHER_CTX_init((EVP_CIPHER_CTX *)env->aux);
-    break;
-    case CRYPTO_CIPHER_DES:
-    env->aux = (unsigned char *)malloc(sizeof(EVP_CIPHER_CTX));
-    if (!env->aux) {
-      free((void *)env);
-      return NULL;
-    }
-    env->key = (unsigned char *)malloc(8);
-    if (!env->key) {
-      free((void *)env->aux);
-      free((void *)env);
-      return NULL;
-    }
-    env->iv = (unsigned char *)malloc(8);
-    if (!env->iv) {
-      free((void *)env->key);
-      free((void *)env->aux);
-      return NULL;
-    }
-    EVP_CIPHER_CTX_init((EVP_CIPHER_CTX *)env->aux);
-    break;
-    case CRYPTO_CIPHER_RC4:
-    env->aux = (unsigned char *)malloc(sizeof(EVP_CIPHER_CTX));
-    if (!env->aux) {
-      free((void *)env);
-      return NULL;
-    }
-    env->key = (unsigned char *)malloc(16);
-    if (!env->key) {
-      free((void *)env->aux);
-      free((void *)env);
-      return NULL;
-    }
-    env->iv = (unsigned char *)malloc(16);
-    if (!env->iv) {
-      free((void *)env->key);
-      free((void *)env->aux);
-      return NULL;
-    }
-    break;
-    EVP_CIPHER_CTX_init((EVP_CIPHER_CTX *)env->aux);
-    default:
-    free((void *)env);
-    return NULL;
-    break;
   }
+
+  if (iv_len && !(env->iv = (unsigned char *)malloc(iv_len)))
+    goto err;
+
+  if (key_len && !(env->key = (unsigned char *)malloc(key_len)))
+    goto err;
   
-  return env;
+err:
+  if (env->key)
+    free(env->key);
+  if (env->iv)
+    free(env->iv);
+  if (env->aux)
+    free(env->aux);
+  if (env)
+    free(env);
+  return NULL;
 }
 
 void crypto_free_cipher_env(crypto_cipher_env_t *env)
 {
   assert(env);
-  
-  switch(env->type) {
-    case CRYPTO_CIPHER_IDENTITY:
-    if (env->aux) {
-      EVP_CIPHER_CTX_cleanup((EVP_CIPHER_CTX *)env->aux);
-      free((void *)env->aux);
-    }
-    break;
-    case CRYPTO_CIPHER_DES:
-    if (env->aux) {
-      EVP_CIPHER_CTX_cleanup((EVP_CIPHER_CTX *)env->aux);
-      free((void *)env->aux);
-    }
-    if (env->key)
-      free((void *)env->key);
-    if (env->iv)
-      free((void *)env->iv);
-    break;
-    case CRYPTO_CIPHER_RC4:
-    if (env->aux) {
-      EVP_CIPHER_CTX_cleanup((EVP_CIPHER_CTX *)env->aux);
-      free((void *)env->aux);
-    }
-    if (env->key)
-      free((void *)env->key);
-    if (env->iv)
-      free((void *)env->iv);
-    break;
-    default:
-    break;
+
+  if (crypto_cipher_evp_cipher(env->type,0)) {
+    /* This is an openssl cipher */
+    assert(env->aux);
+    EVP_CIPHER_CTX_cleanup((EVP_CIPHER_CTX *)env->aux);
   }
-  
+
+  if (env->aux)
+    free((void *)env->aux);
+  if (env->iv) 
+    free((void *)env->iv);
+  if (env->key)
+    free((void *)env->key);
+
   free((void *)env);
-  return;
 }
 
 /* public key crypto */
@@ -552,64 +541,49 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *from, int fro
 /* symmetric crypto */
 int crypto_cipher_generate_key(crypto_cipher_env_t *env)
 {
+  int key_len;
   assert(env);
-  
-  switch(env->type) {
-    case CRYPTO_CIPHER_IDENTITY:
-    return 0;
-    case CRYPTO_CIPHER_DES:
-    return crypto_rand(8, env->key);
-    case CRYPTO_CIPHER_RC4:
-    return crypto_rand(16, env->key);
-    default:
-    return -1;
-  }
 
+  key_len = crypto_cipher_key_length(env->type);
+
+  if (key_len > 0)
+    return crypto_rand(key_len, env->key);
+  else if (key_len == 0)
+    return 0;
+  else
+    return -1;
 }
 
 int crypto_cipher_set_iv(crypto_cipher_env_t *env, unsigned char *iv)
 {
+  int iv_len;
   assert(env && iv);
   
-  switch(env->type) {
-    case CRYPTO_CIPHER_IDENTITY:
-     break;
-    case CRYPTO_CIPHER_DES:
-    if (!env->iv)
-      return -1;
-    memcpy((void *)env->iv, (void *)iv, 8);
-    break;
-    case CRYPTO_CIPHER_RC4:
-    if (!env->iv)
-      return -1;
-    memcpy((void *)env->iv, (void *)iv, 16);
-    break;
-    default:
+  iv_len = crypto_cipher_iv_length(env->type);
+  if (!iv_len)
+    return 0;
+
+  if (!env->iv)
     return -1;
-  }
+
+  memcpy((void*)env->iv, (void*)iv, iv_len);
   
   return 0;
 }
+
 int crypto_cipher_set_key(crypto_cipher_env_t *env, unsigned char *key)
 {
+  int key_len;
   assert(env && key);
-  
-  switch(env->type) {
-    case CRYPTO_CIPHER_IDENTITY:
-    break;
-    case CRYPTO_CIPHER_DES:
-    if (!env->key)
-      return -1;
-    memcpy((void *)env->key, (void *)key, 8);
-    break;
-    case CRYPTO_CIPHER_RC4:
-    if (!env->key)
-      return -1;
-    memcpy((void *)env->key, (void *)key, 16);
-    break;
-    default:
+
+  key_len = crypto_cipher_key_length(env->type);
+  if (!key_len)
+    return 0;
+
+  if (!env->key)
     return -1;
-  }
+
+  memcpy((void*)env->key, (void*)key, key_len);
   
   return 0;
 }
@@ -617,37 +591,27 @@ int crypto_cipher_set_key(crypto_cipher_env_t *env, unsigned char *key)
 int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
 {
   assert(env);
-
-  switch(env->type) {
-    case CRYPTO_CIPHER_IDENTITY:
-      RETURN_SSL_OUTCOME(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux, EVP_enc_null(), env->key, env->iv));
-    case CRYPTO_CIPHER_DES:
-      RETURN_SSL_OUTCOME(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux, EVP_des_ofb(), env->key, env->iv));
-    case CRYPTO_CIPHER_RC4:
-      RETURN_SSL_OUTCOME(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux, EVP_rc4(), env->key, env->iv));
-    default:
-      return -1;
-  }
   
-  return 0;
+  if (crypto_cipher_evp_cipher(env->type, 1)) {
+    RETURN_SSL_OUTCOME(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux,
+				       crypto_cipher_evp_cipher(env->type, 1),
+				       env->key, env->iv));
+  } else {
+    return -1;
+  }
 }
 
 int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
 {
   assert(env);
-  
-  switch(env->type) {
-    case CRYPTO_CIPHER_IDENTITY:
-      RETURN_SSL_OUTCOME(EVP_DecryptInit((EVP_CIPHER_CTX *)env->aux, EVP_enc_null(), env->key, env->iv));
-    case CRYPTO_CIPHER_DES:
-      RETURN_SSL_OUTCOME(EVP_DecryptInit((EVP_CIPHER_CTX *)env->aux, EVP_des_ofb(), env->key, env->iv));
-    case CRYPTO_CIPHER_RC4:
-      RETURN_SSL_OUTCOME(EVP_DecryptInit((EVP_CIPHER_CTX *)env->aux, EVP_rc4(), env->key, env->iv));
-    default:
+
+  if (crypto_cipher_evp_cipher(env->type, 0)) {
+    RETURN_SSL_OUTCOME(EVP_EncryptInit((EVP_CIPHER_CTX *)env->aux,
+				       crypto_cipher_evp_cipher(env->type, 0),
+				       env->key, env->iv));
+  } else {
     return -1;
   }
-  
-    return 0;
 }
 
 int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to)
@@ -693,4 +657,3 @@ char *crypto_perror()
 {
   return (char *)ERR_reason_error_string(ERR_get_error());
 }
-
