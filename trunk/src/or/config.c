@@ -1231,15 +1231,14 @@ getconfig(int argc, char **argv)
   static char **backup_argv;
   static int backup_argc;
 
-  /* we don't use get_options() here, since it's null on the first call */
-  oldoptions = global_options;
-
   if (argv) { /* first time we're called. save commandline args */
     backup_argv = argv;
     backup_argc = argc;
+    oldoptions = NULL;
   } else { /* we're reloading. need to clean up old options first. */
     argv = backup_argv;
     argc = backup_argc;
+    oldoptions = get_options();
   }
   if (argc > 1 && (!strcmp(argv[1], "-h") || !strcmp(argv[1],"--help"))) {
     print_usage();
