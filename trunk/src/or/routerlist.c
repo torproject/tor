@@ -20,7 +20,8 @@ static smartlist_t *trusted_dir_servers = NULL;
 
 /* static function prototypes */
 static routerinfo_t *
-router_pick_directory_server_impl(int requireothers, int fascistfirewall);
+router_pick_directory_server_impl(int requireothers, int fascistfirewall,
+                                  int for_runningrouters);
 static trusted_dir_server_t *
 router_pick_trusteddirserver_impl(int requireother, int fascistfirewall);
 static void mark_all_trusteddirservers_up(void);
@@ -87,15 +88,20 @@ void router_get_trusted_dir_servers(smartlist_t **outp)
 /** Try to find a running dirserver. If there are no running dirservers
  * in our routerlist, set all the authoritative ones as running again,
  * and pick one. If there are no dirservers at all in our routerlist,
- * reload the routerlist and try one last time. */
+ * reload the routerlist and try one last time.  If for_runningrouters is
+ * true, then only pick a dirserver that can answer runningrouters queries
+ * (that is, a trusted dirserver, or one running 0.0.9rc5-cvs or later).
+ */
 routerinfo_t *router_pick_directory_server(int requireothers,
-                                           int fascistfirewall) {
+                                           int fascistfirewall,
+                                           int for_runningrouters) {
   routerinfo_t *choice;
 
   if (!routerlist)
     return NULL;
 
-  choice = router_pick_directory_server_impl(requireothers, fascistfirewall);
+  choice = router_pick_directory_server_impl(requireothers, fascistfirewall,
+                                             for_runningrouters);
   if (choice)
     return choice;
 
@@ -103,7 +109,8 @@ routerinfo_t *router_pick_directory_server(int requireothers,
   /* mark all authdirservers as up again */
   mark_all_trusteddirservers_up();
   /* try again */
-  choice = router_pick_directory_server_impl(requireothers, fascistfirewall);
+  choice = router_pick_directory_server_impl(requireothers, fascistfirewall,
+                                             for_runningrouters);
   if (choice)
     return choice;
 
@@ -114,7 +121,8 @@ routerinfo_t *router_pick_directory_server(int requireothers,
     return NULL;
   }
   /* give it one last try */
-  choice = router_pick_directory_server_impl(requireothers, 0);
+  choice = router_pick_directory_server_impl(requireothers, 0,
+                                             for_runningrouters);
   return choice;
 }
 
@@ -149,7 +157,8 @@ trusted_dir_server_t *router_pick_trusteddirserver(int requireothers,
  * it has to be a trusted server. If requireothers, it cannot be us.
  */
 static routerinfo_t *
-router_pick_directory_server_impl(int requireothers, int fascistfirewall)
+router_pick_directory_server_impl(int requireothers, int fascistfirewall,
+                                  int for_runningrouters)
 {
   int i;
   routerinfo_t *router;
@@ -175,6 +184,11 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall)
       if (!smartlist_string_isin(get_options()->FirewallPorts, buf))
         continue;
     }
+    /* before 0.0.9rc5-cvs, only trusted dirservers served status info. */
+    if (for_runningrouters &&
+        !(tor_version_as_new_as(router->platform,"0.0.9rc5-cvs") ||
+          router_digest_is_trusted_dir(router->identity_digest)))
+      continue;
     smartlist_add(sl, router);
   }
 

@@ -152,21 +152,22 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource)
   trusted_dir_server_t *ds = NULL;
   int fascistfirewall = get_options()->FascistFirewall;
 
-  if (purpose == DIR_PURPOSE_FETCH_DIR) {
+  if (purpose == DIR_PURPOSE_FETCH_DIR ||
+      purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
     if (advertised_server_mode()) {
       /* only ask authdirservers, and don't ask myself */
       ds = router_pick_trusteddirserver(1, fascistfirewall);
     } else {
       /* anybody with a non-zero dirport will do */
-      r = router_pick_directory_server(1, fascistfirewall);
+      r = router_pick_directory_server(1, fascistfirewall,
+                                purpose==DIR_PURPOSE_FETCH_RUNNING_LIST);
       if (!r) {
-        log_fn(LOG_INFO, "No router found for directory; falling back to dirserver list");
+        log_fn(LOG_INFO, "No router found for %s; falling back to dirserver list",
+               purpose == DIR_PURPOSE_FETCH_RUNNING_LIST
+               ? "status list" : "directory");
         ds = router_pick_trusteddirserver(1, fascistfirewall);
       }
     }
-  } else if (purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
-    /* right now, running-routers isn't cached, so ask a trusted directory */
-    ds = router_pick_trusteddirserver(0, fascistfirewall);
   } else { // (purpose == DIR_PURPOSE_FETCH_RENDDESC)
     /* only ask authdirservers, any of them will do */
     /* Never use fascistfirewall; we're going via Tor. */

@@ -1560,7 +1560,7 @@ typedef struct trusted_dir_server_t {
 
 int router_reload_router_list(void);
 void router_get_trusted_dir_servers(smartlist_t **outp);
-routerinfo_t *router_pick_directory_server(int requireothers, int fascistfirewall);
+routerinfo_t *router_pick_directory_server(int requireothers, int fascistfirewall, int for_running_routers);
 trusted_dir_server_t *router_pick_trusteddirserver(int requireothers, int fascistfirewall);
 int all_trusted_directory_servers_down(void);
 struct smartlist_t;
