@@ -37,9 +37,9 @@ static time_t hibernate_end_time = 0;
 
 /* Fields for accounting logic.  Accounting overview:
  *
- * Accounting is designed to ensure that more than N bytes are sent in
- * either direction over a given interval (currently, one month,
- * starting at 0:00 GMT an arbitrary date within the month).  We could
+ * Accounting is designed to ensure that no more than N bytes are sent
+ * in either direction over a given interval (currently, one month,
+ * starting at 0:00 GMT an arbitrary day within the month).  We could
  * try to do this by choking our bandwidth to a trickle, but that
  * would make our streams useless.  Instead, we estimate what our
  * bandwidth usage will be, and guess how long we'll be able to
@@ -451,7 +451,7 @@ static void hibernate_begin(int new_state, time_t now) {
 
   tor_assert(hibernate_state == HIBERNATE_STATE_LIVE);
 
-  /* close listeners */
+  /* close listeners. leave control listener(s). */
   while((conn = connection_get_by_type(CONN_TYPE_OR_LISTENER)) ||
         (conn = connection_get_by_type(CONN_TYPE_AP_LISTENER)) ||
         (conn = connection_get_by_type(CONN_TYPE_DIR_LISTENER))) {
@@ -511,8 +511,11 @@ hibernate_go_dormant(void) {
   hibernate_state = HIBERNATE_STATE_DORMANT;
   log_fn(LOG_NOTICE,"Going dormant. Blowing away remaining connections.");
 
-  /* Close all OR/AP/exit conns. Leave dir conns. */
-  /* XXXX Why leave dir cons? -NM */
+  /* Close all OR/AP/exit conns. Leave dir conns because we still want
+   * to be able to upload server descriptors so people know we're still
+   * running, and download directories so we can detect if we're obsolete.
+   * Leave control conns because we still want to be controllable.
+   */
   while((conn = connection_get_by_type(CONN_TYPE_OR)) ||
         (conn = connection_get_by_type(CONN_TYPE_AP)) ||
         (conn = connection_get_by_type(CONN_TYPE_EXIT))) {
@@ -546,7 +549,7 @@ hibernate_end_time_elapsed(time_t now)
  */
 void consider_hibernation(time_t now) {
 
-  /* If we're in 'exiting' mode, then we just shutdown after the interval
+  /* If we're in 'exiting' mode, then we just shut down after the interval
    * elapses. */
   if (hibernate_state == HIBERNATE_STATE_EXITING) {
     tor_assert(hibernate_end_time);
