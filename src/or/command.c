@@ -300,10 +300,14 @@ void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
     onion_pending_remove(circ);
   }
   circuit_remove(circ);
-  if(cell->aci == circ->p_aci) /* the destroy came from behind */
-    connection_send_destroy(circ->n_aci, circ->n_conn);
-  if(cell->aci == circ->n_aci) /* the destroy came from ahead */
+  if(cell->aci == circ->p_aci) { /* the destroy came from behind */
+    if(circ->n_conn) /* might not be defined, eg if it was just on the pending queue */
+      connection_send_destroy(circ->n_aci, circ->n_conn);
+  }
+  if(cell->aci == circ->n_aci) { /* the destroy came from ahead */
+    assert(circ->p_conn);
     connection_send_destroy(circ->p_aci, circ->p_conn);
+  }
   circuit_free(circ);
 }
 
