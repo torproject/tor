@@ -10,7 +10,7 @@
 /* In-points to command.c:
  *
  * - command_process_cell(), called from
- *   connection_or_process_cells_from_inbuf() in connection_or.c.
+ *   connection_or_process_cells_from_inbuf() in connection_or.c
  */
 
 #include "or.h"

@@ -9,6 +9,26 @@
  * \brief Implement directory HTTP protocol.
  **/
 
+/* In-points to directory.c:
+ *
+ * - directory_post_to_dirservers(), called from
+ *   router_upload_dir_desc_to_dirservers() in router.c
+ *   upload_service_descriptor() in rendservice.c
+ * - directory_get_from_dirserver(), called from
+ *   rend_client_refetch_renddesc() in rendclient.c
+ *   run_scheduled_events() in main.c
+ *   do_hup() in main.c
+ * - connection_dir_process_inbuf(), called from
+ *   connection_process_inbuf() in connection.c
+ * - connection_dir_finished_flushing(), called from
+ *   connection_finished_flushing() in connection.c
+ * - connection_dir_finished_connecting(), called from
+ *   connection_finished_connecting() in connection.c
+ */
+
+static void
+directory_initiate_command(routerinfo_t *router, uint8_t purpose,
+                           const char *payload, int payload_len);
 static void directory_send_command(connection_t *conn, int purpose,
                                    const char *payload, int payload_len);
 static int directory_handle_command(connection_t *conn);
@@ -27,6 +47,43 @@ char rend_fetch_url[] = "/rendezvous/";
 
 /********* END VARIABLES ************/
 
+/** Start a connection to every known directory server, using
+ * connection purpose 'purpose' and uploading the payload 'payload'
+ * (length 'payload_len').  The purpose should be one of
+ * 'DIR_PURPOSE_UPLOAD_DIR' or 'DIR_PURPOSE_UPLOAD_RENDDESC'.
+ */
+void
+directory_post_to_dirservers(uint8_t purpose, const char *payload,
+                             int payload_len)
+{
+  int i;
+  routerinfo_t *router;
+  routerlist_t *rl;
+
+  router_get_routerlist(&rl);
+  if(!rl)
+    return;
+
+  for(i=0; i < smartlist_len(rl->routers); i++) {
+    router = smartlist_get(rl->routers, i);
+    if(router->dir_port > 0)
+      directory_initiate_command(router, purpose, payload, payload_len);
+  }
+}
+
+/** Start a connection to a random running directory server, using
+ * connection purpose 'purpose' requesting 'payload' (length
+ * 'payload_len').  The purpose should be one of
+ * 'DIR_PURPOSE_FETCH_DIR' or 'DIR_PURPOSE_FETCH_RENDDESC'.
+ */
+void
+directory_get_from_dirserver(uint8_t purpose, const char *payload,
+                             int payload_len)
+{
+  directory_initiate_command(router_pick_directory_server(),
+                             purpose, payload, payload_len);
+}
+
 /** Launch a new connection to the directory server <b>router</b> to upload or
  * download a service or rendezvous descriptor. <b>purpose</b> determines what
  * kind of directory connection we're launching, and must be one of
@@ -36,8 +93,10 @@ char rend_fetch_url[] = "/rendezvous/";
  * of the HTTP post.  When fetching a rendezvous descriptor, <b>payload</b>
  * and <b>payload_len</b> are the service ID we want to fetch.
  */
-void directory_initiate_command(routerinfo_t *router, int purpose,
-                                const char *payload, int payload_len) {
+static void
+directory_initiate_command(routerinfo_t *router, uint8_t purpose,
+                           const char *payload, int payload_len)
+{
   connection_t *conn;
 
   switch (purpose)
@@ -169,7 +228,9 @@ static void directory_send_command(connection_t *conn, int purpose,
  * null-terminate it (this modifies headers!) and return 0.
  * Otherwise, return -1.
  */
-int parse_http_url(char *headers, char **url) {
+static int
+parse_http_url(char *headers, char **url)
+{
   char *s, *tmp;
 
   s = (char *)eat_whitespace_no_nl(headers);
@@ -193,7 +254,9 @@ int parse_http_url(char *headers, char **url) {
  * (else leave it alone), and return 0.
  * Otherwise, return -1.
  */
-int parse_http_response(char *headers, int *code, char **message) {
+static int
+parse_http_response(char *headers, int *code, char **message)
+{
   int n1, n2;
   tor_assert(headers && code);
 
@@ -368,9 +431,10 @@ static char answer503[] = "HTTP/1.0 503 Directory unavailable\r\n\r\n";
  * service descriptor.  On finding one, write a response into
  * conn-\>outbuf.  If the request is unrecognized, send a 404.
  * Always return 0. */
-static int directory_handle_command_get(connection_t *conn,
-                                        char *headers, char *body,
-                                        int body_len) {
+static int
+directory_handle_command_get(connection_t *conn, char *headers,
+                             char *body, int body_len)
+{
   size_t dlen;
   const char *cp;
   char *url;
@@ -434,9 +498,10 @@ static int directory_handle_command_get(connection_t *conn,
  * service descriptor.  On finding one, process it and write a
  * response into conn-\>outbuf.  If the request is unrecognized, send a
  * 404.  Always return 0. */
-static int directory_handle_command_post(connection_t *conn,
-                                         char *headers, char *body,
-                                         int body_len) {
+static int
+directory_handle_command_post(connection_t *conn, char *headers,
+                                         char *body, int body_len)
+{
   const char *cp;
   char *url;
 

@@ -228,9 +228,8 @@ rend_client_refetch_renddesc(const char *query)
     log_fn(LOG_INFO,"Would fetch a new renddesc here (for %s), but one is already in progress.", query);
   } else {
     /* not one already; initiate a dir rend desc lookup */
-    directory_initiate_command(router_pick_directory_server(),
-                               DIR_PURPOSE_FETCH_RENDDESC,
-                               query, strlen(query));
+    directory_get_from_dirserver(DIR_PURPOSE_FETCH_RENDDESC,
+                                 query, strlen(query));
   }
 }
 

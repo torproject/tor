@@ -321,30 +321,7 @@ void router_upload_dir_desc_to_dirservers(void) {
     log_fn(LOG_WARN, "No descriptor; skipping upload");
     return;
   }
-  router_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, s, strlen(s));
-}
-
-/** Start a connection to every known directory server, using
- * connection purpose 'purpose' and uploading the payload 'payload'
- * (length 'payload_len').  The purpose should be one of
- * 'DIR_PURPOSE_UPLOAD_DIR' or 'DIR_PURPOSE_UPLOAD_RENDDESC'.
- */
-/* XXXX This is misnamed; it shouldn't be a router-only function; it should
- * XXXX be in directory, since rendservice uses it too. */
-void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload_len) {
-  int i;
-  routerinfo_t *router;
-  routerlist_t *rl;
-
-  router_get_routerlist(&rl);
-  if(!rl)
-    return;
-
-  for(i=0; i < smartlist_len(rl->routers); i++) {
-    router = smartlist_get(rl->routers, i);
-    if(router->dir_port > 0)
-      directory_initiate_command(router, purpose, payload, payload_len);
-  }
+  directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, s, strlen(s));
 }
 
 /** Append the comma-separated sequence of exit policies in <b>s</b> to the
