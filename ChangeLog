@@ -1,3 +1,19 @@
+Changes in version 0.0.9.5 - 2005-02-22
+  o Bugfixes on 0.0.9.x:
+    - Fix an assert race at exit nodes when resolve requests fail.
+    - Stop picking unverified dir mirrors--it only leads to misery.
+    - Patch from Matt Edman to make NT services work better. Service
+      support is still not compiled into the executable by default.
+    - Patch from Dmitri Bely so the Tor service runs better under
+      the win32 SYSTEM account.
+    - Make tor-resolve actually work (?) on Win32.
+    - Fix a sign bug when getrlimit claims to have 4+ billion
+      file descriptors available.
+    - Stop refusing to start when bandwidthburst == bandwidthrate.
+    - When create cells have been on the onion queue more than five
+      seconds, just send back a destroy and take them off the list.
+
+
 Changes in version 0.0.9.4 - 2005-02-03
   o Bugfixes on 0.0.9:
     - Fix an assert bug that took down most of our servers: when
