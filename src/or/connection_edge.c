@@ -758,7 +758,7 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn,
     case 0: /* no useful circuits available */
       if(!circuit_get_newest(conn, 0, must_be_clean)) {
         /* is one already on the way? */
-        circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL);
+        circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
       }
       return 0;
     default: /* case 1, it succeeded, great */

@@ -347,7 +347,7 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   return NULL;
 }
 
-cpath_build_state_t *onion_new_cpath_build_state(void) {
+cpath_build_state_t *onion_new_cpath_build_state(const char *exit_nickname) {
   routerlist_t *rl;
   int r;
   cpath_build_state_t *info;
@@ -357,12 +357,19 @@ cpath_build_state_t *onion_new_cpath_build_state(void) {
   r = new_route_len(options.PathlenCoinWeight, rl->routers, rl->n_routers);
   if (r < 0)
     return NULL;
-  exit = choose_good_exit_server(rl);
-  if(!exit)
-    return NULL;
   info = tor_malloc(sizeof(cpath_build_state_t));
   info->desired_path_len = r;
-  info->chosen_exit = tor_strdup(exit->nickname);
+  if(exit_nickname) { /* the circuit-builder pre-requested one */
+    log_fn(LOG_INFO,"Using requested exit node '%s'", exit_nickname);
+    info->chosen_exit = tor_strdup(exit_nickname);
+  } else { /* we have to decide one */
+    exit = choose_good_exit_server(rl);
+    if(!exit) {
+      tor_free(info);
+      return NULL;
+    }
+    info->chosen_exit = tor_strdup(exit->nickname);
+  }
   return info;
 }
 

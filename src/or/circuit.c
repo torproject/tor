@@ -15,7 +15,7 @@ static void circuit_rep_hist_note_result(circuit_t *circ);
 
 static void circuit_is_ready(circuit_t *circ);
 static void circuit_failed(circuit_t *circ);
-static circuit_t *circuit_establish_circuit(uint8_t purpose);
+static circuit_t *circuit_establish_circuit(uint8_t purpose, const char *exit_nickname);
 
 unsigned long stats_n_relay_cells_relayed = 0;
 unsigned long stats_n_relay_cells_delivered = 0;
@@ -1052,7 +1052,7 @@ static void circuit_failed(circuit_t *circ) {
 static int n_circuit_failures = 0;
 
 /* Launch a new circuit and return a pointer to it. Return NULL if you failed. */
-circuit_t *circuit_launch_new(uint8_t purpose) {
+circuit_t *circuit_launch_new(uint8_t purpose, const char *exit_nickname) {
 
   if(!(options.SocksPort||options.RunTesting)) /* no need for circuits. */
     return NULL;
@@ -1063,7 +1063,7 @@ circuit_t *circuit_launch_new(uint8_t purpose) {
   }
 
   /* try a circ. if it fails, circuit_mark_for_close will increment n_circuit_failures */
-  return circuit_establish_circuit(purpose);
+  return circuit_establish_circuit(purpose, exit_nickname);
 }
 
 void circuit_increment_failure_count(void) {
@@ -1075,14 +1075,15 @@ void circuit_reset_failure_count(void) {
   n_circuit_failures = 0;
 }
 
-static circuit_t *circuit_establish_circuit(uint8_t purpose) {
+static circuit_t *circuit_establish_circuit(uint8_t purpose,
+                                            const char *exit_nickname) {
   routerinfo_t *firsthop;
   connection_t *n_conn;
   circuit_t *circ;
 
   circ = circuit_new(0, NULL); /* sets circ->p_circ_id and circ->p_conn */
   circ->state = CIRCUIT_STATE_OR_WAIT;
-  circ->build_state = onion_new_cpath_build_state();
+  circ->build_state = onion_new_cpath_build_state(exit_nickname);
   circ->purpose = purpose;
 
   if (! circ->build_state) {
