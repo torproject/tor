@@ -13,15 +13,16 @@ ARMA    - arma claims
 
       0.0.8:
 NICK    - Why is the first entry of kill -USR1 a router with a 0 key?
-NICK    - why does common/util.c build-depend on or/or.h ?
+        X why did common/util.c build-depend on or/or.h ?
 NICK?   - Tors deal appropriately when a newly-verified router has the
           same nickname as another router they know about
-NICK?   - Add '[...truncated]' or similar to truncated log entries (like the directory
+        o Add '[...truncated]' or similar to truncated log entries (like the directory
           in connection_dir_process_inbuf()).
-NICK?   - put ip:port:keyhash in intro points, rendezvous points,
+NICK    . put ip:port:keyhash in intro points, rendezvous points,
           and hidserv descriptors.
-* implement parsing and stuff, but don't switch over the cells until
-  sometime in the future.
+                o Specify
+		- Implement parsing
+		- Generate new formats (Not till 007 is dead)
 NICK    - unify similar config entries that need to be split. put them
           into a smartlist, and have things take a smartlist.
 
@@ -49,9 +50,8 @@ NICK    - parse uptime into router->uptime
           ip:port:differentkey
 * reject it. assuming this is as dumb as it sounds.
         - make loglevel info less noisy
-        - defining an ORPort isn't necessary anymore, if you use
+        o defining an ORPort isn't necessary anymore, if you use
           ORAddress:port. Same with DirPort, SocksPort.
-* fix is-a-server macro to look at *bindaddress too.
 
 
 
@@ -77,10 +77,8 @@ NICK    - parse uptime into router->uptime
 * do this eventually, no rush.
 
       more features, easy:
-        - check the date in the http headers, compare for clock skew.
-* nick should do this
-        - requiredentrynode vs preferredentrynode
-* nick can do this, and will figure out what it should be called
+        o check the date in the http headers, compare for clock skew.
+        o requiredentrynode vs preferredentrynode
         - per-month byte allowances
 * nick will spec something.
         - have a pool of circuits available, cannibalize them
