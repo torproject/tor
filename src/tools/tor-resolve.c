@@ -211,6 +211,11 @@ main(int argc, char **argv)
     return 1;
   }
 
+  if (network_init()<0) {
+    log_fn(LOG_ERR,"Error initializing network; exiting.");
+    return -1;
+  }
+
   if (do_resolve(arg[0], sockshost, socksport, &result))
     return 1;
 

@@ -1026,25 +1026,6 @@ static void dumpstats(int severity) {
   rend_service_dump_stats(severity);
 }
 
-/** Called before we make any calls to network-related functions.
- * (Some operating systems require their network libraries to be
- * initialized.) */
-int network_init(void)
-{
-#ifdef MS_WINDOWS
-  /* This silly exercise is necessary before windows will allow gethostbyname to work.
-   */
-  WSADATA WSAData;
-  int r;
-  r = WSAStartup(0x101,&WSAData);
-  if (r) {
-    log_fn(LOG_WARN,"Error initializing windows network layer: code was %d",r);
-    return -1;
-  }
-#endif
-  return 0;
-}
-
 /** Called by exit() as we shut down the process.
  */
 static void exit_function(void)

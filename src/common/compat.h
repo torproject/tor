@@ -117,8 +117,10 @@ int replace_file(const char *from, const char *to);
 
 struct in_addr;
 int tor_inet_aton(const char *cp, struct in_addr *addr);
+int tor_lookup_hostname(const char *name, uint32_t *addr);
 void set_socket_nonblocking(int socket);
 int tor_socketpair(int family, int type, int protocol, int fd[2]);
+int network_init(void);
 /* For stupid historical reasons, windows sockets have an independent
  * set of errnos, and an independent way to get them.  Also, you can't
  * always believe WSAEWOULDBLOCK.  Use the macros below to compare
