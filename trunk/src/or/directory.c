@@ -785,11 +785,6 @@ directory_handle_command_get(connection_t *conn, char *headers,
       !strcmp(url,"/tor/running-routers.z")) { /* running-routers fetch */
     int deflated = !strcmp(url,"/tor/dir.z");
     tor_free(url);
-    if (!authdir_mode(get_options())) {
-      /* For now, we don't cache running-routers. Reject. */
-      connection_write_to_buf(answer400, strlen(answer400), conn);
-      return 0;
-    }
     dlen = dirserv_get_runningrouters(&cp, deflated);
     if (!dlen) { /* we failed to create/cache cp */
       connection_write_to_buf(answer503, strlen(answer503), conn);
