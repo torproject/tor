@@ -42,21 +42,21 @@ N . Switch to libevent
          bandwidth buckets under heavy load.  (Really, the logic was
          never right in the first place.)  Also, we should audit all users
          of get_pending_bytes().
-       . Find a way to make sure we have libevent 1.0 or later.
+       o Find a way to make sure we have libevent 1.0 or later.
          o Implement patch to libevent
          o Submit patch to niels making this possible.
-         - Implement Tor side once patch is accepted.
-       . Log which poll method we're using.
+         o Implement Tor side once patch is accepted.
+       o Log which poll method we're using.
          o Implement patch to libevent
          o Submit patch to niels making this possible.
-         - Implement Tor side once patch is accepted.
-       . Intercept libevent's "log" messages.
+         o Implement Tor side once patch is accepted.
+       o Intercept libevent's "log" messages.
          o Ask Niels whether a patch would be accepted.
          o Implement patch, if so.
-         - Implement Tor side once patch is accepted.
+         o Implement Tor side once patch is accepted.
        o Check return from event_set, event_add, event_del.
        o Keep pushing to get a windows patch accepted.
-       - After about 26 March, check back with Niels; he should be back
+       o After about 26 March, check back with Niels; he should be back
          by then.
 
  Security:
@@ -181,6 +181,7 @@ R  o client software not upload descriptor until:
        * no need to do this yet. few people define their ORPort.
 
  Arguable
+N - tor-resolve script should use socks5 to get better error messages.
 N - Script to try pulling bytes through slow-seeming servers so they can
     notice that they might be fast.
 N . Reverse DNS
