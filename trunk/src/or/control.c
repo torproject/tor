@@ -39,7 +39,8 @@ const char control_c_id[] = "$Id$";
 #define CONTROL_CMD_EVENT        0x0006
 #define CONTROL_CMD_AUTHENTICATE 0x0007
 #define CONTROL_CMD_SAVECONF     0x0008
-#define _CONTROL_CMD_MAX_RECOGNIZED 0x0008
+#define CONTROL_CMD_SIGNAL       0x0009
+#define _CONTROL_CMD_MAX_RECOGNIZED 0x0009
 
 /* Recognized error codes. */
 #define ERR_UNSPECIFIED             0x0000
@@ -113,6 +114,8 @@ static int handle_control_authenticate(connection_t *conn, uint16_t len,
                                        const char *body);
 static int handle_control_saveconf(connection_t *conn, uint16_t len,
                                    const char *body);
+static int handle_control_signal(connection_t *conn, uint16_t len,
+                                 const char *body);
 
 /** Given a possibly invalid message type code <b>cmd</b>, return a
  * human-readable string equivalent. */
@@ -398,6 +401,21 @@ handle_control_saveconf(connection_t *conn, uint16_t len,
   return 0;
 }
 
+static int
+handle_control_signal(connection_t *conn, uint16_t len,
+                      const char *body)
+{
+  if (len != 1) {
+    send_control_error(conn, ERR_SYNTAX,
+                       "Body of SIGNAL command too long or two short.");
+  } else if (control_signal_act((uint8_t)body[0]) < 0) {
+    send_control_error(conn, ERR_SYNTAX, "Unrecognized signal number.");
+  } else {
+    send_control_done(conn);
+  }
+  return 0;
+}
+
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
 connection_control_finished_flushing(connection_t *conn) {
@@ -475,6 +493,10 @@ connection_control_process_inbuf(connection_t *conn) {
       break;
     case CONTROL_CMD_SAVECONF:
       if (handle_control_saveconf(conn, body_len, body))
+        return -1;
+      break;
+    case CONTROL_CMD_SIGNAL:
+      if (handle_control_signal(conn, body_len, body))
         return -1;
       break;
     case CONTROL_CMD_ERROR:

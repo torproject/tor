@@ -122,6 +122,7 @@ N    - Clean up NT service code; make it work
      - Win32 installer plus privoxy, sockscap/freecap, etc.
 
    - Controller enhancements.
+     o Implement SIGNAL feature so windows can hup, shutdown, etc.
      - controller should have 'getinfo' command to query about rephist,
        about rendezvous status, etc.
 

@@ -922,6 +922,41 @@ static int do_main_loop(void) {
   }
 }
 
+/** Used to implement the SIGNAL control command: if we accept
+ * <b>the_signal</b> as a remote pseudo-signal, then act on it and
+ * return 0.  Else return -1. */
+/* We don't re-use catch() here because:
+ *   1. We handle a different set of signals than those allowed in catch.
+ *   2. Platforms without signal() are unlikely to define SIGfoo.
+ *   3. The control spec is defined to use fixed numeric signal values
+ *      which just happen to match the unix values.
+ */
+int
+control_signal_act(int the_signal)
+{
+  switch(the_signal)
+    {
+    case 1:
+      please_reset = 1;
+      break;
+    case 2:
+      please_shutdown = 1;
+      break;
+    case 10:
+      please_dumpstats = 1;
+      break;
+    case 12:
+      please_debug = 1;
+      break;
+    case 15:
+      please_die = 1;
+      break;
+    default:
+      return -1;
+    }
+  return 0;
+}
+
 /** Unix signal handler. */
 static void catch(int the_signal) {
 
