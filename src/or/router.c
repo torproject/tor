@@ -13,7 +13,7 @@ const char router_c_id[] = "$Id$";
  * and uploading server descriptors, retrying OR connections.
  **/
 
-extern long stats_n_seconds_uptime;
+extern long stats_n_seconds_working;
 
 /** Exposed for test.c. */ void get_platform_str(char *platform, size_t len);
 
@@ -697,7 +697,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     router->platform,
     published,
     fingerprint,
-    stats_n_seconds_uptime,
+    stats_n_seconds_working,
     (int) router->bandwidthrate,
     (int) router->bandwidthburst,
     (int) router->bandwidthcapacity,

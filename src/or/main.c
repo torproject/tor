@@ -30,8 +30,10 @@ static int stats_prev_global_write_bucket;
 /** How many bytes have we read/written since we started the process? */
 static uint64_t stats_n_bytes_read = 0;
 static uint64_t stats_n_bytes_written = 0;
+/** What time did this process start up? */
+long time_of_process_start = 0;
 /** How many seconds have we been running? */
-long stats_n_seconds_uptime = 0;
+long stats_n_seconds_working = 0;
 /** When do we next download a directory? */
 static time_t time_to_fetch_directory = 0;
 /** When do we next upload our descriptor? */
@@ -412,6 +414,7 @@ void directory_all_unreachable(time_t now) {
   connection_t *conn;
 
   has_fetched_directory=0;
+  stats_n_seconds_working=0; /* reset it */
 
   while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
@@ -528,7 +531,7 @@ static int decide_if_publishable_server(time_t now) {
     return 0;
   if (options->AuthoritativeDir)
     return 1;
-  if (stats_n_seconds_uptime < MIN_UPTIME_TO_PUBLISH_DESC)
+  if (stats_n_seconds_working < MIN_UPTIME_TO_PUBLISH_DESC)
     return 0;
 
   return 1;
@@ -762,7 +765,7 @@ static int prepare_for_poll(void) {
     stats_prev_global_read_bucket = global_read_bucket;
     stats_prev_global_write_bucket = global_write_bucket;
 
-    stats_n_seconds_uptime += seconds_elapsed;
+    stats_n_seconds_working += seconds_elapsed;
 
     assert_all_pending_dns_resolves_ok();
     run_scheduled_events(now.tv_sec);
@@ -1035,6 +1038,7 @@ static void dumpstats(int severity) {
   int i;
   connection_t *conn;
   time_t now = time(NULL);
+  time_t elapsed;
 
   log(severity, "Dumping stats:");
 
@@ -1077,17 +1081,22 @@ static void dumpstats(int severity) {
            100*(((double)stats_n_data_bytes_received) /
                 (stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
-  if (stats_n_seconds_uptime) {
+  if (now - time_of_process_start >= 0)
+    elapsed = now - time_of_process_start;
+  else
+    elapsed = 0;
+
+  if (elapsed) {
     log(severity,
-        "Average bandwidth: "U64_FORMAT"/%ld = %d bytes/sec reading",
+        "Average bandwidth: "U64_FORMAT"/%d = %d bytes/sec reading",
         U64_PRINTF_ARG(stats_n_bytes_read),
-        stats_n_seconds_uptime,
-        (int) (stats_n_bytes_read/stats_n_seconds_uptime));
+        (int)elapsed,
+        (int) (stats_n_bytes_read/elapsed));
     log(severity,
-        "Average bandwidth: "U64_FORMAT"/%ld = %d bytes/sec writing",
+        "Average bandwidth: "U64_FORMAT"/%d = %d bytes/sec writing",
         U64_PRINTF_ARG(stats_n_bytes_written),
-        stats_n_seconds_uptime,
-        (int) (stats_n_bytes_written/stats_n_seconds_uptime));
+        (int)elapsed,
+        (int) (stats_n_bytes_written/elapsed));
   }
 
   rep_hist_dump_stats(now,severity);
@@ -1132,6 +1141,7 @@ void handle_signals(int is_parent)
  */
 static int tor_init(int argc, char *argv[]) {
 
+  time_of_process_start = time(NULL);
   /* Initialize the history structures. */
   rep_hist_init();
   /* Initialize the service cache. */
