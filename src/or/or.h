@@ -109,7 +109,7 @@
 #include "../common/util.h"
 
 /** Upper bound on maximum simultaneous connections; can be lowered by
- * config file */
+ * config file. */
 #define MAXCONNECTIONS 1000
 
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
@@ -134,61 +134,61 @@
 #define _CONN_TYPE_MIN 3
 /** Type for sockets listening for OR connections. */
 #define CONN_TYPE_OR_LISTENER 3
-/** Type for OR-to-OR or OP-to-OR connections */
+/** Type for OR-to-OR or OP-to-OR connections. */
 #define CONN_TYPE_OR 4
 /** Type for connections from final OR to chosen destination. */
 #define CONN_TYPE_EXIT 5
-/** Type for sockets listening for SOCKS connections */
+/** Type for sockets listening for SOCKS connections. */
 #define CONN_TYPE_AP_LISTENER 6
-/** Type for SOCKS connections to OP */
+/** Type for SOCKS connections to OP. */
 #define CONN_TYPE_AP 7
-/** Type for sockets listening for HTTP connections to the directory server */
+/** Type for sockets listening for HTTP connections to the directory server. */
 #define CONN_TYPE_DIR_LISTENER 8
-/** Type for HTTP connections to the directory server */
+/** Type for HTTP connections to the directory server. */
 #define CONN_TYPE_DIR 9
-/** Type for connections to local dnsworker processes */
+/** Type for connections to local dnsworker processes. */
 #define CONN_TYPE_DNSWORKER 10
-/** Type for connections to local cpuworker processes */
+/** Type for connections to local cpuworker processes. */
 #define CONN_TYPE_CPUWORKER 11
 #define _CONN_TYPE_MAX 11
 
-/** State for any listener connection */
+/** State for any listener connection. */
 #define LISTENER_STATE_READY 0
 
 #define _DNSWORKER_STATE_MIN 1
-/** State for a connection to a dnsworker process that's idle */
+/** State for a connection to a dnsworker process that's idle. */
 #define DNSWORKER_STATE_IDLE 1
-/** State for a connection to a dnsworker process that's resolving a hostname*/
+/** State for a connection to a dnsworker process that's resolving a hostname. */
 #define DNSWORKER_STATE_BUSY 2
 #define _DNSWORKER_STATE_MAX 2
 
 #define _CPUWORKER_STATE_MIN 1
-/** State for a connection to a cpuworker process that's idle */
+/** State for a connection to a cpuworker process that's idle. */
 #define CPUWORKER_STATE_IDLE 1
 /** State for a connection to a cpuworker process that's processing a
- * handshake */
+ * handshake. */
 #define CPUWORKER_STATE_BUSY_ONION 2
 #define _CPUWORKER_STATE_MAX 2
 
 #define CPUWORKER_TASK_ONION CPUWORKER_STATE_BUSY_ONION
 
 #define _OR_CONN_STATE_MIN 1
-/** State for a connection to an OR: waiting for connect() to finish */
+/** State for a connection to an OR: waiting for connect() to finish. */
 #define OR_CONN_STATE_CONNECTING 1
-/** State for a connection to an OR: SSL is handshaking, not done yet */
+/** State for a connection to an OR: SSL is handshaking, not done yet. */
 #define OR_CONN_STATE_HANDSHAKING 2
 /** State for a connection to an OR: Ready to send/receive cells. */
 #define OR_CONN_STATE_OPEN 3
 #define _OR_CONN_STATE_MAX 3
 
 #define _EXIT_CONN_STATE_MIN 1
-/** State for an exit connection: waiting for response from dns farm */
+/** State for an exit connection: waiting for response from dns farm. */
 #define EXIT_CONN_STATE_RESOLVING 1
-/** State for an exit connection: waiting for connect() to finish */
+/** State for an exit connection: waiting for connect() to finish. */
 #define EXIT_CONN_STATE_CONNECTING 2
-/** State for an exit connection: open and ready to transmit data */
+/** State for an exit connection: open and ready to transmit data. */
 #define EXIT_CONN_STATE_OPEN 3
-/** State for an exit connection: waiting to be removed */
+/** State for an exit connection: waiting to be removed. */
 #define EXIT_CONN_STATE_RESOLVEFAILED 4
 #define _EXIT_CONN_STATE_MAX 4
 #if 0
@@ -198,34 +198,34 @@
 
 /* the AP state values must be disjoint from the EXIT state values */
 #define _AP_CONN_STATE_MIN 5
-/** State for a SOCKS connection: waiting for SOCKS request */
+/** State for a SOCKS connection: waiting for SOCKS request. */
 #define AP_CONN_STATE_SOCKS_WAIT 5
 /** State for a SOCKS connection: got a y.onion URL; waiting to receive
- * rendezvous rescriptor.  */
+ * rendezvous rescriptor. */
 #define AP_CONN_STATE_RENDDESC_WAIT 6
-/** State for a SOCKS connection: waiting for a completed circuit */
+/** State for a SOCKS connection: waiting for a completed circuit. */
 #define AP_CONN_STATE_CIRCUIT_WAIT 7
-/** State for a SOCKS connection: sent BEGIN, waiting for CONNECTED */
+/** State for a SOCKS connection: sent BEGIN, waiting for CONNECTED. */
 #define AP_CONN_STATE_CONNECT_WAIT 8
-/** State for a SOCKS connection: ready to send and receive */
+/** State for a SOCKS connection: ready to send and receive. */
 #define AP_CONN_STATE_OPEN 9
 #define _AP_CONN_STATE_MAX 9
 
 #define _DIR_CONN_STATE_MIN 1
-/** State for connection to directory server: waiting for connect()  */
+/** State for connection to directory server: waiting for connect(). */
 #define DIR_CONN_STATE_CONNECTING 1
-/** State for connection to directory server: sending HTTP request  */
+/** State for connection to directory server: sending HTTP request. */
 #define DIR_CONN_STATE_CLIENT_SENDING 2
-/** State for connection to directory server: reading HTTP response  */
+/** State for connection to directory server: reading HTTP response. */
 #define DIR_CONN_STATE_CLIENT_READING 3
-/** State for connection at directory server: waiting for HTTP request  */
+/** State for connection at directory server: waiting for HTTP request. */
 #define DIR_CONN_STATE_SERVER_COMMAND_WAIT 4
-/** State for connection at directory server: sending HTTP response  */
+/** State for connection at directory server: sending HTTP response. */
 #define DIR_CONN_STATE_SERVER_WRITING 5
 #define _DIR_CONN_STATE_MAX 5
 
 #define _DIR_PURPOSE_MIN 1
-/** Purpose for connection to directory server: download a directory */
+/** Purpose for connection to directory server: download a directory. */
 #define DIR_PURPOSE_FETCH_DIR 1
 /** Purpose for connection to directory server: download a rendezvous
  * descriptor. */
@@ -233,22 +233,22 @@
 /** Purpose for connection to directory server: set after a rendezvous
  * descriptor is downloaded. */
 #define DIR_PURPOSE_HAS_FETCHED_RENDDESC 3
-/** Purpose for connection to directory server: upload a server descriptor */
+/** Purpose for connection to directory server: upload a server descriptor. */
 #define DIR_PURPOSE_UPLOAD_DIR 4
 /** Purpose for connection to directory server: upload a rendezvous
- * descriptor */
+ * descriptor. */
 #define DIR_PURPOSE_UPLOAD_RENDDESC 5
 /** Purpose for connection at a directory server. */
 #define DIR_PURPOSE_SERVER 6
 #define _DIR_PURPOSE_MAX 6
 
-/* Circuit state: I'm the OP, still haven't done all my handshakes */
+/** Circuit state: I'm the OP, still haven't done all my handshakes. */
 #define CIRCUIT_STATE_BUILDING 0
-/* Circuit state: Waiting to process the onionskin */
+/** Circuit state: Waiting to process the onionskin. */
 #define CIRCUIT_STATE_ONIONSKIN_PENDING 1
-/* Circuit state: I'm the OP, my firsthop is still connecting */
+/** Circuit state: I'm the OP, my firsthop is still connecting. */
 #define CIRCUIT_STATE_OR_WAIT 2
-/* Circuit state: onionskin(s) processed, ready to send/receive cells */
+/** Circuit state: onionskin(s) processed, ready to send/receive cells. */
 #define CIRCUIT_STATE_OPEN 3
 
 #define _CIRCUIT_PURPOSE_MIN 1
@@ -257,11 +257,11 @@
 #define _CIRCUIT_PURPOSE_OR_MIN 1
 /** OR-side circuit purpose: normal circuit, at OR. */
 #define CIRCUIT_PURPOSE_OR 1
-/** OR-side circuit purpose: At OR, from Bob, waiting for intro from Alices */
+/** OR-side circuit purpose: At OR, from Bob, waiting for intro from Alices. */
 #define CIRCUIT_PURPOSE_INTRO_POINT 2
-/** OR-side circuit purpose: At OR, from Alice, waiting for Bob */
+/** OR-side circuit purpose: At OR, from Alice, waiting for Bob. */
 #define CIRCUIT_PURPOSE_REND_POINT_WAITING 3
-/** OR-side circuit purpose: At OR, both circuits have this purpose */
+/** OR-side circuit purpose: At OR, both circuits have this purpose. */
 #define CIRCUIT_PURPOSE_REND_ESTABLISHED 4
 #define _CIRCUIT_PURPOSE_OR_MAX 4
 
@@ -288,30 +288,30 @@
  */
 /** Client-side circuit purpose: Normal circuit, with cpath. */
 #define CIRCUIT_PURPOSE_C_GENERAL 5
-/** Client-side circuit purpose: at Alice, connecting to intro point */
+/** Client-side circuit purpose: at Alice, connecting to intro point. */
 #define CIRCUIT_PURPOSE_C_INTRODUCING 6
-/** Client-side circuit purpose: at Alice, sent INTRODUCE1 to intro point, waiting for ACK/NAK */
+/** Client-side circuit purpose: at Alice, sent INTRODUCE1 to intro point, waiting for ACK/NAK. */
 #define CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT 7
-/** Client-side circuit purpose: at Alice, introduced and acked, closing */
+/** Client-side circuit purpose: at Alice, introduced and acked, closing. */
 #define CIRCUIT_PURPOSE_C_INTRODUCE_ACKED 8
-/** Client-side circuit purpose: at Alice, waiting for ack */
+/** Client-side circuit purpose: at Alice, waiting for ack. */
 #define CIRCUIT_PURPOSE_C_ESTABLISH_REND 9
-/** Client-side circuit purpose: at Alice, waiting for Bob */
+/** Client-side circuit purpose: at Alice, waiting for Bob. */
 #define CIRCUIT_PURPOSE_C_REND_READY 10
 /** Client-side circuit purpose: at Alice, waiting for Bob, INTRODUCE
  * has been acknowledged. */
 #define CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED 11
-/** Client-side circuit purpose: at Alice, rendezvous established */
+/** Client-side circuit purpose: at Alice, rendezvous established. */
 #define CIRCUIT_PURPOSE_C_REND_JOINED 12
 
-/** Hidden-service-side circuit purpose: at Bob, waiting for introductions */
+/** Hidden-service-side circuit purpose: at Bob, waiting for introductions. */
 #define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 13
 /** Hidden-service-side circuit purpose: at Bob, successfully established
- * intro */
+ * intro. */
 #define CIRCUIT_PURPOSE_S_INTRO 14
-/** Hidden-service-side circuit purpose: at Bob, connecting to rend point */
+/** Hidden-service-side circuit purpose: at Bob, connecting to rend point. */
 #define CIRCUIT_PURPOSE_S_CONNECT_REND 15
-/** Hidden-service-side circuit purpose: at Bob, rendezvous established.*/
+/** Hidden-service-side circuit purpose: at Bob, rendezvous established. */
 #define CIRCUIT_PURPOSE_S_REND_JOINED 16
 #define _CIRCUIT_PURPOSE_MAX 16
 
@@ -408,8 +408,8 @@
 typedef struct {
   uint16_t circ_id; /**< Circuit which received the cell. */
   unsigned char command; /**< Type of the cell: one of PADDING, CREATE, RELAY,
-                          * or DESTROY */
-  unsigned char payload[CELL_PAYLOAD_SIZE]; /**< Cell body */
+                          * or DESTROY. */
+  unsigned char payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
 } cell_t;
 
 /** Beginning of a RELAY cell payload. */
@@ -426,22 +426,22 @@ typedef struct socks_request_t socks_request_t;
 
 #define CONNECTION_MAGIC 0x7C3C304Eu
 /** Description of a connection to another host or process, and associated
- * data */
+ * data. */
 struct connection_t {
   uint32_t magic; /**< For memory debugging: must equal CONNECTION_MAGIC. */
 
   uint8_t type; /**< What kind of connection is this? */
   uint8_t state; /**< Current state of this connection. */
-  uint8_t purpose; /**< Only used for DIR types currently */
-  uint8_t wants_to_read; /**< Should we start reading again once
+  uint8_t purpose; /**< Only used for DIR types currently. */
+  uint8_t wants_to_read; /**< Boolean: should we start reading again once
                           * the bandwidth throttler allows it?
                           */
-  uint8_t wants_to_write; /**< Should we start writing again once
+  uint8_t wants_to_write; /**< Boolean: should we start writing again once
                            * the bandwidth throttler allows reads?
                            */
   int s; /**< Our socket; -1 if this connection is closed. */
-  int poll_index; /**< Index of this conn into the poll_array */
-  int marked_for_close; /**< Should we close this conn on the next
+  int poll_index; /**< Index of this conn into the poll_array. */
+  int marked_for_close; /**< Boolean: should we close this conn on the next
                          * iteration of the main loop?
                          */
   char *marked_for_close_file; /**< For debugging: in which file were we marked
@@ -450,11 +450,11 @@ struct connection_t {
                                 * for close, do we flush it before closing it?
                                 */
 
-  buf_t *inbuf; /**< Buffer holding data read over this connection */
+  buf_t *inbuf; /**< Buffer holding data read over this connection. */
   int inbuf_reached_eof; /**< Boolean: did read() return 0 on this conn? */
   time_t timestamp_lastread; /**< When was the last time poll() said we could read? */
 
-  buf_t *outbuf; /**< Buffer holding data to write over this connection */
+  buf_t *outbuf; /**< Buffer holding data to write over this connection. */
   int outbuf_flushlen; /**< How much data should we try to flush from the
                         * outbuf? */
   time_t timestamp_lastwritten; /**< When was the last time poll() said we could write? */
@@ -463,13 +463,13 @@ struct connection_t {
 
   uint32_t addr; /**< IP of the other side of the connection; used to identify
                   * routers, along with port. */
-  uint16_t port; /**< If non-zero, porrt  on the other end
+  uint16_t port; /**< If non-zero, port  on the other end
                   * of the connection. */
   char *address; /**< FQDN (or IP) of the guy on the other end.
-                  * strdup into this, because free_connection frees it
+                  * strdup into this, because free_connection frees it.
                   */
   crypto_pk_env_t *identity_pkey; /**> Public RSA key for the other side's
-                                   * signing key */
+                                   * signing key. */
   char *nickname; /**< Nickname of OR on other side (if any). */
 
 /* Used only by OR connections: */
@@ -479,7 +479,7 @@ struct connection_t {
                           * range 0..1<<15-1. (OR only.)*/
 
   /* bandwidth and receiver_bucket only used by ORs in OPEN state: */
-  int bandwidth; /**< cOnnection bandwidth. (OPEN ORs only.) */
+  int bandwidth; /**< Connection bandwidth. (OPEN ORs only.) */
   int receiver_bucket; /**< When this hits 0, stop receiving. Every second we
                         * add 'bandwidth' to this, capping it at 10*bandwidth.
                         * (OPEN ORs only)
@@ -500,10 +500,10 @@ struct connection_t {
   int deliver_window; /**< How many more relay cells can end at me? (Edge
                        * only.) */
 
-  int done_sending; /**< For half-open connections; not used currently */
-  int done_receiving; /**< For half-open connections; not used currently */
+  int done_sending; /**< For half-open connections; not used currently. */
+  int done_receiving; /**< For half-open connections; not used currently. */
   char has_sent_end; /**< For debugging: set once we've set the stream end,
-                        and check in circuit_about_to_close_connection() */
+                        and check in circuit_about_to_close_connection(). */
   char num_retries; /**< How many times have we re-tried beginning this stream?  (Edge only) */
 
   /* Used only by AP connections */
@@ -518,13 +518,13 @@ typedef struct connection_t connection_t;
 
 /** A linked list of exit policy rules */
 struct exit_policy_t {
-  char policy_type; /**< One of EXIT_POLICY_ACCEPT or EXIT_POLICY_REJECT */
-  char *string; /**< String representation of this rule */
-  uint32_t addr; /**< Base address to accept or reject */
-  uint32_t msk; /**< Accept/reject all addresses <b>a</b> such that a & msk == 
+  char policy_type; /**< One of EXIT_POLICY_ACCEPT or EXIT_POLICY_REJECT. */
+  char *string; /**< String representation of this rule. */
+  uint32_t addr; /**< Base address to accept or reject. */
+  uint32_t msk; /**< Accept/reject all addresses <b>a</b> such that a & msk ==
                  * <b>addr</b> & msk . */
-  uint16_t prt_min; /**< Lowest port number to accept/reject */
-  uint16_t prt_max; /**< Highest port number to accept/reject */
+  uint16_t prt_min; /**< Lowest port number to accept/reject. */
+  uint16_t prt_max; /**< Highest port number to accept/reject. */
 
   struct exit_policy_t *next; /**< Next rule in list. */
 };
@@ -535,15 +535,15 @@ typedef struct {
   char *nickname; /**< Human-readable OR name. */
 
   uint32_t addr; /**< IPv4 address of OR, in host order. */
-  uint16_t or_port; /**< Port for OR-to-OR and OP-to-OR connections */
-  uint16_t socks_port; /**< Port for SOCKS connections */
-  uint16_t dir_port; /**< Port for HTTP directory connections */
+  uint16_t or_port; /**< Port for OR-to-OR and OP-to-OR connections. */
+  uint16_t socks_port; /**< Port for SOCKS connections. */
+  uint16_t dir_port; /**< Port for HTTP directory connections. */
 
   time_t published_on; /**< When was the information in this routerinfo_t
                         * published? */
 
-  crypto_pk_env_t *onion_pkey; /**< public RSA key for onions */
-  crypto_pk_env_t *identity_pkey;  /**< public RSA key for signing */
+  crypto_pk_env_t *onion_pkey; /**< Public RSA key for onions. */
+  crypto_pk_env_t *identity_pkey;  /**< Public RSA key for signing. */
 
   int is_running; /**< As far as we know, is this OR currently running? */
 
@@ -609,7 +609,7 @@ struct crypt_path_t {
                               * (The list is circular, so the last node
                               * links to the first.) */
   struct crypt_path_t *prev; /**< Link to previous crypt_path_t in the
-                              * circuit */
+                              * circuit. */
 
   int package_window; /**< How many bytes are we allowed to originate ending
                        * at this step? */
@@ -628,11 +628,11 @@ typedef struct crypt_path_t crypt_path_t;
 
 /** Information used to build a circuit. */
 typedef struct {
-  /** intended length of the final circuit */
+  /** intended length of the final circuit. */
   int desired_path_len;
-  /** nickname of planned exit node */
+  /** nickname of planned exit node. */
   char *chosen_exit;
-  /** crypt_path_t to append after rendezvous: used for rendezvous */
+  /** crypt_path_t to append after rendezvous: used for rendezvous. */
   struct crypt_path_t *pending_final_cpath;
   /** How many times has building a circuit for this task failed? */
   int failure_count;
@@ -640,9 +640,9 @@ typedef struct {
 
 
 #define CIRCUIT_MAGIC 0x35315243u
-/** Struct for a path (circuit) through the onion routing network */
+/** Struct for a path (circuit) through the onion routing network. */
 struct circuit_t {
-  uint32_t magic; /**< For memory debugging: must equal CIRCUIT_MAGIC */
+  uint32_t magic; /**< For memory debugging: must equal CIRCUIT_MAGIC. */
 
   int marked_for_close; /**< Should we close this circuit at the end of the
                          * main loop? */
@@ -683,10 +683,10 @@ struct circuit_t {
   uint16_t n_circ_id;
 
   /** The cipher used by intermediate hops for cells heading toward the
-   * OP */
+   * OP. */
   crypto_cipher_env_t *p_crypto;
   /** The cipher used by intermediate hops for cells heading away from
-   * the OP */
+   * the OP. */
   crypto_cipher_env_t *n_crypto;
 
   /** The integrity-checking digest used by intermediate hops, for
@@ -712,8 +712,8 @@ struct circuit_t {
   crypt_path_t *cpath;
 
   char onionskin[ONIONSKIN_CHALLENGE_LEN]; /**< For storage while onionskin
-                                            * pending */
-  char handshake_digest[DIGEST_LEN]; /**< Stores KH for intermediate hops */
+                                            * pending. */
+  char handshake_digest[DIGEST_LEN]; /**< Stores KH for intermediate hops. */
 
   time_t timestamp_created; /**< When was this circuit created? */
   time_t timestamp_dirty; /**< When the circuit was first used, or 0 if the
@@ -730,7 +730,7 @@ struct circuit_t {
   char rend_query[REND_SERVICE_ID_LEN+1];
 
   /** The rend_pk_digest field holds a hash of location-hidden service's
-   * PK if purpose is INTRO_POINT or S_ESTABLISH_INTRO or S_RENDEZVOUSING
+   * PK if purpose is INTRO_POINT or S_ESTABLISH_INTRO or S_RENDEZVOUSING.
    */
   char rend_pk_digest[DIGEST_LEN];
 
@@ -750,14 +750,14 @@ typedef struct circuit_t circuit_t;
 
 /** Configuration options for a Tor process */
 typedef struct {
-  char *LogLevel; /**< Verbosity of log: minimal level of messages to report */
-  char *LogFile; /**< Where to send normal log messages */
-  char *DebugLogFile; /**< Where to send verbose log messages */
-  char *DataDirectory; /**< OR only: where to store long-term data */
-  char *RouterFile; /**< Where to find starting list of ORs */
-  char *Nickname; /**< OR only: nickname of this onion router */
-  char *Address; /**< OR only: configured address for this onion router */
-  char *PidFile; /**< Where to store PID of Tor process */
+  char *LogLevel; /**< Verbosity of log: minimal level of messages to report. */
+  char *LogFile; /**< Where to send normal log messages. */
+  char *DebugLogFile; /**< Where to send verbose log messages. */
+  char *DataDirectory; /**< OR only: where to store long-term data. */
+  char *RouterFile; /**< Where to find starting list of ORs. */
+  char *Nickname; /**< OR only: nickname of this onion router. */
+  char *Address; /**< OR only: configured address for this onion router. */
+  char *PidFile; /**< Where to store PID of Tor process. */
 
   char *ExitNodes; /**< Comma-separated list of nicknames of ORs to consider
                     * as exits. */
@@ -771,23 +771,23 @@ typedef struct {
   char *RendExcludeNodes; /**< Comma-separated list of nicknames not to use
                            * as introduction points. */
 
-  char *ExitPolicy; /**< Comma-separated list of exit policy components */
-  char *SocksBindAddress; /**< Address to bind for listenting for SOCKS
-                           * connections */
-  char *ORBindAddress; /**< Address to bind for listenting for OR
-                        * connections */
-  char *DirBindAddress; /**< Address to bind for listenting for directory
-                         * connections */
+  char *ExitPolicy; /**< Comma-separated list of exit policy components. */
+  char *SocksBindAddress; /**< Address to bind for listening for SOCKS
+                           * connections. */
+  char *ORBindAddress; /**< Address to bind for listening for OR
+                        * connections. */
+  char *DirBindAddress; /**< Address to bind for listening for directory
+                         * connections. */
   char *RecommendedVersions; /**< Directory server only: which versions of
                               * Tor should we tell users to run? */
   char *User; /**< Name of user to run Tor as. */
   char *Group; /**< Name of group to run Tor as. */
   double PathlenCoinWeight; /**< Parameter used to configure average path
-                             * length (alpha in geometric distribution) */
-  int ORPort; /**< Port to listen on for OR connections */
-  int SocksPort; /**< Port to listen on for SOCKS connections */
-  int DirPort; /**< Port to listen on for directory connections */
-  int MaxConn; /**< Maximum number of simultaneous connections */
+                             * length (alpha in geometric distribution). */
+  int ORPort; /**< Port to listen on for OR connections. */
+  int SocksPort; /**< Port to listen on for SOCKS connections. */
+  int DirPort; /**< Port to listen on for directory connections. */
+  int MaxConn; /**< Maximum number of simultaneous connections. */
   int TrafficShaping; /**< Unused. */
   int LinkPadding; /**< Unused. */
   int IgnoreVersion; /**< If true, run no matter what versions of Tor the
@@ -822,7 +822,7 @@ typedef struct {
 /** State of a SOCKS request from a user to an OP */
 struct socks_request_t {
   char socks_version; /**< Which version of SOCKS did the client use? */
-  int replylen; /**< Length of <b>reply</b> */
+  int replylen; /**< Length of <b>reply</b>. */
   char reply[MAX_SOCKS_REPLY_LEN]; /**< Write an entry into this string if
                                     * we want to specify our own socks reply,
                                     * rather than using the default socks4 or

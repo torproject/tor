@@ -172,7 +172,7 @@ crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa)
   return env;
 }
 
-/** used by tortls.c: return the RSA* from a crypto_pk_env_t */
+/** used by tortls.c: return the RSA* from a crypto_pk_env_t. */
 RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env)
 {
   return env->key;
@@ -1062,9 +1062,9 @@ crypto_digest_assign(crypto_digest_env_t *into,
 
 /* DH */
 
-/** Shared P parameter for our DH key exchanged */
+/** Shared P parameter for our DH key exchanged. */
 static BIGNUM *dh_param_p = NULL;
-/** Shared G parameter for our DH key exchanges */
+/** Shared G parameter for our DH key exchanges. */
 static BIGNUM *dh_param_g = NULL;
 
 /** Initialize dh_param_p and dh_param_g if they are not already
@@ -1332,7 +1332,7 @@ void crypto_pseudo_rand(unsigned int n, unsigned char *to)
 }
 
 /** Return a pseudorandom integer, choosen uniformly from the values
- * between 0 and max-1 */
+ * between 0 and max-1. */
 int crypto_pseudo_rand_int(unsigned int max) {
   unsigned int val;
   unsigned int cutoff;

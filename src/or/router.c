@@ -12,7 +12,7 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
-/** exposed for test.c */ void get_platform_str(char *platform, int len);
+/** Exposed for test.c. */ void get_platform_str(char *platform, int len);
 
 /************************************************************/
 
@@ -305,9 +305,9 @@ void router_retry_connections(void) {
  * OR descriptor generation.
  */
 
-/** my routerinfo. */
+/** My routerinfo. */
 static routerinfo_t *desc_routerinfo = NULL;
-/** string representation of my descriptor, signed by me. */
+/** String representation of my descriptor, signed by me. */
 static char descriptor[8192];
 
 /** OR only: try to upload our signed descriptor to all the directory servers

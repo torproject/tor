@@ -29,14 +29,14 @@ extern or_options_t options; /* command-line and config-file options */
 #define MAX_IDLE_DNSWORKERS 10
 
 /** Possible outcomes from hostname lookup: permanent failure,
- * transient (retryable) failure, and success */
+ * transient (retryable) failure, and success. */
 #define DNS_RESOLVE_FAILED_TRANSIENT 1
 #define DNS_RESOLVE_FAILED_PERMANENT 2
 #define DNS_RESOLVE_SUCCEEDED 3
 
-/** How many dnsworkers we have running right now */
+/** How many dnsworkers we have running right now. */
 int num_dnsworkers=0;
-/** How many of the running dnsworkers have an assigned task right now */
+/** How many of the running dnsworkers have an assigned task right now. */
 int num_dnsworkers_busy=0;
 
 /** Linked list of connections waiting for a DNS answer. */
@@ -51,13 +51,13 @@ struct pending_connection_t {
  */
 struct cached_resolve {
   SPLAY_ENTRY(cached_resolve) node;
-  char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved */
+  char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved. */
   uint32_t addr; /**< IPv4 addr for <b>address</b>. */
-  char state; /**< 0 is pending; 1 means answer is valid; 2 means resolve failed */
+  char state; /**< 0 is pending; 1 means answer is valid; 2 means resolve failed. */
 #define CACHE_STATE_PENDING 0
 #define CACHE_STATE_VALID 1
 #define CACHE_STATE_FAILED 2
-  uint32_t expire; /**< Remove items from cache after this time */
+  uint32_t expire; /**< Remove items from cache after this time. */
   struct pending_connection_t *pending_connections;
   struct cached_resolve *next;
 };
@@ -70,7 +70,7 @@ int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
 static void spawn_enough_dnsworkers(void);
 
-/** Splay tree of cached_resolve objects */
+/** Splay tree of cached_resolve objects. */
 static SPLAY_HEAD(cache_tree, cached_resolve) cache_root;
 
 /** Function to compare hashed resolves on their addresses; used to
@@ -84,7 +84,7 @@ static int compare_cached_resolves(struct cached_resolve *a,
 SPLAY_PROTOTYPE(cache_tree, cached_resolve, node, compare_cached_resolves);
 SPLAY_GENERATE(cache_tree, cached_resolve, node, compare_cached_resolves);
 
-/** Initialize the DNS cache */
+/** Initialize the DNS cache. */
 static void init_cache_tree(void) {
   SPLAY_INIT(&cache_root);
 }
@@ -95,7 +95,7 @@ void dns_init(void) {
   spawn_enough_dnsworkers();
 }
 
-/** Linked list of resolved addresses, oldest to newest */
+/** Linked list of resolved addresses, oldest to newest. */
 static struct cached_resolve *oldest_cached_resolve = NULL;
 static struct cached_resolve *newest_cached_resolve = NULL;
 
