@@ -380,7 +380,7 @@ dirserv_add_descriptor(const char **desc)
       /* This isn't really an error; return success. */
       routerinfo_free(ri);
       *desc = end;
-      return 1;
+      return verified;
     }
     /* We don't have a newer one; we'll update this one. */
     log_fn(LOG_INFO,"Dirserv updating desc for nickname '%s'",ri->nickname);
@@ -403,7 +403,7 @@ dirserv_add_descriptor(const char **desc)
   *desc = end;
   directory_set_dirty();
 
-  return 1;
+  return verified;
 }
 
 /** Remove all descriptors whose nicknames or fingerprints we don't
