@@ -370,10 +370,14 @@ static void run_connection_housekeeping(int i, time_t now) {
      the connection or send a keepalive, depending. */
   if(connection_speaks_cells(conn) &&
      now >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
-    if((!clique_mode() && !circuit_get_by_conn(conn)) ||
-       (!connection_state_is_open(conn))) {
-      /* we're an onion proxy, with no circuits;
-       * or our handshake has expired. kill it. */
+    routerinfo_t *router = router_get_by_digest(conn->identity_digest);
+    if((!connection_state_is_open(conn)) ||
+       (!clique_mode() && !circuit_get_by_conn(conn) &&
+       (!router || !server_mode() || strncmp(router->platform, "Tor 0.0.7", 9)))) {
+      /* our handshake has expired;
+       * or we're not an authdirserver, we have no circuits, and
+       *   either he's an OP, we're an OP, or we're both ORs and he's running 0.0.8,
+       * then kill it. */
       log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
              i,conn->address, conn->port);
       /* flush anything waiting, e.g. a destroy for a just-expired circ */
