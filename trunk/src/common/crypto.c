@@ -41,6 +41,9 @@
 #include "util.h"
 
 #ifdef MS_WINDOWS
+#define WIN32_WINNT 0x400
+#define _WIN32_WINNT 0x400
+#define WIN32_LEAN_AND_MEAN
 #include <wincrypt.h>
 #endif
 
