@@ -1295,6 +1295,15 @@ static int tor_init(int argc, char *argv[]) {
   return 0;
 }
 
+/** Free all memory that we might have allocated somewhere.
+ * Helps us find the real leaks with dmalloc and the like.
+ *
+ * Also valgrind should then report 0 reachable in its
+ * leak report */
+void tor_free_all(void) {
+
+}
+
 /** Do whatever cleanup is necessary before shutting Tor down. */
 void tor_cleanup(void) {
   or_options_t *options = get_options();
@@ -1305,6 +1314,7 @@ void tor_cleanup(void) {
   crypto_global_cleanup();
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL));
+  tor_free_all();
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */
