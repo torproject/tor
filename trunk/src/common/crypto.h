@@ -58,7 +58,9 @@ int crypto_pk_keysize(crypto_pk_env_t *env);
 int crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding);
 int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding);
 int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
+int crypto_pk_private_sign_digest(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
 int crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
+int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, unsigned char *data, int datalen, unsigned char *sig, int siglen);
 int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env, unsigned char *from,
 				    int fromlen, unsigned char *to,
 				    int padding);

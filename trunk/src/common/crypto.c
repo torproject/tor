@@ -656,6 +656,44 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromle
   }
 }
 
+/* Return 0 if sig is a correct signature for SHA1(data).  Else return -1.
+ */
+int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, unsigned char *data, int datalen, unsigned char *sig, int siglen)
+{
+  char digest[CRYPTO_SHA1_DIGEST_LEN];
+  char buf[1024];
+  int r;
+
+  assert(env && data && sig);
+
+  if (crypto_SHA_digest(data,datalen,digest)<0) {
+    log_fn(LOG_WARN, "couldn't compute digest");
+    return -1;
+  }
+  r = crypto_pk_public_checksig(env,sig,siglen,buf);
+  if (r != CRYPTO_SHA1_DIGEST_LEN) {
+    log_fn(LOG_WARN, "Invalid signature");
+    return -1;
+  }
+  if (memcmp(buf, digest, CRYPTO_SHA1_DIGEST_LEN)) {
+    log_fn(LOG_WARN, "Signature mismatched with digest.");
+    return -1;
+  }
+
+  return 0;
+}
+
+/* Fill 'to' with a signature of SHA1(from).
+ */
+int crypto_pk_private_sign_digest(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to)
+{
+  char digest[CRYPTO_SHA1_DIGEST_LEN];
+  if (crypto_SHA_digest(from,fromlen,digest)<0)
+    return 0;
+  return crypto_pk_private_sign(env,digest,CRYPTO_SHA1_DIGEST_LEN,to);
+}
+
+
 /* Perform a hybrid (public/secret) encryption on 'fromlen' bytes of data
  * from 'from', with padding type 'padding', storing the results on 'to'.
  *
