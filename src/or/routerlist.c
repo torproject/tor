@@ -400,7 +400,6 @@ static void routerlist_free(routerlist_t *rl)
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                     routerinfo_free(r));
   smartlist_free(rl->routers);
-  tor_free(rl->routers);
   tor_free(rl->software_versions);
   tor_free(rl);
 }
