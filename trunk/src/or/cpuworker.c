@@ -133,7 +133,8 @@ int cpuworker_main(void *data) {
   for(;;) {
 
     if(read(fd, &question_type, 1) != 1) {
-      log_fn(LOG_ERR,"read type failed. Exiting.");
+//      log_fn(LOG_ERR,"read type failed. Exiting.");
+      log_fn(LOG_INFO,"cpuworker exiting because tor process died.");
       spawn_exit();
     }
     assert(question_type == CPUWORKER_TASK_ONION);
