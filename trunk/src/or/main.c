@@ -594,9 +594,10 @@ static int do_main_loop(void) {
    * non-zero. This is where we try to connect to all the other ORs,
    * and start the listeners.
    */
-  retry_all_connections((uint16_t) options.ORPort,
-                        (uint16_t) options.SocksPort,
-                        (uint16_t) options.DirPort);
+  if(retry_all_connections() < 0) {
+    log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
+    return -1;
+  }
 
   for(;;) {
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
