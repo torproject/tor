@@ -67,6 +67,7 @@ void add_temp_log(void);
 void close_temp_logs(void);
 void mark_logs_temp(void);
 void configure_libevent_logging(void);
+void suppress_libevent_log_msg(const char *msg);
 
 /* Outputs a message to stdout */
 void _log(int severity, const char *format, ...) CHECK_PRINTF(2,3);
