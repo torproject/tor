@@ -148,8 +148,9 @@ connection_t *connection_or_connect(routerinfo_t *router, uint16_t port, int *re
   int s;
 
   conn = connection_new(CONN_TYPE_OR);
-  if(!conn)
+  if(!conn) {
     return NULL;
+  }
 
   /* set up conn so it's got all the data we need to remember */
   conn->addr = router->addr;
@@ -470,20 +471,22 @@ int or_handshake_client_process_auth(connection_t *conn) {
   }
   else if (retval != 56)
   { 
-    log(LOG_ERR,"Received an incorrect response from router %s:%u during authentication.",
+    log(LOG_ERR,"client_process_auth: incorrect response from router %s:%u.",
         conn->address,conn->port);
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_client_process_auth() : Decrypted response.");
   /* check validity */
-  if (  (*(uint32_t*)buf != me.sin_addr.s_addr) || /* local address, network order */
-        (*(uint16_t*)(buf+4) != me.sin_port) || /* local port, network order */
+  if ( (*(uint32_t*)buf != me.sin_addr.s_addr) || /* local address, network order */
+       (*(uint16_t*)(buf+4) != me.sin_port) || /* local port, network order */
        (ntohl(*(uint32_t*)(buf+6)) != conn->addr) || /* remote address */
-       (ntohs(*(uint16_t*)(buf+10)) != conn->port) || /* remote port */
-       (memcmp(conn->f_crypto->key, buf+12, 16)) || /* keys */
-       (memcmp(conn->b_crypto->key, buf+28, 16)) )
-  { /* incorrect response */
-    log(LOG_ERR,"Router %s:%u failed to authenticate. Either the key I have is obsolete or they're doing something they're not supposed to.",conn->address,conn->port);
+       (ntohs(*(uint16_t*)(buf+10)) != conn->port) ) { /* remote port */
+    log(LOG_ERR,"client_process_auth: Router %s:%u: bad address info.", conn->address,conn->port);
+    return -1;
+  }
+  if ( (memcmp(conn->f_crypto->key, buf+12, 16)) || /* keys */
+       (memcmp(conn->b_crypto->key, buf+28, 16)) ) {
+    log(LOG_ERR,"client_process_auth: Router %s:%u: bad key info.",conn->address,conn->port);
     return -1;
   }
 
@@ -570,14 +573,14 @@ int or_handshake_server_process_auth(connection_t *conn) {
   retval = crypto_pk_private_decrypt(getprivatekey(), cipher, 128, buf, RSA_PKCS1_PADDING);
   if (retval == -1)
   { 
-    log(LOG_ERR,"Public-key decryption failed processing auth message from new client.");
+    log(LOG_ERR,"or_handshake_server_process_auth: Public-key decryption failed.");
     log(LOG_DEBUG,"or_handshake_server_process_auth() : Reason : %s.",
         crypto_perror());
     return -1;
   }
   else if (retval != 48)
   { 
-    log(LOG_ERR,"Received an incorrect authentication request.");
+    log(LOG_ERR,"or_handshake_server_process_auth(): received an incorrect authentication request.");
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Decrypted authentication message.");
@@ -589,7 +592,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
   router = router_get_by_addr_port(addr,port);
   if (!router)
   {
-    log(LOG_DEBUG,"or_handshake_server_process_auth() : Received a connection from an unknown router '%s:%d'. Will drop.", conn->address, port);
+    log(LOG_DEBUG,"or_handshake_server_process_auth() : unknown router '%s:%d'. Will drop.", conn->address, port);
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Router identified as %s:%u.",
@@ -626,9 +629,8 @@ int or_handshake_server_process_auth(connection_t *conn) {
   }
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Nonce generated.");
 
-  /* generate message */
-  memcpy(buf+48,conn->nonce,8); /* append the nonce to the end of the message */
   *(uint32_t *)(buf+44) = htonl(conn->bandwidth); /* send max link utilisation */
+  memcpy(buf+48,conn->nonce,8); /* append the nonce to the end of the message */
 
   /* encrypt message */
   retval = crypto_pk_public_encrypt(conn->pkey, buf, 56, cipher,RSA_PKCS1_PADDING);
@@ -698,7 +700,7 @@ int or_handshake_server_process_nonce(connection_t *conn) {
   }
   else if (retval != 20)
   { 
-    log(LOG_ERR,"Received an incorrect response from router %s:%u during authentication.",
+    log(LOG_ERR,"server_process_nonce: incorrect response from router %s:%u.",
         conn->address,conn->port);
     return -1;
   }
@@ -711,7 +713,7 @@ int or_handshake_server_process_nonce(connection_t *conn) {
        (*(uint16_t*)(buf+10) != me.sin_port) || /* local port, network order */
       (memcmp(conn->nonce,buf+12,8))) /* nonce */
   { 
-    log(LOG_ERR,"Router %s:%u failed to authenticate. Either the key I have is obsolete or they're doing something they're not supposed to.",conn->address,conn->port);
+    log(LOG_ERR,"server_process_nonce: Router %s:%u gave bad response.",conn->address,conn->port);
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_server_process_nonce() : Response valid. Authentication complete.");

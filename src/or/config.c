@@ -282,7 +282,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     printf("DirFetchPeriod=%d KeepalivePeriod=%d\n",
            options->DirFetchPeriod,
            options->KeepalivePeriod);
-    printf("Daemon=%d", options->Daemon);
+    printf("Daemon=%d\n", options->Daemon);
   }
 
 /* Validate options */
