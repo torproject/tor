@@ -180,10 +180,10 @@ void connection_free(connection_t *conn) {
   if (conn->compression) {
     if (inflateEnd(conn->decompression) != Z_OK)
       log(LOG_ERR,"connection_free(): while closing zlib: %s",
-	  conn->decompression->msg);
+          conn->decompression->msg);
     if (deflateEnd(conn->compression) != Z_OK)
       log(LOG_ERR,"connection_free(): while closing zlib: %s",
-	  conn->compression->msg);
+          conn->compression->msg);
     free(conn->compression);
     free(conn->decompression);
     buf_free(conn->z_outbuf);
@@ -372,14 +372,14 @@ int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
 
 #ifdef USE_ZLIB
 int connection_compress_from_buf(char *string, int len, connection_t *conn,
-				 int flush) {
+                                 int flush) {
   return compress_from_buf(string, len,
-			   &conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen,
-			   conn->compression, flush);
+                           &conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen,
+                           conn->compression, flush);
 }
 
 int connection_decompress_to_buf(char *string, int len, connection_t *conn,
-				 int flush) {
+                                 int flush) {
   int n;
   struct timeval now;
 
@@ -387,7 +387,7 @@ int connection_decompress_to_buf(char *string, int len, connection_t *conn,
 
   if (len) {
     if (write_to_buf(string, len, 
-		     &conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen) < 0)
+        &conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen) < 0)
       return -1;
   }
 
@@ -400,9 +400,9 @@ int connection_decompress_to_buf(char *string, int len, connection_t *conn,
     return 0;
   
   n = decompress_buf_to_buf(
-	   &conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen,
-	   &conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen,
-	   conn->decompression, flush);
+        &conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen,
+        &conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen,
+        conn->decompression, flush);
 
   if (n < 0)
     return -1;
@@ -718,8 +718,8 @@ repeat_connection_package_raw_inbuf:
    *    2) 
    */
   len = connection_compress_from_buf(cell.payload + TOPIC_HEADER_SIZE,
-				     CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE,
-				     conn, Z_SYNC_FLUSH);
+                                     CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE,
+                                     conn, Z_SYNC_FLUSH);
   if (len < 0)
     return -1;
 
