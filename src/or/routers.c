@@ -599,7 +599,7 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   if (!strptime(tok.val.cmd.args[0], "%Y-%m-%d %H:%M:%S", &published)) {
     log_fn(LOG_WARN, "Published time was unparseable"); goto err;
   }
-  published_on = timegm(&published);  
+  published_on = tor_timegm(&published);  
 
   NEXT_TOK();
   TOK_IS(K_RECOMMENDED_SOFTWARE, "recommended-software");
@@ -857,7 +857,7 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   if (!strptime(ARGS[0], "%Y-%m-%d %H:%M:%S", &published)) {
     log_fn(LOG_WARN, "Published time was unparseable"); goto err;
   }
-  router->published_on = timegm(&published);
+  router->published_on = tor_timegm(&published);
 
   NEXT_TOKEN();
   if (tok->tp != K_ONION_KEY) {
