@@ -46,9 +46,6 @@ If the quickstart doesn't work for you:
     ./configure
   rather than simply ./configure.
 
-  On Solaris, maybe use
-    LDFLAGS="-lsocket -lnsl" ./configure --with-ssl-dir=/usr/local/ssl
-
   Check out the list archives at http://archives.seul.org/or/dev/ and see
   if somebody else has reported your problem. If not, please subscribe
   and let us know what you did to fix it, or give us the details and
