@@ -1195,6 +1195,7 @@ extern const char *conn_type_to_string[];
 extern const char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 connection_t *connection_new(int type);
+void connection_unregister(connection_t *conn);
 void connection_free(connection_t *conn);
 void connection_free_all(void);
 void connection_about_to_close_connection(connection_t *conn);
