@@ -571,6 +571,7 @@ int router_load_routerlist_from_string(const char *s, int trusted)
       routerinfo_t *r = smartlist_get(new_list->routers, i);
       if (r->dir_port) {
         char *b;
+        log_fn(LOG_DEBUG,"Trusting router %s.", r->nickname);
         r->is_trusted_dir = 1;
         b = tor_malloc(DIGEST_LEN);
         memcpy(b, r->identity_digest, DIGEST_LEN);

@@ -763,13 +763,6 @@ static int do_main_loop(void) {
   /* Intialize the service cache. */
   rend_cache_init();
 
-  /* load the private keys, if we're supposed to have them, and set up the
-   * TLS context. */
-  if (init_keys() < 0 || rend_service_load_keys() < 0) {
-    log_fn(LOG_ERR,"Error initializing keys; exiting");
-    return -1;
-  }
-
   /* load the routers file */
   if(options.RouterFile) {
     routerlist_clear_trusted_directories();
@@ -777,6 +770,13 @@ static int do_main_loop(void) {
       log_fn(LOG_ERR,"Error loading router list.");
       return -1;
     }
+  }
+
+  /* load the private keys, if we're supposed to have them, and set up the
+   * TLS context. */
+  if (init_keys() < 0 || rend_service_load_keys() < 0) {
+    log_fn(LOG_ERR,"Error initializing keys; exiting");
+    return -1;
   }
 
   if(authdir_mode()) {
