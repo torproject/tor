@@ -650,7 +650,7 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
       set_uint16(buf+2, 0);
       memcpy(buf+4, answer, 4); /* address */
       replylen = SOCKS4_NETWORK_LEN;
-   } else {
+    } else {
       buf[1] = 91; /* "error" */
       memset(buf+2, 0, 6);
       replylen = SOCKS4_NETWORK_LEN;
