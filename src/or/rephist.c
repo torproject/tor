@@ -360,6 +360,8 @@ static void commit_max(bw_array_t *b) {
     ++b->num_maxes_set;
   /* Reset max_total. */
   b->max_total = 0;
+  /* Reset total_in_period. */
+  b->total_in_period = 0;
 }
 
 /** Shift the current observation time of 'b' forward by one second.
@@ -449,7 +451,6 @@ void rep_hist_note_bytes_written(int num_bytes, time_t when) {
  */
 void rep_hist_note_bytes_read(int num_bytes, time_t when) {
 /* if we're smart, we can make this func and the one above share code */
-
   add_obs(read_array, when, num_bytes);
 }
 
@@ -508,8 +509,14 @@ char *rep_hist_get_bandwidth_lines(void)
     sprintf(cp, "opt %s-history %s (%d s)", r?"read":"write", t,
             NUM_SECS_BW_SUM_INTERVAL);
     cp += strlen(cp);
-    for (i=b->num_maxes_set+1,n=0; n<b->num_maxes_set; ++n,++i) {
-      if (i >= NUM_TOTALS) i -= NUM_TOTALS;
+
+    if (b->num_maxes_set < b->next_max_idx)
+      i = 0;
+    else
+      i = b->next_max_idx;
+
+    for (n=0; n<b->num_maxes_set; ++n,++i) {
+      while (i >= NUM_TOTALS) i -= NUM_TOTALS;
       if (n==(b->num_maxes_set-1))
         sprintf(cp, "%d", b->totals[i]);
       else
