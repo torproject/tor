@@ -14,37 +14,36 @@ ARMA    - arma claims
         o Don't use FascistFirewall if you're going via Tor, or if
           you're going via HttpProxy.
         o make RecommendedVersions a CONFIG_TYPE_LINELIST option
-R       . bandwidth buckets for write as well as read.
-N       - Handle rendezvousing with unverified nodes.
-          - Specify: Stick rendezvous point's key in INTRODUCE cell.
-            Bob should _always_ use key from INTRODUCE cell.
-          - Implement.
         o node 'groups' that are known to be in the same zone of control.
           o Nodes can list their coadministrated nodes.
             o If A lists B, it only counts if B also lists A
           o Users can list other coadministrated nodes if they like.
           o Never choose two coadministrated nodes in the same circuit.
-R       - figure out enclaves, e.g. so we know what to recommend that people
-          do, and so running a tor server on your website is helpful.
-          - Do enclaves for same IP only.
-          - Resolve first, then if IP is an OR, connect to next guy.
         o let tor servers use proxies for port 80 exits
           o Use generic port redirector for IP/bits:Port->IP:Port .
           o Make use of them when we're doing exit connections.
         X We should set things in options to NULL, not rely on memset(...0)
           being equivalent.
-          o We should check for memset(0) setting things to NULL with autoconf,
-            and then rely on it in the code.
-        - Once we have a trusted directory on port 80, stop falling back to
-          forbidden ports when fascistfirewall blocks all good dirservers.
+          o We should check for memset(0) setting things to NULL with
+	    autoconf, and then rely on it in the code.
 
-      0.0.9pre5:
-N       - per-month byte allowances.
-          - Based on bandwidth and per-month allowance, choose a
+      0.0.9pre5/6:
+        - per-month byte allowances.
+N         - Based on bandwidth and per-month allowance, choose a
             window within month to be up.  Stay up until allowance is
             used.  Adjust next month's window based on outcome.  Hibernate
             when we're not up.
-          - Hibernate means "stop accepting connections, and start sleeping"
+R         - Hibernate means "stop accepting connections, and start sleeping"
+            Implement hibernation.
+R       . bandwidth buckets for write as well as read.
+N       - Handle rendezvousing with unverified nodes.
+          - Specify: Stick rendezvous point's key in INTRODUCE cell.
+            Bob should _always_ use key from INTRODUCE cell.
+          - Implement.
+R       - figure out enclaves, e.g. so we know what to recommend that people
+          do, and so running a tor server on your website is helpful.
+          - Do enclaves for same IP only.
+          - Resolve first, then if IP is an OR, connect to next guy.
 N       - Pure C tor_resolve
 N       - the user interface interface
           - Skeleton only.
@@ -52,17 +51,19 @@ N       - the user interface interface
 N       - add ipv6 support.
           - Spec issue: if a resolve returns an IP4 and an IP6 address,
             which to use?
+N&R     - Update Spec
 R       - learn from ben about his openssl-reinitialization-trick to
           rotate tls keys without making new connections.
-          - (Roger grabs Ben next time he sees him on IRC) 
+          - (Roger grabs Ben next time he sees him on IRC)
         - christian grothoff's attack of infinite-length circuit.
           the solution is to have a separate 'extend-data' cell type
           which is used for the first N data cells, and only
           extend-data cells can be extend requests.
         - have a pool of circuits available, cannibalize them
           for your purposes (e.g. rendezvous, etc).
-
         D nt services on win32.
+        - Once we have a trusted directory on port 80, stop falling back to
+          forbidden ports when fascistfirewall blocks all good dirservers.
 
       0.0.9 and beyond:
         - fix sprintf's to snprintf's?
@@ -72,6 +73,8 @@ R       - learn from ben about his openssl-reinitialization-trick to
                 o Implement parsing
                 - Generate new formats (Not till 007 is dead)
         - make loglevel info less noisy
+        - Facility to automatically choose long-term helper nodes; perhaps
+          on by default for hidden services.
         - Make command-line strict about checking options; make only certain
           option prefixes work.
         - put expiry date on onion-key, so people don't keep trying
