@@ -881,7 +881,7 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
   rend_service_t *service;
   int i;
   rend_service_port_config_t *p;
-  char serviceid[REND_SERVICE_ID_LEN];
+  char serviceid[REND_SERVICE_ID_LEN+1];
 
   assert(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
   log_fn(LOG_DEBUG,"beginning to hunt for addr/port");
