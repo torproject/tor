@@ -27,6 +27,7 @@ AC_ARG_WITH(ssl-dir,
 )
 
 AC_SEARCH_LIBS(socket, [socket])
+AC_SEARCH_LIBS(gethostbyname, [nsl])
 
 saved_LIBS="$LIBS"
 saved_LDFLAGS="$LDFLAGS"
