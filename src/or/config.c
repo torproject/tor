@@ -204,6 +204,8 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
 
     config_compare(list, "ExitNodes",      CONFIG_TYPE_STRING, &options->ExitNodes) ||
     config_compare(list, "EntryNodes",     CONFIG_TYPE_STRING, &options->EntryNodes) ||
+    config_compare(list, "StrictExitNodes", CONFIG_TYPE_BOOL, &options->StrictExitNodes) ||
+    config_compare(list, "StrictEntryNodes", CONFIG_TYPE_BOOL, &options->StrictEntryNodes) ||
     config_compare(list, "ExitPolicy",     CONFIG_TYPE_LINELIST, &options->ExitPolicy) ||
     config_compare(list, "ExcludeNodes",   CONFIG_TYPE_STRING, &options->ExcludeNodes) ||
 
@@ -529,6 +531,7 @@ static void init_options(or_options_t *options) {
   options->LogOptions = NULL;
   options->ExitNodes = tor_strdup("");
   options->EntryNodes = tor_strdup("");
+  options->StrictEntryNodes = options->StrictExitNodes = 0;
   options->ExcludeNodes = tor_strdup("");
   options->RendNodes = tor_strdup("");
   options->RendExcludeNodes = tor_strdup("");
@@ -711,6 +714,14 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   if(options->DirPort < 0) {
     log(LOG_WARN,"DirPort option can't be negative.");
     result = -1;
+  }
+
+  if(options->StrictExitNodes && !strlen(options->ExitNodes)) {
+    log(LOG_WARN,"StrictExitNodes set, but no ExitNodes listed.");
+  }
+
+  if(options->StrictEntryNodes && !strlen(options->EntryNodes)) {
+    log(LOG_WARN,"StrictEntryNodes set, but no EntryNodes listed.");
   }
 
   if(options->AuthoritativeDir && options->RecommendedVersions == NULL) {

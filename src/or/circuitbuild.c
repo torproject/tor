@@ -897,7 +897,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
         smartlist_add(sl, smartlist_get(dir->routers, i));
 
     smartlist_subtract(sl,excludedexits);
-    if (smartlist_overlap(sl,preferredexits))
+    if (options.StrictExitNodes || smartlist_overlap(sl,preferredexits))
       smartlist_intersect(sl,preferredexits);
     router = smartlist_choose(sl);
   } else {
@@ -911,7 +911,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
         smartlist_add(sl, smartlist_get(dir->routers, i));
 
     smartlist_subtract(sl,excludedexits);
-    if (smartlist_overlap(sl,preferredexits))
+    if (options.StrictExitNodes || smartlist_overlap(sl,preferredexits))
       smartlist_intersect(sl,preferredexits);
     router = smartlist_choose(sl);
   }
@@ -924,7 +924,9 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
     log_fn(LOG_INFO, "Chose exit server '%s'", router->nickname);
     return router;
   }
-  log_fn(LOG_WARN, "No exit routers seem to be running; can't choose an exit.");
+  if (options.StrictExitNodes)
+    log_fn(LOG_WARN, "No exit routers seem to be running; can't choose an exit.");
+  
   return NULL;
 }
 
@@ -946,7 +948,7 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
     case CIRCUIT_PURPOSE_C_GENERAL:
       return choose_good_exit_server_general(dir);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-      r = router_choose_random_node(options.RendNodes, options.RendExcludeNodes, NULL, 0, 1);
+      r = router_choose_random_node(options.RendNodes, options.RendExcludeNodes, NULL, 0, 1, 0);
       return r;
     default:
       log_fn(LOG_WARN,"unhandled purpose %d", purpose);
@@ -1101,7 +1103,7 @@ static routerinfo_t *choose_good_middle_server(cpath_build_state_t *state,
     tor_assert(r);
     smartlist_add(excluded, r);
   }
-  choice = router_choose_random_node("", options.ExcludeNodes, excluded, 0, 1);
+  choice = router_choose_random_node("", options.ExcludeNodes, excluded, 0, 1, 0);
   smartlist_free(excluded);
   return choice;
 }
@@ -1131,7 +1133,8 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
     }
   }
   choice = router_choose_random_node(options.EntryNodes,
-                                     options.ExcludeNodes, excluded, 0, 1);
+                                     options.ExcludeNodes, excluded, 0, 1,
+                                     options.StrictEntryNodes);
   smartlist_free(excluded);
   return choice;
 }

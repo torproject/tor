@@ -824,6 +824,10 @@ typedef struct {
                     * as exits. */
   char *EntryNodes; /**< Comma-separated list of nicknames of ORs to consider
                      * as entry points. */
+  int StrictExitNodes; /**< Boolean: When none of our ExitNodes are up, do we
+                        * stop building circuits? */
+  int StrictEntryNodes; /**< Boolean: When none of our EntryNodes are up, do we
+                         * stop building circuits? */
   char *ExcludeNodes; /**< Comma-separated list of nicknames of ORs not to
                        * use in circuits. */
 
@@ -1381,7 +1385,8 @@ void router_add_running_routers_to_smartlist(struct smartlist_t *sl);
 int router_nickname_matches(routerinfo_t *router, const char *nickname);
 routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
                                         struct smartlist_t *excludedsmartlist,
-                                        int preferuptime, int preferbandwidth);
+                                        int preferuptime, int preferbandwidth,
+                                        int strict);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_nickname(const char *nickname);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
