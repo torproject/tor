@@ -47,11 +47,13 @@ int router_reload_router_list(void)
 {
   char filename[512];
   int is_recent;
+  struct stat st;
   char *s;
   tor_assert(get_options()->DataDirectory);
 
   tor_snprintf(filename,sizeof(filename),"%s/cached-directory",
                get_options()->DataDirectory);
+  stat(filename, &st); /* ignore return value; if s is true below, it worked */
   s = read_file_to_str(filename,0);
   if (s) {
     log_fn(LOG_INFO, "Loading cached directory from %s", filename);
