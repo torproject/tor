@@ -1268,15 +1268,13 @@ void assert_circuit_ok(const circuit_t *c)
 
   assert(c);
   assert(c->magic == CIRCUIT_MAGIC);
-  
-  return;
 
   if (c->n_conn)
     assert(c->n_conn->type == CONN_TYPE_OR);
   if (c->p_conn)
     assert(c->p_conn->type == CONN_TYPE_OR);
   for (conn = c->p_streams; conn; conn = conn->next_stream)
-    assert(c->p_conn->type == CONN_TYPE_AP);
+    assert(conn->type == CONN_TYPE_AP);
   for (conn = c->n_streams; conn; conn = conn->next_stream)
     assert(conn->type == CONN_TYPE_EXIT);
 
@@ -1296,7 +1294,7 @@ void assert_circuit_ok(const circuit_t *c)
     }
   }
   if (c->cpath) {
-    assert_cpath_ok(c->cpath);
+//XXX    assert_cpath_ok(c->cpath);
   }
 }
 
