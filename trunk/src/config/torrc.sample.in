@@ -42,13 +42,13 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 
 #Nickname moria # A unique handle for this server
 #Address moria.seul.org # The IP or fqdn for this server
+#ContactInfo 1024D/28988BF5 Roger Dingledine <arma@mit.edu>
 
 #ORPort 9001 # where to listen for tor connections
 #ORBindAddress 0.0.0.0 # accept connections from anywhere
 #ORBindAddress 0.0.0.0:9090 # accept connections from anywhere, and 
                             # listen on a port other than the one we
                             # advertised.
-
 
 ## A comma-separated list of exit policies. If you want to *replace*
 ## the default exit policy, end this with either a reject *:* or an
