@@ -500,6 +500,9 @@ test_util() {
   char buf[1024];
   time_t t_res;
   int i;
+  uint32_t u32;
+  uint16_t u16;
+  char *cp;
 
   start.tv_sec = 5;
   start.tv_usec = 5000;
@@ -632,6 +635,34 @@ test_util() {
   test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefghi", "##", 3,
                                  NEVER_TERMINATE));
   test_streq(buf, "abc##def##ghi");
+
+  /* Test parse_addr_port */
+  cp = NULL; u32 = 3; u16 = 3;
+  test_assert(!parse_addr_port("1.2.3.4", &cp, &u32, &u16));
+  test_streq(cp, "1.2.3.4");
+  test_eq(u32, 0x01020304u);
+  test_eq(u16, 0);
+  tor_free(cp);
+  test_assert(!parse_addr_port("4.3.2.1:99", &cp, &u32, &u16));
+  test_streq(cp, "4.3.2.1");
+  test_eq(u32, 0x04030201u);
+  test_eq(u16, 99);
+  tor_free(cp);
+  test_assert(!parse_addr_port("nonexistent.address:4040", &cp, NULL, &u16));
+  test_streq(cp, "nonexistent.address");
+  test_eq(u16, 4040);
+  tor_free(cp);
+  test_assert(!parse_addr_port("localhost:9999", &cp, &u32, &u16));
+  test_streq(cp, "localhost");
+  test_eq(u32, 0x7f000001u);
+  test_eq(u16, 9999);
+  tor_free(cp);
+  u32 = 3;
+  test_assert(!parse_addr_port("localhost", NULL, &u32, &u16));
+  test_eq(cp, NULL);
+  test_eq(u32, 0x7f000001u);
+  test_eq(u16, 0);
+  tor_free(cp);
 
   /* XXXX test older functions. */
   smartlist_free(sl);
