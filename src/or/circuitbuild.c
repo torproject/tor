@@ -23,7 +23,8 @@ static int circuit_deliver_create_cell(circuit_t *circ, char *payload);
 static int onion_pick_cpath_exit(circuit_t *circ, routerinfo_t *exit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_next_router_in_cpath(circuit_t *circ, routerinfo_t **router);
-static int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state);
+static int onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
+                              cpath_build_state_t *state);
 static int count_acceptable_routers(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, routerinfo_t *choice);
 
@@ -234,7 +235,7 @@ static int
 onion_populate_cpath(circuit_t *circ) {
   int r;
 again:
-  r = onion_extend_cpath(&circ->cpath, circ->build_state);
+  r = onion_extend_cpath(circ->purpose, &circ->cpath, circ->build_state);
 //    || !CIRCUIT_IS_ORIGIN(circ)) { // wtf? -rd
   if (r < 0) {
     log_fn(LOG_INFO,"Generating cpath hop failed.");
@@ -1255,7 +1256,25 @@ void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
   }
 }
 
-static routerinfo_t *choose_good_middle_server(cpath_build_state_t *state,
+/** Add to sl all routers with platform version less than cutoff. */
+static void
+excluded_add_obsolete(smartlist_t *sl, const char *cutoff) {
+  routerlist_t *rl;
+  int i;
+  routerinfo_t *router;
+
+  router_get_routerlist(&rl);
+  if (!rl) return;
+
+  for (i = 0; i < smartlist_len(rl->routers); ++i) { /* iterate over routers */
+    router = smartlist_get(rl->routers, i);
+    if (!tor_version_as_new_as(router->platform,cutoff))
+      smartlist_add(sl, router);
+  }
+}
+
+static routerinfo_t *choose_good_middle_server(uint8_t purpose,
+                                               cpath_build_state_t *state,
                                                crypt_path_t *head,
                                                int cur_len)
 {
@@ -1280,6 +1299,8 @@ static routerinfo_t *choose_good_middle_server(cpath_build_state_t *state,
       routerlist_add_family(excluded, r);
     }
   }
+  if (purpose == CIRCUIT_PURPOSE_TESTING)
+    excluded_add_obsolete(excluded, "0.0.9.7");
   choice = router_choose_random_node(NULL, get_options()->ExcludeNodes, excluded,
            state->need_uptime, state->need_capacity,
            get_options()->_AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
@@ -1362,7 +1383,8 @@ onion_next_router_in_cpath(circuit_t *circ, routerinfo_t **router) {
  * based on <b>state</b>. Append the hop info to head_ptr.
  */
 static int
-onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state)
+onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
+                   cpath_build_state_t *state)
 {
   int cur_len;
   crypt_path_t *cpath;
@@ -1397,7 +1419,7 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state)
   } else if (cur_len == 0) { /* picking first node */
     choice = choose_good_entry_server(state);
   } else {
-    choice = choose_good_middle_server(state, *head_ptr, cur_len);
+    choice = choose_good_middle_server(purpose, state, *head_ptr, cur_len);
   }
 
   smartlist_free(excludednodes);
