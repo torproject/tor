@@ -65,14 +65,15 @@ the distant future, stuff may have changed.)
         Also implements parsing functions to read HTTP and SOCKS commands
         from buffers.
 
-     tree.h -- A splay tree implementation by Niels Provos.  Used only by
-        dns.c.
+     tree.h -- A splay tree implementation by Niels Provos.  Used by
+        dns.c for dns caching at exits, and by connection_edge.c for dns
+        caching at clients.
 
      config.c -- Code to parse and validate the configuration file.
 
    [Background processing modules]
 
-     cpuworker.c -- Implements a separate 'CPU worker' process to perform
+     cpuworker.c -- Implements a farm of 'CPU worker' processes to perform
         CPU-intensive tasks in the background, so as not interrupt the
         onion router.  (OR only)
 
@@ -163,7 +164,7 @@ the distant future, stuff may have changed.)
      [Internal]
        CONN_TYPE_DNSWORKER -- Connection from the main process to a DNS
           worker process. [OR only]
-       
+
        CONN_TYPE_CPUWORKER -- Connection from the main process to a CPU
           worker process. [OR only]
 
@@ -196,7 +197,7 @@ the distant future, stuff may have changed.)
    poll, if poll is not available) to handle nonblocking (asynchronous)
    IO.  If you're not familiar with nonblocking IO, check out the links
    at the end of this document.
-        
+
    All asynchronous logic is handled in main.c.  The functions
    'connection_add', 'connection_set_poll_socket', and 'connection_remove'
    manage an array of connection_t*, and keep in synch with the array of
