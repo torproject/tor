@@ -72,6 +72,7 @@ TODO: (very soon)
    support any suite without ephemeral keys, symmetric keys of at
    least 128 bits, and digests of at least 160 bits.
 
+[what kind of cert does an OP send? -RD]
    An OR always sends a two-certificate chain, consisting of a self-signed
    certificate containing the OR's identity key, and a second certificate
    using a short-term connection key.  The commonName of the second
@@ -95,6 +96,7 @@ TODO: (very soon)
    OR-to-OR connections are never deliberately closed.  When an OR
    starts or receives a new directory, it tries to open new
    connections to any OR it is not already connected to.
+[not true, unused OR conns close after 5 mins too -RD]
 
    OR-to-OP connections are not permanent. An OP should close a
    connection to an OR if there are no circuits running over the
