@@ -1366,6 +1366,7 @@ int tor_version_as_new_as(const char *platform, const char *cutoff) {
   return tor_version_compare(&router_version, &cutoff_version) >= 0;
 }
 
+/** DOCDOC */
 int tor_version_parse(const char *s, tor_version_t *out)
 {
   char *eos=NULL, *cp=NULL;
