@@ -395,6 +395,7 @@ typedef struct {
    int KeepalivePeriod;
    int MaxOnionsPending;
    int NewCircuitPeriod;
+   int TotalBandwidth;
    int Role;
    int loglevel;
 } or_options_t;
@@ -638,6 +639,7 @@ int connection_dir_handle_listener_read(connection_t *conn);
 void dns_init(void);
 int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
+void dns_cancel_pending_resolve(char *question, connection_t *onlyconn);
 int dns_resolve(connection_t *exitconn);
 
 /********************************* main.c ***************************/

@@ -20,7 +20,6 @@ int num_workers=0;
 int num_workers_busy=0;
 
 static int dns_assign_to_worker(connection_t *exitconn);
-static void dns_cancel_pending_resolve(char *question);
 static void dns_found_answer(char *question, uint32_t answer);
 static void dnsworker_main(int fd);
 static int dns_spawn_worker(void);
@@ -154,7 +153,7 @@ static int dns_assign_to_worker(connection_t *exitconn) {
 
   if(!dnsconn) {
     log(LOG_INFO,"dns_assign_to_worker(): no idle dns workers. Failing.");
-    dns_cancel_pending_resolve(exitconn->address);
+    dns_cancel_pending_resolve(exitconn->address, NULL);
     return -1;
   }
 
@@ -168,7 +167,7 @@ static int dns_assign_to_worker(connection_t *exitconn) {
      connection_write_to_buf(dnsconn->address, len, dnsconn) < 0) {
     log(LOG_NOTICE,"dns_assign_to_worker(): Write failed. Closing worker and failing resolve.");
     dnsconn->marked_for_close = 1;
-    dns_cancel_pending_resolve(exitconn->address);
+    dns_cancel_pending_resolve(exitconn->address, NULL);
     return -1;
   }
 
@@ -176,8 +175,12 @@ static int dns_assign_to_worker(connection_t *exitconn) {
   return 0;
 }
 
-static void dns_cancel_pending_resolve(char *question) {
-  struct pending_connection_t *pend;
+/* if onlyconn is NULL, cancel the whole thing. if onlyconn is defined,
+ * then remove onlyconn from the pending list, and if the pending list
+ * is now empty, cancel the whole thing.
+ */
+void dns_cancel_pending_resolve(char *question, connection_t *onlyconn) {
+  struct pending_connection_t *pend, *victim;
   struct cached_resolve search;
   struct cached_resolve *resolve, *tmp;
 
@@ -185,18 +188,39 @@ static void dns_cancel_pending_resolve(char *question) {
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
-    log_fn(LOG_ERR,"Answer to unasked question '%s'? Dropping.", question);
+    log_fn(LOG_INFO,"Answer to unasked question '%s'? Dropping.", question);
     return;
   }
 
   assert(resolve->state == CACHE_STATE_PENDING);
+  assert(resolve->pending_connections);
 
-  /* mark all pending connections to fail */
-  while(resolve->pending_connections) {
+  if(onlyconn) {
     pend = resolve->pending_connections;
-    pend->conn->marked_for_close = 1;
-    resolve->pending_connections = pend->next;
-    free(pend);
+    if(pend->conn == onlyconn) {
+      resolve->pending_connections = pend->next;
+      free(pend);
+      if(resolve->pending_connections) /* more pending, don't cancel it */
+        return;
+    } else {
+      for( ; pend->next; pend = pend->next) {
+        if(pend->next->conn == onlyconn) {
+          victim = pend->next;
+          pend->next = victim->next;
+          free(victim);
+          return; /* more are pending */
+        }
+      }
+      assert(0); /* not reachable unless onlyconn not in pending list */
+    }
+  } else {
+    /* mark all pending connections to fail */
+    while(resolve->pending_connections) {
+      pend = resolve->pending_connections;
+      pend->conn->marked_for_close = 1;
+      resolve->pending_connections = pend->next;
+      free(pend);
+    }
   }
 
   /* remove resolve from the linked list */
@@ -229,19 +253,11 @@ static void dns_found_answer(char *question, uint32_t answer) {
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
-    log_fn(LOG_ERR,"Answer to unasked question '%s'? Dropping.", question);
+    log_fn(LOG_INFO,"Answer to unasked question '%s'? Dropping.", question);
     return;
   }
 
   assert(resolve->state == CACHE_STATE_PENDING);
-  /* XXX this is a bug which hasn't been found yet. Probably something
-   * about slaves answering questions when they're not supposed to, and
-   * reusing the old question.
-   */
-  if(resolve->state != CACHE_STATE_PENDING) {
-    log(LOG_ERR,"dns_found_answer(): BUG: resolve '%s' in state %d (not pending). Dropping.",question, resolve->state);
-    return;
-  }
 
   resolve->answer = ntohl(answer);
   if(resolve->answer)
@@ -276,7 +292,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
   if(conn->inbuf_reached_eof) {
     log(LOG_ERR,"connection_dnsworker_process_inbuf(): Read eof. Worker dying.");
     if(conn->state == DNSWORKER_STATE_BUSY)
-      dns_cancel_pending_resolve(conn->address);
+      dns_cancel_pending_resolve(conn->address, NULL);
     return -1;
   }
 
@@ -398,7 +414,7 @@ static void spawn_enough_workers(void) {
     assert(dnsconn);
 
     /* tell the exit connection that it's failed */
-    dns_cancel_pending_resolve(dnsconn->address);
+    dns_cancel_pending_resolve(dnsconn->address, NULL);
 
     dnsconn->marked_for_close = 1;
     num_workers_busy--;

@@ -118,6 +118,10 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
     if(conn->type == CONN_TYPE_EXIT && relay_command == RELAY_COMMAND_END) {
       log_fn(LOG_INFO,"Exit got end before we're connected. Marking for close.");
       conn->marked_for_close = 1;
+      if(conn->state == EXIT_CONN_STATE_RESOLVING) {
+        log_fn(LOG_INFO,"...and informing resolver we don't want the answer anymore.");
+        dns_cancel_pending_resolve(conn->address, conn);
+      }
     } else {
       log_fn(LOG_DEBUG,"Got an unexpected relay cell, not in 'open' state. Dropping.");
     }
