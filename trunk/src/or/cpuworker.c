@@ -10,7 +10,7 @@ extern or_options_t options; /* command-line and config-file options */
 
 #define TAG_LEN 8
 #define LEN_ONION_QUESTION (1+TAG_LEN+ONIONSKIN_CHALLENGE_LEN)
-#define LEN_ONION_RESPONSE (1+TAG_LEN+ONIONSKIN_REPLY_LEN+32)
+#define LEN_ONION_RESPONSE (1+TAG_LEN+ONIONSKIN_REPLY_LEN+40+32)
 
 int num_cpuworkers=0;
 int num_cpuworkers_busy=0;
@@ -119,7 +119,7 @@ int cpuworker_main(void *data) {
   int fd;
 
   /* variables for onion processing */
-  unsigned char keys[32];
+  unsigned char keys[40+32];
   unsigned char reply_to_proxy[ONIONSKIN_REPLY_LEN];
   unsigned char buf[LEN_ONION_RESPONSE];
   char tag[TAG_LEN];
@@ -147,7 +147,7 @@ int cpuworker_main(void *data) {
 
     if(question_type == CPUWORKER_TASK_ONION) {
       if(onion_skin_server_handshake(question, get_onion_key(),
-        reply_to_proxy, keys, 32) < 0) {
+        reply_to_proxy, keys, 40+32) < 0) {
         /* failure */
         log_fn(LOG_WARN,"onion_skin_server_handshake failed.");
         memset(buf,0,LEN_ONION_RESPONSE); /* send all zeros for failure */
@@ -157,7 +157,7 @@ int cpuworker_main(void *data) {
         buf[0] = 1; /* 1 means success */
         memcpy(buf+1,tag,TAG_LEN);
         memcpy(buf+1+TAG_LEN,reply_to_proxy,ONIONSKIN_REPLY_LEN);
-        memcpy(buf+1+TAG_LEN+ONIONSKIN_REPLY_LEN,keys,32);
+        memcpy(buf+1+TAG_LEN+ONIONSKIN_REPLY_LEN,keys,40+32);
       }
       if(write_all(fd, buf, LEN_ONION_RESPONSE) != LEN_ONION_RESPONSE) {
         log_fn(LOG_ERR,"writing response buf failed. Exiting.");
