@@ -545,7 +545,7 @@ parse_http_response(const char *headers, int *code, time_t *date,
     } else if (!strcmp(enc, "gzip") || !strcmp(enc, "x-gzip")) {
       *compression = GZIP_METHOD;
     } else {
-      log_fn(LOG_INFO, "Unrecognized content encoding: '%s'", enc);
+      log_fn(LOG_INFO, "Unrecognized content encoding: '%s'. Trying to deal.", enc);
       *compression = -1;
     }
   }
