@@ -628,7 +628,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
 
   /* generate message */
   memcpy(buf+48,conn->nonce,8); /* append the nonce to the end of the message */
-  *(uint32_t *)(buf+28) = htonl(conn->bandwidth); /* send max link utilisation */
+  *(uint32_t *)(buf+44) = htonl(conn->bandwidth); /* send max link utilisation */
 
   /* encrypt message */
   retval = crypto_pk_public_encrypt(conn->pkey, buf, 56, cipher,RSA_PKCS1_PADDING);

@@ -63,10 +63,10 @@ which reveals the downstream node.
            The client's published port            [2 bytes]
            The server's published IPV4 address    [4 bytes]
            The server's published port            [2 bytes]
-           The forward key (K_f)                  [8 bytes]
-           The backward key (K_f)                 [8 bytes]
+           The forward key (K_f)                  [16 bytes]
+           The backward key (K_f)                 [16 bytes]
            The maximum bandwidth (bytes/s)        [4 bytes]
-                                               [Total: 36 bytes] 
+                                               [Total: 48 bytes] 
 
         The client then RSA-encrypts the message with the server's
         public key, and PKCS1 padding to given an encrypted message
@@ -102,9 +102,9 @@ which reveals the downstream node.
 
         The server then creates a server authentication message[M2] as
         follows: 
-               Modified client authentication         [32 bytes]
+               Modified client authentication         [48 bytes]
                A random nonce [N]                     [8 bytes]
-                                                  [Total: 40 bytes]
+                                                  [Total: 56 bytes]
         The client authentication is generated from M by replacing
         the client's preferred bandwidth [B_c] with the server's
         preferred bandwidth [B_s], if B_s < B_c. 
@@ -167,9 +167,9 @@ which reveals the downstream node.
 
         The OP generates a message [M] in the following format:
            Maximum bandwidth (bytes/s)      [4 bytes]
-           Forward key [K_f]                [8 bytes]
-           Backward key [K_b]               [8 bytes]
-                                        [Total: 20 bytes]
+           Forward key [K_f]                [16 bytes]
+           Backward key [K_b]               [16 bytes]
+                                        [Total: 32 bytes]
 
         The OP encrypts M with the OR's public key and PKCS1 padding,
         opens a TCP connection to the OR's TCP port, and sends the
@@ -196,7 +196,7 @@ which reveals the downstream node.
 
    Once the handshake is complete, the ORs or OR and OP send cells
    (specified below) to one another.  Cells are sent serially,
-   encrypted with the DES-OFB keystream specified by the handshake
+   encrypted with the 3DES-OFB keystream specified by the handshake
    protocol.  Over a connection, communicants encrypt outgoing cells
    with the connection's K_f, and decrypt incoming cells with the
    connection's K_b.
@@ -287,6 +287,7 @@ which reveals the downstream node.
           0: Identity 
           1: Single DES in OFB
           2: RC4
+	  3: Triple DES in OFB
 
      The port and address field denote the IPV4 address and port of
      the next onion router in the circuit, or are set to 0 for the
@@ -462,6 +463,7 @@ which reveals the downstream node.
    Once a connection has been established, the OP and exit node
    package stream data in TOPIC_DATA cells, and upon receiving such
    cells, echo their contents to the corresponding TCP stream.  
+   [XXX Mention zlib encoding. -NM]
 
    When one side of the TCP stream is closed, the corresponding edge
    node sends a TOPIC_END cell along the circuit; upon receiving a
