@@ -436,39 +436,39 @@ struct connection_t {
   uint8_t wants_to_read; /**< Should we start reading again once
                           * the bandwidth throttler allows it?
                           */
-  uint8_t wants_to_write; /**< should we start writing again once
+  uint8_t wants_to_write; /**< Should we start writing again once
                            * the bandwidth throttler allows reads?
                            */
-  int s; /**< our socket; -1 if this connection is closed. */
-  int poll_index; /**< index of this conn into the poll_array */
-  int marked_for_close; /**< should we close this conn on the next
+  int s; /**< Our socket; -1 if this connection is closed. */
+  int poll_index; /**< Index of this conn into the poll_array */
+  int marked_for_close; /**< Should we close this conn on the next
                          * iteration of the main loop?
                          */
-  char *marked_for_close_file; /**< for debugging: in which file were we marked
+  char *marked_for_close_file; /**< For debugging: in which file were we marked
                                 * for close? */
   int hold_open_until_flushed; /**< Despite this connection's being marked
                                 * for close, do we flush it before closing it?
                                 */
 
   buf_t *inbuf; /**< Buffer holding data read over this connection */
-  int inbuf_reached_eof; /**< boolean: did read() return 0 on this conn? */
-  time_t timestamp_lastread; /**< when was the last time poll() said we could read? */
+  int inbuf_reached_eof; /**< Boolean: did read() return 0 on this conn? */
+  time_t timestamp_lastread; /**< When was the last time poll() said we could read? */
 
   buf_t *outbuf; /**< Buffer holding data to write over this connection */
   int outbuf_flushlen; /**< How much data should we try to flush from the
                         * outbuf? */
   time_t timestamp_lastwritten; /**< When was the last time poll() said we could write? */
 
-  time_t timestamp_created; /**< when was this connection_t created? */
+  time_t timestamp_created; /**< When was this connection_t created? */
 
   uint32_t addr; /**< IP of the other side of the connection; used to identify
                   * routers, along with port. */
-  uint16_t port; /**< if non-zero, porrt  on the other end
+  uint16_t port; /**< If non-zero, porrt  on the other end
                   * of the connection. */
   char *address; /**< FQDN (or IP) of the guy on the other end.
                   * strdup into this, because free_connection frees it
                   */
-  crypto_pk_env_t *identity_pkey; /**> public RSA key for the other side's
+  crypto_pk_env_t *identity_pkey; /**> Public RSA key for the other side's
                                    * signing key */
   char *nickname; /**< Nickname of OR on other side (if any). */
 
@@ -479,8 +479,8 @@ struct connection_t {
                           * range 0..1<<15-1. (OR only.)*/
 
   /* bandwidth and receiver_bucket only used by ORs in OPEN state: */
-  int bandwidth; /**< connection bandwidth. (OPEN ORs only.) */
-  int receiver_bucket; /**< when this hits 0, stop receiving. Every second we
+  int bandwidth; /**< cOnnection bandwidth. (OPEN ORs only.) */
+  int receiver_bucket; /**< When this hits 0, stop receiving. Every second we
                         * add 'bandwidth' to this, capping it at 10*bandwidth.
                         * (OPEN ORs only)
                         */
@@ -493,18 +493,18 @@ struct connection_t {
   uint16_t stream_id;
   struct connection_t *next_stream; /**< Points to the next stream at this
                                      * edge, if any (Edge only). */
-  struct crypt_path_t *cpath_layer; /**< a pointer to which node in the circ
+  struct crypt_path_t *cpath_layer; /**< A pointer to which node in the circ
                                      * this conn exits at. (Edge only.) */
   int package_window; /**< How many more relay cells can i send into the
                        * circuit? (Edge only.) */
   int deliver_window; /**< How many more relay cells can end at me? (Edge
                        * only.) */
 
-  int done_sending; /**< for half-open connections; not used currently */
-  int done_receiving; /**< for half-open connections; not used currently */
-  char has_sent_end; /**< for debugging: set once we've set the stream end,
+  int done_sending; /**< For half-open connections; not used currently */
+  int done_receiving; /**< For half-open connections; not used currently */
+  char has_sent_end; /**< For debugging: set once we've set the stream end,
                         and check in circuit_about_to_close_connection() */
-  char num_retries; /**< how many times have we re-tried beginning this stream?  (Edge only) */
+  char num_retries; /**< How many times have we re-tried beginning this stream?  (Edge only) */
 
   /* Used only by AP connections */
   socks_request_t *socks_request; /**< SOCKS structure describing request (AP
