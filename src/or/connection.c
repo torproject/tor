@@ -289,6 +289,15 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
   return 1;
 }
 
+static void listener_close_if_present(int type) {
+  connection_t *conn = connection_get_by_type(type);
+  if (conn) {
+    close(conn->s);
+    conn->s = -1;
+    conn->marked_for_close = 1;
+  }
+}
+
 /* start all connections that should be up but aren't */
 int retry_all_connections(void) {
 
@@ -296,19 +305,22 @@ int retry_all_connections(void) {
     router_retry_connections();
   }
 
-  if(options.ORPort && !connection_get_by_type(CONN_TYPE_OR_LISTENER)) {
+  if(options.ORPort) {
+    listener_close_if_present(CONN_TYPE_OR_LISTENER);
     if(connection_create_listener(options.ORBindAddress, options.ORPort,
                                   CONN_TYPE_OR_LISTENER) < 0)
       return -1;
   }
 
-  if(options.DirPort && !connection_get_by_type(CONN_TYPE_DIR_LISTENER)) {
+  if(options.DirPort) {
+    listener_close_if_present(CONN_TYPE_DIR_LISTENER);
     if(connection_create_listener(options.DirBindAddress, options.DirPort,
                                   CONN_TYPE_DIR_LISTENER) < 0)
       return -1;
   }
- 
-  if(options.SocksPort && !connection_get_by_type(CONN_TYPE_AP_LISTENER)) {
+
+  if(options.SocksPort) {
+    listener_close_if_present(CONN_TYPE_AP_LISTENER);
     if(connection_create_listener(options.SocksBindAddress, options.SocksPort,
                                   CONN_TYPE_AP_LISTENER) < 0)
       return -1;
