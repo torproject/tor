@@ -574,7 +574,7 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
 
   /* Send the cell */
   if (connection_edge_send_command(NULL, circuit, RELAY_COMMAND_RENDEZVOUS1,
-                                   buf, REND_COOKIE_LEN+DH_KEY_LEN+1,
+                                   buf, REND_COOKIE_LEN+DH_KEY_LEN+DIGEST_LEN,
                                    circuit->cpath->prev)<0) {
     log_fn(LOG_WARN, "Couldn't send RENDEZVOUS1 cell");
     goto err;
