@@ -218,7 +218,7 @@ int connection_tls_start_handshake(connection_t *conn, int receiving) {
     him = router_get_by_digest(conn->identity_digest);
     me = router_get_my_routerinfo();
 
-    if(him && !strncmp(him->platform, "Tor 0.0.7", 9) &&
+    if(him && !strcmpstart(him->platform, "Tor 0.0.7") &&
        (!me || !me->is_verified)) {
       log_fn(LOG_INFO,"He's running 0.0.7, and I'm unverified. Acting like OP.");
       use_no_cert = 1;
