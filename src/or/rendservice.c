@@ -265,14 +265,12 @@ typedef struct rend_introduction_t {
 } rend_introduction_t;
 
 int
-rend_service_introduce(circuit_t *circuit,const char *request, int request_len)
+rend_service_introduce(circuit_t *circuit, char *request, int request_len)
 {
   char *ptr, *rp_nickname, *r_cookie;
-  char pk_digest[20];
-  char decrypted[1024];
+  char buf[1024];
   rend_service_t *service;
   int len, keylen;
-  crypto_cipher_env_t *cipher;
 
   if (circuit->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
     log_fn(LOG_WARN, "Got an INTRODUCE2 over a non-introduction circuit.");
