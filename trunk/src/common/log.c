@@ -482,8 +482,11 @@ void switch_logs_debug(void)
 }
 
 #ifdef HAVE_EVENT_SET_LOG_CALLBACK
+static const char *suppress_msg = NULL;
 void libevent_logging_callback(int severity, const char *msg)
 {
+  if (suppress_msg && strstr(msg, suppress_msg))
+    return;
   switch (severity) {
     case _EVENT_LOG_DEBUG:
       log(LOG_DEBUG, "Message from libevent: %s", msg);
@@ -505,6 +508,10 @@ void libevent_logging_callback(int severity, const char *msg)
 void configure_libevent_logging(void)
 {
   event_set_log_callback(libevent_logging_callback);
+}
+void suppress_libevent_log_msg(const char *msg)
+{
+  suppress_msg = msg;
 }
 #else
 void configure_libevent_logging(void) {}
