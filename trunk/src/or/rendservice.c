@@ -644,6 +644,9 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   return NULL;
 }
 
+/* XXXX Make this longer once directories remember service descriptors across
+ * restarts.*/
+#define MAX_SERVICE_PUBLICATION_INTERVAL (15*60)
 
 /* For every service, check how many intro points it currently has, and:
  *  - Pick new intro points as necessary.
@@ -659,6 +662,7 @@ int rend_services_init(void) {
   int changed, prev_intro_nodes, desc_len;
   smartlist_t *intro_routers, *exclude_routers;
   int n_old_routers;
+  time_t now;
 
   router_get_routerlist(&rl);
   intro_routers = smartlist_create();
@@ -715,7 +719,9 @@ int rend_services_init(void) {
     smartlist_truncate(exclude_routers, n_old_routers);
 
     /* If there's no need to republish, stop here. */
-    if (!changed)
+    now = time(NULL);
+    if (!changed &&
+        service->desc->timestamp+MAX_SERVICE_PUBLICATION_INTERVAL >= now)
       continue;
 
     /* Update the descriptor. */
