@@ -48,7 +48,7 @@ crypto_pk_env_t *get_identity_key(void) {
 /* Replace the previous onion key with the current onion key, and generate
  * a new previous onion key.  Immediately after calling this function,
  * the OR should:
- *     a) shedule all previous cpuworker to shut down _after_ processing
+ *     a) schedule all previous cpuworkers to shut down _after_ processing
  *        pending work.  (This will cause fresh cpuworkers to be generated.)
  *     b) generate and upload a fresh routerinfo.
  */
@@ -473,7 +473,6 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 
   strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&router->published_on));
 
-  /* XXXX eventually, don't include link key */
   result = snprintf(s, maxlen,
                     "router %s %s %d %d %d\n"
                     "platform %s\n"
