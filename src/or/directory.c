@@ -77,6 +77,7 @@ static int directory_send_command(connection_t *conn, int command) {
   switch(command) {
     case DIR_CONN_STATE_CONNECTING_FETCH:
       connection_write_to_buf(fetchstring, strlen(fetchstring), conn);
+      conn->state = DIR_CONN_STATE_CLIENT_SENDING_FETCH;
       break;
     case DIR_CONN_STATE_CONNECTING_UPLOAD:
       s = router_get_my_descriptor();
@@ -87,6 +88,7 @@ static int directory_send_command(connection_t *conn, int command) {
       snprintf(tmp, sizeof(tmp), "POST / HTTP/1.0\r\nContent-Length: %d\r\n\r\n%s",
                (int)strlen(s), s);
       connection_write_to_buf(tmp, strlen(tmp), conn);
+      conn->state = DIR_CONN_STATE_CLIENT_SENDING_UPLOAD;
       break;
   }
   return 0;
