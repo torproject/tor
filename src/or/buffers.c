@@ -94,9 +94,9 @@ static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
 /** Make sure that the memory in buf ends with a zero byte. */
 static INLINE int buf_nul_terminate(buf_t *buf)
 {
-  if (buf_ensure_capacity(buf,buf->len+1)<0)
+  if (buf_ensure_capacity(buf,buf->datalen+1)<0)
     return -1;
-  buf->mem[buf->len] = '\0';
+  buf->mem[buf->datalen] = '\0';
   return 0;
 }
 
