@@ -96,7 +96,8 @@ the message.
 3.2. DONE (Type 0x0001)
 
   Sent from server to client in response to a request that was successfully
-  completed, with no more information needed.  The body is empty.
+  completed, with no more information needed.  The body is usually empty but
+  may contain a message.
 
 3.3. SETCONF (Type 0x0002)
 
@@ -173,7 +174,7 @@ the message.
 
                 Status [1 octet]
                    (Sent connect=0,sent resolve=1,succeeded=2,failed=3,
-                    closed=4)
+                    closed=4, new=5)
                 Stream ID [4 octets]
                    (Must be unique to Tor process/time)
                 Target (NUL-terminated address-port string]
@@ -192,6 +193,11 @@ the message.
       0x0005 -- Notice/warning/error occurred
 
                 Message [NUL-terminated]
+
+      0x0006 -- New descriptors available
+
+                OR List [NUL-terminated, comma-delimited list of
+                    OR nickname/identity]
 
 3.8. AUTHENTICATE (Type 0x0007)
 
@@ -289,6 +295,74 @@ the message.
   Sent from the client to the server.  The server replies by sending an
   ADDRESSMAPPED message for each current address mapping set by MAPADDRESS or
   otherwise, followed by a DONE message.
+
+3.14 EXTENDCIRCUIT (Type 0x000D)
+
+  [Proposal; not finalized]
+
+  Sent from the client to the server.  The message body contains two fields:
+      Circuit ID [4 octets]
+      Path [NUL-terminated, comma-delimited string of OR nickname/identity]
+
+  This request takes one of two forms: either the Circuit ID is zero, in
+  which case it is a request for the server to build a new circuit according
+  to the specified path, or the Circuit ID is nonzero, in which case it is a 
+  request for the server to extend an existing circuit with that ID according
+  to the specified path.
+
+  If the request for a NEW circuit is successful, then the resultant DONE
+  message will contain a message body consisting of the four-octet Circuit ID
+  of the newly created circuit.
+
+3.15 ATTACHSTREAM (Type 0x000E)
+
+  [Proposal; not finalized]
+
+  Sent from the client to the server.  The message body contains two fields:
+      Stream ID [4 octets]
+      Circuit ID [4 octets]
+
+  This message informs the server that the specified stream should be
+  associated with the specified circuit.  Each stream may be associated with
+  at most one circuit, and multiple streams may share the same circuit.
+
+3.16 GETDESCRIPTOR (Type 0x000F)
+
+  [Proposal; not finalized]
+
+  Sent from the client to the server.  The message body contains one field:
+      OR nickname/identity [NUL-terminated]
+
+  This message informs the server that it should send to the client a
+  complete descriptor corresponding to the specified router.  If the router
+  field is non-empty, and the server has a descriptor for the router
+  specified, then the server should return the descriptor in the body of its
+  DONE message:
+      Descriptor [NUL-terminated string]
+
+  (If the server does not have a descriptor for the router specified, then
+  it should return an error.)
+
+  If the GETDESCRIPTOR message contains an empty body, then the server
+  should interpret the message as a request to send its list of descriptors.
+  The server then provides this list  in the body of its DONE message:
+      OR List [NUL-terminated, comma-delimited list of OR nickname/identity]
+
+4.16 POSTDESCRIPTOR (Type 0x0010)
+
+  [Proposal; not finalized]
+
+  Sent from the client to the server.  The message body contains one field:
+      Descriptor [NUL-terminated string]
+
+  This message informs the server about a new descriptor.
+
+  The descriptor, when parsed, must contain a number of well-specified
+  fields, including fields for its nickname and identity.
+
+  If there is an error in parsing the descriptor, or if the server rejects
+  the descriptor for any reason, the server should send an appropriate error
+  message.
 
 4. Implementation notes
 
