@@ -231,6 +231,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
 
     /* string options */
     config_compare(list, "Address",        CONFIG_TYPE_STRING, &options->Address) ||
+    config_compare(list, "AllowUnverifiedNodes", CONFIG_TYPE_CSV, &options->AllowUnverifiedNodes) ||
     config_compare(list, "AuthoritativeDirectory",CONFIG_TYPE_BOOL, &options->AuthoritativeDir) ||
 
     config_compare(list, "BandwidthRate",  CONFIG_TYPE_INT, &options->BandwidthRate) ||
@@ -808,9 +809,25 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   }
   if(options->FirewallPorts) {
     SMARTLIST_FOREACH(options->FirewallPorts, const char *, cp,
-    { i = atoi(cp); 
+    { i = atoi(cp);
       if (i < 1 || i > 65535) {
-        log(LOG_WARN, "Port %s out of range in FirewallPorts", cp);
+        log(LOG_WARN, "Port '%s' out of range in FirewallPorts", cp);
+        result=-1;
+      }
+    });
+  }
+  options->_AllowUnverified = 0;
+  if(options->AllowUnverifiedNodes) {
+    SMARTLIST_FOREACH(options->AllowUnverifiedNodes, const char *, cp,
+    { if (!strcasecmp(cp, "entry"))
+        options->_AllowUnverified |= ALLOW_UNVERIFIED_ENTRY;
+      else if (!strcasecmp(cp, "exit"))
+        options->_AllowUnverified |= ALLOW_UNVERIFIED_EXIT;
+      else if (!strcasecmp(cp, "middle"))
+        options->_AllowUnverified |= ALLOW_UNVERIFIED_MIDDLE;
+      else {
+        log(LOG_WARN, "Unrecognized value '%s' in AllowUnverifiedNodes",
+            cp);
         result=-1;
       }
     });
