@@ -1024,6 +1024,9 @@ int network_init(void)
     log_fn(LOG_WARN,"Error initializing windows network layer: code was %d",r);
     return -1;
   }
+  /* WSAData.iMaxSockets might show the max sockets we're allowed to use.
+   * We might use it to complain if we're trying to be a server but have
+   * too few sockets available. */
 #endif
   return 0;
 }
