@@ -910,7 +910,8 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
       /* Connection freed; don't touch it. */
       return 0;
     case 1: /* The result was cached; a resolved cell was sent. */
-      connection_free(dummy_conn);
+      if (!dummy_conn->marked_for_close)
+        connection_free(dummy_conn);
       return 0;
     case 0: /* resolve added to pending list */
       dummy_conn->next_stream = circ->resolving_streams;
