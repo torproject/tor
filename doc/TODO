@@ -1,4 +1,3 @@
-
 Legend:
 SPEC!!  - Not specified
 SPEC    - Spec not finalized
@@ -11,11 +10,8 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-      0.0.9pre2:
+      0.0.9pre4:
 R       . bandwidth buckets for write as well as read.
-        o switch dirservers entries to config lines.
-        o add three default dirplaces if we parse the whole torrc and
-          no dirplaces are specified.
 N       - Handle rendezvousing with unverified nodes.
           - Specify: Stick rendezvous point's key in INTRODUCE cell.
             Bob should _always_ use key from INTRODUCE cell.
@@ -32,10 +28,8 @@ R       - figure out enclaves, e.g. so we know what to recommend that people
 N       - let tor servers use proxies for port 80 exits
           - Use generic port redirector for IP/bits:Port->IP:Port .
           - Make use of them when we're doing exit connections.
-N	- Make "tor -V" or "tor [-]-version" print the version and exit.
- 
 
-      0.0.9pre3:
+      0.0.9pre5:
 N       - per-month byte allowances.
           - Based on bandwidth and per-month allowance, choose a
             window within month to be up.  Stay up until allowance is
@@ -53,8 +47,6 @@ R       - learn from ben about his openssl-reinitialization-trick to
           rotate tls keys without making new connections.
           - (Roger grabs Ben next time he sees him on IRC) 
 
-        D let tor clients use http proxies for dir fetching
-          - have a config entry to specify where to go
         D nt services on win32.
 
       0.0.9 and beyond:
