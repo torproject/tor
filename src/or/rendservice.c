@@ -752,13 +752,10 @@ void rend_services_introduce(void) {
   char *intro;
   int changed, prev_intro_nodes;
   smartlist_t *intro_routers, *exclude_routers;
-  int n_old_routers;
 
   router_get_routerlist(&rl);
   intro_routers = smartlist_create();
   exclude_routers = smartlist_create();
-  router_add_nonrendezvous_to_list(exclude_routers);
-  n_old_routers = smartlist_len(exclude_routers);
 
   for (i=0; i< smartlist_len(rend_service_list); ++i) {
     smartlist_clear(intro_routers);
@@ -809,9 +806,8 @@ void rend_services_introduce(void) {
              service->service_id);
     }
 
-    /* Reset exclude_routers to include obsolete routers only for the next
-     * time around the loop. */
-    smartlist_truncate(exclude_routers, n_old_routers);
+    /* Reset exclude_routers, for the next time around the loop. */
+    smartlist_clear(exclude_routers);
 
     /* If there's no need to launch new circuits, stop here. */
     if (!changed)
