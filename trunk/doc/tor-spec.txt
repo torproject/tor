@@ -12,6 +12,11 @@ TODO: (very soon)
       - Sendme w/stream0 is circuit sendme
       - Integrate -NM and -RD comments
 
+EVEN LATER:
+      - Do TCP-style sequencing and ACKing of DATA cells so that we can afford
+        to lose some data cells.
+      - 
+
 0. Notation:
 
    PK -- a public key.
@@ -319,6 +324,7 @@ which reveals the downstream node.
          7 -- RELAY_EXTENDED
          8 -- RELAY_TRUNCATE
          9 -- RELAY_TRUNCATED
+        10 -- RELAY_DROP
 
    All RELAY cells pertaining to the same tunneled stream have the
    same stream ID.  Stream ID's are chosen randomly by the OP.  A
@@ -345,6 +351,9 @@ which reveals the downstream node.
    Once a connection has been established, the OP and exit node
    package stream data in RELAY_DATA cells, and upon receiving such
    cells, echo their contents to the corresponding TCP stream.  
+
+   Relay RELAY_DROP cells are long-range dummies; upon receiving such
+   a cell, the OR or OP must drop it.
 
 5.2. Closing streams
 
