@@ -413,16 +413,18 @@ typedef enum {
 #define RELAY_COMMAND_RENDEZVOUS_ESTABLISHED 39
 #define RELAY_COMMAND_INTRODUCE_ACK 40
 
-#define _MIN_END_STREAM_REASON 1
 #define END_STREAM_REASON_MISC 1
 #define END_STREAM_REASON_RESOLVEFAILED 2
-#define END_STREAM_REASON_CONNECTFAILED 3
+#define END_STREAM_REASON_CONNECTREFUSED 3
 #define END_STREAM_REASON_EXITPOLICY 4
 #define END_STREAM_REASON_DESTROY 5
 #define END_STREAM_REASON_DONE 6
 #define END_STREAM_REASON_TIMEOUT 7
-#define END_STREAM_REASON_RESOURCELIMIT 8
-#define _MAX_END_STREAM_REASON 8
+/* 8 is unallocated. */
+#define END_STREAM_REASON_HIBERNATING 9
+#define END_STREAM_REASON_INTERNAL 10
+#define END_STREAM_REASON_RESOURCELIMIT 11
+#define END_STREAM_REASON_CONNRESET 12
 
 #define RESOLVED_TYPE_IPV4 4
 #define RESOLVED_TYPE_IPV6 6
@@ -465,6 +467,18 @@ typedef enum {
 #define DEFAULT_CLIENT_NICKNAME "client"
 
 #define SOCKS4_NETWORK_LEN 8
+
+typedef enum {
+  SOCKS5_SUCCEEDED                  = 0x00,
+  SOCKS5_GENERAL_ERROR              = 0x01,
+  SOCKS5_NOT_ALLOWED                = 0x02,
+  SOCKS5_NET_UNREACHABLE            = 0x03,
+  SOCKS5_HOST_UNREACHABLE           = 0x04,
+  SOCKS5_CONNECTION_REFUSED         = 0x05,
+  SOCKS5_TTL_EXPIRED                = 0x06,
+  SOCKS5_COMMAND_NOT_SUPPORTED      = 0x07,
+  SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED = 0x08,
+} socks5_reply_status_t;
 
 /*
  * Relay payload:
@@ -1512,6 +1526,10 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
                                  size_t payload_len, crypt_path_t *cpath_layer);
 int connection_edge_package_raw_inbuf(connection_t *conn, int package_partial);
 void connection_edge_consider_sending_sendme(connection_t *conn);
+socks5_reply_status_t connection_edge_end_reason_sock5_response(char *payload, uint16_t length);
+int errno_to_end_reasaon(int e);
+
+
 
 extern uint64_t stats_n_data_cells_packaged;
 extern uint64_t stats_n_data_bytes_packaged;

@@ -914,7 +914,7 @@ loop_again:
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
     if (CONN_IS_EDGE(conn)) {
       connection_edge_end(conn, (char)(connection_state_is_open(conn) ?
-                  END_STREAM_REASON_MISC : END_STREAM_REASON_CONNECTFAILED),
+                  END_STREAM_REASON_MISC : END_STREAM_REASON_CONNECTREFUSED),
                   conn->cpath_layer);
     }
     connection_mark_for_close(conn);
@@ -1092,7 +1092,7 @@ int connection_handle_write(connection_t *conn) {
       if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
         log_fn(LOG_INFO,"in-progress connect failed. Removing.");
         if (CONN_IS_EDGE(conn))
-          connection_edge_end(conn, END_STREAM_REASON_CONNECTFAILED,
+          connection_edge_end(conn, END_STREAM_REASON_CONNECTREFUSED,
                               conn->cpath_layer);
 
         connection_close_immediate(conn);
