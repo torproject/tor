@@ -1556,8 +1556,8 @@ char *read_file_to_str(const char *filename, int bin) {
   } else if (bin && r != statbuf.st_size) {
     /* If we're in binary mode, then we'd better have an exact match for
      * size.  Otherwise, win32 encoding may throw us off, and that's okay. */
-    log_fn(LOG_WARN,"Couldn't read all %ld bytes of file '%s'.",
-           (long)statbuf.st_size,filename);
+    log_fn(LOG_WARN,"Could read only %d of %ld bytes of file '%s'.",
+           r, (long)statbuf.st_size,filename);
     tor_free(string);
     close(fd);
     return NULL;
