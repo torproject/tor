@@ -77,7 +77,7 @@ void circuit_close_all_marked(void)
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
   circuit_t *circ;
   static uint32_t n_circuits_allocated = 1;
-    /* never zero, since a global ID of 0 treated specially by the controller */
+    /* never zero, since a global ID of 0 is treated specially by the controller */
 
   circ = tor_malloc_zero(sizeof(circuit_t));
   circ->magic = CIRCUIT_MAGIC;

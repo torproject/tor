@@ -226,14 +226,7 @@ rend_client_introduction_acked(circuit_t *circ,
       log_fn(LOG_INFO, "Chose new intro point %s for %s (circ %d)",
              nickname, circ->rend_query, circ->n_circ_id);
       tor_free(nickname);
-      circuit_append_new_exit(circ, r);
-      circ->state = CIRCUIT_STATE_BUILDING;
-      if (circuit_send_next_onion_skin(circ)<0) {
-        log_fn(LOG_WARN, "Couldn't extend circuit to new point '%s'.",
-               circ->build_state->chosen_exit_name);
-        circuit_mark_for_close(circ);
-        return -1;
-      }
+      return circuit_extend_to_new_exit(circ, r);
     }
   }
   return 0;

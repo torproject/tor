@@ -722,14 +722,8 @@ circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
         case CIRCUIT_PURPOSE_S_CONNECT_REND:
           /* need to add a new hop */
           tor_assert(exit);
-          circuit_append_new_exit(circ, exit);
-          circ->state = CIRCUIT_STATE_BUILDING;
-          if (circuit_send_next_onion_skin(circ)<0) {
-            log_fn(LOG_WARN, "Couldn't extend circuit to new point '%s'.",
-                   circ->build_state->chosen_exit_name);
-            circuit_mark_for_close(circ);
+          if (circuit_extend_to_new_exit(circ, exit) < 0)
             return NULL;
-          }
           break;
         default:
           log_fn(LOG_WARN,"Bug: unexpected purpose %d when cannibalizing a general circ.",

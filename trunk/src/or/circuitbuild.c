@@ -246,7 +246,7 @@ again:
   return 0; /* if r == 1 */
 }
 
-/** Create and return new circuit. Initialize its purpose and
+/** Create and return a new circuit. Initialize its purpose and
  * build-state based on our arguments. */
 circuit_t *
 circuit_init(uint8_t purpose, int need_uptime, int need_capacity, int internal) {
@@ -1168,8 +1168,9 @@ onion_pick_cpath_exit(circuit_t *circ, routerinfo_t *exit) {
   return 0;
 }
 
-/** Take the open circ originating here, give it a new exit destination
- * to <b>exit</b>, and get it to send the next extend cell.
+/** Give <b>circ</b> a new exit destination to <b>exit</b>, and add a
+ * hop to the cpath reflecting this. Don't send the next extend cell --
+ * the caller will do this if it wants to.
  */
 int
 circuit_append_new_exit(circuit_t *circ, routerinfo_t *exit) {
@@ -1180,6 +1181,22 @@ circuit_append_new_exit(circuit_t *circ, routerinfo_t *exit) {
   memcpy(circ->build_state->chosen_exit_digest, exit->identity_digest, DIGEST_LEN);
   ++circ->build_state->desired_path_len;
   onion_append_hop(&circ->cpath, exit);
+  return 0;
+}
+
+/** Take the open circ originating here, give it a new exit destination
+ * to <b>exit</b>, and get it to send the next extend cell. If you can't
+ * send the extend cell, mark the circuit for close and return -1, else
+ * return 0. */
+int circuit_extend_to_new_exit(circuit_t *circ, routerinfo_t *exit) {
+  circuit_append_new_exit(circ, exit);
+  circ->state = CIRCUIT_STATE_BUILDING;
+  if (circuit_send_next_onion_skin(circ)<0) {
+    log_fn(LOG_WARN, "Couldn't extend circuit to new point '%s'.",
+           circ->build_state->chosen_exit_name);
+    circuit_mark_for_close(circ);
+    return -1;
+  }
   return 0;
 }
 
