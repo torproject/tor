@@ -980,6 +980,36 @@ consider_recording_trackhost(connection_t *conn, circuit_t *circ) {
                       time(NULL) + options->TrackHostExitsExpire);
 }
 
+/* DOCDOC. Return as for connection_ap_handshake_attach_chosen_circuit. */
+int
+connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
+                                              circuit_t *circ)
+{
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_AP);
+  tor_assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT ||
+             conn->state == AP_CONN_STATE_CONTROLLER_WAIT);
+  tor_assert(conn->socks_request);
+  tor_assert(circ);
+
+  conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+
+  if (!circ->timestamp_dirty)
+    circ->timestamp_dirty = time(NULL);
+
+  link_apconn_to_circ(conn, circ);
+  tor_assert(conn->socks_request);
+  if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
+    consider_recording_trackhost(conn, circ);
+    connection_ap_handshake_send_begin(conn, circ);
+  } else {
+    connection_ap_handshake_send_resolve(conn, circ);
+  }
+
+  return 1;
+}
+
+
 /** Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
  * we don't find one: if conn cannot be handled by any known nodes,
  * warn and return -1 (conn needs to die);
@@ -1024,27 +1054,14 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
     if (retval < 1)
       return retval;
 
-    /* We have found a suitable circuit for our conn. Hurray. */
-    tor_assert(circ);
-
-    log_fn(LOG_DEBUG,"Attaching apconn to general circ %d (stream %d sec old).",
+    log_fn(LOG_DEBUG,"Attaching apconn to circ %d (stream %d sec old).",
            circ->n_circ_id, conn_age);
     /* here, print the circ's path. so people can figure out which circs are sucking. */
     circuit_log_path(LOG_INFO,circ);
 
-    if (!circ->timestamp_dirty)
-      circ->timestamp_dirty = time(NULL);
+    /* We have found a suitable circuit for our conn. Hurray. */
+    return connection_ap_handshake_attach_chosen_circuit(conn, circ);
 
-    link_apconn_to_circ(conn, circ);
-    tor_assert(conn->socks_request);
-    if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
-      consider_recording_trackhost(conn, circ);
-      connection_ap_handshake_send_begin(conn, circ);
-    } else {
-      connection_ap_handshake_send_resolve(conn, circ);
-    }
-
-    return 1;
   } else { /* we're a rendezvous conn */
     circuit_t *rendcirc=NULL, *introcirc=NULL;
 

@@ -839,16 +839,22 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
         return 0;
       }
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
+            control_event_stream_status(conn, STREAM_EVENT_NEW_RESOLVE);
     } else { /* socks->command == SOCKS_COMMAND_CONNECT */
       if (socks->port == 0) {
         log_fn(LOG_NOTICE,"Application asked to connect to port 0. Refusing.");
         return -1;
       }
       rep_hist_note_used_port(socks->port, time(NULL)); /* help predict this next time */
+      control_event_stream_status(conn, STREAM_EVENT_NEW);
     }
-    control_event_stream_status(conn, STREAM_EVENT_NEW);
-    conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-    return connection_ap_handshake_attach_circuit(conn);
+    if (get_options()->ManageConnections) {
+      conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+      return connection_ap_handshake_attach_circuit(conn);
+    } else {
+      conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
+      return 0;
+    }
   } else {
     /* it's a hidden-service request */
     rend_cache_entry_t *entry;
