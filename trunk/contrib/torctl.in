@@ -44,7 +44,7 @@ TORDATA=@LOCALSTATEDIR@/lib/tor
 TORUSER=
 TORGROUP=
 
-TORARGS="--pidfile $PIDFILE --log \\"notice file $LOGFILE \\" --runasdaemon 1"
+TORARGS="--pidfile $PIDFILE --log \"notice file $LOGFILE \" --runasdaemon 1"
 TORARGS="$TORARGS --datadirectory $TORDATA"
 
 if [ "x$TORUSER" != "x" ]; then

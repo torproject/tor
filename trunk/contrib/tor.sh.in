@@ -15,7 +15,7 @@ TORDATA=@LOCALSTATEDIR@/lib/tor
 TORCONF=@CONFDIR@/torrc
 # Strictly speaking, we don't need to su if we have --user and --group.
 # "Belt and suspenders," says jbash.
-TORARGS="--pidfile $TORPID --log \\"notice file $TORLOG \\" --runasdaemon 1 --datadirectory $TORDATA"
+TORARGS="--pidfile $TORPID --log \"notice file $TORLOG \" --runasdaemon 1 --datadirectory $TORDATA"
 if [ "x$TORUSER" != "x" ]; then
     TORARGS="$TORARGS --user $TORUSER"
 fi
