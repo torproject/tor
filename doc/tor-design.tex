@@ -1,5 +1,6 @@
-
 \documentclass[times,10pt,twocolumn]{article}
+%\usepackage{/home/syverson/papers/latex8}
+%\usepackage{/home/syverson/papers/times}
 \usepackage{latex8}
 \usepackage{times}
 \usepackage{url}
@@ -44,7 +45,7 @@
 
 \begin{abstract}
 We present Tor, a connection-based low-latency anonymous communication
-system which addresses many flaws in the original onion routing design.
+system which addresses many limitations in the original onion routing design.
 Tor works in a real-world Internet environment,
 requires little synchronization or coordination between nodes, and
 protects against known anonymity-breaking attacks as well
@@ -67,11 +68,14 @@ build a \emph{virtual circuit}, in which each node in the path knows its
 predecessor and successor, but no others. Traffic flowing down the circuit
 is sent in fixed-size \emph{cells}, which are unwrapped by a symmetric key
 at each node, revealing the downstream node. The original onion routing
-project published several design and analysis papers in recent years
-\cite{or-journal,or-discex,or-ih,or-pet}, but because the only
+project published several design and analysis papers
+\cite{or-journal,or-discex,or-ih,or-pet}. While there was briefly
+a network of about a dozen nodes at three widely distributed sites,
+the only long-running and publicly accessible
 implementation was a fragile proof-of-concept that ran on a single
-machine, many critical design and deployment issues were not considered
-or addressed. Here we describe Tor, a protocol for asynchronous, loosely
+machine. Many critical design and deployment issues were never implemented,
+and the design has not been updated in several years.
+Here we describe Tor, a protocol for asynchronous, loosely
 federated onion routers that provides the following improvements over
 the old onion routing design:
 
