@@ -538,10 +538,11 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
   log_fn(LOG_DEBUG,"Connecting to %s:%u.",address,port);
 
   if(connect(s,(struct sockaddr *)&dest_addr,sizeof(dest_addr)) < 0) {
-    if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(s))) {
+    int e = tor_socket_errno(s);
+    if(!ERRNO_IS_CONN_EINPROGRESS(e)) {
       /* yuck. kill it. */
       log_fn(LOG_INFO,"Connect() to %s:%u failed: %s",address,port,
-             tor_socket_strerror(tor_socket_errno(s)));
+             tor_socket_strerror(e));
       tor_close_socket(s);
       return -1;
     } else {

@@ -582,6 +582,10 @@ void tor_mutex_release(tor_mutex_t *m)
  * get your errors from WSAGetLastError, not errno.  (If you supply a
  * socket of -1, we check WSAGetLastError, but don't correct
  * WSAEWOULDBLOCKs.)
+ *
+ * The upshot of all of this is that when a socket call fails, you
+ * should call tor_socket_errno <em>at most once</em> on the failing
+ * socket to get the error.
  */
 #ifdef MS_WINDOWS
 int tor_socket_errno(int sock)
