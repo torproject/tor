@@ -545,8 +545,10 @@ static void free_options(or_options_t *options) {
   config_free_lines(options->DirBindAddress);
   config_free_lines(options->ExitPolicy);
   config_free_lines(options->SocksPolicy);
-  SMARTLIST_FOREACH(options->FirewallPorts, char *, cp, tor_free(cp));
-  smartlist_free(options->FirewallPorts);
+  if (options->FirewallPorts) {
+    SMARTLIST_FOREACH(options->FirewallPorts, char *, cp, tor_free(cp));
+    smartlist_free(options->FirewallPorts);
+  }
 }
 
 /** Set <b>options</b> to hold reasonable defaults for most options. */
