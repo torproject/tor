@@ -18,7 +18,7 @@ For scalability:
 
 For dtor:
 
-      pre1:
+NICK  pre1:
         - make all ORs serve the directory too.
           - "AuthoritativeDir 1" for dirservers
           - non-authorative servers with dirport publish opt dircacheport
@@ -48,7 +48,7 @@ For dtor:
           - also use this in intro points and rendezvous points, and
             hidserv descs.
           - figure out what to do about ip:port:differentkey
-        - ORs connect on demand. attach circuits to new connections, keep
+ARMA    - ORs connect on demand. attach circuits to new connections, keep
           create cells around somewhere, send destroy if fail.
         - nickname defaults to first piece of hostname
         - running-routers list refers to nickname if verified, else
@@ -86,11 +86,12 @@ NICK    . Windows port
           o works as client
             - deal with pollhup / reached_eof on all platforms
           . robust as a client
-          - works as server
+          . works as server
             - can be configured
           - robust as a server
+	  . Usable as NT service
           - docs for building in win
-          - installer?
+          - installer
 
         - Docs
           - FAQ
@@ -109,9 +110,9 @@ NICK    . packages
 
         - code
           - better warn/info messages
-          - let tor do resolves.
-          - extend socks4 to do resolves?
-          - make script to ask tor for resolves
+          o let tor do resolves.
+          o extend socks4 to do resolves?
+          o make script to ask tor for resolves
           - tsocks
             - gather patches, submit to maintainer
             - intercept gethostbyname and others, do resolve via tor
@@ -146,14 +147,13 @@ Other details and small and hard things:
         . Scrubbing proxies
                 - Find an smtp proxy?
                 . Get socks4a support into Mozilla
-        X Extend by nickname/hostname/something, not by IP.
+        - Extend by hostname, not by IP.
         - Need a relay teardown cell, separate from one-way ends.
         - Make it harder to circumvent bandwidth caps: look at number of bytes
           sent across sockets, not number sent inside TLS stream.
         - fix router_get_by_* functions so they can get ourselves too,
           and audit everything to make sure rend and intro points are
           just as likely to be us as not.
-
 
 
 ***************************Future tasks:****************************

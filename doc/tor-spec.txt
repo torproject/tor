@@ -360,6 +360,8 @@ TODO: (very soon)
          8 -- RELAY_TRUNCATE
          9 -- RELAY_TRUNCATED
         10 -- RELAY_DROP
+        11 -- RELAY_RESOLVE
+        12 -- RELAY_RESOLVED
 
    The 'Recognized' field in any unencrypted relay payload is always
    set to zero; the 'digest' field is computed as the first four bytes
@@ -465,6 +467,26 @@ TODO: (very soon)
    If an edge node encounters an error on any stream, it sends a
    'RELAY_END' cell (if possible) and closes the stream immediately.
 
+5.4. Remote hostname lookup
+
+   To find the address associated with a hostname, the OP sends a
+   RELAY_RESOLVE cell containing the hostname to be resolved.  The OR
+   replies with an RELAY_RESOLVED cell containing a status byte, and any
+   number of answers.  Each answer is of the form:
+       Type   (1 octet)
+       Length (1 octet)
+       Value  (variable-width)
+   "Length" is the length of the Value field.  "Type" is one of:
+      0x04 -- IPv4 address
+      0x06 -- IPv6 address
+      0xF0 -- Error, transient
+      0xF1 -- Error, nontransient
+
+    If any answer has a type of 'Error', then no other answer may be given.
+
+    The RELAY_RESOLVE cell must use a nonzero, distinct streamID; the
+    corresponding RELAY_RESOLVED cell must use the same streamID.  No stream
+    is actually created by the OR when resolving the name.
 
 6. Flow control
 
