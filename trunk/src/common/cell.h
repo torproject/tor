@@ -8,8 +8,11 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/07/18 06:38:32  arma
+ * changes to support sendme cells
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.14  2002/04/02 14:27:11  badbytes
  * Final finishes.
@@ -67,6 +70,7 @@
 #define CELL_DESTROY 3
 #define CELL_ACK 4
 #define CELL_NACK 5
+#define CELL_SENDME 6
 
 #define CELL_PAYLOAD_SIZE 120
 
@@ -75,7 +79,7 @@ typedef struct
 {
   uint16_t aci; /* Anonymous Connection Identifier */
   unsigned char command;
-  unsigned char length; /* of payload */
+  unsigned char length; /* of payload if data cell, else value of sendme */
   uint32_t seq; /* sequence number */
   unsigned char payload[120];
 } cell_t;
