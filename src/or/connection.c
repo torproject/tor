@@ -564,7 +564,6 @@ int connection_package_raw_inbuf(connection_t *conn) {
   assert(!connection_speaks_cells(conn));
 
 repeat_connection_package_raw_inbuf:
-  assert(conn->package_window > 0);
 
   circ = circuit_get_by_conn(conn);
   if(!circ) {
@@ -574,6 +573,12 @@ repeat_connection_package_raw_inbuf:
 
   if(circuit_consider_stop_edge_reading(circ, conn->type, conn->cpath_layer))
     return 0;
+
+  if(conn->package_window <= 0) {
+    log_fn(LOG_ERR,"called with package_window 0. Tell Roger.");
+    connection_stop_reading(conn);
+    return 0;
+  }
 
   amount_to_process = conn->inbuf_datalen;
 
