@@ -21,7 +21,7 @@ int num_workers_busy=0;
 
 static int dns_assign_to_worker(connection_t *exitconn);
 static void dns_found_answer(char *question, uint32_t answer);
-static void dnsworker_main(int fd);
+int dnsworker_main(void *data);
 static int dns_spawn_worker(void);
 static void spawn_enough_workers(void);
 
@@ -313,22 +313,27 @@ int connection_dns_process_inbuf(connection_t *conn) {
   return 0;
 }
 
-static void dnsworker_main(int fd) {
+int dnsworker_main(void *data) {
   char question[MAX_ADDRESSLEN];
   unsigned char question_len;
   struct hostent *rent;
+  int fd;
+  int *fdarray = data;
+
+  close(fdarray[0]); /* this is the side of the socketpair the parent uses */
+  fd = fdarray[1]; /* this side is ours */
 
   for(;;) {
 
     if(read(fd, &question_len, 1) != 1) {
       log(LOG_INFO,"dnsworker_main(): read length failed. Exiting.");
-      exit(0);
+      spawn_exit();
     }
     assert(question_len > 0);
 
     if(read(fd, question, question_len) != question_len) {
       log(LOG_INFO,"dnsworker_main(): read hostname failed. Exiting.");
-      exit(0);
+      spawn_exit();
     }
     question[question_len] = 0; /* null terminate it */
 
@@ -338,21 +343,21 @@ static void dnsworker_main(int fd) {
       /* XXX it's conceivable write could return 1 through 3. but that's never gonna happen, right? */
       if(write(fd, "\0\0\0\0", 4) != 4) {
         log(LOG_INFO,"dnsworker_main(): writing nulls failed. Exiting.");
-        exit(0);
+        spawn_exit();
       }
     } else {
       assert(rent->h_length == 4); /* break to remind us if we move away from ipv4 */
       if(write(fd, rent->h_addr, 4) != 4) {
         log(LOG_INFO,"dnsworker_main(): writing answer failed. Exiting.");
-        exit(0);
+        spawn_exit();
       }
       log(LOG_INFO,"dnsworker_main(): Answered question '%s'.",question);
     }
   }
+  return 0; /* windows wants this function to return an int */
 }
 
 static int dns_spawn_worker(void) {
-  pid_t pid;
   int fd[2];
   connection_t *conn;
 
@@ -361,20 +366,9 @@ static int dns_spawn_worker(void) {
     exit(1);
   }
 
-  pid = fork();
-  if(pid < 0) {
-    perror("fork");
-    exit(1);
-  }
-  if(pid == 0) { /* i'm the child */
-    close(fd[0]);
-    dnsworker_main(fd[1]);
-    assert(0); /* never gets here */
-  }
-
-  /* i'm the parent */
+  spawn_func(dnsworker_main, (void*)fd);
   log(LOG_DEBUG,"dns_spawn_worker(): just spawned a worker.");
-  close(fd[1]);
+  close(fd[1]); /* we don't need the worker's side of the pipe */
 
   conn = connection_new(CONN_TYPE_DNSWORKER);
   if(!conn) {
