@@ -523,7 +523,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
     }
     log(LOG_DEBUG,"or_handshake_server_process_auth(): Nonce generated.");
 
-    memmove(buf, buf+2, 46);
+    memmove(buf, buf+2, 44);
     *(uint32_t *)(buf+44) = htonl(conn->bandwidth); /* send max link utilisation */
     memcpy(buf+48,conn->nonce,8); /* append the nonce to the end of the message */
 
