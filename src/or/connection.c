@@ -80,9 +80,8 @@ connection_t *connection_new(int type) {
   memset(conn,0,sizeof(connection_t)); /* zero it out to start */
 
   conn->type = type;
-  if(!(conn->inbuf = buf_new()) ||
-     !(conn->outbuf = buf_new())) 
-    return NULL;
+  conn->inbuf = buf_new();
+  conn->outbuf = buf_new();
 
   conn->receiver_bucket = 50000; /* should be enough to do the handshake */
   conn->bandwidth = conn->receiver_bucket / 10; /* give it a default */
@@ -149,10 +148,6 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
   set_socket_nonblocking(s);
 
   conn = connection_new(type);
-  if(!conn) {
-    log_fn(LOG_WARNING,"connection_new failed. Giving up.");
-    return -1;
-  }
   conn->s = s;
   conn->receiver_bucket = -1; /* non-cell connections don't do receiver buckets */
   conn->bandwidth = -1;
@@ -200,10 +195,6 @@ int connection_handle_listener_read(connection_t *conn, int new_type) {
   set_socket_nonblocking(news);
 
   newconn = connection_new(new_type);
-  if(!newconn) {
-    log_fn(LOG_WARNING,"connection_new failed. Giving up.");
-    return 0;
-  }
   newconn->s = news;
 
   if(!connection_speaks_cells(newconn)) {

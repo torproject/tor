@@ -382,10 +382,6 @@ static int spawn_dnsworker(void) {
   close(fd[1]); /* we don't need the worker's side of the pipe */
 
   conn = connection_new(CONN_TYPE_DNSWORKER);
-  if(!conn) {
-    close(fd[0]);
-    return -1;
-  }
 
   set_socket_nonblocking(fd[0]);
 

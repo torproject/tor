@@ -104,10 +104,6 @@ connection_t *connection_or_connect(routerinfo_t *router) {
     return conn;
 
   conn = connection_new(CONN_TYPE_OR);
-  if(!conn) {
-    log_fn(LOG_WARNING,"connection_new failed; skipping.");
-    return NULL;
-  }
 
   /* set up conn so it's got all the data we need to remember */
   connection_or_init_conn_from_router(conn, router);
