@@ -131,6 +131,7 @@ static config_var_t config_vars[] = {
   VAR("Group",               STRING,   Group,                NULL),
   VAR("HashedControlPassword",STRING,  HashedControlPassword, NULL),
   VAR("HttpProxy",           STRING,   HttpProxy,            NULL),
+  VAR("HttpsProxy",          STRING,   HttpsProxy,           NULL),
   VAR("HiddenServiceOptions",LINELIST_V, RendConfigLines,    NULL),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
@@ -1460,6 +1461,17 @@ options_validate(or_options_t *options)
     }
     if (options->HttpProxyPort == 0) { /* give it a default */
       options->HttpProxyPort = 80;
+    }
+  }
+
+  if (options->HttpsProxy) { /* parse it now */
+    if (parse_addr_port(options->HttpsProxy, NULL,
+                        &options->HttpsProxyAddr, &options->HttpsProxyPort) < 0) {
+      log(LOG_WARN,"HttpsProxy failed to parse or resolve. Please fix.");
+      result = -1;
+    }
+    if (options->HttpsProxyPort == 0) { /* give it a default */
+      options->HttpsProxyPort = 443;
     }
   }
 

@@ -62,9 +62,6 @@ char rend_publish_string[] = "/tor/rendezvous/publish";
 char rend_fetch_url[] = "/tor/rendezvous/";
 #endif
 
-#define MAX_HEADERS_SIZE 50000
-#define MAX_BODY_SIZE 500000
-
 #define ALLOW_DIRECTORY_TIME_SKEW 30*60
 
 /********* END VARIABLES ************/
@@ -497,7 +494,7 @@ parse_http_url(char *headers, char **url)
  * if the value of the header is not recognized.
  * Otherwise, return -1.
  */
-static int
+int
 parse_http_response(const char *headers, int *code, time_t *date,
                     int *compression)
 {

@@ -148,6 +148,10 @@
 #define MAX_HEX_NICKNAME_LEN (HEX_DIGEST_LEN+1)
 #define MAX_DIR_SIZE 500000
 
+/* For http parsing */
+#define MAX_HEADERS_SIZE 50000
+#define MAX_BODY_SIZE 500000
+
 #ifdef TOR_PERF
 /** How long do we keep DNS cache entries before purging them? */
 #define MAX_DNS_ENTRY_AGE (150*60)
@@ -220,11 +224,15 @@ typedef enum {
 #define _OR_CONN_STATE_MIN 1
 /** State for a connection to an OR: waiting for connect() to finish. */
 #define OR_CONN_STATE_CONNECTING 1
+/** State for a connection to an OR: waiting for proxy command to flush. */
+#define OR_CONN_STATE_PROXY_FLUSHING 2
+/** State for a connection to an OR: waiting for proxy response. */
+#define OR_CONN_STATE_PROXY_READING 3
 /** State for a connection to an OR: SSL is handshaking, not done yet. */
-#define OR_CONN_STATE_HANDSHAKING 2
+#define OR_CONN_STATE_HANDSHAKING 4
 /** State for a connection to an OR: Ready to send/receive cells. */
-#define OR_CONN_STATE_OPEN 3
-#define _OR_CONN_STATE_MAX 3
+#define OR_CONN_STATE_OPEN 5
+#define _OR_CONN_STATE_MAX 5
 
 #define _EXIT_CONN_STATE_MIN 1
 /** State for an exit connection: waiting for response from dns farm. */
@@ -991,6 +999,10 @@ typedef struct {
   uint32_t HttpProxyAddr; /**< Parsed IPv4 addr for http proxy, if any */
   uint16_t HttpProxyPort; /**< Parsed port for http proxy, if any */
 
+  char *HttpsProxy; /**< hostname[:port] to use as https proxy, if any */
+  uint32_t HttpsProxyAddr; /**< Parsed IPv4 addr for https proxy, if any */
+  uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any */
+
   struct config_line_t *DirServers; /**< List of configuration lines
                                      * for directory servers. */
   char *MyFamily; /**< Declared family for this OR. */
@@ -1360,6 +1372,9 @@ void directory_post_to_dirservers(uint8_t purpose, const char *payload,
                                   size_t payload_len);
 void directory_get_from_dirserver(uint8_t purpose, const char *resource,
                                   int retry_if_no_servers);
+int parse_http_response(const char *headers, int *code, time_t *date,
+                        int *compression);
+
 int connection_dir_reached_eof(connection_t *conn);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
