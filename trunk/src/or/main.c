@@ -654,7 +654,7 @@ build_directory(directory_t *dir) {
 
   routers = (routerinfo_t**) malloc(sizeof(routerinfo_t*) * (nfds+1));
   if (!routers) {
-    /* freak out XXX */
+    log(LOG_ERR, "build_directory(): couldn\'t allocate space for routerinfo");
     return -1;
   }
   if (my_routerinfo) {
@@ -669,7 +669,8 @@ build_directory(directory_t *dir) {
       continue; /* we only want to list ones that successfully handshaked */
     router = router_get_by_addr_port(conn->addr,conn->port);
     if(!router) {
-      log(LOG_ERR,"dump_directory_to_string(): couldn't find router %d:%d!",conn->addr,conn->port);
+      log(LOG_ERR,"dump_directory_to_string(): couldn\'t find router %d:%d!",
+          conn->addr,conn->port);
       continue;
     }
     routers[n++] = router;
@@ -684,9 +685,11 @@ dump_signed_directory_to_string(char *s, int maxlen,
                                 crypto_pk_env_t *private_key)
 {
   directory_t dir;
-  if (!build_directory(&dir))
+  if (build_directory(&dir)) {
+    log(LOG_ERR,"dump_signed_directory_to_string(): build_directory failed.");
     return -1;
-  return dump_signed_directory_to_string_impl(s, maxlen, &dir, private_key);  
+  }
+  return dump_signed_directory_to_string_impl(s, maxlen, &dir, private_key);
 }
 
 int
@@ -703,20 +706,21 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
           "client-software x y z\n" /* XXX make this real */
           "server-software a b c\n\n" /* XXX make this real */
           , maxlen);
+  
+  i = strlen(s);
+  cp = s+i;
   for (i = 0; i < dir->n_routers; ++i) {
     router = dir->routers[i];
-    written = dump_router_to_string(s, maxlen, router);
+    written = dump_router_to_string(cp, maxlen-i, router);
 
     if(written < 0) { 
-      log(LOG_ERR,"dump_directory_to_string(): tried to exceed string length.");
-      s[maxlen-1] = 0; /* make sure it's null terminated */
+      log(LOG_ERR,"dump_signed_directory_to_string(): tried to exceed string length.");
+      cp[maxlen-1] = 0; /* make sure it's null terminated */
       return -1;
     }
-    
-    maxlen -= written;
-    s += written;
+    i += written;
+    cp += written;
   }
-
 
   /* These multiple strlen calls are inefficient, but dwarfed by the RSA
      signature.
@@ -726,22 +730,33 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   i = strlen(s);
   cp = s + i;
   
-  if (crypto_SHA_digest(s, i, digest))
+  if (crypto_SHA_digest(s, i, digest)) {
+    log(LOG_ERR,"dump_signed_directory_to_string(): couldn\'t compute digest");
     return -1;
-  if (crypto_pk_private_sign(get_signing_privatekey(), digest, 20, signature) < 0)
+  }
+  if (crypto_pk_private_sign(private_key, digest, 20, signature) < 0) {
+    log(LOG_ERR,"dump_signed_directory_to_string(): couldn\'t sign digest");
     return -1;
+  }
   
   strncpy(cp, 
           "-----BEGIN SIGNATURE-----\n", maxlen-i);
           
   i = strlen(s);
   cp = s+i;
-  if (base64_encode(cp, maxlen-i, signature, 128) < 0)
+  if (base64_encode(cp, maxlen-i, signature, 128) < 0) {
+    log(LOG_ERR,"dump_signed_directory_to_string(): couldn\'t base64-encode signature %d/%d");
     return -1;
+  }
 
   i = strlen(s);
   cp = s+i;
-  strcat(cp, "-----END SIGNATURE-----\n");
+  strncat(cp, "-----END SIGNATURE-----\n", maxlen-i);
+  i = strlen(s);
+  if (i == maxlen) {
+    log(LOG_ERR,"dump_signed_directory_to_string(): tried to exceed string length.");
+    return -1;
+  }
 
   return 0;
 }
