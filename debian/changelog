@@ -1,3 +1,12 @@
+tor (0.0.8+0.0.9pre3-1) unstable; urgency=high
+
+  * New upstream (pre)release.
+  * Fixes at least one segfault that can be triggered remotely,
+    a format string vulnerability which probably is not exploitable,
+    and several assert bugs.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 14 Oct 2004 13:36:45 +0200
+
 tor (0.0.8+0.0.9pre2-1) unstable; urgency=low
 
   * New upstream (pre)release.
