@@ -49,18 +49,18 @@ cp contrib/osx/privoxy.config $BUILD_DIR/privoxyconf_packageroot/Library/Privoxy
 $PACKAGEMAKER -build                      \
     -p $BUILD_DIR/output/privoxyconf.pkg  \
     -f $BUILD_DIR/privoxyconf_packageroot \
-    -i contrib/osx/PrivoxyConfInfo.plist \
-    -i contrib/osx/PrivoxyConfDesc.plist
+    -i contrib/osx/PrivoxyConfInfo.plist  \
+    -d contrib/osx/PrivoxyConfDesc.plist
 
 mkdir -p $BUILD_DIR/torstartup_packageroot/System/Library/StartupItems/Tor
 cp contrib/osx/Tor contrib/osx/StartupParameters.plist \
    $BUILD_DIR/torstartup_packageroot/System/Library/StartupItems/Tor
 
-$PACKAGEMAKER -build                    \
-    -p $BUILD_DIR/output/torstartup.pkg \
+$PACKAGEMAKER -build                     \
+    -p $BUILD_DIR/output/torstartup.pkg  \
     -f $BUILD_DIR/torstartup_packageroot \
-    -i contrib/osx/TorStartupInfo.plist \
-    -i contrib/osx/TorStartupDesc.plist
+    -i contrib/osx/TorStartupInfo.plist  \
+    -d contrib/osx/TorStartupDesc.plist
 
 
 ## Ug! Packagemaker won't buld metapackages.
