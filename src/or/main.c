@@ -786,11 +786,6 @@ static int do_main_loop(void) {
   int timeout;
   int poll_result;
 
-  /* Initialize the history structures. */
-  rep_hist_init();
-  /* Intialize the service cache. */
-  rend_cache_init();
-
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */
   if (! identity_key_is_set()) {
@@ -1062,6 +1057,12 @@ void handle_signals(int is_parent)
  */
 static int tor_init(int argc, char *argv[]) {
 
+  /* Initialize the history structures. */
+  rep_hist_init();
+  /* Initialize the service cache. */
+  rend_cache_init();
+  client_dns_init(); /* Init the client dns cache. Do it always, since it's cheap. */
+
   /* give it somewhere to log to initially */
   add_temp_log();
   log_fn(LOG_NOTICE,"Tor v%s. This is experimental software. Do not rely on it for strong anonymity.",VERSION);
@@ -1085,7 +1086,6 @@ static int tor_init(int argc, char *argv[]) {
   if(server_mode(get_options())) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
-  client_dns_init(); /* Init the client dns cache. Do it always, since it's cheap. */
 
   handle_signals(1);
 
