@@ -949,10 +949,7 @@ int connection_handle_write(connection_t *conn) {
     }
     if(e) {
       /* some sort of error, but maybe just inprogress still */
-      errno = e; /* XXX008 this is a kludge. maybe we should rearrange
-                    our error-hunting functions? E.g. pass errno to
-                    tor_socket_errno(). */
-      if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(conn->s))) {
+      if(!ERRNO_IS_CONN_EINPROGRESS(e)) {
         log_fn(LOG_INFO,"in-progress connect failed. Removing.");
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
@@ -1445,7 +1442,6 @@ void assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_CONTROL:
       tor_assert(conn->state >= _CONTROL_CONN_STATE_MIN);
       tor_assert(conn->state <= _CONTROL_CONN_STATE_MAX);
-      /* XXXX009 NM */
       break;
     default:
       tor_assert(0);
