@@ -778,7 +778,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
     if(conn->state == OR_CONN_STATE_OPEN) {
       assert(conn->bandwidth > 0);
       assert(conn->receiver_bucket >= 0);
-      assert(conn->receiver_bucket <= 10*conn->bandwidth);
+//      assert(conn->receiver_bucket <= 10*conn->bandwidth);
     }
     assert(conn->addr && conn->port);
     assert(conn->address);
@@ -795,14 +795,11 @@ void assert_connection_ok(connection_t *conn, time_t now)
     assert(!conn->done_sending);
     assert(!conn->done_receiving);
   } else {
-    assert(!conn->next_stream ||
-           conn->next_stream->type == CONN_TYPE_EXIT ||
-           conn->next_stream->type == CONN_TYPE_AP);
     if(conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN)
       assert(conn->cpath_layer);
     if(conn->cpath_layer)
       assert_cpath_layer_ok(conn->cpath_layer);
-    /* XXX unchecked, package window, deliver window. */
+    /* XXX unchecked: package window, deliver window. */
   }
   if (conn->type != CONN_TYPE_AP) {
     assert(!conn->socks_request);
@@ -835,6 +832,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_DNSWORKER:
       assert(conn->state == DNSWORKER_STATE_IDLE ||
              conn->state == DNSWORKER_STATE_BUSY);
+      break;
     case CONN_TYPE_CPUWORKER:
       assert(conn->state >= _CPUWORKER_STATE_MIN &&
              conn->state <= _CPUWORKER_STATE_MAX);
