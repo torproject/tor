@@ -197,6 +197,11 @@ typedef struct {
   unsigned char command;
   unsigned char length; /* of payload if data cell, else value of sendme */
   uint32_t seq; /* sequence number */
+
+  /* The following 2 fields are only set when command is CELL_DATA */
+  unsigned char topic_command;
+  uint16_t topic_id;
+
   unsigned char payload[CELL_PAYLOAD_SIZE];
 } cell_t;
 
@@ -613,6 +618,9 @@ int connection_process_cell_from_inbuf(connection_t *conn);
 
 int connection_consider_sending_sendme(connection_t *conn, int edge_type);
 int connection_finished_flushing(connection_t *conn);
+
+void cell_pack(char *dest, const cell_t *src);
+void cell_unpack(cell_t *dest, const char *src);
 
 /********************************* connection_ap.c ****************************/
 

@@ -27,9 +27,10 @@ int connection_edge_process_inbuf(connection_t *conn) {
     memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_DATA;
     cell.length = TOPIC_HEADER_SIZE;
-    *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
-    *cell.payload = TOPIC_COMMAND_END;
+    cell.topic_command = TOPIC_COMMAND_END;
+    cell.topic_id = conn->topic_id;
     cell.aci = circ->n_aci;
+
     if (circuit_deliver_data_cell_from_edge(&cell, circ, conn->type) < 0) {
       log(LOG_DEBUG,"connection_edge_process_inbuf: circuit_deliver_data_cell_from_edge failed.  Closing");
       circuit_close(circ);
@@ -75,8 +76,9 @@ int connection_edge_send_command(connection_t *conn, circuit_t *circ, int topic_
   else
     cell.aci = circ->p_aci;
   cell.command = CELL_DATA;
-  *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
-  *cell.payload = topic_command;
+  cell.topic_command = topic_command;
+  cell.topic_id = conn->topic_id;
+
   cell.length = TOPIC_HEADER_SIZE;
   log(LOG_INFO,"connection_edge_send_command(): delivering %d cell %s.", topic_command, conn->type == CONN_TYPE_AP ? "forward" : "backward");
 
@@ -98,8 +100,8 @@ int connection_edge_process_data_cell(cell_t *cell, circuit_t *circ, int edge_ty
 
   assert(cell && circ);
 
-  topic_command = *cell->payload;
-  topic_id = ntohs(*(uint16_t *)(cell->payload+2));
+  topic_command = cell->topic_command;
+  topic_id = cell->topic_id;
   log(LOG_DEBUG,"connection_edge_process_data_cell(): command %d topic %d", topic_command, topic_id);
   num_seen++;
   log(LOG_DEBUG,"connection_edge_process_data_cell(): Now seen %d data cells here.", num_seen);
@@ -151,7 +153,7 @@ int connection_edge_process_data_cell(cell_t *cell, circuit_t *circ, int edge_ty
       }
 
 #ifdef USE_ZLIB
-      if(connection_decompress_to_buf(cell->payload + TOPIC_HEADER_SIZE,
+      if(connection_decompress_to_buf(cell->payload,
                                       cell->length - TOPIC_HEADER_SIZE, 
                                       conn, Z_SYNC_FLUSH) < 0) {
         log(LOG_INFO,"connection_edge_process_data_cell(): write to buf failed. Marking for close.");
@@ -159,7 +161,7 @@ int connection_edge_process_data_cell(cell_t *cell, circuit_t *circ, int edge_ty
         return 0;
       }
 #else
-      if(connection_write_to_buf(cell->payload + TOPIC_HEADER_SIZE,
+      if(connection_write_to_buf(cell->payload,
                                  cell->length - TOPIC_HEADER_SIZE, conn) < 0) {
         conn->marked_for_close = 1;
         return 0;

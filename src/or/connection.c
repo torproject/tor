@@ -543,7 +543,6 @@ void connection_send_cell(connection_t *conn) {
    */
   conn->outbuf_flushlen += sizeof(cell_t); /* instruct it to send a cell */
   connection_start_writing(conn);
-
 }
 
 void connection_increment_send_timeval(connection_t *conn) {
@@ -584,12 +583,7 @@ int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
   char networkcell[CELL_NETWORK_SIZE];
   char *n = networkcell;
  
-  memset(n,0,CELL_NETWORK_SIZE); /* zero it out to start */
-  *(aci_t *)n = htons(cellp->aci);
-  *(n+2) = cellp->command;
-  *(n+3) = cellp->length;
-  /* seq is reserved, leave zero */
-  memcpy(n+8,cellp->payload,CELL_PAYLOAD_SIZE);
+  cell_pack(n, cellp);
 
   if(connection_encrypt_cell(n,conn)<0) {
     return -1;
@@ -676,7 +670,7 @@ repeat_connection_package_raw_inbuf:
    *       compressing.
    *    2) 
    */
-  len = connection_compress_from_buf(cell.payload + TOPIC_HEADER_SIZE,
+  len = connection_compress_from_buf(cell.payload,
                                      CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE,
                                      conn, Z_SYNC_FLUSH);
   if (len < 0)
@@ -690,7 +684,7 @@ repeat_connection_package_raw_inbuf:
     cell.length = amount_to_process;
   }
 
-  if(connection_fetch_from_buf(cell.payload+TOPIC_HEADER_SIZE, cell.length, conn) < 0)
+  if(connection_fetch_from_buf(cell.payload, cell.length, conn) < 0)
     return -1;
 #endif
 
@@ -702,10 +696,11 @@ repeat_connection_package_raw_inbuf:
 
   log(LOG_DEBUG,"connection_package_raw_inbuf(): (%d) Packaging %d bytes (%d waiting).",conn->s,cell.length, conn->inbuf_datalen);
 
-  *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
-  *cell.payload = TOPIC_COMMAND_DATA;
-  cell.length += TOPIC_HEADER_SIZE;
+
   cell.command = CELL_DATA;
+  cell.topic_command = TOPIC_COMMAND_DATA;
+  cell.topic_id = conn->topic_id;
+  cell.length += TOPIC_HEADER_SIZE;
 
   if(conn->type == CONN_TYPE_EXIT) {
     cell.aci = circ->p_aci;
@@ -756,10 +751,10 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
   }
 
   memset(&cell, 0, sizeof(cell_t));
-  *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
-  *cell.payload = TOPIC_COMMAND_SENDME;
-  cell.length += TOPIC_HEADER_SIZE;
   cell.command = CELL_DATA;
+  cell.topic_command = TOPIC_COMMAND_SENDME;
+  cell.topic_id = conn->topic_id;
+  cell.length += TOPIC_HEADER_SIZE;
 
   if(edge_type == EDGE_EXIT) { /* we're at an exit */
     if(conn->p_receive_topicwindow < TOPICWINDOW_START - TOPICWINDOW_INCREMENT) {
@@ -850,16 +845,46 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
 #endif
 
   /* retrieve cell info from outbuf (create the host-order struct from the network-order string) */
-  memset(&cell,0,sizeof(cell_t)); /* zero it out to start */
-  cell.aci = ntohs(*(aci_t *)outbuf);
-  cell.command = *(outbuf+2);
-  cell.length = *(outbuf+3);
-  memcpy(cell.payload, outbuf+8, CELL_PAYLOAD_SIZE);
+  cell_unpack(&cell, outbuf);
 
 //  log(LOG_DEBUG,"connection_process_cell_from_inbuf(): Decrypted cell is of type %u (ACI %u).",cellp->command,cellp->aci);
   command_process_cell(&cell, conn);
 
   return connection_process_inbuf(conn); /* process the remainder of the buffer */
+}
+
+void
+cell_pack(char *dest, const cell_t *src)
+{
+  *(uint16_t*)dest     = htons(src->aci);
+  *(uint8_t*)(dest+2)  = src->command;
+  *(uint8_t*)(dest+3)  = src->length;
+  *(uint32_t*)(dest+4) = 0; /* Reserved */
+  if (src->command != CELL_DATA) {
+    memcpy(dest+8, src->payload, CELL_PAYLOAD_SIZE);
+  } else {
+    *(uint8_t*)(dest+8)  = src->topic_command;
+    *(uint8_t*)(dest+9)  = 0;
+    *(uint16_t*)(dest+10) = htons(src->topic_id);
+    memcpy(dest+12, src->payload, CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE);
+  }
+}
+
+void
+cell_unpack(cell_t *dest, const char *src)
+{
+  dest->aci     = ntohs(*(uint16_t*)(src));
+  dest->command = *(uint8_t*)(src+2);
+  dest->length  = *(uint8_t*)(src+3);
+  dest->seq     = ntohl(*(uint32_t*)(src+4));
+  if (dest->command != CELL_DATA) {
+    memcpy(dest->payload, src+8, CELL_PAYLOAD_SIZE);
+  } else {
+    dest->topic_command = *(uint8_t*)(src+8);
+    /* zero  = *(uint8_t*)(src+9); */
+    dest->topic_id = ntohs(*(uint16_t*)(src+10));
+    memcpy(dest->payload, src+12, CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE);
+  }
 }
 
 /*

@@ -281,12 +281,6 @@ which reveals the downstream node.
 
      The value of Version is currently 2.
 
-     The forward and backward ciphers fields can take the following values:
-          0: Identity 
-          1: Single DES in OFB
-          2: RC4
-          3: Triple DES (encrypt-decrypt-encrypt) in OFB
-
      The port and address field denote the IPV4 address and port of
      the next onion router in the circuit, or are set to 0 for the
      last hop.
@@ -316,7 +310,7 @@ which reveals the downstream node.
 
          D. Encrypt the first 128 bytes of M with the RSA key of
             OR_I, using no padding.  Encrypt the remaining portion of
-            M with DES/OFB, using K1_I as a key and an all-0 IV.
+            M with 3DES/OFB, using K1_I as a key and an all-0 IV.
 
       3. M is now the onion.
 
@@ -365,7 +359,7 @@ which reveals the downstream node.
           in the past, then tear down the circuit (see section 4.2).
 
           Compute K1 through K3 as above.  Use K1 to decrypt the rest
-          of the onion using DES/OFB.
+          of the onion using 3DES/OFB.
 
           If we are not the exit node, remove the first layer from the
           decrypted onion, and send the remainder to the next OR
@@ -403,14 +397,14 @@ which reveals the downstream node.
 
    Otherwise, if the OR is not at the OP edge of the circuit (that is,
    either an 'exit node' or a non-edge node), it de/encrypts the length
-   field and the payload with DES/OFB, as follows:
+   field and the payload with 3DES/OFB, as follows:
         'Forward' data cell (same direction as onion):
             Use K2 as key; encrypt.
         'Back' data cell (opposite direction from onion):
             Use K3 as key; decrypt.
 
    Otherwise, if the data cell has arrived to the OP edge of the circuit,
-   the OP de/encrypts the length and payload fields with DES/OFB as
+   the OP de/encrypts the length and payload fields with 3DES/OFB as
    follows:
          OP sends data cell:
             For I=1...N, decrypt with K2_I.
