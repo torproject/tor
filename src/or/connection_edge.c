@@ -1114,6 +1114,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   relay_header_t rh;
   char *colon;
 
+  assert_circuit_ok(circ);
   relay_header_unpack(&rh, cell->payload);
 
   /* XXX currently we don't send an end cell back if we drop the
@@ -1155,6 +1156,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   /* add it into the linked list of streams on this circuit */
   n_stream->next_stream = circ->n_streams;
   circ->n_streams = n_stream;
+  assert_circuit_ok(circ);
 
   if(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
     log_fn(LOG_DEBUG,"begin is for rendezvous. configuring stream.");
@@ -1162,11 +1164,13 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     n_stream->state = EXIT_CONN_STATE_CONNECTING;
     strcpy(n_stream->rend_query, circ->rend_query);
     assert(n_stream->rend_query[0]);
+    assert_circuit_ok(circ);
     if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {
       log_fn(LOG_WARN,"Didn't find rendezvous service (port %d)",n_stream->port);
       connection_mark_for_close(n_stream,0 /* XXX */);
       return 0;
     }
+    assert_circuit_ok(circ);
     log_fn(LOG_DEBUG,"Finished assigning addr/port");
     n_stream->cpath_layer = circ->cpath->prev; /* link it */
     connection_exit_connect(n_stream);
