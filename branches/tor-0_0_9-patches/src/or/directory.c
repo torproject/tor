@@ -184,7 +184,8 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   else if (ds)
     directory_initiate_command_trusted_dir(ds, purpose, resource, NULL, 0);
   else {
-    log_fn(LOG_WARN,"No running dirservers known. Not trying. (purpose %d)", purpose);
+    log_fn(LOG_NOTICE,"No running dirservers known. Not trying. (purpose %d)", purpose);
+    directory_all_unreachable(time(NULL)); /* remember we tried them all and failed. */
   }
 }
 
