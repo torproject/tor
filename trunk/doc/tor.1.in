@@ -95,7 +95,7 @@ servers haven't authenticated as "verified"?  (Default: middle,rendezvous.)
 Every N seconds, Tor downloads a fresh directory, and re-uploads
 information about hidden services to the directory servers.  If
 running as a server, Tor also re-uploads information about itself to
-the directory servers.  (Tor also uploads this information whenever it 
+the directory servers.  (Tor also uploads this information whenever it
 changes.)  (Default: 600.)
 .TP
 \fBClientOnly \fR\fB0\fR|\fB1\fR\fP
@@ -217,7 +217,7 @@ If you have more than this number of onionskins queued for decrypt, reject new o
 .TP
 \fBMyFamily \fR\fInickname,nickname,...\fP
 Declare that this Tor server is controlled or administered by a group
-or organization identical or similar to that of the other named servers.  
+or organization identical or similar to that of the other named servers.
 When two servers both declare that they are in the same 'family', Tor clients
 will not use them in the same circuit.
 .TP
@@ -295,7 +295,6 @@ If set to 1, Tor tries to build circuits through all of the servers it
 knows about, so it can tell which are up and which are down.  This
 option is only useful for authoritative directories, so you probably
 don't want to use it.
-
 
 .SH HIDDEN SERVICE OPTIONS
 .PP

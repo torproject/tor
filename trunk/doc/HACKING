@@ -53,14 +53,14 @@ the distant future, stuff may have changed.)
      util.[ch] -- Miscellaneous portability and convenience functions.
 
   Files in ./src/or:
-  
+
    [General-purpose modules]
 
      or.h -- Common header file: include everything, define everything.
 
-     buffers.c -- Implements a generic buffer interface.  Buffers are 
+     buffers.c -- Implements a generic buffer interface.  Buffers are
         fairly opaque string holders that can read to or flush from:
-        memory, file descriptors, or TLS connections.  
+        memory, file descriptors, or TLS connections.
 
         Also implements parsing functions to read HTTP and SOCKS commands
         from buffers.
@@ -89,7 +89,7 @@ the distant future, stuff may have changed.)
         results; clients use routers.c to parse them.
 
      dirserv.c -- Code to manage directory contents and generate
-        directories. [Directory server only] 
+        directories. [Directory server only]
 
      routers.c -- Code to parse directories and router descriptors; and to
         generate a router descriptor corresponding to this OR's
@@ -133,9 +133,9 @@ the distant future, stuff may have changed.)
   All sockets in Tor are handled as different types of nonblocking
   'connections'.  (What the Tor spec calls a "Connection", the code refers
   to as a "Cell-speaking" or "OR" connection.)
-  
+
   Connections are implemented by the connection_t struct, defined in or.h.
-  Not every kind of connection uses all the fields in connection_t; see 
+  Not every kind of connection uses all the fields in connection_t; see
   the comments in or.h and the assertions in assert_connection_ok() for
   more information.
 
@@ -272,7 +272,7 @@ the distant future, stuff may have changed.)
          command_process_cell -- Notices it is a relay cell, so calls:
           command_process_relay_cell -- Looks up the circuit for the cell,
                  makes sure the circuit is live, then passes the cell to:
-           circuit_deliver_relay_cell -- Passes the cell to each of: 
+           circuit_deliver_relay_cell -- Passes the cell to each of:
             relay_crypt -- Strips a layer of encryption from the cell and
                  notices that the cell is for local delivery.
             connection_edge_process_relay_cell -- extracts the cell's
@@ -317,7 +317,6 @@ the distant future, stuff may have changed.)
                  back an acknowledgement (requesting that more cells be
                  sent to this stream).
 
-
 1.6. Routers, descriptors, and directories
 
    All Tor processes need to keep track of a list of onion routers, for
@@ -348,7 +347,7 @@ the distant future, stuff may have changed.)
    directories.
 
 1.7. Data model
-  
+
   [XXX]
 
 1.8. Flow control
@@ -477,7 +476,6 @@ the distant future, stuff may have changed.)
 
      [XXX insert references]
 
-
 # ======================================================================
 # Old HACKING document; merge into the above, move into tor-design.tex,
 # or delete.
@@ -574,7 +572,3 @@ Robustness features.
 
   Currently the code tries for the primary router first, and if it's down,
   chooses the first available twin.
-
-
-
-

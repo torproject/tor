@@ -94,7 +94,6 @@ for fname in files:
 
 print "=============================="
 
-
 funcnames = functionCalls.keys()
 funcnames.sort()
 
@@ -145,7 +144,6 @@ for func in funcnames:
         cycCalls[func] = d = {}
         for c in calls:
             d[c]=1
-
 
 cycNames = cycCalls.keys()
 while 1:

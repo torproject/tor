@@ -242,7 +242,7 @@ exit 0
   of weird race going on, and it's arguably a bad thing anyway.
 
 * Mon Jun 06 2004 Nick Mathewson <nickm@freehaven.net> 0.0.7-0.std.0.1.rc2
-- Make spec file more happy with fc2 packaging 
+- Make spec file more happy with fc2 packaging
 
 * Sat Jan 17 2004 John Bashinski <jbash@velvet.com>
 - Basic spec file; tested with Red Hat 9.

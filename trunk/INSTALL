@@ -42,7 +42,7 @@ If you got the source from cvs:
 
 If the quickstart doesn't work for you:
 
-  If you have problems finding libraries, try 
+  If you have problems finding libraries, try
     CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
     ./configure
   rather than simply ./configure.

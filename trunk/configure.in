@@ -50,7 +50,7 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssldir, [
                         continue;
                 fi
                 if test ! -z "$ssldir" -a "x$ssldir" != "x/usr"; then
-                        # Try to use $ssldir/lib if it exists, otherwise 
+                        # Try to use $ssldir/lib if it exists, otherwise
                         # $ssldir
                         if test -d "$ssldir/lib" ; then
                                 LDFLAGS="-L$ssldir/lib $saved_LDFLAGS"
@@ -63,7 +63,7 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssldir, [
                                         LDFLAGS="-R$ssldir $LDFLAGS"
                                 fi
                         fi
-                        # Try to use $ssldir/include if it exists, otherwise 
+                        # Try to use $ssldir/include if it exists, otherwise
                         # $ssldir
                         if test -d "$ssldir/include" ; then
                                 CPPFLAGS="-I$ssldir/include $saved_CPPFLAGS"
@@ -78,7 +78,7 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssldir, [
                         [
 #include <string.h>
 #include <openssl/rand.h>
-int main(void) 
+int main(void)
 {
         char a[2048];
         memset(a, 0, sizeof(a));
@@ -111,7 +111,7 @@ if (test ! -z "$ac_cv_openssldir" && test "x$ac_cv_openssldir" != "x(system)") ;
         dnl Need to recover ssldir - test above runs in subshell
         ssldir=$ac_cv_openssldir
         if test ! -z "$ssldir" -a "x$ssldir" != "x/usr"; then
-                # Try to use $ssldir/lib if it exists, otherwise 
+                # Try to use $ssldir/lib if it exists, otherwise
                 # $ssldir
                 if test -d "$ssldir/lib" ; then
                         LDFLAGS="-L$ssldir/lib $saved_LDFLAGS"
@@ -124,7 +124,7 @@ if (test ! -z "$ac_cv_openssldir" && test "x$ac_cv_openssldir" != "x(system)") ;
                                 LDFLAGS="-R$ssldir $LDFLAGS"
                         fi
                 fi
-                # Try to use $ssldir/include if it exists, otherwise 
+                # Try to use $ssldir/include if it exists, otherwise
                 # $ssldir
                 if test -d "$ssldir/include" ; then
                         CPPFLAGS="-I$ssldir/include $saved_CPPFLAGS"
