@@ -85,7 +85,7 @@ a wide area Onion Routing network,
 % how long is briefly? a day, a month? -RD
 the only long-running and publicly accessible
 implementation was a fragile proof-of-concept that ran on a single
-machine (which nonethless processed several tens of thousands of connections
+machine (which nonetheless processed several tens of thousands of connections
 daily from thousands of global users).
 Many critical design and deployment issues were never resolved,
 and the design has not been updated in several years.
@@ -113,7 +113,7 @@ the initiator knows when a hop fails and can then try extending to a new node.
 \item \textbf{Separation of protocol cleaning from anonymity:}
 The original Onion Routing design required a separate ``application
 proxy'' for each
-supported application protocol --- most
+supported application protocol---most
 of which were never written, so many applications were never supported.
 Tor uses the standard and near-ubiquitous SOCKS
 \cite{socks4,socks5} proxy interface, allowing us to support most TCP-based
@@ -167,7 +167,7 @@ anonymity against a realistic adversary, we leave these strategies out.
   circuit. This not only allows for long-range padding to frustrate traffic
   shape and volume attacks at the initiator \cite{defensive-dropping},
   but because circuits are used by more than one application, it also
-  allows traffic to exit the circuit from the middle -- thus
+  allows traffic to exit the circuit from the middle---thus
   frustrating traffic shape and volume attacks based on observing exit
   points.
 %Or something like that. hm. Tone this down maybe? Or support it. -RD
@@ -182,7 +182,7 @@ at the edges of the network to detect congestion or flooding attacks
 and send less data until the congestion subsides.
 
 \item \textbf{Directory servers:} The original Onion Routing design
-planned to flood link-state information through the network --- an
+planned to flood link-state information through the network---an
 approach which can be unreliable and
 open to partitioning attacks or outright deception. Tor takes a simplified
 view towards distributing link-state information. Certain more trusted
@@ -192,7 +192,7 @@ are currently up. Users periodically download these directories via HTTP.
 
 \item \textbf{End-to-end integrity checking:} Without integrity checking
 on traffic going through the network, any onion router on the path
-can change the contents of cells as they pass by --- for example, to redirect a
+can change the contents of cells as they pass by---for example, to redirect a
 connection on the fly so it connects to a different webserver, or to
 tag encrypted traffic and look for the tagged traffic at the network
 edges \cite{minion-design}.  Tor hampers these attacks by checking data
@@ -283,27 +283,38 @@ trade-off, such \emph{high-latency} networks are well-suited for anonymous
 email, but introduce too much lag for interactive tasks such as web browsing,
 internet chat, or SSH connections.
 
-% Parts of this graf belongs later in expository order.  Some of the
-% sentences seem superficially unrelated. 
-Tor belongs to the second category: \emph{low-latency} designs that
-attempt to anonymize interactive network traffic.  Because such
-traffic tends to involve a relatively large numbers of packets, it is
-difficult to prevent an attacker who can eavesdrop entry and exit
-points from correlating packets entering the anonymity network with
-packets leaving it. Although some work has been done to frustrate
-these attacks, most designs protect primarily against traffic analysis
-rather than traffic confirmation \cite{or-jsac98}.  One can pad and
-limit communication to a constant rate or at least to control the
-variation in traffic shape. This can have prohibitive bandwidth costs
-and/or performance limitations. One can also use a cascade (fixed
-shared route) with a relatively fixed set of users. This assumes a
-significant degree of agreement and provides an easier target for an active
-attacker since the endpoints are generally known.
+Tor belongs to the second category: \emph{low-latency} designs that attempt
+to anonymize interactive network traffic.  Because these protocols typically
+involve a large number of packets that much be delivered quickly, it is
+difficult for them to prevent an attacker who can eavesdrop both ends of the
+interactive communication from points from correlating the timing and volume
+of traffic entering the anonymity network with traffic leaving it.  These
+protocols are also vulnerable against certain active attacks in which an
+adversary introduces timing patterns into traffic entering the network, and 
+looks
+for correlated patterns among exiting traffic.
+Although some work has been done to frustrate
+these attacks,\footnote{
+  The most common approach is to pad and limit communication to a constant
+  rate, or to limit
+  the variation in traffic shape.  Doing so can have prohibitive bandwidth
+  costs and/or performance limitations.
+  %One can also use a cascade (fixed
+  %shared route) with a relatively fixed set of users. This assumes a
+  %significant degree of agreement and provides an easier target for an active
+  %attacker since the endpoints are generally known.
+} most designs protect primarily against traffic analysis rather than traffic
+confirmation \cite{or-jsac98}---that is, they assume that the attacker is
+attempting to learn who is talking to whom, not to confirm a prior suspicion
+about who is talking to whom.
 
 The simplest low-latency designs are single-hop proxies such as the
 Anonymizer \cite{anonymizer}, wherein a single trusted server removes
 identifying users' data before relaying it.  These designs are easy to
-analyze, but require end-users to trust the anonymizing proxy.
+analyze, but require end-users to trust the anonymizing proxy.  Furthermore,
+concentrating the traffic to a single point makes traffic analysis easier: an
+adversary need only eavesdrop on the proxy in order to become a global
+observer against the entire anonymity network.
 
 More complex are distributed-trust, channel-based anonymizing systems.  In
 these designs, a user establishes one or more medium-term bidirectional
@@ -314,49 +325,27 @@ requires public-key cryptography, whereas relaying packets along a tunnel is
 comparatively inexpensive.  Because a tunnel crosses several servers, no
 single server can learn the user's communication partners.
 
-The Java Anon Proxy (aka JAP aka WebMIXes) is based on the cascade
-approach mentioned above. Like a single-hop proxy a single cascade has
-the advantage of concentrating all the concurrent users in one
-communication pipe, making for potentially large anonymity sets.
-Also, like a single-hop proxy, it is easy to know where any
-communication is entering or leaving the network. Thus, though there
-is no single trusted server, it is potentially easy to simply bridge
-the entire cascade, i.e., to obviate its purpose. The design prevents
-this by padding between end users and the head of the cascade
-\cite{web-mix}. However, the current implementation does not do such
-padding and thus remains vulnerable to both active and passive
-bridging.
+In some distributed-trust systems, such as the Java Anon Proxy (also known as
+JAP or WebMIXes), users
+build their tunnels along a fixed shared route or
+``cascade.''  Like a single-hop proxy, a single cascade increases anonymity
+sets by concentrating concurrent traffic into a single communication pipe.
+Concentrating traffic, however, can become a liability: as with a single-hop
+proxy, an attacker only needs to observe a limited number of servers (in this
+case, both ends of the cascade) in order
+to bridge all the system's traffic.
+The Java Anon Proxy's design seeks to prevent this by padding
+between end users and the head of the cascade \cite{web-mix}. However, the
+current implementation does no padding and thus remains vulnerable
+to both active and passive bridging.
 
-%[Ouch: We haven't said what an onion is yet, but we use the word here! -NM]
 Systems such as earlier versions of Freedom and the original Onion Routing
-build the anonymous channel all at once (using an onion of public-key
-encrypted messages, each layer of which provided a session key and pointer
-to the address corresponding to the next layer's key). 
-Later designs of Freedom and Tor as described herein build
-the channel in stages, as does AnonNet
-\cite{anonnet}. Amongst other things, this makes perfect forward
-secrecy feasible.
-
-Some systems, such as Crowds \cite{crowds-tissec}, do not rely on the
-changing appearance of packets to hide the path; rather they employ
-mechanisms so that an intermediary cannot be sure when it is
-receiving from/sending to the ultimate initiator. There is no public-key
-encryption needed for Crowds, but the responder and all data are
-visible to all nodes on the path so that anonymity of connection
-initiator depends on filtering all identifying information from the
-data stream. Crowds is also designed only for HTTP traffic.
-
-Hordes \cite{hordes-jcs} is based on Crowds but also uses multicast
-responses to hide the initiator. Herbivore \cite{herbivore} and
-P5 \cite{p5} go even further requiring broadcast.
-They each use broadcast in different ways, and tradeoffs are made to
-make broadcast more practical. Both Herbivore and P5 are designed primarily
-for communication between communicating peers, although Herbivore
-permits external connections by requesting a peer to serve as a proxy.
-Allowing easy connections to nonparticipating responders or recipients
-is a practical requirement for many users, e.g., to visit
-nonparticipating Web sites or to exchange mail with nonparticipating
-recipients.
+build the anonymous channel all at once, using a layered ``onion'' of
+public-key encrypted messages, each layer of which provides a set of session
+keys and the address of the next server in the channel.  Tor as described
+herein, later designs of Freedom, and AnonNet \cite{anonnet} build the
+channel in stages, extending it one hop at a time, Amongst other things, this
+makes perfect forward secrecy feasible.
 
 Distributed-trust anonymizing systems differ in how they prevent attackers
 from controlling too many servers and thus compromising too many user paths.
@@ -368,7 +357,7 @@ MorphMix) to prevent an attacker from owning too much of the network.
 Crowds uses a centralized ``blender'' to enforce Crowd membership
 policy. For small crowds it is suggested that familiarity with all
 members is adequate. For large diverse crowds, limiting accounts in
-control of any one party is more difficult: 
+control of any one party is more complex: 
 ``(e.g., the blender administrator sets up an account for a user only
 after receiving a written, notarized request from that user) and each
 account to one jondo, and by monitoring and limiting the number of
@@ -386,6 +375,27 @@ has also been designed for other types of systems, including
 ISDN \cite{isdn-mixes}, and mobile applications such as telephones and
 active badging systems \cite{federrath-ih96,reed-protocols97}.
 
+Some systems, such as Crowds \cite{crowds-tissec}, do not rely changing the
+appearance of packets to hide the path; rather they try to prevent an
+intermediary from knowing when whether it is talking to an ultimate
+initiator, or just another intermediary.  Crowds uses no public-key
+encryption encryption, but the responder and all data are visible to all
+nodes on the path so that anonymity of connection initiator depends on
+filtering all identifying information from the data stream. Crowds only
+supports HTTP traffic.
+
+Hordes \cite{hordes-jcs} is based on Crowds but also uses multicast
+responses to hide the initiator. Herbivore \cite{herbivore} and
+P5 \cite{p5} go even further, requiring broadcast.
+Each uses broadcast in different ways, and trade-offs are made to
+make broadcast more practical. Both Herbivore and P5 are designed primarily
+for communication between communicating peers, although Herbivore
+permits external connections by requesting a peer to serve as a proxy.
+Allowing easy connections to nonparticipating responders or recipients
+is a practical requirement for many users, e.g., to visit
+nonparticipating Web sites or to exchange mail with nonparticipating
+recipients.
+
 Tor is not primarily designed for censorship resistance but rather
 for anonymous communication. However, Tor's rendezvous points, which
 enable connections between mutually anonymous entities, also
@@ -396,16 +406,6 @@ essential component for anonymous publishing systems such as
 Publius\cite{publius}, Free Haven\cite{freehaven-berk}, and
 Tangler\cite{tangler}.
 
-[XXX I'm considering the subsection as ended here for now. I'm leaving the
-following notes in case we want to revisit any of them. -PS]
-
-Channel-based anonymizing systems also differ in their use of dummy traffic.
-[XXX]
-
-Finally, several systems provide low-latency anonymity without channel-based
-communication.  Crowds and [XXX] provide anonymity for HTTP requests; [...]
-
-[XXX Mention error recovery?]
 
 STILL NOT MENTIONED:
 real-time mixes\\
@@ -416,185 +416,223 @@ Rewebber was mentioned in an earlier version along with Eternity,
 which *must* be mentioned if we cite anything at all
 in censorship resistance.
 
-
 [XXX Close by mentioning where Tor fits.]
 
 \Section{Design goals and assumptions}
 \label{sec:assumptions}
 
-
 \subsection{Goals}
-% Reformat this section like ``Adversary Model'' is formatted. -NM
 Like other low-latency anonymity designs, Tor seeks to frustrate
 attackers from linking communication partners, or from linking
 multiple communications to or from a single point.  Within this
 main goal, however, several design considerations have directed
 Tor's evolution.
 
-First, we have tried to build a {\bf deployable} system.  [XXX why?]
-This requirement precludes designs that are expensive to run (for
-example, by requiring more bandwidth than volunteers will easily
-provide); designs that place a heavy liability burden on operators
-(for example, by allowing attackers to implicate operators in illegal
-activities); and designs that are difficult or expensive to implement
-(for example, by requiring kernel patches to many operating systems,
-or ).  [Only anon people need to run special software!  Look at minion
-reviews]  
-
-Second, the system must be {\bf usable}.  A hard-to-use system has
-fewer users --- and because anonymity systems hide users among users, a
-system with fewer users provides less anonymity.  Thus, usability is
-not only a convenience, but is a security requirement for anonymity
-systems.  In order to be usable, Tor should with most of a
-user's unmodified aplication; shouldn't introduce prohibitive delays; and 
-[XXX what else?].
-
-Third, the protocol must be {\bf extensible}, so that it can serve as
-a test-bed for future research in low-latency anonymity systems.
-(Note that while an extensible protocol benefits researchers, there is
-a danger that differing choices of extensions will render users
-distinguishable.  Thus, implementations should not permit different
-protocol extensions to coexist in a single deployed network.)
-
-% We should mention that there's a specification someplace: the spec makes us 
-% easier to extend too. -NM
-
-The protocol's design and security parameters must be {\bf
-conservative}.  Additional features impose implementation and
-complexity costs. [XXX Say that we don't want to try to come up with
-speculative solutions to problems we don't KNOW how to solve? -NM]
+\begin{description}
+\item[Deployability:] The design must be one which can be implemented,
+  deployed, and used in the real world.  This requirement precludes designs
+  that are expensive to run (for example, by requiring more bandwidth than
+  volunteers are willing to provide); designs that place a heavy liability
+  burden on operators (for example, by allowing attackers to implicate onion
+  routers in illegal activities); and designs that are difficult or expensive
+  to implement (for example, by requiring kernel patches, or separate proxies
+  for every protocol).  This requirement also precludes systems in which
+  users who do not benefit from anonymity are required to run special
+  software in order to communicate with anonymous parties.
+\item[Usability:] A hard-to-use system has fewer users---and because
+  anonymity systems hide users among users, a system with fewer users
+  provides less anonymity.  Thus, usability is not only a convenience, but is
+  a security requirement for anonymity systems.  In order to be usable, Tor
+  should work with most of a user's unmodified applications; shouldn't
+  introduce prohibitive delays; and should require the user to make as few
+  configuration decisions as possible.
+\item[Flexibility:] Third, the protocol must be flexible and
+  well-specified, so that it can serve as a test-bed for future research in
+  low-latency anonymity systems.  Many of the open problems in low-latency
+  anonymity networks (such as generating dummy traffic, or preventing
+  pseudospoofing attacks) may be solvable independently from the issues
+  solved by Tor; it would be beneficial if future systems were not forced to
+  reinvent Tor's design decisions.  (But note that while a flexible design
+  benefits researchers, there is a danger that differing choices of
+  extensions will render users distinguishable.  Thus, implementations should
+  not permit different protocol extensions to coexist in a single deployed
+  network.)
+\item[Conservative design:] The protocol's design and security parameters
+  must be conservative.  Because additional features impose implementation
+  and complexity costs, Tor should include as few speculative features as
+  possible.  (We do not oppose speculative designs in general; however, it is
+  our goal with Tor to embody a solution to the problems in low-latency
+  anonymity that we can solve today before we plunge into the problems of
+  tomorrow.)
+  % This last bit sounds completely cheesy.  Somebody should tone it down. -NM 
+\end{description}
 
 \subsection{Non-goals}
-In favoring conservative, deployable designs, we have explicitly
-deferred a number of goals --- not because they are not desirable in
-anonymity systems --- but because they are either solved
-elsewhere, or an area of active research without a generally accepted
-solution.
+In favoring conservative, deployable designs, we have explicitly deferred a
+number of goals---not because they are undesirable in anonymity systems---but
+these goals are either solved elsewhere, or present an area of active
+research lacking a generally accepted solution.
 
-Unlike Tarzan or Morphmix, Tor does not attempt to scale to completely
-decentralized peer-to-peer environments with thousands of short-lived
-servers, many of which may be controlled by an adversary.
-
-Tor does not claim to provide a definitive solution to end-to-end
-timing or intersection attacks for users who do not run their own
-Onion Routers.
-% Mention would-be approaches. -NM
-% Does that mean we do claim to solve intersection attack for
-% the enclave-firewall model? -RD
-
-Tor does not provide \emph{protocol normalization} like the Anonymizer or
-Privoxy.  In order to provide client indistinguishibility for
-complex and variable protocols such as HTTP, Tor must be layered with
-a filtering proxy such as Privoxy.  Similarly, Tor does not currently
-integrate tunneling for non-stream-based protocols; this too must be
-provided by an external service.
-
-Tor is not steganographic: it doesn't try to conceal which users are
-sending or receiving communications.
-
+\begin{description}
+\item[Not Peer-to-peer:] Unlike Tarzan or Morphmix, Tor does not attempt to
+  scale to completely decentralized peer-to-peer environments with thousands
+  of short-lived servers, many of which may be controlled by an adversary.
+\item[Not secure against end-to-end attacks:] Tor does not claim to provide a
+  definitive solution to end-to-end timing or intersection attacks for users
+  who do not run their own Onion Routers.
+  % Mention would-be approaches. -NM
+  % Does that mean we do claim to solve intersection attack for
+  % the enclave-firewall model? -RD
+  % I don't think we should. -NM
+\item[No protocol normalization:] Tor does not provide \emph{protocol
+  normalization} Privoxy or the Anonymizer.  In order to make clients
+  indistinguishable when they complex and variable protocols such as HTTP,
+  Tor must be layered with a filtering proxy such as Privoxy to hide
+  differences between clients, expunge protocol features that leak identity,
+  and so on.  Similarly, Tor does not currently integrate tunneling for
+  non-stream-based protocols; this too must be provided by an external
+  service.
+\item[Not steganographic:] Tor does doesn't try to conceal which users are
+  sending or receiving communications; it only tries to conceal whom they are
+  communicating with.
+\end{description}
 
 \SubSection{Adversary Model}
 \label{subsec:adversary-model}
 
-Like all practical low-latency systems, Tor is not secure against a
-global passive adversary, which is the most commonly assumed adversary
-for analysis of theoretical anonymous communication designs. The adversary
-we assume
-is weaker than global with respect to distribution, but it is not
-merely passive.
-We assume a threat model that expands on that from \cite{or-pet00}.
+Although a global passive adversary is the most commonly assumed when
+analyzing theoretical anonymity designs, like all practical low-latency
+systems, Tor is not secure against this adversary.  Instead, we assume an
+adversary that is weaker than global with respect to distribution, but that
+is not merely passive.  Our threat model expands on that from
+\cite{or-pet00}.
 
-
-The basic adversary components we consider are:
-\begin{description}
-\item[Observer:] can observe a connection (e.g., a sniffer on an
-  Internet router), but cannot initiate connections. Observations may
-  include timing and/or volume of packets as well as appearance of
-  individual packets (including headers and content).
-\item[Disrupter:] can delay (indefinitely) or corrupt traffic on a
-  link. Can change all those things that an observer can observe up to
-  the limits of computational ability (e.g., cannot forge signatures
-  unless a key is compromised).
-\item[Hostile initiator:] can initiate (or destroy) connections with
-  specific routes as well as vary the timing and content of traffic
-  on the connections it creates. A special case of the disrupter with
-  additional abilities appropriate to its role in forming connections.
-\item[Hostile responder:] can vary the traffic on the connections made
-  to it including refusing them entirely, intentionally modifying what
-  it sends and at what rate, and selectively closing them. Also a
-  special case of the disrupter.
-\item[Key breaker:] can break the key used to encrypt connection
-  initiation requests sent to a Tor-node.
-% Er, there are no long-term private decryption keys. They have
-% long-term private signing keys, and medium-term onion (decryption)
-% keys. Plus short-term link keys. Should we lump them together or
-% separate them out? -RD
+%%%% This is really keen analytical stuff, but it isn't our threat model:
+%%%% we just go ahead and assume a fraction of hostile nodes for
+%%%% convenience. -NM
 %
-%  Hmmm, I was talking about the keys used to encrypt the onion skin
-%  that contains the public DH key from the initiator. Is that what you
-%  mean by medium-term onion key? (``Onion key'' used to mean the
-%  session keys distributed in the onion, back when there were onions.)
-%  Also, why are link keys short-term? By link keys I assume you mean
-%  keys that neighbor nodes use to superencrypt all the stuff they send
-%  to each other on a link.  Did you mean the session keys? I had been
-%  calling session keys short-term and everything else long-term. I
-%  know I was being sloppy. (I _have_ written papers formalizing
-%  concepts of relative freshness.) But, there's some questions lurking
-%  here. First up, I don't see why the onion-skin encryption key should
-%  be any shorter term than the signature key in terms of threat
-%  resistance. I understand that how we update onion-skin encryption
-%  keys makes them depend on the signature keys. But, this is not the
-%  basis on which we should be deciding about key rotation. Another
-%  question is whether we want to bother with someone who breaks a
-%  signature key as a particular adversary. He should be able to do
-%  nearly the same as a compromised tor-node, although they're not the
-%  same. I reworded above, I'm thinking we should leave other concerns
-%  for later. -PS
+%% The basic adversary components we consider are:
+%% \begin{description}
+%% \item[Observer:] can observe a connection (e.g., a sniffer on an
+%%   Internet router), but cannot initiate connections. Observations may
+%%   include timing and/or volume of packets as well as appearance of
+%%   individual packets (including headers and content).
+%% \item[Disrupter:] can delay (indefinitely) or corrupt traffic on a
+%%   link. Can change all those things that an observer can observe up to
+%%   the limits of computational ability (e.g., cannot forge signatures
+%%   unless a key is compromised).
+%% \item[Hostile initiator:] can initiate (or destroy) connections with
+%%   specific routes as well as vary the timing and content of traffic
+%%   on the connections it creates. A special case of the disrupter with
+%%   additional abilities appropriate to its role in forming connections.
+%% \item[Hostile responder:] can vary the traffic on the connections made
+%%   to it including refusing them entirely, intentionally modifying what
+%%   it sends and at what rate, and selectively closing them. Also a
+%%   special case of the disrupter.
+%% \item[Key breaker:] can break the key used to encrypt connection
+%%   initiation requests sent to a Tor-node.
+%% % Er, there are no long-term private decryption keys. They have
+%% % long-term private signing keys, and medium-term onion (decryption)
+%% % keys. Plus short-term link keys. Should we lump them together or
+%% % separate them out? -RD
+%% %
+%% %  Hmmm, I was talking about the keys used to encrypt the onion skin
+%% %  that contains the public DH key from the initiator. Is that what you
+%% %  mean by medium-term onion key? (``Onion key'' used to mean the
+%% %  session keys distributed in the onion, back when there were onions.)
+%% %  Also, why are link keys short-term? By link keys I assume you mean
+%% %  keys that neighbor nodes use to superencrypt all the stuff they send
+%% %  to each other on a link.  Did you mean the session keys? I had been
+%% %  calling session keys short-term and everything else long-term. I
+%% %  know I was being sloppy. (I _have_ written papers formalizing
+%% %  concepts of relative freshness.) But, there's some questions lurking
+%% %  here. First up, I don't see why the onion-skin encryption key should
+%% %  be any shorter term than the signature key in terms of threat
+%% %  resistance. I understand that how we update onion-skin encryption
+%% %  keys makes them depend on the signature keys. But, this is not the
+%% %  basis on which we should be deciding about key rotation. Another
+%% %  question is whether we want to bother with someone who breaks a
+%% %  signature key as a particular adversary. He should be able to do
+%% %  nearly the same as a compromised tor-node, although they're not the
+%% %  same. I reworded above, I'm thinking we should leave other concerns
+%% %  for later. -PS
+%% \item[Hostile Tor node:] can arbitrarily manipulate the
+%%   connections under its control, as well as creating new connections
+%%   (that pass through itself).
+%% \end{description}
+%
+%% All feasible adversaries can be composed out of these basic
+%% adversaries. This includes combinations such as one or more
+%% compromised Tor-nodes cooperating with disrupters of links on which
+%% those nodes are not adjacent, or such as combinations of hostile
+%% outsiders and link observers (who watch links between adjacent
+%% Tor-nodes).  Note that one type of observer might be a Tor-node. This
+%% is sometimes called an honest-but-curious adversary. While an observer
+%% Tor-node will perform only correct protocol interactions, it might
+%% share information about connections and cannot be assumed to destroy
+%% session keys at end of a session.  Note that a compromised Tor-node is
+%% stronger than any other adversary component in the sense that
+%% replacing a component of any adversary with a compromised Tor-node
+%% results in a stronger overall adversary (assuming that the compromised
+%% Tor-node retains the same signature keys and other private
+%% state-information as the component it replaces).
 
+First, we assume most directory servers are honest, reliable, accurate, and
+trustworthy.  That is, we assume that users periodically cross-check server
+directories, and that they always have access to at least one directory
+server that they trust.
 
-\item[Hostile Tor node:] can arbitrarily manipulate the
-  connections under its control, as well as creating new connections
-  (that pass through itself).
-\end{description}
+Second, we assume that somewhere between ten percent and twenty
+percent\footnote{In some circumstances---for example, if the Tor network is
+  running on a hardened network where all operators have had background
+  checks---the number of compromised nodes could be much lower.} 
+of the Tor nodes accepted by the directory servers are compromised, hostile,
+and collaborating in an off-line clique.  These compromised nodes can
+arbitrarily manipulate the connections that pass through them, as well as
+creating new connections that pass through themselves.  They can observe
+traffic, and record it for later analysis.  Honest participants do not know
+which servers these are.
 
+(In reality, many realistic adversaries might have `bad' servers that are not
+fully compromised but simply under observation, or that have had their keys
+compromised.  But for the sake of analysis, we ignore, this possibility,
+since the threat model we assume is strictly stronger.)
 
-All feasible adversaries can be composed out of these basic
-adversaries. This includes combinations such as one or more
-compromised Tor-nodes cooperating with disrupters of links on which
-those nodes are not adjacent, or such as combinations of hostile
-outsiders and link observers (who watch links between adjacent
-Tor-nodes).  Note that one type of observer might be a Tor-node. This
-is sometimes called an honest-but-curious adversary. While an observer
-Tor-node will perform only correct protocol interactions, it might
-share information about connections and cannot be assumed to destroy
-session keys at end of a session.  Note that a compromised Tor-node is
-stronger than any other adversary component in the sense that
-replacing a component of any adversary with a compromised Tor-node
-results in a stronger overall adversary (assuming that the compromised
-Tor-node retains the same signature keys and other private
-state-information as the component it replaces).
+% This next paragraph is also more about analysis than it is about our
+% threat model.  Perhaps we can say, ``users can connect to the network and
+% use it in any way; we consider abusive attacks separately.'' ? -NM
+Third, we constrain the impact of hostile users.  Users are assumed to vary
+widely in both the duration and number of times they are connected to the Tor
+network. They can also be assumed to vary widely in the volume and shape of
+the traffic they send and receive. Hostile users are, by definition, limited
+to creating and varying their own connections into or through a Tor
+network. They may attack their own connections to try to gain identity
+information of the responder in a rendezvous connection. They can also try to
+attack sites through the Onion Routing network; however we will consider this
+abuse rather than an attack per se (see
+Section~\ref{subsec:exitpolicies}). Other than abuse, a hostile user's
+motivation to attack his own connections is limited to the network effects of
+such actions, such as denial of service (DoS) attacks.  Thus, in this case,
+we can view user as simply an extreme case of the ordinary user; although
+ordinary users are not likely to engage in, e.g., IP spoofing, to gain their
+objectives.
 
-
-In general we are more focused on traffic analysis attacks than
-traffic confirmation attacks. A user who runs a Tor proxy on his own
-machine, connects to some remote Tor-node and makes a connection to an
-open Internet site, such as a public web server, is vulnerable to
-traffic confirmation. That is, an active attacker who suspects that
-the particular client is communicating with the particular server will
-be able to confirm this if she can attack and observe both the
+In general, we are more focused on traffic analysis attacks than
+traffic confirmation attacks. 
+%A user who runs a Tor proxy on his own
+%machine, connects to some remote Tor-node and makes a connection to an
+%open Internet site, such as a public web server, is vulnerable to
+%traffic confirmation.
+That is, an active attacker who suspects that
+a particular client is communicating with a particular server can
+confirm this if she can modify and observe both the
 connection between the Tor network and the client and that between the
-Tor network and the server. Even a purely passive attacker will be
-able to confirm if the timing and volume properties of the traffic on
-the connnection are unique enough.  This is not to say that Tor offers
+Tor network and the server. Even a purely passive attacker can
+confirm traffic if the timing and volume properties of the traffic on
+the connection are unique enough.  (This is not to say that Tor offers
 no resistance to traffic confirmation; it does.  We defer discussion
 of this point and of particular attacks until Section~\ref{sec:attacks},
-after we have described Tor in more detail. However, we note here some
-basic assumptions that affect the threat model.
-
-[XXX I think this next subsection should be cut, leaving its points
-for the attacks section. But I'm leaving it here for now. The above
-line refers to the immediately following SubSection.-PS]
-
+after we have described Tor in more detail.)
 
 \SubSection{Known attacks against low-latency anonymity systems}
 \label{subsec:known-attacks}
@@ -622,57 +660,6 @@ directory attacks,
 tagging attacks,
 smear attacks,
 entrapment attacks
-
-
-\SubSection{Assumptions}
-% Should be merged into ``Threat model''.
-
-For purposes of this paper, we assume all directory servers are honest
-% No longer true, see subsec:dirservers below -RD
-and trusted. Perhaps more accurately, we assume that all users and
-nodes can perform their own periodic checks on information they have
-from directory servers and that all will always have access to at
-least one directory server that they trust and from which they obtain
-all directory information. Future work may include robustness
-techniques to cope with a minority dishonest servers.
-
-Somewhere between ten percent and twenty percent of nodes are assumed
-to be compromised. In some circumstances, e.g., if the Tor network is
-running on a hardened network where all operators have had
-background checks, the percent of compromised nodes might be much
-lower. It may be worthwhile to consider cases where many of the `bad'
-nodes are not fully compromised but simply (passive) observing
-adversaries or that some nodes have only had compromise of the keys
-that decrypt connection initiation requests. But, we assume for
-simplicity that `bad' nodes are compromised in the sense spelled out
-above. We assume that all adversary components, regardless of their
-capabilities are collaborating and are connected in an offline clique.
-
-Users are assumed to vary widely in both the duration and number of
-times they are connected to the Tor network. They can also be assumed
-to vary widely in the volume and shape of the traffic they send and
-receive. Hostile users are, by definition, limited to creating and
-varying their own connections into or through a Tor network. They may
-attack their own connections to try to gain identity information of
-the responder in a rendezvous connection. They may also try to attack
-sites through the Onion Routing network; however we will consider
-this abuse rather than an attack per se (see
-Section~\ref{subsec:exitpolicies}). Other than these, a hostile user's
-motivation to attack his own connections is limited to the network
-effects of such actions, e.g., DoS. Thus, in this case, we can view a
-hostile user as simply an extreme case of the ordinary user; although
-ordinary users are not likely to engage in, e.g., IP spoofing, to gain
-their objectives.
-
-% We do not assume any hostile users, except in the context of
-%
-% This sounds horrible. What do you mean we don't assume any hostile
-% users? Surely we can tolerate some? -RD
-%
-% Better? -PS
-
-
-[XXX what else?]
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
