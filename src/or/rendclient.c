@@ -197,6 +197,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request
 
   /* All is well. Extend the circuit. */
   circ->purpose = CIRCUIT_PURPOSE_C_REND_JOINED;
+  hop->state = CPATH_STATE_OPEN;
   onion_append_to_cpath(&circ->cpath, hop);
   circ->build_state->pending_final_cpath = NULL; /* prevent double-free */
 
