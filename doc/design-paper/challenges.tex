@@ -56,18 +56,18 @@ coordination between nodes, and provides a reasonable tradeoff between
 anonymity, usability, and efficiency.
 
 We first publicly deployed a Tor network in October 2003; since then it has
-grown to over a hundred volunteer servers and as much as 80 megabits of
+grown to over a hundred volunteer Tor routers (TRs)
+and as much as 80 megabits of
 average traffic per second.  Tor's research strategy has focused on deploying
 a network to as many users as possible; thus, we have resisted designs that
-would compromise deployability by imposing high resource demands on server
+would compromise deployability by imposing high resource demands on TR
 operators, and designs that would compromise usability by imposing
 unacceptable restrictions on which applications we support.  Although this
 strategy has
 its drawbacks (including a weakened threat model, as discussed below), it has
-made it possible for Tor to serve many thousands of users, and attract
-research funding from organizations so diverse as ONR and DARPA
-(for use in securing sensitive communications), and the Electronic Frontier
-Foundation (for maintaining civil liberties of ordinary citizens online).
+made it possible for Tor to serve many thousands of users and attract
+funding from diverse sources whose goals range from security on a
+national scale down to the liberties of each individual.
 
 While the Tor design paper~\cite{tor-design} gives an overall view of Tor's
 design and goals, this paper describes some policy, social, and technical
@@ -107,7 +107,9 @@ compare Tor to other low-latency anonymity designs.
 %details on the design, assumptions, and security arguments, we refer
 %the reader to the Tor design paper~\cite{tor-design}.
 
-\subsubsection{How Tor works}
+%\medskip
+\noindent
+{\bf How Tor works.}
 Tor provides \emph{forward privacy}, so that users can connect to
 Internet sites without revealing their logical or physical locations
 to those sites or to observers.  It also provides \emph{location-hidden
@@ -118,14 +120,14 @@ infrastructure is controlled by an adversary.
 
 To create a private network pathway with Tor, the client software
 incrementally builds a \emph{circuit} of encrypted connections through
-servers on the network. The circuit is extended one hop at a time, and
-each server along the way knows only which server gave it data and which
-server it is giving data to. No individual server ever knows the complete
+Tor routers on the network. The circuit is extended one hop at a time, and
+each TR along the way knows only which TR gave it data and which
+TR it is giving data to. No individual TR ever knows the complete
 path that a data packet has taken. The client negotiates a separate set
 of encryption keys for each hop along the circuit.% to ensure that each
 %hop can't trace these connections as they pass through.
-Because each server sees no more than one hop in the
-circuit, neither an eavesdropper nor a compromised server can use traffic
+Because each TR sees no more than one hop in the
+circuit, neither an eavesdropper nor a compromised TR can use traffic
 analysis to link the connection's source and destination.
 For efficiency, the Tor software uses the same circuit for all the TCP
 connections that happen within the same short period.
@@ -146,18 +148,18 @@ Privoxy~\cite{privoxy} for HTTP.  Furthermore, Tor does not permit arbitrary
 IP packets; it only anonymizes TCP streams and DNS request, and only supports
 connections via SOCKS (see Section~\ref{subsec:tcp-vs-ip}).
 
-Most servers operators do not want to allow arbitary TCP connections to leave
-their servers.  To address this, Tor provides \emph{exit policies} so that
-each server can block the IP addresses and ports it is unwilling to allow.
-Servers advertise their exit policies to the directory servers, so that
-client can tell which servers will support their connections.
+Most TR operators do not want to allow arbitary TCP connections to leave
+their TRs.  To address this, Tor provides \emph{exit policies} so that
+each TR can block the IP addresses and ports it is unwilling to allow.
+TRs advertise their exit policies to the directory servers, so that
+client can tell which TRs will support their connections.
 
-As of January 2005, the Tor network has grown to around a hundred servers
+As of January 2005, the Tor network has grown to around a hundred TRs
 on four continents, with a total capacity exceeding 1Gbit/s. Appendix A
-shows a graph of the number of working servers over time, as well as a
+shows a graph of the number of working TRs over time, as well as a
 vgraph of the number of bytes being handled by the network over time. At
 this point the network is sufficiently diverse for further development
-and testing; but of course we always encourage and welcome new servers
+and testing; but of course we always encourage and welcome new TRs
 to join the network.
 
 Tor research and development has been funded by the U.S.~Navy and DARPA
@@ -173,7 +175,9 @@ their popular Java Anon Proxy anonymizing client.
 %interests helps maintain both the stability and the security of the
 %network.
 
-\subsubsection{Threat models and design philosophy}
+\medskip
+\noindent
+{\bf Threat models and design philosophy.}
 The ideal Tor network would be practical, useful and and anonymous. When
 trade-offs arise between these properties, Tor's research strategy has been
 to insist on remaining useful enough to attract many users,
@@ -210,29 +214,77 @@ parties.  Known solutions to this attack would seem to require introducing a
 prohibitive degree of traffic padding between the user and the network, or
 introducing an unacceptable degree of latency (but see Section
 \ref{subsec:mid-latency}).  Also, it is not clear that these methods would
-work at all against a minimally active adversary that can introduce timing
+work at all against even a minimally active adversary that can introduce timing
 patterns or additional traffic.  Thus, Tor only attempts to defend against
 external observers who cannot observe both sides of a user's connection.
 
-Against internal attackers who sign up Tor servers, the situation is more
+The distinction between traffic correlation and traffic analysis is
+not as cut and dried as we might wish. In \cite{hintz-pet02} it was
+shown that if data volumes of various popular
+responder destinations are catalogued, it may not be necessary to
+observe both ends of a stream to learn a source-destination link.
+This should be fairly effective without simultaneously observing both
+ends of the connection. However, it is still essentially confirming
+suspected communicants where the responder suspects are ``stored'' rather
+than observed at the same time as the client.
+Similarly latencies of going through various routes can be
+catalogued~\cite{back01} to connect endpoints.
+This is likely to entail high variability and massive storage since
+% XXX hintz-pet02 just looked at data volumes of the sites. this
+% doesn't require much variability or storage. I think it works
+% quite well actually. Also, \cite{kesdogan:pet2002} takes the
+% attack another level further, to narrow down where you could be
+% based on an intersection attack on subpages in a website. -RD
+%
+% I was trying to be terse and simultaneously referring to both the
+% Hintz stuff and the Back et al. stuff from Info Hiding 01. I've
+% separated the two and added the references. -PFS
+routes through the network to each site will be random even if they
+have relatively unique latency characteristics. So this does not seem
+an immediate practical threat. Further along similar lines, the same
+paper suggested a ``clogging attack''. In \cite{attack-tor-oak05}, a
+version of this was demonstrated to be practical against portions of
+the fifty node Tor network as deployed in mid 2004. There it was shown
+that an outside attacker can trace a stream through the Tor network
+while a stream is still active simply by observing the latency of his
+own traffic sent through various Tor nodes. These attacks do not show
+the client address, only the first TR within the Tor network, making
+helper nodes all the more worthy of exploration (cf.,
+Section~{subsec:helper-nodes}).
+
+Against internal attackers who sign up Tor routers, the situation is more
 complicated.  In the simplest case, if an adversary has compromised $c$ of
-$n$ servers on the Tor network, then the adversary will be able to compromise
+$n$ TRs on the Tor network, then the adversary will be able to compromise
 a random circuit with probability $\frac{c^2}{n^2}$ (since the circuit
 initiator chooses hops randomly).  But there are
 complicating factors:
-\begin{tightlist}
-\item If the user continues to build random circuits over time, an adversary
+(1)~If the user continues to build random circuits over time, an adversary
   is pretty certain to see a statistical sample of the user's traffic, and
   thereby can build an increasingly accurate profile of her behavior.  (See
   \ref{subsec:helper-nodes} for possible solutions.)
-\item An adversary who controls a popular service outside of the Tor network
+(2)~An adversary who controls a popular service outside of the Tor network
   can be certain of observing all connections to that service; he
   therefore will trace connections to that service with probability
   $\frac{c}{n}$.
-\item Users do not in fact choose servers with uniform probability; they
-  favor servers with high bandwidth or uptime, and exit servers that
-  permit connections to their favorite services.
-\end{tightlist}
+(3)~Users do not in fact choose TRs with uniform probability; they
+  favor TRs with high bandwidth or uptime, and exit TRs that
+  permit connections to their favorite services. 
+See Section~\ref{subsec:routing-zones} for discussion of larger
+adversaries and our dispersal goals.
+
+%\begin{tightlist}
+%\item If the user continues to build random circuits over time, an adversary
+%  is pretty certain to see a statistical sample of the user's traffic, and
+%  thereby can build an increasingly accurate profile of her behavior.  (See
+%  \ref{subsec:helper-nodes} for possible solutions.)
+%\item An adversary who controls a popular service outside of the Tor network
+%  can be certain of observing all connections to that service; he
+%  therefore will trace connections to that service with probability
+%  $\frac{c}{n}$.
+%\item Users do not in fact choose TRs with uniform probability; they
+%  favor TRs with high bandwidth or uptime, and exit TRs that
+%  permit connections to their favorite services.
+%\end{tightlist}
 
 %discuss $\frac{c^2}{n^2}$, except how in practice the chance of owning
 %the last hop is not $c/n$ since that doesn't take the destination (website)
@@ -247,9 +299,6 @@ complicating factors:
 
 % XXXX the below paragraph should probably move later, and merge with
 % other discussions of attack-tor-oak5.
-
-See \ref{subsec:routing-zones} for discussion of larger
-adversaries and our dispersal goals.
 
 %Murdoch and Danezis describe an attack
 %\cite{attack-tor-oak05} that lets an attacker determine the nodes used
@@ -275,10 +324,12 @@ adversaries and our dispersal goals.
 %address this issue.
 
 
-\subsubsection{Distributed trust}
+\medskip
+\noindent
+{\bf Distributed trust.}
 In practice Tor's threat model is based entirely on the goal of
 dispersal and diversity.
-Tor's defense lies in having a diverse enough set of servers
+Tor's defense lies in having a diverse enough set of TRs
 to prevent most real-world
 adversaries from being in the right places to attack users.
 Tor aims to resist observers and insiders by distributing each transaction
@@ -330,10 +381,16 @@ network~\cite{freedom21-security} was even more flexible than Tor in
 that it could transport arbitrary IP packets, and it also supported
 pseudonymous access rather than just anonymous access; but it had
 a different approach to sustainability (collecting money from users
-and paying ISPs to run servers), and has shut down due to financial
-load.  Finally, more scalable designs like Tarzan~\cite{tarzan:ccs02} and
+and paying ISPs to run Tor routers), and was shut down due to financial
+load.  Finally, potentially
+more scalable designs like Tarzan~\cite{tarzan:ccs02} and
 MorphMix~\cite{morphmix:fc04} have been proposed in the literature, but
-have not yet been fielded. We direct the interested reader to Section
+have not yet been fielded. All of these systems differ somewhat
+in threat model and presumably practical resistance to threats.
+Morphmix is very close to Tor in circuit setup. And, by separating
+node discovery from route selection from circuit setup, Tor is
+flexible enough to potentially contain a Morphmix experiment within
+it. We direct the interested reader to Section
 2 of~\cite{tor-design} for a more in-depth review of related work.
 
 Tor differs from other deployed systems for traffic analysis resistance
@@ -352,13 +409,13 @@ financial health as well as network security.
 %XXXX six-four. crowds. i2p.
 
 %XXXX
-have a serious discussion of morphmix's assumptions, since they would
-seem to be the direct competition. in fact tor is a flexible architecture
-that would encompass morphmix, and they're nearly identical except for
-path selection and node discovery. and the trust system morphmix has
-seems overkill (and/or insecure) based on the threat model we've picked.
+%have a serious discussion of morphmix's assumptions, since they would
+%seem to be the direct competition. in fact tor is a flexible architecture
+%that would encompass morphmix, and they're nearly identical except for
+%path selection and node discovery. and the trust system morphmix has
+%seems overkill (and/or insecure) based on the threat model we've picked.
 % this para should probably move to the scalability / directory system. -RD
-
+% Nope. Cut for space, except for small comment added above -PFS
 
 \section{Crossroads: Policy issues}
 \label{sec:crossroads-policy}
@@ -402,7 +459,7 @@ traffic.
 However, there's a catch. For users to share the same anonymity set,
 they need to act like each other. An attacker who can distinguish
 a given user's traffic from the rest of the traffic will not be
-distracted by other users on the network. For high-latency systems like
+distracted by anonymity set size. For high-latency systems like
 Mixminion, where the threat model is based on mixing messages with each
 other, there's an arms race between end-to-end statistical attacks and
 counter-strategies~\cite{statistical-disclosure,minion-design,e2e-traffic,trickle02}.
@@ -416,16 +473,16 @@ the responder.
 
 Like Tor, the current JAP implementation does not pad connections
 (apart from using small fixed-size cells for transport). In fact,
-its cascade-based network topology may be even more vulnerable to these
+JAP's cascade-based network topology may be even more vulnerable to these
 attacks, because the network has fewer edges. JAP was born out of
 the ISDN mix design~\cite{isdn-mixes}, where padding made sense because
 every user had a fixed bandwidth allocation, but in its current context
 as a general Internet web anonymizer, adding sufficient padding to JAP
-would be prohibitively expensive.\footnote{Even if they could find and
-maintain extra funding to run higher-capacity nodes, our experience
+would be prohibitively expensive.\footnote{Even if they could fund
+(indefinitely) higher-capacity nodes, our experience
 suggests that many users would not accept the increased per-user
 bandwidth requirements, leading to an overall much smaller user base. But
-see Section \ref{subsec:mid-latency}.} Therefore, since under this threat
+cf.\ Section \ref{subsec:mid-latency}.} Therefore, since under this threat
 model the number of concurrent users does not seem to have much impact
 on the anonymity provided, we suggest that JAP's anonymity meter is not
 correctly communicating security levels to its users.
@@ -445,21 +502,21 @@ the only user who has ever downloaded the software, it might be socially
 accepted, but she's not getting much anonymity. Add a thousand animal rights
 activists, and she's anonymous, but everyone thinks she's a Bambi lover (or
 NRA member if you prefer a contrasting example). Add a thousand
-random citizens (cancer survivors, privacy enthusiasts, and so on)
+diverse citizens (cancer survivors, privacy enthusiasts, and so on)
 and now she's harder to profile.
 
-Furthermore, the network's reputability effects its server base: more people
+Furthermore, the network's reputability affects its router base: more people
 are willing to run a service if they believe it will be used by human rights
 workers than if they believe it will be used exclusively for disreputable
-ends.  This effect becomes stronger if server operators themselves think they
+ends.  This effect becomes stronger if TR operators themselves think they
 will be associated with these disreputable ends.
 
 So the more cancer survivors on Tor, the better for the human rights
 activists. The more malicious hackers, the worse for the normal users. Thus,
 reputability is an anonymity issue for two reasons. First, it impacts
 the sustainability of the network: a network that's always about to be
-shut down has difficulty attracting and keeping servers, so its diversity
-suffers. Second, a disreputable network is more vulnerable to legal and
+shut down has difficulty attracting and keeping adquate TRs.
+Second, a disreputable network is more vulnerable to legal and
 political attacks, since it will attract fewer supporters.
 
 While people therefore have an incentive for the network to be used for
@@ -478,7 +535,6 @@ The impact of public perception on security is especially important
 during the bootstrapping phase of the network, where the first few
 widely publicized uses of the network can dictate the types of users it
 attracts next.
-
 As an example, some some U.S.~Department of Energy
 penetration testing engineers are tasked with compromising DoE computers
 from the outside. They only have a limited number of ISPs from which to
@@ -497,7 +553,7 @@ to dissuade them.
 
 \subsection{Sustainability and incentives}
 One of the unsolved problems in low-latency anonymity designs is
-how to keep the servers running.  Zero-Knowledge Systems's Freedom network
+how to keep the nodes running.  Zero-Knowledge Systems's Freedom network
 depended on paying third parties to run its servers; the JAP project's
 bandwidth depends on grants to pay for its bandwidth and
 administrative expenses.  In Tor, bandwidth and administrative costs are
@@ -508,33 +564,35 @@ funding.\footnote{It also helps that Tor is implemented with free and open
   inclination.}  But why are these volunteers running nodes, and what can we
 do to encourage more volunteers to do so?
 
-We have not surveyed Tor operators to learn why they are running servers, but
+We have not formally surveyed Tor node operators to learn why they are
+running TRs, but
 from the information they have provided, it seems that many of them run Tor
 nodes for reasons of personal interest in privacy issues.  It is possible
-that others are running Tor for anonymity reasons, but of course they are
-hardly likely to tell us if they are.
-
-Significantly, Tor's threat model changes the anonymity incentives for running
-a server.  In a high-latency mix network, users can receive additional
-anonymity by running their own server, since doing so obscures when they are
-injecting messages into the network.  But in Tor, anybody observing a Tor
-server can tell when the server is generating traffic that corresponds to
-none of its incoming traffic.
-Still, anonymity and privacy incentives do remain for server operators:
-\begin{tightlist}
-\item Against a hostile website, running a Tor exit node can provide a degree
-  of ``deniability'' for traffic that originates at that exit node.  For
-  example, it is likely in practice that HTTP requests from a Tor server's IP
-  will be assumed to be from the Tor network.
-\item People and organizations who use Tor for anonymity depend on the
-  continued existence of the Tor network to do so; running a server helps to
+that others are running Tor for their own
+anonymity reasons, but of course they are
+hardly likely to tell us specifics if they are.
+%Significantly, Tor's threat model changes the anonymity incentives for running
+%a TR.  In a high-latency mix network, users can receive additional
+%anonymity by running their own TR, since doing so obscures when they are
+%injecting messages into the network.  But, anybody observing all I/O to a Tor
+%TR can tell when the TR is generating traffic that corresponds to
+%none of its incoming traffic.
+%
+%I didn't buy the above for reason's subtle enough that I just cut it -PFS
+Tor exit node operators do attain a degree of
+``deniability'' for traffic that originates at that exit node.  For
+  example, it is likely in practice that HTTP requests from a Tor node's IP
+  will be assumed to be from the Tor network. 
+  More significantly, people and organizations who use Tor for
+  anonymity depend on the
+  continued existence of the Tor network to do so; running a TR helps to
   keep the network operational.
-%\item Local Tor entry and exit servers allow users on a network to run in an
+%\item Local Tor entry and exit TRs allow users on a network to run in an
 %  `enclave' configuration.  [XXXX need to resolve this. They would do this
 %   for E2E encryption + auth?]
-\end{tightlist}
 
-We must try to make the costs of running a Tor server easily minimized.
+
+%We must try to make the costs of running a Tor node easily minimized.
 Since Tor is run by volunteers, the most crucial software usability issue is
 usability by operators: when an operator leaves, the network becomes less
 usable by everybody.  To keep operators pleased, we must try to keep Tor's
@@ -543,20 +601,19 @@ resource and administrative demands as low as possible.
 Because of ISP billing structures, many Tor operators have underused capacity
 that they are willing to donate to the network, at no additional monetary
 cost to them.  Features to limit bandwidth have been essential to adoption.
-Also useful has been a ``hibernation'' feature that allows a server that
+Also useful has been a ``hibernation'' feature that allows a TR that
 wants to provide high bandwidth, but no more than a certain amount in a
 giving billing cycle, to become dormant once its bandwidth is exhausted, and
 to reawaken at a random offset into the next billing cycle.  This feature has
 interesting policy implications, however; see
-section~\ref{subsec:bandwidth-and-filesharing} below.
-
+Section~\ref{subsec:bandwidth-and-filesharing} below.
 Exit policies help to limit administrative costs by limiting the frequency of
 abuse complaints.
 
-%[XXXX say more.  Why else would you run a server? What else can we do/do we
-%  already do to make running a server more attractive?]
+%[XXXX say more.  Why else would you run a TR? What else can we do/do we
+%  already do to make running a TR more attractive?]
 %[We can enforce incentives; see Section 6.1. We can rate-limit clients.
-%  We can put "top bandwidth servers lists" up a la seti@home.]
+%  We can put "top bandwidth TRs lists" up a la seti@home.]
 
 
 \subsection{Bandwidth and filesharing}
@@ -564,14 +621,13 @@ abuse complaints.
 %One potentially problematical area with deploying Tor has been our response
 %to file-sharing applications.
 Once users have configured their applications to work with Tor, the largest
-remaining usability issue is bandwidth.  When websites ``feel slow,'' users
-begin to suffer.
-
-Clients currently try to build their connections through servers that they
+remaining usability issues is performance.  Users begin to suffer
+when websites ``feel slow''.
+Clients currently try to build their connections through TRs that they
 guess will have enough bandwidth.  But even if capacity is allocated
 optimally, it seems unlikely that the current network architecture will have
 enough capacity to provide every user with as much bandwidth as she would
-receive if she weren't using Tor, unless far more servers join the network
+receive if she weren't using Tor, unless far more TRs join the network
 (see above).
 
 %Limited capacity does not destroy the network, however.  Instead, usage tends
@@ -592,7 +648,7 @@ however, are more interesting.  Typical exit node operators want to help
 people achieve private and anonymous speech, not to help people (say) host
 Vin Diesel movies for download; and typical ISPs would rather not
 deal with customers who incur them the overhead of getting menacing letters
-from the MPAA.  While it is quite likely that the operators are doing nothing
+from the MPAA\@.  While it is quite likely that the operators are doing nothing
 illegal, many ISPs have policies of dropping users who get repeated legal
 threats regardless of the merits of those threats, and many operators would
 prefer to avoid receiving legal threats even if those threats have little
@@ -607,7 +663,7 @@ block filesharing would have to find some way to integrate Tor with a
 protocol-aware exit filter.  This could be a technically expensive
 undertaking, and one with poor prospects: it is unlikely that Tor exit nodes
 would succeed where so many institutional firewalls have failed.  Another
-possibility for sensitive operators is to run a restrictive server that
+possibility for sensitive operators is to run a restrictive TR that
 only permits exit connections to a restricted range of ports which are
 not frequently associated with file sharing.  There are increasingly few such
 ports.
@@ -642,42 +698,41 @@ Internet with vandalism, rude mail, and so on.
 %[XXX we're not talking bandwidth abuse here, we're talking vandalism,
 %hate mails via hotmail, attacks, etc.]
 Our initial answer to this situation was to use ``exit policies''
-to allow individual Tor servers to block access to specific IP/port ranges.
+to allow individual Tor routers to block access to specific IP/port ranges.
 This approach was meant to make operators more willing to run Tor by allowing
-them to prevent their servers from being used for abusing particular
-services.  For example, all Tor servers currently block SMTP (port 25), in
+them to prevent their TRs from being used for abusing particular
+services.  For example, all Tor nodes currently block SMTP (port 25), in
 order to avoid being used to send spam.
 
 This approach is useful, but is insufficient for two reasons.  First, since
-it is not possible to force all servers to block access to any given service,
+it is not possible to force all TRs to block access to any given service,
 many of those services try to block Tor instead.  More broadly, while being
 blockable is important to being good netizens, we would like to encourage
 services to allow anonymous access; services should not need to decide
 between blocking legitimate anonymous use and allowing unlimited abuse.
 
 This is potentially a bigger problem than it may appear. 
-On the one hand, if people want to refuse connections from you on
-their servers it would seem that they should be allowed to.  But, a
-possible major problem with the blocking of Tor is that it's not just
-the decision of the individual server administrator whose deciding if
-he wants to post to Wikipedia from his Tor node address or allow
+On the one hand, if people want to refuse connections from your address to
+their servers it would seem that they should be allowed.  But, it's not just
+for himself that the individual TR administrator is deciding when he decides
+if he wants to post to Wikipedia from his Tor node address or allow
 people to read Wikipedia anonymously through his Tor node. (Wikipedia
 has blocked all posting from all Tor nodes based on IP address.) If e.g.,
 s/he comes through a campus or corporate NAT, then the decision must
 be to have the entire population behind it able to have a Tor exit
-node or to have write access to Wikipedia. This is a loss for both of us (Tor
-and Wikipedia). We don't want to compete for (or divvy up) the NAT
+node or to have write access to Wikipedia. This is a loss for both Tor
+and Wikipedia. We don't want to compete for (or divvy up) the NAT
 protected entities of the world.
 
-(A related problem is that many IP blacklists are not terribly fine-grained.
+Worse, many IP blacklists are not terribly fine-grained.
 No current IP blacklist, for example, allow a service provider to blacklist
-only those Tor servers that allow access to a specific IP or port, even
+only those Tor routers that allow access to a specific IP or port, even
 though this information is readily available.  One IP blacklist even bans
-every class C network that contains a Tor server, and recommends banning SMTP
+every class C network that contains a Tor router, and recommends banning SMTP
 from these networks even though Tor does not allow SMTP at all.  This
 coarse-grained approach is typically a strategic decision to discourage the
 operation of anything resembling an open proxy by encouraging its neighbors
-to shut it down in order to get unblocked themselves.)
+to shut it down in order to get unblocked themselves.
 %[****Since this is stupid and we oppose it, shouldn't we name names here -pfs]
 %[XXX also, they're making \emph{middleman nodes leave} because they're caught
 % up in the standoff!]
@@ -690,8 +745,8 @@ Wikipedia, which rely on IP blocking to ban abusive users.  While at first
 blush this practice might seem to depend on the anachronistic assumption that
 each IP is an identifier for a single user, it is actually more reasonable in
 practice: it assumes that non-proxy IPs are a costly resource, and that an
-abuser can not change IPs at will.  By blocking IPs which are used by Tor
-servers, open proxies, and service abusers, these systems hope to make
+abuser can not change IPs at will.  By blocking IPs which are used by TRs,
+open proxies, and service abusers, these systems hope to make
 ongoing abuse difficult.  Although the system is imperfect, it works
 tolerably well for them in practice.
 
@@ -725,14 +780,14 @@ time.
 %  be less hassle for them to block tor anyway.
 %\end{tightlist}
 
-The use of squishy IP-based ``authentication'' and ``authorization''
-has not broken down even to the level that SSNs used for these
-purposes have in commercial and public record contexts. Externalities
-and misplaced incentives cause a continued focus on fighting identity
-theft by protecting SSNs rather than developing better authentication
-and incentive schemes \cite{price-privacy}. Similarly we can expect a
-continued use of identification by IP number as long as there is no
-workable alternative.
+%The use of squishy IP-based ``authentication'' and ``authorization''
+%has not broken down even to the level that SSNs used for these
+%purposes have in commercial and public record contexts. Externalities
+%and misplaced incentives cause a continued focus on fighting identity
+%theft by protecting SSNs rather than developing better authentication
+%and incentive schemes \cite{price-privacy}. Similarly we can expect a
+%continued use of identification by IP number as long as there is no
+%workable alternative.
 
 %Fortunately, our modular design separates
 %routing from node discovery; so we could implement Morphmix in Tor just
@@ -779,10 +834,10 @@ Also, TLS over UDP is not implemented or even
 specified, though some early work has begun on that~\cite{dtls}.
 \item \emph{We'll still need to tune network parameters}. Since the above
 encryption system will likely need sequence numbers (and maybe more) to do
-replay detection, handle duplicate frames, etc, we will be reimplementing
+replay detection, handle duplicate frames, etc., we will be reimplementing
 some subset of TCP anyway.
 \item \emph{Exit policies for arbitrary IP packets mean building a secure
-IDS.}  Our server operators tell us that exit policies are one of
+IDS\@.}  Our node operators tell us that exit policies are one of
 the main reasons they're willing to run Tor.
 Adding an Intrusion Detection System to handle exit policies would
 increase the security complexity of Tor, and would likely not work anyway,
@@ -795,21 +850,20 @@ characterize the exit policies and let clients parse them to predict
 which nodes will allow which packets to exit.
 \item \emph{The Tor-internal name spaces would need to be redesigned.} We
 support hidden service {\tt{.onion}} addresses, and other special addresses
-like {\tt{.exit}} for the user to request a particular exit server,
+like {\tt{.exit}} for the user to request a particular exit node,
 by intercepting the addresses when they are passed to the Tor client.
 \end{enumerate}
 
 This list is discouragingly long right now, but we recognize that it
 would be good to investigate each of these items in further depth and to
 understand which are actual roadblocks and which are easier to resolve
-than we think. We certainly wouldn't mind if Tor one day is able to
-transport a greater variety of protocols.
-[XXX clarify our actual attitude here. -NM]
+than we think. Greater flexibility to transport various protocols obviously
+has some advantages.
 
 To be fair, Tor's stream-based approach has run into practical
 stumbling blocks as well. While Tor supports the SOCKS protocol,
 which provides a standardized interface for generic TCP proxies, many
-applications do not support SOCKS. Supporting such applications requires
+applications do not support SOCKS\@. Supporting such applications requires
 replacing the networking system calls with SOCKS-aware
 versions, or running a SOCKS tunnel locally, neither of which is
 easy for the average user---even with good instructions.
@@ -842,9 +896,7 @@ First, we need to learn whether we can trade a small increase in latency
 for a large anonymity increase, or if we'll end up trading a lot of
 latency for a small security gain. It would be worthwhile even if we
 can only protect certain use cases, such as infrequent short-duration
-transactions.
-
-  In order to answer this question, we might
+transactions.  In order to answer this question, we might
 try to adapt the techniques of~\cite{e2e-traffic} to a lower-latency mix
 network, where instead of sending messages, users send batches
 of cells in temporally clustered connections.
@@ -854,10 +906,8 @@ the latency could be kept to two or three times its current overhead, this
 might be acceptable to most Tor users. However, it might also destroy much of
 the user base, and it is difficult to know in advance.  Note also that in
 practice, as the network grows to incorporate more DSL and cable-modem nodes,
-and more nodes in various continents, this alone will \emph{already} cause
-many-second delays for some transactions.  Reducing this latency will be
-hard, so perhaps it's worth considering whether accepting this higher latency
-can improve the anonymity we provide.  Also, it could be possible to
+and more nodes in various continents, there are \emph{already}
+many-second increases for some transactions.  It could be possible to
 run a mid-latency option over the Tor network for those
 users either willing to experiment or in need of more
 anonymity.  This would allow us to experiment with both
@@ -869,18 +919,14 @@ low- or mid- latency as they are constructed. Low-latency traffic
 would be processed as now, while cells on circuits that are mid-latency
 would be sent in uniform-size chunks at synchronized intervals.  (Traffic
 already moves through the Tor network in fixed-sized cells; this would
-increase the granularity.)  If servers forward these chunks in roughly
+increase the granularity.)  If TRs forward these chunks in roughly
 synchronous  fashion, it will increase the similarity of data stream timing
 signatures. By experimenting with the granularity of data chunks and
 of synchronization we can attempt once again to optimize for both
 usability and anonymity. Unlike in \cite{sync-batching}, it may be
-impractical to synchronize on network batches by dropping chunks from
-a batch that arrive late at a given node---unless Tor moves away from
-stream processing to a more loss-tolerant paradigm (cf.\
-Section~\ref{subsec:tcp-vs-ip}). Instead, batch timing would be obscured by
-synchronizing batches at the link level, and there would
-be no direct attempt to synchronize all batches
-entering the Tor network at the same time.
+impractical to synchronize on end-to-end network batches.
+But, batch timing could be obscured by
+synchronizing batches at the link level.
 %Alternatively, if end-to-end traffic correlation is the
 %concern, there is little point in mixing.
 %   Why not?? -NM
@@ -896,74 +942,6 @@ mid-latency option; however, we should continue the caution with which
 we have always approached padding lest the overhead cost us too much
 performance or too many volunteers.
 
-The distinction between traffic correlation and traffic analysis is
-not as cut and dried as we might wish. In \cite{hintz-pet02} it was
-shown that if data volumes of various popular
-responder destinations are catalogued, it may not be necessary to
-observe both ends of a stream to learn a source-destination link.
-This should be fairly effective without simultaneously observing both
-ends of the connection. However, it is still essentially confirming
-suspected communicants where the responder suspects are ``stored'' rather
-than observed at the same time as the client.
-Similarly latencies of going through various routes can be
-catalogued~\cite{back01} to connect endpoints.
-This is likely to entail high variability and massive storage since
-% XXX hintz-pet02 just looked at data volumes of the sites. this
-% doesn't require much variability or storage. I think it works
-% quite well actually. Also, \cite{kesdogan:pet2002} takes the
-% attack another level further, to narrow down where you could be
-% based on an intersection attack on subpages in a website. -RD
-%
-% I was trying to be terse and simultaneously referring to both the
-% Hintz stuff and the Back et al. stuff from Info Hiding 01. I've
-% separated the two and added the references. -PFS
-routes through the network to each site will be random even if they
-have relatively unique latency characteristics. So this does
-not seem an immediate practical threat. Further along similar lines,
-the same paper suggested a ``clogging attack''. A version of this
-was demonstrated to be practical in
-\cite{attack-tor-oak05}. There it was shown that an outside attacker can
-trace a stream through the Tor network while a stream is still active
-simply by observing the latency of his own traffic sent through
-various Tor nodes. These attacks are especially significant since they
-counter previous results that running one's own onion router protects
-better than using the network from the outside. The attacks do not
-show the client address, only the first server within the Tor network,
-making helper nodes all the more worthy of exploration for enclave
-protection. Setting up a mid-latency subnet as described above would
-be another significant step to evaluating resistance to such attacks.
-
-The attacks in \cite{attack-tor-oak05} are also dependent on
-cooperation of the responding application or the ability to modify or
-monitor the responder stream, in order of decreasing attack
-effectiveness.  So, another way to slow some of these attacks
-would be to cache responses at exit servers where possible, as it is with
-DNS lookups and cacheable HTTP responses.  Caching would, however,
-create threats of its own. First, a Tor network is expected to contain
-hostile nodes. If one of these is the repository of a cache, the
-attack is still possible. Though more work to set up a Tor node and
-cache repository, the payoff of such an attack is potentially
-higher.
-%To be
-%useful, such caches would need to be distributed to any likely exit
-%nodes of recurred requests for the same data.
-%   Even local caches could be useful, I think. -NM
-%
-%Added some clarification -PFS
-Besides allowing any other insider attacks, caching nodes would hold a
-record of destinations and data visited by Tor users reducing forward
-anonymity. Worse, for the cache to be widely useful much beyond the
-client that caused it there would have to either be a new mechanism to
-distribute cache information around the network and a way for clients
-to make use of it or the caches themselves would need to be
-distributed widely. Either way the record of visited sites and
-downloaded information is made automatically available to an attacker
-without having to actively gather it himself.  Besides its inherent
-value, this could serve as useful data to an attacker deciding which
-locations to target for confirmation. A way to counter this
-distribution threat might be to only cache at certain semitrusted
-helper nodes.  This might help specific clients, but it would limit
-the general value of caching.
 
 \subsection{Measuring performance and capacity}
 \label{subsec:performance}
@@ -972,30 +950,29 @@ One of the paradoxes with engineering an anonymity network is that we'd like
 to learn as much as we can about how traffic flows so we can improve the
 network, but we want to prevent others from learning how traffic flows in
 order to trace users' connections through the network.  Furthermore, many
-mechanisms that help Tor run efficiently (such as having clients choose servers
+mechanisms that help Tor run efficiently (such as having clients choose TRs
 based on their capacities) require measurements about the network.
 
-Currently, servers record their bandwidth use in 15-minute intervals and
+Currently, TRs record their bandwidth use in 15-minute intervals and
 include this information in the descriptors they upload to the directory.
-They also try to deduce their own available bandwidth, on the basis of how
-much traffic they have been able to transfer recently, and upload this
+They also try to deduce their own available bandwidth (based on how
+much traffic they have been able to transfer recently) and upload this
 information as well.
 
-This is, of course, eminently cheatable.  A malicious server can get a
-disproportionate amount of traffic simply by claiming to have more bandiwdth
+This is, of course, eminently cheatable.  A malicious TR can get a
+disproportionate amount of traffic simply by claiming to have more bandwidth
 than it does.  But better mechanisms have their problems.  If bandwidth data
 is to be measured rather than self-reported, it is usually possible for
-servers to selectively provide better service for the measuring party, or
-sabotage the measured value of other servers.  Complex solutions for
+TRs to selectively provide better service for the measuring party, or
+sabotage the measured value of other TRs.  Complex solutions for
 mix networks have been proposed, but do not address the issues
 completely~\cite{mix-acc,casc-rep}.
 
-Even without the possibility of cheating, network measurement is
-non-trivial.  It is far from unusual for one observer's view of a server's
-latency or bandwidth to disagree wildly with another's.  Furthermore, it is
-unclear whether total bandwidth is really the right measure; perhaps clients
-should be considering servers on the basis of unused bandwidth instead, or
-perhaps observed throughput.
+Even with no cheating, network measurement is complex.  It is common
+for views of a node's latency and/or bandwidth to vary wildly between
+observers.  Further, it is unclear whether total bandwidth is really
+the right measure; perhaps clients should instead be considering TRs
+based on unused bandwidth or observed throughput.
 % XXXX say more here?
 
 %How to measure performance without letting people selectively deny service
@@ -1014,39 +991,30 @@ seems plausible that bandwidth data alone is not enough to reveal
 sender-recipient connections under most circumstances, it could certainly
 reveal the path taken by large traffic flows under low-usage circumstances.
 
-\subsection{Running a Tor server, path length, and helper nodes}
+\subsection{Running a Tor router, path length, and helper nodes}
+\label{subsec:helper-nodes}
 
 It has been thought for some time that the best anonymity protection
-comes from running your own onion router~\cite{or-pet00,tor-design}.
+comes from running your own node~\cite{or-pet00,tor-design}.
 (In fact, in Onion Routing's first design, this was the only option
-possible~\cite{or-ih96}.) The first design also had a fixed path
-length of five nodes. Middle Onion Routing involved much analysis
-(mostly unpublished) of route selection algorithms and path length
-algorithms to combine efficiency with unpredictability in routes.
-Since, unlike Crowds, nodes in a route cannot all know the ultimate
-destination of an application connection, it was generally not
-considered significant if a node could determine via latency that it
-was second in the route. But if one followed Tor's three node default
-path length, an enclave-to-enclave communication (in which two of the
-ORs were at each enclave) would be completely compromised by the
+possible~\cite{or-ih96}.)  While the first implementation
+had a fixed path length of five nodes, first generation
+Onion Routing design included random length routes chosen 
+to simultaneously maximize efficiency and unpredictability in routes.
+If one followed Tor's three node default
+path length, an enclave-to-enclave communication (in which the entry and
+exit TRs were run by enclaves themselves) 
+would be completely compromised by the
 middle node. Thus for enclave-to-enclave communication, four is the fewest
 number of nodes that preserves the $\frac{c^2}{n^2}$ degree of protection
 in any setting.
 
-The Murdoch-Danezis attack, however, shows that simply adding to the
-path length may not protect usage of an enclave protecting OR\@.  A
-hostile web server can determine all of the nodes in a three node Tor
-path. The attack only identifies that a node is on the route, not
-where. For example, if all of the nodes on the route were enclave
-nodes, the attack would not identify which of the two not directly
-visible to the attacker was the source.  Thus, there remains an
-element of plausible deniability that is preserved for enclave nodes.
-However, Tor has always sought to be stronger than plausible
-deniability. Our assumption is that users of the network are concerned
-about being identified by an adversary, not with being proven guilty
-beyond any reasonable doubt. Still it is something, and may be desired
-in some settings.
-
+The attack in~\cite{attack-tor-oak05}, however,
+shows that simply adding to the
+path length may not protect usage of an enclave protecting node.  A
+hostile web server can observe interference with latency of its own
+communication to nodes  to determine all of the nodes in a three node Tor
+path (although not their order).
 It is reasonable to think that this attack can be easily extended to
 longer paths should those be used; nonetheless there may be some
 advantage to random path length. If the number of nodes is unknown,
@@ -1056,7 +1024,7 @@ certain that it has not missed the first node in the circuit. Also,
 the attack does not identify the order of nodes in a route, so the
 longer the route, the greater the uncertainty about which node might
 be first. It may be possible to extend the attack to learn the route
-node order, but has not been shown whether this is practically feasible.
+node order, but this has not been explored.
 If so, the incompleteness uncertainty engendered by random lengths would
 remain, but once the complete set of nodes in the route were identified
 the initiating node would also be identified.
@@ -1068,20 +1036,17 @@ of the initiator of a communication in various anonymity protocols.
 The idea is to use a single trusted node as the first one you go to,
 that way an attacker cannot ever attack the first nodes you connect
 to and do some form of intersection attack. This will not affect the
-Danezis-Murdoch attack at all if the attacker can time latencies to
+interference attack at all if the attacker can time latencies to
 both the helper node and the enclave node.
 
-We have to pick the path length so adversary can't distinguish client from
-server (how many hops is good?).
-
-\subsection{Helper nodes}
-\label{subsec:helper-nodes}
-
+\medskip
+\noindent
+{\bf Helper nodes.}
 Tor can only provide anonymity against an attacker if that attacker can't
 monitor the user's entry and exit on the Tor network.  But since Tor
 currently chooses entry and exit points randomly and changes them frequently,
 a patient attacker who controls a single entry and a single exit is sure to
-eventually break some circuits of frequent users who consider those servers.
+eventually break some circuits of frequent users who consider those TRs.
 (We assume that users are as concerned about statistical profiling as about
 the anonymity any particular connection.  That is, it is almost as bad to
 leak the fact that Alice {\it sometimes} talks to Bob as it is to leak the times
@@ -1089,13 +1054,12 @@ when Alice is {\it actually} talking to Bob.)
 
 
 One solution to this problem is to use ``helper nodes''~\cite{wright02,wright03}---to
-have each client choose a few fixed servers for critical positions in her
-circuits.  That is, Alice might choose some server H1 as her preferred
+have each client choose a few fixed TRs for critical positions in her
+circuits.  That is, Alice might choose some TR H1 as her preferred
 entry, so that unless the attacker happens to control or observe her
 connection to H1, her circuits will remain anonymous.  If H1 is compromised,
 Alice is vunerable as before.  But now, at least, she has a chance of
 not being profiled.
-
 (Choosing fixed exit nodes is less useful, since the connection from the exit
 node to Alice's destination will be seen not only by the exit but by the
 destination.  Even if Alice chooses a good fixed exit node, she may
@@ -1103,9 +1067,9 @@ nevertheless connect to a hostile website.)
 
 There are still obstacles remaining before helper nodes can be implemented.
 For one, the litereature does not describe how to choose helpers from a list
-of servers that changes over time.  If Alice is forced to choose a new entry
-helper every $d$ days, she can expect to choose a compromised server around
-every $dc/n$ days.  Worse, an attacker with the ability to DoS servers could
+of TRs that changes over time.  If Alice is forced to choose a new entry
+helper every $d$ days, she can expect to choose a compromised TR around
+every $dc/n$ days.  Worse, an attacker with the ability to DoS TRs could
 force their users to switch helper nodes more frequently.
 
 %Do general DoS attacks have anonymity implications? See e.g. Adam
@@ -1177,7 +1141,7 @@ encryption and end-to-end authentication to their website.
 [arma will edit this and expand/retract it]
 
 The published Tor design adopted a deliberately simplistic design for
-authorizing new nodes and informing clients about servers and their status.
+authorizing new nodes and informing clients about TRs and their status.
 In the early Tor designs, all ORs periodically uploaded a signed description
 of their locations, keys, and capabilities to each of several well-known {\it
   directory servers}.  These directory servers constructed a signed summary
@@ -1189,7 +1153,7 @@ likely to be running.  ORs also operate as directory caches, in order to
 lighten the bandwidth on the authoritative directory servers.
 
 In order to prevent Sybil attacks (wherein an adversary signs up many
-purportedly independent servers in order to increase her chances of observing
+purportedly independent TRs in order to increase her chances of observing
 a stream as it enters and leaves the network), the early Tor directory design
 required the operators of the authoritative directory servers to manually
 approve new ORs.  Unapproved ORs were included in the directory, but clients
@@ -1205,13 +1169,13 @@ move forward.  They include:
 \item Each directory server represents an independent point of failure; if
   any one were compromised, it could immediately compromise all of its users
   by recommending only compromised ORs.
-\item The more servers appear join the network, the more unreasonable it
+\item The more TRs appear join the network, the more unreasonable it
   becomes to expect clients to know about them all.  Directories
-  become unfeasibly large, and downloading the list of servers becomes
+  become unfeasibly large, and downloading the list of TRs becomes
   burdonsome.
 \item The validation scheme may do as much harm as it does good.  It is not
   only incapable of preventing clever attackers from mounting Sybil attacks,
-  but may deter server operators from joining the network.  (For instance, if
+  but may deter TR operators from joining the network.  (For instance, if
   they expect the validation process to be difficult, or if they do not share
   any languages in common with the directory server operators.)
 \end{tightlist}
@@ -1220,7 +1184,7 @@ We could try to move the system in several directions, depending on our
 choice of threat model and requirements.  If we did not need to increase
 network capacity in order to support more users, there would be no reason not
 to adopt even stricter validation requirements, and reduce the number of
-servers in the network to a trusted minimum.  But since we want Tor to work
+TRs in the network to a trusted minimum.  But since we want Tor to work
 for as many users as it can, we need XXXXX
 
 In order to address the first two issues, it seems wise to move to a system
@@ -1230,7 +1194,7 @@ problem of a first introducer: since most users will run Tor in whatever
 configuration the software ships with, the Tor distribution itself will
 remain a potential single point of failure so long as it includes the seed
 keys for directory servers, a list of directory servers, or any other means
-to learn which servers are on the network.  But omitting this information
+to learn which TRs are on the network.  But omitting this information
 from the Tor distribution would only delegate the trust problem to the
 individual users, most of whom are presumably less informed about how to make
 trust decisions than the Tor developers.
@@ -1245,44 +1209,44 @@ trust decisions than the Tor developers.
 %\label{sec:crossroads-scaling}
 %P2P + anonymity issues:
 
-Tor is running today with hundreds of servers and tens of thousands of
+Tor is running today with hundreds of TRs and tens of thousands of
 users, but it will certainly not scale to millions.
 
-Scaling Tor involves three main challenges.  First is safe server
+Scaling Tor involves three main challenges.  First is safe node
 discovery, both bootstrapping -- how a Tor client can robustly find an
-initial server list -- and ongoing -- how a Tor client can learn about
-a fair sample of honest servers and not let the adversary control his
+initial TR list -- and ongoing -- how a Tor client can learn about
+a fair sample of honest TRs and not let the adversary control his
 circuits (see Section~\ref{subsec:trust-and-discovery}).  Second is detecting and handling the speed
-and reliability of the variety of servers we must use if we want to
-accept many servers (see Section~\ref{subsec:performance}).
+and reliability of the variety of TRs we must use if we want to
+accept many TRs (see Section~\ref{subsec:performance}).
 Since the speed and reliability of a circuit is limited by its worst link,
 we must learn to track and predict performance.  Finally, in order to get
-a large set of servers in the first place, we must address incentives
+a large set of TRs in the first place, we must address incentives
 for users to carry traffic for others (see Section incentives).
 
 \subsection{Incentives by Design}
 
-There are three behaviors we need to encourage for each server: relaying
+There are three behaviors we need to encourage for each TR: relaying
 traffic; providing good throughput and reliability while doing it;
-and allowing traffic to exit the network from that server.
+and allowing traffic to exit the network from that TR.
 
 We encourage these behaviors through \emph{indirect} incentives, that
 is, designing the system and educating users in such a way that users
 with certain goals will choose to relay traffic.  One
-main incentive for running a Tor server is social benefit: volunteers
+main incentive for running a Tor router is social benefit: volunteers
 altruistically donate their bandwidth and time.  We also keep public
-rankings of the throughput and reliability of servers, much like
+rankings of the throughput and reliability of TRs, much like
 seti@home.  We further explain to users that they can get plausible
 deniability for any traffic emerging from the same address as a Tor
-exit node, and they can use their own Tor server
+exit node, and they can use their own Tor router
 as entry or exit point and be confident it's not run by the adversary.
 Further, users who need to be able to communicate anonymously
-may run a server simply because their need to increase
+may run a TR simply because their need to increase
 expectation that such a network continues to be available to them
 and usable exceeds any countervening costs.
 Finally, we can improve the usability and feature set of the software:
 rate limiting support and easy packaging decrease the hassle of
-maintaining a server, and our configurable exit policies allow each
+maintaining a TR, and our configurable exit policies allow each
 operator to advertise a policy describing the hosts and ports to which
 he feels comfortable connecting.
 
@@ -1298,7 +1262,7 @@ option is to use a tit-for-tat incentive scheme: provide better service
 to nodes that have provided good service to you.
 
 Unfortunately, such an approach introduces new anonymity problems.
-There are many surprising ways for servers to game the incentive and
+There are many surprising ways for TRs to game the incentive and
 reputation system to undermine anonymity because such systems are
 designed to encourage fairness in storage or bandwidth usage not
 fairness of provided anonymity. An adversary can attract more traffic
@@ -1306,9 +1270,9 @@ by performing well or can provide targeted differential performance to
 individual users to undermine their anonymity. Typically a user who
 chooses evenly from all options is most resistant to an adversary
 targeting him, but that approach prevents from handling heterogeneous
-servers.
+TRs.
 
-%When a server (call him Steve) performs well for Alice, does Steve gain
+%When a TR (call him Steve) performs well for Alice, does Steve gain
 %reputation with the entire system, or just with Alice? If the entire
 %system, how does Alice tell everybody about her experience in a way that
 %prevents her from lying about it yet still protects her identity? If
@@ -1338,23 +1302,6 @@ further study.
 %and/or real) to determine how much the incentive system improves
 %efficiency over baseline, and also to determine how far we are from
 %optimal efficiency (what we could get if we ignored the anonymity goals).
-
-\subsection{Peer-to-peer / practical issues}
-
-[leave this section for now, and make sure things here are covered
-elsewhere. then remove it.]
-
-Making use of servers with little bandwidth. How to handle hammering by
-certain applications.
-
-Handling servers that are far away from the rest of the network, e.g. on
-the continents that aren't North America and Europe. High latency,
-often high packet loss.
-
-Running Tor servers behind NATs, behind great-firewalls-of-China, etc.
-Restricted routes. How to propagate to everybody the topology? BGP
-style doesn't work because we don't want just *one* path. Point to
-Geoff's stuff.
 
 \subsection{Location diversity and ISP-class adversaries}
 \label{subsec:routing-zones}
@@ -1413,7 +1360,7 @@ of knowing our algorithm?
 %
 Lastly, can we use this knowledge to figure out which gaps in our network
 would most improve our robustness to this class of attack, and go recruit
-new servers with those ASes in mind?
+new TRs with those ASes in mind?
 
 Tor's security relies in large part on the dispersal properties of its
 network. We need to be more aware of the anonymity properties of various
@@ -1436,7 +1383,7 @@ users across the world are trying to use it for exactly this purpose.
 
 Anti-censorship networks hoping to bridge country-level blocks face
 a variety of challenges. One of these is that they need to find enough
-exit nodes---servers on the `free' side that are willing to relay
+exit nodes---TRs on the `free' side that are willing to relay
 arbitrary traffic from users to their final destinations. Anonymizing
 networks including Tor are well-suited to this task, since we have
 already gathered a set of exit nodes that are willing to tolerate some
@@ -1452,9 +1399,9 @@ anonymizing networks again have an advantage here, in that we already
 have tens of thousands of separate IP addresses whose users might
 volunteer to provide this service since they've already installed and use
 the software for their own privacy~\cite{koepsell:wpes2004}. Because
-the Tor protocol separates routing from network discovery (see Section
-\ref{do-we-discuss-this?}), volunteers could configure their Tor clients
-to generate server descriptors and send them to a special directory
+the Tor protocol separates routing from network discovery \cite{tor-design},
+volunteers could configure their Tor clients
+to generate TR descriptors and send them to a special directory
 server that gives them out to dissidents who need to get around blocks.
 
 Of course, this still doesn't prevent the adversary
@@ -1484,13 +1431,7 @@ allocating which nodes go to which network along the lines of
 able to gain any advantage in network splitting that they do not
 already have in joining a network.
 
-% Describe these attacks; many people will not have read the paper!
-The attacks in \cite{attack-tor-oak05} show that certain types of
-brute force attacks are in fact feasible; however they make the
-above point stronger not weaker. The attacks do not appear to be
-significantly more difficult to mount against a network that is
-twice the size. Also, they only identify the Tor nodes used in a
-circuit, not the client. Finally note that even if the network is split,
+If the network is split, 
 a client does not need to use just one of the two resulting networks.
 Alice could use either of them, and it would not be difficult to make
 the Tor client able to access several such network on a per circuit
@@ -1500,14 +1441,14 @@ it does not necessarily have the same implications as splitting a mixnet.
 
 Alternatively, we can try to scale a single Tor network.  Some issues for
 scaling include restricting the number of sockets and the amount of bandwidth
-used by each server.  The number of sockets is determined by the network's
+used by each TR\@.  The number of sockets is determined by the network's
 connectivity and the number of users, while bandwidth capacity is determined
-by the total bandwidth of servers on the network.  The simplest solution to
-bandwidth capacity is to add more servers, since adding a tor node of any
+by the total bandwidth of TRs on the network.  The simplest solution to
+bandwidth capacity is to add more TRs, since adding a tor node of any
 feasible bandwidth will increase the traffic capacity of the network.  So as
 a first step to scaling, we should focus on making the network tolerate more
-servers, by reducing the interconnectivity of the nodes; later we can reduce
-overhead associated withy directories, discovery, and so on.
+TRs, by reducing the interconnectivity of the nodes; later we can reduce
+overhead associated with directories, discovery, and so on.
 
 By reducing the connectivity of the network we increase the total number of
 nodes that the network can contain. Danezis~\cite{danezis-pets03} considers
@@ -1577,9 +1518,9 @@ network at all."
 %\put(3,1){\makebox(0,0)[c]{\epsfig{figure=graphnodes,width=6in}}}
 %\end{picture}
 \mbox{\epsfig{figure=graphnodes,width=5in}}
-\caption{Number of servers over time. Lowest line is number of exit
+\caption{Number of TRs over time. Lowest line is number of exit
 nodes that allow connections to port 80. Middle line is total number of
-verified (registered) servers. The line above that represents servers
+verified (registered) TRs. The line above that represents TRs
 that are not yet registered.}
 \label{fig:graphnodes}
 \end{figure}
@@ -1587,11 +1528,67 @@ that are not yet registered.}
 \begin{figure}[t]
 \centering
 \mbox{\epsfig{figure=graphtraffic,width=5in}}
-\caption{The sum of traffic reported by each server over time. The bottom
+\caption{The sum of traffic reported by each TR over time. The bottom
 pair show average throughput, and the top pair represent the largest 15
 minute burst in each 4 hour period.}
 \label{fig:graphtraffic}
 \end{figure}
+
+
+\section{Things to cut?}
+\subsection{Peer-to-peer / practical issues}
+
+[leave this section for now, and make sure things here are covered
+elsewhere. then remove it.]
+
+Making use of TRs with little bandwidth. How to handle hammering by
+certain applications.
+
+Handling TRs that are far away from the rest of the network, e.g. on
+the continents that aren't North America and Europe. High latency,
+often high packet loss.
+
+Running Tor routers behind NATs, behind great-firewalls-of-China, etc.
+Restricted routes. How to propagate to everybody the topology? BGP
+style doesn't work because we don't want just *one* path. Point to
+Geoff's stuff.
+
+\subsection{Caching stuff: If a topic's gotta go for space, I think this
+is the best candidate}
+
+The attacks in \cite{attack-tor-oak05} are also dependent on
+cooperation of the responding application or the ability to modify or
+monitor the responder stream, in order of decreasing attack
+effectiveness.  So, another way to slow some of these attacks
+would be to cache responses at exit nodes where possible, as it is with
+DNS lookups and cacheable HTTP responses.  Caching would, however,
+create threats of its own. First, a Tor network is expected to contain
+hostile nodes. If one of these is the repository of a cache, the
+attack is still possible. Though more work to set up a Tor node and
+cache repository, the payoff of such an attack is potentially
+higher.
+%To be
+%useful, such caches would need to be distributed to any likely exit
+%nodes of recurred requests for the same data.
+%   Even local caches could be useful, I think. -NM
+%
+%Added some clarification -PFS
+Besides allowing any other insider attacks, caching nodes would hold a
+record of destinations and data visited by Tor users reducing forward
+anonymity. Worse, for the cache to be widely useful much beyond the
+client that caused it there would have to either be a new mechanism to
+distribute cache information around the network and a way for clients
+to make use of it or the caches themselves would need to be
+distributed widely. Either way the record of visited sites and
+downloaded information is made automatically available to an attacker
+without having to actively gather it himself.  Besides its inherent
+value, this could serve as useful data to an attacker deciding which
+locations to target for confirmation. A way to counter this
+distribution threat might be to only cache at certain semitrusted
+helper nodes.  This might help specific clients, but it would limit
+the general value of caching.
+
+
 
 \end{document}
 
