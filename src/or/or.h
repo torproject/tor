@@ -1256,6 +1256,7 @@ void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
 
 void parse_socks_policy(void);
+void free_socks_policy(void);
 int socks_policy_permits_address(uint32_t addr);
 
 void client_dns_init(void);
@@ -1263,6 +1264,7 @@ uint32_t client_dns_lookup_entry(const char *address);
 int client_dns_incr_failures(const char *address);
 void client_dns_set_entry(const char *address, uint32_t val);
 void client_dns_clean(void);
+void client_dns_free_all(void);
 void set_exit_redirects(smartlist_t *lst);
 typedef enum hostname_type_t {
   NORMAL_HOSTNAME, ONION_HOSTNAME, EXIT_HOSTNAME
@@ -1346,6 +1348,7 @@ int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
 void connection_dir_connect_failed(connection_t *conn);
 void parse_dir_policy(void);
+void free_dir_policy(void);
 
 /********************************* dirserv.c ***************************/
 
@@ -1365,6 +1368,7 @@ size_t dirserv_get_directory(const char **cp, int compress);
 size_t dirserv_get_runningrouters(const char **rr, int compress);
 void dirserv_set_cached_directory(const char *directory, time_t when,
                                   int is_running_routers);
+void dirserv_free_all(void);
 
 /********************************* dns.c ***************************/
 
@@ -1492,6 +1496,8 @@ int rep_hist_get_predicted_hidserv(time_t now, int *need_uptime, int *need_capac
 void rep_hist_note_used_resolve(time_t now);
 int rep_hist_get_predicted_resolve(time_t now);
 
+void rep_hist_free_all(void);
+
 /********************************* rendclient.c ***************************/
 
 void rend_client_introcirc_has_opened(circuit_t *circ);
@@ -1558,6 +1564,7 @@ int rend_service_introduce(circuit_t *circuit, const char *request, size_t reque
 void rend_service_relaunch_rendezvous(circuit_t *oldcirc);
 int rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ);
 void rend_service_dump_stats(int severity);
+void rend_service_free_all(void);
 
 /********************************* rendmid.c *******************************/
 int rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_len);
@@ -1646,6 +1653,8 @@ void router_get_routerlist(routerlist_t **prouterlist);
 time_t routerlist_get_published_time(void);
 void routerlist_free(routerlist_t *routerlist);
 void routerinfo_free(routerinfo_t *router);
+void routerlist_free_current(void);
+void free_trusted_dir_servers(void);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_mark_as_down(const char *digest);
 void routerlist_remove_old_routers(int age);

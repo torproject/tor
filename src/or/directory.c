@@ -88,6 +88,13 @@ parse_dir_policy(void)
   }
 }
 
+void
+free_dir_policy(void)
+{
+  addr_policy_free(dir_policy);
+  dir_policy = NULL;
+}
+
 /** Return 1 if <b>addr</b> is permitted to connect to our dir port,
  * based on <b>dir_policy</b>. Else return 0.
  */

@@ -1071,6 +1071,13 @@ parse_socks_policy(void)
   }
 }
 
+void
+free_socks_policy(void)
+{
+  addr_policy_free(socks_policy);
+  socks_policy = NULL;
+}
+
 /** Return 1 if <b>addr</b> is permitted to connect to our socks port,
  * based on <b>socks_policy</b>. Else return 0.
  */
@@ -1240,6 +1247,12 @@ void client_dns_clean(void)
     return;
   now = time(NULL);
   strmap_foreach(client_dns_map, (strmap_foreach_fn)_remove_if_expired, &now);
+}
+
+void client_dns_free_all(void)
+{
+  strmap_free(client_dns_map, free);
+  client_dns_map = NULL;
 }
 
 /** Make connection redirection follow the provided list of
