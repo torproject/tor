@@ -428,7 +428,20 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
  * The first 128 bytes are RSA-encrypted with the server's public key,
  * and the last 16 are encrypted with the symmetric key.
  */
-/* FIXME: Nick: looks like we could simplify this by just using 128 bytes for g^x. */
+/* FIXME: 
+    Nick: looks like we could simplify this by just using 128 bytes for g^x. 
+    
+    Problem: this will fail if g^x is greater than the RSA modulus.
+      We'd need to repeatedly generate g^x, until we got one that was
+      < the RSA modulus.  Also, if we ever can afford to revert to a
+      bigger DH key, we'll need to revert.  Are these 'features' ok?
+      If so, we can omit the symmetric encryption.
+
+      Convesely, we can just increment RSA key sizes.  Since we don't
+      use them very often comparatively, we may be able to afford 1536
+      bits.  (Just a thought.)
+      -NM
+*/
 int
 onion_skin_create(crypto_pk_env_t *dest_router_key,
                   crypto_dh_env_t **handshake_state_out,
