@@ -222,7 +222,7 @@ static unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len,
   for(i=0;i<*routelen;i++) {
 //    log_fn(LOG_DEBUG,"Choosing hop %u.",i);
     if (CRYPTO_PSEUDO_RAND_INT(choice)) {
-      free((void *)route);
+      free(route);
       return NULL;
     }
 
@@ -432,7 +432,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
 
   return 0;
  err:
-  if (pubkey) free(pubkey);
+  tor_free(pubkey);
   if (dh) crypto_dh_free(dh);
   if (cipher) crypto_free_cipher_env(cipher);
   return -1;

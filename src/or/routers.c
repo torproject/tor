@@ -144,10 +144,8 @@ void routerinfo_free(routerinfo_t *router)
   if (!router)
     return;
 
-  if (router->address)
-    free(router->address);
-  if (router->nickname)
-    free(router->nickname);
+  tor_free(router->address);
+  tor_free(router->nickname);
   if (router->onion_pkey)
     crypto_free_pk_env(router->onion_pkey);
   if (router->link_pkey)
@@ -157,9 +155,9 @@ void routerinfo_free(routerinfo_t *router)
   while (router->exit_policy) {
     e = router->exit_policy;
     router->exit_policy = e->next;
-    if (e->string) free(e->string);
-    if (e->address) free(e->address);
-    if (e->port) free(e->port);
+    tor_free(e->string);
+    tor_free(e->address);
+    tor_free(e->port);
     free(e);
   }
   free(router);
@@ -170,10 +168,8 @@ void directory_free(directory_t *dir)
   int i;
   for (i = 0; i < dir->n_routers; ++i)
     routerinfo_free(dir->routers[i]);
-  if (dir->routers)
-    free(dir->routers);
-  if(dir->software_versions)
-    free(dir->software_versions);
+  tor_free(dir->routers);
+  tor_free(dir->software_versions);
   free(dir);
 }
 
@@ -825,8 +821,8 @@ routerinfo_t *router_get_entry_from_string(char**s) {
     goto err;
   }
   
-  /* Router->ap_port */
-  router->ap_port = atoi(ARGS[3]);
+  /* Router->socks_port */
+  router->socks_port = atoi(ARGS[3]);
   
   /* Router->dir_port */
   router->dir_port = atoi(ARGS[4]);
@@ -838,8 +834,8 @@ routerinfo_t *router_get_entry_from_string(char**s) {
     goto err;
   }
   
-  log_fn(LOG_DEBUG,"or_port %d, ap_port %d, dir_port %d, bandwidth %d.",
-    router->or_port, router->ap_port, router->dir_port, router->bandwidth);
+  log_fn(LOG_DEBUG,"or_port %d, socks_port %d, dir_port %d, bandwidth %d.",
+    router->or_port, router->socks_port, router->dir_port, router->bandwidth);
 
   /* XXX Later, require platform before published. */
   NEXT_TOKEN();
@@ -1039,12 +1035,9 @@ static int router_add_exit_policy(routerinfo_t *router,
 policy_read_failed:
   assert(newe->string);
   log_fn(LOG_WARN,"Couldn't parse line '%s'. Dropping", newe->string);
-  if(newe->string)
-    free(newe->string);
-  if(newe->address)
-    free(newe->address);
-  if(newe->port)
-    free(newe->port);
+  tor_free(newe->string);
+  tor_free(newe->address);
+  tor_free(newe->port);
   free(newe);
   return -1;
 }
@@ -1121,7 +1114,7 @@ int router_rebuild_descriptor(void) {
   ri->nickname = tor_strdup(options.Nickname);
   /* No need to set addr. */
   ri->or_port = options.ORPort;
-  ri->ap_port = options.APPort;
+  ri->socks_port = options.SocksPort;
   ri->dir_port = options.DirPort;
   ri->published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key());
@@ -1202,7 +1195,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     router->nickname,             
     router->address,
     router->or_port,
-    router->ap_port,
+    router->socks_port,
     router->dir_port,
     router->bandwidth,
     platform,

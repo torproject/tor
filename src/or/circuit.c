@@ -481,7 +481,7 @@ void circuit_close(circuit_t *circ) {
   circuit_t *youngest=NULL;
 
   assert(circ);
-  if(options.APPort) {
+  if(options.SocksPort) {
     youngest = circuit_get_newest_open();
     log_fn(LOG_DEBUG,"youngest %d, circ %d.",(int)youngest, (int)circ);
   }
@@ -496,7 +496,7 @@ void circuit_close(circuit_t *circ) {
   for(conn=circ->p_streams; conn; conn=conn->next_stream) {
     connection_send_destroy(circ->p_aci, conn); 
   }
-  if(options.APPort && youngest == circ) { /* check this after we've sent the destroys, to reduce races */
+  if(options.SocksPort && youngest == circ) { /* check this after we've sent the destroys, to reduce races */
     /* our current circuit just died. Launch another one pronto. */
     log_fn(LOG_INFO,"Youngest circuit dying. Launching a replacement.");
     circuit_launch_new(1);
@@ -616,7 +616,7 @@ void circuit_expire_unused_circuits(void) {
 void circuit_launch_new(int failure_status) {
   static int failures=0;
 
-  if(!options.APPort) /* we're not an application proxy. no need for circuits. */
+  if(!options.SocksPort) /* we're not an application proxy. no need for circuits. */
     return;
 
   if(failure_status == -1) { /* I was called because a circuit succeeded */
