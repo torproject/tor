@@ -134,7 +134,8 @@ int connection_cpu_process_inbuf(connection_t *conn) {
     /* parse out the circ it was talking about */
     tag_unpack(buf, &addr, &port, &circ_id);
     circ = NULL;
-    /* (This is actually right: we want a specific port here in
+    /* (Here we use connection_exact_get_by_addr_port rather than
+     * get_by_identity_digest: we want a specific port here in
      * case there are multiple connections.) */
     p_conn = connection_exact_get_by_addr_port(addr,port);
     if(p_conn)

@@ -697,7 +697,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       /* need to pick an intro point */
       exitname = rend_client_get_random_intro(conn->rend_query);
       if(!exitname) {
-        log_fn(LOG_WARN,"Couldn't get an intro point for '%s'. Closing conn.",
+        log_fn(LOG_WARN,"Couldn't get an intro point for '%s'. Closing.",
                conn->rend_query);
         return -1;
       }
