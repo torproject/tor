@@ -818,6 +818,16 @@ typedef struct circuit_t circuit_t;
 #define ALLOW_UNVERIFIED_RENDEZVOUS   8
 #define ALLOW_UNVERIFIED_INTRODUCTION 16
 
+typedef struct exit_redirect_t {
+  uint32_t addr;
+  uint32_t mask;
+  uint16_t port_min;
+  uint16_t port_max;
+
+  uint32_t addr_dest;
+  uint32_t port_dest;
+} exit_redirect_t;
+
 /** Configuration options for a Tor process */
 typedef struct {
   struct config_line_t *LogOptions; /**< List of configuration lines
@@ -905,6 +915,9 @@ typedef struct {
   char *MyFamily; /**< Declared family for this OR. */
   struct config_line_t *NodeFamilies; /**< List of config lines for
                                        * node families */
+  struct config_line_t *RedirectExit; /**< List of config lines for simple
+                                       * addr/port redirection */
+  smartlist_t *RedirectExitList; /** List of exit_redirect_t */
 } or_options_t;
 
 /* XXX are these good enough defaults? */
