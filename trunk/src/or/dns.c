@@ -225,6 +225,8 @@ int dns_resolve(connection_t *exitconn) {
           send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
         return 1;
       case CACHE_STATE_FAILED:
+        log_fn(LOG_DEBUG,"Connection (fd %d) found cached error for '%s'",
+               exitconn->s, exitconn->address);
         if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
           send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
         return -1;
