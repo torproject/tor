@@ -256,8 +256,9 @@ options_act(void) {
   if (set_max_file_descriptors(options->MaxConn) < 0)
     return -1;
 
+
   mark_logs_temp(); /* Close current logs once new logs are open. */
-  if (config_init_logs(options)<0) /* Configure the log(s) */
+  if (config_init_logs(options, 0)<0) /* Configure the log(s) */
     return -1;
   /* Close the temporary log we used while starting up, if it isn't already
    * gone. */
@@ -275,9 +276,9 @@ options_act(void) {
 
   /* Start backgrounding the process, if requested. */
 
-  /* XXXX We once had a reason to separate start_daemon and finish_daemon: It
-   *    let us have the parent process stick around until we were sure Tor was
-   *    started.  Should we make start_daemon get called earlier? -NM */
+  /* XXXX009 We once had a reason to separate start_daemon and finish_daemon:
+   *    It let us have the parent process stick around until we were sure Tor
+   *    was started.  Should we make start_daemon get called earlier? -NM */
   if (options->RunAsDaemon) {
     start_daemon(options->DataDirectory);
   }
@@ -1025,6 +1026,9 @@ options_validate(or_options_t *options)
     options->Logs = config_line_prepend(NULL, "Log", "notice-err stdout");
   }
 
+  if (config_init_logs(options, 1)<0) /* Validate the log(s) */
+    return -1;
+
   if (server_mode(options)) {
     /* confirm that our address isn't broken, so we can complain now */
     uint32_t tmp;
@@ -1206,6 +1210,19 @@ options_validate(or_options_t *options)
   return result;
 }
 
+/** Helper: return true iff s1 and s2 are both NULL, or both non-NULL
+ * equal strings. */
+static int
+opt_streq(const char *s1, const char *s2)
+{
+  if (!s1 && !s2)
+    return 1;
+  else if (s1 && s2 && !strcmp(s1,s2))
+    return 1;
+  else
+    return 0;
+}
+
 /** Check if any of the previous options have changed but aren't allowed to. */
 static int
 options_transition_allowed(or_options_t *old, or_options_t *new_val) {
@@ -1213,8 +1230,7 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val) {
   if(!old)
     return 0;
 
-  if (old->PidFile &&
-      (!new_val->PidFile || strcmp(old->PidFile,new_val->PidFile))) {
+  if (!opt_streq(old->PidFile, new_val->PidFile)) {
     log_fn(LOG_WARN,"PidFile is not allowed to change. Failing.");
     return -1;
   }
@@ -1234,7 +1250,15 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val) {
     return -1;
   }
 
-  /* XXX not allowed to change User or Group either */
+  if (!opt_streq(old->User, new_val->User)) {
+    log_fn(LOG_WARN,"During reload, changing User is not allowed. Failing.");
+    return -1;
+  }
+
+  if (!opt_streq(old->Group, new_val->Group)) {
+    log_fn(LOG_WARN,"During reload, changing User is not allowed. Failing.");
+    return -1;
+  }
 
   return 0;
 }
@@ -1539,7 +1563,7 @@ convert_log_option(or_options_t *options, struct config_line_t *level_opt,
  * Initialize the logs based on the configuration file.
  */
 int
-config_init_logs(or_options_t *options)
+config_init_logs(or_options_t *options, int validate_only)
 {
   struct config_line_t *opt;
   int ok;
@@ -1559,7 +1583,8 @@ config_init_logs(or_options_t *options)
       ok = 0; goto cleanup;
     }
     if (smartlist_len(elts) < 2) { /* only loglevels were provided */
-      add_stream_log(levelMin, levelMax, "<stdout>", stdout);
+      if (!validate_only)
+        add_stream_log(levelMin, levelMax, "<stdout>", stdout);
       goto cleanup;
     }
     if (!strcasecmp(smartlist_get(elts,1), "file")) {
@@ -1567,7 +1592,8 @@ config_init_logs(or_options_t *options)
         log_fn(LOG_WARN, "Bad syntax on Log option 'Log %s'", opt->value);
         ok = 0; goto cleanup;
       }
-      add_file_log(levelMin, levelMax, smartlist_get(elts, 2));
+      if (!validate_only)
+        add_file_log(levelMin, levelMax, smartlist_get(elts, 2));
       goto cleanup;
     }
     if (smartlist_len(elts) != 2) {
@@ -1575,24 +1601,36 @@ config_init_logs(or_options_t *options)
       ok = 0; goto cleanup;
     }
     if (!strcasecmp(smartlist_get(elts,1), "stdout")) {
-      add_stream_log(levelMin, levelMax, "<stdout>", stdout);
+      if (!validate_only)
+        add_stream_log(levelMin, levelMax, "<stdout>", stdout);
       close_temp_logs();
     } else if (!strcasecmp(smartlist_get(elts,1), "stderr")) {
-      add_stream_log(levelMin, levelMax, "<stderr>", stderr);
+      if (!validate_only)
+        add_stream_log(levelMin, levelMax, "<stderr>", stderr);
       close_temp_logs();
     } else if (!strcasecmp(smartlist_get(elts,1), "syslog")) {
 #ifdef HAVE_SYSLOG_H
-      add_syslog_log(levelMin, levelMax);
+      if (!validate_only)
+        add_syslog_log(levelMin, levelMax);
 #else
       log_fn(LOG_WARN, "Syslog is not supported in this compilation.");
 #endif
+    } else {
+      log_fn(LOG_WARN, "Unrecognized log type %s",
+             (const char*)smartlist_get(elts,1));
+      if (strchr(smartlist_get(elts,1), '/')) {
+        log_fn(LOG_WARN, "Did you mean to say 'Log file %s' ?",
+               (const char *)smartlist_get(elts,1));
+      }
+      ok = 0; goto cleanup;
     }
   cleanup:
     SMARTLIST_FOREACH(elts, char*, cp, tor_free(cp));
     smartlist_clear(elts);
   }
   smartlist_free(elts);
-  close_temp_logs();
+  if (!validate_only)
+    close_temp_logs();
 
   return ok?0:-1;
 }
