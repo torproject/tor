@@ -3,43 +3,19 @@
 /* $Id$ */
 
 #include "../or/or.h"
-#include "log.h"
 
-/* FIXME this whole thing is hacked together. feel free to make it clean. */
-size_t sev_to_string(char *buf, int max, int severity) {
-  assert(max > 20);
-
+static const char *sev_to_string(int severity) {
   switch(severity) {
-    case LOG_DEBUG:
-      strcpy(buf,"debug");  
-      break;
-    case LOG_INFO:
-      strcpy(buf,"info");
-      break;
-    case LOG_NOTICE:
-      strcpy(buf,"notice");
-      break;
-    case LOG_WARNING:
-      strcpy(buf,"warn");
-      break;
-    case LOG_ERR:
-      strcpy(buf,"err");
-      break;
-    case LOG_CRIT:
-      strcpy(buf,"crit");
-      break;
-    case LOG_ALERT:
-      strcpy(buf,"alert");
-      break;
-    case LOG_EMERG: 
-      strcpy(buf,"emerg");
-      break;
-    default:
-      strcpy(buf,"UNKNOWN");
-      break;
+    case LOG_DEBUG:   return "debug";
+    case LOG_INFO:    return "info";
+    case LOG_NOTICE:  return "notice";
+    case LOG_WARNING: return "warn";
+    case LOG_ERR:     return "err";
+    case LOG_CRIT:    return "crit";
+    case LOG_ALERT:   return "alert";
+    case LOG_EMERG:   return "emerg";
+    default:          return "UNKNOWN";
   }
-
-  return strlen(buf)+1;
 }
 
 static int loglevel = LOG_DEBUG;
@@ -59,9 +35,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
 
   t = time(NULL);
   strftime(buf, 200, "%b %d %H:%M:%S", localtime(&t));
-  printf("%s.%.3ld ", buf, (long)now.tv_usec / 1000);
-  sev_to_string(buf, 200, severity);
-  printf("[%s] ", buf);
+  printf("%s.%.3ld [%s] ", buf, (long)now.tv_usec / 1000, sev_to_string(severity));
   if (funcname)
     printf("%s(): ", funcname);
   vprintf(format,ap);
