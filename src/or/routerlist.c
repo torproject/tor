@@ -77,7 +77,7 @@ routerinfo_t *router_pick_directory_server(int requireothers) {
   routerinfo_t *choice;
 
   if (!routerlist)
-    
+    return NULL;
 
   choice = router_pick_directory_server_impl(requireothers, options.FascistFirewall);
   if(choice)
@@ -175,6 +175,9 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
   trusted_dir_server_t *ds;
   sl = smartlist_create();
   me = router_get_my_routerinfo();
+
+  if (!trusted_dir_servers)
+    return NULL;
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
     {
