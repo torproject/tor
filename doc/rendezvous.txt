@@ -85,9 +85,9 @@
    The meeting point and meeting cookie allow Bob to contact Alice and
    prove his identity; the end-to-end authentication enables Bob to
    decide whether to talk to Alice; the initial authentication enables
-   the meeting point to pre-screen introduction requests before sending
-   them to Bob.  (See Section 2 for a discussion of meeting points;
-   see Section 1.1 for an example authentication mechanism.)
+   the introduction point to pre-screen introduction requests before
+   sending them to Bob. (See Section 2 for a discussion of meeting
+   points; see Section 1.1 for an example authentication mechanism.)
 
    The authentication steps are the appropriate places for the
    introduction server or Bob to do replay prevention, if desired.
