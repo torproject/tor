@@ -105,8 +105,10 @@
 #define MAX_BUF_SIZE (640*1024)
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 
+#ifndef USE_TLS
 #define HANDSHAKE_AS_OP 1
 #define HANDSHAKE_AS_OR 2
+#endif
 
 #define ACI_TYPE_LOWER 0
 #define ACI_TYPE_HIGHER 1
@@ -136,7 +138,6 @@
 #define _CPUWORKER_STATE_MAX 2
 
 #define CPUWORKER_TASK_ONION CPUWORKER_STATE_BUSY_ONION
-#define CPUWORKER_TASK_HANDSHAKE CPUWORKER_STATE_BUSY_HANDSHAKE
 
 #ifndef USE_TLS
 /* how to read these states:
@@ -180,21 +181,17 @@
 #define _AP_CONN_STATE_MAX 5
 
 #define _DIR_CONN_STATE_MIN 0
-#define DIR_CONN_STATE_CONNECTING 0
-#define DIR_CONN_STATE_SENDING_COMMAND 1
-#define DIR_CONN_STATE_READING 2
-#define DIR_CONN_STATE_COMMAND_WAIT 3
-#define DIR_CONN_STATE_WRITING 4
+#define DIR_CONN_STATE_CONNECTING 0 /* client */
+#define DIR_CONN_STATE_SENDING_COMMAND 1 /* client */
+#define DIR_CONN_STATE_READING 2 /* client */
+#define DIR_CONN_STATE_COMMAND_WAIT 3 /* dirserver */
+#define DIR_CONN_STATE_WRITING 4 /* dirserver */
 #define _DIR_CONN_STATE_MAX 4
 
 #define CIRCUIT_STATE_BUILDING 0 /* I'm the OP, still haven't done all my handshakes */
-#define CIRCUIT_STATE_ONIONSKIN_PENDING 1 /* waiting to process the onion */
+#define CIRCUIT_STATE_ONIONSKIN_PENDING 1 /* waiting to process the onionskin */
 #define CIRCUIT_STATE_OR_WAIT 2 /* I'm the OP, my firsthop is still connecting */
-#define CIRCUIT_STATE_OPEN 3 /* onion processed, ready to send data along the connection */
-//#define CIRCUIT_STATE_CLOSE_WAIT1 4 /* sent two "destroy" signals, waiting for acks */
-//#define CIRCUIT_STATE_CLOSE_WAIT2 5 /* received one ack, waiting for one more 
-//                                       (or if just one was sent, waiting for that one */
-//#define CIRCUIT_STATE_CLOSE 4 /* both acks received, connection is dead */ /* NOT USED */
+#define CIRCUIT_STATE_OPEN 3 /* onionskin(s) processed, ready to send/receive cells */
 
 #define RELAY_COMMAND_BEGIN 1
 #define RELAY_COMMAND_DATA 2
@@ -212,8 +209,10 @@
 #define DEFAULT_CIPHER CRYPTO_CIPHER_AES_CTR
 /* Used to en/decrypt onion skins */
 #define ONION_CIPHER      DEFAULT_CIPHER
+#ifndef USE_TLS
 /* Used to en/decrypt cells between ORs/OPs. */
 #define CONNECTION_CIPHER DEFAULT_CIPHER
+#endif
 /* Used to en/decrypt RELAY cells */
 #define CIRCUIT_CIPHER    DEFAULT_CIPHER
 
@@ -259,21 +258,6 @@ typedef struct {
 #define SET_CELL_STREAM_ID(c,id)      memcpy((c).payload+1,(id),STREAM_ID_SIZE)
 
 #define ZERO_STREAM "\0\0\0\0\0\0\0\0"
-
-#define SOCKS4_REQUEST_GRANTED          90
-#define SOCKS4_REQUEST_REJECT           91
-#define SOCKS4_REQUEST_IDENT_FAILED     92
-#define SOCKS4_REQUEST_IDENT_CONFLICT   93
-
-/* structure of a socks client operation */
-typedef struct {
-   unsigned char version;     /* socks version number */
-   unsigned char command;     /* command code */
-   unsigned char destport[2]; /* destination port, network order */
-   unsigned char destip[4];   /* destination address */
-   /* userid follows, terminated by a NULL */
-   /* dest host follows, terminated by a NULL */
-} socks4_t;
 
 struct connection_t { 
 
@@ -428,7 +412,7 @@ struct circuit_t {
   int package_window;
   int deliver_window;
 
-  aci_t p_aci; /* connection identifiers */
+  aci_t p_aci; /* circuit identifiers */
   aci_t n_aci;
 
   crypto_cipher_env_t *p_crypto; /* used only for intermediate hops */
@@ -446,11 +430,6 @@ struct circuit_t {
 };
 
 typedef struct circuit_t circuit_t;
-
-struct onion_queue_t {
-  circuit_t *circ;
-  struct onion_queue_t *next;
-};
 
 typedef struct {
    char *LogLevel;
@@ -507,7 +486,7 @@ void circuit_free(circuit_t *circ);
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
-circuit_t *circuit_get_newest_ap(void);
+circuit_t *circuit_get_newest_open(void);
 
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);

@@ -343,7 +343,7 @@ static int prepare_for_poll(void) {
     if(options.APPort && time_to_new_circuit < now.tv_sec) {
       circuit_expire_unused_circuits();
       circuit_launch_new(-1); /* tell it to forget about previous failures */
-      circ = circuit_get_newest_ap();
+      circ = circuit_get_newest_open();
       if(!circ || circ->dirty) {
         log(LOG_INFO,"prepare_for_poll(): Youngest circuit %s; launching replacement.", circ ? "dirty" : "missing");
         circuit_launch_new(0); /* make an onion and lay the circuit */

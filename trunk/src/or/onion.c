@@ -21,6 +21,11 @@ int decide_aci_type(uint32_t local_addr, uint16_t local_port,
    return ACI_TYPE_LOWER; 
 }
 
+struct onion_queue_t {
+  circuit_t *circ;
+  struct onion_queue_t *next;
+};
+
 /* global (within this file) variables used by the next few functions */
 static struct onion_queue_t *ol_list=NULL;
 static struct onion_queue_t *ol_tail=NULL;

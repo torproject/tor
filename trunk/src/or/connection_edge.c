@@ -12,6 +12,21 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char result);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 
+#define SOCKS4_REQUEST_GRANTED          90
+#define SOCKS4_REQUEST_REJECT           91
+#define SOCKS4_REQUEST_IDENT_FAILED     92
+#define SOCKS4_REQUEST_IDENT_CONFLICT   93
+
+/* structure of a socks client operation */
+typedef struct {
+   unsigned char version;     /* socks version number */
+   unsigned char command;     /* command code */
+   unsigned char destport[2]; /* destination port, network order */
+   unsigned char destip[4];   /* destination address */
+   /* userid follows, terminated by a NULL */
+   /* dest host follows, terminated by a NULL */
+} socks4_t;
+
 int connection_edge_process_inbuf(connection_t *conn) {
 
   assert(conn);
@@ -509,7 +524,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   }
 
   /* find the circuit that we should use, if there is one. */
-  circ = circuit_get_newest_ap();
+  circ = circuit_get_newest_open();
 
   if(!circ) {
     log_fn(LOG_INFO,"No circuit ready. Closing.");

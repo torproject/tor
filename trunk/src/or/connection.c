@@ -848,7 +848,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
              conn->state <= _EXIT_CONN_STATE_MAX);
       break;
     case CONN_TYPE_AP:
-      assert(conn->state >= _EXIT_CONN_STATE_MIN &&
+      assert(conn->state >= _AP_CONN_STATE_MIN &&
              conn->state <= _AP_CONN_STATE_MAX);
       break;
     case CONN_TYPE_DIR:
