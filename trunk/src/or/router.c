@@ -499,7 +499,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
   cp = s_tmp = s_dup = tor_strdup(s);
-  ri_tmp = router_get_entry_from_string(&cp);
+  ri_tmp = router_get_entry_from_string(cp, NULL);
   if (!ri_tmp) {
     log_fn(LOG_ERR, "We just generated a router descriptor we can't parse: <<%s>>",
            s);

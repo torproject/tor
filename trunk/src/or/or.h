@@ -860,7 +860,7 @@ int router_set_routerlist_from_string(const char *s);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_router_hash(const char *s, char *digest);
 int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey);
-routerinfo_t *router_get_entry_from_string(const char **s);
+routerinfo_t *router_get_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
                                        struct exit_policy_t *policy);

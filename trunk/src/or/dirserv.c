@@ -218,7 +218,7 @@ dirserv_add_descriptor(const char **desc)
   cp = desc_tmp = tor_strndup(start, desc_len);
 
   /* Check: is the descriptor syntactically valid? */
-  ri = router_get_entry_from_string(&cp);
+  ri = router_get_entry_from_string(cp, NULL);
   if (!ri) {
     log(LOG_WARN, "Couldn't parse descriptor");
     goto err;
