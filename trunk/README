@@ -1,3 +1,22 @@
+'tor' is an implementation of The Onion Routing system, as
+described in a bit more detail at http://www.onion-router.net/. You
+can read list archives, and subscribe to the mailing list, at
+http://archives.seul.org/or/dev/.
+
+Quickstart version:
+
+1) ./configure (or do the two-line version below, if you're on bsd)
+2) make
+3) cd src/config
+4) ../or/or -f oprc -l debug&
+5) download privoxy (www.privoxy.org), and add the line
+  "forward-socks4a / localhost:9050 ." (without the quotes) to its
+  config file.
+6) point your mozilla (or whatever) to proxy at localhost:8118 (this
+  points it through Privoxy, so you now get good data-scrubbing too.)
+7) browse some web pages
+
+More detailed version:
 
 Dependencies:
 
