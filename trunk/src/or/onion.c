@@ -156,13 +156,13 @@ static int onionskin_process(circuit_t *circ) {
   log(LOG_DEBUG,"onionskin_process: init cipher forward %d, backward %d.", *(int*)keys, *(int*)(keys+16));
 
   if (!(circ->n_crypto =
-        crypto_create_init_cipher(DEFAULT_CIPHER,keys,iv,0))) {
+        crypto_create_init_cipher(CIRCUIT_CIPHER,keys,iv,0))) {
     log(LOG_ERR,"Cipher initialization failed.");
     return -1;
   }
 
   if (!(circ->p_crypto =
-        crypto_create_init_cipher(DEFAULT_CIPHER,keys+16,iv,1))) {
+        crypto_create_init_cipher(CIRCUIT_CIPHER,keys+16,iv,1))) {
     log(LOG_ERR,"Cipher initialization failed.");
     return -1;
   }
@@ -433,7 +433,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   puts("");
 #endif
 
-  cipher = crypto_create_init_cipher(CRYPTO_CIPHER_3DES, pubkey, iv, 1);
+  cipher = crypto_create_init_cipher(ONION_CIPHER, pubkey, iv, 1);
 
   if (!cipher)
     goto err;
@@ -490,7 +490,7 @@ onion_skin_server_handshake(char *onion_skin, /* DH_ONIONSKIN_LEN bytes long */
   puts("");
 #endif
 
-  cipher = crypto_create_init_cipher(CRYPTO_CIPHER_3DES, buf, iv, 0);
+  cipher = crypto_create_init_cipher(ONION_CIPHER, buf, iv, 0);
 
   if (crypto_cipher_decrypt(cipher, onion_skin+pkbytes, DH_ONIONSKIN_LEN-pkbytes,
                             buf+pkbytes))
@@ -516,11 +516,9 @@ onion_skin_server_handshake(char *onion_skin, /* DH_ONIONSKIN_LEN bytes long */
   puts("");
 #endif
 
-  len = crypto_dh_compute_secret(dh, buf+16, DH_KEY_LEN, buf);
+  len = crypto_dh_compute_secret(dh, buf+16, DH_KEY_LEN, key_out, key_out_len);
   if (len < 0)
     goto err;
-
-  memcpy(key_out, buf+len-key_out_len, key_out_len);
 
 #ifdef DEBUG_ONION_SKINS
   printf("Server: key material:");
@@ -554,12 +552,9 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                             char *key_out,
                             int key_out_len) 
 {
-  char key_material[DH_KEY_LEN];
   int len;
   assert(crypto_dh_get_bytes(handshake_state) == DH_KEY_LEN);
   
-  memset(key_material, 0, DH_KEY_LEN);
-
 #ifdef DEBUG_ONION_SKINS
   printf("Client: server g^y:");
   PA(handshake_reply+0,3);
@@ -569,16 +564,11 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 #endif
 
   len = crypto_dh_compute_secret(handshake_state, handshake_reply, DH_KEY_LEN,
-                                 key_material);
+                                 key_out, key_out_len);
   if (len < 0)
     return -1;
   
-  memcpy(key_out, key_material+len-key_out_len, key_out_len);
-
 #ifdef DEBUG_ONION_SKINS
-  printf("Client: key material:");
-  PA(key_material, DH_KEY_LEN);
-  puts("");
   printf("Client: keys out:");
   PA(key_out, key_out_len);
   puts("");

@@ -872,13 +872,13 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
 
   log_fn(LOG_DEBUG,"hop %d init cipher forward %d, backward %d.", (uint32_t)hop, *(uint32_t*)keys, *(uint32_t*)(keys+16));
   if (!(hop->f_crypto =
-        crypto_create_init_cipher(DEFAULT_CIPHER,keys,iv,1))) {
+        crypto_create_init_cipher(CIRCUIT_CIPHER,keys,iv,1))) {
     log(LOG_ERR,"Cipher initialization failed.");
     return -1;
   }
 
   if (!(hop->b_crypto =
-        crypto_create_init_cipher(DEFAULT_CIPHER,keys+16,iv,0))) {
+        crypto_create_init_cipher(CIRCUIT_CIPHER,keys+16,iv,0))) {
     log(LOG_ERR,"Cipher initialization failed.");
     return -1;
   }

@@ -126,6 +126,12 @@
 
 /* default cipher function */
 #define DEFAULT_CIPHER CRYPTO_CIPHER_AES_CTR
+/* Used to en/decrypt onion skins */
+#define ONION_CIPHER      DEFAULT_CIPHER
+/* Used to en/decrypt cells between ORs/OPs. */
+#define CONNECTION_CIPHER DEFAULT_CIPHER
+/* Used to en/decrypt RELAY cells */
+#define CIRCUIT_CIPHER    DEFAULT_CIPHER
 
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
