@@ -581,6 +581,8 @@ void router_mark_as_down(const char *digest) {
   if(!router) /* we don't seem to know about him in the first place */
     return;
   log_fn(LOG_DEBUG,"Marking %s as down.",router->nickname);
+  if (router_is_me(router))
+    log_fn(LOG_WARN, "We just marked ourself as down.");
   router->is_running = 0;
   router->status_set_at = time(NULL);
 }
