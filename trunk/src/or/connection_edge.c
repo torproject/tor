@@ -579,7 +579,8 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
   connection_start_reading(conn);
 
-  circ->timestamp_dirty = time(NULL);
+  if(!circ->timestamp_dirty)
+    circ->timestamp_dirty = time(NULL);
 
   /* add it into the linked list of streams on this circuit */
   log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
