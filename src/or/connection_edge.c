@@ -904,18 +904,17 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
   dummy_conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
   dummy_conn->purpose = EXIT_PURPOSE_RESOLVE;
 
-  dummy_conn->next_stream = circ->resolving_streams;
-  circ->resolving_streams = dummy_conn;
-
   /* send it off to the gethostbyname farm */
   switch (dns_resolve(dummy_conn)) {
     case 1: /* The result was cached; a resolved cell was sent. */
-    case -1:
-      /* dummy_conn got freed, don't touch it */
+    case -1: /* Impossible to resolve; a resolved cell was sent. */
+      connection_free(dummy_conn);
       return 0;
     case 0: /* resolve added to pending list */
+      dummy_conn->next_stream = circ->resolving_streams;
+      circ->resolving_streams = dummy_conn;
       assert_circuit_ok(circ);
-      ;
+      break;
   }
   return 0;
 }
