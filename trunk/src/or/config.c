@@ -431,13 +431,6 @@ static int resolve_my_address(or_options_t *options) {
       log_fn(LOG_WARN,"Error obtaining local hostname");
       return -1;
     }
-#if 0 /* don't worry about complaining, as long as it resolves */
-    if(!strchr(localhostname,'.')) {
-      log_fn(LOG_WARN,"fqdn '%s' has only one element. Misconfigured machine?",address);
-      log_fn(LOG_WARN,"Try setting the Address line in your config file.");
-      return -1;
-    }
-#endif
     options->Address = tor_strdup(localhostname);
     log_fn(LOG_DEBUG,"Guessed local host name as '%s'",options->Address);
   }
