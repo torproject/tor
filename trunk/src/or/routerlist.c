@@ -665,7 +665,7 @@ void routerinfo_free(routerinfo_t *router)
     SMARTLIST_FOREACH(router->declared_family, char *, s, tor_free(s));
     smartlist_free(router->declared_family);
   }
-  exit_policy_free(router->exit_policy);
+  addr_policy_free(router->exit_policy);
   tor_free(router);
 }
 
@@ -673,7 +673,7 @@ void routerinfo_free(routerinfo_t *router)
 routerinfo_t *routerinfo_copy(const routerinfo_t *router)
 {
   routerinfo_t *r;
-  struct exit_policy_t **e, *tmp;
+  struct addr_policy_t **e, *tmp;
 
   r = tor_malloc(sizeof(routerinfo_t));
   memcpy(r, router, sizeof(routerinfo_t));
@@ -687,8 +687,8 @@ routerinfo_t *routerinfo_copy(const routerinfo_t *router)
     r->identity_pkey = crypto_pk_dup_key(r->identity_pkey);
   e = &r->exit_policy;
   while (*e) {
-    tmp = tor_malloc(sizeof(struct exit_policy_t));
-    memcpy(tmp,*e,sizeof(struct exit_policy_t));
+    tmp = tor_malloc(sizeof(struct addr_policy_t));
+    memcpy(tmp,*e,sizeof(struct addr_policy_t));
     *e = tmp;
     (*e)->string = tor_strdup((*e)->string);
     e = & ((*e)->next);
@@ -923,21 +923,21 @@ router_resolve_routerlist(routerlist_t *rl)
 }
 
 /** Decide whether a given addr:port is definitely accepted, definitely
- * rejected, or neither by a given exit policy.  If <b>addr</b> is 0, we
+ * rejected, or neither by a given policy.  If <b>addr</b> is 0, we
  * don't know the IP of the target address.
  *
  * Returns -1 for "rejected", 0 for "accepted", 1 for "maybe" (since IP is
  * unknown).
  */
-int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
-                                       struct exit_policy_t *policy)
+int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
+                                       struct addr_policy_t *policy)
 {
   int maybe_reject = 0;
   int maybe_accept = 0;
   int match = 0;
   int maybe = 0;
   struct in_addr in;
-  struct exit_policy_t *tmpe;
+  struct addr_policy_t *tmpe;
 
   for(tmpe=policy; tmpe; tmpe=tmpe->next) {
 //    log_fn(LOG_DEBUG,"Considering exit policy %s", tmpe->string);
@@ -967,16 +967,16 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
       }
     }
     if (maybe) {
-      if (tmpe->policy_type == EXIT_POLICY_REJECT)
+      if (tmpe->policy_type == ADDR_POLICY_REJECT)
         maybe_reject = 1;
       else
         maybe_accept = 1;
     }
     if (match) {
       in.s_addr = htonl(addr);
-      log_fn(LOG_DEBUG,"Address %s:%d matches exit policy '%s'",
+      log_fn(LOG_DEBUG,"Address %s:%d matches policy '%s'",
              inet_ntoa(in), port, tmpe->string);
-      if(tmpe->policy_type == EXIT_POLICY_ACCEPT) {
+      if(tmpe->policy_type == ADDR_POLICY_ACCEPT) {
         /* If we already hit a clause that might trigger a 'reject', than we
          * can't be sure of this certain 'accept'.*/
         return maybe_reject ? ADDR_POLICY_UNKNOWN : ADDR_POLICY_ACCEPTED;
@@ -998,7 +998,7 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
 
   for (i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
-    if (router->is_running && router_compare_addr_to_exit_policy(
+    if (router->is_running && router_compare_addr_to_addr_policy(
              addr, port, router->exit_policy) != ADDR_POLICY_REJECTED)
       return 0; /* this one could be ok. good enough. */
   }
@@ -1008,7 +1008,7 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
 /** Return true iff <b>router</b> does not permit exit streams.
  */
 int router_exit_policy_rejects_all(routerinfo_t *router) {
-  return router_compare_addr_to_exit_policy(0, 0, router->exit_policy)
+  return router_compare_addr_to_addr_policy(0, 0, router->exit_policy)
     == ADDR_POLICY_REJECTED;
 }
 

@@ -52,7 +52,7 @@ static int directory_handle_command(connection_t *conn);
 
 /********* START VARIABLES **********/
 
-static struct exit_policy_t *dir_policy = NULL;
+static struct addr_policy_t *dir_policy = NULL;
 
 #if 0 /* commented out for now, since for now what clients send is
          different from what servers want to receive */
@@ -69,20 +69,18 @@ char rend_fetch_url[] = "/tor/rendezvous/";
 
 /********* END VARIABLES ************/
 
-/** A helper function for dir_policy_permits_address() below.
- *
- * Parse options->DirPolicy in the same way that the exit policy
- * is parsed, and put the processed version in &dir_policy.
- * Ignore port specifiers.
+/** Parse get_options()-&gt;DirPolicy, and put the processed version in
+ * &dir_policy.  Ignore port specifiers.
  */
-static void parse_dir_policy(void)
+void
+parse_dir_policy(void)
 {
-  struct exit_policy_t *n;
+  struct addr_policy_t *n;
   if (dir_policy) {
-    exit_policy_free(dir_policy);
+    addr_policy_free(dir_policy);
     dir_policy = NULL;
   }
-  config_parse_exit_policy(get_options()->DirPolicy, &dir_policy);
+  config_parse_addr_policy(get_options()->DirPolicy, &dir_policy);
   /* ports aren't used. */
   for (n=dir_policy; n; n = n->next) {
     n->prt_min = 1;
@@ -96,12 +94,10 @@ static void parse_dir_policy(void)
 int dir_policy_permits_address(uint32_t addr)
 {
   int a;
-  if (get_options()->DirPolicy && !dir_policy)
-    parse_dir_policy();
 
   if(!dir_policy) /* 'no dir policy' means 'accept' */
     return 1;
-  a = router_compare_addr_to_exit_policy(addr, 1, dir_policy);
+  a = router_compare_addr_to_addr_policy(addr, 1, dir_policy);
   if (a==-1)
     return 0;
   else if (a==0)

@@ -434,9 +434,9 @@ void router_upload_dir_desc_to_dirservers(void) {
  * rule, then append the default exit policy as well.
  */
 static void router_add_exit_policy_from_config(routerinfo_t *router) {
-  struct exit_policy_t *ep;
+  struct addr_policy_t *ep;
   struct config_line_t default_policy;
-  config_parse_exit_policy(get_options()->ExitPolicy, &router->exit_policy);
+  config_parse_addr_policy(get_options()->ExitPolicy, &router->exit_policy);
 
   for (ep = router->exit_policy; ep; ep = ep->next) {
     if (ep->msk == 0 && ep->prt_min <= 1 && ep->prt_max >= 65535) {
@@ -449,7 +449,7 @@ static void router_add_exit_policy_from_config(routerinfo_t *router) {
   default_policy.key = NULL;
   default_policy.value = (char*)DEFAULT_EXIT_POLICY;
   default_policy.next = NULL;
-  config_parse_exit_policy(&default_policy, &router->exit_policy);
+  config_parse_addr_policy(&default_policy, &router->exit_policy);
 }
 
 /** OR only: Return false if my exit policy says to allow connection to
@@ -464,7 +464,7 @@ int router_compare_to_my_exit_policy(connection_t *conn)
   if (!conn->addr)
     return -1;
 
-  return router_compare_addr_to_exit_policy(conn->addr, conn->port,
+  return router_compare_addr_to_addr_policy(conn->addr, conn->port,
                    desc_routerinfo->exit_policy);
 
 }
@@ -596,7 +596,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   size_t onion_pkeylen, identity_pkeylen;
   size_t written;
   int result=0;
-  struct exit_policy_t *tmpe;
+  struct addr_policy_t *tmpe;
   char *bandwidth_usage;
   char *family_line;
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
@@ -698,7 +698,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     in.s_addr = htonl(tmpe->addr);
     /* Write: "accept 1.2.3.4" */
     result = tor_snprintf(s+written, maxlen-written, "%s %s",
-        tmpe->policy_type == EXIT_POLICY_ACCEPT ? "accept" : "reject",
+        tmpe->policy_type == ADDR_POLICY_ACCEPT ? "accept" : "reject",
         tmpe->msk == 0 ? "*" : inet_ntoa(in));
     if(result < 0 || result+written > maxlen) {
       /* apparently different glibcs do different things on tor_snprintf error.. so check both */

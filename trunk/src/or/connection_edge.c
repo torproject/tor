@@ -12,12 +12,12 @@
 #include "or.h"
 #include "tree.h"
 
-static struct exit_policy_t *socks_policy = NULL;
+static struct addr_policy_t *socks_policy = NULL;
 /* List of exit_redirect_t */
 static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
-static void parse_socks_policy(void);
+void parse_socks_policy(void);
 
 /** Handle new bytes on conn->inbuf, or notification of eof.
  *
@@ -999,7 +999,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
     return tor_version_as_new_as(exit->platform, "0.0.9pre1");
   }
   addr = client_dns_lookup_entry(conn->socks_request->address);
-  if(router_compare_addr_to_exit_policy(addr,
+  if(router_compare_addr_to_addr_policy(addr,
      conn->socks_request->port, exit->exit_policy) < 0)
     return 0;
   return 1;
@@ -1011,14 +1011,15 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
  * is parsed, and put the processed version in &socks_policy.
  * Ignore port specifiers.
  */
-static void parse_socks_policy(void)
+void
+parse_socks_policy(void)
 {
-  struct exit_policy_t *n;
+  struct addr_policy_t *n;
   if (socks_policy) {
-    exit_policy_free(socks_policy);
+    addr_policy_free(socks_policy);
     socks_policy = NULL;
   }
-  config_parse_exit_policy(get_options()->SocksPolicy, &socks_policy);
+  config_parse_addr_policy(get_options()->SocksPolicy, &socks_policy);
   /* ports aren't used. */
   for (n=socks_policy; n; n = n->next) {
     n->prt_min = 1;
@@ -1032,13 +1033,10 @@ static void parse_socks_policy(void)
 int socks_policy_permits_address(uint32_t addr)
 {
   int a;
-  or_options_t *options = get_options();
-  if (options->SocksPolicy && !socks_policy)
-    parse_socks_policy();
 
   if(!socks_policy) /* 'no socks policy' means 'accept' */
     return 1;
-  a = router_compare_addr_to_exit_policy(addr, 1, socks_policy);
+  a = router_compare_addr_to_addr_policy(addr, 1, socks_policy);
   if (a==-1)
     return 0;
   else if (a==0)
