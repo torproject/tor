@@ -73,12 +73,6 @@
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
-#ifdef HAVE_PWD_H
-#include <pwd.h>
-#endif
-#ifdef HAVE_GRP_H
-#include <grp.h>
-#endif
 #ifdef HAVE_WINSOCK_H
 #include <winsock.h>
 #endif
@@ -276,8 +270,6 @@
 #define CELL_RELAY 3
 #define CELL_DESTROY 4
 
-/* legal characters in a filename */
-#define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
 /* legal characters in a nickname */
 #define LEGAL_NICKNAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 

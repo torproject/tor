@@ -11,6 +11,7 @@
 #include "./tortls.h"
 #include "./util.h"
 #include "./log.h"
+#include <string.h>
 
 /* Copied from or.h */
 #define LEGAL_NICKNAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

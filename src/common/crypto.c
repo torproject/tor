@@ -2,7 +2,7 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-#include "../or/or.h"
+#include "orconfig.h"
 
 #include <string.h>
 
@@ -22,9 +22,14 @@
 #include <stdio.h>
 #include <limits.h>
 
+#ifdef HAVE_CTYPE_H
+#include <ctype.h>
+#endif
+
 #include "crypto.h"
 #include "log.h"
 #include "aes.h"
+#include "util.h"
 
 #ifdef MS_WINDOWS
 #include <wincrypt.h>

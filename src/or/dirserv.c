@@ -494,3 +494,10 @@ size_t dirserv_get_directory(const char **directory)
   return the_directory_len;
 }
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/
