@@ -876,6 +876,9 @@ directory_handle_command_get(connection_t *conn, char *headers,
     if (dlen == 0) {
       log_fn(LOG_NOTICE,"Client asked for the mirrored directory, but we don't have a good one yet. Sending 503 Dir not available.");
       write_http_status_line(conn, 503, "Directory unavailable");
+      /* try to get a new one now */
+      if (!connection_get_by_type_purpose(CONN_TYPE_DIR, DIR_PURPOSE_FETCH_DIR))
+        directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
       return 0;
     }
 
@@ -898,6 +901,10 @@ directory_handle_command_get(connection_t *conn, char *headers,
     dlen = dirserv_get_runningrouters(&cp, deflated);
     if (!dlen) { /* we failed to create/cache cp */
       write_http_status_line(conn, 503, "Directory unavailable");
+      /* try to get a new one now */
+      if (!connection_get_by_type_purpose(CONN_TYPE_DIR,
+                                          DIR_PURPOSE_FETCH_RUNNING_LIST))
+        directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
       return 0;
     }
 
