@@ -599,9 +599,8 @@ mark_my_descriptor_dirty(void)
  */
 void get_platform_str(char *platform, size_t len)
 {
-  tor_snprintf(platform, len-1, "Tor %s on %s",
+  tor_snprintf(platform, len, "Tor %s on %s",
            VERSION, get_uname());
-  platform[len-1] = '\0';
   return;
 }
 
