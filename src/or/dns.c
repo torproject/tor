@@ -728,11 +728,13 @@ static int dnsworker_main(void *data) {
         log_fn(LOG_INFO,"DNS worker exiting because of error on connection to Tor process.");
         log_fn(LOG_INFO,"(Error on %d was %s)", fd, tor_socket_strerror(tor_socket_errno(fd)));
       }
+      close(fd);
       spawn_exit();
     }
 
     if (address_len && read_all(fd, address, address_len, 1) != address_len) {
       log_fn(LOG_ERR,"read hostname failed. Child exiting.");
+      close(fd);
       spawn_exit();
     }
     address[address_len] = 0; /* null terminate it */
@@ -759,6 +761,7 @@ static int dnsworker_main(void *data) {
     set_uint32(answer+1, ip);
     if (write_all(fd, answer, 5, 1) != 5) {
       log_fn(LOG_ERR,"writing answer failed. Child exiting.");
+      close(fd);
       spawn_exit();
     }
   }
