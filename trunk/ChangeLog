@@ -1,5 +1,5 @@
 Release notes in progress for 0.0.8:
-pre4:
+rc1:
   o Changes from 0.0.7.3:
     - Bugfixes:
       - Fix assert triggers: if the other side returns an address 0.0.0.0,
