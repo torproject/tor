@@ -125,7 +125,7 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   cell_t cell;
   crypt_path_t *tmp_cpath;
 
-  tmp_cpath = tor_malloc_zero(sizeof(tmp_cpath));
+  tmp_cpath = tor_malloc_zero(sizeof(crypt_path_t));
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_CREATED;
