@@ -38,7 +38,7 @@ int crypto_pk_generate_key(crypto_pk_env_t *env);
 int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env, FILE *src);
 int crypto_pk_read_public_key_from_file(crypto_pk_env_t *env, FILE *src);
 int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int *len);
-int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, char *src, int len);
+int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src, int len);
 int crypto_pk_write_private_key_to_file(crypto_pk_env_t *env, FILE *dest);
 int crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env, const char *fname);
 int crypto_pk_write_public_key_to_file(crypto_pk_env_t *env, FILE *dest);
@@ -58,8 +58,8 @@ int crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *from, int fro
 int crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out);
 int crypto_pk_check_fingerprint_syntax(const char *s);
 
-int base64_encode(char *dest, int destlen, char *src, int srclen);
-int base64_decode(char *dest, int destlen, char *src, int srclen);
+int base64_encode(char *dest, int destlen, const char *src, int srclen);
+int base64_decode(char *dest, int destlen, const char *src, int srclen);
 
 /* Key negotiation */
 typedef struct crypto_dh_env_st {
@@ -95,7 +95,7 @@ int crypto_cipher_advance(crypto_cipher_env_t *env, long delta);
 crypto_cipher_env_t *crypto_create_init_cipher(int cipher_type, char *key, char *iv, int encrypt_mode);
 
 /* SHA-1 */
-int crypto_SHA_digest(unsigned char *m, int len, unsigned char *digest);
+int crypto_SHA_digest(const unsigned char *m, int len, unsigned char *digest);
 
 /* random numbers */
 int crypto_seed_rng();

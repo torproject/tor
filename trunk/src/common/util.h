@@ -36,11 +36,12 @@ void *tor_malloc(size_t size);
 void *tor_malloc_zero(size_t size);
 void *tor_realloc(void *ptr, size_t size);
 char *tor_strdup(const char *s);
+char *tor_strndup(const char *s, size_t n);
 #define tor_free(p) do {if(p) {free(p); (p)=NULL;}} while(0)
 
-char *eat_whitespace(char *s);
-char *eat_whitespace_no_nl(char *s);
-char *find_whitespace(char *s);
+const char *eat_whitespace(const char *s);
+const char *eat_whitespace_no_nl(const char *s);
+const char *find_whitespace(const char *s);
 
 void tor_gettimeofday(struct timeval *timeval);
 long tv_udiff(struct timeval *start, struct timeval *end);

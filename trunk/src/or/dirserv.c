@@ -202,7 +202,8 @@ dirserv_add_descriptor(const char **desc)
   routerinfo_t *ri = NULL;
   int i, r;
   char *start, *end;
-  char *desc_tmp = NULL, *cp;
+  char *desc_tmp = NULL;
+  const char *cp;
   size_t desc_len;
 
   start = strstr(*desc, "router ");
@@ -218,9 +219,7 @@ dirserv_add_descriptor(const char **desc)
     end = start+strlen(start);
   }
   desc_len = end-start;
-  cp = desc_tmp = tor_malloc(desc_len+1);
-  strncpy(desc_tmp, start, desc_len);
-  desc_tmp[desc_len]='\0';
+  cp = desc_tmp = tor_strndup(start, desc_len);
 
   /* Check: is the descriptor syntactically valid? */
   ri = router_get_entry_from_string(&cp);

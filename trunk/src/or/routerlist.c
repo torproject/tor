@@ -21,17 +21,17 @@ extern or_options_t options; /* command-line and config-file options */
 
 /****************************************************************************/
 
-struct directory_token;
-typedef struct directory_token directory_token_t;
+struct directory_token_t;
+typedef struct directory_token_t directory_token_t;
 
 /* static function prototypes */
-static int router_set_routerlist_from_string(char *s);
+static int router_set_routerlist_from_string(const char *s);
 static int
-router_get_list_from_string_impl(char **s, routerlist_t **dest,
+router_get_list_from_string_impl(const char **s, routerlist_t **dest,
                                  int n_good_nicknames,
                                  const char **good_nickname_lst);
 static int
-router_get_routerlist_from_directory_impl(char *s, routerlist_t **dest,
+router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
                                           crypto_pk_env_t *pkey);
 static int router_add_exit_policy(routerinfo_t *router, 
                                   directory_token_t *tok);
@@ -245,30 +245,38 @@ typedef enum {
   _SIGNATURE,
   _PUBLIC_KEY,
   _ERR,
-  _EOF
+  _EOF,
+  _NIL
 } directory_keyword;
 
-struct token_table_ent { char *t; int v; };
+typedef enum {
+  NO_ARGS,
+  ARGS,
+  CONCAT_ARGS,
+} arg_syntax;
+ 
+
+struct token_table_ent { char *t; int v; arg_syntax s; };
 
 static struct token_table_ent token_table[] = {
-  { "accept", K_ACCEPT },
-  { "directory-signature", K_DIRECTORY_SIGNATURE },
-  { "reject", K_REJECT },
-  { "router", K_ROUTER },
-  { "recommended-software", K_RECOMMENDED_SOFTWARE },
-  { "signed-directory", K_SIGNED_DIRECTORY },
-  { "signing-key", K_SIGNING_KEY },
-  { "onion-key", K_ONION_KEY },
-  { "link-key", K_LINK_KEY },
-  { "router-signature", K_ROUTER_SIGNATURE },
-  { "published", K_PUBLISHED },
-  { "running-routers", K_RUNNING_ROUTERS },
-  { "platform", K_PLATFORM },
+  { "accept", K_ACCEPT, ARGS },
+  { "directory-signature", K_DIRECTORY_SIGNATURE, NO_ARGS },
+  { "reject", K_REJECT, ARGS },
+  { "router", K_ROUTER, ARGS },
+  { "recommended-software", K_RECOMMENDED_SOFTWARE, ARGS },
+  { "signed-directory", K_SIGNED_DIRECTORY, NO_ARGS },
+  { "signing-key", K_SIGNING_KEY, NO_ARGS },
+  { "onion-key", K_ONION_KEY, NO_ARGS },
+  { "link-key", K_LINK_KEY, NO_ARGS },
+  { "router-signature", K_ROUTER_SIGNATURE, NO_ARGS },
+  { "published", K_PUBLISHED, CONCAT_ARGS },
+  { "running-routers", K_RUNNING_ROUTERS, ARGS },
+  { "platform", K_PLATFORM, ARGS },
   { NULL, -1 }
 };
 
 #define MAX_ARGS 1024
-struct directory_token {
+struct directory_token_t {
   directory_keyword tp;
   union {
     struct {
@@ -287,6 +295,7 @@ struct directory_token {
 static void
 router_release_token(directory_token_t *tok)
 {
+  int i;
   switch (tok->tp) 
     {
     case _SIGNATURE:
@@ -295,14 +304,21 @@ router_release_token(directory_token_t *tok)
     case _PUBLIC_KEY:
       crypto_free_pk_env(tok->val.public_key);
       break;
-    default:
+    case _ERR:
+    case _EOF:
+    case _NIL:
       break;
+    default:
+      for (i = 0; i < tok->val.cmd.n_args; ++i) {
+        tor_free(tok->val.cmd.args[i]);
+      }
     }
+  tok->tp = _NIL;
 }
 
 static int
-_router_get_next_token(char **s, directory_token_t *tok) {
-  char *next;
+_router_get_next_token(const char **s, directory_token_t *tok) {
+  const char *next;
   crypto_pk_env_t *pkey = NULL;
   char *signature = NULL;
   int i, done;
@@ -310,6 +326,8 @@ _router_get_next_token(char **s, directory_token_t *tok) {
   tok->tp = _ERR;
   tok->val.error = "";
 
+  router_release_token(tok);
+  
   *s = eat_whitespace(*s);
   if (!**s) {
     tok->tp = _EOF;
@@ -368,21 +386,42 @@ _router_get_next_token(char **s, directory_token_t *tok) {
     for (i = 0 ; token_table[i].t ; ++i) {
       if (!strncmp(token_table[i].t, *s, next-*s)) {
         tok->tp = token_table[i].v;
-        i = 0;
-        done = (*next == '\n');
-        *s = eat_whitespace_no_nl(next);
-        while (**s != '\n' && i <= MAX_ARGS && !done) {
-          next = find_whitespace(*s);
-          if (*next == '\n')
-            done = 1;
-          *next = 0;
-          tok->val.cmd.args[i++] = *s;
+
+        if (token_table[i].s == ARGS) {
+          i = 0;
+          done = (*next == '\n');
+          *s = eat_whitespace_no_nl(next);
+          while (**s != '\n' && i < MAX_ARGS && !done) {
+            next = find_whitespace(*s);
+            if (*next == '\n')
+              done = 1;
+            tok->val.cmd.args[i++] = tor_strndup(*s,next-*s);
+            *s = eat_whitespace_no_nl(next+1);
+          }
+          tok->val.cmd.n_args = i;
+          if (i >= MAX_ARGS) {
+            /* XXX free args[0..i] */
+            tok->tp = _ERR;
+            tok->val.error = "Too many arguments"; return -1;
+          }
+        } else if (token_table[i].s == CONCAT_ARGS) {
+          *s = eat_whitespace_no_nl(next);
+          next = strchr(*s, '\n');
+          if (!next) {
+            tok->tp = _ERR;
+            tok->val.error = "Unexpected EOF"; return -1;
+          }
+          tok->val.cmd.args[0] = tor_strndup(*s,next-*s);
+          tok->val.cmd.n_args = 1;
           *s = eat_whitespace_no_nl(next+1);
-        };
-        tok->val.cmd.n_args = i;
-        if (i > MAX_ARGS) {
-          tok->tp = _ERR;
-          tok->val.error = "Too many arguments"; return -1;
+        } else {
+          *s = eat_whitespace_no_nl(next);
+          if (**s != '\n') {
+            tok->tp = _ERR;
+            tok->val.error = "Unexpected arguments"; return -1;
+          }
+          tok->val.cmd.n_args = 0;
+          *s = eat_whitespace_no_nl(*s+1);
         }
         return 0;
       }
@@ -444,7 +483,7 @@ router_get_next_token(char **s, directory_token_t *tok) {
 
 /* read routerinfo elements from s, and throw out the ones that
  * don't parse and resolve. */
-static int router_set_routerlist_from_string(char *s)
+static int router_set_routerlist_from_string(const char *s)
 {
   if (router_get_list_from_string_impl(&s, &routerlist, -1, NULL)) {
     log(LOG_WARN, "Error parsing router file");
@@ -457,7 +496,8 @@ static int router_set_routerlist_from_string(char *s)
   return 0;
 }
 
-static int router_get_hash_impl(char *s, char *digest, const char *start_str,
+static int router_get_hash_impl(const char *s, char *digest, 
+                                const char *start_str,
                                 const char *end_str)
 {
   char *start, *end;
@@ -486,22 +526,22 @@ static int router_get_hash_impl(char *s, char *digest, const char *start_str,
   return 0;
 }
 
-int router_get_dir_hash(char *s, char *digest)
+int router_get_dir_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
                               "signed-directory","directory-signature");
 }
-int router_get_router_hash(char *s, char *digest)
+int router_get_router_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
                               "router ","router-signature");
 }
 
 /* return 0 if myversion is in start. Else return -1. */
-int compare_recommended_versions(char *myversion, char *start) {
+int compare_recommended_versions(const char *myversion, const char *start) {
   int len_myversion = strlen(myversion);
   char *comma;
-  char *end = start + strlen(start);
+  const char *end = start + strlen(start);
 
   log_fn(LOG_DEBUG,"checking '%s' in '%s'.", myversion, start);
   
@@ -517,7 +557,7 @@ int compare_recommended_versions(char *myversion, char *start) {
   }
 }
 
-int router_set_routerlist_from_directory(char *s, crypto_pk_env_t *pkey)
+int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
 {
   if (router_get_routerlist_from_directory_impl(s, &routerlist, pkey)) {
     log_fn(LOG_WARN, "Couldn't parse directory.");
@@ -544,18 +584,19 @@ int router_set_routerlist_from_directory(char *s, crypto_pk_env_t *pkey)
 }
 
 static int
-router_get_routerlist_from_directory_impl(char *s, routerlist_t **dest,
+router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
                                           crypto_pk_env_t *pkey)
 {
   directory_token_t tok;
   char digest[20];
   char signed_digest[128];
   routerlist_t *new_dir = NULL;
-  char *versions;
+  char *versions = NULL;
   struct tm published;
   time_t published_on;
-  const char *good_nickname_lst[1024];
-  int n_good_nicknames;
+  char *good_nickname_lst[1024];
+  int n_good_nicknames = 0;
+  int i;
   
 #define NEXT_TOK()                                                      \
   do {                                                                  \
@@ -570,6 +611,10 @@ router_get_routerlist_from_directory_impl(char *s, routerlist_t **dest,
       log_fn(LOG_WARN, "Error reading directory: expected %s", name);\
       return -1;                                                        \
     } } while(0)
+#define N_ARGS tok.val.cmd.n_args
+#define ARGS tok.val.cmd.args
+
+  tok.tp = _NIL;
 
   if (router_get_dir_hash(s, digest)) {
     log_fn(LOG_WARN, "Unable to compute digest of directory");
@@ -584,35 +629,34 @@ router_get_routerlist_from_directory_impl(char *s, routerlist_t **dest,
 
   NEXT_TOK();
   TOK_IS(K_PUBLISHED, "published");
-  if (tok.val.cmd.n_args != 2) {
-    log_fn(LOG_WARN, "Invalid published line");
-    goto err;
-  }
-  tok.val.cmd.args[1][-1] = ' ';
-  if (!strptime(tok.val.cmd.args[0], "%Y-%m-%d %H:%M:%S", &published)) {
+  assert(N_ARGS == 1);
+  if (!strptime(ARGS[0], "%Y-%m-%d %H:%M:%S", &published)) {
     log_fn(LOG_WARN, "Published time was unparseable"); goto err;
   }
   published_on = tor_timegm(&published);  
 
   NEXT_TOK();
   TOK_IS(K_RECOMMENDED_SOFTWARE, "recommended-software");
-  if (tok.val.cmd.n_args != 1) {
+  if (N_ARGS != 1) {
     log_fn(LOG_WARN, "Invalid recommended-software line");
     goto err;
   }
-  versions = tor_strdup(tok.val.cmd.args[0]);
-  
+  versions = ARGS[0];
+  tok.val.cmd.n_args = 0; /* Don't let the versions string get freed. */
+
   NEXT_TOK();
   TOK_IS(K_RUNNING_ROUTERS, "running-routers");
-  n_good_nicknames = tok.val.cmd.n_args;
-  memcpy(good_nickname_lst, tok.val.cmd.args, n_good_nicknames*sizeof(char *));
+  n_good_nicknames = N_ARGS;
+  memcpy(good_nickname_lst, ARGS, n_good_nicknames*sizeof(char *));
+  N_ARGS = 0; /* Don't free the strings in good_nickname_lst. */
 
   if (router_get_list_from_string_impl(&s, &new_dir,
-                                       n_good_nicknames, good_nickname_lst)) {
+                                       n_good_nicknames, 
+                                       (const char**)good_nickname_lst)) {
     log_fn(LOG_WARN, "Error reading routers from directory");
     goto err;
   }
-  new_dir->software_versions = versions;
+  new_dir->software_versions = versions; versions = NULL;
   new_dir->published_on = published_on;
 
   NEXT_TOK();
@@ -623,7 +667,6 @@ router_get_routerlist_from_directory_impl(char *s, routerlist_t **dest,
     if (crypto_pk_public_checksig(pkey, tok.val.signature, 128, signed_digest)
         != 20) {
       log_fn(LOG_WARN, "Error reading directory: invalid signature.");
-      free(tok.val.signature);
       goto err;
     }
     log(LOG_DEBUG,"Signed directory hash starts %02x:%02x:%02x:%02x",
@@ -631,11 +674,9 @@ router_get_routerlist_from_directory_impl(char *s, routerlist_t **dest,
         ((int)signed_digest[2])&0xff,((int)signed_digest[3])&0xff);
     if (memcmp(digest, signed_digest, 20)) {
       log_fn(LOG_WARN, "Error reading directory: signature does not match.");
-      free(tok.val.signature);
       goto err;
     }
   }
-  free(tok.val.signature);
 
   NEXT_TOK();
   TOK_IS(_EOF, "end of directory");
@@ -647,15 +688,25 @@ router_get_routerlist_from_directory_impl(char *s, routerlist_t **dest,
   return 0;
 
  err:
+  router_release_token(&tok);
   if (new_dir)
     routerlist_free(new_dir);
+  if (versions)
+    tor_free(versions);
+  if (n_good_nicknames) {
+    for (i = 0; i < n_good_nicknames; ++i) {
+      tor_free(good_nickname_lst[i]);
+    }
+  }
   return -1;
 #undef NEXT_TOK
 #undef TOK_IS
+#undef ARGS
+#undef N_ARGS
 }
 
 static int
-router_get_list_from_string_impl(char **s, routerlist_t **dest,
+router_get_list_from_string_impl(const char **s, routerlist_t **dest,
                                  int n_good_nicknames,
                                  const char **good_nickname_lst)
 {
@@ -759,7 +810,7 @@ router_resolve_routerlist(routerlist_t *rl)
  * updates s so it points to after the router it just read.
  * mallocs a new router and returns it if all goes well, else returns NULL.
  */
-routerinfo_t *router_get_entry_from_string(char**s) {
+routerinfo_t *router_get_entry_from_string(const char**s) {
   routerinfo_t *router = NULL;
   char signed_digest[128];
   char digest[128];
@@ -775,6 +826,9 @@ routerinfo_t *router_get_entry_from_string(char**s) {
     } } while(0)
 
 #define ARGS tok->val.cmd.args
+#define N_ARGS tok->val.cmd.n_args
+
+  _tok.tp = _NIL;
 
   if (router_get_router_hash(*s, digest) < 0) {
     log_fn(LOG_WARN, "Couldn't compute router hash.");
@@ -784,15 +838,14 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   NEXT_TOKEN();
 
   if (tok->tp != K_ROUTER) {
-    router_release_token(tok);
     log_fn(LOG_WARN,"Entry does not start with \"router\"");
-    return NULL;
+    goto err;
   }
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
   router->onion_pkey = router->identity_pkey = router->link_pkey = NULL; 
 
-  if (tok->val.cmd.n_args != 6) {
+  if (N_ARGS != 6) {
     log_fn(LOG_WARN,"Wrong # of arguments to \"router\"");
     goto err;
   }
@@ -843,10 +896,7 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   if (tok->tp != K_PUBLISHED) {
     log_fn(LOG_WARN, "Missing published time"); goto err;
   }
-  if (tok->val.cmd.n_args != 2) {
-    log_fn(LOG_WARN, "Wrong number of arguments to published"); goto err;
-  }
-  ARGS[1][-1] = ' '; /* Re-insert space. */
+  assert(N_ARGS == 1);
   if (!strptime(ARGS[0], "%Y-%m-%d %H:%M:%S", &published)) {
     log_fn(LOG_WARN, "Published time was unparseable"); goto err;
   }
@@ -912,24 +962,28 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   router_release_token(tok); /* free the signature */
   return router;
 
- err:
+err:
   router_release_token(tok); 
   routerinfo_free(router);
   return NULL;
 #undef ARGS
+#undef N_ARGS
 #undef NEXT_TOKEN
 }
 
 int
-router_add_exit_policy_from_string(routerinfo_t *router, char *s)
+router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
 {
   directory_token_t tok;
-  char *tmp, *cp;
+  const char *cp;
+  char *tmp;
   int r;
   int len, idx;
 
+  tok.tp = _NIL;
+
   len = strlen(s);
-  tmp = cp = tor_malloc(len+2);
+  cp = tmp = tor_malloc(len+2);
   for (idx = 0; idx < len; ++idx) {
     tmp[idx] = tolower(s[idx]);
   }
