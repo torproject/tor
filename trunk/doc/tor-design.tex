@@ -111,10 +111,10 @@ The original Onion Routing design required a separate ``application
 proxy'' for each supported application protocol---most of which were
 never written, so many applications were never supported.  Tor uses the
 standard and near-ubiquitous SOCKS \cite{socks4} proxy interface, allowing
-us to support most TCP-based programs without modification.  This design
-change allows Tor to use the filtering features of privacy-enhancing
-application-level proxies such as Privoxy \cite{privoxy} without having
-to incorporate those features itself.
+us to support most TCP-based programs without modification.  Tor now
+relies on the filtering features of privacy-enhancing
+application-level proxies such as Privoxy \cite{privoxy}, without trying
+to duplicate those features itself.
 
 \item \textbf{Many TCP streams can share one circuit:} The
 original Onion Routing design built a separate circuit for each
@@ -554,6 +554,8 @@ built, extended, truncated, and destroyed. Section~\ref{subsec:tcp}
 describes how TCP streams are routed through the network, and finally
 Section~\ref{subsec:congestion} talks about congestion control and
 fairness issues.
+% XXX \ref{subsec:integrity-checking} is missing
+% XXX \ref{xubsec:rate-limit is missing.
 
 \SubSection{Cells}
 \label{subsec:cells}
@@ -723,10 +725,10 @@ encrypts the cell payload (that is, the relay header and payload) with
 the symmetric key of each hop up to that OR.  Because the streamID is
 encrypted to a different value at each step, only at the targeted OR
 will it have a meaningful value.\footnote{
-  % XXX Should we just say that 2^56 is itself negligible?  
-  % XXX Assuming 4-hop circuits with 10 streams per hop, there are 33 
-  % XXX possible bad streamIDs before the last circuit.  This still
-  % XXX gives an error only once every 2 million terabytes (approx).
+  % Should we just say that 2^56 is itself negligible?  
+  % Assuming 4-hop circuits with 10 streams per hop, there are 33 
+  % possible bad streamIDs before the last circuit.  This still
+  % gives an error only once every 2 million terabytes (approx).
 With 56 bits of streamID per cell, the probability of an accidental
 collision is far lower than the chance of hardware failure.}
 This \emph{leaky pipe} circuit topology
@@ -790,8 +792,8 @@ In the case of Mozilla, the flaw is easy to address: the filtering web
 proxy called Privoxy does the SOCKS call safely, and Mozilla talks to
 Privoxy safely. But a portable general solution, such as is needed for
 SSH, is
-an open problem. Modifying the local nameserver
-is invasive, brittle, and not portable. Forcing the resolver
+an open problem. Modifying or replacing the local nameserver
+can be invasive, brittle, and not portable. Forcing the resolver
 library to do its resolution via TCP rather than UDP is
 hard to do right, and also has portability problems. We could provide a
 tool similar to \emph{dig} to perform a private lookup through the
@@ -811,6 +813,7 @@ connections, such as broken HTTP clients that close their side of the
 stream after writing but are still willing to read.
 
 \SubSection{Integrity checking on streams}
+\label{subsec:integrity-checking}
 
 Because the old Onion Routing design used a stream cipher, traffic was
 vulnerable to a malleability attack: even though the attacker could not
@@ -866,6 +869,7 @@ acceptably low, given that Alice or Bob tear down the circuit if they
 receive a bad hash.
 
 \SubSection{Rate limiting and fairness}
+\label{subsec:rate-limit}
 
 Volunteers are generally more willing to run services that can limit
 their bandwidth usage. To accommodate them, Tor servers use a
@@ -1075,10 +1079,8 @@ general, nodes can require a variety of forms of traffic authentication
 
 Many administrators will use port restrictions to support only a
 limited set of well-known services, such as HTTP, SSH, or AIM.
-This is not a complete solution, since abuse opportunities for these
-protocols are still well known. Nonetheless, the benefits are real,
-since administrators seem used to the concept of port 80 abuse not
-coming from the machine's owner.
+This is not a complete solution, of course, since abuse opportunities for these
+protocols are still well known.
 
 A further solution may be to use proxies to clean traffic for certain
 protocols as it leaves the network.  For example, much abusive HTTP
@@ -1134,6 +1136,7 @@ client about the router membership list, topology, or current network
 state. Such \emph{partitioning attacks} on client knowledge help an
 adversary to efficiently deploy resources
 when attacking a target.
+% XXX Cite for partitioning attacks?
 
 Tor uses a small group of redundant, well-known onion routers to
 track changes in network topology and node state, including keys and
@@ -1261,9 +1264,9 @@ performed on behalf of Alice and Bob by their local onion proxies;
 application integration is described more fully below.
 \begin{tightlist}
 \item Bob chooses some introduction points, and advertises them on
-      the DHT.
+      the DHT.  He can add more later.
 \item Bob establishes a Tor circuit to each of his introduction points,
-      and waits.
+      and waits.  No data is transmitted until a request is received.
 \item Alice learns about Bob's service out of band (perhaps Bob told her,
       or she found it on a website). She retrieves the details of Bob's
       service from the DHT.
@@ -1547,7 +1550,7 @@ circuits, or both.
 % control algorithm.
 
 \emph{Introduce timing into messages.} This is simply a stronger
-version of passive timing attacks already discussed above.
+version of passive timing attacks already discussed earlier.
   
 \emph{Tagging attacks.} A hostile node could ``tag'' a
 cell by altering it. This would render it unreadable, but if the
@@ -1895,9 +1898,6 @@ minutes.  As the state grows larger and clients more numerous, we
 may need to move to a solution in which clients only receive
 incremental updates to directory state, or where directories are
 cached at the ORs to avoid high loads on the directory servers.
-% XXX this is a design paper, not an implementation paper. the design
-%     says that they're already cached at the ORs. Agree/disagree?
-% XXX Agree. -NM
 
 \emph{Implementing location-hidden servers:} While
 Section~\ref{sec:rendezvous} describes a design for rendezvous
