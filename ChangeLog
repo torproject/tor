@@ -1,3 +1,45 @@
+Changes so far in 0.0.9:
+pre1:
+  o Bugfixes:
+    - Stop using separate defaults for no-config-file and
+      empty-config-file. Now you have to explicitly turn off SocksPort,
+      if you don't want it open.
+    - Fix a bug in OutboundBindAddress so it (hopefully) works.
+    - Improve man page to mention more of the 0.0.8 features.
+    - Fix a rare seg fault for people running hidden services on
+      intermittent connections.
+    - Change our file IO stuff (especially wrt OpenSSL) so win32 is
+      happier.
+    - Fix more dns related bugs: send back resolve_failed and end cells
+      more reliably when the resolve fails, rather than closing the
+      circuit and then trying to send the cell. Also attach dummy resolve
+      connections to a circuit *before* calling dns_resolve(), to fix
+      a bug where cached answers would never be sent in RESOLVED cells.
+    - When we run out of disk space, or other log writing error, don't
+      crash. Just stop logging to that log and continue.
+    - We were starting to daemonize before we opened our logs, so if
+      there were any problems opening logs, we would complain to stderr,
+      which wouldn't work, and then mysteriously exit.
+
+  o Features:
+    - Clients can ask dirservers for /dir.z to get a compressed version
+      of the directory. Only works for servers running 0.0.9, of course.
+    - Make clients cache directories and use them to seed their router
+      lists at startup. This means clients have a datadir again.
+    - Configuration infrastructure support for warning on obsolete
+      options.
+    - Respond to content-encoding headers by trying to uncompress as
+      appropriate.
+    - Reply with a deflated directory when a client asks for "dir.z".
+      We could use allow-encodings instead, but allow-encodings isn't
+      specified in HTTP 1.0.
+    - Raise the max dns workers from 50 to 100.
+    - Discourage people from setting their dirfetchpostperiod more often
+      than once per minute
+    - Protect dirservers from overzealous descriptor uploading -- wait
+      10 seconds after directory gets dirty, before regenerating.
+
+
 Changes in version 0.0.8 - 2004-08-25
   o Bugfixes:
     - Made our unit tests compile again on OpenBSD 3.5, and tor
