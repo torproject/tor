@@ -1177,6 +1177,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {
       log_fn(LOG_INFO,"Didn't find rendezvous service (port %d)",n_stream->port);
       connection_mark_for_close(n_stream, END_STREAM_REASON_EXITPOLICY);
+      circuit_mark_for_close(circ); /* knock the whole thing down, somebody screwed up */
       return 0;
     }
     assert_circuit_ok(circ);
