@@ -154,7 +154,8 @@ static int config_compare(struct config_line_t *c, const char *key, config_type_
     case CONFIG_TYPE_CSV:
       if(*(smartlist_t**)arg == NULL)
         *(smartlist_t**)arg = smartlist_create();
-      smartlist_split_string(*(smartlist_t**)arg, c->value, ",", 1);
+      smartlist_split_string(*(smartlist_t**)arg, c->value, ",",
+                             SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
       break;
     case CONFIG_TYPE_LINELIST:
       /* Note: this reverses the order that the lines appear in.  That's
@@ -980,9 +981,7 @@ config_parse_exit_policy(struct config_line_t *cfg,
                          struct exit_policy_t **dest)
 {
   struct exit_policy_t **nextp;
-  char *e, *s;
-  int last=0;
-  char line[1024];
+  smartlist_t *entries;
 
   if (!cfg)
     return;
@@ -990,30 +989,22 @@ config_parse_exit_policy(struct config_line_t *cfg,
   while (*nextp)
     nextp = &((*nextp)->next);
 
+  entries = smartlist_create();
   for (; cfg; cfg = cfg->next) {
-    s = cfg->value;
-    for (;;) {
-      e = strchr(s,',');
-      if(!e) {
-        last = 1;
-        strncpy(line,s,1023);
-      } else {
-        memcpy(line,s, ((e-s)<1023)?(e-s):1023);
-      line[e-s] = 0;
-      }
-      line[1023]=0;
-      log_fn(LOG_DEBUG,"Adding new entry '%s'",line);
-      *nextp = router_parse_exit_policy_from_string(line);
+    smartlist_split_string(entries,cfg->value,",",SPLIT_SKIP_SPACE,0);
+    SMARTLIST_FOREACH(entries, const char *, ent, {
+      log_fn(LOG_DEBUG,"Adding new entry '%s'",ent);
+      *nextp = router_parse_exit_policy_from_string(ent);
       if(*nextp) {
         nextp = &((*nextp)->next);
       } else {
-        log_fn(LOG_WARN,"Malformed exit policy %s; skipping.", line);
+        log_fn(LOG_WARN,"Malformed exit policy %s; skipping.", ent);
       }
-      if (last)
-        break;
-      s = e+1;
-    }
+    });
+    SMARTLIST_FOREACH(entries, char *, ent, tor_free(ent));
+    smartlist_clear(entries);
   }
+  smartlist_free(entries);
 }
 
 void exit_policy_free(struct exit_policy_t *p) {
