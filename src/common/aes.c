@@ -47,14 +47,14 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
   u32 counter1 = cipher->counter1;
   u8 buf[16];
   memset(buf, 0, 8);
-  buf[15] = (counter0 >> 0)  && 0xff;
-  buf[14] = (counter0 >> 8)   && 0xff;
-  buf[13] = (counter0 >> 16) && 0xff;
-  buf[12] = (counter0 >> 24) && 0xff;
-  buf[11] = (counter1 >> 0)  && 0xff;
-  buf[10] = (counter1 >> 8)  && 0xff;
-  buf[ 9] = (counter1 >> 16) && 0xff;
-  buf[ 8] = (counter1 >> 24) && 0xff;
+  buf[15] = (counter0 >> 0)  & 0xff;
+  buf[14] = (counter0 >> 8)  & 0xff;
+  buf[13] = (counter0 >> 16) & 0xff;
+  buf[12] = (counter0 >> 24) & 0xff;
+  buf[11] = (counter1 >> 0)  & 0xff;
+  buf[10] = (counter1 >> 8)  & 0xff;
+  buf[ 9] = (counter1 >> 16) & 0xff;
+  buf[ 8] = (counter1 >> 24) & 0xff;
 
   rijndaelEncrypt(cipher->rk, cipher->nr, buf, cipher->buf);
   cipher->pos = 0;
