@@ -10,6 +10,8 @@
 #include "or.h"
 #include "tree.h"
 
+extern or_options_t options; /* command-line and config-file options */
+
 #define MAX_ADDRESSLEN 256
 
 #define MAX_DNSWORKERS 50
