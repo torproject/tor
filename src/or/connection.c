@@ -163,10 +163,6 @@ _connection_free(connection_t *conn) {
   tor_free(conn->nickname);
   tor_free(conn->socks_request);
 
-  if (conn->s >= 0) {
-    log_fn(LOG_INFO,"closing fd %d.",conn->s);
-    tor_close_socket(conn->s);
-  }
   if (conn->read_event) {
     event_del(conn->read_event);
     tor_free(conn->read_event);
@@ -175,6 +171,11 @@ _connection_free(connection_t *conn) {
     event_del(conn->write_event);
     tor_free(conn->write_event);
   }
+  if (conn->s >= 0) {
+    log_fn(LOG_INFO,"closing fd %d.",conn->s);
+    tor_close_socket(conn->s);
+  }
+
   memset(conn, 0xAA, sizeof(connection_t)); /* poison memory */
   tor_free(conn);
 }
@@ -308,6 +309,16 @@ void connection_close_immediate(connection_t *conn)
     log_fn(LOG_INFO,"fd %d, type %s, state %d, %d bytes on outbuf.",
            conn->s, CONN_TYPE_TO_STRING(conn->type),
            conn->state, (int)conn->outbuf_flushlen);
+  }
+  if (conn->read_event) {
+    event_del(conn->read_event);
+    tor_free(conn->read_event);
+    conn->read_event = NULL;
+  }
+  if (conn->write_event) {
+    event_del(conn->write_event);
+    tor_free(conn->write_event);
+    conn->write_event = NULL;
   }
   tor_close_socket(conn->s);
   conn->s = -1;
