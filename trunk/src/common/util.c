@@ -741,13 +741,37 @@ int read_all(int fd, char *buf, size_t count, int isSocket) {
  *    Filesystem operations.
  */
 
+/** Clean up <b>name</b> so that we can use it in a call to "stat".  On Unix,
+ * we do nothing.  On Windows, we remove a trailing slash, unless the path is
+ * the root of a disk. */
+static void
+clean_name_for_stat(char *name)
+{
+#ifdef MS_WINDOWS
+  size_t len = strlen(name);
+  if (!len)
+    return;
+  if (name[len-1]=='\\' || name[len-1]=='/') {
+    if (len == 1 || (len==3 && name[1]==':'))
+      return;
+    name[len-1]='\0';
+  }
+#endif
+}
+
 /** Return FN_ERROR if filename can't be read, FN_NOENT if it doesn't
  * exist, FN_FILE if it is a regular file, or FN_DIR if it's a
  * directory. */
 file_status_t file_status(const char *fname)
 {
   struct stat st;
-  if (stat(fname, &st)) {
+  char *f;
+  int r;
+  f = tor_strdup(fname);
+  clean_name_for_stat(f);
+  r = stat(f, &st);
+  tor_free(f);
+  if (r) {
     if (errno == ENOENT) {
       return FN_NOENT;
     }
@@ -770,8 +794,13 @@ int check_private_dir(const char *dirname, cpd_check_t check)
 {
   int r;
   struct stat st;
+  char *f;
   tor_assert(dirname);
-  if (stat(dirname, &st)) {
+  f = tor_strdup(dirname);
+  clean_name_for_stat(f);
+  r = stat(f, &st);
+  tor_free(f);
+  if (r) {
     if (errno != ENOENT) {
       log(LOG_WARN, "Directory %s cannot be read: %s", dirname,
           strerror(errno));
@@ -893,12 +922,16 @@ int write_bytes_to_file(const char *fname, const char *str, size_t len,
 char *read_file_to_str(const char *filename, int bin) {
   int fd; /* router file */
   struct stat statbuf;
-  char *string;
+  char *string, *f;
   int r;
 
   tor_assert(filename);
 
-  if (stat(filename, &statbuf) < 0) {
+  f = tor_strdup(filename);
+  clean_name_for_stat(f);
+  r = stat(f, &statbuf);
+  tor_free(f);
+  if (r < 0) {
     log_fn(LOG_INFO,"Could not stat %s.",filename);
     return NULL;
   }
