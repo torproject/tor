@@ -1,3 +1,28 @@
+Changes in version 0.0.2pre22 - 2004-02-26
+  o New features:
+    - Servers publish less revealing uname information in descriptors.
+    - More memory tracking and assertions, to crash more usefully when
+      errors happen.
+    - If the default torrc isn't there, just use some default defaults.
+      Plus provide an internal dirservers file if they don't have one.
+    - When the user tries to use Tor as an http proxy, give them an http
+      501 failure explaining that we're a socks proxy.
+    - Dump a new router.desc on hup, to help confused people who change
+      their exit policies and then wonder why router.desc doesn't reflect
+      it.
+    - Clean up the generic tor.sh init script that we ship with.
+  o Bugfixes:
+    - If the exit stream is pending on the resolve, and a destroy arrives,
+      then the stream wasn't getting removed from the pending list. I
+      think this was the one causing recent server crashes.
+    - Use a more robust poll on OSX 10.3, since their poll is flaky.
+    - When it couldn't resolve any dirservers, it was useless from then on.
+      Now it reloads the RouterFile (or default dirservers) if it has no
+      dirservers.
+    - Move the 'tor' binary back to /usr/local/bin/ -- it turns out
+      many users don't even *have* a /usr/local/sbin/.
+
+
 Changes in version 0.0.2pre21 - 2004-02-18
   o New features:
     - There's a ChangeLog file that actually reflects the changelog.
