@@ -349,7 +349,7 @@ int init_keys(void) {
   /* 6b. [authdirserver only] add own key to approved directories. */
   crypto_pk_get_digest(get_identity_key(), digest);
   if (!router_digest_is_trusted_dir(digest)) {
-    add_trusted_dir_server(options.Address, options.DirPort, digest);
+    add_trusted_dir_server(options.Address, (uint16_t)options.DirPort, digest);
   }
   /* 7. [authdirserver only] load old directory, if it's there */
   sprintf(keydir,"%s/cached-directory", datadir);

@@ -799,9 +799,9 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
       log_fn(LOG_WARN,"Wrong # of arguments to \"ports\"");
       goto err;
     }
-    router->or_port = tor_parse_long(tok->args[0],10,0,65535,NULL,NULL);
-    router->socks_port = tor_parse_long(tok->args[1],10,0,65535,NULL,NULL);
-    router->dir_port = tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
+    router->or_port = (uint16_t) tor_parse_long(tok->args[0],10,0,65535,NULL,NULL);
+    router->socks_port = (uint16_t) tor_parse_long(tok->args[1],10,0,65535,NULL,NULL);
+    router->dir_port = (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
     ports_set = 1;
   }
 
@@ -813,7 +813,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
       log_fn(LOG_WARN,"Wrong # of arguments to \"dircacheport\"");
       goto err;
     }
-    router->dir_port = tor_parse_long(tok->args[0],10,1,65535,NULL,NULL);
+    router->dir_port = (uint16_t) tor_parse_long(tok->args[0],10,1,65535,NULL,NULL);
   }
 
   tok = find_first_by_keyword(tokens, K_BANDWIDTH);
