@@ -63,6 +63,23 @@ ARMA    - tor faq
         o Move (most of) the router/directory code out of main.c
 
 Mid-term:
+        . migrate to using nickname rather than addr:port for routers
+                o decide_aci_type
+                - generate onion skins
+                  - circuit_send_next_onion_skin
+                  - circuit_extend
+                  - onion_generate_cpath
+                - get_unique_aci_by_addr_port
+                - circ->n_addr and circ->n_port
+                  - circuit_enumerate_by_naddr_nport
+                - cpath layers
+                - connection_or_connect
+                - connection_exact_get_by_addr_port
+                - connection_twin_get_by_addr_port
+                - router_get_by_addr_port
+                - connection_or_init_conn_from_router
+                - tag_pack, tag_unpack, connection_cpu_process_inbuf
+                - directory_initiate_command
         . Redo scheduler
                 o fix SSL_read bug for buffered records
                 - make round-robining more fair
