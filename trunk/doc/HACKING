@@ -56,7 +56,7 @@ the distant future, stuff may have changed.)
   
    [General-purpose modules]
 
-     or.h -- Common header file: includes everything, define everything.
+     or.h -- Common header file: include everything, define everything.
 
      buffers.c -- Implements a generic buffer interface.  Buffers are 
         fairly opaque string holders that can read to or flush from:
@@ -65,7 +65,7 @@ the distant future, stuff may have changed.)
         Also implements parsing functions to read HTTP and SOCKS commands
         from buffers.
 
-     tree.h -- A splay tree implementatio by Niels Provos.  Used only by
+     tree.h -- A splay tree implementation by Niels Provos.  Used only by
         dns.c.
 
      config.c -- Code to parse and validate the configuration file.
@@ -88,7 +88,7 @@ the distant future, stuff may have changed.)
         results; clients use routers.c to parse them.
 
      dirserv.c -- Code to manage directory contents and generate
-        directories. [Directory only] 
+        directories. [Directory server only] 
 
      routers.c -- Code to parse directories and router descriptors; and to
         generate a router descriptor corresponding to this OR's
@@ -109,7 +109,7 @@ the distant future, stuff may have changed.)
 
      connection_edge.c -- Code used only by edge connections.
 
-     command.c -- Code to handle specific cell types. [OR only]
+     command.c -- Code to handle specific cell types.
 
      connection_or.c -- Code to implement cell-speaking connections.
 
@@ -151,29 +151,29 @@ the distant future, stuff may have changed.)
      [Edge connections]
        CONN_TYPE_EXIT -- A TCP connection from an onion router to a
           Stream's destination. [OR only]
-       CONN_TYPE_AP -- A SOCKS proxy connection from the end user to the
-          onion proxy.  [OP only]
+       CONN_TYPE_AP -- A SOCKS proxy connection from the end user
+          application to the onion proxy.  [OP only]
 
      [Listeners]
        CONN_TYPE_OR_LISTENER [OR only]
        CONN_TYPE_AP_LISTENER [OP only]
-       CONN_TYPE_DIR_LISTENER [Directory only]
+       CONN_TYPE_DIR_LISTENER [Directory server only]
           -- Bound network sockets, waiting for incoming connections.
 
      [Internal]
        CONN_TYPE_DNSWORKER -- Connection from the main process to a DNS
-          worker. [OR only]
+          worker process. [OR only]
        
        CONN_TYPE_CPUWORKER -- Connection from the main process to a CPU
-          worker. [OR only]
+          worker process. [OR only]
 
    Connection states are documented in or.h.
 
    Every connection has two associated input and output buffers.
-   Listeners don't use them.  With other connections, incoming data is
-   appended to conn->inbuf, and outgoing data is taken from the front of
-   conn->outbuf.  Connections differ primarily in the functions called
-   to fill and drain these buffers.
+   Listeners don't use them.  For non-listener connections, incoming
+   data is appended to conn->inbuf, and outgoing data is taken from the
+   front of conn->outbuf.  Connections differ primarily in the functions
+   called to fill and drain these buffers.
 
 1.3. All about circuits.
 
@@ -192,9 +192,10 @@ the distant future, stuff may have changed.)
 
 1.4. Asynchronous IO and the main loop.
 
-   Tor uses the poll(2) system call [or a substitute based on select(2)]
-   to handle nonblocking (asynchonous) IO.  If you're not familiar with
-   nonblocking IO, check out the links at the end of this document.
+   Tor uses the poll(2) system call (or it wraps select(2) to act like
+   poll, if poll is not available) to handle nonblocking (asynchronous)
+   IO.  If you're not familiar with nonblocking IO, check out the links
+   at the end of this document.
         
    All asynchronous logic is handled in main.c.  The functions
    'connection_add', 'connection_set_poll_socket', and 'connection_remove'
@@ -205,18 +206,23 @@ the distant future, stuff may have changed.)
    individual connections.)
 
    To trap read and write events, connections call the functions
-   'connection_{is|stop|start}_{reading|writing}'.
+   'connection_{is|stop|start}_{reading|writing}'. If you want
+   to completely reset the events you're watching for, use
+   'connection_watch_events'.
 
-   When connections get events, main.c calls conn_read and conn_write.
-   These functions dispatch events to connection_handle_read and
-   connection_handle_write as appropriate.
+   Every time poll() finishes, main.c calls conn_read and conn_write on
+   every connection. These functions dispatch events that have something
+   to read to connection_handle_read, and events that have something to
+   write to connection_handle_write, respectively.
 
-   When connection need to be closed, they can respond in two ways.  Most
-   simply, they can make connection_handle_* to return an error (-1),
-   which will make conn_{read|write} close them.  But if the connection
-   needs to stay around [XXXX explain why] until the end of the current
-   iteration of the main loop, it marks itself for closing by setting
-   conn->connection_marked_for_close.
+   When connections need to be closed, they can respond in two ways.  Most
+   simply, they can make connection_handle_* return an error (-1),
+   which will make conn_{read|write} close them.  But if it's not
+   convenient to return -1 (for example, processing one connection causes
+   you to realize that a second one should close), then you can also
+   mark a connection to close by setting conn->marked_for_close. Marked
+   connections will be closed at the end of the current iteration of
+   the main loop.
 
    The main loop handles several other operations: First, it checks
    whether any signals have been received that require a response (HUP,
@@ -227,23 +233,26 @@ the distant future, stuff may have changed.)
    that were blocking for more bandwidth, and maintaining statistics.
 
    A word about TLS: Using TLS on OR connections complicates matters in
-   two ways.  First, a TLS stream has its own read buffer independent of
-   the connection's read buffer.  (TLS needs to read an entire frame from
+   two ways.
+   First, a TLS stream has its own read buffer independent of the
+   connection's read buffer.  (TLS needs to read an entire frame from
    the network before it can decrypt any data.  Thus, trying to read 1
-   byte from TLS can require that several KB be read from the network and
-   decrypted.  The extra data is stored in TLS's decrypt buffer.)  Second,
-   the TLS stream's events do not correspond directly to network events:
-   sometimes, before a TLS stream can read, the network must be ready to
-   write -- or vice versa.
-
-   [XXXX describe the consequences of this for OR connections.]
+   byte from TLS can require that several KB be read from the network
+   and decrypted.  The extra data is stored in TLS's decrypt buffer.)
+   Because the data hasn't been read by tor (it's still inside the TLS),
+   this means that sometimes a connection "has stuff to read" even when
+   poll() didn't return POLLIN. The tor_tls_get_pending_bytes function is
+   used in main.c to detect TLS objects with non-empty internal buffers.
+   Second, the TLS stream's events do not correspond directly to network
+   events: sometimes, before a TLS stream can read, the network must be
+   ready to write -- or vice versa.
 
 1.5. How data flows (An illustration.)
 
-   Suppose an OR receives 50 bytes along an OR connection.  These 50 bytes
-   complete a data relay cell, which gets decrypted and delivered to an
-   edge connection.  Here we give a possible call sequence for the
-   delivery of this data.
+   Suppose an OR receives 256 bytes along an OR connection.  These 256
+   bytes turn out to be a data relay cell, which gets decrypted and
+   delivered to an edge connection.  Here we give a possible call sequence
+   for the delivery of this data.
 
    (This may be outdated quickly.)
 
@@ -264,22 +273,29 @@ the distant future, stuff may have changed.)
                  makes sure the circuit is live, then passes the cell to:
            circuit_deliver_relay_cell -- Passes the cell to each of: 
             relay_crypt -- Strips a layer of encryption from the cell and
-                 notice that the cell is for local delivery.
+                 notices that the cell is for local delivery.
             connection_edge_process_relay_cell -- extracts the cell's
                  relay command, and makes sure the edge connection is
                  open.  Since it has a DATA cell and an open connection,
                  calls:
-             circuit_consider_sending_sendme -- [XXX]
+             circuit_consider_sending_sendme -- check if the total number
+                 of cells received by all streams on this circuit is
+                 enough that we should send back an acknowledgement
+                 (requesting that more cells be sent to any stream).
              connection_write_to_buf -- To place the data on the outgoing
                  buffer of the correct edge connection, by calling:
               connection_start_writing -- To tell the main poll loop about
                  the pending data.
               write_to_buf -- To actually place the outgoing data on the
                  edge connection.
-             connection_consider_sending_sendme -- [XXX]
+             connection_consider_sending_sendme -- if the outbuf waiting
+                 to flush to the exit connection is not too full, check
+                 if the total number of cells received on this stream
+                 is enough that we should send back an acknowledgement
+                 (requesting that more cells be sent to this stream).
 
-   [In a subsequent iteration, main notices that the edge connection is
-    ready for writing.]
+   In a subsequent iteration, main notices that the edge connection is
+   ready for writing:
 
    do_main_loop -- Calls poll(2), receives a POLLOUT event on a struct
                  pollfd, then calls:
@@ -294,7 +310,12 @@ the distant future, stuff may have changed.)
                  calls:
         connection_stop_writing -- Tells the main poll loop that this
                  connection has no more data to write.
-        connection_consider_sending_sendme -- [XXX]
+        connection_consider_sending_sendme -- now that the outbuf
+                 is empty, check again if the total number of cells
+                 received on this stream is enough that we should send
+                 back an acknowledgement (requesting that more cells be
+                 sent to this stream).
+
 
 1.6. Routers, descriptors, and directories
 
@@ -302,7 +323,7 @@ the distant future, stuff may have changed.)
    several reasons:
        - OPs need to establish connections and circuits to ORs.
        - ORs need to establish connections to other ORs.
-       - OPs and ORs need to fetch directories from a directory servers.
+       - OPs and ORs need to fetch directories from a directory server.
        - ORs need to upload their descriptors to directory servers.
        - Directory servers need to know which ORs are allowed onto the
          network, what the descriptors are for those ORs, and which of
@@ -321,8 +342,8 @@ the distant future, stuff may have changed.)
    'desc_routerinfo' and 'descriptor' static variables in routers.c.
 
    Additionally, a directory server keeps track of a list of the
-   router descriptors it knows in a separte list in dirserv.c.  It
-   uses this list, plus the open connections in main.c, to build
+   router descriptors it knows in a separate list in dirserv.c.  It
+   uses this list, checking which OR connections are open, to build
    directories.
 
 1.7. Data model
@@ -372,14 +393,14 @@ the distant future, stuff may have changed.)
   Log convention: use only these four log severities.
 
     ERR is if something fatal just happened.
-    WARNING is something bad happened, but we're still running. The
+    WARN if something bad happened, but we're still running. The
       bad thing is either a bug in the code, an attack or buggy
       protocol/implementation of the remote peer, etc. The operator should
       examine the bad thing and try to correct it.
     (No error or warning messages should be expected during normal OR or OP
-      operation.. I expect most people to run on -l warning eventually. If a
+      operation. I expect most people to run on -l warn eventually. If a
       library function is currently called such that failure always means
-      ERR, then the library function should log WARNING and let the caller
+      ERR, then the library function should log WARN and let the caller
       log ERR.)
     INFO means something happened (maybe bad, maybe ok), but there's nothing
       you need to (or can) do about it.
@@ -397,7 +418,7 @@ the distant future, stuff may have changed.)
 
      See http://freehaven.net/tor/
          http://freehaven.net/tor/cvs/doc/tor-spec.txt
-         http://freehaven.net/tor/cvs/doc/tor-dessign.tex
+         http://freehaven.net/tor/cvs/doc/tor-design.tex
          http://freehaven.net/tor/cvs/doc/FAQ
 
   About anonymity
