@@ -1,0 +1,13 @@
+
+DataDirectory moria3
+Nickname moria3
+
+ORPort 9003
+APPort 9023
+DirPort 9033
+
+OnionRouter 1
+
+# List of routers
+RouterFile ../config/dirservers
+

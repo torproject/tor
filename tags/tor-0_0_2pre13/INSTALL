@@ -1,0 +1,51 @@
+Quickstart version for users:
+
+0) Download the absolute newest version. No, really.
+  http://freehaven.net/tor/dist/
+1) tar xvf it, and then cd into the directory.
+2) ./configure (or do the two-line version in the README, if you're on bsd)
+3) make
+4) make install
+5) tor (if it doesn't work, give it the whole path or fix your path)
+  You don't need to run this as root, and you probably shouldn't.
+  (Once you're comfortable running it, you can run it with "-l warn",
+   which will only log things that you need to know.)
+6) point your browser to socks4 or socks5 proxy at localhost port
+  9050. In mozilla, this is in edit|preferences|advanced|proxies. This
+  allows you to test to make sure tor is installed correctly.
+  (If you have a personal firewall, be sure to allow connections to
+   localhost port 9050.)
+  (If you're using Safari as your browser, keep in mind that it claims
+   to support socks but does not. You must do step 8.)
+7) make sure you've set it up correctly: go to
+  http://www.junkbusters.com/cgi-bin/privacy and see what IP it says
+  you're coming from. If it works, you should probably go on to step 8,
+  to get better privacy.
+
+8) Optionally, install privoxy (www.privoxy.org), and add the line
+  "forward-socks4a / localhost:9050 ." (without the quotes -- don't forget
+  the dot) to its config file. Then change your mozilla to http proxy
+  at localhost port 8118 (and no socks proxy). This step will give you
+  good html scrubbing as well.
+  (See doc/CLIENTS for why direct socks gives you less anonymity.)
+
+*****If this works for you, you can stop reading here******
+
+If you got the source from cvs:
+
+  Run "./autogen.sh", which will run the various auto* programs and then
+  run ./configure for you. From there, start at step 3 in the quickstart
+  list above.
+
+If the quickstart doesn't work for you:
+
+  If you have problems finding libraries, try 
+    CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
+    ./configure
+  rather than simply ./configure.
+
+  Check out the list archives at http://archives.seul.org/or/dev/ and see
+  if somebody else has reported your problem. If not, please subscribe
+  and let us know what you did to fix it, or give us the details and
+  we'll see what we can do.
+

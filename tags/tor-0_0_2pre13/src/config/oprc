@@ -1,0 +1,12 @@
+# Configuration file for a typical tor client
+# (listen for applications only)
+
+# List of routers. Tor nodes start out knowing about the directory
+# servers, and from them they get a list of currently up nodes.
+RouterFile ../config/dirservers
+
+# Ports for various services. Comment out if you're not running that
+# service.
+#ORPort 9001
+APPort 9050
+
