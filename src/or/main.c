@@ -444,6 +444,8 @@ static void run_scheduled_events(time_t now) {
     } else {
       /* We're a directory; dump any old descriptors. */
       dirserv_remove_old_servers();
+      /* dirservers try to reconnect too, in case connections have failed */
+      router_retry_connections();
     }
     /* Force an upload of our descriptors every DirFetchPostPeriod seconds. */
     rend_services_upload(1);
