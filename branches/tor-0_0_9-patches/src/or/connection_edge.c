@@ -111,6 +111,7 @@ int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
   conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
   connection_mark_for_close(conn);
   conn->hold_open_until_flushed = 1;
+  conn->cpath_layer = NULL;
   return 0;
 }
 
