@@ -191,8 +191,7 @@ void connection_stop_reading(connection_t *conn) {
   tor_assert(conn->poll_index < nfds);
 
   log(LOG_DEBUG,"connection_stop_reading() called.");
-  if(poll_array[conn->poll_index].events & POLLIN)
-    poll_array[conn->poll_index].events -= POLLIN;
+  poll_array[conn->poll_index].events &= ~POLLIN;
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any read events. */
@@ -213,8 +212,7 @@ void connection_stop_writing(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->poll_index >= 0);
   tor_assert(conn->poll_index < nfds);
-  if(poll_array[conn->poll_index].events & POLLOUT)
-    poll_array[conn->poll_index].events -= POLLOUT;
+  poll_array[conn->poll_index].events &= ~POLLOUT;
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any write events. */
