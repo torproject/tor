@@ -430,7 +430,7 @@ typedef struct {
    int LinkPadding;
    int IgnoreVersion;
    int DirRebuildPeriod;
-   int DirFetchPeriod;
+   int DirFetchPostPeriod;
    int KeepalivePeriod;
    int MaxOnionsPending;
    int NewCircuitPeriod;

@@ -276,16 +276,22 @@ static int prepare_for_poll(void) {
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
-    if(!options.DirPort) {
-      if(time_to_fetch_directory < now.tv_sec) {
-        /* it's time to fetch a new directory */
+    if(time_to_fetch_directory < now.tv_sec) {
+      /* it's time to fetch a new directory and/or post our descriptor */
+      if(options.OnionRouter) {
+        if (init_descriptor()<0) {
+          log_fn(LOG_WARNING, "Error initializing descriptor. Not uploading desc.");
+        } else {
+          router_upload_desc_to_dirservers();
+        }
+      }
+      if(!options.DirPort) {
         /* NOTE directory servers do not currently fetch directories.
-         * Hope this doesn't bite us later.
-         */
+         * Hope this doesn't bite us later. */
         directory_initiate_command(router_pick_directory_server(),
                                    DIR_CONN_STATE_CONNECTING_FETCH);
-        time_to_fetch_directory = now.tv_sec + options.DirFetchPeriod;
       }
+      time_to_fetch_directory = now.tv_sec + options.DirFetchPostPeriod;
     }
 
     if(options.APPort && time_to_new_circuit < now.tv_sec) {
@@ -705,7 +711,7 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   int result=0;
   struct exit_policy_t *tmpe;
   
-  get_platform_str(platform, 256);
+  get_platform_str(platform, sizeof(platform));
 
   if(crypto_pk_write_public_key_to_string(router->onion_pkey,
                                           &onion_pkey,&onion_pkeylen)<0) {
