@@ -626,7 +626,7 @@ void daemonize() {
   fclose(stderr);
 }
 
-int main(int argc, char *argv[]) {
+int tor_main(int argc, char *argv[]) {
   int retval = 0;
 
   if(getconfig(argc,argv,&options))
@@ -657,3 +657,10 @@ int main(int argc, char *argv[]) {
   return retval;
 }
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

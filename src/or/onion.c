@@ -809,3 +809,10 @@ static int find_tracked_onion(unsigned char *onion, uint32_t onionlen) {
   return 0;
 }
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

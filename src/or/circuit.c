@@ -631,3 +631,10 @@ void circuit_dump_by_conn(connection_t *conn) {
   }
 }
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

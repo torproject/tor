@@ -532,3 +532,10 @@ void test_write_pkey(crypto_pk_env_t *pkey) {
 }
 #endif
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

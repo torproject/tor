@@ -389,3 +389,10 @@ int connection_exit_connect(connection_t *conn) {
   return connection_exit_send_connected(conn);
 }
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/
