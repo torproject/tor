@@ -506,13 +506,16 @@ char *rep_hist_get_bandwidth_lines(void)
   for (r=0;r<2;++r) {
     b = r?read_array:write_array;
     format_iso_time(t, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
-    sprintf(cp, "opt %s %s (%d s)", r?"read-history ":"write-history", t,
+    sprintf(cp, "opt %s %s (%d s) ", r?"read-history ":"write-history", t,
             NUM_SECS_BW_SUM_INTERVAL);
     cp += strlen(cp);
 
-    if (b->num_maxes_set < b->next_max_idx)
+    if (b->num_maxes_set <= b->next_max_idx)
+      /* We haven't been through the circular array yet; time starts at i=0.*/
       i = 0;
     else
+      /* We've been arround the array at least once.  The next i to be
+         overwritten is the oldest. */
       i = b->next_max_idx;
 
     for (n=0; n<b->num_maxes_set; ++n,++i) {
