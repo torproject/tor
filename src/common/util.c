@@ -31,6 +31,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#ifndef HAVE_GETTIMEOFDAY
+#ifdef HAVE_FTIME
+#include <sys/timeb.h>
+#endif
+#endif
+
 #include "util.h"
 #include "log.h"
 #include "crypto.h"
