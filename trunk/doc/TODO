@@ -25,7 +25,7 @@ NICK            . Handle half-open connections
 NICK            - Look at what ssl does to keep from mutating data streams
 NICK    . On the fly compression of each stream
         o Clean up the event loop (optimize and sanitize)
-ARMA    - Remove that awful concept of 'roles'
+ARMA    o Remove that awful concept of 'roles'
 ARMA    - Exit policies
                 - Spec how to write the exit policies
                 - Path selection algorithms

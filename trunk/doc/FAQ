@@ -12,7 +12,7 @@ service. Users build a layered block of asymmetric encryptions
 (an "onion") which describes a source-routed path through a set of
 nodes. Those nodes build a "virtual circuit" through the network, in which
 each node knows its predecessor and successor, but no others. Traffic
-flowing down the circuit is unwrapped by a symmetric key at each node
+flowing down the circuit is unwrapped by a symmetric key at each node,
 which reveals the downstream node.
 
 Basically tor provides a distributed network of servers ("onion
