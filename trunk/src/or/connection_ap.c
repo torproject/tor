@@ -200,6 +200,9 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
       return -1;
     }
 
+    conn->state = AP_CONN_STATE_OR_WAIT;
+    connection_stop_reading(conn); /* Stop listening for input from the AP! */
+
     if(!n_conn) { /* launch the connection */
       n_conn = connect_to_router_as_op(firsthop);
       if(!n_conn) { /* connect failed, forget the whole thing */
@@ -208,8 +211,7 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
         return -1;
       }   
     }
-    conn->state = AP_CONN_STATE_OR_WAIT;
-    connection_stop_reading(conn); /* Stop listening for input from the AP! */
+
     return 0; /* return success. The onion/circuit/etc will be taken care of automatically
                * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
                */ 
