@@ -381,6 +381,10 @@ int fetch_from_buf_http(buf_t *buf,
   p = strstr(headers, CONTENT_LENGTH);
   if (p) {
     contentlen = atoi(p+strlen(CONTENT_LENGTH));
+    if (contentlen < 0) {
+      log_fn(LOG_WARN, "Content-Length is less than zero; it looks like someone is trying to crash us.");
+      return -1;
+    }
     /* if content-length is malformed, then our body length is 0. fine. */
     log_fn(LOG_DEBUG,"Got a contentlen of %d.",contentlen);
     if(bodylen < contentlen) {
