@@ -63,22 +63,27 @@ Obvious things I'd like to do that won't break anything:
 
 * The parts of the code that say 'FIXME'
 
+
+
+
+
+
 Non-obvious things I'd like to do:
 
 (Many of these topics are inter-related. It's clear that we need more
 analysis before we can guess which approaches are good.)
 
-* Padding between ORs, and correct padding between OPs. Currently
-  the OP seems to send padding at a steady rate, but data cells can
-  come more quickly than that. This doesn't provide much protection
-  at all. I'd like to investigate a synchronous mixing approach, where
-  cells are sent at fixed intervals. We need to investigate the effects
-  of this on DoS resistance -- what do we do when we have too many
-  packets? One approach is to do traffic shaping rather than traffic
-  padding -- we gain a bit more resistance to DoS at the expense of some
-  anonymity. Can we compare this analysis to that of the Cottrell Mix,
-  and learn something new? We'll need to decide on exactly how the
-  traffic shaping algorithm works.
+* Padding between ORs, and correct padding between OPs. The ORs currently
+  send no padding cells between each other. Currently the OP seems to
+  send padding at a steady rate, but data cells can come more quickly
+  than that. This doesn't provide much protection at all. I'd like to
+  investigate a synchronous mixing approach, where cells are sent at fixed
+  intervals. We need to investigate the effects of this on DoS resistance
+  -- what do we do when we have too many packets? One approach is to
+  do traffic shaping rather than traffic padding -- we gain a bit more
+  resistance to DoS at the expense of some anonymity. Can we compare this
+  analysis to that of the Cottrell Mix, and learn something new? We'll
+  need to decide on exactly how the traffic shaping algorithm works.
 
 * Make the connection buf's grow dynamically as needed. This won't
   really solve the fundamental problem above, though, that a buffer
