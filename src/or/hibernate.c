@@ -33,23 +33,17 @@ time_t hibernate_timeout = 0;
 
 /** Returns 1 if the bandwidth soft limit has been reached, else 0. */
 static int hibernate_soft_limit_reached(void) {
-
-
-  return 0;
+  return accounting_soft_limit_reached();
 }
 
 /** Returns 1 if the bandwidth hard limit has been reached, else 0. */
 static int hibernate_hard_limit_reached(void) {
-
-
-  return 0;
+  return accounting_hard_limit_reached();
 }
 
 /** Return the time when we should stop being dormant. */
 static time_t hibernate_calc_wakeup_time(void) {
-
-
-  return 0;
+  return accounting_get_wakeup_time();
 }
 
 /** Called when we get a SIGINT, or when bandwidth soft limit

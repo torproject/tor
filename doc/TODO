@@ -23,8 +23,8 @@ ARMA    - arma claims
    o Add a log handler that sends stuff to syslog.
    o Deprecate unofficial configuration abbrevs; make official abbrevs
      only official on the command line.
-   - per-month byte allowances.
-N    - Based on bandwidth and per-month allowance, choose a
+   l per-month byte allowances.
+N    . Based on bandwidth and per-month allowance, choose a
        window within month to be up.  Stay up until allowance is
        used.  Adjust next month's window based on outcome.  Hibernate
        when we're not up.
@@ -39,7 +39,7 @@ R  . bandwidth buckets for write as well as read.
    . Pure C tor_resolve
      o Implement it; socks4a only is fine for now.
 N    - Make it build on win32
-N/R  - Make it not link with zlib and openssl.
+     o Make it not link with zlib and openssl.
 N  - RPMs
 N  - Windows installer
    - Review website; make important info more prominent.

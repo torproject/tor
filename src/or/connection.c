@@ -869,9 +869,9 @@ static int connection_read_to_buf(connection_t *conn) {
 
   if(result > 0 && !is_local_IP(conn->addr)) { /* remember it */
     rep_hist_note_bytes_read(result, time(NULL));
+    connection_read_bucket_decrement(conn, result);
   }
 
-  connection_read_bucket_decrement(conn, result);
   return 0;
 }
 
@@ -1001,9 +1001,8 @@ int connection_handle_write(connection_t *conn) {
 
   if(result > 0 && !is_local_IP(conn->addr)) { /* remember it */
     rep_hist_note_bytes_written(result, now);
+    global_write_bucket -= result;
   }
-
-  global_write_bucket -= result;
 
   if(!connection_wants_to_flush(conn)) { /* it's done flushing */
     if(connection_finished_flushing(conn) < 0) {
