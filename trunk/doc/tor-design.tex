@@ -6,6 +6,7 @@
 \usepackage{url}
 \usepackage{graphics}
 \usepackage{amsmath}
+\usepackage{epsfig}
 
 \pagestyle{plain}
 
@@ -35,6 +36,12 @@
     %  \setlength{\labelwidth}{0mm}
     %  \setlength{\topsep}{0mm}
     }}{\end{list}}
+
+% Cut down on whitespace above and below figures displayed at head/foot of
+% page.
+\setlength{\textfloatsep}{3mm}
+% Cut down on whitespace above and below figures displayed in middle of page
+\setlength{\intextsep}{3mm}
 
 \begin{document}
 
@@ -168,8 +175,8 @@ that can be unreliable and complex. % open to partitioning attacks.
 Tor takes a simplified view toward distributing this
 information. Certain more trusted nodes act as \emph{directory
 servers}: they provide signed directories describing known
-routers and their current state. Users periodically download these
-directories via HTTP.
+routers and their current state. Users periodically download them
+via HTTP.
 
 \textbf{Variable exit policies:} Tor provides a consistent mechanism
 for each node to advertise a policy describing the hosts
@@ -595,9 +602,7 @@ checking; the length of the relay payload; and a relay command.
 The entire contents of the relay header and the relay cell payload
 are encrypted or decrypted together as the relay cell moves along the
 circuit, using the 128-bit AES cipher in counter mode to generate a
-cipher stream.
-The
-relay commands are: \emph{relay
+cipher stream.  The relay commands are: \emph{relay
 data} (for data flowing down the stream), \emph{relay begin} (to open a
 stream), \emph{relay end} (to close a stream cleanly), \emph{relay
 teardown} (to close a broken stream), \emph{relay connected}
@@ -607,7 +612,17 @@ and to acknowledge), \emph{relay truncate} and \emph{relay truncated}
 (to tear down only part of the circuit, and to acknowledge), \emph{relay
 sendme} (used for congestion control), and \emph{relay drop} (used to
 implement long-range dummies).
-We describe each of these cell types and commands in more detail below.
+We give a visual overview of cell structure plus the details of relay
+cell structure, and then describe each of these cell types and commands
+in more detail below.
+
+\begin{figure}[h]
+\unitlength=1cm
+\centering
+\begin{picture}(8.0,1.5)
+\put(4,.5){\makebox(0,0)[c]{\epsfig{file=cell-struct,width=7cm}}}
+\end{picture}
+\end{figure}
 
 \SubSection{Circuits and streams}
 \label{subsec:circuits}
@@ -1816,7 +1831,7 @@ application integration is described more fully below.
       service from the DHT.
 \item Alice chooses an OR as the rendezvous point (RP) for this
       transaction. She builds a circuit to the RP, and gives it a
-      rendezvous cookie that it will use to recognize Bob.
+      rendezvous cookie to recognize Bob.
 \item Alice opens an anonymous stream to one of Bob's introduction
       points, and gives it a message (encrypted to Bob's public key)
       that tells him
