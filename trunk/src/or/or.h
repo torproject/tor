@@ -869,6 +869,8 @@ typedef struct {
   int NumCpus; /**< How many CPUs should we try to use? */
   int RunTesting; /**< If true, create testing circuits to measure how well the
                    * other ORs are running. */
+  struct config_line_t *TrustedDirs; /**< List of fingerprints of keys that are
+                                          allowed to sign directories. */
   struct config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
   char *ContactInfo; /** Contact info to be published in the directory */
