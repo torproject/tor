@@ -213,6 +213,11 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
 
     config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
 
+    config_compare(list, "HiddenServiceDir", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
+    config_compare(list, "HiddenServicePort", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
+    config_compare(list, "HiddenServiceNodes", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
+    config_compare(list, "HiddenServiceExcludeNodes", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
+
     config_compare(list, "IgnoreVersion",  CONFIG_TYPE_BOOL, &options->IgnoreVersion) ||
 
     config_compare(list, "KeepalivePeriod",CONFIG_TYPE_INT, &options->KeepalivePeriod) ||
@@ -230,12 +235,14 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
 
     config_compare(list, "ORPort",         CONFIG_TYPE_INT, &options->ORPort) ||
     config_compare(list, "ORBindAddress",  CONFIG_TYPE_LINELIST, &options->ORBindAddress) ||
+    config_compare(list, "OutboundBindAddress",CONFIG_TYPE_STRING, &options->OutboundBindAddress) ||
 
     config_compare(list, "PidFile",        CONFIG_TYPE_STRING, &options->PidFile) ||
     config_compare(list, "PathlenCoinWeight",CONFIG_TYPE_DOUBLE, &options->PathlenCoinWeight) ||
 
     config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
     config_compare(list, "RunAsDaemon",    CONFIG_TYPE_BOOL, &options->RunAsDaemon) ||
+    config_compare(list, "RunTesting",     CONFIG_TYPE_BOOL, &options->RunTesting) ||
     config_compare(list, "RecommendedVersions",CONFIG_TYPE_STRING, &options->RecommendedVersions) ||
     config_compare(list, "RendNodes",      CONFIG_TYPE_STRING, &options->RendNodes) ||
     config_compare(list, "RendExcludeNodes",CONFIG_TYPE_STRING, &options->RendExcludeNodes) ||
@@ -246,12 +253,9 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
 
     config_compare(list, "TrafficShaping", CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
 
-    config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User) ||
-    config_compare(list, "RunTesting",     CONFIG_TYPE_BOOL, &options->RunTesting) ||
-    config_compare(list, "HiddenServiceDir", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
-    config_compare(list, "HiddenServicePort", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
-    config_compare(list, "HiddenServiceNodes", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
-    config_compare(list, "HiddenServiceExcludeNodes", CONFIG_TYPE_LINELIST, &options->RendConfigLines)
+    config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User)
+
+
     ) {
       /* then we're ok. it matched something. */
     } else {
@@ -422,31 +426,34 @@ static void print_usage(void) {
 /**
  * Adjust <b>options</b> to contain a reasonable value for Address.
  */
-static int resolve_my_address(or_options_t *options) {
+int resolve_my_address(const char *address, uint32_t *addr) {
   struct in_addr in;
   struct hostent *rent;
-  char localhostname[256];
+  char hostname[256];
   int explicit_ip=1;
 
-  if(!options->Address) { /* then we need to guess our address */
+  tor_assert(addr);
+
+  if(address) {
+    strlcpy(hostname,address,sizeof(hostname));
+  } else { /* then we need to guess our address */
     explicit_ip = 0; /* it's implicit */
 
-    if(gethostname(localhostname,sizeof(localhostname)) < 0) {
+    if(gethostname(hostname,sizeof(hostname)) < 0) {
       log_fn(LOG_WARN,"Error obtaining local hostname");
       return -1;
     }
-    options->Address = tor_strdup(localhostname);
-    log_fn(LOG_DEBUG,"Guessed local host name as '%s'",options->Address);
+    log_fn(LOG_DEBUG,"Guessed local host name as '%s'",hostname);
   }
 
-  /* now we know options->Address is set. resolve it and keep only the IP */
+  /* now we know hostname. resolve it and keep only the IP */
 
-  if(tor_inet_aton(options->Address, &in) == 0) {
+  if(tor_inet_aton(hostname, &in) == 0) {
     /* then we have to resolve it */
     explicit_ip = 0;
-    rent = (struct hostent *)gethostbyname(options->Address);
+    rent = (struct hostent *)gethostbyname(hostname);
     if (!rent) {
-      log_fn(LOG_WARN,"Could not resolve Address %s. Failing.", options->Address);
+      log_fn(LOG_WARN,"Could not resolve local Address %s. Failing.", hostname);
       return -1;
     }
     tor_assert(rent->h_length == 4);
@@ -455,12 +462,11 @@ static int resolve_my_address(or_options_t *options) {
   if(!explicit_ip && is_internal_IP(htonl(in.s_addr))) {
     log_fn(LOG_WARN,"Address '%s' resolves to private IP '%s'. "
            "Please set the Address config option to be the IP you want to use.",
-           options->Address, inet_ntoa(in));
+           hostname, inet_ntoa(in));
     return -1;
   }
-  tor_free(options->Address);
-  options->Address = tor_strdup(inet_ntoa(in));
-  log_fn(LOG_DEBUG,"Resolved Address to %s.", options->Address);
+  log_fn(LOG_DEBUG,"Resolved Address to %s.", inet_ntoa(in));
+  *addr = ntohl(in.s_addr);
   return 0;
 }
 
@@ -513,6 +519,7 @@ static void free_options(or_options_t *options) {
   tor_free(options->ExcludeNodes);
   tor_free(options->RendNodes);
   tor_free(options->RendExcludeNodes);
+  tor_free(options->OutboundBindAddress);
   tor_free(options->RecommendedVersions);
   tor_free(options->User);
   tor_free(options->Group);
@@ -540,6 +547,7 @@ static void init_options(or_options_t *options) {
   options->SocksBindAddress = NULL;
   options->ORBindAddress = NULL;
   options->DirBindAddress = NULL;
+  options->OutboundBindAddress = NULL;
   options->RecommendedVersions = NULL;
   options->PidFile = NULL; // tor_strdup("tor.pid");
   options->DataDirectory = NULL;
@@ -696,8 +704,10 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     }
   }
 
-  if(server_mode()) { /* get an IP for ourselves */
-    if(resolve_my_address(options) < 0)
+  if(server_mode()) {
+    /* confirm that our address isn't broken, so we can complain now */
+    uint32_t tmp;
+    if(resolve_my_address(options->Address, &tmp) < 0)
       result = -1;
   }
 
