@@ -64,6 +64,10 @@ int tor_socketpair(int family, int type, int protocol, int fd[2]);
 
 const char *get_uname(void);
 
+void daemonize(void);
+void write_pidfile(char *filename);
+int switch_id(char *user, char *group);
+
 /* For stupid historical reasons, windows sockets have an independent set of 
  * errnos which they use as the fancy strikes them.
  */

@@ -547,3 +547,91 @@ get_uname(void)
   return uname_result;
 }
       
+void daemonize(void) {
+#ifndef MS_WINDOWS
+  /* Fork; parent exits. */
+  if (fork())
+    exit(0);
+
+  /* Create new session; make sure we never get a terminal */
+  setsid();
+  if (fork())
+    exit(0);
+
+  chdir("/");
+  umask(000);
+
+  fclose(stdin);
+  fclose(stdout);
+  fclose(stderr);
+#endif
+}
+
+void write_pidfile(char *filename) {
+#ifndef MS_WINDOWS
+  FILE *pidfile;
+
+  if ((pidfile = fopen(filename, "w")) == NULL) {
+    log_fn(LOG_WARN, "unable to open %s for writing: %s", filename,
+           strerror(errno));
+  } else {
+    fprintf(pidfile, "%d", getpid());
+    fclose(pidfile);
+  }
+#endif
+}
+
+int switch_id(char *user, char *group) {
+#ifndef MS_WINDOWS
+  int status;
+  struct passwd *pw = NULL;
+  struct group *gr = NULL;
+
+  if (user) {
+    pw = getpwnam(user);
+    if (pw == NULL) {
+      log_fn(LOG_ERR,"User '%s' not found.", user);
+      return -1;
+    }
+  }
+
+  /* switch the group first, while we still have the priveledges to do so */
+  if (group) {
+    gr = getgrnam(group);
+    if (gr == NULL) {
+      log_fn(LOG_ERR,"Group '%s' not found.", group);
+      return -1;
+    }
+
+    status = setgid(gr->gr_gid);
+    if (status != 0) {
+      log_fn(LOG_ERR,"Error setting GID: %s", strerror(errno));
+      return -1;
+    }
+  } else if (user) {
+    status = setgid(pw->pw_gid);
+    if (status != 0) {
+      log_fn(LOG_ERR,"Error setting GID: %s", strerror(errno));
+      return -1;
+    }
+  }
+
+  /* now that the group is switched, we can switch users and lose
+     priviledges */
+  if (user) {
+    status = setuid(pw->pw_uid);
+    if (status != 0) {
+      log_fn(LOG_ERR,"Error setting UID: %s", strerror(errno));
+      return -1;
+    }
+  }
+
+  return 0;
+#endif
+
+  log_fn(LOG_ERR, 
+         "User '%s' specified, but switching users is not supported.", 
+         user);
+
+  return -1;
+}
