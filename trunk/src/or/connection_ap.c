@@ -128,6 +128,7 @@ int ap_handshake_process_socks(connection_t *conn) {
   /* now we're all ready to make an onion or send a begin */
 
   if(circ && circ->state == CIRCUIT_STATE_OPEN) {
+    /* FIXME if circ not yet open, figure out how to queue this begin? */
     /* add it into the linked list of topics on this circuit */
     log(LOG_DEBUG,"ap_handshake_process_socks(): attaching new conn to circ. n_aci %d.", circ->n_aci);
     conn->next_topic = circ->p_conn;
@@ -308,12 +309,12 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit
     if(dataleft >= CELL_PAYLOAD_SIZE) {
       cell.length = CELL_PAYLOAD_SIZE;
       memcpy(cell.payload, tmpbuf + tmpbuflen - dataleft, CELL_PAYLOAD_SIZE);
-      connection_write_cell_to_buf(&cell, n_conn); /* clobbers cell */
+      connection_write_cell_to_buf(&cell, n_conn);
       dataleft -= CELL_PAYLOAD_SIZE;
     } else { /* last cell */
       cell.length = dataleft;
       memcpy(cell.payload, tmpbuf + tmpbuflen - dataleft, dataleft);
-      connection_write_cell_to_buf(&cell, n_conn); /* clobbers cell */
+      connection_write_cell_to_buf(&cell, n_conn);
       dataleft = 0;
     }
   }
@@ -383,7 +384,7 @@ int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ) {
   topic_id = ntohs(*(uint16_t *)(cell->payload+2));
   log(LOG_DEBUG,"connection_ap_process_data_cell(): command %d topic %d", topic_command, topic_id);
   num_seen++;
-  log(LOG_DEBUG,"connection_exit_process_data_cell(): Now seen %d data cells here.", num_seen);
+  log(LOG_DEBUG,"connection_ap_process_data_cell(): Now seen %d data cells here.", num_seen);
 
 
   circuit_consider_sending_sendme(circ, EDGE_AP);
@@ -452,7 +453,7 @@ int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ) {
       break;
     case TOPIC_COMMAND_SENDME:
       if(!conn) {
-        log(LOG_DEBUG,"connection_exit_process_data_cell(): sendme cell dropped, unknown topic %d.",topic_id);
+        log(LOG_DEBUG,"connection_ap_process_data_cell(): sendme cell dropped, unknown topic %d.",topic_id);
         return 0;
       }
       conn->p_receive_topicwindow += TOPICWINDOW_INCREMENT;

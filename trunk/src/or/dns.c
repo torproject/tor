@@ -448,28 +448,24 @@ void init_cache_tree(void) {
  * dns farm, and return 0.
  */
 int dns_resolve(connection_t *exitconn) {
-  struct cached_resolve *new_resolve;
   struct cached_resolve *resolve;
+  struct cached_resolve search;
   struct pending_connection_t *pending_connection;
 
-  new_resolve = malloc(sizeof(struct cached_resolve));
-  memset(new_resolve, 0, sizeof(struct cached_resolve));
-  strncpy(new_resolve->question, exitconn->address, MAX_ADDRESSLEN);
+  strncpy(search.question, exitconn->address, MAX_ADDRESSLEN);
 
   /* try adding it to the tree. if it's already there it will
    * return it. */
-  resolve = SPLAY_INSERT(cache_tree, &cache_root, new_resolve);
+  resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(resolve) { /* already there. free up new_resolve */
-    free(new_resolve);
     switch(resolve->state) {
       case CACHE_STATE_PENDING:
         /* add us to the pending list */
         pending_connection = malloc(sizeof(struct pending_connection_t));
         pending_connection->conn = exitconn;
-        pending_connection->next = new_resolve->pending_connections;
-        new_resolve->pending_connections = pending_connection;
-
-        return dns_tor_to_master(exitconn);
+        pending_connection->next = resolve->pending_connections;
+        resolve->pending_connections = pending_connection;
+        return 0;
       case CACHE_STATE_VALID:
         exitconn->addr = resolve->answer;
         return connection_exit_connect(exitconn);
@@ -477,14 +473,18 @@ int dns_resolve(connection_t *exitconn) {
         return -1;
     }
   } else { /* this was newly added to the tree. ask the dns farm. */
-    new_resolve->state = CACHE_STATE_PENDING;
+    resolve = malloc(sizeof(struct cached_resolve));
+    memset(resolve, 0, sizeof(struct cached_resolve));
+    resolve->state = CACHE_STATE_PENDING;
+    strncpy(resolve->question, exitconn->address, MAX_ADDRESSLEN);
 
     /* add us to the pending list */
     pending_connection = malloc(sizeof(struct pending_connection_t));
     pending_connection->conn = exitconn;
-    pending_connection->next = new_resolve->pending_connections;
-    new_resolve->pending_connections = pending_connection;
+    pending_connection->next = resolve->pending_connections;
+    resolve->pending_connections = pending_connection;
 
+    SPLAY_INSERT(cache_tree, &cache_root, resolve);
     return dns_tor_to_master(exitconn);
   }
 

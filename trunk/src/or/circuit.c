@@ -279,17 +279,18 @@ int circuit_deliver_data_cell_from_edge(cell_t *cell, circuit_t *circ, char edge
     numsent_ap++;
     log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): now sent %d data cells from ap", numsent_ap);
     if(circ->p_receive_circwindow <= 0) {
-      log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): window 0, queueing for later.");
+      log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): pwindow 0, queueing for later.");
       circ->data_queue = data_queue_add(circ->data_queue, cell);
       return 0;
     }
     circ->p_receive_circwindow--;
+//    log(LOG_INFO,"circuit_deliver_data_cell_from_edge(): p_receive_circwindow now %d.",circ->p_receive_circwindow);
   } else { /* i'm the exit */
     cell_direction = CELL_DIRECTION_IN;
     numsent_exit++;
     log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): now sent %d data cells from exit", numsent_exit);
     if(circ->n_receive_circwindow <= 0) {
-      log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): window 0, queueing for later.");
+      log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): nwindow 0, queueing for later.");
       circ->data_queue = data_queue_add(circ->data_queue, cell);
       return 0;
     }
@@ -299,7 +300,7 @@ int circuit_deliver_data_cell_from_edge(cell_t *cell, circuit_t *circ, char edge
   if(circuit_deliver_data_cell(cell, circ, cell_direction) < 0) {
     return -1;
   }
-    
+
   circuit_consider_stop_edge_reading(circ, edge_type); /* has window reached 0? */
   return 0;
 }
@@ -420,18 +421,13 @@ void circuit_resume_edge_reading(circuit_t *circ, int edge_type) {
 
   assert(edge_type == EDGE_EXIT || edge_type == EDGE_AP);
 
-  if(edge_type == EDGE_EXIT)
-    conn = circ->n_conn;
-  else
-    conn = circ->p_conn;
-
   /* first, send the queue waiting at circ onto the circuit */
   while(circ->data_queue) {
     assert(circ->data_queue->cell);
-    if(edge_type == EDGE_EXIT) {   
-      circ->p_receive_circwindow--;
-      assert(circ->p_receive_circwindow >= 0);
-      
+    if(edge_type == EDGE_EXIT) {
+      circ->n_receive_circwindow--;
+      assert(circ->n_receive_circwindow >= 0);
+
       if(circuit_deliver_data_cell(circ->data_queue->cell, circ, CELL_DIRECTION_IN) < 0) {
         circuit_close(circ);
         return;
@@ -439,8 +435,8 @@ void circuit_resume_edge_reading(circuit_t *circ, int edge_type) {
     } else { /* ap */
       circ->p_receive_circwindow--;
       assert(circ->p_receive_circwindow >= 0);
-      
-      if(circuit_deliver_data_cell(circ->data_queue->cell, circ, CELL_DIRECTION_IN) < 0) {
+
+      if(circuit_deliver_data_cell(circ->data_queue->cell, circ, CELL_DIRECTION_OUT) < 0) {
         circuit_close(circ);
         return;
       }
@@ -453,6 +449,11 @@ void circuit_resume_edge_reading(circuit_t *circ, int edge_type) {
     if(circuit_consider_stop_edge_reading(circ, edge_type))
       return;
   }
+
+  if(edge_type == EDGE_EXIT)
+    conn = circ->n_conn;
+  else
+    conn = circ->p_conn;
 
   for( ; conn; conn=conn->next_topic) {
     if((edge_type == EDGE_EXIT && conn->n_receive_topicwindow > 0) ||
@@ -470,10 +471,10 @@ int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type) {
 
   assert(edge_type == EDGE_EXIT || edge_type == EDGE_AP);
 
-  if(edge_type == EDGE_EXIT && circ->p_receive_circwindow <= 0)
-    conn = circ->n_conn;      
-  else if(edge_type == EDGE_AP && circ->n_receive_circwindow <= 0)
-    conn = circ->p_conn;      
+  if(edge_type == EDGE_EXIT && circ->n_receive_circwindow <= 0)
+    conn = circ->n_conn;
+  else if(edge_type == EDGE_AP && circ->p_receive_circwindow <= 0)
+    conn = circ->p_conn;
   else
     return 0;
 
@@ -492,18 +493,22 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type) {
   sendme.length = CIRCWINDOW_INCREMENT;
 
   if(edge_type == EDGE_AP) { /* i'm the AP */
-    if(circ->n_receive_circwindow < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
-      log(LOG_DEBUG,"circuit_consider_sending_sendme(): Queueing sendme forward.");
+    while(circ->n_receive_circwindow < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
+      log(LOG_INFO,"circuit_consider_sending_sendme(): n_receive_circwindow %d, Queueing sendme forward.", circ->n_receive_circwindow);
       circ->n_receive_circwindow += CIRCWINDOW_INCREMENT;
       sendme.aci = circ->n_aci;
-      return connection_write_cell_to_buf(&sendme, circ->n_conn); /* (clobbers sendme) */
+      if(connection_write_cell_to_buf(&sendme, circ->n_conn) < 0) {
+        return -1;
+      }
     }
   } else if(edge_type == EDGE_EXIT) { /* i'm the exit */
-    if(circ->p_receive_circwindow < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
-      log(LOG_DEBUG,"circuit_consider_sending_sendme(): Queueing sendme back.");
+    while(circ->p_receive_circwindow < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
+      log(LOG_INFO,"circuit_consider_sending_sendme(): p_receive_circwindow %d, Queueing sendme back.", circ->p_receive_circwindow);
       circ->p_receive_circwindow += CIRCWINDOW_INCREMENT;
       sendme.aci = circ->p_aci;
-      return connection_write_cell_to_buf(&sendme, circ->p_conn); /* (clobbers sendme) */
+      if(connection_write_cell_to_buf(&sendme, circ->p_conn) < 0) {
+        return -1;
+      }
     }
   }
   return 0;
@@ -548,7 +553,7 @@ void circuit_about_to_close_connection(connection_t *conn) {
     cell.length = TOPIC_HEADER_SIZE;
     *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
     *cell.payload = TOPIC_COMMAND_END;
-   
+
     if(conn == circ->p_conn) {
       circ->p_conn = conn->next_topic;
       edge_type = EDGE_AP;
