@@ -130,7 +130,7 @@ static void config_free_lines(struct config_line_t *front) {
 
 /**
  * Given a list of comma-separated entries, each surrounded by optional
- * whitespace, insert copies the entries (in order) into lst, without
+ * whitespace, insert copies of the entries (in order) into lst, without
  * their surrounding whitespace.
  */
 static void parse_csv_into_smartlist(smartlist_t *lst, const char *val)
