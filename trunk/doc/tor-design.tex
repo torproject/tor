@@ -1,6 +1,6 @@
 \documentclass[times,10pt,twocolumn]{article}
 \usepackage{latex8}
-%\usepackage{times}
+\usepackage{times}
 \usepackage{url}
 \usepackage{graphics}
 \usepackage{amsmath}
@@ -300,12 +300,6 @@ network with both of these features and thousands of active users has
 been run for many years (the Java Anon Proxy, aka Web MIXes,
 \cite{web-mix}).
 
-Another low latency design that was proposed independently and at
-about the same time as the original Onion Routing was PipeNet \cite{pipenet}.
-It provided anonymity protections that were stronger than Onion Routing's,
-but at the cost of allowing a single user to shut down the network simply
-by not sending. It was also never implemented or formally published.
-
 The simplest low-latency designs are single-hop proxies such as the
 Anonymizer \cite{anonymizer}, wherein a single trusted server removes
 identifying users' data before relaying it.  These designs are easy to
@@ -366,6 +360,13 @@ account to one jondo, and by monitoring and limiting the number of
 jondos on any one net- work (using IP address), the attacker would be
 forced to launch jondos using many different identities and on many
 different networks to succeed'' \cite{crowds-tissec}.
+
+Another low latency design that was proposed independently and at
+about the same time as the original Onion Routing was PipeNet
+\cite{pipenet}.  It provided anonymity protections that were stronger
+than Onion Routing's, but at the cost of allowing a single user to
+shut down the network simply by not sending. It was also never
+implemented or formally published.
 
 Tor is not primarily designed for censorship resistance but rather
 for anonymous communication. However, Tor's rendezvous points, which
@@ -528,7 +529,8 @@ The basic adversary components we consider are:
 %  same. I reworded above, I'm thinking we should leave other concerns
 %  for later. -PS
 
-\item{Hostile Tor node:} can arbitrarily manipulate the
+
+\item[Hostile Tor node:] can arbitrarily manipulate the
   connections under its control, as well as creating new connections
   (that pass through itself).
 \end{description}
@@ -627,6 +629,15 @@ capabilities are collaborating and are connected in an offline clique.
 We do not assume any hostile users, except in the context of
 % This sounds horrible. What do you mean we don't assume any hostile
 % users? Surely we can tolerate some? -RD
+%
+% This could be phrased better. All I meant was that we are not
+% going to try to model or quantify any attacks on anonymity
+% by users of the system by trying to vary their
+% activity. Yes, we tolerate some, but if ordinary usage can
+% vary widely, there is nothing added by considering malicious
+% attempts specifically,
+% except if they are attempts to expose someone at the far end of a
+% session we initiate, e.g., the rendezvous server case. -PS
 rendezvous points. Nonetheless, we assume that users vary widely in
 both the duration and number of times they are connected to the Tor
 network. They can also be assumed to vary widely in the volume and
@@ -1001,6 +1012,23 @@ have a buffer for funny stuff coming out of port 80. we could similarly
 have other exit proxies for other protocols, like mail, to check
 delivered mail for being spam.
 
+[XXX Um, I'm uncomfortable with this for several reasons.
+It's not good for keeping honest nodes honest about discarding
+state after it's no longer needed. Granted it keeps an external
+observer from noticing how often sites are visited, but it also
+allows fishing expeditions. ``We noticed you went to this prohibited
+site an hour ago. Kindly turn over your caches to the authorities.''
+I previously elsewhere suggested bulk transfer proxies to carve
+up big things so that they could be downloaded in less noticeable
+pieces over several normal looking connections. We could suggest
+similarly one or a handful of squid nodes that might serve up
+some of the more sensitive but common material, especially if
+the relevant sites didn't want to or couldn't run their own OR.
+This would be better than having everyone run a squid which would
+just help identify after the fact the different history of that
+node's activity. All this kind of speculation needs to move to
+future work section I guess. -PS]
+
 A mixture of open and restricted exit nodes will allow the most
 flexibility for volunteers running servers. But while a large number
 of middleman nodes is useful to provide a large and robust network,
@@ -1236,6 +1264,32 @@ Pull attacks and defenses into analysis as a subsection
 
 \Section{Maintaining anonymity in Tor}
 \label{sec:maintaining-anonymity}
+
+I probably should have noted that this means loops will be on at least
+five hop routes, which should be rare given the distribution.  I'm    
+realizing that this is reproducing some of the thought that led to a  
+default of five hops in the original onion routing design.  There were
+some different assumptions, which I won't spell out now.  Note that   
+enclave level protections really change these assumptions.  If most   
+circuits are just two hops, then just a single link observer will be  
+able to tell that two enclaves are communicating with high probability.
+So, it would seem that enclaves should have a four node minimum circuit
+to prevent trivial circuit insider identification of the whole circuit,
+and three hop minimum for circuits from an enclave to some nonclave    
+responder. But then... we would have to make everyone obey these rules 
+or a node that through timing inferred it was on a four hop circuit    
+would know that it was probably carrying enclave to enclave traffic.   
+Which... if there were even a moderate number of bad nodes in the      
+network would make it advantageous to break the connection to conduct  
+a reformation intersection attack. Ahhh! I gotta stop thinking         
+about this and work on the paper some before the family wakes up.  
+On Sat, Oct 25, 2003 at 06:57:12AM -0400, Paul Syverson wrote:
+> Which... if there were even a moderate number of bad nodes in the
+> network would make it advantageous to break the connection to conduct         > a reformation intersection attack. Ahhh! I gotta stop thinking                > about this and work on the paper some before the family wakes up.             
+This is the sort of issue that should go in the 'maintaining anonymity
+with tor' section towards the end. :)
+Email from between roger and me to beginning of section above. Fix and move.
+
 
 [Put as much of this as a part of open issues as is possible.]
 
