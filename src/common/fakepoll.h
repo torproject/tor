@@ -19,15 +19,11 @@
  * select.  On Mac OS 10.3, this wrapper is kinda flaky, and we should
  * use our own.
  */
-#if (defined(HAVE_POLL_H)||defined(HAVE_SYS_POLL_H)) && !defined(_POLL_EMUL_H_)
-#define tor_poll poll
-#else
+#if !(defined(HAVE_POLL_H)||defined(HAVE_SYS_POLL_H))&&!defined(_POLL_EMUL_H_)
 #define USE_FAKE_POLL
 #endif
 
-#ifdef USE_FAKE_POLL
-
-#ifndef _POLL_EMUL_H_
+#if defined USE_FAKE_POLL && !defined(_POLL_EMUL_H_)
 struct pollfd {
   int fd;
   short events;
@@ -43,7 +39,6 @@ struct pollfd {
 #endif
 
 int tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout);
-#endif
 
 #endif
 
