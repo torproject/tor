@@ -17,23 +17,23 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 # Other choices (not advised) are entry,exit,introduction.
 AllowUnverifiedNodes middle,rendezvous
 
-# By default, we send log messages to stdout.  If you want
-# them to go somewhere else, uncomment one or more of these example
-# configurations.
-### Send all messages of level 'warn' or higher to /var/log/tor/warnings
-#LogFile /var/log/tor/warnings
+# Logs go to stdout unless redirected by something else, like one of
+# the below lines, or --logfile on the command line.
+### Send all messages of level 'warn' or higher to @LOCALSTATEDIR@/log/tor/warnings
+#LogFile @LOCALSTATEDIR@/log/tor/warnings
 #LogLevel warn
-### Send all debug and info messages to /var/log/tor/debug
-#LogFile /var/log/tor/debug
+### Send all debug and info messages to @LOCALSTATEDIR@/log/tor/debug
+#LogFile @LOCALSTATEDIR@/log/tor/debug
 #LogLevel debug-info
-### Send all debug messages ONLY to /var/log/tor/debug
-#LogFile /var/log/tor/debug
+### Send all debug messages ONLY to @LOCALSTATEDIR@/log/tor/debug
+#LogFile @LOCALSTATEDIR@/log/tor/debug
 #LogLevel debug-debug
 ### To use the system log instead of Tor's logfiles, uncomment these lines:
 #SysLog
 #LogLevel notice
 
-# Uncomment this to start the process in the background
+# Uncomment this to start the process in the background... or use
+# --runasdaemon 1 on the command line.
 #RunAsDaemon 1
 
 # The three trusted directory servers on the current Tor network.
@@ -52,11 +52,11 @@ DirServer 62.116.124.106:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D
 ## your configuration. See the README for details.
 
 ## The directory for keeping all the keys/etc for this server
-#DataDirectory @LOCALSTATEDIR@/lib/tor
+DataDirectory @LOCALSTATEDIR@/lib/tor
 
-#Nickname moria # A unique handle for this server
-#Address moria.seul.org # The IP or fqdn for this server
-#ContactInfo 1024D/28988BF5 Roger Dingledine <arma@mit.edu>
+#Nickname ididntedithtconfig       # A unique handle for this server
+#Address noname.example.com        # The IP or fqdn for this server
+#ContactInfo 1234D/FFFFFFFF Random Person <nobody@example.com>
 
 #ORPort 9001 # where to listen for tor connections
 # If you want to listen on a port other than the one advertised
