@@ -22,8 +22,6 @@
 #define CHECK_PRINTF(formatIdx, firstArg) 
 #endif 
 
-void log_set_severity(int severity);
-
 void add_stream_log(int loglevel, const char *name, FILE *stream);
 int add_file_log(int severity, const char *filename);
 void close_logs();

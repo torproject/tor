@@ -24,25 +24,24 @@ static INLINE const char *sev_to_string(int severity) {
   }
 }
 
-static int loglevel = LOG_DEBUG;
 static logfile_t *logfiles = NULL;
 
 /* Format a log message into a fixed-sized buffer. (This is factored out
  * of 'logv' so that we never format a message more than once.
  */
 static INLINE void format_msg(char *buf, size_t buf_len,
-			      int severity, const char *funcname, 
-			      const char *format, va_list ap) 
+                              int severity, const char *funcname, 
+                              const char *format, va_list ap) 
 {
   time_t t;
   struct timeval now;
   int n;
 
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
-  
+
   tor_gettimeofday(&now);
   t = (time_t)now.tv_sec;
-  
+
   n = strftime(buf, buf_len, "%b %d %H:%M:%S", localtime(&t));
   n += snprintf(buf+n, buf_len-n,
                 ".%.3ld [%s] ", 
@@ -71,10 +70,8 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
   char buf[10024];
   int formatted = 0;
   logfile_t *lf;
-  
+
   assert(format);
-  if (severity < loglevel)
-    return;
   for (lf = logfiles; lf; lf = lf->next) {
     if (severity < lf->loglevel || severity > lf->max_loglevel)
       continue;
@@ -89,12 +86,6 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
     fflush(lf->file);
     /* XXX check for EOF */
   }
-}
-
-void 
-log_set_severity(int severity)
-{
-  loglevel = severity;
 }
 
 /* Outputs a message to stdout */
