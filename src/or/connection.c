@@ -319,18 +319,52 @@ static int connection_tls_finish_handshake(connection_t *conn) {
       if (!router) {
         log_fn(LOG_INFO,"Unrecognized public key from peer. Closing.");
         crypto_free_pk_env(pk);
+        return -1;
       }
-      conn->bandwidth = router->bandwidth;
-      conn->addr = router->addr, conn->port = router->or_port;
-      conn->pkey = pk;
-      if(conn->address)
-        free(conn->address);
-      conn->address = strdup(router->address);
+      if(conn->pkey) { /* I initiated this connection. */
+        if(crypto_pk_cmp_keys(conn->pkey, pk)) {
+          log_fn(LOG_INFO,"We connected to '%s' but he gave us a different key. Closing.", router->nickname);
+          crypto_free_pk_env(pk);
+          return -1;
+        }
+        log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
+        crypto_free_pk_env(pk);
+      } else {
+        if(connection_exact_get_by_addr_port(router->addr,router->or_port)) {
+          log_fn(LOG_INFO,"That router is already connected. Dropping.");
+          return -1;
+        }
+        conn->pkey = pk;
+        conn->bandwidth = router->bandwidth;
+        conn->addr = router->addr, conn->port = router->or_port;
+        conn->address = strdup(router->address);
+      }
     } else { /* it's an OP */
       conn->bandwidth = DEFAULT_BANDWIDTH_OP;
     }
   } else { /* I'm a client */
-    /* XXX Clients should also verify certificates. */
+    if(!tor_tls_peer_has_cert(conn->tls)) { /* it's a client too?! */
+      log_fn(LOG_INFO,"Neither peer sent a cert! Closing.");
+      return -1;
+    }
+    pk = tor_tls_verify(conn->tls);
+    if(!pk) {
+      log_fn(LOG_INFO,"Other side has a cert but it's bad. Closing.");
+      return -1;
+    }
+    router = router_get_by_pk(pk);
+    if (!router) {
+      log_fn(LOG_INFO,"Unrecognized public key from peer. Closing.");
+      crypto_free_pk_env(pk);
+      return -1;
+    }
+    if(crypto_pk_cmp_keys(conn->pkey, pk)) {
+      log_fn(LOG_INFO,"We connected to '%s' but he gave us a different key. Closing.", router->nickname);
+      crypto_free_pk_env(pk);
+      return -1;
+    }
+    log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
+    crypto_free_pk_env(pk);
     conn->bandwidth = DEFAULT_BANDWIDTH_OP;
     circuit_n_conn_open(conn); /* send the pending create */
   }
