@@ -182,14 +182,12 @@ dirserv_free_descriptors()
   n_descriptors = 0;
 }
 
-/* Return 0 if descriptor is well-formed; -1 if descriptor is not
- * well-formed.  Update *desc to point after the descriptor if the
+/* Return 1 if descriptor is well-formed and accepted;
+ * 0 if well-formed and server is unapproved;
+ * -1 if not well-formed or if clock is skewed or other error.
+ *
+ * Update *desc to point after the descriptor if the
  * descriptor is well-formed.
- */
-/* XXX down the road perhaps we should return 1 for accepted, 0 for
- * well-formed but rejected, -1 for not-well-formed. So remote servers
- * can know if their submission was accepted and not just whether it
- * was well-formed. ...Or maybe we shouldn't give them that info?
  */
 int
 dirserv_add_descriptor(const char **desc)
@@ -205,7 +203,7 @@ dirserv_add_descriptor(const char **desc)
   start = strstr(*desc, "router ");
   if (!start) {
     log(LOG_WARN, "no descriptor found.");
-    goto err;
+    return -1;
   }
   if ((end = strstr(start+6, "\nrouter "))) {
     ++end; /* Include NL. */
@@ -219,11 +217,11 @@ dirserv_add_descriptor(const char **desc)
 
   /* Check: is the descriptor syntactically valid? */
   ri = router_get_entry_from_string(cp, NULL);
+  tor_free(desc_tmp);
   if (!ri) {
     log(LOG_WARN, "Couldn't parse descriptor");
-    goto err;
+    return -1;
   }
-  tor_free(desc_tmp);
   /* Okay.  Now check whether the fingerprint is recognized. */
   r = dirserv_router_fingerprint_is_known(ri);
   if(r<1) {
@@ -248,7 +246,7 @@ dirserv_add_descriptor(const char **desc)
     log_fn(LOG_WARN, "Publication time for nickname %s is too far in the future; possible clock skew. Not adding", ri->nickname);
     routerinfo_free(ri);
     *desc = end;
-    return 0;
+    return -1;
   }
   /* Do we already have an entry for this router? */
   desc_ent_ptr = NULL;
@@ -263,10 +261,10 @@ dirserv_add_descriptor(const char **desc)
     if ((*desc_ent_ptr)->published > ri->published_on) {
       /* We already have a newer descriptor */
       log_fn(LOG_INFO,"We already have a newer desc for nickname %s. Not adding.",ri->nickname);
-      /* This isn't really an error; return. */
+      /* This isn't really an error; return success. */
       routerinfo_free(ri);
       *desc = end;
-      return 0;
+      return 1;
     }
     /* We don't have a newer one; we'll update this one. */
     free_descriptor_entry(*desc_ent_ptr);
@@ -287,13 +285,7 @@ dirserv_add_descriptor(const char **desc)
   directory_set_dirty();
 
   routerinfo_free(ri);
-  return 0;
- err:
-  tor_free(desc_tmp);
-  if (ri)
-    routerinfo_free(ri);
-
-  return -1;
+  return 1;
 }
 
 void
@@ -310,7 +302,7 @@ dirserv_init_from_directory_string(const char *dir)
     cp = strstr(cp, "\nrouter ");
     if (!cp) break;
     ++cp;
-    if (dirserv_add_descriptor(&cp)) {
+    if (dirserv_add_descriptor(&cp) < 0) {
       return -1;
     }
     --cp; /*Back up to newline.*/

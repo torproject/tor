@@ -161,7 +161,7 @@ int init_keys(void) {
     return -1;
   }
   tmp = mydesc = router_get_my_descriptor();
-  if (dirserv_add_descriptor(&tmp)) {
+  if (dirserv_add_descriptor(&tmp) != 1) {
     log(LOG_ERR, "Unable to add own descriptor to directory.");
     return -1;
   }
