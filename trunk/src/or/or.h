@@ -160,9 +160,7 @@
 #define CELL_CREATE 1
 #define CELL_DATA 2
 #define CELL_DESTROY 3
-#define CELL_ACK 4
-#define CELL_NACK 5
-#define CELL_SENDME 6
+#define CELL_SENDME 4
 
 #define CELL_PAYLOAD_SIZE 120
 #define CELL_NETWORK_SIZE 128
