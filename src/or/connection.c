@@ -399,7 +399,7 @@ int connection_decompress_to_buf(char *string, int len, connection_t *conn,
    *
    * This check should may be different.
    */
-  if (connection_outbuf_too_full(conn->outbuf))
+  if (connection_outbuf_too_full(conn))
     return 0;
   
   n = decompress_buf_to_buf(
@@ -781,11 +781,8 @@ repeat_connection_package_raw_inbuf:
     }
     log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at AP is %d",conn->p_receive_topicwindow);
   }
-  if (conn->inbuf_datalen) {
-    log(LOG_DEBUG,"connection_package_raw_inbuf(): recursing.");
-    goto repeat_connection_package_raw_inbuf;
-  }
-  return 0;
+  /* handle more if there's more, or return 0 if there isn't */
+  goto repeat_connection_package_raw_inbuf;
 }
 
 int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
