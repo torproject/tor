@@ -1087,7 +1087,9 @@ int write_all(int fd, const char *buf, size_t count, int isSocket) {
   return count;
 }
 
-/** Read <b>count</b> bytes from <b>fd</b> to <b>buf</b>.  isSocket must be 1 if fd
+/** Read from <b>fd</b> to <b>buf</b>, until we get <b>count</b> bytes
+ * or reach the end of the file.
+ * isSocket must be 1 if fd
  * was returned by socket() or accept(), and 0 if fd was returned by
  * open().  Return the number of bytes read, or -1 on error. Only use
  * if fd is a blocking fd. */
@@ -1100,8 +1102,10 @@ int read_all(int fd, char *buf, size_t count, int isSocket) {
       result = recv(fd, buf+numread, count-numread, 0);
     else
       result = read(fd, buf+numread, count-numread);
-    if(result<=0)
+    if(result<0)
       return -1;
+    else if (result == 0)
+      break;
     numread += result;
   }
   return count;
@@ -1525,6 +1529,7 @@ char *read_file_to_str(const char *filename, int bin) {
   int fd; /* router file */
   struct stat statbuf;
   char *string;
+  int r;
 
   tor_assert(filename);
 
@@ -1541,10 +1546,19 @@ char *read_file_to_str(const char *filename, int bin) {
 
   string = tor_malloc(statbuf.st_size+1);
 
-  if(read_all(fd,string,statbuf.st_size,0) != statbuf.st_size) {
+  r = read_all(fd,string,statbuf.st_size,0);
+  if (r<0) {
+    log_fn(LOG_WARN,"Error reading from file '%s': %s", filename,
+           strerror(errno));
+    tor_free(string);
+    close(fd);
+    return NULL;
+  } else if (bin && r != statbuf.st_size) {
+    /* If we're in binary mode, then we'd better have an exact match for
+     * size.  Otherwise, win32 encoding may throw us off, and that's okay. */
     log_fn(LOG_WARN,"Couldn't read all %ld bytes of file '%s'.",
            (long)statbuf.st_size,filename);
-    free(string);
+    tor_free(string);
     close(fd);
     return NULL;
   }
