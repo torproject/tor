@@ -226,7 +226,7 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
   }
 
   if(num_acceptable_routers < *routelen) {
-    log(LOG_DEBUG,"new_route(): Cutting routelen from %d to %d.",*routelen, num_acceptable_routers);
+    log(LOG_NOTICE,"new_route(): Cutting routelen from %d to %d.",*routelen, num_acceptable_routers);
     *routelen = num_acceptable_routers;
   }
 
@@ -246,7 +246,7 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
       return NULL;
     }
 
-    choice = choice % (rarray_len);
+    choice = choice % rarray_len;
     log(LOG_DEBUG,"new_route(): Contemplating router %u.",choice);
     if(choice == oldchoice ||
       (oldchoice < rarray_len && !crypto_pk_cmp_keys(rarray[choice]->pkey, rarray[oldchoice]->pkey)) ||

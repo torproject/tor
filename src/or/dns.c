@@ -19,6 +19,7 @@
 int num_workers=0;
 int num_workers_busy=0;
 
+static void purge_expired_resolves(uint32_t now);
 static int dns_assign_to_worker(connection_t *exitconn);
 static void dns_found_answer(char *question, uint32_t answer);
 int dnsworker_main(void *data);
@@ -65,9 +66,26 @@ void dns_init(void) {
 static struct cached_resolve *oldest_cached_resolve = NULL; /* linked list, */
 static struct cached_resolve *newest_cached_resolve = NULL; /* oldest to newest */
 
+static void purge_expired_resolves(uint32_t now) {
+  struct cached_resolve *resolve;
+
+  /* this is fast because the linked list
+   * oldest_cached_resolve is ordered by when they came in.
+   */
+  while(oldest_cached_resolve && (oldest_cached_resolve->expire < now)) {
+    resolve = oldest_cached_resolve;
+    log(LOG_DEBUG,"Forgetting old cached resolve (expires %d)", resolve->expire);
+    oldest_cached_resolve = resolve->next;
+    if(!oldest_cached_resolve) /* if there are no more, */
+      newest_cached_resolve = NULL; /* then make sure the list's tail knows that too */
+    SPLAY_REMOVE(cache_tree, &cache_root, resolve);
+    free(resolve);
+  }
+}
+
 /* See if the question 'exitconn->address' has been answered. if so,
- * if resolve valid, put it into exitconn->addr and exec to
- * connection_exit_connect. If resolve failed, return -1.
+ * if resolve valid, put it into exitconn->addr and return 1.
+ * If resolve failed, return -1.
  *
  * Else, if seen before and pending, add conn to the pending list,
  * and return 0.
@@ -82,18 +100,8 @@ int dns_resolve(connection_t *exitconn) {
   uint32_t now = time(NULL);
 
   /* first take this opportunity to see if there are any expired
-   * resolves in the tree. this is fast because the linked list
-   * oldest_cached_resolve is ordered by when they came in.
-   */
-  while(oldest_cached_resolve && (oldest_cached_resolve->expire < now)) {
-    resolve = oldest_cached_resolve;
-    log(LOG_DEBUG,"Forgetting old cached resolve (expires %d)", resolve->expire);
-    oldest_cached_resolve = resolve->next;
-    if(!oldest_cached_resolve) /* if there are no more, */
-      newest_cached_resolve = NULL; /* then make sure the list's tail knows that too */
-    SPLAY_REMOVE(cache_tree, &cache_root, resolve);
-    free(resolve);
-  }
+     resolves in the tree.*/
+  purge_expired_resolves(now);
 
   /* now check the tree to see if 'question' is already there. */
   strncpy(search.question, exitconn->address, MAX_ADDRESSLEN);
@@ -109,7 +117,7 @@ int dns_resolve(connection_t *exitconn) {
         return 0;
       case CACHE_STATE_VALID:
         exitconn->addr = resolve->answer;
-        return connection_exit_connect(exitconn);
+        return 1;
       case CACHE_STATE_FAILED:
         return -1;
     }

@@ -456,6 +456,7 @@ typedef struct {
    int MaxOnionsPending;
    int NewCircuitPeriod;
    int TotalBandwidth;
+   int NumCpus;
    int Role;
    int loglevel;
 } or_options_t;
@@ -557,8 +558,6 @@ void command_process_destroy_cell(cell_t *cell, connection_t *conn);
 void command_process_connected_cell(cell_t *cell, connection_t *conn);
 
 /********************************* config.c ***************************/
-
-const char *basename(const char *filename);
 
 /* open configuration file for reading */
 FILE *config_open(const unsigned char *filename);
