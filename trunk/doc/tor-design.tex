@@ -531,8 +531,8 @@ the identity key of a router is considered equivalent to creating a
 new router. The onion (decryption) key is used for decrypting requests
 from users to set up a circuit and negotiate ephemeral keys. Finally,
 link keys are used by the TLS protocol when communicating between
-onion routers.  Both short-term keys are rotated periodically and
-independantly, to limit the impact of compromised keys.
+onion routers. Each short-term key is rotated periodically and
+independently, to limit the impact of key compromise.
 
 Section~\ref{subsec:cells} discusses the structure of the fixed-size
 \emph{cells} that are the unit of communication in Tor. We describe
@@ -545,7 +545,7 @@ fairness issues.
 \SubSection{Cells}
 \label{subsec:cells}
 
-ORs communicate with one another, and with users' OPs, via TLS
+Onion routers communicate with one another, and with users' OPs, via TLS
 connections with ephemeral keys.  This prevents an attacker from
 impersonating an OR, conceals the contents of the connection with
 perfect forward secrecy, and prevents an attacker from modifying data
@@ -556,16 +556,16 @@ is 256 bytes (but see Section~\ref{sec:conclusion} for a discussion of
 allowing large cells and small cells on the same network), and
 consists of a header and a payload. The header includes a circuit
 identifier (circID) that specifies which circuit the cell refers to
-(many circuits are be multiplexed over the single TLS connection), and
+(many circuits can be multiplexed over the single TLS connection), and
 a command to describe what to do with the cell's payload.  (Circuit
-identifiers are connection-specific; a single circuit has a different
-circID on each connection it uses.)
+identifiers are connection-specific: each single circuit has one circID
+for the forward connection and another for the backward connection.)
 % XXX Say that each OR can have many circuits with same circID, so
 % XXX long as they're on different connections, and that ORs know 
 % XXX which circIDs/connection pairs are linked by a circuit.
 Based on their command, cells are either \emph{control} cells, which are
 always interpreted by the node that receives them, or \emph{relay} cells,
-which carry end-to-end stream data.   The controls cells commands are:
+which carry end-to-end stream data.   The control cell commands are:
 \emph{padding} (currently used for keepalive, but also usable for link
 padding); \emph{create} or \emph{created} (used to set up a new circuit);
 and \emph{destroy} (to tear down a circuit).
@@ -643,20 +643,20 @@ into a \emph{relay extended} cell and passes it back to Alice.  Now
 the circuit is extended to Carol, and Alice and Carol share a common key
 $K_2 = g^{x_2 y_2}$.
 
-In order to extend the circuit to a third node or beyond, Alice
+To extend the circuit to a third node or beyond, Alice
 proceeds as above, always telling the last node in the circuit to
 extend one hop further.
-% XXX Briefly mention path selection.
+% XXX Briefly mention path selection and path length.
 
 This circuit-level handshake protocol achieves unilateral entity
-authentication (Alice knows she's handshaking with Bob/Carol, but
-Bob/Carol doesn't care who is opening the circuit---Alice has no key
+authentication (Alice knows she's handshaking with the OR, but
+the OR doesn't care who is opening the circuit---Alice has no key
 and is trying to remain anonymous) and unilateral key authentication
-(Alice and Bob/Carol agree on a key, and Alice knows Bob/Carol is the
-only other person who should know it). It also achieves forward
-secrecy and key freshness.  Formally, the protocol is as follows
-(Where $E_{PK_{Bob}}(\cdot)$ is encryption with Bob's public key,
-$H$ is a secure hash function, and $|$ is concatenation.)
+(Alice and the OR agree on a key, and Alice knows the OR is the
+only other entity who should know it). It also achieves forward
+secrecy and key freshness. More formally, the protocol is as follows
+(where $E_{PK_{Bob}}(\cdot)$ is encryption with Bob's public key,
+$H$ is a secure hash function, and $|$ is concatenation):
 
 \begin{equation}
 \begin{aligned}
@@ -682,7 +682,7 @@ OR on the circuit), she can send relay cells.
 % XXX encrypted.  The easiest expository order should probably be: What ORs
 % XXX Do With Unrecognized Streams; What Alice Does To Build Relay
 % XXX Cells; What ORs Do With Streams They Recognize.
-Recall that every relay header has a stream ID in the relay header
+Recall that every relay cell has a stream ID in the relay header
 that indicates to
 which stream the cell belongs.
 This stream ID allows a relay cell to be addressed to any of the ORs
@@ -710,9 +710,9 @@ Alice can instead send a relay truncate cell to a node along the circuit. That
 node will send a \emph{destroy} cell forward, and reply with an acknowledgment
 (a \emph{relay truncated} cell).  Alice might truncate her circuit so
 she can extend it
-to different nodes without signaling to the first few nodes (or somebody
+to different nodes without signalling to the first few nodes (or somebody
 observing them) that she is changing her circuit. That is, nodes in the
-middle of a truncated are not even aware when the circuit is
+middle of a circuit are not even aware that the circuit has been
 truncated, because they see only the encrypted relay cells.
 Similarly, if a node on the circuit goes down,
 the adjacent node can send a \emph{relay truncated} cell back to
@@ -963,6 +963,10 @@ require investigation.
 
 \SubSection{Exit policies and abuse}
 \label{subsec:exitpolicies}
+
+%XXX originally, we planned to put the "users only know the hostname,
+%    not the IP, but exit policies are by IP" problem here too. Worth
+%    while still? -RD
 
 Exit abuse is a serious barrier to wide-scale Tor deployment. Anonymity
 presents would-be vandals and abusers with an opportunity to hide
@@ -1857,7 +1861,7 @@ issues remaining to be ironed out. In particular:
   these bottlenecks.
 \item \emph{Cover traffic:} Currently we avoid cover traffic because
   of its clear costs in performance and bandwidth, and because its
-  security benefits have not well understood. With more research
+  security benefits are not well understood. With more research
   \cite{SS03,defensive-dropping}, the price/value ratio may change,
   both for link-level cover traffic and also long-range cover traffic.
 \item \emph{Better directory distribution:} Even with the threshold
