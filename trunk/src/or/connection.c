@@ -615,7 +615,7 @@ repeat_connection_package_raw_inbuf:
     return -1;
   }
 
-  log(LOG_DEBUG,"connection_package_raw_inbuf(): Packaging %d bytes (%d waiting).",cell.length, amount_to_process);
+  log(LOG_DEBUG,"connection_package_raw_inbuf(): (%d) Packaging %d bytes (%d waiting).",conn->s,cell.length, amount_to_process);
 
   *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
   *cell.payload = TOPIC_COMMAND_DATA;
@@ -631,7 +631,7 @@ repeat_connection_package_raw_inbuf:
     }
     assert(conn->n_receive_topicwindow > 0);
     if(--conn->n_receive_topicwindow <= 0) { /* is it 0 after decrement? */
-      connection_stop_reading(circ->n_conn);
+      connection_stop_reading(conn);
       log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at exit reached 0.");
       return 0; /* don't process the inbuf any more */
     }
@@ -646,7 +646,7 @@ repeat_connection_package_raw_inbuf:
     }
     assert(conn->p_receive_topicwindow > 0);
     if(--conn->p_receive_topicwindow <= 0) { /* is it 0 after decrement? */
-      connection_stop_reading(circ->p_conn);
+      connection_stop_reading(conn);
       log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at AP reached 0.");
       return 0; /* don't process the inbuf any more */
     }
