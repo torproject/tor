@@ -10,6 +10,7 @@
 #include "./crypto.h"
 #include "./tortls.h"
 #include "./util.h"
+#include "./log.h"
 
 #include <assert.h>
 #include <openssl/ssl.h>
@@ -271,7 +272,7 @@ tor_tls_read(tor_tls *tls, char *cp, int len)
     tls->state = TOR_TLS_ST_CLOSED;
     return TOR_TLS_CLOSE;
   } else {
-    /*  XXXX Make sure it's not TOR_TLS_DONE. */
+    assert(err != TOR_TLS_DONE);
     return err;
   }
 }
@@ -287,12 +288,12 @@ tor_tls_write(tor_tls *tls, char *cp, int n)
   int r, err;
   assert(tls && tls->ssl);
   assert(tls->state == TOR_TLS_ST_OPEN);
+  if (n == 0)
+    return 0;
   r = SSL_write(tls->ssl, cp, n);
   err = tor_tls_get_error(tls, r, 1);
-  if (err == _TOR_TLS_ZERORETURN) {
-    /* should never happen XXXX */
-    return 0;
-  } else if (err == TOR_TLS_DONE) {
+  assert(err != _TOR_TLS_ZERORETURN);
+  if (err == TOR_TLS_DONE) {
     return r;
   } else {
     return err;
@@ -332,41 +333,54 @@ tor_tls_shutdown(tor_tls *tls)
   char buf[128];
   assert(tls && tls->ssl);
 
-  if (tls->state == TOR_TLS_ST_SENTCLOSE) {
-    do {
-      r = SSL_read(tls->ssl, buf, 128);
-    } while (r>0);
+  while (1) {
+    if (tls->state == TOR_TLS_ST_SENTCLOSE) {
+      /* If we've already called shutdown once to send a close message,
+       * we read until the other side has closed too.
+       */
+      do {
+	r = SSL_read(tls->ssl, buf, 128);
+      } while (r>0);
+      err = tor_tls_get_error(tls, r, 1);
+      if (err == _TOR_TLS_ZERORETURN) {
+	tls->state = TOR_TLS_ST_GOTCLOSE;
+	/* fall through... */
+      } else {
+	if (err == _TOR_TLS_SYSCALL)
+	  err = TOR_TLS_ERROR;
+	return err;
+      }
+    }
+
+    r = SSL_shutdown(tls->ssl);
+    if (r == 1) {
+      /* If shutdown returns 1, the connection is entirely closed. */
+      tls->state = TOR_TLS_ST_CLOSED;
+      return TOR_TLS_DONE;
+    }
     err = tor_tls_get_error(tls, r, 1);
-    if (err == _TOR_TLS_ZERORETURN) {
-      tls->state = TOR_TLS_ST_GOTCLOSE;
-      /* fall through */
+    if (err == _TOR_TLS_SYSCALL) {
+      /* The underlying TCP connection closed while we were shutting down. */
+      tls->state = TOR_TLS_ST_CLOSED; 
+      return TOR_TLS_DONE;
+    } else if (err == _TOR_TLS_ZERORETURN) {
+      /* The TLS connection says that it sent a shutdown record, but
+       * isn't done shutting down yet.  Make sure that this hasn't
+       * happened before, then go back to the start of the function
+       * and try to read.
+       */
+      if (tls->state == TOR_TLS_ST_GOTCLOSE || 
+	  tls->state == TOR_TLS_ST_SENTCLOSE) {
+	log(LOG_ERR, 
+	    "TLS returned \"half-closed\" value while already half-closed");
+	return TOR_TLS_ERROR;
+      }
+      tls->state = TOR_TLS_ST_SENTCLOSE;
+      /* fall through ... */
     } else {
-      if (err == _TOR_TLS_SYSCALL)
-        err = TOR_TLS_ERROR;
       return err;
     }
-  }
-
-  r = SSL_shutdown(tls->ssl);
-  if (r == 1) {
-    tls->state = TOR_TLS_ST_CLOSED;
-    return TOR_TLS_DONE;
-  }
-  err = tor_tls_get_error(tls, r, 1);
-  if (err == _TOR_TLS_SYSCALL)
-    return TOR_TLS_ST_CLOSED; /* XXXX is this right? */
-  else if (err == _TOR_TLS_ZERORETURN) {
-    if (tls->state == TOR_TLS_ST_GOTCLOSE || 
-        tls->state == TOR_TLS_ST_SENTCLOSE) {
-      /* XXXX log; unexpected. */
-      return TOR_TLS_ERROR;
-    }
-    tls->state = TOR_TLS_ST_SENTCLOSE;
-    return tor_tls_shutdown(tls);
-  } else {
-    /* XXXX log if not error. */
-    return err;
-  }
+  } /* end loop */
 }
 
 /* Return true iff this TLS connection is authenticated.
