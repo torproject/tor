@@ -327,20 +327,23 @@ int fetch_from_buf(char *string, int string_len, buf_t *buf) {
 }
 
 /* There is a (possibly incomplete) http statement on *buf, of the
- * form "%s\r\n\r\n%s", headers, body.
+ * form "%s\r\n\r\n%s", headers, body. (body may contain nuls.)
  * If a) the headers include a Content-Length field and all bytes in
  * the body are present, or b) there's no Content-Length field and
  * all headers are present, then:
- *   strdup headers and body into the supplied args (and null terminate
- *   them), remove them from buf, and return 1.
- *   (If headers or body is NULL, discard that part of the buf.)
+ *   strdup headers into *headers_out, and nul-terminate it.
+ *   memdup body into *body_out, and malloc one byte more than
+ *   necessary, in case the caller wants to nul-terminate it.
+ *   Then remove them from buf, and return 1.
+ *
+ *   If headers or body is NULL, discard that part of the buf.
  *   If a headers or body doesn't fit in the arg, return -1.
  *
  * Else, change nothing and return 0.
  */
 int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, int max_headerlen,
-                        char **body_out, int max_bodylen) {
+                        char **body_out, int *body_used, int max_bodylen) {
   char *headers, *body;
   int i;
   int headerlen, bodylen, contentlen;
@@ -372,7 +375,7 @@ int fetch_from_buf_http(buf_t *buf,
                       headers, headerlen);
   if(i > 0) {
     contentlen = atoi(headers+i);
-    /* XXX What if content-length is malformed? */
+    /* if content-length is malformed, then our body length is 0. fine. */
     log_fn(LOG_DEBUG,"Got a contentlen of %d.",contentlen);
     if(bodylen < contentlen) {
       log_fn(LOG_DEBUG,"body not all here yet.");
@@ -388,9 +391,11 @@ int fetch_from_buf_http(buf_t *buf,
     (*headers_out)[headerlen] = 0; /* null terminate it */
   }
   if(body_out) {
+    assert(body_used);
+    *body_used = bodylen;
     *body_out = tor_malloc(bodylen+1);
     memcpy(*body_out,buf->mem+headerlen,bodylen);
-    (*body_out)[bodylen] = 0; /* null terminate it */
+    /* don't null terminate it */
   }
   buf_remove_from_front(buf, headerlen+bodylen);
   return 1;

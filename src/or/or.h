@@ -628,7 +628,7 @@ int write_to_buf(const char *string, int string_len, buf_t *buf);
 int fetch_from_buf(char *string, int string_len, buf_t *buf);
 int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, int max_headerlen,
-                        char **body_out, int max_bodylen);
+                        char **body_out, int *body_used, int max_bodylen);
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
 
 void assert_buf_ok(buf_t *buf);
