@@ -38,6 +38,9 @@
 #endif
 #include "../common/torint.h"
 #include "../common/fakepoll.h"
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h> /* FreeBSD needs this to know what version it is */
 #endif
