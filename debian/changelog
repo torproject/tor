@@ -1,3 +1,9 @@
+tor (0.0.8+0.0.9pre5-1) unstable; urgency=low
+
+  * New upstream (pre)release.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 10 Nov 2004 03:26:40 +0100
+
 tor (0.0.8+0.0.9pre4-1) unstable; urgency=low
 
   * New upstream (pre)release.
