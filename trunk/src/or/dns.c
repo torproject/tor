@@ -203,7 +203,6 @@ void dns_cancel_pending_resolve(char *address, connection_t *onlyconn) {
     return;
   }
 
-  assert(resolve->state == CACHE_STATE_PENDING);
   assert(resolve->pending_connections);
 
   if(onlyconn) {
