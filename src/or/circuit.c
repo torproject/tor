@@ -1268,11 +1268,6 @@ static circuit_t *circuit_establish_circuit(uint8_t purpose,
   if(!n_conn || n_conn->state != OR_CONN_STATE_OPEN) { /* not currently connected */
     circ->n_addr = firsthop->addr;
     circ->n_port = firsthop->or_port;
-    if(options.ORPort) { /* we would be connected if he were up. and he's not. */
-      log_fn(LOG_INFO,"Route's firsthop isn't connected.");
-      circuit_mark_for_close(circ);
-      return NULL;
-    }
 
     if(!n_conn) { /* launch the connection */
       n_conn = connection_or_connect(firsthop);

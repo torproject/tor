@@ -243,12 +243,12 @@ int connection_dir_process_inbuf(connection_t *conn) {
       } else {
         log_fn(LOG_INFO,"updated routers.");
       }
+      if(options.ORPort) { /* connect to them all */
+        router_retry_connections();
+      }
       if (has_fetched_directory==0) {
         has_fetched_directory=1;
         directory_has_arrived(); /* do things we've been waiting to do */
-      }
-      if(options.ORPort) { /* connect to them all */
-        router_retry_connections();
       }
     }
 
