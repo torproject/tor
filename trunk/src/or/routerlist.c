@@ -248,10 +248,11 @@ int all_trusted_directory_servers_down(void) {
  */
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router) {
   routerinfo_t *r;
+  struct config_line_t *cl;
 
   if (!router->declared_family)
     return;
-  
+
   /* Add every r such that router declares familyness with r, and r
    * declares familyhood with router. */
   SMARTLIST_FOREACH(router->declared_family, const char *, n,
@@ -266,6 +267,13 @@ void routerlist_add_family(smartlist_t *sl, routerinfo_t *router) {
             smartlist_add(sl, r);
         });
     });
+
+
+  for (cl = options.NodeFamilies; cl; cl = cl->next) {
+    if (router_nickname_is_in_list(router, cl->value)) {
+      add_nickname_list_to_smartlist(sl, cl->value, 0);
+    }
+  }
 }
 
 /** Given a comma-and-whitespace separated list of nicknames, see which
@@ -304,6 +312,26 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_do
   });
   SMARTLIST_FOREACH(nickname_list, char *, nick, tor_free(nick));
   smartlist_free(nickname_list);
+}
+
+/** Return 1 iff any member of the comma-separated list <b>list</b> is an
+ * acceptable nickname or hexdigest for <b>router</b>.  Else return 0.
+ */
+int
+router_nickname_is_in_list(routerinfo_t *router, const char *list)
+{
+  smartlist_t *nickname_list;
+  int v = 0;
+
+  tor_assert(router);
+  tor_assert(list);
+
+  nickname_list = smartlist_create();
+  smartlist_split_string(nickname_list, list, ",",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH(nickname_list, char *, cp,
+                    if (router_nickname_matches(router, cp)) {v=1;break;});
+  return v;
 }
 
 /** Add every router from our routerlist that is currently running to
@@ -405,7 +433,7 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
 //    log_fn(LOG_INFO,"Recording bw %d for node %s.", this_bw, router->nickname);
   }
   if(!total_bw)
-    return NULL; 
+    return NULL;
   rand_bw = crypto_pseudo_rand_int(total_bw);
 //  log_fn(LOG_INFO,"Total bw %d. Randomly chose %d.", total_bw, rand_bw);
   tmp = 0;

@@ -22,7 +22,7 @@ N       - Handle rendezvousing with unverified nodes.
         o node 'groups' that are known to be in the same zone of control.
           o Nodes can list their coadministrated nodes.
             o If A lists B, it only counts if B also lists A
-N         - Users can list other coadministrated nodes if they like.
+          o Users can list other coadministrated nodes if they like.
           o Never choose two coadministrated nodes in the same circuit.
 R       - figure out enclaves, e.g. so we know what to recommend that people
           do, and so running a tor server on your website is helpful.

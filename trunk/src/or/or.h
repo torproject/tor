@@ -859,7 +859,7 @@ typedef struct {
   /** Local address to bind outbound sockets */
   char *OutboundBindAddress;
   struct config_line_t *RecommendedVersions;
-  /**< Directory server only: which versions of 
+  /**< Directory server only: which versions of
      * Tor should we tell users to run? */
   char *User; /**< Name of user to run Tor as. */
   char *Group; /**< Name of group to run Tor as. */
@@ -904,6 +904,8 @@ typedef struct {
   struct config_line_t *DirServers; /**< List of configuration lines
                                      * for directory servers. */
   char *MyFamily; /**< Declared family for this OR. */
+  struct config_line_t *NodeFamilies; /**< List of config lines for
+                                       * node families */
 } or_options_t;
 
 /* XXX are these good enough defaults? */
@@ -1420,6 +1422,7 @@ int all_trusted_directory_servers_down(void);
 struct smartlist_t;
 void routerlist_add_family(struct smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list, int warn_if_down);
+int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 routerinfo_t *routerlist_find_my_routerinfo(void);
 int router_nickname_matches(routerinfo_t *router, const char *nickname);
 int router_is_unreliable_router(routerinfo_t *router, int need_uptime, int need_bw);
