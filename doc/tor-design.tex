@@ -294,14 +294,26 @@ forced to launch jondos using many different identities and on many
 different networks to succeed'' \cite{crowds-tissec}.
 
 
+Many systems have been designed for censorship resistant publishing.
+The first of these was the Eternity Service \cite{eternity}. Since
+then, there have been many alternatives and refinements, of which we note
+but a few
+\cite{eternity,gap-pets03,freenet-pets00,freehaven-berk,publius,tangler,taz}.
+From the first, traffic analysis resistant communication has been
+recognized as an important element of censorship resistance because of
+the relation between the ability to censor material and the ability to
+find its distribution source.
+
+Tor is not primarily for censorship resistance but for anonymous
+communication. However, Tor's rendezvous points, which enable
+connections between mutually anonymous entities, also facilitate
+connections to hidden servers.  These building blocks to censorship
+resistance and other capabilities are described in
+Section~\ref{sec:rendezvous}.
+
+
 [XXX I'm considering the subsection as ended here for now. I'm leaving the
 following notes in case we want to revisit any of them. -PS]
-
-There are also many systems which are intended for anonymous
-and/or censorship resistant file sharing. [XXX Should we list all these
-or just say it's out of scope for the paper?
-eternity, gnunet, freenet, freehaven, publius, tangler, taz/rewebber]
-
 
 
 Channel-based anonymizing systems also differ in their use of dummy traffic.
@@ -433,15 +445,38 @@ The basic adversary components we consider are:
   to it including refusing them entirely, intentionally modifying what
   it sends and at what rate, and selectively closing them. Also a
   special case of the disrupter.
-\item[Key breaker:] can break the longterm private decryption key of a
-  Tor-node.
+\item[Key breaker:] can break the key used to encrypt connection
+  initiation requests sent to a Tor-node.
 % Er, there are no long-term private decryption keys. They have
 % long-term private signing keys, and medium-term onion (decryption)
 % keys. Plus short-term link keys. Should we lump them together or
 % separate them out? -RD
-\item[Compromised Tor-node:] can arbitrarily manipulate the connections
-  under its control, as well as creating new connections (that pass
-  through itself).
+%
+%  Hmmm, I was talking about the keys used to encrypt the onion skin
+%  that contains the public DH key from the initiator. Is that what you
+%  mean by medium-term onion key? (``Onion key'' used to mean the
+%  session keys distributed in the onion, back when there were onions.)
+%  Also, why are link keys short-term? By link keys I assume you mean
+%  keys that neighbor nodes use to superencrypt all the stuff they send
+%  to each other on a link.  Did you mean the session keys? I had been
+%  calling session keys short-term and everything else long-term. I
+%  know I was being sloppy. (I _have_ written papers formalizing
+%  concepts of relative freshness.) But, there's some questions lurking
+%  here. First up, I don't see why the onion-skin encryption key should
+%  be any shorter term than the signature key in terms of threat
+%  resistance. I understand that how we update onion-skin encryption
+%  keys makes them depend on the signature keys. But, this is not the
+%  basis on which we should be deciding about key rotation. Another
+%  question is whether we want to bother with someone who breaks a
+%  signature key as a particular adversary. He should be able to do
+%  nearly the same as a compromised tor-node, although they're not the
+%  same. I reworded above, I'm thinking we should leave other concerns
+%  for later. -PS
+
+  
+\item[Compromised Tor-node:] can arbitrarily manipulate the
+  connections under its control, as well as creating new connections
+  (that pass through itself).
 \end{description}
 
 
