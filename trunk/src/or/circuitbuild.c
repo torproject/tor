@@ -86,9 +86,12 @@ circuit_list_path(circuit_t *circ, int verbose)
     smartlist_add(elements, tor_strdup(buf));
   }
 
-  for (hop = circ->cpath; hop && hop != circ->cpath; hop = hop->next) {
+  hop = circ->cpath;
+  do {
     const char *elt;
     routerinfo_t *r;
+    if (!hop)
+      break;
     if (!verbose && hop->state != CPATH_STATE_OPEN)
       break;
     if ((r = router_get_by_digest(hop->identity_digest))) {
@@ -109,7 +112,8 @@ circuit_list_path(circuit_t *circ, int verbose)
     } else {
       smartlist_add(elements, tor_strdup(elt));
     }
-  }
+    hop = hop->next;
+  } while (hop != circ->cpath);
 
   s = smartlist_join_strings(elements, verbose?" ":",", 0, NULL);
   SMARTLIST_FOREACH(elements, char*, cp, tor_free(cp));
@@ -212,10 +216,14 @@ circuit_dump_details(int severity, circuit_t *circ, int poll_index,
     if(circ->state == CIRCUIT_STATE_BUILDING)
       log(severity,"Building: desired len %d, planned exit node %s.",
           circ->build_state->desired_path_len, circ->build_state->chosen_exit_name);
-    for(hop=circ->cpath;hop->next != circ->cpath; hop=hop->next)
+    hop = circ->cpath;
+    do {
+      if (!hop) break;
       log(severity,"hop: state %d, addr 0x%.8x, port %d", hop->state,
           (unsigned int)hop->addr,
           (int)hop->port);
+      hop = hop->next;
+    } while (hop != circ->cpath);
   }
 }
 
