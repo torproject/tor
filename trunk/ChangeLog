@@ -1,3 +1,30 @@
+Changes in version 0.0.2pre26 - 2004-03-14
+  o New features:
+    - If a stream times out after 15s without a connected cell, don't
+      try that circuit again: try a new one.
+    - Retry streams at most 4 times. Then give up.
+    - When a dirserver gets a descriptor from an unknown router, it
+      logs its fingerprint (so the dirserver operator can choose to
+      accept it even without mail from the server operator).
+    - Inform unapproved servers when we reject their descriptors.
+    - Make tor build on Windows again. It works as a client, who knows
+      about as a server.
+    - Clearer instructions in the torrc for how to set up a server.
+    - Be more efficient about reading fd's when our global token bucket
+      (used for rate limiting) becomes empty.
+  o Bugfixes:
+    - Stop asserting that computers always go forward in time. It's
+      simply not true.
+    - When we sent a cell (e.g. destroy) and then marked an OR connection
+      expired, we might close it before finishing a flush if the other
+      side isn't reading right then.
+    - Don't allow dirservers to start if they haven't defined
+      RecommendedVersions
+    - We were caching transient dns failures. Oops.
+    - Prevent servers from publishing an internal IP as their address.
+    - Address a strcat vulnerability in circuit.c
+
+
 Changes in version 0.0.2pre25 - 2004-03-04
   o New features:
     - Put the OR's IP in its router descriptor, not its fqdn. That way
@@ -6,6 +33,7 @@ Changes in version 0.0.2pre25 - 2004-03-04
   o Bugfixes:
     - If the user typed in an address that didn't resolve, the server
       crashed.
+
 
 Changes in version 0.0.2pre24 - 2004-03-03
   o Bugfixes:
