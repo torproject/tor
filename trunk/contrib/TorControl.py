@@ -7,7 +7,10 @@ import socket
 import struct
 import sys
 
+#__all__ = [ "MSG_TYPE", "" ]
+
 class _Enum:
+    # Helper: define an ordered dense name-to-number 1-1 mapping.
     def __init__(self, start, names):
         self.nameOf = {}
         idx = start
@@ -16,9 +19,14 @@ class _Enum:
             self.nameOf[idx] = name
             idx += 1
 class _Enum2:
+    # Helper: define an ordered sparse name-to-number 1-1 mapping.
     def __init__(self, **args):
         self.__dict__.update(args)
+        self.nameOf = {}
+        for k,v in args.items():
+            self.nameOf[v] = k
 
+# Message types that client or server can send.
 MSG_TYPE = _Enum(0x0000,
                  ["ERROR",
                   "DONE",
@@ -43,23 +51,37 @@ MSG_TYPE = _Enum(0x0000,
                   "CLOSECIRCUIT",
                   ])
 
+# Make sure that the enumeration code is working.
 assert MSG_TYPE.SAVECONF == 0x0008
 assert MSG_TYPE.CLOSECIRCUIT == 0x0014
 
+# Types of "EVENT" message.
 EVENT_TYPE = _Enum(0x0001,
                    ["CIRCSTATUS",
                     "STREAMSTATUS",
                     "ORCONNSTATUS",
                     "BANDWIDTH",
-                    "WARN",
-                    "NEWDESC"])
+                    "OBSOLETE_LOG",
+                    "NEWDESC",
+                    "DEBUG_MSG",
+                    "INFO_MSG",
+                    "NOTICE_MSG",
+                    "WARN_MSG",
+                    "ERR_MSG",
+                    ])
 
+assert EVENT_TYPE.ERR_MSG == 0x000B
+assert EVENT_TYPE.OBSOLETE_LOG == 0x0005
+
+# Status codes for "CIRCSTATUS" events.
 CIRC_STATUS = _Enum(0x00,
                     ["LAUNCHED",
                      "BUILT",
                      "EXTENDED",
                      "FAILED",
                      "CLOSED"])
+
+# Status codes for "STREAMSTATUS" events
 STREAM_STATUS = _Enum(0x00,
                       ["SENT_CONNECT",
                        "SENT_RESOLVE",
@@ -69,10 +91,15 @@ STREAM_STATUS = _Enum(0x00,
                        "NEW_CONNECT",
                        "NEW_RESOLVE",
                        "DETACHED"])
+
+# Status codes for "ORCONNSTATUS" events
 OR_CONN_STATUS = _Enum(0x00,
                        ["LAUNCHED","CONNECTED","FAILED","CLOSED"])
+
+# Signal codes for "SIGNAL" events.
 SIGNAL = _Enum2(HUP=0x01,INT=0x02,USR1=0x0A,USR2=0x0C,TERM=0x0F)
 
+# Error codes for "ERROR" events.
 ERR_CODES = {
   0x0000 : "Unspecified error",
   0x0001 : "Internal error",
@@ -90,13 +117,16 @@ ERR_CODES = {
 }
 
 class TorCtlError(Exception):
-  pass
+    "Generic error raised by TorControl code."
+    pass
 
 class ProtocolError(TorCtlError):
-  pass
+    "Raised on violations in Tor controller protocol"
+    pass
 
 class ErrorReply(TorCtlError):
-  pass
+    ""
+    pass
 
 def parseHostAndPort(h):
     host, port = "localhost", 9051
@@ -326,6 +356,11 @@ def close_circuit(s, circid, flags=0):
     send_message(s,MSG_TYPE.CLOSECIRCUIT,msg)
     tp,body = receive_reply(s,[MSG_TYPE.DONE])
 
+def post_descriptor(s, descriptor):
+    send_message(s,MSG_TYPE.POSTDESCRIPTOR,descriptor)
+    tp,body = receive_reply(s,[MSG_TYPE.DONE])
+
+
 def _unterminate(s):
     if s[-1] == '\0':
         return s[:-1]
@@ -360,10 +395,12 @@ def unpack_event(body):
             raise ProtocolError("BANDWIDTH event too short.")
         read, written = struct.unpack("!LL",body[:8])
         args = read, written
-    elif evtype == EVENT_TYPE.WARN:
+    elif evtype == EVENT_TYPE.OBSOLETE_LOG:
         args = (_unterminate(body),)
     elif evtype == EVENT_TYPE.NEWDESC:
         args = (_unterminate(body).split(","),)
+    elif EVENT_TYPE.DEBUG_MSG <= evtype <= EVENT_TYPE.ERR_MSG:
+        args = (EVENT_TYPE.nameOf(evtype), _unterminate(body))
     else:
         args = (body,)
 
@@ -372,7 +409,7 @@ def unpack_event(body):
 def listen_for_events(s):
     while(1):
         _,type,body = receive_message(s)
-        print "event",type
+        print unpack_event(body)
     return
 
 def do_main_loop(host,port):
@@ -402,7 +439,7 @@ def do_main_loop(host,port):
     #set_option(s,"bandwidthburstbytes 100000")
     #set_option(s,"runasdaemon 1")
     #set_events(s,[EVENT_TYPE.WARN])
-    set_events(s,[EVENT_TYPE.WARN,EVENT_TYPE.STREAMSTATUS])
+    set_events(s,[EVENT_TYPE.OBSOLETE_LOG])
 
     listen_for_events(s)
 
