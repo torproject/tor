@@ -14,6 +14,16 @@ For 0.0.9.6:
    - Server instructions for OSX and Windows operators.
    - Audit all changes to bandwidth buckets for integer over/underflow.
 
+For 0.1.0.1-rc:
+R  - write a changelog
+R  - pick the whole path when you start the circuit.
+     - and then the controller can call that for extendcircuit
+R  - finish messing with reachability stuff
+R  - if we jump in time a lot, then mark our circs and note that we
+     haven't made a circ yet.
+
+
+
 For 0.1.0.x:
 
  Refactoring and infrastructure:
