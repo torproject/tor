@@ -313,7 +313,7 @@ static int circuit_is_acceptable(circuit_t *circ,
       }
     }
   }
-  return 0;
+  return 1;
 }
 
 /* Return 1 iff circuit 'a' is better than circuit 'b' for purpose.  Used by
