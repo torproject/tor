@@ -6,7 +6,7 @@
 # This should be incremented whenever the spec file changes, but
 # can drop back to zero at a new Tor version
 
-%define  specver 3
+%define  specver 0
 
 ## Things users may want to change
 #
@@ -34,7 +34,7 @@
 #     * We replace pre with .pre. and rc with .rc.
 #     * We replace -cvs with .cvs, and lack of -cvs with .release.
 #
-# Note what this scheme will break if we ever use 0 as a last digit for a
+# Note that this scheme will break if we ever use 0 as a last digit for a
 # Tor version: so don't do that.
 
 %define is_dev_version %(echo %{native_version} | grep 'cvs\\|pre\\|rc' > /dev/null && echo 1 || echo 0)
