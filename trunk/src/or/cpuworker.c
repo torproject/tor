@@ -132,19 +132,19 @@ int cpuworker_main(void *data) {
 
   for(;;) {
 
-    if(read(fd, &question_type, 1) != 1) {
+    if(recv(fd, &question_type, 1, 0) != 1) {
 //      log_fn(LOG_ERR,"read type failed. Exiting.");
       log_fn(LOG_INFO,"cpuworker exiting because tor process died.");
       spawn_exit();
     }
     assert(question_type == CPUWORKER_TASK_ONION);
 
-    if(read_all(fd, tag, TAG_LEN) != TAG_LEN) {
+    if(read_all(fd, tag, TAG_LEN, 1) != TAG_LEN) {
       log_fn(LOG_ERR,"read tag failed. Exiting.");
       spawn_exit();
     }
 
-    if(read_all(fd, question, ONIONSKIN_CHALLENGE_LEN) != ONIONSKIN_CHALLENGE_LEN) {
+    if(read_all(fd, question, ONIONSKIN_CHALLENGE_LEN, 1) != ONIONSKIN_CHALLENGE_LEN) {
       log_fn(LOG_ERR,"read question failed. Exiting.");
       spawn_exit();
     }
@@ -163,7 +163,7 @@ int cpuworker_main(void *data) {
         memcpy(buf+1+TAG_LEN,reply_to_proxy,ONIONSKIN_REPLY_LEN);
         memcpy(buf+1+TAG_LEN+ONIONSKIN_REPLY_LEN,keys,40+32);
       }
-      if(write_all(fd, buf, LEN_ONION_RESPONSE) != LEN_ONION_RESPONSE) {
+      if(write_all(fd, buf, LEN_ONION_RESPONSE, 1) != LEN_ONION_RESPONSE) {
         log_fn(LOG_ERR,"writing response buf failed. Exiting.");
         spawn_exit();
       }

@@ -397,14 +397,14 @@ int dnsworker_main(void *data) {
 
   for(;;) {
 
-    if(read(fd, &address_len, 1) != 1) {
+    if(recv(fd, &address_len, 1, 0) != 1) {
 //      log_fn(LOG_INFO,"read length failed. Child exiting.");
       log_fn(LOG_INFO,"dnsworker exiting because tor process died.");
       spawn_exit();
     }
     assert(address_len > 0);
 
-    if(read_all(fd, address, address_len) != address_len) {
+    if(read_all(fd, address, address_len, 1) != address_len) {
       log_fn(LOG_ERR,"read hostname failed. Child exiting.");
       spawn_exit();
     }
@@ -413,13 +413,13 @@ int dnsworker_main(void *data) {
     rent = gethostbyname(address);
     if (!rent) {
       log_fn(LOG_INFO,"Could not resolve dest addr %s. Returning nulls.",address);
-      if(write_all(fd, "\0\0\0\0", 4) != 4) {
+      if(write_all(fd, "\0\0\0\0", 4, 1) != 4) {
         log_fn(LOG_ERR,"writing nulls failed. Child exiting.");
         spawn_exit();
       }
     } else {
       assert(rent->h_length == 4); /* break to remind us if we move away from ipv4 */
-      if(write_all(fd, rent->h_addr, 4) != 4) {
+      if(write_all(fd, rent->h_addr, 4, 1) != 4) {
         log_fn(LOG_INFO,"writing answer failed. Child exiting.");
         spawn_exit();
       }
