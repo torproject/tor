@@ -6,7 +6,6 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
-static void circuit_free_cpath(crypt_path_t *cpath);
 static void circuit_free_cpath_node(crypt_path_t *victim);
 static circ_id_t get_unique_circ_id_by_addr_port(uint32_t addr, uint16_t port, int circ_id_type);  
 
@@ -90,7 +89,7 @@ void circuit_free(circuit_t *circ) {
   free(circ);
 }
 
-static void circuit_free_cpath(crypt_path_t *cpath) {
+void circuit_free_cpath(crypt_path_t *cpath) {
   crypt_path_t *victim, *head=cpath;
 
   if(!cpath)

@@ -502,6 +502,7 @@ void circuit_add(circuit_t *circ);
 void circuit_remove(circuit_t *circ);
 circuit_t *circuit_new(circ_id_t p_circ_id, connection_t *p_conn);
 void circuit_free(circuit_t *circ);
+void circuit_free_cpath(crypt_path_t *cpath);
 
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 circuit_t *circuit_get_by_circ_id_conn(circ_id_t circ_id, connection_t *conn);
@@ -692,6 +693,7 @@ void onion_pending_remove(circuit_t *circ);
 int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
 
 crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop);
+int onion_extend_cpath(crypt_path_t **head_ptr, int path_len, routerinfo_t **router_out);
 
 int onion_skin_create(crypto_pk_env_t *router_key,
                       crypto_dh_env_t **handshake_state_out,
