@@ -302,10 +302,9 @@ implementation's padding policy improves anonymity.
 {\bf PipeNet} \cite{back01, pipenet}, another low-latency design proposed at
 about the same time as Onion Routing, provided
 stronger anonymity at the cost of allowing a single user to shut
-down the network simply by not sending.  Low-latency anonymous
-communication has also been designed for different environments with
-different assumptions, such as
-ISDN \cite{isdn-mixes}.
+down the network simply by not sending. Systems like {\bf ISDN mixes}
+\cite{isdn-mixes} were designed for other environments with
+different assumptions.
 
 In P2P designs like {\bf Tarzan} \cite{tarzan:ccs02} and {\bf MorphMix}
 \cite{morphmix:fc04}, all participants both generate traffic and relay
@@ -1245,7 +1244,7 @@ application integration is described more fully below.
 \item Bob chooses some introduction points, and advertises them on
       the DHT.  He can add more later.
 \item Bob builds a circuit to each of his introduction points,
-      and waits.  No more data is transmitted before the first request.
+      and waits for requests.
 \item Alice learns about Bob's service out of band (perhaps Bob told her,
       or she found it on a website). She retrieves the details of Bob's
       service from the DHT.
@@ -1272,37 +1271,6 @@ application integration is described more fully below.
 \item An anonymous stream has been established, and Alice and Bob
       communicate as normal.
 \end{tightlist}
-
-\workingnote{
-\noindent$\bullet$ Bob chooses some introduction points, and advertises them on
-      the DHT.  He can add more later.\\
-$\bullet$ Bob establishes a Tor circuit to each of his introduction points,
-      and waits.  No data is transmitted until a request is received.\\
-$\bullet$ Alice learns about Bob's service out of band (perhaps Bob told her,
-      or she found it on a website). She retrieves the details of Bob's
-      service from the DHT.\\
-$\bullet$ Alice chooses an OR to serve as the rendezvous point (RP) for this
-      transaction. She establishes a circuit to RP, and gives it a
-      rendezvous cookie, which it will use to recognize Bob.\\
-$\bullet$ Alice opens an anonymous stream to one of Bob's introduction
-      points, and gives it a message (encrypted to Bob's public key) which tells him
-      about herself, her chosen RP and the rendezvous cookie, and the
-      first half of an ephemeral
-      key handshake. The introduction point sends the message to Bob.\\
-$\bullet$ If Bob wants to talk to Alice, he builds a new circuit to Alice's
-      RP and provides the rendezvous cookie and the second half of the DH
-      handshake (along with a hash of the session
-      key they now share---by the same argument as in
-      Section~\ref{subsubsec:constructing-a-circuit}, Alice knows she
-      shares the key only with the intended Bob).\\
-$\bullet$ The RP connects Alice's circuit to Bob's. Note that RP can't
-      recognize Alice, Bob, or the data they transmit.\\
-$\bullet$ Alice now sends a \emph{relay begin} cell along the circuit. It
-      arrives at Bob's onion proxy. Bob's onion proxy connects to Bob's
-      webserver.\\
-$\bullet$ An anonymous stream has been established, and Alice and Bob
-      communicate as normal.
-}
 
 When establishing an introduction point, Bob provides the onion router
 with a public ``introduction'' key. The hash of this public key
