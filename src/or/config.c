@@ -345,7 +345,7 @@ static void print_usage(void) {
          );
 }
 
-int resolve_my_address(or_options_t *options) {
+static int resolve_my_address(or_options_t *options) {
   struct in_addr in;
   struct hostent *rent;
   char localhostname[256];
@@ -377,7 +377,7 @@ int resolve_my_address(or_options_t *options) {
   assert(rent->h_length == 4);
   memcpy(&in.s_addr, rent->h_addr,rent->h_length);
   if(is_internal_IP(in.s_addr)) {
-    log_fn(LOG_WARN,"Address '%s' resolves to '%s'. "
+    log_fn(LOG_WARN,"Address '%s' resolves to private IP '%s'. "
            "Please set the Address config option to be your public IP.",
            options->Address, inet_ntoa(in));
     return -1;

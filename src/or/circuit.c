@@ -790,29 +790,28 @@ void circuit_about_to_close_connection(connection_t *conn) {
 }
 
 void circuit_log_path(int severity, circuit_t *circ) {
-  static char b[1024];
+  char buf[1024];
+  char *s = buf;
   struct crypt_path_t *hop;
   char *states[] = {"closed", "waiting for keys", "open"};
   routerinfo_t *router;
   assert(circ->cpath);
 
-  sprintf(b,"circ (length %d, exit %s): ",
+  snprintf(s, sizeof(buf)-1, "circ (length %d, exit %s): ",
           circ->build_state->desired_path_len, circ->build_state->chosen_exit);
   hop=circ->cpath;
   do {
+    s = buf + strlen(buf);
     router = router_get_by_addr_port(hop->addr,hop->port);
     if(router) {
-      /* XXX strcat allows buffer overflow */
-      strcat(b,router->nickname);
-      strcat(b,"(");
-      strcat(b,states[hop->state]);
-      strcat(b,"),");
+      snprintf(s, sizeof(buf) - (s - buf), "%s(%s) ",
+               router->nickname, states[hop->state]);
     } else {
-      strcat(b,"UNKNOWN,");
+      snprintf(s, sizeof(buf) - (s - buf), "UNKNOWN ");
     }
     hop=hop->next;
   } while(hop!=circ->cpath);
-  log_fn(severity,"%s",b);
+  log_fn(severity,"%s",buf);
 }
 
 static void

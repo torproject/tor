@@ -341,7 +341,7 @@ list_running_servers(char **nicknames_out)
   for (i = 0; i<n; ++i) {
     if (i)
       strcat(cp, " ");
-    strcat(cp, nickname_lst[i]);
+    strcat(cp, nickname_lst[i]); /* can't overflow */
     while (*cp)
       ++cp;
   }

@@ -1064,7 +1064,7 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok) {
     strcpy(newe->string, "accept ");
     newe->policy_type = EXIT_POLICY_ACCEPT;
   }
-  strcat(newe->string, arg);
+  strcat(newe->string, arg); /* can't overflow */
 
   address = arg;
   mask = strchr(arg,'/');
