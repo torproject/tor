@@ -249,7 +249,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type) {
   }
 
   if(connection_init_accepted_conn(newconn) < 0) {
-    connection_free(newconn);
+    newconn->marked_for_close = 1;
     return 0;
   }
   return 0;
