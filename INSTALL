@@ -1,5 +1,7 @@
 Quickstart version for users:
 
+-1) If you don't have libevent, install it.  Source is at
+    http://www.monkey.org/~provos/libevent/ .
 0) Download the absolute newest version. No, really.
   http://tor.eff.org/dist/
 1) tar xvf it, and then cd into the directory.
@@ -41,6 +43,10 @@ If you got the source from cvs:
   list above.
 
 If the quickstart doesn't work for you:
+
+  Starting with Tor 0.1.0.0, Tor uses libevent for its asynchronous
+  networking core.  If you don't have libevent, you'll need to install it.
+  You can get it at http://www.monkey.org/~provos/libevent/.
 
   If you have problems finding libraries, try
     CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \

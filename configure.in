@@ -34,7 +34,7 @@ AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
 AC_SEARCH_LIBS(pthread_create, [pthread])
 AC_SEARCH_LIBS(pthread_detach, [pthread])
-AC_SEARCH_LIBS(event_loop, [event], , AC_MSG_ERROR(Libevent library not found. Tor requires libevent to build.))
+AC_SEARCH_LIBS(event_loop, [event], , AC_MSG_ERROR(Libevent library not found. Tor requires libevent to build.  You can get the latest version of libevent at http://www.monkey.org/~provos/libevent/ ))
 
 saved_LIBS="$LIBS"
 saved_LDFLAGS="$LDFLAGS"
