@@ -349,7 +349,7 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
    */
 
   for (tmpconn = circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream) {
-    if (rh.stream_id == tmpconn->stream_id) {
+    if (rh.stream_id == tmpconn->stream_id && !tmpconn->marked_for_close) {
       log_fn(LOG_DEBUG,"found conn for stream %d.", rh.stream_id);
       if (cell_direction == CELL_DIRECTION_OUT ||
           connection_edge_is_rendezvous_stream(tmpconn))
@@ -357,13 +357,13 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
     }
   }
   for (tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream) {
-    if (rh.stream_id == tmpconn->stream_id) {
+    if (rh.stream_id == tmpconn->stream_id && !tmpconn->marked_for_close) {
       log_fn(LOG_DEBUG,"found conn for stream %d.", rh.stream_id);
       return tmpconn;
     }
   }
   for (tmpconn = circ->resolving_streams; tmpconn; tmpconn=tmpconn->next_stream) {
-    if (rh.stream_id == tmpconn->stream_id) {
+    if (rh.stream_id == tmpconn->stream_id && !tmpconn->marked_for_close) {
       log_fn(LOG_DEBUG,"found conn for stream %d.", rh.stream_id);
       return tmpconn;
     }
