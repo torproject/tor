@@ -33,22 +33,9 @@ char *conn_state_to_string[][15] = {
     "close",             /* 2 */
     "close_wait" },      /* 3 */
   { "ready" }, /* or listener, 0 */
-#ifdef USE_TLS
   { "connect()ing",                 /* 0 */
     "handshaking",                  /* 1 */
     "open" },                       /* 2 */
-#else
-  { "connecting (as OP)",       /* or, 0 */
-    "sending keys (as OP)",         /* 1 */
-    "connecting (as client)",       /* 2 */
-    "sending auth (as client)",     /* 3 */
-    "waiting for auth (as client)", /* 4 */
-    "sending nonce (as client)",    /* 5 */
-    "waiting for auth (as server)", /* 6 */
-    "sending auth (as server)",     /* 7 */
-    "waiting for nonce (as server)",/* 8 */
-    "open" },                       /* 9 */
-#endif
   { "waiting for dest info",     /* exit, 0 */
     "connecting",                      /* 1 */
     "open" },                          /* 2 */
@@ -75,10 +62,8 @@ char *conn_state_to_string[][15] = {
 /********* END VARIABLES ************/
 
 static int connection_init_accepted_conn(connection_t *conn);
-#ifdef USE_TLS
 static int connection_tls_continue_handshake(connection_t *conn);
 static int connection_tls_finish_handshake(connection_t *conn);
-#endif
 
 /**************************************************************/
 
@@ -103,21 +88,6 @@ connection_t *connection_new(int type) {
   conn->timestamp_lastread = now.tv_sec;
   conn->timestamp_lastwritten = now.tv_sec;
 
-#ifndef USE_TLS
-  if (connection_speaks_cells(conn)) {
-    conn->f_crypto = crypto_new_cipher_env(CONNECTION_CIPHER);
-    if (!conn->f_crypto) {
-      free((void *)conn);
-      return NULL;
-    }
-    conn->b_crypto = crypto_new_cipher_env(CONNECTION_CIPHER);
-    if (!conn->b_crypto) {
-      crypto_free_cipher_env(conn->f_crypto);
-      free((void *)conn);
-      return NULL;
-    }
-  }
-#endif
   return conn;
 }
 
@@ -133,15 +103,8 @@ void connection_free(connection_t *conn) {
 
   if(connection_speaks_cells(conn)) {
     directory_set_dirty();
-#ifdef USE_TLS
     if (conn->tls)
       tor_tls_free(conn->tls);
-#else
-    if (conn->f_crypto)
-      crypto_free_cipher_env(conn->f_crypto);
-    if (conn->b_crypto)
-      crypto_free_cipher_env(conn->b_crypto);
-#endif
   }
 
   if (conn->pkey)
@@ -260,12 +223,8 @@ static int connection_init_accepted_conn(connection_t *conn) {
 
   switch(conn->type) {
     case CONN_TYPE_OR:
-#ifdef USE_TLS
       if(connection_tls_start_handshake(conn, 1) < 0)
         return -1;
-#else
-      conn->state = OR_CONN_STATE_SERVER_AUTH_WAIT;
-#endif
       break;
     case CONN_TYPE_AP:
       conn->state = AP_CONN_STATE_SOCKS_WAIT;
@@ -277,7 +236,6 @@ static int connection_init_accepted_conn(connection_t *conn) {
   return 0;
 }
 
-#ifdef USE_TLS
 int connection_tls_start_handshake(connection_t *conn, int receiving) {
   conn->state = OR_CONN_STATE_HANDSHAKING;
   conn->tls = tor_tls_new(conn->s, receiving);
@@ -383,7 +341,6 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   }
   return 0;
 }
-#endif
 
 /* take conn, make a nonblocking socket; try to connect to 
  * addr:port (they arrive in *host order*). If fail, return -1. Else
@@ -525,7 +482,6 @@ int connection_read_to_buf(connection_t *conn) {
   if(conn->receiver_bucket >= 0 && at_most > conn->receiver_bucket)
     at_most = conn->receiver_bucket;
 
-#ifdef USE_TLS
   if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
     if(conn->state == OR_CONN_STATE_HANDSHAKING)
       return connection_tls_continue_handshake(conn);
@@ -546,9 +502,7 @@ int connection_read_to_buf(connection_t *conn) {
       case TOR_TLS_DONE: /* no data read, so nothing to process */
         return 0;
     }
-  } else
-#endif
-  {
+  } else {
     result = read_to_buf(conn->s, at_most, &conn->inbuf, &conn->inbuflen,
                          &conn->inbuf_datalen, &conn->inbuf_reached_eof);
 //  log(LOG_DEBUG,"connection_read_to_buf(): read_to_buf returned %d.",read_result);
@@ -601,7 +555,6 @@ int connection_handle_write(connection_t *conn) {
   my_gettimeofday(&now);
   conn->timestamp_lastwritten = now.tv_sec;
 
-#ifdef USE_TLS
   if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
     if(conn->state == OR_CONN_STATE_HANDSHAKING) {
       connection_stop_writing(conn);
@@ -634,9 +587,7 @@ int connection_handle_write(connection_t *conn) {
        * is empty, so we can stop writing.
        */  
     }
-  } else
-#endif
-  {
+  } else {
     if(flush_buf(conn->s, &conn->outbuf, &conn->outbuflen,
                  &conn->outbuf_flushlen, &conn->outbuf_datalen) < 0)
       return -1;
@@ -802,10 +753,8 @@ void assert_connection_ok(connection_t *conn, time_t now)
     assert(conn->addr && conn->port);
     assert(conn->address);
     assert(conn->pkey);
-#ifdef USE_TLS
     if (conn->state != OR_CONN_STATE_CONNECTING)
       assert(conn->tls);
-#endif
   }
   
   if (conn->type != CONN_TYPE_EXIT && conn->type != CONN_TYPE_AP) {
