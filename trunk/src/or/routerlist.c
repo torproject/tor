@@ -752,9 +752,9 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
   router->bandwidthburst = 10*router->bandwidthrate;
 #endif
 
-  log_fn(LOG_DEBUG,"or_port %d, socks_port %d, dir_port %d, bandwidth %u.",
+  log_fn(LOG_DEBUG,"or_port %d, socks_port %d, dir_port %d, bandwidthrate %u, bandwidthburst %u.",
     router->or_port, router->socks_port, router->dir_port,
-    (unsigned) router->bandwidth);
+    (unsigned) router->bandwidthrate, (unsigned) router->bandwidthburst);
 
   /* XXX Later, require platform before published. */
   NEXT_TOKEN();
