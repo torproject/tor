@@ -350,9 +350,14 @@ circuit_deliver_create_cell(circuit_t *circ, char *payload) {
   tor_assert(circ->n_conn->type == CONN_TYPE_OR);
   tor_assert(payload);
 
-  /* XXXX008 How can we keep a good upgrade path here?  We should
+  /* XXXX009 How can we keep a good upgrade path here?  We should
    * compare keys, not nicknames...but older servers will compare nicknames.
    * Should we check server version from the most recent directory? Hm.
+   *
+   * This is important if anybody is unverified.
+   *
+   * Solution: switch to identity-based comparison, but if we get
+   * any circuits in the wrong half of the space, switch.
    */
   circ_id_type = decide_circ_id_type(get_options()->Nickname,
                                      circ->n_conn->nickname);
@@ -1062,7 +1067,8 @@ static int count_acceptable_routers(smartlist_t *routers) {
     }
     if(r->is_verified == 0) {
       log_fn(LOG_DEBUG,"Nope, the directory says %d is not verified.",i);
-      goto next_i_loop; /* XXX008 */
+      /* XXXX009 But unverified routers *are* sometimes acceptable. */
+      goto next_i_loop;
     }
     num++;
     log_fn(LOG_DEBUG,"I like %d. num_acceptable_routers now %d.",i, num);
