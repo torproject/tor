@@ -571,20 +571,20 @@ struct connection_t {
 
 typedef struct connection_t connection_t;
 
-#define EXIT_POLICY_ACCEPT 1
-#define EXIT_POLICY_REJECT 2
+#define ADDR_POLICY_ACCEPT 1
+#define ADDR_POLICY_REJECT 2
 
-/** A linked list of exit policy rules */
-struct exit_policy_t {
-  char policy_type; /**< One of EXIT_POLICY_ACCEPT or EXIT_POLICY_REJECT. */
+/** A linked list of policy rules */
+struct addr_policy_t {
+  char policy_type; /**< One of ADDR_POLICY_ACCEPT or ADDR_POLICY_REJECT. */
   char *string; /**< String representation of this rule. */
   uint32_t addr; /**< Base address to accept or reject. */
-  uint32_t msk; /**< Accept/reject all addresses <b>a</b> such that a & msk ==
-                 * <b>addr</b> & msk . */
+  uint32_t msk; /**< Accept/reject all addresses <b>a</b> such that
+                 * a &amp; msk == <b>addr</b> &amp; msk . */
   uint16_t prt_min; /**< Lowest port number to accept/reject. */
   uint16_t prt_max; /**< Highest port number to accept/reject. */
 
-  struct exit_policy_t *next; /**< Next rule in list. */
+  struct addr_policy_t *next; /**< Next rule in list. */
 };
 
 /** Information about another onion router in the network. */
@@ -612,7 +612,7 @@ typedef struct {
   uint32_t bandwidthburst; /**< How large is this OR's token bucket? */
   /** How many bytes/s is this router known to handle? */
   uint32_t bandwidthcapacity;
-  struct exit_policy_t *exit_policy; /**< What streams will this OR permit
+  struct addr_policy_t *exit_policy; /**< What streams will this OR permit
                                       * to exit? */
   long uptime; /**< How many seconds the router claims to have been up */
   /* local info */
@@ -1108,9 +1108,9 @@ int resolve_my_address(const char *address, uint32_t *addr);
 void options_init(or_options_t *options);
 int init_from_config(int argc, char **argv);
 int config_init_logs(or_options_t *options, int validate_only);
-void config_parse_exit_policy(struct config_line_t *cfg,
-                              struct exit_policy_t **dest);
-void exit_policy_free(struct exit_policy_t *p);
+int config_parse_addr_policy(struct config_line_t *cfg,
+                             struct addr_policy_t **dest);
+void addr_policy_free(struct addr_policy_t *p);
 int config_option_is_recognized(const char *key);
 struct config_line_t *config_get_assigned_option(or_options_t *options,
                                                  const char *key);
@@ -1217,6 +1217,7 @@ int client_dns_incr_failures(const char *address);
 void client_dns_set_entry(const char *address, uint32_t val);
 void client_dns_clean(void);
 void set_exit_redirects(smartlist_t *lst);
+void parse_socks_policy(void);
 
 /********************************* connection_or.c ***************************/
 
@@ -1287,6 +1288,7 @@ void directory_get_from_dirserver(uint8_t purpose, const char *resource);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
+void parse_dir_policy(void);
 
 /********************************* dirserv.c ***************************/
 
@@ -1559,8 +1561,8 @@ void router_mark_as_down(const char *digest);
 void routerlist_remove_old_routers(int age);
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey,
                                           int check_version);
-int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
-                                       struct exit_policy_t *policy);
+int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
+                                       struct addr_policy_t *policy);
 #define ADDR_POLICY_ACCEPTED 0
 #define ADDR_POLICY_REJECTED -1
 #define ADDR_POLICY_UNKNOWN 1
@@ -1606,7 +1608,7 @@ int router_parse_routerlist_from_directory(const char *s,
 running_routers_t *router_parse_runningrouters(const char *str);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
-struct exit_policy_t *router_parse_exit_policy_from_string(const char *s);
+struct addr_policy_t *router_parse_addr_policy_from_string(const char *s);
 int check_software_version_against_directory(const char *directory,
                                              int ignoreversion);
 int tor_version_parse(const char *s, tor_version_t *out);

@@ -939,7 +939,7 @@ test_dir_format(void)
   routerinfo_t r1, r2;
   crypto_pk_env_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
   routerinfo_t *rp1 = NULL, *rp2 = NULL;
-  struct exit_policy_t ex1, ex2;
+  struct addr_policy_t ex1, ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
   tor_version_t ver1;
   char *bw_lines = NULL;
@@ -989,13 +989,13 @@ test_dir_format(void)
   r1.nickname = tor_strdup("Magri");
   r1.platform = tor_strdup(platform);
 
-  ex1.policy_type = EXIT_POLICY_ACCEPT;
+  ex1.policy_type = ADDR_POLICY_ACCEPT;
   ex1.string = NULL;
   ex1.addr = 0;
   ex1.msk = 0;
   ex1.prt_min = ex1.prt_max = 80;
   ex1.next = &ex2;
-  ex2.policy_type = EXIT_POLICY_REJECT;
+  ex2.policy_type = ADDR_POLICY_REJECT;
   ex2.addr = 18 << 24;
   ex2.msk = 0xFF000000u;
   ex2.prt_min = ex2.prt_max = 24;

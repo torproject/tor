@@ -257,7 +257,6 @@ options_act(void) {
   if (set_max_file_descriptors(options->MaxConn) < 0)
     return -1;
 
-
   mark_logs_temp(); /* Close current logs once new logs are open. */
   if (config_init_logs(options, 0)<0) /* Configure the log(s) */
     return -1;
@@ -294,6 +293,10 @@ options_act(void) {
    * will log a warning */
   if(options->PidFile)
     write_pidfile(options->PidFile);
+
+  /* Update address policies. */
+  parse_socks_policy();
+  parse_dir_policy();
 
   init_cookie_authentication(options->CookieAuthentication);
 
@@ -987,6 +990,7 @@ options_validate(or_options_t *options)
   int i;
   int result = 0;
   struct config_line_t *cl;
+  struct addr_policy_t *addr_policy=NULL;
 
   if (options->ORPort < 0 || options->ORPort > 65535) {
     log(LOG_WARN, "ORPort option out of bounds.");
@@ -1200,6 +1204,20 @@ options_validate(or_options_t *options)
     if (check_nickname_list(cl->value, "NodeFamily"))
       result = -1;
   }
+
+  if (config_parse_addr_policy(options->ExitPolicy, &addr_policy)) {
+    log_fn(LOG_WARN, "Error in Exit Policy entry.");
+    result = -1;
+  }
+  if (config_parse_addr_policy(options->DirPolicy, &addr_policy)) {
+    log_fn(LOG_WARN, "Error in DirPolicy entry.");
+    result = -1;
+  }
+  if (config_parse_addr_policy(options->SocksPolicy, &addr_policy)) {
+    log_fn(LOG_WARN, "Error in SocksPolicy entry.");
+    result = -1;
+  }
+  addr_policy_free(addr_policy);
 
   for (cl = options->RedirectExit; cl; cl = cl->next) {
     if (parse_redirect_line(NULL, cl)<0)
@@ -1728,17 +1746,19 @@ normalize_log_options(or_options_t *options)
 
 /**
  * Given a linked list of config lines containing "allow" and "deny" tokens,
- * parse them and place the result in <b>dest</b>.  Skip malformed lines.
+ * parse them and append the result to <b>dest</b>.  Return -1 if any tokens
+ * are malformed, else return 0.
  */
-void
-config_parse_exit_policy(struct config_line_t *cfg,
-                         struct exit_policy_t **dest)
+int
+config_parse_addr_policy(struct config_line_t *cfg,
+                         struct addr_policy_t **dest)
 {
-  struct exit_policy_t **nextp;
+  struct addr_policy_t **nextp;
   smartlist_t *entries;
+  int r = 0;
 
   if (!cfg)
-    return;
+    return 0;
 
   nextp = dest;
 
@@ -1751,23 +1771,25 @@ config_parse_exit_policy(struct config_line_t *cfg,
     SMARTLIST_FOREACH(entries, const char *, ent,
     {
       log_fn(LOG_DEBUG,"Adding new entry '%s'",ent);
-      *nextp = router_parse_exit_policy_from_string(ent);
+      *nextp = router_parse_addr_policy_from_string(ent);
       if (*nextp) {
         nextp = &((*nextp)->next);
       } else {
-        log_fn(LOG_WARN,"Malformed exit policy %s; skipping.", ent);
+        log_fn(LOG_WARN,"Malformed policy %s.", ent);
+        r = -1;
       }
     });
     SMARTLIST_FOREACH(entries, char *, ent, tor_free(ent));
     smartlist_clear(entries);
   }
   smartlist_free(entries);
+  return r;
 }
 
 /** Release all storage held by <b>p</b> */
 void
-exit_policy_free(struct exit_policy_t *p) {
-  struct exit_policy_t *e;
+addr_policy_free(struct addr_policy_t *p) {
+  struct addr_policy_t *e;
 
   while (p) {
     e = p;

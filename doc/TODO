@@ -48,13 +48,19 @@ ARMA    - arma claims
 
 0.0.9pre6:
    - Oct 20 16:45:10.237 [warn] parse_addr_port(): Port '0' out of range
-   - clean up parse_*_policy code
-     - when you hup, they're not getting re-parsed
-     - stop calling a *_policy an exit_policy_t
+   o clean up parse_*_policy code
+     o when you hup, they're not getting re-parsed
+     o stop calling a *_policy an exit_policy_t
+   - Regenerate our server descriptor when a relevant option is changed from
+     control.c.
    - Writing out the machine-readable torrc file
    - fix print_usage()
    - Download and use running-routers
    - document signals in man page
+   - Document all undocumented configuration options.
+     - Accounting
+     - Control interface authentication
+     - ... ?
 N  - RPMs
      o Merge changes from jbash
      - Figure out versioning
