@@ -401,12 +401,10 @@ it is a security requirement \cite{econymics,back01}. Tor should
 therefore not
 require modifying applications; should not introduce prohibitive delays;
 and should require the user to make as few configuration decisions
-as possible.
-Platform support is also an important factor in both usability and
-deployability. Tor currently runs on linux, Windows, and assorted
-BSDs (including MacOS X).
-%XXX Did I forget any? We need to say this somewhere. It's a big deal
-%XXX so should it instead be at the beginning and/or end? -PS
+as possible.  Finally, Tor should be easily implemented on all commonly used
+platforms; we cannot require users to change their operating system in order
+to be anonymous.  (The current Tor implementation runs on Windows and
+assorted Unix-clones including Linux, FreeBSD, and MacOS X.)
 
 \textbf{Flexibility:} The protocol must be flexible and well-specified,
 so that it can serve as a test-bed for future research in low-latency
@@ -633,7 +631,7 @@ seven bytes, plus one byte for the command.
 
 %XXXX Discuss what happens with circIDs here.
 
-A User's OP constructs a circuit incrementally, negotiating a
+A user's OP constructs a circuit incrementally, negotiating a
 symmetric key with each OR on the circuit, one hop at a time. To begin
 creating a new circuit, the OP (call her Alice) sends a
 \emph{create} cell to the first node in her chosen path. This cell's
@@ -1344,15 +1342,16 @@ design withstands them.
   end-to-end timing correlations. An attacker watching patterns of
   traffic at the initiator and the responder will be
   able to confirm the correspondence with high probability. The
-  greatest protection currently against such confirmation is to hide
+  greatest protection currently available against such confirmation is to hide
   the connection between the onion proxy and the first Tor node,
-  either because it is local or behind a firewall.  This approach
+  by running the onion proxy locally or 
+  behind a firewall.  This approach
   requires an observer to separate traffic originating at the onion
-  router from traffic passes through it; but because we do not mix
+  router from traffic passing through it; but because we do not mix
   or pad, this does not provide much defense.
   
 \item \emph{End-to-end Size correlation.} Simple packet counting
-  without timing consideration will also be effective in confirming
+  without timing correlation will also be effective in confirming
   endpoints of a stream. However, even without padding, we have some
   limited protection: the leaky pipe topology means different numbers
   of packets may enter one end of a circuit than exit at the other.
@@ -1841,6 +1840,7 @@ issues remaining to be ironed out. In particular:
   cached at the ORs to avoid high loads on the directory servers.
 % XXX this is a design paper, not an implementation paper. the design
 %     says that they're already cached at the ORs. Agree/disagree?
+% XXX Agree. -NM
 \item \emph{Implementing location-hidden servers:} While
   Section~\ref{sec:rendezvous} describes a design for rendezvous
   points and location-hidden servers, these feature has not yet been
