@@ -37,16 +37,18 @@ char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
   { "",                          /* exit, 0 */
     "waiting for dest info",           /* 1 */
     "connecting",                      /* 2 */
-    "open" },                          /* 3 */
+    "open"                             /* 3 */
+    "resolve failed" },                /* 4 */
   { "ready" }, /* app listener, 0 */
   { "", /* 0 */
     "", /* 1 */
     "", /* 2 */
     "", /* 3 */
-    "awaiting dest info",         /* app, 4 */
-    "waiting for safe circuit",        /* 5 */
-    "waiting for connected",           /* 6 */
-    "open" },                          /* 7 */
+    "", /* 4 */
+    "awaiting dest info",         /* app, 5 */
+    "waiting for safe circuit",        /* 6 */
+    "waiting for connected",           /* 7 */
+    "open" },                          /* 8 */
   { "ready" }, /* dir listener, 0 */
   { "",                           /* dir, 0 */
     "connecting (fetch)",              /* 1 */
