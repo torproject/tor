@@ -155,16 +155,6 @@ even already have Tor started in the background (logging to
 default configuration file, and most people won't need to change any of
 the settings.</p>
 
-<!--
-<p>The only setting you might need to change is "SocksBindAddress".
-By default, your Tor client only listens for applications that connect
-from localhost. Connections from other computers are refused. If you
-want to torify applications on different computers than the Tor client,
-you should copy torrc.sample to torrc (it's installed by default
-to /usr/local/etc/tor/), change the SocksBindAddress line to
-0.0.0.0, and then hup or restart Tor.</p>
--->
-
 <p>After installing Tor, you should install <a
 href="http://www.privoxy.org/">privoxy</a>, which is a filtering web
 proxy that integrates well with Tor. Add the line <br>
