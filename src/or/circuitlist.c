@@ -378,9 +378,8 @@ int _circuit_mark_for_close(circuit_t *circ) {
   while (circ->resolving_streams) {
     conn = circ->resolving_streams;
     circ->resolving_streams = conn->next_stream;
-    connection_dns_remove(conn); /* remove it from resolve lists */
-    log_fn(LOG_INFO,"Freeing resolving-conn.");
-    connection_free(conn);
+    if (!conn->marked_for_close)
+      connection_mark_for_close(conn);
   }
   if (circ->p_conn)
     connection_send_destroy(circ->p_circ_id, circ->p_conn);
