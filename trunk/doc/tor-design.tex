@@ -780,7 +780,7 @@ delays, users construct circuits preemptively.  To limit linkability
 among the streams, users rotate connections by building a new circuit
 periodically (currently every minute) if the previous one has been
 used, and expire old used circuits that are no longer in use. Thus
-even very active users spend a negligible amount of time and CPU in
+even heavy users spend a negligible amount of time and CPU in
 building circuits, but only a limited number of requests can be linked
 to each other by a given exit node. Also, because circuits are built
 in the background, failed routers do not affects user experience.
@@ -1368,9 +1368,32 @@ the IP of that service. One motivation for location privacy is to provide
 protection against DDoS attacks: attackers are forced to attack the
 onion routing network as a whole rather than just Bob's IP.
 
-We provide this censorship resistance for Bob by allowing him to
-advertise several onion routers (his \emph{Introduction Points}) as his
-public location. Alice, the client, chooses a node for her \emph{Meeting
+\subsection{Goals for rendezvous points}
+\label{subsec:rendezvous-goals}
+In addition to our other goals, have tried to provide the following
+properties in our design for location-hidden servers:
+\begin{tightlist}
+\item[Flood-proof:] An attacker should not be able to flood Bob with traffic
+  simply by sending may requests to Bob's public location.  Thus, Bob needs a
+  way to filter incoming requests.
+\item[Robust:] Bob should be able to maintain a long-term pseudonymous
+  identity even in the presence of OR failure.  Thus, Bob's identity must not
+  be tied to a single OR.
+\item[Smear-resistant:] An attacker should not be able to use rendezvous
+  points to smear an OR.  That is, if a social attacker tries to host a 
+  location-hidden service that is illegal or disreputable, it should not
+  appear---even to a casual observer---that the OR is hosting that service.
+\item[Application-transparent:] Although we are willing to require users to
+  run special software to access location-hidden servers, we are not willing
+  to require them to modify their applications.
+\end{tightlist}
+
+\subsection{Rendezvous design}
+We provide location-hiding for Bob by allowing him to advertise several onion
+routers (his \emph{Introduction Points}) as his public location.  (He may do
+this on any robust efficient distributed key-value lookup system with
+authenticated updates, such as CFS \cite{cfs:sosp01}.)
+Alice, the client, chooses a node for her \emph{Meeting
 Point}. She connects to one of Bob's introduction points, informs him
 about her rendezvous point, and then waits for him to connect to the
 rendezvous
@@ -1441,9 +1464,7 @@ rendezvous system.
 
 For each service Bob offers, he configures his local onion proxy to know
 the local IP and port of the server, a strategy for authorizating Alices,
-and a public key. We assume the existence of a robust decentralized
-efficient lookup system which allows authenticated updates, eg
-\cite{cfs:sosp01}. (Each onion router could run a node in this lookup
+and a public key. (Each onion router could run a node in this lookup
 system; also note that as a stopgap measure, we can just run a simple
 lookup system on the directory servers.)  Bob publishes into the DHT
 (indexed by the hash of the public key) the public key, an expiration
@@ -1557,7 +1578,9 @@ a reformation intersection attack. Ahhh! I gotta stop thinking
 about this and work on the paper some before the family wakes up.  
 On Sat, Oct 25, 2003 at 06:57:12AM -0400, Paul Syverson wrote:
 > Which... if there were even a moderate number of bad nodes in the
-> network would make it advantageous to break the connection to conduct         > a reformation intersection attack. Ahhh! I gotta stop thinking                > about this and work on the paper some before the family wakes up.             
+> network would make it advantageous to break the connection to conduct
+> a reformation intersection attack. Ahhh! I gotta stop thinking
+> about this and work on the paper some before the family wakes up. 
 This is the sort of issue that should go in the 'maintaining anonymity
 with tor' section towards the end. :)
 Email from between roger and me to beginning of section above. Fix and move.
@@ -1792,6 +1815,8 @@ deploying a wider network. We will see what happens!
 % Style guide:
 %     U.S. spelling
 %     avoid contractions (it's, can't, etc.)
+%     prefer ``for example'' or ``such as'' to e.g.
+%     prefer ``that is'' to i.e.
 %     'mix', 'mixes' (as noun)
 %     'mix-net'
 %     'mix', 'mixing' (as verb)
@@ -1801,7 +1826,7 @@ deploying a wider network. We will see what happens!
 %     'Cypherpunk', 'Cypherpunks', 'Cypherpunk remailer'
 %     'Onion Routing design', 'onion router' [note capitalization]
 %     'SOCKS'
-%    
+%     Try not to use \cite as a noun.  
 %
 %     'Substitute ``Damn'' every time you're inclined to write ``very;'' your
 %     editor will delete it and the writing will be just as it should be.'
