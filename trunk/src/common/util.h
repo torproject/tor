@@ -2,6 +2,11 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/**
+ * \file util.h
+ * \brief Headers for util.c
+ */
+
 #ifndef __UTIL_H
 #define __UTIL_H
 
@@ -45,7 +50,7 @@
 #define INLINE inline
 #endif
 
-/* Replace assert() with a variant that sends failures to the log before
+/** Replace assert() with a variant that sends failures to the log before
  * calling assert() normally.
  */
 #ifdef NDEBUG
@@ -60,20 +65,21 @@
  } } while (0)
 #endif
 
-/* On windows, you have to call close() on fds returned by open(), and
- * closesocket() on fds returned by socket().  On Unix, everything
- * gets close()'d.  We abstract this difference by always using the
- * following macro to close sockets, and always using close() on
+#ifdef MS_WINDOWS
+/** On windows, you have to call close() on fds returned by open(),
+ * and closesocket() on fds returned by socket().  On Unix, everything
+ * gets close()'d.  We abstract this difference by always using
+ * tor_close_socket to close sockets, and always using close() on
  * files.
  */
-#ifdef MS_WINDOWS
 #define tor_close_socket(s) closesocket(s)
 #else
 #define tor_close_socket(s) close(s)
 #endif
 
-/* legal characters in a filename */
+
 /* XXXX This isn't so on windows. */
+/** Legal characters in a filename */
 #define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
 
 size_t strlcat(char *dst, const char *src, size_t siz);
@@ -131,7 +137,7 @@ void set_uint32(char *cp, uint32_t v);
 void hex_encode(const char *from, int fromlen, char *to);
 const char *hex_str(const char *from, int fromlen);
 
-/* Resizeable array. */
+/** Generic resizeable array. */
 typedef struct smartlist_t smartlist_t;
 
 smartlist_t *smartlist_create();
@@ -219,17 +225,7 @@ int is_internal_IP(uint32_t ip);
 
 const char *get_uname(void);
 
-/* Start putting the process into daemon mode: fork and drop all resources
- * except standard fds.  The parent process never returns, but stays around
- * until finish_daemon is called.  (Note: it's safe to call this more
- * than once: calls after the first are ignored.)
- */
 void start_daemon(char *desired_cwd);
-/* Finish putting the process into daemon mode: drop standard fds, and tell
- * the parent process to exit.  (Note: it's safe to call this more than once:
- * calls after the first are ignored.  Calls start_daemon first if it hasn't
- * been called already.)
- */
 void finish_daemon(void);
 
 void write_pidfile(char *filename);
@@ -246,8 +242,12 @@ int tor_lookup_hostname(const char *name, uint32_t *addr);
  * the actual errno after a socket operation fails.
  */
 #ifdef MS_WINDOWS
+/** Return true if e is EAGAIN or the local equivalent. */
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN || (e) == WSAEWOULDBLOCK)
+/** Return true if e is EINPROGRESS or the local equivalent. */
 #define ERRNO_IS_EINPROGRESS(e)      ((e) == WSAEINPROGRESS)
+/** Return true if e is EINPROGRESS or the local equivalent as returned by
+ * a call to connect(). */
 #define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == WSAEINPROGRESS || (e)== WSAEINVAL)
 int tor_socket_errno(int sock);
 const char *tor_socket_strerror(int e);
