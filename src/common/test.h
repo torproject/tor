@@ -16,8 +16,11 @@
 #define PRETTY_FUNCTION ""
 #endif
 
+extern int have_failed;
+
 #define test_fail()                                             \
   STMT_BEGIN                                                    \
+    have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): assertion failed.",        \
       __FILE__,                                                 \
       __LINE__,                                                 \
@@ -28,6 +31,7 @@
 #define test_assert(expr)                                       \
   STMT_BEGIN                                                    \
   if(expr) { printf("."); } else {                              \
+    have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): assertion failed: (%s)\n", \
       __FILE__,                                                 \
       __LINE__,                                                 \
@@ -40,6 +44,7 @@
   STMT_BEGIN                                                    \
     long v1=(long)(expr1), v2=(long)(expr2);                    \
     if(v1==v2) { printf("."); } else {                          \
+    have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n"\
            "      (%ld != %ld)\n",                              \
       __FILE__,                                                 \
@@ -54,6 +59,7 @@
   STMT_BEGIN                                                    \
     long v1=(long)(expr1), v2=(long)(expr2);                    \
     if(v1!=v2) { printf("."); } else {                          \
+    have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n"\
            "      (%ld == %ld)\n",                              \
       __FILE__,                                                 \
@@ -68,6 +74,7 @@
   STMT_BEGIN                                                    \
     char *v1=(expr1), *v2=(expr2);                              \
     if(!strcmp(v1,v2)) { printf("."); } else {                  \
+    have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n"\
            "      (\"%s\" != \"%s\")\n",                        \
       __FILE__,                                                 \
@@ -82,6 +89,7 @@
   STMT_BEGIN                                                    \
     char *v1=(expr1), *v2=(expr2);                              \
     if(strcmp(v1,v2)) { printf("."); } else {                   \
+    have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n"\
            "      (\"%s\" == \"%s\")\n",                        \
       __FILE__,                                                 \
@@ -96,6 +104,7 @@
   STMT_BEGIN                                                    \
     void *v1=(expr1), *v2=(expr2);                              \
     if(!memcmp(v1,v2,(len))) { printf("."); } else {            \
+    have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n", \
       __FILE__,                                                 \
       __LINE__,                                                 \
@@ -108,6 +117,7 @@
   STMT_BEGIN                                                    \
     void *v1=(expr1), *v2=(expr2);                              \
     if(memcmp(v1,v2,(len))) { printf("."); } else {             \
+    have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n", \
       __FILE__,                                                 \
       __LINE__,                                                 \

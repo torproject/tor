@@ -15,6 +15,8 @@
 #include "or.h"
 #include "../common/test.h"
 
+int have_failed = 0;
+
 void
 dump_hex(char *s, int len)
 {
@@ -715,7 +717,11 @@ main(int c, char**v){
   puts("\n========================= Directory Formats ===============");
   test_dir_format();
   puts("");
-  return 0;
+
+  if (have_failed)
+    return 1;
+  else
+    return 0;
 }
 
 /*
