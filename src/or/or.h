@@ -1313,12 +1313,13 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
 int dir_policy_permits_address(uint32_t addr);
 void directory_post_to_dirservers(uint8_t purpose, const char *payload,
                                   size_t payload_len);
-void directory_get_from_dirserver(uint8_t purpose, const char *resource);
+void directory_get_from_dirserver(uint8_t purpose, const char *resource,
+                                  int retry_if_no_servers);
 int connection_dir_reached_eof(connection_t *conn);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
-int connection_dir_failed(connection_t *conn);
+int connection_dir_connect_failed(connection_t *conn);
 void parse_dir_policy(void);
 
 /********************************* dirserv.c ***************************/
@@ -1571,8 +1572,13 @@ typedef struct trusted_dir_server_t {
 
 int router_reload_router_list(void);
 void router_get_trusted_dir_servers(smartlist_t **outp);
-routerinfo_t *router_pick_directory_server(int requireothers, int fascistfirewall, int for_running_routers);
-trusted_dir_server_t *router_pick_trusteddirserver(int requireothers, int fascistfirewall);
+routerinfo_t *router_pick_directory_server(int requireothers,
+                                           int fascistfirewall,
+                                           int for_running_routers,
+                                           int retry_if_no_servers);
+trusted_dir_server_t *router_pick_trusteddirserver(int requireothers,
+                                                   int fascistfirewall,
+                                                   int retry_if_no_servers);
 int all_trusted_directory_servers_down(void);
 struct smartlist_t;
 void routerlist_add_family(struct smartlist_t *sl, routerinfo_t *router);

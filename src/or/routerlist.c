@@ -95,7 +95,8 @@ void router_get_trusted_dir_servers(smartlist_t **outp)
  */
 routerinfo_t *router_pick_directory_server(int requireothers,
                                            int fascistfirewall,
-                                           int for_runningrouters) {
+                                           int for_runningrouters,
+                                           int retry_if_no_servers) {
   routerinfo_t *choice;
 
   if (!routerlist)
@@ -103,7 +104,7 @@ routerinfo_t *router_pick_directory_server(int requireothers,
 
   choice = router_pick_directory_server_impl(requireothers, fascistfirewall,
                                              for_runningrouters);
-  if (choice)
+  if (choice || !retry_if_no_servers)
     return choice;
 
   log_fn(LOG_INFO,"No reachable router entries for dirservers. Trying them all again.");
@@ -128,11 +129,12 @@ routerinfo_t *router_pick_directory_server(int requireothers,
 }
 
 trusted_dir_server_t *router_pick_trusteddirserver(int requireothers,
-                                                   int fascistfirewall) {
+                                                   int fascistfirewall,
+                                                   int retry_if_no_servers) {
   trusted_dir_server_t *choice;
 
   choice = router_pick_trusteddirserver_impl(requireothers, fascistfirewall);
-  if (choice)
+  if (choice || !retry_if_no_servers)
     return choice;
 
   log_fn(LOG_INFO,"No trusted dirservers are reachable. Trying them all again.");
