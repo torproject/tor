@@ -40,6 +40,18 @@
 #define INLINE inline
 #endif
 
+#ifdef NDEBUG
+#define tor_assert(expr) do {} while(0)
+#else
+#define tor_assert(expr) do {                                 \
+ if (!(expr)) {                                               \
+   log(LOG_ERR, "%s:%d: %s: Assertion %s failed; aborting.",  \
+       __FILE__, __LINE__, __FUNCTION__, #expr);              \
+   assert(expr); /* write to console too. */                  \
+   abort();  /* unreached */                                  \
+ } } while (0)
+#endif
+
 /* legal characters in a filename */
 #define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
 
