@@ -62,10 +62,12 @@ typedef struct {
   void **list;
   int num_used;
   int max;
+  int capacity;
 } smartlist_t;
 
 smartlist_t *smartlist_create(int max_elements);
 void smartlist_free(smartlist_t *sl);
+void smartlist_grow_capacity(smartlist_t *sl, int n);
 void smartlist_add(smartlist_t *sl, void *element);
 void smartlist_remove(smartlist_t *sl, void *element);
 int smartlist_isin(smartlist_t *sl, void *element);
