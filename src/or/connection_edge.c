@@ -905,7 +905,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
     if(retval > 0) {
       /* one is already established, attach */
-      log_fn(LOG_INFO,"rend joined circ already here. reusing.");
+      log_fn(LOG_INFO,"rend joined circ already here. attaching.");
       link_apconn_to_circ(conn, rendcirc);
       if(connection_ap_handshake_send_begin(conn, rendcirc) < 0)
         return 0; /* already marked, let them fade away */
