@@ -1170,7 +1170,7 @@ options_validate(or_options_t *options)
 
   /* Special case if no options are given. */
   if (!options->Logs) {
-    options->Logs = config_line_prepend(NULL, "Log", "notice-err stdout");
+    options->Logs = config_line_prepend(NULL, "Log", "notice stdout");
   }
 
   if (config_init_logs(options, 1)<0) /* Validate the log(s) */
@@ -1896,10 +1896,11 @@ add_single_log_option(or_options_t *options, int minSeverity, int maxSeverity,
   char buf[512];
   int n;
 
-  n = tor_snprintf(buf, sizeof(buf), "%s-%s %s%s%s",
+  n = tor_snprintf(buf, sizeof(buf), "%s%s%s %s%s%s",
                    log_level_to_string(minSeverity),
-                   log_level_to_string(maxSeverity),
-                  type, fname?" ":"", fname?fname:"");
+                   maxSeverity == LOG_ERR ? "" : "-",
+                   maxSeverity == LOG_ERR ? "" : log_level_to_string(maxSeverity),
+                   type, fname?" ":"", fname?fname:"");
   if (n<0) {
     log_fn(LOG_WARN, "Normalized log option too long.");
     return -1;
