@@ -72,6 +72,12 @@
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
+#ifdef HAVE_PWD_H
+#include <pwd.h>
+#endif
+#ifdef HAVE_GRP_H
+#include <grp.h>
+#endif
 #ifdef HAVE_WINSOCK_H
 #include <winsock.h>
 #endif
@@ -428,6 +434,8 @@ typedef struct {
    char *ExitPolicy;
    char *SocksBindAddress;
    char *ORBindAddress;
+   char *User;
+   char *Group;
    double CoinWeight;
    int ORPort;
    int SocksPort;
