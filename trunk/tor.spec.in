@@ -6,13 +6,13 @@
 # This should be incremented whenever the spec file changes, but
 # can drop back to zero at a new Tor version
 
-%define specver 1
+%define specver 2
 
 ## Things users may want to change
 #
 # User (and group) name under which the Tor daemon runs
 
-%define runuser tordmn
+%define runuser _tor
 
 ## Version song and dance
 #
@@ -166,10 +166,17 @@ q
 # but hey...
 %__mkdir_p -m 755 ${RPM_BUILD_ROOT}%{_sysconfdir}/logrotate.d
 %__cat > ${RPM_BUILD_ROOT}%{_sysconfdir}/logrotate.d/%{name} << /EOF/
-%{_localstatedir}/log/%{name} {
-    missingok
-    notifempty
-    sharedscripts
+%{_localstatedir}/log/%{name}/*log {
+	daily
+	rotate 5
+	compress
+	delaycompress
+	missingok
+	notifempty
+	sharedscripts
+	postrotate
+		/etc/rc.d/init.d/tor reload > /dev/null
+	endscript
 }
 /EOF/
 
