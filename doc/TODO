@@ -38,6 +38,8 @@ R       . bandwidth buckets for write as well as read.
             o Decompress incoming HTTP based on Content-Encoding
             o Once dirservers are running new code, make clients
               request compressed directories.
+
+      0.0.9pre2:
 N       - switch dirservers entries to config lines.
 N       - add three default dirplaces if we parse the whole torrc and
           no dirplaces are specified.
@@ -60,7 +62,7 @@ N       - let tor servers use proxies for port 80 exits
           - Use generic port redirector for IP/bits:Port->IP:Port .
           - Make use of them when we're doing exit connections.
 
-      0.0.9pre2:
+      0.0.9pre3:
 N       - per-month byte allowances.
           - Based on bandwidth and per-month allowance, choose a
             window within month to be up.  Stay up until allowance is
