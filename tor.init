@@ -11,6 +11,7 @@ DEFAULTSFILE=/etc/default/$NAME
 WAITFORDAEMON=35
 ARGS=""
 MAX_FILEDESCRIPTORS=4096
+NICE=""
 
 test -x $DAEMON || exit 0
 
@@ -54,6 +55,7 @@ case "$1" in
 		start-stop-daemon --start --quiet --oknodo \
 			--chuid debian-tor:debian-tor \
 			--pidfile $TORPID \
+			$NICE \
 			--exec $DAEMON -- $ARGS
 		echo "done."
 	fi
