@@ -1018,8 +1018,8 @@ void running_routers_free(running_routers_t *rr)
 void routerlist_update_from_runningrouters(routerlist_t *list,
                                            running_routers_t *rr)
 {
-  int n_routers, i;
-  routerinfo_t *router, *me = router_get_my_routerinfo();
+  routerinfo_t *me = router_get_my_routerinfo();
+  smartlist_t *all_routers;
   if (!list)
     return;
   if (list->published_on >= rr->published_on)
@@ -1027,18 +1027,15 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
   if (list->running_routers_updated_on >= rr->published_on)
     return;
 
-  if(me) { /* learn if the dirservers think I'm verified */
-    router_update_status_from_smartlist(me,
-                                        rr->published_on,
-                                        rr->running_routers);
-  }
-  n_routers = smartlist_len(list->routers);
-  for (i=0; i<n_routers; ++i) {
-    router = smartlist_get(list->routers, i);
-    router_update_status_from_smartlist(router,
-                                        rr->published_on,
-                                        rr->running_routers);
-  }
+  all_routers = smartlist_create();
+  if(me) /* learn if the dirservers think I'm verified */
+    smartlist_add(all_routers, me);
+  
+  smartlist_add_all(all_routers,list->routers);
+  SMARTLIST_FOREACH(rr->running_routers, const char *, cp,
+     routers_update_status_from_entry(all_routers, rr->published_on,
+                                      cp, rr->is_running_routers_format));
+  smartlist_free(all_routers);
   list->running_routers_updated_on = rr->published_on;
 }
 
@@ -1046,6 +1043,14 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
  * based in its status in the list of strings stored in <b>running_list</b>.
  * All entries in <b>running_list</b> follow one of these formats:
  * <ol><li> <b>nickname</b> -- router is running and verified.
+ *          (running-routers format)
+ *     <li> !<b>nickname</b> -- router is not-running and verified.
+ *          (running-routers format)
+ *     <li> <b>nickname</b>=$<b>hexdigest</b> -- router is running and 
+ *          verified. (router-status format)
+ *          (router-status format)
+ *     <li> !<b>nickname</b>=$<b>hexdigest</b> -- router is running and 
+ *          verified. (router-status format)
  *     <li> !<b>nickname</b> -- router is not-running and verified.
  *     <li> $<b>hexdigest</b> -- router is running and unverified.
  *     <li> !$<b>hexdigest</b> -- router is not-running and unverified.
@@ -1053,57 +1058,115 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
  *
  * Return 1 if we found router in running_list, else return 0.
  */
-int router_update_status_from_smartlist(routerinfo_t *router,
-                                        time_t list_time,
-                                        smartlist_t *running_list)
+int routers_update_status_from_entry(smartlist_t *routers,
+                                     time_t list_time,
+                                     const char *s,
+                                     int rr_format)
 {
-  int n_names, i, running, approved;
-  const char *name;
-#if 1
-  char *cp;
-  size_t n;
-  n = 0;
-  for (i=0; i<smartlist_len(running_list); ++i) {
-    name = smartlist_get(running_list, i);
-    n += strlen(name) + 1;
-  }
-  cp = tor_malloc(n+2);
-  cp[0] = '\0';
-  for (i=0; i<smartlist_len(running_list); ++i) {
-    name = smartlist_get(running_list, i);
-    strlcat(cp, name, n);
-    strlcat(cp, " ", n);
-  }
-  log_fn(LOG_DEBUG, "Updating status of %s from list \"%s\"",
-         router->nickname, cp);
-  tor_free(cp);
-#endif
+  int is_running = 1;
+  int is_verified = 0;
+  int hex_digest_set = 0;
+  char nickname[MAX_NICKNAME_LEN+1];
+  char hexdigest[HEX_DIGEST_LEN+1];
+  char digest[DIGEST_LEN];
+  const char *cp, *end;
 
-  running = approved = 0;
-  n_names = smartlist_len(running_list);
-  for (i=0; i<n_names; ++i) {
-    name = smartlist_get(running_list, i);
-    if (*name != '!') {
-      if (router_nickname_matches(router, name)) {
-        if (router->status_set_at < list_time) {
-          router->status_set_at = list_time;
-          router->is_running = 1;
-        }
-        router->is_verified = (name[0] != '$');
-        return 1;
-      }
-    } else { /* *name == '!' */
-      name++;
-      if (router_nickname_matches(router, name)) {
-        if (router->status_set_at < list_time) {
-          router->status_set_at = list_time;
-          router->is_running = 0;
-        }
-        router->is_verified = (name[0] != '$');
-        return 1;
-      }
+  /* First, parse the entry. */
+  cp = s;
+  if (*cp == '!') {
+    is_running = 0;
+    ++cp;
+  }
+
+  if (*cp != '$') {
+    /* It starts with a non-dollar character; that's a nickname.  The nickname
+     * entry will either extend to a NUL (old running-routers format) or to an
+     * equals sign (new router-status format). */
+    is_verified = 1;
+    end = strchr(cp, '=');
+    if (!end)
+      end = strchr(cp,'\0');
+    tor_assert(end);
+    /* 'end' now points on character beyond the end of the nickname */
+    if (end == cp || end-cp > MAX_NICKNAME_LEN) {
+      log_fn(LOG_WARN, "Bad nickname length (%d) in router status entry (%s)",
+             end-cp, s);
+      return -1;
+    }
+    memcpy(nickname, cp, end-cp);
+    nickname[end-cp]='\0';
+    if (!is_legal_nickname(nickname)) {
+      log_fn(LOG_WARN, "Bad nickname (%s) in router status entry (%s)",
+             nickname, s);
+      return -1;
+    }
+    cp = end;
+    if (*cp == '=')
+      ++cp;
+  }
+  /* 'end' now points to the start of a hex digest, or EOS. */
+
+  /* Parse the hexdigest portion of the status. */
+  if (*cp == '$') {
+    hex_digest_set = 1;
+    ++cp;
+    if (strlen(cp) != HEX_DIGEST_LEN) {
+      log_fn(LOG_WARN, "Bad length (%d) on digest in router status entry (%s)",
+             strlen(cp), s);
+      return -1;
+    }
+    strcpy(hexdigest, cp);
+    if (base16_decode(digest, DIGEST_LEN, hexdigest, HEX_DIGEST_LEN)<0) {
+      log_fn(LOG_WARN, "Invalid digest in router status entry (%s)", s);
+      return -1;
     }
   }
+
+  /* Make sure that the entry was in the right format. */
+  if (rr_format) {
+    if (is_verified == hex_digest_set) {
+      log_fn(LOG_WARN, "Invalid syntax for running-routers member (%s)", s);
+      return -1;
+    }
+  } else {
+    if (!hex_digest_set) {
+      log_fn(LOG_WARN, "Invalid syntax for router-status member (%s)", s);
+      return -1;
+    }
+  }
+
+  /* Okay, we're done parsing. For all routers that match, update their status.
+   */
+  SMARTLIST_FOREACH(routers, routerinfo_t *, r,
+  {
+    int nickname_matches = is_verified && !strcasecmp(r->nickname, nickname);
+    int digest_matches = !memcmp(digest, r->identity_digest, DIGEST_LEN);
+    if (nickname_matches && (digest_matches||rr_format))
+      r->is_verified = 1;
+    else if (digest_matches)
+      r->is_verified = 0;
+    if (digest_matches || (nickname_matches&&rr_format))
+      if (r->status_set_at < list_time) {
+        r->is_running = is_running;
+        r->status_set_at = time(NULL);
+      }
+  });
+ 
+  return 0;
+}
+
+int router_update_status_from_smartlist(routerinfo_t *router,
+                                        time_t list_time,
+                                        smartlist_t *running_list,
+                                        int rr_format)
+{
+  smartlist_t *rl;
+  rl = smartlist_create();
+  smartlist_add(rl,router);
+  SMARTLIST_FOREACH(running_list, const char *, cp,
+            routers_update_status_from_entry(rl,list_time,cp,rr_format));
+                                                
+  smartlist_free(rl);
   return 0;
 }
 
