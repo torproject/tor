@@ -220,6 +220,8 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
 
   log_fn(LOG_DEBUG,"Looking for firsthop '%s:%u'",
       firsthop->address,firsthop->or_port);
+  /* imprint the circuit with its future n_conn->id */
+  memcpy(circ->n_conn_id_digest, firsthop->identity_digest, DIGEST_LEN);
   n_conn = connection_get_by_identity_digest(firsthop->identity_digest,
                                              CONN_TYPE_OR);
   if(!n_conn || n_conn->state != OR_CONN_STATE_OPEN) { /* not currently connected */
@@ -245,7 +247,6 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
     circ->n_addr = n_conn->addr;
     circ->n_port = n_conn->port;
     circ->n_conn = n_conn;
-    memcpy(circ->n_conn_id_digest, n_conn->identity_digest, DIGEST_LEN);
     log_fn(LOG_DEBUG,"Conn open. Delivering first onion skin.");
     if(circuit_send_next_onion_skin(circ) < 0) {
       log_fn(LOG_INFO,"circuit_send_next_onion_skin failed.");
@@ -261,6 +262,8 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
  */
 void circuit_n_conn_done(connection_t *or_conn, int success) {
   circuit_t *circ;
+
+  log_fn(LOG_DEBUG,"or_conn to %s, success=%d", or_conn->nickname, success);
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
     if (circ->marked_for_close)
@@ -492,6 +495,10 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
 
     memcpy(circ->onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
     circ->state = CIRCUIT_STATE_OR_WAIT;
+
+    /* imprint the circuit with its future n_conn->id */
+    memcpy(circ->n_conn_id_digest, id_digest, DIGEST_LEN);
+
     n_conn = connection_or_connect(circ->n_addr, circ->n_port, id_digest);
     if(!n_conn) {
       log_fn(LOG_INFO,"Launching n_conn failed. Closing.");
