@@ -670,7 +670,7 @@ int fetch_from_buf_control(buf_t *buf, uint16_t *len_out, uint16_t *type_out,
   if (len) {
     *body_out = tor_malloc(len+1);
     memcpy(*body_out, buf->mem+4, len);
-    body_out[len] = '\0';
+    (*body_out)[len] = '\0';
   } else {
     *body_out = NULL;
   }
