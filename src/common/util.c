@@ -683,8 +683,8 @@ get_uname(void)
   if (!uname_result_is_set) {
 #ifdef HAVE_UNAME
     if (!uname((&u))) {
-      snprintf(uname_result, 255, "%s %s %s %s %s",
-               u.sysname, u.nodename, u.release, u.version, u.machine);
+      snprintf(uname_result, 255, "%s %s %s",
+               u.sysname, u.nodename, u.machine);
       uname_result[255] = '\0';
     } else
 #endif
