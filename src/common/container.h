@@ -7,6 +7,18 @@
 
 /** Generic resizeable array. */
 typedef struct smartlist_t smartlist_t;
+#ifdef FAST_SMARTLIST
+
+struct smartlist_t {
+  /** <b>list</b> has enough capacity to store exactly <b>capacity</b> elements
+   * before it needs to be resized.  Only the first <b>num_used</b> (\<=
+   * capacity) elements point to valid data.
+   */
+  void **list;
+  int num_used;
+  int capacity;
+};
+#endif
 
 smartlist_t *smartlist_create(void);
 void smartlist_free(smartlist_t *sl);
@@ -22,12 +34,18 @@ int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
 /* smartlist_choose() is defined in crypto.[ch] */
+#ifndef FAST_SMARTLIST
 void *smartlist_get(const smartlist_t *sl, int idx);
+int smartlist_len(const smartlist_t *sl);
+#else
+#define smartlist_get(sl,idx) ((sl)->list[(idx)])
+#define smartlist_len(sl) ((sl)->num_used)
+#endif
 void *smartlist_set(smartlist_t *sl, int idx, void *val);
 void *smartlist_del(smartlist_t *sl, int idx);
 void *smartlist_del_keeporder(smartlist_t *sl, int idx);
 void smartlist_insert(smartlist_t *sl, int idx, void *val);
-int smartlist_len(const smartlist_t *sl);
+
 #define SPLIT_SKIP_SPACE   0x01
 #define SPLIT_IGNORE_BLANK 0x02
 int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
