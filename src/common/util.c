@@ -2028,6 +2028,62 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
   }
 }
 
+/** Parse a string of the form "host[:port]" from <b>addrport</b>.  If
+ * <b>address</b> is provided, set *<b>address</b> to a copy of the
+ * host portion of the string.  If <b>addr</b> is provided, try to
+ * resolve the host portion of the string and store it into
+ * *<b>addr</b>.  If <b>port</b> is provided, store the port number
+ * into *<b>port</b>, or 0 if no port is given.  Return 0 on success,
+ * -1 on failure.
+ */
+int
+parse_addr_port(const char *addrport, char **address, uint32_t *addr,
+                uint16_t *port)
+{
+  const char *colon;
+  char *_address = NULL;
+  int _port;
+  int ok = 1;
+
+  tor_assert(addrport);
+  tor_assert(port);
+
+  colon = strchr(addrport, ':');
+  if (colon) {
+    _address = tor_strndup(addrport, colon-addrport);
+    _port = atoi(colon+1);
+    if (_port<1 || _port>65536) {
+      log_fn(LOG_WARN, "Port '%s' out of range", colon+1);
+      _port = 0;
+      ok = 0;
+    }
+  } else {
+    _address = tor_strdup(addrport);
+    _port = 0;
+  }
+
+  if (addr) {
+    /* There's an addr pointer, so we need to resolve the hostname. */
+    if (tor_lookup_hostname(_address,addr)) {
+      log_fn(LOG_WARN, "Couldn't look up '%s'", _address);
+      ok = 0;
+      *addr = 0;
+    }
+  }
+
+  if (address && ok) {
+    *address = _address;
+  } else {
+    if (address)
+      *address = NULL;
+    tor_free(_address);
+  }
+  if (port)
+    *port =  ok ? ((uint16_t) _port) : 0;
+
+  return ok ? 0 : -1;
+}
+
 #ifndef MS_WINDOWS
 struct tor_mutex_t {
 };

@@ -260,6 +260,8 @@ int switch_id(char *user, char *group);
 struct in_addr;
 int tor_inet_aton(const char *cp, struct in_addr *addr);
 int tor_lookup_hostname(const char *name, uint32_t *addr);
+int parse_addr_port(const char *addrport, char **address, uint32_t *addr,
+                    uint16_t *port);
 
 /* For stupid historical reasons, windows sockets have an independent
  * set of errnos, and an independent way to get them.  Also, you can't
