@@ -51,16 +51,16 @@ ARMA    - arma claims
    o clean up parse_*_policy code
      o when you hup, they're not getting re-parsed
      o stop calling a *_policy an exit_policy_t
-   - Regenerate our server descriptor when a relevant option is changed from
+N  - Regenerate our server descriptor when a relevant option is changed from
      control.c.
    . Writing out the machine-readable torrc file
      o Function to check whether an option has changed.
      o Function to generate the contents for a torrc file.
      - Function to safely replace a torrc file.
-   - fix print_usage()
+R  - fix print_usage()
    - Download and use running-routers
-   - document signals in man page
-   - Document all undocumented configuration options.
+R  - document signals in man page
+N  - Document all undocumented configuration options.
      - Accounting
      - Control interface authentication
      - ... ?
@@ -68,7 +68,7 @@ N  - RPMs
      o Merge changes from jbash
      - Figure out versioning
 N  - Windows installer
-   - Review website; make important info more prominent.
+R  - Review website; make important info more prominent.
 
 
 
@@ -177,6 +177,7 @@ R  - learn from ben about his openssl-reinitialization-trick to
      - he has successfully extended to you
      - you have sufficient mean-time-between-failures
      * keep doing nothing for now.
+   - Include HTTP status messages in logging (see parse_http_response).
 
    blue sky:
    - Possible to get autoconf to easily install things into ~/.tor?
