@@ -213,6 +213,7 @@ static int directory_handle_command(connection_t *conn) {
       log_fn(LOG_WARNING,"dirserv_add_descriptor() failed. Dropping.");
       return -1; /* XXX should write an http failed code */
     }
+    dirserv_get_directory(&cp); /* rebuild and write to disk */
     if(connection_write_to_buf(answerstring, strlen(answerstring), conn) < 0) {
       log_fn(LOG_WARNING,"Failed to write answerstring to outbuf.");
       return -1;

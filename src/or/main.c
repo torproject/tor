@@ -499,6 +499,7 @@ static int init_keys(void)
   char keydir[512];
   char fingerprint[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3]; 
   char *cp;
+  const char *tmp, *mydesc;
   crypto_pk_env_t *prkey;
 
   /* OP's don't need keys.  Just initialize the TLS context.*/
@@ -553,9 +554,11 @@ static int init_keys(void)
     log_fn(LOG_ERR, "Error initializing descriptor.");
     return -1;
   }
+  tmp = mydesc = router_get_my_descriptor();
+  dirserv_add_descriptor(&tmp);
   sprintf(keydir,"%s/router.desc", options.DataDirectory);
   log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
-  if (write_str_to_file(keydir, router_get_my_descriptor())) {
+  if (write_str_to_file(keydir, mydesc)) {
     return -1;
   }
   /* 5. Dump fingerprint to 'fingerprint' */
