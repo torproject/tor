@@ -32,7 +32,6 @@ void routerlist_free(routerinfo_t *list);
 static char *eat_whitespace(char *s);
 static char *eat_whitespace_no_nl(char *s);
 static char *find_whitespace(char *s);
-static void router_free_exit_policy(routerinfo_t *router);
 static int router_add_exit_policy_from_string(routerinfo_t *router, char *s);
 static int router_add_exit_policy(routerinfo_t *router, 
                                   directory_token_t *tok);
@@ -137,44 +136,45 @@ void router_get_directory(directory_t **pdirectory) {
   *pdirectory = directory;
 }
 
-/* delete a list of routers from memory */
+/* delete a router from memory */
 void routerinfo_free(routerinfo_t *router)
 {
-  struct exit_policy_t *e = NULL, *etmp = NULL;
+  struct exit_policy_t *e;
   
   if (!router)
     return;
 
   if (router->address)
     free(router->address);
+  if (router->nickname)
+    free(router->nickname);
   if (router->onion_pkey)
     crypto_free_pk_env(router->onion_pkey);
   if (router->link_pkey)
     crypto_free_pk_env(router->link_pkey);
   if (router->identity_pkey)
     crypto_free_pk_env(router->identity_pkey);
-  e = router->exit_policy;
-  while (e) {
-    etmp = e->next;
+  while (router->exit_policy) {
+    e = router->exit_policy;
+    router->exit_policy = e->next;
     if (e->string) free(e->string);
     if (e->address) free(e->address);
     if (e->port) free(e->port);
     free(e);
-    e = etmp;
   }
   free(router);
 }
 
-void directory_free(directory_t *directory)
+void directory_free(directory_t *dir)
 {
   int i;
-  for (i = 0; i < directory->n_routers; ++i)
-    routerinfo_free(directory->routers[i]);
-  if (directory->routers)
-    free(directory->routers);
-  if(directory->software_versions)
-    free(directory->software_versions);
-  free(directory);
+  for (i = 0; i < dir->n_routers; ++i)
+    routerinfo_free(dir->routers[i]);
+  if (dir->routers)
+    free(dir->routers);
+  if(dir->software_versions)
+    free(dir->software_versions);
+  free(dir);
 }
 
 void router_mark_as_down(char *nickname) {
@@ -681,6 +681,9 @@ int router_get_list_from_string_impl(char **s, directory_t **dest,
     router = router_get_entry_from_string(s);
     if (!router) {
       log_fn(LOG_WARN, "Error reading router");
+      for(i=0;i<rarray_len;i++)
+        routerinfo_free(rarray[i]);
+      free(rarray);
       return -1;
     }
     if (rarray_len >= MAX_ROUTERS_IN_DIR) {
@@ -794,8 +797,6 @@ routerinfo_t *router_get_entry_from_string(char**s) {
 
   router = tor_malloc(sizeof(routerinfo_t));
   memset(router,0,sizeof(routerinfo_t)); /* zero it out first */
-  /* C doesn't guarantee that NULL is represented by 0 bytes.  You'll
-     thank me for this someday. */
   router->onion_pkey = router->identity_pkey = router->link_pkey = NULL; 
 
   if (tok->val.cmd.n_args != 6) {
@@ -919,32 +920,10 @@ routerinfo_t *router_get_entry_from_string(char**s) {
 
  err:
   router_release_token(tok); 
-  if(router->address)
-    free(router->address);
-  if(router->link_pkey)
-    crypto_free_pk_env(router->link_pkey);
-  if(router->onion_pkey)
-    crypto_free_pk_env(router->onion_pkey);
-  if(router->identity_pkey)
-    crypto_free_pk_env(router->identity_pkey);
-  router_free_exit_policy(router);
-  free(router);
+  routerinfo_free(router);
   return NULL;
 #undef ARGS
 #undef NEXT_TOKEN
-}
-
-static void router_free_exit_policy(routerinfo_t *router) {
-  struct exit_policy_t *tmpe;
-
-  while(router->exit_policy) {
-    tmpe = router->exit_policy;
-    router->exit_policy = tmpe->next;
-    free(tmpe->string);
-    free(tmpe->address);
-    free(tmpe->port);
-    free(tmpe);
-  }
 }
 
 void router_add_exit_policy_from_config(routerinfo_t *router) {
@@ -1132,6 +1111,7 @@ int router_rebuild_descriptor(void) {
     address = localhostname;
     if(!strchr(address,'.')) {
       log_fn(LOG_WARN,"fqdn '%s' has only one element. Misconfigured machine?",address);
+      log_fn(LOG_WARN,"Try setting the Address line in your config file.");
       return -1;
     }
   }
