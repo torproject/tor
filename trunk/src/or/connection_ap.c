@@ -341,7 +341,7 @@ int ap_handshake_socks_reply(connection_t *conn, char result) {
 
   assert(conn);
 
-  socks4_info.version = 4;
+  socks4_info.version = 0;
   socks4_info.command = result;
   socks4_info.destport[0] = socks4_info.destport[1] = 0;
   socks4_info.destip[0] = socks4_info.destip[1] = socks4_info.destip[2] = socks4_info.destip[3] = 0;
