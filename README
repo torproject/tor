@@ -1,3 +1,4 @@
+
 'tor' is an implementation of The Onion Routing system, as
 described in a bit more detail at http://www.onion-router.net/. You
 can read list archives, and subscribe to the mailing list, at
@@ -6,36 +7,12 @@ http://archives.seul.org/or/dev/.
 Is your question in the FAQ? Should it be?
 
 **************************************************************************
-
-Quickstart version for users:
-
-0) Download the absolute newest version. No, really.
-  http://freehaven.net/tor/ (unfortunately they're all unreadable now,
-  so you must skip this step)
-1) tar xvf it, and then cd into the directory.
-2) ./configure (or do the two-line version below, if you're on bsd)
-3) make
-4) cd src/config
-5) ../or/tor -f oprc
-  You don't need to run this as root, and you probably shouldn't.
-6) point your browser to socks4 proxy at localhost port 9050. In mozilla,
-  this is in edit|preferences|advanced|proxies. This allows you to test
-  to make sure tor is installed correctly.
-7) make sure you've set it up correctly: go to
-  http://www.junkbusters.com/cgi-bin/privacy and see what IP it says
-  you're coming from. If it works, you should probably go on to step 8,
-  to get better privacy.
-
-8) Optionally, install privoxy (www.privoxy.org), and add the line
-  "forward-socks4a / localhost:9050 ." (without the quotes) to its config
-  file. Then change your mozilla to http proxy at localhost port 8118 (and
-  no socks proxy). This step will give you good html scrubbing as well.
-
-If this works for you, you can stop reading. Otherwise, below is a more
-detailed version.
+See the INSTALL file for a quickstart. This is all you will probably need.
+**************************************************************************
 
 **************************************************************************
-You only need to look beyond this point if the above doesn't work for you.
+You only need to look beyond this point if the quickstart in the INSTALL
+doesn't work for you.
 **************************************************************************
 
 Dependencies:
@@ -73,20 +50,7 @@ Do you want to run a tor server?
   be able to authenticate to the other tor nodes until I've added you
   to the directory.
 
-How to use it for web browsing:
-
-  Download privoxy (www.privoxy.org). Install it. Add the following
-  line to your 'config' file (it might be in /etc/privoxy/config) :
-    forward-socks4a / localhost:9050 .
-  Don't forget the . at the end.
-
-  From here, you can point your browser/etc to localhost port 8118 (as
-  an http proxy) and your traffic will go through Privoxy, then through
-  the onion proxy, to the onion routing network.
-
-  You can also ignore the whole privoxy thing and set your Mozilla to
-  use localhost 9050 directly as a socks4 server. But see doc/CLIENTS
-  for why this may not give you the anonymity you want.
+Command-line web browsing:
 
   For more convenient command-line use, I recommend making a ~/.wgetrc
   with the line
