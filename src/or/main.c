@@ -181,6 +181,7 @@ static void conn_read(int i) {
       if (!conn->marked_for_close) {
         /* this connection is broken. remove it */
         /* XXX This shouldn't ever happen anymore. */
+        /* XXX but it'll clearly happen on MS_WINDOWS from POLLERR, right? */
         log_fn(LOG_ERR,"Unhandled error on read for %s connection (fd %d); removing",
                conn_type_to_string[conn->type], conn->s);
         connection_mark_for_close(conn,0);
@@ -220,8 +221,10 @@ static void conn_close_if_marked(int i) {
   assert_connection_ok(conn, time(NULL));
   if(conn->marked_for_close) {
     log_fn(LOG_INFO,"Cleaning up connection (fd %d).",conn->s);
-    if(conn->s >= 0) { /* might be an incomplete edge connection */
+    if(conn->s >= 0) { /* -1 means it's an incomplete edge connection */
       /* FIXME there's got to be a better way to check for this -- and make other checks? */
+/* XXX the below two calls to flush_buf should not happen if the
+ * conn got hung up on. */
       if(connection_speaks_cells(conn)) {
         if(conn->state == OR_CONN_STATE_OPEN)
           flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
