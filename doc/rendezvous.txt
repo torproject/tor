@@ -151,18 +151,14 @@
    information into the hostname will be too long for a typical hostname,
    we instead use a layer of indirection. We encode a hash of Bob's PK
    (10 bytes is sufficient since we're not worrying about collisions),
-   and also the authentication token (empty for now). Thus at a bit more
-   than 6 bits encoded per character (assuming only alphanumeric and
-   hyphen), we transform the hostname "moria.mit.edu" into the hostname
-   "moria.mit.edu.onion5gfmjsda-ckd5" (adding 13 characters plus the
-   separator).
-
-   [I thought we were going to do something more like "56fmjsda-ckd5.onion",
-   leaving off moria.mit.edu.  This would have the advantage of not confusing
-   users if the domain name part ('moria.mit.edu') doesn't match the key.
-
-   Also, having a separate onion 'virtual TLD' is kinda more in the spirit
-   of DNS as it stands. -NM]
+   and also the authentication token (empty for now). Location-hidden
+   services use the special top level domain called '.onion': thus
+   hostnames take the form x.y.onion where x is the hash of PK, and y
+   is the authentication cookie. If no cookie is required, the hostname
+   can simply be of the form x.onion. Assuming only case insensitive
+   alphanumeric and hyphen, we get a bit more than 6 bits encoded
+   per character, meaning the x part of the hostname will be about
+   13 characters.
 
    Alice's onion proxy examines hostnames and recognizes when they're
    destined for a hidden server. If so, it decodes the PK, looks it up in
