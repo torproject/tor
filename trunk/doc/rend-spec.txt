@@ -171,16 +171,15 @@ Tor Rendezvous Spec
    ~16-octet hash of Bob's service's public key, computed as follows:
 
          1. Let H = H(PK).
-         2. Let H' = the first 130 bits of H, considering each octet from
+         2. Let H' = the first 80 bits of H, considering each octet from
             most significant bit to least significant big.
          2. Generate a 26-character encoding of H', taking H' 5 bits at
             a time, and mapping each 5-bit value to a character as follows:
                0..25 map to the characters 'a'...'z', respectively.
               26..31 map to the characters '0'...'5', respectively.
 
-   (We only use 130 bits instead of the 160 bits from SHA1 because we don't
-   need to worry about man-in-the-middle attacks.  We use 130 instead of 128
-   in order to have an even multiple of 5.)
+   (We only use 80 bits instead of the 160 bits from SHA1 because we don't
+   need to worry about man-in-the-middle attacks.)
 
    [Yes, numbers are allowed at the beginning.  See RFC1123. -NM]
 
