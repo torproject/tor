@@ -140,7 +140,6 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   X509 *x509 = NULL;
   X509_NAME *name = NULL;
   int nid;
-  int err;
   
   tor_tls_init();
 
@@ -179,13 +178,13 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   if (!X509_sign(x509, pkey, EVP_sha1()))
     goto error;
 
-  err = 0;
   goto done;
  error:
-  err = 1;
+  if (x509) {
+    X509_free(x509); 
+    x509 = NULL;
+  }
  done:
-  if (x509 && err)
-    X509_free(x509);
   if (pkey)
     EVP_PKEY_free(pkey);
   if (name)
@@ -483,23 +482,29 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen)
   
   if (!(cert = SSL_get_peer_certificate(tls->ssl))) {
     log_fn(LOG_WARN, "Peer has no certificate");
-    return -1;
+    goto error;
   }
   if (!(name = X509_get_subject_name(cert))) {
     log_fn(LOG_WARN, "Peer certificate has no subject name");
-    return -1;
+    goto error;
   }
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef)
-    return -1;
+    goto error;
   
   lenout = X509_NAME_get_text_by_NID(name, nid, buf, buflen);
   if (lenout == -1)
-    return -1;
+    goto error;
   if (strspn(buf, LEGAL_NICKNAME_CHARACTERS) != lenout) {
     log_fn(LOG_WARN, "Peer certificate nickname has illegal characters.");
-    return -1;
+    goto error;
   }
   return 0;
+ error:
+  if (cert)
+    X509_free(cert);
+  if (name)
+    X509_NAME_free(name);
+  return -1;
 }
 
 /* If the provided tls connection is authenticated and has a
