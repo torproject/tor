@@ -818,7 +818,7 @@ static int do_main_loop(void) {
     }
     if(please_dumpstats) {
       /* prefer to log it at INFO, but make sure we always see it */
-      dumpstats(get_min_log_level()>LOG_INFO ? get_min_log_level() : LOG_INFO);
+      dumpstats(get_min_log_level()<LOG_INFO ? get_min_log_level() : LOG_INFO);
       please_dumpstats = 0;
     }
     if(please_reset) {
