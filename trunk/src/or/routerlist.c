@@ -936,10 +936,11 @@ router_resolve_routerlist(routerlist_t *rl)
 
 /** Decide whether a given addr:port is definitely accepted, definitely
  * rejected, or neither by a given policy.  If <b>addr</b> is 0, we
- * don't know the IP of the target address.
+ * don't know the IP of the target address. If <b>port</b> is 0, we
+ * don't know the port of the target address.
  *
- * Returns -1 for "rejected", 0 for "accepted", 1 for "maybe" (since IP is
- * unknown).
+ * Returns -1 for "rejected", 0 for "accepted", 1 for "maybe" (since IP or
+ * port is unknown).
  */
 int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
                                        addr_policy_t *policy)
@@ -948,7 +949,6 @@ int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
   int maybe_accept = 0;
   int match = 0;
   int maybe = 0;
-  struct in_addr in;
   addr_policy_t *tmpe;
 
   for (tmpe=policy; tmpe; tmpe=tmpe->next) {
@@ -956,7 +956,8 @@ int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
     maybe = 0;
     if (!addr) {
       /* Address is unknown. */
-      if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
+      if ((port >= tmpe->prt_min && port <= tmpe->prt_max) ||
+           (!port && tmpe->prt_min<=1 && tmpe->prt_max>=65535)) {
         /* The port definitely matches. */
         if (tmpe->msk == 0) {
           match = 1;
@@ -965,10 +966,6 @@ int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
         }
       } else if (!port) {
         /* The port maybe matches. */
-        /* XXX Nick: it looks port 0 only means something special for resolve
-         * commands, which can currently be handled by any exit node.
-         * Should we treat those specially elsewhere?
-         */
         maybe = 1;
       }
     } else {
@@ -989,9 +986,10 @@ int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
         maybe_accept = 1;
     }
     if (match) {
-      in.s_addr = htonl(addr);
-      log_fn(LOG_DEBUG,"Address %s:%d matches policy '%s'",
-             inet_ntoa(in), port, tmpe->string);
+//      struct in_addr in;
+//      in.s_addr = htonl(addr);
+//      log_fn(LOG_DEBUG,"Address %s:%d matches policy '%s'",
+//             inet_ntoa(in), port, tmpe->string);
       if (tmpe->policy_type == ADDR_POLICY_ACCEPT) {
         /* If we already hit a clause that might trigger a 'reject', than we
          * can't be sure of this certain 'accept'.*/
@@ -1024,7 +1022,7 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
 /** Return true iff <b>router</b> does not permit exit streams.
  */
 int router_exit_policy_rejects_all(routerinfo_t *router) {
-  return router_compare_addr_to_addr_policy(0, 1, router->exit_policy)
+  return router_compare_addr_to_addr_policy(0, 0, router->exit_policy)
     == ADDR_POLICY_REJECTED;
 }
 

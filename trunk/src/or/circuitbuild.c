@@ -787,6 +787,56 @@ static int new_route_len(double cw, uint8_t purpose, smartlist_t *routers) {
   return routelen;
 }
 
+/** Fetch the list of predicted ports, turn it into a smartlist of
+ * strings, remove the ones that are already handled by an
+ * existing circuit, and return it.
+ */
+static smartlist_t *
+circuit_get_unhandled_ports(time_t now) {
+  char *pp = rep_hist_get_predicted_ports(now);
+  smartlist_t *needed_ports = smartlist_create();
+  smartlist_split_string(needed_ports, pp, " ", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  tor_free(pp);
+
+  circuit_remove_handled_ports(needed_ports);
+  return needed_ports;
+}
+
+/** Return 1 if we already have circuits present or on the way for
+ * all anticipated ports. Return 0 if we should make more.
+ */
+int
+circuit_all_predicted_ports_handled(time_t now) {
+  int enough;
+  smartlist_t *sl = circuit_get_unhandled_ports(now);
+  enough = (smartlist_len(sl) == 0);
+  smartlist_free(sl);
+  return enough;
+}
+
+/** Return 1 if <b>router</b> can handle one or more of the ports in
+ * <b>needed_ports</b>, else return 0.
+ */
+static int
+router_handles_some_port(routerinfo_t *router, smartlist_t *needed_ports) {
+  int i;
+  uint16_t port;
+
+  for (i = 0; i < smartlist_len(needed_ports); ++i) {
+    port = *(uint16_t *)smartlist_get(needed_ports, i);
+    tor_assert(port);
+    if (router_compare_addr_to_addr_policy(0, port, router->exit_policy) !=
+          ADDR_POLICY_REJECTED)
+      return 1;
+  }
+  return 0;
+}
+
+/** How many circuits do we want simultaneously in-progress to handle
+ * a given stream?
+ */
+#define MIN_CIRCUITS_HANDLING_STREAM 2
+
 /** Return a pointer to a suitable router to be the exit node for the
  * general-purpose circuit we're about to build.
  *
@@ -820,7 +870,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
     if (carray[i]->type == CONN_TYPE_AP &&
         carray[i]->state == AP_CONN_STATE_CIRCUIT_WAIT &&
         !carray[i]->marked_for_close &&
-        !circuit_stream_is_being_handled(carray[i]))
+        !circuit_stream_is_being_handled(carray[i], 0, MIN_CIRCUITS_HANDLING_STREAM))
       ++n_pending_connections;
   }
 //  log_fn(LOG_DEBUG, "Choosing exit node; %d connections are pending",
@@ -873,7 +923,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
       if (carray[j]->type != CONN_TYPE_AP ||
           carray[j]->state != AP_CONN_STATE_CIRCUIT_WAIT ||
           carray[j]->marked_for_close ||
-          circuit_stream_is_being_handled(carray[j]))
+          circuit_stream_is_being_handled(carray[j], 0, MIN_CIRCUITS_HANDLING_STREAM))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
       if (connection_ap_can_use_exit(carray[j], router)) {
         ++n_supported[i];
@@ -920,18 +970,35 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
     router = routerlist_sl_choose_by_bandwidth(sl);
   } else {
     /* Either there are no pending connections, or no routers even seem to
-     * possibly support any of them.  Choose a router at random. */
+     * possibly support any of them.  Choose a router at random that satisfies
+     * at least one predicted exit port. */
+
+    int try;
+    smartlist_t *needed_ports = circuit_get_unhandled_ports(time(NULL));
+
     if (best_support == -1) {
       log(LOG_WARN, "All routers are down or middleman -- choosing a doomed exit at random.");
     }
-    for (i = 0; i < smartlist_len(dir->routers); i++)
-      if (n_supported[i] != -1)
-        smartlist_add(sl, smartlist_get(dir->routers, i));
+    for (try = 0; try < 2; try++) {
+      /* try once to pick only from routers that satisfy a needed port,
+       * then if there are none, pick from any that support exiting. */
+      for (i = 0; i < smartlist_len(dir->routers); i++) {
+        router = smartlist_get(dir->routers, i);
+        if (n_supported[i] != -1 &&
+            (try || router_handles_some_port(router, needed_ports))) {
+          log_fn(LOG_DEBUG,"Try %d: '%s' is a possibility.", try, router->nickname);
+          smartlist_add(sl, router);
+        }
+      }
 
-    smartlist_subtract(sl,excludedexits);
-    if (options->StrictExitNodes || smartlist_overlap(sl,preferredexits))
-      smartlist_intersect(sl,preferredexits);
-    router = routerlist_sl_choose_by_bandwidth(sl);
+      smartlist_subtract(sl,excludedexits);
+      if (options->StrictExitNodes || smartlist_overlap(sl,preferredexits))
+        smartlist_intersect(sl,preferredexits);
+      router = routerlist_sl_choose_by_bandwidth(sl);
+      if (router)
+        break;
+    }
+    smartlist_free(needed_ports);
   }
 
   smartlist_free(preferredexits);
