@@ -76,7 +76,10 @@ int connection_exit_send_connected(connection_t *conn) {
 
   circ = circuit_get_by_conn(conn);
 
-  assert(circ && circ->p_conn && circ->n_conn == conn); /* is this true? i guess i'll see if it breaks. */
+  if(!circ) {
+    log(LOG_DEBUG,"connection_exit_send_connected(): client-side sent destroy just as we completed server connection. Closing.");
+    return -1;
+  }
 
   return connection_send_connected(circ->p_aci, circ->p_conn);
 }
