@@ -329,7 +329,7 @@ static int directory_handle_command_get(connection_t *conn,
     const char *descp;
     int desc_len;
 
-    switch(hidserv_lookup(url+9, &descp, &desc_len)) {
+    switch(rend_cache_lookup(url+9, &descp, &desc_len)) {
       case 1: /* valid */
         connection_write_to_buf(answer200, strlen(answer200), conn);
         connection_write_to_buf(descp, desc_len, conn); /* XXXX Contains NULs*/
@@ -384,7 +384,7 @@ static int directory_handle_command_post(connection_t *conn,
   }
 
   if(!strncmp(url,"/hidserv/",9)) { /* hidserv descriptor post */
-    if(hidserv_store(body, body_len) < 0)
+    if(rend_cache_store(body, body_len) < 0)
       connection_write_to_buf(answer400, strlen(answer400), conn);
     else
       connection_write_to_buf(answer200, strlen(answer200), conn);

@@ -334,7 +334,7 @@ static void run_scheduled_events(time_t now) {
       /* We're a directory; dump any old descriptors. */
       dirserv_remove_old_servers();
     }
-    hidserv_cache_clean(); /* should this go elsewhere? */
+    rend_cache_clean(); /* should this go elsewhere? */
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
   }
 
@@ -549,7 +549,7 @@ static int do_main_loop(void) {
   /* Initialize the history structures. */
   rep_hist_init();
   /* Intialize the service cache. */
-  hidserv_cache_init();
+  rend_cache_init();
 
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */
