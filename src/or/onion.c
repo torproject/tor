@@ -221,7 +221,7 @@ static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
   return routelen;
 }
 
-static routerinfo_t *choose_good_exit_server(directory_t *dir)
+static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
 {
   int *n_supported;
   int *n_maybe_supported;
@@ -383,12 +383,12 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
 }
 
 cpath_build_state_t *onion_new_cpath_build_state(void) {
-  directory_t *dir;
+  routerlist_t *dir;
   int r;
   cpath_build_state_t *info;
   routerinfo_t *exit;
 
-  router_get_directory(&dir);
+  router_get_routerlist(&dir);
   r = new_route_len(options.PathlenCoinWeight, dir->routers, dir->n_routers);
   if (r < 0) 
     return NULL;

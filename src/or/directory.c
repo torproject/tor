@@ -13,6 +13,8 @@ extern or_options_t options; /* command-line and config-file options */
 
 static char fetchstring[] = "GET / HTTP/1.0\r\n\r\n";
 static char answerstring[] = "HTTP/1.0 200 OK\r\n\r\n";
+/* XXX the_directory is the same name as a different variable in·
+ * dirserv.c, are you crazy?? */
 static char the_directory[MAX_DIR_SIZE+1];
 static int directorylen=0;
 
@@ -120,7 +122,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
           log_fn(LOG_INFO,"Empty directory. Ignoring.");
           return -1;
         }
-        if(router_get_dir_from_string(the_directory, conn->identity_pkey) < 0){
+        if(router_set_routerlist_from_directory(the_directory, conn->identity_pkey) < 0){
           log_fn(LOG_INFO,"...but parsing failed. Ignoring.");
         } else {
           log_fn(LOG_INFO,"updated routers.");

@@ -363,7 +363,7 @@ typedef struct {
   int n_routers;
   char *software_versions;
   time_t published_on;
-} directory_t;
+} routerlist_t;
 
 struct crypt_path_t { 
 
@@ -737,7 +737,7 @@ void router_upload_desc_to_dirservers(void);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk);
 routerinfo_t *router_get_by_nickname(char *nickname);
-void router_get_directory(directory_t **pdirectory);
+void router_get_directory(routerlist_t **pdirectory);
 void router_mark_as_down(char *nickname);
 int router_get_list_from_file(char *routerfile);
 int router_get_router_hash(char *s, char *digest);
@@ -746,11 +746,11 @@ int router_get_dir_hash(char *s, char *digest);
 /* Reads a list of known routers, unsigned. */
 int router_get_list_from_string(char *s);
 /* Exported for debugging */
-int router_get_list_from_string_impl(char **s, directory_t **dest, int n_good_nicknames, const char *good_nickname_lst[]);
+int router_get_list_from_string_impl(char **s, routerlist_t **dest, int n_good_nicknames, const char *good_nickname_lst[]);
 /* Reads a signed directory. */
 int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey);
 /* Exported or debugging */
-int router_get_dir_from_string_impl(char *s, directory_t **dest,
+int router_get_dir_from_string_impl(char *s, routerlist_t **dest,
                                     crypto_pk_env_t *pkey);
 routerinfo_t *router_get_entry_from_string(char **s);
 int router_supports_exit_address(uint32_t addr, uint16_t port,
@@ -761,7 +761,6 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
 void routerinfo_free(routerinfo_t *router);
 int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
-const routerinfo_t *router_get_desc_routerinfo(void);
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port);
 int router_exit_policy_rejects_all(routerinfo_t *router);
 const char *router_get_my_descriptor(void);

@@ -16,7 +16,7 @@
 
 /****************************************************************************/
 
-static directory_t *directory = NULL; /* router array */
+static routerlist_t *routerlist = NULL; /* router array */
 static routerinfo_t *desc_routerinfo = NULL; /* my descriptor */
 static char descriptor[8192]; /* string representation of my descriptor */
 
@@ -28,11 +28,10 @@ struct directory_token;
 typedef struct directory_token directory_token_t;
 
 /* static function prototypes */
-void routerlist_free(routerinfo_t *list);
 static int router_add_exit_policy_from_string(routerinfo_t *router, char *s);
 static int router_add_exit_policy(routerinfo_t *router, 
                                   directory_token_t *tok);
-static int router_resolve_directory(directory_t *dir);
+static int router_resolve_routerlist(routerlist_t *dir);
 
 /****************************************************************************/
 
@@ -40,9 +39,10 @@ void router_retry_connections(void) {
   int i;
   routerinfo_t *router;
 
-  for (i=0;i<directory->n_routers;i++) {
-    router = directory->routers[i];
-    if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
+  for (i=0;i<routerlist->n_routers;i++) {
+    router = routerlist->routers[i];
+    if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { 
+      /* not in the list */
       log_fn(LOG_DEBUG,"connecting to OR %s:%u.",router->address,router->or_port);
       connection_or_connect(router);
     }
@@ -55,11 +55,11 @@ routerinfo_t *router_pick_directory_server(void) {
   routerinfo_t *router, *dirserver=NULL;
   int num_dirservers=0;
 
-  if(!directory)
+  if(!routerlist)
     return NULL;
 
-  for(i=0;i<directory->n_routers;i++) {
-    router = directory->routers[i];
+  for(i=0;i<routerlist->n_routers;i++) {
+    router = routerlist->routers[i];
     if(router->dir_port > 0 && router->is_running)
       num_dirservers++;
   }
@@ -68,8 +68,8 @@ routerinfo_t *router_pick_directory_server(void) {
     log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
     /* no running dir servers found? go through and mark them all as up,
      * and we'll cycle through the list again. */
-    for(i=0;i<directory->n_routers;i++) {
-      router = directory->routers[i];
+    for(i=0;i<routerlist->n_routers;i++) {
+      router = routerlist->routers[i];
       if(router->dir_port > 0) {
         router->is_running = 1;
         dirserver = router;
@@ -79,8 +79,8 @@ routerinfo_t *router_pick_directory_server(void) {
   }
 
   j = crypto_pseudo_rand_int(num_dirservers);
-  for (i=0;i<directory->n_routers;i++) {
-    router = directory->routers[i];
+  for (i=0;i<routerlist->n_routers;i++) {
+    router = routerlist->routers[i];
     if (router->dir_port > 0 && router->is_running) {
       if (j)
         --j;
@@ -98,11 +98,11 @@ routerinfo_t *router_pick_randomly_from_running(void) {
   int i,j;
   int num_running=0;
 
-  if(!directory)
+  if(!routerlist)
     return NULL;
 
-  for(i=0;i<directory->n_routers;i++) {
-    if(directory->routers[i]->is_running)
+  for(i=0;i<routerlist->n_routers;i++) {
+    if(routerlist->routers[i]->is_running)
       num_running++;
   }
 
@@ -111,13 +111,13 @@ routerinfo_t *router_pick_randomly_from_running(void) {
     return NULL;
   }
   j = crypto_pseudo_rand_int(num_running);
-  for (i=0;i<directory->n_routers;i++) {
-    if (directory->routers[i]->is_running) {
+  for (i=0;i<routerlist->n_routers;i++) {
+    if (routerlist->routers[i]->is_running) {
       if (j)
         --j;
       else {
-        log_fn(LOG_DEBUG, "Chose server '%s'", directory->routers[i]->nickname);
-        return directory->routers[i];
+        log_fn(LOG_DEBUG, "Chose server '%s'", routerlist->routers[i]->nickname);
+        return routerlist->routers[i];
       }
     }
   }
@@ -129,7 +129,7 @@ void router_upload_desc_to_dirservers(void) {
   int i;
   routerinfo_t *router;
 
-  if(!directory)
+  if(!routerlist)
     return;
 
   if (!router_get_my_descriptor()) {
@@ -137,8 +137,8 @@ void router_upload_desc_to_dirservers(void) {
     return;
   }
 
-  for(i=0;i<directory->n_routers;i++) {
-    router = directory->routers[i];
+  for(i=0;i<routerlist->n_routers;i++) {
+    router = routerlist->routers[i];
     if(router->dir_port > 0)
       directory_initiate_command(router, DIR_CONN_STATE_CONNECTING_UPLOAD);
   }
@@ -148,10 +148,10 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   int i;
   routerinfo_t *router;
 
-  assert(directory);
+  assert(routerlist);
 
-  for(i=0;i<directory->n_routers;i++) {
-    router = directory->routers[i];
+  for(i=0;i<routerlist->n_routers;i++) {
+    router = routerlist->routers[i];
     if ((router->addr == addr) && (router->or_port == port))
       return router;
   }
@@ -163,10 +163,10 @@ routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk)
   int i;
   routerinfo_t *router;
 
-  assert(directory);
+  assert(routerlist);
 
-  for(i=0;i<directory->n_routers;i++) {
-    router = directory->routers[i];
+  for(i=0;i<routerlist->n_routers;i++) {
+    router = routerlist->routers[i];
     if (0 == crypto_pk_cmp_keys(router->link_pkey, pk))
       return router;
   }
@@ -178,25 +178,26 @@ routerinfo_t *router_get_by_nickname(char *nickname)
   int i;
   routerinfo_t *router;
 
-  assert(directory);
+  assert(routerlist);
 
-  for(i=0;i<directory->n_routers;i++) {
-    router = directory->routers[i];
+  for(i=0;i<routerlist->n_routers;i++) {
+    router = routerlist->routers[i];
     if (0 == strcmp(router->nickname, nickname))
       return router;
   }
   return NULL;
 }
 
-void router_get_directory(directory_t **pdirectory) {
-  *pdirectory = directory;
+/* a way to access routerlist outside this file */
+void router_get_routerlist(routerlist_t **prouterlist) {
+  *prouterlist = routerlist;
 }
 
 /* delete a router from memory */
 void routerinfo_free(routerinfo_t *router)
 {
   struct exit_policy_t *e;
-  
+
   if (!router)
     return;
 
@@ -217,14 +218,14 @@ void routerinfo_free(routerinfo_t *router)
   free(router);
 }
 
-void directory_free(directory_t *dir)
+void routerlist_free(routerlist_t *rl)
 {
   int i;
-  for (i = 0; i < dir->n_routers; ++i)
-    routerinfo_free(dir->routers[i]);
-  tor_free(dir->routers);
-  tor_free(dir->software_versions);
-  free(dir);
+  for (i = 0; i < rl->n_routers; ++i)
+    routerinfo_free(rl->routers[i]);
+  tor_free(rl->routers);
+  tor_free(rl->software_versions);
+  free(rl);
 }
 
 void router_mark_as_down(char *nickname) {
@@ -236,7 +237,7 @@ void router_mark_as_down(char *nickname) {
 }
 
 /* load the router list */
-int router_get_list_from_file(char *routerfile)
+int router_set_routerlist_from_file(char *routerfile)
 {
   char *string;
 
@@ -246,7 +247,7 @@ int router_get_list_from_file(char *routerfile)
     return -1;
   }
 
-  if(router_get_list_from_string(string) < 0) {
+  if(router_set_routerlist_from_string(string) < 0) {
     log_fn(LOG_WARN,"The routerfile itself was corrupt.");
     free(string);
     return -1;
@@ -256,13 +257,12 @@ int router_get_list_from_file(char *routerfile)
   return 0;
 }
 
-
 typedef enum {
   K_ACCEPT,
   K_DIRECTORY_SIGNATURE,
   K_RECOMMENDED_SOFTWARE,
-  K_REJECT, 
-  K_ROUTER, 
+  K_REJECT,
+  K_ROUTER,
   K_SIGNED_DIRECTORY,
   K_SIGNING_KEY,
   K_ONION_KEY,
@@ -271,10 +271,10 @@ typedef enum {
   K_PUBLISHED,
   K_RUNNING_ROUTERS,
   K_PLATFORM,
-  _SIGNATURE, 
-  _PUBLIC_KEY, 
-  _ERR, 
-  _EOF 
+  _SIGNATURE,
+  _PUBLIC_KEY,
+  _ERR,
+  _EOF
 } directory_keyword;
 
 struct token_table_ent { char *t; int v; };
@@ -301,7 +301,7 @@ struct directory_token {
   directory_keyword tp;
   union {
     struct {
-      char *args[MAX_ARGS+1]; 
+      char *args[MAX_ARGS+1];
       int n_args;
     } cmd;
     char *signature;
@@ -471,21 +471,23 @@ router_get_next_token(char **s, directory_token_t *tok) {
 #define router_get_next_token _router_get_next_token
 #endif
 
-int router_get_list_from_string(char *s) 
+/* read routerinfo elements from s, and throw out the ones that
+ * don't parse and resolve. */
+int router_set_routerlist_from_string(char *s)
 {
-  if (router_get_list_from_string_impl(&s, &directory, -1, NULL)) {
+  if (router_get_list_from_string_impl(&s, &routerlist, -1, NULL)) {
     log(LOG_WARN, "Error parsing router file");
     return -1;
   }
-  if (router_resolve_directory(directory)) {
-    log(LOG_WARN, "Error resolving directory");
+  if (router_resolve_routerlist(routerlist)) {
+    log(LOG_WARN, "Error resolving routerlist");
     return -1;
   }
   return 0;
 }
 
 static int router_get_hash_impl(char *s, char *digest, const char *start_str,
-                                const char *end_str) 
+                                const char *end_str)
 {
   char *start, *end;
   start = strstr(s, start_str);
@@ -504,7 +506,7 @@ static int router_get_hash_impl(char *s, char *digest, const char *start_str,
     return -1;
   }
   ++end;
-  
+
   if (crypto_SHA_digest(start, end-start, digest)) {
     log_fn(LOG_WARN,"couldn't compute digest");
     return -1;
@@ -535,29 +537,30 @@ int compare_recommended_versions(char *myversion, char *start) {
   for(;;) {
     comma = strchr(start, ',');
     if( ((comma ? comma : end) - start == len_myversion) &&
-       !strncmp(start, myversion, len_myversion)) /* only do strncmp if the length matches */
-        return 0; /* success, it's there */
+       !strncmp(start, myversion, len_myversion))
+      /* only do strncmp if the length matches */
+      return 0; /* success, it's there */
     if(!comma)
       return -1; /* nope */
     start = comma+1;
   }
 }
 
-int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey)
+int router_set_routerlist_from_directory(char *s, crypto_pk_env_t *pkey)
 {
-  if (router_get_dir_from_string_impl(s, &directory, pkey)) {
+  if (router_get_routerlist_from_directory_impl(s, &routerlist, pkey)) {
     log_fn(LOG_WARN, "Couldn't parse directory.");
     return -1;
   }
-  if (router_resolve_directory(directory)) {
-    log_fn(LOG_WARN, "Error resolving directory");
+  if (router_resolve_routerlist(routerlist)) {
+    log_fn(LOG_WARN, "Error resolving routerlist");
     return -1;
   }
-  if (compare_recommended_versions(VERSION, directory->software_versions) < 0) {
+  if (compare_recommended_versions(VERSION, routerlist->software_versions) < 0) {
     log(options.IgnoreVersion ? LOG_WARN : LOG_ERR,
         "You are running Tor version %s, which is not recommended.\n"
        "Please upgrade to one of %s.",
-        VERSION, directory->software_versions);
+        VERSION, routerlist->software_versions);
     if(options.IgnoreVersion) {
       log(LOG_WARN, "IgnoreVersion is set. If it breaks, we told you so.");
     } else {
@@ -569,13 +572,13 @@ int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey)
   return 0;
 }
 
-int router_get_dir_from_string_impl(char *s, directory_t **dest,
-                                    crypto_pk_env_t *pkey)
+int router_get_routerlist_from_directory_impl(char *s, routerlist_t **dest,
+                                              crypto_pk_env_t *pkey)
 {
   directory_token_t tok;
   char digest[20];
   char signed_digest[128];
-  directory_t *new_dir = NULL;
+  routerlist_t *new_dir = NULL;
   char *versions;
   struct tm published;
   time_t published_on;
@@ -666,21 +669,21 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   TOK_IS(_EOF, "end of directory");
 
   if (*dest) 
-    directory_free(*dest);
+    routerlist_free(*dest);
   *dest = new_dir;
 
   return 0;
 
  err:
   if (new_dir)
-    directory_free(new_dir);
+    routerlist_free(new_dir);
   return -1;
 #undef NEXT_TOK
 #undef TOK_IS
 }
 
-int router_get_list_from_string_impl(char **s, directory_t **dest, 
-                                     int n_good_nicknames, 
+int router_get_list_from_string_impl(char **s, routerlist_t **dest,
+                                     int n_good_nicknames,
                                      const char **good_nickname_lst)
 {
   routerinfo_t *router;
@@ -725,15 +728,15 @@ int router_get_list_from_string_impl(char **s, directory_t **dest,
   }
 
   if (*dest)
-    directory_free(*dest);
-  *dest = (directory_t *)tor_malloc(sizeof(directory_t));
+    routerlist_free(*dest);
+  *dest = (routerlist_t *)tor_malloc(sizeof(routerlist_t));
   (*dest)->routers = rarray;
   (*dest)->n_routers = rarray_len;
   (*dest)->software_versions = NULL;
   return 0;
 }
 
-static int 
+static int
 router_resolve(routerinfo_t *router)
 {
   struct hostent *rent;
@@ -750,38 +753,38 @@ router_resolve(routerinfo_t *router)
   return 0;
 }
 
-static int 
-router_resolve_directory(directory_t *dir)
+static int
+router_resolve_routerlist(routerlist_t *rl)
 {
   int i, max, remove;
-  if (!dir)
-    dir = directory;
+  if (!rl)
+    rl = routerlist;
 
-  max = dir->n_routers;
+  max = rl->n_routers;
   for (i = 0; i < max; ++i) {
     remove = 0;
-    if (router_resolve(dir->routers[i])) {
+    if (router_resolve(rl->routers[i])) {
       log_fn(LOG_WARN, "Couldn't resolve router %s; not using",
-             dir->routers[i]->address);
+             rl->routers[i]->address);
       remove = 1;
     } else if (options.Nickname &&
-               !strcmp(dir->routers[i]->nickname, options.Nickname)) {
+               !strcmp(rl->routers[i]->nickname, options.Nickname)) {
       remove = 1;
     }
     if (remove) {
-      routerinfo_free(dir->routers[i]);
-      dir->routers[i] = dir->routers[--max];
-      --dir->n_routers;
+      routerinfo_free(rl->routers[i]);
+      rl->routers[i] = rl->routers[--max];
+      --rl->n_routers;
       --i;
     }
   }
-  
+
   return 0;
 }
 
 /* reads a single router entry from s.
  * updates s so it points to after the router it just read.
- * mallocs a new router, returns it if all goes well, else returns NULL.
+ * mallocs a new router and returns it if all goes well, else returns NULL.
  */
 routerinfo_t *router_get_entry_from_string(char**s) {
   routerinfo_t *router = NULL;
@@ -1008,7 +1011,7 @@ router_add_exit_policy_from_string(routerinfo_t *router,
   return r;
 }
 
-static int router_add_exit_policy(routerinfo_t *router, 
+static int router_add_exit_policy(routerinfo_t *router,
                                   directory_token_t *tok) {
   struct exit_policy_t *tmpe, *newe;
   struct in_addr in;
@@ -1071,7 +1074,7 @@ static int router_add_exit_policy(routerinfo_t *router,
   }
   if (strcmp(port, "*") == 0) {
     newe->prt = 0;
-  } else { 
+  } else {
     endptr = NULL;
     newe->prt = strtol(port, &endptr, 10);
     if (*endptr) {
@@ -1190,8 +1193,8 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
   int i;
   routerinfo_t *router;
 
-  for (i=0;i<directory->n_routers;i++) {
-    router = directory->routers[i];
+  for (i=0;i<routerlist->n_routers;i++) {
+    router = routerlist->routers[i];
     if (router->is_running && router_compare_addr_to_exit_policy(addr,
         port, router->exit_policy) >= 0)
       return 0; /* this one could be ok. good enough. */
@@ -1213,13 +1216,6 @@ const char *router_get_my_descriptor(void) {
   }
   log_fn(LOG_DEBUG,"my desc is '%s'",descriptor);
   return descriptor;
-}
-const routerinfo_t *router_get_desc_routerinfo(void) {
-  if (!desc_routerinfo) {
-    if (router_rebuild_descriptor()) 
-      return NULL;
-  }
-  return desc_routerinfo;
 }
 
 int router_rebuild_descriptor(void) {
