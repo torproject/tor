@@ -267,7 +267,7 @@ dirserv_free_descriptors()
 }
 
 /** Parse the server descriptor at *desc and maybe insert it into the
- * list of service descriptors, and (if the descriptor is well-formed)
+ * list of server descriptors, and (if the descriptor is well-formed)
  * advance *desc immediately past the descriptor's end.
  *
  * Return 1 if descriptor is well-formed and accepted;
@@ -356,9 +356,9 @@ dirserv_add_descriptor(const char **desc)
   }
   if (found >= 0) {
     /* if so, decide whether to update it. */
-    if (ent->published > ri->published_on) {
-      /* We already have a newer descriptor */
-      log_fn(LOG_INFO,"We already have a newer desc for nickname %s. Not adding.",ri->nickname);
+    if (ent->published >= ri->published_on) {
+      /* We already have a newer or equal-time descriptor */
+      log_fn(LOG_INFO,"We already have a new enough desc for nickname %s. Not adding.",ri->nickname);
       /* This isn't really an error; return success. */
       routerinfo_free(ri);
       *desc = end;
@@ -662,7 +662,6 @@ size_t dirserv_get_directory(const char **directory)
     the_directory_len = strlen(the_directory);
     log_fn(LOG_INFO,"New directory (size %d):\n%s",the_directory_len,
            the_directory);
-    the_directory_is_dirty = 0;
     /* Now read the directory we just made in order to update our own
      * router lists.  This does more signature checking than is strictly
      * necessary, but safe is better than sorry. */
@@ -680,6 +679,7 @@ size_t dirserv_get_directory(const char **directory)
         log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
       }
     }
+    the_directory_is_dirty = 0;
   } else {
     log(LOG_INFO,"Directory still clean, reusing.");
   }
