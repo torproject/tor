@@ -304,10 +304,9 @@ static void run_connection_housekeeping(int i, time_t now) {
       /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
       log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
              i,conn->address, conn->port);
-      connection_mark_for_close(conn,0); /* Suppress end ??? */
-/* XXX there's no concept of 'suppressing end' here, because it's an OR
- * connection, and there's no such thing as an end cell for an OR
- * connection. -RD */
+      /* flush anything waiting, e.g. a destroy for a just-expired circ */
+      conn->hold_open_until_flushed = 1;
+      connection_mark_for_close(conn,0);
     } else {
       /* either a full router, or we've got a circuit. send a padding cell. */
       log_fn(LOG_DEBUG,"Sending keepalive to (%s:%d)",
