@@ -1,4 +1,10 @@
 
+Dependencies:
+
+  You're going to need openssl (0.9.6 will work fine, possibly 0.9.5 also)
+  and popt installed. If you're on Linux, everything will probably work
+  fine. If you're not, you're on your own (but let us know how it goes).
+
 If you got the source from cvs:
 
   Run "./autogen.sh", which will run the various auto* programs and then
@@ -40,7 +46,7 @@ Once you've got it compiled:
   and another to indicate that you're providing no headers). For more
   convenient command-line use, I recommend making a ~/.wgetrc with
   the line
-    http_proxy=localhost:9051"
+    http_proxy=localhost:9051
   Then you can do things like "wget seul.org" and watch as it downloads
   from the onion routing network.
 
