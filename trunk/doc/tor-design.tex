@@ -948,14 +948,17 @@ use IP-based authentication (such as institutional mail or web servers)
 can be fooled by the fact that anonymous connections appear to originate
 at the exit OR.
 
-We stress that Tor does not enable any new class of abuse. Spammers and
-other attackers already have access to thousands of misconfigured systems
-worldwide, and the Tor network is far from the easiest way to launch
-these antisocial or illegal attacks. But because the onion routers can
-easily be mistaken for the originators of the abuse, and the volunteers
-who run them may not want to deal with the hassle of repeatedly explaining
-anonymity networks, we must block or limit attacks and other abuse that
-travel through the Tor network.
+We stress that Tor does not enable any new class of abuse. Spammers
+and other attackers already have access to thousands of misconfigured
+systems worldwide, and the Tor network is far from the easiest way
+to launch these antisocial or illegal attacks. Indeed, Tor's limited
+anonymity may be a benefit here, because large determined adversaries
+may still be able to track down criminals. In any case, because the
+%XXX
+onion routers can easily be mistaken for the originators of the abuse,
+and the volunteers who run them may not want to deal with the hassle of
+repeatedly explaining anonymity networks, we must block or limit attacks
+and other abuse that travel through the Tor network.
 
 To mitigate abuse issues, in Tor, each onion router's \emph{exit policy}
 describes to which external addresses and ports the router will permit
@@ -1123,10 +1126,9 @@ central point.
 
 Rendezvous points are a building block for \emph{location-hidden
 services} (also known as ``responder anonymity'') in the Tor
-network.  Location-hidden services allow a server Bob to offer a TCP
-service, such as a webserver, without revealing the IP of his service.
-Besides allowing Bob to provided services anonymously, location
-privacy also seeks to provide some protection against distributed DoS attacks:
+network.  Location-hidden services allow Bob to offer a TCP
+service, such as a webserver, without revealing its IP.
+We are also motivated by protection against distributed DoS attacks:
 attackers are forced to attack the onion routing network as a whole
 rather than just Bob's IP.
 
