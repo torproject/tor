@@ -6,4 +6,4 @@ Legend:
         D Deferred
         X Abandoned
 
-- nothing -
+- strip debugging symbols when tor is more mature
