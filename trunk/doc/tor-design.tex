@@ -454,16 +454,12 @@ as Privoxy to hide differences between clients, and expunge protocol
 features that leak identity. 
 Note that by this separation Tor can also provide services that
 are anonymous to the network yet authenticated to the responder, like
-SSH.
-Similarly, Tor does not currently integrate
+SSH. Similarly, Tor does not currently integrate
 tunneling for non-stream-based protocols like UDP; this too must be
 provided by an external service.
 
-\textbf{Does not provide untraceability:} Tor does not try to conceal
-%XXX untraceability, unobservability, unlinkability? -RD
-which users are
-sending or receiving communications; it only tries to conceal with whom
-they communicate.
+\textbf{Not steganographic:} Tor does not try to conceal who is connected
+to the network.
 
 \SubSection{Threat Model}
 \label{subsec:threat-model}
@@ -1008,9 +1004,10 @@ require investigation.
 \SubSection{Exit policies and abuse}
 \label{subsec:exitpolicies}
 
-%XXX originally, we planned to put the "users only know the hostname,
-%    not the IP, but exit policies are by IP" problem here too. Worth
-%    while still? -RD
+% originally, we planned to put the "users only know the hostname,
+% not the IP, but exit policies are by IP" problem here too. Not
+% worth putting in the submission, but worth thinking about putting
+% in sometime somehow. -RD
 
 Exit abuse is a serious barrier to wide-scale Tor deployment. Anonymity
 presents would-be vandals and abusers with an opportunity to hide
@@ -1044,14 +1041,8 @@ between the private exit and the final destination, and so is less sure of
 Alice's destination and activities. Most onion routers will function as
 \emph{restricted exits} that permit connections to the world at large,
 but prevent access to certain abuse-prone addresses and services. 
-In general, nodes could require the user to authenticate before
-being allowed to exit \cite{or-discex00}.
-% XXX This next sentence makes no sense to me in context; must
-% XXX revisit. -NM
-% Does this help? It's for the enclave OR model. -RD
-%In
-%general, nodes can require a variety of forms of traffic authentication
-%\cite{or-discex00}.
+Additionally, in some cases the OR can authenticate clients to
+prevent exit abuse without harming anonymity \cite{or-discex00}.
 
 %The abuse issues on closed (e.g. military) networks are different
 %from the abuse on open networks like the Internet. While these IP-based
@@ -1414,16 +1405,14 @@ itself may be hostile). Filtering content is not a primary goal of Onion
 Routing; nonetheless, Tor can directly use Privoxy and related
 filtering services to anonymize application data streams.
 
-\emph{Option distinguishability.} Options can be a
-source of distinguishable patterns. In general there is economic
-incentive to allow preferential services \cite{econymics}, and some
-degree of configuration choice can attract users, which
-provide anonymity.  So far, however, we have
-not found a compelling use case in Tor for any client-configurable
-options.  Thus, clients are currently distinguishable only by their
-behavior.
-%XXX Actually, circuitrebuildperiod is such an option. -RD
-  
+\emph{Option distinguishability.} We allow clients to choose local
+configuration options. For example, clients concerned about request
+linkability should rotate circuits more often than those concerned
+about traceability. There is economic incentive to attract users by
+allowing this choice; but at the same time, a set of clients who are
+in the minority may lose more anonymity by appearing distinct than they
+gain by optimizing their behavior \cite{econymics}.
+
 \emph{End-to-end timing correlation.}  Tor only minimally hides
 end-to-end timing correlations. An attacker watching patterns of
 traffic at the initiator and the responder will be
@@ -1816,8 +1805,8 @@ and possibly better anonymity \cite{econymics}. More nodes means increased
 scalability, and more users can mean more anonymity. We need to continue
 examining the incentive structures for participating in Tor.
 
-\emph{Cover traffic:} Currently Tor omits cover traffic because its costs
-in performance and bandwidth are clear, whereas its security benefits are
+\emph{Cover traffic:} Currently Tor omits cover traffic---its costs
+in performance and bandwidth are clear but its security benefits are
 not well understood. We must pursue more research on link-level cover
 traffic and long-range cover traffic to determine whether some simple padding
 method offers provable protection against our chosen adversary.
