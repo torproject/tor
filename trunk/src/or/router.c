@@ -4,6 +4,11 @@
 
 #include "or.h"
 
+/*****
+ * router.c: OR functionality, including key maintenance, generating
+ * and uploading server descriptors, retrying OR connections.
+ *****/
+
 extern or_options_t options; /* command-line and config-file options */
 
 /* exposed for test.c */ void get_platform_str(char *platform, int len);
