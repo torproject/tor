@@ -60,7 +60,6 @@ int router_reload_router_list(void)
   }
   s = read_file_to_str(filename,0);
   if (s) {
-    tor_strstrip(s,"\r"); /* XXXX This is a bug workaround for win32. */
     log_fn(LOG_INFO, "Loading cached directory from %s", filename);
     is_recent = st.st_mtime > time(NULL) - 60*15;
     if (router_load_routerlist_from_directory(s, NULL, is_recent) < 0) {
