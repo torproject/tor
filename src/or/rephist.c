@@ -307,8 +307,7 @@ void write_rep_history(const char *filename)
   const char *name1;
 
   tmpfile = tor_malloc(strlen(filename)+5);
-  strcpy(tmpfile, filename);
-  strcat(tmpfile, "_tmp");
+  snprintf(tmpfile, strlen(filename)+5, "%s_tmp", filename);
 
   f = fopen(tmpfile, "w");
   if (!f) goto done;
@@ -548,7 +547,7 @@ char *rep_hist_get_bandwidth_lines(void)
         snprintf(cp, len-(cp-buf), "%d,", b->totals[i]);
       cp += strlen(cp);
     }
-    strcat(cp, "\n");
+    strlcat(cp, "\n", len-(cp-buf));
     ++cp;
   }
   return buf;
