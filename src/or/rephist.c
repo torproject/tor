@@ -499,7 +499,7 @@ char *rep_hist_get_bandwidth_lines(void)
   bw_array_t *b;
   size_t len;
 
-  /* opt (read|write)history yyyy-mm-dd HH:MM:SS n,n,n,n,n... */
+  /* opt (read|write)-history yyyy-mm-dd HH:MM:SS (xxx s) n,n,n,n,n... */
   len = (60+12*NUM_TOTALS)*2;
   buf = tor_malloc_zero(len);
   cp = buf;
