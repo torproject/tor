@@ -207,8 +207,10 @@
 #define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 6 /* at Bob, waiting for introductions */
 #define CIRCUIT_PURPOSE_C_INTRODUCING 7 /* at Alice, connecting to intro point */
 #define CIRCUIT_PURPOSE_C_ESTABLISH_REND 8 /* at Alice, waiting for Bob */
-#define CIRCUIT_PURPOSE_S_RENDEZVOUSING 9 /* at Bob, connecting to rend point */
-#define _CIRCUIT_PURPOSE_MAX 9
+#define CIRCUIT_PURPOSE_S_CONNECT_REND 9 /* at Bob, connecting to rend point */
+#define CIRCUIT_PURPOSE_C_REND_JOINED 10 /* at Alice, rendezvous established.*/
+#define CIRCUIT_PURPOSE_S_REND_JOINED 11 /* at Bob, rendezvous established.*/
+#define _CIRCUIT_PURPOSE_MAX 11
 
 #define RELAY_COMMAND_BEGIN 1
 #define RELAY_COMMAND_DATA 2
@@ -477,6 +479,7 @@ struct crypt_path_t {
   crypto_digest_env_t *b_digest;
 
   crypto_dh_env_t *handshake_state;
+  char handshake_digest[CRYPTO_SHA1_DIGEST];/* KH in tor-spec.txt */
 
   uint32_t addr;
   uint16_t port;
@@ -501,9 +504,10 @@ typedef struct crypt_path_t crypt_path_t;
 
 typedef struct {
   int desired_path_len;
-  char *chosen_exit; /* nickname of planned exit node */
-  crypto_dh_env_t *rend_handshake_state; /*XXXXDOCDOC*/
-  unsigned char rend_key_material[52]; /*XXXXDOCDOC*/
+  /* nickname of planned exit node */
+  char *chosen_exit;
+  /* cpath to append after rendezvous. */
+  struct crypt_path_t *pending_final_cpath;
 } cpath_build_state_t;
 
 /* struct for a path (circuit) through the network */
@@ -538,6 +542,8 @@ struct circuit_t {
   crypt_path_t *cpath;
 
   char onionskin[ONIONSKIN_CHALLENGE_LEN]; /* for storage while onionskin pending */
+  char handshake_digest[CRYPTO_SHA1_DIGEST_LEN]; /* Stores KH for intermediate hops */
+
   time_t timestamp_created;
   time_t timestamp_dirty; /* when the circuit was first used, or 0 if clean */
 
@@ -714,6 +720,8 @@ void circuit_reset_failure_count(void);
 void circuit_n_conn_open(connection_t *or_conn);
 int circuit_send_next_onion_skin(circuit_t *circ);
 int circuit_extend(cell_t *cell, circuit_t *circ);
+#define CPATH_KEY_MATERIAL_LEN (20*2+16*2)
+int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data);
 int circuit_finish_handshake(circuit_t *circ, char *reply);
 int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
 
@@ -917,6 +925,8 @@ void onion_pending_remove(circuit_t *circ);
 
 int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
 
+
+void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state,
                        routerinfo_t **router_out);
 
@@ -1037,6 +1047,9 @@ int rend_parse_rendezvous_address(char *address);
 int rend_config_services(or_options_t *options);
 int rend_service_init_keys(void);
 int rend_services_init(void);
+
+void rend_service_intro_is_ready(circuit_t *circuit);
+void rend_service_rendezvous_is_ready(circuit_t *circuit);
 
 #endif
 

@@ -264,16 +264,20 @@ typedef struct rend_introduction_t {
   char shared_secret[128];
 } rend_introduction_t;
 
+/* Respond to an INTRODUCE2 cell by launching a circuit to the chosen
+ * rendezvous points.
+ */
 int
 rend_service_introduce(circuit_t *circuit, char *request, int request_len)
 {
   char *ptr, *rp_nickname, *r_cookie;
   char buf[RELAY_PAYLOAD_SIZE];
-  char secret[20+2*16]; /* Holds KH, Kf, Kb */
+  char keys[20+CPATH_KEY_MATERIAL_LEN]; /* Holds KH, Df, Db, Kf, Kb */
   rend_service_t *service;
   int len, keylen;
   crypto_dh_env_t *dh = NULL;
   circuit_t *launched = NULL;
+  crypt_path_t *cpath = NULL;
 
   if (circuit->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
     log_fn(LOG_WARN, "Got an INTRODUCE2 over a non-introduction circuit.");
@@ -334,14 +338,15 @@ rend_service_introduce(circuit_t *circuit, char *request, int request_len)
     log_fn(LOG_WARN, "Couldn't build DH state or generate public key");
     goto err;
   }
-  if (crypto_dh_compute_secret(dh, ptr+20, 128, secret, 20+16*2)<0) {
+  if (crypto_dh_compute_secret(dh, ptr+20, DH_KEY_LEN, keys,
+                               20+CPATH_KEY_MATERIAL_LEN)<0) {
     log_fn(LOG_WARN, "Couldn't complete DH handshake");
     goto err;
   }
 
   /* Launch a circuit to alice's chosen rendezvous point.
    */
-  launched = circuit_launch_new(CIRCUIT_PURPOSE_S_RENDEZVOUSING, rp_nickname);
+  launched = circuit_launch_new(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname);
   if (!launched) {
     log_fn(LOG_WARN, "Can't launch circuit to rendezvous point '%s'",
            rp_nickname);
@@ -351,9 +356,14 @@ rend_service_introduce(circuit_t *circuit, char *request, int request_len)
   /* Fill in the circuit's state. */
   memcpy(launched->rend_service, circuit->rend_service,CRYPTO_SHA1_DIGEST_LEN);
   memcpy(launched->rend_cookie, r_cookie, REND_COOKIE_LEN);
-  memcpy(launched->build_state->rend_key_material, secret, 20+16*2);
-  launched->build_state->rend_handshake_state = dh;
+  launched->build_state->pending_final_cpath = cpath =
+    tor_malloc_zero(sizeof(crypt_path_t));
+
+  cpath->handshake_state = dh;
   dh = NULL;
+  if (circuit_init_cpath_crypto(cpath,keys+20)<0)
+    goto err;
+  memcpy(cpath->handshake_digest, keys, 20);
 
   return 0;
  err:
@@ -362,24 +372,144 @@ rend_service_introduce(circuit_t *circuit, char *request, int request_len)
   return -1;
 }
 
+/* Launch a circuit to serve as an introduction point.
+ */
+static int
+rend_service_launch_establish_intro(rend_service_t *service, char *nickname)
+{
+  circuit_t *launched;
+
+  assert(service && nickname);
+
+  launched = circuit_launch_new(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, nickname);
+  if (!launched) {
+    log_fn(LOG_WARN, "Can't launch circuit to establish introduction at '%s'",
+           nickname);
+    return -1;
+  }
+  memcpy(launched->rend_service, service->pk_digest, CRYPTO_SHA1_DIGEST_LEN);
+
+  return 0;
+}
+
+/* Called when we're done building a circuit to an introduction point:
+ *  sends a RELAY_ESTABLISH_INTRO cell.
+ */
+void
+rend_service_intro_is_ready(circuit_t *circuit)
+{
+  rend_service_t *service;
+  int len, r;
+  char buf[RELAY_PAYLOAD_SIZE];
+  char auth[CRYPTO_SHA1_DIGEST_LEN + 10];
+
+  assert(circuit->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
+  assert(circuit->cpath);
+  service = rend_service_get_by_pk_digest(circuit->rend_service);
+  if (!service) {
+    log_fn(LOG_WARN, "Internal error: unrecognized service ID on introduction circuit");
+    goto err;
+  }
+
+  /* Build the payload for a RELAY_ESTABLISH_INTRO cell. */
+  len = crypto_pk_asn1_encode(service->private_key, buf+2,
+                              RELAY_PAYLOAD_SIZE-2);
+  set_uint16(buf, len);
+  len += 2;
+  memcpy(auth, circuit->cpath->prev->handshake_digest, CRYPTO_SHA1_DIGEST_LEN);
+  memcpy(auth+CRYPTO_SHA1_DIGEST_LEN, "INTRODUCE", 9);
+  if (crypto_SHA_digest(auth, CRYPTO_SHA1_DIGEST_LEN+9, buf+len))
+    goto err;
+  len += 20;
+  r = crypto_pk_private_sign_digest(service->private_key, buf, len, buf+len);
+  if (r<0) {
+    log_fn(LOG_WARN, "Couldn't sign introduction request");
+    goto err;
+  }
+  len += r;
+
+  if (connection_edge_send_command(NULL, circuit,RELAY_COMMAND_ESTABLISH_INTRO,
+                                   buf, len, circuit->cpath->prev)<0) {
+    log_fn(LOG_WARN, "Couldn't send introduction request");
+    goto err;
+  }
+
+  return;
+ err:
+  circuit_mark_for_close(circuit);
+}
+
+/* Called once a circuit to a rendezvous point is ready: sends a
+ *  RELAY_COMMAND_RENDEZVOUS1 cell.
+ */
+void
+rend_service_rendezvous_is_ready(circuit_t *circuit)
+{
+  rend_service_t *service;
+  char buf[RELAY_PAYLOAD_SIZE];
+  crypt_path_t *hop;
+
+  assert(circuit->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
+  assert(circuit->cpath);
+  assert(circuit->build_state);
+  hop = circuit->build_state->pending_final_cpath;
+  assert(hop);
+
+  service = rend_service_get_by_pk_digest(circuit->rend_service);
+  if (!service) {
+    log_fn(LOG_WARN, "Internal error: unrecognized service ID on introduction circuit");
+    goto err;
+  }
+
+  /* All we need to do is send a RELAY_RENDEZVOUS1 cell... */
+  memcpy(buf, circuit->rend_cookie, REND_COOKIE_LEN);
+  if (crypto_dh_get_public(hop->handshake_state,
+                           buf+REND_COOKIE_LEN, DH_KEY_LEN)<0) {
+    log_fn(LOG_WARN,"Couldn't get DH public key");
+    goto err;
+  }
+  memcpy(buf+REND_COOKIE_LEN+DH_KEY_LEN, hop->handshake_digest,
+         CRYPTO_SHA1_DIGEST_LEN);
+
+  /* Send the cell */
+  if (connection_edge_send_command(NULL, circuit, RELAY_COMMAND_RENDEZVOUS1,
+                                   buf, REND_COOKIE_LEN+DH_KEY_LEN+1,
+                                   circuit->cpath->prev)<0) {
+    log_fn(LOG_WARN, "Couldn't send RENDEZVOUS1 cell");
+    goto err;
+  }
+
+  /* Append the cpath entry. */
+  onion_append_to_cpath(&circuit->cpath, hop);
+  circuit->build_state->pending_final_cpath = NULL; /* prevent double-free */
+
+  /* Change the circuit purpose. */
+  circuit->purpose = CIRCUIT_PURPOSE_S_REND_JOINED;
+
+  return;
+ err:
+  circuit_mark_for_close(circuit);
+}
+
 /******
  * Manage introduction points
  ******/
 
 #define NUM_INTRO_POINTS 3
 int rend_services_init(void) {
-  int i;
+  int i,j,r;
   routerinfo_t *router;
   routerlist_t *rl;
-  circuit_t *circ;
+  rend_service_t *service;
 
   router_get_routerlist(&rl);
 
-  //for each of bob's services,
+  for (i=0;i<rend_service_list->num_used;++i) {
+    service = rend_service_list->list[i];
 
     /* The directory is now here. Pick three ORs as intro points. */
-    for (i=0;i<rl->n_routers;i++) {
-      router = rl->routers[i];
+    for (j=0;j<rl->n_routers;j++) {
+      router = rl->routers[j];
       //...
       // maybe built a smartlist of all of them, then pick at random
       // until you have three? or something smarter.
@@ -393,11 +523,12 @@ int rend_services_init(void) {
 
     // for each intro point,
     {
-      //circ = circuit_launch_new(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, intro->nickname);
-      // tell circ which hidden service this is about
+      //r = rend_service_launch_establish_intro(service, intro->nickname);
+      //if (r<0) freak out
     }
 
     // anything else?
+  }
 }
 
 /*
