@@ -573,6 +573,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   char digest[20];
   char signature[128];
   char published[32];
+  char fingerprint[FINGERPRINT_LEN+1];
   struct in_addr in;
   int onion_pkeylen, identity_pkeylen;
   int written;
@@ -587,6 +588,12 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   /* Make sure the identity key matches the one in the routerinfo. */
   if (crypto_pk_cmp_keys(ident_key, router->identity_pkey)) {
     log_fn(LOG_WARN,"Tried to sign a router with a private key that didn't match router's public key!");
+    return -1;
+  }
+
+  /* record our fingerprint, so we can include it in the descriptor */
+  if (crypto_pk_get_fingerprint(router->identity_pkey, fingerprint)<0) {
+    log_fn(LOG_ERR, "Error computing fingerprint");
     return -1;
   }
 
@@ -613,6 +620,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                     "router %s %s %d %d %d\n"
                     "platform %s\n"
                     "published %s\n"
+                    "opt fingerprint %s\n"
                     "opt uptime %ld\n"
                     "bandwidth %d %d %d\n"
                     "onion-key\n%s"
@@ -627,6 +635,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     router->is_trusted_dir ? router->dir_port : 0,
     router->platform,
     published,
+    fingerprint,
     stats_n_seconds_uptime,
     (int) router->bandwidthrate,
     (int) router->bandwidthburst,
