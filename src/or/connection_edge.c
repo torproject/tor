@@ -26,16 +26,24 @@ static int address_is_in_virtual_range(const char *addr);
  */
 void
 connection_close_unattached_ap(connection_t *conn, int endreason) {
+
   tor_assert(conn->type == CONN_TYPE_AP);
   conn->has_sent_end = 1; /* no circ yet */
+
   if (!conn->socks_request->has_finished) {
     socks5_reply_status_t socksreason =
       connection_edge_end_reason_socks5_response(endreason);
+
+    if (endreason == END_STREAM_REASON_ALREADY_SOCKS_REPLIED)
+      log_fn(LOG_WARN,"Bug: stream (marked at %s:%d) sending two socks replies?",
+             conn->marked_for_close_file, conn->marked_for_close);
+
     if (conn->socks_request->command == SOCKS_COMMAND_CONNECT)
       connection_ap_handshake_socks_reply(conn, NULL, 0, socksreason);
     else
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
   }
+
   connection_mark_for_close(conn);
   conn->hold_open_until_flushed = 1;
 }
@@ -90,7 +98,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
   switch (conn->state) {
     case AP_CONN_STATE_SOCKS_WAIT:
       if (connection_ap_handshake_process_socks(conn) < 0) {
-        connection_close_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
+        /* already marked */
         return -1;
       }
       return 0;
@@ -345,7 +353,7 @@ void connection_ap_expire_beginning(void) {
     conn->timestamp_lastread += 15;
     /* move it back into 'pending' state, and try to attach. */
     if (connection_ap_detach_retriable(conn, circ)<0) {
-      connection_close_unattached_ap(conn, END_STREAM_REASON_MISC);
+      connection_close_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
     }
   } /* end for */
 }
@@ -368,7 +376,7 @@ void connection_ap_attach_pending(void)
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
     if (connection_ap_handshake_attach_circuit(conn) < 0) {
-      connection_close_unattached_ap(conn, END_STREAM_REASON_MISC);
+      connection_close_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
     }
   }
 }
@@ -865,12 +873,12 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       log_fn(LOG_DEBUG,"reply is already set for us. Using it.");
       connection_ap_handshake_socks_reply(conn, socks->reply, socks->replylen,
                                           SOCKS5_GENERAL_ERROR);
-      socks->replylen = 0; /* zero it out so we can do another round of negotiation */
     } else {
       log_fn(LOG_WARN,"Fetching socks handshake failed. Closing.");
       connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_GENERAL_ERROR);
     }
-    return sockshere;
+    connection_close_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
+    return -1;
   } /* else socks handshake is done, continue processing */
 
   tor_strlower(socks->address); /* normalize it */
@@ -886,6 +894,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
      */
     log_fn(LOG_WARN,"Missing mapping for virtual address '%s'. Refusing.",
            socks->address);
+    connection_close_unattached_ap(conn, END_STREAM_REASON_INTERNAL);
     return -1;
   }
 
@@ -899,6 +908,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     char *s = strrchr(socks->address,'.');
     if (!s || s[1] == '\0') {
       log_fn(LOG_WARN,"Malformed exit address '%s'. Refusing.", socks->address);
+      connection_close_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
     }
     conn->chosen_exit_name = tor_strdup(s+1);
@@ -910,6 +920,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 
     if (address_is_invalid_destination(socks->address)) {
       log_fn(LOG_WARN,"Destination '%s' seems to be an invalid hostname. Failing.", socks->address);
+      connection_close_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
     }
 
@@ -920,13 +931,14 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
         log_fn(LOG_WARN,"Address to be resolved is too large. Failing.");
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
+        connection_close_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
         return -1;
       }
       if (tor_inet_aton(socks->address, &in)) { /* see if it's an IP already */
         answer = in.s_addr;
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
                                                (char*)&answer);
-        connection_close_unattached_ap(conn, END_STREAM_REASON_DONE);
+        connection_close_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
         return 0;
       }
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
@@ -934,6 +946,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     } else { /* socks->command == SOCKS_COMMAND_CONNECT */
       if (socks->port == 0) {
         log_fn(LOG_NOTICE,"Application asked to connect to port 0. Refusing.");
+        connection_close_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return -1;
       }
       rep_hist_note_used_port(socks->port, time(NULL)); /* help predict this next time */
@@ -941,7 +954,11 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     }
     if (! get_options()->LeaveStreamsUnattached) {
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-      return connection_ap_handshake_attach_circuit(conn);
+      if (connection_ap_handshake_attach_circuit(conn) < 0) {
+        connection_close_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
+        return -1;
+      }
+      return 0;
     } else {
       conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
       return 0;
@@ -956,6 +973,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
        * building all the circuits and then realizing it won't work. */
       log_fn(LOG_WARN,"Resolve requests to hidden services not allowed. Failing.");
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
+      connection_close_unattached_ap(conn, END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
       return -1;
     }
 
@@ -965,6 +983,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     r = rend_cache_lookup_entry(conn->rend_query, &entry);
     if (r<0) {
       log_fn(LOG_WARN,"Invalid service descriptor %s", conn->rend_query);
+      connection_close_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
     }
     if (r==0) {
@@ -978,7 +997,11 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       if (time(NULL) - entry->received < NUM_SECONDS_BEFORE_REFETCH) {
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
         log_fn(LOG_INFO, "Descriptor is here and fresh enough. Great.");
-        return connection_ap_handshake_attach_circuit(conn);
+        if (connection_ap_handshake_attach_circuit(conn) < 0) {
+          connection_close_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
+          return -1;
+        }
+        return 0;
       } else {
         conn->state = AP_CONN_STATE_RENDDESC_WAIT;
         log_fn(LOG_INFO, "Stale descriptor %s. Refetching.", conn->rend_query);
@@ -1144,7 +1167,7 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
 
   /* attaching to a dirty circuit is fine */
   if (connection_ap_handshake_attach_circuit(conn) < 0) {
-    connection_close_unattached_ap(conn, END_STREAM_REASON_MISC);
+    connection_close_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
     tor_close_socket(fd[1]);
     return -1;
   }

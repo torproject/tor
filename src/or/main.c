@@ -478,8 +478,7 @@ void directory_all_unreachable(time_t now) {
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
     log_fn(LOG_NOTICE,"Network down? Failing connection to '%s:%d'.",
            conn->socks_request->address, conn->socks_request->port);
-    connection_close_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
-// XXX should maybe reflect SOCKS5_NET_UNREACHABLE here. what reason is that?
+    connection_close_unattached_ap(conn, END_STREAM_REASON_NET_UNREACHABLE);
   }
 }
 

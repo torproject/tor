@@ -430,6 +430,14 @@ typedef enum {
 #define END_STREAM_REASON_CONNRESET 12
 #define END_STREAM_REASON_TORPROTOCOL 13
 
+/* These high-numbered end reasons are not part of the official spec,
+ * and are not intended to be put in relay end cells. They are here
+ * to be more informative when sending back socks replies to the
+ * application. */
+#define END_STREAM_REASON_ALREADY_SOCKS_REPLIED 256
+#define END_STREAM_REASON_CANT_ATTACH 257
+#define END_STREAM_REASON_NET_UNREACHABLE 258
+
 #define RESOLVED_TYPE_HOSTNAME 0
 #define RESOLVED_TYPE_IPV4 4
 #define RESOLVED_TYPE_IPV6 6
