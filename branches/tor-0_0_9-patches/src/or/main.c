@@ -1102,6 +1102,7 @@ static int tor_init(int argc, char *argv[]) {
 
   /* give it somewhere to log to initially */
   add_temp_log();
+
   log_fn(LOG_NOTICE,"Tor v%s. This is experimental software. Do not rely on it for strong anonymity.",VERSION);
 
   if (network_init()<0) {
@@ -1207,7 +1208,6 @@ void nt_service_control(DWORD request)
 void nt_service_body(int argc, char **argv)
 {
   int err;
-  FILE *f;
   service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
   service_status.dwCurrentState = SERVICE_START_PENDING;
   service_status.dwControlsAccepted =
@@ -1217,10 +1217,12 @@ void nt_service_body(int argc, char **argv)
   service_status.dwCheckPoint = 0;
   service_status.dwWaitHint = 1000;
   hStatus = RegisterServiceCtrlHandler(GENSRV_SERVICENAME, (LPHANDLER_FUNCTION) nt_service_control);
+
   if (hStatus == 0) {
     // failed;
     return;
   }
+
   err = tor_init(backup_argc, backup_argv); // refactor this part out of tor_main and do_main_loop
   if (err) {
     // failed.
@@ -1244,6 +1246,7 @@ void nt_service_main(void)
   table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)nt_service_body;
   table[1].lpServiceName = NULL;
   table[1].lpServiceProc = NULL;
+
   if (!StartServiceCtrlDispatcher(table)) {
     result = GetLastError();
     printf("Error was %d\n",result);
@@ -1272,11 +1275,15 @@ int nt_service_install()
 {
   /* XXXX Problems with NT services:
    * 1. The configuration file needs to be in the same directory as the .exe
+   *
    * 2. The exe and the configuration file can't be on any directory path
    *    that contains a space.
+   *    mje - you can quote the string (i.e., "c:\program files")
+   *
    * 3. Ideally, there should be one EXE that can either run as a
    *    separate process (as now) or that can install and run itself
    *    as an NT service.  I have no idea how hard this is.
+   *    mje - should be done. It can install and run itself as a service
    *
    * Notes about developing NT services:
    *
@@ -1300,14 +1307,27 @@ int nt_service_install()
     return 0;
 
   _tsplitpath(szPath, szDrive, szDir, NULL, NULL);
-  len = _MAX_PATH + strlen(cmd1) + _MAX_DRIVE + _MAX_DIR + strlen(cmd2);
+
+  /* Account for the extra quotes */
+  //len = _MAX_PATH + strlen(cmd1) + _MAX_DRIVE + _MAX_DIR + strlen(cmd2);
+  len = _MAX_PATH + strlen(cmd1) + _MAX_DRIVE + _MAX_DIR + strlen(cmd2) + 4;
   command = tor_malloc(len);
 
-  strlcpy(command, szPath, len);
+  /* 1/26/2005 mje - There was an extra '\' between end of the path and 'torrc'
+   *               - Added quotes around the path\exe and the path\torrc
+   *     like the following:
+   *     "c:\with spaces\tor.exe" -f "c:\with spaces\tor.exe"
+   */
+  strlcpy(command, "\"", len);
+  //strlcpy(command, szPath, len);
+  strlcat(command, szPath, len);
+  strlcat(command, "\"", len);
   strlcat(command, " -f ", len);
+  strlcat(command, "\"", len);
   strlcat(command, szDrive, len);
   strlcat(command, szDir, len);
-  strlcat(command, "\\torrc", len);
+  strlcat(command, "torrc", len);
+  strlcat(command, "\"", len);
 
   if ((hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CREATE_SERVICE)) == NULL) {
     printf("Failed: OpenSCManager()\n");
@@ -1315,21 +1335,30 @@ int nt_service_install()
     return 0;
   }
 
+  /* 1/26/2005 mje
+   * - changed the service start type to auto
+   * - and changed the lpPassword param to "" instead of NULL as per an
+   *   MSDN article.
+   */
   if ((hService = CreateService(hSCManager, GENSRV_SERVICENAME, GENSRV_DISPLAYNAME,
                                 SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS,
-                                SERVICE_DEMAND_START, SERVICE_ERROR_IGNORE, command,
-                                NULL, NULL, NULL, NULL, NULL)) == NULL) {
+                                SERVICE_AUTO_START, SERVICE_ERROR_IGNORE, command,
+                                NULL, NULL, NULL, NULL, "")) == NULL) {
     printf("Failed: CreateService()\n");
     CloseServiceHandle(hSCManager);
     free(command);
     return 0;
   }
 
+  /* Start the service initially, so you don't have to muck with it in the SCM */
+  if(!StartService(hService, 0, NULL))
+    printf("Service installed, but not started.\n");
+  else
+    printf("Service installed and started successfully!\n");
+
   CloseServiceHandle(hService);
   CloseServiceHandle(hSCManager);
   free(command);
-
-  printf("Install service successfully\n");
 
   return 0;
 }
