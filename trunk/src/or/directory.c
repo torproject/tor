@@ -275,11 +275,11 @@ int connection_dir_process_inbuf(connection_t *conn) {
             /* alice's ap_stream is just going to have to time out. */
           } else {
             /* success. notify pending connections about this. */
-            //alice_notify_desc_fetched(conn->rend_query);
+            rend_client_desc_fetched(conn->rend_query);
           }
           break;
         case 404:
-          //alice_notify_desc_not_fetched(conn->rend_query);
+          rend_client_desc_not_fetched(conn->rend_query);
           break;
         case 400:
           log_fn(LOG_WARN,"http status 400 (bad request). Dirserver didn't like our rendezvous query?");

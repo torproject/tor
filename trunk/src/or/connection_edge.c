@@ -9,10 +9,7 @@ extern or_options_t options; /* command-line and config-file options */
 extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
-static int connection_ap_handshake_attach_circuit(connection_t *conn,
-                                                  int must_be_clean);
-static int connection_ap_handshake_attach_circuit_helper(connection_t *conn,
-                                                         int must_be_clean);
+static int connection_ap_handshake_attach_circuit(connection_t *conn);
 static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
@@ -377,9 +374,10 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         memcpy(&addr, cell->payload+RELAY_HEADER_SIZE+1, 4);
         addr = ntohl(addr);
         client_dns_set_entry(conn->socks_request->address, addr);
+        /* conn->purpose is still set to general */
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
         /* attaching to a dirty circuit is fine */
-        if(connection_ap_handshake_attach_circuit(conn, 0) >= 0)
+        if(connection_ap_handshake_attach_circuit(conn) >= 0)
           return 0;
         /* else, conn will get closed below */
       }
@@ -639,6 +637,7 @@ void connection_ap_expire_beginning(void) {
       conn->has_sent_end = 0;
       /* move it back into 'pending' state. */
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+      /* conn->purpose is still set to general */
       circuit_detach_stream(circ, conn);
       /* kludge to make us not try this circuit again, yet to allow
        * current streams on it to survive if they can: make it
@@ -648,7 +647,7 @@ void connection_ap_expire_beginning(void) {
       /* give our stream another 15 seconds to try */
       conn->timestamp_lastread += 15;
       /* attaching to a dirty circuit is fine */
-      if(connection_ap_handshake_attach_circuit(conn,0)<0) {
+      if(connection_ap_handshake_attach_circuit(conn)<0) {
         /* it will never work */
         /* Don't need to send end -- we're not connected */
         connection_mark_for_close(conn, 0);
@@ -672,7 +671,7 @@ void connection_ap_attach_pending(void)
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
     /* attaching to a dirty circuit is fine */
-    if(connection_ap_handshake_attach_circuit(conn,0) < 0) {
+    if(connection_ap_handshake_attach_circuit(conn) < 0) {
       /* -1 means it will never work */
       /* Don't send end; there is no 'other side' yet */
       connection_mark_for_close(conn,0);
@@ -738,8 +737,9 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   if (rend_parse_rendezvous_address(socks->address) < 0) {
     /* normal request */
     conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+    conn->purpose = AP_PURPOSE_GENERAL;
     /* attaching to a dirty circuit is fine */
-    return connection_ap_handshake_attach_circuit(conn,0);
+    return connection_ap_handshake_attach_circuit(conn);
   } else {
     /* it's a hidden-service request */
     const char *descp;
@@ -747,59 +747,59 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 
     /* see if we already have it cached */
     if (rend_cache_lookup(socks->address, &descp, &desc_len) == 1) {
-      if(0){ //if a circuit already exists to this place, use it
-
-      } else {
-        /* go into some other state maybe? */
-        /* then launch a rendezvous circuit */
-        circuit_launch_new(CIRCUIT_PURPOSE_C_ESTABLISH_REND, NULL);
-      }
+      conn->purpose = AP_PURPOSE_RENDPOINT_WAIT;
+      return connection_ap_handshake_attach_circuit(conn);
+      //circuit_launch_new(CIRCUIT_PURPOSE_C_ESTABLISH_REND, NULL);
     } else {
+      conn->purpose = AP_PURPOSE_RENDDESC_WAIT;
       /* initiate a dir hidserv desc lookup */
-      /* go into a state where you'll be notified of the answer */
+      directory_initiate_command(router_pick_directory_server(),
+                                 DIR_PURPOSE_FETCH_RENDDESC,
+                                 socks->address, strlen(socks->address));
+      return 0;
     }
   }
   return 0;
 }
 
-static int connection_ap_handshake_attach_circuit(connection_t *conn,
-                                                  int must_be_clean) {
-  /* try attaching. launch new circuit if needed.
-   * return -1 if conn needs to die, else 0. */
-  switch(connection_ap_handshake_attach_circuit_helper(conn, must_be_clean)) {
-    case -1: /* it will never work */
-      return -1;
-    case 0: /* no useful circuits available */
-      if(!circuit_get_newest(conn, 0, must_be_clean)) {
-        /* is one already on the way? */
-        circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
-      }
-      return 0;
-    default: /* case 1, it succeeded, great */
-      return 0;
-  }
-}
-
 /* Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
  * we don't find one: if conn cannot be handled by any known nodes,
- * warn and return -1; else tell conn to stop reading and return 0.
- * Otherwise, associate conn with a safe live circuit, start
- * sending a BEGIN cell down the circuit, and return 1.
+ * warn and return -1 (conn needs to die);
+ * else launch new circuit and return 0.
+ * Otherwise, associate conn with a safe live circuit, do the
+ * right next step, and return 1.
  */
-static int connection_ap_handshake_attach_circuit_helper(connection_t *conn,
-                                                         int must_be_clean) {
+static int connection_ap_handshake_attach_circuit(connection_t *conn) {
   circuit_t *circ;
   uint32_t addr;
+  int must_be_clean;
+  uint8_t desired_circuit_purpose;
 
   assert(conn);
   assert(conn->type == CONN_TYPE_AP);
   assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   assert(conn->socks_request);
 
+  switch(conn->purpose) {
+    case AP_PURPOSE_GENERAL:
+    case AP_PURPOSE_RENDDESC_WAIT:
+      desired_circuit_purpose = CIRCUIT_PURPOSE_C_GENERAL;
+      break;
+    case AP_PURPOSE_RENDPOINT_WAIT:
+      desired_circuit_purpose = CIRCUIT_PURPOSE_C_ESTABLISH_REND;
+      break;
+    case AP_PURPOSE_INTROPOINT_WAIT:
+      desired_circuit_purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
+      break;
+    default:
+      assert(0); /* never reached */
+  }
+
   /* find the circuit that we should use, if there is one. */
-  circ = circuit_get_newest(conn, 1, must_be_clean);
+  circ = circuit_get_newest(conn, 1, desired_circuit_purpose);
 
   if(!circ) {
+//XXX
     log_fn(LOG_INFO,"No safe circuit ready for edge connection; delaying.");
     addr = client_dns_lookup_entry(conn->socks_request->address);
     if(router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
@@ -807,11 +807,12 @@ static int connection_ap_handshake_attach_circuit_helper(connection_t *conn,
              conn->socks_request->address, conn->socks_request->port);
       return -1;
     }
-    connection_stop_reading(conn); /* don't read until the connected cell arrives */
+    if(!circuit_get_newest(conn, 0, desired_circuit_purpose)) {
+      /* is one already on the way? */
+      circuit_launch_new(desired_circuit_purpose, NULL);
+    }
     return 0;
   }
-
-  connection_start_reading(conn);
 
   /* here, print the circ's path. so people can figure out which circs are sucking. */
   circuit_log_path(LOG_INFO,circ);
@@ -819,17 +820,24 @@ static int connection_ap_handshake_attach_circuit_helper(connection_t *conn,
   if(!circ->timestamp_dirty)
     circ->timestamp_dirty = time(NULL);
 
-  /* add it into the linked list of streams on this circuit */
-  log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
-  conn->next_stream = circ->p_streams;
-  /* assert_connection_ok(conn, time(NULL)); */
-  circ->p_streams = conn;
+  switch(conn->purpose) {
+    case AP_PURPOSE_GENERAL:
+    case AP_PURPOSE_RENDDESC_WAIT:
+      /* add it into the linked list of streams on this circuit */
+      log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
+      conn->next_stream = circ->p_streams;
+      /* assert_connection_ok(conn, time(NULL)); */
+      circ->p_streams = conn;
 
-  assert(circ->cpath && circ->cpath->prev);
-  assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
-  conn->cpath_layer = circ->cpath->prev;
+      assert(circ->cpath && circ->cpath->prev);
+      assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
+      conn->cpath_layer = circ->cpath->prev;
 
-  connection_ap_handshake_send_begin(conn, circ);
+      connection_ap_handshake_send_begin(conn, circ);
+      break;
+    case AP_PURPOSE_RENDPOINT_WAIT:
+    case AP_PURPOSE_INTROPOINT_WAIT:
+  }
 
   return 1;
 }
@@ -894,11 +902,6 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_CONNECT_WAIT;
-  /* XXX Right now, we rely on the socks client not to send us any data
-   * XXX until we've sent back a socks reply.  (If it does, we could wind
-   * XXX up packaging that data and sending it to the exit, then later having
-   * XXX the exit refuse us.)
-   */
   log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
   return;
 }
@@ -947,7 +950,7 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   connection_start_reading(conn);
 
   /* attaching to a dirty circuit is fine */
-  if (connection_ap_handshake_attach_circuit(conn, 0) < 0) {
+  if (connection_ap_handshake_attach_circuit(conn) < 0) {
     connection_mark_for_close(conn, 0);
     close(fd[1]);
     return -1;

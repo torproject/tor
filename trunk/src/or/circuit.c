@@ -255,34 +255,56 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
  * If !conn, return newest.
  *
  * If must_be_open, ignore circs not in CIRCUIT_STATE_OPEN.
- * If must_be_clean, ignore circs that have been used before.
+ *
+ * circ_purpose specifies what sort of circuit we must have.
+ * If circ_purpose is not GENERAL, then conn must be defined.
  */
 circuit_t *circuit_get_newest(connection_t *conn,
-                              int must_be_open, int must_be_clean) {
+                              int must_be_open, uint8_t circ_purpose) {
   circuit_t *circ, *newest=NULL, *leastdirty=NULL;
   routerinfo_t *exitrouter;
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
     if (!circ->cpath)
       continue; /* this circ doesn't start at us */
-    if (circ->purpose != CIRCUIT_PURPOSE_C_GENERAL)
-      continue; /* don't pick rendezvous circuits */
     if (must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_conn))
       continue; /* ignore non-open circs */
     if (circ->marked_for_close)
       continue;
+
+    if (circ->purpose != circ_purpose)
+      continue;
+
+#if 0
     if (must_be_clean && circ->timestamp_dirty)
       continue; /* ignore dirty circs */
+#endif
+
     if(conn) {
+      /* decide if this circ is suitable for this conn */
+
       if(circ->state == CIRCUIT_STATE_OPEN && circ->n_conn) /* open */
-        exitrouter = router_get_by_addr_port(circ->cpath->prev->addr, circ->cpath->prev->port);
+        exitrouter = router_get_by_addr_port(circ->cpath->prev->addr,
+                                             circ->cpath->prev->port);
       else /* not open */
         exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
-      if(!exitrouter || connection_ap_can_use_exit(conn, exitrouter) == ADDR_POLICY_REJECTED) {
-        /* can't exit from this router */
-        continue;
+
+      if(!exitrouter)
+        continue; /* this circuit is screwed and doesn't know it yet */
+
+      if(circ_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+        if(connection_ap_can_use_exit(conn, exitrouter) == ADDR_POLICY_REJECTED) {
+          /* can't exit from this router */
+          continue;
+        }
+      } else { /* not general */
+        if(rend_cmp_service_ids(conn->socks_request->address, circ->rend_service)) {
+          /* this circ is not for this conn */
+          continue;
+        }
       }
     }
+
     if(!newest || newest->timestamp_created < circ->timestamp_created) {
       newest = circ;
     }
@@ -1033,11 +1055,11 @@ static void circuit_is_ready(circuit_t *circ) {
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
       /* at Alice, connecting to intro point */
-      // alice sends introduce1 relay cell
+      rend_client_intro_is_ready(circ);
       break;
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       /* at Alice, waiting for Bob */
-      // alice launches a circuit to bob's intro point
+      rend_client_rendezvous_is_ready(circ);
       break;
     case CIRCUIT_PURPOSE_S_CONNECT_REND:
       /* at Bob, connecting to rend point */
@@ -1246,9 +1268,6 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       }
       circuit_rep_hist_note_result(circ);
       circuit_is_ready(circ); /* do other actions as necessary */
-      /* Tell any AP connections that have been waiting for a new
-       * circuit that one is ready. */
-      connection_ap_attach_pending();
       return 0;
     } else if (r<0) {
       log_fn(LOG_INFO,"Unable to extend circuit path.");
