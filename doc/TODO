@@ -32,8 +32,8 @@ Bugs:
         . fix buffer unit test so it passes
 
 Short-term:
-        - add in 'notice' log level
-        - make recommendedversions different for clients and servers.
+        o add in 'notice' log level
+        X make recommendedversions different for clients and servers.
           e.g. C0.0.3 vs S0.0.3?
         o put IP into the descriptor, so clients don't need to resolve things
         o when you hup, rewrite the router.desc file (and maybe others)
@@ -133,7 +133,7 @@ Rendezvous service:
               points, and can look up circuits by location-hidden service
             o OPs send/handle BEGIN cells for location-hidden services
             o End-to-end communication for location-hidden services
-        - a section in the man pages: how to configure hidden services
+        o a section in the man pages: how to configure hidden services
         o let bob use himself as a rendezvous point
         o let bob choose himself as intro point
         o let bob replenish his intro points and republish
@@ -153,6 +153,12 @@ Rendezvous service:
           num_failed circs, to prevent madness when we're offline (But
           don't count failed rend circs toward Bob's total, or Alice
           can bork him.)
+        o deal with edge_type in connection_edge.c
+        - retry end for certain reasons (resolvefailed, policyfailed)
+        - preemptively build and start rendezvous circs
+        - preemptively build n-1 hops of intro circs?
+        - (n)ack introduction requests?
+        - cannibalize general circs?
 
 On-going
         . Better comments for functions!
@@ -162,9 +168,9 @@ On-going
         . Update the spec so it matches the code
 
 Mid-term:
-	o Refactor: add own routerinfo to routerlist.  Right now, only
-	  router_get_by_nickname knows about 'this router', as a hack to
-	  get circuit_launch_new to do the right thing.
+        o Refactor: add own routerinfo to routerlist.  Right now, only
+          router_get_by_nickname knows about 'this router', as a hack to
+          get circuit_launch_new to do the right thing.
         - Rotate tls-level connections -- make new ones, expire old ones.
           So we get actual key rotation, not just symmetric key rotation
         o Are there anonymity issues with sequential streamIDs? Sequential
@@ -253,18 +259,6 @@ For 0.0.2pre17:
         D increase RSA key length
         D Spec the stream_id stuff. Clarify that nobody on the backward
           stream should look at stream_id.
-
-Cell:
-        ACI (anonymous circuit identifier)    [2 bytes]
-        Command                               [1 byte]
-        Payload (padded with 0 bytes)         [509 bytes]
-
-Relay payload:
-        Relay command           [1 byte]
-        Stream ID               [7 bytes]
-        Partial SHA-1           [4 bytes]
-        Length                  [2 bytes]
-        Relay payload           [495 bytes]
 
 For 0.0.2pre15:
         o don't pick exit nodes which will certainly reject all things.
