@@ -24,15 +24,15 @@
 #error "It seems your platform does not represent NULL as zero. We can't cope."
 #endif
 
-#ifdef HAVE_WINSOCK_H
+#ifdef MS_WINDOWS
+#if (_MSC_VER <= 1300)
 #include <winsock.h>
-#endif
-#if _MSC_VER > 1300
+#else
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#elif defined(_MSC_VER)
-#include <winsock.h>
 #endif
+#endif
+
 #if !defined(HAVE_GETTIMEOFDAY) && !defined(HAVE_STRUCT_TIMEVAL_TV_SEC)
 struct timeval {
   time_t tv_sec;

@@ -51,7 +51,7 @@ setup_directory()
   if (is_setup) return;
 
   sprintf(temp_dir, "/tmp/tor_test_%d", (int) getpid());
-#ifdef _MSC_VER
+#ifdef MS_WINDOWS
   r = mkdir(temp_dir);
 #else
   r = mkdir(temp_dir, 0700);
