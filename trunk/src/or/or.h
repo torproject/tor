@@ -247,11 +247,12 @@
 #define RELAY_COMMAND_ESTABLISH_RENDEZVOUS 33
 #define RELAY_COMMAND_INTRODUCE1 34
 #define RELAY_COMMAND_INTRODUCE2 35
-#define RELAY_COMMAND_RENDEZVOUS1 36
-#define RELAY_COMMAND_RENDEZVOUS2 37
+#define RELAY_COMMAND_INTRODUCE_ACK 36
+#define RELAY_COMMAND_RENDEZVOUS1 37
+#define RELAY_COMMAND_RENDEZVOUS2 38
 /* DOCDOC Spec these next two. */
-#define RELAY_COMMAND_INTRO_ESTABLISHED 38
-#define RELAY_COMMAND_RENDEZVOUS_ESTABLISHED 39
+#define RELAY_COMMAND_INTRO_ESTABLISHED 39
+#define RELAY_COMMAND_RENDEZVOUS_ESTABLISHED 40
 
 #define _MIN_END_STREAM_REASON 1
 #define END_STREAM_REASON_MISC 1
@@ -1057,6 +1058,7 @@ void rep_hist_dump_stats(time_t now, int severity);
 
 void rend_client_introcirc_is_open(circuit_t *circ);
 void rend_client_rendcirc_is_open(circuit_t *circ);
+int rend_client_introduction_acked(circuit_t *circ, const char *request, int request_len);
 int rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_len);
 int rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request_len);
 void rend_client_desc_fetched(char *query, int success);
