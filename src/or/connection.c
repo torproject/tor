@@ -319,30 +319,20 @@ void connection_expire_held_open(void)
 static int connection_create_listener(const char *bindaddress, uint16_t bindport, int type) {
   struct sockaddr_in bindaddr; /* where to bind */
   connection_t *conn;
-  char *hostname, *cp;
-  int usePort;
+  uint16_t usePort;
   int s; /* the socket we're going to make */
   int one=1;
 
-
-  cp = strchr(bindaddress, ':');
-  if (cp) {
-    hostname = tor_strndup(bindaddress, cp-bindaddress);
-    usePort = atoi(cp+1);
-  } else {
-    hostname = tor_strdup(bindaddress);
-    usePort = bindport;
-  }
-
   memset(&bindaddr,0,sizeof(struct sockaddr_in));
-  bindaddr.sin_family = AF_INET;
-  bindaddr.sin_port = htons((uint16_t) usePort);
-  if(tor_lookup_hostname(hostname, &(bindaddr.sin_addr.s_addr)) != 0) {
-    log_fn(LOG_WARN,"Can't resolve BindAddress %s",hostname);
-    tor_free(hostname);
+  if (parse_addr_port(bindaddress, NULL, &(bindaddr.sin_addr.s_addr),
+                      &usePort)<0) {
+    log_fn(LOG_WARN, "Error parsing/resolving BindAddress %s",bindaddress);
     return -1;
   }
-  tor_free(hostname);
+  if (usePort==0)
+    usePort = bindport;
+  bindaddr.sin_family = AF_INET;
+  bindaddr.sin_port = htons((uint16_t) usePort);
 
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {

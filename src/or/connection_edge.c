@@ -737,7 +737,8 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   connection_t *n_stream;
   relay_header_t rh;
-  char *colon;
+  char *address=NULL;
+  uint16_t port;
 
   assert_circuit_ok(circ);
   relay_header_unpack(&rh, cell->payload);
@@ -750,15 +751,13 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     log_fn(LOG_WARN,"relay begin cell has no \\0. Dropping.");
     return 0;
   }
-  colon = strchr(cell->payload+RELAY_HEADER_SIZE, ':');
-  if(!colon) {
-    log_fn(LOG_WARN,"relay begin cell has no colon. Dropping.");
+  if (parse_addr_port(cell->payload+RELAY_HEADER_SIZE, &address, NULL,&port)<0){
+    log_fn(LOG_WARN,"Unable to parse addr:port in relay begin cell. Dropping.");
     return 0;
   }
-  *colon = 0;
-
-  if(!atoi(colon+1)) { /* bad port */
-    log_fn(LOG_WARN,"relay begin cell has invalid port '%s'. Dropping.", colon+1);
+  if (port==0) {
+    log_fn(LOG_WARN,"Missing port in relay begin cell. Dropping.");
+    tor_free(address);
     return 0;
   }
 
@@ -767,7 +766,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   n_stream->purpose = EXIT_PURPOSE_CONNECT;
 
   n_stream->stream_id = rh.stream_id;
-  n_stream->port = atoi(colon+1);
+  n_stream->port = port;
   /* leave n_stream->s at -1, because it's not yet valid */
   n_stream->package_window = STREAMWINDOW_START;
   n_stream->deliver_window = STREAMWINDOW_START;
@@ -784,6 +783,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
       connection_edge_end(n_stream, END_STREAM_REASON_EXITPOLICY, n_stream->cpath_layer);
       connection_free(n_stream);
       circuit_mark_for_close(circ); /* knock the whole thing down, somebody screwed up */
+      tor_free(address);
       return 0;
     }
     assert_circuit_ok(circ);
@@ -796,9 +796,10 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     assert_circuit_ok(circ);
 
     connection_exit_connect(n_stream);
+    tor_free(address);
     return 0;
   }
-  n_stream->address = tor_strdup(cell->payload + RELAY_HEADER_SIZE);
+  n_stream->address = address;
   n_stream->state = EXIT_CONN_STATE_RESOLVEFAILED;
   /* default to failed, change in dns_resolve if it turns out not to fail */
 

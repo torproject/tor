@@ -127,9 +127,10 @@ static void add_service(rend_service_t *service)
  */
 static rend_service_port_config_t *parse_port_config(const char *string)
 {
-  int virtport, realport, r;
-  struct in_addr addr;
-  char *endptr, *colon, *addrstring;
+  int virtport;
+  uint16_t realport;
+  uint32_t addr;
+  char *endptr;
   rend_service_port_config_t *result;
 
   virtport = (int) strtol(string, &endptr, 10);
@@ -145,45 +146,28 @@ static rend_service_port_config_t *parse_port_config(const char *string)
   if (!*string) {
     /* No addr:port part; use default. */
     realport = virtport;
-    addr.s_addr = htonl(0x7F000001u); /* 127.0.0.1 */
-  } else {
-    colon = strchr(string, ':');
-    if (colon) {
-      /* Try to parse addr:port. */
-      addrstring = tor_strndup(string, colon-string);
-      r = tor_inet_aton(addrstring, &addr);
-      tor_free(addrstring);
-      if (!r) {
-        log_fn(LOG_WARN,"Unparseable address in hidden service port configuration");
-        return NULL;
-      }
-      realport = strtol(colon+1, &endptr, 10);
-      if (*endptr) {
-        log_fn(LOG_WARN,"Unparseable or missing port in hidden service port configuration.");
-        return NULL;
-      }
-    } else if (strchr(string, '.') && tor_inet_aton(string, &addr)) {
-      /* We have addr; use deafult port. */
-      realport = virtport;
-    } else {
-      /* No addr:port, no addr -- must be port. */
-      realport = strtol(string, &endptr, 10);
-      if (*endptr) {
-        log_fn(LOG_WARN, "Unparseable of missing port in hidden service port configuration.");
-        return NULL;
-      }
-      addr.s_addr = htonl(0x7F000001u); /* Default to 127.0.0.1 */
+    addr = 0x7F000001u; /* 127.0.0.1 */
+  } else if (strchr(string, ':') || strchr(string, '.')) {
+    if (parse_addr_port(string, NULL, &addr, &realport)<0) {
+      log_fn(LOG_WARN,"Unparseable address in hidden service port configuration");
+      return NULL;
     }
-  }
-  if (realport < 1 || realport > 65535) {
-    log_fn(LOG_WARN, "Port out of range in hidden service port configuration.");
-    return NULL;
+    if (!realport)
+      realport = virtport;
+  } else {
+    /* No addr:port, no addr -- must be port. */
+    realport = strtol(string, &endptr, 10);
+    if (*endptr) {
+      log_fn(LOG_WARN, "Unparseable of missing port in hidden service port configuration.");
+      return NULL;
+    }
+    addr = 0x7F000001u; /* Default to 127.0.0.1 */
   }
 
   result = tor_malloc(sizeof(rend_service_port_config_t));
   result->virtual_port = virtport;
   result->real_port = realport;
-  result->real_address = (uint32_t) ntohl(addr.s_addr);
+  result->real_address = addr;
   return result;
 }
 
