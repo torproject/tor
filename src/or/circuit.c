@@ -58,8 +58,9 @@ void circuit_remove(circuit_t *circ) {
 void circuit_close_all_marked()
 {
   circuit_t *tmp,*m;
-
+  
   while (global_circuitlist && global_circuitlist->marked_for_close) {
+    
     tmp = global_circuitlist->next;
     circuit_free(global_circuitlist);
     global_circuitlist = tmp;
@@ -1267,17 +1268,15 @@ void assert_circuit_ok(const circuit_t *c)
 
   assert(c);
   assert(c->magic == CIRCUIT_MAGIC);
-
+  
   return;
 
-  assert(c->n_addr);
-  assert(c->n_port);
-  assert(c->n_conn);
-  assert(c->n_conn->type == CONN_TYPE_OR);
+  if (c->n_conn)
+    assert(c->n_conn->type == CONN_TYPE_OR);
   if (c->p_conn)
     assert(c->p_conn->type == CONN_TYPE_OR);
   for (conn = c->p_streams; conn; conn = conn->next_stream)
-    assert(c->p_conn->type == CONN_TYPE_EXIT);
+    assert(c->p_conn->type == CONN_TYPE_AP);
   for (conn = c->n_streams; conn; conn = conn->next_stream)
     assert(conn->type == CONN_TYPE_EXIT);
 
@@ -1287,7 +1286,7 @@ void assert_circuit_ok(const circuit_t *c)
     if (c->cpath) {
       assert(!c->n_crypto);
       assert(!c->p_crypto);
-      assert(!c->n_digest);
+      assert(!c->n_digest); 
       assert(!c->p_digest);
     } else {
       assert(c->n_crypto);
