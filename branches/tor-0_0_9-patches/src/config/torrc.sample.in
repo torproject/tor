@@ -23,10 +23,12 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 AllowUnverifiedNodes middle,rendezvous
 
 ## Logs go to stdout at level "notice" unless redirected by something
-## else, like one of the below lines.
+## else, like one of the below lines. You can have as many log lines as
+## you want.
+##
 ## Send all messages of level 'warn' or higher to @LOCALSTATEDIR@/log/tor/warnings.log
 #Log warn file @LOCALSTATEDIR@/log/tor/warnings.log
-## Send all debug and info messages to @LOCALSTATEDIR@/log/tor/debug.log
+## Send only debug and info messages to @LOCALSTATEDIR@/log/tor/debug.log
 #Log debug-info file @LOCALSTATEDIR@/log/tor/debug.log
 ## Send ONLY debug messages to @LOCALSTATEDIR@/log/tor/debug.log
 #Log debug-debug file @LOCALSTATEDIR@/log/tor/debug.log
