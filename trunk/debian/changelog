@@ -1,10 +1,11 @@
-tor (0.0.7-2) unstable; urgency=low
+tor (0.0.7.1-1) unstable; urgency=medium
 
-  * NOT YET RELEASED
+  * New upstream release.
+    Fixes a bug that allows a remote crash on exit bugs.
   * Logrotate var/log/tor/*log instead of just var/log/tor/log, in
     case the admin wants several logs.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 15 Jun 2004 15:21:06 +0200
+ -- Peter Palfrader <weasel@debian.org>  Mon,  5 Jul 2004 19:18:12 +0200
 
 tor (0.0.7-1) unstable; urgency=low
 
