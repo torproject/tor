@@ -748,6 +748,7 @@ void connection_watch_events(connection_t *conn, short events);
 int connection_is_reading(connection_t *conn);
 void connection_stop_reading(connection_t *conn);
 void connection_start_reading(connection_t *conn);
+int connection_is_writing(connection_t *conn);
 void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
 
