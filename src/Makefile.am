@@ -3,5 +3,5 @@
 
 SUBDIRS =      common smtpap orkeygen httpap or
 DIST_SUBDIRS = common smtpap orkeygen httpap or
-
+EXTRA_DIST = config
 
