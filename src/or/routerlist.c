@@ -288,6 +288,10 @@ void routerlist_add_family(smartlist_t *sl, routerinfo_t *router) {
   }
 }
 
+/** List of string for nicknames we've warned about and haven't yet succeeded.
+ */
+static smartlist_t *warned_nicknames = NULL;
+
 /** Given a comma-and-whitespace separated list of nicknames, see which
  * nicknames in <b>list</b> name routers in our routerlist that are
  * currently running.  Add the routerinfos for those routers to <b>sl</b>.
@@ -303,25 +307,39 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_do
   tor_assert(sl);
 
   nickname_list = smartlist_create();
+  if (!warned_nicknames)
+    warned_nicknames = smartlist_create();
 
   smartlist_split_string(nickname_list, list, ",",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
 
   SMARTLIST_FOREACH(nickname_list, const char *, nick, {
+    int warned;
     if (!is_legal_nickname_or_hexdigest(nick)) {
       log_fn(LOG_WARN,"Nickname %s is misformed; skipping", nick);
       continue;
     }
     router = router_get_by_nickname(nick);
+    warned = smartlist_string_isin(warned_nicknames, nick);
     if (router) {
-      if (router->is_running)
+      if (router->is_running) {
         smartlist_add(sl,router);
-      else
-        log_fn(warn_if_down ? LOG_WARN : LOG_DEBUG,
-               "Nickname list includes '%s' which is known but down.",nick);
-    } else
-      log_fn(has_fetched_directory ? LOG_WARN : LOG_INFO,
-             "Nickname list includes '%s' which isn't a known router.",nick);
+        if (warned)
+          smartlist_string_remove(warned_nicknames, nick);
+      } else {
+        if (!warned) {
+          log_fn(warn_if_down ? LOG_WARN : LOG_DEBUG,
+                 "Nickname list includes '%s' which is known but down.",nick);
+          smartlist_add(warned_nicknames, tor_strdup(nick));
+        }
+      }
+    } else {
+      if (!warned) {
+        log_fn(has_fetched_directory ? LOG_WARN : LOG_INFO,
+               "Nickname list includes '%s' which isn't a known router.",nick);
+        smartlist_add(warned_nicknames, tor_strdup(nick));
+      }
+    }
   });
   SMARTLIST_FOREACH(nickname_list, char *, nick, tor_free(nick));
   smartlist_free(nickname_list);
@@ -733,6 +751,11 @@ void routerlist_free_current(void)
   if (routerlist)
     routerlist_free(routerlist);
   routerlist = NULL;
+  if (warned_nicknames) {
+    SMARTLIST_FOREACH(warned_nicknames, char *, cp, tor_free(cp));
+    smartlist_free(warned_nicknames);
+    warned_nicknames = NULL;
+  }
 }
 
 void free_trusted_dir_servers(void)
