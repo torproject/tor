@@ -11,6 +11,9 @@
 
 #include "or.h"
 
+/** Longest time to wait for a circuit before closing an AP connection */
+#define CONN_AP_MAX_ATTACH_DELAY 60
+
 /********* START VARIABLES **********/
 
 extern circuit_t *global_circuitlist; /* from circuitlist.c */
@@ -764,8 +767,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   tor_assert(conn->socks_request);
 
   conn_age = time(NULL) - conn->timestamp_created;
-  if(conn_age > 60) {
-    /* XXX make this cleaner than '60' */
+  if(conn_age > CONN_AP_MAX_ATTACH_DELAY) {
     log_fn(LOG_WARN,"Giving up on unattached conn (%d sec old).", conn_age);
     return -1;
   }
