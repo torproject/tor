@@ -244,4 +244,15 @@ int rend_cache_store(char *desc, int desc_len)
   return 0;
 }
 
+/* ==== General utility functions for rendezvous. */
+
+/* If address is of the form "y.onion" with a well-formed handle y,
+ * then put a '\0' after y and return 0.
+ * Else return -1 and change nothing.
+ */
+int rend_parse_rendezvous_address(char *address) {
+
+
+  return -1;
+}
 

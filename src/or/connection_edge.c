@@ -696,6 +696,7 @@ static void connection_edge_consider_sending_sendme(connection_t *conn) {
   }
 }
 
+/* return -1 if an unexpected error with conn, else 0. */
 static int connection_ap_handshake_process_socks(connection_t *conn) {
   socks_request_t *socks;
   int sockshere;
@@ -724,9 +725,27 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     return sockshere;
   } /* else socks handshake is done, continue processing */
 
-  conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-  /* attaching to a dirty circuit is fine */
-  return connection_ap_handshake_attach_circuit(conn,0);
+  /* this call _modifies_ socks->address iff it's a hidden-service request */
+  if (rend_parse_rendezvous_address(socks->address) < 0) {
+    /* normal request */
+    conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+    /* attaching to a dirty circuit is fine */
+    return connection_ap_handshake_attach_circuit(conn,0);
+  } else {
+    /* it's a hidden-service request */
+    const char *descp;
+    int desc_len;
+
+    /* see if we already have it cached */
+    if (rend_cache_lookup(socks->address, &descp, &desc_len) == 1) {
+      /* then pick and launch a rendezvous circuit */
+      /* go into some other state */
+    } else {
+      /* initiate a dir hidserv desc lookup */
+      /* go into a state where you'll be notified of the answer */
+    }
+  }
+  return 0;
 }
 
 static int connection_ap_handshake_attach_circuit(connection_t *conn,
