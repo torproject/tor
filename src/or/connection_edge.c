@@ -557,7 +557,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
   n_stream->address = tor_strdup(cell->payload + RELAY_HEADER_SIZE + STREAM_ID_SIZE);
   n_stream->port = atoi(colon+1);
   n_stream->state = EXIT_CONN_STATE_RESOLVING;
-  n_stream->s = -1; /* not yet valid */
+  /* leave n_stream->s at -1, because it's not yet valid */
   n_stream->package_window = STREAMWINDOW_START;
   n_stream->deliver_window = STREAMWINDOW_START;
   if(connection_add(n_stream) < 0) { /* no space, forget it */

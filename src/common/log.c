@@ -75,11 +75,6 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
   assert(format);
   if (severity < loglevel)
     return;
-  if (!logfiles) {
-    /* XXX This is a temporary measure until we get configuration support
-       for logfiles. */
-    add_stream_log(loglevel, "<stdout>", stdout);
-  }
   for (lf = logfiles; lf; lf = lf->next) {
     if (severity < lf->loglevel || severity > lf->max_loglevel)
       continue;

@@ -601,7 +601,8 @@ static int do_main_loop(void) {
   for(;;) {
 #ifndef MS_WIN32 /* do signal stuff only on unix */
     if(please_dumpstats) {
-      dumpstats(LOG_INFO);
+      /* prefer to log it at INFO, but make sure we always see it */
+      dumpstats(options.loglevel>LOG_INFO ? options.loglevel : LOG_INFO);
       please_dumpstats = 0;
     }
     if(please_reset) {
@@ -774,14 +775,21 @@ int tor_main(int argc, char *argv[]) {
     log_fn(LOG_ERR,"Reading config file failed. exiting.");
     return -1;
   }
-  log_set_severity(options.loglevel);     /* assign logging severity level from options */
+  log_set_severity(options.loglevel); /* assign logging severity level from options */
+  if(options.DebugLogFile)
+    add_file_log(LOG_DEBUG, options.DebugLogFile);
+  if(options.LogFile)
+    add_file_log(options.loglevel, options.LogFile);
+  if(!options.LogFile && !options.RunAsDaemon)
+    add_stream_log(options.loglevel, "<stdout>", stdout);
+
   global_read_bucket = options.TotalBandwidth; /* start it at 1 second of traffic */
   stats_prev_global_read_bucket = global_read_bucket;
 
   /* write our pid to the pid file */
   write_pidfile(options.PidFile);
 
-  if(options.Daemon)
+  if(options.RunAsDaemon)
     daemonize();
 
   if(options.OnionRouter) { /* only spawn dns handlers if we're a router */

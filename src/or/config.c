@@ -151,6 +151,8 @@ static void config_assign(or_options_t *options, struct config_line *list) {
 
     /* string options */
     config_compare(list, "LogLevel",       CONFIG_TYPE_STRING, &options->LogLevel) ||
+    config_compare(list, "LogFile",        CONFIG_TYPE_STRING, &options->LogFile) ||
+    config_compare(list, "DebugLogFile",   CONFIG_TYPE_STRING, &options->DebugLogFile) ||
     config_compare(list, "DataDirectory",  CONFIG_TYPE_STRING, &options->DataDirectory) ||
     config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
     config_compare(list, "PidFile",        CONFIG_TYPE_STRING, &options->PidFile) ||
@@ -171,10 +173,10 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "NumCpus",         CONFIG_TYPE_INT, &options->NumCpus) ||
 
     config_compare(list, "OnionRouter",     CONFIG_TYPE_BOOL, &options->OnionRouter) ||
-    config_compare(list, "Daemon",          CONFIG_TYPE_BOOL, &options->Daemon) ||
     config_compare(list, "TrafficShaping",  CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
     config_compare(list, "LinkPadding",     CONFIG_TYPE_BOOL, &options->LinkPadding) ||
     config_compare(list, "IgnoreVersion",   CONFIG_TYPE_BOOL, &options->IgnoreVersion) ||
+    config_compare(list, "RunAsDaemon",     CONFIG_TYPE_BOOL, &options->RunAsDaemon) ||
 
     /* float options */
     config_compare(list, "CoinWeight",     CONFIG_TYPE_DOUBLE, &options->CoinWeight)
@@ -201,7 +203,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   memset(options,0,sizeof(or_options_t));
   options->LogLevel = "info";
   options->ExitPolicy = "reject 127.0.0.1:*,reject 18.244.0.188:25,accept *:*";
-  options->loglevel = LOG_DEBUG;
+  options->loglevel = LOG_INFO;
   options->PidFile = "tor.pid";
   options->DataDirectory = NULL;
   options->CoinWeight = 0.1;
