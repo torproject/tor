@@ -137,13 +137,6 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
     return;
   }
 
-  circ = circuit_get_by_circ_id_conn(cell->circ_id, conn);
-
-  if (circ) {
-    log_fn(LOG_WARN,"received CREATE cell (circID %d) for known circ. Dropping.", cell->circ_id);
-    return;
-  }
-
   /* If the high bit of the circuit ID is not as expected, then switch
    * which half of the space we'll use for our own CREATE cells.
    *
@@ -158,6 +151,13 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
     log_fn(LOG_INFO, "Got a low circuit ID from %s (%d); switching to high circuit IDs.",
            conn->nickname ? conn->nickname : "client", conn->s);
     conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
+  }
+
+  circ = circuit_get_by_circ_id_conn(cell->circ_id, conn);
+
+  if (circ) {
+    log_fn(LOG_WARN,"received CREATE cell (circID %d) for known circ. Dropping.", cell->circ_id);
+    return;
   }
 
   circ = circuit_new(cell->circ_id, conn);
