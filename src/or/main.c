@@ -540,8 +540,6 @@ static int do_hup(void) {
     log_fn(LOG_ERR,"Error reloading rendezvous service keys");
     exit(1);
   }
-  /* We'll re-call rend_services_init after the new directory arrives.
-   * XXXX but what if we're the the directory? */
   if(retry_all_connections() < 0) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
@@ -552,6 +550,12 @@ static int do_hup(void) {
     log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
     if(dirserv_parse_fingerprint_file(keydir) < 0) {
       log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
+    }
+    /* Since we aren't fetching a directory, we won't retry rendezvous points
+     * when it gets in.  Try again now. */
+    if (rend_services_init()<0) {
+      log_fn(LOG_ERR,"Error updating rendezvous services");
+      return -1;
     }
   } else {
     /* fetch a new directory */
