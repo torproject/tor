@@ -744,9 +744,6 @@ static int do_hup(void) {
     if(dirserv_parse_fingerprint_file(keydir) < 0) {
       log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
     }
-    /* Since we aren't fetching a directory, we won't retry rendezvous points
-     * when it gets in.  Try again now. */
-    rend_services_introduce();
   }
   /* Fetch a new directory. Even authdirservers do this. */
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
