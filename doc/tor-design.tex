@@ -683,10 +683,20 @@ implement long-range dummies).
 
 We will talk more about each of these cell types below.
 
-% should there have been a table here? -RD
+% Nick: should there have been a table here? -RD
 
 \SubSection{Circuits and streams}
 \label{subsec:circuits}
+
+While the original Onion Routing design built one circuit for each stream,
+Tor circuits can be used by many streams. Thus because circuits can
+take several tenths of a second to construct due to crypto and network
+latency, users construct circuits preemptively. Users build a new circuit
+periodically (currently every minute) if the previous one has been used,
+and expire old used circuits that are no longer in use. Thus even very
+active users spend a negligible amount of time and CPU in building
+circuits, but only a limited number of requests can be linked to each
+other by a given exit node.
 
 Users set up circuits incrementally, negotiating a symmetric key with
 each hop one at a time. To create a new circuit, the user (call her
@@ -725,15 +735,43 @@ OR and an encrypted $g^x$ for it. That node copies the half-handshake
 into a \emph{create} cell, and passes it to the new OR to extend the
 circuit. When it responds with a \emph{created} cell, the penultimate OR
 copies the payload into a \emph{relay extended} cell and passes it back.
-% please fix my "that OR" pronouns -RD
+% Nick: please fix my "that OR" pronouns -RD
 
-Once Alice shares a key with each OR on the circuit, she can
-start opening TCP streams over it. 
+Once Alice has established the circuit (so she shares a key with each
+OR on the circuit), she can send relay cells.
+%The stream ID in the relay header indicates to which stream the cell belongs.
+% Nick: should i include the above line?
+Alice can address each relay cell to any of the ORs on the circuit. To
+construct a relay cell destined for a given OR, she iteratively
+encrypts the cell payload (that is, the relay header and payload)
+with the symmetric key of each hop up to that node. Then, at each hop
+down the circuit, the OR decrypts the cell payload and checks whether
+it recognizes the stream ID. A stream ID is recognized either if it
+is an already open stream at that OR, or if it is equal to zero. The
+zero stream ID is treated specially, and is used for control messages,
+e.g.  starting a new stream. If the stream ID is unrecognized, the OR
+sends the relay cell downstream. This \emph{leaky pipe} circuit design
+allows Alice's streams to exit at different ORs, for example to tolerate
+different exit policies, or to keep the ORs from knowing that two streams
+originate at the same person.
 
-Describe how circuits work and how relay cells get passed along,
-decrypted etc.  This will include mentioning leaky-pipe circuit
-topology and end-to-end integrity checking.  (Mention tagging.)
-Describe how circuits get built, extended, truncated.
+To tear down a circuit, Alice sends a destroy control cell. Each OR
+in the circuit receives the destroy cell, closes all open streams on
+that circuit, and passes a new destroy cell forward. But since circuits
+can be built incrementally, they can also be torn down incrementally:
+Alice can send a relay truncate cell to a node along the circuit. That
+node will send a destroy cell forward, and reply with a relay truncated
+acknowledgement. Alice might truncate her circuit so she can extend it
+to different nodes without notifying the first few nodes (or somebody
+observing them) that she is changing her circuit. That is, nodes in the
+middle are not even aware that the circuit was truncated, because the
+relay cells are encrypted. Similarly, if a node on the circuit goes down,
+the adjacent node can send a relay truncated back to Alice. Thus the
+``break a node and see which circuits go down'' attack is weakened.
+
+\SubSection{Tagging attacks on streams}
+
+end-to-end integrity checking.  (Mention tagging.)
 
 \SubSection{Opening and closing streams}
 \label{subsec:tcp}
@@ -744,6 +782,17 @@ close handshake.
 
 \SubSection{Congestion control and fairness}
 \label{subsec:congestion}
+
+Even with bandwidth throttling, we still need to worry about congestion,
+either accidental or intentional. If a lot of people make circuits into
+the same node, and they all come out through the same connection, then
+that connection may become saturated (be unable to send out cells as
+quickly as it wants to). For example, an adversary can make a 'put'
+request through the onion routing network to a webserver he owns,
+and then refuse to read any of the bytes at the webserver end of the
+circuit. These bottlenecks can propagate back through the entire network,
+mucking up everything.
+
 
 Describe circuit-level and stream-level
 congestion control issues and solutions.
@@ -997,7 +1046,7 @@ When establishing an introduction point, Bob provides the onion router
 with a public ``introduction'' key.  The hash of this public key
 identifies a unique service, and (since Bob is required to sign his
 messages) prevents anybody else from usurping Bob's introduction point
-in the future. Bob uses the same public key when establish the other
+in the future. Bob uses the same public key when establishing the other
 introduction points for that service.
 
 The blob that Alice gives the introduction point includes a hash of Bob's
@@ -1177,8 +1226,17 @@ trick you. similarly, when it rejects you due to exit policy,
 it could give you a bad IP that sends you somewhere else.
 \end{itemize}
 
+we rely on DNS being globally consistent. if people in africa resolve
+IPs differently, then asking to extend a circuit to a certain IP can
+give away your origin.
+
 \item \textbf{Directory attacks}
 \begin{itemize}
+\item knock out a dirserver
+\item knock out half the dirservers
+\item trick user into using different software (with different dirserver
+keys)
+\item OR connects to the dirservers but nowhere else
 \item foo
 \end{itemize}
 
