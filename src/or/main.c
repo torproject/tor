@@ -396,8 +396,6 @@ static int prepare_for_poll(void) {
 }
 
 static int init_from_config(int argc, char **argv) {
-  static int have_daemonized=0;
-
   if(getconfig(argc,argv,&options)) {
     log_fn(LOG_ERR,"Reading config failed. For usage, try -h.");
     return -1;
@@ -424,9 +422,9 @@ static int init_from_config(int argc, char **argv) {
     }
   }
 
-  if(options.RunAsDaemon && !have_daemonized) {
-    daemonize();
-    have_daemonized = 1;
+  if(options.RunAsDaemon) {
+    /* XXXX Can we delay this any more? */
+    finish_daemon();
   }
 
   /* write our pid to the pid file, if we do not have write permissions we will log a warning */
@@ -632,6 +630,10 @@ int tor_main(int argc, char *argv[]) {
 
   if (init_from_config(argc,argv) < 0)
     return -1;
+
+  if (options.RunAsDaemon) {
+    start_daemon();
+  }
 
   if(options.ORPort) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */

@@ -86,7 +86,19 @@ int tor_socketpair(int family, int type, int protocol, int fd[2]);
 
 const char *get_uname(void);
 
-void daemonize(void);
+/* Start putting the process into daemon mode: fork and drop all resources
+ * except standard fds.  The parent process never returns, but stays around
+ * until finish_daemon is called.  (Note: it's safe to call this more
+ * than once: calls after the first are ignored.)
+ */
+void start_daemon(void);
+/* Finish putting the process into daemon mode: drop standard fds, and tell
+ * the parent process to exit.  (Note: it's safe to call this more than once:
+ * calls after the first are ignored.  Calls start_daemon first if it hasn't
+ * been called already.)
+ */
+void finish_daemon(void);
+
 void write_pidfile(char *filename);
 int switch_id(char *user, char *group);
 
