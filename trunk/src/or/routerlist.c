@@ -30,7 +30,7 @@ typedef enum {
   K_SIGNED_DIRECTORY,
   K_SIGNING_KEY,
   K_ONION_KEY,
-  K_LINK_KEY,
+  K_LINK_KEY, /* XXXX obsolete */
   K_ROUTER_SIGNATURE,
   K_PUBLISHED,
   K_RUNNING_ROUTERS,
@@ -83,7 +83,7 @@ static struct {
   char *t; int v; arg_syntax s; obj_syntax os; where_syntax ws;
 } token_table[] = {
   { "accept", K_ACCEPT, ARGS, NO_OBJ, RTR_ONLY },
-  { "directory-signature", K_DIRECTORY_SIGNATURE, NO_ARGS, NEED_OBJ, DIR_ONLY},
+  { "directory-signature", K_DIRECTORY_SIGNATURE, ARGS, NEED_OBJ, DIR_ONLY},
   { "reject", K_REJECT, ARGS, NO_OBJ, RTR_ONLY },
   { "router", K_ROUTER, ARGS, NO_OBJ, RTR_ONLY },
   { "recommended-software", K_RECOMMENDED_SOFTWARE, ARGS, NO_OBJ, DIR_ONLY },
@@ -305,21 +305,6 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
-routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk)
-{
-  int i;
-  routerinfo_t *router;
-
-  assert(routerlist);
-
-  for(i=0;i<smartlist_len(routerlist->routers);i++) {
-    router = smartlist_get(routerlist->routers, i);
-    if (0 == crypto_pk_cmp_keys(router->link_pkey, pk))
-      return router;
-  }
-  return NULL;
-}
-
 routerinfo_t *router_get_by_nickname(char *nickname)
 {
   int i;
@@ -354,8 +339,6 @@ void routerinfo_free(routerinfo_t *router)
   tor_free(router->platform);
   if (router->onion_pkey)
     crypto_free_pk_env(router->onion_pkey);
-  if (router->link_pkey)
-    crypto_free_pk_env(router->link_pkey);
   if (router->identity_pkey)
     crypto_free_pk_env(router->identity_pkey);
   while (router->exit_policy) {
@@ -380,8 +363,6 @@ routerinfo_t *routerinfo_copy(const routerinfo_t *router)
   r->platform = tor_strdup(r->platform);
   if (r->onion_pkey)
     r->onion_pkey = crypto_pk_dup_key(r->onion_pkey);
-  if (r->link_pkey)
-    r->link_pkey = crypto_pk_dup_key(r->link_pkey);
   if (r->identity_pkey)
     r->identity_pkey = crypto_pk_dup_key(r->identity_pkey);
   e = &r->exit_policy;
@@ -949,10 +930,10 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   }
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
-  router->onion_pkey = router->identity_pkey = router->link_pkey = NULL;
+  router->onion_pkey = router->identity_pkey = NULL;
   ports_set = bw_set = 0;
 
-  if (tok->n_args == 2 || tok->n_args == 6) {
+  if (tok->n_args == 2 || tok->n_args == 5 || tok->n_args == 6) {
     router->nickname = tor_strdup(tok->args[0]);
     if (strlen(router->nickname) > MAX_NICKNAME_LEN) {
       log_fn(LOG_WARN,"Router nickname too long.");
@@ -966,15 +947,20 @@ routerinfo_t *router_get_entry_from_string(const char *s,
     router->address = tor_strdup(tok->args[1]);
     router->addr = 0;
 
-    if (tok->n_args == 6) {
+    if (tok->n_args >= 5) {
       router->or_port = atoi(tok->args[2]);
       router->socks_port = atoi(tok->args[3]);
       router->dir_port = atoi(tok->args[4]);
-      router->bandwidthrate = atoi(tok->args[5]);
-      ports_set = bw_set = 1;
+      ports_set = 1;
+      /* XXXX Remove this after everyone has moved to 0.0.6 */
+      if (tok->n_args == 6) {
+        router->bandwidthrate = atoi(tok->args[5]);
+        router->bandwidthburst = router->bandwidthrate * 10;
+        bw_set = 1;
+      }
     }
   } else {
-    log_fn(LOG_WARN,"Wrong # of arguments to \"router\"");
+    log_fn(LOG_WARN,"Wrong # of arguments to \"router\" (%d)",tok->n_args);
     goto err;
   }
 
@@ -998,11 +984,12 @@ routerinfo_t *router_get_entry_from_string(const char *s,
     log_fn(LOG_WARN,"Redundant bandwidth line");
     goto err;
   } else if (tok) {
-    if (tok->n_args < 1) {
+    if (tok->n_args < 2) {
       log_fn(LOG_WARN,"Not enough arguments to \"bandwidth\"");
       goto err;
     }
     router->bandwidthrate = atoi(tok->args[0]);
+    router->bandwidthburst = atoi(tok->args[1]);
     bw_set = 1;
   }
 
@@ -1020,12 +1007,9 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   router->onion_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
 
-  if (!(tok = find_first_by_keyword(tokens, K_LINK_KEY))) {
-    log_fn(LOG_WARN, "Missing onion key"); goto err;
+  if ((tok = find_first_by_keyword(tokens, K_LINK_KEY))) {
+    log_fn(LOG_INFO, "Skipping obsolete link-key"); goto err;
   }
-  /* XXX Check key length */
-  router->link_pkey = tok->key;
-  tok->key = NULL; /* Prevent free */
 
   if (!(tok = find_first_by_keyword(tokens, K_SIGNING_KEY))) {
     log_fn(LOG_WARN, "Missing onion key"); goto err;
@@ -1076,16 +1060,6 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   if (!router->platform) {
     router->platform = tor_strdup("<unknown>");
   }
-
-#if XXXBC
-  router->bandwidthburst = atoi(ARGS[6]);
-  if (!router->bandwidthburst) {
-    log_fn(LOG_WARN,"bandwidthburst unreadable or 0. Failing.");
-    goto err;
-  }
-#else
-  router->bandwidthburst = 10*router->bandwidthrate;
-#endif
 
   log_fn(LOG_DEBUG,"or_port %d, socks_port %d, dir_port %d, bandwidthrate %u, bandwidthburst %u.",
     router->or_port, router->socks_port, router->dir_port,

@@ -116,8 +116,6 @@ void connection_free(connection_t *conn) {
 
   if (conn->onion_pkey)
     crypto_free_pk_env(conn->onion_pkey);
-  if (conn->link_pkey)
-    crypto_free_pk_env(conn->link_pkey);
   if (conn->identity_pkey)
     crypto_free_pk_env(conn->identity_pkey);
   tor_free(conn->nickname);

@@ -11,12 +11,14 @@ extern or_options_t options; /* command-line and config-file options */
 /************************************************************/
 
 /* private keys */
+static time_t onionkey_set_at=0;
 static crypto_pk_env_t *onionkey=NULL;
-static crypto_pk_env_t *linkkey=NULL;
+static crypto_pk_env_t *lastonionkey=NULL;
 static crypto_pk_env_t *identitykey=NULL;
 
 void set_onion_key(crypto_pk_env_t *k) {
   onionkey = k;
+  onionkey_set_at = time(NULL);
 }
 
 crypto_pk_env_t *get_onion_key(void) {
@@ -24,15 +26,12 @@ crypto_pk_env_t *get_onion_key(void) {
   return onionkey;
 }
 
-void set_link_key(crypto_pk_env_t *k)
-{
-  linkkey = k;
+crypto_pk_env_t *get_previous_onion_key(void) {
+  return lastonionkey;
 }
 
-crypto_pk_env_t *get_link_key(void)
-{
-  assert(linkkey);
-  return linkkey;
+time_t get_onion_key_set_at(void) {
+  return onionkey_set_at;
 }
 
 void set_identity_key(crypto_pk_env_t *k) {
@@ -45,6 +44,46 @@ crypto_pk_env_t *get_identity_key(void) {
 }
 
 /************************************************************/
+
+/* Replace the previous onion key with the current onion key, and generate
+ * a new previous onion key.  Immediately after calling this function,
+ * the OR should:
+ *     a) shedule all previous cpuworker to shut down _after_ processing
+ *        pending work.  (This will cause fresh cpuworkers to be generated.)
+ *     b) generate and upload a fresh routerinfo.
+ */
+void rotate_onion_key(void)
+{
+  char fname[512];
+  crypto_pk_env_t *prkey;
+  sprintf(fname,"%s/keys/onion.key",options.DataDirectory);
+  if (!(prkey = crypto_new_pk_env())) {
+    log(LOG_ERR, "Error creating crypto environment.");
+    goto error;
+  }
+  if (crypto_pk_generate_key(onionkey)) {
+    log(LOG_ERR, "Error generating key: %s", crypto_perror());
+    goto error;
+  }
+  if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
+    log(LOG_ERR, "Couldn't write generated key to %s.", fname);
+    goto error;
+  }
+  if (lastonionkey)
+    crypto_free_pk_env(lastonionkey);
+  /* XXXX WINDOWS on windows, we need to protect this next bit with a lock.
+   */
+  lastonionkey = onionkey;
+  set_onion_key(prkey);
+  if (router_rebuild_descriptor() <0) {
+    goto error;
+  }
+  router_upload_dir_desc_to_dirservers();
+  /* Mark all CPU workers to close. */
+  return;
+ error:
+  log_fn(LOG_WARN, "Couldn't rotate onion key.");
+}
 
 /* Try to read an RSA key from 'fname'.  If 'fname' doesn't exist, create a new
  * RSA key and save it in 'fname'.  Return the read/created key, or NULL on
@@ -112,7 +151,7 @@ int init_keys(void) {
   /* OP's don't need keys.  Just initialize the TLS context.*/
   if (!options.ORPort) {
     assert(!options.DirPort);
-    if (tor_tls_context_new(NULL, 0, NULL)<0) {
+    if (tor_tls_context_new(NULL, 0, NULL, 0)<0) {
       log_fn(LOG_ERR, "Error creating TLS context for OP.");
       return -1;
     }
@@ -146,12 +185,10 @@ int init_keys(void) {
   set_onion_key(prkey);
 
   /* 3. Initialize link key and TLS context. */
-  strcpy(cp, "/link.key");
-  log_fn(LOG_INFO,"Reading/making link key %s...",keydir);
-  prkey = init_key_from_file(keydir);
-  if (!prkey) return -1;
-  set_link_key(prkey);
-  if (tor_tls_context_new(prkey, 1, options.Nickname) < 0) {
+  /* XXXX use actual rotation interval as cert lifetime, once we do
+   *  connection rotation. */
+  if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
+                          MAX_SSL_KEY_LIFETIME) < 0) {
     log_fn(LOG_ERR, "Error initializing TLS context");
     return -1;
   }
@@ -370,7 +407,6 @@ int router_rebuild_descriptor(void) {
   ri->dir_port = options.DirPort;
   ri->published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key());
-  ri->link_pkey = crypto_pk_dup_key(get_link_key());
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
   get_platform_str(platform, sizeof(platform));
   ri->platform = tor_strdup(platform);
@@ -403,13 +439,12 @@ void get_platform_str(char *platform, int len)
 int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key) {
   char *onion_pkey;
-  char *link_pkey;
   char *identity_pkey;
   struct in_addr in;
   char digest[20];
   char signature[128];
   char published[32];
-  int onion_pkeylen, link_pkeylen, identity_pkeylen;
+  int onion_pkeylen, identity_pkeylen;
   int written;
   int result=0;
   struct exit_policy_t *tmpe;
@@ -436,33 +471,28 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     return -1;
   }
 
-  if(crypto_pk_write_public_key_to_string(router->link_pkey,
-                                          &link_pkey,&link_pkeylen)<0) {
-    log_fn(LOG_WARN,"write link_pkey to string failed!");
-    return -1;
-  }
   strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&router->published_on));
 
+  /* XXXX eventually, don't include link key */
   result = snprintf(s, maxlen,
-                    "router %s %s %d %d %d %d\n"
+                    "router %s %s %d %d %d\n"
                     "platform %s\n"
                     "published %s\n"
+                    "bandwidth %d %d\n"
                     "onion-key\n%s"
-                    "link-key\n%s"
                     "signing-key\n%s",
     router->nickname,
     router->address,
     router->or_port,
     router->socks_port,
     router->dir_port,
-    (int) router->bandwidthrate,
-/* XXXBC also write bandwidthburst */
     router->platform,
     published,
-    onion_pkey, link_pkey, identity_pkey);
+    (int) router->bandwidthrate,
+    (int) router->bandwidthburst,
+    onion_pkey, identity_pkey);
 
   free(onion_pkey);
-  free(link_pkey);
   free(identity_pkey);
 
   if(result < 0 || result >= maxlen) {

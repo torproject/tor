@@ -437,8 +437,13 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
   /* These multiple strlcat calls are inefficient, but dwarfed by the RSA
      signature.
   */
-  if (strlcat(s, "directory-signature\n", maxlen) >= maxlen)
+  if (strlcat(s, "directory-signature ", maxlen) >= maxlen)
     goto truncated;
+  if (strlcat(s, options.Nickname, maxlen) >= maxlen)
+    goto truncated;
+  if (strlcat(s, "\n", maxlen) >= maxlen)
+    goto truncated;
+
 
   if (router_get_dir_hash(s,digest)) {
     log_fn(LOG_WARN,"couldn't compute digest");

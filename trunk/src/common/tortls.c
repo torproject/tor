@@ -23,8 +23,8 @@
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 
-/* How long do certificates live? (sec) */
-#define CERT_LIFETIME  (365*24*60*60)
+/* How long do identity certificates live? (sec) */
+#define IDENTITY_CERT_LIFETIME  (365*24*60*60)
 /* How much clock skew do we tolerate when checking certificates? (sec) */
 #define CERT_ALLOW_SKEW (90*60)
 
@@ -44,7 +44,10 @@ struct tor_tls_st {
 };
 
 static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
-                                        const char *nickname);
+                                        crypto_pk_env_t *rsa_sign,
+                                        const char *cname,
+                                        const char *cname_sign,
+                                        unsigned int lifetime);
 
 /* global tls context, keep it here because nobody else needs to touch it */
 static tor_tls_context *global_tls_context = NULL;
@@ -54,7 +57,7 @@ static int tls_library_is_initialized = 0;
 #define _TOR_TLS_ZERORETURN -5
 
 /* These functions are declared in crypto.c but not exported. */
-EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env);
+EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
 DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
 
@@ -129,26 +132,32 @@ static int always_accept_verify_cb(int preverify_ok,
 }
 
 /* Generate a self-signed certificate with the private key 'rsa' and
- * commonName 'nickname', and write it, PEM-encoded, to the file named
- * by 'certfile'.  Return 0 on success, -1 for failure.
+ * identity key 'identity and commonName 'nickname'.  Return a certificate
+ * on success, NULL on failure.
+ * DOCDOC
  */
 X509 *
 tor_tls_create_certificate(crypto_pk_env_t *rsa,
-                           const char *nickname)
+                           crypto_pk_env_t *rsa_sign,
+                           const char *cname,
+                           const char *cname_sign,
+                           unsigned int cert_lifetime)
 {
   time_t start_time, end_time;
-  EVP_PKEY *pkey = NULL;
+  EVP_PKEY *sign_pkey = NULL, *pkey=NULL;
   X509 *x509 = NULL;
-  X509_NAME *name = NULL;
+  X509_NAME *name = NULL, *name_issuer=NULL;
   int nid;
 
   tor_tls_init();
 
   start_time = time(NULL);
 
-  assert(rsa && nickname);
-  if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa)))
-    return NULL;
+  assert(rsa && cname && rsa_sign && cname_sign);
+  if (!(sign_pkey = _crypto_pk_env_get_evp_pkey(rsa_sign,1)))
+    goto error;
+  if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,0)))
+    goto error;
   if (!(x509 = X509_new()))
     goto error;
   if (!(X509_set_version(x509, 2)))
@@ -163,20 +172,29 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                    "TOR", -1, -1, 0))) goto error;
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
   if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
-                                   (char*)nickname, -1, -1, 0))) goto error;
-
-  if (!(X509_set_issuer_name(x509, name)))
-    goto error;
+                                   (char*)cname, -1, -1, 0))) goto error;
   if (!(X509_set_subject_name(x509, name)))
     goto error;
+
+  if (!(name_issuer = X509_NAME_new()))
+    goto error;
+  if ((nid = OBJ_txt2nid("organizationName")) == NID_undef) goto error;
+  if (!(X509_NAME_add_entry_by_NID(name_issuer, nid, MBSTRING_ASC,
+                                   "TOR", -1, -1, 0))) goto error;
+  if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
+  if (!(X509_NAME_add_entry_by_NID(name_issuer, nid, MBSTRING_ASC,
+                                (char*)cname_sign, -1, -1, 0))) goto error;
+  if (!(X509_set_issuer_name(x509, name_issuer)))
+    goto error;
+
   if (!X509_time_adj(X509_get_notBefore(x509),0,&start_time))
     goto error;
-  end_time = start_time + CERT_LIFETIME;
+  end_time = start_time + cert_lifetime;
   if (!X509_time_adj(X509_get_notAfter(x509),0,&end_time))
     goto error;
   if (!X509_set_pubkey(x509, pkey))
     goto error;
-  if (!X509_sign(x509, pkey, EVP_sha1()))
+  if (!X509_sign(x509, sign_pkey, EVP_sha1()))
     goto error;
 
   goto done;
@@ -186,10 +204,14 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
     x509 = NULL;
   }
  done:
+  if (sign_pkey)
+    EVP_PKEY_free(sign_pkey);
   if (pkey)
     EVP_PKEY_free(pkey);
   if (name)
     X509_NAME_free(name);
+  if (name_issuer)
+    X509_NAME_free(name_issuer);
   return x509;
 }
 
@@ -210,26 +232,37 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 #endif
 
 /* Create a new TLS context.  If we are going to be using it as a
- * server, it must have isServer set to true, certfile set to a
- * filename for a certificate file, and RSA set to the private key
- * used for that certificate. Return -1 if failure, else 0.
+ * server, it must have isServer set to true, 'identity' set to the
+ * identity key used to sign that certificate, and 'nickname' set to
+ * the server's nickname. Return -1 if failure, else 0.
  */
 int
-tor_tls_context_new(crypto_pk_env_t *rsa,
-                    int isServer, const char *nickname)
+tor_tls_context_new(crypto_pk_env_t *identity,
+                    int isServer, const char *nickname,
+                    unsigned int key_lifetime)
 {
+  crypto_pk_env_t *rsa = NULL;
   crypto_dh_env_t *dh = NULL;
   EVP_PKEY *pkey = NULL;
-  tor_tls_context *result;
-  X509 *cert = NULL;
+  tor_tls_context *result = NULL;
+  X509 *cert = NULL, *idcert = NULL;
+  char nn2[1024];
+  sprintf(nn2, "%s <identity>", nickname);
 
   tor_tls_init();
 
-  if (rsa) {
-    cert = tor_tls_create_certificate(rsa, nickname);
-    if (!cert) {
+  if (isServer) {
+    if (!(rsa = crypto_new_pk_env()))
+      goto error;
+    if (crypto_pk_generate_key(rsa)<0)
+      goto error;
+    cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
+                                      key_lifetime);
+    idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
+                                        IDENTITY_CERT_LIFETIME);
+    if (!cert || !idcert) {
       log(LOG_WARN, "Error creating certificate");
-      return -1;
+      goto error;
     }
   }
 
@@ -249,9 +282,12 @@ tor_tls_context_new(crypto_pk_env_t *rsa,
     goto error;
   if (cert && !SSL_CTX_use_certificate(result->ctx,cert))
     goto error;
+  if (idcert && !SSL_CTX_add_extra_chain_cert(result->ctx,idcert))
+    goto error;
   SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
-  if (rsa) {
-    if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa)))
+  if (isServer) {
+    assert(rsa);
+    if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,1)))
       goto error;
     if (!SSL_CTX_use_PrivateKey(result->ctx, pkey))
       goto error;
@@ -283,13 +319,15 @@ tor_tls_context_new(crypto_pk_env_t *rsa,
  error:
   if (pkey)
     EVP_PKEY_free(pkey);
+  if (rsa)
+    crypto_free_pk_env(rsa);
   if (dh)
     crypto_dh_free(dh);
   if (result && result->ctx)
     SSL_CTX_free(result->ctx);
   if (result)
     free(result);
-
+  /* leak certs XXXX ? */
   return -1;
 }
 
@@ -509,19 +547,19 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen)
 }
 
 /* If the provided tls connection is authenticated and has a
- * certificate that is currently valid and is correctly self-signed,
- * return its public key.  Otherwise return NULL.
+ * certificate that is currently valid and is correctly signed by
+ * identity_key, return 0.  Else, return -1.
  */
-crypto_pk_env_t *
-tor_tls_verify(tor_tls *tls)
+int
+tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
 {
   X509 *cert = NULL;
-  EVP_PKEY *pkey = NULL;
-  RSA *rsa = NULL;
+  EVP_PKEY *id_pkey = NULL;
   time_t now, t;
-  crypto_pk_env_t *r = NULL;
+  int r = -1;
+
   if (!(cert = SSL_get_peer_certificate(tls->ssl)))
-    return NULL;
+    return -1;
 
   now = time(NULL);
   t = now + CERT_ALLOW_SKEW;
@@ -536,33 +574,19 @@ tor_tls_verify(tor_tls *tls)
   }
 
   /* Get the public key. */
-  if (!(pkey = X509_get_pubkey(cert))) {
-    log_fn(LOG_WARN,"X509_get_pubkey returned null");
-    goto done;
-  }
-  if (X509_verify(cert, pkey) <= 0) {
+  if (!(id_pkey = _crypto_pk_env_get_evp_pkey(identity_key,0)) ||
+      X509_verify(cert, id_pkey) <= 0) {
     log_fn(LOG_WARN,"X509_verify on cert and pkey returned <= 0");
     goto done;
   }
 
-  rsa = EVP_PKEY_get1_RSA(pkey);
-  EVP_PKEY_free(pkey);
-  pkey = NULL;
-  if (!rsa) {
-    log_fn(LOG_WARN,"EVP_PKEY_get1_RSA(pkey) returned null");
-    goto done;
-  }
-
-  r = _crypto_new_pk_env_rsa(rsa);
-  rsa = NULL;
+  r = 0;
 
  done:
   if (cert)
     X509_free(cert);
-  if (pkey)
-    EVP_PKEY_free(pkey);
-  if (rsa)
-    RSA_free(rsa);
+  if (id_pkey)
+    EVP_PKEY_free(id_pkey);
   return r;
 }
 
