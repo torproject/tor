@@ -40,6 +40,7 @@
 %\fi
 
 \title{Tor: The Second-Generation Onion Router}
+% Putting the 'Private' back in 'Virtual Private Network'
 
 %\author{Roger Dingledine \\ The Free Haven Project \\ arma@freehaven.net \and
 %Nick Mathewson \\ The Free Haven Project \\ nickm@freehaven.net \and
@@ -52,14 +53,12 @@
 We present Tor, a circuit-based low-latency anonymous communication
 system. Tor is the successor to Onion Routing
 and addresses many limitations in the original Onion Routing design.
-Tor works in a real-world Internet environment,
-% it's user-space too
+Tor works in a real-world Internet environment, requires no special
+privileges such as root- or kernel-level access,
 requires little synchronization or coordination between nodes, and
-provides a reasonable tradeoff between anonymity and usability/efficiency
-%protects against known anonymity-breaking attacks as well
-%as or better than other systems with similar design parameters.
-% and we present a big list of open problems at the end
-% and we present a new practical design for rendezvous points
+provides a reasonable tradeoff between anonymity and usability/efficiency.
+We include a new practical design for rendezvous points, as well
+as a big list of open problems.
 \end{abstract}
 
 %\begin{center}
@@ -205,7 +204,7 @@ unreliable nodes in the first place.
 %We further provide a
 %simple mechanism that allows connections to be established despite recent
 %node failure or slightly dated information from a directory server. Tor
-%permits onion routers to have \emph{router twins} --- nodes that share
+%permits onion routers to have \emph{router twins}---nodes that share
 %the same private decryption key. Note that because connections now have
 %perfect forward secrecy, an onion router still cannot read the traffic
 %on a connection established through its twin even while that connection
@@ -364,6 +363,30 @@ next server in the circuit. Tor as described herein, Tarzan, MorphMix,
 Cebolla \cite{cebolla}, and AnonNet \cite{anonnet} build the circuit
 in stages, extending it one hop at a time. This approach makes perfect
 forward secrecy feasible.
+
+Circuit-based anonymity designs must choose which protocol layer
+to anonymize. They may choose to intercept IP packets directly, and
+relay them whole (stripping the source address) as the contents of
+the circuit \cite{tarzan:ccs02,freedom2-arch}.  Alternatively, like
+Tor, they may accept TCP streams and relay the data in those streams
+along the circuit, ignoring the breakdown of that data into TCP frames
+\cite{anonnet,morphmix:fc04}. Finally, they may accept application-level
+protocols (such as HTTP) and relay the application requests themselves
+along the circuit.  
+This protocol-layer decision represents a compromise between flexibility
+and anonymity.  For example, a system that understands HTTP can strip
+identifying information from those requests; can take advantage of caching
+to limit the number of requests that leave the network; and can batch
+or encode those requests in order to minimize the number of connections.
+On the other hand, an IP-level anonymizer can handle nearly any protocol,
+even ones unforeseen by their designers (though these systems require
+kernel-level modifications to some operating systems, and so are more
+complex and less portable). TCP-level anonymity networks like Tor present
+a middle approach: they are fairly application neutral (so long as the
+application supports, or can be tunneled across, TCP), but by treating
+application connections as data streams rather than raw TCP packets,
+they avoid the well-known inefficiencies of tunneling TCP over TCP
+\cite{tcp-over-tcp-is-bad}. [XXX what's a better cite?]
 
 Distributed-trust anonymizing systems need to prevent attackers from
 adding too many servers and thus compromising too many user paths.
@@ -768,7 +791,7 @@ more complex.
 Rather than doing integrity checking of the relay cells at each hop,
 which would increase packet size
 by a function of path length\footnote{This is also the argument against
-using recent cipher modes like EAX \cite{eax} --- we don't want the added
+using recent cipher modes like EAX \cite{eax}---we don't want the added
 message-expansion overhead at each hop, and we don't want to leak the path
 length (or pad to some max path length).}, we choose to
 % accept passive timing attacks, 
@@ -904,8 +927,9 @@ see Section~\ref{sec:maintaining-anonymity} for more discussion.
 Providing Tor as a public service provides many opportunities for an
 attacker to mount denial-of-service attacks against the network.  While
 flow control and rate limiting (discussed in
-section~\ref{subsec:congestion}) prevents users from consuming more
-bandwidth than nodes are willing to provide, opportunities remain for
+Section~\ref{subsec:congestion}) prevent users from consuming more
+bandwidth than routers are willing to provide, opportunities remain for
+users to
 consume more network resources than their fair share, or to render the
 network unusable for other users.
 
@@ -913,85 +937,44 @@ First of all, there are a number of CPU-consuming denial-of-service
 attacks wherein an attacker can force an OR to perform expensive
 cryptographic operations.  For example, an attacker who sends a
 \emph{create} cell full of junk bytes can force an OR to perform an RSA
-decrypt its half of the Diffie-Helman handshake.  Similarly, an attacker
+decrypt.  Similarly, an attacker can
 fake the start of a TLS handshake, forcing the OR to carry out its
 (comparatively expensive) half of the handshake at no real computational
 cost to the attacker.
 
-To address these attacks, several approaches exist.  First, ORs may
+Several approaches exist to address these attacks. First, ORs may
 demand proof-of-computation tokens \cite{hashcash} before beginning new
 TLS handshakes or accepting \emph{create} cells.  So long as these
 tokens are easy to verify and computationally expensive to produce, this
 approach limits the DoS attack multiplier.  Additionally, ORs may limit
 the rate at which they accept create cells and TLS connections, so that
-the computational work of doing so does not drown out the (comparatively
-inexpensive) work of symmetric cryptography needed to keep users'
-packets flowing.  This rate limiting could, however, allows an attacker
-to slow down other users as they build new circuits.
+the computational work of processing them does not drown out the (comparatively
+inexpensive) work of symmetric cryptography needed to keep cells
+flowing.  This rate limiting could, however, allows an attacker
+to slow down other users when they build new circuits.
 
 % What about link-to-link rate limiting?
 
-% This paragraph needs more references.
 More worrisome are distributed denial of service attacks wherein an
 attacker uses a large number of compromised hosts throughout the network
 to consume the Tor network's resources.  Although these attacks are not
 new to the networking literature, some proposed approaches are a poor
 fit to anonymous networks.  For example, solutions based on backtracking
-harmful traffic present a significant risk that an anonymity-breaking
-adversary could exploit the backtracking mechanism to compromise users'
-anonymity.  [XXX So, what should we say here? -NM]
-
-% Now would be a good point to talk about twins.   What the do, what
-% they can't.
+harmful traffic \cite{XXX} could allow an anonymity-breaking
+adversary to exploit the backtracking mechanism.
 
 Attackers also have an opportunity to attack the Tor network by mounting
-attacks on the hosts and network links running it. If an attacker can
-successfully disrupt a single circuit or link along a virtual circuit,
-all currently open streams passing along that part of the circuit
-become unrecoverable, and are closed.  The current Tor design treats
-such attacks as intermittent network failures, and depends on users and
-applications to respond or recover as appropriate.  A possible future
-design could use an end-to-end based TCP-like acknowledgment protocol,
-so that no streams are lost unless the entry or exit point themselves
-are disrupted.  This solution would require more buffering at exits,
-however, and its network properties still need to be investigated. [XXX
-  That sounds really evasive. We should say more.]
-
-%[XXX Mention that OR-to-OR connections should be highly reliable
-%  (whatever that means).  If they aren't, everything can stall.]
-
-%=====================
-% This stuff should go elsewhere.  Probably section 2.
-
-Channel-based anonymity designs must choose which protocol layer to
-anonymize.  They may choose to intercept IP packets directly, and relay
-them whole (stripping the source address) as the contents of the
-circuit \cite{tarzan:ccs02,freedom2-arch}.  Alternatively,
-they may
-accept TCP streams and relay the data in those streams along the
-circuit, ignoring the breakdown of that data into TCP frames. (Tor
-takes this approach, as does Rennhard's anonymity network \cite{anonnet}
-and MorphMix \cite{morphmix:fc04}.)  Finally, they may accept
-application-level protocols (such as HTTP) and relay the application
-requests themselves along the circuit.
-
-This protocol-layer decision represents a compromise between flexibility
-and anonymity.  For example, a system that understands HTTP can strip
-identifying information from those requests; can take advantage of
-caching to limit the number of requests that leave the network; and can
-batch or encode those requests in order to minimize the number of
-connections.  On the other hand, an IP-level anonymizer can handle
-nearly any protocol, even ones unforeseen by their designers.  TCP-level
-anonymity networks like Tor present a middle approach: they are fairly
-application neutral (so long as the application supports, or can be
-tunneled across, TCP), but by treating application connections as data
-streams rather than raw TCP packets, they avoid the well-known
-inefficiencies of tunneling TCP over TCP \cite{tcp-over-tcp-is-bad}.
-% Is there a better tcp-over-tcp-is-bad reference?
-
-%Also mention that weirdo IP trickery requires kernel patches to most
-%operating systems? -NM
-
+attacks on its hosts and network links. Disrupting a single circuit or
+link breaks all currently open streams passing along that part of the
+circuit. Indeed, this same loss of service occurs when a router crashes
+or its operator restarts it. The current Tor design treats such attacks
+as intermittent network failures, and depends on users and applications
+to respond or recover as appropriate. A future design could use an
+end-to-end based TCP-like acknowledgment protocol, so that no streams are
+lost unless the entry or exit point itself is disrupted. This solution
+would require more buffering at the network edges, however, and the
+performance and anonymity implications from this extra complexity still
+require investigation.
 
 \SubSection{Exit policies and abuse}
 \label{subsec:exitpolicies}
