@@ -778,9 +778,9 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     router->addr = 0;
 
     if (tok->n_args >= 5) {
-      router->or_port = atoi(tok->args[2]);
-      router->socks_port = atoi(tok->args[3]);
-      router->dir_port = atoi(tok->args[4]);
+      router->or_port = (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
+      router->socks_port = (uint16_t) tor_parse_long(tok->args[3],10,0,65535,NULL,NULL);
+      router->dir_port = (uint16_t) tor_parse_long(tok->args[4],10,0,65535,NULL,NULL);
       ports_set = 1;
     }
   } else {
@@ -797,9 +797,9 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
       log_fn(LOG_WARN,"Wrong # of arguments to \"ports\"");
       goto err;
     }
-    router->or_port = atoi(tok->args[0]);
-    router->socks_port = atoi(tok->args[1]);
-    router->dir_port = atoi(tok->args[2]);
+    router->or_port = tor_parse_long(tok->args[0],10,0,65535,NULL,NULL);
+    router->socks_port = tor_parse_long(tok->args[1],10,0,65535,NULL,NULL);
+    router->dir_port = tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
     ports_set = 1;
   }
 
@@ -811,7 +811,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
       log_fn(LOG_WARN,"Wrong # of arguments to \"dircacheport\"");
       goto err;
     }
-    router->dir_port = atoi(tok->args[0]);
+    router->dir_port = tor_parse_long(tok->args[0],10,1,65535,NULL,NULL);
   }
 
   tok = find_first_by_keyword(tokens, K_BANDWIDTH);
@@ -824,10 +824,10 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
       log_fn(LOG_WARN,"Not enough arguments to \"bandwidth\"");
       goto err;
     }
-    router->bandwidthrate = atoi(tok->args[0]);
-    router->bandwidthburst = atoi(tok->args[1]);
+    router->bandwidthrate = tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
+    router->bandwidthburst = tor_parse_long(tok->args[1],10,0,INT_MAX,NULL,NULL);
     if(tok->n_args > 2)
-      router->bandwidthcapacity = atoi(tok->args[2]);
+      router->bandwidthcapacity = tor_parse_long(tok->args[2],10,0,INT_MAX,NULL,NULL);
     bw_set = 1;
   }
 
@@ -835,7 +835,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     if (tok->n_args != 1) {
       log_fn(LOG_WARN, "Unrecognized number of args on K_UPTIME; skipping.");
     } else {
-      router->uptime = atol(tok->args[0]);
+      router->uptime = tor_parse_long(tok->args[0],10,0,LONG_MAX,NULL,NULL);
     }
   }
 
@@ -1003,7 +1003,7 @@ router_parse_exit_policy(directory_token_t *tok) {
   struct exit_policy_t*newe;
   struct in_addr in;
   char *arg, *address, *mask, *port, *endptr;
-  int bits;
+  int bits, ok;
 
   tor_assert(tok->tp == K_REJECT || tok->tp == K_ACCEPT);
 
@@ -1071,16 +1071,18 @@ router_parse_exit_policy(directory_token_t *tok) {
     newe->prt_max = 65535;
   } else {
     endptr = NULL;
-    newe->prt_min = (uint16_t) strtol(port, &endptr, 10);
+    newe->prt_min = (uint16_t) tor_parse_long(port, 10, 1, 65535,
+                                              NULL, &endptr);
     if (*endptr == '-') {
       port = endptr+1;
       endptr = NULL;
-      newe->prt_max = (uint16_t) strtol(port, &endptr, 10);
-      if (*endptr) {
+      newe->prt_max = (uint16_t) tor_parse_long(port, 10, 1, 65535, NULL,
+                                                &endptr);
+      if (*endptr || !newe->prt_max) {
       log_fn(LOG_WARN, "Malformed port %s on exit policy; rejecting.",
              port);
       }
-    } else if (*endptr) {
+    } else if (*endptr || !newe->prt_min) {
       log_fn(LOG_WARN, "Malformed port %s on exit policy; rejecting.",
              port);
       goto policy_read_failed;
