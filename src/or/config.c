@@ -4,8 +4,32 @@
 
 #include "or.h"
 
+/* enumeration of types which option values can take */
+#define CONFIG_TYPE_STRING  0
+#define CONFIG_TYPE_CHAR    1
+#define CONFIG_TYPE_INT     2
+#define CONFIG_TYPE_LONG    3
+#define CONFIG_TYPE_DOUBLE  4
+#define CONFIG_TYPE_BOOL    5
+
+#define CONFIG_LINE_MAXLEN 1024
+
+struct config_line {
+  char *key;
+  char *value;
+  struct config_line *next;
+};
+
+static FILE *config_open(const unsigned char *filename);
+static int config_close(FILE *f);
+static struct config_line *config_get_commandlines(int argc, char **argv);
+static struct config_line *config_get_lines(FILE *f);
+static void config_free_lines(struct config_line *front);
+static int config_compare(struct config_line *c, char *key, int type, void *arg);
+static void config_assign(or_options_t *options, struct config_line *list);
+
 /* open configuration file for reading */
-FILE *config_open(const unsigned char *filename) {
+static FILE *config_open(const unsigned char *filename) {
   assert(filename);
   if (strspn(filename,CONFIG_LEGAL_FILENAME_CHARACTERS) != strlen(filename)) {
     /* filename has illegal letters */
@@ -15,12 +39,12 @@ FILE *config_open(const unsigned char *filename) {
 }
 
 /* close configuration file */
-int config_close(FILE *f) {
+static int config_close(FILE *f) {
   assert(f);
   return fclose(f);
 }
 
-struct config_line *config_get_commandlines(int argc, char **argv) {
+static struct config_line *config_get_commandlines(int argc, char **argv) {
   struct config_line *new;
   struct config_line *front = NULL;
   char *s;
@@ -51,7 +75,7 @@ struct config_line *config_get_commandlines(int argc, char **argv) {
 
 /* parse the config file and strdup into key/value strings. Return list.
  * Warn and ignore mangled lines. */
-struct config_line *config_get_lines(FILE *f) {
+static struct config_line *config_get_lines(FILE *f) {
   struct config_line *new;
   struct config_line *front = NULL;
   char line[CONFIG_LINE_MAXLEN];
@@ -110,7 +134,7 @@ struct config_line *config_get_lines(FILE *f) {
   return front;
 }
 
-void config_free_lines(struct config_line *front) {
+static void config_free_lines(struct config_line *front) {
   struct config_line *tmp;
 
   while(front) {
@@ -123,7 +147,7 @@ void config_free_lines(struct config_line *front) {
   }
 }
 
-int config_compare(struct config_line *c, char *key, int type, void *arg) {
+static int config_compare(struct config_line *c, char *key, int type, void *arg) {
   int i;
 
   if(strncasecmp(c->key,key,strlen(c->key)))
@@ -154,7 +178,7 @@ int config_compare(struct config_line *c, char *key, int type, void *arg) {
   return 1;
 }
 
-void config_assign(or_options_t *options, struct config_line *list) {
+static void config_assign(or_options_t *options, struct config_line *list) {
 
   /* iterate through list. for each item convert as appropriate and assign to 'options'. */
 
