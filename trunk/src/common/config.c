@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.5  2002/07/15 19:05:12  montrose
+ * bug-fix. poptReadDefaultOptions() should find and load ~/.<cmd>rc files now.
+ *
  * Revision 1.4  2002/07/09 19:51:41  montrose
  * Miscellaneous bug fixes / activated "make check" for src/or
  *
@@ -403,9 +406,10 @@ RETURN VALUE: same as poptReadOptions()
    c = poptReadOptions(optCon,fname);
    if ( c == INT_MIN || c >= -1 )
    {
-      sprintf(fname,"~/.%src",cmd);
+      sprintf(fname,"%s/.%src",getenv("HOME"),cmd);
       c = poptReadOptions(optCon,fname);
    }
    return (c == INT_MIN) ? -1 : c;
 }
+
 
