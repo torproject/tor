@@ -66,7 +66,8 @@ int connection_edge_reached_eof(connection_t *conn) {
     connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
     connection_mark_for_close(conn);
   } else {
-    connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_END,
+    connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
+                                 RELAY_COMMAND_END,
                                  NULL, 0, conn->cpath_layer);
   }
   return 0;
@@ -195,7 +196,7 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
     payload_len += 4;
   }
 
-  circ = circuit_get_by_conn(conn);
+  circ = circuit_get_by_edge_conn(conn);
   if (circ && !circ->marked_for_close) {
     log_fn(LOG_DEBUG,"Marking conn (fd %d) and sending end.",conn->s);
     connection_edge_send_command(conn, circ, RELAY_COMMAND_END,
@@ -278,12 +279,12 @@ int connection_edge_finished_connecting(connection_t *conn)
     connection_start_writing(conn);
   /* deliver a 'connected' relay cell back through the circuit. */
   if (connection_edge_is_rendezvous_stream(conn)) {
-    if (connection_edge_send_command(conn, circuit_get_by_conn(conn),
+    if (connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
                                      RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
       return 0; /* circuit is closed, don't continue */
   } else {
     *(uint32_t*)connected_payload = htonl(conn->addr);
-    if (connection_edge_send_command(conn, circuit_get_by_conn(conn),
+    if (connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
         RELAY_COMMAND_CONNECTED, connected_payload, 4, conn->cpath_layer) < 0)
       return 0; /* circuit is closed, don't continue */
   }
@@ -328,7 +329,7 @@ void connection_ap_expire_beginning(void) {
       continue;
     if (now - conn->timestamp_lastread < 15)
       continue;
-    circ = circuit_get_by_conn(conn);
+    circ = circuit_get_by_edge_conn(conn);
     if (!circ) { /* it's vanished? */
       log_fn(LOG_INFO,"Conn is waiting (address %s), but lost its circ.",
              conn->socks_request->address);
@@ -1476,7 +1477,7 @@ connection_exit_connect(connection_t *conn) {
       router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.", conn->address, conn->port);
     connection_edge_end(conn, END_STREAM_REASON_EXITPOLICY, conn->cpath_layer);
-    circuit_detach_stream(circuit_get_by_conn(conn), conn);
+    circuit_detach_stream(circuit_get_by_edge_conn(conn), conn);
     connection_free(conn);
     return;
   }
@@ -1507,7 +1508,7 @@ connection_exit_connect(connection_t *conn) {
   switch (connection_connect(conn, conn->address, addr, port)) {
     case -1:
       connection_edge_end_errno(conn, conn->cpath_layer);
-      circuit_detach_stream(circuit_get_by_conn(conn), conn);
+      circuit_detach_stream(circuit_get_by_edge_conn(conn), conn);
       connection_free(conn);
       return;
     case 0:
@@ -1530,12 +1531,12 @@ connection_exit_connect(connection_t *conn) {
   /* also, deliver a 'connected' cell back through the circuit. */
   if (connection_edge_is_rendezvous_stream(conn)) { /* rendezvous stream */
     /* don't send an address back! */
-    connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
+    connection_edge_send_command(conn, circuit_get_by_edge_conn(conn), RELAY_COMMAND_CONNECTED,
                                  NULL, 0, conn->cpath_layer);
   } else { /* normal stream */
     /* This must be the original address, not the redirected address. */
     *(uint32_t*)connected_payload = htonl(conn->addr);
-    connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
+    connection_edge_send_command(conn, circuit_get_by_edge_conn(conn), RELAY_COMMAND_CONNECTED,
                                  connected_payload, 4, conn->cpath_layer);
   }
 }

@@ -1008,7 +1008,7 @@ int connection_edge_package_raw_inbuf(connection_t *conn, int package_partial) {
 
 repeat_connection_edge_package_raw_inbuf:
 
-  circ = circuit_get_by_conn(conn);
+  circ = circuit_get_by_edge_conn(conn);
   if (!circ) {
     log_fn(LOG_INFO,"conn has no circuit! Closing.");
     return -1;
@@ -1085,7 +1085,7 @@ void connection_edge_consider_sending_sendme(connection_t *conn) {
   if (connection_outbuf_too_full(conn))
     return;
 
-  circ = circuit_get_by_conn(conn);
+  circ = circuit_get_by_edge_conn(conn);
   if (!circ) {
     /* this can legitimately happen if the destroy has already
      * arrived and torn down the circuit */

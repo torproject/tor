@@ -324,7 +324,7 @@ circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn) {
 }
 
 /** DOCDOC */
-circuit_t *circuit_get_by_stream(connection_t *conn)
+circuit_t *circuit_get_by_edge_conn(connection_t *conn)
 {
   circuit_t *circ;
   connection_t *tmpconn;

@@ -501,7 +501,7 @@ void circuit_about_to_close_connection(connection_t *conn) {
        * been sent. But don't kill the circuit.
        */
 
-      circ = circuit_get_by_conn(conn);
+      circ = circuit_get_by_edge_conn(conn);
       if (!circ)
         return;
 
