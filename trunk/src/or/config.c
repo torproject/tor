@@ -1137,6 +1137,12 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
+  /* XXX might similarly want to check the other *BindAddress options */
+  if (options->ORPort == 0 && options->ORBindAddress != NULL) {
+    log(LOG_WARN, "ORPort must be defined if ORBindAddress is defined.");
+    result = -1;
+  }
+
   if (validate_data_directory(options)<0) {
     log(LOG_WARN, "Invalid DataDirectory");
     result = -1;
