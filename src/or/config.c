@@ -174,7 +174,7 @@ static config_var_t config_vars[] = {
   VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
   OBSOLETE("TrafficShaping"),
   VAR("User",                STRING,   User,                 NULL),
-  VAR("__ManageConnections", BOOL,     ManageConnections,    "1"),
+  VAR("__LeaveStreamsUnattached", BOOL,LeaveStreamsUnattached, "0"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR
