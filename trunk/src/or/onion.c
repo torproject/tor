@@ -713,7 +713,7 @@ onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes *
   if (len < 0)
     goto err;
 
-  /* send back H(K) as proof that we learned K. */
+  /* send back H(K|0) as proof that we learned K. */
   memcpy(handshake_reply_out+DH_KEY_LEN, key_material, 20);
 
   /* use the rest of the key material for our shared keys, digests, etc */
