@@ -10,6 +10,8 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/opensslv.h>
+#include <openssl/bn.h>
+#include <openssl/dh.h>
 
 #include <stdlib.h>
 #include <assert.h>
@@ -644,6 +646,120 @@ int crypto_SHA_digest(unsigned char *m, int len, unsigned char *digest)
   return (SHA1(m,len,digest) == NULL);
 }
 
+
+struct crypto_dh_env_st {
+  DH *dh;
+};
+
+static BIGNUM *dh_param_p = NULL;
+static BIGNUM *dh_param_g = NULL;
+
+
+static void init_dh_param() {
+  BIGNUM *p, *g;
+  int r;
+  if (dh_param_p && dh_param_g)
+    return;
+  
+  p = BN_new();
+  g = BN_new();
+  assert(p && g);
+
+  /* This is from draft-ietf-ipsec-ike-modp-groups-05.txt.  It's a safe
+     prime, and supposedly it equals:
+      2^1536 - 2^1472 - 1 + 2^64 * { [2^1406 pi] + 741804 }
+  */
+  r = BN_hex2bn(&p, 
+		"FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
+		"29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
+		"EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"
+		"E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
+		"EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D"
+		"C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F"
+		"83655D23DCA3AD961C62F356208552BB9ED529077096966D"
+		"670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF");
+  assert(r);
+
+  r = BN_set_word(g, 2);
+  assert(r);
+  dh_param_p = p;
+  dh_param_g = g;
+}
+
+crypto_dh_env_t *crypto_dh_new()
+{
+  crypto_dh_env_t *res = NULL;
+
+  if (!dh_param_p)
+    init_dh_param();
+    
+  if (!(res = malloc(sizeof(crypto_dh_env_t))))
+    goto err;
+  res->dh = NULL;
+
+  if (!(res->dh = DH_new()))
+    goto err;
+
+  if (!(res->dh->p = BN_dup(dh_param_p)))
+    goto err;
+
+  if (!(res->dh->g = BN_dup(dh_param_g)))
+    goto err;
+
+  return res;
+ err:
+  if (res && res->dh) DH_free(res->dh); /* frees p and g too */
+  if (res) free(res);
+  return NULL;
+}
+int crypto_dh_get_bytes(crypto_dh_env_t *dh)
+{
+  assert(dh);
+  return DH_size(dh->dh);
+}
+int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
+{
+  int bytes;
+  assert(dh);
+  if (!DH_generate_key(dh->dh))
+    return -1;
+  
+  assert(dh->dh->pub_key);
+  bytes = BN_num_bytes(dh->dh->pub_key);
+  if (pubkey_len < bytes)
+    return -1;
+  
+  memset(pubkey, 0, pubkey_len);
+  BN_bn2bin(dh->dh->pub_key, pubkey+(pubkey_len-bytes));
+
+  return 0;
+}
+int crypto_dh_compute_secret(crypto_dh_env_t *dh, 
+			     char *pubkey, int pubkey_len,
+			     char *secret_out)
+{
+  BIGNUM *pubkey_bn;
+  int secret_len;
+  assert(dh);
+  
+  if (!(pubkey_bn = BN_bin2bn(pubkey, pubkey_len, NULL)))
+    return -1;
+  
+  secret_len = DH_compute_key(secret_out, pubkey_bn, dh->dh);  
+  BN_free(pubkey_bn);
+  if (secret_len == -1)
+    return -1;
+
+  return 0;
+}
+void crypto_dh_free(crypto_dh_env_t *dh)
+{
+  assert(dh && dh->dh);
+  DH_free(dh->dh);
+  free(dh);
+}
+
+
 /* random numbers */
 int crypto_rand(unsigned int n, unsigned char *to)
 {
@@ -662,3 +778,4 @@ char *crypto_perror()
 {
   return (char *)ERR_reason_error_string(ERR_get_error());
 }
+

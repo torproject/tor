@@ -64,7 +64,19 @@ int crypto_pk_keysize(crypto_pk_env_t *env);
 
 int crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding);
 int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding);
-  
+
+/* Key negotiation */
+typedef struct crypto_dh_env_st crypto_dh_env_t;
+#define CRYPTO_DH_SIZE (1536 / 8)
+crypto_dh_env_t *crypto_dh_new();
+int crypto_dh_get_bytes(crypto_dh_env_t *dh);
+int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey_out, 
+			 int pubkey_out_len);
+int crypto_dh_compute_secret(crypto_dh_env_t *dh, 
+			     char *pubkey, int pubkey_len,
+			     char *secret_out);
+void crypto_dh_free(crypto_dh_env_t *dh);
+
 /* symmetric crypto */
 int crypto_cipher_generate_key(crypto_cipher_env_t *env);
 int crypto_cipher_set_iv(crypto_cipher_env_t *env, unsigned char *iv);
