@@ -112,6 +112,7 @@
 #define ACI_TYPE_HIGHER 1
 #define ACI_TYPE_BOTH 2
 
+#define _CONN_TYPE_MIN 3
 #define CONN_TYPE_OR_LISTENER 3
 #define CONN_TYPE_OR 4
 #define CONN_TYPE_EXIT 5
@@ -121,15 +122,18 @@
 #define CONN_TYPE_DIR 9
 #define CONN_TYPE_DNSWORKER 10
 #define CONN_TYPE_CPUWORKER 11
+#define _CONN_TYPE_MAX 3
 
 #define LISTENER_STATE_READY 0
 
 #define DNSWORKER_STATE_IDLE 0
 #define DNSWORKER_STATE_BUSY 1
 
+#define _CPUWORKER_STATE_MIN 0
 #define CPUWORKER_STATE_IDLE 0
 #define CPUWORKER_STATE_BUSY_ONION 1
 #define CPUWORKER_STATE_BUSY_HANDSHAKE 2
+#define _CPUWORKER_STATE_MAX 2
 
 #define CPUWORKER_TASK_ONION CPUWORKER_STATE_BUSY_ONION
 #define CPUWORKER_TASK_HANDSHAKE CPUWORKER_STATE_BUSY_HANDSHAKE
@@ -140,6 +144,7 @@
  * "I am acting as a bar, currently in stage baz of talking with a foo."
  */
 //#define OR_CONN_STATE_OP_CONNECTING 0 /* an application proxy wants me to connect to this OR */
+#define _OR_CONN_STATE_MIN 1
 #define OR_CONN_STATE_OP_SENDING_KEYS 1
 #define OR_CONN_STATE_CLIENT_CONNECTING 2 /* connecting to this OR */
 #define OR_CONN_STATE_CLIENT_SENDING_AUTH 3 /* sending address and info */
@@ -149,29 +154,38 @@
 #define OR_CONN_STATE_SERVER_SENDING_AUTH 7 /* writing auth and nonce */
 #define OR_CONN_STATE_SERVER_NONCE_WAIT 8 /* waiting for confirmation of nonce */
 #define OR_CONN_STATE_OPEN 9 /* ready to send/receive cells. */
+#define _OR_CONN_STATE_MAX 9
 #else
+#define _OR_CONN_STATE_MIN 0
 #define OR_CONN_STATE_CONNECTING 0 /* waiting for connect() to finish */
 #define OR_CONN_STATE_HANDSHAKING 1 /* SSL is handshaking, not done yet */
 #define OR_CONN_STATE_OPEN 2 /* ready to send/receive cells. */
+#define _OR_CONN_STATE_MAX 2
 #endif
 
+#define _EXIT_CONN_STATE_MIN 0
 #define EXIT_CONN_STATE_RESOLVING 0 /* waiting for response from dns farm */
 #define EXIT_CONN_STATE_CONNECTING 1 /* waiting for connect() to finish */
 #define EXIT_CONN_STATE_OPEN 2
+#define _EXIT_CONN_STATE_MAX 2
 #if 0
 #define EXIT_CONN_STATE_CLOSE 3 /* flushing the buffer, then will close */
 #define EXIT_CONN_STATE_CLOSE_WAIT 4 /* have sent a destroy, awaiting a confirmation */
 #endif
 
+#define _AP_CONN_STATE_MIN 3
 #define AP_CONN_STATE_SOCKS_WAIT 3
 #define AP_CONN_STATE_OR_WAIT 4
 #define AP_CONN_STATE_OPEN 5
+#define _AP_CONN_STATE_MAX 5
 
+#define _DIR_CONN_STATE_MIN 0
 #define DIR_CONN_STATE_CONNECTING 0
 #define DIR_CONN_STATE_SENDING_COMMAND 1
 #define DIR_CONN_STATE_READING 2
 #define DIR_CONN_STATE_COMMAND_WAIT 3
 #define DIR_CONN_STATE_WRITING 4
+#define _DIR_CONN_STATE_MAX 4
 
 #define CIRCUIT_STATE_BUILDING 0 /* I'm the OP, still haven't done all my handshakes */
 #define CIRCUIT_STATE_ONIONSKIN_PENDING 1 /* waiting to process the onion */
@@ -518,6 +532,10 @@ int circuit_extend(cell_t *cell, circuit_t *circ);
 int circuit_finish_handshake(circuit_t *circ, char *reply);
 int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
 
+void assert_cpath_ok(crypt_path_t *c);
+void assert_cpath_layer_ok(crypt_path_t *c);
+void assert_circuit_ok(circuit_t *c);
+
 /********************************* command.c ***************************/
 
 void command_process_cell(cell_t *cell, connection_t *conn);
@@ -563,6 +581,8 @@ int connection_send_destroy(aci_t aci, connection_t *conn);
 
 int connection_process_inbuf(connection_t *conn);
 int connection_finished_flushing(connection_t *conn);
+
+void assert_connection_ok(connection_t *conn, time_t now);
 
 /********************************* connection_edge.c ***************************/
 

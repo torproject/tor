@@ -765,6 +765,107 @@ int connection_finished_flushing(connection_t *conn) {
   }
 }
 
+void assert_connection_ok(connection_t *conn, time_t now)
+{
+  assert(conn);
+  assert(conn->type >= _CONN_TYPE_MIN);
+  assert(conn->type <= _CONN_TYPE_MAX);
+
+  /* XXX check: wants_to_read, wants_to_write, s, poll_index,
+   * marked_for_close. */
+  
+  /* buffers */
+  assert(conn->inbuf);
+  assert(conn->inbuflen <= conn->inbuf_datalen);
+  assert(conn->inbuflen >= 0);
+  assert(conn->inbuf_datalen > 0);
+  assert(conn->outbuf);
+  assert(conn->outbuflen <= conn->outbuf_datalen);
+  assert(conn->outbuflen >= 0);
+  assert(conn->outbuf_datalen > 0);
+
+  assert(!now || conn->timestamp_lastread <= now);
+  assert(!now || conn->timestamp_lastwritten <= now);
+  assert(conn->timestamp_created <= conn->timestamp_lastread);
+  assert(conn->timestamp_created <= conn->timestamp_lastwritten);
+  
+  if (conn->type != CONN_TYPE_OR) {
+    assert(conn->bandwidth == -1);
+    assert(conn->receiver_bucket == -1);
+    /* Addr, port, address XXX */
+    assert(!conn->pkey);
+    assert(!conn->tls);
+  } else {
+    assert(conn->bandwidth);
+    assert(conn->receiver_bucket >= 0);
+    assert(conn->receiver_bucket <= 10*conn->bandwidth);
+    assert(conn->addr && conn->port);
+    assert(conn->address);
+    assert(conn->pkey);
+#ifdef USE_TLS
+    if (conn->state != OR_CONN_STATE_CONNECTING)
+      assert(conn->tls);
+#endif
+  }
+  
+  if (conn->type != CONN_TYPE_EXIT) {
+    assert(!conn->stream_id[0]);
+    assert(!conn->next_stream);
+    assert(!conn->cpath_layer);
+    assert(!conn->package_window);
+    assert(!conn->deliver_window);
+    assert(!conn->done_sending);
+    assert(!conn->done_receiving);
+  } else {
+    assert(!conn->next_stream || 
+           conn->next_stream->type == CONN_TYPE_EXIT);
+    assert(conn->cpath_layer);
+    assert_cpath_layer_ok(conn->cpath_layer);
+    /* XXX unchecked, package window, deliver window. */
+  }
+
+  if (conn->type != CONN_TYPE_AP) {
+    assert(!conn->socks_version);
+    assert(!conn->read_username);
+    assert(!conn->dest_addr);
+    assert(!conn->dest_port);
+  }
+
+  switch(conn->type) 
+    {
+    case CONN_TYPE_OR_LISTENER:
+    case CONN_TYPE_AP_LISTENER:
+    case CONN_TYPE_DIR_LISTENER:
+      assert(conn->state == LISTENER_STATE_READY);
+      break;
+    case CONN_TYPE_OR:
+      assert(conn->state >= _OR_CONN_STATE_MIN &&
+             conn->state <= _OR_CONN_STATE_MAX);
+      break;
+    case CONN_TYPE_EXIT:
+      assert(conn->state >= _EXIT_CONN_STATE_MIN &&
+             conn->state <= _EXIT_CONN_STATE_MAX);
+      break;
+    case CONN_TYPE_AP:
+      assert(conn->state >= _AP_CONN_STATE_MIN &&
+             conn->state <= _AP_CONN_STATE_MAX);
+      break;
+    case CONN_TYPE_DIR:
+      assert(conn->state >= _DIR_CONN_STATE_MIN &&
+             conn->state <= _DIR_CONN_STATE_MAX);
+      break;
+    case CONN_TYPE_DNSWORKER:
+      assert(conn->state == DNSWORKER_STATE_IDLE ||
+             conn->state == DNSWORKER_STATE_BUSY);
+    case CONN_TYPE_CPUWORKER:
+      assert(conn->state >= _CPUWORKER_STATE_MIN &&
+             conn->state <= _CPUWORKER_STATE_MAX);
+      break;
+    default:
+      assert(0);
+  }
+}
+
 /*
   Local Variables:
   mode:c
