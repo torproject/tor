@@ -661,12 +661,12 @@ void circuit_close(circuit_t *circ) {
   if(circ->n_conn)
     connection_send_destroy(circ->n_circ_id, circ->n_conn);
   for(conn=circ->n_streams; conn; conn=conn->next_stream) {
-    connection_send_destroy(circ->n_circ_id, conn);
+    connection_edge_destroy(circ->n_circ_id, conn);
   }
   if(circ->p_conn)
     connection_send_destroy(circ->n_circ_id, circ->p_conn);
   for(conn=circ->p_streams; conn; conn=conn->next_stream) {
-    connection_send_destroy(circ->p_circ_id, conn);
+    connection_edge_destroy(circ->p_circ_id, conn);
   }
   if (circ->state == CIRCUIT_STATE_BUILDING ||
       circ->state == CIRCUIT_STATE_OR_WAIT) {

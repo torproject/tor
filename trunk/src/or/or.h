@@ -698,6 +698,7 @@ void assert_connection_ok(connection_t *conn, time_t now);
 void relay_header_pack(char *dest, const relay_header_t *src);
 void relay_header_unpack(relay_header_t *dest, const char *src);
 int connection_edge_process_inbuf(connection_t *conn);
+int connection_edge_destroy(uint16_t circ_id, connection_t *conn);
 int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer);
 
 int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command,
