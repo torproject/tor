@@ -124,7 +124,7 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
     else
       n += r;
   }
-  
+
   r = tor_vsnprintf(buf+n,buf_len-n,format,ap);
   if(r < 0) {
     n = buf_len-2;
@@ -412,7 +412,6 @@ int get_min_log_level(void)
   }
   return min;
 }
-
 
 /*
   Local Variables:

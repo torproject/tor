@@ -99,7 +99,6 @@ RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env);
 EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
 DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
 
-
 /** Return the number of bytes added by padding method <b>padding</b>.
  */
 static INLINE int
@@ -738,7 +737,6 @@ crypto_pk_private_sign_digest(crypto_pk_env_t *env, unsigned char *to,
     return -1;
   return crypto_pk_private_sign(env,to,digest,DIGEST_LEN);
 }
-
 
 /** Perform a hybrid (public/secret) encryption on <b>fromlen</b>
  * bytes of data from <b>from</b>, with padding type 'padding',

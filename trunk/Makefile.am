@@ -24,3 +24,11 @@ dist-rpm: dist
 
 doxygen:
 	doxygen && cd doc/doxygen/latex && make
+
+# Avoid strlcpy.c, strlcat.c, tree.h
+check-spaces:
+	./contrib/checkSpace.pl                \
+	        src/common/*.h                 \
+		src/common/[^s]*.c             \
+		src/or/[^t]*.[ch] src/or/t*.c
+

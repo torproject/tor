@@ -273,7 +273,6 @@ void routerlist_add_family(smartlist_t *sl, routerinfo_t *router) {
         });
     });
 
-
   for (cl = get_options()->NodeFamilies; cl; cl = cl->next) {
     if (router_nickname_is_in_list(router, cl->value)) {
       add_nickname_list_to_smartlist(sl, cl->value, 0);
@@ -835,7 +834,6 @@ routerlist_remove_old_routers(int age)
  * Code to parse router descriptors and directories.
  */
 
-
 /** Add to the current routerlist each router stored in the
  * signed directory <b>s</b>.  If pkey is provided, check the signature against
  * pkey; else check against the pkey of the signing directory server. */
@@ -1044,7 +1042,7 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
   all_routers = smartlist_create();
   if(me) /* learn if the dirservers think I'm verified */
     smartlist_add(all_routers, me);
-  
+
   smartlist_add_all(all_routers,list->routers);
   SMARTLIST_FOREACH(rr->running_routers, const char *, cp,
      routers_update_status_from_entry(all_routers, rr->published_on,
@@ -1060,10 +1058,10 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
  *          (running-routers format)
  *     <li> !<b>nickname</b> -- router is not-running and verified.
  *          (running-routers format)
- *     <li> <b>nickname</b>=$<b>hexdigest</b> -- router is running and 
+ *     <li> <b>nickname</b>=$<b>hexdigest</b> -- router is running and
  *          verified. (router-status format)
  *          (router-status format)
- *     <li> !<b>nickname</b>=$<b>hexdigest</b> -- router is running and 
+ *     <li> !<b>nickname</b>=$<b>hexdigest</b> -- router is running and
  *          verified. (router-status format)
  *     <li> !<b>nickname</b> -- router is not-running and verified.
  *     <li> $<b>hexdigest</b> -- router is running and unverified.

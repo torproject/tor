@@ -178,7 +178,6 @@ directory_get_from_dirserver(uint8_t purpose, const char *payload,
     log_fn(LOG_WARN,"No running dirservers known. Not trying. (purpose %d)", purpose);
 }
 
-
 /** Launch a new connection to the directory server <b>router</b> to upload or
  * download a service or rendezvous descriptor. <b>purpose</b> determines what
  * kind of directory connection we're launching, and must be one of
@@ -755,7 +754,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
       return 0;
     }
 
-    log_fn(LOG_DEBUG,"Dumping %sdirectory to client.", 
+    log_fn(LOG_DEBUG,"Dumping %sdirectory to client.",
            deflated?"deflated ":"");
     format_rfc1123_time(date, time(NULL));
     tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\nContent-Encoding: %s\r\n\r\n",

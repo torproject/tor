@@ -97,7 +97,6 @@
 #include <time.h>
 #endif
 
-
 #ifdef MS_WINDOWS
 #if (_MSC_VER <= 1300)
 #include <winsock.h>
@@ -718,7 +717,6 @@ typedef struct {
   /** How many times has building a circuit for this task failed? */
   int failure_count;
 } cpath_build_state_t;
-
 
 #define CIRCUIT_MAGIC 0x35315243u
 /** Struct for a path (circuit) through the onion routing network. */
@@ -1577,7 +1575,6 @@ int router_update_status_from_smartlist(routerinfo_t *r,
                                         int rr_format);
 void add_trusted_dir_server(const char *addr, uint16_t port,const char *digest);
 void clear_trusted_dir_servers(void);
-
 
 /********************************* routerparse.c ************************/
 

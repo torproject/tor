@@ -625,7 +625,6 @@ test_util(void) {
   test_eq(2, smartlist_len(sl));
   test_streq("efgh", smartlist_get(sl, 1));
 
-
   /* Test tor_strstrip() */
   strcpy(buf, "Testing 1 2 3");
   test_eq(0, tor_strstrip(buf, ",!"));
@@ -779,7 +778,7 @@ test_gzip(void)
   tor_free(buf1);
 }
 
-static void * 
+static void *
 _squareAndRemoveK4(const char *key, void*val, void *data)
 {
   int *ip = (int*)data;
@@ -867,7 +866,7 @@ test_strmap(void)
   strmap_free(map,NULL);
 }
 
-static void 
+static void
 test_onion(void)
 {
 #if 0
@@ -928,7 +927,6 @@ test_onion_handshake(void)
   test_memneq(c_keys, s_buf, 40);
   crypto_free_pk_env(pk);
 }
-
 
 static void
 test_dir_format(void)

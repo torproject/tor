@@ -33,7 +33,6 @@
 #endif
 #endif
 
-
 #if (SIZEOF_INT8_T != 0)
 #define HAVE_INT8_T
 #endif
@@ -87,7 +86,6 @@ typedef unsigned short uint16_t;
 #endif
 #endif
 
-
 #if (SIZEOF_INT == 2)
 #ifndef HAVE_INT16_T
 typedef signed int int16_t;
@@ -110,7 +108,6 @@ typedef unsigned int uint32_t;
 #define UINT32_MAX 0xffffffffu
 #endif
 #endif
-
 
 #if (SIZEOF_LONG == 4)
 #ifndef HAVE_INT32_T

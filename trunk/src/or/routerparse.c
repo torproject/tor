@@ -422,7 +422,7 @@ router_parse_routerlist_from_directory(const char *str,
    * router. */
   str = end;
   if (router_parse_list_from_string(&str, &new_dir,
-                                    good_nickname_list, 
+                                    good_nickname_list,
                                     tok->tp==K_RUNNING_ROUTERS,
                                     published_on)) {
     log_fn(LOG_WARN, "Error reading routers from directory");
@@ -736,7 +736,6 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
   return 0;
 }
 
-
 /** Helper function: reads a single router entry from *<b>s</b> ...
  * *<b>end</b>.  Mallocs a new router and returns it if all goes well, else
  * returns NULL.
@@ -895,7 +894,6 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
                       log_fn(LOG_WARN,"Error in exit policy"); goto err;}
                     );
 
-
   if ((tok = find_first_by_keyword(tokens, K_FAMILY)) && tok->n_args) {
     int i;
     router->declared_family = smartlist_create();
@@ -907,7 +905,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
       smartlist_add(router->declared_family, tor_strdup(tok->args[i]));
     }
   }
-  
+
   if (!(tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE))) {
     log_fn(LOG_WARN, "Missing router signature"); goto err;
   }
@@ -944,7 +942,6 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   log_fn(LOG_DEBUG,"or_port %d, socks_port %d, dir_port %d, bandwidthrate %u, bandwidthburst %u.",
     router->or_port, router->socks_port, router->dir_port,
     (unsigned) router->bandwidthrate, (unsigned) router->bandwidthburst);
-
 
   goto done;
   return router;
@@ -1016,7 +1013,6 @@ int router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
   return 0;
 }
 
-
 static int router_add_exit_policy(routerinfo_t *router,directory_token_t *tok)
 {
   struct exit_policy_t *newe, **tmpe;
@@ -1056,7 +1052,6 @@ router_parse_exit_policy(directory_token_t *tok) {
   if (parse_addr_and_port_range(arg, &newe->addr, &newe->msk,
                                 &newe->prt_min, &newe->prt_max))
     goto policy_read_failed;
-  
 
   in.s_addr = htonl(newe->addr);
   address = tor_strdup(inet_ntoa(in));
@@ -1301,7 +1296,6 @@ get_next_token(const char **s, where_syntax where) {
   if (tok->error) { fprintf(stdout," *%s*", tok->error); }
   fputs("\n",stdout);
 #endif
-
 
   return tok;
 #undef RET_ERR
