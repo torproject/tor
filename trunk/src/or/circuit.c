@@ -405,6 +405,10 @@ void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *l
        (edge_type == EDGE_AP   && conn->package_window > 0 && conn->cpath_layer == layer_hint)) {
       connection_start_reading(conn);
       connection_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
+
+      /* If the circuit won't accept any more data, return without looking
+       * at any more of the streams. Any connections that should be stopped
+       * have already been stopped by connection_package_raw_inbuf. */
       if(circuit_consider_stop_edge_reading(circ, edge_type, layer_hint))
         return;
     }
