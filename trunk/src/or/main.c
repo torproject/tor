@@ -80,7 +80,7 @@ crypto_pk_env_t *get_identity_key(void) {
 int connection_add(connection_t *conn) {
 
   if(nfds >= options.MaxConn-1) {
-    log(LOG_WARNING,"connection_add(): failing because nfds is too high.");
+    log(LOG_WARN,"connection_add(): failing because nfds is too high.");
     return -1;
   }
   
@@ -103,7 +103,7 @@ void connection_set_poll_socket(connection_t *conn) {
   poll_array[conn->poll_index].fd = conn->s;
 }
 
-/* Remove the current function from the global list, and remove the
+/* Remove the connection from the global list, and remove the
  * corresponding poll entry.  Calling this function will shift the last
  * connection (if any) into the position occupied by conn.
  */
@@ -114,10 +114,11 @@ int connection_remove(connection_t *conn) {
   assert(nfds>0);
 
   log(LOG_INFO,"connection_remove(): removing socket %d, nfds now %d",conn->s, nfds-1);
-  circuit_about_to_close_connection(conn); /* if it's an edge conn, remove it from the list
-                                            * of conn's on this circuit. If it's not on an edge,
-                                            * flush and send destroys for all circuits on this conn
-                                            */
+  /* if it's an edge conn, remove it from the list
+   * of conn's on this circuit. If it's not on an edge,
+   * flush and send destroys for all circuits on this conn
+   */
+  circuit_about_to_close_connection(conn);
 
   current_index = conn->poll_index;
   if(current_index == nfds-1) { /* this is the end */
@@ -251,7 +252,7 @@ static void conn_close_if_marked(int i) {
         flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
       }
       if(connection_wants_to_flush(conn)) /* not done flushing */
-        log_fn(LOG_WARNING,"Conn (socket %d) still wants to flush. Losing %d bytes!",conn->s, (int)buf_datalen(conn->inbuf));
+        log_fn(LOG_WARN,"Conn (socket %d) still wants to flush. Losing %d bytes!",conn->s, (int)buf_datalen(conn->inbuf));
     }
     connection_remove(conn);
     connection_free(conn);
@@ -262,7 +263,7 @@ static void conn_close_if_marked(int i) {
   }
 }
 
-/* Perform regulare maintenance tasks for a single connection.  This
+/* Perform regular maintenance tasks for a single connection.  This
  * function gets run once per second per connection by run_housekeeping.
  */
 static void run_connection_housekeeping(int i, time_t now) {
@@ -333,7 +334,7 @@ static void run_scheduled_events(time_t now) {
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
   }
 
-  /* 2. Every NewCircuitPeriod seconds, we expire old ciruits and make a 
+  /* 2. Every NewCircuitPeriod seconds, we expire old circuits and make a 
    *    new one as needed.
    */
   if(options.APPort && time_to_new_circuit < now) {
@@ -607,7 +608,7 @@ static int do_main_loop(void) {
       /* fetch a new directory */
       if(options.DirPort) {
         if(router_get_list_from_file(options.RouterFile) < 0) {
-          log(LOG_WARNING,"Error reloading router list. Continuing with old list.");
+          log(LOG_WARN,"Error reloading router list. Continuing with old list.");
         }
       } else {
         directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_FETCH);
@@ -677,7 +678,7 @@ static void catch(int the_signal) {
       please_reap_children = 1;
       break;
     default:
-      log(LOG_WARNING,"Caught signal %d that we can't handle??", the_signal);
+      log(LOG_WARN,"Caught signal %d that we can't handle??", the_signal);
   }
 #endif /* signal stuff */
 }
@@ -757,7 +758,7 @@ void write_pidfile(char *filename) {
   FILE *pidfile;
 
   if ((pidfile = fopen(filename, "w")) == NULL) {
-    log_fn(LOG_WARNING, "unable to open %s for writing: %s", filename,
+    log_fn(LOG_WARN, "unable to open %s for writing: %s", filename,
            strerror(errno));
   } else {
     fprintf(pidfile, "%d", getpid());

@@ -78,7 +78,7 @@ void router_upload_desc_to_dirservers(void) {
     return;
 
   if (!router_get_my_descriptor()) {
-    log_fn(LOG_WARNING, "No descriptor; skipping upload");
+    log_fn(LOG_WARN, "No descriptor; skipping upload");
     return;
   }
 
@@ -192,12 +192,12 @@ int router_get_list_from_file(char *routerfile)
 
   string = read_file_to_str(routerfile);
   if(!string) {
-    log_fn(LOG_WARNING,"Failed to load routerfile %s.",routerfile);
+    log_fn(LOG_WARN,"Failed to load routerfile %s.",routerfile);
     return -1;
   }
   
   if(router_get_list_from_string(string) < 0) {
-    log_fn(LOG_WARNING,"The routerfile itself was corrupt.");
+    log_fn(LOG_WARN,"The routerfile itself was corrupt.");
     free(string);
     return -1;
   }
@@ -458,11 +458,11 @@ static char *find_whitespace(char *s) {
 int router_get_list_from_string(char *s) 
 {
   if (router_get_list_from_string_impl(&s, &directory, -1, NULL)) {
-    log(LOG_WARNING, "Error parsing router file");
+    log(LOG_WARN, "Error parsing router file");
     return -1;
   }
   if (router_resolve_directory(directory)) {
-    log(LOG_WARNING, "Error resolving directory");
+    log(LOG_WARN, "Error resolving directory");
     return -1;
   }
   return 0;
@@ -474,23 +474,23 @@ static int router_get_hash_impl(char *s, char *digest, const char *start_str,
   char *start, *end;
   start = strstr(s, start_str);
   if (!start) {
-    log_fn(LOG_WARNING,"couldn't find \"%s\"",start_str);
+    log_fn(LOG_WARN,"couldn't find \"%s\"",start_str);
     return -1;
   }
   end = strstr(start+strlen(start_str), end_str);
   if (!end) {
-    log_fn(LOG_WARNING,"couldn't find \"%s\"",end_str);
+    log_fn(LOG_WARN,"couldn't find \"%s\"",end_str);
     return -1;
   }
   end = strchr(end, '\n');
   if (!end) {
-    log_fn(LOG_WARNING,"couldn't find EOL");
+    log_fn(LOG_WARN,"couldn't find EOL");
     return -1;
   }
   ++end;
   
   if (crypto_SHA_digest(start, end-start, digest)) {
-    log_fn(LOG_WARNING,"couldn't compute digest");
+    log_fn(LOG_WARN,"couldn't compute digest");
     return -1;
   }
 
@@ -530,17 +530,17 @@ int compare_recommended_versions(char *myversion, char *start) {
 int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey)
 {
   if (router_get_dir_from_string_impl(s, &directory, pkey)) {
-    log_fn(LOG_WARNING, "Couldn't parse directory.");
+    log_fn(LOG_WARN, "Couldn't parse directory.");
     return -1;
   }
   if (router_resolve_directory(directory)) {
-    log_fn(LOG_WARNING, "Error resolving directory");
+    log_fn(LOG_WARN, "Error resolving directory");
     return -1;
   }
   if (compare_recommended_versions(VERSION, directory->software_versions) < 0) {
-    log(LOG_WARNING, "You are running tor version %s, which is no longer supported.\nPlease upgrade to one of %s.", VERSION, directory->software_versions);
+    log(LOG_WARN, "You are running tor version %s, which is no longer supported.\nPlease upgrade to one of %s.", VERSION, directory->software_versions);
     if(options.IgnoreVersion) {
-      log(LOG_WARNING, "IgnoreVersion is set. If it breaks, we told you so.");
+      log(LOG_WARN, "IgnoreVersion is set. If it breaks, we told you so.");
     } else {
       log(LOG_ERR,"Set IgnoreVersion config variable if you want to proceed.");
       fflush(0);
@@ -567,19 +567,19 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
 #define NEXT_TOK()                                                      \
   do {                                                                  \
     if (router_get_next_token(&s, &tok)) {                              \
-      log_fn(LOG_WARNING, "Error reading directory: %s", tok.val.error);\
+      log_fn(LOG_WARN, "Error reading directory: %s", tok.val.error);\
       return -1;                                                        \
     } } while (0)
 #define TOK_IS(type,name)                                               \
   do {                                                                  \
     if (tok.tp != type) {                                               \
       router_release_token(&tok);                                       \
-      log_fn(LOG_WARNING, "Error reading directory: expected %s", name);\
+      log_fn(LOG_WARN, "Error reading directory: expected %s", name);\
       return -1;                                                        \
     } } while(0)
 
   if (router_get_dir_hash(s, digest)) {
-    log_fn(LOG_WARNING, "Unable to compute digest of directory");
+    log_fn(LOG_WARN, "Unable to compute digest of directory");
     goto err;
   }
   log(LOG_DEBUG,"Received directory hashes to %02x:%02x:%02x:%02x",
@@ -592,19 +592,19 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   NEXT_TOK();
   TOK_IS(K_PUBLISHED, "published");
   if (tok.val.cmd.n_args != 2) {
-    log_fn(LOG_WARNING, "Invalid published line");
+    log_fn(LOG_WARN, "Invalid published line");
     goto err;
   }
   tok.val.cmd.args[1][-1] = ' ';
   if (!strptime(tok.val.cmd.args[0], "%Y-%m-%d %H:%M:%S", &published)) {
-    log_fn(LOG_WARNING, "Published time was unparseable"); goto err;
+    log_fn(LOG_WARN, "Published time was unparseable"); goto err;
   }
   published_on = timegm(&published);  
 
   NEXT_TOK();
   TOK_IS(K_RECOMMENDED_SOFTWARE, "recommended-software");
   if (tok.val.cmd.n_args != 1) {
-    log_fn(LOG_WARNING, "Invalid recommended-software line");
+    log_fn(LOG_WARN, "Invalid recommended-software line");
     goto err;
   }
   versions = tor_strdup(tok.val.cmd.args[0]);
@@ -616,7 +616,7 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
 
   if (router_get_list_from_string_impl(&s, &new_dir,
                                        n_good_nicknames, good_nickname_lst)) {
-    log_fn(LOG_WARNING, "Error reading routers from directory");
+    log_fn(LOG_WARN, "Error reading routers from directory");
     goto err;
   }
   new_dir->software_versions = versions;
@@ -629,7 +629,7 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   if (pkey) {
     if (crypto_pk_public_checksig(pkey, tok.val.signature, 128, signed_digest)
         != 20) {
-      log_fn(LOG_WARNING, "Error reading directory: invalid signature.");
+      log_fn(LOG_WARN, "Error reading directory: invalid signature.");
       free(tok.val.signature);
       goto err;
     }
@@ -637,7 +637,7 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
         ((int)signed_digest[0])&0xff,((int)signed_digest[1])&0xff,
         ((int)signed_digest[2])&0xff,((int)signed_digest[3])&0xff);
     if (memcmp(digest, signed_digest, 20)) {
-      log_fn(LOG_WARNING, "Error reading directory: signature does not match.");
+      log_fn(LOG_WARN, "Error reading directory: signature does not match.");
       free(tok.val.signature);
       goto err;
     }
@@ -680,11 +680,11 @@ int router_get_list_from_string_impl(char **s, directory_t **dest,
       break;
     router = router_get_entry_from_string(s);
     if (!router) {
-      log_fn(LOG_WARNING, "Error reading router");
+      log_fn(LOG_WARN, "Error reading router");
       return -1;
     }
     if (rarray_len >= MAX_ROUTERS_IN_DIR) {
-      log_fn(LOG_WARNING, "too many routers");
+      log_fn(LOG_WARN, "too many routers");
       routerinfo_free(router);
       continue;
     } 
@@ -719,7 +719,7 @@ router_resolve(routerinfo_t *router)
 
   rent = (struct hostent *)gethostbyname(router->address);
   if (!rent) {
-    log_fn(LOG_WARNING,"Could not get address for router %s.",router->address);
+    log_fn(LOG_WARN,"Could not get address for router %s.",router->address);
     return -1; 
   }
   assert(rent->h_length == 4);
@@ -740,7 +740,7 @@ router_resolve_directory(directory_t *dir)
   for (i = 0; i < max; ++i) {
     remove = 0;
     if (router_resolve(dir->routers[i])) {
-      log_fn(LOG_WARNING, "Couldn't resolve router %s; removing",
+      log_fn(LOG_WARN, "Couldn't resolve router %s; removing",
              dir->routers[i]->address);
       remove = 1;
       routerinfo_free(dir->routers[i]);
@@ -773,14 +773,14 @@ routerinfo_t *router_get_entry_from_string(char**s) {
 
 #define NEXT_TOKEN()                                                     \
   do { if (router_get_next_token(s, tok)) {                              \
-      log_fn(LOG_WARNING, "Error reading directory: %s", tok->val.error);\
+      log_fn(LOG_WARN, "Error reading directory: %s", tok->val.error);\
       goto err;                                                          \
     } } while(0)
 
 #define ARGS tok->val.cmd.args
 
   if (router_get_router_hash(*s, digest) < 0) {
-    log_fn(LOG_WARNING, "Couldn't compute router hash.");
+    log_fn(LOG_WARN, "Couldn't compute router hash.");
     return NULL;
   }
 
@@ -788,7 +788,7 @@ routerinfo_t *router_get_entry_from_string(char**s) {
 
   if (tok->tp != K_ROUTER) {
     router_release_token(tok);
-    log_fn(LOG_WARNING,"Entry does not start with \"router\"");
+    log_fn(LOG_WARN,"Entry does not start with \"router\"");
     return NULL;
   }
 
@@ -799,17 +799,17 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   router->onion_pkey = router->identity_pkey = router->link_pkey = NULL; 
 
   if (tok->val.cmd.n_args != 6) {
-    log_fn(LOG_WARNING,"Wrong # of arguments to \"router\"");
+    log_fn(LOG_WARN,"Wrong # of arguments to \"router\"");
     goto err;
   }
   router->nickname = tor_strdup(ARGS[0]);
   if (strlen(router->nickname) > MAX_NICKNAME_LEN) {
-    log_fn(LOG_WARNING,"Router nickname too long.");
+    log_fn(LOG_WARN,"Router nickname too long.");
     goto err;
   }
   if (strspn(router->nickname, LEGAL_NICKNAME_CHARACTERS) != 
       strlen(router->nickname)) {
-    log_fn(LOG_WARNING, "Router nickname contains illegal characters.");
+    log_fn(LOG_WARN, "Router nickname contains illegal characters.");
     goto err;
   }
   
@@ -820,7 +820,7 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   /* Read router->or_port */
   router->or_port = atoi(ARGS[2]);
   if(!router->or_port) {
-    log_fn(LOG_WARNING,"or_port unreadable or 0. Failing.");
+    log_fn(LOG_WARN,"or_port unreadable or 0. Failing.");
     goto err;
   }
   
@@ -833,7 +833,7 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   /* Router->bandwidth */
   router->bandwidth = atoi(ARGS[5]);
   if (!router->bandwidth) {
-    log_fn(LOG_WARNING,"bandwidth unreadable or 0. Failing.");
+    log_fn(LOG_WARN,"bandwidth unreadable or 0. Failing.");
     goto err;
   }
   
@@ -847,44 +847,44 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   }
   
   if (tok->tp != K_PUBLISHED) {
-    log_fn(LOG_WARNING, "Missing published time"); goto err;
+    log_fn(LOG_WARN, "Missing published time"); goto err;
   }
   if (tok->val.cmd.n_args != 2) {
-    log_fn(LOG_WARNING, "Wrong number of arguments to published"); goto err;
+    log_fn(LOG_WARN, "Wrong number of arguments to published"); goto err;
   }
   ARGS[1][-1] = ' '; /* Re-insert space. */
   if (!strptime(ARGS[0], "%Y-%m-%d %H:%M:%S", &published)) {
-    log_fn(LOG_WARNING, "Published time was unparseable"); goto err;
+    log_fn(LOG_WARN, "Published time was unparseable"); goto err;
   }
   router->published_on = timegm(&published);
 
   NEXT_TOKEN();
   if (tok->tp != K_ONION_KEY) {
-    log_fn(LOG_WARNING, "Missing onion-key"); goto err;
+    log_fn(LOG_WARN, "Missing onion-key"); goto err;
   }
   NEXT_TOKEN();
   if (tok->tp != _PUBLIC_KEY) {
-    log_fn(LOG_WARNING, "Missing onion key"); goto err;
+    log_fn(LOG_WARN, "Missing onion key"); goto err;
   } /* XXX Check key length */
   router->onion_pkey = tok->val.public_key;
 
   NEXT_TOKEN();
   if (tok->tp != K_LINK_KEY) {
-    log_fn(LOG_WARNING, "Missing link-key");  goto err;
+    log_fn(LOG_WARN, "Missing link-key");  goto err;
   }
   NEXT_TOKEN();
   if (tok->tp != _PUBLIC_KEY) {
-    log_fn(LOG_WARNING, "Missing link key"); goto err;
+    log_fn(LOG_WARN, "Missing link key"); goto err;
   } /* XXX Check key length */
   router->link_pkey = tok->val.public_key;
 
   NEXT_TOKEN();
   if (tok->tp != K_SIGNING_KEY) {
-    log_fn(LOG_WARNING, "Missing signing-key"); goto err;
+    log_fn(LOG_WARN, "Missing signing-key"); goto err;
   }
   NEXT_TOKEN();
   if (tok->tp != _PUBLIC_KEY) {
-    log_fn(LOG_WARNING, "Missing signing key"); goto err;
+    log_fn(LOG_WARN, "Missing signing key"); goto err;
   }
   router->identity_pkey = tok->val.public_key;
 
@@ -895,23 +895,23 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   }
   
   if (tok->tp != K_ROUTER_SIGNATURE) {
-    log_fn(LOG_WARNING,"Missing router signature");
+    log_fn(LOG_WARN,"Missing router signature");
     goto err;
   }
   NEXT_TOKEN();
   if (tok->tp != _SIGNATURE) {
-    log_fn(LOG_WARNING,"Missing router signature");
+    log_fn(LOG_WARN,"Missing router signature");
     goto err;
   }
   assert (router->identity_pkey);
 
   if ((t=crypto_pk_public_checksig(router->identity_pkey, tok->val.signature,
                                    128, signed_digest)) != 20) {
-    log_fn(LOG_WARNING, "Invalid signature %d",t);
+    log_fn(LOG_WARN, "Invalid signature %d",t);
     goto err;
   }
   if (memcmp(digest, signed_digest, 20)) {
-    log_fn(LOG_WARNING, "Mismatched signature");
+    log_fn(LOG_WARN, "Mismatched signature");
     goto err;
   }
   
@@ -972,7 +972,7 @@ void router_add_exit_policy_from_config(routerinfo_t *router) {
     }
     log_fn(LOG_DEBUG,"Adding new entry '%s'",line);
     if(router_add_exit_policy_from_string(router,line) < 0)
-      log_fn(LOG_WARNING,"Malformed exit policy %s; skipping.", line);
+      log_fn(LOG_WARN,"Malformed exit policy %s; skipping.", line);
     if(last)
       return;
     s = e+1;
@@ -996,12 +996,12 @@ router_add_exit_policy_from_string(routerinfo_t *router,
   tmp[len]='\n';
   tmp[len+1]='\0';
   if (router_get_next_token(&cp, &tok)) {
-    log_fn(LOG_WARNING, "Error reading exit policy: %s", tok.val.error);
+    log_fn(LOG_WARN, "Error reading exit policy: %s", tok.val.error);
     free(tmp);
     return -1;                                                        
   }
   if (tok.tp != K_ACCEPT && tok.tp != K_REJECT) {
-    log_fn(LOG_WARNING, "Expected 'accept' or 'reject'.");
+    log_fn(LOG_WARN, "Expected 'accept' or 'reject'.");
     free(tmp);
     return -1;
   }
@@ -1058,7 +1058,7 @@ static int router_add_exit_policy(routerinfo_t *router,
 
 policy_read_failed:
   assert(newe->string);
-  log_fn(LOG_WARNING,"Couldn't parse line '%s'. Dropping", newe->string);
+  log_fn(LOG_WARN,"Couldn't parse line '%s'. Dropping", newe->string);
   if(newe->string)
     free(newe->string);
   if(newe->address)
@@ -1085,7 +1085,7 @@ int router_compare_to_exit_policy(connection_t *conn) {
     log_fn(LOG_DEBUG,"Considering exit policy %s:%s",tmpe->address, tmpe->port);
     if(strcmp(tmpe->address,"*") &&
        inet_aton(tmpe->address,&in) == 0) { /* malformed IP. reject. */
-      log_fn(LOG_WARNING,"Malformed IP %s in exit policy. Rejecting.",tmpe->address);
+      log_fn(LOG_WARN,"Malformed IP %s in exit policy. Rejecting.",tmpe->address);
       return -1;
     }
     if((!strcmp(tmpe->address,"*") || conn->addr == ntohl(in.s_addr)) &&
@@ -1126,7 +1126,7 @@ int router_rebuild_descriptor(void) {
 
   if(!address) { /* if not specified in config, we find a default */
     if(gethostname(localhostname,sizeof(localhostname)) < 0) {
-      log_fn(LOG_WARNING,"Error obtaining local hostname");
+      log_fn(LOG_WARN,"Error obtaining local hostname");
       return -1;
     }
     address = localhostname;
@@ -1149,7 +1149,7 @@ int router_rebuild_descriptor(void) {
     routerinfo_free(desc_routerinfo);
   desc_routerinfo = ri;
   if (router_dump_router_to_string(descriptor, 8192, ri, get_identity_key())<0) {
-    log_fn(LOG_WARNING, "Couldn't dump router to string.");
+    log_fn(LOG_WARN, "Couldn't dump router to string.");
     return -1;
   }
   return 0;
@@ -1184,25 +1184,25 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   get_platform_str(platform, sizeof(platform));
 
   if (crypto_pk_cmp_keys(ident_key, router->identity_pkey)) {
-    log_fn(LOG_WARNING,"Tried to sign a router with a private key that didn't match router's public key!");
+    log_fn(LOG_WARN,"Tried to sign a router with a private key that didn't match router's public key!");
     return -1;
   }
 
   if(crypto_pk_write_public_key_to_string(router->onion_pkey,
                                           &onion_pkey,&onion_pkeylen)<0) {
-    log_fn(LOG_WARNING,"write onion_pkey to string failed!");
+    log_fn(LOG_WARN,"write onion_pkey to string failed!");
     return -1;
   }
 
   if(crypto_pk_write_public_key_to_string(router->identity_pkey,
                                           &identity_pkey,&identity_pkeylen)<0) {
-    log_fn(LOG_WARNING,"write identity_pkey to string failed!");
+    log_fn(LOG_WARN,"write identity_pkey to string failed!");
     return -1;
   }
 
   if(crypto_pk_write_public_key_to_string(router->link_pkey,
                                           &link_pkey,&link_pkeylen)<0) {
-    log_fn(LOG_WARNING,"write link_pkey to string failed!");
+    log_fn(LOG_WARN,"write link_pkey to string failed!");
     return -1;
   }
   strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&router->published_on));
@@ -1254,13 +1254,13 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     return -1;
 
   if (crypto_pk_private_sign(ident_key, digest, 20, signature) < 0) {
-    log_fn(LOG_WARNING, "Error signing digest");
+    log_fn(LOG_WARN, "Error signing digest");
     return -1;
   }
   strcat(s+written, "-----BEGIN SIGNATURE-----\n");
   written += strlen(s+written);
   if (base64_encode(s+written, maxlen-written, signature, 128) < 0) {
-    log_fn(LOG_WARNING, "Couldn't base64-encode signature");
+    log_fn(LOG_WARN, "Couldn't base64-encode signature");
     return -1;
   }
   written += strlen(s+written);

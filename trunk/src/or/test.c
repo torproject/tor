@@ -554,7 +554,7 @@ test_dir_format()
                                                     &pk3_str_len));
 
   memset(buf, 0, 2048);
-  log_set_severity(LOG_WARNING);
+  log_set_severity(LOG_WARN);
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
   
   strcpy(buf2, "router Magri testaddr1.foo.bar 9000 9002 9003 1000\n"

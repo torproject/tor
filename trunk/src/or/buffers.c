@@ -221,7 +221,7 @@ int write_to_buf(const char *string, int string_len, buf_t *buf) {
   /* this is the point where you would grow the buffer, if you want to */
 
   if (string_len + buf->datalen > buf->len) { /* we're out of luck */
-    log_fn(LOG_WARNING, "buflen too small. Time to implement growing dynamic bufs.");
+    log_fn(LOG_WARN, "buflen too small. Time to implement growing dynamic bufs.");
     return -1;
   }
 
@@ -280,11 +280,11 @@ int fetch_from_buf_http(buf_t *buf,
   log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.",headerlen,bodylen);
 
   if(headers_out && max_headerlen <= headerlen) {
-    log_fn(LOG_WARNING,"headerlen %d larger than %d. Failing.", headerlen, max_headerlen-1);
+    log_fn(LOG_WARN,"headerlen %d larger than %d. Failing.", headerlen, max_headerlen-1);
     return -1;
   }
   if(body_out && max_bodylen <= bodylen) {
-    log_fn(LOG_WARNING,"bodylen %d larger than %d. Failing.", bodylen, max_bodylen-1);
+    log_fn(LOG_WARN,"bodylen %d larger than %d. Failing.", bodylen, max_bodylen-1);
     return -1;
   }
 
@@ -356,7 +356,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
         if(buf->datalen < 2+nummethods)
           return 0;
         if(!nummethods || !memchr(buf->buf+2, 0, nummethods)) {
-          log_fn(LOG_WARNING,"socks5: offered methods don't include 'no auth'. Rejecting.");
+          log_fn(LOG_WARN,"socks5: offered methods don't include 'no auth'. Rejecting.");
           *replylen = 2; /* 2 bytes of response */
           *reply = 5; /* socks5 reply */
           *(reply+1) = 0xFF; /* reject all methods */
@@ -377,7 +377,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
       if(buf->datalen < 8) /* basic info plus >=2 for addr plus 2 for port */
         return 0; /* not yet */
       if(*(buf->buf+1) != 1) { /* not a connect? we don't support it. */
-        log_fn(LOG_WARNING,"socks5: command %d not '1'.",*(buf->buf+1));
+        log_fn(LOG_WARN,"socks5: command %d not '1'.",*(buf->buf+1));
         return -1;
       }
       switch(*(buf->buf+3)) { /* address type */
@@ -389,7 +389,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
           in.s_addr = htonl(destip);
           tmpbuf = inet_ntoa(in);
           if(strlen(tmpbuf)+1 > max_addrlen) {
-            log_fn(LOG_WARNING,"socks5 IP takes %d bytes, which doesn't fit in %d",
+            log_fn(LOG_WARN,"socks5 IP takes %d bytes, which doesn't fit in %d",
                    strlen(tmpbuf)+1,max_addrlen);
             return -1;
           }
@@ -404,7 +404,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
           if(buf->datalen < 7+len) /* addr/port there? */
             return 0; /* not yet */
           if(len+1 > max_addrlen) {
-            log_fn(LOG_WARNING,"socks5 hostname is %d bytes, which doesn't fit in %d",
+            log_fn(LOG_WARN,"socks5 hostname is %d bytes, which doesn't fit in %d",
                    len+1,max_addrlen);
             return -1;
           }
@@ -415,7 +415,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
           memmove(buf->buf, buf->buf+(5+len+2), buf->datalen);
           return 1;
         default: /* unsupported */
-          log_fn(LOG_WARNING,"socks5: unsupported address type %d",*(buf->buf+3));
+          log_fn(LOG_WARN,"socks5: unsupported address type %d",*(buf->buf+3));
           return -1;
       }
       assert(0);
@@ -426,14 +426,14 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
         return 0; /* not yet */
 
       if(*(buf->buf+1) != 1) { /* not a connect? we don't support it. */
-        log_fn(LOG_WARNING,"socks4: command %d not '1'.",*(buf->buf+1));
+        log_fn(LOG_WARN,"socks4: command %d not '1'.",*(buf->buf+1));
         return -1;
       }
 
       *port_out = ntohs(*(uint16_t*)(buf->buf+2));
       destip = ntohl(*(uint32_t*)(buf->buf+4));
       if(!*port_out || !destip) {
-        log_fn(LOG_WARNING,"socks4: Port or DestIP is zero.");
+        log_fn(LOG_WARN,"socks4: Port or DestIP is zero.");
         return -1;
       }
       if(destip >> 8) {
@@ -441,7 +441,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
         in.s_addr = htonl(destip);
         tmpbuf = inet_ntoa(in);
         if(strlen(tmpbuf)+1 > max_addrlen) {
-          log_fn(LOG_WARNING,"socks4 addr (%d bytes) too long.", strlen(tmpbuf));
+          log_fn(LOG_WARN,"socks4 addr (%d bytes) too long.", strlen(tmpbuf));
           return -1;
         }
         log_fn(LOG_DEBUG,"socks4: successfully read destip (%s)", tmpbuf);
@@ -462,7 +462,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
           return 0;
         }
         if(max_addrlen <= next-startaddr) {
-          log_fn(LOG_WARNING,"Destaddr too long.");
+          log_fn(LOG_WARN,"Destaddr too long.");
           return -1;
         }
       }
@@ -473,7 +473,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
       return 1;
 
     default: /* version is not socks4 or socks5 */
-      log_fn(LOG_WARNING,"Socks version %d not recognized.",*(buf->buf));
+      log_fn(LOG_WARN,"Socks version %d not recognized.",*(buf->buf));
       return -1;
   }
 }

@@ -62,23 +62,23 @@ dirserv_parse_fingerprint_file(const char *fname)
   int i, result;
 
   if(!(file = fopen(fname, "r"))) {
-    log_fn(LOG_WARNING, "Cannot open fingerprint file %s", fname);
+    log_fn(LOG_WARN, "Cannot open fingerprint file %s", fname);
     return -1;
   }
   while( (result=parse_line_from_file(line, sizeof(line),file,&nickname,&fingerprint)) > 0) {
     if (strlen(nickname) > MAX_NICKNAME_LEN) {
-      log(LOG_WARNING, "Nickname %s too long in fingerprint file. Skipping.", nickname);
+      log(LOG_WARN, "Nickname %s too long in fingerprint file. Skipping.", nickname);
       continue;
     }
     if(strlen(fingerprint) != FINGERPRINT_LEN ||
        !crypto_pk_check_fingerprint_syntax(fingerprint)) {
-      log_fn(LOG_WARNING, "Invalid fingerprint (nickname %s, fingerprint %s). Skipping.",
+      log_fn(LOG_WARN, "Invalid fingerprint (nickname %s, fingerprint %s). Skipping.",
              nickname, fingerprint);
       continue;
     }
     for (i = 0; i < n_fingerprints_tmp; ++i) {
       if (0==strcasecmp(fingerprint_list_tmp[i].nickname, nickname)) {
-        log(LOG_WARNING, "Duplicate nickname %s. Skipping.",nickname);
+        log(LOG_WARN, "Duplicate nickname %s. Skipping.",nickname);
         break; /* out of the for. the 'if' below means skip to the next line. */
       }
     }
@@ -97,7 +97,7 @@ dirserv_parse_fingerprint_file(const char *fname)
     return 0;
   }
   /* error */
-  log_fn(LOG_WARNING, "Error reading from fingerprint file");
+  log_fn(LOG_WARN, "Error reading from fingerprint file");
   for (i = 0; i < n_fingerprints_tmp; ++i) {
     free(fingerprint_list_tmp[i].nickname);
     free(fingerprint_list_tmp[i].fingerprint);
@@ -123,18 +123,18 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
   }
   
   if (!ent) { /* No such server known */
-    log_fn(LOG_WARNING,"no fingerprint found for %s",router->nickname);
+    log_fn(LOG_WARN,"no fingerprint found for %s",router->nickname);
     return 0;
   }
   if (crypto_pk_get_fingerprint(router->identity_pkey, fp)) {
-    log_fn(LOG_WARNING,"error computing fingerprint");
+    log_fn(LOG_WARN,"error computing fingerprint");
     return 0;
   }
   if (0==strcasecmp(ent->fingerprint, fp)) {
     log_fn(LOG_DEBUG,"good fingerprint for %s",router->nickname);
     return 1; /* Right fingerprint. */
   } else {
-    log_fn(LOG_WARNING,"mismatched fingerprint for %s",router->nickname);
+    log_fn(LOG_WARN,"mismatched fingerprint for %s",router->nickname);
     return 0; /* Wrong fingerprint. */
   }
 }
@@ -197,7 +197,7 @@ dirserv_add_descriptor(const char **desc)
 
   start = strstr(*desc, "router ");
   if (!start) {
-    log(LOG_WARNING, "no descriptor found.");
+    log(LOG_WARN, "no descriptor found.");
     goto err;
   }
   if ((end = strstr(start+6, "\nrouter "))) {
@@ -215,13 +215,13 @@ dirserv_add_descriptor(const char **desc)
   /* Check: is the descriptor syntactically valid? */
   ri = router_get_entry_from_string(&cp);
   if (!ri) {
-    log(LOG_WARNING, "Couldn't parse descriptor");
+    log(LOG_WARN, "Couldn't parse descriptor");
     goto err;
   }
   free(desc_tmp); desc_tmp = NULL;
   /* Okay.  Now check whether the fingerprint is recognized. */
   if (!dirserv_router_fingerprint_is_known(ri)) {
-    log(LOG_WARNING, "Identity is unrecognized for descriptor");
+    log(LOG_WARN, "Identity is unrecognized for descriptor");
     goto err;
   }
   /* Do we already have an entry for this router? */
@@ -372,11 +372,11 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
   cp = s + i;
   
   if (router_get_dir_hash(s,digest)) {
-    log_fn(LOG_WARNING,"couldn't compute digest");
+    log_fn(LOG_WARN,"couldn't compute digest");
     return -1;
   }
   if (crypto_pk_private_sign(private_key, digest, 20, signature) < 0) {
-    log_fn(LOG_WARNING,"couldn't sign digest");
+    log_fn(LOG_WARN,"couldn't sign digest");
     return -1;
   }
   log(LOG_DEBUG,"generated directory digest begins with %02x:%02x:%02x:%02x",
@@ -389,7 +389,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
   i = strlen(s);
   cp = s+i;
   if (base64_encode(cp, maxlen-i, signature, 128) < 0) {
-    log_fn(LOG_WARNING,"couldn't base64-encode signature");
+    log_fn(LOG_WARN,"couldn't base64-encode signature");
     return -1;
   }
 
@@ -398,7 +398,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
   strncat(cp, "-----END SIGNATURE-----\n", maxlen-i);
   i = strlen(s);
   if (i == maxlen) {
-    log_fn(LOG_WARNING,"tried to exceed string length.");
+    log_fn(LOG_WARN,"tried to exceed string length.");
     return -1;
   }
 
@@ -413,7 +413,7 @@ size_t dirserv_get_directory(const char **directory)
     new_directory = tor_malloc(MAX_DIR_SIZE);
     if (dirserv_dump_directory_to_string(new_directory, MAX_DIR_SIZE,
                                          get_identity_key())) {
-      log(LOG_WARNING, "Error creating directory.");
+      log(LOG_WARN, "Error creating directory.");
       free(new_directory);
       return 0;
     }
@@ -436,7 +436,7 @@ size_t dirserv_get_directory(const char **directory)
     free(new_directory);
     sprintf(filename,"%s/cached-directory", options.DataDirectory);
     if(write_str_to_file(filename,the_directory) < 0) {
-      log_fn(LOG_WARNING, "Couldn't write cached directory to disk. Ignoring.");
+      log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
     }
   } else {
     log(LOG_INFO,"Directory still clean, reusing.");

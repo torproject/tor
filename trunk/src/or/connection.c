@@ -127,7 +127,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
 
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) { 
-    log_fn(LOG_WARNING,"Socket creation failed.");
+    log_fn(LOG_WARN,"Socket creation failed.");
     return -1;
   }
 
@@ -135,12 +135,12 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
 
   if(bind(s,(struct sockaddr *)bindaddr,sizeof(*bindaddr)) < 0) {
     perror("bind ");
-    log(LOG_WARNING,"Could not bind to port %u.",ntohs(bindaddr->sin_port));
+    log(LOG_WARN,"Could not bind to port %u.",ntohs(bindaddr->sin_port));
     return -1;
   }
 
   if(listen(s,SOMAXCONN) < 0) {
-    log(LOG_WARNING,"Could not listen on port %u.",ntohs(bindaddr->sin_port));
+    log(LOG_WARN,"Could not listen on port %u.",ntohs(bindaddr->sin_port));
     return -1;
   }
 
@@ -150,7 +150,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
   conn->s = s;
 
   if(connection_add(conn) < 0) { /* no space, forget it */
-    log_fn(LOG_WARNING,"connection_add failed. Giving up.");
+    log_fn(LOG_WARN,"connection_add failed. Giving up.");
     connection_free(conn);
     return -1;
   }
@@ -184,7 +184,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
 #endif
     }
     /* else there was a real error. */
-    log_fn(LOG_WARNING,"accept() failed. Closing listener.");
+    log_fn(LOG_WARN,"accept() failed. Closing listener.");
     return -1;
   }
   log(LOG_INFO,"Connection accepted on socket %d (child of fd %d).",news, conn->s);
@@ -238,7 +238,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
 
   s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
-    log_fn(LOG_WARNING,"Error creating network socket.");
+    log_fn(LOG_WARN,"Error creating network socket.");
     return -1;
   }
   set_socket_nonblocking(s);
@@ -430,7 +430,7 @@ int connection_flush_buf(connection_t *conn) {
 int connection_handle_write(connection_t *conn) {
 
   if(connection_is_listener(conn)) {
-    log_fn(LOG_WARNING,"Got a listener socket. Can't happen!");
+    log_fn(LOG_WARN,"Got a listener socket. Can't happen!");
     return -1;
   }
 
@@ -497,7 +497,7 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
   }
 
   if(write_to_buf(string, len, conn->outbuf) < 0) {
-    log_fn(LOG_WARNING,"write_to_buf failed. Closing connection (fd %d).", conn->s);
+    log_fn(LOG_WARN,"write_to_buf failed. Closing connection (fd %d).", conn->s);
     conn->marked_for_close = 1;
   }
 }
@@ -667,7 +667,7 @@ int connection_process_inbuf(connection_t *conn) {
     case CONN_TYPE_CPUWORKER:
       return connection_cpu_process_inbuf(conn); 
     default:
-      log_fn(LOG_WARNING,"got unexpected conn->type %d.", conn->type);
+      log_fn(LOG_WARN,"got unexpected conn->type %d.", conn->type);
       return -1;
   }
 }
@@ -691,7 +691,7 @@ int connection_finished_flushing(connection_t *conn) {
     case CONN_TYPE_CPUWORKER:
       return connection_cpu_finished_flushing(conn);
     default:
-      log_fn(LOG_WARNING,"got unexpected conn->type %d.", conn->type);
+      log_fn(LOG_WARN,"got unexpected conn->type %d.", conn->type);
       return -1;
   }
 }

@@ -63,7 +63,7 @@ void connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int r
   int is_control_cell=0;
 
   if(!circ) {
-    log_fn(LOG_WARNING,"no circ. Closing.");
+    log_fn(LOG_WARN,"no circ. Closing.");
     return;
   }
 
@@ -95,7 +95,7 @@ void connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int r
          cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
 
   if(circuit_deliver_relay_cell(&cell, circ, cell_direction, cpath_layer) < 0) {
-    log_fn(LOG_WARNING,"circuit_deliver_relay_cell failed. Closing.");
+    log_fn(LOG_WARN,"circuit_deliver_relay_cell failed. Closing.");
     circuit_close(circ);
   }
 }
@@ -127,7 +127,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
       return 0;
     } else {
-      log_fn(LOG_WARNING,"Got an unexpected relay cell, not in 'open' state. Closing.");
+      log_fn(LOG_WARN,"Got an unexpected relay cell, not in 'open' state. Closing.");
       return -1;
     }
   }
@@ -135,11 +135,11 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
   switch(relay_command) {
     case RELAY_COMMAND_BEGIN:
       if(edge_type == EDGE_AP) {
-        log_fn(LOG_WARNING,"relay begin request unsupported at AP. Dropping.");
+        log_fn(LOG_WARN,"relay begin request unsupported at AP. Dropping.");
         return 0;
       }
       if(conn) {
-        log_fn(LOG_WARNING,"begin cell for known stream. Dropping.");
+        log_fn(LOG_WARN,"begin cell for known stream. Dropping.");
         return 0;
       }
       return connection_exit_begin_conn(cell, circ);
@@ -147,7 +147,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       ++stats_n_data_cells_received;
       if((edge_type == EDGE_AP && --layer_hint->deliver_window < 0) ||
          (edge_type == EDGE_EXIT && --circ->deliver_window < 0)) {
-        log_fn(LOG_WARNING,"(relay data) circ deliver_window below 0. Killing.");
+        log_fn(LOG_WARN,"(relay data) circ deliver_window below 0. Killing.");
         return -1;
       }
       log_fn(LOG_DEBUG,"circ deliver_window now %d.", edge_type == EDGE_AP ? layer_hint->deliver_window : circ->deliver_window);
@@ -161,7 +161,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
 
       if(--conn->deliver_window < 0) { /* is it below 0 after decrement? */
-        log_fn(LOG_WARNING,"(relay data) conn deliver_window below 0. Killing.");
+        log_fn(LOG_WARN,"(relay data) conn deliver_window below 0. Killing.");
         return -1; /* somebody's breaking protocol. kill the whole circuit. */
       }
 
@@ -188,24 +188,24 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       break;
     case RELAY_COMMAND_EXTEND:
       if(conn) {
-        log_fn(LOG_WARNING,"'extend' for non-zero stream. Dropping.");
+        log_fn(LOG_WARN,"'extend' for non-zero stream. Dropping.");
         return 0;
       }
       return circuit_extend(cell, circ);
     case RELAY_COMMAND_EXTENDED:
       if(edge_type == EDGE_EXIT) {
-        log_fn(LOG_WARNING,"'extended' unsupported at exit. Dropping.");
+        log_fn(LOG_WARN,"'extended' unsupported at exit. Dropping.");
         return 0;
       }
       log_fn(LOG_DEBUG,"Got an extended cell! Yay.");
       if(circuit_finish_handshake(circ, cell->payload+RELAY_HEADER_SIZE) < 0) {
-        log_fn(LOG_WARNING,"circuit_finish_handshake failed.");
+        log_fn(LOG_WARN,"circuit_finish_handshake failed.");
         return -1;
       }
       return circuit_send_next_onion_skin(circ);
     case RELAY_COMMAND_TRUNCATE:
       if(edge_type == EDGE_AP) {
-        log_fn(LOG_WARNING,"'truncate' unsupported at AP. Dropping.");
+        log_fn(LOG_WARN,"'truncate' unsupported at AP. Dropping.");
         return 0;
       }
       if(circ->n_conn) {
@@ -218,13 +218,13 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       return 0;
     case RELAY_COMMAND_TRUNCATED:
       if(edge_type == EDGE_EXIT) {
-        log_fn(LOG_WARNING,"'truncated' unsupported at exit. Dropping.");
+        log_fn(LOG_WARN,"'truncated' unsupported at exit. Dropping.");
         return 0;
       }
       return circuit_truncated(circ, layer_hint);
     case RELAY_COMMAND_CONNECTED:
       if(edge_type == EDGE_EXIT) {
-        log_fn(LOG_WARNING,"'connected' unsupported at exit. Dropping.");
+        log_fn(LOG_WARN,"'connected' unsupported at exit. Dropping.");
         return 0;
       }
       if(!conn) {
@@ -257,7 +257,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       connection_edge_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
       break;
     default:
-      log_fn(LOG_WARNING,"unknown relay command %d.",relay_command);
+      log_fn(LOG_WARN,"unknown relay command %d.",relay_command);
       return -1;
   }
   return 0;
@@ -303,7 +303,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
       connection_stop_writing(conn);
       return 0;
     default:
-      log_fn(LOG_WARNING,"BUG: called in unexpected state.");
+      log_fn(LOG_WARN,"BUG: called in unexpected state.");
       return -1;
   }
   return 0;
@@ -334,7 +334,7 @@ repeat_connection_edge_package_raw_inbuf:
     return 0;
  
   if(conn->package_window <= 0) {
-    log_fn(LOG_WARNING,"called with package_window %d. Tell Roger.", conn->package_window);
+    log_fn(LOG_WARN,"called with package_window %d. Tell Roger.", conn->package_window);
     connection_stop_reading(conn);
     return 0;
   }
@@ -410,7 +410,7 @@ static void connection_edge_consider_sending_sendme(connection_t *conn, int edge
     log_fn(LOG_DEBUG,"Outbuf %d, Queueing stream sendme.", conn->outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
     if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION(edge_type), conn->cpath_layer) < 0) {
-      log_fn(LOG_WARNING,"circuit_deliver_relay_cell failed. Closing.");
+      log_fn(LOG_WARN,"circuit_deliver_relay_cell failed. Closing.");
       circuit_close(circ);
       return;
     }
@@ -436,7 +436,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       log_fn(LOG_DEBUG,"reply is already set for us. Using it.");
       connection_ap_handshake_socks_reply(conn, reply, replylen, 0);
     } else if(sockshere == -1) { /* send normal reject */
-      log_fn(LOG_WARNING,"Fetching socks handshake failed. Closing.");
+      log_fn(LOG_WARN,"Fetching socks handshake failed. Closing.");
       connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
     } else {
       log_fn(LOG_DEBUG,"socks handshake not all here yet.");
@@ -535,18 +535,18 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
 
   if(!memchr(cell->payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE,0,
              cell->length-RELAY_HEADER_SIZE-STREAM_ID_SIZE)) {
-    log_fn(LOG_WARNING,"relay begin cell has no \\0. Dropping.");
+    log_fn(LOG_WARN,"relay begin cell has no \\0. Dropping.");
     return 0;
   }
   colon = strchr(cell->payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE, ':');
   if(!colon) {
-    log_fn(LOG_WARNING,"relay begin cell has no colon. Dropping.");
+    log_fn(LOG_WARN,"relay begin cell has no colon. Dropping.");
     return 0;
   }
   *colon = 0;
 
   if(!atoi(colon+1)) { /* bad port */
-    log_fn(LOG_WARNING,"relay begin cell has invalid port. Dropping.");
+    log_fn(LOG_WARN,"relay begin cell has invalid port. Dropping.");
     return 0;
   }
 
@@ -561,7 +561,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
   n_stream->package_window = STREAMWINDOW_START;
   n_stream->deliver_window = STREAMWINDOW_START;
   if(connection_add(n_stream) < 0) { /* no space, forget it */
-    log_fn(LOG_WARNING,"connection_add failed. Dropping.");
+    log_fn(LOG_WARN,"connection_add failed. Dropping.");
     connection_free(n_stream);
     return 0;
   }
@@ -577,7 +577,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
         return 0;
       /* else fall through */
     case -1: /* resolve failed */
-      log_fn(LOG_WARNING,"Couldn't queue resolve request.");
+      log_fn(LOG_WARN,"Couldn't queue resolve request.");
       connection_remove(n_stream);
       connection_free(n_stream);
     case 0: /* resolve added to pending list */
@@ -610,7 +610,7 @@ int connection_exit_connect(connection_t *conn) {
   connection_set_poll_socket(conn);
   conn->state = EXIT_CONN_STATE_OPEN;
   if(connection_wants_to_flush(conn)) { /* in case there are any queued data cells */
-    log_fn(LOG_WARNING,"tell roger: newly connected conn had data waiting!");
+    log_fn(LOG_WARN,"tell roger: newly connected conn had data waiting!");
 //    connection_start_writing(conn);
   }
 //   connection_process_inbuf(conn);
