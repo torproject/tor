@@ -458,3 +458,30 @@ Changes in version 0.0.2pre14 - 2003-11-29
     - Reloads config on HUP
     - Usage info on -h or --help
     - If you set User and Group config vars, it'll setu/gid to them.
+
+Changes in version 0.0.2pre13 - 2003-10-19
+  o General stability:
+    - SSL_write no longer fails when it returns WANTWRITE and the number
+      of bytes in the buf has changed by the next SSL_write call.
+    - Fix segfault fetching directory when network is down
+    - Fix a variety of minor memory leaks
+    - Dirservers reload the fingerprints file on HUP, so I don't have
+      to take down the network when I approve a new router
+    - Default server config file has explicit Address line to specify fqdn
+
+  o Buffers:
+    - Buffers grow and shrink as needed (Cut process size from 20M to 2M)
+    - Make listener connections not ever alloc bufs
+
+  o Autoconf improvements:
+    - don't clobber an external CFLAGS in ./configure
+    - Make install now works
+    - create var/lib/tor on make install
+    - autocreate a tor.sh initscript to help distribs
+    - autocreate the torrc and sample-server-torrc with correct paths
+
+  o Log files and Daemonizing now work:
+    - If --DebugLogFile is specified, log to it at -l debug
+    - If --LogFile is specified, use it instead of commandline
+    - If --RunAsDaemon is set, tor forks and backgrounds on startup
+
