@@ -18,6 +18,8 @@ extern circuit_t *global_circuitlist;
 
 /********* END VARIABLES ************/
 
+static int
+circuit_deliver_create_cell(circuit_t *circ, char *payload);
 static cpath_build_state_t *
 onion_new_cpath_build_state(uint8_t purpose, const char *exit_nickname);
 static int
@@ -282,10 +284,40 @@ void circuit_n_conn_done(connection_t *or_conn, int success) {
           /* XXX could this be bad, eg if next_onion_skin failed because conn died? */
         }
       } else {
-        /* XXX008 pull the create cell out of circ->onionskin, and send it */
+        /* pull the create cell out of circ->onionskin, and send it */
+        if(circuit_deliver_create_cell(circ, circ->onionskin) < 0) {
+          circuit_mark_for_close(circ);
+          continue;
+        }
       }
     }
   }
+}
+
+static int
+circuit_deliver_create_cell(circuit_t *circ, char *payload) {
+  int circ_id_type;
+  cell_t cell;
+
+  tor_assert(circ && circ->n_conn && circ->n_conn->type == CONN_TYPE_OR);
+  tor_assert(payload);
+
+  circ_id_type = decide_circ_id_type(options.Nickname,
+                                     circ->n_conn->nickname);
+  circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn, circ_id_type);
+  if(!circ->n_circ_id) {
+    log_fn(LOG_WARN,"failed to get unique circID.");
+    return -1;
+  }
+  log_fn(LOG_DEBUG,"Chosen circID %u.",circ->n_circ_id);
+
+  memset(&cell, 0, sizeof(cell_t));
+  cell.command = CELL_CREATE;
+  cell.circ_id = circ->n_circ_id;
+
+  memcpy(cell.payload, payload, ONIONSKIN_CHALLENGE_LEN);
+  connection_or_write_cell_to_buf(&cell, circ->n_conn);
+  return 0;
 }
 
 extern int has_completed_circuit;
@@ -301,11 +333,9 @@ extern int has_completed_circuit;
  * Return -1 if we want to tear down circ, else return 0.
  */
 int circuit_send_next_onion_skin(circuit_t *circ) {
-  cell_t cell;
   crypt_path_t *hop;
   routerinfo_t *router;
   int r;
-  int circ_id_type;
   char payload[2+4+DIGEST_LEN+ONIONSKIN_CHALLENGE_LEN];
   char *onionskin;
   int payload_len;
@@ -313,16 +343,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   tor_assert(circ && CIRCUIT_IS_ORIGIN(circ));
 
   if(circ->cpath->state == CPATH_STATE_CLOSED) {
-    tor_assert(circ->n_conn && circ->n_conn->type == CONN_TYPE_OR);
-
     log_fn(LOG_DEBUG,"First skin; sending create cell.");
-    circ_id_type = decide_circ_id_type(options.Nickname,
-                                       circ->n_conn->nickname);
-    circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn, circ_id_type);
-
-    memset(&cell, 0, sizeof(cell_t));
-    cell.command = CELL_CREATE;
-    cell.circ_id = circ->n_circ_id;
 
     router = router_get_by_nickname(circ->n_conn->nickname);
     if (!router) {
@@ -333,12 +354,13 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
 
     if(onion_skin_create(router->onion_pkey,
                          &(circ->cpath->handshake_state),
-                         cell.payload) < 0) {
+                         payload) < 0) {
       log_fn(LOG_WARN,"onion_skin_create (first hop) failed.");
       return -1;
     }
 
-    connection_or_write_cell_to_buf(&cell, circ->n_conn);
+    if(circuit_deliver_create_cell(circ, payload) < 0)
+      return -1;
 
     circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
     circ->state = CIRCUIT_STATE_BUILDING;
@@ -401,11 +423,10 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
  */
 int circuit_extend(cell_t *cell, circuit_t *circ) {
   connection_t *n_conn;
-  int circ_id_type;
-  cell_t newcell;
   relay_header_t rh;
   int old_format;
   char *onionskin;
+  char *id_digest=NULL;
 
   if(circ->n_conn) {
     log_fn(LOG_WARN,"n_conn already set. Bug/attack. Closing.");
@@ -420,8 +441,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     old_format = 0;
   } else {
     log_fn(LOG_WARN, "Wrong length on extend cell. Closing circuit.");
-    circuit_mark_for_close(circ);
-    return 0;
+    return -1;
   }
 
   circ->n_addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
@@ -431,9 +451,8 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     n_conn = connection_twin_get_by_addr_port(circ->n_addr,circ->n_port);
     onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
   } else {
-    n_conn = connection_get_by_identity_digest(
-                         cell->payload+RELAY_HEADER_SIZE+4+2,
-                         CONN_TYPE_OR);
+    id_digest = cell->payload+RELAY_HEADER_SIZE+4+2;
+    n_conn = connection_get_by_identity_digest(id_digest, CONN_TYPE_OR);
     onionskin = cell->payload+RELAY_HEADER_SIZE+4+2+DIGEST_LEN;
   }
 
@@ -451,24 +470,31 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
       router = router_get_by_addr_port(circ->n_addr, circ->n_port);
       if(!router) {
         log_fn(LOG_INFO,"Next hop is an unknown router. Closing.");
-        circuit_mark_for_close(circ);
-        return 0;
+        return -1;
       }
+      id_digest = router->identity_digest;
     } else { /* new format */
-      router = router_get_by_digest(cell->payload+RELAY_HEADER_SIZE+4+2);
-    }
-
-    /* XXX copy onionskin into circ->onionskin, get into the right
-     * state, launch an or conn to the right place.
-     *...
-     */
-
-#if 0 /* if we do truncateds, no need to kill circ */
-    connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
-                                 NULL, 0, NULL);
-    return 0;
+      router = router_get_by_digest(id_digest);
+#if 0
+      if(router) { /* addr/port might be different */
+        circ->n_addr = router->addr;
+        circ->n_port = router->or_port;
+      }
 #endif
-    circuit_mark_for_close(circ);
+    }
+    tor_assert(id_digest);
+
+    memcpy(circ->onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
+    circ->state = CIRCUIT_STATE_OR_WAIT;
+    n_conn = connection_or_connect(circ->n_addr, circ->n_port, id_digest);
+    if(!n_conn) {
+      log_fn(LOG_INFO,"Launching n_conn failed. Closing.");
+      return -1;
+    }
+    log_fn(LOG_DEBUG,"connecting in progress (or finished). Good.");
+    /* return success. The onion/circuit/etc will be taken care of automatically
+     * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
+     */
     return 0;
   }
 
@@ -478,23 +504,8 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   circ->n_conn = n_conn;
   log_fn(LOG_DEBUG,"n_conn is %s:%u",n_conn->address,n_conn->port);
 
-  circ_id_type = decide_circ_id_type(options.Nickname, n_conn->nickname);
-
-//  log_fn(LOG_DEBUG,"circ_id_type = %u.",circ_id_type);
-  circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn, circ_id_type);
-  if(!circ->n_circ_id) {
-    log_fn(LOG_WARN,"failed to get unique circID.");
+  if(circuit_deliver_create_cell(circ, onionskin) < 0)
     return -1;
-  }
-  log_fn(LOG_DEBUG,"Chosen circID %u.",circ->n_circ_id);
-
-  memset(&newcell, 0, sizeof(cell_t));
-  newcell.command = CELL_CREATE;
-  newcell.circ_id = circ->n_circ_id;
-
-  memcpy(newcell.payload, onionskin, ONIONSKIN_CHALLENGE_LEN);
-
-  connection_or_write_cell_to_buf(&newcell, circ->n_conn);
   return 0;
 }
 
