@@ -478,6 +478,7 @@ void directory_all_unreachable(time_t now) {
     conn->has_sent_end = 1; /* it's not connected anywhere, so no need to end */
     log_fn(LOG_NOTICE,"Network down? Failing connection to '%s:%d'.",
            conn->socks_request->address, conn->socks_request->port);
+    connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_NET_UNREACHABLE);
     connection_mark_for_close(conn);
   }
 }
