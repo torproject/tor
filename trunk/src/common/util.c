@@ -757,6 +757,13 @@ int check_private_dir(const char *dirname, int create)
 int
 write_str_to_file(const char *fname, const char *str, int bin)
 {
+  return write_bytes_to_file(fname, str, strlen(str), bin);
+}
+
+/* DOCDOC */
+int write_bytes_to_file(const char *fname, const char *str, size_t len,
+                        int bin)
+{
   char tempname[1024];
   int fd;
   size_t len;
@@ -772,7 +779,6 @@ write_str_to_file(const char *fname, const char *str, int bin)
         strerror(errno));
     return -1;
   }
-  len = strlen(str);
   result = write_all(fd, str, len, 0);
   if(result < 0 || (size_t)result != len) {
     log(LOG_WARN, "Error writing to %s: %s", tempname, strerror(errno));
