@@ -268,9 +268,12 @@ int
 rend_service_introduce(circuit_t *circuit, char *request, int request_len)
 {
   char *ptr, *rp_nickname, *r_cookie;
-  char buf[1024];
+  char buf[RELAY_PAYLOAD_SIZE];
+  char secret[20+2*16]; /* Holds KH, Kf, Kb */
   rend_service_t *service;
   int len, keylen;
+  crypto_dh_env_t *dh = NULL;
+  circuit_t *launched = NULL;
 
   if (circuit->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
     log_fn(LOG_WARN, "Got an INTRODUCE2 over a non-introduction circuit.");
@@ -315,6 +318,7 @@ rend_service_introduce(circuit_t *circuit, char *request, int request_len)
     log_fn(LOG_WARN, "Nickname in INTRODUCE2 cell contains illegal character.");
     return -1;
   }
+  /* Okay, now we know that the nickname is at the start of the buffer. */
   rp_nickname = buf;
   ++ptr;
   len -= (ptr-buf);
@@ -322,14 +326,40 @@ rend_service_introduce(circuit_t *circuit, char *request, int request_len)
     log_fn(LOG_WARN, "Bad length for INTRODUCE2 cell.");
     return -1;
   }
+  r_cookie = ptr;
 
-  /* XXXX 1. Do the DH jumping-jacks, and put our key "someplace".
-   * XXXX 2. Store the cell that we will send once we're connected "someplace".
-   * XXXX 3. Launch a circuit to rp_nickname.
-   * XXXX 4. Once we've build the circuit, send the cell.
+  /* Try DH handshake... */
+  dh = crypto_dh_new();
+  if (!dh || crypto_dh_generate_public(dh)<0) {
+    log_fn(LOG_WARN, "Couldn't build DH state or generate public key");
+    goto err;
+  }
+  if (crypto_dh_compute_secret(dh, ptr+20, 128, secret, 20+16*2)<0) {
+    log_fn(LOG_WARN, "Couldn't complete DH handshake");
+    goto err;
+  }
+
+  /* Launch a circuit to alice's chosen rendezvous point.
    */
+  launched = circuit_launch_new(CIRCUIT_PURPOSE_S_RENDEZVOUSING, rp_nickname);
+  if (!launched) {
+    log_fn(LOG_WARN, "Can't launch circuit to rendezvous point '%s'",
+           rp_nickname);
+    return -1;
+  }
+  assert(launched->build_state);
+  /* Fill in the circuit's state. */
+  memcpy(launched->rend_service, circuit->rend_service,CRYPTO_SHA1_DIGEST_LEN);
+  memcpy(launched->rend_cookie, r_cookie, REND_COOKIE_LEN);
+  memcpy(launched->build_state->rend_key_material, secret, 20+16*2);
+  launched->build_state->rend_handshake_state = dh;
+  dh = NULL;
 
   return 0;
+ err:
+  if (dh) crypto_dh_free(dh);
+  if (launched) circuit_mark_for_close(launched);
+  return -1;
 }
 
 /******
