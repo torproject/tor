@@ -681,19 +681,20 @@ static void run_connection_housekeeping(int i, time_t now) {
       conn->hold_open_until_flushed = 1;
     } else if (we_are_hibernating() && !circuit_get_by_conn(conn) &&
                !buf_datalen(conn->outbuf)) {
-      log_fn(LOG_INFO,"Expiring non-used OR connection to %d (%s:%d). [Hibernating.]",
+      log_fn(LOG_INFO,"Expiring non-used OR connection to %d (%s:%d) [Hibernating or exiting].",
              i,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (!clique_mode(options) && !circuit_get_by_conn(conn) &&
                (!router || !server_mode(options) || !router_is_clique_mode(router))) {
-      log_fn(LOG_INFO,"Expiring non-used connection to %d (%s:%d). [Not in clique mode]",
+      log_fn(LOG_INFO,"Expiring non-used connection to %d (%s:%d) [Not in clique mode].",
              i,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (buf_datalen(conn->outbuf) &&
+// XXX will this have races were stuff just got written to the conn and we kill it?
             now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
-      log_fn(LOG_INFO,"Expiriing stuck connection to %d (%s:%d).",
+      log_fn(LOG_INFO,"Expiring stuck connection to %d (%s:%d).",
              i, conn->address, conn->port);
       connection_mark_for_close(conn);
     } else {
