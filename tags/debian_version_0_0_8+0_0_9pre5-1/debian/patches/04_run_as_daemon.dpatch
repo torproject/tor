@@ -1,0 +1,38 @@
+#! /bin/sh -e
+## 04_run_as_daemon.dpatch by  <weasel@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+if [ $# -lt 1 ]; then
+    echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+    exit 1
+fi
+
+[ -f debian/patches/00patch-opts ] && . debian/patches/00patch-opts
+patch_opts="${patch_opts:--f --no-backup-if-mismatch} ${2:+-d $2}"
+
+case "$1" in
+    -patch) patch -p1 ${patch_opts} < $0;;
+    -unpatch) patch -R -p1 ${patch_opts} < $0;;
+    *)
+        echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+        exit 1;;
+esac
+
+exit 0
+
+@DPATCH@
+diff -urNad cvs/src/config/torrc.sample.in /tmp/dpep.ICyOZe/cvs/src/config/torrc.sample.in
+--- cvs/src/config/torrc.sample.in	2004-11-10 03:09:14.931082420 +0100
++++ /tmp/dpep.ICyOZe/cvs/src/config/torrc.sample.in	2004-11-10 04:32:54.737527368 +0100
+@@ -32,7 +32,8 @@
+ 
+ # Uncomment this to start the process in the background... or use
+ # --runasdaemon 1 on the command line.
+-#RunAsDaemon 1
++RunAsDaemon 1
++PIDfile /var/run/tor/tor.pid
+ 
+ # Tor only trusts directories signed with one of these keys, and
+ # uses the given addresses to connect to the trusted directory
