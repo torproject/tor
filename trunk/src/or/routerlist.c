@@ -155,25 +155,22 @@ int all_directory_servers_down(void) {
 void
 add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_down)
 {
-  const char *start,*end;
-  char nick[MAX_HEX_NICKNAME_LEN+1];
   routerinfo_t *router;
+  smartlist_t *nickname_list;
 
   tor_assert(sl);
   tor_assert(list);
 
-  while(isspace((int)*list) || *list==',') list++;
+  nickname_list = smartlist_create();
 
-  start = list;
-  while(*start) {
-    end=start; while(*end && !isspace((int)*end) && *end != ',') end++;
-    if (end-start > MAX_HEX_NICKNAME_LEN) {
+  smartlist_split_string(nickname_list, list, ",",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+
+  SMARTLIST_FOREACH(nickname_list, const char *, nick, {
+    if (strlen(nick) > MAX_HEX_NICKNAME_LEN) {
       log_fn(LOG_WARN,"Nickname too long; skipping");
-      start = end;
       continue;
     }
-    memcpy(nick,start,end-start);
-    nick[end-start] = 0; /* null terminate it */
     router = router_get_by_nickname(nick);
     if (router) {
       if (router->is_running)
@@ -184,9 +181,9 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_do
     } else
       log_fn(has_fetched_directory ? LOG_WARN : LOG_INFO,
              "Nickname list includes '%s' which isn't a known router.",nick);
-    while(isspace((int)*end) || *end==',') end++;
-    start = end;
-  }
+  });
+  SMARTLIST_FOREACH(nickname_list, char *, nick, tor_free(nick));
+  smartlist_free(nickname_list);
 }
 
 /** Add every router from our routerlist that is currently running to

@@ -172,7 +172,7 @@ get_recommended_software_from_directory(const char *str)
   const char *cp = str, *eol;
   int len = strlen(REC);
   cp = str;
-  if (strncmp(str, REC, len)==0) {
+  if (strcmpstart(str, REC)==0) {
     cp += len;
   } else {
     cp = strstr(str, "\n"REC);
@@ -196,10 +196,10 @@ get_recommended_software_from_directory(const char *str)
 /* static */ int is_obsolete_version(const char *myversion,
                            const char *versionlist) {
   const char *vl;
-  char *version, *comma, *cp;
   tor_version_t mine, other;
-  int found_newer = 0, r;
+  int found_newer = 0, r, ret;
   static int warned_too_new=0;
+  smartlist_t *version_sl;
 
   vl = versionlist;
 
@@ -209,14 +209,11 @@ get_recommended_software_from_directory(const char *str)
     log_fn(LOG_ERR, "I couldn't parse my own version (%s)", myversion);
     tor_assert(0);
   }
+  version_sl = smartlist_create();
+  smartlist_split_string(version_sl, versionlist, ",", SPLIT_SKIP_SPACE, 0);
 
-  for(;;) {
-    comma = strchr(vl, ',');
-    version = tor_strndup(vl, comma?(comma-vl):strlen(vl));
-    cp = version;
-    while (isspace((int)*cp))
-      ++cp;
-    if (!strncmp(cp, "Tor ", 4))
+  SMARTLIST_FOREACH(version_sl, const char *, cp, {
+    if (!strcmpstart(cp, "Tor "))
       cp += 4;
 
     if (tor_version_parse(cp, &other)) {
@@ -224,28 +221,29 @@ get_recommended_software_from_directory(const char *str)
     } else {
       r = tor_version_compare(&mine, &other);
       if (r==0) {
-        tor_free(version);
-        return 0; /* It's a match. */
+        ret = 0;
+        goto done;
       } else if (r<0) {
         found_newer = 1;
       }
     }
-    tor_free(version);
-    if (comma)
-      vl = comma+1;
-    else
-      break;
-  }
+  });
+
   if (!found_newer) {
     if (!warned_too_new) {
       log_fn(LOG_WARN, "This version of Tor (%s) is newer than any on the recommended list (%s)",
              myversion, versionlist);
       warned_too_new=1;
     }
-    return 0;
+    ret = 0;
   } else {
-    return 1;
+    ret = 1;
   }
+
+ done:
+  SMARTLIST_FOREACH(version_sl, char *, version, tor_free(version));
+  smartlist_free(version_sl);
+  return ret;
 }
 
 /* Return 0 if myversion is supported; else log a message and return
@@ -1162,13 +1160,13 @@ get_next_token(const char **s, where_syntax where) {
     }
   }
   *s = eat_whitespace(*s);
-  if (strncmp(*s, "-----BEGIN ", 11)) {
+  if (strcmpstart(*s, "-----BEGIN ")) {
     goto done_tokenizing;
   }
   obstart = *s;
   *s += 11; /* length of "-----BEGIN ". */
   next = strchr(*s, '\n');
-  if (next-*s < 6 || strncmp(next-5, "-----\n", 6)) {
+  if (next-*s < 6 || strcmpstart(next-5, "-----\n")) {
     RET_ERR("Malformed object: bad begin line");
   }
   tok->object_type = tor_strndup(*s, next-*s-5);
@@ -1178,7 +1176,7 @@ get_next_token(const char **s, where_syntax where) {
     RET_ERR("Malformed object: missing end line");
   }
   if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) {
-    if (strncmp(next, "-----END RSA PUBLIC KEY-----\n", 29))
+    if (strcmpstart(next, "-----END RSA PUBLIC KEY-----\n"))
       RET_ERR("Malformed object: mismatched end line");
     next = strchr(next,'\n')+1;
     tok->key = crypto_new_pk_env();
@@ -1194,7 +1192,7 @@ get_next_token(const char **s, where_syntax where) {
     tok->object_size = i;
     *s = next + 9; /* length of "-----END ". */
     i = strlen(tok->object_type);
-    if (strncmp(*s, tok->object_type, i) || strncmp(*s+i, "-----\n", 6)) {
+    if (strncmp(*s, tok->object_type, i) || strcmpstart(*s+i, "-----\n")) {
       RET_ERR("Malformed object: mismatched end tag");
     }
     *s += i+6;
