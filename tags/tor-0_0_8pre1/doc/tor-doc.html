@@ -1,0 +1,341 @@
+<html>
+<head>
+<title>Tor: an anonymizing overlay network for TCP</title>
+<meta name="Author" content="Roger Dingledine">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link rel="stylesheet" type="text/css" href="tor-doc.css">
+</head>
+
+<body>
+
+<h1><a href="http://freehaven.net/tor/">Tor</a> documentation</h1>
+
+<p>The simple version: Tor provides a distributed network of servers
+("onion routers"). Users bounce their TCP streams (web traffic, FTP, SSH,
+etc.) around the routers. This makes it hard for recipients, observers, and
+even the onion routers themselves to track the source of the stream.</p>
+
+<p>The complex version: Onion Routing is a connection-oriented anonymizing
+communication service. Users choose a source-routed path through a set of
+nodes, and negotiate a "virtual circuit" through the network, in which
+each node knows its predecessor and successor, but no others. Traffic
+flowing down the circuit is unwrapped by a symmetric key at each node,
+which reveals the downstream node.</p>
+
+<a name="why"></a>
+<h2>Why should I use Tor?</h2>
+
+<p>Individuals need Tor for privacy:
+<ul>
+<li>Privacy in web browsing -- both from the remote website (so it can't
+track and sell your behavior), and similarly from your local ISP.
+<li>Safety in web browsing: if your local government doesn't approve
+of its citizens visiting certain websites, they may monitor the sites
+and put readers on a list of suspicious persons.
+<li>Circumvention of local censorship: connect to resources (news
+sites, instant messaging, etc) that are restricted from your
+ISP/school/company/government.
+<li>Socially sensitive communication: chat rooms and web forums for
+rape and abuse survivors, or people with illnesses.
+</ul>
+
+<p>Journalists and NGOs need Tor for safety:
+<ul>
+<li>Allowing dissidents and whistleblowers to communicate more safely.
+<li>Censorship-resistant publication, such as making available your
+home-made movie anonymously via a Tor <a href="#hidden-service">hidden
+service</a>; and reading, e.g. of news sites not permitted in some
+countries.
+<li>Allowing their agents to check back with their home website while
+they're in a foreign country, without notifying everybody nearby that
+they're working with that organization.
+</ul>
+
+<p>Companies need Tor for business security:
+<ul>
+<li>Competitive analysis: browse the competition's website safely.
+<li>Protecting collaborations of sensitive business units or partners.
+<li>Protecting procurement suppliers or patterns.
+<li>Putting the "P" back in "VPN": traditional VPNs reveal the exact
+amount and frequency of communication. Which locations have employees
+working late? Which locations have employees consulting job-hunting
+websites? Which research groups are communicating with your company's
+patent lawyers?
+</ul>
+
+<p>Governments need Tor for traffic-analysis-resistant communication:
+<ul>
+<li>Open source intelligence gathering (hiding individual analysts is
+not enough -- the organization itself may be sensitive).
+<li>Defense in depth on open <em>and classified</em> networks -- networks
+with a million users (even if they're all cleared) can't be made safe just
+by hardening them to external threat.
+<li>Dynamic and semi-trusted international coalitions: the network can
+be shared without revealing the existence or amount of communication
+between all parties.
+<li>Networks partially under known hostile control: to block
+communications, the enemy must take down the whole network.
+<li>Politically sensitive negotations.
+<li>Road warriors.
+<li>Protecting procurement patterns.
+<li>Anonymous tips.
+</ul>
+
+<p>Law enforcement needs Tor for safety:
+<ul>
+<li>Allowing anonymous tips or crime reporting
+<li>Allowing agents to observe websites without notifying them that
+they're being observed (or, more broadly, without having it be an
+official visit from law enforcement).
+<li>Surveillance and honeypots (sting operations)
+</ul>
+
+<p>Does the idea of sharing the Tor network with
+all of these groups bother you? It shouldn't -- <a
+href="http://freehaven.net/doc/fc03/econymics.pdf">you need them for
+your security</a>.</p>
+
+<a name="client-or-server"></a>
+<h2>Should I run a client or a server?</h2>
+
+<p>You can run Tor in either client mode or server mode. By default,
+everybody is a <i>client</i>. This means you don't relay traffic for
+anybody but yourself.</p>
+
+<p>If you have less than 768kbit in both directions, you should stay
+a client. Otherwise, please consider being a server, to help out the
+network. (Currently each server uses 20-30 gigabytes of traffic
+per month; but that may go up.)</p>
+
+<p>Note that you can be a server without allowing users to make
+connections from your computer to the outside world. This is called being
+a middleman server.</p>
+
+<p> Benefits of running a server include:
+<ul>
+<li>Clients are generally limited to 100KB/s, whereas servers can inject
+or receive as much traffic as they want.
+<li>You may get stronger anonymity, since your destination can't know
+whether connections relayed through your computer originated at your
+computer or not.
+<li>You can also get stronger anonymity by configuring your Tor clients
+to use your Tor server for entry or for exit.
+<li>You're helping me with development and scalability testing.
+<li>You're helping your fellow Internet users by providing a larger
+network. Also, having servers in many different pieces of the Internet
+gives users more robustness against curious telcos and brute force
+attacks.
+</ul>
+
+<p>You can read more about setting up Tor as a
+server <a href="#server">below</a>.</p>
+
+<a name="installing"></a>
+<h2>Installing Tor</h2>
+
+<p>You can get the latest releases <a
+href="http://freehaven.net/tor/dist/">here</a>.</p>
+
+<p>If you got Tor from a tarball, unpack it: <tt>tar xzf
+tor-0.0.7.tar.gz; cd tor-0.0.7</tt>. Run <tt>./configure</tt>, then
+<tt>make</tt>, and then <tt>make install</tt> (as root if necessary). Then
+you can launch tor from the command-line by running <tt>tor</tt>.</p>
+
+<p>If you got Tor from the Win32 .exe file, you
+can just click-click it (you may need to install <a
+href="http://www.slproweb.com/products/Win32OpenSSL.html">OpenSSL
+0.9.7</a> first, if you get an error about missing
+libeay32.dll.) You might also want to run Tor in a dos window,
+so you can see its logs, and see its error messages if it
+crashes. If you don't want the default configuration, fetch the <a
+href="http://freehaven.net/tor/doc/torrc.sample">torrc</a>, edit it,
+and use <tt>tor.exe -f torrc</tt>.</p>
+
+<p>Otherwise, if you got it prepackaged (e.g. in the <a
+href="http://packages.debian.org/tor">Debian package</a> or <a
+href="http://packages.gentoo.org/packages/?category=net-misc;name=tor">Gentoo
+package</a>), these steps are already done for you, and you may
+even already have Tor started in the background (logging to
+/var/log/something).</p>
+
+<p>In any case, see the next section for what to <i>do</i> with it now that
+you've got it running.</p>
+
+<a name="client"></a>
+<h2>Configuring a client</h2>
+
+<p>Tor comes configured as a client by default. It uses a built-in
+default configuration file, and most people won't need to change any of
+the settings.</p>
+
+<p>The only setting you might need to change is "SocksAddress".
+By default, your Tor client only listens for applications that connect
+from localhost. Connections from other computers are refused. If you
+want to torify applications on different computers than the Tor client,
+you should copy torrc.sample to torrc (it's installed by default
+to /usr/local/etc/tor/), change the SocksAddress line to
+0.0.0.0, and then restart Tor.</p>
+
+<p>To test if it's working, point your browser
+to socks4 or socks5 proxy at localhost port 9050. In
+Mozilla, this is in edit|preferences|advanced|proxies. Go to <a
+href="http://www.junkbusters.com/cgi-bin/privacy">http://www.junkbusters.com/cgi-bin/privacy</a>
+and see what IP it says you're coming from. (If you have a personal
+firewall, be sure to allow local connections to port 9050. If your
+firewall blocks outgoing connections, punch a hole so it can connect to
+TCP *:9001-9004 and *:9030-9033. If you're using Safari as your browser,
+keep in mind that OS X before 10.3 claims to support socks but does
+not.)</p>
+
+<p>Once you've tested that it works, you should install <a
+href="http://www.privoxy.org/">privoxy</a>, which is a filtering web
+proxy that integrates well with Tor. Add the line <br>
+<tt>forward-socks4a / localhost:9050 .</tt><br>
+(don't forget the dot) to its
+config file. Then change your mozilla to http proxy at localhost port 8118
+(and no socks proxy). You should also set your SSL proxy to the same
+thing, to hide your https traffic. Using privoxy will give you good html
+scrubbing as well.
+(See <a href="http://freehaven.net/tor/cvs/doc/CLIENTS">this explanation</a>
+for why direct socks gives you less anonymity.)</p>
+
+<p>You might want to use Tor with an application that doesn't
+support socks directly. In this case, you should look at
+using <a href="http://tsocks.sourceforge.net/">tsocks</a>
+to dynamically replace the system calls in your program to
+route through Tor. If you want to use socks4a, consider using <a
+href="http://www.dest-unreach.org/socat/">socat</a> (specific instructions
+are on <a href="http://6sxoyfb3h2nvok2d.onion/tor/SocatHelp">this hidden
+service url</a>).</p>
+
+<a name="server"></a>
+<h2>Configuring a server</h2>
+
+<p>We're looking for people with reasonably reliable Internet connections,
+that have at least 768kbit each way. Currently we don't use all of that,
+but we want it available for burst traffic.</p>
+
+<p>The Tor server doesn't need to be run as root, and doesn't
+need any special system permissions or kernel mods. If you're
+the paranoid sort, feel free to put it into a chroot jail (<a
+href="http://archives.seul.org/or/dev/Jun-2004/msg00001.html">some
+hints</a>), etc.</p>
+
+<p>First, copy torrc.sample to torrc (by default it's in
+/usr/local/etc/tor/), and edit the middle part. Create the DataDirectory,
+and make sure it's owned by whoever will be running tor. Fix your system
+clock so it's not too far off. Make sure name resolution works. Open a
+hole in your firewall so outsiders can connect to your ORPort.</p>
+
+<p>Then run tor to generate keys: <tt>tor</tt>. One of the files generated
+in your DataDirectory is your 'fingerprint' file. Mail it to
+tor-ops@freehaven.net.</p>
+
+<p>In that mail, be sure to tell us who you are, so we know whom to contact
+if there's any problem.  Also describe what kind of connectivity the new
+server will have. If possible, PGP sign your mail.</p>
+
+<p>NOTE: You won't be able to use tor as a client or server
+in this configuration until you've been added to the directory
+and can authenticate to the other nodes.</p>
+
+<p>Once your fingerprint has been approved, you can click <a
+href="http://moria.seul.org:9031/">here</a> or <a
+href="http://62.116.124.106:9030/">here</a> and look at the
+running-routers line to see if your server is part of the network.</p>
+
+<a name="hidden-service"></a>
+<h2>Configuring a hidden service</h2>
+
+<p>Tor allows clients and servers to offer <em>hidden services</em>. That
+is, you can offer an apache, sshd, etc, without revealing your IP to its
+users. This works via Tor's rendezvous point design: both sides build
+a Tor circuit out, and they meet in the middle.</p>
+
+<p>If you're using Tor and <a href="http://www.privoxy.org/">Privoxy</a>,
+you can <a href="http://6sxoyfb3h2nvok2d.onion/">go to the hidden wiki</a>
+to see hidden services in action.</p>
+
+<p>To set up a hidden service, copy torrc.sample to torrc (by default it's
+in /usr/local/etc/tor/), and edit the bottom part. Then run Tor. It will
+create each HiddenServiceDir you have configured, and it will create a
+'hostname' file which specifies the url (xyz.onion) for that service. You
+can tell people the url, and they can connect to it via their Tor client,
+assuming they're using a proxy (such as Privoxy) that speaks socks4a.</p>
+
+<a name="own-network"></a>
+<h2>Setting up your own network</h2>
+
+<p>
+If you want to experiment locally with your own network, or you're cut
+off from the Internet and want to be able to mess with Tor still, then
+you may want to set up your own separate Tor network.
+
+<p>
+To set up your own Tor network, you need to run your own directory
+servers, and you need to change the tarball so it points to your directory
+servers rather than the default ones.
+
+<ul>
+<li>1: Grab the latest release.
+<li>2: For each directory server you want,
+<ul>
+<li>2a: Set it up as a server (see <a href="#server">"setting up a
+server"</a> above), with a least ORPort, DataDirectory, and Nickname
+defined.
+<li>2b: Set "DirPort" to the intended port for serving directories.
+<li>2c: Set "RecommendedVersions" to a comma-separated list of acceptable
+versions of the code for clients and servers to be running (see step
+4c below).
+<!-- <li>2d: Create a file called approved-routers in your DataDirectory:
+<tt>touch approved-routers</tt>. It will be empty for now. We'll fill it in
+step 5. -->
+<li>2d: Create an empty dirservers file (<tt>touch dirservers</tt>). Point
+RouterFile at it in your torrc.
+<li>2e: Run it: <tt>tor -f torrc</tt>. This will generate your keys and a
+router.desc (router descriptor) file. It will then exit with a complaint
+that it can't open the fingerprint file; that's fine.
+</ul>
+<li>3: Create the new dirservers file. You do this by concatenating the
+"router.desc" files from each dirserver's DataDirectory: <tt>cat router1.desc
+router2.desc ... &gt; dirservers</tt>
+<li>4: Now you need to teach clients and servers to use the new
+dirservers file. First, check out the tor cvs repository (instructions <a
+href="http://freehaven.net/tor/">here</a> -- be sure to check out the
+tag that matches the version of the code you intend to use; and note that
+the latest cvs version may not compile or work right). Then:
+<ul>
+<li>4a: Edit src/or/config.c and change the default_dirservers_string array
+so that it reflects the contents of the new dirservers file instead
+of the old one. Be sure to get the quotes and newlines and semicolons
+right. (This step sucks. Please suggest a better way to handle this
+step. ;)
+<li>4b: Replace the dirservers file in your sandbox (in src/config/)
+with the one from step 3.
+<li>4c: edit configure.in, change the AM_INIT_AUTOMAKE(tor, 0.0.6)
+line so that it specifies a version that is specific to you, such as
+0.0.6-arma. This will help you keep from being confused later. Be sure
+to update the RecommendedVersions lines to include this version.
+<li>4d: run <tt>./autogen.sh</tt> (you'll need a new enough set of auto* tools),
+then <tt>make dist</tt>.
+</ul>
+<li>5: Create a file called approved-routers in the DataDirectory
+of each directory server. Collect the 'fingerprint' lines from the
+DataDirectory of each server (including directory servers), and include
+them (one per line) in each approved-routers file. You can hup the tor
+process for each directory server to reload the approved-routers file
+(so you don't have to restart the process).
+</ul>
+
+<h2>Other doc resources</h2>
+
+<ul>
+<li>Design paper
+<li>Spec and rend-spec
+<li>others
+</ul>
+
+</body>
+</html>
+

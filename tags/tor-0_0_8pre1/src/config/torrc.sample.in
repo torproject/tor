@@ -1,0 +1,78 @@
+# Configuration file for a typical tor user
+
+# List of routers. Tor nodes start out knowing about the directory
+# servers, and from them they get a list of currently up nodes.
+RouterFile @CONFDIR@/dirservers
+
+# Comment out if you don't want to allow applications to connect.
+SocksPort 9050
+SocksBindAddress 127.0.0.1 # accept connections only from localhost
+#SocksBindAddress 192.168.0.1:9100 # listen on a chosen IP/port
+
+# Entry policies to allow/deny SOCKS requests based on IP.  By default,
+# we accept all requests to SocksBindAddress.
+#
+#SocksPolicy accept 192.168.0.1/16:*
+#SocksPolicy reject *:*
+
+# By default, we send log messages to stdout.  If you want
+# them to go somewhere else, uncomment one or more of these example
+# configurations.
+### Send all messages of level 'warn' or higher to /var/log/tor/warnings
+#LogFile /var/log/tor/warnings
+#LogLevel warn
+### Send all debug and info messages to /var/log/tor/debug
+#LogFile /var/log/tor/debug
+#LogLevel debug-info
+### Send all debug messages ONLY to /var/log/tor/debug
+#LogFile /var/log/tor/debug
+#LogLevel debug-debug
+
+# Uncomment this to start the process in the background
+#RunAsDaemon 1
+
+##################### Below is just for servers #####################
+
+## NOTE: If you enable these, you won't be able to use tor as a client
+## or server until you've been added to the directory and can
+## authenticate to the other nodes. See the README for details.
+
+## The directory for keeping all the keys/etc for this server
+#DataDirectory @LOCALSTATEDIR@/lib/tor
+
+#Nickname moria # A unique handle for this server
+#Address moria.seul.org # The IP or fqdn for this server
+#ContactInfo 1024D/28988BF5 Roger Dingledine <arma@mit.edu>
+
+#ORPort 9001 # where to listen for tor connections
+#ORBindAddress 0.0.0.0 # accept connections from anywhere
+#ORBindAddress 0.0.0.0:9090 # accept connections from anywhere, and 
+                            # listen on a port other than the one we
+                            # advertised.
+
+# Uncomment this to mirror the directory for others (please do)
+#DirPort 9030
+
+## A comma-separated list of exit policies. If you want to *replace*
+## the default exit policy, end this with either a reject *:* or an
+## accept *:*. Otherwise, you're *augmenting* (prepending to) the
+## default exit policy. Leave commented to just use the default.
+#ExitPolicy accept *:6660-6667
+#ExitPolicy reject 192.168.0.1:*
+#ExitPolicy reject *:*
+
+##################### Below is just for location-hidden services ###
+
+## Look in /tmp/hidden_service/hostname for the url to tell people.
+## HiddenServicePort x y:z says to redirect a port x request from the
+## client to y:z.
+
+#HiddenServiceDir /tmp/hidden_service/
+#HiddenServicePort 80 127.0.0.1:80
+
+#HiddenServiceDir /tmp/other_hidden_service/
+#HiddenServicePort 80 127.0.0.1:80
+#HiddenServicePort 22 127.0.0.1:22
+#HiddenServiceNodes moria1,moria2
+#HiddenServiceExcludeNodes bad,otherbad
+
