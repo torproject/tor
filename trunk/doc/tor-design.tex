@@ -43,7 +43,7 @@
 %  \pdfpageheight=\the\paperheight
 %\fi
 
-\title{Tor: The Second-Generation Onion Router}
+\title{Tor: The Second-Generation Onion Router\\DRAFT VERSION}
 % Putting the 'Private' back in 'Virtual Private Network'
 
 \author{Roger Dingledine \\ The Free Haven Project \\ arma@freehaven.net \and
@@ -242,7 +242,7 @@ including {\bf Babel} \cite{babel}, {\bf Mixmaster}
 decision, these \emph{high-latency} networks resist strong global
 adversaries,
 but introduce too much lag for interactive tasks like web browsing,
-internet chat, or SSH connections.
+Internet chat, or SSH connections.
 
 Tor belongs to the second category: \emph{low-latency} designs that
 try to anonymize interactive network traffic. These systems handle
@@ -560,9 +560,9 @@ the connection with perfect forward secrecy, and prevents an attacker
 from modifying data on the wire or impersonating an OR.
 
 Traffic passes along these connections in fixed-size cells.  Each cell
-is 256 bytes (but see Section~\ref{sec:conclusion} for a discussion of
-allowing large cells and small cells on the same network), and
-consists of a header and a payload. The header includes a circuit
+is 512 bytes, %(but see Section~\ref{sec:conclusion} for a discussion of
+%allowing large cells and small cells on the same network),
+and consists of a header and a payload. The header includes a circuit
 identifier (circID) that specifies which circuit the cell refers to
 (many circuits can be multiplexed over the single TLS connection), and
 a command to describe what to do with the cell's payload.  (Circuit
@@ -717,7 +717,7 @@ will it have a meaningful value.\footnote{
   % Assuming 4-hop circuits with 10 streams per hop, there are 33
   % possible bad streamIDs before the last circuit.  This still
   % gives an error only once every 2 million terabytes (approx).
-With 56 bits of streamID per cell, the probability of an accidental
+With 48 bits of streamID per cell, the probability of an accidental
 collision is far lower than the chance of hardware failure.}
 This \emph{leaky pipe} circuit topology
 allows Alice's streams to exit at different ORs on a single circuit.
@@ -1092,7 +1092,7 @@ and diversity of that system's users, and thereby reduce the anonymity
 of the system itself.  Like usability, public perception is a
 security parameter.  Sadly, preventing abuse of open exit nodes is an
 unsolved problem, and will probably remain an arms race for the
-forseeable future.  The abuse problems faced by Princeton's CoDeeN
+foreseeable future.  The abuse problems faced by Princeton's CoDeeN
 project \cite{darkside} give us a glimpse of likely issues.
 
 \SubSection{Directory Servers}
@@ -1732,7 +1732,7 @@ approaches, but more deployment experience will be helpful in learning
 the relative importance of these bottlenecks.
 
 \emph{Bandwidth classes:} This paper assumes that all ORs have
-good bandwidth and latency. We should instead adopt the Morphmix model,
+good bandwidth and latency. We should instead adopt the MorphMix model,
 where nodes advertise their bandwidth level (DSL, T1, T3), and
 Alice avoids bottlenecks by choosing nodes that match or
 exceed her bandwidth. In this way DSL users can usefully join the Tor
@@ -1807,7 +1807,7 @@ our overall usability.
  Matej Pfajfar, Andrei Serjantov, Marc Rennhard: for design discussions.
  Bram Cohen for congestion control discussions.
  Adam Back for suggesting telescoping circuits.
- Cathy Meadows for formal analysis of the extend protocol.
+ Cathy Meadows for formal analysis of the \emph{extend} protocol.
  This work supported by ONR and DARPA.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
