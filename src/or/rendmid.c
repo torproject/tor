@@ -122,6 +122,8 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
     goto err;
   }
 
+/* change MAX_NICKNAME_LEN to MAX_HEX_NICKNAME_LEN when 0.0.8.1 and
+ * 0.0.9pre3-4 are obsolete. */
   if (request_len < (DIGEST_LEN+(MAX_NICKNAME_LEN+1)+REND_COOKIE_LEN+
                      DH_KEY_LEN+CIPHER_KEY_LEN+PKCS1_OAEP_PADDING_OVERHEAD)) {
     log_fn(LOG_WARN,
@@ -153,7 +155,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, size_t request_len)
     log_fn(LOG_WARN, "Unable to send INTRODUCE2 cell to OP.");
     goto err;
   }
-  /* And sent an ack down the cirecuit.  Empty body->succeeded. */
+  /* And sent an ack down Alice's circuit.  Empty body means succeeded. */
   if (connection_edge_send_command(NULL,circ,RELAY_COMMAND_INTRODUCE_ACK,
                                    NULL,0,NULL)) {
     log_fn(LOG_WARN, "Unable to send INTRODUCE_ACK cell to OP.");
