@@ -717,8 +717,10 @@ void assert_connection_ok(connection_t *conn, time_t now)
    * marked_for_close. */
   
   /* buffers */
-  assert(conn->inbuf);
-  assert(conn->outbuf);
+  if (!connection_is_listener(conn)) {
+    assert(conn->inbuf);
+    assert(conn->outbuf);
+  }
 
   assert(!now || conn->timestamp_lastread <= now);
   assert(!now || conn->timestamp_lastwritten <= now);
@@ -788,12 +790,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_AP:
       assert(conn->state >= _AP_CONN_STATE_MIN &&
              conn->state <= _AP_CONN_STATE_MAX);
-      if (conn->state == AP_CONN_STATE_SOCKS_WAIT ||
-          conn->state == AP_CONN_STATE_CIRCUIT_WAIT) {
-        assert(conn->socks_request);
-      } else {
-        assert(!conn->socks_request);
-      }
+      assert(conn->socks_request);
       break;
     case CONN_TYPE_DIR:
       assert(conn->state >= _DIR_CONN_STATE_MIN &&
