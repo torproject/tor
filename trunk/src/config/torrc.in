@@ -8,5 +8,5 @@ RouterFile @CONFDIR@/dirservers
 # Ports for various services. Comment out if you're not running that
 # service.
 #ORPort 9001
-APPort 9050
+SocksPort 9050
 

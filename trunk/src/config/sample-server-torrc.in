@@ -10,7 +10,7 @@ Address moria.seul.org
 # Ports for various services. Comment out or set to 0 if you're not
 # offering that service.
 ORPort 9004 # listening for cell-speaking connections
-APPort 9024 # listening for socks-speaking connections
+SocksPort 9024 # listening for socks-speaking connections
 #DirPort 0
 
 # Leave this set, or we'll be treated like a client.

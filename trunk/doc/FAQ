@@ -48,9 +48,8 @@ for you.]
 
 The same executable ("or") functions as both client and server, depending
 on which ports are specified in the configuration file. You can specify:
-* APPort: client applications (eg privoxy, Mozilla) can speak socks to
+* SocksPort: client applications (eg privoxy, Mozilla) can speak socks to
   this port.
-* OPPort: onion proxies (client onion routers) connect to this port.
 * ORPort: other onion routers connect to this port
 * DirPort: onion proxies and onion routers speak http to this port, to
   pull down a directory of which nodes are currently available.

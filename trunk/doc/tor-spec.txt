@@ -442,7 +442,7 @@ which reveals the downstream node.
 (Unless otherwise noted, tokens on the same line are space-separated.)
 
 Router ::= Router-Line  Date-Line Onion-Key Link-Key Signing-Key  Exit-Policy Router-Signature NL
-Router-Line ::= "router" nickname address ORPort APPort DirPort bandwidth NL
+Router-Line ::= "router" nickname address ORPort SocksPort DirPort bandwidth NL
 Date-Line ::= "published" YYYY-MM-DD HH:MM:SS NL
 Onion-key ::= "onion-key"  NL  a public key in PEM format   NL
 Link-key ::= "link-key"  NL  a public key in PEM format  NL
@@ -454,7 +454,7 @@ Signature ::= "-----BEGIN SIGNATURE-----" NL
               Base-64-encoded-signature NL "-----END SIGNATURE-----" NL
 
 ORport ::= port where the router listens for routers/proxies (speaking cells)
-APPort ::=  where the router listens for applications (speaking socks)
+SocksPort ::=  where the router listens for applications (speaking socks)
 DirPort ::= where the router listens for directory download requests
 bandwidth ::= maximum bandwidth, in bytes/s
 
