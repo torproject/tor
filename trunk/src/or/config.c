@@ -26,6 +26,93 @@ typedef enum config_type_t {
   CONFIG_TYPE_OBSOLETE,     /**< Obsolete (ignored) option. */
 } config_type_t;
 
+/*DOCDOC*/
+typedef struct config_abbrev_t {
+  char *abbreviated;
+  char *full;
+} config_abbrev_t;
+
+static config_abbrev_t config_abbrevs[] = {
+  { "l", "LogLevel" },
+  { NULL, NULL },
+};
+
+typedef struct config_var_t {
+  char *name;
+  config_type_t type;
+  off_t var_offset;
+} config_var_t;
+
+#define STRUCT_OFFSET(tp, member) ((off_t) &(((tp*)0)->member))
+#define VAR(name,conftype,member) \
+  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_options_t, member) }
+#define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0 }
+
+static config_var_t config_vars[] = {
+  VAR("Address",             STRING,   Address),
+  VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes),
+  VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir),
+  VAR("BandwidthRate",       UINT,     BandwidthRate),
+  VAR("BandwidthBurst",      UINT,     BandwidthBurst),
+  VAR("ClientOnly",          BOOL,     ClientOnly),
+  VAR("ContactInfo",         STRING,   ContactInfo),
+  VAR("DebugLogFile",        STRING,   DebugLogFile),
+  VAR("DataDirectory",       STRING,   DataDirectory),
+  VAR("DirPort",             UINT,     DirPort),
+  VAR("DirBindAddress",      LINELIST, DirBindAddress),
+  VAR("DirFetchPostPeriod",  UINT,     DirFetchPostPeriod),
+  VAR("DirPolicy",           LINELIST, DirPolicy),
+  VAR("DirServer",           LINELIST, DirServers),
+  VAR("ExitNodes",           STRING,   ExitNodes),
+  VAR("EntryNodes",          STRING,   EntryNodes),
+  VAR("StrictExitNodes",     BOOL,     StrictExitNodes),
+  VAR("StrictEntryNodes",    BOOL,     StrictEntryNodes),
+  VAR("ExitPolicy",          LINELIST, ExitPolicy),
+  VAR("ExcludeNodes",        STRING,   ExcludeNodes),
+  VAR("FascistFirewall",     BOOL,     FascistFirewall),
+  VAR("FirewallPorts",       CSV,      FirewallPorts),
+  VAR("MyFamily",            STRING,   MyFamily),
+  VAR("NodeFamily",          LINELIST, NodeFamilies),
+  VAR("Group",               STRING,   Group),
+  VAR("HttpProxy",           STRING,   HttpProxy),
+  VAR("HiddenServiceDir",    LINELIST, RendConfigLines),
+  VAR("HiddenServicePort",   LINELIST, RendConfigLines),
+  VAR("HiddenServiceNodes",  LINELIST, RendConfigLines),
+  VAR("HiddenServiceExcludeNodes", LINELIST, RendConfigLines),
+  VAR("IgnoreVersion",       BOOL,     IgnoreVersion),
+  VAR("KeepalivePeriod",     UINT,     KeepalivePeriod),
+  VAR("LogLevel",            LINELIST, LogOptions),
+  VAR("LogFile",             LINELIST, LogOptions),
+  OBSOLETE("LinkPadding"),
+  VAR("MaxConn",             UINT,     MaxConn),
+  VAR("MaxOnionsPending",    UINT,     MaxOnionsPending),
+  VAR("Nickname",            STRING,   Nickname),
+  VAR("NewCircuitPeriod",    UINT,     NewCircuitPeriod),
+  VAR("NumCpus",             UINT,     NumCpus),
+  VAR("ORPort",              UINT,     ORPort),
+  VAR("ORBindAddress",       LINELIST, ORBindAddress),
+  VAR("OutboundBindAddress", STRING,   OutboundBindAddress),
+  VAR("PidFile",             STRING,   PidFile),
+  VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight),
+  VAR("RedirectExit",        LINELIST, RedirectExit),
+  OBSOLETE("RouterFile"),
+  VAR("RunAsDaemon",         BOOL,     RunAsDaemon),
+  VAR("RunTesting",          BOOL,     RunTesting),
+  VAR("RecommendedVersions", LINELIST, RecommendedVersions),
+  VAR("RendNodes",           STRING,   RendNodes),
+  VAR("RendExcludeNodes",    STRING,   RendExcludeNodes),
+  VAR("SocksPort",           UINT,     SocksPort),
+  VAR("SocksBindAddress",    LINELIST, SocksBindAddress),
+  VAR("SocksPolicy",         LINELIST, SocksPolicy),
+  VAR("SysLog",              LINELIST, LogOptions),
+  OBSOLETE("TrafficShaping"),
+  VAR("User",                STRING,   User),
+  { NULL, NULL, NULL }
+};
+#undef VAR
+#undef OBSOLETE
+
+
 /** Largest allowed config line */
 #define CONFIG_LINE_T_MAXLEN 4096
 
@@ -37,7 +124,21 @@ static int config_assign(or_options_t *options, struct config_line_t *list);
 static int parse_dir_server_line(const char *line);
 static int parse_redirect_line(or_options_t *options,
                                struct config_line_t *line);
+static const char *expand_abbrev(const char *option);
+static config_var_t *config_find_option(const char *key);
 
+/** DOCDOC */
+static const char *
+expand_abbrev(const char *option)
+{
+  int i;
+  for (i=0; config_abbrevs[i].abbreviated; ++i) {
+    /* Abbreviations aren't casei. */
+    if (!strcmp(option,config_abbrevs[i].abbreviated))
+      return config_abbrevs[i].full;
+  }
+  return option;
+}
 
 /** Helper: Read a list of configuration options from the command line. */
 static struct config_line_t *
@@ -61,7 +162,7 @@ config_get_commandlines(int argc, char **argv)
     while(*s == '-')
       s++;
 
-    new->key = tor_strdup(s);
+    new->key = tor_strdup(expand_abbrev(s));
     new->value = tor_strdup(argv[i+1]);
 
     log(LOG_DEBUG,"Commandline: parsed keyword '%s', value '%s'",
@@ -132,30 +233,44 @@ config_free_lines(struct config_line_t *front)
   }
 }
 
-/** Search the linked list <b>c</b> for any option whose key is <b>key</b>.
- * If such an option is found, interpret it as of type <b>type</b>, and store
- * the result in <b>arg</b>.  If the option is misformatted, log a warning and
- * skip it.
- */
+static config_var_t *config_find_option(const char *key)
+{
+  int i;
+  for (i=0; config_vars[i].name; ++i) {
+    if (!strcasecmp(key, config_vars[i].name)) {
+      return &config_vars[i];
+    } else if (!strncasecmp(key, config_vars[i].name, strlen(key))) {
+      log_fn(LOG_WARN, "The abbreviation '%s' is deprecated. "
+          "Tell Nick and Roger to make it official, or just use '%s' instead",
+             key, config_vars[i].name);
+      return &config_vars[i];
+    }
+  }
+  return NULL;
+}
+
 static int
-config_compare(struct config_line_t *c, const char *key,
-               config_type_t type, void *arg)
+config_assign_line(or_options_t *options, struct config_line_t *c)
 {
   int i, ok;
+  config_var_t *var;
+  void *lvalue;
 
-  if (strncasecmp(c->key, key, strlen(c->key)))
-    return 0;
-
-  if (strcasecmp(c->key, key)) {
-    tor_free(c->key);
-    c->key = tor_strdup(key);
+  var = config_find_option(c->key);
+  if (!var) {
+    log_fn(LOG_WARN, "Unknown option '%s'.  Failing.", c->key);
+    return -1;
   }
 
-  /* it's a match. cast and assign. */
-  log_fn(LOG_DEBUG, "Recognized keyword '%s' as %s, using value '%s'.",
-         c->key, key, c->value);
+  /* Put keyword into canonical case. */
+  if (strcmp(var->name, c->key)) {
+    tor_free(c->key);
+    c->key = tor_strdup(var->name);
+  }
 
-  switch(type) {
+  lvalue = ((void*)options) + var->var_offset;
+  switch(var->type) {
+
   case CONFIG_TYPE_UINT:
     i = tor_parse_long(c->value, 10, 0, INT_MAX, &ok, NULL);
     if (!ok) {
@@ -163,7 +278,7 @@ config_compare(struct config_line_t *c, const char *key,
           c->key,c->value);
       return 0;
     }
-    *(int *)arg = i;
+    *(int *)lvalue = i;
     break;
 
   case CONFIG_TYPE_BOOL:
@@ -172,23 +287,23 @@ config_compare(struct config_line_t *c, const char *key,
       log(LOG_WARN, "Boolean keyword '%s' expects 0 or 1. Skipping.", c->key);
       return 0;
     }
-    *(int *)arg = i;
+    *(int *)lvalue = i;
     break;
 
   case CONFIG_TYPE_STRING:
-    tor_free(*(char **)arg);
-    *(char **)arg = tor_strdup(c->value);
+    tor_free(*(char **)lvalue);
+    *(char **)lvalue = tor_strdup(c->value);
     break;
 
   case CONFIG_TYPE_DOUBLE:
-    *(double *)arg = atof(c->value);
+    *(double *)lvalue = atof(c->value);
     break;
 
   case CONFIG_TYPE_CSV:
-    if (*(smartlist_t**)arg == NULL)
-      *(smartlist_t**)arg = smartlist_create();
+    if (*(smartlist_t**)lvalue == NULL)
+      *(smartlist_t**)lvalue = smartlist_create();
 
-    smartlist_split_string(*(smartlist_t**)arg, c->value, ",",
+    smartlist_split_string(*(smartlist_t**)lvalue, c->value, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     break;
 
@@ -196,8 +311,8 @@ config_compare(struct config_line_t *c, const char *key,
       /* Note: this reverses the order that the lines appear in.  That's
        * just fine, since we build up the list of lines reversed in the
        * first place. */
-      *(struct config_line_t**)arg =
-        config_line_prepend(*(struct config_line_t**)arg, c->key, c->value);
+      *(struct config_line_t**)lvalue =
+        config_line_prepend(*(struct config_line_t**)lvalue, c->key, c->value);
       break;
 
   case CONFIG_TYPE_OBSOLETE:
@@ -205,7 +320,7 @@ config_compare(struct config_line_t *c, const char *key,
     break;
   }
 
-  return 1;
+  return 0;
 }
 
 /** Iterate through the linked list of options <b>list</b>.
@@ -216,94 +331,8 @@ static int
 config_assign(or_options_t *options, struct config_line_t *list)
 {
   while (list) {
-    if (
-
-      /* order matters here! abbreviated arguments use the first match. */
-
-      /* string options */
-      config_compare(list, "Address",        CONFIG_TYPE_STRING, &options->Address) ||
-      config_compare(list, "AllowUnverifiedNodes", CONFIG_TYPE_CSV, &options->AllowUnverifiedNodes) ||
-      config_compare(list, "AuthoritativeDirectory",CONFIG_TYPE_BOOL, &options->AuthoritativeDir) ||
-
-      config_compare(list, "BandwidthRate",  CONFIG_TYPE_UINT, &options->BandwidthRate) ||
-      config_compare(list, "BandwidthBurst", CONFIG_TYPE_UINT, &options->BandwidthBurst) ||
-
-      config_compare(list, "ClientOnly",     CONFIG_TYPE_BOOL, &options->ClientOnly) ||
-      config_compare(list, "ContactInfo",    CONFIG_TYPE_STRING, &options->ContactInfo) ||
-
-      config_compare(list, "DebugLogFile",   CONFIG_TYPE_STRING, &options->DebugLogFile) ||
-      config_compare(list, "DataDirectory",  CONFIG_TYPE_STRING, &options->DataDirectory) ||
-      config_compare(list, "DirPort",        CONFIG_TYPE_UINT, &options->DirPort) ||
-      config_compare(list, "DirBindAddress", CONFIG_TYPE_LINELIST, &options->DirBindAddress) ||
-      config_compare(list, "DirFetchPostPeriod",CONFIG_TYPE_UINT, &options->DirFetchPostPeriod) ||
-      config_compare(list, "DirPolicy",      CONFIG_TYPE_LINELIST, &options->DirPolicy) ||
-      config_compare(list, "DirServer",      CONFIG_TYPE_LINELIST, &options->DirServers) ||
-
-      config_compare(list, "ExitNodes",      CONFIG_TYPE_STRING, &options->ExitNodes) ||
-      config_compare(list, "EntryNodes",     CONFIG_TYPE_STRING, &options->EntryNodes) ||
-      config_compare(list, "StrictExitNodes", CONFIG_TYPE_BOOL, &options->StrictExitNodes) ||
-      config_compare(list, "StrictEntryNodes", CONFIG_TYPE_BOOL, &options->StrictEntryNodes) ||
-      config_compare(list, "ExitPolicy",     CONFIG_TYPE_LINELIST, &options->ExitPolicy) ||
-      config_compare(list, "ExcludeNodes",   CONFIG_TYPE_STRING, &options->ExcludeNodes) ||
-
-      config_compare(list, "FascistFirewall",CONFIG_TYPE_BOOL, &options->FascistFirewall) ||
-      config_compare(list, "FirewallPorts",CONFIG_TYPE_CSV, &options->FirewallPorts) ||
-      config_compare(list, "MyFamily",      CONFIG_TYPE_STRING, &options->MyFamily) ||
-      config_compare(list, "NodeFamily",    CONFIG_TYPE_LINELIST, &options->NodeFamilies) ||
-
-      config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
-
-      config_compare(list, "HttpProxy",      CONFIG_TYPE_STRING, &options->HttpProxy) ||
-      config_compare(list, "HiddenServiceDir", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
-      config_compare(list, "HiddenServicePort", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
-      config_compare(list, "HiddenServiceNodes", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
-      config_compare(list, "HiddenServiceExcludeNodes", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
-
-      config_compare(list, "IgnoreVersion",  CONFIG_TYPE_BOOL, &options->IgnoreVersion) ||
-
-      config_compare(list, "KeepalivePeriod",CONFIG_TYPE_UINT, &options->KeepalivePeriod) ||
-
-      config_compare(list, "LogLevel",       CONFIG_TYPE_LINELIST, &options->LogOptions) ||
-      config_compare(list, "LogFile",        CONFIG_TYPE_LINELIST, &options->LogOptions) ||
-      config_compare(list, "LinkPadding",    CONFIG_TYPE_OBSOLETE, NULL) ||
-
-      config_compare(list, "MaxConn",        CONFIG_TYPE_UINT, &options->MaxConn) ||
-      config_compare(list, "MaxOnionsPending",CONFIG_TYPE_UINT, &options->MaxOnionsPending) ||
-
-      config_compare(list, "Nickname",       CONFIG_TYPE_STRING, &options->Nickname) ||
-      config_compare(list, "NewCircuitPeriod",CONFIG_TYPE_UINT, &options->NewCircuitPeriod) ||
-      config_compare(list, "NumCpus",        CONFIG_TYPE_UINT, &options->NumCpus) ||
-
-      config_compare(list, "ORPort",         CONFIG_TYPE_UINT, &options->ORPort) ||
-      config_compare(list, "ORBindAddress",  CONFIG_TYPE_LINELIST, &options->ORBindAddress) ||
-      config_compare(list, "OutboundBindAddress",CONFIG_TYPE_STRING, &options->OutboundBindAddress) ||
-
-      config_compare(list, "PidFile",        CONFIG_TYPE_STRING, &options->PidFile) ||
-      config_compare(list, "PathlenCoinWeight",CONFIG_TYPE_DOUBLE, &options->PathlenCoinWeight) ||
-
-      config_compare(list, "RedirectExit",   CONFIG_TYPE_LINELIST, &options->RedirectExit) ||
-      config_compare(list, "RouterFile",     CONFIG_TYPE_OBSOLETE, NULL) ||
-      config_compare(list, "RunAsDaemon",    CONFIG_TYPE_BOOL, &options->RunAsDaemon) ||
-      config_compare(list, "RunTesting",     CONFIG_TYPE_BOOL, &options->RunTesting) ||
-      config_compare(list, "RecommendedVersions",CONFIG_TYPE_LINELIST, &options->RecommendedVersions) ||
-      config_compare(list, "RendNodes",      CONFIG_TYPE_STRING, &options->RendNodes) ||
-      config_compare(list, "RendExcludeNodes",CONFIG_TYPE_STRING, &options->RendExcludeNodes) ||
-
-      config_compare(list, "SocksPort",      CONFIG_TYPE_UINT, &options->SocksPort) ||
-      config_compare(list, "SocksBindAddress",CONFIG_TYPE_LINELIST,&options->SocksBindAddress) ||
-      config_compare(list, "SocksPolicy",     CONFIG_TYPE_LINELIST,&options->SocksPolicy) ||
-      config_compare(list, "SysLog",          CONFIG_TYPE_LINELIST,&options->LogOptions) ||
-      config_compare(list, "TrafficShaping", CONFIG_TYPE_OBSOLETE, NULL) ||
-
-      config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User)
-
-      ) {
-      /* then we're ok. it matched something. */
-    } else {
-      log_fn(LOG_WARN,"Unknown keyword '%s'. Failing.",list->key);
+    if (config_assign_line(options, list))
       return -1;
-    }
-
     list = list->next;
   }
 
@@ -534,7 +563,7 @@ static char *get_windows_conf_root(void)
 
   if (is_set)
     return path;
-  
+
   /* Find X:\documents and settings\username\applicatation data\ .
    * We would use SHGetSpecialFolder path, but that wasn't added until IE4.
    */
