@@ -165,13 +165,13 @@ static rend_service_port_config_t *parse_port_config(const char *string)
       log_fn(LOG_WARN, "Port out of range");
       return NULL;
     }
-    addr = 0x7F000001u; /* Default to 127.0.0.1 */
+    addr = htonl(0x7F000001u); /* Default to 127.0.0.1 */
   }
 
   result = tor_malloc(sizeof(rend_service_port_config_t));
   result->virtual_port = virtport;
   result->real_port = realport;
-  result->real_address = addr;
+  result->real_address = ntohl(addr);
   return result;
 }
 
