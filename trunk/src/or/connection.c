@@ -198,7 +198,6 @@ void connection_about_to_close_connection(connection_t *conn)
         /* XXX We only set conn->nickname when we initiate the connection, or
          * when the handshake is complete; so conn->nickname is a good test
          * for "we initiated the connection", right? -NM */
-         */
         if(conn->nickname)
           rep_hist_note_connect_failed(conn->identity_digest, time(NULL));
       } else if (0) { // XXX reason == CLOSE_REASON_UNUSED_OR_CONN) {
