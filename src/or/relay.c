@@ -582,6 +582,7 @@ static int
 connection_edge_process_relay_cell_not_open(
     relay_header_t *rh, cell_t *cell, circuit_t *circ,
     connection_t *conn, crypt_path_t *layer_hint) {
+  struct in_addr in;
   uint32_t addr;
   int reason;
   routerinfo_t *exitrouter;
@@ -614,7 +615,8 @@ connection_edge_process_relay_cell_not_open(
         log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
         return 0; /* this circuit is screwed and doesn't know it yet */
       }
-      if (connection_ap_can_use_exit(conn, exitrouter)) {
+      if (!tor_inet_aton(conn->socks_request->address, &in) &&
+          !conn->chosen_exit_name) {
         log_fn(LOG_NOTICE,"Exitrouter '%s' seems to be more restrictive than its exit policy. Not using this router as exit for now.", exitrouter->nickname);
         addr_policy_free(exitrouter->exit_policy);
         exitrouter->exit_policy =
