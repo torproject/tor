@@ -18,7 +18,7 @@ For 0.1.0.x:
 
  Refactoring and infrastructure:
 
-  . Switch to libevent
+N . Switch to libevent
        - Hold-open-until-flushed now works by accident; it should work by
          design.
        - The logic for reading from TLS sockets is likely to overrun the
@@ -33,56 +33,56 @@ For 0.1.0.x:
    - Make sure logged info is "safe"ish.
 
  Stability
-   - Reset uptime when IP/ORPort/... changes.
+R  - Reset uptime when IP/ORPort/... changes.
 
  Functionality
-  - Implement pending controller features.
-  - HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
+N - Implement pending controller features.
+R - HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
     other ORs.)
   - Changes for forward compatibility
-    - If a version is later than the last in its series, but a version
+N   - If a version is later than the last in its series, but a version
       in the next series is recommended, that doesn't mean it's bad.
   - Do end reasons better
-    - Realize that unrecognized end reasons are probably features rather than
-      bugs. (backport to 009x)
     - Start using RESOURCELIMIT more.
     - Try to use MISC a lot less.
       - bug: if the exit node fails to create a socket (e.g. because it
         has too many open), we will get a generic stream end response.
       - niels's "did it fail because conn refused or timeout or what"
         relay end feature.
-    - Start recognizing, but maybe not yet generating, more reasons and
+N   - Realize that unrecognized end reasons are probably features rather than
+      bugs. (backport to 009x)
+N   - Start recognizing, but maybe not yet generating, more reasons and
       needed -- aim to eliminate misc. (backport to 009x)
-  - Feed end reason back into SOCK5 as reasonable.
-  - cache .foo.exit names better, or differently, or not.
-  - make !advertised_server_mode() ORs fetch dirs less often.
-  - Clean up NT service code even more.  Document it. Enable it by default.
+N - Feed end reason back into SOCK5 as reasonable.
+R - cache .foo.exit names better, or differently, or not.
+N - make !advertised_server_mode() ORs fetch dirs less often.
+N - Clean up NT service code even more.  Document it. Enable it by default.
     Make sure it works.
 
  Documentation
-  - Document new version system.
-  - Correct and clarify the wiki entry on port forwarding.
-  - Document where OSX, windows logs go, where stuff is installed.
+N - Document new version system.
+R - Correct and clarify the wiki entry on port forwarding.
+N - Document where OSX, windows logs go, where stuff is installed.
 
  Installers
-  - Vet all pending installer patches
+N - Vet all pending installer patches
     - Win32 installer plus privoxy, sockscap/freecap, etc.
-  - Make OSX man pages go into man directory.
+N - Make OSX man pages go into man directory.
 
  Correctness
    - Bugfixes
-     - when we haven't explicitly sent a socks reject, sending one in
+R    - when we haven't explicitly sent a socks reject, sending one in
        connection_about_to_close_connection() fails because we never give it
        a chance to flush. right answer is to do the socks reply manually in
        each appropriate case, and then about-to-close-connection can simply
        warn us if we forgot one. [Tag this 010 in flyspray.]
-     - should retry exitpolicy end streams even if the end cell didn't
+R    - should retry exitpolicy end streams even if the end cell didn't
        resolve the address for you
    - Figure out when to reset addressmaps (on hup, on reconfig, etc)
 
  Improvements to self-measurement.
-   - round detected bandwidth up to nearest 10KB?
-   - client software not upload descriptor until:
+R  - round detected bandwidth up to nearest 10KB?
+R  - client software not upload descriptor until:
      - you've been running for an hour
      - it's sufficiently satisfied with its bandwidth
      - it decides it is reachable
@@ -93,17 +93,17 @@ For 0.1.0.x:
 
 
  Arguable
-  - Reverse DNS: specify and implement.
-  - make min uptime a function of the available choices (say, choose 60th
+N - Reverse DNS: specify and implement.
+R - make min uptime a function of the available choices (say, choose 60th
     percentile, not 1 day.)
-  - kill dns workers more slowly
-  - build testing circuits? going through non-verified nodes?
+R - kill dns workers more slowly
+R - build testing circuits? going through non-verified nodes?
   - config option to publish what ports you listen on, beyond ORPort/DirPort
-  - It would be nice to have a FirewalledIPs thing that works like
+N - It would be nice to have a FirewalledIPs thing that works like
     FirewallPorts.
   - If we have a trusted directory on port 80, stop falling back to
     forbidden ports when fascistfirewall blocks all good dirservers.
-  - Code cleanup
+N - Code cleanup
     - Make configure.in handle cross-compilation
       - Have NULL_REP_IS_ZERO_BYTES default to 1.
       - Make with-ssl-dir disable search for ssl.
