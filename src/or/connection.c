@@ -154,8 +154,8 @@ void connection_close_immediate(connection_t *conn)
     return;
   }
   if (conn->outbuf_flushlen) {
-    log_fn(LOG_INFO,"Closing connection (fd %d, type %d, state %d) with data on outbuf.",
-           conn->s, conn->type, conn->state);
+    log_fn(LOG_INFO,"Closing connection (fd %d, type %s, state %d) with data on outbuf.",
+           conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state);
   }
   close(conn->s);
   conn->s = -1;
@@ -226,7 +226,8 @@ void connection_expire_held_open(void)
     if (conn->hold_open_until_flushed) {
       assert(conn->marked_for_close);
       if (now - conn->timestamp_lastwritten >= 15) {
-        log_fn(LOG_WARN,"Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %d, state %d).", conn->s, conn->type, conn->state);
+        log_fn(LOG_WARN,"Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %d).", 
+			conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state);
         conn->hold_open_until_flushed = 0;
       }
     }

@@ -188,7 +188,7 @@ int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof) {
     return 0; /* we shouldn't read anything */
 
 //  log_fn(LOG_DEBUG,"reading at most %d bytes.",at_most);
-  read_result = read(s, buf->mem+buf->datalen, at_most);
+  read_result = recv(s, buf->mem+buf->datalen, at_most, 0);
   if (read_result < 0) {
     if(!ERRNO_EAGAIN(errno)) { /* it's a real error */
       return -1;
@@ -250,7 +250,7 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
   if(*buf_flushlen == 0) /* nothing to flush */
     return 0;
 
-  write_result = write(s, buf->mem, *buf_flushlen);
+  write_result = send(s, buf->mem, *buf_flushlen, 0);
   if (write_result < 0) {
     if(!ERRNO_EAGAIN(errno)) { /* it's a real error */
       return -1;

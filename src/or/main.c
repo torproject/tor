@@ -69,7 +69,8 @@ int connection_add(connection_t *conn) {
 
   nfds++;
 
-  log(LOG_INFO,"connection_add(): new conn type %d, socket %d, nfds %d.",conn->type, conn->s, nfds);
+  log(LOG_INFO,"connection_add(): new conn type %s, socket %d, nfds %d.",
+	  CONN_TYPE_TO_STRING(conn->type), conn->s, nfds);
 
   return 0;
 }
@@ -88,7 +89,8 @@ int connection_remove(connection_t *conn) {
   assert(conn);
   assert(nfds>0);
 
-  log(LOG_INFO,"connection_remove(): removing socket %d, nfds now %d",conn->s, nfds-1);
+  log_fn(LOG_INFO,"removing socket %d (type %s), nfds now %d",
+	  conn->s, CONN_TYPE_TO_STRING(conn->type), nfds-1);
   /* if it's an edge conn, remove it from the list
    * of conn's on this circuit. If it's not on an edge,
    * flush and send destroys for all circuits on this conn
@@ -191,7 +193,7 @@ static void conn_read(int i) {
         /* XXX This shouldn't ever happen anymore. */
         /* XXX but it'll clearly happen on MS_WINDOWS from POLLERR, right? */
         log_fn(LOG_ERR,"Unhandled error on read for %s connection (fd %d); removing",
-               conn_type_to_string[conn->type], conn->s);
+               CONN_TYPE_TO_STRING(conn->type), conn->s);
         connection_mark_for_close(conn,0);
       }
     }
@@ -215,7 +217,7 @@ static void conn_write(int i) {
     if (!conn->marked_for_close) {
       /* this connection is broken. remove it. */
       log_fn(LOG_WARN,"Unhandled error on read for %s connection (fd %d); removing",
-             conn_type_to_string[conn->type], conn->s);
+             CONN_TYPE_TO_STRING(conn->type), conn->s);
       conn->has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
       connection_mark_for_close(conn,0);
     }
@@ -238,9 +240,9 @@ static void conn_close_if_marked(int i) {
      * has already been closed as unflushable. */
     if(!conn->hold_open_until_flushed)
       log_fn(LOG_WARN,
-        "Conn (fd %d, type %d, state %d) marked, but wants to flush %d bytes. "
+        "Conn (fd %d, type %s, state %d) marked, but wants to flush %d bytes. "
         "(Marked at %s:%d)",
-        conn->s, conn->type, conn->state,
+        conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state,
         conn->outbuf_flushlen, conn->marked_for_close_file, conn->marked_for_close);
     if(connection_speaks_cells(conn)) {
       if(conn->state == OR_CONN_STATE_OPEN) {
@@ -654,7 +656,7 @@ static void dumpstats(int severity) {
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
     log(severity, "Conn %d (socket %d) type %d (%s), state %d (%s), created %ld secs ago",
-      i, conn->s, conn->type, conn_type_to_string[conn->type],
+      i, conn->s, conn->type, CONN_TYPE_TO_STRING(conn->type),
       conn->state, conn_state_to_string[conn->type][conn->state], now - conn->timestamp_created);
     if(!connection_is_listener(conn)) {
       log(severity,"Conn %d is to '%s:%d'.",i,conn->address, conn->port);
