@@ -24,8 +24,11 @@ Do you want to run a tor server?
 
   Then run tor to generate keys. One of the files generated
   in your DataDirectory is your 'fingerprint' file. Mail it to
-  arma@mit.edu. Remember that you won't be able to authenticate to the
-  other tor nodes until I've added you to the directory.
+  arma@mit.edu.
+
+  NOTE: You won't be able to use tor as a client or server
+  in this configuration until you've been added to the directory
+  and can authenticate to the other nodes.
 
 Configuring tsocks:
 
