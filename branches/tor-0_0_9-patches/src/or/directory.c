@@ -859,7 +859,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     tor_free(url);
 
     if (dlen == 0) {
-      log_fn(LOG_NOTICE,"My directory is empty. Closing.");
+      log_fn(LOG_NOTICE,"Client asked for the mirrored directory, but we don't have a good one yet. Sending 503 Dir not available.");
       connection_write_to_buf(answer503, strlen(answer503), conn);
       return 0;
     }
