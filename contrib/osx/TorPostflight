@@ -57,3 +57,9 @@ if [ ! -e /var/log/tor -o -L /var/log/tor ]; then
   rm -f tor
   ln -sf $LOGDIR tor
 fi
+
+if [ ! -d /Library/StartupItems/Tor ]; then
+  mkdir -p /Library/StartupItems/Tor
+fi
+rm -f /Library/StartupItems/Tor/Tor.loc
+echo "$TARGET" > /Library/StartupItems/Tor/Tor.loc
