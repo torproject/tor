@@ -1,3 +1,10 @@
+tor (0.0.6.1-2) unreleased; urgency=low
+
+  * 
+  * Recommend socat.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  7 May 2004 01:09:13 +0200
+
 tor (0.0.6.1-1) unstable; urgency=medium
 
   * New upstream release (breaks backwards compatibility).
