@@ -22,7 +22,7 @@ Changes that will be in 0.0.7pre1:
 Changes in version 0.0.6.2 - 2004-05-16
   o Our integrity-checking digest was checking only the most recent cell,
     not the previous cells like we'd thought.
-    Thanks to Stefan Kopsell for finding the flaw!
+    Thanks to Stefan Mark for finding the flaw!
 
 
 Changes in version 0.0.6.1 - 2004-05-06
@@ -30,7 +30,7 @@ Changes in version 0.0.6.1 - 2004-05-06
     onion-level stream encryption, but not TLS-level). It turns
     out we were doing something much more akin to a 16-character
     polyalphabetic cipher. Oops.
-    Thanks to Stefan Kopsell for finding the flaw!
+    Thanks to Stefan Mark for finding the flaw!
   o Retire moria3 as a directory server, and add tor26 as a directory
     server.
 
