@@ -200,12 +200,9 @@ static int config_compare(struct config_line_t *c, const char *key, config_type_
       *(double *)arg = atof(c->value);
       break;
     case CONFIG_TYPE_CSV:
-      if (arg) {
-        SMARTLIST_FOREACH((smartlist_t*)arg, char *, cp, tor_free(cp));
-        smartlist_free((smartlist_t*)arg);
-      }
-      arg = smartlist_create();
-      parse_csv_into_smartlist(arg, c->value);
+      if(*(smartlist_t**)arg == NULL)
+        *(smartlist_t**)arg = smartlist_create();
+      parse_csv_into_smartlist(*(smartlist_t**)arg, c->value);
       break;
     case CONFIG_TYPE_LINELIST:
       /* Note: this reverses the order that the lines appear in.  That's
