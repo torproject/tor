@@ -20,8 +20,6 @@ extern or_options_t options;
 int have_failed = 0;
 
 /* These functions are file-local, but are exposed so we can test. */
-int router_get_routerlist_from_directory_impl(
-        const char *s, routerlist_t **dest, crypto_pk_env_t *pkey);
 void add_fingerprint_to_dir(const char *nickname, const char *fp);
 void get_platform_str(char *platform, int len);
 
@@ -727,7 +725,7 @@ test_dir_format()
 
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
   cp = buf;
-  rp1 = router_get_entry_from_string((const char*)cp,NULL);
+  rp1 = router_parse_entry_from_string((const char*)cp,NULL);
   test_assert(rp1);
   test_streq(rp1->address, r1.address);
   test_eq(rp1->or_port, r1.or_port);
@@ -750,7 +748,7 @@ test_dir_format()
   test_streq(buf, buf2);
 
   cp = buf;
-  rp2 = router_get_entry_from_string(&cp);
+  rp2 = router_parse_entry_from_string(&cp);
   test_assert(rp2);
   test_streq(rp2->address, r2.address);
   test_eq(rp2->or_port, r2.or_port);
@@ -787,7 +785,7 @@ test_dir_format()
   options.Nickname = "DirServer";
   test_assert(!dirserv_dump_directory_to_string(buf,8192,pk3));
   cp = buf;
-  test_assert(!router_get_routerlist_from_directory_impl(buf, &dir1, pk3));
+  test_assert(!router_parse_routerlist_from_directory(buf, &dir1, pk3));
   test_eq(2, smartlist_len(dir1->routers));
   dirserv_free_fingerprint_list();
 
