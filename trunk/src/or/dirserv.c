@@ -353,7 +353,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
            "signed-directory\n"
            "published %s\n"
            "recommended-software "RECOMMENDED_SOFTWARE_VERSIONS"\n"
-           "running-routers %s\n", published, cp);
+           "running-routers %s\n\n", published, cp);
   free(cp);
   i = strlen(s);
   cp = s+i;
