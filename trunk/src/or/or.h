@@ -259,7 +259,7 @@ struct connection_t {
 
 /* used by exit and ap: */
 
-  uint32_t topic_id;
+  uint16_t topic_id;
   struct connection_t *next_topic;
   int n_receive_topicwindow;
   int p_receive_topicwindow;
@@ -650,7 +650,7 @@ int connection_dir_handle_listener_read(connection_t *conn);
 
 int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
-int dns_tor_to_master(char *address);
+int dns_tor_to_master(connection_t *exitconn);
 int dns_master_start(void);
 
 /********************************* main.c ***************************/

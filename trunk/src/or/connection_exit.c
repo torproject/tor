@@ -88,7 +88,7 @@ int connection_exit_send_connected(connection_t *conn) {
   memset(&cell, 0, sizeof(cell_t));
   cell.aci = circ->p_aci;
   cell.command = CELL_DATA;
-  *(uint32_t *)cell.payload = conn->topic_id;
+  *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
   *cell.payload = TOPIC_COMMAND_CONNECTED;
   cell.length = TOPIC_HEADER_SIZE;
   log(LOG_INFO,"connection_exit_send_connected(): passing back cell (aci %d).",circ->p_aci);
@@ -129,7 +129,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   }
 
   cell->payload[0] = 0;
-  n_conn->topic_id = *(uint32_t *)(cell->payload);
+  n_conn->topic_id = ntohs(*(uint16_t *)(cell->payload+2));
 
   n_conn->address = strdup(cell->payload + TOPIC_HEADER_SIZE);
   n_conn->port = atoi(comma+1);
@@ -150,7 +150,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   circ->n_conn = n_conn;
 
   /* send it off to the gethostbyname farm */
-  if(dns_tor_to_master(n_conn->address) < 0) {
+  if(dns_tor_to_master(n_conn) < 0) {
     log(LOG_DEBUG,"connection_exit_begin_conn(): Couldn't queue resolve request.");
     connection_remove(n_conn);
     connection_free(n_conn);
@@ -171,8 +171,7 @@ int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ) {
   assert(cell && circ);
 
   topic_command = *cell->payload;
-  *cell->payload = 0;
-  topic_id = *(uint32_t *)cell->payload;
+  topic_id = ntohs(*(uint16_t *)(cell->payload+2));
   log(LOG_DEBUG,"connection_exit_process_data_cell(): command %d topic %d", topic_command, topic_id);
   num_seen++;
   log(LOG_DEBUG,"connection_exit_process_data_cell(): Now seen %d data cells here.", num_seen);

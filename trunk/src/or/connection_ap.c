@@ -336,10 +336,9 @@ int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ) {
   /* deliver the dest_addr in a data cell */
   cell.command = CELL_DATA;
   cell.aci = circ->n_aci;
-  crypto_pseudo_rand(3, cell.payload+1); /* byte 0 is blank, bytes 1-3 are random */
+  crypto_pseudo_rand(2, cell.payload+2); /* bytes 0-1 is blank, bytes 2-3 are random */
   /* FIXME check for collisions */
-  cell.payload[0] = 0;
-  ap_conn->topic_id = *(uint32_t *)cell.payload;
+  ap_conn->topic_id = ntohs(*(uint16_t *)(cell.payload+2));
   cell.payload[0] = TOPIC_COMMAND_BEGIN;
   snprintf(cell.payload+4, CELL_PAYLOAD_SIZE-4, "%s,%d", ap_conn->dest_addr, ap_conn->dest_port);
   cell.length = strlen(cell.payload+TOPIC_HEADER_SIZE)+1+TOPIC_HEADER_SIZE;
@@ -381,8 +380,7 @@ int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ) {
   assert(cell && circ);
 
   topic_command = *cell->payload;
-  *cell->payload = 0;
-  topic_id = *(uint32_t *)cell->payload;
+  topic_id = ntohs(*(uint16_t *)(cell->payload+2));
   log(LOG_DEBUG,"connection_ap_process_data_cell(): command %d topic %d", topic_command, topic_id);
   num_seen++;
   log(LOG_DEBUG,"connection_exit_process_data_cell(): Now seen %d data cells here.", num_seen);

@@ -546,7 +546,7 @@ void circuit_about_to_close_connection(connection_t *conn) {
     memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_DATA;
     cell.length = TOPIC_HEADER_SIZE;
-    *(uint32_t *)cell.payload = conn->topic_id;
+    *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
     *cell.payload = TOPIC_COMMAND_END;
    
     if(conn == circ->p_conn) {
