@@ -12,9 +12,6 @@ const char fakepoll_c_id[] = "$Id$";
 #include "orconfig.h"
 #include "fakepoll.h"
 
-#define MAXCONNECTIONS 10000 /* XXXX copied from or.h */
-#define FD_SETSIZE MAXCONNECTIONS
-
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -44,7 +41,6 @@ tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
         return poll(ufds,nfds,timeout);
 }
 #else
-
 int
 tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 {
@@ -71,7 +67,7 @@ tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
         for (idx = 0; idx < nfds; ++idx) {
                 ufds[idx].revents = 0;
                 fd = ufds[idx].fd;
-                tor_assert(fd >= 0);
+                tor_assert(SOCKET_SEEMS_POLLABLE(fd));
                 if (fd > maxfd) {
                   maxfd = fd;
 #ifdef MS_WINDOWS
