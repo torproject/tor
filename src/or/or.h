@@ -330,6 +330,7 @@ typedef struct {
 typedef struct {
   routerinfo_t **routers;
   int n_routers;
+  char *software_versions;
 } directory_t;
 
 struct crypt_path_t { 
