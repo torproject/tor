@@ -516,7 +516,7 @@ connection_edge_process_relay_cell_not_open(
         connection_mark_for_close(conn);
         return 0;
       }
-      client_dns_set_entry(conn->socks_request->address, addr);
+      client_dns_set_addressmap(conn->socks_request->address, addr);
 
       /* check if he *ought* to have allowed it */
       exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
@@ -589,7 +589,7 @@ connection_edge_process_relay_cell_not_open(
         connection_mark_for_close(conn);
         return 0;
       }
-      client_dns_set_entry(conn->socks_request->address, addr);
+      client_dns_set_addressmap(conn->socks_request->address, addr);
     }
     circuit_log_path(LOG_INFO,circ);
     connection_ap_handshake_socks_reply(conn, NULL, 0, 1);

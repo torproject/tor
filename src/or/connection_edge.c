@@ -329,6 +329,169 @@ void connection_ap_attach_pending(void)
   }
 }
 
+/** A client-side struct to remember requests to rewrite addresses
+ * to new addresses. These structs make up a tree, with addressmap
+ * below as its root.
+ *
+ * There are 5 ways to set an address mapping:
+ * - A MapAddress command from the controller [permanent]
+ * - An AddressMap directive in the torrc [permanent]
+ * - When a TrackHostExits torrc directive is triggered [temporary]
+ * - When a dns resolve succeeds [temporary]
+ * - When a dns resolve fails [temporary]
+ *
+ * When an addressmap request is made but one is already registered,
+ * the new one is replaced only if the currently registered one has
+ * no "new_address" (that is, it's in the process of dns resolve),
+ * or if the new one is permanent (expires==0).
+ */
+typedef struct {
+  char *new_address;
+  time_t expires;
+  int num_resolve_failures;
+} addressmap_entry_t;
+
+/** The tree of client-side address rewrite instructions. */
+static strmap_t *addressmap;
+
+/** Initialize addressmap. */
+void addressmap_init(void) {
+  addressmap = strmap_new();
+}
+
+/** Free the memory associated with the addressmap entry <b>_ent</b>. */
+static void
+addressmap_ent_free(void *_ent) {
+  addressmap_entry_t *ent = _ent;
+  tor_free(ent->new_address);
+  tor_free(ent);
+}
+
+/** A helper function for addressmap_clean() below. If ent is too old,
+ * then remove it from the tree and return NULL, else return ent.
+ */
+static void *
+_addressmap_remove_if_expired(const char *addr,
+                              addressmap_entry_t *ent,
+                              time_t *nowp) {
+  if (ent->expires && ent->expires < *nowp) {
+    log(LOG_NOTICE, "Addressmap: expiring remap (%s to %s)",
+           addr, ent->new_address);
+    addressmap_ent_free(ent);
+    return NULL;
+  } else {
+    return ent;
+  }
+}
+
+/** Clean out entries from the addressmap cache that were
+ * added long enough ago that they are no longer valid.
+ */
+void addressmap_clean(time_t now) {
+  strmap_foreach(addressmap,
+                 (strmap_foreach_fn)_addressmap_remove_if_expired, &now);
+}
+
+/** Free all the elements in the addressmap, and free the addressmap
+ * itself. */
+void addressmap_free_all(void) {
+  strmap_free(addressmap, addressmap_ent_free);
+  addressmap = NULL;
+}
+
+/** Look at address, and rewrite it until it doesn't want any
+ * more rewrites; but don't get into an infinite loop.
+ * Don't write more than maxlen chars into address.
+ */
+void addressmap_rewrite(char *address, size_t maxlen) {
+  addressmap_entry_t *ent;
+  int rewrites;
+
+  for (rewrites = 0; rewrites < 16; rewrites++) {
+    ent = strmap_get(addressmap, address);
+
+    if (!ent || !ent->new_address)
+      return; /* done, no rewrite needed */
+
+    log_fn(LOG_NOTICE, "Addressmap: rewriting '%s' to '%s'",
+           address, ent->new_address);
+    strlcpy(address, ent->new_address, maxlen);
+  }
+  log_fn(LOG_WARN,"Loop detected: we've rewritten '%s' 16 times! Using it as-is.",
+         address);
+  /* it's fine to rewrite a rewrite, but don't loop forever */
+}
+
+/** Return 1 if <b>address</b> is already registered, else return 0 */
+int addressmap_already_mapped(const char *address) {
+  return strmap_get(addressmap, address) ? 1 : 0;
+}
+
+/** Register a request to map <b>address</b> to <b>new_address</b>,
+ * which will expire on <b>expires</b> (or 0 if never expires).
+ *
+ * new_address should be a newly dup'ed string, which we'll use or
+ * free as appropriate. We will leave address alone.
+ */
+void addressmap_register(const char *address, char *new_address, time_t expires) {
+  addressmap_entry_t *ent;
+
+  ent = strmap_get(addressmap, address);
+  if (ent && ent->new_address && expires) {
+    log_fn(LOG_NOTICE,"Addressmap ('%s' to '%s') not performed, since it's already mapped to '%s'", address, new_address, ent->new_address);
+    tor_free(new_address);
+    return;
+  }
+  if (ent) { /* we'll replace it */
+    tor_free(ent->new_address);
+  } else { /* make a new one and register it */
+    ent = tor_malloc_zero(sizeof(addressmap_entry_t));
+    strmap_set(addressmap, address, ent);
+  }
+  ent->new_address = new_address;
+  ent->expires = expires;
+  ent->num_resolve_failures = 0;
+
+  log_fn(LOG_NOTICE, "Addressmap: (re)mapped '%s' to '%s'",
+         address, ent->new_address);
+}
+
+/** An attempt to resolve <b>address</b> failed at some OR.
+ * Increment the number of resolve failures we have on record
+ * for it, and then return that number.
+ */
+int client_dns_incr_failures(const char *address)
+{
+  addressmap_entry_t *ent;
+  ent = strmap_get(addressmap,address);
+  if (!ent) {
+    ent = tor_malloc_zero(sizeof(addressmap_entry_t));
+    ent->expires = time(NULL)+MAX_DNS_ENTRY_AGE;
+    strmap_set(addressmap,address,ent);
+  }
+  ++ent->num_resolve_failures;
+  log_fn(LOG_NOTICE,"Address %s now has %d resolve failures.",
+         address, ent->num_resolve_failures);
+  return ent->num_resolve_failures;
+}
+
+/** Record the fact that <b>address</b> resolved to <b>val</b>.
+ * We can now use this in subsequent streams via addressmap_rewrite()
+ * so we can more correctly choose an exit that will allow <b>address</b>.
+ */
+void client_dns_set_addressmap(const char *address, uint32_t val)
+{
+  struct in_addr in;
+
+  tor_assert(address); tor_assert(val);
+
+  if (tor_inet_aton(address, &in))
+    return; /* don't set an addressmap back to ourselves! */
+  in.s_addr = htonl(val);
+  addressmap_register(address, strdup(inet_ntoa(in)),
+                      time(NULL) + MAX_DNS_ENTRY_AGE);
+}
+
 /** Return 1 if <b>address</b> has funny characters in it like
  * colons. Return 0 if it's fine.
  */
@@ -383,6 +546,11 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     return sockshere;
   } /* else socks handshake is done, continue processing */
 
+  tor_strlower(socks->address); /* normalize it */
+
+  /* For address map controls, remap the address */
+  addressmap_rewrite(socks->address, sizeof(socks->address));
+
   /* Parse the address provided by SOCKS.  Modify it in-place if it
    * specifies a hidden-service (.onion) or particular exit node (.exit).
    */
@@ -408,7 +576,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     }
 
     if (socks->command == SOCKS_COMMAND_RESOLVE) {
-      uint32_t answer = 0;
+      uint32_t answer;
       struct in_addr in;
       /* Reply to resolves immediately if we can. */
       if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
@@ -416,11 +584,8 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
         return -1;
       }
-      if (tor_inet_aton(socks->address, &in)) /* see if it's an IP already */
+      if (tor_inet_aton(socks->address, &in)) { /* see if it's an IP already */
         answer = in.s_addr;
-      if (!answer && !conn->chosen_exit_name) /* if it's not .exit, check cache */
-        answer = htonl(client_dns_lookup_entry(socks->address));
-      if (answer) {
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
                                                (char*)&answer);
         conn->has_sent_end = 1;
@@ -514,8 +679,6 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
 {
   char payload[CELL_PAYLOAD_SIZE];
   int payload_len;
-  struct in_addr in;
-  const char *string_addr;
 
   tor_assert(ap_conn->type == CONN_TYPE_AP);
   tor_assert(ap_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
@@ -530,18 +693,10 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
     return -1;
   }
 
-  if (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
-    in.s_addr = htonl(client_dns_lookup_entry(ap_conn->socks_request->address));
-    string_addr = in.s_addr ? inet_ntoa(in) : NULL;
-
-    tor_snprintf(payload,RELAY_PAYLOAD_SIZE,
-             "%s:%d",
-             string_addr ? string_addr : ap_conn->socks_request->address,
-             ap_conn->socks_request->port);
-  } else {
-    tor_snprintf(payload,RELAY_PAYLOAD_SIZE,
-             ":%d", ap_conn->socks_request->port);
-  }
+  tor_snprintf(payload,RELAY_PAYLOAD_SIZE, "%s:%d",
+               (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) ?
+                 ap_conn->socks_request->address : "",
+               ap_conn->socks_request->port);
   payload_len = strlen(payload)+1;
 
   log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",ap_conn->stream_id);
@@ -670,7 +825,7 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
   if (answer_type == RESOLVED_TYPE_IPV4) {
     uint32_t a = get_uint32(answer);
     if (a)
-      client_dns_set_entry(conn->socks_request->address, ntohl(a));
+      client_dns_set_addressmap(conn->socks_request->address, ntohl(a));
   }
 
   if (conn->socks_request->socks_version == 4) {
@@ -844,6 +999,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     tor_free(address);
     return 0;
   }
+  tor_strlower(address);
   n_stream->address = address;
   n_stream->state = EXIT_CONN_STATE_RESOLVEFAILED;
   /* default to failed, change in dns_resolve if it turns out not to fail */
@@ -1018,8 +1174,6 @@ int connection_edge_is_rendezvous_stream(connection_t *conn) {
  */
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
 {
-  uint32_t addr;
-
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP);
   tor_assert(conn->socks_request);
@@ -1042,7 +1196,10 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
   }
 
   if (conn->socks_request->command != SOCKS_COMMAND_RESOLVE) {
-    addr = client_dns_lookup_entry(conn->socks_request->address);
+    struct in_addr in;
+    uint32_t addr = 0;
+    if (tor_inet_aton(conn->socks_request->address, &in))
+      addr = ntohl(in.s_addr);
     if (router_compare_addr_to_addr_policy(addr, conn->socks_request->port,
           exit->exit_policy) == ADDR_POLICY_REJECTED)
       return 0;
@@ -1098,164 +1255,6 @@ int socks_policy_permits_address(uint32_t addr)
   return 0;
 }
 
-/* ***** Client DNS code ***** */
-
-/* XXX Perhaps this should get merged with the dns.c code somehow. */
-/* XXX But we can't just merge them, because then nodes that act as
- *     both OR and OP could be attacked: people could rig the dns cache
- *     by answering funny things to stream begin requests, and later
- *     other clients would reuse those funny addr's. Hm.
- */
-
-/** A client-side struct to remember the resolved IP (addr) for
- * a given address. These structs make up a tree, with client_dns_map
- * below as its root.
- */
-struct client_dns_entry {
-  uint32_t addr; /**< The resolved IP of this entry. */
-  time_t expires; /**< At what second does addr expire? */
-  int n_failures; /**< How many times has this entry failed to resolve so far? */
-};
-
-/** How many elements are in the client dns cache currently? */
-static int client_dns_size = 0;
-/** The tree of client-side cached DNS resolves. */
-static strmap_t *client_dns_map = NULL;
-
-/** Initialize client_dns_map and client_dns_size. */
-void client_dns_init(void) {
-  client_dns_map = strmap_new();
-  client_dns_size = 0;
-}
-
-/** Return the client_dns_entry that corresponds to <b>address</b>.
- * If it's not there, allocate and return a new entry for <b>address</b>.
- */
-static struct client_dns_entry *
-_get_or_create_ent(const char *address)
-{
-  struct client_dns_entry *ent;
-  ent = strmap_get_lc(client_dns_map,address);
-  if (!ent) {
-    ent = tor_malloc_zero(sizeof(struct client_dns_entry));
-    ent->expires = time(NULL)+MAX_DNS_ENTRY_AGE;
-    strmap_set_lc(client_dns_map,address,ent);
-    ++client_dns_size;
-  }
-  return ent;
-}
-
-/** Return the IP associated with <b>address</b>, if we know it
- * and it's still fresh enough. Otherwise return 0.
- */
-uint32_t client_dns_lookup_entry(const char *address)
-{
-  struct client_dns_entry *ent;
-  struct in_addr in;
-  time_t now;
-
-  tor_assert(address);
-
-  if (tor_inet_aton(address, &in)) {
-    log_fn(LOG_DEBUG, "Using static address %s (%08lX)", address,
-           (unsigned long)ntohl(in.s_addr));
-    return ntohl(in.s_addr);
-  }
-  ent = strmap_get_lc(client_dns_map,address);
-  if (!ent || !ent->addr) {
-    log_fn(LOG_DEBUG, "No entry found for address %s", address);
-    return 0;
-  } else {
-    now = time(NULL);
-    if (ent->expires < now) {
-      log_fn(LOG_DEBUG, "Expired entry found for address %s", address);
-      strmap_remove_lc(client_dns_map,address);
-      tor_free(ent);
-      --client_dns_size;
-      return 0;
-    }
-    in.s_addr = htonl(ent->addr);
-    log_fn(LOG_DEBUG, "Found cached entry for address %s: %s", address,
-           inet_ntoa(in));
-    return ent->addr;
-  }
-}
-
-/** An attempt to resolve <b>address</b> failed at some OR.
- * Increment the number of resolve failures we have on record
- * for it, and then return that number.
- */
-int client_dns_incr_failures(const char *address)
-{
-  struct client_dns_entry *ent;
-  ent = _get_or_create_ent(address);
-  ++ent->n_failures;
-  log_fn(LOG_DEBUG,"Address %s now has %d resolve failures.",
-         address, ent->n_failures);
-  return ent->n_failures;
-}
-
-/** Record the fact that <b>address</b> resolved to <b>val</b>.
- * We can now use this in subsequent streams in client_dns_lookup_entry(),
- * so we can more correctly choose a router that will allow <b>address</b>
- * to exit from him.
- */
-void client_dns_set_entry(const char *address, uint32_t val)
-{
-  struct client_dns_entry *ent;
-  struct in_addr in;
-  time_t now;
-
-  tor_assert(address);
-  tor_assert(val);
-
-  if (tor_inet_aton(address, &in))
-    return;
-  now = time(NULL);
-  ent = _get_or_create_ent(address);
-  in.s_addr = htonl(val);
-  log_fn(LOG_DEBUG, "Updating entry for address %s: %s", address,
-         inet_ntoa(in));
-  ent->addr = val;
-  ent->expires = now+MAX_DNS_ENTRY_AGE;
-  ent->n_failures = 0;
-}
-
-/** A helper function for client_dns_clean() below. If ent is too old,
- * then remove it from the tree and return NULL, else return ent.
- */
-static void* _remove_if_expired(const char *addr,
-                                struct client_dns_entry *ent,
-                                time_t *nowp)
-{
-  if (ent->expires < *nowp) {
-    --client_dns_size;
-    tor_free(ent);
-    return NULL;
-  } else {
-    return ent;
-  }
-}
-
-/** Clean out entries from the client-side DNS cache that were
- * resolved long enough ago that they are no longer valid.
- */
-void client_dns_clean(void)
-{
-  time_t now;
-
-  if (!client_dns_size)
-    return;
-  now = time(NULL);
-  strmap_foreach(client_dns_map, (strmap_foreach_fn)_remove_if_expired, &now);
-}
-
-void client_dns_free_all(void)
-{
-  strmap_free(client_dns_map, free);
-  client_dns_map = NULL;
-}
-
 /** Make connection redirection follow the provided list of
  * exit_redirect_t */
 void
@@ -1284,20 +1283,18 @@ parse_extended_hostname(char *address) {
 
     s = strrchr(address,'.');
     if (!s) return 0; /* no dot, thus normal */
-    if (!strcasecmp(s+1,"exit")) {
+    if (!strcmp(s+1,"exit")) {
       *s = 0; /* null-terminate it */
       return EXIT_HOSTNAME; /* .exit */
     }
-    if (strcasecmp(s+1,"onion"))
+    if (strcmp(s+1,"onion"))
       return NORMAL_HOSTNAME; /* neither .exit nor .onion, thus normal */
 
     /* so it is .onion */
     *s = 0; /* null-terminate it */
     if (strlcpy(query, address, REND_SERVICE_ID_LEN+1) >= REND_SERVICE_ID_LEN+1)
       goto failed;
-    tor_strlower(query);
     if (rend_valid_service_id(query)) {
-      tor_strlower(address);
       return ONION_HOSTNAME; /* success */
     }
 failed:

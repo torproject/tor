@@ -1263,7 +1263,7 @@ static int tor_init(int argc, char *argv[]) {
   rep_hist_init();
   /* Initialize the service cache. */
   rend_cache_init();
-  client_dns_init(); /* Init the client dns cache. Do it always, since it's cheap. */
+  addressmap_init(); /* Init the client dns cache. Do it always, since it's cheap. */
 
   /* give it somewhere to log to initially */
   add_temp_log();
@@ -1308,7 +1308,7 @@ void tor_free_all(void)
 {
   routerlist_free_current();
   free_trusted_dir_servers();
-  client_dns_free_all();
+  addressmap_free_all();
   free_socks_policy();
   free_dir_policy();
   dirserv_free_all();

@@ -950,6 +950,10 @@ typedef struct {
   smartlist_t *FirewallPorts; /**< Which ports our firewall allows (strings). */
   /** Application ports that require all nodes in circ to have sufficient uptime. */
   smartlist_t *LongLivedPorts;
+  /** Should we try to reuse the same exit node for a given host */
+  smartlist_t *TrackHostExits;
+  int TrackHostExitsExpire; /**< Number of seconds until we expire an addressmap */
+  struct config_line_t *AddressMap; /**< List of address map directives. */
   int DirFetchPeriod; /**< How often do we fetch new directories? */
   int DirPostPeriod; /**< How often do we post our server descriptor to the
                       * authoritative directory servers? */
@@ -1212,6 +1216,7 @@ connection_t *connection_get_by_identity_digest(const char *digest, int type);
 
 connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_state(int type, int state);
+connection_t *connection_get_by_type_purpose(int type, int purpose);
 connection_t *connection_get_by_type_state_lastwritten(int type, int state);
 connection_t *connection_get_by_type_state_rendquery(int type, int state, const char *rendquery);
 connection_t *connection_get_by_type_purpose(int type, int purpose);
@@ -1258,16 +1263,19 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
 void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
 
+void addressmap_init(void);
+void addressmap_clean(time_t now);
+void addressmap_free_all(void);
+void addressmap_rewrite(char *address, size_t maxlen);
+int addressmap_already_mapped(const char *address);
+void addressmap_register(const char *address, char *new_address, time_t expires);
+int client_dns_incr_failures(const char *address);
+void client_dns_set_addressmap(const char *address, uint32_t val);
+
 void parse_socks_policy(void);
 void free_socks_policy(void);
 int socks_policy_permits_address(uint32_t addr);
 
-void client_dns_init(void);
-uint32_t client_dns_lookup_entry(const char *address);
-int client_dns_incr_failures(const char *address);
-void client_dns_set_entry(const char *address, uint32_t val);
-void client_dns_clean(void);
-void client_dns_free_all(void);
 void set_exit_redirects(smartlist_t *lst);
 typedef enum hostname_type_t {
   NORMAL_HOSTNAME, ONION_HOSTNAME, EXIT_HOSTNAME

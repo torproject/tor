@@ -385,7 +385,7 @@ void circuit_build_needed_circs(time_t now) {
     circuit_reset_failure_count(1);
     time_to_new_circuit = now + get_options()->NewCircuitPeriod;
     if (proxy_mode(get_options()))
-      client_dns_clean();
+      addressmap_clean(now);
     circuit_expire_old_circuits();
 
 #if 0 /* disable for now, until predict-and-launch-new can cull leftovers */
@@ -768,7 +768,6 @@ circuit_get_open_circ_or_launch(connection_t *conn,
                                 uint8_t desired_circuit_purpose,
                                 circuit_t **circp) {
   circuit_t *circ;
-  uint32_t addr;
   int is_resolve;
   int need_uptime;
 
@@ -801,7 +800,10 @@ circuit_get_open_circ_or_launch(connection_t *conn,
 
   /* Do we need to check exit policy? */
   if (!is_resolve && !connection_edge_is_rendezvous_stream(conn)) {
-    addr = client_dns_lookup_entry(conn->socks_request->address);
+    struct in_addr in;
+    uint32_t addr = 0;
+    if (tor_inet_aton(conn->socks_request->address, &in))
+      addr = ntohl(in.s_addr);
     if (router_exit_policy_all_routers_reject(addr, conn->socks_request->port,
                                               need_uptime)) {
       log_fn(LOG_NOTICE,"No Tor server exists that allows exit to %s:%d. Rejecting.",
@@ -899,6 +901,53 @@ static void link_apconn_to_circ(connection_t *apconn, circuit_t *circ) {
   apconn->cpath_layer = circ->cpath->prev;
 }
 
+/** If an exit wasn't specifically chosen, save the history for future
+ * use */
+static void
+consider_recording_trackhost(connection_t *conn, circuit_t *circ) {
+  int found_needle = 0;
+  char *str;
+  or_options_t *options = get_options();
+  size_t len;
+  char *new_address;
+
+  /* Search the addressmap for this conn's destination. */
+  /* If he's not in the address map.. */
+  if (!options->TrackHostExits ||
+      addressmap_already_mapped(conn->socks_request->address))
+    return; /* nothing to track, or already mapped */
+
+  SMARTLIST_FOREACH(options->TrackHostExits, const char *, cp, {
+    if (cp[0] == '.') { /* match end */
+      /* XXX strstr is probably really bad here */
+      if ((str = strstr(conn->socks_request->address, &cp[1]))) {
+        if (str == conn->socks_request->address
+          || strcmp(str, &cp[1]) == 0) {
+          found_needle = 1;
+        }
+      }
+    } else if (strcmp(cp, conn->socks_request->address) == 0) {
+      found_needle = 1;
+    }
+  });
+
+  if (!found_needle)
+    return;
+
+  /* Add this exit/hostname pair to the addressmap. */
+  len = strlen(conn->socks_request->address) + 1 /* '.' */ +
+        strlen(circ->build_state->chosen_exit_name) + 1 /* '.' */ +
+        strlen("exit") + 1 /* '\0' */;
+  new_address = tor_malloc(len);
+
+  tor_snprintf(new_address, len, "%s.%s.exit",
+               conn->socks_request->address,
+               circ->build_state->chosen_exit_name);
+
+  addressmap_register(conn->socks_request->address, new_address,
+                      time(NULL) + options->TrackHostExitsExpire);
+}
+
 /** Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
  * we don't find one: if conn cannot be handled by any known nodes,
  * warn and return -1 (conn needs to die);
@@ -957,7 +1006,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
     link_apconn_to_circ(conn, circ);
     tor_assert(conn->socks_request);
     if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
-//      consider_recording_trackhost(conn, circ);
+      consider_recording_trackhost(conn, circ);
       connection_ap_handshake_send_begin(conn, circ);
     } else {
       connection_ap_handshake_send_resolve(conn, circ);
