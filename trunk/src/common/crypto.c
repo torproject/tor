@@ -1479,7 +1479,6 @@ int base16_decode(char *dest, int destlen, const char *src, int srclen)
     ++dest;
     src+=2;
   }
-  *dest = '\0';
   return 0;
 }
 
