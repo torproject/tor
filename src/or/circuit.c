@@ -173,13 +173,17 @@ circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn) {
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
     if(circ->p_aci == aci) {
-      for(tmpconn = circ->p_conn; tmpconn; tmpconn = tmpconn->next_stream) {
+      if(circ->p_conn == conn)
+        return circ;
+      for(tmpconn = circ->p_streams; tmpconn; tmpconn = tmpconn->next_stream) {
         if(tmpconn == conn)
           return circ;
       }
     }
     if(circ->n_aci == aci) {
-      for(tmpconn = circ->n_conn; tmpconn; tmpconn = tmpconn->next_stream) {
+      if(circ->n_conn == conn)
+        return circ;
+      for(tmpconn = circ->n_streams; tmpconn; tmpconn = tmpconn->next_stream) {
         if(tmpconn == conn)
           return circ;
       }
@@ -193,10 +197,14 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
   connection_t *tmpconn;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    for(tmpconn = circ->p_conn; tmpconn; tmpconn=tmpconn->next_stream)
+    if(circ->p_conn == conn)
+      return circ;
+    if(circ->n_conn == conn)
+      return circ;
+    for(tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
       if(tmpconn == conn)
         return circ;
-    for(tmpconn = circ->n_conn; tmpconn; tmpconn=tmpconn->next_stream)
+    for(tmpconn = circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream)
       if(tmpconn == conn)
         return circ;
   }
@@ -280,7 +288,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   else
     conn = circ->p_conn;
 
-  if(!conn || !connection_speaks_cells(conn)) {
+  if(!conn) { //|| !connection_speaks_cells(conn)) {
     log(LOG_INFO,"circuit_deliver_relay_cell(): Didn't recognize cell (%d), but circ stops here! Dropping.", *(int *)(cell->payload+1));
     return 0;
   }
@@ -384,26 +392,20 @@ int relay_check_recognized(circuit_t *circ, int cell_direction, char *stream, co
 /* FIXME can optimize by passing thishop in */
   connection_t *tmpconn;
 
-  log(LOG_DEBUG,"relay_check_recognized(): entering");
   if(!memcmp(stream,ZERO_STREAM,STREAM_ID_SIZE)) {
     log(LOG_DEBUG,"relay_check_recognized(): It's the zero stream. Recognized.");
     return 1; /* the zero stream is always recognized */
   }
+  log(LOG_DEBUG,"relay_check_recognized(): not the zero stream.");
 
   if(cell_direction == CELL_DIRECTION_OUT)
-    tmpconn = circ->n_conn;
+    tmpconn = circ->n_streams;
   else
-    tmpconn = circ->p_conn;
+    tmpconn = circ->p_streams;
 
-  log(LOG_DEBUG,"relay_check_recognized(): not the zero stream.");
   if(!tmpconn) {
     log(LOG_DEBUG,"relay_check_recognized(): No conns. Not recognized.");
-    return 0; /* no conns? don't recognize it */
-  }
-
-  while(tmpconn && tmpconn->type == CONN_TYPE_OR) {
-    log(LOG_DEBUG,"relay_check_recognized(): skipping over an OR conn");
-    tmpconn = tmpconn->next_stream;
+    return 0;
   }
 
   for( ; tmpconn; tmpconn=tmpconn->next_stream) {
@@ -422,16 +424,15 @@ int relay_check_recognized(circuit_t *circ, int cell_direction, char *stream, co
 
 void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint) {
   connection_t *conn;
-  struct relay_queue_t *relay, *victim;
 
   assert(edge_type == EDGE_EXIT || edge_type == EDGE_AP);
 
   log(LOG_DEBUG,"circuit_resume_edge_reading(): resuming");
 
   if(edge_type == EDGE_EXIT)
-    conn = circ->n_conn;
+    conn = circ->n_streams;
   else
-    conn = circ->p_conn;
+    conn = circ->p_streams;
 
   for( ; conn; conn=conn->next_stream) {
     if((edge_type == EDGE_EXIT && conn->package_window > 0) ||
@@ -452,9 +453,9 @@ int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type, crypt_pat
 
   log(LOG_DEBUG,"circuit_consider_stop_edge_reading(): considering");
   if(edge_type == EDGE_EXIT && circ->package_window <= 0)
-    conn = circ->n_conn;
+    conn = circ->n_streams;
   else if(edge_type == EDGE_AP && layer_hint->package_window <= 0)
-    conn = circ->p_conn;
+    conn = circ->p_streams;
   else
     return 0;
 
@@ -509,11 +510,15 @@ void circuit_close(circuit_t *circ) {
     log(LOG_DEBUG,"circuit_close(): youngest %d, circ %d.",youngest,circ);
   }
   circuit_remove(circ);
-  for(conn=circ->n_conn; conn; conn=conn->next_stream) {
-    connection_send_destroy(circ->n_aci, circ->n_conn); 
+  if(circ->n_conn)
+    connection_send_destroy(circ->n_aci, circ->n_conn);
+  for(conn=circ->n_streams; conn; conn=conn->next_stream) {
+    connection_send_destroy(circ->n_aci, conn); 
   }
-  for(conn=circ->p_conn; conn; conn=conn->next_stream) {
-    connection_send_destroy(circ->p_aci, circ->p_conn); 
+  if(circ->p_conn)
+    connection_send_destroy(circ->n_aci, circ->p_conn);
+  for(conn=circ->p_streams; conn; conn=conn->next_stream) {
+    connection_send_destroy(circ->p_aci, conn); 
   }
   if(options.APPort && youngest == circ) { /* check this after we've sent the destroys, to reduce races */
     /* our current circuit just died. Launch another one pronto. */
@@ -541,20 +546,20 @@ void circuit_about_to_close_connection(connection_t *conn) {
     if(!circ)
       return;
 
-    if(conn == circ->p_conn) {
-      circ->p_conn = conn->next_stream;
+    if(conn == circ->p_streams) {
+      circ->p_streams = conn->next_stream;
       goto send_end;
     }
-    if(conn == circ->n_conn) {
-      circ->n_conn = conn->next_stream;
+    if(conn == circ->n_streams) {
+      circ->n_streams = conn->next_stream;
       goto send_end;
     }
-    for(prevconn = circ->p_conn; prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
+    for(prevconn = circ->p_streams; prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
     if(prevconn->next_stream) {
       prevconn->next_stream = conn->next_stream;
       goto send_end;
     }
-    for(prevconn = circ->n_conn; prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
+    for(prevconn = circ->n_streams; prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
     if(prevconn->next_stream) {
       prevconn->next_stream = conn->next_stream;
       goto send_end;
@@ -585,13 +590,19 @@ void circuit_dump_by_conn(connection_t *conn) {
   connection_t *tmpconn;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    for(tmpconn=circ->p_conn; tmpconn; tmpconn=tmpconn->next_stream) {
+    if(circ->p_conn == conn)
+      printf("Conn %d has App-ward circuit:  aci %d (other side %d), state %d (%s)\n",
+        conn->poll_index, circ->p_aci, circ->n_aci, circ->state, circuit_state_to_string[circ->state]);
+    for(tmpconn=circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream) {
       if(tmpconn == conn) {
         printf("Conn %d has App-ward circuit:  aci %d (other side %d), state %d (%s)\n",
           conn->poll_index, circ->p_aci, circ->n_aci, circ->state, circuit_state_to_string[circ->state]);
       }
     }
-    for(tmpconn=circ->n_conn; tmpconn; tmpconn=tmpconn->next_stream) {
+    if(circ->n_conn == conn)
+      printf("Conn %d has Exit-ward circuit: aci %d (other side %d), state %d (%s)\n",
+        conn->poll_index, circ->n_aci, circ->p_aci, circ->state, circuit_state_to_string[circ->state]);
+    for(tmpconn=circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream) {
       if(tmpconn == conn) {
         printf("Conn %d has Exit-ward circuit: aci %d (other side %d), state %d (%s)\n",
           conn->poll_index, circ->n_aci, circ->p_aci, circ->state, circuit_state_to_string[circ->state]);
@@ -807,6 +818,11 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   aci_t aci_type;
   struct sockaddr_in me; /* my router identity */
   cell_t newcell;
+
+  if(circ->n_conn) {
+    log(LOG_WARNING,"circuit_extend(): n_conn already set. Bug/attack. Closing.");
+    return -1;
+  }
 
   circ->n_addr = ntohl(*(uint32_t*)(cell->payload+RELAY_HEADER_SIZE));
   circ->n_port = ntohs(*(uint16_t*)(cell->payload+RELAY_HEADER_SIZE+4));

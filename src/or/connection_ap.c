@@ -102,8 +102,8 @@ int ap_handshake_process_socks(connection_t *conn) {
 
   /* add it into the linked list of streams on this circuit */
   log(LOG_DEBUG,"ap_handshake_process_socks(): attaching new conn to circ. n_aci %d.", circ->n_aci);
-  conn->next_stream = circ->p_conn;
-  circ->p_conn = conn;
+  conn->next_stream = circ->p_streams;
+  circ->p_streams = conn;
 
   assert(circ->cpath && circ->cpath->prev);
   assert(circ->cpath->prev->state == CPATH_STATE_OPEN);

@@ -362,7 +362,9 @@ typedef struct {
   uint32_t n_addr;
   uint16_t n_port;
   connection_t *p_conn;
-  connection_t *n_conn; /* convention: first conn is the OR conn, if there is one */
+  connection_t *n_conn; /* for the OR conn, if there is one */
+  connection_t *p_streams;
+  connection_t *n_streams;
   int package_window;
   int deliver_window;
 
