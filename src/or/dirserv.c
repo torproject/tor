@@ -4,6 +4,9 @@
 
 #include "or.h"
 
+/* How far in the future do we allow a router to get? (seconds) */
+#define ROUTER_ALLOW_SKEW (30*60)
+
 extern or_options_t options; /* command-line and config-file options */
 
 static int the_directory_is_dirty = 1;
@@ -219,7 +222,12 @@ dirserv_add_descriptor(const char **desc)
   tor_free(desc_tmp);
   /* Okay.  Now check whether the fingerprint is recognized. */
   if (!dirserv_router_fingerprint_is_known(ri)) {
-    log(LOG_WARN, "Identity is unrecognized for descriptor");
+    log_fn(LOG_WARN, "Identity is unrecognized for descriptor");
+    goto err;
+  }
+  /* Is there too much clock skew? */
+  if (ri->published_on > time(NULL)+ROUTER_ALLOW_SKEW) {
+    log_fn(LOG_WARN, "Publication time for nickname %s is too far in the future; possible clock skew.", ri->nickname);
     goto err;
   }
   /* Do we already have an entry for this router? */

@@ -22,6 +22,11 @@
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 
+/* How long do certificates live? (sec) */
+#define CERT_LIFETIME  (2*24*60*60)
+/* How much clock skew do we tolerate when checking certificates? (sec) */
+#define CERT_ALLOW_SKEW (3*60)
+
 struct tor_tls_context_st {
   SSL_CTX *ctx;
 };
@@ -166,7 +171,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
     goto error;
   if (!X509_time_adj(X509_get_notBefore(x509),0,&start_time))
     goto error;
-  end_time = start_time + 24*60*60*365;
+  end_time = start_time + CERT_LIFETIME;
   if (!X509_time_adj(X509_get_notAfter(x509),0,&end_time))
     goto error;
   if (!X509_set_pubkey(x509, pkey))
@@ -499,18 +504,20 @@ tor_tls_verify(tor_tls *tls)
   X509 *cert = NULL;
   EVP_PKEY *pkey = NULL;
   RSA *rsa = NULL;
-  time_t now;
+  time_t now, t;
   crypto_pk_env_t *r = NULL;
   if (!(cert = SSL_get_peer_certificate(tls->ssl)))
     return NULL;
   
   now = time(NULL);
-  if (X509_cmp_time(X509_get_notBefore(cert), &now) > 0) {
-    log_fn(LOG_WARN,"X509_get_notBefore(cert) is in the future");
+  t = now - CERT_ALLOW_SKEW;
+  if (X509_cmp_time(X509_get_notBefore(cert), &t) > 0) {
+    log_fn(LOG_WARN,"Certificate becomes valid in the future: possible clock skew.");
     goto done;
   }
-  if (X509_cmp_time(X509_get_notAfter(cert), &now) < 0) {
-    log_fn(LOG_WARN,"X509_get_notAfter(cert) is in the past");
+  t = now + CERT_ALLOW_SKEW;
+  if (X509_cmp_time(X509_get_notAfter(cert), &t) < 0) {
+    log_fn(LOG_WARN,"Certificate already expired; possible clock skew.");
     goto done;
   }
   
