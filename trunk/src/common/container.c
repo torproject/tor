@@ -88,7 +88,9 @@ void smartlist_truncate(smartlist_t *sl, int len)
 /** Append element to the end of the list. */
 void smartlist_add(smartlist_t *sl, void *element) {
   if (sl->num_used >= sl->capacity) {
-    sl->capacity *= 2;
+    int higher = sl->capacity * 2;
+    tor_assert(higher > sl->capacity); /* detect overflow */
+    sl->capacity = higher;
     sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
   }
   sl->list[sl->num_used++] = element;
