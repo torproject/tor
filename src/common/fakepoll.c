@@ -1,10 +1,8 @@
-/*
- * fakepoll.c
- *
- * On systems where 'poll' doesn't exist, fake it with 'select'.
- *
- * Nick Mathewson <nickm@freehaven.net>
- */
+/* Copyright 2002,2003 Nick Mathewson, Roger Dingledine, Naval Research Lab. */
+/* See LICENSE for licensing information */
+/* $Id$ */
+
+/* On systems where 'poll' doesn't exist, fake it with 'select'. */
 
 #include "orconfig.h"
 #include "fakepoll.h"
