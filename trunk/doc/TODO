@@ -11,6 +11,8 @@ ARMA    - arma claims
         X Abandoned
 
 0.0.9pre6:
+N  - clients now have certs, which means we warn when their certs have
+     incorrect times. we need to stop that.
    - Oct 20 16:45:10.237 [warn] parse_addr_port(): Port '0' out of range
    o clean up parse_*_policy code
      o when you hup, they're not getting re-parsed
@@ -33,11 +35,14 @@ N  - RPMs
      - Figure out versioning
 N  - Windows installer
 R  - Review website; make important info more prominent.
+R  - merge in the contributed tor.sh
 
 
 
 Beyond 0.0.9:
-   - weasel wants to say 50GB rather than 50000000.
+   - controller should have 'getinfo' command to query about rephist,
+     about rendezvous status, etc.
+   - weasel wants to say 50GB rather than 50000000 in config ints.
    - allow transition from ORPort to !ORPort, and back
 R  . bandwidth buckets for write as well as read.
    - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
