@@ -1,4 +1,3 @@
-% XXX Cite SS03
 
 \documentclass[times,10pt,twocolumn]{article}
 \usepackage{latex8}
@@ -212,11 +211,15 @@ security, and became useless if any node in the path went down
 or rotated its keys.  In Tor, clients negotiate {\it rendezvous points}
 to connect with hidden servers; reply onions are no longer required.
 
+Unlike Freedom~\cite{freedom2-arch}, Tor does not require OS kernel
+patches or network stack support.  This prevents us from anonymizing
+non-TCP protocols, but has greatly helped our portability and
+deployability.
 
-Unlike Freedom~\cite{freedom2-arch}, Tor does not anonymize
-non-TCP protocols---not requiring patches (or built-in support) in an
-operating system's network stack has been valuable to Tor's
-portability and deployability.
+%Unlike Freedom~\cite{freedom2-arch}, Tor only anonymizes
+%TCP-based protocols---not requiring patches (or built-in support) in an
+%operating system's network stack has been valuable to Tor's
+%portability and deployability.
 
 We have implemented all of the above features except rendezvous
 points. Our source code is
@@ -227,7 +230,7 @@ earlier versions of Onion Routing.
 We have deployed a wide-area alpha network
 to test the design, to get more experience with usability
 and users, and to provide a research platform for experimentation.
-As of this writing, the network stands at sixteen nodes in thirteen
+As of this writing, the network stands at eighteen nodes in thirteen
 distinct administrative domains on two continents.
 
 We review previous work in Section~\ref{sec:related-work}, describe
@@ -273,7 +276,8 @@ delivery confirmation. But because these designs typically
 involve many packets that must be delivered quickly, it is
 difficult for them to prevent an attacker who can eavesdrop both ends of the
 communication from correlating the timing and volume
-of traffic entering the anonymity network with traffic leaving it.  These
+of traffic entering the anonymity network with traffic leaving it \cite{SS03}.
+These
 protocols are similarly vulnerable to an active adversary who introduces
 timing patterns into traffic entering the network and looks
 for correlated patterns among exiting traffic.
@@ -1520,8 +1524,8 @@ in~\cite{mix-acc}.\\
 \Section{Early experiences: Tor in the Wild}
 \label{sec:in-the-wild}
 
-As of mid-January 2004, the Tor network consists of 17 nodes
-(15 in the US, 2 in Europe), and more are joining each week as the code
+As of mid-January 2004, the Tor network consists of 18 nodes
+(16 in the US, 2 in Europe), and more are joining each week as the code
 matures.\footnote{For comparison, the current remailer network
 has about 30 reliable nodes. We haven't asked PlanetLab to provide
 Tor nodes, since their AUP wouldn't allow exit nodes (see
