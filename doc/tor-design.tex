@@ -41,7 +41,6 @@
 
 \title{Tor: Design of a Next-Generation Onion Router}
 
-%\author{Anonymous}
 %\author{Roger Dingledine \\ The Free Haven Project \\ arma@freehaven.net \and
 %Nick Mathewson \\ The Free Haven Project \\ nickm@freehaven.net \and
 %Paul Syverson \\ Naval Research Lab \\ syverson@itd.nrl.navy.mil}
@@ -78,6 +77,7 @@ at each node, revealing the downstream node. The original onion routing
 project published several design and analysis papers
 \cite{or-jsac98,or-discex00,or-ih96,or-pet00}. While there was briefly
 a wide area onion routing network,
+% how long is briefly? a day, a month? -RD
 the only long-running and publicly accessible
 implementation was a fragile proof-of-concept that ran on a single
 machine. Many critical design and deployment issues were never implemented,
@@ -99,9 +99,9 @@ the initiator knows which hop failed and can try extending to a new node.
 
 \item \textbf{Applications talk to the onion proxy via Socks:}
 The original onion routing design required a separate proxy for each
-supported application protocol, resulting in a lot of extra code (most
-of which was never written) and also meaning that a lot of TCP-based
-applications were not supported. Tor uses the unified and standard Socks
+supported application protocol, resulting in a lot of extra code --- most
+of which was never written, so most applications were not supported.
+Tor uses the unified and standard Socks
 \cite{socks4,socks5} interface, allowing us to support any TCP-based
 program without modification.
 
@@ -162,32 +162,33 @@ onion routers also serve as directory servers; they provide signed
 are currently up. Users periodically download these directories via HTTP.
 
 \item \textbf{End-to-end integrity checking:} Without integrity checking
-on traffic going through the network, an onion router can change the
-contents of cells as they pass by, e.g. by redirecting a connection on
-the fly so it connects to a different webserver, or by tagging encrypted
-traffic and looking for traffic at the network edges that has been
-tagged \cite{minion-design}.
+on traffic going through the network, any onion router on the path
+can change the contents of cells as they pass by, e.g. to redirect a
+connection on the fly so it connects to a different webserver, or to
+tag encrypted traffic and look for the tagged traffic at the network
+edges \cite{minion-design}.
 
-\item \textbf{Robustness to node failure:} Node failure for a
-  low-latency system like Tor is not as serious a problem as it is for
-  a traditional mix network. Nonetheless, simple mechanisms that allow
-  connections to be established despite slightly dated information
-  from a directory server or very recent node failure are useful.  Tor
-  permits onion routers to have router twins. These share the same
-  private decryption key that is used when establishing a connection
-  through the onion router. Note that because of how connections are
-  now established with perfect forward secrecy, this does not
-  automatically mean that an onion router can read the traffic on a
-  connection established through its twin even while that connection
-  is active. Also, which nodes are twins can change dynamically
-  depending on current circumstances, and twins may or may not be
-  under the same administrative authority.
+\item \textbf{Robustness to failed nodes:} A failed node in a traditional
+mix network means lost messages, but in Tor, users can notice failed
+nodes while building circuits and route around them. We further provide a
+simple mechanism that allows connections to be established despite recent
+node failure or slightly dated information from a directory server. Tor
+permits onion routers to have \emph{router twins} --- nodes that share
+the same private decryption key. Note that because connections now have
+perfect forward secrecy, an onion router still cannot read the traffic
+on a connection established through its twin even while that connection
+is active. Also, which nodes are twins can change dynamically depending
+on current circumstances, and twins may or may not be under the same
+administrative authority.
 
-\item \textbf{Exit policies:}
-Tor provides a consistent mechanism for each node to specify and
-advertise an exit policy.
+\item \textbf{Exit policies:} Tor provides a consistent mechanism for
+each node to specify and advertise its own exit policy. Exit policies
+are critical in a volunteer-based distributed infrastructure, because
+each operator is comfortable with allowing different types of traffic
+to exit the Tor network from his node.
 
-\item \textbf{Rendezvous points:}
+\item \textbf{Rendezvous points and location-protected servers:} Tor
+provides an integrated mechanism for responder-anonymity
 location-protected servers
 
 \end{tightlist}
@@ -312,7 +313,7 @@ The first of these was the Eternity Service \cite{eternity}. Since
 then, there have been many alternatives and refinements, of which we note
 but a few
 \cite{eternity,gap-pets03,freenet-pets00,freehaven-berk,publius,tangler,taz}.
-From the first, traffic analysis resistant communication has been
+From the beginning, traffic analysis resistant communication has been
 recognized as an important element of censorship resistance because of
 the relation between the ability to censor material and the ability to
 find its distribution source.
@@ -381,7 +382,7 @@ activities); and designs that are difficult or expensive to implement
 or ).
 
 Second, the system must be {\bf usable}.  A hard-to-use system has
-fewer users---and because anonymity systems hide users among users, a
+fewer users --- and because anonymity systems hide users among users, a
 system with fewer users provides less anonymity.  Thus, usability is
 not only a convenience, but is a security requirement for anonymity
 systems.
@@ -404,8 +405,8 @@ speculative solutions to problems we don't KNOW how to solve? -NM]
 
 \subsection{Non-goals}
 In favoring conservative, deployable designs, we have explicitly
-deferred a number of goals---not because they are not desirable in
-anonymity systems---but because solving them is either solved
+deferred a number of goals --- not because they are not desirable in
+anonymity systems --- but because solving them is either solved
 elsewhere, or an area of active research without a generally accepted
 solution.
 
@@ -416,16 +417,18 @@ servers.
 Tor does not claim to provide a definitive solution to end-to-end
 timing or intersection attacks for users who do not run their own
 Onion Routers.
+% Does that mean we do claim to solve intersection attack for
+% the enclave-firewall model? -RD
 
-Tor does not provide ``protocol normalization'' like the Anonymizer,
-Privoxy, or XXX.  In order to provide client indistinguishibility for
+Tor does not provide \emph{protocol normalization} like the Anonymizer or
+Privoxy.  In order to provide client indistinguishibility for
 complex and variable protocols such as HTTP, Tor must be layered with
-a proxy such as Privoxy or XXX.  Similarly, Tor does not currently
+a filtering proxy such as Privoxy.  Similarly, Tor does not currently
 integrate tunneling for non-stream-based protocols; this too must be
 provided by an external service.
 
-Tor is not steganographic. It doesn't try to conceal which users are
-sending or receiving communications via Tor.
+Tor is not steganographic: it doesn't try to conceal which users are
+sending or receiving communications.
 
 
 \SubSection{Adversary Model}
@@ -559,6 +562,7 @@ tagging attacks
 \SubSection{Assumptions}
 
 For purposes of this paper, we assume all directory servers are honest
+% No longer true, see subsec:dirservers below -RD
 and trusted. Perhaps more accurately, we assume that all users and
 nodes can perform their own periodic checks on information they have
 from directory servers and that all will always have access to at
@@ -568,7 +572,7 @@ techniques to cope with a minority dishonest servers.
 
 Somewhere between ten percent and twenty percent of nodes are assumed
 to be compromised. In some circumstances, e.g., if the Tor network is
-running on a hardened network where all operators have had careful
+running on a hardened network where all operators have had
 background checks, the percent of compromised nodes might be much
 lower. It may be worthwhile to consider cases where many of the `bad'
 nodes are not fully compromised but simply (passive) observing
@@ -579,6 +583,8 @@ above. We assume that all adversary components, regardless of their
 capabilities are collaborating and are connected in an offline clique.
 
 We do not assume any hostile users, except in the context of
+% This sounds horrible. What do you mean we don't assume any hostile
+% users? Surely we can tolerate some? -RD
 rendezvous points. Nonetheless, we assume that users vary widely in
 both the duration and number of times they are connected to the Tor
 network. They can also be assumed to vary widely in the volume and
@@ -600,7 +606,78 @@ shape of the traffic they send and receive.
 \label{subsec:exitpolicies}
 
 \SubSection{Directory Servers}
-\label{subsec:dir-servers}
+\label{subsec:dirservers}
+
+First-generation Onion Routing designs \cite{or-jsac98,freedom2-arch} did
+% is or-jsac98 the right cite here? what's our stock OR cite? -RD
+in-band network status updates: each router flooded a signed statement
+to its neighbors, which propagated it onward. But anonymizing networks
+have different security goals than typical link-state routing protocols.
+For example, we worry more about delays (accidental or intentional)
+which cause different parts of the network to have different pictures
+of link-state and topology. We also worry about attacks to deceive a
+client about the router membership list, topology, or current network
+state. Such \emph{partitioning attacks} on client knowledge help an
+adversary with limited resources to efficiently deploy those resources
+when attacking a target.
+
+Instead, Tor uses a small group of redundant directory servers to
+track network topology and node state such as current keys and exit
+policies. The directory servers are normal onion routers, but there are
+only a few of them and they are more trusted. They listen on a separate
+port as an HTTP server, both so participants can fetch current network
+state and router lists (a \emph{directory}), and so other onion routers
+can upload a signed summary of their keys, address, bandwidth, exit
+policy, etc (\emph{server descriptors}.
+
+Of course, a variety of attacks remain. An adversary who controls a
+directory server can track certain clients by providing different
+information --- perhaps by listing only nodes under its control
+as working, or by informing only certain clients about a given
+node. Moreover, an adversary without control of a directory server can
+still exploit differences among client knowledge. If Eve knows that
+node $M$ is listed on server $D_1$ but not on $D_2$, she can use this
+knowledge to link traffic through $M$ to clients who have queried $D_1$.
+
+Thus these directory servers must be synchronized and redundant. The
+software is distributed with the signature public key of each directory
+server, and directories must be signed by a threshold of these keys.
+
+The directory servers in Tor are modeled after those in Mixminion
+\cite{minion-design}, but our situation is easier. Firstly, we make the
+simplifying assumption that all participants agree on who the directory
+servers are. Secondly, Mixminion needs to predict node behavior ---
+that is, build a reputation system for guessing future performance of
+nodes based on past performance, and then figure out a way to build
+a threshold consensus of these predictions. Tor just needs to get a
+threshold consensus of the current state of the network.
+
+The threshold consensus can be reached with standard Byzantine agreement
+techniques \cite{castro-liskov}.
+% Should I just stop the section here? Is the rest crap? -RD
+But this library, while more efficient than previous Byzantine agreement
+systems, is still complex and heavyweight for our purposes: we only need
+to compute a single algorithm, and we do not require strict in-order
+computation steps. The Tor directory servers build a consensus directory
+through a simple four-round broadcast protocol. First, each server signs
+and broadcasts its current opinion to the other directory servers; each
+server then rebroadcasts all the signed opinions it has received. At this
+point all directory servers check to see if anybody's cheating. If so,
+directory service stops, the humans are notified, and that directory
+server is permanently removed from the network. Assuming no cheating,
+each directory server then computes a local algorithm on the set of
+opinions, resulting in a uniform shared directory. Then the servers sign
+this directory and broadcast it; and finally all servers rebroadcast
+the directory and all the signatures.
+
+The rebroadcast steps ensure that a directory server is heard by either
+all of the other servers or none of them (some of the links between
+directory servers may be down). Broadcasts are feasible because there
+are so few directory servers (currently 3, but we expect to use as many
+as 9 as the network scales). The actual local algorithm for computing
+the shared directory is straightforward, and is described in the Tor
+specification \cite{tor-spec}.
+% we should, uh, add this to the spec. oh, and write it. -RD
 
 \Section{Rendezvous points: location privacy}
 \label{sec:rendezvous}
@@ -665,6 +742,10 @@ Alice, an optional authentication token so Bob choose whether to respond,
 and the first half of a DH key exchange. When Bob connects to the meeting
 place and gets connected to Alice's pipe, his first cell contains the
 other half of the DH key exchange.
+
+% briefly talk about our notion of giving cookies to people proportional
+% to how important they are, for location-protected servers hardened
+% against DDoS threat? -RD
 
 \subsection{Integration with user applications}
 
@@ -841,7 +922,7 @@ link-level cover traffic and also long-range cover traffic. In particular,
 we expect restricted route topologies to reduce the cost of cover traffic
 because there are fewer links to cover.
 \item \emph{Better directory distribution:} Even with the threshold
-directory agreement algorithm described in \ref{sec:dirservers},
+directory agreement algorithm described in \ref{subsec:dirservers},
 the directory servers are still trust bottlenecks. We must find more
 decentralized yet practical ways to distribute up-to-date snapshots of
 network status without introducing new attacks.
