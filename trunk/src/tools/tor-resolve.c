@@ -137,6 +137,10 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   len = 0;
   while (len < RESPONSE_LEN) {
     r = recv(s, response_buf+len, RESPONSE_LEN-len, 0);
+    if (r==0) {
+      log_fn(LOG_WARN,"EOF while reading SOCKS response");
+      return -1;
+    }
     if (r<0) {
       log_sock_error("reading SOCKS response", s);
       return -1;
