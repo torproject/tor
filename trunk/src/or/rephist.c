@@ -2,26 +2,47 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/*****
+ * rephist.c: Basic history functionality for reputation module.
+ *****/
+
 #include "or.h"
 
+/* History of an or->or link. */
 typedef struct link_history_t {
+  /* When did we start tracking this list? */
   time_t since;
+  /* How many times did extending from OR1 to OR2 succeeed? */
   unsigned long n_extend_ok;
+  /* How many times did extending from OR1 to OR2 fail? */
   unsigned long n_extend_fail;
 } link_history_t;
 
+/* History of an OR. */
 typedef struct or_history_t {
+  /* When did we start tracking this OR? */
   time_t since;
+  /* How many times did we successfully connect? */
   unsigned long n_conn_ok;
+  /*How many times did we try to connect and fail?*/
   unsigned long n_conn_fail;
+  /* How many seconds have we been connected to this OR before
+   * 'up_since'? */
   unsigned long uptime;
+  /* How many seconds have we been unable to connect to this OR before
+   * 'down_since'? */
   unsigned long downtime;
+  /* If nonzero, we have been connected since this time. */
   time_t up_since;
+  /* If nonzero, we have been unable to connect since this time. */
   time_t down_since;
+  /* Map from lowercased OR2 name to a link_history_t for the link
+   * from this OR to OR2. */
   strmap_t *link_history_map;
 } or_history_t;
 
-static strmap_t *history_map;
+/* Map from lowercased OR nickname to or_history_t. */
+static strmap_t *history_map = NULL;
 
 /* Return the or_history_t for the named OR, creating it if necessary.
  */
@@ -57,7 +78,7 @@ static link_history_t *get_link_history(const char *from_name,
 }
 
 /* Update an or_history_t object so that its uptime/downtime count is
- * up-to-date.
+ * up-to-date as of 'when'.
  */
 static void update_or_history(or_history_t *hist, time_t when)
 {
@@ -226,8 +247,6 @@ void rep_hist_dump_stats(time_t now, int severity)
     log(severity, buffer);
   }
 }
-
-
 
 /*
   Local Variables:

@@ -2,9 +2,14 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/*****
+ * rendclient.c: Client code to access location-hiddenn services.
+ *****/
+
 #include "or.h"
 
-/* send the introduce cell */
+/* Called when we've established a circuit to an introduction point:
+ * send the introduction request. */
 void
 rend_client_introcirc_is_open(circuit_t *circ)
 {
@@ -15,8 +20,8 @@ rend_client_introcirc_is_open(circuit_t *circ)
   connection_ap_attach_pending();
 }
 
-/* send the establish-rendezvous cell. if it fails, mark
- * the circ for close and return -1. else return 0.
+/* Send the establish-rendezvous cell along a rendezvous circuit. if
+ * it fails, mark the circ for close and return -1. else return 0.
  */
 int
 rend_client_send_establish_rendezvous(circuit_t *circ)
@@ -124,7 +129,8 @@ err:
   return -1;
 }
 
-/* send the rendezvous cell */
+/* Called when a rendezvous circuit is open; sends a establish
+ * rendezvous circuit as appropriate. */
 void
 rend_client_rendcirc_is_open(circuit_t *circ)
 {
@@ -209,8 +215,13 @@ rend_client_introduction_acked(circuit_t *circ,
   return 0;
 }
 
+
+/* If we are not currently fetching a rendezvous service descriptor
+ * for the service ID 'query', start a directory connection to fetch a
+ * new one.
+ */
 void
-rend_client_refetch_renddesc(char *query)
+rend_client_refetch_renddesc(const char *query)
 {
   if(connection_get_by_type_rendquery(CONN_TYPE_DIR, query)) {
     log_fn(LOG_INFO,"Would fetch a new renddesc here (for %s), but one is already in progress.", query);
@@ -229,7 +240,7 @@ rend_client_refetch_renddesc(char *query)
  * unrecognized, 1 if recognized and some intro points remain.
  */
 int
-rend_client_remove_intro_point(char *failed_intro, char *query)
+rend_client_remove_intro_point(char *failed_intro, const char *query)
 {
   int i, r;
   rend_cache_entry_t *ent;
@@ -280,7 +291,7 @@ rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_l
   return 0;
 }
 
-/* bob sent us a rendezvous cell, join the circs. */
+/* Bob sent us a rendezvous cell; join the circuits. */
 int
 rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request_len)
 {

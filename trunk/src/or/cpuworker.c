@@ -2,6 +2,13 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/*****
+ * cpuworker.c: Run computation-intensive tasks (generally for crypto) in
+ * a separate execution context. [OR only.]
+ *
+ * Right now, we only use this for processing onionskins.
+ *****/
+
 #include "or.h"
 extern or_options_t options; /* command-line and config-file options */
 
@@ -14,6 +21,9 @@ extern or_options_t options; /* command-line and config-file options */
 
 static int num_cpuworkers=0;
 static int num_cpuworkers_busy=0;
+/* We need to spawn new cpuworkers whenever we rotate the onion keys
+ * on platforms where execution contexts==processes.  This variable stores
+ * the last time we got a key rotation event.*/
 static time_t last_rotation_time=0;
 
 int cpuworker_main(void *data);
@@ -21,34 +31,45 @@ static int spawn_cpuworker(void);
 static void spawn_enough_cpuworkers(void);
 static void process_pending_task(connection_t *cpuworker);
 
+/* Initialize the cpuworker subsystem.
+ */
 void cpu_init(void) {
   last_rotation_time=time(NULL);
   spawn_enough_cpuworkers();
 }
 
+/* Called when we're done sending a request to a cpuworker. */
 int connection_cpu_finished_flushing(connection_t *conn) {
   tor_assert(conn && conn->type == CONN_TYPE_CPUWORKER);
   connection_stop_writing(conn);
   return 0;
 }
 
+/* Pack addr,port,and circ_id; set *tag to the result. (See note on
+ * cpuworker_main for wire format.) */
 static void tag_pack(char *tag, uint32_t addr, uint16_t port, uint16_t circ_id) {
   *(uint32_t *)tag     = addr;
   *(uint16_t *)(tag+4) = port;
   *(uint16_t *)(tag+6) = circ_id;
 }
 
-static void tag_unpack(char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ_id) {
+/* Unpack 'tag' into addr, port, and circ_id.
+ */
+static void tag_unpack(const char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ_id) {
   struct in_addr in;
 
-  *addr    = *(uint32_t *)tag;
-  *port    = *(uint16_t *)(tag+4);
-  *circ_id = *(uint16_t *)(tag+6);
+  *addr    = *(const uint32_t *)tag;
+  *port    = *(const uint16_t *)(tag+4);
+  *circ_id = *(const uint16_t *)(tag+6);
 
   in.s_addr = htonl(*addr);
   log_fn(LOG_DEBUG,"onion was from %s:%d, circ_id %d.", inet_ntoa(in), *port, *circ_id);
 }
 
+/* Called when the onion key has changed and we need to spawn new
+ * cpuworkers.  Close all currently idle cpuworkers, and mark the last
+ * rotation time as now.
+ */
 void cpuworkers_rotate(void)
 {
   connection_t *cpuworker;
@@ -61,6 +82,11 @@ void cpuworkers_rotate(void)
   spawn_enough_cpuworkers();
 }
 
+/* Called when we get data from a cpuworker.  If the answer is not complete,
+ * wait for a complete answer.  If the cpuworker closes the connection,
+ * mark it as closed and spawn a new one as needed.  If the answer is complete,
+ * process it as appropriate.
+ */
 int connection_cpu_process_inbuf(connection_t *conn) {
   char success;
   unsigned char buf[LEN_ONION_RESPONSE];
@@ -136,6 +162,20 @@ done_processing:
   return 0;
 }
 
+
+/* Implement a cpuworker.  'data' is an fdarray as returned by socketpair.
+ * Read and writes from fdarray[1].  Reads requests, writes answers.
+ *
+ *   Request format:
+ *          Task type           [1 byte, always ONIONSKIN_CHALLENGE_LEN]
+ *          Opaque tag          TAG_LEN
+ *          Onionskin challenge ONIONSKIN_CHALLENGE_LEN
+ *   Response format:
+ *          Success/failure     [1 byte, boolean.]
+ *          Opaque tag          TAG_LEN
+ *          Onionskin challenge ONIONSKIN_REPLY_LEN
+ *          Negotiated keys     KEY_LEN*2+DIGEST_LEN*2
+ */
 int cpuworker_main(void *data) {
   unsigned char question[ONIONSKIN_CHALLENGE_LEN];
   unsigned char question_type;
@@ -209,6 +249,8 @@ int cpuworker_main(void *data) {
   return 0; /* windows wants this function to return an int */
 }
 
+/* Launch a new cpuworker.
+ */
 static int spawn_cpuworker(void) {
   int fd[2];
   connection_t *conn;
@@ -243,6 +285,9 @@ static int spawn_cpuworker(void) {
   return 0; /* success */
 }
 
+/* If we have too few or too many active cpuworkers, try to spawn new ones
+ * or kill idle ones.
+ */
 static void spawn_enough_cpuworkers(void) {
   int num_cpuworkers_needed = options.NumCpus;
 
@@ -260,6 +305,7 @@ static void spawn_enough_cpuworkers(void) {
   }
 }
 
+/* Take a pending task from the queue and assign it to 'cpuworker' */
 static void process_pending_task(connection_t *cpuworker) {
   circuit_t *circ;
 

@@ -1046,8 +1046,8 @@ void rep_hist_dump_stats(time_t now, int severity);
 void rend_client_introcirc_is_open(circuit_t *circ);
 void rend_client_rendcirc_is_open(circuit_t *circ);
 int rend_client_introduction_acked(circuit_t *circ, const char *request, int request_len);
-void rend_client_refetch_renddesc(char *query);
-int rend_client_remove_intro_point(char *failed_intro, char *query);
+void rend_client_refetch_renddesc(const char *query);
+int rend_client_remove_intro_point(char *failed_intro, const char *query);
 int rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_len);
 int rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request_len);
 void rend_client_desc_fetched(char *query, int success);
@@ -1088,10 +1088,10 @@ typedef struct rend_cache_entry_t {
 
 void rend_cache_init(void);
 void rend_cache_clean(void);
-int rend_valid_service_id(char *query);
-int rend_cache_lookup_desc(char *query, const char **desc, int *desc_len);
-int rend_cache_lookup_entry(char *query, rend_cache_entry_t **entry_out);
-int rend_cache_store(char *desc, int desc_len);
+int rend_valid_service_id(const char *query);
+int rend_cache_lookup_desc(const char *query, const char **desc, int *desc_len);
+int rend_cache_lookup_entry(const char *query, rend_cache_entry_t **entry_out);
+int rend_cache_store(const char *desc, int desc_len);
 
 /********************************* rendservice.c ***************************/
 

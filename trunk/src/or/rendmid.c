@@ -2,10 +2,14 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/*****
+ * rendmid.c: Implement introductions points and rendezvous points.
+ *****/
+
 #include "or.h"
 
-/* Respond to an ESTABLISH_INTRO cell by setting the circuit's purpose and
- * service pk digest..
+/* Respond to an ESTABLISH_INTRO cell by checking the signed data and
+ * setting the circuit's purpose and service pk digest.
  */
 int
 rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
@@ -219,8 +223,9 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request, int request_
   return -1;
 }
 
-/* Process a RENDEZVOUS1 cell by looking up the correct rendezvous circuit by its
- * relaying the cell's body in a RENDEZVOUS2 cell, and connecting the two circuits.
+/* Process a RENDEZVOUS1 cell by looking up the correct rendezvous
+ * circuit by its relaying the cell's body in a RENDEZVOUS2 cell, and
+ * connecting the two circuits.
  */
 int
 rend_mid_rendezvous(circuit_t *circ, const char *request, int request_len)

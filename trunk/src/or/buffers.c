@@ -219,8 +219,9 @@ int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
   tor_assert(tls);
   assert_buf_ok(buf);
 
-  log_fn(LOG_DEBUG,"start: %d on buf, %d pending, at_most %d.",(int)buf_datalen(buf),
-         tor_tls_get_pending_bytes(tls), at_most);
+  log_fn(LOG_DEBUG,"start: %d on buf, %d pending, at_most %d.",
+         (int)buf_datalen(buf), (int)tor_tls_get_pending_bytes(tls),
+         (int)at_most);
 
   if (buf_ensure_capacity(buf, at_most+buf->datalen))
     return TOR_TLS_ERROR;
@@ -231,8 +232,9 @@ int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
   if (at_most == 0)
     return 0;
 
-  log_fn(LOG_DEBUG,"before: %d on buf, %d pending, at_most %d.",(int)buf_datalen(buf),
-         tor_tls_get_pending_bytes(tls), at_most);
+  log_fn(LOG_DEBUG,"before: %d on buf, %d pending, at_most %d.",
+         (int)buf_datalen(buf), (int)tor_tls_get_pending_bytes(tls),
+         (int)at_most);
 
   assert_no_tls_errors();
   r = tor_tls_read(tls, buf->mem+buf->datalen, at_most);
