@@ -1,17 +1,35 @@
 #!/bin/sh
+# $Id$
+# Copyright 2004 Nick Mathewson.
+# See LICENSE in Tor distribution for licensing information.
 
-# Helpful info:
+# This script builds a Macintosh OS X metapackage containing 4 packages:
+#    - One for Tor.
+#    - One for Privoxy.
+#    - One for a tor-specific privoxy configuration script.
+#    - One for Startup scripts for Tor.
+#
+# This script expects to be run from the toplevel makefile, with VERSION
+# set to the latest Tor version, and Tor already built.
+
+# Where have we put the zip file containing Privoxy?  Edit this if your
+# privoxy lives somewhere else.
+PRIVOXY_PKG_ZIP=~/src/privoxy-setup/privoxyosx_setup_3.0.3.zip
+
+###
+# Helpful info on OS X packaging:
 #   http://developer.apple.com/documentation/DeveloperTools/Conceptual/SoftwareDistribution/index.html
 #   man packagemaker
 
+# Make sure VERSION is set, so we don't name the package "Tor  Bundle.dmg"
 if [ "XX$VERSION" = 'XX' ]; then
   echo "VERSION not set."
   exit 1
 fi
 
-PREFIX=/usr/local
+# Where will we put our temporary files?
 BUILD_DIR=/tmp/tor-osx-$$
-PRIVOXY_PKG_ZIP=~/src/privoxy-setup/privoxyosx_setup_3.0.3.zip
+# Path to PackageMaker app.
 PACKAGEMAKER=/Developer/Applications/Utilities/PackageMaker.app/Contents/MacOS/PackageMaker
 
 umask 022
@@ -26,6 +44,7 @@ for subdir in tor_packageroot tor_resources \
     mkdir $BUILD_DIR/$subdir
 done
 
+### Make Tor package.
 make install DESTDIR=$BUILD_DIR/tor_packageroot
 cp contrib/osx/ReadMe.rtf $BUILD_DIR/tor_resources
 cp contrib/osx/License.rtf $BUILD_DIR/tor_resources
@@ -43,6 +62,7 @@ $PACKAGEMAKER -build              \
     -i contrib/osx/TorInfo.plist  \
     -d contrib/osx/TorDesc.plist
 
+### Put privoxy configuration package in place.
 mkdir -p $BUILD_DIR/privoxyconf_packageroot/Library/Privoxy
 cp contrib/osx/privoxy.config $BUILD_DIR/privoxyconf_packageroot/Library/Privoxy/config
 
@@ -51,6 +71,8 @@ $PACKAGEMAKER -build                      \
     -f $BUILD_DIR/privoxyconf_packageroot \
     -i contrib/osx/PrivoxyConfInfo.plist  \
     -d contrib/osx/PrivoxyConfDesc.plist
+
+### Make Startup Script package
 
 mkdir -p $BUILD_DIR/torstartup_packageroot/System/Library/StartupItems/Tor
 cp contrib/osx/Tor contrib/osx/StartupParameters.plist \
@@ -62,8 +84,8 @@ $PACKAGEMAKER -build                     \
     -i contrib/osx/TorStartupInfo.plist  \
     -d contrib/osx/TorStartupDesc.plist
 
-
-## Ug! Packagemaker won't buld metapackages.
+### Assemble the metapackage.  Packagemaker won't buld metapackages from
+# the command line, so we need to do it by hand.
 
 MPKG=$BUILD_DIR/output/Tor\ Bundle.mpkg
 mkdir -p "$MPKG/Contents/Resources"
@@ -74,15 +96,20 @@ cp contrib/osx/TorBundleInfo.plist "$MPKG/Contents/Info.plist"
 cp contrib/osx/TorBundleWelcome.rtf "$MPKG/Contents/Resources/Welcome.rtf"
 cp contrib/osx/TorBundleDesc.plist "$MPKG/Contents/Resources/Description.plist"
 
+# Move all the subpackages into place.  unzip Privoxy.pkg into place,
+# and fix its file permissions so we can rm -rf it later.
 mkdir $BUILD_DIR/output/.contained_packages
 mv $BUILD_DIR/output/*.pkg $BUILD_DIR/OUTPUT/.contained_packages
-( cd $BUILD_DIR/output/.contained_packages && unzip $PRIVOXY_PKG_ZIP && find Privoxy.pkg -type d | xargs chmod u+w )
+( cd $BUILD_DIR/output/.contained_packages && unzip $PRIVOXY_PKG_ZIP && find Privoxy.pkg -type d -print0 | xargs -0 chmod u+w )
 
+### Copy readmes and licenses into toplevel.
 PRIVOXY_RESDIR=$BUILD_DIR/output/.contained_packages/Privoxy.pkg/Contents/Resources
 cp $PRIVOXY_RESDIR/License.html $BUILD_DIR/output/Privoxy\ License.html
 cp $PRIVOXY_RESDIR/ReadMe.txt $BUILD_DIR/output/Privoxy\ ReadMe.txt
 cp contrib/osx/ReadMe.rtf $BUILD_DIR/output/Tor\ ReadMe.rtf
 cp contrib/osx/License.rtf $BUILD_DIR/output/Tor\ License.rtf
+
+### Assemble documentation
 
 DOC=$BUILD_DIR/output/Documents
 mkdir $DOC
@@ -96,6 +123,8 @@ cp doc/tor-spec.txt doc/rend-spec.txt doc/control-spec.txt doc/socks-extensions.
 cp doc/CLIENTS $DOC/Advanced/CLIENTS.txt
 cp doc/HACKING $DOC/Advanced/HACKING.txt
 cp ChangeLog $DOC/Advanced/ChangeLog.txt
+
+### Package it all into a DMG
 
 mv $BUILD_DIR/output "$BUILD_DIR/Tor $VERSION Bundle"
 rm -f "Tor $VERSION Bundle.dmg"
