@@ -44,8 +44,9 @@ routerinfo_t *router_pick_directory_server(void) {
   if(!choice) {
     log_fn(LOG_WARN,"No dirservers known. Reloading and trying again.");
     has_fetched_directory=0; /* reset it */
+    routerlist_clear_trusted_directories();
     if(options.RouterFile) {
-      if(router_set_routerlist_from_file(options.RouterFile) < 0)
+      if(router_load_routerlist_from_file(options.RouterFile, 1) < 0)
         return NULL;
     } else {
       if(config_assign_default_dirservers() < 0)
@@ -71,7 +72,7 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
   sl = smartlist_create();
   for(i=0;i< smartlist_len(routerlist->routers); i++) {
     router = smartlist_get(routerlist->routers, i);
-    if(router->dir_port > 0 && router->is_running)
+    if(router->dir_port > 0 && router->is_running && router->is_trusted_dir)
       smartlist_add(sl, router);
   }
 
@@ -86,7 +87,7 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
    * so we cycle through the list again. */
   for(i=0; i < smartlist_len(routerlist->routers); i++) {
     router = smartlist_get(routerlist->routers, i);
-    if(router->dir_port > 0) {
+    if(router->dir_port > 0 && router->is_trusted_dir) {
       router->is_running = 1;
       dirserver = router;
     }
@@ -300,13 +301,68 @@ void router_mark_as_down(char *nickname) {
   router->is_running = 0;
 }
 
+/** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
+ * older entries (if any) with the same name.  Note: Callers should not hold
+ * their pointers to <b>router</b> after invoking this function; <b>router</b>
+ * will either be inserted into the routerlist or freed.  Returns 0 if the
+ * router was added; -1 if it was not.
+ */
+int router_add_to_routerlist(routerinfo_t *router) {
+  int i;
+  routerinfo_t *r;
+  /* If we have a router with this name, and the identity key is the same,
+   * choose the newer one. If the identity key has changed, drop the router.
+   */
+  for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
+    r = smartlist_get(routerlist->routers, i);
+    if (!strcasecmp(router->nickname, r->nickname)) {
+      if (!crypto_pk_cmp_keys(router->identity_pkey, r->identity_pkey)) {
+        if (router->published_on > r->published_on) {
+          log_fn(LOG_DEBUG, "Replacing entry for router '%s'",
+                 router->nickname);
+          /* Remember whether we trust this router as a dirserver. */
+          if (r->is_trusted_dir)
+            router->is_trusted_dir = 1;
+          /* If the adress hasn't changed; no need to re-resolve. */
+          if (!strcasecmp(r->address, router->address))
+            router->addr = r->addr;
+          routerinfo_free(r);
+          smartlist_set(routerlist->routers, i, router);
+          return 0;
+        } else {
+          log_fn(LOG_DEBUG, "Skipping old entry for router '%s'",
+                 router->nickname);
+          /* If we now trust 'router', then we trust the one in the routerlist
+           * too. */
+          if (router->is_trusted_dir)
+            r->is_trusted_dir = 1;
+          /* Update the is_running status to whatever we were told. */
+          r->is_running = router->is_running;
+          routerinfo_free(router);
+          return -1;
+        }
+      } else {
+        log_fn(LOG_WARN, "Identity key mismatch for router '%s'",
+               router->nickname);
+        routerinfo_free(router);
+        return -1;
+      }
+    }
+  }
+  /* We haven't seen a router with this name before.  Add it to the end of
+   * the list. */
+  smartlist_add(routerlist->routers, router);
+  return 0;
+}
+
 /*
  * Code to parse router descriptors and directories.
  */
 
-/** Replace the current router list with the one stored in
- * <b>routerfile</b>. */
-int router_set_routerlist_from_file(char *routerfile)
+/** Update the current router list with the one stored in
+ * <b>routerfile</b>. If <b>trusted</b> is true, then we'll use
+ * directory servers from the file. */
+int router_load_routerlist_from_file(char *routerfile, int trusted)
 {
   char *string;
 
@@ -316,7 +372,7 @@ int router_set_routerlist_from_file(char *routerfile)
     return -1;
   }
 
-  if(router_set_routerlist_from_string(string) < 0) {
+  if(router_load_routerlist_from_string(string, trusted) < 0) {
     log_fn(LOG_WARN,"The routerfile itself was corrupt.");
     free(string);
     return -1;
@@ -327,15 +383,35 @@ int router_set_routerlist_from_file(char *routerfile)
   return 0;
 }
 
-/** Helper function: read routerinfo elements from s, and throw out the
- * ones that don't parse and resolve.  Replace the current
- * routerlist. */
-int router_set_routerlist_from_string(const char *s)
+/** Mark all directories in the routerlist as nontrusted. */
+void routerlist_clear_trusted_directories(void)
 {
-  if (router_parse_list_from_string(&s, &routerlist, -1, NULL)) {
+  if (!routerlist) return;
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
+                    r->is_trusted_dir = 0);
+}
+
+/** Helper function: read routerinfo elements from s, and throw out the
+ * ones that don't parse and resolve.  Add all remaining elements to the
+ * routerlist.  If <b>trusted</b> is true, then we'll use
+ * directory servers from the string
+ */
+int router_load_routerlist_from_string(const char *s, int trusted)
+{
+  routerlist_t *new_list=NULL;
+
+  if (router_parse_list_from_string(&s, &new_list, -1, NULL)) {
     log(LOG_WARN, "Error parsing router file");
     return -1;
   }
+  if (trusted) {
+    SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
+                      if (r->dir_port) r->is_trusted_dir = 1);
+  }
+  SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
+                    router_add_to_routerlist(r));
+  smartlist_clear(new_list->routers);
+  routerlist_free(new_list);
   if (router_resolve_routerlist(routerlist)) {
     log(LOG_WARN, "Error resolving routerlist");
     return -1;
@@ -370,16 +446,25 @@ int is_recommended_version(const char *myversion,
 /** Replace the current routerlist with the routers stored in the
  * signed directory <b>s</b>.  If pkey is provided, make sure that <b>s</b> is
  * signed with pkey. */
-int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
+int router_load_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
 {
-  if (router_parse_routerlist_from_directory(s, &routerlist, pkey)) {
+  routerlist_t *new_list = NULL;
+  if (router_parse_routerlist_from_directory(s, &new_list, pkey)) {
     log_fn(LOG_WARN, "Couldn't parse directory.");
     return -1;
   }
+  SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
+                    router_add_to_routerlist(r));
+  smartlist_clear(new_list->routers);
   if (router_resolve_routerlist(routerlist)) {
     log_fn(LOG_WARN, "Error resolving routerlist");
     return -1;
   }
+  routerlist->published_on = new_list->published_on;
+  tor_free(routerlist->software_versions);
+  routerlist->software_versions = new_list->software_versions;
+  new_list->software_versions = NULL;
+  routerlist_free(new_list);
   if (!is_recommended_version(VERSION, routerlist->software_versions)) {
     log(options.IgnoreVersion ? LOG_WARN : LOG_ERR,
      "You are running Tor version %s, which will not work with this network.\n"
@@ -432,7 +517,9 @@ router_resolve_routerlist(routerlist_t *rl)
     r = smartlist_get(rl->routers,i);
     if (router_is_me(r)) {
       remove = 1;
-    } else if (router_resolve(r)) {
+    } else if (r->addr) {
+      /* already resolved. */
+    } else if (!router_resolve(r)) {
       log_fn(LOG_WARN, "Couldn't resolve router %s; not using", r->address);
       remove = 1;
     }

@@ -362,7 +362,7 @@ const char default_dirservers_string[] =
 ;
 
 int config_assign_default_dirservers(void) {
-  if(router_set_routerlist_from_string(default_dirservers_string) < 0) {
+  if(router_load_routerlist_from_string(default_dirservers_string, 1) < 0) {
     log_fn(LOG_WARN,"Bug: the default dirservers internal string is corrupt.");
     return -1;
   }

@@ -668,10 +668,12 @@ static int do_main_loop(void) {
   }
 
   /* load the routers file */
-  if(options.RouterFile &&
-     router_set_routerlist_from_file(options.RouterFile) < 0) {
-    log_fn(LOG_ERR,"Error loading router list.");
-    return -1;
+  if(options.RouterFile) {
+    routerlist_clear_trusted_directories();
+    if (router_load_routerlist_from_file(options.RouterFile, 1) < 0) {
+      log_fn(LOG_ERR,"Error loading router list.");
+      return -1;
+    }
   }
 
   if(options.DirPort) { /* the directory is already here, run startup things */
