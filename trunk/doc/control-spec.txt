@@ -78,10 +78,15 @@ the message.
 
         0x0007 Unauthorized.
                [The client tried to send a command that requires
-                authorization, but it hasn't sent a valid AUTHENTICATE message.]
+                authorization, but it hasn't sent a valid AUTHENTICATE
+                message.]
 
         0x0008 Failed authentication attempt
                [The client sent a well-formed authorization message.]
+
+        0x0009 Resource exhausted
+               [The server didn't have enough of a given resource to
+                fulfill a given request.]
 
   The rest of the body should be a human-readable description of the error.
 
@@ -211,6 +216,75 @@ the message.
 
   The server responds with DONE if the signal is recognized (or simply
   closes the socket if it was asked to close immediately), else ERROR.
+
+3.11. MAPADDRESS (Type 0x000A)
+
+  [Proposal; not finalized]
+
+  Sent from the client to the server.  The body contains:
+     Original address type [1 octet]
+     Original address [Variable length]
+     Replacement address type [1 octet]
+     Replacement address [Variable length]
+
+  Addresses types can be:
+     [0x01] for an IPv4 address (4 octets)
+     [0x02] for an IPv6 address (16 octets)
+     [0x03] for a hostname (variable-length, NUL-terminated)
+
+  The client sends this message to the server in order to tell it that future
+  SOCKS requests for connections to the original address should be replaced
+  with connections to the specified replacement address.  If the addresses
+  are well-formed, and the server is able to fulfill the request, the server
+  replies with a single ADDRESSMAPPED message containing the source and
+  destination addresses.  If request is malformed, the server replies with
+  a syntax error message.  The server can't fulfill the request, it replies
+  with an internal ERROR message.
+
+  The client may decline to provide a body for the original address, and
+  instead send a special null address (0.0.0.0 for IPv4, ::0 for IPv6, or "."
+  for hostname).  This signifies that the server should choose the original
+  address itself, and return that address in the ADDRESSMAPPED message.  The
+  server should an element of address space that is unlikely to be in actual
+  use.  If there is already an address mapped to the destination address, the
+  server may reuse that mapping.
+
+  If the original address is already mapped to a different address, the old
+  mapping is removed.  If the original address and the destination address
+  are the same, the server removes any mapping in place for the original
+  address.
+
+  {Note: This feature is designed to be used to help Tor-ify applications
+  that need to use SOCKS4 or hostname-less SOCKS5.  There are three
+  approaches to doing this:
+     1. Somehow make them use SOCKS4a or SOCKS5-with-hostnames instead.
+     2. Use tor-resolve (or another interface to Tor's resolve-over-SOCKS
+        feature) to resolve the hostname remotely.  This doesn't work
+        with special addresses like x.onion or x.y.exit.
+     3. Use MAPADDRESS to map an IP address to the desired hostname, and then
+        arrange to fool the application into thinking that the hostname
+        has resolved to that IP.
+  This functionality is designed to help implement the 3rd approach.}
+
+  [XXXX When, if ever, can mappings expire?  Should they expire?]
+  [XXXX What addresses, if any, are safe to use?]
+
+3.12 ADDRESSMAPPED (Type 0x000B)
+
+  [Proposal; not finalized]
+
+  Same format as MAPADDRESS.
+
+  This message is sent from the server to the client in response to a
+  MAPADDRESS or GETALLMAPPINGS message.
+
+3.13 GETALLMAPPINGS (Type 0x000C)
+
+  [Proposal; not finalized]
+
+  Sent from the client to the server.  The server replies by sending an
+  ADDRESSMAPPED message for each current address mapping set by MAPADDRESS or
+  otherwise, followed by a DONE message.
 
 4. Implementation notes
 
