@@ -4,7 +4,7 @@
 
 #include "or.h"
 
-/* Free the storage held by held by 'desc'.
+/* Free the storage held by 'desc'.
  */
 void rend_service_descriptor_free(rend_service_descriptor_t *desc)
 {
@@ -20,8 +20,8 @@ void rend_service_descriptor_free(rend_service_descriptor_t *desc)
   tor_free(desc);
 }
 
-/* Encode a service descriptor for 'desc', and sign it with 'key'. Stores
- * the descriptor in *str_out, and sets *len_out to its length.
+/* Encode a service descriptor for 'desc', and sign it with 'key'. Store
+ * the descriptor in *str_out, and set *len_out to its length.
  */
 int
 rend_encode_service_descriptor(rend_service_descriptor_t *desc,
@@ -146,7 +146,7 @@ int rend_get_service_id(crypto_pk_env_t *pk, char *out)
 typedef struct rend_cache_entry_t {
   int len; /* Length of desc */
   char *desc; /* Service descriptor */
-  rend_service_descriptor_t *parsed; /* Parsed vvalue of 'desc' */
+  rend_service_descriptor_t *parsed; /* Parsed value of 'desc' */
 } rend_cache_entry_t;
 
 static strmap_t *rend_cache = NULL;
