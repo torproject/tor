@@ -66,6 +66,8 @@ SERVICE_STATUS service_status;
 SERVICE_STATUS_HANDLE hStatus;
 #endif
 
+#define CHECK_DESCRIPTOR_INTERVAL 60
+
 /********* END VARIABLES ************/
 
 /****************************************************************************
@@ -509,6 +511,7 @@ static void run_scheduled_events(time_t now) {
   static time_t last_uploaded_services = 0;
   static time_t last_rotated_certificate = 0;
   static time_t time_to_check_listeners = 0;
+  static time_t time_to_check_descriptor = 0;
   or_options_t *options = get_options();
   int i;
 
@@ -527,11 +530,11 @@ static void run_scheduled_events(time_t now) {
     log_fn(LOG_INFO,"Rotating onion key.");
     rotate_onion_key();
     cpuworkers_rotate();
-    if (router_rebuild_descriptor()<0) {
+    if (router_rebuild_descriptor(1)<0) {
       log_fn(LOG_WARN, "Couldn't rebuild router descriptor");
     }
     if(advertised_server_mode())
-      router_upload_dir_desc_to_dirservers();
+      router_upload_dir_desc_to_dirservers(0);
   }
 
   /** 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */
@@ -553,14 +556,14 @@ static void run_scheduled_events(time_t now) {
   if (options->AccountingMaxKB)
     accounting_run_housekeeping(now);
 
-  /** 2. Every DirFetchPostPeriod seconds, we get a new directory and upload
-   *    our descriptor (if we've passed our internal checks). */
+  /** 2. Every DirFetchPostPeriod seconds, we get a new directory and
+   *    force-upload our descriptor (if we've passed our internal
+   *    checks). */
   if(time_to_fetch_directory < now) {
-
     if(decide_if_publishable_server(now)) {
       server_is_advertised = 1;
-      router_rebuild_descriptor();
-      router_upload_dir_desc_to_dirservers();
+      router_rebuild_descriptor(1);
+      router_upload_dir_desc_to_dirservers(1);
     } else {
       server_is_advertised = 0;
     }
@@ -588,6 +591,18 @@ static void run_scheduled_events(time_t now) {
     rend_cache_clean(); /* should this go elsewhere? */
 
     time_to_fetch_directory = now + options->DirFetchPostPeriod;
+  }
+
+  /* 2b. Once per minute, regenerate and upload the descriptor if it is wrong */
+  if (time_to_check_descriptor < now) {
+    time_to_check_descriptor = now + CHECK_DESCRIPTOR_INTERVAL;
+    if (decide_if_publishable_server(now)) {
+      server_is_advertised=1;
+      router_rebuild_descriptor(0);
+      router_upload_dir_desc_to_dirservers(0);
+    } else {
+      server_is_advertised=0;
+    }
   }
 
   /** 3a. Every second, we examine pending circuits and prune the
@@ -726,8 +741,8 @@ static int do_hup(void) {
      * configuration options. */
     cpuworkers_rotate();
     dnsworkers_rotate();
-    /* Rebuild fresh descriptor as needed. */
-    router_rebuild_descriptor();
+    /* Rebuild fresh descriptor. */
+    router_rebuild_descriptor(1);
     tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", options->DataDirectory);
     log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
     if (write_str_to_file(keydir, router_get_my_descriptor(), 0)) {

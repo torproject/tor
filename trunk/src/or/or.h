@@ -1509,12 +1509,13 @@ int router_get_bandwidth_capacity(void);
 
 void router_retry_connections(void);
 int router_is_clique_mode(routerinfo_t *router);
-void router_upload_dir_desc_to_dirservers(void);
+void router_upload_dir_desc_to_dirservers(int force);
+void mark_my_descriptor_dirty(void);
 int router_compare_to_my_exit_policy(connection_t *conn);
 routerinfo_t *router_get_my_routerinfo(void);
 const char *router_get_my_descriptor(void);
 int router_is_me(routerinfo_t *router);
-int router_rebuild_descriptor(void);
+int router_rebuild_descriptor(int force);
 int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
 int is_legal_nickname(const char *s);
