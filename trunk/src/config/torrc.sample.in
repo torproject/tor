@@ -27,8 +27,8 @@ AllowUnverifiedNodes middle,rendezvous
 ## else, like one of the below lines. You can have as many log lines as
 ## you want.
 ##
-## Send all messages of level 'warn' or higher to @LOCALSTATEDIR@/log/tor/warnings.log
-#Log warn file @LOCALSTATEDIR@/log/tor/warnings.log
+## Send all messages of level 'notice' or higher to @LOCALSTATEDIR@/log/tor/notices.log
+#Log notice file @LOCALSTATEDIR@/log/tor/notices.log
 ## Send only debug and info messages to @LOCALSTATEDIR@/log/tor/debug.log
 #Log debug-info file @LOCALSTATEDIR@/log/tor/debug.log
 ## Send ONLY debug messages to @LOCALSTATEDIR@/log/tor/debug.log
