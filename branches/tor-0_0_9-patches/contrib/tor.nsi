@@ -66,7 +66,9 @@ CRCCheck on
 !define MUI_FINISHPAGE_LINK_LOCATION ${WEBSITE}
 
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "${LICENSE}"
+; There's no point in having a clickthrough license: Our license adds
+; certain rights, but doesn't remove them.
+; !insertmacro MUI_PAGE_LICENSE "${LICENSE}"
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
