@@ -32,7 +32,7 @@ int connection_op_process_inbuf(connection_t *conn) {
 
 int op_handshake_process_keys(connection_t *conn) {
   int retval;
-  int x;
+  //int x;
   unsigned char iv[16];
 
   /* key exchange message */
