@@ -565,7 +565,7 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
     return 0;
   }
 
-  result = snprintf(s, maxlen, "%s %d %d %d %d %d\n%s",
+  result = snprintf(s, maxlen, "router %s %d %d %d %d %d\n%s",
     router->address,
     router->or_port,
     router->op_port,

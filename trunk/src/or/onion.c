@@ -347,6 +347,7 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
   int routelen; /* length of the route */
   unsigned int *route; /* hops in the route as an array of indexes into rarray */
   crypt_path_t *cpath=NULL;
+  directory_t *dir;
   routerinfo_t **rarray;
   int rarray_len;
   int i;
@@ -354,7 +355,9 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
   routerinfo_t *router;
   struct in_addr netaddr;
 
-  router_get_rarray(&rarray, &rarray_len);
+  router_get_directory(&dir);
+  rarray = dir->routers;
+  rarray_len = dir->n_routers;
 
   /* choose a route */
   route = new_route(options.CoinWeight, rarray, rarray_len, &routelen);

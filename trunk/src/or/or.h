@@ -328,6 +328,11 @@ typedef struct {
   void *next;
 } routerinfo_t;
 
+typedef struct {
+  routerinfo_t **routers;
+  int n_routers;
+} directory_t;
+
 struct crypt_path_t { 
 
   /* crypto environments */
@@ -779,11 +784,13 @@ int learn_my_address(struct sockaddr_in *me);
 void router_retry_connections(void);
 routerinfo_t *router_pick_directory_server(void);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
-void router_get_rarray(routerinfo_t ***prouter_array, int *prarray_len);
+void router_get_directory(directory_t **pdirectory);
 int router_is_me(uint32_t addr, uint16_t port);
 void router_forget_router(uint32_t addr, uint16_t port);
 int router_get_list_from_file(char *routerfile);
 int router_get_list_from_string(char *s);
+int router_get_list_from_string_impl(char *s, directory_t **dest);
+routerinfo_t *router_get_entry_from_string(char **s);
 
 int router_compare_to_exit_policy(connection_t *conn);
 
