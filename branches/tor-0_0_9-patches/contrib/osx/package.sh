@@ -74,9 +74,9 @@ $PACKAGEMAKER -build                      \
 
 ### Make Startup Script package
 
-mkdir -p $BUILD_DIR/torstartup_packageroot/System/Library/StartupItems/Tor
+mkdir -p $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
 cp contrib/osx/Tor contrib/osx/StartupParameters.plist \
-   $BUILD_DIR/torstartup_packageroot/System/Library/StartupItems/Tor
+   $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
 
 $PACKAGEMAKER -build                     \
     -p $BUILD_DIR/output/torstartup.pkg  \
