@@ -153,14 +153,17 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   routerinfo_t *r = NULL;
   trusted_dir_server_t *ds = NULL;
   int fascistfirewall = get_options()->FascistFirewall;
+  int directconn = purpose == DIR_PURPOSE_FETCH_DIR ||
+                   purpose == DIR_PURPOSE_FETCH_RUNNING_LIST;
+  int fetch_fresh_first = advertised_server_mode();
 
-  if (purpose == DIR_PURPOSE_FETCH_DIR ||
-      purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
-    if (advertised_server_mode()) {
+  if (directconn) {
+    if (fetch_fresh_first) {
       /* only ask authdirservers, and don't ask myself */
       ds = router_pick_trusteddirserver(1, fascistfirewall,
                                         retry_if_no_servers);
-    } else {
+    }
+    if (!ds) {
       /* anybody with a non-zero dirport will do */
       r = router_pick_directory_server(1, fascistfirewall,
                                 purpose==DIR_PURPOSE_FETCH_RUNNING_LIST,
@@ -184,8 +187,12 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   else if (ds)
     directory_initiate_command_trusted_dir(ds, purpose, resource, NULL, 0);
   else {
-    log_fn(LOG_NOTICE,"No running dirservers known. Not trying. (purpose %d)", purpose);
-    directory_all_unreachable(time(NULL)); /* remember we tried them all and failed. */
+    log_fn(LOG_NOTICE,"No running dirservers known. Not trying. (purpose %d)",
+           purpose);
+    if(directconn) {
+      /* remember we tried them all and failed. */
+      directory_all_unreachable(time(NULL)); 
+    }
   }
 }
 
