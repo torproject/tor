@@ -2185,7 +2185,7 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
    *     "mask" is the Mask|Maskbits part...
    * and "port" is the *|port|min-max part.
    */
-  
+
   if (strcmp(address,"*")==0) {
     *addr_out = 0;
   } else if (tor_inet_aton(address, &in) != 0) {
@@ -2317,6 +2317,41 @@ tor_parse_ulong(const char *s, int base, unsigned long min,
   if (next) *next = endptr;
   return 0;
 }
+
+/** Replacement for snprintf.  Differs from platform snprintf in two
+ * ways: First, always NUL-terminates its output.  Second, always
+ * returns -1 if the result is truncated.  (Note that this return
+ * behavior does <i>not</i> conform to C99; it just happens to be the
+ * easiest to emulate "return -1" with conformant implementations than
+ * it is to emulate "return number that would be written" with
+ * non-conformant implementations.) */
+int tor_snprintf(char *str, size_t size, const char *format, ...)
+{
+  va_list ap;
+  int r;
+  va_start(ap,format);
+  r = tor_vsnprintf(str,size,format,ap);
+  va_end(ap);
+  return r;
+}
+
+/** Replacement for vsnpritnf; behavior differs as tor_snprintf differs from
+ * snprintf.
+ */
+int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
+{
+  int r;
+#ifdef MS_WINDOWS
+  r = _vsnprintf(str, size, format, args);
+#else
+  r = vsnprintf(str, size, format, args);
+#endif
+  str[size-1] = '\0';
+  if (r < 0 || r >= size)
+    return -1;
+  return r;
+}
+
 
 #ifndef MS_WINDOWS
 struct tor_mutex_t {
