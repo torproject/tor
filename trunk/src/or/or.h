@@ -856,8 +856,11 @@ typedef struct {
   } command;
   const char *command_arg; /**< Argument for command-line option. */
 
-  struct config_line_t *LogOptions; /**< List of configuration lines
-                                     * for logfiles */
+  struct config_line_t *OldLogOptions; /**< List of configuration lines
+                                        * for logfiles, old style. */
+
+  struct config_line_t *Logs; /**< New-style list of configuration lines
+                               * for logs */
 
   char *DebugLogFile; /**< Where to send verbose log messages. */
   char *DataDirectory; /**< OR only: where to store long-term data. */

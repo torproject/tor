@@ -52,7 +52,7 @@ static config_abbrev_t config_abbrevs[] = {
   PLURAL(HiddenServiceExcludeNode),
   PLURAL(RendNode),
   PLURAL(RendExcludeNode),
-  { "l", "LogLevel", 1},
+  { "l", "Log", 1},
   { "BandwidthRate", "BandwidthRateBytes", 1},
   { "BandwidthBurst", "BandwidthBurstBytes", 1},
   { NULL, NULL , 0},
@@ -118,9 +118,9 @@ static config_var_t config_vars[] = {
   VAR("HiddenServiceExcludeNodes", LINELIST_S, RendConfigLines, NULL),
   VAR("IgnoreVersion",       BOOL,     IgnoreVersion,        "0"),
   VAR("KeepalivePeriod",     UINT,     KeepalivePeriod,      "300"),
-  VAR("LogOptions",          LINELIST_V, LogOptions,         NULL),
-  VAR("LogLevel",            LINELIST_S, LogOptions,         NULL),
-  VAR("LogFile",             LINELIST_S, LogOptions,         NULL),
+  VAR("Log",                 LINELIST, Logs,                 NULL),
+  VAR("LogLevel",            LINELIST_S, OldLogOptions,      NULL),
+  VAR("LogFile",             LINELIST_S, OldLogOptions,      NULL),
   OBSOLETE("LinkPadding"),
   VAR("MaxConn",             UINT,     MaxConn,              "1024"),
   VAR("MaxOnionsPending",    UINT,     MaxOnionsPending,     "100"),
@@ -144,7 +144,7 @@ static config_var_t config_vars[] = {
   VAR("SocksPort",           UINT,     SocksPort,            "9050"),
   VAR("SocksBindAddress",    LINELIST, SocksBindAddress,     NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
-  VAR("SysLog",              LINELIST_S, LogOptions,         NULL),
+  VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
   OBSOLETE("TrafficShaping"),
   VAR("User",                STRING,   User,                 NULL),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
@@ -168,6 +168,15 @@ static int parse_redirect_line(or_options_t *options,
 static const char *expand_abbrev(const char *option, int commandline_only);
 static config_var_t *config_find_option(const char *key);
 static void reset_option(or_options_t *options, config_var_t *var);
+static int parse_log_severity_range(const char *range, int *min_out,
+                                    int *max_out);
+static int convert_log_option(or_options_t *options,
+                              struct config_line_t *level_opt,
+                              struct config_line_t *file_opt, int isDaemon);
+static int add_single_log_option(or_options_t *options, int minSeverity,
+                                 int maxSeverity,
+                                 const char *type, const char *fname);
+static int normalize_log_options(or_options_t *options);
 
 /** If <b>option</b> is an official abbreviation for a longer option,
  * return the longer option.  Otherwise return <b>option</b>.
@@ -1186,38 +1195,60 @@ getconfig(int argc, char **argv, or_options_t *options)
 }
 
 static int
-add_single_log(struct config_line_t *level_opt,
-               struct config_line_t *file_opt, int isDaemon)
+parse_log_severity_range(const char *range, int *min_out, int *max_out)
 {
-  int levelMin = -1, levelMax = -1;
-  char *cp, *tmp_sev;
-
-  if (level_opt) {
-    cp = strchr(level_opt->value, '-');
-    if (cp) {
-      tmp_sev = tor_strndup(level_opt->value, cp - level_opt->value);
+  int levelMin, levelMax;
+  const char *cp;
+  cp = strchr(range, '-');
+  if (cp) {
+    if (cp == range) {
+      levelMin = LOG_DEBUG;
+    } else {
+      char *tmp_sev = tor_strndup(range, cp - range);
       levelMin = parse_log_level(tmp_sev);
       if (levelMin < 0) {
         log_fn(LOG_WARN, "Unrecognized log severity '%s': must be one of "
                "err|warn|notice|info|debug", tmp_sev);
+        tor_free(tmp_sev);
         return -1;
       }
       tor_free(tmp_sev);
+    }
+    if (!*(cp+1)) {
+      levelMax = LOG_ERR;
+    } else {
       levelMax = parse_log_level(cp+1);
       if (levelMax < 0) {
         log_fn(LOG_WARN, "Unrecognized log severity '%s': must be one of "
                "err|warn|notice|info|debug", cp+1);
         return -1;
       }
-    } else {
-      levelMin = parse_log_level(level_opt->value);
-      if (levelMin < 0) {
-        log_fn(LOG_WARN, "Unrecognized log severity '%s': must be one of "
-               "err|warn|notice|info|debug", level_opt->value);
-        return -1;
-
-      }
     }
+  } else {
+    levelMin = parse_log_level(range);
+    if (levelMin < 0) {
+      log_fn(LOG_WARN, "Unrecognized log severity '%s': must be one of "
+             "err|warn|notice|info|debug", range);
+      return -1;
+    }
+    levelMax = levelMin;
+  }
+
+  *min_out = levelMin;
+  *max_out = levelMax;
+
+  return 0;
+}
+
+static int
+convert_log_option(or_options_t *options, struct config_line_t *level_opt,
+                   struct config_line_t *file_opt, int isDaemon)
+{
+  int levelMin = -1, levelMax = -1;
+
+  if (level_opt) {
+    if (parse_log_severity_range(level_opt->value, &levelMin, &levelMax))
+      return -1;
   }
   if (levelMin < 0 && levelMax < 0) {
     levelMin = LOG_NOTICE;
@@ -1229,26 +1260,16 @@ add_single_log(struct config_line_t *level_opt,
   }
 
   if (file_opt && !strcasecmp(file_opt->key, "LogFile")) {
-    if (add_file_log(levelMin, levelMax, file_opt->value) < 0) {
+    if (add_single_log_option(options, levelMin, levelMax, "file", file_opt->value) < 0) {
       log_fn(LOG_WARN, "Cannot write to LogFile '%s': %s.", file_opt->value,
              strerror(errno));
       return -1;
     }
-    log_fn(LOG_NOTICE, "Successfully opened LogFile '%s', redirecting output.",
-           file_opt->value);
   } else if (file_opt && !strcasecmp(file_opt->key, "SysLog")) {
-#ifdef HAVE_SYSLOG_H
-    if (add_syslog_log(levelMin, levelMax) < 0) {
-      log_fn(LOG_WARN, "Cannot open system log facility");
+    if (add_single_log_option(options, levelMin, levelMax, "syslog", NULL) < 0)
       return -1;
-    }
-    log_fn(LOG_NOTICE, "Successfully opened system log, redirecting output.");
-#else
-    log_fn(LOG_WARN, "Tor was compiled without system logging enabled; can't enable SysLog.");
-#endif
   } else if (!isDaemon) {
-    add_stream_log(levelMin, levelMax, "<stdout>", stdout);
-    close_temp_logs();
+    add_single_log_option(options, levelMin, levelMax, "stdout", NULL);
   }
   return 0;
 }
@@ -1259,26 +1280,105 @@ add_single_log(struct config_line_t *level_opt,
 int
 config_init_logs(or_options_t *options)
 {
-  /* The order of options is:  Level? (File Level?)+
-   */
-  struct config_line_t *opt = options->LogOptions;
+  struct config_line_t *opt;
+  int ok;
+  if (normalize_log_options(options))
+    return -1;
 
   /* Special case if no options are given. */
-  if (!opt) {
-    add_stream_log(LOG_NOTICE, LOG_ERR, "<stdout>", stdout);
-    close_temp_logs();
-    /* don't return yet, in case we want to do a debuglogfile below */
+  if (!options->Logs) {
+    options->Logs = config_line_prepend(NULL, "Log", "notice-err stdout");
   }
+
+  ok = 1;
+  smartlist_t *elts = smartlist_create();
+  for (opt = options->Logs; opt; opt = opt->next) {
+    int levelMin=LOG_DEBUG, levelMax=LOG_ERR;
+    smartlist_split_string(elts, opt->value, " ",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
+    if (smartlist_len(elts) == 0) {
+      log_fn(LOG_WARN, "Bad syntax on Log option 'Log %s'", opt->value);
+      ok = 0; goto cleanup;
+    }
+    if (parse_log_severity_range(smartlist_get(elts,0), &levelMin, &levelMin)) {
+      ok = 0; goto cleanup;
+    }
+    if (smartlist_len(elts) < 2) {
+      add_stream_log(levelMin, levelMax, "<stdout>", stdout);
+      goto cleanup;
+    }
+    if (!strcasecmp(smartlist_get(elts,1), "file")) {
+      if (smartlist_len(elts) != 3) {
+        log_fn(LOG_WARN, "Bad syntax on Log option 'Log %s'", opt->value);
+        ok = 0; goto cleanup;
+      }
+      add_file_log(levelMin, levelMax, smartlist_get(elts, 2));
+      goto cleanup;
+    }
+    if (smartlist_len(elts) != 2) {
+      log_fn(LOG_WARN, "Bad syntax on Log option 'Log %s'", opt->value);
+      ok = 0; goto cleanup;
+    }
+    if (!strcasecmp(smartlist_get(elts,1), "stdout")) {
+      add_stream_log(levelMin, levelMax, "<stdout>", stdout);
+      close_temp_logs();
+    } else if (!strcasecmp(smartlist_get(elts,1), "stderr")) {
+      add_stream_log(levelMin, levelMax, "<stderr>", stderr);
+      close_temp_logs();
+    } else if (!strcasecmp(smartlist_get(elts,1), "syslog")) {
+#ifdef HAVE_SYSLOG_H
+      add_syslog_log(levelMin, levelMax);
+#else
+      log_fn(LOG_WARN, "Syslog is not supported in this compilation.");
+#endif
+    }
+  cleanup:
+    SMARTLIST_FOREACH(elts, char*, cp, tor_free(cp));
+    smartlist_clear(elts);
+  }
+  smartlist_free(elts);
+  close_temp_logs();
+
+  return ok?0:-1;
+}
+
+static int
+add_single_log_option(or_options_t *options, int minSeverity, int maxSeverity,
+                      const char *type, const char *fname)
+{
+  char buf[512];
+  int n;
+
+  n = tor_snprintf(buf, sizeof(buf), "%s-%s %s%s%s",
+                   log_level_to_string(minSeverity),
+                   log_level_to_string(maxSeverity),
+                  type, fname?" ":"", fname?fname:"");
+  if (n<0) {
+    log_fn(LOG_WARN, "Normalized log option too long.");
+    return -1;
+  }
+
+  log_fn(LOG_WARN, "The old LogLevel/LogFile/DebugLogFile/SysLog options are deprecated, and will go away soon.  New format: 'Log %s'", buf);
+  options->Logs = config_line_prepend(options->Logs, "Log", buf);
+  return 0;
+}
+
+static int
+normalize_log_options(or_options_t *options)
+{
+  /* The order of options is:  Level? (File Level?)+
+   */
+  struct config_line_t *opt = options->OldLogOptions;
 
   /* Special case for if first option is LogLevel. */
   if (opt && !strcasecmp(opt->key, "LogLevel")) {
     if (opt->next && (!strcasecmp(opt->next->key, "LogFile") ||
                       !strcasecmp(opt->next->key, "SysLog"))) {
-      if (add_single_log(opt, opt->next, options->RunAsDaemon) < 0)
+      if (convert_log_option(options, opt, opt->next, options->RunAsDaemon) < 0)
         return -1;
       opt = opt->next->next;
     } else if (!opt->next) {
-      if (add_single_log(opt, NULL, options->RunAsDaemon) < 0)
+      if (convert_log_option(options, opt, NULL, options->RunAsDaemon) < 0)
         return -1;
       opt = opt->next;
     } else {
@@ -1295,12 +1395,12 @@ config_init_logs(or_options_t *options)
                  !strcasecmp(opt->key, "SysLog"));
       if (opt->next && !strcasecmp(opt->next->key, "LogLevel")) {
         /* LogFile/SysLog followed by LogLevel */
-        if (add_single_log(opt->next, opt, options->RunAsDaemon) < 0)
+        if (convert_log_option(options,opt->next,opt, options->RunAsDaemon) < 0)
           return -1;
         opt = opt->next->next;
       } else {
         /* LogFile/SysLog followed by LogFile/SysLog or end of list. */
-        if (add_single_log(NULL, opt, options->RunAsDaemon) < 0)
+        if (convert_log_option(options,NULL, opt, options->RunAsDaemon) < 0)
           return -1;
         opt = opt->next;
       }
@@ -1308,10 +1408,13 @@ config_init_logs(or_options_t *options)
   }
 
   if (options->DebugLogFile) {
-    log_fn(LOG_WARN, "DebugLogFile is deprecated; use LogFile and LogLevel instead");
-    if (add_file_log(LOG_DEBUG, LOG_ERR, options->DebugLogFile) < 0)
+    if (add_single_log_option(options, LOG_DEBUG, LOG_ERR, "file", options->DebugLogFile) < 0)
       return -1;
   }
+
+  tor_free(options->DebugLogFile);
+  config_free_lines(options->OldLogOptions);
+  options->OldLogOptions = NULL;
 
   return 0;
 }

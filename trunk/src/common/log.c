@@ -397,6 +397,11 @@ int parse_log_level(const char *level) {
   return -1;
 }
 
+const char *log_level_to_string(int level)
+{
+  return sev_to_string(level);
+}
+
 int get_min_log_level(void)
 {
   logfile_t *lf;
