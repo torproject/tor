@@ -755,7 +755,7 @@ static int do_hup(void) {
     log_fn(LOG_ERR,"Reading config failed--see warnings above. For usage, try -h.");
     return -1;
   }
-  options = get_options();
+  options = get_options(); /* they have changed now */
   if (authdir_mode(options)) {
     /* reload the approved-routers file */
     tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", options->DataDirectory);
