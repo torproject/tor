@@ -56,7 +56,7 @@ and addresses many limitations in the original Onion Routing design.
 Tor works in a real-world Internet environment, requires no special
 privileges such as root- or kernel-level access,
 requires little synchronization or coordination between nodes, and
-provides a reasonable tradeoff between anonymity and usability/efficiency.
+provides a reasonable tradeoff between anonymity, usability, and efficiency.
 We include a new practical design for rendezvous points, as well
 as a big list of open problems.
 \end{abstract}
@@ -367,10 +367,10 @@ forward secrecy feasible.
 Circuit-based anonymity designs must choose which protocol layer
 to anonymize. They may choose to intercept IP packets directly, and
 relay them whole (stripping the source address) as the contents of
-the circuit \cite{tarzan:ccs02,freedom2-arch}.  Alternatively, like
+the circuit \cite{freedom2-arch,tarzan:ccs02}.  Alternatively, like
 Tor, they may accept TCP streams and relay the data in those streams
 along the circuit, ignoring the breakdown of that data into TCP frames
-\cite{anonnet,morphmix:fc04}. Finally, they may accept application-level
+\cite{morphmix:fc04,anonnet}. Finally, they may accept application-level
 protocols (such as HTTP) and relay the application requests themselves
 along the circuit.  
 This protocol-layer decision represents a compromise between flexibility
@@ -786,9 +786,9 @@ using TLS. Addressing the insider malleability attack, however, is
 more complex.
 
 We could do integrity checking of the relay cells at each hop, either
-by including hashes or by using a cipher mode like EAX \cite{eax}.
-But we don't want the added message-expansion overhead at each hop, and
-we don't want to leak the path length (or pad to some max path length).
+by including hashes or by using a cipher mode like EAX \cite{eax},
+but we don't want the added message-expansion overhead at each hop, and
+we don't want to leak the path length or pad to some max path length.
 Because we've already accepted that our design is vulnerable to end-to-end
 timing attacks, we can perform integrity checking only at the edges of
 the circuit without introducing any new anonymity attacks. When Alice
@@ -1894,6 +1894,7 @@ issues remaining to be ironed out. In particular:
 %\Section{Acknowledgments}
 % Peter Palfrader for editing
 % Bram Cohen for congestion control discussions
+% Adam Back for suggesting telescoping circuits
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
