@@ -91,29 +91,13 @@ static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
   buf_shrink_if_underfull(buf);
 }
 
-/** Find the first instance of the str_len byte string <b>str</b> on the
- * buf_len byte string <b>bufstr</b>.  Strings are not necessary
- * NUL-terminated. If none exists, return -1.  Otherwise, return index
- * of the first character in bufstr _after_ the first instance of str.
- */
-/* XXXX The way this function is used, we could always get away with
- * XXXX assuming that str is NUL terminated, and use strstr instead. */
-static int find_mem_in_mem(const char *str, int str_len,
-                           const char *bufstr, int buf_len)
+/** Make sure that the memory in buf ends with a zero byte. */
+static INLINE int buf_nul_terminate(buf_t *buf)
 {
-  const char *location;
-  const char *last_possible = bufstr + buf_len - str_len;
-
-  tor_assert(str && str_len > 0 && bufstr);
-
-  if(buf_len < str_len)
+  if (buf_ensure_capacity(buf,buf->len+1)<0)
     return -1;
-
-  for(location = bufstr; location <= last_possible; location++)
-    if((*location == *str) && !memcmp(location+1, str+1, str_len-1))
-      return location-bufstr+str_len;
-
-  return -1;
+  buf->mem[buf->len] = '\0';
+  return 0;
 }
 
 /** Create and return a new buf with capacity <b>size</b>.
@@ -366,19 +350,22 @@ int fetch_from_buf(char *string, size_t string_len, buf_t *buf) {
 int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, int max_headerlen,
                         char **body_out, int *body_used, int max_bodylen) {
-  char *headers, *body;
-  int i;
+  char *headers, *body, *p;
   int headerlen, bodylen, contentlen;
 
   assert_buf_ok(buf);
 
   headers = buf->mem;
-  i = find_mem_in_mem("\r\n\r\n", 4, buf->mem, buf->datalen);
-  if(i < 0) {
+  if (buf_nul_terminate(buf)<0) {
+    log_fn(LOG_WARN,"Couldn't nul-terminate buffer");
+    return -1;
+  }
+  body = strstr(headers,"\r\n\r\n");
+  if (!body) {
     log_fn(LOG_DEBUG,"headers not all here yet.");
     return 0;
   }
-  body = buf->mem+i;
+  body += 4; /* Skip the the CRLFCRLF */
   headerlen = body-headers; /* includes the CRLFCRLF */
   bodylen = buf->datalen - headerlen;
   log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.", headerlen, bodylen);
@@ -393,10 +380,9 @@ int fetch_from_buf_http(buf_t *buf,
   }
 
 #define CONTENT_LENGTH "\r\nContent-Length: "
-  i = find_mem_in_mem(CONTENT_LENGTH, strlen(CONTENT_LENGTH),
-                      headers, headerlen);
-  if(i > 0) {
-    contentlen = atoi(headers+i);
+  p = strstr(headers, CONTENT_LENGTH);
+  if (p) {
+    contentlen = atoi(p+strlen(CONTENT_LENGTH));
     /* if content-length is malformed, then our body length is 0. fine. */
     log_fn(LOG_DEBUG,"Got a contentlen of %d.",contentlen);
     if(bodylen < contentlen) {

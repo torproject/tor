@@ -215,8 +215,6 @@ static void conn_read(int i) {
     connection_handle_read(conn) < 0) {
       if (!conn->marked_for_close) {
         /* this connection is broken. remove it */
-        /* XXX This shouldn't ever happen anymore. */
-        /* XXX but it'll clearly happen on MS_WINDOWS from POLLERR, right? */
         log_fn(LOG_ERR,"Unhandled error on read for %s connection (fd %d); removing",
                CONN_TYPE_TO_STRING(conn->type), conn->s);
         connection_mark_for_close(conn);
@@ -289,7 +287,6 @@ static void conn_close_if_marked(int i) {
     if(connection_speaks_cells(conn)) {
       if(conn->state == OR_CONN_STATE_OPEN) {
         retval = flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
-        /* XXX actually, some non-zero results are maybe ok. which ones? */
       } else
         retval = -1; /* never flush non-open broken tls connections */
     } else {

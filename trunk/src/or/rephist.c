@@ -154,10 +154,9 @@ void rep_hist_note_connection_died(const char* nickname, time_t when)
 {
   or_history_t *hist;
   if(!nickname) {
-    /* XXX
-     * If conn has no nickname, it's either an OP, or it is an OR
+    /* If conn has no nickname, it's either an OP, or it is an OR
      * which didn't complete its handshake (or did and was unapproved).
-     * Ignore it. Is there anything better we could do?
+     * Ignore it.
      */
     return;
   }

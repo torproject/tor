@@ -419,25 +419,23 @@ void assert_cpath_layer_ok(const crypt_path_t *cp)
  * correct. Trigger an assert if anything is invalid.
  */
 static void
- assert_cpath_ok(const crypt_path_t *cp)
+assert_cpath_ok(const crypt_path_t *cp)
 {
-  while(cp->prev)
-    cp = cp->prev;
-  //XXX this is broken. cp is a doubly linked list.
+  const crypt_path_t *start = cp;
 
-  while(cp->next) {
+  do {
     assert_cpath_layer_ok(cp);
     /* layers must be in sequence of: "open* awaiting? closed*" */
-    if (cp->prev) {
-      if (cp->prev->state == CPATH_STATE_OPEN) {
-        tor_assert(cp->state == CPATH_STATE_CLOSED ||
-                   cp->state == CPATH_STATE_AWAITING_KEYS);
-      } else {
-        tor_assert(cp->state == CPATH_STATE_CLOSED);
+    if (cp != start) {
+      if (cp->state == CPATH_STATE_AWAITING_KEYS) {
+        tor_assert(cp->prev->state == CPATH_STATE_OPEN);
+      } else if (cp->state == CPATH_STATE_OPEN) {
+        tor_assert(cp->prev->state == CPATH_STATE_OPEN);
       }
     }
     cp = cp->next;
-  }
+    tor_assert(cp);
+  } while (cp != start);
 }
 
 /** Verify that circuit <b>c</b> has all of its invariants
@@ -479,8 +477,7 @@ void assert_circuit_ok(const circuit_t *c)
     }
   }
   if (c->cpath) {
-//    assert_cpath_ok(c->cpath);
-// XXX the above call causes an infinite loop.
+    assert_cpath_ok(c->cpath);
   }
   if (c->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED) {
     if (!c->marked_for_close) {

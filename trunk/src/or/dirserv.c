@@ -331,9 +331,12 @@ dirserv_add_descriptor(const char **desc)
     free_descriptor_entry(*desc_ent_ptr);
   } else {
     /* Add this at the end. */
-    log_fn(LOG_INFO,"Dirserv adding desc for nickname %s",ri->nickname);
-    desc_ent_ptr = &descriptor_list[n_descriptors++];
-    /* XXX check if n_descriptors is too big */
+    if (n_descriptors >= MAX_ROUTERS_IN_DIR) {
+      log_fn(LOG_WARN,"Too many descriptors in directory; can't add another.");
+    } else {
+      log_fn(LOG_INFO,"Dirserv adding desc for nickname %s",ri->nickname);
+      desc_ent_ptr = &descriptor_list[n_descriptors++];
+    }
   }
 
   (*desc_ent_ptr) = tor_malloc(sizeof(descriptor_entry_t));

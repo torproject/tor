@@ -375,7 +375,10 @@ tor_tls_context_new(crypto_pk_env_t *identity,
     SSL_CTX_free(result->ctx);
   if (result)
     free(result);
-  /* leak certs XXXX ? */
+  if (cert)
+    X509_free(cert);
+  if (idcert)
+    X509_free(cert);
   return -1;
 }
 
@@ -641,7 +644,8 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
   if (id_pkey)
     EVP_PKEY_free(id_pkey);
 
-  /* XXXX This should never get invoked, but let's make sure for now. */
+  /* This should never get invoked, but let's make sure in case OpenSSL
+   * acts unexpectedly. */
   tls_log_errors(LOG_WARN, "finishing tor_tls_verify");
 
   return r;

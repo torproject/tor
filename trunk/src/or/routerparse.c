@@ -8,10 +8,9 @@
  * \brief Code to parse and validate router descriptors and directories.
  **/
 
-#define _GNU_SOURCE
-/* XXX this is required on rh7 to make strptime not complain. how bad
- * is this for portability?
+/* This is required on rh7 to make strptime not complain.
  */
+#define _GNU_SOURCE
 
 #include "or.h"
 
@@ -32,7 +31,7 @@ typedef enum {
   K_SIGNED_DIRECTORY,
   K_SIGNING_KEY,
   K_ONION_KEY,
-  K_LINK_KEY, /* XXXX obsolete */
+  K_LINK_KEY, /* XXXX obsolete; remove in June. */
   K_ROUTER_SIGNATURE,
   K_PUBLISHED,
   K_RUNNING_ROUTERS,
