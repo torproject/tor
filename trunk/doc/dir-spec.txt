@@ -167,4 +167,9 @@ router in transport domain B must have pushed its descriptor to a directory
 server in transport domain A, so that the directory server in transport domain
 A can use that router to reach the directory server in transport domain B.
 
+When confronted with the choice of multiple different paths to reach the same
+router, the Blossom nodes may use a route selection protocol similar in design
+to that used by BGP (may be a simple distance-vector route selection procedure
+that only takes into account path length, or may be more complex to avoid
+loops, cache results, etc.) in order to choose the best one.
 
