@@ -769,9 +769,11 @@ void router_mark_as_down(const char *digest) {
  * their pointers to <b>router</b> after invoking this function; <b>router</b>
  * will either be inserted into the routerlist or freed.  Returns 0 if the
  * router was added; -1 if it was not.
+ *
+ * DOCDOC msg
  */
 static int
-router_add_to_routerlist(routerinfo_t *router) {
+router_add_to_routerlist(routerinfo_t *router, const char **msg) {
   int i;
   routerinfo_t *r;
   char id_digest[DIGEST_LEN];
@@ -797,11 +799,12 @@ router_add_to_routerlist(routerinfo_t *router) {
         smartlist_set(routerlist->routers, i, router);
         return 0;
       } else {
-        log_fn(LOG_DEBUG, "Skipping old entry for router '%s'",
+        log_fn(LOG_DEBUG, "Skipping not-new descriptor for router '%s'",
                router->nickname);
         /* Update the is_running status to whatever we were told. */
         r->is_running = router->is_running;
         routerinfo_free(router);
+        if (msg) *msg = "Router descriptor was not new.";
         return -1;
       }
     } else if (!strcasecmp(router->nickname, r->nickname)) {
@@ -827,6 +830,7 @@ router_add_to_routerlist(routerinfo_t *router) {
         log_fn(LOG_DEBUG, "Skipping unverified entry for verified router '%s'",
                router->nickname);
         routerinfo_free(router);
+        if (msg) *msg = "Already have verified router with different key and same nickname";
         return -1;
       }
     }
@@ -865,15 +869,19 @@ routerlist_remove_old_routers(int age)
 }
 
 /*
- * Code to parse router descriptors and directories.
+ * Code to parse a single router descriptors and insert it into the
+ * directory.  Return -1 if the descriptor was ill-formed; 0 if the
+ * descriptor was well-formed but could not be added; and 1 if the
+ * descriptor was added.
  */
 int
-router_load_single_router(const char *s)
+router_load_single_router(const char *s, const char **msg)
 {
   routerinfo_t *ri;
 
   if (!(ri = router_parse_entry_from_string(s, NULL))) {
     log_fn(LOG_WARN, "Error parsing router descriptor; dropping.");
+    if (msg) *msg = "Couldn't parse router descriptor";
     return -1;
   }
   if (routerlist && routerlist->running_routers) {
@@ -883,9 +891,10 @@ router_load_single_router(const char *s)
                                         rr->running_routers,
                                         rr->is_running_routers_format);
   }
-  if (router_add_to_routerlist(ri)<0) {
+  if (router_add_to_routerlist(ri, msg)<0) {
     log_fn(LOG_WARN, "Couldn't add router to list; dropping.");
-    return -1;
+    if (msg && !*msg) *msg = "Couldn't add router to list.";
+    return 0;
   } else {
     smartlist_t *changed = smartlist_create();
     smartlist_add(changed, ri);
@@ -893,7 +902,7 @@ router_load_single_router(const char *s)
     smartlist_free(changed);
   }
   log_fn(LOG_DEBUG, "Added router to list");
-  return 0;
+  return 1;
 }
 
 /** Add to the current routerlist each router stored in the
@@ -922,7 +931,7 @@ int router_load_routerlist_from_directory(const char *s,
     smartlist_t *changed = smartlist_create();
     SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
     {
-      if (router_add_to_routerlist(r)==0)
+      if (router_add_to_routerlist(r,NULL)==0)
         smartlist_add(changed, r);
     });
     smartlist_clear(new_list->routers);

@@ -230,6 +230,8 @@ send_control_done(connection_t *conn)
 
 static void send_control_done2(connection_t *conn, const char *msg, size_t len)
 {
+  if (len==0)
+    len = strlen(msg);
   send_control_message(conn, CONTROL_CMD_DONE, len, msg);
 }
 
@@ -760,10 +762,16 @@ static int
 handle_control_postdescriptor(connection_t *conn, uint32_t len,
                               const char *body)
 {
-  if (router_load_single_router(body)<0) {
-    /* XXXX a more specific error would be nice. */
-    send_control_error(conn,ERR_UNSPECIFIED,
-                       "Could not parse descriptor or add it");
+  const char *msg;
+  switch (router_load_single_router(body, &msg)) {
+  case -1:
+    send_control_error(conn,ERR_SYNTAX,msg?msg: "Could not parse descriptor");
+    break;
+  case 0:
+    send_control_done2(conn,msg?msg: "Descriptor not added",0);
+    break;
+  case 1:
+    send_control_done(conn);
     return 0;
   }
 

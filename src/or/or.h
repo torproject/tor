@@ -1796,7 +1796,7 @@ void free_trusted_dir_servers(void);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_mark_as_down(const char *digest);
 void routerlist_remove_old_routers(int age);
-int router_load_single_router(const char *s);
+int router_load_single_router(const char *s, const char **msg);
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey,
                                         int dir_is_recent, int dir_is_cached);
 addr_policy_result_t router_compare_addr_to_addr_policy(uint32_t addr,
