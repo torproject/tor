@@ -833,7 +833,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
 
   if(circ->cpath->state == CPATH_STATE_CLOSED) {
     assert(circ->n_conn && circ->n_conn->type == CONN_TYPE_OR);
-    
+
     log_fn(LOG_DEBUG,"First skin; sending create cell.");
     circ_id_type = decide_circ_id_type(options.Nickname,
                                        circ->n_conn->nickname);
