@@ -260,42 +260,14 @@ void router_forget_router(uint32_t addr, uint16_t port) {
 /* load the router list */
 int router_get_list_from_file(char *routerfile)
 {
-  int fd; /* router file */
-  struct stat statbuf;
   char *string;
 
-  assert(routerfile);
-  
-  if (strcspn(routerfile,CONFIG_LEGAL_FILENAME_CHARACTERS) != 0) {
-    log_fn(LOG_WARNING,"Filename %s contains illegal characters.",routerfile);
+  string = read_file_to_str(routerfile);
+  if(!string) {
+    log_fn(LOG_WARNING,"Failed to load routerfile %s.",routerfile);
     return -1;
   }
   
-  if(stat(routerfile, &statbuf) < 0) {
-    log_fn(LOG_WARNING,"Could not stat %s.",routerfile);
-    return -1;
-  }
-
-  /* open the router list */
-  fd = open(routerfile,O_RDONLY,0);
-  if (fd<0) {
-    log_fn(LOG_WARNING,"Could not open %s.",routerfile);
-    return -1;
-  }
-
-  string = tor_malloc(statbuf.st_size+1);
-
-  if(read(fd,string,statbuf.st_size) != statbuf.st_size) {
-    log_fn(LOG_WARNING,"Couldn't read all %ld bytes of file '%s'.",
-           (long)statbuf.st_size,routerfile);
-    free(string);
-    close(fd);
-    return -1;
-  }
-  close(fd);
-  
-  string[statbuf.st_size] = 0; /* null terminate it */
-
   if(router_get_list_from_string(string) < 0) {
     log_fn(LOG_WARNING,"The routerfile itself was corrupt.");
     free(string);
