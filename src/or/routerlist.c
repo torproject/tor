@@ -9,6 +9,13 @@
 
 #include "or.h"
 
+/*****
+ * routerlist.c: Code to parse descriptors and directories, and to
+ * maintain and access the global list of routerinfos for known
+ * servers.
+ *****/
+
+
 /****************************************************************************/
 
 extern or_options_t options; /* command-line and config-file options */
