@@ -16,7 +16,7 @@
 /* Length of our DH keys. */
 #define DH_BYTES (1024/8)
 
-/* Constants used to indicate disired public-key padding functions. */
+/* Constants used to indicate desired public-key padding functions. */
 #define PK_NO_PADDING         60000
 #define PK_PKCS1_PADDING      60001
 #define PK_PKCS1_OAEP_PADDING 60002

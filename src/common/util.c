@@ -281,9 +281,9 @@ void smartlist_free(smartlist_t *sl) {
 }
 
 /* Change the capacity of the smartlist to 'n', so that we can grow
- * the list upt to'n' elements with no further reallocation or wasted
+ * the list up to 'n' elements with no further reallocation or wasted
  * space.  If 'n' is less than or equal to the number of elements
- * currently in the list, reduces the list's capacity as much as
+ * currently in the list, reduce the list's capacity as much as
  * possible without losing elements.
  */
 void smartlist_set_capacity(smartlist_t *sl, int n) {
@@ -320,7 +320,7 @@ void smartlist_add(smartlist_t *sl, void *element) {
   sl->list[sl->num_used++] = element;
 }
 
-/* Append each elements from S2 to the end of S1. */
+/* Append each element from S2 to the end of S1. */
 void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2)
 {
   SMARTLIST_FOREACH(s2, void *, element, smartlist_add(sl, element));
@@ -440,7 +440,7 @@ int smartlist_len(const smartlist_t *sl)
   return sl->num_used;
 }
 /* Insert the value 'val' as the new 'idx'th element of 'sl', moving all
- * items previously at 'idx' or later forward on space.
+ * items previously at 'idx' or later forward one space.
  */
 void smartlist_insert(smartlist_t *sl, int idx, void *val)
 {
@@ -785,7 +785,8 @@ void tor_gettimeofday(struct timeval *timeval) {
   return;
 }
 
-/* Returns the number of microseconds elapsed between *start and *end.
+/* Return the number of microseconds elapsed between *start and *end.
+ * If start is after end, return 0.
  */
 long
 tv_udiff(struct timeval *start, struct timeval *end)
@@ -981,9 +982,12 @@ void spawn_exit()
  * socketpair.)
  *
  * Currently, only (AF_UNIX, SOCK_STREAM, 0 ) sockets are supported.
- * Note that on systems without socketpair, this call will sometimes
- * fail if localhost is inaccessible (for example, if the networking
- * stack is down).
+ *
+ * Note that on systems without socketpair, this call will fail if
+ * localhost is inaccessible (for example, if the networking
+ * stack is down). And even if it succeeds, the socket pair will not
+ * be able to read while localhost is down later (the socket pair may
+ * even close, depending on OS-specific timeouts).
  **/
 int
 tor_socketpair(int family, int type, int protocol, int fd[2])
@@ -1131,8 +1135,8 @@ file_status_t file_status(const char *fname)
     return FN_ERROR;
 }
 
-/* Check whether dirname exists and is private.  If yes returns 0.  If
- * it does not exist, and create is set, try to creat it and return 0
+/* Check whether dirname exists and is private.  If yes return 0.  If
+ * it does not exist, and create is set, try to create it and return 0
  * on success.  Else return -1. */
 int check_private_dir(const char *dirname, int create)
 {
@@ -1336,7 +1340,7 @@ int is_internal_IP(uint32_t ip) {
 
 /* Hold the result of our call to 'uname'. */
 static char uname_result[256];
-/* True iff uname_Result is set. */
+/* True iff uname_result is set. */
 static int uname_result_is_set = 0;
 
 /* Return a pointer to a description of our platform.
@@ -1465,7 +1469,7 @@ void start_daemon(char *cp) {}
 void finish_daemon(void) {}
 #endif
 
-/* Write the current process ID, followed by NL, into 'filaname',
+/* Write the current process ID, followed by NL, into 'filename',
  */
 void write_pidfile(char *filename) {
 #ifndef MS_WINDOWS
@@ -1536,7 +1540,7 @@ int switch_id(char *user, char *group) {
 
 /* Set *addr to the IP address (in dotted-quad notation) stored in c.
  * Return 1 on success, 0 if c is badly formatted.  (Like inet_aton(c,addr),
- * but works on Windows.)
+ * but works on Windows and Solaris.)
  */
 int tor_inet_aton(const char *c, struct in_addr* addr)
 {

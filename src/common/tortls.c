@@ -33,7 +33,7 @@ typedef struct tor_tls_context_st {
   SSL_CTX *ctx;
 } tor_tls_context;
 
-/* Holds a SSL object and it associated data.
+/* Holds a SSL object and its associated data.
  */
 struct tor_tls_st {
   SSL *ssl;
@@ -41,7 +41,7 @@ struct tor_tls_st {
   enum {
     TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
     TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED
-  } state; /* The current SSL state, depending on which operatios have
+  } state; /* The current SSL state, depending on which operations have
             * completed successfully. */
   int isServer;
   int wantwrite_n; /* 0 normally, >0 if we returned wantwrite last time */
@@ -99,7 +99,7 @@ tls_log_errors(int severity, const char *doing)
  * _TOR_TLS_ZERORETURN instead of reporting zero-return errors.
  *
  * If an error has occurred, log it at level 'severity' and describe the
- * current action as 'doing.'
+ * current action as 'doing'.
  */
 static int
 tor_tls_get_error(tor_tls *tls, int r, int extra,
