@@ -111,9 +111,10 @@ static void directory_send_command(connection_t *conn, int purpose,
       break;
     case DIR_PURPOSE_UPLOAD_DIR:
       assert(payload);
-      snprintf(tmp, sizeof(tmp), "POST / HTTP/1.0\r\nContent-Length: %d\r\n\r\n%s",
-               payload_len, payload);
+      snprintf(tmp, sizeof(tmp), "POST / HTTP/1.0\r\nContent-Length: %d\r\n\r\n",
+               payload_len);
       connection_write_to_buf(tmp, strlen(tmp), conn);
+      connection_write_to_buf(payload, payload_len, conn);
       break;
     case DIR_PURPOSE_FETCH_RENDDESC:
       assert(payload);
@@ -360,9 +361,10 @@ static int directory_handle_command_get(connection_t *conn,
     }
 
     log_fn(LOG_DEBUG,"Dumping directory to client.");
-    snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s",
-             (int)dlen, cp);
+    snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n",
+             (int)dlen);
     connection_write_to_buf(tmp, strlen(tmp), conn);
+    connection_write_to_buf(cp, strlen(cp), conn);
     return 0;
   }
 
