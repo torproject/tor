@@ -136,6 +136,22 @@ connection_t *connection_new(int type) {
   return conn;
 }
 
+/** Tell libevent that we don't care about <b>conn</b> any more. */
+void
+connection_unregister(connection_t *conn)
+{
+  if (conn->read_event) {
+    if (event_del(conn->read_event))
+      log_fn(LOG_WARN, "Error removing read event for %d", (int)conn->s);
+    tor_free(conn->read_event);
+  }
+  if (conn->write_event) {
+    if (event_del(conn->write_event))
+      log_fn(LOG_WARN, "Error removing write event for %d", (int)conn->s);
+    tor_free(conn->write_event);
+  }
+}
+
 /** Deallocate memory used by <b>conn</b>. Deallocate its buffers if necessary,
  * close its socket if necessary, and mark the directory as dirty if <b>conn</b>
  * is an OR or OP connection.
@@ -163,14 +179,8 @@ _connection_free(connection_t *conn) {
   tor_free(conn->nickname);
   tor_free(conn->socks_request);
 
-  if (conn->read_event) {
-    event_del(conn->read_event);
-    tor_free(conn->read_event);
-  }
-  if (conn->write_event) {
-    event_del(conn->write_event);
-    tor_free(conn->write_event);
-  }
+  connection_unregister(conn);
+
   if (conn->s >= 0) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);
     tor_close_socket(conn->s);
@@ -310,14 +320,9 @@ void connection_close_immediate(connection_t *conn)
            conn->s, CONN_TYPE_TO_STRING(conn->type),
            conn->state, (int)conn->outbuf_flushlen);
   }
-  if (conn->read_event) {
-    event_del(conn->read_event);
-    tor_free(conn->read_event);
-  }
-  if (conn->write_event) {
-    event_del(conn->write_event);
-    tor_free(conn->write_event);
-  }
+
+  connection_unregister(conn);
+
   tor_close_socket(conn->s);
   conn->s = -1;
   if (!connection_is_listener(conn)) {

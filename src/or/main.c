@@ -162,14 +162,7 @@ int connection_remove(connection_t *conn) {
     return 0;
   }
 
-  if (conn->read_event) {
-    event_del(conn->read_event);
-    tor_free(conn->read_event);
-  }
-  if (conn->write_event) {
-    event_del(conn->write_event);
-    tor_free(conn->write_event);
-  }
+  connection_unregister(conn);
 
   /* replace this one with the one at the end */
   nfds--;
@@ -235,34 +228,45 @@ void get_connection_array(connection_t ***array, int *n) {
   *n = nfds;
 }
 
-/** Set the event mask on <b>conn</b> to <b>events</b>.  (The form of
-* the event mask is DOCDOC)
+/** Set the event mask on <b>conn</b> to <b>events</b>.  (The event
+* mask is a bitmask whose bits are EV_READ and EV_WRITE.)
  */
 void connection_watch_events(connection_t *conn, short events) {
+  int r;
+
   tor_assert(conn);
   tor_assert(conn->read_event);
   tor_assert(conn->write_event);
 
   if (events & EV_READ) {
-    event_add(conn->read_event, NULL);
+    r = event_add(conn->read_event, NULL);
   } else {
-    event_del(conn->read_event);
+    r = event_del(conn->read_event);
   }
 
+  if (r<0)
+    log_fn(LOG_WARN,
+           "Error from libevent setting read event state for %d to %swatched.",
+           (int)conn->s, (events & EV_READ)?"":"un");
+
   if (events & EV_WRITE) {
-    event_add(conn->write_event, NULL);
+    r = event_add(conn->write_event, NULL);
   } else {
-    event_del(conn->write_event);
+    r = event_del(conn->write_event);
   }
+
+  if (r<0)
+    log_fn(LOG_WARN,
+           "Error from libevent setting read event state for %d to %swatched.",
+           (int)conn->s, (events & EV_WRITE)?"":"un");
 }
 
 /** Return true iff <b>conn</b> is listening for read events. */
 int connection_is_reading(connection_t *conn) {
+  int r;
   tor_assert(conn);
 
-  /* This isn't 100% documented, but it should work. */
-  return conn->read_event &&
-    (conn->read_event->ev_flags & (EVLIST_INSERTED|EVLIST_ACTIVE));
+  return conn->read_event && event_pending(conn->read_event, EV_READ, NULL);
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any read events. */
@@ -271,7 +275,9 @@ void connection_stop_reading(connection_t *conn) {
   tor_assert(conn->read_event);
 
   log(LOG_DEBUG,"connection_stop_reading() called.");
-  event_del(conn->read_event);
+  if (event_del(conn->read_event))
+    log_fn(LOG_WARN, "Error from libevent setting read event state for %d to unwatched.",
+           (int)conn->s);
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any read events. */
@@ -279,16 +285,16 @@ void connection_start_reading(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->read_event);
 
-  event_add(conn->read_event, NULL);
+  if (event_add(conn->read_event, NULL))
+    log_fn(LOG_WARN, "Error from libevent setting read event state for %d to watched.",
+           (int)conn->s);
 }
 
 /** Return true iff <b>conn</b> is listening for write events. */
 int connection_is_writing(connection_t *conn) {
   tor_assert(conn);
 
-  /* This isn't 100% documented, but it should work. */
-  return conn->write_event &&
-    (conn->write_event->ev_flags & (EVLIST_INSERTED|EVLIST_ACTIVE));
+  return conn->write_event && event_pending(conn->write_event, EV_WRITE, NULL);
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any write events. */
@@ -296,7 +302,10 @@ void connection_stop_writing(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->write_event);
 
-  event_del(conn->write_event);
+  if (event_del(conn->write_event))
+    log_fn(LOG_WARN, "Error from libevent setting write event state for %d to unwatched.",
+           (int)conn->s);
+
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any write events. */
@@ -304,7 +313,9 @@ void connection_start_writing(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->write_event);
 
-  event_add(conn->write_event, NULL);
+  if (event_add(conn->write_event, NULL))
+    log_fn(LOG_WARN, "Error from libevent setting write event state for %d to watched.",
+           (int)conn->s);
 }
 
 /** DOCDOC */
@@ -937,7 +948,9 @@ static void second_elapsed_callback(int fd, short event, void *args)
   }
 #endif
 
-  evtimer_add(timeout_event, &one_second);
+  if (evtimer_add(timeout_event, &one_second))
+    log_fn(LOG_ERR,
+           "Error from libevent when setting one-second timeout event");
 }
 
 /** Called when we get a SIGHUP: reload configuration files and keys,
@@ -1235,7 +1248,9 @@ void handle_signals(int is_parent)
     for (i = 0; signals[i] >= 0; ++i) {
       signal_set(&signal_events[i], signals[i], signal_callback,
                  (void*)(uintptr_t)signals[i]);
-      signal_add(&signal_events[i], NULL);
+      if (signal_add(&signal_events[i], NULL))
+        log_fn(LOG_WARN, "Error from libevent when adding event for signal %d",
+               signals[i]);
     }
   } else {
     struct sigaction action;
