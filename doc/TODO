@@ -1,0 +1,117 @@
+
+Legend:
+SPEC!!  - Not specified
+SPEC    - Spec not finalized
+NICK    - nick claims
+ARMA    - arma claims
+        - Not done
+        * Top priority
+        . Partially done
+        o Done
+        D Deferred
+        X Abandoned
+
+
+        - Use a stronger cipher
+                - 3des for now
+                - aes when we everybody has openssl 0.9.7
+        . Topics / circuits
+                o Implement topics
+                - Rotate circuits after N minutes?
+                - Circuits should expire when circuit->expire triggers
+NICK            . Handle half-open connections
+NICK    . On the fly compression of each stream
+        o Clean up the event loop (optimize and sanitize)
+        - Exit policies
+                - Path selection algorithms
+                        - Let user request certain nodes
+                        - And disallow certain nodes
+                        - Choose path by jurisdiction, etc?
+        D Implement our own memory management, at least for common structs
+        . Appropriate logging
+                - Come up with convention for what log level means what
+                - Make code follow convention
+        . Terminology
+                o Circuits, topics, cells stay named that
+                - 'Connection' gets divided, or renamed, or something?
+        . DNS farm
+                o Distribute queries onto the farm, get answers
+                o Preemptively grow a new worker before he's needed
+                - Prune workers when too many are idle
+                o Keep track of which connections are in dns_wait
+                o Need to cache positives/negatives on the tor side
+                        o Keep track of which queries have been asked
+                . Better error handling when
+                        . An address doesn't resolve
+                        - We have max workers running
+                - Consider taking the master out of the loop?
+        . Directory servers
+                - Automated reputation management
+ARMA            - Include key in source; sign directories
+ARMA            - Have directories list recommended-versions
+                        - Quit if running the wrong version
+                        - Command-line option to override quit
+                . Add more information to directory server entries
+                        - Exit policies
+                        - jurisdiction? others?
+SPEC!!          - Figure out how to do threshold directory servers
+        . Scrubbing proxies
+                - Find an smtp proxy?
+                - Find an ftp proxy? Figure out how that would work?
+                - Wait until there are packet redirectors for Linux
+                . Get socks4a support into Mozilla
+        . Get tor to act like a socks server
+                o socks4, socks4a
+                - socks5
+SPEC!!          - Handle socks commands other than connect, eg, bind?
+        - Develop rendezvous points
+        D Implement reply onions
+        D Deploy and manage open source development site.
+        . Documentation
+                . Discussion of socks, tsocks, etc
+                - On-the-network protocol
+                        - Onions
+                        - Cells
+                . Better comments for functions!
+        - Tests
+                - Testing harness/infrastructure
+                - Unit tests
+                - System tests (how?)
+                - Performance tests, so we know when we've improved
+                        . webload infrastructure (Bruce)
+                        . httperf infrastructure (easy to set up)
+                        . oprofile (installed in RH 8.0)
+        D Deploy a widespread network
+        . Router twins
+                o Choose twin if primary is down, when laying circuit
+                - Load balancing between twins
+                        - Keep track of load over links/nodes, to
+                          know who's hosed
+NICK    - Daemonize and package
+                o Teach it to fork and background
+                - Red Hat spec file
+                - Debian spec file equivalent
+                
+        . Autoconf
+                . Which .h files are we actually using? Port to:
+                        o Linux
+                        o BSD
+                        . Solaris
+                        . Windows
+NICK                    . OS X
+        . Move away from openssl
+                o Abstract out crypto calls
+                D Look at ndss, others? Just include code?
+
+        . transition addr to sin_addr (huh?)
+
+        . Clean up the number of places that get to look at prkey
+SPEC!!  - Non-clique topologies, clearer bandwidth management
+        . Look at OR handshake in more detail
+                o Spec it
+                - Merge OR and OP handshakes?
+                - Periodic link key rotation. Spec?
+        - More flexibility in node addressing
+                - Support IPv6 rather than just 4
+                - Handle multihomed servers
+
