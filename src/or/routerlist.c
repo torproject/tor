@@ -233,7 +233,13 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
   }
 }
 
-routerinfo_t *router_choose_random_node(routerlist_t *dir, char *preferred, char *excluded)
+/* Pick a random node from preferred if possible, else from all of dir.
+ * Never pick a node in excluded.
+ * If excludedsmartlist is defined, never pick a node in it either.
+ */
+routerinfo_t *router_choose_random_node(routerlist_t *dir,
+                                        char *preferred, char *excluded,
+                                        smartlist_t *excludedsmartlist)
 {
   smartlist_t *sl, *excludednodes;
   routerinfo_t *choice;
@@ -245,12 +251,16 @@ routerinfo_t *router_choose_random_node(routerlist_t *dir, char *preferred, char
   sl = smartlist_create();
   add_nickname_list_to_smartlist(sl,preferred);
   smartlist_subtract(sl,excludednodes);
+  if(excludedsmartlist)
+    smartlist_subtract(sl,excludedsmartlist);
   choice = smartlist_choose(sl);
   smartlist_free(sl);
   if(!choice) {
     sl = smartlist_create();
     router_add_running_routers_to_smartlist(sl);
     smartlist_subtract(sl,excludednodes);
+    if(excludedsmartlist)
+      smartlist_subtract(sl,excludedsmartlist);
     choice = smartlist_choose(sl);
     smartlist_free(sl);
   }

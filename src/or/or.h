@@ -975,7 +975,9 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 /********************************* routerlist.c ***************************/
 
 routerinfo_t *router_pick_directory_server(void);
-routerinfo_t *router_choose_random_node(routerlist_t *dir, char *preferred, char *excluded);
+routerinfo_t *router_choose_random_node(routerlist_t *dir,
+                                        char *preferred, char *excluded,
+                                        smartlist_t *excludedsmartlist);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk);
 routerinfo_t *router_get_by_nickname(char *nickname);
