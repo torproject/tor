@@ -210,7 +210,7 @@ static int cpuworker_main(void *data) {
   crypto_pk_env_t *onion_key = NULL, *last_onion_key = NULL;
 
   fd = fdarray[1]; /* this side is ours */
-#ifndef MS_WINDOWS
+#ifndef TOR_IS_MULTITHREADED
   tor_close_socket(fdarray[0]); /* this is the side of the socketpair the parent uses */
   connection_free_all(); /* so the child doesn't hold the parent's fd's open */
 #endif
@@ -282,7 +282,9 @@ static int spawn_cpuworker(void) {
 
   spawn_func(cpuworker_main, (void*)fd);
   log_fn(LOG_DEBUG,"just spawned a worker.");
+#ifndef TOR_IS_MULTITHREADED
   tor_close_socket(fd[1]); /* we don't need the worker's side of the pipe */
+#endif
 
   conn = connection_new(CONN_TYPE_CPUWORKER);
 
