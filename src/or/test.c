@@ -1228,9 +1228,9 @@ test_rend_fns(void)
   test_streq(d2->intro_points[1], "crow");
   test_streq(d2->intro_points[2], "joel");
 
-  test_eq(0, parse_address(address1));
-  test_eq(2, parse_address(address2));
-  test_eq(1, parse_address(address3));
+  test_eq(NORMAL_HOSTNAME, parse_extended_hostname(address1));
+  test_eq(ONION_HOSTNAME, parse_extended_hostname(address2));
+  test_eq(EXIT_HOSTNAME, parse_extended_hostname(address3));
 
   rend_service_descriptor_free(d1);
   rend_service_descriptor_free(d2);

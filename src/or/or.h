@@ -1236,7 +1236,10 @@ int client_dns_incr_failures(const char *address);
 void client_dns_set_entry(const char *address, uint32_t val);
 void client_dns_clean(void);
 void set_exit_redirects(smartlist_t *lst);
-int parse_address(char *address);
+typedef enum hostname_type_t {
+  NORMAL_HOSTNAME, ONION_HOSTNAME, EXIT_HOSTNAME
+} hostname_type_t;
+hostname_type_t parse_extended_hostname(char *address);
 
 /********************************* connection_or.c ***************************/
 
