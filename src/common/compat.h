@@ -35,7 +35,7 @@
 /* GCC can check printf types on arbitrary functions. */
 #ifdef __GNUC__
 #define CHECK_PRINTF(formatIdx, firstArg) \
-   __attribute__ ((format (printf, formatIdx, firstArg)))
+   __attribute__ ((format(printf, formatIdx, firstArg)))
 #else
 #define CHECK_PRINTF(formatIdx, firstArg)
 #endif

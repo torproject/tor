@@ -886,7 +886,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   }
   router->identity_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
-  if (crypto_pk_get_digest(router->identity_pkey,router->identity_digest)){
+  if (crypto_pk_get_digest(router->identity_pkey,router->identity_digest)) {
     log_fn(LOG_WARN, "Couldn't calculate key digest"); goto err;
   }
 
