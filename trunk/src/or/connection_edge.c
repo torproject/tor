@@ -257,7 +257,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         client_dns_set_entry(conn->socks_request->address, addr);
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
         if(connection_ap_handshake_attach_circuit(conn) < 0)
-          circuit_launch_new(1); /* Build another circuit to handle this stream */
+          circuit_launch_new(); /* Build another circuit to handle this stream */
         return 0;
       }
       log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
@@ -499,7 +499,7 @@ void connection_ap_attach_pending(void)
     if (connection_ap_handshake_attach_circuit(carray[i])<0) {
       if(!circuit_get_newest(carray[i], 0)) {
         /* if there are no acceptable clean or not-very-dirty circs on the way */
-        circuit_launch_new(1);
+        circuit_launch_new();
       }
     }
   }
@@ -558,7 +558,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
   if(connection_ap_handshake_attach_circuit(conn) < 0)
-    circuit_launch_new(1); /* Build another circuit to handle this stream */
+    circuit_launch_new(); /* Build another circuit to handle this stream */
   return 0;
 }
 
