@@ -595,7 +595,6 @@ typedef struct {
   int is_running; /**< As far as we know, is this OR currently running? */
   time_t status_set_at; /**< When did we last update is_running? */
   int is_verified; /**< Has a trusted dirserver validated this OR? */
-  int is_trusted_dir; /**< Do we trust this OR as a directory server? */
 
   smartlist_t *declared_family; /**< Nicknames of router which this router
                                  * claims are its family. */
@@ -1451,13 +1450,10 @@ routerinfo_t *router_get_by_digest(const char *digest);
 int router_digest_is_trusted_dir(const char *digest);
 void router_get_routerlist(routerlist_t **prouterlist);
 void routerlist_free(routerlist_t *routerlist);
-void routerlist_clear_trusted_directories(void);
 void routerinfo_free(routerinfo_t *router);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_mark_as_down(const char *digest);
 void routerlist_remove_old_routers(int age);
-int router_load_routerlist_from_file(char *routerfile, int trusted);
-int router_load_routerlist_from_string(const char *s, int trusted);
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey,
                                           int check_version);
 int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
