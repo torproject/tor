@@ -719,6 +719,8 @@ hibernate_go_dormant(time_t now) {
   while ((conn = connection_get_by_type(CONN_TYPE_OR)) ||
          (conn = connection_get_by_type(CONN_TYPE_AP)) ||
          (conn = connection_get_by_type(CONN_TYPE_EXIT))) {
+    if (CONN_IS_EDGE(conn))
+      connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
     log_fn(LOG_INFO,"Closing conn type %d", conn->type);
     connection_mark_for_close(conn);
   }
