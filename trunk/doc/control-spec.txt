@@ -19,8 +19,8 @@ forward-compatible.
 TC is a bidirectional message-based protocol.  It assumes an underlying
 stream for communication between a controlling process (the "client") and
 a Tor process (the "server").  The stream may be implemented via TCP,
-TLS-over-TCP, a Unix pipe, or so on.  For security, the stream should not be
-observable by untrusted parties.
+TLS-over-TCP, a Unix-domain socket, or so on.  For security, the stream
+should not be observable by untrusted parties.
 
 In TC, the client and server send typed variable-length messages to one
 another over the underlying stream.  By default, all messages from the server
@@ -76,14 +76,17 @@ the message.
 
 3.4. GETCONF (Type 0x0003)
 
-  Request the value of a configuration variable.  The body contains a
-  nul-terminated string for a configuration key.  The server replies with a
-  CONFVALUE message.
+  Request the value of a configuration variable.  The body contains one or
+  more nul-terminated strings for configuration keys.  The server replies
+  with a CONFVALUE message.
 
 3.5. CONFVALUE (Type 0x0004)
 
-  Sent in response to a GETCONF message; contains a nul-terminated key string
-  and a nul-terminated value string.
+  Sent in response to a GETCONF message; contains a list of nul-terminated
+  key strings followed by nul-terminated value strings.
+
+  [XXXX note that you'll get more keys than you expect with things like
+  loglevel.]
 
 3.6. SETEVENTS (Type 0x0005)
 
@@ -143,8 +146,27 @@ the message.
 
 4. Implementation notes
 
-On Unix, we should use a named pipe on the fs and use filesystem privileges
-to authenticate.  On Win32, a password/magic cookie may be in order.
+There are four ways we could authenticate, for now:
+
+ 1) Listen on 127.0.0.1; trust all local users.
+
+ 2) Write a named socket in tor's data-directory or in some other location;
+    rely on the OS to ensure that only authorized users can open it.  (NOTE:
+    the Linux unix(7) man page suggests that some BSDs don't enforce
+    authorization.)  If the OS has named sockets, and implements
+    authentication, trust all users who can read Tor's data directory.
+
+ 3) Write a random magic cookie to the FS in Tor's data-directory; use that
+    magic cookie for authentication.  Trust all users who can read Tor's data
+    directory.
+
+ 4) Store a salted-and-hashed passphrase in Tor's configuration.  Use the
+    passphrase for authentication.  Trust all users who know the passphrase.
+
+
+On Win32, our only options are 1, 3, and 4.  Since the semantics for 2 and 3
+are so similar, I'm recommending that we not support 2, and just always bind
+on 127.0.0.1.  I've implemented 3 and 4; 1 would be trivial.  -NM
 
 -----------
 (for emacs)
