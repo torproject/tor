@@ -147,8 +147,8 @@ connection_t *connection_new(int type) {
   } else {
     conn->compression = conn->decompression = NULL;
   }
-  conn->done_sending = conn->done_receiving = 0
 #endif
+  conn->done_sending = conn->done_receiving = 0;
   return conn;
 }
 
@@ -383,15 +383,22 @@ int connection_compress_from_buf(char *string, int len, connection_t *conn,
 
 int connection_decompress_to_buf(char *string, int len, connection_t *conn,
 				 int flush) {
-  /* This is not sane with respect to flow control; we want to spool out to 
-   * z_outbuf, but only decompress and write as needed.
-   */
   int n;
   struct timeval now;
 
-  if (write_to_buf(string, len, 
-	   &conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen) < 0)
-    return -1;
+  if (len) {
+    if (write_to_buf(string, len, 
+		     &conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen) < 0)
+      return -1;
+  }
+
+  /* If we have more that 10 payloads worth of data waiting in outbuf, 
+   * don't uncompress any more; queue this data in z_outbuf.
+   *
+   * This check should may be different.
+   */
+  if (connection_outbuf_too_full(conn->outbuf))
+    return 0;
   
   n = decompress_buf_to_buf(
 	   &conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen,
@@ -411,6 +418,7 @@ int connection_decompress_to_buf(char *string, int len, connection_t *conn,
     return 0;
 
   conn->timestamp_lastwritten = now.tv_sec;
+  conn->outbuf_flushlen += n;
 
   return n;
 }
