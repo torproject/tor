@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #endif
 
-#ifdef _MSC_VER
+#ifdef MS_WINDOWS
 /* For mkdir() */
 #include <direct.h>
 #endif

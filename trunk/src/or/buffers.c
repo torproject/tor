@@ -36,6 +36,9 @@ void buf_free(char *buf) {
 int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, int *reached_eof) {
 
   int read_result;
+#ifdef MS_WINDOWS
+  int e;
+#endif
 
   assert(buf && *buf && buflen && buf_datalen && reached_eof && (s>=0));
 
@@ -62,9 +65,15 @@ int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, i
 //  log_fn(LOG_DEBUG,"reading at most %d bytes.",at_most);
   read_result = read(s, *buf+*buf_datalen, at_most);
   if (read_result < 0) {
-    if(errno!=EAGAIN) { /* it's a real error */
+    if(!ERRNO_EAGAIN(errno)) { /* it's a real error */
       return -1;
     }
+#ifdef MS_WINDOWS
+    e = correct_socket_errno(s);
+    if(!ERRNO_EAGAIN(errno)) { /* no, it *is* a real error! */
+      return -1;
+    }
+#endif
     return 0;
   } else if (read_result == 0) {
     log_fn(LOG_DEBUG,"Encountered eof");
@@ -84,6 +93,9 @@ int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datale
    * return -1 or how many bytes remain to be flushed */
 
   int write_result;
+#ifdef MS_WINDOWS
+  int e;
+#endif
 
   assert(buf && *buf && buflen && buf_flushlen && buf_datalen && (s>=0) && (*buf_flushlen <= *buf_datalen));
 
@@ -94,9 +106,15 @@ int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datale
 
   write_result = write(s, *buf, *buf_flushlen);
   if (write_result < 0) {
-    if(errno!=EAGAIN) { /* it's a real error */
+    if(!ERRNO_EAGAIN(errno)) { /* it's a real error */
       return -1;
     }
+#ifdef MS_WINDOWS
+    e = correct_socket_errno(s);
+    if(!ERRNO_EAGAIN(errno)) { /* no, it *is* a real error! */
+      return -1;
+    }
+#endif
     log_fn(LOG_DEBUG,"write() would block, returning.");
     return 0;
   } else {

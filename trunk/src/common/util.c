@@ -4,7 +4,7 @@
 
 #include "../or/or.h"
 
-#ifdef _MSC_VER
+#ifdef MS_WINDOWS
 #include <io.h>
 #include <limits.h>
 #include <process.h>
@@ -90,7 +90,7 @@ void tv_addms(struct timeval *a, long ms) {
 
 void set_socket_nonblocking(int socket)
 {
-#ifdef _MSC_VER
+#ifdef MS_WINDOWS
 	/* Yes means no and no means yes.  Do you not want to be nonblocking? */
 	int nonblocking = 0;
 	ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
@@ -101,7 +101,7 @@ void set_socket_nonblocking(int socket)
 
 int spawn_func(int (*func)(void *), void *data)
 {
-#ifdef _MSC_VER
+#ifdef MS_WINDOWS
   int rv;
   rv = _beginthread(func, 0, data);
   if (rv == (unsigned long) -1)
@@ -125,7 +125,7 @@ int spawn_func(int (*func)(void *), void *data)
 
 void spawn_exit()
 {
-#ifdef _MSC_VER
+#ifdef MS_WINDOWS
   _endthread();
 #else
   exit(0);
@@ -137,7 +137,7 @@ void spawn_exit()
 int
 tor_socketpair(int family, int type, int protocol, int fd[2])
 {
-#ifdef HAVE_SOCKETPAIR_XXX
+#ifdef HAVE_SOCKETPAIR_XXXX
     /* For testing purposes, we never fall back to real socketpairs. */
     return socketpair(family, type, protocol, fd);
 #else
@@ -153,8 +153,8 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
         || family != AF_UNIX
 #endif
         ) {
-#ifdef _MSC_VER
-		errno = WSAEAFNOSUPPORT;
+#ifdef MS_WINDOWS
+        errno = WSAEAFNOSUPPORT;
 #else
         errno = EAFNOSUPPORT;
 #endif
@@ -213,7 +213,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     return 0;
 
   abort_tidy_up_and_fail:
-#ifdef _MSC_VER
+#ifdef MS_WINDOWS
   errno = WSAECONNABORTED;
 #else
   errno = ECONNABORTED; /* I hope this is portable and appropriate.  */
@@ -232,3 +232,16 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     }
 #endif
 }
+
+#ifdef MS_WINDOWS
+int correct_socket_errno(int s)
+{
+  int r, optval, optvallen=sizeof(optval);
+  assert(errno == WSAEWOULDBLOCK);
+  if (getsockopt(s, SOL_SOCKET, SO_ERROR, (void*)&optval, &optvallen))
+    return errno;
+  if (optval)
+    return optval;
+  return WSAEWOULDBLOCK;
+}
+#endif

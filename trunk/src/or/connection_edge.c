@@ -265,7 +265,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
   switch(conn->state) {
     case EXIT_CONN_STATE_CONNECTING:
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
-        if(errno != EINPROGRESS){
+        if(!ERRNO_CONN_EINPROGRESS(errno)) {
           /* yuck. kill it. */
           log_fn(LOG_DEBUG,"in-progress exit connect failed. Removing.");
           return -1;

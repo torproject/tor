@@ -8,6 +8,7 @@
 
 #include "orconfig.h"
 #include "fakepoll.h"
+
 #ifdef USE_FAKE_POLL
 #include <sys/types.h>
 #ifdef HAVE_UNISTD_H
@@ -30,6 +31,9 @@ poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 {
 	unsigned int idx, maxfd, fd;
 	int r;
+#ifdef MS_WINDOWS
+        int any_fds_set = 0;
+#endif
 	fd_set readfds, writefds, exceptfds;
 #ifdef USING_FAKE_TIMEVAL
 #undef timeval
@@ -46,15 +50,26 @@ poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 	maxfd = -1;
 	for (idx = 0; idx < nfds; ++idx) {
 		fd = ufds[idx].fd;
-		if (fd > maxfd && ufds[idx].events)
-			maxfd = fd;
-		if (ufds[idx].events & (POLLIN))
+                if (ufds[idx].events) {
+                        if (fd > maxfd) 
+                                maxfd = fd;
+#ifdef MS_WINDOWS
+                        any_fds_set = 1;
+#endif
+                }
+		if (ufds[idx].events & POLLIN)
 			FD_SET(fd, &readfds);
 		if (ufds[idx].events & POLLOUT)
 			FD_SET(fd, &writefds);
-		if (ufds[idx].events & (POLLERR))
+		if (ufds[idx].events & POLLERR)
 			FD_SET(fd, &exceptfds);
 	}
+#ifdef MS_WINDOWS
+        if (!any_fds_set) {
+                usleep(timeout);
+                return 0;
+        }
+#endif
 	r = select(maxfd+1, &readfds, &writefds, &exceptfds, 
 		   timeout == -1 ? NULL : &_timeout);
 	if (r <= 0)
