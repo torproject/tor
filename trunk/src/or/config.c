@@ -439,6 +439,10 @@ static int config_assign_defaults(or_options_t *options) {
   /* set them up as a client only */
   options->SocksPort = 9050;
 
+  options->AllowUnverifiedNodes = smartlist_create();
+  smartlist_add(options->AllowUnverifiedNodes, "middle");
+  smartlist_add(options->AllowUnverifiedNodes, "rendezvous");
+
   config_free_lines(options->ExitPolicy);
   options->ExitPolicy = config_line_prepend(NULL, "ExitPolicy", "reject *:*");
 
