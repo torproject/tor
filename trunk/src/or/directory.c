@@ -140,32 +140,33 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
     });
 }
 
-/** Start a connection to a random running directory server, using connection
- * purpose 'purpose' requesting 'payload' (length 'payload_len').  The purpose
- * should be one of 'DIR_PURPOSE_FETCH_DIR' or 'DIR_PURPOSE_FETCH_RENDDESC' or
- * 'DIR_PURPOSE_FETCH_RUNNING_LIST.'
+/** Start a connection to a random running directory server, using
+ * connection purpose 'purpose' requesting 'resource'.  The purpose
+ * should be one of 'DIR_PURPOSE_FETCH_DIR',
+ * 'DIR_PURPOSE_FETCH_RENDDESC', 'DIR_PURPOSE_FETCH_RUNNING_LIST.'
  */
 void
 directory_get_from_dirserver(uint8_t purpose, const char *resource)
 {
   routerinfo_t *r = NULL;
   trusted_dir_server_t *ds = NULL;
+  int fascistfirewall = get_options()->FascistFirewall;
 
   if (purpose == DIR_PURPOSE_FETCH_DIR) {
     if (advertised_server_mode()) {
       /* only ask authdirservers, and don't ask myself */
-      ds = router_pick_trusteddirserver(1, get_options()->FascistFirewall);
+      ds = router_pick_trusteddirserver(1, fascistfirewall);
     } else {
       /* anybody with a non-zero dirport will do */
-      r = router_pick_directory_server(1, get_options()->FascistFirewall);
+      r = router_pick_directory_server(1, fascistfirewall);
       if (!r) {
         log_fn(LOG_INFO, "No router found for directory; falling back to dirserver list");
-        ds = router_pick_trusteddirserver(1, get_options()->FascistFirewall);
+        ds = router_pick_trusteddirserver(1, fascistfirewall);
       }
     }
   } else if (purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
     /* right now, running-routers isn't cached, so ask a trusted directory */
-    ds = router_pick_trusteddirserver(0, get_options()->FascistFirewall);
+    ds = router_pick_trusteddirserver(0, fascistfirewall);
   } else { // (purpose == DIR_PURPOSE_FETCH_RENDDESC)
     /* only ask authdirservers, any of them will do */
     /* Never use fascistfirewall; we're going via Tor. */
