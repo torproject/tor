@@ -288,11 +288,6 @@ int connection_dir_process_inbuf(connection_t *conn) {
   return 0;
 }
 
-/* XXX stubs, probably shouldn't be located here */
-#define MAX_HIDSERV_DESC_SIZE 2048
-int hidserv_lookup(char *query, char *desc, int max_desc_size) { return 0; }
-int hidserv_store(char *desc) { return 0; }
-
 static char answer200[] = "HTTP/1.0 200 OK\r\n\r\n";
 static char answer400[] = "HTTP/1.0 400 Bad request\r\n\r\n";
 static char answer403[] = "HTTP/1.0 403 Unapproved server\r\n\r\n";
@@ -331,12 +326,13 @@ static int directory_handle_command_get(connection_t *conn,
   }
 
   if(!strncmp(url,"/hidserv/",9)) { /* hidserv descriptor fetch */
-    char desc[MAX_HIDSERV_DESC_SIZE];
+    const char *descp;
+    int desc_len;
 
-    switch(hidserv_lookup(url+9, desc, MAX_HIDSERV_DESC_SIZE)) {
+    switch(hidserv_lookup(url+9, &descp, &desc_len)) {
       case 1: /* valid */
         connection_write_to_buf(answer200, strlen(answer200), conn);
-        connection_write_to_buf(desc, strlen(desc)+1, conn);
+        connection_write_to_buf(descp, desc_len, conn); /* XXXX Contains NULs*/
         break;
       case 0: /* well-formed but not present */
         connection_write_to_buf(answer404, strlen(answer404), conn);
@@ -355,7 +351,8 @@ static int directory_handle_command_get(connection_t *conn,
 
 /* always returns 0 */
 static int directory_handle_command_post(connection_t *conn,
-                                         char *headers, char *body) {
+                                         char *headers, char *body,
+                                         int body_len) {
   const char *cp;
   char *url;
 
@@ -387,7 +384,7 @@ static int directory_handle_command_post(connection_t *conn,
   }
 
   if(!strncmp(url,"/hidserv/",9)) { /* hidserv descriptor post */
-    if(hidserv_store(body) < 0)
+    if(hidserv_store(body, body_len) < 0)
       connection_write_to_buf(answer400, strlen(answer400), conn);
     else
       connection_write_to_buf(answer200, strlen(answer200), conn);
@@ -420,7 +417,8 @@ static int directory_handle_command(connection_t *conn) {
   if(!strncasecmp(headers,"GET",3))
     r = directory_handle_command_get(conn, headers, body);
   else if (!strncasecmp(headers,"POST",4))
-    r = directory_handle_command_post(conn, headers, body);
+    /* XXXX this takes a length now, and will fail if the body has NULs. */
+    r = directory_handle_command_post(conn, headers, body, strlen(body));
   else {
     log_fn(LOG_WARN,"Got headers '%s' with unknown command. Closing.", headers);
     r = -1;

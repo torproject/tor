@@ -380,7 +380,7 @@ void strmap_foreach(strmap_t *map,
  *
  * // uppercase values in "map", removing empty values.
  *
- * strmap_iterator_t *iter;
+ * strmap_iter_t *iter;
  * const char *key;
  * void *val;
  * char *cp;
