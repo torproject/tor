@@ -104,7 +104,8 @@ static int log_tor_version(logfile_t *lf, int reset)
   n = _log_prefix(buf, sizeof(buf), LOG_NOTICE);
   tor_snprintf(buf+n, sizeof(buf)-n,
                "Tor %s opening %slog file.\n", VERSION, is_new?"new ":"");
-  if (fputs(buf, lf->file) == EOF)
+  if (fputs(buf, lf->file) == EOF ||
+     fflush(lf->file) == EOF) /* error */
     return -1; /* failed */
   return 0;
 }
