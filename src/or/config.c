@@ -328,10 +328,10 @@ static int config_assign_default(or_options_t *options) {
 /* prints the usage of tor. */
 static void print_usage(void) {
   printf("tor -f <torrc> [args]\n"
-         "See man page for more options.\n\n"
+         "See man page for more options. This -h is probably obsolete.\n\n"
          "-b <bandwidth>\t\tbytes/second rate limiting\n"
          "-d <file>\t\tDebug file\n"
-         "-m <max>\t\tMax number of connections\n"
+//         "-m <max>\t\tMax number of connections\n"
          "-l <level>\t\tLog level\n"
          "-r <file>\t\tList of known routers\n");
   printf("\nClient options:\n"
@@ -426,6 +426,11 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   if(argc > 1 && (!strcmp(argv[1], "-h") || !strcmp(argv[1],"--help"))) {
     print_usage();
+    exit(0);
+  }
+
+  if(argc > 1 && (!strcmp(argv[1],"--version"))) {
+    printf("Tor version %s.\n",VERSION);
     exit(0);
   }
 
