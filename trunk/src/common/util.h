@@ -14,7 +14,7 @@
 #include <time.h>
 #endif
 #ifndef HAVE_GETTIMEOFDAY
-#ifdef HAVE_FTIME 
+#ifdef HAVE_FTIME
 #include <sys/timeb.h>
 #define timeval timeb
 #define tv_sec time
