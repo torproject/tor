@@ -37,11 +37,6 @@
 #include <assert.h>
 #include <time.h>
 
-#define free_func zlib_free_func
-#include <zlib.h>
-#undef free_func
-
-
 #include "../common/crypto.h"
 #include "../common/log.h"
 #include "../common/ss.h"
@@ -167,9 +162,6 @@
 /* legal characters in a filename */
 #define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
 
-typedef z_stream z_compression;
-typedef z_stream z_decompression;
-
 struct config_line {
   char *key;
   char *value;
@@ -259,14 +251,6 @@ struct connection_t {
   int deliver_window;
   int done_sending;
   int done_receiving;
-#ifdef USE_ZLIB
-  char *z_outbuf;
-  int z_outbuflen;
-  int z_outbuf_datalen;
-
-  z_stream *compression;
-  z_stream *decompression;
-#endif
 
 /* Used by ap: */
   char socks_version; 
@@ -441,25 +425,6 @@ int fetch_from_buf(char *string, int string_len,
    * then memmove buf back (that is, remove them from buf)
    */
 
-z_compression* compression_new();
-z_decompression* decompression_new();
-void compression_free(z_compression *);
-void decompression_free(z_decompression *);
-
-int compress_from_buf(char *string, int string_len, 
-                      char **buf_in, int *buflen_in, int *buf_datalen_in,
-                      z_compression *compression, int flush);
-  /* read and compress as many characters as possible from buf, writing up to
-   * string_len of them onto string, then memmove buf back.  Return number of
-   * characters written.
-   */
-
-int decompress_buf_to_buf(char **buf_in, int *buflen_in, int *buf_datalen_in,
-                          char **buf_out, int *buflen_out, int *buf_datalen_out,
-                          z_decompression *decompression, int flush);
-  /* XXX document this NM
-   */
-
 int find_on_inbuf(char *string, int string_len,
                   char *buf, int buf_datalen);
   /* find first instance of needle 'string' on haystack 'buf'. return how
@@ -570,13 +535,6 @@ int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16
 int connection_read_to_buf(connection_t *conn);
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn);
-
-#ifdef USE_ZLIB
-int connection_compress_from_buf(char *string, int len, connection_t *conn,
-                                 int flush);
-int connection_decompress_to_buf(char *string, int len, connection_t *conn,
-                                 int flush);
-#endif
 
 int connection_outbuf_too_full(connection_t *conn);
 int connection_find_on_inbuf(char *string, int len, connection_t *conn);

@@ -24,12 +24,7 @@ test_buffers() {
   char *buf;
   int buflen, buf_datalen;
 
-  char *buf2;
-  int buf2len, buf2_datalen;
-
   int s, i, j, eof;
-  z_compression *comp;
-  z_decompression *decomp;
 
   /****
    * buf_new
@@ -159,74 +154,7 @@ test_buffers() {
    ****/
   /* XXXX Needs tests. */
 
-  
-  /***
-   * compress_from_buf (simple)
-   ***/
-  buf_datalen = 0;
-  comp = compression_new();
-  for (i = 0; i < 20; ++i) {
-    write_to_buf("Hello world.  ", 14, &buf, &buflen, &buf_datalen);
-  }
-  i = compress_from_buf(str, 256, &buf, &buflen, &buf_datalen, comp, 
-                        Z_SYNC_FLUSH);
-  test_eq(buf_datalen, 0);
-  /*
-  for (j = 0; j <i ; ++j) {
-    printf("%x '%c'\n", ((int) str[j])&0xff, str[j]);
-  }
-  */
-  /* Now try decompressing. */
-  decomp = decompression_new();
-  if (buf_new(&buf2, &buf2len, &buf2_datalen))
-    test_fail();
-  buf_datalen = 0;
-  test_eq(i, write_to_buf(str, i, &buf, &buflen, &buf_datalen));
-  j = decompress_buf_to_buf(&buf, &buflen, &buf_datalen,
-                            &buf2, &buf2len, &buf2_datalen,
-                            decomp, Z_SYNC_FLUSH);
-  test_eq(buf2_datalen, 14*20);
-  for (i = 0; i < 20; ++i) {
-    test_memeq(buf2+(14*i), "Hello world.  ", 14);
-  }
-  
-  /* Now compress more, into less room. */
-  for (i = 0; i < 20; ++i) {
-    write_to_buf("Hello wxrlx.  ", 14, &buf, &buflen, &buf_datalen);
-  }
-  i = compress_from_buf(str, 8, &buf, &buflen, &buf_datalen, comp, 
-                        Z_SYNC_FLUSH);
-  test_eq(buf_datalen, 0);
-  test_eq(i, 8);
-  memset(str+8,0,248);
-  j = compress_from_buf(str+8, 248, &buf, &buflen, &buf_datalen, comp, 
-                        Z_SYNC_FLUSH);
-  /* test_eq(j, 2); XXXX This breaks, see below. */ 
-
-  buf2_datalen=buf_datalen=0;
-  write_to_buf(str, i+j, &buf, &buflen, &buf_datalen);
-  memset(buf2, 0, buf2len);
-  j = decompress_buf_to_buf(&buf, &buflen, &buf_datalen,
-                            &buf2, &buf2len, &buf2_datalen,
-                            decomp, Z_SYNC_FLUSH);
-  test_eq(buf2_datalen, 14*20);
-  for (i = 0; i < 20; ++i) {
-    test_memeq(buf2+(14*i), "Hello wxrlx.  ", 14);
-  }
-
-  /* This situation is a bit messy.  We need to refactor our use of
-   * zlib until the above code works.  Here's the problem: The zlib
-   * documentation claims that we should reinvoke deflate immediately 
-   * when the outbuf buffer is full and we get Z_OK, without adjusting
-   * the input at all.  This implies that we need to tie a buffer to a
-   * compression or decompression object.
-   */
-
-  compression_free(comp);
-  decompression_free(decomp);
-
   buf_free(buf);
-  buf_free(buf2);
 }
 
 void

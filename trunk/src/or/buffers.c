@@ -76,7 +76,6 @@ int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, i
 //    log(LOG_DEBUG,"read_to_buf(): Read %d bytes. %d on inbuf.",read_result, *buf_datalen);
     return read_result;
   }
-
 }
 
 int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen) {
@@ -131,129 +130,6 @@ int write_to_buf(char *string, int string_len,
   *buf_datalen += string_len;
 //  log(LOG_DEBUG,"write_to_buf(): added %d bytes to buf (now %d total).",string_len, *buf_datalen);
   return *buf_datalen;
-
-}
-
-z_stream *zstream_new(int compression)
-{
-  z_stream* stream;
-  stream = tor_malloc(sizeof(z_stream));
-  memset(stream, 0, sizeof(z_stream));
-  if (compression) {
-    if (deflateInit(stream, Z_DEFAULT_COMPRESSION) != Z_OK) {
-      log(LOG_ERR, "Error initializing zlib: %s", stream->msg);
-      free(stream);
-      return NULL;
-    }
-  } else {
-    if (inflateInit(stream) != Z_OK) {
-      log(LOG_ERR, "Error initializing zlib: %s", stream->msg);
-      free(stream);
-      return NULL;
-    }
-  }
-  return stream;
-}
-
-z_compression *compression_new()
-{
-  return (z_compression *) zstream_new(1);
-}
-
-z_decompression *decompression_new()
-{
-  return (z_compression *) zstream_new(0);
-}
-
-void compression_free(z_stream *stream)
-{
-  int r;
-  r = deflateEnd(stream);
-  if (r != Z_OK)
-    log(LOG_ERR, "while closing compression: %d (%s)", r, stream->msg);
-  free(stream);
-}
-
-void decompression_free(z_stream *stream)
-{
-  int r;
-  r = inflateEnd(stream);
-  if (r != Z_OK)
-    log(LOG_ERR, "while closing decompression: %d (%s)", r, stream->msg);
-  free(stream);
-}
-
-int compress_from_buf(char *string, int string_len, 
-                      char **buf_in, int *buflen_in, int *buf_datalen_in,
-                      z_stream *zstream, int flush) {
-  int err;
-
-  if (!*buf_datalen_in)
-    return 0;
-
-  zstream->next_in = *buf_in;
-  zstream->avail_in = *buf_datalen_in;
-  zstream->next_out = string;
-  zstream->avail_out = string_len;
-  
-  err = deflate(zstream, flush);
-
-  switch (err) 
-    {
-    case Z_OK:
-    case Z_STREAM_END:
-      log(LOG_DEBUG, "Compressed (%d/%d); filled (%d/%d).",
-          *buf_datalen_in-zstream->avail_in, *buf_datalen_in,
-          string_len-zstream->avail_out, string_len);
-      memmove(*buf_in, zstream->next_in, zstream->avail_in);
-      *buf_datalen_in = zstream->avail_in;
-      return string_len - zstream->avail_out;
-    case Z_STREAM_ERROR:
-    case Z_BUF_ERROR:
-      log(LOG_ERR, "Error processing compression: %s", zstream->msg);
-      return -1;
-    default:
-      log(LOG_ERR, "Unknown return value from deflate: %d", err);
-      return -1;
-  }
-}
-
-int decompress_buf_to_buf(char **buf_in, int *buflen_in, int *buf_datalen_in,
-                          char **buf_out, int *buflen_out, int *buf_datalen_out,
-                          z_stream *zstream, int flush) 
-{
-  int err;
-
-  zstream->next_in = *buf_in;
-  zstream->avail_in = *buf_datalen_in;
-  zstream->next_out = *buf_out + *buf_datalen_out;
-  zstream->avail_out = *buflen_out - *buf_datalen_out;
-  
-  if (!zstream->avail_in && !zstream->avail_out)
-    return 0;
-  
-  err = inflate(zstream, flush);
-
-  switch (err) 
-    {
-    case Z_OK:
-    case Z_STREAM_END:
-      log(LOG_DEBUG, "Uncompressed (%d/%d); filled (%d/%d)",
-          *buf_datalen_in-zstream->avail_in, *buf_datalen_in,
-          (*buflen_out-*buf_datalen_out)-zstream->avail_out, 
-          (*buflen_out-*buf_datalen_out) );
-      memmove(*buf_in, zstream->next_in, zstream->avail_in);
-      *buf_datalen_in = zstream->avail_in;
-      *buf_datalen_out = *buflen_out - zstream->avail_out;
-      return 1;
-    case Z_STREAM_ERROR:
-    case Z_BUF_ERROR:
-      log(LOG_ERR, "Error processing compression: %s", zstream->msg);
-      return 1;
-    default:
-      log(LOG_ERR, "Unknown return value from deflate: %d", err);
-      return -1;
-    }
 }
 
 int fetch_from_buf(char *string, int string_len,
