@@ -622,6 +622,7 @@ extern unsigned long stats_n_destroy_cells_processed;
 
 /********************************* config.c ***************************/
 
+int config_assign_default_dirservers(void);
 int getconfig(int argc, char **argv, or_options_t *options);
 
 /********************************* connection.c ***************************/

@@ -65,6 +65,8 @@ typedef struct directory_token_t {
 /****************************************************************************/
 
 /* static function prototypes */
+static routerinfo_t *
+router_pick_directory_server_impl(void);
 static int
 router_get_list_from_string_impl(const char **s, routerlist_t **dest,
                                  int n_good_nicknames,
@@ -93,8 +95,29 @@ router_release_token(directory_token_t *tok);
 
 /****************************************************************************/
 
-/* pick a random running router with a positive dir_port */
+/* try to find a running dirserver. if there are no dirservers
+ * in our routerlist, reload the routerlist and try again. */
 routerinfo_t *router_pick_directory_server(void) {
+  routerinfo_t *choice;
+
+  choice = router_pick_directory_server_impl();
+  if(!choice) {
+    log_fn(LOG_WARN,"No dirservers known. Reloading and trying again.");
+    if(options.RouterFile) {
+      if(router_set_routerlist_from_file(options.RouterFile) < 0)
+        return NULL;
+    } else {
+      if(config_assign_default_dirservers() < 0)
+        return NULL;
+    }
+    /* give it another try */
+    choice = router_pick_directory_server_impl();
+  }
+  return choice;
+}
+
+/* pick a random running router with a positive dir_port */
+static routerinfo_t *router_pick_directory_server_impl(void) {
   int i;
   routerinfo_t *router, *dirserver=NULL;
   smartlist_t *sl;
