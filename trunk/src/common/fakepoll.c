@@ -29,7 +29,7 @@
 int
 poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 {
-	unsigned int idx, maxfd, fd;
+        int idx, maxfd, fd;
 	int r;
 #ifdef MS_WINDOWS
         int any_fds_set = 0;
