@@ -3,5 +3,6 @@ Makefile.in
 aclocal.m4
 configure
 orconfig.h
+orconfig.h.in
 config.cache
 conftest*
