@@ -38,9 +38,9 @@ SPEC!!  D Non-clique topologies
         . Appropriate logging
                 - Come up with convention for what log level means what
                 - Make code follow convention
-        . Terminology
+        o Terminology
                 o Circuits, topics, cells stay named that
-                - 'Connection' gets divided, or renamed, or something?
+                o 'Connection' gets divided, or renamed, or something?
         . DNS farm
                 o Distribute queries onto the farm, get answers
                 o Preemptively grow a new worker before he's needed
@@ -56,7 +56,7 @@ SPEC!!  D Non-clique topologies
                 D Automated reputation management
 NICK            - Include key in source; sign directories
                 - Add versions to code
-ARMA            - Have directories list recommended-versions
+NICK            - Have directories list recommended-versions
                         - Quit if running the wrong version
                         - Command-line option to override quit
                 . Add more information to directory server entries
@@ -77,7 +77,7 @@ SPEC!!          - Handle socks commands other than connect, eg, bind?
         D Implement reply onions
         D Deploy and manage open source development site.
         . Documentation
-                . Discussion of socks, tsocks, etc
+                o Discussion of socks, tsocks, etc
                 o On-the-network protocol
                         o Onions
                         o Cells
@@ -127,4 +127,14 @@ NICK                    . OS X
         - More flexibility in node addressing
                 D Support IPv6 rather than just 4
                 - Handle multihomed servers (config variable to set IP)
+        . Move from onions to ephemeral DH
+                o incremental path building
+                - transition circuit-level sendmes to hop-level sendmes
+                - implement truncate, truncated
+NICK            - move from 192byte DH to 128byte DH, so it isn't so damn slow
+                - exiting from not-last hop
+                        - OP logic to decide to extend/truncate a path
+                        - make sure exiting from the not-last hop works
+                        - logic to find last *open* hop, not last hop, in cpath
+                        - choose exit nodes by exit policies
 
