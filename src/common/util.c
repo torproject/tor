@@ -88,14 +88,6 @@
 #define INADDR_NONE ((unsigned long) -1)
 #endif
 
-/* Inline the strl functions if the plaform doesn't have them. */
-#ifndef HAVE_STRLCPY
-#include "strlcpy.c"
-#endif
-#ifndef HAVE_STRLCAT
-#include "strlcat.c"
-#endif
-
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
