@@ -535,7 +535,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   return 0;
 }
 
-int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ) {
+static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ) {
   cell_t cell;
 
   memset(&cell, 0, sizeof(cell_t));
@@ -565,7 +565,7 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ) {
   return 0;
 }
 
-int connection_ap_handshake_socks_reply(connection_t *conn, char result) {
+static int connection_ap_handshake_socks_reply(connection_t *conn, char result) {
   socks4_t socks4_info; 
 
   assert(conn);

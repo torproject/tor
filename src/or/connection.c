@@ -765,26 +765,6 @@ int connection_finished_flushing(connection_t *conn) {
   }
 }
 
-void
-cell_pack(char *dest, const cell_t *src)
-{
-  *(uint16_t*)dest     = htons(src->aci);
-  *(uint8_t*)(dest+2)  = src->command;
-  *(uint8_t*)(dest+3)  = src->length;
-  *(uint32_t*)(dest+4) = 0; /* Reserved */
-  memcpy(dest+8, src->payload, CELL_PAYLOAD_SIZE);
-}
-
-void
-cell_unpack(cell_t *dest, const char *src)
-{
-  dest->aci     = ntohs(*(uint16_t*)(src));
-  dest->command = *(uint8_t*)(src+2);
-  dest->length  = *(uint8_t*)(src+3);
-  dest->seq     = ntohl(*(uint32_t*)(src+4));
-  memcpy(dest->payload, src+8, CELL_PAYLOAD_SIZE);
-}
-
 /*
   Local Variables:
   mode:c

@@ -6,6 +6,10 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+static void circuit_free_cpath(crypt_path_t *cpath);
+static void circuit_free_cpath_node(crypt_path_t *victim);
+static aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type);  
+
 /********* START VARIABLES **********/
 
 static circuit_t *global_circuitlist=NULL;
@@ -86,7 +90,7 @@ void circuit_free(circuit_t *circ) {
   free(circ);
 }
 
-void circuit_free_cpath(crypt_path_t *cpath) {
+static void circuit_free_cpath(crypt_path_t *cpath) {
   crypt_path_t *victim, *head=cpath;
 
   if(!cpath)
@@ -103,7 +107,7 @@ void circuit_free_cpath(crypt_path_t *cpath) {
   circuit_free_cpath_node(cpath);
 }
 
-void circuit_free_cpath_node(crypt_path_t *victim) {
+static void circuit_free_cpath_node(crypt_path_t *victim) {
   if(victim->f_crypto)
     crypto_free_cipher_env(victim->f_crypto);
   if(victim->b_crypto)
@@ -114,7 +118,7 @@ void circuit_free_cpath_node(crypt_path_t *victim) {
 }
 
 /* return 0 if can't get a unique aci. */
-aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type) {
+static aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type) {
   aci_t test_aci;
   connection_t *conn;
 

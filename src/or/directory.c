@@ -6,6 +6,11 @@
 
 #define MAX_DIR_SIZE 50000 /* XXX, big enough? */
 
+static int directory_send_command(connection_t *conn);
+static void directory_rebuild(void);
+static int directory_handle_command(connection_t *conn);
+static int directory_handle_reading(connection_t *conn);
+
 /********* START VARIABLES **********/
 
 extern or_options_t options; /* command-line and config-file options */
@@ -77,7 +82,7 @@ void directory_initiate_fetch(routerinfo_t *router) {
   }
 }
 
-int directory_send_command(connection_t *conn) {
+static int directory_send_command(connection_t *conn) {
 
   assert(conn && conn->type == CONN_TYPE_DIR);
 
@@ -94,7 +99,7 @@ void directory_set_dirty(void) {
   directory_dirty = 1;
 }
 
-void directory_rebuild(void) {
+static void directory_rebuild(void) {
   if(directory_dirty) {
     if (dump_signed_directory_to_string(the_directory, MAX_DIR_SIZE,
                                         get_signing_privatekey())) {
@@ -150,7 +155,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
   return 0;
 }
 
-int directory_handle_command(connection_t *conn) {
+static int directory_handle_command(connection_t *conn) {
   char buf[15];
 
   assert(conn && conn->type == CONN_TYPE_DIR);
@@ -185,7 +190,7 @@ int directory_handle_command(connection_t *conn) {
   return 0;
 }
 
-int directory_handle_reading(connection_t *conn) {
+static int directory_handle_reading(connection_t *conn) {
   int amt;
   char *headers;
 

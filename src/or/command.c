@@ -6,7 +6,12 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
-void command_time_process_cell(cell_t *cell, connection_t *conn,
+static void command_process_create_cell(cell_t *cell, connection_t *conn);
+static void command_process_created_cell(cell_t *cell, connection_t *conn);
+static void command_process_relay_cell(cell_t *cell, connection_t *conn);
+static void command_process_destroy_cell(cell_t *cell, connection_t *conn);
+
+static void command_time_process_cell(cell_t *cell, connection_t *conn,
                                int *num, int *time,
                                void (*func)(cell_t *, connection_t *)) {
   struct timeval start, end;
@@ -77,7 +82,7 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
   }
 }
 
-void command_process_create_cell(cell_t *cell, connection_t *conn) {
+static void command_process_create_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
   circ = circuit_get_by_aci_conn(cell->aci, conn);
@@ -106,7 +111,7 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
   log_fn(LOG_DEBUG,"success: handed off onionskin.");
 }
 
-void command_process_created_cell(cell_t *cell, connection_t *conn) {
+static void command_process_created_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
   cell_t newcell;
 
@@ -155,7 +160,7 @@ void command_process_created_cell(cell_t *cell, connection_t *conn) {
   }
 }
 
-void command_process_relay_cell(cell_t *cell, connection_t *conn) {
+static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
   circ = circuit_get_by_aci_conn(cell->aci, conn);
@@ -187,7 +192,7 @@ void command_process_relay_cell(cell_t *cell, connection_t *conn) {
   }
 }
 
-void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
+static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
   circ = circuit_get_by_aci_conn(cell->aci, conn);

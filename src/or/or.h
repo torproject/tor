@@ -96,7 +96,7 @@
 #include "../common/log.h"
 #include "../common/util.h"
 
-#define RECOMMENDED_SOFTWARE_VERSIONS "0.0.2pre7,0.0.2pre8"
+#define RECOMMENDED_SOFTWARE_VERSIONS "0.0.2pre8,0.0.2pre9"
 
 #define MAXCONNECTIONS 1000 /* upper bound on max connections.
                               can be lowered by config file */
@@ -466,60 +466,29 @@ typedef struct {
 /********************************* buffers.c ***************************/
 
 int buf_new(char **buf, int *buflen, int *buf_datalen);
-
 void buf_free(char *buf);
 
 int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, int *reached_eof);
-  /* grab from s, put onto buf, return how many bytes read */
 int read_to_buf_tls(tor_tls *tls, int at_most, char **buf, int *buflen, int *buf_datalen);
-  /* grab from tls, put onto buf, return how many bytes read or a TLS
-   * status (same status codes as tor_tls_read) */
 
 int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen);
-  /* push from buf onto s
-   * then memmove to front of buf
-   * return -1 or how many bytes remain on the buf */
 int flush_buf_tls(tor_tls *tls, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen);
-  /* As flush_buf, but returns number of bytes written or TLS status
-   * (same status codes as tor_tls_write) */
 
-int write_to_buf(char *string, int string_len,
-                 char **buf, int *buflen, int *buf_datalen);
-  /* append string to buf (growing as needed, return -1 if "too big")
-   * return total number of bytes on the buf
-   */
-
-int fetch_from_buf(char *string, int string_len,
-                   char **buf, int *buflen, int *buf_datalen);
-  /* if there is string_len bytes in buf, write them onto string,
-   * then memmove buf back (that is, remove them from buf)
-   */
-
-int find_on_inbuf(char *string, int string_len,
-                  char *buf, int buf_datalen);
-  /* find first instance of needle 'string' on haystack 'buf'. return how
-   * many bytes from the beginning of buf to the end of string.
-   * If it's not there, return -1.
-   */
-
-/********************************* cell.c ***************************/
-
-int pack_create(uint16_t aci, unsigned char *onion, uint32_t onionlen, unsigned char **cellbuf, unsigned int *cellbuflen);
+int write_to_buf(char *string, int string_len, char **buf, int *buflen, int *buf_datalen);
+int fetch_from_buf(char *string, int string_len, char **buf, int *buflen, int *buf_datalen);
+int find_on_inbuf(char *string, int string_len, char *buf, int buf_datalen);
 
 /********************************* circuit.c ***************************/
 
 void circuit_add(circuit_t *circ);
 void circuit_remove(circuit_t *circ);
-
 circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn);
+void circuit_free(circuit_t *circ);
 
-/* internal */
-aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type);
-
+circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest_ap(void);
-circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);
@@ -531,14 +500,8 @@ void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *l
 int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
 int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
 
-void circuit_free(circuit_t *circ);
-void circuit_free_cpath(crypt_path_t *cpath);
-void circuit_free_cpath_node(crypt_path_t *victim);
-
 void circuit_close(circuit_t *circ);
-
 void circuit_about_to_close_connection(connection_t *conn);
-  /* flush and send destroys for all circuits using conn */
 
 void circuit_dump_by_conn(connection_t *conn);
 
@@ -555,16 +518,8 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
 
 void command_process_cell(cell_t *cell, connection_t *conn);
 
-void command_process_create_cell(cell_t *cell, connection_t *conn);
-void command_process_created_cell(cell_t *cell, connection_t *conn);
-void command_process_sendme_cell(cell_t *cell, connection_t *conn);
-void command_process_relay_cell(cell_t *cell, connection_t *conn);
-void command_process_destroy_cell(cell_t *cell, connection_t *conn);
-void command_process_connected_cell(cell_t *cell, connection_t *conn);
-
 /********************************* config.c ***************************/
 
-/* return 0 if success, <0 if failure. */
 int getconfig(int argc, char **argv, or_options_t *options);
 
 /********************************* connection.c ***************************/
@@ -575,7 +530,9 @@ void connection_free(connection_t *conn);
 int connection_create_listener(struct sockaddr_in *bindaddr, int type);
 int connection_handle_listener_read(connection_t *conn, int new_type);
 
+#ifdef USE_TLS
 int connection_tls_start_handshake(connection_t *conn, int receiving);
+#endif
 
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
 int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
@@ -584,13 +541,12 @@ int connection_handle_read(connection_t *conn);
 int connection_read_to_buf(connection_t *conn);
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn);
-
-int connection_outbuf_too_full(connection_t *conn);
 int connection_find_on_inbuf(char *string, int len, connection_t *conn);
+
 int connection_wants_to_flush(connection_t *conn);
+int connection_outbuf_too_full(connection_t *conn);
 int connection_flush_buf(connection_t *conn);
 int connection_handle_write(connection_t *conn);
-
 int connection_write_to_buf(char *string, int len, connection_t *conn);
 
 int connection_receiver_bucket_should_increase(connection_t *conn);
@@ -600,20 +556,16 @@ int connection_is_listener(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 
 int connection_send_destroy(aci_t aci, connection_t *conn);
-int connection_send_connected(aci_t aci, connection_t *conn);
 
 int connection_process_inbuf(connection_t *conn);
-
 int connection_finished_flushing(connection_t *conn);
-
-void cell_pack(char *dest, const cell_t *src);
-void cell_unpack(cell_t *dest, const char *src);
 
 /********************************* connection_edge.c ***************************/
 
 int connection_edge_process_inbuf(connection_t *conn);
 int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command);
-int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn, int edge_type, crypt_path_t *layer_hint);
+int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn,
+                                       int edge_type, crypt_path_t *layer_hint);
 int connection_edge_finished_flushing(connection_t *conn);
 
 int connection_package_raw_inbuf(connection_t *conn);
@@ -646,12 +598,8 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
 /********************************* directory.c ***************************/
 
 void directory_initiate_fetch(routerinfo_t *router);
-int directory_send_command(connection_t *conn);
 void directory_set_dirty(void);
-void directory_rebuild(void);
 int connection_dir_process_inbuf(connection_t *conn);
-int directory_handle_command(connection_t *conn);
-int directory_handle_reading(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 
 /********************************* dns.c ***************************/
@@ -706,15 +654,6 @@ void onion_pending_remove(circuit_t *circ);
 
 int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
 
-/* uses a weighted coin with weight cw to choose a route length */
-int chooselen(double cw);
-
-/* returns an array of pointers to routent that define a new route through the OR network
- * int cw is the coin weight to use when choosing the route 
- * order of routers is from last to first
- */
-unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *routelen);
-
 crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop);
 
 int onion_skin_create(crypto_pk_env_t *router_key,
@@ -743,8 +682,6 @@ void router_get_directory(directory_t **pdirectory);
 int router_is_me(uint32_t addr, uint16_t port);
 void router_forget_router(uint32_t addr, uint16_t port);
 int router_get_list_from_file(char *routerfile);
-int router_resolve(routerinfo_t *router);
-int router_resolve_directory(directory_t *dir);
 
 /* Reads a list of known routers, unsigned. */
 int router_get_list_from_string(char *s);
