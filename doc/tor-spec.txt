@@ -178,6 +178,7 @@ which reveals the downstream node.
 
       1. Choose a chain of N onion routers (R_1...R_N) to constitute
          the path, such that no router appears in the path twice.
+         [this is wrong, see October 2003 discussion on or-dev]
 
       2. If not already connected to the first router in the chain,
          open a new connection to that router.
@@ -424,7 +425,7 @@ which reveals the downstream node.
    receives a RELAY_SENDME cell with stream ID zero, it increments its
    packaging window.
 
-   Either of these cells increment the corresponding window by 100.
+   Each of these cells increments the corresponding window by 100.
 
    The OP behaves identically, except that it must track a packaging
    window and a delivery window for every OR in the circuit.
@@ -435,6 +436,7 @@ which reveals the downstream node.
    If a packaging window reaches 0, the OR or OP stops reading from
    TCP connections for all streams on the corresponding circuit, and
    sends no more RELAY_DATA cells until receiving a RELAY_SENDME cell.
+[this stuff is badly worded; copy in the tor-design section -RD]
 
 6.4. Stream-level flow control
 
