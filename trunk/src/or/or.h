@@ -320,6 +320,7 @@ typedef struct {
   uint16_t dir_port;
  
   crypto_pk_env_t *pkey; /* public RSA key */
+  crypto_pk_env_t *signing_pkey; /* May be null */
  
   /* link info */
   uint32_t bandwidth;
@@ -737,6 +738,7 @@ int do_main_loop(void);
 
 void dumpstats(void);
 void dump_directory_to_string(char *s, int maxlen);
+void dump_directory_to_string_impl(char *s, int maxlen, directory_t *directory);
 
 int main(int argc, char *argv[]);
 
@@ -793,6 +795,7 @@ int router_get_list_from_string_impl(char *s, directory_t **dest);
 routerinfo_t *router_get_entry_from_string(char **s);
 
 int router_compare_to_exit_policy(connection_t *conn);
+void routerlist_free(routerinfo_t *list);
 
 #endif
 

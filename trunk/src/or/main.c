@@ -555,7 +555,8 @@ void dumpstats(void) { /* dump stats to stdout */
 
 int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
   char *pkey;
-  int pkeylen;
+  char *signing_pkey, *signing_pkey_tag;
+  int pkeylen, signing_pkeylen;
   int written;
   int result=0;
   struct exit_policy_t *tmpe;
@@ -565,16 +566,30 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
     return 0;
   }
 
-  result = snprintf(s, maxlen, "router %s %d %d %d %d %d\n%s",
+  signing_pkey = "";
+  signing_pkey_tag = "";
+  if (router->signing_pkey) {
+    if(crypto_pk_write_public_key_to_string(router->signing_pkey,
+                                         &signing_pkey,&signing_pkeylen)<0) {
+      log(LOG_ERR,"dump_router_to_string(): write signing_pkey to string failed!");
+      return 0;
+    }
+    signing_pkey_tag = "signing-key\n";
+  }
+  
+  result = snprintf(s, maxlen, "router %s %d %d %d %d %d\n%s%s%s",
     router->address,
     router->or_port,
     router->op_port,
     router->ap_port,
     router->dir_port,
     router->bandwidth,
-    pkey);
+    pkey,
+    signing_pkey_tag, signing_pkey);
 
   free(pkey);
+  if (*signing_pkey)
+    free(signing_pkey);
 
   if(result < 0 || result > maxlen) {
     /* apparently different glibcs do different things on snprintf error.. so check both */
@@ -607,21 +622,23 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
 
 }
 
-void dump_directory_to_string(char *s, int maxlen) {
-  int i;
+void dump_directory_to_string(char *s, int maxlen) 
+{
+  directory_t dir;
+  routerinfo_t **routers = NULL;;
   connection_t *conn;
   routerinfo_t *router;
-  int written;
+  int i, n = 0;
 
-  /* first write my own info */
-  if(my_routerinfo) {
-    written = dump_router_to_string(s, maxlen, my_routerinfo);
-    maxlen -= written;
-    s += written;
+  routers = (routerinfo_t**) malloc(sizeof(routerinfo_t*) * (nfds+1));
+  if (!routers) {
+    /* freak out XXX */
+    return;
   }
-
-  /* now write info for other routers */
-  for(i=0;i<nfds;i++) {
+  if (my_routerinfo) {
+    routers[n++] = my_routerinfo;
+  }
+  for(i = 0; i<nfds; ++i) {
     conn = connection_array[i];
 
     if(conn->type != CONN_TYPE_OR)
@@ -633,7 +650,64 @@ void dump_directory_to_string(char *s, int maxlen) {
       log(LOG_ERR,"dump_directory_to_string(): couldn't find router %d:%d!",conn->addr,conn->port);
       continue;
     }
+    routers[n++] = router;
+  }
+  dir.routers = routers;
+  dir.n_routers = n;
 
+  dump_directory_to_string_impl(s, maxlen, &dir);
+}
+
+int
+dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
+                                     crypto_pk_env_t *private_key)
+{
+  char *cp;
+  char digest[20];
+  char signature[128];
+  int i;
+  strncpy(s, 
+          "signed-directory\n"
+          "client-software x y z\n" /* XXX make this real */
+          "server-software a b c\n\n" /* XXX make this real */
+          , maxlen);
+  /* These multiple strlen calls are inefficient, but dwarfed by the RSA
+     signature.
+  */
+  i = strlen(s); 
+
+  dump_directory_to_string_impl(s+i, maxlen-i, dir);
+  i = strlen(s);
+  cp = s + i;
+  
+  if (crypto_SHA_digest(s, i, digest))
+    return -1;
+  if (crypto_pk_private_sign(private_key, digest, 20, signature))
+    return -1;
+  
+
+  strncpy(cp, 
+          "directory-signature\n-----BEGIN SIGNATURE-----\n", maxlen-i);
+          
+  i = strlen(s);
+  cp = s+i;
+  if (base64_encode(cp, maxlen-i, signature, 128) < 0)
+    return -1;
+
+  i = strlen(s);
+  cp = s+i;
+  strcat(cp, "-----END SIGNATURE-----\n");
+
+  return 0;
+}
+
+void dump_directory_to_string_impl(char *s, int maxlen, directory_t *directory) {
+  int i;
+  routerinfo_t *router;
+  int written;
+
+  for (i = 0; i < directory->n_routers; ++i) {
+    router = directory->routers[i];
     written = dump_router_to_string(s, maxlen, router);
 
     if(written < 0) { 
@@ -645,7 +719,6 @@ void dump_directory_to_string(char *s, int maxlen) {
     maxlen -= written;
     s += written;
   }
-
 }
 
 void daemonize(void) {

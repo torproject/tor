@@ -17,7 +17,7 @@ extern routerinfo_t *my_routerinfo; /* from main.c */
 /****************************************************************************/
 
 /* static function prototypes */
-static void routerlist_free(routerinfo_t *list);
+void routerlist_free(routerinfo_t *list);
 static routerinfo_t **make_rarray(routerinfo_t* list, int *len);
 static char *eat_whitespace(char *s);
 static char *find_whitespace(char *s);
@@ -124,7 +124,7 @@ int router_is_me(uint32_t addr, uint16_t port)
 }
 
 /* delete a list of routers from memory */
-static void routerlist_free(routerinfo_t *list)
+void routerlist_free(routerinfo_t *list)
 {
   routerinfo_t *tmp = NULL;
   struct exit_policy_t *e = NULL, *etmp = NULL;
@@ -402,7 +402,6 @@ routerinfo_t *router_get_entry_from_string(char **s) {
     log(LOG_ERR,"router_get_entry_from_string(): Entry does not start with \"router\"");
     return NULL;
   }
-  puts("X");
 
   router = malloc(sizeof(routerinfo_t));
   if (!router) {
@@ -477,7 +476,7 @@ routerinfo_t *router_get_entry_from_string(char **s) {
     goto router_read_failed;
   }
   
-  /* now advance *s so it's at the end of this router entry */
+  /* now advance *s so it's at the end of this public key */
   next = strchr(next, '\n');
   assert(next); /* can't fail, we just checked it was here */
   *next = 0;
@@ -494,10 +493,40 @@ routerinfo_t *router_get_entry_from_string(char **s) {
     goto router_read_failed;
   }
 
-//  test_write_pkey(router->pkey);  
-
   *s = next+1;
-  while(**s != '\n') {
+  *s = eat_whitespace(*s);
+  if (!strncasecmp(*s, "signing-key", 11)) {
+    /* We have a signing key */
+    *s = strchr(*s, '\n');
+    *s = eat_whitespace(*s); 
+    next = strstr(*s,OR_PUBLICKEY_END_TAG);
+    router->signing_pkey = crypto_new_pk_env(CRYPTO_PK_RSA);
+    if (!next || !router->signing_pkey) {
+      log(LOG_ERR,"router_get_entry_from_string(): Couldn't find signing_pk in string");
+      goto router_read_failed;
+    }
+    next = strchr(next, '\n');
+    assert(next);
+    *next = 0;
+    if ((crypto_pk_read_public_key_from_string(router->signing_pkey, *s,
+                                               strlen(*s)))<0) {
+      log(LOG_ERR,"router_get_entry_from_string(): Couldn't read signing pk from string");
+      goto router_read_failed;
+    }
+
+    log(LOG_DEBUG,"router_get_entry_from_string(): Signing key size = %u.", crypto_pk_keysize(router->signing_pkey));
+
+    if (crypto_pk_keysize(router->signing_pkey) != 128) { /* keys MUST be 1024 bits in size */
+      log(LOG_ERR,"Signing key for router %s:%u is 1024 bits. All keys must be exactly 1024 bits long.",
+          router->address,router->or_port);
+      goto router_read_failed;
+    }
+    *s = next+1;
+  }
+      
+  //  test_write_pkey(router->pkey);  
+
+  while(**s && **s != '\n') {
     /* pull in a line of exit policy */
     next = strchr(*s, '\n');
     if(!next)
@@ -508,7 +537,6 @@ routerinfo_t *router_get_entry_from_string(char **s) {
   }
 
   return router;
-
 
 router_read_failed:
   if(router->address)
