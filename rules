@@ -68,6 +68,7 @@ install: build
 
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tor
 	# move tor to where it belongs
+	mv $(CURDIR)/debian/tor/etc/tor/torrc.sample $(CURDIR)/debian/tor/etc/tor/torrc
 	mv $(CURDIR)/debian/tor/usr/bin/tor $(CURDIR)/debian/tor/usr/sbin/tor
 	install -m 755 contrib/torify $(CURDIR)/debian/tor/usr/bin
 	install -m 644 contrib/torify.1 $(CURDIR)/debian/tor/usr/share/man/man1
