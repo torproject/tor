@@ -47,7 +47,7 @@ rape and abuse survivors, or people with illnesses.
 home-made movie anonymously via a Tor <a href="#hidden-service">hidden
 service</a>; and reading, e.g. of news sites not permitted in some
 countries.
-<li>Allowing their agents to check back with their home website while
+<li>Allowing their workers to check back with their home website while
 they're in a foreign country, without notifying everybody nearby that
 they're working with that organization.
 </ul>
@@ -103,7 +103,7 @@ your security</a>.</p>
 everybody is a <i>client</i>. This means you don't relay traffic for
 anybody but yourself.</p>
 
-<p>If you have less than 768kbit in both directions, you should stay
+<p>If you have less than 1Mbit in both directions, you should stay
 a client. Otherwise, please consider being a server, to help out the
 network. (Currently each server uses 20-30 gigabytes of traffic
 per month; but that may go up.)</p>
@@ -175,7 +175,7 @@ from localhost. Connections from other computers are refused. If you
 want to torify applications on different computers than the Tor client,
 you should copy torrc.sample to torrc (it's installed by default
 to /usr/local/etc/tor/), change the SocksAddress line to
-0.0.0.0, and then restart Tor.</p>
+0.0.0.0, and then hup or restart Tor.</p>
 
 <p>To test if it's working, point your browser
 to socks4 or socks5 proxy at localhost port 9050. In
@@ -195,10 +195,10 @@ proxy that integrates well with Tor. Add the line <br>
 (don't forget the dot) to its
 config file. Then change your mozilla to http proxy at localhost port 8118
 (and no socks proxy). You should also set your SSL proxy to the same
-thing, to hide your https traffic. Using privoxy will give you good html
-scrubbing as well.
-(See <a href="http://freehaven.net/tor/cvs/doc/CLIENTS">this explanation</a>
-for why direct socks gives you less anonymity.)</p>
+thing, to hide your https traffic. Using privoxy is necessary because
+<a href="http://freehaven.net/tor/cvs/doc/CLIENTS">Mozilla leaks your
+DNS requests when it uses a socks proxy directly</a>. Privoxy also gives
+you good html scrubbing.</p>
 
 <p>You might want to use Tor with an application that doesn't
 support socks directly. In this case, you should look at
@@ -213,14 +213,14 @@ service url</a>).</p>
 <h2>Configuring a server</h2>
 
 <p>We're looking for people with reasonably reliable Internet connections,
-that have at least 768kbit each way. Currently we don't use all of that,
+that have at least 1Mbit each way. Currently we don't use all of that,
 but we want it available for burst traffic.</p>
 
-<p>The Tor server doesn't need to be run as root, and doesn't
+<p>(The Tor server doesn't need to be run as root, and doesn't
 need any special system permissions or kernel mods. If you're
 the paranoid sort, feel free to <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorInChroot">put it
-into a chroot jail</a>.</p>
+into a chroot jail</a>.)</p>
 
 <p>First, copy torrc.sample to torrc (by default it's in
 /usr/local/etc/tor/), and edit the middle part. Create the DataDirectory,
@@ -238,7 +238,8 @@ server will have. If possible, PGP sign your mail.</p>
 
 <p>NOTE: You won't be able to use tor as a client or server
 in this configuration until you've been added to the directory
-and can authenticate to the other nodes.</p>
+and can authenticate to the other nodes. (This is no longer the case
+for 0.0.8 and after.)</p>
 
 <p>Once your fingerprint has been approved, you can click <a
 href="http://moria.seul.org:9031/">here</a> or <a
@@ -309,13 +310,12 @@ the latest cvs version may not compile or work right). Then:
 <li>4a: Edit src/or/config.c and change the default_dirservers_string array
 so that it reflects the contents of the new dirservers file instead
 of the old one. Be sure to get the quotes and newlines and semicolons
-right. (This step sucks. Please suggest a better way to handle this
-step. ;)
+right. (This step sucks. We plan to have it solved by the release of 0.0.8.)
 <li>4b: Replace the dirservers file in your sandbox (in src/config/)
 with the one from step 3.
-<li>4c: edit configure.in, change the AM_INIT_AUTOMAKE(tor, 0.0.6)
+<li>4c: edit configure.in, change the AM_INIT_AUTOMAKE(tor, 0.0.8)
 line so that it specifies a version that is specific to you, such as
-0.0.6-arma. This will help you keep from being confused later. Be sure
+0.0.8-arma. This will help you keep from being confused later. Be sure
 to update the RecommendedVersions lines to include this version.
 <li>4d: run <tt>./autogen.sh</tt> (you'll need a new enough set of auto* tools),
 then <tt>make dist</tt>.
@@ -328,13 +328,13 @@ process for each directory server to reload the approved-routers file
 (so you don't have to restart the process).
 </ul>
 
-<h2>Other doc resources</h2>
+<!--<h2>Other doc resources</h2>
 
 <ul>
 <li>Design paper
 <li>Spec and rend-spec
 <li>others
-</ul>
+</ul> -->
 
 </body>
 </html>
