@@ -17,7 +17,6 @@ static struct exit_policy_t *socks_policy = NULL;
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
 static void parse_socks_policy(void);
-static int socks_policy_permits_address(uint32_t addr);
 
 /** Handle new bytes on conn->inbuf, or notification of eof.
  *
@@ -785,6 +784,12 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
            conn->socks_request->port, exit->exit_policy);
 }
 
+/** A helper function for socks_policy_permits_address() below.
+ *
+ * Parse options.SocksPolicy in the same way that the exit policy
+ * is parsed, and put the processed version in &socks_policy.
+ * Ignore port specifiers.
+ */
 static void parse_socks_policy(void)
 {
   struct exit_policy_t *n;
@@ -800,6 +805,9 @@ static void parse_socks_policy(void)
   }
 }
 
+/** Return 1 if <b>addr</b> is permitted to connect to our socks port,
+ * based on <b>socks_policy</b>. Else return 0.
+ */
 int socks_policy_permits_address(uint32_t addr)
 {
   int a;
@@ -811,10 +819,9 @@ int socks_policy_permits_address(uint32_t addr)
     return 0;
   else if (a==0)
     return 1;
-  else if (a==1) {
-    log_fn(LOG_WARN, "Got unexpected 'maybe' answer from socks policy");
-    return 1;
-  }
+  tor_assert(a==1);
+  log_fn(LOG_WARN, "Got unexpected 'maybe' answer from socks policy");
+  return 0;
 }
 
 /* ***** Client DNS code ***** */
