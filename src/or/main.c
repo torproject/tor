@@ -10,6 +10,9 @@ static void dumpstats(void); /* dump stats to stdout */
 
 /********* START VARIABLES **********/
 
+extern char *conn_type_to_string[];
+extern char *conn_state_to_string[][15];
+
 or_options_t options; /* command-line and config-file options */
 int global_read_bucket; /* max number of bytes I can read this second */
 
@@ -269,7 +272,7 @@ static void conn_read(int i) {
   }
 
   if(retval < 0) { /* this connection is broken. remove it */
-    log_fn(LOG_INFO,"Connection broken, removing."); 
+    log_fn(LOG_INFO,"%s connection broken, removing.", conn_type_to_string[conn->type]); 
     connection_remove(conn);
     connection_free(conn);
     if(i<nfds) { /* we just replaced the one at i with a new one.
@@ -300,7 +303,7 @@ static void conn_write(int i) {
   }
 
   if(retval < 0) { /* this connection is broken. remove it. */
-    log_fn(LOG_DEBUG,"Connection broken, removing.");
+    log_fn(LOG_DEBUG,"%s connection broken, removing.", conn_type_to_string[conn->type]);
     connection_remove(conn);
     connection_free(conn);
     if(i<nfds) { /* we just replaced the one at i with a new one.
@@ -597,8 +600,6 @@ static void dumpstats(void) { /* dump stats to stdout */
   int i;
   connection_t *conn;
   struct timeval now;
-  extern char *conn_type_to_string[];
-  extern char *conn_state_to_string[][15];
 
   printf("Dumping stats:\n");
   my_gettimeofday(&now);
