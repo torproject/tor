@@ -23,9 +23,11 @@ static struct pollfd poll_array[MAXCONNECTIONS];
 
 static int nfds=0; /* number of connections currently active */
 
+#ifndef MS_WINDOWS /* do signal stuff only on unix */
 static int please_dumpstats=0; /* whether we should dump stats during the loop */
 static int please_fetch_directory=0; /* whether we should fetch a new directory */
 static int please_reap_children=0; /* whether we should waitpid for exited children*/
+#endif /* signal stuff */
 
 /* private key */
 static crypto_pk_env_t *privatekey=NULL;
@@ -514,6 +516,7 @@ static int do_main_loop(void) {
   retry_all_connections(options.ORPort, options.APPort, options.DirPort);
 
   for(;;) {
+#ifndef MS_WINDOWS /* do signal stuff only on unix */
     if(please_dumpstats) {
       dumpstats();
       please_dumpstats = 0;
@@ -532,6 +535,7 @@ static int do_main_loop(void) {
       while(waitpid(-1,NULL,WNOHANG)) ; /* keep reaping until no more zombies */
       please_reap_children = 0;
     }
+#endif /* signal stuff */
     if(prepare_for_poll(&timeout) < 0) {
       log(LOG_DEBUG,"do_main_loop(): prepare_for_poll failed, exiting.");
       return -1;
@@ -584,6 +588,7 @@ static int do_main_loop(void) {
 
 static void catch(int the_signal) {
 
+#ifndef MS_WINDOWS /* do signal stuff only on unix */
   switch(the_signal) {
 //    case SIGABRT:
     case SIGTERM:
@@ -601,6 +606,7 @@ static void catch(int the_signal) {
     default:
       log(LOG_ERR,"Caught signal that we can't handle??");
   }
+#endif /* signal stuff */
 }
 
 static void dumpstats(void) { /* dump stats to stdout */
@@ -848,11 +854,13 @@ int tor_main(int argc, char *argv[]) {
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
 
+#ifndef MS_WINDOWS /* do signal stuff only on unix */
   signal (SIGINT,  catch); /* catch kills so we can exit cleanly */
   signal (SIGTERM, catch);
   signal (SIGUSR1, catch); /* to dump stats to stdout */
   signal (SIGHUP,  catch); /* to reload directory */
   signal (SIGCHLD, catch); /* for exiting dns/cpu workers */
+#endif /* signal stuff */
 
   crypto_global_init();
   crypto_seed_rng();
