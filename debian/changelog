@@ -1,3 +1,16 @@
+tor (0.0.7.2+0.0.8pre3-0) unstable; urgency=low
+
+  * Ship AUTHORS, doc/CLIENTS, doc/FAQ, doc/HACKING, doc/TODO,
+    doc/tor-doc.{css,html}, doc/{rend,tor}-spec.txt with the binary package.
+  * Build tor-design.{pdf,ps}, wich adds new build-dependencies:
+    tetex-{bin,extra}, transfig, and gs.
+  * Support DEB_BUILD_OPTIONS option 'nodoc' to skip building tor-design.
+    With nodoc the build will not need tetex-{bin,extra}, transfig, and gs.
+  * Support DEB_BUILD_OPTIONS option 'nocheck' to skip unittests
+    ('notest' is an alias')
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  6 Aug 2004 23:27:55 +0200
+
 tor (0.0.7.2+0.0.8pre2-1) unstable; urgency=low
 
   * New upstream (pre)release.

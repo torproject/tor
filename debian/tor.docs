@@ -1,3 +1,12 @@
+AUTHORS
 README
 INSTALL
 debian/README.privoxy
+doc/CLIENTS
+doc/FAQ
+doc/HACKING
+doc/TODO
+doc/tor-doc.css
+doc/tor-doc.html
+doc/rend-spec.txt
+doc/tor-spec.txt
