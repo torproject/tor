@@ -3,6 +3,7 @@
 # List of routers
 RouterFile ../config/routers.or
 
+# Be every role, including a directory server
 Role 63
 
 # Private key
@@ -18,6 +19,3 @@ DirPort 9031
 # Maximum number of connections.
 MaxConn 900
 
-# Which traffic shaping policy to use.
-# 
-TrafficShaping 1

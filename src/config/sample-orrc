@@ -1,0 +1,25 @@
+# Configuration file for a typical tor node
+
+# A file containing this node's private key
+PrivateKeyFile moria4-private
+
+# Ports for various services. Comment out or set to 0 if you're not
+# offering that service.
+ORPort 9004
+OPPort 9014
+APPort 9024
+#DirPort 0
+
+# *** NO NEED TO EDIT BELOW THIS LINE ***
+
+# List of routers. Tor nodes only know about the directory servers
+# at the beginning, and from them they get a list of currently up nodes.
+RouterFile ../config/dirservers
+
+# Should paths tend to be very long (CoinWeight close to 1) or
+# quite short (CoinWeight close to 0)?
+CoinWeight 0.1
+
+# Maximum number of sockets (of any sort) this node can have open
+MaxConn 900
+

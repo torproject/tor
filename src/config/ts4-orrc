@@ -15,7 +15,3 @@ APPort 9024
 # Maximum number of connections.
 MaxConn 900
 
-# Which traffic shaping policy to use.
-# 
-TrafficShaping 1
-
