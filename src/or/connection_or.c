@@ -241,13 +241,14 @@ static int connection_tls_finish_handshake(connection_t *conn) {
 
 /* ********************************** */
 
-void connection_or_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
+void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
   char networkcell[CELL_NETWORK_SIZE];
   char *n = networkcell;
 
+  assert(cell && conn);
   assert(connection_speaks_cells(conn));
 
-  cell_pack(n, cellp);
+  cell_pack(n, cell);
 
   connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
 }

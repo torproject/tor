@@ -311,7 +311,7 @@ int circuit_stream_is_being_handled(connection_t *conn) {
 }
 
 /* update digest from the payload of cell. assign integrity part to cell. */
-void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
+static void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
   uint32_t integrity;
   relay_header_t rh;
 
@@ -326,7 +326,7 @@ void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
 /* update digest from the payload of cell (with the integrity part set
  * to 0). If the integrity part is valid return 0, else return -1.
  */
-int relay_check_digest(crypto_digest_env_t *digest, cell_t *cell) {
+static int relay_check_digest(crypto_digest_env_t *digest, cell_t *cell) {
   uint32_t received_integrity, calculated_integrity;
   relay_header_t rh;
 
@@ -348,15 +348,39 @@ int relay_check_digest(crypto_digest_env_t *digest, cell_t *cell) {
   return 0;
 }
 
-int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
-                               int cell_direction, crypt_path_t *layer_hint) {
+static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
+                                   int encrypt_mode) {
+  char out[CELL_PAYLOAD_SIZE]; /* 'in' must be this size too */
+  relay_header_t rh;
+
+  relay_header_unpack(&rh, in);
+  log_fn(LOG_INFO,"before crypt: %d",rh.recognized);
+  if(( encrypt_mode && crypto_cipher_encrypt(cipher, in, CELL_PAYLOAD_SIZE, out)) ||
+     (!encrypt_mode && crypto_cipher_decrypt(cipher, in, CELL_PAYLOAD_SIZE, out))) {
+    log_fn(LOG_WARN,"Error during crypt: %s", crypto_perror());
+    return -1;
+  }
+  memcpy(in,out,CELL_PAYLOAD_SIZE);
+  relay_header_unpack(&rh, in);
+  log_fn(LOG_INFO,"after crypt: %d",rh.recognized);
+  return 0;
+}
+
+/*
+receive a relay cell:
+  - crypt it (encrypt APward, decrypt at AP, decrypt exitward)
+  - check if recognized (if exitward)
+  - if recognized, check digest, find right conn, deliver to edge.
+  - else connection_or_write_cell_to_buf to the right conn
+*/
+int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
+                               int cell_direction) {
   connection_t *conn=NULL;
+  crypt_path_t *layer_hint=NULL;
   char recognized=0;
 
   assert(cell && circ);
   assert(cell_direction == CELL_DIRECTION_OUT || cell_direction == CELL_DIRECTION_IN);
-
-  log_fn(LOG_DEBUG,"direction %d, stream_id %d before crypt.", cell_direction, *(uint16_t*)(cell->payload+1));/*XXX*/
 
   if(relay_crypt(circ, cell->payload, cell_direction,
                  &layer_hint, &recognized) < 0) {
@@ -394,15 +418,17 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   }
 
   /* not recognized. pass it on. */
-  if(cell_direction == CELL_DIRECTION_OUT)
+  if(cell_direction == CELL_DIRECTION_OUT) {
+    cell->circ_id = circ->n_circ_id; /* switch it */
     conn = circ->n_conn;
-  else
+  } else {
+    cell->circ_id = circ->p_circ_id; /* switch it */
     conn = circ->p_conn;
+  }
 
   if(!conn) {
-    log_fn(LOG_INFO,"Didn't recognize cell (%d), but circ stops here! Dropping.",
-           *(int *)(cell->payload+1));
-    return 0;
+    log_fn(LOG_WARN,"Didn't recognize cell, but circ stops here! Dropping.");
+    return 0; /* XXX if this warning never triggers, then return -1 */
   }
 
   log_fn(LOG_DEBUG,"Passing on unrecognized cell.");
@@ -411,10 +437,10 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   return 0;
 }
 
+/* wrap this into receive_relay_cell one day */
 static int relay_crypt(circuit_t *circ, char *in, char cell_direction,
                        crypt_path_t **layer_hint, char *recognized) {
   crypt_path_t *thishop;
-  char out[CELL_PAYLOAD_SIZE]; /* 'in' must be this size too */
   relay_header_t rh;
 
   assert(circ && in && recognized);
@@ -431,16 +457,11 @@ static int relay_crypt(circuit_t *circ, char *in, char cell_direction,
       do { /* Remember: cpath is in forward order, that is, first hop first. */
         assert(thishop);
 
-        log_fn(LOG_DEBUG,"before decrypt: %d",*(uint16_t*)(in+1));
-        /* decrypt */
-        if(crypto_cipher_decrypt(thishop->b_crypto, in, CELL_PAYLOAD_SIZE, out)) {
-          log_fn(LOG_WARN,"Error performing onion decryption: %s", crypto_perror());
+        if(relay_crypt_one_payload(thishop->b_crypto, in, 0) < 0)
           return -1;
-        }
-        memcpy(in,out,CELL_PAYLOAD_SIZE);
-        log_fn(LOG_DEBUG,"after decrypt: %d",*(uint16_t*)(in+1));
 
-        if(*(uint16_t*)(in+1) == 0) { /* XXX */
+        relay_header_unpack(&rh, in);
+        if(rh.recognized == 0) {
           *recognized = 1;
           *layer_hint = thishop;
           return 0;
@@ -448,59 +469,196 @@ static int relay_crypt(circuit_t *circ, char *in, char cell_direction,
 
         thishop = thishop->next;
       } while(thishop != circ->cpath && thishop->state == CPATH_STATE_OPEN);
-      log_fn(LOG_INFO,"in-cell at OP not recognized. Dropping.");
+      log_fn(LOG_WARN,"in-cell at OP not recognized. Dropping.");
       return 0;
     } else { /* we're in the middle. Just one crypt. */
-
-      log_fn(LOG_DEBUG,"before encrypt: %d",*(uint16_t*)(in+1));
-      if(crypto_cipher_encrypt(circ->p_crypto, in, CELL_PAYLOAD_SIZE, out)) {
-        log_fn(LOG_WARN,"Onion encryption failed for circID %u: %s",
-               circ->p_circ_id, crypto_perror());
+      if(relay_crypt_one_payload(circ->p_crypto, in, 1) < 0)
         return -1;
-      }
-      memcpy(in,out,CELL_PAYLOAD_SIZE);
-      log_fn(LOG_DEBUG,"after encrypt: %d",*(uint16_t*)(in+1));
-
       log_fn(LOG_DEBUG,"Skipping recognized check, because we're not the OP.");
-      /* don't check for recognized. only the OP can recognize a stream on the way back. */
     }
   } else /* cell_direction == CELL_DIRECTION_OUT */ {
-    if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
+    /* we're in the middle. Just one crypt. */
 
-      thishop = *layer_hint; /* we already know which layer, from when we package_raw_inbuf'ed */
-      /* moving from last to first hop */
-      do {
-        assert(thishop);
+    if(relay_crypt_one_payload(circ->n_crypto, in, 0) < 0)
+      return -1;
 
-        log_fn(LOG_DEBUG,"before encrypt: %d",*(uint16_t*)(in+1));
-        if(crypto_cipher_encrypt(thishop->f_crypto, in, CELL_PAYLOAD_SIZE, out)) {
-          log_fn(LOG_WARN,"Error performing encryption: %s", crypto_perror());
-          return -1;
-        }
-        memcpy(in,out,CELL_PAYLOAD_SIZE);
-        log_fn(LOG_DEBUG,"after encrypt: %d",*(uint16_t*)(in+1));
-
-        thishop = thishop->prev;
-      } while(thishop != circ->cpath->prev);
-    } else { /* we're in the middle. Just one crypt. */
-
-      if(crypto_cipher_decrypt(circ->n_crypto,in, CELL_PAYLOAD_SIZE, out)) {
-        log_fn(LOG_WARN,"Decryption failed for circID %u: %s",
-               circ->n_circ_id, crypto_perror());
-        return -1;
-      }
-      memcpy(in,out,CELL_PAYLOAD_SIZE);
-
-      if(*(uint16_t*)(in+1) == 0) { /* XXX */
-        *recognized = 1;
-        return 0;
-      }
+    relay_header_unpack(&rh, in);
+    if (rh.recognized == 0 ||
+        (!circ->n_conn && rh.recognized == 11257)) {
+      /* as a special exception, hops at the end of the circuit
+       * recognize 01 as well. */
+      log_fn(LOG_INFO,"Recognized '%d'", rh.recognized);
+      *recognized = 1;
+      return 0;
     }
   }
   return 0;
 }
 
-static connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction) {
+/* Helper function for circuit_package_relay_cell().
+ * crypt the cell from layer_hint backward. if there's a conflict,
+ * set *conflicthop to the nearest conflict, rewind all the ciphers,
+ * and restore the digest state.
+ *
+ * Conflicthop is set to the node whose cipher is going to output
+ * recognized=0. That is, the hop after conflicthop needs to receive
+ * the dummy cell.
+ */
+static int
+relay_try_all_crypts(cell_t *cell, circuit_t *circ, crypt_path_t *layer_hint,
+                     uint16_t recognized, crypt_path_t **conflicthop)
+{
+  crypt_path_t *thishop; /* counter for repeated crypts */
+  relay_header_t rh; /* to set/check 'recognized' */
+  crypto_digest_env_t *backup_digest=NULL;
+
+  backup_digest = crypto_digest_dup(layer_hint->f_digest);
+  relay_header_unpack(&rh, cell->payload);
+  rh.recognized = recognized;
+  relay_header_pack(cell->payload, &rh);
+  relay_set_digest(layer_hint->f_digest, cell);
+
+  *conflicthop = NULL;
+  thishop = layer_hint;
+
+  /* moving from farthest to nearest hop */
+  do {
+    assert(thishop);
+
+    log_fn(LOG_INFO,"crypting a layer of the relay cell.");
+    if(relay_crypt_one_payload(thishop->f_crypto, cell->payload, 1) < 0) {
+      crypto_free_digest_env(backup_digest);
+      return -1;
+    }
+
+    if(thishop != circ->cpath) {
+      /* if it's not the nearest hop, make sure it didn't accidentally
+       * encrypt recognized to 00. For the nearest hop it doesn't matter
+       * because it will be blindly decrypting whatever it gets. */
+      relay_header_unpack(&rh, cell->payload);
+//      if(rh.recognized == 0) {
+      if(rh.recognized < 10000) {
+        log_fn(LOG_INFO,"Found conflict");
+        *conflicthop = thishop;
+      }
+    }
+    thishop = thishop->prev;
+  } while (thishop != circ->cpath->prev);
+
+  if(*conflicthop) {
+    /* 1. Restore the old digest state */
+    crypto_digest_assign(layer_hint->f_digest, backup_digest);
+
+    /* 2. Restore old state for the ciphers that changed. */
+    thishop = layer_hint;
+    do {
+      log_fn(LOG_INFO,"Rewinding a cipher layer...");
+      crypto_cipher_rewind(thishop->f_crypto, CELL_PAYLOAD_SIZE);
+      thishop = thishop->prev;
+    } while (thishop != circ->cpath->prev);
+  }
+  /* else no conflict. success. */
+  crypto_free_digest_env(backup_digest);
+  return 0;
+}
+
+/*
+package a relay cell:
+  - if from AP: encrypt it to the right conn if 'recognized' doesn't
+    conflict, else insert dummies first as appropriate
+  - if from exit: encrypt it
+  - connection_or_write_cell_to_buf to the right conn
+*/
+int
+circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
+                           int cell_direction,
+                           crypt_path_t *layer_hint)
+{
+  connection_t *conn; /* where to send the cell */
+  crypt_path_t *conflicthop; /* for padding to prematurely recognized hops */
+  crypt_path_t *tmpconflicthop;
+  relay_header_t rh; /* to make the dummy cell */
+  /* backup cell and digest if we need to send a dummy instead */
+  cell_t backup_cell;
+
+  if(cell_direction == CELL_DIRECTION_OUT) {
+    conn = circ->n_conn;
+    if(!conn) {
+      log_fn(LOG_INFO,"outgoing relay cell has n_conn==NULL. Dropping.");
+      return 0; /* just drop it */
+    }
+
+    again:
+
+    /* copy cell in case we need to send a dummy relay cell instead */
+    memcpy(&backup_cell, cell, sizeof(cell_t));
+
+    log_fn(LOG_INFO,"Starting to crypt my relay cell.");
+    if(relay_try_all_crypts(cell, circ, layer_hint, 0, &conflicthop) < 0) {
+      log_fn(LOG_WARN,"relay_try_deliver_cell (1) failed. Closing.");
+      return -1;
+    }
+    if(conflicthop) {
+      log_fn(LOG_WARN,"'recognized' conflict found. Sending padding.");
+      /* 1a. build and set_digest a padding cell. */
+      cell->circ_id = backup_cell.circ_id;
+      cell->command = CELL_RELAY;
+      rh.command = RELAY_COMMAND_DROP;
+      rh.recognized = rh.stream_id = rh.integrity = rh.length = 0;
+      relay_header_pack(cell->payload, &rh);
+      memset(cell->payload+RELAY_HEADER_SIZE, 0, RELAY_PAYLOAD_SIZE);
+
+      /* if conflicthop is the last hop in the circuit... */
+      if(conflicthop == circ->cpath->prev ||
+         conflicthop->next->state == CPATH_STATE_CLOSED) {
+        log_fn(LOG_WARN,"Got a conflict at the end of the circuit, using recognized=1");
+        if(relay_try_all_crypts(cell, circ, conflicthop, 11257, &tmpconflicthop) < 0) {
+          log_fn(LOG_WARN,"relay_try_deliver_cell (2) failed. Closing.");
+          return -1;
+        }
+      } else {
+        log_fn(LOG_WARN,"Got a conflict inside the circuit, using recognized=0");
+        if(relay_try_all_crypts(cell, circ, conflicthop->next, 0, &tmpconflicthop) < 0) {
+          log_fn(LOG_WARN,"relay_try_deliver_cell (3) failed. Closing.");
+          return -1;
+        }
+      }
+
+      if(tmpconflicthop) { /* conflict with this one too?! */
+        log_fn(LOG_WARN,"Conflict with sending padding relay cell. Closing.");
+        return -1;
+      }
+
+      /* send it. */
+      ++stats_n_relay_cells_relayed;
+      connection_or_write_cell_to_buf(cell, conn);
+      log_fn(LOG_INFO,"Delivered my padding cell.");
+
+      /* 2. Restore the original relay cell */
+      memcpy(cell, &backup_cell, sizeof(cell_t));
+
+      /* 3. Try again. */
+      goto again;
+    }
+    /* no conflict, we succeeded. send it and be done. */
+  } else { /* incoming cell */
+    conn = circ->p_conn;
+    if(!conn) {
+      log_fn(LOG_INFO,"incoming relay cell has p_conn==NULL. Dropping.");
+      return 0; /* just drop it */
+    }
+    relay_set_digest(circ->p_digest, cell);
+    if(relay_crypt_one_payload(circ->p_crypto, cell->payload, 1) < 0)
+      return -1;
+  }
+  ++stats_n_relay_cells_relayed;
+  connection_or_write_cell_to_buf(cell, conn);
+  return 0;
+}
+
+static connection_t *
+relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
+{
   connection_t *tmpconn;
   relay_header_t rh;
 
@@ -916,7 +1074,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
      * it to a create cell and then send to hop */
     if(connection_edge_send_command(NULL, circ, RELAY_COMMAND_EXTEND,
                                payload, sizeof(payload), hop->prev) < 0)
-      return -1; /* circuit is closed */
+      return 0; /* circuit is closed */
 
     hop->state = CPATH_STATE_AWAITING_KEYS;
   }

@@ -168,16 +168,14 @@ static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
   }
 
   if(cell->circ_id == circ->p_circ_id) { /* it's an outgoing cell */
-    cell->circ_id = circ->n_circ_id; /* switch it */
-    if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_OUT, conn->cpath_layer) < 0) {
-      log_fn(LOG_WARN,"circuit_deliver_relay_cell (forward) failed. Closing.");
+    if(circuit_receive_relay_cell(cell, circ, CELL_DIRECTION_OUT) < 0) {
+      log_fn(LOG_WARN,"circuit_receive_relay_cell (forward) failed. Closing.");
       circuit_close(circ);
       return;
     }
   } else { /* it's an ingoing cell */
-    cell->circ_id = circ->p_circ_id; /* switch it */
-    if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_IN, NULL) < 0) {
-      log_fn(LOG_WARN,"circuit_deliver_relay_cell (backward) failed. Closing.");
+    if(circuit_receive_relay_cell(cell, circ, CELL_DIRECTION_IN) < 0) {
+      log_fn(LOG_WARN,"circuit_receive_relay_cell (backward) failed. Closing.");
       circuit_close(circ);
       return;
     }
