@@ -18,34 +18,6 @@ For scalability:
 
 For 0.0.8:
 
-      milestone 1:
-        o make all ORs serve the directory too.
-          o "AuthoritativeDir 1" for dirservers
-          o non-authorative servers with dirport publish opt dircacheport
-          o make clients read that and use it.
-          o make clients able to read a normal dirport from non-trusted OR too
-          o make ORs parse-and-keep-and-serve the directory they pull down
-          o authoritativedirservers should pull down directories from
-            other authdirservers, to merge descriptors.
-        . allow dirservers to serve running-router list separately.
-          o "get /running-routers" will fetch just this.
-          o actually make the clients use this sometimes.
-          o distinguish directory-is-dirty from runninglist-is-dirty
-          - ORs keep this too, and serve it
-          o Design: do we need running and non-running lists?
-        o tor remembers descriptor-lists across reboots.
-        . Packages define datadir as /var/lib/tor/. If no datadir is defined,
-          then choose, make, and secure ~/.tor as datadir.
-          o Adjust tor
-          o Change torrc.sample
-          D Change packages (not till 0.0.8 packages!)
-          o Look in ~/.torrc if no */etc/torrc is found.
-NICK      - Possible to get autoconf to easily install things into ~/.tor?
-        o Contact info, pgp fingerprint, comments in router desc.
-          o Add a ContactInfo line to torrc, which gets published in
-            descriptor (as opt)
-        o write tor version at the top of each log file
-
       milestone 2:
         . refer to things by key:
           o extend cells need ip:port:identitykeyhash.
@@ -104,13 +76,8 @@ NICK    - Reputation info needs to give better weight to recent events than
         o get contrib/tor_resolve into the tarball and installed
           - and working
 
-      for pre1:
-        o 0.0.8 ORs should use identity key for 0.0.7 ORs sometimes but
-          not always?
-        o we should publish advertised_bandwidth in descriptor
-        o bug: 0.0.8 OPs can't extend from an 0.0.7 OR to an 0.0.8 OR
-
       post pre1:
+        - Possible to get autoconf to easily install things into ~/.tor?
         - when we sigint tor, the dns/cpuworkers don't intercept sigint?
         - "AcceptOnlyVerifiedRouters" config option?
         - why does common/util.c build-depend on or/or.h ?
@@ -130,16 +97,32 @@ NICK    - Reputation info needs to give better weight to recent events than
           ORAddress:port. Same with DirPort, SocksPort.
         - requiredentrynode vs preferredentrynode
         - per-month byte allowances
-        - if using not-socks4a then warn, once.
-        - if unverified server then warn, once.
+        o if using not-socks4a then warn, once.
+        o if unverified server then warn, once.
         - add a listener for a ui
           - and a basic gui
         - faq and doc-wiki
           - knoppix distro
           - win32 installer using privoxy's installer
-        - win32 problems with pre1
-        - asn.1 issues?
-
+        o win32 problems with pre1
+        . asn.1 issues?
+        o Switch dirservers entries to config lines:
+          - read in and parse each TrustedDir config line.
+          - stop reading dirservers file.
+          - add some default TrustedDir lines if none defined, or if
+            no torrc.
+          - remove notion of ->is_trusted_dir from the routerlist. that's
+            no longer where you look.
+            - clean up router parsing flow, since it's simpler now?
+          - when checking signature on a directory, look it up in
+            options.TrustedDirs, and make sure there's a descriptor
+            with that nickname, whose key hashes to the fingerprint,
+            and who correctly signed the directory.
+          - when fetching a directory, if you want a trusted one,
+            choose from the trusteddir list.
+            - which means keeping track of which ones are "up"
+          - if you don't need a trusted one, choose from the routerinfo
+            list if you have one, else from the trusteddir list.
 
 
       ongoing:
