@@ -1485,7 +1485,14 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     cell.command = CELL_CREATE;
     cell.circ_id = circ->n_circ_id;
 
-    if(onion_skin_create(circ->n_conn->onion_pkey,
+    router = router_get_by_nickname(circ->n_conn->nickname);
+    if (!router) {
+      log_fn(LOG_WARN,"Couldn't find routerinfo for %s",
+             circ->n_conn->nickname);
+      return -1;
+    }
+
+    if(onion_skin_create(router->onion_pkey,
                          &(circ->cpath->handshake_state),
                          cell.payload) < 0) {
       log_fn(LOG_WARN,"onion_skin_create (first hop) failed.");

@@ -383,7 +383,6 @@ struct connection_t {
   char *address; /* FQDN (or IP) of the guy on the other end.
                   * strdup into this, because free_connection frees it
                   */
-  crypto_pk_env_t *onion_pkey; /* public RSA key for the other side's onions */
   crypto_pk_env_t *identity_pkey; /* public RSA key for the other side's signing */
   char *nickname;
 

@@ -402,8 +402,9 @@ static int count_acceptable_routers(smartlist_t *routers) {
 
   n = smartlist_len(routers);
   for(i=0;i<n;i++) {
-    log_fn(LOG_DEBUG,"Contemplating whether router %d is a new option...",i);
     r = smartlist_get(routers, i);
+    log_fn(LOG_DEBUG,"Contemplating whether router %d (%s) is a new option...",
+           i, r->nickname);
     if(r->is_running == 0) {
       log_fn(LOG_DEBUG,"Nope, the directory says %d is not running.",i);
       goto next_i_loop;
@@ -426,7 +427,7 @@ static int count_acceptable_routers(smartlist_t *routers) {
     num++;
     log_fn(LOG_DEBUG,"I like %d. num_acceptable_routers now %d.",i, num);
     next_i_loop:
-      ; /* our compiler may need an explicit statement after the label */
+      ; /* C requires an explicit statement after the label */
   }
 
   return num;

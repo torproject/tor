@@ -73,6 +73,7 @@ void rotate_onion_key(void)
     crypto_free_pk_env(lastonionkey);
   /* XXXX WINDOWS on windows, we need to protect this next bit with a lock.
    */
+  log_fn(LOG_INFO, "Rotating onion key");
   lastonionkey = onionkey;
   set_onion_key(prkey);
   return;

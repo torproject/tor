@@ -114,8 +114,6 @@ void connection_free(connection_t *conn) {
       tor_tls_free(conn->tls);
   }
 
-  if (conn->onion_pkey)
-    crypto_free_pk_env(conn->onion_pkey);
   if (conn->identity_pkey)
     crypto_free_pk_env(conn->identity_pkey);
   tor_free(conn->nickname);
@@ -819,7 +817,7 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
     conn = carray[i];
     assert(conn);
     if(connection_state_is_open(conn) &&
-       !crypto_pk_cmp_keys(conn->onion_pkey, router->onion_pkey)) {
+       !crypto_pk_cmp_keys(conn->identity_pkey, router->identity_pkey)) {
       log(LOG_DEBUG,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
       return conn;
     }
