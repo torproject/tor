@@ -47,6 +47,10 @@ If the quickstart doesn't work for you:
     ./configure
   rather than simply ./configure.
 
+  If you have mysterious autoconf failures while linking openssl,
+  consider setting your LD_LIBRARY_PATH to the openssl lib directory.
+  For example, "setenv LD_LIBRARY_PATH /usr/athena/lib".
+
   Check out the list archives at http://archives.seul.org/or/dev/ and see
   if somebody else has reported your problem. If not, please subscribe
   and let us know what you did to fix it, or give us the details and
