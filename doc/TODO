@@ -11,32 +11,64 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-For 0.0.7:
-        o allow multiple log files
-        o *bindaddress
-          o include the port
-          o allow multiple of them
-          o have an allow/deny series for socks
-        o break exitpolicy into multiple config lines
-        o have the OP forget routers it hasn't heard about in 24 hours
-        D try to break apart the main clump of functions better.
-        o rend_services_introduce should check if it's failed a lot
-          recently, and not try for a while if so
-        o check tor version as soon as you get the recommended-versions
-          string, regardless of whether parsing the directory succeeded.
-NICK    o Check directory signature based on signer ID, not on who
-          we got it from
-ARMA    o Increase all the scalability constants
-
 For scalability:
         - Slightly smarter bandwidth management: use link capacity
           intelligently.
         - Handle full buffers without totally borking
 
-For 0.0.8:
-NICK    . rename/rearrange functions for what file they're in
-ARMA    - make all ORs serve the directory too.
+For dtor:
+        . rename/rearrange functions for what file they're in
+        - make all ORs serve the directory too.
+          - servers publish opt dircacheport
+          - make clients read that and use it.
+          - make clients able to read a normal dirport from non-trusted OR too
+          - "AuthoritativeDir 1" for dirservers
+          - make ORs parse-and-keep the directory they pull down
+          - authoritativedirservers should pull down directories from
+            other authdirservers, to merge descriptors.
+        - users can set their bandwidth, or we auto-detect it:
+          - advertised bandwidth defaults to 10KB
+          - advertised bandwidth is the min of max seen in each direction
+            in the past N seconds.
+          - not counting "local" connections
+          - round detected bandwidth up to nearest 10KB
+        - client software not upload descriptor until:
+          - you've been running for an hour
+          - it's sufficiently satisfied with its bandwidth
+          - it decides it is reachable
+          - start counting again if your IP ever changes.
+          - never regenerate identity keys, for now.
+          - you can set a bit for not-being-an-OR.
+        - clients choose nodes proportional to advertised bandwidth
+        - authdirserver includes descriptor and lists as running iff:
+          - he can connect to you
+          - he has successfully extended to you
+          - he has sufficient mean-time-between-failures
+        - Have clients and dirservers preserve reputation info over
+          reboots.
+        - nickname defaults to first piece of hostname
+        - running-routers list refers to nickname if verified, else
+          hash-base64'ed.
+        - allow dirservers to server running-router list separately.
+          - "get /running-routers" will fetch just this.
+        - tor remembers descriptor-lists across reboots.
+        - Packages define datadir as /var/lib/tor/. If no datadir is defined,
+          then choose, make, and secure ~/.tor as datadir.
+        - refer to things by key:
+          - extend cells need ip:port:identitykeyhash.
+          - also use this in intro points and rendezvous points, and
+            hidserv descs.
+          - figure out what to do about ip:port:differentkey
+        - ORs connect on demand. attach circuits to new connections, keep
+          create cells around somewhere, send destroy if fail.
+        - add new "RelayOnly 1" config variable?
+          - if torrc not found, exitpolicy reject *:*
         - Contact info, pgp fingerprint, comments in router desc.
+          - Add a ContactInfo line to torrc, which gets published in
+            descriptor (as opt)
+        - write tor version at the top of each log file
+        - generalize our transport: add transport.c in preparation for
+          http, airhook, etc transport.
 
 For September:
 NICK    . Windows port
@@ -51,17 +83,17 @@ NICK    . Windows port
 
         - Docs
           - FAQ
-          - overview of tor. how does it work, what's it do, pros and
+          o overview of tor. how does it work, what's it do, pros and
             cons of using it, why should I use it, etc.
           - a howto tutorial with examples
-          - tutorial: how to set up your own tor network
+          o tutorial: how to set up your own tor network
             - (need to not hardcode dirservers file in config.c)
           . correct, update, polish spec
           - document the exposed function api?
           - document what we mean by socks.
 
-NICK    - packages
-          - rpm
+NICK    . packages
+          . rpm
           - find a long-term rpm maintainer
 
         - code
@@ -103,7 +135,7 @@ Other details and small and hard things:
         . Scrubbing proxies
                 - Find an smtp proxy?
                 . Get socks4a support into Mozilla
-        - Extend by nickname/hostname/something, not by IP.
+        X Extend by nickname/hostname/something, not by IP.
         - Need a relay teardown cell, separate from one-way ends.
         - Make it harder to circumvent bandwidth caps: look at number of bytes
           sent across sockets, not number sent inside TLS stream.
@@ -151,7 +183,7 @@ Tor scalability:
   Let dissidents get to Tor servers via Tor users. ("Backbone model")
 
 Anonymity improvements:
-  Is abandonding the circuit the only option when an extend fails, or
+  Is abandoning the circuit the only option when an extend fails, or
     can we do something without impacting anonymity too much?
   Is exiting from the middle of the circuit always a bad idea?
   Helper nodes. Decide how to use them to improve safety.
