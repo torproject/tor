@@ -5,7 +5,9 @@
 /**
  * \file hibernate.c
  * \brief Functions to close listeners, stop allowing new circuits,
- * etc in preparation for closing down or going dormant.
+ * etc in preparation for closing down or going dormant; and to track
+ * bandwidth and time intervals to know when to hibernate and when to
+ * stop hibernating.
  **/
 
 /*

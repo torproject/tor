@@ -105,7 +105,7 @@ static config_var_t config_vars[] = {
   VAR("ExitPolicy",          LINELIST, ExitPolicy,           NULL),
   VAR("ExcludeNodes",        STRING,   ExcludeNodes,         NULL),
   VAR("FascistFirewall",     BOOL,     FascistFirewall,      "0"),
-  VAR("FirewallPorts",       CSV,      FirewallPorts,        NULL),
+  VAR("FirewallPorts",       CSV,      FirewallPorts,        "80,443"),
   VAR("MyFamily",            STRING,   MyFamily,             NULL),
   VAR("NodeFamily",          LINELIST, NodeFamilies,         NULL),
   VAR("Group",               STRING,   Group,                NULL),
@@ -829,17 +829,6 @@ static int check_nickname_list(const char *lst, const char *name)
   SMARTLIST_FOREACH(sl, char *, s, tor_free(s));
   smartlist_free(sl);
   return r;
-}
-
-smartlist_t *config_get_default_firewallports(void) {
-  static smartlist_t *answer;
-
-  if(!answer) {
-    answer = smartlist_create();
-    smartlist_add(answer, tor_strdup("80"));
-    smartlist_add(answer, tor_strdup("443"));
-  }
-  return answer;
 }
 
 static int

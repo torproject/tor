@@ -1144,8 +1144,7 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
     for(i=0; i < smartlist_len(rl->routers); i++) {
       r = smartlist_get(rl->routers, i);
       tor_snprintf(buf, sizeof(buf), "%d", r->or_port);
-      if (!smartlist_string_isin(options.FirewallPorts ?
-          options.FirewallPorts : config_get_default_firewallports(), buf))
+      if (!smartlist_string_isin(options.FirewallPorts, buf))
          smartlist_add(excluded, r);
     }
   }
