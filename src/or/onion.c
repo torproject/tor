@@ -363,6 +363,7 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
       log_fn(LOG_WARN,"unhandled purpose %d", purpose);
       assert(0);
   }
+  return NULL; /* never reached */
 }
 
 cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
