@@ -46,8 +46,8 @@ typedef struct crypto_digest_env_t crypto_digest_env_t;
 typedef struct crypto_dh_env_t crypto_dh_env_t;
 
 /* global state */
-int crypto_global_init();
-int crypto_global_cleanup();
+int crypto_global_init(void);
+int crypto_global_cleanup(void);
 
 /* environment setup */
 crypto_pk_env_t *crypto_new_pk_env(void);
@@ -100,7 +100,7 @@ void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 /* Key negotiation */
-crypto_dh_env_t *crypto_dh_new();
+crypto_dh_env_t *crypto_dh_new(void);
 int crypto_dh_get_bytes(crypto_dh_env_t *dh);
 int crypto_dh_generate_public(crypto_dh_env_t *dh);
 int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey_out,
@@ -129,7 +129,7 @@ crypto_cipher_env_t *crypto_create_init_cipher(const char *key, int encrypt_mode
 
 /* SHA-1 */
 int crypto_digest(const unsigned char *m, int len, unsigned char *digest);
-crypto_digest_env_t *crypto_new_digest_env();
+crypto_digest_env_t *crypto_new_digest_env(void);
 void crypto_free_digest_env(crypto_digest_env_t *digest);
 void crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
                              size_t len);
@@ -140,7 +140,7 @@ void crypto_digest_assign(crypto_digest_env_t *into,
                           const crypto_digest_env_t *from);
 
 /* random numbers */
-int crypto_seed_rng();
+int crypto_seed_rng(void);
 int crypto_rand(unsigned int n, unsigned char *to);
 void crypto_pseudo_rand(unsigned int n, unsigned char *to);
 int crypto_pseudo_rand_int(unsigned int max);

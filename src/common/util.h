@@ -140,7 +140,7 @@ const char *hex_str(const char *from, size_t fromlen);
 /** Generic resizeable array. */
 typedef struct smartlist_t smartlist_t;
 
-smartlist_t *smartlist_create();
+smartlist_t *smartlist_create(void);
 void smartlist_free(smartlist_t *sl);
 void smartlist_set_capacity(smartlist_t *sl, int n);
 void smartlist_clear(smartlist_t *sl);
@@ -234,7 +234,7 @@ char *expand_filename(const char *filename);
 int replace_file(const char *from, const char *to);
 
 int spawn_func(int (*func)(void *), void *data);
-void spawn_exit();
+void spawn_exit(void);
 
 /* Because we use threads instead of processes on Windows, we need locking on Windows.
  * On Unixy platforms, these functions are no-ops. */

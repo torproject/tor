@@ -44,7 +44,7 @@ dump_hex(char *s, size_t len)
 static char temp_dir[256];
 
 void
-setup_directory()
+setup_directory(void)
 {
   static int is_setup = 0;
   int r;
@@ -74,7 +74,7 @@ get_fname(const char *name)
 }
 
 void
-remove_directory()
+remove_directory(void)
 {
   DIR *dirp;
   struct dirent *de;
@@ -98,7 +98,7 @@ remove_directory()
 }
 
 void
-test_buffers() {
+test_buffers(void) {
 #define MAX_BUF_SIZE 1024*1024
   char str[256];
   char str2[256];
@@ -224,7 +224,7 @@ test_buffers() {
 }
 
 void
-test_crypto_dh()
+test_crypto_dh(void)
 {
   crypto_dh_env_t *dh1, *dh2;
   char p1[DH_BYTES];
@@ -259,7 +259,7 @@ test_crypto_dh()
 }
 
 void
-test_crypto()
+test_crypto(void)
 {
   crypto_cipher_env_t *env1, *env2;
   crypto_pk_env_t *pk1, *pk2;
@@ -495,7 +495,7 @@ test_crypto()
 }
 
 void
-test_util() {
+test_util(void) {
   struct timeval start, end;
   struct tm a_time;
   smartlist_t *sl;
@@ -695,7 +695,8 @@ test_util() {
 }
 
 void
-test_gzip() {
+test_gzip(void)
+{
   char *buf1, *buf2=NULL, *buf3=NULL;
   size_t len1, len2;
 
@@ -740,7 +741,8 @@ static void* _squareAndRemoveK4(const char *key, void*val, void *data)
   return (void*)(v*v);
 }
 
-void test_strmap() {
+void test_strmap(void)
+{
   strmap_t *map;
   strmap_iter_t *iter;
   const char *k;
@@ -813,7 +815,8 @@ void test_strmap() {
   strmap_free(map,NULL);
 }
 
-void test_onion() {
+void test_onion(void)
+{
 #if 0
   char **names;
   int i,num;
@@ -831,7 +834,8 @@ void test_onion() {
 }
 
 void
-test_onion_handshake() {
+test_onion_handshake(void)
+{
   /* client-side */
   crypto_dh_env_t *c_dh = NULL;
   char c_buf[ONIONSKIN_CHALLENGE_LEN];
@@ -876,7 +880,7 @@ test_onion_handshake() {
 int is_obsolete_version(const char *myversion, const char *start);
 
 void
-test_dir_format()
+test_dir_format(void)
 {
   char buf[8192], buf2[8192];
   char platform[256];
@@ -1124,7 +1128,7 @@ test_dir_format()
 
 }
 
-void test_rend_fns()
+void test_rend_fns(void)
 {
   char address1[] = "fooaddress.onion";
   char address2[] = "aaaaaaaaaaaaaaaa.onion";

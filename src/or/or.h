@@ -948,7 +948,7 @@ struct socks_request_t {
 
 /********************************* buffers.c ***************************/
 
-buf_t *buf_new();
+buf_t *buf_new(void);
 buf_t *buf_new_with_capacity(size_t size);
 void buf_free(buf_t *buf);
 void buf_clear(buf_t *buf);
@@ -1207,11 +1207,11 @@ int connection_dir_finished_connecting(connection_t *conn);
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_parse_fingerprint_file(const char *fname);
 int dirserv_router_fingerprint_is_known(const routerinfo_t *router);
-void dirserv_free_fingerprint_list();
+void dirserv_free_fingerprint_list(void);
 const char *dirserv_get_nickname_by_digest(const char *digest);
 int dirserv_add_descriptor(const char **desc);
 int dirserv_load_from_directory_string(const char *dir);
-void dirserv_free_descriptors();
+void dirserv_free_descriptors(void);
 void dirserv_remove_old_servers(int age);
 int dirserv_dump_directory_to_string(char *s, size_t maxlen,
                                      crypto_pk_env_t *private_key);
