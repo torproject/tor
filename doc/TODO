@@ -45,13 +45,20 @@ R  - Reset uptime when IP/ORPort/... changes.
 
  Functionality
 N  . Implement pending controller features.
-    - Stubs for new functions.
-    - GETINFO
-      - Version
-      - Descriptors
-      - List of address mappings
-    - POSTDESCRIPTOR
-    - MAPADDRESS
+    o Stubs for new functions.
+    . GETINFO
+      o Version
+      o Descriptor list
+      o Individual descriptors
+        o Need to remember descriptors for all routers.
+        o Replace everything else that remembers serverdescs with
+          routerinfo.
+      - List of address mappings (all, or mapaddress+config,
+                                  or just mapadddress?)
+    o POSTDESCRIPTOR
+    . MAPADDRESS
+      o Map A->B.
+      - Map DontCare->B.
     - Event for "new descriptors"
     - Better streams IDs
     - EXTENDCIRCUIT <depends on revised circ selection stuff.>
