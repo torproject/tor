@@ -459,10 +459,6 @@ SSH.
 Similarly, Tor does not currently integrate
 tunneling for non-stream-based protocols like UDP; this too must be
 provided by an external service.
-% Actually, tunneling udp over tcp is probably horrible for some apps.
-% Should this get its own non-goal bulletpoint? The motivation for
-% non-goal-ness would be burden on clients / portability. -RD
-% No, leave it as is. -RD
 
 \textbf{Not steganographic:} Tor does not try to conceal which users are
 sending or receiving communications; it only tries to conceal with whom
@@ -534,8 +530,6 @@ establish paths (called \emph{virtual circuits}) across the network,
 and handle connections from user applications.  These onion proxies accept
 TCP streams and multiplex them across the virtual circuit. The onion
 router on the other side 
-% I don't mean other side, I mean wherever it is on the circuit. But
-% don't want to introduce complexity this early? Hm. -RD
 of the circuit connects to the destinations of
 the TCP streams and relays data.
 
@@ -558,6 +552,7 @@ built, extended, truncated, and destroyed. Section~\ref{subsec:tcp}
 describes how TCP streams are routed through the network, and finally
 Section~\ref{subsec:congestion} talks about congestion control and
 fairness issues.
+% NICK
 % XXX \ref{subsec:integrity-checking} is missing
 % XXX \ref{xubsec:rate-limit is missing.
 
@@ -708,8 +703,6 @@ corresponds to an open stream at this OR for the circuit, or because
 it is equal to the control streamID (zero).  If the OR recognizes the
 streamID, it accepts the relay cell and processes it as described
 below.  Otherwise, 
-%the relay cell must be intended for another OR on
-%the circuit.  In this case, 
 the OR looks up the circID and OR for the
 next step in the circuit, replaces the circID as appropriate, and
 sends the decrypted relay cell to the next OR.  (If the OR at the end
@@ -756,9 +749,6 @@ truncate} cell to a single OR on the circuit. That node then sends a
 \emph{relay truncated} cell. Alice can then extend the circuit to
 different nodes, all without signaling to the intermediate nodes (or
 somebody observing them) that she has changed her circuit.
-%---because
-%nodes in the middle of a circuit see only the encrypted relay cells,
-%they are not even aware that the circuit has been truncated.
 Similarly, if a node on the circuit goes down, the adjacent
 node can send a \emph{relay truncated} cell back to Alice.  Thus the
 ``break a node and see which circuits go down'' attack
@@ -877,13 +867,6 @@ receive a bad hash.
 Volunteers are generally more willing to run services that can limit
 their bandwidth usage. To accommodate them, Tor servers use a
 token bucket approach \cite{tannenbaum96} to 
-%limit the number of bytes they receive.
-%Tokens are added to the bucket each second; when the bucket is
-%full, new tokens are discarded. Each token represents permission to
-%accept one byte from the network---to accept a byte, the connection
-%must remove a token from the bucket. Thus if the bucket is empty, that
-%connection must wait until more tokens arrive. The number of tokens we
-%add 
 enforce a long-term average rate of incoming bytes, while still
 permitting short-term bursts above the allowed bandwidth. Current bucket
 sizes are set to ten seconds' worth of traffic.
@@ -899,20 +882,10 @@ sizes are set to ten seconds' worth of traffic.
 Because the Tor protocol generates roughly the same number of outgoing
 bytes as incoming bytes, it is sufficient in practice to limit only
 incoming bytes.
-% Is it?  Fun attack: I send you lots of 1-byte-at-a-time TCP segments.
-% In response, you send lots of 256 byte cells.  Can I use this to 
-% make you exceed your outgoing bandwidth limit by a factor of 256? -NM
-% Can we resolve this by, when reading from edge connections, rounding up
-% the bytes read (wrt buckets) to the nearest multiple of 256? -RD
-% How's this? -NM
 With TCP streams, however, the correspondence is not one-to-one:
 relaying a single incoming byte can require an entire 256-byte cell.
 (We can't just wait for more bytes, because the local application may
-be waiting for a reply.)
-%(If we waited too long for more bytes to fill the cell, we might stall
-%the protocol while the local application waits for a response to the
-%byte we never deliver.)
-Therefore, we treat this case as if the entire
+be waiting for a reply.) Therefore, we treat this case as if the entire
 cell size had been read, regardless of the fullness of the cell.
 
 Further, inspired by Rennhard et al's design in \cite{anonnet}, a
@@ -1327,7 +1300,6 @@ to selected users for consulting the DHT\@. All of these approaches
 have the advantage of limiting the damage that can be done even if
 some of the selected high-priority users collude in the DoS\@.
 
-
 \SubSection{Integration with user applications}
 
 Bob configures his onion proxy to know the local IP address and port of his
@@ -1453,10 +1425,12 @@ current evidence of their practicality.}
 
 \subsubsection*{Active attacks}
 
-\emph{Compromise keys.} An attacker who learns the TLS session key can see
-the (still encrypted) relay cells on that circuit; learning the circuit
+\emph{Compromise keys.} An attacker who learns the TLS session key can
+see control cells and encrypted relay cells on every circuit on that
+connection; learning a circuit
 session key lets him unwrap one layer of the encryption. An attacker
-who learns an OR's TLS private key can impersonate that OR, but he must
+who learns an OR's TLS private key can impersonate that OR for the TLS
+key's lifetime, but he must
 also learn the onion key to decrypt \emph{create} cells (and because of
 perfect forward secrecy, he cannot hijack already established circuits
 without also compromising their session keys). Periodic key rotation
@@ -1866,11 +1840,14 @@ issues remaining to be ironed out. In particular:
 deployability has led us to adopt a clique topology, a
 semi-centralized model for directories and trusts, and a
 full-network-visibility model for client knowledge.  None of these
-properties will scale to more than a few hundred servers, at most.
+properties will scale to more than a few hundred servers.
 Promising approaches to better scalability exist (see
 Section~\ref{sec:maintaining-anonymity}), but more deployment
 experience would be helpful in learning the relative importance of
 these bottlenecks.
+
+\emph{Incentives:} Volunteers may want to run nodes for publicity
+or better anonymity \cite{econymics}. 
 
 \emph{Cover traffic:} Currently we avoid cover traffic because
 whereas its costs in performance and bandwidth are clear, and because its
@@ -1902,7 +1879,7 @@ becomes more widely deployed, more people will examine its
 specification.
 
 \emph{Multisystem interoperability:} We are currently working with the
-designers of MorphMix to make the common elements of our two systems
+designer of MorphMix to make the common elements of our two systems
 share a common specification and implementation. So far, this seems
 to be relatively straightforward.  Interoperability will allow testing
 and direct comparison of the two designs for trust and scalability.
