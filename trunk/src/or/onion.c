@@ -59,6 +59,7 @@ int onion_pending_add(circuit_t *circ) {
 }
 
 circuit_t *onion_next_task(void) {
+  circuit_t *circ;
 
   if(!ol_list)
     return NULL; /* no onions pending, we're done */
@@ -71,7 +72,9 @@ circuit_t *onion_next_task(void) {
   }
 
   assert(ol_length > 0);
-  return ol_list->circ;
+  circ = ol_list->circ;
+  onion_pending_remove(ol_list->circ);
+  return circ;
 }
 
 /* go through ol_list, find the onion_queue_t element which points to
@@ -95,7 +98,7 @@ void onion_pending_remove(circuit_t *circ) {
   } else { /* we need to hunt through the rest of the list */
     for( ;tmpo->next && tmpo->next->circ != circ; tmpo=tmpo->next) ;
     if(!tmpo->next) {
-      log(LOG_WARNING,"onion_pending_remove(): circ (p_aci %d), not in list!",circ->p_aci);
+      log_fn(LOG_DEBUG,"circ (p_aci %d) not in list, probably at cpuworker.",circ->p_aci);
       return;
     }
     /* now we know tmpo->next->circ == circ */
