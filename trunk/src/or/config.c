@@ -298,6 +298,14 @@ const char default_dirservers_string[] =
 "-----END SIGNATURE-----\n"
 ;
 
+int config_assign_default_dirservers(void) {
+  if(router_set_routerlist_from_string(default_dirservers_string) < 0) {
+    log_fn(LOG_WARN,"Bug: the default dirservers internal string is corrupt.");
+    return -1;
+  }
+  return 0;
+}
+
 /* Call this function when they're using the default torrc but
  * we can't find it. For now, just hard-code what comes in the
  * default torrc.
@@ -308,16 +316,13 @@ static int config_assign_default(or_options_t *options) {
   options->SocksPort = 9050;
 
   /* plus give them a dirservers file */
-  if(router_set_routerlist_from_string(default_dirservers_string) < 0) {
-    log_fn(LOG_WARN,"Bug: the default dirservers internal string is corrupt.");
+  if(config_assign_default_dirservers() < 0)
     return -1;
-  }
-
   return 0;
 }
 
 /* prints the usage of tor. */
-void print_usage(void) {
+static void print_usage(void) {
   printf("tor -f <torrc> [args]\n"
          "See man page for more options.\n\n"
          "-b <bandwidth>\t\tbytes/second rate limiting\n"
@@ -336,7 +341,7 @@ void print_usage(void) {
          );
 }
 
-void free_options(or_options_t *options) {
+static void free_options(or_options_t *options) {
   tor_free(options->LogLevel);
   tor_free(options->LogFile);
   tor_free(options->DebugLogFile);
@@ -357,7 +362,7 @@ void free_options(or_options_t *options) {
   tor_free(options->Group);
 }
 
-void init_options(or_options_t *options) {
+static void init_options(or_options_t *options) {
 /* give reasonable values for each option. Defaults to zero. */
   memset(options,0,sizeof(or_options_t));
   options->LogLevel = tor_strdup("warn");
