@@ -338,8 +338,6 @@ static void run_connection_housekeeping(int i, time_t now) {
  */
 static void run_scheduled_events(time_t now) {
   static long time_to_fetch_directory = 0;
-  static long time_to_new_circuit = 0;
-  circuit_t *circ;
   int i;
 
   /* 1. Every DirFetchPostPeriod seconds, we get a new directory and upload
@@ -388,49 +386,19 @@ static void run_scheduled_events(time_t now) {
    *    and we make a new circ if there are no clean circuits.
    */
   if(has_fetched_directory &&
-     (options.SocksPort || options.RunTesting)) {
+     (options.SocksPort || options.RunTesting))
+    circuit_build_needed_circs(now);
 
-    if (options.SocksPort)
-      /* launch a new circ for any pending streams that need one */
-      connection_ap_attach_pending();
-
-/* Build a new test circuit every 5 minutes */
-#define TESTING_CIRCUIT_INTERVAL 300
-
-    circ = circuit_get_best(NULL, 1, CIRCUIT_PURPOSE_C_GENERAL);
-    if(time_to_new_circuit < now) {
-      client_dns_clean();
-      circuit_expire_unused_circuits();
-      circuit_reset_failure_count();
-      if(circ && circ->timestamp_dirty) {
-        log_fn(LOG_INFO,"Youngest circuit dirty; launching replacement.");
-        /* make a new circuit */
-        circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
-      } else if (options.RunTesting && circ &&
-                 circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
-        log_fn(LOG_INFO,"Creating a new testing circuit.");
-        circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
-      }
-      time_to_new_circuit = now + options.NewCircuitPeriod;
-    }
-#define CIRCUIT_MIN_BUILDING 3
-    if(!circ && circuit_count_building() < CIRCUIT_MIN_BUILDING) {
-      /* if there's no open circ, and less than 3 are on the way,
-       * go ahead and try another.
-       */
-      circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
-    }
-  }
-
-  /* 5. We do housekeeping for each connection... */
+  /* 4. We do housekeeping for each connection... */
   for(i=0;i<nfds;i++) {
     run_connection_housekeeping(i, now);
   }
 
-  /* 6. And remove any marked circuits... */
+  /* 5. And remove any marked circuits... */
   circuit_close_all_marked();
 
-  /* 7. and blow away any connections that need to die. can't do this later
+#if 0
+  /* 6. and blow away any connections that need to die. can't do this later
    * because we might open up a circuit and not realize we're about to cull
    * the connection it's running over.
    * XXX we can remove this step once we audit circuit-building to make sure
@@ -438,6 +406,7 @@ static void run_scheduled_events(time_t now) {
    */
   for(i=0;i<nfds;i++)
     conn_close_if_marked(i);
+#endif
 }
 
 static int prepare_for_poll(void) {

@@ -716,6 +716,7 @@ circuit_t *circuit_get_rendezvous(const char *cookie);
 void circuit_expire_building(void);
 int circuit_count_building(void);
 int circuit_stream_is_being_handled(connection_t *conn);
+void circuit_build_needed_circs(time_t now);
 
 int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction);
