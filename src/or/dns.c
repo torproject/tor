@@ -547,7 +547,8 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
 
 /** Write handler: called when we've pushed a request to a dnsworker. */
 int connection_dns_finished_flushing(connection_t *conn) {
-  tor_assert(conn && conn->type == CONN_TYPE_DNSWORKER);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_DNSWORKER);
   connection_stop_writing(conn);
   return 0;
 }
@@ -560,7 +561,8 @@ int connection_dns_process_inbuf(connection_t *conn) {
   char success;
   uint32_t addr;
 
-  tor_assert(conn && conn->type == CONN_TYPE_DNSWORKER);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_DNSWORKER);
 
   if(conn->inbuf_reached_eof) {
     log_fn(LOG_WARN,"Read eof. Worker died unexpectedly.");

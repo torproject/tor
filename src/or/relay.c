@@ -139,8 +139,10 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
   crypt_path_t *layer_hint=NULL;
   char recognized=0;
 
-  tor_assert(cell && circ);
-  tor_assert(cell_direction == CELL_DIRECTION_OUT || cell_direction == CELL_DIRECTION_IN);
+  tor_assert(cell);
+  tor_assert(circ);
+  tor_assert(cell_direction == CELL_DIRECTION_OUT ||
+             cell_direction == CELL_DIRECTION_IN);
   if (circ->marked_for_close)
     return 0;
 
@@ -224,8 +226,11 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
   crypt_path_t *thishop;
   relay_header_t rh;
 
-  tor_assert(circ && cell && recognized);
-  tor_assert(cell_direction == CELL_DIRECTION_IN || cell_direction == CELL_DIRECTION_OUT);
+  tor_assert(circ);
+  tor_assert(cell);
+  tor_assert(recognized);
+  tor_assert(cell_direction == CELL_DIRECTION_IN ||
+             cell_direction == CELL_DIRECTION_OUT);
 
   if(cell_direction == CELL_DIRECTION_IN) {
     if(CIRCUIT_IS_ORIGIN(circ)) { /* We're at the beginning of the circuit.
@@ -642,7 +647,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   static int num_seen=0;
   relay_header_t rh;
 
-  tor_assert(cell && circ);
+  tor_assert(cell);
+  tor_assert(circ);
 
   relay_header_unpack(&rh, cell->payload);
 //  log_fn(LOG_DEBUG,"command %d stream %d", rh.command, rh.stream_id);

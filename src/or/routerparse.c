@@ -388,8 +388,8 @@ router_parse_routerlist_from_directory(const char *str,
     goto err;
   }
   if (tok->n_args > 1) {
-    log_fn(LOG_WARN, "Invalid recommended-software line");goto err;
-           
+    log_fn(LOG_WARN, "Invalid recommended-software line");
+    goto err;
   }
   versions = tok->n_args ? tor_strdup(tok->args[0]) : tor_strdup("");
 
@@ -681,7 +681,8 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
   smartlist_t *routers;
   const char *end;
 
-  tor_assert(s && *s);
+  tor_assert(s);
+  tor_assert(*s);
 
   routers = smartlist_create();
 
@@ -848,7 +849,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   }
   tor_assert(tok->n_args == 1);
   if (parse_iso_time(tok->args[0], &router->published_on) < 0)
-          goto err;
+    goto err;
 
   if (!(tok = find_first_by_keyword(tokens, K_ONION_KEY))) {
     log_fn(LOG_WARN, "Missing onion key"); goto err;
@@ -1421,7 +1422,8 @@ int tor_version_parse(const char *s, tor_version_t *out)
   /* Format is:
    *   NUM dot NUM dot NUM [ ( pre | rc | dot ) NUM [ -cvs ] ]
    */
-  tor_assert(s && out);
+  tor_assert(s);
+  tor_assert(out);
   memset(out, 0, sizeof(tor_version_t));
 
   /* Get major. */
@@ -1481,7 +1483,8 @@ int tor_version_parse(const char *s, tor_version_t *out)
 int tor_version_compare(tor_version_t *a, tor_version_t *b)
 {
   int i;
-  tor_assert(a && b);
+  tor_assert(a);
+  tor_assert(b);
   if ((i = a->major - b->major))
     return i;
   else if ((i = a->minor - b->minor))

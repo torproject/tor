@@ -331,7 +331,8 @@ void circuit_build_needed_circs(time_t now) {
 void circuit_detach_stream(circuit_t *circ, connection_t *conn) {
   connection_t *prevconn;
 
-  tor_assert(circ && conn);
+  tor_assert(circ);
+  tor_assert(conn);
 
   conn->cpath_layer = NULL; /* make sure we don't keep a stale pointer */
 
@@ -738,7 +739,9 @@ static void link_apconn_to_circ(connection_t *apconn, circuit_t *circ) {
   /* assert_connection_ok(conn, time(NULL)); */
   circ->p_streams = apconn;
 
-  tor_assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath && circ->cpath->prev);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+  tor_assert(circ->cpath);
+  tor_assert(circ->cpath->prev);
   tor_assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
   apconn->cpath_layer = circ->cpath->prev;
 }

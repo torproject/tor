@@ -169,7 +169,10 @@ directory_initiate_command(const char *address, uint32_t addr,
 {
   connection_t *conn;
 
-  tor_assert(address && addr && dir_port && digest);
+  tor_assert(address);
+  tor_assert(addr);
+  tor_assert(dir_port);
+  tor_assert(digest);
 
   switch (purpose) {
     case DIR_PURPOSE_FETCH_DIR:
@@ -272,8 +275,9 @@ directory_send_command(connection_t *conn, const char *platform,
   int use_newer = 0;
   char *httpcommand = NULL;
 
-  tor_assert(conn && conn->type == CONN_TYPE_DIR);
-  tor_assert(dir_port && conn);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_DIR);
+  tor_assert(dir_port);
 
   /* If we don't know the platform, assume it's up-to-date. */
   use_newer = platform ? tor_version_as_new_as(platform, "0.0.9pre1"):1;
@@ -410,7 +414,8 @@ parse_http_response(char *headers, int *code, char **message, time_t *date,
   int n1, n2;
   char datestr[RFC1123_TIME_LEN+1];
   smartlist_t *parsed_headers;
-  tor_assert(headers && code);
+  tor_assert(headers);
+  tor_assert(code);
 
   while(isspace((int)*headers)) headers++; /* tolerate leading whitespace */
 
@@ -631,7 +636,8 @@ connection_dir_client_reached_eof(connection_t *conn)
 int connection_dir_process_inbuf(connection_t *conn) {
   int retval;
 
-  tor_assert(conn && conn->type == CONN_TYPE_DIR);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_DIR);
 
   /* Directory clients write, then read data until they receive EOF;
    * directory servers read data until they get an HTTP command, then
@@ -859,7 +865,8 @@ static int directory_handle_command(connection_t *conn) {
   size_t body_len=0;
   int r;
 
-  tor_assert(conn && conn->type == CONN_TYPE_DIR);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_DIR);
 
   switch(fetch_from_buf_http(conn->inbuf,
                              &headers, MAX_HEADERS_SIZE,
@@ -894,7 +901,8 @@ static int directory_handle_command(connection_t *conn) {
  */
 int connection_dir_finished_flushing(connection_t *conn) {
 
-  tor_assert(conn && conn->type == CONN_TYPE_DIR);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_DIR);
 
   switch(conn->state) {
     case DIR_CONN_STATE_CLIENT_SENDING:
@@ -917,7 +925,8 @@ int connection_dir_finished_flushing(connection_t *conn) {
  * server */
 int connection_dir_finished_connecting(connection_t *conn)
 {
-  tor_assert(conn && conn->type == CONN_TYPE_DIR);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_DIR);
   tor_assert(conn->state == DIR_CONN_STATE_CONNECTING);
 
   log_fn(LOG_INFO,"Dir connection to router %s:%u established.",

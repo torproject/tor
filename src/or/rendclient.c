@@ -15,7 +15,8 @@ void
 rend_client_introcirc_has_opened(circuit_t *circ)
 {
   tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
-  tor_assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+  tor_assert(circ->cpath);
 
   log_fn(LOG_INFO,"introcirc is open");
   connection_ap_attach_pending();
@@ -315,7 +316,8 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
   }
 
   /* first DH_KEY_LEN bytes are g^y from bob. Finish the dh handshake...*/
-  tor_assert(circ->build_state && circ->build_state->pending_final_cpath);
+  tor_assert(circ->build_state);
+  tor_assert(circ->build_state->pending_final_cpath);
   hop = circ->build_state->pending_final_cpath;
   tor_assert(hop->handshake_state);
   if (crypto_dh_compute_secret(hop->handshake_state, request, DH_KEY_LEN,

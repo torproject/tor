@@ -167,7 +167,8 @@ int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof) {
   int read_result;
 
   assert_buf_ok(buf);
-  tor_assert(reached_eof && (s>=0));
+  tor_assert(reached_eof);
+  tor_assert(s>=0);
 
   if (buf_ensure_capacity(buf,buf->datalen+at_most))
     return -1;
@@ -242,7 +243,9 @@ int flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
   int write_result;
 
   assert_buf_ok(buf);
-  tor_assert(buf_flushlen && (s>=0) && (*buf_flushlen <= buf->datalen));
+  tor_assert(buf_flushlen);
+  tor_assert(s>=0);
+  tor_assert(*buf_flushlen <= buf->datalen);
 
   if(*buf_flushlen == 0) /* nothing to flush */
     return 0;
@@ -270,7 +273,8 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen)
 {
   int r;
   assert_buf_ok(buf);
-  tor_assert(tls && buf_flushlen);
+  tor_assert(tls);
+  tor_assert(buf_flushlen);
 
   /* we want to let tls write even if flushlen is zero, because it might
    * have a partial record pending */
