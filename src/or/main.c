@@ -1126,13 +1126,14 @@ static void signal_callback(int fd, short events, void *arg)
     case SIGCHLD:
       while (waitpid(-1,NULL,WNOHANG) > 0) ; /* keep reaping until no more zombies */
       break;
-    }
 #endif
+  }
 }
 
 /** Write all statistics to the log, with log level 'severity'.  Called
  * in response to a SIGUSR1. */
-static void dumpstats(int severity) {
+static void 
+dumpstats(int severity) {
   int i;
   connection_t *conn;
   time_t now = time(NULL);
@@ -1250,8 +1251,8 @@ void handle_signals(int is_parent)
 #ifdef SIGXFSZ
     sigaction(SIGXFSZ, &action, NULL);
 #endif
-#endif /* signal stuff */
   }
+#endif /* signal stuff */
 }
 
 /** Main entry point for the Tor command-line client.
