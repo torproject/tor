@@ -701,7 +701,7 @@ get_uname(void)
 static int start_daemon_called = 0;
 static int finish_daemon_called = 0;
 static int daemon_filedes[2];
-void start_daemon(void)
+void start_daemon(char *desired_cwd)
 {
   pid_t pid;
 
@@ -709,16 +709,18 @@ void start_daemon(void)
     return;
   start_daemon_called = 1;
 
+  if(!desired_cwd)
+    desired_cwd = "/";
    /* Don't hold the wrong FS mounted */
-  if (chdir("/") < 0) {
-    perror("chdir");
+  if (chdir(desired_cwd) < 0) {
+    log_fn(LOG_ERR,"chdir to %s failed. Exiting.",desired_cwd);
     exit(1);
   }
 
   pipe(daemon_filedes);
   pid = fork();
   if (pid < 0) {
-    perror("fork");
+    log_fn(LOG_ERR,"fork failed. Exiting.");
     exit(1);
   }
   if (pid) {  /* Parent */
@@ -745,7 +747,7 @@ void start_daemon(void)
      * This means that we, as a non-session group leader, can never regain a
      * controlling terminal.   This part is recommended by Stevens's
      * _Advanced Programming in the Unix Environment_.
-     */     
+     */
     if (fork() != 0) {
       exit(0);
     }
@@ -760,13 +762,13 @@ void finish_daemon(void)
   if (finish_daemon_called)
     return;
   if (!start_daemon_called)
-    start_daemon();
+    start_daemon(NULL);
   finish_daemon_called = 1;
 
   nullfd = open("/dev/null",
-		O_CREAT | O_RDWR | O_APPEND);
+                O_CREAT | O_RDWR | O_APPEND);
   if (nullfd < 0) {
-    perror("/dev/null");
+    log_fn(LOG_ERR,"/dev/null can't be opened. Exiting.");
     exit(1);
   }
   /* close fds linking to invoking terminal, but
@@ -776,7 +778,7 @@ void finish_daemon(void)
   if (dup2(nullfd,0) < 0 ||
       dup2(nullfd,1) < 0 ||
       dup2(nullfd,2) < 0) {
-    perror("dup2"); /* Should never happen... */
+    log_fn(LOG_ERR,"dup2 failed. Exiting.");
     exit(1);
   }
   write(daemon_filedes[1], &c, sizeof(char)); /* signal success */

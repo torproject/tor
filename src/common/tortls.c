@@ -370,7 +370,7 @@ tor_tls_write(tor_tls *tls, char *cp, int n)
     return r;
   }
   if (err == TOR_TLS_WANTWRITE || err == TOR_TLS_WANTREAD) {
-    log_fn(LOG_INFO,"wantwrite or wantread. remembering the number %d.",n);
+//    log_fn(LOG_INFO,"wantwrite or wantread. remembering the number %d.",n);
     tls->wantwrite_n = n;
   }
   return err;

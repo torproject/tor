@@ -91,7 +91,7 @@ const char *get_uname(void);
  * until finish_daemon is called.  (Note: it's safe to call this more
  * than once: calls after the first are ignored.)
  */
-void start_daemon(void);
+void start_daemon(char *desired_cwd);
 /* Finish putting the process into daemon mode: drop standard fds, and tell
  * the parent process to exit.  (Note: it's safe to call this more than once:
  * calls after the first are ignored.  Calls start_daemon first if it hasn't
