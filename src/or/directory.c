@@ -37,10 +37,13 @@ static int directory_handle_command(connection_t *conn);
 
 extern or_options_t options; /* command-line and config-file options */
 
+#if 0 /* commented out for now, since for now what clients send is
+         different from what servers want to receive */
 /** URL for publishing rendezvous descriptors. */
 char rend_publish_string[] = "/tor/rendezvous/publish";
 /** Prefix for downloading rendezvous descriptors. */
 char rend_fetch_url[] = "/tor/rendezvous/";
+#endif
 
 #define MAX_HEADERS_SIZE 50000
 #define MAX_BODY_SIZE 500000
@@ -252,13 +255,13 @@ static void directory_send_command(connection_t *conn, int purpose,
       memcpy(conn->rend_query, payload, payload_len);
       conn->rend_query[payload_len] = 0;
 
-      snprintf(tmp, sizeof(tmp), "GET %s%s HTTP/1.0\r\n\r\n", rend_fetch_url, payload);
+      snprintf(tmp, sizeof(tmp), "GET %s%s HTTP/1.0\r\n\r\n", "/rendezvous/", payload);
       connection_write_to_buf(tmp, strlen(tmp), conn);
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       tor_assert(payload);
       snprintf(tmp, sizeof(tmp),
-        "POST %s HTTP/1.0\r\nContent-Length: %d\r\n\r\n", rend_publish_string, payload_len);
+        "POST %s HTTP/1.0\r\nContent-Length: %d\r\n\r\n", "/rendezvous/publish", payload_len);
       connection_write_to_buf(tmp, strlen(tmp), conn);
       /* could include nuls, need to write it separately */
       connection_write_to_buf(payload, payload_len, conn);
@@ -645,7 +648,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     return 0;
   }
 
-  if(!strcmpstart(url,rend_fetch_url)) {
+  if(!strcmpstart(url,"/tor/rendezvous/")) {
     /* rendezvous descriptor fetch */
     const char *descp;
     int desc_len;
@@ -660,7 +663,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
       tor_free(url);
       return 0;
     }
-    switch(rend_cache_lookup_desc(url+strlen(rend_fetch_url), &descp, &desc_len)) {
+    switch(rend_cache_lookup_desc(url+strlen("/tor/rendezvous/"), &descp, &desc_len)) {
       case 1: /* valid */
         format_rfc1123_time(date, time(NULL));
         snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
@@ -735,7 +738,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
     return 0;
   }
 
-  if(!strcmpstart(url,rend_publish_string)) {
+  if(!strcmpstart(url,"/tor/rendezvous/publish")) {
     /* rendezvous descriptor post */
     if(rend_cache_store(body, body_len) < 0)
       connection_write_to_buf(answer400, strlen(answer400), conn);
