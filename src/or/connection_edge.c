@@ -89,6 +89,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
     case AP_CONN_STATE_CIRCUIT_WAIT:
     case AP_CONN_STATE_CONNECT_WAIT:
     case AP_CONN_STATE_RESOLVE_WAIT:
+    case AP_CONN_STATE_CONTROLLER_WAIT:
       log_fn(LOG_INFO,"data from edge while in '%s' state. Leaving it on buffer.",
                       conn_state_to_string[conn->type][conn->state]);
       return 0;
@@ -206,6 +207,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
     case AP_CONN_STATE_RENDDESC_WAIT:
     case AP_CONN_STATE_CIRCUIT_WAIT:
     case AP_CONN_STATE_CONNECT_WAIT:
+    case AP_CONN_STATE_CONTROLLER_WAIT:
       connection_stop_writing(conn);
       return 0;
     default:
@@ -544,11 +546,6 @@ void addressmap_register(const char *address, char *new_address, time_t expires)
   addressmap_entry_t *ent;
 
   ent = strmap_get(addressmap, address);
-  if (ent && ent->new_address && expires>1) {
-    log_fn(LOG_INFO,"Addressmap ('%s' to '%s') not performed, since it's already mapped to '%s'", address, new_address, ent->new_address);
-    tor_free(new_address);
-    return;
-  }
   if (!new_address || !strcasecmp(address,new_address)) {
     /* Remove the mapping, if any. */
     tor_free(new_address);
@@ -558,15 +555,21 @@ void addressmap_register(const char *address, char *new_address, time_t expires)
     }
     return;
   }
-  if (ent && ent->new_address) { /* we'll replace it */
+  if (!ent) { /* make a new one and register it */
+    ent = tor_malloc_zero(sizeof(addressmap_entry_t));
+    strmap_set(addressmap, address, ent);
+  } else if (ent->new_address) { /* we need to clean up the old mapping. */
+    if (expires > 1) {
+      log_fn(LOG_INFO,"Temporary addressmap ('%s' to '%s') not performed, since it's already mapped to '%s'", address, new_address, ent->new_address);
+      tor_free(new_address);
+      return;
+    }
     if (address_is_in_virtual_range(ent->new_address)) {
       addressmap_virtaddress_remove(address, ent);
     }
     tor_free(ent->new_address);
-  } else if (!ent) { /* make a new one and register it */
-    ent = tor_malloc_zero(sizeof(addressmap_entry_t));
-    strmap_set(addressmap, address, ent);
-  }
+  } /* else { we have an in-progress resolve with no mapping. } */
+
   ent->new_address = new_address;
   ent->expires = expires;
   ent->num_resolve_failures = 0;
