@@ -28,12 +28,15 @@ N . Switch to libevent
        . Find a way to make sure we have libevent 1.0 or later.
          o Implement patch to libevent
          o Submit patch to niels making this possible.
+         - Implement Tor side once patch is accepted.
        . Log which poll method we're using.
          o Implement patch to libevent
          o Submit patch to niels making this possible.
-       - Intercept libevent's "log" messages.
+         - Implement Tor side once patch is accepted.
+       . Intercept libevent's "log" messages.
          o Ask Niels whether a patch would be accepted.
-         - Implement patch, if so.
+         o Implement patch, if so.
+         - Implement Tor side once patch is accepted.
        o Check return from event_set, event_add, event_del.
        - Keep pushing to get a windows patch accepted.
 
@@ -60,14 +63,14 @@ N  . Implement pending controller features.
       o Map A->B.
       - Map DontCare->B.
     - Event for "new descriptors"
-    - Better streams IDs
+    o Better stream IDs
     - EXTENDCIRCUIT <depends on revised circ selection stuff.>
     - ATTACHSTREAM <depends on making streams have 'unattached' state.>
     - Stream status changed: "new" state.
 R . HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
     other ORs.)
-  - Changes for forward compatibility
-N   - If a version is later than the last in its series, but a version
+  o Changes for forward compatibility
+    o If a version is later than the last in its series, but a version
       in the next series is recommended, that doesn't mean it's bad.
   - Do end reasons better
     - Start using RESOURCELIMIT more.

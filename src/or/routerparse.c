@@ -142,6 +142,7 @@ static int check_directory_signature(const char *digest,
 static crypto_pk_env_t *find_dir_signing_key(const char *str);
 /* static */ int is_obsolete_version(const char *myversion,
                                      const char *versionlist);
+static int tor_version_same_series(tor_version_t *a, tor_version_t *b);
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
  * <b>s</b>.  Return 0 on success, nonzero on failure.
@@ -199,6 +200,12 @@ get_recommended_software_from_directory(const char *str)
 
 /** Return 1 if <b>myversion</b> is not in <b>versionlist</b>, and if at least
  * one version of Tor on <b>versionlist</b> is newer than <b>myversion</b>.
+
+ * Return 1 if no version from the same series as <b>myversion</b> is
+ * in <b>versionlist</b> (and <b>myversion</b> is not the newest
+ * version), or if a newer version from the same series is in
+ * <b>versionlist</b>.
+ *
  * Otherwise return 0.
  * (versionlist is a comma-separated list of version strings,
  * optionally prefixed with "Tor".  Versions that can't be parsed are
@@ -207,9 +214,11 @@ get_recommended_software_from_directory(const char *str)
                            const char *versionlist) {
   const char *vl;
   tor_version_t mine, other;
-  int found_newer = 0, r, ret;
+  int found_newer = 0, found_newer_in_series = 0, found_any_in_series = 0,
+    r, ret, same;
   static int warned_too_new=0;
   smartlist_t *version_sl;
+  int XXXpath;
 
   vl = versionlist;
 
@@ -229,26 +238,63 @@ get_recommended_software_from_directory(const char *str)
     if (tor_version_parse(cp, &other)) {
       /* Couldn't parse other; it can't be a match. */
     } else {
+      same = tor_version_same_series(&mine, &other);
+      if (same)
+        found_any_in_series = 1;
       r = tor_version_compare(&mine, &other);
       if (r==0) {
         ret = 0;
         goto done;
       } else if (r<0) {
         found_newer = 1;
+        if (same)
+          found_newer_in_series = 1;
       }
     }
   });
 
-  if (!found_newer) {
-    if (!warned_too_new) {
-      log(LOG_WARN, "This version of Tor (%s) is newer than any on the recommended list (%s)",
-             myversion, versionlist);
-      warned_too_new=1;
+  /* We didn't find the listed version. Is it new or old? */
+
+  if (found_any_in_series) {
+    if (!found_newer_in_series) {
+      /* We belong to a series with recommended members, and we are newer than
+       * any recommended member. We're probably okay. */
+      if (!warned_too_new) {
+        log(LOG_WARN, "This version of Tor (%s) is newer than any in the same series on the reccomended list (%s)",
+            myversion, versionlist);
+        warned_too_new = 1;
+      }
+      ret = 0;
+      XXXpath = 1;
+    } else {
+      /* We found a newer one in the same series; we're obsolete. */
+      ret = 1;
+      XXXpath = 2;
     }
-    ret = 0;
   } else {
-    ret = 1;
+    if (found_newer) {
+      /* We belong to a series with no recommended members, and
+       * a newer series is recommended. We're obsolete. */
+      ret = 1;
+      XXXpath = 3;
+    } else {
+      /* We belong to a series with no recommended members, and it's
+       * newer than any recommended series. We're probably okay. */
+      if (!warned_too_new) {
+        log(LOG_WARN, "This version of Tor (%s) is newer than any on the reccomended list (%s)",
+            myversion, versionlist);
+        warned_too_new = 1;
+      }
+      ret = 0;
+      XXXpath = 4;
+    }
   }
+  /*
+  log_fn(LOG_DEBUG,
+         "Decided that %s is %sobsolete relative to %s: %d, %d, %d\n",
+         myversion, ret?"":"not ", versionlist, found_newer,
+         found_any_in_series, found_newer_in_series);
+  */
 
  done:
   SMARTLIST_FOREACH(version_sl, char *, version, tor_free(version));
@@ -1486,12 +1532,15 @@ int tor_version_parse(const char *s, tor_version_t *out)
 {
   char *eos=NULL, *cp=NULL;
   /* Format is:
-   *   NUM dot NUM dot NUM [ ( pre | rc | dot ) NUM [ -cvs ] ]
+   *   "Tor " ? NUM dot NUM dot NUM [ ( pre | rc | dot ) NUM [ -cvs ] ]
    */
   tor_assert(s);
   tor_assert(out);
 
   memset(out, 0, sizeof(tor_version_t));
+
+  if (!strcasecmpstart(s, "Tor "))
+    cp += 4;
 
   /* Get major. */
   out->major = strtol(s,&eos,10);
@@ -1571,3 +1620,12 @@ int tor_version_compare(tor_version_t *a, tor_version_t *b)
   }
 }
 
+static int
+tor_version_same_series(tor_version_t *a, tor_version_t *b)
+{
+  tor_assert(a);
+  tor_assert(b);
+  return ((a->major == b->major) &&
+          (a->minor == b->minor) &&
+          (a->micro == b->micro));
+}
