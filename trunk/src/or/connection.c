@@ -363,6 +363,10 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
   if (s < 0) {
     log_fn(LOG_WARN,"Socket creation failed.");
     return -1;
+  } else if (!SOCKET_IS_POLLABLE(s)) {
+    log_fn(LOG_WARN,"Too many connections; can't create pollable listener.");
+    tor_close_socket(s);
+    return -1;
   }
 
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one, sizeof(one));
@@ -410,8 +414,16 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   int remotelen = sizeof(struct sockaddr_in);
 
   news = accept(conn->s,(struct sockaddr *)&remote,&remotelen);
-  if (news == -1) { /* accept() error */
-    int e = tor_socket_errno(conn->s);
+  if (!SOCKET_IS_POLLABLE(news)) {
+    /* accept() error, or two many conns to poll */
+    int e;
+    if (news>=0) {
+      /* Too many conns to poll. */
+      log_fn(LOG_WARN,"Too many connections; couldn't accept connection.");
+      tor_close_socket(news);
+      return 0;
+    }
+    e = tor_socket_errno(conn->s);
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
       return 0; /* he hung up before we could accept(). that's fine. */
     } else if (ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e)) {
@@ -505,10 +517,15 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
   struct sockaddr_in dest_addr;
   or_options_t *options = get_options();
 
-  s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
+  s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
     log_fn(LOG_WARN,"Error creating network socket: %s",
            tor_socket_strerror(tor_socket_errno(-1)));
+    return -1;
+  } else if (!SOCKET_IS_POLLABLE(s)) {
+    log_fn(LOG_WARN,
+      "Too many connections; can't create pollable connection to %s", address);
+    tor_close_socket(s);
     return -1;
   }
 
