@@ -83,23 +83,13 @@ papers
 \cite{or-ih96,or-jsac98,or-discex00,or-pet00}. While
 a wide area Onion Routing network was deployed for some weeks,
 the only long-running and publicly accessible
-implementation was a fragile proof-of-concept that ran on a single
-machine.
-% (which nonetheless processed several tens of thousands of connections
-%daily from thousands of global users).
-%%Do we really want to say this? It softens our motivation for the paper. -RD
-%
-% In general, I try to emphasize rather than understate past
-% accomplishments so I am giving an accurate comparison,
-% which strengthens the claims in the paper. This is true whether
-% it is my work or someone else's. 
-% This is also the only experimental basic viability result we
-% can point to for Onion Routing in general at this point. -PS
-Many critical design and deployment issues were never resolved,
-and the design has not been updated in several years.
-Here we describe Tor, a protocol for asynchronous, loosely
-federated onion routers that provides the following improvements over
-the old Onion Routing design:
+implementation of the original design was a fragile proof-of-concept
+that ran on a single machine. Even this simple deployment processed tens
+of thousands of connections daily from thousands of users worldwide. But
+many critical design and deployment issues were never resolved, and the
+design has not been updated in several years. Here we describe Tor, a
+protocol for asynchronous, loosely federated onion routers that provides
+the following improvements over the old Onion Routing design:
 
 \begin{tightlist}
 
@@ -275,8 +265,12 @@ trade-off, these \emph{high-latency} networks are well-suited for anonymous
 email, but introduce too much lag for interactive tasks such as web browsing,
 internet chat, or SSH connections.
 
-Tor belongs to the second category: \emph{low-latency} designs that attempt
-to anonymize interactive network traffic.  Because these protocols typically
+Tor belongs to the second category: \emph{low-latency} designs that
+attempt to anonymize interactive network traffic. These systems handle
+a variety of bidirectional protocols. They also provide more convenient
+mail delivery than the high-latency fire-and-forget anonymous email
+networks, because the remote mail server provides explicit delivery
+confirmation. But because these designs typically
 involve a large number of packets that must be delivered quickly, it is
 difficult for them to prevent an attacker who can eavesdrop both ends of the
 communication from correlating the timing and volume
@@ -373,8 +367,8 @@ protocols (such as HTTP) and relay the application requests themselves
 along the circuit.  
 This protocol-layer decision represents a compromise between flexibility
 and anonymity.  For example, a system that understands HTTP can strip
-identifying information from those requests; can take advantage of caching
-to limit the number of requests that leave the network; and can batch
+identifying information from those requests, can take advantage of caching
+to limit the number of requests that leave the network, and can batch
 or encode those requests in order to minimize the number of connections.
 On the other hand, an IP-level anonymizer can handle nearly any protocol,
 even ones unforeseen by their designers (though these systems require
@@ -384,7 +378,7 @@ a middle approach: they are fairly application neutral (so long as the
 application supports, or can be tunneled across, TCP), but by treating
 application connections as data streams rather than raw TCP packets,
 they avoid the well-known inefficiencies of tunneling TCP over TCP
-\cite{tcp-over-tcp-is-bad}. [XXX what's a better cite?]
+\cite{tcp-over-tcp-is-bad}.
 
 Distributed-trust anonymizing systems need to prevent attackers from
 adding too many servers and thus compromising too many user paths.
@@ -396,12 +390,12 @@ from becoming too much of the network based on a limited resource such
 as number of IPs controlled. Crowds suggests requiring written, notarized
 requests from potential crowd members.
 
-Anonymous communication is an essential component of censorship-resistant
+Anonymous communication is essential for censorship-resistant
 systems like Eternity \cite{eternity}, Free~Haven \cite{freehaven-berk},
 Publius \cite{publius}, and Tangler \cite{tangler}. Tor's rendezvous
 points enable connections between mutually anonymous entities; they
 are a building block for location-hidden servers, which are needed by
-Eternity and Free Haven.
+Eternity and Free~Haven.
 
 % didn't include rewebbers. No clear place to put them, so I'll leave
 % them out for now. -RD
@@ -781,7 +775,7 @@ cell to create corresponding changes to the data leaving the network.
 This weakness allowed an adversary to change a padding cell to a destroy
 cell; change the destination address in a relay begin cell to the
 adversary's webserver; or change a user on an ftp connection from
-typing ``dir'' to typing ``delete *''. Any node or external adversary
+typing ``dir'' to typing ``delete~*''. Any node or external adversary
 along the circuit could introduce such corruption in a stream.
 
 Tor prevents external adversaries from mounting this attack simply by
@@ -960,7 +954,7 @@ circuit. Indeed, this same loss of service occurs when a router crashes
 or its operator restarts it. The current Tor design treats such attacks
 as intermittent network failures, and depends on users and applications
 to respond or recover as appropriate. A future design could use an
-end-to-end based TCP-like acknowledgment protocol, so that no streams are
+end-to-end TCP-like acknowledgment protocol, so that no streams are
 lost unless the entry or exit point itself is disrupted. This solution
 would require more buffering at the network edges, however, and the
 performance and anonymity implications from this extra complexity still
@@ -969,47 +963,37 @@ require investigation.
 \SubSection{Exit policies and abuse}
 \label{subsec:exitpolicies}
 
-Exit abuse is a serious barrier to wide-scale Tor deployment.  Not
-only does anonymity present would-be vandals and abusers with an
-opportunity to hide the origins of their activities---but also,
-existing sanctions against abuse present an easy way for attackers to
-harm the Tor network by implicating exit servers for their abuse.
-Thus, must block or limit attacks and other abuse that travel through
-the Tor network.
+Exit abuse is a serious barrier to wide-scale Tor deployment. Anonymity
+presents would-be vandals and abusers with an opportunity to hide
+the origins of their activities. Attackers can harm the Tor network by
+implicating exit servers for their abuse. Also, applications that commonly
+use IP-based authentication (such as institutional mail or web servers)
+can be fooled by the fact that anonymous connections appear to originate
+at the exit OR.
 
-Also, applications that commonly use IP-based authentication (such
-institutional mail or web servers) can be fooled by the fact that
-anonymous connections appear to originate at the exit OR.  Rather than
-expose a private service, an administrator may prefer to prevent Tor
-users from connecting to those services from a local OR.
+We stress that Tor does not enable any new class of abuse. Spammers and
+other attackers already have access to thousands of misconfigured systems
+worldwide, and the Tor network is far from the easiest way to launch
+these antisocial or illegal attacks. But because the onion routers can
+easily be mistaken for the originators of the abuse, and the volunteers
+who run them may not want to deal with the hassle of repeatedly explaining
+anonymity networks, we must block or limit attacks and other abuse that
+travel through the Tor network.
 
-To mitigate abuse issues, in Tor, each onion router's \emph{exit
-  policy} describes to which external addresses and ports the router
-will permit stream connections. On one end of the spectrum are
-\emph{open exit} nodes that will connect anywhere.  As a compromise,
-most onion routers will function as \emph{restricted exits} that
-permit connections to the world at large, but prevent access to
-certain abuse-prone addresses and services.  on the other end are
-\emph{middleman} nodes that only relay traffic to other Tor nodes, and
-\emph{private exit} nodes that only connect to a local host or
-network.  (Using a private exit (if one exists) is a more secure way
-for a client to connect to a given host or network---an external
-adversary cannot eavesdrop traffic between the private exit and the
-final destination, and so is less sure of Alice's destination and
-activities.)  is less sure of Alice's destination. In general,
-nodes can require a variety of forms of traffic authentication
+To mitigate abuse issues, in Tor, each onion router's \emph{exit policy}
+describes to which external addresses and ports the router will permit
+stream connections. On one end of the spectrum are \emph{open exit}
+nodes that will connect anywhere. On the other end are \emph{middleman}
+nodes that only relay traffic to other Tor nodes, and \emph{private exit}
+nodes that only connect to a local host or network.  Using a private
+exit (if one exists) is a more secure way for a client to connect to a
+given host or network---an external adversary cannot eavesdrop traffic
+between the private exit and the final destination, and so is less sure of
+Alice's destination and activities. Most onion routers will function as
+\emph{restricted exits} that permit connections to the world at large,
+but prevent access to certain abuse-prone addresses and services. In
+general, nodes can require a variety of forms of traffic authentication
 \cite{or-discex00}.
-
-%Tor offers more reliability than the high-latency fire-and-forget
-%anonymous email networks, because the sender opens a TCP stream
-%with the remote mail server and receives an explicit confirmation of
-%acceptance. But ironically, the private exit node model works poorly for
-%email, when Tor nodes are run on volunteer machines that also do other
-%things, because it's quite hard to configure mail transport agents so
-%normal users can send mail normally, but the Tor process can only deliver
-%mail locally. Further, most organizations have specific hosts that will
-%deliver mail on behalf of certain IP ranges; Tor operators must be aware
-%of these hosts and consider putting them in the Tor exit policy.
 
 %The abuse issues on closed (e.g. military) networks are different
 %from the abuse on open networks like the Internet. While these IP-based
@@ -1020,8 +1004,8 @@ nodes can require a variety of forms of traffic authentication
 Many administrators will use port restrictions to support only a
 limited set of well-known services, such as HTTP, SSH, or AIM.
 This is not a complete solution, since abuse opportunities for these
-protocols are still well known.  Nonetheless, the benefits are real,
-since administrators seem used to  the concept of port 80 abuse not
+protocols are still well known. Nonetheless, the benefits are real,
+since administrators seem used to the concept of port 80 abuse not
 coming from the machine's owner.
 
 A further solution may be to use proxies to clean traffic for certain
@@ -1029,54 +1013,28 @@ protocols as it leaves the network.  For example, much abusive HTTP
 behavior (such as exploiting buffer overflows or well-known script
 vulnerabilities) can be detected in a straightforward manner.
 Similarly, one could run automatic spam filtering software (such as
-SpamAssassin) on email exiting the OR network.  A generic
-intrusion detection system (IDS) could be adapted to these purposes.
-
-[XXX Mention possibility of filtering spam-like habits--e.g., many
-  recipients. -NM]
+SpamAssassin) on email exiting the OR network.
 
 ORs may also choose to rewrite exiting traffic in order to append
 headers or other information to indicate that the traffic has passed
-through an anonymity service.  This approach is commonly used, to some
-success, by email-only anonymity systems.  When possible, ORs can also
+through an anonymity service.  This approach is commonly used
+by email-only anonymity systems.  When possible, ORs can also
 run on servers with hostnames such as {\it anonymous}, to further
 alert abuse targets to the nature of the anonymous traffic.
 
-%we should run a squid at each exit node, to provide comparable anonymity
-%to private exit nodes for cache hits, to speed everything up, and to
-%have a buffer for funny stuff coming out of port 80. we could similarly
-%have other exit proxies for other protocols, like mail, to check
-%delivered mail for being spam.
-
-%[XXX Um, I'm uncomfortable with this for several reasons.
-%It's not good for keeping honest nodes honest about discarding
-%state after it's no longer needed. Granted it keeps an external
-%observer from noticing how often sites are visited, but it also
-%allows fishing expeditions. ``We noticed you went to this prohibited
-%site an hour ago. Kindly turn over your caches to the authorities.''
-%I previously elsewhere suggested bulk transfer proxies to carve
-%up big things so that they could be downloaded in less noticeable
-%pieces over several normal looking connections. We could suggest
-%similarly one or a handful of squid nodes that might serve up
-%some of the more sensitive but common material, especially if
-%the relevant sites didn't want to or couldn't run their own OR.
-%This would be better than having everyone run a squid which would
-%just help identify after the fact the different history of that
-%node's activity. All this kind of speculation needs to move to
-%future work section I guess. -PS]
-
 A mixture of open and restricted exit nodes will allow the most
-flexibility for volunteers running servers. But while a large number
-of middleman nodes is useful to provide a large and robust network,
+flexibility for volunteers running servers. But while many
+middleman nodes help provide a large and robust network,
 having only a small number of exit nodes reduces the number of nodes
 an adversary needs to monitor for traffic analysis, and places a
 greater burden on the exit nodes.  This tension can be seen in the JAP
 cascade model, wherein only one node in each cascade needs to handle
 abuse complaints---but an adversary only needs to observe the entry
 and exit of a cascade to perform traffic analysis on all that
-cascade's users.  The Hydra model (many entries, few exits) presents a
+cascade's users. The Hydra model (many entries, few exits) presents a
 different compromise: only a few exit nodes are needed, but an
-adversary needs to work harder to watch all the clients.
+adversary needs to work harder to watch all the clients; see
+Section~\ref{sec:conclusion}.
 
 Finally, we note that exit abuse must not be dismissed as a peripheral
 issue: when a system's public image suffers, it can reduce the number
@@ -1090,8 +1048,7 @@ project \cite{darkside} give us a glimpse of likely issues.
 \SubSection{Directory Servers}
 \label{subsec:dirservers}
 
-First-generation Onion Routing designs \cite{or-jsac98,freedom2-arch} did
-% is or-jsac98 the right cite here? what's our stock OR cite? -RD
+First-generation Onion Routing designs \cite{freedom2-arch,or-jsac98} used
 in-band network status updates: each router flooded a signed statement
 to its neighbors, which propagated it onward. But anonymizing networks
 have different security goals than typical link-state routing protocols.
@@ -1208,25 +1165,20 @@ privacy also seeks to provide some protection against distributed DoS attacks:
 attackers are forced to attack the onion routing network as a whole
 rather than just Bob's IP.
 
-\subsection{Goals for rendezvous points}
-\label{subsec:rendezvous-goals}
-Our design for location-hidden servers has the following properties:
-\begin{tightlist}
-\item[Flood-proof:] An attacker should not be able to flood Bob with traffic
-  simply by sending many requests to talk to Bob.  Thus, Bob needs a
-  way to filter incoming requests.
-\item[Robust:] Bob should be able to maintain a long-term pseudonymous
-  identity even in the presence of router failure.  Thus, Bob's service
-  must not be tied to a single OR, and Bob must be able to tie his service
-  to new ORs.
-\item[Smear-resistant:] An attacker should not be able to use rendezvous
-  points to smear an OR.  That is, if a social attacker tries to host a 
-  location-hidden service that is illegal or disreputable, it should not
-  appear---even to a casual observer---that the OR is hosting that service.
-\item[Application-transparent:] Although we are willing to require users to
-  run special software to access location-hidden servers, we are not willing
-  to require them to modify their applications.
-\end{tightlist}
+Our design for location-hidden servers has the following properties.
+\textbf{Flood-proof:} An attacker should not be able to flood Bob
+with traffic simply by sending many requests to talk to Bob.  Thus,
+Bob needs a way to filter incoming requests. \textbf{Robust:} Bob
+should be able to maintain a long-term pseudonymous identity even
+in the presence of router failure.  Thus, Bob's service must not be
+tied to a single OR, and Bob must be able to tie his service to new
+ORs. \textbf{Smear-resistant:} An attacker should not be able to use
+rendezvous points to smear an OR.  That is, if a social attacker tries
+to host a location-hidden service that is illegal or disreputable, it
+should not appear---even to a casual observer---that the OR is hosting
+that service. \textbf{Application-transparent:} Although we are willing to
+require users to run special software to access location-hidden servers,
+we are not willing to require them to modify their applications.
 
 \subsection{Rendezvous design}
 We provide location-hiding for Bob by allowing him to advertise
@@ -1404,7 +1356,7 @@ and its resistance to attacks.
   % Do we want to say this?  I don't think we should talk about this
   % kind of discussion till we have more positive results.
   
-\item[Conservative design:] Tor opts for practicality when there is no
+\item[Simple design:] Tor opts for practicality when there is no
   clear resolution of anonymity tradeoffs or practical means to
   achieve resolution. Thus, we do not currently pad or mix; although
   it would be easy to add either of these. Indeed, our system allows
@@ -1899,6 +1851,21 @@ presence of unreliable nodes.
 % section.  After all, we will doubtlessly learn very much about why
 % people do or don't run and use Tor in the near future. -NM
 
+%We should run a squid at each exit node, to provide comparable anonymity
+%to private exit nodes for cache hits, to speed everything up, and to
+%have a buffer for funny stuff coming out of port 80.
+% on the other hand, it hampers PFS, because ORs have pages in the cache.
+%I previously elsewhere suggested bulk transfer proxies to carve
+%up big things so that they could be downloaded in less noticeable
+%pieces over several normal looking connections. We could suggest
+%similarly one or a handful of squid nodes that might serve up
+%some of the more sensitive but common material, especially if
+%the relevant sites didn't want to or couldn't run their own OR.
+%This would be better than having everyone run a squid which would
+%just help identify after the fact the different history of that
+%node's activity. All this kind of speculation needs to move to
+%future work section I guess. -PS]
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -1962,6 +1929,8 @@ issues remaining to be ironed out. In particular:
   able to evaluate some of our design decisions, including our
   robustness/latency tradeoffs, our abuse-prevention mechanisms, and
   our overall usability.
+work with morphmix spec
+small cells vs large cells
 \end{tightlist}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
