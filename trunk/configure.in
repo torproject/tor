@@ -153,8 +153,10 @@ AC_CHECK_SIZEOF(uint8_t)
 AC_CHECK_SIZEOF(uint16_t)
 AC_CHECK_SIZEOF(uint32_t)
 AC_CHECK_SIZEOF(uint64_t)
+AC_CHECK_SIZEOF(intptr_t)
+AC_CHECK_SIZEOF(uintptr_t)
 
-dnl AC_CHECK_TYPES([int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t])
+dnl AC_CHECK_TYPES([int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, intptr_t, uintptr_t])
 
 AC_CHECK_SIZEOF(char)
 AC_CHECK_SIZEOF(short)
@@ -162,6 +164,7 @@ AC_CHECK_SIZEOF(int)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(__int64)
+AC_CHECK_SIZEOF(void *)
 
 # Now, let's see about alignment requirements
 AC_CACHE_CHECK([whether unaligned int access is allowed], tor_cv_unaligned_ok,

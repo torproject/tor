@@ -44,6 +44,12 @@
 #if (SIZEOF_UINT64_T != 0)
 #define HAVE_UINT64_T
 #endif
+#if (SIZEOF_INTPTR_T != 0)
+#define HAVE_INTPTR_T
+#endif
+#if (SIZEOF_UINTPTR_T != 0)
+#define HAVE_UINTPTR_T
+#endif
 
 #if (SIZEOF_CHAR == 1)
 #ifndef HAVE_INT8_T
@@ -131,6 +137,23 @@ typedef unsigned __int64 uint64_t;
 #endif
 #endif
 
+#if (SIZEOF_VOID_P > 4 && SIZEOF_VOID_P <= 8)
+#ifndef HAVE_INTPTR_T
+typedef int64_t intptr_t;
+#endif
+#ifndef HAVE_UINTPTR_T
+typedef uint64_t uintptr_t;
+#endif
+#elif (SIZEOF_VOID_P > 2 && SIZEOF_VOID_P <= 4)
+#ifndef HAVE_INTPTR_T
+typedef int32_t intptr_t;
+#endif
+#ifndef HAVE_UINTPTR_T
+typedef uint32_t uintptr_t;
+#endif
+#else
+#error "void * is either >8 bytes or <= 2.  In either case, I am confused."
+#endif
 
 #ifndef HAVE_INT8_T
 #error "Missing type int8_t"
