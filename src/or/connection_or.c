@@ -188,12 +188,14 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     if(tor_tls_peer_has_cert(conn->tls)) { /* it's another OR */
       pk = tor_tls_verify(conn->tls);
       if(!pk) {
-        log_fn(LOG_WARNING,"Other side has a cert but it's invalid. Closing.");
+        log_fn(LOG_WARNING,"Other side (%s:%p) has a cert but it's invalid. Closing.",
+               conn->address, conn->port);
         return -1;
       }
       router = router_get_by_link_pk(pk);
       if (!router) {
-        log_fn(LOG_WARNING,"Unrecognized public key from peer. Closing.");
+        log_fn(LOG_WARNING,"Unrecognized public key from peer (%s:%d). Closing.",
+               conn->address, conn->port);
         crypto_free_pk_env(pk);
         return -1;
       }
@@ -223,12 +225,14 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     }
     pk = tor_tls_verify(conn->tls);
     if(!pk) {
-      log_fn(LOG_WARNING,"Other side has a cert but it's invalid. Closing.");
+      log_fn(LOG_WARNING,"Other side (%s:%d) has a cert but it's invalid. Closing.",
+             conn->address, conn->port);
       return -1;
     }
     router = router_get_by_link_pk(pk);
     if (!router) {
-      log_fn(LOG_WARNING,"Unrecognized public key from peer. Closing.");
+      log_fn(LOG_WARNING,"Unrecognized public key from peer (%s:%d). Closing.",
+             conn->address, conn->port);
       crypto_free_pk_env(pk);
       return -1;
     }
