@@ -510,11 +510,11 @@ list_running_servers(char **nicknames_out)
   return 0;
 }
 
-/** Remove any descriptors from the directory that are more than ROUTER_MAX_AGE
+/** Remove any descriptors from the directory that are more than <b>age</b>
  * seconds old.
  */
 void
-dirserv_remove_old_servers(void)
+dirserv_remove_old_servers(int age)
 {
   int i;
   time_t cutoff;
@@ -522,10 +522,10 @@ dirserv_remove_old_servers(void)
   if (!descriptor_list)
     descriptor_list = smartlist_create();
 
-  cutoff = time(NULL) - ROUTER_MAX_AGE;
+  cutoff = time(NULL) - age;
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
     ent = smartlist_get(descriptor_list, i);
-    if (ent->published < cutoff) {
+    if (ent->published <= cutoff) {
       /* descriptor_list[i] is too old.  Remove it. */
       free_descriptor_entry(ent);
       smartlist_del(descriptor_list, i--);
@@ -556,7 +556,7 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
 
   if (list_running_servers(&cp))
     return -1;
-  dirserv_remove_old_servers();
+  dirserv_remove_old_servers(ROUTER_MAX_AGE);
   published_on = time(NULL);
   strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&published_on));
   snprintf(s, maxlen,

@@ -544,11 +544,12 @@ static void run_scheduled_events(time_t now) {
       server_is_advertised = 0;
     }
 
-    routerlist_remove_old_routers(); /* purge obsolete entries */
+    /* purge obsolete entries */
+    routerlist_remove_old_routers(ROUTER_MAX_AGE);
 
     if(authdir_mode()) {
       /* We're a directory; dump any old descriptors. */
-      dirserv_remove_old_servers();
+      dirserv_remove_old_servers(ROUTER_MAX_AGE);
     }
     if(server_mode()) {
       /* dirservers try to reconnect, in case connections have failed;

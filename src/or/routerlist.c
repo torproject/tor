@@ -488,14 +488,14 @@ int router_add_to_routerlist(routerinfo_t *router) {
   return 0;
 }
 
-/** Remove any routers from the routerlist that are more than ROUTER_MAX_AGE
+/** Remove any routers from the routerlist that are more than <b>age</b>
  * seconds old.
  *
  * (This function is just like dirserv_remove_old_servers. One day we should
  * merge them.)
  */
 void
-routerlist_remove_old_routers(void)
+routerlist_remove_old_routers(int age)
 {
   int i;
   time_t cutoff;
@@ -503,10 +503,11 @@ routerlist_remove_old_routers(void)
   if (!routerlist)
     return;
 
-  cutoff = time(NULL) - ROUTER_MAX_AGE;
+  cutoff = time(NULL) - age;
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
     router = smartlist_get(routerlist->routers, i);
-    if (router->published_on < cutoff &&
+    if (router->published_on <= cutoff &&
+/* XXX008 don't get fooled by cached dir ports */
       !router->dir_port) {
       /* Too old.  Remove it. But never remove dirservers! */
       log_fn(LOG_INFO,"Forgetting obsolete routerinfo for node %s.", router->nickname);
