@@ -59,7 +59,7 @@ static uint16_t get_unique_circ_id_by_conn(connection_t *conn) {
       return 0;
     }
     test_circ_id |= high_bit;
-  } while (circuit_get_by_circ_id_conn(test_circ_id, conn));
+  } while (circuit_get_by_circid_orconn(test_circ_id, conn));
   return test_circ_id;
 }
 
@@ -391,7 +391,8 @@ circuit_deliver_create_cell(circuit_t *circ, char *payload) {
   tor_assert(circ->n_conn->type == CONN_TYPE_OR);
   tor_assert(payload);
 
-  circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn);
+  circuit_set_circid_orconn(circ, get_unique_circ_id_by_conn(circ->n_conn),
+                            circ->n_conn, N_CONN_CHANGED);
   if (!circ->n_circ_id) {
     log_fn(LOG_WARN,"failed to get unique circID.");
     return -1;

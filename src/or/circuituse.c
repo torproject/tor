@@ -483,10 +483,12 @@ void circuit_about_to_close_connection(connection_t *conn) {
       circuit_n_conn_done(conn, 0);
       /* Now close all the attached circuits on it. */
       while ((circ = circuit_get_by_conn(conn))) {
-        if (circ->n_conn == conn) /* it's closing in front of us */
-          circ->n_conn = NULL;
-        if (circ->p_conn == conn) /* it's closing behind us */
-          circ->p_conn = NULL;
+        if (circ->n_conn == conn)
+          /* it's closing in front of us */
+          circuit_set_circid_orconn(circ, 0, NULL, P_CONN_CHANGED);
+        if (circ->p_conn == conn)
+          /* it's closing behind us */
+          circuit_set_circid_orconn(circ, 0, NULL, N_CONN_CHANGED);
         circuit_mark_for_close(circ);
       }
       return;

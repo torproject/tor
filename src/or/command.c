@@ -173,7 +173,7 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
     conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
   }
 
-  circ = circuit_get_by_circ_id_conn(cell->circ_id, conn);
+  circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
 
   if (circ) {
     log_fn(LOG_WARN,"received CREATE cell (circID %d) for known circ. Dropping.", cell->circ_id);
@@ -205,7 +205,7 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
 static void command_process_created_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
-  circ = circuit_get_by_circ_id_conn(cell->circ_id, conn);
+  circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
 
   if (!circ) {
     log_fn(LOG_INFO,"(circID %d) unknown circ (probably got a destroy earlier). Dropping.", cell->circ_id);
@@ -245,7 +245,7 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
 static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
-  circ = circuit_get_by_circ_id_conn(cell->circ_id, conn);
+  circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
 
   if (!circ) {
     log_fn(LOG_INFO,"unknown circuit %d on connection to %s:%d. Dropping.",
@@ -290,7 +290,7 @@ static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
 static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
-  circ = circuit_get_by_circ_id_conn(cell->circ_id, conn);
+  circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
 
   if (!circ) {
     log_fn(LOG_INFO,"unknown circuit %d on connection to %s:%d. Dropping.",
@@ -305,10 +305,10 @@ static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
 
   if (cell->circ_id == circ->p_circ_id) {
     /* the destroy came from behind */
-    circ->p_conn = NULL;
+    circuit_set_circid_orconn(circ, 0, NULL, P_CONN_CHANGED);
     circuit_mark_for_close(circ);
   } else { /* the destroy came from ahead */
-    circ->n_conn = NULL;
+    circuit_set_circid_orconn(circ, 0, NULL, N_CONN_CHANGED);
     if (CIRCUIT_IS_ORIGIN(circ)) {
       circuit_mark_for_close(circ);
     } else {

@@ -11,11 +11,9 @@ const char circuitlist_c_id[] = "$Id$";
  **/
 
 #include "or.h"
+#include "tree.h"
 
 /********* START VARIABLES **********/
-
-/** A global list of all circuits at this hop. */
-circuit_t *global_circuitlist=NULL;
 
 /** Array of strings to make circ-\>state human-readable */
 const char *circuit_state_to_string[] = {
@@ -25,11 +23,90 @@ const char *circuit_state_to_string[] = {
   "open"                     /* 3 */
 };
 
-/********* END VARIABLES ************/
+/** A global list of all circuits at this hop. */
+circuit_t *global_circuitlist=NULL;
 
 static void circuit_free(circuit_t *circ);
 static void circuit_free_cpath(crypt_path_t *cpath);
 static void circuit_free_cpath_node(crypt_path_t *victim);
+
+/********* END VARIABLES ************/
+
+struct orconn_circid_circuit_map_t {
+  SPLAY_ENTRY(orconn_circid_circuit_map_t) node;
+  connection_t *or_conn;
+  uint16_t circ_id;
+  circuit_t *circuit;
+};
+
+static int compare_orconn_circid_entries(struct orconn_circid_circuit_map_t *a,
+                                         struct orconn_circid_circuit_map_t *b)
+{
+  if (a->or_conn < b->or_conn)
+    return -1;
+  else if (a->or_conn > b->or_conn)
+    return 1;
+  else if (a->circ_id < b->circ_id)
+    return -1;
+  else if (a->circ_id > b->circ_id)
+    return 1;
+  else
+    return 0;
+};
+SPLAY_HEAD(orconn_circid_tree, orconn_circid_circuit_map_t) orconn_circid_circuit_map = SPLAY_INITIALIZER(orconn_circid_circuit_map);
+SPLAY_PROTOTYPE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
+SPLAY_GENERATE(orconn_circid_tree, orconn_circid_circuit_map_t, node, compare_orconn_circid_entries);
+
+void
+circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
+                          connection_t *conn,
+                          enum which_conn_changed_t which)
+{
+  uint16_t old_id;
+  connection_t *old_conn;
+  struct orconn_circid_circuit_map_t search;
+  struct orconn_circid_circuit_map_t *found;
+
+  tor_assert(!conn || conn->type == CONN_TYPE_OR);
+
+  if (which == P_CONN_CHANGED) {
+    old_id = circ->p_circ_id;
+    old_conn = circ->p_conn;
+    circ->p_circ_id = id;
+    circ->p_conn = conn;
+  } else {
+    old_id = circ->n_circ_id;
+    old_conn = circ->n_conn;
+    circ->n_circ_id = id;
+    circ->n_conn = conn;
+  }
+
+  if (old_conn) {
+    search.circ_id = old_id;
+    search.or_conn = old_conn;
+    found = SPLAY_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+    if (found) {
+      SPLAY_REMOVE(orconn_circid_tree, &orconn_circid_circuit_map, found);
+    }
+    tor_free(found);
+  }
+
+  if (conn == NULL)
+    return;
+
+  search.circ_id = id;
+  search.or_conn = conn;
+  found = SPLAY_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+  if (found) {
+    found->circuit = circ;
+  } else {
+    found = tor_malloc_zero(sizeof(struct orconn_circid_circuit_map_t));
+    found->circ_id = id;
+    found->or_conn = conn;
+    found->circuit = circ;
+    SPLAY_INSERT(orconn_circid_tree, &orconn_circid_circuit_map, found);
+  }
+}
 
 /** Add <b>circ</b> to the global list of circuits. This is called only from
  * within circuit_new.
@@ -84,13 +161,12 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
 
   circ->timestamp_created = time(NULL);
 
-  circ->p_circ_id = p_circ_id;
-  circ->p_conn = p_conn;
-
   circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
 
   /* CircIDs */
-  circ->p_circ_id = p_circ_id;
+  if (p_conn) {
+    circuit_set_circid_orconn(circ, p_circ_id, p_conn, P_CONN_CHANGED);
+  }
   /* circ->n_circ_id remains 0 because we haven't identified the next hop yet */
 
   circ->package_window = CIRCWINDOW_START;
@@ -127,6 +203,9 @@ static void circuit_free(circuit_t *circ) {
   if (circ->rend_splice) {
     circ->rend_splice->rend_splice = NULL;
   }
+  /* Remove from map. */
+  circuit_set_circid_orconn(circ, 0, NULL, P_CONN_CHANGED);
+  circuit_set_circid_orconn(circ, 0, NULL, N_CONN_CHANGED);
 
   memset(circ, 0xAA, sizeof(circuit_t)); /* poison memory */
   tor_free(circ);
@@ -208,36 +287,19 @@ circuit_get_by_global_id(uint32_t id)
  *    in p_streams or n_streams.
  * Return NULL if no such circuit exists.
  */
-circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn) {
-  circuit_t *circ;
-  connection_t *tmpconn;
+circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn) {
+  struct orconn_circid_circuit_map_t search;
+  struct orconn_circid_circuit_map_t *found;
 
-  for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (circ->marked_for_close)
-      continue;
+  tor_assert(conn->type == CONN_TYPE_OR);
 
-    if (circ->p_circ_id == circ_id) {
-      if (circ->p_conn == conn)
-        return circ;
-      for (tmpconn = circ->p_streams; tmpconn; tmpconn = tmpconn->next_stream) {
-        if (tmpconn == conn)
-          return circ;
-      }
-    }
-    if (circ->n_circ_id == circ_id) {
-      if (circ->n_conn == conn)
-        return circ;
-      for (tmpconn = circ->n_streams; tmpconn; tmpconn = tmpconn->next_stream) {
-        if (tmpconn == conn)
-          return circ;
-      }
-      for (tmpconn = circ->resolving_streams; tmpconn; tmpconn = tmpconn->next_stream) {
-        if (tmpconn == conn)
-          return circ;
-      }
-    }
-  }
-  return NULL;
+  search.circ_id = circ_id;
+  search.or_conn = conn;
+  found = SPLAY_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
+  if (found && found->circuit && !found->circuit->marked_for_close)
+    return found->circuit;
+  else
+    return NULL;
 }
 
 /** Return a circ such that circ is attached to <b>conn</b>, either as
@@ -526,9 +588,14 @@ void assert_circuit_ok(const circuit_t *c)
   if (c->n_conn) {
     tor_assert(c->n_conn->type == CONN_TYPE_OR);
     tor_assert(!memcmp(c->n_conn->identity_digest, c->n_conn_id_digest, DIGEST_LEN));
+    if (c->n_circ_id)
+      tor_assert(c == circuit_get_by_circid_orconn(c->n_circ_id, c->n_conn));
   }
-  if (c->p_conn)
+  if (c->p_conn) {
     tor_assert(c->p_conn->type == CONN_TYPE_OR);
+    if (c->p_circ_id)
+      tor_assert(c == circuit_get_by_circid_orconn(c->p_circ_id, c->p_conn));
+  }
   for (conn = c->p_streams; conn; conn = conn->next_stream)
     tor_assert(conn->type == CONN_TYPE_AP);
   for (conn = c->n_streams; conn; conn = conn->next_stream)

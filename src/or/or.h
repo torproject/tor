@@ -1165,9 +1165,13 @@ void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 /********************************* circuitlist.c ***********************/
 
 extern const char *circuit_state_to_string[];
+enum which_conn_changed_t { P_CONN_CHANGED=1, N_CONN_CHANGED=0 };
+void circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
+                               connection_t *conn,
+                               enum which_conn_changed_t which);
 void circuit_close_all_marked(void);
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
-circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn);
+circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_by_global_id(uint32_t id);
 circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose);
