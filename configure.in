@@ -205,6 +205,7 @@ fi
 AC_CACHE_CHECK([whether memset(0) sets pointers to NULL], tor_cv_null_is_zero,
 [AC_RUN_IFELSE([AC_LANG_SOURCE(
 [[#include <stdlib.h>
+#include <string.h>
 int main () { char *p1,*p2; p1=NULL; memset(&p2,0,sizeof(p2));
 return memcmp(&p1,&p2,sizeof(char*))?1:0; }]])],
        [tor_cv_null_is_zero=yes],
