@@ -92,6 +92,8 @@ int connection_edge_process_inbuf(connection_t *conn) {
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
   assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
 
+  if(conn->marked_for_close)
+    return 0; /* already marked; probably got an 'end' */
   log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.",
          circ_id);
   conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
