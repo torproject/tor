@@ -236,24 +236,6 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
   }
 }
 
-/* Return 0 if router is running a version of Tor too old to be a
- * rendezvous/introduction point.  Return 1 otherwise.
- */
-int router_version_supports_rendezvous(routerinfo_t *router)
-{
-  return (router->platform && 0!=strncasecmp(router->platform,"Tor 0.0.5",9));
-}
-
-/* Add every router running a version of Tor too old for rend/intro
-   points to sl.
- */
-void router_add_nonrendezvous_to_list(smartlist_t *sl)
-{
-  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
-                    if (!router_version_supports_rendezvous(r))
-                      smartlist_add(sl,r));
-}
-
 /* Pick a random node from preferred if possible, else from all of dir.
  * Never pick a node in excluded.
  * If excludedsmartlist is defined, never pick a node in it either.
