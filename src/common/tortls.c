@@ -263,7 +263,8 @@ tor_tls_context_new(crypto_pk_env_t *rsa,
   crypto_dh_free(dh);
   SSL_CTX_set_verify(result->ctx, SSL_VERIFY_PEER, 
                      always_accept_verify_cb);
-  
+  /* let us realloc bufs that we're writing from */
+  SSL_CTX_set_mode(result->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);  
   global_tls_context = result;
   return 0;
 
@@ -358,8 +359,8 @@ tor_tls_write(tor_tls *tls, char *cp, int n)
   if (err == TOR_TLS_DONE) {
     return r;
   }
-  if (err == TOR_TLS_WANTWRITE) {
-    log_fn(LOG_INFO,"wantwrite. remembering the number %d.",n);
+  if (err == TOR_TLS_WANTWRITE || err == TOR_TLS_WANTREAD) {
+    log_fn(LOG_INFO,"wantwrite or wantread. remembering the number %d.",n);
     tls->wantwrite_n = n;
   }
   return err;
