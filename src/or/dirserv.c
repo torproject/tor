@@ -678,8 +678,8 @@ size_t dirserv_get_directory(const char **directory, int deflate)
   } else {
     log(LOG_INFO,"Directory still clean, reusing.");
   }
-  *directory = deflate ? the_directory : the_directory_z;
-  return deflate ? the_directory_len : the_directory_z_len;
+  *directory = deflate ? the_directory_z : the_directory;
+  return deflate ? the_directory_z_len : the_directory_len;
 }
 
 /**
