@@ -991,18 +991,17 @@ to slow down other users when they build new circuits.
 
 % What about link-to-link rate limiting?
 
-Attackers also have an opportunity to attack the Tor network by mounting
-attacks on its hosts and network links. Disrupting a single circuit or
-link breaks all currently open streams passing along that part of the
-circuit. Indeed, this same loss of service occurs when a router crashes
-or its operator restarts it. The current Tor design treats such attacks
-as intermittent network failures, and depends on users and applications
-to respond or recover as appropriate. A future design could use an
-end-to-end TCP-like acknowledgment protocol, so that no streams are
-lost unless the entry or exit point itself is disrupted. This solution
-would require more buffering at the network edges, however, and the
-performance and anonymity implications from this extra complexity still
-require investigation.
+Adversaries can also attack the Tor network's hosts and network
+links. Disrupting a single circuit or link breaks all streams passing
+along that part of the circuit. Indeed, this same loss of service
+occurs when a router crashes or its operator restarts it. The current
+Tor design treats such attacks as intermittent network failures, and
+depends on users and applications to respond or recover as appropriate. A
+future design could use an end-to-end TCP-like acknowledgment protocol,
+so that no streams are lost unless the entry or exit point itself is
+disrupted. This solution would require more buffering at the network
+edges, however, and the performance and anonymity implications from this
+extra complexity still require investigation.
 
 \SubSection{Exit policies and abuse}
 \label{subsec:exitpolicies}
