@@ -111,6 +111,24 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
+routerinfo_t *router_get_by_pk(crypto_pk_env_t *pk) 
+{
+  int i;
+  routerinfo_t *router;
+
+  assert(directory);
+
+  for(i=0;i<directory->n_routers;i++) {
+    router = directory->routers[i];
+    /* XXX Should this really be a separate link key? */
+    if (0 == crypto_pk_cmp_keys(router->pkey, pk))
+      return router;
+  }
+  
+  return NULL;
+}
+  
+
 void router_get_directory(directory_t **pdirectory) {
   *pdirectory = directory;
 }
