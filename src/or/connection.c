@@ -75,8 +75,10 @@ char *conn_state_to_string[][15] = {
 /********* END VARIABLES ************/
 
 static int connection_init_accepted_conn(connection_t *conn);
+#ifdef USE_TLS
 static int connection_tls_continue_handshake(connection_t *conn);
 static int connection_tls_finish_handshake(connection_t *conn);
+#endif
 
 /**************************************************************/
 
@@ -673,56 +675,6 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
   return connection_write_cell_to_buf(&cell, conn);
 }
 
-int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
-  char networkcell[CELL_NETWORK_SIZE];
-  char *n = networkcell;
- 
-  cell_pack(n, cellp);
-
-#ifndef USE_TLS
-  if(connection_encrypt_cell(n,conn)<0) {
-    return -1;
-  }
-#endif
-
-  return connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
-}
-
-#ifndef USE_TLS
-int connection_encrypt_cell(char *cellp, connection_t *conn) {
-  char cryptcell[CELL_NETWORK_SIZE];
-#if 0
-  int x;
-  char *px;
-
-  printf("Sending: Cell header plaintext: ");
-  px = (char *)cellp;
-  for(x=0;x<8;x++) {
-    printf("%u ",px[x]);
-  } 
-  printf("\n");
-#endif
-
-  assert(conn);
-
-  if(crypto_cipher_encrypt(conn->f_crypto, cellp, CELL_NETWORK_SIZE, cryptcell)) {
-    log(LOG_ERR,"Could not encrypt cell for connection %s:%u.",conn->address,conn->port);
-    return -1;
-  }
-#if 0
-  printf("Sending: Cell header crypttext: ");
-  px = (char *)&newcell;
-  for(x=0;x<8;x++) {
-    printf("%u ",px[x]);
-  }
-  printf("\n");
-#endif
-
-  memcpy(cellp,cryptcell,CELL_NETWORK_SIZE);
-  return 0;
-}
-#endif
-
 int connection_process_inbuf(connection_t *conn) {
 
   assert(conn);
@@ -743,127 +695,6 @@ int connection_process_inbuf(connection_t *conn) {
       log_fn(LOG_DEBUG,"got unexpected conn->type.");
       return -1;
   }
-}
-
-int connection_package_raw_inbuf(connection_t *conn) {
-  int amount_to_process;
-  cell_t cell;
-  circuit_t *circ;
-
-  assert(conn);
-  assert(!connection_speaks_cells(conn));
-
-repeat_connection_package_raw_inbuf:
-
-  circ = circuit_get_by_conn(conn);
-  if(!circ) {
-    log_fn(LOG_DEBUG,"conn has no circuits!");
-    return -1;
-  }
-
-  if(circuit_consider_stop_edge_reading(circ, conn->type, conn->cpath_layer))
-    return 0;
-
-  if(conn->package_window <= 0) {
-    log_fn(LOG_ERR,"called with package_window 0. Tell Roger.");
-    connection_stop_reading(conn);
-    return 0;
-  }
-
-  amount_to_process = conn->inbuf_datalen;
-
-  if(!amount_to_process)
-    return 0;
-
-  /* Initialize the cell with 0's */
-  memset(&cell, 0, sizeof(cell_t));
-
-  if(amount_to_process > CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE) {
-    cell.length = CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE;
-  } else {
-    cell.length = amount_to_process;
-  }
-
-  connection_fetch_from_buf(cell.payload+RELAY_HEADER_SIZE, cell.length, conn);
-
-  log_fn(LOG_DEBUG,"(%d) Packaging %d bytes (%d waiting).",conn->s,cell.length, conn->inbuf_datalen);
-
-
-  cell.command = CELL_RELAY;
-  SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_DATA);
-  SET_CELL_STREAM_ID(cell, conn->stream_id);
-  cell.length += RELAY_HEADER_SIZE;
-
-  if(conn->type == CONN_TYPE_EXIT) {
-    cell.aci = circ->p_aci;
-    if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_IN, NULL) < 0) {
-      log_fn(LOG_DEBUG,"circuit_deliver_relay_cell (backward) failed. Closing.");
-      circuit_close(circ);
-      return 0;
-    }
-    assert(circ->package_window > 0);
-    circ->package_window--;
-  } else { /* send it forward. we're an AP */
-    assert(conn->type == CONN_TYPE_AP);
-    cell.aci = circ->n_aci;
-    if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, conn->cpath_layer) < 0) {
-      log_fn(LOG_DEBUG,"circuit_deliver_relay_cell (forward) failed. Closing.");
-      circuit_close(circ);
-      return 0;
-    }
-    assert(conn->cpath_layer->package_window > 0);
-    conn->cpath_layer->package_window--;
-  }
-
-  assert(conn->package_window > 0);
-  if(--conn->package_window <= 0) { /* is it 0 after decrement? */
-    connection_stop_reading(conn);
-    log_fn(LOG_DEBUG,"conn->package_window reached 0.");
-    circuit_consider_stop_edge_reading(circ, conn->type, conn->cpath_layer);
-    return 0; /* don't process the inbuf any more */
-  }
-  log_fn(LOG_DEBUG,"conn->package_window is now %d",conn->package_window);
-
-  /* handle more if there's more, or return 0 if there isn't */
-  goto repeat_connection_package_raw_inbuf;
-}
-
-int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
-  circuit_t *circ;
-  cell_t cell;
-
-  if(connection_outbuf_too_full(conn))
-    return 0;
-
-  circ = circuit_get_by_conn(conn);
-  if(!circ) {
-    /* this can legitimately happen if the destroy has already arrived and torn down the circuit */
-    log_fn(LOG_DEBUG,"No circuit associated with conn. Skipping.");
-    return 0;
-  }
-
-  memset(&cell, 0, sizeof(cell_t));
-  cell.command = CELL_RELAY;
-  SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_SENDME);
-  SET_CELL_STREAM_ID(cell, conn->stream_id);
-  cell.length += RELAY_HEADER_SIZE;
-
-  if(edge_type == EDGE_EXIT)
-    cell.aci = circ->p_aci;
-  else
-    cell.aci = circ->n_aci;
-
-  while(conn->deliver_window < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
-    log_fn(LOG_DEBUG,"Outbuf %d, Queueing stream sendme.", conn->outbuf_flushlen);
-    conn->deliver_window += STREAMWINDOW_INCREMENT;
-    if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION(edge_type), conn->cpath_layer) < 0) {
-      log_fn(LOG_DEBUG,"circuit_deliver_relay_cell failed. Closing.");
-      circuit_close(circ);
-      return 0;
-    }
-  }
-
-  return 0;
 }
 
 int connection_finished_flushing(connection_t *conn) {
@@ -888,55 +719,6 @@ int connection_finished_flushing(connection_t *conn) {
       log_fn(LOG_DEBUG,"got unexpected conn->type.");
       return -1;
   }
-}
-
-int connection_process_cell_from_inbuf(connection_t *conn) {
-  /* check if there's a whole cell there.
-   * if yes, pull it off, decrypt it if we're not doing TLS, and process it.
-   */
-#ifndef USE_TLS
-  char networkcell[CELL_NETWORK_SIZE];
-#endif
-  char buf[CELL_NETWORK_SIZE];
-//  int x;
-  cell_t cell;
-
-  if(conn->inbuf_datalen < CELL_NETWORK_SIZE) /* entire response available? */
-    return 0; /* not yet */
-
-#ifdef USE_TLS
-  connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, conn);
-#else
-  connection_fetch_from_buf(networkcell, CELL_NETWORK_SIZE, conn);
-#if 0
-  printf("Cell header crypttext: ");
-  for(x=0;x<8;x++) {
-    printf("%u ",crypted[x]);
-  }
-  printf("\n");
-#endif
-  /* decrypt */
-  if(crypto_cipher_decrypt(conn->b_crypto, networkcell, CELL_NETWORK_SIZE, buf)) {
-    log_fn(LOG_ERR,"Decryption failed, dropping.");
-    return connection_process_inbuf(conn); /* process the remainder of the buffer */
-  }
-//  log_fn(LOG_DEBUG,"Cell decrypted (%d bytes).",outlen);
-#if 0
-  printf("Cell header plaintext: ");
-  for(x=0;x<8;x++) {
-    printf("%u ",outbuf[x]);
-  }
-  printf("\n");
-#endif
-#endif
-
-  /* retrieve cell info from buf (create the host-order struct from the network-order string) */
-  cell_unpack(&cell, buf);
-
-//  log_fn(LOG_DEBUG,"Decrypted cell is of type %u (ACI %u).",cellp->command,cellp->aci);
-  command_process_cell(&cell, conn);
-
-  return connection_process_inbuf(conn); /* process the remainder of the buffer */
 }
 
 void
@@ -966,3 +748,4 @@ cell_unpack(cell_t *dest, const char *src)
   c-basic-offset:2
   End:
 */
+
