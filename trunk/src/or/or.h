@@ -1082,8 +1082,10 @@ int rend_cache_store(char *desc, int desc_len);
 /********************************* rendservice.c ***************************/
 
 int rend_config_services(or_options_t *options);
-int rend_service_init_keys(void);
+int rend_service_load_keys(void);
 void rend_services_init(void);
+void rend_services_introduce(void);
+void rend_services_upload(int force);
 
 void rend_service_intro_is_ready(circuit_t *circuit);
 int rend_service_intro_established(circuit_t *circuit, const char *request, int request_len);
