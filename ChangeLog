@@ -6,8 +6,11 @@ Changes in version 0.0.9.4 - 2005-02-03
     - Don't crash as badly if we have spawned the max allowed number
       of dnsworkers, or we're out of file descriptors.
     - Block more file-sharing ports in the default exit policy.
-    - Give better a clearer message that they need to raise MaxConn
-      when they start running out of file descriptors.
+    - MaxConn is now automatically set to the hard limit of max
+      file descriptors we're allowed (ulimit -n), minus a few for
+      logs, etc.
+    - Give a clearer message when servers need to raise their
+      ulimit -n when they start running out of file descriptors.
     - SGI Compatibility patches from Jan Schaumann.
     - Tolerate a corrupt cached directory better.
     - When a dirserver hasn't approved your server, list which one.
