@@ -829,7 +829,7 @@ int connection_edge_process_inbuf(connection_t *conn);
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn);
 int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer);
 int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
-                                 int relay_command, void *payload,
+                                 int relay_command, const char *payload,
                                  int payload_len, crypt_path_t *cpath_layer);
 int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                                        connection_t *conn, int edge_type,
@@ -1044,6 +1044,9 @@ typedef struct rend_service_descriptor_t {
   char **intro_points;
 } rend_service_descriptor_t;
 
+void rend_process_relay_cell(circuit_t *circ, int command, int length,
+                             const char *payload);
+
 void rend_service_descriptor_free(rend_service_descriptor_t *desc);
 int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
                                    crypto_pk_env_t *key,
@@ -1058,7 +1061,6 @@ int rend_valid_service_id(char *query);
 int rend_cache_lookup(char *query, const char **desc, int *desc_len);
 int rend_cache_store(char *desc, int desc_len);
 
-
 /********************************* rendservice.c ***************************/
 
 int rend_config_services(or_options_t *options);
@@ -1067,6 +1069,13 @@ int rend_services_init(void);
 
 void rend_service_intro_is_ready(circuit_t *circuit);
 void rend_service_rendezvous_is_ready(circuit_t *circuit);
+int rend_service_introduce(circuit_t *circuit, const char *request, int request_len);
+
+/********************************* rendmid.c *******************************/
+int rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len);
+int rend_mid_introduce(circuit_t *circ, const char *request, int request_len);
+int rend_mid_establish_rendezvous(circuit_t *circ, const char *request, int request_len);
+int rend_mid_rendezvous(circuit_t *circ, const char *request, int request_len);
 
 #endif
 

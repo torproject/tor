@@ -171,7 +171,7 @@ int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_lay
  * return -1. Else return 0.
  */
 int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
-                                 int relay_command, void *payload,
+                                 int relay_command, const char *payload,
                                  int payload_len, crypt_path_t *cpath_layer) {
   cell_t cell;
   relay_header_t rh;
@@ -432,6 +432,15 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       log_fn(LOG_DEBUG,"stream-level sendme, packagewindow now %d.", conn->package_window);
       connection_start_reading(conn);
       connection_edge_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
+      return 0;
+    case RELAY_COMMAND_ESTABLISH_INTRO:
+    case RELAY_COMMAND_ESTABLISH_RENDEZVOUS:
+    case RELAY_COMMAND_INTRODUCE1:
+    case RELAY_COMMAND_INTRODUCE2:
+    case RELAY_COMMAND_RENDEZVOUS1:
+    case RELAY_COMMAND_RENDEZVOUS2:
+      rend_process_relay_cell(circ, rh.command, rh.length,
+                              cell->payload+RELAY_HEADER_SIZE);
       return 0;
   }
   log_fn(LOG_WARN,"unknown relay command %d.",rh.command);
