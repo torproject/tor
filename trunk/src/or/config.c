@@ -50,7 +50,7 @@ static struct config_line *config_get_commandlines(int argc, char **argv) {
   char *s;
   int i = 1;
 
-  while(i < argc-1) { 
+  while(i < argc-1) {
     if(!strcmp(argv[i],"-f")) {
 //      log(LOG_DEBUG,"Commandline: skipping over -f.");
       i+=2; /* this is the config file option. ignore it. */
@@ -119,7 +119,7 @@ static int config_compare(struct config_line *c, char *key, int type, void *arg)
   log_fn(LOG_DEBUG,"Recognized keyword '%s' as %s, using value '%s'.",c->key,key,c->value);
 
   switch(type) {
-    case CONFIG_TYPE_INT:   
+    case CONFIG_TYPE_INT:
       *(int *)arg = atoi(c->value);
       break;
     case CONFIG_TYPE_BOOL:
@@ -205,7 +205,7 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     }
 
     list = list->next;
-  }  
+  }
 }
 
 /* prints the usage of tor. */
@@ -300,7 +300,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     previous_runasdaemon = options->RunAsDaemon;
     free_options(options);
   }
-  init_options(options); 
+  init_options(options);
 
   if(argc > 1 && (!strcmp(argv[1], "-h") || !strcmp(argv[1],"--help"))) {
     print_usage();
@@ -330,7 +330,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   config_assign(options,cl);
   config_free_lines(cl);
   config_close(cf);
- 
+
 /* go through command-line variables too */
   cl = config_get_commandlines(argc,argv);
   config_assign(options,cl);
@@ -394,7 +394,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   if(options->SocksPort == 0 && options->ORPort == 0) {
     log(LOG_WARN,"SocksPort and ORPort are both undefined? Quitting.");
     result = -1;
-  } 
+  }
 
   if(options->DirPort < 0) {
     log(LOG_WARN,"DirPort option can't be negative.");

@@ -224,7 +224,7 @@ void router_retry_connections(void) {
   router_get_routerlist(&rl);
   for (i=0;i<rl->n_routers;i++) {
     router = rl->routers[i];
-    if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { 
+    if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) {
       /* not in the list */
       log_fn(LOG_DEBUG,"connecting to OR %s:%u.",router->address,router->or_port);
       connection_or_connect(router);
@@ -378,11 +378,11 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   int result=0;
   struct exit_policy_t *tmpe;
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
-  char *s_tmp, *s_dup; 
+  char *s_tmp, *s_dup;
   const char *cp;
   routerinfo_t *ri_tmp;
 #endif
-  
+
   get_platform_str(platform, sizeof(platform));
 
   if (crypto_pk_cmp_keys(ident_key, router->identity_pkey)) {
@@ -408,8 +408,8 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     return -1;
   }
   strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&router->published_on));
-  
-  result = snprintf(s, maxlen, 
+
+  result = snprintf(s, maxlen,
                     "router %s %s %d %d %d %d\n"
                     "platform %s\n"
                     "published %s\n"
@@ -493,8 +493,8 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   written += strlen(s+written);
   strcat(s+written, "-----END SIGNATURE-----\n");
   written += strlen(s+written);
-  
-  if (written > maxlen-2) 
+
+  if (written > maxlen-2)
     return -1;
   /* include a last '\n' */
   s[written] = '\n';
@@ -504,7 +504,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   cp = s_tmp = s_dup = tor_strdup(s);
   ri_tmp = router_get_entry_from_string(&cp);
   if (!ri_tmp) {
-    log_fn(LOG_ERR, "We just generated a router descriptor we can't parse: <<%s>>", 
+    log_fn(LOG_ERR, "We just generated a router descriptor we can't parse: <<%s>>",
            s);
     return -1;
   }

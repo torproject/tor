@@ -317,7 +317,7 @@ struct connection_t {
 
 /* Used only by OR connections: */
   tor_tls *tls;
-  circ_id_t next_circ_id; /* Which circ_id do we try to use next on this connection? 
+  circ_id_t next_circ_id; /* Which circ_id do we try to use next on this connection?
                            * This is always in the range 0..1<<15-1.*/
 
   /* bandwidth and receiver_bucket only used by ORs in OPEN state: */
@@ -337,7 +337,7 @@ struct connection_t {
   int done_receiving;
   char has_sent_end; /* for debugging: set once we've set the stream end,
                         and check in circuit_about_to_close_connection() */
-  
+
   /* Used only by AP connections */
   socks_request_t *socks_request;
 };
@@ -362,18 +362,18 @@ struct exit_policy_t {
 typedef struct {
   char *address;
   char *nickname;
- 
+
   uint32_t addr; /* all host order */
   uint16_t or_port;
   uint16_t socks_port;
   uint16_t dir_port;
 
   time_t published_on;
- 
+
   crypto_pk_env_t *onion_pkey; /* public RSA key for onions */
   crypto_pk_env_t *link_pkey;  /* public RSA key for TLS */
   crypto_pk_env_t *identity_pkey;  /* public RSA key for signing */
- 
+
   int is_running;
 
   /* link info */
@@ -389,7 +389,7 @@ typedef struct {
   time_t published_on;
 } routerlist_t;
 
-struct crypt_path_t { 
+struct crypt_path_t {
 
   /* crypto environments */
   crypto_cipher_env_t *f_crypto;
@@ -735,7 +735,7 @@ void onion_pending_remove(circuit_t *circ);
 
 int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
 
-int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, 
+int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state,
                        routerinfo_t **router_out);
 
 int onion_skin_create(crypto_pk_env_t *router_key,

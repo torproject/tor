@@ -21,7 +21,7 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn,
                                int *num, int *time,
                                void (*func)(cell_t *, connection_t *)) {
   struct timeval start, end;
-  long time_passed; 
+  long time_passed;
 
   *num += 1;
 
@@ -46,7 +46,7 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
 
   if(now > current_second) { /* the second has rolled over */
     /* print stats */
-    log(LOG_INFO,"At end of second:"); 
+    log(LOG_INFO,"At end of second:");
     log(LOG_INFO,"Create:    %d (%d ms)", num_create, create_time/1000);
     log(LOG_INFO,"Created:   %d (%d ms)", num_created, created_time/1000);
     log(LOG_INFO,"Relay:     %d (%d ms)", num_relay, relay_time/1000);

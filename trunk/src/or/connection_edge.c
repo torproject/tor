@@ -27,7 +27,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
 
   if(conn->inbuf_reached_eof) {
 #ifdef HALF_OPEN
-    /* eof reached; we're done reading, but we might want to write more. */ 
+    /* eof reached; we're done reading, but we might want to write more. */
     conn->done_receiving = 1;
     shutdown(conn->s, 0); /* XXX check return, refactor NM */
     if (conn->done_sending) {
@@ -38,7 +38,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
                                    NULL, 0, conn->cpath_layer);
     }
     return 0;
-#else 
+#else
     /* eof reached, kill it. */
     log_fn(LOG_INFO,"conn (fd %d) reached eof. Closing.", conn->s);
     if(connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer) < 0)
@@ -676,7 +676,7 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   memcpy(payload, ap_conn->stream_id, STREAM_ID_SIZE);
   payload_len = STREAM_ID_SIZE + 1 +
     snprintf(payload+STREAM_ID_SIZE,CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE-STREAM_ID_SIZE,
-             "%s:%d", 
+             "%s:%d",
              string_addr ? string_addr : ap_conn->socks_request->address,
              ap_conn->socks_request->port);
 
@@ -692,7 +692,7 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   /* XXX Right now, we rely on the socks client not to send us any data
    * XXX until we've sent back a socks reply.  (If it does, we could wind
    * XXX up packaging that data and sending it to the exit, then later having
-   * XXX the exit refuse us.)  
+   * XXX the exit refuse us.)
    * XXX Perhaps we should grow an AP_CONN_STATE_CONNECTING state.
    */
   log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
@@ -865,7 +865,7 @@ static int client_dns_size = 0;
 static SPLAY_HEAD(client_dns_tree, client_dns_entry) client_dns_root;
 
 static int compare_client_dns_entries(struct client_dns_entry *a,
-                                      struct client_dns_entry *b) 
+                                      struct client_dns_entry *b)
 {
   return strcasecmp(a->address, b->address);
 }
@@ -962,7 +962,7 @@ void client_dns_clean(void)
 
   if(!client_dns_size)
     return;
-  expired_entries = tor_malloc(client_dns_size * 
+  expired_entries = tor_malloc(client_dns_size *
                                sizeof(struct client_dns_entry *));
 
   now = time(NULL);

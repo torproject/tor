@@ -141,7 +141,7 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
   }
 }
 
-void 
+void
 dirserv_free_fingerprint_list()
 {
   int i;
@@ -285,17 +285,17 @@ dirserv_add_descriptor(const char **desc)
   tor_free(desc_tmp);
   if (ri)
     routerinfo_free(ri);
-  
+
   return -1;
 }
 
-void 
+void
 directory_set_dirty()
 {
   the_directory_is_dirty = 1;
 }
 
-int 
+int
 dirserv_init_from_directory_string(const char *dir)
 {
   const char *cp = dir;
@@ -343,7 +343,7 @@ list_running_servers(char **nicknames_out)
     if (i)
       strcat(cp, " ");
     strcat(cp, nickname_lst[i]);
-    while (*cp) 
+    while (*cp)
       ++cp;
   }
   return 0;

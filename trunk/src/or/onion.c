@@ -111,7 +111,7 @@ void onion_pending_remove(circuit_t *circ) {
 
   /* now victim points to the element that needs to be removed */
 
-  free(victim); 
+  free(victim);
 }
 
 /* given a response payload and keys, initialize, then send a created cell back */
@@ -266,7 +266,7 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
           carray[j]->marked_for_close ||
           circuit_stream_is_being_handled(carray[j]))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
-      switch (connection_ap_can_use_exit(carray[j], dir->routers[i])) 
+      switch (connection_ap_can_use_exit(carray[j], dir->routers[i]))
         {
         case -1:
           log_fn(LOG_DEBUG,"%s (index %d) would reject this stream.",
@@ -283,7 +283,7 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
                  dir->routers[i]->nickname, i, n_maybe_supported[i]);
         }
     } /* End looping over connections. */
-    if (n_supported[i] > best_support) { 
+    if (n_supported[i] > best_support) {
       /* If this router is better than previous ones, remember its index
        * and goodness, and start counting how many routers are this good. */
       best_support = n_supported[i]; best_support_idx = i; n_best_support=1;
@@ -372,7 +372,7 @@ cpath_build_state_t *onion_new_cpath_build_state(void) {
 
   router_get_routerlist(&rl);
   r = new_route_len(options.PathlenCoinWeight, rl->routers, rl->n_routers);
-  if (r < 0) 
+  if (r < 0)
     return NULL;
   exit = choose_good_exit_server(rl);
   if(!exit)
@@ -459,10 +459,10 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
       ++cur_len;
     }
   }
-  if (cur_len >= state->desired_path_len) { 
-    log_fn(LOG_DEBUG, "Path is complete: %d steps long", 
+  if (cur_len >= state->desired_path_len) {
+    log_fn(LOG_DEBUG, "Path is complete: %d steps long",
            state->desired_path_len);
-    return 1; 
+    return 1;
   }
   log_fn(LOG_DEBUG, "Path is %d long; we want %d", cur_len,
          state->desired_path_len);
@@ -544,7 +544,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   hop->package_window = CIRCWINDOW_START;
   hop->deliver_window = CIRCWINDOW_START;
 
-  log_fn(LOG_DEBUG, "Extended circuit path with %s for hop %d", 
+  log_fn(LOG_DEBUG, "Extended circuit path with %s for hop %d",
          choice->nickname, cur_len);
 
   *router_out = choice;
@@ -600,7 +600,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
    * of 'challenge' to 0.  This means that our symmetric key is really
    * only 127 bits.
    */
-  challenge[0] &= 0x7f; 
+  challenge[0] &= 0x7f;
 
   if (crypto_dh_get_public(dh, challenge+16, dhbytes))
     goto err;

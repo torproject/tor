@@ -7,7 +7,7 @@
 extern or_options_t options; /* command-line and config-file options */
 
 static void circuit_free_cpath_node(crypt_path_t *victim);
-static circ_id_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type);  
+static circ_id_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type);
 
 unsigned long stats_n_relay_cells_relayed = 0;
 unsigned long stats_n_relay_cells_delivered = 0;
@@ -54,7 +54,7 @@ void circuit_remove(circuit_t *circ) {
 }
 
 circuit_t *circuit_new(circ_id_t p_circ_id, connection_t *p_conn) {
-  circuit_t *circ; 
+  circuit_t *circ;
 
   circ = tor_malloc_zero(sizeof(circuit_t));
 
@@ -344,7 +344,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   char recognized=0;
 
   assert(cell && circ);
-  assert(cell_direction == CELL_DIRECTION_OUT || cell_direction == CELL_DIRECTION_IN); 
+  assert(cell_direction == CELL_DIRECTION_OUT || cell_direction == CELL_DIRECTION_IN);
 
   log_fn(LOG_DEBUG,"direction %d, streamid %d before crypt.", cell_direction, *(int*)(cell->payload+1));
 
@@ -409,7 +409,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
 
   assert(inlen < CELL_NETWORK_SIZE);
 
-  if(cell_direction == CELL_DIRECTION_IN) { 
+  if(cell_direction == CELL_DIRECTION_IN) {
     if(circ->cpath) { /* we're at the beginning of the circuit.
                          We'll want to do layered crypts. */
       thishop = circ->cpath;
@@ -453,7 +453,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
       /* don't check for recognized. only the OP can recognize a stream on the way back. */
 
     }
-  } else if(cell_direction == CELL_DIRECTION_OUT) { 
+  } else if(cell_direction == CELL_DIRECTION_OUT) {
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
 
       thishop = *layer_hint; /* we already know which layer, from when we package_raw_inbuf'ed */
@@ -604,12 +604,12 @@ void circuit_close(circuit_t *circ) {
   if(circ->n_conn)
     connection_send_destroy(circ->n_circ_id, circ->n_conn);
   for(conn=circ->n_streams; conn; conn=conn->next_stream) {
-    connection_send_destroy(circ->n_circ_id, conn); 
+    connection_send_destroy(circ->n_circ_id, conn);
   }
   if(circ->p_conn)
     connection_send_destroy(circ->n_circ_id, circ->p_conn);
   for(conn=circ->p_streams; conn; conn=conn->next_stream) {
-    connection_send_destroy(circ->p_circ_id, conn); 
+    connection_send_destroy(circ->p_circ_id, conn);
   }
   if (circ->state == CIRCUIT_STATE_BUILDING ||
       circ->state == CIRCUIT_STATE_OR_WAIT) {
@@ -638,7 +638,7 @@ void circuit_about_to_close_connection(connection_t *conn) {
         if(circ->p_conn == conn) /* it's closing behind us */
           circ->p_conn = NULL;
         circuit_close(circ);
-      }  
+      }
       return;
     case CONN_TYPE_AP:
     case CONN_TYPE_EXIT:
@@ -692,8 +692,8 @@ void circuit_dump_details(int severity, circuit_t *circ, int poll_index,
       log(severity,"Building: desired len %d, planned exit node %s.",
           circ->build_state->desired_path_len, circ->build_state->chosen_exit);
     for(hop=circ->cpath;hop->next != circ->cpath; hop=hop->next)
-      log(severity,"hop: state %d, addr %x, port %d", hop->state, 
-          (unsigned int)hop->addr, 
+      log(severity,"hop: state %d, addr %x, port %d", hop->state,
+          (unsigned int)hop->addr,
           (int)hop->port);
   }
 }
@@ -744,7 +744,7 @@ void circuit_expire_unused_circuits(void) {
 /* Number of consecutive failures so far; should only be touched by
  * circuit_launch_new and circuit_*_failure_count.
  */
-static int n_circuit_failures = 0; 
+static int n_circuit_failures = 0;
 
 /* Return -1 if you aren't going to try to make a circuit, 0 if you did try. */
 int circuit_launch_new(void) {
@@ -820,7 +820,7 @@ int circuit_establish_circuit(void) {
     log_fn(LOG_DEBUG,"connecting in progress (or finished). Good.");
     return 0; /* return success. The onion/circuit/etc will be taken care of automatically
                * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
-               */ 
+               */
   } else { /* it (or a twin) is already open. use it. */
     circ->n_addr = n_conn->addr;
     circ->n_port = n_conn->port;
@@ -1084,7 +1084,7 @@ void assert_cpath_layer_ok(const crypt_path_t *cp)
   assert(cp->b_crypto);
   assert(cp->addr);
   assert(cp->port);
-  switch(cp->state) 
+  switch(cp->state)
     {
     case CPATH_STATE_CLOSED:
     case CPATH_STATE_OPEN:
@@ -1120,7 +1120,7 @@ void assert_cpath_ok(const crypt_path_t *cp)
   }
 }
 
-void assert_circuit_ok(const circuit_t *c) 
+void assert_circuit_ok(const circuit_t *c)
 {
   connection_t *conn;
 
