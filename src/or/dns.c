@@ -343,8 +343,10 @@ void dns_cancel_pending_resolve(char *address) {
     pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
     pendconn = pend->conn; /* don't pass complex things to the
                               connection_mark_for_close macro */
-    connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
-    connection_mark_for_close(pendconn);
+    if(!pendconn->marked_for_close) {
+      connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
+      connection_mark_for_close(pendconn);
+    }
     resolve->pending_connections = pend->next;
     tor_free(pend);
   }

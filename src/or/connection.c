@@ -172,16 +172,46 @@ void connection_free_all(void) {
 
 void connection_about_to_close_connection(connection_t *conn)
 {
+
+  if(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
+    if(!conn->has_sent_end)
+      log_fn(LOG_WARN,"Edge connection hasn't sent end yet? Bug.");
+  }
+
   switch(conn->type) {
     case CONN_TYPE_DIR:
       if(conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
         rend_client_desc_fetched(conn->rend_query, 0);
       break;
+    case CONN_TYPE_OR:
+      /* Remember why we're closing this connection. */
+      if (conn->state != OR_CONN_STATE_OPEN) {
+        /* XXX Nick: this still isn't right, because it might be
+         * dying even though we didn't initiate the connect. Can
+         * you look at this more? -RD */
+        if(conn->nickname)
+          rep_hist_note_connect_failed(conn->nickname, time(NULL));
+      } else if (0) { // XXX reason == CLOSE_REASON_UNUSED_OR_CONN) {
+        rep_hist_note_disconnect(conn->nickname, time(NULL));
+      } else {
+        rep_hist_note_connection_died(conn->nickname, time(NULL));
+      }
+      break;
     case CONN_TYPE_AP:
+      if (conn->socks_request->has_finished == 0) {
+        log_fn(LOG_INFO,"Cleaning up AP -- sending socks reject.");
+        connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
+        conn->socks_request->has_finished = 1;
+        conn->hold_open_until_flushed = 1;
+      }
+      break;
     case CONN_TYPE_EXIT:
-      if(!conn->has_sent_end) {
-        log_fn(LOG_WARN,"Edge connection hasn't sent end yet? Bug.");
-        connection_mark_for_close(conn);
+      if (conn->state == EXIT_CONN_STATE_RESOLVING)
+        connection_dns_remove(conn);
+      break;
+    case CONN_TYPE_DNSWORKER:
+      if (conn->state == DNSWORKER_STATE_BUSY) {
+        dns_cancel_pending_resolve(conn->address);
       }
       break;
   }
@@ -230,50 +260,6 @@ _connection_mark_for_close(connection_t *conn)
     return -1;
   }
 
-  switch (conn->type)
-    {
-    case CONN_TYPE_OR_LISTENER:
-    case CONN_TYPE_AP_LISTENER:
-    case CONN_TYPE_DIR_LISTENER:
-    case CONN_TYPE_CPUWORKER:
-    case CONN_TYPE_DIR:
-      /* No special processing needed immediately. */
-      break;
-    case CONN_TYPE_OR:
-      /* Remember why we're closing this connection. */
-      if (conn->state != OR_CONN_STATE_OPEN) {
-        /* XXX Nick: this still isn't right, because it might be
-         * dying even though we didn't initiate the connect. Can
-         * you look at this more? -RD */
-        if(conn->nickname)
-          rep_hist_note_connect_failed(conn->nickname, time(NULL));
-      } else if (0) { // XXX reason == CLOSE_REASON_UNUSED_OR_CONN) {
-        rep_hist_note_disconnect(conn->nickname, time(NULL));
-      } else {
-        rep_hist_note_connection_died(conn->nickname, time(NULL));
-      }
-      break;
-    case CONN_TYPE_AP:
-      if (conn->socks_request->has_finished == 0) {
-        log_fn(LOG_INFO,"Cleaning up AP -- sending socks reject.");
-        connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
-        conn->socks_request->has_finished = 1;
-        conn->hold_open_until_flushed = 1;
-      }
-      /* fall through, to do things for both ap and exit */
-    case CONN_TYPE_EXIT:
-      if (conn->state == EXIT_CONN_STATE_RESOLVING)
-        connection_dns_remove(conn);
-      break;
-    case CONN_TYPE_DNSWORKER:
-      if (conn->state == DNSWORKER_STATE_BUSY) {
-        dns_cancel_pending_resolve(conn->address);
-      }
-      break;
-    default:
-      log(LOG_ERR, "Unknown connection type %d", conn->type);
-      ;
-    }
   conn->marked_for_close = 1;
 
   /* in case we're going to be held-open-til-flushed, reset
