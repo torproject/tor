@@ -131,7 +131,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
        * descriptor -- those use Tor. */
       if (options.FascistFirewall && purpose == DIR_PURPOSE_UPLOAD_DIR &&
           !options.HttpProxy) {
-        sprintf(buf,"%d",ds->dir_port);
+        snprintf(buf,sizeof(buf),"%d",ds->dir_port);
         if (!smartlist_string_isin(options.FirewallPorts, buf))
           continue;
       }
@@ -325,10 +325,10 @@ directory_send_command(connection_t *conn, const char *platform,
   if(conn->port == 80) {
     strlcpy(hoststring, conn->address, sizeof(hoststring));
   } else {
-    sprintf(hoststring, "%s:%d", conn->address, conn->port);
+    snprintf(hoststring, sizeof(hoststring),"%s:%d",conn->address, conn->port);
   }
   if(options.HttpProxy) {
-    sprintf(proxystring, "http://%s", hoststring);
+    snprintf(proxystring, sizeof(proxystring),"http://%s", hoststring);
   } else {
     proxystring[0] = 0;
   }
@@ -361,7 +361,7 @@ directory_send_command(connection_t *conn, const char *platform,
       conn->rend_query[payload_len] = 0;
 
       httpcommand = "GET";
-      sprintf(url, "%s/rendezvous/%s", use_newer ? "/tor" : "", payload);
+      snprintf(url, sizeof(url), "%s/rendezvous/%s", use_newer ? "/tor" : "", payload);
 
       /* XXX We're using payload here to mean something other than
        * payload of the http post. This is probably bad, and should
@@ -373,7 +373,7 @@ directory_send_command(connection_t *conn, const char *platform,
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       tor_assert(payload);
       httpcommand = "POST";
-      sprintf(url, "%s/rendezvous/publish", use_newer ? "/tor" : "");
+      snprintf(url, sizeof(url), "%s/rendezvous/publish", use_newer ? "/tor" : "");
       break;
   }
 

@@ -835,7 +835,7 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
 #endif
   published_on = time(NULL);
   format_iso_time(published, published_on);
-  sprintf(s, "network-status\n"
+  snprintf(s, len, "network-status\n"
              "published %s\n"
              "router-status %s\n"
              "opt dir-signing-key %s\n"

@@ -82,7 +82,7 @@ R  - learn from ben about his openssl-reinitialization-trick to
      forbidden ports when fascistfirewall blocks all good dirservers.
 
    0.0.9 and beyond:
-   - fix sprintf's to snprintf's?
+   o fix sprintf's to snprintf's?
    . Make intro points and rendezvous points accept $KEYID in addition
      to nicknames.
            o Specify

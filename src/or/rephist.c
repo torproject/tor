@@ -528,7 +528,7 @@ char *rep_hist_get_bandwidth_lines(void)
   for (r=0;r<2;++r) {
     b = r?read_array:write_array;
     format_iso_time(t, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
-    sprintf(cp, "opt %s %s (%d s) ", r?"read-history ":"write-history", t,
+    snprintf(cp, len-(cp-buf), "opt %s %s (%d s) ", r?"read-history ":"write-history", t,
             NUM_SECS_BW_SUM_INTERVAL);
     cp += strlen(cp);
 
@@ -543,9 +543,9 @@ char *rep_hist_get_bandwidth_lines(void)
     for (n=0; n<b->num_maxes_set; ++n,++i) {
       while (i >= NUM_TOTALS) i -= NUM_TOTALS;
       if (n==(b->num_maxes_set-1))
-        sprintf(cp, "%d", b->totals[i]);
+        snprintf(cp, len-(cp-buf), "%d", b->totals[i]);
       else
-        sprintf(cp, "%d,", b->totals[i]);
+        snprintf(cp, len-(cp-buf), "%d,", b->totals[i]);
       cp += strlen(cp);
     }
     strcat(cp, "\n");
