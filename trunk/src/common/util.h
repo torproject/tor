@@ -13,6 +13,7 @@
 #include "orconfig.h"
 #include "torint.h"
 #include <stdio.h>
+#include <stdarg.h>
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
@@ -106,7 +107,18 @@ long tor_parse_long(const char *s, int base, long min,
 unsigned long tor_parse_ulong(const char *s, int base, unsigned long min,
                               unsigned long max, int *ok, char **next);
 
+/* XXXX duplicated from log.h */
+#ifdef __GNUC__
+#define CHECK_PRINTF(formatIdx, firstArg) \
+   __attribute__ ((format (printf, formatIdx, firstArg)))
+#else
+#define CHECK_PRINTF(formatIdx, firstArg)
+#endif
 
+int tor_snprintf(char *str, size_t size, const char *format, ...)
+     CHECK_PRINTF(3,4);
+int tor_vsnprintf(char *str, size_t size, const char *format, va_list args);
+     
 /* Some platforms segfault when you try to access a multi-byte type
  * that isn't aligned to a word boundary.  The macros and/or functions
  * below can be used to access unaligned data on any platform.
