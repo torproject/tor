@@ -1440,6 +1440,7 @@ int tor_version_parse(const char *s, tor_version_t *out)
    */
   tor_assert(s);
   tor_assert(out);
+
   memset(out, 0, sizeof(tor_version_t));
 
   /* Get major. */
@@ -1482,13 +1483,14 @@ int tor_version_parse(const char *s, tor_version_t *out)
   if (!eos || eos==cp) return -1;
   cp = eos;
 
-  /* Get cvs status. */
-  if (!*eos) {
-    out->cvs = IS_NOT_CVS;
-  } else if (0==strcmp(cp, "-cvs")) {
+  /* Get cvs status and status tag. */
+  if (*cp == '-' || *cp == '.')
+    ++cp;
+  strlcpy(out->status_tag, cp, sizeof(out->status_tag));
+  if (0==strcmp(cp, "cvs") && out->major == 0 && out->minor == 0) {
     out->cvs = IS_CVS;
   } else {
-    return -1;
+    out->cvs = IS_NOT_CVS;
   }
 
   return 0;
@@ -1511,9 +1513,11 @@ int tor_version_compare(tor_version_t *a, tor_version_t *b)
     return i;
   else if ((i = a->patchlevel - b->patchlevel))
     return i;
-  else if ((i = a->cvs - b->cvs))
-    return i;
-  else
-    return 0;
+
+  if (a->major > 0 || a->minor > 0) {
+    return strcmp(a->status_tag, b->status_tag);
+  } else {
+    return (a->cvs - b->cvs);
+  }
 }
 

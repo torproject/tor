@@ -20,7 +20,7 @@ N  - pump up periods for fetching things; figure out how to do this
      get the right behavior.
      - If dirport is set, we should have a maximum dirfetchperiod and
        a maximum statusfetchperiod, or else we'll serve very stale stuff.
-N  - Adapt version parsing code to handle new version scheme; document new
+   o Adapt version parsing code to handle new version scheme; document new
      version scheme.
 N&R. make loglevels info,debug less noisy
 R  - fix dfc/weasel's intro point bug
