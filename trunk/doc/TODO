@@ -34,6 +34,7 @@ Short-term:
         - Make tls connections tls_close intentionally
         - Add '[...truncated]' or similar to truncated log entries (like the directory
           in connection_dir_process_inbuf()).
+        - Make logs handle it better when writing to them fails.
         o Rename ACI to circID
         . integrate rep_ok functions, see what breaks
         - update tor faq
