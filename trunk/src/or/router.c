@@ -239,7 +239,7 @@ int init_keys(void) {
   if (!key_lock)
     key_lock = tor_mutex_new();
 
-  /* OP's don't need persistant keys; just make up an identity and
+  /* OP's don't need persistent keys; just make up an identity and
    * initialize the TLS context. */
   if (!server_mode(options)) {
     if (!(prkey = crypto_new_pk_env()))
