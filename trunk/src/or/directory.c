@@ -820,13 +820,19 @@ int connection_dir_process_inbuf(connection_t *conn) {
   return 0;
 }
 
+/** Create an http response for the client <b>conn</b> out of
+ * <b>status</b> and <b>reason_phrase</b>. Write it to <b>conn</b>.
+ */
 static void
 write_http_status_line(connection_t *conn, int status,
                        const char *reason_phrase)
 {
-  char buf[128];
-  if (tor_snprintf(buf, sizeof(buf), "HTTP/1.0 %d %s\r\n\r\n")<0)
+  char buf[256];
+  if (tor_snprintf(buf, sizeof(buf), "HTTP/1.0 %d %s\r\n\r\n",
+      status, reason_phrase) < 0) {
+    log_fn(LOG_WARN,"Bug: status line too long.");
     return;
+  }
   connection_write_to_buf(buf, strlen(buf), conn);
 }
 
@@ -910,7 +916,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
        * if we're gone to the site recently, and 404 if we haven't.
        *
        * Reject. */
-      write_http_status_line(conn, 400, "Nonauthorative directory does not not store rendezvous descriptors.");
+      write_http_status_line(conn, 400, "Nonauthoritative directory does not not store rendezvous descriptors.");
       tor_free(url);
       return 0;
     }
@@ -959,7 +965,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
   if (!authdir_mode(get_options())) {
     /* we just provide cached directories; we don't want to
      * receive anything. */
-    write_http_status_line(conn, 400, "Not authoritative server");
+    write_http_status_line(conn, 400, "Nonauthoritative directory does not not store server descriptors");
     return 0;
   }
 
@@ -978,7 +984,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
         break;
       case 0:
         /* descriptor was well-formed but server has not been approved */
-        write_http_status_line(conn, 200, "Unverified server descriptor accepted");
+        write_http_status_line(conn, 200, "Unverified server descriptor accepted. Have you mailed us your key fingerprint? Are you using the right key?");
         break;
       case 1:
         dirserv_get_directory(&cp, 0); /* rebuild and write to disk */
