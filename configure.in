@@ -133,10 +133,16 @@ LIBS="$saved_LIBS -lcrypto"
 
 dnl The warning message here is no longer strictly accurate.
 
-AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h poll.h sys/poll.h sys/types.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h stdint.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
+AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h poll.h sys/poll.h sys/types.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h , , AC_MSG_WARN(some headers were not found, compilation may fail))
+
+dnl These headers are not essential
+
+AC_CHECK_HEADERS(stdint.h sys/types.h)
 
 dnl In case we aren't given a working stdint.h, we'll need to grow our own.
 dnl Watch out.
+
+AC_CHECK_TYPES([int8_t, int16_t, int32_t, int64_t])
 
 AC_CHECK_SIZEOF(char)
 AC_CHECK_SIZEOF(short)
