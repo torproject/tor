@@ -1368,8 +1368,8 @@ options_validate(or_options_t *options)
     result = -1;
   }
   if (server_mode(options) &&
-      options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
-    log(LOG_WARN,"BandwidthRate is set to %d bytes/second. For servers, it must be at least %d.", (int)options->BandwidthRate, ROUTER_REQUIRED_MIN_BANDWIDTH);
+      options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH*2) {
+    log(LOG_WARN,"BandwidthRate is set to %d bytes/second. For servers, it must be at least %d.", (int)options->BandwidthRate, ROUTER_REQUIRED_MIN_BANDWIDTH*2);
     result = -1;
   }
 
