@@ -955,7 +955,7 @@ static int router_add_exit_policy(routerinfo_t *router,
     }
   }
   if (!port || strcmp(port, "*") == 0) {
-    newe->prt_min = 1;
+    newe->prt_min = 0;
     newe->prt_max = 65535;
   } else {
     endptr = NULL;

@@ -455,7 +455,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
         return -1;
       written += result;
     }
-    if (tmpe->prt_min == 1 && tmpe->prt_max == 65535) {
+    if (tmpe->prt_min == 0 && tmpe->prt_max == 65535) {
       if (written > maxlen-4)
         return -1;
       strcat(s+written, ":*\n");
