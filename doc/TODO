@@ -12,91 +12,145 @@ ARMA    - arma claims
 
 For 0.0.9:
 
+   o Solve the MSVC nuisance where __FILE__ contains the full path.
+     People are getting confused about why their errors are coming from
+     C:\Documents and Settings\Nick Mathewson\My Documents\src\tor .
 N&R. bring tor-spec up to date
 N&R. make loglevels info,debug less noisy
+N  . OS X package (and bundle?)
+N  . Working RPMs
 N  - Get win32 servers working, or find out why it isn't happening now.
 
 ************************ For Post 0.0.9 *****************************
 
 Tier one:
-   - niels's "did it fail because conn refused or timeout or what"
-     relay end feature.
-   - if a version is later than the last in its series, but a version
-     in the next series is recommended, that doesn't mean it's bad.
-   - fix dfc/weasel's intro point bug
-   - support hostnames as well as IPs for authdirservers.
-N  - OS X package (and bundle?)
-N  - Make millisecond accuracy work on win32
-   - Make more configuration variables into CSVs.
-   - Once we have a trusted directory on port 80, stop falling back to
-     forbidden ports when fascistfirewall blocks all good dirservers.
-   - Convert man pages to pod, or whatever's right.
-   - Move to our new version system.
-   - Get more nodes running on 80 and 443.
-   - Get epic, aclu, etc running nodes.
-   - Start distributing an rpm with the new version scheme.
-   - Bug tracker.
-   - cache .foo.exit names better, or differently, or not.
-   - teach connection_ap_handshake_socks_reply() about ipv6 and friends
-     so connection_ap_handshake_socks_resolved() doesn't also need
-     to know about them.
-   - when we haven't explicitly sent a socks reject, sending one in
-     connection_about_to_close_connection() fails because we never give
-     it a chance to flush. right answer is to do the socks reply manually
-     in each appropriate case, and then about-to-close-connection can
-     simply warn us if we forgot one.
-   - Solve the MSVC nuisance where __FILE__ contains the full path.
-     People are getting confused about why their errors are coming from
-     C:\Documents and Settings\Nick Mathewson\My Documents\src\tor .
-   - GPSLocation optional config string.
-   - Figure out how to make the rpm not strip the binaries it makes.
+   o Move to our new version system.
+   - Changes for forward compatibility
+     - If a version is later than the last in its series, but a version
+       in the next series is recommended, that doesn't mean it's bad.
+
+   - Bugfixes
+     - fix dfc/weasel's intro point bug
+     - when we haven't explicitly sent a socks reject, sending one in
+       connection_about_to_close_connection() fails because we never give it
+       a chance to flush. right answer is to do the socks reply manually in
+       each appropriate case, and then about-to-close-connection can simply
+       warn us if we forgot one.
+
+   - Documentation
+     - Convert man pages to pod, or whatever's right.  Alternatively, find
+       a man2html that actually works.
+     - Macintosh HOWTO page.
+
+   - Evangelism
+     - Get more nodes running on 80 and 443.
+     - Get epic, aclu, etc running nodes.
+
+   - Dirservers and server descs: small, backward-compatible changes
+     - support hostnames as well as IPs for authdirservers.
+     - If we have a trusted directory on port 80, stop falling back to
+       forbidden ports when fascistfirewall blocks all good dirservers.
+     - GPSLocation optional config string.
+
+   - SOCKS enhancements
+     - niels's "did it fail because conn refused or timeout or what"
+       relay end feature.
+
+   - Windows
+N    - Make millisecond accuracy work on win32
+     - Switch to WSA*Event code as a better poll replacement.  Or maybe just
+       do libevent?
+
+   - Code cleanup
+     - Make more configuration variables into CSVs.
+
+   - Support
+     - Bug tracker.
+
+   - Exit hostname support
+     - cache .foo.exit names better, or differently, or not.
+
+   - IPv6 support
+     - teach connection_ap_handshake_socks_reply() about ipv6 and friends
+       so connection_ap_handshake_socks_resolved() doesn't also need
+       to know about them.
+
+   - Packaging
+     - Figure out how to make the rpm not strip the binaries it makes.
+
 
 Tier two:
 
-   - Handle pools of waiting circuits better.
-   - Limit number of circuits that we preemptively generate based on past
-     behavior; use same limits in circuit_expire_old_circuits().
-   - Let more config options (e.g. ORPort) change dynamically.
-   - Write limiting; configurable token buckets.
-   - Only the top of a directory needs to be signed.
-   - Make sure logged information is 'safe'.
-   - make advertised_server_mode() ORs fetch dirs more often.
+   - Efficiency/speed improvements.
+     - Handle pools of waiting circuits better.
+     - Limit number of circuits that we preemptively generate based on past
+       behavior; use same limits in circuit_expire_old_circuits().
+     - Write limiting; configurable token buckets.
+     - Switch to libevent?  Evaluate it first.
+     - Make it harder to circumvent bandwidth caps: look at number of bytes
+       sent across sockets, not number sent inside TLS stream.
 
-N  - Clean up NT service code
-   - Work as an NT service; on system tray; etc.
-   - Win32 installer plus privoxy, sockscap/freecap, etc.
-   - controller should have 'getinfo' command to query about rephist,
-     about rendezvous status, etc.
-   - Implement If-Modified-Since for directories.
+
+   - QOI
+     - Let more config options (e.g. ORPort) change dynamically.
+
+   - Dirservers and server descs: small, backward-compatible changes
+     - make advertised_server_mode() ORs fetch dirs more often.
+     - Implement If-Modified-Since for directories.
+
+   - Big, incompatible re-architecting and decentralization of directory
+     system.
+     - Only the top of a directory needs to be signed.
+
+   - Windows
+N    - Clean up NT service code; make it work
+     - Get a controller to launch tor and keep it on the system tray.
+     - Win32 installer plus privoxy, sockscap/freecap, etc.
+
+   - Controller enhancements.
+     - controller should have 'getinfo' command to query about rephist,
+       about rendezvous status, etc.
+
 N  - Handle rendezvousing with unverified nodes.
      - Specify: Stick rendezvous point's key in INTRODUCE cell.
        Bob should _always_ use key from INTRODUCE cell.
      - Implement.
-N  - add ipv6 support.
+
+N  - IPv6 support (For exit addresses)
      - Spec issue: if a resolve returns an IP4 and an IP6 address,
        which to use?
-   - christian grothoff's attack of infinite-length circuit.
-     the solution is to have a separate 'extend-data' cell type
-     which is used for the first N data cells, and only
-     extend-data cells can be extend requests.
-   . rename/rearrange functions for what file they're in
+     - Add to exit policy code
+     - Make tor_gethostbyname into tor_getaddrinfo
+     - Make everything that uses uint32_t as an IP address change to use
+       a generalize address struct.
+     - Change relay cell types to accept new addresses.
+     - Add flag to serverdescs to tell whether IPv6 is supported.
+     - When should servers 
+
+   - Security fixes
+     - christian grothoff's attack of infinite-length circuit.
+       the solution is to have a separate 'extend-data' cell type
+       which is used for the first N data cells, and only
+       extend-data cells can be extend requests.
+     - Make sure logged information is 'safe'.
+
+   - Code cleanup
+     . rename/rearrange functions for what file they're in
+     - fix router_get_by_* functions so they can get ourselves too,
+       and audit everything to make sure rend and intro points are
+       just as likely to be us as not.
+
+   - Bugfixes
+     - hidserv offerers shouldn't need to define a SocksPort
+       * figure out what breaks for this, and do it.
+     - should retry exitpolicy end streams even if the end cell didn't
+       resolve the address for you
+
    - tor should be able to have a pool of outgoing IP addresses
      that it is able to rotate through. (maybe)
-   - hidserv offerers shouldn't need to define a SocksPort
-     * figure out what breaks for this, and do it.
-   - should retry exitpolicy end streams even if the end cell didn't
-     resolve the address for you
-   - Make it harder to circumvent bandwidth caps: look at number of bytes
-     sent across sockets, not number sent inside TLS stream.
-   - fix router_get_by_* functions so they can get ourselves too,
-     and audit everything to make sure rend and intro points are
-     just as likely to be us as not.
 
    Packaging, docs, etc:
    - Exit node caching: tie into squid or other caching web proxy.
-   - FAQ.
-   - Website spiffying. Logo. Pictures.
-   - Configuration walk-through with screenshots of each step.
 
    Deferred until needed:
    - Do something to prevent spurious EXTEND cells from making middleman
