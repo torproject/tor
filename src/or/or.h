@@ -560,6 +560,7 @@ struct connection_t {
   time_t timestamp_lastwritten; /**< When was the last time poll() said we could write? */
 
   time_t timestamp_created; /**< When was this connection_t created? */
+  time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
 
   uint32_t addr; /**< IP of the other side of the connection; used to identify
                   * routers, along with port. */

@@ -660,6 +660,9 @@ static void run_connection_housekeeping(int i, time_t now) {
   connection_t *conn = connection_array[i];
   or_options_t *options = get_options();
 
+  if (conn->outbuf && !buf_datalen(conn->outbuf))
+    conn->timestamp_lastempty = now;
+
   /* Expire any directory connections that haven't sent anything for 5 min */
   if (conn->type == CONN_TYPE_DIR &&
       !conn->marked_for_close &&
@@ -691,11 +694,13 @@ static void run_connection_housekeeping(int i, time_t now) {
              i,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
-    } else if (buf_datalen(conn->outbuf) &&
-// XXX will this have races were stuff just got written to the conn and we kill it?
-            now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
-      log_fn(LOG_INFO,"Expiring stuck connection to %d (%s:%d).",
-             i, conn->address, conn->port);
+    } else if (
+         now >= conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
+         now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
+      log_fn(LOG_NOTICE,"Expiring stuck connection to %d (%s:%d). (%ul bytes to flush; %d seconds since last write)",
+             i, conn->address, conn->port,
+             (unsigned long)buf_datalen(conn->outbuf),
+             (int)(now-conn->timestamp_lastwritten));
       connection_mark_for_close(conn);
     } else {
       /* either in clique mode, or we've got a circuit. send a padding cell. */
