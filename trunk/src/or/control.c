@@ -118,7 +118,7 @@ send_control_error(connection_t *conn, uint16_t error, const char *message)
   len = strlen(message);
   tor_assert(len < (256-2));
   memcpy(buf+2, message, len);
-  send_control_message(conn, CONTROL_CMD_ERROR, len+2, buf);
+  send_control_message(conn, CONTROL_CMD_ERROR, (uint16_t)(len+2), buf);
 }
 
 static void
@@ -181,7 +181,8 @@ static int handle_control_getconf(connection_t *conn, uint16_t body_len,
   }
 
   msg = smartlist_join_strings2(answer_elements, "\0", 1, 0, &msg_len);
-  send_control_message(conn, CONTROL_CMD_CONFVALUE, msg_len, msg);
+  send_control_message(conn, CONTROL_CMD_CONFVALUE,
+                       (uint16_t)msg_len, msg);
 
  done:
   SMARTLIST_FOREACH(answer_elements, char *, cp, tor_free(cp));
