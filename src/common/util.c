@@ -751,7 +751,7 @@ const char *eat_whitespace_no_nl(const char *s) {
 }
 
 /* Return a pointer to the first char of s that is whitespace or '#',
- * or to the terminating NUL if no such character exists. */
+ * or to the terminating NUL if no such character exists.
  */
 const char *find_whitespace(const char *s) {
   tor_assert(s);
