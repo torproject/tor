@@ -166,6 +166,21 @@ that would encompass morphmix, and they're nearly identical except for
 path selection and node discovery. and the trust system morphmix has
 seems overkill (and/or insecure) based on the threat model we've picked.
 
+\section{Threat model}
+
+discuss $\frac{c^2}{n^2}$, except how in practice the chance of owning
+the last hop is not c/n since that doesn't take the destination (website)
+into account. so in cases where the adversary does not also control the
+final destination we're in good shape, but if he *does* then we'd be better
+off with a system that lets each hop choose a path.
+
+in practice tor's threat model is based entirely on the goal of dispersal
+and diversity. george and steven describe an attack \cite{draft} that
+lets them determine the nodes used in a circuit; yet they can't identify
+alice or bob through this attack. so it's really just the endpoints that
+remain secure. see \ref{subsec:routing-zones} for discussion of larger
+adversaries and our dispersal goals.
+
 \section{Crossroads: Policy issues}
 \label{sec:crossroads-policy}
 
@@ -268,32 +283,47 @@ logging verbosely? Would that actually solve any attacks?
 
 \subsection{Transporting the stream vs transporting the packets}
 
-We periodically run into ZKS people who tell us that the process of
+We periodically run into ex ZKS employees who tell us that the process of
 anonymizing IPs should ``obviously'' be done at the IP layer. Here are
 the issues that need to be resolved before we'll be ready to switch Tor
 over to arbitrary IP traffic.
 
-1: we still need to do IP-level packet normalization, to stop things
-like ip fingerprinting. This is doable.
-2: we still need to be easy to integrate with user-level applications,
-so they can do application-level scrubbing. So we will still need
-application-specific proxies.
-3: we need a block-level encryption approach that can provide security despite
+\begin{enumerate}
+\setlength{\itemsep}{0mm}
+\setlength{\parsep}{0mm}
+\item [IP packets reveal OS characteristics.] We still need to do
+IP-level packet normalization, to stop things like IP fingerprinting
+\cite{ip-fingerprinting}. There exist libraries \cite{ip-normalizing}
+that can help with this.
+\item [Application-level streams still need scrubbing.] We still need
+Tor to be easy to integrate with user-level application-specific proxies
+such as Privoxy. So it's not just a matter of capturing packets and
+anonymizing them at the IP layer.
+\item [Certain protocols will still leak information.] For example,
+DNS requests destined for my local DNS servers need to be rewritten
+to be delivered to some other unlinkable DNS server. This requires
+understanding the protocols we are transporting.
+\item [The crypto is unspecified.] First we need a block-level encryption
+approach that can provide security despite
 packet loss and out-of-order delivery. Freedom allegedly had one, but it was
-never publicly specified. (We also believe that the Freedom and Cebolla designs
-are vulnerable to tagging attacks.)
-4: we still need to play with parameters for throughput, congestion control,
-etc -- since we need sequence numbers and maybe more to do replay detection,
-and just to handle duplicate frames. so we would be reimplementing some subset of tcp
-anyway.
-5: tls over udp is not implemented or even specified.
-6: exit policies over arbitrary IP packets seems to be an IDS-hard problem. i
-don't want to build an IDS into tor.
-7: certain protocols are going to leak information at the IP layer anyway. for
-example, if we anonymizer your dns requests, but they still go to comcast's dns servers,
-that's bad.
-8: hidden services, .exit addresses, etc are broken unless we have some way to
-reach into the application-level protocol and decide the hostname it's trying to get.
+never publicly specified, and we believe it's likely vulnerable to tagging
+attacks \cite{tor-design}. Also, TLS over UDP is not implemented or even
+specified, though some early work has begun on that \cite{ben-tls-udp}.
+\item [We'll still need to tune network parameters]. Since the above
+encryption system will likely need sequence numbers and maybe more to do
+replay detection, handle duplicate frames, etc, we will be reimplementing
+some subset of TCP anyway to manage throughput, congestion control, etc.
+\item [Exit policies for arbitrary IP packets mean building a secure
+IDS.]  Our server operators tell us that exit policies are one of
+the main reasons they're willing to run Tor over previous attempts
+at anonymizing networks.  Adding an IDS to handle exit policies would
+increase the security complexity of Tor, and would likely not work anyway,
+as evidenced by the entire field of IDS and counter-IDS papers.
+\item [The Tor-internal name spaces would need to be redesigned.] We
+support hidden service \tt{.onion} addresses, and other special addresses
+like \tt{.exit} (see Section \ref{subsec:}), by intercepting the addresses
+when they are passed to the Tor client.
+\end{enumerate}
 
 \subsection{Mid-latency}
 
@@ -301,7 +331,17 @@ Mid-latency. Can we do traffic shape to get any defense against George's
 PET2004 paper? Will padding or long-range dummies do anything then? Will
 it kill the user base or can we get both approaches to play well together?
 
+explain what mid-latency is. propose a single network where users of
+varying latency goals can combine.
 
+Note that in practice as the network is growing and we accept cable
+modem and dsl nodes, and nodes in other continents, we're *already*
+looking at many-second delays for some transactions. The engineering
+required to get this lower is going to be extremely hard. It's worth
+considering how hard it would be to accept the fixed (higher) latency
+and improve the protection we get from it.
+
+% can somebody besides arma flesh this section out?
 
 %\subsection{The DNS problem in practice}
 
@@ -342,16 +382,22 @@ that using Tor as a building block for Free Haven is going to be really
 hard. Also, they're brittle in terms of intersection and observation
 attacks. Would be nice to have hot-swap services, but hard to design.
 
-
+in practice, sites like bloggers without borders (www.b19s.org) are
+running tor servers but more important are advertising a hidden-service
+address on their front page. doing this can provide increased robustness
+if they used the dual-IP approach we describe in tor-design, but in
+practice they do it to a) increase visibility of the tor project and their
+support for privacy, and b) to offer a way for their users, using vanilla
+software, to get end-to-end encryption and end-to-end authentication to
+their website.
 
 
 \section{Crossroads: Scaling}
 %\label{sec:crossroads-scaling}
 %P2P + anonymity issues:
 
-Tor is running today with thousands of users, and the current design
-can handle hundreds of servers and probably tens of thousands of users;
-but it will certainly not scale to millions.
+Tor is running today with hundreds of servers and tens of thousands of
+users, but it will certainly not scale to millions.
 
 Scaling Tor involves three main challenges.  First is safe server
 discovery, both bootstrapping -- how a Tor client can robustly find an
