@@ -26,7 +26,7 @@
 \begin{abstract}
 
 We describe our experiences with deploying Tor, a low-latency anonymous
-communication system that has been funded both by the U.S.~government
+communication system that has been funded both by the U.S.~Navy
 and also by the Electronic Frontier Foundation.
 
 Because of its simplified threat model, Tor does not aim to defend
@@ -73,7 +73,7 @@ who don't want to reveal information to their competitors, and law
 enforcement and government intelligence agencies who need
 to do operations on the Internet without being noticed.
 
-Tor research and development has been funded by the U.S. Navy, for use
+Tor research and development has been funded by the U.S.~Navy, for use
 in securing government
 communications, and also by the Electronic Frontier Foundation, for use
 in maintaining civil liberties for ordinary citizens online. The Tor
@@ -215,7 +215,7 @@ to join the network.
 
 Tor is not the only anonymity system that aims to be practical and useful.
 Commercial single-hop proxies~\cite{anonymizer}, as well as unsecured
-open proxies around the Internet~\cite{open-proxies}, can provide good
+open proxies around the Internet, can provide good
 performance and some security against a weaker attacker. Dresden's Java
 Anon Proxy~\cite{web-mix} provides similar functionality to Tor but only
 handles web browsing rather than arbitrary TCP\@. Also, JAP's network
@@ -250,12 +250,12 @@ seems overkill (and/or insecure) based on the threat model we've picked.
 
 Tor does not attempt to defend against a global observer.  Any adversary who
 can see a user's connection to the Tor network, and who can see the
-corresponding connection as it exits the Tor network, can use the timing
-correlation between the two connections to confirm the user's chosen
+corresponding connection as it exits the Tor network, can use timing
+correlation to confirm the user's chosen
 communication partners.  Defeating this attack would seem to require
 introducing a prohibitive degree of traffic padding between the user and the
 network, or introducing an unacceptable degree of latency (but see
-Section \ref{subsec:mid-latency}). 
+Section \ref{subsec:mid-latency}).
 And, it is not clear that padding works at all if we assume a
 minimally active adversary that merely modifies the timing of packets
 to or from the user. Thus, Tor only attempts to defend against
@@ -380,9 +380,9 @@ Mixminion, where the threat model is based on mixing messages with each
 other, there's an arms race between end-to-end statistical attacks and
 counter-strategies~\cite{statistical-disclosure,minion-design,e2e-traffic,trickle02}.
 But for low-latency systems like Tor, end-to-end \emph{traffic
-confirmation} attacks~\cite{danezis-pet2004,SS03,defensive-dropping}
+correlation} attacks~\cite{danezis-pet2004,SS03,defensive-dropping}
 allow an attacker who watches or controls both ends of a communication
-to use statistics to correlate packet timing and volume, quickly linking
+to use statistics to match packet timing and volume, quickly linking
 the initiator to her destination. This is why Tor's threat model is
 based on preventing the adversary from observing both the initiator and
 the responder.
@@ -742,7 +742,7 @@ transport a greater variety of protocols.
 Though Tor has always been designed to be practical and usable first
 with as much anonymity as can be built in subject to those goals, we
 have contemplated that users might need resistance to at least simple
-traffic confirmation attacks.  Higher-latency mix-networks resist these
+traffic correlation attacks.  Higher-latency mix-networks resist these
 attacks by introducing variability into message arrival times in order to
 suppress timing correlation.  Thus, it seems worthwhile to consider the
 whether we can improving Tor's anonymity by introducing batching and delaying
@@ -796,7 +796,7 @@ Section~\ref{subsec:tcp-vs-ip}). Instead, batch timing would be obscured by
 synchronizing batches at the link level, and there would
 be no direct attempt to synchronize all batches
 entering the Tor network at the same time.
-%Alternatively, if end-to-end traffic confirmation is the
+%Alternatively, if end-to-end traffic correlation is the
 %concern, there is little point in mixing.
 %   Why not?? -NM
 It might also be feasible to
@@ -811,11 +811,11 @@ mid-latency option; however, we should continue the caution with which
 we have always approached padding lest the overhead cost us too much
 performance or too many volunteers.
 
-The distinction between traffic confirmation and traffic analysis is
+The distinction between traffic correlation and traffic analysis is
 not as cut and dried as we might wish. In \cite{hintz-pet02} it was
 shown that if data volumes of various popular
 responder destinations are catalogued, it may not be necessary to
-observe both ends of a stream to confirm a source-destination link.
+observe both ends of a stream to learn a source-destination link.
 This should be fairly effective without simultaneously observing both
 ends of the connection. However, it is still essentially confirming
 suspected communicants where the responder suspects are ``stored'' rather
@@ -1012,7 +1012,7 @@ leak the fact that Alice {\it sometimes} talks to Bob as it is to leak the times
 when Alice is {\it actually} talking to Bob.)
 
 
-One solution to this problem is to use ``helper nodes''~\cite{helpers}---to
+One solution to this problem is to use ``helper nodes''~\cite{wright02,wright03}---to
 have each client choose a few fixed servers for critical positions in her
 circuits.  That is, Alice might choose some server H1 as her preferred
 entry, so that unless the attacker happens to control or observe her
@@ -1345,8 +1345,8 @@ their country. These users try to find any tools available to allow
 them to get-around these firewalls. Some anonymity networks, such as
 Six-Four~\cite{six-four}, are designed specifically with this goal in
 mind; others like the Anonymizer~\cite{anonymizer} are paid by sponsors
-such as Voice of America to set up a network to encourage `Internet
-freedom'~\cite{voice-of-america-anonymizer}. Even though Tor wasn't
+such as Voice of America to set up a network to encourage Internet
+freedom. Even though Tor wasn't
 designed with ubiquitous access to the network in mind, thousands of
 users across the world are trying to use it for exactly this purpose.
 % Academic and NGO organizations, peacefire, \cite{berkman}, etc
@@ -1427,7 +1427,7 @@ servers, by reducing the interconnectivity of the nodes; later we can reduce
 overhead associated withy directories, discovery, and so on.
 
 By reducing the connectivity of the network we increase the total number of
-nodes that the network can contain. Danezis~\cite{danezis-pet03} considers
+nodes that the network can contain. Danezis~\cite{danezis-pets03} considers
 the anonymity implications of restricting routes on mix networks, and
 recommends an approach based on expander graphs (where any subgraph is likely
 to have many neighbors).  It is not immediately clear that this approach will
