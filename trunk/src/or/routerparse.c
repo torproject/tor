@@ -330,6 +330,7 @@ router_parse_routerlist_from_directory(const char *str,
   int i, r;
   const char *end, *cp;
   smartlist_t *tokens = NULL;
+  char dirnickname[MAX_NICKNAME_LEN+1];
 
   if (router_get_dir_hash(str, digest)) {
     log_fn(LOG_WARN, "Unable to compute digest of directory");
@@ -352,14 +353,17 @@ router_parse_routerlist_from_directory(const char *str,
   if (smartlist_len(tokens) != 1) {
     log_fn(LOG_WARN, "Unexpected number of tokens in signature"); goto err;
   }
-  if (smartlist_len(tokens) != 1 ||
-      (!(tok=smartlist_get(tokens,0))) || /* always succeeds */
-      (tok->tp != K_DIRECTORY_SIGNATURE)) {
+  tok=smartlist_get(tokens,0);
+  if(tok->tp != K_DIRECTORY_SIGNATURE) {
     log_fn(LOG_WARN,"Expected a single directory signature"); goto err;
   }
-  if (check_directory_signature(digest, smartlist_get(tokens,0), pkey)<0) {
+  if (check_directory_signature(digest, tok, pkey)<0) {
     goto err;
   }
+
+  /* now we know tok->n_args == 1, so it's safe to access tok->args[0] */
+  strlcpy(dirnickname, tok->args[0], sizeof(dirnickname));
+
   SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
   smartlist_free(tokens);
   tokens = NULL;
@@ -449,7 +453,7 @@ router_parse_routerlist_from_directory(const char *str,
       router_update_status_from_smartlist(me, published_on,
                                           good_nickname_list);
       if(me->is_verified == 0 && !have_warned_about_unverified_status) {
-        log_fn(LOG_WARN,"Dirserver %s lists your server as unverified. Please consider sending your identity fingerprint to the tor-ops.", "");
+        log_fn(LOG_WARN,"Dirserver %s lists your server as unverified. Please consider sending your identity fingerprint to the tor-ops.", dirnickname);
         /* XXX008 can we print the name of the dirserver above? how to get it */
         have_warned_about_unverified_status = 1;
       }
@@ -572,6 +576,7 @@ static int check_directory_signature(const char *digest,
       return -1;
     }
   } else if (tok->n_args > 1) {
+/* XXX008 Nick: shouldn't we check for <1 too? */
     log_fn(LOG_WARN, "Too many arguments to directory-signature");
     return -1;
   }
@@ -585,7 +590,7 @@ static int check_directory_signature(const char *digest,
       log_fn(LOG_WARN, "Error reading directory: invalid signature.");
       return -1;
     }
-    log(LOG_DEBUG,"Signed directory hash starts %s", hex_str(signed_digest,4));
+    log_fn(LOG_DEBUG,"Signed directory hash starts %s", hex_str(signed_digest,4));
     if (memcmp(digest, signed_digest, 20)) {
       log_fn(LOG_WARN, "Error reading directory: signature does not match.");
       return -1;
