@@ -13,7 +13,7 @@ static void circuit_free_cpath_node(crypt_path_t *victim);
 static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type);
 static void circuit_rep_hist_note_result(circuit_t *circ);
 
-static void circuit_is_ready(circuit_t *circ);
+static void circuit_is_open(circuit_t *circ);
 static void circuit_failed(circuit_t *circ);
 static circuit_t *circuit_establish_circuit(uint8_t purpose, const char *exit_nickname);
 
@@ -250,21 +250,30 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
   return NULL;
 }
 
-/* Find the newest circ that conn can use, preferably one which is
+/* Dear god this function needs refactoring. */
+/* Find the best circ that conn can use, preferably one which is
  * dirty. Circ must not be too old.
  * If !conn, return newest.
  *
  * If must_be_open, ignore circs not in CIRCUIT_STATE_OPEN.
  *
  * circ_purpose specifies what sort of circuit we must have.
+ * It can be C_GENERAL, C_INTRODUCING, or C_REND_JOINED.
+ *
+ * If it's REND_JOINED and must_be_open==0, then return the closest
+ * rendezvous-purposed circuit that you can find.
+ *
  * If circ_purpose is not GENERAL, then conn must be defined.
- * If circ_purpose is C_ESTABLISH_REND, then it's also ok
- * to return a C_REND_JOINED circ.
  */
-circuit_t *circuit_get_newest(connection_t *conn,
-                              int must_be_open, uint8_t circ_purpose) {
-  circuit_t *circ, *newest=NULL, *leastdirty=NULL;
+circuit_t *circuit_get_best(connection_t *conn,
+                            int must_be_open, uint8_t purpose) {
+  circuit_t *circ, *best=NULL;
   routerinfo_t *exitrouter;
+  time_t now = time(NULL);
+
+  assert(purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+         purpose == CIRCUIT_PURPOSE_C_INTRODUCING ||
+         purpose == CIRCUIT_PURPOSE_C_REND_JOINED);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
     if (!circ->cpath)
@@ -274,18 +283,23 @@ circuit_t *circuit_get_newest(connection_t *conn,
     if (circ->marked_for_close)
       continue;
 
-    /* if this isn't our purpose, skip. except, if our purpose is
-     * establish_rend, keep going if circ is rend_joined.
-     */
-    if (circ->purpose != circ_purpose &&
-      (circ_purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
-       circ->purpose != CIRCUIT_PURPOSE_C_REND_JOINED))
-      continue;
+    /* if this circ isn't our purpose, skip. */
+    if(purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
+      if(must_be_open && purpose != circ->purpose)
+        continue;
+      if(circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
+         circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
+         circ->purpose != CIRCUIT_PURPOSE_C_REND_JOINED)
+        continue;
+    } else {
+      if(purpose != circ->purpose)
+        continue;
+    }
 
-#if 0
-    if (must_be_clean && circ->timestamp_dirty)
-      continue; /* ignore dirty circs */
-#endif
+    if(purpose == CIRCUIT_PURPOSE_C_GENERAL)
+      if(circ->timestamp_dirty &&
+         circ->timestamp_dirty+options.NewCircuitPeriod < now)
+        continue; /* too old */
 
     if(conn) {
       /* decide if this circ is suitable for this conn */
@@ -296,10 +310,12 @@ circuit_t *circuit_get_newest(connection_t *conn,
       else /* not open */
         exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
 
-      if(!exitrouter)
+      if(!exitrouter) {
+        log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
         continue; /* this circuit is screwed and doesn't know it yet */
+      }
 
-      if(circ_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+      if(purpose == CIRCUIT_PURPOSE_C_GENERAL) {
         if(connection_ap_can_use_exit(conn, exitrouter) == ADDR_POLICY_REJECTED) {
           /* can't exit from this router */
           continue;
@@ -312,27 +328,40 @@ circuit_t *circuit_get_newest(connection_t *conn,
       }
     }
 
-    if(!newest || newest->timestamp_created < circ->timestamp_created) {
-      newest = circ;
-    }
-    if(conn && circ->timestamp_dirty &&
-       (!leastdirty || leastdirty->timestamp_dirty < circ->timestamp_dirty)) {
-      leastdirty = circ;
+    /* now this is an acceptable circ to hand back. but that doesn't
+     * mean it's the *best* circ to hand back. try to decide.
+     */
+    if(!best)
+      best = circ;
+    switch(purpose) {
+      case CIRCUIT_PURPOSE_C_GENERAL:
+        /* if it's used but less dirty it's best;
+         * else if it's more recently created it's best
+         */
+        if(best->timestamp_dirty) {
+          if(circ->timestamp_dirty &&
+             circ->timestamp_dirty > best->timestamp_dirty)
+            best = circ;
+        } else {
+          if(circ->timestamp_dirty ||
+             circ->timestamp_created > best->timestamp_created)
+            best = circ;
+        }
+        break;
+      case CIRCUIT_PURPOSE_C_INTRODUCING:
+        /* more recently created is best */
+        if(circ->timestamp_created > best->timestamp_created)
+          best = circ;
+        break;
+      case CIRCUIT_PURPOSE_C_REND_JOINED:
+        /* the closer it is to rend_joined the better it is */
+        if(circ->purpose > best->purpose)
+          best = circ;
+        break;
     }
   }
 
-  if(leastdirty &&
-     leastdirty->timestamp_dirty+options.NewCircuitPeriod > time(NULL)) {
-/*    log_fn(LOG_DEBUG,"Choosing in-use circuit %s:%d:%d.",
-           leastdirty->n_conn->address, leastdirty->n_port, leastdirty->n_circ_id); */
-    return leastdirty;
-  }
-  if(newest) {
-/*    log_fn(LOG_DEBUG,"Choosing circuit %s:%d:%d.",
-           newest->n_conn->address, newest->n_port, newest->n_circ_id); */
-    return newest;
-  }
-  return NULL;
+  return best;
 }
 
 /* Return the first circuit in global_circuitlist after 'start' whose
@@ -422,8 +451,9 @@ int circuit_count_building(void) {
 }
 
 #define MIN_CIRCUITS_HANDLING_STREAM 2
-/* return 1 if at least MIN_CIRCUITS_HANDLING_STREAM non-open circuits
- * will have an acceptable exit node for conn. Else return 0.
+/* return 1 if at least MIN_CIRCUITS_HANDLING_STREAM non-open
+ * general-purpose circuits will have an acceptable exit node for
+ * conn. Else return 0.
  */
 int circuit_stream_is_being_handled(connection_t *conn) {
   circuit_t *circ;
@@ -432,7 +462,7 @@ int circuit_stream_is_being_handled(connection_t *conn) {
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
     if(circ->cpath && circ->state != CIRCUIT_STATE_OPEN &&
-       !circ->marked_for_close) {
+       !circ->marked_for_close && circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
       if(exitrouter && connection_ap_can_use_exit(conn, exitrouter) != ADDR_POLICY_REJECTED)
         if(++num >= MIN_CIRCUITS_HANDLING_STREAM)
@@ -1047,22 +1077,18 @@ void circuit_expire_unused_circuits(void) {
   smartlist_free(unused_open_circs);
 }
 
-static void circuit_is_ready(circuit_t *circ) {
+static void circuit_is_open(circuit_t *circ) {
 
-  /* should maybe break this into rend_circuit_is_ready() one day */
   switch(circ->purpose) {
+    case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
+      rend_client_rendcirc_is_open(circ);
+      break;
+    case CIRCUIT_PURPOSE_C_INTRODUCING:
+      rend_client_introcirc_is_open(circ);
+      break;
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* Tell any AP connections that have been waiting for a new
        * circuit that one is ready. */
-      connection_ap_attach_pending();
-      break;
-    case CIRCUIT_PURPOSE_C_INTRODUCING:
-      /* at Alice, connecting to intro point */
-      connection_ap_attach_pending();
-      break;
-    case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-      /* at Alice, waiting for Bob */
-      /* XXXNM make and send the rendezvous cookie, and store it in circ */
       connection_ap_attach_pending();
       break;
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
@@ -1278,7 +1304,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
         log_fn(LOG_NOTICE,"Tor has successfully opened a circuit. Looks like it's working.");
       }
       circuit_rep_hist_note_result(circ);
-      circuit_is_ready(circ); /* do other actions as necessary */
+      circuit_is_open(circ); /* do other actions as necessary */
       return 0;
     } else if (r<0) {
       log_fn(LOG_INFO,"Unable to extend circuit path.");

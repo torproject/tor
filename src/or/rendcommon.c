@@ -61,6 +61,8 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
   return 0;
 }
 
+/* malloc a service_descriptor_t and return it.
+ * return NULL if invalid descriptor or error */
 rend_service_descriptor_t *rend_parse_service_descriptor(
                            const char *str, int len)
 {
@@ -83,6 +85,10 @@ rend_service_descriptor_t *rend_parse_service_descriptor(
   cp += 4;
   if (end-cp < 2) goto truncated;
   result->n_intro_points = get_uint16(cp);
+  if(result->n_intro_points < 1) {
+    log_fn(LOG_WARN,"Service descriptor listed no intro points.");
+    goto error;
+  }
   result->intro_points = tor_malloc_zero(sizeof(char*)*result->n_intro_points);
   cp += 2;
   for (i=0;i<result->n_intro_points;++i) {
@@ -282,8 +288,7 @@ void rend_process_relay_cell(circuit_t *circ, int command, int length,
       r = rend_service_intro_established(circ,payload,length);
       break;
     case RELAY_COMMAND_RENDEZVOUS_ESTABLISHED:
-      /* r = rend_client_rendezvous_established(circ,payload,length); */
-      log_fn(LOG_NOTICE, "Ignoring a rendezvous_established cell");
+      r = rend_client_rendezvous_acked(circ,payload,length);
       break;
     default:
       assert(0);

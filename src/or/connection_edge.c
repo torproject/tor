@@ -76,6 +76,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       if(conn->package_window <= 0) {
+        /* XXX this is still getting called rarely :( */
         log_fn(LOG_WARN,"called with package_window %d. Tell Roger.", conn->package_window);
         return 0;
       }
@@ -85,6 +86,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
       }
       return 0;
     case EXIT_CONN_STATE_CONNECTING:
+    case AP_CONN_STATE_RENDDESC_WAIT:
     case AP_CONN_STATE_CIRCUIT_WAIT:
     case AP_CONN_STATE_CONNECT_WAIT:
       log_fn(LOG_INFO,"data from edge while in '%s' state. Leaving it on buffer.",
@@ -235,6 +237,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 
   if(conn && conn->state != AP_CONN_STATE_OPEN && conn->state != EXIT_CONN_STATE_OPEN) {
     if(rh.command == RELAY_COMMAND_END) {
+      circuit_log_path(LOG_INFO,circ);
       log_fn(LOG_INFO,"Edge got end (%s) before we're connected. Marking for close.",
         connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
       conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
@@ -335,9 +338,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
          */
         addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
         client_dns_set_entry(conn->socks_request->address, addr);
-        /* conn->purpose is still set to general */
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-        /* attaching to a dirty circuit is fine */
         if(connection_ap_handshake_attach_circuit(conn) >= 0)
           return 0;
         /* else, conn will get closed below */
@@ -491,6 +492,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
+    case AP_CONN_STATE_RENDDESC_WAIT:
     case AP_CONN_STATE_CIRCUIT_WAIT:
     case AP_CONN_STATE_CONNECT_WAIT:
       connection_stop_writing(conn);
@@ -609,7 +611,6 @@ void connection_ap_expire_beginning(void) {
       conn->has_sent_end = 0;
       /* move it back into 'pending' state. */
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-      /* conn->purpose is still set to general */
       circuit_detach_stream(circ, conn);
       /* kludge to make us not try this circuit again, yet to allow
        * current streams on it to survive if they can: make it
@@ -642,7 +643,6 @@ void connection_ap_attach_pending(void)
     if (conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
-    /* attaching to a dirty circuit is fine */
     if(connection_ap_handshake_attach_circuit(conn) < 0) {
       /* -1 means it will never work */
       /* Don't send end; there is no 'other side' yet */
@@ -709,48 +709,49 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   if (rend_parse_rendezvous_address(socks->address) < 0) {
     /* normal request */
     conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-    conn->purpose = AP_PURPOSE_GENERAL;
-    /* attaching to a dirty circuit is fine */
     return connection_ap_handshake_attach_circuit(conn);
   } else {
     /* it's a hidden-service request */
     const char *descp;
     int desc_len;
 
-    strcpy(conn->rend_query, socks->address);
+    strcpy(conn->rend_query, socks->address); /* this strcpy is safe -RD */
     log_fn(LOG_INFO,"Got a hidden service request for ID '%s'", conn->rend_query);
     /* see if we already have it cached */
     if (rend_cache_lookup(conn->rend_query, &descp, &desc_len) == 1) {
-      conn->purpose = AP_PURPOSE_RENDPOINT_WAIT;
+      conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
       return connection_ap_handshake_attach_circuit(conn);
-      //circuit_launch_new(CIRCUIT_PURPOSE_C_ESTABLISH_REND, NULL);
     } else {
-      conn->purpose = AP_PURPOSE_RENDDESC_WAIT;
-      /* initiate a dir hidserv desc lookup */
-      directory_initiate_command(router_pick_directory_server(),
-                                 DIR_PURPOSE_FETCH_RENDDESC,
-                                 conn->rend_query, strlen(conn->rend_query));
+      conn->state = AP_CONN_STATE_RENDDESC_WAIT;
+      if(!connection_get_by_type_rendquery(CONN_TYPE_DIR, conn->rend_query)) {
+        /* not one already; initiate a dir rend desc lookup */
+        directory_initiate_command(router_pick_directory_server(),
+                                   DIR_PURPOSE_FETCH_RENDDESC,
+                                   conn->rend_query, strlen(conn->rend_query));
+      }
       return 0;
     }
   }
   return 0;
 }
 
-/* find an open circ that we're happy with: return 1. if there isn't
- * one, launch one and return 0. if it will never work, return -1.
- * write the found or launched circ into *circp.
+/* Find an open circ that we're happy with: return 1. if there isn't
+ * one, and there isn't one on the way, launch one and return 0. if it
+ * will never work, return -1.
+ * write the found or in-progress or launched circ into *circp.
  */
 static int
-get_open_circ_or_launch(connection_t *conn,
-                        uint8_t desired_circuit_purpose,
-                        circuit_t **circp) {
+circuit_get_open_circ_or_launch(connection_t *conn,
+                                uint8_t desired_circuit_purpose,
+                                circuit_t **circp) {
   circuit_t *circ;
   uint32_t addr;
 
   assert(conn);
   assert(circp);
+  assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
 
-  circ = circuit_get_newest(conn, 1, desired_circuit_purpose);
+  circ = circuit_get_best(conn, 1, desired_circuit_purpose);
 
   if(circ) {
     *circp = circ;
@@ -760,7 +761,7 @@ get_open_circ_or_launch(connection_t *conn,
   log_fn(LOG_INFO,"No safe circuit (purpose %d) ready for edge connection; delaying.",
          desired_circuit_purpose);
 
-  if(conn->purpose == AP_PURPOSE_GENERAL) {
+  if(!*conn->rend_query) { /* general purpose circ */
     addr = client_dns_lookup_entry(conn->socks_request->address);
     if(router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
       log_fn(LOG_WARN,"No Tor server exists that allows exit to %s:%d. Rejecting.",
@@ -768,13 +769,33 @@ get_open_circ_or_launch(connection_t *conn,
       return -1;
     }
   }
-  if(!circuit_get_newest(conn, 0, desired_circuit_purpose)) {
-    /* is one already on the way? */
-    circ = circuit_launch_new(desired_circuit_purpose, NULL);
-    /* depending on purpose, store stuff into circ */
+
+  /* is one already on the way? */
+  circ = circuit_get_best(conn, 0, desired_circuit_purpose);
+  if(!circ) {
+    char *exitname=NULL;
+    uint8_t new_circ_purpose;
+
+    if(desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCING) {
+      /* need to pick an intro point */
+      exitname = rend_get_random_intro(conn->rend_query);
+      if(!exitname) {
+        log_fn(LOG_WARN,"Couldn't get an intro point for '%s'. Closing conn.",
+               conn->rend_query);
+        return -1;
+      }
+      log_fn(LOG_INFO,"Chose %s as intro point for %s.", exitname, conn->rend_query);
+    }
+
+    if(desired_circuit_purpose == CIRCUIT_PURPOSE_C_REND_JOINED)
+      new_circ_purpose = CIRCUIT_PURPOSE_C_ESTABLISH_REND;
+    else
+      new_circ_purpose = desired_circuit_purpose;
+
+    circ = circuit_launch_new(new_circ_purpose, exitname);
+
     if(circ &&
-       (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL ||
-        desired_circuit_purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND)) {
+       (desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL)) {
       /* then write the service_id into circ */
       strcpy(circ->rend_query, conn->rend_query);
     }
@@ -791,8 +812,6 @@ get_open_circ_or_launch(connection_t *conn,
  * right next step, and return 1.
  */
 int connection_ap_handshake_attach_circuit(connection_t *conn) {
-  circuit_t *circ=NULL;
-  uint8_t desired_circuit_purpose;
   int retval;
 
   assert(conn);
@@ -800,60 +819,74 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   assert(conn->socks_request);
 
-  if(conn->purpose == AP_PURPOSE_RENDDESC_WAIT)
-    return 0; /* these guys don't attach to circuits directly */
+  if(!*conn->rend_query) { /* we're a general conn */
+    circuit_t *circ=NULL;
 
-  switch(conn->purpose) {
-    case AP_PURPOSE_GENERAL:
-      desired_circuit_purpose = CIRCUIT_PURPOSE_C_GENERAL;
-      break;
-    case AP_PURPOSE_RENDPOINT_WAIT:
-      desired_circuit_purpose = CIRCUIT_PURPOSE_C_ESTABLISH_REND;
-      break;
-    case AP_PURPOSE_INTROPOINT_WAIT:
-      desired_circuit_purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
-      break;
-    default:
-      log_fn(LOG_ERR, "Got unexpected purpose: %d", conn->purpose);
-      assert(0); /* never reached */
+    /* find the circuit that we should use, if there is one. */
+    retval = circuit_get_open_circ_or_launch(conn, CIRCUIT_PURPOSE_C_GENERAL, &circ);
+    if(retval < 1)
+      return retval;
+
+    /* We have found a suitable circuit for our conn. Hurray. */
+
+    /* here, print the circ's path. so people can figure out which circs are sucking. */
+    circuit_log_path(LOG_INFO,circ);
+
+    if(!circ->timestamp_dirty)
+      circ->timestamp_dirty = time(NULL);
+
+    /* add it into the linked list of streams on this circuit */
+    log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
+    conn->next_stream = circ->p_streams;
+    /* assert_connection_ok(conn, time(NULL)); */
+    circ->p_streams = conn;
+
+    assert(circ->cpath && circ->cpath->prev);
+    assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
+    conn->cpath_layer = circ->cpath->prev;
+
+    connection_ap_handshake_send_begin(conn, circ);
+
+    return 1;
+
+  } else { /* we're a rendezvous conn */
+    circuit_t *rendcirc=NULL, *introcirc=NULL;
+
+    /* first, find a rendezvous circuit for us */
+
+    retval = circuit_get_open_circ_or_launch(conn, CIRCUIT_PURPOSE_C_REND_JOINED, &rendcirc);
+    if(retval < 0) return -1; /* failed */
+
+    if(retval > 0) {
+      /* one is already established, attach */
+
+      log_fn(LOG_WARN,"XXX rend joined circ already here. should reuse.");
+      return -1;
+    }
+
+    if(rendcirc &&
+       rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY &&
+       rendcirc->build_state->pending_final_cpath) {
+      log_fn(LOG_WARN,"XXX pending-join circ already here. should reuse.");
+      return -1;
+    }
+
+    /* it's on its way. find an intro circ. */
+    retval = circuit_get_open_circ_or_launch(conn, CIRCUIT_PURPOSE_C_INTRODUCING, &introcirc);
+    if(retval < 0) return -1; /* failed */
+
+    if(retval > 0) {
+      log_fn(LOG_INFO,"Intro circ is ready for us");
+      if(rendcirc &&
+         rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
+        /* then we know !pending_final_cpath, from above */
+        log_fn(LOG_WARN,"XXX intro and rend are both ready. do the magic.");
+        return -1;
+      }
+    }
+    log_fn(LOG_INFO,"Intro and rend circs are not both ready. Stalling conn.");
+    return 0;
   }
-
-  /* find the circuit that we should use, if there is one. */
-  retval = get_open_circ_or_launch(conn, desired_circuit_purpose, &circ);
-  if(retval < 1)
-    return retval;
-
-  /* We have found a suitable circuit for our conn. Hurray. */
-
-  /* here, print the circ's path. so people can figure out which circs are sucking. */
-  circuit_log_path(LOG_INFO,circ);
-
-  if(!circ->timestamp_dirty)
-    circ->timestamp_dirty = time(NULL);
-
-  switch(conn->purpose) {
-    case AP_PURPOSE_GENERAL:
-      /* add it into the linked list of streams on this circuit */
-      log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
-      conn->next_stream = circ->p_streams;
-      /* assert_connection_ok(conn, time(NULL)); */
-      circ->p_streams = conn;
-
-      assert(circ->cpath && circ->cpath->prev);
-      assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
-      conn->cpath_layer = circ->cpath->prev;
-
-      connection_ap_handshake_send_begin(conn, circ);
-      break;
-    case AP_PURPOSE_RENDPOINT_WAIT:
-      rend_client_rendcirc_is_ready(conn, circ);
-      break;
-    case AP_PURPOSE_INTROPOINT_WAIT:
-      rend_client_introcirc_is_ready(conn, circ);
-      break;
-  }
-
-  return 1;
 }
 
 /* Iterate over the two bytes of stream_id until we get one that is not
@@ -961,7 +994,6 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   }
 
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-  conn->purpose = AP_PURPOSE_GENERAL;
   connection_start_reading(conn);
 
   /* attaching to a dirty circuit is fine */

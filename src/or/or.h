@@ -100,7 +100,7 @@
                               can be lowered by config file */
 
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
-#define MAX_NICKNAME_LEN 32
+#define MAX_NICKNAME_LEN 19
 #define MAX_DIR_SIZE 500000
 
 #ifdef TOR_PERF
@@ -159,18 +159,11 @@
 /* the AP state values must be disjoint from the EXIT state values */
 #define _AP_CONN_STATE_MIN 5
 #define AP_CONN_STATE_SOCKS_WAIT 5
-#define AP_CONN_STATE_CIRCUIT_WAIT 6
-#define AP_CONN_STATE_CONNECT_WAIT 7
-#define AP_CONN_STATE_OPEN 8
-#define _AP_CONN_STATE_MAX 8
-
-/* only used if state==CIRCUIT_WAIT */
-#define _AP_PURPOSE_MIN 1
-#define AP_PURPOSE_GENERAL 1
-#define AP_PURPOSE_RENDDESC_WAIT 2
-#define AP_PURPOSE_RENDPOINT_WAIT 3
-#define AP_PURPOSE_INTROPOINT_WAIT 4
-#define _AP_PURPOSE_MAX 4
+#define AP_CONN_STATE_RENDDESC_WAIT 6
+#define AP_CONN_STATE_CIRCUIT_WAIT 7
+#define AP_CONN_STATE_CONNECT_WAIT 8
+#define AP_CONN_STATE_OPEN 9
+#define _AP_CONN_STATE_MAX 9
 
 #define _DIR_CONN_STATE_MIN 1
 #define DIR_CONN_STATE_CONNECTING 1
@@ -194,23 +187,42 @@
 #define CIRCUIT_STATE_OPEN 3 /* onionskin(s) processed, ready to send/receive cells */
 
 #define _CIRCUIT_PURPOSE_MIN 1
+
 /* these circuits were initiated elsewhere */
 #define CIRCUIT_PURPOSE_OR 1 /* normal circuit, at OR. */
 #define CIRCUIT_PURPOSE_INTRO_POINT 2 /* At OR, from Bob, waiting for intro from Alices */
 #define CIRCUIT_PURPOSE_REND_POINT_WAITING 3 /* At OR, from Alice, waiting for Bob */
 #define CIRCUIT_PURPOSE_REND_ESTABLISHED 4 /* At OR, both circuits have this purpose */
+
 /* these circuits originate at this node */
+
+/* here's how circ client-side purposes work:
+ *   normal circuits are C_GENERAL.
+ *   circuits that are c_introducing are either on their way to
+ *     becoming open, or they are open but haven't been used yet.
+ *     (as soon as they are used, they are destroyed.)
+ *   circuits that are c_establish_rend are either on their way
+ *     to becoming open, or they are open and have sent the
+ *     establish_rendezvous cell but haven't received an ack.
+ *   circuits that are c_rend_ready are open and have received an
+ *     ack, but haven't heard from bob yet. if they have a
+ *     buildstate->pending_final_cpath then they're expecting a
+ *     cell from bob, else they're not.
+ *   circuits that are c_rend_joined are open, have heard from
+ *     bob, and are talking to him.
+ */
 #define CIRCUIT_PURPOSE_C_GENERAL 5 /* normal circuit, with cpath */
 #define CIRCUIT_PURPOSE_C_INTRODUCING 6 /* at Alice, connecting to intro point */
-#define CIRCUIT_PURPOSE_C_ESTABLISH_REND 7 /* at Alice, waiting for Bob */
-#define CIRCUIT_PURPOSE_C_REND_JOINED 8 /* at Alice, rendezvous established.*/
+#define CIRCUIT_PURPOSE_C_ESTABLISH_REND 7 /* at Alice, waiting for ack */
+#define CIRCUIT_PURPOSE_C_REND_READY 8 /* at Alice, waiting for Bob */
+#define CIRCUIT_PURPOSE_C_REND_JOINED 9 /* at Alice, rendezvous established */
 
-#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 9 /* at Bob, waiting for introductions */
-#define CIRCUIT_PURPOSE_S_INTRO 10 /* at Bob, successfully established intro */
-#define CIRCUIT_PURPOSE_S_CONNECT_REND 11 /* at Bob, connecting to rend point */
+#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 10 /* at Bob, waiting for introductions */
+#define CIRCUIT_PURPOSE_S_INTRO 11 /* at Bob, successfully established intro */
+#define CIRCUIT_PURPOSE_S_CONNECT_REND 12 /* at Bob, connecting to rend point */
 
-#define CIRCUIT_PURPOSE_S_REND_JOINED 12 /* at Bob, rendezvous established.*/
-#define _CIRCUIT_PURPOSE_MAX 11
+#define CIRCUIT_PURPOSE_S_REND_JOINED 13 /* at Bob, rendezvous established.*/
+#define _CIRCUIT_PURPOSE_MAX 13
 
 #define RELAY_COMMAND_BEGIN 1
 #define RELAY_COMMAND_DATA 2
@@ -347,7 +359,7 @@ struct connection_t {
 
   uint8_t type;
   uint8_t state;
-  uint8_t purpose; /* only used for DIR and AP types currently */
+  uint8_t purpose; /* only used for DIR types currently */
   uint8_t wants_to_read; /* should we start reading again once
                           * the bandwidth throttler allows it?
                           */
@@ -687,8 +699,8 @@ int _circuit_mark_for_close(circuit_t *circ);
 
 circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
-circuit_t *circuit_get_newest(connection_t *conn,
-                              int must_be_open, uint8_t conn_purpose);
+circuit_t *circuit_get_best(connection_t *conn,
+                            int must_be_open, uint8_t purpose);
 circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *circuit,
                                               const char *servid, uint8_t purpose);
 circuit_t *circuit_get_rendezvous(const char *cookie);
@@ -803,6 +815,7 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_lastwritten(int type, int state);
+connection_t *connection_get_by_type_rendquery(int type, char *rendquery);
 
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 #define connection_has_pending_tls_data(conn) \
@@ -1025,12 +1038,14 @@ void rep_hist_dump_stats(time_t now, int severity);
 
 /********************************* rendclient.c ***************************/
 
-void rend_client_introcirc_is_ready(connection_t *apconn, circuit_t *circ);
-void rend_client_rendcirc_is_ready(connection_t *apconn, circuit_t *circ);
+void rend_client_introcirc_is_open(circuit_t *circ);
+void rend_client_rendcirc_is_open(circuit_t *circ);
+int rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_len);
 void rend_client_rendezvous(connection_t *apconn, circuit_t *circ);
 void rend_client_desc_fetched(char *query, int success);
 
 int rend_cmp_service_ids(char *one, char *two);
+char *rend_get_random_intro(char *query);
 int rend_parse_rendezvous_address(char *address);
 
 int rend_client_send_establish_rendezvous(circuit_t *circ);

@@ -866,6 +866,22 @@ connection_t *connection_get_by_type_state_lastwritten(int type, int state) {
   return best;
 }
 
+connection_t *connection_get_by_type_rendquery(int type, char *rendquery) {
+  int i, n;
+  connection_t *conn;
+  connection_t **carray;
+
+  get_connection_array(&carray,&n);
+  for(i=0;i<n;i++) {
+    conn = carray[i];
+    if(conn->type == type &&
+       !conn->marked_for_close &&
+       !rend_cmp_service_ids(rendquery, conn->rend_query))
+      return conn;
+  }
+  return NULL;
+}
+
 int connection_is_listener(connection_t *conn) {
   if(conn->type == CONN_TYPE_OR_LISTENER ||
      conn->type == CONN_TYPE_AP_LISTENER ||
@@ -1026,9 +1042,8 @@ void assert_connection_ok(connection_t *conn, time_t now)
   } else {
     assert(!conn->socks_request);
   }
-  if(conn->type != CONN_TYPE_DIR &&
-     conn->type != CONN_TYPE_AP) {
-    assert(!conn->purpose); /* only used for dir and ap types currently */
+  if(conn->type != CONN_TYPE_DIR) {
+    assert(!conn->purpose); /* only used for dir types currently */
   }
 
   switch(conn->type)
