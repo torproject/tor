@@ -480,6 +480,10 @@ void circuit_expire_building(time_t now) {
        /* c_rend_ready circs measure age since timestamp_dirty,
         * because that's set when they switch purposes
         */
+       /* rend and intro circs become dirty each time they
+        * make an introduction attempt. so timestamp_dirty
+        * will reflect the time since the last attempt.
+        */
        ((victim->purpose == CIRCUIT_PURPOSE_C_REND_READY ||
          victim->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED ||
          victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) &&

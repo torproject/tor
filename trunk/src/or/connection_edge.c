@@ -948,9 +948,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
         if(rend_client_send_introduction(introcirc, rendcirc) < 0) {
           return -1;
         }
-        assert(!rendcirc->timestamp_dirty);
         rendcirc->timestamp_dirty = time(NULL);
-        assert(!introcirc->timestamp_dirty);
         introcirc->timestamp_dirty = time(NULL);
         return 0;
       }
