@@ -195,6 +195,9 @@ update_expected_bandwidth(void)
 {
   uint64_t used;
   uint32_t max_configured = (get_options()->BandwidthRateBytes * 60);
+  /* XXX max_configured will be false if it exceeds
+   * get_options()->AccountingMaxKB*1000, right? -RD
+   */
 
   if (n_seconds_active_in_interval < 1800) {
     expected_bandwidth_usage = max_configured;
@@ -449,8 +452,6 @@ static void hibernate_begin(int new_state, time_t now) {
     exit(0);
   }
 
-  tor_assert(hibernate_state == HIBERNATE_STATE_LIVE);
-
   /* close listeners. leave control listener(s). */
   while((conn = connection_get_by_type(CONN_TYPE_OR_LISTENER)) ||
         (conn = connection_get_by_type(CONN_TYPE_AP_LISTENER)) ||
@@ -466,7 +467,6 @@ static void hibernate_begin(int new_state, time_t now) {
     log(LOG_NOTICE,"Interrupt: will shut down in %d seconds. Interrupt again to exit now.", SHUTDOWN_WAIT_LENGTH);
     hibernate_end_time = time(NULL) + SHUTDOWN_WAIT_LENGTH;
   } else { /* soft limit reached */
-    log_fn(LOG_NOTICE,"Bandwidth limit reached; beginning hibernation.");
     hibernate_end_time = interval_end_time;
   }
 
