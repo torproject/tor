@@ -414,7 +414,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
 
   cpath->handshake_state = dh;
   dh = NULL;
-  if (circuit_init_cpath_crypto(cpath,keys+20)<0)
+  if (circuit_init_cpath_crypto(cpath,keys+20,1)<0)
     goto err;
   memcpy(cpath->handshake_digest, keys, 20);
 
