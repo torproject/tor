@@ -269,13 +269,13 @@ test_crypto()
     }
     test_memeq(data1, data3, 560);
     /* Now encrypt 3 at a time, and get 5 at a time. */
-    for (j = 560; j < 1024; j += 3) {
+    for (j = 560; j < 1024-5; j += 3) {
       crypto_cipher_encrypt(env1, data1+j, 3, data2+j);
     }
-    for (j = 560; j < 1024; j += 5) {
+    for (j = 560; j < 1024-5; j += 5) {
       crypto_cipher_decrypt(env2, data2+j, 5, data3+j);
     }
-    test_memeq(data1, data3, 1024-4);
+    test_memeq(data1, data3, 1024-5);
     /* Now make sure that when we encrypt with different chunk sizes, we get
        the same results. */
     crypto_free_cipher_env(env2);
