@@ -414,13 +414,14 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     if (strlen(s+1) == HEX_DIGEST_LEN) {
       conn->chosen_exit_name = tor_malloc(HEX_DIGEST_LEN+2);
       *(conn->chosen_exit_name) = '$';
-      strlcpy(conn->chosen_exit_name+1, HEX_DIGEST_LEN+1, s+1);
+      strlcpy(conn->chosen_exit_name+1, s+1, HEX_DIGEST_LEN+1);
     } else {
       conn->chosen_exit_name = tor_strdup(s+1);
     }
     *s = 0;
     if (!is_legal_nickname_or_hexdigest(conn->chosen_exit_name)) {
-      log_fn(LOG_WARN, "%s is not a legal exit node nickname; rejecting.");
+      log_fn(LOG_WARN, "%s is not a legal exit node nickname; rejecting.",
+             conn->chosen_exit_name);
       return -1;
     }
   }
