@@ -322,7 +322,7 @@ static int directory_handle_command_get(connection_t *conn,
 
     log_fn(LOG_DEBUG,"Dumping directory to client.");
     snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s",
-             dlen, cp);
+             (int)dlen, cp);
     connection_write_to_buf(tmp, strlen(tmp), conn);
     return 0;
   }
