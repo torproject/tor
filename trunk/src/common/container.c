@@ -622,7 +622,7 @@ strmap_free(strmap_t *map, void (*free_val)(void*))
     SPLAY_REMOVE(strmap_tree, &map->head, ent);
     tor_free(ent->key);
     if (free_val)
-      tor_free(ent->val);
+      free_val(ent->val);
   }
   tor_assert(SPLAY_EMPTY(&map->head));
   tor_free(map);
