@@ -12,8 +12,6 @@ static int connection_ap_handshake_process_socks(connection_t *conn);
 static int connection_ap_handshake_attach_circuit(connection_t *conn);
 static int connection_ap_handshake_attach_circuit_helper(connection_t *conn);
 static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
-static void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
-                                                int replylen, char success);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 static void connection_edge_consider_sending_sendme(connection_t *conn);
@@ -284,6 +282,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
              (int)(time(NULL) - conn->timestamp_lastread));
       circuit_log_path(LOG_INFO,circ);
       connection_ap_handshake_socks_reply(conn, NULL, 0, 1);
+      conn->socks_request->has_finished = 1;
       return 0;
     } else {
       log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
@@ -704,6 +703,8 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     } else {
       log_fn(LOG_DEBUG,"socks handshake not all here yet.");
     }
+    if (sockshere == -1)
+      conn->socks_request->has_finished = 1;
     return sockshere;
   } /* else socks handshake is done, continue processing */
 
@@ -848,8 +849,8 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   return;
 }
 
-static void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
-                                               int replylen, char success) {
+void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
+                                         int replylen, char success) {
   char buf[256];
 
   if(replylen) { /* we already have a reply in mind */

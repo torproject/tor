@@ -199,8 +199,14 @@ _connection_mark_for_close(connection_t *conn, char reason)
       }
       /* No special processing needed. */
       break;
-    case CONN_TYPE_EXIT:
     case CONN_TYPE_AP:
+      if (conn->socks_request->has_finished == 0) {
+        log_fn(LOG_INFO,"Cleaning up AP -- sending socks reject.");
+        connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
+        conn->socks_request->has_finished = 1;
+      }
+      /* fall through, to do things for both ap and exit */
+    case CONN_TYPE_EXIT:
       if (conn->state == EXIT_CONN_STATE_RESOLVING)
         connection_dns_remove(conn);
       if (!conn->has_sent_end && reason &&
@@ -1004,13 +1010,16 @@ void assert_connection_ok(connection_t *conn, time_t now)
     assert(!conn->done_sending);
     assert(!conn->done_receiving);
   } else {
-    if(conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN)
-      assert(conn->cpath_layer);
-    if(conn->cpath_layer)
-      assert_cpath_layer_ok(conn->cpath_layer);
     /* XXX unchecked: package window, deliver window. */
   }
-  if (conn->type != CONN_TYPE_AP) {
+  if (conn->type == CONN_TYPE_AP) {
+    assert(conn->socks_request);
+    if (conn->state == AP_CONN_STATE_OPEN) {
+      assert(conn->socks_request->has_finished);
+      assert(conn->cpath_layer);
+      assert_cpath_layer_ok(conn->cpath_layer);
+    }
+  } else {
     assert(!conn->socks_request);
   }
 
