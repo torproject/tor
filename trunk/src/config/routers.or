@@ -1,0 +1,28 @@
+# List of core onion routers in the network.
+# Line format : router-address router-port min-bandwidth(kilobytes/s) max-bandwidthkilobytes/s)
+# followed by the routers public key.
+# router-port is where the router is accepting connections from other routers.
+
+# Router 1
+moria 9001 10 10
+-----BEGIN RSA PUBLIC KEY-----
+MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
+7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
+nZ7kVMRoiXCbjL6VAtNa4Zy1Af/GOm0iCIDpholeujQ95xew7rQnAgMA//8=
+-----END RSA PUBLIC KEY-----
+
+# Router 2
+moria 9002 10 10
+-----BEGIN RSA PUBLIC KEY-----
+MIGJAoGBANX/HHRuudz274MFSQ4manX8DhtsIuogNUyco9/0dr+XsfioTGd3RgMj
+aSWlD87arkZO4hHBPHe0q89Z3s1UtUsyQ/VmsxSv9g2OCnF/dU2Nz4h6+Al3iNJF
+1UlWR4eiqBx3djxdIl/t+Nidw++YGc8QqRqkg0EhQCJ2fnOtHn9bAgMA//8=
+-----END RSA PUBLIC KEY-----
+
+# Router 3
+moria 9003 10 10
+-----BEGIN RSA PUBLIC KEY-----
+MIGJAoGBAJfkNWCaNkYIRwfHT06KBU6dz8W1xDpW5ezGJwAOoxCX3/ZNoUicb/1V
+oB3OzW6VxWIiht3da/3K0ywiBOOCcf6BabKoMdiPpH7NIeu6XRmBYK2uqW13gBgh
+xJbQBb58Nx8Fr05XkvLG6i+vTDY3MZOW3E2/DwSe/jFzuHSD5b3nAgMA//8=
+-----END RSA PUBLIC KEY-----

@@ -1,0 +1,13 @@
+# Sample configuration file for smtpap.
+
+# Local port on which the onion proxy is running.
+OnionProxy 3000
+
+# Maximum number of incoming connections.
+MaxConn 100
+
+# Run in anonymizing mode.
+Anonimize 0
+
+# Timeout for incoming connections.
+ConnTimeout 6000
