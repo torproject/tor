@@ -610,7 +610,6 @@ int router_load_routerlist_from_directory(const char *s,
                                           crypto_pk_env_t *pkey)
 {
   routerlist_t *new_list = NULL;
-  check_software_version_against_directory(s, options.IgnoreVersion);
   if (router_parse_routerlist_from_directory(s, &new_list, pkey)) {
     log_fn(LOG_WARN, "Couldn't parse directory.");
     return -1;

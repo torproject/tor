@@ -16,6 +16,8 @@
 
 /****************************************************************************/
 
+extern or_options_t options; /* command-line and config-file options */
+
 /** Enumeration of possible token types.  The ones starting with K_
  * correspond to directory 'keywords'.  _UNRECOGNIZED is for an
  * unrecognized keyword; _ERR is an error in the tokenizing process,
@@ -229,9 +231,12 @@ get_recommended_software_from_directory(const char *str)
  * ignored.) */
 /* static */ int is_obsolete_version(const char *myversion,
                            const char *versionlist) {
+  const char *vl;
   char *version, *comma, *cp;
   tor_version_t mine, other;
   int found_newer = 0, r;
+
+  vl = versionlist;
 
   log_fn(LOG_DEBUG,"checking '%s' in '%s'.", myversion, versionlist);
 
@@ -241,9 +246,8 @@ get_recommended_software_from_directory(const char *str)
   }
 
   for(;;) {
-    comma = strchr(versionlist, ',');
-    version = tor_strndup(versionlist,
-                          comma?(comma-versionlist):strlen(versionlist));
+    comma = strchr(vl, ',');
+    version = tor_strndup(vl, comma?(comma-vl):strlen(vl));
     cp = version;
     while (isspace(*cp))
       ++cp;
@@ -263,7 +267,7 @@ get_recommended_software_from_directory(const char *str)
     }
     tor_free(version);
     if (comma)
-      versionlist = comma+1;
+      vl = comma+1;
     else
       break;
   }
@@ -324,7 +328,7 @@ router_parse_routerlist_from_directory(const char *str,
   smartlist_t *good_nickname_list = NULL;
   time_t published_on;
   int i, r;
-  const char *end;
+  const char *end, *cp;
   smartlist_t *tokens = NULL;
 
   if (router_get_dir_hash(str, digest)) {
@@ -333,6 +337,37 @@ router_parse_routerlist_from_directory(const char *str,
   }
   log_fn(LOG_DEBUG,"Received directory hashes to %s",hex_str(digest,4));
 
+  /* Check signature first, before we try to tokenize. */
+  cp = str;
+  while (cp && (end = strstr(cp+1, "\ndirectory-signature")))
+    cp = end;
+  if (cp == str || !cp) {
+    log_fn(LOG_WARN, "No signature found on directory."); goto err;
+  }
+  ++cp;
+  tokens = smartlist_create();
+  if (tokenize_string(cp,strchr(cp,'\0'),tokens,1)) {
+    log_fn(LOG_WARN, "Error tokenizing directory signature"); goto err;
+  }
+  if (smartlist_len(tokens) != 1) {
+    log_fn(LOG_WARN, "Unexpected number of tokens in signature"); goto err;
+  }
+  if (smartlist_len(tokens) != 1 ||
+      (!(tok=smartlist_get(tokens,0))) || /* always succeeds */
+      (tok->tp != K_DIRECTORY_SIGNATURE)) {
+    log_fn(LOG_WARN,"Expected a single directory signature"); goto err;
+  }
+  if (check_directory_signature(digest, smartlist_get(tokens,0), pkey)<0) {
+    goto err;
+  }
+  SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
+  smartlist_free(tokens);
+  tokens = NULL;
+
+  /* Now that we know the signature is okay, check the version. */
+  check_software_version_against_directory(str, options.IgnoreVersion);
+
+  /* Now try to parse the first part of the directory. */
   if ((end = strstr(str,"\nrouter "))) {
     ++end;
   } else if ((end = strstr(str, "\ndirectory-signature"))) {
@@ -404,20 +439,7 @@ router_parse_routerlist_from_directory(const char *str,
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
   smartlist_free(tokens);
-
-  tokens = smartlist_create();
-  if (tokenize_string(str,str+strlen(str),tokens,1)<0) {
-    log_fn(LOG_WARN, "Error tokenizing signature"); goto err;
-  }
-
-  if (smartlist_len(tokens) != 1 ||
-      (!(tok=smartlist_get(tokens,0))) || /* always succeeds */
-      (tok->tp != K_DIRECTORY_SIGNATURE)) {
-    log_fn(LOG_WARN,"Expected a single directory signature"); goto err;
-  }
-  if (check_directory_signature(digest, smartlist_get(tokens,0), pkey)<0) {
-    goto err;
-  }
+  tokens = NULL;
 
   /* Determine if my routerinfo is considered verified. */
   {
