@@ -59,7 +59,7 @@ static void send_control_error(connection_t *conn, uint16_t error,
                                const char *message);
 static void send_control_event(uint16_t event, uint16_t len, const char *body);
 static int handle_control_setconf(connection_t *conn, uint16_t len,
-                                  const char *body);
+                                  char *body);
 static int handle_control_getconf(connection_t *conn, uint16_t len,
                                   const char *body);
 static int handle_control_setevents(connection_t *conn, uint16_t len,
@@ -139,58 +139,81 @@ send_control_event(uint16_t event, uint16_t len, const char *body)
 
 static int
 handle_control_setconf(connection_t *conn, uint16_t len,
-                                  const char *body)
+                       char *body)
 {
+  char *k, *v;
+  struct config_line_t *lines = NULL;
+
+  /* XXXX009 move this logic into config.c someplace. */
+
+  do {
+    body = parse_line_from_str(body, &k, &v);
+    if (!body) {
+      goto err;
+    }
+    if (k && v)
+      lines = config_line_prepend(lines, k, v);
+  } while (*body);
+
   /* XXXX009 NM */
+
+  return 0;
+ err:
+  send_control_error(conn, ERR_UNSPECIFIED, "Couldn't parse configuration");
+  /* config_free_lines(lines); */
   return 0;
 }
 
-static int handle_control_getconf(connection_t *conn, uint16_t body_len,
+static int
+handle_control_getconf(connection_t *conn, uint16_t body_len,
                                   const char *body)
 {
-  smartlist_t *answer_elements = NULL;
+  smartlist_t *questions = NULL;
+  smartlist_t *answers = NULL;
   char *msg = NULL;
   size_t msg_len;
 
-  if (body[body_len-1] != '\0') {
-    send_control_error(conn, ERR_UNSPECIFIED,
-                       "getconf message body not nul-terminated.");
-    return 0;
-  }
-  /* Now we can be sure that body will end in a nul-terminated string. */
-
-  answer_elements = smartlist_create();
-  while (body_len) {
-    size_t question_len = strlen(body);
-    struct config_line_t *answer = config_get_assigned_option(&options,body);
+  questions = smartlist_create();
+  smartlist_split_string(questions, body, "\n",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  answers = smartlist_create();
+  SMARTLIST_FOREACH(questions, const char *, q,
+  {
+    struct config_line_t *answer = config_get_assigned_option(&options,q);
     if (!answer) {
       send_control_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, body);
       goto done;
     } else {
       while (answer) {
         struct config_line_t *next;
-        smartlist_add(answer_elements, answer->key);
-        smartlist_add(answer_elements, answer->value);
+        size_t alen = strlen(answer->key)+strlen(answer->value)+2;
+        char *astr = tor_malloc(alen);
+        tor_snprintf(astr, alen, "%s %s\n", answer->key, answer->value);
+        smartlist_add(answers, astr);
+
         next = answer->next;
+        tor_free(answer->key);
+        tor_free(answer->value);
         tor_free(answer);
         answer = next;
       }
     }
-    body += question_len+1;
-    body_len -= question_len+1;
-  }
+  });
 
-  msg = smartlist_join_strings2(answer_elements, "\0", 1, 0, &msg_len);
+  msg = smartlist_join_strings(answers, "", 0, &msg_len);
   send_control_message(conn, CONTROL_CMD_CONFVALUE,
                        (uint16_t)msg_len, msg);
 
  done:
-  SMARTLIST_FOREACH(answer_elements, char *, cp, tor_free(cp));
-  smartlist_free(answer_elements);
+  if (answers) SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
+  if (questions) SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
+  smartlist_free(answers);
+  smartlist_free(questions);
   tor_free(msg);
 
   return 0;
 }
+
 static int handle_control_setevents(connection_t *conn, uint16_t len,
                                     const char *body)
 {
@@ -218,6 +241,7 @@ static int handle_control_setevents(connection_t *conn, uint16_t len,
   send_control_done(conn);
   return 0;
 }
+
 static int handle_control_authenticate(connection_t *conn, uint16_t len,
                                        const char *body)
 {
