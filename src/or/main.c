@@ -737,6 +737,8 @@ static int do_hup(void) {
 
   log_fn(LOG_NOTICE,"Received sighup. Reloading config.");
   has_completed_circuit=0;
+  accounting_record_bandwidth_usage();
+
   /* first, reload config variables, in case they've changed */
   /* no need to provide argc/v, they've been cached inside init_from_config */
   if (init_from_config(0, NULL) < 0) {
@@ -792,11 +794,6 @@ static int do_main_loop(void) {
   connection_bucket_init();
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
-
-  /*XXX009 move to options_act? */
-  /* Set up accounting */
-  if (get_options()->AccountingMaxKB)
-    configure_accounting(time(NULL));
 
   /* load the routers file, or assign the defaults. */
   if(router_reload_router_list()) {
@@ -1082,6 +1079,7 @@ void tor_cleanup(void) {
   if(options->PidFile && options->command == CMD_RUN_TOR)
     unlink(options->PidFile);
   crypto_global_cleanup();
+  accounting_record_bandwidth_usage();
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */

@@ -1327,6 +1327,7 @@ int dns_resolve(connection_t *exitconn);
 void configure_accounting(time_t now);
 void accounting_run_housekeeping(time_t now);
 void accounting_add_bytes(size_t n_read, size_t n_written, int seconds);
+int accounting_record_bandwidth_usage(time_t now);
 void hibernate_begin_shutdown(void);
 int we_are_hibernating(void);
 void consider_hibernation(time_t now);
