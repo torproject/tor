@@ -1,9 +1,9 @@
 AUTOMAKE_OPTIONS = foreign
  # else it keeps trying to put COPYING back in
 
-SUBDIRS = src doc
+SUBDIRS = src doc contrib
 
-DIST_SUBDIRS = src doc
+DIST_SUBDIRS = src doc contrib
 
 EXTRA_DIST = INSTALL README AUTHORS LICENSE ChangeLog
 
