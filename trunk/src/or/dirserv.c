@@ -188,12 +188,14 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
  * return that router's nickname.  Otherwise return NULL. */
 const char *dirserv_get_nickname_by_digest(const char *digest)
 {
+  char hexdigest[HEX_DIGEST_LEN+1];
   if (!fingerprint_list)
     return NULL;
   tor_assert(digest);
 
+  base16_encode(hexdigest, HEX_DIGEST_LEN+1, digest, DIGEST_LEN);
   SMARTLIST_FOREACH(fingerprint_list, fingerprint_entry_t*, ent,
-                    { if (!strcasecmp(digest, ent->fingerprint))
+                    { if (!strcasecmp(hexdigest, ent->fingerprint))
                          return ent->nickname; } );
   return NULL;
 }
