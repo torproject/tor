@@ -29,8 +29,9 @@
 static void
 directory_initiate_command(routerinfo_t *router, uint8_t purpose,
                            const char *payload, int payload_len);
-static void directory_send_command(connection_t *conn, int purpose,
-                                   const char *payload, int payload_len);
+static void
+directory_send_command(connection_t *conn, routerinfo_t *router, int purpose,
+                       const char *payload, int payload_len);
 static int directory_handle_command(connection_t *conn);
 
 /********* START VARIABLES **********/
@@ -128,8 +129,7 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
   tor_assert(router);
   tor_assert(router->dir_port);
 
-  switch (purpose)
-    {
+  switch (purpose) {
     case DIR_PURPOSE_FETCH_DIR:
       log_fn(LOG_DEBUG,"initiating directory fetch");
       break;
@@ -145,13 +145,18 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
     default:
       log_fn(LOG_ERR, "Unrecognized directory connection purpose.");
       tor_assert(0);
-    }
+  }
 
   conn = connection_new(CONN_TYPE_DIR);
 
   /* set up conn so it's got all the data we need to remember */
-  conn->addr = router->addr;
-  conn->port = router->dir_port;
+  if(options.HttpProxy) {
+    conn->addr = options.HttpProxyAddr;
+    conn->port = options.HttpProxyPort;
+  } else {
+    conn->addr = router->addr;
+    conn->port = router->dir_port;
+  }
   conn->address = tor_strdup(router->address);
   conn->nickname = tor_strdup(router->nickname);
   tor_assert(router->identity_pkey);
@@ -180,7 +185,7 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
         /* fall through */
       case 0:
         /* queue the command on the outbuf */
-        directory_send_command(conn, purpose, payload, payload_len);
+        directory_send_command(conn, router, purpose, payload, payload_len);
 
         connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
         /* writable indicates finish, readable indicates broken link,
@@ -201,7 +206,7 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
     conn->state = DIR_CONN_STATE_CLIENT_SENDING;
     connection_add(conn);
     /* queue the command on the outbuf */
-    directory_send_command(conn, purpose, payload, payload_len);
+    directory_send_command(conn, router, purpose, payload, payload_len);
     connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
   }
 }
@@ -210,44 +215,49 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
  * <b>purpose</b>, <b>payload</b>, and <b>payload_len</b> are as in
  * directory_initiate_command.
  */
-static void directory_send_command(connection_t *conn, int purpose,
-                                   const char *payload, int payload_len) {
-  char fetchwholedir[] = "GET / HTTP/1.0\r\n\r\n"; /* deprecated */
-  char fetchwholedir_z[] = "GET /tor/dir.z HTTP/1.0\r\n\r\n";
-  char fetchrunninglist[] = "GET /tor/running-routers HTTP/1.0\r\n\r\n";
+static void
+directory_send_command(connection_t *conn, routerinfo_t *router, int purpose,
+                       const char *payload, int payload_len) {
   char tmp[8192];
-  routerinfo_t *router;
+  char proxystring[128];
+  char hoststring[128];
+  char url[128];
   int use_newer = 0;
+  char *httpcommand = NULL;
 
   tor_assert(conn && conn->type == CONN_TYPE_DIR);
-
-  router = router_get_by_digest(conn->identity_digest);
-  tor_assert(router); /* the func that calls us found it, so we should too */
+  tor_assert(router);
 
   use_newer = tor_version_as_new_as(router->platform, "0.0.9pre1");
+
+  if(router->dir_port == 80) {
+    strlcpy(hoststring, router->address, sizeof(hoststring));
+  } else {
+    sprintf(hoststring, "%s:%d", router->address, router->dir_port);
+  }
+  if(options.HttpProxy) {
+    sprintf(proxystring, "http://%s", hoststring);
+  } else {
+    proxystring[0] = 0;
+  }
 
   switch(purpose) {
     case DIR_PURPOSE_FETCH_DIR:
       tor_assert(payload == NULL);
-      if(use_newer) {
-        log_fn(LOG_DEBUG, "Asking for compressed directory from server running  %s", router->platform);
-        connection_write_to_buf(fetchwholedir_z, strlen(fetchwholedir_z), conn);
-      } else {
-        log_fn(LOG_DEBUG, "Asking for uncompressed directory from server running  %s", router->platform);
-        connection_write_to_buf(fetchwholedir, strlen(fetchwholedir), conn);
-      }
+      log_fn(LOG_DEBUG, "Asking for %scompressed directory from server running %s",
+             use_newer?"":"un", router->platform);
+      httpcommand = "GET";
+      strlcpy(url, use_newer ? "/tor/dir.z" : "/", sizeof(url));
       break;
     case DIR_PURPOSE_FETCH_RUNNING_LIST:
       tor_assert(payload == NULL);
-      connection_write_to_buf(fetchrunninglist, strlen(fetchrunninglist), conn);
+      httpcommand = "GET";
+      strlcpy(url, use_newer ? "/tor/running-routers" : "/running-routers", sizeof(url));
       break;
     case DIR_PURPOSE_UPLOAD_DIR:
       tor_assert(payload);
-      snprintf(tmp, sizeof(tmp), "POST %s/ HTTP/1.0\r\nContent-Length: %d\r\n\r\n",
-               use_newer ? "/tor" : "",
-               payload_len);
-      connection_write_to_buf(tmp, strlen(tmp), conn);
-      connection_write_to_buf(payload, payload_len, conn);
+      httpcommand = "POST";
+      strlcpy(url, use_newer ? "/tor/" : "/", sizeof(url));
       break;
     case DIR_PURPOSE_FETCH_RENDDESC:
       tor_assert(payload);
@@ -258,21 +268,32 @@ static void directory_send_command(connection_t *conn, int purpose,
       memcpy(conn->rend_query, payload, payload_len);
       conn->rend_query[payload_len] = 0;
 
-      snprintf(tmp, sizeof(tmp), "GET %s%s HTTP/1.0\r\n\r\n", "/rendezvous/", payload);
-      connection_write_to_buf(tmp, strlen(tmp), conn);
+      httpcommand = "GET";
+      sprintf(url, "%s/rendezvous/%s", use_newer ? "/tor" : "", payload);
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       tor_assert(payload);
-      snprintf(tmp, sizeof(tmp),
-        "POST %s HTTP/1.0\r\nContent-Length: %d\r\n\r\n", "/rendezvous/publish", payload_len);
-      connection_write_to_buf(tmp, strlen(tmp), conn);
-      /* could include nuls, need to write it separately */
-      connection_write_to_buf(payload, payload_len, conn);
+      httpcommand = "POST";
+      sprintf(url, "%s/rendezvous/publish", use_newer ? "/tor" : "");
       break;
+  }
+
+  snprintf(tmp, sizeof(tmp), "%s %s%s HTTP/1.0\r\nContent-Length: %d\r\nHost: %s\r\n\r\n",
+           httpcommand,
+           proxystring,
+           url,
+           payload_len,
+           hoststring);
+  connection_write_to_buf(tmp, strlen(tmp), conn);
+
+  if(purpose == DIR_PURPOSE_UPLOAD_DIR || purpose == DIR_PURPOSE_UPLOAD_RENDDESC) {
+    /* then send the payload afterwards too */
+    connection_write_to_buf(payload, payload_len, conn);
   }
 }
 
-/** Parse an HTTP request string <b>headers</b> of the form "\%s \%s HTTP/1..."
+/** Parse an HTTP request string <b>headers</b> of the form
+ * "\%s [http[s]://]\%s HTTP/1..."
  * If it's well-formed, strdup the second \%s into *<b>url</b>, and
  * null-terminate it. If the url doesn't start with "/tor/", rewrite it
  * so it does. Return 0.
@@ -281,7 +302,7 @@ static void directory_send_command(connection_t *conn, int purpose,
 static int
 parse_http_url(char *headers, char **url)
 {
-  char *s, *start;
+  char *s, *start, *tmp;
 
   s = (char *)eat_whitespace_no_nl(headers);
   if (!*s) return -1;
@@ -292,6 +313,21 @@ parse_http_url(char *headers, char **url)
   start = s; /* this is it, assuming it's valid */
   s = (char *)find_whitespace(start);
   if (!*s) return -1;
+
+  /* tolerate the http[s] proxy style of putting the hostname in the url */
+  if(s-start >= 4 && !strcmpstart(start,"http")) {
+    tmp = start + 4;
+    if(*tmp == 's')
+      tmp++;
+    if(s-tmp >= 3 && !strcmpstart(tmp,"://")) {
+      tmp = strchr(tmp+3, '/');
+      if(tmp && tmp < s) {
+        log_fn(LOG_DEBUG,"Skipping over 'http[s]://hostname' string");
+        start = tmp;
+      }
+    }
+  }
+
   if(s-start < 5 || strcmpstart(start,"/tor/")) { /* need to rewrite it */
     *url = tor_malloc(s - start + 5);
     strcpy(*url,"/tor");
