@@ -622,15 +622,16 @@ static int check_directory_signature(const char *digest,
       _pkey = declared_key;
   }
   if (!_pkey) {
+    log_fn(LOG_WARN, "Processing directory in old (before 0.0.9pre3) format--this may fail.");
     r = router_get_by_nickname(tok->args[0]);
-    log_fn(LOG_DEBUG, "Got directory signed by %s", tok->args[0]);
+    log_fn(LOG_DEBUG, "Got directory signed (allegedly) by %s", tok->args[0]);
     if (r && r->is_trusted_dir) {
       _pkey = r->identity_pkey;
     } else if (!r && pkey) {
       /* pkey provided for debugging purposes. */
       _pkey = pkey;
     } else if (!r) {
-      log_fn(LOG_WARN, "Directory was signed by unrecognized server %s",
+      log_fn(LOG_WARN, "No server descriptor loaded for signer %s",
              tok->args[0]);
       return -1;
     } else if (r && !r->is_trusted_dir) {
