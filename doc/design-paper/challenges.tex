@@ -1,16 +1,14 @@
 \documentclass{llncs}
-% XXXX NM: Fold ``bandwidth and usability'' into ``Tor and file-sharing'' --
-% ``bandwidth and file-sharing''.
 
 \usepackage{url}
 \usepackage{amsmath}
 \usepackage{epsfig}
 
-\setlength{\textwidth}{6.1in}
-\setlength{\textheight}{8.5in}
-\setlength{\topmargin}{1cm}
-\setlength{\oddsidemargin}{.5cm}
-\setlength{\evensidemargin}{.5cm}
+\setlength{\textwidth}{5.9in}
+\setlength{\textheight}{8.4in}
+\setlength{\topmargin}{.5cm}
+\setlength{\oddsidemargin}{1cm}
+\setlength{\evensidemargin}{1cm}
 
 \newenvironment{tightlist}{\begin{list}{$\bullet$}{
   \setlength{\itemsep}{0mm}
@@ -122,7 +120,7 @@ giving an effective vector for physical or online attackers.
 Tor provides these protections even when a portion of its
 infrastructure is compromised.
 
-To connect to a remove server via Tor, the client software learns a signed
+To connect to a remote server via Tor, the client software learns a signed
 list of Tor nodes from one of several central \emph{directory servers}, and
 incrementally creates a private pathway or \emph{circuit} of encrypted
 connections through authenticated Tor nodes on the network, negotiating a
@@ -373,10 +371,10 @@ eavesdropper can perform traffic analysis on the entire network.
 %financial health as well as network security.
 The Java
 Anon Proxy~\cite{web-mix} provides similar functionality to Tor but
-handles only web browsing rather than arbitrary TCP\@.
+handles only web browsing rather than all TCP\@.
 %Some peer-to-peer file-sharing overlay networks such as
 %Freenet~\cite{freenet} and Mute~\cite{mute}
-Zero-Knowledge Systems' commercial Freedom
+Zero-Knowledge Systems' Freedom
 network~\cite{freedom21-security} was even more flexible than Tor in
 transporting arbitrary IP packets, and also supported
 pseudonymity in addition to anonymity; but it has
@@ -387,7 +385,7 @@ more scalable peer-to-peer designs like Tarzan~\cite{tarzan:ccs02} and
 MorphMix~\cite{morphmix:fc04} have been proposed in the literature, but
 have not been fielded. These systems differ somewhat
 in threat model and presumably practical resistance to threats.
-Note that MorphMix and Tor differ only in
+Note that MorphMix differs from Tor only in
 node discovery and circuit setup; so Tor's architecture is flexible
 enough to contain a MorphMix experiment.
 We direct the interested reader
@@ -461,7 +459,7 @@ attacks, because its network has fewer edges. JAP was born out of
 the ISDN mix design~\cite{isdn-mixes}, where padding made sense because
 every user had a fixed bandwidth allocation and altering the timing
 pattern of packets could be immediately detected. But in its current context
-as a general Internet web anonymizer, adding sufficient padding to JAP
+as an Internet web anonymizer, adding sufficient padding to JAP
 would probably be prohibitively expensive and ineffective against a
 minimally active attacker.\footnote{Even if JAP could
 fund higher-capacity nodes indefinitely, our experience
@@ -621,7 +619,7 @@ any anonymizing network: their intensive bandwidth requirement, and the
 degree to which they are associated (correctly or not) with copyright
 infringement.
 
-As noted above, high-bandwidth protocols can make the network unresponsive,
+High-bandwidth protocols can make the network unresponsive,
 but tend to be somewhat self-correcting as lack of bandwidth drives away
 users who need it.  Issues of copyright violation,
 however, are more interesting.  Typical exit node operators want to help
@@ -636,7 +634,7 @@ So when letters arrive, operators are likely to face
 pressure to block file-sharing applications entirely, in order to avoid the
 hassle.
 
-But blocking file-sharing is not easy: many popular
+But blocking file-sharing is not easy: popular
 protocols have evolved to run on non-standard ports to
 get around other port-based bans.  Thus, exit node operators who want to
 block file-sharing would have to find some way to integrate Tor with a
@@ -726,20 +724,20 @@ nodes, open proxies, and service abusers, these systems hope to make
 ongoing abuse difficult.  Although the system is imperfect, it works
 tolerably well for them in practice.
 
-But of course, we would prefer that legitimate anonymous users be able to
-access abuse-prone services.  One conceivable approach would be to require
+Of course, we would prefer that legitimate anonymous users be able to
+access abuse-prone services.  One conceivable approach would require
 would-be IRC users, for instance, to register accounts if they want to
 access the IRC network from Tor.  In practice this would not
 significantly impede abuse if creating new accounts were easily automatable;
 this is why services use IP blocking.  To deter abuse, pseudonymous
 identities need to require a significant switching cost in resources or human
 time.  Some popular webmail applications
-impose cost with Reverse Turing Tests, but these may not be costly enough to
-deter abusers.  Freedom used blind signatures to limit
+impose cost with Reverse Turing Tests, but this step may not deter all
+abusers.  Freedom used blind signatures to limit
 the number of pseudonyms for each paying account, but Tor has neither the
 ability nor the desire to collect payment.
 
-We stress that as far as we can tell, most Tor uses so far are not
+We stress that as far as we can tell, most Tor uses are not
 abusive. Most services have not complained, and others are actively
 working to find ways besides banning to cope with the abuse. For example,
 the Freenode IRC network had a problem with a coordinated group of
@@ -891,8 +889,8 @@ prevent individual machines within the enclave from running Tor
 clients~\cite{or-jsac98,or-discex00}.
 
 Of course, Tor's default path length of
-three is insufficient for these enclaves, since the entry and/or exit
-themselves are sensitive. Tor thus increments the path length by one
+three is insufficient for these enclaves, since the entry or exit
+themselves are sensitive. Tor thus increments path length by one
 for each sensitive endpoint in the circuit.
 Enclaves also help to protect against end-to-end attacks, since it's
 possible that traffic coming from the node has simply been relayed from
@@ -1208,49 +1206,47 @@ further study.
 \subsection{Trust and discovery}
 \label{subsec:trust-and-discovery}
 
-The published Tor design adopted a deliberately simplistic design for
+The published Tor design uses a deliberately simplistic design for
 authorizing new nodes and informing clients about Tor nodes and their status.
-In preliminary Tor designs, all nodes periodically uploaded a
-signed description
+All nodes periodically upload a signed description
 of their locations, keys, and capabilities to each of several well-known {\it
-  directory servers}.  These directory servers constructed a signed summary
+  directory servers}.  These directory servers construct a signed summary
 of all known Tor nodes (a ``directory''), and a signed statement of which
 nodes they
-believed to be operational at any given time (a ``network status'').  Clients
-periodically downloaded a directory to learn the latest nodes and
-keys, and more frequently downloaded a network status to learn which nodes were
+believe to be operational then (a ``network status'').  Clients
+periodically download a directory to learn the latest nodes and
+keys, and more frequently download a network status to learn which nodes are
 likely to be running.  Tor nodes also operate as directory caches, to
-lighten the bandwidth on the authoritative directory servers.
+lighten the bandwidth on the directory servers.
 
-In order to prevent Sybil attacks (wherein an adversary signs up many
-purportedly independent nodes to increase her chances of observing
-a stream as it enters and leaves the network), the early Tor directory design
-required the operators of the authoritative directory servers to manually
-approve new nodes.  Unapproved nodes were included in the directory,
+To prevent Sybil attacks (wherein an adversary signs up many
+purportedly independent nodes to increase her network view),
+this design
+requires the directory server operators to manually
+approve new nodes.  Unapproved nodes are included in the directory,
 but clients
-did not use them at the start or end of their circuits.  In practice,
-directory administrators performed little actual verification, and tended to
-approve any Tor node whose operator could compose a coherent email.
+do not use them at the start or end of their circuits.  In practice,
+directory administrators perform little actual verification, and tend to
+approve any Tor node whose operator can compose a coherent email.
 This procedure
-may have prevented trivial automated Sybil attacks, but would do little
+may prevent trivial automated Sybil attacks, but will do little
 against a clever and determined attacker.
 
 There are a number of flaws in this system that need to be addressed as we
-move forward.  They include:
-\begin{tightlist}
-\item Each directory server represents an independent point of failure; if
-  any one were compromised, it could immediately compromise all of its users
-  by recommending only compromised nodes.
-\item The more nodes join the network, the more unreasonable it
-  becomes to expect clients to know about them all.  Directories
-  become infeasibly large, and downloading the list of nodes becomes
-  burdensome.
-\item The validation scheme may do as much harm as it does good.  It is not
-  only incapable of preventing clever attackers from mounting Sybil attacks,
-  but may deter node operators from joining the network.  (For instance, if
-  they expect the validation process to be difficult, or if they do not share
-  any languages in common with the directory server operators.)
-\end{tightlist}
+move forward. First,
+each directory server represents an independent point of failure: any
+compromised directory server could start recommending only compromised
+nodes.
+Second, as more nodes join the network, %the more unreasonable it
+%becomes to expect clients to know about them all.
+directories
+become infeasibly large, and downloading the list of nodes becomes
+burdensome.
+Third, the validation scheme may do as much harm as it does good.  It not
+only can't prevent clever attackers from mounting Sybil attacks,
+but it may deter node operators from joining the network, if
+they expect the validation process to be difficult, or they do not share
+any languages in common with the directory server operators.
 
 We could try to move the system in several directions, depending on our
 choice of threat model and requirements.  If we did not need to increase
@@ -1261,18 +1257,17 @@ But, we can only do that if can simultaneously make node capacity
 scale much more than we anticipate to be feasible soon, and if we can find
 entities willing to run such nodes, an equally daunting prospect.
 
-
 In order to address the first two issues, it seems wise to move to a system
 including a number of semi-trusted directory servers, no one of which can
 compromise a user on its own.  Ultimately, of course, we cannot escape the
 problem of a first introducer: since most users will run Tor in whatever
 configuration the software ships with, the Tor distribution itself will
-remain a potential single point of failure so long as it includes the seed
+remain a single point of failure so long as it includes the seed
 keys for directory servers, a list of directory servers, or any other means
 to learn which nodes are on the network.  But omitting this information
-from the Tor distribution would only delegate the trust problem to the
-individual users, most of whom are presumably less informed about how to make
-trust decisions than the Tor developers.
+from the Tor distribution would only delegate the trust problem to each
+individual user. %, most of whom are presumably less informed about how to make
+%trust decisions than the Tor developers.
 
 %Network discovery, sybil, node admission, scaling. It seems that the code
 %will ship with something and that's our trust root. We could try to get
@@ -1310,20 +1305,19 @@ for views of a node's latency and/or bandwidth to vary wildly between
 observers.  Further, it is unclear whether total bandwidth is really
 the right measure; perhaps clients should instead be considering nodes
 based on unused bandwidth or observed throughput.
-% XXXX say more here?
-
 %How to measure performance without letting people selectively deny service
 %by distinguishing pings. Heck, just how to measure performance at all. In
 %practice people have funny firewalls that don't match up to their exit
 %policies and Tor doesn't deal.
-
+%
 %Network investigation: Is all this bandwidth publishing thing a good idea?
 %How can we collect stats better? Note weasel's smokeping, at
 %http://seppia.noreply.org/cgi-bin/smokeping.cgi?target=Tor
 %which probably gives george and steven enough info to break tor?
-
-Even if we can collect and use this network information effectively, we need
-to make sure that it is not more useful to attackers than to us.  While it
+%
+And even if we can collect and use this network information effectively,
+we must ensure
+that it is not more useful to attackers than to us.  While it
 seems plausible that bandwidth data alone is not enough to reveal
 sender-recipient connections under most circumstances, it could certainly
 reveal the path taken by large traffic flows under low-usage circumstances.
@@ -1331,24 +1325,27 @@ reveal the path taken by large traffic flows under low-usage circumstances.
 \subsection{Non-clique topologies}
 
 Tor's comparatively weak threat model may allow easier scaling than
-other mix-net
+other
 designs.  High-latency mix networks need to avoid partitioning attacks, where
 network splits let an attacker distinguish users in different partitions.
 Since Tor assumes the adversary cannot cheaply observe nodes at will,
 a network split may not decrease protection much.
 Thus, one option when the scale of a Tor network
 exceeds some size is simply to split it. Nodes could be allocated into
-partitions while hampering collobrating hostile nodes from taking over
+partitions while hampering collaborating hostile nodes from taking over
 a single partition~\cite{casc-rep}.
 Clients could switch between
-networks, even on a per-circuit basis.  Future analysis may uncover
-other dangers beyond those affecting mix-nets.
+networks, even on a per-circuit basis.
+%Future analysis may uncover
+%other dangers beyond those affecting mix-nets.
 
-More conservatively, we can try to scale a single Tor network.  Potential
+More conservatively, we can try to scale a single Tor network. Likely
 problems with adding more servers to a single Tor network include an
 explosion in the number of sockets needed on each server as more servers
-join, and an increase in coordination overhead as keeping everyone's view of
-the network consistent becomes increasingly difficult.
+join, and increased coordination overhead to keep each users' view of
+the network consistent. As we grow, we will also have more instances of
+servers that can't reach each other simply due to Internet topology or
+routing problems.
 
 %include restricting the number of sockets and the amount of bandwidth
 %used by each node.  The number of sockets is determined by the network's
@@ -1369,9 +1366,7 @@ extend to Tor, which has a weaker threat model but higher performance
 requirements: instead of analyzing the
 probability of an attacker's viewing whole paths, we will need to examine the
 attacker's likelihood of compromising the endpoints.
-
-% Nick edits these next 2 grafs.
-
+%
 Tor may not need an expander graph per se: it
 may be enough to have a single subnet that is highly connected, like
 an internet backbone. %  As an
@@ -1382,22 +1377,22 @@ an internet backbone. %  As an
 %center and anyone out of the center that they want to.  Then the
 %network easily scales to c. 2500 nodes with commensurate increase in
 %bandwidth.
-There are many open questions: how to distribute directory information
-(presumably information about the center nodes could
-be given to any new nodes with their codebase), whether center nodes
-will need to function as a `backbone', and so one. As above,
+There are many open questions: how to distribute connectivity information
+(presumably nodes will learn about the center nodes
+when they download Tor), whether center nodes
+will need to function as a `backbone', and so on. As above,
 this could create problems for the expected anonymity for a mix-net,
 but for a low-latency network where anonymity derives largely from
 the edges, it may be feasible.
 
-In a sense, Tor already has a non-clique topology.
-Individuals can set up and run Tor nodes without informing the
-directory servers. This allows groups to run a
-local Tor network of private nodes that connects to the public Tor
-network. This network is hidden behind the Tor network, and its
-only visible connection to Tor is at those points where it connects.
-As far as the public network, or anyone observing it, is concerned,
-they are running clients.
+%In a sense, Tor already has a non-clique topology.
+%Individuals can set up and run Tor nodes without informing the
+%directory servers. This allows groups to run a
+%local Tor network of private nodes that connects to the public Tor
+%network. This network is hidden behind the Tor network, and its
+%only visible connection to Tor is at those points where it connects.
+%As far as the public network, or anyone observing it, is concerned,
+%they are running clients.
 
 \section{The Future}
 \label{sec:conclusion}
