@@ -36,6 +36,9 @@
 #include <errno.h>
 #include <assert.h>
 #include <time.h>
+#ifdef USE_ZLIB
+#include <zlib.h>
+#endif
 
 #include "../common/crypto.h"
 #include "../common/log.h"
@@ -171,6 +174,7 @@
 #define CONFIG_TYPE_INT     2
 #define CONFIG_TYPE_LONG    3
 #define CONFIG_TYPE_DOUBLE  4
+#define CONFIG_TYPE_BOOL    5
 
 #define CONFIG_LINE_MAXLEN 1024
 
@@ -254,24 +258,39 @@ struct connection_t {
   uint16_t port;
 
 /* used by exit and ap: */
-
   uint16_t topic_id;
   struct connection_t *next_topic;
   int n_receive_topicwindow;
   int p_receive_topicwindow;
+  int done_sending;
+  int done_receiving;
+#ifdef USE_ZLIB
+  char *z_outbuf;
+  int z_outbuflen;
+  int z_outbuf_datalen;
 
+  z_stream *compression;
+  z_stream *decompression;
+#endif
+
+/* Used by ap: */
   char socks_version; 
   char read_username;
 
+/* Used by exit and ap: */
   char *dest_addr;
   uint16_t dest_port; /* host order */
 
+/* Used by ap: */
   char dest_tmp[512];
   int dest_tmplen;
   
+/* Used by everyone */
   char *address; /* strdup into this, because free_connection frees it */
+/* Used for cell connections */
   crypto_pk_env_t *pkey; /* public RSA key for the other side */
 
+/* Used while negotiating OR/OR connections */
   char nonce[8];
  
 };
@@ -383,6 +402,7 @@ typedef struct {
    char *RouterFile;
    char *PrivateKeyFile;
    double CoinWeight;
+   int Daemon;
    int ORPort;
    int OPPort;
    int APPort;
@@ -421,11 +441,28 @@ int write_to_buf(char *string, int string_len,
    * return total number of bytes on the buf
    */
 
+
 int fetch_from_buf(char *string, int string_len,
                    char **buf, int *buflen, int *buf_datalen);
   /* if there is string_len bytes in buf, write them onto string,
    * then memmove buf back (that is, remove them from buf)
    */
+
+#ifdef USE_ZLIB
+int compress_from_buf(char *string, int string_len, 
+		      char **buf_in, int *buflen_in, int *buf_datalen_in,
+		      z_stream *zstream, int flush);
+  /* read and compress as many characters as possible from buf, writing up to
+   * string_len of them onto string, then memmove buf back.  Return number of
+   * characters written.
+   */
+
+int decompress_buf_to_buf(char **buf_in, int *buflen_in, int *buf_datalen_in,
+			  char **buf_out, int *buflen_out, int *buf_datalen_out,
+			  z_stream *zstream, int flush);
+  /* XXX document this NM
+   */
+#endif
 
 int find_on_inbuf(char *string, int string_len,
                   char *buf, int buf_datalen);
@@ -528,6 +565,13 @@ int retry_all_connections(int role, uint16_t or_listenport,
 int connection_read_to_buf(connection_t *conn);
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn);
+
+#ifdef USE_ZLIB
+int connection_compress_from_buf(char *string, int len, connection_t *conn,
+				 int flush);
+int connection_decompress_to_buf(char *string, int len, connection_t *conn,
+				 int flush);
+#endif
 
 int connection_outbuf_too_full(connection_t *conn);
 int connection_find_on_inbuf(char *string, int len, connection_t *conn);

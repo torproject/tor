@@ -19,8 +19,8 @@ ARMA    - arma claims
                 o Implement topics
                 - Rotate circuits after N minutes?
                 - Circuits should expire when circuit->expire triggers
-NICK            - Handle half-open connections
-NICK    - On the fly compression of each stream
+NICK            . Handle half-open connections
+NICK    . On the fly compression of each stream
         o Clean up the event loop (optimize and sanitize)
         - Exit policies
                 - Path selection algorithms
@@ -88,7 +88,7 @@ SPEC!!          - Handle socks commands other than connect, eg, bind?
                         - Keep track of load over links/nodes, to
                           know who's hosed
 NICK    - Daemonize and package
-                - Teach it to fork and background
+                o Teach it to fork and background
                 - Red Hat spec file
                 - Debian spec file equivalent
                 

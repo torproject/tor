@@ -418,11 +418,21 @@ int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ) {
       }
       log(LOG_DEBUG,"connection_ap_process_data_cell(): willing to receive %d more cells from circ",conn->n_receive_topicwindow);
 
+#ifdef USE_ZLIB
+      if(connection_decompress_to_buf(cell->payload + TOPIC_HEADER_SIZE,
+				      cell->length - TOPIC_HEADER_SIZE, 
+				      conn, Z_SYNC_FLUSH) < 0) {
+        log(LOG_INFO,"connection_exit_process_data_cell(): write to buf failed. Marking for close.");
+        conn->marked_for_close = 1;
+        return 0;
+      }
+#else
       if(connection_write_to_buf(cell->payload + TOPIC_HEADER_SIZE,
                                  cell->length - TOPIC_HEADER_SIZE, conn) < 0) {
         conn->marked_for_close = 1;
         return 0;
       }
+#endif
       if(connection_consider_sending_sendme(conn, EDGE_AP) < 0)
         conn->marked_for_close = 1;
       return 0;
@@ -440,6 +450,12 @@ int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ) {
       }
       for(prevconn = circ->p_conn; prevconn->next_topic != conn; prevconn = prevconn->next_topic) ;
       prevconn->next_topic = conn->next_topic;
+#endif
+#if 0
+      conn->done_sending = 1;
+      shutdown(conn->s, 1); /* XXX check return; refactor NM */
+      if (conn->done_receiving)
+	conn->marked_for_close = 1;
 #endif
       conn->marked_for_close = 1;
       break;

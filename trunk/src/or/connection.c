@@ -126,6 +126,29 @@ connection_t *connection_new(int type) {
   if(type == CONN_TYPE_OR) {
     directory_set_dirty();
   }
+#ifdef USE_ZLIB
+  if (type == CONN_TYPE_AP || type == CONN_TYPE_EXIT)  {
+    if (buf_new(&conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen) < 0)
+      return NULL;
+    if (! (conn->compression = malloc(sizeof(z_stream))))
+      return NULL;
+    if (! (conn->decompression = malloc(sizeof(z_stream))))
+      return NULL;
+    memset(conn->compression, 0, sizeof(z_stream));
+    memset(conn->decompression, 0, sizeof(z_stream));
+    if (deflateInit(conn->compression, Z_DEFAULT_COMPRESSION) != Z_OK) {
+      log(LOG_ERR, "Error initializing zlib: %s", conn->compression->msg);
+      return NULL;
+    }
+    if (inflateInit(conn->decompression) != Z_OK) {
+      log(LOG_ERR, "Error initializing zlib: %s", conn->decompression->msg);
+      return NULL;
+    }
+  } else {
+    conn->compression = conn->decompression = NULL;
+  }
+  conn->done_sending = conn->done_receiving = 0
+#endif
   return conn;
 }
 
@@ -156,6 +179,19 @@ void connection_free(connection_t *conn) {
   if(conn->type == CONN_TYPE_OR) {
     directory_set_dirty();
   }
+#ifdef USE_ZLIB
+  if (conn->compression) {
+    if (inflateEnd(conn->decompression) != Z_OK)
+      log(LOG_ERR,"connection_free(): while closing zlib: %s",
+	  conn->decompression->msg);
+    if (deflateEnd(conn->compression) != Z_OK)
+      log(LOG_ERR,"connection_free(): while closing zlib: %s",
+	  conn->compression->msg);
+    free(conn->compression);
+    free(conn->decompression);
+    buf_free(conn->z_outbuf);
+  }
+#endif
   free(conn);
 }
 
@@ -336,6 +372,49 @@ int connection_read_to_buf(connection_t *conn) {
 int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
   return fetch_from_buf(string, len, &conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen);
 }
+
+#ifdef USE_ZLIB
+int connection_compress_from_buf(char *string, int len, connection_t *conn,
+				 int flush) {
+  return compress_from_buf(string, len,
+			   &conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen,
+			   conn->compression, flush);
+}
+
+int connection_decompress_to_buf(char *string, int len, connection_t *conn,
+				 int flush) {
+  /* This is not sane with respect to flow control; we want to spool out to 
+   * z_outbuf, but only decompress and write as needed.
+   */
+  int n;
+  struct timeval now;
+
+  if (write_to_buf(string, len, 
+	   &conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen) < 0)
+    return -1;
+  
+  n = decompress_buf_to_buf(
+	   &conn->z_outbuf, &conn->z_outbuflen, &conn->z_outbuf_datalen,
+	   &conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen,
+	   conn->decompression, flush);
+
+  if (n < 0)
+    return -1;
+
+  if(gettimeofday(&now,NULL) < 0)
+    return -1;
+  
+  if(!n)
+    return 0;
+
+  if(conn->marked_for_close)
+    return 0;
+
+  conn->timestamp_lastwritten = now.tv_sec;
+
+  return n;
+}
+#endif
 
 int connection_find_on_inbuf(char *string, int len, connection_t *conn) {
   return find_on_inbuf(string, len, conn->inbuf, conn->inbuf_datalen);
@@ -607,7 +686,7 @@ int connection_process_inbuf(connection_t *conn) {
 }
 
 int connection_package_raw_inbuf(connection_t *conn) {
-  int amount_to_process;
+  int amount_to_process, len;
   cell_t cell;
   circuit_t *circ;
 
@@ -618,13 +697,27 @@ int connection_package_raw_inbuf(connection_t *conn) {
 repeat_connection_package_raw_inbuf:
 
   amount_to_process = conn->inbuf_datalen;
-
+  
   if(!amount_to_process)
     return 0;
 
   /* Initialize the cell with 0's */
   memset(&cell, 0, sizeof(cell_t));
 
+#ifdef USE_ZLIB
+  /* This compression logic is not necessarily optimal:
+   *    1) Maybe we should try to read as much as we can onto the inbuf before
+   *       compressing.
+   *    2) 
+   */
+  len = connection_compress_from_buf(cell.payload + TOPIC_HEADER_SIZE,
+				     CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE,
+				     conn, Z_SYNC_FLUSH);
+  if (len < 0)
+    return -1;
+
+  cell.length = len;    
+#else 
   if(amount_to_process > CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE) {
     cell.length = CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE;
   } else {
@@ -633,6 +726,7 @@ repeat_connection_package_raw_inbuf:
 
   if(connection_fetch_from_buf(cell.payload+TOPIC_HEADER_SIZE, cell.length, conn) < 0)
     return -1;
+#endif
 
   circ = circuit_get_by_conn(conn);
   if(!circ) {
@@ -677,7 +771,7 @@ repeat_connection_package_raw_inbuf:
     }
     log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at AP is %d",conn->p_receive_topicwindow);
   }
-  if(amount_to_process > CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE) {
+  if (conn->inbuf_datalen) {
     log(LOG_DEBUG,"connection_package_raw_inbuf(): recursing.");
     goto repeat_connection_package_raw_inbuf;
   }

@@ -136,6 +136,74 @@ int write_to_buf(char *string, int string_len,
 
 }
 
+#ifdef USE_ZLIB
+int compress_from_buf(char *string, int string_len, 
+		      char **buf_in, int *buflen_in, int *buf_datalen_in,
+		      z_stream *zstream, int flush) {
+  int err;
+
+  if (!*buf_datalen_in)
+    return 0;
+
+  zstream->next_in = *buf_in;
+  zstream->avail_in = *buf_datalen_in;
+  zstream->next_out = string;
+  zstream->avail_out = string_len;
+  
+  err = deflate(zstream, flush);
+
+  switch (err) 
+    {
+    case Z_OK:
+    case Z_STREAM_END:
+      memmove(*buf_in, zstream->next_in, zstream->avail_in);
+      *buf_datalen_in = zstream->avail_in;
+      return string_len - zstream->avail_out;
+    case Z_STREAM_ERROR:
+    case Z_BUF_ERROR:
+      log(LOG_ERR, "Error processing compression: %s", zstream->msg);
+      return -1;
+    default:
+      log(LOG_ERR, "Unknown return value from deflate: %d", err);
+      return -1;
+  }
+}
+
+int decompress_buf_to_buf(char **buf_in, int *buflen_in, int *buf_datalen_in,
+			  char **buf_out, int *buflen_out, int *buf_datalen_out,
+			  z_stream *zstream, int flush) 
+{
+  int err;
+
+  zstream->next_in = *buf_in;
+  zstream->avail_in = *buf_datalen_in;
+  zstream->next_out = *buf_out + *buf_datalen_out;
+  zstream->avail_out = *buflen_out - *buf_datalen_out;
+  
+  if (!zstream->avail_in && !zstream->avail_out)
+    return 0;
+  
+  err = inflate(zstream, flush);
+
+  switch (err) 
+    {
+    case Z_OK:
+    case Z_STREAM_END:
+      memmove(*buf_in, zstream->next_in, zstream->avail_in);
+      *buf_datalen_in = zstream->avail_in;
+      *buf_datalen_out = *buflen_out - zstream->avail_out;
+      return 1;
+    case Z_STREAM_ERROR:
+    case Z_BUF_ERROR:
+      log(LOG_ERR, "Error processing compression: %s", zstream->msg);
+      return 1;
+    default:
+      log(LOG_ERR, "Unknown return value from deflate: %d", err);
+      return -1;
+    }
+}
+#endif
+
 int fetch_from_buf(char *string, int string_len,
                    char **buf, int *buflen, int *buf_datalen) {
 
