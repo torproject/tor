@@ -12,10 +12,11 @@ ARMA    - arma claims
         X Abandoned
 
 Bugs:
+        - we call signal(), but we should be calling sigaction()
         - send socks rejects when things go bad ?
         o on solaris, need to build with
           LDFLAGS="-lsocket -lnsl" ./configure
-        - on solaris, we HAVE_UNAME but the uname() call fails?
+        o on solaris, we HAVE_UNAME but the uname() call fails?
         - should maybe make clients exit(1) when bad things happen?
           e.g. clock skew.
         o client-side dns cache doesn't appear to be getting populated
