@@ -1,4 +1,7 @@
-/* orconfig.h.in.  Generated from configure.ac by autoheader.  */
+/* orconfig.h.in.  Generated from configure.in by autoheader.  */
+#undef HAVE_POPT
+#undef HAVE_OPENSSL
+
 
 /* Define if OpenSSL was found. */
 #undef HAVE_OPENSSL
