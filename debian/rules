@@ -117,6 +117,8 @@ install: build
 
 	dh_link usr/share/man/man8/tor.8 usr/share/man/man5/torrc.5
 
+	rm -f $(CURDIR)/debian/tor/usr/bin/tor-control.py
+
 
 # Build architecture-independent files here.
 binary-indep: build install
