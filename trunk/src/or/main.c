@@ -445,16 +445,12 @@ static void run_scheduled_events(time_t now) {
     last_uploaded_services = now;
   }
 
-#if 0
-  /* 6. and blow away any connections that need to die. can't do this later
-   * because we might open up a circuit and not realize we're about to cull
-   * the connection it's running over.
-   * XXX we can remove this step once we audit circuit-building to make sure
-   *     it doesn't pick a marked-for-close conn. -RD
+  /* 6. and blow away any connections that need to die. have to do this now,
+   * because if we marked a conn for close and left its socket -1, then
+   * we'll pass it to poll/select and bad things will happen.
    */
   for(i=0;i<nfds;i++)
     conn_close_if_marked(i);
-#endif
 }
 
 static int prepare_for_poll(void) {
