@@ -27,10 +27,21 @@
  */
 
 static void
-directory_initiate_command(routerinfo_t *router, uint8_t purpose,
-                           const char *payload, int payload_len);
+directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
+                                  const char *payload, int payload_len);
 static void
-directory_send_command(connection_t *conn, routerinfo_t *router, int purpose,
+directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
+                      uint8_t purpose, const char *payload, int payload_len);
+
+static void
+directory_initiate_command(const char *address, uint32_t addr, uint16_t port,
+                           const char *platform,
+                           const char *digest, uint8_t purpose,
+                           const char *payload, int payload_len);
+
+static void
+directory_send_command(connection_t *conn, const char *platform,
+                       uint16_t dir_port, int purpose,
                        const char *payload, int payload_len);
 static int directory_handle_command(connection_t *conn);
 
@@ -75,7 +86,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
     /* Note: this posts our descriptor to ourselves, if we're an
      * authdirserver. But I think that's ok. */
     if(router->is_trusted_dir)
-      directory_initiate_command(router, purpose, payload, payload_len);
+      directory_initiate_command_router(router, purpose, payload, payload_len);
   }
 }
 
@@ -88,28 +99,36 @@ void
 directory_get_from_dirserver(uint8_t purpose, const char *payload,
                              int payload_len)
 {
-  routerinfo_t *ds;
+  routerinfo_t *r = NULL;
+  trusted_dir_server_t *ds = NULL;
 
   if (purpose == DIR_PURPOSE_FETCH_DIR) {
     if (advertised_server_mode()) {
       /* only ask authdirservers, and don't ask myself */
-      ds = router_pick_directory_server(1, 1);
+      r = router_pick_directory_server(1, 1);
+      /* XXXX NM Enable this once we actually set keys for dirservers.
+       * ds = router_pick_trusteddirserver(1);
+       */
     } else {
       /* anybody with a non-zero dirport will do */
-      ds = router_pick_directory_server(0, 1);
+      r = router_pick_directory_server(0, 1);
     }
   } else { // (purpose == DIR_PURPOSE_FETCH_RENDDESC)
     /* only ask authdirservers, any of them will do */
-    ds = router_pick_directory_server(1, 0);
+    r = router_pick_directory_server(1, 0);
+    /* XXXX NM Enable this once we actually set keys for dirservers.
+     * ds = router_pick_trusteddirserver(0);
+     */
   }
 
-  if (!ds) { /* no viable dirserver found */
+  if (r)
+    directory_initiate_command_router(r, purpose, payload, payload_len);
+  else if (ds)
+    directory_initiate_command_trusted_dir(ds, purpose, payload, payload_len);
+  else
     log_fn(LOG_WARN,"No running dirservers known. Not trying. (purpose %d)", purpose);
-    return;
-  }
-
-  directory_initiate_command(ds, purpose, payload, payload_len);
 }
+
 
 /** Launch a new connection to the directory server <b>router</b> to upload or
  * download a service or rendezvous descriptor. <b>purpose</b> determines what
@@ -121,13 +140,31 @@ directory_get_from_dirserver(uint8_t purpose, const char *payload,
  * and <b>payload_len</b> are the service ID we want to fetch.
  */
 static void
-directory_initiate_command(routerinfo_t *router, uint8_t purpose,
+directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
+                                  const char *payload, int payload_len)
+{
+  directory_initiate_command(router->address, router->addr, router->dir_port,
+                             router->platform, router->identity_digest,
+                             purpose, payload, payload_len);
+}
+
+static void
+directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
+                      uint8_t purpose, const char *payload, int payload_len)
+{
+  directory_initiate_command(dirserv->address, dirserv->addr, dirserv->dir_port,
+                        NULL, dirserv->digest, purpose, payload, payload_len);
+}
+
+static void
+directory_initiate_command(const char *address, uint32_t addr,
+                           uint16_t dir_port, const char *platform,
+                           const char *digest, uint8_t purpose,
                            const char *payload, int payload_len)
 {
   connection_t *conn;
 
-  tor_assert(router);
-  tor_assert(router->dir_port);
+  tor_assert(address && addr && dir_port && digest);
 
   switch (purpose) {
     case DIR_PURPOSE_FETCH_DIR:
@@ -154,14 +191,15 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
     conn->addr = options.HttpProxyAddr;
     conn->port = options.HttpProxyPort;
   } else {
-    conn->addr = router->addr;
-    conn->port = router->dir_port;
+    conn->addr = addr;
+    conn->port = dir_port;
   }
-  conn->address = tor_strdup(router->address);
-  conn->nickname = tor_strdup(router->nickname);
-  tor_assert(router->identity_pkey);
-  conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
-  crypto_pk_get_digest(conn->identity_pkey, conn->identity_digest);
+  conn->address = tor_strdup(address);
+  /* conn->nickname = tor_strdup(router->nickname); */
+  /* tor_assert(router->identity_pkey); */
+  /* conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey); */
+  /* crypto_pk_get_digest(conn->identity_pkey, conn->identity_digest); */
+  memcpy(conn->identity_digest, digest, DIGEST_LEN);
 
   conn->purpose = purpose;
 
@@ -185,7 +223,8 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
         /* fall through */
       case 0:
         /* queue the command on the outbuf */
-        directory_send_command(conn, router, purpose, payload, payload_len);
+        directory_send_command(conn, platform, dir_port,
+                               purpose, payload, payload_len);
 
         connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
         /* writable indicates finish, readable indicates broken link,
@@ -206,7 +245,8 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
     conn->state = DIR_CONN_STATE_CLIENT_SENDING;
     connection_add(conn);
     /* queue the command on the outbuf */
-    directory_send_command(conn, router, purpose, payload, payload_len);
+    directory_send_command(conn, platform, dir_port,
+                           purpose, payload, payload_len);
     connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
   }
 }
@@ -216,7 +256,8 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
  * directory_initiate_command.
  */
 static void
-directory_send_command(connection_t *conn, routerinfo_t *router, int purpose,
+directory_send_command(connection_t *conn, const char *platform,
+                       uint16_t dir_port, int purpose,
                        const char *payload, int payload_len) {
   char tmp[8192];
   char proxystring[128];
@@ -226,14 +267,15 @@ directory_send_command(connection_t *conn, routerinfo_t *router, int purpose,
   char *httpcommand = NULL;
 
   tor_assert(conn && conn->type == CONN_TYPE_DIR);
-  tor_assert(router);
+  tor_assert(dir_port && conn);
 
-  use_newer = tor_version_as_new_as(router->platform, "0.0.9pre1");
+  /* If we don't know the platform, assume it's up-to-date. */
+  use_newer = platform ? tor_version_as_new_as(platform, "0.0.9pre1"):1;
 
-  if(router->dir_port == 80) {
-    strlcpy(hoststring, router->address, sizeof(hoststring));
+  if(dir_port == 80) {
+    strlcpy(hoststring, conn->address, sizeof(hoststring));
   } else {
-    sprintf(hoststring, "%s:%d", router->address, router->dir_port);
+    sprintf(hoststring, "%s:%d", conn->address, dir_port);
   }
   if(options.HttpProxy) {
     sprintf(proxystring, "http://%s", hoststring);
@@ -245,7 +287,7 @@ directory_send_command(connection_t *conn, routerinfo_t *router, int purpose,
     case DIR_PURPOSE_FETCH_DIR:
       tor_assert(payload == NULL);
       log_fn(LOG_DEBUG, "Asking for %scompressed directory from server running %s",
-             use_newer?"":"un", router->platform);
+             use_newer?"":"un", platform?platform:"<unknown version>");
       httpcommand = "GET";
       strlcpy(url, use_newer ? "/tor/dir.z" : "/", sizeof(url));
       break;

@@ -18,16 +18,18 @@ extern or_options_t options; /**< command-line and config-file options */
 
 /* ********************************************************************** */
 
+static smartlist_t *trusted_dir_servers = NULL;
+
 /* static function prototypes */
 static routerinfo_t *
 router_pick_directory_server_impl(int requireauth, int requireothers, int fascistfirewall);
-static void mark_all_authdirservers_up(void);
+static trusted_dir_server_t *
+router_pick_trusteddirserver_impl(int requireother, int fascistfirewall);
+static void mark_all_trusteddirservers_up(void);
 static int router_resolve_routerlist(routerlist_t *dir);
+static void clear_trusted_dir_servers(void);
 
 /****************************************************************************/
-
-/** List of digests of keys for servers that are trusted directories. */
-static smartlist_t *trusted_dir_digests = NULL;
 
 /****
  * Functions to manage and access our list of known routers. (Note:
@@ -92,7 +94,7 @@ routerinfo_t *router_pick_directory_server(int requireauth, int requireothers) {
 
   log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
   /* mark all authdirservers as up again */
-  mark_all_authdirservers_up();
+  mark_all_trusteddirservers_up();
   /* try again */
   choice = router_pick_directory_server_impl(requireauth, requireothers, 0);
   if(choice)
@@ -107,6 +109,34 @@ routerinfo_t *router_pick_directory_server(int requireauth, int requireothers) {
   }
   /* give it one last try */
   choice = router_pick_directory_server_impl(requireauth, requireothers, 0);
+  return choice;
+}
+
+trusted_dir_server_t *router_pick_trusteddirserver(int requireothers) {
+  trusted_dir_server_t *choice;
+
+  choice = router_pick_trusteddirserver_impl(requireothers,
+                                             options.FascistFirewall);
+  if(choice)
+    return choice;
+
+  log_fn(LOG_INFO,"No trusted dirservers are reachable. Trying them all again.");
+  /* mark all authdirservers as up again */
+  mark_all_trusteddirservers_up();
+  /* try again */
+  choice = router_pick_trusteddirserver_impl(requireothers, 0);
+  if(choice)
+    return choice;
+
+  log_fn(LOG_WARN,"Still no dirservers %s. Reloading and trying again.",
+         options.FascistFirewall ? "reachable" : "known");
+  has_fetched_directory=0; /* reset it */
+  routerlist_clear_trusted_directories();
+  if(router_reload_router_list()) {
+    return NULL;
+  }
+  /* give it one last try */
+  choice = router_pick_trusteddirserver_impl(requireothers, 0);
   return choice;
 }
 
@@ -147,21 +177,48 @@ router_pick_directory_server_impl(int requireauth, int requireothers, int fascis
   return router;
 }
 
+static trusted_dir_server_t *
+router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
+{
+  smartlist_t *sl;
+  routerinfo_t *me;
+  char buf[16];
+  trusted_dir_server_t *ds;
+  sl = smartlist_create();
+  me = router_get_my_routerinfo();
+
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
+    {
+      if (!d->is_running) continue;
+      if (requireother && me &&
+          !memcmp(me->identity_digest, d->digest, DIGEST_LEN))
+        continue;
+      if (fascistfirewall) {
+        sprintf(buf,"%d",d->dir_port);
+        if (!smartlist_string_isin(options.FirewallPorts, buf))
+          continue;
+      }
+      smartlist_add(sl, d);
+    });
+
+  ds = smartlist_choose(sl);
+  smartlist_free(sl);
+  return ds;
+}
+
 /** Go through and mark the auth dirservers as up */
-static void mark_all_authdirservers_up(void) {
-  int i;
-  routerinfo_t *router;
-
-  if(!routerlist)
-    return;
-
-  for(i=0; i < smartlist_len(routerlist->routers); i++) {
-    router = smartlist_get(routerlist->routers, i);
-    if(router->is_trusted_dir) {
-      tor_assert(router->dir_port > 0);
-      router->is_running = 1;
-      router->status_set_at = time(NULL);
-    }
+static void mark_all_trusteddirservers_up(void) {
+  if(routerlist) {
+    SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
+                      if(router->is_trusted_dir) {
+                        tor_assert(router->dir_port > 0);
+                        router->is_running = 1;
+                        router->status_set_at = time(NULL);
+                      });
+  }
+  if (trusted_dir_servers) {
+    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, dir,
+                      dir->is_running = 1);
   }
 }
 
@@ -180,6 +237,12 @@ int all_directory_servers_down(void) {
       return 0;
     }
   }
+  /* XXXX NM look at trusted_dir_servers instead.
+  if (!trusted_dir_servers)
+    return 1;
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, dir,
+                    if (dir->is_running) return 0);
+  */
   return 1;
 }
 
@@ -477,14 +540,13 @@ routerinfo_t *router_get_by_nickname(const char *nickname)
   return NULL;
 }
 
-/* XXX008 currently this trusted_dir_digests stuff is not used. */
 /** Return true iff <b>digest</b> is the digest of the identity key of
  * a trusted directory. */
 int router_digest_is_trusted_dir(const char *digest) {
-  if (!trusted_dir_digests)
+  if (!trusted_dir_servers)
     return 0;
-  SMARTLIST_FOREACH(trusted_dir_digests, char *, cp,
-                    if (!memcmp(digest, cp, DIGEST_LEN)) return 1);
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
+                    if (!memcmp(digest, ent->digest, DIGEST_LEN)) return 1);
   return 0;
 }
 
@@ -586,6 +648,11 @@ void routerlist_free(routerlist_t *rl)
 void router_mark_as_down(const char *digest) {
   routerinfo_t *router;
   tor_assert(digest);
+
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
+                    if (!memcmp(d->digest, digest, DIGEST_LEN))
+                      d->is_running = 0);
+
   router = router_get_by_digest(digest);
   if(!router) /* we don't seem to know about him in the first place */
     return;
@@ -619,7 +686,9 @@ int router_add_to_routerlist(routerinfo_t *router) {
         log_fn(LOG_DEBUG, "Replacing entry for router '%s/%s' [%s]",
                router->nickname, r->nickname, hex_str(id_digest,DIGEST_LEN));
         /* Remember whether we trust this router as a dirserver. */
-        if (r->is_trusted_dir)
+        /*XXXXNM first test is redundant; second should move elsewhere */
+        if (r->is_trusted_dir ||
+            router_digest_is_trusted_dir(router->identity_digest))
           router->is_trusted_dir = 1;
         /* If the address hasn't changed; no need to re-resolve. */
         if (!strcasecmp(r->address, router->address))
@@ -735,10 +804,7 @@ void routerlist_clear_trusted_directories(void)
     SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
                       r->is_trusted_dir = 0);
   }
-  if (trusted_dir_digests) {
-    SMARTLIST_FOREACH(trusted_dir_digests, char *, cp, tor_free(cp));
-    smartlist_clear(trusted_dir_digests);
-  }
+  clear_trusted_dir_servers();
 }
 
 /** Helper function: read routerinfo elements from s, and throw out the
@@ -760,17 +826,12 @@ int router_load_routerlist_from_string(const char *s, int trusted)
   }
   if (trusted) {
     int i;
-    if (!trusted_dir_digests)
-      trusted_dir_digests = smartlist_create();
     for (i=0;i<smartlist_len(new_list->routers);++i) {
       routerinfo_t *r = smartlist_get(new_list->routers, i);
       if (r->dir_port) {
-        char *b;
         log_fn(LOG_DEBUG,"Trusting router %s.", r->nickname);
         r->is_trusted_dir = 1;
-        b = tor_malloc(DIGEST_LEN);
-        memcpy(b, r->identity_digest, DIGEST_LEN);
-        smartlist_add(trusted_dir_digests, b);
+        add_trusted_dir_server(r->address, r->dir_port, r->identity_digest);
       }
     }
   }
@@ -1077,6 +1138,38 @@ int router_update_status_from_smartlist(routerinfo_t *router,
     }
   }
   return 0;
+}
+
+void add_trusted_dir_server(const char *addr, uint16_t port, const char *digest)
+{
+  trusted_dir_server_t *ent;
+  uint32_t a;
+  if (!trusted_dir_servers)
+    trusted_dir_servers = smartlist_create();
+
+  if (tor_lookup_hostname(addr, &a)) {
+    log_fn(LOG_WARN, "Unable to lookup address for directory server at %s",
+           addr);
+    return;
+  }
+
+  ent = tor_malloc(sizeof(trusted_dir_server_t));
+  ent->address = tor_strdup(addr);
+  ent->addr = a;
+  ent->dir_port = port;
+  ent->is_running = 1;
+  memcpy(ent->digest, digest, DIGEST_LEN);
+}
+
+static void clear_trusted_dir_servers(void)
+{
+  if (trusted_dir_servers) {
+    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
+                      { tor_free(ent->address); tor_free(ent); });
+    smartlist_clear(trusted_dir_servers);
+  } else {
+    trusted_dir_servers = smartlist_create();
+  }
 }
 
 /*
