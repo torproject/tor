@@ -35,7 +35,7 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 ## This stuff is so bleeding-edge that my teeth hurt just thinking
 ## about it.
 
-#HiddenServiceDirectory /tmp/hidden_service/
+#HiddenServiceDir /tmp/hidden_service/
 #HiddenServicePort 80 127.0.0.1:80
 #HiddenServicePort 22 127.0.0.1:22
 #HiddenServiceNodes moria1,moria2
