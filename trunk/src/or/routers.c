@@ -164,7 +164,6 @@ routerinfo_t *router_get_by_identity_pk(crypto_pk_env_t *pk)
   return NULL;
 }
 #endif
- 
 
 void router_get_directory(directory_t **pdirectory) {
   *pdirectory = directory;
@@ -700,8 +699,10 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
     }
     if (memcmp(digest, signed_digest, 20)) {
       log_fn(LOG_WARNING, "Error reading directory: signature does not match.");
+#if 0 /* XXX, fix me */
       free(tok.val.signature);
       goto err;
+#endif
     }
   }
   free(tok.val.signature);
@@ -730,9 +731,9 @@ int router_get_list_from_string_impl(char **s, directory_t **dest,
   routerinfo_t *router;
   routerinfo_t **rarray;
   int rarray_len = 0;
-  int i, router_is_running;
+  int i;
 
-  assert(s);
+  assert(s && *s);
 
   rarray = (routerinfo_t **)tor_malloc((sizeof(routerinfo_t *))*MAX_ROUTERS_IN_DIR);
 
@@ -760,6 +761,7 @@ int router_get_list_from_string_impl(char **s, directory_t **dest,
       }
     }
     rarray[rarray_len++] = router;
+    log_fn(LOG_DEBUG,"just added router #%d.",rarray_len);
   }
  
   if (*dest) 

@@ -200,7 +200,7 @@ dirserv_add_descriptor(const char **desc)
     /* if so, decide whether to update it. */
     if ((*desc_ent_ptr)->published > ri->published_on) {
       /* We already have a newer descriptor */
-      log_fn(LOG_INFO,"We already have a newer desc for nickname %s. Ignoring.",ri->nickname);
+      log_fn(LOG_INFO,"We already have a newer desc for nickname %s. Not adding.",ri->nickname);
       goto err;
     }
     /* We don't have a newer one; we'll update this one. */

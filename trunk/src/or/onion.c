@@ -198,7 +198,7 @@ static unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len,
     log_fn(LOG_WARNING,"Choosing route length failed.");
     return NULL;
   }
-  log_fn(LOG_DEBUG,"Chosen route length %d.",*routelen);
+  log_fn(LOG_DEBUG,"Chosen route length %d (%d routers available).",*routelen, rarray_len);
 
   num_acceptable_routers = count_acceptable_routers(rarray, rarray_len);
 
@@ -222,7 +222,7 @@ static unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len,
  
   oldchoice = rarray_len;
   for(i=0;i<*routelen;i++) {
-    log(LOG_DEBUG,"new_route(): Choosing hop %u.",i);
+    log_fn(LOG_DEBUG,"Choosing hop %u.",i);
     if (CRYPTO_PSEUDO_RAND_INT(choice)) {
       free((void *)route);
       return NULL;

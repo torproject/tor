@@ -26,40 +26,43 @@ char *conn_type_to_string[] = {
 };
 
 char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
-	{ NULL },         /* no type associated with 0 */
-  { "ready" }, /* op listener, 0 */
-  { "awaiting keys", /* op, 0 */
-    "open",              /* 1 */
-    "close",             /* 2 */
-    "close_wait" },      /* 3 */
+  { NULL }, /* no type associated with 0 */
+  { NULL }, /* op listener, obsolete */
+  { NULL }, /* op, obsolete */
   { "ready" }, /* or listener, 0 */
-  { "connect()ing",                 /* 0 */
-    "handshaking",                  /* 1 */
-    "open" },                       /* 2 */
-  { "waiting for dest info",     /* exit, 0 */
-    "connecting",                      /* 1 */
-    "open" },                          /* 2 */
+  { "",                         /* OR, 0 */
+    "connect()ing",                 /* 1 */
+    "handshaking",                  /* 2 */
+    "open" },                       /* 3 */
+  { "",                          /* exit, 0 */
+    "waiting for dest info",           /* 1 */
+    "connecting",                      /* 2 */
+    "open" },                          /* 3 */
   { "ready" }, /* app listener, 0 */
   { "", /* 0 */
     "", /* 1 */
     "", /* 2 */
-    "awaiting dest info",         /* app, 3 */
-    "waiting for OR connection",       /* 4 */
-    "open" },                          /* 5 */
+    "", /* 3 */
+    "awaiting dest info",         /* app, 4 */
+    "waiting for OR connection",       /* 5 */
+    "open" },                          /* 6 */
   { "ready" }, /* dir listener, 0 */
-  { "connecting (fetch)",              /* 0 */
-    "connecting (upload)",             /* 1 */
-    "client sending fetch",            /* 2 */
-    "client sending upload",           /* 3 */
-    "client reading fetch",            /* 4 */
-    "client reading upload",           /* 5 */
-    "awaiting command",                /* 6 */
-    "writing" },                       /* 7 */
-  { "idle",                /* dns worker, 0 */
-    "busy" },                          /* 1 */
-  { "idle",                /* cpu worker, 0 */
-    "busy with onion",                 /* 1 */
-    "busy with handshake" },           /* 2 */
+  { "",                           /* dir, 0 */
+    "connecting (fetch)",              /* 1 */
+    "connecting (upload)",             /* 2 */
+    "client sending fetch",            /* 3 */
+    "client sending upload",           /* 4 */
+    "client reading fetch",            /* 5 */
+    "client reading upload",           /* 6 */
+    "awaiting command",                /* 7 */
+    "writing" },                       /* 8 */
+  { "",                    /* dns worker, 0 */
+    "idle",                            /* 1 */
+    "busy" },                          /* 2 */
+  { "",                    /* cpu worker, 0 */
+    "idle",                            /* 1 */
+    "busy with onion",                 /* 2 */
+    "busy with handshake" },           /* 3 */
 };
 
 /********* END VARIABLES ************/
