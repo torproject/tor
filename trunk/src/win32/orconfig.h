@@ -23,6 +23,10 @@
 
 #undef HAVE_GETTIMEOFDAY
 
+#undef HAVE_STRPTIME
+
+#undef HAVE_INET_ATON
+
 /* Define to 1 if the system has the type `int16_t'. */
 #undef HAVE_INT16_T
 

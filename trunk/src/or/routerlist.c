@@ -544,8 +544,7 @@ int router_exit_policy_rejects_all(routerinfo_t *router) {
 static time_t parse_time(const char *cp)
 {
   struct tm st_tm;
-  /* XXXX WWWW should be HAVE_STRPTIME */
-#ifndef MS_WINDOWS
+#ifdef HAVE_STRPTIME
   if (!strptime(cp, "%Y-%m-%d %H:%M:%S", &st_tm)) {
     log_fn(LOG_WARN, "Published time was unparseable"); return 0;
   }
@@ -903,7 +902,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
     log_fn(LOG_WARN, "Missing published time"); goto err;
   }
   assert(tok->n_args == 1);
-  if (!(router->published_on = parse_time(tok->args[0]))) 
+  if (!(router->published_on = parse_time(tok->args[0])))
 	  goto err;
 
   if (!(tok = find_first_by_keyword(tokens, K_ONION_KEY))) {

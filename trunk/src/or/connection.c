@@ -434,7 +434,7 @@ int retry_all_connections(void) {
 
   if(options.SocksPort) {
     listener_close_if_present(CONN_TYPE_AP_LISTENER);
-    if(connection_create_listener(options.SocksBindAddress, 
+    if(connection_create_listener(options.SocksBindAddress,
 		                          (uint16_t) options.SocksPort,
                                   CONN_TYPE_AP_LISTENER) < 0)
       return -1;

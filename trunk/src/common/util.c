@@ -865,8 +865,7 @@ int switch_id(char *user, char *group) {
 
 int tor_inet_aton(const char *c, struct in_addr* addr)
 {
-#ifndef MS_WINDOWS
-  /* XXXX WWWW Should be HAVE_INET_ATON */
+#ifdef HAVE_INET_ATON
   return inet_aton(c, addr);
 #else
   uint32_t r;
