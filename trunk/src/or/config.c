@@ -165,7 +165,7 @@ static int options_transition_allowed(or_options_t *old, or_options_t *new);
 static int check_nickname_list(const char *lst, const char *name);
 
 static int parse_dir_server_line(const char *line, int validate_only);
-static int parse_redirect_line(or_options_t *options,
+static int parse_redirect_line(smartlist_t *result,
                                struct config_line_t *line);
 static int parse_log_severity_range(const char *range, int *min_out,
                                     int *max_out);
@@ -264,14 +264,27 @@ options_act(void) {
   close_temp_logs();
   add_callback_log(LOG_NOTICE, LOG_ERR, control_event_logmsg);
 
+  {
+    smartlist_t *sl = smartlist_create();
+    for (cl = options->RedirectExit; cl; cl = cl->next) {
+      if (parse_redirect_line(sl, cl)<0)
+        return -1;
+    }
+    set_exit_redirects(sl);
+  }
+
   /* Start backgrounding the process, if requested. */
+
+  /* XXXX We once had a reason to separate start_daemon and finish_daemon: It
+   *    let us have the parent process stick around until we were sure Tor was
+   *    started.  Should se make start_daemon get called earlier? -NM */
   if (options->RunAsDaemon) {
     start_daemon(options->DataDirectory);
   }
 
   /* Finish backgrounding the process */
   if(options->RunAsDaemon) {
-    /* XXXX Can we delay this any more? */
+    /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
     finish_daemon();
   }
 
@@ -599,7 +612,7 @@ config_get_assigned_option(or_options_t *options, const char *key)
       }
       break;
     case CONFIG_TYPE_UINT:
-      /* XXX This means every or_options_t uint or bool element
+      /* This means every or_options_t uint or bool element
        * needs to be an int. Not, say, a uint16_t or char. */
       tor_snprintf(buf, sizeof(buf), "%d", *(int*)value);
       result->value = tor_strdup(buf);
@@ -916,13 +929,6 @@ options_free(or_options_t *options)
         break;
     }
   }
-  /* XXX this last part is an exception. can we make it not needed? */
-  if (options->RedirectExitList) {
-    SMARTLIST_FOREACH(options->RedirectExitList,
-                      exit_redirect_t *, p, tor_free(p));
-    smartlist_free(options->RedirectExitList);
-    options->RedirectExitList = NULL;
-  }
 }
 
 /** Copy storage held by <b>old</b> into a new or_options_t and return it. */
@@ -1180,16 +1186,8 @@ options_validate(or_options_t *options)
       result = -1;
   }
 
-  /* free options->RedirectExitList */
-  if (options->RedirectExitList) {
-    SMARTLIST_FOREACH(options->RedirectExitList,
-                      exit_redirect_t *, p, tor_free(p));
-    smartlist_free(options->RedirectExitList);
-  }
-
-  options->RedirectExitList = smartlist_create();
   for (cl = options->RedirectExit; cl; cl = cl->next) {
-    if (parse_redirect_line(options, cl)<0)
+    if (parse_redirect_line(NULL, cl)<0)
       result = -1;
   }
 
@@ -1729,17 +1727,16 @@ exit_policy_free(struct exit_policy_t *p) {
   }
 }
 
-/** Parse a single RedirectExit line's contents from <b>line</b>.  If they are
- *  valid, add an element to <b>options</b>-&gt;RedirectExitList and return 0.
+/** Parse a single RedirectExit line's contents from <b>line</b>.  If
+ *  they are valid, and <b>result</b> is not NULL, add an element to
+ *  <b>result</b> and return 0. Else if they are valid, return 0.
  *  Else return -1. */
 static int
-parse_redirect_line(or_options_t *options, struct config_line_t *line)
+parse_redirect_line(smartlist_t *result, struct config_line_t *line)
 {
   smartlist_t *elements = NULL;
   exit_redirect_t *r;
 
-  tor_assert(options);
-  tor_assert(options->RedirectExitList);
   tor_assert(line);
 
   r = tor_malloc_zero(sizeof(exit_redirect_t));
@@ -1773,7 +1770,10 @@ parse_redirect_line(or_options_t *options, struct config_line_t *line)
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
   if (r) {
-    smartlist_add(options->RedirectExitList, r);
+    if (result)
+      smartlist_add(result, r);
+    else
+      tor_free(r);
     return 0;
   } else {
     return -1;
@@ -1840,6 +1840,9 @@ parse_dir_server_line(const char *line, int validate_only)
   return r;
 }
 
+
+/** Adjust or the value of options->DataDirectory, or fill it in if it's
+ * absent. Return 0 on success, -1 on failure. */
 static int
 normalize_data_directory(or_options_t *options) {
 #ifdef MS_WINDOWS
@@ -1861,6 +1864,11 @@ normalize_data_directory(or_options_t *options) {
      log_fn(LOG_ERR,"Failed to expand filename '%s'.", d);
      return -1;
    }
+   if (!options->DataDirectory && !strcmp(fn,"/.tor")) {
+     /* If our homedir is /, we probably don't want to use it. */
+     /* XXXX Default to /var/lib/tor? */
+     log_fn(LOG_WARN, "Defaulting to %s, which may not be what you want", fn);
+   }
    tor_free(options->DataDirectory);
    options->DataDirectory = fn;
  }
@@ -1868,6 +1876,8 @@ normalize_data_directory(or_options_t *options) {
 #endif
 }
 
+/** Check and normalize the value of options->DataDirectory; return 0 if it
+ * sane, -1 otherwise. */
 static int
 validate_data_directory(or_options_t *options) {
   if (normalize_data_directory(options) < 0)

@@ -345,12 +345,6 @@ router_parse_routerlist_from_directory(const char *str,
   smartlist_free(tokens);
   tokens = NULL;
 
-  if(!get_options()->AuthoritativeDir) {
-    /* Now that we know the signature is okay, cache the directory. */
-    /* XXXX009 extract published time if possible. */
-    dirserv_set_cached_directory(str, time(NULL));
-  }
-
   /* Now that we know the signature is okay, check the version. */
   if (check_version)
     check_software_version_against_directory(str, get_options()->IgnoreVersion);
@@ -391,6 +385,12 @@ router_parse_routerlist_from_directory(const char *str,
 
   if (parse_iso_time(tok->args[0], &published_on) < 0) {
      goto err;
+  }
+
+  if(!get_options()->AuthoritativeDir) {
+    /* Now that we know the signature is okay, and we have a
+     * publication time, cache the directory. */
+    dirserv_set_cached_directory(str, published_on);
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_RECOMMENDED_SOFTWARE))) {
@@ -863,14 +863,22 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   if (!(tok = find_first_by_keyword(tokens, K_ONION_KEY))) {
     log_fn(LOG_WARN, "Missing onion key"); goto err;
   }
-  /* XXX Check key length */
+  if (crypto_pk_keysize(tok->key) != PK_BYTES) {
+    log_fn(LOG_WARN, "Wrong size on onion key: %d bits!",
+           crypto_pk_keysize(tok->key)*8);
+    goto err;
+  }
   router->onion_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
 
   if (!(tok = find_first_by_keyword(tokens, K_SIGNING_KEY))) {
     log_fn(LOG_WARN, "Missing identity key"); goto err;
   }
-  /* XXX Check key length */
+  if (crypto_pk_keysize(tok->key) != PK_BYTES) {
+    log_fn(LOG_WARN, "Wrong size on identity key: %d bits!",
+           crypto_pk_keysize(tok->key)*8);
+    goto err;
+  }
   router->identity_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
   if (crypto_pk_get_digest(router->identity_pkey,router->identity_digest)){
@@ -1420,7 +1428,8 @@ int tor_version_as_new_as(const char *platform, const char *cutoff) {
   return tor_version_compare(&router_version, &cutoff_version) >= 0;
 }
 
-/** DOCDOC */
+/** Parse a tor version from <b>s</b>, and store the result in <b>out</b>.
+ * Return 0 on success, -1 on failure. */
 int tor_version_parse(const char *s, tor_version_t *out)
 {
   char *eos=NULL, *cp=NULL;

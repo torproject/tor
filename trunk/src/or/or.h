@@ -432,6 +432,9 @@
 /* legal characters in a nickname */
 #define LEGAL_NICKNAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
+/** Name to use in client TLS certificates if no nickname is given.*/
+#define DEFAULT_CLIENT_NICKNAME "client"
+
 #define SOCKS4_NETWORK_LEN 8
 
 /*
@@ -1210,6 +1213,7 @@ uint32_t client_dns_lookup_entry(const char *address);
 int client_dns_incr_failures(const char *address);
 void client_dns_set_entry(const char *address, uint32_t val);
 void client_dns_clean(void);
+void set_exit_redirects(smartlist_t *lst);
 
 /********************************* connection_or.c ***************************/
 

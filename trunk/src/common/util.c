@@ -283,6 +283,18 @@ int strcmpstart(const char *s1, const char *s2)
   return strncmp(s1, s2, n);
 }
 
+/* Compares the last strlen(s2) characters of s1 with s2.  Returns as for
+ * strcmp.
+ */
+int strcmpend(const char *s1, const char *s2)
+{
+  size_t n1 = strlen(s1), n2 = strlen(s2);
+  if (n2>n1)
+    return strcmp(s1,s2);
+  else
+    return strncmp(s1+(n1-n2), s2, n2);
+}
+
 
 /** Return a pointer to the first char of s that is not whitespace and
  * not a comment, or to the terminating NUL if no such character exists.
@@ -554,7 +566,7 @@ static const char *MONTH_NAMES[] =
 void format_rfc1123_time(char *buf, time_t t) {
   struct tm *tm = gmtime(&t);
 
-  strftime(buf, RFC1123_TIME_LEN+1, "XXX, %d XXX %Y %H:%M:%S GMT", tm);
+  strftime(buf, RFC1123_TIME_LEN+1, "___, %d ___ %Y %H:%M:%S GMT", tm);
   tor_assert(tm->tm_wday >= 0);
   tor_assert(tm->tm_wday <= 6);
   memcpy(buf, WEEKDAY_NAMES[tm->tm_wday], 3);
@@ -732,7 +744,6 @@ int check_private_dir(const char *dirname, cpd_check_t check)
         return -1;
       }
     }
-
     /* XXXX In the case where check==CPD_CHECK, we should look at the
      * parent directory a little harder. */
     return 0;
@@ -771,7 +782,8 @@ write_str_to_file(const char *fname, const char *str, int bin)
   return write_bytes_to_file(fname, str, strlen(str), bin);
 }
 
-/* DOCDOC */
+/** As write_str_to_file, but does not assume a NUL-terminated *
+ * string. Instead, we write <b>len</b> bytes, starting at <b>str</b>. */
 int write_bytes_to_file(const char *fname, const char *str, size_t len,
                         int bin)
 {
@@ -799,30 +811,7 @@ int write_bytes_to_file(const char *fname, const char *str, size_t len,
     log(LOG_WARN,"Error flushing to %s: %s", tempname, strerror(errno));
     return -1;
   }
-
-  /* XXXX use replace_file() instead. */
-#ifdef MS_WINDOWS
-  /* On Windows, rename doesn't replace.  We could call ReplaceFile, but
-   * that's hard, and we can probably sneak by without atomicity. */
-  switch (file_status(fname)) {
-    case FN_ERROR:
-      log(LOG_WARN, "Error replacing %s: %s", fname, strerror(errno));
-      return -1;
-    case FN_DIR:
-      log(LOG_WARN, "Error replacing %s: is directory", fname);
-      return -1;
-    case FN_FILE:
-      if (unlink(fname)) {
-        log(LOG_WARN, "Error replacing %s while removing old copy: %s",
-            fname, strerror(errno));
-        return -1;
-      }
-      break;
-    case FN_NOENT:
-      ;
-  }
-#endif
-  if (rename(tempname, fname)) {
+  if (replace_file(tempname, fname)) {
     log(LOG_WARN, "Error replacing %s: %s", fname, strerror(errno));
     return -1;
   }
@@ -875,9 +864,15 @@ char *read_file_to_str(const char *filename, int bin) {
   return string;
 }
 
-/** DOCDOC.
+/** Given a string containing part of a configuration file or similar format,
+ * advance past comments and whitespace and try to parse a single line.  If we
+ * parse a line successfully, set *<b>key_out</b> to the key portion and
+ * *<b>value_out</b> to the value portion of the line, and return a pointer to
+ * the start of the next line.  If we run out of data, return a pointer to the
+ * end of the string.  If we encounter an error, return NULL.
  *
- * Return next line or end of string on success, NULL on failure.
+ * NOTE: We modify <b>line</b> as we parse it, by inserting NULs to terminate
+ * the key and value.
  */
 char *
 parse_line_from_str(char *line, char **key_out, char **value_out)
@@ -958,7 +953,9 @@ char *expand_filename(const char *filename)
      * Round up to 16 in case we can't do math. */
     len = strlen(home)+strlen(filename)+16;
     result = tor_malloc(len);
-    tor_snprintf(result,len,"%s/%s",home,filename+2);
+    tor_snprintf(result,len,"%s%s%s",home,
+                 (!strcmpend(home, "/")) ? "" : "/",
+                 filename+2);
     return result;
   } else {
     return tor_strdup(filename);
