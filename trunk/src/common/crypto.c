@@ -1200,8 +1200,7 @@ crypto_dh_env_t *crypto_dh_new()
   if (!dh_param_p)
     init_dh_param();
 
-  res = tor_malloc(sizeof(crypto_dh_env_t));
-  res->dh = NULL;
+  res = tor_malloc_zero(sizeof(crypto_dh_env_t));
 
   if (!(res->dh = DH_new()))
     goto err;

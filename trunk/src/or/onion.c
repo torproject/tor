@@ -29,9 +29,8 @@ static int ol_length=0;
 int onion_pending_add(circuit_t *circ) {
   struct onion_queue_t *tmp;
 
-  tmp = tor_malloc(sizeof(struct onion_queue_t));
+  tmp = tor_malloc_zero(sizeof(struct onion_queue_t));
   tmp->circ = circ;
-  tmp->next = NULL;
 
   if(!ol_tail) {
     tor_assert(!ol_list);
