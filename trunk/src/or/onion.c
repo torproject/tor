@@ -185,10 +185,14 @@ static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
 
   assert((cw >= 0) && (cw < 1) && rarray); /* valid parameters */
 
-  for(routelen=3; ; routelen++) { /* 3, increment until coinflip says we're done */
+#ifdef TOR_PERF
+  routelen = 2;
+#else
+  for(routelen = 3; ; routelen++) { /* 3, increment until coinflip says we're done */
     if (crypto_pseudo_rand_int(255) >= cw*255) /* don't extend */
       break;
   }
+#endif
   log_fn(LOG_DEBUG,"Chosen route length %d (%d routers available).",routelen, rarray_len);
 
   num_acceptable_routers = count_acceptable_routers(rarray, rarray_len);
