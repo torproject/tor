@@ -113,14 +113,15 @@ int dns_resolve(connection_t *exitconn) {
   uint32_t now = time(NULL);
   assert_connection_ok(exitconn, 0);
 
-#if 0 /* only enable this once we've found the conn-munging bug */
-  /* first check if exitconn->address is an IP. If so, we already
-   * know the answer. */
-  if (tor_inet_aton(exitconn->address, &in) != 0) {
-    exitconn->addr = ntohl(in.s_addr);
-    return 1;
+  /* XXX leave disabled for dirservers so we can find the conn-munging bug */
+  if(!options.DirPort) {
+    /* first check if exitconn->address is an IP. If so, we already
+     * know the answer. */
+    if (tor_inet_aton(exitconn->address, &in) != 0) {
+      exitconn->addr = ntohl(in.s_addr);
+      return 1;
+    }
   }
-#endif
 
   /* then take this opportunity to see if there are any expired
    * resolves in the tree. */
