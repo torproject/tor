@@ -313,12 +313,10 @@ void connection_close_immediate(connection_t *conn)
   if (conn->read_event) {
     event_del(conn->read_event);
     tor_free(conn->read_event);
-    conn->read_event = NULL;
   }
   if (conn->write_event) {
     event_del(conn->write_event);
     tor_free(conn->write_event);
-    conn->write_event = NULL;
   }
   tor_close_socket(conn->s);
   conn->s = -1;
