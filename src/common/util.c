@@ -25,6 +25,12 @@ void *tor_malloc(size_t size) {
   return result;
 }
 
+void *tor_malloc_zero(size_t size) {
+  void *result = tor_malloc(size);
+  memset(result, 0, size);
+  return result;
+}
+
 void *tor_realloc(void *ptr, size_t size) {
   void *result;
   

@@ -33,6 +33,7 @@
 #endif
 
 void *tor_malloc(size_t size);
+void *tor_malloc_zero(size_t size);
 void *tor_realloc(void *ptr, size_t size);
 char *tor_strdup(const char *s);
 #define tor_free(p) do {if(p) {free(p); (p)=NULL;}} while(0)
