@@ -1387,6 +1387,7 @@ int server_mode(or_options_t *options);
 int advertised_server_mode(void);
 int proxy_mode(or_options_t *options);
 
+int control_signal_act(int the_signal);
 void handle_signals(int is_parent);
 void tor_cleanup(void);
 
