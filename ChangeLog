@@ -1,3 +1,30 @@
+Changes that will be in 0.0.7pre1:
+  o Bugfixes:
+    - Fix an epipe bug: sometimes when directory connections failed
+      to connect, we would give them a chance to flush before closing
+      them.
+    - Directory connections were asking the wrong poll socket to
+      start writing, and not asking themselves to start writing.
+    - When we detached from a circuit because we sent a begin but
+      didn't get a connected, we would use it again the first time;
+      but after that we would correctly switch to a different one.
+    - When we detached from a circuit because of resolvefailed, we
+      would immediately try the same circuit twice more, and then
+      give up on the resolve thinking we'd tried three different
+      exit nodes.
+    - Stop warning when the first onion decrypt attempt fails; they
+      will sometimes legitimately fail now that we rotate keys.
+  o Features:
+    - Doxygen markup on all functions.
+    - Rearranged functions more clearly; there are several new source
+      files.
+
+Changes in version 0.0.6.2 - 2004-05-16
+  o Our integrity-checking digest was checking only the most recent cell,
+    not the previous cells like we'd thought.
+    Thanks to Stefan Kopsell for finding the flaw!
+
+
 Changes in version 0.0.6.1 - 2004-05-06
   o Fix two bugs in our AES counter-mode implementation (this affected
     onion-level stream encryption, but not TLS-level). It turns
