@@ -842,7 +842,7 @@ static int do_main_loop(void) {
       please_reset = 0;
     }
     if(please_reap_children) {
-      while(waitpid(-1,NULL,WNOHANG)) ; /* keep reaping until no more zombies */
+      while(waitpid(-1,NULL,WNOHANG) > 0) ; /* keep reaping until no more zombies */
       please_reap_children = 0;
     }
 #endif /* signal stuff */
