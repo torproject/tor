@@ -156,6 +156,17 @@ tor_tls_init(void) {
   }
 }
 
+void
+tor_tls_free_all(void)
+{
+  if (global_tls_context) {
+    SSL_CTX_free(global_tls_context->ctx);
+    SSL_CTX_free(global_tls_context->client_only_ctx);
+    tor_free(global_tls_context);
+    global_tls_context = NULL;
+  }
+}
+
 /** We need to give OpenSSL a callback to verify certificates. This is
  * it: We always accept peer certs and complete the handshake.  We
  * don't validate them until later.
