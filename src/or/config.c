@@ -329,7 +329,7 @@ options_act(void) {
 
   /* Set up accounting */
   if (accounting_parse_options(options, 0)<0) {
-    log_fn(LOG_ERR,"Error in accouting options");
+    log_fn(LOG_ERR,"Error in accounting options");
     return -1;
   }
   if (accounting_is_enabled(options))
@@ -499,7 +499,7 @@ static config_var_t *config_find_option(const char *key)
       return &config_vars[i];
     }
   }
-  /* Okay, unrecogized options */
+  /* Okay, unrecognized options */
   return NULL;
 }
 
@@ -1522,7 +1522,7 @@ static char *get_windows_conf_root(void)
   if (is_set)
     return path;
 
-  /* Find X:\documents and settings\username\applicatation data\ .
+  /* Find X:\documents and settings\username\application data\ .
    * We would use SHGetSpecialFolder path, but that wasn't added until IE4.
    */
   if (!SUCCEEDED(SHGetSpecialFolderLocation(NULL, CSIDL_APPDATA,
@@ -1909,7 +1909,7 @@ add_single_log_option(or_options_t *options, int minSeverity, int maxSeverity,
 }
 
 /** Convert all old-style logging options to new-style Log options. Return 0
- * on success, -1 on faulure. */
+ * on success, -1 on failure. */
 static int
 normalize_log_options(or_options_t *options)
 {
@@ -2077,7 +2077,7 @@ parse_redirect_line(smartlist_t *result, struct config_line_t *line)
 /** Read the contents of a DirServer line from <b>line</b>.  Return 0
  * if the line is well-formed, and 0 if it isn't.  If
  * <b>validate_only</b> is 0, and the line is well-formed, then add
- * the dirserver desribed in the line as a valid server. */
+ * the dirserver described in the line as a valid server. */
 static int
 parse_dir_server_line(const char *line, int validate_only)
 {

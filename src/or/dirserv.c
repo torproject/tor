@@ -899,7 +899,7 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   }
   runningrouters_is_dirty = 0;
 
-  /* We don't cache runnning-routers to disk, so there's no point in
+  /* We don't cache running-routers to disk, so there's no point in
    * authdirservers caching it. */
   /* dirserv_set_cached_directory(the_runningrouters, time(NULL), 1); */
 

@@ -70,7 +70,7 @@ static INLINE int buf_ensure_capacity(buf_t *buf, size_t capacity)
 static INLINE void buf_shrink_if_underfull(buf_t *buf) {
   size_t new_len;
   /* If the buffer is at least .25 full, or if shrinking the buffer would
-   * put it onder MIN_BUF_SHRINK_SIZE, don't do it. */
+   * put it under MIN_BUF_SHRINK_SIZE, don't do it. */
   if (buf->datalen >= buf->len/4 || buf->len < 2*MIN_BUF_SHRINK_SIZE)
     return;
   /* Shrink new_len by powers of 2 until: datalen is at least 1/4 of

@@ -1078,7 +1078,7 @@ crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *to,
 }
 
 /** Move the position of the cipher stream backwards by <b>delta</b> bytes.
- * Return 0 on suuccess, -1 on failure.
+ * Return 0 on success, -1 on failure.
  */
 int
 crypto_cipher_rewind(crypto_cipher_env_t *env, long delta)
@@ -1087,7 +1087,7 @@ crypto_cipher_rewind(crypto_cipher_env_t *env, long delta)
 }
 
 /** Move the position of the cipher stream forwards by <b>delta</b> bytes.
- * Return 0 on suuccess, -1 on failure.
+ * Return 0 on success, -1 on failure.
  */
 int
 crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
@@ -1100,7 +1100,7 @@ crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
 
 /** Compute the SHA1 digest of <b>len</b> bytes in data stored in
  * <b>m</b>.  Write the DIGEST_LEN byte result into <b>digest</b>.
- * Return 0 on suuccess, -1 on failure.
+ * Return 0 on success, -1 on failure.
  */
 int crypto_digest(unsigned char *digest, const unsigned char *m, int len)
 {
@@ -1388,7 +1388,7 @@ void crypto_dh_free(crypto_dh_env_t *dh)
 /* random numbers */
 
 /** Seed OpenSSL's random number generator with DIGEST_LEN bytes from the
- * operating system.  Return 0 on suuccess, -1 on failure.
+ * operating system.  Return 0 on success, -1 on failure.
  */
 int crypto_seed_rng(void)
 {
@@ -1417,7 +1417,7 @@ int crypto_seed_rng(void)
     return -1;
   }
   RAND_seed(buf, DIGEST_LEN);
-  /* And add the current screen state to the entopy pool for
+  /* And add the current screen state to the entropy pool for
    * good measure. */
   RAND_screen();
   return 0;
@@ -1474,7 +1474,7 @@ void crypto_pseudo_rand(unsigned char *to, unsigned int n)
   }
 }
 
-/** Return a pseudorandom integer, choosen uniformly from the values
+/** Return a pseudorandom integer, chosen uniformly from the values
  * between 0 and max-1. */
 int crypto_pseudo_rand_int(unsigned int max) {
   unsigned int val;

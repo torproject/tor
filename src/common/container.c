@@ -242,7 +242,7 @@ void smartlist_insert(smartlist_t *sl, int idx, void *val)
 }
 
 /**
- * Split a string <b>str</b> along all occurences of <b>sep</b>,
+ * Split a string <b>str</b> along all occurrences of <b>sep</b>,
  * adding the split strings, in order, to <b>sl</b>.  If
  * <b>flags</b>&amp;SPLIT_SKIP_SPACE is true, remove initial and
  * trailing space from each entry.  If

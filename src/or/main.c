@@ -1247,9 +1247,9 @@ int nt_service_install()
    *    separate process (as now) or that can install and run itself
    *    as an NT service.  I have no idea how hard this is.
    *
-   * Notes about develiping NT services:
+   * Notes about developing NT services:
    *
-   * 1. Don't count on your CWD. If an abolute path is not given, the
+   * 1. Don't count on your CWD. If an absolute path is not given, the
    *    fopen() function goes wrong.
    * 2. The parameters given to the nt_service_body() function differ
    *    from those given to main() function.

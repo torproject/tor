@@ -1409,7 +1409,7 @@ int tor_version_as_new_as(const char *platform, const char *cutoff) {
   char tmp[128];
 
   if (tor_version_parse(cutoff, &cutoff_version)<0) {
-    log_fn(LOG_WARN,"Bug: cutoff version '%s' unparsable.",cutoff);
+    log_fn(LOG_WARN,"Bug: cutoff version '%s' unparseable.",cutoff);
     return 0;
   }
   if (strcmpstart(platform,"Tor ")) /* nonstandard Tor; be safe and say yes */
@@ -1423,7 +1423,7 @@ int tor_version_as_new_as(const char *platform, const char *cutoff) {
   strlcpy(tmp, start, s-start+1);
 
   if (tor_version_parse(tmp, &router_version)<0) {
-    log_fn(LOG_INFO,"Router version '%s' unparsable.",tmp);
+    log_fn(LOG_INFO,"Router version '%s' unparseable.",tmp);
     return 1; /* be safe and say yes */
   }
 

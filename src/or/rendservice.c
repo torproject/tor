@@ -209,7 +209,7 @@ int rend_config_services(or_options_t *options, int validate_only)
       continue;
     }
     if (!service) {
-      log_fn(LOG_WARN, "HiddenServicePort with no preceeding HiddenServiceDir directive");
+      log_fn(LOG_WARN, "HiddenServicePort with no preceding HiddenServiceDir directive");
       rend_service_free(service);
       return -1;
     }
@@ -925,7 +925,7 @@ rend_consider_services_upload(time_t now) {
 }
 
 /** Log the status of introduction points for all rendezvous services
- * at log severity <b>serverity</b>.
+ * at log severity <b>severity</b>.
  */
 void
 rend_service_dump_stats(int severity)

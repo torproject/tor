@@ -168,7 +168,7 @@ char *tor_strndup(const char *s, size_t n) {
   char *dup;
   tor_assert(s);
   dup = tor_malloc(n+1);
-  /* Performance note: Ordinarly we prefer strlcpy to strncpy.  But
+  /* Performance note: Ordinarily we prefer strlcpy to strncpy.  But
    * this function gets called a whole lot, and platform strncpy is
    * much faster than strlcpy when strlen(s) is much longer than n.
    */
@@ -256,7 +256,7 @@ int tor_strpartition(char *dest, size_t dest_len,
   return 0;
 }
 
-/** Return a pointer to a NUL-terminated hexidecimal string encoding
+/** Return a pointer to a NUL-terminated hexadecimal string encoding
  * the first <b>fromlen</b> bytes of <b>from</b>. (fromlen must be \<= 32.) The
  * result does not need to be deallocated, but repeated calls to
  * hex_str will trash old results.
@@ -385,7 +385,7 @@ const char *find_whitespace(const char *s) {
  * are converted; or if there are unconverted characters and next is NULL; or
  * if the parsed value is not between min and max.  When no error occurs,
  * return the parsed value and set *ok (if provided) to 1.  When an error
- * ocurs, return 0 and set *ok (if provided) to 0.
+ * occurs, return 0 and set *ok (if provided) to 0.
  */
 long
 tor_parse_long(const char *s, int base, long min, long max,

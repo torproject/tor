@@ -1005,7 +1005,7 @@ int connection_handle_write(connection_t *conn) {
 
   conn->timestamp_lastwritten = now;
 
-  /* Sometimes, "writeable" means "connected". */
+  /* Sometimes, "writable" means "connected". */
   if (connection_state_is_connecting(conn)) {
     if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0) {
       log_fn(LOG_WARN,"getsockopt() syscall failed?! Please report to tor-ops.");

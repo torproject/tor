@@ -64,7 +64,7 @@ typedef enum {
  *    connections, but provide bandwidth until we run out.
  * 5. Then we hibernate until the end of the interval.
  *
- * If the interval ends before we run out of bandwdith, we go back to
+ * If the interval ends before we run out of bandwidth, we go back to
  * step one.
  */
 
@@ -153,7 +153,7 @@ accounting_parse_options(or_options_t *options, int validate_only)
   case UNIT_MONTH:
     d = tor_parse_long(smartlist_get(items,1), 10, 1, 28, &ok, NULL);
     if (!ok) {
-      log_fn(LOG_WARN, "Monthy accounting must start begin on a day between 1 and 28");
+      log_fn(LOG_WARN, "Monthly accounting must start begin on a day between 1 and 28");
       goto err;
     }
     break;

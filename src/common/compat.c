@@ -112,7 +112,7 @@ int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
 
 #ifndef UNALIGNED_INT_ACCESS_OK
 /**
- * Read a 16-bit value beginning at <b>cp</b>.  Equaivalent to
+ * Read a 16-bit value beginning at <b>cp</b>.  Equivalent to
  * *(uint16_t*)(cp), but will not cause segfaults on platforms that forbid
  * unaligned memory access.
  */
@@ -123,7 +123,7 @@ uint16_t get_uint16(const char *cp)
   return v;
 }
 /**
- * Read a 32-bit value beginning at <b>cp</b>.  Equaivalent to
+ * Read a 32-bit value beginning at <b>cp</b>.  Equivalent to
  * *(uint32_t*)(cp), but will not cause segfaults on platforms that forbid
  * unaligned memory access.
  */
@@ -249,7 +249,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     memset(&listen_addr, 0, sizeof(listen_addr));
     listen_addr.sin_family = AF_INET;
     listen_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    listen_addr.sin_port = 0;   /* kernel choses port.  */
+    listen_addr.sin_port = 0;   /* kernel chooses port.  */
     if (bind(listener, (struct sockaddr *) &listen_addr, sizeof (listen_addr))
         == -1)
         goto tidy_up_and_fail;
@@ -646,7 +646,7 @@ struct { int code; const char *msg; } windows_socket_errors[] = {
   E(WSAENETRESET, "Network dropped connection on reset"),
   E(WSAECONNABORTED, "Software caused connection abort"),
   E(WSAECONNRESET, "Connection reset by peer"),
-  E(WSAENOBUFS, "No buffer space avaialable"),
+  E(WSAENOBUFS, "No buffer space available"),
   E(WSAEISCONN, "Socket is already connected"),
   E(WSAENOTCONN, "Socket is not connected"),
   E(WSAESHUTDOWN, "Cannot send after socket shutdown"),
