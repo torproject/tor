@@ -1044,6 +1044,8 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
 void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
 
+int socks_policy_permits_address(uint32_t addr);
+
 void client_dns_init(void);
 uint32_t client_dns_lookup_entry(const char *address);
 int client_dns_incr_failures(const char *address);

@@ -429,6 +429,11 @@ static int connection_init_accepted_conn(connection_t *conn) {
     case CONN_TYPE_OR:
       return connection_tls_start_handshake(conn, 1);
     case CONN_TYPE_AP:
+      /* check sockspolicy to see if we should accept it */
+      if(socks_policy_permits_address(conn->addr) == 0) {
+        log_fn(LOG_WARN,"Denying socks connection from untrusted address %s.", conn->address);
+        return -1;
+      }
       conn->state = AP_CONN_STATE_SOCKS_WAIT;
       break;
     case CONN_TYPE_DIR:
