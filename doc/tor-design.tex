@@ -1374,11 +1374,6 @@ acknowledge his existence.
 %     enable us to accept a lot more ORs than if we continue to
 %     require 10mbit connections for all ORs. -RD
 
-% XXX In sec9, we should note that we are currently
-%     working with the designers of MorphMix to render our two systems
-%     interoperable. So far, this seems to be relatively straightforward.
-%     Interoperability will allow testing and direct comparison of the two
-%     rather different designs.
   
 Below we summarize a variety of attacks, and discuss how well our
 design withstands them.
@@ -1885,14 +1880,14 @@ experience would be helpful in learning the relative importance of
 these bottlenecks.
 
 \emph{Cover traffic:} Currently we avoid cover traffic because
-of its clear costs in performance and bandwidth, and because its
+whereas its costs in performance and bandwidth are clear, and because its
 security benefits are not well understood. With more research
-\cite{SS03,defensive-dropping}, the price/value ratio may change,
+\cite{SS03,defensive-dropping}, this price/value ratio may change,
 both for link-level cover traffic and also long-range cover traffic.
 
 \emph{Better directory distribution:} Even with the threshold
 directory agreement algorithm described in Section~\ref{subsec:dirservers},
-the directory servers are still trust bottlenecks. We must find more
+directory distribution is still performance-critical. We must find more
 decentralized yet practical ways to distribute up-to-date snapshots of
 network status without introducing new attacks.  Also, directory
 retrieval presents a scaling problem, since clients currently
@@ -1908,14 +1903,21 @@ implemented.  While doing so we are likely to encounter additional
 issues that must be resolved, both in terms of usability and anonymity.
 
 \emph{Further specification review:} Although we have a public,
-byte-level specification for the Tor protocols, this protocol has
+byte-level specification for the Tor protocols, this document has
 not received extensive external review.  We hope that as Tor
-becomes more widely deployed, more people will become interested in
-examining our specification.
+becomes more widely deployed, more people will examine its
+specification.
+
+\emph{Multisystem interoperability:} We are currently working with the
+designers of MorphMix to make the common elements of our two systems
+share a common specification and implementation. So far, this seems
+to be relatively straightforward.  Interoperability will allow testing
+and direct comparison of the two designs for trust and scalability.
+% XXXX Bandwidth classes.
 
 \emph{Wider-scale deployment:} The original goal of Tor was to
 gain experience in deploying an anonymizing overlay network, and
-learn from having actual users.  We are now at the point in design
+learn from having actual users.  We are now at a point in design
 and development where we can start deploying a wider network.  Once
 we have many actual users, we will doubtlessly be better
 able to evaluate some of our design decisions, including our
@@ -1923,7 +1925,6 @@ robustness/latency trade-offs, our performance trade-offs (including
 cell size), our abuse-prevention mechanisms, and
 our overall usability.
 % XXX large and small cells on same network.
-% XXX work with morphmix spec
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
