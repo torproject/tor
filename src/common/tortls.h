@@ -5,6 +5,11 @@
 #ifndef _TORTLS_H
 #define _TORTLS_H
 
+/**
+ * \file tortls.h
+ * \brief Headers for tortls.c
+ **/
+
 #include "../common/crypto.h"
 
 /* Opaque structure to hold a TLS connection. */

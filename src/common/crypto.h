@@ -3,7 +3,7 @@
 /* $Id$ */
 
 /**
- * \file crypto.c
+ * \file crypto.h
  *
  * \brief Headers for low-level cryptographic functions.
  **/

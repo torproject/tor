@@ -5,6 +5,11 @@
 #ifndef __FAKEPOLL_H
 #define __FAKEPOLL_H
 
+/**
+ * \file fakepoll.h
+ * \brief Headers for fakepoll.c
+ */
+
 #include "orconfig.h"
 
 #define POLL_NO_WARN

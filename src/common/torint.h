@@ -2,15 +2,15 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/*****
- * torint.h: Header file to define uint32_t and friends.
- *****/
+/**
+ * \file torint.h
+ * \brief Header file to define uint32_t and friends
+ **/
 
 #ifndef __TORINT_H
 #define __TORINT_H
 
 #include "orconfig.h"
-
 
 #ifdef HAVE_STDINT_H
 #include <stdint.h>

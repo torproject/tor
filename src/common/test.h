@@ -5,6 +5,11 @@
 #ifndef __TEST_H
 #define __TEST_H
 
+/**
+ * \file test.h
+ * \brief Headers for test.c
+ */
+
 #include <string.h>
 #include <stdio.h>
 
