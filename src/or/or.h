@@ -290,6 +290,18 @@ struct connection_t {
 
 typedef struct connection_t connection_t;
 
+#define EXIT_POLICY_ACCEPT 1
+#define EXIT_POLICY_REJECT 2
+
+struct exit_policy_t {
+  char policy_type;
+  char *string;
+  char *address;
+  char *port;
+
+  struct exit_policy_t *next;
+};
+
 /* config stuff we know about the other ORs in the network */
 typedef struct {
   char *address;
@@ -304,14 +316,7 @@ typedef struct {
  
   /* link info */
   uint32_t bandwidth;
-
-//  struct timeval  min_interval;
- 
-  /* time when last data was sent to that router */
-//  struct timeval lastsend;
- 
-  /* socket */
-//  int s;
+  struct exit_policy_t *exit_policy;
 
   void *next;
 } routerinfo_t;
