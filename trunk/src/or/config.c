@@ -103,6 +103,7 @@ static config_var_t config_vars[] = {
   VAR("CookieAuthentication",BOOL,     CookieAuthentication, "0"),
   VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
   VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
+  VAR("DirAllowPrivateAddresses",BOOL, DirAllowPrivateAddresses, NULL),
   VAR("DirPort",             UINT,     DirPort,              "0"),
   VAR("DirBindAddress",      LINELIST, DirBindAddress,       NULL),
 /* XXX we'd like dirfetchperiod to be higher for people with dirport not
