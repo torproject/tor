@@ -1032,7 +1032,7 @@ void assert_buf_ok(buf_t *buf);
 
 /********************************* circuitbuild.c **********************/
 
-char *circuit_list_path(circuit_t *circ);
+char *circuit_list_path(circuit_t *circ, int verbose);
 void circuit_log_path(int severity, circuit_t *circ);
 void circuit_rep_hist_note_result(circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
