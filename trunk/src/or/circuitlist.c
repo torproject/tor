@@ -295,11 +295,16 @@ circuit_t *circuit_get_rendezvous(const char *cookie)
 /** Return a circuit that is open, has specified <b>purpose</b>,
  * has a timestamp_dirty value of 0, and is uptime/capacity/internal
  * if required; or NULL if no circuit fits this description.
+ *
+ * Avoid returning need_uptime circuits if not necessary.
+ * FFFF As a more important goal, not yet implemented, avoid returning
+ * internal circuits if not necessary.
  */
 circuit_t *
 circuit_get_clean_open(uint8_t purpose, int need_uptime,
                        int need_capacity, int internal) {
   circuit_t *circ;
+  circuit_t *best=NULL;
 
   log_fn(LOG_DEBUG,"Hunting for a circ to cannibalize: purpose %d, uptime %d, capacity %d, internal %d", purpose, need_uptime, need_capacity, internal);
 
@@ -311,10 +316,12 @@ circuit_get_clean_open(uint8_t purpose, int need_uptime,
         !circ->timestamp_dirty &&
         (!need_uptime || circ->build_state->need_uptime) &&
         (!need_capacity || circ->build_state->need_capacity) &&
-        (!internal || circ->build_state->is_internal))
-      return circ;
+        (!internal || circ->build_state->is_internal)) {
+      if (!best || (best->build_state->need_uptime && !need_uptime))
+        best = circ;
+    }
   }
-  return NULL;
+  return best;
 }
 
 /** Mark <b>circ</b> to be closed next time we call
