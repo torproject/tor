@@ -114,7 +114,8 @@ NICK                    . OS X
 SPEC!!  - Non-clique topologies, clearer bandwidth management
         . Look at OR handshake in more detail
                 o Spec it
-                - Merge OR and OP handshakes?
+                - Merge OR and OP handshakes
+                        - But figure out how to indicate if we're OR?
                 - Periodic link key rotation. Spec?
         - More flexibility in node addressing
                 - Support IPv6 rather than just 4

@@ -51,5 +51,11 @@ Probably tsocks doesn't behave well for behemoths like Mozilla.
 
     Part three: applications which support tor correctly
 
+http: Mozilla: set your socks4 proxy to be the onion proxy
+      privoxy: set your socks4a proxy to be the onion proxy
+ssh: tsocks ssh arma@18.244.0.188
+ftp: tsocks wget ftp://18.244.0.188/quux.tar --passive
+     Mozilla: set your socks4 proxy to be the onion proxy
+
 
 
