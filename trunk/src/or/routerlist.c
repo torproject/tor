@@ -404,24 +404,25 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
   int maybe_reject = 0;
   int maybe_accept = 0;
   int match = 0;
+  int maybe = 0;
   struct in_addr in;
   struct exit_policy_t *tmpe;
 
   for(tmpe=policy; tmpe; tmpe=tmpe->next) {
     log_fn(LOG_DEBUG,"Considering exit policy %s", tmpe->string);
+    maybe = 0;
     if (!addr) {
       /* Address is unknown. */
-      if (tmpe->msk == 0 && (port >= tmpe->prt_min && port <= tmpe->prt_max)) {
-        /* The exit policy is accept/reject *:port */
-        match = 1;
-      } else if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
-        if (tmpe->policy_type == EXIT_POLICY_REJECT) {
-          /* The exit policy is reject ???:port */
-          maybe_reject = 1;
+      if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
+        /* The port definitely matches. */
+        if (tmpe->msk == 0) {
+          match = 1;
         } else {
-          /* The exit policy is accept ???:port */
-          maybe_accept = 1;
+          maybe = 1;
         }
+      } else if (!port) {
+        /* The port maybe matches. */
+        maybe = 1;
       }
     } else {
       /* Address is known */
@@ -430,6 +431,12 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
         /* Exact match for the policy */
         match = 1;
       }
+    }
+    if (maybe) {
+      if (tmpe->policy_type == EXIT_POLICY_REJECT)
+        maybe_reject = 1;
+      else
+        maybe_accept = 1;
     }
     if (match) {
       in.s_addr = htonl(addr);
