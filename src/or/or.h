@@ -102,15 +102,14 @@
 #define MAXCONNECTIONS 15000
 
 #ifdef MS_WINDOWS
-/* This trick makes winsock resize fd_set, which defaults to the
- * insanely low 64. */
-#define FD_SETSIZE MAXCONNECTIONS
-/* XXXX But Windows FD_SET and FD_CLR are tremendously ugly, and linear in
- *   the total number of sockets set! Perhaps we should eventually use
- *   WSAEventSelect and WSAWaitForMultipleEvents instead of select? -NM
- *   I'm told these funcs have an unchangeable 64 conn limit on 95/98,
- *   so maybe not. -RD */
-
+/* No, we don't need to redefine FD_SETSIZE before including winsock:
+ * we use libevent now, and libevent handles the select() stuff.  Yes,
+ * some documents imply that we need to redefine anyway if we're using
+ * select() anywhere in our application or in anything it links to: these
+ * documents are either the holy texts of a cargo cult of network
+ * programmers, or more likely a simplification of what's going on for
+ * people who haven't read winsock[2].c for themselves.
+ */
 #if (_MSC_VER <= 1300)
 #include <winsock.h>
 #else
