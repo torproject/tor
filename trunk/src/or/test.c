@@ -120,10 +120,6 @@ test_buffers() {
   test_memeq(str+10,buf,246);
   test_eq(buf_datalen,246);
 
-  test_eq(-1, fetch_from_buf(str2, 247, &buf, &buflen, &buf_datalen));
-  test_memeq(str+10,buf,246);
-  test_eq(buf_datalen, 246);
-  
   test_eq(0, fetch_from_buf(str2, 246, &buf, &buflen, &buf_datalen));
   test_memeq(str2, str+10, 246);
   test_eq(buflen,MAX_BUF_SIZE);

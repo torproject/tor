@@ -186,9 +186,7 @@ int directory_handle_command(connection_t *conn) {
     return 0; /* not yet */
   }
 
-  if(connection_fetch_from_buf(buf,strlen(getstring),conn) < 0) {
-    return -1;    
-  }
+  connection_fetch_from_buf(buf,strlen(getstring),conn);
 
   if(strncasecmp(buf,getstring,strlen("GET / HTTP/"))) {
     log_fn(LOG_DEBUG,"Command doesn't seem to be a get. Closing,");
@@ -224,10 +222,7 @@ int directory_handle_reading(connection_t *conn) {
     if(amt < 0) /* not there yet */
       return 0;
     headers = tor_malloc(amt+1);
-    if(connection_fetch_from_buf(headers,amt,conn) < 0) {
-      log_fn(LOG_DEBUG,"fetch_from_buf failed (reading headers).");
-      return -1;
-    }
+    connection_fetch_from_buf(headers,amt,conn);
     headers[amt] = 0; /* null terminate it, */
     free(headers); /* and then throw it away */
     reading_headers = 0;
@@ -243,10 +238,7 @@ int directory_handle_reading(connection_t *conn) {
   log_fn(LOG_DEBUG,"Pulling %d bytes in at offset %d.",
     amt, directorylen);
 
-  if(connection_fetch_from_buf(the_directory+directorylen,amt,conn) < 0) {
-    log_fn(LOG_DEBUG,"fetch_from_buf failed (reading dir).");
-    return -1;    
-  }
+  connection_fetch_from_buf(the_directory+directorylen,amt,conn);
 
   directorylen += amt;
 

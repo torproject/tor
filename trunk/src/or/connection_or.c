@@ -372,9 +372,7 @@ or_handshake_client_process_auth(connection_t *conn) {
   if(conn->inbuf_datalen < 128) /* entire response available? */
     return 0; /* not yet */
 
-  if(connection_fetch_from_buf(cipher,128,conn) < 0) {
-    return -1;    
-  }
+  connection_fetch_from_buf(cipher,128,conn);
   log(LOG_DEBUG,"or_handshake_client_process_auth() : Received auth.");
 
   /* decrypt response */
@@ -483,9 +481,7 @@ or_handshake_server_process_auth(connection_t *conn) {
   if(conn->inbuf_datalen < 128) /* entire response available? */
     return 0; /* not yet */  
 
-  if(connection_fetch_from_buf(cipher,128,conn) < 0) {
-    return -1;
-  }
+  connection_fetch_from_buf(cipher,128,conn);
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Received auth.");
 
   /* decrypt response */
@@ -632,9 +628,7 @@ or_handshake_server_process_nonce(connection_t *conn) {
   if(conn->inbuf_datalen < 128) /* entire response available? */
     return 0; /* not yet */
 
-  if(connection_fetch_from_buf(cipher,128,conn) < 0) {
-    return -1;    
-  }
+  connection_fetch_from_buf(cipher,128,conn);
   log(LOG_DEBUG,"or_handshake_server_process_nonce() : Received auth.");
 
   /* decrypt response */
