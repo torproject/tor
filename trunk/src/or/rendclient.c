@@ -216,6 +216,7 @@ rend_client_introduction_acked(circuit_t *circ,
       if (!(r = router_get_by_nickname(nickname))) {
         log_fn(LOG_WARN, "Advertised intro point '%s' for %s is not known. Closing.",
                nickname, circ->rend_query);
+        tor_free(nickname);
         circuit_mark_for_close(circ);
         return -1;
       }
@@ -223,7 +224,9 @@ rend_client_introduction_acked(circuit_t *circ,
              nickname, circ->rend_query, circ->n_circ_id);
       circ->state = CIRCUIT_STATE_BUILDING;
       tor_free(circ->build_state->chosen_exit_name);
-      circ->build_state->chosen_exit_name = tor_strdup(nickname);
+      /* no need to strdup, since rend_client_get_random_intro() made
+       * it just for us: */
+      circ->build_state->chosen_exit_name = nickname;
       memcpy(circ->build_state->chosen_exit_digest, r->identity_digest, DIGEST_LEN);
       ++circ->build_state->desired_path_len;
       if (circuit_send_next_onion_skin(circ)<0) {
