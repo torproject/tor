@@ -1585,7 +1585,8 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
                                  NULL, 0, NULL);
     return 0;
 #endif
-    return -1;
+    circuit_mark_for_close(circ);
+    return 0;
   }
 
   circ->n_addr = n_conn->addr; /* these are different if we found a twin instead */
