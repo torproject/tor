@@ -1345,46 +1345,43 @@ behavior, whereas Tor only needs a threshold consensus of the current
 state of the network.
 % Cite dir-spec or dir-agreement?
 
-The threshold consensus can be reached with standard Byzantine agreement
-techniques \cite{castro-liskov}.  
-% Should I just stop the section here? Is the rest crap? -RD
-% IMO this graf makes me uncomfortable.  It picks a fight with the
-% Byzantine people for no good reason. -NM
-But this library, while more efficient than previous Byzantine agreement
-systems, is still complex and heavyweight for our purposes: we only need
-to compute a single algorithm, and we do not require strict in-order
-computation steps. Indeed, the complexity of Byzantine agreement protocols
-threatens our security, because users cannot easily understand it and
-thus have less trust in the directory servers. The Tor directory servers
-build a consensus directory
-through a simple four-round broadcast protocol. First, each server signs
-and broadcasts its current opinion to the other directory servers; each
-server then rebroadcasts all the signed opinions it has received. At this
-point all directory servers check to see if anybody's cheating. If so,
-directory service stops, the humans are notified, and that directory
-server is permanently removed from the network. Assuming no cheating,
-each directory server then computes a local algorithm on the set of
-opinions, resulting in a uniform shared directory. Then the servers sign
-this directory and broadcast it; and finally all servers rebroadcast
-the directory and all the signatures.
+Tor directory servers build a consensus directory through a simple
+four-round broadcast protocol.  In round one, each server dates and
+signs its current opinion, and broadcasts it to the other directory
+servers; then in round two, each server rebroadcasts all the signed
+opinions it has received.  At this point all directory servers check
+to see whether any server has signed multiple opinions in the same
+period. If so, the server is either broken or cheating, so protocol
+stops and notifies the administrators, who either remove the cheater
+or wait for the broken server to be fixed.  If there are no
+discrepancies, each directory server then locally computes algorithm
+on the set of opinions, resulting in a uniform shared directory. In
+round three servers sign this directory and broadcast it; and finally
+in round four the servers rebroadcast the directory and all the
+signatures.  If any directory server drops out of the network, its
+signature is not included on the file directory.
 
-The rebroadcast steps ensure that a directory server is heard by either
-all of the other servers or none of them (some of the links between
-directory servers may be down). Broadcasts are feasible because there
-are so few directory servers (currently 3, but we expect to use as many
-as 9 as the network scales). The actual local algorithm for computing
-the shared directory is straightforward, and is described in the Tor
-specification \cite{tor-spec}.
-% we should, uh, add this to the spec. oh, and write it. -RD
+The rebroadcast steps ensure that a directory server is heard by
+either all of the other servers or none of them, assuming that any two
+directories can talk directly, or via a third directory (some of the
+links between directory servers may be down). Broadcasts are feasible
+because there are relatively few directory servers (currently 3, but we expect
+to use as many as 9 as the network scales). The actual local algorithm
+for computing the shared directory is a straightforward threshold
+voting process: we include an OR if a majority of directory servers
+believe it to be good.
 
-Using directory servers rather than flooding approaches provides
-simplicity and flexibility. For example, they don't complicate
-the analysis when we start experimenting with non-clique network
-topologies. And because the directories are signed, they can be cached at
-all the other onion routers (or even elsewhere). Thus directory servers
-are not a performance bottleneck when we have many users, and also they
-won't aid traffic analysis by forcing clients to periodically announce
-their existence to any central point.
+When a client Alice retrieves a consensus directory, she uses it if it
+is signed by a majority of the directory servers she knows.
+
+Using directory servers rather than flooding provides simplicity and
+flexibility. For example, they don't complicate the analysis when we
+start experimenting with non-clique network topologies. And because
+the directories are signed, they can be cached by other onion routers,
+or indeed by any server.  Thus directory servers are not a performance
+bottleneck when we have many users, and do not aid traffic analysis by
+forcing clients to periodically announce their existence to any
+central point.
 % Mention Hydra as an example of non-clique topologies. -NM, from RD
 
 % also find some place to integrate that dirservers have to actually
