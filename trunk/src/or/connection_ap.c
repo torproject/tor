@@ -205,7 +205,7 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
     connection_stop_reading(conn); /* Stop listening for input from the AP! */
 
     if(!n_conn) { /* launch the connection */
-      n_conn = connect_to_router_as_op(firsthop);
+      n_conn = connection_or_connect_as_op(firsthop);
       if(!n_conn) { /* connect failed, forget the whole thing */
         log(LOG_DEBUG,"ap_handshake_establish_circuit(): connect to firsthop failed. Closing.");
         circuit_close(circ);
@@ -393,9 +393,9 @@ int connection_ap_finished_flushing(connection_t *conn) {
 
 }
 
-int connection_ap_create_listener(struct sockaddr_in *local) {
+int connection_ap_create_listener(struct sockaddr_in *bindaddr) {
   log(LOG_DEBUG,"connection_create_ap_listener starting");
-  return connection_create_listener(local, CONN_TYPE_AP_LISTENER);
+  return connection_create_listener(bindaddr, CONN_TYPE_AP_LISTENER);
 }
 
 int connection_ap_handle_listener_read(connection_t *conn) {

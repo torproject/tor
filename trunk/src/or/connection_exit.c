@@ -120,6 +120,7 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
           return -1;
         }
         memcpy(&conn->addr, rent->h_addr,rent->h_length); 
+        conn->addr = ntohl(conn->addr); /* get it back to host order */
         log(LOG_DEBUG,"connection_exit_process_data_cell(): addr is %s.",cell->payload);
       } else if (!conn->port) { /* this cell contains the dest port */
         if(!memchr(cell->payload,'\0',cell->length)) {
@@ -143,7 +144,7 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
         memset((void *)&dest_addr,0,sizeof(dest_addr));
         dest_addr.sin_family = AF_INET;
         dest_addr.sin_port = htons(conn->port);
-        memcpy((void *)&dest_addr.sin_addr, &conn->addr, sizeof(uint32_t));
+        dest_addr.sin_addr.s_addr = htonl(conn->addr);
       
         log(LOG_DEBUG,"connection_exit_process_data_cell(): Connecting to %s:%u.",conn->address,conn->port); 
 

@@ -54,9 +54,9 @@ void directory_initiate_fetch(routerinfo_t *router) {
   memset((void *)&router_addr,0,sizeof(router_addr));
   router_addr.sin_family = AF_INET;
   router_addr.sin_port = htons(router->dir_port);
-  router_addr.sin_addr.s_addr = router->addr;
+  router_addr.sin_addr.s_addr = htonl(router->addr);
 
-  log(LOG_DEBUG,"directory_initiate_fetch(): Trying to connect to %s:%u.",inet_ntoa(*(struct in_addr *)&router->addr),router->dir_port);
+  log(LOG_DEBUG,"directory_initiate_fetch(): Trying to connect to %s:%u.",router->address,router->dir_port);
 
   if(connect(s,(struct sockaddr *)&router_addr,sizeof(router_addr)) < 0){
     if(errno != EINPROGRESS){
@@ -133,15 +133,11 @@ int connection_dir_process_inbuf(connection_t *conn) {
       log(LOG_DEBUG,"connection_dir_process_inbuf(): Empty directory. Ignoring.");
       return -1;
     }
-    if(router_get_list_from_string(the_directory, options.ORPort) < 0) {
+    if(router_get_list_from_string(the_directory) < 0) {
       log(LOG_DEBUG,"connection_dir_process_inbuf(): ...but parsing failed. Ignoring.");
     }
     if(options.Role & ROLE_OR_CONNECT_ALL) { /* connect to them all */
-      struct sockaddr_in local; /* local address */
-      if(learn_local(&local) < 0)
-        return -1;
-      local.sin_port = htons(options.ORPort);
-      router_retry_connections(&local);
+      router_retry_connections();
     }
     return -1;
   }
@@ -277,9 +273,9 @@ int connection_dir_finished_flushing(connection_t *conn) {
   return 0;
 }
 
-int connection_dir_create_listener(struct sockaddr_in *local) {
+int connection_dir_create_listener(struct sockaddr_in *bindaddr) {
   log(LOG_DEBUG,"connection_create_dir_listener starting");
-  return connection_create_listener(local, CONN_TYPE_DIR_LISTENER);
+  return connection_create_listener(bindaddr, CONN_TYPE_DIR_LISTENER);
 }
 
 int connection_dir_handle_listener_read(connection_t *conn) {

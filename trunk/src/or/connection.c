@@ -148,7 +148,7 @@ void connection_free(connection_t *conn) {
   free(conn);
 }
 
-int connection_create_listener(struct sockaddr_in *local, int type) {
+int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
   connection_t *conn;
   int s;
   int one=1;
@@ -162,15 +162,14 @@ int connection_create_listener(struct sockaddr_in *local, int type) {
 
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
-  if(bind(s,(struct sockaddr *)local,sizeof(*local)) < 0) {
+  if(bind(s,(struct sockaddr *)bindaddr,sizeof(*bindaddr)) < 0) {
     perror("bind ");
-    log(LOG_ERR,"Could not bind to local port %u.",ntohs(local->sin_port));
+    log(LOG_ERR,"Could not bind to port %u.",ntohs(bindaddr->sin_port));
     return -1;
   }
 
-  /* start local server */
   if(listen(s,SOMAXCONN) < 0) {
-    log(LOG_ERR,"Could not listen on local port %u.",ntohs(local->sin_port));
+    log(LOG_ERR,"Could not listen on port %u.",ntohs(bindaddr->sin_port));
     return -1;
   }
 
@@ -189,10 +188,7 @@ int connection_create_listener(struct sockaddr_in *local, int type) {
     return -1;
   }
 
-  /* remember things so you can tell the baby sockets */
-  memcpy(&conn->local,local,sizeof(struct sockaddr_in));
-
-  log(LOG_DEBUG,"connection_create_listener(): Listening on local port %u.",ntohs(local->sin_port));
+  log(LOG_DEBUG,"connection_create_listener(): Listening on port %u.",ntohs(bindaddr->sin_port));
 
   conn->state = LISTENER_STATE_READY;
   connection_start_reading(conn);
@@ -227,8 +223,6 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
     newconn->bandwidth = -1;
   }
 
-  /* learn things from parent, so we can perform auth */
-  memcpy(&newconn->local,&conn->local,sizeof(struct sockaddr_in));
   newconn->address = strdup(inet_ntoa(remote.sin_addr)); /* remember the remote address */
 
   if(connection_add(newconn) < 0) { /* no space, forget it */
@@ -243,86 +237,51 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   return 0;
 }
 
-/* create the 'local' variable used below */
-int learn_local(struct sockaddr_in *local) {
-  /* local host information */
-  char localhostname[512];
-  struct hostent *localhost;
-
-  /* obtain local host information */
-  if(gethostname(localhostname,512) < 0) {
-    log(LOG_ERR,"Error obtaining local hostname.");
-    return -1;
-  }
-  log(LOG_DEBUG,"learn_local: localhostname is '%s'.",localhostname);
-  localhost = gethostbyname(localhostname);
-  if (!localhost) {
-    log(LOG_ERR,"Error obtaining local host info.");
-    return -1;
-  }
-  memset((void *)local,0,sizeof(struct sockaddr_in));
-  local->sin_family = AF_INET;
-  memcpy((void *)&local->sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
-  log(LOG_DEBUG,"learn_local: chose address as '%s'.",inet_ntoa(local->sin_addr));
-
-  return 0;
-}
-
 int retry_all_connections(int role, uint16_t or_listenport,
   uint16_t op_listenport, uint16_t ap_listenport, uint16_t dir_listenport) {
 
   /* start all connections that should be up but aren't */
 
-  struct sockaddr_in local; /* local address */
+  struct sockaddr_in bindaddr; /* where to bind */
 
-  if(learn_local(&local) < 0)
-    return -1;
-
-  local.sin_port = htons(or_listenport);
   if(role & ROLE_OR_CONNECT_ALL) {
-    router_retry_connections(&local);
+    router_retry_connections();
   }
 
-  local.sin_addr.s_addr = htonl(INADDR_ANY); /* anyone can connect */
+  memset(&bindaddr,0,sizeof(struct sockaddr_in));
+  bindaddr.sin_family = AF_INET;
+  bindaddr.sin_addr.s_addr = htonl(INADDR_ANY); /* anyone can connect */
 
   if(role & ROLE_OR_LISTEN) {
+    bindaddr.sin_port = htons(or_listenport);
     if(!connection_get_by_type(CONN_TYPE_OR_LISTENER)) {
-      connection_or_create_listener(&local);
+      connection_or_create_listener(&bindaddr);
     }
   }
 
   if(role & ROLE_OP_LISTEN) {
-    local.sin_port = htons(op_listenport);
+    bindaddr.sin_port = htons(op_listenport);
     if(!connection_get_by_type(CONN_TYPE_OP_LISTENER)) {
-      connection_op_create_listener(&local);
+      connection_op_create_listener(&bindaddr);
     }
   }
 
   if(role & ROLE_DIR_LISTEN) {
-    local.sin_port = htons(dir_listenport);
+    bindaddr.sin_port = htons(dir_listenport);
     if(!connection_get_by_type(CONN_TYPE_DIR_LISTENER)) {
-      connection_dir_create_listener(&local);
+      connection_dir_create_listener(&bindaddr);
     }
   }
  
   if(role & ROLE_AP_LISTEN) {
-    local.sin_port = htons(ap_listenport);
-    inet_aton("127.0.0.1", &(local.sin_addr)); /* the AP listens only on localhost! */
+    bindaddr.sin_port = htons(ap_listenport);
+    inet_aton("127.0.0.1", &(bindaddr.sin_addr)); /* the AP listens only on localhost! */
     if(!connection_get_by_type(CONN_TYPE_AP_LISTENER)) {
-      connection_ap_create_listener(&local);
+      connection_ap_create_listener(&bindaddr);
     }
   }
 
   return 0;
-}
-
-connection_t *connection_connect_to_router_as_op(routerinfo_t *router, uint16_t local_or_port) {
-  struct sockaddr_in local; /* local address */
-
-  if(learn_local(&local) < 0)
-    return NULL;
-  local.sin_port = htons(local_or_port);
-  return connection_or_connect_as_op(router, &local);
 }
 
 int connection_read_to_buf(connection_t *conn) {
