@@ -611,7 +611,7 @@ test_onion_handshake() {
 }
 
 /* from routers.c */
-int compare_recommended_versions(char *myversion, char *start);
+int is_recommended_version(char *myversion, char *start);
 
 void
 test_dir_format()
@@ -766,15 +766,15 @@ test_dir_format()
   tor_free(dir1); /* And more !*/
   tor_free(dir2); /* And more !*/
 
-  /* make sure compare_recommended_versions() works */
-  test_eq(0, compare_recommended_versions("abc", "abc"));
-  test_eq(0, compare_recommended_versions("abc", "ab,abd,abde,abc,abcde"));
-  test_eq(0, compare_recommended_versions("abc", "ab,abd,abde,abcde,abc"));
-  test_eq(0, compare_recommended_versions("abc", "abc,abd,abde,abc,abcde"));
-  test_eq(0, compare_recommended_versions("a", "a,ab,abd,abde,abc,abcde"));
-  test_eq(-1, compare_recommended_versions("a", "ab,abd,abde,abc,abcde"));
-  test_eq(-1, compare_recommended_versions("abb", "ab,abd,abde,abc,abcde"));
-  test_eq(-1, compare_recommended_versions("a", ""));
+  /* make sure is_recommended_version() works */
+  test_eq(1, is_recommended_version("abc", "abc"));
+  test_eq(1, is_recommended_version("abc", "ab,abd,abde,abc,abcde"));
+  test_eq(1, is_recommended_version("abc", "ab,abd,abde,abcde,abc"));
+  test_eq(1, is_recommended_version("abc", "abc,abd,abde,abc,abcde"));
+  test_eq(1, is_recommended_version("a", "a,ab,abd,abde,abc,abcde"));
+  test_eq(0, is_recommended_version("a", "ab,abd,abde,abc,abcde"));
+  test_eq(0, is_recommended_version("abb", "ab,abd,abde,abc,abcde"));
+  test_eq(0, is_recommended_version("a", ""));
 }
 
 int

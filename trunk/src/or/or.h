@@ -801,6 +801,7 @@ void dns_init(void);
 int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
 void connection_dns_remove(connection_t *conn);
+void assert_connection_edge_not_dns_pending(connection_t *conn);
 void dns_cancel_pending_resolve(char *question);
 int dns_resolve(connection_t *exitconn);
 

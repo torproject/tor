@@ -237,6 +237,19 @@ void connection_dns_remove(connection_t *conn)
   }
 }
 
+void assert_connection_edge_not_dns_pending(connection_t *conn) {
+  struct pending_connection_t *pend;
+  struct cached_resolve *resolve;
+
+  SPLAY_FOREACH(resolve, cache_tree, &cache_root) {
+    for(pend = resolve->pending_connections;
+        pend;
+        pend = pend->next) {
+      assert(pend->conn != conn);
+    }
+  }
+}
+
 /* Cancel all pending connections. Then cancel the resolve itself,
  * and remove the 'struct cached_resolve' from the cache.
  */

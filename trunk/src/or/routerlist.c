@@ -357,10 +357,10 @@ int router_get_router_hash(const char *s, char *digest)
                               "router ","router-signature");
 }
 
-/* return 0 if myversion is in versionlist. Else return -1.
+/* return 1 if myversion is in versionlist. Else return 0.
  * (versionlist contains a comma-separated list of versions.) */
-int compare_recommended_versions(const char *myversion,
-                                 const char *versionlist) {
+int is_recommended_version(const char *myversion,
+                           const char *versionlist) {
   int len_myversion = strlen(myversion);
   char *comma;
   const char *end = versionlist + strlen(versionlist);
@@ -372,9 +372,9 @@ int compare_recommended_versions(const char *myversion,
     if( ((comma ? comma : end) - versionlist == len_myversion) &&
        !strncmp(versionlist, myversion, len_myversion))
       /* only do strncmp if the length matches */
-      return 0; /* success, it's there */
+      return 1; /* success, it's there */
     if(!comma)
-      return -1; /* nope */
+      return 0; /* nope */
     versionlist = comma+1;
   }
 }
@@ -391,7 +391,8 @@ int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
     log_fn(LOG_WARN, "Error resolving routerlist");
     return -1;
   }
-  if (compare_recommended_versions(VERSION, routerlist->software_versions) < 0) {
+  if (is_recommended_version(VERSION,
+      routerlist->software_versions) < 0) {
     log(options.IgnoreVersion ? LOG_WARN : LOG_ERR,
         "You are running Tor version %s, which will not work with this network.\n"
        "Please use %s%s.",
