@@ -108,7 +108,7 @@
 #include "../common/log.h"
 #include "../common/util.h"
 
-/** Upper bound on maximum simulataneous connections; can be lowered by
+/** Upper bound on maximum simultaneous connections; can be lowered by
  * config file */
 #define MAXCONNECTIONS 1000
 
@@ -140,7 +140,7 @@
 #define CONN_TYPE_EXIT 5
 /** Type for sockets listening for SOCKS connections */
 #define CONN_TYPE_AP_LISTENER 6
-/** Type for SOCKS connections to OP. */
+/** Type for SOCKS connections to OP */
 #define CONN_TYPE_AP 7
 /** Type for sockets listening for HTTP connections to the directory server */
 #define CONN_TYPE_DIR_LISTENER 8
@@ -640,41 +640,78 @@ typedef struct {
 
 
 #define CIRCUIT_MAGIC 0x35315243u
-/** struct for a path (circuit) through the onion routing network */
+/** Struct for a path (circuit) through the onion routing network */
 struct circuit_t {
-  uint32_t magic; /**< for memory debugging: must equal CRICUIT_MAGIC */
+  uint32_t magic; /**< For memory debugging: must equal CIRCUIT_MAGIC */
 
   int marked_for_close; /**< Should we close this circuit at the end of the
                          * main loop? */
   char *marked_for_close_file; /**< For debugging: in which file was this
                                 * circuit marked for close? */
 
-  /* XXXX ARMA : please document these: I can't untangle them so well. */
-
+  /** The IPv4 address of the OR that is next in this circuit. */
   uint32_t n_addr;
+  /** The port for the OR that is next in this circuit. */
   uint16_t n_port;
+  /** The OR connection that is previous in this circuit. */
   connection_t *p_conn;
-  connection_t *n_conn; /* for the OR conn, if there is one */
+  /** The OR connection that is next in this circuit. */
+  connection_t *n_conn;
+  /** Linked list of AP streams associated with this circuit. */
   connection_t *p_streams;
+  /** Linked list of Exit streams associated with this circuit. */
   connection_t *n_streams;
+  /** Linked list of Exit streams associated with this circuit that are
+   * still being resolved. */
   connection_t *resolving_streams;
+  /** The next stream_id that will be tried when we're attempting to
+   * construct a new AP stream originating at this circuit. */
   uint16_t next_stream_id;
+  /** How many relay data cells can we package (read from edge streams)
+   * on this circuit before we receive a circuit-level sendme cell asking
+   * for more? */
   int package_window;
+  /** How many relay data cells will we deliver (write to edge streams)
+   * on this circuit? When deliver_window gets low, we send some
+   * circuit-level sendme cells to indicate that we're willing to accept
+   * more. */
   int deliver_window;
 
-  uint16_t p_circ_id; /* circuit identifiers */
+  /** The circuit_id used in the previous (backward) hop of this circuit. */
+  uint16_t p_circ_id;
+  /** The circuit_id used in the next (forward) hop of this circuit. */
   uint16_t n_circ_id;
 
-  crypto_cipher_env_t *p_crypto; /* used only for intermediate hops */
+  /** The cipher used by intermediate hops for cells heading toward the
+   * OP */
+  crypto_cipher_env_t *p_crypto;
+  /** The cipher used by intermediate hops for cells heading away from
+   * the OP */
   crypto_cipher_env_t *n_crypto;
 
-  crypto_digest_env_t *p_digest; /* for integrity checking, */
-  crypto_digest_env_t *n_digest; /* intermediate hops only */
+  /** The integrity-checking digest used by intermediate hops, for
+   * cells packaged here and heading towards the OP.
+   */
+  crypto_digest_env_t *p_digest;
+  /** The integrity-checking digest used by intermediate hops, for
+   * cells packaged at the OP and arriving here.
+   */
+  crypto_digest_env_t *n_digest;
 
+  /** Build state for this circuit. It includes the intended path
+   * length, the chosen exit router, rendezvous information, etc.
+   */
   cpath_build_state_t *build_state;
+  /** The doubly-linked list of crypt_path_t entries, one per hop,
+   * for this circuit. This includes ciphers for each hop,
+   * integrity-checking digests for each hop, and package/delivery
+   * windows for each hop.
+   *
+   * The cpath field is defined only when we are the circuit's origin.
+   */
   crypt_path_t *cpath;
 
-  char onionskin[ONIONSKIN_CHALLENGE_LEN]; /**< for storage while onionskin
+  char onionskin[ONIONSKIN_CHALLENGE_LEN]; /**< For storage while onionskin
                                             * pending */
   char handshake_digest[DIGEST_LEN]; /**< Stores KH for intermediate hops */
 
@@ -686,14 +723,14 @@ struct circuit_t {
   uint8_t purpose; /**< Why are we creating this circuit? */
 
   /**
-   * rend_query holds y portion of y.onion (nul-terminated) if purpose
-   * is C_INTRODUCING or C_ESTABLISH_REND, or is a C_GENERAL for a
-   * hidden service, or is S_*.
+   * The rend_query field holds y portion of y.onion (nul-terminated)
+   * if purpose is C_INTRODUCING or C_ESTABLISH_REND, or is a C_GENERAL
+   * for a hidden service, or is S_*.
    */
   char rend_query[REND_SERVICE_ID_LEN+1];
 
-  /** rend_pk_digest holds a hash of location-hidden service's PK if
-   * purpose is INTRO_POINT or S_ESTABLISH_INTRO or S_RENDEZVOUSING
+  /** The rend_pk_digest field holds a hash of location-hidden service's
+   * PK if purpose is INTRO_POINT or S_ESTABLISH_INTRO or S_RENDEZVOUSING
    */
   char rend_pk_digest[DIGEST_LEN];
 
@@ -786,10 +823,15 @@ typedef struct {
 struct socks_request_t {
   char socks_version; /**< Which version of SOCKS did the client use? */
   int replylen; /**< Length of <b>reply</b> */
-  char reply[MAX_SOCKS_REPLY_LEN]; /* XXXX ARMA */
+  char reply[MAX_SOCKS_REPLY_LEN]; /**< Write an entry into this string if
+                                    * we want to specify our own socks reply,
+                                    * rather than using the default socks4 or
+                                    * socks5 socks reply. We use this for the
+                                    * two-stage socks5 handshake.
+                                    */
   int has_finished; /**< Has the SOCKS handshake finished? */
-  char address[MAX_SOCKS_ADDR_LEN]; /* XXXX ARMA */
-  uint16_t port; /* XXXX ARMA */
+  char address[MAX_SOCKS_ADDR_LEN]; /**< What address did the client ask to connect to? */
+  uint16_t port; /**< What port did the client ask to connect to? */
 };
 
 /* all the function prototypes go here */
@@ -823,7 +865,6 @@ void assert_buf_ok(buf_t *buf);
 /********************************* circuit.c ***************************/
 
 extern char *circuit_state_to_string[];
-void circuit_remove(circuit_t *circ);
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 void circuit_close_all_marked(void);
 void circuit_free(circuit_t *circ);

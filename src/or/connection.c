@@ -4,7 +4,8 @@
 
 /**
  * \file connection.c
- * \brief foo
+ * \brief General high-level functions to handle reading and writing
+ * on connections.
  **/
 
 #include "or.h"
