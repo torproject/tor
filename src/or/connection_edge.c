@@ -352,6 +352,7 @@ void connection_ap_attach_pending(void)
 static int connection_ap_handshake_process_socks(connection_t *conn) {
   socks_request_t *socks;
   int sockshere;
+  int addresstype;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP);
@@ -397,9 +398,24 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     }
   }
 
-  /* this call _modifies_ socks->address iff it's a hidden-service request */
-  if (rend_parse_rendezvous_address(socks->address) < 0) {
-    /* normal request */
+  /* Parse the address provided by SOCKS.  Modify it in-place if it
+   * specifies a hidden-service (.onion) or particular exit node (.exit).
+   */
+  addresstype = parse_address(socks->address);
+
+  if (addresstype == 1) {
+    /* .exit -- modify conn to specify the exit node. */
+    char *s = strrchr(socks->address,'.');
+    if (!s || s[1] == '\0') {
+      log_fn(LOG_WARN,"Malformed address '%s.exit'. Refusing.", socks->address);
+      return -1;
+    }
+    conn->chosen_exit_name = tor_strdup(s+1);
+    *s = 0;
+  }
+
+  if (addresstype != 2) {
+    /* not a hidden-service request (i.e. normal or .exit) */
     if (socks->command == SOCKS_COMMAND_CONNECT && socks->port == 0) {
       log_fn(LOG_WARN,"Application asked to connect to port 0. Refusing.");
       return -1;
@@ -447,7 +463,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       }
     }
   }
-  return 0;
+  return 0; /* unreached but keeps the compiler happy */
 }
 
 /** Iterate over the two bytes of stream_id until we get one that is not
@@ -991,18 +1007,34 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP);
   tor_assert(conn->socks_request);
+  tor_assert(exit);
 
   log_fn(LOG_DEBUG,"considering nickname %s, for address %s / port %d:",
          exit->nickname, conn->socks_request->address,
          conn->socks_request->port);
+
+  /* If a particular exit node has been requested for the new connection,
+   * make sure the exit node of the existing circuit matches exactly.
+   */
+  if (conn->chosen_exit_name) {
+    if (router_get_by_nickname(conn->chosen_exit_name) != exit) {
+      /* doesn't match */
+      log_fn(LOG_DEBUG,"Requested node '%s', considering node '%s'. No.",
+             conn->chosen_exit_name, exit->nickname);
+      return 0;
+    }
+  }
+
   if (conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
     /* 0.0.8 servers have buggy resolve support. */
-    return tor_version_as_new_as(exit->platform, "0.0.9pre1");
+    if (!tor_version_as_new_as(exit->platform, "0.0.9pre1"))
+      return 0;
+  } else {
+    addr = client_dns_lookup_entry(conn->socks_request->address);
+    if (router_compare_addr_to_addr_policy(addr, conn->socks_request->port,
+                                           exit->exit_policy) < 0)
+      return 0;
   }
-  addr = client_dns_lookup_entry(conn->socks_request->address);
-  if (router_compare_addr_to_addr_policy(addr, conn->socks_request->port,
-                                         exit->exit_policy) < 0)
-    return 0;
   return 1;
 }
 
@@ -1209,5 +1241,42 @@ set_exit_redirects(smartlist_t *lst)
     smartlist_free(redirect_exit_list);
   }
   redirect_exit_list = lst;
+}
+
+/** If address is of the form "y.onion" with a well-formed handle y:
+ *     Put a '\0' after y, lower-case it, and return 2.
+ *
+ * If address is of the form "y.exit":
+ *     Put a '\0' after y and return 1.
+ *
+ * Otherwise:
+ *     Return 0 and change nothing.
+ */
+int parse_address(char *address) {
+    char *s;
+    char query[REND_SERVICE_ID_LEN+1];
+
+    s = strrchr(address,'.');
+    if (!s) return 0; /* no dot, thus normal */
+    if (!strcasecmp(s+1,"exit")) {
+      *s = 0; /* null-terminate it */
+      return 1; /* .exit */
+    }
+    if (strcasecmp(s+1,"onion"))
+      return 0; /* neither .exit nor .onion, thus normal */
+
+    /* so it is .onion */
+    *s = 0; /* null-terminate it */
+    if (strlcpy(query, address, REND_SERVICE_ID_LEN+1) >= REND_SERVICE_ID_LEN+1)
+      goto failed;
+    tor_strlower(query);
+    if (rend_valid_service_id(query)) {
+      tor_strlower(address);
+      return 2; /* success */
+    }
+failed:
+    /* otherwise, return to previous state and return 0 */
+    *s = '.';
+    return 0;
 }
 

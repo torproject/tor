@@ -439,30 +439,3 @@ char *rend_client_get_random_intro(char *query) {
   return nickname;
 }
 
-/** If address is of the form "y.onion" with a well-formed handle y,
- * then put a '\0' after y, lower-case it, and return 0.
- * Else return -1 and change nothing.
- */
-int rend_parse_rendezvous_address(char *address) {
-  char *s;
-  char query[REND_SERVICE_ID_LEN+1];
-
-  s = strrchr(address,'.');
-  if (!s) return -1; /* no dot */
-  if (strcasecmp(s+1,"onion"))
-    return -1; /* not .onion */
-
-  *s = 0; /* null terminate it */
-  if (strlcpy(query, address, REND_SERVICE_ID_LEN+1) >= REND_SERVICE_ID_LEN+1)
-    goto failed;
-  tor_strlower(query);
-  if (rend_valid_service_id(query)) {
-    tor_strlower(address);
-    return 0; /* success */
-  }
-failed:
-  /* otherwise, return to previous state and return -1 */
-  *s = '.';
-  return -1;
-}
-
