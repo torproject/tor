@@ -37,5 +37,8 @@ Description: anonymizing overlay network for TCP
  and web proxies like privoxy come with socks support, so you don't need an
  extra socks client if you want to use Tor with them.
  .
+ This package enables only the onion proxy by default, but it can be configured
+ as a relay (server) node.
+ .
  Remember that this is alpha code, and the network is very small -- Tor will
  not provide anonymity currently.
