@@ -216,7 +216,7 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
                              circ->n_circ_id, circ->p_circ_id);
       }
     }
-    if (!circ->n_conn &&
+    if (!circ->n_conn && circ->n_addr && circ->n_port &&
         circ->n_addr == conn->addr &&
         circ->n_port == conn->port &&
         !memcmp(conn->identity_digest, circ->n_conn_id_digest, DIGEST_LEN)) {
