@@ -149,6 +149,14 @@ option multiple times; each time applies to the service using the most recent
 hiddenservicedir.  By default, this option maps the virtual port to the
 same port on 127.0.0.1.  You may override the target port, address, or both
 by specifying a target of addr, port, or addr:port.
+.TP
+\fBhiddenservicenodes \fR\fInickname,nicknamme,...\fP
+If possible, use the specified nodes as introduction points for the hidden
+service.
+.TP
+\fBhiddenserviceexcludenodes \fR\fInickname,nicknamme,...\fP
+Do not use the specified nodes as introduction points for the hidden
+service.
 
 .SH FILES
 .TP
