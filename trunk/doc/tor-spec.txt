@@ -330,8 +330,9 @@ which reveals the downstream node.
    To create a new anonymized TCP connection, the OP sends a
    RELAY_BEGIN data cell with a payload encoding the address and port
    of the destination host.  The stream ID is zero.  The payload format is:
-         ADDRESS | ':' | PORT | '\000'
-   where ADDRESS may be a DNS hostname, or an IPv4 address in
+         NEWSTREAMID | ADDRESS | ':' | PORT | '\000'
+   where NEWSTREAMID is the newly generated Stream ID to use for
+   this stream, ADDRESS may be a DNS hostname, or an IPv4 address in
    dotted-quad format; and where PORT is encoded in decimal.
 
    Upon receiving this packet, the exit node resolves the address as
