@@ -235,6 +235,7 @@ seems overkill (and/or insecure) based on the threat model we've picked.
 % this para should probably move to the scalability / directory system. -RD
 
 \section{Threat model}
+\label{sec:threat-model}
 
 Tor does not attempt to defend against a global observer.  Any adversary who
 can see a user's connection to the Tor network, and who can see the
@@ -243,8 +244,8 @@ correlation between the two connections to confirm the user's chosen
 communication partners.  Defeating this attack would seem to require
 introducing a prohibitive degree of traffic padding between the user and the
 network, or introducing an unacceptable degree of latency (but see
-\ref{subsec:mid-latency} below).  Thus, Tor only
-attempts to defend against external observers who can observe both sides of a
+Section \ref{subsec:mid-latency}).  Thus, Tor only
+attempts to defend against external observers who cannot observe both sides of a
 user's connection.
 
 Against internal attackers, who sign up Tor servers, the situation is more
@@ -279,7 +280,7 @@ complicating factors:
 % Sure. In fact, better off, since they seem to scale more easily. -rd
 
 in practice tor's threat model is based entirely on the goal of dispersal
-and diversity. george and steven describe an attack \cite{draft} that
+and diversity. george and steven describe an attack \cite{attack-tor-oak05} that
 lets them determine the nodes used in a circuit; yet they can't identify
 alice or bob through this attack. so it's really just the endpoints that
 remain secure. and the enclave model seems particularly threatened by
@@ -317,43 +318,75 @@ Tor's interaction with other services on the Internet.
 
 \subsection{Image and security}
 
-Image: substantial non-infringing uses. Image is a security parameter,
-since it impacts user base and perceived sustainability.
+A growing field of papers argue that usability for anonymity systems
+contributes directly to their security, because how usable the system
+is impacts the possible anonymity set~\cite{back01,econymics}. Or
+conversely, an unusable system attracts few users and thus can't provide
+much anonymity.
 
-good uses are kept private, bad uses are publicized. not good.
+This phenomenon has a second-order effect: knowing this, users should
+choose which anonymity system to use based in part on how usable
+\emph{others} will find it, in order to get the protection of a larger
+anonymity set. Thus we might replace the adage ``usability is a security
+parameter''~\cite{back01} with a new one: ``perceived usability is a
+security parameter.'' From here we can better understand the effects
+of publicity and advertising on security: the more convincing your
+advertising, the more likely people will believe you have users, and thus
+the more users you will attract. Perversely, over-hyped systems (if they
+are not too broken) may be a better choice than modestly promoted ones,
+if the hype attracts more users~\cite{usability-network-effect}.
 
-Public perception, and thus advertising, is a security parameter.
+So it follows that we should come up with ways to accurately communicate
+the available security levels to the user, so she can make informed
+decisions. Dresden's JAP project aims to do this, by including a
+comforting `anonymity meter' dial in the software's graphical interface,
+giving the user an impression of the level of protection for her current
+traffic.
 
-users do not correlate to anonymity. arma will do this.
-Communicating security levels to the user
-A Tor gui, how jap's gui is nice but does not reflect the security
-they provide.
+However, there's a catch. For users to share the same anonymity set,
+they need to act like each other. An attacker who can distinguish
+a given user's traffic from the rest of the traffic will not be
+distracted by other users on the network. For high-latency systems like
+Mixminion, where the threat model is based on mixing messages with each
+other, there's an arms race between end-to-end statistical attacks and
+counter-strategies~\cite{statistical-disclosure,minion-design,e2e-traffic,trickle02}.
+But for low-latency systems like Tor, end-to-end \emph{traffic
+confirmation} attacks~\cite{danezis-pet2004,SS03,defensive-dropping}
+allow an attacker who watches or controls both ends of a communication
+to use statistics to correlate packet timing and volume, quickly linking
+the initiator to her destination. This is why Tor's threat model is
+based on preventing the adversary from observing both the initiator and
+the responder.
 
-\subsection{Usability and bandwidth and sustainability and incentives}
+Like Tor, the current JAP implementation does not pad connections
+(apart from using small fixed-size cells for transport). In fact,
+its cascade-based network toplogy may be even more vulnerable to these
+attacks, because the network has fewer endpoints. JAP was born out of
+the ISDN mix design~\cite{isdn-mixes}, where padding made sense because
+every user had a fixed bandwidth allocation, but in its current context
+as a general Internet web anonymizer, adding sufficient padding to JAP
+would be prohibitively expensive.\footnote{Even if they could find and
+maintain extra funding to run higher-capacity nodes, our experience with
+users suggests that many users would not accept the increased per-user
+bandwidth requirements, leading to an overall much smaller user base. But
+see Section \ref{subsec:mid-latency}.} Therefore, since under this threat
+model the number of concurrent users does not seem to have much impact
+on the anonymity provided, we suggest that JAP's anonymity meter is not
+correctly communicating security levels to its users.
 
-low-pain-threshold users go away until all users are willing to use it
-
-Sustainability. Previous attempts have been commercial which we think
-adds a lot of unnecessary complexity and accountability. Freedom didn't
-collect enough money to pay its servers; JAP bandwidth is supported by
-continued money, and they periodically ask what they will do when it
-dries up.
-
-"outside of academia, jap has just lost, permanently"
-
-Usability: fc03 paper was great, except the lower latency you are the
-less useful it seems it is.
-
-[nick will write this section]
+On the other hand, while the number of active concurrent users may not
+matter as much as we'd like, it still helps to have some other users
+who use the network. We investigate this issue in the next section.
 
 \subsection{Reputability}
 
-Yet another factor in the safety of a given network is its reputability:
-the perception of its social value based on its current users. If I'm
-the only user of a system, it might be socially accepted, but I'm not
-getting any anonymity. Add a thousand Communists, and I'm anonymous,
-but everyone thinks I'm a Commie. Add a thousand random citizens (cancer
-survivors, privacy enthusiasts, and so on) and now I'm hard to profile.
+Another factor impacting the network's security is its reputability:
+the perception of its social value based on its current user base. If I'm
+the only user who has ever downloaded the software, it might be socially
+accepted, but I'm not getting much anonymity. Add a thousand Communists,
+and I'm anonymous, but everyone thinks I'm a Commie. Add a thousand
+random citizens (cancer survivors, privacy enthusiasts, and so on)
+and now I'm harder to profile.
 
 The more cancer survivors on Tor, the better for the human rights
 activists. The more script kiddies, the worse for the normal users. Thus,
@@ -370,10 +403,29 @@ involved when it comes to anonymity. To follow the above example, a
 network used entirely by cancer survivors might welcome some Communists
 onto the network, though of course they'd prefer a wider variety of users.
 
+Reputability becomes even more tricky in the case of privacy networks,
+since the good uses of the network (such as publishing by journalists in
+dangerous countries) are typically kept private, whereas network abuses
+or other problems tend to be more widely publicized.
+
 The impact of public perception on security is especially important
 during the bootstrapping phase of the network, where the first few
 widely publicized uses of the network can dictate the types of users it
 attracts next.
+
+\subsection{Usability and bandwidth and sustainability and incentives}
+
+low-pain-threshold users go away until all users are willing to use it
+
+Sustainability. Previous attempts have been commercial which we think
+adds a lot of unnecessary complexity and accountability. Freedom didn't
+collect enough money to pay its servers; JAP bandwidth is supported by
+continued money, and they periodically ask what they will do when it
+dries up.
+
+"outside of academia, jap has just lost, permanently"
+
+[nick will write this section]
 
 \subsection{Tor and file-sharing}
 
