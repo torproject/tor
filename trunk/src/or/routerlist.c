@@ -111,15 +111,13 @@ static int
 router_get_list_from_string_impl(const char **s, routerlist_t **dest,
                                  int n_good_nicknames,
                                  const char **good_nickname_lst);
-static int
+int /* Exposed for unit tests */
 router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
                                           crypto_pk_env_t *pkey);
 static int
 router_add_exit_policy(routerinfo_t *router, directory_token_t *tok);
 static int
 router_resolve_routerlist(routerlist_t *dir);
-
-
 
 static int router_get_hash_impl(const char *s, char *digest,
                                 const char *start_str, const char *end_str);
@@ -575,7 +573,7 @@ static int parse_time(const char *cp, time_t *t)
  * resulting routerlist in *dest, freeing the old value if necessary.
  * If pkey is provided, we check the directory signature with pkey.
  */
-static int
+int /* Should be static; exposed for unit tests */
 router_get_routerlist_from_directory_impl(const char *str, 
                                           routerlist_t **dest,
                                           crypto_pk_env_t *pkey)

@@ -26,7 +26,7 @@ typedef struct fingerprint_entry_t {
 static fingerprint_entry_t fingerprint_list[MAX_ROUTERS_IN_DIR];
 static int n_fingerprints = 0;
 
-static void
+void /* Should be static; exposed for testing */
 add_fingerprint_to_dir(const char *nickname, const char *fp)
 {
   int i;
