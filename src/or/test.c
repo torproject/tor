@@ -39,7 +39,7 @@ setup_directory(void)
 
 #ifdef MS_WINDOWS
   // XXXX
-  tor_snprintf(temp_dir, sizeof(temp_dir), "c:\\windows\\temp\\tor_test_%d", (int)getpid()); 
+  tor_snprintf(temp_dir, sizeof(temp_dir), "c:\\windows\\temp\\tor_test_%d", (int)getpid());
   r = mkdir(temp_dir);
 #else
   tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d", (int) getpid());
@@ -78,7 +78,7 @@ remove_directory(void)
     perror("Can't remove");
     return;
   }
-  while(1) {
+  while (1) {
     size_t dlen = strlen(findData.cFileName)+strlen(temp_dir)+16;
     char *deleteable = tor_malloc(dlen);
     tor_snprintf(deleteable, dlen, "%s\\%s", temp_dir, findData.cFileName);
