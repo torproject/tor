@@ -7,6 +7,8 @@
 
 #include "or.h"
 
+static circuit_t *find_intro_circuit(routerinfo_t *router, const char *pk_digest);
+
 /* Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
  */
@@ -32,8 +34,9 @@ typedef struct rend_service_t {
   crypto_pk_env_t *private_key;
   char service_id[REND_SERVICE_ID_LEN+1];
   char pk_digest[DIGEST_LEN];
-  smartlist_t *intro_nodes; /* list of nicknames */
+  smartlist_t *intro_nodes; /* list of nicknames for intro points we _want_ */
   rend_service_descriptor_t *desc;
+  int desc_is_dirty;
 } rend_service_t;
 
 /* A list of rend_service_t's for services run on this OP.
@@ -231,7 +234,9 @@ int rend_config_services(or_options_t *options)
 static void rend_service_update_descriptor(rend_service_t *service)
 {
   rend_service_descriptor_t *d;
+  circuit_t *circ;
   int i,n;
+  routerinfo_t *router;
 
   if (service->desc) {
     rend_service_descriptor_free(service->desc);
@@ -240,17 +245,23 @@ static void rend_service_update_descriptor(rend_service_t *service)
   d = service->desc = tor_malloc(sizeof(rend_service_descriptor_t));
   d->pk = crypto_pk_dup_key(service->private_key);
   d->timestamp = time(NULL);
-  n = d->n_intro_points = smartlist_len(service->intro_nodes);
+  n = smartlist_len(service->intro_nodes);
+  d->n_intro_points = 0;
   d->intro_points = tor_malloc(sizeof(char*)*n);
   for (i=0; i < n; ++i) {
-    d->intro_points[i] = tor_strdup(smartlist_get(service->intro_nodes, i));
+    router = router_get_by_nickname(smartlist_get(service->intro_nodes, i));
+    circ = find_intro_circuit(router, service->pk_digest);
+    if (circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
+      /* We have an entirely established intro circuit. */
+      d->intro_points[d->n_intro_points++] = tor_strdup(router->nickname);
+    }
   }
 }
 
 /* Load and/or generate private keys for all hidden services.  Return 0 on
  * success, -1 on failure.
  */
-int rend_service_init_keys(void)
+int rend_service_load_keys(void)
 {
   int i;
   rend_service_t *s;
@@ -529,14 +540,23 @@ rend_service_intro_is_ready(circuit_t *circuit)
   circuit_mark_for_close(circuit);
 }
 
-/* Handle an intro_established cell. */
+/* Handle an INTRO_ESTABLISHED cell. */
 int
 rend_service_intro_established(circuit_t *circuit, const char *request, int request_len)
 {
+  rend_service_t *service;
+
   if (circuit->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
     log_fn(LOG_WARN, "received INTRO_ESTABLISHED cell on non-intro circuit");
     goto err;
   }
+  service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);
+  if (!service) {
+    log_fn(LOG_WARN, "Unknown service on introduction circuit %d",
+           circuit->n_circ_id);
+    goto err;
+  }
+  service->desc_is_dirty = 1;
   circuit->purpose = CIRCUIT_PURPOSE_S_INTRO;
 
   return 0;
@@ -653,6 +673,31 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   return NULL;
 }
 
+static void
+upload_service_descriptor(rend_service_t *service)
+{
+  char *desc;
+  int desc_len;
+  if (!service->desc_is_dirty)
+    return;
+
+  /* Update the descriptor. */
+  rend_service_update_descriptor(service);
+  if (rend_encode_service_descriptor(service->desc,
+                                     service->private_key,
+                                     &desc, &desc_len)<0) {
+    log_fn(LOG_WARN, "Couldn't encode service descriptor; not uploading");
+    return;
+  }
+
+  /* Post it to the dirservers */
+  router_post_to_dirservers(DIR_PURPOSE_UPLOAD_RENDDESC, desc, desc_len);
+  tor_free(desc);
+
+  service->desc_is_dirty = 0;
+}
+
+
 /* XXXX Make this longer once directories remember service descriptors across
  * restarts.*/
 #define MAX_SERVICE_PUBLICATION_INTERVAL (15*60)
@@ -660,18 +705,16 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
 /* For every service, check how many intro points it currently has, and:
  *  - Pick new intro points as necessary.
  *  - Launch circuits to any new intro points.
- *  - Upload a fresh service descriptor if anything has changed.
  */
-void rend_services_init(void) {
+void rend_services_introduce(void) {
   int i,j,r;
   routerinfo_t *router;
   routerlist_t *rl;
   rend_service_t *service;
-  char *desc, *intro;
-  int changed, prev_intro_nodes, desc_len;
+  char *intro;
+  int changed, prev_intro_nodes;
   smartlist_t *intro_routers, *exclude_routers;
   int n_old_routers;
-  time_t now;
 
   router_get_routerlist(&rl);
   intro_routers = smartlist_create();
@@ -686,7 +729,7 @@ void rend_services_init(void) {
     assert(service);
     changed = 0;
 
-    /* Find out which introduction points we really have for this service. */
+    /* Find out which introduction points we have in progress for this service. */
     for (j=0;j< smartlist_len(service->intro_nodes); ++j) {
       router = router_get_by_nickname(smartlist_get(service->intro_nodes,j));
       if (!router || !find_intro_circuit(router,service->pk_digest)) {
@@ -728,25 +771,9 @@ void rend_services_init(void) {
      * time around the loop. */
     smartlist_truncate(exclude_routers, n_old_routers);
 
-    /* If there's no need to republish, stop here. */
-    now = time(NULL);
-    if (!changed && service->desc &&
-        service->desc->timestamp+MAX_SERVICE_PUBLICATION_INTERVAL >= now)
+    /* If there's no need to launch new circuits, stop here. */
+    if (!changed)
       continue;
-
-    /* Update the descriptor. */
-    rend_service_update_descriptor(service);
-    if (rend_encode_service_descriptor(service->desc,
-                                       service->private_key,
-                                       &desc, &desc_len)<0) {
-
-      log_fn(LOG_WARN, "Couldn't encode service descriptor; not uploading");
-      continue;
-    }
-
-    /* Post it to the dirservers */
-    router_post_to_dirservers(DIR_PURPOSE_UPLOAD_RENDDESC, desc, desc_len);
-    tor_free(desc);
 
     /* Establish new introduction points. */
     for (j=prev_intro_nodes; j < smartlist_len(service->intro_nodes); ++j) {
@@ -759,6 +786,21 @@ void rend_services_init(void) {
   }
   smartlist_free(intro_routers);
   smartlist_free(exclude_routers);
+}
+
+void
+rend_services_upload(int force)
+{
+  int i;
+  rend_service_t *service;
+
+  for (i=0; i< smartlist_len(rend_service_list); ++i) {
+    service = smartlist_get(rend_service_list, i);
+    if (force)
+      service->desc_is_dirty = 1;
+    if (service->desc_is_dirty)
+      upload_service_descriptor(service);
+  }
 }
 
 void

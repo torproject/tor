@@ -546,7 +546,7 @@ void circuit_build_needed_circs(time_t now) {
   connection_ap_attach_pending();
 
   /* make sure any hidden services have enough intro points */
-  rend_services_init();
+  rend_services_introduce();
 
   circ = circuit_get_youngest_clean_open(CIRCUIT_PURPOSE_C_GENERAL);
 

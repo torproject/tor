@@ -354,6 +354,8 @@ static void run_scheduled_events(time_t now) {
       /* We're a directory; dump any old descriptors. */
       dirserv_remove_old_servers();
     }
+    /* Force an upload of our descriptors every DirFetchPostPeriod seconds. */
+    rend_services_upload(1);
     rend_cache_clean(); /* should this go elsewhere? */
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
   }
@@ -392,6 +394,10 @@ static void run_scheduled_events(time_t now) {
 
   /* 5. And remove any marked circuits... */
   circuit_close_all_marked();
+
+  /* 6. And upload service descriptors for any services whose intro points
+   *    have changed in the last second. */
+  rend_services_upload(0);
 
 #if 0
   /* 6. and blow away any connections that need to die. can't do this later
@@ -501,7 +507,7 @@ static int do_hup(void) {
     exit(1);
   }
   /* reload keys as needed for rendezvous services. */
-  if (rend_service_init_keys()<0) {
+  if (rend_service_load_keys()<0) {
     log_fn(LOG_ERR,"Error reloading rendezvous service keys");
     exit(1);
   }
@@ -518,7 +524,7 @@ static int do_hup(void) {
     }
     /* Since we aren't fetching a directory, we won't retry rendezvous points
      * when it gets in.  Try again now. */
-    rend_services_init();
+    rend_services_introduce();
   } else {
     /* fetch a new directory */
     directory_initiate_command(router_pick_directory_server(),
@@ -547,7 +553,7 @@ static int do_main_loop(void) {
 
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */
-  if (init_keys() < 0 || rend_service_init_keys() < 0) {
+  if (init_keys() < 0 || rend_service_load_keys() < 0) {
     log_fn(LOG_ERR,"Error initializing keys; exiting");
     return -1;
   }
