@@ -664,6 +664,10 @@ test_util() {
   test_eq(u16, 0);
   tor_free(cp);
 
+  /* Test tor_parse_long. */
+  test_eq(10L, tor_parse_long("10",10,0,100,NULL,NULL));
+  test_eq(0L, tor_parse_long("10",10,50,100,NULL,NULL));
+
   /* XXXX test older functions. */
   smartlist_free(sl);
 }
@@ -919,7 +923,7 @@ test_dir_format()
   ex2.policy_type = EXIT_POLICY_REJECT;
   ex2.addr = 18 << 24;
   ex2.msk = 0xFF000000u;
-  ex2.prt_min = ex1.prt_max = 24;
+  ex2.prt_min = ex2.prt_max = 24;
   ex2.next = NULL;
   r2.address = "tor.tor.tor";
   r2.addr = 0x0a030201u; /* 10.3.2.1 */
