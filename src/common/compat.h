@@ -191,5 +191,11 @@ void tor_mutex_acquire(tor_mutex_t *m);
 void tor_mutex_release(tor_mutex_t *m);
 void tor_mutex_free(tor_mutex_t *m);
 
+#ifdef MS_WINDOWS
+#define TOR_IS_MULTITHREADED 1
+#else
+#undef TOR_IS_MULTITHREADED
+#endif
+
 #endif
 
