@@ -399,7 +399,7 @@ void _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
 
   if (circ->marked_for_close) {
     log(LOG_WARN,"Duplicate call to circuit_mark_for_close at %s:%d"
-        " (first at %s:%d)", line, file,
+        " (first at %s:%d)", file, line,
         circ->marked_for_close_file, circ->marked_for_close);
     return;
   }
@@ -457,7 +457,6 @@ void _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
     circuit_mark_for_close(circ->rend_splice);
     circ->rend_splice = NULL;
   }
-  return 0;
 }
 
 /** Verify that cpath layer <b>cp</b> has all of its invariants
