@@ -118,8 +118,10 @@ N - Document where OSX, windows logs go, where stuff is installed.
 N - Vet all pending installer patches
     - Win32 installer plus privoxy, sockscap/freecap, etc.
     - Vet win32 systray helper code
-N - Make OSX man pages go into man directory.
-  - Make logs do into platform default locations.
+  o Make OSX man pages go into man directory.
+N . Make logs go into platform default locations.
+    o OSX
+    - 
 
  Correctness
    - Mark bugs for 010 or post 010 in bugtracker.
