@@ -421,6 +421,7 @@ typedef struct {
    char *RouterFile;
    char *Nickname;
    char *Address;
+   char *ExitPolicy;
    double CoinWeight;
    int Daemon;
    int ORPort;

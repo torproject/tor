@@ -1038,6 +1038,7 @@ policy_read_failed:
  */
 int router_compare_to_exit_policy(connection_t *conn) {
   struct exit_policy_t *tmpe;
+  struct in_addr in;
 
   assert(desc_routerinfo);
 
@@ -1045,10 +1046,14 @@ int router_compare_to_exit_policy(connection_t *conn) {
     assert(tmpe->address);
     assert(tmpe->port);
 
-    /* Totally ignore the address field of the exit policy, for now. */
-
-    if(!strcmp(tmpe->port,"*") || atoi(tmpe->port) == conn->port) {
-      log_fn(LOG_INFO,"Port '%s' matches '%d'. %s.",
+    if(inet_aton(tmpe->address,&in) == 0) { /* malformed IP. reject. */
+      log_fn(LOG_WARNING,"Malformed IP %s in exit policy. Rejecting.",tmpe->address);
+      return -1;
+    }
+    if(conn->addr == ntohl(in.s_addr) &&
+       (!strcmp(tmpe->port,"*") || atoi(tmpe->port) == conn->port)) {
+      log_fn(LOG_INFO,"Address '%s' matches '%s' and port '%s' matches '%d'. %s.",
+          tmpe->address, conn->address,
           tmpe->port, conn->port,
           tmpe->policy_type == EXIT_POLICY_ACCEPT ? "Accepting" : "Rejecting");
       if(tmpe->policy_type == EXIT_POLICY_ACCEPT)
@@ -1057,7 +1062,6 @@ int router_compare_to_exit_policy(connection_t *conn) {
         return -1;
     }
   }
-
   return 0; /* accept all by default. */
 }
 
