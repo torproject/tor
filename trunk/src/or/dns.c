@@ -266,6 +266,7 @@ static void dns_found_answer(char *question, uint32_t answer) {
   }
 
   assert(resolve->state == CACHE_STATE_PENDING);
+  /* XXX sometimes this still gets triggered. :( */
 
   resolve->answer = ntohl(answer);
   if(resolve->answer)
