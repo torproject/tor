@@ -122,10 +122,10 @@ void onion_pending_remove(circuit_t *circ) {
 
 /* given a response payload and keys, initialize, then send a created cell back */
 int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys) {
-  unsigned char iv[CIPHER_IV_LEN];
   cell_t cell;
+  crypt_path_t *tmp_cpath;
 
-  memset(iv, 0, CIPHER_IV_LEN);
+  tmp_cpath = tor_malloc_zero(sizeof(tmp_cpath));
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_CREATED;
@@ -139,21 +139,16 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
 
   log_fn(LOG_INFO,"init digest forward 0x%.8x, backward 0x%.8x.",
          (unsigned int)*(uint32_t*)(keys), (unsigned int)*(uint32_t*)(keys+20));
-  circ->n_digest = crypto_new_digest_env();
-  crypto_digest_add_bytes(circ->n_digest, keys, DIGEST_LEN);
-  circ->p_digest = crypto_new_digest_env();
-  crypto_digest_add_bytes(circ->p_digest, keys+DIGEST_LEN, DIGEST_LEN);
-
-  log_fn(LOG_DEBUG,"init cipher forward 0x%.8x, backward 0x%.8x.",
-         (unsigned int)*(uint32_t*)(keys+40), (unsigned int)*(uint32_t*)(keys+40+16));
-  if (!(circ->n_crypto = crypto_create_init_cipher(keys+40,iv,0))) {
-    log_fn(LOG_WARN,"Cipher initialization failed (n).");
+  if (circuit_init_cpath_crypto(tmp_cpath, keys, 0)<0) {
+    log_fn(LOG_WARN,"Circuit initialization failed");
+    tor_free(tmp_cpath);
     return -1;
   }
-  if (!(circ->p_crypto = crypto_create_init_cipher(keys+40+16,iv,1))) {
-    log_fn(LOG_WARN,"Cipher initialization failed (p).");
-    return -1;
-  }
+  circ->n_digest = tmp_cpath->f_digest;
+  circ->n_crypto = tmp_cpath->f_crypto;
+  circ->p_digest = tmp_cpath->b_digest;
+  circ->p_crypto = tmp_cpath->b_crypto;
+  tor_free(tmp_cpath);
 
   memcpy(circ->handshake_digest, cell.payload+DH_KEY_LEN, DIGEST_LEN);
 
@@ -553,15 +548,12 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
                   crypto_dh_env_t **handshake_state_out,
                   char *onion_skin_out) /* Must be ONIONSKIN_CHALLENGE_LEN bytes */
 {
-  char iv[16];
   char *challenge = NULL;
   crypto_dh_env_t *dh = NULL;
-  crypto_cipher_env_t *cipher = NULL;
   int dhbytes, pkbytes;
 
   *handshake_state_out = NULL;
   memset(onion_skin_out, 0, ONIONSKIN_CHALLENGE_LEN);
-  memset(iv, 0, 16);
 
   if (!(dh = crypto_dh_new()))
     goto err;
@@ -570,20 +562,9 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   pkbytes = crypto_pk_keysize(dest_router_key);
   assert(dhbytes == 128);
   assert(pkbytes == 128);
-  challenge = (char *)tor_malloc_zero(ONIONSKIN_CHALLENGE_LEN);
+  challenge = (char *)tor_malloc_zero(ONIONSKIN_CHALLENGE_LEN-CIPHER_KEY_LEN);
 
-  if (crypto_rand(16, challenge))
-    goto err;
-
-  /* You can't just run around RSA-encrypting any bitstream: if it's
-   * greater than the RSA key, then OpenSSL will happily encrypt,
-   * and later decrypt to the wrong value.  So we set the first bit
-   * of 'challenge' to 0.  This means that our symmetric key is really
-   * only 127 bits.
-   */
-  challenge[0] &= 0x7f;
-
-  if (crypto_dh_get_public(dh, challenge+16, dhbytes))
+  if (crypto_dh_get_public(dh, challenge, dhbytes))
     goto err;
 
 #ifdef DEBUG_ONION_SKINS
@@ -602,29 +583,18 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
 #endif
 
   /* set meeting point, meeting cookie, etc here. Leave zero for now. */
-
-  cipher = crypto_create_init_cipher(challenge, iv, 1);
-
-  if (!cipher)
-    goto err;
-
-  if (crypto_pk_public_encrypt(dest_router_key, challenge, pkbytes,
-                               onion_skin_out, PK_NO_PADDING)==-1)
-    goto err;
-
-  if (crypto_cipher_encrypt(cipher, challenge+pkbytes, ONIONSKIN_CHALLENGE_LEN-pkbytes,
-                            onion_skin_out+pkbytes))
+  if (crypto_pk_public_hybrid_encrypt(dest_router_key, challenge,
+                                      ONIONSKIN_CHALLENGE_LEN-CIPHER_KEY_LEN,
+                                      onion_skin_out, PK_NO_PADDING)<0)
     goto err;
 
   tor_free(challenge);
-  crypto_free_cipher_env(cipher);
   *handshake_state_out = dh;
 
   return 0;
  err:
   tor_free(challenge);
   if (dh) crypto_dh_free(dh);
-  if (cipher) crypto_free_cipher_env(cipher);
   return -1;
 }
 
@@ -641,40 +611,15 @@ onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes *
                             int key_out_len)
 {
   char challenge[ONIONSKIN_CHALLENGE_LEN];
-  char iv[16];
   crypto_dh_env_t *dh = NULL;
   crypto_cipher_env_t *cipher = NULL;
-  int pkbytes;
   int len;
   char *key_material=NULL;
 
-  memset(iv, 0, 16);
-  pkbytes = crypto_pk_keysize(private_key);
-
-  if (crypto_pk_private_decrypt(private_key,
-                                onion_skin, pkbytes,
-                                challenge, PK_NO_PADDING) == -1)
+  if (crypto_pk_private_hybrid_decrypt(private_key,
+                                       onion_skin, ONIONSKIN_CHALLENGE_LEN,
+                                       challenge, PK_NO_PADDING)<0)
     goto err;
-
-#ifdef DEBUG_ONION_SKINS
-  printf("Server: client symkey:");
-  PA(buf+0,16);
-  puts("");
-#endif
-
-  cipher = crypto_create_init_cipher(challenge, iv, 0);
-
-  if (crypto_cipher_decrypt(cipher, onion_skin+pkbytes, ONIONSKIN_CHALLENGE_LEN-pkbytes,
-                            challenge+pkbytes))
-    goto err;
-
-#ifdef DEBUG_ONION_SKINS
-  printf("Server: client g^x:");
-  PA(buf+16,3);
-  printf("...");
-  PA(buf+141,3);
-  puts("");
-#endif
 
   dh = crypto_dh_new();
   if (crypto_dh_get_public(dh, handshake_reply_out, DH_KEY_LEN))
@@ -688,17 +633,17 @@ onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes *
   puts("");
 #endif
 
-  key_material = tor_malloc(20+key_out_len);
-  len = crypto_dh_compute_secret(dh, challenge+16, DH_KEY_LEN,
-                                 key_material, 20+key_out_len);
+  key_material = tor_malloc(DIGEST_LEN+key_out_len);
+  len = crypto_dh_compute_secret(dh, challenge, DH_KEY_LEN,
+                                 key_material, DIGEST_LEN+key_out_len);
   if (len < 0)
     goto err;
 
   /* send back H(K|0) as proof that we learned K. */
-  memcpy(handshake_reply_out+DH_KEY_LEN, key_material, 20);
+  memcpy(handshake_reply_out+DH_KEY_LEN, key_material, DIGEST_LEN);
 
   /* use the rest of the key material for our shared keys, digests, etc */
-  memcpy(key_out, key_material+20, key_out_len);
+  memcpy(key_out, key_material+DIGEST_LEN, key_out_len);
 
 #ifdef DEBUG_ONION_SKINS
   printf("Server: key material:");

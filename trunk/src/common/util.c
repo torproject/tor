@@ -162,6 +162,15 @@ void hex_encode(const char *from, int fromlen, char *to)
   *to = '\0';
 }
 
+const char *hex_str(const char *from, int fromlen)
+{
+  static char buf[65];
+  if (fromlen>(sizeof(buf)-1)/2)
+    fromlen = (sizeof(buf)-1)/2;
+  hex_encode(from,fromlen,buf);
+  return buf;
+}
+
 /*
  * A simple smartlist interface to make an unordered list of acceptable
  * nodes and then choose a random one.

@@ -95,6 +95,7 @@ void set_uint32(char *cp, uint32_t v);
 #endif
 
 void hex_encode(const char *from, int fromlen, char *to);
+const char *hex_str(const char *from, int fromlen);
 
 typedef struct smartlist_t smartlist_t;
 
