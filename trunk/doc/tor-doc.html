@@ -120,6 +120,33 @@ gives users more robustness against curious telcos and brute force
 attacks.
 </ul>
 
+<p>Other things to note:
+<ul>
+<li>Tor has built-in support for rate limiting; see BandwidthRate
+and BandwidthBurst config options. Further, if you have
+lots of capacity but don't want to spend that many bytes per
+month, check out the Accounting and Hibernation features. See <a
+href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>
+for details.</li>
+<li>It's fine if the server goes offline sometimes. The directories
+notice this quickly and stop advertising the server. Just try to make
+sure it's not too often, since connections using the server when it
+disconnects will break.</li>
+<li>We can handle servers with dynamic IPs just fine, as long as the
+server itself knows its IP. If your server is behind a NAT and it doesn't
+know its public IP (e.g. it has an IP of 192.168.x.y), then we can't use it
+as a server yet. (If you want to port forward and set your Address
+config option to use dyndns DNS voodoo to get around this, feel free. If
+you write a howto, <a href="mailto:tor-volunteer@freehaven.net">even
+better</a>.)</li>
+<li>Your server will passively estimate and advertise its recent
+bandwidth capacity.
+Clients choose paths weighted by this capacity, so high-bandwidth
+servers will attract more paths than low-bandwidth ones. That's why
+having even low-bandwidth servers is useful too.</li>
+</ul>
+</p>
+
 <p>You can read more about setting up Tor as a
 server <a href="#server">below</a>.</p>
 
@@ -207,34 +234,9 @@ service url</a>).</p>
 <p>We're looking for people with reasonably reliable Internet connections,
 that have at least 20 kilobytes/s each way. If you frequently have a
 lot of packet loss or really high latency, we can't handle your server
-yet. Otherwise, please help out!
-</p>
-
-<p>Other things to note:
-<ul>
-<li>Tor has built-in support for rate limiting; see BandwidthRate
-and BandwidthBurst config options. Further, if you have
-lots of capacity but don't want to spend that many bytes per
-month, check out the Accounting and Hibernation features. See <a
-href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>
-for details.</li>
-<li>It's fine if the server goes offline sometimes. The directories
-notice this quickly and stop advertising the server. Just try to make
-sure it's not too often, since connections using the server when it
-disconnects will break.</li>
-<li>We can handle servers with dynamic IPs just fine, as long as the
-server itself knows its IP. If your server is behind a NAT and it doesn't
-know its public IP (e.g. it has an IP of 192.168.x.y), then we can't use it
-as a server yet. (If you want to port forward and set your Address
-config option to use dyndns DNS voodoo to get around this, feel free. If
-you write a howto, <a href="mailto:tor-volunteer@freehaven.net">even
-better</a>.)</li>
-<li>Your server will passively estimate and advertise its recent
-bandwidth capacity.
-Clients choose paths weighted by this capacity, so high-bandwidth
-servers will attract more paths than low-bandwidth ones. That's why
-having even low-bandwidth servers is useful too.</li>
-</ul>
+yet. Otherwise, please help out! (If you want to read more about whether
+you should be a server, check out <a href="#client-or-server">the
+section above</a>.
 </p>
 
 <p>To set up a Tor server, do the following steps after installing Tor.
