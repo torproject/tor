@@ -45,8 +45,8 @@ N  - Windows installer
    - Review website; make important info more prominent.
 
 Beyond 0.0.9:
-   - Check getrlimit(RLIMIT_[N]OFILE), sysconf(OPEN_MAX) on start-up, and
-     warn if we're running as a server with a low limit.    
+   o Check getrlimit(RLIMIT_[N]OFILE), sysconf(OPEN_MAX) on start-up, and
+     warn if we're running as a server with a low limit.
    - Implement If-Modified-Since for directories.
 N  - Handle rendezvousing with unverified nodes.
      - Specify: Stick rendezvous point's key in INTRODUCE cell.
