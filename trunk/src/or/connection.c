@@ -305,8 +305,8 @@ int connection_handle_read(connection_t *conn) {
            /* XXX I suspect pollerr may make Windows not get to this point. :( */
            router_forget_router(conn->addr,conn->port); 
              /* FIXME i don't think router_forget_router works. */
-         }
-         return -1;
+        }
+        return -1;
       }
       if(connection_process_inbuf(conn) < 0) {
         //log_fn(LOG_DEBUG,"connection_process_inbuf returned %d.",retval);
@@ -322,12 +322,23 @@ int connection_handle_read(connection_t *conn) {
 
 int connection_read_to_buf(connection_t *conn) {
   int read_result;
-  int at_most = global_read_bucket;
+  int at_most;
 
-  if(connection_speaks_cells(conn)) {
-    assert(conn->receiver_bucket >= 0);
+  assert((connection_speaks_cells(conn) && conn->receiver_bucket >= 0) ||
+         (!connection_speaks_cells(conn) && conn->receiver_bucket < 0));
+
+  if(options.LinkPadding) {
+    at_most = global_read_bucket;
   } else {
-    assert(conn->receiver_bucket < 0);
+    /* do a rudimentary round-robin so one connection can't hog a thickpipe */
+    if(connection_speaks_cells(conn)) {
+      at_most = 10*(CELL_NETWORK_SIZE);
+    } else {
+      at_most = 10*(CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE);
+    }
+
+    if(at_most > global_read_bucket)
+      at_most = global_read_bucket;
   }
 
   if(conn->receiver_bucket >= 0 && at_most > conn->receiver_bucket)
@@ -348,7 +359,7 @@ int connection_read_to_buf(connection_t *conn) {
       /* If we're not in 'open' state here, then we're never going to finish the
        * handshake, because we'll never increment the receiver_bucket. But we
        * can't check for that here, because the buf we just read might have enough
-       * on it to finish the handshake. So we check for that in conn_read().
+       * on it to finish the handshake. So we check for that in connection_handle_read().
        */
     }
   }

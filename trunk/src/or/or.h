@@ -34,7 +34,7 @@
 #include "../common/fakepoll.h"
 #endif
 #ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
+#include <sys/types.h> /* Must be included before sys/stat.h for Ultrix */
 #endif
 #ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
@@ -489,7 +489,7 @@ void buf_free(char *buf);
 int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, int *reached_eof);
   /* grab from s, put onto buf, return how many bytes read */
 int read_to_buf_tls(tor_tls *tls, int at_most, char **buf, int *buflen, int *buf_datalen);
-  /* grab from s, put onto buf, return how many bytes read or a TLS
+  /* grab from tls, put onto buf, return how many bytes read or a TLS
    * status (same status codes as tor_tls_read) */
 
 int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen);
