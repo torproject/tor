@@ -127,7 +127,7 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
       break;
     }
   }
-  
+
   if (!ent) { /* No such server known */
     log_fn(LOG_INFO,"no fingerprint found for %s",router->nickname);
     return 0;

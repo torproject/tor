@@ -1,9 +1,6 @@
-/*
- * log.h
- * Logging facilities.
- * 
- * Matej Pfajfar <mp292@cam.ac.uk>
- */
+/* Copyright 2001,2002,2003 Roger Dingledine, Matej Pfajfar. */
+/* See LICENSE for licensing information */
+/* $Id$ */
 
 #ifndef __LOG_H
 

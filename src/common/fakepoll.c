@@ -1,4 +1,4 @@
-/* Copyright 2002,2003 Nick Mathewson, Roger Dingledine, Naval Research Lab. */
+/* Copyright 2002,2003 Nick Mathewson, Roger Dingledine */
 /* See LICENSE for licensing information */
 /* $Id$ */
 
