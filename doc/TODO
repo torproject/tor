@@ -135,9 +135,9 @@ Rendezvous service:
             o End-to-end communication for location-hidden services
         - a section in the man pages: how to configure hidden services
         o let bob use himself as a rendezvous point
-        - let bob choose himself as intro point
-        - let bob replenish his intro points and republish
-        - alice retries introduction and rendezvous a few times?
+        o let bob choose himself as intro point
+        o let bob replenish his intro points and republish
+        o alice retries introduction and rendezvous a few times?
         - should alice ever try to refresh her service desc cache entries?
           should she expire them after e.g. 15 mins?
         - race condition: alice has the serverdesc in her cache, she opens
@@ -149,7 +149,9 @@ Rendezvous service:
           force an upgrade? simply be more robust against useless nodes?
         o should expire rend streams when too much time has passed
         - should make failed rend/intro circs count toward alice's
-          num_failed circs, to prevent madness when we're offline
+          num_failed circs, to prevent madness when we're offline (But
+          don't count failed rend circs toward Bob's total, or Alice
+          can bork him.)
 
 On-going
         . Better comments for functions!
@@ -159,7 +161,7 @@ On-going
         . Update the spec so it matches the code
 
 Mid-term:
-	- Refactor: add own routerinfo to routerlist.  Right now, only
+	o Refactor: add own routerinfo to routerlist.  Right now, only
 	  router_get_by_nickname knows about 'this router', as a hack to
 	  get circuit_launch_new to do the right thing.
         - Rotate tls-level connections -- make new ones, expire old ones.
@@ -209,7 +211,7 @@ NICK    . Daemonize and package
                 . Port to:
                         o Linux
                         o BSD
-                        . Solaris
+                        o Solaris
                         o Cygwin
                         . Win32
                         o OS X
