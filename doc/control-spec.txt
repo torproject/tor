@@ -4,12 +4,10 @@ $Id$
 
 0. Scope
 
-(8 Aug 2004) This document describes an implementation-specific protocol to
-be implemented in a future version of Tor.  It is not part of the Tor onion
+This document describes an implementation-specific protocol that is used
+for other programs (such as frontend user-interfaces) to communicate
+with a locally running Tor process.  It is not part of the Tor onion
 routing protocol.
-
-The protocol described in this document is used for other programs (such as
-frontend user-interfaces) to communicate with a locally running Tor process.
 
 We're trying to be pretty extensible here, but not infinitely
 forward-compatible.
@@ -19,11 +17,12 @@ forward-compatible.
 TC is a bidirectional message-based protocol.  It assumes an underlying
 stream for communication between a controlling process (the "client") and
 a Tor process (the "server").  The stream may be implemented via TCP,
-TLS-over-TCP, a Unix-domain socket, or so on.  For security, the stream
-should not be observable by untrusted parties.
+TLS-over-TCP, a Unix-domain socket, or so on, but it must provide
+reliable in-order delivery.  For security, the stream should not be
+accessible by untrusted parties.
 
-In TC, the client and server send typed variable-length messages to one
-another over the underlying stream.  By default, all messages from the server
+In TC, the client and server send typed variable-length messages to each
+other over the underlying stream.  By default, all messages from the server
 are in response to messages from the client.  Some client requests, however,
 will cause the server to send messages to the client indefinitely far into
 the future.
@@ -39,7 +38,7 @@ The messages take the following format:
    Body   [Length octets]
 
 Upon encountering a recognized Type, implementations behave as described in
-section 3 below.  If the type is not recognized, servers respond with an
+section 3 below.  If the type is not recognized, servers respond with a
 "STAT" message (code UNRECOGNIZED; see 3.1 below), and clients simply ignore
 the message.
 
@@ -79,12 +78,12 @@ the message.
   When a configuration options takes multiple values, or when multiple
   configuration keys form a context-sensitive group (see below), then
   setting _any_ of the options in a SETCONF command is taken to reset all of
-  the others.  For example, if two ORBindAddress values are provided,
+  the others.  For example, if two ORBindAddress values are configured,
   and a SETCONF command arrives containing a single ORBindAddress value, the
   new command's value replaces the two old values.
 
-  To _remove_ all settings for a given option entirely, send a single line
-  containing the key and no value.
+  To _remove_ all settings for a given option entirely (and go back to its
+  default value), send a single line containing the key and no value.
 
 3.4. GETCONF (Type 0x0003)
 
@@ -96,20 +95,16 @@ the message.
   key-value pairs are returned in order.
 
   Some options are context-sensitive, and depend on other options with
-  different keywords.  These cannot be fetched directly.  Instead, clients
-  should use the "LogOptions" virtual keyword to get all LogFile, LogLevel,
-  and SysLog option settings; and "HiddenServiceOptions" to get all
-  HiddenServiceDir, HiddenServicePort, HiddenServiceNodes, and
-  HiddenServiceExcludeNodes options.
+  different keywords.  These cannot be fetched directly.  Currently there
+  is only one such option: clients should use the "HiddenServiceOptions"
+  virtual keyword to get all HiddenServiceDir, HiddenServicePort,
+  HiddenServiceNodes, and HiddenServiceExcludeNodes option settings.
 
 3.5. CONFVALUE (Type 0x0004)
 
-  Sent in response to a GETCONF message; contains a list of list of "Key
-  Value\n" (A non-whitespace keyword, a single space, a non-NL value, a NL)
+  Sent in response to a GETCONF message; contains a list of "Key Value\n"
+  (A non-whitespace keyword, a single space, a non-NL value, a NL)
   strings.
-
-  [XXXX note that you'll get more keys than you expect with things like
-  loglevel.]
 
 3.6. SETEVENTS (Type 0x0005)
 
@@ -123,9 +118,9 @@ the message.
 
 3.7. EVENT (Type 0x0006)
 
-  Sent from the server to the client when an event has occurred, and the
+  Sent from the server to the client when an event has occurred and the
   client has requested that kind of event.  The body contains a 2-byte
-  event code, followed by additional event-dependent information.  Event
+  event code followed by additional event-dependent information.  Event
   codes are:
       0x0001 -- Circuit status changed
 
@@ -152,8 +147,9 @@ the message.
                    (Launched=0,connected=1,failed=2,closed=3)
                 OR nickname/identity [NUL-terminated]
 
-      0x0004 -- Bandwidth used in last N seconds. (N=1? 5?)
+      0x0004 -- Bandwidth used in last N seconds.
 
+                Number of seconds covered in interval [2 octets]
                 Bytes read [4 octets]
                 Bytes written [4 octets]
 
@@ -167,9 +163,15 @@ the message.
   that client is really the admin for this Tor process.  The server responds
   with DONE or ERROR.
 
+3.9. SAVECONF (Type 0x0008)
+
+  Sent from the client to the server. Instructs the server to write out
+  its config options into its torrc. Server returns DONE if successful, or
+  ERROR if it can't write the file or some other error occurs.
+
 4. Implementation notes
 
-There are four ways we could authenticate, for now:
+4.1. There are four ways we could authenticate, for now:
 
  1) Listen on 127.0.0.1; trust all local users.
 
@@ -186,10 +188,18 @@ There are four ways we could authenticate, for now:
  4) Store a salted-and-hashed passphrase in Tor's configuration.  Use the
     passphrase for authentication.  Trust all users who know the passphrase.
 
+  On Win32, our only options are 1, 3, and 4.  Since the semantics for 2
+  and 3 are so similar, we chose to not support 2, and just always bind
+  on 127.0.0.1.  We've implemented 1, 3, and 4.
 
-On Win32, our only options are 1, 3, and 4.  Since the semantics for 2 and 3
-are so similar, I'm recommending that we not support 2, and just always bind
-on 127.0.0.1.  I've implemented 3 and 4; 1 would be trivial.  -NM
+  By default, the Tor client accepts authentication approach #1. If
+  the controller wants Tor to demand more authentication, it should use
+  setconf and saveconf to configure Tor to demand more next time.
+
+4.2. Don't let the buffer get too big.
+
+  If you ask for lots of events, and 16MB of them queue up on the buffer,
+  the Tor process will close the socket.
 
 -----------
 (for emacs)

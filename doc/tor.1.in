@@ -1,4 +1,4 @@
-.TH TOR 1 "November 2003" "TOR"
+.TH TOR 1 "November 2004" "TOR"
 .SH NAME
 tor \- The second-generation onion router
 .SH SYNOPSIS
@@ -28,9 +28,9 @@ Other options can be specified either on the commandline (\fI--option
 value\fR), or in the configuration file (\fIoption value\fR).
 Options are case-insensitive.
 .TP
-\fBLog \fR\fIminSeverity\fR-\fImaxSeverity\fR \fBstderr\fR|\fBstdout\fR|\fBsyslog\fR\fP
+\fBLog \fR\fIminSeverity\fR[-\fImaxSeverity\fR] \fBstderr\fR|\fBstdout\fR|\fBsyslog\fR\fP
 Send all messages between \fIminSeverity\fR and \fImaxSeverity\fR to
-the standard output stream, the standard error strem, or to the system
+the standard output stream, the standard error stream, or to the system
 log. (The "syslog" value is only supported on Unix.)  Recognized
 severity levels are debug, info, notice, warn, and err.  If only one
 severity level is given, all messages of that level or higher will be
@@ -39,13 +39,13 @@ sent to the listed destination.
 \fBLog \fR\fIminSeverity\fR-\fImaxSeverity\fR \fBfile\fR \fIFILENAME\fP
 As above, but send log messages to the listed filename.  The "Log"
 option may appear more than once in a configuration file.  Messages
-messaes are sent to all the logs that match their severity level.
+are sent to all the logs that match their severity level.
 .TP
-\fBBandwidthRate \fR\fINUM\fP
+\fBBandwidthRateBytes \fR\fINUM\fP
 A token bucket limits the average incoming bandwidth on this node to NUM bytes per second. (Default: 800000)
 .TP
-\fBBandwidthBurst \fR\fINUM\fP
-Limit the maximum token bucket size (also known as the burst) to NUM bytes. (Default: 10000000)
+\fBBandwidthBurstBytes \fR\fINUM\fP
+Limit the maximum token bucket size (also known as the burst) to NUM bytes. (Default: 50000000)
 .TP
 \fBDirServer \fR\fIaddress:port fingerprint\fP
 Use a nonstandard authoritative directory server at the provided
@@ -57,14 +57,19 @@ directory servers: moria1, moria2, and tor26.
 \fBGroup \fR\fIGID\fP
 On startup, setgid to this user.
 .TP
+\fBHttpProxy\fR \fIhost\fR[:\fIport\fR]\fP
+If set, Tor will make all its directory requests through this host:port,
+rather than connecting directly to any directory servers.
+.TP
 \fBKeepalivePeriod \fR\fINUM\fP
-To keep firewalls from expiring connections, send a padding keepalive cell on open connections every NUM seconds. (Default: 300)
+To keep firewalls from expiring connections, send a padding keepalive
+cell on open connections every NUM seconds. (Default: 300)
 .TP
 \fBMaxConn \fR\fINUM\fP
-Maximum number of simultaneous connections allowed.  You probably don't need
-to adjust this. (Default: 900)
+Maximum number of simultaneous sockets allowed.  You probably don't need
+to adjust this. (Default: 1024)
 .TP
-\fBOutboundBindAddress \fR\fIP\fP
+\fBOutboundBindAddress \fR\fIIP\fP
 Make all outbound connections originate from the IP address specified.  This
 is only useful when you have multiple network interfaces, and you want all
 of Tor's outgoing connections to use a single one.
@@ -72,7 +77,7 @@ of Tor's outgoing connections to use a single one.
 \fBPIDFile \fR\fIFILE\fP
 On startup, write our PID to FILE. On clean shutdown, remove FILE.
 .TP
-\fBRunAsDaemon \fR\fI0|1\fP
+\fBRunAsDaemon \fR\fB0\fR|\fB1\fR\fP
 If 1, Tor forks and daemonizes to the background. (Default: 0)
 .TP
 \fBUser \fR\fIUID\fP
@@ -82,7 +87,7 @@ On startup, setuid to this user.
 .PP
 The following options are useful only for clients (that is, if \fBSOCKSPort\fP is non-zero):
 .TP
-\fBAllowUnverifiedNodes \fR\fIentry|exit|middle|introduction|rendezvous,...\fP
+\fBAllowUnverifiedNodes\fR \fBentry\fR|\fBexit\fR|\fBmiddle\fR|\fBintroduction\fR|\fBrendezvous\fR|...\fP
 Where on our circuits should we allow Tor servers that the directory
 servers haven't authenticated as "verified"?  (Default: middle,rendezvous.)
 \fBdirfetchpostperiod \fR\fIseconds\fP
@@ -92,10 +97,10 @@ running as a server, Tor also re-uploads information about itself to
 the directory servers.  (Tor also uploads this information whenever it 
 changes.)  (Default: 600.)
 .TP
-\fBClientOnly \fR\fI0|1\fP
+\fBClientOnly \fR\fB0\fR|\fB1\fR\fP
 If set to 1, Tor will under no circumstances run as a server.  (Usually,
 you don't need to set this; Tor is pretty smart at figuring out whether
-you are reliable and high-bandwith enough to be a good server.)
+you are reliable and high-bandwidth enough to be a good server.)
 .TP
 \fBEntryNodes \fR\fInickname,nickname,...\fP
 A list of preferred nodes to use for the first hop in the circuit, if possible.
@@ -106,23 +111,23 @@ A list of preferred nodes to use for the last hop in the circuit, if possible.
 \fBExcludeNodes \fR\fInickname,nickname,...\fP
 A list of nodes to never use when building a circuit.
 .TP
-\fBStrictExitNodes \fR\fI0|1\fP
+\fBStrictExitNodes \fR\fB0\fR|\fB1\fR\fP
 If 1, Tor will never use any nodes besides those listed in "exitnodes" for
 the last hop of a circuit.
 .TP
-\fBStrictEntryNodes \fR\fI0|1\fP
+\fBStrictEntryNodes \fR\fB0\fR|\fB1\fR\fP
 If 1, Tor will never use any nodes besides those listed in "entrynodes" for
 the first hop of a circuit.
 .TP
-\fBFascistFirewall \fR\fI0|1\fP
+\fBFascistFirewall \fR\fB0\fR|\fB1\fR\fP
 If 1, Tor will only create outgoing connections to ORs running on ports that
-your firewall allows (defaults to 80 and 443; see firewallports).  This will
+your firewall allows (defaults to 80 and 443; see \fBFirewallPorts\fR).  This will
 allow you to run Tor as a client behind a firewall with restrictive policies,
 but will not allow you to run as a server behind such a firewall.
 .TP
 \fBFirewallPorts \fR\fIPORTS\fP
 A list of ports that your firewall allows you to connect to.  Only used when
-fascistfirewall is set. (Default: 80, 443.)
+\fBFascistFirewall\fR is set. (Default: 80, 443.)
 .TP
 \fB
 \fBNewCircuitPeriod \fR\fINUM\fP
@@ -242,7 +247,7 @@ considered.
 .PP
 The following options are useful only for directory servers (that is, if \fBDirPort\fP is non-zero):
 .TP
-\fBAuthoritativeDirectory \fR\fI0|1\fP
+\fBAuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
 When this option is set to 1, Tor operates as an authoritative
 directory server.  Instead of caching the directory, it generates its
 own list of good servers, signs it, and sends that to the clients.
@@ -269,7 +274,7 @@ pull down the directory learn whether they need to upgrade.  This
 option can appear multiple times: the values from multiple lines are
 spliced together.
 .TP
-\fBRunTesting \fR\fI0|1\fP
+\fBRunTesting \fR\fB0\fR|\fB1\fR\fP
 If set to 1, Tor tries to build circuits through all of the servers it
 knows about, so it can tell which are up and which are down.  This
 option is only useful for authoritative directories, so you probably
@@ -316,7 +321,8 @@ The tor process stores keys and other data here.
 
 .SH SEE ALSO
 .BR privoxy (1),
-.BR tsocks (1)
+.BR tsocks (1),
+.BR torify (1)
 
 .BR http://freehaven.net/tor/
 
