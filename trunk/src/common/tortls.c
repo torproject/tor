@@ -623,7 +623,8 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t **identity_key)
   if (!(chain = SSL_get_peer_cert_chain(tls->ssl)))
     goto done;
   if (sk_X509_num(chain) != 2) {
-    log_fn(LOG_WARN,"Unexpected number of certificates in chain");
+    log_fn(LOG_WARN,"Unexpected number of certificates in chain (%d)",
+           sk_X509_num(chain));
     goto done;
   }
   for (i=0; i<2; ++i) {
