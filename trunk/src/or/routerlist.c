@@ -551,12 +551,12 @@ static int parse_time(const char *cp, time_t *t)
 #else 
   unsigned int year=0, month=0, day=0, hour=100, minute=100, second=100;
   if (sscanf(cp, "%u-%u-%u %u:%u:%u", &year, &month, 
-	        &day, &hour, &minute, &second) < 6) {
-	log_fn(LOG_WARN, "Published time was unparseable"); return -1;
+                &day, &hour, &minute, &second) < 6) {
+        log_fn(LOG_WARN, "Published time was unparseable"); return -1;
   }
   if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
-	  hour > 23 || minute > 59 || second > 61) {
-	log_fn(LOG_WARN, "Published time was nonsensical"); return -1;
+          hour > 23 || minute > 59 || second > 61) {
+        log_fn(LOG_WARN, "Published time was nonsensical"); return -1;
   }
   st_tm.tm_year = year;
   st_tm.tm_mon = month-1;
@@ -903,7 +903,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   }
   assert(tok->n_args == 1);
   if (parse_time(tok->args[0], &router->published_on) < 0)
-	  goto err;
+          goto err;
 
   if (!(tok = find_first_by_keyword(tokens, K_ONION_KEY))) {
     log_fn(LOG_WARN, "Missing onion key"); goto err;
