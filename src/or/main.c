@@ -257,6 +257,8 @@ static void conn_read(int i) {
 
   conn = connection_array[i];
   //log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
+ 
+  assert_connection_ok(conn, time(NULL));
 
   if(
       /* XXX does POLLHUP also mean it's definitely broken? */
@@ -272,7 +274,7 @@ static void conn_read(int i) {
       if(i<nfds) { /* we just replaced the one at i with a new one. process it too. */
         conn_read(i);
       }
-    }
+    } else assert_connection_ok(conn, time(NULL));
 }
 
 static void conn_write(int i) {
@@ -284,6 +286,8 @@ static void conn_write(int i) {
   conn = connection_array[i];
   //log_fn(LOG_DEBUG,"socket %d wants to write.",conn->s);
 
+  assert_connection_ok(conn, time(NULL));
+
   if(connection_handle_write(conn) < 0) { /* this connection is broken. remove it. */
     log_fn(LOG_DEBUG,"%s connection broken, removing.", conn_type_to_string[conn->type]);
     connection_remove(conn);
@@ -291,14 +295,14 @@ static void conn_write(int i) {
     if(i<nfds) { /* we just replaced the one at i with a new one. process it too. */
         conn_write(i);
     }
-  }
+  } else assert_connection_ok(conn, time(NULL));
 }
 
 static void check_conn_marked(int i) {
   connection_t *conn;
 
   conn = connection_array[i];
-  assert(conn);
+  assert_connection_ok(conn, time(NULL));
   if(conn->marked_for_close) {
     log_fn(LOG_DEBUG,"Cleaning up connection.");
     if(conn->s >= 0) { /* might be an incomplete edge connection */
@@ -337,7 +341,8 @@ static int prepare_for_poll(void) {
         /* NOTE directory servers do not currently fetch directories.
          * Hope this doesn't bite us later.
          */
-        directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_FETCH);
+        directory_initiate_command(router_pick_directory_server(),
+                                   DIR_CONN_STATE_CONNECTING_FETCH);
         time_to_fetch_directory = now.tv_sec + options.DirFetchPeriod;
       }
     }
@@ -347,7 +352,7 @@ static int prepare_for_poll(void) {
       circuit_launch_new(-1); /* tell it to forget about previous failures */
       circ = circuit_get_newest_open();
       if(!circ || circ->dirty) {
-        log(LOG_INFO,"prepare_for_poll(): Youngest circuit %s; launching replacement.", circ ? "dirty" : "missing");
+        log_fn(LOG_INFO,"Youngest circuit %s; launching replacement.", circ ? "dirty" : "missing");
         circuit_launch_new(0); /* make an onion and lay the circuit */
       }
       time_to_new_circuit = now.tv_sec + options.NewCircuitPeriod;
@@ -384,12 +389,12 @@ static int prepare_for_poll(void) {
         if((!options.OnionRouter && !circuit_get_by_conn(conn)) ||
            (!connection_state_is_open(conn))) {
           /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
-          log(LOG_DEBUG,"prepare_for_poll(): Expiring connection to %d (%s:%d).",
+          log_fn(LOG_DEBUG,"Expiring connection to %d (%s:%d).",
               i,conn->address, conn->port);
           conn->marked_for_close = 1;
         } else {
           /* either a full router, or we've got a circuit. send a padding cell. */
-//          log(LOG_DEBUG,"prepare_for_poll(): Sending keepalive to (%s:%d)",
+//          log_fn(LOG_DEBUG,"Sending keepalive to (%s:%d)",
 //              conn->address, conn->port);
           memset(&cell,0,sizeof(cell_t));
           cell.command = CELL_PADDING;
@@ -498,7 +503,8 @@ static int do_main_loop(void) {
         directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_FETCH);
       }
 
-      reset_logs(); /* close and reopen the log files */
+      /* close and reopen the log files */
+      reset_logs();
 
       please_reset = 0;
     }
