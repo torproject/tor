@@ -550,7 +550,6 @@ int connection_write_to_buf(char *string, int len, connection_t *conn);
 void connection_send_cell(connection_t *conn);
 
 int connection_receiver_bucket_should_increase(connection_t *conn);
-void connection_increment_receiver_bucket (connection_t *conn);
 
 void connection_increment_send_timeval(connection_t *conn);
 void connection_init_timeval(connection_t *conn);
