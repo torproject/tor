@@ -1179,11 +1179,6 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   /* leave n_stream->s at -1, because it's not yet valid */
   n_stream->package_window = STREAMWINDOW_START;
   n_stream->deliver_window = STREAMWINDOW_START;
-  if(connection_add(n_stream) < 0) { /* no space, forget it */
-    log_fn(LOG_WARN,"connection_add failed. Dropping.");
-    connection_free(n_stream);
-    return 0;
-  }
 
   log_fn(LOG_DEBUG,"finished adding conn");
 
@@ -1202,6 +1197,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {
       log_fn(LOG_INFO,"Didn't find rendezvous service (port %d)",n_stream->port);
       connection_mark_for_close(n_stream, END_STREAM_REASON_EXITPOLICY);
+      connection_free(n_stream);
       circuit_mark_for_close(circ); /* knock the whole thing down, somebody screwed up */
       return 0;
     }
@@ -1223,6 +1219,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     case -1: /* resolve failed */
       log_fn(LOG_INFO,"Resolve failed (%s).", n_stream->address);
       connection_mark_for_close(n_stream, END_STREAM_REASON_RESOLVEFAILED);
+      connection_free(n_stream);
       break;
     case 0: /* resolve added to pending list */
       ;
@@ -1244,9 +1241,9 @@ void connection_exit_connect(connection_t *conn) {
   switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
     case -1:
       connection_mark_for_close(conn, END_STREAM_REASON_CONNECTFAILED);
+      connection_free(conn);
       return;
     case 0:
-      connection_set_poll_socket(conn);
       conn->state = EXIT_CONN_STATE_CONNECTING;
 
       connection_watch_events(conn, POLLOUT | POLLIN | POLLERR);
@@ -1256,7 +1253,6 @@ void connection_exit_connect(connection_t *conn) {
     /* case 1: fall through */
   }
 
-  connection_set_poll_socket(conn);
   conn->state = EXIT_CONN_STATE_OPEN;
   if(connection_wants_to_flush(conn)) { /* in case there are any queued data cells */
     log_fn(LOG_WARN,"tell roger: newly connected conn had data waiting!");

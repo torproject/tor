@@ -54,6 +54,7 @@ int has_completed_circuit=0;
 
 int connection_add(connection_t *conn) {
   tor_assert(conn);
+  tor_assert(conn->s >= 0);
 
   if(nfds >= options.MaxConn-1) {
     log_fn(LOG_WARN,"failing because nfds is too high.");
@@ -61,10 +62,10 @@ int connection_add(connection_t *conn) {
   }
 
   conn->poll_index = nfds;
-  connection_set_poll_socket(conn);
   connection_array[nfds] = conn;
 
   /* zero these out here, because otherwise we'll inherit values from the previously freed one */
+  poll_array[nfds].fd = conn->s;
   poll_array[nfds].events = 0;
   poll_array[nfds].revents = 0;
 
@@ -74,10 +75,6 @@ int connection_add(connection_t *conn) {
       CONN_TYPE_TO_STRING(conn->type), conn->s, nfds);
 
   return 0;
-}
-
-void connection_set_poll_socket(connection_t *conn) {
-  poll_array[conn->poll_index].fd = conn->s;
 }
 
 /* Remove the connection from the global list, and remove the

@@ -365,10 +365,11 @@ static int connection_init_accepted_conn(connection_t *conn) {
   return 0;
 }
 
-/* take conn, make a nonblocking socket; try to connect to
+/* Take conn, make a nonblocking socket; try to connect to
  * addr:port (they arrive in *host order*). If fail, return -1. Else
  * assign s to conn->s: if connected return 1, if eagain return 0.
- * address is used to make the logs useful.
+ * address is used to make the logs useful.  On success, add 'conn' to
+ * the list of polled connections.
  */
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port) {
   int s;
@@ -398,6 +399,8 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
     } else {
       /* it's in progress. set state appropriately and return. */
       conn->s = s;
+      if(connection_add(conn) < 0) /* no space, forget it */
+        return -1;
       log_fn(LOG_DEBUG,"connect in progress, socket %d.",s);
       return 0;
     }
@@ -406,6 +409,8 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
   /* it succeeded. we're connected. */
   log_fn(LOG_INFO,"Connection to %s:%u established.",address,port);
   conn->s = s;
+  if(connection_add(conn) < 0) /* no space, forget it */
+    return -1;
   return 1;
 }
 
