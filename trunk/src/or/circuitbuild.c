@@ -225,7 +225,8 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
     circ->n_port = firsthop->or_port;
 
     if(!n_conn) { /* launch the connection */
-      n_conn = connection_or_connect(firsthop);
+      n_conn = connection_or_connect(firsthop->addr, firsthop->or_port,
+                                     firsthop->identity_digest);
       if(!n_conn) { /* connect failed, forget the whole thing */
         log_fn(LOG_INFO,"connect to firsthop failed. Closing.");
         circuit_mark_for_close(circ);
@@ -255,21 +256,33 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
 /** Find circuits that are waiting on <b>or_conn</b> to become open,
  * if any, and get them to send their create cells forward.
  */
-void circuit_n_conn_open(connection_t *or_conn) {
+void circuit_n_conn_done(connection_t *or_conn, int success) {
   circuit_t *circ;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
     if (circ->marked_for_close)
       continue;
-    if(CIRCUIT_IS_ORIGIN(circ) && circ->n_addr == or_conn->addr && circ->n_port == or_conn->port) {
+    if(!circ->n_conn &&
+       circ->n_addr == or_conn->addr &&
+       circ->n_port == or_conn->port &&
+       !memcmp(or_conn->identity_digest, circ->n_conn_id_digest, DIGEST_LEN)) {
       tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
-      log_fn(LOG_DEBUG,"Found circ %d, sending onion skin.", circ->n_circ_id);
-      circ->n_conn = or_conn;
-      if(circuit_send_next_onion_skin(circ) < 0) {
-        log_fn(LOG_INFO,"send_next_onion_skin failed; circuit marked for closing.");
+      if(!success) { /* or_conn failed; close circ */
+        log_fn(LOG_INFO,"or_conn failed. Closing circ.");
         circuit_mark_for_close(circ);
         continue;
-        /* XXX could this be bad, eg if next_onion_skin failed because conn died? */
+      }
+      log_fn(LOG_DEBUG,"Found circ %d, sending create cell.", circ->n_circ_id);
+      circ->n_conn = or_conn;
+      if(CIRCUIT_IS_ORIGIN(circ)) {
+        if(circuit_send_next_onion_skin(circ) < 0) {
+          log_fn(LOG_INFO,"send_next_onion_skin failed; circuit marked for closing.");
+          circuit_mark_for_close(circ);
+          continue;
+          /* XXX could this be bad, eg if next_onion_skin failed because conn died? */
+        }
+      } else {
+        /* XXX008 pull the create cell out of circ->onionskin, and send it */
       }
     }
   }
@@ -418,24 +431,38 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     n_conn = connection_twin_get_by_addr_port(circ->n_addr,circ->n_port);
     onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
   } else {
-    /* XXXX Roger: in this case, we should create the connnection if
-     * n_conn is null. */
     n_conn = connection_get_by_identity_digest(
                          cell->payload+RELAY_HEADER_SIZE+4+2,
                          CONN_TYPE_OR);
     onionskin = cell->payload+RELAY_HEADER_SIZE+4+2+DIGEST_LEN;
   }
 
-  if(!n_conn || n_conn->type != CONN_TYPE_OR) {
-    /* I've disabled making connections through OPs, but it's definitely
-     * possible here. I'm not sure if it would be a bug or a feature.
-     *
-     * Note also that this will close circuits where the onion has the same
+  if(!n_conn) { /* we should try to open a connection */
+     /* Note that this will close circuits where the onion has the same
      * router twice in a row in the path. I think that's ok.
      */
+    routerinfo_t *router;
     struct in_addr in;
     in.s_addr = htonl(circ->n_addr);
-    log_fn(LOG_INFO,"Next router (%s:%d) not connected. Closing.", inet_ntoa(in), circ->n_port);
+    log_fn(LOG_INFO,"Next router (%s:%d) not connected. Connecting.",
+           inet_ntoa(in), circ->n_port);
+
+    if (old_format) {
+      router = router_get_by_addr_port(circ->n_addr, circ->n_port);
+      if(!router) {
+        log_fn(LOG_INFO,"Next hop is an unknown router. Closing.");
+        circuit_mark_for_close(circ);
+        return 0;
+      }
+    } else { /* new format */
+      router = router_get_by_digest(cell->payload+RELAY_HEADER_SIZE+4+2);
+    }
+
+    /* XXX copy onionskin into circ->onionskin, get into the right
+     * state, launch an or conn to the right place.
+     *...
+     */
+
 #if 0 /* if we do truncateds, no need to kill circ */
     connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
                                  NULL, 0, NULL);

@@ -270,7 +270,7 @@
 #define CIRCUIT_STATE_BUILDING 0
 /** Circuit state: Waiting to process the onionskin. */
 #define CIRCUIT_STATE_ONIONSKIN_PENDING 1
-/** Circuit state: I'm the OP, my firsthop is still connecting. */
+/** Circuit state: I'd like to deliver a create, but my n_conn is still connecting. */
 #define CIRCUIT_STATE_OR_WAIT 2
 /** Circuit state: onionskin(s) processed, ready to send/receive cells. */
 #define CIRCUIT_STATE_OPEN 3
@@ -700,6 +700,8 @@ struct circuit_t {
   connection_t *p_conn;
   /** The OR connection that is next in this circuit. */
   connection_t *n_conn;
+  /** The identity hash of n_conn. */
+  char n_conn_id_digest[DIGEST_LEN];
   /** Linked list of AP streams associated with this circuit. */
   connection_t *p_streams;
   /** Linked list of Exit streams associated with this circuit. */
@@ -754,8 +756,9 @@ struct circuit_t {
    */
   crypt_path_t *cpath;
 
-  char onionskin[ONIONSKIN_CHALLENGE_LEN]; /**< For storage while onionskin
-                                            * pending. */
+  /** For storage while passing to cpuworker, or while n_conn is pending. */
+  char onionskin[ONIONSKIN_CHALLENGE_LEN];
+
   char handshake_digest[DIGEST_LEN]; /**< Stores KH for intermediate hops. */
 
   time_t timestamp_created; /**< When was this circuit created? */
@@ -917,7 +920,7 @@ void circuit_rep_hist_note_result(circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 circuit_t *circuit_establish_circuit(uint8_t purpose,
                                      const char *exit_nickname);
-void circuit_n_conn_open(connection_t *or_conn);
+void circuit_n_conn_done(connection_t *or_conn, int success);
 int circuit_send_next_onion_skin(circuit_t *circ);
 int circuit_extend(cell_t *cell, circuit_t *circ);
 int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse);
@@ -1108,7 +1111,8 @@ int connection_or_process_inbuf(connection_t *conn);
 int connection_or_finished_flushing(connection_t *conn);
 int connection_or_finished_connecting(connection_t *conn);
 
-connection_t *connection_or_connect(routerinfo_t *router);
+connection_t *connection_or_connect(uint32_t addr, uint16_t port,
+                                    const char *id_digest);
 
 int connection_tls_start_handshake(connection_t *conn, int receiving);
 int connection_tls_continue_handshake(connection_t *conn);
