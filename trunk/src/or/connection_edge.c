@@ -1218,11 +1218,11 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                          size_t replylen,
                                          socks5_reply_status_t status) {
   char buf[256];
+  tor_assert(conn->socks_request); /* make sure it's an AP stream */
 
   control_event_stream_status(conn,
      status==SOCKS5_SUCCEEDED ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED);
 
-  tor_assert(conn->socks_request);
   if (conn->socks_request->has_finished) {
     log_fn(LOG_WARN, "Harmless bug: duplicate calls to connection_ap_handshake_socks_reply.");
     return;
