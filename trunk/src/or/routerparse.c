@@ -32,6 +32,7 @@ typedef enum {
   K_ROUTER_SIGNATURE,
   K_PUBLISHED,
   K_RUNNING_ROUTERS,
+  K_ROUTER_STATUS,
   K_PLATFORM,
   K_OPT,
   K_BANDWIDTH,
@@ -106,6 +107,7 @@ static struct {
   { "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY,RTR_ONLY },
   { "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ,RTR_ONLY },
   { "running-routers",     K_RUNNING_ROUTERS,     ARGS,    NO_OBJ,  DIR_ONLY },
+  { "router-status",       K_ROUTER_STATUS,       ARGS,    NO_OBJ,  DIR_ONLY },
   { "ports",               K_PORTS,               ARGS,    NO_OBJ,  RTR_ONLY },
   { "bandwidth",           K_BANDWIDTH,           ARGS,    NO_OBJ,  RTR_ONLY },
   { "platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ,  RTR_ONLY },
@@ -393,9 +395,13 @@ router_parse_routerlist_from_directory(const char *str,
   }
   versions = tok->n_args ? tor_strdup(tok->args[0]) : tor_strdup("");
 
-  if (!(tok = find_first_by_keyword(tokens, K_RUNNING_ROUTERS))) {
-    log_fn(LOG_WARN, "Missing running-routers line from directory.");
-    goto err;
+  /* Prefer router-status, then running-routers. */
+  if (!(tok = find_first_by_keyword(tokens, K_ROUTER_STATUS))) {
+    if (!(tok = find_first_by_keyword(tokens, K_RUNNING_ROUTERS))) {
+      log_fn(LOG_WARN,
+             "Missing running-routers/router-status line from directory.");
+      goto err;
+    }
   }
 
   good_nickname_list = smartlist_create();
@@ -408,9 +414,26 @@ router_parse_routerlist_from_directory(const char *str,
    * router. */
   str = end;
   if (router_parse_list_from_string(&str, &new_dir,
-                                    good_nickname_list, published_on)) {
+                                    good_nickname_list, 
+                                    tok->tp==K_RUNNING_ROUTERS,
+                                    published_on)) {
     log_fn(LOG_WARN, "Error reading routers from directory");
     goto err;
+  }
+
+  /* Determine if my routerinfo is considered verified. */
+  {
+    static int have_warned_about_unverified_status = 0;
+    routerinfo_t *me = router_get_my_routerinfo();
+    if(me) {
+      if(router_update_status_from_smartlist(me, published_on,
+                                             good_nickname_list,
+                                          tok->tp==K_RUNNING_ROUTERS)==1 &&
+        me->is_verified == 0 && !have_warned_about_unverified_status) {
+        log_fn(LOG_WARN,"Dirserver %s lists your server as unverified. Please consider sending your identity fingerprint to the tor-ops.", dirnickname);
+        have_warned_about_unverified_status = 1;
+      }
+    }
   }
 
   new_dir->software_versions = versions; versions = NULL;
@@ -419,20 +442,6 @@ router_parse_routerlist_from_directory(const char *str,
   SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
   smartlist_free(tokens);
   tokens = NULL;
-
-  /* Determine if my routerinfo is considered verified. */
-  {
-    static int have_warned_about_unverified_status = 0;
-    routerinfo_t *me = router_get_my_routerinfo();
-    if(me) {
-      if(router_update_status_from_smartlist(me, published_on,
-                                             good_nickname_list)==1 &&
-        me->is_verified == 0 && !have_warned_about_unverified_status) {
-        log_fn(LOG_WARN,"Dirserver %s lists your server as unverified. Please consider sending your identity fingerprint to the tor-ops.", dirnickname);
-        have_warned_about_unverified_status = 1;
-      }
-    }
-  }
 
   if (*dest)
     routerlist_free(*dest);
@@ -497,14 +506,18 @@ router_parse_runningrouters(const char *str)
      goto err;
   }
 
-  if (!(tok = find_first_by_keyword(tokens, K_RUNNING_ROUTERS))) {
-    log_fn(LOG_WARN, "Missing running-routers line from directory.");
-    goto err;
+  if (!(tok = find_first_by_keyword(tokens, K_ROUTER_STATUS))) {
+    if (!(tok = find_first_by_keyword(tokens, K_RUNNING_ROUTERS))) {
+      log_fn(LOG_WARN,
+             "Missing running-routers/router-status line from directory.");
+      goto err;
+    }
   }
 
   new_list = tor_malloc_zero(sizeof(running_routers_t));
   new_list->published_on = published_on;
   new_list->running_routers = smartlist_create();
+  new_list->is_running_routers_format = (tok->tp == K_RUNNING_ROUTERS);
   for (i=0;i<tok->n_args;++i) {
     smartlist_add(new_list->running_routers, tok->args[i]);
   }
@@ -661,7 +674,7 @@ static int check_directory_signature(const char *digest,
 int
 router_parse_list_from_string(const char **s, routerlist_t **dest,
                               smartlist_t *good_nickname_list,
-                              time_t published_on)
+                              int rr_format, time_t published_on)
 {
   routerinfo_t *router;
   smartlist_t *routers;
@@ -692,16 +705,19 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
       continue;
     }
 
-    if (good_nickname_list) {
-      router_update_status_from_smartlist(router, published_on,
-                                          good_nickname_list);
-    } else {
+    if (!good_nickname_list) {
       router->is_running = 1; /* start out assuming all dirservers are up */
       router->is_verified = 1;
       router->status_set_at = time(NULL);
     }
     smartlist_add(routers, router);
     log_fn(LOG_DEBUG,"just added router #%d.",smartlist_len(routers));
+  }
+
+  if (good_nickname_list) {
+    SMARTLIST_FOREACH(good_nickname_list, const char *, cp,
+           routers_update_status_from_entry(routers, published_on,
+                                            cp, rr_format));
   }
 
   if (*dest)

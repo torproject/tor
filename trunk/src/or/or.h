@@ -621,6 +621,7 @@ typedef struct running_routers_t {
   time_t published_on; /**< When was the list marked as published? */
   /** Which ORs are on the list?  Entries may be prefixed with ! and $. */
   smartlist_t *running_routers;
+  int is_running_routers_format; /**< Are we using the old entry format? */
 } running_routers_t;
 
 /** Holds accounting information for a single step in the layered encryption
@@ -1469,9 +1470,14 @@ int router_exit_policy_rejects_all(routerinfo_t *router);
 void running_routers_free(running_routers_t *rr);
 void routerlist_update_from_runningrouters(routerlist_t *list,
                                            running_routers_t *rr);
+int routers_update_status_from_entry(smartlist_t *routers,
+                                        time_t list_time,
+                                        const char *s,
+                                        int rr_format);
 int router_update_status_from_smartlist(routerinfo_t *r,
                                         time_t list_time,
-                                        smartlist_t *running_list);
+                                        smartlist_t *running_list,
+                                        int rr_format);
 void add_trusted_dir_server(const char *addr, uint16_t port,const char *digest);
 void clear_trusted_dir_servers(void);
 
@@ -1493,6 +1499,7 @@ int router_get_runningrouters_hash(const char *s, char *digest);
 int router_parse_list_from_string(const char **s,
                                   routerlist_t **dest,
                                   smartlist_t *good_nickname_list,
+                                  int rr_format,                        
                                   time_t published);
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,

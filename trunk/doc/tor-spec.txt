@@ -706,7 +706,7 @@ line, they must appear in the "ports" lines.
 
 A Directory begins with a "signed-directory" item, followed by one each of
 the following, in any order: "recommended-software", "published",
-"running-routers".  It may include any number of "opt" items.  After these
+"router-status".  It may include any number of "opt" items.  After these
 items, a directory includes any number of router descriptors, and a single
 "directory-signature" item.
 
@@ -723,7 +723,7 @@ items, a directory includes any number of router descriptors, and a single
         A list of which versions of which implementations are currently
         believed to be secure and compatible with the network.
 
-    "running-routers" comma-separated-list
+    "running-routers" space-separated-list
 
         A description of which routers are currently believed to be up or
         down.  Every entry consists of an optional "!", followed by either an
@@ -733,8 +733,30 @@ items, a directory includes any number of router descriptors, and a single
         If a router's nickname is given, exactly one router of that nickname
         will appear in the directory, and that router is "approved" by the
         directory server.  If a hashed identity key is given, that OR is not
-        "approved".
+        "approved".  [XXXX The 'running-routers' line is only provided for
+        backward compatibility.  New code should parse 'router-status'
+        instead.]
 
+    "router-status" space-separated-list
+
+        A description of which routers are currently believed to be up or
+        down, and which are verified or unverified.  Contains one entry for
+        every router that the directory server knows.  Each entry is of the
+        format:
+
+              !name=$digest  [Verified router, currently not live.]
+              name=$digest   [Verified router, currently live.]
+              !$digest       [Unverified router, currently not live.]
+          or  $digest        [Unverified router, currently live.]
+
+        (where 'name' is the router's nickname and 'digest' is a hexadecimal
+        encoding of the hash of the routers' identity key).
+
+        When parsing this line, clients should only mark a router as
+        'verified' if its nickname AND digest match the one provided.
+        [XXXX 'router-status' was added in 0.0.9pre5; older directory code
+        uses 'running-routers' instead.]
+ 
     "directory-signature" nickname-of-dirserver NL Signature
 
 Note:  The router descriptor for the directory server MUST appear first.
@@ -763,7 +785,7 @@ entries.
 
         (see 7.2 above)
 
-     "running-routers" list
+     "router-status" list
 
         (see 7.2 above)
 

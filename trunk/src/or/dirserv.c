@@ -20,7 +20,8 @@ extern or_options_t options; /**< command-line and config-file options */
 static int the_directory_is_dirty = 1;
 static int runningrouters_is_dirty = 1;
 
-static int list_running_servers(char **nicknames_out);
+static int list_server_status(char **running_routers_out,
+                              char **router_status_out);
 static void directory_remove_unrecognized(void);
 static int dirserv_regenerate_directory(void);
 
@@ -456,71 +457,80 @@ dirserv_load_from_directory_string(const char *dir)
   return 0;
 }
 
-/** Set *<b>nicknames_out</b> to a comma-separated list of all the ORs that we
- * believe are currently running (because we have open connections to
- * them).  Return 0 on success; -1 on error.
+/**
+ * Allocate and return a description of the status of the server <b>desc</b>,
+ * for use in a running-routers line (if <b>rr_format</b> is true), or in a
+ * router-status line (if <b>rr_format</b> is false.  The server is listed 
+ * as running iff <b>is_live</b> is true.
+ */
+static char *
+list_single_server_status(descriptor_entry_t *desc, int is_live,
+                          int rr_format)
+{
+  char buf[MAX_NICKNAME_LEN+HEX_DIGEST_LEN+4]; /* !nickname=$hexdigest\0 */
+  char *cp;
+
+  tor_assert(desc);
+  tor_assert(desc->router);
+
+  cp = buf;
+  if (!is_live) {
+    *cp++ = '!';
+  }
+  if (desc->verified) {
+    strcpy(cp, desc->nickname);
+    cp += strlen(cp);
+    if (!rr_format)
+      *cp++ = '=';
+  }
+  if (!desc->verified || !rr_format) {
+    *cp++ = '$';
+    base16_encode(cp, HEX_DIGEST_LEN+1, desc->router->identity_digest,
+                  DIGEST_LEN);
+  }
+  return tor_strdup(buf);
+}
+
+/** Allocate the contents of a running-routers line and a router-status line,
+ * and store them in *<b>running_routers_out</b> and *<b>router_status_out</b>
+ * respectively.  Return 0 on success, -1 on failure.
  */
 static int
-list_running_servers(char **nicknames_out)
+list_server_status(char **running_routers_out, char **router_status_out)
 {
-  connection_t **connection_array;
-  int n_conns;
-  connection_t *conn;
-  char *cp;
-  int i;
-  size_t length;
-  smartlist_t *nicknames_up, *nicknames_down;
-  char *name;
-  const char *s;
+  /* List of entries in running-routers style: An optional !, then either
+   * a nickname or a dollar-prefixed hexdigest. */
+  smartlist_t *rr_entries; 
+  /* List of entries in a router-status style: An optional !, then an optional
+   * equals-suffixed nickname, then a dollar-prefixed hexdigest. */
+  smartlist_t *rs_entries;
 
-  *nicknames_out = NULL;
-  nicknames_up = smartlist_create();
-  nicknames_down = smartlist_create();
-  smartlist_add(nicknames_up, tor_strdup(options.Nickname));
+  tor_assert(running_routers_out || router_status_out);
 
-  get_connection_array(&connection_array, &n_conns);
-  for (i = 0; i<n_conns; ++i) {
-    conn = connection_array[i];
-    if (conn->type != CONN_TYPE_OR || !conn->nickname)
-      continue; /* only list connections to ORs with certificates. */
-    s = dirserv_get_nickname_by_digest(conn->identity_digest);
-    if (s) {
-      name = tor_strdup(s);
-    } else {
-      name = tor_malloc(HEX_DIGEST_LEN+2);
-      *name = '$';
-      base16_encode(name+1, HEX_DIGEST_LEN+1, conn->identity_digest, DIGEST_LEN);
-    }
+  rr_entries = smartlist_create();
+  rs_entries = smartlist_create();
 
-    if(conn->state == OR_CONN_STATE_OPEN)
-      smartlist_add(nicknames_up, name);
-    else
-      smartlist_add(nicknames_down, name);
-  }
-  length = smartlist_len(nicknames_up) +
-           2*smartlist_len(nicknames_down) + 1;
-           /* spaces + EOS + !'s + 1. */
-  SMARTLIST_FOREACH(nicknames_up, char *, c, length += strlen(c));
-  SMARTLIST_FOREACH(nicknames_down, char *, c, length += strlen(c));
-  *nicknames_out = tor_malloc_zero(length);
-  cp = *nicknames_out;
-  for (i = 0; i<smartlist_len(nicknames_up); ++i) {
-    if (i)
-      strcat(cp, " ");
-    strcat(cp, (char*)smartlist_get(nicknames_up,i)); /* can't overflow */
-    while (*cp)
-      ++cp;
-  }
-  for (i = 0; i<smartlist_len(nicknames_down); ++i) {
-    strcat(cp, " !");
-    strcat(cp, (char*)smartlist_get(nicknames_down,i)); /* can't overflow */
-    while (*cp)
-      ++cp;
-  }
-  SMARTLIST_FOREACH(nicknames_up, char *, victim, tor_free(victim));
-  SMARTLIST_FOREACH(nicknames_down, char *, victim, tor_free(victim));
-  smartlist_free(nicknames_up);
-  smartlist_free(nicknames_down);
+  SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t *, d,
+  {
+    int is_live;
+    tor_assert(d->router);
+    connection_t *conn = connection_get_by_identity_digest(
+                    d->router->identity_digest, CONN_TYPE_OR);
+    is_live = (conn && conn->state == OR_CONN_STATE_OPEN);
+    smartlist_add(rr_entries, list_single_server_status(d, is_live, 1));
+    smartlist_add(rs_entries, list_single_server_status(d, is_live, 0));
+  });
+
+  if (running_routers_out)
+    *running_routers_out = smartlist_join_strings(rr_entries, " ", 0);
+  if (router_status_out)
+    *router_status_out = smartlist_join_strings(rs_entries, " ", 0);
+
+  SMARTLIST_FOREACH(rr_entries, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(rs_entries, char *, cp, tor_free(cp));
+  smartlist_free(rr_entries);
+  smartlist_free(rs_entries);
+
   return 0;
 }
 
@@ -557,7 +567,8 @@ int
 dirserv_dump_directory_to_string(char *s, size_t maxlen,
                                  crypto_pk_env_t *private_key)
 {
-  char *cp, *eos;
+  char *eos, *cp;
+  char *running_routers, *router_status;
   char *identity_pkey; /* Identity key, DER64-encoded. */
   char *recommended_versions;
   char digest[20];
@@ -570,7 +581,7 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
   if (!descriptor_list)
     descriptor_list = smartlist_create();
 
-  if (list_running_servers(&cp))
+  if (list_server_status(&running_routers, &router_status))
     return -1;
 
   /* ASN.1-encode the public key.  This is a temporary measure; once
@@ -612,10 +623,13 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
            "published %s\n"
            "recommended-software %s\n"
            "running-routers %s\n"
+           "opt router-status %s\n"
            "opt dir-signing-key %s\n\n",
-           published, recommended_versions, cp, identity_pkey);
+           published, recommended_versions, running_routers, router_status,
+           identity_pkey);
 
-  tor_free(cp);
+  tor_free(running_routers);
+  tor_free(router_status);
   tor_free(identity_pkey);
   i = strlen(s);
   cp = s+i;
@@ -788,6 +802,7 @@ static size_t runningrouters_len=0;
 static int generate_runningrouters(crypto_pk_env_t *private_key)
 {
   char *s, *cp;
+  char *router_status;
   char digest[DIGEST_LEN];
   char signature[PK_BYTES];
   int i;
@@ -798,7 +813,7 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
 
   len = 1024+(MAX_HEX_NICKNAME_LEN+2)*smartlist_len(descriptor_list);
   s = tor_malloc_zero(len);
-  if (list_running_servers(&cp))
+  if (list_server_status(NULL, &router_status))
     return -1;
   /* ASN.1-encode the public key.  This is a temporary measure; once
    * everyone is running 0.0.9pre3 or later, we can shift to using a
@@ -822,12 +837,12 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   format_iso_time(published, published_on);
   sprintf(s, "network-status\n"
              "published %s\n"
-             "running-routers %s\n"
+             "router-status %s\n"
              "opt dir-signing-key %s\n"
              "directory-signature %s\n"
              "-----BEGIN SIGNATURE-----\n",
-          published, cp, identity_pkey, options.Nickname);
-  tor_free(cp);
+          published, router_status, identity_pkey, options.Nickname);
+  tor_free(router_status);
   tor_free(identity_pkey);
   if (router_get_runningrouters_hash(s,digest)) {
     log_fn(LOG_WARN,"couldn't compute digest");
