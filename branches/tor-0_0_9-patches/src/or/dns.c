@@ -280,8 +280,9 @@ static int assign_to_dnsworker(connection_t *exitconn) {
 
   if (!dnsconn) {
     log_fn(LOG_WARN,"no idle dns workers. Failing.");
+    if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
+      send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
     dns_cancel_pending_resolve(exitconn->address);
-    send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
     return -1;
   }
 
