@@ -12,6 +12,13 @@
 
 #include "or.h"
 
+/** How much clock skew do we tolerate when checking certificates for
+ * known routers? (sec) */
+#define TIGHT_CERT_ALLOW_SKEW (90*60)
+/** How much clock skew do we tolerate when checking certificates for
+ * unknown routers/clients? (sec) */
+#define LOOSE_CERT_ALLOW_SKEW (24*60*60)
+
 static int connection_tls_finish_handshake(connection_t *conn);
 static int connection_or_process_cells_from_inbuf(connection_t *conn);
 
@@ -362,6 +369,11 @@ connection_tls_finish_handshake(connection_t *conn) {
            nickname, conn->address, conn->port);
     return -1;
   }
+  if(tor_tls_check_lifetime(conn->tls, LOOSE_CERT_ALLOW_SKEW)<0) {
+    log_fn(LOG_WARN,"Other side '%s' (%s:%d) has a very highly skewed clock, or an expired certificate. Closing.",
+           nickname, conn->address, conn->port);
+    return -1;
+  }
   log_fn(LOG_DEBUG,"The router's cert is valid.");
   crypto_pk_get_digest(identity_rcvd, digest_rcvd);
 
@@ -378,6 +390,14 @@ connection_tls_finish_handshake(connection_t *conn) {
      memcmp(digest_rcvd, router->identity_digest, DIGEST_LEN) != 0) {
     log_fn(LOG_WARN, "Identity key not as expected for %s", nickname);
     return -1;
+  }
+  if (router_get_by_digest(digest_rcvd)) {
+    /* This is a known router; don't cut it slack with its clock skew. */
+    if(tor_tls_check_lifetime(conn->tls, TIGHT_CERT_ALLOW_SKEW)<0) {
+      log_fn(LOG_WARN,"Router '%s' (%s:%d) has a skewed clock, or an expired certificate. Closing.",
+             nickname, conn->address, conn->port);
+      return -1;
+    }
   }
 
   if (connection_or_nonopen_was_started_here(conn)) {
