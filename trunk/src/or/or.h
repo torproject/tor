@@ -53,12 +53,13 @@
 #define MAX_BUF_SIZE (640*1024)
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 
+#define HANDSHAKE_AS_OP 1
+#define HANDSHAKE_AS_OR 2
+
 #define ACI_TYPE_LOWER 0
 #define ACI_TYPE_HIGHER 1
 #define ACI_TYPE_BOTH 2
 
-#define CONN_TYPE_OP_LISTENER 1
-#define CONN_TYPE_OP 2
 #define CONN_TYPE_OR_LISTENER 3
 #define CONN_TYPE_OR 4
 #define CONN_TYPE_EXIT 5
@@ -72,16 +73,13 @@
 
 #define DNSMASTER_STATE_OPEN 0
 
-#define OP_CONN_STATE_AWAITING_KEYS 0
-#define OP_CONN_STATE_OPEN 1
-
 /* how to read these states:
  * foo_CONN_STATE_bar_baz:
  * "I am acting as a bar, currently in stage baz of talking with a foo."
  */
-#define OR_CONN_STATE_OP_CONNECTING 0 /* an application proxy wants me to connect to this OR */
+//#define OR_CONN_STATE_OP_CONNECTING 0 /* an application proxy wants me to connect to this OR */
 #define OR_CONN_STATE_OP_SENDING_KEYS 1
-#define OR_CONN_STATE_CLIENT_CONNECTING 2 /* I'm connecting to this OR as an OR */
+#define OR_CONN_STATE_CLIENT_CONNECTING 2 /* connecting to this OR */
 #define OR_CONN_STATE_CLIENT_SENDING_AUTH 3 /* sending address and info */
 #define OR_CONN_STATE_CLIENT_AUTH_WAIT 4 /* have sent address and info, waiting */
 #define OR_CONN_STATE_CLIENT_SENDING_NONCE 5 /* sending nonce, last piece of handshake */
@@ -405,10 +403,10 @@ typedef struct {
    double CoinWeight;
    int Daemon;
    int ORPort;
-   int OPPort;
    int APPort;
    int DirPort;
    int MaxConn;
+   int OnionRouter;
    int TrafficShaping;
    int LinkPadding;
    int DirRebuildPeriod;
@@ -574,8 +572,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type);
 int connection_handle_listener_read(connection_t *conn, int new_type, int new_state);
 
 /* start all connections that should be up but aren't */
-int retry_all_connections(uint16_t or_listenport,
-  uint16_t op_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
+int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
 
 int connection_read_to_buf(connection_t *conn);
 
@@ -602,7 +599,7 @@ void connection_increment_receiver_bucket (connection_t *conn);
 void connection_increment_send_timeval(connection_t *conn);
 void connection_init_timeval(connection_t *conn);
 
-int connection_speaks_cells(connection_t *conn);
+#define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 int connection_is_listener(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 
@@ -676,9 +673,7 @@ int or_handshake_client_send_auth(connection_t *conn);
 int or_handshake_server_process_auth(connection_t *conn);
 int or_handshake_server_process_nonce(connection_t *conn);
 
-connection_t *connect_to_router_as_or(routerinfo_t *router);
-connection_t *connection_or_connect_as_or(routerinfo_t *router);
-connection_t *connection_or_connect_as_op(routerinfo_t *router);
+connection_t *connection_or_connect(routerinfo_t *router);
 
 int connection_or_create_listener(struct sockaddr_in *bindaddr);
 int connection_or_handle_listener_read(connection_t *conn);

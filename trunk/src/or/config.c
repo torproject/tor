@@ -182,7 +182,6 @@ void config_assign(or_options_t *options, struct config_line *list) {
     /* int options */
     config_compare(list, "MaxConn",         CONFIG_TYPE_INT, &options->MaxConn) ||
     config_compare(list, "APPort",          CONFIG_TYPE_INT, &options->APPort) ||
-    config_compare(list, "OPPort",          CONFIG_TYPE_INT, &options->OPPort) ||
     config_compare(list, "ORPort",          CONFIG_TYPE_INT, &options->ORPort) ||
     config_compare(list, "DirPort",         CONFIG_TYPE_INT, &options->DirPort) ||
     config_compare(list, "DirFetchPeriod",  CONFIG_TYPE_INT, &options->DirFetchPeriod) ||
@@ -190,6 +189,7 @@ void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "MaxOnionsPending",CONFIG_TYPE_INT, &options->MaxOnionsPending) ||
     config_compare(list, "NewCircuitPeriod",CONFIG_TYPE_INT, &options->NewCircuitPeriod) ||
 
+    config_compare(list, "OnionRouter",     CONFIG_TYPE_BOOL, &options->OnionRouter) ||
     config_compare(list, "Daemon",          CONFIG_TYPE_BOOL, &options->Daemon) ||
     config_compare(list, "TrafficShaping",  CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
     config_compare(list, "LinkPadding",     CONFIG_TYPE_BOOL, &options->LinkPadding) ||
@@ -276,8 +276,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
            options->RouterFile ? options->RouterFile : "(undefined)",
            options->PrivateKeyFile ? options->PrivateKeyFile : "(undefined)",
            options->SigningPrivateKeyFile ? options->SigningPrivateKeyFile : "(undefined)");
-    printf("ORPort=%d, OPPort=%d, APPort=%d DirPort=%d\n",
-           options->ORPort,options->OPPort,
+    printf("ORPort=%d, APPort=%d DirPort=%d\n",
+           options->ORPort,
            options->APPort,options->DirPort);
     printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d, LinkPadding=%d\n",
            options->CoinWeight,
@@ -321,22 +321,22 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   }
 
   if(options->ORPort < 0) {
-    log(LOG_ERR,"ORPort option required and must be a positive integer value.");
+    log(LOG_ERR,"ORPort option can't be negative.");
     result = -1;
   }
 
-  if(options->ORPort > 0 && options->PrivateKeyFile == NULL) {
-    log(LOG_ERR,"PrivateKeyFile option required for OR, but not found.");
+  if(options->OnionRouter && options->ORPort == 0) {
+    log(LOG_ERR,"If OnionRouter is set, then ORPort must be positive.");
+    result = -1;
+  }
+
+  if(options->OnionRouter && options->PrivateKeyFile == NULL) {
+    log(LOG_ERR,"PrivateKeyFile option required for OnionRouter, but not found.");
     result = -1;
   }
 
   if(options->DirPort > 0 && options->SigningPrivateKeyFile == NULL) {
     log(LOG_ERR,"SigningPrivateKeyFile option required for DirServer, but not found.");
-    result = -1;
-  }
-
-  if(options->OPPort < 0) {
-    log(LOG_ERR,"OPPort option can't be negative.");
     result = -1;
   }
 
