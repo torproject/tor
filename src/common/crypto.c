@@ -997,7 +997,7 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
     goto error;
   secret_tmp = tor_malloc(crypto_dh_get_bytes(dh)+1);
   secret_len = DH_compute_key(secret_tmp, pubkey_bn, dh->dh);
-  assert(secret_len == crypto_dh_get_bytes(dh));
+  /* sometimes secret_len might be less than 128, e.g., 127. that's ok. */
   for (i = 0; i < secret_bytes_out; i += 20) {
     secret_tmp[secret_len] = (unsigned char) i/20;
     if (crypto_SHA_digest(secret_tmp, secret_len+1, hash))
@@ -1012,8 +1012,7 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
  done:
   if (pubkey_bn)
     BN_free(pubkey_bn);
-  if (secret_tmp)
-    free(secret_tmp);
+  tor_free(secret_tmp);
   return secret_len;
 }
 void crypto_dh_free(crypto_dh_env_t *dh)

@@ -99,7 +99,7 @@ crypto_cipher_env_t *crypto_create_init_cipher(int cipher_type, char *key, char 
 
 /* SHA-1 */
 int crypto_SHA_digest(const unsigned char *m, int len, unsigned char *digest);
-crypto_digest_env_t *crypto_digest_new_env(int type);
+crypto_digest_env_t *crypto_new_digest_env(int type);
 void crypto_free_digest_env(crypto_digest_env_t *digest);
 void crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
                              size_t len);
