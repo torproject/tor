@@ -545,7 +545,7 @@ test_util(void) {
   smartlist_add(sl, (void*)2);
   smartlist_add(sl, (void*)3);
   smartlist_add(sl, (void*)4);
-  test_eq((void*)2, smartlist_del_keeporder(sl, 1));
+  smartlist_del_keeporder(sl, 1);
   smartlist_insert(sl, 1, (void*)22);
   smartlist_insert(sl, 0, (void*)0);
   smartlist_insert(sl, 5, (void*)555);

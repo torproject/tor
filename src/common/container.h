@@ -36,14 +36,15 @@ void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
 /* smartlist_choose() is defined in crypto.[ch] */
 #ifndef FAST_SMARTLIST
 void *smartlist_get(const smartlist_t *sl, int idx);
+void smartlist_set(smartlist_t *sl, int idx, void *val);
 int smartlist_len(const smartlist_t *sl);
 #else
 #define smartlist_get(sl,idx) ((sl)->list[(idx)])
+#define smartlist_set(sl,idx,val) ((sl)->list[(idx)] = val)
 #define smartlist_len(sl) ((sl)->num_used)
 #endif
-void *smartlist_set(smartlist_t *sl, int idx, void *val);
-void *smartlist_del(smartlist_t *sl, int idx);
-void *smartlist_del_keeporder(smartlist_t *sl, int idx);
+void smartlist_del(smartlist_t *sl, int idx);
+void smartlist_del_keeporder(smartlist_t *sl, int idx);
 void smartlist_insert(smartlist_t *sl, int idx, void *val);
 
 #define SPLIT_SKIP_SPACE   0x01

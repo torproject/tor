@@ -172,6 +172,16 @@ void *smartlist_get(const smartlist_t *sl, int idx)
   tor_assert(idx < sl->num_used);
   return sl->list[idx];
 }
+/** Change the value of the <b>idx</b>th element of sl to <b>val</b>; return the old
+ * value of the <b>idx</b>th element.
+ */
+void smartlist_set(smartlist_t *sl, int idx, void *val)
+{
+  tor_assert(sl);
+  tor_assert(idx>=0);
+  tor_assert(idx < sl->num_used);
+  sl->list[idx] = val;
+}
 /** Return the number of items in sl.
  */
 int smartlist_len(const smartlist_t *sl)
@@ -180,49 +190,29 @@ int smartlist_len(const smartlist_t *sl)
 }
 #endif
 
-/** Change the value of the <b>idx</b>th element of sl to <b>val</b>; return the old
- * value of the <b>idx</b>th element.
- */
-void *smartlist_set(smartlist_t *sl, int idx, void *val)
-{
-  void *old;
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx < sl->num_used);
-  old = sl->list[idx];
-  sl->list[idx] = val;
-  return old;
-}
-
 /** Remove the <b>idx</b>th element of sl; if idx is not the last
  * element, swap the last element of sl into the <b>idx</b>th space.
  * Return the old value of the <b>idx</b>th element.
  */
-void *smartlist_del(smartlist_t *sl, int idx)
+void smartlist_del(smartlist_t *sl, int idx)
 {
-  void *old;
   tor_assert(sl);
   tor_assert(idx>=0);
   tor_assert(idx < sl->num_used);
-  old = sl->list[idx];
   sl->list[idx] = sl->list[--sl->num_used];
-  return old;
 }
 /** Remove the <b>idx</b>th element of sl; if idx is not the last element,
  * moving all subsequent elements back one space. Return the old value
  * of the <b>idx</b>th element.
  */
-void *smartlist_del_keeporder(smartlist_t *sl, int idx)
+void smartlist_del_keeporder(smartlist_t *sl, int idx)
 {
-  void *old;
   tor_assert(sl);
   tor_assert(idx>=0);
   tor_assert(idx < sl->num_used);
-  old = sl->list[idx];
   --sl->num_used;
   if (idx < sl->num_used)
     memmove(sl->list+idx, sl->list+idx+1, sizeof(void*)*(sl->num_used-idx));
-  return old;
 }
 /** Insert the value <b>val</b> as the new <b>idx</b>th element of
  * <b>sl</b>, moving all items previously at <b>idx</b> or later
