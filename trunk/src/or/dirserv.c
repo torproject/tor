@@ -570,10 +570,19 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
    * everyone is running 0.0.9pre3 or later, we can shift to using a
    * PEM-encoded key instead.
    */
+#if 1
   if(crypto_pk_DER64_encode_public_key(private_key, &identity_pkey)<0) {
     log_fn(LOG_WARN,"write identity_pkey to string failed!");
     return -1;
   }
+#else
+  { int l;
+    if(crypto_pk_write_public_key_to_string(private_key, &identity_pkey, &l)<0){
+      log_fn(LOG_WARN,"write identity_pkey to string failed!");
+      return -1;
+    }
+  }
+#endif
   dirserv_remove_old_servers(ROUTER_MAX_AGE);
   published_on = time(NULL);
   format_iso_time(published, published_on);
@@ -774,11 +783,20 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
    * everyone is running 0.0.9pre3 or later, we can shift to using a
    * PEM-encoded key instead.
    */
+#if 1
   if(crypto_pk_DER64_encode_public_key(private_key, &identity_pkey)<0) {
     log_fn(LOG_WARN,"write identity_pkey to string failed!");
     tor_free(cp);
     return -1;
   }
+#else
+  { int l;
+    if(crypto_pk_write_public_key_to_string(private_key, &identity_pkey, &l)<0){
+      log_fn(LOG_WARN,"write identity_pkey to string failed!");
+      return -1;
+    }
+  }
+#endif
   published_on = time(NULL);
   format_iso_time(published, published_on);
   sprintf(s, "network-status\n"
