@@ -467,9 +467,17 @@ int server_mode(void) {
   return (options.ORPort != 0);
 }
 
+/** Return true iff we have published our descriptor lately.
+ */
+int advertised_server_mode(void) {
+  return (options.ORPort != 0);
+}
+
 /** Return true iff we are trying to be an exit server.
  */
 int exit_server_mode(void) {
+  /* XXX008 NM: non-exit servers still answer resolve requests, right? How
+   * is this to be used? */
   return (options.ORPort != 0);
 }
 
@@ -506,6 +514,7 @@ static void run_scheduled_events(time_t now) {
     if (router_rebuild_descriptor()<0) {
       log_fn(LOG_WARN, "Couldn't rebuild router descriptor");
     }
+    /* XXX008 only if advertised_server_mode */
     router_upload_dir_desc_to_dirservers();
   }
 

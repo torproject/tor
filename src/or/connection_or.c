@@ -142,9 +142,9 @@ connection_or_init_conn_from_address(connection_t *conn,
  * handshake with an OR with identity digest <b>id_digest</b>.
  *
  * If <b>id_digest</b> is me, do nothing. If we're already connected to it,
- * return that connection. If the connect() is in progress, set conn's
- * state to 'connecting' and return. If connect() succeeds, call
- * connection_tls_start_handshake() on it.
+ * return that connection. If the connect() is in progress, set the
+ * new conn's state to 'connecting' and return it. If connect() succeeds,
+ * call * connection_tls_start_handshake() on it.
  *
  * This function is called from router_retry_connections(), for
  * ORs connecting to ORs, and circuit_establish_circuit(), for
@@ -158,7 +158,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
 
   tor_assert(id_digest);
 
-  if(0) { /* XXX008 if I'm an OR and id_digest is my digest */
+  if(server_mode() && 0) { /* XXX008 if I'm an OR and id_digest is my digest */
     log_fn(LOG_WARN,"Request to connect to myself! Failing.");
     return NULL;
   }
@@ -260,7 +260,7 @@ int connection_tls_continue_handshake(connection_t *conn) {
  * If all is successful and he's an OR, then call circuit_n_conn_done()
  * to handle events that have been pending on the tls handshake
  * completion, and set the directory to be dirty (only matters if I'm
- * a dirserver).
+ * an authdirserver).
  */
 static int
 connection_tls_finish_handshake(connection_t *conn) {

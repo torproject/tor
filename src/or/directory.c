@@ -83,8 +83,8 @@ directory_get_from_dirserver(uint8_t purpose, const char *payload,
   routerinfo_t *ds;
 
   if (purpose == DIR_PURPOSE_FETCH_DIR) {
-    if (server_mode()) {
-      /* only ask authdirservers, don't ask myself */
+    if (advertised_server_mode()) {
+      /* only ask authdirservers, and don't ask myself */
       ds = router_pick_directory_server(1, 1);
     } else {
       /* anybody with a non-zero dirport will do */
