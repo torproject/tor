@@ -569,16 +569,16 @@ dirserv_remove_old_servers(int age)
   }
 }
 
-/** Dump all routers currently in the directory into the string
- * <b>s</b>, using at most <b>maxlen</b> characters, and signing the
+/** Generate a new directory and write it into a newly allocated string.
+ * Point *<b>dir_out</b> to the allocated string.  Sign the
  * directory with <b>private_key</b>.  Return 0 on success, -1 on
  * failure.
  */
 int
-dirserv_dump_directory_to_string(char *s, size_t maxlen,
+dirserv_dump_directory_to_string(char **dir_out,
                                  crypto_pk_env_t *private_key)
 {
-  char *eos, *cp;
+  char *cp;
   char *running_routers, *router_status;
   char *identity_pkey; /* Identity key, DER64-encoded. */
   char *recommended_versions;
@@ -586,8 +586,12 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
   char signature[128];
   char published[33];
   time_t published_on;
+  char *buf = NULL;
+  size_t buf_len;
   int i;
-  eos = s+maxlen;
+
+  tor_assert(dir_out);
+  *dir_out = NULL;
 
   if (!descriptor_list)
     descriptor_list = smartlist_create();
@@ -630,7 +634,18 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
   dirserv_remove_old_servers(ROUTER_MAX_AGE);
   published_on = time(NULL);
   format_iso_time(published, published_on);
-  tor_snprintf(s, maxlen,
+
+  buf_len = 2048+strlen(recommended_versions)+strlen(running_routers)+
+    strlen(router_status);
+  SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t *, d,
+                    buf_len += strlen(d->descriptor));
+  buf = tor_malloc(buf_len);
+  /* We'll be comparing against buf_len throughout the rest of the
+     function, though strictly speaking we shouldn't be able to exceed
+     it.  This is C, after all, so we may as well check for buffer
+     overruns.*/
+
+  tor_snprintf(buf, buf_len,
            "signed-directory\n"
            "published %s\n"
            "recommended-software %s\n"
@@ -643,49 +658,54 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
   tor_free(running_routers);
   tor_free(router_status);
   tor_free(identity_pkey);
-  i = strlen(s);
-  cp = s+i;
+  i = strlen(buf);
+  cp = buf+i;
 
   SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t *, d,
-    if (strlcat(s, d->descriptor, maxlen) >= maxlen)
+    if (strlcat(buf, d->descriptor, buf_len) >= buf_len)
       goto truncated);
 
   /* These multiple strlcat calls are inefficient, but dwarfed by the RSA
      signature.
   */
-  if (strlcat(s, "directory-signature ", maxlen) >= maxlen)
+  if (strlcat(buf, "directory-signature ", buf_len) >= buf_len)
     goto truncated;
-  if (strlcat(s, get_options()->Nickname, maxlen) >= maxlen)
+  if (strlcat(buf, get_options()->Nickname, buf_len) >= buf_len)
     goto truncated;
-  if (strlcat(s, "\n", maxlen) >= maxlen)
+  if (strlcat(buf, "\n", buf_len) >= buf_len)
     goto truncated;
 
-  if (router_get_dir_hash(s,digest)) {
+  if (router_get_dir_hash(buf,digest)) {
     log_fn(LOG_WARN,"couldn't compute digest");
+    tor_free(buf);
     return -1;
   }
   if (crypto_pk_private_sign(private_key, signature, digest, 20) < 0) {
     log_fn(LOG_WARN,"couldn't sign digest");
+    tor_free(buf);
     return -1;
   }
   log(LOG_DEBUG,"generated directory digest begins with %s",hex_str(digest,4));
 
-  if (strlcat(cp, "-----BEGIN SIGNATURE-----\n", maxlen) >= maxlen)
+  if (strlcat(cp, "-----BEGIN SIGNATURE-----\n", buf_len) >= buf_len)
     goto truncated;
 
-  i = strlen(s);
-  cp = s+i;
-  if (base64_encode(cp, maxlen-i, signature, 128) < 0) {
+  i = strlen(buf);
+  cp = buf+i;
+  if (base64_encode(cp, buf_len-i, signature, 128) < 0) {
     log_fn(LOG_WARN,"couldn't base64-encode signature");
+    tor_free(buf);
     return -1;
   }
 
-  if (strlcat(s, "-----END SIGNATURE-----\n", maxlen) >= maxlen)
+  if (strlcat(buf, "-----END SIGNATURE-----\n", buf_len) >= buf_len)
     goto truncated;
 
+  *dir_out = buf;
   return 0;
  truncated:
   log_fn(LOG_WARN,"tried to exceed string length.");
+  tor_free(buf);
   return -1;
 }
 
@@ -774,10 +794,9 @@ size_t dirserv_get_directory(const char **directory, int compress)
  */
 static int dirserv_regenerate_directory(void)
 {
-  char *new_directory;
+  char *new_directory=NULL;
 
-  new_directory = tor_malloc(MAX_DIR_SIZE);
-  if (dirserv_dump_directory_to_string(new_directory, MAX_DIR_SIZE,
+  if (dirserv_dump_directory_to_string(&new_directory,
                                        get_identity_key())) {
     log(LOG_WARN, "Error creating directory.");
     tor_free(new_directory);
