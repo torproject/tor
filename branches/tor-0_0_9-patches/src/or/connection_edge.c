@@ -130,7 +130,7 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
   circuit_t *circ;
 
   if (conn->has_sent_end) {
-    log_fn(LOG_WARN,"Bug: Calling connection_edge_end (reason %d) on an already ended stream?", reason);
+    log_fn(LOG_WARN,"Harmless bug: Calling connection_edge_end (reason %d) on an already ended stream?", reason);
     return -1;
   }
 
