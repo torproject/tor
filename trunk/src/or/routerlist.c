@@ -675,7 +675,7 @@ router_get_routerlist_from_directory_impl(const char *str,
   if (tokenize_string(str,end,tokens,1)) {
     log_fn(LOG_WARN, "Error tokenizing directory"); goto err;
   }
-  if (tokens->num_used < 1) {
+  if (smartlist_len(tokens) < 1) {
     log_fn(LOG_WARN, "Impossibly short directory header"); goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
@@ -684,7 +684,7 @@ router_get_routerlist_from_directory_impl(const char *str,
     goto err;
   }
 
-  tok = (directory_token_t*)tokens->list[0];
+  tok = smartlist_get(tokens,0);
   if (tok->tp != K_SIGNED_DIRECTORY) {
     log_fn(LOG_WARN, "Directory doesn't start with signed-directory."); 
     goto err;
@@ -732,21 +732,20 @@ router_get_routerlist_from_directory_impl(const char *str,
   }
   new_dir->software_versions = versions; versions = NULL;
   new_dir->published_on = published_on;
-  
-  for (i = 0; i < tokens->num_used; ++i) {
-    token_free((directory_token_t*)tokens->list[i]);
-  }
+
+  SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
   smartlist_free(tokens);
+
   tokens = smartlist_create();
   if (tokenize_string(str,str+strlen(str),tokens,1)<0) {
     log_fn(LOG_WARN, "Error tokenizing signature"); goto err;
   }
 
-  if (tokens->num_used != 1 || 
-      ((directory_token_t*)tokens->list[0])->tp != K_DIRECTORY_SIGNATURE){
+  if (smartlist_len(tokens) != 1 ||
+   ((directory_token_t*)smartlist_get(tokens,0))->tp != K_DIRECTORY_SIGNATURE){
     log_fn(LOG_WARN,"Expected a single directory signature"); goto err;
   }
-  tok = (directory_token_t*)tokens->list[0];
+  tok = smartlist_get(tokens,0);
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
     log_fn(LOG_WARN, "Bad object type or length on directory signature"); 
     goto err;
@@ -782,9 +781,7 @@ router_get_routerlist_from_directory_impl(const char *str,
   }
  done:
   if (tokens) {
-    for (i = 0; i < tokens->num_used; ++i) {
-      token_free((directory_token_t*)tokens->list[i]);
-    }
+    SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
     smartlist_free(tokens);
   }
   return r;
@@ -872,7 +869,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   char digest[128];
   smartlist_t *tokens = NULL, *exit_policy_tokens = NULL;
   directory_token_t *tok;
-  int t, i;
+  int t;
   int ports_set, bw_set;
 
   if (!end) {
@@ -888,7 +885,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
     log_fn(LOG_WARN, "Error tokeninzing router descriptor."); goto err;
   }
 
-  if (tokens->num_used < 2) {
+  if (smartlist_len(tokens) < 2) {
     log_fn(LOG_WARN, "Impossibly short router descriptor.");
     goto err;
   }
@@ -898,7 +895,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
     goto err;
   }
 
-  tok = (directory_token_t*)tokens->list[0];
+  tok = smartlist_get(tokens,0);
   if (tok->tp != K_ROUTER) {
     log_fn(LOG_WARN,"Entry does not start with \"router\"");
     goto err;
@@ -991,18 +988,16 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   tok->key = NULL; /* Prevent free */
 
   exit_policy_tokens = find_all_exitpolicy(tokens);
-  for (i = 0; i < exit_policy_tokens->num_used; ++i) {
-    if (router_add_exit_policy(router, 
-                   (directory_token_t*)exit_policy_tokens->list[i])<0) {
-      log_fn(LOG_WARN, "Error in exit policy"); goto err;
-    }
-  }
-  
+  SMARTLIST_FOREACH(exit_policy_tokens, directory_token_t *, t,
+                    if (router_add_exit_policy(router,t)<0) {
+                      log_fn(LOG_WARN,"Error in exit policy"); goto err;}
+                    );
+
   if (!(tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE))) {
     log_fn(LOG_WARN, "Missing router signature"); goto err;
   }
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
-    log_fn(LOG_WARN, "Bad object type or length on router signature"); 
+    log_fn(LOG_WARN, "Bad object type or length on router signature");
     goto err;
   }
   if ((t=crypto_pk_public_checksig(router->identity_pkey, tok->object_body,
@@ -1051,9 +1046,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   router = NULL;
  done:
   if (tokens) {
-    for (i = 0; i < tokens->num_used; ++i) {
-      token_free((directory_token_t*)tokens->list[i]);
-    }
+    SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
     smartlist_free(tokens);
   }
   if (exit_policy_tokens) {
@@ -1453,29 +1446,17 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
 static directory_token_t *
 find_first_by_keyword(smartlist_t *s, directory_keyword keyword)
 {
-  int i;
-  directory_token_t *tok;
-  for (i = 0; i < s->num_used; ++i) {
-    tok = (directory_token_t*) s->list[i];
-    if (tok->tp == keyword) {
-      return tok;
-    }
-  }
+  SMARTLIST_FOREACH(s, directory_token_t *, t, if (t->tp == keyword) return t);
   return NULL;
 }
 
 static smartlist_t *
 find_all_exitpolicy(smartlist_t *s)
 {
-  int i;
-  directory_token_t *tok;
   smartlist_t *out = smartlist_create();
-  for (i = 0; i < s->num_used; ++i) {
-    tok = (directory_token_t*) s->list[i];
-    if (tok->tp == K_ACCEPT || tok->tp == K_REJECT) {
-      smartlist_add(out,tok);
-    }
-  }
+  SMARTLIST_FOREACH(s, directory_token_t *, t,
+                    if (t->tp == K_ACCEPT || t->tp == K_REJECT)
+                      smartlist_add(out,t));
   return out;
 }
 

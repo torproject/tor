@@ -405,12 +405,10 @@ static void remove_twins_from_smartlist(smartlist_t *sl, routerinfo_t *twin) {
   if(twin == NULL)
     return;
 
-/* XXX abstraction violation: this function reaches inside smartlist :( */
-  for(i=0; i < sl->num_used; i++) {
-    r = sl->list[i];
+  for(i=0; i < smartlist_len(sl); i++) {
+    r = smartlist_get(sl,i);
     if (!crypto_pk_cmp_keys(r->onion_pkey, twin->onion_pkey)) {
-      sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
-      i--; /* so we process the new i'th element */
+      smartlist_del(sl,i--);
     }
   }
 }

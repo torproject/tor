@@ -83,11 +83,7 @@ void set_uint32(char *cp, uint32_t v);
 
 void hex_encode(const char *from, int fromlen, char *to);
 
-typedef struct smartlist_t {
-  void **list;
-  int num_used;
-  int capacity;
-} smartlist_t;
+typedef struct smartlist_t smartlist_t;
 
 smartlist_t *smartlist_create();
 void smartlist_free(smartlist_t *sl);
@@ -99,6 +95,18 @@ int smartlist_overlap(smartlist_t *sl1, smartlist_t *sl2);
 void smartlist_intersect(smartlist_t *sl1, smartlist_t *sl2);
 void smartlist_subtract(smartlist_t *sl1, smartlist_t *sl2);
 void *smartlist_choose(smartlist_t *sl);
+void *smartlist_get(smartlist_t *sl, int idx);
+void *smartlist_set(smartlist_t *sl, int idx, void *val);
+void *smartlist_del(smartlist_t *sl, int idx);
+int smartlist_len(smartlist_t *sl);
+#define SMARTLIST_FOREACH(sl, type, var, cmd)			\
+  do {								\
+    int sl_idx, sl_len=smartlist_len(sl);			\
+    type var;							\
+    for(sl_idx = 0; sl_idx < sl_len; ++sl_idx) {		\
+      var = smartlist_get((sl),sl_idx);				\
+      do {cmd;} while(0);					\
+    } } while (0)
 
 /* Map from const char * to void*. Implemented with a splay tree. */
 typedef struct strmap_t strmap_t;
