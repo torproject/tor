@@ -583,8 +583,12 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
     break;
 
   case CONFIG_TYPE_CSV:
-    if (*(smartlist_t**)lvalue == NULL)
+    if (*(smartlist_t**)lvalue) {
+      SMARTLIST_FOREACH(*(smartlist_t**)lvalue, char *, cp, tor_free(cp));
+      smartlist_clear(*(smartlist_t**)lvalue);
+    } else {
       *(smartlist_t**)lvalue = smartlist_create();
+    }
 
     smartlist_split_string(*(smartlist_t**)lvalue, c->value, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
