@@ -402,6 +402,25 @@ static void conn_close_if_marked(int i) {
   }
 }
 
+/** We've just tried every dirserver we know about, and none of
+ * them were reachable. Assume the network is down. Change state
+ * so next time an application connection arrives we'll delay it
+ * and try another directory fetch. Kill off all the circuit_wait
+ * streams that are waiting now, since they will all timeout anyway.
+ */
+void directory_all_unreachable(time_t now) {
+  connection_t *conn;
+
+  has_fetched_directory=0;
+
+  while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
+                                              AP_CONN_STATE_CIRCUIT_WAIT))) {
+    conn->has_sent_end = 1; /* it's not connected anywhere, so no need to end */
+    log_fn(LOG_NOTICE,"Network down? Failing connection to '%s'.", conn->address);
+    connection_mark_for_close(conn);
+  }
+}
+
 /** This function is called whenever we successfully pull down a directory */
 void directory_has_arrived(time_t now) {
   or_options_t *options = get_options();

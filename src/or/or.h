@@ -1382,7 +1382,9 @@ int connection_is_writing(connection_t *conn);
 void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
 
+void directory_all_unreachable(time_t now);
 void directory_has_arrived(time_t now);
+
 int authdir_mode(or_options_t *options);
 int clique_mode(or_options_t *options);
 int server_mode(or_options_t *options);
