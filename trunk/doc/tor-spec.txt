@@ -346,44 +346,14 @@ which reveals the downstream node.
       3. When a RELAY_CREATED cell is received, calculate the shared
          keys.  The circuit is now extended.
 
-   [ This next part is old. Update it. -NM]
-   Upon receiving a CREATE cell along a connection, an OR performs
-   the following steps:
-
-       1. If we already have an 'open' circuit along this connection
-          with this ACI, drop the cell.
-
-          Otherwise, if we have no circuit along this connection with
-          this ACI, let L = the integer value of the first 4 bytes of 
-          the payload.  Create a half-open circuit with this ACI, and
-          begin queueing CREATE cells for this circuit.
-
-          Otherwise, we have a half-open circuit.  If the total payload
-          length of the CREATE cells for this circuit is exactly equal
-          to the onion length specified in the first cell (minus 4), then
-          process the onion. If it is more, then tear down the circuit.
-  
-       2. Once we have a complete onion, decrypt the first 128 bytes
-          of the onion with this OR's RSA private key, and extract
-          the outmost onion layer.  If the version, back cipher, or
-          forward cipher is unrecognized, or the expiration time is
-          in the past, then tear down the circuit (see section 4.2).
-
-          Compute K1 through K3 as above.  Use K1 to decrypt the rest
-          of the onion using 3DES/OFB.
-
-          If we are not the exit node, remove the first layer from the
-          decrypted onion, and send the remainder to the next OR
-          on the circuit, as specified above.  (Note that we'll
-          choose a different ACI for this circuit on the connection
-          with the next OR.)
-
    When an onion router receives an EXTEND relay cell, it sends a
    CREATE cell to the next onion router, with the enclosed onion skin
    as its payload.  The initiating onion router chooses some random
    ACI not yet used on the connection between the two onion routers.
 
-   Some time after receiving a create cell, an onion router completes
+   When an onion router receives a CREATE cell, if it already has a
+   circuit on the given connection with the given ACI, it drops the
+   cell.  Otherwise, some time after receiving the CREATE cell, completes
    the DH handshake, and replies with a CREATED cell, containing g^y
    as its [128 byte] payload.  Upon receiving a CREATED cell, an onion
    router packs it payload into an EXTENDED relay cell (see section 5),
@@ -396,15 +366,13 @@ which reveals the downstream node.
 
 4.4. Tearing down circuits
 
-   [Note: this section is untouched; the code doesn't seem to match
-   what I remembered discussing.  Let's sort it out. -NM]
-
    Circuits are torn down when an unrecoverable error occurs along
    the circuit, or when all streams on a circuit are closed and the
-   circuit's intended lifetime is over.
+   circuit's intended lifetime is over.  Circuits may be torn down
+   either completely or hop-by-hop.
 
-   To tear down a circuit, an OR or OP sends a DESTROY cell with that
-   direction's ACI to the adjacent nodes on that circuit.
+   To tear down a circuit completely, an OR or OP sends a DESTROY cell
+   with that direction's ACI to an adjacent nodes on that circuit.
 
    Upon receiving a DESTROY cell, an OR frees resources associated
    with the corresponding circuit. If it's not the start or end of the
@@ -414,6 +382,17 @@ which reveals the downstream node.
 
    After a DESTROY cell has been processed, an OR ignores all data or
    destroy cells for the corresponding circuit.
+
+   To tear down part of a circuit, the OP sends a RELAY_TRUNCATE cell
+   signaling a given OR (Stream ID zero).  That OR sends a DESTROY
+   cell to the next node in the circuit, and replies to the OP with a
+   RELAY_TRUNCATED cell.
+
+   When an unrecoverable error occurs along one connection in a
+   circuit, the nodes on either side of the connection should, if they
+   are able, act as follows:  the node closer to the OP should send a
+   RELAY_TRUNCATED cell towards the OP; the node farther from the OP
+   should send a DESTROY cell down the circuit.
 
 4.5. Routing data cells
 
@@ -475,6 +454,8 @@ which reveals the downstream node.
          5 -- RELAY_SENDME
          6 -- RELAY_EXTEND
          7 -- RELAY_EXTENDED
+	 8 -- RELAY_TRUNCATE
+	 9 -- RELAY_TRUNCATED
 
    All RELAY cells pertaining to the same tunneled stream have the
    same stream ID.  Stream ID's are chosen randomly by the OP.  A
@@ -504,16 +485,11 @@ which reveals the downstream node.
 
    When one side of the TCP stream is closed, the corresponding edge
    node sends a RELAY_END cell along the circuit; upon receiving a
-   RELAY_END cell, the edge node closes the corresponding TCP stream.
-   [This should probably become:
-
-   When one side of the TCP stream is closed, the corresponding edge
-   node sends a RELAY_END cell along the circuit; upon receiving a
    RELAY_END cell, the edge node closes its side of the corresponding
    TCP stream (by sending a FIN packet), but continues to accept and
    package incoming data until both sides of the TCP stream are
    closed.  At that point, the edge node sends a second RELAY_END
-   cell, and drops its record of the topic. -NM]
+   cell, and drops its record of the stream.
 
    For creation and handling of RELAY_EXTEND and RELAY_EXTENDED cells,
    see section 4.  For creating and handling of RELAY_SENDME cells,
@@ -543,36 +519,29 @@ which reveals the downstream node.
 
 6.3. Circuit flow control
 
-   To control a circuit's bandwidth usage, each node keeps track of
+   To control a circuit's bandwidth usage, each OR keeps track of
    two 'windows', consisting of how many RELAY_DATA cells it is
    allowed to package for transmission, and how many RELAY_DATA cells
-   it is willing to deliver to a stream outside the network.  
+   it is willing to deliver to streams outside the network.  
    Each 'window' value is initially set to 500 data cells
    in each direction (cells that are not data cells do not affect
-   the window).
+   the window).  When an OR wants to deliver more cells, it sends a
+   RELAY_SENDME cell towards the OP, with Stream ID zero.  When an OR 
+   receives a RELAY_SENDME cell with stream ID zero, it increments its
+   packaging window.
 
-   [Note: I'm not touching the rest of this section... it looks in the
-   code as if RELAY_COMMAND_SENDME is now doing double duty for both
-   stream flow control and circuit flow control.  I thought we wanted
-   two different notions of windows. -NM]
-   [We do have two different 'levels' of windows. The relay sendme command
-    is talking about a stream for non-zero stream id, and talking about
-    the circuit for zero stream id. -RD]
+   Either of these cells increment the corresponding window by 100.
 
-   Each edge node on a circuit sends a SENDME cell
-   (with length=100) every time it has received 100 data cells on the
-   circuit. When a node receives a SENDME cell for a circuit, it increases
-   the circuit's window in the corresponding direction (that is, for
-   sending data cells back in the direction from which the sendme arrived)
-   by the value of the cell's length field. If it's not an edge node,
-   it passes an equivalent SENDME cell to the next node in the circuit.
+   The OP behaves identically, except that it must track a packaging and
+   delivery windows for every OR in the circuit.
+ 
+   An OR or OP sends cells to increment its delivery window when the
+   corresponding window value falls under some threshold (400), and
+   the node is ready to process more cells on that circuit.
 
-   If the window value reaches 0 at the edge of a circuit, the OR stops
-   reading from the edge connections. (It may finish processing what
-   it's already read, and queue those cells for when a SENDME cell
-   arrives.) Otherwise (when not at the edge of a circuit), if the
-   window value is 0 and a data cell arrives, the node must tear down
-   the circuit.
+   If a packaging window reaches 0, the OR or OP stops reading from
+   TCP connections for all streams on the corresponding circuit, and
+   sends no more RELAY_DATA cells until receiving a RElAY_SENDME cell.
 
 6.4. Topic flow control
 
