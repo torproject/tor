@@ -1018,6 +1018,11 @@ crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
 {
   tor_assert(digest);
   tor_assert(data);
+  /* Using the SHA1_*() calls directly means we don't support doing
+   * sha1 in hardware. But so far the delay of getting the question
+   * to the hardware, and hearing the answer, is likely higher than
+   * just doing it ourselves. Hashes are fast.
+   */
   SHA1_Update(&digest->d, (void*)data, len);
 }
 
