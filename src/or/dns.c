@@ -75,7 +75,7 @@ static void purge_expired_resolves(uint32_t now) {
    */
   while(oldest_cached_resolve && (oldest_cached_resolve->expire < now)) {
     resolve = oldest_cached_resolve;
-    log(LOG_DEBUG,"Forgetting old cached resolve (expires %d)", resolve->expire);
+    log(LOG_DEBUG,"Forgetting old cached resolve (expires %lu)", (unsigned long)resolve->expire);
     oldest_cached_resolve = resolve->next;
     if(!oldest_cached_resolve) /* if there are no more, */
       newest_cached_resolve = NULL; /* then make sure the list's tail knows that too */

@@ -663,7 +663,9 @@ void circuit_dump_details(int severity, circuit_t *circ, int poll_index,
       log(severity,"Building: desired len %d, planned exit node %s.",
           circ->build_state->desired_path_len, circ->build_state->chosen_exit);
     for(hop=circ->cpath;hop->next != circ->cpath; hop=hop->next)
-      log(severity,"hop: state %d, addr %d, port %d", hop->state, hop->addr, hop->port);
+      log(severity,"hop: state %d, addr %x, port %d", hop->state, 
+          (unsigned int)hop->addr, 
+          (int)hop->port);
   }
 }
 
@@ -989,7 +991,8 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   crypto_dh_free(hop->handshake_state); /* don't need it anymore */
   hop->handshake_state = NULL;
 
-  log_fn(LOG_DEBUG,"hop %d init cipher forward %d, backward %d.", (uint32_t)hop, *(uint32_t*)keys, *(uint32_t*)(keys+16));
+  log_fn(LOG_DEBUG,"hop %d init cipher forward %u, backward %u.", 
+        (int)hop, (unsigned)*(uint32_t*)keys, (unsigned) *(uint32_t*)(keys+16));
   if (!(hop->f_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys,iv,1))) {
     log(LOG_WARN,"forward cipher initialization failed.");

@@ -421,7 +421,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     router->or_port,
     router->socks_port,
     router->dir_port,
-    router->bandwidth,
+    (int) router->bandwidth,
     platform,
     published,
     onion_pkey, link_pkey, identity_pkey);

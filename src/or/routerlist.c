@@ -755,8 +755,9 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
     goto err;
   }
   
-  log_fn(LOG_DEBUG,"or_port %d, socks_port %d, dir_port %d, bandwidth %d.",
-    router->or_port, router->socks_port, router->dir_port, router->bandwidth);
+  log_fn(LOG_DEBUG,"or_port %d, socks_port %d, dir_port %d, bandwidth %u.",
+    router->or_port, router->socks_port, router->dir_port, 
+    (unsigned) router->bandwidth);
 
   /* XXX Later, require platform before published. */
   NEXT_TOKEN();
