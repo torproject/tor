@@ -1120,8 +1120,11 @@ char *circuit_list_path(circuit_t *circ, int verbose);
 void circuit_log_path(int severity, circuit_t *circ);
 void circuit_rep_hist_note_result(circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
-circuit_t *circuit_establish_circuit(uint8_t purpose, const char *exit_digest,
+circuit_t *circuit_init(uint8_t purpose, int need_uptime,
+                        int need_capacity, int internal);
+circuit_t *circuit_establish_circuit(uint8_t purpose, routerinfo_t *exit,
                                      int need_uptime, int need_capacity, int internal);
+int circuit_handle_first_hop(circuit_t *circ);
 void circuit_n_conn_done(connection_t *or_conn, int status);
 int circuit_send_next_onion_skin(circuit_t *circ);
 void circuit_note_clock_jumped(int seconds_elapsed);
@@ -1133,7 +1136,7 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
 int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
                                         int *need_capacity);
 
-int circuit_append_new_hop(circuit_t *circ, char *nickname, const char *exit_digest);
+int circuit_append_new_exit(circuit_t *circ, routerinfo_t *exit);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 
 /********************************* circuitlist.c ***********************/
@@ -1181,8 +1184,8 @@ void circuit_has_opened(circuit_t *circ);
 void circuit_build_failed(circuit_t *circ);
 circuit_t *circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
                                       int need_uptime, int need_capacity, int is_internal);
-circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest,
-                                      int need_uptime, int need_capacity, int is_internal);
+circuit_t *circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
+                                    int need_uptime, int need_capacity, int is_internal);
 void circuit_reset_failure_count(int timeout);
 int connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
                                                   circuit_t *circ);

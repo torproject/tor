@@ -642,12 +642,6 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
     send_control_error(conn, ERR_SYNTAX, "extendcircuit message too short");
     return 0;
   }
-  circ_id = ntohl(get_uint32(body));
-  if (!(circ = circuit_get_by_global_id(circ_id))) {
-    send_control_error(conn, ERR_NO_STREAM,
-                       "No connection found with given ID");
-    return 0;
-  }
 
   router_nicknames = smartlist_create();
   routers = smartlist_create();
@@ -661,20 +655,45 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
       }
       smartlist_add(routers, r);
     });
+  if (!smartlist_len(routers)) {
+    send_control_error(conn, ERR_SYNTAX, "No router names provided");
+    goto done;
+  }
 
-#if 1
-  /*XXXX RD*/
-  send_control_error(conn, ERR_INTERNAL, "EXTENDCIRCUIT not implemented.");
-#else
+  circ_id = ntohl(get_uint32(body));
+  if (!circ_id) {
+    /* start a new circuit */
+    circ = circuit_init(CIRCUIT_PURPOSE_C_GENERAL, 0, 0, 0);
+  } else {
+    circ = circuit_get_by_global_id(circ_id);
+    if (!circ) {
+      send_control_error(conn, ERR_NO_CIRC,
+                         "No circuit found with given ID");
+      goto done;
+    }
+  }
+
+  /* now circ refers to something that is ready to be extended */
+
   SMARTLIST_FOREACH(routers, routerinfo_t *, r,
     {
-      /*XXXX RD*/
-      if (circuit_extend_path(circ, r)<0) {
-        send_control_error(conn, ERR_INTERNAL, "Unable to extend path.");
-        goto done;
-      }
+      circuit_append_new_exit(circ, r);
     });
-#endif
+
+  /* now that we've populated the cpath, start extending */
+  if (!circ_id) {
+    if (circuit_handle_first_hop(circ) < 0) {
+      circuit_mark_for_close(circ);
+    }
+  } else {
+    if (circ->state == CIRCUIT_STATE_OPEN) {
+      circ->state = CIRCUIT_STATE_BUILDING;
+      if (circuit_send_next_onion_skin(circ) < 0) {
+        log_fn(LOG_INFO,"send_next_onion_skin failed; circuit marked for closing.");
+        circuit_mark_for_close(circ);
+      }
+    }
+  }
 
   send_control_done(conn);
  done:
