@@ -782,37 +782,37 @@ designed with ubiquitous access to the network in mind, thousands of
 users across the world are trying to use it for exactly this purpose.
 % Academic and NGO organizations, peacefire, \cite{berkman}, etc
 
-Anti-censorship networks designed to bridge country-level blocks face
-a variety of challenges. One of these is that they need to find a set
-of exit nodes---servers on the `free' side that are willing to relay
-arbitrary traffic from users to their final destination. Anonymizing
+Anti-censorship networks hoping to bridge country-level blocks face
+a variety of challenges. One of these is that they need to find enough
+exit nodes---servers on the `free' side that are willing to relay
+arbitrary traffic from users to their final destinations. Anonymizing
 networks including Tor are well-suited to this task, since we have
 already gathered a set of exit nodes that are willing to tolerate some
 political heat.
 
-The other main challenge is how to distribute a list of reachable relays
+The other main challenge is to distribute a list of reachable relays
 to the users inside the country, and give them software to use them,
 without letting the authorities also enumerate this list and block each
 relay. Anonymizer solves this by buying lots of seemingly-unrelated IP
-addresses (or having them donated), and tells a few users about the new
-addresses, abandoning old ones that have been `used up'. Distributed
+addresses (or having them donated), abandoning old addresses as they are
+`used up', and telling a few users about the new ones. Distributed
 anonymizing networks again have an advantage here, in that we already
 have tens of thousands of separate IP addresses whose users might
-volunteer to provide this service now that they've installed and use
+volunteer to provide this service since they've already installed and use
 the software for their own privacy~\cite{koepsell-wpes2004}. Because
 the Tor protocol separates routing from network discovery (see Section
 \ref{do-we-discuss-this?}), volunteers could configure their Tor clients
 to generate server descriptors and send them to a special directory
 server that gives them out to dissidents who need to get around blocks.
 
-Of course, this passes the buck in terms of preventing the adversary
+Of course, this still doesn't prevent the adversary
 from enumerating all the volunteer relays and blocking them preemptively.
 Perhaps a tiered-trust system could be built where a few individuals are
-given relay IPs, and they recommend other individuals by telling them
+given relays' locations, and they recommend other individuals by telling them
 those addresses, thus providing a built-in incentive to avoid letting the
-adversary learn the addresses. Max-flow trust algorithms~\cite{advogato}
-might help to bound the number of IPs leaked to the adversary. Groups
-like the W3C are looking into using Tor as a component in a system to
+adversary intercept them. Max-flow trust algorithms~\cite{advogato}
+might help to bound the number of IP addresses leaked to the adversary. Groups
+like the W3C are looking into using Tor as a component in an overall system to
 help address censorship; we wish them luck.
 
 %\cite{infranet}
