@@ -506,7 +506,7 @@ int connection_handle_write(connection_t *conn) {
   } else {
     if(flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen) < 0)
       return -1;
-      /* conns in CONNECTING state will fall through... */
+    /* conns in CONNECTING state will fall through... */
   }
 
   if(!connection_wants_to_flush(conn)) /* it's done flushing */
@@ -527,9 +527,8 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
     return;
   }
 
-  /* XXX if linkpadding, this only applies to conns that aren't open OR connections */
   connection_start_writing(conn);
-#define MIN_TLS_FLUSHLEN 16300
+#define MIN_TLS_FLUSHLEN 15872
 /* openssl tls record size is 16383, this is close. The goal here is to
  * push data out as soon as we know there's enough for a tls record, so
  * during periods of high load we won't read the entire megabyte from
@@ -544,7 +543,11 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
       log_fn(LOG_WARN,"flushing failed.");
     }
   }
-  conn->outbuf_flushlen += len;
+  if(len > 0) { /* if there's any left over */
+    conn->outbuf_flushlen += len;
+    connection_start_writing(conn);
+    /* because connection_handle_write() above might have stopped writing */
+  }
 }
 
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
@@ -757,6 +760,10 @@ void assert_connection_ok(connection_t *conn, time_t now)
   return;
   assert(conn->type >= _CONN_TYPE_MIN);
   assert(conn->type <= _CONN_TYPE_MAX);
+
+  if(conn->outbuf_flushlen > 0) {
+    assert(connection_is_writing(conn) || conn->wants_to_write);
+  }
 
   /* XXX check: wants_to_read, wants_to_write, s, poll_index,
    * marked_for_close. */

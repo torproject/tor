@@ -136,6 +136,10 @@ void connection_start_reading(connection_t *conn) {
   poll_array[conn->poll_index].events |= POLLIN;
 }
 
+int connection_is_writing(connection_t *conn) {
+  return poll_array[conn->poll_index].events & POLLOUT;
+}
+
 void connection_stop_writing(connection_t *conn) {
 
   assert(conn && conn->poll_index < nfds);
