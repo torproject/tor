@@ -199,6 +199,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 
   goto done;
  error:
+  tls_log_errors(LOG_WARN, "generating certificate");
   if (x509) {
     X509_free(x509);
     x509 = NULL;
@@ -317,6 +318,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   return 0;
 
  error:
+  tls_log_errors(LOG_WARN, "creating TLS context");
   if (pkey)
     EVP_PKEY_free(pkey);
   if (rsa)
@@ -434,7 +436,7 @@ tor_tls_handshake(tor_tls *tls)
   r = tor_tls_get_error(tls,r,0, "handshaking", LOG_INFO);
   if (r == TOR_TLS_DONE) {
     tls->state = TOR_TLS_ST_OPEN;
-  } 
+  }
   return r;
 }
 
@@ -557,9 +559,6 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
   EVP_PKEY *id_pkey = NULL;
   time_t now, t;
   int r = -1;
-
-  /* XXXX */
-  tls_log_errors(LOG_WARN, "preparing to verify");
 
   if (!(cert = SSL_get_peer_certificate(tls->ssl)))
     return -1;
