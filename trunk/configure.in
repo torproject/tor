@@ -145,7 +145,8 @@ dnl These headers are not essential
 
 AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h)
 
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy strtoull getpwnam fseeko ftello)
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy strtoull getpwnam ftello)
+AC_FUNC_FSEEKO
 
 AC_CHECK_MEMBERS([struct timeval.tv_sec])
 
@@ -236,12 +237,10 @@ AC_SUBST(LOCALSTATEDIR)
 # than autoconf's macros like.
 CFLAGS="$CFLAGS -Wall -g -O2"
 # Add some more warnings which we use in the cvs version but not in the
-# released versions.
-#CFLAGS="$CFLAGS -W -Wno-unused-parameter -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes"
-#CFLAGS="$CFLAGS -Wwrite-strings -Wredundant-decls"
-
+# released versions.  (Some relevant gcc versions can't handle these.)
+#CFLAGS="$CFLAGS -W -Wno-unused-parameter -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls"
 # Add these in when you feel like fun.
-# -Wbad-function-cast -Werror  -Wdeclaration-after-statement
+#CFLAGS="$CFLAGS -Wbad-function-cast -Werror -Wdeclaration-after-statement"
 
 echo "confdir: $CONFDIR"
 

@@ -8,11 +8,11 @@
  * \brief Functions to send messages to log files or the console.
  */
 
+#include "orconfig.h"
 #include <stdarg.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include "orconfig.h"
 #include "./util.h"
 #include "./log.h"
 
