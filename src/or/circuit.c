@@ -405,9 +405,10 @@ void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *l
        (edge_type == EDGE_AP   && conn->package_window > 0 && conn->cpath_layer == layer_hint)) {
       connection_start_reading(conn);
       connection_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
+      if(circuit_consider_stop_edge_reading(circ, edge_type, layer_hint))
+        return;
     }
   }
-  circuit_consider_stop_edge_reading(circ, edge_type, layer_hint);
 }
 
 /* returns 1 if the window is empty, else 0. If it's empty, tell edge conns to stop reading. */

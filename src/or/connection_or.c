@@ -205,7 +205,7 @@ int connection_or_create_listener(struct sockaddr_in *bindaddr) {
 }
 
 int connection_or_handle_listener_read(connection_t *conn) {
-  log(LOG_NOTICE,"OR: Received a connection request from a router. Attempting to authenticate.");
+  log(LOG_NOTICE,"OR: Received a connection request. Attempting to authenticate.");
   return connection_handle_listener_read(conn, CONN_TYPE_OR, OR_CONN_STATE_SERVER_AUTH_WAIT);
 }
 
