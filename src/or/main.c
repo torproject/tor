@@ -240,6 +240,8 @@ static void conn_read(int i) {
   if (conn->marked_for_close)
     return;
 
+  /* post 0.0.9, 
+
   /* see http://www.greenend.org.uk/rjk/2001/06/poll.html for
    * discussion of POLLIN vs POLLHUP */
   if (!(poll_array[i].revents & (POLLIN|POLLHUP|POLLERR)))
