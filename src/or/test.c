@@ -554,7 +554,7 @@ test_dir_format()
   r1.onion_pkey = pk1;
   r1.identity_pkey = pk2;
   r1.link_pkey = pk3;
-  r1.bandwidth = 1000;
+  r1.bandwidthrate = r1.bandwidthburst = 1000;
   r1.exit_policy = NULL;
   r1.nickname = "Magri";
 
@@ -578,7 +578,7 @@ test_dir_format()
   r2.onion_pkey = pk2;
   r2.identity_pkey = pk1;
   r2.link_pkey = pk2;
-  r2.bandwidth = 3000;
+  r2.bandwidthrate = r2.bandwidthburst = 3000;
   r2.exit_policy = &ex1;
 
   test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
@@ -615,7 +615,8 @@ test_dir_format()
   test_eq(rp1->or_port, r1.or_port);
   test_eq(rp1->socks_port, r1.socks_port);
   test_eq(rp1->dir_port, r1.dir_port);
-  test_eq(rp1->bandwidth, r1.bandwidth);
+  test_eq(rp1->bandwidthrate, r1.bandwidthrate);
+//  test_eq(rp1->bandwidthburst, r1.bandwidthburst);
   test_assert(crypto_pk_cmp_keys(rp1->onion_pkey, pk1) == 0);
   test_assert(crypto_pk_cmp_keys(rp1->link_pkey, pk3) == 0);
   test_assert(crypto_pk_cmp_keys(rp1->identity_pkey, pk2) == 0);

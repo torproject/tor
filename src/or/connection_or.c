@@ -76,7 +76,7 @@ int connection_or_finished_flushing(connection_t *conn) {
 void connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router) {
   conn->addr = router->addr;
   conn->port = router->or_port;
-  conn->receiver_bucket = conn->bandwidth = router->bandwidth;
+  conn->receiver_bucket = conn->bandwidth = router->bandwidthburst;
   conn->onion_pkey = crypto_pk_dup_key(router->onion_pkey);
   conn->link_pkey = crypto_pk_dup_key(router->link_pkey);
   conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
