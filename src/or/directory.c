@@ -94,7 +94,7 @@ static int directory_send_command(connection_t *conn, int command) {
 }
 
 int connection_dir_process_inbuf(connection_t *conn) {
-  char directory[MAX_DIR_SIZE+1];
+  char *directory;
   int directorylen=0;
 
   assert(conn && conn->type == CONN_TYPE_DIR);
@@ -104,7 +104,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
       case DIR_CONN_STATE_CLIENT_READING_FETCH:
         /* kill it, but first fetch/process the directory to learn about new routers. */
         switch(fetch_from_buf_http(conn->inbuf,
-                                   NULL, 0, directory, MAX_DIR_SIZE)) {
+                                   NULL, 0, &directory, MAX_DIR_SIZE)) {
           case -1: /* overflow */
             log_fn(LOG_WARN,"'fetch' response too large. Failing.");
             return -1;
@@ -118,6 +118,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
         log_fn(LOG_INFO,"Received directory (size %d):\n%s", directorylen, directory);
         if(directorylen == 0) {
           log_fn(LOG_INFO,"Empty directory. Ignoring.");
+          free(directory);
           return -1;
         }
         if(router_set_routerlist_from_directory(directory, conn->identity_pkey) < 0){
@@ -128,6 +129,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
         if(options.ORPort) { /* connect to them all */
           router_retry_connections();
         }
+        free(directory);
         return -1;
       case DIR_CONN_STATE_CLIENT_READING_UPLOAD:
         /* XXX make sure there's a 200 OK on the buffer */
@@ -148,16 +150,56 @@ int connection_dir_process_inbuf(connection_t *conn) {
   return 0;
 }
 
-static int directory_handle_command(connection_t *conn) {
-  char headers[2048];
-  char body[50000]; /* XXX */
+static int directory_handle_command_get(connection_t *conn,
+                                        char *headers, char *body) {
   size_t dlen;
   const char *cp;
+
+  /* XXX should check url and http version */
+  log_fn(LOG_DEBUG,"Received GET command.");
+
+  dlen = dirserv_get_directory(&cp);
+
+  if(dlen == 0) {
+    log_fn(LOG_WARN,"My directory is empty. Closing.");
+    return -1; /* XXX send some helpful http error code */
+  }
+
+  log_fn(LOG_DEBUG,"Dumping directory to client."); 
+  connection_write_to_buf(answerstring, strlen(answerstring), conn);
+  connection_write_to_buf(cp, dlen, conn);
+  conn->state = DIR_CONN_STATE_SERVER_WRITING;
+  return 0;
+}
+
+static int directory_handle_command_post(connection_t *conn,
+                                         char *headers, char *body) {
+  const char *cp;
+
+  /* XXX should check url and http version */
+  log_fn(LOG_DEBUG,"Received POST command.");
+  cp = body;
+  if(dirserv_add_descriptor(&cp) < 0) {
+    log_fn(LOG_WARN,"dirserv_add_descriptor() failed. Dropping.");
+    return -1; /* XXX should write an http failed code */
+  }
+  dirserv_get_directory(&cp); /* rebuild and write to disk */
+  connection_write_to_buf(answerstring, strlen(answerstring), conn);
+  conn->state = DIR_CONN_STATE_SERVER_WRITING;
+  return 0;
+}
+
+static int directory_handle_command(connection_t *conn) {
+  char *headers=NULL, *body=NULL;
+  int r;
+
+#define MAX_HEADERS_SIZE 2048
+#define MAX_BODY_SIZE 500000
 
   assert(conn && conn->type == CONN_TYPE_DIR);
 
   switch(fetch_from_buf_http(conn->inbuf,
-                             headers, sizeof(headers), body, sizeof(body))) {
+                             &headers, MAX_HEADERS_SIZE, &body, MAX_BODY_SIZE)) {
     case -1: /* overflow */
       log_fn(LOG_WARN,"input too large. Failing.");
       return -1;
@@ -167,41 +209,19 @@ static int directory_handle_command(connection_t *conn) {
     /* case 1, fall through */
   }
 
-  log_fn(LOG_DEBUG,"headers '%s', body '%s'.",headers,body);
-  if(!strncasecmp(headers,"GET",3)) {
-    /* XXX should check url and http version */
-    log_fn(LOG_DEBUG,"Received GET command.");
+  log_fn(LOG_DEBUG,"headers '%s', body '%s'.", headers, body);
 
-    dlen = dirserv_get_directory(&cp);
-
-    if(dlen == 0) {
-      log_fn(LOG_WARN,"My directory is empty. Closing.");
-      return -1; /* XXX send some helpful http error code */
-    }
-
-    log_fn(LOG_DEBUG,"Dumping directory to client."); 
-    connection_write_to_buf(answerstring, strlen(answerstring), conn);
-    connection_write_to_buf(cp, dlen, conn);
-    conn->state = DIR_CONN_STATE_SERVER_WRITING;
-    return 0;
+  if(!strncasecmp(headers,"GET",3))
+    r = directory_handle_command_get(conn, headers, body);
+  else if (!strncasecmp(headers,"POST",4))
+    r = directory_handle_command_post(conn, headers, body);
+  else {
+    log_fn(LOG_WARN,"Got headers '%s' with unknown command. Closing.", headers);
+    r = -1;
   }
 
-  if(!strncasecmp(headers,"POST",4)) {
-    /* XXX should check url and http version */
-    log_fn(LOG_DEBUG,"Received POST command.");
-    cp = body;
-    if(dirserv_add_descriptor(&cp) < 0) {
-      log_fn(LOG_WARN,"dirserv_add_descriptor() failed. Dropping.");
-      return -1; /* XXX should write an http failed code */
-    }
-    dirserv_get_directory(&cp); /* rebuild and write to disk */
-    connection_write_to_buf(answerstring, strlen(answerstring), conn);
-    conn->state = DIR_CONN_STATE_SERVER_WRITING;
-    return 0;
-  }
-
-  log_fn(LOG_WARN,"Got headers with unknown command. Closing.");
-  return -1;
+  tor_free(headers); tor_free(body);
+  return r;
 }
 
 int connection_dir_finished_flushing(connection_t *conn) {

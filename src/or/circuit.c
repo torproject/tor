@@ -369,7 +369,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
     }
     if(cell_direction == CELL_DIRECTION_IN) {
       if(relay_check_digest(layer_hint->b_digest, cell) < 0) {
-        log_fn(LOG_WARN,"outgoing cell failed integrity check. Closing circ.");
+        log_fn(LOG_WARN,"incoming cell failed integrity check. Closing circ.");
         return -1;
       }
       ++stats_n_relay_cells_delivered;
