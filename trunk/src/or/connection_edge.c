@@ -353,7 +353,7 @@ void connection_ap_attach_pending(void)
 static int connection_ap_handshake_process_socks(connection_t *conn) {
   socks_request_t *socks;
   int sockshere;
-  int addresstype;
+  hostname_type_t addresstype;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP);
@@ -402,20 +402,30 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   /* Parse the address provided by SOCKS.  Modify it in-place if it
    * specifies a hidden-service (.onion) or particular exit node (.exit).
    */
-  addresstype = parse_address(socks->address);
+  addresstype = parse_extended_hostname(socks->address);
 
-  if (addresstype == 1) {
+  if (addresstype == EXIT_HOSTNAME) {
     /* .exit -- modify conn to specify the exit node. */
     char *s = strrchr(socks->address,'.');
     if (!s || s[1] == '\0') {
       log_fn(LOG_WARN,"Malformed address '%s.exit'. Refusing.", socks->address);
       return -1;
     }
-    conn->chosen_exit_name = tor_strdup(s+1);
+    if (strlen(s+1) == HEX_DIGEST_LEN) {
+      conn->chosen_exit_name = tor_malloc(HEX_DIGEST_LEN+2);
+      *(conn->chosen_exit_name) = '$';
+      strlcpy(conn->chosen_exit_name+1, HEX_DIGEST_LEN+1, s+1);
+    } else {
+      conn->chosen_exit_name = tor_strdup(s+1);
+    }
     *s = 0;
+    if (!is_legal_nickname_or_hexdigest(conn->chosen_exit_name)) {
+      log_fn(LOG_WARN, "%s is not a legal exit node nickname; rejecting.");
+      return -1;
+    }
   }
 
-  if (addresstype != 2) {
+  if (addresstype != ONION_HOSTNAME) {
     /* not a hidden-service request (i.e. normal or .exit) */
     if (socks->command == SOCKS_COMMAND_CONNECT && socks->port == 0) {
       log_fn(LOG_WARN,"Application asked to connect to port 0. Refusing.");
@@ -1245,15 +1255,16 @@ set_exit_redirects(smartlist_t *lst)
 }
 
 /** If address is of the form "y.onion" with a well-formed handle y:
- *     Put a '\0' after y, lower-case it, and return 2.
+ *     Put a '\0' after y, lower-case it, and return ONION_HOSTNAME.
  *
  * If address is of the form "y.exit":
- *     Put a '\0' after y and return 1.
+ *     Put a '\0' after y and return EXIT_HOSTNAME.
  *
  * Otherwise:
- *     Return 0 and change nothing.
+ *     Return NORMAL_HOSTNAME and change nothing.
  */
-int parse_address(char *address) {
+hostname_type_t
+parse_extended_hostname(char *address) {
     char *s;
     char query[REND_SERVICE_ID_LEN+1];
 
@@ -1261,10 +1272,10 @@ int parse_address(char *address) {
     if (!s) return 0; /* no dot, thus normal */
     if (!strcasecmp(s+1,"exit")) {
       *s = 0; /* null-terminate it */
-      return 1; /* .exit */
+      return EXIT_HOSTNAME; /* .exit */
     }
     if (strcasecmp(s+1,"onion"))
-      return 0; /* neither .exit nor .onion, thus normal */
+      return NORMAL_HOSTNAME; /* neither .exit nor .onion, thus normal */
 
     /* so it is .onion */
     *s = 0; /* null-terminate it */
@@ -1273,11 +1284,11 @@ int parse_address(char *address) {
     tor_strlower(query);
     if (rend_valid_service_id(query)) {
       tor_strlower(address);
-      return 2; /* success */
+      return ONION_HOSTNAME; /* success */
     }
 failed:
     /* otherwise, return to previous state and return 0 */
     *s = '.';
-    return 0;
+    return NORMAL_HOSTNAME;
 }
 
