@@ -14,7 +14,7 @@ static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type)
 static void circuit_rep_hist_note_result(circuit_t *circ);
 
 static void circuit_is_open(circuit_t *circ);
-static void circuit_failed(circuit_t *circ);
+static void circuit_build_failed(circuit_t *circ);
 static circuit_t *circuit_establish_circuit(uint8_t purpose, const char *exit_nickname);
 
 unsigned long stats_n_relay_cells_relayed = 0;
@@ -854,7 +854,7 @@ int _circuit_mark_for_close(circuit_t *circ) {
    * links worked and which didn't.
    */
   if (circ->state != CIRCUIT_STATE_OPEN) {
-    circuit_failed(circ); /* take actions if necessary */
+    circuit_build_failed(circ); /* take actions if necessary */
     circuit_rep_hist_note_result(circ);
   }
 
@@ -1130,7 +1130,9 @@ static void circuit_is_open(circuit_t *circ) {
   }
 }
 
-static void circuit_failed(circuit_t *circ) {
+/* Called whenever a circuit could not be successfully built.
+ */
+static void circuit_build_failed(circuit_t *circ) {
 
   /* we should examine circ and see if it failed because of
    * the last hop or an earlier hop. then use this info below.
@@ -1148,23 +1150,37 @@ static void circuit_failed(circuit_t *circ) {
       break;
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
       /* at Bob, waiting for introductions */
+      if (circ->state != CIRCUIT_STATE_OPEN) {
+        circuit_increment_failure_count();
+      }
       /* no need to care here, because bob will rebuild intro
        * points periodically. */
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
       /* at Alice, connecting to intro point */
+      /* Don't increment failure count, since Bob may have picked
+       * the inttroduction point badly */
       /* Alice will pick a new intro point when this one dies, if
        * the stream in question still cares. No need to act here. */
       break;
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       /* at Alice, waiting for Bob */
+      if (circ->state != CIRCUIT_STATE_OPEN) {
+        circuit_increment_failure_count();
+      }
       /* Alice will pick a new rend point when this one dies, if
        * the stream in question still cares. No need to act here. */
       break;
     case CIRCUIT_PURPOSE_S_CONNECT_REND:
       /* at Bob, connecting to rend point */
+      /* Don't increment failure count, since Alice may have picked
+       * the rendezvous point badly */
       log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s. Sucks to be Alice.", circ->build_state->chosen_exit);
       break;
+    default:
+      /* Other cases are impossible, since this function is only caused with
+       * unbuilt circuits. */
+      assert(0);
   }
 }
 
