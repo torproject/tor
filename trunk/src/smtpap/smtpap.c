@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.4  2002/09/03 18:44:24  nickm
+ * Port to MacOS X
+ *
  * Revision 1.3  2002/08/24 07:56:34  arma
  * proxies send port in host order as ascii string
  *
@@ -114,6 +117,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -122,7 +126,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
-#include <wait.h>
 #include <stdarg.h>
 #include <ctype.h>
 #include <stdint.h>
