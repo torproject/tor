@@ -1,7 +1,44 @@
 
+[First four are all equally first.
+Others follow in order of priority.]
+
+Patch well-known proxies to make them OR compliant
+   Data stream anonymizing, HTTP/FTP (Privoxy, Squid), SMTP, etc.
+   Packet Redirector, a la FreeBSD (DNS, authenticated connections, etc.)
+
+Deploy and manage open source development site.
+Manage and maintain code, write documentation, design and write
+ unit tests, handle patch submissions, make the autoconf work, etc
+
+Deploy a widespread network: manage deployment.
+Maintain and distribute directory/network state information etc. Keep
+operators and users happy.
+
+Test OR network for reliability and performance, with and without
+ mechanisms for throttling, congestion control, padding, load balancing
+ if applicable, etc.
+     Use httperf and webload to get some performance stats
+     Modify code as dictated by testing.
+
+Develop rendezvous points
+Implement reply onions
+Develop location protected servers idea
+
+Enhance router twins to do load balancing as well as DoS prevention
+
+Develop and deploy automated reputation management, directory servers,
+and directory/network state monitoring.
+
+---
+
+debian / red hat spec file
+handle starting things as a system daemon
+transition addr to sin_addr
+
+
 Obvious things I'd like to do that won't break anything:
 
-* Abstract out crypto calls, with the eventual goal of moving
+* Abstract out crypto calls (done), with the eventual goal of moving
   from openssl to something with a more flexible license.
 
 * Test suite. We need one.
