@@ -514,6 +514,43 @@ int circuit_stream_is_being_handled(connection_t *conn) {
   return 0;
 }
 
+void circuit_build_needed_circs(time_t now) {
+  static long time_to_new_circuit = 0;
+  circuit_t *circ;
+
+  if (options.SocksPort)
+    /* launch a new circ for any pending streams that need one */
+    connection_ap_attach_pending();
+
+/* Build a new test circuit every 5 minutes */
+#define TESTING_CIRCUIT_INTERVAL 300
+
+  circ = circuit_get_best(NULL, 1, CIRCUIT_PURPOSE_C_GENERAL);
+  if(time_to_new_circuit < now) {
+    client_dns_clean();
+    circuit_expire_unused_circuits();
+    circuit_reset_failure_count();
+    if(circ && circ->timestamp_dirty) {
+      log_fn(LOG_INFO,"Youngest circuit dirty; launching replacement.");
+      /* make a new circuit */
+      circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
+    } else if (options.RunTesting && circ &&
+               circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
+      log_fn(LOG_INFO,"Creating a new testing circuit.");
+      circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
+    }
+    time_to_new_circuit = now + options.NewCircuitPeriod;
+    time_to_new_circuit = now + options.NewCircuitPeriod;
+  }
+#define CIRCUIT_MIN_BUILDING 3
+  if(!circ && circuit_count_building() < CIRCUIT_MIN_BUILDING) {
+    /* if there's no open circ, and less than 3 are on the way,
+     * go ahead and try another.
+     */
+    circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
+  }
+}
+
 /* update digest from the payload of cell. assign integrity part to cell. */
 static void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
   char integrity[4];
