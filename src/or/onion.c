@@ -8,6 +8,7 @@ extern or_options_t options; /* command-line and config-file options */
 
 static int onion_process(circuit_t *circ);
 static int onion_deliver_to_conn(aci_t aci, unsigned char *onion, uint32_t onionlen, connection_t *conn);
+static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len);
 static int find_tracked_onion(unsigned char *onion, uint32_t onionlen);
 
 int decide_aci_type(uint32_t local_addr, uint16_t local_port,
@@ -335,7 +336,7 @@ int chooselen(double cw)
 unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *routelen)
 {
   int i, j;
-  int num_acceptable_routers = 0;
+  int num_acceptable_routers;
   unsigned int *route = NULL;
   unsigned int oldchoice, choice;
   
@@ -348,26 +349,8 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
   }
   log(LOG_DEBUG,"new_route(): Chosen route length %d.",*routelen);
 
-  for(i=0;i<rarray_len;i++) {
-    log(LOG_DEBUG,"Contemplating whether router %d is a new option...",i);
-    if(options.ORPort &&
-      !connection_exact_get_by_addr_port(rarray[i]->addr, rarray[i]->or_port)) {
-      log(LOG_DEBUG,"Nope, %d is not connected.",i);
-      goto next_i_loop;
-    }
-    for(j=0;j<i;j++) {
-      if(!crypto_pk_cmp_keys(rarray[i]->pkey, rarray[j]->pkey)) {
-        /* these guys are twins. so we've already counted him. */
-        log(LOG_DEBUG,"Nope, %d is a twin of %d.",i,j);
-        goto next_i_loop;
-      }
-    }
-    num_acceptable_routers++;
-    log(LOG_DEBUG,"I like %d. num_acceptable_routers now %d.",i, num_acceptable_routers);
-    next_i_loop:
-      ; /* our compiler may need an explicit statement after the label */
-  }
-      
+  num_acceptable_routers = count_acceptable_routers(rarray, rarray_len);
+
   if(num_acceptable_routers < *routelen) {
     log(LOG_DEBUG,"new_route(): Cutting routelen from %d to %d.",*routelen, num_acceptable_routers);
     *routelen = num_acceptable_routers;
@@ -412,6 +395,34 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
    
   return route;
 }
+
+static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
+  int i, j;
+  int num=0;
+
+  for(i=0;i<rarray_len;i++) {
+    log(LOG_DEBUG,"Contemplating whether router %d is a new option...",i);
+    if(options.ORPort &&
+      !connection_exact_get_by_addr_port(rarray[i]->addr, rarray[i]->or_port)) {
+      log(LOG_DEBUG,"Nope, %d is not connected.",i);
+      goto next_i_loop;
+    }
+    for(j=0;j<i;j++) {
+      if(!crypto_pk_cmp_keys(rarray[i]->pkey, rarray[j]->pkey)) {
+        /* these guys are twins. so we've already counted him. */
+        log(LOG_DEBUG,"Nope, %d is a twin of %d.",i,j);
+        goto next_i_loop;
+      }
+    }
+    num++;
+    log(LOG_DEBUG,"I like %d. num_acceptable_routers now %d.",i, num);
+    next_i_loop:
+      ; /* our compiler may need an explicit statement after the label */
+  }
+
+  return num;
+}
+
 
 crypto_cipher_env_t *
 create_onion_cipher(int cipher_type, char *key, char *iv, int encrypt_mode)

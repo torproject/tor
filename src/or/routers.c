@@ -563,15 +563,18 @@ static void router_add_exit_policy(routerinfo_t *router, char *string) {
   memset(newe,0,sizeof(struct exit_policy_t));
 
   newe->string = strdup(string);
-  if(!strncasecmp(string,"reject ",strlen("reject "))) {
+  n = find_whitespace(string);
+  *n = 0;
+
+  if(!strcasecmp(string,"reject")) {
     newe->policy_type = EXIT_POLICY_REJECT;
-  } else if(!strncasecmp(string,"accept ",strlen("accept "))) {
+  } else if(!strcasecmp(string,"accept")) {
     newe->policy_type = EXIT_POLICY_ACCEPT;
   } else {
     goto policy_read_failed;
   }
 
-  string = eat_whitespace(string + strlen("reject "));
+  string = eat_whitespace(n+1);
   if(!*string) {
     goto policy_read_failed;
   }
@@ -612,6 +615,38 @@ policy_read_failed:
     free(newe->port);
   free(newe);
   return;
+
+}
+
+/* Return 0 if my exit policy says to allow connection to conn.
+ * Else return -1.
+ */
+int router_compare_to_exit_policy(connection_t *conn) {
+  struct exit_policy_t *tmpe;
+
+  if(!my_routerinfo) {
+    log(LOG_WARNING, "router_compare_to_exit_policy(): my_routerinfo undefined! Rejected.");
+    return -1;
+  }
+
+  for(tmpe=my_routerinfo->exit_policy; tmpe; tmpe=tmpe->next) {
+    assert(tmpe->address);
+    assert(tmpe->port);
+
+    /* Totally ignore the address field of the exit policy, for now. */
+
+    if(!strcmp(tmpe->port,"*") || atoi(tmpe->port) == conn->port) {
+      log(LOG_INFO,"router_compare_to_exit_policy(): Port '%s' matches '%d'. %s.",
+          tmpe->port, conn->port,
+          tmpe->policy_type == EXIT_POLICY_ACCEPT ? "Accepting" : "Rejecting");
+      if(tmpe->policy_type == EXIT_POLICY_ACCEPT)
+        return 0;
+      else
+        return -1;
+    }
+  }
+
+  return 0; /* accept all by default. */
 
 }
 
