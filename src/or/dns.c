@@ -116,7 +116,6 @@ int dns_resolve(connection_t *exitconn) {
         resolve->pending_connections = pending_connection;
         log_fn(LOG_DEBUG,"Connection (fd %d) waiting for pending DNS resolve of '%s'",
                exitconn->s, exitconn->address);
-               
         return 0;
       case CACHE_STATE_VALID:
         exitconn->addr = resolve->answer;
@@ -126,32 +125,30 @@ int dns_resolve(connection_t *exitconn) {
       case CACHE_STATE_FAILED:
         return -1;
     }
-  } else { /* need to add it */
-    resolve = tor_malloc_zero(sizeof(struct cached_resolve));
-    resolve->state = CACHE_STATE_PENDING;
-    resolve->expire = now + 15*60; /* 15 minutes */
-    strncpy(resolve->question, exitconn->address, MAX_ADDRESSLEN);
-
-    /* add us to the pending list */
-    pending_connection = tor_malloc(sizeof(struct pending_connection_t));
-    pending_connection->conn = exitconn;
-    pending_connection->next = resolve->pending_connections;
-    resolve->pending_connections = pending_connection;
-
-    /* add us to the linked list of resolves */
-    if (!oldest_cached_resolve) {
-      oldest_cached_resolve = resolve;
-    } else {
-      newest_cached_resolve->next = resolve;
-    }
-    newest_cached_resolve = resolve;
-
-    SPLAY_INSERT(cache_tree, &cache_root, resolve);
-    return assign_to_dnsworker(exitconn);
+    assert(0);
   }
+  /* not there, need to add it */
+  resolve = tor_malloc_zero(sizeof(struct cached_resolve));
+  resolve->state = CACHE_STATE_PENDING;
+  resolve->expire = now + 15*60; /* 15 minutes */
+  strncpy(resolve->question, exitconn->address, MAX_ADDRESSLEN);
 
-  assert(0);
-  return 0; /* not reached; keep gcc happy */
+  /* add us to the pending list */
+  pending_connection = tor_malloc(sizeof(struct pending_connection_t));
+  pending_connection->conn = exitconn;
+  pending_connection->next = resolve->pending_connections;
+  resolve->pending_connections = pending_connection;
+
+  /* add us to the linked list of resolves */
+  if (!oldest_cached_resolve) {
+    oldest_cached_resolve = resolve;
+  } else {
+    newest_cached_resolve->next = resolve;
+  }
+  newest_cached_resolve = resolve;
+
+  SPLAY_INSERT(cache_tree, &cache_root, resolve);
+  return assign_to_dnsworker(exitconn);
 }
 
 static int assign_to_dnsworker(connection_t *exitconn) {
