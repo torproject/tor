@@ -127,6 +127,22 @@ Bind the directory service to this address. (Default: 0.0.0.0)
 \fBrecommendedversions \fR\fISTRING\fP
 STRING is a command-separated list of Tor versions currently believed to be safe. The list is included in each directory, and nodes which pull down the directory learn whether they need to upgrade.
 
+.SH HIDDEN SERVER OPTIONS
+.PP
+The following options are used to configure a hidden service.
+.TP
+\fBhiddenservicedir \fR\fIDIRECTORY\fP
+Store data files for a hidden service in DIRECTORY.  Every hidden
+service must have a separate directory.  You may use this option multiple
+times to specify multiple services.
+.TP
+\fBhiddenserviceport \fR\fIVIRTPORT \fR[\fITARGET\fR]\fP
+Configure a virtual port VIRTPORT for a hidden service.  You may use this
+option multiple times; each time applies to the service using the most recent
+hiddenservicedir.  By default, this option maps the virtual port to the
+same port on 127.0.0.1.  You may override the target port, address, or both
+by specifying a target of addr, port, or addr:port.
+
 .SH FILES
 .TP
 .I @CONFDIR@/torrc
