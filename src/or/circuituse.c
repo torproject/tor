@@ -198,6 +198,7 @@ void circuit_expire_building(time_t now) {
     if (victim->timestamp_created + MIN_SECONDS_BEFORE_EXPIRING_CIRC > now)
       continue; /* it's young still, don't mess with it */
 
+#if 0
     /* some debug logs, to help track bugs */
     if (victim->purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
         victim->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
@@ -213,6 +214,7 @@ void circuit_expire_building(time_t now) {
                victim->n_circ_id,
                (int)(now - victim->timestamp_dirty));
     }
+#endif
 
     /* if circ is !open, or if it's open but purpose is a non-finished
      * intro or rend, then mark it for close */
