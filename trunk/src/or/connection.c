@@ -167,6 +167,14 @@ void connection_free(connection_t *conn) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);
     tor_close_socket(conn->s);
   }
+  if (conn->read_event) {
+    event_del(conn->read_event);
+    tor_free(conn->read_event);
+  }
+  if (conn->write_event) {
+    event_del(conn->write_event);
+    tor_free(conn->write_event);
+  }
   memset(conn, 0xAA, sizeof(connection_t)); /* poison memory */
   tor_free(conn);
 }
@@ -300,6 +308,7 @@ _connection_mark_for_close(connection_t *conn)
   }
 
   conn->marked_for_close = 1;
+  add_connection_to_closeable_list(conn);
 
   /* in case we're going to be held-open-til-flushed, reset
    * the number of seconds since last successful write, so
@@ -904,6 +913,7 @@ static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
   }
 
   if (connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
+    int pending;
     if (conn->state == OR_CONN_STATE_HANDSHAKING) {
       /* continue handshaking even if global token bucket is empty */
       return connection_tls_continue_handshake(conn);
@@ -931,7 +941,22 @@ static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
       case TOR_TLS_DONE: /* no data read, so nothing to process */
         result = 0;
         break; /* so we call bucket_decrement below */
+      default:
+        break;
     }
+    pending = tor_tls_get_pending_bytes(conn->tls);
+    if (pending) {
+      /* XXXX If we have any pending bytes, read them now.  This *can*
+       * take us over our read alotment, but really we shouldn't be
+       * believing that SSL bytes are the same as TCP bytes anyway. */
+      int r2 = read_to_buf_tls(conn->tls, pending, conn->inbuf);
+      if (r2<0) {
+        log_fn(LOG_WARN, "Bug: apparently, reading pending bytes can fail.");
+      } else {
+        result += r2;
+      }
+    }
+
   } else {
     result = read_to_buf(conn->s, at_most, conn->inbuf,
                          &conn->inbuf_reached_eof);

@@ -70,7 +70,7 @@ Tier one:
 
    - Windows
 N    - Make millisecond accuracy work on win32
-     - Switch to WSA*Event code as a better poll replacement.  Or maybe just
+     X Switch to WSA*Event code as a better poll replacement.  Or maybe just
        do libevent?
 
    - Code cleanup
@@ -101,10 +101,24 @@ Tier two:
      - Limit number of circuits that we preemptively generate based on past
        behavior; use same limits in circuit_expire_old_circuits().
      - Write limiting; configurable token buckets.
-     - Switch to libevent?  Evaluate it first.
      - Make it harder to circumvent bandwidth caps: look at number of bytes
        sent across sockets, not number sent inside TLS stream.
 
+     . Switch to libevent
+       o Evaluate libevent
+       o Convert socket handling
+       o Convert signal handling
+       o Convert timers
+       o Update configure.in
+       o Remove fakepoll
+       - Hold-open-until-flushed now works by accident; it should work by
+         design.
+       - The logic for reading from TLS sockets is likely to overrun the
+         bandwidth buckets under heavy load.  (Really, the logic was
+         never right in the first place.)  Also, we should audit all users
+         of get_pending_bytes().
+       - Make sure it works on more platforms.
+       - Find a way to make sure we have libevent 1.0 or later.
 
    - QOI
      - Let more config options (e.g. ORPort) change dynamically.

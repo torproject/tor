@@ -238,7 +238,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
       connection_free(conn);
       return NULL;
     case 0:
-      connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
+      connection_watch_events(conn, EV_READ | EV_WRITE);
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link on windows */
       return conn;
@@ -342,7 +342,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   or_options_t *options = get_options();
 
   conn->state = OR_CONN_STATE_OPEN;
-  connection_watch_events(conn, POLLIN);
+  connection_watch_events(conn, EV_READ);
   log_fn(LOG_DEBUG,"tls handshake done. verifying.");
   if (! tor_tls_peer_has_cert(conn->tls)) { /* It's an old OP. */
     if (server_mode(options)) { /* I'm an OR; good. */
