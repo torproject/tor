@@ -139,22 +139,32 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
   logfile_t *lf;
 
   assert(format);
-  for (lf = logfiles; lf; lf = lf->next) {
-    if (severity < lf->loglevel || severity > lf->max_loglevel)
+  lf = logfiles;
+  while(lf) {
+    if (severity < lf->loglevel || severity > lf->max_loglevel) {
+      lf = lf->next;
       continue;
-    if (!lf->file)
+    }
+    if (!lf->file) {
+      lf = lf->next;
       continue;
+    }
 
     if (!formatted) {
-      format_msg(buf, 10024, severity, funcname, format, ap);
+      format_msg(buf, sizeof(buf), severity, funcname, format, ap);
       formatted = 1;
     }
-    if(fputs(buf, lf->file) == EOF) { /* error */
-      assert(0); /* XXX */
-    }
-    if(fflush(lf->file) == EOF) { /* error */
-      /* don't log the error! */
-      assert(0); /* XXX fail for now. what's better to do? */
+    if(fputs(buf, lf->file) == EOF ||
+       fflush(lf->file) == EOF) { /* error */
+      /* don't log the error! Blow away this log entry and continue. */
+      logfile_t *victim = lf;
+      lf = victim->next;
+      if(victim == logfiles)
+        logfiles = lf;
+      tor_free(victim->filename);
+      tor_free(victim);
+    } else {
+      lf = lf->next;
     }
   }
 }
@@ -194,13 +204,24 @@ void close_logs()
 /** Close and re-open all log files; used to rotate logs on SIGHUP. */
 void reset_logs()
 {
-  logfile_t *lf;
-  for (lf = logfiles; lf; lf = lf->next) {
+  logfile_t *lf = logfiles;
+  while(lf) {
     if (lf->needs_close) {
-      fclose(lf->file);
-      lf->file = fopen(lf->filename, "a");
-      log_tor_version(lf, 1);
+      if(fclose(lf->file)==EOF ||
+        !(lf->file = fopen(lf->filename, "a"))) {
+        /* error. don't log it. delete the log entry and continue. */
+        logfile_t *victim = lf;
+        lf = victim->next;
+        if(victim == logfiles)
+          logfiles = lf;
+        tor_free(victim->filename);
+        tor_free(victim);
+        continue;
+      } else {
+        log_tor_version(lf, 1);
+      }
     }
+    lf = lf->next;
   }
 }
 
