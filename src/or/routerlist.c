@@ -695,7 +695,7 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
     return NULL;
   }
 
-  NEXT_TOKEN();
+  NEXT_TOKEN();  /* XXX This leaks some arguments. */
 
   if (tok->tp != K_ROUTER) {
     log_fn(LOG_WARN,"Entry does not start with \"router\"");
@@ -807,7 +807,7 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
   NEXT_TOKEN();
   while (tok->tp == K_ACCEPT || tok->tp == K_REJECT) {
     router_add_exit_policy(router, tok);
-    NEXT_TOKEN();
+    NEXT_TOKEN(); /* This also leaks some args. XXX */
   }
 
   if (tok->tp != K_ROUTER_SIGNATURE) {
@@ -1067,10 +1067,11 @@ _router_get_next_token(const char **s, directory_token_t *tok) {
   char *signature = NULL;
   int i, done;
 
+  /* Clear the token _first_, so that we can clear it safely. */
+  router_release_token(tok);
+
   tok->tp = _ERR;
   tok->val.error = "";
-
-  router_release_token(tok);
 
   *s = eat_whitespace(*s);
   if (!**s) {
