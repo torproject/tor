@@ -678,16 +678,16 @@ static void dumpstats(int severity) {
 
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
-    log(severity, "Conn %d (socket %d) type %d (%s), state %d (%s), created %ld secs ago",
+    log(severity, "Conn %d (socket %d) type %d (%s), state %d (%s), created %d secs ago",
       i, conn->s, conn->type, CONN_TYPE_TO_STRING(conn->type),
-      conn->state, conn_state_to_string[conn->type][conn->state], now - conn->timestamp_created);
+      conn->state, conn_state_to_string[conn->type][conn->state], (int)(now - conn->timestamp_created));
     if(!connection_is_listener(conn)) {
       log(severity,"Conn %d is to '%s:%d'.",i,conn->address, conn->port);
-      log(severity,"Conn %d: %d bytes waiting on inbuf (last read %ld secs ago)",i,
+      log(severity,"Conn %d: %d bytes waiting on inbuf (last read %d secs ago)",i,
              (int)buf_datalen(conn->inbuf),
-             now - conn->timestamp_lastread);
-      log(severity,"Conn %d: %d bytes waiting on outbuf (last written %ld secs ago)",i,
-             (int)buf_datalen(conn->outbuf), now - conn->timestamp_lastwritten);
+             (int)(now - conn->timestamp_lastread));
+      log(severity,"Conn %d: %d bytes waiting on outbuf (last written %d secs ago)",i,
+             (int)buf_datalen(conn->outbuf), (int)(now - conn->timestamp_lastwritten));
     }
     circuit_dump_by_conn(conn, severity); /* dump info about all the circuits using this conn */
   }
