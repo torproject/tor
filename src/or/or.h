@@ -501,6 +501,7 @@ void circuit_about_to_close_connection(connection_t *conn);
 
 void circuit_dump_by_conn(connection_t *conn);
 
+void circuit_expire_unused_circuits(void);
 void circuit_launch_new(int failure_status);
 int circuit_create_onion(void);
 int circuit_establish_circuit(unsigned int *route, int routelen, char *onion,
