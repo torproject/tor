@@ -1054,11 +1054,15 @@ static void circuit_is_ready(circuit_t *circ) {
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* Tell any AP connections that have been waiting for a new
        * circuit that one is ready. */
+      connection_ap_attach_pending();
+      break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
       /* at Alice, connecting to intro point */
+      connection_ap_attach_pending();
+      break;
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       /* at Alice, waiting for Bob */
-
+      /* XXXNM make and send the rendezvous cookie, and store it in circ */
       connection_ap_attach_pending();
       break;
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
