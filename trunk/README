@@ -39,6 +39,9 @@ Do you want to run a tor server?
   in this configuration until you've been added to the directory
   and can authenticate to the other nodes.
 
+  You may find the initscript in contrib/tor.sh useful if you
+  want to set up Tor to start at boot.
+
 Do you want to run a hidden service?
 
   Copy torrc.sample to torrc (by default it's in /usr/local/etc/tor/), and
