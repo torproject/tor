@@ -423,6 +423,7 @@ static void
 {
   while(cp->prev)
     cp = cp->prev;
+  //XXX this is broken. cp is a doubly linked list.
 
   while(cp->next) {
     assert_cpath_layer_ok(cp);
@@ -478,7 +479,8 @@ void assert_circuit_ok(const circuit_t *c)
     }
   }
   if (c->cpath) {
-    assert_cpath_ok(c->cpath);
+//    assert_cpath_ok(c->cpath);
+// XXX the above call causes an infinite loop.
   }
   if (c->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED) {
     if (!c->marked_for_close) {
