@@ -237,20 +237,14 @@ int init_keys(void) {
   /* OP's don't need persistant keys; just make up an identity and
    * initialize the TLS context. */
   if (!server_mode()) {
-#if 0
-    /* XXXX008 enable this once we make ORs tolerate unknown routers. */
     if (!(prkey = crypto_new_pk_env()))
       return -1;
     if (crypto_pk_generate_key(prkey))
       return -1;
     set_identity_key(prkey);
+/* XXX NM: do we have a convention for what client's Nickname is? */
     if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
                             MAX_SSL_KEY_LIFETIME) < 0) {
-      log_fn(LOG_ERR, "Error creating TLS context for OP.");
-      return -1;
-    }
-#endif
-    if (tor_tls_context_new(NULL, 0, NULL, MAX_SSL_KEY_LIFETIME)<0) {
       log_fn(LOG_ERR, "Error creating TLS context for OP.");
       return -1;
     }
@@ -405,8 +399,6 @@ void router_retry_connections(void) {
 
 int router_is_clique_mode(routerinfo_t *router) {
   if(router->is_trusted_dir)
-    return 1;
-  if(!tor_version_as_new_as(router->platform, "0.0.8pre1"))
     return 1;
   return 0;
 }
@@ -669,10 +661,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     router->address,
     router->or_port,
     router->socks_port,
-    /* Due to an 0.0.7 bug, we can't actually say that we have a dirport unles
-     * we're an authoritative directory.
-     */
-    router->is_trusted_dir ? router->dir_port : 0,
+    router->dir_port,
     router->platform,
     published,
     fingerprint,
@@ -693,16 +682,6 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
   /* From now on, we use 'written' to remember the current length of 's'. */
   written = result;
-
-  if (router->dir_port && !router->is_trusted_dir) {
-    /* dircacheport wasn't recognized before 0.0.8pre.  (When 0.0.7 is gone,
-     * we can fold this back into dirport anyway.) */
-    result = snprintf(s+written,maxlen-written, "opt dircacheport %d\n",
-                      router->dir_port);
-    if (result<0 || result+written > maxlen)
-      return -1;
-    written += result;
-  }
 
   if (options.ContactInfo && strlen(options.ContactInfo)) {
     result = snprintf(s+written,maxlen-written, "opt contact %s\n",

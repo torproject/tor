@@ -437,7 +437,6 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
 int circuit_extend(cell_t *cell, circuit_t *circ) {
   connection_t *n_conn;
   relay_header_t rh;
-  int old_format;
   char *onionskin;
   char *id_digest=NULL;
   routerinfo_t *router;
@@ -449,11 +448,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
 
   relay_header_unpack(&rh, cell->payload);
 
-  if (rh.length == 4+2+ONIONSKIN_CHALLENGE_LEN) {
-    old_format = 1;
-  } else if (rh.length == 4+2+ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN) {
-    old_format = 0;
-  } else {
+  if (rh.length < 4+2+ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN) {
     log_fn(LOG_WARN, "Wrong length %d on extend cell. Closing circuit.", rh.length);
     return -1;
   }
@@ -461,19 +456,9 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   circ->n_addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
   circ->n_port = ntohs(get_uint16(cell->payload+RELAY_HEADER_SIZE+4));
 
-  if (old_format) {
-    n_conn = connection_exact_get_by_addr_port(circ->n_addr,circ->n_port);
-    onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
-    if(!n_conn) { /* hunt around for it a bit before giving up */
-      router = router_get_by_addr_port(circ->n_addr, circ->n_port);
-      if(router)
-        n_conn = connection_get_by_identity_digest(router->identity_digest, CONN_TYPE_OR);
-    }
-  } else {
-    onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
-    id_digest = cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
-    n_conn = connection_get_by_identity_digest(id_digest, CONN_TYPE_OR);
-  }
+  onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
+  id_digest = cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
+  n_conn = connection_get_by_identity_digest(id_digest, CONN_TYPE_OR);
 
   if(!n_conn || n_conn->state != OR_CONN_STATE_OPEN) {
      /* Note that this will close circuits where the onion has the same
@@ -484,17 +469,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     log_fn(LOG_INFO,"Next router (%s:%d) not connected. Connecting.",
            inet_ntoa(in), circ->n_port);
 
-    if (old_format) {
-      router = router_get_by_addr_port(circ->n_addr, circ->n_port);
-      if(!router) {
-        log_fn(LOG_WARN,"Next hop is an unknown router. Closing.");
-        return -1;
-      }
-      id_digest = router->identity_digest;
-    } else { /* new format */
-      router = router_get_by_digest(id_digest);
-    }
-    tor_assert(id_digest);
+    router = router_get_by_digest(id_digest);
 
     memcpy(circ->onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
     circ->state = CIRCUIT_STATE_OR_WAIT;

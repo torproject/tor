@@ -188,8 +188,7 @@ done_processing:
  *          Negotiated keys     KEY_LEN*2+DIGEST_LEN*2
  *
  *  (Note: this _should_ be by addr/port, since we're concerned with specific
- * connections, not with routers (where we'd use identity).  Also, using
- * identity would break pre-0.0.8 OPs, which don't have identity keys.)
+ * connections, not with routers (where we'd use identity).)
  */
 static int cpuworker_main(void *data) {
   unsigned char question[ONIONSKIN_CHALLENGE_LEN];

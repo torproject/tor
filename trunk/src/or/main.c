@@ -400,9 +400,7 @@ static void run_connection_housekeeping(int i, time_t now) {
        (!clique_mode() && !circuit_get_by_conn(conn) &&
        (!router || !server_mode() || !router_is_clique_mode(router)))) {
       /* our handshake has expired;
-       * or we're not an authdirserver, we have no circuits, and
-       *   either he's an OP, we're an OP, or we're both ORs and he's
-       *   running 0.0.8 and he's not an authdirserver,
+       * or we have no circuits and we're both either OPs or normal ORs,
        * then kill it. */
       log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
              i,conn->address, conn->port);
@@ -535,10 +533,7 @@ static void run_scheduled_events(time_t now) {
   /** 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */
   if (!last_rotated_certificate)
     last_rotated_certificate = now;
-  /*XXXX008 we should remove the server_mode() check once OPs also use
-   * identity keys (which they can't do until the known-router check in
-   * connection_or.c is removed. */
-  if (server_mode() && last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
+  if (last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
     log_fn(LOG_INFO,"Rotating tls context.");
     if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
                             MAX_SSL_KEY_LIFETIME) < 0) {
