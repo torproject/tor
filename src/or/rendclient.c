@@ -8,11 +8,16 @@
 void
 rend_client_introcirc_is_open(circuit_t *circ)
 {
+  circuit_t *rendcirc = NULL;
   assert(circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath);
 
   log_fn(LOG_INFO,"introcirc is open");
   connection_ap_attach_pending();
+  while ((rendcirc = circuit_get_next_by_pk_and_purpose(
+            rendcirc, circ->rend_pk_digest, CIRCUIT_PURPOSE_C_REND_READY))) {
+    rend_client_send_introduction(circ, rendcirc);
+  }
 }
 
 /* send the establish-rendezvous cell. if it fails, mark
@@ -69,15 +74,18 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   }
 
   /* Initialize the pending_final_cpath and start the DH handshake. */
-  cpath = rendcirc->build_state->pending_final_cpath =
-    tor_malloc_zero(sizeof(crypt_path_t));
-  if (!(cpath->handshake_state = crypto_dh_new())) {
-    log_fn(LOG_WARN, "Couldn't allocate DH");
-    goto err;
-  }
-  if (crypto_dh_generate_public(cpath->handshake_state)<0) {
-    log_fn(LOG_WARN, "Couldn't generate g^x");
-    goto err;
+  cpath = rendcirc->build_state->pending_final_cpath;
+  if (!cpath) {
+    cpath = rendcirc->build_state->pending_final_cpath =
+      tor_malloc_zero(sizeof(crypt_path_t));
+    if (!(cpath->handshake_state = crypto_dh_new())) {
+      log_fn(LOG_WARN, "Couldn't allocate DH");
+      goto err;
+    }
+    if (crypto_dh_generate_public(cpath->handshake_state)<0) {
+      log_fn(LOG_WARN, "Couldn't generate g^x");
+      goto err;
+    }
   }
 
   /* write the remaining items into tmp */
