@@ -20,8 +20,6 @@ const char dirserv_c_id[] = "$Id$";
 static int the_directory_is_dirty = 1;
 static int runningrouters_is_dirty = 1;
 
-static int list_server_status(char **running_routers_out,
-                              char **router_status_out);
 static void directory_remove_unrecognized(void);
 static int dirserv_regenerate_directory(void);
 /* Should be static; exposed for testing */
@@ -515,7 +513,7 @@ list_single_server_status(routerinfo_t *desc, int is_live,
  * and store them in *<b>running_routers_out</b> and *<b>router_status_out</b>
  * respectively.  Return 0 on success, -1 on failure.
  */
-static int
+int
 list_server_status(char **running_routers_out, char **router_status_out)
 {
   /* List of entries in running-routers style: An optional !, then either
