@@ -244,83 +244,47 @@ void connection_start_writing(connection_t *conn) {
 }
 
 static void conn_read(int i) {
-  int retval;
   connection_t *conn;
 
+  if(!(poll_array[i].revents & (POLLIN|POLLHUP|POLLERR)))
+    return; /* this conn doesn't want to read */
+    /* see http://www.greenend.org.uk/rjk/2001/06/poll.html for
+     * discussion of POLLIN vs POLLHUP */
+
   conn = connection_array[i];
-  assert(conn);
-//  log_fn(LOG_DEBUG,"socket %d has something to read.",conn->s);
+  //log_fn(LOG_DEBUG,"socket %d has something to read.",conn->s);
 
+  if(
+      /* XXX does POLLHUP also mean it's definitely broken? */
 #ifdef MS_WINDOWS
-  if (poll_array[i].revents & POLLERR) {
-    retval = -1;
-    goto error;
-  }
+      (poll_array[i].revents & POLLERR) ||
 #endif
-
-  if (conn->type == CONN_TYPE_OR_LISTENER) {
-    retval = connection_or_handle_listener_read(conn);
-  } else if (conn->type == CONN_TYPE_AP_LISTENER) {
-    retval = connection_ap_handle_listener_read(conn);
-  } else if (conn->type == CONN_TYPE_DIR_LISTENER) {
-    retval = connection_dir_handle_listener_read(conn);
-  } else {
-    retval = connection_read_to_buf(conn);
-    if (retval < 0 && conn->type == CONN_TYPE_DIR && conn->state == DIR_CONN_STATE_CONNECTING) {
-       /* it's a directory server and connecting failed: forget about this router */
-       router_forget_router(conn->addr,conn->port); /* FIXME i don't think this function works. */
-    }
-    if (retval >= 0) { /* all still well */
-      retval = connection_process_inbuf(conn);
-//    log_fn(LOG_DEBUG,"connection_process_inbuf returned %d.",retval);
-      if(retval >= 0 && !connection_state_is_open(conn) && conn->receiver_bucket == 0) {
-        log(LOG_DEBUG,"conn_read(): receiver bucket reached 0 before handshake finished. Closing.");
-        retval = -1;
+    connection_handle_read(conn) < 0)
+    {
+      /* this connection is broken. remove it */
+      log_fn(LOG_INFO,"%s connection broken, removing.", conn_type_to_string[conn->type]); 
+      connection_remove(conn);
+      connection_free(conn);
+      if(i<nfds) { /* we just replaced the one at i with a new one. process it too. */
+        conn_read(i);
       }
     }
-  }
-
-#ifdef MS_WINDOWS
- error:
-#endif
-  if(retval < 0) { /* this connection is broken. remove it */
-    log_fn(LOG_INFO,"%s connection broken, removing.", conn_type_to_string[conn->type]); 
-    connection_remove(conn);
-    connection_free(conn);
-    if(i<nfds) { /* we just replaced the one at i with a new one.
-                    process it too. */
-      if(poll_array[i].revents & (POLLIN|POLLHUP|POLLERR))
-        /* something to read */
-        conn_read(i);
-    }
-  }
 }
 
 static void conn_write(int i) {
-  int retval;
   connection_t *conn;
 
+  if(!(poll_array[i].revents & POLLOUT))
+    return; /* this conn doesn't want to write */
+
   conn = connection_array[i];
-//  log_fn(LOG_DEBUG,"socket %d wants to write.",conn->s);
+  //log_fn(LOG_DEBUG,"socket %d wants to write.",conn->s);
 
-  if(connection_is_listener(conn)) {
-    log_fn(LOG_DEBUG,"Got a listener socket. Can't happen!");
-    retval = -1;
-  } else {
-    /* else it's an OP, OR, or exit */
-    retval = connection_flush_buf(conn); /* conns in CONNECTING state will fall through... */
-    if(retval == 0) { /* it's done flushing */
-      retval = connection_finished_flushing(conn); /* ...and get handled here. */
-    }
-  }
-
-  if(retval < 0) { /* this connection is broken. remove it. */
+  if(connection_handle_write(conn) < 0) { /* this connection is broken. remove it. */
     log_fn(LOG_DEBUG,"%s connection broken, removing.", conn_type_to_string[conn->type]);
     connection_remove(conn);
     connection_free(conn);
-    if(i<nfds) { /* we just replaced the one at i with a new one.
-                    process it too. */
-      if(poll_array[i].revents & POLLOUT) /* something to write */
+    if(i<nfds) { /* we just replaced the one at i with a new one. process it too. */
         conn_write(i);
     }
   }
@@ -346,7 +310,7 @@ static void check_conn_marked(int i) {
   }
 }
 
-static int prepare_for_poll(int *timeout) {
+static int prepare_for_poll(void) {
   int i;
 //  connection_t *conn = NULL;
   connection_t *tmpconn;
@@ -434,44 +398,8 @@ static int prepare_for_poll(int *timeout) {
     current_second = now.tv_sec; /* remember which second it is, for next time */
   }
 
-  *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
-
-  return 0;
+  return (1000 - (now.tv_usec / 1000)); /* how many milliseconds til the next second? */
 }
-
-
-
-/* Link padding stuff left here for fun. Not used now. */
-#if 0
-  if(options.LinkPadding) {
-    /* now check which conn wants to speak soonest */
-    for(i=0;i<nfds;i++) {
-      tmpconn = connection_array[i];
-      if(!connection_speaks_cells(tmpconn))
-        continue; /* this conn type doesn't send cells */
-      if(!connection_state_is_open(tmpconn))
-        continue; /* only conns in state 'open' have a valid send_timeval */ 
-      while(tv_cmp(&tmpconn->send_timeval,&now) <= 0) { /* send_timeval has already passed, let it send a cell */
-        connection_send_cell(tmpconn);
-      }
-      if(!conn || tv_cmp(&tmpconn->send_timeval, &soonest) < 0) { /* this is the best choice so far */
-        conn = tmpconn;
-        soonest.tv_sec = conn->send_timeval.tv_sec;
-        soonest.tv_usec = conn->send_timeval.tv_usec;
-      }
-    }
-
-    if(conn) { /* we might want to set *timeout sooner */
-      ms_until_conn = (soonest.tv_sec - now.tv_sec)*1000 +
-                    (soonest.tv_usec - now.tv_usec)/1000;
-//      log(LOG_DEBUG,"prepare_for_poll(): conn %d times out in %d ms.",conn->s, ms_until_conn);
-      if(ms_until_conn < *timeout) { /* use the new one */
-//        log(LOG_DEBUG,"prepare_for_poll(): conn %d soonest, in %d ms.",conn->s,ms_until_conn);
-        *timeout = ms_until_conn;
-      }
-    }
-  }
-#endif
 
 static int do_main_loop(void) {
   int i;
@@ -516,7 +444,7 @@ static int do_main_loop(void) {
 
   /* start up the necessary connections based on which ports are
    * non-zero. This is where we try to connect to all the other ORs,
-   * and start the listeners
+   * and start the listeners.
    */
   retry_all_connections((uint16_t) options.ORPort,
                         (uint16_t) options.APPort,
@@ -543,17 +471,10 @@ static int do_main_loop(void) {
       please_reap_children = 0;
     }
 #endif /* signal stuff */
-    if(prepare_for_poll(&timeout) < 0) {
-      log(LOG_DEBUG,"do_main_loop(): prepare_for_poll failed, exiting.");
-      return -1;
-    }
-    /* now timeout is the value we'll hand to poll. It's either -1, meaning
-     * don't timeout, else it indicates the soonest event (either the
-     * one-second rollover for refilling receiver buckets, or the soonest
-     * conn that needs to send a cell)
-     */
 
-    /* poll until we have an event, or it's time to do something */
+    timeout = prepare_for_poll();
+
+    /* poll until we have an event, or the second ends */
     poll_result = poll(poll_array, nfds, timeout);
 
 #if 0 /* let catch() handle things like ^c, and otherwise don't worry about it */
@@ -567,16 +488,11 @@ static int do_main_loop(void) {
     if(poll_result > 0) { /* we have at least one connection to deal with */
       /* do all the reads and errors first, so we can detect closed sockets */
       for(i=0;i<nfds;i++)
-        if(poll_array[i].revents & (POLLIN|POLLHUP|POLLERR))
-          /* something to read, or an error. */
-          conn_read(i); /* this also blows away broken connections */
-/* see http://www.greenend.org.uk/rjk/2001/06/poll.html for discussion
- * of POLLIN vs POLLHUP */
+        conn_read(i); /* this also blows away broken connections */
 
       /* then do the writes */
       for(i=0;i<nfds;i++)
-        if(poll_array[i].revents & POLLOUT) /* something to write */
-          conn_write(i);
+        conn_write(i);
 
       /* any of the conns need to be closed now? */
       for(i=0;i<nfds;i++)

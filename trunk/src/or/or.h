@@ -94,7 +94,7 @@
 #include "../common/log.h"
 #include "../common/util.h"
 
-#define RECOMMENDED_SOFTWARE_VERSIONS "0.0.2pre6,0.0.2pre7"
+#define RECOMMENDED_SOFTWARE_VERSIONS "0.0.2pre8"
 
 #define MAXCONNECTIONS 1000 /* upper bound on max connections.
                               can be lowered by config file */
@@ -131,6 +131,7 @@
 #define CPUWORKER_TASK_ONION CPUWORKER_STATE_BUSY_ONION
 #define CPUWORKER_TASK_HANDSHAKE CPUWORKER_STATE_BUSY_HANDSHAKE
 
+#ifndef TOR_TLS
 /* how to read these states:
  * foo_CONN_STATE_bar_baz:
  * "I am acting as a bar, currently in stage baz of talking with a foo."
@@ -145,6 +146,11 @@
 #define OR_CONN_STATE_SERVER_SENDING_AUTH 7 /* writing auth and nonce */
 #define OR_CONN_STATE_SERVER_NONCE_WAIT 8 /* waiting for confirmation of nonce */
 #define OR_CONN_STATE_OPEN 9 /* ready to send/receive cells. */
+#else
+#define OR_CONN_STATE_CONNECTING 0 /* waiting for connect() to finish */
+#define OR_CONN_STATE_HANDSHAKING 1 /* SSL is handshaking, not done yet */
+#define OR_CONN_STATE_OPEN 2 /* ready to send/receive cells. */
+#endif
 
 #define EXIT_CONN_STATE_RESOLVING 0 /* waiting for response from dns farm */
 #define EXIT_CONN_STATE_CONNECTING 1 /* waiting for connect() to finish */
@@ -272,73 +278,72 @@ typedef struct {
 
 struct connection_t { 
 
-/* Used by all types: */
-
   uint8_t type;
-  int state;
-  uint8_t wants_to_read;
+  uint8_t state;
+  uint8_t wants_to_read; /* should we start reading again once
+                          * the bandwidth throttler allows it?
+                          */
   int s; /* our socket */
-  int poll_index;
-  int marked_for_close;
+  int poll_index; /* index of this conn into the poll_array */
+  int marked_for_close; /* should we close this conn on the next
+                         * iteration of the main loop?
+                         */
 
   char *inbuf;
-  int inbuflen;
-  int inbuf_datalen;
-  int inbuf_reached_eof;
-  long timestamp_lastread;
+  int inbuflen; /* how many bytes are alloc'ed for inbuf? */
+  int inbuf_datalen; /* how many bytes of data are on inbuf? */
+  int inbuf_reached_eof; /* did read() return 0 on this conn? */
+  long timestamp_lastread; /* when was the last time poll() said we could read? */
 
   char *outbuf;
   int outbuflen; /* how many bytes are allocated for the outbuf? */
   int outbuf_flushlen; /* how much data should we try to flush from the outbuf? */
   int outbuf_datalen; /* how much data is there total on the outbuf? */
-  long timestamp_lastwritten;
+  long timestamp_lastwritten; /* when was the last time poll() said we could write? */
 
-  long timestamp_created;
+  long timestamp_created; /* when was this connection_t created? */
 
-/* used by OR and OP: */
-
-  uint32_t bandwidth; /* connection bandwidth */
+  uint32_t bandwidth; /* connection bandwidth. Set to -1 for non-OR conns. */
   int receiver_bucket; /* when this hits 0, stop receiving. Every second we
                         * add 'bandwidth' to this, capping it at 10*bandwidth.
+			* Set to -1 for non-OR conns.
                         */
-  struct timeval send_timeval; /* for determining when to send the next cell */
+
+  uint32_t addr; /* these two uniquely identify a router. Both in host order. */
+  uint16_t port; /* if non-zero, they identify the guy on the other end
+                  * of the connection. */
+  char *address; /* FQDN (or IP) of the guy on the other end.
+                  * strdup into this, because free_connection frees it
+                  */
+  crypto_pk_env_t *pkey; /* public RSA key for the other side */
+
+#ifndef TOR_TLS
+/* Used only by OR connections: */
 
   /* link encryption */
   crypto_cipher_env_t *f_crypto;
   crypto_cipher_env_t *b_crypto;
 
-//  struct timeval lastsend; /* time of last transmission to the client */
-//  struct timeval interval; /* transmission interval */
+  char nonce[8];
+#endif
 
-  uint32_t addr; /* these two uniquely identify a router. Both in host order. */
-  uint16_t port;
-
-/* used by exit and ap: */
+/* Used only by edge connections: */
   char stream_id[STREAM_ID_SIZE];
-  struct connection_t *next_stream;
+  struct connection_t *next_stream; /* points to the next stream at this edge, if any */
   struct crypt_path_t *cpath_layer; /* a pointer to which node in the circ this conn exits at */
-  int package_window;
-  int deliver_window;
-  int done_sending;
+  int package_window; /* how many more relay cells can i send into the circuit? */
+  int deliver_window; /* how many more relay cells can end at me? */
+
+  int done_sending; /* for half-open connections; not used currently */
   int done_receiving;
 
-/* Used by ap: */
-  char socks_version; 
-  char read_username;
-
-/* Used by exit and ap: */
-  char *dest_addr;
+/* Used only by AP connections: */
+  char socks_version; /* what socks version are they speaking at me? */
+  char read_username; /* have i read the username yet? */
+  char *dest_addr; /* what address and port are this stream's destination? */
   uint16_t dest_port; /* host order */
 
-/* Used by everyone */
-  char *address; /* strdup into this, because free_connection frees it */
-/* Used for cell connections */
-  crypto_pk_env_t *pkey; /* public RSA key for the other side */
-
-/* Used while negotiating OR/OR connections */
-  char nonce[8];
-
-/* Used by worker connections */
+/* Used only by worker connections: */
   int num_processed; /* statistics kept by dns worker */
   struct circuit_t *circ; /* by cpu worker to know who he's working for */
 };
@@ -392,7 +397,7 @@ struct crypt_path_t {
   uint32_t addr;
   uint16_t port;
 
-  char state;
+  uint8_t state;
 #define CPATH_STATE_CLOSED 0
 #define CPATH_STATE_AWAITING_KEYS 1
 #define CPATH_STATE_OPEN 2
@@ -429,9 +434,9 @@ struct circuit_t {
 
   char onionskin[DH_ONIONSKIN_LEN]; /* for storage while onionskin pending */
   long timestamp_created;
-  char dirty; /* whether this circuit has been used yet */
+  uint8_t dirty; /* whether this circuit has been used yet */
 
-  int state;
+  uint8_t state;
 
 //  unsigned char *onion; /* stores the onion when state is CONN_STATE_OPEN_WAIT */
 //  uint32_t onionlen; /* total onion length */
@@ -612,6 +617,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
 /* start all connections that should be up but aren't */
 int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
 
+int connection_handle_read(connection_t *conn);
 int connection_read_to_buf(connection_t *conn);
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn);
@@ -620,6 +626,7 @@ int connection_outbuf_too_full(connection_t *conn);
 int connection_find_on_inbuf(char *string, int len, connection_t *conn);
 int connection_wants_to_flush(connection_t *conn);
 int connection_flush_buf(connection_t *conn);
+int connection_handle_write(connection_t *conn);
 
 int connection_write_to_buf(char *string, int len, connection_t *conn);
 void connection_send_cell(connection_t *conn);

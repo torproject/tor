@@ -6,6 +6,7 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+#ifndef TOR_TLS
 static int or_handshake_op_send_keys(connection_t *conn);
 static int or_handshake_op_finished_sending_keys(connection_t *conn);
 
@@ -15,8 +16,9 @@ static int or_handshake_client_send_auth(connection_t *conn);
 static int or_handshake_server_process_auth(connection_t *conn);
 static int or_handshake_server_process_nonce(connection_t *conn);
 
-static void connection_or_set_open(connection_t *conn);
 static void conn_or_init_crypto(connection_t *conn);
+#endif
+static void connection_or_set_open(connection_t *conn);
 
 /*
  *
@@ -29,7 +31,6 @@ int connection_or_process_inbuf(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_OR);
 
   if(conn->inbuf_reached_eof) {
-    /* eof reached, kill it. */
     log_fn(LOG_DEBUG,"conn reached eof. Closing.");
     return -1;
   }
@@ -37,12 +38,14 @@ int connection_or_process_inbuf(connection_t *conn) {
 //  log(LOG_DEBUG,"connection_or_process_inbuf(): state %d.",conn->state);
 
   switch(conn->state) {
+#ifndef TOR_TLS
     case OR_CONN_STATE_CLIENT_AUTH_WAIT:
       return or_handshake_client_process_auth(conn);
     case OR_CONN_STATE_SERVER_AUTH_WAIT:
       return or_handshake_server_process_auth(conn);
     case OR_CONN_STATE_SERVER_NONCE_WAIT:
       return or_handshake_server_process_nonce(conn);
+#endif
     case OR_CONN_STATE_OPEN:
       return connection_process_cell_from_inbuf(conn);
     default:
@@ -583,7 +586,6 @@ or_handshake_server_process_auth(connection_t *conn) {
     crypto_cipher_decrypt_init_cipher(conn->f_crypto);
 
     conn->state = OR_CONN_STATE_OPEN;
-    connection_init_timeval(conn);
     connection_watch_events(conn, POLLIN);
 
     return connection_process_inbuf(conn); /* in case they sent some cells along with the keys */
@@ -654,10 +656,10 @@ static void
 connection_or_set_open(connection_t *conn) {
   conn->state = OR_CONN_STATE_OPEN;
   directory_set_dirty();
-  connection_init_timeval(conn);
   connection_watch_events(conn, POLLIN);
 }
 
+#ifndef TOR_TLS
 static void 
 conn_or_init_crypto(connection_t *conn) {
   //int x;
@@ -673,6 +675,7 @@ conn_or_init_crypto(connection_t *conn) {
   crypto_cipher_decrypt_init_cipher(conn->b_crypto);
     /* always encrypt with f, always decrypt with b */
 }
+#endif
 
 
 
