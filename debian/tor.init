@@ -1,26 +1,53 @@
 #! /bin/sh
 
+set -e
+
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/sbin/tor
 NAME=tor
 DESC="tor daemon"
 TORLOG=/var/log/tor/log
 TORPID=/var/run/tor/tor.pid
+DEFAULTSFILE=/etc/default/$NAME
+WAITFORDAEMON=10
 ARGS="--pidfile $TORPID --logfile $TORLOG --runasdaemon 1"
 
 test -x $DAEMON || exit 0
 
 # Include tor defaults if available
-if [ -f /etc/default/tor ] ; then
-	. /etc/default/tor
+if [ -f $DEFAULTSFILE ] ; then
+	. $DEFAULTSFILE
 fi
 
-set -e
+wait_for_deaddaemon () {
+	pid=$1
+	sleep 1
+	if test -n "$pid"
+	then
+		if kill -0 $pid 2>/dev/null
+		then
+			echo -n "."
+			cnt=0
+			while kill -0 $pid 2>/dev/null
+			do
+				cnt=`expr $cnt + 1`
+				if [ $cnt -gt $WAITFORDAEMON ]
+				then
+					echo " FAILED."
+					return 1
+				fi
+				sleep 1
+				echo -n "."
+			done
+		fi
+	fi
+	return 0
+}
 
 case "$1" in
   start)
 	if [ "$RUN_DAEMON" != "yes" ]; then
-		echo "Not starting $DESC (Disabled in /etc/default/tor)."
+		echo "Not starting $DESC (Disabled in $DEFAULTSFILE)."
 	else
 		echo -n "Starting $DESC: "
 		start-stop-daemon --start --quiet --oknodo \
@@ -32,14 +59,36 @@ case "$1" in
 	;;
   stop)
 	echo -n "Stopping $DESC: "
-	start-stop-daemon --stop --quiet --oknodo --pidfile $TORPID \
-		--exec $DAEMON
-	echo "$NAME."
+	pid=`cat $TORPID 2>/dev/null` || true
+	if test ! -f $TORPID -o -z "$pid"
+	then
+		echo "not running (there is no $TORPID)."
+	elif start-stop-daemon --stop --quiet --pidfile $TORPID --exec $DAEMON
+	then
+		wait_for_deaddaemon $pid
+		echo "$NAME."
+	elif kill -0 $pid 2>/dev/null
+	then
+		echo "FAILED (Is $pid not $NAME?  Is $DAEMON a different binary now?)."
+	else
+		echo "FAILED ($DAEMON died: process $pid not running)."
+	fi
 	;;
   reload|force-reload)
-	echo "Reloading $DESC configuration."
-	start-stop-daemon --stop --signal 1 --oknodo --quiet --pidfile $TORPID \
-		--exec $DAEMON
+	echo -n "Reloading $DESC configuration: "
+	pid=`cat $TORPID 2>/dev/null` || true
+	if test ! -f $TORPID -o -z "$pid"
+	then
+		echo "not running (there is no $TORPID)."
+	elif start-stop-daemon --stop --signal 1 --quiet --pidfile $TORPID --exec $DAEMON
+	then
+		echo "$NAME."
+	elif kill -0 $pid 2>/dev/null
+	then
+		echo "FAILED (Is $pid not $NAME?  Is $DAEMON a different binary now?)."
+	else
+		echo "FAILED ($DAEMON died: process $pid not running)."
+	fi
 	;;
   restart)
 	$0 stop
