@@ -314,8 +314,8 @@ directory_initiate_command(const char *address, uint32_t addr,
   }
 }
 
-/** Queue an appropriate HTTP command on conn-\>outbuf.  The other args as in
- * directory_initiate_command.
+/** Queue an appropriate HTTP command on conn-\>outbuf.  The other args
+ * are as in directory_initiate_command.
  */
 static void
 directory_send_command(connection_t *conn, const char *platform,
@@ -371,7 +371,7 @@ directory_send_command(connection_t *conn, const char *platform,
       tor_assert(!payload);
 
       /* this must be true or we wouldn't be doing the lookup */
-      tor_assert(strlen(payload) <= REND_SERVICE_ID_LEN);
+      tor_assert(strlen(resource) <= REND_SERVICE_ID_LEN);
       /* This breaks the function abstraction. */
       strlcpy(conn->rend_query, resource, sizeof(conn->rend_query));
 
@@ -391,7 +391,7 @@ directory_send_command(connection_t *conn, const char *platform,
            httpcommand,
            proxystring,
            url,
-           (unsigned long)payload_len,
+           payload ? (unsigned long)payload_len : 0,
            hoststring);
   connection_write_to_buf(tmp, strlen(tmp), conn);
 
