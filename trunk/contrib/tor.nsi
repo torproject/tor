@@ -33,7 +33,7 @@
 
 !define VERSION "0.1.0.0-alpha-cvs"
 !define INSTALLER "tor-${VERSION}-win32.exe"
-!define WEBSITE "http://freehaven.net/tor/"
+!define WEBSITE "http://tor.eff.org/"
 
 !define LICENSE "..\LICENSE"
 ;BIN is where it expects to find tor.exe, tor_resolve.exe, libeay32.dll and
