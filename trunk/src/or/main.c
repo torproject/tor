@@ -1265,6 +1265,8 @@ void tor_free_all(void)
   tor_tls_free_all();
   /* stuff in main.c */
   smartlist_free(closeable_connection_lst);
+
+  close_logs(); /* free log strings. do this last so logs keep working. */
 }
 
 /** Do whatever cleanup is necessary before shutting Tor down. */
