@@ -12,6 +12,7 @@ TORUSER=_tor
 TORGROUP=daemon
 TARGET=$2/Library/Tor
 TORDIR=$TARGET/var/lib/tor
+LOGDIR=$TARGET/var/log/tor
 
 # Create user $TORUSER in group daemon.  If it's already there, great.
 $ADDSYSUSER $TORUSER "Tor System user" $TORDIR
@@ -20,10 +21,16 @@ $ADDSYSUSER $TORUSER "Tor System user" $TORDIR
 if [ ! -d $TORDIR ]; then
   mkdir -p $TORDIR
 fi
+if [ ! -d $LOGDIR ]; then
+  mkdir -p $LOGDIR
+fi
 # Check its permissions.
 chown $TORUSER $TORDIR
 chgrp daemon $TORDIR
 chmod 700 $TORDIR
+chown $TORUSER $LOGDIR
+chgrp daemon $LOGDIR
+chmod 700 $LOGDIR
 
 # Create the configuration file only if there wan't one already.
 if [ ! -f $TARGET/torrc ]; then
@@ -44,3 +51,9 @@ ln -sf $TARGET/tor_resolve .
 cd /usr/share/man/man1
 MAN1=$TARGET/man/man1
 ln -sf $MAN1/*.1 .
+
+if [ ! -e /var/log/tor -o -L /var/log/tor ]; then
+  cd /var/log
+  rm -f tor
+  ln -sf $LOGDIR tor
+fi
