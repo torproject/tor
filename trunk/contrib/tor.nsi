@@ -14,7 +14,7 @@
 ;   Step 5. Run man2html on tor.1.in; call the result tor-reference.html
 ;           Run man2html on tor-resolve.1; call the result tor-resolve.html
 ;   Step 6. Copy torrc.sample.in to torrc.sample.
-;   Step 7. Build tor.exe; save the result into bin.
+;   Step 7. Build tor.exe and tor_resolve.exe; save the result into bin.
 ;   Step 8. cd into contrib and run "makensis tor.nsi".
 ;
 ; Problems:
@@ -39,7 +39,8 @@
 !define WEBSITE "http://freehaven.net/tor/"
 
 !define LICENSE "..\LICENSE"
-;BIN is where it expects to find tor.exe, libeay32.dll, ssleay32.dll
+;BIN is where it expects to find tor.exe, tor_resolve.exe, libeay32.dll and
+;  ssleay32.dll
 !define BIN "..\bin"
 
 SetCompressor lzma
@@ -91,6 +92,7 @@ Section "Tor" Tor
    SectionIn RO
    SetOutPath $INSTDIR
    File "${BIN}\tor.exe"
+   File "${BIN}\tor_resolve.exe"
    WriteIniStr "$INSTDIR\Tor Website.url" "InternetShortcut" "URL" ${WEBSITE}
 
    StrCpy $configfile "torrc"
