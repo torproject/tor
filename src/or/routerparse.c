@@ -1147,7 +1147,7 @@ get_next_token(const char **s, where_syntax where) {
       tok->args[0] = tor_strndup(*s,next-*s);
       tok->n_args = 1;
       *s = eat_whitespace_no_nl(next+1);
-      a_syn = OBJ_OK;
+      o_syn = OBJ_OK;
     } else {
       tok->tp = _UNRECOGNIZED;
       next = strchr(*s, '\n');
@@ -1213,7 +1213,7 @@ get_next_token(const char **s, where_syntax where) {
       break;
     case NEED_KEY:
       if (!tok->key)
-        RET_ERR("Missing publid key for keyword");
+        RET_ERR("Missing public key for keyword");
       break;
     case OBJ_OK:
       break;
