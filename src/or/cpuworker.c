@@ -48,6 +48,7 @@ static void tag_unpack(char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ
 }
 
 int connection_cpu_process_inbuf(connection_t *conn) {
+  char success;
   unsigned char buf[LEN_ONION_RESPONSE];
   uint32_t addr;
   uint16_t port;
@@ -77,10 +78,11 @@ int connection_cpu_process_inbuf(connection_t *conn) {
       return 0; /* not yet */
     assert(buf_datalen(conn->inbuf) == LEN_ONION_RESPONSE);
 
-    connection_fetch_from_buf(buf,LEN_ONION_RESPONSE,conn);
+    connection_fetch_from_buf(&success,1,conn);
+    connection_fetch_from_buf(buf,LEN_ONION_RESPONSE-1,conn);
 
     /* parse out the circ it was talking about */
-    tag_unpack(buf+1, &addr, &port, &circ_id);
+    tag_unpack(buf, &addr, &port, &circ_id);
     circ = NULL;
     p_conn = connection_exact_get_by_addr_port(addr,port);
     if(p_conn)
@@ -91,12 +93,12 @@ int connection_cpu_process_inbuf(connection_t *conn) {
       goto done_processing;
     }
     assert(circ->p_conn);
-    if(*buf == 0) {
+    if(success == 0) {
       log_fn(LOG_WARN,"decoding onionskin failed. Closing.");
       circuit_mark_for_close(circ);
       goto done_processing;
     }
-    if(onionskin_answer(circ, buf+1+TAG_LEN, buf+1+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
+    if(onionskin_answer(circ, buf+TAG_LEN, buf+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
       log_fn(LOG_WARN,"onionskin_answer failed. Closing.");
       circuit_mark_for_close(circ);
       goto done_processing;

@@ -22,19 +22,56 @@ static uint32_t client_dns_lookup_entry(const char *address);
 static void client_dns_set_entry(const char *address, uint32_t val);
 
 void relay_header_pack(char *dest, const relay_header_t *src) {
+  uint16_t tmp;
+
+  /* we have to do slow memcpy's here, because we screwed up
+   * and made our cell payload not word-aligned. we should fix
+   * this someday.
+   */
+
+  *(uint8_t*)(dest) = src->command;
+
+  tmp = htons(src->recognized);
+  memcpy(dest+1, &tmp, 2);
+
+  tmp = htons(src->stream_id);
+  memcpy(dest+3, &tmp, 2);
+
+  memcpy(dest+5, src->integrity, 4);
+
+  tmp = htons(src->length);
+  memcpy(dest+9, &tmp, 2);
+
+#if 0
   *(uint8_t*)(dest)    = src->command;
   *(uint16_t*)(dest+1) = htons(src->recognized);
   *(uint16_t*)(dest+3) = htons(src->stream_id);
   memcpy(dest+5, src->integrity, 4);
   *(uint16_t*)(dest+9) = htons(src->length);
+#endif
 }
 
 void relay_header_unpack(relay_header_t *dest, const char *src) {
+  dest->command = *(uint8_t*)(src);
+
+  memcpy(&dest->recognized, src+1, 2);
+  dest->recognized = ntohs(dest->recognized);
+
+  memcpy(&dest->stream_id, src+3, 2);
+  dest->stream_id = ntohs(dest->stream_id);
+
+  memcpy(dest->integrity, src+5, 4);
+
+  memcpy(&dest->length, src+9, 2);
+  dest->length = ntohs(dest->length);
+
+#if 0
   dest->command    = *(uint8_t*)(src);
   dest->recognized = ntohs(*(uint16_t*)(src+1));
   dest->stream_id  = ntohs(*(uint16_t*)(src+3));
   memcpy(dest->integrity, src+5, 4);
   dest->length     = ntohs(*(uint16_t*)(src+9));
+#endif
 }
 
 int connection_edge_process_inbuf(connection_t *conn) {
@@ -138,7 +175,9 @@ int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_lay
 
   payload[0] = reason;
   if(reason == END_STREAM_REASON_EXITPOLICY) {
-    *(uint32_t *)(payload+1) = htonl(conn->addr);
+    uint32_t tmp = htonl(conn->addr);
+    memcpy(payload+1, &tmp, 4);
+//    *(uint32_t *)(payload+1) = htonl(conn->addr);
     payload_len += 4;
   }
 
@@ -236,7 +275,9 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
 //      log_fn(LOG_INFO,"Connected! Notifying application.");
       conn->state = AP_CONN_STATE_OPEN;
       if (rh.length >= 4) {
-        addr = ntohl(*(uint32_t*)(cell->payload + RELAY_HEADER_SIZE));
+        memcpy(&addr, cell->payload + RELAY_HEADER_SIZE, 4);
+        addr = ntohl(addr);
+//        addr = ntohl(*(uint32_t*)(cell->payload + RELAY_HEADER_SIZE));
         client_dns_set_entry(conn->socks_request->address, addr);
       }
       log_fn(LOG_INFO,"'connected' received after %d seconds.",
@@ -311,7 +352,9 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
          * we try a new exit node.
          * cell->payload+RELAY_HEADER_SIZE+1 holds the destination addr.
          */
-        addr = ntohl(*(uint32_t*)(cell->payload+RELAY_HEADER_SIZE+1));
+        memcpy(&addr, cell->payload+RELAY_HEADER_SIZE+1, 4);
+        addr = ntohl(addr);
+//        addr = ntohl(*(uint32_t*)(cell->payload+RELAY_HEADER_SIZE+1));
         client_dns_set_entry(conn->socks_request->address, addr);
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
         if(connection_ap_handshake_attach_circuit(conn) >= 0)
@@ -936,7 +979,7 @@ void connection_exit_connect(connection_t *conn) {
   connection_watch_events(conn, POLLIN);
 
   /* also, deliver a 'connected' cell back through the circuit. */
-  *((uint32_t*) connected_payload) = htonl(conn->addr);
+  *(uint32_t*)connected_payload = htonl(conn->addr);
   connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
                                connected_payload, 4, NULL);
 }
