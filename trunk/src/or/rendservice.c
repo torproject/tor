@@ -235,8 +235,7 @@ int rend_service_init_keys(void)
   return 0;
 }
 
-/*DOCDOC*/
-rend_service_t *
+static rend_service_t *
 rend_service_get_by_pk_digest(const char* digest)
 {
   int i;
@@ -252,17 +251,6 @@ rend_service_get_by_pk_digest(const char* digest)
 /******
  * Handle cells
  ******/
-
-typedef struct rend_introduction_t {
-  /* Digest of the hidden service's PK. */
-  char key_digest[20];
-  /* Nickname of OR running rendezvous point. */
-  char *rendezvous_point;
-  /* Cookie that we'll use to recognize the rendezvous point. */
-  char cookie[20];
-  /* g^xy */
-  char shared_secret[128];
-} rend_introduction_t;
 
 /* Respond to an INTRODUCE2 cell by launching a circuit to the chosen
  * rendezvous points.
