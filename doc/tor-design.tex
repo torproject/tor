@@ -100,7 +100,7 @@ Rather than using a single onion to lay each circuit,
 Tor now uses an incremental or \emph{telescoping}
 path-building design, where the initiator negotiates session keys with
 each successive hop in the circuit.  Once these keys are deleted,
-subsequent compromised nodes cannot decrypt old traffic.
+subsequently compromised nodes cannot decrypt old traffic.
 As a side benefit, onion replay detection is no longer
 necessary, and the process of building circuits is more reliable, since
 the initiator knows when a hop fails and can then try extending to a new node.
@@ -122,7 +122,7 @@ incorporate those features itself.
 \item \textbf{Many TCP streams can share one circuit:} The original
 Onion Routing design built a separate circuit for each application-level
 request.
-This hurt perfomance by requiring multiple public key operations for
+This hurt performance by requiring multiple public key operations for
 every request, and also presented
 a threat to anonymity (see Section~\ref{maintaining-anonymity}).
 \footnote{The first Onion Routing design \cite{or-ih96} protected against
@@ -145,20 +145,18 @@ onion routers.
 The current Tor design multiplexes multiple TCP streams along each virtual
 circuit, in order to improve efficiency and anonymity.
 
-\item \textbf{No mixing, padding, or traffic shaping:} 
-The original Onion Routing
-design called for full link padding both between onion routers and between
-onion proxies (that is, users) and onion routers \cite{or-jsac98}. The
+\item \textbf{No mixing, padding, or traffic shaping:} The original
+Onion Routing design called for mixing of data from each circuit,
+plus full link padding both between onion routers and between onion
+proxies (that is, users) and onion routers \cite{or-jsac98}. The
 later analysis paper \cite{or-pet00} suggested \emph{traffic shaping}
 to provide similar protection but use less bandwidth, but did not go
-into detail.  However, recent research \cite{econymics} and deployment
+into detail. However, recent research \cite{econymics} and deployment
 experience \cite{freedom21-security} suggest that this level of resource
 use is not practical or economical; and even full link padding is still
-vulnerable to active attacks \cite{defensive-dropping}.
-%[An upcoming FC04 paper. I'll add a cite when it's out. -RD]
-Thus, absent a proven design for traffic shaping, Tor currently generates 
-no dummy traffic. 
-% We don't mention mixing in the above, but we mention it in the title. -NM
+vulnerable \cite{defensive-dropping}. Thus, until we have a proven and
+convenient design for traffic shaping or low-latency mixing that will help
+anonymity against a realistic adversary, we leave these strategies out.
 
 \item \textbf{Leaky-pipe circuit topology:} Through in-band
   signalling within the
@@ -180,11 +178,10 @@ congestion control maintains reasonable anonymity while allowing nodes
 at the edges of the network to detect congestion or flooding attacks
 and send less data until the congestion subsides.
 
-\item \textbf{Directory servers:} Rather take the original Onion
-Routing's approach and  attempting to flood
-link-state information through the network --- an approach which can be
-unreliable and
-open to partitioning attacks or outright deception --- Tor takes a simplified
+\item \textbf{Directory servers:} The original Onion Routing design
+planned to flood link-state information through the network --- an
+approach which can be unreliable and
+open to partitioning attacks or outright deception. Tor takes a simplified
 view towards distributing link-state information. Certain more trusted
 onion routers also serve as directory servers; they provide signed
 \emph{directories} describing all routers they know about, and which
@@ -229,19 +226,23 @@ each operator is comfortable with allowing different types of traffic
 to exit the Tor network from his node.
 
 \item \textbf{Implementable in user-space:} Because it only attempts to
-anonymize TCP streams, Tor differs from some other anonymity
-systems\cite{freedom} in that it does not require patches to an operating
+anonymize TCP streams, Tor differs from other anonymity systems like
+Freedom \cite{freedom} in that it does not require patches to an operating
 system's network stack in order to operate.  Although this approach is less
-flexible, it has proven valuable to Tor's portability and deployabilitiy.
+flexible, it has proven valuable to Tor's portability and deployability.
 
 \item \textbf{Rendezvous points and location-protected servers:} Tor
-provides an integrated mechanism for responder-anonymity
+provides an integrated mechanism for responder anonymity via
 location-protected servers.  Previous Onion Routing designs included
 long-lived ``reply onions'' which could be used to build virtual
-circuits towards a hidden server, but this design is vulnerable to
-flooding attacks, and is incompatible with forward security.  In Tor's
+circuits to a hidden server, but this approach is 
+brittle because a reply onion becomes useless if any node in the
+path goes down or rotates its keys, and it's also
+%vulnerable to flooding attacks,
+% no it isn't. no more than our rendezvous point approach at least -RD
+incompatible with forward security.  In Tor's
 current design, clients use {\it introduction points} to negotiate {\it
-  rendezvous points} to connect with hidden servers, and reply onions
+rendezvous points} to connect with hidden servers; and reply onions
 are no longer required.
 \end{tightlist}
 
@@ -528,7 +529,7 @@ The basic adversary components we consider are:
 %  for later. -PS
 
   
-\item{Hostile Tor node:] can arbitrarily manipulate the
+\item{Hostile Tor node:} can arbitrarily manipulate the
   connections under its control, as well as creating new connections
   (that pass through itself).
 \end{description}
@@ -735,7 +736,7 @@ perfect forward secrecy, key freshness, etc.
 \begin{equation}
 \begin{aligned}
 \mathrm{Alice} \rightarrow \mathrm{Bob}&: E_{PK_{Bob}}(g^x) \\
-\mathrm{Bob} \rightarrow \mathrm{Alice}&: g^y, H(K | \mathrm{``handshake''}) \\
+\mathrm{Bob} \rightarrow \mathrm{Alice}&: g^y, H(K | \mathrm{``handshake"}) \\
 \end{aligned}
 \end{equation}
 
@@ -893,7 +894,7 @@ without just making the whole network wide open.
 
 even limiting most nodes to allow http, ssh, and aim to exit and reject
 all other stuff is sketchy, because plenty of abuse can happen over
-port 80. but it's a good start, because it blocks most things,
+port 80. but it's a surprisingly good start, because it blocks most things,
 and because people are more used to the concept of port 80 abuse not
 coming from the machine's owner.
 
@@ -1028,7 +1029,8 @@ We provide this censorship resistance for Bob by allowing him to
 advertise several onion routers (his \emph{Introduction Points}) as his
 public location. Alice, the client, chooses a node for her \emph{Meeting
 Point}. She connects to one of Bob's introduction points, informs him
-about her meeting point, and then waits for him to connect to the meeting
+about her rendezvous point, and then waits for him to connect to the
+rendezvous
 point. This extra level of indirection means Bob's introduction points
 don't open themselves up to abuse by serving files directly, eg if Bob
 chooses a node in France to serve material distateful to the French. The
@@ -1048,15 +1050,15 @@ The steps of a rendezvous:
 \item Alice learns about Bob's service out of band (perhaps Bob told her,
       or she found it on a website). She looks up the details of Bob's
       service from the DHT.
-\item Alice chooses and establishes a Meeting Point (MP) for this
+\item Alice chooses and establishes a Rendezvous Point (RP) for this
       transaction.
 \item Alice goes to one of Bob's Introduction Points, and gives it a blob
-      (encrypted for Bob) which tells him about herself, the Meeting Point
+      (encrypted for Bob) which tells him about herself, the RP
       she chose, and the first half of an ephemeral key handshake. The
       Introduction Point sends the blob to Bob.
-\item Bob chooses whether to ignore the blob, or to onion route to MP.
+\item Bob chooses whether to ignore the blob, or to onion route to RP.
       Let's assume the latter.
-\item MP plugs together Alice and Bob. Note that MP can't recognize Alice,
+\item RP plugs together Alice and Bob. Note that RP can't recognize Alice,
       Bob, or the data they transmit (they share a session key).
 \item Alice sends a Begin cell along the circuit. It arrives at Bob's
       onion proxy. Bob's onion proxy connects to Bob's webserver.
@@ -1073,11 +1075,11 @@ introduction points for that service.
 The blob that Alice gives the introduction point includes a hash of Bob's
 public key to identify the service, an optional initial authentication
 token (the introduction point can do prescreening, eg to block replays),
-and (encrypted to Bob's public key) the location of the meeting point,
-a meeting cookie Bob should tell the meeting point so he gets connected to
+and (encrypted to Bob's public key) the location of the rendezvous point,
+a rendezvous cookie Bob should tell RP so he gets connected to
 Alice, an optional authentication token so Bob can choose whether to respond,
-and the first half of a DH key exchange. When Bob connects to the meeting
-place and gets connected to Alice's pipe, his first cell contains the
+and the first half of a DH key exchange. When Bob connects to RP
+and gets connected to Alice's pipe, his first cell contains the
 other half of the DH key exchange.
 
 % briefly talk about our notion of giving cookies to people proportional
@@ -1095,7 +1097,7 @@ system; also note that as a stopgap measure, we can just run a simple
 lookup system on the directory servers.)  Bob publishes into the DHT
 (indexed by the hash of the public key) the public key, an expiration
 time (``not valid after''), and the current introduction points for that
-service. Note that Bob's webserver is completely oblivious to the fact
+service. Note that Bob's webserver is unmodified, and doesn't even know
 that it's hidden behind the Tor network.
 
 As far as Alice's experience goes, we require that her client interface
@@ -1119,12 +1121,13 @@ client can recognize the same service with confidence later on. His
 design differs from ours in the following ways though. Firstly, Ian
 suggests that the client should manually hunt down a current location of
 the service via Gnutella; whereas our use of the DHT makes lookup faster,
-more robust, and transparent to the user. Secondly, the client and server
-can share ephemeral DH keys, so at no point in the path is the plaintext
+more robust, and transparent to the user. Secondly, in Tor the client
+and server can share ephemeral DH keys, so at no point in the path is
+the plaintext
 exposed. Thirdly, our design is much more practical for deployment in a
 volunteer network, in terms of getting volunteers to offer introduction
-and meeting point services. The introduction points do not output any
-bytes to the clients. And the meeting points don't know the client,
+and rendezvous point services. The introduction points do not output any
+bytes to the clients, and the rendezvous points don't know the client,
 the server, or the stuff being transmitted. The indirection scheme
 is also designed with authentication/authorization in mind -- if the
 client doesn't include the right cookie with its request for service,
