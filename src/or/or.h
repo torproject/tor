@@ -701,8 +701,6 @@ void onion_pending_remove(circuit_t *circ);
 
 int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
 
-char **parse_nickname_list(char *start, int *num);
-
 int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, 
                        routerinfo_t **router_out);
 
@@ -743,7 +741,6 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 /********************************* routerlist.c ***************************/
 
 routerinfo_t *router_pick_directory_server(void);
-routerinfo_t *router_pick_randomly_from_running(void);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk);
 routerinfo_t *router_get_by_nickname(char *nickname);

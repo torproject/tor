@@ -129,23 +129,20 @@ routerinfo_t *router_pick_directory_server(void) {
   return dirserver;
 }
 
-routerinfo_t *router_pick_randomly_from_running(void) {
-  int i;
+void router_add_running_routers_to_smartlist(smartlist_t *sl) {
   routerinfo_t *router;
-  smartlist_t *sl;
+  int i;
 
   if(!routerlist)
-    return NULL;
+    return;
 
-  sl = smartlist_create(MAX_ROUTERS_IN_DIR);
-  for(i=0;i<routerlist->n_routers;i++)
-    if(routerlist->routers[i]->is_running)
-      smartlist_add(sl, routerlist->routers[i]);
-
-  router = smartlist_choose(sl);
-  smartlist_free(sl);
-  log_fn(LOG_DEBUG, "Chose server '%s'", router ? router->nickname : "<none>");
-  return router;
+  for(i=0;i<routerlist->n_routers;i++) {
+    router = routerlist->routers[i];
+    if(router->is_running &&
+       (!options.ORPort ||
+        connection_twin_get_by_addr_port(router->addr, router->or_port) ))
+      smartlist_add(sl, router);
+  }
 }
 
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
