@@ -159,8 +159,8 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
   unsigned char *bufp;
   routerinfo_t *router;
 
-  if ( (rarray) && (route) && (lenp) ) /* valid parameters */
-  {
+  assert(rarray && route && lenp && routelen);
+
     /* calculate the size of the onion */
     *lenp = routelen * 28 + 100; /* 28 bytes per layer + 100 bytes padding for the innermost layer */
     log(LOG_DEBUG,"create_onion() : Size of the onion is %u.",*lenp);
@@ -337,13 +337,10 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
       log(LOG_DEBUG,"create_onion() : Encrypted layer.");
       
       /* calculate pointer to next layer */
-      layer = (onion_layer_t *)bufp + (routelen-i-2)*sizeof(onion_layer_t);
+      layer = (onion_layer_t *)(bufp + (routelen-i-2)*sizeof(onion_layer_t));
     }
 
     return bufp;
-  } /* valid parameters */
-  else
-    return NULL;
 }
 
 /* encrypts 128 bytes of the onion with the specified public key, the rest with 
