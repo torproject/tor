@@ -119,8 +119,11 @@ Short-term:
         o Remember address and port when beginning. 
         - Extend by nickname/hostname/something, not by IP.
         - Need a relay teardown cell, separate from one-way ends.
+        - remove per-connection rate limiting
         - Make it harder to circumvent bandwidth caps: look at number of bytes
           sent across sockets, not number sent inside TLS stream.
+        - make 'make test' exit(1) if a test fails.
+        - fix buffer unit test so it passes
 
 On-going
         . Better comments for functions!
