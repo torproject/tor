@@ -598,6 +598,10 @@ struct connection_t {
   socks_request_t *socks_request; /**< SOCKS structure describing request (AP
                                    * only.) */
 
+  /** Quasi-global identifier for this connection; used for control.c */
+  /* XXXX NM This can get re-used after 2**32 circuits. */
+  uint32_t global_identifier;
+
   /* Used only by control connections */
   uint32_t event_mask;
 };
@@ -874,7 +878,7 @@ struct circuit_t {
   struct circuit_t *rend_splice;
 
   /** Quasi-global identifier for this circuit; used for control.c */
-  /* XXXX009 NM This can get re-used after 2**32 circuits. */
+  /* XXXX NM This can get re-used after 2**32 circuits. */
   uint32_t global_identifier;
 
   struct circuit_t *next; /**< Next circuit in linked list. */
