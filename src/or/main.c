@@ -247,7 +247,7 @@ static void conn_close_if_marked(int i) {
         retval = flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
         /* XXX actually, some non-zero results are maybe ok. which ones? */
       } else
-        retval = -1;
+        retval = -1; /* never flush non-open broken tls connections */
     } else {
       retval = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
     }

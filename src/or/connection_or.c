@@ -154,8 +154,9 @@ int connection_tls_start_handshake(connection_t *conn, int receiving) {
   }
   connection_start_reading(conn);
   log_fn(LOG_DEBUG,"starting the handshake");
-  if(connection_tls_continue_handshake(conn) < 0)
+  if(connection_tls_continue_handshake(conn) < 0) {
     return -1;
+  }
   return 0;
 }
 
