@@ -8,6 +8,8 @@ RouterFile ../config/routers.or
 # Private key
 PrivateKeyFile moria2-private
 SigningPrivateKeyFile moria2-private
+CertFile moria2-cert
+Nickname moria2
 
 CoinWeight 0.01
 
