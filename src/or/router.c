@@ -96,7 +96,6 @@ int identity_key_is_set(void) {
   return identitykey != NULL;
 }
 
-
 /** Replace the previous onion key with the current onion key, and generate
  * a new previous onion key.  Immediately after calling this function,
  * the OR should:
