@@ -802,6 +802,10 @@ static int do_main_loop(void) {
     }
 #else /* do signal stuff only on unix */
     if(please_shutdown) {
+      if(!server_mode()) { /* do it now */
+        log(LOG_NOTICE,"Interrupt: exiting cleanly.");
+        exit(0);
+      }
       if(shutting_down) { /* we've already been asked. do it now. */
         log(LOG_NOTICE,"Second sigint received; exiting now.");
         exit(0);
