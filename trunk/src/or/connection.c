@@ -620,13 +620,14 @@ repeat_connection_package_raw_inbuf:
   }
 
   assert(conn->package_window > 0);
-  if(--conn->package_window <= 0) { /* is it 0 after decrement? */
-    connection_stop_reading(conn);
-    log_fn(LOG_DEBUG,"conn->package_window reached 0.");
-    circuit_consider_stop_edge_reading(circ, conn->type, conn->cpath_layer);
-    return 0; /* don't process the inbuf any more */
-  }
-  log_fn(LOG_DEBUG,"conn->package_window is %d",conn->package_window);
+  conn->package_window--;
+//  if(--conn->package_window <= 0) { /* is it 0 after decrement? */
+//    connection_stop_reading(conn);
+//    log_fn(LOG_DEBUG,"conn->package_window reached 0.");
+//    circuit_consider_stop_edge_reading(circ, conn->type, conn->cpath_layer);
+//    return 0; /* don't process the inbuf any more */
+//  }
+  log_fn(LOG_DEBUG,"conn->package_window is now %d",conn->package_window);
 
   /* handle more if there's more, or return 0 if there isn't */
   goto repeat_connection_package_raw_inbuf;
