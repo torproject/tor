@@ -15,6 +15,8 @@
 #include "or.h"
 #include "../common/test.h"
 
+extern or_options_t options;
+
 int have_failed = 0;
 
 /* These functions are file-local, but are exposed so we can test. */
@@ -760,7 +762,6 @@ test_dir_format()
   test_assert(router_dump_router_to_string(buf, 2048, &r2, pk1)>0);
   cp = buf;
   test_eq(dirserv_add_descriptor((const char**)&cp), 1);
-  extern or_options_t options;
   options.Nickname = "DirServer";
   test_assert(!dirserv_dump_directory_to_string(buf,8192,pk3));
   cp = buf;
