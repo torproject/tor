@@ -1,4 +1,4 @@
-sw$Id$
+$Id$
 
 Tor Spec
 
@@ -125,7 +125,8 @@ TODO: (very soon)
    The payload is padded with 0 bytes.
 
    PADDING cells are currently used to implement connection keepalive.
-   ORs and OPs send one another a PADDING cell every few minutes.
+   If there is no other traffic, ORs and OPs send one another a PADDING
+   cell every few minutes.
 
    CREATE, CREATED, and DESTROY cells are used to manage circuits;
    see section 4 below.
@@ -192,16 +193,19 @@ TODO: (very soon)
    servers can now calculate g^xy with ordinary DH.  From the base key
    material g^xy, they compute derivative key material as follows.
    First, the server represents g^xy as a big-endian unsigned integer.
-   Next, the server computes 60 bytes of key data as K = SHA1(g^xy |
-   [00]) | SHA1(g^xy | [01]) | SHA1(g^xy | [02]) where "00" is a single
-   octet whose value is zero, [01] is a single octet whose value is
-   one, etc.  The first 20 bytes of K form KH, the next 16 bytes of K
-   form Kf, and the next 16 bytes of K form Kb.
+   Next, the server computes 100 bytes of key data as K = SHA1(g^xy |
+   [00]) | SHA1(g^xy | [01]) | ... SHA1(g^xy | [04]) where "00" is
+   a single octet whose value is zero, [01] is a single octet whose
+   value is one, etc.  The first 20 bytes of K form KH, bytes 21-40 form
+   the forward digest Df, 41-60 form the backward digest Db, 61-76 form
+   Kf, and 77-92 form Kb.
 
    KH is used in the handshake response to demonstrate knowledge of the
-   computed shared key. Kf is used to encrypt the stream of data going
-   from the OP to the OR, and Kb is used to encrypt the stream of data
-   going from the OR to the OP.
+   computed shared key. Df is used to seed the integrity-checking hash
+   for the stream of data going from the OP to the OR, and Db seeds the
+   integrity-checking hash for the data stream from the OR to the OP. Kf
+   is used to encrypt the stream of data going from the OP to the OR, and
+   Kb is used to encrypt the stream of data going from the OR to the OP.
 
 4.3. Creating circuits
 
@@ -232,10 +236,9 @@ TODO: (very soon)
    To extend the circuit by a single onion router R_M, the OP performs
    these steps:
 
-      1. Create an onion skin, encrypting the RSA-encrypted part with
-         R's public key.
+      1. Create an onion skin, encrypted to R_M's public key.
 
-      2. Encrypt and send the onion skin in a relay EXTEND cell along
+      2. Send the onion skin in a relay EXTEND cell along
          the circuit (see section 5).
 
       3. When a relay EXTENDED cell is received, verify KH, and
@@ -341,7 +344,7 @@ TODO: (very soon)
    The payload of each unencrypted RELAY cell consists of:
          Relay command           [1 byte]
          'Recognized'            [2 bytes]
-         StreamID               [2 bytes]
+         StreamID                [2 bytes]
          Digest                  [4 bytes]
          Length                  [2 bytes]
          Data                    [498 bytes]
@@ -358,10 +361,12 @@ TODO: (very soon)
          9 -- RELAY_TRUNCATED
         10 -- RELAY_DROP
 
-   The 'Recognized' field in any unencrypted relay payload is always set
-   to zero; the 'digest' field is computed as the first four bytes of a
-   SHA-1 digest of the rest of the RELAY cell's payload, taken with the
-   digest field set to zero.
+   The 'Recognized' field in any unencrypted relay payload is always
+   set to zero; the 'digest' field is computed as the first four bytes
+   of the running SHA-1 digest of all the bytes that have travelled
+   over this circuit, seeded from Df or Db respectively (obtained in
+   section 4.2 above), and including this RELAY cell's entire payload
+   (taken with the digest field set to zero).
 
    When the 'recognized' field of a RELAY cell is zero, and the digest
    is correct, the cell is considered "recognized" for the purposes of
@@ -373,8 +378,8 @@ TODO: (very soon)
    stream use a StreamID of zero.
 
    The 'Length' field of a relay cell contains the number of bytes in
-   the relay payload which contain real payload data.  The remainder of
-   the payload is padded with random bytes.
+   the relay payload which contain real payload data. The remainder of
+   the payload is padded with NUL bytes.
 
 5.2. Opening streams and transferring data
 
@@ -390,6 +395,7 @@ TODO: (very soon)
    dotted-quad format; and where PORT is encoded in decimal.
 
    [What is the [00] for? -NM]
+   [It's so the payload is easy to parse out with string funcs -RD]
 
    Upon receiving this cell, the exit node resolves the address as
    necessary, and opens a new TCP connection to the target port.  If the
