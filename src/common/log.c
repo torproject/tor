@@ -3,10 +3,8 @@
 /* $Id$ */
 
 #include "../or/or.h"
-#include "util.h"
 
 struct logfile_t;
-
 typedef struct logfile_t {
   struct logfile_t *next;
   const char *filename;
