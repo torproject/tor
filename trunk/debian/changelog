@@ -1,3 +1,11 @@
+tor (0.0.2-1) unstable; urgency=low
+
+  * New upstream release.
+  * Uses strlcpy and strlcat by Todd C. Miller, mention him in
+    debian/copyright.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 19 Mar 2004 12:37:17 +0100
+
 tor (0.0.1+0.0.2pre27-1) unstable; urgency=low
 
   * New upstream release.
