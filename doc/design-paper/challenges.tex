@@ -265,28 +265,15 @@ responder destinations (say, websites with consistent data volumes) may not
 need to
 observe both ends of a stream to learn source-destination links for those
 responders.
-%However, it is still essentially confirming
-%suspected communicants where the responder suspects are ``stored'' rather
-%than observed at the same time as the client.
 Similarly, latencies of going through various routes can be
 cataloged~\cite{back01} to connect endpoints.
-% XXX hintz-pet02 just looked at data volumes of the sites. this
-% doesn't require much variability or storage. I think it works
-% quite well actually. Also, \cite{kesdogan:pet2002} takes the
+% Also, \cite{kesdogan:pet2002} takes the
 % attack another level further, to narrow down where you could be
 % based on an intersection attack on subpages in a website. -RD
-%
-% I was trying to be terse and simultaneously referring to both the
-% Hintz stuff and the Back et al. stuff from Info Hiding 01. I've
-% separated the two and added the references. -PFS
 It has not yet been shown whether these attacks will succeed or fail
 in the presence of the variability and volume quantization introduced by the
 Tor network, but it seems likely that these factors will at best delay
 rather than halt the attacks in the cases where they succeed.
-%likely to entail high variability and massive storage since
-%routes through the network to each site will be random even if they
-%have relatively unique latency characteristics. So this does not seem
-%an immediate practical threat.
 Along similar lines, the same paper suggests a ``clogging
 attack.'' Murdoch and Danezis~\cite{attack-tor-oak05} show a practical
 clogging attack against portions of
@@ -309,9 +296,6 @@ help counter these attacks.
 % dest, we would be just as well off with such as system.'' ?  If not, why
 % not? -nm
 % Sure. In fact, better off, since they seem to scale more easily. -rd
-
-% XXXX the below paragraph should probably move later, and merge with
-% other discussions of attack-tor-oak5.
 
 %Murdoch and Danezis describe an attack
 %\cite{attack-tor-oak05} that lets an attacker determine the nodes used
@@ -433,7 +417,6 @@ Many of the issues the Tor project needs to address extend beyond
 system design and technology development. In particular, the
 Tor project's \emph{image} with respect to its users and the rest of
 the Internet impacts the security it can provide.
-% No image, no sustainability -NM
 With this image issue in mind, this section discusses the Tor user base and
 Tor's interaction with other services on the Internet.
 
@@ -476,9 +459,7 @@ But for low-latency systems like Tor, end-to-end \emph{traffic
 correlation} attacks~\cite{danezis-pet2004,defensive-dropping,SS03}
 allow an attacker who can observe both ends of a communication
 to correlate packet timing and volume, quickly linking
-the initiator to her destination. % This is why Tor's threat model is
-%based on preventing the adversary from observing both the initiator and
-%the responder.
+the initiator to her destination.
 
 Like Tor, the current JAP implementation does not pad connections
 apart from using small fixed-size cells for transport. In fact,
@@ -700,7 +681,7 @@ file-sharing protocols that have separate control and data channels.
 \label{subsec:tor-and-blacklists}
 
 It was long expected that, alongside legitimate users, Tor would also
-attract troublemakers who exploited Tor in order to abuse services on the
+attract troublemakers who exploit Tor to abuse services on the
 Internet with vandalism, rude mail, and so on.
 Our initial answer to this situation was to use ``exit policies''
 to allow individual Tor nodes to block access to specific IP/port ranges.
@@ -709,12 +690,12 @@ them to prevent their nodes from being used for abusing particular
 services.  For example, all Tor nodes currently block SMTP (port 25),
 to avoid being used for spam.
 
-Exit policies are useful, but are insufficient for two reasons.  First, since
-it is not possible to force all nodes to block access to any given service,
-many of those services try to block Tor instead.  More broadly, while being
-blockable is important to being good netizens, we would like to encourage
-services to allow anonymous access. Services should not need to decide
-between blocking legitimate anonymous use and allowing unlimited abuse.
+Exit policies are useful, but they are insufficient: if not all nodes
+block a given service, that service may try to block Tor instead.
+While being blockable is important to being good netizens, we would like
+to encourage services to allow anonymous access. Services should not
+need to decide between blocking legitimate anonymous use and allowing
+unlimited abuse.
 
 This is potentially a bigger problem than it may appear.
 On the one hand, services should be allowed to refuse connections from
@@ -738,7 +719,7 @@ every class C network that contains a Tor node, and recommends banning SMTP
 from these networks even though Tor does not allow SMTP at all.  This
 strategic decision aims to discourage the
 operation of anything resembling an open proxy by encouraging its neighbors
-to shut it down in order to get unblocked themselves. This pressure even
+to shut it down to get unblocked themselves. This pressure even
 affects Tor nodes running in middleman mode (disallowing all exits) when
 those nodes are blacklisted too.
 
@@ -754,10 +735,10 @@ tolerably well for them in practice.
 
 But of course, we would prefer that legitimate anonymous users be able to
 access abuse-prone services.  One conceivable approach would be to require
-would-be IRC users, for instance, to register accounts if they wanted to
+would-be IRC users, for instance, to register accounts if they want to
 access the IRC network from Tor.  In practice this would not
 significantly impede abuse if creating new accounts were easily automatable;
-this is why services use IP blocking.  In order to deter abuse, pseudonymous
+this is why services use IP blocking.  To deter abuse, pseudonymous
 identities need to require a significant switching cost in resources or human
 time.  Some popular webmail applications
 impose cost with Reverse Turing Tests, but these may not be costly enough to
@@ -765,25 +746,13 @@ deter abusers.  Freedom used blind signatures to limit
 the number of pseudonyms for each paying account, but Tor has neither the
 ability nor the desire to collect payment.
 
-%One approach, similar to that taken by Freedom, would be to bootstrap some
-%non-anonymous costly identification mechanism to allow access to a
-%blind-signature pseudonym protocol.  This would effectively create costly
-%pseudonyms, which services could require in order to allow anonymous access.
-%This approach has difficulties in practice, however:
-%\begin{tightlist}
-%\item Unlike Freedom, Tor is not a commercial service.  Therefore, it would
-%  be a shame to require payment in order to make Tor useful, or to make
-%  non-paying users second-class citizens.
-%\item It is hard to think of an underlying resource that would actually work.
-%  We could use IP addresses, but that's the problem, isn't it?
-%\item Managing single sign-on services is not considered a well-solved
-%  problem in practice.  If Microsoft can't get universal acceptance for
-%  Passport, why do we think that a Tor-specific solution would do any good?
-%\item Even if we came up with a perfect authentication system for our needs,
-%  there's no guarantee that any service would actually start using it.  It
-%  would require a nonzero effort for them to support it, and it might just
-%  be less hassle for them to block tor anyway.
-%\end{tightlist}
+We stress that as far as we can tell, most Tor uses so far are not
+abusive. Most services have not complained, and others are actively
+working to find ways besides banning to cope with the abuse. For example,
+the Freenode IRC network had a problem with a coordinated group of
+abusers joining channels and subtly taking over the conversation; but
+when they labelled all users coming from Tor IPs as ``anonymous users,''
+removing the ability of the abusers to blend in, the abuse stopped.
 
 %The use of squishy IP-based ``authentication'' and ``authorization''
 %has not broken down even to the level that SSNs used for these
@@ -873,7 +842,7 @@ themselves before handing an IP address to Tor, which advertises
 where the user is about to connect.
 We are still working on more usable solutions.
 
-%So in order to actually provide good anonymity, we need to make sure that
+%So to actually provide good anonymity, we need to make sure that
 %users have a practical way to use Tor anonymously.  Possibilities include
 %writing wrappers for applications to anonymize them automatically; improving
 %the applications' support for SOCKS; writing libraries to help application
@@ -1163,7 +1132,7 @@ help address censorship; we wish them success.
 Tor is running today with hundreds of nodes and tens of thousands of
 users, but it will certainly not scale to millions.
 
-Scaling Tor involves four main challenges. First, in order to get a
+Scaling Tor involves four main challenges. First, to get a
 large set of nodes in the first place, we must address incentives for
 users to carry traffic for others. Next is safe node discovery, both
 while bootstrapping (how does a Tor client robustly find an initial
@@ -1237,8 +1206,9 @@ service it receives from adjacent nodes, and provide service relative
 to the received service, but (2) when a node is making decisions that
 affect its own security (such as building a circuit for its own
 application connections), it should choose evenly from a sufficiently
-large set of nodes that meet some minimum service threshold
-\cite{casc-rep}.  This approach allows us to discourage bad service
+large set of nodes that meet some minimum service
+threshold~\cite{casc-rep}.  This approach allows us to discourage
+bad service
 without opening Alice up as much to attacks.  All of this requires
 further study.
 
@@ -1254,13 +1224,13 @@ of their locations, keys, and capabilities to each of several well-known {\it
 of all known Tor nodes (a ``directory''), and a signed statement of which
 nodes they
 believed to be operational at any given time (a ``network status'').  Clients
-periodically downloaded a directory in order to learn the latest nodes and
+periodically downloaded a directory to learn the latest nodes and
 keys, and more frequently downloaded a network status to learn which nodes were
-likely to be running.  Tor nodes also operate as directory caches, in order to
+likely to be running.  Tor nodes also operate as directory caches, to
 lighten the bandwidth on the authoritative directory servers.
 
 In order to prevent Sybil attacks (wherein an adversary signs up many
-purportedly independent nodes in order to increase her chances of observing
+purportedly independent nodes to increase her chances of observing
 a stream as it enters and leaves the network), the early Tor directory design
 required the operators of the authoritative directory servers to manually
 approve new nodes.  Unapproved nodes were included in the directory,
@@ -1291,7 +1261,7 @@ move forward.  They include:
 
 We could try to move the system in several directions, depending on our
 choice of threat model and requirements.  If we did not need to increase
-network capacity in order to support more users, we could simply
+network capacity to support more users, we could simply
  adopt even stricter validation requirements, and reduce the number of
 nodes in the network to a trusted minimum.  
 But, we can only do that if can simultaneously make node capacity
@@ -1367,24 +1337,21 @@ reveal the path taken by large traffic flows under low-usage circumstances.
 
 \subsection{Non-clique topologies}
 
-Tor's comparatively weak threat model may actually make scaling easier than
-in other mix net
+Tor's comparatively weak threat model may allow easier scaling than
+other mix-net
 designs.  High-latency mix networks need to avoid partitioning attacks, where
-network splits allow an attacker to distinguish users based on which
-partitions they use.
-In Tor, however, we assume that the adversary cannot
-cheaply observe nodes at will, so even if the network splits, the
-users do not necessarily receive much less protection.
-Thus, a simple possibility when the scale of a Tor network
-exceeds some size is to simply split it. Care could be taken in
-allocating which nodes go to which network along the lines of
-\cite{casc-rep} to insure that collaborating hostile nodes do not
-gain any advantage that they do not
-already have in the original network.  Clients could switch between
-networks, and switch between them on a per-circuit basis.  More analysis is
-needed to tell if there are other dangers beyond those effecting mix nets.
+network splits let an attacker distinguish users in different partitions.
+Since Tor assumes the adversary cannot cheaply observe nodes at will,
+a network split may not decrease protection much.
+Thus, one option when the scale of a Tor network
+exceeds some size is simply to split it. Nodes could be allocated into
+partitions while hampering collobrating hostile nodes from taking over
+a single partition~\cite{casc-rep}.
+Clients could switch between
+networks, even on a per-circuit basis.  Future analysis may uncover
+other dangers beyond those affecting mix-nets.
 
-More conservatively, we can try to scale a single Tor network.  One potential
+More conservatively, we can try to scale a single Tor network.  Potential
 problems with adding more servers to a single Tor network include an
 explosion in the number of sockets needed on each server as more servers
 join, and an increase in coordination overhead as keeping everyone's view of
@@ -1426,7 +1393,7 @@ There are many open questions: how to distribute directory information
 (presumably information about the center nodes could
 be given to any new nodes with their codebase), whether center nodes
 will need to function as a `backbone', and so one. As above,
-this could create problems for the expected anonymity for a mixnet,
+this could create problems for the expected anonymity for a mix-net,
 but for a low-latency network where anonymity derives largely from
 the edges, it may be feasible.
 
