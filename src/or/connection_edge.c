@@ -71,7 +71,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
       if (connection_ap_handshake_process_socks(conn) < 0) {
         conn->has_sent_end = 1; /* no circ yet */
         connection_mark_for_close(conn);
-        conn->hold_open_until_flushed = 1;
+        conn->hold_open_until_flushed = 1; /* redundant but shouldn't hurt */
         return -1;
       }
       return 0;

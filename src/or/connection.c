@@ -235,9 +235,9 @@ void connection_about_to_close_connection(connection_t *conn)
     case CONN_TYPE_AP:
       if (conn->socks_request->has_finished == 0) {
         log_fn(LOG_INFO,"Cleaning up AP -- sending socks reject.");
+        conn->hold_open_until_flushed = 1;
         connection_ap_handshake_socks_reply(conn, NULL, 0, -1);
         conn->socks_request->has_finished = 1;
-        conn->hold_open_until_flushed = 1;
       } else {
         control_event_stream_status(conn, STREAM_EVENT_CLOSED);
       }
@@ -1105,7 +1105,10 @@ int connection_handle_write(connection_t *conn) {
  */
 void connection_write_to_buf(const char *string, size_t len, connection_t *conn) {
 
-  if (!len || conn->marked_for_close)
+  if (!len)
+    return;
+  /* if it's marked for close, only allow write if we mean to flush it */
+  if (conn->marked_for_close && !conn->hold_open_until_flushed)
     return;
 
   if (write_to_buf(string, len, conn->outbuf) < 0) {
