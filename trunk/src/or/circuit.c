@@ -522,8 +522,10 @@ void circuit_close(circuit_t *circ) {
   circuit_t *youngest=NULL;
 
   assert(circ);
-  if(options.APPort)
+  if(options.APPort) {
     youngest = circuit_get_newest_by_edge_type(EDGE_AP);
+    log(LOG_DEBUG,"circuit_close(): youngest %d, circ %d.",youngest,circ);
+  }
   circuit_remove(circ);
   for(conn=circ->n_conn; conn; conn=conn->next_topic) {
     connection_send_destroy(circ->n_aci, circ->n_conn); 
@@ -585,17 +587,13 @@ send_end:
     return;
   }
 
+  /* this connection speaks cells. We must close all the circuits on it. */
   while((circ = circuit_get_by_conn(conn))) {
-    circuit_remove(circ);
     if(circ->n_conn == conn) /* it's closing in front of us */
-      for(tmpconn=circ->p_conn; tmpconn; tmpconn=tmpconn->next_topic) {
-        connection_send_destroy(circ->p_aci, tmpconn); 
-      }
+      circ->n_conn = NULL;
     if(circ->p_conn == conn) /* it's closing behind us */
-      for(tmpconn=circ->n_conn; tmpconn; tmpconn=tmpconn->next_topic) {
-        connection_send_destroy(circ->n_aci, tmpconn); 
-      }
-    circuit_free(circ);
+      circ->p_conn = NULL;
+    circuit_close(circ);
   }  
 }
 
@@ -643,6 +641,9 @@ void circuit_expire_unused_circuits(void) {
  */
 void circuit_launch_new(int failure_status) {
   static int failures=0;
+
+  if(!options.APPort) /* we're not an application proxy. no need for circuits. */
+    return;
 
   if(failure_status == -1) { /* I was called because a circuit succeeded */
     failures = 0;

@@ -272,19 +272,11 @@ void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
     onion_pending_remove(circ);
   }
 
-  circuit_remove(circ);
-
-  if(cell->aci == circ->p_aci) { /* the destroy came from behind */
-    for(tmpconn = circ->n_conn; tmpconn; tmpconn=tmpconn->next_topic) {
-      connection_send_destroy(circ->n_aci, tmpconn);
-    }
-  }
-  if(cell->aci == circ->n_aci) { /* the destroy came from ahead */
-    for(tmpconn = circ->p_conn; tmpconn; tmpconn=tmpconn->next_topic) {
-      connection_send_destroy(circ->p_aci, tmpconn);
-    }
-  }
-  circuit_free(circ);
+  if(cell->aci == circ->p_aci) /* the destroy came from behind */
+    circ->p_conn = NULL;
+  if(cell->aci == circ->n_aci) /* the destroy came from ahead */
+    circ->n_conn = NULL;
+  circuit_close(circ);
 }
 
 /*
