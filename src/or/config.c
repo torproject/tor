@@ -825,6 +825,10 @@ int getconfig(int argc, char **argv, or_options_t *options) {
         options->_AllowUnverified |= ALLOW_UNVERIFIED_EXIT;
       else if (!strcasecmp(cp, "middle"))
         options->_AllowUnverified |= ALLOW_UNVERIFIED_MIDDLE;
+      else if (!strcasecmp(cp, "introduction"))
+        options->_AllowUnverified |= ALLOW_UNVERIFIED_INTRODUCTION;
+      else if (!strcasecmp(cp, "rendezvous"))
+        options->_AllowUnverified |= ALLOW_UNVERIFIED_RENDEZVOUS;
       else {
         log(LOG_WARN, "Unrecognized value '%s' in AllowUnverifiedNodes",
             cp);

@@ -808,10 +808,11 @@ struct circuit_t {
 
 typedef struct circuit_t circuit_t;
 
-#define ALLOW_UNVERIFIED_ENTRY  1
-#define ALLOW_UNVERIFIED_EXIT   2
-#define ALLOW_UNVERIFIED_MIDDLE 4
-
+#define ALLOW_UNVERIFIED_ENTRY        1
+#define ALLOW_UNVERIFIED_EXIT         2
+#define ALLOW_UNVERIFIED_MIDDLE       4
+#define ALLOW_UNVERIFIED_RENDEZVOUS   8
+#define ALLOW_UNVERIFIED_INTRODUCTION 16
 
 /** Configuration options for a Tor process */
 typedef struct {
@@ -1392,12 +1393,11 @@ routerinfo_t *router_pick_directory_server(int requireauth, int requireothers);
 int all_directory_servers_down(void);
 struct smartlist_t;
 void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list);
-void router_add_running_routers_to_smartlist(struct smartlist_t *sl);
 int router_nickname_matches(routerinfo_t *router, const char *nickname);
 routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
                                         struct smartlist_t *excludedsmartlist,
                                         int preferuptime, int preferbandwidth,
-                                        int strict);
+                                        int allow_unverified, int strict);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_nickname(const char *nickname);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);

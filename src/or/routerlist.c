@@ -189,7 +189,9 @@ void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list) {
 /** Add every router from our routerlist that is currently running to
  * <b>sl</b>.
  */
-void router_add_running_routers_to_smartlist(smartlist_t *sl) {
+static void
+router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified)
+{
   routerinfo_t *router;
   int i;
 
@@ -198,8 +200,8 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
 
   for(i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
-    /* XXX008 for now, only choose verified routers */
-    if(router->is_running && router->is_verified) {
+    if(router->is_running &&
+       (allow_unverified || router->is_verified)) {
       if(!clique_mode()) {
         smartlist_add(sl, router);
       } else {
@@ -289,7 +291,7 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
 routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
                                         smartlist_t *excludedsmartlist,
                                         int preferuptime, int preferbandwidth,
-                                        int strict)
+                                        int allow_unverified, int strict)
 {
   smartlist_t *sl, *excludednodes;
   routerinfo_t *choice;
@@ -312,7 +314,7 @@ routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
   smartlist_free(sl);
   if(!choice && !strict) {
     sl = smartlist_create();
-    router_add_running_routers_to_smartlist(sl);
+    router_add_running_routers_to_smartlist(sl, allow_unverified);
     smartlist_subtract(sl,excludednodes);
     if(excludedsmartlist)
       smartlist_subtract(sl,excludedsmartlist);
