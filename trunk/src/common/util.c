@@ -88,13 +88,19 @@ void smartlist_free(smartlist_t *sl) {
 void smartlist_add(smartlist_t *sl, void *element) {
   if(sl->num_used < sl->max)
     sl->list[sl->num_used++] = element;
+  else
+    log_fn(LOG_WARN,"We've already got %d elements, discarding.",sl->max);
 }
 
 void smartlist_remove(smartlist_t *sl, void *element) {
   int i;
+  if(element == NULL)
+    return;
   for(i=0; i < sl->num_used; i++)
-    if(sl->list[i] == element)
+    if(sl->list[i] == element) {
       sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
+      i--; /* so we process the new i'th element */
+    }
 }
 
 void *smartlist_choose(smartlist_t *sl) {
