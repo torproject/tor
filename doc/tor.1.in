@@ -18,13 +18,13 @@ routers"). Users bounce their tcp streams -- web traffic, ftp, ssh, etc --
 around the routers, and recipients, observers, and even the routers
 themselves have difficulty tracking the source of the stream.
 .SH OPTIONS
-Options can be specified either on the commandline (\fI--option value\fR), or in the configuration file (\fIoption value\fR).
-.TP
 \fB-h, -help\fP
 Display a short help message and exit.
 .TP
 \fB-f \fR\fIFILE\fP
 FILE contains further "option value" pairs. (Default: @CONFDIR@/torrc)
+.TP
+Other options can be specified either on the commandline (\fI--option value\fR), or in the configuration file (\fIoption value\fR).
 .TP
 \fBloglevel debug|info|warn|err\fP
 Set the verboseness level of the primary log. (Default: warn)

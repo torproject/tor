@@ -1,6 +1,4 @@
 improve how it behaves when i remove a line from the approved-routers files
-    - Rotate tls-level connections -- make new ones, expire old ones.
-      Nick, can you remember why we wanted to do this?
 on hup, retry_all_connections (plus binding? and closing i guess. hm.)
 
 Legend:
@@ -16,9 +14,11 @@ ARMA    - arma claims
         X Abandoned
 
 For 0.0.2pre15:
-        - don't pick exit nodes which will certainly reject all things.
-        - don't pick nodes that the directory says are down
-        - choose randomly from running dirservers, not just first one
+        o don't pick exit nodes which will certainly reject all things.
+        o don't pick nodes that the directory says are down
+        o choose randomly from running dirservers, not just first one
+        o install the man page
+        o warn when client-side tries an address/port which no router in the dir accepts.
 
 For 0.0.2pre14:
         o More flexible exit policies (18.*, 18.0.0.0/8)
@@ -101,6 +101,8 @@ On-going
         . Unit tests
 
 Mid-term:
+        - Rotate tls-level connections -- make new ones, expire old ones.
+          So we get actual key rotation, not just symmetric key rotation
         - Are there anonymity issues with sequential streamIDs? Sequential
           circIDs? Eg an attacker can learn how many there have been.
           The fix is to initialize them randomly rather than at 1.
