@@ -578,13 +578,15 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         log_fn(LOG_DEBUG,"socks4: Username not here yet.");
         return 0;
       }
+      tor_assert(next < buf->mem+buf->datalen);
 
-      startaddr = next+1;
+      startaddr = NULL;
       if(socks4_prot != socks4a && !have_warned_about_unsafe_socks) {
         log_fn(LOG_WARN,"Your application (using socks4 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.", req->port);
 //      have_warned_about_unsafe_socks = 1; // (for now, warn every time)
       }
-      if(socks4_prot == socks4a) {
+      if(socks4_prot == socks4a && next+1 < buf->mem+buf->datalen) {
+        startaddr = next+1;
         next = memchr(startaddr, 0, buf->mem+buf->datalen-startaddr);
         if(!next) {
           log_fn(LOG_DEBUG,"socks4: Destaddr not here yet.");
@@ -594,13 +596,11 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           log_fn(LOG_WARN,"socks4: Destaddr too long. Rejecting.");
           return -1;
         }
+        tor_assert(next < buf->mem+buf->datalen);
       }
       log_fn(LOG_DEBUG,"socks4: Everything is here. Success.");
-      strlcpy(req->address, socks4_prot == socks4 ? tmpbuf : startaddr,
+      strlcpy(req->address, startaddr ? startaddr : tmpbuf,
               sizeof(req->address));
-      /* XXX on very old netscapes (socks4) the next line triggers an
-       * assert, because next-buf->mem+1 is greater than buf->datalen.
-       */
       buf_remove_from_front(buf, next-buf->mem+1); /* next points to the final \0 on inbuf */
       return 1;
 
