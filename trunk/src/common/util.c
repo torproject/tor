@@ -630,8 +630,7 @@ int switch_id(char *user, char *group) {
 #endif
 
   log_fn(LOG_ERR, 
-         "User '%s' specified, but switching users is not supported.", 
-         user);
+         "User or group specified, but switching users is not supported.");
 
   return -1;
 }
