@@ -315,8 +315,8 @@ void circuit_build_needed_circs(time_t now) {
  * want to be building at once, if there are no open general-purpose
  * circuits?
  */
-#define CIRCUIT_MIN_BUILDING_GENERAL 3
-  /* if there's no open circ, and less than 3 are on the way,
+#define CIRCUIT_MIN_BUILDING_GENERAL 5
+  /* if there's no open circ, and less than 5 are on the way,
    * go ahead and try another. */
   if(!circ && circuit_count_building(CIRCUIT_PURPOSE_C_GENERAL)
               < CIRCUIT_MIN_BUILDING_GENERAL) {
