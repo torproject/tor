@@ -11,40 +11,6 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-      misc:
-        . refer to things by key:
-          - also use this in intro points and rendezvous points, and
-            hidserv descs.  [XXXX This isn't enough.]
-          - figure out what to do about ip:port:differentkey
-        - users can set their bandwidth, or we auto-detect it:
-          - advertised bandwidth defaults to 10KB
-          o advertised bandwidth is the min of max seen in each direction
-            in the past N seconds.
-            o calculate this
-          o not counting "local" connections
-          - round detected bandwidth up to nearest 10KB
-        - client software not upload descriptor until:
-          - you've been running for an hour
-          - it's sufficiently satisfied with its bandwidth
-          - it decides it is reachable
-          - start counting again if your IP ever changes.
-          - never regenerate identity keys, for now.
-          - you can set a bit for not-being-an-OR.
-NICK    - Reputation info needs to give better weight to recent events than
-          very old ones.
-        - Have clients and dirservers preserve reputation info over
-          reboots.
-        - clients choose nodes proportional to advertised bandwidth
-        -  and lists as running iff:
-          - he can connect to you
-          - he has successfully extended to you
-          - you have sufficient mean-time-between-failures
-
-      docs:
-        - faq and doc-wiki
-          - knoppix distro
-          - win32 installer using privoxy's installer
-
       bug fixes, necessary:
         - Why is the first entry of kill -USR1 a router with a 0 key?
         - why does common/util.c build-depend on or/or.h ?
@@ -64,6 +30,12 @@ NICK    - Reputation info needs to give better weight to recent events than
         - Handle full buffers without totally borking
         - Add '[...truncated]' or similar to truncated log entries (like the directory
           in connection_dir_process_inbuf()).
+
+      protocol changes and design work:
+        - put ip:port in intro points, rendezvous points, and hidserv
+          descriptors.
+        - figure out what to do when somebody asks to extend to
+          ip:port:differentkey
 
       more features, easy:
         - check the date in the http headers, compare for clock skew.
@@ -102,6 +74,27 @@ NICK    - Reputation info needs to give better weight to recent events than
             list if you have one, else from the trusteddir list.
         - add a listener for a ui
           - and a basic gui
+        - Have clients and dirservers preserve reputation info over
+          reboots.
+        - users can set their bandwidth, or we auto-detect it:
+          - advertised bandwidth defaults to 10KB
+          o advertised bandwidth is the min of max seen in each direction
+            in the past N seconds.
+            o calculate this
+          o not counting "local" connections
+          - round detected bandwidth up to nearest 10KB
+        - client software not upload descriptor until:
+          - you've been running for an hour
+          - it's sufficiently satisfied with its bandwidth
+          - it decides it is reachable
+          - start counting again if your IP ever changes.
+          - never regenerate identity keys, for now.
+          - you can set a bit for not-being-an-OR.
+        - clients choose nodes proportional to advertised bandwidth
+        - authdirserver lists you as running iff:
+          - he can connect to you
+          - he has successfully extended to you
+          - you have sufficient mean-time-between-failures
 
       blue sky:
         - Possible to get autoconf to easily install things into ~/.tor?
