@@ -361,7 +361,7 @@ static int dns_spawn_worker(void) {
   int fd[2];
   connection_t *conn;
 
-  if(socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
+  if(tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
     perror("socketpair");
     exit(1);
   }

@@ -18,6 +18,15 @@
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -25,6 +34,8 @@
 #include <unistd.h>
 #endif
 #include <assert.h>
+#include <errno.h>
+#include <string.h>
 
 #include "util.h"
 #include "log.h"
@@ -145,5 +156,98 @@ void spawn_exit()
   _endthread();
 #else
   exit(0);
+#endif
+}
+
+
+/* Fake socket pair over TCP.  Code adapted from perl 5.8.0's util.c */
+int
+tor_socketpair(int family, int type, int protocol, int fd[2])
+{
+#ifdef HAVE_SOCKETPAIR_XXX
+    /* For testing purposes, we never fall back to real socketpairs. */
+    return socketpair(family, type, protocol, fd);
+#else
+    int listener = -1;
+    int connector = -1;
+    int acceptor = -1;
+    struct sockaddr_in listen_addr;
+    struct sockaddr_in connect_addr;
+    size_t size;
+    
+    if (protocol
+#ifdef AF_UNIX
+        || family != AF_UNIX
+#endif
+        ) {
+        errno = EAFNOSUPPORT;
+        return -1;
+    }
+    if (!fd) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    listener = socket(AF_INET, type, 0);
+    if (listener == -1)
+      return -1;
+    memset (&listen_addr, 0, sizeof (listen_addr));
+    listen_addr.sin_family = AF_INET;
+    listen_addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+    listen_addr.sin_port = 0;   /* kernel choses port.  */
+    if (bind(listener, (struct sockaddr *) &listen_addr, sizeof (listen_addr))
+        == -1)
+        goto tidy_up_and_fail;
+    if (listen(listener, 1) == -1)
+        goto tidy_up_and_fail;
+
+    connector = socket(AF_INET, type, 0);
+    if (connector == -1)
+        goto tidy_up_and_fail;
+    /* We want to find out the port number to connect to.  */
+    size = sizeof (connect_addr);
+    if (getsockname(listener, (struct sockaddr *) &connect_addr, &size) == -1)
+        goto tidy_up_and_fail;
+    if (size != sizeof (connect_addr))
+        goto abort_tidy_up_and_fail;
+    if (connect(connector, (struct sockaddr *) &connect_addr,
+                sizeof (connect_addr)) == -1)
+        goto tidy_up_and_fail;
+
+    size = sizeof (listen_addr);
+    acceptor = accept(listener, (struct sockaddr *) &listen_addr, &size);
+    if (acceptor == -1)
+        goto tidy_up_and_fail;
+    if (size != sizeof(listen_addr))
+        goto abort_tidy_up_and_fail;
+    close(listener);
+    /* Now check we are talking to ourself by matching port and host on the
+       two sockets.  */
+    if (getsockname(connector, (struct sockaddr *) &connect_addr, &size) == -1)
+        goto tidy_up_and_fail;
+    if (size != sizeof (connect_addr)
+        || listen_addr.sin_family != connect_addr.sin_family
+        || listen_addr.sin_addr.s_addr != connect_addr.sin_addr.s_addr
+        || listen_addr.sin_port != connect_addr.sin_port) {
+        goto abort_tidy_up_and_fail;
+    }
+    fd[0] = connector;
+    fd[1] = acceptor;
+    return 0;
+
+  abort_tidy_up_and_fail:
+  errno = ECONNABORTED; /* I hope this is portable and appropriate.  */
+  tidy_up_and_fail:
+    {
+        int save_errno = errno;
+        if (listener != -1)
+            close(listener);
+        if (connector != -1)
+	    close(connector);
+        if (acceptor != -1)
+            close(acceptor);
+        errno = save_errno;
+        return -1;
+    }
 #endif
 }
