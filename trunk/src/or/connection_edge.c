@@ -757,9 +757,6 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     return 1; /* we're happy */
   }
 
-  log_fn(LOG_INFO,"No safe circuit (purpose %d) ready for edge connection; delaying.",
-         desired_circuit_purpose);
-
   if(!*conn->rend_query) { /* general purpose circ */
     addr = client_dns_lookup_entry(conn->socks_request->address);
     if(router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
@@ -804,6 +801,9 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       strcpy(circ->rend_query, conn->rend_query);
     }
   }
+  if(!circ)
+    log_fn(LOG_INFO,"No safe circuit (purpose %d) ready for edge connection; delaying.",
+           desired_circuit_purpose);
   *circp = circ;
   return 0;
 }
