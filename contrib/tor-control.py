@@ -52,12 +52,18 @@ def get_option(s,name):
   length,type,body = receive_message(s)
   return
 
+def set_option(s,msg):
+  s.sendall(pack_message(MSG_TYPE_SETCONF,msg))
+  length,type,body = receive_message(s)
+  return
+
 def do_main_loop(host,port):
   print "host is %s:%d"%(host,port)
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   s.connect((host,port))
   authenticate(s)
   get_option(s,"nickname")
+  set_option(s,"runasdaemon 1")
 #  get_option(s,"DirFetchPostPeriod\n")
 
   return
