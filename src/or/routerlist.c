@@ -124,7 +124,7 @@ void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list) {
       if (router->is_running)
         smartlist_add(sl,router);
       else
-        log_fn(LOG_INFO,"Nickname list includes '%s' which is known but down.",nick);
+        log_fn(LOG_WARN,"Nickname list includes '%s' which is known but down.",nick);
     } else
       log_fn(has_fetched_directory ? LOG_WARN : LOG_INFO,
              "Nickname list includes '%s' which isn't a known router.",nick);

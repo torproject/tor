@@ -259,8 +259,6 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
   return 0;
 }
 
-/* XXX are there any other specifiers we want to give so making
- * a several-thousand-byte string is less painful? */
 const char default_dirservers_string[] =
 "router moria1 18.244.0.188 9001 9021 9031\n"
 "platform Tor 0.0.6rc1 on Linux moria.mit.edu i686\n"
@@ -380,14 +378,15 @@ int config_assign_default_dirservers(void) {
 
 /** Set <b>options</b> to a reasonable default.
  *
- * Call this function when they're using the default torrc but
- * we can't find it. For now, we just hard-code what comes in the
- * default torrc.
+ * Call this function when we can't find any torrc config file.
  */
-static int config_assign_default(or_options_t *options) {
+static int config_assign_defaults(or_options_t *options) {
 
   /* set them up as a client only */
   options->SocksPort = 9050;
+
+  config_free_lines(options->ExitPolicy);
+  options->ExitPolicy = config_line_prepend(NULL, "ExitPolicy", "reject *:*");
 
   /* plus give them a dirservers file */
   if(config_assign_default_dirservers() < 0)
@@ -585,7 +584,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   if(!cf) {
     if(using_default_torrc == 1) {
       log(LOG_NOTICE, "Configuration file '%s' not present, using reasonable defaults.",fname);
-      if(config_assign_default(options) < 0)
+      if(config_assign_defaults(options) < 0)
         return -1;
     } else {
       log(LOG_WARN, "Unable to open configuration file '%s'.",fname);
@@ -631,13 +630,6 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
-#if 0
-  if(options->ORPort && options->DataDirectory == NULL) {
-    log(LOG_WARN,"DataDirectory option required if ORPort is set, but not found.");
-    result = -1;
-  }
-#endif
-
   if (options->ORPort) {
     if (options->Nickname == NULL) {
       log_fn(LOG_WARN,"Nickname required if ORPort is set, but not found.");
@@ -676,7 +668,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
-  if(options->DirPort && options->RecommendedVersions == NULL) {
+  if(options->AuthoritativeDir && options->RecommendedVersions == NULL) {
     log(LOG_WARN,"Directory servers must configure RecommendedVersions.");
     result = -1;
   }
