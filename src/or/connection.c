@@ -272,8 +272,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
   if(connect(s,(struct sockaddr *)&dest_addr,sizeof(dest_addr)) < 0) {
     if(!ERRNO_CONN_EINPROGRESS(errno)) {
       /* yuck. kill it. */
-      perror("connect");
-      log_fn(LOG_INFO,"Connect() to %s:%u failed.",address,port);
+      log_fn(LOG_INFO,"Connect() to %s:%u failed: %s",address,port,strerror(errno));
       close(s);
       return -1;
     } else {
