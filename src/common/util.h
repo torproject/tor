@@ -269,12 +269,22 @@ int parse_addr_and_port_range(const char *s, uint32_t *addr_out,
 /** Return true if e is EINPROGRESS or the local equivalent as returned by
  * a call to connect(). */
 #define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == WSAEINPROGRESS || (e)== WSAEINVAL)
+/** Return true if e is EAGAIN or another error indicating that a call to
+ * accept() has no pending connections to return. */
+#define ERRNO_IS_ACCEPT_EAGAIN(e)    ERRNO_IS_EAGAIN(e)
+/** Return true if e is EMFILE or another error indicating that a call to
+ * accept() has failed because we're out of fds or something. */
+#define ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e) \
+  ((e) == WSAEMFILE || (e) == WSAENOBUFS)
 int tor_socket_errno(int sock);
 const char *tor_socket_strerror(int e);
 #else
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN)
 #define ERRNO_IS_EINPROGRESS(e)      ((e) == EINPROGRESS)
 #define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == EINPROGRESS)
+#define ERRNO_IS_ACCEPT_EAGAIN(e)    ((e) == EAGAIN || (e) == ECONNABORTED)
+#define ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e) \
+  ((e) == EMFILE || (e) == ENFILE || (e) == ENOBUFS || (e) == ENOMEM)
 #define tor_socket_errno(sock)       (errno)
 #define tor_socket_strerror(e)       strerror(e)
 #endif
