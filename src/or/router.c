@@ -516,8 +516,8 @@ int router_rebuild_descriptor(void) {
     log_fn(LOG_WARN, "Couldn't dump router to string.");
     return -1;
   }
-  ri->is_trusted_dir = ri->dir_port &&
-    router_digest_is_trusted_dir(ri->identity_digest);
+  ri->is_trusted_dir = (ri->dir_port &&
+    router_digest_is_trusted_dir(ri->identity_digest));
   return 0;
 }
 

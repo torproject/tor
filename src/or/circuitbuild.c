@@ -114,7 +114,9 @@ void circuit_rep_hist_note_result(circuit_t *circ) {
     return;
   }
   if (server_mode()) {
-    prev_digest = router_get_my_routerinfo()->identity_digest;
+    routerinfo_t *me = router_get_my_routerinfo();
+    tor_assert(me);
+    prev_digest = me->identity_digest;
   }
   do {
     router = router_get_by_digest(hop->identity_digest);
