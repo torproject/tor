@@ -998,6 +998,7 @@ test_dir_format(void)
   routerlist_t *dir1 = NULL, *dir2 = NULL;
   tor_version_t ver1;
   char *bw_lines = NULL;
+  const char *m;
 
   test_assert( (pk1 = crypto_new_pk_env()) );
   test_assert( (pk2 = crypto_new_pk_env()) );
@@ -1158,10 +1159,10 @@ test_dir_format(void)
   r2.published_on = time(NULL)-3*60*60;
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
   cp = buf;
-  test_eq(dirserv_add_descriptor((const char**)&cp), 1);
+  test_eq(dirserv_add_descriptor((const char**)&cp,&m), 1);
   test_assert(router_dump_router_to_string(buf, 2048, &r2, pk1)>0);
   cp = buf;
-  test_eq(dirserv_add_descriptor((const char**)&cp), 1);
+  test_eq(dirserv_add_descriptor((const char**)&cp,&m), 1);
   get_options()->Nickname = tor_strdup("DirServer");
   test_assert(!dirserv_dump_directory_to_string(&cp,pk3));
   test_assert(!router_parse_routerlist_from_directory(cp, &dir1, pk3, 1, 0));

@@ -1349,7 +1349,7 @@ int dirserv_parse_fingerprint_file(const char *fname);
 int dirserv_router_fingerprint_is_known(const routerinfo_t *router);
 void dirserv_free_fingerprint_list(void);
 const char *dirserv_get_nickname_by_digest(const char *digest);
-int dirserv_add_descriptor(const char **desc);
+int dirserv_add_descriptor(const char **desc, const char **msg);
 int dirserv_load_from_directory_string(const char *dir);
 void dirserv_free_descriptors(void);
 void dirserv_remove_old_servers(int age);
