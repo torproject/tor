@@ -1102,7 +1102,7 @@ int connection_handle_write(connection_t *conn) {
         /* it's safe to pass OPs to router_mark_as_down(), since it just
          * ignores unrecognized routers
          */
-        if (conn->type == CONN_TYPE_OR)
+        if (conn->type == CONN_TYPE_OR && !get_options()->HttpsProxy)
           router_mark_as_down(conn->identity_digest);
         return -1;
       } else {
