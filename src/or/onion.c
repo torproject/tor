@@ -188,6 +188,9 @@ static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
 #ifdef TOR_PERF
   routelen = 2;
 #else
+  routelen = 3;
+#endif
+#if 0
   for(routelen = 3; ; routelen++) { /* 3, increment until coinflip says we're done */
     if (crypto_pseudo_rand_int(255) >= cw*255) /* don't extend */
       break;
