@@ -52,4 +52,6 @@ void set_socket_nonblocking(int socket);
 int spawn_func(int (*func)(void *), void *data);
 void spawn_exit();
 
+int tor_socketpair(int family, int type, int protocol, int fd[2]);
+
 #endif
