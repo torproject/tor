@@ -1644,17 +1644,14 @@ void clear_trusted_dir_servers(void);
  * encounter two versions that differ only by status tag, we compare them
  * lexically.
  *
- * Now, we start each development branch with (say) 0.1.1.1-cvs.  The
- * patchlevel increments consistently as the status tag changes, for example,
- * as in: 0.1.1.2-alpha, 0.1.1.3-cvs, 0.1.1.4-alpha, 0.1.1.5-cvs, 0.1.1.6-rc
- * 0.1.1.7-cvs, 0.1.1.8-rc, 0.1.1.9-cvs.  Eventually, we release 0.1.1.10.
- * The stable CVS repository gets the version 0.1.1.11-maint_cvs; the
- * next patch release is 0.1.1.12.
+ * Now, we start each development branch with (say) 0.1.1.1-alpha.
+ * The patchlevel increments consistently as the status tag changes,
+ * for example, as in: 0.1.1.2-alpha, 0.1.1.3-alpha, 0.1.1.4-rc
+ * 0.1.1.5-rc, Eventually, we release 0.1.1.6.  The next patch release
+ * is 0.1.1.7.
  *
- * XXXX(Alternatively, we could go: 0.1.1.1-alpha, 0.1.1.1-alpha_cvs,
- * 0.1.1.2-alpha, 0.1.1.2-alpha_cvs .  This wouldn't violate our
- * only-one-release-per-number rule, since CVS versions aren't
- * released. Roger?)
+ * Between these releases, CVS is versioned with a -cvs tag: after
+ * 0.1.1.1-alpha comes 0.1.1.1-alpha-cvs, and so on.
  */
 typedef struct tor_version_t {
   int major;
