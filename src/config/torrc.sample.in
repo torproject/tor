@@ -91,15 +91,17 @@ AllowUnverifiedNodes middle,rendezvous
 ## Required: what port to advertise for tor connections
 #ORPort 9001
 ## If you want to listen on a port other than the one advertised
-## in ORPort, uncomment the line below. You'll need to do ipchains
-## or other port forwarding yourself to make this work.
+## in ORPort (e.g. to advertise 443 but bind to 9090), uncomment
+## the line below. You'll need to do ipchains or other port forwarding
+## yourself to make this work.
 #ORBindAddress 0.0.0.0:9090
 
 ## Uncomment this to mirror the directory for others (please do)
 #DirPort 9030 # what port to advertise for directory connections
 ## If you want to listen on a port other than the one advertised
-## in DirPort, uncomment the line below. You'll need to do ipchains
-## or other port forwarding yourself to make this work.
+## in DirPort (e.g. to advertise 80 but bind 9091), uncomment the line
+## below. You'll need to do ipchains or other port forwarding yourself
+## to make this work.
 #DirBindAddress 0.0.0.0:9091
 
 ## A comma-separated list of exit policies. They're considered first
