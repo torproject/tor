@@ -939,15 +939,19 @@ control_event_stream_status(connection_t *conn, stream_status_event_t tp)
 {
   char *msg;
   size_t len;
-  char buf[256];
+  char buf[256], buf2[256];
   tor_assert(conn->type == CONN_TYPE_AP);
   tor_assert(conn->socks_request);
 
   if (!EVENT_IS_INTERESTING(EVENT_STREAM_STATUS))
     return 0;
 
-  tor_snprintf(buf, sizeof(buf), "%s:%d",
-               conn->socks_request->address, conn->socks_request->port),
+  if (conn->chosen_exit_name)
+    tor_snprintf(buf2, sizeof(buf2), ".%s.exit", conn->chosen_exit_name);
+  tor_snprintf(buf, sizeof(buf), "%s%s:%d",
+               conn->socks_request->address,
+               conn->chosen_exit_name ? buf2 : "",
+               conn->socks_request->port),
   len = strlen(buf);
   msg = tor_malloc(5+len+1);
   msg[0] = (uint8_t) tp;
