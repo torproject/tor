@@ -95,14 +95,13 @@ int ap_handshake_process_socks(connection_t *conn) {
 
   /* find the circuit that we should use, if there is one. */
   circ = circuit_get_newest_by_edge_type(EDGE_AP);
-  circ->dirty = 1;
-
-  /* now we're all ready to make an onion or send a begin */
 
   if(!circ) {
     log(LOG_INFO,"ap_handshake_process_socks(): No circuit ready. Closing.");
     return -1;
   }
+
+  circ->dirty = 1;
 
   /* add it into the linked list of topics on this circuit */
   log(LOG_DEBUG,"ap_handshake_process_socks(): attaching new conn to circ. n_aci %d.", circ->n_aci);
