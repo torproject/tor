@@ -136,7 +136,57 @@ int write_to_buf(char *string, int string_len,
 
 }
 
-#ifdef USE_ZLIB
+z_stream *zstream_new(int compression)
+{
+  z_stream* stream;
+  stream = malloc(sizeof(z_stream));
+  if (!stream)
+    return NULL;
+  memset(stream, 0, sizeof(z_stream));
+  if (compression) {
+    if (deflateInit(stream, Z_DEFAULT_COMPRESSION) != Z_OK) {
+      log(LOG_ERR, "Error initializing zlib: %s", stream->msg);
+      free(stream);
+      return NULL;
+    }
+  } else {
+    if (inflateInit(stream) != Z_OK) {
+      log(LOG_ERR, "Error initializing zlib: %s", stream->msg);
+      free(stream);
+      return NULL;
+    }
+  }
+  return stream;
+}
+
+z_compression *compression_new()
+{
+  return (z_compression *) zstream_new(1);
+}
+
+z_decompression *decompression_new()
+{
+  return (z_compression *) zstream_new(0);
+}
+
+void compression_free(z_stream *stream)
+{
+  int r;
+  r = deflateEnd(stream);
+  if (r != Z_OK)
+    log(LOG_ERR, "while closing zlib: %d (%s)", r, stream->msg);
+  free(stream);
+}
+
+void decompression_free(z_stream *stream)
+{
+  int r;
+  r = inflateEnd(stream);
+  if (r != Z_OK)
+    log(LOG_ERR, "while closing zlib: %d (%s)", r, stream->msg);
+  free(stream);
+}
+
 int compress_from_buf(char *string, int string_len, 
                       char **buf_in, int *buflen_in, int *buf_datalen_in,
                       z_stream *zstream, int flush) {
@@ -209,13 +259,16 @@ int decompress_buf_to_buf(char **buf_in, int *buflen_in, int *buf_datalen_in,
       return -1;
     }
 }
-#endif
 
 int fetch_from_buf(char *string, int string_len,
                    char **buf, int *buflen, int *buf_datalen) {
 
   /* if there are string_len bytes in buf, write them onto string,
-   * then memmove buf back (that is, remove them from buf) */
+   * then memmove buf back (that is, remove them from buf).
+   *
+   * If there are not enough bytes on the buffer to fill string, return -1.
+   *
+   * Return the number of bytes still on the buffer. */
 
   assert(string && buf && *buf && buflen && buf_datalen);
 
