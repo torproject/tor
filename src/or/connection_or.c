@@ -403,7 +403,7 @@ int or_handshake_client_send_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated first authentication message.");
 
   /* encrypt message */
-  retval = crypto_pk_public_encrypt(conn->pkey, buf, 36, cipher,RSA_PKCS1_PADDING);
+  retval = crypto_pk_public_encrypt(conn->pkey, buf, 32, cipher,RSA_PKCS1_PADDING);
   if (retval == -1) /* error */
   { 
     log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,conn->port);
@@ -439,7 +439,7 @@ int or_handshake_client_send_auth(connection_t *conn) {
 }
 
 int or_handshake_client_process_auth(connection_t *conn) {
-  char buf[128]; /* only 44 of this is expected to be used */
+  char buf[128]; /* only 40 of this is expected to be used */
   char cipher[128];
   uint32_t bandwidth;
   int retval;
@@ -468,7 +468,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
         crypto_perror());
     return -1;
   }
-  else if (retval != 44)
+  else if (retval != 40)
   { 
     log(LOG_ERR,"Received an incorrect response from router %s:%u during authentication.",
         conn->address,conn->port);
@@ -496,7 +496,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
     conn->bandwidth = bandwidth;
 
   /* reply is just local addr/port, remote addr/port, nonce */
-  memcpy(buf+12, buf+36, 8);
+  memcpy(buf+12, buf+32, 8);
 
   /* encrypt reply */
   retval = crypto_pk_public_encrypt(conn->pkey, buf, 20, cipher,RSA_PKCS1_PADDING);
@@ -545,7 +545,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
 int or_handshake_server_process_auth(connection_t *conn) {
   int retval;
 
-  char buf[128]; /* only 42 of this is expected to be used */
+  char buf[128]; /* only 32 of this is expected to be used */
   char cipher[128];
 
   uint32_t addr;
@@ -575,7 +575,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
         crypto_perror());
     return -1;
   }
-  else if (retval != 36)
+  else if (retval != 32)
   { 
     log(LOG_ERR,"Received an incorrect authentication request.");
     return -1;
@@ -627,11 +627,11 @@ int or_handshake_server_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Nonce generated.");
 
   /* generate message */
-  memcpy(buf+36,conn->nonce,8); /* append the nonce to the end of the message */
+  memcpy(buf+32,conn->nonce,8); /* append the nonce to the end of the message */
   *(uint32_t *)(buf+28) = htonl(conn->bandwidth); /* send max link utilisation */
 
   /* encrypt message */
-  retval = crypto_pk_public_encrypt(conn->pkey, buf, 44, cipher,RSA_PKCS1_PADDING);
+  retval = crypto_pk_public_encrypt(conn->pkey, buf, 40, cipher,RSA_PKCS1_PADDING);
   if (retval == -1) /* error */
   {
     log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,conn->port);
