@@ -476,6 +476,7 @@ Tor's evolution.
 \end{description}
 
 \SubSection{Non-goals}
+\label{subsec:non-goals}
 In favoring conservative, deployable designs, we have explicitly deferred
 a number of goals. Many of these goals are desirable in anonymity systems,
 but we choose to defer them either because they are solved elsewhere,
@@ -1539,124 +1540,161 @@ Mention jurisdictional arbitrage.
 
 Pull attacks and defenses into analysis as a subsection
 
-\Section{Maintaining anonymity in Tor}
+\Section{Open Questions in Low-latency Anonymity}
 \label{sec:maintaining-anonymity}
 
-\footnote{The first Onion Routing design \cite{or-ih96} protected against
-this threat to some
-extent by requiring users to hide network access behind an onion
-router/firewall that was also forwarding traffic from other nodes.
-However, it is desirable for users to
-benefit from Onion Routing even when they can't run their own
-onion routers.
-%Such users, especially if they engage in certain unusual
-%communication behaviors, may be identifiable \cite{wright03}.
-%To
-%complicate the possibility of such attacks Tor multiplexes many
-%stream down each circuit, but still rotates the circuit
-%periodically to avoid too much linkability from requests on a single
-%circuit.
-}
+% There must be a better intro than this! -NM
+In addition to the open problems discussed in
+section~\ref{subsec:non-goals}, many other questions remain to be
+solved by future research before we can be truly confident that we
+have built a secure low-latency anonymity service.
 
-I probably should have noted that this means loops will be on at least
-five hop routes, which should be rare given the distribution.  I'm    
-realizing that this is reproducing some of the thought that led to a  
-default of five hops in the original onion routing design.  There were
-some different assumptions, which I won't spell out now.  Note that   
-enclave level protections really change these assumptions.  If most   
-circuits are just two hops, then just a single link observer will be  
-able to tell that two enclaves are communicating with high probability.
-So, it would seem that enclaves should have a four node minimum circuit
-to prevent trivial circuit insider identification of the whole circuit,
-and three hop minimum for circuits from an enclave to some nonclave    
-responder. But then... we would have to make everyone obey these rules 
-or a node that through timing inferred it was on a four hop circuit    
-would know that it was probably carrying enclave to enclave traffic.   
-Which... if there were even a moderate number of bad nodes in the      
-network would make it advantageous to break the connection to conduct  
-a reformation intersection attack. Ahhh! I gotta stop thinking         
-about this and work on the paper some before the family wakes up.  
-On Sat, Oct 25, 2003 at 06:57:12AM -0400, Paul Syverson wrote:
-> Which... if there were even a moderate number of bad nodes in the
-> network would make it advantageous to break the connection to conduct
-> a reformation intersection attack. Ahhh! I gotta stop thinking
-> about this and work on the paper some before the family wakes up. 
-This is the sort of issue that should go in the 'maintaining anonymity
-with tor' section towards the end. :)
-Email from between roger and me to beginning of section above. Fix and move.
+Many of these open issues are questions of balance.  For example,
+how often should users rotate to fresh circuits?  Too-frequent
+rotation is inefficient and expensive, but too-infrequent rotation
+makes the user's traffic linkable.   Instead of opening a fresh
+circuit; clients can also limit linkability exit from a middle point
+of the circuit, or by truncating and re-extending the circuit, but
+more analysis is needed to determine the proper trade-off.
+[XXX mention predecessor attacks?]
 
+A similar question surrounds timing of directory operations:
+how often should directories be updated?  With too-infrequent
+updates clients receive an inaccurate picture of the network; with
+too-frequent updates the directory servers are overloaded.
 
-[Put as much of this as a part of open issues as is possible.]
+%do different exit policies at different exit nodes trash anonymity sets,
+%or not mess with them much?
+%
+%% Why would they?  By routing traffic to certain nodes preferentially?
 
-[what's an anonymity set?]
+[XXX Choosing paths and path lengths: I'm not writing this bit till
+  Arma's pathselection stuff is in. -NM]
 
-packet counting attacks work great against initiators. need to do some
-level of obfuscation for that. standard link padding for passive link
-observers. long-range padding for people who own the first hop. are
-we just screwed against people who insert timing signatures into your
-traffic?
+%%%% Roger said that he'd put a path selection paragraph into section
+%%%% 4 that would replace this.
+%
+%I probably should have noted that this means loops will be on at least
+%five hop routes, which should be rare given the distribution.  I'm    
+%realizing that this is reproducing some of the thought that led to a  
+%default of five hops in the original onion routing design.  There were
+%some different assumptions, which I won't spell out now.  Note that   
+%enclave level protections really change these assumptions.  If most   
+%circuits are just two hops, then just a single link observer will be  
+%able to tell that two enclaves are communicating with high probability.
+%So, it would seem that enclaves should have a four node minimum circuit
+%to prevent trivial circuit insider identification of the whole circuit,
+%and three hop minimum for circuits from an enclave to some nonclave    
+%responder. But then... we would have to make everyone obey these rules 
+%or a node that through timing inferred it was on a four hop circuit    
+%would know that it was probably carrying enclave to enclave traffic.   
+%Which... if there were even a moderate number of bad nodes in the      
+%network would make it advantageous to break the connection to conduct  
+%a reformation intersection attack. Ahhh! I gotta stop thinking         
+%about this and work on the paper some before the family wakes up.  
+%On Sat, Oct 25, 2003 at 06:57:12AM -0400, Paul Syverson wrote:
+%> Which... if there were even a moderate number of bad nodes in the
+%> network would make it advantageous to break the connection to conduct
+%> a reformation intersection attack. Ahhh! I gotta stop thinking
+%> about this and work on the paper some before the family wakes up. 
+%This is the sort of issue that should go in the 'maintaining anonymity
+%with tor' section towards the end. :)
+%Email from between roger and me to beginning of section above. Fix and move.
 
-Even regardless of link padding from Alice to the cloud, there will be
-times when Alice is simply not online. Link padding, at the edges or
-inside the cloud, does not help for this.
+Throughout this paper, we have assumed that end-to-end traffic
+analysis cannot yet be defeated.  But even high-latency anonymity
+systems can be vulnerable to end-to-end traffic analysis, if the
+traffic volumes are high enough, and if users' habits are sufficiently
+distinct \cite{disclosure,statistical-disclosure}.  \emph{What can be
+  done to limit the effectiveness of these attacks against low-latency
+  systems?}  Tor already makes some effort to conceal the starts and
+ends of streams by wrapping all long-range control commands in
+identical-looking relay cells, but more analysis is needed.  Link
+padding could frustrate passive observer who count packets; long-range
+padding could work against observers who own the first hop in a
+circuit.  But more research needs to be done in order to find an
+efficient and practical approach.  Volunteers prefer not to run
+constant-bandwidth padding; but more sophisticated traffic shaping
+approaches remain somewhat unanalyzed. [XXX is this so?] Recent work
+on long-range padding \cite{long-range-padding} shows promise.  One
+could also try to reduce correlation in packet timing by batching and
+re-ordering packets, but it is unclear whether this could improve
+anonymity without introducing so much latency as to render the
+network unusable.
 
-how often should we pull down directories? how often send updated
-server descs?
+Even if passive timing attacks were wholly solved, active timing
+attacks would remain.  \emph{What can
+  be done to address attackers who can introduce timing patterns into
+  a user's traffic?}  [XXX mention likely approaches]
 
-when we start up the client, should we build a circuit immediately,
-or should the default be to build a circuit only on demand? should we
-fetch a directory immediately?
+%%% I think we cover this by framing the problem as ``Can we make 
+%%% end-to-end characteristics of low-latency systems as good as
+%%% those of high-latency systems?''  Eliminating long-term
+%%% intersection is a hard problem.
+%
+%Even regardless of link padding from Alice to the cloud, there will be
+%times when Alice is simply not online. Link padding, at the edges or
+%inside the cloud, does not help for this.
 
-would we benefit from greater synchronization, to blend with the other
-users? would the reduced speed hurt us more?
+In order to scale to large numbers of users, and to prevent an
+attacker from observing the whole network at once, it may be necessary
+for low-latency anonymity systems to support far more servers than Tor
+currently anticipates.  This introduces several issues.  First, if
+approval by a centralized set of directory servers is no longer
+feasible, what mechanism should be used to prevent adversaries from
+signing up many spurious servers?  (Tarzan and Morphmix present
+possible solutions.)  Second, if clients can no longer have a complete
+picture of the network at all times how do we prevent attackers from
+manipulating client knowledge?  Third, if there are to many servers
+for every server to constantly communicate with every other, what kind
+of non-clique topology should the network use?  [XXX cite george's
+  restricted-routes paper] (Whatever topology we choose, we need some
+way to keep attackers from manipulating their position within it.)
+Fourth, since no centralized authority is tracking server reliability,
+How do we prevent unreliable servers from rendering the network
+unusable?  Fifth, do clients receive so much anonymity benefit from
+running their own servers that we should expect them all to do so, or
+do we need to find another incentive structure to motivate them?
 
-does the "you can't see when i'm starting or ending a stream because
-you can't tell what sort of relay cell it is" idea work, or is just
-a distraction?
-
-does running a server actually get you better protection, because traffic
-coming from your node could plausibly have come from elsewhere? how
-much mixing do you need before this is actually plausible, or is it
-immediately beneficial because many adversary can't see your node?
-
-do different exit policies at different exit nodes trash anonymity sets,
-or not mess with them much?
-
-do we get better protection against a realistic adversary by having as
-many nodes as possible, so he probably can't see the whole network,
-or by having a small number of nodes that mix traffic well? is a
-cascade topology a more realistic way to get defenses against traffic
-confirmation? does the hydra (many inputs, few outputs) topology work
-better? are we going to get a hydra anyway because most nodes will be
+Alternatively, it may be the case that one of these problems proves
+intractable, or that the drawbacks to many-server systems prove
+greater than the benefits.  Nevertheless, we may still do well to
+consider non-clique topologies.  A cascade topology may provide more
+defense against traffic confirmation confirmation.
+% Why would it?   Cite.  -NM
+Does the hydra (many inputs, few outputs) topology work
+better? Are we going to get a hydra anyway because most nodes will be
 middleman nodes?
 
-using a circuit many times is good because it's less cpu work.
-  good because of predecessor attacks with path rebuilding.
-  bad because predecessor attacks can be more likely to link you with a
-    previous circuit since you're so verbose.
-  bad because each thing you do on that circuit is linked to the other
-    things you do on that circuit.
-  how often to rotate?
-  how to decide when to exit from middle?
-  when to truncate and re-extend versus when to start new circuit?
+%%% Do more with this paragraph once The TCP-over-TCP paragraph is
+%%% more integrated into Related works.
+%
+As mentioned in section\ref{where-is-it-now}, Tor could improve its
+robustness against node failure by buffering stream data at the
+network's edges, and performing end-to-end acknowledgments.  The
+efficacy of this approach remains to be tested, however, and there
+may be more effective means for ensuring reliable connections in the
+presence of unreliable nodes.
 
-Because Tor runs over TCP, when one of the servers goes down it seems
-that all the circuits (and thus streams) going over that server must
-break. This reduces anonymity because everybody needs to reconnect
-right then (does it? how much?) and because exit connections all break
-at the same time, and it also reduces usability. It seems the problem
-is even worse in a p2p environment, because so far such systems don't
-really provide an incentive for nodes to stay connected when they're
-done browsing, so we would expect a much higher churn rate than for
-onion routing. Are there ways of allowing streams to survive the loss
-of a node in the path?
+%%% Keeping this original paragraph for a little while, since it 
+%%% is not the same as what's written there now.
+%
+%Because Tor depends on TLS and TCP to provide a reliable transport,
+%when one of the servers goes down, all the circuits (and thus streams)
+%traveling over that server must break.  This reduces anonymity because
+%everybody needs to reconnect right then (does it? how much?)  and
+%because exit connections all break at the same time, and it also harms
+%usability. It seems the problem is even worse in a peer-to-peer
+%environment, because so far such systems don't really provide an
+%incentive for nodes to stay connected when they're done browsing, so
+%we would expect a much higher churn rate than for onion routing.
+%there ways of allowing streams to survive the loss of a node in the
+%path?
 
-discuss topologies. Cite George's non-freeroutes paper.  Maybe this
-graf goes elsewhere.
-
-discuss attracting users; incentives; usability.
-
-Choosing paths and path lengths.
+% Roger or Paul suggested that we say something about incentives,
+% too, but I think that's a better candidate for our future work
+% section.  After all, we will doubtlessly learn very much about why
+% people do or don't run and use Tor in the near future. -NM
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
