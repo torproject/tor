@@ -1,4 +1,6 @@
-/* Copyright 2001,2002,2003 Roger Dingledine, Matej Pfajfar. */
+/* Copyright 2001 Matej Pfajfar.
+ * Copyright 2001-2004 Roger Dingledine.
+ * Copyright 2004 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 
@@ -624,10 +626,6 @@ option_reset(or_options_t *options, config_var_t *var)
     config_free_lines(c);
   }
 }
-
-
-
-
 
 static void
 add_default_trusted_dirservers(void)

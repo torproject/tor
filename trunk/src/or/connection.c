@@ -1,4 +1,6 @@
-/* Copyright 2001,2002,2003 Roger Dingledine, Matej Pfajfar. */
+/* Copyright 2001 Matej Pfajfar.
+ * Copyright 2001-2004 Roger Dingledine.
+ * Copyright 2004 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 
@@ -687,6 +689,9 @@ static void connection_read_bucket_decrement(connection_t *conn, int num_read) {
   if(connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
     conn->receiver_bucket -= num_read; tor_assert(conn->receiver_bucket >= 0);
   }
+}
+
+static void connection_consider_empty_buckets(connection_t *conn) {
   if(global_read_bucket == 0) {
     log_fn(LOG_DEBUG,"global bucket exhausted. Pausing.");
     conn->wants_to_read = 1;
@@ -881,14 +886,13 @@ static int connection_read_to_buf(connection_t *conn) {
 
   if(result > 0 && !is_local_IP(conn->addr)) { /* remember it */
     rep_hist_note_bytes_read(result, time(NULL));
+    connection_read_bucket_decrement(conn, result);
   }
 
   /* Call even if result is 0, since the global read bucket may
    * have reached 0 on a different conn, and this guy needs to
    * know to stop reading. */
-  /* Longer-term, we should separate this out to read_bucket_decrement
-   * and consider_empty_buckets, and just call the second one always. */
-  connection_read_bucket_decrement(conn, result);
+  connection_consider_empty_buckets(conn);
 
   return 0;
 }
