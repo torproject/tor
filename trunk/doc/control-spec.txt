@@ -120,9 +120,10 @@ the message.
 3.3. SETCONF (Type 0x0002)
 
   Change the value of a configuration variable. The body contains a list of
-  newline-terminated key-value configuration lines.
-  The server behaves as though it had just read the key-value pair in its
-  configuration file.
+  newline-terminated key-value configuration lines.  An individual key-value
+  configuration line consists of the key, followed by a space, followed by
+  the value. The server behaves as though it had just read the key-value pair
+  in its configuration file.
 
   The server responds with a DONE message on success, or an ERROR message on
   failure.
