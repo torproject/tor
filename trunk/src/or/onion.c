@@ -351,7 +351,7 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
       if (i) {
         --i;
       } else {
-        log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[i]->nickname);
+        log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[j]->nickname);
         return dir->routers[j];
       }
     }
