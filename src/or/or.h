@@ -419,7 +419,7 @@ struct circuit_t {
 
   char onionskin[DH_ONIONSKIN_LEN]; /* for storage while onionskin pending */
   long timestamp_created;
-  uint8_t dirty; /* whether this circuit has been used yet */
+  long timestamp_dirty; /* when the circuit was first used, or 0 if clean */
 
   uint8_t state;
 
@@ -515,7 +515,7 @@ void circuit_free_cpath(crypt_path_t *cpath);
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 circuit_t *circuit_get_by_circ_id_conn(circ_id_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
-circuit_t *circuit_get_newest_open(void);
+circuit_t *circuit_get_newest_open(connection_t *conn);
 
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);
@@ -533,7 +533,7 @@ void circuit_about_to_close_connection(connection_t *conn);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 
 void circuit_expire_unused_circuits(void);
-void circuit_launch_new(int failure_status);
+int circuit_launch_new(int failure_status);
 int circuit_establish_circuit(void);
 void circuit_n_conn_open(connection_t *or_conn);
 int circuit_send_next_onion_skin(circuit_t *circ);
@@ -631,6 +631,7 @@ extern uint64_t stats_n_data_cells_received;
 extern uint64_t stats_n_data_bytes_received;
 
 void client_dns_init(void);
+void client_dns_clean(void);
 
 /********************************* connection_or.c ***************************/
 

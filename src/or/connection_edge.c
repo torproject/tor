@@ -18,7 +18,6 @@ static void connection_edge_consider_sending_sendme(connection_t *conn);
 
 static uint32_t client_dns_lookup_entry(const char *address);
 static void client_dns_set_entry(const char *address, uint32_t val);
-static void client_dns_clean(void);
 
 int connection_edge_process_inbuf(connection_t *conn) {
 
@@ -255,7 +254,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         addr = ntohl(*cell->payload+RELAY_HEADER_SIZE+1);
         client_dns_set_entry(conn->socks_request->address, addr);
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-        /* XXX Build another circuit as required */
+        if(connection_ap_handshake_attach_circuit(conn) < 0)
+          circuit_launch_new(1); /* Build another circuit to handle this stream */
         return 0;
       }
       log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
@@ -489,10 +489,12 @@ void connection_ap_attach_pending(void)
     if (carray[i]->type != CONN_TYPE_AP || 
         carray[i]->type != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
-    if (connection_ap_handshake_attach_circuit(carray[i])) {
-      need_new_circuit = 1; /* XXX act on this. */
+    if (connection_ap_handshake_attach_circuit(carray[i])<0) {
+      need_new_circuit = 1;
     }
   }
+  if(need_new_circuit)
+    circuit_launch_new(1);
 }
 
 static void connection_edge_consider_sending_sendme(connection_t *conn) {
@@ -547,51 +549,37 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   } /* else socks handshake is done, continue processing */
 
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-  if (connection_ap_handshake_attach_circuit(conn)) {
-    /* XXX we need a circuit */
-  }      
+  if (connection_ap_handshake_attach_circuit(conn)<0) {
+    circuit_launch_new(1);
+  }
   return 0;
 }
 
 /* Try to find a live circuit.  If we don't find one, tell 'conn' to
  * stop reading and return 0.  Otherwise, associate the CONN_TYPE_AP
- * connection 'conn' with the newest live circuit, start sending a
+ * connection 'conn' with a safe live circuit, start sending a
  * BEGIN cell down the circuit, and return 1.
  */
 static int connection_ap_handshake_attach_circuit(connection_t *conn) {
   circuit_t *circ;
-  
+
   assert(conn);
   assert(conn->type == CONN_TYPE_AP);
   assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   assert(conn->socks_request);
-  
+
   /* find the circuit that we should use, if there is one. */
-  circ = circuit_get_newest_open();
+  circ = circuit_get_newest_open(conn);
 
   if(!circ) {
-    log_fn(LOG_INFO,"No circuit ready for edge connection; delaying.");
-    connection_stop_reading(conn);
-    /* XXX both this and the start_reading below can go away if we
-     *     remove our notion that we shouldn't read from a socks
-     *     client until we're connected. the socks spec promises that it
-     *     won't write. is that good enough?
-     */
-    return -1;
-  }
-  if (connection_ap_can_use_exit(conn,
-                  router_get_by_addr_port(circ->cpath->prev->addr,
-                                          circ->cpath->prev->port)) < 0) {
-    /* The exit on this circuit will _definitely_ reject this connection. */
-    log_fn(LOG_INFO,"Most recent circuit will reject AP connection; delaying.");
-    /* XXX Build another circuit. */
-    connection_stop_reading(conn);
+    log_fn(LOG_INFO,"No safe circuit ready for edge connection; delaying.");
+    connection_stop_reading(conn); /* don't read until the connected cell arrives */
     return -1;
   }
 
   connection_start_reading(conn);
 
-  circ->dirty = 1;
+  circ->timestamp_dirty = time(NULL);
 
   /* add it into the linked list of streams on this circuit */
   log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
@@ -893,7 +881,7 @@ static void client_dns_set_entry(const char *address, uint32_t val)
   }
 }
 
-static void client_dns_clean(void)
+void client_dns_clean(void)
 {
   struct client_dns_entry **expired_entries;
   int n_expired_entries = 0;

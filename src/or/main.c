@@ -335,20 +335,31 @@ static void run_scheduled_events(time_t now) {
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
   }
 
-  /* 2. Every NewCircuitPeriod seconds, we expire old circuits and make a 
-   *    new one as needed.
+  /* 2. Every second, we try a new circuit if there are no valid
+   *    circuits. Every NewCircuitPeriod seconds, we expire circuits
+   *    that became dirty more than NewCircuitPeriod seconds ago,
+   *    and we make a new circ if there are no clean circuits.
    */
-  if(options.SocksPort && time_to_new_circuit < now) {
-    circuit_expire_unused_circuits();
-    circuit_launch_new(-1); /* tell it to forget about previous failures */
-    circ = circuit_get_newest_open();
-    if(!circ || circ->dirty) {
-      log_fn(LOG_INFO,"Youngest circuit %s; launching replacement.", circ ? "dirty" : "missing");
-      circuit_launch_new(0); /* make an onion and lay the circuit */
+  if(options.SocksPort) {
+    circ = circuit_get_newest_open(NULL);
+    if(time_to_new_circuit < now) {
+      client_dns_clean();
+      circuit_expire_unused_circuits();
+      circuit_launch_new(-1); /* tell it to forget about previous failures */
+      if(circ && circ->timestamp_dirty) {
+        log_fn(LOG_INFO,"Youngest circuit dirty; launching replacement.");
+        circuit_launch_new(0); /* make a new circuit */
+      }
+      time_to_new_circuit = now + options.NewCircuitPeriod;
     }
-    time_to_new_circuit = now + options.NewCircuitPeriod;
+    if(!circ) {
+      circuit_launch_new(1);
+    }
+    /* XXX also check if we have any circuit_pending streams and we're not
+     * currently building a circuit for them.
+     */
   }
-  
+
   /* 3. Every second, we check how much bandwidth we've consumed and 
    *    increment global_read_bucket.
    */
@@ -358,7 +369,6 @@ static void run_scheduled_events(time_t now) {
     log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
   }
   stats_prev_global_read_bucket = global_read_bucket;
-  
 
   /* 4. We do houskeeping for each connection... */
   for(i=0;i<nfds;i++) {
@@ -368,6 +378,8 @@ static void run_scheduled_events(time_t now) {
   /* 5. and blow away any connections that need to die. can't do this later
    * because we might open up a circuit and not realize we're about to cull
    * the connection it's running over.
+   * XXX we can remove this step once we audit circuit-building to make sure
+   *     it doesn't pick a marked-for-close conn. -RD
    */
   for(i=0;i<nfds;i++)
     conn_close_if_marked(i);
