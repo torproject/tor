@@ -78,7 +78,8 @@ static time_t interval_start_time = 0;
 static time_t interval_end_time = 0;
 /** How far into the accounting interval should we hibernate? */
 static time_t interval_wakeup_time = 0;
-/** How much bandwidth do we 'expect' to use per minute? */
+/** How much bandwidth do we 'expect' to use per minute?  (0 if we have no
+ * info from the last period.) */
 static uint32_t expected_bandwidth_usage = 0;
 /** What unit are we using for our accounting? */
 static time_unit_t cfg_unit = UNIT_MONTH;
@@ -340,17 +341,16 @@ update_expected_bandwidth(void)
   uint64_t max_configured = (get_options()->BandwidthRate * 60);
 
   if (n_seconds_active_in_interval < 1800) {
-    /* If we haven't gotten enough data last interval, guess that
-     * we'll be used at our maximum capacity.  This is unlikely to be
-     * so, but it will give us an okay first estimate, and we'll stay
-     * up until we send Max bytes.  Next interval, we'll choose
-     * our starting time based on how much we sent this interval.
+    /* If we haven't gotten enough data last interval, set 'expected'
+     * to 0.  This will set our wakeup to the start of the interval.
+     * Next interval, we'll choose our starting time based on how much
+     * we sent this interval.
      */
-    expected = max_configured;
+    expected = 0;
   } else {
     used = n_bytes_written_in_interval < n_bytes_read_in_interval ?
       n_bytes_read_in_interval : n_bytes_written_in_interval;
-    expected = (used / (n_seconds_active_in_interval / 60));
+    expected = used / (n_seconds_active_in_interval / 60);
     if (expected > max_configured)
       expected = max_configured;
   }
@@ -423,7 +423,6 @@ accounting_set_wakeup_time(void)
   int time_in_interval;
   int time_to_exhaust_bw;
   int time_to_consider;
-  int d,h,m;
 
   if (! identity_key_is_set()) {
     if (init_keys() < 0) {
@@ -441,17 +440,28 @@ accounting_set_wakeup_time(void)
   crypto_digest_get_digest(d_env, digest, DIGEST_LEN);
   crypto_free_digest_env(d_env);
 
-  if (expected_bandwidth_usage)
-    time_to_exhaust_bw = (int)
-      (get_options()->AccountingMax/expected_bandwidth_usage)*60;
-  else
+  if (!expected_bandwidth_usage) {
+    char buf1[ISO_TIME_LEN+1];
+    char buf2[ISO_TIME_LEN+1];
+    format_local_iso_time(buf1, interval_start_time);
+    format_local_iso_time(buf2, interval_end_time);
     time_to_exhaust_bw = 24*60*60;
+    interval_wakeup_time = interval_start_time;
 
+    log_fn(LOG_NOTICE, "Configured hibernation.  This interval begins at %s "
+        "and ends at %s.  We have no prior estimate for bandwidth, so "
+        "we will start out awake and hibernate when we exhaust our bandwidth.",
+        buf1, buf2);
+    return;
+  }
+
+  time_to_exhaust_bw = (int)
+    (get_options()->AccountingMax/expected_bandwidth_usage)*60;
   time_in_interval = interval_end_time - interval_start_time;
   time_to_consider = time_in_interval - time_to_exhaust_bw;
+
   if (time_to_consider<=0) {
     interval_wakeup_time = interval_start_time;
-    d=h=m=0;
   } else {
     /* XXX can we simplify this just by picking a random (non-deterministic)
      * time to be up? If we go down and come up, then we pick a new one. Is
@@ -465,6 +475,7 @@ accounting_set_wakeup_time(void)
 
     format_iso_time(buf, interval_wakeup_time);
   }
+
   {
     char buf1[ISO_TIME_LEN+1];
     char buf2[ISO_TIME_LEN+1];
@@ -475,14 +486,18 @@ accounting_set_wakeup_time(void)
       down_time = interval_end_time;
     format_local_iso_time(buf1, interval_start_time);
     format_local_iso_time(buf2, interval_wakeup_time);
-    format_local_iso_time(buf3, down_time);
+    format_local_iso_time(buf3,
+                   down_time<interval_end_time?down_time:interval_end_time);
     format_local_iso_time(buf4, interval_end_time);
 
-    log_fn(LOG_NOTICE, "Configured hibernation.  This interval begins at %s; "
-           "scheduled wake-up time %s; "
-           "we expect to stay up until at least %s; "
-           "we will start a new interval at %s (all times local)",
-           buf1, buf2, buf3, buf4);
+    log_fn(LOG_NOTICE, "Configured hibernation.  This interval began at %s; "
+           "the scheduled wake-up time %s %s; "
+           "we expect%s to exhaust our bandwidth for this interval around %s; "
+           "the next interval begins at %s (all times local)",
+           buf1,
+           time(NULL)<interval_wakeup_time?"is":"was", buf2,
+           time(NULL)<down_time?"":"ed", buf3,
+           buf4);
   }
 }
 
