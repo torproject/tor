@@ -1090,6 +1090,8 @@ void rend_service_intro_is_ready(circuit_t *circuit);
 int rend_service_intro_established(circuit_t *circuit, const char *request, int request_len);
 void rend_service_rendezvous_is_ready(circuit_t *circuit);
 int rend_service_introduce(circuit_t *circuit, const char *request, int request_len);
+int rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ);
+
 
 /********************************* rendmid.c *******************************/
 int rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len);

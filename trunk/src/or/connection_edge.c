@@ -1134,7 +1134,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   if(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
     n_stream->address = tor_strdup("(rendezvous)");
     strcpy(n_stream->rend_query, "yes"); /* XXX kludge */
-    if(connection_exit_set_rendezvous_addr_port(n_stream) < 0) {
+    if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {
       log_fn(LOG_WARN,"Didn't find rendezvous service (port %d)",n_stream->port);
       connection_mark_for_close(n_stream,0 /* XXX */);
       return 0;
@@ -1209,20 +1209,6 @@ void connection_exit_connect(connection_t *conn) {
     connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
                                  connected_payload, 4, conn->cpath_layer);
   }
-}
-
-/* This is a beginning rendezvous stream. Look up conn->port,
- * and assign the actual conn->addr and conn->port. Return -1
- * if failure, or 0 for success.
- */
-static int
-connection_exit_set_rendezvous_addr_port(connection_t *conn) {
-
-  /* XXX fill me in */
-
-  conn->addr = 0x7F000001u; /* 127.0.0.1, host order */
-
-  return 0;
 }
 
 int connection_edge_is_rendezvous_stream(connection_t *conn) {
