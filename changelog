@@ -5,8 +5,9 @@ tor (0.0.1+0.0.2pre24-1) unstable; urgency=low
   * Add "# ulimit -c unlimited" to tor.default
   * Always enable DataDirectory.
   * Actually use dpatch now (to modify upstream torrc.in)
+  * Wait for tor to die in init stop.  Let the user know if it doesn't.
 
- -- Peter Palfrader <weasel@debian.org>  Wed,  3 Mar 2004 13:48:09 +0100
+ -- Peter Palfrader <weasel@debian.org>  Wed,  3 Mar 2004 14:10:25 +0100
 
 tor (0.0.1+0.0.2pre23-1) unstable; urgency=low
 
