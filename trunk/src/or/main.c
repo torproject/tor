@@ -353,7 +353,7 @@ void directory_has_arrived(void) {
 
   has_fetched_directory=1;
 
-  if(clique_mode()) { /* connect to them all */
+  if(server_mode()) { /* connect to the appropriate routers */
     router_retry_connections();
   }
 }
@@ -541,7 +541,10 @@ static void run_scheduled_events(time_t now) {
     if(authdir_mode()) {
       /* We're a directory; dump any old descriptors. */
       dirserv_remove_old_servers();
-      /* dirservers try to reconnect, in case connections have failed */
+    }
+    if(server_mode()) {
+      /* dirservers try to reconnect, in case connections have failed;
+       * and normal servers try to reconnect to dirservers */
       router_retry_connections();
     }
 

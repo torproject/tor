@@ -347,17 +347,23 @@ int init_keys(void) {
  * Clique maintenance
  */
 
-/** OR only: try to open connections to all of the other ORs we know about.
+/** OR only: if in clique mode, try to open connections to all of the
+ * other ORs we know about. Otherwise, open connections to those we
+ * think are in clique mode.
  */
 void router_retry_connections(void) {
   int i;
   routerinfo_t *router;
   routerlist_t *rl;
 
+  tor_assert(server_mode());
+
   router_get_routerlist(&rl);
   for (i=0;i < smartlist_len(rl->routers);i++) {
     router = smartlist_get(rl->routers, i);
     if(router_is_me(router))
+      continue;
+    if(!clique_mode() && !router_is_clique_mode(router))
       continue;
     if(!connection_get_by_identity_digest(router->identity_digest,
                                           CONN_TYPE_OR)) {
