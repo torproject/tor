@@ -149,7 +149,7 @@ void add_stream_log(int loglevel, const char *name, FILE *stream)
   lf->filename = name;
   lf->needs_close = 0;
   lf->loglevel = loglevel;
-  lf->max_loglevel = LOG_EMERG;
+  lf->max_loglevel = LOG_ERR;
   lf->file = stream;
   lf->next = logfiles;
   logfiles = lf;
