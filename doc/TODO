@@ -53,6 +53,7 @@ ARMA    - arma claims
      - stop calling a *_policy an exit_policy_t
    - Writing out the machine-readable torrc file
    - fix print_usage()
+   - Download and use running-routers
    - document signals in man page
 N  - RPMs
      o Merge changes from jbash
