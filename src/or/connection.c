@@ -850,14 +850,19 @@ loop_again:
     if (connection_process_inbuf(conn, 0) < 0) {
       return -1;
     }
-    if (connection_is_reading(conn) && !conn->inbuf_reached_eof)
+    if (!conn->marked_for_close &&
+        connection_is_reading(conn) &&
+        !conn->inbuf_reached_eof)
       goto loop_again; /* try reading again, in case more is here now */
   }
   /* one last try, packaging partial cells and all. */
-  if (connection_process_inbuf(conn, 1) < 0) {
+  if (!conn->marked_for_close &&
+      connection_process_inbuf(conn, 1) < 0) {
     return -1;
   }
-  if (conn->inbuf_reached_eof && connection_reached_eof(conn) < 0) {
+  if (!conn->marked_for_close &&
+      conn->inbuf_reached_eof &&
+      connection_reached_eof(conn) < 0) {
     return -1;
   }
   return 0;
