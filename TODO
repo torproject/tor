@@ -11,4 +11,3 @@ Legend:
   maybe also add a sample configuration for privoxy.
 - Add a torify script, which wraps around tsocks and sets its own
   configuration file.  Requires dependency on tsocks.
-- Kick upstream to maintain the ChangeLog file.
