@@ -392,6 +392,10 @@ model the number of concurrent users does not seem to have much impact
 on the anonymity provided, we suggest that JAP's anonymity meter is not
 correctly communicating security levels to its users.
 
+% because more users don't help anonymity much, we need to rely more
+% on other incentive schemes, both policy-based (see sec x) and
+% technically enforced (see sec y)
+
 On the other hand, while the number of active concurrent users may not
 matter as much as we'd like, it still helps to have some other users
 who use the network. We investigate this issue in the next section.
@@ -558,6 +562,9 @@ filesharing protocols that have separate control and data channels.
   people back off, so we get more ops since there's less filesharing, so the
   filesharers come back, etc.]
 
+in practice, plausible deniability is hypothetical and doesn't seem very
+convincing. if ISPs find the activity antisocial, they don't care *why*
+your computer is doing that behavior.
 
 \subsection{Tor and blacklists}
 
@@ -980,12 +987,6 @@ Danezis-Murdoch attack at all.
 We have to pick the path length so adversary can't distinguish client from
 server (how many hops is good?).
 
-in practice, plausible deniability is hypothetical and doesn't seem very
-convincing. if ISPs find the activity antisocial, they don't care *why*
-your computer is doing that behavior.
-
-[arma will write this section]
-
 \subsection{Helper nodes}
 \label{subsec:helper-nodes}
 
@@ -1043,30 +1044,44 @@ force their users to switch helper nodes more frequently.
 
 \subsection{Location-hidden services}
 
-[arma will write this section]
+While most of the discussions about have been about forward anonymity
+with Tor, it also provides support for \emph{rendezvous points}, which
+let users provide TCP services to other Tor users without revealing
+their location. Since this feature is relatively recent, we describe here
+a couple of our early observations from its deployment.
 
-Survivable services are new in practice, yes? Hidden services seem
-less hidden than we'd like, since they stay in one place and get used
-a lot. They're the epitome of the need for helper nodes. This means
-that using Tor as a building block for Free Haven is going to be really
-hard. Also, they're brittle in terms of intersection and observation
-attacks. Would be nice to have hot-swap services, but hard to design.
+First, our implementation of hidden services seems less hidden than we'd
+like, since they are configured on a single client and get used over
+and over---particularly because an external adversary can induce them to
+produce traffic. They seem the ideal use case for our above discussion
+of helper nodes. This insecurity means that they may not be suitable as
+a building block for Free Haven~\cite{freehaven-berk} or other anonymous
+publishing systems that aim to provide long-term security.
+%Also, they're brittle in terms of intersection and observation attacks.
 
-people are using hidden services as a poor man's vpn and firewall-buster.
-rather than playing with dyndns and trying to pierce holes in their
-firewall (say, so they can ssh in from the outside), they run a hidden
-service on the inside and then rendezvous with that hidden service
-externally.
+\emph{Hot-swap} hidden services, where more than one location can
+provide the service and loss of any one location does not imply a
+change in service, would help foil intersection and observation attacks
+where an adversary monitors availability of a hidden service and also
+monitors whether certain users or servers are online. However, the design
+challenges in providing these services without otherwise compromising
+the hidden service's anonymity remain an open problem.
 
-in practice, sites like bloggers without borders (www.b19s.org) are
-running tor servers but more important are advertising a hidden-service
-address on their front page. doing this can provide increased robustness
-if they used the dual-IP approach we describe in tor-design, but in
-practice they do it to a) increase visibility of the tor project and their
-support for privacy, and b) to offer a way for their users, using vanilla
-software, to get end-to-end encryption and end-to-end authentication to
-their website.
+In practice, hidden services are used for more than just providing private
+access to a web server or IRC server. People are using hidden services
+as a poor man's VPN and firewall-buster. Many people want to be able
+to connect to the computers in their private network via secure shell,
+and rather than playing with dyndns and trying to pierce holes in their
+firewall, they run a hidden service on the inside and then rendezvous
+with that hidden service externally.
 
+Also, sites like Bloggers Without Borders (www.b19s.org) are advertising
+a hidden-service address on their front page. Doing this can provide
+increased robustness if they use the dual-IP approach we describe in
+tor-design, but in practice they do it firstly to increase visibility
+of the tor project and their support for privacy, and secondly to offer
+a way for their users, using unmodified software, to get end-to-end
+encryption and end-to-end authentication to their website.
 
 \subsection{Trust and discovery}
 
