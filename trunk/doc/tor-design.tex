@@ -53,12 +53,14 @@
 We present Tor, a circuit-based low-latency anonymous communication
 system. Tor is the successor to Onion Routing
 and addresses various limitations in the original Onion Routing design.
-Tor works in a real-world Internet environment, requires no special
+Tor works on the real-world Internet, requires no special
 privileges such as root- or kernel-level access,
 requires little synchronization or coordination between nodes, and
 provides a reasonable tradeoff between anonymity, usability, and efficiency.
-We include a new, more practical design for rendezvous points, and we
-provide a list of open problems in anonymous communication systems today.
+We include a new, more practical design for rendezvous points, and
+close with a list of open problems in anonymous communication systems
+today.
+% Which other innovations from section 1 should we mention in the abstract?
 \end{abstract}
 
 %\begin{center}
@@ -307,16 +309,14 @@ cryptography, whereas relaying cells is comparatively inexpensive.
 Because a circuit crosses several servers, no single server can link a
 user to her communication partners.
 
-The Java Anon Proxy (also known
-as JAP or Web MIXes) uses fixed shared routes known as
-\emph{cascades}.  As with a single-hop proxy, this approach aggregates
-users into larger anonymity sets, but again an attacker only needs to
-observe both ends of the cascade to bridge all the system's traffic.
-The Java Anon Proxy's design provides protection by padding
-between end users and the head of the cascade \cite{web-mix}. However, the
-current implementation does no padding and thus remains vulnerable
-to both active and passive bridging.
-%XXX fix, yes it does, sort of.
+The Java Anon Proxy (also known as JAP or Web MIXes) uses fixed shared
+routes known as \emph{cascades}.  As with a single-hop proxy, this
+approach aggregates users into larger anonymity sets, but again an
+attacker only needs to observe both ends of the cascade to bridge all
+the system's traffic.  The Java Anon Proxy's design provides
+protection by padding between end users and the head of the cascade
+\cite{web-mix}. However, it is not demonstrated whether current
+implementation's padding policy hinders bridging.
 
 PipeNet \cite{back01, pipenet}, another low-latency design proposed at
 about the same time as the original Onion Routing design, provided
@@ -365,7 +365,7 @@ along the circuit, ignoring the breakdown of that data into TCP frames
 \cite{morphmix:fc04,anonnet}. Finally, they may accept application-level
 protocols (such as HTTP) and relay the application requests themselves
 along the circuit.  
-This protocol-layer decision represents a compromise between flexibility
+Making this protocol-layer decision requires a compromise between flexibility
 and anonymity.  For example, a system that understands HTTP can strip
 identifying information from those requests, can take advantage of caching
 to limit the number of requests that leave the network, and can batch
@@ -1165,7 +1165,7 @@ privacy also seeks to provide some protection against distributed DoS attacks:
 attackers are forced to attack the onion routing network as a whole
 rather than just Bob's IP.
 
-Our design for location-hidden servers has the following properties.
+Our design for location-hidden servers has the following goals.
 \textbf{Flood-proof:} An attacker should not be able to flood Bob
 with traffic simply by sending many requests to talk to Bob.  Thus,
 Bob needs a way to filter incoming requests. \textbf{Robust:} Bob
@@ -1213,14 +1213,14 @@ must run; application integration is described more fully below.
       service from CFS.
 \item Alice chooses an OR to serve as a Rendezvous Point (RP) for this
       transaction. She establishes a virtual circuit to her RP, and
-      tells it to wait for connections. [XXX how?]
+      tells it to wait for connections. %[XXX how?]
 \item Alice opens an anonymous stream to one of Bob's Introduction
       Points, and gives it message (encrypted for Bob) which tells him
       about herself, her chosen RP, and the first half of an ephemeral
       key handshake. The Introduction Point sends the message to Bob.
-\item Bob may decide to ignore Alice's request.  [XXX Based on what?]
+\item Bob may decide to ignore Alice's request.  %[XXX Based on what?]
       Otherwise, he creates a new virtual circuit to Alice's RP, and
-      authenticates himself. [XXX how?]
+      authenticates himself. %[XXX how?]
 \item If the authentication is successful, the RP connects Alice's
       virtual circuit to Bob's. Note that RP can't recognize Alice,
       Bob, or the data they transmit (they share a session key).
@@ -1230,8 +1230,8 @@ must run; application integration is described more fully below.
       communicate as normal.
 \end{tightlist}
 
-[XXX We need to modify the above to refer people down to these next
-  paragraphs. -NM]
+%[XXX We need to modify the above to refer people down to these next
+%  paragraphs. -NM]
 
 When establishing an introduction point, Bob provides the onion router
 with a public ``introduction'' key.  The hash of this public key
@@ -1495,8 +1495,7 @@ design withstands them.
   harder---this phenomenon is commonly called ``jurisdictional
   arbitrage.'' The JAP project recently experienced this issue, when
   the German government successfully ordered them to add a backdoor to
-  all of their nodes.
-
+  all of their nodes \cite{jap-backdoor}.
   
 \item \emph{Run a recipient.} By running a Web server, an adversary
   trivially learns the timing patterns of those connecting to it, and
@@ -1704,7 +1703,7 @@ makes the user's traffic linkable.   Instead of opening a fresh
 circuit; clients can also limit linkability exit from a middle point
 of the circuit, or by truncating and re-extending the circuit, but
 more analysis is needed to determine the proper trade-off.
-[XXX mention predecessor attacks?]
+%[XXX mention predecessor attacks?]
 
 A similar question surrounds timing of directory operations:
 how often should directories be updated?  With too-infrequent
@@ -1716,8 +1715,8 @@ too-frequent updates the directory servers are overloaded.
 %
 %% Why would they?  By routing traffic to certain nodes preferentially?
 
-[XXX Choosing paths and path lengths: I'm not writing this bit till
-  Arma's pathselection stuff is in. -NM]
+%[XXX Choosing paths and path lengths: I'm not writing this bit till
+%  Arma's pathselection stuff is in. -NM]
 
 %%%% Roger said that he'd put a path selection paragraph into section
 %%%% 4 that would replace this.
@@ -1765,7 +1764,9 @@ padding could work against observers who own the first hop in a
 circuit.  But more research needs to be done in order to find an
 efficient and practical approach.  Volunteers prefer not to run
 constant-bandwidth padding; but more sophisticated traffic shaping
-approaches remain somewhat unanalyzed. [XXX is this so?] Recent work
+approaches remain somewhat unanalyzed. 
+%[XXX is this so?] 
+Recent work
 on long-range padding \cite{defensive-dropping} shows promise.  One
 could also try to reduce correlation in packet timing by batching and
 re-ordering packets, but it is unclear whether this could improve
@@ -1775,7 +1776,7 @@ network unusable.
 Even if passive timing attacks were wholly solved, active timing
 attacks would remain.  \emph{What can
   be done to address attackers who can introduce timing patterns into
-  a user's traffic?}  [XXX mention likely approaches]
+  a user's traffic?}  % [XXX mention likely approaches]
 
 %%% I think we cover this by framing the problem as ``Can we make 
 %%% end-to-end characteristics of low-latency systems as good as
@@ -1809,27 +1810,24 @@ running their own servers that we should expect them all to do so, or
 do we need to find another incentive structure to motivate them?
 (Tarzan and MorphMix present possible solutions.)
 
-[[ XXX how to approve new nodes (advogato, sybil, captcha (RTT));]
+% [[ XXX how to approve new nodes (advogato, sybil, captcha (RTT));]
 
 Alternatively, it may be the case that one of these problems proves
 intractable, or that the drawbacks to many-server systems prove
 greater than the benefits.  Nevertheless, we may still do well to
 consider non-clique topologies.  A cascade topology may provide more
 defense against traffic confirmation confirmation.
-% Why would it?   Cite.  -NM
+% XXX Why would it?   Cite.  -NM
 Does the hydra (many inputs, few outputs) topology work
 better? Are we going to get a hydra anyway because most nodes will be
 middleman nodes?
 
-%%% Do more with this paragraph once The TCP-over-TCP paragraph is
-%%% more integrated into Related works.
-%
-As mentioned in section\ref{where-is-it-now}, Tor could improve its
-robustness against node failure by buffering stream data at the
-network's edges, and performing end-to-end acknowledgments.  The
-efficacy of this approach remains to be tested, however, and there
-may be more effective means for ensuring reliable connections in the
-presence of unreliable nodes.
+As mentioned in section\ref{subsec:dos}, Tor could improve its
+robustness against node failure by buffering transmitted stream data
+at the network's edges until the data has been acknowledged by the
+other end of the stream.  The efficacy of this approach remains to be
+tested, however, and there may be more effective means for ensuring
+reliable connections in the presence of unreliable nodes.
 
 %%% Keeping this original paragraph for a little while, since it 
 %%% is not the same as what's written there now.
@@ -1868,14 +1866,8 @@ presence of unreliable nodes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \Section{Future Directions}
 \label{sec:conclusion}
-
-% Mention that we need to do TCP over tor for reliability.
 
 Tor brings together many innovations into
 a unified deployable system. But there are still several attacks that
@@ -1929,8 +1921,8 @@ issues remaining to be ironed out. In particular:
   able to evaluate some of our design decisions, including our
   robustness/latency tradeoffs, our abuse-prevention mechanisms, and
   our overall usability.
-work with morphmix spec
-small cells vs large cells
+% XXX work with morphmix spec
+% XXX small cells vs large cells
 \end{tightlist}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
