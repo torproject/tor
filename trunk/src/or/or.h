@@ -646,8 +646,6 @@ struct socks_request_t {
 
 /********************************* buffers.c ***************************/
 
-/* int find_on_inbuf(char *string, int string_len, buf_t *buf); */
-
 buf_t *buf_new();
 buf_t *buf_new_with_capacity(size_t size);
 void buf_free(buf_t *buf);
@@ -802,7 +800,6 @@ int connection_handle_read(connection_t *conn);
 int connection_read_to_buf(connection_t *conn);
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn);
-/* int connection_find_on_inbuf(char *string, int len, connection_t *conn); */
 
 int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);

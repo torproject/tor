@@ -136,30 +136,6 @@ test_buffers() {
 
   close(s);
 
-
-#if 0
-  /****
-   * find_on_inbuf
-   ****/
-  buf_free(buf);
-  buf = buf_new();
-  s = open("/tmp/tor_test/data", O_RDONLY, 0);
-  eof = 0;
-  i = read_to_buf(s, 1024, buf, &eof);
-  test_eq(256, i);
-  close(s);
-
-  test_eq(((int)'d') + 1, find_on_inbuf("abcd", 4, buf));
-  test_eq(-1, find_on_inbuf("xyzzy", 5, buf));
-  /* Make sure we don't look off the end of the buffef */
-  ((char*)_buf_peek_raw_buffer(buf))[256] = 'A';
-  ((char*)_buf_peek_raw_buffer(buf))[257] = 'X';
-  test_eq(-1, find_on_inbuf("\xff" "A", 2, buf));
-  test_eq(-1, find_on_inbuf("AX", 2, buf));
-  /* Make sure we use the string length */
-  test_eq(((int)'d')+1, find_on_inbuf("abcdX", 4, buf));
-#endif
-
   /****
    * fetch_from_buf
    ****/

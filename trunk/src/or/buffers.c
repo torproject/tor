@@ -115,17 +115,7 @@ static int find_mem_in_mem(const char *str, int str_len,
   return -1;
 }
 
-#if 0
-/* Find the first occurence of the string_len byte string 'str' on the
- * buffer 'buf'.  If none exists, return -1.  Otherwise, return index
- * of the first character on the buffer _after_ the first instance of str.
- */
-int find_on_inbuf(char *str, int string_len, buf_t *buf) {
-  return find_mem_in_mem(str, string_len, buf->mem, buf->datalen);
-}
-#endif
-
-/* Create and return a new buf with capacity 'capacity'.
+/* Create and return a new buf with capacity 'size'.
  */
 buf_t *buf_new_with_capacity(size_t size) {
   buf_t *buf;
@@ -257,7 +247,7 @@ int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
 /* Write data from 'buf' to the socket 's'.  Write at most
  * *buf_flushlen bytes, and decrement *buf_flushlen by the number of
  * bytes actually written.  Return the number of bytes written on
- * success, -1 on failure.  Returns 0 if write() would block.
+ * success, -1 on failure.  Return 0 if write() would block.
  */
 int flush_buf(int s, buf_t *buf, int *buf_flushlen)
 {
@@ -338,7 +328,7 @@ int write_to_buf(const char *string, int string_len, buf_t *buf) {
 
 
 /* Remove string_len bytes from the front of 'buf', and store them
- * into 'string'.  Returns the new buffer size.  string_len must be <=
+ * into 'string'.  Return the new buffer size.  string_len must be <=
  * the number of bytes on the buffer.
  */
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf) {

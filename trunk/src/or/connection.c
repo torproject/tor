@@ -655,12 +655,6 @@ int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
   return fetch_from_buf(string, len, conn->inbuf);
 }
 
-/*
-int connection_find_on_inbuf(char *string, int len, connection_t *conn) {
-  return find_on_inbuf(string, len, conn->inbuf);
-}
-*/
-
 int connection_wants_to_flush(connection_t *conn) {
   return conn->outbuf_flushlen;
 }
