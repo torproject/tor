@@ -242,7 +242,7 @@ test_crypto()
   crypto_pk_env_t *pk1, *pk2;
   char *data1, *data2, *data3, *cp;
   FILE *f;
-  int i, j;
+  int i, j, p, len;
   int str_ciphers[] = { CRYPTO_CIPHER_IDENTITY,
                         CRYPTO_CIPHER_DES,
                         CRYPTO_CIPHER_RC4,
@@ -416,6 +416,23 @@ test_crypto()
   pk2 = crypto_pk_asn1_decode(data1, i);
   test_assert(crypto_pk_cmp_keys(pk1,pk2) == 0);
 
+  /* Try with hybrid encryption wrappers. */
+  crypto_rand(1024, data1);
+  for (i = 0; i < 3; ++i) {
+    for (j = 85; j < 140; ++j) {
+      memset(data2,0,1024);
+      memset(data3,0,1024);
+      if (i == 0 && j < 129)
+        continue;
+      p = (i==0)?RSA_NO_PADDING:
+        (i==1)?RSA_PKCS1_PADDING:RSA_PKCS1_OAEP_PADDING;
+      len = crypto_pk_public_hybrid_encrypt(pk1,data1,j,data2,p);
+      test_assert(len>=0);
+      len = crypto_pk_private_hybrid_decrypt(pk1,data2,len,data3,p);
+      test_eq(len,j);
+      test_memeq(data1,data3,j);
+    }
+  }
   crypto_free_pk_env(pk1);
   crypto_free_pk_env(pk2);
 

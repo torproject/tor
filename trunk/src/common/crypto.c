@@ -114,6 +114,17 @@ crypto_cipher_evp_cipher(int type, int enc) {
     }
 }
 
+static INLINE int
+crypto_get_rsa_padding_overhead(int padding) {
+  switch(padding)
+    {
+    case RSA_NO_PADDING: return 0;
+    case RSA_PKCS1_OAEP_PADDING: return 42;
+    case RSA_PKCS1_PADDING: return 11;
+    default: assert(0); return -1;
+    }
+}
+
 static int _crypto_global_initialized = 0;
 
 int crypto_global_init()
@@ -643,6 +654,118 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromle
     default:
       return -1;
   }
+}
+
+/* Perform a hybrid (public/secret) encryption on 'fromlen' bytes of data
+ * from 'from', with padding type 'padding', storing the results on 'to'.
+ *
+ * If no padding is used, the public key must be at least as large as
+ * 'from'.
+ *
+ * Returns the number of bytes written on success, -1 on failure.
+ *
+ * The encrypted data consists of:
+ *
+ *   The source data, padded and encrypted with the public key, if the
+ *   padded source data is no longer than the public key.
+ *  OR
+ *   The beginning of the source data prefixed with a 16-symmetric key,
+ *   padded and encrypted with the public key; followed by the rest of
+ *   the source data encrypted in AES-CTR mode with the symmetric key.
+ */
+int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env, unsigned char *from,
+				    int fromlen, unsigned char *to,
+				    int padding)
+{
+  int overhead, pkeylen, outlen, r, symlen;
+  crypto_cipher_env_t *cipher = NULL;
+  char buf[1024];
+
+  assert(env && from && to);
+
+  overhead = crypto_get_rsa_padding_overhead(padding);
+  pkeylen = crypto_pk_keysize(env);
+
+  if (padding == RSA_NO_PADDING && fromlen < pkeylen)
+    return -1;
+
+  if (fromlen+overhead <= pkeylen) {
+    /* It all fits in a single encrypt. */
+    return crypto_pk_public_encrypt(env,from,fromlen,to,padding);
+  }
+  cipher = crypto_new_cipher_env(CRYPTO_CIPHER_AES_CTR);
+  if (!cipher) return -1;
+  if (crypto_cipher_generate_key(cipher)<0)
+    goto err;
+  if (padding == RSA_NO_PADDING)
+    cipher->key[0] &= 0x7f;
+  if (crypto_cipher_encrypt_init_cipher(cipher)<0)
+    goto err;
+  memcpy(buf, cipher->key, 16);
+  memcpy(buf+16, from, pkeylen-overhead-16);
+
+  /* Length of symmetrically encrypted data. */
+  symlen = fromlen-(pkeylen-overhead-16);
+
+  outlen = crypto_pk_public_encrypt(env,buf,pkeylen-overhead,to,padding);
+  if (outlen!=pkeylen) {
+    goto err;
+  }
+  r = crypto_cipher_encrypt(cipher,
+			    from+pkeylen-overhead-16, symlen,
+			    to+outlen);
+
+  if (r<0) goto err;
+  memset(buf, 0, 1024);
+  crypto_free_cipher_env(cipher);
+  return outlen + symlen;
+ err:
+  memset(buf, 0, 1024);
+  if (cipher) crypto_free_cipher_env(cipher);
+  return -1;
+}
+
+/* Invert crypto_pk_public_hybrid_encrypt. */
+int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env, unsigned char *from,
+				    int fromlen, unsigned char *to,
+				    int padding)
+{
+  int overhead, pkeylen, outlen, r;
+  crypto_cipher_env_t *cipher = NULL;
+  char buf[1024];
+
+  overhead = crypto_get_rsa_padding_overhead(padding);
+  pkeylen = crypto_pk_keysize(env);
+
+  if (fromlen <= pkeylen) {
+    return crypto_pk_private_decrypt(env,from,fromlen,to,padding);
+  }
+  outlen = crypto_pk_private_decrypt(env,from,pkeylen,buf,padding);
+  if (outlen<0) {
+    log_fn(LOG_WARN, "Error decrypting public-key data");
+    return -1;
+  }
+  if (outlen < 16) {
+    log_fn(LOG_WARN, "No room for a symmetric key");
+    return -1;
+  }
+  cipher = crypto_create_init_cipher(CRYPTO_CIPHER_AES_CTR, buf, "", 0);
+  if (!cipher) {
+    return -1;
+  }
+  memcpy(to,buf+16,outlen-16);
+  outlen -= 16;
+  r = crypto_cipher_decrypt(cipher, from+pkeylen, fromlen-pkeylen,
+			    to+outlen);
+  if (r<0)
+    goto err;
+  memset(buf,0,1024);
+  crypto_free_cipher_env(cipher);
+  return outlen + (fromlen-pkeylen);
+ err:
+  memset(buf, 0, 1024);
+  if (cipher) crypto_free_cipher_env(cipher);
+  return -1;
 }
 
 /* Encode the public portion of 'pk' into 'dest'.  Return -1 on error,
