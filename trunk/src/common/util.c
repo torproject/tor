@@ -112,13 +112,29 @@ void tv_addms(struct timeval *a, long ms) {
   a->tv_usec %= 1000000;
 }
 
+time_t tor_timegm (struct tm *tm) {
+  time_t ret;
+  char *tz;
+
+  tz = getenv("TZ");
+  setenv("TZ", "", 1);
+  tzset();
+  ret = mktime(tm);
+  if (tz)
+      setenv("TZ", tz, 1);
+  else
+      unsetenv("TZ");
+  tzset();
+  return ret;
+}
+
 /*
  *   Low-level I/O.
  */
 
 /* a wrapper for write(2) that makes sure to write all count bytes.
  * Only use if fd is a blocking fd. */
-int write_all(int fd, const void *buf, size_t count) {
+int write_all(int fd, const char *buf, size_t count) {
   int written = 0;
   int result;
 
@@ -133,7 +149,7 @@ int write_all(int fd, const void *buf, size_t count) {
 
 /* a wrapper for read(2) that makes sure to read all count bytes.
  * Only use if fd is a blocking fd. */
-int read_all(int fd, void *buf, size_t count) {
+int read_all(int fd, char *buf, size_t count) {
   int numread = 0;
   int result;
 
