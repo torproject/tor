@@ -359,6 +359,19 @@ circuit_get_clean_open(uint8_t purpose, int need_uptime,
   return best;
 }
 
+/** Go through the circuitlist; mark-for-close each circuit that starts
+ *  at us but has not yet been used. */
+void circuit_mark_all_unused_circs(void) {
+  circuit_t *circ;
+
+  for (circ=global_circuitlist; circ; circ = circ->next) {
+    if (CIRCUIT_IS_ORIGIN(circ) &&
+        !circ->marked_for_close &&
+        !circ->timestamp_dirty)
+      circuit_mark_for_close(circ);
+  }
+}
+
 /** Mark <b>circ</b> to be closed next time we call
  * circuit_close_all_marked(). Do any cleanup needed:
  *   - If state is onionskin_pending, remove circ from the onion_pending

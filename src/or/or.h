@@ -1124,6 +1124,7 @@ circuit_t *circuit_establish_circuit(uint8_t purpose, const char *exit_digest,
                                      int need_uptime, int need_capacity, int internal);
 void circuit_n_conn_done(connection_t *or_conn, int status);
 int circuit_send_next_onion_skin(circuit_t *circ);
+void circuit_note_clock_jumped(int seconds_elapsed);
 int circuit_extend(cell_t *cell, circuit_t *circ);
 int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse);
 int circuit_finish_handshake(circuit_t *circ, char *reply);
@@ -1149,6 +1150,7 @@ circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
 circuit_t *circuit_get_rendezvous(const char *cookie);
 circuit_t *circuit_get_clean_open(uint8_t purpose, int need_uptime,
                                   int need_capacity, int internal);
+void circuit_mark_all_unused_circs(void);
 int _circuit_mark_for_close(circuit_t *circ);
 
 #define circuit_mark_for_close(c)                                       \

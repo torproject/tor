@@ -892,8 +892,10 @@ static void second_elapsed_callback(int fd, short event, void *args)
   stats_prev_global_write_bucket = global_write_bucket;
 
   /* if more than 10s have elapsed, probably the clock jumped: doesn't count. */
-  if (seconds_elapsed < 10)
+  if (seconds_elapsed < 100)
     stats_n_seconds_working += seconds_elapsed;
+  else
+    circuit_note_clock_jumped(seconds_elapsed);
 
   assert_all_pending_dns_resolves_ok();
   run_scheduled_events(now.tv_sec);
