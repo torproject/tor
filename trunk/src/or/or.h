@@ -1043,6 +1043,8 @@ void rep_hist_dump_stats(time_t now, int severity);
 void rend_client_introcirc_is_open(circuit_t *circ);
 void rend_client_rendcirc_is_open(circuit_t *circ);
 int rend_client_introduction_acked(circuit_t *circ, const char *request, int request_len);
+void rend_client_refetch_renddesc(char *query);
+int rend_client_remove_intro_point(char *failed_intro, char *query);
 int rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_len);
 int rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request_len);
 void rend_client_desc_fetched(char *query, int success);

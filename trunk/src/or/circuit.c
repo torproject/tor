@@ -997,6 +997,13 @@ int _circuit_mark_for_close(circuit_t *circ) {
       circuit_build_failed(circ); /* take actions if necessary */
     circuit_rep_hist_note_result(circ);
   }
+  if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
+    assert(circ->state == CIRCUIT_STATE_OPEN);
+    /* treat this like getting a nack from it */
+    log_fn(LOG_INFO,"Failed intro circ %s to %s (awaiting ack). Removing from descriptor.",
+           circ->rend_query, circ->build_state->chosen_exit);
+    rend_client_remove_intro_point(circ->build_state->chosen_exit, circ->rend_query);
+  }
 
   if(circ->n_conn)
     connection_send_destroy(circ->n_circ_id, circ->n_conn);

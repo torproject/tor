@@ -147,8 +147,6 @@ int
 rend_client_introduction_acked(circuit_t *circ,
                                const char *request, int request_len)
 {
-  int i, r;
-  rend_cache_entry_t *ent;
   char *nickname;
   circuit_t *rendcirc;
 
@@ -177,69 +175,91 @@ rend_client_introduction_acked(circuit_t *circ,
   } else {
     /* It's a NAK; the introduction point didn't relay our request. */
     circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
-    /* XXXX
-     * Now become non-open, extend to another one of Bob's
-     * introduction points, and try again.  Maybe mark the service as
-     * non-functional at the first intro point somehow?
-     *
-     * Or re-fetch the service descriptor? Hm....
+    /* Remove this intro point from the set of viable introduction
+     * points. If any remain, extend to a new one and try again.
+     * If none remain, refetch the service descriptor.
      */
-    r = rend_cache_lookup_entry(circ->rend_query, &ent);
-    if (r<0) {
-      log_fn(LOG_WARN, "Malformed service ID '%s'", circ->rend_query);
-      return -1;
-    }
-    if (r>0) {
-      /* Okay, we found the right service desc.  First, remove this intro point
-       * from the parsed descriptor (if it's still there!)
-       */
-      for (i=0; i < ent->parsed->n_intro_points; ++i) {
-        if (!strcasecmp(ent->parsed->intro_points[i],
-                        circ->build_state->chosen_exit)) {
-          tor_free(ent->parsed->intro_points[i]);
-          ent->parsed->intro_points[i] =
-            ent->parsed->intro_points[--ent->parsed->n_intro_points];
-          break;
-        }
-      }
-      /* If there are any introduction points left, re-extend the circuit to
+    if(rend_client_remove_intro_point(circ->build_state->chosen_exit,
+                                      circ->rend_query) > 0) {
+      /* There are introduction points left. re-extend the circuit to
        * another intro point and try again. */
-      if (ent->parsed->n_intro_points) {
-        nickname = rend_client_get_random_intro(circ->rend_query);
-        assert(nickname);
-        if (!router_get_by_nickname(nickname)) {
-          log_fn(LOG_WARN, "Advertised intro point '%s' for %s is not known. Closing.",
-                 nickname, circ->rend_query);
-          circuit_mark_for_close(circ);
-          return -1;
-        }
-        log_fn(LOG_INFO, "Chose new intro point %s for %s (circ %d, %d choices left)",
-               nickname, circ->rend_query, circ->n_circ_id, ent->parsed->n_intro_points);
-        circ->state = CIRCUIT_STATE_BUILDING;
-        tor_free(circ->build_state->chosen_exit);
-        circ->build_state->chosen_exit = tor_strdup(nickname);
-        ++circ->build_state->desired_path_len;
-        if (circuit_send_next_onion_skin(circ)<0) {
-          log_fn(LOG_WARN, "Couldn't extend circuit to new intro point.");
-          circuit_mark_for_close(circ);
-          return -1;
-        }
-        return 0;
+      nickname = rend_client_get_random_intro(circ->rend_query);
+      assert(nickname);
+      log_fn(LOG_INFO,"Got nack for %s from %s, extending to %s.", circ->rend_query, circ->build_state->chosen_exit, nickname);
+      if (!router_get_by_nickname(nickname)) {
+        log_fn(LOG_WARN, "Advertised intro point '%s' for %s is not known. Closing.",
+               nickname, circ->rend_query);
+        circuit_mark_for_close(circ);
+        return -1;
       }
-    }
-    /* Either we have no service desc, or all the intro points in that
-     * descriptor failed. So re-fetch the descriptor and try again. */
-    circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
-    /* XXX anything else we need to do to circ? */
-    /* Refetch descriptor */
-    if(!connection_get_by_type_rendquery(CONN_TYPE_DIR, circ->rend_query)) {
-      /* not one already; initiate a dir rend desc lookup */
-      directory_initiate_command(router_pick_directory_server(),
-                                 DIR_PURPOSE_FETCH_RENDDESC,
-                                 circ->rend_query, strlen(circ->rend_query));
+      log_fn(LOG_INFO, "Chose new intro point %s for %s (circ %d)",
+             nickname, circ->rend_query, circ->n_circ_id);
+      circ->state = CIRCUIT_STATE_BUILDING;
+      tor_free(circ->build_state->chosen_exit);
+      circ->build_state->chosen_exit = tor_strdup(nickname);
+      ++circ->build_state->desired_path_len;
+      if (circuit_send_next_onion_skin(circ)<0) {
+        log_fn(LOG_WARN, "Couldn't extend circuit to new intro point.");
+        circuit_mark_for_close(circ);
+        return -1;
+      }
     }
   }
   return 0;
+}
+
+void
+rend_client_refetch_renddesc(char *query)
+{
+  if(connection_get_by_type_rendquery(CONN_TYPE_DIR, query)) {
+    log_fn(LOG_INFO,"Would fetch a new renddesc here (for %s), but one is already in progress.", query);
+  } else {
+    /* not one already; initiate a dir rend desc lookup */
+    directory_initiate_command(router_pick_directory_server(),
+                               DIR_PURPOSE_FETCH_RENDDESC,
+                               query, strlen(query));
+  }
+}
+
+/* remove failed_intro from ent. if ent now has no intro points, or
+ * service is unrecognized, then launch a new renddesc fetch.
+ *
+ * Return -1 if error, 0 if no intro points remain or service
+ * unrecognized, 1 if recognized and some intro points remain.
+ */
+int
+rend_client_remove_intro_point(char *failed_intro, char *query)
+{
+  int i, r;
+  rend_cache_entry_t *ent;
+
+  r = rend_cache_lookup_entry(query, &ent);
+  if (r<0) {
+    log_fn(LOG_WARN, "Malformed service ID '%s'", query);
+    return -1;
+  }
+  if (r==0) {
+    log_fn(LOG_INFO, "Unknown service %s. Re-fetching descriptor.", query);
+    rend_client_refetch_renddesc(query);
+    return 0;
+  }
+
+  for (i=0; i < ent->parsed->n_intro_points; ++i) {
+    if (!strcasecmp(ent->parsed->intro_points[i], failed_intro)) {
+      tor_free(ent->parsed->intro_points[i]);
+      ent->parsed->intro_points[i] =
+        ent->parsed->intro_points[--ent->parsed->n_intro_points];
+      break;
+    }
+  }
+
+  if(!ent->parsed->n_intro_points) {
+    log_fn(LOG_INFO,"No more intro points remain for %s. Re-fetching descriptor.", query);
+    rend_client_refetch_renddesc(query);
+    return 0;
+  }
+  log_fn(LOG_INFO,"%d options left for %s.", ent->parsed->n_intro_points, query);
+  return 1;
 }
 
 /* Called when we receive a RENDEZVOUS_ESTABLISHED cell; changes the state of
