@@ -1534,6 +1534,10 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
  * the result into <b>dest</b>, if it will fit within <b>destlen</b>
  * bytes.  Return the number of bytes written on success; -1 if
  * destlen is too short, or other failure.
+ *
+ * NOTE: destlen should be a little longer than the amount of data it
+ * will contain, since we check for sufficient space conservatively.
+ * Here, "a little" is around 64-ish bytes.
  */
 int
 base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
