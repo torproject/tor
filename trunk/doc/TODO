@@ -30,7 +30,9 @@ For dtor:
         - Have clients and dirservers preserve reputation info over
           reboots.
         - allow dirservers to serve running-router list separately.
-          - "get /running-routers" will fetch just this.
+          o "get /running-routers" will fetch just this.
+          - actually make the clients use this sometimes.
+          - distinguish directory-is-dirty from runninglist-is-dirty
           - ORs keep this too, and serve it
         - tor remembers descriptor-lists across reboots.
         - Packages define datadir as /var/lib/tor/. If no datadir is defined,
