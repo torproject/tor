@@ -818,7 +818,6 @@ crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
   }
 }
 
-
 /* SHA-1 */
 int crypto_SHA_digest(const unsigned char *m, int len, unsigned char *digest)
 {
@@ -833,8 +832,9 @@ struct crypto_digest_env_t {
 crypto_digest_env_t *
 crypto_digest_new_env(int type)
 {
+  crypto_digest_env_t *r;
   assert(type == CRYPTO_SHA1_DIGEST);
-  crypto_digest_env_t *r = tor_malloc(sizeof(crypto_digest_env_t));
+  r = tor_malloc(sizeof(crypto_digest_env_t));
   SHA1_Init(&r->d);
   return r;
 }
@@ -844,16 +844,18 @@ crypto_digest_free(crypto_digest_env_t *digest) {
   assert(digest);
   tor_free(digest);
 }
+
 void
 crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
-			size_t len)
+                        size_t len)
 {
   assert(digest);
   assert(data);
   SHA1_Update(&digest->d, (void*)data, len);
 }
+
 void crypto_digest_get_digest(crypto_digest_env_t *digest,
-			      char *out, size_t out_len)
+                              char *out, size_t out_len)
 {
   static char r[SHA_DIGEST_LENGTH];
   assert(digest && out);
@@ -863,17 +865,18 @@ void crypto_digest_get_digest(crypto_digest_env_t *digest,
 }
 
 crypto_digest_env_t *
-crypto_digest_copy(const crypto_digest_env_t *digest)
+crypto_digest_dup(const crypto_digest_env_t *digest)
 {
   crypto_digest_env_t *r;
   assert(digest);
   r = tor_malloc(sizeof(crypto_digest_env_t));
   memcpy(r,digest,sizeof(crypto_digest_env_t));
+  return r;
 }
 
 void
 crypto_digest_assign(crypto_digest_env_t *into,
-		     const crypto_digest_env_t *from)
+                     const crypto_digest_env_t *from)
 {
   assert(into && from);
   memcpy(into,from,sizeof(crypto_digest_env_t));
@@ -882,7 +885,6 @@ crypto_digest_assign(crypto_digest_env_t *into,
 /* DH */
 static BIGNUM *dh_param_p = NULL;
 static BIGNUM *dh_param_g = NULL;
-
 
 static void init_dh_param() {
   BIGNUM *p, *g;
