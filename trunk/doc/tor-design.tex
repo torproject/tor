@@ -32,11 +32,12 @@
 %  \pdfpageheight=\the\paperheight
 %\fi
 
-\title{Tor: Design of a Next-generation Onion Router}
+\title{Tor: Design of a Next-Generation Onion Router}
 
-\author{Roger Dingledine \\ The Free Haven Project \\ arma@freehaven.net \and
-Nick Mathewson \\ The Free Haven Project \\ nickm@freehaven.net \and
-Paul Syverson \\ Naval Research Lab \\ syverson@itd.nrl.navy.mil}
+\author{Anonymous}
+%\author{Roger Dingledine \\ The Free Haven Project \\ arma@freehaven.net \and
+%Nick Mathewson \\ The Free Haven Project \\ nickm@freehaven.net \and
+%Paul Syverson \\ Naval Research Lab \\ syverson@itd.nrl.navy.mil}
 
 \maketitle
 \thispagestyle{empty}
@@ -60,14 +61,14 @@ as or better than other systems with similar design parameters.
 \label{sec:intro}
 
 Onion routing is a distributed overlay network designed to anonymize
-low-latency TCP-based applications such as web browsing, secure
-shell, and instant messaging. Users choose a path through the
-network and build a \emph{virtual circuit}, in which each node in
-the path knows its predecessor and successor, but no others. Traffic
-flowing down the circuit is unwrapped by a symmetric key at each
-node which reveals the downstream node. The original onion routing
-project published several design and analysis papers several years
-ago \cite{or-journal,or-discex,or-ih,or-pet}, but because the only
+low-latency TCP-based applications such as web browsing, secure shell,
+and instant messaging. Users choose a path through the network and
+build a \emph{virtual circuit}, in which each node in the path knows its
+predecessor and successor, but no others. Traffic flowing down the circuit
+is sent in fixed-size \emph{cells}, which are unwrapped by a symmetric key
+at each node, revealing the downstream node. The original onion routing
+project published several design and analysis papers in recent years
+\cite{or-journal,or-discex,or-ih,or-pet}, but because the only
 implementation was a fragile proof-of-concept that ran on a single
 machine, many critical design and deployment issues were not considered
 or addressed. Here we describe Tor, a protocol for asynchronous, loosely
@@ -75,6 +76,15 @@ federated onion routers that provides the following improvements over
 the old onion routing design:
 
 \begin{itemize}
+
+\item \textbf{Perfect forward secrecy:} The original onion routing
+design is vulnerable to a single hostile node recording traffic and later
+forcing successive nodes in the circuit to decrypt it. Rather than using
+onions to lay the circuits, Tor uses an incremental or \emph{telescoping}
+path-building design, where the initiator negotiates session keys with
+each successive hop in the circuit. Onion replay detection is no longer
+necessary, and the network as a whole is more reliable to boot, since
+the initiator knows which hop failed and can try extending to a new node.
 
 \item \textbf{Applications talk to the onion proxy via Socks:}
 The original onion routing design required a separate proxy for each
@@ -84,30 +94,54 @@ applications were not supported. Tor uses the unified and standard Socks
 \cite{socks4,socks5} interface, allowing us to support any TCP-based
 program without modification.
 
+\item \textbf{Many applications can share one circuit:} The original
+onion routing design built one circuit for each request. Aside from the
+performance issues of doing public key operations for every request, it
+also turns out that regular communications patterns mean building lots
+of circuits can endanger anonymity \cite{wright03}. Tor multiplexes many
+connections down each circuit, but still rotates the circuit periodically
+to avoid too much linkability.
+
 \item \textbf{No mixing or traffic shaping:} The original onion routing
 design called for full link padding both between onion routers and between
 onion proxies (that is, users) and onion routers \cite{or-journal}. The
 later analysis paper \cite{or-pet} suggested \emph{traffic shaping}
-schemes that would provide similar protection but use less bandwidth,
-but did not go into detail. However, recent research \cite{econymics}
-and deployment experience \cite{freedom2-arch} indicate that this level
-of resource use is not practical or economical, especially if.
+to provide similar protection but use less bandwidth, but did not go
+into detail. However, recent research \cite{econymics} and deployment
+experience \cite{freedom2-arch} indicate that this level of resource
+use is not practical or economical; and even full link padding is still
+vulnerable to active attacks \cite{defensive-dropping}.
 
-\item \textbf{Directory servers:} Traditional link state
+\item \textbf{Leaky pipes:} Through in-band signalling within the circuit,
+Tor initiators can direct traffic to nodes partway down the circuit. This
+allows for long-range padding to frustrate timing attacks at the initiator
+\cite{defensive-dropping}, but because circuits are used by more than
+one application, it also allows traffic to exit the circuit from the
+middle -- thus frustrating timing attacks based on observing exit points.
+%Or something like that. hm.
 
-\item \textbf{Congestion control:} Traditional flow control solutions
- Our decentralized ack-based congestion control
-allows nodes at the edges of the network to detect incidental congestion
-or flooding attacks and send less data until the congestion subsides.
+\item \textbf{Congestion control:} Earlier anonymity designs do not
+address traffic bottlenecks. Unfortunately, typical approaches to load
+balancing and flow control in overlay networks involve inter-node control
+communication and global views of traffic. Our decentralized ack-based
+congestion control maintains reasonable anonymity while allowing nodes
+at the edges of the network to detect congestion or flooding attacks
+and send less data until the congestion subsides.
 
+\item \textbf{Directory servers:} Rather than attempting to flood
+link-state information through the network, which can be unreliable and
+open to partitioning attacks or outright deception, Tor takes a simplified
+view towards distributing link-state information. Certain more trusted
+onion routers also serve as directory servers; they provide signed
+\emph{directories} describing all routers they know about, and which
+are currently up. Users periodically download these directories via HTTP.
 
-\item \textbf{Forward security:}
-
-\item \textbf{Many applications can share one circuit:}
-
-leaky pipes
-
-\item \textbf{End-to-end integrity checking:}
+\item \textbf{End-to-end integrity checking:} Without integrity checking
+on traffic going through the network, an onion router can change the
+contents of cells as they pass by, e.g. by redirecting a connection on
+the fly so it connects to a different webserver, or by tagging encrypted
+traffic and looking for traffic at the network edges that has been
+tagged \cite{minion-design}.
 
 \item \textbf{Robustness to node failure:} router twins
 
@@ -120,11 +154,12 @@ location-protected servers
 
 \end{itemize}
 
-We review mixes and mix-nets in Section \ref{sec:background},
-describe our goals and assumptions in Section \ref{sec:assumptions},
+We review previous work in Section \ref{sec:background}, describe
+our goals and assumptions in Section \ref{sec:assumptions},
 and then address the above list of improvements in Sections
-\ref{sec:design}-\ref{sec:nymservers}. We then summarize how our design
-stands up to known attacks, and conclude with a list of open problems.
+\ref{sec:design}-\ref{sec:maintaining-anonymity}. We then summarize
+how our design stands up to known attacks, and conclude with a list of
+open problems.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -192,6 +227,15 @@ them.
 
 \Section{Future Directions and Open Problems}
 \label{sec:conclusion}
+
+Tor brings together many innovations from many different projects into
+a unified deployable system. But there are still several attacks that
+work quite well, as well as a number of sustainability and run-time
+issues remaining to be ironed out. In particular:
+
+\begin{itemize}
+\item foo
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
