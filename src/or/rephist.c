@@ -181,6 +181,7 @@ void rep_hist_dump_stats(time_t now, int severity)
   const char *name1, *name2;
   or_history_t *or_history;
   link_history_t *link_history;
+  void *or_history_p, *link_history_p;
   double uptime;
   char buffer[2048];
   int len;
@@ -190,7 +191,8 @@ void rep_hist_dump_stats(time_t now, int severity)
 
   for (orhist_it = strmap_iter_init(history_map); !strmap_iter_done(orhist_it);
        orhist_it = strmap_iter_next(history_map,orhist_it)) {
-    strmap_iter_get(orhist_it, &name1, (void**)&or_history);
+    strmap_iter_get(orhist_it, &name1, &or_history_p);
+    or_history = (or_history_t*) or_history_p;
 
     update_or_history(or_history, now);
     upt = or_history->uptime;
@@ -211,7 +213,8 @@ void rep_hist_dump_stats(time_t now, int severity)
     for (lhist_it = strmap_iter_init(or_history->link_history_map);
 	 !strmap_iter_done(lhist_it);
 	 lhist_it = strmap_iter_next(or_history->link_history_map, lhist_it)) {
-      strmap_iter_get(lhist_it, &name2, (void**)&link_history);
+      strmap_iter_get(lhist_it, &name2, &link_history_p);
+      link_history = (link_history_t*) link_history_p;
       len += snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
 		      link_history->n_extend_ok,
 		      link_history->n_extend_ok+link_history->n_extend_fail);
