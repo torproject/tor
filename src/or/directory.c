@@ -874,7 +874,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     tor_free(url);
 
     if (dlen == 0) {
-      log_fn(LOG_NOTICE,"My directory is empty. Closing.");
+      log_fn(LOG_NOTICE,"Client asked for the mirrored directory, but we don't have a good one yet. Sending 503 Dir not available.");
       write_http_status_line(conn, 503, "Directory unavailable");
       return 0;
     }
