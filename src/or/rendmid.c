@@ -173,7 +173,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, int request_len)
   return -1;
 }
 
-/* Process an ESTABLISH_RENDEZVOUS cell by settingthe circuit's purpose and
+/* Process an ESTABLISH_RENDEZVOUS cell by setting the circuit's purpose and
  * rendezvous cookie.
  */
 int
