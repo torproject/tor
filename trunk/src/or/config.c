@@ -724,6 +724,229 @@ static int check_nickname_list(const char *lst, const char *name)
   return r;
 }
 
+smartlist_t *config_get_default_firewallports(void) {
+  static smartlist_t *answer;
+
+  if(!answer) {
+    answer = smartlist_create();
+    smartlist_add(answer, tor_strdup("80"));
+    smartlist_add(answer, tor_strdup("443"));
+  }
+  return answer;
+}
+
+static int
+validate_options(or_options_t *options)
+{
+  int i;
+  int result = 0;
+  struct config_line_t *cl;
+
+  if (options->ORPort < 0 || options->ORPort > 65535) {
+    log(LOG_WARN, "ORPort option out of bounds.");
+    result = -1;
+  }
+
+  if (options->Nickname == NULL) {
+    if (server_mode()) {
+      if (!(options->Nickname = get_default_nickname()))
+        return -1;
+      log_fn(LOG_NOTICE, "Choosing default nickname %s", options->Nickname);
+    }
+  } else {
+    if (strspn(options->Nickname, LEGAL_NICKNAME_CHARACTERS) !=
+        strlen(options->Nickname)) {
+      log_fn(LOG_WARN, "Nickname '%s' contains illegal characters.", options->Nickname);
+      result = -1;
+    }
+    if (strlen(options->Nickname) == 0) {
+      log_fn(LOG_WARN, "Nickname must have at least one character");
+      result = -1;
+    }
+    if (strlen(options->Nickname) > MAX_NICKNAME_LEN) {
+      log_fn(LOG_WARN, "Nickname '%s' has more than %d characters.",
+             options->Nickname, MAX_NICKNAME_LEN);
+      result = -1;
+    }
+  }
+
+  if (server_mode()) {
+    /* confirm that our address isn't broken, so we can complain now */
+    uint32_t tmp;
+    if (resolve_my_address(options->Address, &tmp) < 0)
+      result = -1;
+  }
+
+  if (options->SocksPort < 0 || options->SocksPort > 65535) {
+    log(LOG_WARN, "SocksPort option out of bounds.");
+    result = -1;
+  }
+
+  if (options->SocksPort == 0 && options->ORPort == 0) {
+    log(LOG_WARN, "SocksPort and ORPort are both undefined? Quitting.");
+    result = -1;
+  }
+
+  if (options->ControlPort < 0 || options->ControlPort > 65535) {
+    log(LOG_WARN, "ControlPort option out of bounds.");
+    result = -1;
+  }
+
+  if (options->DirPort < 0 || options->DirPort > 65535) {
+    log(LOG_WARN, "DirPort option out of bounds.");
+    result = -1;
+  }
+
+  if (options->StrictExitNodes &&
+      (!options->ExitNodes || !strlen(options->ExitNodes))) {
+    log(LOG_WARN, "StrictExitNodes set, but no ExitNodes listed.");
+  }
+
+  if (options->StrictEntryNodes &&
+      (!options->EntryNodes || !strlen(options->EntryNodes))) {
+    log(LOG_WARN, "StrictEntryNodes set, but no EntryNodes listed.");
+  }
+
+  if (options->AuthoritativeDir && options->RecommendedVersions == NULL) {
+    log(LOG_WARN, "Directory servers must configure RecommendedVersions.");
+    result = -1;
+  }
+
+  if (options->AuthoritativeDir && !options->DirPort) {
+    log(LOG_WARN, "Running as authoritative directory, but no DirPort set.");
+    result = -1;
+  }
+
+  if (options->AuthoritativeDir && !options->ORPort) {
+    log(LOG_WARN, "Running as authoritative directory, but no ORPort set.");
+    result = -1;
+  }
+
+  if (options->AuthoritativeDir && options->ClientOnly) {
+    log(LOG_WARN, "Running as authoritative directory, but ClientOnly also set.");
+    result = -1;
+  }
+
+  if (options->FirewallPorts) {
+    SMARTLIST_FOREACH(options->FirewallPorts, const char *, cp,
+    {
+      i = atoi(cp);
+      if (i < 1 || i > 65535) {
+        log(LOG_WARN, "Port '%s' out of range in FirewallPorts", cp);
+        result=-1;
+      }
+    });
+  }
+  options->_AllowUnverified = 0;
+  if (options->AllowUnverifiedNodes) {
+    SMARTLIST_FOREACH(options->AllowUnverifiedNodes, const char *, cp, {
+        if (!strcasecmp(cp, "entry"))
+          options->_AllowUnverified |= ALLOW_UNVERIFIED_ENTRY;
+        else if (!strcasecmp(cp, "exit"))
+          options->_AllowUnverified |= ALLOW_UNVERIFIED_EXIT;
+        else if (!strcasecmp(cp, "middle"))
+          options->_AllowUnverified |= ALLOW_UNVERIFIED_MIDDLE;
+        else if (!strcasecmp(cp, "introduction"))
+          options->_AllowUnverified |= ALLOW_UNVERIFIED_INTRODUCTION;
+        else if (!strcasecmp(cp, "rendezvous"))
+          options->_AllowUnverified |= ALLOW_UNVERIFIED_RENDEZVOUS;
+        else {
+          log(LOG_WARN, "Unrecognized value '%s' in AllowUnverifiedNodes",
+              cp);
+          result=-1;
+        }
+      });
+  }
+
+  if (options->SocksPort >= 1 &&
+      (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0)) {
+    log(LOG_WARN, "PathlenCoinWeight option must be >=0.0 and <1.0.");
+    result = -1;
+  }
+
+  if (options->MaxConn < 1) {
+    log(LOG_WARN, "MaxConn option must be a non-zero positive integer.");
+    result = -1;
+  }
+
+  if (options->MaxConn >= MAXCONNECTIONS) {
+    log(LOG_WARN, "MaxConn option must be less than %d.", MAXCONNECTIONS);
+    result = -1;
+  }
+
+#define MIN_DIRFETCHPOSTPERIOD 60
+  if (options->DirFetchPostPeriod < MIN_DIRFETCHPOSTPERIOD) {
+    log(LOG_WARN, "DirFetchPostPeriod option must be at least %d.", MIN_DIRFETCHPOSTPERIOD);
+    result = -1;
+  }
+  if (options->DirFetchPostPeriod > MIN_ONION_KEY_LIFETIME / 2) {
+    log(LOG_WARN, "DirFetchPostPeriod is too large; clipping.");
+    options->DirFetchPostPeriod = MIN_ONION_KEY_LIFETIME / 2;
+  }
+
+  if (options->KeepalivePeriod < 1) {
+    log(LOG_WARN,"KeepalivePeriod option must be positive.");
+    result = -1;
+  }
+
+  if (options->AccountingStart < 0 || options->AccountingStart > 31) {
+    log(LOG_WARN,"Monthly accounting must start on a day of the month, and no months have %d days.",
+        options->AccountingStart);
+    result = -1;
+  } else if (options->AccountingStart > 28) {
+    log(LOG_WARN,"Not every month has %d days.",options->AccountingStart);
+    result = -1;
+  }
+
+  if (options->HttpProxy) { /* parse it now */
+    if (parse_addr_port(options->HttpProxy, NULL,
+                        &options->HttpProxyAddr, &options->HttpProxyPort) < 0) {
+      log(LOG_WARN,"HttpProxy failed to parse or resolve. Please fix.");
+      result = -1;
+    }
+    if (options->HttpProxyPort == 0) { /* give it a default */
+      options->HttpProxyPort = 80;
+    }
+  }
+
+  if (check_nickname_list(options->ExitNodes, "ExitNodes"))
+    result = -1;
+  if (check_nickname_list(options->EntryNodes, "EntryNodes"))
+    result = -1;
+  if (check_nickname_list(options->ExcludeNodes, "ExcludeNodes"))
+    result = -1;
+  if (check_nickname_list(options->RendNodes, "RendNodes"))
+    result = -1;
+  if (check_nickname_list(options->RendNodes, "RendExcludeNodes"))
+    result = -1;
+  if (check_nickname_list(options->MyFamily, "MyFamily"))
+    result = -1;
+  for (cl = options->NodeFamilies; cl; cl = cl->next) {
+    if (check_nickname_list(cl->value, "NodeFamily"))
+      result = -1;
+  }
+
+  if (!options->RedirectExitList)
+    options->RedirectExitList = smartlist_create();
+/* XXX need to free the old one if it's there, else they just keep piling up */
+  for (cl = options->RedirectExit; cl; cl = cl->next) {
+    if (parse_redirect_line(options, cl)<0)
+      result = -1;
+  }
+
+  clear_trusted_dir_servers();
+  if (!options->DirServers) {
+    add_default_trusted_dirservers();
+  } else {
+    for (cl = options->DirServers; cl; cl = cl->next) {
+      if (parse_dir_server_line(cl->value)<0)
+        result = -1;
+    }
+  }
+
+  return result;
+}
+
 /** Read a configuration file into <b>options</b>, finding the configuration
  * file location based on the command line.  After loading the options,
  * validate them for consistency. Return 0 if success, <0 if failure. */
@@ -735,19 +958,17 @@ getconfig(int argc, char **argv, or_options_t *options)
   char *fname;
   int i;
   int result = 0;
-  static int first_load = 1;
+  int using_default_torrc;
   static char **backup_argv;
   static int backup_argc;
   char *previous_pidfile = NULL;
   int previous_runasdaemon = 0;
   int previous_orport = -1;
-  int using_default_torrc;
 
-  if (first_load) { /* first time we're called. save commandline args */
+  if (argv) { /* first time we're called. save commandline args */
     backup_argv = argv;
     backup_argc = argc;
-    first_load = 0;
-  } else { /* we're reloading. need to clean up old ones first. */
+  } else { /* we're reloading. need to clean up old options first. */
     argv = backup_argv;
     argc = backup_argc;
 
@@ -859,211 +1080,8 @@ getconfig(int argc, char **argv, or_options_t *options)
     return -1;
   }
 
-  if (options->ORPort < 0 || options->ORPort > 65535) {
-    log(LOG_WARN, "ORPort option out of bounds.");
+  if (validate_options(options) < 0)
     result = -1;
-  }
-
-  if (options->Nickname == NULL) {
-    if (server_mode()) {
-      if (!(options->Nickname = get_default_nickname()))
-        return -1;
-      log_fn(LOG_NOTICE, "Choosing default nickname %s", options->Nickname);
-    }
-  } else {
-    if (strspn(options->Nickname, LEGAL_NICKNAME_CHARACTERS) !=
-        strlen(options->Nickname)) {
-      log_fn(LOG_WARN, "Nickname '%s' contains illegal characters.", options->Nickname);
-      result = -1;
-    }
-    if (strlen(options->Nickname) == 0) {
-      log_fn(LOG_WARN, "Nickname must have at least one character");
-      result = -1;
-    }
-    if (strlen(options->Nickname) > MAX_NICKNAME_LEN) {
-      log_fn(LOG_WARN, "Nickname '%s' has more than %d characters.",
-             options->Nickname, MAX_NICKNAME_LEN);
-      result = -1;
-    }
-  }
-
-  if (server_mode()) {
-    /* confirm that our address isn't broken, so we can complain now */
-    uint32_t tmp;
-    if (resolve_my_address(options->Address, &tmp) < 0)
-      result = -1;
-  }
-
-  if (options->SocksPort < 0 || options->SocksPort > 65535) {
-    log(LOG_WARN, "SocksPort option out of bounds.");
-    result = -1;
-  }
-
-  if (options->SocksPort == 0 && options->ORPort == 0) {
-    log(LOG_WARN, "SocksPort and ORPort are both undefined? Quitting.");
-    result = -1;
-  }
-
-  if (options->ControlPort < 0 || options->ControlPort > 65535) {
-    log(LOG_WARN, "ControlPort option out of bounds.");
-    result = -1;
-  }
-
-  if (options->DirPort < 0 || options->DirPort > 65535) {
-    log(LOG_WARN, "DirPort option out of bounds.");
-    result = -1;
-  }
-
-  if (options->StrictExitNodes &&
-      (!options->ExitNodes || !strlen(options->ExitNodes))) {
-    log(LOG_WARN, "StrictExitNodes set, but no ExitNodes listed.");
-  }
-
-  if (options->StrictEntryNodes &&
-      (!options->EntryNodes || !strlen(options->EntryNodes))) {
-    log(LOG_WARN, "StrictEntryNodes set, but no EntryNodes listed.");
-  }
-
-  if (options->AuthoritativeDir && options->RecommendedVersions == NULL) {
-    log(LOG_WARN, "Directory servers must configure RecommendedVersions.");
-    result = -1;
-  }
-
-  if (options->AuthoritativeDir && !options->DirPort) {
-    log(LOG_WARN, "Running as authoritative directory, but no DirPort set.");
-    result = -1;
-  }
-
-  if (options->AuthoritativeDir && !options->ORPort) {
-    log(LOG_WARN, "Running as authoritative directory, but no ORPort set.");
-    result = -1;
-  }
-
-  if (options->AuthoritativeDir && options->ClientOnly) {
-    log(LOG_WARN, "Running as authoritative directory, but ClientOnly also set.");
-    result = -1;
-  }
-
-  if (options->FascistFirewall && !options->FirewallPorts) {
-    options->FirewallPorts = smartlist_create();
-    smartlist_add(options->FirewallPorts, tor_strdup("80"));
-    smartlist_add(options->FirewallPorts, tor_strdup("443"));
-  }
-  if (options->FirewallPorts) {
-    SMARTLIST_FOREACH(options->FirewallPorts, const char *, cp,
-    {
-      i = atoi(cp);
-      if (i < 1 || i > 65535) {
-        log(LOG_WARN, "Port '%s' out of range in FirewallPorts", cp);
-        result=-1;
-      }
-    });
-  }
-  options->_AllowUnverified = 0;
-  if (options->AllowUnverifiedNodes) {
-    SMARTLIST_FOREACH(options->AllowUnverifiedNodes, const char *, cp, {
-        if (!strcasecmp(cp, "entry"))
-          options->_AllowUnverified |= ALLOW_UNVERIFIED_ENTRY;
-        else if (!strcasecmp(cp, "exit"))
-          options->_AllowUnverified |= ALLOW_UNVERIFIED_EXIT;
-        else if (!strcasecmp(cp, "middle"))
-          options->_AllowUnverified |= ALLOW_UNVERIFIED_MIDDLE;
-        else if (!strcasecmp(cp, "introduction"))
-          options->_AllowUnverified |= ALLOW_UNVERIFIED_INTRODUCTION;
-        else if (!strcasecmp(cp, "rendezvous"))
-          options->_AllowUnverified |= ALLOW_UNVERIFIED_RENDEZVOUS;
-        else {
-          log(LOG_WARN, "Unrecognized value '%s' in AllowUnverifiedNodes",
-              cp);
-          result=-1;
-        }
-      });
-  }
-
-  if (options->SocksPort >= 1 &&
-      (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0)) {
-    log(LOG_WARN, "PathlenCoinWeight option must be >=0.0 and <1.0.");
-    result = -1;
-  }
-
-  if (options->MaxConn < 1) {
-    log(LOG_WARN, "MaxConn option must be a non-zero positive integer.");
-    result = -1;
-  }
-
-  if (options->MaxConn >= MAXCONNECTIONS) {
-    log(LOG_WARN, "MaxConn option must be less than %d.", MAXCONNECTIONS);
-    result = -1;
-  }
-
-#define MIN_DIRFETCHPOSTPERIOD 60
-  if (options->DirFetchPostPeriod < MIN_DIRFETCHPOSTPERIOD) {
-    log(LOG_WARN, "DirFetchPostPeriod option must be at least %d.", MIN_DIRFETCHPOSTPERIOD);
-    result = -1;
-  }
-  if (options->DirFetchPostPeriod > MIN_ONION_KEY_LIFETIME / 2) {
-    log(LOG_WARN, "DirFetchPostPeriod is too large; clipping.");
-    options->DirFetchPostPeriod = MIN_ONION_KEY_LIFETIME / 2;
-  }
-
-  if (options->KeepalivePeriod < 1) {
-    log(LOG_WARN,"KeepalivePeriod option must be positive.");
-    result = -1;
-  }
-
-  if (options->AccountingStart < 0 || options->AccountingStart > 31) {
-    log(LOG_WARN,"Monthly accounting must start on a day of the month, and no months have %d days.",
-        options->AccountingStart);
-    result = -1;
-  } else if (options->AccountingStart > 28) {
-    log(LOG_WARN,"Not every month has %d days.",options->AccountingStart);
-    result = -1;
-  }
-
-  if (options->HttpProxy) { /* parse it now */
-    if (parse_addr_port(options->HttpProxy, NULL,
-                        &options->HttpProxyAddr, &options->HttpProxyPort) < 0) {
-      log(LOG_WARN,"HttpProxy failed to parse or resolve. Please fix.");
-      result = -1;
-    }
-    if (options->HttpProxyPort == 0) { /* give it a default */
-      options->HttpProxyPort = 80;
-    }
-  }
-
-  if (check_nickname_list(options->ExitNodes, "ExitNodes"))
-    return -1;
-  if (check_nickname_list(options->EntryNodes, "EntryNodes"))
-    return -1;
-  if (check_nickname_list(options->ExcludeNodes, "ExcludeNodes"))
-    return -1;
-  if (check_nickname_list(options->RendNodes, "RendNodes"))
-    return -1;
-  if (check_nickname_list(options->RendNodes, "RendExcludeNodes"))
-    return -1;
-  if (check_nickname_list(options->MyFamily, "MyFamily"))
-    return -1;
-  for (cl = options->NodeFamilies; cl; cl = cl->next) {
-    if (check_nickname_list(cl->value, "NodeFamily"))
-      return -1;
-  }
-
-  if (!options->RedirectExitList)
-    options->RedirectExitList = smartlist_create();
-  for (cl = options->RedirectExit; cl; cl = cl->next) {
-    if (parse_redirect_line(options, cl)<0)
-      return -1;
-  }
-
-  clear_trusted_dir_servers();
-  if (!options->DirServers) {
-    add_default_trusted_dirservers();
-  } else {
-    for (cl = options->DirServers; cl; cl = cl->next) {
-      if (parse_dir_server_line(cl->value)<0)
-        return -1;
-    }
-  }
 
   if (rend_config_services(options) < 0) {
     result = -1;
