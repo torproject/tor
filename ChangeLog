@@ -11,8 +11,8 @@ rc1:
 
   o Bugfixes on 0.0.9pre6:
     - Fix hibernate bug that caused pre6 to be broken.
-    - Dont keep rephist info for routers that havent had activity for
-      24 hours. (This matters now that clients have keys, so we track
+    - Don't keep rephist info for routers that haven't had activity for
+      24 hours. (This matters now that clients have keys, since we track
       them too.)
     - Never call close_temp_logs while validating log options.
     - Fix backslash-escaping on tor.sh.in and torctl.in.
@@ -30,7 +30,7 @@ rc1:
     - If your requested entry or exit node has advertised bandwidth 0,
       pick it anyway.
     - Be more greedy about filling up relay cells -- we try reading again
-      once we've processed the stuff we read, in case enough have arrived
+      once we've processed the stuff we read, in case enough has arrived
       to fill the last cell completely.
     - Apply NT service patch from Osamu Fujino. Still needs more work.
 
