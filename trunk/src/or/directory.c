@@ -541,7 +541,7 @@ connection_dir_client_reached_eof(connection_t *conn)
                               &headers, MAX_HEADERS_SIZE,
                               &body, &body_len, MAX_DIR_SIZE)) {
     case -1: /* overflow */
-      log_fn(LOG_WARN,"'fetch' response too large. Failing.");
+      log_fn(LOG_WARN,"'fetch' response too large (server '%s'). Failing.", conn->address);
       return -1;
     case 0:
       log_fn(LOG_INFO,"'fetch' response not all here, but we're at eof. Closing.");
@@ -551,7 +551,7 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (parse_http_response(headers, &status_code, &date_header,
                           &compression) < 0) {
-    log_fn(LOG_WARN,"Unparseable headers. Closing.");
+    log_fn(LOG_WARN,"Unparseable headers (server '%s'). Closing.", conn->address);
     tor_free(body); tor_free(headers);
     return -1;
   }
@@ -559,7 +559,8 @@ connection_dir_client_reached_eof(connection_t *conn)
     now = time(NULL);
     delta = now-date_header;
     if (abs(delta)>ALLOW_DIRECTORY_TIME_SKEW) {
-      log_fn(LOG_WARN, "Received directory with skewed time: we are %d minutes %s, or the directory is %d minutes %s.",
+      log_fn(LOG_WARN, "Received directory with skewed time (server '%s'): we are %d minutes %s, or the directory is %d minutes %s.",
+             conn->address,
              abs(delta)/60, delta>0 ? "ahead" : "behind",
              abs(delta)/60, delta>0 ? "behind" : "ahead");
     } else {
@@ -571,7 +572,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     char *new_body;
     size_t new_len;
     if (tor_gzip_uncompress(&new_body, &new_len, body, body_len, compression)) {
-      log_fn(LOG_WARN, "Unable to decompress HTTP body.");
+      log_fn(LOG_WARN, "Unable to decompress HTTP body (server '%s').", conn->address);
       tor_free(body); tor_free(headers);
       return -1;
     }
@@ -582,15 +583,16 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (conn->purpose == DIR_PURPOSE_FETCH_DIR) {
     /* fetch/process the directory to learn about new routers. */
-    log_fn(LOG_INFO,"Received directory (size %d)", (int)body_len);
+    log_fn(LOG_INFO,"Received directory (size %d) from server '%s'",
+           (int)body_len, conn->address);
     if (status_code == 503 || body_len == 0) {
       log_fn(LOG_INFO,"Empty directory. Ignoring.");
       tor_free(body); tor_free(headers);
       return 0;
     }
     if (status_code != 200) {
-      log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
-             status_code);
+      log_fn(LOG_WARN,"Received http status code %d from server '%s'. Failing.",
+             status_code, conn->address);
       tor_free(body); tor_free(headers);
       return -1;
     }
@@ -608,13 +610,13 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* just update our list of running routers, if this list is new info */
     log_fn(LOG_INFO,"Received running-routers list (size %d)", (int)body_len);
     if (status_code != 200) {
-      log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
-             status_code);
+      log_fn(LOG_WARN,"Received http status code %d from server '%s'. Failing.",
+             status_code, conn->address);
       tor_free(body); tor_free(headers);
       return -1;
     }
     if (!(rrs = router_parse_runningrouters(body))) {
-      log_fn(LOG_WARN, "Can't parse runningrouters list");
+      log_fn(LOG_WARN, "Can't parse runningrouters list (server '%s')", conn->address);
       tor_free(body); tor_free(headers);
       return -1;
     }
@@ -630,13 +632,13 @@ connection_dir_client_reached_eof(connection_t *conn)
         log_fn(LOG_INFO,"eof (status 200) after uploading server descriptor: finished.");
         break;
       case 400:
-        log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver. Malformed server descriptor?");
+        log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver '%s'. Malformed server descriptor?", conn->address);
         break;
       case 403:
-        log_fn(LOG_WARN,"http status 403 (unapproved server) response from dirserver. Is your clock skewed? Have you mailed us your identity fingerprint? Are you using the right key? See README.");
+        log_fn(LOG_WARN,"http status 403 (unapproved server) response from dirserver '%s'. Is your clock skewed? Have you mailed us your identity fingerprint? Are you using the right key? See README.", conn->address);
         break;
       default:
-        log_fn(LOG_WARN,"http status %d response unrecognized.", status_code);
+        log_fn(LOG_WARN,"http status %d response unrecognized (server '%s').", status_code, conn->address);
         break;
     }
   }
