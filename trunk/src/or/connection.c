@@ -317,17 +317,19 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
   struct sockaddr_in bindaddr; /* where to bind */
   connection_t *conn;
   uint16_t usePort;
+  uint32_t addr;
   int s; /* the socket we're going to make */
   int one=1;
 
   memset(&bindaddr,0,sizeof(struct sockaddr_in));
-  if (parse_addr_port(bindaddress, NULL, &(bindaddr.sin_addr.s_addr),
-                      &usePort)<0) {
+  if (parse_addr_port(bindaddress, NULL, &addr, &usePort)<0) {
     log_fn(LOG_WARN, "Error parsing/resolving BindAddress %s",bindaddress);
     return -1;
   }
+  
   if (usePort==0)
     usePort = bindport;
+  binaddrr.sin_addr.s_addr = htonl(addr);
   bindaddr.sin_family = AF_INET;
   bindaddr.sin_port = htons((uint16_t) usePort);
 

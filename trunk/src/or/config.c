@@ -847,7 +847,6 @@ getconfig(int argc, char **argv, or_options_t *options)
       log(LOG_WARN,"HttpProxy failed to parse or resolve. Please fix.");
       result = -1;
     }
-    options->HttpProxyAddr = ntohl(options->HttpProxyAddr); /* switch to host-order */
     if (options->HttpProxyPort == 0) { /* give it a default */
       options->HttpProxyPort = 80;
     }
