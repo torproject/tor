@@ -302,7 +302,7 @@ rend_service_get_by_pk_digest(const char* digest)
  * rendezvous points.
  */
 int
-rend_service_introduce(circuit_t *circuit, char *request, int request_len)
+rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
 {
   char *ptr, *rp_nickname, *r_cookie;
   char buf[RELAY_PAYLOAD_SIZE];

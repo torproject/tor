@@ -8,7 +8,7 @@
  * rendevous service.
  */
 int
-rend_mid_establish_intro(circuit_t *circ, char *request, int request_len)
+rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
 {
   crypto_pk_env_t *pk = NULL;
   char buf[20+9];
@@ -97,7 +97,7 @@ rend_mid_establish_intro(circuit_t *circ, char *request, int request_len)
  * INTRODUCE2 cell.
  */
 int
-rend_mid_introduce(circuit_t *circ, char *request, int request_len)
+rend_mid_introduce(circuit_t *circ, const char *request, int request_len)
 {
   circuit_t *intro_circ;
   char hexid[9];
@@ -149,7 +149,7 @@ rend_mid_introduce(circuit_t *circ, char *request, int request_len)
  * rendezvous cookie.
  */
 int
-rend_mid_establish_rendezvous(circuit_t *circ, char *request, int request_len)
+rend_mid_establish_rendezvous(circuit_t *circ, const char *request, int request_len)
 {
   char hexid[9];
 
@@ -185,7 +185,7 @@ rend_mid_establish_rendezvous(circuit_t *circ, char *request, int request_len)
  * relaying the cell's body in a RENDEZVOUS2 cell, and connecting the two circuits.
  */
 int
-rend_mid_rendezvous(circuit_t *circ, char *request, int request_len)
+rend_mid_rendezvous(circuit_t *circ, const char *request, int request_len)
 {
   circuit_t *rend_circ;
   char hexid[9];

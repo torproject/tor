@@ -68,15 +68,17 @@ void set_uint32(char *cp, uint32_t v);
     ((*(((uint8_t*)(cp))+3))    ) )
 #define set_uint16(cp,v)			\
   do {						\
+    uint16_t u16v = (v);			\
     *(((uint8_t*)(cp))+0) = (v >> 8)&0xff;	\
     *(((uint8_t*)(cp))+1) = (v >> 0)&0xff;	\
   } while (0)
-#define set_uint32(cp,v)			\
+#define set_uint32(cp,val)			\
   do {						\
-    *(((uint8_t*)(cp))+0) = (v >> 24)&0xff;	\
-    *(((uint8_t*)(cp))+1) = (v >> 16)&0xff;	\
-    *(((uint8_t*)(cp))+2) = (v >> 8)&0xff;	\
-    *(((uint8_t*)(cp))+3) = (v >> 0)&0xff;	\
+    uint32_t u32v = (v);			\
+    *(((uint8_t*)(cp))+0) = s32 >> 24)&0xff;	\
+    *(((uint8_t*)(cp))+1) = s32 >> 16)&0xff;	\
+    *(((uint8_t*)(cp))+2) = s32 >> 8)&0xff;	\
+    *(((uint8_t*)(cp))+3) = s32 >> 0)&0xff;	\
   } while (0)
 #endif
 #endif
@@ -197,5 +199,12 @@ int correct_socket_errno(int s);
 #define correct_socket_errno(s)   (errno)
 #endif
 
-
 #endif
+
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

@@ -93,7 +93,11 @@ rend_service_descriptor_t *rend_parse_service_descriptor(
     cp = eos+1;
   }
   keylen = crypto_pk_keysize(result->pk);
-  if (end-cp != keylen) goto truncated;
+  if (end-cp < keylen) goto truncated;
+  if (end-cp > keylen) {
+    log_fn(LOG_WARN, "Signature too long on service descriptor");
+    goto error;
+  }
   if (crypto_pk_public_checksig_digest(result->pk,
                                        (char*)str,cp-str, /* data */
                                        (char*)cp,end-cp  /* signature*/
@@ -246,6 +250,36 @@ int rend_cache_store(char *desc, int desc_len)
 
   log_fn(LOG_INFO,"Successfully stored rend desc '%s', len %d", query, desc_len);
   return 0;
+}
+
+/* Dispatch on rendezvous relay command. */
+void rend_process_relay_cell(circuit_t *circ, int command, int length,
+                             const char *payload)
+{
+  int r;
+  switch(command) {
+    case RELAY_COMMAND_ESTABLISH_INTRO:
+      r = rend_mid_establish_intro(circ,payload,length);
+      break;
+    case RELAY_COMMAND_ESTABLISH_RENDEZVOUS:
+      r = rend_mid_establish_rendezvous(circ,payload,length);
+      break;
+    case RELAY_COMMAND_INTRODUCE1:
+      r = rend_mid_introduce(circ,payload,length);
+      break;
+    case RELAY_COMMAND_INTRODUCE2:
+      r = rend_service_introduce(circ,payload,length);
+      break;
+    case RELAY_COMMAND_RENDEZVOUS1:
+      r = rend_mid_rendezvous(circ,payload,length);
+      break;
+    case RELAY_COMMAND_RENDEZVOUS2:
+      /* r = rend_client_rendezvous(circ,payload,length); */
+      log_fn(LOG_NOTICE, "Ignoring a rendezvous2 cell");
+      break;
+    default:
+      assert(0);
+  }
 }
 
 /*
