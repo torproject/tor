@@ -250,11 +250,13 @@ int tor_lookup_hostname(const char *name, uint32_t *addr);
 #define ERRNO_IS_EINPROGRESS(e)      ((e) == WSAEINPROGRESS)
 #define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == WSAEINPROGRESS || (e)== WSAEINVAL)
 int tor_socket_errno(int sock);
+const char *tor_socket_strerror(int e);
 #else
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN)
 #define ERRNO_IS_EINPROGRESS(e)      ((e) == EINPROGRESS)
 #define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == EINPROGRESS)
 #define tor_socket_errno(sock)       (errno)
+#define tor_socket_strerror(e)              strerror(e)
 #endif
 
 #endif

@@ -656,7 +656,8 @@ static int do_main_loop(void) {
       /* let the program survive things like ^z */
       if(tor_socket_errno(-1) != EINTR) {
         log_fn(LOG_ERR,"poll failed: %s [%d]",
-               strerror(tor_socket_errno(-1)), tor_socket_errno(-1));
+               tor_socket_strerror(tor_socket_errno(-1)),
+               tor_socket_errno(-1));
         return -1;
       } else {
         log_fn(LOG_DEBUG,"poll interrupted.");
