@@ -9,7 +9,7 @@
 ## Replace this with "SocksPort 0" if you don't want clients to connect.
 SocksPort 9050 # what port to advertise for application connections
 SocksBindAddress 127.0.0.1 # accept connections only from localhost
-#SocksBindAddress 192.168.0.1:9100 # listen on a chosen IP/port
+#SocksBindAddress 192.168.0.1:9100 # listen on a chosen IP/port too
 
 ## Entry policies to allow/deny SOCKS requests based on IP address.
 ## First entry that matches wins. If no SocksPolicy is set, we accept
