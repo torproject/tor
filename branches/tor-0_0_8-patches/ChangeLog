@@ -1,3 +1,19 @@
+Changes in version 0.0.8.1 - 2004-10-14
+  o Bugfixes:
+    - Fix a rare assert trigger, where routerinfos for entries in
+      our cpath would expire while we're building the path.
+    - Fix a bug in OutboundBindAddress so it (hopefully) works.
+    - Fix a rare seg fault for people running hidden services on
+      intermittent connections.
+    - Fix a bug in parsing opt keywords with objects.
+    - Fix a stale pointer assert bug when a stream detaches and
+      reattaches.
+    - Fix a string format vulnerability (probably not exploitable)
+      in reporting stats locally.
+    - Fix an assert trigger: sometimes launching circuits can fail
+      immediately, e.g. because too many circuits have failed recently.
+
+
 Changes in version 0.0.8 - 2004-08-25
   o Bugfixes:
     - Made our unit tests compile again on OpenBSD 3.5, and tor
