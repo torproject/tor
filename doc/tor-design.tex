@@ -76,7 +76,7 @@ predecessor and successor, but no others. Traffic flowing down the circuit
 is sent in fixed-size \emph{cells}, which are unwrapped by a symmetric key
 at each node, revealing the downstream node. The original onion routing
 project published several design and analysis papers
-\cite{or-jsac98,or-discex00,or-ih96,or-pet02}. While there was briefly
+\cite{or-jsac98,or-discex00,or-ih96,or-pet00}. While there was briefly
 a wide area onion routing network,
 the only long-running and publicly accessible
 implementation was a fragile proof-of-concept that ran on a single
@@ -109,24 +109,23 @@ program without modification.
 onion routing design built one circuit for each request. Aside from the
 performance issues of doing public key operations for every request, it
 also turns out that regular communications patterns mean building lots
-of circuits, which can endanger anonymity \cite{wright03}.
-%[XXX Was this
-%supposed to be Wright02 or Wright03. In any case I am hesitant to cite
-%that work in this context. While the point is valid in general, that
-%work is predicated on assumptions that I don't think typically apply
-%to onion routing (whether old or new design). -PS]
-%[I had meant wright03, but I guess wright02 could work as well.
-% If you don't think these attacks work on onion routing, you need to
-% write up a convincing argument of this. Such an argument would
-% be very worthwhile to include in this paper. -RD]
-Tor multiplexes many
-connections down each circuit, but still rotates the circuit periodically
-to avoid too much linkability.
+of circuits, which can endanger anonymity.
+The very first onion routing design \cite{or-ih96} protected against
+this to some extent by hiding network access behind an onion
+router/firewall that was also forwarding traffic from other nodes.
+However, even if this meant complete protection, many users can
+benefit from onion routing for which neither running one's own node
+nor such firewall configurations are adequately convenient to be
+feasible. Those users, especially if they engage in certain unusual
+communication behaviors, may be identifiable \cite{wright03}. To
+complicate the possibility of such attacks Tor multiplexes many
+connections down each circuit, but still rotates the circuit
+periodically to avoid too much linkability.
 
 \item \textbf{No mixing or traffic shaping:} The original onion routing
 design called for full link padding both between onion routers and between
 onion proxies (that is, users) and onion routers \cite{or-jsac98}. The
-later analysis paper \cite{or-pet02} suggested \emph{traffic shaping}
+later analysis paper \cite{or-pet00} suggested \emph{traffic shaping}
 to provide similar protection but use less bandwidth, but did not go
 into detail. However, recent research \cite{econymics} and deployment
 experience \cite{freedom} indicate that this level of resource
@@ -135,13 +134,16 @@ vulnerable to active attacks \cite{defensive-dropping}.
 % [XXX what is being referenced here, Dogan? -PS]
 %[An upcoming FC04 paper. I'll add a cite when it's out. -RD]
 
-\item \textbf{Leaky pipes:} Through in-band signalling within the circuit,
-Tor initiators can direct traffic to nodes partway down the circuit. This
-allows for long-range padding to frustrate timing attacks at the initiator
-\cite{defensive-dropping}, but because circuits are used by more than
-one application, it also allows traffic to exit the circuit from the
-middle -- thus frustrating timing attacks based on observing exit points.
+\item \textbf{Leaky pipes:} Through in-band signalling within the
+  circuit, Tor initiators can direct traffic to nodes partway down the
+  circuit. This allows for long-range padding to frustrate traffic
+  shape and volume attacks at the initiator \cite{defensive-dropping},
+  but because circuits are used by more than one application, it also
+  allows traffic to exit the circuit from the middle -- thus
+  frustrating traffic shape and volume attacks based on observing exit
+  points.
 %Or something like that. hm. Tone this down maybe? Or support it. -RD
+%How's that? -PS
 
 \item \textbf{Congestion control:} Earlier anonymity designs do not
 address traffic bottlenecks. Unfortunately, typical approaches to load
@@ -219,14 +221,16 @@ limit communication to a constant rate or at least to control the
 variation in traffic shape. This can have prohibitive bandwidth costs
 and/or performance limitations. One can also use a cascade (fixed
 shared route) with a relatively fixed set of users. This assumes a
-degree of agreement and provides an easier target for an active
+significant degree of agreement and provides an easier target for an active
 attacker since the endpoints are generally known. However, a practical
 network with both of these features has been run for many years
-\cite{web-mix}.
+(the Java Anon Proxy, aka Web MIXes, \cite{web-mix}).
 
-they still...  
-[XXX go on to explain how the design choices implied in low-latency result in
-significantly different designs.]
+Another low latency design that was proposed independently and at
+about the same time as onion routing was PipeNet \cite{pipenet}.
+This provided anonymity protections that were stronger than onion routing's,
+but at the cost of allowing a single user to shut down the network simply
+by not sending. It was also never implemented or formally published.
 
 The simplest low-latency designs are single-hop proxies such as the
 Anonymizer \cite{anonymizer}, wherein a single trusted server removes
@@ -244,55 +248,58 @@ single server can learn the user's communication partners.
 
 Systems such as earlier versions of Freedom and onion routing
 build the anonymous channel all at once (using an onion). Later
-designs of each of these build the channel in stages as does AnonNet
+designs of Freedom and onion routing as described herein build
+the channel in stages as does AnonNet
 \cite{anonnet}. Amongst other things, this makes perfect forward
 secrecy feasible.
 
 Some systems, such as Crowds \cite{crowds-tissec}, do not rely on the
 changing appearance of packets to hide the path; rather they employ
 mechanisms so that an intermediary cannot be sure when it is
-receiving/sending to the ultimate initiator. There is no public-key
+receiving from/sending to the ultimate initiator. There is no public-key
 encryption needed for Crowds, but the responder and all data are
 visible to all nodes on the path so that anonymity of connection
 initiator depends on filtering all identifying information from the
 data stream. Crowds is also designed only for HTTP traffic.
 
 Hordes \cite{hordes-jcs} is based on Crowds but also uses multicast
-responses to hide the initiator. Some systems go even further
-requiring broadcast \cite{herbivore,p5} although tradeoffs are made to
-make this more practical. Both Herbivore and P5 are designed primarily
+responses to hide the initiator. Herbivore \cite{herbivore} and
+P5 \cite{p5} go even further requiring broadcast.
+They each use broadcast in very different ways, and tradeoffs are made to
+make broadcast more practical. Both Herbivore and P5 are designed primarily
 for communication between communicating peers, although Herbivore
 permits external connections by requesting a peer to serve as a proxy.
 Allowing easy connections to nonparticipating responders or recipients
 is a practical requirement for many users, e.g., to visit
-nonparticipating Web sites or to send mail to nonparticipating
+nonparticipating Web sites or to exchange mail with nonparticipating
 recipients.
 
 Distributed-trust anonymizing systems differ in how they prevent attackers
 from controlling too many servers and thus compromising too many user paths.
 Some protocols rely on a centrally maintained set of well-known anonymizing
-servers.  Others (such as Tarzan and MorphMix) allow unknown users to run
+servers.  Current Tor design falls into this category.
+Others (such as Tarzan and MorphMix) allow unknown users to run
 servers, while using a limited resource (DHT space for Tarzan; IP space for
 MorphMix) to prevent an attacker from owning too much of the network.
-[XXX what else?  What does (say) crowds do?]
+Crowds uses a centralized ``blender'' to enforce Crowd membership
+policy. For small crowds it is suggested that familiarity with all
+members is adequate. For large diverse crowds, limiting accounts in
+control of any one party is more difficult: 
+``(e.g., the blender administrator sets up an account for a user only
+after receiving a written, notarized request from that user) and each
+account to one jondo, and by monitoring and limiting the number of
+jondos on any one net- work (using IP address), the attacker would be
+forced to launch jondos using many different identities and on many
+different networks to succeed'' \cite{crowds-tissec}.
 
-All of the above systems  Several systems with varying design goals
-and capabilities but all of which require that communicants be
-intentionally participating are mentioned here.
 
-Some involve multicast or more to work
-herbivore
+[XXX I'm considering the subsection as ended here for now. I'm leaving the
+following notes in case we want to revisit any of them. -PS]
 
 There are also many systems which are intended for anonymous
 and/or censorship resistant file sharing. [XXX Should we list all these
 or just say it's out of scope for the paper?
 eternity, gnunet, freenet, freehaven, publius, tangler, taz/rewebber]
-
-
-
-[XXX Should we add a paragraph dividing servers by all-at-once approach to
-  tunnel-building (OR1,Freedom1) versus piecemeal approach
-  (OR2,Anonnet?,Freedom2) ?]
 
 
 
@@ -304,39 +311,105 @@ communication.  Crowds and [XXX] provide anonymity for HTTP requests; [...]
 
 [XXX Mention error recovery?]
 
-Web-MIXes \cite{web-mix} (also known as the Java Anon Proxy or JAP)
-use a cascade architecture with relatively constant groups of users
-sending and receiving at a constant rate.
-
-Some, such as Crowds \cite{crowds-tissec}, do nothing against such
-confirmation but still make it difficult for nodes along a connection to
-perform timing confirmations that would more easily identify when
-the immediate predecessor is the initiator of a connection, which in
-Crowds would reveal both initiator and responder to the attacker.
 
 
-anonymizer
-pipenet
-freedom v1
-freedom v2
-onion routing v1
-isdn-mixes
-crowds
-real-time mixes, web mixes
-anonnet (marc rennhard's stuff)
-morphmix
-P5
-gnunet
-rewebbers
-tarzan
-herbivore
-hordes
-cebolla (?)
+anonymizer%
+pipenet%
+freedom v1%
+freedom v2%
+onion routing v1%
+isdn-mixes%
+crowds%
+real-time mixes, web mixes%
+anonnet (marc rennhard's stuff)%
+morphmix%
+P5%
+gnunet%
+rewebbers%
+tarzan%
+herbivore%
+hordes%
+cebolla (?)%
 
 [XXX Close by mentioning where Tor fits.]
 
 \SubSection{Our threat model}
 \label{subsec:threat-model}
+
+Like all practical low-latency systems, Tor is broken against a global
+passive adversary, the most commonly assumed adversary for analysis of
+theoretical anonymous communication designs. The adversary we assume
+is weaker than global with respect to distribution, but it is not
+merely passive. We assume a threat model derived largely from that of
+\cite{or-pet00}.
+
+[XXX The following is cut in from the OR analysis paper from PET 2000.
+I've already changed it a little, but didn't get very far.
+And, much if not all will eventually
+go. But I thought it a useful starting point. -PS]
+
+The basic adversary components we consider are:
+\begin{description}
+\item[Observer:] can observe a connection (e.g., a sniffer on an
+  Internet router), but cannot initiate connections.
+\item[Disrupter:] can delay (indefinitely) or corrupt traffic on a
+  link.
+\item[Hostile initiator:] can initiate (destroy) connections with
+  specific routes as well as varying the timing and content of traffic
+  on the connections it creates.
+\item[Hostile responder:] can vary the traffic on the connections made
+  to it including refusing them entirely, intentionally modifying what
+  it sends and at what rate, and selectively closing them.
+\item[Compromised Tor-node:] can arbitrarily manipulate the connections
+  under its control, as well as creating new connections (that pass
+  through itself).
+\end{description}
+
+
+All feasible adversaries can be composed out of these basic
+adversaries. This includes combinations such as one or more
+compromised network nodes cooperating with disrupters of links on
+which those nodes are not adjacent, or such as combinations of hostile
+outsiders and observers.  However, we are able to restrict our
+analysis of adversaries to just one class, the compromised Tor-node.
+We now justify this claim.
+
+Especially in light of our assumption that the network forms a clique,
+a hostile outsider can perform a subset of the actions that a
+compromised COR can do. Also, while a compromised COR cannot disrupt
+or observe a link unless it is adjacent to it, any adversary that
+replaces some or all observers and/or disrupters with a compromised
+COR adjacent to the relevant link is more powerful than the adversary
+it replaces. And, in the presence of adequate link padding or bandwidth
+limiting even collaborating observers can gain no useful information about
+connections within the network. They may be able to gain information
+by observing connections to the network (in the remote-COR configuration),
+but again this is less than what the COR to which such connection is made
+can learn. Thus, by considering adversaries consisting of
+collections of compromised CORs we cover the worst case of all
+combinations of basic adversaries. Our analysis focuses on this most
+capable adversary, one or more compromised CORs.
+
+The possible distributions of adversaries are
+\begin{itemize}
+\item{\bf single adversary}
+\item{\bf multiple adversary:} A fixed, randomly distributed subset of
+  Tor-nodes is compromised.
+\item{\bf roving adversary:} A fixed-bound size subset of Tor-nodes is
+  compromised at any one time. At specific intervals, other CORs can
+  become compromised or uncompromised.
+\item{\bf global adversary:} All nodes are compromised.
+\end{itemize}
+
+Onion Routing provides no protection against a global adversary.  If
+all the CORs are compromised, they can know exactly who is talking to
+whom. The content of what was sent will be revealed as it emerges
+from the OR network, unless it has been end-to-end encrypted outside the
+OR network. Even a firewall-to-firewall connection is exposed
+if, as assumed above, our goal is to hide which local-COR is talking to
+which local-COR.
+
+
 
 \SubSection{Known attacks against low-latency anonymity systems}
 \label{subsec:known-attacks}
