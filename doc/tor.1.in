@@ -67,7 +67,7 @@ rather than connecting directly to any directory servers.
 .TP
 \fBKeepalivePeriod \fR\fINUM\fP
 To keep firewalls from expiring connections, send a padding keepalive
-cell on open connections every NUM seconds. (Default: 300)
+cell on open connections every NUM seconds. (Default: 5 minutes.)
 .TP
 \fBMaxConn \fR\fINUM\fP
 Maximum number of simultaneous sockets allowed.  You probably don't need
@@ -119,7 +119,7 @@ information about the current state of known servers.  (Default: 20 minutes.)
 \fBRendPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
 Every time the specified period elapses, Tor uploads any rendezvous
 service descriptors to the directory servers.  This information is also
-uploaded whenever it changes.  (Default: 10 minutes.)
+uploaded whenever it changes.  (Default: 20 minutes.)
 
 .SH CLIENT OPTIONS
 .PP
@@ -282,7 +282,7 @@ considered.
 \fBDirPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
 Every time the specified period elapses, Tor uploads its server
 descriptors to the directory servers.  This information is also
-uploaded whenever it changes.  (Default: 10 minutes.)
+uploaded whenever it changes.  (Default: 20 minutes.)
 .TP
 \fBAccountingMax \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 Never send more than the specified number of bytes in a given
