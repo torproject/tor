@@ -363,6 +363,10 @@ list_running_servers(char **nicknames_out)
       continue; /* only list successfully handshaked OR's. */
     if(!conn->nickname) /* it's an OP, don't list it */
       continue;
+    /* XXX if conn->nickname not approved, continue. otherwise when you
+     * remove them from the approved list and hup, their descriptor is
+     * taken out of the directory, but they're still in the running-routers
+     * line. */
     nickname_lst[n++] = conn->nickname;
   }
   length = n + 1; /* spaces + EOS + 1. */
