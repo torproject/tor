@@ -435,6 +435,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
+    case AP_CONN_STATE_CIRCUIT_WAIT:
       connection_stop_writing(conn);
       return 0;
     default:
