@@ -618,7 +618,7 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   crypto_pseudo_rand(STREAM_ID_SIZE, ap_conn->stream_id);
   /* FIXME check for collisions */
 
-  in.s_addr = client_dns_lookup_entry(ap_conn->socks_request->address);
+  in.s_addr = htonl(client_dns_lookup_entry(ap_conn->socks_request->address));
   string_addr = in.s_addr ? inet_ntoa(in) : NULL;
 
   memcpy(payload, ap_conn->stream_id, STREAM_ID_SIZE);
@@ -831,8 +831,9 @@ static uint32_t client_dns_lookup_entry(const char *address)
   assert(address);
 
   if (inet_aton(address, &in)) {
-    log_fn(LOG_DEBUG, "Using static address %s (%08X)", address, in.s_addr);
-    return in.s_addr;
+    log_fn(LOG_DEBUG, "Using static address %s (%08X)", address, 
+           ntohl(in.s_addr));
+    return ntohl(in.s_addr);
   }
   search.address = (char*)address;
   ent = SPLAY_FIND(client_dns_tree, &client_dns_root, &search);
@@ -848,7 +849,7 @@ static uint32_t client_dns_lookup_entry(const char *address)
       --client_dns_size;
       return 0;
     }
-    in.s_addr = ent->addr;
+    in.s_addr = htonl(ent->addr);
     log_fn(LOG_DEBUG, "Found cached entry for address %s: %s", address,
            inet_ntoa(in));
     return ent->addr;
@@ -865,9 +866,9 @@ static void client_dns_set_entry(const char *address, uint32_t val)
   assert(val);
 
   if (inet_aton(address, &in)) {
-    if (in.s_addr == val)
+    if (ntohl(in.s_addr) == val)
       return;
-    in.s_addr = val;
+    in.s_addr = htonl(val);
     log_fn(LOG_WARN, 
         "Trying to store incompatible cached value %s for static address %s",
         inet_ntoa(in), address);
@@ -881,7 +882,7 @@ static void client_dns_set_entry(const char *address, uint32_t val)
     ent->addr = val;
     ent->expires = now+MAX_DNS_ENTRY_AGE;
   } else {
-    in.s_addr = val;
+    in.s_addr = htonl(val);
     log_fn(LOG_DEBUG, "Caching result for address %s: %s", address,
            inet_ntoa(in));
     ent = tor_malloc(sizeof(struct client_dns_entry));

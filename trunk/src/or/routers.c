@@ -996,7 +996,7 @@ static int router_add_exit_policy(routerinfo_t *router,
   if (strcmp(address, "*") == 0) {
     newe->addr = 0;
   } else if (inet_aton(address, &in) != 0) {
-    newe->addr = in.s_addr;
+    newe->addr = ntohl(in.s_addr);
   } else {
     log_fn(LOG_WARN, "Malformed IP %s in exit policy; rejecting.",
            address);
@@ -1014,7 +1014,7 @@ static int router_add_exit_policy(routerinfo_t *router,
       /* strtol handled the whole mask. */
       newe->msk = ~((1<<(32-bits))-1);
     } else if (inet_aton(mask, &in) != 0) {
-      newe->msk = in.s_addr;
+      newe->msk = ntohl(in.s_addr);
     } else {
       log_fn(LOG_WARN, "Malformed mask %s on exit policy; rejecting.",
              mask);
@@ -1033,9 +1033,9 @@ static int router_add_exit_policy(routerinfo_t *router,
     }
   }
 
-  in.s_addr = newe->addr;
+  in.s_addr = htonl(newe->addr);
   address = tor_strdup(inet_ntoa(in));
-  in.s_addr = newe->msk;
+  in.s_addr = htonl(newe->msk);
   log_fn(LOG_DEBUG,"%s %s/%s:%d",
          newe->policy_type == EXIT_POLICY_REJECT ? "reject" : "accept",
          address, inet_ntoa(in), newe->prt);
@@ -1106,7 +1106,7 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
       }
     }
     if (match) {
-      in.s_addr = addr;
+      in.s_addr = htonl(addr);
       log_fn(LOG_INFO,"Address %s:%d matches exit policy '%s'",
              inet_ntoa(in), port, tmpe->string);
       if(tmpe->policy_type == EXIT_POLICY_ACCEPT)
@@ -1276,7 +1276,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   written = result;
 
   for(tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
-    in.s_addr = tmpe->addr;
+    in.s_addr = htonl(tmpe->addr);
     result = snprintf(s+written, maxlen-written, "%s %s",
         tmpe->policy_type == EXIT_POLICY_ACCEPT ? "accept" : "reject",
         tmpe->msk == 0 ? "*" : inet_ntoa(in));
@@ -1286,7 +1286,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     }
     written += result;
     if (tmpe->msk != 0xFFFFFFFFu) {
-      in.s_addr = tmpe->msk;
+      in.s_addr = htonl(tmpe->msk);
       result = snprintf(s+written, maxlen-written, "/%s", inet_ntoa(in));
       if (result<0 || result+written > maxlen)
         return -1;
