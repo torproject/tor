@@ -379,6 +379,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       conn->socks_request->has_finished = 1;
       conn->has_sent_end = 1;
       connection_mark_for_close(conn);
+      conn->hold_open_until_flushed = 1;
       return 0;
     }
     answer = htonl(client_dns_lookup_entry(socks->address));
@@ -388,6 +389,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       conn->socks_request->has_finished = 1;
       conn->has_sent_end = 1;
       connection_mark_for_close(conn);
+      conn->hold_open_until_flushed = 1;
       return 0;
     }
   }

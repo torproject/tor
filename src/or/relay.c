@@ -581,6 +581,7 @@ connection_edge_process_relay_cell_not_open(
     conn->socks_request->has_finished = 1;
     conn->has_sent_end = 1;
     connection_mark_for_close(conn);
+    conn->hold_open_until_flushed = 1;
     return 0;
   }
 
