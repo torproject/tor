@@ -1,3 +1,8 @@
+Changes in version 0.0.2 - 2004-03-19
+    - Include strlcpy and strlcat for safer string ops
+    - define INADDR_NONE so we compile (but still not run) on solaris
+
+
 Changes in version 0.0.2pre27 - 2004-03-14
   o Bugfixes:
     - Allow internal tor networks (we were rejecting internal IPs,
