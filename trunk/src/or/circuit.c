@@ -1256,7 +1256,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   log_fn(LOG_INFO,"finished");
   if(!has_completed_circuit) {
     has_completed_circuit=1;
-    log_fn(LOG_WARN,"Tor has successfully opened a circuit. Looks like it's working.");
+    log_fn(LOG_NOTICE,"Tor has successfully opened a circuit. Looks like it's working.");
   }
   circuit_log_path(LOG_INFO,circ);
   circuit_rep_hist_note_result(circ);

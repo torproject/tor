@@ -472,7 +472,7 @@ static int init_from_config(int argc, char **argv) {
       add_stream_log(options.loglevel, "<stderr>", stderr);
       log_fn(LOG_WARN, "Cannot write to LogFile '%s': %s.", options.LogFile, strerror(errno));
     }
-    log_fn(LOG_WARN, "Successfully opened LogFile '%s', redirecting output.",
+    log_fn(LOG_NOTICE, "Successfully opened LogFile '%s', redirecting output.",
            options.LogFile);
   }
   if(options.DebugLogFile) {
@@ -499,7 +499,7 @@ static int init_from_config(int argc, char **argv) {
 static int do_hup(void) {
   char keydir[512];
 
-  log_fn(LOG_WARN,"Received sighup. Reloading config.");
+  log_fn(LOG_NOTICE,"Received sighup. Reloading config.");
   has_completed_circuit=0;
   /* first, reload config variables, in case they've changed */
   /* no need to provide argc/v, they've been cached inside init_from_config */
@@ -730,7 +730,7 @@ int tor_main(int argc, char *argv[]) {
 
   /* give it somewhere to log to initially */
   add_stream_log(LOG_INFO, "<stdout>", stdout);
-  log_fn(LOG_WARN,"Tor v%s. This is experimental software. Do not use it if you need anonymity.",VERSION);
+  log_fn(LOG_NOTICE,"Tor v%s. This is experimental software. Do not use it if you need anonymity.",VERSION);
 
   if (network_init()<0) {
     log_fn(LOG_ERR,"Error initializing network; exiting.");
