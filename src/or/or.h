@@ -740,10 +740,12 @@ int prepare_for_poll(int *timeout);
 int do_main_loop(void);
 
 void dumpstats(void);
-void dump_directory_to_string(char *s, int maxlen);
-void dump_directory_to_string_impl(char *s, int maxlen, directory_t *directory);
-int dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir, crypto_pk_env_t *private_key);
-                                         
+int dump_signed_directory_to_string(char *s, int maxlen, 
+                                    crypto_pk_env_t *private_key);
+/* Exported for debugging */
+int dump_signed_directory_to_string_impl(char *s, int maxlen, 
+                                         directory_t *dir, 
+                                         crypto_pk_env_t *private_key); 
 
 int main(int argc, char *argv[]);
 
@@ -796,9 +798,13 @@ int router_is_me(uint32_t addr, uint16_t port);
 void router_forget_router(uint32_t addr, uint16_t port);
 int router_get_list_from_file(char *routerfile);
 int router_resolve(routerinfo_t *router);
+/* Reads a list of known routers, unsigned. */
 int router_get_list_from_string(char *s);
+/* Exported for debugging */
 int router_get_list_from_string_impl(char *s, directory_t **dest);
+/* Reads a signed directory. */
 int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey);
+/* Exported or debugging */
 int router_get_dir_from_string_impl(char *s, directory_t **dest,
                                     crypto_pk_env_t *pkey);
 routerinfo_t *router_get_entry_from_string(char **s);

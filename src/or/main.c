@@ -645,9 +645,8 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
 
 }
 
-void dump_directory_to_string(char *s, int maxlen) 
-{
-  directory_t dir;
+static int 
+build_directory(directory_t *dir) {
   routerinfo_t **routers = NULL;
   connection_t *conn;
   routerinfo_t *router;
@@ -656,7 +655,7 @@ void dump_directory_to_string(char *s, int maxlen)
   routers = (routerinfo_t**) malloc(sizeof(routerinfo_t*) * (nfds+1));
   if (!routers) {
     /* freak out XXX */
-    return;
+    return -1;
   }
   if (my_routerinfo) {
     routers[n++] = my_routerinfo;
@@ -675,10 +674,19 @@ void dump_directory_to_string(char *s, int maxlen)
     }
     routers[n++] = router;
   }
-  dir.routers = routers;
-  dir.n_routers = n;
+  dir->routers = routers;
+  dir->n_routers = n;
+  return 0;
+}
 
-  dump_directory_to_string_impl(s, maxlen, &dir);
+int
+dump_signed_directory_to_string(char *s, int maxlen,
+                                crypto_pk_env_t *private_key)
+{
+  directory_t dir;
+  if (!build_directory(&dir))
+    return -1;
+  return dump_signed_directory_to_string_impl(s, maxlen, &dir, private_key);  
 }
 
 int
@@ -688,18 +696,31 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   char *cp;
   char digest[20];
   char signature[128];
-  int i;
+  int i, written;
+  routerinfo_t *router;
   strncpy(s, 
           "signed-directory\n"
           "client-software x y z\n" /* XXX make this real */
           "server-software a b c\n\n" /* XXX make this real */
           , maxlen);
+  for (i = 0; i < dir->n_routers; ++i) {
+    router = dir->routers[i];
+    written = dump_router_to_string(s, maxlen, router);
+
+    if(written < 0) { 
+      log(LOG_ERR,"dump_directory_to_string(): tried to exceed string length.");
+      s[maxlen-1] = 0; /* make sure it's null terminated */
+      return -1;
+    }
+    
+    maxlen -= written;
+    s += written;
+  }
+
+
   /* These multiple strlen calls are inefficient, but dwarfed by the RSA
      signature.
   */
-  i = strlen(s); 
-
-  dump_directory_to_string_impl(s+i, maxlen-i, dir);
   i = strlen(s);
   strncat(s, "directory-signature\n", maxlen-i);
   i = strlen(s);
@@ -723,26 +744,6 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   strcat(cp, "-----END SIGNATURE-----\n");
 
   return 0;
-}
-
-void dump_directory_to_string_impl(char *s, int maxlen, directory_t *directory) {
-  int i;
-  routerinfo_t *router;
-  int written;
-
-  for (i = 0; i < directory->n_routers; ++i) {
-    router = directory->routers[i];
-    written = dump_router_to_string(s, maxlen, router);
-
-    if(written < 0) { 
-      log(LOG_ERR,"dump_directory_to_string(): tried to exceed string length.");
-      s[maxlen-1] = 0; /* make sure it's null terminated */
-      return;
-    }
-
-    maxlen -= written;
-    s += written;
-  }
 }
 
 void daemonize(void) {
