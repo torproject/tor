@@ -49,6 +49,10 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn, int *tim
   if (time_passed > 10000) { /* more than 10ms */
     log_fn(LOG_DEBUG,"That call just took %ld ms.",time_passed/1000);
   }
+  if (time_passed < 0) {
+    log_fn(LOG_INFO,"That call took us back in time!");
+    time_passed = 0;
+  }
   *time += time_passed;
 }
 

@@ -475,7 +475,6 @@ int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
  * ===== */
 
 /** Return the number of microseconds elapsed between *start and *end.
- * If start is after end, return 0.
  */
 long
 tv_udiff(struct timeval *start, struct timeval *end)
@@ -483,17 +482,12 @@ tv_udiff(struct timeval *start, struct timeval *end)
   long udiff;
   long secdiff = end->tv_sec - start->tv_sec;
 
-  if (secdiff+1 > LONG_MAX/1000000) {
+  if (labs(secdiff+1) > LONG_MAX/1000000) {
     log_fn(LOG_WARN, "comparing times too far apart.");
     return LONG_MAX;
   }
 
   udiff = secdiff*1000000L + (end->tv_usec - start->tv_usec);
-  if(udiff < 0) {
-    log_fn(LOG_INFO, "start (%ld.%ld) is after end (%ld.%ld). Returning 0.",
-           (long)start->tv_sec, (long)start->tv_usec, (long)end->tv_sec, (long)end->tv_usec);
-    return 0;
-  }
   return udiff;
 }
 
