@@ -388,6 +388,7 @@ void dns_cancel_pending_resolve(char *address) {
   struct cached_resolve search;
   struct cached_resolve *resolve;
   connection_t *pendconn;
+  circuit_t *circ;
 
   strlcpy(search.address, address, sizeof(search.address));
 
@@ -415,7 +416,9 @@ void dns_cancel_pending_resolve(char *address) {
     if (!pendconn->marked_for_close) {
       connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
     }
-    circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
+    circ = circuit_get_by_conn(pendconn);
+    if (circ)
+      circuit_detach_stream(circ, pendconn);
     connection_free(pendconn);
     resolve->pending_connections = pend->next;
     tor_free(pend);
