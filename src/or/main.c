@@ -240,7 +240,16 @@ static void conn_read(int i) {
   if (conn->marked_for_close)
     return;
 
-  /* post 0.0.9, 
+  /* post 0.0.9, sometimes we get into loops like:
+Jan 06 13:54:14.999 [debug] connection_consider_empty_buckets(): global bucket exhausted. Pausing.
+Jan 06 13:54:14.999 [debug] connection_stop_reading() called.
+Jan 06 13:54:14.999 [debug] conn_read(): socket 14 wants to read.
+Jan 06 13:54:14.999 [debug] connection_consider_empty_buckets(): global bucket exhausted. Pausing.
+...
+  We finish the loop after a couple of seconds go by, but nothing seems
+  to happen during the loop except tight looping over poll. Perhaps the
+  tls buffer has pending bytes but we don't allow ourselves to read them?
+  */
 
   /* see http://www.greenend.org.uk/rjk/2001/06/poll.html for
    * discussion of POLLIN vs POLLHUP */
