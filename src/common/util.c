@@ -8,6 +8,13 @@
 #include <sys/utsname.h>
 #endif
 
+#ifndef HAVE_STRLCPY
+#include "strlcpy.c"
+#endif
+#ifndef HAVE_STRLCAT
+#include "strlcat.c"
+#endif
+
 /*
  *    Memory wrappers
  */
@@ -568,12 +575,11 @@ write_str_to_file(const char *fname, const char *str)
   char tempname[1024];
   int fd;
   FILE *file;
-  if (strlen(fname) > 1000) {
-    log(LOG_WARN, "Filename %s is too long.", fname);
+  if ((strlcpy(tempname,fname,1024) >= 1024) ||
+      (strlcat(tempname,".tmp",1024) >= 1024)) {
+    log(LOG_WARN, "Filename %s.tmp too long (>1024 chars)", fname);
     return -1;
   }
-  strcpy(tempname,fname);
-  strcat(tempname,".tmp");
   if ((fd = open(tempname, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0) {
     log(LOG_WARN, "Couldn't open %s for writing: %s", tempname,
         strerror(errno));

@@ -32,6 +32,9 @@
 #define INLINE inline
 #endif
 
+size_t strlcat(char *dst, const char *src, size_t siz);
+size_t strlcpy(char *dst, const char *src, size_t siz);
+
 void *tor_malloc(size_t size);
 void *tor_malloc_zero(size_t size);
 void *tor_realloc(void *ptr, size_t size);
