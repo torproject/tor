@@ -160,7 +160,7 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
 
 extern int has_fetched_directory;
 
-static int new_route_len(double cw, smartlist_t *routers) {
+static int new_route_len(double cw, uint8_t purpose, smartlist_t *routers) {
   int num_acceptable_routers;
   int routelen;
 
@@ -169,7 +169,16 @@ static int new_route_len(double cw, smartlist_t *routers) {
 #ifdef TOR_PERF
   routelen = 2;
 #else
-  routelen = 3;
+  if(purpose == CIRCUIT_PURPOSE_C_GENERAL)
+    routelen = 3;
+  else if(purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND)
+    routelen = 4;
+  else if(purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
+    routelen = 4;
+  else {
+    log_fn(LOG_WARN,"Unhandled purpose %d", purpose);
+    return -1;
+  }
 #endif
 #if 0
   for(routelen = 3; ; routelen++) { /* 3, increment until coinflip says we're done */
@@ -360,7 +369,7 @@ cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
   routerinfo_t *exit;
 
   router_get_routerlist(&rl);
-  r = new_route_len(options.PathlenCoinWeight, rl->routers);
+  r = new_route_len(options.PathlenCoinWeight, purpose, rl->routers);
   if (r < 0)
     return NULL;
   info = tor_malloc_zero(sizeof(cpath_build_state_t));
