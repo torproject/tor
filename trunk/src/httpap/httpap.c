@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.6  2002/08/24 07:56:22  arma
+ * proxies send port in host order as ascii string
+ *
  * Revision 1.5  2002/07/20 02:01:18  arma
  * bugfixes: don't hang waiting for new children to die; accept HTTP/1.1
  *
@@ -207,14 +210,14 @@ int handle_connection(int new_sock, struct hostent *local, struct sockaddr_in re
       write_tout(new_sock, HTTPAP_STATUS_LINE_UNEXPECTED, strlen(HTTPAP_STATUS_LINE_UNEXPECTED), conn_toutp);
       return -1;
     }
-    snprintf(port,6,"%u",htons(HTTPAP_DEFAULT_HTTP_PORT));
+    snprintf(port,6,"%u",HTTPAP_DEFAULT_HTTP_PORT);
   }
   else
   {
     log(LOG_DEBUG,"handle_connection() : Destination address is %s.",addr);
     log(LOG_DEBUG,"handle_connection() : Destination port is %s.",port);
   
-    /* conver the port to an integer */
+    /* convert the port to an integer */
     portn = (uint16_t)strtoul(port,&errtest,0);
     if ((*port == '\0') || (*errtest != '\0')) /* port conversion was unsuccessful */
     {
@@ -233,7 +236,7 @@ int handle_connection(int new_sock, struct hostent *local, struct sockaddr_in re
       return -1;
     }
     
-    snprintf(port,6,"%u",htons(portn));
+    snprintf(port,6,"%u",portn);
   }
   
   /* create a standard structure */
@@ -655,7 +658,7 @@ int main(int argc, char *argv[])
   /* set up the sockaddr_in structure */
   local.sin_family=AF_INET;
   local.sin_addr.s_addr = INADDR_ANY;
-  local.sin_port=p;
+  local.sin_port=p; /* p is already in network order */
 
   setsockopt(request_sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 

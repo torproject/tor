@@ -8,8 +8,11 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/08/24 07:56:22  arma
+ * proxies send port in host order as ascii string
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.2  2002/04/02 14:27:33  badbytes
  * Final finishes.
@@ -144,6 +147,10 @@ int http_get_dest(unsigned char *rl, unsigned char **addr, unsigned char **port)
     return -1;
   
   /* check for a :port in the address */
+
+/* BUG: if there's a : later in the url, eg in google's cache pages,
+ * this gets confused and fails
+ */
   colon = strchr(start,':');
   if (colon)
   {
