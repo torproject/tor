@@ -8,10 +8,6 @@
  * \brief Code to parse and validate router descriptors and directories.
  **/
 
-/* This is required on rh7 to make strptime not complain.
- */
-#define _GNU_SOURCE
-
 #include "or.h"
 
 /****************************************************************************/
@@ -162,38 +158,6 @@ int router_get_runningrouters_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
                               "network-status","\ndirectory-signature");
-}
-
-/** Parse a date of the format "YYYY-MM-DD hh:mm:ss" and store the result into
- * *<b>t</b>.
- */
-/* XXX this should go in util.c, yes? -RD */
-static int parse_time(const char *cp, time_t *t)
-{
-  struct tm st_tm;
-#ifdef HAVE_STRPTIME
-  if (!strptime(cp, "%Y-%m-%d %H:%M:%S", &st_tm)) {
-    log_fn(LOG_WARN, "Published time was unparseable"); return -1;
-  }
-#else
-  unsigned int year=0, month=0, day=0, hour=100, minute=100, second=100;
-  if (sscanf(cp, "%u-%u-%u %u:%u:%u", &year, &month,
-                &day, &hour, &minute, &second) < 6) {
-        log_fn(LOG_WARN, "Published time was unparseable"); return -1;
-  }
-  if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
-          hour > 23 || minute > 59 || second > 61) {
-        log_fn(LOG_WARN, "Published time was nonsensical"); return -1;
-  }
-  st_tm.tm_year = year;
-  st_tm.tm_mon = month-1;
-  st_tm.tm_mday = day;
-  st_tm.tm_hour = hour;
-  st_tm.tm_min = minute;
-  st_tm.tm_sec = second;
-#endif
-  *t = tor_timegm(&st_tm);
-  return 0;
 }
 
 /**
@@ -405,7 +369,7 @@ router_parse_routerlist_from_directory(const char *str,
   }
   tor_assert(tok->n_args == 1);
 
-  if (parse_time(tok->args[0], &published_on) < 0) {
+  if (parse_iso_time(tok->args[0], &published_on) < 0) {
      goto err;
   }
 
@@ -517,7 +481,7 @@ router_parse_runningrouters(const char *str)
     goto err;
   }
   tor_assert(tok->n_args == 1);
-  if (parse_time(tok->args[0], &published_on) < 0) {
+  if (parse_iso_time(tok->args[0], &published_on) < 0) {
      goto err;
   }
 
@@ -783,7 +747,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     log_fn(LOG_WARN, "Missing published time"); goto err;
   }
   tor_assert(tok->n_args == 1);
-  if (parse_time(tok->args[0], &router->published_on) < 0)
+  if (parse_iso_time(tok->args[0], &router->published_on) < 0)
           goto err;
 
   if (!(tok = find_first_by_keyword(tokens, K_ONION_KEY))) {

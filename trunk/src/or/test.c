@@ -482,13 +482,13 @@ test_util() {
   a_time.tm_mday = 10;
   test_eq((time_t) 1076393695UL, tor_timegm(&a_time));
 
-  tor_format_rfc1123_time(timestr, 0);
+  format_rfc1123_time(timestr, 0);
   test_streq("Thu, 01 Jan 1970 00:00:00 GMT", timestr);
-  tor_format_rfc1123_time(timestr, (time_t)1091580502UL);
+  format_rfc1123_time(timestr, (time_t)1091580502UL);
   test_streq("Wed, 04 Aug 2004 00:48:22 GMT", timestr);
 
   t_res = 0;
-  i = tor_parse_rfc1123_time(timestr, &t_res);
+  i = parse_rfc1123_time(timestr, &t_res);
   test_eq(i,0);
   test_eq(t_res, (time_t)1091580502UL);
 
@@ -923,8 +923,9 @@ main(int c, char**v){
 #endif
 
   crypto_seed_rng();
-
   setup_directory();
+  rep_hist_init();
+
 //  puts("========================== Buffers =========================");
 //  test_buffers();
   puts("\n========================== Crypto ==========================");

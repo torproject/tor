@@ -9,6 +9,10 @@
  * process control, and cross-platform portability.
  **/
 
+/* This is required on rh7 to make strptime not complain.
+ */
+#define _GNU_SOURCE
+
 #include "orconfig.h"
 
 #ifdef MS_WINDOWS
@@ -905,7 +909,7 @@ static const char *MONTH_NAMES[] =
   { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
-void tor_format_rfc1123_time(char *buf, time_t t) {
+void format_rfc1123_time(char *buf, time_t t) {
   struct tm *tm = gmtime(&t);
 
   strftime(buf, RFC1123_TIME_LEN+1, "XXX, %d XXX %Y %H:%M:%S GMT", tm);
@@ -915,7 +919,7 @@ void tor_format_rfc1123_time(char *buf, time_t t) {
   memcpy(buf+8, MONTH_NAMES[tm->tm_mon], 3);
 }
 
-int tor_parse_rfc1123_time(const char *buf, time_t *t) {
+int parse_rfc1123_time(const char *buf, time_t *t) {
   struct tm tm;
   char month[4];
   char weekday[4];
@@ -948,6 +952,38 @@ int tor_parse_rfc1123_time(const char *buf, time_t *t) {
   *t = tor_timegm(&tm);
   return 0;
 }
+
+void format_iso_time(char *buf, time_t t) {
+  strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", gmtime(&t));
+}
+
+int parse_iso_time(const char *cp, time_t *t) {
+  struct tm st_tm;
+#ifdef HAVE_STRPTIME
+  if (!strptime(cp, "%Y-%m-%d %H:%M:%S", &st_tm)) {
+    log_fn(LOG_WARN, "Published time was unparseable"); return -1;
+  }
+#else
+  unsigned int year=0, month=0, day=0, hour=100, minute=100, second=100;
+  if (sscanf(cp, "%u-%u-%u %u:%u:%u", &year, &month,
+                &day, &hour, &minute, &second) < 6) {
+        log_fn(LOG_WARN, "Published time was unparseable"); return -1;
+  }
+  if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
+          hour > 23 || minute > 59 || second > 61) {
+        log_fn(LOG_WARN, "Published time was nonsensical"); return -1;
+  }
+  st_tm.tm_year = year;
+  st_tm.tm_mon = month-1;
+  st_tm.tm_mday = day;
+  st_tm.tm_hour = hour;
+  st_tm.tm_min = minute;
+  st_tm.tm_sec = second;
+#endif
+  *t = tor_timegm(&st_tm);
+  return 0;
+}
+
 
 /*
  *   Low-level I/O.

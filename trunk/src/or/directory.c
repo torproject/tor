@@ -538,7 +538,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
       return 0;
     }
 
-    tor_format_rfc1123_time(date, time(NULL));
+    format_rfc1123_time(date, time(NULL));
     snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
              date,
              (int)dlen);
@@ -563,7 +563,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     }
     switch(rend_cache_lookup_desc(url+strlen(rend_fetch_url), &descp, &desc_len)) {
       case 1: /* valid */
-        tor_format_rfc1123_time(date, time(NULL));
+        format_rfc1123_time(date, time(NULL));
         snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
                  date,
                  desc_len); /* can't include descp here, because it's got nuls */

@@ -418,7 +418,7 @@ static void run_connection_housekeeping(int i, time_t now) {
 static int decide_if_publishable_server(time_t now) {
   int bw;
 
-  bw = rep_hist_bandwidth_assess(now);
+  bw = rep_hist_bandwidth_assess();
   router_set_advertised_bandwidth(bw);
 
   if(options.ClientOnly)
