@@ -73,7 +73,7 @@ AllowUnverifiedNodes middle,rendezvous
 ## key fingerprint to the tor-ops, so we can add you to the list of
 ## servers that clients will trust. See the README for details.
 
-## A unique handle for this server
+## Required: A unique handle for this server
 #Nickname ididnteditheconfig
 
 ## The IP or fqdn for this server. Leave blank and Tor will guess.
@@ -81,7 +81,8 @@ AllowUnverifiedNodes middle,rendezvous
 
 #ContactInfo 1234D/FFFFFFFF Random Person <nobody@example.com>
 
-#ORPort 9001 # what port to advertise for tor connections
+## Required: what port to advertise for tor connections
+#ORPort 9001
 ## If you want to listen on a port other than the one advertised
 ## in ORPort, uncomment the line below. You'll need to do ipchains
 ## or other port forwarding yourself to make this work.
