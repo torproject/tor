@@ -541,6 +541,31 @@ circuit_expire_old_circuits(void)
   }
 }
 
+/** A testing circuit has completed. Take whatever stats we want. */
+static void
+circuit_testing_opened(circuit_t *circ) {
+
+  /* For now, we only use testing circuits to see if our ORPort is
+     reachable. So, if this circuit ends at us, remember that. */
+  routerinfo_t *exit = router_get_by_digest(circ->build_state->chosen_exit_digest);
+  if(exit && router_is_me(exit)) {
+    log_fn(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent.");
+    router_orport_found_reachable();
+  }
+  circuit_mark_for_close(circ);
+}
+
+/** A testing circuit has failed to build. Take whatever stats we want. */
+static void
+circuit_testing_failed(circuit_t *circ, int at_last_hop) {
+  routerinfo_t *me = router_get_my_routerinfo();
+
+  if (!at_last_hop)
+    circuit_launch_by_identity(CIRCUIT_PURPOSE_TESTING, me->identity_digest, 0, 0, 1);
+  else
+    log_fn(LOG_NOTICE,"The testing circuit has failed. Guess you're not reachable yet.");
+}
+
 /** The circuit <b>circ</b> has just become open. Take the next
  * step: for rendezvous circuits, we pass circ to the appropriate
  * function in rendclient or rendservice. For general circuits, we
@@ -572,6 +597,9 @@ void circuit_has_opened(circuit_t *circ) {
       /* at Bob, connecting to rend point */
       rend_service_rendezvous_has_opened(circ);
       break;
+    case CIRCUIT_PURPOSE_TESTING:
+      circuit_testing_opened(circ);
+      break;
     default:
       log_fn(LOG_ERR,"unhandled purpose %d",circ->purpose);
       tor_assert(0);
@@ -602,6 +630,9 @@ void circuit_build_failed(circuit_t *circ) {
          * circuit-building failed immediately, it won't be set yet. */
         circuit_increment_failure_count();
       }
+      break;
+    case CIRCUIT_PURPOSE_TESTING:
+      circuit_testing_failed(circ, failed_at_last_hop);
       break;
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
       /* at Bob, waiting for introductions */
@@ -666,7 +697,8 @@ circuit_launch_by_identity(uint8_t purpose, const char *exit_digest,
     return NULL;
   }
 
-  if (purpose != CIRCUIT_PURPOSE_C_GENERAL) {
+  if (purpose != CIRCUIT_PURPOSE_C_GENERAL &&
+      purpose != CIRCUIT_PURPOSE_TESTING) {
     /* see if there are appropriate circs available to cannibalize. */
     if ((circ = circuit_get_clean_open(CIRCUIT_PURPOSE_C_GENERAL, need_uptime,
                                        need_capacity, internal))) {

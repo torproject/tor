@@ -933,6 +933,7 @@ resolve_my_address(const char *address, uint32_t *addr)
   char hostname[256];
   int explicit_ip=1;
   char tmpbuf[INET_NTOA_BUF_LEN];
+  static uint32_t old_addr=0;
 
   tor_assert(addr);
 
@@ -972,6 +973,11 @@ resolve_my_address(const char *address, uint32_t *addr)
 
   log_fn(LOG_DEBUG, "Resolved Address to %s.", tmpbuf);
   *addr = ntohl(in.s_addr);
+  if (old_addr && old_addr != *addr) {
+    log_fn(LOG_NOTICE,"Your IP seems to have changed. Updating.");
+    server_has_changed_ip();
+  }
+  old_addr = *addr;
   return 0;
 }
 

@@ -753,6 +753,8 @@ static int new_route_len(double cw, uint8_t purpose, smartlist_t *routers) {
 #else
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL)
     routelen = 3;
+  else if (purpose == CIRCUIT_PURPOSE_TESTING)
+    routelen = 3;
   else if (purpose == CIRCUIT_PURPOSE_C_INTRODUCING)
     routelen = 4;
   else if (purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND)
