@@ -1060,6 +1060,9 @@ int connection_handle_write(connection_t *conn) {
       /* some sort of error, but maybe just inprogress still */
       if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
         log_fn(LOG_INFO,"in-progress connect failed. Removing.");
+        if (CONN_IS_EDGE(conn))
+          connection_edge_end_errno(conn, conn->cpath_layer);
+
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
         /* it's safe to pass OPs to router_mark_as_down(), since it just
