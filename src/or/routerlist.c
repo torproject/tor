@@ -2,11 +2,6 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-#define OR_PUBLICKEY_BEGIN_TAG "-----BEGIN RSA PUBLIC KEY-----\n"
-#define OR_PUBLICKEY_END_TAG "-----END RSA PUBLIC KEY-----\n"
-#define OR_SIGNATURE_BEGIN_TAG "-----BEGIN SIGNATURE-----\n"
-#define OR_SIGNATURE_END_TAG "-----END SIGNATURE-----\n"
-
 #define _GNU_SOURCE
 /* XXX this is required on rh7 to make strptime not complain. how bad
  * is this for portability?
@@ -40,29 +35,74 @@ typedef enum {
   K_PUBLISHED,
   K_RUNNING_ROUTERS,
   K_PLATFORM,
-  _SIGNATURE,
-  _PUBLIC_KEY,
+  K_OPT,
+  K_BANDWIDTH,
+  K_PORTS,
+  _UNRECOGNIZED,
   _ERR,
   _EOF,
   _NIL
 } directory_keyword;
 
-/* Struct containing a directory token. */
-#define MAX_ARGS 1024
 typedef struct directory_token_t {
   directory_keyword tp;        /* Type of the token. */
-  union {
-    struct {
-      char *args[MAX_ARGS+1];  /* For K_xxx tokens only: an array and count */
-      int n_args;              /*    of arguments provided on the same line */
-    } cmd;
-    char *signature;           /* For _SIGNATURE tokens only. */
-    char *error;               /* For _ERR tokens only. */
-    crypto_pk_env_t *public_key;  /* For _PUBLIC_KEY tokens only. */
-  } val;
+  int n_args;
+  char **args;
+  char *object_type;
+  int object_size;
+  char *object_body;
+  crypto_pk_env_t *key;      /* For public keys only. */
+  char *error;               /* For _ERR tokens only. */
 } directory_token_t;
 
-/****************************************************************************/
+/* ********************************************************************** */
+
+/* Every keyword takes either... */
+typedef enum {
+  NO_ARGS,     /*    (1) no arguments, ever */
+  ARGS,        /*    (2) a list of arguments separated by spaces */
+  CONCAT_ARGS, /* or (3) the rest of the line, treated as a single argument. */
+} arg_syntax;
+
+typedef enum {
+  NO_OBJ,
+  NEED_OBJ,
+  NEED_KEY,
+  OBJ_OK,
+} obj_syntax;
+
+typedef enum {
+  ANY = 0,
+  DIR_ONLY,
+  RTR_ONLY,
+} where_syntax;
+
+/* Table mapping keywods to token value and to argument rules. */
+
+static struct {
+  char *t; int v; arg_syntax s; obj_syntax os; where_syntax ws;
+} token_table[] = {
+  { "accept", K_ACCEPT, ARGS, NO_OBJ, RTR_ONLY },
+  { "directory-signature", K_DIRECTORY_SIGNATURE, NO_ARGS, NEED_OBJ, DIR_ONLY},
+  { "reject", K_REJECT, ARGS, NO_OBJ, RTR_ONLY },
+  { "router", K_ROUTER, ARGS, NO_OBJ, RTR_ONLY },
+  { "recommended-software", K_RECOMMENDED_SOFTWARE, ARGS, NO_OBJ, DIR_ONLY },
+  { "signed-directory", K_SIGNED_DIRECTORY, NO_ARGS, NO_OBJ, DIR_ONLY },
+  { "signing-key", K_SIGNING_KEY, NO_ARGS, NEED_KEY, RTR_ONLY },
+  { "onion-key", K_ONION_KEY, NO_ARGS, NEED_KEY, RTR_ONLY },
+  { "link-key", K_LINK_KEY, NO_ARGS, NEED_KEY, RTR_ONLY },
+  { "router-signature", K_ROUTER_SIGNATURE, NO_ARGS, NEED_OBJ, RTR_ONLY },
+  { "published", K_PUBLISHED, CONCAT_ARGS, NO_OBJ, ANY },
+  { "running-routers", K_RUNNING_ROUTERS, ARGS, NO_OBJ, DIR_ONLY },
+  { "platform", K_PLATFORM, CONCAT_ARGS, NO_OBJ, RTR_ONLY },
+  { "ports", K_PORTS, ARGS, NO_OBJ, RTR_ONLY },
+  { "bandwidth", K_BANDWIDTH, ARGS, NO_OBJ, RTR_ONLY },
+  { "opt", K_OPT, CONCAT_ARGS, OBJ_OK, ANY },
+  
+  { NULL, -1 }
+};
+
+/* ********************************************************************** */
 
 /* static function prototypes */
 static routerinfo_t *
@@ -79,19 +119,17 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok);
 static int
 router_resolve_routerlist(routerlist_t *dir);
 
-static int
-_router_get_next_token(const char **s, directory_token_t *tok);
-#ifdef DEBUG_ROUTER_TOKENS
-static int
-router_get_next_token(const char **s, directory_token_t *tok);
-#else
-#define router_get_next_token _router_get_next_token
-#endif
-static int
-router_get_hash_impl(const char *s, char *digest,
-                     const char *start_str, const char *end_str);
-static void
-router_release_token(directory_token_t *tok);
+
+
+static int router_get_hash_impl(const char *s, char *digest,
+                                const char *start_str, const char *end_str);
+static void token_free(directory_token_t *tok);
+static smartlist_t *find_all_exitpolicy(smartlist_t *s);
+static directory_token_t *find_first_by_keyword(smartlist_t *s, 
+                                                directory_keyword keyword);
+static int tokenize_string(const char *start, const char *end,
+                           smartlist_t *out, int is_dir);
+static directory_token_t *get_next_token(const char **s, where_syntax where);
 
 /****************************************************************************/
 
@@ -508,10 +546,11 @@ int router_exit_policy_rejects_all(routerinfo_t *router) {
  * If pkey is provided, we check the directory signature with pkey.
  */
 static int
-router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
+router_get_routerlist_from_directory_impl(const char *str, 
+                                          routerlist_t **dest,
                                           crypto_pk_env_t *pkey)
 {
-  directory_token_t tok;
+  directory_token_t *tok;
   char digest[20];
   char signed_digest[128];
   routerlist_t *new_dir = NULL;
@@ -520,33 +559,11 @@ router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
   time_t published_on;
   char *good_nickname_lst[1024];
   int n_good_nicknames = 0;
-  int i;
+  int i, r;
+  const char *end;
+  smartlist_t *tokens = NULL;
 
-  /* Local helper macro: get the next token from s (advancing s) and
-   * bail on failure. */
-#define NEXT_TOK()                                                      \
-  do {                                                                  \
-    if (router_get_next_token(&s, &tok)) {                              \
-      log_fn(LOG_WARN, "Error reading directory: %s", tok.val.error);   \
-      goto err;                                                         \
-    } } while (0)
-  /* Local helper macro: bail if the most recently read token is not of
-   * the given type. */
-#define TOK_IS(type,name)                                               \
-  do {                                                                  \
-    if (tok.tp != type) {                                               \
-      router_release_token(&tok);                                       \
-      log_fn(LOG_WARN, "Error reading directory: expected %s", name);   \
-      goto err;                                                         \
-    } } while(0)
-  /* Local helper macro: Number of args in most recent token. */
-#define N_ARGS tok.val.cmd.n_args
-  /* Local helper macro: Array of args to most recent token. */
-#define ARGS tok.val.cmd.args
-
-  tok.tp = _NIL;
-
-  if (router_get_dir_hash(s, digest)) {
+  if (router_get_dir_hash(str, digest)) {
     log_fn(LOG_WARN, "Unable to compute digest of directory");
     goto err;
   }
@@ -554,35 +571,66 @@ router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
       ((int)digest[0])&0xff,((int)digest[1])&0xff,
       ((int)digest[2])&0xff,((int)digest[3])&0xff);
 
-  NEXT_TOK();
-  TOK_IS(K_SIGNED_DIRECTORY, "signed-directory");
+  if ((end = strstr(str,"\nrouter "))) {
+    ++end;
+  } else if ((end = strstr(str, "\ndirectory-signature"))) {
+    ++end;
+  } else {
+    end = str + strlen(str);
+  }
+  
+  tokens = smartlist_create(128);
+  if (tokenize_string(str,end,tokens,1)) {
+    log_fn(LOG_WARN, "Error tokenizing directory"); goto err;
+  }
+  if (tokens->num_used < 1) {
+    log_fn(LOG_WARN, "Impossibly short directory header"); goto err;
+  }
+  if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
+    log_fn(LOG_WARN, "Unrecognized keyword in \"%s\"; can't parse directory.",
+           tok->args[0]);
+    goto err;
+  }
+  
+  tok = (directory_token_t*)tokens->list[0];
+  if (tok->tp != K_SIGNED_DIRECTORY) {
+    log_fn(LOG_WARN, "Directory doesn't start with signed-directory."); 
+    goto err;
+  }
 
-  NEXT_TOK();
-  TOK_IS(K_PUBLISHED, "published");
-  assert(N_ARGS == 1);
-  if (!strptime(ARGS[0], "%Y-%m-%d %H:%M:%S", &published)) {
+  if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
+    log_fn(LOG_WARN, "Missing published time on directory.");
+    goto err;
+  }
+  assert(tok->n_args == 1);
+  
+  if (!strptime(tok->args[0], "%Y-%m-%d %H:%M:%S", &published)) {
     log_fn(LOG_WARN, "Published time was unparseable"); goto err;
   }
   published_on = tor_timegm(&published);
 
-  NEXT_TOK();
-  TOK_IS(K_RECOMMENDED_SOFTWARE, "recommended-software");
-  if (N_ARGS != 1) {
-    log_fn(LOG_WARN, "Invalid recommended-software line");
+  if (!(tok = find_first_by_keyword(tokens, K_RECOMMENDED_SOFTWARE))) {
+    log_fn(LOG_WARN, "Missing recommended-software line from directory.");
     goto err;
   }
-  versions = ARGS[0];
-  tok.val.cmd.n_args = 0; /* Don't let the versions string get freed. */
+  if (tok->n_args != 1) {
+    log_fn(LOG_WARN, "Invalid recommended-software line"); goto err;
+  }
+  versions = tor_strdup(tok->args[0]);
+  
+  if (!(tok = find_first_by_keyword(tokens, K_RUNNING_ROUTERS))) {
+    log_fn(LOG_WARN, "Missing running-routers line from directory.");
+    goto err;    
+  }
 
-  NEXT_TOK();
-  TOK_IS(K_RUNNING_ROUTERS, "running-routers");
-  n_good_nicknames = N_ARGS;
-  memcpy(good_nickname_lst, ARGS, n_good_nicknames*sizeof(char *));
-  N_ARGS = 0; /* Don't free the strings in good_nickname_lst yet. */
+  n_good_nicknames = tok->n_args;
+  memcpy(good_nickname_lst, tok->args, n_good_nicknames*sizeof(char *));
+  tok->n_args = 0; /* Don't free the strings in good_nickname_lst yet. */
 
   /* Read the router list from s, advancing s up past the end of the last
    * router. */
-  if (router_get_list_from_string_impl(&s, &new_dir,
+  str = end;
+  if (router_get_list_from_string_impl(&str, &new_dir,
                                        n_good_nicknames,
                                        (const char**)good_nickname_lst)) {
     log_fn(LOG_WARN, "Error reading routers from directory");
@@ -593,13 +641,27 @@ router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
   }
   new_dir->software_versions = versions; versions = NULL;
   new_dir->published_on = published_on;
+  
+  for (i = 0; i < tokens->num_used; ++i) {
+    token_free((directory_token_t*)tokens->list[i]);
+  }
+  smartlist_free(tokens);
+  tokens = smartlist_create(128);
+  if (tokenize_string(str,str+strlen(str),tokens,1)<0) {
+    log_fn(LOG_WARN, "Error tokenizing signature"); goto err;
+  }
 
-  NEXT_TOK();
-  TOK_IS(K_DIRECTORY_SIGNATURE, "directory-signature");
-  NEXT_TOK();
-  TOK_IS(_SIGNATURE, "signature");
+  if (tokens->num_used != 1 || 
+      ((directory_token_t*)tokens->list[0])->tp != K_DIRECTORY_SIGNATURE){
+    log_fn(LOG_WARN,"Expected a single directory signature"); goto err;
+  }
+  tok = (directory_token_t*)tokens->list[0];
+  if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
+    log_fn(LOG_WARN, "Bad object type or length on directory signature"); 
+    goto err;
+  }
   if (pkey) {
-    if (crypto_pk_public_checksig(pkey, tok.val.signature, 128, signed_digest)
+    if (crypto_pk_public_checksig(pkey, tok->object_body, 128, signed_digest)
         != 20) {
       log_fn(LOG_WARN, "Error reading directory: invalid signature.");
       goto err;
@@ -613,28 +675,28 @@ router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
     }
   }
 
-  NEXT_TOK();
-  TOK_IS(_EOF, "end of directory");
-
   if (*dest)
     routerlist_free(*dest);
   *dest = new_dir;
 
-  return 0;
-
+  r = 0;
+  goto done;
  err:
-  router_release_token(&tok);
+  r = -1;
   if (new_dir)
     routerlist_free(new_dir);
   tor_free(versions);
   for (i = 0; i < n_good_nicknames; ++i) {
     tor_free(good_nickname_lst[i]);
   }
-  return -1;
-#undef NEXT_TOK
-#undef TOK_IS
-#undef ARGS
-#undef N_ARGS
+ done:
+  if (tokens) {
+    for (i = 0; i < tokens->num_used; ++i) {
+      token_free((directory_token_t*)tokens->list[i]);
+    }
+    smartlist_free(tokens);
+  }
+  return r;
 }
 
 /* Helper function: Given a string *s containing a concatenated
@@ -653,6 +715,7 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
   routerinfo_t **rarray;
   int rarray_len = 0;
   int i;
+  const char *end;
 
   assert(s && *s);
 
@@ -664,19 +727,21 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
     /* Don't start parsing the rest of *s unless it contains a router. */
     if (strncmp(*s, "router ", 7)!=0)
       break;
-    router = router_get_entry_from_string(s);
-    if (!router) {
-      log_fn(LOG_WARN, "Error reading router");
-      for(i=0;i<rarray_len;i++)
-        routerinfo_free(rarray[i]);
-      free(rarray);
-      return -1;
+    if ((end = strstr(*s+1, "\nrouter "))) {
+      end++;
+    } else if ((end = strstr(*s+1, "\ndirectory-signature"))) {
+      end++;
+    } else {
+      end = *s+strlen(*s);
     }
-    if (rarray_len >= MAX_ROUTERS_IN_DIR) {
-      log_fn(LOG_WARN, "too many routers");
-      routerinfo_free(router);
+
+    router = router_get_entry_from_string(*s, end);
+    *s = end;
+    if (!router) {
+      log_fn(LOG_WARN, "Error reading router; skipping");
       continue;
     }
+
     if (n_good_nicknames>=0) {
       router->is_running = 0;
       for (i = 0; i < n_good_nicknames; ++i) {
@@ -706,36 +771,44 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
  * *s so it points to just after the router it just read.
  * mallocs a new router and returns it if all goes well, else returns
  * NULL.
+ * 
+ * DOCDOC
  */
-routerinfo_t *router_get_entry_from_string(const char**s) {
+routerinfo_t *router_get_entry_from_string(const char *s,
+                                           const char *end) {
   routerinfo_t *router = NULL;
   char signed_digest[128];
   char digest[128];
-  directory_token_t _tok;
-  directory_token_t *tok = &_tok;
+  smartlist_t *tokens = NULL, *exit_policy_tokens = NULL;
+  directory_token_t *tok;
   struct tm published;
-  int t;
+  int t, i;
+  int ports_set, bw_set;
 
-  /* Helper macro: read the next token from *s, advance *s, and bail
-     if there's an error */
-#define NEXT_TOKEN()                                                     \
-  do { if (router_get_next_token(s, tok)) {                              \
-      log_fn(LOG_WARN, "Error reading directory: %s", tok->val.error);\
-      goto err;                                                          \
-    } } while(0)
+  if (!end) {
+    end = s + strlen(s);
+  }
 
-#define ARGS tok->val.cmd.args
-#define N_ARGS tok->val.cmd.n_args
-
-  _tok.tp = _NIL;
-
-  if (router_get_router_hash(*s, digest) < 0) {
+  if (router_get_router_hash(s, digest) < 0) {
     log_fn(LOG_WARN, "Couldn't compute router hash.");
     return NULL;
   }
+  tokens = smartlist_create(128);
+  if (tokenize_string(s,end,tokens,0)) {
+    log_fn(LOG_WARN, "Error tokeninzing router descriptor."); goto err;
+  }
 
-  NEXT_TOKEN();  /* XXX This leaks some arguments. */
+  if (tokens->num_used < 2) {
+    log_fn(LOG_WARN, "Impossibly short router descriptor.");
+    goto err;
+  }
+  if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
+    log_fn(LOG_WARN, "Unrecognized keyword in \"%s\"; skipping descriptor.",
+           tok->args[0]);
+    goto err;
+  }
 
+  tok = (directory_token_t*)tokens->list[0];
   if (tok->tp != K_ROUTER) {
     log_fn(LOG_WARN,"Entry does not start with \"router\"");
     goto err;
@@ -743,42 +816,126 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
   router->onion_pkey = router->identity_pkey = router->link_pkey = NULL;
+  ports_set = bw_set = 0;
 
-/* XXXBC move to <7 once we require bandwidthburst */
-  if (N_ARGS < 6) {
+  if (tok->n_args == 2 || tok->n_args == 6) {
+    router->nickname = tor_strdup(tok->args[0]);
+    if (strlen(router->nickname) > MAX_NICKNAME_LEN) {
+      log_fn(LOG_WARN,"Router nickname too long.");
+      goto err;
+    }
+    if (strspn(router->nickname, LEGAL_NICKNAME_CHARACTERS) !=
+        strlen(router->nickname)) {
+      log_fn(LOG_WARN, "Router nickname contains illegal characters.");
+      goto err;
+    }
+    router->address = tor_strdup(tok->args[1]);
+    router->addr = 0;
+    
+    if (tok->n_args == 6) {
+      router->or_port = atoi(tok->args[2]);
+      router->socks_port = atoi(tok->args[3]);
+      router->dir_port = atoi(tok->args[4]);
+      router->bandwidthrate = atoi(tok->args[5]);
+      ports_set = bw_set = 1;
+    }
+  } else {
     log_fn(LOG_WARN,"Wrong # of arguments to \"router\"");
     goto err;
-  }
-  router->nickname = tor_strdup(ARGS[0]);
-  if (strlen(router->nickname) > MAX_NICKNAME_LEN) {
-    log_fn(LOG_WARN,"Router nickname too long.");
+  }  
+    
+  tok = find_first_by_keyword(tokens, K_PORTS);
+  if (tok && ports_set) {
+    log_fn(LOG_WARN,"Rendundant ports line");
     goto err;
+  } else if (tok) {
+    if (tok->n_args != 3) {
+      log_fn(LOG_WARN,"Wrong # of arguments to \"ports\"");
+      goto err;
+    }
+    router->or_port = atoi(tok->args[0]);
+    router->socks_port = atoi(tok->args[1]);
+    router->dir_port = atoi(tok->args[2]);
+    ports_set = 1;
   }
-  if (strspn(router->nickname, LEGAL_NICKNAME_CHARACTERS) !=
-      strlen(router->nickname)) {
-    log_fn(LOG_WARN, "Router nickname contains illegal characters.");
+  
+  tok = find_first_by_keyword(tokens, K_BANDWIDTH);
+  if (tok && bw_set) {
+    log_fn(LOG_WARN,"Rendundant bandwidth line");
     goto err;
+  } else if (tok) {
+    if (tok->n_args < 1) {
+      log_fn(LOG_WARN,"Not enough arguments to \"bandwidth\"");
+      goto err;
+    }
+    router->bandwidthrate = atoi(tok->args[0]);
+    bw_set = 1;
   }
 
-  /* read router.address */
-  router->address = tor_strdup(ARGS[1]);
-  router->addr = 0;
+  if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
+    log_fn(LOG_WARN, "Missing published time"); goto err;
+  }
+  assert(tok->n_args == 1);
+  if (!strptime(tok->args[0], "%Y-%m-%d %H:%M:%S", &published)) {
+    log_fn(LOG_WARN, "Published time was unparseable"); goto err;
+  }
+  router->published_on = tor_timegm(&published);
 
-  /* Read router->or_port */
-  router->or_port = atoi(ARGS[2]);
+
+  if (!(tok = find_first_by_keyword(tokens, K_ONION_KEY))) {
+    log_fn(LOG_WARN, "Missing onion key"); goto err;
+  }
+  /* XXX Check key length */
+  router->onion_pkey = tok->key;
+  tok->key = NULL; /* Prevent free */
+
+  if (!(tok = find_first_by_keyword(tokens, K_LINK_KEY))) {
+    log_fn(LOG_WARN, "Missing onion key"); goto err;
+  }
+  /* XXX Check key length */
+  router->link_pkey = tok->key;
+  tok->key = NULL; /* Prevent free */
+
+  if (!(tok = find_first_by_keyword(tokens, K_SIGNING_KEY))) {
+    log_fn(LOG_WARN, "Missing onion key"); goto err;
+  }
+  /* XXX Check key length */
+  router->identity_pkey = tok->key;
+  tok->key = NULL; /* Prevent free */
+
+  exit_policy_tokens = find_all_exitpolicy(tokens);
+  for (i = 0; i < exit_policy_tokens->num_used; ++i) {
+    if (router_add_exit_policy(router, 
+                   (directory_token_t*)exit_policy_tokens->list[i])<0) {
+      log_fn(LOG_WARN, "Error in exit policy"); goto err;
+    }
+  }
+  
+  if (!(tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE))) {
+    log_fn(LOG_WARN, "Missing router signature"); goto err;
+  }
+  if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
+    log_fn(LOG_WARN, "Bad object type or length on router signature"); 
+    goto err;
+  }
+  if ((t=crypto_pk_public_checksig(router->identity_pkey, tok->object_body,
+                                   128, signed_digest)) != 20) {
+    log_fn(LOG_WARN, "Invalid signature %d",t); goto err;
+  }
+  if (memcmp(digest, signed_digest, 20)) {
+    log_fn(LOG_WARN, "Mismatched signature"); goto err;
+  }
+
+  if (!ports_set) {
+    log_fn(LOG_WARN,"No ports declared; failing."); goto err;
+  }
+  if (!bw_set) {
+    log_fn(LOG_WARN,"No bandwidth declared; failing."); goto err;
+  }
   if(!router->or_port) {
     log_fn(LOG_WARN,"or_port unreadable or 0. Failing.");
     goto err;
   }
-
-  /* Router->socks_port */
-  router->socks_port = atoi(ARGS[3]);
-
-  /* Router->dir_port */
-  router->dir_port = atoi(ARGS[4]);
-
-  /* Router->bandwidth */
-  router->bandwidthrate = atoi(ARGS[5]);
   if (!router->bandwidthrate) {
     log_fn(LOG_WARN,"bandwidthrate unreadable or 0. Failing.");
     goto err;
@@ -798,91 +955,24 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
     router->or_port, router->socks_port, router->dir_port,
     (unsigned) router->bandwidthrate, (unsigned) router->bandwidthburst);
 
-  /* XXX Later, require platform before published. */
-  NEXT_TOKEN();
-  if (tok->tp == K_PLATFORM) {
-    NEXT_TOKEN();
-  }
 
-  if (tok->tp != K_PUBLISHED) {
-    log_fn(LOG_WARN, "Missing published time"); goto err;
-  }
-  assert(N_ARGS == 1);
-  if (!strptime(ARGS[0], "%Y-%m-%d %H:%M:%S", &published)) {
-    log_fn(LOG_WARN, "Published time was unparseable"); goto err;
-  }
-  router->published_on = tor_timegm(&published);
-
-  NEXT_TOKEN();
-  if (tok->tp != K_ONION_KEY) {
-    log_fn(LOG_WARN, "Missing onion-key"); goto err;
-  }
-  NEXT_TOKEN();
-  if (tok->tp != _PUBLIC_KEY) {
-    log_fn(LOG_WARN, "Missing onion key"); goto err;
-  } /* XXX Check key length */
-  router->onion_pkey = tok->val.public_key;
-  tok->val.public_key = NULL; /* Prevent free */
-
-  NEXT_TOKEN();
-  if (tok->tp != K_LINK_KEY) {
-    log_fn(LOG_WARN, "Missing link-key");  goto err;
-  }
-  NEXT_TOKEN();
-  if (tok->tp != _PUBLIC_KEY) {
-    log_fn(LOG_WARN, "Missing link key"); goto err;
-  } /* XXX Check key length */
-  router->link_pkey = tok->val.public_key;
-  tok->val.public_key = NULL; /* Prevent free */
-
-  NEXT_TOKEN();
-  if (tok->tp != K_SIGNING_KEY) {
-    log_fn(LOG_WARN, "Missing signing-key"); goto err;
-  }
-  NEXT_TOKEN();
-  if (tok->tp != _PUBLIC_KEY) {
-    log_fn(LOG_WARN, "Missing signing key"); goto err;
-  }
-  router->identity_pkey = tok->val.public_key;
-  tok->val.public_key = NULL; /* Prevent free */
-
-  NEXT_TOKEN();
-  while (tok->tp == K_ACCEPT || tok->tp == K_REJECT) {
-    router_add_exit_policy(router, tok);
-    NEXT_TOKEN(); /* This also leaks some args. XXX */
-  }
-
-  if (tok->tp != K_ROUTER_SIGNATURE) {
-    log_fn(LOG_WARN,"Missing router signature");
-    goto err;
-  }
-  NEXT_TOKEN();
-  if (tok->tp != _SIGNATURE) {
-    log_fn(LOG_WARN,"Missing router signature");
-    goto err;
-  }
-  assert (router->identity_pkey);
-
-  if ((t=crypto_pk_public_checksig(router->identity_pkey, tok->val.signature,
-                                   128, signed_digest)) != 20) {
-    log_fn(LOG_WARN, "Invalid signature %d",t);
-    goto err;
-  }
-  if (memcmp(digest, signed_digest, 20)) {
-    log_fn(LOG_WARN, "Mismatched signature");
-    goto err;
-  }
-
-  router_release_token(tok); /* free the signature */
+  goto done;
   return router;
-
-err:
-  router_release_token(tok);
+  
+ err:
   routerinfo_free(router);
-  return NULL;
-#undef ARGS
-#undef N_ARGS
-#undef NEXT_TOKEN
+  router = NULL;
+ done:
+  if (tokens) {
+    for (i = 0; i < tokens->num_used; ++i) {
+      token_free((directory_token_t*)tokens->list[i]);
+    }
+    smartlist_free(tokens);
+  }
+  if (exit_policy_tokens) {
+    smartlist_free(exit_policy_tokens);
+  }
+  return router;
 }
 
 /* Parse the exit policy in the string 's' and add it to 'router'.
@@ -890,13 +980,11 @@ err:
 int
 router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
 {
-  directory_token_t tok;
+  directory_token_t *tok = NULL;
   const char *cp;
   char *tmp;
   int r;
   int len, idx;
-
-  tok.tp = _NIL;
 
   /* *s might not end with \n, so we need to extend it with one. */
   len = strlen(s);
@@ -906,30 +994,31 @@ router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
   }
   tmp[len]='\n';
   tmp[len+1]='\0';
-  if (router_get_next_token(&cp, &tok)) {
-    log_fn(LOG_WARN, "Error reading exit policy: %s", tok.val.error);
+  tok = get_next_token(&cp, RTR_ONLY);
+  if (tok->tp == _ERR) {
+    log_fn(LOG_WARN, "Error reading exit policy: %s", tok->error);
     goto err;
   }
-  if (tok.tp != K_ACCEPT && tok.tp != K_REJECT) {
+  if (tok->tp != K_ACCEPT && tok->tp != K_REJECT) {
     log_fn(LOG_WARN, "Expected 'accept' or 'reject'.");
     goto err;
   }
 
   /* Now that we've gotten an exit policy, add it to the router. */
-  r = router_add_exit_policy(router, &tok);
+  r = router_add_exit_policy(router, tok);
   goto done;
  err:
   r = -1;
  done:
   free(tmp);
-  router_release_token(&tok);
+  token_free(tok);
   return r;
 }
 
 /* Given a K_ACCEPT or K_REJECT token and a router, create a new exit_policy_t
  * corresponding to the token, and add it to 'router' */
-static int router_add_exit_policy(routerinfo_t *router,
-                                  directory_token_t *tok) {
+static int 
+router_add_exit_policy(routerinfo_t *router, directory_token_t *tok) {
 
   struct exit_policy_t *tmpe, *newe;
   struct in_addr in;
@@ -938,9 +1027,9 @@ static int router_add_exit_policy(routerinfo_t *router,
 
   assert(tok->tp == K_REJECT || tok->tp == K_ACCEPT);
 
-  if (tok->val.cmd.n_args != 1)
+  if (tok->n_args != 1)
     return -1;
-  arg = tok->val.cmd.args[0];
+  arg = tok->args[0];
 
   newe = tor_malloc_zero(sizeof(struct exit_policy_t));
 
@@ -1047,239 +1136,262 @@ policy_read_failed:
 /* ------------------------------------------------------------ */
 /* Tokenizer for router descriptors and directories. */
 
-/* Every keyword takes either... */
-typedef enum {
-  NO_ARGS,     /*    (1) no arguments, ever */
-  ARGS,        /*    (2) a list of arguments separated by spaces */
-  CONCAT_ARGS, /* or (3) the rest of the line, treated as a single argument. */
-} arg_syntax;
-
-/* Table mapping keywods to token value and to argument rules. */
-static struct { char *t; int v; arg_syntax s; } token_table[] = {
-  { "accept", K_ACCEPT, ARGS },
-  { "directory-signature", K_DIRECTORY_SIGNATURE, NO_ARGS },
-  { "reject", K_REJECT, ARGS },
-  { "router", K_ROUTER, ARGS },
-  { "recommended-software", K_RECOMMENDED_SOFTWARE, ARGS },
-  { "signed-directory", K_SIGNED_DIRECTORY, NO_ARGS },
-  { "signing-key", K_SIGNING_KEY, NO_ARGS },
-  { "onion-key", K_ONION_KEY, NO_ARGS },
-  { "link-key", K_LINK_KEY, NO_ARGS },
-  { "router-signature", K_ROUTER_SIGNATURE, NO_ARGS },
-  { "published", K_PUBLISHED, CONCAT_ARGS },
-  { "running-routers", K_RUNNING_ROUTERS, ARGS },
-  { "platform", K_PLATFORM, ARGS },
-  { NULL, -1 }
-};
 
 /* Free any malloced resources allocated for a token.  Does not free
  *  the token itself.
  */
 static void
-router_release_token(directory_token_t *tok)
+token_free(directory_token_t *tok)
 {
   int i;
-  switch (tok->tp)
-    {
-    case _SIGNATURE:
-      if (tok->val.signature)
-        free(tok->val.signature);
-      break;
-    case _PUBLIC_KEY:
-      if (tok->val.public_key)
-        crypto_free_pk_env(tok->val.public_key);
-      break;
-    case _ERR:
-    case _EOF:
-    case _NIL:
-      break;
-    default:
-      for (i = 0; i < tok->val.cmd.n_args; ++i) {
-        tor_free(tok->val.cmd.args[i]);
-      }
+  assert(tok);
+  if (tok->args) {
+    for (i = 0; i < tok->n_args; ++i) {
+      tor_free(tok->args[i]);
     }
-  tok->tp = _NIL;
+    tor_free(tok->args);
+  }
+  tor_free(tok->object_type);
+  tor_free(tok->object_body);
+  if (tok->key)
+    crypto_free_pk_env(tok->key);
+  tor_free(tok);
 }
 
-/* Helper function: read the next token from *s, and stores it into *tok.
- * If *tok already contains a token (tok->tp != _NIL), free the resources
- * held by *tok.  Advance *s to a point immediately after the token.
- *
- *
+/* Helper function: read the next token from *s, and stores it into a new
+ * directory token *tok.
  */
-static int
-_router_get_next_token(const char **s, directory_token_t *tok) {
-  const char *next;
-  crypto_pk_env_t *pkey = NULL;
-  char *signature = NULL;
-  int i, done;
+static directory_token_t *
+get_next_token(const char **s, where_syntax where) {
+  const char *next, *obstart;
+  int i, done, allocated;
+  directory_token_t *tok;
+  arg_syntax a_syn;
+  obj_syntax o_syn = NO_OBJ;
 
-  /* Clear the token _first_, so that we can clear it safely. */
-  router_release_token(tok);
-
+#define RET_ERR(msg)                                    \
+  do { if (tok) token_free(tok);                        \
+       tok = tor_malloc_zero(sizeof(directory_token_t));\
+       tok->tp = _ERR;                                  \
+       tok->error = msg;                                \
+       goto done_tokenizing; } while (0)
+ 
+  tok = tor_malloc_zero(sizeof(directory_token_t));
   tok->tp = _ERR;
-  tok->val.error = "";
 
   *s = eat_whitespace(*s);
   if (!**s) {
     tok->tp = _EOF;
-    return 0;
-  } else if (**s == '-') {
-    next = strchr(*s, '\n');
-    if (! next) { tok->val.error = "No newline at EOF"; return -1; }
-    ++next;
-    if (! strncmp(*s, OR_PUBLICKEY_BEGIN_TAG, next-*s)) {
-      /* We have a ----BEGIN PUBLIC KEY----- */
-      next = strstr(*s, OR_PUBLICKEY_END_TAG);
-      if (!next) { tok->val.error = "No public key end tag found"; return -1; }
-      next = strchr(next, '\n'); /* Part of OR_PUBLICKEY_END_TAG; can't fail.*/
-      ++next;
-      if (!(pkey = crypto_new_pk_env(CRYPTO_PK_RSA)))
-        return -1;
-      if (crypto_pk_read_public_key_from_string(pkey, *s, next-*s)) {
-        crypto_free_pk_env(pkey);
-        tok->val.error = "Couldn't parse public key.";
-        return -1;
-      }
-      tok->tp = _PUBLIC_KEY;
-      tok->val.public_key = pkey;
-      *s = next;
-      return 0;
-    } else if (! strncmp(*s, OR_SIGNATURE_BEGIN_TAG, next-*s)) {
-      /* We have a -----BEGIN SIGNATURE----- */
-      /* Advance past newline; can't fail. */
-      *s = strchr(*s, '\n');
-      ++*s;
-      /* Find end of base64'd data */
-      next = strstr(*s, OR_SIGNATURE_END_TAG);
-      if (!next) { tok->val.error = "No signature end tag found"; return -1; }
-
-      signature = tor_malloc(256);
-      i = base64_decode(signature, 256, *s, next-*s);
-      if (i<0) {
-        free(signature);
-        tok->val.error = "Error decoding signature."; return -1;
-      } else if (i != 128) {
-        free(signature);
-        tok->val.error = "Bad length on decoded signature."; return -1;
-      }
-      tok->tp = _SIGNATURE;
-      tok->val.signature = signature;
-
-      next = strchr(next, '\n'); /* Part of OR_SIGNATURE_END_TAG; can't fail.*/
-      *s = next+1;
-      return 0;
-    } else {
-      tok->val.error = "Unrecognized begin line"; return -1;
-    }
-  } else {
-    next = find_whitespace(*s);
-    if (!next) {
-      tok->val.error = "Unexpected EOF"; return -1;
-    }
-    /* It's a keyword... but which one? */
-    for (i = 0 ; token_table[i].t ; ++i) {
-      if (!strncmp(token_table[i].t, *s, next-*s)) {
-        /* We've found the keyword. */
-        tok->tp = token_table[i].v;
-
-        if (token_table[i].s == ARGS) {
-          /* This keyword takes multiple arguments. */
-          i = 0;
-          done = (*next == '\n');
-          *s = eat_whitespace_no_nl(next);
-          while (**s != '\n' && i < MAX_ARGS && !done) {
-            next = find_whitespace(*s);
-            if (*next == '\n')
-              done = 1;
-            tok->val.cmd.args[i++] = tor_strndup(*s,next-*s);
-            /* XXX this line (the strndup) is the memory leak. */
-            *s = eat_whitespace_no_nl(next+1);
-          }
-          tok->val.cmd.n_args = i;
-          if (i >= MAX_ARGS) {
-            router_release_token(tok);
-            tok->tp = _ERR;
-            tok->val.error = "Too many arguments"; return -1;
-          }
-        } else if (token_table[i].s == CONCAT_ARGS) {
-          /* The keyword takes the line as a single argument */
-          *s = eat_whitespace_no_nl(next);
-          next = strchr(*s, '\n');
-          if (!next) {
-            tok->tp = _ERR;
-            tok->val.error = "Unexpected EOF"; return -1;
-          }
-          tok->val.cmd.args[0] = tor_strndup(*s,next-*s);
-          tok->val.cmd.n_args = 1;
-          *s = eat_whitespace_no_nl(next+1);
+    return tok;
+  } 
+  next = find_whitespace(*s);
+  if (!next) {
+    tok->error = "Unexpected EOF"; return tok;
+  }
+  /* It's a keyword... but which one? */
+  for (i = 0 ; token_table[i].t ; ++i) {
+    if (!strncmp(token_table[i].t, *s, next-*s)) {
+      /* We've found the keyword. */
+      tok->tp = token_table[i].v;
+      a_syn = token_table[i].s;
+      o_syn = token_table[i].os;
+      if (token_table[i].ws != ANY && token_table[i].ws != where) {
+        if (where == DIR_ONLY) {
+          RET_ERR("Found a router-only token in a directory section");
         } else {
-          /* The keyword takes no arguments. */
-          *s = eat_whitespace_no_nl(next);
-          if (**s != '\n') {
-            tok->tp = _ERR;
-            tok->val.error = "Unexpected arguments"; return -1;
-          }
-          tok->val.cmd.n_args = 0;
-          *s = eat_whitespace_no_nl(*s+1);
+          RET_ERR("Found a directory-only token in a router descriptor");
         }
-        return 0;
       }
+      if (a_syn == ARGS) {
+        /* This keyword takes multiple arguments. */
+        i = 0;
+        done = (*next == '\n');
+        allocated = 32;
+        tok->args = (char**)tor_malloc(sizeof(char*)*32);
+        *s = eat_whitespace_no_nl(next);
+        while (**s != '\n' && !done) {
+          next = find_whitespace(*s);
+          if (*next == '\n')
+            done = 1;
+          if (i == allocated) {
+            allocated *= 2;
+            tok->args = (char**)tor_realloc(tok->args,sizeof(char*)*allocated);
+          }
+          tok->args[i++] = tor_strndup(*s,next-*s);
+          *s = eat_whitespace_no_nl(next+1);
+        }
+        tok->n_args = i;
+      } else if (a_syn == CONCAT_ARGS) {
+        /* The keyword takes the line as a single argument */
+        *s = eat_whitespace_no_nl(next);
+        next = strchr(*s, '\n');
+        if (!next)
+          RET_ERR("Unexpected EOF");
+        tok->args = (char**) tor_malloc(sizeof(char*));
+        tok->args[0] = tor_strndup(*s,next-*s);
+        tok->n_args = 1;
+        *s = eat_whitespace_no_nl(next+1);
+      } else {
+        /* The keyword takes no arguments. */
+        assert(a_syn == NO_ARGS);
+        *s = eat_whitespace_no_nl(next);
+        if (**s != '\n') {
+          RET_ERR("Unexpected arguments");
+        }
+        tok->n_args = 0;
+        *s = eat_whitespace_no_nl(*s+1);
+      }
+      break;
     }
-    tok->val.error = "Unrecognized command"; return -1;
   }
+  if (tok->tp == _ERR) {
+    tok->tp = _UNRECOGNIZED;
+    next = strchr(*s, '\n');
+    if (!next) {
+      RET_ERR("Unexpected EOF");
+    }    
+    tok->args = (char**) tor_malloc(sizeof(char*));
+    tok->args[0] = tor_strndup(*s,next-*s);
+    tok->n_args = 1;
+    *s = next+1;
+    o_syn = OBJ_OK;
+  }
+  *s = eat_whitespace(*s);
+  if (strncmp(*s, "-----BEGIN ", 11)) {
+    goto done_tokenizing;
+  }
+  obstart = *s;
+  *s += 11; /* length of "-----BEGIN ". */
+  next = strchr(*s, '\n');
+  if (next-*s < 6 || strncmp(next-5, "-----\n", 6)) {
+    RET_ERR("Malformed object: bad begin line");
+  }
+  tok->object_type = tor_strndup(*s, next-*s-5);
+  *s = next+1;
+  next = strstr(*s, "-----END ");
+  if (!next) {
+    RET_ERR("Malformed object: missing end line");
+  }
+  if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) {
+    if (strncmp(next, "-----END RSA PUBLIC KEY-----\n", 29))
+      RET_ERR("Malformed object: mismatched end line");
+    next = strchr(next,'\n')+1;
+    tok->key = crypto_new_pk_env(CRYPTO_PK_RSA);
+    if (crypto_pk_read_public_key_from_string(tok->key, obstart, next-obstart))
+      RET_ERR("Couldn't parse public key.");
+    *s = next;
+  } else {
+    tok->object_body = tor_malloc(next-*s); /* really, this is too much RAM. */
+    i = base64_decode(tok->object_body, 256, *s, next-*s);
+    if (i<0) {
+      RET_ERR("Malformed object: bad base64-encoded data");
+    }
+    tok->object_size = i;
+    *s = next + 9; /* length of "-----END ". */
+    i = strlen(tok->object_type);
+    if (strncmp(*s, tok->object_type, i) || strncmp(*s+i, "-----\n", 6)) {
+      RET_ERR("Malformed object: mismatched end tag");
+    }
+    *s += i+6;
+  }
+  switch(o_syn)
+    {
+    case NO_OBJ:
+      if (tok->object_body)
+        RET_ERR("Unexpected object for keyword");
+      if (tok->key)
+        RET_ERR("Unexpected public key for keyword");
+      break;
+    case NEED_OBJ:
+      if (!tok->object_body)
+        RET_ERR("Missing object for keyword");
+      break;
+    case NEED_KEY:
+      if (!tok->key)
+        RET_ERR("Missing publid key for keyword");
+      break;
+    case OBJ_OK:
+      break;
+    }
+  
+ done_tokenizing:
+
+#if 0
+  for (i = 0; token_table[i].t ; ++i) {
+    if (token_table[i].v == tok->tp) {
+      fputs(token_table[i].t, stdout);
+      break;
+      i = -1;
+    }
+  }
+  if (i) {
+    if (tok->tp == _UNRECOGNIZED) fputs("UNRECOGNIZED", stdout);
+    if (tok->tp == _ERR) fputs("ERR",stdout);
+    if (tok->tp == _EOF) fputs("EOF",stdout);
+    if (tok->tp == _NIL) fputs("_NIL",stdout);
+  }
+  for(i = 0; i < tok->n_args; ++i) {
+    fprintf(stdout," \"%s\"", tok->args[i]);
+  }
+  if (tok->error) { fprintf(stdout," *%s*", tok->error); }
+  fputs("\n",stdout);
+#endif
+
+
+  return tok;
+#undef RET_ERR
 }
 
-#ifdef DEBUG_ROUTER_TOKENS
-static void
-router_dump_token(directory_token_t *tok) {
-  int i;
-  switch(tok->tp)
-    {
-    case _SIGNATURE:
-      puts("(signature)");
-      return;
-    case _PUBLIC_KEY:
-      puts("(public key)");
-      return;
-    case _ERR:
-      printf("(Error: %s\n)", tok->val.error);
-      return;
-    case _EOF:
-      puts("EOF");
-      return;
-    case K_ACCEPT: printf("Accept"); break;
-    case K_DIRECTORY_SIGNATURE: printf("Directory-Signature"); break;
-    case K_REJECT: printf("Reject"); break;
-    case K_RECOMMENDED_SOFTWARE: printf("Server-Software"); break;
-    case K_ROUTER: printf("Router"); break;
-    case K_SIGNED_DIRECTORY: printf("Signed-Directory"); break;
-    case K_SIGNING_KEY: printf("Signing-Key"); break;
-    case K_ONION_KEY: printf("Onion-key"); break;
-    case K_LINK_KEY: printf("Link-key"); break;
-    case K_ROUTER_SIGNATURE: printf("Router-signature"); break;
-    case K_PUBLISHED: printf("Published"); break;
-    case K_RUNNING_ROUTERS: printf("Running-routers"); break;
-    case K_PLATFORM: printf("Platform"); break;
-    default:
-      printf("?????? %d\n", tok->tp); return;
+static int 
+tokenize_string(const char *start, const char *end, smartlist_t *out, 
+                int is_dir)
+{
+  const char **s;
+  directory_token_t *tok = NULL;
+  where_syntax where = is_dir ? DIR_ONLY : RTR_ONLY;
+  s = &start;
+  while (*s < end && (!tok || tok->tp != _EOF)) {
+    tok = get_next_token(s, where);
+    if (tok->tp == _ERR) {
+      log_fn(LOG_WARN, "parse error: %s", tok->error);
+      return -1;
     }
-  for (i = 0; i < tok->val.cmd.n_args; ++i) {
-    printf(" \"%s\"", tok->val.cmd.args[i]);
+    smartlist_add(out, tok);
+    *s = eat_whitespace(*s);
   }
-  printf("\n");
-  return;
+  
+  return 0;
 }
-static int
-router_get_next_token(const char **s, directory_token_t *tok) {
+
+static directory_token_t *
+find_first_by_keyword(smartlist_t *s, directory_keyword keyword)
+{
   int i;
-  i = _router_get_next_token(s, tok);
-  router_dump_token(tok);
-  return i;
+  directory_token_t *tok;
+  for (i = 0; i < s->num_used; ++i) {
+    tok = (directory_token_t*) s->list[i];
+    if (tok->tp == keyword) {
+      return tok;
+    }
+  }
+  return NULL;
 }
-#else
-#define router_get_next_token _router_get_next_token
-#endif
+
+static smartlist_t *
+find_all_exitpolicy(smartlist_t *s)
+{
+  int i;
+  directory_token_t *tok;
+  smartlist_t *out = smartlist_create(s->num_used);
+  for (i = 0; i < s->num_used; ++i) {
+    tok = (directory_token_t*) s->list[i];
+    if (tok->tp == K_ACCEPT || tok->tp == K_REJECT) {
+      smartlist_add(out,tok);
+    }
+  }
+  return out;
+}
+
 
 /* Compute the SHA digest of the substring of s taken from the first
  * occurrence of start_str through the first newline after the first
@@ -1317,8 +1429,6 @@ static int router_get_hash_impl(const char *s, char *digest,
 
   return 0;
 }
-
-
 
 /*
   Local Variables:
