@@ -636,6 +636,38 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   }
 }
 
+/* DOCDOC: 1 if complete, 0 if pending, -1 on error. */
+int fetch_from_buf_control(buf_t *buf, uint16_t *len_out, uint16_t *type_out,
+                           char **body_out)
+{
+  uint16_t len;
+
+  tor_assert(buf);
+  tor_assert(len_out);
+  tor_assert(type_out);
+  tor_assert(body_out);
+
+  if (buf->datalen < 4)
+    return 0;
+
+  len = ntohs(get_uint16(buf->mem));
+  if (buf->datalen < 4 + (unsigned)len)
+    return 0;
+
+  *len_out = len;
+  *type_out = ntohs(get_uint16(buf->mem+2));
+  if (len) {
+    *body_out = tor_malloc(len);
+    memcpy(*body_out, buf->mem+4, len);
+  } else {
+    *body_out = NULL;
+  }
+
+  buf_remove_from_front(buf, 4+len);
+
+  return 1;
+}
+
 /** Log an error and exit if <b>buf</b> is corrupted.
  */
 void assert_buf_ok(buf_t *buf)

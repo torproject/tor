@@ -59,6 +59,8 @@ the message.
         0x0005 Unauthorized user
         0x0006 Failed authentication attempt
 
+  The rest of the body should be a human-readable description of the error.
+
 3.2. DONE (Type 0x0001)
 
   Sent from server to client in response to a request that was successfully
@@ -76,7 +78,7 @@ the message.
 
   Request the value of a configuration variable.  The body contains a
   nul-terminated string for a configuration key.  The server replies with a
-  CONFVALUE message 
+  CONFVALUE message.
 
 3.5. CONFVALUE (Type 0x0004)
 

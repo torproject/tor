@@ -28,6 +28,8 @@ const char *conn_type_to_string[] = {
   "Dir",         /* 9 */
   "DNS worker",  /* 10 */
   "CPU worker",  /* 11 */
+  "Control listener", /* 12 */
+  "Control",     /* 13 */
 };
 
 /** Array of string arrays to make {conn-\>type,conn-\>state} human-readable. */
@@ -70,6 +72,10 @@ const char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
     "idle",                            /* 1 */
     "busy with onion",                 /* 2 */
     "busy with handshake" },           /* 3 */
+  { "ready" }, /* control listener, 0 */
+  { "",                       /* control, 0 */
+    "ready",                           /* 1 */
+    "waiting for authentication", },   /* 2 */
 };
 
 /********* END VARIABLES ************/
@@ -326,7 +332,7 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
     log_fn(LOG_WARN, "Error parsing/resolving BindAddress %s",bindaddress);
     return -1;
   }
-  
+
   if (usePort==0)
     usePort = bindport;
   bindaddr.sin_addr.s_addr = htonl(addr);
@@ -459,6 +465,9 @@ static int connection_init_accepted_conn(connection_t *conn) {
       conn->purpose = DIR_PURPOSE_SERVER;
       conn->state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
       break;
+    case CONN_TYPE_CONTROL:
+      /* XXXX009 NM control */
+      break;
   }
   return 0;
 }
@@ -543,7 +552,8 @@ static void listener_close_if_present(int type) {
   int i,n;
   tor_assert(type == CONN_TYPE_OR_LISTENER ||
              type == CONN_TYPE_AP_LISTENER ||
-             type == CONN_TYPE_DIR_LISTENER);
+             type == CONN_TYPE_DIR_LISTENER ||
+             type == CONN_TYPE_CONTROL_LISTENER);
   get_connection_array(&carray,&n);
   for(i=0;i<n;i++) {
     conn = carray[i];
@@ -585,7 +595,7 @@ static int retry_listeners(int type, struct config_line_t *cfg,
       want = 0;
     }
 
-    /* How many are there actually? */    
+    /* How many are there actually? */
     have = 0;
     get_connection_array(&carray,&n_conn);
     for(i=0;i<n_conn;i++) {
@@ -602,7 +612,7 @@ static int retry_listeners(int type, struct config_line_t *cfg,
     log_fn(LOG_WARN,"We have %d %s(s) open, but we want %d; relaunching.",
            have, conn_type_to_string[type], want);
   }
-  
+
   listener_close_if_present(type);
   if (port_option) {
     if (!cfg) {
@@ -636,6 +646,7 @@ int retry_all_listeners(int force) {
   if (retry_listeners(CONN_TYPE_AP_LISTENER, options.SocksBindAddress,
                       options.SocksPort, "127.0.0.1", force)<0)
     return -1;
+  /* XXXX009 control NM */
 
   return 0;
 }
@@ -787,6 +798,8 @@ int connection_handle_read(connection_t *conn) {
       return connection_handle_listener_read(conn, CONN_TYPE_AP);
     case CONN_TYPE_DIR_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_DIR);
+    case CONN_TYPE_CONTROL_LISTENER:
+      return connection_handle_listener_read(conn, CONN_TYPE_CONTROL);
   }
 
   if(connection_read_to_buf(conn) < 0) {
@@ -1151,7 +1164,8 @@ connection_t *connection_get_by_type_rendquery(int type, const char *rendquery) 
 int connection_is_listener(connection_t *conn) {
   if(conn->type == CONN_TYPE_OR_LISTENER ||
      conn->type == CONN_TYPE_AP_LISTENER ||
-     conn->type == CONN_TYPE_DIR_LISTENER)
+     conn->type == CONN_TYPE_DIR_LISTENER ||
+     conn->type == CONN_TYPE_CONTROL_LISTENER)
     return 1;
   return 0;
 }
@@ -1167,7 +1181,8 @@ int connection_state_is_open(connection_t *conn) {
 
   if((conn->type == CONN_TYPE_OR && conn->state == OR_CONN_STATE_OPEN) ||
      (conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN) ||
-     (conn->type == CONN_TYPE_EXIT && conn->state == EXIT_CONN_STATE_OPEN))
+     (conn->type == CONN_TYPE_EXIT && conn->state == EXIT_CONN_STATE_OPEN) ||
+     (conn->type == CONN_TYPE_CONTROL && conn->state ==CONTROL_CONN_STATE_OPEN))
     return 1;
 
   return 0;
@@ -1232,6 +1247,8 @@ static int connection_process_inbuf(connection_t *conn) {
       return connection_dns_process_inbuf(conn);
     case CONN_TYPE_CPUWORKER:
       return connection_cpu_process_inbuf(conn);
+    case CONN_TYPE_CONTROL:
+      return connection_control_process_inbuf(conn);
     default:
       log_fn(LOG_WARN,"got unexpected conn->type %d.", conn->type);
       return -1;
@@ -1262,6 +1279,8 @@ static int connection_finished_flushing(connection_t *conn) {
       return connection_dns_finished_flushing(conn);
     case CONN_TYPE_CPUWORKER:
       return connection_cpu_finished_flushing(conn);
+    case CONN_TYPE_CONTROL:
+      return connection_control_finished_flushing(conn);
     default:
       log_fn(LOG_WARN,"got unexpected conn->type %d.", conn->type);
       return -1;
@@ -1384,6 +1403,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_OR_LISTENER:
     case CONN_TYPE_AP_LISTENER:
     case CONN_TYPE_DIR_LISTENER:
+    case CONN_TYPE_CONTROL_LISTENER:
       tor_assert(conn->state == LISTENER_STATE_READY);
       break;
     case CONN_TYPE_OR:
@@ -1412,6 +1432,11 @@ void assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_CPUWORKER:
       tor_assert(conn->state >= _CPUWORKER_STATE_MIN);
       tor_assert(conn->state <= _CPUWORKER_STATE_MAX);
+      break;
+    case CONN_TYPE_CONTROL:
+      tor_assert(conn->state >= _CONTROL_CONN_STATE_MIN);
+      tor_assert(conn->state <= _CONTROL_CONN_STATE_MAX);
+      /* XXXX009 NM */
       break;
     default:
       tor_assert(0);

@@ -171,7 +171,11 @@
 #define CONN_TYPE_DNSWORKER 10
 /** Type for connections to local cpuworker processes. */
 #define CONN_TYPE_CPUWORKER 11
-#define _CONN_TYPE_MAX 11
+/** Type for listenting for connections from user interface process */
+#define CONN_TYPE_CONTROL_LISTENER 12
+/** Type for connections from user interface process */
+#define CONN_TYPE_CONTROL 13
+#define _CONN_TYPE_MAX 13
 
 /** State for any listener connection. */
 #define LISTENER_STATE_READY 0
@@ -246,6 +250,11 @@
 /** State for connection at directory server: sending HTTP response. */
 #define DIR_CONN_STATE_SERVER_WRITING 5
 #define _DIR_CONN_STATE_MAX 5
+
+#define _CONTROL_CONN_STATE_MIN 1
+#define CONTROL_CONN_STATE_OPEN 1
+#define CONTROL_CONN_STATE_NEEDAUTH 2
+#define _CONTROL_CONN_STATE_MAX 2
 
 #define _DIR_PURPOSE_MIN 1
 /** Purpose for connection to directory server: download a directory. */
@@ -546,6 +555,9 @@ struct connection_t {
   /* Used only by AP connections */
   socks_request_t *socks_request; /**< SOCKS structure describing request (AP
                                    * only.) */
+
+  /* Used only by control connections */
+  uint32_t event_mask;
 };
 
 typedef struct connection_t connection_t;
@@ -981,6 +993,8 @@ int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, size_t max_headerlen,
                         char **body_out, size_t *body_used, size_t max_bodylen);
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
+int fetch_from_buf_control(buf_t *buf, uint16_t *len_out, uint16_t *type_out,
+                           char **body_out);
 
 void assert_buf_ok(buf_t *buf);
 
@@ -1186,6 +1200,16 @@ int connection_tls_continue_handshake(connection_t *conn);
 void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn);
 void connection_or_update_nickname(connection_t *conn);
 
+/********************************* control.c ***************************/
+
+int connection_control_finished_flushing(connection_t *conn);
+int connection_control_process_inbuf(connection_t *conn);
+
+int control_event_circuit_status(circuit_t *circ);
+int control_event_stream_status(connection_t *conn);
+int control_event_or_conn_status(connection_t *conn);
+int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
+int control_event_warning(const char *msg);
 
 /********************************* cpuworker.c *****************************/
 
