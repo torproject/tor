@@ -418,8 +418,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
     return -1;
   }
   if ((version == 0 && !is_legal_nickname(rp_nickname)) ||
-      (version == 1 && !is_legal_nickname_or_hexdigest(rp_nickname)) ||
-      (int)strspn(buf,LEGAL_NICKNAME_CHARACTERS) != ptr-buf) {
+      (version == 1 && !is_legal_nickname_or_hexdigest(rp_nickname))) {
     log_fn(LOG_WARN, "Bad nickname in INTRODUCE2 cell.");
     return -1;
   }
