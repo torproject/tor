@@ -13,8 +13,10 @@ Quickstart version for users:
 6) point your browser to socks4 or socks5 proxy at localhost port
   9050. In mozilla, this is in edit|preferences|advanced|proxies. This
   allows you to test to make sure tor is installed correctly.
-  (If you have a personal firewall, be sure to allow connections to
-   localhost port 9050.)
+  (If you have a personal firewall, be sure to allow local connections
+   to port 9050.)
+  (If your firewall blocks outgoing connections, punch a hole so it
+   can connect to TCP *:9001-9004 and *:9031-9033)
   (If you're using Safari as your browser, keep in mind that OS X before
    10.3 claims to support socks but does not. You must do step 8.)
 7) make sure you've set it up correctly: go to
