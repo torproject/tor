@@ -836,16 +836,14 @@ list_running_servers(char **nicknames_out)
     length += strlen(nickname_lst[i]);
   }
   *nicknames_out = tor_malloc(length);
-  log_fn(LOG_DEBUG,"total length %d malloced.",length);
   cp = *nicknames_out;
+  memset(cp,0,length);
   for (i = 0; i<n; ++i) {
     if (i)
       strcat(cp, " ");
     strcat(cp, nickname_lst[i]);
     while (*cp) 
       ++cp;
-    log_fn(LOG_DEBUG,"end of loop %d, now %d written (nick %s)",
-           i,1+(int)(cp-*nicknames_out),nickname_lst[i]);
   }
   return 0;
 }
