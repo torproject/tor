@@ -488,8 +488,8 @@ struct connection_t {
   time_t timestamp_lastread; /**< When was the last time poll() said we could read? */
 
   buf_t *outbuf; /**< Buffer holding data to write over this connection. */
-  int outbuf_flushlen; /**< How much data should we try to flush from the
-                        * outbuf? */
+  size_t outbuf_flushlen; /**< How much data should we try to flush from the
+                           * outbuf? */
   time_t timestamp_lastwritten; /**< When was the last time poll() said we could write? */
 
   time_t timestamp_created; /**< When was this connection_t created? */
@@ -1193,7 +1193,7 @@ int dirserv_add_descriptor(const char **desc);
 int dirserv_load_from_directory_string(const char *dir);
 void dirserv_free_descriptors();
 void dirserv_remove_old_servers(int age);
-int dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
+int dirserv_dump_directory_to_string(char *s, size_t maxlen,
                                      crypto_pk_env_t *private_key);
 void directory_set_dirty(void);
 size_t dirserv_get_directory(const char **cp, int compress);
