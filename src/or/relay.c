@@ -518,14 +518,17 @@ connection_edge_end_reason_sock5_response(char *payload, uint16_t length) {
   }
 }
 
+/* We need to use a few macros to deal with the fact that Windows
+ * decided that their sockets interface should be a permakludge.
+ * E_CASE is for errors where windows has both a EFOO and a WSAEFOO
+ * version, and S_CASE is for errors where windows has only a WSAEFOO
+ * version.  (The E is for 'error', the S is for 'socket'). */
 #ifdef MS_WINDOWS
 #define E_CASE(s) case s: case WSA ## s
 #define S_CASE(s) case WSA ## s
-#define W_CASE(s) case s:
 #else
 #define E_CASE(s) case s
 #define S_CASE(s) case s
-#define W_CASE(s)
 #endif
 
 int
