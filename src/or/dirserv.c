@@ -4,6 +4,9 @@
 
 #include "or.h"
 
+/* How old do we allow a router to get before removing it? (seconds) */
+#define ROUTER_MAX_AGE (60*60*24)
+
 /* How far in the future do we allow a router to get? (seconds) */
 #define ROUTER_ALLOW_SKEW (30*60)
 
@@ -199,6 +202,7 @@ dirserv_add_descriptor(const char **desc)
   char *desc_tmp = NULL;
   const char *cp;
   size_t desc_len;
+  time_t now;
 
   start = strstr(*desc, "router ");
   if (!start) {
@@ -242,12 +246,20 @@ dirserv_add_descriptor(const char **desc)
     return 0;
   }
   /* Is there too much clock skew? */
-  if (ri->published_on > time(NULL)+ROUTER_ALLOW_SKEW) {
+  now = time(NULL);
+  if (ri->published_on > now+ROUTER_ALLOW_SKEW) {
     log_fn(LOG_WARN, "Publication time for nickname %s is too far in the future; possible clock skew. Not adding", ri->nickname);
     routerinfo_free(ri);
     *desc = end;
     return -1;
   }
+  if (ri->published_on < now-ROUTER_MAX_AGE) {
+    log_fn(LOG_WARN, "Publication time for router with nickanem %s is too far in the past. Not adding", ri->nickname);
+    routerinfo_free(ri);
+    *desc = end;
+    return -1;
+  }
+
   /* Do we already have an entry for this router? */
   desc_ent_ptr = NULL;
   for (i = 0; i < n_descriptors; ++i) {
@@ -348,6 +360,31 @@ list_running_servers(char **nicknames_out)
   return 0;
 }
 
+/* Remove any descriptors from the directory that are more than ROUTER_MAX_AGE
+ * seconds old.
+ */
+void
+dirserv_remove_old_servers(void)
+{
+  int i;
+  time_t cutoff;
+  cutoff = time(NULL) - ROUTER_MAX_AGE;
+  for (i = 0; i < n_descriptors; ++i) {
+    if (descriptor_list[i]->published < cutoff) {
+      /* descriptor_list[i] is too old.  Remove it. */
+      free_descriptor_entry(descriptor_list[i]);
+      descriptor_list[i] = descriptor_list[n_descriptors-1];
+      --n_descriptors;
+      directory_set_dirty();
+      --i; /* Don't advance the index; consider the new value now at i. */
+    }
+  }
+}
+
+/* Dump all routers currently in the directory into the string <s>, using
+ * at most <maxlen> characters, and signing the directory with <private_key>.
+ * Return 0 on success, -1 on failure.
+ */
 int
 dirserv_dump_directory_to_string(char *s, int maxlen,
                                  crypto_pk_env_t *private_key)
@@ -362,6 +399,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
 
   if (list_running_servers(&cp))
     return -1;
+  dirserv_remove_old_servers();
   published_on = time(NULL);
   strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&published_on));
   snprintf(s, maxlen,
@@ -374,18 +412,14 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
   cp = s+i;
 
   for (i = 0; i < n_descriptors; ++i) {
-    strncat(cp, descriptor_list[i]->descriptor, descriptor_list[i]->desc_len);
-    /* XXX Nick: do strncat and friends null-terminate? man page is ambiguous. */
-    cp += descriptor_list[i]->desc_len;
-    assert(!*cp);
+    if (strlcat(s, descriptor_list[i]->descriptor, maxlen) >= maxlen)
+      goto truncated;
   }
-  /* These multiple strlen calls are inefficient, but dwarfed by the RSA
+  /* These multiple strlcat calls are inefficient, but dwarfed by the RSA
      signature.
   */
-  i = strlen(s);
-  strncat(s, "directory-signature\n", maxlen-i);
-  i = strlen(s);
-  cp = s + i;
+  if (strlcat(s, "directory-signature\n", maxlen) >= maxlen)
+    goto truncated;
 
   if (router_get_dir_hash(s,digest)) {
     log_fn(LOG_WARN,"couldn't compute digest");
@@ -399,8 +433,8 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
       ((int)digest[0])&0xff,((int)digest[1])&0xff,
       ((int)digest[2])&0xff,((int)digest[3])&0xff);
 
-  strncpy(cp, "-----BEGIN SIGNATURE-----\n", maxlen-i);
-  cp[maxlen-i-1] = 0;
+  if (strlcat(cp, "-----BEGIN SIGNATURE-----\n", maxlen) >= maxlen)
+    goto truncated;
 
   i = strlen(s);
   cp = s+i;
@@ -409,16 +443,13 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
     return -1;
   }
 
-  i = strlen(s);
-  cp = s+i;
-  strncat(cp, "-----END SIGNATURE-----\n", maxlen-i);
-  i = strlen(s);
-  if (i == maxlen) {
-    log_fn(LOG_WARN,"tried to exceed string length.");
-    return -1;
-  }
+  if (strlcat(s, "-----END SIGNATURE-----\n", maxlen) >= maxlen)
+    goto truncated;
 
   return 0;
+ truncated:
+  log_fn(LOG_WARN,"tried to exceed string length.");
+  return -1;
 }
 
 static char *the_directory = NULL;

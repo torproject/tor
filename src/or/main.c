@@ -330,6 +330,9 @@ static void run_scheduled_events(time_t now) {
        * Hope this doesn't bite us later. */
       directory_initiate_command(router_pick_directory_server(),
                                  DIR_CONN_STATE_CONNECTING_FETCH);
+    } else {
+      /* We're a directory; dump any old descriptors. */
+      dirserv_remove_old_servers();
     }
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
   }

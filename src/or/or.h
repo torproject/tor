@@ -905,8 +905,9 @@ int dirserv_init_from_directory_string(const char *dir);
 void dirserv_free_descriptors();
 int dirserv_dump_directory_to_string(char *s, int maxlen,
                                      crypto_pk_env_t *private_key);
-void directory_set_dirty();
+void directory_set_dirty(void);
 size_t dirserv_get_directory(const char **cp);
+void dirserv_remove_old_servers(void);
 
 
 /********************************* rephist.c ***************************/
