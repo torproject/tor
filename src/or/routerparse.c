@@ -366,10 +366,27 @@ router_parse_routerlist_from_directory(const char *str,
   }
 
   if (smartlist_len(tokens) != 1 ||
-   ((directory_token_t*)smartlist_get(tokens,0))->tp != K_DIRECTORY_SIGNATURE){
+      (!(tok=smartlist_get(tokens,0))) || /* always succeeds */
+      (tok->tp != K_DIRECTORY_SIGNATURE)) {
     log_fn(LOG_WARN,"Expected a single directory signature"); goto err;
   }
-  tok = smartlist_get(tokens,0);
+  if (tok->n_args == 1) {
+    routerinfo_t *r = router_get_by_nickname(tok->args[0]);
+    log_fn(LOG_DEBUG, "Got directory signed by %s", tok->args[0]);
+    if (r && r->is_trusted_dir) {
+      pkey = r->identity_pkey;
+    } else if (!r && pkey) {
+      /* pkey provided for debugging purposes. */
+    } else if (!r) {
+      log_fn(LOG_WARN, "Directory was signed by unrecognized server %s",
+             tok->args[0]);
+      goto err;
+    } else if (r && !r->is_trusted_dir) {
+      log_fn(LOG_WARN, "Directory was signed by non-trusted server %s",
+             tok->args[0]);
+      goto err;
+    }
+  }
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
     log_fn(LOG_WARN, "Bad object type or length on directory signature");
     goto err;

@@ -578,6 +578,8 @@ typedef struct {
    * published?
    */
   time_t published_on;
+  /** Which router is claimed to have signed it? */
+  char *signing_router;
 } routerlist_t;
 
 /** Holds accounting information for a single step in the layered encryption
