@@ -596,8 +596,9 @@ main(int c, char**v) {
 #endif
   log(LOG_ERR,NULL);         /* make logging quieter */
 
+  crypto_seed_rng();
+
   setup_directory();
-#ifndef DEBUG_ONION_SKINS
   puts("========================== Buffers =========================");
   test_buffers();
   puts("\n========================== Crypto ==========================");
@@ -606,12 +607,7 @@ main(int c, char**v) {
   puts("\n========================= Util ============================");
   test_util();
   puts("\n========================= Onion Skins =====================");
-#endif
-  crypto_seed_rng();
-  while(1) {
-    test_onion_handshake();
-    fflush(NULL);
-  }
+  test_onion_handshake();
   puts("\n========================= Directory Formats ===============");
   test_dir_format();
   puts("");
