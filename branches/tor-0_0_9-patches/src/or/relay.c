@@ -460,21 +460,22 @@ connection_edge_end_reason(char *payload, uint16_t length) {
     log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
     return "MALFORMED";
   }
-  if (*payload < _MIN_END_STREAM_REASON || *payload > _MAX_END_STREAM_REASON) {
-    log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
-    return "MALFORMED";
-  }
   switch (*payload) {
     case END_STREAM_REASON_MISC:           return "misc error";
     case END_STREAM_REASON_RESOLVEFAILED:  return "resolve failed";
-    case END_STREAM_REASON_CONNECTFAILED:  return "connect failed";
+    case END_STREAM_REASON_CONNECTREFUSED: return "connection refused";
     case END_STREAM_REASON_EXITPOLICY:     return "exit policy failed";
     case END_STREAM_REASON_DESTROY:        return "destroyed";
     case END_STREAM_REASON_DONE:           return "closed normally";
     case END_STREAM_REASON_TIMEOUT:        return "gave up (timeout)";
+    case END_STREAM_REASON_HIBERNATING:    return "server is hibernating";
+    case END_STREAM_REASON_INTERNAL:       return "internal error at server";
+    case END_STREAM_REASON_RESOURCELIMIT:  return "server out of resources";
+    case END_STREAM_REASON_CONNRESET:      return "connection reset";
+    default:
+      log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
+      return "unknown";
   }
-  tor_assert(0);
-  return "";
 }
 
 /** How many times will I retry a stream that fails due to DNS

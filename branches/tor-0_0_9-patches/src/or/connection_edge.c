@@ -940,7 +940,7 @@ connection_exit_connect(connection_t *conn) {
   log_fn(LOG_DEBUG,"about to try connecting");
   switch (connection_connect(conn, conn->address, addr, port)) {
     case -1:
-      connection_edge_end(conn, END_STREAM_REASON_CONNECTFAILED, conn->cpath_layer);
+      connection_edge_end(conn, END_STREAM_REASON_CONNECTREFUSED, conn->cpath_layer);
       circuit_detach_stream(circuit_get_by_conn(conn), conn);
       connection_free(conn);
       return;
