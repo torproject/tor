@@ -23,10 +23,7 @@
 ;     result.
 ;   - Building Tor requires too much windows C clue.
 ;     - We should have actual makefiles for VC that do the right thing.
-;     - We should maybe have project files for VCfoo too.
-;   - It would be nice if version numbers checked themselves.
 ;   - I need to learn more NSIS juju to solve these:
-;     - tor-resolve.exe isn't included in the installer. 
 ;     - There should be a batteries-included installer that comes with
 ;       privoxy too. (Check privoxy license on this; be sure to include
 ;       all privoxy documents.)
