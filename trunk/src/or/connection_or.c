@@ -344,16 +344,10 @@ connection_tls_finish_handshake(connection_t *conn) {
   conn->state = OR_CONN_STATE_OPEN;
   connection_watch_events(conn, EV_READ);
   log_fn(LOG_DEBUG,"tls handshake done. verifying.");
-  if (! tor_tls_peer_has_cert(conn->tls)) { /* It's an old OP. */
-    if (server_mode(options)) { /* I'm an OR; good. */
-      conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
-      return 0;
-    } else { /* Neither side sent a certificate: ouch. */
-      log_fn(LOG_WARN,"Neither peer sent a cert! Closing.");
-      return -1;
-    }
+  if (! tor_tls_peer_has_cert(conn->tls)) {
+    log_fn(LOG_WARN,"Peer didn't send a cert! Closing.");
+    return -1;
   }
-  /* Okay; the other side is an OR or a post-0.0.8 OP (with a cert). */
   if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, sizeof(nickname))) {
     log_fn(LOG_WARN,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
            conn->address, conn->port);
