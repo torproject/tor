@@ -1059,6 +1059,8 @@ typedef struct {
   int ManageConnections; /**< Boolean: Does Tor attach new connections to
                           * circuits itself (1), or does it let the controller
                           * deal? (0) */
+  int ShutdownWaitLength; /**< When we get a SIGINT and we're a server, how
+                           * long do we wait before exiting? */
 } or_options_t;
 
 #define MAX_SOCKS_REPLY_LEN 1024

@@ -29,8 +29,6 @@ hibernating, phase 2:
 #define HIBERNATE_STATE_LOWBANDWIDTH 3
 #define HIBERNATE_STATE_DORMANT 4
 
-#define SHUTDOWN_WAIT_LENGTH 30 /* seconds */
-
 extern long stats_n_seconds_working; /* published uptime */
 
 static int hibernate_state = HIBERNATE_STATE_LIVE;
@@ -656,6 +654,7 @@ static int hibernate_soft_limit_reached(void)
  * connections, but we continue handling old ones. */
 static void hibernate_begin(int new_state, time_t now) {
   connection_t *conn;
+  or_options_t *options = get_options();
 
   if (new_state == HIBERNATE_STATE_EXITING &&
       hibernate_state != HIBERNATE_STATE_LIVE) {
@@ -678,8 +677,8 @@ static void hibernate_begin(int new_state, time_t now) {
   /* XXX upload rendezvous service descriptors with no intro points */
 
   if (new_state == HIBERNATE_STATE_EXITING) {
-    log(LOG_NOTICE,"Interrupt: will shut down in %d seconds. Interrupt again to exit now.", SHUTDOWN_WAIT_LENGTH);
-    hibernate_end_time = time(NULL) + SHUTDOWN_WAIT_LENGTH;
+    log(LOG_NOTICE,"Interrupt: will shut down in %d seconds. Interrupt again to exit now.", options->ShutdownWaitLength);
+    hibernate_end_time = time(NULL) + options->ShutdownWaitLength;
   } else { /* soft limit reached */
     hibernate_end_time = interval_end_time;
   }
