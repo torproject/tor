@@ -14,6 +14,9 @@
 #define _GNU_SOURCE
 
 #include "orconfig.h"
+#include "util.h"
+#include "log.h"
+#include "crypto.h"
 
 /* XXXX probably some of these are unneeded. find out which. */
 #ifdef MS_WINDOWS
@@ -31,9 +34,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include "util.h"
-#include "log.h"
-#include "crypto.h"
 
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>

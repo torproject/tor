@@ -13,7 +13,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#ifdef MS_WINDOWS
+#include "..\..\contrib\zlib\zlib.h"
+#else
 #include <zlib.h>
+#endif
 
 #include "util.h"
 #include "log.h"

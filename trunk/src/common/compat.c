@@ -8,6 +8,7 @@
 #define _GNU_SOURCE
 
 #include "orconfig.h"
+#include "compat.h"
 
 #ifdef MS_WINDOWS
 #include <io.h>
@@ -65,7 +66,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include "compat.h"
 #include "log.h"
 #include "util.h"
 
