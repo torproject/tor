@@ -897,6 +897,12 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
       /* one is already established, attach */
       log_fn(LOG_INFO,"rend joined circ %d already here. attaching. (stream %d sec old)",
              rendcirc->n_circ_id, conn_age);
+      /* Mark rendezvous circuits as 'newly dirty' every time you use
+       * them, since the process of rebuilding a rendezvous circ is so
+       * expensive. There is a tradeoffs between linkability and
+       * feasibility, at this point.
+       */
+      rendcirc->timestamp_dirty = time(NULL);
       link_apconn_to_circ(conn, rendcirc);
       if (connection_ap_handshake_send_begin(conn, rendcirc) < 0)
         return 0; /* already marked, let them fade away */

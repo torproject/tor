@@ -50,7 +50,7 @@ typedef struct rend_service_t {
   int n_intro_circuits_launched; /**< count of intro circuits we have
                                   * established in this period. */
   rend_service_descriptor_t *desc;
-  int desc_is_dirty;
+  time_t desc_is_dirty;
   time_t next_upload_time;
 } rend_service_t;
 
@@ -645,7 +645,7 @@ rend_service_intro_established(circuit_t *circuit, const char *request, size_t r
            circuit->n_circ_id);
     goto err;
   }
-  service->desc_is_dirty = 1;
+  service->desc_is_dirty = time(NULL);
   circuit->purpose = CIRCUIT_PURPOSE_S_INTRO;
 
   return 0;
@@ -833,7 +833,8 @@ void rend_services_introduce(void) {
                 intro, service->service_id);
         tor_free(intro);
         smartlist_del(service->intro_nodes,j--);
-        changed = service->desc_is_dirty = 1;
+        service->desc_is_dirty = now;
+        changed = 1;
       }
       smartlist_add(intro_routers, router);
     }
@@ -915,9 +916,9 @@ rend_consider_services_upload(time_t now) {
     }
     if (service->next_upload_time < now ||
         (service->desc_is_dirty &&
-         service->next_upload_time < now-5)) {
+         service->desc_is_dirty < now-5)) {
       /* if it's time, or if the directory servers have a wrong service
-       * descriptor and this has been the case for 5 seconds, upload a
+       * descriptor and ours has been stable for 5 seconds, upload a
        * new one. */
       upload_service_descriptor(service);
       service->next_upload_time = now + rendpostperiod;
