@@ -18,9 +18,9 @@ ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 else
 	CFLAGS += -O2
 endif
-ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
-	INSTALL_PROGRAM += -s
-endif
+#ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
+#	INSTALL_PROGRAM += -s
+#endif
 
 config.status: configure
 	dh_testdir
@@ -92,7 +92,7 @@ binary-arch: build install
 #	dh_installcron
 	dh_installman
 	dh_link
-	dh_strip
+	#dh_strip
 	dh_compress
 	dh_fixperms
 	dh_installdeb
