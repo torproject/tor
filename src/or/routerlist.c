@@ -310,6 +310,7 @@ routerinfo_t *router_get_by_nickname(const char *nickname)
   return NULL;
 }
 
+/* XXX008 currently this trusted_dir_digests stuff is not used. */
 /** Return true iff <b>digest</b> is the digest of the identity key of
  * a trusted directory. */
 int router_digest_is_trusted_dir(const char *digest) {
