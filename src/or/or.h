@@ -1046,7 +1046,7 @@ int rend_client_receive_rendezvous(circuit_t *circ, const char *request, int req
 void rend_client_desc_fetched(char *query, int success);
 
 int rend_cmp_service_ids(char *one, char *two);
-char *rend_get_random_intro(char *query);
+char *rend_client_get_random_intro(char *query);
 int rend_parse_rendezvous_address(char *address);
 
 int rend_client_send_establish_rendezvous(circuit_t *circ);

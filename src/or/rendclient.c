@@ -208,7 +208,7 @@ int rend_cmp_service_ids(char *one, char *two) {
 /* return a pointer to a nickname for a random introduction
  * point of query. return NULL if error.
  */
-char *rend_get_random_intro(char *query) {
+char *rend_client_get_random_intro(char *query) {
   const char *descp;
   int desc_len;
   int i;
