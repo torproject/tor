@@ -129,6 +129,13 @@ void hex_encode(const char *from, int fromlen, char *to)
  * _choose() returns a random element.
  */
 #define SMARTLIST_DEFAULT_CAPACITY 32
+
+struct smartlist_t {
+  void **list;
+  int num_used;
+  int capacity;
+};
+
 smartlist_t *smartlist_create() {
   smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
   sl->num_used = 0;
@@ -143,6 +150,8 @@ void smartlist_free(smartlist_t *sl) {
 }
 
 void smartlist_set_capacity(smartlist_t *sl, int n) {
+  if (n<0)
+    n = sl->num_used;
   if (sl->capacity != n && sl->num_used < n) {
     sl->capacity = n;
     sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
@@ -206,6 +215,29 @@ void *smartlist_choose(smartlist_t *sl) {
   if(sl->num_used)
     return sl->list[crypto_pseudo_rand_int(sl->num_used)];
   return NULL; /* no elements to choose from */
+}
+
+void *smartlist_get(smartlist_t *sl, int idx)
+{
+  return sl->list[idx];
+}
+void *smartlist_set(smartlist_t *sl, int idx, void *val)
+{
+  void *old;
+  old = sl->list[idx];
+  sl->list[idx] = val;
+  return old;
+}
+void *smartlist_del(smartlist_t *sl, int idx)
+{
+  void *old;
+  old = sl->list[idx];
+  sl->list[idx] = sl->list[--sl->num_used];
+  return old;
+}
+int smartlist_len(smartlist_t *sl)
+{
+  return sl->num_used;
 }
 
 /*

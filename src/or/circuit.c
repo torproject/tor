@@ -1033,8 +1033,8 @@ void circuit_expire_unused_circuits(void) {
       smartlist_add(unused_open_circs, circ);
     }
   }
-  for (i = MAX_UNUSED_OPEN_CIRCUITS; i < unused_open_circs->num_used; ++i) {
-    circuit_t *circ=(circuit_t*)(unused_open_circs->list[i]);
+  for (i = MAX_UNUSED_OPEN_CIRCUITS; i < smartlist_len(unused_open_circs); ++i) {
+    circuit_t *circ = smartlist_get(unused_open_circs, i);
     circuit_mark_for_close(circ);
   }
   smartlist_free(unused_open_circs);

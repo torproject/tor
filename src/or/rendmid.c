@@ -18,7 +18,8 @@ rend_mid_establish_intro(circuit_t *circ, char *request, int request_len)
   circuit_t *c;
   char hexid[9];
 
-  log_fn(LOG_INFO, "Received an ESTABLISH_INTRO request on circuit %d", circ->p_circ_id);
+  log_fn(LOG_INFO,
+         "Received an ESTABLISH_INTRO request on circuit %d", circ->p_circ_id);
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
     log_fn(LOG_WARN, "Rejecting ESTABLISH_INTRO on non-OR or non-edge circuit");
@@ -69,7 +70,8 @@ rend_mid_establish_intro(circuit_t *circ, char *request, int request_len)
   c = NULL;
   while ((c = circuit_get_next_by_pk_and_purpose(
                                 c,pk_digest,CIRCUIT_PURPOSE_INTRO_POINT))) {
-    log_fn(LOG_INFO, "Replacing old circuit %d for service %s", c->p_circ_id, hexid);
+    log_fn(LOG_INFO, "Replacing old circuit %d for service %s",
+           c->p_circ_id, hexid);
     circuit_mark_for_close(c);
   }
 
@@ -77,7 +79,8 @@ rend_mid_establish_intro(circuit_t *circ, char *request, int request_len)
   circ->purpose = CIRCUIT_PURPOSE_INTRO_POINT;
   memcpy(circ->rend_pk_digest, pk_digest, 20);
 
-  log_fn(LOG_INFO, "Established introduction point on circuit %d for service %s",
+  log_fn(LOG_INFO,
+         "Established introduction point on circuit %d for service %s",
          circ->p_circ_id, hexid);
 
   return 0;
@@ -97,20 +100,36 @@ int
 rend_mid_introduce(circuit_t *circ, char *request, int request_len)
 {
   circuit_t *intro_circ;
+  char hexid[9];
 
-  if (request_len < 276) {
-    log_fn(LOG_WARN, "Impossibly short INTRODUCE2 cell; dropping.");
+  if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
+    log_fn(LOG_WARN, "Rejecting INTRODUCE2 on non-OR or non-edge circuit %d",
+           circ->p_circ_id);
     goto err;
   }
+
+  if (request_len < 276) {
+    log_fn(LOG_WARN,
+           "Impossibly short INTRODUCE2 cell on circuit %d; dropping.",
+           circ->p_circ_id);
+    goto err;
+  }
+
+  hex_encode(request,4,hexid);
 
   /* The first 20 bytes are all we look at: they have a hash of Bob's PK. */
   intro_circ = circuit_get_next_by_pk_and_purpose(
                              NULL, request, CIRCUIT_PURPOSE_INTRO_POINT);
   if (!intro_circ) {
     log_fn(LOG_WARN,
-           "No introduction circuit matching INTRODUCE2 cell; dropping");
+           "No intro circ found for INTRODUCE2 cell (%s) from circuit %d; dropping",
+           hexid, circ->p_circ_id);
     goto err;
   }
+
+  log_fn(LOG_INFO,
+         "Sending introduction request for service %s from circ %d to circ %d",
+         hexid, circ->p_circ_id, intro_circ->p_circ_id);
 
   /* Great.  Now we just relay the cell down the circuit. */
   if (connection_edge_send_command(NULL, intro_circ,
@@ -132,6 +151,8 @@ rend_mid_introduce(circuit_t *circ, char *request, int request_len)
 int
 rend_mid_establish_rendezvous(circuit_t *circ, char *request, int request_len)
 {
+  char hexid[9];
+
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
     log_fn(LOG_WARN, "Tried to establish rendezvous on non-OR or non-edge circuit");
     goto err;
@@ -150,6 +171,10 @@ rend_mid_establish_rendezvous(circuit_t *circ, char *request, int request_len)
   circ->purpose = CIRCUIT_PURPOSE_REND_POINT_WAITING;
   memcpy(circ->rend_cookie, request, REND_COOKIE_LEN);
 
+  hex_encode(request,4,hexid);
+  log_fn(LOG_INFO, "Established rendezvous point on circuit %d for cookie %s",
+         circ->p_circ_id, hexid);
+
   return 0;
  err:
   circuit_mark_for_close(circ);
@@ -163,20 +188,33 @@ int
 rend_mid_rendezvous(circuit_t *circ, char *request, int request_len)
 {
   circuit_t *rend_circ;
+  char hexid[9];
+
+  if (request_len>=4) {
+    hex_encode(request,4,hexid);
+    log_fn(LOG_INFO, "Got request for rendezvous from circuit %d to cookie %s",
+           circ->p_circ_id, hexid);
+  }
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
-    log_fn(LOG_WARN, "Tried to complete rendezvous on non-OR or non-edge circuit");
+    log_fn(LOG_WARN,
+           "Tried to complete rendezvous on non-OR or non-edge circuit %d",
+           circ->p_circ_id);
     goto err;
   }
 
   if (request_len < 20+128+20) {
-    log_fn(LOG_WARN, "Rejecting impossibly short RENDEZVOUS1 cell");
+    log_fn(LOG_WARN,
+           "Rejecting impossibly short RENDEZVOUS1 cell on circuit %d",
+           circ->p_circ_id);
     goto err;
   }
 
   rend_circ = circuit_get_rendezvous(request);
   if (!rend_circ) {
-    log_fn(LOG_WARN, "Rejecting RENDEZVOUS1 cell with unrecognized rendezvous cookie");
+    log_fn(LOG_WARN,
+           "Rejecting RENDEZVOUS1 cell with unrecognized rendezvous cookie %s",
+           hexid);
     goto err;
   }
 
@@ -184,11 +222,16 @@ rend_mid_rendezvous(circuit_t *circ, char *request, int request_len)
   if (connection_edge_send_command(NULL, rend_circ,
                                    RELAY_COMMAND_RENDEZVOUS2,
                                    request+20, request_len-20, NULL)) {
-    log_fn(LOG_WARN, "Unable to send RENDEZVOUS2 cell to OP.");
+    log_fn(LOG_WARN, "Unable to send RENDEZVOUS2 cell to OP on circuit %d",
+           rend_circ->p_circ_id);
     goto err;
   }
 
   /* Join the circuits. */
+  log_fn(LOG_INFO,
+         "Completing rendezvous: circuit %d joins circuit %d (cookie %s)",
+         circ->p_circ_id, rend_circ->p_circ_id, hexid);
+
   circ->purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
   rend_circ->purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
   memset(circ->rend_cookie, 0, 20);

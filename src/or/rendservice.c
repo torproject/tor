@@ -40,20 +40,15 @@ static smartlist_t *rend_service_list = NULL;
 
 static void rend_service_free(rend_service_t *config)
 {
-  int i;
   if (!config) return;
   tor_free(config->directory);
-  for (i=0; i<config->ports->num_used; ++i) {
-    tor_free(config->ports->list[i]);
-  }
+  SMARTLIST_FOREACH(config->ports, void*, p, tor_free(p));
   smartlist_free(config->ports);
   if (config->private_key)
     crypto_free_pk_env(config->private_key);
   tor_free(config->intro_prefer_nodes);
   tor_free(config->intro_exclude_nodes);
-  for (i=0; i<config->intro_nodes->num_used; ++i) {
-    tor_free(config->intro_nodes->list[i]);
-  }
+  SMARTLIST_FOREACH(config->intro_nodes, void*, p, tor_free(p));
   smartlist_free(config->intro_nodes);
   if (config->desc)
     rend_service_descriptor_free(config->desc);
@@ -62,14 +57,12 @@ static void rend_service_free(rend_service_t *config)
 
 static void rend_service_free_all(void)
 {
-  int i;
   if (!rend_service_list) {
     rend_service_list = smartlist_create();
     return;
   }
-  for (i=0; i < rend_service_list->num_used; ++i) {
-    rend_service_free(rend_service_list->list[i]);
-  }
+  SMARTLIST_FOREACH(rend_service_list, rend_service_t*, ptr,
+                    rend_service_free(ptr));
   smartlist_free(rend_service_list);
   rend_service_list = smartlist_create();
 }
@@ -85,15 +78,15 @@ static void add_service(rend_service_t *service)
   if (!service->intro_exclude_nodes)
     service->intro_exclude_nodes = tor_strdup("");
 
-  if (!service->ports->num_used) {
+  if (!smartlist_len(service->ports)) {
     log_fn(LOG_WARN, "Hidden service with no ports configured; ignoring.");
     rend_service_free(service);
   } else {
-    smartlist_set_capacity(service->ports, service->ports->num_used);
+    smartlist_set_capacity(service->ports, -1);
     smartlist_add(rend_service_list, service);
     log_fn(LOG_INFO,"Configuring service with directory %s",service->directory);
-    for (i = 0; i < service->ports->num_used; ++i) {
-      p = (rend_service_port_config_t *) service->ports->list[i];
+    for (i = 0; i < smartlist_len(service->ports); ++i) {
+      p = smartlist_get(service->ports, i);
       addr.s_addr = htonl(p->real_address);
       log_fn(LOG_INFO,"Service maps port %d to %s:%d",
 	     p->virtual_port, inet_ntoa(addr), p->real_port);
@@ -220,8 +213,8 @@ int rend_config_services(or_options_t *options)
   return 0;
 }
 
-/*
- * DOCDOC
+/* Replace the old value of service->desc with one that reflects
+ * the other fields in service.
  */
 static void rend_service_update_descriptor(rend_service_t *service)
 {
@@ -235,10 +228,10 @@ static void rend_service_update_descriptor(rend_service_t *service)
   d = service->desc = tor_malloc(sizeof(rend_service_descriptor_t));
   d->pk = crypto_pk_dup_key(service->private_key);
   d->timestamp = time(NULL);
-  n = d->n_intro_points = service->intro_nodes->num_used;
+  n = d->n_intro_points = smartlist_len(service->intro_nodes);
   d->intro_points = tor_malloc(sizeof(char*)*n);
   for (i=0; i < n; ++i) {
-    d->intro_points[i] = tor_strdup(service->intro_nodes->list[i]);
+    d->intro_points[i] = tor_strdup(smartlist_get(service->intro_nodes, i));
   }
 }
 
@@ -252,10 +245,12 @@ int rend_service_init_keys(void)
   char fname[512];
   char buf[128];
 
-  for (i=0; i < rend_service_list->num_used; ++i) {
-    s = (rend_service_t*) rend_service_list->list[i];
+  for (i=0; i < smartlist_len(rend_service_list); ++i) {
+    s = smartlist_get(rend_service_list,i);
     if (s->private_key)
       continue;
+    log_fn(LOG_INFO, "Loading hidden-service keys from '%s'", s->directory);
+
     /* Check/create directory */
     if (check_private_dir(s->directory, 1) < 0)
       return -1;
@@ -294,13 +289,8 @@ int rend_service_init_keys(void)
 static rend_service_t *
 rend_service_get_by_pk_digest(const char* digest)
 {
-  int i;
-  rend_service_t *s;
-  for (i = 0; i < rend_service_list->num_used; ++i) {
-    s = (rend_service_t*)rend_service_list->list[i];
-    if (!memcmp(s->pk_digest, digest, 20))
-      return s;
-  }
+  SMARTLIST_FOREACH(rend_service_list, rend_service_t*, s,
+                    if (!memcmp(s->pk_digest,digest,20)) return s);
   return NULL;
 }
 
@@ -322,22 +312,32 @@ rend_service_introduce(circuit_t *circuit, char *request, int request_len)
   crypto_dh_env_t *dh = NULL;
   circuit_t *launched = NULL;
   crypt_path_t *cpath = NULL;
+  char hexid[9];
+  char hexcookie[9];
+
+  hex_encode(circuit->rend_pk_digest, 4, hexid);
+
+  log_fn(LOG_INFO, "Received INTRODUCE2 cell for service %s on circ %d",
+         hexid, circuit->n_circ_id);
 
   if (circuit->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
-    log_fn(LOG_WARN, "Got an INTRODUCE2 over a non-introduction circuit.");
+    log_fn(LOG_WARN, "Got an INTRODUCE2 over a non-introduction circuit %d",
+           circuit->n_circ_id);
     return -1;
   }
 
   /* min key length plus digest length */
   if (request_len < 148) {
-    log_fn(LOG_WARN, "Got a truncated INTRODUCE2 cell.");
+    log_fn(LOG_WARN, "Got a truncated INTRODUCE2 cell on circ %d",
+           circuit->n_circ_id);
     return -1;
   }
 
   /* first 20 bytes of request is service pk digest */
   service = rend_service_get_by_pk_digest(request);
   if (!service) {
-    log_fn(LOG_WARN, "Got an INTRODUCE2 cell for an unrecognized service");
+    log_fn(LOG_WARN, "Got an INTRODUCE2 cell for an unrecognized service %s",
+           hexid);
     return -1;
   }
   if (!memcmp(circuit->rend_pk_digest, request, 20)) {
@@ -375,6 +375,7 @@ rend_service_introduce(circuit_t *circuit, char *request, int request_len)
     return -1;
   }
   r_cookie = ptr;
+  hex_encode(r_cookie,4,hexcookie);
 
   /* Try DH handshake... */
   dh = crypto_dh_new();
@@ -391,9 +392,13 @@ rend_service_introduce(circuit_t *circuit, char *request, int request_len)
   /* Launch a circuit to alice's chosen rendezvous point.
    */
   launched = circuit_launch_new(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname);
+  log_fn(LOG_INFO,
+        "Accepted intro; launching circuit to '%s' (cookie %s) for service %s",
+         rp_nickname, hexcookie, hexid);
   if (!launched) {
-    log_fn(LOG_WARN, "Can't launch circuit to rendezvous point '%s'",
-           rp_nickname);
+    log_fn(LOG_WARN,
+           "Can't launch circuit to rendezvous point '%s' for service %s",
+           rp_nickname, hexid);
     return -1;
   }
   assert(launched->build_state);
@@ -423,8 +428,13 @@ static int
 rend_service_launch_establish_intro(rend_service_t *service, char *nickname)
 {
   circuit_t *launched;
+  char hexid[9];
 
   assert(service && nickname);
+
+  hex_encode(service->pk_digest, 4, hexid);
+  log_fn(LOG_INFO, "Launching circuit to introduction point %s for service %s",
+         nickname, hexid);
 
   launched = circuit_launch_new(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, nickname);
   if (!launched) {
@@ -447,14 +457,22 @@ rend_service_intro_is_ready(circuit_t *circuit)
   int len, r;
   char buf[RELAY_PAYLOAD_SIZE];
   char auth[CRYPTO_SHA1_DIGEST_LEN + 10];
+  char hexid[9];
 
   assert(circuit->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
   assert(circuit->cpath);
+
+  hex_encode(circuit->rend_pk_digest, 4, hexid);
   service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);
   if (!service) {
-    log_fn(LOG_WARN, "Internal error: unrecognized service ID on introduction circuit");
+    log_fn(LOG_WARN, "Unrecognized service ID %s on introduction circuit %d",
+           hexid, circuit->n_circ_id);
     goto err;
   }
+
+  log_fn(LOG_INFO,
+         "Established circuit %d as introduction point for service %s",
+         circuit->n_circ_id, hexid);
 
   /* Build the payload for a RELAY_ESTABLISH_INTRO cell. */
   len = crypto_pk_asn1_encode(service->private_key, buf+2,
@@ -475,7 +493,9 @@ rend_service_intro_is_ready(circuit_t *circuit)
 
   if (connection_edge_send_command(NULL, circuit,RELAY_COMMAND_ESTABLISH_INTRO,
                                    buf, len, circuit->cpath->prev)<0) {
-    log_fn(LOG_WARN, "Couldn't send introduction request");
+    log_fn(LOG_WARN,
+           "Couldn't send introduction request for service %s on circuit %d",
+           hexid, circuit->n_circ_id);
     goto err;
   }
 
@@ -493,12 +513,21 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
   rend_service_t *service;
   char buf[RELAY_PAYLOAD_SIZE];
   crypt_path_t *hop;
+  char hexid[9];
+  char hexcookie[9];
 
   assert(circuit->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
   assert(circuit->cpath);
   assert(circuit->build_state);
   hop = circuit->build_state->pending_final_cpath;
   assert(hop);
+
+  hex_encode(circuit->rend_pk_digest, 4, hexid);
+  hex_encode(circuit->rend_cookie, 4, hexcookie);
+
+  log_fn(LOG_INFO,
+       "Done building circuit %d to rendezvous with cookie %s for service %s",
+         circuit->n_circ_id, hexcookie, hexid);
 
   service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);
   if (!service) {
@@ -556,14 +585,16 @@ int rend_services_init(void) {
 
   router_get_routerlist(&rl);
 
-  for (i=0;i<rend_service_list->num_used;++i) {
-    service = rend_service_list->list[i];
+  for (i=0; i< smartlist_len(rend_service_list); ++i) {
+    service = smartlist_get(rend_service_list, i);
+
     assert(service);
     changed = 0;
 
     /* Find out which introduction points we really have for this service. */
-    for (j=0;j<service->intro_nodes->num_used;++j) {
-      router = router_get_by_nickname(service->intro_nodes->list[j]);
+    for (j=0;j< smartlist_len(service->intro_nodes); ++j) {
+
+      router = router_get_by_nickname(smartlist_get(service->intro_nodes,j));
       if (!router)
         goto remove_point;
       circ = NULL;
@@ -580,22 +611,18 @@ int rend_services_init(void) {
       if (found) continue;
 
     remove_point:
-      tor_free(service->intro_nodes->list[j]);
-      service->intro_nodes->list[j] =
-        service->intro_nodes->list[service->intro_nodes->num_used-1];
-      --service->intro_nodes->num_used;
-      --j;
+      smartlist_del(service->intro_nodes,j--);
       changed = 1;
     }
 
     /* We have enough intro points, and the intro points we thought we had were
      * all connected.
      */
-    if (!changed && service->intro_nodes->num_used >= NUM_INTRO_POINTS)
+    if (!changed && smartlist_len(service->intro_nodes) >= NUM_INTRO_POINTS)
       continue;
 
     /* Remember how many introduction circuits we started with. */
-    prev_intro_nodes = service->intro_nodes->num_used;
+    prev_intro_nodes = smartlist_len(service->intro_nodes);
 
     /* The directory is now here. Pick three ORs as intro points. */
     for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
@@ -605,7 +632,7 @@ int rend_services_init(void) {
                                          service->intro_nodes);
       if (!router) {
         log_fn(LOG_WARN, "Can't establish more than %d introduction points",
-               service->intro_nodes->num_used);
+               smartlist_len(service->intro_nodes));
         break;
       }
       changed = 1;
@@ -630,8 +657,8 @@ int rend_services_init(void) {
     tor_free(desc);
 
     /* Establish new introduction points. */
-    for (i=prev_intro_nodes; i < service->intro_nodes->num_used; ++i) {
-      intro = (char*) service->intro_nodes->list[i];
+    for (j=prev_intro_nodes; j < smartlist_len(service->intro_nodes); ++j) {
+      intro = smartlist_get(service->intro_nodes, j);
       r = rend_service_launch_establish_intro(service, intro);
       if (r<0) {
         log_fn(LOG_WARN, "Error launching circuit to node %s", intro);
