@@ -6,7 +6,6 @@
 #define __OR_H
 
 #include "orconfig.h"
-#undef VERSION
 
 #include <stdio.h>
 #include <stdlib.h>

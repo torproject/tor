@@ -48,8 +48,11 @@ int ap_handshake_process_ss(connection_t *conn) {
     conn->ss_received = sizeof(ss_t);
     log(LOG_DEBUG,"ap_handshake_process_ss(): Successfully read ss.");
 
-    if ((conn->ss.version == 0) || (conn->ss.version != VERSION)) { /* unsupported version */
-      log(LOG_DEBUG,"ap_handshake_process_ss(): ss: Unsupported version.");
+    if ((conn->ss.version == 0) || (conn->ss.version != OR_VERSION)) { /* unsupported version */
+      log(LOG_NOTICE,"ap_handshake_process_ss(): ss: Unsupported version '%c'.",conn->ss.version);
+      if(tolower(conn->ss.version) == 'g') {
+        log(LOG_NOTICE,"ap_handshake_process_ss(): are you using the onion proxy as a web proxy?");
+      }
       return -1;
     }
     if (conn->ss.addr_fmt != SS_ADDR_FMT_ASCII_HOST_PORT) { /* unrecognized address format */

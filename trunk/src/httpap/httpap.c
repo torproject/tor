@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.10  2002/09/19 20:13:27  arma
+ * synchronize to the version i've been giving people to test
+ *
  * Revision 1.9  2002/09/10 13:32:27  nickm
  * "You got BSD in my MacOS!" "You got MacOS in my BSD!" Anyway, MacOS works again.
  *
@@ -57,7 +60,6 @@
  */
 
 #include "orconfig.h"
-#undef VERSION
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -259,7 +261,7 @@ int handle_connection(int new_sock, struct hostent *local, struct sockaddr_in re
   }
   
   /* create a standard structure */
-  ss.version = VERSION;
+  ss.version = OR_VERSION;
   ss.protocol = SS_PROTOCOL_HTTP;
   ss.retry_count = 0;
   ss.addr_fmt = SS_ADDR_FMT_ASCII_HOST_PORT;

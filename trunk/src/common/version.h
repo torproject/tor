@@ -8,8 +8,11 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/09/19 20:13:23  arma
+ * synchronize to the version i've been giving people to test
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.3  2002/04/02 14:27:11  badbytes
  * Final finishes.
@@ -23,6 +26,6 @@
  */
 
 #ifndef __VERSION_H
-#define VERSION 2
+#define OR_VERSION 2
 #define __VERSION_H
 #endif
