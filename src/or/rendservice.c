@@ -23,6 +23,12 @@ typedef struct rend_service_port_config_t {
 /** Try to maintain this many intro points per service if possible. */
 #define NUM_INTRO_POINTS 3
 
+/** If we can't build our intro circuits, don't retry for this long. */
+#define INTRO_CIRC_RETRY_PERIOD 60*15
+/** Don't try to build more than this many circuits before giving up
+ * for a while.*/
+#define MAX_INTRO_CIRCS_PER_PERIOD 20
+
 /** Represents a single hidden service running at this OP. */
 typedef struct rend_service_t {
   /** Fields specified in config file */
@@ -36,6 +42,9 @@ typedef struct rend_service_t {
   char pk_digest[DIGEST_LEN];
   smartlist_t *intro_nodes; /**< list of nicknames for intro points we have,
                              * or are trying to establish. */
+  time_t intro_period_started;
+  int n_intro_circuits_launched; /**< count of intro circuits we have
+                                  * established in this period. */
   rend_service_descriptor_t *desc;
   int desc_is_dirty;
 } rend_service_t;
@@ -195,6 +204,7 @@ int rend_config_services(or_options_t *options)
       service->directory = tor_strdup(line->value);
       service->ports = smartlist_create();
       service->intro_nodes = smartlist_create();
+      service->intro_period_started = time(NULL);
       continue;
     }
     if (!service) {
@@ -514,6 +524,7 @@ rend_service_launch_establish_intro(rend_service_t *service, const char *nicknam
   log_fn(LOG_INFO, "Launching circuit to introduction point %s for service %s",
          nickname, service->service_id);
 
+  ++service->n_intro_circuits_launched;
   launched = circuit_launch_new(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, nickname);
   if (!launched) {
     log_fn(LOG_WARN, "Can't launch circuit to establish introduction at '%s'",
@@ -766,10 +777,12 @@ void rend_services_introduce(void) {
   char *intro;
   int changed, prev_intro_nodes;
   smartlist_t *intro_routers, *exclude_routers;
+  time_t now;
 
   router_get_routerlist(&rl);
   intro_routers = smartlist_create();
   exclude_routers = smartlist_create();
+  now = time(NULL);
 
   for (i=0; i< smartlist_len(rend_service_list); ++i) {
     smartlist_clear(intro_routers);
@@ -777,6 +790,15 @@ void rend_services_introduce(void) {
 
     tor_assert(service);
     changed = 0;
+    if (now > service->intro_period_started+INTRO_CIRC_RETRY_PERIOD) {
+      /* One period has elapsed; we can try building circuits again. */
+      service->intro_period_started = now;
+      service->n_intro_circuits_launched = 0;
+    } else if (service->n_intro_circuits_launched>=MAX_INTRO_CIRCS_PER_PERIOD){
+      /* We have failed too many times in this period; wait for the next
+       * one before we try again. */
+      continue;
+    }
 
     /* Find out which introduction points we have in progress for this service. */
     for (j=0;j< smartlist_len(service->intro_nodes); ++j) {
@@ -794,8 +816,13 @@ void rend_services_introduce(void) {
     /* We have enough intro points, and the intro points we thought we had were
      * all connected.
      */
-    if (!changed && smartlist_len(service->intro_nodes) >= NUM_INTRO_POINTS)
+    if (!changed && smartlist_len(service->intro_nodes) >= NUM_INTRO_POINTS) {
+      /* We have all our intro points! Start a fresh period and reset the
+       * circuit count. */
+      service->intro_period_started = now;
+      service->n_intro_circuits_launched = 0;
       continue;
+    }
 
     /* Remember how many introduction circuits we started with. */
     prev_intro_nodes = smartlist_len(service->intro_nodes);
