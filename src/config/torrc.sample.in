@@ -109,7 +109,8 @@ AllowUnverifiedNodes middle,rendezvous
 ## to last, and the first match wins. If you want to *replace*
 ## the default exit policy, end this with either a reject *:* or an
 ## accept *:*. Otherwise, you're *augmenting* (prepending to) the
-## default exit policy. Leave commented to just use the default.
+## default exit policy. Leave commented to just use the default, which is 
+## available in the man page or at tor.eff.org/tor-manual.html.
 #ExitPolicy accept *:6660-6667,reject *:* # allow irc ports but no more
 #ExitPolicy accept *:119 # accept nntp as well as default exit policy
 #ExitPolicy reject *:* # middleman only -- no exits allowed
