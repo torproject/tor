@@ -39,7 +39,6 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   if(conn->inbuf_reached_eof) {
     log_fn(LOG_ERR,"Read eof. Worker dying.");
     if(conn->state != CPUWORKER_STATE_IDLE) {
-      onion_pending_remove(conn->circ);
       circuit_close(conn->circ);
       conn->circ = NULL;
       num_cpuworkers_busy--;
@@ -59,11 +58,9 @@ int connection_cpu_process_inbuf(connection_t *conn) {
     if(*buf == 0 || conn->circ->p_conn == NULL ||
        onionskin_process(conn->circ, buf+1, buf+1+DH_KEY_LEN) < 0) {
       log_fn(LOG_DEBUG,"decoding onion, onionskin_process, or p_conn failed. Closing.");
-//      onion_pending_remove(conn->circ);
       circuit_close(conn->circ);
     } else {
       log_fn(LOG_DEBUG,"onionskin_process succeeded. Yay.");
-//      onion_pending_remove(conn->circ);
     }
     conn->circ = NULL;
   } else {

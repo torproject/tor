@@ -168,6 +168,7 @@ void directory_free(directory_t *directory)
   for (i = 0; i < directory->n_routers; ++i)
     routerinfo_free(directory->routers[i]);
   free(directory->routers);
+  /* XXX are we leaking directory->software_versions here? */
   free(directory);
 }
 
@@ -506,6 +507,25 @@ static int router_get_dir_hash(char *s, char *digest)
   return 0;
 }
 
+/* return 0 if myversion is in start. Else return -1. */
+int compare_recommended_versions(char *myversion, char *start) {
+  int len_myversion = strlen(myversion);
+  char *comma;
+  char *end = start + strlen(start);
+
+  log_fn(LOG_DEBUG,"checking '%s' in '%s'.", myversion, start);
+  
+  for(;;) {
+    comma = strchr(start, ',');
+    if( ((comma ? comma : end) - start == len_myversion) &&
+       !strncmp(start, myversion, len_myversion)) /* only do strncmp if the length matches */
+        return 0; /* success, it's there */
+    if(!comma)
+      return -1; /* nope */
+    start = comma+1;
+  }
+}
+
 int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey)
 {
   if (router_get_dir_from_string_impl(s, &directory, pkey)) {
@@ -516,7 +536,17 @@ int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey)
     log(LOG_ERR, "Error resolving directory");
     return -1;
   }
-  /* XXXX Check version number */
+  if (compare_recommended_versions(VERSION, directory->software_versions) < 0) {
+    log(LOG_ERR, "You are running tor version %s, which is no longer supported.\nPlease upgrade to one of %s.", VERSION, RECOMMENDED_SOFTWARE_VERSIONS);
+    if(options.IgnoreVersion) {
+      log(LOG_WARNING, "IgnoreVersion is set. If it breaks, we told you so.");
+    } else {
+      log(LOG_ERR,"Set IgnoreVersion config variable if you want to survive this error.");
+      fflush(0);
+      exit(0);
+    }
+  }
+
   return 0;
 }
 

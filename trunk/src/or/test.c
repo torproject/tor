@@ -485,6 +485,9 @@ test_onion_handshake() {
 int dump_router_to_string(char *s, int maxlen, routerinfo_t *router);
 void dump_directory_to_string(char *s, int maxlen);
 
+/* from routers.c */
+int compare_recommended_versions(char *myversion, char *start);
+
 void
 test_dir_format()
 {
@@ -608,6 +611,17 @@ test_dir_format()
   if (rp2) routerinfo_free(rp2);
   if (dir1) free(dir1); /* And more !*/
   if (dir1) free(dir2); /* And more !*/
+
+  /* make sure compare_recommended_versions() works */
+  test_eq(0, compare_recommended_versions("abc", "abc"));
+  test_eq(0, compare_recommended_versions("abc", "ab,abd,abde,abc,abcde"));
+  test_eq(0, compare_recommended_versions("abc", "ab,abd,abde,abcde,abc"));
+  test_eq(0, compare_recommended_versions("abc", "abc,abd,abde,abc,abcde"));
+  test_eq(0, compare_recommended_versions("a", "a,ab,abd,abde,abc,abcde"));
+  test_eq(-1, compare_recommended_versions("a", "ab,abd,abde,abc,abcde"));
+  test_eq(-1, compare_recommended_versions("abb", "ab,abd,abde,abc,abcde"));
+  test_eq(-1, compare_recommended_versions("a", ""));
+  test_eq(0, compare_recommended_versions(VERSION, RECOMMENDED_SOFTWARE_VERSIONS));
 }
 
 int 

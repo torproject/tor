@@ -93,6 +93,8 @@
 #include "../common/log.h"
 #include "../common/util.h"
 
+#define RECOMMENDED_SOFTWARE_VERSIONS "0.0.2pre6,0.0.2pre7"
+
 #define MAXCONNECTIONS 1000 /* upper bound on max connections.
                               can be lowered by config file */
 
@@ -459,6 +461,7 @@ typedef struct {
    int OnionRouter;
    int TrafficShaping;
    int LinkPadding;
+   int IgnoreVersion;
    int DirRebuildPeriod;
    int DirFetchPeriod;
    int KeepalivePeriod;
