@@ -436,8 +436,10 @@ tor_tls_new(int sock, int isServer, int use_no_cert)
 void
 tor_tls_free(tor_tls *tls)
 {
+  tor_assert(tls && tls->ssl);
   SSL_free(tls->ssl);
-  free(tls);
+  tls->ssl = NULL;
+  tor_free(tls);
 }
 
 /** Underlying function for TLS reading.  Reads up to <b>len</b>

@@ -170,8 +170,10 @@ _connection_free(connection_t *conn) {
   if (connection_speaks_cells(conn)) {
     if (conn->state == OR_CONN_STATE_OPEN)
       directory_set_dirty();
-    if (conn->tls)
+    if (conn->tls) {
       tor_tls_free(conn->tls);
+      conn->tls = NULL;
+    }
   }
 
   if (conn->identity_pkey)
