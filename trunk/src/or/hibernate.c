@@ -38,6 +38,7 @@ static time_t hibernate_timeout = 0;
 /** How many bytes have we read/written in this accounting interval? */
 static uint64_t n_bytes_read_in_interval = 0;
 static uint64_t n_bytes_written_in_interval = 0;
+/** How many seconds have we been running this interval? */
 static uint32_t n_seconds_active_in_interval = 0;
 /** When did this accounting interval start? */
 static time_t interval_start_time = 0;
@@ -45,7 +46,10 @@ static time_t interval_start_time = 0;
 static time_t interval_end_time = 0;
 /** How far into the accounting interval should we hibernate? */
 static time_t interval_wakeup_time = 0;
+/** How much bandwidth do we 'expect' to use per minute? */
+static uint32_t expected_bandwidth_usage = 0;
 
+static void reset_accounting(time_t now);
 static int read_bandwidth_usage(void);
 static int record_bandwidth_usage(time_t now);
 static time_t start_of_accounting_period_after(time_t now);
@@ -56,7 +60,8 @@ static void accounting_set_wakeup_time(void);
  * Functions for bandwidth accounting.
  * ************/
 
-void accounting_add_bytes(size_t n_read, size_t n_written, int seconds)
+void
+accounting_add_bytes(size_t n_read, size_t n_written, int seconds)
 {
   n_bytes_read_in_interval += n_read;
   n_bytes_written_in_interval += n_written;
@@ -65,17 +70,35 @@ void accounting_add_bytes(size_t n_read, size_t n_written, int seconds)
   n_seconds_active_in_interval += (seconds < 10) ? seconds : 0;
 }
 
-static time_t start_of_accounting_period_containing(time_t now)
+static INLINE void
+incr_month(struct tm *tm, unsigned int delta)
+{
+  tm->tm_mon += delta;
+  while (tm->tm_mon > 11) {
+    ++tm->tm_year;
+    tm->tm_mon -= 12;
+  }
+}
+
+static INLINE void
+decr_month(struct tm *tm, unsigned int delta)
+{
+  tm->tm_mon -= delta;
+  while (tm->tm_mon < 0) {
+    --tm->tm_year;
+    tm->tm_mon += 12;
+  }
+}
+
+static time_t
+start_of_accounting_period_containing(time_t now)
 {
   struct tm *tm;
   /* Only months are supported. */
   tm = gmtime(&now);
   /* If this is before the Nth, we want the Nth of last month. */
   if (tm->tm_mday < options.AccountingStart) {
-    if (--tm->tm_mon < 0) {
-      tm->tm_mon = 11;
-      --tm->tm_year;
-    }
+    decr_month(tm, 1);
   }
   /* Otherwise, the month and year are correct.*/
 
@@ -85,44 +108,69 @@ static time_t start_of_accounting_period_containing(time_t now)
   tm->tm_sec = 0;
   return tor_timegm(tm);
 }
-static time_t start_of_accounting_period_after(time_t now)
+static time_t
+start_of_accounting_period_after(time_t now)
 {
   time_t start;
   struct tm *tm;
   start = start_of_accounting_period_containing(now);
 
   tm = gmtime(&start);
-  if (++tm->tm_mon > 11) {
-    tm->tm_mon = 0;
-    ++tm->tm_year;
-  }
+  incr_month(tm, 1);
   return tor_timegm(tm);
 }
 
-void configure_accounting(time_t now)
+void
+configure_accounting(time_t now)
 {
   if (!interval_start_time)
-    read_bandwidth_usage(); /* XXXX009 check warning? */
+    read_bandwidth_usage(); /* If we fail, we'll leave values at zero, and
+                             * reset below.*/
   if (!interval_start_time ||
       start_of_accounting_period_after(interval_start_time) <= now) {
     /* We start a new interval. */
     log_fn(LOG_INFO, "Starting new accounting interval.");
-    interval_start_time = start_of_accounting_period_containing(now);
-    interval_end_time = start_of_accounting_period_after(interval_start_time);
-    n_bytes_read_in_interval = 0;
-    n_bytes_written_in_interval = 0;
+    reset_accounting(now);
   } if (interval_start_time ==
         start_of_accounting_period_containing(interval_start_time)) {
     log_fn(LOG_INFO, "Continuing accounting interval.");
     /* We are in the interval we thought we were in. Do nothing.*/
   } else {
-    /* XXXX009 We are in an incompatible interval; we must have
-     * changed our configuration.  Do we reset the interval, or
-     * what? */
-    log_fn(LOG_INFO, "Mismatched accounting interval.");
+    log_fn(LOG_WARN, "Mismatched accounting interval; starting a fresh one.");
+    reset_accounting(now);
   }
   accounting_set_wakeup_time();
 }
+
+static void
+update_expected_bandwidth(void)
+{
+  uint64_t used;
+  uint32_t max_configured = (options.BandwidthRateBytes * 60);
+
+  if (n_seconds_active_in_interval < 1800) {
+    expected_bandwidth_usage = max_configured;
+  } else {
+    used = n_bytes_written_in_interval < n_bytes_read_in_interval ?
+      n_bytes_read_in_interval : n_bytes_written_in_interval;
+    expected_bandwidth_usage = (uint32_t)
+      (used / (n_seconds_active_in_interval / 60));
+    if (expected_bandwidth_usage > max_configured)
+      expected_bandwidth_usage = max_configured;
+  }
+}
+
+static void
+reset_accounting(time_t now) {
+  log_fn(LOG_INFO, "Starting new accounting interval.");
+  update_expected_bandwidth();
+  interval_start_time = start_of_accounting_period_containing(now);
+  interval_end_time = start_of_accounting_period_after(interval_start_time);
+  n_bytes_read_in_interval = 0;
+  n_bytes_written_in_interval = 0;
+  n_seconds_active_in_interval = 0;
+}
+
 
 static INLINE int time_to_record_bandwidth_usage(time_t now)
 {
@@ -134,12 +182,15 @@ static INLINE int time_to_record_bandwidth_usage(time_t now)
   static uint64_t last_written_bytes_noted = 0;
   static time_t last_time_noted = 0;
 
-  if ((options.AccountingMaxKB || 1)&&
-      (last_time_noted + NOTE_INTERVAL <= now ||
-       last_read_bytes_noted + NOTE_BYTES <= n_bytes_read_in_interval ||
-       last_written_bytes_noted + NOTE_BYTES <=
-           n_bytes_written_in_interval ||
-       (interval_end_time && interval_end_time <= now))) {
+  /* ???? Maybe only do this if accountingmaxkb is set ?
+  if (!options.AccountingMaxKB)
+    return 0;
+  */
+
+  if (last_time_noted + NOTE_INTERVAL <= now ||
+      last_read_bytes_noted + NOTE_BYTES <= n_bytes_read_in_interval ||
+      last_written_bytes_noted + NOTE_BYTES <= n_bytes_written_in_interval ||
+      (interval_end_time && interval_end_time <= now)) {
     last_time_noted = now;
     last_read_bytes_noted = n_bytes_read_in_interval;
     last_written_bytes_noted = n_bytes_written_in_interval;
@@ -148,26 +199,30 @@ static INLINE int time_to_record_bandwidth_usage(time_t now)
   return 0;
 }
 
-void accounting_run_housekeeping(time_t now)
+void
+accounting_run_housekeeping(time_t now)
 {
   if (now >= interval_end_time) {
     configure_accounting(now);
   }
   if (time_to_record_bandwidth_usage(now)) {
     if (record_bandwidth_usage(now)) {
-      log_fn(LOG_WARN, "Couldn't record bandwidth usage!");
-      /* XXXX009 should this exit? */
+      log_fn(LOG_ERR, "Couldn't record bandwidth usage; exiting.");
+      exit(1);
     }
   }
 }
 
-void accounting_set_wakeup_time(void)
+static void
+accounting_set_wakeup_time(void)
 {
   struct tm *tm;
   char buf[ISO_TIME_LEN+1];
   char digest[DIGEST_LEN];
   crypto_digest_env_t *d;
   int n_days_in_interval;
+  int n_days_to_exhaust_bw;
+  int n_days_to_consider;
 
   format_iso_time(buf, interval_start_time);
   crypto_pk_get_digest(get_identity_key(), digest);
@@ -178,40 +233,44 @@ void accounting_set_wakeup_time(void)
   crypto_digest_get_digest(d, digest, DIGEST_LEN);
   crypto_free_digest_env(d);
 
-  /* XXXX009 This logic is  wrong.  Instead of choosing randomly
-   * from the days in the interval, we should avoid days so close to the end
-   * that we won't use up all our bandwidth.  This could potentially waste
-   * 50% of all donated bandwidth.
-   */
+  n_days_to_exhaust_bw = (options.AccountingMaxKB/expected_bandwidth_usage)
+    /(24*60);
+
   tm = gmtime(&interval_start_time);
   if (++tm->tm_mon > 11) { tm->tm_mon = 0; ++tm->tm_year; }
   n_days_in_interval = (tor_timegm(tm)-interval_start_time+1)/(24*60*60);
 
-  while (((unsigned char)digest[0]) > n_days_in_interval)
+  n_days_to_consider = n_days_in_interval - n_days_to_exhaust_bw;
+
+  while (((unsigned char)digest[0]) > n_days_to_consider)
     crypto_digest(digest, digest, DIGEST_LEN);
 
   interval_wakeup_time = interval_start_time +
     24*60*60 * (unsigned char)digest[0];
 }
 
+#define BW_ACCOUNTING_VERSION 1
 static int record_bandwidth_usage(time_t now)
 {
   char buf[128];
   char fname[512];
+  char time1[ISO_TIME_LEN+1];
+  char time2[ISO_TIME_LEN+1];
   char *cp = buf;
+  /* Format is:
+     Version\nTime\nTime\nRead\nWrite\nSeconds\nExpected-Rate\n */
 
-  *cp++ = '0';
-  *cp++ = ' ';
-  format_iso_time(cp, interval_start_time);
-  cp += ISO_TIME_LEN;
-  *cp++ = ' ';
-  format_iso_time(cp, now);
-  cp += ISO_TIME_LEN;
-  tor_snprintf(cp, sizeof(buf)-ISO_TIME_LEN*2-3,
-               " "U64_FORMAT" "U64_FORMAT" %lu\n",
+  format_iso_time(time1, interval_start_time);
+  format_iso_time(time2, now);
+  tor_snprintf(cp, sizeof(buf),
+               "%d\n%s\n%s\n"U64_FORMAT"\n"U64_FORMAT"\n%lu\n%lu\n",
+               BW_ACCOUNTING_VERSION,
+               time1,
+               time2,
                U64_PRINTF_ARG(n_bytes_read_in_interval),
                U64_PRINTF_ARG(n_bytes_written_in_interval),
-               (unsigned long)n_seconds_active_in_interval);
+               (unsigned long)n_seconds_active_in_interval,
+               (unsigned long)expected_bandwidth_usage);
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
                get_data_directory(&options));
 
@@ -222,58 +281,76 @@ static int read_bandwidth_usage(void)
 {
   char *s = NULL;
   char fname[512];
-  time_t scratch_time;
-  unsigned long sec;
+  time_t t1, t2;
+  uint64_t n_read, n_written;
+  uint32_t expected_bw, n_seconds;
+  smartlist_t *elts;
+  int ok;
 
-  /*
-  if (!options.AccountingMaxKB)
-    return 0;
-  */
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
                get_data_directory(&options));
   if (!(s = read_file_to_str(fname, 0))) {
     return 0;
   }
-  /* version, space, time, space, time, space, bw, space, bw, nl. */
-  if (strlen(s) < ISO_TIME_LEN*2+6) {
-    log_fn(LOG_WARN,
-           "Recorded bandwidth usage file seems truncated or corrupted");
+  elts = smartlist_create();
+  smartlist_split_string(elts, s, "\n", SPLIT_SKIP_SPACE, SPLIT_IGNORE_BLANK);
+  tor_free(s);
+
+  if (smartlist_len(elts)<1 ||
+      atoi(smartlist_get(elts,0)) != BW_ACCOUNTING_VERSION) {
+    log_fn(LOG_WARN, "Unrecognized bw_accounting file version: %s",
+           (const char*)smartlist_get(elts,0));
     goto err;
   }
-  if (s[0] != '0' || s[1] != ' ') {
-    log_fn(LOG_WARN, "Unrecognized version on bandwidth usage file");
+  if (smartlist_len(elts) < 7) {
+    log_fn(LOG_WARN, "Corrupted bw_accounting file: %d lines",
+           smartlist_len(elts));
     goto err;
   }
-  if (parse_iso_time(s+2, &interval_start_time)) {
+  if (parse_iso_time(smartlist_get(elts,1), &t1)) {
     log_fn(LOG_WARN, "Error parsing bandwidth usage start time.");
     goto err;
   }
-  if (s[ISO_TIME_LEN+2] != ' ') {
-    log_fn(LOG_WARN, "Expected space after start time.");
-    goto err;
-  }
-  if (parse_iso_time(s+ISO_TIME_LEN+3, &scratch_time)) {
+  if (parse_iso_time(smartlist_get(elts,2), &t2)) {
     log_fn(LOG_WARN, "Error parsing bandwidth usage last-written time");
     goto err;
   }
-  if (s[ISO_TIME_LEN+3+ISO_TIME_LEN] != ' ') {
-    log_fn(LOG_WARN, "Expected space after last-written time.");
+  n_read = tor_parse_uint64(smartlist_get(elts,3), 10, 0, UINT64_MAX,
+                            &ok, NULL);
+  if (!ok) {
+    log_fn(LOG_WARN, "Error parsing number of bytes read");
     goto err;
   }
-  if (sscanf(s+ISO_TIME_LEN*2+4, U64_FORMAT" "U64_FORMAT" %lu",
-             U64_SCANF_ARG(&n_bytes_read_in_interval),
-             U64_SCANF_ARG(&n_bytes_written_in_interval),
-             &sec)<2) {
-    log_fn(LOG_WARN, "Error reading bandwidth usage.");
+  n_written = tor_parse_uint64(smartlist_get(elts,4), 10, 0, UINT64_MAX,
+                               &ok, NULL);
+  if (!ok) {
+    log_fn(LOG_WARN, "Error parsing number of bytes read");
     goto err;
   }
-  n_seconds_active_in_interval = (uint32_t)sec;
+  n_seconds = (uint32_t)tor_parse_ulong(smartlist_get(elts,5), 10,0,ULONG_MAX,
+                                        &ok, NULL);
+  if (!ok) {
+    log_fn(LOG_WARN, "Error parsing number of seconds live");
+    goto err;
+  }
+  expected_bw =(uint32_t)tor_parse_ulong(smartlist_get(elts,6), 10,0,ULONG_MAX,
+                                        &ok, NULL);
+  if (!ok) {
+    log_fn(LOG_WARN, "Error parsing expected bandwidth");
+    goto err;
+  }
 
-  tor_free(s);
+  n_bytes_read_in_interval = n_read;
+  n_bytes_written_in_interval = n_written;
+  n_seconds_active_in_interval = n_seconds;
+  interval_start_time = t1;
+  expected_bandwidth_usage = expected_bw;
+
   accounting_set_wakeup_time();
   return 0;
  err:
-  tor_free(s);
+  SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
+  smartlist_free(elts);
   return -1;
 }
 
@@ -295,27 +372,9 @@ static int hibernate_soft_limit_reached(void)
     || n_bytes_written_in_interval >= soft_limit;
 }
 
-static time_t hibernate_calc_wakeup_time(void)
-{
-  if (interval_wakeup_time > time(NULL))
-    return interval_wakeup_time;
-  else
-    /*XXXX009 this means that callers must check for wakeup time again
-    * at the start of the next interval.  Not right! */
-    return interval_end_time;
-}
-
-#if 0
-static int accounting_should_hibernate(void)
-{
-  return hibernate_limit_reached() || interval_wakeup_time > time(NULL);
-}
-#endif
-
-
 /** Called when we get a SIGINT, or when bandwidth soft limit
  * is reached. */
-static void hibernate_begin(int new_state) {
+static void hibernate_begin(int new_state, time_t now) {
   connection_t *conn;
 
   if(hibernate_state == HIBERNATE_STATE_EXITING) {
@@ -343,7 +402,7 @@ static void hibernate_begin(int new_state) {
     hibernate_timeout = time(NULL) + SHUTDOWN_WAIT_LENGTH;
   } else { /* soft limit reached */
     log_fn(LOG_NOTICE,"Bandwidth limit reached; beginning hibernation.");
-    hibernate_timeout = hibernate_calc_wakeup_time();
+    hibernate_timeout = interval_end_time;
   }
 
   hibernate_state = new_state;
@@ -364,7 +423,7 @@ static void hibernate_end(int new_state) {
 
 /** A wrapper around hibernate_begin, for when we get SIGINT. */
 void hibernate_begin_shutdown(void) {
-  hibernate_begin(HIBERNATE_STATE_EXITING);
+  hibernate_begin(HIBERNATE_STATE_EXITING, time(NULL));
 }
 
 /** A wrapper to expose whether we're hibernating. */
@@ -378,10 +437,8 @@ int we_are_hibernating(void) {
 void consider_hibernation(time_t now) {
   connection_t *conn;
 
-  if (hibernate_state != HIBERNATE_STATE_LIVE)
-    tor_assert(hibernate_timeout);
-
   if (hibernate_state == HIBERNATE_STATE_EXITING) {
+    tor_assert(hibernate_timeout);
     if(hibernate_timeout <= now) {
       log(LOG_NOTICE,"Clean shutdown finished. Exiting.");
       tor_cleanup();
@@ -390,18 +447,33 @@ void consider_hibernation(time_t now) {
     return; /* if exiting soon, don't worry about bandwidth limits */
   }
 
-  if(hibernate_timeout && hibernate_timeout <= now) {
-    /* we've been hibernating; time to wake up. */
-    hibernate_end(HIBERNATE_STATE_LIVE);
-    return;
+  if(hibernate_state != HIBERNATE_STATE_LIVE) {
+    /* We've been hibernating because of bandwidth accounting. */
+    tor_assert(hibernate_timeout);
+    if (hibernate_timeout > now) {
+      /* If we're hibernating, don't wake up until it's time, regardless of
+       * whether we're in a new interval */
+      return ;
+    } else {
+      /* The interval has ended, or it is wakeup time.  Find out which */
+      accounting_run_housekeeping(now);
+      if (interval_wakeup_time <= now) {
+        /* The interval hasn't changed, but interval_wakeup_time has passed.
+         * It's time to wake up. */
+        hibernate_end(HIBERNATE_STATE_LIVE);
+        return;
+      } else {
+        /* The interval has changed, and it isn't time to wake up yet. */
+        hibernate_timeout = interval_wakeup_time;
+      }
+    }
   }
 
-  /* else, see if it's time to start hibernating */
-
+  /* Else, see if it's time to start hibernating, or to go dormant. */
   if (hibernate_state == HIBERNATE_STATE_LIVE &&
       hibernate_soft_limit_reached()) {
     log_fn(LOG_NOTICE,"Bandwidth soft limit reached; commencing hibernation.");
-    hibernate_begin(HIBERNATE_STATE_LOWBANDWIDTH);
+    hibernate_begin(HIBERNATE_STATE_LOWBANDWIDTH, now);
   }
 
   if (hibernate_state == HIBERNATE_STATE_LOWBANDWIDTH &&
