@@ -59,8 +59,6 @@ R       - learn from ben about his openssl-reinitialization-trick to
         D nt services on win32.
 
       0.0.9 and beyond:
-        - Should redirects change conn->addr/port or not? Either HTTP
-          proxying or exit redirection is doing the wrong thing.
         - fix sprintf's to snprintf's?
         . Make intro points and rendezvous points accept $KEYID in addition
           to nicknames.
