@@ -1,3 +1,25 @@
+Changes in version 0.0.9.6 - 2005-03-24
+  o Bugfixes on 0.0.9.x (crashes and asserts):
+    - Add new end stream reasons to maintainance branch. Fix bug where
+      reason (8) could trigger an assert.  Prevent bug from recurring.
+    - Apparently win32 stat wants paths to not end with a slash.
+    - Fix assert triggers in assert_cpath_layer_ok(), where we were
+      blowing away the circuit that conn->cpath_layer points to, then
+      checking to see if the circ is well-formed. Backport check to make
+      sure we dont use the cpath on a closed connection
+    - Don't crash on hup if your options->address has become unresolvable.
+
+  o Bugfixes on 0.0.9.x (other):
+    - Fix harmless but scary "Unrecognized content encoding" warn message.
+    - Add new stream error reason: TORPROTOCOL reason means "you are not
+      speaking a version of Tor I understand; say bye-bye to your stream."
+    - Be willing to cache directories from up to ROUTER_MAX_AGE seconds
+      into the future, now that we are more tolerant of skew. This
+      resolves a bug where a Tor server would refuse to cache a directory
+      because all the directories it gets are too far in the future;
+      yet the Tor server never logs any complaints about clock skew.
+
+
 Changes in version 0.0.9.5 - 2005-02-22
   o Bugfixes on 0.0.9.x:
     - Fix an assert race at exit nodes when resolve requests fail.
