@@ -274,6 +274,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
       /* yuck. kill it. */
       perror("connect");
       log_fn(LOG_INFO,"Connect() to %s:%u failed.",address,port);
+      close(s);
       return -1;
     } else {
       /* it's in progress. set state appropriately and return. */
