@@ -599,7 +599,7 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   conn->socks_request->command = SOCKS_COMMAND_CONNECT;
 
   conn->address = tor_strdup("(local bridge)");
-  conn->addr = ntohs(0);
+  conn->addr = 0;
   conn->port = 0;
 
   if(connection_add(conn) < 0) { /* no space, forget it */
@@ -882,6 +882,8 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
  */
 void connection_exit_connect(connection_t *conn) {
   unsigned char connected_payload[4];
+  uint32_t addr;
+  uint16_t port;
 
   if (!connection_edge_is_rendezvous_stream(conn) &&
       router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
@@ -892,8 +894,24 @@ void connection_exit_connect(connection_t *conn) {
     return;
   }
 
+  addr = conn->addr;
+  port = conn->port;
+  SMARTLIST_FOREACH(options.RedirectExitList, exit_redirect_t *, r,
+    {
+      if ((addr&r->mask)==(r->addr&r->mask) &&
+          (r->port_min <= port) && (port <= r->port_max)) {
+        struct in_addr in;
+        addr = r->addr_dest;
+        port = r->port_dest;
+        in.s_addr = htonl(addr);
+        log_fn(LOG_DEBUG, "Redirecting connection from %s:%d to %s:%d",
+               conn->address, conn->port, inet_ntoa(in), port);
+        break;
+      }
+    });
+
   log_fn(LOG_DEBUG,"about to try connecting");
-  switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
+  switch(connection_connect(conn, conn->address, addr, port)) {
     case -1:
       connection_edge_end(conn, END_STREAM_REASON_CONNECTFAILED, conn->cpath_layer);
       circuit_detach_stream(circuit_get_by_conn(conn), conn);
@@ -922,6 +940,7 @@ void connection_exit_connect(connection_t *conn) {
     connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
                                  NULL, 0, conn->cpath_layer);
   } else { /* normal stream */
+    /* This must be the original address, not the redirected address. */
     *(uint32_t*)connected_payload = htonl(conn->addr);
     connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
                                  connected_payload, 4, conn->cpath_layer);
