@@ -514,9 +514,8 @@ crypto_pk_env_t *crypto_pk_DER64_decode_public_key(const char *in)
   }
   /* base64_decode doesn't work unless we insert linebreaks every 64
    * characters.  how dumb. */
-  if (tor_strpartition(partitioned, sizeof(partitioned), in, "\n", 64))
-    return NULL;
-  if (strlcat(partitioned, "\n",sizeof(partitioned))>=sizeof(partitioned))
+  if (tor_strpartition(partitioned, sizeof(partitioned), in, "\n", 64,
+                       ALWAYS_TERMINATE))
     return NULL;
   len = base64_decode(buf, sizeof(buf), partitioned, strlen(partitioned));
   if (len<0) {
@@ -919,7 +918,9 @@ crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out, int add_space)
   }
   base16_encode(hexdigest,sizeof(hexdigest),digest,DIGEST_LEN);
   if (add_space) {
-    tor_strpartition(fp_out, FINGERPRINT_LEN+1, hexdigest, " ", 4);
+    if (tor_strpartition(fp_out, FINGERPRINT_LEN+1, hexdigest, " ", 4,
+                         NEVER_TERMINATE)<0)
+      return -1;
   } else {
     strcpy(fp_out, hexdigest);
   }

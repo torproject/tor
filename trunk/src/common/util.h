@@ -88,8 +88,12 @@ char *tor_strndup(const char *s, size_t n);
 void tor_strlower(char *s);
 int strcmpstart(const char *s1, const char *s2);
 int tor_strstrip(char *s, const char *strip);
+typedef enum {
+  ALWAYS_TERMINATE, NEVER_TERMINATE, TERMINATE_IF_EVEN
+} part_finish_rule_t;
 int tor_strpartition(char *dest, size_t dest_len,
-                     const char *s, const char *insert, size_t n);
+                     const char *s, const char *insert, size_t n,
+                     part_finish_rule_t rule);
 
 
 /* Some platforms segfault when you try to access a multi-byte type
