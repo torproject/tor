@@ -143,15 +143,14 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
     /* The message was too long; overwrite the end of the buffer with
      * "[...truncated]" */
     if (buf_len >= TRUNCATED_STR_LEN) {
-      /* This is safe, since we have an extra character after buf_len
-         to hold the \0. */
-      strlcpy(buf+buf_len-TRUNCATED_STR_LEN, TRUNCATED_STR,
-              buf_len-(buf_len-TRUNCATED_STR_LEN-1));
+      int offset = buf_len-TRUNCATED_STR_LEN;
+      /* We have an extra 2 characters after buf_len to hold the \n\0,
+       * so it's safe to add 1 to the size here. */
+      strlcpy(buf+offset, TRUNCATED_STR, buf_len-offset+1);
     }
     /* Set 'n' to the end of the buffer, where we'll be writing \n\0.
      * Since we already subtracted 2 from buf_len, this is safe.*/
     n = buf_len;
-
   } else {
     n += r;
   }
