@@ -349,8 +349,10 @@ static int resolve_my_address(or_options_t *options) {
   struct in_addr in;
   struct hostent *rent;
   char localhostname[256];
+  int guessed=0;
 
   if(!options->Address) { /* then we need to guess our address */
+    guessed = 1;
 
     if(gethostname(localhostname,sizeof(localhostname)) < 0) {
       log_fn(LOG_WARN,"Error obtaining local hostname");
@@ -376,7 +378,7 @@ static int resolve_my_address(or_options_t *options) {
   }
   assert(rent->h_length == 4);
   memcpy(&in.s_addr, rent->h_addr,rent->h_length);
-  if(is_internal_IP(htonl(in.s_addr))) {
+  if(guessed==1 && is_internal_IP(htonl(in.s_addr))) {
     log_fn(LOG_WARN,"Address '%s' resolves to private IP '%s'. "
            "Please set the Address config option to be your public IP.",
            options->Address, inet_ntoa(in));
