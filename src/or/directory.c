@@ -50,11 +50,6 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
 
   conn->purpose = purpose;
 
-  if(connection_add(conn) < 0) { /* no space, forget it */
-    connection_free(conn);
-    return;
-  }
-
   /* queue the command on the outbuf */
   directory_send_command(conn, purpose, payload, payload_len);
 
@@ -67,13 +62,12 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
     switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
       case -1:
         router_mark_as_down(conn->nickname); /* don't try him again */
-        connection_mark_for_close(conn, 0);
+        connection_free(conn);
         return;
       case 1:
         conn->state = DIR_CONN_STATE_CLIENT_SENDING; /* start flushing conn */
         /* fall through */
       case 0:
-        connection_set_poll_socket(conn);
         connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
         /* writable indicates finish, readable indicates broken link,
            error indicates broken link in windowsland. */
@@ -91,7 +85,7 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
     }
 
     conn->state = DIR_CONN_STATE_CLIENT_SENDING;
-    connection_set_poll_socket(conn);
+    connection_add(conn);
     connection_start_reading(conn);
   }
 }

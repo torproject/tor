@@ -619,7 +619,6 @@ void circuit_build_needed_circs(time_t now) {
   }
 
   /* XXX count idle rendezvous circs and build more */
-
 }
 
 /* update digest from the payload of cell. assign integrity part to cell. */

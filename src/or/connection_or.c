@@ -111,25 +111,17 @@ connection_t *connection_or_connect(routerinfo_t *router) {
   connection_or_init_conn_from_router(conn, router);
   conn->state = OR_CONN_STATE_CONNECTING;
 
-  if(connection_add(conn) < 0) { /* no space, forget it */
-    connection_free(conn);
-    return NULL;
-  }
-
   switch(connection_connect(conn, router->address, router->addr, router->or_port)) {
     case -1:
-      connection_mark_for_close(conn, 0);
+      connection_free(conn);
       return NULL;
     case 0:
-      connection_set_poll_socket(conn);
       connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link on windows */
       return conn;
     /* case 1: fall through */
   }
-
-  connection_set_poll_socket(conn);
 
   if(connection_tls_start_handshake(conn, 0) >= 0)
     return conn;
