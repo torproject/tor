@@ -19,27 +19,30 @@ For scalability:
 For dtor:
 
 NICK  pre1:
-        . make all ORs serve the directory too.
+        o make all ORs serve the directory too.
           o "AuthoritativeDir 1" for dirservers
           o non-authorative servers with dirport publish opt dircacheport
           o make clients read that and use it.
           o make clients able to read a normal dirport from non-trusted OR too
           o make ORs parse-and-keep-and-serve the directory they pull down
-          - authoritativedirservers should pull down directories from
+          o authoritativedirservers should pull down directories from
             other authdirservers, to merge descriptors.
-        - Have clients and dirservers preserve reputation info over
+        D Have clients and dirservers preserve reputation info over
           reboots.
-        - allow dirservers to serve running-router list separately.
+	  [Deferred until we know what reputation info we actually want to
+	   maintain.  Our current algorithm Couldn't Possibly Work.]
+        . allow dirservers to serve running-router list separately.
           o "get /running-routers" will fetch just this.
-          - actually make the clients use this sometimes.
-          - distinguish directory-is-dirty from runninglist-is-dirty
+          o actually make the clients use this sometimes.
+          o distinguish directory-is-dirty from runninglist-is-dirty
           - ORs keep this too, and serve it
-        - tor remembers descriptor-lists across reboots.
+	  - Design: do we need running and non-running lists?
+        o tor remembers descriptor-lists across reboots.
         . Packages define datadir as /var/lib/tor/. If no datadir is defined,
           then choose, make, and secure ~/.tor as datadir.
 	  o Adjust tor
 	  o Change torrc.sample
-	  - Change packages
+	  D Change packages (not till 0.0.8 packages!)
 	  - Look in ~/.torrc if no */etc/torrc is found?
         o Contact info, pgp fingerprint, comments in router desc.
           o Add a ContactInfo line to torrc, which gets published in

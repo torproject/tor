@@ -451,9 +451,8 @@ static void run_scheduled_events(time_t now) {
       router_rebuild_descriptor();
       router_upload_dir_desc_to_dirservers();
     }
-    if(!options.DirPort) {
-      /* NOTE directory servers do not currently fetch directories.
-       * Hope this doesn't bite us later. */
+    if(!options.DirPort || !options.AuthoritativeDir) {
+      /* XXXX should directories do this next part too? */
       routerlist_remove_old_routers(); /* purge obsolete entries */
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
     } else {
@@ -461,6 +460,8 @@ static void run_scheduled_events(time_t now) {
       dirserv_remove_old_servers();
       /* dirservers try to reconnect too, in case connections have failed */
       router_retry_connections();
+      /* fetch another directory, in case it knows something we don't */
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
     }
     /* Force an upload of our descriptors every DirFetchPostPeriod seconds. */
     rend_services_upload(1);
