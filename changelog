@@ -1,10 +1,10 @@
-tor (0.0.9.2-X) UNRELEASED; urgency=low
+tor (0.1.0.0-alpha-cvs-1) UNRELEASED; urgency=low
 
   * Add a watch file.
-  * Forward port patches (so they apply to current cvs).
+  * Forward port 06_add_compile_time_defaults.
   * Add libevent-dev to build-depends.
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 12 Jan 2005 16:43:10 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sun, 23 Jan 2005 16:19:29 +0100
 
 tor (0.0.9.3-1) unstable; urgency=low
 
