@@ -388,10 +388,10 @@ router_parse_routerlist_from_directory(const char *str,
     goto err;
   }
   if (tok->n_args > 1) {
-    log_fn(LOG_WARN, "Invalid recommended-software line", tok->n_args);goto err;
+    log_fn(LOG_WARN, "Invalid recommended-software line");goto err;
            
   }
-  versions = tor->n_args ? tor_strdup(tok->args[0]) : tor_strdup("");
+  versions = tok->n_args ? tor_strdup(tok->args[0]) : tor_strdup("");
 
   if (!(tok = find_first_by_keyword(tokens, K_RUNNING_ROUTERS))) {
     log_fn(LOG_WARN, "Missing running-routers line from directory.");

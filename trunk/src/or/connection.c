@@ -329,7 +329,7 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
   
   if (usePort==0)
     usePort = bindport;
-  binaddrr.sin_addr.s_addr = htonl(addr);
+  bindaddr.sin_addr.s_addr = htonl(addr);
   bindaddr.sin_family = AF_INET;
   bindaddr.sin_port = htons((uint16_t) usePort);
 
