@@ -1,4 +1,4 @@
-tor (0.0.7.2+0.0.8pre3-0) unstable; urgency=low
+tor (0.0.7.2+0.0.8pre3-1) unstable; urgency=low
 
   * New upstream (pre)release.
   * Ship AUTHORS, doc/CLIENTS, doc/FAQ, doc/HACKING, doc/TODO,
