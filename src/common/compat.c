@@ -472,6 +472,7 @@ get_uname(void)
 #endif
       {
         strlcpy(uname_result, "Unknown platform", sizeof(uname_result));
+/* XXX win32 doesn't have uname, but we can still ifdef windows sprint "windows" */
       }
     uname_result_is_set = 1;
   }
