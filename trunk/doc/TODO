@@ -49,6 +49,7 @@ N  - Make millisecond accuracy work on win32
      People are getting confused about why their errors are coming from
      C:\Documents and Settings\Nick Mathewson\My Documents\src\tor .
    - GPSLocation optional config string.
+   - Figure out how to make the rpm not strip the binaries it makes.
 
 Tier two:
 
