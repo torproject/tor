@@ -284,6 +284,8 @@ int circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min) 
   routerinfo_t *exitrouter;
   int num=0;
   time_t now = time(NULL);
+  int need_uptime = smartlist_string_num_isin(get_options()->LongLivedPorts,
+                                   conn ? conn->socks_request->port : port);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
@@ -293,6 +295,7 @@ int circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min) 
          circ->timestamp_dirty + get_options()->NewCircuitPeriod < now)) {
       exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
       if (exitrouter &&
+          (!need_uptime || circ->build_state->need_uptime) &&
           ((conn && connection_ap_can_use_exit(conn, exitrouter)) ||
            (!conn &&
             router_compare_addr_to_addr_policy(0, port, exitrouter->exit_policy) !=
