@@ -66,8 +66,6 @@ typedef struct directory_token_t {
 
 /* static function prototypes */
 static int
-router_set_routerlist_from_string(const char *s);
-static int
 router_get_list_from_string_impl(const char **s, routerlist_t **dest,
                                  int n_good_nicknames,
                                  const char **good_nickname_lst);
@@ -265,7 +263,7 @@ int router_set_routerlist_from_file(char *routerfile)
 /* Helper function: read routerinfo elements from s, and throw out the
  * ones that don't parse and resolve.  Replace the current
  * routerlist. */
-static int router_set_routerlist_from_string(const char *s)
+int router_set_routerlist_from_string(const char *s)
 {
   if (router_get_list_from_string_impl(&s, &routerlist, -1, NULL)) {
     log(LOG_WARN, "Error parsing router file");

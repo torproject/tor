@@ -452,7 +452,8 @@ static int do_main_loop(void) {
   int poll_result;
 
   /* load the routers file */
-  if(router_set_routerlist_from_file(options.RouterFile) < 0) {
+  if(options.RouterFile &&
+     router_set_routerlist_from_file(options.RouterFile) < 0) {
     log_fn(LOG_ERR,"Error loading router list.");
     return -1;
   }
