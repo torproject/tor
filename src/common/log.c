@@ -8,6 +8,7 @@
  * \brief Functions to send messages to log files or the console.
  */
 
+#include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -89,7 +90,7 @@ static void log_tor_version(logfile_t *lf, int reset)
   if (lf->is_temporary)
     /* If it's temporary, it isn't really a file. */
     return;
-#if HAVE_FTELLO
+#ifdef HAVE_FTELLO
   is_new = (ftello(lf->file) == 0);
 #else
   is_new = (ftell(lf->file) == 0);
