@@ -263,7 +263,8 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   char buf[CELL_NETWORK_SIZE];
   cell_t cell;
 
-  log_fn(LOG_DEBUG,"%d: starting, inbuf_datalen %d.",conn->s,buf_datalen(conn->inbuf));
+  log_fn(LOG_DEBUG,"%d: starting, inbuf_datalen %d (%d pending in tls object).",
+         conn->s,buf_datalen(conn->inbuf),tor_tls_get_pending_bytes(conn->tls));
   if(buf_datalen(conn->inbuf) < CELL_NETWORK_SIZE) /* entire response available? */
     return 0; /* not yet */
  
