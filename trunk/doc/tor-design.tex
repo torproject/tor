@@ -1,8 +1,6 @@
 \documentclass[times,10pt,twocolumn]{article}
-%\usepackage{/home/syverson/papers/latex8}
-%\usepackage{/home/syverson/papers/times}
 \usepackage{latex8}
-\usepackage{times}
+%\usepackage{times}
 \usepackage{url}
 \usepackage{graphics}
 \usepackage{amsmath}
@@ -69,7 +67,7 @@ predecessor and successor, but no others. Traffic flowing down the circuit
 is sent in fixed-size \emph{cells}, which are unwrapped by a symmetric key
 at each node, revealing the downstream node. The original onion routing
 project published several design and analysis papers
-\cite{or-journal,or-discex,or-ih,or-pet}. While there was briefly
+\cite{or-jsac98,or-discex00,or-ih96,or-pet02}. While there was briefly
 a network of about a dozen nodes at three widely distributed sites,
 the only long-running and publicly accessible
 implementation was a fragile proof-of-concept that ran on a single
@@ -102,19 +100,25 @@ program without modification.
 onion routing design built one circuit for each request. Aside from the
 performance issues of doing public key operations for every request, it
 also turns out that regular communications patterns mean building lots
-of circuits can endanger anonymity \cite{wright03}. Tor multiplexes many
+of circuits, which can endanger anonymity \cite{wright03}. [XXX Was this
+supposed to be Wright02 or Wright03. In any case I am hesitant to cite
+that work in this context. While the point is valid in general, that
+work is predicated on assumptions that I don't think typically apply
+to onion routing (whether old or new design).]
+Tor multiplexes many
 connections down each circuit, but still rotates the circuit periodically
 to avoid too much linkability.
 
 \item \textbf{No mixing or traffic shaping:} The original onion routing
 design called for full link padding both between onion routers and between
-onion proxies (that is, users) and onion routers \cite{or-journal}. The
-later analysis paper \cite{or-pet} suggested \emph{traffic shaping}
+onion proxies (that is, users) and onion routers \cite{or-jsac98}. The
+later analysis paper \cite{or-pet02} suggested \emph{traffic shaping}
 to provide similar protection but use less bandwidth, but did not go
 into detail. However, recent research \cite{econymics} and deployment
-experience \cite{freedom2-arch} indicate that this level of resource
+experience \cite{freedom} indicate that this level of resource
 use is not practical or economical; and even full link padding is still
-vulnerable to active attacks \cite{defensive-dropping}.
+vulnerable to active attacks \cite{defensive-dropping}. [XXX what is being
+referenced here, Dogan?]
 
 \item \textbf{Leaky pipes:} Through in-band signalling within the circuit,
 Tor initiators can direct traffic to nodes partway down the circuit. This
@@ -179,27 +183,40 @@ through a path composed of Mix servers.  Mix servers in turn decrypt, delay,
 and re-order messages, before relay them along the path towards their
 destinations.
 
-Subsequent relay-based anonymity designs have diverged in two principal
-directions.  Some have, such as Babel\cite{babel}, Mixmaster\cite{mixmaster},
-and Mixminion\cite{minion-design}, attempt to maximize anonymity at the cost
-of introducing comparatively large and variable latencies.  Because of this
+Subsequent relay-based anonymity designs have diverged in two
+principal directions.  Some have attempted to maximize anonymity at
+the cost of introducing comparatively large and variable latencies,
+for example, Babel\cite{babel}, Mixmaster\cite{mixmaster-spec}, and
+Mixminion\cite{minion-design}.  Because of this
 decision, such \emph{high-latency} networks are well-suited for anonymous
 email, but introduce too much lag for interactive tasks such as web browsing,
 internet chat, or SSH connections.
 
-Tor belongs to the second category: \emph{low-latency} designs that attempt
-to anonymize interactive network traffic.  Because such traffic tends to
-involve a relatively large numbers of packets, it is difficult to prevent an
-attacker who can eavesdrop entry and exit points from correlating packets
-entering the anonymity network with packets leaving it. Although some
-work has been done to frustrate these attacks, they still...  
+Tor belongs to the second category: \emph{low-latency} designs that
+attempt to anonymize interactive network traffic.  Because such
+traffic tends to involve a relatively large numbers of packets, it is
+difficult to prevent an attacker who can eavesdrop entry and exit
+points from correlating packets entering the anonymity network with
+packets leaving it. Although some work has been done to frustrate
+these attacks, most designs protect primarily against traffic analysis
+rather than traffic confirmation \cite{or-jsac98}.  One can pad and
+limit communication to a constant rate or at least to control the
+variation in traffic shape. This can have prohibitive bandwidth costs
+and/or performance limitations. One can also use a cascade (fixed
+shared route) with a relatively fixed set of users. This assumes a
+degree of agreement and provides an easier target for an active
+attacker since the endpoints are generally known. However, a practical
+network with both of these features has been run for many years
+\cite{web-mix}.
+
+they still...  
 [XXX go on to explain how the design choices implied in low-latency result in
 significantly different designs.]
 
 The simplest low-latency designs are single-hop proxies such as the
-Anonymizer, wherein a single trusted server removes identifying users' data
-before relaying it.  These designs are easy to analyze, but require end-users
-to trust the anonymizing proxy.
+Anonymizer \cite{anonymizer}, wherein a single trusted server removes
+identifying users' data before relaying it.  These designs are easy to
+analyze, but require end-users to trust the anonymizing proxy.
 
 More complex are distributed-trust, channel-based anonymizing systems.  In
 these designs, a user establishes one or more medium-term bidirectional
@@ -209,13 +226,32 @@ tunnel.  Establishing tunnels is comparatively expensive and typically
 requires public-key cryptography, whereas relaying packets along a tunnel is
 comparatively inexpensive.  Because a tunnel crosses several servers, no
 single server can learn the user's communication partners.
-[XXX give examples.]  
-[XXX Everybody I know except Crowds and gnunet is in this category.  Am I
-right?]
 
-[XXX Should we add a paragraph dividing servers by all-at-once approach to
-  tunnel-building (OR1,Freedom1) versus piecemeal approach
-  (OR2,Anonnet?,Freedom2) ?]
+Systems such as earlier versions of Freedom and onion routing
+build the anonymous channel all at once (using an onion). Later
+designs of each of these build the channel in stages as does AnonNet
+\cite{anonnet}. Amongst other things, this makes perfect forward
+secrecy feasible.
+
+Some systems, such as Crowds \cite{crowds-tissec}, do not rely on the
+changing appearance of packets to hide the path; rather they employ
+mechanisms so that an intermediary cannot be sure when it is
+receiving/sending to the ultimate initiator. There is no public-key
+encryption needed for Crowds, but the responder and all data are
+visible to all nodes on the path so that anonymity of connection
+initiator depends on filtering all identifying information from the
+data stream. Crowds is also designed only for HTTP traffic.
+
+Hordes \cite{hordes-jcs} is based on Crowds but also uses multicast
+responses to hide the initiator. Some systems go even further
+requiring broadcast \cite{herbivore,p5} although tradeoffs are made to
+make this more practical. Both Herbivore and P5 are designed primarily
+for communication between communicating peers, although Herbivore
+permits external connections by requesting a peer to serve as a proxy.
+Allowing easy connections to nonparticipating responders or recipients
+is a practical requirement for many users, e.g., to visit
+nonparticipating Web sites or to send mail to nonparticipating
+recipients.
 
 Distributed-trust anonymizing systems differ in how they prevent attackers
 from controlling too many servers and thus compromising too many user paths.
@@ -225,6 +261,26 @@ servers, while using a limited resource (DHT space for Tarzan; IP space for
 MorphMix) to prevent an attacker from owning too much of the network.
 [XXX what else?  What does (say) crowds do?]
 
+All of the above systems  Several systems with varying design goals
+and capabilities but all of which require that communicants be
+intentionally participating are mentioned here.
+
+Some involve multicast or more to work
+herbivore
+
+There are also many systems which are intended for anonymous
+and/or censorship resistant file sharing. [XXX Should we list all these
+or just say it's out of scope for the paper?
+eternity, gnunet, freenet, freehaven, publius, tangler, taz/rewebber]
+
+
+
+[XXX Should we add a paragraph dividing servers by all-at-once approach to
+  tunnel-building (OR1,Freedom1) versus piecemeal approach
+  (OR2,Anonnet?,Freedom2) ?]
+
+
+
 Channel-based anonymizing systems also differ in their use of dummy traffic.
 [XXX]
 
@@ -232,6 +288,16 @@ Finally, several systems provide low-latency anonymity without channel-based
 communication.  Crowds and [XXX] provide anonymity for HTTP requests; [...]
 
 [XXX Mention error recovery?]
+
+Web-MIXes \cite{web-mix} (also known as the Java Anon Proxy or JAP)
+use a cascade architecture with relatively constant groups of users
+sending and receiving at a constant rate.
+
+Some, such as Crowds \cite{crowds-tissec}, do nothing against such
+confirmation but still make it difficult for nodes along a connection to
+perform timing confirmations that would more easily identify when
+the immediate predecessor is the initiator of a connection, which in
+Crowds would reveal both initiator and responder to the attacker.
 
 
 anonymizer
@@ -338,7 +404,7 @@ issues remaining to be ironed out. In particular:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \bibliographystyle{latex8}
-\bibliography{minion-design}
+\bibliography{tor-design}
 
 \end{document}
 
