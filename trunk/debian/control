@@ -42,3 +42,7 @@ Description: anonymizing overlay network for TCP
  .
  Remember that this is alpha code, and the network is very small -- Tor will
  not provide anonymity currently.
+ .
+ The latest information can be found at http://freehaven.net/tor/, or on the
+ mailing lists, archived at http://archives.seul.org/or/dev/ or
+ http://archives.seul.org/or/announce/.
