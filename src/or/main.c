@@ -845,7 +845,7 @@ static int do_main_loop(void) {
     }
     if (please_debug) {
       switch_logs_debug();
-      log(LOG_DEBUG,"Caught USR2. Going to loglevel debug.");
+      log(LOG_NOTICE,"Caught USR2. Going to loglevel debug.");
       please_debug = 0;
     }
     if (please_reset) {
