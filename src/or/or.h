@@ -427,7 +427,7 @@ struct crypt_path_t {
 };
 
 #define DH_KEY_LEN CRYPTO_DH_SIZE
-#define ONIONSKIN_CHALLENGE_LEN (16+DH_KEY_LEN+6+8+16)
+#define ONIONSKIN_CHALLENGE_LEN (16+DH_KEY_LEN)
 #define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+20)
 
 typedef struct crypt_path_t crypt_path_t;
