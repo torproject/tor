@@ -13,6 +13,24 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
+For 0.0.2pre14:
+NICK    - More flexible exit policies (18.*, 18.0.0.0/8)
+NICK    - Work to succeed in the precense of exit policy violation
+                - Replace desired_path_len with opaque path-selection specifier
+                - Client-side DNS caching
+                - Add entries to client DNS cache based on END cells
+                - Remove port from END_REASON_EXITPOLICY cells
+                - Start building new circuits when we get an exit-policy
+                  failure.  (Defer exiting from the middle of existing
+                  circuits or extending existing circuits for later.)
+                - Implement function to check whether a routerinfo_t 
+                  supports a given exit addr.
+                - Choose the exit node of an in-progress circuit based on
+                  pending AP connections.
+                - Choose the exit node _first_, then beginning, then
+                  middle nodes.
+
+                 
 Short-term:
         - Make tls connections tls_close intentionally
         o Rename ACI to circID
@@ -31,7 +49,6 @@ ARMA    -* Put recommended_versions in a config entry
         - Continue reading from socks port even while waiting for connect.
         .* Exit policies
                 o Spec how to write the exit policies
-NICK            -* More flexible policies (18.*, 18.0.0.0/8)
                 .* Path selection algorithms
                         o Choose path more incrementally
 ARMA                    -* Let user request first/last node
