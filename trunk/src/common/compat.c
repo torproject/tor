@@ -357,37 +357,51 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 #endif
 }
 
+#define ULIMIT_BUFFER 32 /* keep 32 extra fd's beyond _ConnLimit */
+
 /** Get the maximum allowed number of file descriptors. (Some systems
  * have a low soft limit.) Make sure we set it to at least
- * <b>required_min</b>. Return 0 if we can, or -1 if we fail. */
-int set_max_file_descriptors(unsigned int required_min) {
+ * <b>*limit</b>. Return a new limit if we can, or -1 if we fail. */
+int set_max_file_descriptors(int limit, int cap) {
 #ifndef HAVE_GETRLIMIT
   log_fn(LOG_INFO,"This platform is missing getrlimit(). Proceeding.");
-  return 0; /* hope we'll be ok */
+  if (limit > cap) {
+    log(LOG_INFO, "ConnLimit must be at most %d. Capping it.", cap);
+    limit = cap;
+  }
 #else
   struct rlimit rlim;
+  int most;
 
   if (getrlimit(RLIMIT_NOFILE, &rlim) != 0) {
     log_fn(LOG_WARN, "Could not get maximum number of file descriptors: %s",
            strerror(errno));
     return -1;
   }
-  if (required_min > rlim.rlim_max) {
-    log_fn(LOG_WARN,"We need %u file descriptors available, and we're limited to %lu. Please change your ulimit.", required_min, (unsigned long int)rlim.rlim_max);
+  if (rlim.rlim_max < limit) {
+    log_fn(LOG_WARN,"We need %d file descriptors available, and we're limited to %lu. Please change your ulimit -n.", limit, (unsigned long int)rlim.rlim_max);
     return -1;
   }
-  if (required_min > rlim.rlim_cur) {
-    log_fn(LOG_INFO,"Raising max file descriptors from %lu to %lu.",
-           (unsigned long int)rlim.rlim_cur, (unsigned long int)rlim.rlim_max);
+  most = ((rlim.rlim_max > cap) ? cap : rlim.rlim_max);
+  if (most > rlim.rlim_cur) {
+    log_fn(LOG_INFO,"Raising max file descriptors from %lu to %d.",
+           (unsigned long int)rlim.rlim_cur, most);
   }
-  rlim.rlim_cur = rlim.rlim_max;
+  rlim.rlim_cur = most;
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
     log_fn(LOG_WARN, "Could not set maximum number of file descriptors: %s",
            strerror(errno));
     return -1;
   }
-  return 0;
+  /* leave some overhead for logs, etc, */
+  limit = most;
 #endif
+
+  if (limit < ULIMIT_BUFFER) {
+    log_fn(LOG_WARN,"ConnLimit must be at least %d. Failing.", ULIMIT_BUFFER);
+    return -1;
+  }
+  return limit - ULIMIT_BUFFER;
 }
 
 /** Call setuid and setgid to run as <b>user</b>:<b>group</b>.  Return 0 on
