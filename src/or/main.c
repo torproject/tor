@@ -449,7 +449,6 @@ static int do_main_loop(void) {
     set_signing_privatekey(prkey);
   }
 
-#ifdef USE_TLS
   if(options.OnionRouter) {
     struct stat statbuf;
     if(stat(options.CertFile, &statbuf) < 0) {
@@ -472,7 +471,6 @@ static int do_main_loop(void) {
       return -1;
     }
   }
-#endif
 
   /* start up the necessary connections based on which ports are
    * non-zero. This is where we try to connect to all the other ORs,

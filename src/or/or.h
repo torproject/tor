@@ -7,7 +7,6 @@
 
 #include "orconfig.h"
 
-#define USE_TLS
 #define SEQUENTIAL_ACI
 
 #include <stdio.h>
@@ -105,11 +104,6 @@
 #define MAX_BUF_SIZE (640*1024)
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 
-#ifndef USE_TLS
-#define HANDSHAKE_AS_OP 1
-#define HANDSHAKE_AS_OR 2
-#endif
-
 #define ACI_TYPE_LOWER 0
 #define ACI_TYPE_HIGHER 1
 #define ACI_TYPE_BOTH 2
@@ -139,30 +133,11 @@
 
 #define CPUWORKER_TASK_ONION CPUWORKER_STATE_BUSY_ONION
 
-#ifndef USE_TLS
-/* how to read these states:
- * foo_CONN_STATE_bar_baz:
- * "I am acting as a bar, currently in stage baz of talking with a foo."
- */
-//#define OR_CONN_STATE_OP_CONNECTING 0 /* an application proxy wants me to connect to this OR */
-#define _OR_CONN_STATE_MIN 1
-#define OR_CONN_STATE_OP_SENDING_KEYS 1
-#define OR_CONN_STATE_CLIENT_CONNECTING 2 /* connecting to this OR */
-#define OR_CONN_STATE_CLIENT_SENDING_AUTH 3 /* sending address and info */
-#define OR_CONN_STATE_CLIENT_AUTH_WAIT 4 /* have sent address and info, waiting */
-#define OR_CONN_STATE_CLIENT_SENDING_NONCE 5 /* sending nonce, last piece of handshake */
-#define OR_CONN_STATE_SERVER_AUTH_WAIT 6 /* waiting for address and info */
-#define OR_CONN_STATE_SERVER_SENDING_AUTH 7 /* writing auth and nonce */
-#define OR_CONN_STATE_SERVER_NONCE_WAIT 8 /* waiting for confirmation of nonce */
-#define OR_CONN_STATE_OPEN 9 /* ready to send/receive cells. */
-#define _OR_CONN_STATE_MAX 9
-#else
 #define _OR_CONN_STATE_MIN 0
 #define OR_CONN_STATE_CONNECTING 0 /* waiting for connect() to finish */
 #define OR_CONN_STATE_HANDSHAKING 1 /* SSL is handshaking, not done yet */
 #define OR_CONN_STATE_OPEN 2 /* ready to send/receive cells. */
 #define _OR_CONN_STATE_MAX 2
-#endif
 
 #define _EXIT_CONN_STATE_MIN 0
 #define EXIT_CONN_STATE_RESOLVING 0 /* waiting for response from dns farm */
@@ -209,10 +184,6 @@
 #define DEFAULT_CIPHER CRYPTO_CIPHER_AES_CTR
 /* Used to en/decrypt onion skins */
 #define ONION_CIPHER      DEFAULT_CIPHER
-#ifndef USE_TLS
-/* Used to en/decrypt cells between ORs/OPs. */
-#define CONNECTION_CIPHER DEFAULT_CIPHER
-#endif
 /* Used to en/decrypt RELAY cells */
 #define CIRCUIT_CIPHER    DEFAULT_CIPHER
 
@@ -304,15 +275,7 @@ struct connection_t {
   crypto_pk_env_t *pkey; /* public RSA key for the other side */
 
 /* Used only by OR connections: */
-#ifdef USE_TLS
   tor_tls *tls;
-#else
-  /* link encryption */
-  crypto_cipher_env_t *f_crypto;
-  crypto_cipher_env_t *b_crypto;
-
-  char nonce[8];
-#endif
 #ifdef SEQUENTIAL_ACI
   uint16_t next_aci; /* Which ACI do we try to use next on this connection? 
                       * This is always in the range 0..1<<15-1.*/
@@ -532,9 +495,7 @@ void connection_free(connection_t *conn);
 int connection_create_listener(struct sockaddr_in *bindaddr, int type);
 int connection_handle_listener_read(connection_t *conn, int new_type);
 
-#ifdef USE_TLS
 int connection_tls_start_handshake(connection_t *conn, int receiving);
-#endif
 
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
 int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
@@ -586,9 +547,6 @@ connection_t *connection_or_connect(routerinfo_t *router);
 
 int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn);
 int connection_process_cell_from_inbuf(connection_t *conn);
-#ifndef USE_TLS
-int connection_encrypt_cell(char *cellp, connection_t *conn);
-#endif
 
 /********************************* cpuworker.c *****************************/
 
