@@ -343,7 +343,7 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
     routerinfo_t *r;
     obsolete_routers = smartlist_create();
     router_add_nonrendezvous_to_list(obsolete_routers);
-    r = router_choose_random_node(dir, options.RendNodes, options.RendExcludeNodes, NULL);
+    r = router_choose_random_node(dir, options.RendNodes, options.RendExcludeNodes, obsolete_routers);
     smartlist_free(obsolete_routers);
     return r;
   } else
