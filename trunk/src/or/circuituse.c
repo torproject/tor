@@ -356,14 +356,14 @@ circuit_predict_and_launch_new(void)
     if (need_ports) {
       log_fn(LOG_INFO,"Have %d clean circs (%d internal), need another exit circ.",
         num, num_internal);
-      circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL,
+      circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
                                port_needs_uptime, port_needs_capacity, 0);
     } else if (need_hidserv &&
                ((num_uptime_internal<2 && hidserv_needs_uptime) ||
                 num_internal<2)) {
       log_fn(LOG_INFO,"Have %d clean circs (%d uptime-internal, %d internal),"
         " need another hidserv circ.", num, num_uptime_internal, num_internal);
-      circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL,
+      circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL,
                                hidserv_needs_uptime, hidserv_needs_capacity, 1);
     }
   }
@@ -400,7 +400,7 @@ void circuit_build_needed_circs(time_t now) {
         circ &&
         circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
       log_fn(LOG_INFO,"Creating a new testing circuit.");
-      circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL, 0, 0, 0);
+      circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, 0, 0, 0);
     }
 #endif
   }
@@ -562,7 +562,7 @@ circuit_testing_failed(circuit_t *circ, int at_last_hop) {
   routerinfo_t *me = router_get_my_routerinfo();
 
   if (!at_last_hop)
-    circuit_launch_by_identity(CIRCUIT_PURPOSE_TESTING, me->identity_digest, 0, 0, 1);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 0, 1);
   else
     log_fn(LOG_INFO,"Our testing circuit (to see if your ORPort is reachable) has failed. I'll try again later.");
 }
@@ -684,9 +684,10 @@ static int did_circs_fail_last_period = 0;
  * success. */
 #define MAX_CIRCUIT_FAILURES 5
 
+/** Launch a new circuit based on our arguments. */
 circuit_t *
-circuit_launch_by_identity(uint8_t purpose, const char *exit_digest,
-                           int need_uptime, int need_capacity, int internal)
+circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
+                         int need_uptime, int need_capacity, int internal)
 {
   circuit_t *circ;
 
@@ -720,9 +721,15 @@ circuit_launch_by_identity(uint8_t purpose, const char *exit_digest,
         case CIRCUIT_PURPOSE_C_INTRODUCING:
         case CIRCUIT_PURPOSE_S_CONNECT_REND:
           /* need to add a new hop */
-          tor_assert(exit_digest);
-          if (circuit_append_new_hop(circ, NULL, exit_digest) < 0)
+          tor_assert(exit);
+          circuit_append_new_exit(circ, exit);
+          circ->state = CIRCUIT_STATE_BUILDING;
+          if (circuit_send_next_onion_skin(circ)<0) {
+            log_fn(LOG_WARN, "Couldn't extend circuit to new point '%s'.",
+                   circ->build_state->chosen_exit_name);
+            circuit_mark_for_close(circ);
             return NULL;
+          }
           break;
         default:
           log_fn(LOG_WARN,"Bug: unexpected purpose %d when cannibalizing a general circ.",
@@ -744,7 +751,7 @@ circuit_launch_by_identity(uint8_t purpose, const char *exit_digest,
   }
 
   /* try a circ. if it fails, circuit_mark_for_close will increment n_circuit_failures */
-  return circuit_establish_circuit(purpose, exit_digest,
+  return circuit_establish_circuit(purpose, exit,
                                    need_uptime, need_capacity, internal);
 }
 
@@ -753,18 +760,17 @@ circuit_t *
 circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
                            int need_uptime, int need_capacity, int internal)
 {
-  const char *digest = NULL;
+  routerinfo_t *router = NULL;
 
   if (exit_nickname) {
-    routerinfo_t *r = router_get_by_nickname(exit_nickname);
-    if (!r) {
+    router = router_get_by_nickname(exit_nickname);
+    if (!router) {
       log_fn(LOG_WARN, "No such OR as '%s'", exit_nickname);
       return NULL;
     }
-    digest = r->identity_digest;
   }
-  return circuit_launch_by_identity(purpose, digest,
-                                    need_uptime, need_capacity, internal);
+  return circuit_launch_by_router(purpose, router,
+                                  need_uptime, need_capacity, internal);
 }
 
 /** Record another failure at opening a general circuit. When we have

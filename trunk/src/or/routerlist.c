@@ -628,7 +628,7 @@ routerinfo_t *router_get_by_hexdigest(const char *hexdigest) {
 }
 
 /** Return the router in our routerlist whose 20-byte key digest
- * is <b>hexdigest</b>.  Return NULL if no such router is known. */
+ * is <b>digest</b>.  Return NULL if no such router is known. */
 routerinfo_t *router_get_by_digest(const char *digest) {
   int i;
   routerinfo_t *router;

@@ -385,7 +385,7 @@ void consider_testing_reachability(void) {
   routerinfo_t *me = router_get_my_routerinfo();
 
   if (!can_reach_or_port) {
-    circuit_launch_by_identity(CIRCUIT_PURPOSE_TESTING, me->identity_digest, 0, 0, 1);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 0, 1);
   }
 
   if (!can_reach_dir_port && me->dir_port) {
