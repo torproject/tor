@@ -760,7 +760,15 @@ can address them with witness connections or other means. (E.g., does
 it make sense to favor the nodes that are listed by more than one node
 at the top?)
 
-
+Been making this too hard. Save elegant answers for another venue.
+Just assume 50 node clique (center).  Assume these can each handle 125
+connections to other nodes. Assume everyone else connects to 3 nodes
+in the center and anyone out of the center that they want to. All
+3-node paths choose a center node for their second hop. Then the
+network easily scales to c. 1300 nodes with commensurate increase in
+bandwidth. Distribute the center hardwired to new nodes or publicize.
+Let directories tell about other nodes in the network.  50-50 that
+path goes whatever-center-center.
 
 
 \section{The Future}
