@@ -242,8 +242,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   return 0;
 }
 
-int retry_all_connections(uint16_t or_listenport,
-  uint16_t op_listenport, uint16_t ap_listenport, uint16_t dir_listenport) {
+int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport) {
 
   /* start all connections that should be up but aren't */
 
@@ -261,13 +260,6 @@ int retry_all_connections(uint16_t or_listenport,
     bindaddr.sin_port = htons(or_listenport);
     if(!connection_get_by_type(CONN_TYPE_OR_LISTENER)) {
       connection_or_create_listener(&bindaddr);
-    }
-  }
-
-  if(op_listenport) {
-    bindaddr.sin_port = htons(op_listenport);
-    if(!connection_get_by_type(CONN_TYPE_OP_LISTENER)) {
-      connection_op_create_listener(&bindaddr);
     }
   }
 
@@ -450,18 +442,8 @@ void connection_increment_receiver_bucket(connection_t *conn) {
   }
 }
 
-int connection_speaks_cells(connection_t *conn) {
-  assert(conn);
-
-  if(conn->type == CONN_TYPE_OR || conn->type == CONN_TYPE_OP)
-    return 1;
-
-  return 0;
-}
-
 int connection_is_listener(connection_t *conn) {
-  if(conn->type == CONN_TYPE_OP_LISTENER ||
-     conn->type == CONN_TYPE_OR_LISTENER ||
+  if(conn->type == CONN_TYPE_OR_LISTENER ||
      conn->type == CONN_TYPE_AP_LISTENER ||
      conn->type == CONN_TYPE_DIR_LISTENER)
     return 1;
@@ -472,7 +454,6 @@ int connection_state_is_open(connection_t *conn) {
   assert(conn);
 
   if((conn->type == CONN_TYPE_OR && conn->state == OR_CONN_STATE_OPEN) ||
-     (conn->type == CONN_TYPE_OP && conn->state == OP_CONN_STATE_OPEN) ||
      (conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN) ||
      (conn->type == CONN_TYPE_EXIT && conn->state == EXIT_CONN_STATE_OPEN))
     return 1;
@@ -629,8 +610,6 @@ int connection_process_inbuf(connection_t *conn) {
   assert(conn);
 
   switch(conn->type) {
-    case CONN_TYPE_OP:
-      return connection_op_process_inbuf(conn);
     case CONN_TYPE_OR:
       return connection_or_process_inbuf(conn);
     case CONN_TYPE_EXIT:
@@ -787,8 +766,6 @@ int connection_finished_flushing(connection_t *conn) {
 //  log(LOG_DEBUG,"connection_finished_flushing() entered. Socket %u.", conn->s);
 
   switch(conn->type) {
-    case CONN_TYPE_OP:
-      return connection_op_finished_flushing(conn);
     case CONN_TYPE_OR:
       return connection_or_finished_flushing(conn);
     case CONN_TYPE_AP:

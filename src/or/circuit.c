@@ -683,14 +683,14 @@ int circuit_establish_circuit(void) {
   if(!n_conn || n_conn->state != OR_CONN_STATE_OPEN) { /* not currently connected */
     circ->n_addr = firsthop->addr;
     circ->n_port = firsthop->or_port;
-    if(options.ORPort) { /* we would be connected if he were up. but he's not. */
+    if(options.OnionRouter) { /* we would be connected if he were up. but he's not. */
       log(LOG_DEBUG,"circuit_establish_circuit(): Route's firsthop isn't connected.");
       circuit_close(circ); 
       return -1;
     }
 
     if(!n_conn) { /* launch the connection */
-      n_conn = connection_or_connect_as_op(firsthop);
+      n_conn = connection_or_connect(firsthop);
       if(!n_conn) { /* connect failed, forget the whole thing */
         log(LOG_DEBUG,"circuit_establish_circuit(): connect to firsthop failed. Closing.");
         circuit_close(circ);

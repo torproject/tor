@@ -298,7 +298,7 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
     log(LOG_DEBUG,"new_route(): Contemplating router %u.",choice);
     if(choice == oldchoice ||
       (oldchoice < rarray_len && !crypto_pk_cmp_keys(rarray[choice]->pkey, rarray[oldchoice]->pkey)) ||
-      (options.ORPort && !connection_twin_get_by_addr_port(rarray[choice]->addr, rarray[choice]->or_port))) {
+      (options.OnionRouter && !connection_twin_get_by_addr_port(rarray[choice]->addr, rarray[choice]->or_port))) {
       /* Same router as last choice, or router twin,
        *   or no routers with that key are connected to us.
        * Try again. */
@@ -321,7 +321,7 @@ static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
 
   for(i=0;i<rarray_len;i++) {
     log(LOG_DEBUG,"Contemplating whether router %d is a new option...",i);
-    if(options.ORPort) {
+    if(options.OnionRouter) {
       conn = connection_exact_get_by_addr_port(rarray[i]->addr, rarray[i]->or_port);
       if(!conn || conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN) {
         log(LOG_DEBUG,"Nope, %d is not connected.",i);

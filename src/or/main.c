@@ -217,9 +217,7 @@ void check_conn_read(int i) {
     assert(conn);
 //    log(LOG_DEBUG,"check_conn_read(): socket %d has something to read.",conn->s);
 
-    if (conn->type == CONN_TYPE_OP_LISTENER) {
-      retval = connection_op_handle_listener_read(conn);
-    } else if (conn->type == CONN_TYPE_OR_LISTENER) {
+    if (conn->type == CONN_TYPE_OR_LISTENER) {
       retval = connection_or_handle_listener_read(conn);
     } else if (conn->type == CONN_TYPE_AP_LISTENER) {
       retval = connection_ap_handle_listener_read(conn);
@@ -352,7 +350,7 @@ int prepare_for_poll(int *timeout) {
       if(!connection_speaks_cells(tmpconn))
         continue; /* this conn type doesn't send cells */
       if(now.tv_sec >= tmpconn->timestamp_lastwritten + options.KeepalivePeriod) {
-        if((!options.ORPort && !circuit_get_by_conn(tmpconn)) ||
+        if((!options.OnionRouter && !circuit_get_by_conn(tmpconn)) ||
            (!connection_state_is_open(tmpconn))) {
           /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
           log(LOG_DEBUG,"prepare_for_poll(): Expiring connection to %d (%s:%d).",
@@ -435,7 +433,7 @@ int do_main_loop(void) {
   }
 
   /* load the private key, if we're supposed to have one */
-  if(options.ORPort) {
+  if(options.OnionRouter) {
     prkey = crypto_new_pk_env(CRYPTO_PK_RSA);
     if (!prkey) {
       log(LOG_ERR,"Error creating a crypto environment.");
@@ -466,8 +464,7 @@ int do_main_loop(void) {
    * non-zero. This is where we try to connect to all the other ORs,
    * and start the listeners
    */
-  retry_all_connections(options.ORPort,
-                        options.OPPort, options.APPort, options.DirPort);
+  retry_all_connections(options.ORPort, options.APPort, options.DirPort);
 
   for(;;) {
     if(please_dumpstats) {
@@ -788,7 +785,7 @@ int tor_main(int argc, char *argv[]) {
   if (options.Daemon)
     daemonize();
 
-  if(options.ORPort) { /* only spawn dns handlers if we're a router */
+  if(options.OnionRouter) { /* only spawn dns handlers if we're a router */
     if(dns_master_start() < 0) {
       log(LOG_ERR,"main(): We're running without a dns handler. Bad news.");
     }

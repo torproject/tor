@@ -70,7 +70,7 @@ void router_retry_connections(void) {
     router = directory->routers[i];
     if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
       log_fn(LOG_DEBUG,"connecting to OR %s:%u.",router->address,router->or_port);
-      connection_or_connect_as_or(router);
+      connection_or_connect(router);
     }
   }
 }
@@ -119,7 +119,7 @@ int router_is_me(uint32_t addr, uint16_t port)
   /* XXXX Should this check the key too? */
   struct sockaddr_in me; /* my router identity */
 
-  if(!options.ORPort) {
+  if(!options.OnionRouter) {
     /* we're not an OR. This obviously isn't us. */
     return 0;
   }
