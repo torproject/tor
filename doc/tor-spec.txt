@@ -14,6 +14,7 @@ TODO: (very soon)
       - EXTEND cells should have hostnames or nicknames, so that OPs never
         resolve OR hostnames.  Else DNS servers can give different answers to
         different OPs, and compromise their anonymity.
+      - Rename ACI to circID
 
 EVEN LATER:
       - Do TCP-style sequencing and ACKing of DATA cells so that we can afford
