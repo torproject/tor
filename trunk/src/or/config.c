@@ -945,10 +945,13 @@ const char *get_data_directory(or_options_t *options) {
   const char *d;
   if (options->DataDirectory)
     d = options->DataDirectory;
-  else
+  else if (server_mode())
     d = "~/.tor";
+  else
+    d = NULL; /* XXX008 don't create datadir until we have something
+                 we'll be putting in it */
 
-  if (strncmp(d,"~/",2)==0) {
+  if (d && strncmp(d,"~/",2)==0) {
     char *fn = expand_filename(d);
     tor_free(options->DataDirectory);
     options->DataDirectory = fn;
