@@ -260,7 +260,7 @@ accounting_run_housekeeping(time_t now)
     configure_accounting(now);
   }
   if (time_to_record_bandwidth_usage(now)) {
-    if (record_bandwidth_usage(now)) {
+    if (accounting_record_bandwidth_usage(now)) {
       log_fn(LOG_ERR, "Couldn't record bandwidth usage; exiting.");
       exit(1);
     }

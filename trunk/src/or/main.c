@@ -737,7 +737,7 @@ static int do_hup(void) {
 
   log_fn(LOG_NOTICE,"Received sighup. Reloading config.");
   has_completed_circuit=0;
-  accounting_record_bandwidth_usage();
+  accounting_record_bandwidth_usage(time(NULL));
 
   /* first, reload config variables, in case they've changed */
   /* no need to provide argc/v, they've been cached inside init_from_config */
@@ -1079,7 +1079,7 @@ void tor_cleanup(void) {
   if(options->PidFile && options->command == CMD_RUN_TOR)
     unlink(options->PidFile);
   crypto_global_cleanup();
-  accounting_record_bandwidth_usage();
+  accounting_record_bandwidth_usage(time(NULL));
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */
