@@ -557,12 +557,14 @@ circuit_testing_opened(circuit_t *circ) {
 /** A testing circuit has failed to build. Take whatever stats we want. */
 static void
 circuit_testing_failed(circuit_t *circ, int at_last_hop) {
+#if 0
   routerinfo_t *me = router_get_my_routerinfo();
 
   if (!at_last_hop)
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 1, 1);
   else
-    log_fn(LOG_INFO,"Our testing circuit (to see if your ORPort is reachable) has failed. I'll try again later.");
+#endif
+  log_fn(LOG_INFO,"Our testing circuit (to see if your ORPort is reachable) has failed. I'll try again later.");
 }
 
 /** The circuit <b>circ</b> has just become open. Take the next

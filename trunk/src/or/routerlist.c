@@ -174,7 +174,7 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall,
 
   /* Find all the running dirservers we know about. */
   sl = smartlist_create();
-  for (i=0;i< smartlist_len(routerlist->routers); i++) {
+  for (i=0;i < smartlist_len(routerlist->routers); i++) {
     router = smartlist_get(routerlist->routers, i);
     if (!router->is_running || !router->dir_port || !router->is_verified)
       continue;
