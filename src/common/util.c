@@ -117,12 +117,17 @@ void set_uint32(char *cp, uint32_t v)
  * _add() adds an element, _remove() removes an element if it's there,
  * _choose() returns a random element.
  */
+#define SL_DEFAULT_CAPACITY 32
 
 smartlist_t *smartlist_create(int max_elements) {
   smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
-  sl->list = tor_malloc(sizeof(void *) * max_elements);
   sl->num_used = 0;
   sl->max = max_elements;
+  if (max_elements <= SL_DEFAULT_CAPACITY)
+    sl->capacity = max_elements;
+  else
+    sl->capacity = SL_DEFAULT_CAPACITY;
+  sl->list = tor_malloc(sizeof(void *) * sl->capacity);
   return sl;
 }
 
@@ -131,11 +136,22 @@ void smartlist_free(smartlist_t *sl) {
   free(sl);
 }
 
+void smartlist_grow_capacity(smartlist_t *sl, int n) {
+  if (sl->capacity < n) {
+    sl->capacity = n;
+    sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
+  }
+}
+
 /* add element to the list, but only if there's room */
 void smartlist_add(smartlist_t *sl, void *element) {
-  if(sl->num_used < sl->max)
+  if (sl->num_used < sl->max) {
+    if (sl->num_used >= sl->capacity) {
+      sl->capacity *= 2;
+      sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
+    }
     sl->list[sl->num_used++] = element;
-  else
+  } else
     log_fn(LOG_WARN,"We've already got %d elements, discarding.",sl->max);
 }
 
