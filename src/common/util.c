@@ -219,25 +219,56 @@ int tor_strstrip(char *s, const char *strip)
 /** Set the <b>dest_len</b>-byte buffer <b>buf</b> to contain the
  * string <b>s</b>, with the string <b>insert</b> inserted after every
  * <b>n</b> characters.  Return 0 on success, -1 on failure.
+ *
+ * If <b>rule</b> is ALWAYS_TERMINATE, then always end the string with
+ * <b>insert</b>, even if its length is not a multiple of <b>n</b>.  If
+ * <b>rule</b> is NEVER_TERMINATE, then never end the string with
+ * <b>insert</b>, even if its length <i>is</i> a multiple of <b>n</b>.
+ * If <b>rule</b> is TERMINATE_IF_EVEN, then end the string with <b>insert</b>
+ * exactly when its length <i>is</i> a multiple of <b>n</b>.
  */
 int tor_strpartition(char *dest, size_t dest_len,
-                     const char *s, const char *insert, size_t n)
+                     const char *s, const char *insert, size_t n,
+                     part_finish_rule_t rule)
 {
   tor_assert(s && insert && n > 0);
+  char *destp;
   int len_in, len_out, len_ins;
+  int is_even;
   len_in = strlen(s);
   len_ins = strlen(insert);
   len_out = len_in + (len_in/n)*len_ins;
+  is_even = (len_in%n) == 0;
+  switch(rule)
+    {
+    case ALWAYS_TERMINATE:
+      if (!is_even) len_out += len_ins;
+      break;
+    case NEVER_TERMINATE:
+      if (is_even && len_in) len_out -= len_ins;
+      break;
+    case TERMINATE_IF_EVEN:
+      break;
+    }
   if (dest_len < len_out+1)
     return -1;
+  destp = dest;
   while(len_in) {
-    strncpy(dest, s, n);
+    strncpy(destp, s, n);
     len_in -= n;
-    if (len_in < 0) break;
-    strcpy(dest+n, insert);
+    if (len_in < 0) {
+      if (rule == ALWAYS_TERMINATE)
+        strcpy(destp+n+len_in,insert);
+      break;
+    } else if (len_in == 0 && rule == NEVER_TERMINATE) {
+      *(destp+n) = '\0';
+      break;
+    }
+    strcpy(destp+n, insert);
     s += n;
-    dest += n+len_ins;
+    destp += n+len_ins;
   }
+  tor_assert(len_out == strlen(dest));
   return 0;
 }
 

@@ -620,10 +620,18 @@ test_util() {
   test_streq(buf, "Testing123");
 
   /* Test tor_strpartition() */
-  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefg", "##", 3));
+  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefg", "##", 3,
+                                 TERMINATE_IF_EVEN));
   test_streq(buf, "abc##def##g");
-  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefghi", "##", 3));
+  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefg", "##", 3,
+                                 ALWAYS_TERMINATE));
+  test_streq(buf, "abc##def##g##");
+  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefghi", "##", 3,
+                                 TERMINATE_IF_EVEN));
   test_streq(buf, "abc##def##ghi##");
+  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefghi", "##", 3,
+                                 NEVER_TERMINATE));
+  test_streq(buf, "abc##def##ghi");
 
   /* XXXX test older functions. */
   smartlist_free(sl);
@@ -915,7 +923,7 @@ test_dir_format()
   strcat(buf2, "\n"
          "published 1970-01-01 00:00:00\n"
          "opt fingerprint ");
-  crypto_pk_get_fingerprint(pk2, fingerprint, 1);
+  test_assert(!crypto_pk_get_fingerprint(pk2, fingerprint, 1));
   strcat(buf2, fingerprint);
   strcat(buf2, "\nopt uptime 0\n"
   /* XXX the "0" above is hardcoded, but even if we made it reflect
