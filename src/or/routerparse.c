@@ -387,11 +387,9 @@ router_parse_routerlist_from_directory(const char *str,
      goto err;
   }
 
-  if(!get_options()->AuthoritativeDir) {
-    /* Now that we know the signature is okay, and we have a
-     * publication time, cache the directory. */
-    dirserv_set_cached_directory(str, published_on, 0);
-  }
+  /* Now that we know the signature is okay, and we have a
+   * publication time, cache the directory. */
+  dirserv_set_cached_directory(str, published_on, 0);
 
   if (!(tok = find_first_by_keyword(tokens, K_RECOMMENDED_SOFTWARE))) {
     log_fn(LOG_WARN, "Missing recommended-software line from directory.");
@@ -515,11 +513,9 @@ router_parse_runningrouters(const char *str)
      goto err;
   }
 
-  if(!get_options()->AuthoritativeDir) {
-    /* Now that we know the signature is okay, and we have a
-     * publication time, cache the list. */
-    dirserv_set_cached_directory(str, published_on, 1);
-  }
+  /* Now that we know the signature is okay, and we have a
+   * publication time, cache the list. */
+  dirserv_set_cached_directory(str, published_on, 1);
 
   if (!(tok = find_first_by_keyword(tokens, K_ROUTER_STATUS))) {
     if (!(tok = find_first_by_keyword(tokens, K_RUNNING_ROUTERS))) {
