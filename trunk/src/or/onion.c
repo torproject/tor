@@ -349,6 +349,9 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   } else {
     /* Either there are no pending connections, or no routers even seem to
      * possibly support any of them.  Choose a router at random. */
+    if (best_maybe_support == -1) {
+      log(LOG_WARN, "All routers are down or middleman -- choosing a doomed exit at random.");
+    }
     for(i = best_maybe_support_idx; i < dir->n_routers; i++)
       if(n_supported[i] != -1)
         smartlist_add(sl, dir->routers[i]);
