@@ -43,7 +43,7 @@ are sent to all the logs that match their severity level.
 .TP
 \fBBandwidthRate \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 A token bucket limits the average incoming bandwidth on this node to
-the specified number of bytes second. (Default: 780 KB)
+the specified number of bytes per second. (Default: 780 KB)
 .TP
 \fBBandwidthBurst \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 Limit the maximum token bucket size (also known as the burst) to the given number of bytes. (Default: 48 MB)
@@ -110,7 +110,7 @@ security.
 \fBDirFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
 Every time the specified period elapses, Tor downloads a directory.
 A directory contains a signed list of all known servers as well as
-their current their liveness status.  (Default: 1 hour)
+their current liveness status.  (Default: 1 hour)
 .TP
 \fBStatusFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
 Every time the specified period elapses, Tor downloads signed status
@@ -285,7 +285,7 @@ uploaded whenever it changes.  (Default: 10 minutes.)
 .TP
 \fBAccountingMax \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 Never send more than the specified number of bytes in a given
-accounting period,or receive more than that number in the period.
+accounting period, or receive more than that number in the period.
 When the number of bytes is exhausted, Tor will hibernate until some
 time in the next accounting period.  To prevent all servers from
 waking at the same time, Tor will also wait until a random point in
