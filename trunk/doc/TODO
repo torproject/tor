@@ -13,7 +13,7 @@ ARMA    - arma claims
 0.0.9pre6:
    o clients now have certs, which means we warn when their certs have
      incorrect times. we need to stop that.
-   - Oct 20 16:45:10.237 [warn] parse_addr_port(): Port '0' out of range
+   o Oct 20 16:45:10.237 [warn] parse_addr_port(): Port '0' out of range
    o clean up parse_*_policy code
      o when you hup, they're not getting re-parsed
      o stop calling a *_policy an exit_policy_t
@@ -23,11 +23,11 @@ ARMA    - arma claims
      o Function to check whether an option has changed.
      o Function to generate the contents for a torrc file.
      o Function to safely replace a torrc file.
-R  - fix print_usage()
-   . Download and use running-routers
+   o fix print_usage()
+   o Download and use running-routers
      o Code to download running-routers
-     - Decouple DirFetchPeriod, StatusFetchPeriod, DirPostPeriod.
-     - Do we really want to send the clients to the authdirservers for
+     o Decouple DirFetchPeriod, StatusFetchPeriod, DirPostPeriod.
+     o Do we really want to send the clients to the authdirservers for
        running-routers so often?
 R  - document signals in man page
    o Check for hibernation on startup, hup, etc.
@@ -46,8 +46,6 @@ N  . Test hibernation a lot.
      o Make torrc.sample say to put torrc into application data\tor
    o Review website; make important info more prominent.
    o merge in the contributed tor.sh
-
-
 
 Beyond 0.0.9:
    - controller should have 'getinfo' command to query about rephist,
