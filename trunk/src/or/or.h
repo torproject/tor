@@ -283,7 +283,7 @@ typedef struct {
   uint8_t command;
   uint16_t recognized;
   uint16_t stream_id;
-  uint32_t integrity;
+  char integrity[4];
   uint16_t length;
 } relay_header_t;
 
