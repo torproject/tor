@@ -506,8 +506,8 @@ void
 test_dir_format()
 {
   
-  char buf[2048], buf2[512];
-  char *pk1_str, *pk2_str, *cp;
+  char buf[2048], buf2[2048];
+  char *pk1_str = NULL, *pk2_str = NULL, *cp;
   int pk1_str_len, pk2_str_len;
   routerinfo_t r1, r2;
   crypto_pk_env_t *pk1 = NULL, *pk2 = NULL;
@@ -528,6 +528,7 @@ test_dir_format()
   r1.ap_port = 9002;
   r1.dir_port = 9003;
   r1.pkey = pk1;
+  r1.signing_pkey = NULL;
   r1.bandwidth = 1000;
   r1.exit_policy = NULL;
   r1.next = &r2;
@@ -548,6 +549,7 @@ test_dir_format()
   r2.ap_port = 0;
   r2.dir_port = 0;
   r2.pkey = pk2;
+  r2.signing_pkey = pk1;
   r2.bandwidth = 3000;
   r2.exit_policy = &ex1;
   r2.next = NULL;
@@ -574,10 +576,13 @@ test_dir_format()
   test_eq(rp1->dir_port, r1.dir_port);
   test_eq(rp1->bandwidth, r1.bandwidth);
   test_assert(crypto_pk_cmp_keys(rp1->pkey, pk1) == 0);
+  test_assert(rp1->signing_pkey == NULL);
   test_assert(rp1->exit_policy == NULL);
 
   strcpy(buf2, "router tor.tor.tor 9005 0 0 0 3000\n");
   strcat(buf2, pk2_str);
+  strcat(buf2, "signing-key\n");
+  strcat(buf2, pk1_str);
   strcat(buf2, "accept *:80\nreject 18.*:24\n\n");
   test_assert(dump_router_to_string(buf, 2048, &r2)>0);
   test_streq(buf, buf2);
@@ -592,6 +597,7 @@ test_dir_format()
   test_eq(rp2->dir_port, r2.dir_port);
   test_eq(rp2->bandwidth, r2.bandwidth);
   test_assert(crypto_pk_cmp_keys(rp2->pkey, pk2) == 0);
+  test_assert(crypto_pk_cmp_keys(rp2->signing_pkey, pk1) == 0);
   test_eq(rp2->exit_policy->policy_type, EXIT_POLICY_ACCEPT);
   test_streq(rp2->exit_policy->string, "accept *:80");
   test_streq(rp2->exit_policy->address, "*");
@@ -601,9 +607,17 @@ test_dir_format()
   test_streq(rp2->exit_policy->next->address, "18.*");
   test_streq(rp2->exit_policy->next->port, "24");
   test_assert(rp2->exit_policy->next->next == NULL);
+
+  /* Okay, now for the directories. */
   
-  
-  /* XXXX free everything*/
+
+
+  if (pk1_str) free(pk1_str);
+  if (pk2_str) free(pk2_str);
+  if (pk1) crypto_free_pk_env(pk1);
+  if (pk2) crypto_free_pk_env(pk2);
+  if (rp1) routerlist_free(rp1);
+  if (rp2) routerlist_free(rp2);
 }
 
 int 
@@ -617,7 +631,7 @@ main(int c, char**v) {
   log(LOG_ERR,NULL);         /* make logging quieter */
 
   setup_directory();
-#if 1
+#if 0
   puts("========================== Buffers =========================");
   test_buffers();
   puts("========================== Crypto ==========================");

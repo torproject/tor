@@ -545,6 +545,36 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *from, int fro
   }
 }
 
+int crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to)
+{
+  assert(env && from && to);
+
+  switch(env->type) {
+  case CRYPTO_PK_RSA:
+    if (!(((RSA*)env->key)->p))
+      return -1;
+    return RSA_public_decrypt(fromlen, from, to, (RSA *)env->key, 
+			      RSA_PKCS1_OAEP_PADDING);
+    default:
+    return -1;
+  }
+}
+
+int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to)
+{
+  assert(env && from && to);
+
+  switch(env->type) {
+  case CRYPTO_PK_RSA:
+    if (!(((RSA*)env->key)->p))
+      return -1;
+    return RSA_private_encrypt(fromlen, from, to, (RSA *)env->key, 
+			       RSA_PKCS1_OAEP_PADDING);
+    default:
+    return -1;
+  }
+}
+
 /* symmetric crypto */
 int crypto_cipher_generate_key(crypto_cipher_env_t *env)
 {
@@ -779,3 +809,38 @@ char *crypto_perror()
   return (char *)ERR_reason_error_string(ERR_get_error());
 }
 
+int 
+base64_encode(char *dest, int destlen, char *src, int srclen)
+{
+  EVP_ENCODE_CTX ctx;
+  int len, ret;
+  
+  /* 48 bytes of input -> 64 bytes of output plus newline. 
+     Plus one more byte, in case I'm wrong.
+  */
+  if (destlen < ((srclen/48)+1)*66)
+    return -1;
+
+  EVP_EncodeInit(&ctx);
+  EVP_EncodeUpdate(&ctx, dest, &len, src, srclen);
+  EVP_EncodeFinal(&ctx, dest, &ret);
+  ret += len;
+  return ret;
+}
+int 
+base64_decode(char *dest, int destlen, char *src, int srclen)
+{
+  EVP_ENCODE_CTX ctx;
+  int len, ret;
+  /* 64 bytes of input -> *up to* 48 bytes of output.
+     Plus one more byte, in caes I'm wrong.
+  */
+  if (destlen < ((srclen/64)+1)*49)
+    return -1;
+
+  EVP_DecodeInit(&ctx);
+  EVP_DecodeUpdate(&ctx, dest, &len, src, srclen);
+  EVP_DecodeFinal(&ctx, dest, &ret);
+  ret += len;
+  return ret;
+}

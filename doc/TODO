@@ -83,8 +83,8 @@ SPEC!!          - Handle socks commands other than connect, eg, bind?
                         o Cells
                 . Better comments for functions!
         - Tests
-NICK            o Testing harness/infrastructure
-                . Unit tests
+                o Testing harness/infrastructure
+NICK            . Unit tests
                 D System tests (how?)
                 - Performance tests, so we know when we've improved
                         . webload infrastructure (Bruce)
