@@ -443,8 +443,10 @@ list_running_servers(char **nicknames_out)
   char *cp;
   int i;
   int length;
+  smartlist_t *nicknames;
+
   *nicknames_out = NULL;
-  smartlist_t *nicknames = smartlist_create();
+  nicknames = smartlist_create();
   smartlist_add(nicknames, options.Nickname);
 
   get_connection_array(&connection_array, &n_conns);
