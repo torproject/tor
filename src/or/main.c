@@ -783,7 +783,7 @@ void daemonize(void) {
   umask(000);
 
   fclose(stdin);
-  fclose(stdout);
+  fclose(stdout); /* XXX Nick: this closes our log, right? is it safe to leave this open? */
   fclose(stderr);
 }
 
