@@ -230,9 +230,8 @@ int fetch_from_buf_http(char *buf, int *buf_datalen,
     return -1;
   }
 
-#define CONTENT_LENGTH "Content-Length: "
+#define CONTENT_LENGTH "\r\nContent-Length: "
   i = find_on_inbuf(CONTENT_LENGTH, strlen(CONTENT_LENGTH), headers, headerlen);
-  /* This includes headers like Not-Content-Length. But close enough. */
   if(i > 0) {
     contentlen = atoi(headers+i);
     if(bodylen < contentlen) {
@@ -265,13 +264,13 @@ int fetch_from_buf_http(char *buf, int *buf_datalen,
  *   then pull the handshake off the buf, assign to addr_out and port_out,
  *   and return 1.
  * If it's invalid or too big, return -1.
- * Else it's not all there yet, change nothing return 0.
+ * Else it's not all there yet, change nothing and return 0.
  */
 int fetch_from_buf_socks(char *buf, int *buf_datalen,
                          char *addr_out, int max_addrlen,
                          uint16_t *port_out) {
-  socks4_t *socks4_info;
-  char tmpbuf[512];
+  socks4_t socks4_info;
+  char *tmpbuf=NULL;
   uint16_t port;
   enum {socks4, socks4a } socks_prot = socks4a;
   char *next, *startaddr;
@@ -279,38 +278,47 @@ int fetch_from_buf_socks(char *buf, int *buf_datalen,
   if(*buf_datalen < sizeof(socks4_t)) /* basic info available? */
     return 0; /* not yet */
 
-  socks4_info = (socks4_t *)buf;
+  /* an inlined socks4_unpack() */
+  socks4_info.version = *buf;
+  socks4_info.command = *(buf+1);
+  socks4_info.destport = *(uint16_t*)(buf+2); 
+  socks4_info.destip = *(uint32_t*)(buf+4);
 
-  if(socks4_info->version != 4) {
-    log_fn(LOG_NOTICE,"Unrecognized version %d.",socks4_info->version);
+  if(socks4_info.version != 4) {
+    log_fn(LOG_NOTICE,"Unrecognized version %d.",socks4_info.version);
     return -1;
   }
 
-  if(socks4_info->command != 1) { /* not a connect? we don't support it. */
-    log_fn(LOG_NOTICE,"command %d not '1'.",socks4_info->command);
+  if(socks4_info.command != 1) { /* not a connect? we don't support it. */
+    log_fn(LOG_NOTICE,"command %d not '1'.",socks4_info.command);
     return -1;
   }
 
-  port = ntohs(*(uint16_t*)&socks4_info->destport);
+  port = ntohs(socks4_info.destport);
   if(!port) {
     log_fn(LOG_NOTICE,"Port is zero.");
     return -1;
   }
 
-  if(socks4_info->destip[0] || socks4_info->destip[1] ||
-     socks4_info->destip[2] || !socks4_info->destip[3]) { /* not 0.0.0.x */
+  if(!socks4_info.destip) {
+    log_fn(LOG_NOTICE,"DestIP is zero.");
+    return -1;
+  }
+
+  if(socks4_info.destip >> 8) {
+    struct in_addr in;
     log_fn(LOG_NOTICE,"destip not in form 0.0.0.x.");
-    sprintf(tmpbuf, "%d.%d.%d.%d", socks4_info->destip[0],
-      socks4_info->destip[1], socks4_info->destip[2], socks4_info->destip[3]);
+    in.s_addr = htonl(socks4_info.destip);
+    tmpbuf = inet_ntoa(in);
     if(max_addrlen <= strlen(tmpbuf)) {
-      log_fn(LOG_DEBUG,"socks4-addr too long.");
+      log_fn(LOG_DEBUG,"socks4 addr too long.");
       return -1;
     }
     log_fn(LOG_DEBUG,"Successfully read destip (%s)", tmpbuf);
     socks_prot = socks4;
   }
 
-  next = memchr(buf+sizeof(socks4_t), 0, *buf_datalen);
+  next = memchr(buf+SOCKS4_NETWORK_LEN, 0, *buf_datalen);
   if(!next) {
     log_fn(LOG_DEBUG,"Username not here yet.");
     return 0;

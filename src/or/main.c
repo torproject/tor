@@ -25,7 +25,7 @@ static int nfds=0; /* number of connections currently active */
 
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
 static int please_dumpstats=0; /* whether we should dump stats during the loop */
-static int please_fetch_directory=0; /* whether we should fetch a new directory */
+static int please_reset =0; /* whether we just got a sighup */
 static int please_reap_children=0; /* whether we should waitpid for exited children*/
 #endif /* signal stuff */
 
@@ -337,7 +337,7 @@ static int prepare_for_poll(void) {
         /* NOTE directory servers do not currently fetch directories.
          * Hope this doesn't bite us later.
          */
-        directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_GET);
+        directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_FETCH);
         time_to_fetch_directory = now.tv_sec + options.DirFetchPeriod;
       }
     }
@@ -488,15 +488,19 @@ static int do_main_loop(void) {
       dumpstats();
       please_dumpstats = 0;
     }
-    if(please_fetch_directory) {
+    if(please_reset) {
+      /* fetch a new directory */
       if(options.DirPort) {
         if(router_get_list_from_file(options.RouterFile) < 0) {
           log(LOG_ERR,"Error reloading router list. Continuing with old list.");
         }
       } else {
-        directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_GET);
+        directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_FETCH);
       }
-      please_fetch_directory = 0;
+
+      reset_logs(); /* close and reopen the log files */
+
+      please_reset = 0;
     }
     if(please_reap_children) {
       while(waitpid(-1,NULL,WNOHANG)) ; /* keep reaping until no more zombies */
@@ -546,7 +550,7 @@ static void catch(int the_signal) {
       log(LOG_NOTICE,"Catching signal %d, exiting cleanly.", the_signal);
       exit(0);
     case SIGHUP:
-      please_fetch_directory = 1;
+      please_reset = 1;
       break;
     case SIGUSR1:
       please_dumpstats = 1;
