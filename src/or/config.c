@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.4  2002/07/03 19:58:18  montrose
+ * minor bug fix in error checking
+ *
  * Revision 1.3  2002/07/03 16:53:34  montrose
  * added error checking into getoptions()
  *
@@ -104,7 +107,14 @@ RETURN VALUE: 0 on success, non-zero on error
          code = poptReadOptions(optCon,ConfigFile);
       else                                /* load Default configuration files */
          code = poptReadDefaultOptions(cmd,optCon);
-   
+   }
+
+   switch(code)                           /* error checking */
+   {
+   case INT_MIN:
+      fprintf(stderr, "%s: Unable to open configuration file.\n", ConfigFile);
+      break;
+   case -1:
       if ( Verbose )                      /* display options upon user request */
       {
          printf("\nLogLevel=%s\n",options->LogLevel);
@@ -112,16 +122,11 @@ RETURN VALUE: 0 on success, non-zero on error
          printf("ORPort=%d, OPPort=%d, APPort=%d\n",options->ORPort,options->OPPort,options->APPort);
          printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d\n\n",options->CoinWeight,options->MaxConn,options->TrafficShaping);
       }
-   }
-
-   switch(code)                           /* error checking */
-   {
-   case INT_MIN:
-      fprintf(stderr, "%s: Unable to open configuration file.\n", ConfigFile);
-   case -1:
       code = 0;
+      break;
    default:
       fprintf(stderr, "%s: %s\n", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(code));
+      break;
    }
 
    poptFreeContext(optCon);
