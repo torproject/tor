@@ -610,6 +610,8 @@ static int check_directory_signature(const char *digest,
 {
   char signed_digest[PK_BYTES];
   routerinfo_t *r;
+  crypto_pk_env_t *_pkey = NULL;
+  
 
   if (tok->n_args != 1) {
     log_fn(LOG_WARN, "Too many or too few arguments to directory-signature");
@@ -618,14 +620,16 @@ static int check_directory_signature(const char *digest,
 
   if (declared_key) {
     if (dir_signing_key_is_trusted(declared_key))
-      pkey = declared_key;
-  } else {
+      _pkey = declared_key;
+  } 
+  if (!_pkey) {
     r = router_get_by_nickname(tok->args[0]);
     log_fn(LOG_DEBUG, "Got directory signed by %s", tok->args[0]);
     if (r && r->is_trusted_dir) {
-      pkey = r->identity_pkey;
+      _pkey = r->identity_pkey;
     } else if (!r && pkey) {
       /* pkey provided for debugging purposes. */
+      _pkey = pkey;
     } else if (!r) {
       log_fn(LOG_WARN, "Directory was signed by unrecognized server %s",
              tok->args[0]);
@@ -642,9 +646,9 @@ static int check_directory_signature(const char *digest,
     return -1;
   }
 
-  tor_assert(pkey);
+  tor_assert(_pkey);
 
-  if (crypto_pk_public_checksig(pkey, tok->object_body, 128, signed_digest)
+  if (crypto_pk_public_checksig(_pkey, tok->object_body, 128, signed_digest)
       != 20) {
     log_fn(LOG_WARN, "Error reading directory: invalid signature.");
     return -1;

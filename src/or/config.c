@@ -1096,6 +1096,8 @@ static int parse_dir_server_line(const char *line)
     log_fn(LOG_WARN, "Unable to decode DirServer key digest."); goto err;
   }
 
+  log_fn(LOG_DEBUG, "Trusted dirserver at %s:%d (%s)", address,(int)port,
+         (char*)smartlist_get(items,1));
   add_trusted_dir_server(address, port, digest);
 
   r = 0;
