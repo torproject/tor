@@ -91,7 +91,7 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
       return;
     }
 
-    conn->state = DIR_CONN_STATE_CLIENT_SENDING; 
+    conn->state = DIR_CONN_STATE_CLIENT_SENDING;
     connection_set_poll_socket(conn);
     connection_start_reading(conn);
   }

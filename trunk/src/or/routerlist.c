@@ -123,7 +123,7 @@ static int router_get_hash_impl(const char *s, char *digest,
                                 const char *start_str, const char *end_str);
 static void token_free(directory_token_t *tok);
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
-static directory_token_t *find_first_by_keyword(smartlist_t *s, 
+static directory_token_t *find_first_by_keyword(smartlist_t *s,
                                                 directory_keyword keyword);
 static int tokenize_string(const char *start, const char *end,
                            smartlist_t *out, int is_dir);
@@ -607,7 +607,7 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
 }
 
 int router_exit_policy_rejects_all(routerinfo_t *router) {
-  return router_compare_addr_to_exit_policy(0, 0, router->exit_policy) 
+  return router_compare_addr_to_exit_policy(0, 0, router->exit_policy)
     == ADDR_POLICY_REJECTED;
 }
 
@@ -618,9 +618,9 @@ static int parse_time(const char *cp, time_t *t)
   if (!strptime(cp, "%Y-%m-%d %H:%M:%S", &st_tm)) {
     log_fn(LOG_WARN, "Published time was unparseable"); return -1;
   }
-#else 
+#else
   unsigned int year=0, month=0, day=0, hour=100, minute=100, second=100;
-  if (sscanf(cp, "%u-%u-%u %u:%u:%u", &year, &month, 
+  if (sscanf(cp, "%u-%u-%u %u:%u:%u", &year, &month,
                 &day, &hour, &minute, &second) < 6) {
         log_fn(LOG_WARN, "Published time was unparseable"); return -1;
   }
@@ -645,7 +645,7 @@ static int parse_time(const char *cp, time_t *t)
  * If pkey is provided, we check the directory signature with pkey.
  */
 int /* Should be static; exposed for unit tests */
-router_get_routerlist_from_directory_impl(const char *str, 
+router_get_routerlist_from_directory_impl(const char *str,
                                           routerlist_t **dest,
                                           crypto_pk_env_t *pkey)
 {
@@ -690,7 +690,7 @@ router_get_routerlist_from_directory_impl(const char *str,
 
   tok = smartlist_get(tokens,0);
   if (tok->tp != K_SIGNED_DIRECTORY) {
-    log_fn(LOG_WARN, "Directory doesn't start with signed-directory."); 
+    log_fn(LOG_WARN, "Directory doesn't start with signed-directory.");
     goto err;
   }
 
@@ -699,7 +699,7 @@ router_get_routerlist_from_directory_impl(const char *str,
     goto err;
   }
   assert(tok->n_args == 1);
-  
+
   if (parse_time(tok->args[0], &published_on) < 0) {
      goto err;
   }
@@ -712,10 +712,10 @@ router_get_routerlist_from_directory_impl(const char *str,
     log_fn(LOG_WARN, "Invalid recommended-software line"); goto err;
   }
   versions = tor_strdup(tok->args[0]);
-  
+
   if (!(tok = find_first_by_keyword(tokens, K_RUNNING_ROUTERS))) {
     log_fn(LOG_WARN, "Missing running-routers line from directory.");
-    goto err;    
+    goto err;
   }
 
   n_good_nicknames = tok->n_args;
@@ -751,7 +751,7 @@ router_get_routerlist_from_directory_impl(const char *str,
   }
   tok = smartlist_get(tokens,0);
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
-    log_fn(LOG_WARN, "Bad object type or length on directory signature"); 
+    log_fn(LOG_WARN, "Bad object type or length on directory signature");
     goto err;
   }
   if (pkey) {
@@ -930,8 +930,8 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   } else {
     log_fn(LOG_WARN,"Wrong # of arguments to \"router\"");
     goto err;
-  }  
-    
+  }
+
   tok = find_first_by_keyword(tokens, K_PORTS);
   if (tok && ports_set) {
     log_fn(LOG_WARN,"Redundant ports line");
@@ -946,7 +946,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
     router->dir_port = atoi(tok->args[2]);
     ports_set = 1;
   }
-  
+
   tok = find_first_by_keyword(tokens, K_BANDWIDTH);
   if (tok && bw_set) {
     log_fn(LOG_WARN,"Redundant bandwidth line");
@@ -1041,7 +1041,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
 
   goto done;
   return router;
-  
+
  err:
   routerinfo_free(router);
   router = NULL;
@@ -1098,7 +1098,7 @@ router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
 
 /* Given a K_ACCEPT or K_REJECT token and a router, create a new exit_policy_t
  * corresponding to the token, and add it to 'router' */
-static int 
+static int
 router_add_exit_policy(routerinfo_t *router, directory_token_t *tok) {
 
   struct exit_policy_t *tmpe, *newe;
@@ -1256,7 +1256,7 @@ get_next_token(const char **s, where_syntax where) {
        tok->tp = _ERR;                                  \
        tok->error = msg;                                \
        goto done_tokenizing; } while (0)
- 
+
   tok = tor_malloc_zero(sizeof(directory_token_t));
   tok->tp = _ERR;
 
@@ -1264,7 +1264,7 @@ get_next_token(const char **s, where_syntax where) {
   if (!**s) {
     tok->tp = _EOF;
     return tok;
-  } 
+  }
   next = find_whitespace(*s);
   if (!next) {
     tok->error = "Unexpected EOF"; return tok;
@@ -1394,7 +1394,7 @@ get_next_token(const char **s, where_syntax where) {
     case OBJ_OK:
       break;
     }
-  
+
  done_tokenizing:
 
 #if 0
@@ -1423,8 +1423,8 @@ get_next_token(const char **s, where_syntax where) {
 #undef RET_ERR
 }
 
-static int 
-tokenize_string(const char *start, const char *end, smartlist_t *out, 
+static int
+tokenize_string(const char *start, const char *end, smartlist_t *out,
                 int is_dir)
 {
   const char **s;
@@ -1440,7 +1440,7 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
     smartlist_add(out, tok);
     *s = eat_whitespace(*s);
   }
-  
+
   return 0;
 }
 

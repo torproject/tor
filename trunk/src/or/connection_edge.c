@@ -1158,7 +1158,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
       log_fn(LOG_INFO,"Resolve failed (%s).", n_stream->address);
       /* Set the state so that we don't try to remove n_stream from a DNS
        * pending list. */
-      n_stream->state = EXIT_CONN_STATE_RESOLVEFAILED; 
+      n_stream->state = EXIT_CONN_STATE_RESOLVEFAILED;
       connection_mark_for_close(n_stream, END_STREAM_REASON_RESOLVEFAILED);
       break;
     case 0: /* resolve added to pending list */

@@ -747,7 +747,7 @@ int read_all(int fd, char *buf, size_t count, int isSocket) {
   int result;
 
   while(numread != count) {
-    if (isSocket) 
+    if (isSocket)
       result = recv(fd, buf+numread, count-numread, 0);
     else
       result = read(fd, buf+numread, count-numread);
@@ -1212,7 +1212,7 @@ void start_daemon(char *desired_cwd)
 
     pid = setsid(); /* Detach from controlling terminal */
     /*
-     * Fork one more time, so the parent (the session group leader) can exit. 
+     * Fork one more time, so the parent (the session group leader) can exit.
      * This means that we, as a non-session group leader, can never regain a
      * controlling terminal.   This part is recommended by Stevens's
      * _Advanced Programming in the Unix Environment_.
