@@ -1,3 +1,27 @@
+Changes in version 0.0.5 - 2004-03-30
+  o Install torrc as torrc.sample -- we no longer clobber your
+    torrc. (Woo!)
+  o Fix mangled-state bug in directory fetching (was causing sigpipes).
+  o Only build circuits after we've fetched the directory: clients were
+    using only the directory servers before they'd fetched a directory.
+    This also means longer startup time; so it goes.
+  o Fix an assert trigger where an OP would fail to handshake, and we'd
+    expect it to have a nickname.
+  o Work around a tsocks bug: do a socks reject when AP connection dies
+    early, else tsocks goes into an infinite loop.
+  o Hold socks connection open until reply is flushed (if possible)
+  o Make exit nodes resolve IPs to IPs immediately, rather than asking
+    the dns farm to do it.
+  o Fix c99 aliasing warnings in rephist.c
+  o Don't include server descriptors that are older than 24 hours in the
+    directory.
+  o Give socks 'reject' replies their whole 15s to attempt to flush,
+    rather than seeing the 60s timeout and assuming the flush had failed.
+  o Clean automake droppings from the cvs repository
+  o Add in a 'notice' log level for things the operator should hear
+    but that aren't warnings
+
+
 Changes in version 0.0.4 - 2004-03-26
   o When connecting to a dirserver or OR and the network is down,
     we would crash.
