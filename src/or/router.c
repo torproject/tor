@@ -284,12 +284,14 @@ int init_keys(void) {
   if(!cp) {
     log_fn(LOG_INFO,"Cached directory %s not present. Ok.",keydir);
   } else {
-    if(dirserv_init_from_directory_string(cp) < 0) {
+    if(options.AuthoritativeDir && dirserv_load_from_directory_string(cp) < 0){
       log_fn(LOG_ERR, "Cached directory %s is corrupt", keydir);
       free(cp);
       return -1;
     }
-    free(cp);
+    /* set time to 1 so it will be replaced on first download.
+     */
+    dirserv_set_cached_directory(cp, 1);
   }
   /* success */
   return 0;

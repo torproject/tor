@@ -595,9 +595,16 @@ typedef struct {
    * published?
    */
   time_t published_on;
+  time_t running_routers_updated_on;
   /** Which router is claimed to have signed it? */
   char *signing_router;
 } routerlist_t;
+
+/* DOCDOC */
+typedef struct running_routers_t {
+  time_t published_on;
+  smartlist_t *running_routers;
+} running_routers_t;
 
 /** Holds accounting information for a single step in the layered encryption
  * performed by a circuit.  Used only at the client edge of a circuit. */
@@ -1130,7 +1137,7 @@ int dirserv_parse_fingerprint_file(const char *fname);
 int dirserv_router_fingerprint_is_known(const routerinfo_t *router);
 void dirserv_free_fingerprint_list();
 int dirserv_add_descriptor(const char **desc);
-int dirserv_init_from_directory_string(const char *dir);
+int dirserv_load_from_directory_string(const char *dir);
 void dirserv_free_descriptors();
 void dirserv_remove_old_servers(void);
 int dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
@@ -1352,11 +1359,15 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
 #define ADDR_POLICY_UNKNOWN 1
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port);
 int router_exit_policy_rejects_all(routerinfo_t *router);
+void running_routers_free(running_routers_t *rr);
+void routerlist_update_from_runningrouters(routerlist_t *list,
+                                           running_routers_t *rr);
 
 /********************************* routerparse.c ************************/
 
 int router_get_router_hash(const char *s, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
+int router_get_runningrouters_hash(const char *s, char *digest);
 int router_parse_list_from_string(const char **s,
                                        routerlist_t **dest,
                                        int n_good_nicknames,
@@ -1364,6 +1375,7 @@ int router_parse_list_from_string(const char **s,
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
                                            crypto_pk_env_t *pkey);
+running_routers_t *router_parse_runningrouters(const char *str);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 struct exit_policy_t *router_parse_exit_policy_from_string(const char *s);

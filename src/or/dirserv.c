@@ -16,6 +16,7 @@ extern or_options_t options; /**< command-line and config-file options */
 
 /** Do we need to regenerate the directory when someone asks for it? */
 static int the_directory_is_dirty = 1;
+static int runningrouters_is_dirty = 1;
 
 static int list_running_servers(char **nicknames_out);
 static void directory_remove_unrecognized(void);
@@ -406,13 +407,14 @@ void
 directory_set_dirty()
 {
   the_directory_is_dirty = 1;
+  runningrouters_is_dirty = 1;
 }
 
-/** Load all descriptors from an earlier directory stored in the string
+/** Load all descriptors from a directory stored in the string
  * <b>dir</b>.
  */
 int
-dirserv_init_from_directory_string(const char *dir)
+dirserv_load_from_directory_string(const char *dir)
 {
   const char *cp = dir;
   while(1) {
@@ -525,7 +527,9 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
            "signed-directory\n"
            "published %s\n"
            "recommended-software %s\n"
-           "running-routers %s\n\n", published, options.RecommendedVersions, cp);
+           "running-routers %s\n\n",
+           published, options.RecommendedVersions, cp);
+
   free(cp);
   i = strlen(s);
   cp = s+i;
@@ -563,7 +567,7 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
     log_fn(LOG_WARN,"couldn't base64-encode signature");
     return -1;
   }
-
+  
   if (strlcat(s, "-----END SIGNATURE-----\n", maxlen) >= maxlen)
     goto truncated;
 
@@ -583,6 +587,7 @@ static int cached_directory_len = -1;
 void dirserv_set_cached_directory(const char *directory, time_t when)
 {
   time_t now;
+  char filename[512];
   if (!options.AuthoritativeDir)
     return;
   now = time(NULL);
@@ -591,6 +596,11 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
     tor_free(cached_directory);
     cached_directory = tor_strdup(directory);
     cached_directory_len = strlen(cached_directory);
+    cached_directory_published = when;
+    sprintf(filename,"%s/cached-directory", options.DataDirectory);
+    if(write_str_to_file(filename,cached_directory) < 0) {
+      log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
+    }
   }
 }
 
@@ -644,12 +654,70 @@ size_t dirserv_get_directory(const char **directory)
   return the_directory_len;
 }
 
+static char *runningrouters_string=NULL;
+static size_t runningrouters_len=0;
+
+/** Replace the current running-routers list with a newly generated one. */
+static int generate_runningrouters(crypto_pk_env_t *private_key)
+{
+  char *s, *cp;
+  char digest[DIGEST_LEN];
+  char signature[PK_BYTES];
+  int i, len;
+  char published[33];
+  time_t published_on;
+
+  len = 1024+MAX_NICKNAME_LEN*smartlist_len(descriptor_list);
+  s = tor_malloc_zero(len);
+  if (list_running_servers(&cp))
+    return -1;
+  published_on = time(NULL);
+  strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&published_on));
+  sprintf(s, "network-status\n"
+             "published %s\n"
+             "running-routers %s\n"
+             "directory-signature %s\n"
+             "-----BEGIN SIGNATURE-----\n",
+             published, cp, options.Nickname);
+  free(cp);
+  if (router_get_runningrouters_hash(s,digest)) {
+    log_fn(LOG_WARN,"couldn't compute digest");
+    return -1;
+  }
+  if (crypto_pk_private_sign(private_key, digest, 20, signature) < 0) {
+    log_fn(LOG_WARN,"couldn't sign digest");
+    return -1;
+  }
+
+  i = strlen(s);
+  cp = s+i;
+  if (base64_encode(cp, len-i, signature, 128) < 0) {
+    log_fn(LOG_WARN,"couldn't base64-encode signature");
+    return -1;
+  }
+  if (strlcat(s, "-----END SIGNATURE-----\n", len) >= len) {
+    return -1;
+  }
+
+  tor_free(runningrouters_string);
+  runningrouters_string = s;
+  runningrouters_len = strlen(s);
+  runningrouters_is_dirty = 0;
+  return 0;
+}
+
 /** Set *<b>rr</b> to the most recently generated encoded signed
  * running-routers list, generating a new one as necessary. */
 size_t dirserv_get_runningrouters(const char **rr)
 {
-  /* XXX008 fill in this function */
-  return 0;
+  if (runningrouters_is_dirty) {
+    if(generate_runningrouters(get_identity_key())) {
+      log_fn(LOG_ERR, "Couldn't generate running-routers list?");
+      return -1;
+    }
+  }
+  *rr = runningrouters_string;
+  return runningrouters_len;
 }
 
 /*

@@ -41,6 +41,7 @@ typedef enum {
   K_PORTS,
   K_DIRCACHEPORT,
   K_CONTACT,
+  K_NETWORK_STATUS,
   _UNRECOGNIZED,
   _ERR,
   _EOF,
@@ -88,7 +89,7 @@ typedef enum {
 typedef enum {
   ANY = 0,    /**< Appears in router descriptor or in directory sections. */
   DIR_ONLY,   /**< Appears only in directory. */
-  RTR_ONLY,   /**< Appears only in router descriptor. */
+  RTR_ONLY,   /**< Appears only in router descriptor or runningrouters */
 } where_syntax;
 
 /** Table mapping keywords to token value and to argument rules. */
@@ -113,6 +114,7 @@ static struct {
   { "opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK,  ANY },
   { "dircacheport",        K_DIRCACHEPORT,        ARGS,    NO_OBJ,  RTR_ONLY },
   { "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ,  ANY },
+  { "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ,  DIR_ONLY },
   { NULL, -1 }
 };
 
@@ -128,6 +130,10 @@ static directory_token_t *find_first_by_keyword(smartlist_t *s,
 static int tokenize_string(const char *start, const char *end,
                            smartlist_t *out, int is_dir);
 static directory_token_t *get_next_token(const char **s, where_syntax where);
+static int check_directory_signature(const char *digest,
+                                     directory_token_t *tok,
+                                     crypto_pk_env_t *pkey);
+
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
  * <b>s</b>.  Return 0 on success, nonzero on failure.
@@ -145,6 +151,13 @@ int router_get_router_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
                               "router ","router-signature");
+}
+
+/** DOCDOC */
+int router_get_runningrouters_hash(const char *s, char *digest)
+{
+  return router_get_hash_impl(s,digest,
+                              "network-status ","directory-signature");
 }
 
 /** Parse a date of the format "YYYY-MM-DD hh:mm:ss" and store the result into
@@ -273,13 +286,12 @@ router_parse_routerlist_from_directory(const char *str,
 				       crypto_pk_env_t *pkey)
 {
   directory_token_t *tok;
-  char digest[20];
-  char signed_digest[128];
+  char digest[DIGEST_LEN];
   routerlist_t *new_dir = NULL;
   char *versions = NULL;
-  time_t published_on;
-  char *good_nickname_lst[1024];
   int n_good_nicknames = 0;
+  char *good_nickname_lst[1024]; /* XXXX008 correct this limit. */
+  time_t published_on;
   int i, r;
   const char *end;
   smartlist_t *tokens = NULL;
@@ -373,39 +385,8 @@ router_parse_routerlist_from_directory(const char *str,
       (tok->tp != K_DIRECTORY_SIGNATURE)) {
     log_fn(LOG_WARN,"Expected a single directory signature"); goto err;
   }
-  if (tok->n_args == 1) {
-    routerinfo_t *r = router_get_by_nickname(tok->args[0]);
-    log_fn(LOG_DEBUG, "Got directory signed by %s", tok->args[0]);
-    if (r && r->is_trusted_dir) {
-      pkey = r->identity_pkey;
-    } else if (!r && pkey) {
-      /* pkey provided for debugging purposes. */
-    } else if (!r) {
-      log_fn(LOG_WARN, "Directory was signed by unrecognized server %s",
-             tok->args[0]);
-      goto err;
-    } else if (r && !r->is_trusted_dir) {
-      log_fn(LOG_WARN, "Directory was signed by non-trusted server %s",
-             tok->args[0]);
-      goto err;
-    }
-  }
-  if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
-    log_fn(LOG_WARN, "Bad object type or length on directory signature");
+  if (check_directory_signature(digest, smartlist_get(tokens,0), pkey)<0) {
     goto err;
-  }
-  if (pkey) {
-    if (crypto_pk_public_checksig(pkey, tok->object_body, 128, signed_digest)
-        != 20) {
-      log_fn(LOG_WARN, "Error reading directory: invalid signature.");
-      goto err;
-    }
-    log(LOG_DEBUG,"Signed directory hash starts %s", hex_str(signed_digest,4));
-
-    if (memcmp(digest, signed_digest, 20)) {
-      log_fn(LOG_WARN, "Error reading directory: signature does not match.");
-      goto err;
-    }
   }
 
   if (*dest)
@@ -429,6 +410,124 @@ router_parse_routerlist_from_directory(const char *str,
   }
   return r;
 }
+
+running_routers_t *
+router_parse_runningrouters(const char *str)
+{
+  char digest[DIGEST_LEN];
+  running_routers_t *new_list = NULL;
+  directory_token_t *tok;
+  time_t published_on;
+  int i;
+
+  smartlist_t *tokens = NULL;
+
+  if (router_get_runningrouters_hash(str, digest)) {
+    log_fn(LOG_WARN, "Unable to compute digest of directory");
+    goto err;
+  }
+  tokens = smartlist_create();
+  if (tokenize_string(str,str+strlen(str),tokens,1)) {
+    log_fn(LOG_WARN, "Error tokenizing directory"); goto err;
+  }
+  if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
+    log_fn(LOG_WARN, "Unrecognized keyword in \"%s\"; can't parse directory.",
+           tok->args[0]);
+    goto err;
+  }
+  tok = smartlist_get(tokens,0);
+  if (tok->tp != K_NETWORK_STATUS) {
+    log_fn(LOG_WARN, "Network-status starts with wrong token");
+    goto err;
+  }
+
+  if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
+    log_fn(LOG_WARN, "Missing published time on directory.");
+    goto err;
+  }
+  tor_assert(tok->n_args == 1);
+  if (parse_time(tok->args[0], &published_on) < 0) {
+     goto err;
+  }
+
+  if (!(tok = find_first_by_keyword(tokens, K_RUNNING_ROUTERS))) {
+    log_fn(LOG_WARN, "Missing running-routers line from directory.");
+    goto err;
+  }
+
+  new_list = tor_malloc_zero(sizeof(running_routers_t));
+  new_list->published_on = published_on;
+  new_list->running_routers = smartlist_create();
+  for (i=0;i<tok->n_args;++i) {
+    smartlist_add(new_list->running_routers, tok->args[i]);
+  }
+
+  if (!(tok = find_first_by_keyword(tokens, K_DIRECTORY_SIGNATURE))) {
+    log_fn(LOG_WARN, "Missing signature on directory");
+    goto err;
+  }
+  if (check_directory_signature(digest, tok, NULL)<0) {
+    goto err;
+  }
+
+  goto done;
+ err:
+  running_routers_free(new_list);
+  new_list = NULL;
+ done:
+  if (tokens) {
+    SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
+    smartlist_free(tokens);
+  }
+  return new_list;
+}
+
+static int check_directory_signature(const char *digest,
+                                      directory_token_t *tok,
+                                      crypto_pk_env_t *pkey)
+{
+  char signed_digest[PK_BYTES];
+  if (tok->n_args == 1) {
+    routerinfo_t *r = router_get_by_nickname(tok->args[0]);
+    log_fn(LOG_DEBUG, "Got directory signed by %s", tok->args[0]);
+    if (r && r->is_trusted_dir) {
+      pkey = r->identity_pkey;
+    } else if (!r && pkey) {
+      /* pkey provided for debugging purposes. */
+    } else if (!r) {
+      log_fn(LOG_WARN, "Directory was signed by unrecognized server %s",
+             tok->args[0]);
+      return -1;
+    } else if (r && !r->is_trusted_dir) {
+      log_fn(LOG_WARN, "Directory was signed by non-trusted server %s",
+             tok->args[0]);
+      return -1;
+    }
+  } else if (tok->n_args > 1) {
+    log_fn(LOG_WARN, "Too many arguments to directory-signature");
+    return -1;
+  }
+  if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
+    log_fn(LOG_WARN, "Bad object type or length on directory signature");
+    return -1;
+  }
+  if (pkey) {
+    if (crypto_pk_public_checksig(pkey, tok->object_body, 128, signed_digest)
+        != 20) {
+      log_fn(LOG_WARN, "Error reading directory: invalid signature.");
+      return -1;
+    }
+    log(LOG_DEBUG,"Signed directory hash starts %s", hex_str(signed_digest,4));
+    if (memcmp(digest, signed_digest, 20)) {
+      log_fn(LOG_WARN, "Error reading directory: signature does not match.");
+      return -1;
+    }
+  } else {
+    /* XXXX008 freak out, unless testing. */
+  }
+  return 0;
+}
+
 
 /** Given a string *<b>s</b> containing a concatenated
  * sequence of router descriptors, parses them and stores the result

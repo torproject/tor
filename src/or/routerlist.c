@@ -477,7 +477,11 @@ int router_load_routerlist_from_directory(const char *s,
     log_fn(LOG_WARN, "Error resolving routerlist");
     return -1;
   }
+  /* Remember the directory, if we're nonauthoritative.*/
   dirserv_set_cached_directory(s, routerlist->published_on);
+  /* Learn about the descriptors in the directory, if we're authoritative */
+  if (options.AuthoritativeDir)
+    dirserv_load_from_directory_string(s);
   return 0;
 }
 
@@ -619,6 +623,50 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
 int router_exit_policy_rejects_all(routerinfo_t *router) {
   return router_compare_addr_to_exit_policy(0, 0, router->exit_policy)
     == ADDR_POLICY_REJECTED;
+}
+
+/* DODCDOC */
+void running_routers_free(running_routers_t *rr)
+{
+  tor_assert(rr);
+  if (rr->running_routers) {
+    SMARTLIST_FOREACH(rr->running_routers, char *, s, tor_free(s));
+    smartlist_free(rr->running_routers);
+  }
+  tor_free(rr);
+}
+
+/* DOCDOC*/
+void routerlist_update_from_runningrouters(routerlist_t *list,
+                                           running_routers_t *rr)
+{
+  int n_routers, n_names, i, j, running;
+  routerinfo_t *router;
+  const char *name;
+  if (!routerlist)
+    return;
+  if (routerlist->published_on >= rr->published_on)
+    return;
+  if (routerlist->running_routers_updated_on >= rr->published_on)
+    return;
+
+  n_routers = smartlist_len(list->routers);
+  n_names = smartlist_len(rr->running_routers);
+  for (i=0; i<n_routers; ++i) {
+    running = 0;
+    router = smartlist_get(list->routers, i);
+    for (j=0; j<n_names; ++j) {
+      name = smartlist_get(rr->running_routers, j);
+      if (!strcmp(name, router->nickname)) {
+        running=1;
+        break;
+      }
+    }
+    router->is_running = 1; /* arma: is this correct? */
+  }
+  routerlist->running_routers_updated_on = rr->published_on;
+  /* XXXX008 Should there also be a list of which are down, so that we
+   * don't mark merely unknown routers as down? */
 }
 
 /*

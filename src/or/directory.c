@@ -352,6 +352,8 @@ int connection_dir_process_inbuf(connection_t *conn) {
     }
 
     if(conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
+      running_routers_t *rrs;
+      routerlist_t *rl;
       /* just update our list of running routers, if this list is new info */
       log_fn(LOG_INFO,"Received running-routers list (size %d):\n%s", body_len, body);
       if(status_code != 200) {
@@ -361,7 +363,15 @@ int connection_dir_process_inbuf(connection_t *conn) {
         connection_mark_for_close(conn);
         return -1;
       }
-      /* XXX008 hand 'body' to something that parses a running-routers list. */
+      if (!(rrs = router_parse_runningrouters(body))) {
+        log_fn(LOG_WARN, "Can't parse runningrouters list");
+        free(body); free(headers);
+        connection_mark_for_close(conn);
+        return -1;
+      }
+      router_get_routerlist(&rl);
+      routerlist_update_from_runningrouters(rl,rrs);
+      running_routers_free(rrs);
     }
 
     if(conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {
