@@ -1,6 +1,6 @@
 
 AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.0.5)
+AM_INIT_AUTOMAKE(tor, 0.0.6pre1)
 AM_CONFIG_HEADER(orconfig.h)
 
 CFLAGS="$CFLAGS -Wall -g -O2 -I/usr/kerberos/include"
@@ -94,7 +94,7 @@ int main(void)
         done
 
         if test -z "$found_crypto" ; then
-                AC_MSG_ERROR([Could not find working OpenSSL library, please install or check config.log])      
+                AC_MSG_ERROR([Could not find working OpenSSL library, please install or check config.log])
         fi
         if test -z "$ssldir" ; then
                 ssldir="(system)"
