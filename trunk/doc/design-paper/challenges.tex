@@ -107,14 +107,13 @@ and~\ref{sec:crossroads-technical} go on to describe the practical challenges,
 both policy and technical respectively, that stand in the way of moving
 from a practical useful network to a practical useful anonymous network.
 
-\section{What Is Tor}
+%\section{What Is Tor}
+\section{Distributed trust: safety in numbers}
 \label{sec:what-is-tor}
 
 Here we give a basic overview of the Tor design and its properties. For
 details on the design, assumptions, and security arguments, we refer
-the reader to~\cite{tor-design}.
-
-\subsection{Distributed trust: safety in numbers}
+the reader to the Tor design paper~\cite{tor-design}.
 
 Tor provides \emph{forward privacy}, so that users can connect to
 Internet sites without revealing their logical or physical locations
@@ -150,10 +149,6 @@ offering various kinds of services, such as web publishing or an instant
 messaging server. Using Tor ``rendezvous points'', other Tor users can
 connect to these hidden services, each without knowing the other's network
 identity.
-%This hidden service functionality could allow Tor users to
-%set up a website where people publish material without worrying about
-%censorship. Nobody would be able to determine who was offering the site,
-%and nobody who offered the site would know who was posting to it.
 
 Tor attempts to anonymize the transport layer, not the application layer, so
 application protocols that include personally identifying information need
@@ -185,7 +180,7 @@ Instead, to protect our networks from traffic analysis, we must
 collaboratively blend the traffic from many organizations and private
 citizens, so that an eavesdropper can't tell which users are which,
 and who is looking for what information.  By bringing more users onto
-the network, all users become more secure \cite{econymics}.
+the network, all users become more secure~\cite{econymics}.
 
 Naturally, organizations will not want to depend on others for their
 security.  If most participating providers are reliable, Tor tolerates
@@ -196,12 +191,16 @@ hasn't been read or modified.  This even works for Internet services that
 don't have built-in encryption and authentication, such as unencrypted
 HTTP or chat, and it requires no modification of those services to do so.
 
-weasel's graph of \# nodes and of bandwidth, ideally from week 0.
+As of January 2005, the Tor network has grown to around a hundred servers
+on four continents, with a total capacity exceeding 1Gbit/s. Appendix A
+shows a graph of the number of working servers over time, as well as a
+graph of the number of bytes being handled by the network over time. At
+this point the network is sufficiently diverse for further development
+and testing; but of course we always encourage and welcome new servers
+to join the network.
 
-Tor doesn't try to provide steg (but see Sec \ref{china}), or
-the other non-goals listed in tor-design.
-
-[arma will do this part]
+%Tor doesn't try to provide steg (but see Section~\ref{subsec:china}), or
+%the other non-goals listed in tor-design.
 
 Tor is not the only anonymity system that aims to be practical and useful.
 Commercial single-hop proxies~\cite{anonymizer}, as well as unsecured
@@ -277,6 +276,7 @@ complicating factors:
 %Isn't it more accurate to say ``If the adversary _always_ controls the final
 % dest, we would be just as well off with such as system.'' ?  If not, why
 % not? -nm
+% Sure. In fact, better off, since they seem to scale more easily. -rd
 
 in practice tor's threat model is based entirely on the goal of dispersal
 and diversity. george and steven describe an attack \cite{draft} that
@@ -312,22 +312,22 @@ we also decided that it would probably be poor precedent to encourage
 such use---even legal use that improves national security---and managed
 to dissuade them.
 
-With this image issue in mind, here we discuss the Tor user base and
+With this image issue in mind, this section discusses the Tor user base and
 Tor's interaction with other services on the Internet.
-\subsection{Image and reputability}
+
+\subsection{Image and security}
 
 Image: substantial non-infringing uses. Image is a security parameter,
 since it impacts user base and perceived sustainability.
 
-grab reputability paragraphs from usability.tex [arma will do this]
-
-A Tor gui, how jap's gui is nice but does not reflect the security
-they provide.
-Public perception, and thus advertising, is a security parameter.
-
 good uses are kept private, bad uses are publicized. not good.
 
+Public perception, and thus advertising, is a security parameter.
+
 users do not correlate to anonymity. arma will do this.
+Communicating security levels to the user
+A Tor gui, how jap's gui is nice but does not reflect the security
+they provide.
 
 \subsection{Usability and bandwidth and sustainability and incentives}
 
@@ -345,6 +345,35 @@ Usability: fc03 paper was great, except the lower latency you are the
 less useful it seems it is.
 
 [nick will write this section]
+
+\subsection{Reputability}
+
+Yet another factor in the safety of a given network is its reputability:
+the perception of its social value based on its current users. If I'm
+the only user of a system, it might be socially accepted, but I'm not
+getting any anonymity. Add a thousand Communists, and I'm anonymous,
+but everyone thinks I'm a Commie. Add a thousand random citizens (cancer
+survivors, privacy enthusiasts, and so on) and now I'm hard to profile.
+
+The more cancer survivors on Tor, the better for the human rights
+activists. The more script kiddies, the worse for the normal users. Thus,
+reputability is an anonymity issue for two reasons. First, it impacts
+the sustainability of the network: a network that's always about to be
+shut down has difficulty attracting and keeping users, so its anonymity
+set suffers. Second, a disreputable network attracts the attention of
+powerful attackers who may not mind revealing the identities of all the
+users to uncover a few bad ones.
+
+While people therefore have an incentive for the network to be used for
+``more reputable'' activities than their own, there are still tradeoffs
+involved when it comes to anonymity. To follow the above example, a
+network used entirely by cancer survivors might welcome some Communists
+onto the network, though of course they'd prefer a wider variety of users.
+
+The impact of public perception on security is especially important
+during the bootstrapping phase of the network, where the first few
+widely publicized uses of the network can dictate the types of users it
+attracts next.
 
 \subsection{Tor and file-sharing}
 
@@ -951,6 +980,7 @@ network. We need to be more aware of the anonymity properties of various
 approaches we can make better design decisions in the future.
 
 \subsection{The China problem}
+\label{subsec:china}
 
 Citizens in a variety of countries, such as most recently China and
 Iran, are periodically blocked from accessing various sites outside
