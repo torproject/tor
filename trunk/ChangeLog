@@ -10,7 +10,7 @@ rc5:
     - Fix integer underflow in tor_vsnprintf() that may be exploitable,
       but doesn't seem to be currently; thanks to Ilja van Sprundel for
       finding it.
-    - If anybody set DirFetchPostPeriod, give them StatuFetchPeriod
+    - If anybody set DirFetchPostPeriod, give them StatusFetchPeriod
       instead.  Impose minima and maxima for all *Period options; impose
       even tighter maxima for fetching if we are a caching dirserver.
       Clip rather than rejecting.
