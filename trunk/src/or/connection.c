@@ -236,6 +236,8 @@ void connection_about_to_close_connection(connection_t *conn)
       if (conn->socks_request->has_finished == 0) {
         log_fn(LOG_INFO,"Cleaning up AP -- sending socks reject.");
         conn->hold_open_until_flushed = 1;
+        /* XXX this socks_reply never gets sent, since conn
+         * gets removed right after this function finishes. */
         connection_ap_handshake_socks_reply(conn, NULL, 0, -1);
         conn->socks_request->has_finished = 1;
       } else {
