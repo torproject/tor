@@ -1388,324 +1388,311 @@ Below we summarize a variety of attacks, and discuss how well our
 design withstands them.
 
 \subsubsection*{Passive attacks}
-\begin{tightlist}
-\item \emph{Observing user traffic patterns.} Observations of connection
-  between a user and her first onion router will not reveal to whom
-  the user is connecting or what information is being sent. It will
-  reveal patterns of user traffic (both sent and received). Simple
-  profiling of user connection patterns is not generally possible,
-  however, because multiple application streams may be operating
-  simultaneously or in series over a single circuit. Thus, further
-  processing is necessary to discern even these usage patterns.
-  
-\item \emph{Observing user content.} At the user end, content is
-  encrypted; however, connections from the network to arbitrary
-  websites may not be. Further, a responding website may itself be
-  hostile. Filtering content is not a primary goal of
-  Onion Routing; nonetheless, Tor can directly make use of Privoxy and
-  related filtering services to anonymize application data streams.
 
-\item \emph{Option distinguishability.} Configuration options can be a
-  source of distinguishable patterns. In general there is economic
-  incentive to allow preferential services \cite{econymics}, and some
-  degree of configuration choice can attract users, which
-  provide anonymity.  So far, however, we have
-  not found a compelling use case in Tor for any client-configurable
-  options.  Thus, clients are currently distinguishable only by their
-  behavior.
+\emph{Observing user traffic patterns.} Observations of connection
+between a user and her first onion router will not reveal to whom
+the user is connecting or what information is being sent. It will
+reveal patterns of user traffic (both sent and received). Simple
+profiling of user connection patterns is not generally possible,
+however, because multiple application streams may be operating
+simultaneously or in series over a single circuit. Thus, further
+processing is necessary to discern even these usage patterns.
+  
+\emph{Observing user content.} At the user end, content is
+encrypted; however, connections from the network to arbitrary
+websites may not be. Further, a responding website may itself be
+hostile. Filtering content is not a primary goal of
+Onion Routing; nonetheless, Tor can directly make use of Privoxy and
+related filtering services to anonymize application data streams.
+
+\emph{Option distinguishability.} Configuration options can be a
+source of distinguishable patterns. In general there is economic
+incentive to allow preferential services \cite{econymics}, and some
+degree of configuration choice can attract users, which
+provide anonymity.  So far, however, we have
+not found a compelling use case in Tor for any client-configurable
+options.  Thus, clients are currently distinguishable only by their
+behavior.
 %XXX Actually, circuitrebuildperiod is such an option. -RD
   
-\item \emph{End-to-end Timing correlation.}  Tor only minimally hides
-  end-to-end timing correlations. An attacker watching patterns of
-  traffic at the initiator and the responder will be
-  able to confirm the correspondence with high probability. The
-  greatest protection currently available against such confirmation is to hide
-  the connection between the onion proxy and the first Tor node,
-  by running the onion proxy locally or 
-  behind a firewall.  This approach
-  requires an observer to separate traffic originating at the onion
-  router from traffic passing through it; but because we do not mix
-  or pad, this does not provide much defense.
+\emph{End-to-end Timing correlation.}  Tor only minimally hides
+end-to-end timing correlations. An attacker watching patterns of
+traffic at the initiator and the responder will be
+able to confirm the correspondence with high probability. The
+greatest protection currently available against such confirmation is to hide
+the connection between the onion proxy and the first Tor node,
+by running the onion proxy locally or 
+behind a firewall.  This approach
+requires an observer to separate traffic originating at the onion
+router from traffic passing through it; but because we do not mix
+or pad, this does not provide much defense.
   
-\item \emph{End-to-end Size correlation.} Simple packet counting
-  without timing correlation will also be effective in confirming
-  endpoints of a stream. However, even without padding, we have some
-  limited protection: the leaky pipe topology means different numbers
-  of packets may enter one end of a circuit than exit at the other.
+\emph{End-to-end Size correlation.} Simple packet counting
+without timing correlation will also be effective in confirming
+endpoints of a stream. However, even without padding, we have some
+limited protection: the leaky pipe topology means different numbers
+of packets may enter one end of a circuit than exit at the other.
   
-\item \emph{Website fingerprinting.} All the above passive
-  attacks that are at all effective are traffic confirmation attacks.
-  This puts them outside our general design goals. There is also
-  a passive traffic analysis attack that is potentially effective.
-  Rather than searching exit connections for timing and volume
-  correlations, the adversary may build up a database of
-  ``fingerprints'' containing file sizes and access patterns for many
-  interesting websites. He can confirm a user's connection to a given
-  site simply by consulting the database. This attack has
-  been shown to be effective against SafeWeb \cite{hintz-pet02}. But
-  Tor is not as vulnerable as SafeWeb to this attack: there is the
-  possibility that multiple streams are exiting the circuit at
-  different places concurrently.  Also, fingerprinting will be limited to
-  the granularity of cells, currently 256 bytes. Other defenses include
-  larger cell sizes and/or minimal padding schemes that group websites
-  into large sets. But this remains an open problem.  Link
-  padding or long-range dummies may also make fingerprints harder to
-  detect.\footnote{Note that
-  such fingerprinting should not be confused with the latency attacks
-  of \cite{back01}. Those require a fingerprint of the latencies of
-  all circuits through the network, combined with those from the
-  network edges to the targeted user and the responder website. While
-  these are in principal feasible and surprises are always possible,
-  these constitute a much more complicated attack, and there is no
-  current evidence of their practicality.}
-
-%\item \emph{Content analysis.}  Tor explicitly provides no content
-%  rewriting for any protocol at a higher level than TCP.  When
-%  protocol cleaners are available, however (as Privoxy is for HTTP),
-%  Tor can integrate them to address these attacks.
-
-\end{tightlist}
+\emph{Website fingerprinting.} All the above passive
+attacks that are at all effective are traffic confirmation attacks.
+This puts them outside our general design goals. There is also
+a passive traffic analysis attack that is potentially effective.
+Rather than searching exit connections for timing and volume
+correlations, the adversary may build up a database of
+``fingerprints'' containing file sizes and access patterns for many
+interesting websites. He can confirm a user's connection to a given
+site simply by consulting the database. This attack has
+been shown to be effective against SafeWeb \cite{hintz-pet02}. But
+Tor is not as vulnerable as SafeWeb to this attack: there is the
+possibility that multiple streams are exiting the circuit at
+different places concurrently.  Also, fingerprinting will be limited to
+the granularity of cells, currently 256 bytes. Other defenses include
+larger cell sizes and/or minimal padding schemes that group websites
+into large sets. But this remains an open problem.  Link
+padding or long-range dummies may also make fingerprints harder to
+detect.\footnote{Note that
+such fingerprinting should not be confused with the latency attacks
+of \cite{back01}. Those require a fingerprint of the latencies of
+all circuits through the network, combined with those from the
+network edges to the targeted user and the responder website. While
+these are in principal feasible and surprises are always possible,
+these constitute a much more complicated attack, and there is no
+current evidence of their practicality.}
 
 \subsubsection*{Active attacks}
-\begin{tightlist}
-\item \emph{Compromise keys.}
-  If a TLS session key is compromised, an attacker
-  can view all the cells on TLS connection until the key is
-  renegotiated.  (These cells are themselves encrypted.)  If a TLS
-  private key is compromised, the attacker can fool others into
-  thinking that he is the affected OR, but still cannot accept any
-  connections. \\
-  If a circuit session key is compromised, the
-  attacker can unwrap a single layer of encryption from the relay
-  cells traveling along that circuit.  (Only nodes on the circuit can
-  see these cells.) If an onion private key is compromised, the attacker
-  can impersonate the OR in circuits, but only if the attacker has
-  also compromised the OR's TLS private key, or is running the
-  previous OR in the circuit.  (This compromise affects newly created
-  circuits, but because of perfect forward secrecy, the attacker
-  cannot hijack old circuits without compromising their session keys.)
-  In any case, periodic key rotation limits the window of opportunity
-  for compromising these keys. \\
-  Only by
-  compromising a node's identity key can an attacker replace that
-  node indefinitely, by sending new forged descriptors to the
-  directory servers.  Finally, an attacker who can compromise a
-  directory server's identity key can influence every client's view
-  of the network---but only to the degree made possible by gaining a
-  vote with the rest of the the directory servers.
 
-\item \emph{Iterated compromise.} A roving adversary who can
-  compromise ORs (by system intrusion, legal coersion, or extralegal
-  coersion) could march down the circuit compromising the
-  nodes until he reaches the end.  Unless the adversary can complete
-  this attack within the lifetime of the circuit, however, the ORs
-  will have discarded the necessary information before the attack can
-  be completed.  (Thanks to the perfect forward secrecy of session
-  keys, the attacker cannot force nodes to decrypt recorded
-  traffic once the circuits have been closed.)  Additionally, building
-  circuits that cross jurisdictions can make legal coercion
-  harder---this phenomenon is commonly called ``jurisdictional
-  arbitrage.'' The Java Anon Proxy project recently experienced the
-  need for this approach, when
-  the German government successfully ordered them to add a backdoor to
-  all of their nodes \cite{jap-backdoor}.
-  
-\item \emph{Run a recipient.} By running a Web server, an adversary
-  trivially learns the timing patterns of users connecting to it, and
-  can introduce arbitrary patterns in its responses.  This can greatly
-  facilitate end-to-end attacks: If the adversary can induce certain
-  users to connect to his webserver (perhaps by advertising
-  content targeted at those users), she now holds one end of their
-  connection.  Additionally, there is a danger that the application
-  protocols and associated programs can be induced to reveal
-  information about the initiator. Tor does not aim to solve this problem;
-  we depend on Privoxy and similar protocol cleaners.
-  
-\item \emph{Run an onion proxy.} It is expected that end users will
-  nearly always run their own local onion proxy. However, in some
-  settings, it may be necessary for the proxy to run
-  remotely---typically, in an institutional setting which wants
-  to monitor the activity of those connecting to the proxy.
-  Compromising an onion proxy means compromising all future connections
-  through it.
+\emph{Compromise keys.}
+If a TLS session key is compromised, an attacker
+can view all the cells on TLS connection until the key is
+renegotiated.  (These cells are themselves encrypted.)  If a TLS
+private key is compromised, the attacker can fool others into
+thinking that he is the affected OR, but still cannot accept any
+connections. \\
+If a circuit session key is compromised, the
+attacker can unwrap a single layer of encryption from the relay
+cells traveling along that circuit.  (Only nodes on the circuit can
+see these cells.) If an onion private key is compromised, the attacker
+can impersonate the OR in circuits, but only if the attacker has
+also compromised the OR's TLS private key, or is running the
+previous OR in the circuit.  (This compromise affects newly created
+circuits, but because of perfect forward secrecy, the attacker
+cannot hijack old circuits without compromising their session keys.)
+In any case, periodic key rotation limits the window of opportunity
+for compromising these keys. \\
+Only by
+compromising a node's identity key can an attacker replace that
+node indefinitely, by sending new forged descriptors to the
+directory servers.  Finally, an attacker who can compromise a
+directory server's identity key can influence every client's view
+of the network---but only to the degree made possible by gaining a
+vote with the rest of the the directory servers.
 
-\item \emph{DoS non-observed nodes.} An observer who can observe some
-  of the Tor network can increase the value of this traffic analysis
-  by attacking non-observed nodes to shut them down, reduce
-  their reliability, or persuade users that they are not trustworthy.
-  The best defense here is robustness.
-  
-\item \emph{Run a hostile node.}  In addition to the abilities of a
-  local observer, an isolated hostile node can create circuits through
-  itself, or alter traffic patterns, to affect traffic at
-  other nodes. Its ability to directly DoS a neighbor is now limited
-  by bandwidth throttling. Nonetheless, in order to compromise the
-  anonymity of the endpoints of a circuit by its observations, a
-  hostile node must be immediately adjacent to that endpoint. 
-  
-\item \emph{Run multiple hostile nodes.}  If an adversary is able to
-  run multiple ORs, and is able to persuade the directory servers
-  that those ORs are trustworthy and independant, then occasionally
-  some user will choose one of those ORs for the start and another
-  as the end of a circuit.  When this happens, the user's
-  anonymity is compromised for those streams.  If an adversary can
-  control $m$ out of $N$ nodes, he should be able to correlate at most 
-  $\left(\frac{m}{N}\right)^2$ of the traffic in this way---although an 
-  adversary
-  could possibly attract a disproportionately large amount of traffic
-  by running an exit node with an unusually permissive exit policy.
+\emph{Iterated compromise.} A roving adversary who can
+compromise ORs (by system intrusion, legal coersion, or extralegal
+coersion) could march down the circuit compromising the
+nodes until he reaches the end.  Unless the adversary can complete
+this attack within the lifetime of the circuit, however, the ORs
+will have discarded the necessary information before the attack can
+be completed.  (Thanks to the perfect forward secrecy of session
+keys, the attacker cannot force nodes to decrypt recorded
+traffic once the circuits have been closed.)  Additionally, building
+circuits that cross jurisdictions can make legal coercion
+harder---this phenomenon is commonly called ``jurisdictional
+arbitrage.'' The Java Anon Proxy project recently experienced the
+need for this approach, when
+the German government successfully ordered them to add a backdoor to
+all of their nodes \cite{jap-backdoor}.
 
-\item \emph{Compromise entire path.} Anyone compromising both
-  endpoints of a circuit can confirm this with high probability. If
-  the entire path is compromised, this becomes a certainty; however,
-  the added benefit to the adversary of such an attack is small in
-  relation to the difficulty.
+\emph{Run a recipient.} By running a Web server, an adversary
+trivially learns the timing patterns of users connecting to it, and
+can introduce arbitrary patterns in its responses.  This can greatly
+facilitate end-to-end attacks: If the adversary can induce certain
+users to connect to his webserver (perhaps by advertising
+content targeted at those users), she now holds one end of their
+connection.  Additionally, there is a danger that the application
+protocols and associated programs can be induced to reveal
+information about the initiator. Tor does not aim to solve this problem;
+we depend on Privoxy and similar protocol cleaners.
   
-\item \emph{Run a hostile directory server.} Directory servers control
-  admission to the network. However, because the network directory
-  must be signed by a majority of servers, the threat of a single
-  hostile server is minimized.
+\emph{Run an onion proxy.} It is expected that end users will
+nearly always run their own local onion proxy. However, in some
+settings, it may be necessary for the proxy to run
+remotely---typically, in an institutional setting which wants
+to monitor the activity of those connecting to the proxy.
+Compromising an onion proxy means compromising all future connections
+through it.
+
+\emph{DoS non-observed nodes.} An observer who can observe some
+of the Tor network can increase the value of this traffic analysis
+by attacking non-observed nodes to shut them down, reduce
+their reliability, or persuade users that they are not trustworthy.
+The best defense here is robustness.
   
-\item \emph{Selectively DoS a Tor node.} As noted, neighbors are
-  bandwidth limited; however, it is possible to open up sufficient
-  circuits that converge at a single onion router to
-  overwhelm its network connection, its ability to process new
-  circuits, or both.
+\emph{Run a hostile node.}  In addition to the abilities of a
+local observer, an isolated hostile node can create circuits through
+itself, or alter traffic patterns, to affect traffic at
+other nodes. Its ability to directly DoS a neighbor is now limited
+by bandwidth throttling. Nonetheless, in order to compromise the
+anonymity of the endpoints of a circuit by its observations, a
+hostile node must be immediately adjacent to that endpoint. 
+  
+\emph{Run multiple hostile nodes.}  If an adversary is able to
+run multiple ORs, and is able to persuade the directory servers
+that those ORs are trustworthy and independant, then occasionally
+some user will choose one of those ORs for the start and another
+as the end of a circuit.  When this happens, the user's
+anonymity is compromised for those streams.  If an adversary can
+control $m$ out of $N$ nodes, he should be able to correlate at most 
+$\left(\frac{m}{N}\right)^2$ of the traffic in this way---although an 
+adversary
+could possibly attract a disproportionately large amount of traffic
+by running an exit node with an unusually permissive exit policy.
+
+\emph{Compromise entire path.} Anyone compromising both
+endpoints of a circuit can confirm this with high probability. If
+the entire path is compromised, this becomes a certainty; however,
+the added benefit to the adversary of such an attack is small in
+relation to the difficulty.
+
+\emph{Run a hostile directory server.} Directory servers control
+admission to the network. However, because the network directory
+must be signed by a majority of servers, the threat of a single
+hostile server is minimized.
+  
+\emph{Selectively DoS a Tor node.} As noted, neighbors are
+bandwidth limited; however, it is possible to open up sufficient
+circuits that converge at a single onion router to
+overwhelm its network connection, its ability to process new
+circuits, or both.
 % We aim to address something like this attack with our congestion
 % control algorithm.
 
-\item \emph{Introduce timing into messages.} This is simply a stronger
-  version of passive timing attacks already discussed above.
+\emph{Introduce timing into messages.} This is simply a stronger
+version of passive timing attacks already discussed above.
   
-\item \emph{Tagging attacks.} A hostile node could ``tag'' a
-  cell by altering it. This would render it unreadable, but if the
-  stream is, for example, an unencrypted request to a Web site,
-  the garbled content coming out at the appropriate time could confirm
-  the association. However, integrity checks on cells prevent
-  this attack.
+\emph{Tagging attacks.} A hostile node could ``tag'' a
+cell by altering it. This would render it unreadable, but if the
+stream is, for example, an unencrypted request to a Web site,
+the garbled content coming out at the appropriate time could confirm
+the association. However, integrity checks on cells prevent
+this attack.
 
-\item \emph{Replace contents of unauthenticated protocols.}  When
-  relaying an unauthenticated protocol like HTTP, a hostile exit node 
-  can impersonate the target server.  Thus, whenever possible, clients
-  should prefer protocols with end-to-end authentication.
+\emph{Replace contents of unauthenticated protocols.}  When
+relaying an unauthenticated protocol like HTTP, a hostile exit node 
+can impersonate the target server.  Thus, whenever possible, clients
+should prefer protocols with end-to-end authentication.
 
-\item \emph{Replay attacks.} Some anonymity protocols are vulnerable
-  to replay attacks.  Tor is not; replaying one side of a handshake
-  will result in a different negotiated session key, and so the rest
-  of the recorded session can't be used.  
-  % ``NonSSL Anonymizer''?
+\emph{Replay attacks.} Some anonymity protocols are vulnerable
+to replay attacks.  Tor is not; replaying one side of a handshake
+will result in a different negotiated session key, and so the rest
+of the recorded session can't be used.  
 
-\item \emph{Smear attacks.} An attacker could use the Tor network to
-  engage in socially dissapproved acts, so as to try to bring the
-  entire network into disrepute and get its operators to shut it down.
-  Exit policies can help reduce the possibilities for abuse, but
-  ultimately, the network will require volunteers who can tolerate
-  some political heat.
+\emph{Smear attacks.} An attacker could use the Tor network to
+engage in socially dissapproved acts, so as to try to bring the
+entire network into disrepute and get its operators to shut it down.
+Exit policies can help reduce the possibilities for abuse, but
+ultimately, the network will require volunteers who can tolerate
+some political heat.
 
-\item \emph{Distribute hostile code.} An attacker could trick users
-  into running subverted Tor software that did not, in fact, anonymize
-  their connections---or worse, trick ORs into running weakened
-  software that provided users with less anonymity.  We address this
-  problem (but do not solve it completely) by signing all Tor releases
-  with an official public key, and including an entry in the directory
-  describing which versions are currently believed to be secure.  To
-  prevent an attacker from subverting the official release itself
-  (through threats, bribery, or insider attacks), we provide all
-  releases in source code form, encourage source audits, and
-  frequently warn our users never to trust any software (even from
-  us!) that comes without source.
-\end{tightlist}
+\emph{Distribute hostile code.} An attacker could trick users
+into running subverted Tor software that did not, in fact, anonymize
+their connections---or worse, trick ORs into running weakened
+software that provided users with less anonymity.  We address this
+problem (but do not solve it completely) by signing all Tor releases
+with an official public key, and including an entry in the directory
+describing which versions are currently believed to be secure.  To
+prevent an attacker from subverting the official release itself
+(through threats, bribery, or insider attacks), we provide all
+releases in source code form, encourage source audits, and
+frequently warn our users never to trust any software (even from
+us!) that comes without source.
 
 \subsubsection*{Directory attacks}
-\begin{tightlist}
-\item \emph{Destroy directory servers.}  If a few directory
-  servers drop out of operation, the others still arrive at a final
-  directory.  So long as any directory servers remain in operation,
-  they will still broadcast their views of the network and generate a
-  consensus directory.  (If more than half are destroyed, this
-  directory will not, however, have enough signatures for clients to
-  use it automatically; human intervention will be necessary for
-  clients to decide whether to trust the resulting directory, or continue
-  to use the old valid one.)
 
-\item \emph{Subvert a directory server.}  By taking over a directory
-  server, an attacker can influence (but not control) the final
-  directory.  Since ORs are included or excluded by majority vote,
-  the corrupt directory can at worst cast a tie-breaking vote to
-  decide whether to include marginal ORs.  How often such marginal
-  cases will occur in practice, however, remains to be seen.
+\emph{Destroy directory servers.}  If a few directory
+servers drop out of operation, the others still arrive at a final
+directory.  So long as any directory servers remain in operation,
+they will still broadcast their views of the network and generate a
+consensus directory.  (If more than half are destroyed, this
+directory will not, however, have enough signatures for clients to
+use it automatically; human intervention will be necessary for
+clients to decide whether to trust the resulting directory, or continue
+to use the old valid one.)
 
-\item \emph{Subvert a majority of directory servers.}  If the
-  adversary controls more than half of the directory servers, he can
-  decide on a final directory, and thus can include as many
-  compromised ORs in the final directory as he wishes.  Other than
-  trying to ensure that directory server operators are truly
-  independent and resistant to attack, Tor does not address this
-  possibility.
+\emph{Subvert a directory server.}  By taking over a directory
+server, an attacker can influence (but not control) the final
+directory.  Since ORs are included or excluded by majority vote,
+the corrupt directory can at worst cast a tie-breaking vote to
+decide whether to include marginal ORs.  How often such marginal
+cases will occur in practice, however, remains to be seen.
 
-\item \emph{Encourage directory server dissent.}  The directory
-  agreement protocol requires that directory server operators agree on 
-  the list of directory servers.  An adversary who can persuade some
-  of the directory server operators to distrust one another could
-  split the quorum into mutually hostile camps, thus partitioning
-  users based on which directory they used.  Tor does not address
-  this attack.
+\emph{Subvert a majority of directory servers.}  If the
+adversary controls more than half of the directory servers, he can
+decide on a final directory, and thus can include as many
+compromised ORs in the final directory as he wishes.  Other than
+trying to ensure that directory server operators are truly
+independent and resistant to attack, Tor does not address this
+possibility.
 
-\item \emph{Trick the directory servers into listing a hostile OR.}
-  Our threat model explicitly assumes directory server operators will
-  be able to filter out most hostile ORs.  If this is not true, an
-  attacker can flood the directory with compromised servers.
+\emph{Encourage directory server dissent.}  The directory
+agreement protocol requires that directory server operators agree on 
+the list of directory servers.  An adversary who can persuade some
+of the directory server operators to distrust one another could
+split the quorum into mutually hostile camps, thus partitioning
+users based on which directory they used.  Tor does not address
+this attack.
 
-\item \emph{Convince the directories that a malfunctioning OR is
-  working.}  In the current Tor implementation, directory servers
-  assume that if they can start a TLS connection to an an OR, that OR
-  must be running correctly.  It would be easy for a hostile OR to
-  subvert this test by only accepting TLS connections from ORs, and
-  ignoring all cells. Thus, directory servers must actively test ORs
-  by building circuits and streams as appropriate.  The benefits and
-  hazards of a similar approach are discussed in \cite{mix-acc}.
+\emph{Trick the directory servers into listing a hostile OR.}
+Our threat model explicitly assumes directory server operators will
+be able to filter out most hostile ORs.  If this is not true, an
+attacker can flood the directory with compromised servers.
+
+\emph{Convince the directories that a malfunctioning OR is
+working.}  In the current Tor implementation, directory servers
+assume that if they can start a TLS connection to an an OR, that OR
+must be running correctly.  It would be easy for a hostile OR to
+subvert this test by only accepting TLS connections from ORs, and
+ignoring all cells. Thus, directory servers must actively test ORs
+by building circuits and streams as appropriate.  The benefits and
+hazards of a similar approach are discussed in \cite{mix-acc}.
   
-\end{tightlist}
-
 \subsubsection*{Attacks against rendezvous points}
-\begin{tightlist}
-\item \emph{Make many introduction requests.}  An attacker could
-  attempt to deny Bob service by flooding his Introduction Point with
-  requests.  Because the introduction point can block requests that
-  lack authentication tokens, however, Bob can restrict the volume of
-  requests he receives, or require a certain amount of computation for
-  every request he receives.
+
+\emph{Make many introduction requests.}  An attacker could
+attempt to deny Bob service by flooding his Introduction Point with
+requests.  Because the introduction point can block requests that
+lack authentication tokens, however, Bob can restrict the volume of
+requests he receives, or require a certain amount of computation for
+every request he receives.
   
-\item \emph{Attack an introduction point.} An attacker could try to
-  disrupt a location-hidden service by disabling its introduction
-  point.  But because a service's identity is attached to its public
-  key, not its introduction point, the service can simply re-advertise
-  itself at a different introduction point.
-  
-\item \emph{Attack multiple introduction points.}  If an attacker is
-  able to disable all of the introduction points for a given service,
-  he can block access to the service. However, re-advertisement of
-  introduction points can still be done secretly so that only
-  high-priority clients know the address of the service's introduction
-  points. These selective secret authorizations can also be issued
-  during normal operation. Thus an attacker must disable
-  all possible introduction points.
+\emph{Attack an introduction point.} An attacker could try to
+disrupt a location-hidden service by disabling its introduction
+point.  But because a service's identity is attached to its public
+key, not its introduction point, the service can simply re-advertise
+itself at a different introduction point.
 
-\item \emph{Compromise an introduction point.} If an attacker controls
-  an introduction point for a service, it can flood the service with
-  introduction requests, or prevent valid introduction requests from
-  reaching the hidden server.  The server will notice a flooding
-  attempt if it receives many introduction requests.  To notice
-  blocking of valid requests, however, the hidden server should
-  periodically test the introduction point by sending its introduction
-  requests, and making sure it receives them.
+\emph{Attack multiple introduction points.}  If an attacker is
+able to disable all of the introduction points for a given service,
+he can block access to the service. However, re-advertisement of
+introduction points can still be done secretly so that only
+high-priority clients know the address of the service's introduction
+points. These selective secret authorizations can also be issued
+during normal operation. Thus an attacker must disable
+all possible introduction points.
 
-\item \emph{Compromise a rendezvous point.}  Controlling a rendezvous
-  point gains an attacker no more than controlling any other OR along
-  a circuit, since all data passing along the rendezvous is protected
-  by the session key shared by the client and server.
+\emph{Compromise an introduction point.} If an attacker controls
+an introduction point for a service, it can flood the service with
+introduction requests, or prevent valid introduction requests from
+reaching the hidden server.  The server will notice a flooding
+attempt if it receives many introduction requests.  To notice
+blocking of valid requests, however, the hidden server should
+periodically test the introduction point by sending its introduction
+requests, and making sure it receives them.
 
-\end{tightlist}
+\emph{Compromise a rendezvous point.}  Controlling a rendezvous
+point gains an attacker no more than controlling any other OR along
+a circuit, since all data passing along the rendezvous is protected
+by the session key shared by the client and server.
 
 \Section{Open Questions in Low-latency Anonymity}
 \label{sec:maintaining-anonymity}
@@ -1901,57 +1888,61 @@ issues remaining to be ironed out. In particular:
 % Many of these (Scalability, cover traffic, morphmix) 
 % are duplicates from open problems.
 %
-\begin{tightlist}
-\item \emph{Scalability:} Tor's emphasis on design simplicity and
-  deployability has led us to adopt a clique topology, a
-  semi-centralized model for directories and trusts, and a
-  full-network-visibility model for client knowledge.  None of these
-  properties will scale to more than a few hundred servers, at most.
-  Promising approaches to better scalability exist (see
-  Section~\ref{sec:maintaining-anonymity}), but more deployment
-  experience would be helpful in learning the relative importance of
-  these bottlenecks.
-\item \emph{Cover traffic:} Currently we avoid cover traffic because
-  of its clear costs in performance and bandwidth, and because its
-  security benefits are not well understood. With more research
-  \cite{SS03,defensive-dropping}, the price/value ratio may change,
-  both for link-level cover traffic and also long-range cover traffic.
-\item \emph{Better directory distribution:} Even with the threshold
-  directory agreement algorithm described in Section~\ref{subsec:dirservers},
-  the directory servers are still trust bottlenecks. We must find more
-  decentralized yet practical ways to distribute up-to-date snapshots of
-  network status without introducing new attacks.  Also, directory
-  retrieval presents a scaling problem, since clients currently
-  download a description of the entire network state every 15
-  minutes.  As the state grows larger and clients more numerous, we
-  may need to move to a solution in which clients only receive
-  incremental updates to directory state, or where directories are
-  cached at the ORs to avoid high loads on the directory servers.
+
+\emph{Scalability:} Tor's emphasis on design simplicity and
+deployability has led us to adopt a clique topology, a
+semi-centralized model for directories and trusts, and a
+full-network-visibility model for client knowledge.  None of these
+properties will scale to more than a few hundred servers, at most.
+Promising approaches to better scalability exist (see
+Section~\ref{sec:maintaining-anonymity}), but more deployment
+experience would be helpful in learning the relative importance of
+these bottlenecks.
+
+\emph{Cover traffic:} Currently we avoid cover traffic because
+of its clear costs in performance and bandwidth, and because its
+security benefits are not well understood. With more research
+\cite{SS03,defensive-dropping}, the price/value ratio may change,
+both for link-level cover traffic and also long-range cover traffic.
+
+\emph{Better directory distribution:} Even with the threshold
+directory agreement algorithm described in Section~\ref{subsec:dirservers},
+the directory servers are still trust bottlenecks. We must find more
+decentralized yet practical ways to distribute up-to-date snapshots of
+network status without introducing new attacks.  Also, directory
+retrieval presents a scaling problem, since clients currently
+download a description of the entire network state every 15
+minutes.  As the state grows larger and clients more numerous, we
+may need to move to a solution in which clients only receive
+incremental updates to directory state, or where directories are
+cached at the ORs to avoid high loads on the directory servers.
 % XXX this is a design paper, not an implementation paper. the design
 %     says that they're already cached at the ORs. Agree/disagree?
 % XXX Agree. -NM
-\item \emph{Implementing location-hidden servers:} While
-  Section~\ref{sec:rendezvous} describes a design for rendezvous
-  points and location-hidden servers, these features have not yet been
-  implemented.  While doing so we are likely to encounter additional
-  issues that must be resolved, both in terms of usability and anonymity.
-\item \emph{Further specification review:} Although we have a public,
-  byte-level specification for the Tor protocols, this protocol has
-  not received extensive external review.  We hope that as Tor
-  becomes more widely deployed, more people will become interested in
-  examining our specification.
-\item \emph{Wider-scale deployment:} The original goal of Tor was to
-  gain experience in deploying an anonymizing overlay network, and
-  learn from having actual users.  We are now at the point in design
-  and development where we can start deploying a wider network.  Once
-  we have many actual users, we will doubtlessly be better
-  able to evaluate some of our design decisions, including our
-  robustness/latency trade-offs, our performance trade-offs (including
-  cell size), our abuse-prevention mechanisms, and
-  our overall usability.
+
+\emph{Implementing location-hidden servers:} While
+Section~\ref{sec:rendezvous} describes a design for rendezvous
+points and location-hidden servers, these features have not yet been
+implemented.  While doing so we are likely to encounter additional
+issues that must be resolved, both in terms of usability and anonymity.
+
+\emph{Further specification review:} Although we have a public,
+byte-level specification for the Tor protocols, this protocol has
+not received extensive external review.  We hope that as Tor
+becomes more widely deployed, more people will become interested in
+examining our specification.
+
+\emph{Wider-scale deployment:} The original goal of Tor was to
+gain experience in deploying an anonymizing overlay network, and
+learn from having actual users.  We are now at the point in design
+and development where we can start deploying a wider network.  Once
+we have many actual users, we will doubtlessly be better
+able to evaluate some of our design decisions, including our
+robustness/latency trade-offs, our performance trade-offs (including
+cell size), our abuse-prevention mechanisms, and
+our overall usability.
 % XXX large and small cells on same network.
 % XXX work with morphmix spec
-\end{tightlist}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
