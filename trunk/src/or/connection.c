@@ -380,9 +380,9 @@ int connection_read_to_buf(connection_t *conn) {
   } else {
     /* do a rudimentary round-robin so one connection can't hog a thickpipe */
     if(connection_speaks_cells(conn)) {
-      at_most = 30*(CELL_NETWORK_SIZE);
+      at_most = 32*(CELL_NETWORK_SIZE);
     } else {
-      at_most = 30*(RELAY_PAYLOAD_SIZE);
+      at_most = 32*(RELAY_PAYLOAD_SIZE);
     }
 
     if(at_most > global_read_bucket)
@@ -524,6 +524,21 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
 
   /* XXX if linkpadding, this only applies to conns that aren't open OR connections */
   connection_start_writing(conn);
+#define MIN_TLS_FLUSHLEN 16300
+/* openssl tls record size is 16383, this is close. The goal here is to
+ * push data out as soon as we know there's enough for a tls record, so
+ * during periods of high load we won't read the entire megabyte from
+ * input before pushing any data out. */
+/* We follow the same algorithm for non-tls streams, because hey, why not. */
+  if(conn->outbuf_flushlen < MIN_TLS_FLUSHLEN &&
+     conn->outbuf_flushlen+len >= MIN_TLS_FLUSHLEN) {
+    len -= (MIN_TLS_FLUSHLEN - conn->outbuf_flushlen);
+    conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
+    if(connection_handle_write(conn) < 0) {
+      conn->marked_for_close = 1;
+      log_fn(LOG_WARN,"flushing failed.");
+    }
+  }
   conn->outbuf_flushlen += len;
 }
 
