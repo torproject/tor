@@ -22,8 +22,8 @@
 #define snprintf _snprintf
 #endif
 
-#define TRUNCATED_STR "[truncated]"
-#define TRUNCATED_STR_LEN 11
+#define TRUNCATED_STR "[...truncated]"
+#define TRUNCATED_STR_LEN 14
 
 /** Information for a single logfile; only used in log.c */
 typedef struct logfile_t {
