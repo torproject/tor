@@ -171,7 +171,7 @@ char *tor_strndup(const char *s, size_t n) {
    * this function gets called a whole lot, and platform strncpy is
    * much faster than strlcpy when strlen(s) is much longer than n.
    */
-  strncpy(dup, s, n+1);
+  strncpy(dup, s, n);
   dup[n]='\0';
   return dup;
 }
