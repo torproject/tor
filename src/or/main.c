@@ -21,6 +21,8 @@ static int please_dumpstats=0; /* whether we should dump stats during the loop *
 /* private key */
 static crypto_pk_env_t *prkey;
 
+routerinfo_t *my_routerinfo=NULL;
+
 /********* END VARIABLES ************/
 
 /****************************************************************************
@@ -214,6 +216,10 @@ void check_conn_read(int i) {
       retval = connection_dir_handle_listener_read(conn);
     } else {
       retval = connection_read_to_buf(conn);
+      if (retval < 0 && conn->type == CONN_TYPE_DIR) {
+         /* as a special case: forget about this router */
+         router_forget_router(conn->addr,conn->port);
+      }
       if (retval >= 0) { /* all still well */
         retval = connection_process_inbuf(conn);
 //      log(LOG_DEBUG,"check_conn_read(): connection_process_inbuf returned %d.",retval);
@@ -501,14 +507,42 @@ void dumpstats (void) { /* dump stats to stdout */
   please_dumpstats = 0;
 }
 
-void dump_directory_to_string(char *s, int maxlen) {
-  int i;
-  connection_t *conn;
+int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
   char *pkey;
   int pkeylen;
   int written;
-  routerinfo_t *router;
 
+  if(crypto_pk_write_public_key_to_string(router->pkey,&pkey,&pkeylen)<0) {
+    log(LOG_ERR,"dump_directory_to_string(): write pkey to string failed!");
+    return 0;
+  }
+  written = snprintf(s, maxlen, "%s %d %d %d %d %d\n%s\n",
+    router->address,
+    router->or_port,
+    router->op_port,
+    router->ap_port,
+    router->dir_port,
+    router->bandwidth,
+    pkey);
+
+  free(pkey);
+
+  return written;
+}
+
+void dump_directory_to_string(char *s, int maxlen) {
+  int i;
+  connection_t *conn;
+  routerinfo_t *router;
+  int written;
+
+  /* first write my own info */
+  /* XXX should check for errors here too */
+  written = dump_router_to_string(s, maxlen, my_routerinfo);
+  maxlen -= written;
+  s += written;
+
+  /* now write info for other routers */
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
 
@@ -519,20 +553,8 @@ void dump_directory_to_string(char *s, int maxlen) {
       log(LOG_ERR,"dump_directory_to_string(): couldn't find router %d:%d!",conn->addr,conn->port);
       return;
     }
-    if(crypto_pk_write_public_key_to_string(router->pkey,&pkey,&pkeylen)<0) {
-      log(LOG_ERR,"dump_directory_to_string(): write pkey to string failed!");
-      return;
-    }
-    written = snprintf(s, maxlen, "%s %d %d %d %d %d\n%s\n",
-      router->address,
-      router->or_port,
-      router->op_port,
-      router->ap_port,
-      router->dir_port,
-      router->bandwidth,
-      pkey);
 
-    free(pkey);
+    written = dump_router_to_string(s, maxlen, router);
 
     if(written < 0 || written > maxlen) { 
       /* apparently different glibcs do different things on error.. so check both */
@@ -543,7 +565,6 @@ void dump_directory_to_string(char *s, int maxlen) {
   
     maxlen -= written;
     s += written;
-
   }
 
 }

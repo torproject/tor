@@ -1,4 +1,4 @@
-/* Copyright 2001,2002 Roger Dingledine, Matej Pfaêfar. */
+/* Copyright 2001,2002 Roger Dingledine, Matej Pfajfar. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 
@@ -56,6 +56,7 @@ void directory_initiate_fetch(routerinfo_t *router) {
   if(connect(s,(struct sockaddr *)&router_addr,sizeof(router_addr)) < 0){
     if(errno != EINPROGRESS){
       /* yuck. kill it. */
+      router_forget_router(conn->addr, conn->port); /* don't try him again */
       connection_free(conn);
       return;
     } else {
@@ -210,6 +211,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
         if(errno != EINPROGRESS){
           /* yuck. kill it. */
           log(LOG_DEBUG,"connection_dir_finished_flushing(): in-progress connect failed. Removing.");
+          router_forget_router(conn->addr, conn->port); /* don't try him again */
           return -1;
         } else {
           return 0; /* no change, see if next time is better */
@@ -217,7 +219,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
       }
       /* the connect has finished. */
 
-      log(LOG_DEBUG,"connection_dir_finished_flushing(): DIR connection to router %s:%u established.",
+      log(LOG_DEBUG,"connection_dir_finished_flushing(): Dir connection to router %s:%u established.",
           conn->address,conn->port);
 
       return directory_send_command(conn);
