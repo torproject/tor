@@ -690,17 +690,17 @@ static int init_from_config(int argc, char **argv) {
     return -1;
   }
 
-  /* Start backgrounding the process, if requested. */
-  if (options.RunAsDaemon) {
-    start_daemon(get_data_directory(&options));
-  }
-
   /* Configure the log(s) */
   if (config_init_logs(&options)<0)
     return -1;
   /* Close the temporary log we used while starting up, if it isn't already
    * gone. */
   close_temp_logs();
+
+  /* Start backgrounding the process, if requested. */
+  if (options.RunAsDaemon) {
+    start_daemon(get_data_directory(&options));
+  }
 
   /* Set up our buckets */
   connection_bucket_init();
