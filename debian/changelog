@@ -1,8 +1,7 @@
-tor (0.0.8-NOTRELEASED) NOTRELEASED; urgency=low
+tor (0.0.7.2+0.0.8pre2-1) unstable; urgency=low
 
-  * Depend on python as we now have a python script: tor_resolve
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 23 Jul 2004 00:27:33 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed,  4 Aug 2004 20:09:26 +0200
 
 tor (0.0.7.2-1) unstable; urgency=medium
 
