@@ -1,3 +1,8 @@
+Changes in version 0.0.7.1 - 2004-07-04
+  o When an address resolves to 0.0.0.0, treat it as a failed resolve,
+    since internally we use 0.0.0.0 to signify "not yet resolved".
+
+
 Changes in version 0.0.7 - 2004-06-07
   o Fixes for crashes and other obnoxious bugs:
     - Fix an epipe bug: sometimes when directory connections failed
