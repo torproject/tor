@@ -102,7 +102,7 @@ R       - learn from ben about his openssl-reinitialization-trick to
           o stop reading dirservers file.
           o add some default TrustedDir lines if none defined, or if
             no torrc.
-          - remove notion of ->is_trusted_dir from the routerlist. that's
+          o remove notion of ->is_trusted_dir from the routerlist. that's
             no longer where you look.
             - clean up router parsing flow, since it's simpler now?
           o when checking signature on a directory, look it up in

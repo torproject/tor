@@ -48,7 +48,6 @@ extern int has_fetched_directory; /**< from main.c */
 int router_reload_router_list(void)
 {
   char filename[512];
-  routerlist_clear_trusted_directories();
   if (get_data_directory(&options)) {
     char *s;
     snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
@@ -107,7 +106,6 @@ routerinfo_t *router_pick_directory_server(int requireothers,
   log_fn(LOG_INFO,"Still no %s router entries. Reloading and trying again.",
          options.FascistFirewall ? "reachable" : "known");
   has_fetched_directory=0; /* reset it */
-  routerlist_clear_trusted_directories();
   if(router_reload_router_list()) {
     return NULL;
   }
@@ -135,7 +133,6 @@ trusted_dir_server_t *router_pick_trusteddirserver(int requireothers,
   log_fn(LOG_WARN,"Still no dirservers %s. Reloading and trying again.",
          options.FascistFirewall ? "reachable" : "known");
   has_fetched_directory=0; /* reset it */
-  routerlist_clear_trusted_directories();
   if(router_reload_router_list()) {
     return NULL;
   }
@@ -221,11 +218,11 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
 static void mark_all_trusteddirservers_up(void) {
   if(routerlist) {
     SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
-                      if(router->is_trusted_dir) {
-                        tor_assert(router->dir_port > 0);
-                        router->is_running = 1;
-                        router->status_set_at = time(NULL);
-                      });
+                 if(router_digest_is_trusted_dir(router->identity_digest)) {
+                   tor_assert(router->dir_port > 0);
+                   router->is_running = 1;
+                   router->status_set_at = time(NULL);
+                 });
   }
   if (trusted_dir_servers) {
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, dir,
@@ -737,8 +734,6 @@ int router_add_to_routerlist(routerinfo_t *router) {
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
     r = smartlist_get(routerlist->routers, i);
 
-    r->is_trusted_dir = router_digest_is_trusted_dir(r->identity_digest);
-
     if (!crypto_pk_cmp_keys(router->identity_pkey, r->identity_pkey)) {
       if (router->published_on > r->published_on) {
         log_fn(LOG_DEBUG, "Replacing entry for router '%s/%s' [%s]",
@@ -809,9 +804,8 @@ routerlist_remove_old_routers(int age)
   cutoff = time(NULL) - age;
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
     router = smartlist_get(routerlist->routers, i);
-    if (router->published_on <= cutoff &&
-      !router->is_trusted_dir) {
-      /* Too old.  Remove it. But never remove dirservers! */
+    if (router->published_on <= cutoff) {
+      /* Too old.  Remove it. */
       log_fn(LOG_INFO,"Forgetting obsolete routerinfo for node %s.", router->nickname);
       routerinfo_free(router);
       smartlist_del(routerlist->routers, i--);
@@ -823,83 +817,6 @@ routerlist_remove_old_routers(int age)
  * Code to parse router descriptors and directories.
  */
 
-/** Update the current router list with the one stored in
- * <b>routerfile</b>. If <b>trusted</b> is true, then we'll use
- * directory servers from the file. */
-int router_load_routerlist_from_file(char *routerfile, int trusted)
-{
-  char *string;
-
-  string = read_file_to_str(routerfile,0);
-  if(!string) {
-    log_fn(LOG_WARN,"Failed to load routerfile %s.",routerfile);
-    return -1;
-  }
-
-  if(router_load_routerlist_from_string(string, trusted) < 0) {
-    log_fn(LOG_WARN,"The routerfile itself was corrupt.");
-    tor_free(string);
-    return -1;
-  }
-  /* dump_onion_keys(LOG_NOTICE); */
-
-  tor_free(string);
-  return 0;
-}
-
-/** Mark all directories in the routerlist as nontrusted. */
-void routerlist_clear_trusted_directories(void)
-{
-  if (routerlist) {
-    SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
-                      r->is_trusted_dir = 0);
-  }
-}
-
-/** Helper function: read routerinfo elements from s, and throw out the
- * ones that don't parse and resolve.  Add all remaining elements to the
- * routerlist.  If <b>trusted</b> is true, then we'll use
- * directory servers from the string
- */
-int router_load_routerlist_from_string(const char *s, int trusted)
-{
-  routerlist_t *new_list=NULL;
-
-  if (router_parse_list_from_string(&s, &new_list, NULL, 0)) {
-    log(LOG_WARN, "Error parsing router file");
-    return -1;
-  }
-  if (*s) {
-    log(LOG_WARN, "Extraneous text at start of router file");
-    return -1;
-  }
-  if (trusted) {
-    int i;
-    for (i=0;i<smartlist_len(new_list->routers);++i) {
-      routerinfo_t *r = smartlist_get(new_list->routers, i);
-      if (r->dir_port) {
-        log_fn(LOG_DEBUG,"Trusting router %s.", r->nickname);
-        r->is_trusted_dir = 1;
-        add_trusted_dir_server(r->address, r->dir_port, r->identity_digest);
-      }
-    }
-  }
-  if (routerlist) {
-    SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
-                      router_add_to_routerlist(r));
-    smartlist_clear(new_list->routers);
-    routerlist_free(new_list);
-  } else {
-    routerlist = new_list;
-  }
-  if (router_resolve_routerlist(routerlist)) {
-    log(LOG_WARN, "Error resolving routerlist");
-    return -1;
-  }
-  /* dump_onion_keys(LOG_NOTICE); */
-
-  return 0;
-}
 
 /** Add to the current routerlist each router stored in the
  * signed directory <b>s</b>.  If pkey is provided, check the signature against

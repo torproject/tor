@@ -242,8 +242,10 @@ int init_keys(void) {
     if (crypto_pk_generate_key(prkey))
       return -1;
     set_identity_key(prkey);
-/* XXX NM: do we have a convention for what client's Nickname is? */
-    if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
+    /* XXX NM: do we have a convention for what client's Nickname is?
+     * No.  Let me propose one: */
+    if (tor_tls_context_new(get_identity_key(), 1, 
+                            options.Nickname ? options.Nickname : "client",
                             MAX_SSL_KEY_LIFETIME) < 0) {
       log_fn(LOG_ERR, "Error creating TLS context for OP.");
       return -1;
@@ -398,7 +400,7 @@ void router_retry_connections(void) {
 }
 
 int router_is_clique_mode(routerinfo_t *router) {
-  if(router->is_trusted_dir)
+  if(router_digest_is_trusted_dir(router->identity_digest))
     return 1;
   return 0;
 }
@@ -541,7 +543,6 @@ int router_rebuild_descriptor(void) {
   ri->bandwidthburst = options.BandwidthBurst;
   ri->bandwidthcapacity = router_get_bandwidth_capacity();
   router_add_exit_policy_from_config(ri);
-  ri->is_trusted_dir = authdir_mode();
   if(desc_routerinfo) /* inherit values */
     ri->is_verified = desc_routerinfo->is_verified;
   if (options.MyFamily) {

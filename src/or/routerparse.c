@@ -599,9 +599,7 @@ static int dir_signing_key_is_trusted(crypto_pk_env_t *key)
  * was used to sign it, so we will use that key only if it is an
  * authoritative directory signing key.
  *
- * Otherwise, try to look up the router whose nickname is given in the
- * directory-signature token.  If this fails, or the named router is
- * not authoritative, try to use pkey.
+ * Otherwise, if pkey is provided, try to use it.
  *
  * (New callers should always use <b>declared_key</b> when possible;
  * <b>pkey is only for debugging.)
@@ -612,7 +610,6 @@ static int check_directory_signature(const char *digest,
                                      crypto_pk_env_t *declared_key)
 {
   char signed_digest[PK_BYTES];
-  routerinfo_t *r;
   crypto_pk_env_t *_pkey = NULL;
 
   if (tok->n_args != 1) {
@@ -624,24 +621,13 @@ static int check_directory_signature(const char *digest,
     if (dir_signing_key_is_trusted(declared_key))
       _pkey = declared_key;
   }
+  if (!_pkey && pkey) {
+    /* pkey provided for debugging purposes */
+    _pkey = pkey;
+  }
   if (!_pkey) {
-    log_fn(LOG_WARN, "Processing directory in old (before 0.0.9pre3) format--this may fail.");
-    r = router_get_by_nickname(tok->args[0]);
-    log_fn(LOG_DEBUG, "Got directory signed (allegedly) by %s", tok->args[0]);
-    if (r && r->is_trusted_dir) {
-      _pkey = r->identity_pkey;
-    } else if (!r && pkey) {
-      /* pkey provided for debugging purposes. */
-      _pkey = pkey;
-    } else if (!r) {
-      log_fn(LOG_WARN, "No server descriptor loaded for signer %s",
-             tok->args[0]);
-      return -1;
-    } else if (r && !r->is_trusted_dir) {
-      log_fn(LOG_WARN, "Directory was signed by non-trusted server %s",
-             tok->args[0]);
-      return -1;
-    }
+    log_fn(LOG_WARN, "Found directory in old (before 0.0.9pre3) format--rejecting.");
+    return -1;
   }
 
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
@@ -825,7 +811,8 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     goto err;
   } else if (tok) {
     if (tok->n_args < 3) {
-      log_fn(LOG_WARN,"Not enough arguments to \"bandwidth\"");
+      /* XXXX Once 0.0.7 is *really* dead, restore this warning to its old form*/
+      log_fn(LOG_WARN,"Not enough arguments to \"bandwidth\": must be an obsolete server. Rejecting.");
       goto err;
     }
     router->bandwidthrate = tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
