@@ -613,7 +613,9 @@ connection_dir_client_reached_eof(connection_t *conn)
     now = time(NULL);
     delta = now-date_header;
     if (abs(delta)>ALLOW_DIRECTORY_TIME_SKEW) {
-      log_fn(LOG_WARN, "Received directory with skewed time (server '%s'): we are %d minutes %s, or the directory is %d minutes %s.",
+      routerinfo_t *router = router_get_by_digest(conn->identity_digest);
+      log_fn((router && router->is_verified) ? LOG_WARN : LOG_INFO,
+             "Received directory with skewed time (server '%s'): we are %d minutes %s, or the directory is %d minutes %s.",
              conn->address,
              abs(delta)/60, delta>0 ? "ahead" : "behind",
              abs(delta)/60, delta>0 ? "behind" : "ahead");
