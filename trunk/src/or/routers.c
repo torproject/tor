@@ -164,8 +164,6 @@ void routerinfo_free(routerinfo_t *router)
     e = router->exit_policy;
     router->exit_policy = e->next;
     tor_free(e->string);
-    tor_free(e->address);
-    tor_free(e->port);
     free(e);
   }
   free(router);
@@ -915,11 +913,12 @@ void router_add_exit_policy_from_config(routerinfo_t *router) {
     e = strchr(s,',');
     if(!e) {
       last = 1;
-      strcpy(line,s);
+      strncpy(line,s,1023); 
     } else {
-      memcpy(line,s,e-s);
+      memcpy(line,s, ((e-s)<1023)?(e-s):1023); 
       line[e-s] = 0;
     }
+    line[1023]=0;
     log_fn(LOG_DEBUG,"Adding new entry '%s'",line);
     if(router_add_exit_policy_from_string(router,line) < 0)
       log_fn(LOG_WARN,"Malformed exit policy %s; skipping.", line);
@@ -963,7 +962,9 @@ router_add_exit_policy_from_string(routerinfo_t *router,
 static int router_add_exit_policy(routerinfo_t *router, 
                                   directory_token_t *tok) {
   struct exit_policy_t *tmpe, *newe;
-  char *arg, *colon;
+  struct in_addr in;
+  char *arg, *address, *mask, *port, *endptr;
+  int bits;
 
   if (tok->val.cmd.n_args != 1)
     return -1;
@@ -982,17 +983,63 @@ static int router_add_exit_policy(routerinfo_t *router,
     newe->policy_type = EXIT_POLICY_ACCEPT;
   }
   strcat(newe->string, arg);
-  
-  colon = strchr(arg,':');
-  if(!colon)
-    goto policy_read_failed;
-  *colon = 0;
-  newe->address = tor_strdup(arg);
-  newe->port = tor_strdup(colon+1);
 
-  log_fn(LOG_DEBUG,"%s %s:%s",
-      newe->policy_type == EXIT_POLICY_REJECT ? "reject" : "accept",
-      newe->address, newe->port);
+  address = arg;
+  mask = strchr(arg,'/');
+  port = strchr(mask?mask:arg,':');
+  if(!port)
+    goto policy_read_failed;
+  if (mask)
+    *mask++ = 0;
+  *port++ = 0;
+
+  if (strcmp(address, "*") == 0) {
+    newe->addr = 0;
+  } else if (inet_aton(address, &in) != 0) {
+    newe->addr = in.s_addr;
+  } else {
+    log_fn(LOG_WARN, "Malformed IP %s in exit policy; rejecting.",
+           address);
+    goto policy_read_failed;
+  }
+  if (!mask) {
+    if (strcmp(address, "*") == 0)
+      newe->msk = 0;
+    else
+      newe->msk = 0xFFFFFFFFu;
+  } else {
+    endptr = NULL;
+    bits = (int) strtol(mask, &endptr, 10);
+    if (!*endptr) {
+      /* strtol handled the whole mask. */
+      newe->msk = ~((1<<(32-bits))-1);
+    } else if (inet_aton(mask, &in) != 0) {
+      newe->msk = in.s_addr;
+    } else {
+      log_fn(LOG_WARN, "Malformed mask %s on exit policy; rejecting.",
+             mask);
+      goto policy_read_failed;
+    }
+  }
+  if (strcmp(port, "*") == 0) {
+    newe->prt = 0;
+  } else { 
+    endptr = NULL;
+    newe->prt = strtol(port, &endptr, 10);
+    if (*endptr) {
+      log_fn(LOG_WARN, "Malformed port %s on exit policy; rejecting.",
+             port);
+      goto policy_read_failed;
+    }
+  }
+
+  in.s_addr = newe->addr;
+  address = tor_strdup(inet_ntoa(in));
+  in.s_addr = newe->msk;
+  log_fn(LOG_DEBUG,"%s %s/%s:%d",
+         newe->policy_type == EXIT_POLICY_REJECT ? "reject" : "accept",
+         address, inet_ntoa(in), newe->prt);
+  tor_free(address);
 
   /* now link newe onto the end of exit_policy */
 
@@ -1010,10 +1057,60 @@ policy_read_failed:
   assert(newe->string);
   log_fn(LOG_WARN,"Couldn't parse line '%s'. Dropping", newe->string);
   tor_free(newe->string);
-  tor_free(newe->address);
-  tor_free(newe->port);
   free(newe);
   return -1;
+}
+
+
+/* Addr is 0 for "IP unknown".
+ *
+ * Returns -1 for 'rejected', 0 for accepted, 1 for 'maybe' (since IP is
+ * unknown.
+ */
+int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
+                                       struct exit_policy_t *policy)
+{
+  int maybe_reject = 0;
+  int match = 0;
+  struct in_addr in;
+  struct exit_policy_t *tmpe;
+
+  assert(desc_routerinfo);
+
+  for(tmpe=policy; tmpe; tmpe=tmpe->next) {
+    log_fn(LOG_DEBUG,"Considering exit policy %s", tmpe->string);
+    if (!addr) {
+      /* Address is unknown. */
+      if (tmpe->msk == 0 && port == tmpe->prt) {
+        /* The exit policy is accept/reject *:port */
+        match = 1;
+      } else if ((!tmpe->prt || port == tmpe->prt) && 
+                 tmpe->policy_type == EXIT_POLICY_REJECT) {
+        /* The exit policy is reject ???:port */
+        maybe_reject = 1;
+      }
+    } else {
+      /* Address is known */
+      if ( (addr & tmpe->msk) == (tmpe->addr & tmpe->msk) &&
+           (!tmpe->prt || port == tmpe->prt) ) {
+        /* Exact match for the policy */
+        match = 1;
+      }
+    }
+    if (match) {
+      in.s_addr = addr;
+      log_fn(LOG_INFO,"Address %s:%d matches exit policy '%s'",
+             inet_ntoa(in), port, tmpe->string);
+      if(tmpe->policy_type == EXIT_POLICY_ACCEPT)
+        return 0;
+      else
+        return -1;
+    }
+  }
+  if (maybe_reject)
+    return 1;
+  else
+    return 0; /* accept all by default. */
 }
 
 /* Return 0 if my exit policy says to allow connection to conn.
@@ -1021,33 +1118,14 @@ policy_read_failed:
  */
 int router_compare_to_exit_policy(connection_t *conn) {
   struct exit_policy_t *tmpe;
-  struct in_addr in;
 
   assert(desc_routerinfo);
-
-  for(tmpe=desc_routerinfo->exit_policy; tmpe; tmpe=tmpe->next) {
-    assert(tmpe->address);
-    assert(tmpe->port);
-
-    log_fn(LOG_DEBUG,"Considering exit policy %s:%s",tmpe->address, tmpe->port);
-    if(strcmp(tmpe->address,"*") &&
-       inet_aton(tmpe->address,&in) == 0) { /* malformed IP. reject. */
-      log_fn(LOG_WARN,"Malformed IP %s in exit policy. Rejecting.",tmpe->address);
-      return -1;
-    }
-    if((!strcmp(tmpe->address,"*") || conn->addr == ntohl(in.s_addr)) &&
-       (!strcmp(tmpe->port,"*") || atoi(tmpe->port) == conn->port)) {
-      log_fn(LOG_INFO,"Address '%s' matches '%s' and port '%s' matches '%d'. %s.",
-          tmpe->address, conn->address,
-          tmpe->port, conn->port,
-          tmpe->policy_type == EXIT_POLICY_ACCEPT ? "Accepting" : "Rejecting");
-      if(tmpe->policy_type == EXIT_POLICY_ACCEPT)
-        return 0;
-      else
-        return -1;
-    }
-  }
-  return 0; /* accept all by default. */
+  
+  if (router_compare_addr_to_exit_policy(conn->addr, conn->port,
+                                         desc_routerinfo->exit_policy))
+    return -1;
+  else 
+    return 0;
 }
 
 const char *router_get_my_descriptor(void) {
@@ -1120,6 +1198,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   char *onion_pkey;
   char *link_pkey;
   char *identity_pkey;
+  struct in_addr in;
   char platform[256];
   char digest[20];
   char signature[128];
@@ -1187,14 +1266,32 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   written = result;
 
   for(tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
-    result = snprintf(s+written, maxlen-written, "%s %s:%s\n", 
-      tmpe->policy_type == EXIT_POLICY_ACCEPT ? "accept" : "reject",
-      tmpe->address, tmpe->port);
+    in.s_addr = tmpe->addr;
+    result = snprintf(s+written, maxlen-written, "%s %s",
+        tmpe->policy_type == EXIT_POLICY_ACCEPT ? "accept" : "reject",
+        tmpe->msk == 0 ? "*" : inet_ntoa(in));
     if(result < 0 || result+written > maxlen) {
       /* apparently different glibcs do different things on snprintf error.. so check both */
       return -1;
     }
     written += result;
+    if (tmpe->msk != 0xFFFFFFFFu) {
+      in.s_addr = tmpe->msk;
+      result = snprintf(s+written, maxlen-written, "/%s", inet_ntoa(in));
+      if (result<0 || result+written > maxlen)
+        return -1;
+      written += result;
+    }
+    if (tmpe->prt) {
+      result = snprintf(s+written, maxlen-written, ":%d", tmpe->prt);
+      if (result<0 || result+written > maxlen)
+        return -1;
+      written += result;
+    } else {
+      if (written > maxlen-3)
+        return -1;
+      strcat(s+written, ":*");
+    }
   }
   if (written > maxlen-256) /* Not enough room for signature. */
     return -1;

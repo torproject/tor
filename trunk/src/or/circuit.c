@@ -81,10 +81,12 @@ circuit_t *circuit_new(circ_id_t p_circ_id, connection_t *p_conn) {
 }
 
 void circuit_free(circuit_t *circ) {
+  assert(circ);
   if (circ->n_crypto)
     crypto_free_cipher_env(circ->n_crypto);
   if (circ->p_crypto)
     crypto_free_cipher_env(circ->p_crypto);
+  tor_free(circ->build_state);
   circuit_free_cpath(circ->cpath);
   free(circ);
 }
@@ -656,16 +658,15 @@ int circuit_establish_circuit(void) {
 
   circ = circuit_new(0, NULL); /* sets circ->p_circ_id and circ->p_conn */
   circ->state = CIRCUIT_STATE_OR_WAIT;
-  circ->desired_cpath_len = onion_new_route_len();
+  circ->build_state = onion_new_cpath_build_state();
   
-  if (circ->desired_cpath_len < 0) {
+  if (! circ->build_state) {
     log_fn(LOG_INFO,"Generating cpath length failed.");
     circuit_close(circ);
     return -1;
   }
 
-  onion_extend_cpath(&circ->cpath, circ->desired_cpath_len,
-                     &firsthop);
+  onion_extend_cpath(&circ->cpath, circ->build_state, &firsthop);
   if(!circ->cpath) {
     log_fn(LOG_INFO,"Generating first cpath hop failed.");
     circuit_close(circ);
@@ -766,11 +767,11 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     assert(circ->cpath->state == CPATH_STATE_OPEN);
     assert(circ->state == CIRCUIT_STATE_BUILDING);
     log_fn(LOG_DEBUG,"starting to send subsequent skin.");
-    r = onion_extend_cpath(&circ->cpath, circ->desired_cpath_len, &router);
+    r = onion_extend_cpath(&circ->cpath, circ->build_state, &router);
     if (r==1) {
       /* done building the circuit. whew. */
       circ->state = CIRCUIT_STATE_OPEN;
-      log_fn(LOG_INFO,"circuit built! (%d hops long)",circ->desired_cpath_len);
+      log_fn(LOG_INFO,"circuit built!");
       /* Tell any AP connections that have been waiting for a new
        * circuit that one is ready. */
       connection_ap_attach_pending();

@@ -6,6 +6,10 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+struct cpath_build_state_t {
+  int desired_path_len;
+};
+
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len);
 
 int decide_circ_id_type(char *local_nick, char *remote_nick) {
@@ -219,11 +223,18 @@ static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
   return routelen;
 }
 
-int onion_new_route_len(void) {
+cpath_build_state_t *onion_new_cpath_build_state(void) {
   directory_t *dir;
-
+  int r;
+  cpath_build_state_t *info;
+  
   router_get_directory(&dir);
-  return new_route_len(options.PathlenCoinWeight, dir->routers, dir->n_routers);
+  r = new_route_len(options.PathlenCoinWeight, dir->routers, dir->n_routers);
+  if (r < 0) 
+    return NULL;
+  info = tor_malloc(sizeof(cpath_build_state_t));
+  info->desired_path_len = r;
+  return info;
 }
 
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
@@ -256,7 +267,7 @@ static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
   return num;
 }
 
-int onion_extend_cpath(crypt_path_t **head_ptr, int path_len, routerinfo_t **router_out)
+int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, routerinfo_t **router_out)
 {
   int cur_len;
   crypt_path_t *cpath, *hop;
@@ -283,8 +294,13 @@ int onion_extend_cpath(crypt_path_t **head_ptr, int path_len, routerinfo_t **rou
       ++cur_len;
     }
   }
-  if (cur_len >= path_len) { return 1; }
-  log_fn(LOG_DEBUG, "Path is %d long; we want %d", cur_len, path_len);
+  if (cur_len >= state->desired_path_len) { 
+    log_fn(LOG_DEBUG, "Path is complete: %d steps long", 
+           state->desired_path_len);
+    return 1; 
+  }
+  log_fn(LOG_DEBUG, "Path is %d long; we want %d", cur_len, 
+         state->desired_path_len);
 
  again:
   if(cur_len == 0) { /* picking entry node */
@@ -554,5 +570,3 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   c-basic-offset:2
   End:
 */
-
-
