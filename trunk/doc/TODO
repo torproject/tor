@@ -21,8 +21,9 @@ Short-term:
         o obey SocksBindAddress, ORBindAddress
         - warn if we're running as root
         o make connection_flush_buf() more obviously obsolete
-        .* let hup reread the config file, eg so we can get new exit
+ARMA    .* let hup reread the config file, eg so we can get new exit
           policies without restarting
+ARMA    -* Put recommended_versions in a config entry
         - use times(2) rather than gettimeofday to measure how long it
           takes to process a cell
         - Separate trying to rebuild a circuit because you have none from trying 
@@ -30,18 +31,17 @@ Short-term:
         - Continue reading from socks port even while waiting for connect.
         .* Exit policies
                 o Spec how to write the exit policies
-                -* More flexible policies (18.*, 18.0.0.0/8)
-                -* Path selection algorithms
-                        -* Choose path more incrementally
-                        -* Let user request first/last node
+NICK            -* More flexible policies (18.*, 18.0.0.0/8)
+                .* Path selection algorithms
+                        o Choose path more incrementally
+ARMA                    -* Let user request first/last node
                         - And disallow certain nodes
                         D Choose path by jurisdiction, etc?
                 . Make relay end cells have failure status and payload attached
-                -* Streams that fail due to exit policy must reextend to new node
-                -* Add extend_wait state to edge connections, thumb through them
+NICK            -* Streams that fail due to exit policy must reextend to new node
+NICK            -* Add extend_wait state to edge connections, thumb through them
                   when the AP get an extended cell.
-        -* let non-approved routers handshake.
-        -* just list approved routers in directory.
+        X let non-approved routers handshake.
         - Dirserver shouldn't put you in running-routers list if you haven't
           uploaded a descriptor recently
         . migrate to using nickname rather than addr:port for routers
@@ -66,7 +66,7 @@ Short-term:
                 o transition circuit-level sendmes to hop-level sendmes
                 o implement truncate, truncated
                 o move from 192byte DH to 128byte DH, so it isn't so damn slow
-                -* exiting from not-last hop
+NICK            -* exiting from not-last hop
                         -* OP logic to decide to extend/truncate a path
                         -* make sure exiting from the not-last hop works
                         -* logic to find last *open* hop, not last hop, in cpath
