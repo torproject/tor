@@ -1,0 +1,100 @@
+tor (0.0.1+0.0.2pre27-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon, 15 Mar 2004 05:19:16 +0100
+
+tor (0.0.1+0.0.2pre26-1) unstable; urgency=low
+
+  * New upstream release.
+  * Mention log and pidfile location in tor.1.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon, 15 Mar 2004 02:21:29 +0100
+
+tor (0.0.1+0.0.2pre25-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu,  4 Mar 2004 23:05:38 +0100
+
+tor (0.0.1+0.0.2pre24-1) unstable; urgency=low
+
+  * New upstream release.
+  * Do not strip binaries for now.
+  * Add "# ulimit -c unlimited" to tor.default
+  * Always enable DataDirectory.
+  * Actually use dpatch now (to modify upstream torrc.in)
+  * Wait for tor to die in init stop.  Let the user know if it doesn't.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed,  3 Mar 2004 14:10:25 +0100
+
+tor (0.0.1+0.0.2pre23-1) unstable; urgency=low
+
+  * New upstream release.
+  * The one test that always failed has been fixed:  removed comment from
+    rules file.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 29 Feb 2004 12:36:33 +0100
+
+tor (0.0.1+0.0.2pre22-1) unstable; urgency=low
+
+  * New upstream release.
+  * Upstream has moved tor back to usr/bin, but we will keep it in
+    usr/sbin.  That's the right place and it doesn't break my tab
+    completion there.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 27 Feb 2004 01:59:09 +0100
+
+tor (0.0.1+0.0.2pre21-1) unstable; urgency=low
+
+  * New upstream release.
+  * 0.0.2pre20-2 removed the Recommends: on privoxy rather
+    than tsocks (which is now required) by mistake.  Fix that.
+  * package description: Mention that the package starts the OP by default and
+    that OR can be enabled in the config.
+  * tor moved to sbin, updating init script.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 18 Feb 2004 10:08:12 +0100
+
+tor (0.0.1+0.0.2pre20-2) unstable; urgency=low
+
+  * Add torify script, documentation, and config file.  Means we also
+    depend on tsocks now rather than just recommending it.  Right now
+    we install it in debian/rules, but upcoming versions might install
+    it in upstream's make install target.
+  * There's an upstream ChangeLog file now.  Enjoy!
+  * Add a README.privoxy file that explains how to setup privoxy to
+    go over tor.
+  * As is the case too often, the INSTALL file not only covers
+    installation, but also basic usage and configuration.  Therefore
+    include it in the docs dir.
+  * Add a lintian override for the INSTALL file.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 17 Feb 2004 02:32:00 +0100
+
+tor (0.0.1+0.0.2pre20-1) unstable; urgency=low
+
+  * New upstream version.
+    - various design paper updates
+    - resolve cygwin warnings
+    - split the token bucket into "rate" and "burst" params
+    - try to resolve discrepency between bytes transmitted over TLS and actual
+      bandwidth use
+    - setuid to user _before_ complaining about running as root
+    - fix several memleaks and double frees
+    - minor logging fixes
+    - add more debugging for logs.
+    - various documentation fixes and improvements
+    - for perforcmance testing, paths are always 3 hops, not "3 or more"
+      (this will go away at a later date again)
+  * Add dependency on adduser which was previously missing.
+  * Change short description to a nicer one.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 31 Jan 2004 10:10:45 +0100
+
+tor (0.0.1+0.0.2pre19-1) unstable; urgency=low
+
+  * Initial Release  (closes: #216611).
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 10 Jan 2004 11:20:06 +0100
+

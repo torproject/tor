@@ -1,0 +1,34 @@
+
+Main authors:
+-------------
+
+Roger Dingledine <arma@freehaven.net> overhauled all of the code, did
+a bunch of new design work, etc.
+
+Nick Mathewson <nickm@freehaven.net> wrote lots of stuff too, in
+particular the router and descriptor parsing, and the crypto and tls
+wrappers.
+
+Matej Pfajfar <badbytes@freehaven.net> wrote the first version of the code
+(called OR) in 2001-2002.
+
+Contributors:
+-------------
+
+John Bashinski <jbash@velvet.com> contributed the initial rpm spec file.
+
+Christian Grothoff <grothoff@cs.purdue.edu> contributed better daemonizing
+behavior.
+
+Steven Hazel <sah@thalassocracy.org> made 'make install' do the right
+thing.
+
+Jason Holt <jason@lunkwill.org> contributed patches to the instructions
+and the man page.
+
+Peter Palfrader <peter@palfrader.org> maintains everything that's
+debian-specific.
+
+Aaron Turner <aturner@netscreen.com> contributed the first version of
+the tor.sh initscripts shell script.
+
