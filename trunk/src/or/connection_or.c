@@ -334,7 +334,7 @@ int or_handshake_op_finished_sending_keys(connection_t *conn) {
   conn_or_init_crypto(conn);
 
   connection_or_set_open(conn);
-  ap_handshake_n_conn_open(conn); /* send the pending onions */
+  circuit_n_conn_open(conn); /* send the pending onion(s) */
   return 0;
 }
 

@@ -182,7 +182,7 @@ test_buffers() {
   j = decompress_buf_to_buf(&buf, &buflen, &buf_datalen,
                             &buf2, &buf2len, &buf2_datalen,
                             decomp, 1);
-  /*XXXX check result *
+  /*XXXX check result */
   
   /* Now compress more, into less room. */
   for (i = 0; i < 20; ++i) {

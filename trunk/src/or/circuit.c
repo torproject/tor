@@ -4,6 +4,8 @@
 
 #include "or.h"
 
+extern or_options_t options; /* command-line and config-file options */
+
 /********* START VARIABLES **********/
 
 static circuit_t *global_circuitlist=NULL;
@@ -49,11 +51,17 @@ void circuit_remove(circuit_t *circ) {
 
 circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
   circuit_t *circ; 
+  struct timeval now;
+
+  if(gettimeofday(&now,NULL) < 0)
+    return NULL;
 
   circ = (circuit_t *)malloc(sizeof(circuit_t));
   if(!circ)
     return NULL;
   memset(circ,0,sizeof(circuit_t)); /* zero it out */
+
+  circ->timestamp_created = now.tv_sec;
 
   circ->p_aci = p_aci;
   circ->p_conn = p_conn;
@@ -252,20 +260,24 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
   return NULL;
 }
 
-circuit_t *circuit_get_by_edge_type(char edge_type) {
-  circuit_t *circ;
+circuit_t *circuit_get_newest_by_edge_type(char edge_type) {
+  circuit_t *circ, *bestcirc=NULL;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(edge_type == EDGE_AP && circ->n_conn && circ->n_conn->type == CONN_TYPE_OR) {
-      log(LOG_DEBUG,"circuit_get_by_edge_type(): Choosing n_aci %d.", circ->n_aci);
-      return circ;
+    if(edge_type == EDGE_AP && (!circ->p_conn || circ->p_conn->type == CONN_TYPE_AP)) {
+      if(!bestcirc ||
+        (circ->state == CIRCUIT_STATE_OPEN && bestcirc->timestamp_created < circ->timestamp_created)) {
+        log(LOG_DEBUG,"circuit_get_newest_by_edge_type(): Choosing n_aci %d.", circ->n_aci);
+        bestcirc = circ;
+      }
     }
-    if(edge_type == EDGE_EXIT && circ->p_conn && circ->p_conn->type == CONN_TYPE_OR) {
-      return circ;
+    if(edge_type == EDGE_EXIT && (!circ->n_conn || circ->n_conn->type == CONN_TYPE_EXIT)) {
+      if(!bestcirc ||
+        (circ->state == CIRCUIT_STATE_OPEN && bestcirc->timestamp_created < circ->timestamp_created))
+        bestcirc = circ;
     }
-    log(LOG_DEBUG,"circuit_get_by_edge_type(): Skipping p_aci %d / n_aci %d.", circ->p_aci, circ->n_aci);
   }
-  return NULL;
+  return bestcirc;
 }
 
 int circuit_deliver_data_cell_from_edge(cell_t *cell, circuit_t *circ, char edge_type) {
@@ -517,14 +529,22 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type) {
 
 void circuit_close(circuit_t *circ) {
   connection_t *conn;
+  circuit_t *youngest;
 
   assert(circ);
+  if(options.APPort)
+    youngest = circuit_get_newest_by_edge_type(EDGE_AP);
   circuit_remove(circ);
   for(conn=circ->n_conn; conn; conn=conn->next_topic) {
     connection_send_destroy(circ->n_aci, circ->n_conn); 
   }
   for(conn=circ->p_conn; conn; conn=conn->next_topic) {
     connection_send_destroy(circ->p_aci, circ->p_conn); 
+  }
+  if(options.APPort && youngest == circ) { /* check this after we've sent the destroys, to reduce races */
+    /* our current circuit just died. Launch another one pronto. */
+    log(LOG_INFO,"circuit_close(): Youngest circuit dying. Launching a replacement.");
+    circuit_launch_new(1);
   }
   circuit_free(circ);
 }
@@ -608,6 +628,210 @@ void circuit_dump_by_conn(connection_t *conn) {
       }
     }
   }
+}
+
+void circuit_expire_unused_circuits(void) {
+  circuit_t *circ, *tmpcirc;
+  circuit_t *youngest;
+
+  youngest = circuit_get_newest_by_edge_type(EDGE_AP);
+
+  circ = global_circuitlist;
+  while(circ) {
+    tmpcirc = circ;
+    circ = circ->next;
+    if(tmpcirc != youngest && (!tmpcirc->p_conn || tmpcirc->p_conn->type == CONN_TYPE_AP)) {
+      log(LOG_DEBUG,"circuit_expire_unused_circuits(): Closing n_aci %d",tmpcirc->n_aci);
+      circuit_close(tmpcirc);
+    }
+  }
+}
+
+/* failure_status code: negative means reset failures to 0. Other values mean
+ * add that value to the current number of failures, then if we don't have too
+ * many failures on record, try to make a new circuit.
+ */
+void circuit_launch_new(int failure_status) {
+  static int failures=0;
+
+  if(failure_status == -1) { /* I was called because a circuit succeeded */
+    failures = 0;
+    return;
+  }
+
+  failures += failure_status;
+
+retry_circuit:
+
+  if(failures > 5) {
+    log(LOG_INFO,"circuit_launch_new(): Giving up, %d failures.", failures);
+    return;
+  }
+
+  if(circuit_create_onion() < 0) {
+    failures++;
+    goto retry_circuit;
+  }
+
+  failures = 0;
+  return;
+}
+
+int circuit_create_onion(void) {
+  int i;
+  int routelen; /* length of the route */
+  unsigned int *route; /* hops in the route as an array of indexes into rarray */
+  unsigned char *onion; /* holds the onion */
+  int onionlen; /* onion length in host order */
+  crypt_path_t **cpath; /* defines the crypt operations that need to be performed on incoming/outgoing data */
+
+  /* choose a route */
+  route = (unsigned int *)router_new_route(&routelen);
+  if (!route) { 
+    log(LOG_ERR,"circuit_create_onion(): Error choosing a route through the OR network.");
+    return -1;
+  }
+  log(LOG_DEBUG,"circuit_create_onion(): Chosen a route of length %u : ",routelen);
+
+  /* allocate memory for the crypt path */
+  cpath = malloc(routelen * sizeof(crypt_path_t *));
+  if (!cpath) { 
+    log(LOG_ERR,"circuit_create_onion(): Error allocating memory for cpath.");
+    free(route);
+    return -1;
+  }
+
+  /* create an onion and calculate crypto keys */
+  onion = router_create_onion(route,routelen,&onionlen,cpath);
+  if (!onion) {
+    log(LOG_ERR,"circuit_create_onion(): Error creating an onion.");
+    free(route);
+    free(cpath); /* it's got nothing in it, since !onion */
+    return -1;
+  }
+  log(LOG_DEBUG,"circuit_create_onion(): Created an onion of size %u bytes.",onionlen);
+  log(LOG_DEBUG,"circuit_create_onion(): Crypt path :");
+  for (i=0;i<routelen;i++) {
+    log(LOG_DEBUG,"circuit_create_onion() : %u/%u",(cpath[i])->forwf, (cpath[i])->backf);
+  }
+
+  return circuit_establish_circuit(route, routelen, onion, onionlen, cpath);
+}
+
+int circuit_establish_circuit(unsigned int *route, int routelen, char *onion,
+                                   int onionlen, crypt_path_t **cpath) {
+  routerinfo_t *firsthop;
+  connection_t *n_conn;
+  circuit_t *circ;
+
+  /* now see if we're already connected to the first OR in 'route' */
+  firsthop = router_get_first_in_route(route, routelen);
+  assert(firsthop); /* should always be defined */
+  free(route); /* we don't need it anymore */
+
+  circ = circuit_new(0, NULL); /* sets circ->p_aci and circ->p_conn */
+  circ->state = CIRCUIT_STATE_OR_WAIT;
+  circ->onion = onion;
+  circ->onionlen = onionlen;
+  circ->cpath = cpath;
+  circ->cpathlen = routelen;
+
+  log(LOG_DEBUG,"circuit_establish_circuit(): Looking for firsthop '%s:%u'",
+      firsthop->address,firsthop->or_port);
+  n_conn = connection_twin_get_by_addr_port(firsthop->addr,firsthop->or_port);
+  if(!n_conn || n_conn->state != OR_CONN_STATE_OPEN) { /* not currently connected */
+    circ->n_addr = firsthop->addr;
+    circ->n_port = firsthop->or_port;
+    if(options.ORPort) { /* we would be connected if he were up. but he's not. */
+      log(LOG_DEBUG,"circuit_establish_circuit(): Route's firsthop isn't connected.");
+      circuit_close(circ); 
+      return -1;
+    }
+
+    if(!n_conn) { /* launch the connection */
+      n_conn = connection_or_connect_as_op(firsthop);
+      if(!n_conn) { /* connect failed, forget the whole thing */
+        log(LOG_DEBUG,"circuit_establish_circuit(): connect to firsthop failed. Closing.");
+        circuit_close(circ);
+        return -1;
+      }
+    }
+
+    return 0; /* return success. The onion/circuit/etc will be taken care of automatically
+               * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
+               */ 
+  } else { /* it (or a twin) is already open. use it. */
+    circ->n_addr = n_conn->addr;
+    circ->n_port = n_conn->port;
+    return circuit_send_onion(n_conn, circ);
+  }
+}
+
+/* find circuits that are waiting on me, if any, and get them to send the onion */
+void circuit_n_conn_open(connection_t *or_conn) {
+  circuit_t *circ;
+
+  log(LOG_DEBUG,"circuit_n_conn_open(): Starting.");
+  circ = circuit_enumerate_by_naddr_nport(NULL, or_conn->addr, or_conn->port);
+  for(;;) {
+    if(!circ)
+      return;
+
+    log(LOG_DEBUG,"circuit_n_conn_open(): Found circ, sending onion.");
+    if(circuit_send_onion(or_conn, circ) < 0) {
+      log(LOG_DEBUG,"circuit_n_conn_open(): circuit marked for closing.");
+      circuit_close(circ);
+      return; /* FIXME will want to try the other circuits too? */
+    }
+    circ = circuit_enumerate_by_naddr_nport(circ, or_conn->addr, or_conn->port);
+  }
+}
+
+int circuit_send_onion(connection_t *n_conn, circuit_t *circ) {
+  cell_t cell;
+  int tmpbuflen, dataleft;
+  char *tmpbuf;
+
+  circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, ACI_TYPE_BOTH);
+  circ->n_conn = n_conn;
+  log(LOG_DEBUG,"circuit_send_onion(): n_conn is %s:%u",n_conn->address,n_conn->port);
+
+  /* deliver the onion as one or more create cells */
+  cell.command = CELL_CREATE;
+  cell.aci = circ->n_aci;
+
+  tmpbuflen = circ->onionlen+4;
+  tmpbuf = malloc(tmpbuflen);
+  if(!tmpbuf)
+    return -1;
+  *(uint32_t*)tmpbuf = htonl(circ->onionlen);
+  memcpy(tmpbuf+4, circ->onion, circ->onionlen);
+
+  dataleft = tmpbuflen;
+  while(dataleft) {
+    cell.command = CELL_CREATE;
+    cell.aci = circ->n_aci;
+    log(LOG_DEBUG,"circuit_send_onion(): Sending a create cell for the onion...");
+    if(dataleft >= CELL_PAYLOAD_SIZE) {
+      cell.length = CELL_PAYLOAD_SIZE;
+      memcpy(cell.payload, tmpbuf + tmpbuflen - dataleft, CELL_PAYLOAD_SIZE);
+      connection_write_cell_to_buf(&cell, n_conn);
+      dataleft -= CELL_PAYLOAD_SIZE;
+    } else { /* last cell */
+      cell.length = dataleft;
+      memcpy(cell.payload, tmpbuf + tmpbuflen - dataleft, dataleft);
+      /* fill extra space with 0 bytes */
+      memset(cell.payload + dataleft, 0, CELL_PAYLOAD_SIZE - dataleft);
+      connection_write_cell_to_buf(&cell, n_conn);
+      dataleft = 0;
+    }
+  }
+  free(tmpbuf);
+
+  circ->state = CIRCUIT_STATE_OPEN;
+  /* FIXME should set circ->expire to something here */
+
+  return 0;
 }
 
 /*

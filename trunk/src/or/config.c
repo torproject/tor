@@ -187,6 +187,7 @@ void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "DirFetchPeriod",  CONFIG_TYPE_INT, &options->DirFetchPeriod) ||
     config_compare(list, "KeepalivePeriod", CONFIG_TYPE_INT, &options->KeepalivePeriod) ||
     config_compare(list, "MaxOnionsPending",CONFIG_TYPE_INT, &options->MaxOnionsPending) ||
+    config_compare(list, "NewCircuitPeriod",CONFIG_TYPE_INT, &options->NewCircuitPeriod) ||
 
     config_compare(list, "Daemon",          CONFIG_TYPE_BOOL, &options->Daemon) ||
     config_compare(list, "TrafficShaping",  CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
@@ -224,6 +225,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->DirFetchPeriod = 600;
   options->KeepalivePeriod = 300;
   options->MaxOnionsPending = 10;
+  options->NewCircuitPeriod = 60; /* once a minute */
 //  options->ReconnectPeriod = 6001;
 
 /* get config lines from /etc/torrc and assign them */

@@ -341,7 +341,7 @@ struct data_queue_t {
   struct data_queue_t *next;
 };
 
-/* per-anonymous-connection struct */
+/* struct for a path (circuit) through the network */
 typedef struct {
   uint32_t n_addr;
   uint16_t n_port;
@@ -365,6 +365,8 @@ typedef struct {
   int cpathlen; 
 
   uint32_t expire; /* expiration time for the corresponding onion */
+  long timestamp_created;
+  char dirty; /* whether this circuit has been used yet */
 
   int state;
 
@@ -380,20 +382,6 @@ struct onion_queue_t {
   struct data_queue_t *data_cells;
   struct onion_queue_t *next;
 };
-
-#if 0
-typedef struct
-{ 
-  int zero:1;
-  int version:7;
-  int backf:4;
-  int forwf:4;
-  uint16_t port;
-  uint32_t addr;
-  uint32_t expire;
-  unsigned char keyseed[16];
-} onion_layer_t;
-#endif
 
 #define ONION_LAYER_SIZE 28
 #define ONION_PADDING_SIZE (128-ONION_LAYER_SIZE)
@@ -415,10 +403,10 @@ typedef struct {
    int DirFetchPeriod;
    int KeepalivePeriod;
    int MaxOnionsPending;
+   int NewCircuitPeriod;
    int Role;
    int loglevel;
 } or_options_t;
-
 
     /* all the function prototypes go here */
 
@@ -491,7 +479,7 @@ aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type);
 
 circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
-circuit_t *circuit_get_by_edge_type(char edge_type);
+circuit_t *circuit_get_newest_by_edge_type(char edge_type);
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 
 int circuit_deliver_data_cell_from_edge(cell_t *cell, circuit_t *circ, char edge_type);
@@ -506,14 +494,19 @@ int circuit_init(circuit_t *circ, int aci_type);
 void circuit_free(circuit_t *circ);
 void circuit_free_cpath(crypt_path_t **cpath, int cpathlen);
 
-
-
 void circuit_close(circuit_t *circ);
 
 void circuit_about_to_close_connection(connection_t *conn);
   /* flush and send destroys for all circuits using conn */
 
 void circuit_dump_by_conn(connection_t *conn);
+
+void circuit_launch_new(int failure_status);
+int circuit_create_onion(void);
+int circuit_establish_circuit(unsigned int *route, int routelen, char *onion,
+                                   int onionlen, crypt_path_t **cpath);
+void circuit_n_conn_open(connection_t *or_conn);
+int circuit_send_onion(connection_t *or_conn, circuit_t *circ);
 
 /********************************* command.c ***************************/
 
@@ -611,14 +604,6 @@ int connection_finished_flushing(connection_t *conn);
 
 int ap_handshake_process_socks(connection_t *conn);
 
-int ap_handshake_create_onion(connection_t *conn);
-
-int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int routelen, char *onion,
-                                   int onionlen, crypt_path_t **cpath);
-
-void ap_handshake_n_conn_open(connection_t *or_conn);
-
-int ap_handshake_send_onion(connection_t *ap_conn, connection_t *or_conn, circuit_t *circ);
 int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 
 int ap_handshake_socks_reply(connection_t *conn, char result);
