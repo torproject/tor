@@ -228,8 +228,8 @@ which reveals the downstream node.
 
         ACI (anonymous circuit identifier)    [2 bytes]
         Command                               [1 byte]
-        Sequence number (unused, set to 0)    [4 bytes]
         Length                                [1 byte]
+        Sequence number (unused, set to 0)    [4 bytes]
         Payload (padded with 0 bytes)         [248 bytes]
                                          [Total size: 256 bytes]
 
@@ -440,7 +440,7 @@ which reveals the downstream node.
    To create a new anonymized TCP connection, the OP sends a
    TOPIC_BEGIN data cell with a payload encoding the address and port
    of the destination host.  The payload format is:
-         ADDRESS | ',' | PORT | '\000'
+         ADDRESS | ':' | PORT | '\000'
    where ADDRESS may be a DNS hostname, or an IPv4 address in
    dotted-quad format; and where PORT is encoded in decimal.
 
@@ -524,6 +524,20 @@ which reveals the downstream node.
 
 7. Directories and routers
 
-[????]
+7.1. Router descriptor format.
 
+Line format : address ORPort OPPort APPort DirPort bandwidth(bytes/s)
+followed by the router's public key.
+ORport is where the router listens for other routers (speaking cells)
+OPPort is where the router listens for onion proxies (speaking cells)
+APPort is where the router listens for applications (speaking socks)
+DirPort is where the router listens for directory download requests
+
+Example:
+moria.mit.edu 9001 9011 9021 9031 100000
+-----BEGIN RSA PUBLIC KEY-----
+MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
+7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
+nZ7kVMRoiXCbjL6VAtNa4Zy1Af/GOm0iCIDpholeujQ95xew7rQnAgMA//8=
+-----END RSA PUBLIC KEY-----
 
