@@ -12,6 +12,7 @@
 
 #ifdef MS_WINDOWS
 #define vsnprintf _vsnprintf
+#define snprintf _snprintf
 #endif
 
 struct logfile_t;

@@ -3,6 +3,23 @@
 /* $Id$ */
 
 #include "orconfig.h"
+
+#ifdef MS_WINDOWS
+#define WIN32_WINNT 0x400
+#define _WIN32_WINNT 0x400
+#define WIN32_LEAN_AND_MEAN
+#if _MSC_VER > 1300
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#elif defined(_MSC_VER)
+#include <winsock.h>
+#endif
+#include <io.h>
+#include <process.h>
+#include <direct.h>
+#include <windows.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -26,6 +43,9 @@
 #endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
+#endif
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
 #endif
 #ifdef HAVE_SYS_LIMITS_H
 #include <sys/limits.h>
@@ -57,17 +77,8 @@
 #ifdef HAVE_GRP_H
 #include <grp.h>
 #endif
-
-#ifdef HAVE_WINSOCK_H
-#define WIN32_WINNT 0x400
-#define _WIN32_WINNT 0x400
-#define WIN32_LEAN_AND_MEAN
-#endif
-#if _MSC_VER > 1300
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#elif defined(_MSC_VER)
-#include <winsock.h>
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
 #endif
 
 /* used by inet_addr, not defined on solaris anywhere!? */
@@ -152,13 +163,13 @@ void tor_strlower(char *s)
 }
 
 #ifndef UNALIGNED_INT_ACCESS_OK
-uint16_t get_uint16(char *cp)
+uint16_t get_uint16(const char *cp)
 {
   uint16_t v;
   memcpy(&v,cp,2);
   return v;
 }
-uint32_t get_uint32(char *cp)
+uint32_t get_uint32(const char *cp)
 {
   uint32_t v;
   memcpy(&v,cp,4);

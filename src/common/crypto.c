@@ -4,6 +4,14 @@
 
 #include "orconfig.h"
 
+#ifdef MS_WINDOWS
+#define WIN32_WINNT 0x400
+#define _WIN32_WINNT 0x400
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <wincrypt.h>
+#endif
+
 #include <string.h>
 
 #include <openssl/err.h>
@@ -39,13 +47,6 @@
 #include "log.h"
 #include "aes.h"
 #include "util.h"
-
-#ifdef MS_WINDOWS
-#define WIN32_WINNT 0x400
-#define _WIN32_WINNT 0x400
-#define WIN32_LEAN_AND_MEAN
-#include <wincrypt.h>
-#endif
 
 #if OPENSSL_VERSION_NUMBER < 0x00905000l
 #error "We require openssl >= 0.9.5"
