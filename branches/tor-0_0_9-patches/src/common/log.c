@@ -337,7 +337,7 @@ void add_stream_log(int loglevelMin, int loglevelMax, const char *name, FILE *st
  */
 void add_temp_log(void)
 {
-  add_stream_log(LOG_INFO, LOG_ERR, "<temp>", stdout);
+  add_stream_log(LOG_NOTICE, LOG_ERR, "<temp>", stdout);
   logfiles->is_temporary = 1;
 }
 
