@@ -869,6 +869,12 @@ static void second_elapsed_callback(int fd, short event, void *args)
   /* the second has rolled over. check more stuff. */
   bytes_written = stats_prev_global_write_bucket - global_write_bucket;
   bytes_read = stats_prev_global_read_bucket - global_read_bucket;
+  /* XXX below we get suspicious if time jumps forward more than 10
+   * seconds, but we never notice if it jumps *back* more than 10 seconds.
+   * This could be useful for detecting that we just NTP'ed to three
+   * weeks ago and it will be 3 weeks and 15 minutes until any of our
+   * events trigger.
+   */
   seconds_elapsed = current_second ? (now.tv_sec - current_second) : 0;
   stats_n_bytes_read += bytes_read;
   stats_n_bytes_written += bytes_written;
