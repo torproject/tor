@@ -861,6 +861,17 @@ router_handles_some_port(routerinfo_t *router, smartlist_t *needed_ports) {
  */
 #define MIN_CIRCUITS_HANDLING_STREAM 2
 
+static int
+ap_stream_wants_exit_attention(connection_t *conn) {
+  if (conn->type == CONN_TYPE_AP &&
+      conn->state == AP_CONN_STATE_CIRCUIT_WAIT &&
+      !conn->marked_for_close &&
+      !connection_edge_is_rendezvous_stream(conn) &&
+      !circuit_stream_is_being_handled(conn, 0, MIN_CIRCUITS_HANDLING_STREAM))
+    return 1;
+  return 0;
+}
+
 /** Return a pointer to a suitable router to be the exit node for the
  * general-purpose circuit we're about to build.
  *
@@ -893,10 +904,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
    * We use this for log messages now, but in the future we may depend on it.
    */
   for (i = 0; i < n_connections; ++i) {
-    if (carray[i]->type == CONN_TYPE_AP &&
-        carray[i]->state == AP_CONN_STATE_CIRCUIT_WAIT &&
-        !carray[i]->marked_for_close &&
-        !circuit_stream_is_being_handled(carray[i], 0, MIN_CIRCUITS_HANDLING_STREAM))
+    if (ap_stream_wants_exit_attention(carray[i]))
       ++n_pending_connections;
   }
 //  log_fn(LOG_DEBUG, "Choosing exit node; %d connections are pending",
@@ -950,11 +958,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     }
     n_supported[i] = 0;
     for (j = 0; j < n_connections; ++j) { /* iterate over connections */
-      if (carray[j]->type != CONN_TYPE_AP ||
-          carray[j]->state != AP_CONN_STATE_CIRCUIT_WAIT ||
-          carray[j]->marked_for_close ||
-          connection_edge_is_rendezvous_stream(carray[j]) ||
-          circuit_stream_is_being_handled(carray[j], 0, MIN_CIRCUITS_HANDLING_STREAM))
+      if (!ap_stream_wants_exit_attention(carray[j]))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
       if (connection_ap_can_use_exit(carray[j], router)) {
         ++n_supported[i];
