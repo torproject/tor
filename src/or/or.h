@@ -1451,7 +1451,7 @@ int rep_hist_bandwidth_assess(void);
 char *rep_hist_get_bandwidth_lines(void);
 void rep_history_clean(time_t before);
 void rep_hist_note_used_port(uint16_t port, time_t now);
-char *rep_hist_get_predicted_ports(time_t now);
+smartlist_t *rep_hist_get_predicted_ports(time_t now);
 
 /********************************* rendclient.c ***************************/
 

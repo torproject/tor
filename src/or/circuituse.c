@@ -255,19 +255,17 @@ void circuit_expire_building(time_t now) {
 void
 circuit_remove_handled_ports(smartlist_t *needed_ports) {
   int i;
-  uint16_t port;
-  char *portstring;
+  uint16_t *port;
 
   for (i = 0; i < smartlist_len(needed_ports); ++i) {
-    portstring = smartlist_get(needed_ports, i);
-    port = *(uint16_t*)(portstring);
-    tor_assert(port);
-    if (circuit_stream_is_being_handled(NULL, port, 2)) {
+    port = smartlist_get(needed_ports, i);
+    tor_assert(*port);
+    if (circuit_stream_is_being_handled(NULL, *port, 2)) {
 //      log_fn(LOG_DEBUG,"Port %d is already being handled; removing.", port);
       smartlist_del(needed_ports, i--);
-      tor_free(portstring);
+      tor_free(port);
     } else {
-      log_fn(LOG_DEBUG,"Port %d is not handled.", port);
+      log_fn(LOG_DEBUG,"Port %d is not handled.", *port);
     }
   }
 }
