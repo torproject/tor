@@ -36,6 +36,11 @@ For 0.0.9.5:
 
 ************************ For Post 0.0.9 *****************************
 
+  - make min uptime a function of the available choices
+  - kill dns workers more slowly
+  - reset uptime when ip changes
+  - build testing circuits? going through non-verified nodes?
+
   - config option to publish what ports you listen on, beyond ORPort/DirPort
   - https proxy for OR CONNECT stuff
   - choose entry node to be one you're already connected to?
