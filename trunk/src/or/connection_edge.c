@@ -977,7 +977,6 @@ void client_dns_init(void) {
   client_dns_size = 0;
 }
 
-/* XXXX NM casei */
 static uint32_t client_dns_lookup_entry(const char *address)
 {
   struct client_dns_entry *ent;
@@ -1057,7 +1056,6 @@ static void* _remove_if_expired(const char *addr,
 
 void client_dns_clean(void)
 {
-  struct client_dns_entry *ent;
   time_t now;
 
   if(!client_dns_size)

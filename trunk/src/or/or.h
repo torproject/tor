@@ -209,6 +209,9 @@
 #define END_STREAM_REASON_TIMEOUT 7
 #define _MAX_END_STREAM_REASON 7
 
+/* Reasons used by connection_mark_for_close */
+#define CLOSE_REASON_UNUSED_OR_CONN 100
+
 /* default cipher function */
 #define DEFAULT_CIPHER CRYPTO_CIPHER_AES_CTR
 /* Used to en/decrypt onion skins */
@@ -905,11 +908,12 @@ size_t dirserv_get_directory(const char **cp);
 void rep_hist_init(void);
 void rep_hist_note_connect_failed(const char* nickname, time_t when);
 void rep_hist_note_connect_succeeded(const char* nickname, time_t when);
+void rep_hist_note_disconnect(const char* nickname, time_t when);
 void rep_hist_note_connection_died(const char* nickname, time_t when);
 void rep_hist_note_extend_succeeded(const char *from_name,
 				    const char *to_name);
 void rep_hist_note_extend_failed(const char *from_name, const char *to_name);
-void rep_hist_dump_status(time_t now);
+void rep_hist_dump_stats(time_t now, int severity);
 
 
 #endif
