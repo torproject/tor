@@ -1285,7 +1285,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
       return -1;
     }
     written += result;
-    if (tmpe->msk != 0xFFFFFFFFu) {
+    if (tmpe->msk != 0xFFFFFFFFu && tmpe->msk != 0) {
       in.s_addr = htonl(tmpe->msk);
       result = snprintf(s+written, maxlen-written, "/%s", inet_ntoa(in));
       if (result<0 || result+written > maxlen)
@@ -1293,19 +1293,16 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
       written += result;
     }
     if (tmpe->prt) {
-      result = snprintf(s+written, maxlen-written, ":%d", tmpe->prt);
+      result = snprintf(s+written, maxlen-written, ":%d\n", tmpe->prt);
       if (result<0 || result+written > maxlen)
         return -1;
       written += result;
     } else {
       if (written > maxlen-4)
         return -1;
-      strcat(s+written, ":*");
+      strcat(s+written, ":*\n");
+      written += 3;
     }
-    if(written > maxlen-1)
-      return -1;
-    strcat(s+written, "\n");
-    written++;
   } /* end for */
   if (written > maxlen-256) /* Not enough room for signature. */
     return -1;
