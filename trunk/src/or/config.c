@@ -12,7 +12,7 @@
 #define CONFIG_TYPE_DOUBLE  4
 #define CONFIG_TYPE_BOOL    5
 
-#define CONFIG_LINE_MAXLEN 1024
+#define CONFIG_LINE_MAXLEN 4096
 
 struct config_line {
   char *key;
@@ -155,6 +155,7 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
     config_compare(list, "Nickname",       CONFIG_TYPE_STRING, &options->Nickname) ||
     config_compare(list, "Address",        CONFIG_TYPE_STRING, &options->Address) ||
+    config_compare(list, "ExitPolicy",     CONFIG_TYPE_STRING, &options->ExitPolicy) ||
 
     /* int options */
     config_compare(list, "MaxConn",         CONFIG_TYPE_INT, &options->MaxConn) ||
