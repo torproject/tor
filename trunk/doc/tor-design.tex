@@ -434,7 +434,7 @@ Tor's evolution.
   for every protocol).  This requirement also precludes systems in which
   users who do not benefit from anonymity are required to run special
   software in order to communicate with anonymous parties.
-% XXX Our rendezvous points require clients to use our software to get to
+%     Our rendezvous points require clients to use our software to get to
 %     the location-hidden servers.
 %     Or at least, they require somebody near the client-side running our
 %     software. We haven't worked out the details of keeping it transparent
@@ -517,10 +517,10 @@ accepted solution.
   communicating with.
 \end{description}
 
-\SubSection{Adversary Model}
-\label{subsec:adversary-model}
+\SubSection{Threat Model}
+\label{subsec:threat-model}
 
-A global passive adversary is the most commonly assumed when
+A global passive adversary is the most commonly assumed threat when
 analyzing theoretical anonymity designs. But like all practical low-latency
 systems, Tor is not secure against this adversary.  Instead, we assume an
 adversary that is weaker than global with respect to distribution, but that
@@ -682,7 +682,7 @@ from reliable servers and trying to get them taken down.
 % XXX Should there be more or less?  Should we turn this into a
 % bulleted list?  Should we cut it entirely?
 
-We list these attacks and more, and describe our defenses against them
+We consider these attacks and more, and describe our defenses against them
 in Section~\ref{sec:attacks}.
 
 
@@ -771,7 +771,8 @@ periodically (currently every minute) if the previous one has been used,
 and expire old used circuits that are no longer in use. Thus even very
 active users spend a negligible amount of time and CPU in building
 circuits, but only a limited number of requests can be linked to each
-other by a given exit node.
+other by a given exit node. Also, because circuits are built in the
+background, an already failed router never affects the user experience.
 
 Users set up circuits incrementally, negotiating a symmetric key with
 each hop one at a time. To create a new circuit, the user (call her
@@ -814,9 +815,7 @@ copies the payload into a \emph{relay extended} cell and passes it back.
 
 Once Alice has established the circuit (so she shares a key with each
 OR on the circuit), she can send relay cells.
-%The stream ID in the relay header indicates to which stream the cell belongs.
-% Nick: should i include the above line?
-% Paul says yes. -PS
+The stream ID in the relay header indicates to which stream the cell belongs.
 Alice can address each relay cell to any of the ORs on the circuit. To
 construct a relay cell destined for a given OR, she iteratively
 encrypts the cell payload (that is, the relay header and payload)
@@ -924,28 +923,17 @@ of the current value of the hash.
 The attacker must be able to guess all previous bytes between Alice
 and Bob on that circuit (including the pseudorandomness from the key
 negotiation), plus the bytes in the current cell, to remove or modify the
-cell. The computational overhead isn't so bad, compared to doing an AES
-% XXX We never say we use AES. Say it somewhere above?
+cell. Attacks on SHA-1 where the adversary can incrementally add to a
+hash to produce a new valid hash \cite{practical-crypto} don't work,
+% XXX Do we want to cite practical crypto here, or is there a better
+%     place to cite, or is this well-known enough to leave out a cite? -RD
+because all hashes are end-to-end encrypted across the circuit.
+The computational overhead isn't so bad, compared to doing an AES
+% XXX We never say we use AES. Say it somewhere above? -RD
 crypt at each hop in the circuit. We use only four bytes per cell to
 minimize overhead; the chance that an adversary will correctly guess a
 valid hash, plus the payload the current cell, is acceptly low, given
 that Alice or Bob tear down the circuit if they receive a bad hash.
-
-%% probably don't need to even mention this, because the randomness
-%% covers it:
-%The fun SHA1 attack where the bad guy can incrementally add to a hash
-%to get a new valid hash doesn't apply to us, because we never show any
-%hashes to anybody.
-
-\SubSection{Website fingerprinting attacks}
-
-% this subsection probably wants to move to analysis -RD
-old onion routing is vulnerable to website fingerprinting attacks like
-david martin's from usenix sec and drew's from pet2002. so is tor. we
-need to send some padding or something, including long-range padding
-(to foil the first hop), to solve this. let's hope somebody writes
-a followup to \cite{defensive-dropping} that tells us what, exactly,
-to do, and why, exactly, it helps.
 
 \SubSection{Rate limiting and fairness}
 
@@ -1534,8 +1522,17 @@ them.
 \item \textbf{Passive attacks}
 \begin{itemize}
 \item \emph{Observing user behavior.}
-\item \emph{Timing correlation.}
-\item \emph{Size correlation.}
+\item \emph{End-to-end Timing correlation.}
+\item \emph{End-to-end Size correlation.}
+\item \emph{Website fingerprinting attacks} old onion routing is
+vulnerable to website fingerprinting attacks like david martin's
+from usenix sec and drew's from pet2002. so is tor. we need to send
+some padding or something, including long-range padding (to foil the
+first hop), to solve this. let's hope somebody writes a followup to
+\cite{defensive-dropping} that tells us what, exactly, to do, and why,
+exactly, it helps. but website fingerprinting intersection attacks
+\cite{dogan:pet2002} still seem an open problem.
+
 \item \emph{Option distinguishability.} User configuration options.
 A: We standardize on how clients behave. cite econymics.
 
