@@ -335,7 +335,8 @@ static config_var_t *config_find_option(const char *key)
 }
 
 /** If <b>c</b> is a syntactically valid configuration line, update
- * <b>options</b> with its value and return 0.  Otherwise return -1.
+ * <b>options</b> with its value and return 0.  Otherwise return -1 for bad key,
+ * -2 for bad value.
  *
  * If 'reset' is set, and we get a line containing no value, restore the
  * option to its default value.
@@ -371,7 +372,7 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
     if (!ok) {
       log(LOG_WARN, "Int keyword '%s %s' is malformed or out of bounds.",
           c->key,c->value);
-      return -1;
+      return -2;
     }
     *(int *)lvalue = i;
     break;
@@ -380,7 +381,7 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
     i = tor_parse_long(c->value, 10, 0, 1, &ok, NULL);
     if (!ok) {
       log(LOG_WARN, "Boolean keyword '%s' expects 0 or 1.", c->key);
-      return -1;
+      return -2;
     }
     *(int *)lvalue = i;
     break;
@@ -416,7 +417,7 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
     break;
   case CONFIG_TYPE_LINELIST_V:
     log_fn(LOG_WARN, "Can't provide value for virtual option '%s'", c->key);
-    return -1;
+    return -2;
   default:
     tor_assert(0);
     break;
@@ -516,7 +517,8 @@ config_get_assigned_option(or_options_t *options, const char *key)
  *
  * If <b>reset</b>, then interpret empty lines as meaning "restore to
  * default value", and interpret LINELIST* options as replacing (not
- * extending) their previous values.
+ * extending) their previous values.  Return 0 on success, -1 on bad key,
+ * -2 on bad value.
  */
 static int
 config_assign(or_options_t *options, struct config_line_t *list, int reset)
@@ -541,8 +543,9 @@ config_assign(or_options_t *options, struct config_line_t *list, int reset)
 
   /* pass 3: assign. */
   while (list) {
-    if (config_assign_line(options, list, reset))
-      return -1;
+    int r;
+    if ((r=config_assign_line(options, list, reset)))
+      return r;
     list = list->next;
   }
   return 0;
@@ -551,26 +554,28 @@ config_assign(or_options_t *options, struct config_line_t *list, int reset)
 /** Try assigning <b>list</b> to <b>options</b>. You do this by duping
  * options, assigning list to the new one, then validating it. If it's
  * ok, then through out the old one and stick with the new one. Else,
- * revert to old and return failure.
+ * revert to old and return failure.  Return 0 on success, -1 on bad
+ * keys, -2 on bad values, -3 on bad transition.
  */
 int
 config_trial_assign(or_options_t **options, struct config_line_t *list, int reset)
 {
+  int r;
   or_options_t *trial_options = options_dup(*options);
 
-  if (config_assign(trial_options, list, reset) < 0) {
+  if ((r=config_assign(trial_options, list, reset)) < 0) {
     options_free(trial_options);
-    return -1;
+    return r;
   }
 
   if (options_validate(trial_options) < 0) {
     options_free(trial_options);
-    return -1;
+    return -2;
   }
 
   if (options_transition_allowed(*options, trial_options) < 0) {
     options_free(trial_options);
-    return -1;
+    return -3;
   }
 
   /* XXX now act on options */
