@@ -735,11 +735,11 @@ void connection_bucket_refill(struct timeval *now) {
   or_options_t *options = get_options();
 
   /* refill the global buckets */
-  if(global_read_bucket < options->BandwidthBurst) {
+  if((unsigned)global_read_bucket < options->BandwidthBurst) {
     global_read_bucket += (int)options->BandwidthRate;
     log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
   }
-  if(global_write_bucket < options->BandwidthBurst) {
+  if((unsigned)global_write_bucket < options->BandwidthBurst) {
     global_write_bucket += (int)options->BandwidthRate;
     log_fn(LOG_DEBUG,"global_write_bucket now %d.", global_write_bucket);
   }

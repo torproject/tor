@@ -2328,10 +2328,6 @@ config_parse_interval(const char *s, int *ok) {
     log_fn(LOG_WARN, "Interval '%s' is too long", s);
     *ok = 0;
     return -1;
-  } else if (r<0) {
-    log_fn(LOG_WARN, "Interval '%s' is negative", s);
-    *ok = 0;
-    return -1;
   }
   return (int)r;
 }
