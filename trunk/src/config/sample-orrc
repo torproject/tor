@@ -14,7 +14,7 @@ APPort 9024 # listening for socks-speaking connections
 # Leave this set, or we'll be treated like a client.
 OnionRouter 1
 
-# List of routers. Tor nodes only know about the directory servers
-# at the beginning, and from them they get a list of currently up nodes.
+# List of routers. Tor nodes start out knowing about the directory
+# servers, and from them they get a list of currently up nodes.
 RouterFile ../config/dirservers
 
