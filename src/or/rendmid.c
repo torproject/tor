@@ -123,7 +123,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, int request_len)
   if (request_len < (DIGEST_LEN+(MAX_NICKNAME_LEN+1)+REND_COOKIE_LEN+
                      DH_KEY_LEN+CIPHER_KEY_LEN+PKCS1_OAEP_PADDING_OVERHEAD)) {
     log_fn(LOG_WARN,
-           "Impossibly short INTRODUCE1 cell on circuit %d; dropping.",
+           "Impossibly short INTRODUCE1 cell on circuit %d; responding with nack.",
            circ->p_circ_id);
     goto err;
   }
@@ -132,13 +132,12 @@ rend_mid_introduce(circuit_t *circ, const char *request, int request_len)
     goto err;
   }
 
-
   /* The first 20 bytes are all we look at: they have a hash of Bob's PK. */
   intro_circ = circuit_get_next_by_pk_and_purpose(
                              NULL, request, CIRCUIT_PURPOSE_INTRO_POINT);
   if (!intro_circ) {
     log_fn(LOG_WARN,
-           "No intro circ found for INTRODUCE1 cell (%s) from circuit %d; dropping",
+           "No intro circ found for INTRODUCE1 cell (%s) from circuit %d; responding with nack",
            serviceid, circ->p_circ_id);
     goto err;
   }
@@ -164,7 +163,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, int request_len)
 
   return 0;
  err:
-  /* Send the client an ACK */
+  /* Send the client an NACK */
   nak_body[0] = 1;
   if (connection_edge_send_command(NULL,circ,RELAY_COMMAND_INTRODUCE_ACK,
                                    nak_body, 1, NULL)) {
