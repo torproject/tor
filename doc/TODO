@@ -126,15 +126,15 @@ NICK                    . OS X
         - Total rate limiting
         . Look at OR handshake in more detail
                 o Spec it
-                - Merge OR and OP handshakes
-                        - But figure out how to indicate if we're OR?
+                o Merge OR and OP handshakes
+                - rearrange connection_or so it doesn't suck so much to read
                 D Periodic link key rotation. Spec?
         - More flexibility in node addressing
                 D Support IPv6 rather than just 4
                 - Handle multihomed servers (config variable to set IP)
         . Move from onions to ephemeral DH
                 o incremental path building
-                - transition circuit-level sendmes to hop-level sendmes
+                o transition circuit-level sendmes to hop-level sendmes
                 - implement truncate, truncated
                 o move from 192byte DH to 128byte DH, so it isn't so damn slow
                 - exiting from not-last hop
@@ -142,4 +142,5 @@ NICK                    . OS X
                         - make sure exiting from the not-last hop works
                         - logic to find last *open* hop, not last hop, in cpath
                         - choose exit nodes by exit policies
+        o wrap malloc with something that explodes when it fails
 
