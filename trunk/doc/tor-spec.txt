@@ -11,6 +11,9 @@ TODO: (very soon)
       - Specify truncate/truncated
       - Sendme w/stream0 is circuit sendme
       - Integrate -NM and -RD comments
+      - EXTEND cells should have hostnames or nicknames, so that OPs never
+        resolve OR hostnames.  Else DNS servers can give different answers to
+        different OPs, and compromise their anonymity.
 
 EVEN LATER:
       - Do TCP-style sequencing and ACKing of DATA cells so that we can afford
