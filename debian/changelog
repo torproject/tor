@@ -1,6 +1,12 @@
+tor (0.0.6.1-1) unstable; urgency=medium
+
+  * New upstream release (breaks backwards compatibility).
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  7 May 2004 00:24:49 +0200
+
 tor (0.0.6-1) unstable; urgency=low
 
-  * New upstream release.
+  * New upstream release (breaks backwards compatibility).
 
  -- Peter Palfrader <weasel@debian.org>  Sun,  2 May 2004 23:58:36 +0200
 
