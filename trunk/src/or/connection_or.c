@@ -107,7 +107,7 @@ int connection_or_process_inbuf(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_OR);
 
-  switch(conn->state) {
+  switch (conn->state) {
     case OR_CONN_STATE_PROXY_READING:
       return connection_or_read_proxy_response(conn);
     case OR_CONN_STATE_OPEN:
@@ -131,7 +131,7 @@ int connection_or_finished_flushing(connection_t *conn) {
 
   assert_connection_ok(conn,0);
 
-  switch(conn->state) {
+  switch (conn->state) {
     case OR_CONN_STATE_PROXY_FLUSHING:
       log_fn(LOG_DEBUG,"finished sending CONNECT to proxy.");
       conn->state = OR_CONN_STATE_PROXY_READING;

@@ -1355,4 +1355,3 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
   *router_out = choice;
   return 0;
 }
-

@@ -1074,7 +1074,7 @@ static void signal_callback(int fd, short events, void *arg)
 
 /** Write all statistics to the log, with log level 'severity'.  Called
  * in response to a SIGUSR1. */
-static void 
+static void
 dumpstats(int severity) {
   int i;
   connection_t *conn;
@@ -1597,7 +1597,7 @@ int tor_main(int argc, char *argv[]) {
     return -1;
   switch (get_options()->command) {
   case CMD_RUN_TOR:
-#ifdef MS_WINDOWS_SERVICE 
+#ifdef MS_WINDOWS_SERVICE
     service_status.dwCurrentState = SERVICE_RUNNING;
 #endif
     do_main_loop();

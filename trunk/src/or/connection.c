@@ -1243,7 +1243,6 @@ connection_t *connection_get_by_identity_digest(const char *digest, int type)
   return best;
 }
 
-
 /** Return the connection with id <b>id</b> if it is not already
  * marked for close.
  */
@@ -1265,7 +1264,6 @@ connection_get_by_global_id(uint32_t id) {
   }
   return NULL;
 }
-
 
 /** Return a connection of type <b>type</b> that is not marked for
  * close.
@@ -1675,4 +1673,3 @@ void assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(0);
   }
 }
-

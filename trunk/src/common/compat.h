@@ -206,7 +206,6 @@ char *get_user_homedir(const char *username);
 int spawn_func(int (*func)(void *), void *data);
 void spawn_exit(void);
 
-
 #if defined(MS_WINDOWS)
 #define USE_WIN32_THREADS
 #define TOR_IS_MULTITHREADED 1
@@ -230,10 +229,8 @@ unsigned long tor_get_thread_id(void);
 #define tor_mutex_new() ((tor_mutex_t*)tor_malloc(sizeof(int)))
 #define tor_mutex_acquire(m) do { } while (0)
 #define tor_mutex_release(m) do { } while (0)
-#define tor_mutex_free(m) do { tor_free(m); } while(0)
+#define tor_mutex_free(m) do { tor_free(m); } while (0)
 #define tor_get_thread_id() (1UL)
 #endif
 
-
 #endif
-

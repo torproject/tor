@@ -548,7 +548,7 @@ circuit_testing_opened(circuit_t *circ) {
   /* For now, we only use testing circuits to see if our ORPort is
      reachable. So, if this circuit ends at us, remember that. */
   routerinfo_t *exit = router_get_by_digest(circ->build_state->chosen_exit_digest);
-  if(exit && router_is_me(exit)) {
+  if (exit && router_is_me(exit)) {
     log_fn(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent.");
     router_orport_found_reachable();
   }
@@ -1009,7 +1009,6 @@ connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
   return 1;
 }
 
-
 /** Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
  * we don't find one: if conn cannot be handled by any known nodes,
  * warn and return -1 (conn needs to die);
@@ -1133,4 +1132,3 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
     return 0;
   }
 }
-

@@ -669,7 +669,6 @@ static int handle_control_attachstream(connection_t *conn, uint32_t len,
     return 0;
   }
 
-
   if (!(circ = circuit_get_by_global_id(circ_id))) {
     send_control_error(conn, ERR_NO_CIRC, "No circuit found with given ID");
     return 0;
