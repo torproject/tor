@@ -1763,6 +1763,7 @@ char *expand_filename(const char *filename)
   tor_assert(filename);
   /* XXXX Should eventually check for ~username/ */
   if (!strncmp(filename,"~/",2)) {
+    size_t len;
     const char *home = getenv("HOME");
     char *result;
     if (!home) {
@@ -1770,8 +1771,9 @@ char *expand_filename(const char *filename)
       return NULL;
     }
     /* minus two characters for ~/, plus one for /, plus one for NUL. */
-    result = tor_malloc(strlen(home)+strlen(filename)+16);
-    sprintf(result,"%s/%s",home,filename+2);
+    len = strlen(home)+strlen(filename)+16;
+    result = tor_malloc(len);
+    snprintf(result,len,"%s/%s",home,filename+2);
     return result;
   } else {
     return tor_strdup(filename);

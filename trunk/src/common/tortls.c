@@ -294,12 +294,12 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   EVP_PKEY *pkey = NULL;
   tor_tls_context *result = NULL;
   X509 *cert = NULL, *idcert = NULL;
-  char nn2[1024];
+  char nn2[128];
   int client_only;
   SSL_CTX **ctx;
   if (!nickname)
     nickname = "null";
-  sprintf(nn2, "%s <identity>", nickname);
+  snprintf(nn2, sizeof(nn2), "%s <identity>", nickname);
 
   tor_tls_init();
 

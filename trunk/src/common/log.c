@@ -142,7 +142,7 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
 
 /** Helper: sends a message to the appropriate logfiles, at loglevel
  * <b>severity</b>.  If provided, <b>funcname</b> is prepended to the
- * message.  The actual message is derived as from vsprintf(format,ap).
+ * message.  The actual message is derived as from vsnprintf(format,ap).
  */
 static void
 logv(int severity, const char *funcname, const char *format, va_list ap)

@@ -167,7 +167,7 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall)
     if(requireothers && router_is_me(router))
       continue;
     if(fascistfirewall) {
-      sprintf(buf,"%d",router->dir_port);
+      snprintf(buf,sizeof(buf),"%d",router->dir_port);
       if (!smartlist_string_isin(options.FirewallPorts, buf))
         continue;
     }
@@ -202,7 +202,7 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
           !memcmp(me->identity_digest, d->digest, DIGEST_LEN))
         continue;
       if (fascistfirewall) {
-        sprintf(buf,"%d",d->dir_port);
+        snprintf(buf,sizeof(buf),"%d",d->dir_port);
         if (!smartlist_string_isin(options.FirewallPorts, buf))
           continue;
       }

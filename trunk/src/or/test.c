@@ -50,7 +50,7 @@ setup_directory()
   int r;
   if (is_setup) return;
 
-  sprintf(temp_dir, "/tmp/tor_test_%d", (int) getpid());
+  snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d", (int) getpid());
 #ifdef MS_WINDOWS
   r = mkdir(temp_dir);
 #else
@@ -69,7 +69,7 @@ get_fname(const char *name)
 {
   static char buf[1024];
   setup_directory();
-  sprintf(buf,"%s/%s",temp_dir,name);
+  snprintf(buf,sizeof(buf),"%s/%s",temp_dir,name);
   return buf;
 }
 

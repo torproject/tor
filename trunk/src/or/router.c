@@ -101,9 +101,10 @@ void rotate_onion_key(void)
   char fname[512];
   char fname_prev[512];
   crypto_pk_env_t *prkey;
-  sprintf(fname,"%s/keys/secret_onion_key",get_data_directory(&options));
-  sprintf(fname_prev,"%s/keys/secret_onion_key.old",
-          get_data_directory(&options));
+  snprintf(fname,sizeof(fname),
+           "%s/keys/secret_onion_key",get_data_directory(&options));
+  snprintf(fname_prev,sizeof(fname_prev),
+           "%s/keys/secret_onion_key.old",get_data_directory(&options));
   if (!(prkey = crypto_new_pk_env())) {
     log(LOG_ERR, "Error creating crypto environment.");
     goto error;
@@ -263,27 +264,27 @@ int init_keys(void) {
     return -1;
   }
   /* Check the key directory. */
-  sprintf(keydir,"%s/keys", datadir);
+  snprintf(keydir,sizeof(keydir),"%s/keys", datadir);
   if (check_private_dir(keydir, 1)) {
     return -1;
   }
   cp = keydir + strlen(keydir); /* End of string. */
 
   /* 1. Read identity key. Make it if none is found. */
-  sprintf(keydir,"%s/keys/identity.key",datadir);
-  sprintf(keydir2,"%s/keys/secret_id_key",datadir);
+  snprintf(keydir,sizeof(keydir),"%s/keys/identity.key",datadir);
+  snprintf(keydir2,sizeof(keydir2),"%s/keys/secret_id_key",datadir);
   log_fn(LOG_INFO,"Reading/making identity key %s...",keydir2);
   prkey = init_key_from_file_name_changed(keydir,keydir2);
   if (!prkey) return -1;
   set_identity_key(prkey);
   /* 2. Read onion key.  Make it if none is found. */
-  sprintf(keydir,"%s/keys/onion.key",datadir);
-  sprintf(keydir2,"%s/keys/secret_onion_key",datadir);
+  snprintf(keydir,sizeof(keydir),"%s/keys/onion.key",datadir);
+  snprintf(keydir2,sizeof(keydir2),"%s/keys/secret_onion_key",datadir);
   log_fn(LOG_INFO,"Reading/making onion key %s...",keydir2);
   prkey = init_key_from_file_name_changed(keydir,keydir2);
   if (!prkey) return -1;
   set_onion_key(prkey);
-  sprintf(keydir,"%s/keys/secret_onion_key.old",datadir);
+  snprintf(keydir,sizeof(keydir),"%s/keys/secret_onion_key.old",datadir);
   if (file_status(keydir) == FN_FILE) {
     prkey = init_key_from_file(keydir);
     if (prkey)
@@ -315,13 +316,13 @@ int init_keys(void) {
     }
   }
 
-  sprintf(keydir,"%s/router.desc", datadir);
+  snprintf(keydir,sizeof(keydir),"%s/router.desc", datadir);
   log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
   if (write_str_to_file(keydir, mydesc,0)) {
     return -1;
   }
   /* 5. Dump fingerprint to 'fingerprint' */
-  sprintf(keydir,"%s/fingerprint", datadir);
+  snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
   log_fn(LOG_INFO,"Dumping fingerprint to %s...",keydir);
   tor_assert(strlen(options.Nickname) <= MAX_NICKNAME_LEN);
   strcpy(fingerprint, options.Nickname);
@@ -337,7 +338,7 @@ int init_keys(void) {
   if(!authdir_mode())
     return 0;
   /* 6. [authdirserver only] load approved-routers file */
-  sprintf(keydir,"%s/approved-routers", datadir);
+  snprintf(keydir,sizeof(keydir),"%s/approved-routers", datadir);
   log_fn(LOG_INFO,"Loading approved fingerprints from %s...",keydir);
   if(dirserv_parse_fingerprint_file(keydir) < 0) {
     log_fn(LOG_ERR, "Error loading fingerprints");
@@ -349,7 +350,7 @@ int init_keys(void) {
     add_trusted_dir_server(options.Address, (uint16_t)options.DirPort, digest);
   }
   /* 7. [authdirserver only] load old directory, if it's there */
-  sprintf(keydir,"%s/cached-directory", datadir);
+  snprintf(keydir,sizeof(keydir),"%s/cached-directory", datadir);
   log_fn(LOG_INFO,"Loading cached directory from %s...",keydir);
   cp = read_file_to_str(keydir,0);
   if(!cp) {
