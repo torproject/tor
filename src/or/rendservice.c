@@ -482,7 +482,7 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
   circuit_t *newcirc;
   cpath_build_state_t *newstate, *oldstate;
 
-  /* XXXX assert type and build_state */
+  tor_assert(oldcirc->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
 
   if (!oldcirc->build_state ||
       oldcirc->build_state->failure_count > MAX_REND_FAILURES) {

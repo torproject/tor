@@ -1323,7 +1323,28 @@ write_str_to_file(const char *fname, const char *str)
     return -1;
   }
   fclose(file);
-  /* XXXX This won't work on windows: you can't use rename to replace a file.*/
+
+#ifdef MS_WINDOWS
+  /* On Windows, rename doesn't replace.  We could call ReplaceFile, but
+   * that's hard, and we can probably sneak by without atomicity. */
+  switch (file_status(fname)) {
+    case FN_ERROR:
+      log(LOG_WARN, "Error replacing %s: %s", fname, strerror(errno));
+      return -1;
+    case FN_DIR:
+      log(LOG_WARN, "Error replacing %s: is directory", fname);
+      return -1;
+    case FN_FILE:
+      if (unlink(fname)) {
+        log(LOG_WARN, "Error replacing %s while removing old copy: %s",
+            fname, strerror(errno));
+        return -1;
+      }
+      break;
+    case FN_NOENT:
+      ;
+  }
+#endif
   if (rename(tempname, fname)) {
     log(LOG_WARN, "Error replacing %s: %s", fname, strerror(errno));
     return -1;

@@ -44,7 +44,7 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
   char *buf, *cp, *ipoint;
   int i, keylen, asn1len;
   keylen = crypto_pk_keysize(desc->pk);
-  buf = tor_malloc(keylen*2); /* XXXX */
+  buf = tor_malloc(keylen*2); /* Too long, but that's okay. */
   asn1len = crypto_pk_asn1_encode(desc->pk, buf, keylen*2);
   if (asn1len<0) {
     tor_free(buf);
