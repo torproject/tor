@@ -17,7 +17,6 @@ static struct addr_policy_t *socks_policy = NULL;
 static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
-void parse_socks_policy(void);
 
 /** Handle new bytes on conn->inbuf, or notification of eof.
  *
