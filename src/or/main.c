@@ -282,13 +282,21 @@ static void conn_close_if_marked(int i) {
   }
 }
 
+/* This function is called whenever we successfully pull
+ * down a directory */
 void directory_has_arrived(void) {
 
-  log_fn(LOG_INFO, "We now have a directory.");
+  log_fn(LOG_INFO, "A directory has arrived.");
 
   /* just for testing */
 //  directory_initiate_command(router_pick_directory_server(),
 //                             DIR_PURPOSE_FETCH_RENDDESC, "foo", 3);
+
+  has_fetched_directory=1;
+
+  if(options.ORPort) { /* connect to them all */
+    router_retry_connections();
+  }
 
   rend_services_init(); /* get bob to initialize all his hidden services */
 
