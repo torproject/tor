@@ -1,6 +1,6 @@
 
 AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.0.9pre5-cvs)
+AM_INIT_AUTOMAKE(tor, 0.0.9pre5)
 AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST
@@ -235,7 +235,7 @@ AC_SUBST(LOCALSTATEDIR)
 CFLAGS="$CFLAGS -Wall -W -Wno-unused-parameter -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -g -O2"
 # Add some more warnings which we use in the cvs version but not in the
 # released versions.
-CFLAGS="$CFLAGS -Wwrite-strings -Wredundant-decls"
+#CFLAGS="$CFLAGS -Wwrite-strings -Wredundant-decls"
 
 # Add these in when you feel like fun.
 # -Wbad-function-cast -Werror  -Wdeclaration-after-statement
