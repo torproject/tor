@@ -229,8 +229,41 @@ test_buffers() {
   buf_free(buf2);
 }
 
+void
+test_crypto_dh()
+{
+  crypto_dh_env_t *dh1, *dh2;
+  char p1[CRYPTO_DH_SIZE];
+  char p2[CRYPTO_DH_SIZE];
+  char s1[CRYPTO_DH_SIZE];
+  char s2[CRYPTO_DH_SIZE];
+
+  dh1 = crypto_dh_new();
+  dh2 = crypto_dh_new();
+  test_eq(crypto_dh_get_bytes(dh1), CRYPTO_DH_SIZE);
+  test_eq(crypto_dh_get_bytes(dh2), CRYPTO_DH_SIZE);
+
+  memset(p1, 0, CRYPTO_DH_SIZE);
+  memset(p2, 0, CRYPTO_DH_SIZE);
+  test_memeq(p1, p2, CRYPTO_DH_SIZE);
+  test_assert(! crypto_dh_get_public(dh1, p1, CRYPTO_DH_SIZE));
+  test_memneq(p1, p2, CRYPTO_DH_SIZE);
+  test_assert(! crypto_dh_get_public(dh2, p2, CRYPTO_DH_SIZE));
+  test_memneq(p1, p2, CRYPTO_DH_SIZE);
+  
+  memset(s1, 0, CRYPTO_DH_SIZE);
+  memset(s2, 0, CRYPTO_DH_SIZE);
+  test_assert(! crypto_dh_compute_secret(dh1, p2, CRYPTO_DH_SIZE, s1));
+  test_assert(! crypto_dh_compute_secret(dh2, p1, CRYPTO_DH_SIZE, s2));
+  test_memeq(s1, s2, CRYPTO_DH_SIZE);
+  
+  crypto_dh_free(dh1);
+  crypto_dh_free(dh2);
+}
+
 void 
-test_crypto() {
+test_crypto() 
+{
   crypto_cipher_env_t *env1, *env2;
   crypto_pk_env_t *pk1, *pk2;
   char *data1, *data2, *data3, *cp;
@@ -441,6 +474,7 @@ main(int c, char**v) {
   puts("========================== Buffers =========================");
   test_buffers();
   puts("========================== Crypto ==========================");
+  test_crypto_dh();
   test_crypto(); /* this seg faults :( */
   puts("\n========================== Util ============================");
   test_util();
