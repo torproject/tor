@@ -53,7 +53,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       }
       /* the connect has finished. */
 
-      log(LOG_DEBUG,"connection_or_finished_flushing() : Connection to router %s:%u established.",
+      log(LOG_DEBUG,"connection_or_finished_flushing() : OP connection to router %s:%u established.",
           conn->address,ntohs(conn->port));
 
       return or_handshake_op_send_keys(conn);
@@ -71,7 +71,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       }
       /* the connect has finished. */
 
-      log(LOG_DEBUG,"connection_or_finished_flushing() : Connection to router %s:%u established.",
+      log(LOG_DEBUG,"connection_or_finished_flushing() : OR connection to router %s:%u established.",
           conn->address,ntohs(conn->port));
 
       return or_handshake_client_send_auth(conn);

@@ -241,7 +241,7 @@ connection_t *connection_connect_to_router_as_op(routerinfo_t *router, RSA *prke
   if(learn_local(&local) < 0)
     return NULL;
   local.sin_port = htons(local_or_port);
-  return connection_or_connect_as_or(router, prkey, &local);
+  return connection_or_connect_as_op(router, prkey, &local);
 }
 
 int connection_read_to_buf(connection_t *conn) {

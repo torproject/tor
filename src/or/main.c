@@ -8,6 +8,7 @@ static char *args = "hf:e:n:l:";
 
 int loglevel = LOG_DEBUG;
 
+//int global_role = ROLE_AP_LISTEN;
 int global_role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
 /* FIXME defaulting to all roles for now. should make it a config option though */
 

@@ -475,6 +475,7 @@ int or_handshake_server_process_nonce(connection_t *conn);
 
 connection_t *connect_to_router_as_or(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local);
 connection_t *connection_or_connect_as_or(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local);
+connection_t *connection_or_connect_as_op(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local);
 
 int connection_or_create_listener(RSA *prkey, struct sockaddr_in *local);
 int connection_or_handle_listener_read(connection_t *conn);
