@@ -192,13 +192,7 @@ void connection_about_to_close_connection(connection_t *conn)
     case CONN_TYPE_OR:
       /* Remember why we're closing this connection. */
       if (conn->state != OR_CONN_STATE_OPEN) {
-        /* XXX Nick: this still isn't right, because it might be
-         * dying even though we didn't initiate the connect. Can
-         * you look at this more? -RD XXXX008 -NM*/
-        /* XXX We only set conn->nickname when we initiate the connection, or
-         * when the handshake is complete; so conn->nickname is a good test
-         * for "we initiated the connection", right? -NM */
-        if(conn->nickname)
+        if(connection_or_nonopen_was_started_here(conn))
           rep_hist_note_connect_failed(conn->identity_digest, time(NULL));
       } else if (0) { // XXX reason == CLOSE_REASON_UNUSED_OR_CONN) {
         rep_hist_note_disconnect(conn->identity_digest, time(NULL));
