@@ -262,7 +262,7 @@ static int cpuworker_main(void *data) {
       }
       if (write_all(fd, buf, LEN_ONION_RESPONSE, 1) != LEN_ONION_RESPONSE) {
         log_fn(LOG_ERR,"writing response buf failed. Exiting.");
-        spawn_exit();
+        goto end;
       }
       log_fn(LOG_DEBUG,"finished writing response.");
     }
@@ -272,6 +272,7 @@ static int cpuworker_main(void *data) {
     crypto_free_pk_env(onion_key);
   if (last_onion_key)
     crypto_free_pk_env(last_onion_key);
+  close(fd);
   spawn_exit();
   return 0; /* windows wants this function to return an int */
 }
