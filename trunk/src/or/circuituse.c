@@ -298,7 +298,7 @@ void circuit_build_needed_circs(time_t now) {
   circ = circuit_get_youngest_clean_open(CIRCUIT_PURPOSE_C_GENERAL);
 
   if(time_to_new_circuit < now) {
-    circuit_reset_failure_count();
+    circuit_reset_failure_count(1);
     time_to_new_circuit = now + options.NewCircuitPeriod;
     if(proxy_mode())
       client_dns_clean();
@@ -585,6 +585,7 @@ void circuit_build_failed(circuit_t *circ) {
  * circuit_launch_new and circuit_*_failure_count.
  */
 static int n_circuit_failures = 0;
+static int did_circs_fail_last_period = 0;
 
 /** Don't retry launching a new circuit if we try this many times with no
  * success. */
@@ -597,7 +598,8 @@ circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest)
     return NULL;
   }
 
-  if (n_circuit_failures > MAX_CIRCUIT_FAILURES) {
+  if (did_circs_fail_last_period &&
+      n_circuit_failures > MAX_CIRCUIT_FAILURES) {
     /* too many failed circs in a row. don't try. */
 //    log_fn(LOG_INFO,"%d failures so far, not trying.",n_circuit_failures);
     return NULL;
@@ -635,7 +637,11 @@ static void circuit_increment_failure_count(void) {
  * we will try MAX_CIRCUIT_FAILURES times more (if necessary) before
  * stopping again.
  */
-void circuit_reset_failure_count(void) {
+void circuit_reset_failure_count(int timeout) {
+  if(timeout && n_circuit_failures > MAX_CIRCUIT_FAILURES)
+    did_circs_fail_last_period = 1;
+  else
+    did_circs_fail_last_period = 0;
   n_circuit_failures = 0;
 }
 

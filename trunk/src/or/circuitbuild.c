@@ -386,7 +386,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       /* done building the circuit. whew. */
       circ->state = CIRCUIT_STATE_OPEN;
       log_fn(LOG_INFO,"circuit built!");
-      circuit_reset_failure_count();
+      circuit_reset_failure_count(0);
       if(!has_completed_circuit) {
         has_completed_circuit=1;
         log_fn(LOG_NOTICE,"Tor has successfully opened a circuit. Looks like it's working.");
