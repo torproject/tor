@@ -729,6 +729,8 @@ static int connection_bucket_read_limit(connection_t *conn) {
     if (at_most > conn->receiver_bucket)
       at_most = conn->receiver_bucket;
 
+  if (at_most < 0)
+    return 0;
   return at_most;
 }
 
