@@ -775,3 +775,11 @@ int router_get_list_from_file(char *routerfile);
 int router_get_list_from_string(char *s);
 
 #endif
+
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

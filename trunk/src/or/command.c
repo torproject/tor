@@ -300,3 +300,10 @@ void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   circuit_free(circ);
 }
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

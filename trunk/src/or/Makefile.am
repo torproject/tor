@@ -1,19 +1,22 @@
+TESTS = test
 
-TESTS = test_config
-
-noinst_PROGRAMS = test_config
+noinst_PROGRAMS = test
 
 bin_PROGRAMS = or
 
-or_LDADD = -L../common -lor -lz
-
 or_SOURCES = buffers.c circuit.c command.c connection.c \
              connection_exit.c connection_ap.c connection_op.c connection_or.c config.c \
-             main.c onion.c routers.c directory.c dns.c
+             onion.c routers.c directory.c dns.c \
+             main.c tor_main.c
 
-test_config_SOURCES = test_config.c config.c
+or_LDADD = -L../common -lor -lz
 
-test_config_LDADD = -L../common -lor
+test_SOURCES = buffers.c circuit.c command.c connection.c \
+             connection_exit.c connection_ap.c connection_op.c connection_or.c config.c \
+             onion.c routers.c directory.c dns.c \
+             main.c test.c
+
+test_LDADD = -L../common -lor -lz
 
 noinst_HEADERS = or.h tree.h
 

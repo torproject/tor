@@ -293,3 +293,10 @@ int connection_dir_handle_listener_read(connection_t *conn) {
   return connection_handle_listener_read(conn, CONN_TYPE_DIR, DIR_CONN_STATE_COMMAND_WAIT);
 } 
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

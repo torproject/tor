@@ -369,3 +369,10 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   return result;
 }
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

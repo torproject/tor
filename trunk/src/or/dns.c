@@ -568,3 +568,10 @@ static int dns_found_answer(char *question, uint32_t answer, uint32_t valid) {
   return 0;
 }
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/
