@@ -310,7 +310,7 @@ add_default_trusted_dirservers(void)
   parse_dir_server_line("18.244.0.188:9031 "
                         "FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441");
   /* moria2 */
-  parse_dir_server_line("18.244.0.188:9032 "
+  parse_dir_server_line("18.244.0.114:80 "
                         "719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF");
   /* tor26 */
   parse_dir_server_line("62.116.124.106:9030 "
