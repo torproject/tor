@@ -510,7 +510,6 @@ get_status_fetch_period(or_options_t *options)
     return 30*60;
 }
 
-
 /** This function is called whenever we successfully pull down a directory.
  * If <b>identity_digest</b> is defined, it contains the digest of the
  * router that just gave us this directory. */
@@ -532,7 +531,8 @@ void directory_has_arrived(time_t now, char *identity_digest) {
   if (!time_to_fetch_running_routers)
     time_to_fetch_running_routers = now + get_status_fetch_period(options);
 
-  if (identity_digest) { /* if this is us, then our dirport is reachable */
+  if (server_mode(options) && identity_digest) {
+    /* if this is us, then our dirport is reachable */
     routerinfo_t *router = router_get_by_digest(identity_digest);
     if (!router) // XXX
       log_fn(LOG_WARN,"Bug: router_get_by_digest doesn't find me.");
@@ -713,7 +713,8 @@ static void run_scheduled_events(time_t now) {
     consider_publishable_server(now, 0);
     /* also, check religiously for reachability, if it's within the first
      * 20 minutes of our uptime. */
-    if (stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT)
+    if (server_mode(options) &&
+        stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT)
       consider_testing_reachability();
   }
 
