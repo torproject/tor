@@ -1,6 +1,6 @@
-tor (0.1.0.2-rc-cvs-200504061620-1) UNRELEASED; urgency=low
+tor (0.1.0.2-rc-cvs-200504062112-1) UNRELEASED; urgency=low
 
-  * CVS snapshot: 2005-04-06 16:20 UTC.
+  * CVS snapshot: 2005-04-06 21:12 UTC.
   * Add a watch file.
   * Forward port 03_tor_manpage_in_section_8.
   * Forward port 06_add_compile_time_defaults.
@@ -13,7 +13,7 @@ tor (0.1.0.2-rc-cvs-200504061620-1) UNRELEASED; urgency=low
   * If "with-dmalloc" is in DEB_BUILD_OPTIONS we build against libdmalloc4.
     Of course the -dev package needs to be installed.
 
- -- Peter Palfrader <weasel@debian.org>  Wed,  6 Apr 2005 18:28:29 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed,  6 Apr 2005 23:11:36 +0200
 
 tor (0.0.9.7-1) unstable; urgency=low
 
