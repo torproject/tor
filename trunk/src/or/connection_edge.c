@@ -308,7 +308,7 @@ void connection_ap_expire_beginning(void) {
   } /* end for */
 }
 
-/** Tell any AP streamss that are waiting for a new circuit that one is
+/** Tell any AP streams that are waiting for a new circuit that one is
  * available.
  */
 void connection_ap_attach_pending(void)
