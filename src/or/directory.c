@@ -229,7 +229,8 @@ connection_dir_connect_failed(connection_t *conn)
   router_mark_as_down(conn->identity_digest); /* don't try him again */
   if (conn->purpose == DIR_PURPOSE_FETCH_DIR ||
       conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
-    log_fn(LOG_INFO, "Giving up on directory server at '%s'; retrying");
+    log_fn(LOG_INFO, "Giving up on directory server at '%s'; retrying",
+           conn->address);
     directory_get_from_dirserver(conn->purpose, NULL,
                                  0 /* don't retry_if_no_servers */);
   }
