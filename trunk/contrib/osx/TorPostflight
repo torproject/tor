@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# TorPostflight gets invoked after any install or upgrade.
+
+ADDSYSUSER=$RECEIPT_PATH/addsysuser
+if [ ! -x "$ADDSYSUSER" ]; then
+  echo "Could not find addsysuser script."
+  exit 1
+fi
+
+TORUSER=_tor
+TORGROUP=daemon
+TORDIR=/Library/Tor/var/lib/tor
+
+# Create user $TORUSER in group daemon.  If it's already there, great.
+$ADDSYSUSER $TORUSER "Tor System user" $TORDIR
+
+# Create the tor directory, if it doesn't exist.
+if [ ! -d $TORDIR ]; then
+  mkdir -p $TORDIR
+fi
+# Check its permissions.
+chown $TORUSER $TORDIR
+chgrp daemon $TORDIR
+chmod 700 $TORDIR
+
+# Ensure a symbolic link.
+cd /usr/bin
+if [ -e /usr/bin/tor -a ! -L /usr/bin/tor ]; then
+  mv tor tor_old
+fi
+if [ -e /usr/bin/tor-resolve -a ! -L /usr/bin/tor-resolve ]; then
+  mv tor-resolve tor-resolve_old
+fi
+ln -sf /Library/Tor/tor .
+ln -sf /Library/Tor/tor_resolve .
