@@ -2,30 +2,31 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/*****
- * buffers.c: Abstractions for buffered IO.
- *****/
+/**
+ * \file buffers.c
+ * \brief Abstractions for buffered IO.
+ **/
 
 #include "or.h"
 
 #define BUFFER_MAGIC 0xB0FFF312u
 struct buf_t {
-  uint32_t magic; /* Magic cookie for debugging: Must be set to BUFFER_MAGIC */
-  char *mem;      /* Storage for data in the buffer */
-  size_t len;     /* Maximum amount of data that 'mem' can hold. */
-  size_t datalen; /* Number of bytes currently in 'mem'. */
+  uint32_t magic; /**< Magic cookie for debugging: Must be set to BUFFER_MAGIC */
+  char *mem;      /**< Storage for data in the buffer */
+  size_t len;     /**< Maximum amount of data that 'mem' can hold. */
+  size_t datalen; /**< Number of bytes currently in 'mem'. */
 };
 
-/* Size, in bytes, for newly allocated buffers.  Should be a power of 2. */
+/** Size, in bytes, for newly allocated buffers.  Should be a power of 2. */
 #define INITIAL_BUF_SIZE (4*1024)
-/* Maximum size, in bytes, for resized buffers. */
+/** Maximum size, in bytes, for resized buffers. */
 #define MAX_BUF_SIZE (1024*1024*10)
-/* Size, in bytes, for minimum 'shrink' size for buffers.  Buffers may start
+/** Size, in bytes, for minimum 'shrink' size for buffers.  Buffers may start
  * out smaller than this, but they will never autoshrink to less
  * than this size. */
 #define MIN_BUF_SHRINK_SIZE (16*1024)
 
-/* Change a buffer's capacity.  new_capacity must be <= buf->datalen. */
+/** Change a buffer's capacity.  new_capacity must be \<= buf->datalen. */
 static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
 {
   tor_assert(buf->datalen <= new_capacity);
@@ -34,7 +35,7 @@ static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
   buf->len = new_capacity;
 }
 
-/* If the buffer is not large enough to hold "capacity" bytes, resize
+/** If the buffer is not large enough to hold "capacity" bytes, resize
  * it so that it can.  (The new size will be a power of 2 times the old
  * size.)
  */
@@ -58,7 +59,7 @@ static INLINE int buf_ensure_capacity(buf_t *buf, size_t capacity)
   return 0;
 }
 
-/* If the buffer is at least 2*MIN_BUF_SHRINK_SIZE bytes in capacity,
+/** If the buffer is at least 2*MIN_BUF_SHRINK_SIZE bytes in capacity,
  * and if the buffer is less than 1/4 full, shrink the buffer until
  * one of the above no longer holds.  (We shrink the buffer by
  * dividing by powers of 2.)
@@ -81,7 +82,7 @@ static INLINE void buf_shrink_if_underfull(buf_t *buf) {
   buf_resize(buf, new_len);
 }
 
-/* Remove the first 'n' bytes from buf.
+/** Remove the first 'n' bytes from buf.
  */
 static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
   tor_assert(buf->datalen >= n);
@@ -90,7 +91,7 @@ static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
   buf_shrink_if_underfull(buf);
 }
 
-/* Find the first instance of the str_len byte string 'sr' on the
+/** Find the first instance of the str_len byte string 'sr' on the
  * buf_len byte string 'bufstr'.  Strings are not necessary
  * NUL-terminated. If none exists, return -1.  Otherwise, return index
  * of the first character in bufstr _after_ the first instance of str.
@@ -115,7 +116,7 @@ static int find_mem_in_mem(const char *str, int str_len,
   return -1;
 }
 
-/* Create and return a new buf with capacity 'size'.
+/** Create and return a new buf with capacity 'size'.
  */
 buf_t *buf_new_with_capacity(size_t size) {
   buf_t *buf;
@@ -130,39 +131,39 @@ buf_t *buf_new_with_capacity(size_t size) {
   return buf;
 }
 
-/* Allocate and return a new buffer with default capacity. */
+/** Allocate and return a new buffer with default capacity. */
 buf_t *buf_new()
 {
   return buf_new_with_capacity(INITIAL_BUF_SIZE);
 }
 
-/* Remove all data from 'buf' */
+/** Remove all data from 'buf' */
 void buf_clear(buf_t *buf)
 {
   buf->datalen = 0;
 }
 
-/* Return the number of bytes stored in 'buf' */
+/** Return the number of bytes stored in 'buf' */
 size_t buf_datalen(const buf_t *buf)
 {
   return buf->datalen;
 }
 
-/* Return the maximum bytes that can be stored in 'buf' before buf
+/** Return the maximum bytes that can be stored in 'buf' before buf
  * needs to resize. */
 size_t buf_capacity(const buf_t *buf)
 {
   return buf->len;
 }
 
-/* For testing only: Return a pointer to the raw memory stored in 'buf'.
+/** For testing only: Return a pointer to the raw memory stored in 'buf'.
  */
 const char *_buf_peek_raw_buffer(const buf_t *buf)
 {
   return buf->mem;
 }
 
-/* Release storage held by 'buf'.
+/** Release storage held by 'buf'.
  */
 void buf_free(buf_t *buf) {
   assert_buf_ok(buf);
@@ -171,7 +172,7 @@ void buf_free(buf_t *buf) {
   tor_free(buf);
 }
 
-/* Read from socket s, writing onto end of buf.  Read at most
+/** Read from socket s, writing onto end of buf.  Read at most
  * 'at_most' bytes, resizing the buffer as necessary.  If read()
  * returns 0, set *reached_eof to 1 and return 0. Return -1 on error;
  * else return the number of bytes read.  Return 0 if read() would
@@ -212,7 +213,7 @@ int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof) {
   }
 }
 
-/* As read_to_buf, but reads from a TLS connection.
+/** As read_to_buf, but reads from a TLS connection.
  */
 int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
   int r;
@@ -246,7 +247,7 @@ int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
   return r;
 }
 
-/* Write data from 'buf' to the socket 's'.  Write at most
+/** Write data from 'buf' to the socket 's'.  Write at most
  * *buf_flushlen bytes, and decrement *buf_flushlen by the number of
  * bytes actually written.  Return the number of bytes written on
  * success, -1 on failure.  Return 0 if write() would block.
@@ -284,7 +285,7 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
   }
 }
 
-/* As flush_buf, but writes data to a TLS connection.
+/** As flush_buf, but writes data to a TLS connection.
  */
 int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen)
 {
@@ -305,7 +306,7 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen)
   return r;
 }
 
-/* Append string_len bytes from 'string' to the end of 'buf'.
+/** Append string_len bytes from 'string' to the end of 'buf'.
  * Return the new length of the buffer on success, -1 on failure.
  */
 int write_to_buf(const char *string, int string_len, buf_t *buf) {
@@ -349,17 +350,18 @@ int fetch_from_buf(char *string, size_t string_len, buf_t *buf) {
   return buf->datalen;
 }
 
-/* There is a (possibly incomplete) http statement on *buf, of the
- * form "%s\r\n\r\n%s", headers, body. (body may contain nuls.)
+/** There is a (possibly incomplete) http statement on *buf, of the
+ * form "\%s\\r\\n\\r\\n\%s", headers, body. (body may contain nuls.)
  * If a) the headers include a Content-Length field and all bytes in
  * the body are present, or b) there's no Content-Length field and
  * all headers are present, then:
- *   strdup headers into *headers_out, and nul-terminate it.
- *   memdup body into *body_out, and nul-terminate it.
- *   Then remove them from buf, and return 1.
  *
- *   If headers or body is NULL, discard that part of the buf.
- *   If a headers or body doesn't fit in the arg, return -1.
+ *  - strdup headers into *headers_out, and nul-terminate it.
+ *  - memdup body into *body_out, and nul-terminate it.
+ *  - Then remove them from buf, and return 1.
+ *
+ *  - If headers or body is NULL, discard that part of the buf.
+ *  - If a headers or body doesn't fit in the arg, return -1.
  *
  * Else, change nothing and return 0.
  */
@@ -425,19 +427,23 @@ int fetch_from_buf_http(buf_t *buf,
   return 1;
 }
 
-/* There is a (possibly incomplete) socks handshake on buf, of one
+/** There is a (possibly incomplete) socks handshake on buf, of one
  * of the forms
- *   socks4: "socksheader username\0"
- *   socks4a: "socksheader username\0 destaddr\0"
- *   socks5 phase one: "version #methods methods"
- *   socks5 phase two: "version command 0 addresstype..."
+ *  - socks4: "socksheader username\\0"
+ *  - socks4a: "socksheader username\\0 destaddr\\0"
+ *  - socks5 phase one: "version #methods methods"
+ *  - socks5 phase two: "version command 0 addresstype..."
  * If it's a complete and valid handshake, and destaddr fits in
  *   MAX_SOCKS_ADDR_LEN bytes, then pull the handshake off the buf,
  *   assign to req, and return 1.
+ *
  * If it's invalid or too big, return -1.
+ *
  * Else it's not all there yet, leave buf alone and return 0.
+ *
  * If you want to specify the socks reply, write it into req->reply
  *   and set req->replylen, else leave req->replylen alone.
+ *
  * If returning 0 or -1, req->address and req->port are undefined.
  */
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
@@ -612,7 +618,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   }
 }
 
-/* Log an error and exit if 'buf' is corrupted.
+/** Log an error and exit if 'buf' is corrupted.
  */
 void assert_buf_ok(buf_t *buf)
 {

@@ -2,10 +2,12 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/*****
- * util.c: Common functions for strings, IO, network, data structures,
+/**
+ * \file util.c
+ *
+ * \brief Common functions for strings, IO, network, data structures,
  * process control, and cross-platform portability.
- *****/
+ **/
 
 #include "orconfig.h"
 
@@ -99,11 +101,7 @@
 #include "strlcat.c"
 #endif
 
-/*****
- *    Memory wrappers
- *****/
-
-/* Allocate a chunk of 'size' bytes of memory, and return a pointer to
+/** Allocate a chunk of <b>size</b> bytes of memory, and return a pointer to
  * result.  On error, log and terminate the process.  (Same as malloc(size),
  * but never returns NULL.)
  */
@@ -124,7 +122,7 @@ void *tor_malloc(size_t size) {
   return result;
 }
 
-/* Allocate a chunk of 'size' bytes of memory, fill the memory with
+/* Allocate a chunk of <b>size</b> bytes of memory, fill the memory with
  * zero bytes, and return a pointer to the result.  Log and terminate
  * the process on error.  (Same as calloc(size,1), but never returns NULL.)
  */
@@ -134,7 +132,7 @@ void *tor_malloc_zero(size_t size) {
   return result;
 }
 
-/* Change the size of the memory block pointed to by 'ptr' to 'size'
+/** Change the size of the memory block pointed to by <b>ptr</b> to <b>size</b>
  * bytes long; return the new memory block.  On error, log and
  * terminate. (Like realloc(ptr,size), but never returns NULL.)
  */
@@ -149,7 +147,7 @@ void *tor_realloc(void *ptr, size_t size) {
   return result;
 }
 
-/* Return a newly allocated copy of the NUL-terminated string s. On
+/** Return a newly allocated copy of the NUL-terminated string s. On
  * error, log and terminate.  (Like strdup(s), but never returns
  * NULL.)
  */
@@ -165,10 +163,11 @@ char *tor_strdup(const char *s) {
   return dup;
 }
 
-/* Allocate and return a new string containing the first 'n'
- * characters of 's'.  If 's' is longer than 'n' characters, only the
- * first 'n' are copied.  The result is always NUL-terminated.  (Like
- * strndup(s,n), but never returns NULL.)
+/** Allocate and return a new string containing the first <b>n</b>
+ * characters of <b>s</b>.  If <b>s</b> is longer than <b>n</b>
+ * characters, only the first <b>n</b> are copied.  The result is
+ * always NUL-terminated.  (Like strndup(s,n), but never returns
+ * NULL.)
  */
 char *tor_strndup(const char *s, size_t n) {
   char *dup;
@@ -179,41 +178,50 @@ char *tor_strndup(const char *s, size_t n) {
   return dup;
 }
 
-/* Convert all alphabetic characters in the nul-terminated string 's' to
- * lowercase. */
-void tor_strlower(char *s)
-{
-  while (*s) {
-    *s = tolower(*s);
-    ++s;
-  }
-}
 
 #ifndef UNALIGNED_INT_ACCESS_OK
+/**
+ * Read a 16-bit value beginning at <b>cp</b>.  Equaivalent to
+ * *(uint16_t*)(cp), but will not cause segfaults on platforms that forbid
+ * unaligned memory access.
+ */
 uint16_t get_uint16(const char *cp)
 {
   uint16_t v;
   memcpy(&v,cp,2);
   return v;
 }
+/**
+ * Read a 32-bit value beginning at <b>cp</b>.  Equaivalent to
+ * *(uint32_t*)(cp), but will not cause segfaults on platforms that forbid
+ * unaligned memory access.
+ */
 uint32_t get_uint32(const char *cp)
 {
   uint32_t v;
   memcpy(&v,cp,4);
   return v;
 }
+/**
+ * Set a 16-bit value beginning at <b>cp</b> to <b>v</b>. Equivalent to
+ * *(uint16_t)(cp) = v, but will not cause segfaults on platforms that forbid
+ * unaligned memory access. */
 void set_uint16(char *cp, uint16_t v)
 {
   memcpy(cp,&v,2);
 }
+/**
+ * Set a 32-bit value beginning at <b>cp</b> to <b>v</b>. Equivalent to
+ * *(uint32_t)(cp) = v, but will not cause segfaults on platforms that forbid
+ * unaligned memory access. */
 void set_uint32(char *cp, uint32_t v)
 {
   memcpy(cp,&v,4);
 }
 #endif
 
-/* Encode the first 'fromlen' bytes stored at 'from' in hexidecimal;
- * write the result as a NUL-terminated string to 'to'.  'to' must
+/** Encode the first <b>fromlen</b> bytes stored at <b>from</b> in hexidecimal;
+ * write the result as a NUL-terminated string to <b>to</b>.  <b>to</b> must
  * have at least (2*fromlen)+1 bytes of free space.
  */
 void hex_encode(const char *from, int fromlen, char *to)
@@ -229,8 +237,8 @@ void hex_encode(const char *from, int fromlen, char *to)
   *to = '\0';
 }
 
-/* Return a pointer to a NUL-terminated hexidecimal string encoding
- * the first 'fromlen' bytes of 'from'. (fromlen must be <= 32.) The
+/** Return a pointer to a NUL-terminated hexidecimal string encoding
+ * the first <b>fromlen</b> bytes of <b>from</b>. (fromlen must be \<= 32.) The
  * result does not need to be deallocated, but repeated calls to
  * hex_str will trash old results.
  */
@@ -253,8 +261,8 @@ const char *hex_str(const char *from, int fromlen)
 
 
 struct smartlist_t {
-  /* 'list' has enough capacity to store exactly 'capacity' elements
-   * before it needs to be resized.  Only the first 'num_used' (<=
+  /** <b>list</b> has enough capacity to store exactly <b>capacity</b> elements
+   * before it needs to be resized.  Only the first <b>num_used</b> (\<=
    * capacity) elements point to valid data.
    */
   void **list;
@@ -262,7 +270,7 @@ struct smartlist_t {
   int capacity;
 };
 
-/* Allocate and return an empty smartlist.
+/** Allocate and return an empty smartlist.
  */
 smartlist_t *smartlist_create() {
   smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
@@ -272,7 +280,7 @@ smartlist_t *smartlist_create() {
   return sl;
 }
 
-/* Deallocate a smartlist.  Does not release storage associated with the
+/** Deallocate a smartlist.  Does not release storage associated with the
  * list's elements.
  */
 void smartlist_free(smartlist_t *sl) {
@@ -280,9 +288,9 @@ void smartlist_free(smartlist_t *sl) {
   free(sl);
 }
 
-/* Change the capacity of the smartlist to 'n', so that we can grow
- * the list up to 'n' elements with no further reallocation or wasted
- * space.  If 'n' is less than or equal to the number of elements
+/** Change the capacity of the smartlist to <b>n</b>, so that we can grow
+ * the list up to <b>n</b> elements with no further reallocation or wasted
+ * space.  If <b>n</b> is less than or equal to the number of elements
  * currently in the list, reduce the list's capacity as much as
  * possible without losing elements.
  */
@@ -295,13 +303,13 @@ void smartlist_set_capacity(smartlist_t *sl, int n) {
   }
 }
 
-/* Remove all elements from the list.
+/** Remove all elements from the list.
  */
 void smartlist_clear(smartlist_t *sl) {
   sl->num_used = 0;
 }
 
-/* Set the list's new length to 'len' (which must be <= the list's
+/** Set the list's new length to <b>len</b> (which must be \<= the list's
  * current size). Remove the last smartlist_len(sl)-len elements from the
  * list.
  */
@@ -311,7 +319,7 @@ void smartlist_truncate(smartlist_t *sl, int len)
   sl->num_used = len;
 }
 
-/* Append element to the end of the list. */
+/** Append element to the end of the list. */
 void smartlist_add(smartlist_t *sl, void *element) {
   if (sl->num_used >= sl->capacity) {
     sl->capacity *= 2;
@@ -320,13 +328,13 @@ void smartlist_add(smartlist_t *sl, void *element) {
   sl->list[sl->num_used++] = element;
 }
 
-/* Append each element from S2 to the end of S1. */
+/** Append each element from S2 to the end of S1. */
 void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2)
 {
   SMARTLIST_FOREACH(s2, void *, element, smartlist_add(sl, element));
 }
 
-/* Remove all elements E from sl such that E==element.  Does not preserve
+/** Remove all elements E from sl such that E==element.  Does not preserve
  * the order of s1.
  */
 void smartlist_remove(smartlist_t *sl, void *element) {
@@ -340,7 +348,7 @@ void smartlist_remove(smartlist_t *sl, void *element) {
     }
 }
 
-/* Return true iff some element E of sl has E==element.
+/** Return true iff some element E of sl has E==element.
  */
 int smartlist_isin(const smartlist_t *sl, void *element) {
   int i;
@@ -350,7 +358,7 @@ int smartlist_isin(const smartlist_t *sl, void *element) {
   return 0;
 }
 
-/* Return true iff some element E of sl2 has smartlist_isin(sl1,E).
+/** Return true iff some element E of sl2 has smartlist_isin(sl1,E).
  */
 int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2) {
   int i;
@@ -360,7 +368,7 @@ int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2) {
   return 0;
 }
 
-/* Remove every element E of sl1 such that !smartlist_isin(sl2,E).
+/** Remove every element E of sl1 such that !smartlist_isin(sl2,E).
  * Does not preserve the order of sl1.
  */
 void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2) {
@@ -372,7 +380,7 @@ void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2) {
     }
 }
 
-/* Remove every element E of sl1 such that smartlist_isin(sl2,E).
+/** Remove every element E of sl1 such that smartlist_isin(sl2,E).
  * Does not preserve the order of sl1.
  */
 void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2) {
@@ -381,7 +389,7 @@ void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2) {
     smartlist_remove(sl1, sl2->list[i]);
 }
 
-/* Return a randomly chosen element of sl; or NULL if sl is empty.
+/** Return a randomly chosen element of sl; or NULL if sl is empty.
  */
 void *smartlist_choose(const smartlist_t *sl) {
   if(sl->num_used)
@@ -389,15 +397,15 @@ void *smartlist_choose(const smartlist_t *sl) {
   return NULL; /* no elements to choose from */
 }
 
-/* Return the 'idx'th element of sl.
+/** Return the <b>idx</b>th element of sl.
  */
 void *smartlist_get(const smartlist_t *sl, int idx)
 {
   tor_assert(sl && idx>=0 && idx < sl->num_used);
   return sl->list[idx];
 }
-/* Change the value of the 'idx'th element of sl to 'val'; return the old
- * value of the 'idx'th element.
+/** Change the value of the <b>idx</b>th element of sl to <b>val</b>; return the old
+ * value of the <b>idx</b>th element.
  */
 void *smartlist_set(smartlist_t *sl, int idx, void *val)
 {
@@ -407,9 +415,9 @@ void *smartlist_set(smartlist_t *sl, int idx, void *val)
   sl->list[idx] = val;
   return old;
 }
-/* Remove the 'idx'th element of sl; if idx is not the last element,
- * swap the last element of sl into the 'idx'th space.  Return the old value
- * of the 'idx'th element.
+/** Remove the <b>idx</b>th element of sl; if idx is not the last
+ * element, swap the last element of sl into the <b>idx</b>th space.
+ * Return the old value of the <b>idx</b>th element.
  */
 void *smartlist_del(smartlist_t *sl, int idx)
 {
@@ -419,9 +427,9 @@ void *smartlist_del(smartlist_t *sl, int idx)
   sl->list[idx] = sl->list[--sl->num_used];
   return old;
 }
-/* Remove the 'idx'th element of sl; if idx is not the last element,
+/** Remove the <b>idx</b>th element of sl; if idx is not the last element,
  * moving all subsequent elements back one space. Return the old value
- * of the 'idx'th element.
+ * of the <b>idx</b>th element.
  */
 void *smartlist_del_keeporder(smartlist_t *sl, int idx)
 {
@@ -433,14 +441,15 @@ void *smartlist_del_keeporder(smartlist_t *sl, int idx)
     memmove(sl->list+idx, sl->list+idx+1, sizeof(void*)*(sl->num_used-idx));
   return old;
 }
-/* Return the number of items in sl.
+/** Return the number of items in sl.
  */
 int smartlist_len(const smartlist_t *sl)
 {
   return sl->num_used;
 }
-/* Insert the value 'val' as the new 'idx'th element of 'sl', moving all
- * items previously at 'idx' or later forward one space.
+/** Insert the value <b>val</b> as the new <b>idx</b>th element of
+ * <b>sl</b>, moving all items previously at <b>idx</b> or later
+ * forward one space.
  */
 void smartlist_insert(smartlist_t *sl, int idx, void *val)
 {
@@ -462,9 +471,8 @@ void smartlist_insert(smartlist_t *sl, int idx, void *val)
   }
 }
 
-/*****
- * Splay-tree implementation of string-to-void* map
- *****/
+/* Splay-tree implementation of string-to-void* map
+ */
 struct strmap_entry_t {
   SPLAY_ENTRY(strmap_entry_t) node;
   char *key;
@@ -484,7 +492,7 @@ static int compare_strmap_entries(struct strmap_entry_t *a,
 SPLAY_PROTOTYPE(strmap_tree, strmap_entry_t, node, compare_strmap_entries);
 SPLAY_GENERATE(strmap_tree, strmap_entry_t, node, compare_strmap_entries);
 
-/* Create a new empty map from strings to void*'s.
+/** Create a new empty map from strings to void*'s.
  */
 strmap_t* strmap_new(void)
 {
@@ -494,10 +502,10 @@ strmap_t* strmap_new(void)
   return result;
 }
 
-/* Set the current value for <key> with <val>.  Returns the previous
- * value for <key> if one was set, or NULL if one was not.
+/** Set the current value for <b>key</b> to <b>val</b>.  Returns the previous
+ * value for <b>key</b> if one was set, or NULL if one was not.
  *
- * This function makes a copy of 'key' if necessary, but not of 'val'.
+ * This function makes a copy of <b>key</b> if necessary, but not of <b>val</b>.
  */
 void* strmap_set(strmap_t *map, const char *key, void *val)
 {
@@ -520,7 +528,7 @@ void* strmap_set(strmap_t *map, const char *key, void *val)
   }
 }
 
-/* Return the current value associated with <key>, or NULL if no
+/** Return the current value associated with <b>key</b>, or NULL if no
  * value is set.
  */
 void* strmap_get(strmap_t *map, const char *key)
@@ -537,9 +545,9 @@ void* strmap_get(strmap_t *map, const char *key)
   }
 }
 
-/* Remove the value currently associated with <key> from the map.
+/** Remove the value currently associated with <b>key</b> from the map.
  * Return the value if one was set, or NULL if there was no entry for
- * <key>.
+ * <b>key</b>.
  *
  * Note: you must free any storage associated with the returned value.
  */
@@ -562,7 +570,7 @@ void* strmap_remove(strmap_t *map, const char *key)
   }
 }
 
-/* Same as strmap_set, but first converts <key> to lowercase. */
+/** Same as strmap_set, but first converts <b>key</b> to lowercase. */
 void* strmap_set_lc(strmap_t *map, const char *key, void *val)
 {
   /* We could be a little faster by using strcasecmp instead, and a separate
@@ -574,7 +582,7 @@ void* strmap_set_lc(strmap_t *map, const char *key, void *val)
   tor_free(lc_key);
   return v;
 }
-/* Same as strmap_get, but first converts <key> to lowercase. */
+/** Same as strmap_get, but first converts <b>key</b> to lowercase. */
 void* strmap_get_lc(strmap_t *map, const char *key)
 {
   void *v;
@@ -584,7 +592,7 @@ void* strmap_get_lc(strmap_t *map, const char *key)
   tor_free(lc_key);
   return v;
 }
-/* Same as strmap_remove, but first converts <key> to lowercase */
+/** Same as strmap_remove, but first converts <b>key</b> to lowercase */
 void* strmap_remove_lc(strmap_t *map, const char *key)
 {
   void *v;
@@ -595,14 +603,14 @@ void* strmap_remove_lc(strmap_t *map, const char *key)
   return v;
 }
 
-
-/* Invoke fn() on every entry of the map, in order.  For every entry,
+/** Invoke fn() on every entry of the map, in order.  For every entry,
  * fn() is invoked with that entry's key, that entry's value, and the
- * value of <data> supplied to strmap_foreach.  fn() must return a new
+ * value of <b>data</b> supplied to strmap_foreach.  fn() must return a new
  * (possibly unmodified) value for each entry: if fn() returns NULL, the
  * entry is removed.
  *
  * Example:
+ * \code
  *   static void* upcase_and_remove_empty_vals(const char *key, void *val,
  *                                             void* data) {
  *     char *cp = (char*)val;
@@ -620,6 +628,7 @@ void* strmap_remove_lc(strmap_t *map, const char *key)
  *   ...
  *
  *   strmap_foreach(map, upcase_and_remove_empty_vals, NULL);
+ * \endcode
  */
 void strmap_foreach(strmap_t *map,
                     void* (*fn)(const char *key, void *val, void *data),
@@ -639,10 +648,11 @@ void strmap_foreach(strmap_t *map,
   }
 }
 
-/* return an 'iterator' pointer to the front of a map.
+/** return an <b>iterator</b> pointer to the front of a map.
  *
  * Iterator example:
  *
+ * \code
  * // uppercase values in "map", removing empty values.
  *
  * strmap_iter_t *iter;
@@ -661,6 +671,7 @@ void strmap_foreach(strmap_t *map,
  *       iter = strmap_iter_next(iter);
  *    }
  * }
+ * \endcode
  *
  */
 strmap_iter_t *strmap_iter_init(strmap_t *map)
@@ -668,14 +679,14 @@ strmap_iter_t *strmap_iter_init(strmap_t *map)
   tor_assert(map);
   return SPLAY_MIN(strmap_tree, &map->head);
 }
-/* Advance the iterator 'iter' for map a single step to the next entry.
+/** Advance the iterator <b>iter</b> for map a single step to the next entry.
  */
 strmap_iter_t *strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
 {
   tor_assert(map && iter);
   return SPLAY_NEXT(strmap_tree, &map->head, iter);
 }
-/* Advance the iterator 'iter' a single step to the next entry, removing
+/** Advance the iterator <b>iter</b> a single step to the next entry, removing
  * the current entry.
  */
 strmap_iter_t *strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
@@ -688,7 +699,7 @@ strmap_iter_t *strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
   tor_free(iter);
   return next;
 }
-/* Set *keyp and *valp to the current entry pointed to by iter.
+/** Set *keyp and *valp to the current entry pointed to by iter.
  */
 void strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
 {
@@ -696,14 +707,14 @@ void strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
   *keyp = iter->key;
   *valp = iter->val;
 }
-/* Return true iff iter has advanced past the last entry of map.
+/** Return true iff iter has advanced past the last entry of map.
  */
 int strmap_iter_done(strmap_iter_t *iter)
 {
   return iter == NULL;
 }
-/* Remove all entries from <map>, and deallocate storage for those entries.
- * If free_val is provided, it is invoked on every value in <map>.
+/** Remove all entries from <b>map</b>, and deallocate storage for those entries.
+ * If free_val is provided, it is invoked on every value in <b>map</b>.
  */
 void strmap_free(strmap_t *map, void (*free_val)(void*))
 {
@@ -723,7 +734,18 @@ void strmap_free(strmap_t *map, void (*free_val)(void*))
  *    String manipulation
  */
 
-/* Return a pointer to the first char of s that is not whitespace and
+/** Convert all alphabetic characters in the nul-terminated string <b>s</b> to
+ * lowercase. */
+void tor_strlower(char *s)
+{
+  while (*s) {
+    *s = tolower(*s);
+    ++s;
+  }
+}
+
+
+/** Return a pointer to the first char of s that is not whitespace and
  * not a comment, or to the terminating NUL if no such character exists.
  */
 const char *eat_whitespace(const char *s) {
@@ -742,7 +764,7 @@ const char *eat_whitespace(const char *s) {
   return s;
 }
 
-/* Return a pointer to the first char of s that is not a space or a tab,
+/** Return a pointer to the first char of s that is not a space or a tab,
  * or to the terminating NUL if no such character exists. */
 const char *eat_whitespace_no_nl(const char *s) {
   while(*s == ' ' || *s == '\t')
@@ -750,7 +772,7 @@ const char *eat_whitespace_no_nl(const char *s) {
   return s;
 }
 
-/* Return a pointer to the first char of s that is whitespace or '#',
+/** Return a pointer to the first char of s that is whitespace or <b>#</b>,
  * or to the terminating NUL if no such character exists.
  */
 const char *find_whitespace(const char *s) {
@@ -762,11 +784,11 @@ const char *find_whitespace(const char *s) {
   return s;
 }
 
-/*****
+/*
  * Time
- *****/
+ */
 
-/* Set *timeval to the current time of day.  On error, log and terminate.
+/** Set *timeval to the current time of day.  On error, log and terminate.
  * (Same as gettimeofday(timeval,NULL), but never returns -1.)
  */
 void tor_gettimeofday(struct timeval *timeval) {
@@ -785,7 +807,7 @@ void tor_gettimeofday(struct timeval *timeval) {
   return;
 }
 
-/* Return the number of microseconds elapsed between *start and *end.
+/** Return the number of microseconds elapsed between *start and *end.
  * If start is after end, return 0.
  */
 long
@@ -808,7 +830,7 @@ tv_udiff(struct timeval *start, struct timeval *end)
   return udiff;
 }
 
-/* Return -1 if *a<*b, 0 if *a==*b, and 1 if *a>*b.
+/** Return -1 if *a \< *b, 0 if *a==*b, and 1 if *a \> *b.
  */
 int tv_cmp(struct timeval *a, struct timeval *b) {
   if (a->tv_sec > b->tv_sec)
@@ -822,7 +844,7 @@ int tv_cmp(struct timeval *a, struct timeval *b) {
   return 0;
 }
 
-/* Increment *a by the number of seconds and microseconds in *b.
+/** Increment *a by the number of seconds and microseconds in *b.
  */
 void tv_add(struct timeval *a, struct timeval *b) {
   a->tv_usec += b->tv_usec;
@@ -830,7 +852,7 @@ void tv_add(struct timeval *a, struct timeval *b) {
   a->tv_usec %= 1000000;
 }
 
-/* Increment *a by 'ms' milliseconds.
+/** Increment *a by <b>ms</b> milliseconds.
  */
 void tv_addms(struct timeval *a, long ms) {
   a->tv_usec += (ms * 1000) % 1000000;
@@ -845,10 +867,11 @@ static int n_leapdays(int y1, int y2) {
   --y2;
   return (y2/4 - y1/4) - (y2/100 - y1/100) + (y2/400 - y1/400);
 }
+/** Number of days per month in non-leap year; used by tor_timegm. */
 static const int days_per_month[] =
   { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-/* Return a time_t given a struct tm.  The result is given in GMT, and
+/** Return a time_t given a struct tm.  The result is given in GMT, and
  * does not account for leap seconds.
  */
 time_t tor_timegm (struct tm *tm) {
@@ -878,10 +901,10 @@ time_t tor_timegm (struct tm *tm) {
  *   Low-level I/O.
  */
 
-/* Write 'count' bytes from 'buf' to 'fd'.  isSocket must be 1 if fd
- * was returned by socket() or accept(), and 0 if fd was returned by
- * open().  Return the number of bytes written, or -1 on error.  Only
- * use if fd is a blocking fd.  */
+/** Write <b>count</b> bytes from <b>buf</b> to <b>fd</b>.  <b>isSocket</b>
+ * must be 1 if fd was returned by socket() or accept(), and 0 if fd
+ * was returned by open().  Return the number of bytes written, or -1
+ * on error.  Only use if fd is a blocking fd.  */
 int write_all(int fd, const char *buf, size_t count, int isSocket) {
   size_t written = 0;
   int result;
@@ -898,7 +921,7 @@ int write_all(int fd, const char *buf, size_t count, int isSocket) {
   return count;
 }
 
-/* Read 'count' bytes from 'fd' to 'buf'.  isSocket must be 1 if fd
+/** Read <b>count</b> bytes from <b>fd</b> to <b>buf</b>.  isSocket must be 1 if fd
  * was returned by socket() or accept(), and 0 if fd was returned by
  * open().  Return the number of bytes read, or -1 on error. Only use
  * if fd is a blocking fd. */
@@ -918,7 +941,7 @@ int read_all(int fd, char *buf, size_t count, int isSocket) {
   return count;
 }
 
-/* Turn 'socket' into a nonblocking socket.
+/** Turn <b>socket</b> into a nonblocking socket.
  */
 void set_socket_nonblocking(int socket)
 {
@@ -935,7 +958,7 @@ void set_socket_nonblocking(int socket)
  *   Process control
  */
 
-/* Minimalist interface to run a void function in the background.  On
+/** Minimalist interface to run a void function in the background.  On
  * unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
  * func should not return, but rather should call spawn_exit.
  */
@@ -964,7 +987,7 @@ int spawn_func(int (*func)(void *), void *data)
 #endif
 }
 
-/* End the current thread/process.
+/** End the current thread/process.
  */
 void spawn_exit()
 {
@@ -1092,7 +1115,8 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 #endif
 }
 
-/* On Windows, WSAEWOULDBLOCK is not always correct: when you see it,
+/**
+ * On Windows, WSAEWOULDBLOCK is not always correct: when you see it,
  * you need to ask the socket for its actual errno.  Also, you need to
  * get your errors from WSAGetLastError, not errno.  (If you supply a
  * socket of -1, we check WSAGetLastError, but don't correct
@@ -1113,9 +1137,6 @@ int tor_socket_errno(int sock)
 }
 #endif
 
-/* There does not seem to be a strerror equivalent for winsock errors.
- * Naturally, we have to roll our own.
- */
 #ifdef MS_WINDOWS
 #define E(code, s) { code, (s " [" #code " ]") }
 struct { int code; const char *msg; } windows_socket_errors[] = {
@@ -1168,7 +1189,7 @@ struct { int code; const char *msg; } windows_socket_errors[] = {
   E(WSANO_DATA, "Valid name, no data record of requested type)"),
 
   /* There are some more error codes whose numeric values are marked
-   * 'OS dependent'. They start with WSA_, apparently for the same
+   * <b>OS dependent</b>. They start with WSA_, apparently for the same
    * reason that practitioners of some craft traditions deliberately
    * introduce imperfections into their baskets and rugs "to allow the
    * evil spirits to escape."  If we catch them, then our binaries
@@ -1177,6 +1198,9 @@ struct { int code; const char *msg; } windows_socket_errors[] = {
    */
   { -1, NULL },
 };
+/** There does not seem to be a strerror equivalent for winsock errors.
+ * Naturally, we have to roll our own.
+ */
 const char *tor_socket_strerror(int e)
 {
   int i;
@@ -1192,7 +1216,7 @@ const char *tor_socket_strerror(int e)
  *    Filesystem operations.
  */
 
-/* Return FN_ERROR if filename can't be read, FN_NOENT if it doesn't
+/** Return FN_ERROR if filename can't be read, FN_NOENT if it doesn't
  * exist, FN_FILE if it is a regular file, or FN_DIR if it's a
  * directory. */
 file_status_t file_status(const char *fname)
@@ -1212,7 +1236,7 @@ file_status_t file_status(const char *fname)
     return FN_ERROR;
 }
 
-/* Check whether dirname exists and is private.  If yes return 0.  If
+/** Check whether dirname exists and is private.  If yes return 0.  If
  * it does not exist, and create is set, try to create it and return 0
  * on success.  Else return -1. */
 int check_private_dir(const char *dirname, int create)
@@ -1266,8 +1290,8 @@ int check_private_dir(const char *dirname, int create)
   return 0;
 }
 
-/* Create a file named 'fname' with the contents 'str'.  Overwrite the
- * previous 'fname' if possible.  Return 0 on success, -1 on failure.
+/** Create a file named <b>fname</b> with the contents <b>str</b>.  Overwrite the
+ * previous <b>fname</b> if possible.  Return 0 on success, -1 on failure.
  *
  * This function replaces the old file atomically, if possible.
  */
@@ -1307,7 +1331,7 @@ write_str_to_file(const char *fname, const char *str)
   return 0;
 }
 
-/* Read the contents of 'filename' into a newly allocated string; return the
+/** Read the contents of <b>filename</b> into a newly allocated string; return the
  * string on success or NULL on failure.
  */
 char *read_file_to_str(const char *filename) {
@@ -1348,7 +1372,7 @@ char *read_file_to_str(const char *filename) {
   return string;
 }
 
-/* read lines from f (no more than maxlen-1 bytes each) until we
+/** read lines from f (no more than maxlen-1 bytes each) until we
  * get a non-whitespace line. If it isn't of the form "key value"
  * (value can have spaces), return -1.
  * Point *key to the first word in line, point *value * to the second.
@@ -1400,7 +1424,7 @@ try_next_line:
   return 1;
 }
 
-/* Return true iff 'ip' (in host order) is an IP reserved to localhost,
+/** Return true iff <b>ip</b> (in host order) is an IP reserved to localhost,
  * or reserved for local networks by RFC 1918.
  */
 int is_internal_IP(uint32_t ip) {
@@ -1415,7 +1439,7 @@ int is_internal_IP(uint32_t ip) {
   return 0;
 }
 
-/* Hold the result of our call to 'uname'. */
+/* Hold the result of our call to <b>uname</b>. */
 static char uname_result[256];
 /* True iff uname_result is set. */
 static int uname_result_is_set = 0;
@@ -1450,9 +1474,10 @@ get_uname(void)
 static int start_daemon_called = 0;
 static int finish_daemon_called = 0;
 static int daemon_filedes[2];
-/* Begin running this process as a daemon.  The child process will return
- * quickly; the parent process will wait around until the child process calls
- * finish_daemon.
+/** Start putting the process into daemon mode: fork and drop all resources
+ * except standard fds.  The parent process never returns, but stays around
+ * until finish_daemon is called.  (Note: it's safe to call this more
+ * than once: calls after the first are ignored.)
  */
 void start_daemon(char *desired_cwd)
 {
@@ -1508,8 +1533,10 @@ void start_daemon(char *desired_cwd)
   }
 }
 
-/* Tell the parent process that the child has successfully finished setup,
- * and the daemon is now running.
+/** Finish putting the process into daemon mode: drop standard fds, and tell
+ * the parent process to exit.  (Note: it's safe to call this more than once:
+ * calls after the first are ignored.  Calls start_daemon first if it hasn't
+ * been called already.)
  */
 void finish_daemon(void)
 {
@@ -1546,7 +1573,7 @@ void start_daemon(char *cp) {}
 void finish_daemon(void) {}
 #endif
 
-/* Write the current process ID, followed by NL, into 'filename',
+/** Write the current process ID, followed by NL, into <b>filename</b>.
  */
 void write_pidfile(char *filename) {
 #ifndef MS_WINDOWS
@@ -1562,7 +1589,7 @@ void write_pidfile(char *filename) {
 #endif
 }
 
-/* Call setuid and setgid to run as 'user':'group'.  Return 0 on
+/** Call setuid and setgid to run as <b>user</b>:<b>group</b>.  Return 0 on
  * success.  On failure, log and return -1.
  */
 int switch_id(char *user, char *group) {
@@ -1615,7 +1642,7 @@ int switch_id(char *user, char *group) {
   return -1;
 }
 
-/* Set *addr to the IP address (in dotted-quad notation) stored in c.
+/** Set *addr to the IP address (in dotted-quad notation) stored in c.
  * Return 1 on success, 0 if c is badly formatted.  (Like inet_aton(c,addr),
  * but works on Windows and Solaris.)
  */
@@ -1638,18 +1665,18 @@ int tor_inet_aton(const char *c, struct in_addr* addr)
 #endif
 }
 
-/* Similar behavior to Unix gethostbyname: resolve 'name', and set
+/** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
  * *addr to the proper IP address, in network byte order.  Returns 0
  * on success, -1 on failure; 1 on transient failure.
  *
  * (This function exists because standard windows gethostbyname
  * doesn't treat raw IP addresses properly.)
  */
-/* Perhaps eventually this should be replaced by a tor_getaddrinfo or
- * something.
- */
 int tor_lookup_hostname(const char *name, uint32_t *addr)
 {
+  /* Perhaps eventually this should be replaced by a tor_getaddrinfo or
+   * something.
+   */
   struct in_addr iaddr;
   struct hostent *ent;
   tor_assert(addr);
