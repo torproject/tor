@@ -63,7 +63,7 @@ typedef struct config_var_t {
 } config_var_t;
 
 /** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
-#define STRUCT_OFFSET(tp, member) ((off_t) &(((tp*)0)->member))
+#define STRUCT_OFFSET(tp, member) ((off_t) (((char*)&((tp*)0)->member)-(char*)0))
 /** An entry for config_vars: "The option <b>name</b> has type
  * CONFIG_TYPE_<b>conftype</b>, and corresponds to
  * or_options_t.<b>member</b>"
