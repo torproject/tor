@@ -302,7 +302,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 /** Get the maximum allowed number of file descriptors. (Some systems
  * have a low soft limit.) Make sure we set it to at least
  * <b>required_min</b>. Return 0 if we can, or -1 if we fail. */
-int set_max_file_descriptors(int required_min) {
+int set_max_file_descriptors(unsigned int required_min) {
 #ifndef HAVE_GETRLIMIT
   log_fn(LOG_INFO,"This platform is missing getrlimit(). Proceeding.");
   return 0; /* hope we'll be ok */

@@ -143,7 +143,7 @@ void set_uint16(char *cp, uint16_t v);
 void set_uint32(char *cp, uint32_t v);
 #endif
 
-int set_max_file_descriptors(int required_min);
+int set_max_file_descriptors(unsigned int required_min);
 int switch_id(char *user, char *group);
 
 int spawn_func(int (*func)(void *), void *data);
