@@ -481,7 +481,7 @@ rend_service_intro_is_ready(circuit_t *circuit)
   char hexid[9];
 
   assert(circuit->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
-  assert(circuit->cpath);
+  assert(CIRCUIT_IS_ORIGIN(circuit) && circuit->cpath);
 
   hex_encode(circuit->rend_pk_digest, 4, hexid);
   service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);

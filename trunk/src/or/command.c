@@ -132,7 +132,7 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
     return;
   }
 
-  if(circ->cpath) { /* we're the OP. Handshake this. */
+  if(CIRCUIT_IS_ORIGIN(circ)) { /* we're the OP. Handshake this. */
     log_fn(LOG_DEBUG,"at OP. Finishing handshake.");
     if(circuit_finish_handshake(circ, cell->payload) < 0) {
       log_fn(LOG_WARN,"circuit_finish_handshake failed.");
@@ -198,7 +198,7 @@ static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
     onion_pending_remove(circ);
   }
 
-  if(cell->circ_id == circ->p_circ_id || circ->cpath) {
+  if(cell->circ_id == circ->p_circ_id || CIRCUIT_IS_ORIGIN(circ)) {
     /* either the destroy came from behind, or we're the AP */
     circ->p_conn = NULL;
     circuit_mark_for_close(circ);
