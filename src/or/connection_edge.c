@@ -1471,8 +1471,8 @@ int connection_edge_is_rendezvous_stream(connection_t *conn) {
   return 0;
 }
 
-/** Return 1 if router <b>exit</b> might allow stream <b>conn</b>
- * to exit from it, or 0 if it definitely will not allow it.
+/** Return 1 if router <b>exit</b> is likely to allow stream <b>conn</b>
+ * to exit from it, or 0 if it probably will not allow it.
  * (We might be uncertain if conn's destination address has not yet been
  * resolved.)
  */
@@ -1502,10 +1502,12 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
   if (conn->socks_request->command != SOCKS_COMMAND_RESOLVE) {
     struct in_addr in;
     uint32_t addr = 0;
+    addr_policy_result_t r;
     if (tor_inet_aton(conn->socks_request->address, &in))
       addr = ntohl(in.s_addr);
-    if (router_compare_addr_to_addr_policy(addr, conn->socks_request->port,
-          exit->exit_policy) == ADDR_POLICY_REJECTED)
+    r = router_compare_addr_to_addr_policy(addr, conn->socks_request->port,
+                                           exit->exit_policy);
+    if (r == ADDR_POLICY_REJECTED || r == ADDR_POLICY_PROBABLY_REJECTED)
       return 0;
   }
   return 1;
@@ -1550,11 +1552,10 @@ int socks_policy_permits_address(uint32_t addr)
   if (!socks_policy) /* 'no socks policy' means 'accept' */
     return 1;
   a = router_compare_addr_to_addr_policy(addr, 1, socks_policy);
-  if (a==-1)
+  if (a==ADDR_POLICY_REJECTED)
     return 0;
-  else if (a==0)
+  else if (a==ADDR_POLICY_ACCEPTED)
     return 1;
-  tor_assert(a==1);
   log_fn(LOG_WARN, "Bug: Got unexpected 'maybe' answer from socks policy");
   return 0;
 }

@@ -1001,16 +1001,26 @@ router_resolve_routerlist(routerlist_t *rl)
   return 0;
 }
 
-/** Decide whether a given addr:port is definitely accepted, definitely
- * rejected, or neither by a given policy.  If <b>addr</b> is 0, we
- * don't know the IP of the target address. If <b>port</b> is 0, we
- * don't know the port of the target address.
+/** Decide whether a given addr:port is definitely accepted,
+ * definitely rejected, probably accepted, or probably rejected by a
+ * given policy.  If <b>addr</b> is 0, we don't know the IP of the
+ * target address. If <b>port</b> is 0, we don't know the port of the
+ * target address.
  *
- * Returns -1 for "rejected", 0 for "accepted", 1 for "maybe" (since IP or
- * port is unknown).
+ * For now, the algorithm is pretty simple: we look for definite and
+ * uncertain matches.  The first definite match is what we guess; if
+ * it was proceded by no uncertain matches of the opposite policy,
+ * then the guess is definite; otherwise it is probable.  (If we
+ * have a known addr and port, all matches are definite; if we have an
+ * unknown addr/port, any address/port ranges other than "all" are
+ * uncertain.)
+ *
+ * We could do better by assuming that some ranges never match typical
+ * addresses (127.0.0.1, and so on).  But we'll try this for now.
  */
-int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
-                                       addr_policy_t *policy)
+addr_policy_result_t
+router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
+                                   addr_policy_t *policy)
 {
   int maybe_reject = 0;
   int maybe_accept = 0;
@@ -1060,14 +1070,14 @@ int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
       if (tmpe->policy_type == ADDR_POLICY_ACCEPT) {
         /* If we already hit a clause that might trigger a 'reject', than we
          * can't be sure of this certain 'accept'.*/
-        return maybe_reject ? ADDR_POLICY_UNKNOWN : ADDR_POLICY_ACCEPTED;
+        return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED : ADDR_POLICY_ACCEPTED;
       } else {
-        return maybe_accept ? ADDR_POLICY_UNKNOWN : ADDR_POLICY_REJECTED;
+        return maybe_accept ? ADDR_POLICY_PROBABLY_REJECTED : ADDR_POLICY_REJECTED;
       }
     }
   }
   /* accept all by default. */
-  return maybe_reject ? ADDR_POLICY_UNKNOWN : ADDR_POLICY_ACCEPTED;
+  return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED : ADDR_POLICY_ACCEPTED;
 }
 
 /** Return 1 if all running sufficiently-stable routers will reject
@@ -1076,15 +1086,17 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
                                           int need_uptime) {
   int i;
   routerinfo_t *router;
+  addr_policy_result_t r;
   if (!routerlist) return 1;
 
   for (i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
     if (router->is_running &&
-        !router_is_unreliable(router, need_uptime, 0) &&
-        router_compare_addr_to_addr_policy(
-             addr, port, router->exit_policy) != ADDR_POLICY_REJECTED)
-      return 0; /* this one could be ok. good enough. */
+        !router_is_unreliable(router, need_uptime, 0)) {
+      r = router_compare_addr_to_addr_policy(addr, port, router->exit_policy);
+      if (r != ADDR_POLICY_REJECTED && r != ADDR_POLICY_PROBABLY_REJECTED)
+        return 0; /* this one could be ok. good enough. */
+    }
   }
   return 1; /* all will reject. */
 }

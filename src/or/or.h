@@ -1661,6 +1661,12 @@ int rend_mid_establish_rendezvous(circuit_t *circ, const char *request, size_t r
 int rend_mid_rendezvous(circuit_t *circ, const char *request, size_t request_len);
 
 /********************************* router.c ***************************/
+typedef enum {
+  ADDR_POLICY_ACCEPTED=0,
+  ADDR_POLICY_REJECTED=-1,
+  ADDR_POLICY_PROBABLY_ACCEPTED=1,
+  ADDR_POLICY_PROBABLY_REJECTED=2
+} addr_policy_result_t;
 
 void set_onion_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_onion_key(void);
@@ -1760,11 +1766,9 @@ void routerlist_remove_old_routers(int age);
 int router_load_single_router(const char *s);
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey,
                                         int dir_is_recent, int dir_is_cached);
-int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
-                                       addr_policy_t *policy);
-#define ADDR_POLICY_ACCEPTED 0
-#define ADDR_POLICY_REJECTED -1
-#define ADDR_POLICY_UNKNOWN 1
+addr_policy_result_t router_compare_addr_to_addr_policy(uint32_t addr,
+                              uint16_t port, addr_policy_t *policy);
+
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
                                           int need_uptime);
 
