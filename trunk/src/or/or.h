@@ -145,6 +145,7 @@
 #define CELL_CONNECTED 7
 
 #define CELL_PAYLOAD_SIZE 120
+#define CELL_NETWORK_SIZE 128
 
 typedef uint16_t aci_t;
 
@@ -334,13 +335,13 @@ typedef struct
   int forwf:4;
   uint16_t port;
   uint32_t addr;
-  time_t expire;
+  uint32_t expire;
   unsigned char keyseed[16];
 } onion_layer_t;
 
 typedef struct
 { 
-  time_t expire;
+  uint32_t expire;
   char digest[20]; /* SHA digest of the onion */
   void *prev;
   void *next;
@@ -495,7 +496,7 @@ int connection_state_is_open(connection_t *conn);
 
 int connection_send_destroy(aci_t aci, connection_t *conn);
 int connection_send_connected(aci_t aci, connection_t *conn);
-int connection_encrypt_cell(cell_t *cellp, connection_t *conn);
+int connection_encrypt_cell(char *cellp, connection_t *conn);
 int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn);
 
 int connection_process_inbuf(connection_t *conn);
