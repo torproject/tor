@@ -772,7 +772,7 @@ static int do_hup(void) {
     /* Rebuild fresh descriptor. */
     router_rebuild_descriptor(1);
     tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", options->DataDirectory);
-    log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
+    log_fn(LOG_INFO,"Saving descriptor to %s...",keydir);
     if (write_str_to_file(keydir, router_get_my_descriptor(), 0)) {
       return -1;
     }

@@ -285,7 +285,7 @@ directory_initiate_command(const char *address, uint32_t addr,
         router_mark_as_down(conn->identity_digest); /* don't try him again */
         if(purpose == DIR_PURPOSE_FETCH_DIR &&
            !all_trusted_directory_servers_down()) {
-          log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->address);
+          log_fn(LOG_INFO,"Giving up on dirserver '%s'; trying another.", conn->address);
           directory_get_from_dirserver(purpose, NULL);
         }
         connection_free(conn);

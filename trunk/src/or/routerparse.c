@@ -212,7 +212,7 @@ get_recommended_software_from_directory(const char *str)
 
   vl = versionlist;
 
-  log_fn(LOG_DEBUG,"checking '%s' in '%s'.", myversion, versionlist);
+  log_fn(LOG_DEBUG,"Checking whether version '%s' is in '%s'", myversion, versionlist);
 
   if (tor_version_parse(myversion, &mine)) {
     log_fn(LOG_ERR, "I couldn't parse my own version (%s)", myversion);
@@ -437,7 +437,7 @@ router_parse_routerlist_from_directory(const char *str,
                                              good_nickname_list,
                                           tok->tp==K_RUNNING_ROUTERS)==1 &&
         me->is_verified == 0 && !have_warned_about_unverified_status) {
-        log_fn(LOG_WARN,"Dirserver %s lists your server as unverified. Please consider sending your identity fingerprint to the tor-ops.", dirnickname);
+        log_fn(LOG_WARN,"Dirserver '%s' lists your server as unverified. Please consider sending your identity fingerprint to the tor-ops.", dirnickname);
         have_warned_about_unverified_status = 1;
       }
     }
@@ -495,7 +495,7 @@ router_parse_runningrouters(const char *str)
     log_fn(LOG_WARN, "Error tokenizing directory"); goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_fn(LOG_WARN, "Unrecognized keyword \"%s\"; can't parse running-routers",
+    log_fn(LOG_WARN, "Unrecognized keyword '%s'; can't parse running-routers",
            tok->args[0]);
     goto err;
   }
@@ -774,7 +774,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_fn(LOG_WARN, "Unrecognized keyword \"%s\"; skipping descriptor.",
+    log_fn(LOG_WARN, "Unrecognized keyword '%s'; skipping descriptor.",
            tok->args[0]);
     goto err;
   }
@@ -841,7 +841,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   } else if (tok) {
     if (tok->n_args < 3) {
       /* XXXX Once 0.0.7 is *really* dead, restore this warning to its old form*/
-      log_fn(LOG_WARN,"Not enough arguments to \"bandwidth\": must be an obsolete server. Rejecting (nickname %s).", router->nickname);
+      log_fn(LOG_WARN,"Not enough arguments to \"bandwidth\": must be an obsolete server. Rejecting one server (nickname '%s').", router->nickname);
       goto err;
     }
     router->bandwidthrate = tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
@@ -905,7 +905,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     router->declared_family = smartlist_create();
     for (i=0;i<tok->n_args;++i) {
       if (!is_legal_nickname_or_hexdigest(tok->args[i])) {
-        log_fn(LOG_WARN, "Illegal nickname %s in family line", tok->args[i]);
+        log_fn(LOG_WARN, "Illegal nickname '%s' in family line", tok->args[i]);
         goto err;
       }
       smartlist_add(router->declared_family, tor_strdup(tok->args[i]));
