@@ -770,8 +770,8 @@ none is available), chooses a suitable OR on that circuit to be the
 exit node (usually the last node, but maybe others due to exit policy
 conflicts; see Section~\ref{subsec:exitpolicies}), chooses a new
 random streamID for the stream, and sends a \emph{relay begin} cell
-to that exit node.  The OP uses a streamID of zero for the begin cell
-(so the OR will recognize it), and uses that streamID, destination
+to that exit node.  The OP uses a streamID of zero for this cell
+(so the OR will recognize it), and uses the new streamID, destination
 address, and port as the contents of the cell's relay payload.  Once the
 exit node completes the connection to the remote host, it responds
 with a \emph{relay connected} cell.  Upon receipt, the OP sends a
@@ -809,7 +809,7 @@ all relay cells use layered encryption, only the destination OR knows
 that a given relay cell is a request to close a stream.  This two-step
 handshake allows for TCP-based applications that use half-closed
 connections, such as broken HTTP clients that close their side of the
-stream after writing, but are still willing to read.
+stream after writing but are still willing to read.
 
 \SubSection{Integrity checking on streams}
 
@@ -835,12 +835,12 @@ more complex.
 We could do integrity checking of the relay cells at each hop, either
 by including hashes or by using an authenticating cipher mode like
 EAX \cite{eax}, but there are some problems. First, these approaches
-impose a message-expansion overhead at each hop, and we would have to
+impose a message-expansion overhead at each hop, and so we would have to
 either leak the path length or waste bytes by padding to a maximum
 path length. Second, these solutions can only verify traffic coming
 from Alice: ORs would not be able to include suitable hashes for
 the intermediate hops, since the ORs on a circuit do not know the
-other session keys. Third, we have already accepted that our design
+other ORs' session keys. Third, we have already accepted that our design
 is vulnerable to end-to-end timing attacks; tagging attacks performed
 within the circuit provide no additional information to the attacker.
 
@@ -949,8 +949,8 @@ to deliver to TCP streams outside the network. Each window is initialized
 (say, to 1000 data cells). When a data cell is packaged or delivered,
 the appropriate window is decremented. When an OR has received enough
 data cells (currently 100), it sends a \emph{relay sendme} cell towards the OP,
-with streamID zero. When an OR receives a \emph{relay sendme} cell with stream
-ID zero, it increments its packaging window. Either of these cells
+with streamID zero. When an OR receives a \emph{relay sendme} cell with
+streamID zero, it increments its packaging window. Either of these cells
 increments the corresponding window by 100. If the packaging window
 reaches 0, the OR stops reading from TCP connections for all streams
 on the corresponding circuit, and sends no more relay data cells until
