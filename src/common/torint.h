@@ -33,6 +33,9 @@
 #include <machine/limits.h>
 #endif
 #endif
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif
 
 #if (SIZEOF_INT8_T != 0)
 #define HAVE_INT8_T

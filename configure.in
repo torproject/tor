@@ -149,12 +149,13 @@ AC_CHECK_HEADERS(zlib.h, , AC_MSG_ERROR(Zlib header (zlib.h) not found. Tor requ
 
 dnl These headers are not essential
 
-AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h pthread.h stddef.h)
+AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h pthread.h stddef.h inttypes.h)
 
 AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy strtoull getpwnam ftello pthread_create gethostbyname_r getaddrinfo)
 AC_FUNC_FSEEKO
 
 AC_CHECK_MEMBERS([struct timeval.tv_sec])
+
 
 dnl In case we aren't given a working stdint.h, we'll need to grow our own.
 dnl Watch out.
@@ -179,6 +180,10 @@ AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(__int64)
 AC_CHECK_SIZEOF(void *)
+
+# We want to make sure that we _don't_ have a cell_t defined, like IRIX does.
+
+AC_CHECK_SIZEOF(cell_t)
 
 # Now, let's see about alignment requirements.  On some platforms, we override
 # the default.
