@@ -1,7 +1,7 @@
 #! /bin/sh
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DAEMON=/usr/bin/tor
+DAEMON=/usr/sbin/tor
 NAME=tor
 DESC="tor daemon"
 TORLOG=/var/log/tor/log
