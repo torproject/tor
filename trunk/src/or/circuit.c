@@ -989,6 +989,13 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
   assert(circ);
   assert(layer);
 
+  /* XXX Since we don't ask for truncates currently, getting a truncated
+   *     means that a connection broke or an extend failed. For now,
+   *     just give up.
+   */
+  circuit_close(circ);
+  return 0;
+
   while(layer->next != circ->cpath) {
     /* we need to clear out layer->next */
     victim = layer->next;
