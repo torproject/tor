@@ -84,7 +84,10 @@ int has_fetched_directory=0;
  * entry to inform the user that Tor is working. */
 int has_completed_circuit=0;
 
-/* #define MS_WINDOWS_SERVICE */
+#ifdef MS_WINDOWS
+#define MS_WINDOWS_SERVICE
+#endif
+
 #ifdef MS_WINDOWS_SERVICE
 #include <tchar.h>
 #define GENSRV_SERVICENAME  TEXT("tor")
