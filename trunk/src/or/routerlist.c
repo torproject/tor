@@ -26,6 +26,9 @@ static int router_resolve_routerlist(routerlist_t *dir);
 
 /****************************************************************************/
 
+/** List of digests of keys for servers that are trusted directories. */
+static smartlist_t *trusted_dir_digests = NULL;
+
 /****
  * Functions to manage and access our list of known routers. (Note:
  * dirservers maintain a separate, independent list of known router
@@ -306,6 +309,16 @@ routerinfo_t *router_get_by_nickname(const char *nickname)
   return NULL;
 }
 
+/** Return true iff <b>digest</b> is the digest of the identity key of
+ * a trusted directory. */
+int router_digest_is_trusted_dir(const char *digest) {
+  if (!trusted_dir_digests)
+    return 0;
+  SMARTLIST_FOREACH(trusted_dir_digests, char *, cp,
+                    if (!memcmp(digest, cp, DIGEST_LEN)) return 1);
+  return 0;
+}
+
 /** Return the router in our routerlist whose hexadecimal key digest
  * is <b>hexdigest</b>.  Return NULL if no such router is known. */
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest) {
@@ -527,9 +540,14 @@ int router_load_routerlist_from_file(char *routerfile, int trusted)
 /** Mark all directories in the routerlist as nontrusted. */
 void routerlist_clear_trusted_directories(void)
 {
-  if (!routerlist) return;
-  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
-                    r->is_trusted_dir = 0);
+  if (routerlist) {
+    SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
+                      r->is_trusted_dir = 0);
+  }
+  if (trusted_dir_digests) {
+    SMARTLIST_FOREACH(trusted_dir_digests, char *, cp, tor_free(cp));
+    smartlist_clear(trusted_dir_digests);
+  }
 }
 
 /** Helper function: read routerinfo elements from s, and throw out the
@@ -546,8 +564,19 @@ int router_load_routerlist_from_string(const char *s, int trusted)
     return -1;
   }
   if (trusted) {
-    SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
-                      if (r->dir_port) r->is_trusted_dir = 1);
+    int i;
+    if (!trusted_dir_digests)
+      trusted_dir_digests = smartlist_create();
+    for (i=0;i<smartlist_len(new_list->routers);++i) {
+      routerinfo_t *r = smartlist_get(new_list->routers, i);
+      if (r->dir_port) {
+        char *b;
+        r->is_trusted_dir = 1;
+        b = tor_malloc(DIGEST_LEN);
+        memcpy(b, r->identity_digest, DIGEST_LEN);
+        smartlist_add(trusted_dir_digests, b);
+      }
+    }
   }
   if (routerlist) {
     SMARTLIST_FOREACH(new_list->routers, routerinfo_t *, r,
