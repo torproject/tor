@@ -260,7 +260,6 @@ rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_l
 int
 rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request_len)
 {
-  connection_t *apconn;
   crypt_path_t *hop;
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
 
