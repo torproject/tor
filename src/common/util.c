@@ -1773,7 +1773,7 @@ char *expand_filename(const char *filename)
      * Round up to 16 in case we can't do math. */
     len = strlen(home)+strlen(filename)+16;
     result = tor_malloc(len);
-    snprintf(result,len,"%s/%s",home,filename+2);
+    tor_snprintf(result,len,"%s/%s",home,filename+2);
     return result;
   } else {
     return tor_strdup(filename);
@@ -1847,7 +1847,7 @@ get_uname(void)
 #ifdef HAVE_UNAME
     if (uname(&u) != -1) {
       /* (linux says 0 is success, solaris says 1 is success) */
-      snprintf(uname_result, 255, "%s %s %s",
+      tor_snprintf(uname_result, 255, "%s %s %s",
                u.sysname, u.nodename, u.machine);
       uname_result[255] = '\0';
     } else

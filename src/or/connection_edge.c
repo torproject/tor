@@ -502,12 +502,12 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
     in.s_addr = htonl(client_dns_lookup_entry(ap_conn->socks_request->address));
     string_addr = in.s_addr ? inet_ntoa(in) : NULL;
 
-    snprintf(payload,RELAY_PAYLOAD_SIZE,
+    tor_snprintf(payload,RELAY_PAYLOAD_SIZE,
              "%s:%d",
              string_addr ? string_addr : ap_conn->socks_request->address,
              ap_conn->socks_request->port);
   } else {
-    snprintf(payload,RELAY_PAYLOAD_SIZE,
+    tor_snprintf(payload,RELAY_PAYLOAD_SIZE,
              ":%d", ap_conn->socks_request->port);
   }
   payload_len = strlen(payload)+1;

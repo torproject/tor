@@ -101,9 +101,9 @@ void rotate_onion_key(void)
   char fname[512];
   char fname_prev[512];
   crypto_pk_env_t *prkey;
-  snprintf(fname,sizeof(fname),
+  tor_snprintf(fname,sizeof(fname),
            "%s/keys/secret_onion_key",get_data_directory(&options));
-  snprintf(fname_prev,sizeof(fname_prev),
+  tor_snprintf(fname_prev,sizeof(fname_prev),
            "%s/keys/secret_onion_key.old",get_data_directory(&options));
   if (!(prkey = crypto_new_pk_env())) {
     log(LOG_ERR, "Error creating crypto environment.");
@@ -264,27 +264,27 @@ int init_keys(void) {
     return -1;
   }
   /* Check the key directory. */
-  snprintf(keydir,sizeof(keydir),"%s/keys", datadir);
+  tor_snprintf(keydir,sizeof(keydir),"%s/keys", datadir);
   if (check_private_dir(keydir, 1)) {
     return -1;
   }
   cp = keydir + strlen(keydir); /* End of string. */
 
   /* 1. Read identity key. Make it if none is found. */
-  snprintf(keydir,sizeof(keydir),"%s/keys/identity.key",datadir);
-  snprintf(keydir2,sizeof(keydir2),"%s/keys/secret_id_key",datadir);
+  tor_snprintf(keydir,sizeof(keydir),"%s/keys/identity.key",datadir);
+  tor_snprintf(keydir2,sizeof(keydir2),"%s/keys/secret_id_key",datadir);
   log_fn(LOG_INFO,"Reading/making identity key %s...",keydir2);
   prkey = init_key_from_file_name_changed(keydir,keydir2);
   if (!prkey) return -1;
   set_identity_key(prkey);
   /* 2. Read onion key.  Make it if none is found. */
-  snprintf(keydir,sizeof(keydir),"%s/keys/onion.key",datadir);
-  snprintf(keydir2,sizeof(keydir2),"%s/keys/secret_onion_key",datadir);
+  tor_snprintf(keydir,sizeof(keydir),"%s/keys/onion.key",datadir);
+  tor_snprintf(keydir2,sizeof(keydir2),"%s/keys/secret_onion_key",datadir);
   log_fn(LOG_INFO,"Reading/making onion key %s...",keydir2);
   prkey = init_key_from_file_name_changed(keydir,keydir2);
   if (!prkey) return -1;
   set_onion_key(prkey);
-  snprintf(keydir,sizeof(keydir),"%s/keys/secret_onion_key.old",datadir);
+  tor_snprintf(keydir,sizeof(keydir),"%s/keys/secret_onion_key.old",datadir);
   if (file_status(keydir) == FN_FILE) {
     prkey = init_key_from_file(keydir);
     if (prkey)
@@ -316,13 +316,13 @@ int init_keys(void) {
     }
   }
 
-  snprintf(keydir,sizeof(keydir),"%s/router.desc", datadir);
+  tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", datadir);
   log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
   if (write_str_to_file(keydir, mydesc,0)) {
     return -1;
   }
   /* 5. Dump fingerprint to 'fingerprint' */
-  snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
+  tor_snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
   log_fn(LOG_INFO,"Dumping fingerprint to %s...",keydir);
   tor_assert(strlen(options.Nickname) <= MAX_NICKNAME_LEN);
   strlcpy(fingerprint, options.Nickname, sizeof(fingerprint));
@@ -338,7 +338,7 @@ int init_keys(void) {
   if(!authdir_mode())
     return 0;
   /* 6. [authdirserver only] load approved-routers file */
-  snprintf(keydir,sizeof(keydir),"%s/approved-routers", datadir);
+  tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", datadir);
   log_fn(LOG_INFO,"Loading approved fingerprints from %s...",keydir);
   if(dirserv_parse_fingerprint_file(keydir) < 0) {
     log_fn(LOG_ERR, "Error loading fingerprints");
@@ -350,7 +350,7 @@ int init_keys(void) {
     add_trusted_dir_server(options.Address, (uint16_t)options.DirPort, digest);
   }
   /* 7. [authdirserver only] load old directory, if it's there */
-  snprintf(keydir,sizeof(keydir),"%s/cached-directory", datadir);
+  tor_snprintf(keydir,sizeof(keydir),"%s/cached-directory", datadir);
   log_fn(LOG_INFO,"Loading cached directory from %s...",keydir);
   cp = read_file_to_str(keydir,0);
   if(!cp) {
@@ -568,7 +568,7 @@ int router_rebuild_descriptor(void) {
  */
 void get_platform_str(char *platform, size_t len)
 {
-  snprintf(platform, len-1, "Tor %s on %s",
+  tor_snprintf(platform, len-1, "Tor %s on %s",
            VERSION, get_uname());
   platform[len-1] = '\0';
   return;
@@ -643,14 +643,14 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     char *s = smartlist_join_strings(router->declared_family, " ", 0);
     size_t n = strlen(s) + strlen("opt family ") + 2; /* 1 for \n, 1 for \0. */
     family_line = tor_malloc(n);
-    snprintf(family_line, n, "opt family %s\n", s);
+    tor_snprintf(family_line, n, "opt family %s\n", s);
     tor_free(s);
   } else {
     family_line = tor_strdup("");
   }
 
   /* Generate the easy portion of the router descriptor. */
-  result = snprintf(s, maxlen,
+  result = tor_snprintf(s, maxlen,
                     "router %s %s %d %d %d\n"
                     "platform %s\n"
                     "published %s\n"
@@ -679,14 +679,14 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   tor_free(bandwidth_usage);
 
   if(result < 0 || (size_t)result >= maxlen) {
-    /* apparently different glibcs do different things on snprintf error.. so check both */
+    /* apparently different glibcs do different things on tor_snprintf error.. so check both */
     return -1;
   }
   /* From now on, we use 'written' to remember the current length of 's'. */
   written = result;
 
   if (options.ContactInfo && strlen(options.ContactInfo)) {
-    result = snprintf(s+written,maxlen-written, "opt contact %s\n",
+    result = tor_snprintf(s+written,maxlen-written, "opt contact %s\n",
                       options.ContactInfo);
     if (result<0 || result+written > maxlen)
       return -1;
@@ -697,18 +697,18 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   for(tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
     in.s_addr = htonl(tmpe->addr);
     /* Write: "accept 1.2.3.4" */
-    result = snprintf(s+written, maxlen-written, "%s %s",
+    result = tor_snprintf(s+written, maxlen-written, "%s %s",
         tmpe->policy_type == EXIT_POLICY_ACCEPT ? "accept" : "reject",
         tmpe->msk == 0 ? "*" : inet_ntoa(in));
     if(result < 0 || result+written > maxlen) {
-      /* apparently different glibcs do different things on snprintf error.. so check both */
+      /* apparently different glibcs do different things on tor_snprintf error.. so check both */
       return -1;
     }
     written += result;
     if (tmpe->msk != 0xFFFFFFFFu && tmpe->msk != 0) {
       /* Write "/255.255.0.0" */
       in.s_addr = htonl(tmpe->msk);
-      result = snprintf(s+written, maxlen-written, "/%s", inet_ntoa(in));
+      result = tor_snprintf(s+written, maxlen-written, "/%s", inet_ntoa(in));
       if (result<0 || result+written > maxlen)
         return -1;
       written += result;
@@ -721,13 +721,13 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
       written += 3;
     } else if (tmpe->prt_min == tmpe->prt_max) {
       /* There is only one port; write ":80". */
-      result = snprintf(s+written, maxlen-written, ":%d\n", tmpe->prt_min);
+      result = tor_snprintf(s+written, maxlen-written, ":%d\n", tmpe->prt_min);
       if (result<0 || result+written > maxlen)
         return -1;
       written += result;
     } else {
       /* There is a range of ports; write ":79-80". */
-      result = snprintf(s+written, maxlen-written, ":%d-%d\n", tmpe->prt_min,
+      result = tor_snprintf(s+written, maxlen-written, ":%d-%d\n", tmpe->prt_min,
                         tmpe->prt_max);
       if (result<0 || result+written > maxlen)
         return -1;

@@ -50,7 +50,7 @@ int router_reload_router_list(void)
   char filename[512];
   if (get_data_directory(&options)) {
     char *s;
-    snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
+    tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
     s = read_file_to_str(filename,0);
     if (s) {
       tor_strstrip(s,"\r"); /* XXXX This is a bug workaround for win32. */
@@ -167,7 +167,7 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall)
     if(requireothers && router_is_me(router))
       continue;
     if(fascistfirewall) {
-      snprintf(buf,sizeof(buf),"%d",router->dir_port);
+      tor_snprintf(buf,sizeof(buf),"%d",router->dir_port);
       if (!smartlist_string_isin(options.FirewallPorts, buf))
         continue;
     }
@@ -202,7 +202,7 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
           !memcmp(me->identity_digest, d->digest, DIGEST_LEN))
         continue;
       if (fascistfirewall) {
-        snprintf(buf,sizeof(buf),"%d",d->dir_port);
+        tor_snprintf(buf,sizeof(buf),"%d",d->dir_port);
         if (!smartlist_string_isin(options.FirewallPorts, buf))
           continue;
       }

@@ -131,7 +131,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
        * descriptor -- those use Tor. */
       if (options.FascistFirewall && purpose == DIR_PURPOSE_UPLOAD_DIR &&
           !options.HttpProxy) {
-        snprintf(buf,sizeof(buf),"%d",ds->dir_port);
+        tor_snprintf(buf,sizeof(buf),"%d",ds->dir_port);
         if (!smartlist_string_isin(options.FirewallPorts, buf))
           continue;
       }
@@ -325,10 +325,10 @@ directory_send_command(connection_t *conn, const char *platform,
   if(conn->port == 80) {
     strlcpy(hoststring, conn->address, sizeof(hoststring));
   } else {
-    snprintf(hoststring, sizeof(hoststring),"%s:%d",conn->address, conn->port);
+    tor_snprintf(hoststring, sizeof(hoststring),"%s:%d",conn->address, conn->port);
   }
   if(options.HttpProxy) {
-    snprintf(proxystring, sizeof(proxystring),"http://%s", hoststring);
+    tor_snprintf(proxystring, sizeof(proxystring),"http://%s", hoststring);
   } else {
     proxystring[0] = 0;
   }
@@ -361,7 +361,7 @@ directory_send_command(connection_t *conn, const char *platform,
       conn->rend_query[payload_len] = 0;
 
       httpcommand = "GET";
-      snprintf(url, sizeof(url), "%s/rendezvous/%s", use_newer ? "/tor" : "", payload);
+      tor_snprintf(url, sizeof(url), "%s/rendezvous/%s", use_newer ? "/tor" : "", payload);
 
       /* XXX We're using payload here to mean something other than
        * payload of the http post. This is probably bad, and should
@@ -373,11 +373,11 @@ directory_send_command(connection_t *conn, const char *platform,
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       tor_assert(payload);
       httpcommand = "POST";
-      snprintf(url, sizeof(url), "%s/rendezvous/publish", use_newer ? "/tor" : "");
+      tor_snprintf(url, sizeof(url), "%s/rendezvous/publish", use_newer ? "/tor" : "");
       break;
   }
 
-  snprintf(tmp, sizeof(tmp), "%s %s%s HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s\r\n\r\n",
+  tor_snprintf(tmp, sizeof(tmp), "%s %s%s HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s\r\n\r\n",
            httpcommand,
            proxystring,
            url,
@@ -758,7 +758,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     log_fn(LOG_DEBUG,"Dumping %sdirectory to client.", 
            deflated?"deflated ":"");
     format_rfc1123_time(date, time(NULL));
-    snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\nContent-Encoding: %s\r\n\r\n",
+    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\nContent-Encoding: %s\r\n\r\n",
              date,
              (int)dlen,
              deflated?"deflate":"identity");
@@ -781,7 +781,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     }
 
     format_rfc1123_time(date, time(NULL));
-    snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
+    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
              date,
              (int)dlen);
     connection_write_to_buf(tmp, strlen(tmp), conn);
@@ -807,7 +807,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     switch(rend_cache_lookup_desc(url+strlen("/tor/rendezvous/"), &descp, &desc_len)) {
       case 1: /* valid */
         format_rfc1123_time(date, time(NULL));
-        snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
+        tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
                  date,
                  (int)desc_len); /* can't include descp here, because it's got nuls */
         connection_write_to_buf(tmp, strlen(tmp), conn);

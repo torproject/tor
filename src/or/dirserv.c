@@ -616,7 +616,7 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
   dirserv_remove_old_servers(ROUTER_MAX_AGE);
   published_on = time(NULL);
   format_iso_time(published, published_on);
-  snprintf(s, maxlen,
+  tor_snprintf(s, maxlen,
            "signed-directory\n"
            "published %s\n"
            "recommended-software %s\n"
@@ -711,7 +711,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
     }
     cached_directory_published = when;
     if(get_data_directory(&options)) {
-      snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
+      tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
       if(write_str_to_file(filename,cached_directory,0) < 0) {
         log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
       }
@@ -783,7 +783,7 @@ static int dirserv_regenerate_directory(void)
   }
   tor_free(new_directory);
   if(get_data_directory(&options)) {
-    snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
+    tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
     if(write_str_to_file(filename,the_directory,0) < 0) {
       log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
     }
@@ -833,7 +833,7 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
 #endif
   published_on = time(NULL);
   format_iso_time(published, published_on);
-  snprintf(s, len, "network-status\n"
+  tor_snprintf(s, len, "network-status\n"
              "published %s\n"
              "router-status %s\n"
              "opt dir-signing-key %s\n"

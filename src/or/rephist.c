@@ -279,8 +279,8 @@ void rep_hist_dump_stats(time_t now, int severity)
           name2 = "(unknown)";
 
         link_history = (link_history_t*) link_history_p;
-/* XXX009 snprintf can return -1 for error also. need to detect. */
-        len += snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
+/* XXX009 tor_snprintf can return -1 for error also. need to detect. */
+        len += tor_snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
                         link_history->n_extend_ok,
                         link_history->n_extend_ok+link_history->n_extend_fail);
         if (len >= 2048) {
@@ -307,7 +307,7 @@ void write_rep_history(const char *filename)
   const char *name1;
 
   tmpfile = tor_malloc(strlen(filename)+5);
-  snprintf(tmpfile, strlen(filename)+5, "%s_tmp", filename);
+  tor_snprintf(tmpfile, strlen(filename)+5, "%s_tmp", filename);
 
   f = fopen(tmpfile, "w");
   if (!f) goto done;
@@ -527,7 +527,7 @@ char *rep_hist_get_bandwidth_lines(void)
   for (r=0;r<2;++r) {
     b = r?read_array:write_array;
     format_iso_time(t, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
-    snprintf(cp, len-(cp-buf), "opt %s %s (%d s) ", r?"read-history ":"write-history", t,
+    tor_snprintf(cp, len-(cp-buf), "opt %s %s (%d s) ", r?"read-history ":"write-history", t,
             NUM_SECS_BW_SUM_INTERVAL);
     cp += strlen(cp);
 
@@ -542,9 +542,9 @@ char *rep_hist_get_bandwidth_lines(void)
     for (n=0; n<b->num_maxes_set; ++n,++i) {
       while (i >= NUM_TOTALS) i -= NUM_TOTALS;
       if (n==(b->num_maxes_set-1))
-        snprintf(cp, len-(cp-buf), "%d", b->totals[i]);
+        tor_snprintf(cp, len-(cp-buf), "%d", b->totals[i]);
       else
-        snprintf(cp, len-(cp-buf), "%d,", b->totals[i]);
+        tor_snprintf(cp, len-(cp-buf), "%d,", b->totals[i]);
       cp += strlen(cp);
     }
     strlcat(cp, "\n", len-(cp-buf));

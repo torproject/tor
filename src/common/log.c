@@ -16,12 +16,6 @@
 #include "./util.h"
 #include "./log.h"
 
-
-#ifdef MS_WINDOWS
-#define vsnprintf _vsnprintf
-#define snprintf _snprintf
-#endif
-
 #define TRUNCATED_STR "[...truncated]"
 #define TRUNCATED_STR_LEN 14
 
@@ -65,19 +59,19 @@ _log_prefix(char *buf, size_t buf_len, int severity)
   time_t t;
   struct timeval now;
   size_t n;
+  int r;
 
   tor_gettimeofday(&now);
   t = (time_t)now.tv_sec;
 
   n = strftime(buf, buf_len, "%b %d %H:%M:%S", localtime(&t));
-  n += snprintf(buf+n, buf_len-n,
+  r = tor_snprintf(buf+n, buf_len-n,
                 ".%.3ld [%s] ",
                 (long)now.tv_usec / 1000, sev_to_string(severity));
-  if(n > buf_len)
-    n = buf_len-1; /* the *nprintf funcs return how many bytes they
-                    * _would_ print, if the output is truncated.
-                    * Subtract one because the count doesn't include the \0 */
-  return n;
+  if (r<0)
+    return buf_len-1;
+  else
+    return n+r;
 }
 
 /** If lf refers to an actual file that we have just opened, and the file
@@ -99,12 +93,9 @@ static void log_tor_version(logfile_t *lf, int reset)
     /* We are resetting, but we aren't at the start of the file; no
      * need to log again. */
     return;
-  n = _log_prefix(buf, 250, LOG_NOTICE);
-  n += snprintf(buf+n, 250-n, "Tor %s opening %slog file.\n", VERSION,
-                is_new?"new ":"");
-  if (n>250)
-    n = 250;
-  buf[n+1]='\0';
+  n = _log_prefix(buf, sizeof(buf), LOG_NOTICE);
+  tor_snprintf(buf+n, sizeof(buf)-n,
+               "Tor %s opening %slog file.\n", VERSION, is_new?"new ":"");
   fputs(buf, lf->file);
 }
 
@@ -118,6 +109,7 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
                               const char *format, va_list ap)
 {
   size_t n;
+  int r;
   char *end_of_prefix;
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
 
@@ -125,15 +117,18 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
   end_of_prefix = buf+n;
 
   if (funcname) {
-    n += snprintf(buf+n, buf_len-n, "%s(): ", funcname);
-    if(n > buf_len)
-      n = buf_len-1;
+    r = tor_snprintf(buf+n, buf_len-n, "%s(): ", funcname);
+    if (r<0)
+      n = strlen(buf);
+    else
+      n += r;
   }
-
-  n += vsnprintf(buf+n,buf_len-n,format,ap);
-  if(n > buf_len) {
-    n = buf_len-1;
-    strcpy(buf+n-TRUNCATED_STR_LEN, TRUNCATED_STR);
+  
+  n += tor_vsnprintf(buf+n,buf_len-n,format,ap);
+  if(n < 0) {
+    n = buf_len-2;
+    strlcpy(buf+buf_len-TRUNCATED_STR_LEN-1, TRUNCATED_STR,
+            buf_len-(buf_len-TRUNCATED_STR_LEN-1));
   }
   buf[n]='\n';
   buf[n+1]='\0';
@@ -142,7 +137,7 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
 
 /** Helper: sends a message to the appropriate logfiles, at loglevel
  * <b>severity</b>.  If provided, <b>funcname</b> is prepended to the
- * message.  The actual message is derived as from vsnprintf(format,ap).
+ * message.  The actual message is derived as from tor_snprintf(format,ap).
  */
 static void
 logv(int severity, const char *funcname, const char *format, va_list ap)
