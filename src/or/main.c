@@ -53,13 +53,6 @@ static int please_sigpipe=0; /**< Whether we've caught a sigpipe lately. */
 static int please_shutdown=0; /**< Whether we should shut down Tor. */
 #endif /* signal stuff */
 
-/** We should exit if shutting_down != 0 and now <= shutting_down.
- * If it's non-zero, don't accept any new circuits or connections.
- * This gets assigned when we receive a sig_int, and if we receive a
- * second one we exit immediately. */
-int shutting_down=0;
-#define SHUTDOWN_WAIT_LENGTH 30 /* seconds */
-
 /** We set this to 1 when we've fetched a dir, to know whether to complain
  * yet about unrecognized nicknames in entrynodes, exitnodes, etc.
  * Also, we don't try building circuits unless this is 1. */
@@ -373,7 +366,8 @@ void directory_has_arrived(time_t now) {
   if (!time_to_fetch_directory)
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
 
-  if(server_mode()) { /* connect to the appropriate routers */
+  if (server_mode() &&
+      !we_are_hibernating()) { /* connect to the appropriate routers */
     router_retry_connections();
   }
 }
@@ -400,9 +394,10 @@ static void run_connection_housekeeping(int i, time_t now) {
      now >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     if((!connection_state_is_open(conn)) ||
+       (we_are_hibernating() && !circuit_get_by_conn(conn)) ||
        (!clique_mode() && !circuit_get_by_conn(conn) &&
        (!router || !server_mode() || !router_is_clique_mode(router)))) {
-      /* our handshake has expired;
+      /* our handshake has expired; we're hibernating;
        * or we have no circuits and we're both either OPs or normal ORs,
        * then kill it. */
       log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
@@ -510,13 +505,10 @@ static void run_scheduled_events(time_t now) {
   int i;
 
   /** 0. See if we've been asked to shut down and our timeout has
-   * expired. If so, exit now.
+   * expired; or if our bandwidth limits are exhausted and we
+   * should hibernate; or if it's time to wake up from hibernation.
    */
-  if(shutting_down && shutting_down <= now) {
-    log(LOG_NOTICE,"Clean shutdown finished. Exiting.");
-    tor_cleanup();
-    exit(0);
-  }
+  consider_hibernation(now);
 
   /** 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
    *  shut down and restart all cpuworkers, and update the directory if
@@ -566,7 +558,7 @@ static void run_scheduled_events(time_t now) {
       /* We're a directory; dump any old descriptors. */
       dirserv_remove_old_servers(ROUTER_MAX_AGE);
     }
-    if(server_mode()) {
+    if(server_mode() && !we_are_hibernating()) {
       /* dirservers try to reconnect, in case connections have failed;
        * and normal servers try to reconnect to dirservers */
       router_retry_connections();
@@ -574,9 +566,11 @@ static void run_scheduled_events(time_t now) {
 
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
 
-    /* Force an upload of our rend descriptors every DirFetchPostPeriod seconds. */
-    rend_services_upload(1);
-    last_uploaded_services = now;
+    if(!we_are_hibernating()) {
+      /* Force an upload of our rend descriptors every DirFetchPostPeriod seconds. */
+      rend_services_upload(1);
+      last_uploaded_services = now;
+    }
     rend_cache_clean(); /* should this go elsewhere? */
 
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
@@ -601,8 +595,8 @@ static void run_scheduled_events(time_t now) {
    */
   connection_expire_held_open();
 
-  /** 3d. And every 60 secionds, we relaunch listeners if any died. */
-  if (time_to_check_listeners < now) {
+  /** 3d. And every 60 seconds, we relaunch listeners if any died. */
+  if (!we_are_hibernating() && time_to_check_listeners < now) {
     retry_all_listeners(0); /* 0 means "only if some died." */
     time_to_check_listeners = now+60;
   }
@@ -612,7 +606,7 @@ static void run_scheduled_events(time_t now) {
    *    that became dirty more than NewCircuitPeriod seconds ago,
    *    and we make a new circ if there are no clean circuits.
    */
-  if(has_fetched_directory)
+  if(has_fetched_directory && !we_are_hibernating())
     circuit_build_needed_circs(now);
 
   /** 5. We do housekeeping for each connection... */
@@ -842,14 +836,7 @@ static int do_main_loop(void) {
         tor_cleanup();
         exit(0);
       }
-      if(shutting_down) { /* we've already been asked. do it now. */
-        log(LOG_NOTICE,"Second sigint received; exiting now.");
-        tor_cleanup();
-        exit(0);
-      } else {
-        log(LOG_NOTICE,"Interrupt: will shut down in %d seconds. Interrupt again to exit now.", SHUTDOWN_WAIT_LENGTH);
-        shutting_down = time(NULL) + SHUTDOWN_WAIT_LENGTH;
-      }
+      hibernate_begin_shutdown();
       please_shutdown = 0;
     }
     if(please_sigpipe) {

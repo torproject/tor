@@ -1236,6 +1236,12 @@ void assert_all_pending_dns_resolves_ok(void);
 void dns_cancel_pending_resolve(char *question);
 int dns_resolve(connection_t *exitconn);
 
+/********************************* hibernate.c **********************/
+
+void hibernate_begin_shutdown(void);
+int we_are_hibernating(void);
+void consider_hibernation(time_t now);
+
 /********************************* main.c ***************************/
 
 int connection_add(connection_t *conn);

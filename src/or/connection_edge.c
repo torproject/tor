@@ -804,6 +804,11 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   n_stream->state = EXIT_CONN_STATE_RESOLVEFAILED;
   /* default to failed, change in dns_resolve if it turns out not to fail */
 
+  if(we_are_hibernating()) {
+    connection_edge_end(n_stream, END_STREAM_REASON_EXITPOLICY, n_stream->cpath_layer);
+    connection_free(n_stream);
+  }
+
   /* send it off to the gethostbyname farm */
   switch(dns_resolve(n_stream)) {
     case 1: /* resolve worked */
