@@ -482,12 +482,16 @@ void smartlist_insert(smartlist_t *sl, int idx, void *val)
 }
 
 /**
- * Split a string <b>str</b> along all occurences of <b>sep</b>, adding the
- * split strings, in order, to <b>sl</b>.  If <b>skipSpace</b> is true,
- * remove initial and trailing space from each entry.
+ * Split a string <b>str</b> along all occurences of <b>sep</b>,
+ * adding the split strings, in order, to <b>sl</b>.  If
+ * <b>flags</b>&amp;SPLIT_SKIP_SPACE is true, remove initial and
+ * trailing space from each entry.  If
+ * <b>flags</b>&amp;SPLIT_IGNORE_BLANK is true, remove any entries of
+ * length 0.  If max>0, divide the string into no more than <b>max</b>
+ * pieces.
  */
 int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
-                           int skipSpace)
+                           int flags, int max)
 {
   const char *cp, *end, *next;
   int n = 0;
@@ -496,23 +500,31 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
 
   cp = str;
   while (1) {
-    if (skipSpace) {
+    if (flags&SPLIT_SKIP_SPACE) {
       while (isspace((int)*cp)) ++cp;
     }
-    end = strstr(cp,sep);
-    if (!end) {
+
+    if (max>0 && n == max-1) {
       end = strchr(cp,'\0');
+    } else {
+      end = strstr(cp,sep);
+      if (!end)
+        end = strchr(cp,'\0');
+    }
+    if (!*end) {
       next = NULL;
     } else {
       next = end+strlen(sep);
     }
 
-    if (skipSpace) {
+    if (flags&SPLIT_SKIP_SPACE) {
       while (end > cp && isspace((int)*(end-1)))
         --end;
     }
-    smartlist_add(sl, tor_strndup(cp, end-cp));
-    ++n;
+    if (end != cp || !(flags&SPLIT_IGNORE_BLANK)) {
+      smartlist_add(sl, tor_strndup(cp, end-cp));
+      ++n;
+    }
     if (!next)
       break;
     cp = next;
@@ -797,6 +809,15 @@ void tor_strlower(char *s)
     *s = tolower(*s);
     ++s;
   }
+}
+
+/* Compares the first strlen(s2) characters of s1 with s2.  Returns as for
+ * strcmp.
+ */
+int strcmpstart(const char *s1, const char *s2)
+{
+  size_t n = strlen(s2);
+  return strncmp(s1, s2, n);
 }
 
 

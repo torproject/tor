@@ -86,6 +86,7 @@ char *tor_strdup(const char *s);
 char *tor_strndup(const char *s, size_t n);
 #define tor_free(p) do {if(p) {free(p); (p)=NULL;}} while(0)
 void tor_strlower(char *s);
+int strcmpstart(const char *s1, const char *s2);
 
 /* Some platforms segfault when you try to access a multi-byte type
  * that isn't aligned to a word boundary.  The macros and/or functions
@@ -153,8 +154,10 @@ void *smartlist_del(smartlist_t *sl, int idx);
 void *smartlist_del_keeporder(smartlist_t *sl, int idx);
 void smartlist_insert(smartlist_t *sl, int idx, void *val);
 int smartlist_len(const smartlist_t *sl);
+#define SPLIT_SKIP_SPACE   0x01
+#define SPLIT_IGNORE_BLANK 0x02
 int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
-  int skipSpace);
+                           int flags, int max);
 
 #define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
   do {                                                          \
