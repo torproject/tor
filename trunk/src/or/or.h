@@ -1387,6 +1387,7 @@ int proxy_mode(or_options_t *options);
 
 void handle_signals(int is_parent);
 void tor_cleanup(void);
+int network_init(void);
 
 int tor_main(int argc, char *argv[]);
 
