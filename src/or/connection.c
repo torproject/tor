@@ -805,7 +805,6 @@ void assert_connection_ok(connection_t *conn, time_t now)
 {
   assert(conn);
   assert(conn->magic == CONNECTION_MAGIC);
-  return; /* XXX !!! */
   assert(conn->type >= _CONN_TYPE_MIN);
   assert(conn->type <= _CONN_TYPE_MAX);
 
