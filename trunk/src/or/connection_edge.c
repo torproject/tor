@@ -13,8 +13,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                                int replylen, char success);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
-static void connection_edge_consider_sending_sendme(connection_t *conn, 
-                                                    int edge_type);
+static void connection_edge_consider_sending_sendme(connection_t *conn);
 
 int connection_edge_process_inbuf(connection_t *conn) {
 
@@ -112,15 +111,15 @@ void connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_la
   conn->has_sent_end = 1;
 }
 
-void connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command,
-                                  void *payload, int payload_len, crypt_path_t *cpath_layer) {
+int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command,
+                                 void *payload, int payload_len, crypt_path_t *cpath_layer) {
   cell_t cell;
   int cell_direction;
   int is_control_cell=0;
 
   if(!circ) {
     log_fn(LOG_WARN,"no circ. Closing.");
-    return;
+    return 0;
   }
 
   if(!fromconn || relay_command == RELAY_COMMAND_BEGIN) /* XXX more */
@@ -153,7 +152,9 @@ void connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int r
   if(circuit_deliver_relay_cell(&cell, circ, cell_direction, cpath_layer) < 0) {
     log_fn(LOG_WARN,"circuit_deliver_relay_cell failed. Closing.");
     circuit_close(circ);
+    return -1;
   }
+  return 0;
 }
 
 /* an incoming relay cell has arrived. return -1 if you want to tear down the
@@ -231,7 +232,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       stats_n_data_bytes_received += (cell->length - RELAY_HEADER_SIZE);
       connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
                              cell->length - RELAY_HEADER_SIZE, conn);
-      connection_edge_consider_sending_sendme(conn, edge_type);
+      connection_edge_consider_sending_sendme(conn);
       return 0;
     case RELAY_COMMAND_END:
       if(!conn) {
@@ -372,13 +373,14 @@ int connection_edge_finished_flushing(connection_t *conn) {
       if(connection_wants_to_flush(conn)) /* in case there are any queued relay cells */
         connection_start_writing(conn);
       /* deliver a 'connected' relay cell back through the circuit. */
-      connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
-                                   NULL, 0, conn->cpath_layer);
+      if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
+         RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
+        return 0; /* circuit is closed, don't continue */
       return connection_process_inbuf(conn); /* in case the server has written anything */
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       connection_stop_writing(conn);
-      connection_edge_consider_sending_sendme(conn, conn->type);
+      connection_edge_consider_sending_sendme(conn);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
       connection_stop_writing(conn);
@@ -438,8 +440,9 @@ repeat_connection_edge_package_raw_inbuf:
   log_fn(LOG_DEBUG,"(%d) Packaging %d bytes (%d waiting).",conn->s,length,
          (int)buf_datalen(conn->inbuf));
  
-  connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
-                               payload, length, conn->cpath_layer);
+  if(connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
+                               payload, length, conn->cpath_layer) < 0)
+    return 0; /* circuit is closed, don't continue */
 
   if(conn->type == CONN_TYPE_EXIT) {
     assert(circ->package_window > 0);
@@ -462,38 +465,27 @@ repeat_connection_edge_package_raw_inbuf:
   goto repeat_connection_edge_package_raw_inbuf;
 }
 
-static void connection_edge_consider_sending_sendme(connection_t *conn, int edge_type) {
+static void connection_edge_consider_sending_sendme(connection_t *conn) {
   circuit_t *circ;
-  cell_t cell;
  
   if(connection_outbuf_too_full(conn))
     return;
  
   circ = circuit_get_by_conn(conn);
   if(!circ) {
-    /* this can legitimately happen if the destroy has already arrived and torn down the circuit */
+    /* this can legitimately happen if the destroy has already
+     * arrived and torn down the circuit */
     log_fn(LOG_INFO,"No circuit associated with conn. Skipping.");
     return;
   }
  
-  memset(&cell, 0, sizeof(cell_t));
-  cell.command = CELL_RELAY;
-  SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_SENDME);
-  SET_CELL_STREAM_ID(cell, conn->stream_id);
-  cell.length += RELAY_HEADER_SIZE;
- 
-  if(edge_type == EDGE_EXIT)
-    cell.aci = circ->p_aci;
-  else
-    cell.aci = circ->n_aci;
- 
   while(conn->deliver_window < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
     log_fn(LOG_DEBUG,"Outbuf %d, Queueing stream sendme.", conn->outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
-    if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION(edge_type), conn->cpath_layer) < 0) {
-      log_fn(LOG_WARN,"circuit_deliver_relay_cell failed. Closing.");
-      circuit_close(circ);
-      return;
+    if(connection_edge_send_command(conn, circ, RELAY_COMMAND_SENDME,
+                                    NULL, 0, conn->cpath_layer) < 0) {
+      log_fn(LOG_WARN,"connection_edge_send_command failed. Returning.");
+      return; /* the circuit's closed, don't continue */
     }
   }
 }
@@ -569,8 +561,9 @@ static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *
 
   log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",*(int *)ap_conn->stream_id);
 
-  connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_BEGIN,
-                               payload, payload_len, ap_conn->cpath_layer);
+  if(connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_BEGIN,
+                               payload, payload_len, ap_conn->cpath_layer) < 0)
+    return 0; /* circuit is closed, don't continue */
 
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
