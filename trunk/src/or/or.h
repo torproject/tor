@@ -615,6 +615,7 @@ int getconfig(int argc, char **argv, or_options_t *options);
 
 connection_t *connection_new(int type);
 void connection_free(connection_t *conn);
+void connection_free_all(void);
 
 int connection_create_listener(char *bindaddress, uint16_t bindport, int type);
 

@@ -395,6 +395,7 @@ int dnsworker_main(void *data) {
 
   close(fdarray[0]); /* this is the side of the socketpair the parent uses */
   fd = fdarray[1]; /* this side is ours */
+  connection_free_all(); /* so the child doesn't hold the parent's fd's open */
 
   for(;;) {
 
@@ -506,7 +507,7 @@ static void spawn_enough_dnsworkers(void) {
     num_dnsworkers++;
   }
 
-  while(num_dnsworkers > num_dnsworkers_needed+MAX_IDLE_DNSWORKERS) { /* too many idle? */
+  while(num_dnsworkers > num_dnsworkers_busy+MAX_IDLE_DNSWORKERS) { /* too many idle? */
     /* cull excess workers */
     log_fn(LOG_WARN,"%d of %d dnsworkers are idle. Killing one.",
            num_dnsworkers-num_dnsworkers_needed, num_dnsworkers);

@@ -128,6 +128,15 @@ void connection_free(connection_t *conn) {
   free(conn);
 }
 
+void connection_free_all(void) {
+  int i, n;
+  connection_t **carray;
+
+  get_connection_array(&carray,&n);
+  for(i=0;i<n;i++)
+    connection_free(carray[i]);
+}
+
 int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
   struct sockaddr_in bindaddr; /* where to bind */
   struct hostent *rent;
