@@ -565,9 +565,9 @@ void circuit_expire_building(void);
 int circuit_count_building(void);
 int circuit_stream_is_being_handled(connection_t *conn);
 
-void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell);
-int relay_check_digest(crypto_digest_env_t *digest, cell_t *cell);
-int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
+int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
+                               int cell_direction);
+int circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);
 
 void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
@@ -695,7 +695,7 @@ connection_t *connection_or_connect(routerinfo_t *router);
 int connection_tls_start_handshake(connection_t *conn, int receiving);
 int connection_tls_continue_handshake(connection_t *conn);
 
-void connection_or_write_cell_to_buf(const cell_t *cellp, connection_t *conn);
+void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn);
 
 /********************************* cpuworker.c *****************************/
 

@@ -171,16 +171,11 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
   if(payload_len)
     memcpy(cell.payload+RELAY_HEADER_SIZE, payload, payload_len);
 
-  if(cell_direction == CELL_DIRECTION_OUT) /* AP */
-    relay_set_digest(cpath_layer->f_digest, &cell);
-  else /* exit */
-    relay_set_digest(circ->p_digest, &cell);
-
   log_fn(LOG_DEBUG,"delivering %d cell %s.", relay_command,
          cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
 
-  if(circuit_deliver_relay_cell(&cell, circ, cell_direction, cpath_layer) < 0) {
-    log_fn(LOG_WARN,"circuit_deliver_relay_cell failed. Closing.");
+  if(circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer) < 0) {
+    log_fn(LOG_WARN,"circuit_package_relay_cell failed. Closing.");
     circuit_close(circ);
     return -1;
   }
@@ -226,6 +221,9 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
   }
 
   switch(rh.command) {
+    case RELAY_COMMAND_DROP:
+      log_fn(LOG_INFO,"Got a relay-level padding cell. Dropping.");
+      return 0;
     case RELAY_COMMAND_BEGIN:
       if(edge_type == EDGE_AP) {
         log_fn(LOG_WARN,"relay begin request unsupported at AP. Dropping.");
