@@ -195,8 +195,7 @@ char *tor_strndup(const char *s, size_t n) {
   char *dup;
   tor_assert(s);
   dup = tor_malloc(n+1);
-  strncpy(dup, s, n);
-  dup[n] = 0;
+  strlcpy(dup, s, n+1);
   return dup;
 }
 
@@ -1770,7 +1769,8 @@ char *expand_filename(const char *filename)
       log_fn(LOG_WARN, "Couldn't find $HOME environment variable while expanding %s", filename);
       return NULL;
     }
-    /* minus two characters for ~/, plus one for /, plus one for NUL. */
+    /* minus two characters for ~/, plus one for /, plus one for NUL.
+     * Round up to 16 in case we can't do math. */
     len = strlen(home)+strlen(filename)+16;
     result = tor_malloc(len);
     snprintf(result,len,"%s/%s",home,filename+2);
