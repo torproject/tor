@@ -99,6 +99,7 @@ static config_var_t config_vars[] = {
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "1 MB"),
   VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "5 MB"),
+  VAR("MaxAdvertisedBandwidth",MEMUNIT,MaxAdvertisedBandwidth,"128 TB"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
   VAR("ControlPort",         UINT,     ControlPort,          "0"),
