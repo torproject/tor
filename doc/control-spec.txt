@@ -367,10 +367,10 @@ the message.
   returned to Tor.
 
   {Implementation note: By default, Tor automatically attaches streams to
-  circuits itself, unless the configuration variable "__ManageConnections" is
-  set to "0".  Attempting to attach streams via TC when "__ManageConnections"
-  is true may cause a race between Tor and the controller, as both attempt to
-  attach streams to circuits.}
+  circuits itself, unless the configuration variable
+  "__LeaveStreamsUnattached" is set to "1".  Attempting to attach streams
+  via TC when "__LeaveStreamsUnattached" is false may cause a race between
+  Tor and the controller, as both attempt to attach streams to circuits.}
 
 3.16 POSTDESCRIPTOR (Type 0x000F)
 
