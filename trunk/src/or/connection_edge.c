@@ -792,6 +792,7 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
       desired_circuit_purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
       break;
     default:
+      log_fn(LOG_ERR, "Got unexpected purpose: %d", conn->purpose);
       assert(0); /* never reached */
   }
 

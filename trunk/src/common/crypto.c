@@ -1403,8 +1403,6 @@ base64_decode(char *dest, int destlen, const char *src, int srclen)
   return ret;
 }
 
-static const char BASE32_CHARS[] = "abcdefghijklmnopqrstuvwxyz012345";
-
 int
 base32_encode(char *dest, int destlen, const char *src, int srclen)
 {
