@@ -528,6 +528,9 @@ list_server_status(char **running_routers_out, char **router_status_out)
   rr_entries = smartlist_create();
   rs_entries = smartlist_create();
 
+  if (!descriptor_list)
+    descriptor_list = smartlist_create();
+
   SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
   {
     int is_live;

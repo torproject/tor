@@ -413,7 +413,7 @@ typedef struct {
 } virtaddress_entry_t;
 
 /** The tree of client-side address rewrite instructions. */
-static strmap_t *addressmap;
+static strmap_t *addressmap=NULL;
 /**
  * Tree mapping addresses to which virtual address, if any, we
  * assigned them to.
@@ -424,7 +424,7 @@ static strmap_t *addressmap;
  * if it fails, then we could end up mapping two virtual addresses to
  * the same address, which is no disaster.
  **/
-static strmap_t *virtaddress_reversemap;
+static strmap_t *virtaddress_reversemap=NULL;
 
 /** Initialize addressmap. */
 void addressmap_init(void) {
@@ -454,6 +454,7 @@ addressmap_virtaddress_remove(const char *addr, addressmap_entry_t *ent)
   if (ent && address_is_in_virtual_range(ent->new_address)) {
     virtaddress_entry_t *ve =
       strmap_get(virtaddress_reversemap, ent->new_address);
+    /*log_fn(LOG_NOTICE,"remove reverse mapping for %s",ent->new_address);*/
     if (ve) {
       if (!strcmp(addr, ve->ipv4_address))
         tor_free(ve->ipv4_address);
@@ -533,8 +534,9 @@ int addressmap_already_mapped(const char *address) {
 }
 
 /** Register a request to map <b>address</b> to <b>new_address</b>,
- * which will expire on <b>expires</b> (or 0 if never expires from config
- * file, 1 if never expires from controller).
+ * which will expire on <b>expires</b> (or 0 if never expires from
+ * config file, 1 if never expires from controller, 2 if never expires
+ * (virtual address mapping) from the controller.)
  *
  * <b>new_address</b> should be a newly dup'ed string, which we'll use or
  * free as appropriate. We will leave address alone.
@@ -564,14 +566,17 @@ void addressmap_register(const char *address, char *new_address, time_t expires)
       tor_free(new_address);
       return;
     }
-    if (address_is_in_virtual_range(ent->new_address)) {
+    if (address_is_in_virtual_range(ent->new_address) &&
+        expires != 2) {
+      /* XXX This isn't the perfect test; we want to avoid removing
+       * mappings set from the control interface _as virtual mapping */
       addressmap_virtaddress_remove(address, ent);
     }
     tor_free(ent->new_address);
   } /* else { we have an in-progress resolve with no mapping. } */
 
   ent->new_address = new_address;
-  ent->expires = expires;
+  ent->expires = expires==2 ? 1 : expires;
   ent->num_resolve_failures = 0;
 
   log_fn(LOG_INFO, "Addressmap: (re)mapped '%s' to '%s'",
@@ -673,7 +678,7 @@ addressmap_get_virtual_address(int type)
   struct in_addr in;
 
   if (type == RESOLVED_TYPE_HOSTNAME) {
-    char rand[16];
+    char rand[10];
     do {
       crypto_rand(rand, sizeof(rand));
       base32_encode(buf,sizeof(buf),rand,sizeof(rand));
@@ -712,33 +717,53 @@ addressmap_get_virtual_address(int type)
  * The string in <b>new_address</b> may be freed, or inserted into a map
  * as appropriate.
  **/
-char *
+const char *
 addressmap_register_virtual_address(int type, char *new_address)
 {
   char **addrp;
   virtaddress_entry_t *vent;
 
   tor_assert(new_address);
+  tor_assert(addressmap);
+  tor_assert(virtaddress_reversemap);
 
   vent = strmap_get(virtaddress_reversemap, new_address);
-  if (!vent)
+  if (!vent) {
     vent = tor_malloc_zero(sizeof(virtaddress_entry_t));
+    strmap_set(virtaddress_reversemap, new_address, vent);
+  }
 
   addrp = (type == RESOLVED_TYPE_IPV4) ?
     &vent->ipv4_address : &vent->hostname_address;
   if (*addrp) {
     addressmap_entry_t *ent = strmap_get(addressmap, *addrp);
-    if (!strcasecmp(new_address, ent->new_address))
+    if (ent && !strcasecmp(new_address, ent->new_address)) {
+      tor_free(new_address);
       return tor_strdup(*addrp);
-    else
+    } else
       log_fn(LOG_WARN, "Internal confusion: I thought that '%s' was mapped to by '%s', but '%s' really maps to '%s'. This is a harmless bug.",
-             new_address, *addrp, *addrp, ent->new_address);
+             new_address, *addrp, *addrp, ent?ent->new_address:"(nothing)");
   }
 
   tor_free(*addrp);
   *addrp = addressmap_get_virtual_address(type);
-  strmap_set(virtaddress_reversemap, new_address, tor_strdup(*addrp));
-  addressmap_register(*addrp, new_address, 1);
+  addressmap_register(*addrp, new_address, 2);
+
+#if 0
+  {
+    addressmap_entry_t *ent;
+    ent = strmap_get(addressmap, *addrp);
+    tor_assert(ent);
+    tor_assert(!strcasecmp(ent->new_address,new_address));
+    vent = strmap_get(virtaddress_reversemap, new_address);
+    tor_assert(vent);
+    tor_assert(!strcasecmp(*addrp,
+                           (type == RESOLVED_TYPE_IPV4) ?
+                           vent->ipv4_address : vent->hostname_address));
+    log_fn(LOG_INFO, "Map from %s to %s okay.",*addrp,new_address);
+  }
+#endif
+
   return *addrp;
 }
 
