@@ -63,7 +63,8 @@ int connection_exit_finished_flushing(connection_t *conn) {
 int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
   struct hostent *rent;
   struct sockaddr_in dest_addr;
-  int s;
+  int retval;
+  int s; /* for the new socket, if we're on connecting_wait */
 
   /* an outgoing data cell has arrived */
 
@@ -148,14 +149,15 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
         connection_set_poll_socket(conn);
         conn->state = EXIT_CONN_STATE_OPEN;
         connection_watch_events(conn, POLLIN);
-      } else { /* i'm not sure what this would be */
-        log(LOG_DEBUG,"connection_exit_process_cell(): in connecting_wait, not sure why.");
+	return 0;
       }
-      return 0;
+      log(LOG_DEBUG,"connection_exit_process_cell(): in connecting_wait, but I've already received everything. Closing.");
+      return -1;
     case EXIT_CONN_STATE_CONNECTING:
       log(LOG_DEBUG,"connection_exit_process_cell(): Data receiving while connecting. Queueing.");
-      /* FIXME kludge. shouldn't call write_to_buf directly. */
-      return write_to_buf(cell->payload, cell->length, &conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen);
+      retval = connection_write_to_buf(cell->payload, cell->length, conn);
+      connection_watch_events(conn, POLLIN); /* make it stop trying to write */
+      return retval; 
     case EXIT_CONN_STATE_OPEN:
       return connection_write_to_buf(cell->payload, cell->length, conn);
   }

@@ -3,8 +3,7 @@
 
 int check_sane_cell(cell_t *cell) {
 
-  if(!cell)
-    return -1;
+  assert(cell);
 
   if(cell->aci == 0) {
     log(LOG_DEBUG,"check_sane_cell(): Cell has aci=0. Dropping.");
