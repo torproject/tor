@@ -32,7 +32,7 @@ ARMA    - router posts descriptor
                 - when it boots
                 - when it changes
 NICK    - change tls stuff so certs don't get written to disk, or read from disk
-ARMA    - make directory.c threadsafe (or at least safe for multiple posts)
+        o make directory.c 'thread'safe
 NICK    ? dirserver parses descriptor
         - dirserver checks signature
         D client checks signature?
@@ -45,7 +45,7 @@ NICK    - instruments ORs to report stats
           - average cell fullness
           - average bandwidth used
           - others?
-ARMA    - integrate rep_ok functions, see what breaks
+        . integrate rep_ok functions, see what breaks
 ARMA    - configure log files. separate log file, separate severities.
 ARMA    - what assumptions break if we fclose(0) when we daemonize?
 NICK    - make buffer struct elements opaque outside buffers.c
@@ -53,8 +53,8 @@ ARMA    - Go through log messages, reduce confusing error messages.
 ARMA    - make the logs include more info (fd, etc)
 ARMA    - add log convention to the HACKING file
         - make 'make install' do the right thing
-ARMA    - change binary name to tor
-ARMA    - change config files so you look at commandline, else look in
+        o change binary name to tor
+        o change config files so you look at commandline, else look in
           /etc/torrc. no cascading.
 ARMA    - have an absolute datadir with fixed names for files, and fixed-name
           keydir under that with fixed names
