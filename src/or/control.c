@@ -589,7 +589,6 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
   smartlist_split_string(questions, body, "\n",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   answers = smartlist_create();
-  msg_len = 0;
   SMARTLIST_FOREACH(questions, const char *, q,
   {
     if (handle_getinfo_helper(q, &ans) < 0) {
@@ -601,12 +600,12 @@ handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
     }
     smartlist_add(answers, tor_strdup(q));
     smartlist_add(answers, ans);
-    msg_len += 2 + strlen(ans) + strlen(q);
   });
 
   msg = smartlist_join_strings2(answers, "\0", 1, 1, &msg_len);
+  tor_assert(msg_len > 0); /* it will at least be terminated */
   send_control_message(conn, CONTROL_CMD_INFOVALUE,
-                       msg_len, msg_len?msg:NULL);
+                       msg_len, msg);
 
  done:
   if (answers) SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
