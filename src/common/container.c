@@ -132,6 +132,12 @@ int smartlist_string_isin(const smartlist_t *sl, const char *element) {
   return 0;
 }
 
+int smartlist_string_num_isin(const smartlist_t *sl, int num) {
+  char buf[16];
+  tor_snprintf(buf,sizeof(buf),"%d", num);
+  return smartlist_string_isin(sl, buf);
+}
+
 /** Return true iff some element E of sl2 has smartlist_isin(sl1,E).
  */
 int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2) {
