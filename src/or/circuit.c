@@ -304,10 +304,14 @@ circuit_t *circuit_get_best(connection_t *conn,
     if(conn) {
       /* decide if this circ is suitable for this conn */
 
-      if(circ->state == CIRCUIT_STATE_OPEN && circ->n_conn) /* open */
-        exitrouter = router_get_by_addr_port(circ->cpath->prev->addr,
-                                             circ->cpath->prev->port);
-      else /* not open */
+//      if(circ->state == CIRCUIT_STATE_OPEN && circ->n_conn) /* open */
+//        exitrouter = router_get_by_addr_port(circ->cpath->prev->addr,
+//                                             circ->cpath->prev->port);
+//      else /* not open */
+/* for rend circs, circ->cpath->prev is not the last router in the
+ * circuit, it's the magical extra bob hop. so just check the nickname
+ * of the one we meant to finish at.
+ */
         exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
 
       if(!exitrouter) {
