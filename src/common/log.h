@@ -56,6 +56,7 @@
 typedef void (*log_callback)(int severity, const char *msg);
 
 int parse_log_level(const char *level);
+const char *log_level_to_string(int level);
 void add_stream_log(int severityMin, int severityMax, const char *name, FILE *stream);
 int add_file_log(int severityMin, int severityMax, const char *filename);
 #ifdef HAVE_SYSLOG_H
