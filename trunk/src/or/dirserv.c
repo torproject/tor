@@ -688,6 +688,7 @@ static char *cached_directory_z = NULL;
 static size_t cached_directory_z_len = 0;
 static time_t cached_directory_published = 0;
 
+/** DOCDOC */
 void dirserv_set_cached_directory(const char *directory, time_t when)
 {
   time_t now;
