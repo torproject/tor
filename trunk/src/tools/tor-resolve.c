@@ -81,8 +81,10 @@ parse_socks4a_resolve_response(const char *response, size_t len,
   status = (uint8_t)response[1];
   if (get_uint16(response+2)!=0) /* port: 0 */
     return -1;
-  if (status != 90)
+  if (status != 90) {
+    log_fn(LOG_WARN,"Got status response '%d', meaning not success.", status);
     return -1;
+  }
 
   *addr_out = ntohl(get_uint32(response+4));
   return 0;
