@@ -42,7 +42,7 @@ Short-term:
         - Add '[...truncated]' or similar to truncated log entries (like the directory
           in connection_dir_process_inbuf()).
         . Make logs handle it better when writing to them fails.
-        - leave server descriptor out of directory if it's too old
+        o leave server descriptor out of directory if it's too old
         o Rename ACI to circID
         o integrate rep_ok functions, see what breaks
         - update tor faq
@@ -88,6 +88,47 @@ Short-term:
         o Audit users of connnection_remove and connection_free outside of
           main.c; many should use mark_for_close instead.
 
+Rendezvous service:
+        o Design and specify protocol
+        - Possible preliminary refactoring:
+            - Should we break circuits up into "circuit-with-cpath" and
+              "circuit-without-cpath"?
+            - We need a way to tag circuits as special-purpose circuits for:
+                - Connecting from Bob's OP to the introduction point
+                - Sending introduction requests from the IPoint to Bob
+                - Connecting from Alice to the rendezvous point for Bob
+                - Connecting from Bob to the rendezvous point for Alice
+                - Waiting at a rendezvous point to be joined
+                - Joined to another circuit at the rendezvous point.
+              (We should also enumerate all the states that these operations
+              can be in.)
+        - Code to configure hidden services
+        - Service descriptors
+            - OPs need to maintain identity keys for hidden services [NM]
+            - Code to generate and parse service descriptors [NM]
+        - Advertisement
+            - Generate y.onion hostnames [NM]
+            - Code to do an HTTP connection over Tor from within Tor.
+            - Publish service descriptors to directory
+            - Directory accepts and remembers service descriptors, and
+              delivers them as requested
+            - Code for OPs to retrieve (and cache?) service descriptors
+        - Rendezvous
+            - Code as needed to generate and parse all rendezvous-related
+              cell types, and do all handshaking.
+            - ORs implement introduction points
+            - OPs with hidden services establish introduction points
+            - ORs implement rendezvous points
+            - OPs notice y.onion URLs, and:
+                - Retrieve service descriptors
+                - Establish rendezvous points
+                - Send introduction requests to introduction points
+        - Communication
+            - OPs remember which circuits are used for which rendezvous
+              points, and can look up circuits by location-hidden service
+            - OPs send/handle BEGIN cells for location-hidden services
+            - End-to-end communication for location-hidden services
+
 On-going
         . Better comments for functions!
         . Go through log messages, reduce confusing error messages.
@@ -127,11 +168,6 @@ NICK            . Handle half-open connections
                 o Find an ftp proxy? wget --passive
                 D Wait until there are packet redirectors for Linux
                 . Get socks4a support into Mozilla
-        . Develop rendezvous points
-                X Handle socks commands other than connect, eg, bind?
-                o Design
-                - Spec
-                - Implement
         . Tests
                 o Testing harness/infrastructure
                 D System tests (how?)
