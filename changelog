@@ -3,8 +3,10 @@ tor (0.0.8+0.0.9pre5-2) unreleased; urgency=low
   * unreleased.
   * Symlink tor(8) manpage to torrc(5).
   * Make logs readable by the system administrators (group adm).
+  * Point to /var/log/tor (the directory) instead of a single
+    file (/var/log/tor/log) in the debian patch of the manpage.
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 12 Nov 2004 17:43:06 +0100
+ -- Peter Palfrader <weasel@debian.org>  Fri, 12 Nov 2004 17:51:13 +0100
 
 tor (0.0.8+0.0.9pre5-1) unstable; urgency=low
 
