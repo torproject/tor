@@ -735,6 +735,41 @@ int rend_services_init(void) {
   return 0;
 }
 
+/* This is a beginning rendezvous stream. Look up conn->port,
+ * and assign the actual conn->addr and conn->port. Return -1
+ * if failure, or 0 for success.
+ */
+int
+rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
+{
+  rend_service_t *service;
+  int i;
+  rend_service_port_config_t *p;
+  char hexid[9];
+
+  assert(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
+  hex_encode(circ->rend_pk_digest, 4, hexid);
+  service = rend_service_get_by_pk_digest(circ->rend_pk_digest);
+  if (!service) {
+    log_fn(LOG_WARN, "Couldn't find any service associated with pk %s on rendezvous circuit %d; closing",
+           hexid, circ->n_circ_id);
+    circuit_mark_for_close(circ);
+    connection_mark_for_close(conn, 0/*XXX*/);
+  }
+  for (i = 0; i < smartlist_len(service->ports); ++i) {
+    p = smartlist_get(service->ports, i);
+    if (conn->port == p->virtual_port) {
+      conn->addr = p->real_address;
+      conn->port = p->real_port;
+      return 0;
+    }
+  }
+  log_fn(LOG_WARN, "No virtual port mapping exists for port %d on service %s",
+         conn->port, hexid);
+  connection_mark_for_close(conn, 0/*XXX*/);
+  return -1;
+}
+
 /*
   Local Variables:
   mode:c

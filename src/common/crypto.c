@@ -529,13 +529,13 @@ int crypto_pk_private_sign_digest(crypto_pk_env_t *env, const unsigned char *fro
  * The encrypted data consists of:
  *
  *   The source data, padded and encrypted with the public key, if the
- *   padded source data is no longer than the public key.
+ *   padded source data is no longer than the public key, and "force"
+ *   is false.
  *  OR
- *   The beginning of the source data prefixed with a 16-symmetric key,
+ *   The beginning of the source data prefixed with a 16-byte symmetric key,
  *   padded and encrypted with the public key; followed by the rest of
  *   the source data encrypted in AES-CTR mode with the symmetric key.
  *
- * DOCDOC force.
  */
 int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
                                     const unsigned char *from,
