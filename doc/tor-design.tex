@@ -22,6 +22,14 @@
 %   \pdftrue
 %\fi
 
+\newenvironment{tightlist}{\begin{list}{$\bullet$}{
+  \setlength{\itemsep}{0mm}
+    \setlength{\parsep}{0mm}
+    %  \setlength{\labelsep}{0mm}
+    %  \setlength{\labelwidth}{0mm}
+    %  \setlength{\topsep}{0mm}
+    }}{\end{list}}
+
 \begin{document}
 
 %% Use dvipdfm instead. --DH
@@ -77,7 +85,7 @@ Here we describe Tor, a protocol for asynchronous, loosely
 federated onion routers that provides the following improvements over
 the old onion routing design:
 
-\begin{itemize}
+\begin{tightlist}
 
 \item \textbf{Perfect forward secrecy:} The original onion routing
 design is vulnerable to a single hostile node recording traffic and later
@@ -100,11 +108,16 @@ program without modification.
 onion routing design built one circuit for each request. Aside from the
 performance issues of doing public key operations for every request, it
 also turns out that regular communications patterns mean building lots
-of circuits, which can endanger anonymity \cite{wright03}. [XXX Was this
-supposed to be Wright02 or Wright03. In any case I am hesitant to cite
-that work in this context. While the point is valid in general, that
-work is predicated on assumptions that I don't think typically apply
-to onion routing (whether old or new design).]
+of circuits, which can endanger anonymity \cite{wright03}.
+%[XXX Was this
+%supposed to be Wright02 or Wright03. In any case I am hesitant to cite
+%that work in this context. While the point is valid in general, that
+%work is predicated on assumptions that I don't think typically apply
+%to onion routing (whether old or new design). -PS]
+%[I had meant wright03, but I guess wright02 could work as well.
+% If you don't think these attacks work on onion routing, you need to
+% write up a convincing argument of this. Such an argument would
+% be very worthwhile to include in this paper. -RD]
 Tor multiplexes many
 connections down each circuit, but still rotates the circuit periodically
 to avoid too much linkability.
@@ -117,8 +130,9 @@ to provide similar protection but use less bandwidth, but did not go
 into detail. However, recent research \cite{econymics} and deployment
 experience \cite{freedom} indicate that this level of resource
 use is not practical or economical; and even full link padding is still
-vulnerable to active attacks \cite{defensive-dropping}. [XXX what is being
-referenced here, Dogan?]
+vulnerable to active attacks \cite{defensive-dropping}.
+% [XXX what is being referenced here, Dogan? -PS]
+%[An upcoming FC04 paper. I'll add a cite when it's out. -RD]
 
 \item \textbf{Leaky pipes:} Through in-band signalling within the circuit,
 Tor initiators can direct traffic to nodes partway down the circuit. This
@@ -126,7 +140,7 @@ allows for long-range padding to frustrate timing attacks at the initiator
 \cite{defensive-dropping}, but because circuits are used by more than
 one application, it also allows traffic to exit the circuit from the
 middle -- thus frustrating timing attacks based on observing exit points.
-%Or something like that. hm.
+%Or something like that. hm. Tone this down maybe? Or support it. -RD
 
 \item \textbf{Congestion control:} Earlier anonymity designs do not
 address traffic bottlenecks. Unfortunately, typical approaches to load
@@ -160,7 +174,7 @@ advertise an exit policy.
 \item \textbf{Rendezvous points:}
 location-protected servers
 
-\end{itemize}
+\end{tightlist}
 
 We review previous work in Section \ref{sec:background}, describe
 our goals and assumptions in Section \ref{sec:assumptions},
@@ -366,8 +380,87 @@ tagging attacks
 \SubSection{Directory Servers}
 \label{subsec:dir-servers}
 
-\Section{Rendezvous points: pseudonyms with responder anonymity}
+\Section{Rendezvous points for location privacy}
 \label{sec:rendezvous}
+
+Rendezvous points are a building block for \emph{location-hidden services}
+(that is, responder anonymity) in the Tor network. Location-hidden
+services means Bob can offer a tcp service, such as an Apache webserver,
+without revealing the IP of that service.
+
+We provide censorship resistance for Bob by allowing him to advertise
+several onion routers (nodes known as his Introduction Points, see
+Section \ref{subsec:intro-point}) as his public location. Alice,
+the client, chooses a node known as a Meeting Point (see Section
+\ref{subsec:meeting-point}). She connects to one of Bob's introduction
+points, informs him about her meeting point, and then waits for him to
+connect to her meeting point. This extra level of indirection is needed
+so Bob's introduction points don't serve files directly (else they open
+themselves up to abuse, eg from serving Nazi propaganda in France). The
+extra level of indirection also allows Bob to choose which requests to
+respond to, and which to ignore.
+
+We provide the necessary glue code so that Alice can view
+webpages on a location-hidden webserver, and Bob can run a
+location-hidden server, with minimal invasive changes (see Section
+\ref{subsec:client-rendezvous}). Both Alice and Bob must run local
+onion proxies (OPs) -- software that knows how to talk to the onion
+routing network.
+
+The steps of a rendezvous:
+\begin{tightlist}
+\item Bob chooses some Introduction Points, and advertises them on a
+      Distributed Hash Table (DHT).
+\item Bob establishes onion routing connections to each of his
+      Introduction Points, and waits.
+\item Alice learns about Bob's service out of band (perhaps Bob gave her
+      a pointer, or she found it on a website). She looks up the details
+      of Bob's service from the DHT.
+\item Alice chooses and establishes a Meeting Point (MP) for this
+      transaction.
+\item Alice goes to one of Bob's Introduction Points, and gives it a blob
+      (encrypted for Bob) which tells him about herself and the Meeting
+      Point she chose. The Introduction Point sends the blob to Bob.
+\item Bob chooses whether to ignore the blob, or to onion route to MP.
+      Let's assume the latter.
+\item MP plugs together Alice and Bob. Note that MP doesn't know (or care)
+      who Alice is, or who Bob is; and it can't read anything they
+      transmit either, because they share a session key.
+\item Alice sends a 'begin' cell along the circuit. It makes its way
+      to Bob's onion proxy. Bob's onion proxy connects to Bob's webserver.
+\item Data goes back and forth as usual.
+\end{tightlist}
+
+Ian Goldberg developed a similar notion of rendezvous points for
+low-latency anonymity systems \cite{goldberg-thesis}. His ``service tag''
+is the same concept as our ``hash of service's public key''. We make it
+a hash of the public key so it can be self-authenticating, and so the
+client can recognize the same service with confidence later on.
+The main differences are:
+* We force the client to use our software. This means
+   - the client can get anonymity for himself pretty easily, since he's
+     already running our onion proxy.
+   - the client can literally just click on a url in his Mozilla, paste it
+     into wget, etc, and it will just work. (The url is a long-term
+     service tag; like Ian's, it doesn't expire as the server changes
+     public addresses. But in Ian's scheme it seems the client must
+     manually hunt down a current location of the service via gnutella?)
+   - the client and server can share ephemeral DH keys, so at no point
+     in the path is the plaintext exposed.
+* I fear that we would get *no* volunteers to run Ian's rendezvous points,
+  because they have to actually serve the Nazi propaganda (or whatever)
+  in plaintext. So we add another layer of indirection to the system:
+  the rendezvous service is divided into Introduction Points and
+  Meeting Points. The introduction points (the ones that the server is
+  publically associated with) do not output any bytes to the clients. And
+  the meeting points don't know the client, the server, or the stuff
+  being transmitted. The indirection scheme is also designed with
+  authentication/authorization in mind -- if the client doesn't include
+  the right cookie with its request for service, the server doesn't even
+  acknowledge its existence.
+
+
+\SubSubSection{Integration with user applications}
 
 \Section{Maintaining anonymity sets}
 \label{sec:maintaining-anonymity}
