@@ -834,9 +834,18 @@ int connection_handle_write(connection_t *conn) {
   /* Sometimes, "writeable" means "connected". */
   if (connection_state_is_connecting(conn)) {
     if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0) {
-      /* not yet */
+      log_fn(LOG_WARN,"getsockopt() syscall failed?! Please report to tor-ops.");
+      connection_close_immediate(conn);
+      connection_mark_for_close(conn);
+      return -1;
+    }
+    if(e) {
+      /* some sort of error, but maybe just inprogress still */
+      errno = e; /* XXX008 this is a kludge. maybe we should rearrange
+                    our error-hunting functions? E.g. pass errno to
+                    tor_socket_errno(). */
       if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(conn->s))) {
-        log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
+        log_fn(LOG_INFO,"in-progress connect failed. Removing.");
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
         /* it's safe to pass OPs to router_mark_as_down(), since it just
