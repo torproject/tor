@@ -623,9 +623,9 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
  * Manage introduction points
  ******/
 
-/* Return the introduction circuit ending at 'router' for the service
- * whose public key is 'pk_digest'.  Return NULL if no such service is
- * found.
+/* Return the (possibly non-open) introduction circuit ending at
+ * 'router' for the service whose public key is 'pk_digest'.  Return
+ * NULL if no such service is found.
  */
 static circuit_t *
 find_intro_circuit(routerinfo_t *router, const char *pk_digest)
@@ -635,8 +635,8 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                                   CIRCUIT_PURPOSE_S_INTRO))) {
     assert(circ->cpath);
-    if (circ->cpath->prev->addr == router->addr &&
-        circ->cpath->prev->port == router->or_port) {
+    if (circ->build_state->chosen_exit &&
+        !strcasecmp(circ->build_state->chosen_exit, router->nickname)) {
       return circ;
     }
   }
@@ -645,8 +645,8 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                         CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
     assert(circ->cpath);
-    if (circ->cpath->prev->addr == router->addr &&
-        circ->cpath->prev->port == router->or_port) {
+    if (circ->build_state->chosen_exit &&
+        !strcasecmp(circ->build_state->chosen_exit, router->nickname)) {
       return circ;
     }
   }
