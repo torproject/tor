@@ -314,6 +314,16 @@ def attach_stream(s, streamid, circid):
     send_message(s,MSG_TYPE.ATTACHSTREAM,msg)
     tp,body = receive_reply(s,[MSG_TYPE.DONE])
 
+def close_stream(s, streamid, reason=0, flags=0):
+    msg = struct.pack("!LBB",streamid,reason,flags)
+    send_message(s,MSG_TYPE.CLOSESTREAM,msg)
+    tp,body = receive_reply(s,[MSG_TYPE.DONE])
+
+def close_circuit(s, circid, flags=0):
+    msg = struct.pack("!LB",circid,flags)
+    send_message(s,MSG_TYPE.CLOSECIRCUIT,msg)
+    tp,body = receive_reply(s,[MSG_TYPE.DONE])
+
 def _unterminate(s):
     if s[-1] == '\0':
         return s[:-1]
