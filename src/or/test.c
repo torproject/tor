@@ -264,7 +264,7 @@ test_crypto()
   crypto_pk_env_t *pk1, *pk2;
   char *data1, *data2, *data3, *cp;
   int i, j, p, len;
-  int size;
+  size_t size;
 
   data1 = tor_malloc(1024);
   data2 = tor_malloc(1024);
@@ -1110,7 +1110,7 @@ void test_rend_fns()
   char address2[] = "aaaaaaaaaaaaaaaa.onion";
   rend_service_descriptor_t *d1, *d2;
   char *encoded;
-  int len;
+  size_t len;
   crypto_pk_env_t *pk1;
   time_t now;
   pk1 = crypto_new_pk_env();
