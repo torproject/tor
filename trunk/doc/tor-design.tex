@@ -212,7 +212,7 @@ We review previous work in Section~\ref{sec:related-work}, describe
 our goals and assumptions in Section~\ref{sec:assumptions},
 and then address the above list of improvements in
 Sections~\ref{sec:design}-\ref{sec:rendezvous}. We summarize
-in Section~\ref{sec:analysis} how our design stands up to
+in Section~\ref{sec:attacks} how our design stands up to
 known attacks, and conclude with a list of open problems in
 Section~\ref{sec:maintaining-anonymity} and future work for the Onion
 Routing project in Section~\ref{sec:conclusion}.
@@ -321,7 +321,8 @@ Systems like Freedom and the original Onion Routing build the circuit
 all at once, using a layered ``onion'' of public-key encrypted messages,
 each layer of which provides a set of session keys and the address of the
 next server in the circuit. Tor as described herein, Tarzan, MorphMix,
-Cebolla \cite{cebolla}, and AnonNet \cite{anonnet} build the circuit
+Cebolla \cite{cebolla}, and Rennhard's Anonymity Network \cite{anonnet}
+build the circuit
 in stages, extending it one hop at a time.
 Section~\ref{subsubsec:constructing-a-circuit} describes how this
 approach makes perfect forward secrecy feasible.
@@ -433,7 +434,7 @@ is appealing, but still has many open problems
 \textbf{Not secure against end-to-end attacks:} Tor does not claim
 to provide a definitive solution to end-to-end timing or intersection
 attacks. Some approaches, such as running an onion router, may help;
-see Section~\ref{sec:analysis} for more discussion.
+see Section~\ref{sec:attacks} for more discussion.
 
 \textbf{No protocol normalization:} Tor does not provide \emph{protocol
 normalization} like Privoxy or the Anonymizer. For complex and variable
@@ -605,7 +606,7 @@ In Tor, each circuit can be shared by many TCP streams.  To avoid
 delays, users construct circuits preemptively.  To limit linkability
 among their streams, users' OPs build a new circuit
 periodically if the previous one has been used,
-and expire old used circuits that no longer have any open streams.  
+and expire old used circuits that no longer have any open streams.
 OPs consider making a new circuit once a minute: thus
 even heavy users spend a negligible amount of time and CPU in
 building circuits, but only a limited number of requests can be linked
@@ -1100,7 +1101,7 @@ adversary can exploit differences in client knowledge: clients who use
 a node listed on one directory server but not the others are vulnerable.
 
 Thus these directory servers must be synchronized and redundant.
-Valid directories are those signed by a threshold of the directory
+Directories are valid if they are signed by a threshold of the directory
 servers.
 
 The directory servers in Tor are modeled after those in Mixminion
@@ -1280,69 +1281,19 @@ also designed to include authentication/authorization---if Alice doesn't
 include the right cookie with her request for service, Bob need not even
 acknowledge his existence.
 
-\Section{Analysis}
-\label{sec:analysis}
-
-In this section, we discuss how well Tor meets our stated design goals
-and its resistance to attacks.
-
-\SubSection{Meeting Basic Goals}
-% None of these seem to say very much.  Should this subsection be removed?
-\begin{tightlist}
-\item [Basic Anonymity:] Because traffic is encrypted, changing in
-  appearance, and can flow from anywhere to anywhere within the
-  network, a simple observer that cannot see both the initiator
-  activity and the corresponding activity where the responder talks to
-  the network will not be able to link the initiator and responder.
-  Nor is it possible to directly correlate any two communication
-  sessions as coming from a single source without additional
-  information. Resistance to more sophisticated anonymity threats is
-  discussed below.
-\item[Deployability:] Tor requires no specialized hardware. Tor
-  requires no kernel modifications; it runs in user space (currently
-  on Linux, various BSDs, and Windows). All of these imply a low
-  technical barrier to running a Tor node. There is an assumption that
-  Tor nodes have good relatively persistent net connectivity
-  (currently T1 or better);
-% Is that reasonable to say? We haven't really discussed it -P.S.
-% Roger thinks otherwise; he will fix this. -NM
-  however, there is no padding overhead, and operators can limit
-  bandwidth on any link.  Tor is freely available under the modified
-  BSD license, and operators are able to choose their own exit
-  policies, thus reducing legal and social barriers to
-  running a node.
-  
-\item[Usability:] As noted, Tor runs in user space. So does the onion
-  proxy, which is comparatively easy to install and run. SOCKS-aware
-  applications require nothing more than to be pointed at the onion
-  proxy; other applications can be redirected to use SOCKS for their
-  outgoing TCP connections by drop-in libraries such as tsocks.
-  
-\item[Flexibility:] Tor's design and implementation is fairly modular,
-  so that, for example, a scalable P2P replacement for the directory
-  servers would not substantially impact other aspects of the system.
-  Tor runs on top of TCP, so design options that could not easily do
-  so would be difficult to test on the current network. However, most
-  low-latency protocols are designed to run over TCP. We are currently
-  working with the designers of MorphMix to render our two systems
-  interoperable. So for, this seems to be relatively straightforward.
-  Interoperability will allow testing and direct comparison of the two
-  rather different designs.
-  
-\item[Simple design:] Tor opts for practicality when there is no
-  clear resolution of anonymity trade-offs or practical means to
-  achieve resolution. Thus, we do not currently pad or mix; although
-  it would be easy to add either of these. Indeed, our system allows
-  long-range and variable padding if this should ever be shown to have
-  a clear advantage.  Similarly, we do not currently attempt to
-  resolve such issues as Sybil attacks to dominate the network except
-  by such direct means as personal familiarity of director operators
-  with all node operators.
-\end{tightlist}
-
-\SubSection{Attacks and Defenses}
+\Section{Attacks and Defenses}
 \label{sec:attacks}
 
+% XXX In sec4 we should talk about bandwidth classes, which will
+%     enable us to accept a lot more ORs than if we continue to
+%     require 10mbit connections for all ORs. -RD
+
+% XXX In sec9, we should note that we are currently
+%     working with the designers of MorphMix to render our two systems
+%     interoperable. So far, this seems to be relatively straightforward.
+%     Interoperability will allow testing and direct comparison of the two
+%     rather different designs.
+  
 Below we summarize a variety of attacks, and discuss how well our
 design withstands them.
 
