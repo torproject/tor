@@ -209,8 +209,8 @@ N  - IPv6 support (For exit addresses)
        extend-data cells can be extend requests.
 
    - Code cleanup
-     - fix router_get_by_* functions so they can get ourselves too,
-       and audit everything to make sure rend and intro points are
+     o fix router_get_by_* functions so they can get ourselves too ...
+     - and audit everything to make sure rend and intro points are
        just as likely to be us as not.
 
    - tor should be able to have a pool of outgoing IP addresses

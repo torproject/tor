@@ -582,6 +582,9 @@ routerinfo_t *router_get_by_nickname(const char *nickname)
     return NULL;
   if (nickname[0] == '$')
     return router_get_by_hexdigest(nickname);
+  if (server_mode(get_options()) &&
+      !strcasecmp(nickname, get_options()->Nickname))
+    return router_get_my_routerinfo();
 
   maybedigest = (strlen(nickname) == HEX_DIGEST_LEN) &&
     (base16_decode(digest,DIGEST_LEN,nickname,HEX_DIGEST_LEN) == 0);
@@ -632,6 +635,10 @@ routerinfo_t *router_get_by_digest(const char *digest) {
 
   tor_assert(digest);
   if (!routerlist) return NULL;
+  if (server_mode(get_options()) &&
+      (router = router_get_my_routerinfo()) &&
+      !memcmp(digest, router->identity_digest, DIGEST_LEN))
+    return router;
 
   for (i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
