@@ -15,6 +15,8 @@ Matej Pfajfar <badbytes@freehaven.net> wrote the first version of the code
 Contributors:
 -------------
 
+John Bashinski <jbash@velvet.com> contributed the initial rpm spec file.
+
 Christian Grothoff <grothoff@cs.purdue.edu> contributed better daemonizing
 behavior.
 
@@ -23,6 +25,9 @@ thing.
 
 Jason Holt <jason@lunkwill.org> contributed patches to the instructions
 and the man page.
+
+Peter Palfrader <peter@palfrader.org> maintains everything that's
+debian-specific.
 
 Aaron Turner <aturner@netscreen.com> contributed the first version of
 the tor.sh initscripts shell script.
