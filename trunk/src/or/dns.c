@@ -378,14 +378,16 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
     assert_connection_ok(pend->conn,time(NULL));
     pend->conn->addr = resolve->addr;
 
-    /* prevent double-remove. (this may get changed below.) */
-    pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
 
     if(resolve->state == CACHE_STATE_FAILED) {
       pendconn = pend->conn; /* don't pass complex things to the
                                 connection_mark_for_close macro */
+      /* prevent double-remove. */
+      pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
       connection_mark_for_close(pendconn, END_STREAM_REASON_RESOLVEFAILED);
     } else {
+      /* prevent double-remove. */
+      pend->conn->state = EXIT_CONN_STATE_CONNECTING;
       connection_exit_connect(pend->conn);
     }
     resolve->pending_connections = pend->next;
