@@ -101,6 +101,7 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
        */
       log(LOG_DEBUG,"command_process_create_cell(): Next router not connected. Closing.");
       circuit_close(circ);
+      return;
     }
     circ->n_conn = n_conn;
     log(LOG_DEBUG,"command_process_create_cell(): n_conn is %s:%u",n_conn->address,ntohs(n_conn->port));
