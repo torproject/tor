@@ -266,7 +266,7 @@ handle_control_getconf(connection_t *conn, uint16_t body_len, const char *body)
 
       while (answer) {
         struct config_line_t *next;
-        size_t alen = strlen(answer->key)+strlen(answer->value)+2;
+        size_t alen = strlen(answer->key)+strlen(answer->value)+3;
         char *astr = tor_malloc(alen);
         tor_snprintf(astr, alen, "%s %s\n", answer->key, answer->value);
         smartlist_add(answers, astr);
