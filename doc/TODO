@@ -32,6 +32,7 @@ For 0.0.9.3:
 
 ************************ For Post 0.0.9 *****************************
 
+config option to publish what ports you listen on, beyond ORPort/DirPort
 https proxy for OR CONNECT stuff
 choose entry node to be one you're already connected to?
 
@@ -120,6 +121,9 @@ Tier two:
        - Make sure it works on more platforms.
        - Find a way to make sure we have libevent 1.0 or later.
        - Check return from event_set, event_add, event_del.
+
+   - Integrate an http proxy into Tor (maybe as a third class of worker
+     process), so we can stop shipping with the beast that is Privoxy.
 
    - QOI
      - Let more config options (e.g. ORPort) change dynamically.
