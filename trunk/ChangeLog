@@ -1,3 +1,25 @@
+Changes in version 0.0.9.4 - 2005-02-03
+  o Bugfixes on 0.0.9:
+    - Fix an assert bug that took down most of our servers: when
+      a server claims to have 500 GB of bandwidthburst, don't
+      freak out.
+    - Don't crash as badly if we have spawned the max allowed number
+      of dnsworkers, or we're out of file descriptors.
+    - Block more file-sharing ports in the default exit policy.
+    - Give better a clearer message that they need to raise MaxConn
+      when they start running out of file descriptors.
+    - SGI Compatibility patches from Jan Schaumann.
+    - Tolerate a corrupt cached directory better.
+    - When a dirserver hasn't approved your server, list which one.
+    - Go into soft hibernation after 95% of the bandwidth is used,
+      not 99%. This is especially important for daily hibernators who
+      have a small accounting max. Hopefully it will result in fewer
+      cut connections when the hard hibernation starts.
+    - Load-balance better when using servers that claim more than
+      800kB/s of capacity.
+    - Make NT services work (experimental, only used if compiled in).
+
+
 Changes in version 0.0.9.3 - 2005-01-21
   o Bugfixes on 0.0.9:
     - Backport the cpu use fixes from main branch, so busy servers won't
