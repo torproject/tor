@@ -479,6 +479,8 @@ void connection_send_cell(connection_t *conn) {
     connection_write_cell_to_buf(&cell, conn);
   }
 
+  /* ???? If we might not have added a cell above, why are we
+   * ???? increasing outbuf_flushlen? -NM */
   conn->outbuf_flushlen += sizeof(cell_t); /* instruct it to send a cell */
   connection_start_writing(conn);
 
@@ -512,6 +514,7 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
      return 0;
   }
 
+  memset(&cell, 0, sizeof(cell_t));
   cell.aci = aci;
   cell.command = CELL_DESTROY;
   log(LOG_INFO,"connection_send_destroy(): Sending destroy (aci %d).",aci);
@@ -606,6 +609,9 @@ repeat_connection_package_raw_inbuf:
   if(!amount_to_process)
     return 0;
 
+  /* Initialize the cell with 0's */
+  memset(&cell, 0, sizeof(cell_t));
+
   if(amount_to_process > CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE) {
     cell.length = CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE;
   } else {
@@ -679,6 +685,7 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
     return 0;
   }
 
+  memset(&cell, 0, sizeof(cell_t));
   *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
   *cell.payload = TOPIC_COMMAND_SENDME;
   cell.length += TOPIC_HEADER_SIZE;

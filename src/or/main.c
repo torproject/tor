@@ -342,7 +342,7 @@ int prepare_for_poll(int *timeout) {
           /* either a full router, or we've got a circuit. send a padding cell. */
 //          log(LOG_DEBUG,"prepare_for_poll(): Sending keepalive to (%s:%d)",
 //              tmpconn->address, tmpconn->port);
-//          memset(&cell,0,sizeof(cell_t));
+          memset(&cell,0,sizeof(cell_t));
           cell.command = CELL_PADDING;
           if(connection_write_cell_to_buf(&cell, tmpconn) < 0)
             tmpconn->marked_for_close = 1;

@@ -314,6 +314,8 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit
     } else { /* last cell */
       cell.length = dataleft;
       memcpy(cell.payload, tmpbuf + tmpbuflen - dataleft, dataleft);
+      /* fill extra space with 0 bytes */
+      memset(cell.payload + dataleft, 0, CELL_PAYLOAD_SIZE - dataleft);
       connection_write_cell_to_buf(&cell, n_conn);
       dataleft = 0;
     }
