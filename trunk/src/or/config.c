@@ -17,7 +17,7 @@
 /** Enumeration of types which option values can take */
 typedef enum config_type_t {
   CONFIG_TYPE_STRING = 0, /**< An arbitrary string. */
-  CONFIG_TYPE_INT, /**< An integer */
+  CONFIG_TYPE_UINT, /**< A non-negative integer less than MAX_INT */
   CONFIG_TYPE_DOUBLE, /**< A floating-point value */
   CONFIG_TYPE_BOOL, /**< A boolean value, expressed as 0 or 1. */
   CONFIG_TYPE_CSV, /**< A list of strings, separated by commas and optional
@@ -127,7 +127,7 @@ static void config_free_lines(struct config_line_t *front) {
  * skip it.
  */
 static int config_compare(struct config_line_t *c, const char *key, config_type_t type, void *arg) {
-  int i;
+  int i, ok;
 
   if(strncasecmp(c->key,key,strlen(c->key)))
     return 0;
@@ -141,13 +141,19 @@ static int config_compare(struct config_line_t *c, const char *key, config_type_
   log_fn(LOG_DEBUG,"Recognized keyword '%s' as %s, using value '%s'.",c->key,key,c->value);
 
   switch(type) {
-    case CONFIG_TYPE_INT:
-      *(int *)arg = atoi(c->value);
+    case CONFIG_TYPE_UINT:
+      i = tor_parse_long(c->value,10,0,INT_MAX,&ok,NULL);
+      if(!ok) {
+        log(LOG_WARN, "Int keyword '%s %s' is malformed or out of bounds. Skipping.",
+            c->key,c->value);
+        return 0;
+      }
+      *(int *)arg = i;
       break;
     case CONFIG_TYPE_BOOL:
-      i = atoi(c->value);
-      if (i != 0 && i != 1) {
-        log(LOG_WARN, "Boolean keyword '%s' expects 0 or 1", c->key);
+      i = tor_parse_long(c->value,10,0,1,&ok,NULL);
+      if (!ok) {
+        log(LOG_WARN, "Boolean keyword '%s' expects 0 or 1. Skipping.", c->key);
         return 0;
       }
       *(int *)arg = i;
@@ -195,17 +201,17 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
     config_compare(list, "AllowUnverifiedNodes", CONFIG_TYPE_CSV, &options->AllowUnverifiedNodes) ||
     config_compare(list, "AuthoritativeDirectory",CONFIG_TYPE_BOOL, &options->AuthoritativeDir) ||
 
-    config_compare(list, "BandwidthRate",  CONFIG_TYPE_INT, &options->BandwidthRate) ||
-    config_compare(list, "BandwidthBurst", CONFIG_TYPE_INT, &options->BandwidthBurst) ||
+    config_compare(list, "BandwidthRate",  CONFIG_TYPE_UINT, &options->BandwidthRate) ||
+    config_compare(list, "BandwidthBurst", CONFIG_TYPE_UINT, &options->BandwidthBurst) ||
 
     config_compare(list, "ClientOnly",     CONFIG_TYPE_BOOL, &options->ClientOnly) ||
     config_compare(list, "ContactInfo",    CONFIG_TYPE_STRING, &options->ContactInfo) ||
 
     config_compare(list, "DebugLogFile",   CONFIG_TYPE_STRING, &options->DebugLogFile) ||
     config_compare(list, "DataDirectory",  CONFIG_TYPE_STRING, &options->DataDirectory) ||
-    config_compare(list, "DirPort",        CONFIG_TYPE_INT, &options->DirPort) ||
+    config_compare(list, "DirPort",        CONFIG_TYPE_UINT, &options->DirPort) ||
     config_compare(list, "DirBindAddress", CONFIG_TYPE_LINELIST, &options->DirBindAddress) ||
-    config_compare(list, "DirFetchPostPeriod",CONFIG_TYPE_INT, &options->DirFetchPostPeriod) ||
+    config_compare(list, "DirFetchPostPeriod",CONFIG_TYPE_UINT, &options->DirFetchPostPeriod) ||
     config_compare(list, "DirServer",      CONFIG_TYPE_LINELIST, &options->DirServers) ||
 
     config_compare(list, "ExitNodes",      CONFIG_TYPE_STRING, &options->ExitNodes) ||
@@ -220,6 +226,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
 
     config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
 
+    config_compare(list, "HttpProxy",      CONFIG_TYPE_STRING, &options->HttpProxy) ||
     config_compare(list, "HiddenServiceDir", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
     config_compare(list, "HiddenServicePort", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
     config_compare(list, "HiddenServiceNodes", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
@@ -227,20 +234,20 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
 
     config_compare(list, "IgnoreVersion",  CONFIG_TYPE_BOOL, &options->IgnoreVersion) ||
 
-    config_compare(list, "KeepalivePeriod",CONFIG_TYPE_INT, &options->KeepalivePeriod) ||
+    config_compare(list, "KeepalivePeriod",CONFIG_TYPE_UINT, &options->KeepalivePeriod) ||
 
     config_compare(list, "LogLevel",       CONFIG_TYPE_LINELIST, &options->LogOptions) ||
     config_compare(list, "LogFile",        CONFIG_TYPE_LINELIST, &options->LogOptions) ||
     config_compare(list, "LinkPadding",    CONFIG_TYPE_OBSOLETE, NULL) ||
 
-    config_compare(list, "MaxConn",        CONFIG_TYPE_INT, &options->MaxConn) ||
-    config_compare(list, "MaxOnionsPending",CONFIG_TYPE_INT, &options->MaxOnionsPending) ||
+    config_compare(list, "MaxConn",        CONFIG_TYPE_UINT, &options->MaxConn) ||
+    config_compare(list, "MaxOnionsPending",CONFIG_TYPE_UINT, &options->MaxOnionsPending) ||
 
     config_compare(list, "Nickname",       CONFIG_TYPE_STRING, &options->Nickname) ||
-    config_compare(list, "NewCircuitPeriod",CONFIG_TYPE_INT, &options->NewCircuitPeriod) ||
-    config_compare(list, "NumCpus",        CONFIG_TYPE_INT, &options->NumCpus) ||
+    config_compare(list, "NewCircuitPeriod",CONFIG_TYPE_UINT, &options->NewCircuitPeriod) ||
+    config_compare(list, "NumCpus",        CONFIG_TYPE_UINT, &options->NumCpus) ||
 
-    config_compare(list, "ORPort",         CONFIG_TYPE_INT, &options->ORPort) ||
+    config_compare(list, "ORPort",         CONFIG_TYPE_UINT, &options->ORPort) ||
     config_compare(list, "ORBindAddress",  CONFIG_TYPE_LINELIST, &options->ORBindAddress) ||
     config_compare(list, "OutboundBindAddress",CONFIG_TYPE_STRING, &options->OutboundBindAddress) ||
 
@@ -254,7 +261,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
     config_compare(list, "RendNodes",      CONFIG_TYPE_STRING, &options->RendNodes) ||
     config_compare(list, "RendExcludeNodes",CONFIG_TYPE_STRING, &options->RendExcludeNodes) ||
 
-    config_compare(list, "SocksPort",      CONFIG_TYPE_INT, &options->SocksPort) ||
+    config_compare(list, "SocksPort",      CONFIG_TYPE_UINT, &options->SocksPort) ||
     config_compare(list, "SocksBindAddress",CONFIG_TYPE_LINELIST,&options->SocksBindAddress) ||
     config_compare(list, "SocksPolicy",     CONFIG_TYPE_LINELIST,&options->SocksPolicy) ||
 
@@ -443,7 +450,8 @@ static void print_usage(void) {
 }
 
 /**
- * Adjust <b>options</b> to contain a reasonable value for Address.
+ * Based on <b>address</b>, guess our public IP address and put it
+ * in <b>addr</b>.
  */
 int resolve_my_address(const char *address, uint32_t *addr) {
   struct in_addr in;
@@ -542,6 +550,7 @@ static void free_options(or_options_t *options) {
   tor_free(options->RecommendedVersions);
   tor_free(options->User);
   tor_free(options->Group);
+  tor_free(options->HttpProxy);
   config_free_lines(options->RendConfigLines);
   config_free_lines(options->SocksBindAddress);
   config_free_lines(options->ORBindAddress);
@@ -727,8 +736,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     return -1;
   }
 
-  if(options->ORPort < 0) {
-    log(LOG_WARN,"ORPort option can't be negative.");
+  if(options->ORPort < 0 || options->ORPort > 65535) {
+    log(LOG_WARN,"ORPort option out of bounds.");
     result = -1;
   }
 
@@ -762,8 +771,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
       result = -1;
   }
 
-  if(options->SocksPort < 0) {
-    log(LOG_WARN,"SocksPort option can't be negative.");
+  if(options->SocksPort < 0 || options->SocksPort > 65535) {
+    log(LOG_WARN,"SocksPort option out of bounds.");
     result = -1;
   }
 
@@ -772,8 +781,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
-  if(options->DirPort < 0) {
-    log(LOG_WARN,"DirPort option can't be negative.");
+  if(options->DirPort < 0 || options->DirPort > 65535) {
+    log(LOG_WARN,"DirPort option out of bounds.");
     result = -1;
   }
 
@@ -869,6 +878,18 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   if(options->KeepalivePeriod < 1) {
     log(LOG_WARN,"KeepalivePeriod option must be positive.");
     result = -1;
+  }
+
+  if(options->HttpProxy) { /* parse it now */
+    if(parse_addr_port(options->HttpProxy, NULL,
+                       &options->HttpProxyAddr, &options->HttpProxyPort) < 0) {
+      log(LOG_WARN,"HttpProxy failed to parse or resolve. Please fix.");
+      result = -1;
+    }
+    options->HttpProxyAddr = ntohl(options->HttpProxyAddr); /* switch to host-order */
+    if(options->HttpProxyPort == 0) { /* give it a default */
+      options->HttpProxyPort = 80;
+    }
   }
 
   for (cl = options->DirServers; cl; cl = cl->next) {
