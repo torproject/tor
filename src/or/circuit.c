@@ -255,15 +255,16 @@ circuit_t *circuit_get_newest_by_edge_type(char edge_type) {
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
     if(edge_type == EDGE_AP && (!circ->p_conn || circ->p_conn->type == CONN_TYPE_AP)) {
-      if(!bestcirc ||
-        (circ->state == CIRCUIT_STATE_OPEN && bestcirc->timestamp_created < circ->timestamp_created)) {
+      if(circ->state == CIRCUIT_STATE_OPEN && (!bestcirc ||
+        bestcirc->timestamp_created < circ->timestamp_created)) {
         log(LOG_DEBUG,"circuit_get_newest_by_edge_type(): Choosing n_aci %d.", circ->n_aci);
+        assert(circ->n_aci);
         bestcirc = circ;
       }
     }
     if(edge_type == EDGE_EXIT && (!circ->n_conn || circ->n_conn->type == CONN_TYPE_EXIT)) {
-      if(!bestcirc ||
-        (circ->state == CIRCUIT_STATE_OPEN && bestcirc->timestamp_created < circ->timestamp_created))
+      if(circ->state == CIRCUIT_STATE_OPEN && (!bestcirc ||
+        bestcirc->timestamp_created < circ->timestamp_created))
         bestcirc = circ;
     }
   }
@@ -547,7 +548,7 @@ void circuit_about_to_close_connection(connection_t *conn) {
    * down the road, maybe we'll consider that eof doesn't mean can't-write
    */
   circuit_t *circ;
-  connection_t *prevconn, *tmpconn;
+  connection_t *prevconn;
 
   if(!connection_speaks_cells(conn)) {
     /* it's an edge conn. need to remove it from the linked list of

@@ -258,7 +258,6 @@ void command_process_data_cell(cell_t *cell, connection_t *conn) {
 
 void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
-  connection_t *tmpconn;
 
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
