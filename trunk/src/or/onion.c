@@ -160,17 +160,13 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
 /* uses a weighted coin with weight cw to choose a route length */
 static int chooselen(double cw) {
   int len = 2;
-  uint8_t coin;
   
   if ((cw < 0) || (cw >= 1)) /* invalid parameter */
     return -1;
   
   while(1)
   {
-    if (CRYPTO_PSEUDO_RAND_INT(coin))
-      return -1;
-    
-    if (coin > cw*255) /* don't extend */
+    if (crypto_pseudo_rand_int(255) > cw*255) /* don't extend */
       break;
     else
       len++;
@@ -279,10 +275,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, int path_len, routerinfo_t **rou
   log_fn(LOG_DEBUG, "Path is %d long; we want %d", cur_len, path_len);
 
  again:
-  if (CRYPTO_PSEUDO_RAND_INT(choice)) {
-    return -1;
-  }
-  choice %= rarray_len;
+  choice = crypto_pseudo_rand_int(rarray_len);
   log_fn(LOG_DEBUG,"Contemplating router %s for hop %d",
          rarray[choice]->nickname, cur_len);
   for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {
