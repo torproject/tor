@@ -1158,12 +1158,20 @@ int crypto_dh_get_bytes(crypto_dh_env_t *dh)
   assert(dh);
   return DH_size(dh->dh);
 }
+int crypto_dh_generate_public(crypto_dh_env_t *dh)
+{
+  if (!DH_generate_key(dh->dh))
+    return -1;
+  return 0;
+}
 int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
 {
   int bytes;
   assert(dh);
-  if (!DH_generate_key(dh->dh))
-    return -1;
+  if (!dh->dh->pub_key) {
+    if (!DH_generate_key(dh->dh))
+      return -1;
+  }
 
   assert(dh->dh->pub_key);
   bytes = BN_num_bytes(dh->dh->pub_key);

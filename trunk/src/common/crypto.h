@@ -86,6 +86,7 @@ typedef struct crypto_dh_env_st {
 #define CRYPTO_DH_SIZE (1024 / 8)
 crypto_dh_env_t *crypto_dh_new();
 int crypto_dh_get_bytes(crypto_dh_env_t *dh);
+int crypto_dh_generate_public(crypto_dh_env_t *dh);
 int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey_out,
                          int pubkey_out_len);
 int crypto_dh_compute_secret(crypto_dh_env_t *dh,
