@@ -1160,7 +1160,7 @@ void dirserv_free_fingerprint_list();
 int dirserv_add_descriptor(const char **desc);
 int dirserv_load_from_directory_string(const char *dir);
 void dirserv_free_descriptors();
-void dirserv_remove_old_servers(void);
+void dirserv_remove_old_servers(int age);
 int dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
                                      crypto_pk_env_t *private_key);
 void directory_set_dirty(void);
@@ -1385,7 +1385,7 @@ void routerlist_clear_trusted_directories(void);
 void routerinfo_free(routerinfo_t *router);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_mark_as_down(const char *digest);
-void routerlist_remove_old_routers(void);
+void routerlist_remove_old_routers(int age);
 int router_load_routerlist_from_file(char *routerfile, int trusted);
 int router_load_routerlist_from_string(const char *s, int trusted);
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey);
