@@ -418,7 +418,7 @@ void router_upload_dir_desc_to_dirservers(void) {
   directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, s, strlen(s));
 }
 
-#define DEFAULT_EXIT_POLICY "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,accept *:20-22,accept *:53,accept *:79-81,accept *:110,accept *:143,accept *:443,accept *:873,accept *:993,accept *:995,accept *:1024-65535,reject *:*"
+#define DEFAULT_EXIT_POLICY "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,accept *:20-22,accept *:53,accept *:79-81,accept *:110,accept *:143,accept *:443,accept *:873,accept *:993,accept *:995,reject *:4661-4662,reject *:1214,reject *:6346,accept *:1024-65535,reject *:*"
 
 /** Set the exit policy on <b>router</b> to match the exit policy in the
  * current configuration file.  If the exit policy doesn't have a catch-all
