@@ -256,7 +256,7 @@ const char *tor_socket_strerror(int e);
 #define ERRNO_IS_EINPROGRESS(e)      ((e) == EINPROGRESS)
 #define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == EINPROGRESS)
 #define tor_socket_errno(sock)       (errno)
-#define tor_socket_strerror(e)              strerror(e)
+#define tor_socket_strerror(e)       strerror(e)
 #endif
 
 #endif

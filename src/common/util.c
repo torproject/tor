@@ -1094,7 +1094,9 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 
 /* On Windows, WSAEWOULDBLOCK is not always correct: when you see it,
  * you need to ask the socket for its actual errno.  Also, you need to
- * get your errors from WSAGetLastError, not errno.
+ * get your errors from WSAGetLastError, not errno.  (If you supply a
+ * socket of -1, we check WSAGetLastError, but don't correct
+ * WSAEWOULDBLOCKs.)
  */
 #ifdef MS_WINDOWS
 int tor_socket_errno(int sock)
