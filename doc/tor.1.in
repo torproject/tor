@@ -85,6 +85,27 @@ If 1, Tor forks and daemonizes to the background. (Default: 0)
 .TP
 \fBUser \fR\fIUID\fP
 On startup, setuid to this user.
+.TP
+\fBControlPort \fR\fIPort\fP
+If set, Tor will accept connections from the same machine (localhost only) on
+this port, and allow those connections to control the Tor process using the
+Tor Control Protocol (described in control-spec.txt).  Note: unless you also
+specify one of \fBHashedControlPassword\fP or \fBCookieAuthentication\fP,
+setting this option will cause Tor to allow any process on the local host to
+control it.
+.TP
+\fBHashedControlPassword \fR\fIhashed_password\fP
+Don't allow any connections on the control port except when the other process
+knows the password whose one-way hash is \fIhashed_password\fP.  You can
+compute the hash of a password by running "tor --hash-password
+\fIpassword\fP".
+.TP
+\fBCookieAuthentication \fR\fB0\fR|\fB1\fP
+If this option is set to 1, don't allow any connections on the control port
+except when the connecting process knows the contents of a file named
+"control_auth_cookie", which Tor will create in its data directory.  This
+authentication methods should only be used on systems with good filesystem
+security.
 
 .SH CLIENT OPTIONS
 .PP
@@ -223,7 +244,8 @@ If you have more than this number of onionskins queued for decrypt, reject new o
 Declare that this Tor server is controlled or administered by a group
 or organization identical or similar to that of the other named servers.
 When two servers both declare that they are in the same 'family', Tor clients
-will not use them in the same circuit.
+will not use them in the same circuit.  (Each server only need to list the
+other servers in its family; it doesn't need to list itself.)
 .TP
 \fBNickname \fR\fIname\fP
 Set the server's nickname to 'name'.

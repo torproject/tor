@@ -1317,6 +1317,11 @@ options_validate(or_options_t *options)
       result = -1;
     }
   }
+  if (options->HashedControlPassword && options->CookieAuthentication) {
+    log_fn(LOG_WARN,"Cannot enable both HashedControlPassword and CookieAuthentication");
+    result = -1;
+  }
+
   if (check_nickname_list(options->ExitNodes, "ExitNodes"))
     result = -1;
   if (check_nickname_list(options->EntryNodes, "EntryNodes"))
