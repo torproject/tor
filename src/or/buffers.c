@@ -138,8 +138,8 @@ int write_to_buf(char *string, int string_len,
 
 #ifdef USE_ZLIB
 int compress_from_buf(char *string, int string_len, 
-		      char **buf_in, int *buflen_in, int *buf_datalen_in,
-		      z_stream *zstream, int flush) {
+                      char **buf_in, int *buflen_in, int *buf_datalen_in,
+                      z_stream *zstream, int flush) {
   int err;
 
   if (!*buf_datalen_in)
@@ -157,8 +157,8 @@ int compress_from_buf(char *string, int string_len,
     case Z_OK:
     case Z_STREAM_END:
       log(LOG_DEBUG, "Compressed (%d/%d); filled (%d/%d).",
-	  *buf_datalen_in-zstream->avail_in, *buf_datalen_in,
-	  string_len-zstream->avail_out, string_len);
+          *buf_datalen_in-zstream->avail_in, *buf_datalen_in,
+          string_len-zstream->avail_out, string_len);
       memmove(*buf_in, zstream->next_in, zstream->avail_in);
       *buf_datalen_in = zstream->avail_in;
       return string_len - zstream->avail_out;
@@ -173,8 +173,8 @@ int compress_from_buf(char *string, int string_len,
 }
 
 int decompress_buf_to_buf(char **buf_in, int *buflen_in, int *buf_datalen_in,
-			  char **buf_out, int *buflen_out, int *buf_datalen_out,
-			  z_stream *zstream, int flush) 
+                          char **buf_out, int *buflen_out, int *buf_datalen_out,
+                          z_stream *zstream, int flush) 
 {
   int err;
 
@@ -193,9 +193,9 @@ int decompress_buf_to_buf(char **buf_in, int *buflen_in, int *buf_datalen_in,
     case Z_OK:
     case Z_STREAM_END:
       log(LOG_DEBUG, "Uncompressed (%d/%d); filled (%d/%d)",
-	  *buf_datalen_in-zstream->avail_in, *buf_datalen_in,
-	  (*buflen_out-*buf_datalen_out)-zstream->avail_out, 
-	  (*buflen_out-*buf_datalen_out) );
+          *buf_datalen_in-zstream->avail_in, *buf_datalen_in,
+          (*buflen_out-*buf_datalen_out)-zstream->avail_out, 
+          (*buflen_out-*buf_datalen_out) );
       memmove(*buf_in, zstream->next_in, zstream->avail_in);
       *buf_datalen_in = zstream->avail_in;
       *buf_datalen_out = *buflen_out - zstream->avail_out;

@@ -252,8 +252,8 @@ int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ) {
 #ifdef USE_ZLIB
       log(LOG_DEBUG,"connection_exit_process_data_cell(): uncompressing %d bytes onto outbuf...",cell->length - TOPIC_HEADER_SIZE);
       len = connection_decompress_to_buf(cell->payload + TOPIC_HEADER_SIZE,
-					 cell->length - TOPIC_HEADER_SIZE, 
-					 conn, Z_SYNC_FLUSH);
+                                         cell->length - TOPIC_HEADER_SIZE, 
+                                         conn, Z_SYNC_FLUSH);
       log(LOG_DEBUG,"%d bytes written", len);
       if (len<0) {
         log(LOG_INFO,"connection_exit_process_data_cell(): write to buf failed. Marking for close.");
