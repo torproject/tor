@@ -866,8 +866,8 @@ void assert_connection_ok(connection_t *conn, time_t now)
 
   /* buffers */
   if (!connection_is_listener(conn)) {
-    assert(conn->inbuf);
-    assert(conn->outbuf);
+    assert_buf_ok(conn->inbuf);
+    assert_buf_ok(conn->outbuf);
   }
 
   assert(!now || conn->timestamp_lastread <= now);

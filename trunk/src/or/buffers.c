@@ -6,7 +6,9 @@
 
 #include "or.h"
 
+#define BUFFER_MAGIC 0xB0FFF312u
 struct buf_t {
+  uint32_t magic; /* for debugging */
   char *mem;
   size_t len;
   size_t datalen;
@@ -118,6 +120,7 @@ int find_on_inbuf(char *string, int string_len, buf_t *buf) {
 buf_t *buf_new_with_capacity(size_t size) {
   buf_t *buf;
   buf = (buf_t*)tor_malloc(sizeof(buf_t));
+  buf->magic = BUFFER_MAGIC;
   buf->mem = (char *)tor_malloc(size);
   buf->len = size;
   buf->datalen = 0;
@@ -153,9 +156,10 @@ const char *_buf_peek_raw_buffer(const buf_t *buf)
 }
 
 void buf_free(buf_t *buf) {
-  assert(buf && buf->mem);
-  free(buf->mem);
-  free(buf);
+  assert_buf_ok(buf);
+  buf->magic = 0xDEADBEEF;
+  tor_free(buf->mem);
+  tor_free(buf);
 }
 
 /* read from socket s, writing onto end of buf.
@@ -574,6 +578,14 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
              *(buf->mem));
       return -1;
   }
+}
+
+void assert_buf_ok(buf_t *buf)
+{
+  assert(buf);
+  assert(buf->magic == BUFFER_MAGIC);
+  assert(buf->mem);
+  assert(buf->datalen <= buf->len);
 }
 
 /*
