@@ -215,7 +215,7 @@ if test $tor_cv_null_is_zero = yes; then
 fi
 
 # Whether we should use the dmalloc memory allocation debugging library.
-AC_MSG_CHECKING(wether to use dmalloc (debug memory allocation library))
+AC_MSG_CHECKING(whether to use dmalloc (debug memory allocation library))
 AC_ARG_WITH(dmalloc,
 [  --with-dmalloc        Use debug memory allocation library. ],
 [if [[ "$withval" = "yes" ]]; then
