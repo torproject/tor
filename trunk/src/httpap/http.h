@@ -8,8 +8,11 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/07/20 02:01:18  arma
+ * bugfixes: don't hang waiting for new children to die; accept HTTP/1.1
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.2  2002/04/02 14:27:33  badbytes
  * Final finishes.
@@ -28,7 +31,7 @@
 #define HTTPAP_VERSION "HTTP/1.0"
 
 #define HTTPAP_STATUS_LINE_FORBIDDEN HTTPAP_VERSION " 403 Only local connections are allowed." HTTPAP_CRLF
-#define HTTPAP_STATUS_LINE_VERSION_NOT_SUPPORTED HTTPAP_VERSION " 505 Only HTTP/1.0 is supported." HTTPAP_CRLF
+#define HTTPAP_STATUS_LINE_VERSION_NOT_SUPPORTED HTTPAP_VERSION " 501 Only HTTP/1.0 is supported." HTTPAP_CRLF
 #define HTTPAP_STATUS_LINE_UNAVAILABLE HTTPAP_VERSION " 503 Connection to the server failed." HTTPAP_CRLF
 #define HTTPAP_STATUS_LINE_BAD_REQUEST HTTPAP_VERSION " 400 Invalid syntax." HTTPAP_CRLF
 #define HTTPAP_STATUS_LINE_UNEXPECTED HTTPAP_VERSION " 500 Internal server error." HTTPAP_CRLF

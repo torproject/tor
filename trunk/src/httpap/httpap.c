@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.5  2002/07/20 02:01:18  arma
+ * bugfixes: don't hang waiting for new children to die; accept HTTP/1.1
+ *
  * Revision 1.4  2002/07/19 18:48:19  arma
  * slightly less noisy
  *
@@ -97,8 +100,10 @@ void print_usage()
 /* used for reaping zombie processes */
 void sigchld_handler(int s)
 {
-  while (wait(NULL) > 0);
-  connections--;
+  while((waitpid (-1, NULL, WNOHANG)) > 0) {
+//  while (wait(NULL) > 0);
+    connections--;
+  }
 }
 
 int handle_connection(int new_sock, struct hostent *local, struct sockaddr_in remote, uint16_t op_port)
@@ -177,12 +182,12 @@ int handle_connection(int new_sock, struct hostent *local, struct sockaddr_in re
     return -1;
   }
   log(LOG_DEBUG,"handle_connection : Client's version is : %s.",http_ver);
-  if (strcmp(http_ver, HTTPAP_VERSION)) /* not supported */
-  {
-    log(LOG_DEBUG,"handle_connection : Client's version is %s, I only support HTTP/1.0.",http_ver);
-    write_tout(new_sock, HTTPAP_STATUS_LINE_VERSION_NOT_SUPPORTED, strlen(HTTPAP_STATUS_LINE_VERSION_NOT_SUPPORTED), conn_toutp);
-    return -1;
-  }
+//  if (strcmp(http_ver, HTTPAP_VERSION)) /* not supported */
+//  {
+//    log(LOG_DEBUG,"handle_connection : Client's version is %s, I only support HTTP/1.0.",http_ver);
+//    write_tout(new_sock, HTTPAP_STATUS_LINE_VERSION_NOT_SUPPORTED, strlen(HTTPAP_STATUS_LINE_VERSION_NOT_SUPPORTED), conn_toutp);
+//    return -1;
+//  }
   free((void *)http_ver);
   
   /* extract the destination address and port */
