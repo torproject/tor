@@ -63,6 +63,40 @@ static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type)
   return test_circ_id;
 }
 
+/** Allocate and return a comma-separated list of the currently built
+ * elements of circuit_t.
+ */
+char *circuit_list_path(circuit_t *circ)
+{
+  struct crypt_path_t *hop;
+  routerinfo_t *r;
+  smartlist_t *elements;
+  char *s;
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+  tor_assert(circ->cpath);
+
+  elements = smartlist_create();
+
+  for (hop = circ->cpath; hop; hop = hop->next) {
+    if (hop->state != CPATH_STATE_OPEN)
+      break;
+    if ((r = router_get_by_digest(hop->identity_digest))) {
+      smartlist_add(elements, tor_strdup(r->nickname));
+    } else if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
+      smartlist_add(elements, tor_strdup("<rendezvous splice>"));
+    } else {
+      s = tor_malloc(HEX_DIGEST_LEN+2);
+      s[0]='$';
+      base16_encode(s+1,HEX_DIGEST_LEN+1,hop->identity_digest,DIGEST_LEN);
+      smartlist_add(elements, s);
+    }
+  }
+
+  s = smartlist_join_strings(elements, ",", 0, NULL);
+  SMARTLIST_FOREACH(elements, char*, cp, tor_free(cp));
+  return s;
+}
+
 /** Log, at severity <b>severity</b>, the nicknames of each router in
  * circ's cpath. Also log the length of the cpath, and the intended
  * exit point.
@@ -219,6 +253,8 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
     circuit_mark_for_close(circ);
     return NULL;
   }
+
+  control_event_circuit_status(circ, CIRC_EVENT_LAUNCHED);
 
   /* now see if we're already connected to the first OR in 'route' */
 
@@ -604,6 +640,8 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   hop->state = CPATH_STATE_OPEN;
   log_fn(LOG_INFO,"finished");
   circuit_log_path(LOG_INFO,circ);
+  control_event_circuit_status(circ, CIRC_EVENT_EXTENDED);
+
   return 0;
 }
 

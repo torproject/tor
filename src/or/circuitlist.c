@@ -74,6 +74,7 @@ void circuit_close_all_marked(void)
  */
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
   circuit_t *circ;
+  static uint32_t n_circuits_allocated = 0;
 
   circ = tor_malloc_zero(sizeof(circuit_t));
   circ->magic = CIRCUIT_MAGIC;
@@ -93,6 +94,7 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
   circ->deliver_window = CIRCWINDOW_START;
 
   circ->next_stream_id = crypto_pseudo_rand_int(1<<16);
+  circ->global_identifier = n_circuits_allocated++;
 
   circuit_add(circ);
 
@@ -353,9 +355,14 @@ int _circuit_mark_for_close(circuit_t *circ) {
    * links worked and which didn't.
    */
   if (circ->state != CIRCUIT_STATE_OPEN) {
-    if(CIRCUIT_IS_ORIGIN(circ))
+    if(CIRCUIT_IS_ORIGIN(circ)) {
       circuit_build_failed(circ); /* take actions if necessary */
+    }
     circuit_rep_hist_note_result(circ);
+  }
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    control_event_circuit_status(circ,
+     (circ->state == CIRCUIT_STATE_OPEN)?CIRC_EVENT_CLOSED:CIRC_EVENT_FAILED);
   }
   if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     tor_assert(circ->state == CIRCUIT_STATE_OPEN);

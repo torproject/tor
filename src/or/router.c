@@ -640,8 +640,9 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   bandwidth_usage = rep_hist_get_bandwidth_lines();
 
   if (router->declared_family && smartlist_len(router->declared_family)) {
-    char *s = smartlist_join_strings(router->declared_family, " ", 0);
-    size_t n = strlen(s) + strlen("opt family ") + 2; /* 1 for \n, 1 for \0. */
+    size_t n;
+    char *s = smartlist_join_strings(router->declared_family, " ", 0, &n);
+    n += strlen("opt family ") + 2; /* 1 for \n, 1 for \0. */
     family_line = tor_malloc(n);
     tor_snprintf(family_line, n, "opt family %s\n", s);
     tor_free(s);

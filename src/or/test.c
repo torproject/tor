@@ -566,19 +566,19 @@ test_util(void) {
   test_streq("a", smartlist_get(sl, 1));
   test_streq("bc", smartlist_get(sl, 2));
   test_streq("", smartlist_get(sl, 3));
-  cp = smartlist_join_strings(sl, "", 0);
+  cp = smartlist_join_strings(sl, "", 0, NULL);
   test_streq(cp, "abcabc");
   tor_free(cp);
-  cp = smartlist_join_strings(sl, "!", 0);
+  cp = smartlist_join_strings(sl, "!", 0, NULL);
   test_streq(cp, "abc!a!bc!");
   tor_free(cp);
-  cp = smartlist_join_strings(sl, "XY", 0);
+  cp = smartlist_join_strings(sl, "XY", 0, NULL);
   test_streq(cp, "abcXYaXYbcXY");
   tor_free(cp);
-  cp = smartlist_join_strings(sl, "XY", 1);
+  cp = smartlist_join_strings(sl, "XY", 1, NULL);
   test_streq(cp, "abcXYaXYbcXYXY");
   tor_free(cp);
-  cp = smartlist_join_strings(sl, "", 1);
+  cp = smartlist_join_strings(sl, "", 1, NULL);
   test_streq(cp, "abcabc");
   tor_free(cp);
 

@@ -822,6 +822,10 @@ struct circuit_t {
    * is not marked for close. */
   struct circuit_t *rend_splice;
 
+  /** Quasi-global identifier for this circuit; used for control.c */
+  /* XXXX009 NM This can get re-used after 2**32 circuits. */
+  uint32_t global_identifier;
+
   struct circuit_t *next; /**< Next circuit in linked list. */
 };
 
@@ -1000,6 +1004,7 @@ void assert_buf_ok(buf_t *buf);
 
 /********************************* circuitbuild.c **********************/
 
+char *circuit_list_path(circuit_t *circ);
 void circuit_log_path(int severity, circuit_t *circ);
 void circuit_rep_hist_note_result(circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
@@ -1084,6 +1089,8 @@ void config_parse_exit_policy(struct config_line_t *cfg,
                               struct exit_policy_t **dest);
 void exit_policy_free(struct exit_policy_t *p);
 const char *get_data_directory(or_options_t *options);
+struct config_line_t *config_get_assigned_option(or_options_t *options,
+                                                 const char *key);
 
 /********************************* connection.c ***************************/
 
@@ -1202,14 +1209,37 @@ void connection_or_update_nickname(connection_t *conn);
 
 /********************************* control.c ***************************/
 
+typedef enum circuit_status_event_t {
+  CIRC_EVENT_LAUNCHED = 0,
+  CIRC_EVENT_BUILT    = 1,
+  CIRC_EVENT_EXTENDED = 2,
+  CIRC_EVENT_FAILED   = 3,
+  CIRC_EVENT_CLOSED   = 4,
+} circuit_status_event_t;
+
+typedef enum stream_status_event_t {
+  STREAM_EVENT_SENT_CONNECT = 0,
+  STREAM_EVENT_SENT_RESOLVE = 1,
+  STREAM_EVENT_SUCCEEDED    = 2,
+  STREAM_EVENT_FAILED       = 3,
+  STREAM_EVENT_CLOSED       = 4
+} stream_status_event_t;
+
+typedef enum or_conn_status_event_t {
+  OR_CONN_EVENT_LAUNCHED     = 0,
+  OR_CONN_EVENT_CONNECTED    = 1,
+  OR_CONN_EVENT_FAILED       = 2,
+  OR_CONN_EVENT_CLOSED       = 3,
+} or_conn_status_event_t;
+
 int connection_control_finished_flushing(connection_t *conn);
 int connection_control_process_inbuf(connection_t *conn);
 
-int control_event_circuit_status(circuit_t *circ);
-int control_event_stream_status(connection_t *conn);
-int control_event_or_conn_status(connection_t *conn);
+int control_event_circuit_status(circuit_t *circ, circuit_status_event_t e);
+int control_event_stream_status(connection_t *conn, stream_status_event_t e);
+int control_event_or_conn_status(connection_t *conn, or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
-int control_event_warning(const char *msg);
+void control_event_logmsg(int severity, const char *msg);
 
 /********************************* cpuworker.c *****************************/
 
@@ -1543,7 +1573,7 @@ int router_get_runningrouters_hash(const char *s, char *digest);
 int router_parse_list_from_string(const char **s,
                                   routerlist_t **dest,
                                   smartlist_t *good_nickname_list,
-                                  int rr_format,                        
+                                  int rr_format,
                                   time_t published);
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
