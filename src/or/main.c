@@ -615,7 +615,7 @@ time_t accounting_get_wakeup_time(void)
 
 int accounting_should_hibernate(void)
 {
-  return accouting_hard_limit_reached() || interval_wakeup_time > time(NULL);
+  return accounting_hard_limit_reached() || interval_wakeup_time > time(NULL);
 }
 
 /** Perform regular maintenance tasks for a single connection.  This
