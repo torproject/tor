@@ -9,7 +9,7 @@ or_LDADD = -L../common -lor
 
 or_SOURCES = buffers.c circuit.c command.c connection.c \
              connection_exit.c connection_ap.c connection_op.c connection_or.c config.c \
-             main.c onion.c routers.c directory.c
+             main.c onion.c routers.c directory.c dns.c
 
 test_config_SOURCES = test_config.c
 

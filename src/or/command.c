@@ -38,8 +38,8 @@ void command_time_process_cell(cell_t *cell, connection_t *conn,
 }
 
 void command_process_cell(cell_t *cell, connection_t *conn) {
-  static int num_create=0, num_data=0, num_destroy=0, num_sendme=0, num_connected=0;
-  static int create_time=0, data_time=0, destroy_time=0, sendme_time=0, connected_time=0;
+  static int num_create=0, num_data=0, num_destroy=0, num_sendme=0;
+  static int create_time=0, data_time=0, destroy_time=0, sendme_time=0;
   static long current_second = 0; /* from previous calls to gettimeofday */
   struct timeval now;
 
@@ -55,11 +55,10 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
     log(LOG_INFO,"Data:      %d (%d ms)", num_data, data_time/1000);
     log(LOG_INFO,"Destroy:   %d (%d ms)", num_destroy, destroy_time/1000);
     log(LOG_INFO,"Sendme:    %d (%d ms)", num_sendme, sendme_time/1000);
-    log(LOG_INFO,"Connected: %d (%d ms)", num_connected, connected_time/1000);
 
     /* zero out stats */
-    num_create = num_data = num_destroy = num_sendme = num_connected = 0;
-    create_time = data_time = destroy_time = sendme_time = connected_time = 0;
+    num_create = num_data = num_destroy = num_sendme = 0;
+    create_time = data_time = destroy_time = sendme_time = 0;
 
     /* remember which second it is, for next time */
     current_second = now.tv_sec; 
@@ -84,10 +83,6 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
     case CELL_SENDME:
       command_time_process_cell(cell, conn, &num_sendme, &sendme_time,
                                 command_process_sendme_cell);
-      break;
-    case CELL_CONNECTED:
-      command_time_process_cell(cell, conn, &num_connected, &connected_time,
-                                command_process_connected_cell);
       break;
     default:
       log(LOG_DEBUG,"Cell of unknown type (%d) received. Dropping.", cell->command);
@@ -115,7 +110,7 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
       circuit_close(circ);
       return;
     }
-    circ->onion = (unsigned char *)malloc(circ->onionlen);
+    circ->onion = malloc(circ->onionlen);
     if(!circ->onion) { 
       log(LOG_DEBUG,"command_process_create_cell(): Out of memory. Closing.");
       circuit_close(circ);
@@ -158,16 +153,6 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
   return;
 }
 
-#if 0
-  conn->onions_handled_this_second++;
-  log(LOG_DEBUG,"command_process_create_cell(): Processing onion %d for this second.",conn->onions_handled_this_second);
-  if(conn->onions_handled_this_second > options.OnionsPerSecond) {
-    log(LOG_INFO,"command_process_create_cell(): Received too many onions (now %d) this second. Closing.", conn->onions_handled_this_second);
-    circuit_close(circ);
-    return;
-  }
-#endif
-
 void command_process_sendme_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
@@ -189,17 +174,16 @@ void command_process_sendme_cell(cell_t *cell, connection_t *conn) {
 
   /* at this point both circ->n_conn and circ->p_conn are guaranteed to be set */
 
-  if(cell->length != RECEIVE_WINDOW_INCREMENT) {
+  if(cell->length != CIRCWINDOW_INCREMENT) {
     log(LOG_WARNING,"command_process_sendme_cell(): non-standard sendme value %d.",cell->length);
   }
-//  assert(cell->length == RECEIVE_WINDOW_INCREMENT);
 
   if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
-    circ->n_receive_window += cell->length;
-    log(LOG_DEBUG,"connection_process_sendme_cell(): n_receive_window for aci %d is %d.",circ->n_aci,circ->n_receive_window);
-    if(circ->n_conn->type == CONN_TYPE_EXIT) {
-      connection_start_reading(circ->n_conn);
-      connection_package_raw_inbuf(circ->n_conn); /* handle whatever might still be on the inbuf */
+    circ->n_receive_circwindow += cell->length;
+    assert(circ->n_receive_circwindow <= CIRCWINDOW_START);
+    log(LOG_DEBUG,"connection_process_sendme_cell(): n_receive_circwindow for aci %d is %d.",circ->n_aci,circ->n_receive_circwindow);
+    if(!circ->n_conn || circ->n_conn->type == CONN_TYPE_EXIT) {
+      circuit_resume_edge_reading(circ, EDGE_EXIT);
     } else {
       cell->aci = circ->n_aci; /* switch it */
       if(connection_write_cell_to_buf(cell, circ->n_conn) < 0) { /* (clobbers cell) */
@@ -208,11 +192,11 @@ void command_process_sendme_cell(cell_t *cell, connection_t *conn) {
       }
     }
   } else { /* it's an ingoing cell */
-    circ->p_receive_window += cell->length;
-    log(LOG_DEBUG,"connection_process_sendme_cell(): p_receive_window for aci %d is %d.",circ->p_aci,circ->p_receive_window);
-    if(circ->p_conn->type == CONN_TYPE_AP) {
-      connection_start_reading(circ->p_conn);
-      connection_package_raw_inbuf(circ->p_conn); /* handle whatever might still be on the inbuf */
+    circ->p_receive_circwindow += cell->length;
+    log(LOG_DEBUG,"connection_process_sendme_cell(): p_receive_circwindow for aci %d is %d.",circ->p_aci,circ->p_receive_circwindow);
+    assert(circ->p_receive_circwindow <= CIRCWINDOW_START);
+    if(!circ->p_conn || circ->p_conn->type == CONN_TYPE_AP) {
+      circuit_resume_edge_reading(circ, EDGE_AP);
     } else {
       cell->aci = circ->p_aci; /* switch it */
       if(connection_write_cell_to_buf(cell, circ->p_conn) < 0) { /* (clobbers cell) */
@@ -246,47 +230,41 @@ void command_process_data_cell(cell_t *cell, connection_t *conn) {
     onion_pending_data_add(circ, cell);
     return;
   }
-  /* at this point both circ->n_conn and circ->p_conn are guaranteed to be set */
+
+  /* circ->p_conn and n_conn are only null if we're at an edge point with no connections yet */
 
   if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
     cell->aci = circ->n_aci; /* switch it */
-    if(--circ->p_receive_window < 0) { /* is it less than 0 after decrement? */
-      log(LOG_DEBUG,"connection_process_data_cell(): Too many data cells on aci %d. Closing.", circ->p_aci);
+    if(--circ->p_receive_circwindow < 0) { /* is it less than 0 after decrement? */
+      log(LOG_INFO,"connection_process_data_cell(): Too many data cells for circuit (aci %d). Closing.", circ->p_aci);
       circuit_close(circ);
       return;
     }
-    log(LOG_DEBUG,"connection_process_data_cell(): p_receive_window for aci %d is %d.",circ->p_aci,circ->p_receive_window);
-    if(circuit_deliver_data_cell(cell, circ, circ->n_conn, 'd') < 0) {
-      log(LOG_DEBUG,"command_process_data_cell(): circuit_deliver_data_cell (forward) failed. Closing.");
+    log(LOG_DEBUG,"connection_process_data_cell(): p_receive_circwindow for aci %d is %d.",circ->p_aci,circ->p_receive_circwindow);
+    if(circuit_deliver_data_cell(cell, circ, CELL_DIRECTION_OUT) < 0) {
+      log(LOG_INFO,"command_process_data_cell(): circuit_deliver_data_cell (forward) failed. Closing.");
       circuit_close(circ);
       return;
     }
   } else { /* it's an ingoing cell */
     cell->aci = circ->p_aci; /* switch it */
-    if(--circ->n_receive_window < 0) { /* is it less than 0 after decrement? */
-      log(LOG_DEBUG,"connection_process_data_cell(): Too many data cells on aci %d. Closing.", circ->n_aci);
+    if(--circ->n_receive_circwindow < 0) { /* is it less than 0 after decrement? */
+      log(LOG_DEBUG,"connection_process_data_cell(): Too many data cells for circuit (aci %d). Closing.", circ->n_aci);
       circuit_close(circ);
       return;
     }
-    log(LOG_DEBUG,"connection_process_data_cell(): n_receive_window for aci %d is %d.",circ->n_aci,circ->n_receive_window);
-    if(circ->p_conn->type == CONN_TYPE_AP) { /* we want to decrypt, not encrypt */
-      if(circuit_deliver_data_cell(cell, circ, circ->p_conn, 'd') < 0) {
-        log(LOG_DEBUG,"command_process_data_cell(): circuit_deliver_data_cell (backward to AP) failed. Closing.");
-        circuit_close(circ);
-        return;
-      }
-    } else {
-      if(circuit_deliver_data_cell(cell, circ, circ->p_conn, 'e') < 0) {
-        log(LOG_DEBUG,"command_process_data_cell(): circuit_deliver_data_cell (backward) failed. Closing.");
-        circuit_close(circ);
-        return;
-      }
+    log(LOG_DEBUG,"connection_process_data_cell(): n_receive_circwindow for aci %d is %d.",circ->n_aci,circ->n_receive_circwindow);
+    if(circuit_deliver_data_cell(cell, circ, CELL_DIRECTION_IN) < 0) {
+      log(LOG_DEBUG,"command_process_data_cell(): circuit_deliver_data_cell (backward to AP) failed. Closing.");
+      circuit_close(circ);
+      return;
     }
   }
 }
 
 void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
+  connection_t *tmpconn;
 
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
@@ -299,34 +277,19 @@ void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   if(circ->state == CIRCUIT_STATE_ONION_PENDING) {
     onion_pending_remove(circ);
   }
+
   circuit_remove(circ);
+
   if(cell->aci == circ->p_aci) { /* the destroy came from behind */
-    if(circ->n_conn) /* might not be defined, eg if it was just on the pending queue */
-      connection_send_destroy(circ->n_aci, circ->n_conn);
+    for(tmpconn = circ->n_conn; tmpconn; tmpconn=tmpconn->next_topic) {
+      connection_send_destroy(circ->n_aci, tmpconn);
+    }
   }
   if(cell->aci == circ->n_aci) { /* the destroy came from ahead */
-    assert(circ->p_conn);
-    connection_send_destroy(circ->p_aci, circ->p_conn);
+    for(tmpconn = circ->p_conn; tmpconn; tmpconn=tmpconn->next_topic) {
+      connection_send_destroy(circ->p_aci, tmpconn);
+    }
   }
   circuit_free(circ);
-}
-
-void command_process_connected_cell(cell_t *cell, connection_t *conn) {
-  circuit_t *circ;
-
-  circ = circuit_get_by_aci_conn(cell->aci, conn);
-
-  if(!circ) {
-    log(LOG_DEBUG,"command_process_connected_cell(): unknown circuit %d. Dropping.", cell->aci);
-    return;
-  }
-
-  if(circ->n_conn != conn) {
-    log(LOG_WARNING,"command_process_connected_cell(): cell didn't come from n_conn! (aci %d)",cell->aci);
-    return;
-  }
-
-  log(LOG_DEBUG,"command_process_connected_cell(): Received for aci %d.",cell->aci);
-  connection_send_connected(circ->p_aci, circ->p_conn);
 }
 

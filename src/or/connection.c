@@ -19,6 +19,7 @@ char *conn_type_to_string[] = {
   "App",         /* 7 */
   "Dir listener",/* 8 */
   "Dir",         /* 9 */
+  "DNS master",  /* 10 */
 };
 
 char *conn_state_to_string[][15] = {
@@ -52,6 +53,7 @@ char *conn_state_to_string[][15] = {
     "reading",                         /* 2 */
     "awaiting command",                /* 3 */
     "writing" },                       /* 4 */
+  { "open" }, /* dns master, 0 */
 };
 
 /********* END VARIABLES ************/
@@ -354,6 +356,9 @@ int connection_write_to_buf(char *string, int len, connection_t *conn) {
   if(!len)
     return 0;
 
+  if(conn->marked_for_close)
+    return 0;
+
   conn->timestamp_lastwritten = now.tv_sec;
 
   if( (!connection_speaks_cells(conn)) ||
@@ -507,23 +512,6 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
   return connection_write_cell_to_buf(&cell, conn);
 }
 
-int connection_send_connected(aci_t aci, connection_t *conn) {
-  cell_t cell;
-
-  assert(conn);
-
-  if(!connection_speaks_cells(conn)) {
-    log(LOG_INFO,"connection_send_connected(): Aci %d: At entry point. Notifying proxy.", aci);
-    connection_ap_send_connected(conn);
-    return 0;
-  }
-
-  cell.aci = aci;
-  cell.command = CELL_CONNECTED;
-  log(LOG_INFO,"connection_send_connected(): passing back cell (aci %d).",aci);
-  return connection_write_cell_to_buf(&cell, conn);
-}
-
 int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn) {
   char networkcell[CELL_NETWORK_SIZE];
   char *n = networkcell;
@@ -588,6 +576,8 @@ int connection_process_inbuf(connection_t *conn) {
       return connection_ap_process_inbuf(conn);
     case CONN_TYPE_DIR:
       return connection_dir_process_inbuf(conn);
+    case CONN_TYPE_DNSMASTER:
+      return connection_dns_process_inbuf(conn); 
     default:
       log(LOG_DEBUG,"connection_process_inbuf() got unexpected conn->type.");
       return -1;
@@ -601,70 +591,76 @@ int connection_package_raw_inbuf(connection_t *conn) {
 
   assert(conn);
   assert(!connection_speaks_cells(conn));
-  /* this function should never get called if the receiver_window is 0 */
+  /* this function should never get called if the receive_topicwindow is 0 */
+ 
+repeat_connection_package_raw_inbuf:
 
   amount_to_process = conn->inbuf_datalen;
 
   if(!amount_to_process)
     return 0;
 
-  if(amount_to_process > CELL_PAYLOAD_SIZE) {
-    cell.length = CELL_PAYLOAD_SIZE;
+  if(amount_to_process > CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE) {
+    cell.length = CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE;
   } else {
     cell.length = amount_to_process;
   }
 
-  if(connection_fetch_from_buf(cell.payload, cell.length, conn) < 0)
+  if(connection_fetch_from_buf(cell.payload+TOPIC_HEADER_SIZE, cell.length, conn) < 0)
     return -1;
 
   circ = circuit_get_by_conn(conn);
   if(!circ) {
-    log(LOG_DEBUG,"connection_raw_package_inbuf(): conn has no circuits!");
+    log(LOG_DEBUG,"connection_package_raw_inbuf(): conn has no circuits!");
     return -1;
   }
 
-  log(LOG_DEBUG,"connection_raw_package_inbuf(): Packaging %d bytes.",cell.length);
+  log(LOG_DEBUG,"connection_package_raw_inbuf(): Packaging %d bytes (%d waiting).",cell.length, amount_to_process);
+
+  *(uint32_t *)cell.payload = conn->topic_id;
+  *cell.payload = TOPIC_COMMAND_DATA;
+  cell.length += TOPIC_HEADER_SIZE;
+  cell.command = CELL_DATA;
+
   if(circ->n_conn == conn) { /* send it backward. we're an exit. */
     cell.aci = circ->p_aci;
-    cell.command = CELL_DATA;
-    if(circuit_deliver_data_cell(&cell, circ, circ->p_conn, 'e') < 0) {
-      log(LOG_DEBUG,"connection_raw_package_inbuf(): circuit_deliver_data_cell (backward) failed. Closing.");
+    if(circuit_deliver_data_cell_from_edge(&cell, circ, EDGE_EXIT) < 0) {
+      log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_data_cell_from_edge (backward) failed. Closing.");
       circuit_close(circ);
       return 0;
     }
-    assert(circ->n_receive_window > 0);
-    if(--circ->n_receive_window <= 0) { /* is it 0 after decrement? */
+    assert(conn->n_receive_topicwindow > 0);
+    if(--conn->n_receive_topicwindow <= 0) { /* is it 0 after decrement? */
       connection_stop_reading(circ->n_conn);
-      log(LOG_DEBUG,"connection_raw_package_inbuf(): receive_window at exit reached 0.");
+      log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at exit reached 0.");
       return 0; /* don't process the inbuf any more */
     }
-    log(LOG_DEBUG,"connection_raw_package_inbuf(): receive_window at exit is %d",circ->n_receive_window);
+    log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at exit is %d",conn->n_receive_topicwindow);
   } else { /* send it forward. we're an AP */
     cell.aci = circ->n_aci;
-    cell.command = CELL_DATA;
-    if(circuit_deliver_data_cell(&cell, circ, circ->n_conn, 'e') < 0) {
-      /* yes, we use 'e' here, because the AP connection must *encrypt* its input. */
-      log(LOG_DEBUG,"connection_raw_package_inbuf(): circuit_deliver_data_cell (forward) failed. Closing.");
+    if(circuit_deliver_data_cell_from_edge(&cell, circ, EDGE_AP) < 0) {
+      log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_data_cell_from_edge (forward) failed. Closing.");
       circuit_close(circ);
       return 0;
     }
-    assert(circ->p_receive_window > 0);
-    if(--circ->p_receive_window <= 0) { /* is it 0 after decrement? */
+    assert(conn->p_receive_topicwindow > 0);
+    if(--conn->p_receive_topicwindow <= 0) { /* is it 0 after decrement? */
       connection_stop_reading(circ->p_conn);
-      log(LOG_DEBUG,"connection_raw_package_inbuf(): receive_window at AP reached 0.");
+      log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at AP reached 0.");
       return 0; /* don't process the inbuf any more */
     }
-    log(LOG_DEBUG,"connection_raw_package_inbuf(): receive_window at AP is %d",circ->p_receive_window);
+    log(LOG_DEBUG,"connection_package_raw_inbuf(): receive_topicwindow at AP is %d",conn->p_receive_topicwindow);
   }
-  if(amount_to_process > CELL_PAYLOAD_SIZE)
-    log(LOG_DEBUG,"connection_raw_package_inbuf(): recursing.");
-    return connection_package_raw_inbuf(conn);
+  if(amount_to_process > CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE) {
+    log(LOG_DEBUG,"connection_package_raw_inbuf(): recursing.");
+    goto repeat_connection_package_raw_inbuf;
+  }
   return 0;
 }
 
-int connection_consider_sending_sendme(connection_t *conn) {
+int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
   circuit_t *circ;
-  cell_t sendme;
+  cell_t cell;
 
   if(connection_outbuf_too_full(conn))
     return 0;
@@ -675,22 +671,34 @@ int connection_consider_sending_sendme(connection_t *conn) {
     log(LOG_DEBUG,"connection_consider_sending_sendme(): No circuit associated with conn. Skipping.");
     return 0;
   }
-  sendme.command = CELL_SENDME;
-  sendme.length = RECEIVE_WINDOW_INCREMENT;
 
-  if(circ->n_conn == conn) { /* we're at an exit */
-    if(circ->p_receive_window < RECEIVE_WINDOW_START-RECEIVE_WINDOW_INCREMENT) {
-      log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing sendme back.", conn->outbuf_flushlen);
-      circ->p_receive_window += RECEIVE_WINDOW_INCREMENT;
-      sendme.aci = circ->p_aci;
-      return connection_write_cell_to_buf(&sendme, circ->p_conn); /* (clobbers sendme) */
+  *(uint32_t *)cell.payload = conn->topic_id;
+  *cell.payload = TOPIC_COMMAND_SENDME;
+  cell.length += TOPIC_HEADER_SIZE;
+  cell.command = CELL_DATA;
+
+  if(edge_type == EDGE_EXIT) { /* we're at an exit */
+    if(conn->p_receive_topicwindow < TOPICWINDOW_START - TOPICWINDOW_INCREMENT) {
+      log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing topic sendme back.", conn->outbuf_flushlen);
+      conn->p_receive_topicwindow += TOPICWINDOW_INCREMENT;
+      cell.aci = circ->p_aci;
+      if(circuit_deliver_data_cell_from_edge(&cell, circ, edge_type) < 0) {
+        log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_data_cell_from_edge (backward) failed. Closing.");
+        circuit_close(circ);
+        return 0;
+      }
     }
   } else { /* we're at an AP */
-    if(circ->n_receive_window < RECEIVE_WINDOW_START-RECEIVE_WINDOW_INCREMENT) {
-      log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing sendme forward.", conn->outbuf_flushlen);
-      circ->n_receive_window += RECEIVE_WINDOW_INCREMENT;
-      sendme.aci = circ->n_aci;
-      return connection_write_cell_to_buf(&sendme, circ->n_conn); /* (clobbers sendme) */
+    assert(edge_type == EDGE_AP);
+    if(conn->n_receive_topicwindow < TOPICWINDOW_START-TOPICWINDOW_INCREMENT) {
+      log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing topic sendme forward.", conn->outbuf_flushlen);
+      conn->n_receive_topicwindow += TOPICWINDOW_INCREMENT;
+      cell.aci = circ->n_aci;
+      if(circuit_deliver_data_cell_from_edge(&cell, circ, edge_type) < 0) {
+        log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_data_cell_from_edge (forward) failed. Closing.");
+        circuit_close(circ);
+        return 0;
+      }
     }
   }
   return 0;
@@ -713,6 +721,8 @@ int connection_finished_flushing(connection_t *conn) {
       return connection_exit_finished_flushing(conn);
     case CONN_TYPE_DIR:
       return connection_dir_finished_flushing(conn);
+    case CONN_TYPE_DNSMASTER:
+      return connection_dns_finished_flushing(conn);
     default:
       log(LOG_DEBUG,"connection_finished_flushing() got unexpected conn->type.");
       return -1;

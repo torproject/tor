@@ -64,8 +64,8 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
   circ->p_aci = p_aci;
   /* circ->n_aci remains 0 because we haven't identified the next hop yet */
 
-  circ->n_receive_window = RECEIVE_WINDOW_START;
-  circ->p_receive_window = RECEIVE_WINDOW_START;
+  circ->n_receive_circwindow = CIRCWINDOW_START;
+  circ->p_receive_circwindow = CIRCWINDOW_START;
 
   circuit_add(circ);
 
@@ -73,6 +73,7 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
 }
 
 void circuit_free(circuit_t *circ) {
+  struct data_queue_t *tmpd;
   
   if (circ->n_crypto)
     crypto_free_cipher_env(circ->n_crypto);
@@ -83,6 +84,12 @@ void circuit_free(circuit_t *circ) {
     free(circ->onion);
   if(circ->cpath)
     circuit_free_cpath(circ->cpath, circ->cpathlen);
+  while(circ->data_queue) {
+    tmpd = circ->data_queue;
+    circ->data_queue = tmpd->next;
+    free(tmpd->cell);
+    free(tmpd);
+  }
 
   free(circ);
 }
@@ -202,7 +209,7 @@ circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *circ, uint32_t naddr, uin
   else
     circ = circ->next;
 
-  for( ;circ;circ = circ->next) {
+  for( ; circ; circ = circ->next) {
     if(circ->n_addr == naddr && circ->n_port == nport)
        return circ;
   }
@@ -211,56 +218,108 @@ circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *circ, uint32_t naddr, uin
 
 circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn) {
   circuit_t *circ;
+  connection_t *tmpconn;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->p_conn == conn && circ->p_aci == aci)
-       return circ;
-    if(circ->n_conn == conn && circ->n_aci == aci)
-       return circ;
+    if(circ->p_aci == aci) {
+      for(tmpconn = circ->p_conn; tmpconn; tmpconn = tmpconn->next_topic) {
+        if(tmpconn == conn)
+          return circ;
+      }
+    }
+    if(circ->n_aci == aci) {
+      for(tmpconn = circ->n_conn; tmpconn; tmpconn = tmpconn->next_topic) {
+        if(tmpconn == conn)
+          return circ;
+      }
+    }
   }
   return NULL;
 }
 
 circuit_t *circuit_get_by_conn(connection_t *conn) {
   circuit_t *circ;
+  connection_t *tmpconn;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->p_conn == conn)
-       return circ;
-    if(circ->n_conn == conn)
-       return circ;
+    for(tmpconn = circ->p_conn; tmpconn; tmpconn=tmpconn->next_topic)
+      if(tmpconn == conn)
+        return circ;
+    for(tmpconn = circ->n_conn; tmpconn; tmpconn=tmpconn->next_topic)
+      if(tmpconn == conn)
+        return circ;
   }
   return NULL;
 }
 
-int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, connection_t *conn, int crypt_type) {
+int circuit_deliver_data_cell_from_edge(cell_t *cell, circuit_t *circ, char edge_type) {
+  int cell_direction;
 
-  /* first decrypt cell->length */
-  if(circuit_crypt(circ, &(cell->length), 1, crypt_type) < 0) {
-    log(LOG_DEBUG,"circuit_deliver_data_cell(): length decryption failed. Dropping connection.");
+  log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): called, edge_type %d.", edge_type);
+
+  if(edge_type == EDGE_AP) { /* i'm the AP */
+    cell_direction = CELL_DIRECTION_OUT;
+    if(circ->p_receive_circwindow <= 0) {
+      log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): window 0, queueing for later.");
+      circ->data_queue = data_queue_add(circ->data_queue, cell);
+      return 0;
+    }
+    circ->p_receive_circwindow--;
+  } else { /* i'm the exit */
+    cell_direction = CELL_DIRECTION_IN;
+    if(circ->n_receive_circwindow <= 0) {
+      log(LOG_DEBUG,"circuit_deliver_data_cell_from_edge(): window 0, queueing for later.");
+      circ->data_queue = data_queue_add(circ->data_queue, cell);
+      return 0;
+    }
+    circ->n_receive_circwindow--;
+  }
+
+  if(circuit_deliver_data_cell(cell, circ, cell_direction) < 0) {
+    return -1;
+  }
+    
+  circuit_consider_stop_edge_reading(circ, edge_type); /* has window reached 0? */
+  return 0;
+}
+
+int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, int cell_direction) {
+  connection_t *conn;
+
+  assert(cell && circ);
+  assert(cell_direction == CELL_DIRECTION_OUT || cell_direction == CELL_DIRECTION_IN); 
+  if(cell_direction == CELL_DIRECTION_OUT)
+    conn = circ->n_conn;
+  else
+    conn = circ->p_conn;
+
+  /* first crypt cell->length */
+  if(circuit_crypt(circ, &(cell->length), 1, cell_direction) < 0) {
+    log(LOG_DEBUG,"circuit_deliver_data_cell(): length crypt failed. Dropping connection.");
     return -1;
   }
 
-  /* then decrypt the payload */
-  if(circuit_crypt(circ, (char *)&(cell->payload), CELL_PAYLOAD_SIZE, crypt_type) < 0) {
-    log(LOG_DEBUG,"circuit_deliver_data_cell(): payload decryption failed. Dropping connection.");
+  /* then crypt the payload */
+  if(circuit_crypt(circ, (char *)&(cell->payload), CELL_PAYLOAD_SIZE, cell_direction) < 0) {
+    log(LOG_DEBUG,"circuit_deliver_data_cell(): payload crypt failed. Dropping connection.");
     return -1;
   }
 
-  if(conn->type == CONN_TYPE_EXIT) { /* send payload directly */
-//    log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to exit.");
-    return connection_exit_process_data_cell(cell, conn);
+  if((!conn && cell_direction == CELL_DIRECTION_OUT) || (conn && conn->type == CONN_TYPE_EXIT)) {
+    log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to exit.");
+    return connection_exit_process_data_cell(cell, circ);
   }
-  if(conn->type == CONN_TYPE_AP) { /* send payload directly */
-//    log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to AP.");
-    return connection_ap_process_data_cell(cell, conn);
+  if((!conn && cell_direction == CELL_DIRECTION_IN) || (conn && conn->type == CONN_TYPE_AP)) {
+    log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to AP.");
+    return connection_ap_process_data_cell(cell, circ);
   }
   /* else send it as a cell */
-//  log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to connection.");
+  assert(conn);
+  //log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to connection.");
   return connection_write_cell_to_buf(cell, conn);
 }
 
-int circuit_crypt(circuit_t *circ, char *in, int inlen, char crypt_type) {
+int circuit_crypt(circuit_t *circ, char *in, int inlen, char cell_direction) {
   char *out;
   int i;
   crypt_path_t *thishop;
@@ -271,20 +330,17 @@ int circuit_crypt(circuit_t *circ, char *in, int inlen, char crypt_type) {
   if(!out)
     return -1;
 
-  if(crypt_type == 'e') {
-//    log(LOG_DEBUG,"circuit_crypt(): Encrypting %d bytes.",inlen);
+  if(cell_direction == CELL_DIRECTION_IN) { //crypt_type == 'e') {
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
-      /* 'e' means we're preparing to send it out. */
-      for (i=0; i < circ->cpathlen; i++) /* moving from last to first hop 
-                                          * Remember : cpath is in reverse order, i.e. last hop first
-                                          */
+      for (i=circ->cpathlen-1; i >= 0; i--) /* moving from first to last hop 
+                                       * Remember : cpath is in reverse order, i.e. last hop first
+                                       */
       { 
-//        log(LOG_DEBUG,"circuit_crypt() : Encrypting via cpath: Processing hop %u",circ->cpathlen-i);
         thishop = circ->cpath[i];
-    
-        /* encrypt */
-        if(crypto_cipher_encrypt(thishop->f_crypto, in, inlen, (unsigned char *)out)) {
-          log(LOG_ERR,"Error performing encryption:%s",crypto_perror());
+
+        /* decrypt */
+        if(crypto_cipher_decrypt(thishop->b_crypto, in, inlen, out)) {
+          log(LOG_ERR,"Error performing decryption:%s",crypto_perror());
           free(out);
           return -1;
         }
@@ -301,19 +357,17 @@ int circuit_crypt(circuit_t *circ, char *in, int inlen, char crypt_type) {
       }
       memcpy(in,out,inlen);
     }
-  } else if(crypt_type == 'd') {
-//    log(LOG_DEBUG,"circuit_crypt(): Decrypting %d bytes.",inlen);
+  } else if(cell_direction == CELL_DIRECTION_OUT) { //crypt_type == 'd') {
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
-      for (i=circ->cpathlen-1; i >= 0; i--) /* moving from first to last hop 
-                                       * Remember : cpath is in reverse order, i.e. last hop first
-                                       */
+      for (i=0; i < circ->cpathlen; i++) /* moving from last to first hop 
+                                          * Remember : cpath is in reverse order, i.e. last hop first
+                                          */
       { 
-//        log(LOG_DEBUG,"circuit_crypt() : Decrypting via cpath: Processing hop %u",circ->cpathlen-i);
         thishop = circ->cpath[i];
-
+    
         /* encrypt */
-        if(crypto_cipher_decrypt(thishop->b_crypto, in, inlen, out)) {
-          log(LOG_ERR,"Error performing decryption:%s",crypto_perror());
+        if(crypto_cipher_encrypt(thishop->f_crypto, in, inlen, (unsigned char *)out)) {
+          log(LOG_ERR,"Error performing encryption:%s",crypto_perror());
           free(out);
           return -1;
         }
@@ -330,19 +384,120 @@ int circuit_crypt(circuit_t *circ, char *in, int inlen, char crypt_type) {
       }
       memcpy(in,out,inlen);
     }
+  } else {
+    log(LOG_ERR,"circuit_crypt(): unknown cell direction %d.", cell_direction);
+    assert(0);
   }
 
   free(out);
+  return 0;
+}
 
+void circuit_resume_edge_reading(circuit_t *circ, int edge_type) {
+  connection_t *conn;
+  struct data_queue_t *tmpd;
+
+  assert(edge_type == EDGE_EXIT || edge_type == EDGE_AP);
+
+  if(edge_type == EDGE_EXIT)
+    conn = circ->n_conn;
+  else
+    conn = circ->p_conn;
+
+  /* first, send the queue waiting at circ onto the circuit */
+  while(circ->data_queue) {
+    assert(circ->data_queue->cell);
+    if(edge_type == EDGE_EXIT) {   
+      circ->p_receive_circwindow--;
+      assert(circ->p_receive_circwindow >= 0);
+      
+      if(circuit_deliver_data_cell(circ->data_queue->cell, circ, CELL_DIRECTION_IN) < 0) {
+        circuit_close(circ);
+        return;
+      }
+    } else { /* ap */
+      circ->p_receive_circwindow--;
+      assert(circ->p_receive_circwindow >= 0);
+      
+      if(circuit_deliver_data_cell(circ->data_queue->cell, circ, CELL_DIRECTION_IN) < 0) {
+        circuit_close(circ);
+        return;
+      }
+    }
+    tmpd = circ->data_queue;
+    circ->data_queue = tmpd->next;
+    free(tmpd->cell);
+    free(tmpd);
+
+    if(circuit_consider_stop_edge_reading(circ, edge_type))
+      return;
+  }
+
+  for( ; conn; conn=conn->next_topic) {
+    if((edge_type == EDGE_EXIT && conn->n_receive_topicwindow > 0) ||
+       (edge_type == EDGE_AP   && conn->p_receive_topicwindow > 0)) {
+      connection_start_reading(conn);
+      connection_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
+    }
+  }
+  circuit_consider_stop_edge_reading(circ, edge_type);
+}
+
+/* returns 1 if the window is empty, else 0. If it's empty, tell edge conns to stop reading. */
+int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type) {
+  connection_t *conn = NULL;
+
+  assert(edge_type == EDGE_EXIT || edge_type == EDGE_AP);
+
+  if(edge_type == EDGE_EXIT && circ->p_receive_circwindow <= 0)
+    conn = circ->n_conn;      
+  else if(edge_type == EDGE_AP && circ->n_receive_circwindow <= 0)
+    conn = circ->p_conn;      
+  else
+    return 0;
+
+  for( ; conn; conn=conn->next_topic)
+    connection_stop_reading(conn);
+
+  return 1;
+}
+
+int circuit_consider_sending_sendme(circuit_t *circ, int edge_type) {
+  cell_t sendme;
+
+  assert(circ);
+
+  sendme.command = CELL_SENDME;
+  sendme.length = CIRCWINDOW_INCREMENT;
+
+  if(edge_type == EDGE_AP) { /* i'm the AP */
+    if(circ->n_receive_circwindow < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
+      log(LOG_DEBUG,"circuit_consider_sending_sendme(): Queueing sendme forward.");
+      circ->n_receive_circwindow += CIRCWINDOW_INCREMENT;
+      sendme.aci = circ->n_aci;
+      return connection_write_cell_to_buf(&sendme, circ->n_conn); /* (clobbers sendme) */
+    }
+  } else if(edge_type == EDGE_EXIT) { /* i'm the exit */
+    if(circ->p_receive_circwindow < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
+      log(LOG_DEBUG,"circuit_consider_sending_sendme(): Queueing sendme back.");
+      circ->p_receive_circwindow += CIRCWINDOW_INCREMENT;
+      sendme.aci = circ->p_aci;
+      return connection_write_cell_to_buf(&sendme, circ->p_conn); /* (clobbers sendme) */
+    }
+  }
   return 0;
 }
 
 void circuit_close(circuit_t *circ) {
+  connection_t *conn;
+
   circuit_remove(circ);
-  if(circ->n_conn)
+  for(conn=circ->n_conn; conn; conn=conn->next_topic) {
     connection_send_destroy(circ->n_aci, circ->n_conn); 
-  if(circ->p_conn)
+  }
+  for(conn=circ->p_conn; conn; conn=conn->next_topic) {
     connection_send_destroy(circ->p_aci, circ->p_conn); 
+  }
   circuit_free(circ);
 }
 
@@ -352,31 +507,98 @@ void circuit_about_to_close_connection(connection_t *conn) {
    * down the road, maybe we'll consider that eof doesn't mean can't-write
    */
   circuit_t *circ;
+  connection_t *prevconn, *tmpconn;
+  cell_t cell;
+  int edge_type;
+
+  if(!connection_speaks_cells(conn)) {
+    /* it's an edge conn. need to remove it from the linked list of
+     * conn's for this circuit. Send an 'end' data topic.
+     * But don't kill the circuit.
+     */
+
+    circ = circuit_get_by_conn(conn);
+    if(!circ)
+      return;
+
+    memset(&cell, 0, sizeof(cell_t));
+    cell.command = CELL_DATA;
+    cell.length = TOPIC_HEADER_SIZE;
+    *(uint32_t *)cell.payload = conn->topic_id;
+    *cell.payload = TOPIC_COMMAND_END;
+   
+    if(conn == circ->p_conn) {
+      circ->p_conn = conn->next_topic;
+      edge_type = EDGE_AP;
+      goto send_end;
+    }
+    if(conn == circ->n_conn) {
+      circ->n_conn = conn->next_topic;
+      edge_type = EDGE_EXIT;
+      goto send_end;
+    }
+    for(prevconn = circ->p_conn; prevconn->next_topic && prevconn->next_topic != conn; prevconn = prevconn->next_topic) ;
+    if(prevconn->next_topic) {
+      prevconn->next_topic = conn->next_topic;
+      edge_type = EDGE_AP;
+      goto send_end;
+    }
+    for(prevconn = circ->n_conn; prevconn->next_topic && prevconn->next_topic != conn; prevconn = prevconn->next_topic) ;
+    if(prevconn->next_topic) {
+      prevconn->next_topic = conn->next_topic;
+      edge_type = EDGE_EXIT;
+      goto send_end;
+    }
+    log(LOG_ERR,"circuit_about_to_close_connection(): edge conn not in circuit's list?");
+    assert(0); /* should never get here */
+send_end:
+    if(edge_type == EDGE_AP) { /* send to circ->n_conn */
+      log(LOG_INFO,"circuit_about_to_close_connection(): send data end forward (aci %d).",circ->n_aci);
+      cell.aci = circ->n_aci;
+    } else { /* send to circ->p_conn */
+      assert(edge_type == EDGE_EXIT);
+      log(LOG_INFO,"circuit_about_to_close_connection(): send data end backward (aci %d).",circ->p_aci);
+      cell.aci = circ->p_aci;
+    }
+
+    if(circuit_deliver_data_cell_from_edge(&cell, circ, edge_type) < 0) {
+      log(LOG_DEBUG,"circuit_about_to_close_connection(): circuit_deliver_data_cell_from_edge (%d) failed. Closing.", edge_type);
+      circuit_close(circ);
+    }
+    return;
+  }
 
   while((circ = circuit_get_by_conn(conn))) {
     circuit_remove(circ);
     if(circ->n_conn == conn) /* it's closing in front of us */
-      /* circ->p_conn should always be set */
-      assert(circ->p_conn);
-      connection_send_destroy(circ->p_aci, circ->p_conn);
+      for(tmpconn=circ->p_conn; tmpconn; tmpconn=tmpconn->next_topic) {
+        connection_send_destroy(circ->p_aci, tmpconn); 
+      }
     if(circ->p_conn == conn) /* it's closing behind us */
-      if(circ->n_conn)
-        connection_send_destroy(circ->n_aci, circ->n_conn);
+      for(tmpconn=circ->n_conn; tmpconn; tmpconn=tmpconn->next_topic) {
+        connection_send_destroy(circ->n_aci, tmpconn); 
+      }
     circuit_free(circ);
   }  
 }
 
+/* FIXME this now leaves some out */
 void circuit_dump_by_conn(connection_t *conn) {
   circuit_t *circ;
+  connection_t *tmpconn;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->p_conn == conn) {
-      printf("Conn %d has App-ward circuit:  aci %d (other side %d), state %d (%s)\n",
-        conn->poll_index, circ->p_aci, circ->n_aci, circ->state, circuit_state_to_string[circ->state]);
+    for(tmpconn=circ->p_conn; tmpconn; tmpconn=tmpconn->next_topic) {
+      if(tmpconn == conn) {
+        printf("Conn %d has App-ward circuit:  aci %d (other side %d), state %d (%s)\n",
+          conn->poll_index, circ->p_aci, circ->n_aci, circ->state, circuit_state_to_string[circ->state]);
+      }
     }
-    if(circ->n_conn == conn) {
-      printf("Conn %d has Exit-ward circuit: aci %d (other side %d), state %d (%s)\n",
-        conn->poll_index, circ->n_aci, circ->p_aci, circ->state, circuit_state_to_string[circ->state]);
+    for(tmpconn=circ->n_conn; tmpconn; tmpconn=tmpconn->next_topic) {
+      if(tmpconn == conn) {
+        printf("Conn %d has Exit-ward circuit: aci %d (other side %d), state %d (%s)\n",
+          conn->poll_index, circ->n_aci, circ->p_aci, circ->state, circuit_state_to_string[circ->state]);
+      }
     }
   }
 }

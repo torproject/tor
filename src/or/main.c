@@ -76,7 +76,10 @@ int connection_remove(connection_t *conn) {
   assert(nfds>0);
 
   log(LOG_INFO,"connection_remove(): removing socket %d, nfds now %d",conn->s, nfds-1);
-  circuit_about_to_close_connection(conn); /* flush and send destroys for all circuits on this conn */
+  circuit_about_to_close_connection(conn); /* if it's an edge conn, remove it from the list
+                                            * of conn's on this circuit. If it's not on an edge,
+                                            * flush and send destroys for all circuits on this conn
+                                            */
 
   current_index = conn->poll_index;
   if(current_index == nfds-1) { /* this is the end */
@@ -126,7 +129,6 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
       return conn;
     }
   }
-
   /* guess not */
   return NULL;
 
@@ -142,7 +144,6 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
     if(conn->addr == addr && conn->port == port)
        return conn;
   }
-
   return NULL;
 }
 
@@ -155,7 +156,21 @@ connection_t *connection_get_by_type(int type) {
     if(conn->type == type)
        return conn;
   }
+  return NULL;
+}
 
+connection_t *connection_get_pendingresolve_by_address(char *address) {
+  int i;
+  connection_t *conn;
+
+  for(i=0;i<nfds;i++) {
+    conn = connection_array[i];
+    if(conn->type == CONN_TYPE_EXIT &&
+       conn->state == EXIT_CONN_STATE_RESOLVING &&
+       !strcmp(conn->address, address)) {
+         return conn;
+    }
+  }
   return NULL;
 }
 
@@ -223,7 +238,7 @@ void check_conn_read(int i) {
       retval = connection_read_to_buf(conn);
       if (retval < 0 && conn->type == CONN_TYPE_DIR && conn->state == DIR_CONN_STATE_CONNECTING) {
          /* it's a directory server and connecting failed: forget about this router */
-         router_forget_router(conn->addr,conn->port);
+         router_forget_router(conn->addr,conn->port); /* FIXME i don't think this function works. */
       }
       if (retval >= 0) { /* all still well */
         retval = connection_process_inbuf(conn);
@@ -319,8 +334,8 @@ int prepare_for_poll(int *timeout) {
       /* it's time to rebuild our directory */
       if(time_to_rebuild_directory == 0) { 
         /* we just started up. if we build a directory now it will be meaningless. */
-        log(LOG_DEBUG,"prepare_for_poll(): Delaying initial dir build for 15 seconds.");
-        time_to_rebuild_directory = now.tv_sec + 15; /* try in 15 seconds */
+        log(LOG_DEBUG,"prepare_for_poll(): Delaying initial dir build for 10 seconds.");
+        time_to_rebuild_directory = now.tv_sec + 10; /* try in 10 seconds */
       } else {
         directory_rebuild();
         time_to_rebuild_directory = now.tv_sec + options.DirRebuildPeriod;
@@ -641,19 +656,25 @@ void dump_directory_to_string(char *s, int maxlen) {
 int main(int argc, char *argv[]) {
   int retval = 0;
 
-  signal (SIGINT, catch); /* catch kills so we can exit cleanly */
-//  signal (SIGABRT, catch);
-  signal (SIGTERM, catch);
-  signal (SIGUSR1, catch); /* to dump stats to stdout */
-  signal (SIGHUP, catch); /* to reload directory */
-
   if(getconfig(argc,argv,&options))
     exit(1);
   log(options.loglevel,NULL);         /* assign logging severity level from options */
   global_role = options.Role;   /* assign global_role from options. FIXME: remove from global namespace later. */
 
-  crypto_global_init();
+  if(options.Role & ROLE_OR_LISTEN) { /* only spawn dns handlers if we're a router */
+    if(dns_master_start() < 0) {
+      log(LOG_ERR,"main(): We're running without a dns handler. Bad news.");
+    }
+  }
+
   init_tracked_tree(); /* initialize the replay detection tree */
+
+  signal (SIGINT,  catch); /* catch kills so we can exit cleanly */
+  signal (SIGTERM, catch);
+  signal (SIGUSR1, catch); /* to dump stats to stdout */
+  signal (SIGHUP,  catch); /* to reload directory */
+
+  crypto_global_init();
   retval = do_main_loop();
   crypto_global_cleanup();
 
