@@ -1,6 +1,5 @@
 tor (1) UNRELEASED; urgency=low
 
-    FIXME
   * Upstream installs a torrc.sample file now, rather than torrc.
     Keep using torrc as dpkg handles conffile upgrades.
 
