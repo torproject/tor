@@ -1438,8 +1438,7 @@ int base16_encode(char *dest, int destlen, const char *src, int srclen)
   const char *end;
   char *cp;
 
-  if (destlen < srclen*2+1)
-    return -1;
+  tor_assert(destlen >= srclen*2+1)
 
   cp = dest;
   end = src+srclen;
