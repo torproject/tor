@@ -366,16 +366,14 @@ static void run_connection_housekeeping(int i, time_t now) {
     return;
   }
 
-  /* check connections to see whether we should send a keepalive, expire, or wait */
-  if(!connection_speaks_cells(conn))
-    return;
-
   /* If we haven't written to an OR connection for a while, then either nuke
      the connection or send a keepalive, depending. */
-  if(now >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
+  if(connection_speaks_cells(conn) &&
+     now >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
     if((!options.ORPort && !circuit_get_by_conn(conn)) ||
        (!connection_state_is_open(conn))) {
-      /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
+      /* we're an onion proxy, with no circuits;
+       * or our handshake has expired. kill it. */
       log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
              i,conn->address, conn->port);
       /* flush anything waiting, e.g. a destroy for a just-expired circ */
@@ -392,6 +390,36 @@ static void run_connection_housekeeping(int i, time_t now) {
   }
 }
 
+#define MIN_BW_TO_PUBLISH_DESC 5000 /* 5000 bytes sustained */
+#define MIN_UPTIME_TO_PUBLISH_DESC (30*60) /* half an hour */
+
+/** Decide if we're a server or just a client. We are a server if:
+ * - We have the AuthoritativeDirectory option set.
+ * or
+ * - We don't have the ClientOnly option set; and
+ * - We have ORPort set; and
+ * - We have been up for at least MIN_UPTIME_TO_PUBLISH_DESC seconds; and
+ * - We have processed some suitable minimum bandwidth recently; and
+ * - We believe we are reachable from the outside.
+ */
+static int decide_if_server(time_t now) {
+
+  if(options.AuthoritativeDir)
+    return 1;
+  if(options.ClientOnly)
+    return 0;
+  if(!options.ORPort)
+    return 0;
+
+  /* here, determine if we're reachable */
+
+  if(stats_n_seconds_uptime < MIN_UPTIME_TO_PUBLISH_DESC)
+    return 0;
+  if(rep_hist_bandwidth_assess(now) < MIN_BW_TO_PUBLISH_DESC)
+    return 0;
+  return 1;
+}
+
 /** Perform regular maintenance tasks.  This function gets run once per
  * second by prepare_for_poll.
  */
@@ -400,7 +428,6 @@ static void run_scheduled_events(time_t now) {
   static time_t last_uploaded_services = 0;
   static time_t last_rotated_certificate = 0;
   int i;
-
 
   /** 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
    *  shut down and restart all cpuworkers, and update the directory if
@@ -430,37 +457,42 @@ static void run_scheduled_events(time_t now) {
      * XXXX them at all. */
   }
 
-  /** 1c. Every DirFetchPostPeriod seconds, we get a new directory and upload
-   *    our descriptor (if any). */
+  /** 2. Every DirFetchPostPeriod seconds, we get a new directory and upload
+   *    our descriptor (if we've passed our internal checks). */
   if(time_to_fetch_directory < now) {
-    /* it's time to fetch a new directory and/or post our descriptor */
-    if(options.ORPort) {
+
+    if(decide_if_server(now)) {
       router_rebuild_descriptor();
       router_upload_dir_desc_to_dirservers();
     }
+
     routerlist_remove_old_routers(); /* purge obsolete entries */
+
     if(options.AuthoritativeDir) {
       /* We're a directory; dump any old descriptors. */
       dirserv_remove_old_servers();
       /* dirservers try to reconnect too, in case connections have failed */
       router_retry_connections();
     }
+
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
-    /* Force an upload of our descriptors every DirFetchPostPeriod seconds. */
+
+    /* Force an upload of our rend descriptors every DirFetchPostPeriod seconds. */
     rend_services_upload(1);
     last_uploaded_services = now;
     rend_cache_clean(); /* should this go elsewhere? */
+
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
   }
 
-  /** 2. Every second, we examine pending circuits and prune the
+  /** 3a. Every second, we examine pending circuits and prune the
    *    ones which have been pending for more than a few seconds.
    *    We do this before step 3, so it can try building more if
    *    it's not comfortable with the number of available circuits.
    */
   circuit_expire_building(now);
 
-  /** 2b. Also look at pending streams and prune the ones that 'began'
+  /** 3b. Also look at pending streams and prune the ones that 'began'
    *     a long time ago but haven't gotten a 'connected' yet.
    *     Do this before step 3, so we can put them back into pending
    *     state to be picked up by the new circuit.
@@ -468,11 +500,11 @@ static void run_scheduled_events(time_t now) {
   connection_ap_expire_beginning();
 
 
-  /** 2c. And expire connections that we've held open for too long.
+  /** 3c. And expire connections that we've held open for too long.
    */
   connection_expire_held_open();
 
-  /** 3. Every second, we try a new circuit if there are no valid
+  /** 4. Every second, we try a new circuit if there are no valid
    *    circuits. Every NewCircuitPeriod seconds, we expire circuits
    *    that became dirty more than NewCircuitPeriod seconds ago,
    *    and we make a new circ if there are no clean circuits.
@@ -480,22 +512,22 @@ static void run_scheduled_events(time_t now) {
   if(has_fetched_directory)
     circuit_build_needed_circs(now);
 
-  /** 4. We do housekeeping for each connection... */
+  /** 5. We do housekeeping for each connection... */
   for(i=0;i<nfds;i++) {
     run_connection_housekeeping(i, now);
   }
 
-  /** 5. And remove any marked circuits... */
+  /** 6. And remove any marked circuits... */
   circuit_close_all_marked();
 
-  /** 6. And upload service descriptors for any services whose intro points
+  /** 7. And upload service descriptors for any services whose intro points
    *    have changed in the last second. */
   if (last_uploaded_services < now-5) {
     rend_services_upload(0);
     last_uploaded_services = now;
   }
 
-  /** 7. and blow away any connections that need to die. have to do this now,
+  /** 8. and blow away any connections that need to die. have to do this now,
    * because if we marked a conn for close and left its socket -1, then
    * we'll pass it to poll/select and bad things will happen.
    */
@@ -510,6 +542,7 @@ static void run_scheduled_events(time_t now) {
 static int prepare_for_poll(void) {
   static long current_second = 0; /* from previous calls to gettimeofday */
   connection_t *conn;
+  int bytes_read;
   struct timeval now;
   int i;
 
@@ -517,8 +550,12 @@ static int prepare_for_poll(void) {
 
   /* Check how much bandwidth we've consumed, and increment the token
    * buckets. */
-  stats_n_bytes_read += stats_prev_global_read_bucket-global_read_bucket;
+  bytes_read = stats_prev_global_read_bucket - global_read_bucket;
+  stats_n_bytes_read += bytes_read;
   connection_bucket_refill(&now);
+  if (bytes_read > 0) {
+    rep_hist_note_bytes_read(bytes_read, now.tv_sec);
+  }
   stats_prev_global_read_bucket = global_read_bucket;
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */

@@ -193,6 +193,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
     config_compare(list, "BandwidthRate",  CONFIG_TYPE_INT, &options->BandwidthRate) ||
     config_compare(list, "BandwidthBurst", CONFIG_TYPE_INT, &options->BandwidthBurst) ||
 
+    config_compare(list, "ClientOnly",     CONFIG_TYPE_BOOL, &options->ClientOnly) ||
     config_compare(list, "ContactInfo",    CONFIG_TYPE_STRING, &options->ContactInfo) ||
 
     config_compare(list, "DebugLogFile",   CONFIG_TYPE_STRING, &options->DebugLogFile) ||
@@ -677,6 +678,10 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     log(LOG_WARN,"Running as authoritative directory, but no DirPort set.");
     result = -1;
   }
+
+  /* XXX008 if AuthDir and !ORPort then fail */
+
+  /* XXX008 if AuthDir and ClientOnly then fail */
 
   if(options->SocksPort > 1 &&
      (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0)) {

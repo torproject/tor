@@ -287,6 +287,54 @@ void write_rep_history(const char *filename)
 }
 #endif
 
+#define NUM_SECS_ROLLING_MEASURE 10
+#define NUM_SECS_BW_SUM_IS_VALID (12*60*60) /* half a day */
+
+/** We read <b>num_bytes</b> more bytes in second <b>when</b>.
+ *
+ * Add num_bytes to the current running total for <b>when</b>.
+ *
+ * <b>when</b> can go back to time, but it's safe to ignore calls
+ * earlier that the latest <b>when</b> you've heard of.
+ */
+void rep_hist_note_bytes_written(int num_bytes, time_t when) {
+/* Maybe a circular array for recent seconds, and step to a new point
+ * every time a new second shows up. Or simpler is to just to have
+ * a normal array and push down each item every second; it's short.
+ */
+/* When a new second has rolled over, compute the sum of the bytes we've
+ * seen over when-1 to when-1-NUM_SECS_ROLLING_MEASURE, and stick it
+ * somewhere. See rep_hist_bandwidth_assess() below.
+ */
+
+}
+
+/** We wrote <b>num_bytes</b> more bytes in second <b>when</b>.
+ * (like rep_hist_note_bytes_written() above)
+ */
+void rep_hist_note_bytes_read(int num_bytes, time_t when) {
+/* if we're smart, we can make this func and the one above share code */
+}
+
+/**
+ * Find the largest sums in the past NUM_SECS_BW_SUM_IS_VALID (roughly)
+ * seconds. Find one sum for reading and one for writing. They don't have
+ * to be at the same time).
+ *
+ * Return the smaller of these sums, divided by NUM_SECS_ROLLING_MEASURE.
+ */
+int rep_hist_bandwidth_assess(time_t when) {
+/* To get a handle on space complexity, I promise I will call this
+ * function at most every options.DirFetchPostPeriod seconds. So in
+ * rep_hist_note_bytes_foo() above, you could keep a running max sum
+ * for the current period, and when the period ends you can tuck it away
+ * in a circular array of more managable size. We lose a bit of precision,
+ * but this is all guesswork anyway.
+ */
+
+  return 0;
+}
+
 /*
   Local Variables:
   mode:c
