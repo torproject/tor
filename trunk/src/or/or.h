@@ -1105,6 +1105,7 @@ int _circuit_mark_for_close(circuit_t *circ);
 
 void assert_cpath_layer_ok(const crypt_path_t *cp);
 void assert_circuit_ok(const circuit_t *c);
+void circuit_free_all(void);
 
 /********************************* circuituse.c ************************/
 
@@ -1144,6 +1145,7 @@ struct config_line_t {
 or_options_t *get_options(void);
 void set_options(or_options_t *new_val);
 int options_act(void);
+void config_free_all(void);
 
 int config_get_lines(char *string, struct config_line_t **result);
 void config_free_lines(struct config_line_t *front);
@@ -1373,6 +1375,7 @@ void dirserv_free_all(void);
 /********************************* dns.c ***************************/
 
 void dns_init(void);
+void dns_free_all(void);
 int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_reached_eof(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
@@ -1450,6 +1453,8 @@ int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                              char *handshake_reply,
                              char *key_out,
                              size_t key_out_len);
+
+void clear_pending_onions(void);
 
 /********************************* relay.c ***************************/
 
@@ -1601,6 +1606,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
 int is_legal_nickname(const char *s);
 int is_legal_nickname_or_hexdigest(const char *s);
+void router_free_all_keys(void);
 
 /********************************* routerlist.c ***************************/
 

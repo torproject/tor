@@ -232,6 +232,13 @@ set_options(or_options_t *new_val) {
   global_options = new_val;
 }
 
+void
+config_free_all(void)
+{
+  options_free(global_options);
+  tor_free(config_fname);
+}
+
 /** Fetch the active option list, and take actions based on it. All
  * of the things we do should survive being done repeatedly.
  * Return 0 if all goes well, return -1 if it's time to die.

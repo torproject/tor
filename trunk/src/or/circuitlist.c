@@ -149,6 +149,24 @@ static void circuit_free_cpath(crypt_path_t *cpath) {
   circuit_free_cpath_node(cpath);
 }
 
+/** Release all storage held by circuits. */
+void
+circuit_free_all(void)
+{
+  circuit_t *next;
+  while (global_circuitlist) {
+    next = global_circuitlist->next;
+    while (global_circuitlist->resolving_streams) {
+      connection_t *next;
+      next = global_circuitlist->resolving_streams->next_stream;
+      connection_free(global_circuitlist->resolving_streams);
+      global_circuitlist->resolving_streams = next;
+    }
+    circuit_free(global_circuitlist);
+    global_circuitlist = next;
+  }
+}
+
 /** Deallocate space associated with the cpath node <b>victim</b>. */
 static void
 circuit_free_cpath_node(crypt_path_t *victim) {
