@@ -350,15 +350,6 @@ circuit_deliver_create_cell(circuit_t *circ, char *payload) {
   tor_assert(circ->n_conn->type == CONN_TYPE_OR);
   tor_assert(payload);
 
-  /* XXXX009 How can we keep a good upgrade path here?  We should
-   * compare keys, not nicknames...but older servers will compare nicknames.
-   * Should we check server version from the most recent directory? Hm.
-   *
-   * This is important if anybody is unverified.
-   *
-   * Solution: switch to identity-based comparison, but if we get
-   * any circuits in the wrong half of the space, switch.
-   */
   circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn);
   if(!circ->n_circ_id) {
     log_fn(LOG_WARN,"failed to get unique circID.");
