@@ -900,6 +900,18 @@ void directory_set_dirty();
 size_t dirserv_get_directory(const char **cp);
 
 
+/********************************* rephist.c ***************************/
+
+void rep_hist_init(void);
+void rep_hist_note_connect_failed(const char* nickname, time_t when);
+void rep_hist_note_connect_succeeded(const char* nickname, time_t when);
+void rep_hist_note_connection_died(const char* nickname, time_t when);
+void rep_hist_note_extend_succeeded(const char *from_name,
+				    const char *to_name);
+void rep_hist_note_extend_failed(const char *from_name, const char *to_name);
+void rep_hist_dump_status(time_t now);
+
+
 #endif
 
 /*
