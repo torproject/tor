@@ -115,16 +115,15 @@ crypto_pk_env_t *crypto_new_pk_env(int type)
   
   switch(type) {
     case CRYPTO_PK_RSA:
-    env->key = (unsigned char *)RSA_new();
-    if (!env->key) {
-      free((void *)env);
-      return NULL;
-    }
-    break;
+      env->key = (unsigned char *)RSA_new();
+      if (!env->key) {
+        free(env);
+        return NULL;
+      }
+      break;
     default:
-    free((void *)env);
-    return NULL;
-    break;
+      free(env);
+      return NULL;
   }
 
   return env;
@@ -139,15 +138,14 @@ void crypto_free_pk_env(crypto_pk_env_t *env)
   
   switch(env->type) {
     case CRYPTO_PK_RSA:
-    if (env->key)
-      RSA_free((RSA *)env->key);
-    break;
+      if (env->key)
+        RSA_free((RSA *)env->key);
+      break;
     default:
-    break;
+      break;
   }
   
-  free((void *)env);
-  return;
+  free(env);
 }
 
 
@@ -429,13 +427,13 @@ int crypto_pk_write_private_key_to_file(crypto_pk_env_t *env, FILE *dest)
   
   switch(env->type) {
     case CRYPTO_PK_RSA:
-    if (!env->key)
-      return -1;
-    if (PEM_write_RSAPrivateKey(dest, (RSA *)env->key, NULL, NULL, 0,0, NULL) == 0)
-      return -1;
-    break;
+      if (!env->key)
+        return -1;
+      if (PEM_write_RSAPrivateKey(dest, (RSA *)env->key, NULL, NULL, 0,0, NULL) == 0)
+        return -1;
+      break;
     default :
-    return -1;
+      return -1;
   }
   
   return 0;
@@ -446,13 +444,13 @@ int crypto_pk_write_public_key_to_file(crypto_pk_env_t *env, FILE *dest)
   
   switch(env->type) {
     case CRYPTO_PK_RSA:
-    if (!env->key)
-      return -1;
-    if (PEM_write_RSAPublicKey(dest, (RSA *)env->key) == 0)
-      return -1;
-    break;
+      if (!env->key)
+        return -1;
+      if (PEM_write_RSAPublicKey(dest, (RSA *)env->key) == 0)
+        return -1;
+      break;
     default :
-    return -1;
+      return -1;
   }
   
   return 0;
@@ -484,13 +482,13 @@ int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b) {
   
   switch(a->type) {
     case CRYPTO_PK_RSA:
-    assert(((RSA *)a->key)->n && ((RSA *)a->key)->e && ((RSA *)b->key)->n && ((RSA *)b->key)->e);
-    result = BN_cmp(((RSA *)a->key)->n, ((RSA *)b->key)->n);
-    if (result)
-      return result;
-    return BN_cmp(((RSA *)a->key)->e, ((RSA *)b->key)->e);
+      assert(((RSA *)a->key)->n && ((RSA *)a->key)->e && ((RSA *)b->key)->n && ((RSA *)b->key)->e);
+      result = BN_cmp(((RSA *)a->key)->n, ((RSA *)b->key)->n);
+      if (result)
+        return result;
+      return BN_cmp(((RSA *)a->key)->e, ((RSA *)b->key)->e);
     default:
-    return -1;
+      return -1;
   }
 }
 
@@ -521,9 +519,9 @@ int crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *from, int from
   
   switch(env->type) {
     case CRYPTO_PK_RSA:
-    return RSA_public_encrypt(fromlen, from, to, (RSA *)env->key, padding);
+      return RSA_public_encrypt(fromlen, from, to, (RSA *)env->key, padding);
     default:
-    return -1;
+      return -1;
   }
 }
 
@@ -532,12 +530,12 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *from, int fro
   assert(env && from && to);
 
   switch(env->type) {
-  case CRYPTO_PK_RSA:
-    if (!(((RSA*)env->key)->p))
-      return -1;
-    return RSA_private_decrypt(fromlen, from, to, (RSA *)env->key, padding);
+    case CRYPTO_PK_RSA:
+      if (!(((RSA*)env->key)->p))
+        return -1;
+      return RSA_private_decrypt(fromlen, from, to, (RSA *)env->key, padding);
     default:
-    return -1;
+      return -1;
   }
 }
 
@@ -546,11 +544,11 @@ int crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *from, int fro
   assert(env && from && to);
 
   switch(env->type) {
-  case CRYPTO_PK_RSA:
-    return RSA_public_decrypt(fromlen, from, to, (RSA *)env->key, 
+    case CRYPTO_PK_RSA:
+      return RSA_public_decrypt(fromlen, from, to, (RSA *)env->key, 
 			      RSA_PKCS1_PADDING);
     default:
-    return -1;
+      return -1;
   }
 }
 
@@ -559,13 +557,13 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromle
   assert(env && from && to);
 
   switch(env->type) {
-  case CRYPTO_PK_RSA:
-    if (!(((RSA*)env->key)->p))
-      return -1;
-    return RSA_private_encrypt(fromlen, from, to, (RSA *)env->key, 
+    case CRYPTO_PK_RSA:
+      if (!(((RSA*)env->key)->p))
+        return -1;
+      return RSA_private_encrypt(fromlen, from, to, (RSA *)env->key, 
 			       RSA_PKCS1_PADDING);
     default:
-    return -1;
+      return -1;
   }
 }
 
