@@ -1,7 +1,10 @@
 # List of core onion routers in the network.
-# Line format : router-address router-port bandwidth(bytes/s) bandwidth(bytes/s)
+# Line format : address ORPort OPPort APPort DirPort bandwidth(bytes/s)
 # followed by the routers public key.
-# router-port is where the router is accepting connections from other routers.
+# ORport is where the router listens for other routers
+# OPPort is where the router listens for onion proxies (speaking cells)
+# APPort is where the router listens for applications (speaking socks)
+# DirPort is where the router listens for directory download requests
 
 # Router 1
 moria.mit.edu 9001 9011 9021 9031 1000000
