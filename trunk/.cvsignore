@@ -20,3 +20,5 @@ depcomp
 install-sh
 missing
 mkinstalldirs
+Tor*Bundle.dmg
+tor-*-win32.exe
