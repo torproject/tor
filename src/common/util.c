@@ -25,6 +25,17 @@ void *tor_malloc(size_t size) {
   return result;
 }
 
+void *tor_realloc(void *ptr, size_t size) {
+  void *result;
+  
+  result = realloc(ptr, size);
+  if (!result) {
+    log_fn(LOG_ERR, "Out of memory. Dying.");
+    exit(1);
+  }
+  return result;
+}
+
 char *tor_strdup(const char *s) {
   char *dup;
   assert(s);
