@@ -122,10 +122,8 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
   size_t n;
   int r;
   char *end_of_prefix;
-  if (buf_len < 2) { /* prevent integer underflow */
-    tor_assert(0);
-    exit(1);
-  }
+
+  tor_assert(buf_len >= 2); /* prevent integer underflow */
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
 
   n = _log_prefix(buf, buf_len, severity);
@@ -141,7 +139,8 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
 
   r = tor_vsnprintf(buf+n,buf_len-n,format,ap);
   if (r < 0) {
-    n = buf_len-2;
+    n = buf_len-2; /* XXX is this line redundant with the -=2 above,
+                      and also a source of underflow danger? */
     strlcpy(buf+buf_len-TRUNCATED_STR_LEN-1, TRUNCATED_STR,
             buf_len-(buf_len-TRUNCATED_STR_LEN-1));
   } else {
