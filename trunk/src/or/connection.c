@@ -820,10 +820,12 @@ int connection_outbuf_too_full(connection_t *conn) {
  */
 int connection_handle_write(connection_t *conn) {
   int e, len=sizeof(e);
+  int result;
+  time_t now = time(NULL);
 
   tor_assert(!connection_is_listener(conn));
 
-  conn->timestamp_lastwritten = time(NULL);
+  conn->timestamp_lastwritten = now;
 
   /* Sometimes, "writeable" means "connected". */
   if (connection_state_is_connecting(conn)) {
@@ -859,7 +861,8 @@ int connection_handle_write(connection_t *conn) {
     }
 
     /* else open, or closing */
-    switch(flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen)) {
+    result = flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
+    switch(result) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
         log_fn(LOG_INFO,"tls error. breaking.");
@@ -888,12 +891,17 @@ int connection_handle_write(connection_t *conn) {
        */
     }
   } else {
-    if (flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen) < 0) {
+    result = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
+    if (result < 0) {
       connection_close_immediate(conn); /* Don't flush; connection is dead. */
       conn->has_sent_end = 1;
       connection_mark_for_close(conn);
       return -1;
     }
+  }
+
+  if(result > 0) { /* remember it */
+    rep_hist_note_bytes_written(result, now);
   }
 
   if(!connection_wants_to_flush(conn)) { /* it's done flushing */

@@ -840,6 +840,7 @@ typedef struct {
   int SocksPort; /**< Port to listen on for SOCKS connections. */
   int DirPort; /**< Port to listen on for directory connections. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
+  int ClientOnly; /**< Boolean: should we never evolve into a server role? */
   int MaxConn; /**< Maximum number of simultaneous connections. */
   int TrafficShaping; /**< Unused. */
   int LinkPadding; /**< Unused. */
