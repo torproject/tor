@@ -47,7 +47,7 @@ typedef struct config_abbrev_t {
 /* A list of command-line abbreviations. */
 static config_abbrev_t config_abbrevs[] = {
   PLURAL(ExitNode),
-  PLURAL(EntryNodes),
+  PLURAL(EntryNode),
   PLURAL(ExcludeNode),
   PLURAL(FirewallPort),
   PLURAL(HiddenServiceNode),
