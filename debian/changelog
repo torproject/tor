@@ -1,13 +1,13 @@
-tor (0.0.6.1-2) unreleased; urgency=low
+tor (0.0.6.2-1) unstable; urgency=medium
 
-  *
+  * New upstream release (breaks backwards compatibility yet again).
   * Recommend socat.
   * Since tor is in /usr/sbin, the manpage should be in section 8, not
     in section 1.  Move it there, including updating the section in
     the manpage itself and the reference in torify(1).
   * Update debian/copyright file.
 
- -- Peter Palfrader <weasel@debian.org>  Thu, 13 May 2004 05:06:19 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sun, 16 May 2004 10:47:20 +0200
 
 tor (0.0.6.1-1) unstable; urgency=medium
 
