@@ -245,31 +245,26 @@ href="#client-or-server">the section above</a>.
 </p>
 
 <p>To set up a Tor server, do the following steps after installing Tor.
-(These instructions are Unix-centric; if you're excited about working
-with the Tor developers to get a Tor server working on Windows, let us
-know and we'll work with you to fix whatever bugs come up.) <!-- currently
-there are some known bugs that keep Tor from working as a server on
-native Win32.) -->
+(These instructions are Unix-centric; but Tor 0.0.9.2 is running as a
+server on Windows now as well.)
 </p>
 
 <ul>
 <li>1. Edit the bottom part of your torrc (if you installed from source,
 you will need to copy torrc.sample to torrc first. Look for them in
-/usr/local/etc/tor/). Create the DataDirectory if necessary, and make
-sure it's owned by the uid/gid that will be running tor. Fix your system
+/usr/local/etc/tor/ on Unix). Create the DataDirectory if necessary, and make
+sure it's owned by the user that will be running tor. Fix your system
 clock so it's not too far off. Make sure name resolution works.
-<!--Make sure each
-process can get to 1024 file descriptors (this should be already done
-for everybody but some BSD folks). -->
 <li>2. If you are using a firewall, open a hole in your firewall so
 incoming connections can reach the ports you configured (i.e. ORPort,
-plus DirPort if you enabled it). Make sure outgoing connections can reach
-at least ports 80, 443, and 9001-9033 (to get to other onion routers),
-plus any other addresses or ports your exit policy allows.
+plus DirPort if you enabled it). Make sure you allow outgoing connections,
+to get to other onion routers plus any other addresses or ports your
+exit policy allows.
 <li>3. Start your server: if you installed from source you can just
 run <tt>tor</tt>, whereas packages typically launch Tor from their
-initscripts. If it logs any warnings, address them. (By default Tor
-logs to stdout, but some packages log to /var/log/tor/ instead.)
+initscripts or startup scripts. If it logs any warnings, address them. (By
+default Tor logs to stdout, but some packages log to /var/log/tor/
+instead. You can edit your torrc to configure log locations.)
 <li>4. <b>Register your server.</b>  Send mail to <a
 href="mailto:tor-ops@freehaven.net">tor-ops@freehaven.net</a> with the
 following information:
@@ -289,7 +284,7 @@ Optionally, we recommend the following steps as well:
 </p>
 
 <ul>
-<li>5. Make a separate user to run the server. If you
+<li>(Unix only) 5. Make a separate user to run the server. If you
 installed the deb or the rpm, this is already done. Otherwise,
 you can do it by hand. (The Tor server doesn't need to be run as
 root, so it's good practice to not run it as root. Running as a
@@ -303,9 +298,9 @@ due to abuse potential. You might want an exit policy that is
 less restrictive or more restrictive; edit your torrc appropriately.
 If you choose a particularly open exit policy, you might want to make
 sure your upstream or ISP is ok with that choice.
-<li>7. You may find the initscripts in contrib/tor.sh or
-contrib/torctl useful if you want to set up Tor to start at boot. Let
-the Tor developers know which script you find more useful.
+<li>7. If you installed from source, you may find the initscripts in
+contrib/tor.sh or contrib/torctl useful if you want to set up Tor to
+start at boot.
 <li>8. Consider setting your hostname to 'anonymous' or
 'proxy' or 'tor-proxy' if you can, so when other people see the address
 in their web logs or whatever, they will more quickly understand what's
