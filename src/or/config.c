@@ -321,7 +321,7 @@ expand_abbrev(const char *option, int command_line)
   int i;
   for (i=0; config_abbrevs[i].abbreviated; ++i) {
     /* Abbreviations aren't casei. */
-    if (!strcmp(option,config_abbrevs[i].abbreviated) &&
+    if (!strcasecmp(option,config_abbrevs[i].abbreviated) &&
         (command_line || !config_abbrevs[i].commandline_only)) {
       return config_abbrevs[i].full;
     }
