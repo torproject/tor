@@ -11,6 +11,34 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
+      0.0.9:
+        - the user interface interface
+        - let tor clients use http proxies for dir fetching
+        - let tor servers use http proxies for port 80 exits
+        - write instructions for port-forwarding directives or programs
+          to let people run on ports 80 and 443 without needing to bind
+          tor to them.
+        - learn from ben about his openssl-reinitialization-trick to
+          rotate tls keys without making new connections.
+        - figure out how to handle rendezvousing with unverified nodes.
+        - clean up all the comma-separated stuff (eg exit policies) into
+          smartlists.
+        - per-month byte allowances.
+        - node 'groups' that are known to be in the same zone of control.
+        - figure out enclaves, e.g. so we know what to recommend that people
+          do, and so running a tor server on your website is helpful.
+        - compress the directory.
+        - switch dirservers entries to config lines.
+        - investigate sctp for alternate transport.
+        - nt services on win32.
+        - bandwidth buckets for write as well as read.
+        - make clients store the cached-directory to disk, and use it
+          when they startup, so they don't need to bootstrap from the
+          authdirservers every time they start. also, once we've reduced
+          authdirserver entries to config lines, we can have lines that
+          list cacheddirservers too.
+        - add ipv6 support.
+
       0.0.8:
         - fix sprintf's to snprintf's?
         o Make it work on win32 with no $home
@@ -34,36 +62,6 @@ NICK    . unify similar config entries that need to be split. put them
 * reject it. assuming this is as dumb as it sounds.
         - make loglevel info less noisy
 
-        o if there's only one entrynode preference, don't pick the
-          desired entrynode as exit.
-        o "AllowUnverifiedRouters" config option
-          o Parse it into 3 bits
-          o Consider it when picking nodes for your path
-        o 'fascistfirewall' option to pick dirservers on port 80 and
-          ORs on port 443.
-          o extend it to take a range of ports
-        o parse uptime into router->uptime
-        o Handle servers with dynamic IP addresses: don't replace
-          options->Address with the resolved one at startup.
-          o detect our address right before we make a routerinfo each time.
-        o external IP vs bind-IP. Already done, just use options->Address.
-        o OutboundBindAddress config option, to bind to a specific
-          IP address for outgoing connect()s.
-        o Add '[...truncated]' or similar to truncated log entries.
-        o if a begin failed due to exit policy, but we believe the IP
-          should have been allowed, switch that router to exitpolicy
-          reject *:* until we get our next directory.
-        o tor-resolve needs a man page
-        o clients choose nodes proportional to advertised bandwidth
-        o and/or while avoiding unreliable nodes, depending on goals
-        o defining an ORPort isn't necessary anymore, if you use
-          ORAddress:port. Same with DirPort, SocksPort.
-        X why did common/util.c build-depend on or/or.h ?
-
-
-
-
-
       bug fixes, might be handy:
         - the directory servers complain a lot about people using the
           old key. does 0.0.7 use dirservers before it's pulled down
@@ -84,8 +82,6 @@ NICK    . unify similar config entries that need to be split. put them
 * do this eventually, no rush.
 
       more features, easy:
-        o check the date in the http headers, compare for clock skew.
-        o requiredentrynode vs preferredentrynode
         - per-month byte allowances
 * nick will spec something.
         - have a pool of circuits available, cannibalize them
