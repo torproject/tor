@@ -31,7 +31,7 @@ ARMA    - if there's only one entrynode preference and multiple exit node
           choices, don't pick the desired entrynode as exit.
         o 'fascistfirewall' option to pick dirservers on port 80 and
           ORs on port 443.
-NICK      - extend it to take a range of ports
+          o extend it to take a range of ports
 NICK    - parse uptime into router->uptime
         - figure out what to do when somebody asks to extend to
           ip:port:differentkey

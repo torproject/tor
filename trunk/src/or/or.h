@@ -863,7 +863,8 @@ typedef struct {
   int IgnoreVersion; /**< If true, run no matter what versions of Tor the
                       * directory recommends. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
-  int FascistFirewall; /**< Whether to prefer ORs reachable on 80/443. */
+  int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
+  smartlist_t *FirewallPorts; /** Which ports our firewall allows. */
   int DirFetchPostPeriod; /**< How often do we fetch new directories
                            * and post server descriptros to the directory
                            * server? */
