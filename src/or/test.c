@@ -619,6 +619,12 @@ test_util() {
   test_eq(5, tor_strstrip(buf, "!? "));
   test_streq(buf, "Testing123");
 
+  /* Test tor_strpartition() */
+  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefg", "##", 3));
+  test_streq(buf, "abc##def##g");
+  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefghi", "##", 3));
+  test_streq(buf, "abc##def##ghi##");
+
   /* XXXX test older functions. */
   smartlist_free(sl);
 }

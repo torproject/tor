@@ -512,6 +512,7 @@ routerinfo_t *router_get_by_digest(const char *digest) {
   routerinfo_t *router;
 
   tor_assert(digest);
+  if (!routerlist) return NULL;
 
   for(i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
