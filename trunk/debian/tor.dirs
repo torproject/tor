@@ -1,0 +1,4 @@
+etc/tor
+var/lib/tor
+var/log/tor
+var/run/tor
