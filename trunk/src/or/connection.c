@@ -621,14 +621,14 @@ int connection_consider_sending_sendme(connection_t *conn) {
 
   if(circ->n_conn == conn) { /* we're at an exit */
     if(circ->p_receive_window < RECEIVE_WINDOW_START-RECEIVE_WINDOW_INCREMENT) {
-      log(LOG_DEBUG,"connection_consider_sending_sendme(): Queueing sendme back.");
+      log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing sendme back.", conn->outbuf_flushlen);
       circ->p_receive_window += RECEIVE_WINDOW_INCREMENT;
       sendme.aci = circ->p_aci;
       return connection_write_cell_to_buf(&sendme, circ->p_conn); /* (clobbers sendme) */
     }
   } else { /* we're at an AP */
     if(circ->n_receive_window < RECEIVE_WINDOW_START-RECEIVE_WINDOW_INCREMENT) {
-      log(LOG_DEBUG,"connection_consider_sending_sendme(): Queueing sendme forward.");
+      log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing sendme forward.", conn->outbuf_flushlen);
       circ->n_receive_window += RECEIVE_WINDOW_INCREMENT;
       sendme.aci = circ->n_aci;
       return connection_write_cell_to_buf(&sendme, circ->n_conn); /* (clobbers sendme) */

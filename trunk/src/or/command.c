@@ -6,9 +6,6 @@
 
 void command_process_cell(cell_t *cell, connection_t *conn) {
 
-  if(check_sane_cell(cell) < 0)
-    return;
-
   switch(cell->command) {
     case CELL_PADDING:
       /* do nothing */
