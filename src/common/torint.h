@@ -233,7 +233,7 @@ typedef uint32_t uintptr_t;
 #endif
 
 /* Any size_t larger than this amount is likely to be an underflow. */
-#define SIZE_T_CEILING (1u<<(sizeof(size_t)*8 - 1))
+#define SIZE_T_CEILING (sizeof(char)<<(sizeof(size_t)*8 - 1))
 
 #endif /* __TORINT_H */
 
