@@ -44,7 +44,7 @@ int find_on_inbuf(char *string, int string_len, buf_t *buf) {
 
 /* Create and return a new buf of size 'size'
  */
-buf_t *buf_new_with_capacity(size_t size) {
+static buf_t *buf_new_with_capacity(size_t size) {
   buf_t *buf;
   buf = (buf_t*)tor_malloc(sizeof(buf_t));
   buf->buf = (char *)tor_malloc(size);

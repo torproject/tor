@@ -43,8 +43,6 @@ void directory_initiate_command(routerinfo_t *router, int command) {
     log_fn(LOG_DEBUG,"initiating directory upload");
 
   conn = connection_new(CONN_TYPE_DIR);
-  if(!conn)
-    return;
 
   /* set up conn so it's got all the data we need to remember */
   conn->addr = router->addr;

@@ -548,10 +548,6 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
 
   log_fn(LOG_DEBUG,"Creating new exit connection.");
   n_stream = connection_new(CONN_TYPE_EXIT);
-  if(!n_stream) {
-    log_fn(LOG_WARNING,"connection_new failed. Dropping.");
-    return 0;
-  }
 
   memcpy(n_stream->stream_id, cell->payload + RELAY_HEADER_SIZE, STREAM_ID_SIZE);
   n_stream->address = strdup(cell->payload + RELAY_HEADER_SIZE + STREAM_ID_SIZE);
