@@ -37,6 +37,10 @@ void *tor_realloc(void *ptr, size_t size);
 char *tor_strdup(const char *s);
 #define tor_free(p) do {if(p) {free(p); (p)=NULL;}} while(0)
 
+char *eat_whitespace(char *s);
+char *eat_whitespace_no_nl(char *s);
+char *find_whitespace(char *s);
+
 void tor_gettimeofday(struct timeval *timeval);
 long tv_udiff(struct timeval *start, struct timeval *end);
 void tv_addms(struct timeval *a, long ms);

@@ -49,6 +49,43 @@ char *tor_strdup(const char *s) {
 }
 
 /*
+ *    String manipulation
+ */
+
+/* return the first char of s that is not whitespace and not a comment */
+char *eat_whitespace(char *s) {
+  assert(s);
+
+  while(isspace(*s) || *s == '#') {
+    while(isspace(*s))
+      s++;
+    if(*s == '#') { /* read to a \n or \0 */
+      while(*s && *s != '\n')
+        s++;
+      if(!*s)
+        return s;
+    }
+  }
+  return s;
+}
+
+char *eat_whitespace_no_nl(char *s) {
+  while(*s == ' ' || *s == '\t') 
+    ++s;
+  return s;
+}
+
+/* return the first char of s that is whitespace or '#' or '\0 */
+char *find_whitespace(char *s) {
+  assert(s);
+
+  while(*s && !isspace(*s) && *s != '#')
+    s++;
+
+  return s;
+}
+
+/*
  *    Time
  */
 
@@ -653,3 +690,4 @@ int switch_id(char *user, char *group) {
 
   return -1;
 }
+
