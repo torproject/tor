@@ -648,9 +648,8 @@ static int dnsworker_main(void *data) {
       log_fn(LOG_INFO,"dnsworker exiting because tor process died.");
       spawn_exit();
     }
-    tor_assert(address_len > 0);
 
-    if(read_all(fd, address, address_len, 1) != address_len) {
+    if(address_len && read_all(fd, address, address_len, 1) != address_len) {
       log_fn(LOG_ERR,"read hostname failed. Child exiting.");
       spawn_exit();
     }

@@ -1709,7 +1709,10 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
   struct in_addr iaddr;
   struct hostent *ent;
   tor_assert(addr);
-  if (tor_inet_aton(name, &iaddr)) {
+  if (!*name) {
+    /* Empty address is an error. */
+    return -1;
+  } if (tor_inet_aton(name, &iaddr)) {
     /* It's an IP. */
     memcpy(addr, &iaddr.s_addr, 4);
     return 0;
