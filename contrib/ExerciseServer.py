@@ -27,12 +27,14 @@ def runSocks4A(nonce, targetHost, targetPort, targetURL):
     while 1:
         r = s.recv(1024)
         if not r:
+            print "WOOT! Got a web page."
             s.close()
             return 1
 
-HOSTS_TO_TEST = [ "moria1", "mordor", "tor26"]
+HOSTS_TO_TEST = [ "moria1", "ned", "tor26"]
 EXITS_TO_TEST = [ "pvt", ]
-TARGETS = [ ("www.seul.org", "/"), ]
+TARGETS = [ ("belegost.mit.edu", "/"),
+            ("seul.org", "/")]
 
 CIRCS_AT_A_TIME = 3
 CIRC_LEN = 3
@@ -46,9 +48,9 @@ def launchCirc(s):
 
 def runControl(s):
     circs = {}
-    streams = {}
-    _h = lambda body,circs=circs,streams=streams,s=s:handleEvent(s,body,
-                                                                circs,streams)
+    s1,s2 = {},{}
+    _h = lambda body,circs=circs,s1=s1,s2=s2,s=s:handleEvent(s,body,
+                                                             circs,s1,s2)
     TorControl._event_handler = _h
     TorControl.set_events(s,
                           [TorControl.EVENT_TYPE.CIRCSTATUS,
@@ -61,9 +63,9 @@ def runControl(s):
             circs[c]=p
         _, tp, body = TorControl.receive_message(s)
         if tp == TorControl.MSG_TYPE.EVENT:
-            handleEvent(s, body, circs, streams)
+            handleEvent(s, body, circs, s1,s2)
 
-def handleEvent(s, body, circs, streams):
+def handleEvent(s, body, circs, streamsByNonce, streamsByIdent):
     event, args = TorControl.unpack_event(body)
     if event == TorControl.EVENT_TYPE.STREAMSTATUS:
         status, ident, target = args
@@ -72,12 +74,20 @@ def handleEvent(s, body, circs, streams):
         if status in (TorControl.STREAM_STATUS.NEW_CONNECT,
                       TorControl.STREAM_STATUS.NEW_RESOLVE,
                       TorControl.STREAM_STATUS.DETACHED):
+            target,port=target.split(":")
             if not target.endswith(".exnonce"):
                 TorControl.attach_stream(s, ident, 0)
             else:
-                circid, (host,url) = streams[target]
+                circid, (host,url) = streamsByNonce[target]
+                streamsByIdent[ident] = circid,(host,url)
+                print "Redirecting circuit",circid,"to",host
                 TorControl.redirect_stream(s, ident, host)
                 TorControl.attach_stream(s, ident, circid)
+        elif status in (TorControl.STREAM_STATUS.CLOSED,
+                        TorControl.STREAM_STATUS.FAILED):
+            circid, (host,url) = streamsByIdent[ident]
+            del circs[circid]
+            del streamsByIdent[ident]
     elif event == TorControl.EVENT_TYPE.CIRCSTATUS:
         status, ident, path = args
         print "Got circuit event",TorControl.CIRC_STATUS.nameOf[status],\
@@ -91,7 +101,7 @@ def handleEvent(s, body, circs, streams):
             nonce = random.randint(1,100000000)
             nonce = "%s.exnonce" % nonce
             host,url = random.choice(TARGETS)
-            streams[nonce] = ident, (host,url)
+            streamsByNonce[nonce] = ident, (host,url)
             print "Launching socks4a connection"
             t = threading.Thread(target=runSocks4A, args=(nonce, host, 80, url))
             t.setDaemon(1)
