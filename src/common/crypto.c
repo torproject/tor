@@ -41,6 +41,13 @@
 #define RETURN_SSL_OUTCOME(exp) return !(exp)
 #endif
 
+#ifdef MS_WINDOWS
+#define WIN32_WINNT 0x400
+#define _WIN32_WINNT 0x400
+#include <windows.h>
+#include <wincrypt.h>
+#endif
+
 struct crypto_pk_env_t
 {
   int type;
@@ -1032,6 +1039,39 @@ void crypto_dh_free(crypto_dh_env_t *dh)
 }
 
 /* random numbers */
+#ifdef MS_WINDOWS
+int crypto_seed_rng()
+{
+  static int provider_set = 0;
+  static HCRYPTPROV p;
+  char buf[21];
+
+  if (!provider_set) {
+    if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL, 0)) {
+      if (GetLastError() != NTE_BAD_KEYSET) {
+	log_fn(LOG_ERR,"Can't get CryptoAPI provider [1]");
+	return -1;
+      }
+      /* Yes, we need to try it twice. */
+      if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL,
+			       CRYPT_NEWKEYSET)) {
+	log_fn(LOG_ERR,"Can't get CryptoAPI provider [2]");
+	return -1;
+      }
+    }
+    provider_set = 1;
+  }
+  if (!CryptGenRandom(provider, 20, buf)) {
+    log_fn(LOG_ERR,"Can't get entropy from CryptoAPI.");
+    return -1;
+  }
+  RAND_seed(buf, 20);
+  /* And add the current screen state to the entopy pool for
+   * good measure. */
+  RAND_screen();
+  return 0;
+}
+#else
 int crypto_seed_rng()
 {
   static char *filenames[] = {
@@ -1058,6 +1098,7 @@ int crypto_seed_rng()
   log_fn(LOG_WARN, "Cannot seed RNG -- no entropy source found.");
   return -1;
 }
+#endif
 
 int crypto_rand(unsigned int n, unsigned char *to)
 {

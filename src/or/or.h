@@ -86,6 +86,8 @@
 #include <io.h>
 #include <process.h>
 #include <direct.h>
+#define WIN32_WINNT 0x400
+#define _WIN32_WINNT 0x400
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #define snprintf _snprintf
