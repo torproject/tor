@@ -9,7 +9,7 @@
 #endif
 
 /*
- *    Memory
+ *    Memory wrappers
  */
 
 void *tor_malloc(size_t size) {
@@ -22,17 +22,26 @@ void *tor_malloc(size_t size) {
     exit(1);
   }
   memset(result,'X',size); /* XXX deadbeef to encourage bugs */
-
   return result;
+}
+
+char *tor_strdup(const char *s) {
+  char *dup;
+  assert(s);
+
+  dup = strdup(s);
+  if(!dup) {
+    log_fn(LOG_ERR,"Out of memory. Dying.");
+    exit(1);
+  }
+  return dup;
 }
 
 /*
  *    Time
  */
 
-void 
-my_gettimeofday(struct timeval *timeval) 
-{
+void tor_gettimeofday(struct timeval *timeval) {
 #ifdef HAVE_GETTIMEOFDAY
   if (gettimeofday(timeval, NULL)) {
     log_fn(LOG_ERR, "gettimeofday failed.");
@@ -141,6 +150,10 @@ void set_socket_nonblocking(int socket)
  *   Process control
  */
 
+/* Minimalist interface to run a void function in the background.  On
+ * unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
+ * func should not return, but rather should call spawn_exit.
+ */
 int spawn_func(int (*func)(void *), void *data)
 {
 #ifdef MS_WINDOWS
@@ -294,6 +307,10 @@ int correct_socket_errno(int s)
 /*
  *    Filesystem operations.
  */
+
+/* Return FN_ERROR if filename can't be read, FN_NOENT if it doesn't
+ * exist, FN_FILE if it is a regular file, or FN_DIR if it's a
+ * directory. */
 file_status_t file_status(const char *fname)
 {
   struct stat st;
@@ -311,6 +328,8 @@ file_status_t file_status(const char *fname)
     return FN_ERROR;
 }
 
+/* Check whether dirname exists and is private.  If yes returns
+   0.  Else returns -1. */
 int check_private_dir(const char *dirname, int create)
 {
   struct stat st;

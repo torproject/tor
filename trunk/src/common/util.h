@@ -33,11 +33,9 @@
 #endif
 
 void *tor_malloc(size_t size);
+char *tor_strdup(const char *s);
+void tor_gettimeofday(struct timeval *timeval);
 
-/* Same as gettimeofday, but no need to check exit value. */
-void my_gettimeofday(struct timeval *timeval);
-/* Returns the number of microseconds between start and end.  Requires that
- * end >= start, and that the number of microseconds < LONG_MAX. */
 long tv_udiff(struct timeval *start, struct timeval *end);
 
 void tv_addms(struct timeval *a, long ms);
@@ -51,22 +49,12 @@ void set_socket_nonblocking(int socket);
 
 typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR} file_status_t;
 
-/* Return FN_ERROR if filename can't be read, FN_NOENT if it doesn't
- * exist, FN_FILE if it is a regular file, or FN_DIR if it's a
- * directory. */
 file_status_t file_status(const char *filename);
-/* Check whether dirname exists and is private.  If yes returns
- * 0.  Else returns -1.
- */
 int check_private_dir(const char *dirname, int create);
 int write_str_to_file(const char *fname, const char *str);
 char *read_file_to_str(const char *filename);
 int parse_line_from_file(char *line, int maxlen, FILE *f, char **key_out, char **value_out);
 
-/* Minimalist interface to run a void function in the background.  On
-   unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
-   func should not return, but rather should call spawn_exit.
-*/
 int spawn_func(int (*func)(void *), void *data);
 void spawn_exit();
 

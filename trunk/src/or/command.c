@@ -25,11 +25,11 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn,
 
   *num += 1;
 
-  my_gettimeofday(&start);
+  tor_gettimeofday(&start);
 
   (*func)(cell, conn);
 
-  my_gettimeofday(&end);
+  tor_gettimeofday(&end);
   time_passed = tv_udiff(&start, &end) ;
 
   if (time_passed > 5000) { /* more than 5ms */
@@ -38,17 +38,13 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn,
   *time += time_passed;
 }
 
-
-
 void command_process_cell(cell_t *cell, connection_t *conn) {
   static int num_create=0, num_created=0, num_relay=0, num_destroy=0;
   static int create_time=0, created_time=0, relay_time=0, destroy_time=0;
-  static long current_second = 0; /* from previous calls to gettimeofday */
-  struct timeval now;
+  static time_t current_second = 0; /* from previous calls to time */
+  time_t now = time(NULL);
 
-  my_gettimeofday(&now);
-
-  if(now.tv_sec > current_second) { /* the second has rolled over */
+  if(now > current_second) { /* the second has rolled over */
     /* print stats */
     log(LOG_INFO,"At end of second:"); 
     log(LOG_INFO,"Create:    %d (%d ms)", num_create, create_time/1000);
@@ -61,7 +57,7 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
     create_time = created_time = relay_time = destroy_time = 0;
 
     /* remember which second it is, for next time */
-    current_second = now.tv_sec; 
+    current_second = now;
   }
 
   switch(cell->command) {

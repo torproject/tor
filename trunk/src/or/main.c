@@ -270,7 +270,7 @@ static int prepare_for_poll(void) {
   cell_t cell;
   circuit_t *circ;
 
-  my_gettimeofday(&now);
+  tor_gettimeofday(&now);
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
@@ -656,23 +656,22 @@ static void catch(int the_signal) {
 static void dumpstats(void) { /* dump stats to stdout */
   int i;
   connection_t *conn;
-  struct timeval now;
+  time_t now = time(NULL);
 
   printf("Dumping stats:\n");
-  my_gettimeofday(&now);
 
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
     printf("Conn %d (socket %d) type %d (%s), state %d (%s), created %ld secs ago\n",
       i, conn->s, conn->type, conn_type_to_string[conn->type],
-      conn->state, conn_state_to_string[conn->type][conn->state], now.tv_sec - conn->timestamp_created);
+      conn->state, conn_state_to_string[conn->type][conn->state], now - conn->timestamp_created);
     if(!connection_is_listener(conn)) {
       printf("Conn %d is to '%s:%d'.\n",i,conn->address, conn->port);
       printf("Conn %d: %d bytes waiting on inbuf (last read %ld secs ago)\n",i,
              (int)buf_datalen(conn->inbuf),
-             now.tv_sec - conn->timestamp_lastread);
-      printf("Conn %d: %d bytes waiting on outbuf (last written %ld secs ago)\n",i,(int)buf_datalen(conn->outbuf),
-        now.tv_sec - conn->timestamp_lastwritten);
+             now - conn->timestamp_lastread);
+      printf("Conn %d: %d bytes waiting on outbuf (last written %ld secs ago)\n",i,
+             (int)buf_datalen(conn->outbuf), now - conn->timestamp_lastwritten);
     }
     circuit_dump_by_conn(conn); /* dump info about all the circuits using this conn */
     printf("\n");
@@ -703,7 +702,6 @@ static void dumpstats(void) { /* dump stats to stdout */
   if (stats_n_seconds_reading)
     printf("Average bandwidth used: %d bytes/sec\n",
            (int) (stats_n_bytes_read/stats_n_seconds_reading));
-
 }
 
 void daemonize(void) {

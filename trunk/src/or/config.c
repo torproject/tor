@@ -61,8 +61,8 @@ static struct config_line *config_get_commandlines(int argc, char **argv) {
     s = argv[i];
     while(*s == '-')
       s++;
-    new->key = strdup(s);
-    new->value = strdup(argv[i+1]);
+    new->key = tor_strdup(s);
+    new->value = tor_strdup(argv[i+1]);
 
     log(LOG_DEBUG,"Commandline: parsed keyword '%s', value '%s'",
       new->key, new->value);
@@ -85,8 +85,8 @@ static struct config_line *config_get_lines(FILE *f) {
 
   while( (result=parse_line_from_file(line,sizeof(line),f,&key,&value)) > 0) {
     new = tor_malloc(sizeof(struct config_line));
-    new->key = strdup(key);
-    new->value = strdup(value);
+    new->key = tor_strdup(key);
+    new->value = tor_strdup(value);
 
     new->next = front;
     front = new;
@@ -131,7 +131,7 @@ static int config_compare(struct config_line *c, char *key, int type, void *arg)
       *(int *)arg = i;
       break;
     case CONFIG_TYPE_STRING:
-      *(char **)arg = strdup(c->value);
+      *(char **)arg = tor_strdup(c->value);
       break;
     case CONFIG_TYPE_DOUBLE:
       *(double *)arg = atof(c->value);

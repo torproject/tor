@@ -165,7 +165,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
     return -1;
   }
 
-  dnsconn->address = strdup(exitconn->address);
+  dnsconn->address = tor_strdup(exitconn->address);
   dnsconn->state = DNSWORKER_STATE_BUSY;
   num_dnsworkers_busy++;
 
@@ -381,7 +381,7 @@ static int spawn_dnsworker(void) {
 
   /* set up conn so it's got all the data we need to remember */
   conn->s = fd[0];
-  conn->address = strdup("localhost");
+  conn->address = tor_strdup("localhost");
 
   if(connection_add(conn) < 0) { /* no space, forget it */
     log_fn(LOG_WARNING,"connection_add failed. Giving up.");
