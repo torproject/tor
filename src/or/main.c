@@ -938,15 +938,19 @@ const char *router_get_my_descriptor(void) {
 static int init_descriptor(void) {
   routerinfo_t *ri;
   char localhostname[256];
+  char *address = options.Address;
 
-  if(gethostname(localhostname,sizeof(localhostname)) < 0) {
-    log_fn(LOG_WARNING,"Error obtaining local hostname");
-    return -1;
+  if(!address) { /* if not specified in config, we find a default */
+    if(gethostname(localhostname,sizeof(localhostname)) < 0) {
+      log_fn(LOG_WARNING,"Error obtaining local hostname");
+      return -1;
+    }
+    address = localhostname;
   }
   ri = tor_malloc(sizeof(routerinfo_t));
-  ri->address = strdup(localhostname);
+  ri->address = strdup(address);
   ri->nickname = strdup(options.Nickname);
-  /* No need to set addr. ???? */
+  /* No need to set addr. */
   ri->or_port = options.ORPort;
   ri->ap_port = options.APPort;
   ri->dir_port = options.DirPort;

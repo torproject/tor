@@ -192,6 +192,7 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "DataDirectory",  CONFIG_TYPE_STRING, &options->DataDirectory) ||
     config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
     config_compare(list, "Nickname",       CONFIG_TYPE_STRING, &options->Nickname) ||
+    config_compare(list, "Address",        CONFIG_TYPE_STRING, &options->Address) ||
 
     /* int options */
     config_compare(list, "MaxConn",         CONFIG_TYPE_INT, &options->MaxConn) ||
@@ -277,7 +278,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 /* Validate options */
 
   if(options->LogLevel) {
-    else if(!strcmp(options->LogLevel,"err"))
+    if(!strcmp(options->LogLevel,"err"))
       options->loglevel = LOG_ERR;
     else if(!strcmp(options->LogLevel,"warning"))
       options->loglevel = LOG_WARNING;
