@@ -1117,6 +1117,7 @@ static void do_list_fingerprint(void)
 {
   char buf[FINGERPRINT_LEN+1];
   crypto_pk_env_t *k;
+  const char *nickname = get_options()->Nickname;
   if (init_keys() < 0) {
     log_fn(LOG_ERR,"Error initializing keys; exiting");
     return;
@@ -1129,7 +1130,7 @@ static void do_list_fingerprint(void)
     log_fn(LOG_ERR, "Error computing fingerprint");
     return;
   }
-  printf("%s %s\n", get_options()->Nickname, buf);
+  printf("%s %s\n", nickname?nickname:"client", buf);
 }
 
 /** DOCDOC **/
