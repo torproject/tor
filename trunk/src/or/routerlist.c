@@ -846,7 +846,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
     
   tok = find_first_by_keyword(tokens, K_PORTS);
   if (tok && ports_set) {
-    log_fn(LOG_WARN,"Rendundant ports line");
+    log_fn(LOG_WARN,"Redundant ports line");
     goto err;
   } else if (tok) {
     if (tok->n_args != 3) {

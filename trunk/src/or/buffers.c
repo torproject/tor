@@ -491,6 +491,8 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       }
       assert(0);
     case 4: /* socks4 */
+      /* http://archive.socks.permeo.com/protocol/socks4.protocol */
+      /* http://archive.socks.permeo.com/protocol/socks4a.protocol */
 
       req->socks_version = 4;
       if(buf->datalen < SOCKS4_NETWORK_LEN) /* basic info available? */

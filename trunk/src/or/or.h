@@ -189,6 +189,8 @@
 #define RELAY_COMMAND_TRUNCATE 8
 #define RELAY_COMMAND_TRUNCATED 9
 #define RELAY_COMMAND_DROP 10
+#define RELAY_COMMAND_RESOLVE 11
+#define RELAY_COMMAND_RESOLVED 12
 
 #define _MIN_END_STREAM_REASON 1
 #define END_STREAM_REASON_MISC 1
@@ -363,6 +365,7 @@ struct connection_t {
   int done_receiving;
   char has_sent_end; /* for debugging: set once we've set the stream end,
                         and check in circuit_about_to_close_connection() */
+  char num_retries; /* how many times have we re-tried beginning this stream? */
 
   /* Used only by AP connections */
   socks_request_t *socks_request;
