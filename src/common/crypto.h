@@ -40,6 +40,7 @@ int crypto_pk_read_public_key_from_file(crypto_pk_env_t *env, FILE *src);
 int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int *len);
 int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, char *src, int len);
 int crypto_pk_write_private_key_to_file(crypto_pk_env_t *env, FILE *dest);
+int crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env, const char *fname);
 int crypto_pk_write_public_key_to_file(crypto_pk_env_t *env, FILE *dest);
 int crypto_pk_check_key(crypto_pk_env_t *env);
 int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *keyfile);
