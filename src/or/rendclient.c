@@ -90,7 +90,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   }
 
   /* write the remaining items into tmp */
-  strncpy(tmp, rendcirc->build_state->chosen_exit, (MAX_NICKNAME_LEN+1)); /* nul pads */
+  strncpy(tmp, rendcirc->build_state->chosen_exit_name, (MAX_NICKNAME_LEN+1)); /* nul pads */
   memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_cookie, REND_COOKIE_LEN);
   if (crypto_dh_get_public(cpath->handshake_state,
                            tmp+MAX_NICKNAME_LEN+1+REND_COOKIE_LEN,
@@ -164,7 +164,7 @@ rend_client_introduction_acked(circuit_t *circ,
     return -1;
   }
 
-  tor_assert(circ->build_state->chosen_exit);
+  tor_assert(circ->build_state->chosen_exit_name);
 
   if (request_len == 0) {
     /* It's an ACK; the introduction point relayed our introduction request. */
@@ -187,14 +187,15 @@ rend_client_introduction_acked(circuit_t *circ,
      * points. If any remain, extend to a new one and try again.
      * If none remain, refetch the service descriptor.
      */
-    if(rend_client_remove_intro_point(circ->build_state->chosen_exit,
+    if(rend_client_remove_intro_point(circ->build_state->chosen_exit_name,
                                       circ->rend_query) > 0) {
       /* There are introduction points left. re-extend the circuit to
        * another intro point and try again. */
+      routerinfo_t *r;
       nickname = rend_client_get_random_intro(circ->rend_query);
       tor_assert(nickname);
-      log_fn(LOG_INFO,"Got nack for %s from %s, extending to %s.", circ->rend_query, circ->build_state->chosen_exit, nickname);
-      if (!router_get_by_nickname(nickname)) {
+      log_fn(LOG_INFO,"Got nack for %s from %s, extending to %s.", circ->rend_query, circ->build_state->chosen_exit_name, nickname);
+      if (!(r = router_get_by_nickname(nickname))) {
         log_fn(LOG_WARN, "Advertised intro point '%s' for %s is not known. Closing.",
                nickname, circ->rend_query);
         circuit_mark_for_close(circ);
@@ -203,8 +204,9 @@ rend_client_introduction_acked(circuit_t *circ,
       log_fn(LOG_INFO, "Chose new intro point %s for %s (circ %d)",
              nickname, circ->rend_query, circ->n_circ_id);
       circ->state = CIRCUIT_STATE_BUILDING;
-      tor_free(circ->build_state->chosen_exit);
-      circ->build_state->chosen_exit = tor_strdup(nickname);
+      tor_free(circ->build_state->chosen_exit_name);
+      circ->build_state->chosen_exit_name = tor_strdup(nickname);
+      memcpy(circ->build_state->chosen_exit_digest, r->identity_digest, DIGEST_LEN);
       ++circ->build_state->desired_path_len;
       if (circuit_send_next_onion_skin(circ)<0) {
         log_fn(LOG_WARN, "Couldn't extend circuit to new intro point.");

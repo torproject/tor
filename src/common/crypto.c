@@ -1448,7 +1448,7 @@ int base16_encode(char *dest, int destlen, const char *src, int srclen)
     ++src;
     cp += 2;
   }
-  *dest = '\0';
+  *cp = '\0';
   return 0;
 }
 
@@ -1484,6 +1484,7 @@ int base16_decode(char *dest, int destlen, const char *src, int srclen)
       return -1;
     *(uint8_t*)dest = (v1<<4)|v2;
     ++dest;
+    src+=2;
   }
   *dest = '\0';
   return 0;

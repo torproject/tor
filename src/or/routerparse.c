@@ -539,7 +539,7 @@ static int check_directory_signature(const char *digest,
 int
 router_parse_list_from_string(const char **s, routerlist_t **dest,
 			      int n_good_nicknames,
-			      const char **good_nickname_lst)
+			      const char **good_nickname_list)
 {
   routerinfo_t *router;
   smartlist_t *routers;
@@ -574,7 +574,7 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
     if (n_good_nicknames>=0) {
       router->is_running = 0;
       for (i = 0; i < n_good_nicknames; ++i) {
-        if (0==strcasecmp(good_nickname_lst[i], router->nickname)) {
+        if (router_nickname_matches(router, good_nickname_list[i])) {
           router->is_running = 1;
           break;
         }

@@ -66,7 +66,7 @@ static int circuit_is_acceptable(circuit_t *circ,
      * circuit, it's the magical extra bob hop. so just check the nickname
      * of the one we meant to finish at.
      */
-    exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
+    exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
 
     if(!exitrouter) {
       log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
@@ -201,12 +201,12 @@ void circuit_expire_building(time_t now) {
       if(!victim->timestamp_dirty)
         log_fn(LOG_DEBUG,"Considering %sopen purp %d to %s (circid %d). (clean).",
                victim->state == CIRCUIT_STATE_OPEN ? "" : "non",
-               victim->purpose, victim->build_state->chosen_exit,
+               victim->purpose, victim->build_state->chosen_exit_name,
                victim->n_circ_id);
       else
         log_fn(LOG_DEBUG,"Considering %sopen purp %d to %s (circid %d). %d secs since dirty.",
                victim->state == CIRCUIT_STATE_OPEN ? "" : "non",
-               victim->purpose, victim->build_state->chosen_exit,
+               victim->purpose, victim->build_state->chosen_exit_name,
                victim->n_circ_id,
                (int)(now - victim->timestamp_dirty));
     }
@@ -266,7 +266,7 @@ int circuit_stream_is_being_handled(connection_t *conn) {
        !circ->marked_for_close && circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
        (!circ->timestamp_dirty ||
         circ->timestamp_dirty + options.NewCircuitPeriod < now)) {
-      exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
+      exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
       if(exitrouter && connection_ap_can_use_exit(conn, exitrouter) != ADDR_POLICY_REJECTED)
         if(++num >= MIN_CIRCUITS_HANDLING_STREAM)
           return 1;
@@ -305,7 +305,7 @@ void circuit_build_needed_circs(time_t now) {
     if(options.RunTesting && circ &&
                circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
       log_fn(LOG_INFO,"Creating a new testing circuit.");
-      circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
+      circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL);
     }
   }
 
@@ -318,7 +318,7 @@ void circuit_build_needed_circs(time_t now) {
    * go ahead and try another. */
   if(!circ && circuit_count_building(CIRCUIT_PURPOSE_C_GENERAL)
               < CIRCUIT_MIN_BUILDING_GENERAL) {
-    circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
+    circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL);
   }
 
   /* XXX count idle rendezvous circs and build more */
@@ -565,10 +565,10 @@ void circuit_build_failed(circuit_t *circ) {
       /* Don't increment failure count, since Alice may have picked
        * the rendezvous point maliciously */
       if (failed_at_last_hop) {
-        log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s. Sucks to be Alice.", circ->build_state->chosen_exit);
+        log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s. Sucks to be Alice.", circ->build_state->chosen_exit_name);
       } else {
         log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s, because an earlier node failed.",
-               circ->build_state->chosen_exit);
+               circ->build_state->chosen_exit_name);
         rend_service_relaunch_rendezvous(circ);
       }
       break;
@@ -588,9 +588,8 @@ static int n_circuit_failures = 0;
  * success. */
 #define MAX_CIRCUIT_FAILURES 5
 
-/** Launch a new circuit and return a pointer to it. Return NULL if you failed. */
-circuit_t *circuit_launch_new(uint8_t purpose, const char *exit_nickname) {
-
+circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest)
+{
   if (n_circuit_failures > MAX_CIRCUIT_FAILURES) {
     /* too many failed circs in a row. don't try. */
 //    log_fn(LOG_INFO,"%d failures so far, not trying.",n_circuit_failures);
@@ -598,7 +597,23 @@ circuit_t *circuit_launch_new(uint8_t purpose, const char *exit_nickname) {
   }
 
   /* try a circ. if it fails, circuit_mark_for_close will increment n_circuit_failures */
-  return circuit_establish_circuit(purpose, exit_nickname);
+  return circuit_establish_circuit(purpose, exit_digest);
+}
+
+/** Launch a new circuit and return a pointer to it. Return NULL if you failed. */
+circuit_t *circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname)
+{
+  const char *digest = NULL;
+
+  if (exit_nickname) {
+    routerinfo_t *r = router_get_by_nickname(exit_nickname);
+    if (!r) {
+      log_fn(LOG_WARN, "No such OR as '%s'", exit_nickname);
+      return NULL;
+    }
+    digest = r->identity_digest;
+  }
+  return circuit_launch_by_identity(purpose, digest);
 }
 
 /** Record another failure at opening a general circuit. When we have
@@ -682,7 +697,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     else
       new_circ_purpose = desired_circuit_purpose;
 
-    circ = circuit_launch_new(new_circ_purpose, exitname);
+    circ = circuit_launch_by_nickname(new_circ_purpose, exitname);
     tor_free(exitname);
 
     if(circ &&

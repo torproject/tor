@@ -304,6 +304,8 @@ connection_tls_finish_handshake(connection_t *conn) {
   }
   log_fn(LOG_DEBUG,"The router's cert is valid.");
 
+  /* XXXX008 This isn't right; fix this one we launch by identity digest
+   * XXXX008 rather than by nickname */
   if (conn->nickname) {
     /* I initiated this connection. */
     if (strcasecmp(conn->nickname, nickname)) {

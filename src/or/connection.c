@@ -712,7 +712,7 @@ int connection_handle_read(connection_t *conn) {
        conn->state == DIR_CONN_STATE_CONNECTING) {
        /* it's a directory server and connecting failed: forget about this router */
        /* XXX I suspect pollerr may make Windows not get to this point. :( */
-       router_mark_as_down(conn->nickname);
+       router_mark_as_down(conn->identity_digest);
     }
     /* There's a read error; kill the connection.*/
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
@@ -828,8 +828,9 @@ int connection_handle_write(connection_t *conn) {
         log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
-        if (conn->nickname)
-          router_mark_as_down(conn->nickname);
+        /* Previously we tested conn->nickname; is this right? */
+        if (conn->type == CONN_TYPE_OR)
+          router_mark_as_down(conn->identity_digest);
         return -1;
       } else {
         return 0; /* no change, see if next time is better */

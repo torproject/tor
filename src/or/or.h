@@ -674,7 +674,9 @@ typedef struct {
   /** Intended length of the final circuit. */
   int desired_path_len;
   /** Nickname of planned exit node. */
-  char *chosen_exit;
+  char *chosen_exit_name;
+  /** Identity of planned exit node. */
+  char chosen_exit_digest[DIGEST_LEN];
   /** The crypt_path_t to append after rendezvous: used for rendezvous. */
   struct crypt_path_t *pending_final_cpath;
   /** How many times has building a circuit for this task failed? */
@@ -919,7 +921,7 @@ void circuit_log_path(int severity, circuit_t *circ);
 void circuit_rep_hist_note_result(circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 circuit_t *circuit_establish_circuit(uint8_t purpose,
-                                     const char *exit_nickname);
+                                     const char *exit_digest);
 void circuit_n_conn_done(connection_t *or_conn, int success);
 int circuit_send_next_onion_skin(circuit_t *circ);
 int circuit_extend(cell_t *cell, circuit_t *circ);
@@ -968,7 +970,8 @@ void circuit_detach_stream(circuit_t *circ, connection_t *conn);
 void circuit_about_to_close_connection(connection_t *conn);
 void circuit_has_opened(circuit_t *circ);
 void circuit_build_failed(circuit_t *circ);
-circuit_t *circuit_launch_new(uint8_t purpose, const char *exit_nickname);
+circuit_t *circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname);
+circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest);
 void circuit_reset_failure_count(void);
 int connection_ap_handshake_attach_circuit(connection_t *conn);
 
@@ -1346,6 +1349,7 @@ routerinfo_t *router_pick_directory_server(void);
 struct smartlist_t;
 void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list);
 void router_add_running_routers_to_smartlist(struct smartlist_t *sl);
+int router_nickname_matches(routerinfo_t *router, const char *nickname);
 routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
                                         struct smartlist_t *excludedsmartlist);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
@@ -1357,7 +1361,7 @@ void routerlist_free(routerlist_t *routerlist);
 void routerlist_clear_trusted_directories(void);
 void routerinfo_free(routerinfo_t *router);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
-void router_mark_as_down(char *nickname);
+void router_mark_as_down(const char *digest);
 void routerlist_remove_old_routers(void);
 int router_load_routerlist_from_file(char *routerfile, int trusted);
 int router_load_routerlist_from_string(const char *s, int trusted);

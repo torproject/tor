@@ -113,7 +113,7 @@ static void circuit_free(circuit_t *circ) {
   if (circ->p_digest)
     crypto_free_digest_env(circ->p_digest);
   if(circ->build_state) {
-    tor_free(circ->build_state->chosen_exit);
+    tor_free(circ->build_state->chosen_exit_name);
     if (circ->build_state->pending_final_cpath)
       circuit_free_cpath_node(circ->build_state->pending_final_cpath);
   }
@@ -361,8 +361,8 @@ int _circuit_mark_for_close(circuit_t *circ) {
     tor_assert(circ->state == CIRCUIT_STATE_OPEN);
     /* treat this like getting a nack from it */
     log_fn(LOG_INFO,"Failed intro circ %s to %s (awaiting ack). Removing from descriptor.",
-           circ->rend_query, circ->build_state->chosen_exit);
-    rend_client_remove_intro_point(circ->build_state->chosen_exit, circ->rend_query);
+           circ->rend_query, circ->build_state->chosen_exit_name);
+    rend_client_remove_intro_point(circ->build_state->chosen_exit_name, circ->rend_query);
   }
 
   if(circ->n_conn)
