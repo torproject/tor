@@ -47,6 +47,11 @@ On startup, setgid to this user.
 \fBkeepaliveperiod \fR\fINUM\fP
 To keep firewalls from expiring connections, send a padding keepalive cell on open connections every NUM seconds. (Default: 300)
 .TP
+\fBoutboundbindaddress \fR\fIP\fP
+Make all outbound connections originate from the IP address specified.  This
+is only useful when you have multiple network interfaces, and you want all
+of Tor's outgoing connections to use a single one.
+.TP
 \fBpidfile \fR\fIFILE\fP
 On startup, write our PID to FILE. On clean shutdown, remove FILE.
 .TP
@@ -85,6 +90,12 @@ Every NUM seconds consider whether to build a new circuit. (Default: 60)
 .TP
 \fBpathlencoinweight \fR\fI0.0-1.0\fP
 Paths are 3 hops plus a geometric distribution centered around this coinweight. Must be >=0.0 and <1.0. (Default: 0.3) NOT USED CURRENTLY
+.TP
+\fBrendnodes \fR\fInickname,nickname,...\fP
+A list of preferred nodes to use for the rendezvous point, if possible.
+.TP
+\fBrendexcludenodes \fR\fInickname,nickname,...\fP
+A list of nodes to never use when choosing a rendezvous point.
 .TP
 \fBsocksport \fR\fIPORT\fP
 Bind to this port to listen for connections from socks-speaking applications.
@@ -166,6 +177,9 @@ Bind to this address to listen for connections from Tor clients and servers. (De
 .PP
 The following options are useful only for directory servers (that is, if \fBdirport\fP is non-zero):
 .TP
+\fBcontactinfo \fR\fIemail address\fP
+Administrative contact information for server.
+.TP
 \fBdirport \fR\fIPORT\fP
 Bind the directory service to this port.
 .TP
@@ -198,6 +212,25 @@ service.
 \fBhiddenserviceexcludenodes \fR\fInickname,nicknamme,...\fP
 Do not use the specified nodes as introduction points for the hidden
 service.
+
+.\" UNDOCUMENTED
+.\" The following options need to be described:
+.\" fascistfirewall   (once we have a server running on 80/443)
+.\" firewallports     (once we have a server running on 80/443)
+.\" maxconn             (Why would you want to use this?)
+.\" I'm going to wait for go-ahead from arma before I document these;
+.\" there are policy issues here:
+.\" allowunverifiednodes
+.\" clientonly
+.\" dirfetchpostperiod
+.\" ignoreversion
+.\" The following options are only useful for people who want to run
+.\" authoritative dirservers:
+.\" authoritativedirectory
+.\" runtesting
+.\" The following options are not implemented:
+.\" linkpadding  (but connection.c refers to it!)
+.\" trafficshaping
 
 .SH FILES
 .TP
