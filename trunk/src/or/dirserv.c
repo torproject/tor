@@ -466,6 +466,8 @@ list_running_servers(char **nicknames_out)
   int i;
   int length;
   smartlist_t *nicknames_up, *nicknames_down;
+  char *name;
+  const char *s;
 
   *nicknames_out = NULL;
   nicknames_up = smartlist_create();
@@ -474,13 +476,12 @@ list_running_servers(char **nicknames_out)
 
   get_connection_array(&connection_array, &n_conns);
   for (i = 0; i<n_conns; ++i) {
-    char *name, *cp;
     conn = connection_array[i];
     if (conn->type != CONN_TYPE_OR || !conn->nickname)
       continue; /* only list ORs. */
-    cp = dirserv_get_nickname_by_digest(conn->identity_digest);
-    if (cp) {
-      name = tor_strdup(cp);
+    s = dirserv_get_nickname_by_digest(conn->identity_digest);
+    if (s) {
+      name = tor_strdup(s);
     } else {
       name = tor_malloc(HEX_DIGEST_LEN+2);
       *name = '$';
