@@ -693,53 +693,65 @@ static size_t the_directory_len = 0;
 static char *the_directory_z = NULL;
 static size_t the_directory_z_len = 0;
 
-static char *cached_directory = NULL; /* used only by non-auth dirservers */
-static size_t cached_directory_len = 0;
-static char *cached_directory_z = NULL;
-static size_t cached_directory_z_len = 0;
-static time_t cached_directory_published = 0;
+typedef struct cached_dir_t {
+  char *dir;
+  char *dir_z;
+  size_t dir_len;
+  size_t dir_z_len;
+  time_t published;
+} cached_dir_t;
+
+/* used only by non-auth dirservers */
+static cached_dir_t cached_directory = { NULL, NULL, 0, 0, 0 };
+static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0 };
 
 /** If we have no cached directory, or it is older than <b>when</b>, then
  * replace it with <b>directory</b>, published at <b>when</b>.
  */
-void dirserv_set_cached_directory(const char *directory, time_t when)
+void dirserv_set_cached_directory(const char *directory, time_t when,
+                                  int is_running_routers)
 {
   time_t now;
-  char filename[512];
+  cached_dir_t *d;
   tor_assert(!get_options()->AuthoritativeDir);
   now = time(NULL);
-  if (when<=cached_directory_published) {
+  d = is_running_routers ? &cached_runningrouters : &cached_directory;
+  if (when<=d->published) {
     log_fn(LOG_INFO, "Ignoring old directory; not caching.");
   } else if (when>=now+ROUTER_ALLOW_SKEW) {
     log_fn(LOG_INFO, "Ignoring future directory; not caching.");
-  } else if (when>cached_directory_published &&
+  } else if (when>d->published &&
         when<now+ROUTER_ALLOW_SKEW) {
     log_fn(LOG_DEBUG, "Caching directory.");
-    tor_free(cached_directory);
-    cached_directory = tor_strdup(directory);
-    cached_directory_len = strlen(cached_directory);
-    tor_free(cached_directory_z);
-    if (tor_gzip_compress(&cached_directory_z, &cached_directory_z_len,
-                          cached_directory, cached_directory_len,
+    tor_free(d->dir);
+    d->dir = tor_strdup(directory);
+    d->dir_len = strlen(directory);
+    tor_free(d->dir_z);
+    if (tor_gzip_compress(&(d->dir_z), &(d->dir_z_len), d->dir, d->dir_len,
                           ZLIB_METHOD)) {
       log_fn(LOG_WARN,"Error compressing cached directory");
     }
-    cached_directory_published = when;
-    tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_options()->DataDirectory);
-    if(write_str_to_file(filename,cached_directory,0) < 0) {
-      log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
+    d->published = when;
+    if (!is_running_routers) {
+      char filename[512];
+      tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_options()->DataDirectory);
+      if(write_str_to_file(filename,cached_directory.dir,0) < 0) {
+        log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
+      }
     }
   }
 }
 
 /** Set *<b>directory</b> to the most recently generated encoded signed
- * directory, generating a new one as necessary. */
+ * directory, generating a new one as necessary.  If not an authoritative
+ * directory may return 0 if no directory is yet cached.*/
 size_t dirserv_get_directory(const char **directory, int compress)
 {
   if (!get_options()->AuthoritativeDir) {
-    if (compress?cached_directory_z:cached_directory) {
-      *directory = compress?cached_directory_z:cached_directory;
-      return compress?cached_directory_z_len:cached_directory_len;
+    cached_dir_t *d = &cached_directory;
+    *directory = compress ? d->dir_z : d->dir;
+    if (*directory) {
+      return compress ? d->dir_z_len : d->dir_len;
     } else {
       /* no directory yet retrieved */
       return 0;
@@ -799,8 +811,10 @@ static int dirserv_regenerate_directory(void)
   return 0;
 }
 
-static char *runningrouters_string=NULL;
-static size_t runningrouters_len=0;
+static char *the_runningrouters=NULL;
+static size_t the_runningrouters_len=0;
+static char *the_runningrouters_z=NULL;
+static size_t the_runningrouters_z_len=0;
 
 /** Replace the current running-routers list with a newly generated one. */
 static int generate_runningrouters(crypto_pk_env_t *private_key)
@@ -867,9 +881,16 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
     goto err;
   }
 
-  tor_free(runningrouters_string);
-  runningrouters_string = s;
-  runningrouters_len = strlen(s);
+  tor_free(the_runningrouters);
+  the_runningrouters = s;
+  the_runningrouters_len = strlen(s);
+  tor_free(the_runningrouters_z);
+  if (tor_gzip_compress(&the_runningrouters_z, &the_runningrouters_z_len,
+                        the_runningrouters, the_runningrouters_len,
+                        ZLIB_METHOD)) {
+    log_fn(LOG_WARN, "Error gzipping runningrouters");
+    return -1;
+  }
   runningrouters_is_dirty = 0;
   return 0;
  err:
@@ -881,8 +902,18 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
 /** Set *<b>rr</b> to the most recently generated encoded signed
  * running-routers list, generating a new one as necessary.  Return the
  * size of the directory on success, and 0 on failure. */
-size_t dirserv_get_runningrouters(const char **rr)
+size_t dirserv_get_runningrouters(const char **rr, int compress)
 {
+  if (!get_options()->AuthoritativeDir) {
+    cached_dir_t *d = &cached_runningrouters;
+    *rr = compress ? d->dir_z : d->dir;
+    if (*rr) {
+      return compress ? d->dir_z_len : d->dir_len;
+    } else {
+      /* no directory yet retrieved */
+      return 0;
+    }
+  }
   if (runningrouters_is_dirty &&
       runningrouters_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL)) {
     if(generate_runningrouters(get_identity_key())) {
@@ -890,8 +921,8 @@ size_t dirserv_get_runningrouters(const char **rr)
       return 0;
     }
   }
-  *rr = runningrouters_string;
-  return runningrouters_len;
+  *rr = compress ? the_runningrouters_z : the_runningrouters;
+  return compress ? the_runningrouters_z_len : the_runningrouters_len;
 }
 
 /*

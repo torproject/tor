@@ -780,23 +780,26 @@ directory_handle_command_get(connection_t *conn, char *headers,
     return 0;
   }
 
-  if(!strcmp(url,"/tor/running-routers")) { /* running-routers fetch */
+  if(!strcmp(url,"/tor/running-routers") ||
+     !strcmp(url,"/tor/running-routers.z")) { /* running-routers fetch */
+    int deflated = !strcmp(url,"/tor/dir.z");
     tor_free(url);
     if(!authdir_mode(get_options())) {
       /* For now, we don't cache running-routers. Reject. */
       connection_write_to_buf(answer400, strlen(answer400), conn);
       return 0;
     }
-    dlen = dirserv_get_runningrouters(&cp);
-    if(!dlen) { /* we failed to create cp */
+    dlen = dirserv_get_runningrouters(&cp, deflated);
+    if(!dlen) { /* we failed to create/cache cp */
       connection_write_to_buf(answer503, strlen(answer503), conn);
       return 0;
     }
 
     format_rfc1123_time(date, time(NULL));
-    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
-             date,
-             (int)dlen);
+    tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\nContent-Encoding: %s\r\n\r\n",
+                 date,
+                 (int)dlen,
+                 deflated?"deflate":"identity");
     connection_write_to_buf(tmp, strlen(tmp), conn);
     connection_write_to_buf(cp, strlen(cp), conn);
     return 0;
