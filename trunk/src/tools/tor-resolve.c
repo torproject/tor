@@ -46,8 +46,8 @@
 
 static int 
 build_socks4a_resolve_request(char **out,
-			      const char *username,
-			      const char *hostname)
+                              const char *username,
+                              const char *hostname)
 {
   size_t len;
   tor_assert(out);
@@ -68,7 +68,7 @@ build_socks4a_resolve_request(char **out,
 
 static int 
 parse_socks4a_resolve_response(const char *response, size_t len,
-			       uint32_t *addr_out)
+                               uint32_t *addr_out)
 {
   uint8_t status;
   tor_assert(response);
@@ -90,7 +90,7 @@ parse_socks4a_resolve_response(const char *response, size_t len,
 
 static int 
 do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
-	   uint32_t *result_addr)
+           uint32_t *result_addr)
 {
   int s;
   struct sockaddr_in socksaddr;
