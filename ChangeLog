@@ -80,6 +80,8 @@ pre1:
 
 Changes in version 0.0.8.1 - 2004-10-13
   o Bugfixes:
+    - Fix a seg fault that can be triggered remotely for Tor
+      clients/servers with an open dirport.
     - Fix a rare assert trigger, where routerinfos for entries in
       our cpath would expire while we're building the path.
     - Fix a bug in OutboundBindAddress so it (hopefully) works.
