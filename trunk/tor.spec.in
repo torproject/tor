@@ -6,7 +6,7 @@
 # This should be incremented whenever the spec file changes, but
 # can drop back to zero at a new Tor version
 
-%define specver 2
+%define specver 3
 
 ## Things users may want to change
 #
@@ -118,11 +118,11 @@ This package provides the "tor" program, which serves as both a client and
 a relay node. Scripts will automatically create a "%{runuser}" user and
 group, and set tor up to run as a daemon when the system is rebooted.
 
-Clients connect to their local Tor servers using the SOCKS5
-protocol. The local server chooses a path through a set of relays, in
+Applications connect to the local Tor proxy using the SOCKS
+protocol. The local proxy chooses a path through a set of relays, in
 which each relay knows its predecessor and successor, but no
 others. Traffic flowing down the circuit is unwrapped by a symmetric
-key at each relay, which reveals the downstream node.
+key at each relay, which reveals the downstream relay.
 
 Warnings: Tor does no protocol cleaning.  That means there is a danger
 that application protocols and associated programs can be induced to
@@ -230,8 +230,8 @@ exit 0
 %{_bindir}/tor-resolve
 %config %{_initrddir}/%{name}
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/logrotate.d/%{name}
-%dir %attr(0750,root,%{runuser}) %{_sysconfdir}/%{name}/
-%config(noreplace) %attr(0640,root,%{runuser}) %{_sysconfdir}/%{name}/*
+%dir %attr(0755,root,%{runuser}) %{_sysconfdir}/%{name}/
+%config(noreplace) %attr(0644,root,%{runuser}) %{_sysconfdir}/%{name}/*
 %attr(0700,%{runuser},%{runuser}) %dir %{_localstatedir}/lib/%{name}
 %attr(0750,%{runuser},%{runuser}) %dir %{_localstatedir}/run/%{name}
 %attr(0750,%{runuser},%{runuser}) %dir %{_localstatedir}/log/%{name}
