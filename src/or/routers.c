@@ -33,6 +33,7 @@ static char *eat_whitespace(char *s);
 static char *eat_whitespace_no_nl(char *s);
 static char *find_whitespace(char *s);
 static void router_free_exit_policy(routerinfo_t *router);
+static int router_add_exit_policy_from_string(routerinfo_t *router, char *s);
 static int router_add_exit_policy(routerinfo_t *router, 
                                   directory_token_t *tok);
 static int router_resolve_directory(directory_t *dir);
@@ -946,8 +947,37 @@ static void router_free_exit_policy(routerinfo_t *router) {
   }
 }
 
-int router_add_exit_policy_from_string(routerinfo_t *router,
-                                       char *s)
+void router_add_exit_policy_from_config(routerinfo_t *router) {
+  char *s = options.ExitPolicy, *e;
+  int last=0;
+
+  if(!s) {
+    log_fn(LOG_INFO,"No exit policy configured. Ok.");
+    return; /* nothing to see here */
+  }
+  if(!*s) {
+    log_fn(LOG_INFO,"Exit policy is empty. Ok.");
+    return; /* nothing to see here */
+  }
+
+  for(;;) {
+    e = strchr(s,',');
+    if(!e)
+      last = 1;
+    else
+      *e = 0;
+    log_fn(LOG_DEBUG,"Adding new entry '%s'",s);
+    if(router_add_exit_policy_from_string(router,s) < 0)
+      log_fn(LOG_WARNING,"Malformed exit policy %s; skipping.", s);
+    if(last)
+      return;
+    s = e+1;
+  }
+}
+
+static int
+router_add_exit_policy_from_string(routerinfo_t *router,
+                                   char *s)
 {
   directory_token_t tok;
   char *tmp, *cp;
@@ -1048,11 +1078,12 @@ int router_compare_to_exit_policy(connection_t *conn) {
     assert(tmpe->address);
     assert(tmpe->port);
 
+    log_fn(LOG_DEBUG,"Considering exit policy %s:%s",tmpe->address, tmpe->port);
     if(inet_aton(tmpe->address,&in) == 0) { /* malformed IP. reject. */
       log_fn(LOG_WARNING,"Malformed IP %s in exit policy. Rejecting.",tmpe->address);
       return -1;
     }
-    if(conn->addr == ntohl(in.s_addr) &&
+    if((!strcmp(tmpe->address,"*") || conn->addr == ntohl(in.s_addr)) &&
        (!strcmp(tmpe->port,"*") || atoi(tmpe->port) == conn->port)) {
       log_fn(LOG_INFO,"Address '%s' matches '%s' and port '%s' matches '%d'. %s.",
           tmpe->address, conn->address,
@@ -1107,7 +1138,8 @@ int router_rebuild_descriptor(void) {
   ri->link_pkey = crypto_pk_dup_key(get_link_key());
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
   ri->bandwidth = options.TotalBandwidth;
-  ri->exit_policy = NULL; /* XXX implement this. */
+  ri->exit_policy = NULL; /* zero it out first */
+  router_add_exit_policy_from_config(ri);
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
   desc_routerinfo = ri;
