@@ -1393,6 +1393,7 @@ int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
 int connection_in_array(connection_t *conn);
 void add_connection_to_closeable_list(connection_t *conn);
+int connection_is_on_closeable_list(connection_t *conn);
 
 void get_connection_array(connection_t ***array, int *n);
 
