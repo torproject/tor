@@ -317,7 +317,8 @@ void connection_ap_attach_pending(void)
 
   for (i = 0; i < n; ++i) {
     conn = carray[i];
-    if (conn->type != CONN_TYPE_AP ||
+    if (conn->marked_for_close ||
+        conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
     if(connection_ap_handshake_attach_circuit(conn) < 0) {
