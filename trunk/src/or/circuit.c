@@ -250,7 +250,106 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
   return NULL;
 }
 
-/* Dear god this function needs refactoring. */
+/* Return 1 iff 'c' could be returned by circuit_get_best.
+ */
+static int circuit_is_acceptable(circuit_t *circ,
+                                 connection_t *conn,
+                                 int must_be_open,
+                                 uint8_t purpose,
+                                 time_t now)
+{
+  routerinfo_t *exitrouter;
+
+  if (!circ->cpath)
+    return 0; /* this circ doesn't start at us */
+  if (must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_conn))
+    return 0; /* ignore non-open circs */
+  if (circ->marked_for_close)
+    return 0;
+
+  /* if this circ isn't our purpose, skip. */
+  if(purpose == CIRCUIT_PURPOSE_C_REND_JOINED && !must_be_open) {
+    if(circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
+       circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
+       circ->purpose != CIRCUIT_PURPOSE_C_REND_JOINED)
+      return 0;
+  } else {
+    if(purpose != circ->purpose)
+      return 0;
+  }
+
+  if(purpose == CIRCUIT_PURPOSE_C_GENERAL)
+    if(circ->timestamp_dirty &&
+       circ->timestamp_dirty+options.NewCircuitPeriod < now)
+      return 0;
+
+  if(conn) {
+    /* decide if this circ is suitable for this conn */
+
+//      if(circ->state == CIRCUIT_STATE_OPEN && circ->n_conn) /* open */
+//        exitrouter = router_get_by_addr_port(circ->cpath->prev->addr,
+//                                             circ->cpath->prev->port);
+//      else /* not open */
+    /* for rend circs, circ->cpath->prev is not the last router in the
+     * circuit, it's the magical extra bob hop. so just check the nickname
+     * of the one we meant to finish at.
+     */
+    exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
+
+    if(!exitrouter) {
+      log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
+      return 0; /* this circuit is screwed and doesn't know it yet */
+    }
+
+    if(purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+      if(connection_ap_can_use_exit(conn, exitrouter) == ADDR_POLICY_REJECTED) {
+        /* can't exit from this router */
+        return 0;
+      }
+    } else { /* not general */
+      if(rend_cmp_service_ids(conn->rend_query, circ->rend_query)) {
+        /* this circ is not for this conn */
+        return 0;
+      }
+    }
+  }
+  return 0;
+}
+
+/* Return 1 iff circuit 'a' is better than circuit 'b' for purpose.  Used by
+ * circuit_get_best
+ */
+static int circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
+{
+  switch(purpose) {
+    case CIRCUIT_PURPOSE_C_GENERAL:
+      /* if it's used but less dirty it's best;
+       * else if it's more recently created it's best
+       */
+      if(b->timestamp_dirty) {
+        if(a->timestamp_dirty &&
+           a->timestamp_dirty > b->timestamp_dirty)
+          return 1;
+      } else {
+        if(a->timestamp_dirty ||
+           a->timestamp_created > b->timestamp_created)
+          return 1;
+      }
+      break;
+    case CIRCUIT_PURPOSE_C_INTRODUCING:
+      /* more recently created is best */
+      if(a->timestamp_created > b->timestamp_created)
+        return 1;
+      break;
+    case CIRCUIT_PURPOSE_C_REND_JOINED:
+      /* the closer it is to rend_joined the better it is */
+      if(a->purpose > b->purpose)
+        return 1;
+      break;
+  }
+  return 0;
+}
+
 /* Find the best circ that conn can use, preferably one which is
  * dirty. Circ must not be too old.
  * If !conn, return newest.
@@ -268,7 +367,6 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
 circuit_t *circuit_get_best(connection_t *conn,
                             int must_be_open, uint8_t purpose) {
   circuit_t *circ, *best=NULL;
-  routerinfo_t *exitrouter;
   time_t now = time(NULL);
 
   assert(purpose == CIRCUIT_PURPOSE_C_GENERAL ||
@@ -276,93 +374,14 @@ circuit_t *circuit_get_best(connection_t *conn,
          purpose == CIRCUIT_PURPOSE_C_REND_JOINED);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (!circ->cpath)
-      continue; /* this circ doesn't start at us */
-    if (must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_conn))
-      continue; /* ignore non-open circs */
-    if (circ->marked_for_close)
+    if (!circuit_is_acceptable(circ,conn,must_be_open,purpose,now))
       continue;
-
-    /* if this circ isn't our purpose, skip. */
-    if(purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
-      if(must_be_open && purpose != circ->purpose)
-        continue;
-      if(circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
-         circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
-         circ->purpose != CIRCUIT_PURPOSE_C_REND_JOINED)
-        continue;
-    } else {
-      if(purpose != circ->purpose)
-        continue;
-    }
-
-    if(purpose == CIRCUIT_PURPOSE_C_GENERAL)
-      if(circ->timestamp_dirty &&
-         circ->timestamp_dirty+options.NewCircuitPeriod < now)
-        continue; /* too old */
-
-    if(conn) {
-      /* decide if this circ is suitable for this conn */
-
-//      if(circ->state == CIRCUIT_STATE_OPEN && circ->n_conn) /* open */
-//        exitrouter = router_get_by_addr_port(circ->cpath->prev->addr,
-//                                             circ->cpath->prev->port);
-//      else /* not open */
-/* for rend circs, circ->cpath->prev is not the last router in the
- * circuit, it's the magical extra bob hop. so just check the nickname
- * of the one we meant to finish at.
- */
-        exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
-
-      if(!exitrouter) {
-        log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
-        continue; /* this circuit is screwed and doesn't know it yet */
-      }
-
-      if(purpose == CIRCUIT_PURPOSE_C_GENERAL) {
-        if(connection_ap_can_use_exit(conn, exitrouter) == ADDR_POLICY_REJECTED) {
-          /* can't exit from this router */
-          continue;
-        }
-      } else { /* not general */
-        if(rend_cmp_service_ids(conn->rend_query, circ->rend_query)) {
-          /* this circ is not for this conn */
-          continue;
-        }
-      }
-    }
 
     /* now this is an acceptable circ to hand back. but that doesn't
      * mean it's the *best* circ to hand back. try to decide.
      */
-    if(!best)
+    if(!best || circuit_is_better(circ,best,purpose))
       best = circ;
-    switch(purpose) {
-      case CIRCUIT_PURPOSE_C_GENERAL:
-        /* if it's used but less dirty it's best;
-         * else if it's more recently created it's best
-         */
-        if(best->timestamp_dirty) {
-          if(circ->timestamp_dirty &&
-             circ->timestamp_dirty > best->timestamp_dirty)
-            best = circ;
-        } else {
-          if(circ->timestamp_dirty ||
-             circ->timestamp_created > best->timestamp_created)
-            best = circ;
-        }
-        break;
-      case CIRCUIT_PURPOSE_C_INTRODUCING:
-        /* more recently created is best */
-        if(circ->timestamp_created > best->timestamp_created)
-          best = circ;
-        break;
-      case CIRCUIT_PURPOSE_C_REND_JOINED:
-        /* the closer it is to rend_joined the better it is */
-        if(circ->purpose > best->purpose)
-          best = circ;
-        break;
-    }
   }
 
   return best;
