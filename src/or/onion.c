@@ -386,14 +386,18 @@ cpath_build_state_t *onion_new_cpath_build_state(void) {
   directory_t *dir;
   int r;
   cpath_build_state_t *info;
-  
+  routerinfo_t *exit;
+
   router_get_directory(&dir);
   r = new_route_len(options.PathlenCoinWeight, dir->routers, dir->n_routers);
   if (r < 0) 
     return NULL;
+  exit = choose_good_exit_server(dir);
+  if(!exit)
+    return NULL;
   info = tor_malloc(sizeof(cpath_build_state_t));
   info->desired_path_len = r;
-  info->chosen_exit = tor_strdup(choose_good_exit_server(dir)->nickname);
+  info->chosen_exit = tor_strdup(exit->nickname);
   return info;
 }
 
