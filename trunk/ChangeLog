@@ -23,7 +23,7 @@ rc5:
     - Support "foo.nickname.exit" addresses, to let Alice request the
       address "foo" as viewed by exit node "nickname". Based on a patch
       by Geoff Goodell.
-    - Make tor --version --version dump the cvs $Id$ of every file.
+    - Make tor --version --version dump the cvs Id of every file.
 
 rc4:
   o Bugfixes on 0.0.8.1:
