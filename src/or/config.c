@@ -23,6 +23,11 @@ typedef enum config_type_t {
   CONFIG_TYPE_CSV,          /**< A list of strings, separated by commas and optional
                               * whitespace. */
   CONFIG_TYPE_LINELIST,     /**< Uninterpreted config lines */
+  CONFIG_TYPE_LINELIST_S,   /**< Uninterpreted, context-sensitive config lines,
+                             * mixed with other keywords. */
+  CONFIG_TYPE_LINELIST_V,   /**< Catch-all "virtual" option to summarize
+                             * context-sensitive config lines when fetching.
+                             */
   CONFIG_TYPE_OBSOLETE,     /**< Obsolete (ignored) option. */
 } config_type_t;
 
@@ -106,14 +111,16 @@ static config_var_t config_vars[] = {
   VAR("Group",               STRING,   Group,                NULL),
   VAR("HashedControlPassword",STRING,  HashedControlPassword, NULL),
   VAR("HttpProxy",           STRING,   HttpProxy,            NULL),
-  VAR("HiddenServiceDir",    LINELIST, RendConfigLines,      NULL),
-  VAR("HiddenServicePort",   LINELIST, RendConfigLines,      NULL),
-  VAR("HiddenServiceNodes",  LINELIST, RendConfigLines,      NULL),
-  VAR("HiddenServiceExcludeNodes", LINELIST, RendConfigLines,NULL),
+  VAR("HiddenServiceOptions",LINELIST_V, RendConfigLines,    NULL),
+  VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
+  VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
+  VAR("HiddenServiceNodes",  LINELIST_S, RendConfigLines,    NULL),
+  VAR("HiddenServiceExcludeNodes", LINELIST_S, RendConfigLines, NULL),
   VAR("IgnoreVersion",       BOOL,     IgnoreVersion,        "0"),
   VAR("KeepalivePeriod",     UINT,     KeepalivePeriod,      "300"),
-  VAR("LogLevel",            LINELIST, LogOptions,           NULL),
-  VAR("LogFile",             LINELIST, LogOptions,           NULL),
+  VAR("LogOptions",          LINELIST_V, LogOptions,         NULL),
+  VAR("LogLevel",            LINELIST_S, LogOptions,         NULL),
+  VAR("LogFile",             LINELIST_S, LogOptions,         NULL),
   OBSOLETE("LinkPadding"),
   VAR("MaxConn",             UINT,     MaxConn,              "1024"),
   VAR("MaxOnionsPending",    UINT,     MaxOnionsPending,     "100"),
@@ -137,7 +144,7 @@ static config_var_t config_vars[] = {
   VAR("SocksPort",           UINT,     SocksPort,            "9050"),
   VAR("SocksBindAddress",    LINELIST, SocksBindAddress,     NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
-  VAR("SysLog",              LINELIST, LogOptions,           NULL),
+  VAR("SysLog",              LINELIST_S, LogOptions,         NULL),
   OBSOLETE("TrafficShaping"),
   VAR("User",                STRING,   User,                 NULL),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
@@ -151,13 +158,16 @@ static config_var_t config_vars[] = {
 static struct config_line_t *config_get_commandlines(int argc, char **argv);
 static int config_get_lines(FILE *f, struct config_line_t **result);
 static void config_free_lines(struct config_line_t *front);
-static int config_assign_line(or_options_t *options, struct config_line_t *c);
-static int config_assign(or_options_t *options, struct config_line_t *list);
+static int config_assign_line(or_options_t *options, struct config_line_t *c,
+                              int reset);
+static int config_assign(or_options_t *options, struct config_line_t *list,
+                         int reset);
 static int parse_dir_server_line(const char *line);
 static int parse_redirect_line(or_options_t *options,
                                struct config_line_t *line);
 static const char *expand_abbrev(const char *option, int commandline_only);
 static config_var_t *config_find_option(const char *key);
+static void reset_option(or_options_t *options, config_var_t *var);
 
 /** If <b>option</b> is an official abbreviation for a longer option,
  * return the longer option.  Otherwise return <b>option</b>.
@@ -216,7 +226,7 @@ config_get_commandlines(int argc, char **argv)
 
 /** Helper: allocate a new configuration option mapping 'key' to 'val',
  * prepend it to 'front', and return the newly allocated config_line_t */
-static struct config_line_t *
+struct config_line_t *
 config_line_prepend(struct config_line_t *front,
                     const char *key,
                     const char *val)
@@ -298,9 +308,13 @@ static config_var_t *config_find_option(const char *key)
 }
 
 /** If <b>c</b> is a syntactically valid configuration line, update
- * <b>options</b> with its value and return 0.  Otherwise return -1. */
+ * <b>options</b> with its value and return 0.  Otherwise return -1.
+ *
+ * If 'reset' is set, and we get a line containing no value, restore the
+ * option to its default value.
+ */
 static int
-config_assign_line(or_options_t *options, struct config_line_t *c)
+config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
 {
   int i, ok;
   config_var_t *var;
@@ -311,11 +325,15 @@ config_assign_line(or_options_t *options, struct config_line_t *c)
     log_fn(LOG_WARN, "Unknown option '%s'.  Failing.", c->key);
     return -1;
   }
-
   /* Put keyword into canonical case. */
   if (strcmp(var->name, c->key)) {
     tor_free(c->key);
     c->key = tor_strdup(var->name);
+  }
+
+  if (reset && !strlen(c->value)) {
+    reset_option(options, var);
+    return 0;
   }
 
   lvalue = ((char*)options) + var->var_offset;
@@ -357,20 +375,41 @@ config_assign_line(or_options_t *options, struct config_line_t *c)
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     break;
 
-    case CONFIG_TYPE_LINELIST:
-      /* Note: this reverses the order that the lines appear in.  That's
-       * just fine, since we build up the list of lines reversed in the
-       * first place. */
-      *(struct config_line_t**)lvalue =
-        config_line_prepend(*(struct config_line_t**)lvalue, c->key, c->value);
-      break;
+
+  case CONFIG_TYPE_LINELIST:
+  case CONFIG_TYPE_LINELIST_S:
+    /* Note: this reverses the order that the lines appear in.  That's
+     * just fine, since we build up the list of lines reversed in the
+     * first place. */
+    *(struct config_line_t**)lvalue =
+      config_line_prepend(*(struct config_line_t**)lvalue, c->key, c->value);
+    break;
 
   case CONFIG_TYPE_OBSOLETE:
     log_fn(LOG_WARN, "Skipping obsolete configuration option '%s'", c->key);
     break;
+  case CONFIG_TYPE_LINELIST_V:
+    log_fn(LOG_WARN, "Can't provide value for virtual option '%s'", c->key);
+    return -1;
+  default:
+    tor_assert(0);
+    break;
   }
 
   return 0;
+}
+
+/** restore the option named <b>key</b> in options to its default value. */
+static void
+config_reset_line(or_options_t *options, const char *key)
+{
+  config_var_t *var;
+
+  var = config_find_option(key);
+  if (!var)
+    return; /* give error on next pass. */
+
+  reset_option(options, var);
 }
 
 /** Return a canonicalized list of the options assigned for key.
@@ -387,10 +426,14 @@ config_get_assigned_option(or_options_t *options, const char *key)
   if (!var) {
     log_fn(LOG_WARN, "Unknown option '%s'.  Failing.", key);
     return NULL;
+  } else if (var->type == CONFIG_TYPE_LINELIST_S) {
+    log_fn(LOG_WARN, "Can't return context-sensitive '%s' on its own", key);
+    return NULL;
   }
   value = ((char*)options) + var->var_offset;
 
-  if (var->type == CONFIG_TYPE_LINELIST) {
+  if (var->type == CONFIG_TYPE_LINELIST ||
+      var->type == CONFIG_TYPE_LINELIST_V) {
     /* Linelist requires special handling: we just copy and return it. */
     const struct config_line_t *next_in = value;
     struct config_line_t **next_out = &result;
@@ -442,18 +485,36 @@ config_get_assigned_option(or_options_t *options, const char *key)
 /** Iterate through the linked list of requested options <b>list</b>.
  * For each item, convert as appropriate and assign to <b>options</b>.
  * If an item is unrecognized, return -1 immediately,
- * else return 0 for success. */
+ * else return 0 for success.
+ *
+ * If <b>reset</b>, then interpret empty lines as meaning "restore to
+ * default value", and interpret LINELIST* options as replacing (not
+ * extending) their previous values.
+ */
 static int
-config_assign(or_options_t *options, struct config_line_t *list)
+config_assign(or_options_t *options, struct config_line_t *list, int reset)
 {
-  while (list) {
-    const char *full = expand_abbrev(list->key, 0);
-    if (strcmp(full,list->key)) {
-      tor_free(list->key);
-      list->key = tor_strdup(full);
-    }
+  struct config_line_t *p;
 
-    if (config_assign_line(options, list))
+  /* pass 1: normalize keys */
+  for (p = list; p; p = p->next) {
+    const char *full = expand_abbrev(p->key, 0);
+    if (strcmp(full,p->key)) {
+      tor_free(p->key);
+      p->key = tor_strdup(full);
+    }
+  }
+
+  /* pass 2: if we're reading from a resetting souurce, clear all mentioned
+   * linelists. */
+  if (reset) {
+    for (p = list; p; p = p->next)
+      config_reset_line(options, p->key);
+  }
+
+  /* pass 3: assign. */
+  while (list) {
+    if (config_assign_line(options, list, reset))
       return -1;
     list = list->next;
   }
@@ -604,6 +665,7 @@ free_options(or_options_t *options)
         tor_free(*(char **)lvalue);
         break;
       case CONFIG_TYPE_LINELIST:
+      case CONFIG_TYPE_LINELIST_V:
         config_free_lines(*(struct config_line_t**)lvalue);
         *(struct config_line_t**)lvalue = NULL;
         break;
@@ -613,6 +675,9 @@ free_options(or_options_t *options)
           smartlist_free(*(smartlist_t**)lvalue);
           *(smartlist_t**)lvalue = NULL;
         }
+        break;
+      case CONFIG_TYPE_LINELIST_S:
+        /* will be freed by corresponding LINELIST_V. */
         break;
     }
   }
@@ -625,13 +690,59 @@ free_options(or_options_t *options)
   }
 }
 
+/** Replace the option indexed by <b>var</b> in <b>options</b> with its
+ * default value. */
+static void
+reset_option(or_options_t *options, config_var_t *var)
+{
+  struct config_line_t *c;
+  void *lvalue;
+
+  lvalue = ((char*)options) + var->var_offset;
+  switch (var->type) {
+    case CONFIG_TYPE_STRING:
+      tor_free(*(char**)lvalue);
+      break;
+    case CONFIG_TYPE_DOUBLE:
+      *(double*)lvalue = 0.0;
+      break;
+    case CONFIG_TYPE_UINT:
+    case CONFIG_TYPE_BOOL:
+      *(int*)lvalue = 0;
+      break;
+    case CONFIG_TYPE_CSV:
+      if (*(smartlist_t**)lvalue) {
+        SMARTLIST_FOREACH(*(smartlist_t **)lvalue, char *, cp, tor_free(cp));
+        smartlist_free(*(smartlist_t **)lvalue);
+        *(smartlist_t **)lvalue = NULL;
+      }
+      break;
+    case CONFIG_TYPE_LINELIST:
+    case CONFIG_TYPE_LINELIST_S:
+      config_free_lines(*(struct config_line_t **)lvalue);
+      *(struct config_line_t **)lvalue = NULL;
+      break;
+    case CONFIG_TYPE_LINELIST_V:
+      /* handled by linelist_s. */
+      break;
+    case CONFIG_TYPE_OBSOLETE:
+      break;
+  }
+  if (var->initvalue) {
+    c = tor_malloc(sizeof(struct config_line_t));
+    c->key = tor_strdup(var->name);
+    c->value = tor_strdup(var->initvalue);
+    config_assign_line(options,c,0);
+    config_free_lines(c);
+  }
+}
+
 /** Set <b>options</b> to hold reasonable defaults for most options.
  * Each option defaults to zero. */
 static void
 init_options(or_options_t *options)
 {
   int i;
-  struct config_line_t *c;
   config_var_t *var;
 
   memset(options,0,sizeof(or_options_t));
@@ -639,11 +750,7 @@ init_options(or_options_t *options)
     var = &config_vars[i];
     if(!var->initvalue)
       continue; /* defaults to NULL or 0 */
-    c = tor_malloc(sizeof(struct config_line_t));
-    c->key = tor_strdup(var->name);
-    c->value = tor_strdup(var->initvalue);
-    config_assign_line(options,c);
-    config_free_lines(c);
+    reset_option(options, var);
   }
 }
 
@@ -1048,7 +1155,7 @@ getconfig(int argc, char **argv, or_options_t *options)
     tor_free(fname);
     if (config_get_lines(cf, &cl)<0)
       return -1;
-    if (config_assign(options,cl) < 0)
+    if (config_assign(options,cl, 0) < 0)
       return -1;
     config_free_lines(cl);
     fclose(cf);
@@ -1056,7 +1163,7 @@ getconfig(int argc, char **argv, or_options_t *options)
 
 /* go through command-line variables too */
   cl = config_get_commandlines(argc,argv);
-  if (config_assign(options,cl) < 0)
+  if (config_assign(options,cl,0) < 0)
     return -1;
   config_free_lines(cl);
 
