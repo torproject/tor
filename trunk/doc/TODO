@@ -27,6 +27,8 @@ R  o pick the whole path when you start the circuit.
    o have a separate config option which caps bandwidth-to-advertise.
    o Make list_server_status work right on non-directories, so that 
      getinfo("network-status") control message can work there.
+   - Forward-port changes related to checking sockaddrs set by accept() on OS
+     X, once we know what the bug was to begin with.
 
 For 0.1.0.x:
 
