@@ -1106,6 +1106,7 @@ void config_parse_exit_policy(struct config_line_t *cfg,
                               struct exit_policy_t **dest);
 void exit_policy_free(struct exit_policy_t *p);
 const char *get_data_directory(void);
+int config_option_is_recognized(const char *key);
 struct config_line_t *config_get_assigned_option(or_options_t *options,
                                                  const char *key);
 struct config_line_t *config_line_prepend(struct config_line_t *front,

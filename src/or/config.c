@@ -255,7 +255,7 @@ options_act(void) {
   if (options->command != CMD_RUN_TOR)
     return 0;
 
-  if (set_max_file_descriptors(get_options()->MaxConn) < 0)
+  if (set_max_file_descriptors(options->MaxConn) < 0)
     return -1;
 
   /* Configure the log(s) */
@@ -542,6 +542,14 @@ config_reset_line(or_options_t *options, const char *key)
   option_reset(options, var);
 }
 
+/** Return true iff key is a valid configuration option. */
+int
+config_option_is_recognized(const char *key)
+{
+  config_var_t *var = config_find_option(key);
+  return (var != NULL);
+}
+
 /** Return a canonicalized list of the options assigned for key.
  */
 struct config_line_t *
@@ -551,6 +559,7 @@ config_get_assigned_option(or_options_t *options, const char *key)
   const void *value;
   char buf[32];
   struct config_line_t *result;
+  tor_assert(options && key);
 
   var = config_find_option(key);
   if (!var) {
@@ -583,7 +592,13 @@ config_get_assigned_option(or_options_t *options, const char *key)
   switch(var->type)
     {
     case CONFIG_TYPE_STRING:
-      result->value = tor_strdup(*(char**)value ? *(char**)value : "");
+      if (*(char**)value) {
+        result->value = tor_strdup(*(char**)value);
+      } else {
+        tor_free(result->key);
+        tor_free(result);
+        return NULL;
+      }
       break;
     case CONFIG_TYPE_UINT:
       /* XXX This means every or_options_t uint or bool element
@@ -633,6 +648,7 @@ static int
 config_assign(or_options_t *options, struct config_line_t *list, int reset)
 {
   struct config_line_t *p;
+  tor_assert(options);
 
   /* pass 1: normalize keys */
   for (p = list; p; p = p->next) {
