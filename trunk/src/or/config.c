@@ -26,7 +26,7 @@ static struct config_line *config_get_commandlines(int argc, char **argv);
 static struct config_line *config_get_lines(FILE *f);
 static void config_free_lines(struct config_line *front);
 static int config_compare(struct config_line *c, char *key, int type, void *arg);
-static void config_assign(or_options_t *options, struct config_line *list);
+static int config_assign(or_options_t *options, struct config_line *list);
 
 /* open configuration file for reading */
 static FILE *config_open(const unsigned char *filename) {
@@ -141,9 +141,11 @@ static int config_compare(struct config_line *c, char *key, int type, void *arg)
   return 1;
 }
 
-static void config_assign(or_options_t *options, struct config_line *list) {
-
-  /* iterate through list. for each item convert as appropriate and assign to 'options'. */
+/* Iterate through list.
+ * For each item, convert as appropriate and assign to 'options'.
+ * If an item is unrecognized, return -1 immediately,
+ * else return 0 for success. */
+static int config_assign(or_options_t *options, struct config_line *list) {
 
   while(list) {
     if(
@@ -203,11 +205,13 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     ) {
       /* then we're ok. it matched something. */
     } else {
-      log_fn(LOG_WARN,"Ignoring unknown keyword '%s'.",list->key);
+      log_fn(LOG_WARN,"Unknown keyword '%s'. Failing.",list->key);
+      return -1;
     }
 
     list = list->next;
   }
+  return 0;
 }
 
 /* XXX are there any other specifiers we want to give so making
@@ -453,14 +457,16 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   } else { /* it opened successfully. use it. */
     cl = config_get_lines(cf);
     if(!cl) return -1;
-    config_assign(options,cl);
+    if(config_assign(options,cl) < 0)
+      return -1;
     config_free_lines(cl);
     config_close(cf);
   }
 
 /* go through command-line variables too */
   cl = config_get_commandlines(argc,argv);
-  config_assign(options,cl);
+  if(config_assign(options,cl) < 0)
+    return -1;
   config_free_lines(cl);
 
 /* Validate options */
