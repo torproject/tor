@@ -1286,7 +1286,8 @@ options_validate(or_options_t *options)
 #define MIN_REND_POST_PERIOD 300
 #define MIN_STATUS_FETCH_PERIOD 60
 
-#define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
+  /* After 0.0.8 is dead, change this to MIN_ONION_KEY_LIFETIME. */
+#define MAX_DIR_PERIOD (OLD_MIN_ONION_KEY_LIFETIME/2)
 #define MAX_CACHE_DIR_FETCH_PERIOD 3600
 #define MAX_CACHE_STATUS_FETCH_PERIOD 900
 
