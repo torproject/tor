@@ -153,6 +153,7 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "LogLevel",       CONFIG_TYPE_STRING, &options->LogLevel) ||
     config_compare(list, "DataDirectory",  CONFIG_TYPE_STRING, &options->DataDirectory) ||
     config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
+    config_compare(list, "PidFile",        CONFIG_TYPE_STRING, &options->PidFile) ||
     config_compare(list, "Nickname",       CONFIG_TYPE_STRING, &options->Nickname) ||
     config_compare(list, "Address",        CONFIG_TYPE_STRING, &options->Address) ||
     config_compare(list, "ExitPolicy",     CONFIG_TYPE_STRING, &options->ExitPolicy) ||
@@ -201,6 +202,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->LogLevel = "info";
   options->ExitPolicy = "reject 127.0.0.1:*,reject 18.244.0.188:25,accept *:*";
   options->loglevel = LOG_DEBUG;
+  options->PidFile = "tor.pid";
   options->DataDirectory = NULL;
   options->CoinWeight = 0.1;
   options->MaxConn = 900;
