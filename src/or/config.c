@@ -607,10 +607,20 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     i++;
   }
   if(i < argc-1) { /* we found one */
-    fname = argv[i+1];
+    fname = tor_strdup(argv[i+1]);
     using_default_torrc = 0;
-  } else { /* didn't find one, try CONFDIR */
-    fname = CONFDIR "/torrc";
+  } else if (file_status(CONFDIR "/torrc")==FN_FILE) {
+    /* didn't find one, try CONFDIR */
+    fname = tor_strdup(CONFDIR "/torrc");
+    using_default_torrc = 1;
+  } else {
+    char *fn = expand_filename("~/.torrc");
+    if (file_status(fn)==FN_FILE) {
+      fname = fn;
+    } else {
+      tor_free(fn);
+      fname = tor_strdup(CONFDIR "/torrc");
+    }
     using_default_torrc = 1;
   }
   log(LOG_DEBUG,"Opening config file '%s'",fname);
@@ -619,13 +629,17 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   if(!cf) {
     if(using_default_torrc == 1) {
       log(LOG_NOTICE, "Configuration file '%s' not present, using reasonable defaults.",fname);
-      if(config_assign_defaults(options) < 0)
+      tor_free(fname);
+      if(config_assign_defaults(options) < 0) {
         return -1;
+      }
     } else {
       log(LOG_WARN, "Unable to open configuration file '%s'.",fname);
+      tor_free(fname);
       return -1;
     }
   } else { /* it opened successfully. use it. */
+    tor_free(fname);
     cl = config_get_lines(cf);
     if(!cl) return -1;
     if(config_assign(options,cl) < 0)
@@ -925,27 +939,15 @@ void exit_policy_free(struct exit_policy_t *p) {
 
 const char *get_data_directory(or_options_t *options) {
   const char *d;
-  char buf[1024];
-  const char *home;
-  size_t n;
   if (options->DataDirectory)
     d = options->DataDirectory;
   else
     d = "~/.tor";
 
-  if (!strncmp(d,"~/",2)) {
-    home = getenv("HOME");
-    if (!home) {
-      log_fn(LOG_ERR, "Couldn't find $HOME environment variable for data directory %s", d);
-      exit(1);
-    }
-    n = snprintf(buf,1020,"%s/%s",home,d+2);
-    if (n>=1020) {
-      log_fn(LOG_ERR, "Overlong data directory name.");
-      exit(1);
-    }
+  if (strncmp(d,"~/",2)==0) {
+    char *fn = expand_filename(d);
     tor_free(options->DataDirectory);
-    options->DataDirectory = tor_strdup(buf);
+    options->DataDirectory = fn;
   }
   return options->DataDirectory;
 }

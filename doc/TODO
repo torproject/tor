@@ -39,7 +39,7 @@ NICK  milestone 1:
           o Adjust tor
           o Change torrc.sample
           D Change packages (not till 0.0.8 packages!)
-NICK      - Look in ~/.tor/ if no */etc/torrc is found?
+          o Look in ~/.torrc if no */etc/torrc is found.
 NICK      - Possible to get autoconf to easily install things into ~/.tor?
         o Contact info, pgp fingerprint, comments in router desc.
           o Add a ContactInfo line to torrc, which gets published in
