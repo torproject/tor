@@ -589,6 +589,7 @@ typedef struct {
   int NumCpus;
   int loglevel;
   int RunTesting;
+  struct config_line_t *RendConfigLines;
 } or_options_t;
 
 /* XXX are these good enough defaults? */
@@ -708,6 +709,12 @@ extern unsigned long stats_n_relay_cells_processed;
 extern unsigned long stats_n_destroy_cells_processed;
 
 /********************************* config.c ***************************/
+
+struct config_line_t {
+  char *key;
+  char *value;
+  struct config_line_t *next;
+};
 
 int config_assign_default_dirservers(void);
 int getconfig(int argc, char **argv, or_options_t *options);
@@ -907,6 +914,7 @@ void set_identity_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_identity_key(void);
 crypto_pk_env_t *get_link_key(void);
 int init_keys(void);
+crypto_pk_env_t *init_key_from_file(const char *fname);
 
 void router_retry_connections(void);
 void router_upload_desc_to_dirservers(void);
@@ -991,6 +999,11 @@ void rend_cache_init(void);
 void rend_cache_clean(void);
 int rend_cache_lookup(char *query, const char **desc, int *desc_len);
 int rend_cache_store(char *desc, int desc_len);
+
+/********************************* rendservice.c ***************************/
+
+int rend_config_services(or_options_t *options);
+int rend_service_init_keys(void);
 
 #endif
 

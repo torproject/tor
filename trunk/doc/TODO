@@ -104,12 +104,13 @@ Rendezvous service:
               (We should also enumerate all the states that these operations
               can be in.) [NM]
             o Add circuit metadata [NM]
-        - Code to configure hidden services [NM] 4 hours
-        . Service descriptors
-            - OPs need to maintain identity keys for hidden services [NM] 1 hour
+        o Code to configure hidden services [NM] 4 hours
+        o Service descriptors
+            o OPs need to maintain identity keys for hidden services [NM]
             o Code to generate and parse service descriptors [NM]
-        - Advertisement
+        . Advertisement
             o Generate y.onion hostnames [NM]
+	        o Store y.onion hostnames to disk. [NM]
             - Code to do an HTTP connection over Tor from within Tor [RD]
             - Publish service descriptors to directory [RD]
             - Directory accepts and remembers service descriptors, and
