@@ -355,10 +355,10 @@ which reveals the downstream node.
           the payload.  Create a half-open circuit with this ACI, and
           begin queueing CREATE cells for this circuit.
 
-          Otherwise, we have a half-open circuit.  If the total
-          payload length of the CREATE cells for this circuit is at
-          least equal to the onion length in the first cell (minus
-          4), then process the onion.
+          Otherwise, we have a half-open circuit.  If the total payload
+          length of the CREATE cells for this circuit is at exactly equal
+          to the onion length specified in the first cell (minus 4), then
+          process the onion. If it is more, then tear down the circuit.
   
        2. Once we have a complete onion, decrypt the first 128 bytes
           of the onion with this OR's RSA private key, and extract
@@ -483,44 +483,50 @@ which reveals the downstream node.
 
    As discussed above in section 2.1, ORs and OPs negotiate a maximum
    bandwidth upon startup.  The communicants only read up to that
-   number of bytes per second on average, though they may smooth the
-   number of bytes read over a 10-second window. 
-   [???? more detail? -NM]
+   number of bytes per second on average, though they may use mechanisms
+   to handle spikes (eg token buckets).
 
-   Communicants rely on TCP flow control to prevent the bandwidth
-   from being exceeded.
+   Communicants rely on TCP's default flow control to push back when they
+   stop reading, so nodes that don't obey this bandwidth limit can't do
+   too much damage.
 
 6.2. Link padding
 
-   On every cell connection, every ????/bandwidth seconds, if less
-   than MIN(bandwidth/(100*128), 10) cells are waiting to be sent
-   along a connection, nodes add a single padding cell to the cells
-   they will send along the connection.
+   Currently nodes are not required to do any sort of link padding or
+   dummy traffic. Because strong attacks exist even with link padding,
+   and because link padding greatly increases the bandwidth requirements
+   for running a node, we plan to leave out link padding until this
+   tradeoff is better understood.
 
 6.3. Circuit flow control
 
    To control a circuit's bandwidth usage, each node keeps track of
-   how many cells it is allowed to send to the next hop in the circuit
-   before queueing cells.  This 'window' value is initially set to
-   1000 cells in each direction.  Each edge node on a circuit sends a
-   SENDME cell (with length=100) every time it has received 100 cells
-   on the circuit.  When a node receives a SENDME cell for a circuit,
-   it increases the circuit's window in the corresponding by the value
-   of the cell's length field, and (if not an edge node) passes an
-   equivalent SENDME cell to the next node in the circuit.
+   how many data cells it is allowed to send to the next hop in the
+   circuit. This 'window' value is initially set to 1000 data cells
+   in each direction (cells that are not data cells do not affect
+   the window). Each edge node on a circuit sends a SENDME cell
+   (with length=100) every time it has received 100 data cells on the
+   circuit. When a node receives a SENDME cell for a circuit, it increases
+   the circuit's window in the corresponding direction (that is, for
+   sending data cells back in the direction from which the sendme arrived)
+   by the value of the cell's length field. If it's not an edge node,
+   it passes an equivalent SENDME cell to the next node in the circuit.
 
-   If a window value ever reaches 0, the OR queues cells for the
-   corresponding circuit and direction until it receives an
-   appropriate SENDME cell.
+   If the window value reaches 0 at the edge of a circuit, the OR stops
+   reading from the edge connections. (It may finish processing what
+   it's already read, and queue those cells for when a SENDME cell
+   arrives.) Otherwise (when not at the edge of a circuit), if the
+   window value is 0 and a data cell arrives, the node must tear down
+   the circuit.
 
 6.4. Topic flow control
 
    Edge nodes use TOPIC_SENDME data cells to implement end-to-end flow
-   control for individual connections across circuits.  As with
-   circuit flow control, edge nodes begin with a window of cells (500)
-   per topic, and increment the window by a fixed value (50) upon
-   receiving a TOPIC_SENDME cell.  Edge nodes create and additional
-   TOPIC_SENDME cells when  [????] -NM
+   control for individual connections across circuits.  As with circuit
+   flow control, edge nodes begin with a window of cells (500) per
+   topic, and increment the window by a fixed value (50) upon receiving
+   a TOPIC_SENDME data cell. Edge nodes initiate TOPIC_SENDME data
+   cells when
 
 7. Directories and routers
 
