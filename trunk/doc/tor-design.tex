@@ -75,7 +75,7 @@ close with a list of open problems in anonymous communication.
 \label{sec:intro}
 
 Onion Routing is a distributed overlay network designed to anonymize
-low-latency TCP-based applications such as web browsing, secure shell,
+TCP-based applications such as web browsing, secure shell,
 and instant messaging. Clients choose a path through the network and
 build a \emph{circuit}, in which each node (or ``onion router'' or ``OR'')
 in the path knows its predecessor and successor, but no other nodes in
@@ -164,7 +164,7 @@ that can be unreliable and complex. % open to partitioning attacks.
 Tor takes a simplified view toward distributing such
 information. Certain more trusted nodes act as \emph{directory
 servers}: they provide signed directories that describe known
-routers and their availability. Users periodically download the
+routers and their current state. Users periodically download the
 directories via HTTP.
 
 \textbf{Variable exit policies:} Tor provides a consistent mechanism
@@ -180,15 +180,17 @@ circuit could change the contents of data cells as they passed by---for
 example, to alter a connection request so it would connect
 to a different webserver, or to `tag' encrypted traffic and look for
 corresponding corrupted traffic at the network edges \cite{minion-design}.
-Tor hampers these attacks by checking data integrity before it leaves
+Tor hampers these attacks by verifying data integrity before it leaves
 the network.
 
-\textbf{Improved robustness to failed nodes:} A failed node
-in the old design meant that circuit building failed, but thanks to
-Tor's step-by-step circuit building, users notice failed nodes
-while building circuits and route around them. Additionally, liveness
-information from directories allows users to avoid unreliable nodes in
-the first place.
+%\textbf{Improved robustness to failed nodes:} A failed node
+%in the old design meant that circuit building failed, but thanks to
+%Tor's step-by-step circuit building, users notice failed nodes
+%while building circuits and route around them. Additionally, liveness
+%information from directories allows users to avoid unreliable nodes in
+%the first place.
+%% Can't really claim this, now that we've found so many variants of
+%% attack on partial-circuit-building. -RD
 
 \textbf{Rendezvous points and hidden services:}
 Tor provides an integrated mechanism for responder anonymity via
@@ -205,9 +207,13 @@ TCP streams. Not requiring patches (or built-in support) in an
 operating system's network stack has been valuable to Tor's
 portability and deployability.
 
-We have implemented most of the above features. Our source code is
-available under a free license, and, as far as we know, is unencumbered by
-patents. We have recently begun deploying a wide-area alpha network
+We have implemented all of the above features except rendezvous
+points. Our source code is
+available under a free license, and Tor
+%, as far as we know, is unencumbered by patents.
+is not covered by the patent that affected distribution and use of
+earlier versions of Onion Routing.
+We have recently begun deploying a wide-area alpha network
 to test the design in practice, to get more experience with usability
 and users, and to provide a research platform for experimentation.
 
@@ -216,7 +222,8 @@ our goals and assumptions in Section~\ref{sec:assumptions},
 and then address the above list of improvements in
 Sections~\ref{sec:design}-\ref{sec:rendezvous}. We summarize
 in Section~\ref{sec:attacks} how our design stands up to
-known attacks, and conclude with a list of open problems in
+known attacks, and talk about our early deployment experiences in
+Section~\ref{sec:in-the-wild}. We conclude with a list of open problems in
 Section~\ref{sec:maintaining-anonymity} and future work for the Onion
 Routing project in Section~\ref{sec:conclusion}.
 
@@ -234,31 +241,26 @@ decrypts, delays, and re-orders messages, before relaying them toward
 their destinations.
 
 Subsequent relay-based anonymity designs have diverged in two
-main directions.  Some have tried to maximize anonymity at
-the cost of introducing comparatively large and variable latencies,
-including {\bf Babel} \cite{babel}, {\bf Mixmaster}
-\cite{mixmaster-spec}, and
-{\bf Mixminion} \cite{minion-design}.  Because of this
-decision, these \emph{high-latency} networks resist strong global
-adversaries,
+main directions. Systems like {\bf Babel} \cite{babel}, {\bf Mixmaster}
+\cite{mixmaster-spec}, and {\bf Mixminion} \cite{minion-design} have tried
+to maximize anonymity at the cost of introducing comparatively large and
+variable latencies. Because of this decision, these \emph{high-latency}
+networks resist strong global adversaries,
 but introduce too much lag for interactive tasks like web browsing,
 Internet chat, or SSH connections.
 
 Tor belongs to the second category: \emph{low-latency} designs that
 try to anonymize interactive network traffic. These systems handle
-a variety of bidirectional protocols.
-They also provide more convenient
+a variety of bidirectional protocols. They also provide more convenient
 mail delivery than the high-latency anonymous email
 networks, because the remote mail server provides explicit and timely
-delivery confirmation.
-But because these designs typically
+delivery confirmation. But because these designs typically
 involve many packets that must be delivered quickly, it is
 difficult for them to prevent an attacker who can eavesdrop both ends of the
 communication from correlating the timing and volume
 of traffic entering the anonymity network with traffic leaving it.  These
-protocols are also vulnerable against active attacks in which an
-adversary introduces timing patterns into traffic entering the network and
-looks
+protocols are similarly vulnerable to an active adversary who introduces
+timing patterns into traffic entering the network and looks
 for correlated patterns among exiting traffic.
 Although some work has been done to frustrate
 these attacks, %\footnote{
@@ -269,13 +271,13 @@ these attacks, %\footnote{
 %}
 % Point in the footnote is covered above, yes? -PS
  most designs protect primarily against traffic analysis rather than traffic
-confirmation (cf.\ Section~\ref{subsec:threat-model}).
+confirmation (see Section~\ref{subsec:threat-model}).
 
 The simplest low-latency designs are single-hop proxies such as the
-{\bf Anonymizer} \cite{anonymizer}, wherein a single trusted server strips the
+{\bf Anonymizer} \cite{anonymizer}: a single trusted server strips the
 data's origin before relaying it.  These designs are easy to
 analyze, but users must trust the anonymizing proxy.
-Concentrating the traffic to a single point increases the anonymity set
+Concentrating the traffic to this single point increases the anonymity set
 (the people a given user is hiding among), but it is vulnerable if the
 adversary can observe all traffic going into and out of the proxy.
 
@@ -305,6 +307,7 @@ stronger anonymity at the cost of allowing a single user to shut
 down the network simply by not sending. Systems like {\bf ISDN mixes}
 \cite{isdn-mixes} were designed for other environments with
 different assumptions.
+%XXX please can we fix this sentence to something less demeaning
 
 In P2P designs like {\bf Tarzan} \cite{tarzan:ccs02} and {\bf MorphMix}
 \cite{morphmix:fc04}, all participants both generate traffic and relay
@@ -313,7 +316,7 @@ whether a given peer originated a request
 or just relayed it from another peer. While Tarzan and MorphMix use
 layered encryption as above, {\bf Crowds} \cite{crowds-tissec} simply assumes
 an adversary who cannot observe the initiator: it uses no public-key
-encryption, so any node on a circuit can read that circuit's traffic.
+encryption, so any node on a circuit can read the circuit's traffic.
 
 {\bf Hordes} \cite{hordes-jcs} is based on Crowds but also uses multicast
 responses to hide the initiator. {\bf Herbivore} \cite{herbivore} and
@@ -346,7 +349,7 @@ and anonymity.  For example, a system that understands HTTP, such as Crowds,
 can strip
 identifying information from those requests, can take advantage of caching
 to limit the number of requests that leave the network, and can batch
-or encode those requests in order to minimize the number of connections.
+or encode those requests to minimize the number of connections.
 On the other hand, an IP-level anonymizer can handle nearly any protocol,
 even ones unforeseen by its designers (though these systems require
 kernel-level modifications to some operating systems, and so are more
@@ -407,7 +410,7 @@ therefore not
 require modifying applications; should not introduce prohibitive delays;
 and should require users to make as few configuration decisions
 as possible.  Finally, Tor should be easily implemented on all common
-platforms; we cannot require users to change their operating system in order
+platforms; we cannot require users to change their operating system
 to be anonymous.  (The current Tor implementation runs on Windows and
 assorted Unix clones including Linux, FreeBSD, and MacOS X.)
 
@@ -452,9 +455,9 @@ as Privoxy to hide differences between clients, and expunge protocol
 features that leak identity.
 Note that by this separation Tor can also provide services that
 are anonymous to the network yet authenticated to the responder, like
-SSH. Similarly, Tor does not currently integrate
-tunneling for non-stream-based protocols like UDP; this too must be
-provided by an external service.
+SSH. Similarly, Tor does not integrate
+tunneling for non-stream-based protocols like UDP; this must be
+provided by an external service if appropriate.
 
 \textbf{Not steganographic:} Tor does not try to conceal who is connected
 to the network.
@@ -497,10 +500,9 @@ network stops; or by introducing patterns into traffic that can later be
 detected. The adversary might subvert the directory servers to give users
 differing views of network state. Additionally, he can try to decrease
 the network's reliability by attacking nodes or by performing antisocial
-activities from reliable servers and trying to get them taken down;
-making the network unreliable flushes users to other less anonymous
-systems, where they may be easier to attack.
-We summarize
+activities from reliable nodes and trying to get them taken down---making
+the network unreliable flushes users to other less anonymous
+systems, where they may be easier to attack. We summarize
 in Section~\ref{sec:attacks} how well the Tor design defends against
 each of these attacks.
 
@@ -863,8 +865,8 @@ Volunteers are generally more willing to run services that can limit
 their own bandwidth usage. To accommodate them, Tor servers use a
 token bucket approach \cite{tannenbaum96} to
 enforce a long-term average rate of incoming bytes, while still
-permitting short-term bursts above the allowed bandwidth. Current bucket
-sizes are set to ten seconds' worth of traffic.
+permitting short-term bursts above the allowed bandwidth.
+% Current bucket sizes are set to ten seconds' worth of traffic.
 
 %Further, we want to avoid starving any Tor streams. Entire circuits
 %could starve if we read greedily from connections and one connection
@@ -878,13 +880,13 @@ Because the Tor protocol generates roughly the same number of outgoing
 bytes as incoming bytes, it is sufficient in practice to limit only
 incoming bytes.
 With TCP streams, however, the correspondence is not one-to-one:
-relaying a single incoming byte can require an entire 256-byte cell.
+relaying a single incoming byte can require an entire 512-byte cell.
 (We can't just wait for more bytes, because the local application may
 be waiting for a reply.) Therefore, we treat this case as if the entire
 cell size had been read, regardless of the fullness of the cell.
 
 Further, inspired by Rennhard et al's design in \cite{anonnet}, a
-circuit's edges heuristically distinguish interactive streams from bulk
+circuit's edges can heuristically distinguish interactive streams from bulk
 streams by comparing the frequency with which they supply cells.  We can
 provide good latency for interactive streams by giving them preferential
 service, while still giving good overall throughput to the bulk
@@ -950,10 +952,8 @@ Currently, non-data relay cells do not affect the windows. Thus we
 avoid potential deadlock issues, for example, arising because a stream
 can't send a \emph{relay sendme} cell when its packaging window is empty.
 
-These arbitrarily chosen parameters
-%are probably not optimal; more
-%research remains to find which parameters
-seem to give tolerable throughput and delay; more research remains.
+These arbitrarily chosen parameters seem to give tolerable throughput
+and delay; see Section~\ref{sec:in-the-wild}.
 
 \Section{Other design decisions}
 
@@ -984,8 +984,8 @@ TLS handshakes or accepting \emph{create} cells.  So long as these
 tokens are easy to verify and computationally expensive to produce, this
 approach limits the attack multiplier.  Additionally, ORs may limit
 the rate at which they accept create cells and TLS connections, so that
-the computational work of processing them does not drown out the (comparatively
-inexpensive) work of symmetric cryptography needed to keep cells
+the computational work of processing them does not drown out the
+symmetric cryptography operations that keep cells
 flowing.  This rate limiting could, however, allow an attacker
 to slow down other users when they build new circuits.
 
@@ -1189,8 +1189,8 @@ Using directory servers is simpler and more flexible than flooding.
 Flooding is expensive, and complicates the analysis when we
 start experimenting with non-clique network topologies. Signed
 directories can be cached by other
-onion routers.
-Thus directory servers are not a performance
+onion routers,
+so directory servers are not a performance
 bottleneck when we have many users, and do not aid traffic analysis by
 forcing clients to periodically announce their existence to any
 central point.
@@ -1414,7 +1414,7 @@ been shown to be effective against SafeWeb \cite{hintz-pet02}.
 It may be less effective against Tor, since
 streams are multiplexed within the same circuit, and
 fingerprinting will be limited to
-the granularity of cells (currently 256 bytes). Additional
+the granularity of cells (currently 512 bytes). Additional
 defenses could include
 larger cell sizes, padding schemes to group websites
 into large sets, and link
@@ -1609,6 +1609,64 @@ sure he receives them.
 point is no more sensitive than any other OR on
 a circuit, since all data passing through the rendezvous is encrypted
 with a session key shared by Alice and Bob.
+
+\Section{Early experiences: Tor in the Wild}
+\label{sec:in-the-wild}
+
+The current Tor network, as of mid January 2004, consists of 16 nodes
+(14 in the US, 2 in Europe), and we're adding more each week as the code
+gets more robust.\footnote{For comparison, the current remailer network
+has about 30 nodes.} Each node has at least a 768k/768k connection, and
+most have 10Mb. The number of users varies (and of course, it's hard to
+tell for sure), but we sometimes have several hundred users---admins at
+several companies have started putting their entire department's web
+traffic through Tor, to block snooping admins in other divisions of
+their company from reading the traffic. Tor users have reported using
+the network for web browsing, ftp, IRC, AIM, Kazaa, and ssh.
+
+As of mid January, each Tor node was processing roughly 800,000 relay
+cells (a bit under half a gigabyte) per week. On average, about 80\%
+of each 500-byte payload is full for cells going back to the client,
+whereas about 40\% is full for cells coming from the client. (They are
+difference because most of our traffic is web browsing.) Interactive
+traffic like ssh brings down the average a lot---once we have more
+experience, and assuming we can resolve the anonymity issues, we will
+consider partitioning traffic into two relay cell sizes: one to handle
+bulk traffic and one for interactive traffic.
+
+We haven't asked to use PlanetLab \cite{planetlab} to provide more nodes,
+because their AUP excludes projects like Tor (see also \cite{darkside}. On
+the other hand, we have had no abuse issues since the network was deployed
+in October 2003. Our default exit policy rejects smtp requests, to block
+spamming even before it becomes an issue. For now we're happy with our
+slow growth rate, while we add features, resolve bugs, and get a feel for
+what users actually want from an anonymity system. We are not eager to
+attract the Kazaa or warez communities, even though they would greatly
+bolster the anonymity sets---we must build a reputation of being for
+privacy, human rights, research, and other entirely legitimate activities.
+
+As for performance, profiling shows that almost all the CPU time for the
+Tor program itself is spent in AES (which is fast). Thus latency comes
+from two factors. First, network latency is a critical factor: we are
+intentionally bouncing traffic around the world several times. Second,
+our end-to-end congestion control algorithm focuses on protecting our
+volunteer servers from accidental DoS rather than providing maximum
+performance. Right now the first $500*500B=250KB$ of the stream arrives
+quickly, and after that throughput depends on the rate that \emph{relay
+sendme} acknowledgements arrive. We can tweak the congestion control
+parameters to provide faster throughput at the expense of requiring
+larger buffers at each node; adding the heuristics mentioned in
+Section~\ref{subsec:rate-limit} to give better speed to low-volume
+streams will change the equation too. More research remains to find the
+right balance.
+
+%performs badly on lossy networks. may need airhook or something else as
+%transport alternative?
+
+With the current network's topology and load, users can typically
+get 1-2 megabits sustained transfer rate. Overall, this performance is
+sufficient. The Tor design focuses on security; usability and performance
+just have to not suck too much.
 
 \Section{Open Questions in Low-latency Anonymity}
 \label{sec:maintaining-anonymity}
