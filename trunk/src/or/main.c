@@ -11,6 +11,10 @@ const char main_c_id[] = "$Id$";
  **/
 
 #include "or.h"
+#include "orconfig.h"
+#ifdef USE_DMALLOC
+#include <dmalloc.h>
+#endif
 
 /* These signals are defined to help control_signal_act work. */
 #ifndef SIGHUP
@@ -1314,7 +1318,11 @@ void tor_cleanup(void) {
   crypto_global_cleanup();
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL));
+#ifdef USE_DMALLOC
   tor_free_all();
+  dmalloc_log_unfreed();
+  dmalloc_shutdown();
+#endif
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */

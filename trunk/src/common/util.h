@@ -47,12 +47,18 @@
 #endif
 
 /* Memory management */
-void *tor_malloc(size_t size);
-void *tor_malloc_zero(size_t size);
-void *tor_realloc(void *ptr, size_t size);
-char *tor_strdup(const char *s);
-char *tor_strndup(const char *s, size_t n);
+void *_tor_malloc(const char *file, const int line, size_t size);
+void *_tor_malloc_zero(const char *file, const int line, size_t size);
+void *_tor_realloc(const char *file, const int line, void *ptr, size_t size);
+char *_tor_strdup(const char *file, const int line, const char *s);
+char *_tor_strndup(const char *file, const int line, const char *s, size_t n);
 #define tor_free(p) do { if (p) {free(p); (p)=NULL;} } while (0)
+
+#define tor_malloc(size)       _tor_malloc(_SHORT_FILE_, __LINE__, size)
+#define tor_malloc_zero(size)  _tor_malloc_zero(_SHORT_FILE_, __LINE__, size)
+#define tor_realloc(ptr, size) _tor_realloc(_SHORT_FILE_, __LINE__, ptr, size)
+#define tor_strdup(s)          _tor_strdup(_SHORT_FILE_, __LINE__, s)
+#define tor_strndup(s, n)      _tor_strndup(_SHORT_FILE_, __LINE__, s, n)
 
 /* String manipulation */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
