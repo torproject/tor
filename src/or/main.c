@@ -297,6 +297,7 @@ static void conn_write(int i) {
 static void conn_close_if_marked(int i) {
   connection_t *conn;
   int retval;
+  struct in_addr in;
 
   conn = connection_array[i];
   assert_connection_ok(conn, time(NULL));
@@ -308,11 +309,12 @@ static void conn_close_if_marked(int i) {
   if(conn->s >= 0 && connection_wants_to_flush(conn)) {
     /* -1 means it's an incomplete edge connection, or that the socket
      * has already been closed as unflushable. */
+    in.s_addr = htonl(conn->addr);
     if(!conn->hold_open_until_flushed)
-      log_fn(LOG_WARN,
-        "Conn (fd %d, type %s, state %d) marked, but wants to flush %d bytes. "
+      log_fn(LOG_INFO,
+        "Conn (addr %s, fd %d, type %s, state %d) marked, but wants to flush %d bytes. "
         "(Marked at %s:%d)",
-        conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state,
+        inet_ntoa(in), conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state,
         conn->outbuf_flushlen, conn->marked_for_close_file, conn->marked_for_close);
     if(connection_speaks_cells(conn)) {
       if(conn->state == OR_CONN_STATE_OPEN) {
@@ -329,8 +331,8 @@ static void conn_close_if_marked(int i) {
       return;
     }
     if(connection_wants_to_flush(conn)) {
-      log_fn(LOG_WARN,"Conn (fd %d, type %s, state %d) still wants to flush. Losing %d bytes! (Marked at %s:%d)",
-             conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state,
+      log_fn(LOG_WARN,"Conn (addr %s, fd %d, type %s, state %d) still wants to flush. Losing %d bytes! (Marked at %s:%d)",
+             inet_ntoa(in), conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state,
              (int)buf_datalen(conn->outbuf), conn->marked_for_close_file,
              conn->marked_for_close);
     }
