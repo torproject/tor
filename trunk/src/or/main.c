@@ -305,8 +305,8 @@ static void run_connection_housekeeping(int i, time_t now) {
       log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
              i,conn->address, conn->port);
       /* flush anything waiting, e.g. a destroy for a just-expired circ */
-      conn->hold_open_until_flushed = 1;
       connection_mark_for_close(conn,0);
+      conn->hold_open_until_flushed = 1;
     } else {
       /* either a full router, or we've got a circuit. send a padding cell. */
       log_fn(LOG_DEBUG,"Sending keepalive to (%s:%d)",
