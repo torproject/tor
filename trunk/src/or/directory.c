@@ -213,6 +213,28 @@ directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
                NULL, dirserv->digest, purpose, resource, payload, payload_len);
 }
 
+/** Called when we are unable to complete our connection to a
+ * directory server: Mark the router as down and try again if possible.
+ */
+int
+connection_dir_connect_failed(connection_t *conn)
+{
+  router_mark_as_down(conn->identity_digest); /* don't try him again */
+  if (conn->purpose == DIR_PURPOSE_FETCH_DIR ||
+      conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
+    /* XXX This should possibly take into account that
+     * !advertised_server_mode() allows us to use more directory
+     * servers, and fascistfirewall allows us to use less.
+     */
+    if (!all_trusted_directory_servers_down()) {
+      log_fn(LOG_INFO,"Giving up on dirserver '%s'; trying another.", conn->address);
+      directory_get_from_dirserver(conn->purpose, NULL);
+    } else {
+      log_fn(LOG_INFO,"Giving up on dirserver '%s'; no more to try.", conn->address);
+    }
+  }
+}
+
 /** Helper for directory_initiate_command(router|trusted_dir): send the
  * command to a server whose address is <b>address</b>, whose IP is
  * <b>addr</b>, whose directory port is <b>dir_port</b>, whose tor version is
@@ -282,12 +304,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     /* then we want to connect directly */
     switch (connection_connect(conn, conn->address, addr, dir_port)) {
       case -1:
-        router_mark_as_down(conn->identity_digest); /* don't try him again */
-        if (purpose == DIR_PURPOSE_FETCH_DIR &&
-            !all_trusted_directory_servers_down()) {
-          log_fn(LOG_INFO,"Giving up on dirserver '%s'; trying another.", conn->address);
-          directory_get_from_dirserver(purpose, NULL);
-        }
+        connection_dir_connect_failed(conn);
         connection_free(conn);
         return;
       case 1:
