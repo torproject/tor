@@ -333,7 +333,7 @@ build the anonymous channel all at once, using a layered ``onion'' of
 public-key encrypted messages, each layer of which provides a set of session
 keys and the address of the next server in the channel.  Tor as described
 herein, Tarzan, Morphmix, Cebolla \cite{cebolla}, and AnonNet
-\cite{anonnet} build the
+\cite{RRMPH02-1} build the
 channel in stages, extending it one hop at a time. This approach
 makes perfect forward secrecy feasible.
 
@@ -988,7 +988,7 @@ incoming bytes.
 % In response, you send lots of 256 byte cells.  Can I use this to 
 % make you exceed your outgoing bandwidth limit by a factor of 256?
 
-Further, inspired by Rennhard et al's design in \cite{anonnet}, a
+Further, inspired by Rennhard et al's design in \cite{RRMPH02-1}, a
 circuit's edges heuristically distinguish interactive streams from bulk
 streams by comparing the frequency with which they supply cells.  We can
 provide good latency for interactive streams by giving them preferential
