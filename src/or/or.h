@@ -501,7 +501,7 @@ typedef struct {
   char *PidFile;
   char *ExitNodes;
   char *EntryNodes;
-  char *ExcludedNodes;
+  char *ExcludeNodes;
   char *ExitPolicy;
   char *SocksBindAddress;
   char *ORBindAddress;
