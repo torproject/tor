@@ -354,7 +354,7 @@ connection_tls_finish_handshake(connection_t *conn) {
     }
   }
   /* Okay; the other side is an OR or a post-0.0.8 OP (with a cert). */
-  if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, MAX_NICKNAME_LEN)) {
+  if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, sizeof(nickname))) {
     log_fn(LOG_WARN,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
            conn->address, conn->port);
     return -1;
