@@ -401,10 +401,19 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     return connection_ap_handshake_attach_circuit(conn);
   } else {
     /* it's a hidden-service request */
-    /* XXX008 what does it mean to socks-resolve a hidden service? should
-     * we fail those right here? */
     rend_cache_entry_t *entry;
     int r;
+
+    if (socks->command == SOCKS_COMMAND_RESOLVE) {
+      /* if it's a resolve request, fail it right now, rather than
+       * building all the circuits and then realizing it won't work. */
+      connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
+      conn->socks_request->has_finished = 1;
+      conn->has_sent_end = 1;
+      connection_mark_for_close(conn);
+      conn->hold_open_until_flushed = 1;
+      return 0;
+    }
 
     strcpy(conn->rend_query, socks->address); /* this strcpy is safe -RD */
     log_fn(LOG_INFO,"Got a hidden service request for ID '%s'", conn->rend_query);
