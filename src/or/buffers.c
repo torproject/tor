@@ -17,7 +17,7 @@ struct buf_t {
 /* Size, in bytes, for newly allocated buffers.  Should be a power of 2. */
 #define INITIAL_BUF_SIZE (4*1024)
 /* Maximum size, in bytes, for resized buffers. */
-#define MAX_BUF_SIZE (1024*1024)
+#define MAX_BUF_SIZE (1024*1024*10)
 /* Size, in bytes, for minimum 'shrink' size for buffers.  Buffers may start
  * out smaller than this, but they will never autoshrink to less
  * than this size. */
