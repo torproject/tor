@@ -655,6 +655,10 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
     log_fn(LOG_WARNING, "Unable to compute digest of directory");
     goto err;
   }
+  log(LOG_DEBUG,"Received directory hashes to %02x:%02x:%02x:%02x",
+      ((int)digest[0])&0xff,((int)digest[1])&0xff,
+      ((int)digest[2])&0xff,((int)digest[3])&0xff);
+
   NEXT_TOK();
   TOK_IS(K_SIGNED_DIRECTORY, "signed-directory");
 
@@ -702,6 +706,9 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
       free(tok.val.signature);
       goto err;
     }
+    log(LOG_DEBUG,"Signed directory hash starts %02x:%02x:%02x:%02x",
+        ((int)signed_digest[0])&0xff,((int)signed_digest[1])&0xff,
+        ((int)signed_digest[2])&0xff,((int)signed_digest[3])&0xff);
     if (memcmp(digest, signed_digest, 20)) {
       log_fn(LOG_WARNING, "Error reading directory: signature does not match.");
 #if 0 /* XXX, fix me */
@@ -830,9 +837,7 @@ router_resolve_directory(directory_t *dir)
  */
 routerinfo_t *router_get_entry_from_string(char**s) {
   routerinfo_t *router = NULL;
-#if 0
   char signed_digest[128];
-#endif
   char digest[128];
   directory_token_t _tok;
   directory_token_t *tok = &_tok;
@@ -961,9 +966,7 @@ routerinfo_t *router_get_entry_from_string(char**s) {
     goto err;
   }
   assert (router->identity_pkey);
-#if 0
-  /* XXX This should get re-enabled, once directory servers properly
-   * XXX relay signed router blocks. */
+
   if (crypto_pk_public_checksig(router->identity_pkey, tok->val.signature,
                                 128, signed_digest) != 20) {
     log_fn(LOG_WARNING, "Invalid signature");
@@ -973,7 +976,6 @@ routerinfo_t *router_get_entry_from_string(char**s) {
     log_fn(LOG_WARNING, "Mismatched signature");
     goto err;
   }
-#endif
   
   return router;
 
