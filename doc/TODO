@@ -53,6 +53,8 @@ N  - Make millisecond accuracy work on win32
 Tier two:
 
    - Handle pools of waiting circuits better.
+   - Limit number of circuits that we preemptively generate based on past
+     behavior; use same limits in circuit_expire_old_circuits().
    - Let more config options (e.g. ORPort) change dynamically.
    - Write limiting; configurable token buckets.
    - Only the top of a directory needs to be signed.
