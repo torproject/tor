@@ -266,7 +266,7 @@ options_act(void) {
    *    It let us have the parent process stick around until we were sure Tor
    *    was started.  Should we make start_daemon get called earlier? -NM */
   if (options->RunAsDaemon) {
-    start_daemon(options->DataDirectory);
+    start_daemon();
   }
   if (!libevent_initialized) {
     configure_libevent_logging();
@@ -346,7 +346,7 @@ options_act(void) {
   /* Finish backgrounding the process */
   if (options->RunAsDaemon) {
     /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
-    finish_daemon();
+    finish_daemon(options->DataDirectory);
   }
 
   /* Write our pid to the pid file. If we do not have write permissions we
