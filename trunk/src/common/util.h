@@ -19,6 +19,7 @@
 #elif defined(_MSC_VER)
 #include <winsock.h>
 #endif
+#include <errno.h>
 #ifndef HAVE_GETTIMEOFDAY
 #ifdef HAVE_FTIME
 #define USING_FAKE_TIMEVAL
@@ -65,13 +66,9 @@ int tor_socketpair(int family, int type, int protocol, int fd[2]);
  * errnos which they use as the fancy strikes them.
  */
 #ifdef MS_WINDOWS
-#define ERRNO_EAGAIN(e)           ((e) == EAGAIN || \
-                                   (e) == WSAEWOULDBLOCK || \
-                                   (e) == EWOULDBLOCK)
-#define ERRNO_EINPROGRESS(e)      ((e) == EINPROGRESS || \
-                                   (e) == WSAEINPROGRESS)
-#define ERRNO_CONN_EINPROGRESS(e) ((e) == EINPROGRESS || \
-                                   (e) == WSAEINPROGRESS || (e) == WSAEINVAL)
+#define ERRNO_EAGAIN(e)           ((e) == EAGAIN || (e) == WSAEWOULDBLOCK)
+#define ERRNO_EINPROGRESS(e)      ((e) == WSAEINPROGRESS)
+#define ERRNO_CONN_EINPROGRESS(e) ((e) == WSAEINPROGRESS || (e) == WSAEINVAL)
 int correct_socket_errno(int s);
 #else
 #define ERRNO_EAGAIN(e)           ((e) == EAGAIN)

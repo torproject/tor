@@ -116,6 +116,7 @@ int spawn_func(int (*func)(void *), void *data)
     /* Child */
     func(data);
     assert(0); /* Should never reach here. */
+    return 0; /* suppress "control-reaches-end-of-non-void" warning. */
   } else {
     /* Parent */
     return 0;
@@ -236,7 +237,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 #ifdef MS_WINDOWS
 int correct_socket_errno(int s)
 {
-  int r, optval, optvallen=sizeof(optval);
+  int optval, optvallen=sizeof(optval);
   assert(errno == WSAEWOULDBLOCK);
   if (getsockopt(s, SOL_SOCKET, SO_ERROR, (void*)&optval, &optvallen))
     return errno;

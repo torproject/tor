@@ -66,7 +66,7 @@ poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 	}
 #ifdef MS_WINDOWS
         if (!any_fds_set) {
-                usleep(timeout);
+                Sleep(timeout);
                 return 0;
         }
 #endif
