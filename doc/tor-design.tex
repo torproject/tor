@@ -39,7 +39,7 @@
 %  \pdfpageheight=\the\paperheight
 %\fi
 
-\title{Tor: Design of a Next-Generation Onion Router}
+\title{Tor: Design of a Second-Generation Onion Router}
 
 %\author{Roger Dingledine \\ The Free Haven Project \\ arma@freehaven.net \and
 %Nick Mathewson \\ The Free Haven Project \\ nickm@freehaven.net \and
@@ -50,7 +50,7 @@
 
 \begin{abstract}
 We present Tor, a connection-based low-latency anonymous communication
-system. It is intended as an update and replacement for Onion Routing
+system. It is intended as a successor to Onion Routing
 and addresses many limitations in the original Onion Routing design.
 Tor works in a real-world Internet environment,
 requires little synchronization or coordination between nodes, and
@@ -67,13 +67,13 @@ as or better than other systems with similar design parameters.
 \Section{Overview}
 \label{sec:intro}
 
-Onion routing is a distributed overlay network designed to anonymize
+Onion Routing is a distributed overlay network designed to anonymize
 low-latency TCP-based applications such as web browsing, secure shell,
-and instant messaging. Users choose a path through the network and
+and instant messaging. Clients choose a path through the network and
 build a \emph{virtual circuit}, in which each node in the path knows its
 predecessor and successor, but no others. Traffic flowing down the circuit
 is sent in fixed-size \emph{cells}, which are unwrapped by a symmetric key
-at each node, revealing the downstream node. The original Onion Routing
+at each node and relayed downstream. The original Onion Routing
 project published several design and analysis papers
 \cite{or-jsac98,or-discex00,or-ih96,or-pet00}. While there was briefly
 a wide area Onion Routing network,
@@ -84,34 +84,39 @@ machine. Many critical design and deployment issues were never implemented,
 and the design has not been updated in several years.
 Here we describe Tor, a protocol for asynchronous, loosely
 federated onion routers that provides the following improvements over
-the old Onion Routing design:
-
-% Also itemize improvements over Freedom.
+the old Onion Routing design, and over other low-latency anonymity systems:
 
 \begin{tightlist}
 
 \item \textbf{Perfect forward secrecy:} The original Onion Routing
 design is vulnerable to a single hostile node recording traffic and later
-forcing successive nodes in the circuit to decrypt it. Rather than using
+compromising successive nodes in the circuit and forcing them to
+decrypt it. 
+Rather than using
 onions to lay the circuits, Tor uses an incremental or \emph{telescoping}
 path-building design, where the initiator negotiates session keys with
 each successive hop in the circuit. Onion replay detection is no longer
 necessary, and the process of building circuits is more reliable, since
-the initiator knows which hop failed and can try extending to a new node.
+the initiator knows when a hop fails and can then try extending to a new node.
 
-\item \textbf{Applications talk to the onion proxy via Socks:}
-The original Onion Routing design required a separate proxy for each
+\item \textbf{Separation of protocol cleaning from anonymity:}
+The original Onion Routing design required a separate ``application
+proxy'' for each
 supported application protocol, resulting in a lot of extra code --- most
 of which was never written, so most applications were not supported.
 Tor uses the unified and standard Socks
-\cite{socks4,socks5} interface, allowing us to support any TCP-based
-program without modification.
+\cite{socks4,socks5} proxy interface, allowing us to support most TCP-based
+programs without modification.  This design change allows Tor to
+use the protocol-normalization features of privacy-enhancing
+application-level proxies such as Privoxy without having to
+incorporate those features itself.
 
-\item \textbf{Many applications can share one circuit:} The original
-Onion Routing design built one circuit for each request. Aside from the
-performance issues of doing public key operations for every request, it
-also turns out that regular communications patterns mean building lots
-of circuits, which can endanger anonymity.
+\item \textbf{Many TCP streams can share one circuit:} The original
+Onion Routing design built one circuit for each application-level
+request. 
+Aside from the performance issues of doing multiple public key
+operations for every request, building a circuit for each request can
+endanger anonymity.
 The very first Onion Routing design \cite{or-ih96} protected against
 this to some extent by hiding network access behind an onion
 router/firewall that was also forwarding traffic from other nodes.
@@ -121,22 +126,24 @@ nor such firewall configurations are adequately convenient to be
 feasible. Those users, especially if they engage in certain unusual
 communication behaviors, may be identifiable \cite{wright03}. To
 complicate the possibility of such attacks Tor multiplexes many
-connections down each circuit, but still rotates the circuit
+stream down each circuit, but still rotates the circuit
 periodically to avoid too much linkability from requests on a single
 circuit.
 
-\item \textbf{No mixing or traffic shaping:} The original Onion Routing
+\item \textbf{No mixing, padding, or traffic shaping:} 
+The original Onion Routing
 design called for full link padding both between onion routers and between
 onion proxies (that is, users) and onion routers \cite{or-jsac98}. The
 later analysis paper \cite{or-pet00} suggested \emph{traffic shaping}
 to provide similar protection but use less bandwidth, but did not go
-into detail. However, recent research \cite{econymics} and deployment
-experience \cite{freedom21-security} indicate that this level of resource
+into detail.  However, recent research \cite{econymics} and deployment
+experience \cite{freedom21-security} suggest that this level of resource
 use is not practical or economical; and even full link padding is still
 vulnerable to active attacks \cite{defensive-dropping}.
 %[An upcoming FC04 paper. I'll add a cite when it's out. -RD]
 
-\item \textbf{Leaky pipes:} Through in-band signalling within the
+\item \textbf{Leaky-pipe circuit topology:} Through in-band
+  signalling within the
   circuit, Tor initiators can direct traffic to nodes partway down the
   circuit. This allows for long-range padding to frustrate traffic
   shape and volume attacks at the initiator \cite{defensive-dropping},
@@ -171,20 +178,31 @@ tag encrypted traffic and look for the tagged traffic at the network
 edges \cite{minion-design}.
 
 \item \textbf{Robustness to failed nodes:} A failed node in a traditional
-mix network means lost messages, but in Tor, users can notice failed
-nodes while building circuits and route around them. We further provide a
-simple mechanism that allows connections to be established despite recent
-node failure or slightly dated information from a directory server. Tor
-permits onion routers to have \emph{router twins} --- nodes that share
-the same private decryption key. Note that because connections now have
-perfect forward secrecy, an onion router still cannot read the traffic
-on a connection established through its twin even while that connection
-is active. Also, which nodes are twins can change dynamically depending
-on current circumstances, and twins may or may not be under the same
-administrative authority.
+mix network means lost messages, but thanks to Tor's step-by-step
+circuit building, users can notice failed
+nodes while building circuits and route around them.  Additionally,
+liveness information from directories allows users to avoid
+unreliable node in the first place.
+%We further provide a
+%simple mechanism that allows connections to be established despite recent
+%node failure or slightly dated information from a directory server. Tor
+%permits onion routers to have \emph{router twins} --- nodes that share
+%the same private decryption key. Note that because connections now have
+%perfect forward secrecy, an onion router still cannot read the traffic
+%on a connection established through its twin even while that connection
+%is active. Also, which nodes are twins can change dynamically depending
+%on current circumstances, and twins may or may not be under the same
+%administrative authority.
+%
+%[Commented out; Router twins provide no real increase in robustness
+%to failed nodes.  If a non-twinned node goes down, the
+%circuit-builder notices this and routes around it.  Circuit-building
+%is offline, so there shouldn't even be a latency hit. -NM]
 
-\item \textbf{Exit policies:} Tor provides a consistent mechanism for
-each node to specify and advertise its own exit policy. Exit policies
+\item \textbf{Variable exit policies:} Tor provides a consistent
+mechanism  for
+each node to specify and advertise a policy describing the hosts and
+ports to which it will connect. These exit policies
 are critical in a volunteer-based distributed infrastructure, because
 each operator is comfortable with allowing different types of traffic
 to exit the Tor network from his node.
@@ -193,7 +211,7 @@ to exit the Tor network from his node.
 
 \item \textbf{Rendezvous points and location-protected servers:} Tor
 provides an integrated mechanism for responder-anonymity
-location-protected servers.
+location-protected servers.  [XXX say more.]
 [XXX Mention that reply onions are out because they're brittle don't give PFS.]
 
 \end{tightlist}
@@ -272,7 +290,7 @@ single server can learn the user's communication partners.
 
 Systems such as earlier versions of Freedom and Onion Routing
 build the anonymous channel all at once (using an onion). Later
-designs of Freedom and onion routing as described herein build
+designs of Freedom and Onion Routing as described herein build
 the channel in stages as does AnonNet
 \cite{anonnet}. Amongst other things, this makes perfect forward
 secrecy feasible.
