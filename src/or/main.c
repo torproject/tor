@@ -430,6 +430,17 @@ static int init_from_config(int argc, char **argv) {
     return -1;
   }
   close_logs(); /* we'll close, then open with correct loglevel if necessary */
+
+  if(options.User || options.Group) {
+    if(switch_id(options.User, options.Group) != 0) {
+      return -1;
+    }
+  }
+
+  if (options.RunAsDaemon) {
+    start_daemon(options.DataDirectory);
+  }
+
   if(!options.LogFile && !options.RunAsDaemon)
     add_stream_log(options.loglevel, "<stdout>", stdout);
   if(options.LogFile) {
@@ -449,12 +460,6 @@ static int init_from_config(int argc, char **argv) {
 
   global_read_bucket = options.BandwidthBurst; /* start it at max traffic */
   stats_prev_global_read_bucket = global_read_bucket;
-
-  if(options.User || options.Group) {
-    if(switch_id(options.User, options.Group) != 0) {
-      return -1;
-    }
-  }
 
   if(options.RunAsDaemon) {
     /* XXXX Can we delay this any more? */
@@ -679,10 +684,6 @@ int tor_main(int argc, char *argv[]) {
   if(geteuid()==0)
     log_fn(LOG_WARN,"You are running Tor as root. You don't need to, and you probably shouldn't.");
 #endif
-
-  if (options.RunAsDaemon) {
-    start_daemon(options.DataDirectory);
-  }
 
   if(options.ORPort) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
