@@ -23,19 +23,19 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad cvs/src/or/config.c /tmp/dpep.XUCqlY/cvs/src/or/config.c
---- cvs/src/or/config.c	2004-11-12 17:40:22.906576139 +0100
-+++ /tmp/dpep.XUCqlY/cvs/src/or/config.c	2004-11-12 17:58:01.603511522 +0100
-@@ -95,7 +95,7 @@
+diff -urNad tor-0.1.0.0-alpha-cvs/src/or/config.c /tmp/dpep.w3oD6B/tor-0.1.0.0-alpha-cvs/src/or/config.c
+--- tor-0.1.0.0-alpha-cvs/src/or/config.c	2005-01-06 22:03:27.000000000 +0100
++++ /tmp/dpep.w3oD6B/tor-0.1.0.0-alpha-cvs/src/or/config.c	2005-01-07 01:57:43.801310097 +0100
+@@ -102,7 +102,7 @@
    VAR("ControlPort",         UINT,     ControlPort,          "0"),
    VAR("CookieAuthentication",BOOL,     CookieAuthentication, "0"),
    VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
 -  VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
 +  VAR("DataDirectory",       STRING,   DataDirectory,        "/var/lib/tor"),
+   VAR("DirAllowPrivateAddresses",BOOL, DirAllowPrivateAddresses, NULL),
    VAR("DirPort",             UINT,     DirPort,              "0"),
    VAR("DirBindAddress",      LINELIST, DirBindAddress,       NULL),
-   VAR("DirFetchPostPeriod",  UINT,     DirFetchPostPeriod,   "600"),
-@@ -135,11 +135,11 @@
+@@ -148,11 +148,11 @@
    VAR("ORPort",              UINT,     ORPort,               "0"),
    VAR("ORBindAddress",       LINELIST, ORBindAddress,        NULL),
    VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
