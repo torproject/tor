@@ -19,6 +19,15 @@ routers'). Users bounce their tcp streams (web traffic, ftp, ssh, etc)
 around the routers, and recipients, observers, and even the routers
 themselves have difficulty tracking the source of the stream.
 
+1.2. Why's it called tor?
+
+Because tor is the onion routing system. I kept telling people I was
+working on onion routing, and they said "Neat. Which one?" Even if onion
+routing has become a standard household term, this is the actual onion
+routing project, started out of the Naval Research Lab.
+
+(Theories about recursive acronyms are ok too.)
+
 
 2. Compiling and installing.
 
