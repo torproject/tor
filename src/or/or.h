@@ -572,6 +572,8 @@ int fetch_from_buf_http(buf_t *buf,
                         char **body_out, int max_bodylen);
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
 
+void assert_buf_ok(buf_t *buf);
+
 /********************************* circuit.c ***************************/
 
 void circuit_add(circuit_t *circ);
