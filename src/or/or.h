@@ -186,6 +186,22 @@
 #define CIRCUIT_STATE_OR_WAIT 2 /* I'm the OP, my firsthop is still connecting */
 #define CIRCUIT_STATE_OPEN 3 /* onionskin(s) processed, ready to send/receive cells */
 
+#define _CIRCUIT_PURPOSE_MIN 1
+/* these circuits were initiated elsewhere */
+#define CIRCUIT_PURPOSE_INTERMEDIATE 1 /* normal circuit */
+#define CIRCUIT_PURPOSE_INTRO_POINT 2 /* from Bob, waiting for intro from Alices */
+#define CIRCUIT_PURPOSE_REND_POINT_WAITING 3 /* from Alice, waiting for Bob */
+#define CIRCUIT_PURPOSE_REND_ESTABLISHED 4 /* both circuits have this purpose */
+/* these circuits were initiated at this node */
+#define CIRCUIT_PURPOSE_C_GENERAL 5 /* normal circuit, with cpath */
+#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 6 /* at Bob, waiting for introductions */
+#define CIRCUIT_PURPOSE_C_INTRODUCING 7 /* at Alice, connecting to intro point */
+#define CIRCUIT_PURPOSE_C_ESTABLISH_REND 8 /* at Alice, waiting for Bob */
+#define CIRCUIT_PURPOSE_S_RENDEZVOUSING 9 /* at Bob, connecting to rend point */
+#define CIRCUIT_PURPOSE_S_UPLOAD_SERVICE_DESC 10
+#define CIRCUIT_PURPOSE_C_FETCH_SERVICE_DESC 11
+#define _CIRCUIT_PURPOSE_MAX 11
+
 #define RELAY_COMMAND_BEGIN 1
 #define RELAY_COMMAND_DATA 2
 #define RELAY_COMMAND_END 3
