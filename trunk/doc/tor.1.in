@@ -32,6 +32,12 @@ Set the verboseness level of the primary log. (Default: warn)
 \fBlogfile \fR\fIFILE\fP
 Rather than logging to stdout, log to FILE.
 .TP
+\fBbandwidthrate \fR\fINUM\fP
+A token bucket limits the average incoming bandwidth on this node to NUM bytes per second. (Default: 800000)
+.TP
+\fBbandwidthburst \fR\fINUM\fP
+Limit the maximum token bucket size (also known as the burst) to NUM bytes. (Default: 10000000)
+.TP
 \fBdebuglogfile \fR\fIFILE\fP
 In addition to other logging, we will log to FILE at log-level debug.
 .TP
@@ -49,9 +55,6 @@ FILE contains a list of directory servers, to bootstrap into the network. (Defau
 .TP
 \fBrunasdaemon \fR\fI0|1\fP
 If 1, Tor forks and daemonizes to the background. (Default: 0)
-.TP
-\fBtotalbandwidth \fR\fINUM\fP
-A token bucket limits the average incoming bandwidth on this node to NUM bytes per second. (Default: 800000)
 .TP
 \fBuser \fR\fIUID\fP
 On startup, setuid to this user.
