@@ -399,7 +399,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   /* this call _modifies_ socks->address iff it's a hidden-service request */
   if (rend_parse_rendezvous_address(socks->address) < 0) {
     /* normal request */
-    if (socks->port == 0) {
+    if (socks->command == SOCKS_COMMAND_CONNECT && socks->port == 0) {
       log_fn(LOG_WARN,"Application asked to connect to port 0. Refusing.");
       return -1;
     }
