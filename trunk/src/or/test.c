@@ -14,6 +14,7 @@
 #include <dirent.h>
 #include "or.h"
 #include "../common/test.h"
+#include "../common/torgzip.h"
 
 extern or_options_t options;
 
@@ -552,15 +553,15 @@ test_util() {
   test_eq((void*)555, smartlist_get(sl,5));
 
   smartlist_clear(sl);
-  smartlist_split_string(sl, "abc", ":", 0);
+  smartlist_split_string(sl, "abc", ":", 0, 0);
   test_eq(1, smartlist_len(sl));
   test_streq("abc", smartlist_get(sl, 0));
-  smartlist_split_string(sl, "a::bc::", "::", 0);
+  smartlist_split_string(sl, "a::bc::", "::", 0, 0);
   test_eq(4, smartlist_len(sl));
   test_streq("a", smartlist_get(sl, 1));
   test_streq("bc", smartlist_get(sl, 2));
   test_streq("", smartlist_get(sl, 3));
-  smartlist_split_string(sl, "/def/  /ghijk", "/", 0);
+  smartlist_split_string(sl, "/def/  /ghijk", "/", 0, 0);
   test_eq(8, smartlist_len(sl));
   test_streq("", smartlist_get(sl, 4));
   test_streq("def", smartlist_get(sl, 5));
@@ -569,12 +570,12 @@ test_util() {
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
-  smartlist_split_string(sl, "a,bbd,cdef", ",", 1);
+  smartlist_split_string(sl, "a,bbd,cdef", ",", SPLIT_SKIP_SPACE, 0);
   test_eq(3, smartlist_len(sl));
   test_streq("a", smartlist_get(sl,0));
   test_streq("bbd", smartlist_get(sl,1));
   test_streq("cdef", smartlist_get(sl,2));
-  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>", 1);
+  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>", SPLIT_SKIP_SPACE, 0);
   test_eq(8, smartlist_len(sl));
   test_streq("z", smartlist_get(sl,3));
   test_streq("zhasd", smartlist_get(sl,4));
@@ -583,9 +584,55 @@ test_util() {
   test_streq("", smartlist_get(sl,7));
 
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  test_eq(3, smartlist_len(sl));
+  test_streq("z", smartlist_get(sl, 0));
+  test_streq("zhasd", smartlist_get(sl, 1));
+  test_streq("bnud", smartlist_get(sl, 2));
+  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
+  test_eq(5, smartlist_len(sl));
+  test_streq("z", smartlist_get(sl, 3));
+  test_streq("zhasd <>  <> bnud<>", smartlist_get(sl, 4));
+
 
   /* XXXX test older functions. */
   smartlist_free(sl);
+}
+
+void
+test_gzip() {
+  char *buf1, *buf2=NULL, *buf3=NULL;
+  size_t len1, len2;
+
+  buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+  if (is_gzip_supported()) {
+    test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
+                                   GZIP_METHOD));
+    test_assert(buf2);
+    test_assert(!memcmp(buf2, "\037\213", 2)); /* Gzip magic. */
+
+    test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1, GZIP_METHOD));
+    test_assert(buf3);
+    test_streq(buf1,buf3);
+
+    tor_free(buf2);
+    tor_free(buf3);
+  }
+
+  test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
+                                 ZLIB_METHOD));
+  test_assert(buf2);
+  test_assert(!memcmp(buf2, "\x78\xDA", 2)); /* deflate magic. */
+
+  test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1, ZLIB_METHOD));
+  test_assert(buf3);
+  test_streq(buf1,buf3);
+
+  tor_free(buf2);
+  tor_free(buf3);
+  tor_free(buf1);
 }
 
 static void* _squareAndRemoveK4(const char *key, void*val, void *data)
@@ -1037,6 +1084,7 @@ main(int c, char**v){
   test_crypto();
   test_crypto_dh();
   puts("\n========================= Util ============================");
+  test_gzip();
   test_util();
   test_strmap();
   puts("\n========================= Onion Skins =====================");
