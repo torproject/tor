@@ -835,7 +835,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
     if (conn->chosen_exit_name) {
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name);
-      if(!router) {
+      if (!router) {
         log_fn(LOG_WARN,"Requested exit point '%s' is not known. Closing.",
                conn->chosen_exit_name);
         return -1;

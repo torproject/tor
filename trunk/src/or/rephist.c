@@ -651,7 +651,7 @@ void rep_hist_note_used_port(uint16_t port, time_t now) {
   tor_assert(predicted_ports_list);
   tor_assert(predicted_ports_times);
 
-  if(!port) /* record nothing */
+  if (!port) /* record nothing */
     return;
 
   for (i = 0; i < smartlist_len(predicted_ports_list); ++i) {
