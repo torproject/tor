@@ -965,16 +965,23 @@ static int do_hup(void) {
   /* Fetch a new directory. Even authdirservers do this. */
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
   if (server_mode(options)) {
+    const char *descriptor;
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate();
     dnsworkers_rotate();
-    /* Rebuild fresh descriptor. */
+    /* Rebuild fresh descriptor, but leave old one on failure. */
     router_rebuild_descriptor(1);
-    tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", options->DataDirectory);
+    descriptor = router_get_my_descriptor();
+    if (!descriptor) {
+      log_fn(LOG_WARN,"No descriptor to save.");
+      return 0;
+    }
+    tor_snprintf(keydir,sizeof(keydir),"%s/router.desc",
+                 options->DataDirectory);
     log_fn(LOG_INFO,"Saving descriptor to %s...",keydir);
-    if (write_str_to_file(keydir, router_get_my_descriptor(), 0)) {
-      return -1;
+    if (write_str_to_file(keydir, descriptor, 0)) {
+      return 0;
     }
   }
   return 0;
