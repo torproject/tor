@@ -64,7 +64,7 @@ typedef struct directory_token_t {
   size_t object_size;             /**< Bytes in object_body */
   char *object_body;           /**< Contents of object, base64-decoded. */
   crypto_pk_env_t *key;        /**< For public keys only. */
-  char *error;                 /**< For _ERR tokens only. */
+  const char *error;           /**< For _ERR tokens only. */
 } directory_token_t;
 
 /* ********************************************************************** */
@@ -95,7 +95,7 @@ typedef enum {
 
 /** Table mapping keywords to token value and to argument rules. */
 static struct {
-  char *t; int v; arg_syntax s; obj_syntax os; where_syntax ws;
+  const char *t; int v; arg_syntax s; obj_syntax os; where_syntax ws;
 } token_table[] = {
   { "accept",              K_ACCEPT,              ARGS,    NO_OBJ,  RTR_ONLY },
   { "directory-signature", K_DIRECTORY_SIGNATURE, ARGS,    NEED_OBJ,DIR_ONLY},

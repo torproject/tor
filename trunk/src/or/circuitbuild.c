@@ -71,7 +71,7 @@ void circuit_log_path(int severity, circuit_t *circ) {
   char buf[1024];
   char *s = buf;
   struct crypt_path_t *hop;
-  char *states[] = {"closed", "waiting for keys", "open"};
+  const char *states[] = {"closed", "waiting for keys", "open"};
   routerinfo_t *router;
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
   tor_assert(circ->cpath);
@@ -144,7 +144,7 @@ void circuit_rep_hist_note_result(circuit_t *circ) {
  */
 static void
 circuit_dump_details(int severity, circuit_t *circ, int poll_index,
-                     char *type, int this_circid, int other_circid) {
+                     const char *type, int this_circid, int other_circid) {
   struct crypt_path_t *hop;
   log(severity,"Conn %d has %s circuit: circID %d (other side %d), state %d (%s), born %d",
       poll_index, type, this_circid, other_circid, circ->state,

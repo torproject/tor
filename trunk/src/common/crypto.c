@@ -127,7 +127,7 @@ static int _crypto_global_initialized = 0;
 static void
 crypto_log_errors(int severity, const char *doing)
 {
-  int err;
+  unsigned int err;
   const char *msg, *lib, *func;
   while ((err = ERR_get_error()) != 0) {
     msg = (const char*)ERR_reason_error_string(err);
@@ -1398,7 +1398,7 @@ int crypto_seed_rng(void)
   RAND_screen();
   return 0;
 #else
-  static char *filenames[] = {
+  static const char *filenames[] = {
     "/dev/srandom", "/dev/urandom", "/dev/random", NULL
   };
   int fd;

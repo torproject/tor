@@ -11,7 +11,6 @@
 #include "tree.h"
 
 extern or_options_t options; /* command-line and config-file options */
-extern char *conn_state_to_string[][_CONN_TYPE_MAX+1]; /* from connection.c */
 
 static struct exit_policy_t *socks_policy = NULL;
 

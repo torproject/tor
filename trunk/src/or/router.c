@@ -449,7 +449,7 @@ static void router_add_exit_policy_from_config(routerinfo_t *router) {
 
   /* Else, append the default exitpolicy. */
   default_policy.key = NULL;
-  default_policy.value = DEFAULT_EXIT_POLICY;
+  default_policy.value = (char*)DEFAULT_EXIT_POLICY;
   default_policy.next = NULL;
   config_parse_exit_policy(&default_policy, &router->exit_policy);
 }

@@ -458,7 +458,8 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
  * available.  If <b>strict</b> is true, never pick any node besides
  * those in <b>preferred</b>.
  */
-routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
+routerinfo_t *router_choose_random_node(const char *preferred,
+                                        const char *excluded,
                                         smartlist_t *excludedsmartlist,
                                         int preferuptime, int preferbandwidth,
                                         int allow_unverified, int strict)
@@ -1112,7 +1113,7 @@ int routers_update_status_from_entry(smartlist_t *routers,
     ++cp;
     if (strlen(cp) != HEX_DIGEST_LEN) {
       log_fn(LOG_WARN, "Bad length (%d) on digest in router status entry (%s)",
-             strlen(cp), s);
+             (int)strlen(cp), s);
       return -1;
     }
     strlcpy(hexdigest, cp, sizeof(hexdigest));

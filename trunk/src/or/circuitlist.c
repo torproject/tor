@@ -17,7 +17,7 @@ extern or_options_t options; /* command-line and config-file options */
 circuit_t *global_circuitlist=NULL;
 
 /** Array of strings to make circ-\>state human-readable */
-char *circuit_state_to_string[] = {
+const char *circuit_state_to_string[] = {
   "doing handshakes",        /* 0 */
   "processing the onion",    /* 1 */
   "connecting to firsthop",  /* 2 */

@@ -124,11 +124,13 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
       n += r;
   }
   
-  n += tor_vsnprintf(buf+n,buf_len-n,format,ap);
-  if(n < 0) {
+  r = tor_vsnprintf(buf+n,buf_len-n,format,ap);
+  if(r < 0) {
     n = buf_len-2;
     strlcpy(buf+buf_len-TRUNCATED_STR_LEN-1, TRUNCATED_STR,
             buf_len-(buf_len-TRUNCATED_STR_LEN-1));
+  } else {
+    n += r;
   }
   buf[n]='\n';
   buf[n+1]='\0';
