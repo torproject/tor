@@ -67,7 +67,7 @@ rend_mid_establish_intro(circuit_t *circ, char *request, int request_len)
 
   /* Close any other intro circuits with the same pk. */
   c = NULL;
-  while ((c = circuit_get_next_by_service_and_purpose(
+  while ((c = circuit_get_next_by_pk_and_purpose(
                                 c,pk_digest,CIRCUIT_PURPOSE_INTRO_POINT))) {
     log_fn(LOG_INFO, "Replacing old circuit %d for service %s", c->p_circ_id, hexid);
     circuit_mark_for_close(c);
@@ -75,7 +75,7 @@ rend_mid_establish_intro(circuit_t *circ, char *request, int request_len)
 
   /* Now, set up this circuit. */
   circ->purpose = CIRCUIT_PURPOSE_INTRO_POINT;
-  memcpy(circ->rend_service, pk_digest, 20);
+  memcpy(circ->rend_pk_digest, pk_digest, 20);
 
   log_fn(LOG_INFO, "Established introduction point on circuit %d for service %s",
          circ->p_circ_id, hexid);
@@ -104,7 +104,7 @@ rend_mid_introduce(circuit_t *circ, char *request, int request_len)
   }
 
   /* The first 20 bytes are all we look at: they have a hash of Bob's PK. */
-  intro_circ = circuit_get_next_by_service_and_purpose(
+  intro_circ = circuit_get_next_by_pk_and_purpose(
                              NULL, request, CIRCUIT_PURPOSE_INTRO_POINT);
   if (!intro_circ) {
     log_fn(LOG_WARN,

@@ -698,7 +698,7 @@ circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest(connection_t *conn,
                               int must_be_open, uint8_t conn_purpose);
-circuit_t *circuit_get_next_by_service_and_purpose(circuit_t *circuit,
+circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *circuit,
                                              const char *servid, int purpose);
 circuit_t *circuit_get_rendezvous(const char *cookie);
 
