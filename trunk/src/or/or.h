@@ -37,7 +37,9 @@
 #include <assert.h>
 #include <time.h>
 #ifdef USE_ZLIB
+#define free_func zlib_free_func
 #include <zlib.h>
+#undef free_func
 #endif
 
 #include "../common/crypto.h"
