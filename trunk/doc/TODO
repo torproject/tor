@@ -126,6 +126,20 @@ NICK    - Reputation info needs to give better weight to recent events than
           end?
         - tor-resolve needs a man page
         - tor-resolve should make use of cached answers?
+        - defining an ORPort isn't necessary anymore, if you more
+          ORAddress:port. Same with DirPort, SocksPort.
+        - requiredentrynode vs preferredentrynode
+        - per-month byte allowances
+        - if using not-socks4a then warn, once.
+        - if unverified server then warn, once.
+        - add a listener for a ui
+          - and a basic gui
+        - faq and doc-wiki
+          - knoppix distro
+          - win32 installer using privoxy's installer
+        - win32 problems with pre1
+        - asn.1 issues?
+
 
 
       ongoing:
