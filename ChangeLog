@@ -1,4 +1,4 @@
-Changes in version 0.1.0.1-rc1 - 2005-03-28
+Changes in version 0.1.0.1-rc - 2005-03-28
 
   o New features:
     - Add reachability testing. Your Tor server will automatically try
