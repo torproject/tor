@@ -543,6 +543,7 @@ static int dns_found_answer(char *question, uint32_t answer, uint32_t valid) {
 
   assert(resolve->state == CACHE_STATE_PENDING);
 
+  resolve->answer = ntohl(answer);
   if(valid)
     resolve->state = CACHE_STATE_VALID;
   else
@@ -550,7 +551,7 @@ static int dns_found_answer(char *question, uint32_t answer, uint32_t valid) {
 
   while(resolve->pending_connections) {
     pend = resolve->pending_connections;
-    pend->conn->addr = ntohl(answer);
+    pend->conn->addr = resolve->answer;
     if(resolve->state == CACHE_STATE_FAILED || connection_exit_connect(pend->conn) < 0) {
       pend->conn->marked_for_close = 1;
     }
