@@ -216,16 +216,18 @@
  */
 #define CIRCUIT_PURPOSE_C_GENERAL 5 /* normal circuit, with cpath */
 #define CIRCUIT_PURPOSE_C_INTRODUCING 6 /* at Alice, connecting to intro point */
-#define CIRCUIT_PURPOSE_C_ESTABLISH_REND 7 /* at Alice, waiting for ack */
-#define CIRCUIT_PURPOSE_C_REND_READY 8 /* at Alice, waiting for Bob */
-#define CIRCUIT_PURPOSE_C_REND_JOINED 9 /* at Alice, rendezvous established */
+#define CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT 7 /* at alice, sent INTRODUCE1 to intro point, waiting for ACK/NAK */
 
-#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 10 /* at Bob, waiting for introductions */
-#define CIRCUIT_PURPOSE_S_INTRO 11 /* at Bob, successfully established intro */
-#define CIRCUIT_PURPOSE_S_CONNECT_REND 12 /* at Bob, connecting to rend point */
+#define CIRCUIT_PURPOSE_C_ESTABLISH_REND 8 /* at Alice, waiting for ack */
+#define CIRCUIT_PURPOSE_C_REND_READY 9 /* at Alice, waiting for Bob */
+#define CIRCUIT_PURPOSE_C_REND_JOINED 10 /* at Alice, rendezvous established */
 
-#define CIRCUIT_PURPOSE_S_REND_JOINED 13 /* at Bob, rendezvous established.*/
-#define _CIRCUIT_PURPOSE_MAX 13
+#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 11 /* at Bob, waiting for introductions */
+#define CIRCUIT_PURPOSE_S_INTRO 12 /* at Bob, successfully established intro */
+#define CIRCUIT_PURPOSE_S_CONNECT_REND 13 /* at Bob, connecting to rend point */
+
+#define CIRCUIT_PURPOSE_S_REND_JOINED 14 /* at Bob, rendezvous established.*/
+#define _CIRCUIT_PURPOSE_MAX 14
 
 #define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>_CIRCUIT_PURPOSE_OR_MAX)
 #define CIRCUIT_IS_ORIGIN(c) (CIRCUIT_PURPOSE_IS_ORIGIN((c)->purpose))
