@@ -106,8 +106,12 @@ Piece two: (optional)
   and not fingerprints, it also means that dirservers can rotate their
   signing keys transparently.
 
-  But, keeping track of the seed keys becomes a critical security issue;
-  and rotating them in a backward-compatible way adds complexity.
+  But, keeping track of the seed keys becomes a critical security issue.
+  And rotating them in a backward-compatible way adds complexity. Also,
+  dirserver locations must be at least somewhere static, since each lost
+  dirserver degrades reachability for old clients. So as the dirserver
+  list rolls over we have no choice but to put out new versions.
+
 
 Piece three: (optional)
 
