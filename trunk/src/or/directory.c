@@ -555,6 +555,8 @@ static int
 body_is_plausible(const char *body, size_t len, int purpose)
 {
   int i;
+  if (len == 0)
+    return 1; /* empty bodies don't need decompression */
   if (len < 32)
     return 0;
   if (purpose != DIR_PURPOSE_FETCH_RENDDESC) {
