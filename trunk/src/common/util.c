@@ -1281,7 +1281,7 @@ int check_private_dir(const char *dirname, int create)
   }
 #ifndef MS_WINDOWS
   if (st.st_uid != getuid()) {
-    log(LOG_WARN, "%s is not owned by this UID (%d)", dirname, (int)getuid());
+    log(LOG_WARN, "%s is not owned by this UID (%d). You must fix this to proceed.", dirname, (int)getuid());
     return -1;
   }
   if (st.st_mode & 0077) {
