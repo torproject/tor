@@ -26,7 +26,7 @@
 /* How long do certificates live? (sec) */
 #define CERT_LIFETIME  (365*24*60*60)
 /* How much clock skew do we tolerate when checking certificates? (sec) */
-#define CERT_ALLOW_SKEW (30*60)
+#define CERT_ALLOW_SKEW (90*60)
 
 struct tor_tls_context_st {
   SSL_CTX *ctx;
