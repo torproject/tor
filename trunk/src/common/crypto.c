@@ -1406,20 +1406,16 @@ base64_decode(char *dest, int destlen, const char *src, int srclen)
 }
 
 /** Implements base32 encoding as in rfc3548.  Limitation: Requires
- * that srclen is a multiple of 5.
+ * that srclen*8 is a multiple of 5.
  */
-int
+void
 base32_encode(char *dest, int destlen, const char *src, int srclen)
 {
   int nbits, i, bit, v, u;
   nbits = srclen * 8;
 
-  if ((nbits%5) != 0)
-    /* We need an even multiple of 5 bits. */
-    return -1;
-  if ((nbits/5)+1 > destlen)
-    /* Not enough space. */
-    return -1;
+  tor_assert((nbits%5) == 0); /* We need an even multiple of 5 bits. */
+  tor_assert((nbits/5)+1 <= destlen); /* We need enough space. */
 
   for (i=0,bit=0; bit < nbits; ++i, bit+=5) {
     /* set v to the 16-bit value starting at src[bits/8], 0-padded. */
@@ -1430,10 +1426,9 @@ base32_encode(char *dest, int destlen, const char *src, int srclen)
     dest[i] = BASE32_CHARS[u];
   }
   dest[i] = '\0';
-  return 0;
 }
 
-int base16_encode(char *dest, int destlen, const char *src, int srclen)
+void base16_encode(char *dest, int destlen, const char *src, int srclen)
 {
   const char *end;
   char *cp;
@@ -1448,7 +1443,6 @@ int base16_encode(char *dest, int destlen, const char *src, int srclen)
     cp += 2;
   }
   *cp = '\0';
-  return 0;
 }
 
 static const char HEX_DIGITS[] = "0123456789ABCDEFabcdef";

@@ -69,10 +69,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
     goto err;
   }
 
-  if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
-                    pk_digest,10)) {
-    goto err;
-  }
+  base32_encode(serviceid, REND_SERVICE_ID_LEN+1, pk_digest,10);
 
   /* Close any other intro circuits with the same pk. */
   c = NULL;
@@ -133,9 +130,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, int request_len)
     goto err;
   }
 
-  if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1, request,10)) {
-    goto err;
-  }
+  base32_encode(serviceid, REND_SERVICE_ID_LEN+1, request,10);
 
   /* The first 20 bytes are all we look at: they have a hash of Bob's PK. */
   intro_circ = circuit_get_next_by_pk_and_purpose(
