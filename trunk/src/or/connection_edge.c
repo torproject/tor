@@ -777,10 +777,14 @@ circuit_get_open_circ_or_launch(connection_t *conn,
 
     if(desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCING) {
       /* need to pick an intro point */
-      exitname = rend_get_random_intro(conn->rend_query);
+      exitname = rend_client_get_random_intro(conn->rend_query);
       if(!exitname) {
         log_fn(LOG_WARN,"Couldn't get an intro point for '%s'. Closing conn.",
                conn->rend_query);
+        return -1;
+      }
+      if(!router_get_by_nickname(exitname)) {
+        log_fn(LOG_WARN,"Advertised intro point '%s' is not known. Closing.", exitname);
         return -1;
       }
       log_fn(LOG_INFO,"Chose %s as intro point for %s.", exitname, conn->rend_query);
