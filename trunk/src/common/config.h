@@ -8,8 +8,11 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/07/03 16:31:22  montrose
+ * Added getoptions() and made minor adjustment to poptReadDefaultOptions()
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.7  2002/04/02 14:27:11  badbytes
  * Final finishes.
@@ -38,6 +41,8 @@
 #ifndef __CONFIG_H
 
 # include <stdio.h>
+
+#include <popt.h>
 
 /* enumeration of types which option values can take */
 #define CONFIG_TYPE_STRING  0
@@ -83,6 +88,12 @@ int close_config(FILE *f);
 
 /* parse the config file and obtain required option values */
 int parse_config(FILE *f, config_opt_t *option);
+
+/* parse popt-style options in a config file */
+int poptReadOptions(poptContext optCon, const unsigned char *fname);
+
+/* parse popt-style options from /etc/<cmd>rc and ~/.<cmd>rc */
+int poptReadDefaultOptions(const char *cmd, poptContext optCon);
 
 #define __CONFIG_H
 #endif

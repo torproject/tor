@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.3  2002/07/03 16:31:22  montrose
+ * Added getoptions() and made minor adjustment to poptReadDefaultOptions()
+ *
  * Revision 1.2  2002/06/28 18:14:55  montrose
  * Added poptReadOptions() and poptReadDefaultOptions()
  *
@@ -360,7 +363,7 @@ RETURN VALUE: INT_MIN = problem opening config file, else standard poptGetNextOp
    FILE *fp;
    int argc, c;
    char **argv;
-   char line[256];
+   char line[1024];
    line[0] = line[1] = '-';  /* prepend expected long name option flag */
    fp = open_config(fname);
    if ( fp == NULL ) return INT_MIN;
@@ -402,6 +405,6 @@ RETURN VALUE: same as poptReadOptions()
       sprintf(fname,"~/.%src",cmd);
       c = poptReadOptions(optCon,fname);
    }
-   return c;
+   return (c == INT_MIN) ? -1 : c;
 }
 
