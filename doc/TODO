@@ -11,6 +11,7 @@ ARMA    - arma claims
         X Abandoned
 
       0.0.9pre4:
+        - make RecommendedVersions a CONFIG_TYPE_LINELIST option
 R       . bandwidth buckets for write as well as read.
 N       - Handle rendezvousing with unverified nodes.
           - Specify: Stick rendezvous point's key in INTRODUCE cell.
