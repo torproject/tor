@@ -958,10 +958,10 @@ has to check whether data has been successfully flushed onto the TCP
 stream; it sends the \emph{relay sendme} cell only when the number of bytes pending
 to be flushed is under some threshold (currently 10 cells' worth).
 
-% Maybe omit this next paragraph. -NM
-Currently, non-data relay cells do not affect the windows. Thus we
-avoid potential deadlock issues, for example, arising because a stream
-can't send a \emph{relay sendme} cell when its packaging window is empty.
+%% Maybe omit this next paragraph. -NM
+%Currently, non-data relay cells do not affect the windows. Thus we
+%avoid potential deadlock issues, for example, arising because a stream
+%can't send a \emph{relay sendme} cell when its packaging window is empty.
 
 These arbitrarily chosen parameters seem to give tolerable throughput
 and delay; see Section~\ref{sec:in-the-wild}.
@@ -987,7 +987,6 @@ to new ORs. \textbf{Smear-resistant:}
 A social attacker who offers an illegal or disreputable location-hidden
 service should not be able to ``frame'' a rendezvous router by
 making observers believe the router created that service.
-%slander-resistant? defamation-resistant?
 \textbf{Application-transparent:} Although we require users
 to run special software to access location-hidden servers, we must not
 require them to modify their applications.
@@ -1903,41 +1902,40 @@ also designed to include authentication/authorization---if Alice doesn't
 include the right cookie with her request for service, Bob need not even
 acknowledge his existence.
 
-\SubSection{Attacks against rendezvous points}
-
-We describe here attacks against rendezvous points and how well
-the system protects against them.
-
-\emph{Make many introduction requests.}  An attacker could
-try to deny Bob service by flooding his introduction points with
-requests.  Because the introduction points can block requests that
-lack authorization tokens, however, Bob can restrict the volume of
-requests he receives, or require a certain amount of computation for
-every request he receives.
-
-\emph{Attack an introduction point.} An attacker could
-disrupt a location-hidden service by disabling its introduction
-points.  But because a service's identity is attached to its public
-key, the service can simply re-advertise
-itself at a different introduction point. Advertisements can also be
-done secretly so that only high-priority clients know the address of
-Bob's introduction points or so that different clients know of different
-introduction points. This forces the attacker to disable all possible
-introduction points.
-
-\emph{Compromise an introduction point.} An attacker who controls
-Bob's introduction point can flood Bob with
-introduction requests, or prevent valid introduction requests from
-reaching him. Bob can notice a flood, and close the circuit.  To notice
-blocking of valid requests, however, he should periodically test the
-introduction point by sending rendezvous requests and making
-sure he receives them.
-
-\emph{Compromise a rendezvous point.}  A rendezvous
-point is no more sensitive than any other OR on
-a circuit, since all data passing through the rendezvous is encrypted
-with a session key shared by Alice and Bob.
-
+%\SubSection{Attacks against rendezvous points}
+%
+%We describe here attacks against rendezvous points and how well
+%the system protects against them.
+%
+%\emph{Make many introduction requests.}  An attacker could
+%try to deny Bob service by flooding his introduction points with
+%requests.  Because the introduction points can block requests that
+%lack authorization tokens, however, Bob can restrict the volume of
+%requests he receives, or require a certain amount of computation for
+%every request he receives.
+%
+%\emph{Attack an introduction point.} An attacker could
+%disrupt a location-hidden service by disabling its introduction
+%points.  But because a service's identity is attached to its public
+%key, the service can simply re-advertise
+%itself at a different introduction point. Advertisements can also be
+%done secretly so that only high-priority clients know the address of
+%Bob's introduction points or so that different clients know of different
+%introduction points. This forces the attacker to disable all possible
+%introduction points.
+%
+%\emph{Compromise an introduction point.} An attacker who controls
+%Bob's introduction point can flood Bob with
+%introduction requests, or prevent valid introduction requests from
+%reaching him. Bob can notice a flood, and close the circuit.  To notice
+%blocking of valid requests, however, he should periodically test the
+%introduction point by sending rendezvous requests and making
+%sure he receives them.
+%
+%\emph{Compromise a rendezvous point.}  A rendezvous
+%point is no more sensitive than any other OR on
+%a circuit, since all data passing through the rendezvous is encrypted
+%with a session key shared by Alice and Bob.
 
 \end{document}
 
