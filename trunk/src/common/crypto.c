@@ -452,7 +452,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   return r;
 }
 
-/* Return true iff env has a good key.
+/* Return true iff env has a valid key.
  */
 int crypto_pk_check_key(crypto_pk_env_t *env)
 {
@@ -543,10 +543,10 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, i
   return r;
 }
 
-/* Check a 'fromlen' bytes signature from 'from' with the public key
- * in 'env', using PKCS1 padding.  On success, write the signed data
- * to 'to', and return the number of bytes written.  On failure,
- * return -1.
+/* Check the signature in 'from' ('fromlen' bytes long) with the
+ * public key in 'env', using PKCS1 padding.  On success, write the
+ * signed data to 'to', and return the number of bytes written.
+ * On failure, return -1.
  */
 int crypto_pk_public_checksig(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
 {
@@ -554,8 +554,10 @@ int crypto_pk_public_checksig(crypto_pk_env_t *env, const unsigned char *from, i
   tor_assert(env && from && to);
   r = RSA_public_decrypt(fromlen, (unsigned char*)from, to, env->key, RSA_PKCS1_PADDING);
 
-  if (r<0)
+  if (r<0) {
     crypto_log_errors(LOG_WARN, "checking RSA signature");
+    return -1;
+  }
   return r;
 }
 
@@ -573,8 +575,10 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, const unsigned char *from, int 
     return -1;
 
   r = RSA_private_encrypt(fromlen, (unsigned char*)from, to, env->key, RSA_PKCS1_PADDING);
-  if (r<0)
+  if (r<0) {
     crypto_log_errors(LOG_WARN, "generating RSA signature");
+    return -1;
+  }
   return r;
 }
 
@@ -770,7 +774,7 @@ int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
 }
 
 /* Decode an ASN.1-encoded public key from str; return the result on
- * success and -1 on failure.
+ * success and NULL on failure.
  */
 crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len)
 {
@@ -879,8 +883,8 @@ int crypto_cipher_generate_key(crypto_cipher_env_t *env)
   return crypto_rand(CIPHER_KEY_LEN, env->key);
 }
 
-/* Set the symmetric key for the cipehr in 'env' to CIPHER_KEY_LEN
- * bytes from 'key'. Does not initialize the cipher.
+/* Set the symmetric key for the cipher in 'env' to the first
+ * CIPHER_KEY_LEN bytes of 'key'. Does not initialize the cipher.
  */
 int crypto_cipher_set_key(crypto_cipher_env_t *env, const unsigned char *key)
 {
@@ -1177,7 +1181,7 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
  * bytes of shared key material and write them to 'secret_out'.
  *
  * (We generate key material by computing
- *         SHA11( g^xy || "\x00" ) || SHA1( g^xy || "\x01" ) || ...
+ *         SHA1( g^xy || "\x00" ) || SHA1( g^xy || "\x01" ) || ...
  * where || is concatenation.)
  *
  */
@@ -1336,7 +1340,8 @@ int crypto_pseudo_rand_int(unsigned int max) {
 
 /* Base-64 encode 'srclen' bytes of data from 'src'.  Write the result
  * into 'dest', if it will fit within 'destlen' bytes.  Return the
- * number of bytes written on success; -1 on failure.
+ * number of bytes written on success; -1 if destlen is too short,
+ * or other failure.
  */
 int
 base64_encode(char *dest, int destlen, const char *src, int srclen)
@@ -1359,7 +1364,8 @@ base64_encode(char *dest, int destlen, const char *src, int srclen)
 
 /* Base-64 decode 'srclen' bytes of data from 'src'.  Write the result
  * into 'dest', if it will fit within 'destlen' bytes.  Return the
- * number of bytes written on success; -1 on failure.
+ * number of bytes written on success; -1 if destlen is too short,
+ * or other failure.
  */
 int
 base64_decode(char *dest, int destlen, const char *src, int srclen)
