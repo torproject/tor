@@ -169,28 +169,86 @@ seems overkill (and/or insecure) based on the threat model we've picked.
 \section{Crossroads: Policy issues}
 \label{sec:crossroads-policy}
 
-\subsection{Tor and blacklists}
+Many of the issues the Tor project needs to address are not just a
+matter of system design or technology development. In particular, the
+Tor project's \emph{image} with respect to its users and the rest of
+the Internet impacts the security it can provide.
 
-Takedowns and efnet abuse and wikipedia complaints and irc
-networks.
+As an example to motivate this section, some U.S.~Department of Enery
+penetration testing engineers are tasked with compromising DoE computers
+from the outside. They only have a limited number of ISPs from which to
+launch their attacks, and they found that the defenders were recognizing
+attacks because they came from the same IP space. These engineers wanted
+to use Tor to hide their tracks. First, from a technical standpoint,
+Tor does not support the variety of IP packets they would like to use in
+such attacks (see Section \ref{subsec:ip-vs-tcp}). But aside from this,
+we also decided that it would probably be poor precedent to encourage
+such use -- even legal use that improves national security -- and managed
+to dissuade them.
 
-\subsection{Tor and file-sharing}
+With this image issue in mind, here we discuss the Tor user base and
+Tor's interaction with other services on the Internet.
 
-Bittorrent and dmca. Should we add an IDS to autodetect protocols and
-snipe them?
+\subsection{Usability}
 
-\subsection{Image and sustainability}
+Usability: fc03 paper was great, except the lower latency you are the
+less useful it seems it is.
+A Tor gui, how jap's gui is nice but does not reflect the security
+they provide.
+Public perception, and thus advertising, is a security parameter.
+
+
+\subsection{Image, usability, and sustainability}
 
 Image: substantial non-infringing uses. Image is a security parameter,
 since it impacts user base and perceived sustainability.
-
-good uses are kept private, bad uses are publicized. not good.
 
 Sustainability. Previous attempts have been commercial which we think
 adds a lot of unnecessary complexity and accountability. Freedom didn't
 collect enough money to pay its servers; JAP bandwidth is supported by
 continued money, and they periodically ask what they will do when it
 dries up.
+
+good uses are kept private, bad uses are publicized. not good.
+
+\subsection{Reputability}
+
+Yet another factor in the safety of a given network is its reputability:
+the perception of its social value based on its current users. If I'm
+the only user of a system, it might be socially accepted, but I'm not
+getting any anonymity. Add a thousand Communists, and I'm anonymous,
+but everyone thinks I'm a Commie. Add a thousand random citizens (cancer
+survivors, privacy enthusiasts, and so on) and now I'm hard to profile.
+
+The more cancer survivors on Tor, the better for the human rights
+activists. The more script kiddies, the worse for the normal users. Thus,
+reputability is an anonymity issue for two reasons. First, it impacts
+the sustainability of the network: a network that's always about to be
+shut down has difficulty attracting and keeping users, so its anonymity
+set suffers. Second, a disreputable network attracts the attention of
+powerful attackers who may not mind revealing the identities of all the
+users to uncover the few bad ones.
+
+While people therefore have an incentive for the network to be used for
+``more reputable'' activities than their own, there are still tradeoffs
+involved when it comes to anonymity. To follow the above example, a
+network used entirely by cancer survivors might welcome some Communists
+onto the network, though of course they'd prefer a wider variety of users.
+
+The impact of public perception on security is especially important
+during the bootstrapping phase of the network, where the first few
+widely publicized uses of the network can dictate the types of users it
+attracts next.
+
+\subsection{Tor and file-sharing}
+
+Bittorrent and dmca. Should we add an IDS to autodetect protocols and
+snipe them?
+
+\subsection{Tor and blacklists}
+
+Takedowns and efnet abuse and wikipedia complaints and irc
+networks.
 
 \subsection{Other}
 
@@ -287,24 +345,95 @@ attacks. Would be nice to have hot-swap services, but hard to design.
 
 
 
-%\section{Crossroads: Scaling}
+\section{Crossroads: Scaling}
 %\label{sec:crossroads-scaling}
 %P2P + anonymity issues:
 
+Tor is running today with thousands of users, and the current design
+can handle hundreds of servers and probably tens of thousands of users;
+but it will certainly not scale to millions.
+
+Scaling Tor involves three main challenges.  First is safe server
+discovery, both bootstrapping -- how a Tor client can robustly find an
+initial server list -- and ongoing -- how a Tor client can learn about
+a fair sample of honest servers and not let the adversary control his
+circuits (see Section x).  Second is detecting and handling the speed
+and reliability of the variety of servers we must use if we want to
+accept many servers (see Section y).
+Since the speed and reliability of a circuit is limited by its worst link,
+we must learn to track and predict performance.  Finally, in order to get
+a large set of servers in the first place, we must address incentives
+for users to carry traffic for others (see Section incentives).
+
 \subsection{Incentives}
 
-Copy the page I wrote for the NSF proposal, and maybe extend
-it if we're feeling smart.
+There are three behaviors we need to encourage for each server: relaying
+traffic; providing good throughput and reliability while doing it;
+and allowing traffic to exit the network from that server.
 
-\subsection{Usability}
+We encourage these behaviors through \emph{indirect} incentives, that
+is, designing the system and educating users in such a way that users
+with certain goals will choose to relay traffic.  In practice, the
+main incentive for running a Tor server is social benefit: volunteers
+altruistically donate their bandwidth and time.  We also keep public
+rankings of the throughput and reliability of servers, much like
+seti@home.  We further explain to users that they can get \emph{better
+security} by operating a server, because they get plausible deniability
+(indeed, they may not need to route their own traffic through Tor at all
+-- blending directly with other traffic exiting Tor may be sufficient
+protection for them), and because they can use their own Tor server
+as entry or exit point and be confident it's not run by the adversary.
+Finally, we can improve the usability and feature set of the software:
+rate limiting support and easy packaging decrease the hassle of
+maintaining a server, and our configurable exit policies allow each
+operator to advertise a policy describing the hosts and ports to which
+he feels comfortable connecting.
 
-Usability: fc03 paper was great, except the lower latency you are the
-less useful it seems it is.
-A Tor gui, how jap's gui is nice but does not reflect the security
-they provide.
-Public perception, and thus advertising, is a security parameter.
+Beyond these, however, there is also a need for \emph{direct} incentives:
+providing payment or other resources in return for high-quality service.
+Paying actual money is problematic: decentralized e-cash systems are
+not yet practical, and a centralized collection system not only reduces
+robustness, but also has failed in the past (the history of commercial
+anonymizing networks is littered with failed attempts).  A more promising
+option is to use a tit-for-tat incentive scheme: provide better service
+to nodes that have provided good service to you.
 
-Peer-to-peer / practical issues:
+Unfortunately, such an approach introduces new anonymity problems.
+Does the incentive system enable the adversary to attract more traffic by
+performing well? Typically a user who chooses evenly from all options is
+most resistant to an adversary targetting him, but that approach prevents
+us from handling heterogeneous servers \cite{casc-rep}.
+When a server (call him Steve) performs well for Alice, does Steve gain
+reputation with the entire system, or just with Alice? If the entire
+system, how does Alice tell everybody about her experience in a way that
+prevents her from lying about it yet still protects her identity? If
+Steve's behavior only affects Alice's behavior, does this allow Steve to
+selectively perform only for Alice, and then break her anonymity later
+when somebody (presumably Alice) routes through his node?
+
+These are difficult and open questions, yet choosing not to scale means
+leaving most users to a less secure network or no anonymizing network
+at all.  We will start with a simplified approach to the tit-for-tat
+incentive scheme based on two rules: (1) each node should measure the
+service it receives from adjacent nodes, and provide service relative to
+the received service, but (2) when a node is making decisions that affect
+its own security (e.g. when building a circuit for its own application
+connections), it should choose evenly from a sufficiently large set of
+nodes that meet some minimum service threshold.  This approach allows us
+to discourage bad service without opening Alice up as much to attacks.
+
+%XXX rewrite the above so it sounds less like a grant proposal and
+%more like a "if somebody were to try to solve this, maybe this is a
+%good first step".
+
+%We should implement the above incentive scheme in the
+%deployed Tor network, in conjunction with our plans to add the necessary
+%associated scalability mechanisms.  We will do experiments (simulated
+%and/or real) to determine how much the incentive system improves
+%efficiency over baseline, and also to determine how far we are from
+%optimal efficiency (what we could get if we ignored the anonymity goals).
+
+\subsection{Peer-to-peer / practical issues}
 
 Network discovery, sybil, node admission, scaling. It seems that the code
 will ship with something and that's our trust root. We could try to get
