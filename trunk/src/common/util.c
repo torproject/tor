@@ -4,14 +4,6 @@
 
 #include "../or/or.h"
 
-#ifdef MS_WINDOWS
-#include <io.h>
-#include <limits.h>
-#include <process.h>
-#endif
-
-#include "util.h"
-#include "log.h"
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
 #endif
@@ -29,6 +21,7 @@ void *tor_malloc(size_t size) {
     log_fn(LOG_ERR, "Out of memory. Dying.");
     exit(1);
   }
+  memset(result,'X',size); /* XXX deadbeef to encourage bugs */
 
   return result;
 }
