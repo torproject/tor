@@ -837,11 +837,11 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
              router->nickname, i);
       continue; /* skip routers that are known to be down */
     }
-    if(!router->is_verified) {
+    if(!router->is_verified &&
+       !(options._AllowUnverified & ALLOW_UNVERIFIED_EXIT)) {
       n_supported[i] = -1;
       log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- unverified router.",
              router->nickname, i);
-      /* XXX008 maybe one day allow unverified routers as exits */
       continue; /* skip unverified routers */
     }
     if(router_exit_policy_rejects_all(router)) {
@@ -948,7 +948,8 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
     case CIRCUIT_PURPOSE_C_GENERAL:
       return choose_good_exit_server_general(dir);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-      r = router_choose_random_node(options.RendNodes, options.RendExcludeNodes, NULL, 0, 1, 0);
+      r = router_choose_random_node(options.RendNodes, options.RendExcludeNodes,
+          NULL, 0, 1, options._AllowUnverified & ALLOW_UNVERIFIED_RENDEZVOUS, 0);
       return r;
     default:
       log_fn(LOG_WARN,"unhandled purpose %d", purpose);
@@ -1103,7 +1104,8 @@ static routerinfo_t *choose_good_middle_server(cpath_build_state_t *state,
     tor_assert(r);
     smartlist_add(excluded, r);
   }
-  choice = router_choose_random_node("", options.ExcludeNodes, excluded, 0, 1, 0);
+  choice = router_choose_random_node("", options.ExcludeNodes, excluded,
+           0, 1, options._AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
   smartlist_free(excluded);
   return choice;
 }
@@ -1134,9 +1136,9 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
          smartlist_add(excluded, r);
     }
   }
-  choice = router_choose_random_node(options.EntryNodes,
-                                     options.ExcludeNodes, excluded, 0, 1,
-                                     options.StrictEntryNodes);
+  choice = router_choose_random_node(options.EntryNodes, options.ExcludeNodes,
+           excluded, 0, 1, options._AllowUnverified & ALLOW_UNVERIFIED_ENTRY,
+           options.StrictEntryNodes);
   smartlist_free(excluded);
   return choice;
 }

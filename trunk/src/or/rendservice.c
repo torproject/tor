@@ -9,6 +9,8 @@
 
 #include "or.h"
 
+extern or_options_t options; /* command-line and config-file options */
+
 static circuit_t *find_intro_circuit(routerinfo_t *router, const char *pk_digest);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
@@ -821,8 +823,8 @@ void rend_services_introduce(void) {
     /* The directory is now here. Pick three ORs as intro points. */
     for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
       router = router_choose_random_node(service->intro_prefer_nodes,
-                                         service->intro_exclude_nodes,
-                                         exclude_routers, 1, 0, 0);
+               service->intro_exclude_nodes, exclude_routers, 1, 0,
+               options._AllowUnverified & ALLOW_UNVERIFIED_INTRODUCTION, 0);
       if (!router) {
         log_fn(LOG_WARN, "Could only establish %d introduction points for %s",
                smartlist_len(service->intro_nodes), service->service_id);
