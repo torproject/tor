@@ -1,0 +1,165 @@
+
+
+
+Challenges in bringing low-latency stream anonymity to the masses
+
+
+\section{Introduction}
+
+We deployed this thing called Tor. it's got all these different types of
+users. it's been backed by navy and eff, and prime and anonymizer looked at
+it. Because we're this cool, you should believe us when we tell you stuff.
+
+In this paper we give the reader an understanding of Tor's context
+in the anonymity space and then we go on to describe the variety of
+practical challenges that stand in the way of moving from a practical
+useful network to a practical useful anonymous network.
+
+% The goal of the paper is to get the PET-audience reader up to speed
+% on all the issues we have with Tor, so he can, if he wants,
+% * understand the technical and policy and legal issues and why they're
+%   tricky in practice
+% * help us out with answering some of the technical decisions
+%   (and in writing it, we'll clarify our own opinions about them)
+% * help us out with answering some of the anonymity questions
+
+\section{What Is Tor}
+
+Tor works like this.
+
+weasel's graph of # nodes and of bandwidth, ideally from week 0.
+
+Tor has the following goals.
+
+and we made these assumptions when trying to design the thing.
+
+\section{Tor's position in the anonymity field}
+
+There are many other classes of systems: single-hop proxies, open proxies,
+jap, mixminion, flash mixes, freenet, i2p, mute/ants/etc, tarzan,
+morphmix, freedom. Give brief descriptions and brief characterizations
+of how we differ. This is not the breakthrough stuff and we only have
+a page or two for it.
+
+
+\section{Crossroads}
+
+Discuss each item that Tor hasn't solved yet that isn't just coding
+work.  Perhaps we'll have so many that we can pick out the best ones to
+discuss, so it's a bit less of a laundry list. Maybe they'll even fit
+into categories. The trick to making the paper good will be to find
+the right balance between going into depth and breadth of coverage.
+
+
+Peer-to-peer / practical issues:
+
+Network discovery, sybil, node admission, scaling. It seems that the code
+will ship with something and that's our trust root. We could try to get
+people to build a web of trust, but no. Where we go from here depends
+on what threats we have in mind. Really decentralized if your threat is
+RIAA; less so if threat is to application data or individuals or...
+
+Making use of servers with little bandwidth. How to handle hammering by
+certain applications.
+
+Handling servers that are far away from the rest of the network, e.g. on
+the continents that aren't North America and Europe. High latency,
+often high packet loss.
+
+Running Tor servers behind NATs, behind great-firewalls-of-China, etc.
+Restricted routes. How to propagate to everybody the topology? BGP
+style doesn't work because we don't want just *one* path. Point to
+Geoff's stuff.
+
+Routing-zones. It seems that our threat model comes down to diversity and
+dispersal. But hard for Alice to know how to act. Many questions remain.
+
+The China problem. We have lots of users in Iran and similar (we stopped
+logging, so it's hard to know now, but many Persian sites on how to use
+Tor), and they seem to be doing ok. But the China problem is bigger. Cite
+Stefan's paper, and talk about how we need to route through clients,
+and we maybe we should start with a time-release IP publishing system +
+advogato based reputation system, to bound the number of IPs leaked to the
+adversary.
+
+
+Policy issues:
+
+Bittorrent and dmca. Should we add an IDS to autodetect protocols and
+snipe them? Takedowns and efnet abuse and wikipedia complaints and irc
+networks. Should we allow revocation of anonymity if a threshold of
+servers want to?
+
+Logging. Making logs not revealing. A happy coincidence that verbose
+logging is our #2 performance bottleneck. Is there a way to detect
+modified servers, or to have them volunteer the information that they're
+logging verbosely? Would that actually solve any attacks?
+
+
+Anonymity issues:
+
+Transporting the stream vs transporting the packets.
+
+The DNS problem in practice.
+
+Applications that leak data. We can say they're not our problem, but
+they're somebody's problem.
+
+How to measure performance without letting people selectively deny service
+by distinguishing pings. Heck, just how to measure performance at all. In
+practice people have funny firewalls that don't match up to their exit
+policies and Tor doesn't deal.
+
+Mid-latency. Can we do traffic shape to get any defense against George's
+PET2004 paper? Will padding or long-range dummies do anything then? Will
+it kill the user base or can we get both approaches to play well together?
+
+Does running a server help you or harm you? George's Oakland attack.
+Plausible deniability -- without even running your traffic through Tor! We
+have to pick the path length so adversary can't distinguish client from
+server (how many hops is good?).
+
+When does fixing your entry or exit node help you?
+Helper nodes in the literature don't deal with churn, and
+especially active attacks to induce churn.
+
+Survivable services are new in practice, yes? Hidden services seem
+less hidden than we'd like, since they stay in one place and get used
+a lot. They're the epitome of the need for helper nodes. This means
+that using Tor as a building block for Free Haven is going to be really
+hard. Also, they're brittle in terms of intersection and observation
+attacks. Would be nice to have hot-swap services, but hard to design.
+
+
+P2P + anonymity issues:
+
+Incentives. Copy the page I wrote for the NSF proposal, and maybe extend
+it if we're feeling smart.
+
+Usability: fc03 paper was great, except the lower latency you are the
+less useful it seems it is.
+A Tor gui, how jap's gui is nice but does not reflect the security
+they provide.
+Public perception, and thus advertising, is a security parameter.
+
+Network investigation: Is all this bandwidth publishing thing a good idea?
+How can we collect stats better? Note weasel's smokeping, at
+http://seppia.noreply.org/cgi-bin/smokeping.cgi?target=Tor
+which probably gives george and steven enough info to break tor?
+
+Do general DoS attacks have anonymity implications? See e.g. Adam
+Back's IH paper, but I think there's more to be pointed out here.
+
+% need to do somewhere in the paper:
+
+have a serious discussion of morphmix's assumptions, since they would
+seem to be the direct competition. in fact tor is a flexible architecture
+that would encompass morphmix, and they're nearly identical except for
+path selection and node discovery. and the trust system morphmix has
+seems overkill (and/or insecure) based on the threat model we've picked.
+
+need to discuss how we take the approach of building the thing, and then
+assuming that, how much anonymity can we get. we're not here to model or
+to simulate or to produce equations and formulae. but those have their
+roles too.
+
