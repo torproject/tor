@@ -44,7 +44,7 @@ struct aes_cnt_cipher {
   u8 pos;
 };
 
-static void 
+static void
 _aes_fill_buf(aes_cnt_cipher_t *cipher)
 {
   u32 counter0 = cipher->counter0;

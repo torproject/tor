@@ -164,7 +164,7 @@ const char *eat_whitespace(const char *s) {
 }
 
 const char *eat_whitespace_no_nl(const char *s) {
-  while(*s == ' ' || *s == '\t') 
+  while(*s == ' ' || *s == '\t')
     ++s;
   return s;
 }
@@ -250,11 +250,11 @@ static int n_leapdays(int y1, int y2) {
   --y2;
   return (y2/4 - y1/4) - (y2/100 - y1/100) + (y2/400 - y1/400);
 }
-static const int days_per_month[] = 
+static const int days_per_month[] =
   { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 time_t tor_timegm (struct tm *tm) {
-  /* This is a pretty ironclad timegm implementation, snarfed from Python2.2. 
+  /* This is a pretty ironclad timegm implementation, snarfed from Python2.2.
    * It's way more brute-force than fiddling with tzset().
    */
   time_t ret;
@@ -270,7 +270,7 @@ time_t tor_timegm (struct tm *tm) {
     ++days;
   days += tm->tm_mday - 1;
   hours = days*24 + tm->tm_hour;
-  
+
   minutes = hours*60 + tm->tm_min;
   ret = minutes*60 + tm->tm_sec;
   return ret;
@@ -380,7 +380,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     struct sockaddr_in listen_addr;
     struct sockaddr_in connect_addr;
     int size;
-    
+
     if (protocol
 #ifdef AF_UNIX
         || family != AF_UNIX
@@ -495,7 +495,7 @@ file_status_t file_status(const char *fname)
     }
     return FN_ERROR;
   }
-  if (st.st_mode & S_IFDIR) 
+  if (st.st_mode & S_IFDIR)
     return FN_DIR;
   else if (st.st_mode & S_IFREG)
     return FN_FILE;
@@ -510,17 +510,17 @@ int check_private_dir(const char *dirname, int create)
   struct stat st;
   if (stat(dirname, &st)) {
     if (errno != ENOENT) {
-      log(LOG_WARN, "Directory %s cannot be read: %s", dirname, 
+      log(LOG_WARN, "Directory %s cannot be read: %s", dirname,
           strerror(errno));
       return -1;
-    } 
+    }
     if (!create) {
       log(LOG_WARN, "Directory %s does not exist.", dirname);
       return -1;
     }
-    log(LOG_INFO, "Creating directory %s", dirname); 
+    log(LOG_INFO, "Creating directory %s", dirname);
     if (mkdir(dirname, 0700)) {
-      log(LOG_WARN, "Error creating directory %s: %s", dirname, 
+      log(LOG_WARN, "Error creating directory %s: %s", dirname,
           strerror(errno));
       return -1;
     } else {
@@ -538,7 +538,7 @@ int check_private_dir(const char *dirname, int create)
   if (st.st_mode & 0077) {
     log(LOG_WARN, "Fixing permissions on directory %s", dirname);
     if (chmod(dirname, 0700)) {
-      log(LOG_WARN, "Could not chmod directory %s: %s", dirname, 
+      log(LOG_WARN, "Could not chmod directory %s: %s", dirname,
           strerror(errno));
       return -1;
     } else {
@@ -561,12 +561,12 @@ write_str_to_file(const char *fname, const char *str)
   strcpy(tempname,fname);
   strcat(tempname,".tmp");
   if ((fd = open(tempname, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0) {
-    log(LOG_WARN, "Couldn't open %s for writing: %s", tempname, 
+    log(LOG_WARN, "Couldn't open %s for writing: %s", tempname,
         strerror(errno));
     return -1;
   }
   if (!(file = fdopen(fd, "w"))) {
-    log(LOG_WARN, "Couldn't fdopen %s for writing: %s", tempname, 
+    log(LOG_WARN, "Couldn't fdopen %s for writing: %s", tempname,
         strerror(errno));
     close(fd); return -1;
   }
@@ -615,7 +615,7 @@ char *read_file_to_str(const char *filename) {
     return NULL;
   }
   close(fd);
-  
+
   string[statbuf.st_size] = 0; /* null terminate it */
   return string;
 }
@@ -686,7 +686,7 @@ get_uname(void)
       snprintf(uname_result, 255, "%s %s %s %s %s",
                u.sysname, u.nodename, u.release, u.version, u.machine);
       uname_result[255] = '\0';
-    } else 
+    } else
 #endif
       {
         strcpy(uname_result, "Unknown platform");
@@ -780,7 +780,7 @@ int switch_id(char *user, char *group) {
   return 0;
 #endif
 
-  log_fn(LOG_ERR, 
+  log_fn(LOG_ERR,
          "User or group specified, but switching users is not supported.");
 
   return -1;

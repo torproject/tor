@@ -33,61 +33,61 @@ int
 poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 {
         int idx, maxfd, fd;
-	int r;
+        int r;
 #ifdef MS_WINDOWS
         int any_fds_set = 0;
 #endif
-	fd_set readfds, writefds, exceptfds;
+        fd_set readfds, writefds, exceptfds;
 #ifdef USING_FAKE_TIMEVAL
 #undef timeval
 #undef tv_sec
 #undef tv_usec
 #endif
-	struct timeval _timeout;
-	_timeout.tv_sec = timeout/1000;
-	_timeout.tv_usec = (timeout%1000)*1000;
-	FD_ZERO(&readfds);
-	FD_ZERO(&writefds);
-	FD_ZERO(&exceptfds);
+        struct timeval _timeout;
+        _timeout.tv_sec = timeout/1000;
+        _timeout.tv_usec = (timeout%1000)*1000;
+        FD_ZERO(&readfds);
+        FD_ZERO(&writefds);
+        FD_ZERO(&exceptfds);
 
-	maxfd = -1;
-	for (idx = 0; idx < nfds; ++idx) {
+        maxfd = -1;
+        for (idx = 0; idx < nfds; ++idx) {
                 ufds[idx].revents = 0;
-		fd = ufds[idx].fd;
+                fd = ufds[idx].fd;
                 if (fd > maxfd) {
                   maxfd = fd;
 #ifdef MS_WINDOWS
                   any_fds_set = 1;
 #endif
                 }
-		if (ufds[idx].events & POLLIN)
-			FD_SET(fd, &readfds);
-		if (ufds[idx].events & POLLOUT)
-			FD_SET(fd, &writefds);
-		FD_SET(fd, &exceptfds);
-	}
+                if (ufds[idx].events & POLLIN)
+                        FD_SET(fd, &readfds);
+                if (ufds[idx].events & POLLOUT)
+                        FD_SET(fd, &writefds);
+                FD_SET(fd, &exceptfds);
+        }
 #ifdef MS_WINDOWS
         if (!any_fds_set) {
                 Sleep(timeout);
                 return 0;
         }
 #endif
-	r = select(maxfd+1, &readfds, &writefds, &exceptfds, 
-		   timeout == -1 ? NULL : &_timeout);
-	if (r <= 0)
-		return r;
-	r = 0;
-	for (idx = 0; idx < nfds; ++idx) {
-		fd = ufds[idx].fd;
-		if (FD_ISSET(fd, &readfds))
-			ufds[idx].revents |= POLLIN;
-		if (FD_ISSET(fd, &writefds))
-			ufds[idx].revents |= POLLOUT;
-		if (FD_ISSET(fd, &exceptfds))
-			ufds[idx].revents |= POLLERR;
-		if (ufds[idx].revents)
-			++r;
-	}
-	return r;
+        r = select(maxfd+1, &readfds, &writefds, &exceptfds,
+                   timeout == -1 ? NULL : &_timeout);
+        if (r <= 0)
+                return r;
+        r = 0;
+        for (idx = 0; idx < nfds; ++idx) {
+                fd = ufds[idx].fd;
+                if (FD_ISSET(fd, &readfds))
+                        ufds[idx].revents |= POLLIN;
+                if (FD_ISSET(fd, &writefds))
+                        ufds[idx].revents |= POLLOUT;
+                if (FD_ISSET(fd, &exceptfds))
+                        ufds[idx].revents |= POLLERR;
+                if (ufds[idx].revents)
+                        ++r;
+        }
+        return r;
 }
 #endif
