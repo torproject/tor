@@ -1160,6 +1160,8 @@ int connection_tls_start_handshake(connection_t *conn, int receiving);
 int connection_tls_continue_handshake(connection_t *conn);
 
 void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn);
+void connection_or_update_nickname(connection_t *conn);
+
 
 /********************************* cpuworker.c *****************************/
 
