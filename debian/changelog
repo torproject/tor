@@ -4,8 +4,9 @@ tor (0.0.1+0.0.2pre20-3) UNRELEASED; urgency=low
     than tsocks (which is now required) by mistake.  Fix that.
   * package description: Mention that the package starts the OP by default and
     that OR can be enabled in the config.
+  * tor moved to sbin, updating init script.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 17 Feb 2004 05:56:20 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 17 Feb 2004 05:57:48 +0100
 
 tor (0.0.1+0.0.2pre20-2) unstable; urgency=low
 
