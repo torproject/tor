@@ -1,6 +1,6 @@
 
 AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.1.0.1-rc-cvs)
+AM_INIT_AUTOMAKE(tor, 0.1.0.2-rc)
 AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST
