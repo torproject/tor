@@ -68,6 +68,14 @@
 #include "log.h"
 #include "util.h"
 
+/* Inline the strl functions if the plaform doesn't have them. */
+#ifndef HAVE_STRLCPY
+#include "strlcpy.c"
+#endif
+#ifndef HAVE_STRLCAT
+#include "strlcat.c"
+#endif
+
 /** Replacement for snprintf.  Differs from platform snprintf in two
  * ways: First, always NUL-terminates its output.  Second, always
  * returns -1 if the result is truncated.  (Note that this return

@@ -46,9 +46,6 @@ char *tor_strndup(const char *s, size_t n);
 
 /* String manipulation */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
-size_t strlcat(char *dst, const char *src, size_t siz);
-size_t strlcpy(char *dst, const char *src, size_t siz);
-
 void tor_strlower(char *s);
 int strcmpstart(const char *s1, const char *s2);
 int tor_strstrip(char *s, const char *strip);

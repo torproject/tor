@@ -143,8 +143,7 @@ dnl These headers are not essential
 
 AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h)
 
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit)
-AC_REPLACE_FUNCS(strlcat strlcpy)
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy)
 
 AC_CHECK_MEMBERS([struct timeval.tv_sec])
 
@@ -233,10 +232,10 @@ AC_SUBST(LOCALSTATEDIR)
 
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
-CFLAGS="$CFLAGS -Wall -W -Wno-unused-parameter -Wfloat-equal -Wdeclaration-after-statement -Wundef -Wendif-labels -Wpointer-arith -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wredundant-decls -g -O2"
+CFLAGS="$CFLAGS -Wall -W -Wno-unused-parameter -Wfloat-equal -Wundef -Wendif-labels -Wpointer-arith -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wredundant-decls -g -O2"
 
 # Add these in when you feel like fun.
-# -Wbad-function-cast -Werror
+# -Wbad-function-cast -Werror  -Wdeclaration-after-statement
 
 echo "confdir: $CONFDIR"
 
