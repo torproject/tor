@@ -693,7 +693,6 @@ void onion_pending_remove(circuit_t *circ);
 
 int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
 
-crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop);
 int onion_extend_cpath(crypt_path_t **head_ptr, int path_len, routerinfo_t **router_out);
 
 int onion_skin_create(crypto_pk_env_t *router_key,
