@@ -1097,6 +1097,8 @@ void exit_policy_free(struct exit_policy_t *p);
 const char *get_data_directory(or_options_t *options);
 struct config_line_t *config_get_assigned_option(or_options_t *options,
                                                  const char *key);
+struct config_line_t *config_line_prepend(struct config_line_t *front,
+                                          const char *key, const char *val);
 
 /********************************* connection.c ***************************/
 
@@ -1301,6 +1303,9 @@ int dns_resolve(connection_t *exitconn);
 
 /********************************* hibernate.c **********************/
 
+void configure_accounting(time_t now);
+void accounting_run_housekeeping(time_t now);
+void accounting_add_bytes(size_t n_read, size_t n_written, int seconds);
 void hibernate_begin_shutdown(void);
 int we_are_hibernating(void);
 void consider_hibernation(time_t now);
@@ -1331,11 +1336,6 @@ int proxy_mode(void);
 
 void handle_signals(int is_parent);
 void tor_cleanup(void);
-
-int accounting_hard_limit_reached(void);
-int accounting_soft_limit_reached(void);
-time_t accounting_get_wakeup_time(void);
-int accounting_should_hibernate(void);
 
 int tor_main(int argc, char *argv[]);
 
