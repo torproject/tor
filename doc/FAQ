@@ -70,7 +70,7 @@ and you're all set. If you want to run a router, you can do so by
 enabling ORPort, which will make your router get used for some things.
 However, in order to get used for everything, you must become a "verified"
 router.  Simply convince the directory server operators (mail
-tor-ops@freehaven.net) that you're a trustworthy and reliable person.
+tor-ops@freehaven.net) that you have a stable machine with enough bandwidth.
 From there, the operators add you to the directory, which propagates out
 to the rest of the network. All nodes will know about you within a half
 hour.  Once you are verified clients will pick you as entry and exit nodes.
