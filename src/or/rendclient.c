@@ -50,6 +50,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   char payload[LEN_REND_INTRODUCE1];
   char tmp[20+20+128];
   rend_service_descriptor_t *parsed=NULL;
+  crypt_path_t *cpath;
 
   assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   assert(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY);
@@ -73,12 +74,25 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
     goto err;
   }
 
+  /* Initialize the pending_final_cpath and start the DH handshake. */
+  cpath = rendcirc->build_state->pending_final_cpath =
+    tor_malloc_zero(sizeof(crypt_path_t));
+  if (!(cpath->handshake_state = crypto_dh_new())) {
+    log_fn(LOG_WARN, "Couldn't allocate DH");
+    goto err;
+  }
+  if (crypto_dh_generate_public(cpath->handshake_state)<0) {
+    log_fn(LOG_WARN, "Couldn't generate g^x");
+    goto err;
+  }
+
   /* write the remaining items into tmp */
   strncpy(tmp, rendcirc->build_state->chosen_exit, 20); /* nul pads */
   memcpy(tmp+20, rendcirc->rend_cookie, 20);
-  memset(tmp+40, 0, 128); /* XXX g^x is all zero's for now */
-
-  /* XXX copy the appropriate stuff into rendcirc's pending_final_cpath */
+  if (crypto_dh_get_public(cpath->handshake_state, tmp+40, 128)<0) {
+    log_fn(LOG_WARN, "Couldn't extract g^x");
+    goto err;
+  }
 
   if(crypto_pk_public_hybrid_encrypt(parsed->pk, tmp,
                                      20+20+128, payload+20,
