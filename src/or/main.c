@@ -261,14 +261,17 @@ void connection_start_writing(connection_t *conn) {
 }
 
 static void conn_read(int i) {
-  connection_t *conn;
+  connection_t *conn = connection_array[i];
 
+  /* see http://www.greenend.org.uk/rjk/2001/06/poll.html for
+   * discussion of POLLIN vs POLLHUP */
   if(!(poll_array[i].revents & (POLLIN|POLLHUP|POLLERR)))
-    return; /* this conn doesn't want to read */
-    /* see http://www.greenend.org.uk/rjk/2001/06/poll.html for
-     * discussion of POLLIN vs POLLHUP */
+    if(!connection_speaks_cells(conn) ||
+       conn->state != OR_CONN_STATE_OPEN ||
+       !connection_is_reading(conn) ||
+       !tor_tls_get_pending_bytes(conn->tls)) 
+      return; /* this conn should not read */
 
-  conn = connection_array[i];
   log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
  
   assert_connection_ok(conn, time(NULL));
@@ -340,8 +343,9 @@ static void check_conn_marked(int i) {
 
 static int prepare_for_poll(void) {
   int i;
+  int timeout;
   connection_t *conn;
-  struct timeval now; //soonest;
+  struct timeval now;
   static long current_second = 0; /* from previous calls to gettimeofday */
   static long time_to_fetch_directory = 0;
   static long time_to_new_circuit = 0;
@@ -350,6 +354,7 @@ static int prepare_for_poll(void) {
   circuit_t *circ;
 
   my_gettimeofday(&now);
+  timeout = (1000 - (now.tv_usec / 1000)); /* how many milliseconds til the next second? */
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
@@ -404,6 +409,8 @@ static int prepare_for_poll(void) {
       /* check connections to see whether we should send a keepalive, expire, or wait */
       if(!connection_speaks_cells(conn))
         continue; /* this conn type doesn't send cells */
+      if(connection_state_is_open(conn) && tor_tls_get_pending_bytes(conn->tls))
+        timeout = 0; /* has pending bytes to read; don't let poll wait. */
       if(now.tv_sec >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
         if((!options.OnionRouter && !circuit_get_by_conn(conn)) ||
            (!connection_state_is_open(conn))) {
@@ -423,7 +430,8 @@ static int prepare_for_poll(void) {
       }
     }
     /* blow away any connections that need to die. can't do this later
-     * because we might open up a circuit and not realize it we're about to cull it.
+     * because we might open up a circuit and not realize we're about to cull
+     * the connection it's running over.
      */
     for(i=0;i<nfds;i++)
       check_conn_marked(i); 
@@ -431,7 +439,7 @@ static int prepare_for_poll(void) {
     current_second = now.tv_sec; /* remember which second it is, for next time */
   }
 
-  return (1000 - (now.tv_usec / 1000)); /* how many milliseconds til the next second? */
+  return timeout;
 }
 
 static crypto_pk_env_t *init_key_from_file(const char *fname)
@@ -828,6 +836,7 @@ list_running_servers(char **nicknames_out)
     length += strlen(nickname_lst[i]);
   }
   *nicknames_out = tor_malloc(length);
+  log_fn(LOG_DEBUG,"total length %d malloced.",length);
   cp = *nicknames_out;
   for (i = 0; i<n; ++i) {
     if (i)
@@ -835,6 +844,8 @@ list_running_servers(char **nicknames_out)
     strcat(cp, nickname_lst[i]);
     while (*cp) 
       ++cp;
+    log_fn(LOG_DEBUG,"end of loop %d, now %d written (nick %s)",
+           i,1+(int)(cp-*nicknames_out),nickname_lst[i]);
   }
   return 0;
 }

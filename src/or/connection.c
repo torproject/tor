@@ -25,7 +25,7 @@ char *conn_type_to_string[] = {
   "CPU worker",  /* 11 */
 };
 
-char *conn_state_to_string[][15] = {
+char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
 	{ NULL },         /* no type associated with 0 */
   { "ready" }, /* op listener, 0 */
   { "awaiting keys", /* op, 0 */
@@ -509,9 +509,6 @@ int connection_read_to_buf(connection_t *conn) {
       return 0;
     }
   }
-  if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING)
-    if(result == at_most)
-      return connection_read_to_buf(conn);
   return 0;
 }
 
