@@ -28,6 +28,7 @@ const char *circuit_state_to_string[] = {
 
 static void circuit_free(circuit_t *circ);
 static void circuit_free_cpath(crypt_path_t *cpath);
+static void circuit_free_cpath_node(crypt_path_t *victim);
 
 /** Add <b>circ</b> to the global list of circuits. This is called only from
  * within circuit_new.
@@ -148,8 +149,8 @@ static void circuit_free_cpath(crypt_path_t *cpath) {
 }
 
 /** Deallocate space associated with the cpath node <b>victim</b>. */
-/* XXX rewrite so the call from circuitbuild isn't necessary */
-void circuit_free_cpath_node(crypt_path_t *victim) {
+static void
+circuit_free_cpath_node(crypt_path_t *victim) {
   if(victim->f_crypto)
     crypto_free_cipher_env(victim->f_crypto);
   if(victim->b_crypto)
