@@ -4,7 +4,7 @@ TORBIN=@BINDIR@/tor
 TORPID=@LOCALSTATEDIR@/run/tor.pid
 TORLOG=@LOCALSTATEDIR@/log/tor/tor.log
 TORCONF=@CONFDIR@/torrc
-TORARGS="-l warn"
+TORARGS="--pidfile $TORPID --logfile $TORLOG --runasdaemon 1"
 RETVAL=0
 
 case "$1" in
@@ -16,7 +16,7 @@ case "$1" in
         RETVAL=1
     else 
         echo -n "Starting tor..."
-        $TORBIN -f $TORCONF $TORARGS >$TORLOG 2>&1 &
+        $TORBIN -f $TORCONF $TORARGS
         RETVAL=$?
         if [ $RETVAL -eq 0 ]; then
             echo " ok"
