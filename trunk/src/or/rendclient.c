@@ -2,13 +2,14 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/*****
- * rendclient.c: Client code to access location-hiddenn services.
- *****/
+/**
+ * \file rendclient.c
+ * \brief Client code to access location-hiddenn services.
+ **/
 
 #include "or.h"
 
-/* Called when we've established a circuit to an introduction point:
+/** Called when we've established a circuit to an introduction point:
  * send the introduction request. */
 void
 rend_client_introcirc_is_open(circuit_t *circ)
@@ -20,7 +21,7 @@ rend_client_introcirc_is_open(circuit_t *circ)
   connection_ap_attach_pending();
 }
 
-/* Send the establish-rendezvous cell along a rendezvous circuit. if
+/** Send the establish-rendezvous cell along a rendezvous circuit. if
  * it fails, mark the circ for close and return -1. else return 0.
  */
 int
@@ -46,7 +47,7 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
   return 0;
 }
 
-/* Called when we're trying to connect an ap conn; sends an INTRODUCE1 cell
+/** Called when we're trying to connect an ap conn; sends an INTRODUCE1 cell
  * down introcirc if possible.
  */
 int
@@ -129,7 +130,7 @@ err:
   return -1;
 }
 
-/* Called when a rendezvous circuit is open; sends a establish
+/** Called when a rendezvous circuit is open; sends a establish
  * rendezvous circuit as appropriate. */
 void
 rend_client_rendcirc_is_open(circuit_t *circ)
@@ -147,7 +148,7 @@ rend_client_rendcirc_is_open(circuit_t *circ)
   connection_ap_attach_pending();
 }
 
-/* Called when get an ACK or a NAK for a REND_INTRODUCE1 cell.
+/** Called when get an ACK or a NAK for a REND_INTRODUCE1 cell.
  */
 int
 rend_client_introduction_acked(circuit_t *circ,
@@ -216,7 +217,7 @@ rend_client_introduction_acked(circuit_t *circ,
 }
 
 
-/* If we are not currently fetching a rendezvous service descriptor
+/** If we are not currently fetching a rendezvous service descriptor
  * for the service ID 'query', start a directory connection to fetch a
  * new one.
  */
@@ -233,7 +234,7 @@ rend_client_refetch_renddesc(const char *query)
   }
 }
 
-/* remove failed_intro from ent. if ent now has no intro points, or
+/** remove failed_intro from ent. if ent now has no intro points, or
  * service is unrecognized, then launch a new renddesc fetch.
  *
  * Return -1 if error, 0 if no intro points remain or service
@@ -274,7 +275,7 @@ rend_client_remove_intro_point(char *failed_intro, const char *query)
   return 1;
 }
 
-/* Called when we receive a RENDEZVOUS_ESTABLISHED cell; changes the state of
+/** Called when we receive a RENDEZVOUS_ESTABLISHED cell; changes the state of
  * the circuit to C_REND_READY.
  */
 int
@@ -291,7 +292,7 @@ rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_l
   return 0;
 }
 
-/* Bob sent us a rendezvous cell; join the circuits. */
+/** Bob sent us a rendezvous cell; join the circuits. */
 int
 rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request_len)
 {
@@ -350,7 +351,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request
   return -1;
 }
 
-/* Find all the apconns in state AP_CONN_STATE_RENDDESC_WAIT that
+/** Find all the apconns in state AP_CONN_STATE_RENDDESC_WAIT that
  * are waiting on query. If success==1, move them to the next state.
  * If success==0, fail them.
  */
@@ -388,11 +389,12 @@ void rend_client_desc_fetched(char *query, int success) {
   }
 }
 
+/** Return 0 if one and two are the same service ids, else -1 or 1 */
 int rend_cmp_service_ids(const char *one, const char *two) {
   return strcasecmp(one,two);
 }
 
-/* strdup a nickname for a random introduction
+/** strdup a nickname for a random introduction
  * point of query. return NULL if error.
  */
 char *rend_client_get_random_intro(char *query) {
@@ -423,7 +425,7 @@ char *rend_client_get_random_intro(char *query) {
   return nickname;
 }
 
-/* If address is of the form "y.onion" with a well-formed handle y,
+/** If address is of the form "y.onion" with a well-formed handle y,
  * then put a '\0' after y, lower-case it, and return 0.
  * Else return -1 and change nothing.
  */

@@ -9,26 +9,27 @@
 
 #include "or.h"
 
-/*****
- * routerlist.c: Code to parse descriptors and directories, and to
+/**
+ * \file routerlist.c
+ * \brief Code to parse descriptors and directories, and to
  * maintain and access the global list of routerinfos for known
  * servers.
- *****/
+ **/
 
 
 /****************************************************************************/
 
-extern or_options_t options; /* command-line and config-file options */
+extern or_options_t options; /**< command-line and config-file options */
 
 /****************************************************************************/
 
-/* We parse a directory by breaking it into "tokens", each consisting
+/** We parse a directory by breaking it into "tokens", each consisting
  * of a keyword, a line full of arguments, and a binary object.  The
  * arguments and object are both optional, depending on the keyword
  * type.
  */
 
-/* Enumeration of possible token types.  The ones starting with K_
+/** Enumeration of possible token types.  The ones starting with K_
  * correspond to directory 'keywords'.  _UNRECOGNIZED is for an
  * unrecognized keyword; _ERR is an error in the tokenizing process,
  * _EOF is an end-of-file marker, and _NIL is used to encode
@@ -57,46 +58,46 @@ typedef enum {
   _NIL
 } directory_keyword;
 
-/* Structure to hold a single directory tokon.
+/** Structure to hold a single directory tokon.
  */
 typedef struct directory_token_t {
-  directory_keyword tp;        /* Type of the token. */
-  int n_args;                  /* Number of elements in args */
-  char **args;                 /* Array of arguments from keyword line. */
-  char *object_type;           /* -----BEGIN [object_type]-----*/
-  int object_size;             /* Bytes in object_body */
-  char *object_body;           /* Contents of object, base64-decoded. */
-  crypto_pk_env_t *key;        /* For public keys only. */
-  char *error;                 /* For _ERR tokens only. */
+  directory_keyword tp;        /**< Type of the token. */
+  int n_args;                  /**< Number of elements in args */
+  char **args;                 /**< Array of arguments from keyword line. */
+  char *object_type;           /**< -----BEGIN [object_type]-----*/
+  int object_size;             /**< Bytes in object_body */
+  char *object_body;           /**< Contents of object, base64-decoded. */
+  crypto_pk_env_t *key;        /**< For public keys only. */
+  char *error;                 /**< For _ERR tokens only. */
 } directory_token_t;
 
 /* ********************************************************************** */
 
-/* We use a table of rules to decide how to parse each token type. */
+/** We use a table of rules to decide how to parse each token type. */
 
-/* Rules for how many arguments a keyword can take. */
+/** Rules for how many arguments a keyword can take. */
 typedef enum {
-  NO_ARGS,     /*    (1) no arguments, ever */
-  ARGS,        /*    (2) a list of arguments separated by spaces */
-  CONCAT_ARGS, /* or (3) the rest of the line, treated as a single argument. */
+  NO_ARGS,     /**<    (1) no arguments, ever */
+  ARGS,        /**<    (2) a list of arguments separated by spaces */
+  CONCAT_ARGS, /**< or (3) the rest of the line, treated as a single argument. */
 } arg_syntax;
 
-/* Rules for whether the keyword needs an object. */
+/** Rules for whether the keyword needs an object. */
 typedef enum {
-  NO_OBJ,      /*    (1) no object, ever */
-  NEED_OBJ,    /*    (2) object is required */
-  NEED_KEY,    /*    (3) object is required, and must be a public key. */
-  OBJ_OK,      /* or (4) object is optional. */
+  NO_OBJ,      /**<    (1) no object, ever */
+  NEED_OBJ,    /**<    (2) object is required */
+  NEED_KEY,    /**<    (3) object is required, and must be a public key. */
+  OBJ_OK,      /**< or (4) object is optional. */
 } obj_syntax;
 
-/* Rules for where a keyword can appear. */
+/** Rules for where a keyword can appear. */
 typedef enum {
-  ANY = 0,    /* Appears in router descriptor or in directory sections. */
-  DIR_ONLY,   /* Appears only in directory. */
-  RTR_ONLY,   /* Appears only in router descriptor. */
+  ANY = 0,    /**< Appears in router descriptor or in directory sections. */
+  DIR_ONLY,   /**< Appears only in directory. */
+  RTR_ONLY,   /**< Appears only in router descriptor. */
 } where_syntax;
 
-/* Table mapping keywords to token value and to argument rules. */
+/** Table mapping keywords to token value and to argument rules. */
 static struct {
   char *t; int v; arg_syntax s; obj_syntax os; where_syntax ws;
 } token_table[] = {
@@ -155,12 +156,12 @@ static directory_token_t *get_next_token(const char **s, where_syntax where);
  * descriptors.)
  *****/
 
-/* Global list of all of the routers that we, as an OR or OP, know about. */
+/** Global list of all of the routers that we, as an OR or OP, know about. */
 static routerlist_t *routerlist = NULL;
 
-extern int has_fetched_directory; /* from main.c */
+extern int has_fetched_directory; /**< from main.c */
 
-/* Try to find a running dirserver.  If there are no running dirservers
+/** Try to find a running dirserver.  If there are no running dirservers
  * in our routerlist, reload the routerlist and try again. */
 routerinfo_t *router_pick_directory_server(void) {
   routerinfo_t *choice;
@@ -182,7 +183,7 @@ routerinfo_t *router_pick_directory_server(void) {
   return choice;
 }
 
-/* Pick a random running router with a positive dir_port from our
+/** Pick a random running router with a positive dir_port from our
  * routerlist. */
 static routerinfo_t *router_pick_directory_server_impl(void) {
   int i;
@@ -221,7 +222,7 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
   return dirserver;
 }
 
-/* Given a comma-and-whitespace separated list of nicknames, see which
+/** Given a comma-and-whitespace separated list of nicknames, see which
  * nicknames in 'list' name routers in our routerlist that are
  * currently running.  Add the routerinfos for those routers to 'sl'.
  */
@@ -254,7 +255,7 @@ void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list) {
   }
 }
 
-/* Add every router from our routerlist that is currently running to 'sl'.
+/** Add every router from our routerlist that is currently running to 'sl'.
  */
 void router_add_running_routers_to_smartlist(smartlist_t *sl) {
   routerinfo_t *router;
@@ -272,7 +273,7 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
   }
 }
 
-/* Pick a random running router from a routerlist 'dir'.  If any node
+/** Pick a random running router from a routerlist 'dir'.  If any node
  * named in 'preferred' is available, pick one of those.  Never pick a
  * node named in 'excluded', or whose routerinfo is in
  * 'excludedsmartlist', even if they are the only nodes available.
@@ -310,7 +311,7 @@ routerinfo_t *router_choose_random_node(routerlist_t *dir,
   return choice;
 }
 
-/* Return the router in our routerlist whose address is 'addr' and
+/** Return the router in our routerlist whose address is 'addr' and
  * whose OR port is 'port'. Return NULL if no such router is known.
  */
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
@@ -327,7 +328,7 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
-/* Return the router in our routerlist whose nickname is 'nickname'
+/** Return the router in our routerlist whose nickname is 'nickname'
  * (case insensitive).  Return NULL if no such router is known.
  */
 routerinfo_t *router_get_by_nickname(char *nickname)
@@ -346,12 +347,12 @@ routerinfo_t *router_get_by_nickname(char *nickname)
   return NULL;
 }
 
-/* Set *prouterlist to the current list of all known routers. */
+/** Set *prouterlist to the current list of all known routers. */
 void router_get_routerlist(routerlist_t **prouterlist) {
   *prouterlist = routerlist;
 }
 
-/* Free all storage held by 'router'. */
+/** Free all storage held by 'router'. */
 void routerinfo_free(routerinfo_t *router)
 {
   struct exit_policy_t *e;
@@ -375,7 +376,7 @@ void routerinfo_free(routerinfo_t *router)
   free(router);
 }
 
-/* Allocate a fresh copy of 'router' */
+/** Allocate a fresh copy of 'router' */
 routerinfo_t *routerinfo_copy(const routerinfo_t *router)
 {
   routerinfo_t *r;
@@ -402,7 +403,7 @@ routerinfo_t *routerinfo_copy(const routerinfo_t *router)
   return r;
 }
 
-/* Free all storage held by a routerlist 'rl' */
+/** Free all storage held by a routerlist 'rl' */
 static void routerlist_free(routerlist_t *rl)
 {
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
@@ -412,7 +413,7 @@ static void routerlist_free(routerlist_t *rl)
   tor_free(rl);
 }
 
-/* Mark the router named 'nickname' as non-running in our routerlist. */
+/** Mark the router named 'nickname' as non-running in our routerlist. */
 void router_mark_as_down(char *nickname) {
   routerinfo_t *router = router_get_by_nickname(nickname);
   if(!router) /* we don't seem to know about him in the first place */
@@ -425,7 +426,7 @@ void router_mark_as_down(char *nickname) {
  * Code to parse router descriptors and directories.
  *****/
 
-/* Replace the current router list with the one stored in 'routerfile'. */
+/** Replace the current router list with the one stored in 'routerfile'. */
 int router_set_routerlist_from_file(char *routerfile)
 {
   char *string;
@@ -447,7 +448,7 @@ int router_set_routerlist_from_file(char *routerfile)
   return 0;
 }
 
-/* Helper function: read routerinfo elements from s, and throw out the
+/** Helper function: read routerinfo elements from s, and throw out the
  * ones that don't parse and resolve.  Replace the current
  * routerlist. */
 int router_set_routerlist_from_string(const char *s)
@@ -465,7 +466,7 @@ int router_set_routerlist_from_string(const char *s)
   return 0;
 }
 
-/* Set 'digest' to the SHA-1 digest of the hash of the directory in 's'.
+/** Set 'digest' to the SHA-1 digest of the hash of the directory in 's'.
  * Return 0 on success, nonzero on failure.
  */
 int router_get_dir_hash(const char *s, char *digest)
@@ -473,7 +474,8 @@ int router_get_dir_hash(const char *s, char *digest)
   return router_get_hash_impl(s,digest,
                               "signed-directory","directory-signature");
 }
-/* Set 'digest' to the SHA-1 digest of the hash of the first router in 's'.
+
+/** Set 'digest' to the SHA-1 digest of the hash of the first router in 's'.
  * Return 0 on success, nonzero on failure.
  */
 int router_get_router_hash(const char *s, char *digest)
@@ -482,7 +484,7 @@ int router_get_router_hash(const char *s, char *digest)
                               "router ","router-signature");
 }
 
-/* Return 1 if myversion is in versionlist. Else return 0.
+/** Return 1 if myversion is in versionlist. Else return 0.
  * (versionlist is a comma-separated list of versions.) */
 int is_recommended_version(const char *myversion,
                            const char *versionlist) {
@@ -504,7 +506,7 @@ int is_recommended_version(const char *myversion,
   }
 }
 
-/* Replace the current routerlist with the routers stored in the
+/** Replace the current routerlist with the routers stored in the
  * signed directory 's'.  If pkey is provided, make sure that 's' is
  * signed with pkey. */
 int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
@@ -533,7 +535,7 @@ int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
   return 0;
 }
 
-/* Helper function: resolve the hostname for 'router'. */
+/** Helper function: resolve the hostname for 'router'. */
 static int
 router_resolve(routerinfo_t *router)
 {
@@ -547,7 +549,7 @@ router_resolve(routerinfo_t *router)
   return 0;
 }
 
-/* Helper function: resolve every router in rl, and ensure that our own
+/** Helper function: resolve every router in rl, and ensure that our own
  * routerinfo is at the front.
  */
 static int
@@ -582,7 +584,7 @@ router_resolve_routerlist(routerlist_t *rl)
   return 0;
 }
 
-/* Decide whether a given addr:port is definitely accepted, definitely
+/** Decide whether a given addr:port is definitely accepted, definitely
  * rejected, or neither by a given exit policy.  If 'addr' is 0, we
  * don't know the IP of the target address.
  *
@@ -649,7 +651,7 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
   return maybe_reject ? ADDR_POLICY_UNKNOWN : ADDR_POLICY_ACCEPTED;
 }
 
-/* Return 1 if all running routers will reject addr:port, return 0 if
+/** Return 1 if all running routers will reject addr:port, return 0 if
  * any might accept it. */
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
   int i;
@@ -664,14 +666,14 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
   return 1; /* all will reject. */
 }
 
-/* Return true iff 'router' does not permit exit streams.
+/** Return true iff 'router' does not permit exit streams.
  */
 int router_exit_policy_rejects_all(routerinfo_t *router) {
   return router_compare_addr_to_exit_policy(0, 0, router->exit_policy)
     == ADDR_POLICY_REJECTED;
 }
 
-/* Parse a date of the format 'YYYY-MM-DD hh:mm:ss" and store the result into
+/** Parse a date of the format 'YYYY-MM-DD hh:mm:ss" and store the result into
  * *t.
  */
 /* XXX this should go in util.c, yes? -RD */
@@ -704,7 +706,7 @@ static int parse_time(const char *cp, time_t *t)
 }
 
 
-/* Helper function: parse a directory from 's' and, when done, store the
+/** Helper function: parse a directory from 's' and, when done, store the
  * resulting routerlist in *dest, freeing the old value if necessary.
  * If pkey is provided, we check the directory signature with pkey.
  */
@@ -854,7 +856,7 @@ router_get_routerlist_from_directory_impl(const char *str,
   return r;
 }
 
-/* Helper function: Given a string *s containing a concatenated
+/** Helper function: Given a string *s containing a concatenated
  * sequence of router descriptors, parses them and stores the result
  * in *dest.  If good_nickname_lst is provided, then routers whose
  * nicknames are not listed are marked as nonrunning.  Advances *s to
@@ -921,7 +923,7 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
 }
 
 
-/* Helper function: reads a single router entry from *s ... *end.
+/** Helper function: reads a single router entry from *s ... *end.
  * Mallocs a new router and returns it if all goes well, else returns
  * NULL.
  */
@@ -1118,7 +1120,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   return router;
 }
 
-/* Parse the exit policy in the string 's' and add it to 'router'.
+/** Parse the exit policy in the string 's' and add it to 'router'.
  */
 int
 router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
@@ -1158,7 +1160,7 @@ router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
   return r;
 }
 
-/* Given a K_ACCEPT or K_REJECT token and a router, create a new exit_policy_t
+/** Given a K_ACCEPT or K_REJECT token and a router, create a new exit_policy_t
  * corresponding to the token, and add it to 'router' */
 static int
 router_add_exit_policy(routerinfo_t *router, directory_token_t *tok) {
@@ -1281,7 +1283,7 @@ policy_read_failed:
  *****/
 
 
-/* Free all resources allocated for 'tok' */
+/** Free all resources allocated for 'tok' */
 static void
 token_free(directory_token_t *tok)
 {
@@ -1300,7 +1302,7 @@ token_free(directory_token_t *tok)
   tor_free(tok);
 }
 
-/* Helper function: read the next token from *s, advance *s to the end
+/** Helper function: read the next token from *s, advance *s to the end
  * of the token, and return the parsed token.  If 'where' is DIR_ONLY
  * or RTR_ONLY, reject all tokens of the wrong type.
  */
@@ -1485,7 +1487,7 @@ get_next_token(const char **s, where_syntax where) {
 #undef RET_ERR
 }
 
-/* Read all tokens from a string between 'start' and 'end', and add
+/** Read all tokens from a string between 'start' and 'end', and add
  * them to 'out'.  If 'is_dir' is true, reject all non-directory
  * tokens; else reject all non-routerdescriptor tokens.
  */
@@ -1510,7 +1512,7 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
   return 0;
 }
 
-/* Find the first token in 's' whose keyword is 'keyword'; return NULL if no
+/** Find the first token in 's' whose keyword is 'keyword'; return NULL if no
  * such keyword is found.
  */
 static directory_token_t *
@@ -1520,7 +1522,7 @@ find_first_by_keyword(smartlist_t *s, directory_keyword keyword)
   return NULL;
 }
 
-/* Return a newly allocated smartlist of all accept or reject tokens in 's'.
+/** Return a newly allocated smartlist of all accept or reject tokens in 's'.
  */
 static smartlist_t *
 find_all_exitpolicy(smartlist_t *s)
@@ -1533,7 +1535,7 @@ find_all_exitpolicy(smartlist_t *s)
 }
 
 
-/* Compute the SHA digest of the substring of s taken from the first
+/** Compute the SHA digest of the substring of s taken from the first
  * occurrence of start_str through the first newline after the first
  * subsequent occurrence of end_str; store the 20-byte result in 'digest';
  * return 0 on success.

@@ -4,9 +4,10 @@
 
 #include "or.h"
 
-/*****
- * directory.c: Implement directory HTTP protocol.
- *****/
+/**
+ * \file directory.c
+ * \brief Implement directory HTTP protocol.
+ **/
 
 static void directory_send_command(connection_t *conn, int purpose,
                                    const char *payload, int payload_len);
@@ -16,9 +17,9 @@ static int directory_handle_command(connection_t *conn);
 
 extern or_options_t options; /* command-line and config-file options */
 
-/* URL for publishing rendezvous descriptors. */
+/** URL for publishing rendezvous descriptors. */
 char rend_publish_string[] = "/rendezvous/publish";
-/* Prefix for downloading rendezvous descriptors. */
+/** Prefix for downloading rendezvous descriptors. */
 char rend_fetch_url[] = "/rendezvous/";
 
 #define MAX_HEADERS_SIZE 10000
@@ -26,7 +27,7 @@ char rend_fetch_url[] = "/rendezvous/";
 
 /********* END VARIABLES ************/
 
-/* Launch a new connection to the directory server 'router' to upload
+/** Launch a new connection to the directory server 'router' to upload
  * or download a service or rendezvous descriptor. 'purpose' determines what
  * kind of directory connection we're launching, and must be one of
  * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC}.
@@ -117,7 +118,7 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
   }
 }
 
-/* Queue an appropriate HTTP command on conn->outbuf.  The args
+/** Queue an appropriate HTTP command on conn->outbuf.  The args
  * 'purpose', 'payload', and 'payload_len' are as in
  * directory_initiate_command.
  */
@@ -163,7 +164,7 @@ static void directory_send_command(connection_t *conn, int purpose,
   }
 }
 
-/* Parse an HTTP request string 'headers' of the form "%s %s HTTP/1..."
+/** Parse an HTTP request string 'headers' of the form "%s %s HTTP/1..."
  * If it's well-formed, point *url to the second %s,
  * null-terminate it (this modifies headers!) and return 0.
  * Otherwise, return -1.
@@ -185,7 +186,7 @@ int parse_http_url(char *headers, char **url) {
   return 0;
 }
 
-/* Parse an HTTP response string 'headers' of the form "HTTP/1.%d %d%s\r\n...".
+/** Parse an HTTP response string 'headers' of the form "HTTP/1.%d %d%s\r\n...".
  * If it's well-formed, assign *code, point *message to the first
  * non-space character after code if there is one and message is non-NULL
  * (else leave it alone), and return 0.
@@ -210,7 +211,7 @@ int parse_http_response(char *headers, int *code, char **message) {
   return 0;
 }
 
-/* Read handler for directory connections.  (That's connections *to*
+/** Read handler for directory connections.  (That's connections *to*
  * directory servers and connections *at* directory servers.)
  */
 int connection_dir_process_inbuf(connection_t *conn) {
@@ -361,7 +362,7 @@ static char answer403[] = "HTTP/1.0 403 Unapproved server\r\n\r\n";
 static char answer404[] = "HTTP/1.0 404 Not found\r\n\r\n";
 static char answer503[] = "HTTP/1.0 503 Directory unavailable\r\n\r\n";
 
-/* Helper function: called when a dirserver gets a complete HTTP GET
+/** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
  * service descriptor.  On finding one, write a response into
  * conn->outbuf.  If the request is unrecognized, send a 404.
@@ -427,7 +428,7 @@ static int directory_handle_command_get(connection_t *conn,
   return 0;
 }
 
-/* Helper function: called when a dirserver gets a complete HTTP POST
+/** Helper function: called when a dirserver gets a complete HTTP POST
  * request.  Look for an uploaded server descriptor or rendezvous
  * service descriptor.  On finding one, process it and write a
  * response into conn->outbuf.  If the request is unrecognized, send a
@@ -481,7 +482,7 @@ static int directory_handle_command_post(connection_t *conn,
   return 0;
 }
 
-/* Called when a dirserver receives data on a directory connection;
+/** Called when a dirserver receives data on a directory connection;
  * looks for an HTTP request.  If the request is complete, remove it
  * from the inbuf, try to process it; otherwise, leave it on the
  * buffer.  Return a 0 on success, or -1 on error.
@@ -520,7 +521,7 @@ static int directory_handle_command(connection_t *conn) {
   return r;
 }
 
-/* Write handler for directory connections; called when all data has
+/** Write handler for directory connections; called when all data has
  * been flushed.  Handle a completed connection: close the connection
  * or wait for a response as appropriate.
  */

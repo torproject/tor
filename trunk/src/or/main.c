@@ -2,9 +2,10 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/*****
- * main.c: Tor main loop and startup functions.
- *****/
+/**
+ * \file main.c
+ * \brief Tor main loop and startup functions.
+ **/
 
 #include "or.h"
 
@@ -15,42 +16,42 @@ static int init_from_config(int argc, char **argv);
 
 /********* START VARIABLES **********/
 
-/* declared in connection.c */
+/** declared in connection.c */
 extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
-or_options_t options; /* command-line and config-file options */
-int global_read_bucket; /* max number of bytes I can read this second */
+or_options_t options; /**< command-line and config-file options */
+int global_read_bucket; /**< max number of bytes I can read this second */
 
-/* What was the read bucket before the last call to prepare_for_pool?
+/** What was the read bucket before the last call to prepare_for_pool?
  * (used to determine how many bytes we've read). */
 static int stats_prev_global_read_bucket;
-/* How many bytes have we read since we started the process? */
+/** How many bytes have we read since we started the process? */
 static uint64_t stats_n_bytes_read = 0;
-/* How many seconds have we been running? */
+/** How many seconds have we been running? */
 static long stats_n_seconds_reading = 0;
 
-/* Array of all open connections; each element corresponds to the element of
+/** Array of all open connections; each element corresponds to the element of
  * poll_array in the same position.  The first nfds elements are valid. */
 static connection_t *connection_array[MAXCONNECTIONS] =
         { NULL };
 
-/* Array of pollfd objects for calls to poll(). */
+/** Array of pollfd objects for calls to poll(). */
 static struct pollfd poll_array[MAXCONNECTIONS];
 
-static int nfds=0; /* number of connections currently active */
+static int nfds=0; /**< number of connections currently active */
 
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
-static int please_dumpstats=0; /* whether we should dump stats during the loop */
-static int please_reset=0; /* whether we just got a sighup */
-static int please_reap_children=0; /* whether we should waitpid for exited children */
+static int please_dumpstats=0; /**< whether we should dump stats during the loop */
+static int please_reset=0; /**< whether we just got a sighup */
+static int please_reap_children=0; /**< whether we should waitpid for exited children */
 #endif /* signal stuff */
 
-/* we set this to 1 when we've fetched a dir, to know whether to complain
+/** We set this to 1 when we've fetched a dir, to know whether to complain
  * yet about unrecognized nicknames in entrynodes, exitnodes, etc.
  * Also, we don't try building circuits unless this is 1. */
 int has_fetched_directory=0;
 
-/* we set this to 1 when we've opened a circuit, so we can print a log
+/** We set this to 1 when we've opened a circuit, so we can print a log
  * entry to inform the user that Tor is working. */
 int has_completed_circuit=0;
 
@@ -64,7 +65,7 @@ int has_completed_circuit=0;
 *
 ****************************************************************************/
 
-/* Add 'conn' to the array of connections that we can poll on.  The
+/** Add <b>conn</b> to the array of connections that we can poll on.  The
  * connection's socket must be set; the connection starts out
  * non-reading and non-writing.
  */
@@ -95,7 +96,7 @@ int connection_add(connection_t *conn) {
   return 0;
 }
 
-/* Remove the connection from the global list, and remove the
+/** Remove the connection from the global list, and remove the
  * corresponding poll entry.  Calling this function will shift the last
  * connection (if any) into the position occupied by conn.
  */
@@ -126,16 +127,17 @@ int connection_remove(connection_t *conn) {
   return 0;
 }
 
-/* Set *array to an array of all connections, and *n to the length
- * of the array.  *array and *n must not be modified.
+/** Set <b>*array</b> to an array of all connections, and <b>*n</b>
+ * to the length of the array. <b>*array</b> and <b>*n</b> must not
+ * be modified.
  */
 void get_connection_array(connection_t ***array, int *n) {
   *array = connection_array;
   *n = nfds;
 }
 
-/* Set the event mask on 'conn' to 'events'.  (The form of the event mask is
- * as for poll().)
+/** Set the event mask on <b>conn</b> to <b>events</b>.  (The form of
+* the event mask is as for poll().)
  */
 void connection_watch_events(connection_t *conn, short events) {
 
@@ -144,13 +146,13 @@ void connection_watch_events(connection_t *conn, short events) {
   poll_array[conn->poll_index].events = events;
 }
 
-/* Return true iff the 'conn' is listening for read events. */
+/** Return true iff <b>conn</b> is listening for read events. */
 int connection_is_reading(connection_t *conn) {
   tor_assert(conn && conn->poll_index >= 0);
   return poll_array[conn->poll_index].events & POLLIN;
 }
 
-/* Tell the main loop to stop notifying 'conn' of any read events. */
+/** Tell the main loop to stop notifying <b>conn</b> of any read events. */
 void connection_stop_reading(connection_t *conn) {
   tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
 
@@ -159,31 +161,31 @@ void connection_stop_reading(connection_t *conn) {
     poll_array[conn->poll_index].events -= POLLIN;
 }
 
-/* Tell the main loop to start notifying 'conn' of any read events. */
+/** Tell the main loop to start notifying <b>conn</b> of any read events. */
 void connection_start_reading(connection_t *conn) {
   tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
   poll_array[conn->poll_index].events |= POLLIN;
 }
 
-/* Return true iff the 'conn' is listening for write events. */
+/** Return true iff <b>conn</b> is listening for write events. */
 int connection_is_writing(connection_t *conn) {
   return poll_array[conn->poll_index].events & POLLOUT;
 }
 
-/* Tell the main loop to stop notifying 'conn' of any write events. */
+/** Tell the main loop to stop notifying <b>conn</b> of any write events. */
 void connection_stop_writing(connection_t *conn) {
   tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
   if(poll_array[conn->poll_index].events & POLLOUT)
     poll_array[conn->poll_index].events -= POLLOUT;
 }
 
-/* Tell the main loop to start notifying 'conn' of any write events. */
+/** Tell the main loop to start notifying <b>conn</b> of any write events. */
 void connection_start_writing(connection_t *conn) {
   tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
   poll_array[conn->poll_index].events |= POLLOUT;
 }
 
-/* Called when the connection at connection_array[i] has a read event,
+/** Called when the connection at connection_array[i] has a read event,
  * or it has pending tls data waiting to be read: checks for validity,
  * catches numerous errors, and dispatches to connection_handle_read.
  */
@@ -224,7 +226,7 @@ static void conn_read(int i) {
   assert_all_pending_dns_resolves_ok();
 }
 
-/* Called when the connection at connection_array[i] has a write event:
+/** Called when the connection at connection_array[i] has a write event:
  * checks for validity, catches numerous errors, and dispatches to
  * connection_handle_write.
  */
@@ -255,7 +257,7 @@ static void conn_write(int i) {
   assert_all_pending_dns_resolves_ok();
 }
 
-/* If the connection at connection_array[i] is marked for close, then:
+/** If the connection at connection_array[i] is marked for close, then:
  *    - If it has data that it wants to flush, try to flush it.
  *    - If it _still_ has data to flush, and conn->hold_open_until_flushed is
  *      true, then leave the connection open and return.
@@ -322,7 +324,7 @@ static void conn_close_if_marked(int i) {
   }
 }
 
-/* This function is called whenever we successfully pull down a directory */
+/** This function is called whenever we successfully pull down a directory */
 void directory_has_arrived(void) {
 
   log_fn(LOG_INFO, "A directory has arrived.");
@@ -338,7 +340,7 @@ void directory_has_arrived(void) {
   }
 }
 
-/* Perform regular maintenance tasks for a single connection.  This
+/** Perform regular maintenance tasks for a single connection.  This
  * function gets run once per second per connection by run_housekeeping.
  */
 static void run_connection_housekeeping(int i, time_t now) {
@@ -382,7 +384,7 @@ static void run_connection_housekeeping(int i, time_t now) {
   }
 }
 
-/* Perform regular maintenance tasks.  This function gets run once per
+/** Perform regular maintenance tasks.  This function gets run once per
  * second by prepare_for_poll.
  */
 static void run_scheduled_events(time_t now) {
@@ -392,7 +394,7 @@ static void run_scheduled_events(time_t now) {
   int i;
 
 
-  /* 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
+  /** 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
    *  shut down and restart all cpuworkers, and update the directory if
    *  necessary.
    */
@@ -406,7 +408,7 @@ static void run_scheduled_events(time_t now) {
     router_upload_dir_desc_to_dirservers();
   }
 
-  /* 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */
+  /** 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */
   if (!last_rotated_certificate)
     last_rotated_certificate = now;
   if (options.ORPort && last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
@@ -420,7 +422,7 @@ static void run_scheduled_events(time_t now) {
      * XXXX them at all. */
   }
 
-  /* 1c. Every DirFetchPostPeriod seconds, we get a new directory and upload
+  /** 1c. Every DirFetchPostPeriod seconds, we get a new directory and upload
    *    our descriptor (if any). */
   if(time_to_fetch_directory < now) {
     /* it's time to fetch a new directory and/or post our descriptor */
@@ -445,14 +447,14 @@ static void run_scheduled_events(time_t now) {
   }
 
 
-  /* 2. Every second, we examine pending circuits and prune the
+  /** 2. Every second, we examine pending circuits and prune the
    *    ones which have been pending for more than a few seconds.
    *    We do this before step 3, so it can try building more if
    *    it's not comfortable with the number of available circuits.
    */
   circuit_expire_building(now);
 
-  /* 2b. Also look at pending streams and prune the ones that 'began'
+  /** 2b. Also look at pending streams and prune the ones that 'began'
    *     a long time ago but haven't gotten a 'connected' yet.
    *     Do this before step 3, so we can put them back into pending
    *     state to be picked up by the new circuit.
@@ -460,11 +462,11 @@ static void run_scheduled_events(time_t now) {
   connection_ap_expire_beginning();
 
 
-  /* 2c. And expire connections that we've held open for too long.
+  /** 2c. And expire connections that we've held open for too long.
    */
   connection_expire_held_open();
 
-  /* 3. Every second, we try a new circuit if there are no valid
+  /** 3. Every second, we try a new circuit if there are no valid
    *    circuits. Every NewCircuitPeriod seconds, we expire circuits
    *    that became dirty more than NewCircuitPeriod seconds ago,
    *    and we make a new circ if there are no clean circuits.
@@ -472,22 +474,22 @@ static void run_scheduled_events(time_t now) {
   if(has_fetched_directory)
     circuit_build_needed_circs(now);
 
-  /* 4. We do housekeeping for each connection... */
+  /** 4. We do housekeeping for each connection... */
   for(i=0;i<nfds;i++) {
     run_connection_housekeeping(i, now);
   }
 
-  /* 5. And remove any marked circuits... */
+  /** 5. And remove any marked circuits... */
   circuit_close_all_marked();
 
-  /* 6. And upload service descriptors for any services whose intro points
+  /** 6. And upload service descriptors for any services whose intro points
    *    have changed in the last second. */
   if (last_uploaded_services < now-5) {
     rend_services_upload(0);
     last_uploaded_services = now;
   }
 
-  /* 6. and blow away any connections that need to die. have to do this now,
+  /** 7. and blow away any connections that need to die. have to do this now,
    * because if we marked a conn for close and left its socket -1, then
    * we'll pass it to poll/select and bad things will happen.
    */
@@ -495,7 +497,7 @@ static void run_scheduled_events(time_t now) {
     conn_close_if_marked(i);
 }
 
-/* Called every time we're about to call tor_poll.  Increments statistics,
+/** Called every time we're about to call tor_poll.  Increments statistics,
  * and adjusts token buckets.  Returns the number of milliseconds to use for
  * the poll() timeout.
  */
@@ -535,7 +537,7 @@ static int prepare_for_poll(void) {
   return (1000 - (now.tv_usec / 1000)); /* how many milliseconds til the next second? */
 }
 
-/* Configure the Tor process from the command line arguments and from the
+/** Configure the Tor process from the command line arguments and from the
  * configuration file.
  */
 static int init_from_config(int argc, char **argv) {
@@ -594,7 +596,7 @@ static int init_from_config(int argc, char **argv) {
   return 0;
 }
 
-/* Called when we get a SIGHUP: reload configuration files and keys,
+/** Called when we get a SIGHUP: reload configuration files and keys,
  * retry all connections, re-upload all descriptors, and so on. */
 static int do_hup(void) {
   char keydir[512];
@@ -641,7 +643,7 @@ static int do_hup(void) {
   return 0;
 }
 
-/* Tor main loop. */
+/** Tor main loop. */
 static int do_main_loop(void) {
   int i;
   int timeout;
@@ -737,7 +739,7 @@ static int do_main_loop(void) {
   }
 }
 
-/* Unix signal handler. */
+/** Unix signal handler. */
 static void catch(int the_signal) {
 
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
@@ -769,7 +771,7 @@ static void catch(int the_signal) {
 #endif /* signal stuff */
 }
 
-/* Write all statistics to the log, with log level 'severity'.  Called
+/** Write all statistics to the log, with log level 'severity'.  Called
  * in response to a SIGUSR1. */
 static void dumpstats(int severity) {
   int i;
@@ -825,7 +827,7 @@ static void dumpstats(int severity) {
   rend_service_dump_stats(severity);
 }
 
-/* Called before we make any calls to network-related functions.
+/** Called before we make any calls to network-related functions.
  * (Some operating systems require their network libraries to be
  * initialized.) */
 int network_init(void)
@@ -845,7 +847,7 @@ int network_init(void)
   return 0;
 }
 
-/* Called by exit() as we shut down the process.
+/** Called by exit() as we shut down the process.
  */
 void exit_function(void)
 {
@@ -854,7 +856,7 @@ void exit_function(void)
 #endif
 }
 
-/* Main entry point for the Tor command-line client.
+/** Main entry point for the Tor command-line client.
  */
 int tor_main(int argc, char *argv[]) {
 

@@ -1,4 +1,4 @@
-/* Copyright 2001,2002,2003 Roger Dingledine, Matej Pfajfar. */
+/* Copyright 2001 Matej Pfajfar, 2001-2004 Roger Dingledine. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 
@@ -13,8 +13,8 @@
 struct buf_t {
   uint32_t magic; /**< Magic cookie for debugging: Must be set to BUFFER_MAGIC */
   char *mem;      /**< Storage for data in the buffer */
-  size_t len;     /**< Maximum amount of data that 'mem' can hold. */
-  size_t datalen; /**< Number of bytes currently in 'mem'. */
+  size_t len;     /**< Maximum amount of data that <b>mem</b> can hold. */
+  size_t datalen; /**< Number of bytes currently in <b>mem</b>. */
 };
 
 /** Size, in bytes, for newly allocated buffers.  Should be a power of 2. */
@@ -26,7 +26,7 @@ struct buf_t {
  * than this size. */
 #define MIN_BUF_SHRINK_SIZE (16*1024)
 
-/** Change a buffer's capacity.  new_capacity must be \<= buf->datalen. */
+/** Change a buffer's capacity. <b>new_capacity</b> must be \<= buf->datalen. */
 static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
 {
   tor_assert(buf->datalen <= new_capacity);
@@ -35,7 +35,7 @@ static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
   buf->len = new_capacity;
 }
 
-/** If the buffer is not large enough to hold "capacity" bytes, resize
+/** If the buffer is not large enough to hold <b>capacity</b> bytes, resize
  * it so that it can.  (The new size will be a power of 2 times the old
  * size.)
  */
@@ -82,7 +82,7 @@ static INLINE void buf_shrink_if_underfull(buf_t *buf) {
   buf_resize(buf, new_len);
 }
 
-/** Remove the first 'n' bytes from buf.
+/** Remove the first <b>n</b> bytes from buf.
  */
 static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
   tor_assert(buf->datalen >= n);
@@ -91,8 +91,8 @@ static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
   buf_shrink_if_underfull(buf);
 }
 
-/** Find the first instance of the str_len byte string 'sr' on the
- * buf_len byte string 'bufstr'.  Strings are not necessary
+/** Find the first instance of the str_len byte string <b>str</b> on the
+ * buf_len byte string <b>bufstr</b>.  Strings are not necessary
  * NUL-terminated. If none exists, return -1.  Otherwise, return index
  * of the first character in bufstr _after_ the first instance of str.
  */
@@ -116,7 +116,7 @@ static int find_mem_in_mem(const char *str, int str_len,
   return -1;
 }
 
-/** Create and return a new buf with capacity 'size'.
+/** Create and return a new buf with capacity <b>size</b>.
  */
 buf_t *buf_new_with_capacity(size_t size) {
   buf_t *buf;
@@ -137,33 +137,33 @@ buf_t *buf_new()
   return buf_new_with_capacity(INITIAL_BUF_SIZE);
 }
 
-/** Remove all data from 'buf' */
+/** Remove all data from <b>buf</b> */
 void buf_clear(buf_t *buf)
 {
   buf->datalen = 0;
 }
 
-/** Return the number of bytes stored in 'buf' */
+/** Return the number of bytes stored in <b>buf</b> */
 size_t buf_datalen(const buf_t *buf)
 {
   return buf->datalen;
 }
 
-/** Return the maximum bytes that can be stored in 'buf' before buf
+/** Return the maximum bytes that can be stored in <b>buf</b> before buf
  * needs to resize. */
 size_t buf_capacity(const buf_t *buf)
 {
   return buf->len;
 }
 
-/** For testing only: Return a pointer to the raw memory stored in 'buf'.
+/** For testing only: Return a pointer to the raw memory stored in <b>buf</b>.
  */
 const char *_buf_peek_raw_buffer(const buf_t *buf)
 {
   return buf->mem;
 }
 
-/** Release storage held by 'buf'.
+/** Release storage held by <b>buf</b>.
  */
 void buf_free(buf_t *buf) {
   assert_buf_ok(buf);
@@ -172,9 +172,9 @@ void buf_free(buf_t *buf) {
   tor_free(buf);
 }
 
-/** Read from socket s, writing onto end of buf.  Read at most
- * 'at_most' bytes, resizing the buffer as necessary.  If read()
- * returns 0, set *reached_eof to 1 and return 0. Return -1 on error;
+/** Read from socket <b>s</s>, writing onto end of <b>buf</b>.  Read at most
+ * <b>at_most</b> bytes, resizing the buffer as necessary.  If read()
+ * returns 0, set <b>*reached_eof</b> to 1 and return 0. Return -1 on error;
  * else return the number of bytes read.  Return 0 if read() would
  * block.
  */
@@ -247,17 +247,14 @@ int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
   return r;
 }
 
-/** Write data from 'buf' to the socket 's'.  Write at most
- * *buf_flushlen bytes, and decrement *buf_flushlen by the number of
- * bytes actually written.  Return the number of bytes written on
- * success, -1 on failure.  Return 0 if write() would block.
+/** Write data from <b>buf</b> to the socket <b>s</b>.  Write at most
+ * <b>*buf_flushlen</b> bytes, decrement <b>*buf_flushlen</b> by
+ * the number of bytes actually written, and remove the written bytes
+ * from the buffer.  Return the number of bytes written on success,
+ * -1 on failure.  Return 0 if write() would block.
  */
 int flush_buf(int s, buf_t *buf, int *buf_flushlen)
 {
-  /* push from buf onto s
-   * then memmove to front of buf
-   * return -1 or how many bytes you just flushed */
-
   int write_result;
 
   assert_buf_ok(buf);
@@ -306,7 +303,9 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen)
   return r;
 }
 
-/** Append string_len bytes from 'string' to the end of 'buf'.
+/** Append <b>string_len</b> bytes from <b>string</b> to the end of
+ * <b>buf</b>.
+ *
  * Return the new length of the buffer on success, -1 on failure.
  */
 int write_to_buf(const char *string, int string_len, buf_t *buf) {
@@ -329,9 +328,8 @@ int write_to_buf(const char *string, int string_len, buf_t *buf) {
   return buf->datalen;
 }
 
-
-/* Remove string_len bytes from the front of 'buf', and store them
- * into 'string'.  Return the new buffer size.  string_len must be <=
+/** Remove <b>string_len</b> bytes from the front of <b>buf</b>, and store them
+ * into <b>string</b>.  Return the new buffer size.  <b>string_len</b> must be \<=
  * the number of bytes on the buffer.
  */
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf) {
@@ -350,15 +348,15 @@ int fetch_from_buf(char *string, size_t string_len, buf_t *buf) {
   return buf->datalen;
 }
 
-/** There is a (possibly incomplete) http statement on *buf, of the
+/** There is a (possibly incomplete) http statement on <b>buf</b>, of the
  * form "\%s\\r\\n\\r\\n\%s", headers, body. (body may contain nuls.)
  * If a) the headers include a Content-Length field and all bytes in
  * the body are present, or b) there's no Content-Length field and
  * all headers are present, then:
  *
- *  - strdup headers into *headers_out, and nul-terminate it.
- *  - memdup body into *body_out, and nul-terminate it.
- *  - Then remove them from buf, and return 1.
+ *  - strdup headers into <b>*headers_out</b>, and nul-terminate it.
+ *  - memdup body into <b>*body_out</b>, and nul-terminate it.
+ *  - Then remove them from <b>buf</b>, and return 1.
  *
  *  - If headers or body is NULL, discard that part of the buf.
  *  - If a headers or body doesn't fit in the arg, return -1.
@@ -427,7 +425,7 @@ int fetch_from_buf_http(buf_t *buf,
   return 1;
 }
 
-/** There is a (possibly incomplete) socks handshake on buf, of one
+/** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"
  *  - socks4a: "socksheader username\\0 destaddr\\0"
@@ -435,16 +433,16 @@ int fetch_from_buf_http(buf_t *buf,
  *  - socks5 phase two: "version command 0 addresstype..."
  * If it's a complete and valid handshake, and destaddr fits in
  *   MAX_SOCKS_ADDR_LEN bytes, then pull the handshake off the buf,
- *   assign to req, and return 1.
+ *   assign to <b>req</b>, and return 1.
  *
  * If it's invalid or too big, return -1.
  *
  * Else it's not all there yet, leave buf alone and return 0.
  *
- * If you want to specify the socks reply, write it into req->reply
- *   and set req->replylen, else leave req->replylen alone.
+ * If you want to specify the socks reply, write it into <b>req->reply</b>
+ *   and set <b>req->replylen</b>, else leave <b>req->replylen</b> alone.
  *
- * If returning 0 or -1, req->address and req->port are undefined.
+ * If returning 0 or -1, <b>req->address</b> and <b>req->port</b> are undefined.
  */
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   unsigned char len;
@@ -618,7 +616,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   }
 }
 
-/** Log an error and exit if 'buf' is corrupted.
+/** Log an error and exit if <b>buf</b> is corrupted.
  */
 void assert_buf_ok(buf_t *buf)
 {
@@ -627,7 +625,6 @@ void assert_buf_ok(buf_t *buf)
   tor_assert(buf->mem);
   tor_assert(buf->datalen <= buf->len);
 }
-
 
 /*
   Local Variables:
