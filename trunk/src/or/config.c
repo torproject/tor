@@ -588,7 +588,7 @@ static char *get_default_conf_file(void)
   char *path = tor_malloc(MAX_PATH);
   if (!SUCCEEDED(SHGetSpecialFolderPath(NULL, path, CSIDL_APPDATA, 1))) {
     tor_free(path);
-	return NULL;
+    return NULL;
   }
   strlcat(path,"\\tor\\torrc",MAX_PATH);
   return path;
@@ -651,21 +651,21 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     using_default_torrc = 0;
   } else {
     /* didn't find one, try CONFDIR */
-	char *fn;
-	using_default_torrc = 1;
-	fn = get_default_conf_file();
+    char *fn;
+    using_default_torrc = 1;
+    fn = get_default_conf_file();
     if (fn && file_status(fn)==FN_FILE) {
-       fname = fn;
-	} else {
-	   tor_free(fn);
-       fn = expand_filename("~/.torrc");
-       if (fn && file_status(fn)==FN_FILE) {
-         fname = fn;
-	   } else {
-         tor_free(fn);
-		 fname = get_default_conf_file();
-	   }
-	}
+      fname = fn;
+    } else {
+      tor_free(fn);
+      fn = expand_filename("~/.torrc");
+      if (fn && file_status(fn)==FN_FILE) {
+        fname = fn;
+      } else {
+        tor_free(fn);
+        fname = get_default_conf_file();
+      }
+    }
   }
   log(LOG_DEBUG,"Opening config file '%s'",fname);
 
@@ -1040,13 +1040,13 @@ const char *get_data_directory(or_options_t *options) {
   else if (server_mode()) {
 #ifdef MS_WINDOWS
     char *p;
-	p = tor_malloc(MAX_PATH);
+    p = tor_malloc(MAX_PATH);
     if (!SUCCEEDED(SHGetSpecialFolderPath(NULL, p, CSIDL_APPDATA, 1))) {
       strlcpy(p,CONFDIR, MAX_PATH);
-	}
+    }
     strlcat(p,"\\tor",MAX_PATH);
     options->DataDirectory = p;
-	return p;
+    return p;
 #else
     d = "~/.tor";
 #endif
