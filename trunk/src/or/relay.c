@@ -107,9 +107,9 @@ static int relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell) {
 static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
                                    int encrypt_mode) {
   char out[CELL_PAYLOAD_SIZE]; /* 'in' must be this size too */
-  relay_header_t rh;
+//  relay_header_t rh;
 
-  relay_header_unpack(&rh, in);
+//  relay_header_unpack(&rh, in);
 //  log_fn(LOG_DEBUG,"before crypt: %d",rh.recognized);
   if (( encrypt_mode && crypto_cipher_encrypt(cipher, out, in, CELL_PAYLOAD_SIZE)) ||
       (!encrypt_mode && crypto_cipher_decrypt(cipher, out, in, CELL_PAYLOAD_SIZE))) {
@@ -117,7 +117,7 @@ static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
     return -1;
   }
   memcpy(in,out,CELL_PAYLOAD_SIZE);
-  relay_header_unpack(&rh, in);
+//  relay_header_unpack(&rh, in);
 //  log_fn(LOG_DEBUG,"after crypt: %d",rh.recognized);
   return 0;
 }
