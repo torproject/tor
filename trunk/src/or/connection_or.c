@@ -122,7 +122,7 @@ connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router) {
  * state to 'connecting' and return. If connect to router succeeds, call
  * connection_tls_start_handshake() on it.
  *
- * This function is called from router_retry_connections() , for
+ * This function is called from router_retry_connections(), for
  * ORs connecting to ORs, and circuit_establish_circuit(), for
  * OPs connecting to ORs.
  *
@@ -193,7 +193,7 @@ int connection_tls_start_handshake(connection_t *conn, int receiving) {
   return 0;
 }
 
-/* Move forward with ths tls handshake. If it finishes, hand
+/* Move forward with the tls handshake. If it finishes, hand
  * conn to connection_tls_finish_handshake().
  *
  * Return -1 if conn is broken, else return 0.
@@ -221,9 +221,9 @@ int connection_tls_continue_handshake(connection_t *conn) {
  *
  * Make sure we are happy with the person we just handshaked with:
  * If it's an OP (that is, it has no certificate), make sure I'm an OR.
- * If it's an OR (is has a certificate), make sure it has a recognized
- * nickname, its cert is signed by the identity key of that nickname;
- * if I initiated the connection, make sure it's the right guy, and if
+ * If it's an OR (it has a certificate), make sure it has a recognized
+ * nickname, and its cert is signed by the identity key of that nickname.
+ * If I initiated the connection, make sure it's the right guy; and if
  * he initiated the connection, make sure he's not already connected.
  *
  * If he initiated the conn, also initialize conn from the information
