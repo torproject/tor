@@ -977,6 +977,7 @@ void router_retry_connections(void);
 void router_upload_dir_desc_to_dirservers(void);
 void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload_len);
 int router_compare_to_my_exit_policy(connection_t *conn);
+routerinfo_t *router_get_my_routerinfo(void);
 const char *router_get_my_descriptor(void);
 int router_rebuild_descriptor(void);
 int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
