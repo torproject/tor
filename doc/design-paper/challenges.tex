@@ -103,7 +103,7 @@ aim to create a research agenda for others to
 help in addressing these issues. Section~\ref{sec:what-is-tor} gives an
 overview of the Tor
 design and ours goals. Sections~\ref{sec:crossroads-policy}
-and~\ref{sec:crossroads-technical} go on to describe the practical challenges,
+and~\ref{sec:crossroads-design} go on to describe the practical challenges,
 both policy and technical respectively, that stand in the way of moving
 from a practical useful network to a practical useful anonymous network.
 
@@ -155,7 +155,7 @@ application protocols that include personally identifying information need
 additional application-level scrubbing proxies, such as
 Privoxy~\cite{privoxy} for HTTP.  Furthermore, Tor does not permit arbitrary
 IP packets; it only anonymizes TCP and DNS, and only supports connections via
-SOCKS (see Section \ref{subsec:tcp-vs-ip}).
+SOCKS (see Section~\ref{subsec:tcp-vs-ip}).
 
 Tor differs from other deployed systems for traffic analysis resistance
 in its security and flexibility.  Mix networks such as
@@ -207,7 +207,7 @@ Commercial single-hop proxies~\cite{anonymizer}, as well as unsecured
 open proxies around the Internet~\cite{open-proxies}, can provide good
 performance and some security against a weaker attacker. Dresden's Java
 Anon Proxy~\cite{web-mix} provides similar functionality to Tor but only
-handles web browsing rather than arbitrary TCP. Also, JAP's network
+handles web browsing rather than arbitrary TCP\@. Also, JAP's network
 topology uses cascades (fixed routes through the network); since without
 end-to-end padding it is just as vulnerable as Tor to end-to-end timing
 attacks, its dispersal properties are therefore worse than Tor's.
@@ -244,9 +244,12 @@ correlation between the two connections to confirm the user's chosen
 communication partners.  Defeating this attack would seem to require
 introducing a prohibitive degree of traffic padding between the user and the
 network, or introducing an unacceptable degree of latency (but see
-Section \ref{subsec:mid-latency}).  Thus, Tor only
-attempts to defend against external observers who cannot observe both sides of a
-user's connection.
+Section \ref{subsec:mid-latency}). 
+And, it is not clear that padding works at all if we assume a
+minimally active adversary that merely modifies the timing of packets
+to or from the user. Thus, Tor only attempts to defend against
+external observers who cannot observe both sides of a user's
+connection.
 
 Against internal attackers, who sign up Tor servers, the situation is more
 complicated.  In the simplest case, if an adversary has compromised $c$ of
@@ -279,14 +282,29 @@ complicating factors:
 % not? -nm
 % Sure. In fact, better off, since they seem to scale more easily. -rd
 
-in practice tor's threat model is based entirely on the goal of dispersal
-and diversity. george and steven describe an attack \cite{attack-tor-oak05} that
-lets them determine the nodes used in a circuit; yet they can't identify
-alice or bob through this attack. so it's really just the endpoints that
-remain secure. and the enclave model seems particularly threatened by
-this, since this attack lets us identify endpoints when they're servers.
-see \ref{subsec:helper-nodes} for discussion of some ways to address this
-issue.
+In practice Tor's threat model is based entirely on the goal of
+dispersal and diversity. Murdoch and Danezis describe an attack
+\cite{attack-tor-oak05} that lets an attacker determine the nodes used
+in a circuit; yet s/he cannot identify the initiator or responder,
+e.g., client or web server, through this attack. So the endpoints
+remain secure, which is the goal. On the other hand we can imagine an
+adversary that could attack or set up observation of all connections
+to an arbitrary Tor node in only a few minutes.  If such an adversary
+were to exist, s/he could use this probing to remotely identify a node
+for further attack.  Also, the enclave model seems particularly
+threatened by this attack, since it identifies endpoints when they're
+also nodes in the Tor network: see Section~\ref{subsec:helper-nodes}
+for discussion of some ways to address this issue.
+
+[*****Suppose an adversary with active access to the responder traffic
+wants to keep a circuit alive long enough to attack an identified
+node. Could s/he do this without the overt cooperation of the client
+proxy? More immediately, someone could identify nodes in this way and
+if in their jurisdiction, immediately get a subpoena (if they even
+need one) and tell the node operator(s) that she must retain all the
+active circuit data she now has at that moment.  That \emph{can} be
+done in real time.********** We should say something about this
+here or later in the paper -pfs]
 
 see \ref{subsec:routing-zones} for discussion of larger
 adversaries and our dispersal goals.
@@ -308,7 +326,7 @@ launch their attacks, and they found that the defenders were recognizing
 attacks because they came from the same IP space. These engineers wanted
 to use Tor to hide their tracks. First, from a technical standpoint,
 Tor does not support the variety of IP packets one would like to use in
-such attacks (see Section \ref{subsec:ip-vs-tcp}). But aside from this,
+such attacks (see Section~\ref{subsec:tcp-vs-ip}). But aside from this,
 we also decided that it would probably be poor precedent to encourage
 such use---even legal use that improves national security---and managed
 to dissuade them.
@@ -383,8 +401,9 @@ who use the network. We investigate this issue in the next section.
 Another factor impacting the network's security is its reputability:
 the perception of its social value based on its current user base. If I'm
 the only user who has ever downloaded the software, it might be socially
-accepted, but I'm not getting much anonymity. Add a thousand Communists,
-and I'm anonymous, but everyone thinks I'm a Commie. Add a thousand
+accepted, but I'm not getting much anonymity. Add a thousand animal rights
+activists, and I'm anonymous, but everyone thinks I'm a bambi lover (or
+NRA member if you prefer a contrasting example). Add a thousand
 random citizens (cancer survivors, privacy enthusiasts, and so on)
 and now I'm harder to profile.
 
@@ -400,8 +419,9 @@ users to uncover a few bad ones.
 While people therefore have an incentive for the network to be used for
 ``more reputable'' activities than their own, there are still tradeoffs
 involved when it comes to anonymity. To follow the above example, a
-network used entirely by cancer survivors might welcome some Communists
-onto the network, though of course they'd prefer a wider variety of users.
+network used entirely by cancer survivors might welcome some animal rights
+activists onto the network, though of course they'd prefer a wider
+variety of users.
 
 Reputability becomes even more tricky in the case of privacy networks,
 since the good uses of the network (such as publishing by journalists in
@@ -466,12 +486,13 @@ On the one hand, if people want to refuse connections from you on
 their servers it would seem that they should be allowed to.  But, a
 possible major problem with the blocking of Tor is that it's not just
 the decision of the individual server administrator whose deciding if
-he wants to post to wikipedia from his Tor node address or allow
-people to read wikipedia anonymously through his Tor node. If e.g.,
+he wants to post to Wikipedia from his Tor node address or allow
+people to read Wikipedia anonymously through his Tor node. (Wikipedia
+has blocked all posting from all Tor nodes based in IP address.) If e.g.,
 s/he comes through a campus or corporate NAT, then the decision must
 be to have the entire population behind it able to have a Tor exit
-node or write access to wikipedia. This is a loss for both of us (Tor
-and wikipedia). We don't want to compete for (or divvy up) the NAT
+node or to have write access to Wikipedia. This is a loss for both of us (Tor
+and Wikipedia). We don't want to compete for (or divvy up) the NAT
 protected entities of the world.
 
 (A related problem is that many IP blacklists are not terribly fine-grained.
@@ -480,9 +501,11 @@ only those Tor servers that allow access to a specific IP or port, even
 though this information is readily available.  One IP blacklist even bans
 every class C network that contains a Tor server, and recommends banning SMTP
 from these networks even though Tor does not allow SMTP at all.)
+[****Since this is stupid and we oppose it, shouldn't we name names here -pfs]
+
 
 Problems of abuse occur mainly with services such as IRC networks and
-Wikipedia, which rely on IP-blocking to ban abusive users.  While at first
+Wikipedia, which rely on IP blocking to ban abusive users.  While at first
 blush this practice might seem to depend on the anachronistic assumption that
 each IP is an identifier for a single user, it is actually more reasonable in
 practice: it assumes that non-proxy IPs are a costly resource, and that an
@@ -501,7 +524,7 @@ this is why services use IP blocking.  In order to deter abuse, pseudonymous
 identities need to impose a significant switching cost in resources or human
 time.
 
-Once approach, similar to that taken by Freedom, would be to bootstrap some
+One approach, similar to that taken by Freedom, would be to bootstrap some
 non-anonymous costly identification mechanism to allow access to a
 blind-signature pseudonym protocol.  This would effectively create costly
 pseudonyms, which services could require in order to allow anonymous access.
@@ -514,16 +537,22 @@ This approach has difficulties in practise, however:
   We could use IP addresses, but that's the problem, isn't it?
 \item Managing single sign-on services is not considered a well-solved
   problem in practice.  If Microsoft can't get universal acceptance for
-  passport, why do we think that a Tor-specific solution would do any good?
+  Passport, why do we think that a Tor-specific solution would do any good?
 \item Even if we came up with a perfect authentication system for our needs,
   there's no guarantee that any service would actually start using it.  It
   would require a nonzero effort for them to support it, and it might just
   be less hassle for them to block tor anyway.
 \end{tightlist}
 
-Squishy IP based ``authentication'' and ``authorization'' is a reality
-we must contend with. We should say something more about the analogy
-with SSNs.
+The use of squishy IP-based ``authentication'' and ``authorization''
+has not broken down even to the level that SSNs used for these
+purposes have in commercial and public record contexts. Externalities
+and misplaced incentives cause a continued focus on fighting identity
+theft by protecting SSNs rather than developing better authentication
+and incentive schemes \cite{price-privacy}. Similarly we can expect a
+continued use of identification by IP number as long as there is no
+workable alternative.
+
 
 
 
@@ -557,6 +586,7 @@ logging verbosely? Would that actually solve any attacks?
 \label{sec:crossroads-design}
 
 \subsection{Transporting the stream vs transporting the packets}
+\label{subsec:stream-vs-packet}
 \label{subsec:tcp-vs-ip}
 
 We periodically run into ex ZKS employees who tell us that the process of
@@ -603,7 +633,7 @@ characterize the exit policies and let clients parse them to decide
 which nodes will allow which packets to exit.
 \item \emph{The Tor-internal name spaces would need to be redesigned.} We
 support hidden service {\tt{.onion}} addresses, and other special addresses
-like {\tt{.exit}} (see Section \ref{subsec:}), by intercepting the addresses
+like {\tt{.exit}} (see Section~\ref{subsec:}), by intercepting the addresses
 when they are passed to the Tor client.
 \end{enumerate}
 
@@ -653,7 +683,8 @@ stream processing to a more loss-tolerant processing of traffic (cf.\
 Section~\ref{subsec:tcp-vs-ip}). In other words, there would
 probably be no direct attempt to synchronize on batches of data
 entering the Tor network at the same time. Rather, it is the link
-level batching that will add noise to the traffic patterns exiting the
+level batching that will add noise to the traffic patterns entering
+and passing through the
 network.  Similarly, if end-to-end traffic confirmation is the
 concern, there is little point in mixing. It might also be feasible to
 pad chunks to uniform size as is done now for cells; if this is link
@@ -667,19 +698,31 @@ performance or too many volunteers.
 
 The distinction between traffic confirmation and traffic analysis is
 not as practically cut and dried as we might wish. In \cite{hintz-pet02} it was
-shown that if latencies to and/or data volumes of various popular
+shown that if data volumes of various popular
 responder destinations are catalogued, it may not be necessary to
 observe both ends of a stream to confirm a source-destination link.
-These are likely to entail high variability and massive storage since
+This should be fairly effective without simultaneously observing both
+ends of the connection. However, it is still essentially confirming
+suspected communicants where the responder suspects are ``stored'' rather
+than observed at the same time as the client.
+Similarly latencies of going through various routes can be
+catalogued~\cite{back01} to connect endpoints.
+This is likely to entail high variability and massive storage since
 % XXX hintz-pet02 just looked at data volumes of the sites. this
 % doesn't require much variability or storage. I think it works
 % quite well actually. Also, \cite{kesdogan:pet2002} takes the
 % attack another level further, to narrow down where you could be
 % based on an intersection attack on subpages in a website. -RD
+%
+% I was trying to be terse and simultaneously referring to both the
+% Hintz stuff and the Back et al. stuff from Info Hiding 01. I've
+% separated the two and added the references. -PFS
 routes through the network to each site will be random even if they
-have relatively unique latency or volume characteristics. So these do
-not seem an immediate practical threat. Further along similar lines, in
-\cite{attack-tor-oak05}, it was shown that an outside attacker can
+have relatively unique latency characteristics. So the do
+not seem an immediate practical threat. Further along similar lines,
+the same paper suggested a ``clogging attack''. A version of this
+was demonstrated to be practical in
+\cite{attack-tor-oak05}. There it was shown that an outside attacker can
 trace a stream through the Tor network while a stream is still active
 simply by observing the latency of his own traffic sent through
 various Tor nodes. These attacks are especially significant since they
@@ -704,7 +747,9 @@ difficulties and overhead of distribution, they constitute a collected
 record of destinations and/or data visited by Tor users.  While
 limited to network insiders, given the need for wide distribution
 they could serve as useful data to an attacker deciding which locations
-to target for confirmation.
+to target for confirmation. A way to counter this distribution
+threat might be to only cache at certain semitrusted helper nodes.
+
 
 [nick will work on this]
 
@@ -728,13 +773,58 @@ which probably gives george and steven enough info to break tor?
 
 [nick will work on this section, unless arma gets there first]
 
-\subsection{Anonymity benefits for running a server}
+\subsection{Running a Tor server, path length, and helper nodes}
 
-Does running a server help you or harm you? George's Oakland attack.
+It has been thought for some time that the best anonymity protection
+comes from running your own onion router~\cite{or-pet00,tor-design}.
+(In fact, in Onion Routing's first design, this was the only option
+possible~\cite{or-ih96}.) The first design also had a fixed path
+length of five nodes. Middle Onion Routing involved much analysis
+(mostly unpublished) of route selection algorithms and path length
+algorithms to combine efficiency with unpredictability in routes.
+Since, unlike Crowds, nodes in a route cannot all know the ultimate
+destination of an application connection, it was generally not
+considered significant if a node could determine via latency that it
+was second in the route. But if one followed Tor's three node default
+path length, an enclave-to-enclave communication (in which two of the
+ORs were at each enclave) would be completely compromised by the
+middle node. Thus for enclave-to-enclave communication, four is the fewest
+number of nodes that preserves the $\frac{c^2}{n^2}$ degree of protection
+in any setting.
 
-Plausible deniability -- without even running your traffic through Tor!
-But nobody knows about Tor, and the legal situation is fuzzy, so this
-isn't very true really.
+The Murdoch-Danezis attack, however, shows that simply adding to the
+path length may not protect usage of an enclave protecting OR\@.  A
+hostile web server can determine all of the nodes in a three node Tor
+path. The attack only identifies that a node is on the route, not
+where. For example, if all of the nodes on the route were enclave
+nodes, the attack would not identify which of the two not directly
+visible to the attacker was the source.  Thus, there remains an
+element of plausible deniability that is preserved for enclave nodes.
+However, Tor has always sought to be stronger than plausible
+deniability. Our assumption is that users of the network are concerned
+about being identified by an adversary, not with being proven guilty
+beyond any reasonable doubt. Still it is something, and may be desired
+in some settings.
+
+It is reasonable to think that this attack can be easily extended to
+longer paths should those be used; nonetheless there may be some
+advantage to random path length. If the number of nodes is unknown,
+then the adversary would need to send streams to all the nodes in the
+network and analyze the resulting latency from them to be reasonably
+certain that it has not missed the first node in the circuit. Also,
+the attack does not identify the order of nodes in a route, so the
+longer the route, the greater the uncertainty about which node might
+be first. It may be possible to extend the attack to learn the route
+node order, but it is not clear that this is practically feasible.
+
+Another way to reduce the threats to both enclaves and simple Tor
+clients is to have helper nodes. Helper nodes were introduced
+in~\cite{wright03} as a suggested means of protecting the identity
+of the initiator of a communication in various anonymity protocols.
+The idea is to use a single trusted node as the first one you go to,
+that way an attacker cannot ever attack the first nodes you connect
+to and do some form of intersection attack. This will not affect the
+Danezis-Murdoch attack at all.
 
 We have to pick the path length so adversary can't distinguish client from
 server (how many hops is good?).
@@ -746,6 +836,7 @@ your computer is doing that behavior.
 [arma will write this section]
 
 \subsection{Helper nodes}
+\label{subsec:helper-nodes}
 
 When does fixing your entry or exit node help you?
 Helper nodes in the literature don't deal with churn, and
