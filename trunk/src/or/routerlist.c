@@ -25,7 +25,14 @@ struct directory_token;
 typedef struct directory_token directory_token_t;
 
 /* static function prototypes */
-static int router_add_exit_policy_from_string(routerinfo_t *router, char *s);
+static int router_set_routerlist_from_string(char *s);
+static int
+router_get_list_from_string_impl(char **s, routerlist_t **dest,
+                                 int n_good_nicknames,
+                                 const char **good_nickname_lst);
+static int
+router_get_routerlist_from_directory_impl(char *s, routerlist_t **dest,
+                                          crypto_pk_env_t *pkey);
 static int router_add_exit_policy(routerinfo_t *router, 
                                   directory_token_t *tok);
 static int router_resolve_routerlist(routerlist_t *dir);
