@@ -207,28 +207,37 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
 
 /* Find the newest circ that conn can use, preferably one which is
  * dirty and not too old.
- * If !conn, return newest open.
+ * If !conn, return newest.
+ *
+ * If must_be_open, ignore circs not in CIRCUIT_STATE_OPEN.
  */
-circuit_t *circuit_get_newest_open(connection_t *conn) {
+circuit_t *circuit_get_newest(connection_t *conn, int must_be_open) {
   circuit_t *circ, *newest=NULL, *leastdirty=NULL;
+  routerinfo_t *exitrouter;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(conn && connection_ap_can_use_exit(conn,
-       router_get_by_addr_port(circ->cpath->prev->addr, circ->cpath->prev->port)) < 0) {
-      log_fn(LOG_DEBUG,"Skipping %s:%d:%d because we couldn't exit there.",
-             circ->n_conn->address, circ->n_port, circ->n_circ_id);
-      continue;
+    if(!circ->cpath)
+      continue; /* this circ doesn't start at us */
+    if(must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_conn))
+      continue; /* ignore non-open circs */
+    if(conn) {
+      if(circ->state == CIRCUIT_STATE_OPEN && circ->n_conn) /* open */
+        exitrouter = router_get_by_addr_port(circ->cpath->prev->addr, circ->cpath->prev->port);
+      else /* not open */
+        exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
+      if(!exitrouter || connection_ap_can_use_exit(conn, exitrouter) < 0) {
+        /* can't exit from this router */
+        continue;
+      }
     }
-    if(circ->cpath && circ->state == CIRCUIT_STATE_OPEN && circ->n_conn) {
-      if(!newest || newest->timestamp_created < circ->timestamp_created) {
-        assert(circ->n_circ_id);
-        newest = circ;
-      }
-      if(conn && circ->timestamp_dirty &&
-         (!leastdirty || leastdirty->timestamp_dirty < circ->timestamp_dirty)) {
-        assert(circ->n_circ_id);
-        leastdirty = circ;
-      }
+    if(!newest || newest->timestamp_created < circ->timestamp_created) {
+      assert(circ->n_circ_id);
+      newest = circ;
+    }
+    if(conn && circ->timestamp_dirty &&
+       (!leastdirty || leastdirty->timestamp_dirty < circ->timestamp_dirty)) {
+      assert(circ->n_circ_id);
+      leastdirty = circ;
     }
   }
 
@@ -743,6 +752,7 @@ void circuit_n_conn_open(connection_t *or_conn) {
     if(!circ)
       return;
 
+    assert(circ->state == CIRCUIT_STATE_OR_WAIT);
     log_fn(LOG_DEBUG,"Found circ, sending onion skin.");
     circ->n_conn = or_conn;
     if(circuit_send_next_onion_skin(circ) < 0) {

@@ -341,7 +341,11 @@ static void run_scheduled_events(time_t now) {
    *    and we make a new circ if there are no clean circuits.
    */
   if(options.SocksPort) {
-    circ = circuit_get_newest_open(NULL);
+
+    /* launch a new circ for any pending streams that need one */
+    connection_ap_attach_pending();
+
+    circ = circuit_get_newest(NULL, 1);
     if(time_to_new_circuit < now) {
       client_dns_clean();
       circuit_expire_unused_circuits();
@@ -352,12 +356,8 @@ static void run_scheduled_events(time_t now) {
       }
       time_to_new_circuit = now + options.NewCircuitPeriod;
     }
-    if(!circ) {
+    if(!circ)
       circuit_launch_new(1);
-    }
-    /* XXX also check if we have any circuit_pending streams and we're not
-     * currently building a circuit for them.
-     */
   }
 
   /* 3. Every second, we check how much bandwidth we've consumed and 

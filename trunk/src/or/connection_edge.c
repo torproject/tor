@@ -481,7 +481,6 @@ void connection_ap_attach_pending(void)
 {
   connection_t **carray;
   int n, i;
-  int need_new_circuit = 0;
 
   get_connection_array(&carray, &n);
 
@@ -490,11 +489,12 @@ void connection_ap_attach_pending(void)
         carray[i]->type != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
     if (connection_ap_handshake_attach_circuit(carray[i])<0) {
-      need_new_circuit = 1;
+      if(!circuit_get_newest(carray[i], 0)) {
+        /* if there are no acceptable clean or not-very-dirty circs on the way */
+        circuit_launch_new(1);
+      }
     }
   }
-  if(need_new_circuit)
-    circuit_launch_new(1);
 }
 
 static void connection_edge_consider_sending_sendme(connection_t *conn) {
@@ -549,9 +549,8 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   } /* else socks handshake is done, continue processing */
 
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-  if (connection_ap_handshake_attach_circuit(conn)<0) {
-    circuit_launch_new(1);
-  }
+  if(connection_ap_handshake_attach_circuit(conn) < 0)
+    circuit_launch_new(1); /* Build another circuit to handle this stream */
   return 0;
 }
 
@@ -569,7 +568,7 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
   assert(conn->socks_request);
 
   /* find the circuit that we should use, if there is one. */
-  circ = circuit_get_newest_open(conn);
+  circ = circuit_get_newest(conn, 1);
 
   if(!circ) {
     log_fn(LOG_INFO,"No safe circuit ready for edge connection; delaying.");
