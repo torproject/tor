@@ -270,6 +270,13 @@ directory_send_command(connection_t *conn, routerinfo_t *router, int purpose,
 
       httpcommand = "GET";
       sprintf(url, "%s/rendezvous/%s", use_newer ? "/tor" : "", payload);
+
+      /* XXX We're using payload here to mean something other than
+       * payload of the http post. This is probably bad, and should
+       * be fixed one day. Kludge for now to make sure we don't post more. */
+      payload_len = 0;
+      payload = NULL;
+
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       tor_assert(payload);
@@ -286,7 +293,7 @@ directory_send_command(connection_t *conn, routerinfo_t *router, int purpose,
            hoststring);
   connection_write_to_buf(tmp, strlen(tmp), conn);
 
-  if(purpose == DIR_PURPOSE_UPLOAD_DIR || purpose == DIR_PURPOSE_UPLOAD_RENDDESC) {
+  if(payload) {
     /* then send the payload afterwards too */
     connection_write_to_buf(payload, payload_len, conn);
   }
