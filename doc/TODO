@@ -65,6 +65,9 @@ ARMA    - ORs connect on demand. attach circuits to new connections, keep
         - nickname defaults to first piece of hostname
         - running-routers list refers to nickname if verified, else
           hash-base64'ed.
+        - put OR uptime in descriptor
+        - name the secret-key directory something to discourage people
+          from mailing their identity key to tor-ops
 
 
       pre3:
