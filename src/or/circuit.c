@@ -65,7 +65,7 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
   circ->p_aci = p_aci;
   circ->p_conn = p_conn;
 
-  circ->state = CIRCUIT_STATE_ONION_WAIT;
+  circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
 
   /* ACIs */
   circ->p_aci = p_aci;
@@ -87,8 +87,6 @@ void circuit_free(circuit_t *circ) {
   if (circ->p_crypto)
     crypto_free_cipher_env(circ->p_crypto);
 
-  if(circ->onion)
-    free(circ->onion);
   circuit_free_cpath(circ->cpath);
   while(circ->relay_queue) {
     tmpd = circ->relay_queue;
@@ -122,6 +120,8 @@ void circuit_free_cpath_node(crypt_path_t *victim) {
     crypto_free_cipher_env(victim->f_crypto);
   if(victim->b_crypto)
     crypto_free_cipher_env(victim->b_crypto);
+  if(victim->handshake_state)
+    crypto_dh_free(victim->handshake_state);
   free(victim);
 }
 
@@ -153,66 +153,6 @@ try_again:
     goto try_again;
 
   return test_aci;
-}
-
-int circuit_init(circuit_t *circ, int aci_type, onion_layer_t *layer) {
-  unsigned char iv[16];
-  unsigned char digest1[20];
-  unsigned char digest2[20];
-  struct timeval start, end;
-  long time_passed;
-
-  assert(circ && circ->onion);
-
-  log(LOG_DEBUG,"circuit_init(): starting");
-  circ->n_port = layer->port;
-  log(LOG_DEBUG,"circuit_init(): Set port to %u.",circ->n_port);
-  circ->n_addr = layer->addr;
-  circ->state = CIRCUIT_STATE_OPEN;
-
-  log(LOG_DEBUG,"circuit_init(): aci_type = %u.",aci_type);
-
-  my_gettimeofday(&start);
-
-  circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, aci_type);
-  if(!circ->n_aci) {
-    log(LOG_ERR,"circuit_init(): failed to get unique aci.");
-    return -1;
-  }
-
-  my_gettimeofday(&end);
-
-  time_passed = tv_udiff(&start, &end);
-  if (time_passed > 1000) {/* more than 1ms */
-    log(LOG_NOTICE,"circuit_init(): get_unique_aci just took %d us!",time_passed);
-  }
-
-  log(LOG_DEBUG,"circuit_init(): Chosen ACI %u.",circ->n_aci);
-
-  /* keys */
-  memset(iv, 0, 16);
-  crypto_SHA_digest(layer->keyseed,16,digest1);
-  crypto_SHA_digest(digest1,20,digest2);
-  crypto_SHA_digest(digest2,20,digest1);
-  log(LOG_DEBUG,"circuit_init(): Computed keys.");
-
-  if (!(circ->p_crypto = 
-        crypto_create_init_cipher(DEFAULT_CIPHER,digest2,iv,1))) {
-    log(LOG_ERR,"Cipher initialization failed (ACI %u).",circ->n_aci);
-    return -1;
-  }
-  
-  if (!(circ->n_crypto = 
-        crypto_create_init_cipher(DEFAULT_CIPHER,digest1,iv,0))) {
-    log(LOG_ERR,"Cipher initialization failed (ACI %u).",circ->n_aci);
-    return -1;
-  }
-
-  log(LOG_DEBUG,"circuit_init(): Cipher initialization complete.");
-
-  circ->expire = layer->expire;
-
-  return 0;
 }
 
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *circ, uint32_t naddr, uint16_t nport) {
@@ -269,13 +209,11 @@ circuit_t *circuit_get_newest_ap(void) {
   circuit_t *circ, *bestcirc=NULL;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(!circ->p_conn || circ->p_conn->type == CONN_TYPE_AP) {
-      if(circ->state == CIRCUIT_STATE_OPEN && (!bestcirc ||
-        bestcirc->timestamp_created < circ->timestamp_created)) {
-        log(LOG_DEBUG,"circuit_get_newest_ap(): Choosing n_aci %d.", circ->n_aci);
-        assert(circ->n_aci);
-        bestcirc = circ;
-      }
+    if(circ->cpath && circ->state == CIRCUIT_STATE_OPEN && (!bestcirc ||
+      bestcirc->timestamp_created < circ->timestamp_created)) {
+      log(LOG_DEBUG,"circuit_get_newest_ap(): Choosing n_aci %d.", circ->n_aci);
+      assert(circ->n_aci);
+      bestcirc = circ;
     }
   }
   return bestcirc;
@@ -331,7 +269,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   buf[0] = cell->length;
   memcpy(buf+1, cell->payload, CELL_PAYLOAD_SIZE);
 
-  log(LOG_DEBUG,"circuit_deliver_relay_cell(): streamid %d before crypt.", *(int*)(cell->payload+1));
+  log(LOG_DEBUG,"circuit_deliver_relay_cell(): direction %d, streamid %d before crypt.", cell_direction, *(int*)(cell->payload+1));
 
   if(relay_crypt(circ, buf, 1+CELL_PAYLOAD_SIZE, cell_direction, layer_hint, &recognized, &conn) < 0) {
     log(LOG_DEBUG,"circuit_deliver_relay_cell(): relay crypt failed. Dropping connection.");
@@ -363,6 +301,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
     return 0;
   }
 
+  log(LOG_DEBUG,"circuit_deliver_relay_cell(): Passing on unrecognized cell.");
   return connection_write_cell_to_buf(cell, conn);
 }
 
@@ -378,32 +317,42 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
   if(cell_direction == CELL_DIRECTION_IN) { 
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
       thishop = circ->cpath;
+      if(thishop->state != CPATH_STATE_OPEN) {
+        log(LOG_INFO,"relay_crypt(): Relay cell before first created cell?");
+        return -1;
+      }
       do { /* Remember: cpath is in forward order, that is, first hop first. */
         assert(thishop);
 
+        log(LOG_DEBUG,"relay_crypt(): before decrypt: %d",*(int*)(in+2));
         /* decrypt */
         if(crypto_cipher_decrypt(thishop->b_crypto, in, inlen, out)) {
           log(LOG_ERR,"Error performing decryption:%s",crypto_perror());
           return -1;
         }
         memcpy(in,out,inlen);
+        log(LOG_DEBUG,"relay_crypt(): after decrypt: %d",*(int*)(in+2));
 
         if( (*recognized = relay_check_recognized(circ, cell_direction, in+2, conn)))
           return 0;
 
         thishop = thishop->next;
-      } while(thishop != circ->cpath);
+      } while(thishop != circ->cpath && thishop->state == CPATH_STATE_OPEN);
       log(LOG_INFO,"relay_crypt(): in-cell at OP not recognized. Killing circuit.");
-      return -1;
+      return 0;
+//      return -1;
     } else { /* we're in the middle. Just one crypt. */
 
+      log(LOG_DEBUG,"relay_crypt(): before encrypt: %d",*(int*)(in+2));
       if(crypto_cipher_encrypt(circ->p_crypto, in, inlen, out)) {
         log(LOG_ERR,"circuit_encrypt(): Encryption failed for ACI : %u (%s).",
             circ->p_aci, crypto_perror());
         return -1;
       }
       memcpy(in,out,inlen);
+      log(LOG_DEBUG,"relay_crypt(): after encrypt: %d",*(int*)(in+2));
 
+      log(LOG_DEBUG,"circuit_encrypt(): Skipping recognized check, because we're not the OP.");
       /* don't check for recognized. only the OP can recognize a stream on the way back. */
 
     }
@@ -415,12 +364,13 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
       do {
         assert(thishop);
 
-        /* encrypt */
+        log(LOG_DEBUG,"relay_crypt(): before encrypt: %d",*(int*)(in+2));
         if(crypto_cipher_encrypt(thishop->f_crypto, in, inlen, out)) {
           log(LOG_ERR,"Error performing encryption:%s",crypto_perror());
           return -1;
         }
         memcpy(in,out,inlen);
+        log(LOG_DEBUG,"relay_crypt(): after encrypt: %d",*(int*)(in+2));
 
         thishop = thishop->prev;
       } while(thishop != circ->cpath->prev);
@@ -450,8 +400,10 @@ int relay_check_recognized(circuit_t *circ, int cell_direction, char *stream, co
   connection_t *tmpconn;
 
   log(LOG_DEBUG,"relay_check_recognized(): entering");
-  if(!memcmp(stream,ZERO_STREAM,STREAM_ID_SIZE))
+  if(!memcmp(stream,ZERO_STREAM,STREAM_ID_SIZE)) {
+    log(LOG_DEBUG,"relay_check_recognized(): It's the zero stream. Recognized.");
     return 1; /* the zero stream is always recognized */
+  }
 
   if(cell_direction == CELL_DIRECTION_OUT)
     tmpconn = circ->n_conn;
@@ -459,8 +411,10 @@ int relay_check_recognized(circuit_t *circ, int cell_direction, char *stream, co
     tmpconn = circ->p_conn;
 
   log(LOG_DEBUG,"relay_check_recognized(): not the zero stream.");
-  if(!tmpconn)
+  if(!tmpconn) {
+    log(LOG_DEBUG,"relay_check_recognized(): No conns. Not recognized.");
     return 0; /* no conns? don't recognize it */
+  }
 
   while(tmpconn && tmpconn->type == CONN_TYPE_OR) {
     log(LOG_DEBUG,"relay_check_recognized(): skipping over an OR conn");
@@ -723,7 +677,7 @@ retry_circuit:
     return;
   }
 
-  if(circuit_create_onion() < 0) {
+  if(circuit_establish_circuit() < 0) {
     failures++;
     goto retry_circuit;
   }
@@ -732,50 +686,21 @@ retry_circuit:
   return;
 }
 
-int circuit_create_onion(void) {
-  int routelen; /* length of the route */
-  unsigned int *route; /* hops in the route as an array of indexes into rarray */
-  unsigned char *onion; /* holds the onion */
-  int onionlen; /* onion length in host order */
-  crypt_path_t *cpath; /* defines the crypt operations that need to be performed on incoming/outgoing data */
-
-  /* choose a route */
-  route = (unsigned int *)router_new_route(&routelen);
-  if (!route) { 
-    log(LOG_ERR,"circuit_create_onion(): Error choosing a route through the OR network.");
-    return -1;
-  }
-  log(LOG_DEBUG,"circuit_create_onion(): Chosen a route of length %u : ",routelen);
-
-  /* create an onion and calculate crypto keys */
-  onion = router_create_onion(route,routelen,&onionlen, &cpath);
-  if (!onion) {
-    log(LOG_ERR,"circuit_create_onion(): Error creating an onion.");
-    free(route);
-    return -1;
-  }
-  log(LOG_DEBUG,"circuit_create_onion(): Created an onion of size %u bytes.",onionlen);
-//  log(LOG_DEBUG,"circuit_create_onion(): Crypt path :");
-
-  return circuit_establish_circuit(route, routelen, onion, onionlen, cpath);
-}
-
-int circuit_establish_circuit(unsigned int *route, int routelen, char *onion,
-                                   int onionlen, crypt_path_t *cpath) {
+int circuit_establish_circuit(void) {
   routerinfo_t *firsthop;
   connection_t *n_conn;
   circuit_t *circ;
 
-  /* now see if we're already connected to the first OR in 'route' */
-  firsthop = router_get_first_in_route(route, routelen);
-  assert(firsthop); /* should always be defined */
-  free(route); /* we don't need it anymore */
-
   circ = circuit_new(0, NULL); /* sets circ->p_aci and circ->p_conn */
   circ->state = CIRCUIT_STATE_OR_WAIT;
-  circ->onion = onion;
-  circ->onionlen = onionlen;
-  circ->cpath = cpath;
+  circ->cpath = onion_generate_cpath(&firsthop);
+  if(!circ->cpath) {
+    log(LOG_DEBUG,"circuit_establish_circuit(): Generating cpath failed.");
+    circuit_close(circ);
+    return -1;
+  }
+
+  /* now see if we're already connected to the first OR in 'route' */
 
   log(LOG_DEBUG,"circuit_establish_circuit(): Looking for firsthop '%s:%u'",
       firsthop->address,firsthop->or_port);
@@ -798,14 +723,22 @@ int circuit_establish_circuit(unsigned int *route, int routelen, char *onion,
       }
     }
 
+    log(LOG_DEBUG,"circuit_establish_circuit(): connecting in progress (or finished). Good.");
     return 0; /* return success. The onion/circuit/etc will be taken care of automatically
                * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
                */ 
   } else { /* it (or a twin) is already open. use it. */
     circ->n_addr = n_conn->addr;
     circ->n_port = n_conn->port;
-    return circuit_send_onion(n_conn, circ);
+    circ->n_conn = n_conn;
+    log(LOG_DEBUG,"circuit_establish_circuit(): Conn open. Delivering first onion skin.");
+    if(circuit_send_next_onion_skin(circ) < 0) {
+      log(LOG_DEBUG,"circuit_establish_circuit(): circuit_send_next_onion_skin failed.");
+      circuit_close(circ);
+      return -1;
+    }
   }
+  return 0;
 }
 
 /* find circuits that are waiting on me, if any, and get them to send the onion */
@@ -818,8 +751,9 @@ void circuit_n_conn_open(connection_t *or_conn) {
     if(!circ)
       return;
 
-    log(LOG_DEBUG,"circuit_n_conn_open(): Found circ, sending onion.");
-    if(circuit_send_onion(or_conn, circ) < 0) {
+    log(LOG_DEBUG,"circuit_n_conn_open(): Found circ, sending onion skin.");
+    circ->n_conn = or_conn;
+    if(circuit_send_next_onion_skin(circ) < 0) {
       log(LOG_DEBUG,"circuit_n_conn_open(): circuit marked for closing.");
       circuit_close(circ);
       return; /* FIXME will want to try the other circuits too? */
@@ -828,50 +762,182 @@ void circuit_n_conn_open(connection_t *or_conn) {
   }
 }
 
-int circuit_send_onion(connection_t *n_conn, circuit_t *circ) {
+int circuit_send_next_onion_skin(circuit_t *circ) {
   cell_t cell;
-  int tmpbuflen, dataleft;
-  char *tmpbuf;
+  crypt_path_t *hop;
+  routerinfo_t *router;
 
-  circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, ACI_TYPE_BOTH);
-  circ->n_conn = n_conn;
-  log(LOG_DEBUG,"circuit_send_onion(): n_conn is %s:%u",n_conn->address,n_conn->port);
+  assert(circ && circ->cpath);
 
-  /* deliver the onion as one or more create cells */
-  cell.command = CELL_CREATE;
-  cell.aci = circ->n_aci;
+  if(circ->cpath->state == CPATH_STATE_CLOSED) {
 
-  tmpbuflen = circ->onionlen+4;
-  tmpbuf = malloc(tmpbuflen);
-  if(!tmpbuf)
-    return -1;
-  *(uint32_t*)tmpbuf = htonl(circ->onionlen);
-  memcpy(tmpbuf+4, circ->onion, circ->onionlen);
+    log(LOG_DEBUG,"circuit_send_next_onion_skin(): First skin; sending create cell.");
+    circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, ACI_TYPE_BOTH);
 
-  dataleft = tmpbuflen;
-  while(dataleft) {
+    memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_CREATE;
     cell.aci = circ->n_aci;
-    log(LOG_DEBUG,"circuit_send_onion(): Sending a create cell for the onion...");
-    if(dataleft >= CELL_PAYLOAD_SIZE) {
-      cell.length = CELL_PAYLOAD_SIZE;
-      memcpy(cell.payload, tmpbuf + tmpbuflen - dataleft, CELL_PAYLOAD_SIZE);
-      connection_write_cell_to_buf(&cell, n_conn);
-      dataleft -= CELL_PAYLOAD_SIZE;
-    } else { /* last cell */
-      cell.length = dataleft;
-      memcpy(cell.payload, tmpbuf + tmpbuflen - dataleft, dataleft);
-      /* fill extra space with 0 bytes */
-      memset(cell.payload + dataleft, 0, CELL_PAYLOAD_SIZE - dataleft);
-      connection_write_cell_to_buf(&cell, n_conn);
-      dataleft = 0;
+    cell.length = 208;
+
+    if(onion_skin_create(circ->n_conn->pkey, &(circ->cpath->handshake_state), cell.payload) < 0) {
+      log(LOG_INFO,"circuit_send_next_onion_skin(): onion_skin_create (first hop) failed.");
+      return -1;
+    }
+
+    if(connection_write_cell_to_buf(&cell, circ->n_conn) < 0) {
+      return -1;
+    }
+
+    circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
+    circ->state = CIRCUIT_STATE_BUILDING;
+    log(LOG_DEBUG,"circuit_send_next_onion_skin(): first skin; finished sending create cell.");
+  } else {
+    assert(circ->cpath->state == CPATH_STATE_OPEN);
+    assert(circ->state == CIRCUIT_STATE_BUILDING);
+    log(LOG_DEBUG,"circuit_send_next_onion_skin(): starting to send subsequent skin.");
+    for(hop=circ->cpath->next;
+        hop != circ->cpath && hop->state == CPATH_STATE_OPEN;
+        hop=hop->next) ;
+    if(hop == circ->cpath) { /* done building the circuit. whew. */
+      circ->state = CIRCUIT_STATE_OPEN;
+      log(LOG_DEBUG,"circuit_send_next_onion_skin(): circuit built!");
+      return 0;
+    }
+
+    router = router_get_by_addr_port(hop->addr,hop->port);
+    if(!router) {
+      log(LOG_INFO,"circuit_send_next_onion_skin(): couldn't lookup router %d:%d",hop->addr,hop->port);
+      return -1;
+    }
+
+    memset(&cell, 0, sizeof(cell_t));
+    cell.command = CELL_RELAY; 
+    cell.aci = circ->n_aci;
+    SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_EXTEND);
+    SET_CELL_STREAM_ID(cell, ZERO_STREAM);
+
+    cell.length = RELAY_HEADER_SIZE + 6 + 208;
+    *(uint32_t*)(cell.payload+RELAY_HEADER_SIZE) = htonl(hop->addr);
+    *(uint32_t*)(cell.payload+RELAY_HEADER_SIZE+4) = htons(hop->port);
+    if(onion_skin_create(router->pkey, &(hop->handshake_state), cell.payload+RELAY_HEADER_SIZE+6) < 0) {
+      log(LOG_INFO,"circuit_send_next_onion_skin(): onion_skin_create failed.");
+      return -1;
+    }
+
+    log(LOG_DEBUG,"circuit_send_next_onion_skin(): Sending extend relay cell.");
+    /* send it to hop->prev, because it will transfer it to a create cell and then send to hop */
+    if(circuit_deliver_relay_cell_from_edge(&cell, circ, EDGE_AP, hop->prev) < 0) {
+      log(LOG_DEBUG,"circuit_send_next_onion_skin(): failed to deliver extend cell. Closing.");
+      return -1;
+    }
+    hop->state = CPATH_STATE_AWAITING_KEYS;
+  }
+  return 0;
+}
+
+/* take the 'extend' cell, pull out addr/port plus the onion skin. Connect
+ * to the next hop, and pass it the onion skin in a create cell.
+ */
+int circuit_extend(cell_t *cell, circuit_t *circ) {
+  connection_t *n_conn;
+  aci_t aci_type;
+  struct sockaddr_in me; /* my router identity */
+  cell_t newcell;
+
+  circ->n_addr = ntohl(*(uint32_t*)(cell->payload+RELAY_HEADER_SIZE));
+  circ->n_port = ntohs(*(uint16_t*)(cell->payload+RELAY_HEADER_SIZE+4));
+
+  if(learn_my_address(&me) < 0)
+    return -1;
+
+  n_conn = connection_twin_get_by_addr_port(circ->n_addr,circ->n_port);
+  if(!n_conn || n_conn->type != CONN_TYPE_OR) {
+    /* i've disabled making connections through OPs, but it's definitely
+     * possible here. I'm not sure if it would be a bug or a feature. -RD
+     */
+    /* note also that this will close circuits where the onion has the same
+     * router twice in a row in the path. i think that's ok. -RD
+     */
+    log(LOG_DEBUG,"circuit_extend(): Next router not connected. Closing.");
+    /* XXX later we should fail more gracefully here, like with a 'truncated' */
+    return -1;
+  }
+
+  circ->n_addr = n_conn->addr; /* these are different if we found a twin instead */
+  circ->n_port = n_conn->port;
+
+  circ->n_conn = n_conn;
+  log(LOG_DEBUG,"circuit_extend(): n_conn is %s:%u",n_conn->address,n_conn->port);
+
+  aci_type = decide_aci_type(ntohl(me.sin_addr.s_addr), ntohs(me.sin_port),
+                             circ->n_addr, circ->n_port);
+
+  log(LOG_DEBUG,"circuit_extend(): aci_type = %u.",aci_type);
+  circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, aci_type);
+  if(!circ->n_aci) {
+    log(LOG_ERR,"circuit_extend(): failed to get unique aci.");
+    return -1;
+  }
+  log(LOG_DEBUG,"circuit_extend(): Chosen ACI %u.",circ->n_aci);
+
+  memset(&newcell, 0, sizeof(cell_t));
+  newcell.command = CELL_CREATE;
+  newcell.aci = circ->n_aci;
+  newcell.length = 208;
+
+  memcpy(newcell.payload, cell->payload+RELAY_HEADER_SIZE+6, 208);
+
+  if(connection_write_cell_to_buf(&newcell, circ->n_conn) < 0) {
+    return -1;
+  }
+
+  return 0;
+}
+
+int circuit_finish_handshake(circuit_t *circ, char *reply) {
+  unsigned char iv[16];
+  unsigned char keys[32];
+  crypt_path_t *hop;
+
+  memset(iv, 0, 16);
+
+  assert(circ->cpath);
+  if(circ->cpath->state == CPATH_STATE_AWAITING_KEYS)
+    hop = circ->cpath;
+  else {
+    for(hop=circ->cpath->next;
+        hop != circ->cpath && hop->state == CPATH_STATE_OPEN;
+        hop=hop->next) ;
+    if(hop == circ->cpath) { /* got an extended when we're all done? */
+      log(LOG_INFO,"circuit_finish_handshake(): got extended when circ already built? Weird.");
+      return 0;
     }
   }
-  free(tmpbuf);
+  assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
-  circ->state = CIRCUIT_STATE_OPEN;
-  /* FIXME should set circ->expire to something here */
+  if(onion_skin_client_handshake(hop->handshake_state, reply, keys, 32) < 0) {
+    log(LOG_ERR,"circuit_finish_handshake(): onion_skin_client_handshake failed.");
+    return -1;
+  }
 
+  crypto_dh_free(hop->handshake_state); /* don't need it anymore */
+  hop->handshake_state = NULL;
+
+  log(LOG_DEBUG,"circuit_finish_handshake(): hop %d init cipher forward %d, backward %d.", hop, *(int*)keys, *(int*)(keys+16));
+  if (!(hop->f_crypto =
+        crypto_create_init_cipher(DEFAULT_CIPHER,keys,iv,1))) {
+    log(LOG_ERR,"Cipher initialization failed.");
+    return -1;
+  }
+
+  if (!(hop->b_crypto =
+        crypto_create_init_cipher(DEFAULT_CIPHER,keys+16,iv,0))) {
+    log(LOG_ERR,"Cipher initialization failed.");
+    return -1;
+  }
+
+  hop->state = CPATH_STATE_OPEN;
+  log(LOG_DEBUG,"circuit_finish_handshake(): Completed.");
   return 0;
 }
 

@@ -607,6 +607,8 @@ int connection_encrypt_cell(char *cellp, connection_t *conn) {
   printf("\n");
 #endif
 
+  assert(conn);
+
   if(crypto_cipher_encrypt(conn->f_crypto, cellp, CELL_NETWORK_SIZE, cryptcell)) {
     log(LOG_ERR,"Could not encrypt cell for connection %s:%u.",conn->address,conn->port);
     return -1;

@@ -113,9 +113,9 @@
 #define DIR_CONN_STATE_COMMAND_WAIT 3
 #define DIR_CONN_STATE_WRITING 4
 
-#define CIRCUIT_STATE_ONION_WAIT 0 /* receiving the onion */
-#define CIRCUIT_STATE_ONION_PENDING 1 /* waiting to process the onion */
-#define CIRCUIT_STATE_OR_WAIT 2 /* I'm at the beginning of the path, my firsthop is still connecting */
+#define CIRCUIT_STATE_BUILDING 0 /* I'm the OP, still haven't done all my handshakes */
+#define CIRCUIT_STATE_ONIONSKIN_PENDING 1 /* waiting to process the onion */
+#define CIRCUIT_STATE_OR_WAIT 2 /* I'm the OP, my firsthop is still connecting */
 #define CIRCUIT_STATE_OPEN 3 /* onion processed, ready to send data along the connection */
 //#define CIRCUIT_STATE_CLOSE_WAIT1 4 /* sent two "destroy" signals, waiting for acks */
 //#define CIRCUIT_STATE_CLOSE_WAIT2 5 /* received one ack, waiting for one more 
@@ -127,23 +127,14 @@
 #define RELAY_COMMAND_END 3
 #define RELAY_COMMAND_CONNECTED 4
 #define RELAY_COMMAND_SENDME 5
+#define RELAY_COMMAND_EXTEND 6
+#define RELAY_COMMAND_EXTENDED 7
 
 #define RELAY_HEADER_SIZE 8
 
 #define RELAY_STATE_RESOLVING
 
-/* available cipher functions */
-#if 0
-#define ONION_CIPHER_IDENTITY 0
-#define ONION_CIPHER_DES 1
-#define ONION_CIPHER_RC4 2
-#define ONION_CIPHER_3DES 3
-#endif
-
 /* default cipher function */
-#if 0
-#define ONION_DEFAULT_CIPHER ONION_CIPHER_3DES
-#endif
 #define DEFAULT_CIPHER CRYPTO_CIPHER_3DES
 
 #define CELL_DIRECTION_IN 1
@@ -160,9 +151,10 @@
 /* cell commands */
 #define CELL_PADDING 0
 #define CELL_CREATE 1
-#define CELL_RELAY 2
-#define CELL_DESTROY 3
-#define CELL_SENDME 4
+#define CELL_CREATED 2
+#define CELL_RELAY 3
+#define CELL_DESTROY 4
+#define CELL_SENDME 5
 
 #define CELL_PAYLOAD_SIZE 248
 #define CELL_NETWORK_SIZE 256
@@ -245,8 +237,6 @@ struct connection_t {
   long timestamp_lastwritten;
 
   long timestamp_created;
-
-  int onions_handled_this_second;
 
 /* used by OR and OP: */
 
@@ -339,16 +329,19 @@ typedef struct {
 } routerinfo_t;
 
 struct crypt_path_t { 
-  char digest2[20]; /* second SHA output for onion_layer_t.keyseed */
-  char digest3[20]; /* third SHA output for onion_layer_t.keyseed */
 
   /* crypto environments */
   crypto_cipher_env_t *f_crypto;
   crypto_cipher_env_t *b_crypto;
 
+  crypto_dh_env_t *handshake_state;
+
+  uint32_t addr;
+  uint16_t port;
+
   char state;
 #define CPATH_STATE_CLOSED 0
-#define CPATH_STATE_AWAITING_KEY 1
+#define CPATH_STATE_AWAITING_KEYS 1
 #define CPATH_STATE_OPEN 2
   struct crypt_path_t *next;
   struct crypt_path_t *prev; /* doubly linked list */
@@ -382,15 +375,15 @@ typedef struct {
 
   crypt_path_t *cpath;
 
-  uint32_t expire; /* expiration time for the corresponding onion */
+  char onionskin[208]; /* for storage while onionskin pending */
   long timestamp_created;
   char dirty; /* whether this circuit has been used yet */
 
   int state;
 
-  unsigned char *onion; /* stores the onion when state is CONN_STATE_OPEN_WAIT */
-  uint32_t onionlen; /* total onion length */
-  uint32_t recvlen; /* length of the onion so far */
+//  unsigned char *onion; /* stores the onion when state is CONN_STATE_OPEN_WAIT */
+//  uint32_t onionlen; /* total onion length */
+//  uint32_t recvlen; /* length of the onion so far */
 
   void *next;
 } circuit_t;
@@ -538,17 +531,18 @@ void circuit_dump_by_conn(connection_t *conn);
 
 void circuit_expire_unused_circuits(void);
 void circuit_launch_new(int failure_status);
-int circuit_create_onion(void);
-int circuit_establish_circuit(unsigned int *route, int routelen, char *onion,
-                                   int onionlen, crypt_path_t *cpath);
+int circuit_establish_circuit(void);
 void circuit_n_conn_open(connection_t *or_conn);
-int circuit_send_onion(connection_t *or_conn, circuit_t *circ);
+int circuit_send_next_onion_skin(circuit_t *circ);
+int circuit_extend(cell_t *cell, circuit_t *circ);
+int circuit_finish_handshake(circuit_t *circ, char *reply);
 
 /********************************* command.c ***************************/
 
 void command_process_cell(cell_t *cell, connection_t *conn);
 
 void command_process_create_cell(cell_t *cell, connection_t *conn);
+void command_process_created_cell(cell_t *cell, connection_t *conn);
 void command_process_sendme_cell(cell_t *cell, connection_t *conn);
 void command_process_relay_cell(cell_t *cell, connection_t *conn);
 void command_process_destroy_cell(cell_t *cell, connection_t *conn);
@@ -775,23 +769,7 @@ int chooselen(double cw);
  */
 unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *routelen);
 
-/* creates a new onion from route, stores it and its length into bufp and lenp respectively */
-unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int *route, int routelen, int *len, crypt_path_t **cpath);
-
-/* encrypts 128 bytes of the onion with the specified public key, the rest with 
- * DES OFB with the key as defined in the outter layer */
-int encrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *pkey, char *keyseed);
-
-/* decrypts the first 128 bytes using RSA and prkey, decrypts the rest with DES OFB with key1. Writes the first layer into 'layer' */
-int decrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *prkey, onion_layer_t *layer);
-
-/* delete first n bytes of the onion and pads the end with n bytes of random data */
-void pad_onion(unsigned char *onion, uint32_t onionlen, int n);
-
-void init_tracked_tree(void);
-
-void onion_pack(char *dest, onion_layer_t *src);
-void onion_unpack(onion_layer_t *dest, char *src);
+crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop);
 
 int onion_skin_create(crypto_pk_env_t *router_key,
                       crypto_dh_env_t **handshake_state_out,
@@ -814,10 +792,8 @@ int learn_my_address(struct sockaddr_in *me);
 void router_retry_connections(void);
 routerinfo_t *router_pick_directory_server(void);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
-unsigned int *router_new_route(int *routelen);
-unsigned char *router_create_onion(unsigned int *route, int routelen, int *len, crypt_path_t **cpath);
+void router_get_rarray(routerinfo_t ***prouter_array, int *prarray_len);
 int router_is_me(uint32_t addr, uint16_t port);
-routerinfo_t *router_get_first_in_route(unsigned int *route, int routelen);
 void router_forget_router(uint32_t addr, uint16_t port);
 int router_get_list_from_file(char *routerfile);
 int router_get_list_from_string(char *s);

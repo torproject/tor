@@ -98,18 +98,9 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
-routerinfo_t *router_get_first_in_route(unsigned int *route, int routelen) {
-  return router_array[route[routelen-1]];
-}
-
-/* a wrapper around new_route. put all these in routers.c perhaps? */
-unsigned int *router_new_route(int *routelen) {
-  return new_route(options.CoinWeight, router_array, rarray_len, routelen);
-}
-
-/* a wrapper around create_onion */
-unsigned char *router_create_onion(unsigned int *route, int routelen, int *len, crypt_path_t **cpath) {
-  return create_onion(router_array,rarray_len,route,routelen,len,cpath);
+void router_get_rarray(routerinfo_t ***prouter_array, int *prarray_len) {
+  *prouter_array = router_array;
+  *prarray_len = rarray_len;
 }
 
 /* return 1 if addr and port corresponds to my addr and my or_listenport. else 0,
@@ -132,52 +123,6 @@ int router_is_me(uint32_t addr, uint16_t port)
 
   return 0;
 
-#if 0
-  /* local host information */
-  char localhostname[512];
-  struct hostent *localhost;
-  struct in_addr *a;
-  char *tmp1;
-  
-  char *addr = NULL;
-  int i = 0;
-
-  /* obtain local host information */
-  if (gethostname(localhostname,512) < 0) {
-    log(LOG_ERR,"router_is_me(): Error obtaining local hostname.");
-    return -1;
-  }
-  localhost = gethostbyname(localhostname);
-  if (!localhost) {
-    log(LOG_ERR,"router_is_me(): Error obtaining local host info.");
-    return -1;
-  }
-  
-  /* check host addresses for a match with or_address above */
-  addr = localhost->h_addr_list[i++]; /* set to the first local address */
-  while(addr)
-  {
-    a = (struct in_addr *)addr;
-
-    tmp1 = strdup(inet_ntoa(*a)); /* can't call inet_ntoa twice in the same
-                                     printf, since it overwrites its static
-                                     memory each time */
-    log(LOG_DEBUG,"router_is_me(): Comparing '%s' to '%s'.",tmp1,
-       inet_ntoa( *((struct in_addr *)&or_address) ) );
-    free(tmp1);
-    if (!memcmp((void *)&or_address, (void *)addr, sizeof(uint32_t))) { /* addresses match */
-      log(LOG_DEBUG,"router_is_me(): Addresses match. Comparing ports.");
-      if (or_listenport == my_or_listenport) { /* ports also match */
-        log(LOG_DEBUG,"router_is_me(): Ports match too.");
-        return 1;
-      }
-    }
-    
-    addr = localhost->h_addr_list[i++];
-  }
-
-  return 0;
-#endif
 }
 
 /* delete a list of routers from memory */
