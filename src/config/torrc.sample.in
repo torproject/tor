@@ -55,6 +55,11 @@ AllowUnverifiedNodes middle,rendezvous
 ## things in $HOME/.tor on Unix, and in Application Data\tor on Windows.
 #DataDirectory @LOCALSTATEDIR@/lib/tor
 
+## The port on which Tor will listen for local connections from Tor controller
+## applications, as documented in control-spec.txt.  NB: this feature is
+## currently experimental.
+#ControlPort 9051
+
 ############### This section is just for location-hidden services ###
 
 ## Look in .../hidden_service/hostname for the address to tell people.
