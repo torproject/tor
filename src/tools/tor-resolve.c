@@ -204,6 +204,15 @@ main(int argc, char **argv)
     usage();
   }
 
+  if (!strcasecmpend(arg[0], ".onion") || !strcasecmpend(arg[0], ".exit")) {
+    const char *name_type = (!strcasecmpend(arg[0], ".exit")) ?
+      "an exit-local hostname" : "a hidden service";
+    fprintf(stderr, "%s is %s; those don't have IP addresses.\n\n"
+            "To connect to %s, you need to send the hostname to Tor;\n"
+            "we suggest SOCKS 4a.\n", arg[0], name_type, name_type);
+    return 1;
+  }
+
   if (do_resolve(arg[0], sockshost, socksport, &result))
     return 1;
 
