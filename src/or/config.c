@@ -217,15 +217,7 @@ get_options(void) {
 }
 
 /** Change the current global options to contain <b>new_val</b> instead
- * of their current value; free the old value as necessary.  Where
- * <b>new_val</b> is different from the old value, update the process to
- * use the new value instead.
- *
- * Note 1: <b>new_val</b> must have previously been validated with
- * options_validate(), or Tor may freak out and exit.
- *
- * Note 2: We haven't moved all the "act on new configuration" logic
- * here yet.  Some is still in do_hup() and other places.
+ * of their current value; free the old value as necessary.
  */
 void
 set_options(or_options_t *new_val) {
@@ -237,6 +229,12 @@ set_options(or_options_t *new_val) {
 /** Fetch the active option list, and take actions based on it. All
  * of the things we do should survive being done repeatedly.
  * Return 0 if all goes well, return -1 if it's time to die.
+ *
+ * Note 1: <b>new_val</b> must have previously been validated with
+ * options_validate(), or Tor may freak out and exit.
+ *
+ * Note 2: We haven't moved all the "act on new configuration" logic
+ * here yet.  Some is still in do_hup() and other places.
  */
 int
 options_act(void) {
@@ -1367,6 +1365,10 @@ options_validate(or_options_t *options)
   }
   if (options->BandwidthBurst > INT_MAX) {
     log(LOG_WARN,"BandwidthBurst must be less than %d",INT_MAX);
+    result = -1;
+  }
+  if (options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
+    log(LOG_WARN,"BandwidthRate is set to %d bytes/second. It must be at least %d.", (int)options->BandwidthRate, ROUTER_REQUIRED_MIN_BANDWIDTH);
     result = -1;
   }
 
