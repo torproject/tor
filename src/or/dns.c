@@ -309,9 +309,9 @@ int connection_dns_process_inbuf(connection_t *conn) {
   }
 
   assert(conn->state == DNSWORKER_STATE_BUSY);
-  if(conn->inbuf_datalen < 4) /* entire answer available? */
+  if(buf_datalen(conn->inbuf) < 4) /* entire answer available? */
     return 0; /* not yet */
-  assert(conn->inbuf_datalen == 4);
+  assert(buf_datalen(conn->inbuf) == 4);
 
   connection_fetch_from_buf((char*)&answer,sizeof(answer),conn);
 

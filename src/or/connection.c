@@ -80,8 +80,8 @@ connection_t *connection_new(int type) {
   memset(conn,0,sizeof(connection_t)); /* zero it out to start */
 
   conn->type = type;
-  if(buf_new(&conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen) < 0 ||
-     buf_new(&conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen) < 0)
+  if(!(conn->inbuf = buf_new()) ||
+     !(conn->outbuf = buf_new())) 
     return NULL;
 
   conn->receiver_bucket = 50000; /* should be enough to do the handshake */
@@ -108,8 +108,12 @@ void connection_free(connection_t *conn) {
       tor_tls_free(conn->tls);
   }
 
-  if (conn->pkey)
-    crypto_free_pk_env(conn->pkey);
+  if (conn->onion_pkey)
+    crypto_free_pk_env(conn->onion_pkey);
+  if (conn->link_pkey)
+    crypto_free_pk_env(conn->link_pkey);
+  if (conn->identity_pkey)
+    crypto_free_pk_env(conn->identity_pkey);
 
   if(conn->s > 0) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);
@@ -287,14 +291,14 @@ static int connection_tls_finish_handshake(connection_t *conn) {
         log_fn(LOG_INFO,"Other side has a cert but it's bad. Closing.");
         return -1;
       }
-      router = router_get_by_pk(pk);
+      router = router_get_by_link_pk(pk);
       if (!router) {
         log_fn(LOG_INFO,"Unrecognized public key from peer. Closing.");
         crypto_free_pk_env(pk);
         return -1;
       }
-      if(conn->pkey) { /* I initiated this connection. */
-        if(crypto_pk_cmp_keys(conn->pkey, pk)) {
+      if(conn->link_pkey) { /* I initiated this connection. */
+        if(crypto_pk_cmp_keys(conn->link_pkey, pk)) {
           log_fn(LOG_INFO,"We connected to '%s' but he gave us a different key. Closing.", router->nickname);
           crypto_free_pk_env(pk);
           return -1;
@@ -306,7 +310,7 @@ static int connection_tls_finish_handshake(connection_t *conn) {
           log_fn(LOG_INFO,"That router is already connected. Dropping.");
           return -1;
         }
-        conn->pkey = pk;
+        conn->link_pkey = pk;
         conn->bandwidth = router->bandwidth;
         conn->addr = router->addr, conn->port = router->or_port;
         if(conn->address)
@@ -326,13 +330,13 @@ static int connection_tls_finish_handshake(connection_t *conn) {
       log_fn(LOG_INFO,"Other side has a cert but it's bad. Closing.");
       return -1;
     }
-    router = router_get_by_pk(pk);
+    router = router_get_by_link_pk(pk);
     if (!router) {
       log_fn(LOG_INFO,"Unrecognized public key from peer. Closing.");
       crypto_free_pk_env(pk);
       return -1;
     }
-    if(crypto_pk_cmp_keys(conn->pkey, pk)) {
+    if(crypto_pk_cmp_keys(conn->link_pkey, pk)) {
       log_fn(LOG_INFO,"We connected to '%s' but he gave us a different key. Closing.", router->nickname);
       crypto_free_pk_env(pk);
       return -1;
@@ -494,8 +498,7 @@ int connection_read_to_buf(connection_t *conn) {
       return connection_tls_continue_handshake(conn);
 
     /* else open, or closing */
-    result = read_to_buf_tls(conn->tls, at_most, &conn->inbuf,
-                             &conn->inbuflen, &conn->inbuf_datalen);
+    result = read_to_buf_tls(conn->tls, at_most, conn->inbuf);
 
     switch(result) {
       case TOR_TLS_ERROR:
@@ -510,8 +513,9 @@ int connection_read_to_buf(connection_t *conn) {
         return 0;
     }
   } else {
-    result = read_to_buf(conn->s, at_most, &conn->inbuf, &conn->inbuflen,
-                         &conn->inbuf_datalen, &conn->inbuf_reached_eof);
+    result = read_to_buf(conn->s, at_most, conn->inbuf,
+                         &conn->inbuf_reached_eof);
+
 //  log(LOG_DEBUG,"connection_read_to_buf(): read_to_buf returned %d.",read_result);
 
     if(result < 0)
@@ -534,11 +538,11 @@ int connection_read_to_buf(connection_t *conn) {
 }
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
-  return fetch_from_buf(string, len, &conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen);
+  return fetch_from_buf(string, len, conn->inbuf);
 }
 
 int connection_find_on_inbuf(char *string, int len, connection_t *conn) {
-  return find_on_inbuf(string, len, conn->inbuf, conn->inbuf_datalen);
+  return find_on_inbuf(string, len, conn->inbuf);
 }
 
 int connection_wants_to_flush(connection_t *conn) {
@@ -550,8 +554,7 @@ int connection_outbuf_too_full(connection_t *conn) {
 }
 
 int connection_flush_buf(connection_t *conn) {
-  return flush_buf(conn->s, &conn->outbuf, &conn->outbuflen,
-                   &conn->outbuf_flushlen, &conn->outbuf_datalen);
+  return flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
 }
 
 /* return -1 if you want to break the conn, else return 0 */
@@ -573,8 +576,7 @@ int connection_handle_write(connection_t *conn) {
     }
 
     /* else open, or closing */
-    switch(flush_buf_tls(conn->tls, &conn->outbuf, &conn->outbuflen,
-                         &conn->outbuf_flushlen, &conn->outbuf_datalen)) {
+    switch(flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen)) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
         log_fn(LOG_DEBUG,"tls error. breaking.");
@@ -601,8 +603,7 @@ int connection_handle_write(connection_t *conn) {
        */  
     }
   } else {
-    if(flush_buf(conn->s, &conn->outbuf, &conn->outbuflen,
-                 &conn->outbuf_flushlen, &conn->outbuf_datalen) < 0)
+    if(flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen) < 0)
       return -1;
       /* conns in CONNECTING state will fall through... */
   }
@@ -631,7 +632,7 @@ int connection_write_to_buf(char *string, int len, connection_t *conn) {
     conn->outbuf_flushlen += len;
   }
 
-  return write_to_buf(string, len, &conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen);
+  return write_to_buf(string, len, conn->outbuf);
 }
 
 int connection_receiver_bucket_should_increase(connection_t *conn) {
@@ -741,29 +742,25 @@ void assert_connection_ok(connection_t *conn, time_t now)
   
   /* buffers */
   assert(conn->inbuf);
-  assert(conn->inbuflen >= conn->inbuf_datalen);
-  assert(conn->inbuflen >= 0);
-  assert(conn->inbuf_datalen >= 0);
   assert(conn->outbuf);
-  assert(conn->outbuflen >= conn->outbuf_datalen);
-  assert(conn->outbuflen >= 0);
-  assert(conn->outbuf_datalen >= 0);
 
   assert(!now || conn->timestamp_lastread <= now);
   assert(!now || conn->timestamp_lastwritten <= now);
   assert(conn->timestamp_created <= conn->timestamp_lastread);
   assert(conn->timestamp_created <= conn->timestamp_lastwritten);
   
+  /* XXX Fix this; no longer so.*/
+#if 0
   if(conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_DIR)
     assert(!conn->pkey);
   /* pkey is set if we're a dir client, or if we're an OR in state OPEN
    * connected to another OR.
    */
+#endif
 
   if (conn->type != CONN_TYPE_OR) {
     assert(conn->bandwidth == -1);
     assert(conn->receiver_bucket == -1);
-    /* Addr, port, address XXX */
     assert(!conn->tls);
   } else {
     assert(conn->bandwidth);

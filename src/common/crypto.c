@@ -349,7 +349,7 @@ int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env, FILE *src)
   return 0;
 }
 
-int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, unsigned char *keyfile)
+int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *keyfile)
 {
   FILE *f_pr;
   int retval = 0;
@@ -616,6 +616,43 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromle
     default:
       return -1;
   }
+}
+
+int 
+crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out)
+{
+  unsigned char *buf, *bufp;
+  unsigned char digest[20];
+  int len;
+  int i;
+  assert(pk->type == CRYPTO_PK_RSA);
+  len = i2d_RSAPublicKey((RSA*)pk->key, NULL);
+  if (len < 0)
+    return -1;
+  if (len<FINGERPRINT_LEN+1) len = FINGERPRINT_LEN+1;
+  buf = bufp = tor_malloc(len+1);
+  len = i2d_RSAPublicKey((RSA*)pk->key, &bufp);
+  if (len < 0) {
+    free(buf);
+    return -1;
+  }
+  if (crypto_SHA_digest(buf, len, digest) < 0) {
+    free(buf);
+    return -1;
+  }
+  bufp = buf;
+  for (i = 0; i < 20; ++i) {
+    sprintf(bufp,"%02X",digest[i]);
+    bufp += 2;
+    if (i%2 && i != 19) {
+      *bufp++ = ' ';
+    }
+  }
+  *bufp = '\0';
+  assert(strlen(buf) == FINGERPRINT_LEN);
+  strcpy(fp_out, buf);
+  free(buf);
+  return 0;
 }
 
 /* symmetric crypto */

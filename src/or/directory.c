@@ -53,11 +53,11 @@ void directory_initiate_command(routerinfo_t *router, int command) {
   conn->address = strdup(router->address);
   conn->receiver_bucket = -1; /* edge connections don't do receiver buckets */
   conn->bandwidth = -1;
-  if (router->signing_pkey)
-    conn->pkey = crypto_pk_dup_key(router->signing_pkey);
+  if (router->identity_pkey)
+    conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
   else {
     log_fn(LOG_ERR, "No signing key known for dirserver %s; signature won't be checked", conn->address);
-    conn->pkey = NULL;
+    conn->identity_pkey = NULL;
   }
 
   if(connection_add(conn) < 0) { /* no space, forget it */
@@ -124,7 +124,7 @@ void directory_set_dirty(void) {
 static void directory_rebuild(void) {
   if(directory_dirty) {
     if (dump_signed_directory_to_string(the_directory, MAX_DIR_SIZE,
-                                        get_signing_privatekey())) {
+                                        get_identity_key())) {
       log(LOG_ERR, "Error writing directory");
       return;
     }
@@ -144,7 +144,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
     switch(conn->state) {
       case DIR_CONN_STATE_CLIENT_READING_FETCH:
         /* kill it, but first process the_directory and learn about new routers. */
-        switch(fetch_from_buf_http(conn->inbuf,&conn->inbuf_datalen,
+        switch(fetch_from_buf_http(conn->inbuf,
                                    NULL, 0, the_directory, MAX_DIR_SIZE)) {
           case -1: /* overflow */
             log_fn(LOG_DEBUG,"'fetch' response too large. Failing.");
@@ -161,11 +161,11 @@ int connection_dir_process_inbuf(connection_t *conn) {
           log_fn(LOG_DEBUG,"Empty directory. Ignoring.");
           return -1;
         }
-        if(router_get_dir_from_string(the_directory, conn->pkey) < 0) {
+        if(router_get_dir_from_string(the_directory, conn->identity_pkey) < 0){
           log_fn(LOG_DEBUG,"...but parsing failed. Ignoring.");
         } else {
           log_fn(LOG_DEBUG,"and got an %s directory; updated routers.", 
-              conn->pkey ? "authenticated" : "unauthenticated");
+              conn->identity_pkey ? "authenticated" : "unauthenticated");
         }
         if(options.OnionRouter) { /* connect to them all */
           router_retry_connections();
@@ -196,7 +196,7 @@ static int directory_handle_command(connection_t *conn) {
 
   assert(conn && conn->type == CONN_TYPE_DIR);
 
-  switch(fetch_from_buf_http(conn->inbuf,&conn->inbuf_datalen,
+  switch(fetch_from_buf_http(conn->inbuf,
                              headers, sizeof(headers), body, sizeof(body))) {
     case -1: /* overflow */
       log_fn(LOG_DEBUG,"input too large. Failing.");

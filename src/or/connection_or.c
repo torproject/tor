@@ -99,7 +99,8 @@ connection_t *connection_or_connect(routerinfo_t *router) {
   conn->addr = router->addr;
   conn->port = router->or_port;
   conn->bandwidth = router->bandwidth;
-  conn->pkey = crypto_pk_dup_key(router->pkey);
+  conn->onion_pkey = crypto_pk_dup_key(router->onion_pkey);
+  conn->link_pkey = crypto_pk_dup_key(router->link_pkey);
   conn->address = strdup(router->address);
 
   if(connection_add(conn) < 0) { /* no space, forget it */
@@ -148,9 +149,9 @@ int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
 int connection_process_cell_from_inbuf(connection_t *conn) {
   char buf[CELL_NETWORK_SIZE];
   cell_t cell;
- 
-  log_fn(LOG_DEBUG,"%d: starting, inbuf_datalen %d.",conn->s,conn->inbuf_datalen);
-  if(conn->inbuf_datalen < CELL_NETWORK_SIZE) /* entire response available? */
+
+  log_fn(LOG_DEBUG,"%d: starting, inbuf_datalen %d.",conn->s,buf_datalen(conn->inbuf));
+  if(buf_datalen(conn->inbuf) < CELL_NETWORK_SIZE) /* entire response available? */
     return 0; /* not yet */
  
   connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, conn);

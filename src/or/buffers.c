@@ -8,50 +8,103 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
-/* Create a new buf of size MAX_BUF_SIZE. Write a pointer to it
- * into *buf, write MAX_BUF_SIZE into *buflen, and initialize
- * *buf_datalen to 0. Return 0.
+struct buf_t {
+  char *buf;
+  size_t len;
+  size_t datalen;
+};
+
+#define BUF_OK(b) ((b) && (b)->buf && (b)->datalen <= (b)->len)
+
+/* Find the first instance of str on buf.  If none exists, return -1.
+ * Otherwise, return index of the first character in buf _after_ the
+ * first instance of str.
  */
-int buf_new(char **buf, int *buflen, int *buf_datalen) {
+static int find_str_in_str(const char *str, int str_len, 
+                           const char *buf, int buf_len)
+{
+  const char *location;
+  const char *last_possible = buf + buf_len - str_len;
 
-  assert(buf && buflen && buf_datalen);
+  assert(str && str_len > 0 && buf);
 
-  *buf = (char *)tor_malloc(MAX_BUF_SIZE);
-//  memset(*buf,0,MAX_BUF_SIZE);
-  *buflen = MAX_BUF_SIZE;
-  *buf_datalen = 0;
+  if(buf_len < str_len)
+    return -1;
 
-  return 0;
+  for(location = buf; location <= last_possible; location++)
+    if((*location == *str) && !memcmp(location+1, str+1, str_len-1))
+      return location-buf+str_len;
+
+  return -1;
 }
 
-void buf_free(char *buf) {
+/* Create and return a new buf of size 'size'
+ */
+buf_t *buf_new_with_capacity(size_t size) {
+  buf_t *buf;
+  buf = (buf_t*)tor_malloc(sizeof(buf_t));
+  buf->buf = (char *)tor_malloc(size);
+  buf->len = size;
+  buf->datalen = 0;
+//  memset(buf->buf,0,size);
+
+  assert(BUF_OK(buf));
+  return buf;
+}
+
+buf_t *buf_new()
+{
+  return buf_new_with_capacity(MAX_BUF_SIZE);
+}
+
+
+size_t buf_datalen(const buf_t *buf)
+{
+  return buf->datalen;
+}
+
+size_t buf_capacity(const buf_t *buf)
+{
+  return buf->len;
+}
+
+const char *_buf_peek_raw_buffer(const buf_t *buf)
+{
+  return buf->buf;
+}
+
+void buf_free(buf_t *buf) {
+  assert(buf && buf->buf);
+  free(buf->buf);
   free(buf);
 }
 
-/* read from socket s, writing onto buf+buf_datalen.
+
+
+/* read from socket s, writing onto end of buf.
  * read at most 'at_most' bytes, and in any case don't read more than will fit based on buflen.
  * If read() returns 0, set *reached_eof to 1 and return 0. If you want to tear
  * down the connection return -1, else return the number of bytes read.
  */
-int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, int *reached_eof) {
+int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof) {
 
   int read_result;
 #ifdef MS_WINDOWS
   int e;
 #endif
 
-  assert(buf && *buf && buflen && buf_datalen && reached_eof && (s>=0));
+  assert(BUF_OK(buf) && reached_eof && (s>=0));
 
   /* this is the point where you would grow the buffer, if you want to */
 
-  if(at_most > *buflen - *buf_datalen)
-    at_most = *buflen - *buf_datalen; /* take the min of the two */
+  if(at_most > buf->len - buf->datalen)
+    at_most = buf->len - buf->datalen; /* take the min of the two */
 
   if(at_most == 0)
     return 0; /* we shouldn't read anything */
 
 //  log_fn(LOG_DEBUG,"reading at most %d bytes.",at_most);
-  read_result = read(s, *buf+*buf_datalen, at_most);
+  read_result = read(s, buf->buf+buf->datalen, at_most);
   if (read_result < 0) {
     if(!ERRNO_EAGAIN(errno)) { /* it's a real error */
       return -1;
@@ -68,31 +121,33 @@ int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, i
     *reached_eof = 1;
     return 0;
   } else { /* we read some bytes */
-    *buf_datalen += read_result;
-    log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf.",read_result, *buf_datalen);
+    buf->datalen += read_result;
+    log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf.",read_result,
+           (int)buf->datalen);
     return read_result;
   }
 }
 
-int read_to_buf_tls(tor_tls *tls, int at_most, char **buf, int *buflen, int *buf_datalen) {
+int read_to_buf_tls(tor_tls *tls, int at_most, buf_t *buf) {
   int r;
-  assert(tls && *buf && buflen && buf_datalen);
+  assert(tls && BUF_OK(buf));
   
-  if (at_most > *buflen - *buf_datalen)
-    at_most = *buflen - *buf_datalen;
+  if (at_most > buf->len - buf->datalen)
+    at_most = buf->len - buf->datalen;
 
   if (at_most == 0)
     return 0;
   
-  r = tor_tls_read(tls, *buf+*buf_datalen, at_most);
+  r = tor_tls_read(tls, buf->buf+buf->datalen, at_most);
   if (r<0) 
     return r;
-  *buf_datalen += r;
-  log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf.",r, *buf_datalen);
+  buf->datalen += r;
+  log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf.",r, (int)buf->datalen);
   return r;
 } 
 
-int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen) {
+int flush_buf(int s, buf_t *buf, int *buf_flushlen) 
+{
 
   /* push from buf onto s
    * then memmove to front of buf
@@ -103,14 +158,12 @@ int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datale
   int e;
 #endif
 
-  assert(buf && *buf && buflen && buf_flushlen && buf_datalen && (s>=0) && (*buf_flushlen <= *buf_datalen));
+  assert(BUF_OK(buf) && buf_flushlen && (s>=0) && (*buf_flushlen <= buf->datalen));
 
   if(*buf_flushlen == 0) /* nothing to flush */
     return 0;
 
-  /* this is the point where you would grow the buffer, if you want to */
-
-  write_result = write(s, *buf, *buf_flushlen);
+  write_result = write(s, buf->buf, *buf_flushlen);
   if (write_result < 0) {
     if(!ERRNO_EAGAIN(errno)) { /* it's a real error */
       return -1;
@@ -124,72 +177,70 @@ int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datale
     log_fn(LOG_DEBUG,"write() would block, returning.");
     return 0;
   } else {
-    *buf_datalen -= write_result;
+    buf->datalen -= write_result;
     *buf_flushlen -= write_result;
-    memmove(*buf, *buf+write_result, *buf_datalen);
+    memmove(buf->buf, buf->buf+write_result, buf->datalen);
     log_fn(LOG_DEBUG,"%d: flushed %d bytes, %d ready to flush, %d remain.",
-      s,write_result,*buf_flushlen,*buf_datalen);
+           s,write_result,*buf_flushlen,(int)buf->datalen);
     return *buf_flushlen;
     /* XXX USE_TLS should change to return write_result like any sane function would */
   }
 }
 
-int flush_buf_tls(tor_tls *tls, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen)
+int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen) 
 {
   int r;
-  assert(tls && *buf && buflen && buf_datalen);
+  assert(tls && BUF_OK(buf) && buf_flushlen);
 
   /* we want to let tls write even if flushlen is zero, because it might
    * have a partial record pending */
-  r = tor_tls_write(tls, *buf, *buf_flushlen);
+  r = tor_tls_write(tls, buf->buf, *buf_flushlen);
   if (r < 0) {
     return r;
   }
-  *buf_datalen -= r;
+  buf->datalen -= r;
   *buf_flushlen -= r;
-  memmove(*buf, *buf+r, *buf_datalen);
+  memmove(buf->buf, buf->buf+r, buf->datalen);
   log_fn(LOG_DEBUG,"flushed %d bytes, %d ready to flush, %d remain.",
-    r,*buf_flushlen,*buf_datalen);
+    r,*buf_flushlen,(int)buf->datalen);
   return r;
 }
 
-int write_to_buf(char *string, int string_len,
-                 char **buf, int *buflen, int *buf_datalen) {
+int write_to_buf(char *string, int string_len, buf_t *buf) {
 
   /* append string to buf (growing as needed, return -1 if "too big")
    * return total number of bytes on the buf
    */
 
-  assert(string && buf && *buf && buflen && buf_datalen);
+  assert(string && BUF_OK(buf));
 
   /* this is the point where you would grow the buffer, if you want to */
 
-  if (string_len + *buf_datalen > *buflen) { /* we're out of luck */
+  if (string_len + buf->datalen > buf->len) { /* we're out of luck */
     log_fn(LOG_DEBUG, "buflen too small. Time to implement growing dynamic bufs.");
     return -1;
   }
 
-  memcpy(*buf+*buf_datalen, string, string_len);
-  *buf_datalen += string_len;
-  log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",string_len, *buf_datalen);
-  return *buf_datalen;
+  memcpy(buf->buf+buf->datalen, string, string_len);
+  buf->datalen += string_len;
+  log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",string_len, (int)buf->datalen);
+  return buf->datalen;
 }
 
-int fetch_from_buf(char *string, int string_len,
-                   char **buf, int *buflen, int *buf_datalen) {
+int fetch_from_buf(char *string, int string_len, buf_t *buf) {
 
   /* There must be string_len bytes in buf; write them onto string,
    * then memmove buf back (that is, remove them from buf).
    *
    * Return the number of bytes still on the buffer. */
 
-  assert(string && buf && *buf && buflen && buf_datalen);
-  assert(string_len <= *buf_datalen); /* make sure we don't ask for too much */
+  assert(string && BUF_OK(buf));
+  assert(string_len <= buf->datalen); /* make sure we don't ask for too much */
 
-  memcpy(string,*buf,string_len);
-  *buf_datalen -= string_len;
-  memmove(*buf, *buf+string_len, *buf_datalen);
-  return *buf_datalen;
+  memcpy(string,buf->buf,string_len);
+  buf->datalen -= string_len;
+  memmove(buf->buf, buf->buf+string_len, buf->datalen);
+  return buf->datalen;
 }
 
 /* There is a (possibly incomplete) http statement on *buf, of the
@@ -204,24 +255,24 @@ int fetch_from_buf(char *string, int string_len,
  * 
  * Else, change nothing and return 0.
  */
-int fetch_from_buf_http(char *buf, int *buf_datalen,
+int fetch_from_buf_http(buf_t *buf,
                         char *headers_out, int max_headerlen,
                         char *body_out, int max_bodylen) {
   char *headers, *body;
   int i;
   int headerlen, bodylen, contentlen;
 
-  assert(buf && buf_datalen);
+  assert(BUF_OK(buf));
 
-  headers = buf;
-  i = find_on_inbuf("\r\n\r\n", 4, buf, *buf_datalen);
+  headers = buf->buf;
+  i = find_on_inbuf("\r\n\r\n", 4, buf);
   if(i < 0) {
     log_fn(LOG_DEBUG,"headers not all here yet.");
     return 0;
   }
-  body = buf+i;
+  body = buf->buf+i;
   headerlen = body-headers; /* includes the CRLFCRLF */
-  bodylen = *buf_datalen - headerlen;
+  bodylen = buf->datalen - headerlen;
   log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.",headerlen,bodylen);
 
   if(headers_out && max_headerlen <= headerlen) {
@@ -234,9 +285,11 @@ int fetch_from_buf_http(char *buf, int *buf_datalen,
   }
 
 #define CONTENT_LENGTH "\r\nContent-Length: "
-  i = find_on_inbuf(CONTENT_LENGTH, strlen(CONTENT_LENGTH), headers, headerlen);
+  i = find_str_in_str(CONTENT_LENGTH, sizeof(CONTENT_LENGTH), 
+                      headers, headerlen);
   if(i > 0) {
     contentlen = atoi(headers+i);
+    /* XXX What if content-length is malformed? */
     if(bodylen < contentlen) {
       log_fn(LOG_DEBUG,"body not all here yet.");
       return 0; /* not all there yet */
@@ -246,15 +299,15 @@ int fetch_from_buf_http(char *buf, int *buf_datalen,
   }
   /* all happy. copy into the appropriate places, and return 1 */
   if(headers_out) {
-    memcpy(headers_out,buf,headerlen);
+    memcpy(headers_out,buf->buf,headerlen);
     headers_out[headerlen] = 0; /* null terminate it */
   }
   if(body_out) {
-    memcpy(body_out,buf+headerlen,bodylen);
+    memcpy(body_out,buf->buf+headerlen,bodylen);
     body_out[bodylen] = 0; /* null terminate it */
   }
-  *buf_datalen -= (headerlen+bodylen);
-  memmove(buf, buf+headerlen+bodylen, *buf_datalen);
+  buf->datalen -= (headerlen+bodylen);
+  memmove(buf, buf->buf+headerlen+bodylen, buf->datalen);
 
   return 1;
 }
@@ -269,7 +322,7 @@ int fetch_from_buf_http(char *buf, int *buf_datalen,
  * If it's invalid or too big, return -1.
  * Else it's not all there yet, change nothing and return 0.
  */
-int fetch_from_buf_socks(char *buf, int *buf_datalen,
+int fetch_from_buf_socks(buf_t *buf,
                          char *addr_out, int max_addrlen,
                          uint16_t *port_out) {
   socks4_t socks4_info;
@@ -278,14 +331,14 @@ int fetch_from_buf_socks(char *buf, int *buf_datalen,
   enum {socks4, socks4a } socks_prot = socks4a;
   char *next, *startaddr;
 
-  if(*buf_datalen < sizeof(socks4_t)) /* basic info available? */
+  if(buf->datalen < sizeof(socks4_t)) /* basic info available? */
     return 0; /* not yet */
 
   /* an inlined socks4_unpack() */
-  socks4_info.version = *buf;
-  socks4_info.command = *(buf+1);
-  socks4_info.destport = ntohs(*(uint16_t*)(buf+2));
-  socks4_info.destip = ntohl(*(uint32_t*)(buf+4));
+  socks4_info.version = (unsigned char) *(buf->buf);
+  socks4_info.command = (unsigned char) *(buf->buf+1);
+  socks4_info.destport = ntohs(*(uint16_t*)(buf->buf+2));
+  socks4_info.destip = ntohl(*(uint32_t*)(buf->buf+4));
 
   if(socks4_info.version != 4) {
     log_fn(LOG_NOTICE,"Unrecognized version %d.",socks4_info.version);
@@ -321,7 +374,7 @@ int fetch_from_buf_socks(char *buf, int *buf_datalen,
     socks_prot = socks4;
   }
 
-  next = memchr(buf+SOCKS4_NETWORK_LEN, 0, *buf_datalen);
+  next = memchr(buf->buf+SOCKS4_NETWORK_LEN, 0, buf->datalen);
   if(!next) {
     log_fn(LOG_DEBUG,"Username not here yet.");
     return 0;
@@ -329,7 +382,7 @@ int fetch_from_buf_socks(char *buf, int *buf_datalen,
 
   startaddr = next+1;
   if(socks_prot == socks4a) {
-    next = memchr(startaddr, 0, buf+*buf_datalen-startaddr);
+    next = memchr(startaddr, 0, buf->buf+buf->datalen-startaddr);
     if(!next) {
       log_fn(LOG_DEBUG,"Destaddr not here yet.");
       return 0;
@@ -342,32 +395,19 @@ int fetch_from_buf_socks(char *buf, int *buf_datalen,
   log_fn(LOG_DEBUG,"Everything is here. Success.");
   *port_out = port; 
   strcpy(addr_out, socks_prot == socks4 ? tmpbuf : startaddr);
-  *buf_datalen -= (next-buf+1); /* next points to the final \0 on inbuf */
-  memmove(buf, next+1, *buf_datalen);
+  buf->datalen -= (next-buf->buf+1); /* next points to the final \0 on inbuf */
+  memmove(buf->buf, next+1, buf->datalen);
 //  log_fn(LOG_DEBUG,"buf_datalen is now %d:'%s'",*buf_datalen,buf);
   return 1;
 }
 
-int find_on_inbuf(char *string, int string_len,
-                  char *buf, int buf_datalen) {
+int find_on_inbuf(char *string, int string_len, buf_t *buf) {
   /* find first instance of needle 'string' on haystack 'buf'. return how
    * many bytes from the beginning of buf to the end of string.
    * If it's not there, return -1.
    */
 
-  char *location;
-  char *last_possible = buf + buf_datalen - string_len;
-
-  assert(string && string_len > 0 && buf);
-
-  if(buf_datalen < string_len)
-    return -1;
-
-  for(location = buf; location <= last_possible; location++)
-    if((*location == *string) && !memcmp(location+1, string+1, string_len-1))
-      return location-buf+string_len;
-
-  return -1;
+  return find_str_in_str(string, string_len, buf->buf, buf->datalen);
 }
 
 /*

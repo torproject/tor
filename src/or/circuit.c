@@ -751,7 +751,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     cell.aci = circ->n_aci;
     cell.length = DH_ONIONSKIN_LEN;
 
-    if(onion_skin_create(circ->n_conn->pkey, &(circ->cpath->handshake_state), cell.payload) < 0) {
+    if(onion_skin_create(circ->n_conn->onion_pkey, &(circ->cpath->handshake_state), cell.payload) < 0) {
       log_fn(LOG_INFO,"onion_skin_create (first hop) failed.");
       return -1;
     }
@@ -791,7 +791,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     cell.length = RELAY_HEADER_SIZE + 6 + DH_ONIONSKIN_LEN;
     *(uint32_t*)(cell.payload+RELAY_HEADER_SIZE) = htonl(hop->addr);
     *(uint16_t*)(cell.payload+RELAY_HEADER_SIZE+4) = htons(hop->port);
-    if(onion_skin_create(router->pkey, &(hop->handshake_state), cell.payload+RELAY_HEADER_SIZE+6) < 0) {
+    if(onion_skin_create(router->onion_pkey, &(hop->handshake_state), cell.payload+RELAY_HEADER_SIZE+6) < 0) {
       log_fn(LOG_INFO,"onion_skin_create failed.");
       return -1;
     }

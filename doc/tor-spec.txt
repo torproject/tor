@@ -439,12 +439,16 @@ which reveals the downstream node.
 
 (Unless otherwise noted, tokens on the same line are space-separated.)
 
-Router ::= Router-Line  Public-Key  Signing-Key?  Exit-Policy NL
+Router ::= Router-Line  Onion-Key Link-Key Signing-Key  Exit-Policy Router-Signature NL
 Router-Line ::= "router" address ORPort APPort DirPort bandwidth NL
-Public-key ::= a public key in PEM format   NL
-Signing-Key ::= "signing-key"  NL  signing key in PEM format   NL
+Onion-key ::= "onion-key"  NL  a public key in PEM format   NL
+Link-key ::= "link-key"  NL  a public key in PEM format  NL
+Signing-Key ::= "signing-key"  NL  a public key in PEM format   NL
 Exit-Policy ::= Exit-Line*
 Exit-Line ::= ("accept"|"reject")  string  NL
+Router-Signature ::= "router-signature"  NL  Signature
+Signature ::= "-----BEGIN SIGNATURE-----" NL
+              Base-64-encoded-signature NL "-----END SIGNATURE-----" NL
 
 ORport ::= port where the router listens for routers/proxies (speaking cells)
 APPort ::=  where the router listens for applications (speaking socks)
@@ -475,7 +479,8 @@ Directory ::= Directory-Header  Directory-Router  Router*  Signature
 Directory-Header ::= "signed-directory" NL Software-Line NL
 Software-Line: "recommended-software"  comma-separated-version-list
 Directory-Router ::= Router
-Signature ::= "directory-signature" NL "-----BEGIN SIGNATURE-----" NL
+Directory-Signature ::= "directory-signature"  NL  Signature
+Signature ::= "-----BEGIN SIGNATURE-----" NL
               Base-64-encoded-signature NL "-----END SIGNATURE-----" NL
 
 Note:  The router block for the directory server must appear first.

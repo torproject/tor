@@ -189,10 +189,8 @@ static void config_assign(or_options_t *options, struct config_line *list) {
 
     /* string options */
     config_compare(list, "LogLevel",       CONFIG_TYPE_STRING, &options->LogLevel) ||
-    config_compare(list, "PrivateKeyFile", CONFIG_TYPE_STRING, &options->PrivateKeyFile) ||
-    config_compare(list, "SigningPrivateKeyFile", CONFIG_TYPE_STRING, &options->SigningPrivateKeyFile) ||
+    config_compare(list, "DataDirectory",  CONFIG_TYPE_STRING, &options->DataDirectory) ||
     config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
-    config_compare(list, "CertFile",       CONFIG_TYPE_STRING, &options->CertFile) ||
     config_compare(list, "Nickname",       CONFIG_TYPE_STRING, &options->Nickname) ||
 
     /* int options */
@@ -238,6 +236,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   memset(options,0,sizeof(or_options_t));
   options->LogLevel = "debug";
   options->loglevel = LOG_DEBUG;
+  options->DataDirectory = NULL;
   options->CoinWeight = 0.8;
   options->MaxConn = 900;
   options->DirFetchPeriod = 600;
@@ -246,7 +245,6 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->NewCircuitPeriod = 60; /* once a minute */
   options->TotalBandwidth = 800000; /* at most 800kB/s total sustained incoming */
   options->NumCpus = 1;
-  options->CertFile = "default.cert";
 
 /* learn config file name, get config lines, assign them */
   i = 1;
@@ -316,18 +314,13 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
-  if(options->OnionRouter && options->PrivateKeyFile == NULL) {
-    log(LOG_ERR,"PrivateKeyFile option required for OnionRouter, but not found.");
+  if(options->OnionRouter && options->DataDirectory == NULL) {
+    log(LOG_ERR,"DataDirectory option required for OnionRouter, but not found.");
     result = -1;
   }
 
   if(options->OnionRouter && options->Nickname == NULL) {
     log_fn(LOG_ERR,"Nickname required for OnionRouter, but not found.");
-    result = -1;
-  }
-
-  if(options->DirPort > 0 && options->SigningPrivateKeyFile == NULL) {
-    log(LOG_ERR,"SigningPrivateKeyFile option required for DirServer, but not found.");
     result = -1;
   }
 
