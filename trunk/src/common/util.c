@@ -208,6 +208,11 @@ void smartlist_set_capacity(smartlist_t *sl, int n) {
   }
 }
 
+/* Remove all elements from the list. */
+void smartlist_clear(smartlist_t *sl) {
+  sl->num_used = 0;
+}
+
 /* add element to the list, but only if there's room */
 void smartlist_add(smartlist_t *sl, void *element) {
   if (sl->num_used >= sl->capacity) {

@@ -102,6 +102,7 @@ typedef struct smartlist_t smartlist_t;
 smartlist_t *smartlist_create();
 void smartlist_free(smartlist_t *sl);
 void smartlist_set_capacity(smartlist_t *sl, int n);
+void smartlist_clear(smartlist_t *sl);
 void smartlist_add(smartlist_t *sl, void *element);
 void smartlist_remove(smartlist_t *sl, void *element);
 int smartlist_isin(smartlist_t *sl, void *element);

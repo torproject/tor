@@ -651,10 +651,13 @@ int rend_services_init(void) {
   rend_service_t *service;
   char *desc, *intro;
   int changed, prev_intro_nodes, desc_len;
+  smartlist_t *intro_routers;
 
   router_get_routerlist(&rl);
+  intro_routers = smartlist_create();
 
   for (i=0; i< smartlist_len(rend_service_list); ++i) {
+    smartlist_clear(intro_routers);
     service = smartlist_get(rend_service_list, i);
 
     assert(service);
@@ -667,6 +670,7 @@ int rend_services_init(void) {
         smartlist_del(service->intro_nodes,j--);
         changed = 1;
       }
+      smartlist_add(intro_routers, router);
     }
 
     /* We have enough intro points, and the intro points we thought we had were
@@ -683,13 +687,14 @@ int rend_services_init(void) {
       router = router_choose_random_node(rl,
                                          service->intro_prefer_nodes,
                                          service->intro_exclude_nodes,
-                                         service->intro_nodes);
+                                         intro_routers);
       if (!router) {
         log_fn(LOG_WARN, "Can't establish more than %d introduction points",
                smartlist_len(service->intro_nodes));
         break;
       }
       changed = 1;
+      smartlist_add(intro_routers, router);
       smartlist_add(service->intro_nodes, tor_strdup(router->nickname));
     }
 
@@ -719,6 +724,8 @@ int rend_services_init(void) {
       }
     }
   }
+  smartlist_free(intro_routers);
+
   return 0;
 }
 
