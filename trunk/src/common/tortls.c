@@ -377,6 +377,7 @@ tor_tls_read(tor_tls *tls, char *cp, int len)
   if (r > 0)
     return r;
   err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_INFO);
+  log_fn(LOG_DEBUG,"returned r=%d, err=%d",r,err);
   if (err == _TOR_TLS_ZERORETURN) {
     tls->state = TOR_TLS_ST_CLOSED;
     return TOR_TLS_CLOSE;
