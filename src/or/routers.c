@@ -1130,6 +1130,10 @@ int router_rebuild_descriptor(void) {
       return -1;
     }
     address = localhostname;
+    if(!strchr(address,'.')) {
+      log_fn(LOG_WARN,"fqdn '%s' has only one element. Misconfigured machine?",address);
+      return -1;
+    }
   }
   ri = tor_malloc(sizeof(routerinfo_t));
   ri->address = tor_strdup(address);
