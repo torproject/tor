@@ -701,6 +701,7 @@ config_trial_assign(or_options_t **options, struct config_line_t *list, int rese
     return -3;
   }
 
+  *options = trial_options;
   return 0;
 }
 
