@@ -30,9 +30,10 @@
 #ifdef HAVE_FTIME
 #define USING_FAKE_TIMEVAL
 #include <sys/timeb.h>
-#define timeval timeb
-#define tv_sec time
-#define tv_usec millitm
+struct timeval {
+  time_t tv_sec;
+  unsigned int tv_usec;
+};
 #endif
 #endif
 

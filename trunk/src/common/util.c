@@ -808,7 +808,10 @@ void tor_gettimeofday(struct timeval *timeval) {
     exit(1);
   }
 #elif defined(HAVE_FTIME)
-  ftime(timeval);
+  struct timeb tb;
+  ftime(&tb);
+  timeval->tv_sec = tb.time;
+  timeval->tv_usec = tb.millitm * 1000;
 #else
 #error "No way to get time."
 #endif
