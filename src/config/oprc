@@ -22,6 +22,3 @@ APPort 9050
 # Maximum number of sockets (of any sort) this node can have open
 MaxConn 900
 
-# Be a client: listen only for AP (socks) connections.
-Role 8
-

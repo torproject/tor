@@ -3,9 +3,6 @@
 # List of routers
 RouterFile ../config/routers.or
 
-# Be every role, including a directory server
-Role 63
-
 # Private key
 PrivateKeyFile moria2-private
 
