@@ -49,12 +49,12 @@ poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 
 	maxfd = -1;
 	for (idx = 0; idx < nfds; ++idx) {
+                ufds[idx].revents = 0;
 		fd = ufds[idx].fd;
-                if (ufds[idx].events) {
-                        if (fd > maxfd) 
-                                maxfd = fd;
+                if (fd > maxfd) {
+                  maxfd = fd;
 #ifdef MS_WINDOWS
-                        any_fds_set = 1;
+                  any_fds_set = 1;
 #endif
                 }
 		if (ufds[idx].events & POLLIN)
@@ -76,7 +76,6 @@ poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 	r = 0;
 	for (idx = 0; idx < nfds; ++idx) {
 		fd = ufds[idx].fd;
-		ufds[idx].revents = 0;
 		if (FD_ISSET(fd, &readfds))
 			ufds[idx].revents |= POLLIN;
 		if (FD_ISSET(fd, &writefds))
