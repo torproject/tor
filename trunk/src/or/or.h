@@ -427,6 +427,7 @@ typedef enum {
 #define END_STREAM_REASON_CONNRESET 12
 #define END_STREAM_REASON_TORPROTOCOL 13
 
+#define RESOLVED_TYPE_HOSTNAME 0
 #define RESOLVED_TYPE_IPV4 4
 #define RESOLVED_TYPE_IPV6 6
 #define RESOLVED_TYPE_ERROR_TRANSIENT 0xF0
@@ -1318,6 +1319,7 @@ int addressmap_already_mapped(const char *address);
 void addressmap_register(const char *address, char *new_address, time_t expires);
 int client_dns_incr_failures(const char *address);
 void client_dns_set_addressmap(const char *address, uint32_t val, const char *exitname);
+char *client_dns_get_unmapped_address(int type);
 
 void parse_socks_policy(void);
 void free_socks_policy(void);

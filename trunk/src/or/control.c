@@ -471,6 +471,18 @@ handle_control_mapaddress(connection_t *conn, uint16_t len, const char *body)
         log_fn(LOG_WARN,"Skipping invalid argument '%s' in MapAddress msg",from);
       } else if (!is_plausible_address(to)) {
         log_fn(LOG_WARN,"Skipping invalid argument '%s' in AddressMap msg",to);
+      } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
+        char *addr = client_dns_get_unmapped_address(
+               strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4);
+        if (!addr) {
+          log_fn(LOG_WARN,
+                 "Unable to allocate address for '%s' in AdressMap msg", line);
+        } else {
+          char *ans = tor_malloc(strlen(addr)+strlen(to)+2);
+          tor_snprintf(ans, "%s %s", addr, to);
+          addressmap_register(addr, tor_strdup(to), 0);
+          smartlist_add(reply, ans);
+        }
       } else {
         addressmap_register(from, tor_strdup(to), 0);
         smartlist_add(reply, tor_strdup(line));
