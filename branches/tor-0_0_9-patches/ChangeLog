@@ -5,11 +5,10 @@ Changes in version 0.0.9.5 - 2005-02-22
     - Patch from Dmitry Bely so Tor runs better as a service under
       the win32 SYSTEM account.
     - Make tor-resolve actually work (?) on Win32.
-    - Patches so Tor builds on Irix.
-    - Fix a sign bug when your getrlimit claims you have 4+ billion
+    - Fix a sign bug when getrlimit claims to have 4+ billion
       file descriptors available.
-    - Stop refusing to start if bandwidthburst == bandwidthrate.
-    - When create requests have been on the onion queue more than five
+    - Stop refusing to start when bandwidthburst == bandwidthrate.
+    - When create cells have been on the onion queue more than five
       seconds, just send back a destroy and take them off the list.
 
 
