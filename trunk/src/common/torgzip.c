@@ -20,6 +20,7 @@ const char torgzip_c_id[] = "$Id$";
 #include <zlib.h>
 #endif
 #include <string.h>
+#include <netinet/in.h>
 
 #include "util.h"
 #include "log.h"
