@@ -74,10 +74,6 @@
 
 #define OP_CONN_STATE_AWAITING_KEYS 0
 #define OP_CONN_STATE_OPEN 1
-#if 0
-#define OP_CONN_STATE_CLOSE 2 /* flushing the buffer, then will close */
-#define OP_CONN_STATE_CLOSE_WAIT 3 /* have sent a destroy, awaiting a confirmation */
-#endif
 
 /* how to read these states:
  * foo_CONN_STATE_bar_baz:
@@ -260,10 +256,6 @@ struct connection_t {
   struct crypt_path_t *cpath_layer; /* a pointer to which node in the circ this conn exits at */
   int package_window;
   int deliver_window;
-#if 0
-  int n_receive_streamwindow;
-  int p_receive_streamwindow;
-#endif
   int done_sending;
   int done_receiving;
 #ifdef USE_ZLIB
