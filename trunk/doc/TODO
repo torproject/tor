@@ -24,17 +24,17 @@ N&R. make loglevels info,debug less noisy
 
 For 0.0.9.3:
    - All tasks marked for 0093 in flyspray.
-   - Backport performance improvement (stop calling getttimeofday for
+   o Backport performance improvement (stop calling getttimeofday for
      each cell)
    o Tor startup script should be installed by default on OSX.
-   - Setup instructions for OSX.
+   o Setup instructions for OSX.
    - Server instructions for OSX and Windows operators.
 
 ************************ For Post 0.0.9 *****************************
 
-config option to publish what ports you listen on, beyond ORPort/DirPort
-https proxy for OR CONNECT stuff
-choose entry node to be one you're already connected to?
+  - config option to publish what ports you listen on, beyond ORPort/DirPort
+  - https proxy for OR CONNECT stuff
+  - choose entry node to be one you're already connected to?
 
 Tier one:
    o Move to our new version system.
@@ -43,7 +43,7 @@ Tier one:
        in the next series is recommended, that doesn't mean it's bad.
 
    - Bugfixes
-     - fix dfc/weasel's intro point bug
+     o fix dfc/weasel's intro point bug
      - when we haven't explicitly sent a socks reject, sending one in
        connection_about_to_close_connection() fails because we never give it
        a chance to flush. right answer is to do the socks reply manually in
@@ -53,7 +53,7 @@ Tier one:
    - Documentation
      - Convert man pages to pod, or whatever's right.  Alternatively, find
        a man2html that actually works.
-     - Macintosh HOWTO page.
+     o Macintosh HOWTO page.
 
    - Evangelism
      - Get more nodes running on 80 and 443.
@@ -68,6 +68,8 @@ Tier one:
    - SOCKS enhancements
      - niels's "did it fail because conn refused or timeout or what"
        relay end feature.
+     - bug: if the exit node fails to create a socket (e.g. because it
+       has too many open), we will get a generic stream end response.
 
    - Windows
 N    - Make millisecond accuracy work on win32
@@ -75,13 +77,13 @@ N    - Make millisecond accuracy work on win32
        do libevent?
 
    - Code cleanup
-     - Make more configuration variables into CSVs.
+     X Make more configuration variables into CSVs.
      - Make configure.in handle cross-compilation
        - Have NULL_REP_IS_ZERO_BYTES default to 1.
        - Make with-ssl-dir disable search for ssl.
 
    - Support
-     - Bug tracker.
+     o Bug tracker.
 
    - Exit hostname support
      - cache .foo.exit names better, or differently, or not.
@@ -98,8 +100,8 @@ N    - Make millisecond accuracy work on win32
 Tier two:
 
    - Efficiency/speed improvements.
-     - Handle pools of waiting circuits better.
-     - Limit number of circuits that we preemptively generate based on past
+     o Handle pools of waiting circuits better.
+     o Limit number of circuits that we preemptively generate based on past
        behavior; use same limits in circuit_expire_old_circuits().
      - Write limiting; configurable token buckets.
      - Make it harder to circumvent bandwidth caps: look at number of bytes
@@ -290,9 +292,9 @@ Sample Publicity Landmarks:
 
 Rendezvous and hidden services:
   make it fast:
-    - preemptively build and start rendezvous circs.
-    - preemptively build n-1 hops of intro circs?
-    - cannibalize general circs?
+    o preemptively build and start rendezvous circs.
+    o preemptively build n-1 hops of intro circs?
+    o cannibalize general circs?
   make it reliable:
     - standby/hotswap/redundant services.
     - store stuff to disk? dirservers forget service descriptors when
