@@ -401,15 +401,10 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
 
     *(uint32_t*)payload = htonl(hop->addr);
     *(uint16_t*)(payload+4) = htons(hop->port);
-    if (strncmp(router->platform, "Tor 0.0.7", 9)) {
-      /* Before 0.0.8, we didn't support the long payload format. */
-      memcpy(payload+2+4, hop->identity_digest, DIGEST_LEN);
-      onionskin = payload+2+4+DIGEST_LEN;
-      payload_len = 2+4+DIGEST_LEN+ONIONSKIN_CHALLENGE_LEN;
-    } else {
-      onionskin = payload+2+4;
-      payload_len = 2+4+ONIONSKIN_CHALLENGE_LEN;
-    }
+
+    onionskin = payload+2+4;
+    memcpy(payload+2+4+ONIONSKIN_CHALLENGE_LEN, hop->identity_digest, DIGEST_LEN);
+    payload_len = 2+4+ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN;
 
     if(onion_skin_create(router->onion_pkey, &(hop->handshake_state), onionskin) < 0) {
       log_fn(LOG_WARN,"onion_skin_create failed.");
@@ -450,7 +445,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     /* Once this format is no longer supported, nobody will use
      * connection_*_get_by_addr_port. */
     old_format = 1;
-  } else if (rh.length == 4+2+DIGEST_LEN+ONIONSKIN_CHALLENGE_LEN) {
+  } else if (rh.length == 4+2+ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN) {
     old_format = 0;
   } else {
     log_fn(LOG_WARN, "Wrong length on extend cell. Closing circuit.");
@@ -464,9 +459,9 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     n_conn = connection_twin_get_by_addr_port(circ->n_addr,circ->n_port);
     onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
   } else {
-    id_digest = cell->payload+RELAY_HEADER_SIZE+4+2;
+    onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
+    id_digest = cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
     n_conn = connection_get_by_identity_digest(id_digest, CONN_TYPE_OR);
-    onionskin = cell->payload+RELAY_HEADER_SIZE+4+2+DIGEST_LEN;
   }
 
   if(!n_conn) { /* we should try to open a connection */
