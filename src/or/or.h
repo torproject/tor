@@ -116,6 +116,8 @@
 #include "../common/crypto.h"
 #include "../common/tortls.h"
 #include "../common/log.h"
+#include "../common/compat.h"
+#include "../common/container.h"
 #include "../common/util.h"
 #include "../common/torgzip.h"
 

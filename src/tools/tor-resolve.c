@@ -4,6 +4,7 @@
 
 #include "orconfig.h"
 
+#include "../common/compat.h"
 #include "../common/util.h"
 #include "../common/log.h"
 
