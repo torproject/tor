@@ -136,7 +136,7 @@ dnl These headers are not essential
 
 AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/wait.h netinet/in.h arpa/inet.h)
 
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname)
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime)
 
 dnl In case we aren't given a working stdint.h, we'll need to grow our own.
 dnl Watch out.
