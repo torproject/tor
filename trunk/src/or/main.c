@@ -781,13 +781,16 @@ static int do_main_loop(void) {
     return -1;
   }
 
-  /* load the routers file */
+  /* load the routers file, or assign the defaults. */
   if(options.RouterFile) {
     routerlist_clear_trusted_directories();
     if (router_load_routerlist_from_file(options.RouterFile, 1) < 0) {
       log_fn(LOG_ERR,"Error loading router list.");
       return -1;
     }
+  } else {
+    if(config_assign_default_dirservers() < 0)
+      return -1;
   }
 
   if(authdir_mode()) {

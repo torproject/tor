@@ -29,7 +29,7 @@ typedef enum config_type_t {
 #define CONFIG_LINE_T_MAXLEN 4096
 
 static struct config_line_t *config_get_commandlines(int argc, char **argv);
-static struct config_line_t *config_get_lines(FILE *f);
+static int config_get_lines(FILE *f, struct config_line_t **result);
 static void config_free_lines(struct config_line_t *front);
 static int config_compare(struct config_line_t *c, const char *key, config_type_t type, void *arg);
 static int config_assign(or_options_t *options, struct config_line_t *list);
@@ -80,21 +80,27 @@ config_line_prepend(struct config_line_t *front,
 }
 
 /** Helper: parse the config file and strdup into key/value
- * strings. Return list, or NULL if parsing the file failed.  Warn and
- * ignore any misformatted lines. */
-static struct config_line_t *config_get_lines(FILE *f) {
+ * strings. Set *result to the list, or NULL if parsing the file
+ * failed.  Return 0 on success, -1 on failure. Warn and ignore any
+ * misformatted lines. */
+static int config_get_lines(FILE *f,
+                            struct config_line_t **result) {
 
   struct config_line_t *front = NULL;
   char line[CONFIG_LINE_T_MAXLEN];
-  int result;
+  int r;
   char *key, *value;
 
-  while( (result=parse_line_from_file(line,sizeof(line),f,&key,&value)) > 0) {
+  while( (r=parse_line_from_file(line,sizeof(line),f,&key,&value)) > 0) {
     front = config_line_prepend(front, key, value);
   }
-  if(result < 0)
-    return NULL;
-  return front;
+  if(r < 0) {
+    *result = NULL;
+    return -1;
+  } else {
+    *result = front;
+    return 0;
+  }
 }
 
 /**
@@ -396,9 +402,6 @@ static int config_assign_defaults(or_options_t *options) {
   config_free_lines(options->ExitPolicy);
   options->ExitPolicy = config_line_prepend(NULL, "ExitPolicy", "reject *:*");
 
-  /* plus give them a dirservers file */
-  if(config_assign_default_dirservers() < 0)
-    return -1;
   return 0;
 }
 
@@ -656,14 +659,14 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   tor_assert(fname);
   log(LOG_DEBUG,"Opening config file '%s'",fname);
 
+  if(config_assign_defaults(options) < 0) {
+    return -1;
+  }
   cf = fopen(fname, "r");
   if(!cf) {
     if(using_default_torrc == 1) {
       log(LOG_NOTICE, "Configuration file '%s' not present, using reasonable defaults.",fname);
       tor_free(fname);
-      if(config_assign_defaults(options) < 0) {
-        return -1;
-      }
     } else {
       log(LOG_WARN, "Unable to open configuration file '%s'.",fname);
       tor_free(fname);
@@ -671,8 +674,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     }
   } else { /* it opened successfully. use it. */
     tor_free(fname);
-    cl = config_get_lines(cf);
-    if(!cl) return -1;
+    if (config_get_lines(cf, &cl)<0)
+      return -1;
     if(config_assign(options,cl) < 0)
       return -1;
     config_free_lines(cl);
