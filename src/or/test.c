@@ -466,6 +466,81 @@ test_util() {
   test_eq((time_t) 1076393695UL, tor_timegm(&a_time));
 }
 
+static void* _squareAndRemoveK4(const char *key, void*val, void *data)
+{
+  int *ip = (int*)data;
+  int v;
+  if (strcmp(key,"K4") == 0) {
+    ++(*ip);
+    return NULL;
+  }
+  v = (int)val;
+  return (void*)(v*v);
+}
+
+void test_strmap() {
+  strmap_t *map;
+  strmap_iter_t *iter;
+  const char *k;
+  void *v;
+  int count;
+
+  map = strmap_new();
+  v = strmap_set(map, "K1", (void*)99);
+  test_eq(v, NULL);
+  v = strmap_set(map, "K2", (void*)101);
+  test_eq(v, NULL);
+  v = strmap_set(map, "K1", (void*)100);
+  test_eq(v, (void*)99);
+  test_eq(strmap_get(map,"K1"), (void*)100);
+  test_eq(strmap_get(map,"K2"), (void*)101);
+  test_eq(strmap_get(map,"K-not-there"), NULL);
+
+  v = strmap_remove(map,"K2");
+  test_eq(v, (void*)101);
+  test_eq(strmap_get(map,"K2"), NULL);
+  test_eq(strmap_remove(map,"K2"), NULL);
+
+  strmap_set(map, "K2", (void*)101);
+  strmap_set(map, "K3", (void*)102);
+  strmap_set(map, "K4", (void*)103);
+  strmap_set(map, "K5", (void*)104);
+  strmap_set(map, "K6", (void*)105);
+
+  count = 0;
+  strmap_foreach(map, _squareAndRemoveK4, &count);
+  test_eq(count, 1);
+  test_eq(strmap_get(map, "K4"), NULL);
+  test_eq(strmap_get(map, "K1"), (void*)10000);
+  test_eq(strmap_get(map, "K6"), (void*)11025);
+
+  iter = strmap_iter_init(map);
+  strmap_iter_get(iter,&k,&v);
+  test_streq(k, "K1");
+  test_eq(v, (void*)10000);
+  iter = strmap_iter_next(map,iter);
+  strmap_iter_get(iter,&k,&v);
+  test_streq(k, "K2");
+  test_eq(v, (void*)10201);
+  iter = strmap_iter_next_rmv(map,iter);
+  strmap_iter_get(iter,&k,&v);
+  test_streq(k, "K3");
+  test_eq(v, (void*)10404);
+  iter = strmap_iter_next(map,iter); /* K5 */
+  test_assert(!strmap_iter_done(iter));
+  iter = strmap_iter_next(map,iter); /* K6 */
+  test_assert(!strmap_iter_done(iter));
+  iter = strmap_iter_next(map,iter); /* done */
+  test_assert(strmap_iter_done(iter));
+
+  /* Make sure we removed K2, but not the others. */
+  test_eq(strmap_get(map, "K2"), NULL);
+  test_eq(strmap_get(map, "K5"), (void*)10816);
+
+  /* Clean up after ourselves. */
+  strmap_free(map, NULL);
+}
+
 void test_onion() {
 #if 0
   char **names;
@@ -711,6 +786,7 @@ main(int c, char**v){
   test_crypto_dh();
   puts("\n========================= Util ============================");
   test_util();
+  test_strmap();
   puts("\n========================= Onion Skins =====================");
   test_onion();
   test_onion_handshake();

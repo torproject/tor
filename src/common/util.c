@@ -3,6 +3,7 @@
 /* $Id$ */
 
 #include "../or/or.h"
+#include "../or/tree.h"
 
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
@@ -153,6 +154,229 @@ void *smartlist_choose(smartlist_t *sl) {
   if(sl->num_used)
     return sl->list[crypto_pseudo_rand_int(sl->num_used)];
   return NULL; /* no elements to choose from */
+}
+
+/*
+ * Splay-tree implementation of string-to-void* map
+ */
+struct strmap_entry_t {
+  SPLAY_ENTRY(strmap_entry_t) node;
+  char *key;
+  void *val;
+};
+
+struct strmap_t {
+  SPLAY_HEAD(strmap_tree, strmap_entry_t) head;
+};
+
+static int compare_strmap_entries(struct strmap_entry_t *a,
+				 struct strmap_entry_t *b)
+{
+  return strcmp(a->key, b->key);
+}
+
+SPLAY_PROTOTYPE(strmap_tree, strmap_entry_t, node, compare_strmap_entries);
+SPLAY_GENERATE(strmap_tree, strmap_entry_t, node, compare_strmap_entries);
+
+/* Create a new empty map from strings to void*'s.
+ */
+strmap_t* strmap_new(void)
+{
+  strmap_t *result;
+  result = tor_malloc(sizeof(strmap_t));
+  SPLAY_INIT(&result->head);
+  return result;
+}
+
+/* Set the current value for <key> with <val>.  Returns the previous
+ * value for <key> if one was set, or NULL if one was not.
+ *
+ * This function makes a copy of 'key' if necessary, but not of 'val'.
+ */
+void* strmap_set(strmap_t *map, const char *key, void *val)
+{
+  strmap_entry_t *resolve;
+  strmap_entry_t search;
+  void *oldval;
+  assert(map && key && val);
+  search.key = (char*)key;
+  resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
+  if (resolve) {
+    oldval = resolve->val;
+    resolve->val = val;
+    return oldval;
+  } else {
+    resolve = tor_malloc_zero(sizeof(strmap_entry_t));
+    resolve->key = tor_strdup(key);
+    resolve->val = val;
+    SPLAY_INSERT(strmap_tree, &map->head, resolve);
+    return NULL;
+  }
+}
+
+/* Return the current value associated with <key>, or NULL if no
+ * value is set.
+ */
+void* strmap_get(strmap_t *map, const char *key)
+{
+  strmap_entry_t *resolve;
+  strmap_entry_t search;
+  assert(map && key);
+  search.key = (char*)key;
+  resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
+  if (resolve) {
+    return resolve->val;
+  } else {
+    return NULL;
+  }
+}
+
+/* Remove the value currently associated with <key> from the map.
+ * Return the value if one was set, or NULL if there was no entry for
+ * <key>.
+ *
+ * Note: you must free any storage associated with the returned value.
+ */
+void* strmap_remove(strmap_t *map, const char *key)
+{
+  strmap_entry_t *resolve;
+  strmap_entry_t search;
+  void *oldval;
+  assert(map && key);
+  search.key = (char*)key;
+  resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
+  if (resolve) {
+    oldval = resolve->val;
+    SPLAY_REMOVE(strmap_tree, &map->head, resolve);
+    tor_free(resolve->key);
+    tor_free(resolve);
+    return oldval;
+  } else {
+    return NULL;
+  }
+}
+
+/* Invoke fn() on every entry of the map, in order.  For every entry,
+ * fn() is invoked with that entry's key, that entry's value, and the
+ * value of <data> supplied to strmap_foreach.  fn() must return a new
+ * (possibly unmodified) value for each entry: if fn() returns NULL, the
+ * entry is removed.
+ *
+ * Example:
+ *   static void* upcase_and_remove_empty_vals(const char *key, void *val,
+ *                                             void* data) {
+ *     char *cp = (char*)val;
+ *     if (!*cp) {  // val is an empty string.
+ *       free(val);
+ *       return NULL;
+ *     } else {
+ *       for (; *cp; cp++)
+ *         *cp = toupper(*cp);
+ *       }
+ *       return val;
+ *     }
+ *   }
+ *
+ *   ...
+ *
+ *   strmap_foreach(map, upcase_and_remove_empty_vals, NULL);
+ */
+void strmap_foreach(strmap_t *map,
+		    void* (*fn)(const char *key, void *val, void *data),
+		    void *data)
+{
+  strmap_entry_t *ptr, *next;
+  assert(map && fn);
+  for (ptr = SPLAY_MIN(strmap_tree, &map->head); ptr != NULL; ptr = next) {
+    /* This remove-in-place usage is specifically blessed in tree(3). */
+    next = SPLAY_NEXT(strmap_tree, &map->head, ptr);
+    ptr->val = fn(ptr->key, ptr->val, data);
+    if (!ptr->val) {
+      SPLAY_REMOVE(strmap_tree, &map->head, ptr);
+      tor_free(ptr->key);
+      tor_free(ptr);
+    }
+  }
+}
+
+/* return an 'iterator' pointer to the front of a map.
+ *
+ * Iterator example:
+ *
+ * // uppercase values in "map", removing empty values.
+ *
+ * strmap_iterator_t *iter;
+ * const char *key;
+ * void *val;
+ * char *cp;
+ *
+ * for (iter = strmap_iter_init(map); !strmap_iter_done(iter); ) {
+ *    strmap_iter_get(iter, &key, &val);
+ *    cp = (char*)val;
+ *    if (!*cp) {
+ *       iter = strmap_iter_next_rmv(iter);
+ *       free(val);
+ *    } else {
+ *       for(;*cp;cp++) *cp = toupper(*cp);
+ *       iter = strmap_iter_next(iter);
+ *    }
+ * }
+ *
+ */
+strmap_iter_t *strmap_iter_init(strmap_t *map)
+{
+  assert(map);
+  return SPLAY_MIN(strmap_tree, &map->head);
+}
+/* Advance the iterator 'iter' for map a single step to the next entry.
+ */
+strmap_iter_t *strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
+{
+  assert(map && iter);
+  return SPLAY_NEXT(strmap_tree, &map->head, iter);
+}
+/* Advance the iterator 'iter' a single step to the next entry, removing
+ * the current entry.
+ */
+strmap_iter_t *strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
+{
+  strmap_iter_t *next;
+  assert(map && iter);
+  next = SPLAY_NEXT(strmap_tree, &map->head, iter);
+  SPLAY_REMOVE(strmap_tree, &map->head, iter);
+  tor_free(iter->key);
+  tor_free(iter);
+  return next;
+}
+/* Set *keyp and *valp to the current entry pointed to by iter.
+ */
+void strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
+{
+  assert(iter && keyp && valp);
+  *keyp = iter->key;
+  *valp = iter->val;
+}
+/* Return true iff iter has advanced past the last entry of map.
+ */
+int strmap_iter_done(strmap_iter_t *iter)
+{
+  return iter == NULL;
+}
+/* Remove all entries from <map>, and deallocate storage for those entries.
+ * If free_val is provided, it is invoked on every value in <map>.
+ */
+void strmap_free(strmap_t *map, void (*free_val)(void*))
+{
+  strmap_entry_t *ent, *next;
+  for (ent = SPLAY_MIN(strmap_tree, &map->head); ent != NULL; ent = next) {
+    next = SPLAY_NEXT(strmap_tree, &map->head, ent);
+    SPLAY_REMOVE(strmap_tree, &map->head, ent);
+    tor_free(ent->key);
+    if (free_val)
+      tor_free(ent->val);
+  }
+  assert(SPLAY_EMPTY(&map->head));
+  tor_free(map);
 }
 
 /*

@@ -72,7 +72,7 @@ extern int have_failed;
 
 #define test_streq(expr1, expr2)                                \
   STMT_BEGIN                                                    \
-    char *v1=(expr1), *v2=(expr2);                              \
+    const char *v1=(expr1), *v2=(expr2);                        \
     if(!strcmp(v1,v2)) { printf("."); } else {                  \
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n"\
@@ -87,7 +87,7 @@ extern int have_failed;
 
 #define test_strneq(expr1, expr2)                               \
   STMT_BEGIN                                                    \
-    char *v1=(expr1), *v2=(expr2);                              \
+    const char *v1=(expr1), *v2=(expr2);                        \
     if(strcmp(v1,v2)) { printf("."); } else {                   \
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n"\
