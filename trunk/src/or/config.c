@@ -159,7 +159,9 @@ static config_var_t config_vars[] = {
   VAR("SocksPort",           UINT,     SocksPort,            "9050"),
   VAR("SocksBindAddress",    LINELIST, SocksBindAddress,     NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
-  VAR("StatusFetchPeriod",   INTERVAL, StatusFetchPeriod,    "20 minutes"),
+/* XXX as with dirfetchperiod, we want this to be 15 minutes for people
+ * with a dirport open, but higher for people without a dirport open. */
+  VAR("StatusFetchPeriod",   INTERVAL, StatusFetchPeriod,    "15 minutes"),
   VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
   OBSOLETE("TrafficShaping"),
   VAR("User",                STRING,   User,                 NULL),
