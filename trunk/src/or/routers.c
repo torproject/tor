@@ -40,8 +40,9 @@ static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my
   while(addr)
   {
     if (!memcmp((void *)&or_address, (void *)addr, sizeof(uint32_t))) { /* addresses match */
-      if (or_listenport == htons(my_or_listenport)) /* ports also match */
-	      return 1;
+/* FIXME one's a string, one's a uint32_t? does this make sense? */
+      if (or_listenport == my_or_listenport) /* ports also match */
+        return 1;
     }
     
     addr = localhost->h_addr_list[i++];
@@ -194,10 +195,8 @@ routerinfo_t **getrouters(char *routerfile, int *len, uint16_t or_listenport)
 	  if ((*token != '\0') && (*errtest == '\0')) /* conversion was successful */
 	  {
 /* FIXME patch from RD. We should make it actually read these. */
-	    router->op_port = htons(router->or_port + 10);
-	    router->ap_port = htons(router->or_port + 20);
-	    /* convert port to network format */
-	    router->or_port = htons(router->or_port);
+	    router->op_port = router->or_port + 10;
+	    router->ap_port = router->or_port + 20;
 	    
 	    /* read min bandwidth */
 	    token = (char *)strtok(NULL,OR_ROUTERLIST_SEPCHARS);

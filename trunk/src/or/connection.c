@@ -262,7 +262,7 @@ int retry_all_connections(int role, routerinfo_t **router_array, int rarray_len,
     for (i=0;i<rarray_len;i++) {
       router = router_array[i];
       if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
-        log(LOG_DEBUG,"retry_all_connections(): connecting to OR %s:%u.",router->address,ntohs(router->or_port));
+        log(LOG_DEBUG,"retry_all_connections(): connecting to OR %s:%u.",router->address,router->or_port);
         connection_or_connect_as_or(router, prkey, &local);
       }
     }
@@ -517,7 +517,7 @@ int connection_encrypt_cell_header(cell_t *cellp, connection_t *conn) {
 #endif
 
   if(crypto_cipher_encrypt(conn->f_crypto, (char *)cellp, 8, newheader)) {
-    log(LOG_ERR,"Could not encrypt data for connection %s:%u.",conn->address,ntohs(conn->port));
+    log(LOG_ERR,"Could not encrypt data for connection %s:%u.",conn->address,conn->port);
     return -1;
   }
 #if 0

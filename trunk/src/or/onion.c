@@ -41,7 +41,7 @@ int process_onion(circuit_t *circ, connection_t *conn) {
     return -1;
   }
 
-  aci_type = decide_aci_type(conn->local.sin_addr.s_addr, conn->local.sin_port,
+  aci_type = decide_aci_type(conn->local.sin_addr.s_addr, ntohs(conn->local.sin_port),
              ((onion_layer_t *)circ->onion)->addr,((onion_layer_t *)circ->onion)->port);
       
   if(circuit_init(circ, aci_type) < 0) { 
@@ -200,7 +200,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
     
     for (retval=0; retval<routelen;retval++)
     {
-      log(LOG_DEBUG,"create_onion() : %u : %s:%u, %u/%u",routelen-retval,inet_ntoa(*((struct in_addr *)&((rarray[route[retval]])->addr))),ntohs((rarray[route[retval]])->or_port),(rarray[route[retval]])->pkey,crypto_pk_keysize((rarray[route[retval]])->pkey));
+      log(LOG_DEBUG,"create_onion() : %u : %s:%u, %u/%u",routelen-retval,inet_ntoa(*((struct in_addr *)&((rarray[route[retval]])->addr))),(rarray[route[retval]])->or_port,(rarray[route[retval]])->pkey,crypto_pk_keysize((rarray[route[retval]])->pkey));
     }
     
     layer = (onion_layer_t *)(buf + *len - 128); /* pointer to innermost layer */
@@ -210,7 +210,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       router = rarray[route[i]];
       
       log(LOG_DEBUG,"create_onion() : %u",router);
-      log(LOG_DEBUG,"create_onion() : This router is %s:%u",inet_ntoa(*((struct in_addr *)&router->addr)),ntohs(router->or_port));
+      log(LOG_DEBUG,"create_onion() : This router is %s:%u",inet_ntoa(*((struct in_addr *)&router->addr)),router->or_port);
       log(LOG_DEBUG,"create_onion() : Key pointer = %u.",router->pkey);
       log(LOG_DEBUG,"create_onion() : Key size = %u.",crypto_pk_keysize(router->pkey)); 
       
@@ -252,7 +252,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
 	}
 	return NULL;
       }
-      log(LOG_DEBUG,"create_onion() : Onion layer %u built : %u, %u, %u, %s, %u.",i+1,layer->zero,layer->backf,layer->forwf,inet_ntoa(*((struct in_addr *)&layer->addr)),ntohs(layer->port));
+      log(LOG_DEBUG,"create_onion() : Onion layer %u built : %u, %u, %u, %s, %u.",i+1,layer->zero,layer->backf,layer->forwf,inet_ntoa(*((struct in_addr *)&layer->addr)),layer->port);
       
       /* build up the crypt_path */
       if (cpath)
@@ -452,7 +452,7 @@ unsigned char *encrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_
   {
     memset((void *)iv,0,8);
     
-    log(LOG_DEBUG,"Onion layer : %u, %u, %u, %s, %u.",onion->zero,onion->backf,onion->forwf,inet_ntoa(*((struct in_addr *)&onion->addr)),ntohs(onion->port));
+    log(LOG_DEBUG,"Onion layer : %u, %u, %u, %s, %u.",onion->zero,onion->backf,onion->forwf,inet_ntoa(*((struct in_addr *)&onion->addr)),onion->port);
     /* allocate space for tmpbuf */
     tmpbuf = (unsigned char *)malloc(onionlen);
     if (!tmpbuf)
