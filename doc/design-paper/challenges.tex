@@ -433,32 +433,131 @@ during the bootstrapping phase of the network, where the first few
 widely publicized uses of the network can dictate the types of users it
 attracts next.
 
-\subsection{Usability and bandwidth and sustainability and incentives}
+%% "outside of academia, jap has just lost, permanently".  (That is,
+%% even though the crime detection issues are resolved and are unlikely
+%% to go down the same way again, public perception has not been kind.)
 
-low-pain-threshold users go away until all users are willing to use it
+\subsection{Sustainability and incentives}
+One of the (arguably) unsolved problems in low-latency anonymity designs is
+how to keep the servers running.  Zero-Knowledge Systems's Freedom network
+depended on paying third parties to run its servers; the JAP project's
+bandwidth is dependent on grants from ???? to pay for its bandwidth and
+administrative expenses.  In Tor, bandwidth and administrative costs are
+distributed across the volunteers who run Tor nodes, so at least we have
+reason to think that the Tor network could survive without continued research
+funding.\footnote{It also helps that Tor is implemented with free and open
+  source software that can be maintained by anybody with the ability and
+  inclination.}  But why are these volunteers running nodes, and what can we
+do to encourage more volunteers to do so?
 
-Sustainability. Previous attempts have been commercial which we think
-adds a lot of unnecessary complexity and accountability. Freedom didn't
-collect enough money to pay its servers; JAP bandwidth is supported by
-continued money, and they periodically ask what they will do when it
-dries up.
+We have not surveyed Tor operators to learn why they are running ORs, but
+from the information they have provided, it seems that many of them run Tor
+nodes for reasons of personal interest in privacy issues.  It is possible
+that others are running Tor for anonymity reasons, but of course they are
+hardly likely to tell us if they are.
 
-"outside of academia, jap has just lost, permanently"
+Significantly, Tor's threat model changes the anonymity incentives for running
+a server.  In a high-latency mix network, users can receive additional
+anonymity by running their own server, since doing so obscures when they are
+injecting messages into the network.  But in Tor, anybody observing a Tor
+server can tell when the server is generating traffic that corresponds to
+none of its incoming traffic, and therefore originating traffic itself.
+Still, anonymity and privacy incentives do remain for server operators:
+\begin{tightlist}
+\item Against a hostile website, running a Tor exit node can provide a degree
+  of ``deniaibility'' for traffic that originates at that exit node.  For
+  example, it is likely in practise that HTTP requests from a Tor server's IP
+  will be assumed to have left the Tor network.
+\item Local Tor entry and exit servers allow users on a network to run in an
+  `enclave' configuration.  [XXXX say more]
+\end{tightlist}
 
-[nick will write this section]
+First, we try to make the costs of running a Tor server easily minimized.
+Since Tor is run by volunteers, the most crucial software usability issue is
+usability by operators: when an operator leaves, the network becomes less
+usable by everybody.  To keep operators pleased, we must try to keep Tor's
+resource and administrative demands as low as possible. [XXXX say mroe]
+
+Because of ISP billing structures, many Tor operators have underused capacity
+that they are willing to donate to the network, at no additional monetary
+cost to them.  Features to limit bandwidth have been essential to adoption.
+Also useful has been a ``hibernation'' feature that allows a server that
+wants to provide high bandwidth, but no more than a certain amount in a
+giving billing cycle, to become dormant once its bandwidth is exhausted, and
+to reawaken at a random offset into the next billing cycle.  This feature has
+interesting policy implications, however; see
+section~\ref{subsec:bandwidth-and-usability} below.
+
+[XXXX say more.  Why else would you run a server? What else can we do/do we
+  already do to make running a server more attractive?]
+
+\subsection{Bandwidth and usability}
+\label{subsec:bandwidth-and-usability}
+Once users have configured their applications to work with Tor, the largest
+remaining usability issue is bandwidth.  When websites ``feel slow,'' users
+begin to suffer.
+
+Clients currently try to build their connections through servers that they
+guess will have enough bandwidth.  But even if capacity is allocated
+optimally, it seems unlikely that the current network architecture will have
+enough capacity to provide every user with as much bandwidth as she would
+receive if she weren't using Tor, unless far more servers join the network
+(see above).
+
+Limited capacity does not destroy the network, however.  Instead, usage tends
+towards an equilibrium: when performance suffers, users who value performance
+over anonymity tend to leave the system, thus freeing capacity until the
+remaining users on the network are exactly those willing to use that capacity
+there is.
+
+XXXX hibernation vs rate-limiting: do we want diversity or throughput? i
+think we're shifting back to wanting diversity.
 
 \subsection{Tor and file-sharing}
+One potentially problematical area with deploying Tor has been our response
+to file-sharing applications.  These applications make up an enormous
+fraction of the traffic on the Internet today, and provide two challenges to
+any anonymizing network: their intensive bandwidth requirement, and the
+degree to which they are associated (correctly or not) with copyright
+violation.
 
-[nick will write this section]
+As noted above, high-bandwidth protocols can make the network unresponsive,
+but tend to be somewhat self-correcting.  Issues of copyright violation,
+however, are more interesting.  Typical exit node operators want to help
+people achieve privacy and anonymous speech, not to help people (say) host
+Vin Diesel movies for illegal download; and typical ISPs would rather not
+deal with customers who incur them the overhead of getting menacing letters
+from the MPAA.  While it is quite likely that the operators are doing nothing
+illegal, many ISPs have policies of dropping users who get repeated legal
+threats regardless of the merits of those threats, and many operators would
+prefer to avoid receiving legal threats even if those threats have little
+merit.  So when the letters arrive, operators are likely to face
+pressure to block filesharing applications entirely, in order to avoid the
+hassle.
 
-Bittorrent and dmca. Should we add an IDS to autodetect protocols and
-snipe them?
+But blocking filesharing would not necessarily be easy; most popular
+protocols have evolved to run on a variety of non-standard ports in order to
+get around other port-based bans.  Thus, exit node operators who wanted to
+block filesharing would have to find some way to integrate Tor with a
+protocol-aware exit filter.  This could be a technically expensive
+undertaking, and one with poor prospects: it is unlikely that Tor exit nodes
+would succeed where so many institutional firewalls have failed.  Another
+possibility for sensitive operators is to run a very restrictive server that
+only permits exit connections to a very restricted range of ports which are
+not frequently associated with file sharing.  There are increasingly few such
+ports.
 
-because only at the exit is it evident what port or protocol a given
-tor stream is, you can't choose not to carry file-sharing traffic.
+For the moment, it seems that Tor's bandwidth issues have rendered it
+unattractive for bulk file-sharing traffic; this may continue to be so in the
+future.  Nevertheless, Tor will likely remain attractive for limited use in
+filesharing protocols that have separate control and data channels.
 
-hibernation vs rate-limiting: do we want diversity or throughput? i
-think we're shifting back to wanting diversity.
+[xxxx We should say more -- but what?  That we'll see a similar
+  equilibriating effect as with bandwidth, where sensitive ops switch to
+  middleman, and we become less useful for filesharing, so the filesharing
+  people back off, so we get more ops since there's less filesharing, so the
+  filesharers come back, etc.]
+
 
 \subsection{Tor and blacklists}
 
