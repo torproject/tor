@@ -128,6 +128,10 @@
 #include "../common/util.h"
 #include "../common/torgzip.h"
 
+/** Define this if you want Tor to crash when any problem comes up,
+ * so you can get a coredump and track things down. */
+#undef TOR_FRAGILE
+
 /** Upper bound on maximum simultaneous connections; can be lowered by
  * config file. */
 #define MAXCONNECTIONS 15000

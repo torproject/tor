@@ -1080,6 +1080,9 @@ int connection_dir_finished_flushing(connection_t *conn) {
       return 0;
     default:
       log_fn(LOG_WARN,"Bug: called in unexpected state %d.", conn->state);
+#ifdef TOR_FRAGILE
+      tor_assert(0);
+#endif
       return -1;
   }
   return 0;

@@ -93,6 +93,9 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
       return 0;
   }
   log_fn(LOG_WARN,"Bug: Got unexpected state %d. Closing.",conn->state);
+#ifdef TOR_FRAGILE
+  tor_assert(0);
+#endif
   connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
   connection_mark_for_close(conn);
   return -1;
@@ -131,6 +134,9 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
 
   if (conn->has_sent_end) {
     log_fn(LOG_WARN,"Bug: Calling connection_edge_end on an already ended stream?");
+#ifdef TOR_FRAGILE
+    tor_assert(0);
+#endif
     return -1;
   }
 
@@ -183,6 +189,9 @@ int connection_edge_finished_flushing(connection_t *conn) {
       return 0;
     default:
       log_fn(LOG_WARN,"BUG: called in unexpected state %d.", conn->state);
+#ifdef TOR_FRAGILE
+      tor_assert(0);
+#endif
       return -1;
   }
   return 0;
