@@ -40,13 +40,13 @@ for $fn (@ARGV) {
 	    }
 	}
 	if (m!/\*.*?\*/!) {
-	    s!/\*.*?\*/!!;
+	    s!\s*/\*.*?\*/!!;
 	} elsif (m!/\*!) {
-	    s!/\*!!;
+	    s!\s*/\*!!;
 	    $incomment = 1;
 	    next;
 	}
-	s!"(?:[^\"]+|\\.)*"!!g;
+	s!"(?:[^\"]+|\\.)*"!"X"!g;
 	next if /^\#/;
 	## Warn about C++-style comments.
 	if (m!//!) {
@@ -57,6 +57,15 @@ for $fn (@ARGV) {
 	if (/([^\s])\{/) {
 	    print "       $1\{:$fn:$.\n";
 	}
+	## Warn about multiple internal spaces.
+	#if (/[^\s,:]\s{2,}[^\s\\=]/) {
+	#    print "     X  X:$fn:$.\n";
+	#}
+	## Warn about { with stuff after.
+	#s/\s+$//;
+	#if (/\{[^\}\\]+$/) {
+	#    print "     {X:$fn:$.\n";
+	#}
 	## Warn about function calls with space before parens.
 	if (/(\w+)\s\(/) {
 	    if ($1 ne "if" and $1 ne "while" and $1 ne "for" and 
@@ -65,15 +74,6 @@ for $fn (@ARGV) {
 		print "     fn ():$fn:$.\n";
 	    }
 	}
-	## Warn about multiple internal spaces.
-	#if (/\S\s{2,}[^\s\\]/) {
-	#    print "     X  X:$fn:$.\n";
-	#}
-	## Warn about { with stuff after.
-	#s/\s+$//;
-	#if (/\{[^\}\\]+$/) {
-	#    print "     {X:$fn:$.\n";
-	#}
     }
     close(F);
 }
