@@ -49,23 +49,26 @@ int router_reload_router_list(void)
   char filename[512];
   routerlist_clear_trusted_directories();
   if (options.RouterFile) {
+    log_fn(LOG_INFO, "Loading router list from %s", options.RouterFile);
     if (router_load_routerlist_from_file(options.RouterFile, 1) < 0) {
-      log_fn(LOG_ERR,"Error loading router list.");
+      log_fn(LOG_ERR,"Error loading router list '%s'.", options.RouterFile);
       return -1;
     }
   } else {
+    log_fn(LOG_INFO, "Loading internal default router list.");
     if (config_assign_default_dirservers() < 0)
       return -1;
   }
   if (get_data_directory(&options)) {
     char *s;
-    sprintf(filename,"%s/cached-directory", get_data_directory(&options));
+    snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
     s = read_file_to_str(filename,0);
     if (s) {
       log_fn(LOG_INFO, "Loading cached directory from %s", filename);
       if (router_load_routerlist_from_string(s, 0) < 0) {
-        log_fn(LOG_WARN, "Cached directory was unparseable; ignoring.");
+        log_fn(LOG_WARN, "Cached directory '%s' was unparseable; ignoring.", filename);
       }
+      tor_free(s);
     }
   }
   return 0;
