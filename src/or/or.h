@@ -1412,8 +1412,8 @@ typedef struct trusted_dir_server_t {
 } trusted_dir_server_t;
 
 int router_reload_router_list(void);
-routerinfo_t *router_pick_directory_server(int requireothers);
-trusted_dir_server_t *router_pick_trusteddirserver(int requireothers);
+routerinfo_t *router_pick_directory_server(int requireothers, int fascistfirewall);
+trusted_dir_server_t *router_pick_trusteddirserver(int requireothers, int fascistfirewall);
 int all_trusted_directory_servers_down(void);
 struct smartlist_t;
 void routerlist_add_family(struct smartlist_t *sl, routerinfo_t *router);

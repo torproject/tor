@@ -73,13 +73,14 @@ int router_reload_router_list(void)
  * in our routerlist, set all the authoritative ones as running again,
  * and pick one. If there are no dirservers at all in our routerlist,
  * reload the routerlist and try one last time. */
-routerinfo_t *router_pick_directory_server(int requireothers) {
+routerinfo_t *router_pick_directory_server(int requireothers,
+                                           int fascistfirewall) {
   routerinfo_t *choice;
 
   if (!routerlist)
     return NULL;
 
-  choice = router_pick_directory_server_impl(requireothers, options.FascistFirewall);
+  choice = router_pick_directory_server_impl(requireothers, fascistfirewall);
   if(choice)
     return choice;
 
@@ -87,7 +88,7 @@ routerinfo_t *router_pick_directory_server(int requireothers) {
   /* mark all authdirservers as up again */
   mark_all_trusteddirservers_up();
   /* try again */
-  choice = router_pick_directory_server_impl(requireothers, options.FascistFirewall);
+  choice = router_pick_directory_server_impl(requireothers, fascistfirewall);
   if(choice)
     return choice;
 
@@ -103,11 +104,11 @@ routerinfo_t *router_pick_directory_server(int requireothers) {
   return choice;
 }
 
-trusted_dir_server_t *router_pick_trusteddirserver(int requireothers) {
+trusted_dir_server_t *router_pick_trusteddirserver(int requireothers,
+                                                   int fascistfirewall) {
   trusted_dir_server_t *choice;
 
-  choice = router_pick_trusteddirserver_impl(requireothers,
-                                             options.FascistFirewall);
+  choice = router_pick_trusteddirserver_impl(requireothers, fascistfirewall);
   if(choice)
     return choice;
 
@@ -115,7 +116,7 @@ trusted_dir_server_t *router_pick_trusteddirserver(int requireothers) {
   /* mark all authdirservers as up again */
   mark_all_trusteddirservers_up();
   /* try again */
-  choice = router_pick_trusteddirserver_impl(requireothers, 0);
+  choice = router_pick_trusteddirserver_impl(requireothers, fascistfirewall);
   if(choice)
     return choice;
 
@@ -144,6 +145,9 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall)
 
   if(!routerlist)
     return NULL;
+
+  if(options.HttpProxy)
+    fascistfirewall = 0;
 
   /* Find all the running dirservers we know about. */
   sl = smartlist_create();
@@ -178,6 +182,9 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
 
   if (!trusted_dir_servers)
     return NULL;
+
+  if(options.HttpProxy)
+    fascistfirewall = 0;
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
     {

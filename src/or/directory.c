@@ -76,6 +76,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
   int i;
   routerinfo_t *router;
   routerlist_t *rl;
+  char buf[16];
 
   router_get_routerlist(&rl);
   if(!rl)
@@ -85,8 +86,14 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
     router = smartlist_get(rl->routers, i);
     /* Note: this posts our descriptor to ourselves, if we're an
      * authdirserver. But I think that's ok. */
-    if(router->is_trusted_dir)
-      directory_initiate_command_router(router, purpose, payload, payload_len);
+    if(!router->is_trusted_dir)
+      continue;
+    if (options.FascistFirewall && purpose == DIR_PURPOSE_UPLOAD_DIR) {
+      sprintf(buf,"%d",router->dir_port);
+      if (!smartlist_string_isin(options.FirewallPorts, buf))
+        continue;      
+    }
+    directory_initiate_command_router(router, purpose, payload, payload_len);
   }
 }
 
@@ -105,18 +112,19 @@ directory_get_from_dirserver(uint8_t purpose, const char *payload,
   if (purpose == DIR_PURPOSE_FETCH_DIR) {
     if (advertised_server_mode()) {
       /* only ask authdirservers, and don't ask myself */
-      ds = router_pick_trusteddirserver(1);
+      ds = router_pick_trusteddirserver(1, options.FascistFirewall);
     } else {
       /* anybody with a non-zero dirport will do */
-      r = router_pick_directory_server(1);
+      r = router_pick_directory_server(1, options.FascistFirewall);
       if (!r) {
         log_fn(LOG_INFO, "No router found for directory; falling back to dirserver list");
-        ds = router_pick_trusteddirserver(1);
+        ds = router_pick_trusteddirserver(1, options.FascistFirewall);
       }
     }
   } else { // (purpose == DIR_PURPOSE_FETCH_RENDDESC)
     /* only ask authdirservers, any of them will do */
-    ds = router_pick_trusteddirserver(0);
+    /* Never use fascistfirewall; we're going via Tor. */
+    ds = router_pick_trusteddirserver(0, 0);
   }
 
   if (r)
