@@ -494,19 +494,15 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
   if(!len || conn->marked_for_close)
     return;
 
-  if( (!connection_speaks_cells(conn)) ||
-      (!connection_state_is_open(conn)) ||
-      (options.LinkPadding == 0) ) {
-    /* connection types other than or, or or not in 'open' state, should flush immediately */
-    /* also flush immediately if we're not doing LinkPadding, since otherwise it will never flush */
-    connection_start_writing(conn);
-    conn->outbuf_flushlen += len;
-  }
-
   if(write_to_buf(string, len, conn->outbuf) < 0) {
     log_fn(LOG_WARN,"write_to_buf failed. Closing connection (fd %d).", conn->s);
     conn->marked_for_close = 1;
+    return;
   }
+
+  /* XXX if linkpadding, this only applies to conns that aren't open OR connections */
+  connection_start_writing(conn);
+  conn->outbuf_flushlen += len;
 }
 
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
