@@ -1,0 +1,68 @@
+
+'tor' is an implementation of The Onion Routing system, as
+described in a bit more detail at http://www.onion-router.net/. You
+can read list archives, and subscribe to the mailing list, at
+http://archives.seul.org/or/dev/.
+
+Is your question in the FAQ? Should it be?
+
+**************************************************************************
+See the INSTALL file for a quickstart. That is all you will probably need.
+**************************************************************************
+
+**************************************************************************
+You only need to look beyond this point if the quickstart in the INSTALL
+doesn't work for you.
+**************************************************************************
+
+Do you want to run a tor server?
+
+  We're looking for people with reasonably reliable Internet connections,
+  that have at least 1Mbit each way. Currently we don't use all of that,
+  but we want it available for burst traffic.
+
+  (The Tor server doesn't need to be run as root, and doesn't need any
+  special system permissions or kernel mods. You should probably run it
+  as its own user though, especially if you run an identd service too.)
+
+  First, copy torrc.sample to torrc (by default it's in
+  /usr/local/etc/tor/), and edit the middle part. Create the
+  DataDirectory, and make sure it's owned by the uid/gid that will be
+  running tor. Fix your system clock so it's not too far off. Make sure
+  name resolution works.
+
+  Then run tor to generate keys. One of the files generated
+  in your DataDirectory is your 'fingerprint' file. Mail it to
+  tor-ops@freehaven.net.
+
+  Please also tell us in that mail who you are, so we know whom to contact
+  if there's any problem.  Also describe what kind of connectivity the new
+  server will have.  If possible PGP sign your mail.
+
+  You may find the initscript in contrib/tor.sh useful if you
+  want to set up Tor to start at boot.
+
+Do you want to run a hidden service?
+
+  Copy torrc.sample to torrc (by default it's in /usr/local/etc/tor/), and
+  edit the bottom part. Then run Tor. It will create each HiddenServiceDir
+  you have configured, and it will create a 'hostname' file which
+  specifies the url (xyz.onion) for that service. You can tell people
+  the url, and they can connect to it via their Tor client.
+
+Configuring tsocks:
+
+  If you want to use Tor for protocols that can't use Privoxy, or
+  with applications that are not socksified, then download tsocks
+  (tsocks.sourceforge.net) and configure it to talk to localhost:9050
+  as a socks4 server. My /etc/tsocks.conf simply has:
+    server_port = 9050
+    server = 127.0.0.1
+  (I had to "cd /usr/lib; ln -s /lib/libtsocks.so" to get the tsocks
+   library working after install, since my libpath didn't include /lib.)
+  Then you can do "tsocks ssh arma@moria.mit.edu". But note that if
+  ssh is suid root, you either need to do this as root, or cp a local
+  version of ssh that isn't suid.
+
+  (On Windows, you may want to look at the Hummingbird SOCKS client,
+  or at SocksCap, instead.)
