@@ -258,6 +258,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
         return -1;
       }
     }
+    return 0;
   }
 
   ++stats_n_relay_cells_relayed;
