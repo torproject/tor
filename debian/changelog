@@ -5,8 +5,9 @@ tor (0.1.0.0-alpha-cvs-1) UNRELEASED; urgency=low
   * Add libevent-dev to build-depends.
   * Update URL to tor in debian/control and debian/copyright.
   * Add a snippet to disable epoll in etc/default/tor, commented out.
+  * Add a snippet to set nice level in etc/default/tor.
 
- -- Peter Palfrader <weasel@debian.org>  Thu,  3 Feb 2005 12:20:07 +0100
+ -- Peter Palfrader <weasel@debian.org>  Fri,  4 Feb 2005 13:24:47 +0100
 
 tor (0.0.9.4-1) unstable; urgency=low
 

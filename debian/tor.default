@@ -15,6 +15,16 @@ RUN_DAEMON="yes"
 MAX_FILEDESCRIPTORS=4096
 
 #
+# If tor is seriously hogging your CPU, taking away too much cycles from
+# other system resources, then you can renice tor.  See nice(1) for a
+# bit more information.  Another way to limit the CPU usage of an Onion
+# Router is to set a lower BandwidthRate, as CPU usage is mostly a function
+# of the amount of traffic flowing through your node.  Consult the torrc(5)
+# manual page for more information on setting BandwidthRate.
+#
+# NICE="--nicelevel 5"
+
+#
 # Sometimes epoll is broken.  This happens to be the case on
 # at least the maintainer's desktop box running Linux 2.6.11-rc1
 # on adm64.
