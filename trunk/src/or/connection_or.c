@@ -249,9 +249,9 @@ or_handshake_op_send_keys(connection_t *conn) {
   /* compose the message */
   *(uint16_t *)(message) = htons(HANDSHAKE_AS_OP);
   memcpy((void *)(message+FLAGS_LEN), 
-         (void *)conn->f_crypto->key, 16);
+         (void *)crypto_cipher_get_key(conn->f_crypto), 16);
   memcpy((void *)(message+FLAGS_LEN+KEY_LEN), 
-         (void *)conn->b_crypto->key, 16);
+         (void *)crypto_cipher_get_key(conn->b_crypto), 16);
 
   /* encrypt with RSA */
   if(crypto_pk_public_encrypt(conn->pkey, message, sizeof(message), cipher, RSA_PKCS1_PADDING) < 0) {
@@ -322,9 +322,9 @@ or_handshake_client_send_auth(connection_t *conn) {
   *(uint32_t*)(buf+FLAGS_LEN+ADDR_LEN+PORT_LEN) = htonl(conn->addr); /* remote address */
   *(uint16_t*)(buf+FLAGS_LEN+ADDR_LEN+PORT_LEN+ADDR_LEN) = htons(conn->port); /* remote port */
   memcpy(buf+FLAGS_LEN+ADDR_LEN+PORT_LEN+ADDR_LEN+PORT_LEN,
-         conn->f_crypto->key,16); /* keys */
+         crypto_cipher_get_key(conn->f_crypto),16); /* keys */
   memcpy(buf+FLAGS_LEN+ADDR_LEN+PORT_LEN+ADDR_LEN+PORT_LEN+KEY_LEN,
-         conn->b_crypto->key,16);
+         crypto_cipher_get_key(conn->b_crypto),16);
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated first authentication message.");
 
   /* encrypt message */
@@ -406,8 +406,8 @@ or_handshake_client_process_auth(connection_t *conn) {
     log(LOG_ERR,"client_process_auth: Router %s:%u: bad address info.", conn->address,conn->port);
     return -1;
   }
-  if ( (memcmp(conn->f_crypto->key, buf+12, 16)) || /* keys */
-       (memcmp(conn->b_crypto->key, buf+28, 16)) ) {
+  if ( (memcmp(crypto_cipher_get_key(conn->f_crypto), buf+12, 16)) ||/* keys */
+       (memcmp(crypto_cipher_get_key(conn->b_crypto), buf+28, 16)) ) {
     log(LOG_ERR,"client_process_auth: Router %s:%u: bad key info.",conn->address,conn->port);
     return -1;
   }

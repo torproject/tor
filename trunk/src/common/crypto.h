@@ -18,23 +18,8 @@
 
 #define CRYPTO_PK_RSA 0
 
-typedef struct 
-{
-  int type;
-  int refs; /* reference counting; so we don't have to copy keys */
-  unsigned char *key;
-  /* auxiliary data structure(s) used by the underlying crypto library */
-  unsigned char *aux;
-} crypto_pk_env_t;
-
-typedef struct
-{
-  int type;
-  unsigned char *key;
-  unsigned char *iv;
-  /* auxiliary data structure(s) used by the underlying crypto library */
-  unsigned char *aux;
-} crypto_cipher_env_t;
+typedef struct crypto_pk_env_t crypto_pk_env_t;
+typedef struct crypto_cipher_env_t crypto_cipher_env_t;
 
 /* global state */
 int crypto_global_init();
@@ -94,6 +79,7 @@ int crypto_cipher_set_iv(crypto_cipher_env_t *env, unsigned char *iv);
 int crypto_cipher_set_key(crypto_cipher_env_t *env, unsigned char *key);
 int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env);
 int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env);
+unsigned char *crypto_cipher_get_key(crypto_cipher_env_t *env);
 
 int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to);
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to);

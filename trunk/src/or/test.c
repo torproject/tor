@@ -269,7 +269,7 @@ test_crypto()
     test_neq(env2, 0);
     j = crypto_cipher_generate_key(env1);
     if (str_ciphers[i] != CRYPTO_CIPHER_IDENTITY) {
-      crypto_cipher_set_key(env2, env1->key);
+      crypto_cipher_set_key(env2, crypto_cipher_get_key(env1));
     }
     crypto_cipher_set_iv(env1, "12345678901234567890");
     crypto_cipher_set_iv(env2, "12345678901234567890");
@@ -309,7 +309,7 @@ test_crypto()
     env2 = crypto_new_cipher_env(str_ciphers[i]);
     test_neq(env2, 0);
     if (str_ciphers[i] != CRYPTO_CIPHER_IDENTITY) {
-      crypto_cipher_set_key(env2, env1->key);
+      crypto_cipher_set_key(env2, crypto_cipher_get_key(env1));
     }
     crypto_cipher_set_iv(env2, "12345678901234567890");
     crypto_cipher_encrypt_init_cipher(env2);

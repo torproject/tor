@@ -40,6 +40,24 @@
 #define RETURN_SSL_OUTCOME(exp) return !(exp)
 #endif
 
+struct crypto_pk_env_t
+{
+  int type;
+  int refs; /* reference counting; so we don't have to copy keys */
+  unsigned char *key;
+  /* auxiliary data structure(s) used by the underlying crypto library */
+  unsigned char *aux;
+};
+
+struct crypto_cipher_env_t
+{
+  int type;
+  unsigned char *key;
+  unsigned char *iv;
+  /* auxiliary data structure(s) used by the underlying crypto library */
+  unsigned char *aux;
+};
+
 /* static INLINE const EVP_CIPHER *
    crypto_cipher_evp_cipher(int type, int enc);
 */
@@ -102,31 +120,37 @@ int crypto_global_cleanup()
   return 0;
 }
 
-crypto_pk_env_t *crypto_new_pk_env(int type)
+crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa)
 {
   crypto_pk_env_t *env;
-  
+  assert(rsa);
   env = (crypto_pk_env_t *)tor_malloc(sizeof(crypto_pk_env_t));
-  
-  env->type = type;
+  env->type = CRYPTO_PK_RSA;
   env->refs = 1;
-  env->key = NULL;
+  env->key = (unsigned char*)rsa;
   env->aux = NULL;
-  
+  return env;
+}
+
+RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env)
+{
+  if (env->type != CRYPTO_PK_RSA)
+    return NULL;
+  return (RSA*)env->key;
+}
+
+crypto_pk_env_t *crypto_new_pk_env(int type)
+{
+  RSA *rsa;
+
   switch(type) {
     case CRYPTO_PK_RSA:
-      env->key = (unsigned char *)RSA_new();
-      if (!env->key) {
-        free(env);
-        return NULL;
-      }
-      break;
+      rsa = RSA_new();
+      if (!rsa) return NULL;
+      return _crypto_new_pk_env_rsa(rsa);
     default:
-      free(env);
       return NULL;
   }
-
-  return env;
 }
 
 void crypto_free_pk_env(crypto_pk_env_t *env)
@@ -615,6 +639,11 @@ int crypto_cipher_set_key(crypto_cipher_env_t *env, unsigned char *key)
   memcpy((void*)env->key, (void*)key, key_len);
   
   return 0;
+}
+
+unsigned char *crypto_cipher_get_key(crypto_cipher_env_t *env)
+{
+  return env->key;
 }
 
 int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
