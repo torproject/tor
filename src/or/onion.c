@@ -249,38 +249,6 @@ static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
   return num;
 }
 
-/* XXX This function should be replaced by calls to onion_extend_cpath */
-crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
-  int routelen;
-  crypt_path_t *cpath=NULL;
-  int r;
-  directory_t *dir;
-  routerinfo_t **rarray;
-  int rarray_len;
-
-  assert(firsthop);
-  *firsthop = NULL;
-
-  router_get_directory(&dir);
-  rarray = dir->routers;
-  rarray_len = dir->n_routers;
-  
-  routelen = new_route_len(options.CoinWeight, rarray, rarray_len);
-  if (routelen < 0) return NULL;
-  
-  while (1) {
-    r = onion_extend_cpath(&cpath, routelen, cpath ? NULL : firsthop);
-    if (r < 0) {
-      if (cpath) circuit_free_cpath(cpath);
-      return NULL;
-    } else if (r == 1) {
-      break;
-    }
-    /* r == 0; keep on chugging. */
-  }
-  return cpath;
-}
-
 int onion_extend_cpath(crypt_path_t **head_ptr, int path_len, routerinfo_t **router_out)
 {
   int cur_len;

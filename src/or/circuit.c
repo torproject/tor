@@ -758,7 +758,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     assert(circ->state == CIRCUIT_STATE_BUILDING);
     log_fn(LOG_DEBUG,"starting to send subsequent skin.");
     r = onion_extend_cpath(&circ->cpath, circ->desired_cpath_len, &router);
-    if (r==1) {
+    if (r==1 || !router) {
       /* done building the circuit. whew. */
       circ->state = CIRCUIT_STATE_OPEN;
       log_fn(LOG_INFO,"circuit built! (%d hops long)",circ->desired_cpath_len);
@@ -771,12 +771,6 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       return -1;
     }
     hop = circ->cpath->prev;
-
-    router = router_get_by_addr_port(hop->addr,hop->port);
-    if(!router) {
-      log_fn(LOG_WARN,"couldn't lookup router %d:%d",hop->addr,hop->port);
-      return -1;
-    }
 
     memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_RELAY; 
