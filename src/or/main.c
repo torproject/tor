@@ -88,6 +88,7 @@ int has_completed_circuit=0;
 #include <tchar.h>
 #define GENSRV_SERVICENAME  TEXT("tor-"VERSION)
 #define GENSRV_DISPLAYNAME  TEXT("Tor "VERSION" Win32 Service")
+#define GENSRV_DESCRIPTION  TEXT("Provides an anonymous Internet communication system")
 SERVICE_STATUS service_status;
 SERVICE_STATUS_HANDLE hStatus;
 static char **backup_argv;
@@ -1372,7 +1373,7 @@ static void do_hash_password(void)
 
 #ifdef MS_WINDOWS_SERVICE
 /** If we're compile to run as an NT service, and the service has been
- * shut down, then change our current status and return 1.  Else 
+ * shut down, then change our current status and return 1.  Else
  * return 0.
  */
 static int
@@ -1489,6 +1490,7 @@ int nt_service_install()
 
   SC_HANDLE hSCManager = NULL;
   SC_HANDLE hService = NULL;
+  SERVICE_DESCRIPTION sdBuff;
   TCHAR szPath[_MAX_PATH];
   TCHAR szDrive[_MAX_DRIVE];
   TCHAR szDir[_MAX_DIR];
@@ -1504,13 +1506,13 @@ int nt_service_install()
 
   /* Account for the extra quotes */
   //len = _MAX_PATH + strlen(cmd1) + _MAX_DRIVE + _MAX_DIR + strlen(cmd2);
-  len = _MAX_PATH + strlen(cmd1) + _MAX_DRIVE + _MAX_DIR + strlen(cmd2) + 4;
+  len = _MAX_PATH + strlen(cmd1) + _MAX_DRIVE + _MAX_DIR + strlen(cmd2) + 64;
   command = tor_malloc(len);
 
   /* Create a quoted command line, like "c:\with spaces\tor.exe" -f
    * "c:\with spaces\tor.exe"
    */
-  if (tor_snprintf(command, len, "\"%s\" -f \"%s%storrc\"",
+  if (tor_snprintf(command, len, "\"%s\" --nt-service -f \"%s%storrc\"",
                    szPath,  szDrive, szDir)<0) {
     printf("Failed: tor_snprinf()\n");
     free(command);
@@ -1540,10 +1542,25 @@ int nt_service_install()
 
   /* Start the service initially, so you don't have to muck with it in the SCM
    */
-  if(!StartService(hService, 0, NULL))
-    printf("Service installed, but not started.\n");
-  else
-    printf("Service installed and started successfully!\n");
+  /* Set the service's description */
+  sdBuff.lpDescription = GENSRV_DESCRIPTION;
+  ChangeServiceConfig2(hService, SERVICE_CONFIG_DESCRIPTION, &sdBuff);
+
+  /* Start the service, so you don't have to muck with it in the SCM */
+  if (StartService(hService, 0, NULL)) {
+    /* Loop until the service has finished attempting to start */
+    while (QueryServiceStatus(hService, &service_status) &&
+           service_status.dwCurrentState == SERVICE_START_PENDING)
+      Sleep(500);
+
+    /* Check if it started successfully or not */
+    if (service_status.dwCurrentState == SERVICE_RUNNING)
+      printf("Service installed and started successfully.\n");
+    else
+      printf("Service installed, but failed to start.\n");
+  } else {
+    printf("Service installed, but failed to start.\n");
+  }
 
   CloseServiceHandle(hService);
   CloseServiceHandle(hSCManager);
@@ -1567,6 +1584,7 @@ int nt_service_remove()
   if ((hService = OpenService(hSCManager, GENSRV_SERVICENAME, SERVICE_ALL_ACCESS)) == NULL) {
     printf("Failed: OpenService()\n");
     CloseServiceHandle(hSCManager);
+    return 0;
   }
 
   result = ControlService(hService, SERVICE_CONTROL_STOP, &service_status);
@@ -1579,13 +1597,13 @@ int nt_service_remove()
         break;
     }
     if (DeleteService(hService))
-      printf("Remove service successfully\n");
+      printf("Removed service successfully\n");
     else
       printf("Failed: DeleteService()\n");
   } else {
     result = DeleteService(hService);
     if (result)
-      printf("Remove service successfully\n");
+      printf("Removed service successfully\n");
     else
       printf("Failed: DeleteService()\n");
   }
@@ -1605,8 +1623,10 @@ int tor_main(int argc, char *argv[]) {
     return nt_service_install();
   if ((argc >= 2) && !strcmp(argv[1], "-remove"))
     return nt_service_remove();
-  nt_service_main();
-  return 0;
+  if ((argc >= 2) && !strcmp(argv[1], "--nt-service")) {
+    nt_service_main();
+    return 0;
+  }
 #else
   if (tor_init(argc, argv)<0)
     return -1;
