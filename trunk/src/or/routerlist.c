@@ -1113,21 +1113,21 @@ int router_update_status_from_smartlist(routerinfo_t *router,
   return 0;
 }
 
-void add_trusted_dir_server(const char *addr, uint16_t port, const char *digest)
+void add_trusted_dir_server(const char *address, uint16_t port, const char *digest)
 {
   trusted_dir_server_t *ent;
   uint32_t a;
   if (!trusted_dir_servers)
     trusted_dir_servers = smartlist_create();
 
-  if (tor_lookup_hostname(addr, &a)) {
+  if (tor_lookup_hostname(address, &a)) {
     log_fn(LOG_WARN, "Unable to lookup address for directory server at %s",
-           addr);
+           address);
     return;
   }
 
   ent = tor_malloc(sizeof(trusted_dir_server_t));
-  ent->address = tor_strdup(addr);
+  ent->address = tor_strdup(address);
   ent->addr = ntohl(a);
   ent->dir_port = port;
   ent->is_running = 1;
