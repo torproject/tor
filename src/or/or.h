@@ -314,6 +314,8 @@ struct connection_t {
   int marked_for_close; /* should we close this conn on the next
                          * iteration of the main loop?
                          */
+  char *marked_for_close_file; /* for debugging: in which file were we marked
+                                * for close? */
 
   buf_t *inbuf;
   int inbuf_reached_eof; /* did read() return 0 on this conn? */
@@ -641,8 +643,11 @@ int _connection_mark_for_close(connection_t *conn, char reason);
 #define connection_mark_for_close(c,r)                                  \
   do {                                                                  \
     if (_connection_mark_for_close(c,r)<0) {                            \
-      log(LOG_WARN,"Duplicate call to connection_mark_for_close at %s:%d", \
-          __FILE__,__LINE__);                                           \
+      log(LOG_WARN,"Duplicate call to connection_mark_for_close at %s:%d (first at %s:%d)", \
+          __FILE__,__LINE__,c->marked_for_close_file,c->marked_for_close); \
+    } else {                                                            \
+      c->marked_for_close_file = __FILE__;                              \
+      c->marked_for_close = __LINE__;                                   \
     }                                                                   \
   } while (0)
 

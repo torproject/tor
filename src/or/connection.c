@@ -262,6 +262,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
     }
     /* else there was a real error. */
     log_fn(LOG_WARN,"accept() failed. Closing listener.");
+    connection_mark_for_close(conn,0);
     return -1;
   }
   log(LOG_INFO,"Connection accepted on socket %d (child of fd %d).",news, conn->s);
@@ -412,6 +413,8 @@ int connection_handle_read(connection_t *conn) {
        /* XXX I suspect pollerr may make Windows not get to this point. :( */
        router_mark_as_down(conn->nickname);
     }
+    /* There's a read error; kill the connection.*/
+    connection_mark_for_close(conn, END_STREAM_REASON_MISC);
     return -1;
   }
   if(connection_process_inbuf(conn) < 0) {
@@ -516,8 +519,9 @@ int connection_handle_write(connection_t *conn) {
 
   conn->timestamp_lastwritten = time(NULL);
 
-  if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
-    if(conn->state == OR_CONN_STATE_HANDSHAKING) {
+  if (connection_speaks_cells(conn) &&
+      conn->state != OR_CONN_STATE_CONNECTING) {
+    if (conn->state == OR_CONN_STATE_HANDSHAKING) {
       connection_stop_writing(conn);
       return connection_tls_continue_handshake(conn);
     }
@@ -527,6 +531,7 @@ int connection_handle_write(connection_t *conn) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
         log_fn(LOG_INFO,"tls error. breaking.");
+        connection_mark_for_close(conn, 0);
         return -1; /* XXX deal with close better */
       case TOR_TLS_WANTWRITE:
         log_fn(LOG_DEBUG,"wanted write.");
@@ -550,9 +555,10 @@ int connection_handle_write(connection_t *conn) {
        */
     }
   } else {
-    if(flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen) < 0)
+    if (flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen) < 0) {
+      connection_mark_for_close(conn, END_STREAM_REASON_MISC);
       return -1;
-    /* conns in CONNECTING state will fall through... */
+    }
   }
 
   if(!connection_wants_to_flush(conn)) /* it's done flushing */
