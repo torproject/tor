@@ -1,0 +1,7 @@
+Makefile
+Makefile.in
+aclocal.m4
+configure
+orconfig.h
+config.cache
+conftest*
