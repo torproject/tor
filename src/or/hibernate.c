@@ -480,7 +480,7 @@ accounting_set_wakeup_time(void)
 
     log_fn(LOG_NOTICE, "Configured hibernation.  This interval begins at %s; "
            "we will hibernate until %s; "
-           "we expect to stay up until approximately %s; "
+           "we expect to stay up until at least %s; "
            "we will start a new interval at %s (all times local)",
            buf1, buf2, buf3, buf4);
   }
