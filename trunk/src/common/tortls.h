@@ -20,15 +20,11 @@ int tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickna
 int tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer);
 tor_tls *tor_tls_new(int sock, int isServer);
 void tor_tls_free(tor_tls *tls);
+int tor_tls_peer_is_valid(tor_tls *tls);
+crypto_pk_env_t *tor_tls_get_peer_pk(tor_tls *tls);
 int tor_tls_read(tor_tls *tls, char *cp, int len);
 int tor_tls_write(tor_tls *tls, char *cp, int n);
 int tor_tls_handshake(tor_tls *tls);
-/* XXXX we need a function to check for validated, verified peer certs. */
-/* XXXX i would also very much like a function to tell me who i just
- * handshaked with. maybe a nickname, and from there i can look
- * up a router entry? and maybe one day a function to make sure the cert
- * doesn't disagree too much with the router entry.
- */
 int tor_tls_shutdown(tor_tls *tls);
 
 #endif
