@@ -147,7 +147,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
       circ = circuit_get_by_circ_id_conn(circ_id, p_conn);
 
     if (success == 0) {
-      log_fn(LOG_WARN,"decoding onionskin failed. Closing.");
+      log_fn(LOG_INFO,"decoding onionskin failed. Closing.");
       if (circ)
         circuit_mark_for_close(circ);
       goto done_processing;
@@ -248,7 +248,7 @@ static int cpuworker_main(void *data) {
       if (onion_skin_server_handshake(question, onion_key, last_onion_key,
           reply_to_proxy, keys, 40+32) < 0) {
         /* failure */
-        log_fn(LOG_WARN,"onion_skin_server_handshake failed.");
+        log_fn(LOG_INFO,"onion_skin_server_handshake failed.");
         memset(buf,0,LEN_ONION_RESPONSE); /* send all zeros for failure */
       } else {
         /* success */
