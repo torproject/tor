@@ -958,7 +958,7 @@ struct config_line_t {
 
 int config_assign_default_dirservers(void);
 int getconfig(int argc, char **argv, or_options_t *options);
-void config_init_logs(or_options_t *options);
+int config_init_logs(or_options_t *options);
 void config_parse_exit_policy(struct config_line_t *cfg,
                               struct exit_policy_t **dest);
 void exit_policy_free(struct exit_policy_t *p);

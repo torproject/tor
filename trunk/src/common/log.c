@@ -25,11 +25,12 @@
 /** Information for a single logfile; only used in log.c */
 typedef struct logfile_t {
   struct logfile_t *next; /**< Next logfile_t in the linked list. */
-  const char *filename; /**< Filename to open. */
+  char *filename; /**< Filename to open. */
   FILE *file; /**< Stream to receive log messages. */
   int needs_close; /**< Boolean: true if the stream gets closed on shutdown. */
   int loglevel; /**< Lowest severity level to send to this stream. */
   int max_loglevel; /**< Highest severity level to send to this stream. */
+  int is_temporary; /**< Boolean: close after initializing logging subsystem.*/
 } logfile_t;
 
 /** Helper: map a log severity to descriptive string. */
@@ -145,7 +146,8 @@ void close_logs()
     logfiles = logfiles->next;
     if (victim->needs_close)
       fclose(victim->file);
-    free(victim);
+    tor_free(victim->filename);
+    tor_free(victim);
   }
 }
 
@@ -167,13 +169,40 @@ void add_stream_log(int loglevelMin, int loglevelMax, const char *name, FILE *st
 {
   logfile_t *lf;
   lf = tor_malloc(sizeof(logfile_t));
-  lf->filename = name;
+  lf->filename = tor_strdup(name);
   lf->needs_close = 0;
   lf->loglevel = loglevelMin;
   lf->max_loglevel = loglevelMax;
   lf->file = stream;
   lf->next = logfiles;
+  lf->is_temporary = 0;
   logfiles = lf;
+}
+
+/** Add a log handler to receive messages during startup (before the real
+ * logs are initialized).
+ */
+void add_temp_log(void)
+{
+  add_stream_log(LOG_INFO, LOG_ERR, "<temp>", stdout);
+  logfiles->is_temporary = 1;
+}
+
+void close_temp_logs(void)
+{
+  logfile_t *lf, **p;
+  for (p = &logfiles; *p; ) {
+    if ((*p)->is_temporary) {
+      lf = *p;
+      *p = (*p)->next;
+      if (lf->needs_close)
+        fclose(lf->file);
+      tor_free(lf->filename);
+      tor_free(lf);
+    } else {
+      p = &((*p)->next);
+    }
+  }
 }
 
 /**
