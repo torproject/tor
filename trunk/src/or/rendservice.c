@@ -16,18 +16,22 @@ typedef struct rend_service_port_config_t {
   uint32_t real_address;
 } rend_service_port_config_t;
 
+#define NUM_INTRO_POINTS 3
+
 /* Represents a single hidden service running at this OP.
  */
 typedef struct rend_service_t {
   /* Fields specified in config file */
   char *directory; /* where in the filesystem it stores it */
   smartlist_t *ports;
-  char *intro_nodes;
+  char *intro_prefer_nodes;
   char *intro_exclude_nodes;
   /* Other fields */
   crypto_pk_env_t *private_key;
   char service_id[REND_SERVICE_ID_LEN+1];
   char pk_digest[20];
+  smartlist_t *intro_nodes; /* list of nicknames */
+  rend_service_descriptor_t *desc;
 } rend_service_t;
 
 /* A list of rend_service_t.
@@ -45,6 +49,15 @@ static void rend_service_free(rend_service_t *config)
   smartlist_free(config->ports);
   if (config->private_key)
     crypto_free_pk_env(config->private_key);
+  tor_free(config->intro_prefer_nodes);
+  tor_free(config->intro_exclude_nodes);
+  for (i=0; i<config->intro_nodes->num_used; ++i) {
+    tor_free(config->intro_nodes->list[i]);
+  }
+  smartlist_free(config->intro_nodes);
+  if (config->desc)
+    rend_service_descriptor_free(config->desc);
+  tor_free(config);
 }
 
 static void rend_service_free_all(void)
@@ -66,6 +79,11 @@ static void add_service(rend_service_t *service)
   int i;
   rend_service_port_config_t *p;
   struct in_addr addr;
+
+  if (!service->intro_prefer_nodes)
+    service->intro_prefer_nodes = tor_strdup("");
+  if (!service->intro_exclude_nodes)
+    service->intro_exclude_nodes = tor_strdup("");
 
   if (!service->ports->num_used) {
     log_fn(LOG_WARN, "Hidden service with no ports configured; ignoring.");
@@ -167,6 +185,7 @@ int rend_config_services(or_options_t *options)
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
       service->ports = smartlist_create();
+      service->intro_nodes = smartlist_create();
       continue;
     }
     if (!service) {
@@ -182,11 +201,11 @@ int rend_config_services(or_options_t *options)
       }
       smartlist_add(service->ports, portcfg);
     } else if (!strcasecmp(line->key, "HiddenServiceNodes")) {
-      if (service->intro_nodes) {
+      if (service->intro_prefer_nodes) {
         log_fn(LOG_WARN, "Got multiple HiddenServiceNodes lines for a single service");
         return -1;
       }
-      service->intro_nodes = tor_strdup(line->value);
+      service->intro_prefer_nodes = tor_strdup(line->value);
     } else {
       assert(!strcasecmp(line->key, "HiddenServiceExcludeNodes"));
       if (service->intro_exclude_nodes) {
@@ -200,6 +219,28 @@ int rend_config_services(or_options_t *options)
     add_service(service);
 
   return 0;
+}
+
+/*
+ * DOCDOC
+ */
+static void rend_service_update_descriptor(rend_service_t *service)
+{
+  rend_service_descriptor_t *d;
+  int i,n;
+
+  if (service->desc) {
+    rend_service_descriptor_free(service->desc);
+    service->desc = NULL;
+  }
+  d = service->desc = tor_malloc(sizeof(rend_service_descriptor_t));
+  d->pk = crypto_pk_dup_key(service->private_key);
+  d->timestamp = time(NULL);
+  n = d->n_intro_points = service->intro_nodes->num_used;
+  d->intro_points = tor_malloc(sizeof(char*)*n);
+  for (i=0; i < n; ++i) {
+    d->intro_points[i] = tor_strdup(service->intro_nodes->list[i]);
+  }
 }
 
 /* Load and/or generate private keys for all hidden services.  Return 0 on
@@ -499,40 +540,105 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
  * Manage introduction points
  ******/
 
-#define NUM_INTRO_POINTS 3
+/* For every service, check how many intro points it currently has, and:
+ *  - Pick new intro points as necessary.
+ *  - Launch circuits to any new intro points.
+ *  -
+ */
 int rend_services_init(void) {
   int i,j,r;
   routerinfo_t *router;
   routerlist_t *rl;
   rend_service_t *service;
+  circuit_t *circ;
+  char *desc, *intro;
+  int changed, found, prev_intro_nodes, desc_len;
 
   router_get_routerlist(&rl);
 
   for (i=0;i<rend_service_list->num_used;++i) {
     service = rend_service_list->list[i];
+    assert(service);
+    changed = 0;
+
+    /* Find out which introduction points we really have for this service. */
+    for (j=0;j<service->intro_nodes->num_used;++j) {
+      router = router_get_by_nickname(service->intro_nodes->list[j]);
+      if (!router)
+        goto remove_point;
+      circ = NULL;
+      found = 1;
+      while ((circ = circuit_get_next_by_service_and_purpose(
+                                                circ,service->pk_digest,
+                                                CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
+        assert(circ->cpath);
+        if (circ->cpath->prev->addr == router->addr &&
+            circ->cpath->prev->port == router->or_port) {
+          found = 1; break;
+        }
+      }
+      if (found) continue;
+
+    remove_point:
+      tor_free(service->intro_nodes->list[j]);
+      service->intro_nodes->list[j] =
+        service->intro_nodes->list[service->intro_nodes->num_used-1];
+      --service->intro_nodes->num_used;
+      --j;
+      changed = 1;
+    }
+
+    /* We have enough intro points, and the intro points we thought we had were
+     * all connected.
+     */
+    if (!changed && service->intro_nodes->num_used >= NUM_INTRO_POINTS)
+      continue;
+
+    /* Remember how many introduction circuits we started with. */
+    prev_intro_nodes = service->intro_nodes->num_used;
 
     /* The directory is now here. Pick three ORs as intro points. */
-    for (j=0;j<rl->n_routers;j++) {
-      router = rl->routers[j];
-      //...
-      // maybe built a smartlist of all of them, then pick at random
-      // until you have three? or something smarter.
+    for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
+      router = router_choose_random_node(rl,
+                                         service->intro_prefer_nodes,
+                                         service->intro_exclude_nodes,
+                                         service->intro_nodes);
+      if (!router) {
+        log_fn(LOG_WARN, "Can't establish more than %d introduction points",
+               service->intro_nodes->num_used);
+        break;
+      }
+      changed = 1;
+      smartlist_add(service->intro_nodes, tor_strdup(router->nickname));
     }
 
-    /* build a service descriptor out of them, and tuck it away
-     * somewhere so we don't lose it */
+    /* If there's no need to republish, stop here. */
+    if (!changed)
+      continue;
 
-    /* post it to the dirservers */
-    //call router_post_to_dirservers(DIR_PURPOSE_UPLOAD_HIDSERV, desc, desc_len);
-
-    // for each intro point,
-    {
-      //r = rend_service_launch_establish_intro(service, intro->nickname);
-      //if (r<0) freak out
+    /* Update the descriptor. */
+    rend_service_update_descriptor(service);
+    if (rend_encode_service_descriptor(service->desc,
+                                       service->private_key,
+                                       &desc, &desc_len)<0) {
+      log_fn(LOG_WARN, "Couldn't encode service descriptor; not uploading");
+      continue;
     }
 
-    // anything else?
+    /* Post it to the dirservers */
+    router_post_to_dirservers(DIR_PURPOSE_UPLOAD_RENDDESC, desc, desc_len);
+    tor_free(desc);
+
+    /* Establish new introduction points. */
+    for (i=prev_intro_nodes; i < service->intro_nodes->num_used; ++i) {
+      intro = (char*) service->intro_nodes->list[i];
+      r = rend_service_launch_establish_intro(service, intro);
+      if (r<0) {
+        log_fn(LOG_WARN, "Error launching circuit to node %s", intro);
+      }
+    }
   }
+  return 0;
 }
 
 /*

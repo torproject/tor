@@ -81,7 +81,7 @@ void set_uint32(char *cp, uint32_t v);
 #endif
 #endif
 
-typedef struct {
+typedef struct smartlist_t {
   void **list;
   int num_used;
   int capacity;
