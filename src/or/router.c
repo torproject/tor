@@ -861,8 +861,8 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 
   /* Write the exit policy to the end of 's'. */
   for (tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
-    in.s_addr = htonl(tmpe->addr);
     /* Write: "accept 1.2.3.4" */
+    in.s_addr = htonl(tmpe->addr);
     tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
     result = tor_snprintf(s+written, maxlen-written, "%s %s",
         tmpe->policy_type == ADDR_POLICY_ACCEPT ? "accept" : "reject",
@@ -872,8 +872,8 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     written += result;
     if (tmpe->msk != 0xFFFFFFFFu && tmpe->msk != 0) {
       /* Write "/255.255.0.0" */
-      tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
       in.s_addr = htonl(tmpe->msk);
+      tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
       result = tor_snprintf(s+written, maxlen-written, "/%s", addrbuf);
       if (result<0)
         return -1;
