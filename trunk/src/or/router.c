@@ -61,7 +61,7 @@ void rotate_onion_key(void)
     log(LOG_ERR, "Error creating crypto environment.");
     goto error;
   }
-  if (crypto_pk_generate_key(onionkey)) {
+  if (crypto_pk_generate_key(prkey)) {
     log(LOG_ERR, "Error generating key: %s", crypto_perror());
     goto error;
   }
