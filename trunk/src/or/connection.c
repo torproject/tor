@@ -194,7 +194,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   }
   log(LOG_DEBUG,"Connection accepted on socket %d.",news);
 
-  fcntl(news, F_SETFL, O_NONBLOCK); /* set s to non-blocking */
+  fcntl(news, F_SETFL, O_NONBLOCK); /* set news to non-blocking */
 
   newconn = connection_new(new_type);
   newconn->s = news;
@@ -207,7 +207,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   /* learn things from parent, so we can perform auth */
   memcpy(&newconn->local,&conn->local,sizeof(struct sockaddr_in));
   newconn->prkey = conn->prkey;
-//  newconn->address = strdup(get_string_from_remote()) FIXME ;
+  newconn->address = strdup(inet_ntoa(*(struct in_addr *)&remote.sin_addr.s_addr)); /* remember the remote address */
 
   if(connection_add(newconn) < 0) { /* no space, forget it */
     connection_free(newconn);

@@ -95,60 +95,84 @@ int chooselen(double cw)
 unsigned int *new_route(double cw, routerinfo_t **rarray, size_t rarray_len, size_t *rlen)
 {
   int routelen = 0;
-  int i = 0;
+  int i, j;
+  int num_acceptable_routers = 0;
   int retval = 0;
   unsigned int *route = NULL;
   unsigned int oldchoice, choice;
   
   assert((cw >= 0) && (cw < 1) && (rarray) && (rlen) ); /* valid parameters */
 
-    routelen = chooselen(cw);
-    if (routelen == -1)
-    {
-      log(LOG_ERR,"Choosing route length failed.");
-      return NULL;
-    }
-    log(LOG_DEBUG,"new_route(): Chosen route length %u.",routelen);
+  routelen = chooselen(cw);
+  if (routelen == -1) {
+    log(LOG_ERR,"Choosing route length failed.");
+    return NULL;
+  }
+  log(LOG_DEBUG,"new_route(): Chosen route length %d.",routelen);
 
-    /* FIXME need to figure out how many routers we can actually choose from.
-     * We can get into an infinite loop if there are too few. */
-  
-    /* allocate memory for the new route */
-    route = (unsigned int *)malloc(routelen * sizeof(unsigned int));
-    if (!route)
-    {
-      log(LOG_ERR,"Memory allocation failed.");
-      return NULL;
+  for(i=0;i<rarray_len;i++) {
+    log(LOG_DEBUG,"Contemplating whether router %d is any good...",i);
+    if(!connection_exact_get_by_addr_port(rarray[i]->addr, rarray[i]->or_port)) {
+      log(LOG_DEBUG,"Nope, %d is not connected.",i);
+      goto next_i_loop;
     }
+    for(j=0;j<i;j++) {
+      if(!pkey_cmp(rarray[i]->pkey, rarray[j]->pkey)) {
+        /* these guys are twins. so we've already counted him. */
+        log(LOG_DEBUG,"Nope, %d is a twin of %d.",i,j);
+        goto next_i_loop;
+      }
+    }
+    num_acceptable_routers++;
+    log(LOG_DEBUG,"I like %d. num_acceptable_routers now %d.",i, num_acceptable_routers);
+    next_i_loop:
+  }
+      
+  if(num_acceptable_routers < routelen) {
+    log(LOG_DEBUG,"new_route(): Cutting routelen from %d to %d.",routelen, num_acceptable_routers);
+    routelen = num_acceptable_routers;
+  }
+
+  if(routelen < 1) {
+    log(LOG_ERR,"new_route(): Didn't find any acceptable routers. Failing.");
+    return NULL;
+  }
+
+  /* allocate memory for the new route */
+  route = (unsigned int *)malloc(routelen * sizeof(unsigned int));
+  if (!route) {
+    log(LOG_ERR,"Memory allocation failed.");
+    return NULL;
+  }
  
-    oldchoice = rarray_len;
-    for(i=0;i<routelen;i++)
-    {
-      log(LOG_DEBUG,"new_route() : Choosing hop %u.",i);
-      retval = crypto_pseudo_rand(sizeof(unsigned int),(unsigned char *)&choice);
-      if (retval)
-      {
-	free((void *)route);
-	return NULL;
-      }
-
-      choice = choice % (rarray_len);
-      log(LOG_DEBUG,"new_route() : Chosen router %u.",choice);
-      if (choice == oldchoice ||
-        (oldchoice < rarray_len && !pkey_cmp(rarray[choice]->pkey, rarray[oldchoice]->pkey)) ||
-        !connection_twin_get_by_addr_port(rarray[choice]->addr, rarray[choice]->or_port)) {
-        /* Same router as last choice, or router twin,
-         *   or no routers with that key are connected to us.
-         * Try again. */
-	i--;
-	continue;
-      }
-      oldchoice = choice;
-      route[i] = choice;
+  oldchoice = rarray_len;
+  for(i=0;i<routelen;i++) {
+    log(LOG_DEBUG,"new_route(): Choosing hop %u.",i);
+    retval = crypto_pseudo_rand(sizeof(unsigned int),(unsigned char *)&choice);
+    if (retval) {
+      free((void *)route);
+      return NULL;
     }
+
+    choice = choice % (rarray_len);
+    log(LOG_DEBUG,"new_route(): Contemplating router %u.",choice);
+    while(choice == oldchoice ||
+      (oldchoice < rarray_len && !pkey_cmp(rarray[choice]->pkey, rarray[oldchoice]->pkey)) ||
+      !connection_twin_get_by_addr_port(rarray[choice]->addr, rarray[choice]->or_port)) {
+      /* Same router as last choice, or router twin,
+       *   or no routers with that key are connected to us.
+       * Try again. */
+      log(LOG_DEBUG,"new_route(): Picked a router %d that won't work as next hop.",choice);
+      choice++;
+      choice = choice % (rarray_len);
+    }
+    log(LOG_DEBUG,"new_route(): Chosen router %u for hop %u.",choice,i);
+    oldchoice = choice;
+    route[i] = choice;
+  }
    
-    *rlen = routelen;
-    return route;
+  *rlen = routelen;
+  return route;
 }
 
 /* creates a new onion from route, stores it and its length into bufp and lenp respectively */

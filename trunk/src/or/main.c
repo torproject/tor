@@ -108,7 +108,7 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
   /* first check if it's there exactly */
   conn = connection_exact_get_by_addr_port(addr,port);
   if(conn && connection_state_is_open(conn)) {
-    log(LOG_DEBUG,"connection_twin_get_by_addr_port(): Found exact match.");
+    log(LOG_INFO,"connection_twin_get_by_addr_port(): Found exact match.");
     return conn;
   }
 
@@ -122,7 +122,7 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
     conn = connection_array[i];
     assert(conn);
     if(connection_state_is_open(conn) && !pkey_cmp(conn->pkey, router->pkey)) {
-      log(LOG_DEBUG,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
+      log(LOG_INFO,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
       return conn;
     }
   }
