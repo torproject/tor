@@ -147,7 +147,7 @@ int all_directory_servers_down(void) {
  */
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list) {
   const char *start,*end;
-  char nick[MAX_NICKNAME_LEN+1];
+  char nick[MAX_HEX_NICKNAME_LEN+1];
   routerinfo_t *router;
 
   tor_assert(sl);

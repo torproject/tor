@@ -123,6 +123,8 @@
 
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 #define MAX_NICKNAME_LEN 19
+/* Hex digest plus dollar sign. */
+#define MAX_HEX_NICKNAME_LEN HEX_DIGEST_LEN+1
 #define MAX_DIR_SIZE 500000
 
 #ifdef TOR_PERF

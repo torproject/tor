@@ -699,7 +699,7 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   char published[33];
   time_t published_on;
 
-  len = 1024+MAX_NICKNAME_LEN*smartlist_len(descriptor_list);
+  len = 1024+(MAX_HEX_NICKNAME_LEN+2)*smartlist_len(descriptor_list);
   s = tor_malloc_zero(len);
   if (list_running_servers(&cp))
     return -1;
