@@ -469,8 +469,9 @@ list_running_servers(char **nicknames_out)
     if (router_nickname_is_approved(conn->nickname, conn->identity_digest)) {
       name = tor_strdup(conn->nickname);
     } else {
-      name = tor_malloc(HEX_DIGEST_LEN+1);
-      base16_encode(name, HEX_DIGEST_LEN, conn->identity_digest, DIGEST_LEN);
+      name = tor_malloc(HEX_DIGEST_LEN+2);
+      *name = '$';
+      base16_encode(name+1, HEX_DIGEST_LEN, conn->identity_digest, DIGEST_LEN);
     }
 
     if(conn->state == OR_CONN_STATE_OPEN)

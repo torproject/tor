@@ -93,6 +93,7 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
     if(router->is_trusted_dir) {
       tor_assert(router->dir_port > 0);
       router->is_running = 1;
+      router->status_set_at = time(NULL);
       smartlist_add(sl, router);
     }
   }
@@ -391,6 +392,7 @@ void router_mark_as_down(const char *digest) {
     return;
   log_fn(LOG_DEBUG,"Marking %s as down.",router->nickname);
   router->is_running = 0;
+  router->status_set_at = time(NULL);
 }
 
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
@@ -523,7 +525,7 @@ int router_load_routerlist_from_string(const char *s, int trusted)
 {
   routerlist_t *new_list=NULL;
 
-  if (router_parse_list_from_string(&s, &new_list, -1, NULL)) {
+  if (router_parse_list_from_string(&s, &new_list, NULL)) {
     log(LOG_WARN, "Error parsing router file");
     return -1;
   }
@@ -743,9 +745,8 @@ void running_routers_free(running_routers_t *rr)
 void routerlist_update_from_runningrouters(routerlist_t *list,
                                            running_routers_t *rr)
 {
-  int n_routers, n_names, i, j, running;
+  int n_routers, i;
   routerinfo_t *router;
-  const char *name;
   if (!list)
     return;
   if (list->published_on >= rr->published_on)
@@ -754,26 +755,55 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
     return;
 
   n_routers = smartlist_len(list->routers);
-  n_names = smartlist_len(rr->running_routers);
   for (i=0; i<n_routers; ++i) {
-    running = 0;
     router = smartlist_get(list->routers, i);
-    for (j=0; j<n_names; ++j) {
-      name = smartlist_get(rr->running_routers, j);
-      if (*name != '!') {
-        if (router_nickname_matches(router, name)) {
+    router_update_status_from_smartlist(router,
+                                        rr->published_on,
+                                        rr->running_routers);
+  }
+  list->running_routers_updated_on = rr->published_on;
+}
+
+/** Update the is_running and is_verified fields of the router <b>router</b>,
+ * based in its status in the list of strings stored in <b>running_list</b>.
+ * All entries in <b>running_list</b> follow one of these formats:
+ * <ol><li> <b>nickname</b> -- router is running and verified.
+ *     <li> !<b>nickname</b> -- router is not-running and verified.
+ *     <li> $<b>hexdigest</b> -- router is running and unverified.
+ *     <li> !$<b>hexdigest</b> -- router is not-running and unverified.
+ * </ol>
+ */
+void router_update_status_from_smartlist(routerinfo_t *router,
+                                         time_t list_time,
+                                         smartlist_t *running_list)
+{
+  int n_names, i, running, approved;
+  const char *name;
+  running = approved = 0;
+
+  n_names = smartlist_len(running_list);
+  for (i=0; i<n_names; ++i) {
+    name = smartlist_get(running_list, i);
+    if (*name != '!') {
+      if (router_nickname_matches(router, name)) {
+        if (router->status_set_at < list_time) {
+          router->status_set_at = list_time;
           router->is_running = 1;
-          break;
         }
-      } else { /* *name == '!' */
-        if (router_nickname_matches(router, name)) {
+        router->is_verified = (name[1] != '$');
+        return;
+      }
+    } else { /* *name == '!' */
+      if (router_nickname_matches(router, name)) {
+        if (router->status_set_at < list_time) {
+          router->status_set_at = list_time;
           router->is_running = 0;
-          break;
         }
+        router->is_verified = (name[1] != '$');
+        return;
       }
     }
   }
-  list->running_routers_updated_on = rr->published_on;
 }
 
 /*

@@ -584,6 +584,8 @@ typedef struct {
                                       * to exit? */
   /* local info */
   int is_running; /**< As far as we know, is this OR currently running? */
+  time_t status_set_at; /**< When did we last update is_running? */
+  int is_verified; /**< Has a trusted dirserver validated this OR? */
   int is_trusted_dir; /**< Do we trust this OR as a directory server? */
 
 } routerinfo_t;
@@ -1381,6 +1383,9 @@ int router_exit_policy_rejects_all(routerinfo_t *router);
 void running_routers_free(running_routers_t *rr);
 void routerlist_update_from_runningrouters(routerlist_t *list,
                                            running_routers_t *rr);
+void router_update_status_from_smartlist(routerinfo_t *r,
+                                         time_t list_time,
+                                         smartlist_t *running_list);
 
 /********************************* routerparse.c ************************/
 
@@ -1397,9 +1402,8 @@ int router_get_router_hash(const char *s, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_runningrouters_hash(const char *s, char *digest);
 int router_parse_list_from_string(const char **s,
-                                       routerlist_t **dest,
-                                       int n_good_nicknames,
-                                       const char **good_nickname_lst);
+                                  routerlist_t **dest,
+                                  smartlist_t *good_nickname_list);
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
                                            crypto_pk_env_t *pkey);

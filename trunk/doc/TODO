@@ -65,7 +65,7 @@ NICK      - Possible to get autoconf to easily install things into ~/.tor?
         o nickname defaults to first piece of hostname
         o running-routers list refers to nickname if verified, else
           hash-base64'ed.
-        - Mark routers as verified or unverified based on whether
+        o Mark routers as verified or unverified based on whether
           running-routers list includes nickname or id hash.
         o put OR uptime in descriptor
         o name the secret-key directory something to discourage people
@@ -95,6 +95,7 @@ NICK    - Reputation info needs to give better weight to recent events than
           - he can connect to you
           - he has successfully extended to you
           - he has sufficient mean-time-between-failures
+	- Don't accept ORs with nicknames same as verified ORs' nicknames.
         - add new "Middleman 1" config variable?
           o if torrc not found, exitpolicy reject *:*
 NICK    - change if(options.ORPort) to what we really mean.
