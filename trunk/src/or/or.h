@@ -540,6 +540,13 @@ int connection_flush_buf(connection_t *conn);
 int connection_handle_write(connection_t *conn);
 int connection_write_to_buf(const char *string, int len, connection_t *conn);
 
+connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port);
+connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
+
+connection_t *connection_get_by_type(int type);
+connection_t *connection_get_by_type_state(int type, int state);
+connection_t *connection_get_by_type_state_lastwritten(int type, int state);
+
 int connection_receiver_bucket_should_increase(connection_t *conn);
 
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
@@ -612,13 +619,6 @@ crypto_pk_env_t *get_identity_key(void);
 int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
 void connection_set_poll_socket(connection_t *conn);
-
-connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port);
-connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
-
-connection_t *connection_get_by_type(int type);
-connection_t *connection_get_by_type_state(int type, int state);
-connection_t *connection_get_by_type_state_lastwritten(int type, int state);
 
 void connection_watch_events(connection_t *conn, short events);
 int connection_is_reading(connection_t *conn);

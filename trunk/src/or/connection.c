@@ -510,6 +510,99 @@ int connection_write_to_buf(const char *string, int len, connection_t *conn) {
   return write_to_buf(string, len, conn->outbuf);
 }
 
+connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
+  int i, n;
+  connection_t *conn;
+  connection_t **carray;
+ 
+  get_connection_array(&carray,&n);
+  for(i=0;i<n;i++) {
+    conn = carray[i];
+    if(conn->addr == addr && conn->port == port && !conn->marked_for_close)
+      return conn;
+  }
+  return NULL;
+}
+
+connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
+  /* Find a connection to the router described by addr and port,
+   *   or alternately any router which knows its key.
+   * This connection *must* be in 'open' state.
+   * If not, return NULL.
+   */
+  int i, n;
+  connection_t *conn;
+  routerinfo_t *router;
+  connection_t **carray;
+
+  /* first check if it's there exactly */
+  conn = connection_exact_get_by_addr_port(addr,port);
+  if(conn && connection_state_is_open(conn)) {
+    log(LOG_INFO,"connection_twin_get_by_addr_port(): Found exact match.");
+    return conn;
+  }
+ 
+  /* now check if any of the other open connections are a twin for this one */
+ 
+  router = router_get_by_addr_port(addr,port);
+  if(!router)
+    return NULL;
+ 
+  get_connection_array(&carray,&n);
+  for(i=0;i<n;i++) {
+    conn = carray[i];
+    assert(conn);
+    if(connection_state_is_open(conn) &&
+       !conn->marked_for_close &&
+       !crypto_pk_cmp_keys(conn->onion_pkey, router->onion_pkey)) {
+      log(LOG_INFO,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
+      return conn;
+    }
+  }
+  return NULL;
+}
+
+connection_t *connection_get_by_type(int type) {
+  int i, n;
+  connection_t *conn;
+  connection_t **carray;
+ 
+  get_connection_array(&carray,&n);
+  for(i=0;i<n;i++) {
+    conn = carray[i];
+    if(conn->type == type && !conn->marked_for_close)
+      return conn;
+  }
+  return NULL;
+}
+
+connection_t *connection_get_by_type_state(int type, int state) {
+  int i, n;
+  connection_t *conn;
+  connection_t **carray;
+ 
+  for(i=0;i<n;i++) {
+    conn = carray[i];
+    if(conn->type == type && conn->state == state && !conn->marked_for_close)
+      return conn;
+  }
+  return NULL;
+}
+
+connection_t *connection_get_by_type_state_lastwritten(int type, int state) {
+  int i, n;
+  connection_t *conn, *best=NULL;
+  connection_t **carray;
+ 
+  for(i=0;i<n;i++) {
+    conn = carray[i];
+    if(conn->type == type && conn->state == state && !conn->marked_for_close)
+      if(!best || conn->timestamp_lastwritten < best->timestamp_lastwritten)
+        best = conn;
+  }
+  return best;
+}
+
 int connection_receiver_bucket_should_increase(connection_t *conn) {
   assert(conn);
 

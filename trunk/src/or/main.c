@@ -131,91 +131,9 @@ int connection_remove(connection_t *conn) {
   return 0;  
 }
 
-connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
-  /* Find a connection to the router described by addr and port,
-   *   or alternately any router which knows its key.
-   * This connection *must* be in 'open' state.
-   * If not, return NULL.
-   */
-  int i;
-  connection_t *conn;
-  routerinfo_t *router;
-
-  /* first check if it's there exactly */
-  conn = connection_exact_get_by_addr_port(addr,port);
-  if(conn && connection_state_is_open(conn)) {
-    log(LOG_INFO,"connection_twin_get_by_addr_port(): Found exact match.");
-    return conn;
-  }
-
-  /* now check if any of the other open connections are a twin for this one */
-
-  router = router_get_by_addr_port(addr,port);
-  if(!router)
-    return NULL;
-
-  for(i=0;i<nfds;i++) {
-    conn = connection_array[i];
-    assert(conn);
-    if(connection_state_is_open(conn) &&
-       !conn->marked_for_close &&
-       !crypto_pk_cmp_keys(conn->onion_pkey, router->onion_pkey)) {
-      log(LOG_INFO,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
-      return conn;
-    }
-  }
-  /* guess not */
-  return NULL;
-
-}
-
-connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
-  int i;
-  connection_t *conn;
-
-  for(i=0;i<nfds;i++) {
-    conn = connection_array[i];
-    if(conn->addr == addr && conn->port == port && !conn->marked_for_close)
-      return conn;
-  }
-  return NULL;
-}
-
-connection_t *connection_get_by_type(int type) {
-  int i;
-  connection_t *conn;
-
-  for(i=0;i<nfds;i++) {
-    conn = connection_array[i];
-    if(conn->type == type && !conn->marked_for_close)
-      return conn;
-  }
-  return NULL;
-}
-
-connection_t *connection_get_by_type_state(int type, int state) {
-  int i;
-  connection_t *conn;
-
-  for(i=0;i<nfds;i++) {
-    conn = connection_array[i];
-    if(conn->type == type && conn->state == state && !conn->marked_for_close)
-      return conn;
-  }
-  return NULL;
-}
-
-connection_t *connection_get_by_type_state_lastwritten(int type, int state) {
-  int i;
-  connection_t *conn, *best=NULL;
-
-  for(i=0;i<nfds;i++) {
-    conn = connection_array[i];
-    if(conn->type == type && conn->state == state && !conn->marked_for_close)
-      if(!best || conn->timestamp_lastwritten < best->timestamp_lastwritten)
-        best = conn;
-  }
-  return best;
+void get_connection_array(connection_t ***array, int *n) {
+  *array = connection_array;
+  *n = nfds;
 }
 
 void connection_watch_events(connection_t *conn, short events) {
@@ -740,7 +658,6 @@ static void dumpstats(void) { /* dump stats to stdout */
     circuit_dump_by_conn(conn); /* dump info about all the circuits using this conn */
     printf("\n");
   }
-
 }
 
 int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
