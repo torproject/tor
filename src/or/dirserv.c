@@ -711,11 +711,9 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
       log_fn(LOG_WARN,"Error compressing cached directory");
     }
     cached_directory_published = when;
-    if(get_options()->DataDirectory) {
-      tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_options()->DataDirectory);
-      if(write_str_to_file(filename,cached_directory,0) < 0) {
-        log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
-      }
+    tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_options()->DataDirectory);
+    if(write_str_to_file(filename,cached_directory,0) < 0) {
+      log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
     }
   }
 }
