@@ -24,7 +24,11 @@ N  - clients now have certs, which means we warn when their certs have
      o Function to generate the contents for a torrc file.
      o Function to safely replace a torrc file.
 R  - fix print_usage()
-   - Download and use running-routers
+   . Download and use running-routers
+     o Code to download running-routers
+     - Decouple DirFetchPeriod, StatusFetchPeriod, DirPostPeriod.
+     - Do we really want to send the clients to the authdirservers for
+       running-routers so often?
 R  - document signals in man page
    o Check for hibernation on startup, hup, etc.
 N  - Test hibernation a lot.
