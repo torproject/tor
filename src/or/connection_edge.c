@@ -365,6 +365,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     if(socks->replylen) { /* we should send reply back */
       log_fn(LOG_DEBUG,"reply is already set for us. Using it.");
       connection_ap_handshake_socks_reply(conn, socks->reply, socks->replylen, 0);
+      socks->replylen = 0; /* zero it out so we can do another round of negotiation */
     } else if(sockshere == -1) { /* send normal reject */
       log_fn(LOG_WARN,"Fetching socks handshake failed. Closing.");
       connection_ap_handshake_socks_reply(conn, NULL, 0, -1);
