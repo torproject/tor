@@ -320,12 +320,12 @@ int set_max_file_descriptors(unsigned int required_min) {
     return -1;
   }
   if(required_min > rlim.rlim_max) {
-    log_fn(LOG_WARN,"We need %d file descriptors available, and we're limited to %d. Please change your ulimit.", required_min, (int)rlim.rlim_max);
+    log_fn(LOG_WARN,"We need %u file descriptors available, and we're limited to %lu. Please change your ulimit.", required_min, (unsigned long int)rlim.rlim_max);
     return -1;
   }
   if(required_min > rlim.rlim_cur) {
-    log_fn(LOG_INFO,"Raising max file descriptors from %d to %d.",
-           (int)rlim.rlim_cur, (int)rlim.rlim_max);
+    log_fn(LOG_INFO,"Raising max file descriptors from %lu to %lu.",
+           (unsigned long int)rlim.rlim_cur, (unsigned long int)rlim.rlim_max);
   }
   rlim.rlim_cur = rlim.rlim_max;
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
