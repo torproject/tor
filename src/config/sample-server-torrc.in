@@ -4,6 +4,8 @@
 DataDirectory @LOCALSTATEDIR@/lib/tor
 # A unique handle for this node
 Nickname moria4
+# The fqdn for this node
+Address moria.seul.org
 
 # Ports for various services. Comment out or set to 0 if you're not
 # offering that service.
