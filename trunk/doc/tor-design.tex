@@ -845,17 +845,18 @@ copies the payload into a \emph{relay extended} cell and passes it back.
 Once Alice has established the circuit (so she shares a key with each
 OR on the circuit), she can send relay cells.
 The stream ID in the relay header indicates to which stream the cell belongs.
-Alice can address each relay cell to any of the ORs on the circuit. To
-construct a relay cell destined for a given OR, she iteratively
+A relay cell can be addressed to any of the ORs on the circuit. To
+construct a relay cell addressed to a given OR, Alice iteratively
 encrypts the cell payload (that is, the relay header and payload)
-with the symmetric key of each hop up to that node. Then, at each hop
+with the symmetric key of each hop up to that OR. Then, at each hop
 down the circuit, the OR decrypts the cell payload and checks whether
-it recognizes the stream ID. A stream ID is recognized either if it
+it recognizes the stream ID.  A stream ID is recognized either if it
 is an already open stream at that OR, or if it is equal to zero. The
 zero stream ID is treated specially, and is used for control messages,
 e.g. starting a new stream. If the stream ID is unrecognized, the OR
-passes the relay cell downstream. This \emph{leaky pipe} circuit design
-allows Alice's streams to exit at different ORs, for example to tolerate
+passes the relay cell downstream. This \emph{leaky pipe} circuit topology
+allows Alice's streams to exit at different ORs on a single circuit.  
+Alice may do this to tolerate
 different exit policies, or to keep the ORs from knowing that two streams
 originate at the same person.
 
@@ -863,7 +864,7 @@ To tear down a circuit, Alice sends a destroy control cell. Each OR
 in the circuit receives the destroy cell, closes all open streams on
 that circuit, and passes a new destroy cell forward. But since circuits
 can be built incrementally, they can also be torn down incrementally:
-Alice can send a relay truncate cell to a node along the circuit. That
+Alice can instead send a relay truncate cell to a node along the circuit. That
 node will send a destroy cell forward, and reply with an acknowledgment
 (relay truncated). Alice might truncate her circuit so she can extend it
 to different nodes without signaling to the first few nodes (or somebody
@@ -969,15 +970,17 @@ that Alice or Bob tear down the circuit if they receive a bad hash.
 
 \SubSection{Rate limiting and fairness}
 
-Nodes use a token bucket approach \cite{foo} to limit the number of
-bytes they receive. Tokens are added to the bucket each second (when
-the bucket is full, new tokens are discarded.) Each token represents
-permission to receive one byte from the network --- to receive a byte,
-the connection must remove a token from the bucket. Thus if the bucket
-is empty, that connection must wait until more tokens arrive. The number
-of tokens we add enforces a longterm average rate of incoming bytes, yet
-we still permit short-term bursts above the allowed bandwidth. Currently
-bucket sizes are set to ten seconds worth of traffic.
+Volunteers are generally more willing to run services that can limit
+their bandwidth usage.  To accomodate them, Tor servers use a token
+bucket approach \cite{foo} to limit the number of bytes they
+receive. Tokens are added to the bucket each second (when the bucket is
+full, new tokens are discarded.) Each token represents permission to
+receive one byte from the network --- to receive a byte, the connection
+must remove a token from the bucket. Thus if the bucket is empty, that
+connection must wait until more tokens arrive. The number of tokens we
+add enforces a long-term average rate of incoming bytes, while still
+permitting short-term bursts above the allowed bandwidth. Current bucket
+sizes are set to ten seconds worth of traffic.
 
 Further, we want to avoid starving any Tor streams. Entire circuits
 could starve if we read greedily from connections and one connection
@@ -987,37 +990,42 @@ and reading at most that number of bytes from each connection. We iterate
 this procedure until the number of tokens in the bucket is under some
 threshold (eg 10KB), at which point we greedily read from connections.
 
-Because the number of bytes going out of a node is roughly the same
-as the number of bytes that have come in, doing rate limiting only on
-incoming bytes should be sufficient.
+Because the Tor protocol generates roughly the same number of outgoing
+bytes as incoming bytes, it is sufficient in practice to rate-limit
+incoming bytes.
+% Is it?  Fun attack: I send you lots of 1-byte-at-a-time TCP frames.
+% In response, you send lots of 256 byte cells.  Can I use this to 
+% make you exceed your outgoing bandwidth limit by a factor of 256?
 
-Further, inspired by Rennhard et al's design in \cite{anonnet}, the edges
-of the circuit can automatically distinguish interactive streams compared
-to bulk streams --- interactive streams supply cells only rarely. We can
-get good latency for these streams by giving them preferential service,
-while still getting good overall throughput to the bulk streams. Such
-preferential treatment can have impact on anonymity, but an adversary
-who can observe the stream can already learn this information through
-timing attacks.
+Further, inspired by Rennhard et al's design in \cite{anonnet}, a
+circuit's edges heuristically distinguish interactive streams from bulk
+streams by comparing the frequency with which they supply cells.  We can
+provide good latency for these streams by giving them preferential
+service, while still getting good overall throughput to the bulk
+streams. Such preferential treatment presents a possible end-to-end
+attack, but an adversary who can observe the stream can observe both
+ends of the stream can already learn this information through timing
+attacks.
 
 \SubSection{Congestion control}
 \label{subsec:congestion}
 
 Even with bandwidth rate limiting, we still need to worry about
-congestion, either accidental or intentional. If enough users choose
-the same OR-to-OR connection for their circuits, that connection
-will become saturated. For example, an adversary can make a `put'
-request through the onion routing network to a webserver he runs,
-and then refuse to read any of the bytes at the webserver end of the
+congestion, either accidental or intentional. If enough users choose the
+same OR-to-OR connection for their circuits, that connection can become
+saturated. For example, an adversary could make a large HTTP PUT request
+through the onion routing network to a webserver he runs, and then
+refuse to read any of the bytes at the webserver end of the
 circuit. Without some congestion control mechanism, these bottlenecks
-can propagate back through the entire network.
+can propagate back through the entire network.  We describe our
+responses below.
 
 \subsubsection{Circuit-level}
 
 To control a circuit's bandwidth usage, each OR keeps track of two
-windows. The package window tracks how many relay data cells the OR is
+windows. The \emph{package window} tracks how many relay data cells the OR is
 allowed to package (from outside streams) for transmission back to the OP,
-and the deliver window tracks how many relay data cells it is willing
+and the \emph{deliver window} tracks how many relay data cells it is willing
 to deliver to streams outside the network. Each window is initialized
 (say, to 1000 data cells). When a data cell is packaged or delivered,
 the appropriate window is decremented. When an OR has received enough
