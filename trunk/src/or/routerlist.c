@@ -436,7 +436,7 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
 //    log_fn(LOG_INFO,"Recording bw %d for node %s.", this_bw, router->nickname);
   }
   if(!total_bw)
-    return NULL;
+    return smartlist_choose(sl);
   rand_bw = crypto_pseudo_rand_int(total_bw);
 //  log_fn(LOG_INFO,"Total bw %d. Randomly chose %d.", total_bw, rand_bw);
   tmp = 0;
