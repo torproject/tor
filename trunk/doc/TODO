@@ -10,14 +10,11 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-0.0.9pre5/6: ("Launch" version)
+
+0.0.9pre5:
+NM - add hibernation stuff to man page
    o "tor --list-fingerprint" to print fingerprint and exit.
-   - Oct 20 16:45:10.237 [warn] parse_addr_port(): Port '0' out of range
    o add and document DirPolicy config option
-   - clean up parse_*_policy code
-     - when you hup, they're not getting re-parsed
-     - stop calling a *_policy an exit_policy_t
-   - stop calling running-routers running-routers?
    o Replace syslog/debuglogfile/logfile/loglevel with a new option,
      "log (minlevel)?-(maxlevel)? (syslog|stderr|stdout|file (.*))".
    o Replace running-routers with a router-status line that can be used
@@ -34,26 +31,38 @@ ARMA    - arma claims
        Implement hibernation.  Have a separate
        about-to-start-hibernating state implemented in similar way to
        will shut-down-in-30-seconds state.
-   - Rendezvous service bug: can we nail it down?
-R  . bandwidth buckets for write as well as read.
+   o Rendezvous service bug: can we nail it down?
    o Make watchdogged clients check cached-directory mtime to avoid
      fetching directory in a tight loop.
-   . Pure C tor_resolve
+   o Pure C tor_resolve
      o Implement it; socks4a only is fine for now.
      o Make it build on win32
      o Make it not link with zlib and openssl.
+   o Implement control-spec.txt
+     o Implement protocol
+     o Implement setconfig
+     o Specify and implement a commitconfig command.
+
+0.0.9pre6:
+   - Oct 20 16:45:10.237 [warn] parse_addr_port(): Port '0' out of range
+   - clean up parse_*_policy code
+     - when you hup, they're not getting re-parsed
+     - stop calling a *_policy an exit_policy_t
+   - Writing out the machine-readable torrc file
+   - fix print_usage()
+   - document signals in man page
 N  - RPMs
      o Merge changes from jbash
      - Figure out versioning
 N  - Windows installer
    - Review website; make important info more prominent.
-   . Implement control-spec.txt
-     o Implement protocol
-R    . Implement setconfig
-     - Specify and implement a commitconfig command.
-     - Ability to dump minimal set of options to torrc.
+
+
 
 Beyond 0.0.9:
+   - allow transition from ORPort to !ORPort, and back
+R  . bandwidth buckets for write as well as read.
+   - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
    o Check getrlimit(RLIMIT_[N]OFILE), sysconf(OPEN_MAX) on start-up, and
      warn if we're running as a server with a low limit.
    - Implement If-Modified-Since for directories.
