@@ -535,6 +535,8 @@ or_handshake_server_process_auth(connection_t *conn) {
     /* copy all relevant info to conn */
     conn->addr = router->addr, conn->port = router->or_port;
     conn->pkey = crypto_pk_dup_key(router->pkey);
+    if(conn->address)
+      free(conn->address);
     conn->address = strdup(router->address);
 
     /* generate a nonce */
