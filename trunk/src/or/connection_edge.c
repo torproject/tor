@@ -624,7 +624,6 @@ static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_OPEN;
-  tor_free(ap_conn->socks_request); /* this also NULLs it out */
   log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
   return 0;
 }
