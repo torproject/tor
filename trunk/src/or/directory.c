@@ -117,9 +117,11 @@ void directory_set_dirty(void) {
 
 void directory_rebuild(void) {
   if(directory_dirty) {
-/* NICK: This is where the dirserver makes a new <the_directory,directorylen>
- * (or whatever it'll be called in the future) pair. */
-    dump_directory_to_string(the_directory, MAX_DIR_SIZE);
+    if (dump_signed_directory_to_string(the_directory, MAX_DIR_SIZE,
+                                        get_signing_privatekey())) {
+      log(LOG_ERR, "Error writing directory");
+      return;
+    }
     log(LOG_INFO,"New directory:\n%s",the_directory);
     directorylen = strlen(the_directory);
     directory_dirty = 0;
@@ -144,9 +146,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
       log(LOG_DEBUG,"connection_dir_process_inbuf(): Empty directory. Ignoring.");
       return -1;
     }
-/* NICK: This is where the client parses, checks-the-signature-of, etc the
- * new directory. conn->pkey is the signing key of the directory server we chose. */
-    if(router_get_list_from_string(the_directory) < 0) {
+    if(router_get_dir_from_string(the_directory, conn->pkey) < 0) {
       log(LOG_DEBUG,"connection_dir_process_inbuf(): ...but parsing failed. Ignoring.");
     }
     if(options.ORPort) { /* connect to them all */
