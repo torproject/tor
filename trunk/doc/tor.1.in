@@ -131,6 +131,9 @@ space. The default exit policy is:
 .IP "accept *:873"
 .IP "accept *:993"
 .IP "accept *:995" 4
+.IP "reject *:4661-4662"
+.IP "reject *:1214"
+.IP "reject *:6346"
 .IP "accept *:1024-65535"
 .IP "reject *:*"
 .RE
