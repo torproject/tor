@@ -30,10 +30,13 @@ void directory_initiate_command(routerinfo_t *router, int command) {
   if(!router) /* i guess they didn't have one in mind for me to use */
     return;
 
+#if 0 /* there's no problem with parallel get/posts now. whichever 'get' ends
+         last is the directory. */
   if(connection_get_by_type(CONN_TYPE_DIR)) { /* there's already a dir conn running */
     log_fn(LOG_DEBUG,"Canceling connect, dir conn already active.");
     return;
   }
+#endif
 
   if(command == DIR_CONN_STATE_CONNECTING_FETCH)
     log_fn(LOG_DEBUG,"initiating directory fetch");
