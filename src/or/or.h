@@ -756,13 +756,15 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
 routerinfo_t *router_get_entry_from_string(char **s);
 int router_supports_exit_address(uint32_t addr, uint16_t port,
                                  routerinfo_t *router);
-int router_compare_to_exit_policy(connection_t *conn);
+int router_compare_to_my_exit_policy(connection_t *conn);
 int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
                                        struct exit_policy_t *policy);
 void routerinfo_free(routerinfo_t *router);
 int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
 const routerinfo_t *router_get_desc_routerinfo(void);
+int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port);
+int router_exit_policy_rejects_all(routerinfo_t *router);
 const char *router_get_my_descriptor(void);
 int router_rebuild_descriptor(void);
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
