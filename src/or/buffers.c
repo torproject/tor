@@ -716,7 +716,7 @@ int fetch_from_buf_control(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
       msglen = ntohs(get_uint16(cp));
       if (ntohs(get_uint16(cp+2) != CONTROL_CMD_FRAGMENT))
         return -1; /* Missing fragment message; error. */
-      if ((endp-cp) < 4+msglen)
+      if ((endp-cp) < (int)(4+msglen))
         return 0; /* Fragment not all here. */
       sofar += msglen;
       cp += (4+msglen);
