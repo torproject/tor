@@ -393,6 +393,7 @@ static int spawn_dnsworker(void) {
   conn->receiver_bucket = -1; /* non-cell connections don't do receiver buckets */
   conn->bandwidth = -1;
   conn->s = fd[0];
+  conn->address = strdup("localhost");
 
   if(connection_add(conn) < 0) { /* no space, forget it */
     log_fn(LOG_INFO,"connection_add failed. Giving up.");

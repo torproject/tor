@@ -160,8 +160,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
   int one=1;
 
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
-  if (s < 0)
-  { 
+  if (s < 0) { 
     log_fn(LOG_ERR,"Socket creation failed.");
     return -1;
   }
@@ -385,6 +384,49 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   return 0;
 }
 #endif
+
+/* take conn, make a nonblocking socket; try to connect to 
+ * addr:port (they arrive in *host order*). If fail, return -1. Else
+ * assign s to conn->s: if connected return 1, if eagain return 0.
+ * address is used to make the logs useful.
+ */
+int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port) {
+  int s;
+  struct sockaddr_in dest_addr;
+
+  s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
+  if (s < 0) {
+    log_fn(LOG_ERR,"Error creating network socket.");
+    return -1;
+  }
+  set_socket_nonblocking(s);
+
+  memset((void *)&dest_addr,0,sizeof(dest_addr));
+  dest_addr.sin_family = AF_INET;
+  dest_addr.sin_port = htons(port);
+  dest_addr.sin_addr.s_addr = htonl(addr);
+
+  log_fn(LOG_DEBUG,"Connecting to %s:%u.",address,port);
+
+  if(connect(s,(struct sockaddr *)&dest_addr,sizeof(dest_addr)) < 0) {
+    if(!ERRNO_CONN_EINPROGRESS(errno)) {
+      /* yuck. kill it. */
+      perror("connect");
+      log_fn(LOG_DEBUG,"Connect failed.");
+      return -1;
+    } else {
+      /* it's in progress. set state appropriately and return. */
+      conn->s = s;
+      log_fn(LOG_DEBUG,"connect in progress, socket %d.",s);
+      return 0;
+    }
+  }
+
+  /* it succeeded. we're connected. */
+  log_fn(LOG_DEBUG,"Connection to %s:%u established.",address,port);
+  conn->s = s;
+  return 1;
+}
 
 /* start all connections that should be up but aren't */
 int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport) {
