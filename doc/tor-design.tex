@@ -1814,21 +1814,23 @@ our overall usability.
 \bibliographystyle{latex8}
 \bibliography{tor-design}
 
+\newpage
 \appendix
 
 \Section{Rendezvous points and hidden services}
 \label{sec:rendezvous-specifics}
 
-In this appendix we provide more specifics about the rendezvous points
-of Section~\ref{subsec:rendezvous}. We also describe integration
-issues and related work.
+In this appendix we provide specifics about the rendezvous points
+of Section~\ref{subsec:rendezvous}. % We also describe integration
+%issues and related work.
 %, and how well the rendezvous point design
 %withstands various attacks.
 %    (Not any more; it's currently commented out. -NM)
-
-\SubSection{Rendezvous protocol overview}
-
-We give an overview of the steps of a rendezvous. These are
+%
+%\SubSection{Rendezvous protocol overview}
+%
+The following steps are
+%We give an overview of the steps of a rendezvous. These are
 performed on behalf of Alice and Bob by their local OPs;
 application integration is described more fully below.
 
@@ -1873,14 +1875,17 @@ introduction points for his service, and periodically refreshes his
 entry in the DHT.
 
 The message that Alice gives
-the introduction point includes a hash of Bob's public key to identify
-the service, along with an optional initial authorization token (the
+the introduction point includes a hash of Bob's public key % to identify
+%the service, along with 
+and an optional initial authorization token (the
 introduction point can do prescreening, for example to block replays). Her
 message to Bob may include an end-to-end authorization token so Bob
 can choose whether to respond.
 The authorization tokens can be used to provide selective access:
-important users get tokens to ensure uninterrupted access to the
-service. During normal situations, Bob's service might simply be offered
+important users can get uninterrupted access.
+%important users get tokens to ensure uninterrupted access. %to the
+%service.
+During normal situations, Bob's service might simply be offered
 directly from mirrors, while Bob gives out tokens to high-priority users. If
 the mirrors are knocked down,
 %by distributed DoS attacks or even
@@ -1888,17 +1893,16 @@ the mirrors are knocked down,
 those users can switch to accessing Bob's service via
 the Tor rendezvous system.
 
-Since Bob's introduction points might themselves be subject to DoS he
-could have to choose between keeping many
-introduction connections open or risking such an attack. In this case,
-he can provide selected users
-with a current list and/or future schedule of introduction points that
-are not advertised in the DHT\@. This is most likely to be practical
+Bob's introduction points are themselves subject to DoS---he must
+open many introduction points or risk such an attack.
+He can provide selected users with a current list or future schedule of
+unadvertised introduction points;
+this is most practical
 if there is a stable and large group of introduction points
-available. Alternatively, Bob could give secret public keys
-to selected users for consulting the DHT\@. All of these approaches
-have the advantage of limiting exposure even when
-some of the selected users collude in the DoS\@.
+available. Bob could also give secret public keys
+for consulting the DHT\@. All of these approaches
+limit exposure even when
+some selected users collude in the DoS\@.
 
 \SubSection{Integration with user applications}
 
@@ -1914,7 +1918,7 @@ remains a SOCKS proxy. We encode all of the necessary information
 into the fully qualified domain name Alice uses when establishing her
 connection. Location-hidden services use a virtual top level domain
 called {\tt .onion}: thus hostnames take the form {\tt x.y.onion} where
-{\tt x} is the authorization cookie, and {\tt y} encodes the hash of
+{\tt x} is the authorization cookie and {\tt y} encodes the hash of
 the public key. Alice's onion proxy
 examines addresses; if they're destined for a hidden server, it decodes
 the key and starts the rendezvous as described above.
@@ -1928,17 +1932,16 @@ of mobile phones and low-power location
 trackers~\cite{federrath-ih96,reed-protocols97}.  Rendezvous for
 low-latency
 Internet connections was suggested in early Onion Routing
-work~\cite{or-ih96}; however, the first published design of rendezvous
-points for low-latency Internet connections was by Ian
+work~\cite{or-ih96}, but the first published design was by Ian
 Goldberg~\cite{ian-thesis}. His design differs from
 ours in three ways. First, Goldberg suggests that Alice should manually
 hunt down a current location of the service via Gnutella; our approach
 makes lookup transparent to the user, as well as faster and more robust.
 Second, in Tor the client and server negotiate session keys
 via Diffie-Hellman, so plaintext is not exposed even at the rendezvous point. Third,
-our design tries to minimize the exposure associated with running the
+our design minimizes the exposure from running the
 service, to encourage volunteers to offer introduction and rendezvous
-point services. Tor's introduction points do not output any bytes to the
+services. Tor's introduction points do not output any bytes to the
 clients; the rendezvous points don't know the client or the server,
 and can't read the data being transmitted. The indirection scheme is
 also designed to include authentication/authorization---if Alice doesn't
