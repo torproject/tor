@@ -272,8 +272,7 @@ int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16
  
   if(ap_listenport) {
     bindaddr.sin_port = htons(ap_listenport);
-    inet_aton("127.0.0.1", &(bindaddr.sin_addr)); /* the AP listens only on localhost! */
-    /* XXX inet_aton is missing on solaris. use something simpler? */
+    bindaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); /* the AP listens only on localhost! */
     if(!connection_get_by_type(CONN_TYPE_AP_LISTENER)) {
       connection_ap_create_listener(&bindaddr);
     }
