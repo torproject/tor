@@ -1,3 +1,6 @@
+SUBDIRS = osx
+DIST_SUBDIRS = osx
+
 confdir = $(sysconfdir)/tor
 
 EXTRA_DIST = tor-tsocks.conf torify.1 tor-control.py tor.nsi tor.sh torctl
