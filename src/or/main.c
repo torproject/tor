@@ -6,7 +6,7 @@
 /* valid command-line options */
 static char *args = "hf:e:n:l:";
 
-int loglevel = LOG_DEBUG;
+int loglevel = LOG_DEBUG; /* global variable */
 
 //int global_role = ROLE_AP_LISTEN;
 int global_role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
@@ -29,25 +29,30 @@ enum opts {
   RouterFile=0, PrivateKeyFile, APPort, OPPort, ORPort, CoinWeight, MaxConn, TrafficShaping
 };
 
-connection_t *connection_array[MAXCONNECTIONS] =
+static connection_t *connection_array[MAXCONNECTIONS] =
         { NULL };
 
-struct pollfd poll_array[MAXCONNECTIONS] =
+static struct pollfd poll_array[MAXCONNECTIONS] =
         { [0 ... MAXCONNECTIONS-1] = { -1, 0, 0 } };
 
-int nfds=0; /* number of connections currently active */
-
-/* default logging threshold */
-extern int loglevel;
+static int nfds=0; /* number of connections currently active */
 
 /* private key */
-RSA *prkey = NULL;
+static RSA *prkey = NULL;
 
 /* router array */
-routerinfo_t **router_array = NULL;
-int rarray_len = 0;
+static routerinfo_t **router_array = NULL;
+static int rarray_len = 0;
 
 /********* END VARIABLES ************/
+
+/****************************************************************************
+*
+* This section contains accessors and other methods on the connection_array
+* and poll_array variables (which are global within this file and unavailable
+* outside it).
+*
+****************************************************************************/
 
 int connection_add(connection_t *conn) {
 
@@ -133,22 +138,27 @@ connection_t *connection_get_by_type(int type) {
   return NULL;
 }
 
+
+
+
+/* the next 4 functions should move to routers.c once we get it
+ * cleaned up more. The router_array and rarray_len variables should
+ * move there too.
+ */
+
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   int i;
   routerinfo_t *router;
 
-  if (!router_array)
-    return NULL;
+  assert(router_array);
 
-  for(i=0;i<rarray_len;i++)
-  {
+  for(i=0;i<rarray_len;i++) {
     router = router_array[i];
     if ((router->addr == addr) && (router->or_port == port))
       return router;
   }
 
   return NULL;
-
 }
 
 routerinfo_t *router_get_first_in_route(unsigned int *route, size_t routelen) {
@@ -164,6 +174,10 @@ unsigned int *router_new_route(size_t *rlen) {
 unsigned char *router_create_onion(unsigned int *route, size_t routelen, size_t *lenp, crypt_path_t **cpathp) {
   return create_onion(router_array,rarray_len,route,routelen,lenp,cpathp);
 }
+
+
+
+
 
 connection_t *connect_to_router_as_op(routerinfo_t *router) {
   return connection_connect_to_router_as_op(router, prkey, options[ORPort].r.i);
@@ -261,7 +275,7 @@ void check_conn_marked(int i) {
     connection_free(conn);
     if(i<nfds) { /* we just replaced the one at i with a new one.
                     process it too. */
-      check_conn_read(i);
+      check_conn_marked(i);
     }
   }
 }
@@ -373,23 +387,11 @@ int main(int argc, char *argv[]) {
     log(LOG_ERR,"MaxConn option required but not found.");
     exit(1);
   }
-#if 0
-  if (!options[TrafficShaping].err)
-  { 
-    options[TrafficShaping].r.i = DEFAULT_POLICY;
-  }
-  else if ((options[TrafficShaping].r.i < 0) || (options[TrafficShaping].r.i > 1))
-  {
-    log(LOG_ERR,"Invalid value for the TrafficShaping option.");
-    exit(1);
-  }
-#endif
 
   ERR_load_crypto_strings();
   retval = do_main_loop();
   ERR_free_strings();
 
   return retval;
-
 }
 

@@ -81,11 +81,6 @@ int op_handshake_process_keys(connection_t *conn) {
   EVP_EncryptInit(&conn->b_ctx, EVP_des_ofb(), conn->b_session_key, conn->b_session_iv);
   EVP_DecryptInit(&conn->f_ctx, EVP_des_ofb(), conn->f_session_key, conn->f_session_iv);
 
-#if 0
-  /* FIXME must choose conn->aci here? What does it mean for a connection to have an aci? */
-  log(LOG_DEBUG,"new_entry_connection : Chosen ACI %u.",conn->aci);
-#endif
-
   conn->state = OP_CONN_STATE_OPEN;
   connection_watch_events(conn, POLLIN);
 

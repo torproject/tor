@@ -3,7 +3,7 @@
 
 /********* START VARIABLES **********/
 
-circuit_t *global_circuitlist=NULL;
+static circuit_t *global_circuitlist=NULL;
 
 /********* END VARIABLES ************/
 
@@ -22,8 +22,7 @@ void circuit_add(circuit_t *circ) {
 void circuit_remove(circuit_t *circ) {
   circuit_t *tmpcirc;
 
-  if(!circ || !global_circuitlist)
-    return;
+  assert(circ && global_circuitlist);
 
   if(global_circuitlist == circ) {
     global_circuitlist = global_circuitlist->next;
@@ -36,11 +35,9 @@ void circuit_remove(circuit_t *circ) {
       return;
     }
   }
-
 }
 
 circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
-
   circuit_t *circ; 
 
   circ = (circuit_t *)malloc(sizeof(circuit_t));
@@ -55,7 +52,7 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
 
   /* ACIs */
   circ->p_aci = p_aci;
-  circ->n_aci = 0; /* we need to have identified the next hop to choose a correct ACI */
+  /* circ->n_aci remains 0 because we haven't identified the next hop yet */
 
   circuit_add(circ);
 
@@ -363,7 +360,6 @@ void circuit_about_to_close_connection(connection_t *conn) {
   /* currently, we assume it's too late to flush conn's buf here.
    * down the road, maybe we'll consider that eof doesn't mean can't-write
    */
-
   circuit_t *circ;
 
   while((circ = circuit_get_by_conn(conn))) {

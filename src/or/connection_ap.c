@@ -212,7 +212,6 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
     
     /* ok, launch the connection */
     n_conn = connect_to_router_as_op(firsthop);
-    /* FIXME react to this somehow */
     if(!n_conn) { /* connect failed, forget the whole thing */
       log(LOG_DEBUG,"ap_handshake_establish_circuit(): connect to firsthop failed. Closing.");
       circuit_close(circ);
