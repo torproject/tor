@@ -2,6 +2,8 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+#include "../or/or.h"
+
 #include <string.h>
 
 #include <openssl/err.h>
@@ -19,9 +21,12 @@
 #include <limits.h>
 
 #include "crypto.h"
-#include "../or/or.h"
 #include "log.h"
 #include "aes.h"
+
+#ifdef MS_WINDOWS
+#include <wincrypt.h>
+#endif
 
 #if OPENSSL_VERSION_NUMBER < 0x00905000l
 #error "We require openssl >= 0.9.5"
@@ -39,13 +44,6 @@
 #define RETURN_SSL_OUTCOME(exp) (exp); return 0
 #else
 #define RETURN_SSL_OUTCOME(exp) return !(exp)
-#endif
-
-#ifdef MS_WINDOWS
-#define WIN32_WINNT 0x400
-#define _WIN32_WINNT 0x400
-#include <windows.h>
-#include <wincrypt.h>
 #endif
 
 struct crypto_pk_env_t
@@ -1043,7 +1041,7 @@ void crypto_dh_free(crypto_dh_env_t *dh)
 int crypto_seed_rng()
 {
   static int provider_set = 0;
-  static HCRYPTPROV p;
+  static HCRYPTPROV provider;
   char buf[21];
 
   if (!provider_set) {

@@ -6,6 +6,13 @@
 #define __OR_H
 
 #include "orconfig.h"
+#ifdef MS_WINDOWS
+#define WIN32_WINNT 0x400
+#define _WIN32_WINNT 0x400
+#define WIN32_LEAN_AND_MEAN
+/* Number of fds that select will accept; default is 64. */
+#define FD_SETSIZE 512
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -86,9 +93,6 @@
 #include <io.h>
 #include <process.h>
 #include <direct.h>
-#define WIN32_WINNT 0x400
-#define _WIN32_WINNT 0x400
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #define snprintf _snprintf
 #endif
@@ -659,6 +663,11 @@ int config_assign_default_dirservers(void);
 int getconfig(int argc, char **argv, or_options_t *options);
 
 /********************************* connection.c ***************************/
+
+#define CONN_TYPE_TO_STRING(t) (((t) < _CONN_TYPE_MIN || (t) > _CONN_TYPE_MAX) ? "Unknown" : \
+	                            conn_type_to_string[(t)])
+
+extern char *conn_type_to_string[];
 
 connection_t *connection_new(int type);
 void connection_free(connection_t *conn);

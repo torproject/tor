@@ -555,11 +555,11 @@ static int parse_time(const char *cp, time_t *t)
 	log_fn(LOG_WARN, "Published time was unparseable"); return -1;
   }
   if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
-	  hour > 24 || minute > 61 || second > 62) {
+	  hour > 23 || minute > 59 || second > 61) {
 	log_fn(LOG_WARN, "Published time was nonsensical"); return -1;
   }
   st_tm.tm_year = year;
-  st_tm.tm_mon = month;
+  st_tm.tm_mon = month-1;
   st_tm.tm_mday = day;
   st_tm.tm_hour = hour;
   st_tm.tm_min = minute;
