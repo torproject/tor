@@ -1018,9 +1018,12 @@ void crypto_digest_get_digest(crypto_digest_env_t *digest,
                               char *out, size_t out_len)
 {
   static char r[DIGEST_LEN];
+  SHA_CTX tmpctx;
   tor_assert(digest && out);
   tor_assert(out_len <= DIGEST_LEN);
-  SHA1_Final(r, &digest->d);
+  /* memcpy into a temporary ctx, since SHA1_Final clears the context */
+  memcpy(&tmpctx, &digest->d, sizeof(SHA_CTX));
+  SHA1_Final(r, &tmpctx);
   memcpy(out, r, out_len);
 }
 
