@@ -942,7 +942,7 @@ static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
     result = read_to_buf(conn->s, at_most, conn->inbuf,
                          &conn->inbuf_reached_eof);
 
-//  log(LOG_DEBUG,"connection_read_to_buf(): read_to_buf returned %d.",read_result);
+//  log_fn(LOG_DEBUG,"read_to_buf returned %d.",read_result);
 
     if (result < 0)
       return -1;

@@ -252,6 +252,17 @@ static void conn_read(int i) {
     /* XXX Post 0.0.9, we should rewrite this whole if statement;
      * something sane may result.  Nick suspects that the || below
      * should be a &&.
+     *
+     * No, it should remain a ||. Here's why: when we reach the end
+     * of a read bucket, we stop reading on a conn. We don't want to
+     * read any more bytes on it, until we're allowed to resume reading.
+     * So if !connection_is_reading, then return right then. Also, if
+     * poll() said nothing (true because the if above), and there's
+     * nothing pending, then also return because nothing to do.
+     *
+     * If poll *does* have something to say, even though
+     * !connection_is_reading, then we want to handle it in connection.c
+     * to make it stop reading for next time, else we loop.
      */
     if (!connection_is_reading(conn) ||
         !connection_has_pending_tls_data(conn))
