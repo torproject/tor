@@ -186,8 +186,8 @@ dirserv_free_descriptors()
 }
 
 /* Return 1 if descriptor is well-formed and accepted;
- * 0 if well-formed and server is unapproved;
- * -1 if not well-formed or if clock is skewed or other error.
+ * 0 if well-formed and server or descriptor is unapproved;
+ * -1 if not well-formed or other error.
  *
  * Update *desc to point after the descriptor if the
  * descriptor is well-formed.
@@ -248,16 +248,16 @@ dirserv_add_descriptor(const char **desc)
   /* Is there too much clock skew? */
   now = time(NULL);
   if (ri->published_on > now+ROUTER_ALLOW_SKEW) {
-    log_fn(LOG_WARN, "Publication time for nickname %s is too far in the future; possible clock skew. Not adding", ri->nickname);
+    log_fn(LOG_WARN, "Publication time for nickname %s is too far in the future; possible clock skew. Not adding.", ri->nickname);
     routerinfo_free(ri);
     *desc = end;
-    return -1;
+    return 0;
   }
   if (ri->published_on < now-ROUTER_MAX_AGE) {
-    log_fn(LOG_WARN, "Publication time for router with nickname %s is too far in the past. Not adding", ri->nickname);
+    log_fn(LOG_WARN, "Publication time for router with nickname %s is too far in the past. Not adding.", ri->nickname);
     routerinfo_free(ri);
     *desc = end;
-    return -1;
+    return 0;
   }
 
   /* Do we already have an entry for this router? */

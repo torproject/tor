@@ -198,10 +198,10 @@ int connection_dir_process_inbuf(connection_t *conn) {
           log_fn(LOG_INFO,"eof (status 200) while reading upload response: finished.");
           break;
         case 400:
-          log_fn(LOG_WARN,"http status 400 (bad request) from dirserver. Is your clock skewed?");
+          log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver.");
           break;
         case 403:
-          log_fn(LOG_WARN,"http status 403 (unapproved server) from dirserver. Have you mailed arma your identity fingerprint? Are you using the right key?");
+          log_fn(LOG_WARN,"http status 403 (unapproved server) response from dirserver. Is your clock skewed? Have you mailed arma your identity fingerprint? Are you using the right key?");
 
           break;
       }
@@ -258,7 +258,7 @@ static int directory_handle_command_post(connection_t *conn,
   cp = body;
   switch(dirserv_add_descriptor(&cp)) {
     case -1:
-      /* malformed descriptor, or clock is skewed, or something wrong */
+      /* malformed descriptor, or something wrong */
       connection_write_to_buf(answer400, strlen(answer400), conn);
       break;
     case 0:
