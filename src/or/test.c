@@ -483,6 +483,7 @@ test_util() {
   struct tm a_time;
   smartlist_t *sl;
   char timestr[RFC1123_TIME_LEN+1];
+  char buf[1024];
   time_t t_res;
   int i;
 
@@ -596,6 +597,13 @@ test_util() {
   test_streq("z", smartlist_get(sl, 3));
   test_streq("zhasd <>  <> bnud<>", smartlist_get(sl, 4));
 
+  /* Test tor_strstrip() */
+  strcpy(buf, "Testing 1 2 3");
+  test_eq(0, tor_strstrip(buf, ",!"));
+  test_streq(buf, "Testing 1 2 3");
+  strcpy(buf, "!Testing 1 2 3?");
+  test_eq(5, tor_strstrip(buf, "!? "));
+  test_streq(buf, "Testing123");
 
   /* XXXX test older functions. */
   smartlist_free(sl);
@@ -887,7 +895,7 @@ test_dir_format()
   strcat(buf2, "\n"
          "published 1970-01-01 00:00:00\n"
          "opt fingerprint ");
-  crypto_pk_get_fingerprint(pk2, fingerprint);
+  crypto_pk_get_fingerprint(pk2, fingerprint, 1);
   strcat(buf2, fingerprint);
   strcat(buf2, "\nopt uptime 0\n"
   /* XXX the "0" above is hardcoded, but even if we made it reflect
@@ -952,9 +960,9 @@ test_dir_format()
 #endif
 
   /* Okay, now for the directories. */
-  crypto_pk_get_fingerprint(pk2, buf);
+  crypto_pk_get_fingerprint(pk2, buf, 1);
   add_fingerprint_to_dir("Magri", buf);
-  crypto_pk_get_fingerprint(pk1, buf);
+  crypto_pk_get_fingerprint(pk1, buf, 1);
   add_fingerprint_to_dir("Fred", buf);
   /* Make sure routers aren't too far in the past any more. */
   r1.published_on = time(NULL);
@@ -1097,7 +1105,7 @@ main(int c, char**v){
   test_onion();
   test_onion_handshake();
   puts("\n========================= Directory Formats ===============");
-  /* add_stream_log(LOG_DEBUG, NULL, stdout); */
+  /* add_stream_log(LOG_DEBUG, LOG_ERR, "<stdout>", stdout); */
   test_dir_format();
   puts("\n========================= Rendezvous functionality ========");
   test_rend_fns();

@@ -23,13 +23,12 @@ static int runningrouters_is_dirty = 1;
 static int list_running_servers(char **nicknames_out);
 static void directory_remove_unrecognized(void);
 static int dirserv_regenerate_directory(void);
-static void encode_digest_to_fingerprint(char *fp, const char *digest);
 
 /************** Fingerprint handling code ************/
 
 typedef struct fingerprint_entry_t {
   char *nickname;
-  char *fingerprint;
+  char *fingerprint; /**< Stored as HEX_DIGEST_LEN characters, followed by a NUL */
 } fingerprint_entry_t;
 
 /** List of nickname-\>identity fingerprint mappings for all the routers
@@ -58,6 +57,7 @@ add_fingerprint_to_dir(const char *nickname, const char *fp)
   ent = tor_malloc(sizeof(fingerprint_entry_t));
   ent->nickname = tor_strdup(nickname);
   ent->fingerprint = tor_strdup(fp);
+  tor_strstrip(ent->fingerprint, " ");
   smartlist_add(fingerprint_list, ent);
 }
 
@@ -67,7 +67,7 @@ int
 dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
 {
   char fp[FINGERPRINT_LEN+1];
-  if (crypto_pk_get_fingerprint(pk, fp)<0) {
+  if (crypto_pk_get_fingerprint(pk, fp, 0)<0) {
     log_fn(LOG_ERR, "Error computing fingerprint");
     return -1;
   }
@@ -118,6 +118,7 @@ dirserv_parse_fingerprint_file(const char *fname)
       ent = tor_malloc(sizeof(fingerprint_entry_t));
       ent->nickname = tor_strdup(nickname);
       ent->fingerprint = tor_strdup(fingerprint);
+      tor_strstrip(ent->fingerprint, " ");
       smartlist_add(fingerprint_list_new, ent);
     }
   }
@@ -169,7 +170,7 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
     log_fn(LOG_INFO,"no fingerprint found for %s",router->nickname);
     return 0;
   }
-  if (crypto_pk_get_fingerprint(router->identity_pkey, fp)) {
+  if (crypto_pk_get_fingerprint(router->identity_pkey, fp, 0)) {
     log_fn(LOG_WARN,"error computing fingerprint");
     return -1;
   }
@@ -187,35 +188,14 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
  * return that router's nickname.  Otherwise return NULL. */
 const char *dirserv_get_nickname_by_digest(const char *digest)
 {
-  char fp[FINGERPRINT_LEN+1];
   if (!fingerprint_list)
     return NULL;
   tor_assert(digest);
-  encode_digest_to_fingerprint(fp, digest);
 
   SMARTLIST_FOREACH(fingerprint_list, fingerprint_entry_t*, ent,
-                    { if (!strcasecmp(fp, ent->fingerprint))
+                    { if (!strcasecmp(digest, ent->fingerprint))
                          return ent->nickname; } );
   return NULL;
-}
-
-/** Set fp to contain the hex encoding of <b>digest</b>, with every 4
- * hex digits separated by a space.  The digest must be DIGEST_LEN bytes long;
- * fp must have FINGERPRINT_LEN+1 bytes free. */
-static void encode_digest_to_fingerprint(char *fp, const char *digest)
-{
-  char hexdigest[HEX_DIGEST_LEN+1];
-  int i,j;
-
-  tor_assert(fp&&digest);
-
-  base16_encode(hexdigest, sizeof(hexdigest), digest, DIGEST_LEN);
-  for (i=j=0;j<HEX_DIGEST_LEN;++i,++j) {
-    fp[i]=hexdigest[j];
-    if ((j%4)==3 && j != 39)
-      fp[++i]=' ';
-  }
-  fp[i]='\0';
 }
 
 /** Return true iff any router named <b>nickname</b> with <b>digest</b>
@@ -348,7 +328,7 @@ dirserv_add_descriptor(const char **desc)
     char fp[FINGERPRINT_LEN+1];
     log_fn(LOG_INFO, "Unknown nickname %s (%s:%d). Adding.",
            ri->nickname, ri->address, ri->or_port);
-    if (crypto_pk_get_fingerprint(ri->identity_pkey, fp) < 0) {
+    if (crypto_pk_get_fingerprint(ri->identity_pkey, fp, 1) < 0) {
       log_fn(LOG_WARN, "Error computing fingerprint for %s", ri->nickname);
     } else {
       log_fn(LOG_INFO, "Fingerprint line: %s %s", ri->nickname, fp);
@@ -572,11 +552,12 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
                                  crypto_pk_env_t *private_key)
 {
   char *cp, *eos;
+  char *identity_pkey; /* Identity key, PEM-encoded. */
   char digest[20];
   char signature[128];
   char published[33];
   time_t published_on;
-  int i;
+  int i, identity_pkeylen;
   eos = s+maxlen;
 
   if (!descriptor_list)
@@ -584,6 +565,14 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
 
   if (list_running_servers(&cp))
     return -1;
+#if 0
+  /* PEM-encode the identity key key */
+  if(crypto_pk_write_public_key_to_string(private_key,
+                                        &identity_pkey,&identity_pkeylen)<0) {
+    log_fn(LOG_WARN,"write identity_pkey to string failed!");
+    return -1;
+  }
+#endif
   dirserv_remove_old_servers(ROUTER_MAX_AGE);
   published_on = time(NULL);
   format_iso_time(published, published_on);
@@ -595,6 +584,7 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
            published, options.RecommendedVersions, cp);
 
   tor_free(cp);
+  tor_free(identity_pkey);
   i = strlen(s);
   cp = s+i;
 

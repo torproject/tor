@@ -329,7 +329,7 @@ int init_keys(void) {
   strcpy(fingerprint, options.Nickname);
   strcat(fingerprint, " ");
   if (crypto_pk_get_fingerprint(get_identity_key(),
-                                fingerprint+strlen(fingerprint))<0) {
+                                fingerprint+strlen(fingerprint), 1)<0) {
     log_fn(LOG_ERR, "Error computing fingerprint");
     return -1;
   }
@@ -605,7 +605,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   }
 
   /* record our fingerprint, so we can include it in the descriptor */
-  if (crypto_pk_get_fingerprint(router->identity_pkey, fingerprint)<0) {
+  if (crypto_pk_get_fingerprint(router->identity_pkey, fingerprint, 1)<0) {
     log_fn(LOG_ERR, "Error computing fingerprint");
     return -1;
   }
