@@ -239,8 +239,11 @@ static void conn_close_if_marked(int i) {
        * has already been closed as unflushable. */
       /* FIXME there's got to be a better way to check for this -- and make other checks? */
       log_fn(LOG_WARN,
-             "Conn (fd %d, type %d, state %d) marked for close, but wants to flush.",
-             conn->s, conn->type, conn->state);
+             "Conn (fd %d, type %d, state %d) marked for close, but wants to flush %d bytes. "
+             "Marked at %s:%d",
+             conn->s, conn->type, conn->state,
+             conn->outbuf_flushlen, conn->marked_for_close_file, conn->marked_for_close);
+      /* XXX change the above to 'warn', and go through and fix all the complaints */
       if(connection_speaks_cells(conn)) {
         if(conn->state == OR_CONN_STATE_OPEN) {
           flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
