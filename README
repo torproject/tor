@@ -64,3 +64,5 @@ Configuring tsocks:
   ssh is suid root, you either need to do this as root, or cp a local
   version of ssh that isn't suid.
 
+  (On Windows, you may want to look at the Hummingbird SOCKS client,
+  or at SocksCap, instead.)
