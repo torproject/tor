@@ -742,7 +742,7 @@ static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t
      thank me for this someday. */
   router->pkey = router->signing_pkey = NULL; 
 
-  if (tok->val.cmd.n_args != 6) {
+  if (tok->val.cmd.n_args != 5) {
     log(LOG_ERR,"router_get_entry_from_string(): Wrong # of arguments to \"router\"");
     goto err;
   }
@@ -759,23 +759,20 @@ static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t
     goto err;
   }
   
-  /* Router->op_port */
-  router->op_port = atoi(ARGS[2]);
-  
   /* Router->ap_port */
-  router->ap_port = atoi(ARGS[3]);
+  router->ap_port = atoi(ARGS[2]);
   
   /* Router->dir_port */
-  router->dir_port = atoi(ARGS[4]);
+  router->dir_port = atoi(ARGS[3]);
 
   /* Router->bandwidth */
-  router->bandwidth = atoi(ARGS[5]);
+  router->bandwidth = atoi(ARGS[4]);
   if (!router->bandwidth) {
     log(LOG_ERR,"router_get_entry_from_string(): bandwidth unreadable or 0. Failing.");
   }
   
-  log(LOG_DEBUG,"or_port %d, op_port %d, ap_port %d, dir_port %d, bandwidth %d.",
-    router->or_port, router->op_port, router->ap_port, router->dir_port, router->bandwidth);
+  log(LOG_DEBUG,"or_port %d, ap_port %d, dir_port %d, bandwidth %d.",
+    router->or_port, router->ap_port, router->dir_port, router->bandwidth);
 
   NEXT_TOKEN();
   if (tok->tp != _PUBLIC_KEY) { 

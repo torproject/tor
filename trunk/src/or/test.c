@@ -509,7 +509,6 @@ test_dir_format()
   r1.address = "testaddr1.foo.bar";
   r1.addr = 0xc0a80001u; /* 192.168.0.1 */
   r1.or_port = 9000;
-  r1.op_port = 9001;
   r1.ap_port = 9002;
   r1.dir_port = 9003;
   r1.pkey = pk1;
@@ -529,7 +528,6 @@ test_dir_format()
   r2.address = "tor.tor.tor";
   r2.addr = 0x0a030201u; /* 10.3.2.1 */
   r2.or_port = 9005;
-  r2.op_port = 0;
   r2.ap_port = 0;
   r2.dir_port = 0;
   r2.pkey = pk2;
@@ -554,7 +552,6 @@ test_dir_format()
   test_assert(rp1);
   test_streq(rp1->address, r1.address);
   test_eq(rp1->or_port, r1.or_port);
-  test_eq(rp1->op_port, r1.op_port);
   test_eq(rp1->ap_port, r1.ap_port);
   test_eq(rp1->dir_port, r1.dir_port);
   test_eq(rp1->bandwidth, r1.bandwidth);
@@ -575,7 +572,6 @@ test_dir_format()
   test_assert(rp2);
   test_streq(rp2->address, r2.address);
   test_eq(rp2->or_port, r2.or_port);
-  test_eq(rp2->op_port, r2.op_port);
   test_eq(rp2->ap_port, r2.ap_port);
   test_eq(rp2->dir_port, r2.dir_port);
   test_eq(rp2->bandwidth, r2.bandwidth);

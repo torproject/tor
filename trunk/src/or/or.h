@@ -362,7 +362,6 @@ typedef struct {
  
   uint32_t addr; /* all host order */
   uint16_t or_port;
-  uint16_t op_port;
   uint16_t ap_port;
   uint16_t dir_port;
  
