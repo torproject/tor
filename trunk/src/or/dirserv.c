@@ -552,7 +552,7 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
                                  crypto_pk_env_t *private_key)
 {
   char *cp, *eos;
-  char *identity_pkey; /* Identity key, PEM-encoded. */
+  char *identity_pkey; /* Identity key, DER64-encoded. */
   char digest[20];
   char signature[128];
   char published[33];
@@ -764,20 +764,32 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   char published[33];
   size_t len;
   time_t published_on;
+  char *identity_pkey; /* Identity key, DER64-encoded. */
 
   len = 1024+(MAX_HEX_NICKNAME_LEN+2)*smartlist_len(descriptor_list);
   s = tor_malloc_zero(len);
   if (list_running_servers(&cp))
     return -1;
+  /* ASN.1-encode the public key.  This is a temporary measure; once
+   * everyone is running 0.0.9pre3 or later, we can shift to using a
+   * PEM-encoded key instead.
+   */
+  if(crypto_pk_DER64_encode_public_key(private_key, &identity_pkey)<0) {
+    log_fn(LOG_WARN,"write identity_pkey to string failed!");
+    tor_free(cp);
+    return -1;
+  }
   published_on = time(NULL);
   format_iso_time(published, published_on);
   sprintf(s, "network-status\n"
              "published %s\n"
              "running-routers %s\n"
+             "opt dir-signing-key %s\n"
              "directory-signature %s\n"
              "-----BEGIN SIGNATURE-----\n",
-             published, cp, options.Nickname);
+          published, cp, identity_pkey, options.Nickname);
   tor_free(cp);
+  tor_free(identity_pkey);
   if (router_get_runningrouters_hash(s,digest)) {
     log_fn(LOG_WARN,"couldn't compute digest");
     return -1;

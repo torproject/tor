@@ -40,6 +40,7 @@ typedef enum {
   K_CONTACT,
   K_NETWORK_STATUS,
   K_UPTIME,
+  K_DIR_SIGNING_KEY,
   _UNRECOGNIZED,
   _ERR,
   _EOF,
@@ -113,6 +114,7 @@ static struct {
   { "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ,  ANY },
   { "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ,  DIR_ONLY },
   { "uptime",              K_UPTIME,              ARGS,    NO_OBJ,  RTR_ONLY },
+  { "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK,  DIR_ONLY },
   { NULL, -1 }
 };
 
@@ -130,8 +132,9 @@ static int tokenize_string(const char *start, const char *end,
 static directory_token_t *get_next_token(const char **s, where_syntax where);
 static int check_directory_signature(const char *digest,
                                      directory_token_t *tok,
-                                     crypto_pk_env_t *pkey);
-
+                                     crypto_pk_env_t *pkey,
+                                     crypto_pk_env_t *declared_key);
+static crypto_pk_env_t *find_dir_signing_key(const char *str);
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
  * <b>s</b>.  Return 0 on success, nonzero on failure.
@@ -298,6 +301,7 @@ router_parse_routerlist_from_directory(const char *str,
   const char *end, *cp;
   smartlist_t *tokens = NULL;
   char dirnickname[MAX_NICKNAME_LEN+1];
+  crypto_pk_env_t *declared_key = NULL;
 
   if (router_get_dir_hash(str, digest)) {
     log_fn(LOG_WARN, "Unable to compute digest of directory");
@@ -324,9 +328,9 @@ router_parse_routerlist_from_directory(const char *str,
   if(tok->tp != K_DIRECTORY_SIGNATURE) {
     log_fn(LOG_WARN,"Expected a single directory signature"); goto err;
   }
-  if (check_directory_signature(digest, tok, pkey)<0) {
+  declared_key = find_dir_signing_key(str);
+  if (check_directory_signature(digest, tok, pkey, declared_key)<0)
     goto err;
-  }
 
   /* now we know tok->n_args == 1, so it's safe to access tok->args[0] */
   strlcpy(dirnickname, tok->args[0], sizeof(dirnickname));
@@ -439,6 +443,7 @@ router_parse_routerlist_from_directory(const char *str,
     routerlist_free(new_dir);
   tor_free(versions);
  done:
+  if (declared_key) crypto_free_pk_env(declared_key);
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
     smartlist_free(tokens);
@@ -458,7 +463,7 @@ router_parse_runningrouters(const char *str)
   directory_token_t *tok;
   time_t published_on;
   int i;
-
+  crypto_pk_env_t *declared_key = NULL;
   smartlist_t *tokens = NULL;
 
   if (router_get_runningrouters_hash(str, digest)) {
@@ -505,15 +510,16 @@ router_parse_runningrouters(const char *str)
     log_fn(LOG_WARN, "Missing signature on directory");
     goto err;
   }
-  if (check_directory_signature(digest, tok, NULL)<0) {
+  declared_key = find_dir_signing_key(str);
+  if (check_directory_signature(digest, tok, NULL, declared_key) < 0)
     goto err;
-  }
 
   goto done;
  err:
   running_routers_free(new_list);
   new_list = NULL;
  done:
+  if (declared_key) crypto_free_pk_env(declared_key);
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
     smartlist_free(tokens);
@@ -521,9 +527,91 @@ router_parse_runningrouters(const char *str)
   return new_list;
 }
 
+/** Given a directory or running-routers string in <b>str</b>, try to
+ * find the its dir-signing-key token (if any).  If this token is
+ * present, extract and return the key.  Return NULL on failure. */
+static crypto_pk_env_t *find_dir_signing_key(const char *str)
+{
+  const char *cp;
+  directory_token_t *tok;
+  crypto_pk_env_t *key = NULL;
+
+  /* Is there a dir-signing-key in the directory? */
+  cp = strstr(str, "\nopt dir-signing-key");
+  if (!cp)
+    cp = strstr(str, "\ndir-signing-key");
+  if (!cp)
+    return NULL;
+  ++cp; /* Now cp points to the start of the token. */
+
+  tok = get_next_token(&cp, DIR_ONLY);
+  if (!tok) {
+    log_fn(LOG_WARN, "Unparseable dir-signing-key token");
+    return NULL;
+  }
+  if (tok->tp != K_DIR_SIGNING_KEY) {
+    log_fn(LOG_WARN, "Dir-signing-key token did not parse as expected");
+    return NULL;
+  }
+
+  if (tok->key) {
+    key = tok->key;
+    tok->key = NULL; /* steal reference. */
+  } else if (tok->n_args >= 1) {
+    key = crypto_pk_DER64_decode_public_key(tok->args[0]);
+    if (!key) {
+      log_fn(LOG_WARN, "Unparseable dir-signing-key argument");
+      return NULL;
+    }
+  } else {
+    log_fn(LOG_WARN, "Dir-signing-key token contained no key");
+    return NULL;
+  }
+
+  token_free(tok);
+  return key;
+}
+
+/** Return true iff <b>key</b> is allowed to sign directories.
+ */
+static int dir_signing_key_is_trusted(crypto_pk_env_t *key)
+{
+  char digest[DIGEST_LEN];
+  routerinfo_t *r;
+  if (!key) return 0;
+  if (crypto_pk_get_digest(key, digest) < 0) {
+    log_fn(LOG_WARN, "Error computing dir-signing-key digest");
+    return 0;
+  }
+  if (!(r = router_get_by_digest(digest))) {
+    log_fn(LOG_WARN, "No router known with given dir-signing-key digest");
+    return 0;
+  }
+  if (! r->is_trusted_dir) {
+    log_fn(LOG_WARN, "Listed dir-signing-key is not trusted");
+    return 0;
+  }
+  return 1;
+}
+
+/** Check whether the K_DIRECTORY_SIGNATURE token in <b>tok</b> has a
+ * good signature for <b>digest</b>.
+ *
+ * If <b>declared_key</b> is set, the directory has declared what key
+ * was used to sign it, so we will use that key only if it is an
+ * authoritative directory signing key.
+ *
+ * Otherwise, try to look up the router whose nickname is given in the
+ * directory-signature token.  If this fails, or the named router is
+ * not authoritative, try to use pkey.
+ *
+ * (New callers should always use <b>declared_key</b> when possible;
+ * <b>pkey is only for debugging.)
+ */
 static int check_directory_signature(const char *digest,
-                                      directory_token_t *tok,
-                                      crypto_pk_env_t *pkey)
+                                     directory_token_t *tok,
+                                     crypto_pk_env_t *pkey,
+                                     crypto_pk_env_t *declared_key)
 {
   char signed_digest[PK_BYTES];
   routerinfo_t *r;
@@ -533,21 +621,27 @@ static int check_directory_signature(const char *digest,
     return -1;
   }
 
-  r = router_get_by_nickname(tok->args[0]);
-  log_fn(LOG_DEBUG, "Got directory signed by %s", tok->args[0]);
-  if (r && r->is_trusted_dir) {
-    pkey = r->identity_pkey;
-  } else if (!r && pkey) {
-    /* pkey provided for debugging purposes. */
-  } else if (!r) {
-    log_fn(LOG_WARN, "Directory was signed by unrecognized server %s",
-           tok->args[0]);
-    return -1;
-  } else if (r && !r->is_trusted_dir) {
-    log_fn(LOG_WARN, "Directory was signed by non-trusted server %s",
-           tok->args[0]);
-    return -1;
+  if (declared_key) {
+    if (dir_signing_key_is_trusted(declared_key))
+      pkey = declared_key;
+  } else {
+    r = router_get_by_nickname(tok->args[0]);
+    log_fn(LOG_DEBUG, "Got directory signed by %s", tok->args[0]);
+    if (r && r->is_trusted_dir) {
+      pkey = r->identity_pkey;
+    } else if (!r && pkey) {
+      /* pkey provided for debugging purposes. */
+    } else if (!r) {
+      log_fn(LOG_WARN, "Directory was signed by unrecognized server %s",
+             tok->args[0]);
+      return -1;
+    } else if (r && !r->is_trusted_dir) {
+      log_fn(LOG_WARN, "Directory was signed by non-trusted server %s",
+             tok->args[0]);
+      return -1;
+    }
   }
+
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
     log_fn(LOG_WARN, "Bad object type or length on directory signature");
     return -1;
