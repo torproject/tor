@@ -115,7 +115,6 @@ char *expand_filename(const char *filename);
 /* Net helpers */
 int is_internal_IP(uint32_t ip);
 int is_local_IP(uint32_t ip);
-int tor_lookup_hostname(const char *name, uint32_t *addr);
 int parse_addr_port(const char *addrport, char **address, uint32_t *addr,
                     uint16_t *port);
 int parse_addr_and_port_range(const char *s, uint32_t *addr_out,

@@ -55,6 +55,9 @@ const char compat_c_id[] = "$Id$";
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h> /* FreeBSD needs this to know what version it is */
 #endif
@@ -73,6 +76,11 @@ const char compat_c_id[] = "$Id$";
 #endif
 #ifndef HAVE_STRLCAT
 #include "strlcat.c"
+#endif
+
+/* used by inet_addr, not defined on solaris anywhere!? */
+#ifndef INADDR_NONE
+#define INADDR_NONE ((unsigned long) -1)
 #endif
 
 /** Replacement for snprintf.  Differs from platform snprintf in two
@@ -473,6 +481,45 @@ int tor_inet_aton(const char *c, struct in_addr* addr)
 #endif
 }
 
+/** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
+ * *addr to the proper IP address, in network byte order.  Returns 0
+ * on success, -1 on failure; 1 on transient failure.
+ *
+ * (This function exists because standard windows gethostbyname
+ * doesn't treat raw IP addresses properly.)
+ */
+int tor_lookup_hostname(const char *name, uint32_t *addr)
+{
+  /* Perhaps eventually this should be replaced by a tor_getaddrinfo or
+   * something.
+   */
+  struct in_addr iaddr;
+  struct hostent *ent;
+  tor_assert(addr);
+  if (!*name) {
+    /* Empty address is an error. */
+    return -1;
+  } else if (tor_inet_aton(name, &iaddr)) {
+    /* It's an IP. */
+    memcpy(addr, &iaddr.s_addr, 4);
+    return 0;
+  } else {
+    ent = gethostbyname(name);
+    if (ent) {
+      /* break to remind us if we move away from IPv4 */
+      tor_assert(ent->h_length == 4);
+      memcpy(addr, ent->h_addr, 4);
+      return 0;
+    }
+    memset(addr, 0, 4);
+#ifdef MS_WINDOWS
+    return (WSAGetLastError() == WSATRY_AGAIN) ? 1 : -1;
+#else
+    return (h_errno == TRY_AGAIN) ? 1 : -1;
+#endif
+  }
+}
+
 /* Hold the result of our call to <b>uname</b>. */
 static char uname_result[256];
 /* True iff uname_result is set. */
@@ -719,3 +766,22 @@ const char *tor_socket_strerror(int e)
   return strerror(e);
 }
 #endif
+
+/** Called before we make any calls to network-related functions.
+ * (Some operating systems require their network libraries to be
+ * initialized.) */
+int network_init(void)
+{
+#ifdef MS_WINDOWS
+  /* This silly exercise is necessary before windows will allow gethostbyname to work.
+   */
+  WSADATA WSAData;
+  int r;
+  r = WSAStartup(0x101,&WSAData);
+  if (r) {
+    log_fn(LOG_WARN,"Error initializing windows network layer: code was %d",r);
+    return -1;
+  }
+#endif
+  return 0;
+}

@@ -62,9 +62,6 @@ const char util_c_id[] = "$Id$";
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
-#ifdef HAVE_NETDB_H
-#include <netdb.h>
-#endif
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
@@ -79,11 +76,6 @@ const char util_c_id[] = "$Id$";
 #endif
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
-
-/* used by inet_addr, not defined on solaris anywhere!? */
-#ifndef INADDR_NONE
-#define INADDR_NONE ((unsigned long) -1)
 #endif
 
 #ifndef O_BINARY
@@ -698,8 +690,7 @@ int write_all(int fd, const char *buf, size_t count, int isSocket) {
 }
 
 /** Read from <b>fd</b> to <b>buf</b>, until we get <b>count</b> bytes
- * or reach the end of the file.
- * isSocket must be 1 if fd
+ * or reach the end of the file. <b>isSocket</b> must be 1 if fd
  * was returned by socket() or accept(), and 0 if fd was returned by
  * open().  Return the number of bytes read, or -1 on error. Only use
  * if fd is a blocking fd. */
@@ -1067,45 +1058,6 @@ int is_internal_IP(uint32_t ip) {
  */
 int is_local_IP(uint32_t ip) {
   return is_internal_IP(ip);
-}
-
-/** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
- * *addr to the proper IP address, in network byte order.  Returns 0
- * on success, -1 on failure; 1 on transient failure.
- *
- * (This function exists because standard windows gethostbyname
- * doesn't treat raw IP addresses properly.)
- */
-int tor_lookup_hostname(const char *name, uint32_t *addr)
-{
-  /* Perhaps eventually this should be replaced by a tor_getaddrinfo or
-   * something.
-   */
-  struct in_addr iaddr;
-  struct hostent *ent;
-  tor_assert(addr);
-  if (!*name) {
-    /* Empty address is an error. */
-    return -1;
-  } else if (tor_inet_aton(name, &iaddr)) {
-    /* It's an IP. */
-    memcpy(addr, &iaddr.s_addr, 4);
-    return 0;
-  } else {
-    ent = gethostbyname(name);
-    if (ent) {
-      /* break to remind us if we move away from IPv4 */
-      tor_assert(ent->h_length == 4);
-      memcpy(addr, ent->h_addr, 4);
-      return 0;
-    }
-    memset(addr, 0, 4);
-#ifdef MS_WINDOWS
-    return (WSAGetLastError() == WSATRY_AGAIN) ? 1 : -1;
-#else
-    return (h_errno == TRY_AGAIN) ? 1 : -1;
-#endif
-  }
 }
 
 /** Parse a string of the form "host[:port]" from <b>addrport</b>.  If
