@@ -2,9 +2,11 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/*****
- * fakepoll.c: On systems where 'poll' doesn't exist, fake it with 'select'.
- *****/
+/**
+ * \file fakepoll.c
+ *
+ * \brief On systems where poll() doesn't exist, fake it with select().
+ **/
 
 #include "orconfig.h"
 #include "fakepoll.h"

@@ -2,6 +2,12 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/**
+ * \file log.c
+ *
+ * \brief Functions to send messages to log files or the console.
+ */
+
 #include <stdarg.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -15,16 +21,17 @@
 #define snprintf _snprintf
 #endif
 
-struct logfile_t;
+/** Information for a single logfile; only used in log.c */
 typedef struct logfile_t {
-  struct logfile_t *next;
-  const char *filename;
-  FILE *file;
-  int needs_close;
-  int loglevel;
-  int max_loglevel;
+  struct logfile_t *next; /**< Next logfile_t in the linked list */
+  const char *filename; /**< Filename to open */
+  FILE *file; /**< Stream to receive log messages */
+  int needs_close; /**< Boolean: true if the stream gets closed on shutdown. */
+  int loglevel; /**< Lowest severity level to send to this stream. */
+  int max_loglevel; /**< Highest severity level to send to this stream. */
 } logfile_t;
 
+/** Helper: map a log severity to descriptive string */
 static INLINE const char *sev_to_string(int severity) {
   switch(severity) {
     case LOG_DEBUG:   return "debug";
@@ -36,10 +43,12 @@ static INLINE const char *sev_to_string(int severity) {
   }
 }
 
+/** Linked list of logfile_t */
 static logfile_t *logfiles = NULL;
 
-/* Format a log message into a fixed-sized buffer. (This is factored out
- * of 'logv' so that we never format a message more than once.
+/** Helper: Format a log message into a fixed-sized buffer. (This is
+ * factored out of <b>logv</b> so that we never format a message more
+ * than once.)
  */
 static INLINE void format_msg(char *buf, size_t buf_len,
                               int severity, const char *funcname,
@@ -76,6 +85,10 @@ static INLINE void format_msg(char *buf, size_t buf_len,
   buf[n+1]='\0';
 }
 
+/** Helper: sends a message to the appropriate logfiles, at loglevel
+ * <b>severity</b>.  If provided, <b>funcname</b> is prepended to the
+ * message.  The actual message is derived as from vsprintf(format,ap).
+ */
 static void
 logv(int severity, const char *funcname, const char *format, va_list ap)
 {
@@ -104,7 +117,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
   }
 }
 
-/* Outputs a message to stdout */
+/** Output a message to the log. */
 void _log(int severity, const char *format, ...)
 {
   va_list ap;
@@ -113,6 +126,7 @@ void _log(int severity, const char *format, ...)
   va_end(ap);
 }
 
+/** Output a message to the log, prefixed with a function name <b>fn</b> */
 void _log_fn(int severity, const char *fn, const char *format, ...)
 {
   va_list ap;
@@ -121,6 +135,7 @@ void _log_fn(int severity, const char *fn, const char *format, ...)
   va_end(ap);
 }
 
+/** Close all open log files */
 void close_logs()
 {
   logfile_t *victim;
@@ -133,6 +148,7 @@ void close_logs()
   }
 }
 
+/** Close and re-open all log files; used to rotate logs on SIGHUP. */
 void reset_logs()
 {
   logfile_t *lf;
@@ -144,6 +160,8 @@ void reset_logs()
   }
 }
 
+/** Add a log handler to send all messages of severity <b>loglevel</b>
+ * or higher to <b>stream</b>. */
 void add_stream_log(int loglevel, const char *name, FILE *stream)
 {
   logfile_t *lf;
@@ -157,9 +175,10 @@ void add_stream_log(int loglevel, const char *name, FILE *stream)
   logfiles = lf;
 }
 
-/*
- * If opening the logfile fails, -1 is returned and
- * errno is set appropriately (by fopen)
+/**
+ * Add a log handler to send messages to <b>filename</b>. If opening
+ * the logfile fails, -1 is returned and errno is set appropriately
+ * (by fopen)
  */
 int add_file_log(int loglevel, const char *filename)
 {

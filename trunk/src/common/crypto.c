@@ -2,6 +2,12 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/**
+ * \file crypto.c
+ *
+ * \brief Low-level cryptographic functions.
+ **/
+
 #include "orconfig.h"
 
 #ifdef MS_WINDOWS
@@ -65,9 +71,9 @@
 #define RETURN_SSL_OUTCOME(exp) return !(exp)
 #endif
 
-/* Macro: is k a valid RSA public or private key? */
+/** Macro: is k a valid RSA public or private key? */
 #define PUBLIC_KEY_OK(k) ((k) && (k)->key && (k)->key->n)
-/* Macro: is k a valid RSA private key? */
+/** Macro: is k a valid RSA private key? */
 #define PRIVATE_KEY_OK(k) ((k) && (k)->key && (k)->key->p)
 
 struct crypto_pk_env_t
@@ -86,7 +92,7 @@ struct crypto_dh_env_t {
   DH *dh;
 };
 
-/* Return the number of bytes added by padding method 'padding'
+/** Return the number of bytes added by padding method <b>padding</b>.
  */
 static INLINE int
 crypto_get_rsa_padding_overhead(int padding) {
@@ -99,7 +105,7 @@ crypto_get_rsa_padding_overhead(int padding) {
     }
 }
 
-/* Given a padding method 'padding', return the correct OpenSSL constant.
+/** Given a padding method <b>padding</b>, return the correct OpenSSL constant.
  */
 static INLINE int
 crypto_get_rsa_padding(int padding) {
@@ -112,11 +118,11 @@ crypto_get_rsa_padding(int padding) {
     }
 }
 
-/* Boolen: has OpenSSL's crypto been initialized? */
+/** Boolean: has OpenSSL's crypto been initialized? */
 static int _crypto_global_initialized = 0;
 
-/* Log all pending crypto errors at level 'severity'.  Use 'doing' to describe
- * our current activities.
+/** Log all pending crypto errors at level <b>severity</b>.  Use
+ * <b>doing</b> to describe our current activities.
  */
 static void
 crypto_log_errors(int severity, const char *doing)
@@ -135,7 +141,8 @@ crypto_log_errors(int severity, const char *doing)
     }
   }
 }
-/* Initialize the crypto library.
+
+/** Initialize the crypto library.
  */
 int crypto_global_init()
 {
@@ -146,7 +153,7 @@ int crypto_global_init()
   return 0;
 }
 
-/* Uninitialize the crypto library.
+/** Uninitialize the crypto library.
  */
 int crypto_global_cleanup()
 {
@@ -154,7 +161,7 @@ int crypto_global_cleanup()
   return 0;
 }
 
-/* used by tortls.c: wrap an RSA* in a crypto_pk_env_t. */
+/** used by tortls.c: wrap an RSA* in a crypto_pk_env_t. */
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa)
 {
   crypto_pk_env_t *env;
@@ -165,13 +172,13 @@ crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa)
   return env;
 }
 
-/* used by tortls.c: return the RSA* from a crypto_pk_env_t */
+/** used by tortls.c: return the RSA* from a crypto_pk_env_t */
 RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env)
 {
   return env->key;
 }
 
-/* used by tortls.c: get an equivalent EVP_PKEY* for a crypto_pk_env_t.  Iff
+/** used by tortls.c: get an equivalent EVP_PKEY* for a crypto_pk_env_t.  Iff
  * private is set, include the private-key portion of the key. */
 EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private)
 {
@@ -198,14 +205,14 @@ EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private)
   return NULL;
 }
 
-/* Used by tortls.c: Get the DH* from a crypto_dh_env_t.
+/** Used by tortls.c: Get the DH* from a crypto_dh_env_t.
  */
 DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh)
 {
   return dh->dh;
 }
 
-/* Allocate and return storage for a public key.  The key itself will not yet
+/** Allocate and return storage for a public key.  The key itself will not yet
  * be set.
  */
 crypto_pk_env_t *crypto_new_pk_env(void)
@@ -217,7 +224,7 @@ crypto_pk_env_t *crypto_new_pk_env(void)
   return _crypto_new_pk_env_rsa(rsa);
 }
 
-/* Release a reference to an asymmetric key; when all the references
+/** Release a reference to an asymmetric key; when all the references
  * are released, free the key.
  */
 void crypto_free_pk_env(crypto_pk_env_t *env)
@@ -233,7 +240,7 @@ void crypto_free_pk_env(crypto_pk_env_t *env)
   free(env);
 }
 
-/* Create a new symmetric cipher for a given key and encryption flag
+/** Create a new symmetric cipher for a given key and encryption flag
  * (1=encrypt, 0=decrypt).  Return the crypto object on success; NULL
  * on failure.
  */
@@ -268,7 +275,7 @@ crypto_create_init_cipher(const char *key, int encrypt_mode)
   return NULL;
 }
 
-/* Allocate and return a new symmetric cipher.
+/** Allocate and return a new symmetric cipher.
  */
 crypto_cipher_env_t *crypto_new_cipher_env()
 {
@@ -279,7 +286,7 @@ crypto_cipher_env_t *crypto_new_cipher_env()
   return env;
 }
 
-/* Free a symmetric cipher.
+/** Free a symmetric cipher.
  */
 void crypto_free_cipher_env(crypto_cipher_env_t *env)
 {
@@ -292,7 +299,7 @@ void crypto_free_cipher_env(crypto_cipher_env_t *env)
 
 /* public key crypto */
 
-/* Generate a new public/private keypair in 'env'.  Return 0 on
+/** Generate a new public/private keypair in <b>env</b>.  Return 0 on
  * success, -1 on failure.
  */
 int crypto_pk_generate_key(crypto_pk_env_t *env)
@@ -310,7 +317,7 @@ int crypto_pk_generate_key(crypto_pk_env_t *env)
   return 0;
 }
 
-/* Read a PEM-encoded private key from 'src' into 'env'.
+/** Read a PEM-encoded private key from <b>src</b> into <b>env</b>.
  */
 static int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env,
                                                 FILE *src)
@@ -328,8 +335,8 @@ static int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env,
   return 0;
 }
 
-/* Read a PEM-encoded private key from the file named by 'keyfile' into 'env'.
- * Return 0 on success, -1 on failure.
+/** Read a PEM-encoded private key from the file named by
+ * <b>keyfile</b> into <b>env</b>.  Return 0 on success, -1 on failure.
  */
 int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *keyfile)
 {
@@ -361,9 +368,10 @@ int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *k
   return 0;
 }
 
-/* PEM-encode the public key portion of 'env' and write it to a newly
- * allocated string.  On success, set *dest to the new string, *len to
- * the string's length, and return 0.  On failure, return -1.
+/** PEM-encode the public key portion of <b>env</b> and write it to a
+ * newly allocated string.  On success, set *<b>dest</b> to the new
+ * string, *<b>len</b> to the string's length, and return 0.  On
+ * failure, return -1.
  */
 int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int *len) {
   BUF_MEM *buf;
@@ -394,8 +402,8 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int 
   return 0;
 }
 
-/* Read a PEM-encoded public key from the first 'len' characters of
- * 'src', and store the result in 'env'.  Return 0 on success, -1 on
+/** Read a PEM-encoded public key from the first <b>len</b> characters of
+ * <b>src</b>, and store the result in <b>env</b>.  Return 0 on success, -1 on
  * failure.
  */
 int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src, int len) {
@@ -452,7 +460,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   return r;
 }
 
-/* Return true iff env has a valid key.
+/** Return true iff <b>env</b> has a valid key.
  */
 int crypto_pk_check_key(crypto_pk_env_t *env)
 {
@@ -465,8 +473,8 @@ int crypto_pk_check_key(crypto_pk_env_t *env)
   return r;
 }
 
-/* Compare the public-key components of a and b.  Return -1 if a<b, 0
- * if a==b, and 1 if a>b.
+/** Compare the public-key components of a and b.  Return -1 if a\<b, 0
+ * if a==b, and 1 if a\>b.
  */
 int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b) {
   int result;
@@ -485,7 +493,7 @@ int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b) {
   return BN_cmp((a->key)->e, (b->key)->e);
 }
 
-/* Return the size of the public key modulus in 'env', in bytes. */
+/** Return the size of the public key modulus in <b>env</b>, in bytes. */
 int crypto_pk_keysize(crypto_pk_env_t *env)
 {
   tor_assert(env && env->key);
@@ -493,7 +501,7 @@ int crypto_pk_keysize(crypto_pk_env_t *env)
   return RSA_size(env->key);
 }
 
-/* Increase the reference count of 'env'.
+/** Increase the reference count of <b>env</b>.
  */
 crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *env) {
   tor_assert(env && env->key);
@@ -502,10 +510,10 @@ crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *env) {
   return env;
 }
 
-/* Encrypt 'fromlen' bytes from 'from' with the public key in 'env',
- * using the padding method 'padding'.  On success, write the result
- * to 'to', and return the number of bytes written.  On failure,
- * return -1.
+/** Encrypt <b>fromlen</b> bytes from <b>from</b> with the public key
+ * in <b>env</b>, using the padding method <b>padding</b>.  On success,
+ * write the result to <b>to</b>, and return the number of bytes
+ * written.  On failure, return -1.
  */
 int crypto_pk_public_encrypt(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to, int padding)
 {
@@ -521,10 +529,10 @@ int crypto_pk_public_encrypt(crypto_pk_env_t *env, const unsigned char *from, in
   return r;
 }
 
-/* Decrypt 'fromlen' bytes from 'from' with the private key in 'env',
- * using the padding method 'padding'.  On success, write the result
- * to 'to', and return the number of bytes written.  On failure,
- * return -1.
+/** Decrypt <b>fromlen</b> bytes from <b>from</b> with the private key
+ * in <b>env</b>, using the padding method <b>padding</b>.  On success,
+ * write the result to <b>to</b>, and return the number of bytes
+ * written.  On failure, return -1.
  */
 int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to, int padding)
 {
@@ -543,9 +551,9 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, i
   return r;
 }
 
-/* Check the signature in 'from' ('fromlen' bytes long) with the
- * public key in 'env', using PKCS1 padding.  On success, write the
- * signed data to 'to', and return the number of bytes written.
+/** Check the signature in <b>from</b> (<b>fromlen</b> bytes long) with the
+ * public key in <b>env</b>, using PKCS1 padding.  On success, write the
+ * signed data to <b>to</b>, and return the number of bytes written.
  * On failure, return -1.
  */
 int crypto_pk_public_checksig(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
@@ -561,9 +569,9 @@ int crypto_pk_public_checksig(crypto_pk_env_t *env, const unsigned char *from, i
   return r;
 }
 
-/* Sign 'fromlen' bytes of data from 'from' with the private key in
- * 'env', using PKCS1 padding.  On success, write the signature to
- * 'to', and return the number of bytes written.  On failure, return
+/** Sign <b>fromlen</b> bytes of data from <b>from</b> with the private key in
+ * <b>env</b>, using PKCS1 padding.  On success, write the signature to
+ * <b>to</b>, and return the number of bytes written.  On failure, return
  * -1.
  */
 int crypto_pk_private_sign(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
@@ -582,9 +590,10 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, const unsigned char *from, int 
   return r;
 }
 
-/* Check a siglen-byte long signature at 'sig' against 'datalen' bytes
- * of data at 'data', using the public key in 'env'. Return 0 if 'sig'
- * is a correct signature for SHA1(data).  Else return -1.
+/** Check a siglen-byte long signature at <b>sig</b> against
+ * <b>datalen</b> bytes of data at <b>data</b>, using the public key
+ * in <b>env</b>. Return 0 if <b>sig</b> is a correct signature for
+ * SHA1(data).  Else return -1.
  */
 int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const unsigned char *data, int datalen, const unsigned char *sig, int siglen)
 {
@@ -611,9 +620,10 @@ int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const unsigned char *
   return 0;
 }
 
-/* Compute a SHA1 digest of 'fromlen' bytes of data stored at 'from';
- * sign the data with the private key in 'env', and store it in 'to'.
- * Return the number of bytes written on success, and -1 on failure.
+/** Compute a SHA1 digest of <b>fromlen</b> bytes of data stored at
+ * <b>from</b>; sign the data with the private key in <b>env</b>, and
+ * store it in <b>to</b>.  Return the number of bytes written on
+ * success, and -1 on failure.
  */
 int crypto_pk_private_sign_digest(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
 {
@@ -624,24 +634,22 @@ int crypto_pk_private_sign_digest(crypto_pk_env_t *env, const unsigned char *fro
 }
 
 
-/* Perform a hybrid (public/secret) encryption on 'fromlen' bytes of data
- * from 'from', with padding type 'padding', storing the results on 'to'.
+/** Perform a hybrid (public/secret) encryption on <b>fromlen</b>
+ * bytes of data from <b>from</b>, with padding type 'padding',
+ * storing the results on <b>to</b>.
  *
  * If no padding is used, the public key must be at least as large as
- * 'from'.
+ * <b>from</b>.
  *
  * Returns the number of bytes written on success, -1 on failure.
  *
  * The encrypted data consists of:
- *
- *   The source data, padded and encrypted with the public key, if the
- *   padded source data is no longer than the public key, and "force"
- *   is false.
- *  OR
- *   The beginning of the source data prefixed with a 16-byte symmetric key,
- *   padded and encrypted with the public key; followed by the rest of
- *   the source data encrypted in AES-CTR mode with the symmetric key.
- *
+ *   - The source data, padded and encrypted with the public key, if the
+ *     padded source data is no longer than the public key, and <b>force</b>
+ *     is false, OR
+ *   - The beginning of the source data prefixed with a 16-byte symmetric key,
+ *     padded and encrypted with the public key; followed by the rest of
+ *     the source data encrypted in AES-CTR mode with the symmetric key.
  */
 int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
                                     const unsigned char *from,
@@ -702,7 +710,7 @@ int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
   return -1;
 }
 
-/* Invert crypto_pk_public_hybrid_encrypt. */
+/** Invert crypto_pk_public_hybrid_encrypt. */
 int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
                                      const unsigned char *from,
                                      int fromlen, unsigned char *to,
@@ -748,8 +756,8 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   return -1;
 }
 
-/* ASN.1-encode the public portion of 'pk' into 'dest'.  Return -1 on
- * error, or the number of characters used on success.
+/** ASN.1-encode the public portion of <b>pk</b> into <b>dest</b>.
+ * Return -1 on error, or the number of characters used on success.
  */
 int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
 {
@@ -773,7 +781,7 @@ int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
   return len;
 }
 
-/* Decode an ASN.1-encoded public key from str; return the result on
+/** Decode an ASN.1-encoded public key from <b>str</b>; return the result on
  * success and NULL on failure.
  */
 crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len)
@@ -799,8 +807,8 @@ crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len)
   return _crypto_new_pk_env_rsa(rsa);
 }
 
-/* Given a private or public key pk, put a SHA1 hash of the public key into
- * digest_out (must have DIGEST_LEN bytes of space).
+/** Given a private or public key <b>pk</b>, put a SHA1 hash of the
+ * public key into <b>digest_out</b> (must have DIGEST_LEN bytes of space).
  */
 int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
 {
@@ -825,9 +833,13 @@ int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
   return 0;
 }
 
-/* Given a private or public key pk, put a fingerprint of the
- * public key into fp_out (must have at least FINGERPRINT_LEN+1 bytes of
+/** Given a private or public key <b>pk</b>, put a fingerprint of the
+ * public key into <b>fp_out</b> (must have at least FINGERPRINT_LEN+1 bytes of
  * space).
+ *
+ * Fingerprints are computed as the SHA1 digest of the ASN.1 encoding
+ * of the public key, converted to hexadecimal, with a space after every
+ * four digits.
  */
 int
 crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out)
@@ -854,7 +866,7 @@ crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out)
   return 0;
 }
 
-/* Return true iff 's' is in the correct format for a fingerprint.
+/** Return true iff <b>s</b> is in the correct format for a fingerprint.
  */
 int
 crypto_pk_check_fingerprint_syntax(const char *s)
@@ -873,7 +885,7 @@ crypto_pk_check_fingerprint_syntax(const char *s)
 
 /* symmetric crypto */
 
-/* Generate a new random key for the symmetric cipher in 'env'.
+/** Generate a new random key for the symmetric cipher in <b>env</b>.
  * Return 0 on success, -1 on failure.  Does not initialize the cipher.
  */
 int crypto_cipher_generate_key(crypto_cipher_env_t *env)
@@ -883,8 +895,8 @@ int crypto_cipher_generate_key(crypto_cipher_env_t *env)
   return crypto_rand(CIPHER_KEY_LEN, env->key);
 }
 
-/* Set the symmetric key for the cipher in 'env' to the first
- * CIPHER_KEY_LEN bytes of 'key'. Does not initialize the cipher.
+/** Set the symmetric key for the cipher in <b>env</b> to the first
+ * CIPHER_KEY_LEN bytes of <b>key</b>. Does not initialize the cipher.
  */
 int crypto_cipher_set_key(crypto_cipher_env_t *env, const unsigned char *key)
 {
@@ -898,14 +910,14 @@ int crypto_cipher_set_key(crypto_cipher_env_t *env, const unsigned char *key)
   return 0;
 }
 
-/* Return a pointer to the key set for the cipher in 'env'.
+/** Return a pointer to the key set for the cipher in <b>env</b>.
  */
 const unsigned char *crypto_cipher_get_key(crypto_cipher_env_t *env)
 {
   return env->key;
 }
 
-/* Initialize the cipher in 'env' for encryption.
+/** Initialize the cipher in <b>env</b> for encryption.
  */
 int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
 {
@@ -915,7 +927,7 @@ int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env)
   return 0;
 }
 
-/* Initialize the cipher in 'env' for decryption.
+/** Initialize the cipher in <b>env</b> for decryption.
  */
 int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
 {
@@ -925,9 +937,9 @@ int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
   return 0;
 }
 
-/* Encrypt 'fromlen' bytes from 'from' using the cipher 'env'; on
- * success, store the result to 'to' and return 0.  On failure, return
- * -1.
+/** Encrypt <b>fromlen</b> bytes from <b>from</b> using the cipher
+ * <b>env</b>; on success, store the result to <b>to</b> and return 0.
+ * On failure, return -1.
  */
 int crypto_cipher_encrypt(crypto_cipher_env_t *env, const unsigned char *from, unsigned int fromlen, unsigned char *to)
 {
@@ -937,9 +949,9 @@ int crypto_cipher_encrypt(crypto_cipher_env_t *env, const unsigned char *from, u
   return 0;
 }
 
-/* Decrypt 'fromlen' bytes from 'from' using the cipher 'env'; on
- * success, store the result to 'to' and return 0.  On failure, return
- * -1.
+/** Decrypt <b>fromlen</b> bytes from <b>from</b> using the cipher
+ * <b>env</b>; on success, store the result to <b>to</b> and return 0.
+ * On failure, return -1.
  */
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, const unsigned char *from, unsigned int fromlen, unsigned char *to)
 {
@@ -949,7 +961,7 @@ int crypto_cipher_decrypt(crypto_cipher_env_t *env, const unsigned char *from, u
   return 0;
 }
 
-/* Move the position of the cipher stream backwards by 'delta' bytes.
+/** Move the position of the cipher stream backwards by <b>delta</b> bytes.
  */
 int
 crypto_cipher_rewind(crypto_cipher_env_t *env, long delta)
@@ -957,7 +969,7 @@ crypto_cipher_rewind(crypto_cipher_env_t *env, long delta)
   return crypto_cipher_advance(env, -delta);
 }
 
-/* Move the position of the cipher stream forwards by 'delta' bytes.
+/** Move the position of the cipher stream forwards by <b>delta</b> bytes.
  */
 int
 crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
@@ -968,8 +980,8 @@ crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
 
 /* SHA-1 */
 
-/* Compute the SHA1 digest of 'len' bytes in data stored in 'm'.  Write the
- * DIGEST_LEN byte result into 'digest'.
+/** Compute the SHA1 digest of <b>len</b> bytes in data stored in
+ * <b>m</b>.  Write the DIGEST_LEN byte result into <b>digest</b>.
  */
 int crypto_digest(const unsigned char *m, int len, unsigned char *digest)
 {
@@ -981,7 +993,7 @@ struct crypto_digest_env_t {
   SHA_CTX d;
 };
 
-/* Allocate and return a new digest object.
+/** Allocate and return a new digest object.
  */
 crypto_digest_env_t *
 crypto_new_digest_env(void)
@@ -992,14 +1004,14 @@ crypto_new_digest_env(void)
   return r;
 }
 
-/* Deallocate a digest object.
+/** Deallocate a digest object.
  */
 void
 crypto_free_digest_env(crypto_digest_env_t *digest) {
   tor_free(digest);
 }
 
-/* Add 'len' bytes from 'data' to the digest object.
+/** Add <b>len</b> bytes from <b>data</b> to the digest object.
  */
 void
 crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
@@ -1010,9 +1022,9 @@ crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
   SHA1_Update(&digest->d, (void*)data, len);
 }
 
-/* Compute the hash of the data that has been passed to the digest object;
- * write the first out_len bytes of the result to 'out'.  'out_len' must be
- * <= DIGEST_LEN.
+/** Compute the hash of the data that has been passed to the digest
+ * object; write the first out_len bytes of the result to <b>out</b>.
+ * <b>out_len</b> must be \<= DIGEST_LEN.
  */
 void crypto_digest_get_digest(crypto_digest_env_t *digest,
                               char *out, size_t out_len)
@@ -1024,7 +1036,8 @@ void crypto_digest_get_digest(crypto_digest_env_t *digest,
   memcpy(out, r, out_len);
 }
 
-/* Allocate and return a new digest object with the same state as 'digest'
+/** Allocate and return a new digest object with the same state as
+ * <b>digest</b>
  */
 crypto_digest_env_t *
 crypto_digest_dup(const crypto_digest_env_t *digest)
@@ -1036,8 +1049,8 @@ crypto_digest_dup(const crypto_digest_env_t *digest)
   return r;
 }
 
-/* Replace the state of the digest object 'into' with the state of the digest
- * object 'from'.
+/** Replace the state of the digest object <b>into</b> with the state
+ * of the digest object <b>from</b>.
  */
 void
 crypto_digest_assign(crypto_digest_env_t *into,
@@ -1049,12 +1062,12 @@ crypto_digest_assign(crypto_digest_env_t *into,
 
 /* DH */
 
-/* Shared P parameter for our DH key exchanged */
+/** Shared P parameter for our DH key exchanged */
 static BIGNUM *dh_param_p = NULL;
-/* Shared G parameter for our DH key exchanges */
+/** Shared G parameter for our DH key exchanges */
 static BIGNUM *dh_param_g = NULL;
 
-/* Initialize dh_param_p and dh_param_g if they are not already
+/** Initialize dh_param_p and dh_param_g if they are not already
  * set. */
 static void init_dh_param() {
   BIGNUM *p, *g;
@@ -1101,7 +1114,7 @@ static void init_dh_param() {
   dh_param_g = g;
 }
 
-/* Allocate and return a new DH object for a key echange.
+/** Allocate and return a new DH object for a key echange.
  */
 crypto_dh_env_t *crypto_dh_new()
 {
@@ -1130,7 +1143,7 @@ crypto_dh_env_t *crypto_dh_new()
   return NULL;
 }
 
-/* Return the length of the DH key in 'dh', in bytes.
+/** Return the length of the DH key in <b>dh</b>, in bytes.
  */
 int crypto_dh_get_bytes(crypto_dh_env_t *dh)
 {
@@ -1138,7 +1151,7 @@ int crypto_dh_get_bytes(crypto_dh_env_t *dh)
   return DH_size(dh->dh);
 }
 
-/* Generate <x,g^x> for our part of the key exchange.  Return 0 on
+/** Generate \<x,g^x\> for our part of the key exchange.  Return 0 on
  * success, -1 on failure.
  */
 int crypto_dh_generate_public(crypto_dh_env_t *dh)
@@ -1150,9 +1163,9 @@ int crypto_dh_generate_public(crypto_dh_env_t *dh)
   return 0;
 }
 
-/* Generate g^x as necessary, and write the g^x for the key exchange
- * as a pubkey_len-byte value into 'pubkey'. Return 0 on success, -1
- * on failure.  pubkey_len must be >= DH_BYTES.
+/** Generate g^x as necessary, and write the g^x for the key exchange
+ * as a <b>pubkey_len</b>-byte value into <b>pubkey</b>. Return 0 on
+ * success, -1 on failure.  <b>pubkey_len</b> must be \>= DH_BYTES.
  */
 int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
 {
@@ -1176,14 +1189,14 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
 
 #undef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
-/* Given a DH key exchange object, and our peer's value of g^y (as a
- * pubkey_len byte value in 'pubkey') generate 'secret_bytes_out'
- * bytes of shared key material and write them to 'secret_out'.
+/** Given a DH key exchange object, and our peer's value of g^y (as a
+ * <b>pubkey_len</b> byte value in <b>pubkey</b>) generate
+ * <b>secret_bytes_out</b> bytes of shared key material and write them
+ * to <b>secret_out</b>.
  *
  * (We generate key material by computing
  *         SHA1( g^xy || "\x00" ) || SHA1( g^xy || "\x01" ) || ...
  * where || is concatenation.)
- *
  */
 int crypto_dh_compute_secret(crypto_dh_env_t *dh,
                              const char *pubkey, int pubkey_len,
@@ -1220,7 +1233,7 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
   tor_free(secret_tmp);
   return secret_len;
 }
-/* Free a DH key exchange object.
+/** Free a DH key exchange object.
  */
 void crypto_dh_free(crypto_dh_env_t *dh)
 {
@@ -1231,7 +1244,7 @@ void crypto_dh_free(crypto_dh_env_t *dh)
 
 /* random numbers */
 
-/* Seed OpenSSL's random number generator with DIGEST_LEN bytes from the
+/** Seed OpenSSL's random number generator with DIGEST_LEN bytes from the
  * operating system.
  */
 int crypto_seed_rng()
@@ -1292,8 +1305,8 @@ int crypto_seed_rng()
 #endif
 }
 
-/* Write n bytes of strong random data to 'to'. Return 0 on success, -1 on
- * failure.
+/** Write n bytes of strong random data to <b>to</b>. Return 0 on
+ * success, -1 on failure.
  */
 int crypto_rand(unsigned int n, unsigned char *to)
 {
@@ -1305,8 +1318,8 @@ int crypto_rand(unsigned int n, unsigned char *to)
   return (r == 1) ? 0 : -1;
 }
 
-/* Write n bytes of pseudorandom data to 'to'. Return 0 on success, -1
- * on failure.
+/** Write n bytes of pseudorandom data to <b>to</b>. Return 0 on
+ * success, -1 on failure.
  */
 void crypto_pseudo_rand(unsigned int n, unsigned char *to)
 {
@@ -1318,7 +1331,7 @@ void crypto_pseudo_rand(unsigned int n, unsigned char *to)
   }
 }
 
-/* Return a pseudorandom integer, choosen uniformly from the values
+/** Return a pseudorandom integer, choosen uniformly from the values
  * between 0 and max-1 */
 int crypto_pseudo_rand_int(unsigned int max) {
   unsigned int val;
@@ -1338,10 +1351,10 @@ int crypto_pseudo_rand_int(unsigned int max) {
   }
 }
 
-/* Base-64 encode 'srclen' bytes of data from 'src'.  Write the result
- * into 'dest', if it will fit within 'destlen' bytes.  Return the
- * number of bytes written on success; -1 if destlen is too short,
- * or other failure.
+/** Base-64 encode <b>srclen</b> bytes of data from <b>src</b>.  Write
+ * the result into <b>dest</b>, if it will fit within <b>destlen</b>
+ * bytes.  Return the number of bytes written on success; -1 if
+ * destlen is too short, or other failure.
  */
 int
 base64_encode(char *dest, int destlen, const char *src, int srclen)
@@ -1362,10 +1375,10 @@ base64_encode(char *dest, int destlen, const char *src, int srclen)
   return ret;
 }
 
-/* Base-64 decode 'srclen' bytes of data from 'src'.  Write the result
- * into 'dest', if it will fit within 'destlen' bytes.  Return the
- * number of bytes written on success; -1 if destlen is too short,
- * or other failure.
+/** Base-64 decode <b>srclen</b> bytes of data from <b>src</b>.  Write
+ * the result into <b>dest</b>, if it will fit within <b>destlen</b>
+ * bytes.  Return the number of bytes written on success; -1 if
+ * destlen is too short, or other failure.
  */
 int
 base64_decode(char *dest, int destlen, const char *src, int srclen)
@@ -1385,7 +1398,7 @@ base64_decode(char *dest, int destlen, const char *src, int srclen)
   return ret;
 }
 
-/* Implements base32 encoding as in rfc3548.  Limitation: Requires
+/** Implements base32 encoding as in rfc3548.  Limitation: Requires
  * that srclen is a multiple of 5.
  */
 int

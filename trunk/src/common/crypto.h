@@ -2,34 +2,41 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/**
+ * \file crypto.c
+ *
+ * \brief Headers for low-level cryptographic functions.
+ **/
+
 #ifndef __CRYPTO_H
 #define __CRYPTO_H
 
 #include <stdio.h>
 
-/* Length of the output of our message digest. */
+/** Length of the output of our message digest. */
 #define DIGEST_LEN 20
-/* Length of our symmetric cipher's keys. */
+/** Length of our symmetric cipher's keys. */
 #define CIPHER_KEY_LEN 16
-/* Length of our public keys. */
+/** Length of our public keys. */
 #define PK_BYTES (1024/8)
-/* Length of our DH keys. */
+/** Length of our DH keys. */
 #define DH_BYTES (1024/8)
 
-/* Constants used to indicate desired public-key padding functions. */
+/** Constants used to indicate no padding for public-key encryption */
 #define PK_NO_PADDING         60000
+/** Constants used to indicate PKCS1 padding for public-key encryption */
 #define PK_PKCS1_PADDING      60001
+/** Constants used to indicate OAEP padding for public-key encryption */
 #define PK_PKCS1_OAEP_PADDING 60002
 
-/* Bytes added for PKCS1 padding. */
+/** Number of bytes added for PKCS1 padding. */
 #define PKCS1_PADDING_OVERHEAD 11
-/* Bytes added for PKCS1-OAEP padding. */
+/** Number of bytes added for PKCS1-OAEP padding. */
 #define PKCS1_OAEP_PADDING_OVERHEAD 42
 
-/* Length of encoded public key fingerprints, including space; but not
+/** Length of encoded public key fingerprints, including space; but not
  * including terminating NUL. */
 #define FINGERPRINT_LEN 49
-
 
 typedef struct crypto_pk_env_t crypto_pk_env_t;
 typedef struct crypto_cipher_env_t crypto_cipher_env_t;
