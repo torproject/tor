@@ -289,10 +289,17 @@ int check_software_version_against_directory(const char *directory,
 }
 
 /** Parse a directory from <b>str</b> and, when done, store the
- * resulting routerlist in *<b>dest</b>, freeing the old value if necessary.
+ * resulting routerlist in *<b>dest</b>, freeing the old value if
+ * necessary.
+ *
  * If <b>pkey</b> is provided, we check the directory signature with pkey.
  *
- * DOCDOC check_version, write_to_cache.
+ * If <b>check_version</b> is non-zero, then examine the
+ * Recommended-versions * line in the directory, and warn or quit
+ * as needed.
+ *
+ * If <b>write_to_cache</b> is non-zero, then store this directory in
+ * memory and/or disk as well.
  */
 int /* Should be static; exposed for unit tests */
 router_parse_routerlist_from_directory(const char *str,
