@@ -495,7 +495,18 @@ connection_tls_finish_handshake(connection_t *conn) {
 
   if (connection_or_nonopen_was_started_here(conn)) {
     /* I initiated this connection. */
-    if (strcasecmp(conn->nickname, nickname)) {
+    if (conn->nickname[0] == '$') {
+      /* I was aiming for a particular digest. Did I get it? */
+      char d[HEX_DIGEST_LEN+1];
+      base16_encode(d, HEX_DIGEST_LEN+1, digest_rcvd, DIGEST_LEN);
+      if (strcasecmp(d,conn->nickname+1)) {
+        log_fn(LOG_WARN, "Identity key not as expected for router at %s:%d: wanted %s but got %s",
+               conn->address, conn->port, conn->nickname, d);
+        control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
+        return -1;
+      }
+    } else if (strcasecmp(conn->nickname, nickname)) {
+      /* I was aiming for a nickname.  Did I get it? */
       log_fn(authdir_mode(options) ? LOG_WARN : LOG_INFO,
              "Other side (%s:%d) is '%s', but we tried to connect to '%s'",
              conn->address, conn->port, nickname, conn->nickname);
