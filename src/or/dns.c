@@ -169,6 +169,22 @@ static void send_resolved_cell(connection_t *conn, uint8_t answer_type)
                                conn->cpath_layer);
 }
 
+/** Link <b>r</b> into the tree of address-to-result mappings, and add it to
+ * the linked list of resolves-by-age. */
+static void
+insert_resolve(struct cached_resolve *r)
+{
+  /* add us to the linked list of resolves */
+  if (!oldest_cached_resolve) {
+    oldest_cached_resolve = r;
+  } else {
+    newest_cached_resolve->next = r;
+  }
+  newest_cached_resolve = r;
+
+  SPLAY_INSERT(cache_tree, &cache_root, r);
+}
+
 /** See if we have a cache entry for <b>exitconn</b>-\>address. if so,
  * if resolve valid, put it into <b>exitconn</b>-\>addr and return 1.
  * If resolve failed, return -1.
@@ -243,15 +259,7 @@ int dns_resolve(connection_t *exitconn) {
   resolve->pending_connections = pending_connection;
   exitconn->state = EXIT_CONN_STATE_RESOLVING;
 
-  /* add us to the linked list of resolves */
-  if (!oldest_cached_resolve) {
-    oldest_cached_resolve = resolve;
-  } else {
-    newest_cached_resolve->next = resolve;
-  }
-  newest_cached_resolve = resolve;
-
-  SPLAY_INSERT(cache_tree, &cache_root, resolve);
+  insert_resolve(resolve);
   return assign_to_dnsworker(exitconn);
 }
 
@@ -453,9 +461,13 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
-    log_fn(LOG_INFO,"Resolved unasked address '%s'? Dropping.", address);
-    /* XXX Why drop?  Just because we don't care now doesn't mean we shouldn't
-     * XXX cache the result for later. */
+    log_fn(LOG_INFO,"Resolved unasked address '%s'; caching anyway.", address);
+    resolve = tor_malloc_zero(sizeof(struct cached_resolve));
+    resolve->state = (outcome == DNS_RESOLVE_SUCCEEDED) ?
+      CACHE_STATE_VALID : CACHE_STATE_FAILED;
+    resolve->addr = addr;
+    resolve->expire = time(NULL) + MAX_DNS_ENTRY_AGE;
+    insert_resolve(resolve);
     return;
   }
 
@@ -473,7 +485,7 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
    * resolve X.Y.Z. */
   /* tor_assert(resolve->state == CACHE_STATE_PENDING); */
 
-  resolve->addr = ntohl(addr);
+  resolve->addr = addr;
   if(outcome == DNS_RESOLVE_SUCCEEDED)
     resolve->state = CACHE_STATE_VALID;
   else
@@ -586,7 +598,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
 
   tor_assert(success >= DNS_RESOLVE_FAILED_TRANSIENT);
   tor_assert(success <= DNS_RESOLVE_SUCCEEDED);
-  dns_found_answer(conn->address, addr, success);
+  dns_found_answer(conn->address, ntohl(addr), success);
 
   tor_free(conn->address);
   conn->address = tor_strdup("<idle>");
@@ -667,7 +679,7 @@ static int dnsworker_main(void *data) {
       result = -1;
     switch (result) {
       case 1:
-/* XXX008 result can never be 1, because we set it to -1 above on error */
+        /* XXX result can never be 1, because we set it to -1 above on error */
         log_fn(LOG_INFO,"Could not resolve dest addr %s (transient).",address);
         answer[0] = DNS_RESOLVE_FAILED_TRANSIENT;
         break;

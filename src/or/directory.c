@@ -31,20 +31,23 @@
 
 static void
 directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
+                                  const char *resource,
                                   const char *payload, size_t payload_len);
 static void
 directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
-                      uint8_t purpose, const char *payload, size_t payload_len);
-
+                                      uint8_t purpose, const char *resource,
+                                      const char *payload, size_t payload_len);
 static void
 directory_initiate_command(const char *address, uint32_t addr, uint16_t port,
                            const char *platform,
                            const char *digest, uint8_t purpose,
+                           const char *resource,
                            const char *payload, size_t payload_len);
 
 static void
 directory_send_command(connection_t *conn, const char *platform,
-                       int purpose, const char *payload, size_t payload_len);
+                       int purpose, const char *resource,
+                       const char *payload, size_t payload_len);
 static int directory_handle_command(connection_t *conn);
 
 /********* START VARIABLES **********/
@@ -136,7 +139,8 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
         if (!smartlist_string_isin(get_options()->FirewallPorts, buf))
           continue;
       }
-      directory_initiate_command_trusted_dir(ds, purpose, payload, payload_len);
+      directory_initiate_command_trusted_dir(ds, purpose, NULL,
+                                             payload, payload_len);
     });
 }
 
@@ -146,8 +150,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
  * 'DIR_PURPOSE_FETCH_DIR' or 'DIR_PURPOSE_FETCH_RENDDESC'.
  */
 void
-directory_get_from_dirserver(uint8_t purpose, const char *payload,
-                             size_t payload_len)
+directory_get_from_dirserver(uint8_t purpose, const char *resource)
 {
   routerinfo_t *r = NULL;
   trusted_dir_server_t *ds = NULL;
@@ -171,9 +174,9 @@ directory_get_from_dirserver(uint8_t purpose, const char *payload,
   }
 
   if (r)
-    directory_initiate_command_router(r, purpose, payload, payload_len);
+    directory_initiate_command_router(r, purpose, resource, NULL, 0);
   else if (ds)
-    directory_initiate_command_trusted_dir(ds, purpose, payload, payload_len);
+    directory_initiate_command_trusted_dir(ds, purpose, resource, NULL, 0);
   else
     log_fn(LOG_WARN,"No running dirservers known. Not trying. (purpose %d)", purpose);
 }
@@ -184,30 +187,42 @@ directory_get_from_dirserver(uint8_t purpose, const char *payload,
  * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC}.
  *
  * When uploading, <b>payload</b> and <b>payload_len</b> determine the content
- * of the HTTP post.  When fetching a rendezvous descriptor, <b>payload</b>
- * and <b>payload_len</b> are the service ID we want to fetch.
+ * of the HTTP post.  Otherwise, <b>payload</b> should be NULL.
+ *
+ * When fetching a rendezvous descriptor, <b>resource</b> is the service ID we
+ * want to fetch.
  */
 static void
 directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
+                                  const char *resource,
                                   const char *payload, size_t payload_len)
 {
   directory_initiate_command(router->address, router->addr, router->dir_port,
                              router->platform, router->identity_digest,
-                             purpose, payload, payload_len);
+                             purpose, resource, payload, payload_len);
 }
 
+/** As directory_initiate_command_router, but send the command to a trusted
+ * directory server <b>dirserv</b>. **/
 static void
 directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
-                      uint8_t purpose, const char *payload, size_t payload_len)
+                                       uint8_t purpose, const char *resource,
+                                       const char *payload, size_t payload_len)
 {
   directory_initiate_command(dirserv->address, dirserv->addr,dirserv->dir_port,
-                        NULL, dirserv->digest, purpose, payload, payload_len);
+               NULL, dirserv->digest, purpose, resource, payload, payload_len);
 }
 
+/** Helper for directory_initiate_command(router|trusted_dir): send the
+ * command to a server whose address is <b>address</b>, whose IP is
+ * <b>addr</b>, whose directory port is <b>dir_port</b>, whose tor version is
+ * <b>platform</b>, and whose identity key digest is <b>digest</b>. The
+ * <b>platform</b> argument is optional; the others are required. */
 static void
 directory_initiate_command(const char *address, uint32_t addr,
                            uint16_t dir_port, const char *platform,
                            const char *digest, uint8_t purpose,
+                           const char *resource,
                            const char *payload, size_t payload_len)
 {
   connection_t *conn;
@@ -267,7 +282,7 @@ directory_initiate_command(const char *address, uint32_t addr,
         if(purpose == DIR_PURPOSE_FETCH_DIR &&
            !all_trusted_directory_servers_down()) {
           log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->address);
-          directory_get_from_dirserver(purpose, payload, payload_len);
+          directory_get_from_dirserver(purpose, NULL);
         }
         connection_free(conn);
         return;
@@ -276,8 +291,8 @@ directory_initiate_command(const char *address, uint32_t addr,
         /* fall through */
       case 0:
         /* queue the command on the outbuf */
-        directory_send_command(conn, platform, purpose, payload, payload_len);
-
+        directory_send_command(conn, platform, purpose, resource,
+                               payload, payload_len);
         connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
         /* writable indicates finish, readable indicates broken link,
            error indicates broken link in windowsland. */
@@ -297,18 +312,19 @@ directory_initiate_command(const char *address, uint32_t addr,
     conn->state = DIR_CONN_STATE_CLIENT_SENDING;
     connection_add(conn);
     /* queue the command on the outbuf */
-    directory_send_command(conn, platform, purpose, payload, payload_len);
+    directory_send_command(conn, platform, purpose, resource,
+                           payload, payload_len);
     connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
   }
 }
 
-/** Queue an appropriate HTTP command on conn-\>outbuf.  The args
- * <b>purpose</b>, <b>payload</b>, and <b>payload_len</b> are as in
+/** Queue an appropriate HTTP command on conn-\>outbuf.  The other args as in
  * directory_initiate_command.
  */
 static void
 directory_send_command(connection_t *conn, const char *platform,
-                       int purpose, const char *payload, size_t payload_len) {
+                       int purpose, const char *resource,
+                       const char *payload, size_t payload_len) {
   char tmp[8192];
   char proxystring[128];
   char hoststring[128];
@@ -335,42 +351,40 @@ directory_send_command(connection_t *conn, const char *platform,
 
   switch(purpose) {
     case DIR_PURPOSE_FETCH_DIR:
-      tor_assert(payload == NULL);
+      tor_assert(!resource);
+      tor_assert(!payload);
       log_fn(LOG_DEBUG, "Asking for %scompressed directory from server running %s",
              use_newer?"":"un", platform?platform:"<unknown version>");
       httpcommand = "GET";
       strlcpy(url, use_newer ? "/tor/dir.z" : "/", sizeof(url));
       break;
     case DIR_PURPOSE_FETCH_RUNNING_LIST:
-      tor_assert(payload == NULL);
+      tor_assert(!resource);
+      tor_assert(!payload);
       httpcommand = "GET";
       strlcpy(url, use_newer ? "/tor/running-routers" : "/running-routers", sizeof(url));
       break;
     case DIR_PURPOSE_UPLOAD_DIR:
+      tor_assert(!resource);
       tor_assert(payload);
       httpcommand = "POST";
       strlcpy(url, use_newer ? "/tor/" : "/", sizeof(url));
       break;
     case DIR_PURPOSE_FETCH_RENDDESC:
-      tor_assert(payload);
+      tor_assert(resource);
+      tor_assert(!payload);
 
       /* this must be true or we wouldn't be doing the lookup */
-      tor_assert(payload_len <= REND_SERVICE_ID_LEN);
+      tor_assert(strlen(payload) <= REND_SERVICE_ID_LEN);
       /* This breaks the function abstraction. */
-      memcpy(conn->rend_query, payload, payload_len);
-      conn->rend_query[payload_len] = 0;
+      strlcpy(conn->rend_query, resource, sizeof(conn->rend_query));
 
       httpcommand = "GET";
-      tor_snprintf(url, sizeof(url), "%s/rendezvous/%s", use_newer ? "/tor" : "", payload);
-
-      /* XXX We're using payload here to mean something other than
-       * payload of the http post. This is probably bad, and should
-       * be fixed one day. Kludge for now to make sure we don't post more. */
-      payload_len = 0;
-      payload = NULL;
+      tor_snprintf(url, sizeof(url), "%s/rendezvous/%s", use_newer ? "/tor" : "", resource);
 
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
+      tor_assert(!resource);
       tor_assert(payload);
       httpcommand = "POST";
       tor_snprintf(url, sizeof(url), "%s/rendezvous/publish", use_newer ? "/tor" : "");
@@ -439,15 +453,13 @@ parse_http_url(char *headers, char **url)
 
 /** Parse an HTTP response string <b>headers</b> of the form
  * "HTTP/1.\%d \%d\%s\r\n...".
- * If it's well-formed, assign *<b>code</b>, point *<b>message</b> to the first
- * non-space character after code if there is one and message is non-NULL
- * (else leave it alone), and return 0.
+ * If it's well-formed, assign *<b>code</b>, point  and return 0.
  * If <b>date</b> is provided, set *date to the Date header in the
  * http headers, or 0 if no such header is found.
  * Otherwise, return -1.
  */
 static int
-parse_http_response(char *headers, int *code, char **message, time_t *date,
+parse_http_response(const char *headers, int *code, time_t *date,
                     int *compression)
 {
   int n1, n2;
@@ -465,9 +477,7 @@ parse_http_response(char *headers, int *code, char **message, time_t *date,
     return -1;
   }
   *code = n2;
-  if(message) {
-    /* XXX should set *message correctly */
-  }
+
   parsed_headers = smartlist_create();
   smartlist_split_string(parsed_headers, headers, "\n",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
@@ -535,7 +545,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* case 1, fall through */
   }
 
-  if(parse_http_response(headers, &status_code, NULL, &date_header,
+  if(parse_http_response(headers, &status_code, &date_header,
                          &compression) < 0) {
     log_fn(LOG_WARN,"Unparseable headers. Closing.");
     tor_free(body); tor_free(headers);
@@ -769,7 +779,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
   if(!strcmp(url,"/tor/running-routers")) { /* running-routers fetch */
     tor_free(url);
     if(!authdir_mode(get_options())) {
-      /* XXX008 for now, we don't cache running-routers. Reject. */
+      /* For now, we don't cache running-routers. Reject. */
       connection_write_to_buf(answer400, strlen(answer400), conn);
       return 0;
     }

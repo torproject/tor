@@ -441,7 +441,7 @@ static int decide_if_publishable_server(time_t now) {
   if(!options->ORPort)
     return 0;
 
-  /* XXX008 for now, you're only a server if you're a server */
+  /* XXX for now, you're only a server if you're a server */
   return server_mode(options);
 
   /* here, determine if we're reachable */
@@ -568,7 +568,7 @@ static void run_scheduled_events(time_t now) {
       router_retry_connections();
     }
 
-    directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
+    directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL);
 
     if(!we_are_hibernating()) {
       /* Force an upload of our rend descriptors every DirFetchPostPeriod seconds. */
@@ -710,7 +710,7 @@ static int do_hup(void) {
     }
   }
   /* Fetch a new directory. Even authdirservers do this. */
-  directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
+  directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL);
   if(server_mode(options)) {
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
@@ -750,7 +750,7 @@ static int do_main_loop(void) {
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
 
-/*XXX move to options_act? */
+  /*XXX009 move to options_act? */
   /* Set up accounting */
   if (get_options()->AccountingMaxKB)
     configure_accounting(time(NULL));
@@ -958,7 +958,6 @@ static int network_init(void)
     log_fn(LOG_WARN,"Error initializing windows network layer: code was %d",r);
     return -1;
   }
-  /* XXXX We should call WSACleanup on exit, I think. */
 #endif
   return 0;
 }
@@ -967,7 +966,8 @@ static int network_init(void)
  */
 static void exit_function(void)
 {
-/* XXX if we ever daemonize, this gets called immediately */
+  /* NOTE: If we ever daemonize, this gets called immediately.  That's
+   * okay for now, because we only use this on Windows.  */
 #ifdef MS_WINDOWS
   WSACleanup();
 #endif
