@@ -49,14 +49,11 @@ char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
     "open" },                          /* 8 */
   { "ready" }, /* dir listener, 0 */
   { "",                           /* dir, 0 */
-    "connecting (fetch)",              /* 1 */
-    "connecting (upload)",             /* 2 */
-    "client sending fetch",            /* 3 */
-    "client sending upload",           /* 4 */
-    "client reading fetch",            /* 5 */
-    "client reading upload",           /* 6 */
-    "awaiting command",                /* 7 */
-    "writing" },                       /* 8 */
+    "connecting",                      /* 1 */
+    "client sending",                  /* 2 */
+    "client reading",                  /* 3 */
+    "awaiting command",                /* 4 */
+    "writing" },                       /* 5 */
   { "",                    /* dns worker, 0 */
     "idle",                            /* 1 */
     "busy" },                          /* 2 */
@@ -373,6 +370,7 @@ static int connection_init_accepted_conn(connection_t *conn) {
       conn->state = AP_CONN_STATE_SOCKS_WAIT;
       break;
     case CONN_TYPE_DIR:
+      conn->purpose = DIR_PURPOSE_SERVER;
       conn->state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
       break;
   }
@@ -599,8 +597,7 @@ int connection_handle_read(connection_t *conn) {
 
   if(connection_read_to_buf(conn) < 0) {
     if(conn->type == CONN_TYPE_DIR &&
-       (conn->state == DIR_CONN_STATE_CONNECTING_FETCH ||
-        conn->state == DIR_CONN_STATE_CONNECTING_UPLOAD)) {
+       conn->state == DIR_CONN_STATE_CONNECTING) {
        /* it's a directory server and connecting failed: forget about this router */
        /* XXX I suspect pollerr may make Windows not get to this point. :( */
        router_mark_as_down(conn->nickname);
@@ -1029,6 +1026,9 @@ void assert_connection_ok(connection_t *conn, time_t now)
   } else {
     assert(!conn->socks_request);
   }
+  if(conn->type != CONN_TYPE_DIR) {
+    assert(!conn->purpose); /* only used for dir types currently */
+  }
 
   switch(conn->type)
     {
@@ -1053,6 +1053,8 @@ void assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_DIR:
       assert(conn->state >= _DIR_CONN_STATE_MIN &&
              conn->state <= _DIR_CONN_STATE_MAX);
+      assert(conn->purpose >= _DIR_PURPOSE_MIN &&
+             conn->purpose <= _DIR_PURPOSE_MAX);
       break;
     case CONN_TYPE_DNSWORKER:
       assert(conn->state == DNSWORKER_STATE_IDLE ||

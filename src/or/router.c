@@ -236,12 +236,14 @@ void router_upload_desc_to_dirservers(void) {
   int i;
   routerinfo_t *router;
   routerlist_t *rl;
+  const char *s;
 
   router_get_routerlist(&rl);
   if(!rl)
     return;
 
-  if (!router_get_my_descriptor()) {
+  s = router_get_my_descriptor();
+  if (!s) {
     log_fn(LOG_WARN, "No descriptor; skipping upload");
     return;
   }
@@ -249,7 +251,7 @@ void router_upload_desc_to_dirservers(void) {
   for(i=0;i<rl->n_routers;i++) {
     router = rl->routers[i];
     if(router->dir_port > 0)
-      directory_initiate_command(router, DIR_CONN_STATE_CONNECTING_UPLOAD);
+      directory_initiate_command(router, DIR_PURPOSE_UPLOAD_DIR, s);
   }
 }
 
