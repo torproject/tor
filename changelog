@@ -1,3 +1,10 @@
+tor (0.0.8+0.0.9pre1-1) unstable; urgency=low
+
+  * New upstream (pre)release.
+  * Built depend on zlib1g-dev.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri,  1 Oct 2004 21:28:49 +0200
+
 tor (0.0.8-1) unstable; urgency=low
 
   * New upstream release.

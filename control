@@ -2,7 +2,7 @@ Source: tor
 Section: comm
 Priority: optional
 Maintainer: Peter Palfrader <weasel@debian.org>
-Build-Depends: debhelper (>= 4.1.65), libssl-dev, dpatch, tetex-bin, tetex-extra, transfig, gs
+Build-Depends: debhelper (>= 4.1.65), libssl-dev, dpatch, zlib1g-dev, tetex-bin, tetex-extra, transfig, gs
 Standards-Version: 3.6.1
 
 Package: tor
