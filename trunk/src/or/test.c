@@ -1218,7 +1218,7 @@ test_rend_fns(void)
 }
 
 int
-main(int c, char**v){
+main(int c, char**v) {
   or_options_t *options = tor_malloc_zero(sizeof(or_options_t));
   options_init(options);
   set_options(options);

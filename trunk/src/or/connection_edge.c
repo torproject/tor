@@ -761,7 +761,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     log_fn(LOG_WARN,"relay begin cell has no \\0. Dropping.");
     return 0;
   }
-  if (parse_addr_port(cell->payload+RELAY_HEADER_SIZE, &address, NULL,&port)<0){
+  if (parse_addr_port(cell->payload+RELAY_HEADER_SIZE,&address,NULL,&port)<0) {
     log_fn(LOG_WARN,"Unable to parse addr:port in relay begin cell. Dropping.");
     return 0;
   }

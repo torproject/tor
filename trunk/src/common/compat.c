@@ -239,9 +239,9 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     listener = socket(AF_INET, type, 0);
     if (listener == -1)
       return -1;
-    memset (&listen_addr, 0, sizeof (listen_addr));
+    memset(&listen_addr, 0, sizeof(listen_addr));
     listen_addr.sin_family = AF_INET;
-    listen_addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+    listen_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     listen_addr.sin_port = 0;   /* kernel choses port.  */
     if (bind(listener, (struct sockaddr *) &listen_addr, sizeof (listen_addr))
         == -1)
@@ -253,16 +253,16 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     if (connector == -1)
         goto tidy_up_and_fail;
     /* We want to find out the port number to connect to.  */
-    size = sizeof (connect_addr);
+    size = sizeof(connect_addr);
     if (getsockname(listener, (struct sockaddr *) &connect_addr, &size) == -1)
         goto tidy_up_and_fail;
     if (size != sizeof (connect_addr))
         goto abort_tidy_up_and_fail;
     if (connect(connector, (struct sockaddr *) &connect_addr,
-                sizeof (connect_addr)) == -1)
+                sizeof(connect_addr)) == -1)
         goto tidy_up_and_fail;
 
-    size = sizeof (listen_addr);
+    size = sizeof(listen_addr);
     acceptor = accept(listener, (struct sockaddr *) &listen_addr, &size);
     if (acceptor == -1)
         goto tidy_up_and_fail;
@@ -468,7 +468,8 @@ get_uname(void)
  * unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
  * func should not return, but rather should call spawn_exit.
  */
-int spawn_func(int (*func)(void *), void *data)
+int
+spawn_func(int (*func)(void *), void *data)
 {
 #ifdef MS_WINDOWS
   int rv;

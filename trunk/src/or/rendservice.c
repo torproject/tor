@@ -378,7 +378,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
 
   /* min key length plus digest length plus nickname length */
   if (request_len < DIGEST_LEN+REND_COOKIE_LEN+(MAX_NICKNAME_LEN+1)+
-      DH_KEY_LEN+42){
+      DH_KEY_LEN+42) {
     log_fn(LOG_WARN, "Got a truncated INTRODUCE2 cell on circ %d",
            circuit->n_circ_id);
     return -1;
@@ -816,7 +816,8 @@ void rend_services_introduce(void) {
       /* One period has elapsed; we can try building circuits again. */
       service->intro_period_started = now;
       service->n_intro_circuits_launched = 0;
-    } else if (service->n_intro_circuits_launched>=MAX_INTRO_CIRCS_PER_PERIOD){
+    } else if (service->n_intro_circuits_launched >=
+               MAX_INTRO_CIRCS_PER_PERIOD) {
       /* We have failed too many times in this period; wait for the next
        * one before we try again. */
       continue;

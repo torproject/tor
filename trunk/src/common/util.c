@@ -540,7 +540,8 @@ static const int days_per_month[] =
 /** Return a time_t given a struct tm.  The result is given in GMT, and
  * does not account for leap seconds.
  */
-time_t tor_timegm (struct tm *tm) {
+time_t
+tor_timegm(struct tm *tm) {
   /* This is a pretty ironclad timegm implementation, snarfed from Python2.2.
    * It's way more brute-force than fiddling with tzset().
    */

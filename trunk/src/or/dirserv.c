@@ -604,8 +604,9 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
     return -1;
   }
 #else
-  { int l;
-    if(crypto_pk_write_public_key_to_string(private_key, &identity_pkey, &l)<0){
+  {
+    int l;
+    if(crypto_pk_write_public_key_to_string(private_key,&identity_pkey,&l)<0) {
       log_fn(LOG_WARN,"write identity_pkey to string failed!");
       return -1;
     }
@@ -847,8 +848,9 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
     goto err;
   }
 #else
-  { int l;
-    if(crypto_pk_write_public_key_to_string(private_key, &identity_pkey, &l)<0){
+  {
+    int l;
+    if(crypto_pk_write_public_key_to_string(private_key,&identity_pkey,&l)<0) {
       log_fn(LOG_WARN,"write identity_pkey to string failed!");
       goto err;
     }

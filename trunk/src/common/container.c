@@ -597,7 +597,8 @@ int strmap_iter_done(strmap_iter_t *iter)
 /** Remove all entries from <b>map</b>, and deallocate storage for those entries.
  * If free_val is provided, it is invoked on every value in <b>map</b>.
  */
-void strmap_free(strmap_t *map, void (*free_val)(void*))
+void
+strmap_free(strmap_t *map, void (*free_val)(void*))
 {
   strmap_entry_t *ent, *next;
   for (ent = SPLAY_MIN(strmap_tree, &map->head); ent != NULL; ent = next) {
