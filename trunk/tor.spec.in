@@ -6,7 +6,7 @@
 # This should be incremented whenever the spec file changes, but
 # can drop back to zero at a new Tor version
 
-%define  specver 1
+%define  specver 2
 
 ## Things users may want to change
 #
@@ -20,14 +20,43 @@
 # including any "pre<x>" or "rc<y>" suffix. This gets massaged to
 # create the RPM version number, in a way that depends on the Tor
 # numbering scheme.
-%define  native_version       @VERSION@
+%define native_version       @VERSION@
 
 # Massage the version so that pre-releases will be treated as earlier
 # than release candidates which will be treated as earlier than released
-# versions... while making as few confusing changes to the standard
-# release naming as possible.
-# XXXX009 Execept that handling cvs breaks this.
-%define version %(echo %{native_version} | sed -e 's/-cvs/.cvs/' -e 's/pre/.pre./' -e 's/rc/.rc./' -e 's/([0-9])$/\1.release/')
+# versions.
+#
+# We do this as follows: 
+#   - If the version number has no "pre", "cvs", or "rc", we let it pass.
+#   - Otherwise, we mangle it heavily:
+#     * To make 0.0.Xpre come after 0.0.{X-1}* but before 0.0.X, we prepend
+#       0.0.{X-1}.99 to the version.
+#     * We replace pre with .pre. and rc with .rc.
+#     * We replace -cvs with .cvs, and lack of -cvs with .release.
+#
+# Note what this scheme will break if we ever use 0 as a last digit for a
+# Tor version: so don't do that.
+
+%define is_dev_version %(echo %{native_version} | grep 'cvs\\|pre\\|rc' > /dev/null && echo 1 || echo 0)
+
+%if %{is_dev_version}
+
+# The 0.0.X.pre.1.cvs part.
+%define safe_native_version %(echo %{native_version} | sed -e 's/-cvs/.cvs/' -e 's/pre/.pre./' -e 's/rc/.rc./' -e 's/\\([0-9]\\)$/\\1.release/')
+# The 0.0.X part -- the version we are leading up to.
+%define stub_version %(echo %{native_version} | sed -e 's/-cvs//' -e 's/pre.*//' -e 's/rc.*//')
+# The 0.0 part
+%define stub_start %(echo %{stub_version} | sed -e 's/\\.[0-9]*$//')
+# The X part.
+%define stub_last %(echo %{stub_version} | sed -e 's/.*\\.\\([0-9]*\\)$/\\1/')
+# The {X-1} part.
+%define stub_newlast %(expr %{stub_last} - 1)
+# The actual version: 0.0.{X-1}.99.0.0.X.pre.1.cvs
+%define version %{stub_start}.%{stub_newlast}.99.%{safe_native_version}
+
+%else
+%define version %{native_version}
+%endif
 
 ## Release and OS identification song and dance
 #

@@ -31,13 +31,13 @@ R  - fix print_usage()
        running-routers so often?
 R  - document signals in man page
    o Check for hibernation on startup, hup, etc.
-N  - Test hibernation a lot.
+N  . Test hibernation a lot.
    o Document all undocumented configuration options.
      o Accounting
      o Control interface authentication
-N  - RPMs
+   o RPMs
      o Merge changes from jbash
-     - Figure out versioning
+     o Figure out versioning
    o Windows installer
      o Make installer get built
      o Write script to correct windows versions.
