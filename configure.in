@@ -232,7 +232,10 @@ AC_SUBST(LOCALSTATEDIR)
 
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
-CFLAGS="$CFLAGS -Wall -W -Wno-unused-parameter -Wfloat-equal -Wundef -Wpointer-arith -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wredundant-decls -g -O2"
+CFLAGS="$CFLAGS -Wall -W -Wno-unused-parameter -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -g -O2"
+# Add some more warnings which we use in the cvs version but not in the
+# released versions.
+CFLAGS="$CFLAGS -Wwrite-strings -Wredundant-decls"
 
 # Add these in when you feel like fun.
 # -Wbad-function-cast -Werror  -Wdeclaration-after-statement
