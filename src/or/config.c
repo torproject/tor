@@ -134,6 +134,7 @@ void config_free_lines(struct config_line *front) {
 }
 
 int config_compare(struct config_line *c, char *key, int type, void *arg) {
+  int i;
 
   if(strncasecmp(c->key,key,strlen(c->key)))
     return 0;
@@ -144,6 +145,14 @@ int config_compare(struct config_line *c, char *key, int type, void *arg) {
   switch(type) {
     case CONFIG_TYPE_INT:   
       *(int *)arg = atoi(c->value);
+      break;
+    case CONFIG_TYPE_BOOL:
+      i = atoi(c->value);
+      if (i != 0 && i != 1) {
+	log(LOG_ERR, "Boolean keyword '%s' expects 0 or 1", c->key);
+	return 0;
+      }
+      *(int *)arg = i;
       break;
     case CONFIG_TYPE_STRING:
       *(char **)arg = strdup(c->value);
@@ -176,12 +185,14 @@ void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "OPPort",          CONFIG_TYPE_INT, &options->OPPort) ||
     config_compare(list, "ORPort",          CONFIG_TYPE_INT, &options->ORPort) ||
     config_compare(list, "DirPort",         CONFIG_TYPE_INT, &options->DirPort) ||
-    config_compare(list, "TrafficShaping",  CONFIG_TYPE_INT, &options->TrafficShaping) ||
-    config_compare(list, "LinkPadding",     CONFIG_TYPE_INT, &options->LinkPadding) ||
     config_compare(list, "DirRebuildPeriod",CONFIG_TYPE_INT, &options->DirRebuildPeriod) ||
     config_compare(list, "DirFetchPeriod",  CONFIG_TYPE_INT, &options->DirFetchPeriod) ||
     config_compare(list, "KeepalivePeriod", CONFIG_TYPE_INT, &options->KeepalivePeriod) ||
     config_compare(list, "MaxOnionsPending",CONFIG_TYPE_INT, &options->MaxOnionsPending) ||
+
+    config_compare(list, "Daemon",          CONFIG_TYPE_BOOL, &options->Daemon) ||
+    config_compare(list, "TrafficShaping",  CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
+    config_compare(list, "LinkPadding",     CONFIG_TYPE_BOOL, &options->LinkPadding) ||
 
     /* float options */
     config_compare(list, "CoinWeight",     CONFIG_TYPE_DOUBLE, &options->CoinWeight)
@@ -207,6 +218,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
 /* give reasonable defaults for each option */
   memset(options,0,sizeof(or_options_t));
+  options->Daemon = 0;
   options->LogLevel = "debug";
   options->loglevel = LOG_DEBUG;
   options->CoinWeight = 0.8;
@@ -276,6 +288,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
            options->DirRebuildPeriod,
            options->DirFetchPeriod,
            options->KeepalivePeriod);
+    printf("Daemon=%d", options->Daemon);
   }
 
 /* Validate options */
@@ -351,6 +364,11 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   if(options->MaxConn >= MAXCONNECTIONS) {
     log(LOG_ERR,"MaxConn option must be less than %d.", MAXCONNECTIONS);
+    result = -1;
+  }
+
+  if(options->Daemon != 0 && options->Daemon != 1) {
+    log(LOG_ERR,"TrafficShaping option must be either 0 or 1.");
     result = -1;
   }
 
