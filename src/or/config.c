@@ -271,9 +271,6 @@ options_act(void) {
   if (options->command != CMD_RUN_TOR)
     return 0;
 
-  if (set_max_file_descriptors(options->MaxConn) < 0)
-    return -1;
-
   mark_logs_temp(); /* Close current logs once new logs are open. */
   if (config_init_logs(options, 0)<0) /* Configure the log(s) */
     return -1;
@@ -281,6 +278,9 @@ options_act(void) {
    * gone. */
   close_temp_logs();
   add_callback_log(LOG_NOTICE, LOG_ERR, control_event_logmsg);
+
+  if (set_max_file_descriptors(options->MaxConn) < 0)
+    return -1;
 
   {
     smartlist_t *sl = smartlist_create();
