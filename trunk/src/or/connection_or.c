@@ -179,7 +179,8 @@ int connection_tls_continue_handshake(connection_t *conn) {
 static int connection_tls_finish_handshake(connection_t *conn) {
   crypto_pk_env_t *pk;
   routerinfo_t *router;
-  char nickname[255];
+  char nickname[MAX_NICKNAME_LEN+1];
+  connection_t *otherconn;
 
   conn->state = OR_CONN_STATE_OPEN;
   directory_set_dirty();
@@ -195,7 +196,7 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     }
   }
   /* Okay; the other side is an OR. */
-  if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, 256)) {
+  if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, MAX_NICKNAME_LEN)) {
     log_fn(LOG_WARN,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
            conn->address, conn->port);
     return -1;
@@ -223,21 +224,20 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     }
     log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
   } else {
-    if(connection_exact_get_by_addr_port(router->addr,router->or_port)) {
-      log_fn(LOG_INFO,"Router %s is already connected. Dropping.", router->nickname);
-      crypto_free_pk_env(pk);
-      return -1;
-    }
     connection_or_init_conn_from_router(conn, router);
-    crypto_free_pk_env(pk);
   }
+  crypto_free_pk_env(pk);
   if (strcmp(conn->nickname, nickname)) {
     log_fn(LOG_WARN,"Other side claims to be '%s', but we wanted '%s'",
            nickname, conn->nickname);
     return -1;
   }
-  if (!options.OnionRouter) {
-    /* If I'm an OP... */
+  otherconn = connection_exact_get_by_addr_port(router->addr,router->or_port);
+  if(otherconn && connection_state_is_open(otherconn)) {
+    log_fn(LOG_INFO,"Router %s is already connected. Dropping.", router->nickname);
+    return -1;
+  }
+  if (!options.OnionRouter) { /* If I'm an OP... */
     conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
     circuit_n_conn_open(conn); /* send the pending creates, if any. */
   }

@@ -551,7 +551,6 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
     conn = carray[i];
     assert(conn);
     if(connection_state_is_open(conn) &&
-       !conn->marked_for_close &&
        !crypto_pk_cmp_keys(conn->onion_pkey, router->onion_pkey)) {
       log(LOG_INFO,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
       return conn;
@@ -628,6 +627,9 @@ int connection_is_listener(connection_t *conn) {
 
 int connection_state_is_open(connection_t *conn) {
   assert(conn);
+
+  if(conn->marked_for_close)
+    return 0;
 
   if((conn->type == CONN_TYPE_OR && conn->state == OR_CONN_STATE_OPEN) ||
      (conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN) ||
