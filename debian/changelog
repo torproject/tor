@@ -1,3 +1,11 @@
+tor (0.0.1+0.0.2pre23-1) unstable; urgency=low
+
+  * New upstream release.
+  * The one test that always failed has been fixed:  removed comment from
+    rules file.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 29 Feb 2004 12:36:33 +0100
+
 tor (0.0.1+0.0.2pre22-1) unstable; urgency=low
 
   * New upstream release.
