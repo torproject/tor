@@ -122,6 +122,10 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
   size_t n;
   int r;
   char *end_of_prefix;
+  if (buf_len < 2) { /* prevent integer underflow */
+    tor_assert(0);
+    exit(1);
+  }
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
 
   n = _log_prefix(buf, buf_len, severity);
