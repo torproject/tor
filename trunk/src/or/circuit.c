@@ -857,7 +857,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
      */
     struct in_addr in;
     in.s_addr = htonl(circ->n_addr);
-    log_fn(LOG_DEBUG,"Next router (%s:%d) not connected. Closing.", inet_ntoa(in), circ->n_port);
+    log_fn(LOG_WARN,"Next router (%s:%d) not connected. Closing.", inet_ntoa(in), circ->n_port);
     /* XXX later we should fail more gracefully here, like with a 'truncated' */
     return -1;
   }
