@@ -919,7 +919,8 @@ test_dir_format()
   test_assert(!is_legal_nickname_or_hexdigest("abcdefghijklmnopqrst"));
 
   get_platform_str(platform, sizeof(platform));
-
+  memset(&r1,0,sizeof(r1));
+  memset(&r2,0,sizeof(r2));
   r1.address = "testaddr1.foo.bar";
   r1.addr = 0xc0a80001u; /* 192.168.0.1 */
   r1.published_on = 0;
