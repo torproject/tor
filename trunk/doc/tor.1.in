@@ -72,6 +72,16 @@ On startup, setuid to this user.
 .PP
 The following options are useful only for clients (that is, if \fBsocksport\fP is non-zero):
 .TP
+\fBallowunverifiednodes \fR\fIentry|exit|middle|introduction|rendezvous,...\fP
+Where on our circuits should we allow Tor servers that the directory
+servers haven't authenticated as "verified"?  (Default: middle,rendezvous.)
+\fBdirfetchpostperiod \fR\fIseconds\fP
+Every N seconds, Tor downloads a fresh directory, and re-uploads
+information about hidden services to the directory servers.  If
+running as a server, Tor also re-uploads information about itself to
+the directory servers.  (Tor also uploads this information whenever it 
+changes.)  (Default: 600.)
+.TP
 \fBentrynodes \fR\fInickname,nickname,...\fP
 A list of preferred nodes to use for the first hop in the circuit, if possible.
 .TP
@@ -192,6 +202,14 @@ Bind to this address to listen for connections from Tor clients and servers. (De
 .PP
 The following options are useful only for directory servers (that is, if \fBdirport\fP is non-zero):
 .TP
+\fBauthoritativedirectory \fR\fI0|1\fP
+When this option is set to 1, Tor operates as an authoritative
+directory server.  Instead of caching the directory, it generates its
+own list of good servers, signs it, and sends that to the clients.
+Unless the clients already have you listed as a trusted directory, you
+probably do not want to set this option.  Please coordinate with the other
+admins at tor-ops@freehaven.net if you think you should be a directory.
+.TP
 \fBcontactinfo \fR\fIemail address\fP
 Administrative contact information for server.
 .TP
@@ -203,6 +221,13 @@ Bind the directory service to this address. (Default: 0.0.0.0)
 .TP
 \fBrecommendedversions \fR\fISTRING\fP
 STRING is a command-separated list of Tor versions currently believed to be safe. The list is included in each directory, and nodes which pull down the directory learn whether they need to upgrade.
+.TP
+\fBruntesting \fR\fI0|1\fP
+If set to 1, Tor tries to stay connected to all of the servers it
+knows about, so it can tell which are up and which are down.  This
+option is only useful for authoritative directories, so you probably
+don't want to use it.
+
 
 .SH HIDDEN SERVER OPTIONS
 .PP
@@ -231,14 +256,9 @@ service.
 .\" UNDOCUMENTED
 .\" I'm going to wait for go-ahead from arma before I document these;
 .\" there are policy issues here:
-.\" allowunverifiednodes
 .\" clientonly
-.\" dirfetchpostperiod
 .\" ignoreversion
-.\" The following options are only useful for people who want to run
-.\" authoritative dirservers:
-.\" authoritativedirectory
-.\" runtesting
+
 
 .SH FILES
 .TP
