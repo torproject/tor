@@ -2334,10 +2334,3 @@ config_parse_interval(const char *s, int *ok) {
   return (int)r;
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

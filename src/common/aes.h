@@ -27,10 +27,3 @@ void aes_adjust_counter(aes_cnt_cipher_t *cipher, long delta);
 
 #endif
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

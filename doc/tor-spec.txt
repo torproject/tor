@@ -809,10 +809,3 @@ A.1. Differences between spec and implementation
   addresses in their exit policies.  The current codebase has no IPv6
   support at all.
 
------------
-(for emacs)
-  Local Variables:
-  mode:text
-  indent-tabs-mode:nil
-  fill-column:77
-  End:

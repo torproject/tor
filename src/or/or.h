@@ -1643,10 +1643,3 @@ int tor_version_compare(tor_version_t *a, tor_version_t *b);
 
 #endif
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -1518,10 +1518,3 @@ void assert_connection_ok(connection_t *conn, time_t now)
   }
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -47,10 +47,3 @@ int tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout);
 
 #endif
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

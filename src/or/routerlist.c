@@ -1217,10 +1217,3 @@ void clear_trusted_dir_servers(void)
   }
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -47,10 +47,3 @@ void _assert_no_tls_errors(const char *fname, int line);
 
 #endif
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -1211,10 +1211,3 @@ set_exit_redirects(smartlist_t *lst)
   redirect_exit_list = lst;
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

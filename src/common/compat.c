@@ -672,10 +672,3 @@ const char *tor_socket_strerror(int e)
   return strerror(e);
 }
 #endif
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

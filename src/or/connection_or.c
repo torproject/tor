@@ -499,10 +499,3 @@ loop:
   goto loop; /* process the remainder of the buffer */
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

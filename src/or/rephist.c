@@ -616,10 +616,3 @@ rep_hist_get_bandwidth_lines(void)
   return buf;
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

@@ -233,10 +233,3 @@ typedef uint32_t uintptr_t;
 
 #endif /* __TORINT_H */
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/

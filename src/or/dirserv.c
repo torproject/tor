@@ -935,10 +935,3 @@ size_t dirserv_get_runningrouters(const char **rr, int compress)
   return compress ? the_runningrouters_z_len : the_runningrouters_len;
 }
 
-/*
-  Local Variables:
-  mode:c
-  indent-tabs-mode:nil
-  c-basic-offset:2
-  End:
-*/
