@@ -147,6 +147,9 @@ Rendezvous service:
         - backward compatibility: when only certain nodes know about rend
           protocol, how do we deal? have nodes parse the tor version field?
           force an upgrade? simply be more robust against useless nodes?
+        o should expire rend streams when too much time has passed
+        - should make failed rend/intro circs count toward alice's
+          num_failed circs, to prevent madness when we're offline
 
 On-going
         . Better comments for functions!
