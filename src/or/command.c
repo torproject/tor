@@ -94,14 +94,14 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
 static void command_process_create_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
-  circ = circuit_get_by_aci_conn(cell->aci, conn);
+  circ = circuit_get_by_circ_id_conn(cell->circ_id, conn);
 
   if(circ) {
-    log_fn(LOG_WARN,"received CREATE cell (aci %d) for known circ. Dropping.", cell->aci);
+    log_fn(LOG_WARN,"received CREATE cell (circID %d) for known circ. Dropping.", cell->circ_id);
     return;
   }
 
-  circ = circuit_new(cell->aci, conn);
+  circ = circuit_new(cell->circ_id, conn);
   circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
   if(cell->length != DH_ONIONSKIN_LEN) {
     log_fn(LOG_WARN,"Bad cell length %d. Dropping.", cell->length);
@@ -123,14 +123,14 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
 static void command_process_created_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
-  circ = circuit_get_by_aci_conn(cell->aci, conn);
+  circ = circuit_get_by_circ_id_conn(cell->circ_id, conn);
 
   if(!circ) {
-    log_fn(LOG_INFO,"(aci %d) unknown circ (probably got a destroy earlier). Dropping.", cell->aci);
+    log_fn(LOG_INFO,"(circID %d) unknown circ (probably got a destroy earlier). Dropping.", cell->circ_id);
     return;
   }
 
-  if(circ->n_aci != cell->aci) {
+  if(circ->n_circ_id != cell->circ_id) {
     log_fn(LOG_WARN,"got created cell from OPward? Closing.");
     circuit_close(circ);
     return;
@@ -160,10 +160,10 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
 static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
-  circ = circuit_get_by_aci_conn(cell->aci, conn);
+  circ = circuit_get_by_circ_id_conn(cell->circ_id, conn);
 
   if(!circ) {
-    log_fn(LOG_INFO,"unknown circuit %d. Dropping.", cell->aci);
+    log_fn(LOG_INFO,"unknown circuit %d. Dropping.", cell->circ_id);
     return;
   }
 
@@ -173,15 +173,15 @@ static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
     return;
   }
 
-  if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
-    cell->aci = circ->n_aci; /* switch it */
+  if(cell->circ_id == circ->p_circ_id) { /* it's an outgoing cell */
+    cell->circ_id = circ->n_circ_id; /* switch it */
     if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_OUT, conn->cpath_layer) < 0) {
       log_fn(LOG_WARN,"circuit_deliver_relay_cell (forward) failed. Closing.");
       circuit_close(circ);
       return;
     }
   } else { /* it's an ingoing cell */
-    cell->aci = circ->p_aci; /* switch it */
+    cell->circ_id = circ->p_circ_id; /* switch it */
     if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_IN, NULL) < 0) {
       log_fn(LOG_WARN,"circuit_deliver_relay_cell (backward) failed. Closing.");
       circuit_close(circ);
@@ -193,19 +193,19 @@ static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
 static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   circuit_t *circ;
 
-  circ = circuit_get_by_aci_conn(cell->aci, conn);
+  circ = circuit_get_by_circ_id_conn(cell->circ_id, conn);
 
   if(!circ) {
-    log_fn(LOG_INFO,"unknown circuit %d. Dropping.", cell->aci);
+    log_fn(LOG_INFO,"unknown circuit %d. Dropping.", cell->circ_id);
     return;
   }
 
-  log_fn(LOG_DEBUG,"Received for aci %d.",cell->aci);
+  log_fn(LOG_DEBUG,"Received for circIDD %d.",cell->circ_id);
   if(circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
     onion_pending_remove(circ);
   }
 
-  if(cell->aci == circ->p_aci || circ->cpath) {
+  if(cell->circ_id == circ->p_circ_id || circ->cpath) {
     /* either the destroy came from behind, or we're the AP */
     circ->p_conn = NULL;
     circuit_close(circ);

@@ -8,17 +8,17 @@ extern or_options_t options; /* command-line and config-file options */
 
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len);
 
-int decide_aci_type(char *local_nick, char *remote_nick) {
+int decide_circ_id_type(char *local_nick, char *remote_nick) {
   int result;
  
   assert(remote_nick);
   if(!local_nick)
-    return ACI_TYPE_LOWER;
+    return CIRC_ID_TYPE_LOWER;
   result = strcmp(local_nick, remote_nick);
   assert(result);
   if(result < 0)
-    return ACI_TYPE_LOWER;
-  return ACI_TYPE_HIGHER;
+    return CIRC_ID_TYPE_LOWER;
+  return CIRC_ID_TYPE_HIGHER;
 }
 
 struct onion_queue_t {
@@ -103,7 +103,7 @@ void onion_pending_remove(circuit_t *circ) {
   } else { /* we need to hunt through the rest of the list */
     for( ;tmpo->next && tmpo->next->circ != circ; tmpo=tmpo->next) ;
     if(!tmpo->next) {
-      log_fn(LOG_DEBUG,"circ (p_aci %d) not in list, probably at cpuworker.",circ->p_aci);
+      log_fn(LOG_DEBUG,"circ (p_circ_id %d) not in list, probably at cpuworker.",circ->p_circ_id);
       return;
     }
     /* now we know tmpo->next->circ == circ */
@@ -128,7 +128,7 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_CREATED;
-  cell.aci = circ->p_aci;
+  cell.circ_id = circ->p_circ_id;
   cell.length = DH_KEY_LEN;
 
   circ->state = CIRCUIT_STATE_OPEN;

@@ -12,7 +12,7 @@ static int connection_or_process_cell_from_inbuf(connection_t *conn);
 /**************************************************************/
 
 static void cell_pack(char *dest, const cell_t *src) {
-  *(uint16_t*)dest     = htons(src->aci);
+  *(uint16_t*)dest     = htons(src->circ_id);
   *(uint8_t*)(dest+2)  = src->command;
   *(uint8_t*)(dest+3)  = src->length;
   *(uint32_t*)(dest+4) = 0; /* Reserved */
@@ -20,7 +20,7 @@ static void cell_pack(char *dest, const cell_t *src) {
 }
 
 static void cell_unpack(cell_t *dest, const char *src) {
-  dest->aci     = ntohs(*(uint16_t*)(src));
+  dest->circ_id = ntohs(*(uint16_t*)(src));
   dest->command = *(uint8_t*)(src+2);
   dest->length  = *(uint8_t*)(src+3);
   dest->seq     = ntohl(*(uint32_t*)(src+4));

@@ -30,28 +30,28 @@ int connection_cpu_finished_flushing(connection_t *conn) {
   return 0;
 }
 
-static void tag_pack(char *tag, uint32_t addr, uint16_t port, aci_t aci) {
+static void tag_pack(char *tag, uint32_t addr, uint16_t port, circ_id_t circ_id) {
   *(uint32_t *)tag = addr;
   *(uint16_t *)(tag+4) = port;
-  *(aci_t *)(tag+6) = aci;
+  *(circ_id_t *)(tag+6) = circ_id;
 }
 
-static void tag_unpack(char *tag, uint32_t *addr, uint16_t *port, aci_t *aci) {
+static void tag_unpack(char *tag, uint32_t *addr, uint16_t *port, circ_id_t *circ_id) {
   struct in_addr in;
 
   *addr = *(uint32_t *)tag;
   *port = *(uint16_t *)(tag+4);
-  *aci = *(aci_t *)(tag+6);
+  *circ_id = *(circ_id_t *)(tag+6);
 
   in.s_addr = htonl(*addr);
-  log_fn(LOG_DEBUG,"onion was from %s:%d, aci %d.", inet_ntoa(in), *port, *aci);
+  log_fn(LOG_DEBUG,"onion was from %s:%d, circ_id %d.", inet_ntoa(in), *port, *circ_id);
 }
 
 int connection_cpu_process_inbuf(connection_t *conn) {
   unsigned char buf[LEN_ONION_RESPONSE];
   uint32_t addr;
   uint16_t port;
-  aci_t aci;
+  circ_id_t circ_id;
   connection_t *p_conn;
   circuit_t *circ;
 
@@ -75,11 +75,11 @@ int connection_cpu_process_inbuf(connection_t *conn) {
     connection_fetch_from_buf(buf,LEN_ONION_RESPONSE,conn);
 
     /* parse out the circ it was talking about */
-    tag_unpack(buf+1, &addr, &port, &aci);
+    tag_unpack(buf+1, &addr, &port, &circ_id);
     circ = NULL;
     p_conn = connection_exact_get_by_addr_port(addr,port);
     if(p_conn)
-      circ = circuit_get_by_aci_conn(aci, p_conn);
+      circ = circuit_get_by_circ_id_conn(circ_id, p_conn);
 
     if(!circ) {
       log_fn(LOG_INFO,"processed onion for a circ that's gone. Dropping.");
@@ -262,7 +262,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
       log_fn(LOG_INFO,"circ->p_conn gone. Failing circ.");
       return -1;
     }
-    tag_pack(tag, circ->p_conn->addr, circ->p_conn->port, circ->p_aci);
+    tag_pack(tag, circ->p_conn->addr, circ->p_conn->port, circ->p_circ_id);
 
     cpuworker->state = CPUWORKER_STATE_BUSY_ONION;
     num_cpuworkers_busy++;
