@@ -772,14 +772,12 @@ upload_service_descriptor(rend_service_t *service)
 void rend_services_introduce(void) {
   int i,j,r;
   routerinfo_t *router;
-  routerlist_t *rl;
   rend_service_t *service;
   char *intro;
   int changed, prev_intro_nodes;
   smartlist_t *intro_routers, *exclude_routers;
   time_t now;
 
-  router_get_routerlist(&rl);
   intro_routers = smartlist_create();
   exclude_routers = smartlist_create();
   now = time(NULL);
@@ -830,8 +828,7 @@ void rend_services_introduce(void) {
     smartlist_add_all(exclude_routers, intro_routers);
     /* The directory is now here. Pick three ORs as intro points. */
     for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
-      router = router_choose_random_node(rl,
-                                         service->intro_prefer_nodes,
+      router = router_choose_random_node(service->intro_prefer_nodes,
                                          service->intro_exclude_nodes,
                                          exclude_routers);
       if (!router) {

@@ -1292,8 +1292,7 @@ routerinfo_t *router_pick_directory_server(void);
 struct smartlist_t;
 void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list);
 void router_add_running_routers_to_smartlist(struct smartlist_t *sl);
-routerinfo_t *router_choose_random_node(routerlist_t *dir,
-                                        char *preferred, char *excluded,
+routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
                                         struct smartlist_t *excludedsmartlist);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_nickname(char *nickname);

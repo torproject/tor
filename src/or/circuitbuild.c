@@ -855,7 +855,7 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
     case CIRCUIT_PURPOSE_C_GENERAL:
       return choose_good_exit_server_general(dir);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-      r = router_choose_random_node(dir, options.RendNodes, options.RendExcludeNodes, NULL);
+      r = router_choose_random_node(options.RendNodes, options.RendExcludeNodes, NULL);
       return r;
     default:
       log_fn(LOG_WARN,"unhandled purpose %d", purpose);
