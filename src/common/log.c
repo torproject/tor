@@ -70,7 +70,7 @@ static INLINE void format_msg(char *buf, size_t buf_len,
 static void 
 logv(int severity, const char *funcname, const char *format, va_list ap)
 {
-  char buf[1024];
+  char buf[10024];
   int formatted = 0;
   logfile_t *lf;
   
@@ -89,7 +89,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
       continue;
 
     if (!formatted) {
-      format_msg(buf, 1024, severity, funcname, format, ap);
+      format_msg(buf, 10024, severity, funcname, format, ap);
       formatted = 1;
     }
     fputs(buf, lf->file);
