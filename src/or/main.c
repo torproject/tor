@@ -335,7 +335,14 @@ static void run_scheduled_events(time_t now) {
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
   }
 
-  /* 2. Every second, we try a new circuit if there are no valid
+  /* 2. Every second, we examine pending circuits and prune the
+   *    ones which have been pending for more than 2 seconds.
+   *    We do this before step 3, so it can try building more if
+   *    it's not comfortable with the number of available circuits.
+   */
+  circuit_expire_building();
+
+  /* 3. Every second, we try a new circuit if there are no valid
    *    circuits. Every NewCircuitPeriod seconds, we expire circuits
    *    that became dirty more than NewCircuitPeriod seconds ago,
    *    and we make a new circ if there are no clean circuits.
@@ -356,11 +363,15 @@ static void run_scheduled_events(time_t now) {
       }
       time_to_new_circuit = now + options.NewCircuitPeriod;
     }
-    if(!circ)
+#define CIRCUIT_MIN_BUILDING 3
+    if(!circ && circuit_count_building() < CIRCUIT_MIN_BUILDING)
+      /* if there's no open circ, and less than 3 are on the way,
+       * go ahead and try another.
+       */
       circuit_launch_new(1);
   }
 
-  /* 3. Every second, we check how much bandwidth we've consumed and 
+  /* 4. Every second, we check how much bandwidth we've consumed and 
    *    increment global_read_bucket.
    */
   stats_n_bytes_read += stats_prev_global_read_bucket-global_read_bucket;
@@ -370,12 +381,12 @@ static void run_scheduled_events(time_t now) {
   }
   stats_prev_global_read_bucket = global_read_bucket;
 
-  /* 4. We do houskeeping for each connection... */
+  /* 5. We do housekeeping for each connection... */
   for(i=0;i<nfds;i++) {
     run_connection_housekeeping(i, now);
   }
 
-  /* 5. and blow away any connections that need to die. can't do this later
+  /* 6. and blow away any connections that need to die. can't do this later
    * because we might open up a circuit and not realize we're about to cull
    * the connection it's running over.
    * XXX we can remove this step once we audit circuit-building to make sure

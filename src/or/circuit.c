@@ -250,6 +250,46 @@ circuit_t *circuit_get_newest(connection_t *conn, int must_be_open) {
   return NULL;
 }
 
+#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 2
+/* circuits that were born at the end of their second might be expired
+ * after 2.1 seconds; circuits born at the beginning might be expired
+ * after closer to 3 seconds.
+ */
+
+/* close all circuits that start at us, aren't open, and were born
+ * at least MIN_SECONDS_BEFORE_EXPIRING_CIRC seconds ago */
+void circuit_expire_building(void) {
+  circuit_t *circ;
+  int now = time(NULL);
+
+  for(circ=global_circuitlist;circ;circ = circ->next) {
+    if(circ->cpath &&
+       circ->state != CIRCUIT_STATE_OPEN &&
+       circ->timestamp_created + MIN_SECONDS_BEFORE_EXPIRING_CIRC+1 < now) {
+      if(circ->n_conn)
+        log_fn(LOG_INFO,"Abandoning circ %s:%d:%d (state %d:%s)",
+               circ->n_conn->address, circ->n_port, circ->n_circ_id,
+               circ->state, circuit_state_to_string[circ->state]);
+      else
+        log_fn(LOG_INFO,"Abandoning circ %d (state %d:%s)", circ->n_circ_id,
+               circ->state, circuit_state_to_string[circ->state]);
+      circuit_close(circ);
+    }
+  }
+}
+
+/* count the number of circs starting at us that aren't open */
+int circuit_count_building(void) {
+  circuit_t *circ;
+  int num=0;
+
+  for(circ=global_circuitlist;circ;circ = circ->next) {
+    if(circ->cpath && circ->state != CIRCUIT_STATE_OPEN)
+      num++;
+  }
+  return num;
+}
+
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint) {
   connection_t *conn=NULL;
@@ -818,7 +858,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       connection_ap_attach_pending();
       return 0;
     } else if (r<0) {
-      log_fn(LOG_WARN,"Unable to extend circuit path.");
+      log_fn(LOG_INFO,"Unable to extend circuit path.");
       return -1;
     }
     hop = circ->cpath->prev;

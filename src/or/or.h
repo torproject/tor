@@ -110,7 +110,6 @@
 
 #define CIRC_ID_TYPE_LOWER 0
 #define CIRC_ID_TYPE_HIGHER 1
-#define CIRC_ID_TYPE_BOTH 2
 
 #define _CONN_TYPE_MIN 3
 #define CONN_TYPE_OR_LISTENER 3
@@ -517,6 +516,9 @@ circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, ui
 circuit_t *circuit_get_by_circ_id_conn(circ_id_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest(connection_t *conn, int must_be_open);
+
+void circuit_expire_building(void);
+int circuit_count_building(void);
 
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);

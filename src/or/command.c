@@ -146,8 +146,8 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
     }
     log_fn(LOG_DEBUG,"Moving to next skin.");
     if(circuit_send_next_onion_skin(circ) < 0) {
-      log_fn(LOG_WARN,"circuit_send_next_onion_skin failed.");
-      circuit_close(circ);
+      log_fn(LOG_INFO,"circuit_send_next_onion_skin failed.");
+      circuit_close(circ); /* XXX push this circuit_close lower */
       return;
     }
   } else { /* pack it into an extended relay cell, and send it. */
