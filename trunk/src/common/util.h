@@ -9,6 +9,7 @@
 
 #ifndef __UTIL_H
 #define __UTIL_H
+#define UTIL_H_ID "$Id$"
 
 #include "orconfig.h"
 #include "torint.h"

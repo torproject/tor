@@ -9,11 +9,7 @@
  **/
 
 #ifndef __LOG_H
-
-/**
- * \file log.h
- * \brief Headers for log.c
- */
+#define LOG_H_ID "$Id$"
 
 #include "../common/compat.h"
 

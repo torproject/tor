@@ -3,6 +3,7 @@
  * Copyright 2004 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
+const char command_c_id[] = "$Id$";
 
 /**
  * \file command.c

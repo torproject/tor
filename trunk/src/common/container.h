@@ -4,6 +4,7 @@
 
 #ifndef __CONTAINER_H
 #define __CONTAINER_H
+#define CONTAINER_H_ID "$Id$"
 
 /** Generic resizeable array. */
 typedef struct smartlist_t smartlist_t;

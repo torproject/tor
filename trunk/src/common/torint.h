@@ -9,6 +9,7 @@
 
 #ifndef __TORINT_H
 #define __TORINT_H
+#define TORINT_H_ID "$Id$"
 
 #include "orconfig.h"
 

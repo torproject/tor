@@ -1,6 +1,7 @@
 /* Copyright 2003-2004 Roger Dingledine; Copyright 2004 Nick Mathewson */
 /* See LICENSE for licensing information */
 /* $Id$ */
+const char container_c_id[] = "$Id$";
 
 #include "compat.h"
 #include "util.h"

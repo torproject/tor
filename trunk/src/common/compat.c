@@ -1,6 +1,7 @@
 /* Copyright 2003-2004 Roger Dingledine; Copyright 2004 Nick Mathewson */
 /* See LICENSE for licensing information */
 /* $Id$ */
+const char compat_c_id[] = "$Id$";
 
 /* This is required on rh7 to make strptime not complain.
  */

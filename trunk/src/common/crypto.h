@@ -10,6 +10,7 @@
 
 #ifndef __CRYPTO_H
 #define __CRYPTO_H
+#define CRYPTO_H_ID "$Id$"
 
 #include <stdio.h>
 

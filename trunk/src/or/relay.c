@@ -3,6 +3,7 @@
  * Copyright 2004 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
+const char relay_c_id[] = "$Id$";
 
 /**
  * \file relay.c

@@ -1,6 +1,7 @@
 /* Copyright 2001,2002,2003 Roger Dingledine, Matej Pfajfar. */
 /* See LICENSE for licensing information */
 /* $Id$ */
+const char aes_c_id[] = "$Id$";
 
 /**
  * \file aes.c

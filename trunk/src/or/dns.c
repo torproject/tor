@@ -2,6 +2,7 @@
  * Copyright 2004 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
+const char dns_c_id[] = "$Id$";
 
 /**
  * \file dns.c

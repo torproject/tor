@@ -9,6 +9,7 @@
 
 #ifndef __TORGZIP_H
 #define __TORGZIP_H
+#define TORGZIP_H_ID "$Id$"
 
 typedef enum { GZIP_METHOD=1, ZLIB_METHOD=2 } compress_method_t;
 

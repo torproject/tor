@@ -12,6 +12,7 @@
 
 #ifndef __OR_H
 #define __OR_H
+#define OR_H_ID "$Id$"
 
 #include "orconfig.h"
 #ifdef MS_WINDOWS
