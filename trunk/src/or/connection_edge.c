@@ -499,7 +499,7 @@ void client_dns_set_addressmap(const char *address, uint32_t val)
   tor_assert(address); tor_assert(val);
 
   if (tor_inet_aton(address, &in))
-    return; /* don't set an addresmap back to ourselves! ????NM*/
+    return; /* If address was an IP address already, don't add a mapping. */
   in.s_addr = htonl(val);
   addr = tor_malloc(INET_NTOA_BUF_LEN);
   tor_inet_ntoa(&in,addr,INET_NTOA_BUF_LEN);
