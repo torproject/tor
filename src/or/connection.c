@@ -204,6 +204,7 @@ _connection_mark_for_close(connection_t *conn, char reason)
         log_fn(LOG_INFO,"Cleaning up AP -- sending socks reject.");
         connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
         conn->socks_request->has_finished = 1;
+        conn->hold_open_until_flushed = 1;
       }
       /* fall through, to do things for both ap and exit */
     case CONN_TYPE_EXIT:
