@@ -434,7 +434,7 @@ tor_tls_handshake(tor_tls *tls)
   r = tor_tls_get_error(tls,r,0, "handshaking", LOG_INFO);
   if (r == TOR_TLS_DONE) {
     tls->state = TOR_TLS_ST_OPEN;
-  }
+  } 
   return r;
 }
 
@@ -558,6 +558,9 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
   time_t now, t;
   int r = -1;
 
+  /* XXXX */
+  tls_log_errors(LOG_WARN, "preparing to verify");
+
   if (!(cert = SSL_get_peer_certificate(tls->ssl)))
     return -1;
 
@@ -587,6 +590,10 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
     X509_free(cert);
   if (id_pkey)
     EVP_PKEY_free(id_pkey);
+
+  /* XXXX */
+  tls_log_errors(LOG_WARN, "finishing tor_tls_verify");
+
   return r;
 }
 
