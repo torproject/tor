@@ -1400,9 +1400,9 @@ int router_exit_policy_rejects_all(routerinfo_t *router);
 void running_routers_free(running_routers_t *rr);
 void routerlist_update_from_runningrouters(routerlist_t *list,
                                            running_routers_t *rr);
-void router_update_status_from_smartlist(routerinfo_t *r,
-                                         time_t list_time,
-                                         smartlist_t *running_list);
+int router_update_status_from_smartlist(routerinfo_t *r,
+                                        time_t list_time,
+                                        smartlist_t *running_list);
 
 /********************************* routerparse.c ************************/
 

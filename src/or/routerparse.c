@@ -393,7 +393,7 @@ router_parse_routerlist_from_directory(const char *str,
   for (i=0; i<tok->n_args; ++i) {
     smartlist_add(good_nickname_list, tok->args[i]);
   }
-  tok->n_args = 0; /* Don't free the strings in good_nickname_lst yet. */
+  tok->n_args = 0; /* Don't free the strings in good_nickname_list yet. */
 
   /* Read the router list from s, advancing s up past the end of the last
    * router. */
@@ -416,9 +416,9 @@ router_parse_routerlist_from_directory(const char *str,
     static int have_warned_about_unverified_status = 0;
     routerinfo_t *me = router_get_my_routerinfo();
     if(me) {
-      router_update_status_from_smartlist(me, published_on,
-                                          good_nickname_list);
-      if(me->is_verified == 0 && !have_warned_about_unverified_status) {
+      if(router_update_status_from_smartlist(me, published_on,
+                                             good_nickname_list)==1 &&
+        me->is_verified == 0 && !have_warned_about_unverified_status) {
         log_fn(LOG_WARN,"Dirserver %s lists your server as unverified. Please consider sending your identity fingerprint to the tor-ops.", dirnickname);
         have_warned_about_unverified_status = 1;
       }
