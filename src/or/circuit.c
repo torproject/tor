@@ -157,80 +157,13 @@ int circuit_init(circuit_t *circ, int aci_type) {
   crypto_SHA_digest(digest2,20,digest1);
   log(LOG_DEBUG,"circuit_init(): Computed keys.");
 
-  /* initialize crypto engines */
-  switch(circ->p_f)
-  {
-   case ONION_CIPHER_DES :
-    circ->p_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
-    break;
-   case ONION_CIPHER_RC4 :
-    circ->p_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_RC4);
-    break;
-   case ONION_CIPHER_IDENTITY :
-    circ->p_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_IDENTITY);
-    break;
-   default :
-    log(LOG_ERR,"Onion contains unrecognized cipher(%u) for ACI : %u.",circ->p_f,circ->n_aci);
-    return -1;
-    break;
-  }
-
-  if (!circ->p_crypto) {
-    log(LOG_ERR,"Could not create a cryptographic environment.");
-    return -1;
-  }
-  if (crypto_cipher_set_iv(circ->p_crypto, iv) == -1) {
-    log(LOG_ERR,"Could not set the IV.");
-    crypto_free_cipher_env(circ->p_crypto);
-    return -1;
-  }
-  if (crypto_cipher_set_key(circ->p_crypto, digest2) == -1) {
-    log(LOG_ERR,"Could not set encryption key.");
-    crypto_free_cipher_env(circ->p_crypto);
-    return -1;
-  }
-  if (crypto_cipher_encrypt_init_cipher(circ->p_crypto)) /* crypto_cipher_init_cipher error */
-  {
+  if (!(circ->p_crypto = create_onion_cipher(circ->p_f,digest2,iv,1))) {
     log(LOG_ERR,"Cipher initialization failed (ACI %u).",circ->n_aci);
-    crypto_free_cipher_env(circ->p_crypto);
     return -1;
   }
   
-  switch(circ->n_f)
-  {
-   case ONION_CIPHER_DES :
-    circ->n_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
-    break;
-   case ONION_CIPHER_RC4 :
-    circ->n_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_RC4);
-    break;
-   case ONION_CIPHER_IDENTITY :
-    circ->n_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_IDENTITY);
-    break;
-   default :
-    log(LOG_ERR,"Onion contains unrecognized cipher(%u) for ACI : %u.",circ->n_f,circ->n_aci);
-    return -1;
-    break;
-  }
-
-  if (!circ->n_crypto) {
-    log(LOG_ERR,"Could not create a cryptographic environment.");
-    return -1;
-  }
-  if (crypto_cipher_set_iv(circ->n_crypto, iv) == -1) {
-    log(LOG_ERR,"Could not set the IV.");
-    crypto_free_cipher_env(circ->n_crypto);
-    return -1;
-  }
-  if (crypto_cipher_set_key(circ->n_crypto, digest1) == -1) {
-    log(LOG_ERR,"Could not set encryption key.");
-    crypto_free_cipher_env(circ->n_crypto);
-    return -1;
-  }
-  if (crypto_cipher_decrypt_init_cipher(circ->n_crypto)) /* crypto_cipher_init_cipher error */
-  {
+  if (!(circ->n_crypto = create_onion_cipher(circ->n_f, digest1, iv, 0))) {
     log(LOG_ERR,"Cipher initialization failed (ACI %u).",circ->n_aci);
-    crypto_free_cipher_env(circ->n_crypto);
     return -1;
   }
 
