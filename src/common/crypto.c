@@ -479,18 +479,23 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   BIO *bio;
   char *cp;
   long len;
+  char *s;
   int r;
   assert(env->type == CRYPTO_PK_RSA);
   if (!(bio = BIO_new(BIO_s_mem())))
     return -1;
-  if (PEM_write_bio_RSAPrivateKey(bio, (RSA*)env->key, NULL,NULL,0,0,NULL)) {
+  if (PEM_write_bio_RSAPrivateKey(bio, (RSA*)env->key, NULL,NULL,0,NULL,NULL) 
+      == 0) {
     BIO_free(bio);
     return -1;
   }
   len = BIO_get_mem_data(bio, &cp);
-  assert(len == strlen(cp));
-  r = write_str_to_file(fname, cp);
+  s = tor_malloc(len+1);
+  strncpy(s, cp, len);
+  s[len] = '\0';
+  r = write_str_to_file(fname, s);
   BIO_free(bio);
+  free(s);
   return r;
 }
 
