@@ -173,9 +173,9 @@ TODO: (very soon)
          Onion skin                    [186 bytes]
          Public key hash               [20 bytes]
 
-   The port and address field denote the IPV4 address and port of the
-   next onion router in the circuit; the public key hash is the SHA1 hash of
-   the ASN1 encoding of the next onion router's identity key.
+   The port and address field denote the IPV4 address and port of the next
+   onion router in the circuit; the public key hash is the SHA1 hash of the
+   PKCS#1 ASN1 encoding of the next onion router's identity (signing) key.
 
    [XXXX Before 0.0.8, EXTEND cells did not include the public key hash.
    Servers running 0.0.8 distinguish the old-style cells based on the
