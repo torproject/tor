@@ -102,7 +102,8 @@ static int nt_service_is_stopped(void);
 #define nt_service_is_stopped() (0)
 #endif
 
-#define CHECK_DESCRIPTOR_INTERVAL 60
+#define CHECK_DESCRIPTOR_INTERVAL 60 /* one minute */
+#define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60) /* 20 minutes */
 
 /********* END VARIABLES ************/
 
@@ -712,6 +713,10 @@ static void run_scheduled_events(time_t now) {
   if (time_to_check_descriptor < now) {
     time_to_check_descriptor = now + CHECK_DESCRIPTOR_INTERVAL;
     consider_publishable_server(now, 0);
+    /* also, check religiously for reachability, if it's within the first
+     * 20 minutes of our uptime. */
+    if (stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT)
+      consider_testing_reachability();
   }
 
   /** 3a. Every second, we examine pending circuits and prune the
@@ -806,15 +811,14 @@ static void second_elapsed_callback(int fd, short event, void *args)
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
 
-#define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60) /* 20 minutes */
   if (server_mode(options) &&
       stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
       stats_n_seconds_working+seconds_elapsed >=
         TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
       !check_whether_ports_reachable()) {
     routerinfo_t *me = router_get_my_routerinfo();
-    tor_assert(me);
-    log_fn(LOG_WARN,"Your server (%s:%d) has not managed to confirm that it is reachable. Please check your firewalls, ports, address, etc.", me->address, me->or_port);
+    log_fn(LOG_WARN,"Your server (%s:%d) has not managed to confirm that it is reachable. Please check your firewalls, ports, address, etc.",
+           me ? me->address : options->Address, options->ORPort);
   }
 
   /* if more than 10s have elapsed, probably the clock jumped: doesn't count. */
