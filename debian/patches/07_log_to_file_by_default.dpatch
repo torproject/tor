@@ -23,14 +23,14 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad cvs/src/or/config.c /tmp/dpep.fbjWEM/cvs/src/or/config.c
---- cvs/src/or/config.c	2004-11-12 18:10:35.333768630 +0100
-+++ /tmp/dpep.fbjWEM/cvs/src/or/config.c	2004-11-12 18:10:53.432747222 +0100
-@@ -1026,7 +1026,7 @@
+diff -urNad tor-0.0.9rc7/src/or/config.c /tmp/dpep.BdF2iw/tor-0.0.9rc7/src/or/config.c
+--- tor-0.0.9rc7/src/or/config.c	2004-12-08 13:20:28.111199142 +0100
++++ /tmp/dpep.BdF2iw/tor-0.0.9rc7/src/or/config.c	2004-12-08 13:22:08.294210420 +0100
+@@ -1179,7 +1179,7 @@
  
    /* Special case if no options are given. */
    if (!options->Logs) {
--    options->Logs = config_line_prepend(NULL, "Log", "notice-err stdout");
+-    options->Logs = config_line_prepend(NULL, "Log", "notice stdout");
 +    options->Logs = config_line_prepend(NULL, "Log", "notice file /var/log/tor/log");
    }
  

@@ -1,3 +1,12 @@
+tor (0.0.8+0.0.9rc7-1) unstable; urgency=medium
+
+  * New upstream release (candidate).
+    For real this time.  Looks like our rc6 orig.tar.gz
+    was in fact the rc5 one.
+  * forward port patches/07_log_to_file_by_default
+
+ -- Peter Palfrader <weasel@debian.org>  Wed,  8 Dec 2004 15:22:44 +0100
+
 tor (0.0.8+0.0.9rc6-1) unstable; urgency=medium
 
   * New upstream release (candidate).
