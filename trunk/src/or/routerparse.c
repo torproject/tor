@@ -393,14 +393,15 @@ router_parse_routerlist_from_directory(const char *str,
   {
     routerinfo_t *me = router_get_my_routerinfo();
     if(me)
-      router_update_status_from_smartlist(me, time(NULL), good_nickname_list);
+      router_update_status_from_smartlist(me, published_on,
+                                          good_nickname_list);
   }
 
   /* Read the router list from s, advancing s up past the end of the last
    * router. */
   str = end;
   if (router_parse_list_from_string(&str, &new_dir,
-                                    good_nickname_list)) {
+                                    good_nickname_list, published_on)) {
     log_fn(LOG_WARN, "Error reading routers from directory");
     goto err;
   }
@@ -576,7 +577,8 @@ static int check_directory_signature(const char *digest,
  */
 int
 router_parse_list_from_string(const char **s, routerlist_t **dest,
-                              smartlist_t *good_nickname_list)
+                              smartlist_t *good_nickname_list,
+                              time_t published_on)
 {
   routerinfo_t *router;
   smartlist_t *routers;
@@ -607,7 +609,7 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
     }
 
     if (good_nickname_list) {
-      router_update_status_from_smartlist(router, time(NULL),
+      router_update_status_from_smartlist(router, published_on,
                                           good_nickname_list);
     } else {
       router->is_running = 1; /* start out assuming all dirservers are up */

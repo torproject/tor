@@ -561,7 +561,7 @@ int router_load_routerlist_from_string(const char *s, int trusted)
 {
   routerlist_t *new_list=NULL;
 
-  if (router_parse_list_from_string(&s, &new_list, NULL)) {
+  if (router_parse_list_from_string(&s, &new_list, NULL, 0)) {
     log(LOG_WARN, "Error parsing router file");
     return -1;
   }

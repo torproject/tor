@@ -1415,7 +1415,8 @@ int router_get_dir_hash(const char *s, char *digest);
 int router_get_runningrouters_hash(const char *s, char *digest);
 int router_parse_list_from_string(const char **s,
                                   routerlist_t **dest,
-                                  smartlist_t *good_nickname_list);
+                                  smartlist_t *good_nickname_list,
+                                  time_t published);
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
                                            crypto_pk_env_t *pkey);
