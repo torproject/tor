@@ -13,7 +13,8 @@ If you got the source from cvs:
 
 If you got the source from a tarball:
 
-  Run ./configure, make, make install as usual.
+  Run ./configure and make as usual. There isn't much point in 
+  'make install' yet.
 
 If this doesn't work for you:
 
@@ -23,7 +24,6 @@ If this doesn't work for you:
   we'll see what we can do.
 
 Once you've got it compiled:
-  (these notes assume you started with source from cvs)
 
   It's a bit hard to figure out what to do with the binaries. If you
   want to set up your own test network, go into src/config/ and look
@@ -54,8 +54,9 @@ Once you've got it compiled:
   then ^z the wget a little bit in. The onion routers will continue
   talking for a while, queueing around 500k in the kernel-level buffers.
   When the kernel buffers are full, and the outbuf for the AP connection
-  also fills, the internal congestion control will kick in and the
-  exit connection will stop reading from the webserver. The circuit
-  will wait until you fg the wget -- and other circuits will work just
-  fine throughout.
+  also fills, the internal congestion control will kick in and the exit
+  connection will stop reading from the webserver. The circuit will
+  wait until you fg the wget -- and other circuits will work just fine
+  throughout. Then try ^z'ing the onion routers, and watch how well it
+  recovers. Then try ^z'ing several of them at once. :)
 
