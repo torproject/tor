@@ -624,7 +624,7 @@ int connection_ap_handle_listener_read(connection_t *conn);
 /********************************* connection_edge.c ***************************/
 
 int connection_edge_process_inbuf(connection_t *conn);
-int connection_edge_send_command(connection_t *conn, int topic_command);
+int connection_edge_send_command(connection_t *conn, circuit_t *circ, int topic_command);
 int connection_edge_process_data_cell(cell_t *cell, circuit_t *circ, int edge_type);
 int connection_edge_finished_flushing(connection_t *conn);
 

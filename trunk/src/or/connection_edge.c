@@ -106,7 +106,12 @@ int connection_edge_process_data_cell(cell_t *cell, circuit_t *circ, int edge_ty
 
   circuit_consider_sending_sendme(circ, edge_type);
 
-  for(conn = circ->p_conn; conn && conn->topic_id != topic_id; conn = conn->next_topic) ;
+  if(edge_type == EDGE_AP)
+    conn = circ->p_conn;
+  else
+    conn = circ->n_conn;
+
+  for( ; conn && conn->topic_id != topic_id; conn = conn->next_topic) ;
 
   /* now conn is either NULL, in which case we don't recognize the topic_id, or
    * it is set, in which case cell is talking about this conn.
@@ -247,7 +252,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
       if(connection_wants_to_flush(conn)) /* in case there are any queued data cells */
         connection_start_writing(conn);
       return
-        connection_exit_send_connected(conn) || /* deliver a 'connected' data cell back through the circuit. */
+        connection_edge_send_command(conn, circuit_get_by_conn(conn), TOPIC_COMMAND_CONNECTED) || /* deliver a 'connected' data cell back through the circuit. */
         connection_process_inbuf(conn); /* in case the server has written anything */
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
