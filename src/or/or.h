@@ -248,6 +248,7 @@ typedef struct {
 #define SET_CELL_RELAY_COMMAND(c,cmd) (*(uint8_t*)((c).payload) = (cmd))
 #define STREAM_ID_SIZE 7
 #define SET_CELL_STREAM_ID(c,id)      memcpy((c).payload+1,(id),STREAM_ID_SIZE)
+#define CELL_RELAY_COMMAND_END_REASON(c) (*(uint8_t)((c).payload+1))
 
 #define ZERO_STREAM "\0\0\0\0\0\0\0\0"
 
@@ -326,8 +327,9 @@ typedef struct connection_t connection_t;
 struct exit_policy_t {
   char policy_type;
   char *string;
-  char *address;
-  char *port;
+  uint32_t addr;
+  uint32_t msk;
+  uint16_t prt;
 
   struct exit_policy_t *next;
 };
@@ -390,6 +392,8 @@ struct crypt_path_t {
 
 typedef struct crypt_path_t crypt_path_t;
 
+typedef struct cpath_build_state_t cpath_build_state_t;
+
 /* struct for a path (circuit) through the network */
 struct circuit_t {
   uint32_t n_addr;
@@ -407,7 +411,7 @@ struct circuit_t {
   crypto_cipher_env_t *p_crypto; /* used only for intermediate hops */
   crypto_cipher_env_t *n_crypto;
 
-  int desired_cpath_len;
+  cpath_build_state_t *build_state;
   crypt_path_t *cpath;
 
   char onionskin[DH_ONIONSKIN_LEN]; /* for storage while onionskin pending */
@@ -695,7 +699,8 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
 
 char **parse_nickname_list(char *start, int *num);
 
-int onion_extend_cpath(crypt_path_t **head_ptr, int path_len, routerinfo_t **router_out);
+int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, 
+                       routerinfo_t **router_out);
 
 int onion_skin_create(crypto_pk_env_t *router_key,
                       crypto_dh_env_t **handshake_state_out,
@@ -712,7 +717,7 @@ int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                              char *key_out,
                              int key_out_len);
 
-int onion_new_route_len(void);
+cpath_build_state_t *onion_new_cpath_build_state(void);
 
 /********************************* routers.c ***************************/
 
@@ -741,6 +746,8 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
                                     crypto_pk_env_t *pkey);
 routerinfo_t *router_get_entry_from_string(char **s);
 int router_compare_to_exit_policy(connection_t *conn);
+int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
+                                       struct exit_policy_t *policy);
 void routerinfo_free(routerinfo_t *router);
 int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);

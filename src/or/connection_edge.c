@@ -3,6 +3,7 @@
 /* $Id$ */
 
 #include "or.h"
+#include "tree.h"
 
 extern or_options_t options; /* command-line and config-file options */
 
@@ -14,6 +15,10 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 static void connection_edge_consider_sending_sendme(connection_t *conn);
+
+static uint32_t client_dns_lookup_entry(const char *address);
+static void client_dns_set_entry(const char *address, uint32_t val);
+static void client_dns_clean(void);
 
 int connection_edge_process_inbuf(connection_t *conn) {
 
@@ -96,7 +101,6 @@ void connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_la
   payload[0] = reason;
   if(reason == END_STREAM_REASON_EXITPOLICY) {
     *(uint32_t *)(payload+1) = htonl(conn->addr);
-    *(uint16_t *)(payload+5) = htons(conn->port);
     payload_len += 6;
   }
 
@@ -163,6 +167,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
                                        int edge_type, crypt_path_t *layer_hint) {
   int relay_command;
   static int num_seen=0;
+  uint32_t addr;
 
   assert(cell && circ);
 
@@ -241,19 +246,21 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
           *(int*)conn->stream_id);
         return 0;
       }
-      log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
-        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, cell->length),
-        *(int*)conn->stream_id);
-      if(cell->length && *(cell->payload+RELAY_HEADER_SIZE) ==
-                           END_STREAM_REASON_EXITPOLICY) {
+      if(cell->length-RELAY_HEADER_SIZE >= 5 && 
+         *(cell->payload+RELAY_HEADER_SIZE) == END_STREAM_REASON_EXITPOLICY) {
         /* No need to close the connection. We'll hold it open while
          * we try a new exit node.
          * cell->payload+RELAY_HEADER_SIZE+1 holds the addr and then
          * port of the destination. Which is good, because we've
          * forgotten it.
          */
-        /* XXX */
+        addr = ntohl(*cell->payload+RELAY_HEADER_SIZE+1);
+        client_dns_set_entry(conn->address, addr);
+        /* XXX Move state back into CIRCUIT_WAIT. */
       }
+      log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
+        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, cell->length),
+        *(int*)conn->stream_id);
 
 #ifdef HALF_OPEN
       conn->done_sending = 1;
@@ -313,6 +320,10 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         break;
       }
       log_fn(LOG_INFO,"Connected! Notifying application.");
+      if (cell->length-RELAY_HEADER_SIZE == 4) {
+        addr = htonl(*(uint32_t*)(cell->payload + RELAY_HEADER_SIZE));
+        client_dns_set_entry(conn->socks_request->addr, addr);
+      }
       if(connection_ap_handshake_socks_reply(conn, NULL, 0, 1) < 0) {
         log_fn(LOG_INFO,"Writing to socks-speaking application failed. Closing.");
         connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
@@ -386,7 +397,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
       connection_stop_writing(conn);
       return 0;
     default:
-      log_fn(LOG_WARN,"BUG: called in unexpected state.");
+      log_fn(LOG_WARN,"BUG: called in unexpected state: %d", conn->state);
       return -1;
   }
   return 0;
@@ -583,6 +594,8 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
 {
   char payload[CELL_PAYLOAD_SIZE];
   int payload_len;
+  struct in_addr in;
+  const char *string_addr;
 
   assert(ap_conn->type == CONN_TYPE_AP);
   assert(ap_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
@@ -592,10 +605,15 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   crypto_pseudo_rand(STREAM_ID_SIZE, ap_conn->stream_id);
   /* FIXME check for collisions */
 
+  in.s_addr = client_dns_lookup_entry(ap_conn->socks_request->addr);
+  string_addr = in.s_addr ? inet_ntoa(in) : NULL;
+
   memcpy(payload, ap_conn->stream_id, STREAM_ID_SIZE);
   payload_len = STREAM_ID_SIZE + 1 +
     snprintf(payload+STREAM_ID_SIZE,CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE-STREAM_ID_SIZE,
-             "%s:%d", ap_conn->socks_request->addr, ap_conn->socks_request->port);
+             "%s:%d", 
+             string_addr ? string_addr : ap_conn->socks_request->addr, 
+             ap_conn->socks_request->port);
 
   log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",*(int *)ap_conn->stream_id);
 
@@ -606,6 +624,12 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_OPEN;
+  /* XXX Right now, we rely on the socks client not to send us any data
+   * XXX until we've sent back a socks reply.  (If it does, we could wind
+   * XXX up packaging that data and sending it to the exit, then later having
+   * XXX the exit refuse us.)  
+   * XXX Perhaps we should grow an AP_CONN_STATE_CONNECTING state.
+   */
   log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
   return;
 }
@@ -701,6 +725,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
 }
 
 void connection_exit_connect(connection_t *conn) {
+  unsigned char connected_payload[4];
 
   if(router_compare_to_exit_policy(conn) < 0) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.", conn->address, conn->port);
@@ -733,8 +758,137 @@ void connection_exit_connect(connection_t *conn) {
   connection_watch_events(conn, POLLIN);
 
   /* also, deliver a 'connected' cell back through the circuit. */
+  *((uint32_t*) connected_payload) = htonl(conn->addr);
   connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
-                               NULL, 0, conn->cpath_layer);
+                               connected_payload, 4, conn->cpath_layer);
+}
+
+/* ***** Client DNS code ***** */
+#define MAX_DNS_ENTRY_AGE 30*60
+
+/* XXX Perhaps this should get merged with the dns.c code somehow. */
+struct client_dns_entry {
+  SPLAY_ENTRY(client_dns_entry) node;
+  char *address;
+  uint32_t addr;
+  time_t expires;
+};      
+static int client_dns_size = 0;
+static SPLAY_HEAD(client_dns_tree, client_dns_entry) client_dns_root;
+
+static int compare_client_dns_entries(struct client_dns_entry *a,
+                                      struct client_dns_entry *b) 
+{
+  return strcasecmp(a->address, b->address);
+}
+
+static void client_dns_entry_free(struct client_dns_entry *ent)
+{
+  tor_free(ent->address);
+  tor_free(ent);
+}
+
+SPLAY_PROTOTYPE(client_dns_tree, client_dns_entry, node, compare_client_dns_entries);
+SPLAY_GENERATE(client_dns_tree, client_dns_entry, node, compare_client_dns_entries);
+
+void client_dns_init(void) {
+  SPLAY_INIT(&client_dns_root);
+  client_dns_size = 0;
+}
+
+static uint32_t client_dns_lookup_entry(const char *address)
+{
+  struct client_dns_entry *ent;
+  struct client_dns_entry search;
+  struct in_addr in;
+  time_t now;
+
+  assert(address);
+
+  if (inet_aton(address, &in)) {
+    log_fn(LOG_DEBUG, "Using static address %s", address);
+    return in.s_addr;
+  }
+  search.address = (char*)address;
+  ent = SPLAY_FIND(client_dns_tree, &client_dns_root, &search);
+  if (!ent) {
+    log_fn(LOG_DEBUG, "No entry found for address %s", address);
+    return 0;
+  } else {
+    now = time(NULL);
+    if (ent->expires < now) {
+      log_fn(LOG_DEBUG, "Expired entry found for address %s", address);
+      SPLAY_REMOVE(client_dns_tree, &client_dns_root, ent);
+      client_dns_entry_free(ent);
+      --client_dns_size;
+      return 0;
+    }
+    in.s_addr = ent->addr;
+    log_fn(LOG_DEBUG, "Found cached entry for address %s: %s", address,
+           inet_ntoa(in));
+    return ent->addr;
+  }
+}
+static void client_dns_set_entry(const char *address, uint32_t val)
+{
+  struct client_dns_entry *ent;
+  struct client_dns_entry search;
+  struct in_addr in;
+  time_t now;
+
+  assert(address);
+  assert(val);
+
+  if (inet_aton(address, &in)) {
+    if (in.s_addr == val)
+      return;
+    in.s_addr = val;
+    log_fn(LOG_WARN, 
+        "Trying to store incompatible cached value %s for static address %s",
+        inet_ntoa(in), address);
+    return;
+  }
+  search.address = (char*) address;
+  now = time(NULL);
+  ent = SPLAY_FIND(client_dns_tree, &client_dns_root, &search);
+  if (ent) {
+    log_fn(LOG_DEBUG, "Updating entry for address %s", address);
+    ent->addr = val;
+    ent->expires = now+MAX_DNS_ENTRY_AGE;
+  } else {
+    in.s_addr = val;
+    log_fn(LOG_DEBUG, "Caching result for address %s: %s", address,
+           inet_ntoa(in));
+    ent = tor_malloc(sizeof(struct client_dns_entry));
+    ent->address = tor_strdup(address);
+    ent->addr = val;
+    ent->expires = now+MAX_DNS_ENTRY_AGE;
+    SPLAY_INSERT(client_dns_tree, &client_dns_root, ent);
+    ++client_dns_size;
+  }
+}
+static void client_dns_clean()
+{
+  struct client_dns_entry **expired_entries;
+  int n_expired_entries = 0;
+  struct client_dns_entry *ent;
+  time_t now;
+  int i;
+
+  expired_entries = tor_malloc(client_dns_size * 
+                               sizeof(struct client_dns_entry *));   
+  
+  now = time(NULL);
+  SPLAY_FOREACH(ent, client_dns_tree, &client_dns_root) {
+    if (ent->expires < now) {
+      expired_entries[n_expired_entries++] = ent;
+    }
+  }
+  for (i = 0; i < n_expired_entries; ++i) {
+    SPLAY_REMOVE(client_dns_tree, &client_dns_root, expired_entries[i]);
+    client_dns_entry_free(expired_entries[i]);
+  }
+  tor_free(expired_entries);
 }
 
 /*
@@ -744,4 +898,3 @@ void connection_exit_connect(connection_t *conn) {
   c-basic-offset:2
   End:
 */
-
