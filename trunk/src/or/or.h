@@ -902,7 +902,6 @@ typedef struct {
 
   struct config_line_t *DirServers; /**< List of configuration lines
                                      * for directory servers. */
-
 } or_options_t;
 
 /* XXX are these good enough defaults? */
@@ -1455,6 +1454,8 @@ int router_update_status_from_smartlist(routerinfo_t *r,
                                         time_t list_time,
                                         smartlist_t *running_list);
 void add_trusted_dir_server(const char *addr, uint16_t port,const char *digest);
+void clear_trusted_dir_servers(void);
+
 
 /********************************* routerparse.c ************************/
 
