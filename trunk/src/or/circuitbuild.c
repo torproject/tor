@@ -1016,7 +1016,6 @@ onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest)
 static int count_acceptable_routers(smartlist_t *routers) {
   int i, j, n;
   int num=0;
-  connection_t *conn;
   routerinfo_t *r, *r2;
 
   n = smartlist_len(routers);
@@ -1031,14 +1030,6 @@ static int count_acceptable_routers(smartlist_t *routers) {
     if(r->is_verified == 0) {
       log_fn(LOG_DEBUG,"Nope, the directory says %d is not verified.",i);
       goto next_i_loop; /* XXX008 */
-    }
-    if(clique_mode()) {
-      conn = connection_get_by_identity_digest(r->identity_digest,
-                                               CONN_TYPE_OR);
-      if(!conn || conn->state != OR_CONN_STATE_OPEN) {
-        log_fn(LOG_DEBUG,"Nope, %d is not connected.",i);
-        goto next_i_loop;
-      }
     }
     for(j=0;j<i;j++) {
       r2 = smartlist_get(routers, j);
