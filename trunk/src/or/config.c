@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.3  2002/07/03 16:53:34  montrose
+ * added error checking into getoptions()
+ *
  * Revision 1.2  2002/07/03 16:31:22  montrose
  * Added getoptions() and made minor adjustment to poptReadDefaultOptions()
  *
@@ -95,28 +98,34 @@ RETURN VALUE: 0 on success, non-zero on error
    bzero(options,sizeof(or_options_t));   /* zero out options initially */
 
    code = poptGetNextOpt(optCon);         /* first we handle command-line args */
-
-   if ( ConfigFile )                      /* handle user-specified config file if any */
+   if ( code == -1 )
    {
-      code = poptReadOptions(optCon,ConfigFile);
-      if ( code < -1 ) return code;
+      if ( ConfigFile )                   /* handle user-specified config file if any */
+         code = poptReadOptions(optCon,ConfigFile);
+      else                                /* load Default configuration files */
+         code = poptReadDefaultOptions(cmd,optCon);
+   
+      if ( Verbose )                      /* display options upon user request */
+      {
+         printf("\nLogLevel=%s\n",options->LogLevel);
+         printf("RouterFile=%s, PrivateKeyFile=%s\n",options->RouterFile,options->PrivateKeyFile);
+         printf("ORPort=%d, OPPort=%d, APPort=%d\n",options->ORPort,options->OPPort,options->APPort);
+         printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d\n\n",options->CoinWeight,options->MaxConn,options->TrafficShaping);
+      }
    }
-   else                                   /* load Default configuration files */
-   {
-      code = poptReadDefaultOptions(cmd,optCon);
-      if ( code < -1 ) return code;
-   }
 
-   if ( Verbose )                         /* display options upon user request */
+   switch(code)                           /* error checking */
    {
-      printf("\nLogLevel=%s\n",options->LogLevel);
-      printf("RouterFile=%s, PrivateKeyFile=%s\n",options->RouterFile,options->PrivateKeyFile);
-      printf("ORPort=%d, OPPort=%d, APPort=%d\n",options->ORPort,options->OPPort,options->APPort);
-      printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d\n\n",options->CoinWeight,options->MaxConn,options->TrafficShaping);
+   case INT_MIN:
+      fprintf(stderr, "%s: Unable to open configuration file.\n", ConfigFile);
+   case -1:
+      code = 0;
+   default:
+      fprintf(stderr, "%s: %s\n", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(code));
    }
 
    poptFreeContext(optCon);
 
-   return 0;
+   return code;
 }
 
