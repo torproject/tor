@@ -10,7 +10,7 @@ MSG_TYPE_GETCONF = 0x0003
 MSG_TYPE_AUTH    = 0x0007
 
 def parseHostAndPort(h):
-    host, port = "localhost", 9050
+    host, port = "localhost", 9051
     if ":" in h:
         i = h.index(":")
         host = h[:i]
