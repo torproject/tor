@@ -257,7 +257,6 @@ void connection_expire_held_open(void)
 
 int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
   struct sockaddr_in bindaddr; /* where to bind */
-  struct hostent *rent;
   connection_t *conn;
   int s; /* the socket we're going to make */
   int one=1;
@@ -265,14 +264,10 @@ int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
   memset(&bindaddr,0,sizeof(struct sockaddr_in));
   bindaddr.sin_family = AF_INET;
   bindaddr.sin_port = htons(bindport);
-  rent = gethostbyname(bindaddress);
-  if (!rent) {
+  if(tor_lookup_hostname(bindaddress, &(bindaddr.sin_addr.s_addr)) != 0) {
     log_fn(LOG_WARN,"Can't resolve BindAddress %s",bindaddress);
     return -1;
   }
-  if(rent->h_length != 4)
-    return -1; /* XXX complain */
-  memcpy(&(bindaddr.sin_addr.s_addr),rent->h_addr,rent->h_length);
 
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
