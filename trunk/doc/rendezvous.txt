@@ -1,22 +1,48 @@
-                  How to make rendezvous points work
-                               1-11Jun2003
+              How to make rendezvous points work with tor
 
 0. Overview
 
-   Rendezvous points are an implementation of server anonymity /
-   location-hidden servers in the onion routing network.  There are
-   three components needed for rendezvous points:
+   Rendezvous points are an implementation of location-hidden services
+   (server anonymity) in the onion routing network. Location-hidden
+   services means Bob can offer a tcp service (say, a webserver) via the
+   onion routing network, without revealing the IP of that service.
 
-   A) A means for the client ("Alice") to tell a server ("Bob") where
-      to contact her in order to establish a connection. (Introduction)
-   B) A means for Bob to contact Alice to actually establish the
-      connection, and for them to communicate later. (Meeting)
-   C) Necessary glue code so that Alice can view webpages on a
-      location-hidden webserver, and Bob can run a location-hidden
-      server with minimal invasive changes. (Application)
+   The basic idea is to provide censorship resistance for Bob by allowing
+   him to advertise a variety of onion routers as his public location
+   (nodes known as his Introduction Points, see Section 1). Alice,
+   the client, chooses a node known as a Meeting Point (see Section
+   2). This extra level of indirection is needed so Bob doesn't serve
+   files directly from his public locations (so these nodes don't open
+   themselves up to abuse, eg from serving Nazi propaganda in France). The
+   extra level of indirection also allows Bob to choose which requests
+   to respond to, and which to ignore.
 
-   We'll tackle these in order.  In all cases, we'll assume that both
-   Alice and Bob run local OPs.
+   We also provide the necessary glue code so that Alice can view webpages
+   on a location-hidden webserver, and Bob can run a location-hidden
+   server, with minimal invasive changes (see Section 3). Both Alice
+   and Bob must run local onion proxies (OPs).
+
+   The big picture follows. We direct the reader to the rest of the
+   document for more details and explanation.
+
+   1) Bob chooses some Introduction Points, and advertises them on a DHT.
+   2) Bob establishes onion routing connections to each of his
+      Introduction Points, and waits.
+   3) Alice learns about Bob's service out of band (perhaps Bob gave her
+      a pointer, or she found it on a website). She looks up the details
+      of Bob's service from the DHT.
+   4) Alice chooses and establishes a Meeting Point for this transaction.
+   5) Alice goes to one of Bob's Introduction Points, and gives it a blob
+      (encrypted for Bob) which tells him about herself and the Meeting
+      Point she chose.
+   6) IP sends the blob to Bob.
+   7) Bob chooses whether to ignore the blob, or to onion route to MP.
+   8) MP plugs together Alice and Bob. Note that MP doesn't know (or care)
+      who Alice is, or who Bob is; and it can't read anything they
+      transmit either, because they share a session key.
+   9) Alice sends a 'begin' cell along the circuit. It makes its way
+      to Bob's onion proxy. Bob's onion proxy connects to Bob's webserver.
+   10) Data goes back and forth as usual.
 
 1. Introduction service
 
@@ -27,11 +53,11 @@
 
    When establishing such an introduction point, Bob provides the onion
    router with a public "introduction" key.  The hash of this public
-   key uniquely identifies Bob, and prevents anybody else from
-   usurping Bob's introduction point in the future.  Additionally, Bob
-   can use the same public key to establish an introduction point on
-   another OR, and Alice can still be confident that Bob is the same
-   server.
+   key identifies a unique Bob, and (since Bob is required to sign his
+   messages) prevents anybody else from usurping Bob's introduction
+   point in the future.  Additionally, Bob can use the same public key
+   to establish an introduction point on another onion router (OR),
+   and Alice can still be confident that Bob is the same server.
 
    (The set-up-an-introduction-point command should come via a
    RELAY_BIND_INTRODUCTION cell. This cell creates a new stream on the
@@ -54,13 +80,12 @@
 [98 bytes] g^x part 1 (inside the RSA)
 [30 bytes] g^x part 2 (symmetrically encrypted)
 
-
    The meeting point and meeting cookie allow Bob to contact Alice and
-   prove his identity; the end-to-end authentication enables Bob to 
+   prove his identity; the end-to-end authentication enables Bob to
    decide whether to talk to Alice; the initial authentication enables
-   the meeting point to pre-screen introduction requests before
-   sending them to Bob.  (See 3 for a discussion of meeting points;
-   see 2.1 for a proposed authentication mechanism.)
+   the meeting point to pre-screen introduction requests before sending
+   them to Bob.  (See Section 2 for a discussion of meeting points;
+   see Section 1.1 for an example authentication mechanism.)
 
    The authentication steps are the appropriate places for the
    introduction server or Bob to do replay prevention, if desired.
@@ -81,6 +106,10 @@
    value to be used twice.  Over time, Bob rotates SB and SN.
 
    [Maybe] Each 'A' has an expiration time built in to it.
+
+   In reality, we'll want to pick a scheme that (a) wasn't invented from
+   scratch in an evening, and (b) doesn't require Alice to remember this
+   many bits (see section 3.2).
 
 2. Meeting points
 
@@ -130,21 +159,23 @@
    We assume the existence of a robust decentralized efficient lookup
    system (call it "DHT"). Bob publishes
      * Bob's Public Key for that service
-     * Timestamp
+     * Expiration date ("don't use after")
      * Introduction server 0 ... Introduction server N
      (All signed by Bob's Public Key)
    into DHT, indexed by the hash of Bob's Public Key. Bob should
    periodically republish his introduction information with a new
-   timestamp (and possibly with new/different introduction servers if
-   he wants), so Alice can trust that DHT is giving her an up-to-date
-   version.
+   expiration date (and possibly with new/different introduction servers
+   if he wants), so Alice can trust that DHT is giving her an up-to-date
+   version. The Chord CFS paper describes a sample DHT that allows
+   authenticated updating.
 
 3.2. Application interface: client side
 
    We require that the client interface remain a SOCKS proxy, and we
    require that Alice shouldn't have to modify her applications. Thus
-   we encode all of the necessary information into the hostname that
-   Alice uses (eg when clicking on a url in her browser, etc).
+   we encode all of the necessary information into the hostname (more
+   correctly, fqdn) that Alice uses, eg when clicking on a url in her
+   browser.
 
    To establish a connection to Bob, Alice needs to know an Introduction
    point, Bob's PK, and some authentication cookie. Because encoding this
@@ -161,7 +192,6 @@
    13 characters.
 
    Alice's onion proxy examines hostnames and recognizes when they're
-   destined for a hidden server. If so, it decodes the PK, looks it up in
-   the DHT, chooses and connects to a meeting place, chooses and connects
-   to one of Bob's introduction servers, and then waits to hear from Bob.
+   destined for a hidden server. If so, it decodes the PK and performs
+   the steps in Section 0 above.
 
