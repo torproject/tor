@@ -11,6 +11,7 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
 static connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction);
 static void circuit_free_cpath_node(crypt_path_t *victim);
 static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type);
+static void circuit_rep_hist_note_result(circuit_t *circ);
 
 unsigned long stats_n_relay_cells_relayed = 0;
 unsigned long stats_n_relay_cells_delivered = 0;
@@ -698,6 +699,12 @@ int _circuit_mark_for_close(circuit_t *circ) {
   if(circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
     onion_pending_remove(circ);
   }
+  /* If the circuit ever became OPEN, we sent it to the reputation history
+   * module then.  If it isn't OPEN, we send it there now to remember which
+   * links worked and which didn't.
+   */
+  if (circ->state != CIRCUIT_STATE_OPEN)
+    circuit_rep_hist_note_result(circ);
 
   if(circ->n_conn)
     connection_send_destroy(circ->n_circ_id, circ->n_conn);
@@ -812,6 +819,40 @@ void circuit_log_path(int severity, circuit_t *circ) {
     hop=hop->next;
   } while(hop!=circ->cpath);
   log_fn(severity,"%s",buf);
+}
+
+/* Tell the rep(utation)hist(ory) module about the status of the links
+ * in circ.  Hops that have become OPEN are marked as successfully
+ * extended; the _first_ hop that isn't open (if any) is marked as
+ * unable to extend.
+ */
+static void
+circuit_rep_hist_note_result(circuit_t *circ)
+{
+  struct crypt_path_t *hop;
+  char *prev_nickname = NULL;
+  routerinfo_t *router;
+  hop = circ->cpath;
+  if (options.ORPort) {
+    prev_nickname = options.Nickname;
+  }
+  do {
+    router = router_get_by_addr_port(hop->addr,hop->port);
+    if (router) {
+      if (prev_nickname) {
+        if (hop->state == CPATH_STATE_OPEN)
+          rep_hist_note_extend_succeeded(prev_nickname, router->nickname);
+        else {
+          rep_hist_note_extend_failed(prev_nickname, router->nickname);
+          break;
+        }
+      }
+      prev_nickname = router->nickname;
+    } else {
+      prev_nickname = NULL;
+    }
+    hop=hop->next;
+  } while (hop!=circ->cpath);
 }
 
 static void
@@ -1179,6 +1220,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
     log_fn(LOG_WARN,"Tor has successfully opened a circuit. Looks like it's working.");
   }
   circuit_log_path(LOG_INFO,circ);
+  circuit_rep_hist_note_result(circ);
   return 0;
 }
 

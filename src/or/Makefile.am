@@ -14,7 +14,7 @@ tor_LDADD = ../common/libor.a
 test_SOURCES = buffers.c circuit.c command.c connection.c \
              connection_or.c config.c dirserv.c \
              onion.c router.c routerlist.c directory.c dns.c connection_edge.c \
-             cpuworker.c main.c test.c
+             rephist.c cpuworker.c main.c test.c
 
 test_LDADD = ../common/libor.a
 

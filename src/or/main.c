@@ -291,7 +291,7 @@ static void run_connection_housekeeping(int i, time_t now) {
       log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
              i,conn->address, conn->port);
       /* flush anything waiting, e.g. a destroy for a just-expired circ */
-      connection_mark_for_close(conn,0);
+      connection_mark_for_close(conn,CLOSE_REASON_UNUSED_OR_CONN);
       conn->hold_open_until_flushed = 1;
     } else {
       /* either a full router, or we've got a circuit. send a padding cell. */
@@ -528,6 +528,9 @@ static int do_main_loop(void) {
     return -1;
   }
 
+  /* Initialize the history structures. */
+  rep_hist_init();
+
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */
   if (init_keys() < 0) {
@@ -679,6 +682,8 @@ static void dumpstats(int severity) {
   if (stats_n_seconds_reading)
     log(severity,"Average bandwidth used: %d bytes/sec",
            (int) (stats_n_bytes_read/stats_n_seconds_reading));
+
+  rep_hist_dump_stats(now,severity);
 }
 
 int network_init(void)
