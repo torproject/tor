@@ -817,8 +817,9 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
       /* is one already on the way? */
       circ = circuit_launch_new(desired_circuit_purpose, NULL);
       /* depending on purpose, store stuff into circ */
-      if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL ||
-          desired_circuit_purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
+      if(circ &&
+         (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+          desired_circuit_purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND)) {
         /* then write the service_id into circ */
         strcpy(circ->rend_query, conn->rend_query);
       }
@@ -964,6 +965,7 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   }
 
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+  conn->purpose = AP_PURPOSE_GENERAL;
   connection_start_reading(conn);
 
   /* attaching to a dirty circuit is fine */

@@ -334,7 +334,7 @@ circuit_t *circuit_get_newest(connection_t *conn,
  * the list.
  */
 circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
-                                         const char *digest, int purpose)
+                                         const char *digest, uint8_t purpose)
 {
   circuit_t *circ;
   if (start == NULL)

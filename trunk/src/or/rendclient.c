@@ -9,7 +9,7 @@ void
 rend_client_introcirc_is_ready(connection_t *apconn, circuit_t *circ)
 {
 
-
+  log_fn(LOG_WARN,"introcirc is ready");
 }
 
 /* send the rendezvous cell */
@@ -18,6 +18,7 @@ rend_client_rendcirc_is_ready(connection_t *apconn, circuit_t *circ)
 {
 
 
+  log_fn(LOG_WARN,"rendcirc is ready");
 }
 
 /* bob sent us a rendezvous cell, join the circs. */
