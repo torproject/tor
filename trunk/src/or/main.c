@@ -11,7 +11,6 @@ static int init_from_config(int argc, char **argv);
 
 /********* START VARIABLES **********/
 
-extern char *conn_type_to_string[];
 extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 or_options_t options; /* command-line and config-file options */
@@ -281,23 +280,6 @@ static void run_connection_housekeeping(int i, time_t now) {
   cell_t cell;
   connection_t *conn = connection_array[i];
 
-  if(connection_receiver_bucket_should_increase(conn)) {
-    conn->receiver_bucket += conn->bandwidth;
-    //        log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i, conn->receiver_bucket);
-  }
-
-  if(conn->wants_to_read == 1 /* it's marked to turn reading back on now */
-     && global_read_bucket > 0 /* and we're allowed to read */
-     && (!connection_speaks_cells(conn) || conn->receiver_bucket > 0)) {
-    /* and either a non-cell conn or a cell conn with non-empty bucket */
-    conn->wants_to_read = 0;
-    connection_start_reading(conn);
-    if(conn->wants_to_write == 1) {
-      conn->wants_to_write = 0;
-      connection_start_writing(conn);
-    }
-  }
-
   /* check connections to see whether we should send a keepalive, expire, or wait */
   if(!connection_speaks_cells(conn))
     return;
@@ -397,16 +379,6 @@ static void run_scheduled_events(time_t now) {
     }
   }
 
-  /* 4. Every second, we check how much bandwidth we've consumed and
-   *    increment global_read_bucket.
-   */
-  stats_n_bytes_read += stats_prev_global_read_bucket-global_read_bucket;
-  if(global_read_bucket < options.BandwidthBurst) {
-    global_read_bucket += options.BandwidthRate;
-    log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
-  }
-  stats_prev_global_read_bucket = global_read_bucket;
-
   /* 5. We do housekeeping for each connection... */
   for(i=0;i<nfds;i++) {
     run_connection_housekeeping(i, now);
@@ -432,6 +404,12 @@ static int prepare_for_poll(void) {
   int i;
 
   tor_gettimeofday(&now);
+
+  /* Check how much bandwidth we've consumed,
+   * and increment the token buckets. */
+  stats_n_bytes_read += stats_prev_global_read_bucket-global_read_bucket;
+  connection_bucket_refill(&now);
+  stats_prev_global_read_bucket = global_read_bucket;
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
@@ -486,7 +464,7 @@ static int init_from_config(int argc, char **argv) {
     log_fn(LOG_DEBUG, "Successfully opened DebugLogFile '%s'.", options.DebugLogFile);
   }
 
-  global_read_bucket = options.BandwidthBurst; /* start it at max traffic */
+  connection_bucket_init();
   stats_prev_global_read_bucket = global_read_bucket;
 
   if(options.RunAsDaemon) {
