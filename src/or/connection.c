@@ -440,7 +440,7 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
 #ifndef MS_WINDOWS
   /* REUSEADDR on normal places means you can rebind to the port
    * right after somebody else has let it go. But REUSEADDR on win32
-   * means to let you bind to the port _even when somebody else
+   * means you can bind to the port _even when somebody else
    * already has it bound_. So, don't do that on Win32. */
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one, sizeof(one));
 #endif
@@ -1223,7 +1223,7 @@ void connection_write_to_buf(const char *string, size_t len, connection_t *conn)
 
 /** Return the conn to addr/port that has the most recent
  * timestamp_created, or NULL if no such conn exists. */
-connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
+connection_t *connection_or_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
   int i, n;
   connection_t *conn, *best=NULL;
   connection_t **carray;
@@ -1231,7 +1231,10 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
   get_connection_array(&carray,&n);
   for (i=0;i<n;i++) {
     conn = carray[i];
-    if (conn->addr == addr && conn->port == port && !conn->marked_for_close &&
+    if (conn->type == CONN_TYPE_OR &&
+        conn->addr == addr &&
+        conn->port == port &&
+        !conn->marked_for_close &&
         (!best || best->timestamp_created < conn->timestamp_created))
       best = conn;
   }

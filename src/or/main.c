@@ -838,17 +838,6 @@ static void second_elapsed_callback(int fd, short event, void *args)
 
   current_second = now.tv_sec; /* remember which second it is, for next time */
 
-#if 0
-  for (i=0;i<nfds;i++) {
-    conn = connection_array[i];
-    if (connection_has_pending_tls_data(conn) &&
-        connection_is_reading(conn)) {
-      log_fn(LOG_DEBUG,"sock %d has pending bytes.",conn->s);
-      return; /* has pending bytes to read; don't let poll wait. */
-    }
-  }
-#endif
-
   if (evtimer_add(timeout_event, &one_second))
     log_fn(LOG_ERR,
            "Error from libevent when setting one-second timeout event");
