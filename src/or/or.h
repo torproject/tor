@@ -148,19 +148,20 @@
 #define EXIT_CONN_STATE_RESOLVING 1 /* waiting for response from dns farm */
 #define EXIT_CONN_STATE_CONNECTING 2 /* waiting for connect() to finish */
 #define EXIT_CONN_STATE_OPEN 3
-#define _EXIT_CONN_STATE_MAX 3
+#define EXIT_CONN_STATE_RESOLVEFAILED 4 /* waiting to be remoed*/
+#define _EXIT_CONN_STATE_MAX 4
 #if 0
 #define EXIT_CONN_STATE_CLOSE 3 /* flushing the buffer, then will close */
 #define EXIT_CONN_STATE_CLOSE_WAIT 4 /* have sent a destroy, awaiting a confirmation */
 #endif
 
 /* the AP state values must be disjoint from the EXIT state values */
-#define _AP_CONN_STATE_MIN 4
-#define AP_CONN_STATE_SOCKS_WAIT 4
-#define AP_CONN_STATE_CIRCUIT_WAIT 5
-#define AP_CONN_STATE_CONNECTING 6
-#define AP_CONN_STATE_OPEN 7
-#define _AP_CONN_STATE_MAX 7
+#define _AP_CONN_STATE_MIN 5
+#define AP_CONN_STATE_SOCKS_WAIT 5
+#define AP_CONN_STATE_CIRCUIT_WAIT 6
+#define AP_CONN_STATE_CONNECTING 7
+#define AP_CONN_STATE_OPEN 8
+#define _AP_CONN_STATE_MAX 8
 
 #define _DIR_CONN_STATE_MIN 1
 #define DIR_CONN_STATE_CONNECTING_FETCH 1
