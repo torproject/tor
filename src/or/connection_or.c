@@ -339,7 +339,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   conn->state = OR_CONN_STATE_OPEN;
   connection_watch_events(conn, POLLIN);
   log_fn(LOG_DEBUG,"tls handshake done. verifying.");
-  if (! tor_tls_peer_has_cert(conn->tls)) { /* It's an OP. */
+  if (! tor_tls_peer_has_cert(conn->tls)) { /* It's an old OP. */
     if (server_mode(options)) { /* I'm an OR; good. */
       conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
       return 0;
@@ -348,7 +348,7 @@ connection_tls_finish_handshake(connection_t *conn) {
       return -1;
     }
   }
-  /* Okay; the other side is an OR. */
+  /* Okay; the other side is an OR or a post-0.0.8 OP (with a cert). */
   if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, MAX_NICKNAME_LEN)) {
     log_fn(LOG_WARN,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
            conn->address, conn->port);
@@ -365,6 +365,12 @@ connection_tls_finish_handshake(connection_t *conn) {
   log_fn(LOG_DEBUG,"The router's cert is valid.");
   crypto_pk_get_digest(identity_rcvd, digest_rcvd);
   crypto_free_pk_env(identity_rcvd);
+
+  if (crypto_pk_cmp_keys(get_identity_key(), identity_rcvd)<0) {
+    conn->circ_id_type = CIRC_ID_TYPE_LOWER;
+  } else {
+    conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
+  }
 
   router = router_get_by_nickname(nickname);
   if(router && /* we know this nickname */
@@ -394,6 +400,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   if (!server_mode(options)) { /* If I'm an OP... */
     conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
   }
+
   directory_set_dirty();
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
   /* Note the success */
