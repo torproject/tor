@@ -11,10 +11,7 @@
 #include "compat.h"
 
 #ifdef MS_WINDOWS
-#include <io.h>
 #include <process.h>
-#include <direct.h>
-#include <windows.h>
 #endif
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
