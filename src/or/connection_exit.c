@@ -135,20 +135,20 @@ int connection_exit_send_connected(connection_t *conn) {
 
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   connection_t *n_conn;
-  char *comma;
+  char *colon;
 
   if(!memchr(cell->payload + TOPIC_HEADER_SIZE,0,cell->length - TOPIC_HEADER_SIZE)) {
     log(LOG_WARNING,"connection_exit_begin_conn(): topic begin cell has no \\0. Dropping.");
     return 0;
   }
-  comma = strchr(cell->payload + TOPIC_HEADER_SIZE, ',');
-  if(!comma) {
-    log(LOG_WARNING,"connection_exit_begin_conn(): topic begin cell has no comma. Dropping.");
+  colon = strchr(cell->payload + TOPIC_HEADER_SIZE, ':');
+  if(!colon) {
+    log(LOG_WARNING,"connection_exit_begin_conn(): topic begin cell has no colon. Dropping.");
     return 0;
   }
-  *comma = 0;
+  *colon = 0;
 
-  if(!atoi(comma+1)) { /* bad port */
+  if(!atoi(colon+1)) { /* bad port */
     log(LOG_DEBUG,"connection_exit_begin_conn(): topic begin cell has invalid port. Dropping.");
     return 0;
   }
@@ -164,7 +164,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   n_conn->topic_id = ntohs(*(uint16_t *)(cell->payload+2));
 
   n_conn->address = strdup(cell->payload + TOPIC_HEADER_SIZE);
-  n_conn->port = atoi(comma+1);
+  n_conn->port = atoi(colon+1);
   n_conn->state = EXIT_CONN_STATE_RESOLVING;
   n_conn->receiver_bucket = -1; /* edge connections don't do receiver buckets */
   n_conn->bandwidth = -1;
