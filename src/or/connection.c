@@ -80,8 +80,10 @@ connection_t *connection_new(int type) {
   memset(conn,0,sizeof(connection_t)); /* zero it out to start */
 
   conn->type = type;
-  conn->inbuf = buf_new();
-  conn->outbuf = buf_new();
+  if(!connection_is_listener(conn)) { /* listeners never use their buf */
+    conn->inbuf = buf_new();
+    conn->outbuf = buf_new();
+  }
 
   conn->timestamp_created = now;
   conn->timestamp_lastread = now;
@@ -93,8 +95,10 @@ connection_t *connection_new(int type) {
 void connection_free(connection_t *conn) {
   assert(conn);
 
-  buf_free(conn->inbuf);
-  buf_free(conn->outbuf);
+  if(!connection_is_listener(conn)) {
+    buf_free(conn->inbuf);
+    buf_free(conn->outbuf);
+  }
   if(conn->address)
     free(conn->address);
 
