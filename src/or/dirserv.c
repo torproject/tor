@@ -618,6 +618,14 @@ size_t dirserv_get_directory(const char **directory)
   return the_directory_len;
 }
 
+/** Set *<b>rr</b> to the most recently generated encoded signed
+ * running-routers list, generating a new one as necessary. */
+size_t dirserv_get_runningrouters(const char **rr)
+{
+  /* XXX008 fill in this function */
+  return 0;
+}
+
 /*
   Local Variables:
   mode:c

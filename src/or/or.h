@@ -241,20 +241,23 @@
 #define _DIR_PURPOSE_MIN 1
 /** Purpose for connection to directory server: download a directory. */
 #define DIR_PURPOSE_FETCH_DIR 1
+/** Purpose for connection to directory server: download just the list
+ * of running routers. */
+#define DIR_PURPOSE_FETCH_RUNNING_LIST 2
 /** Purpose for connection to directory server: download a rendezvous
  * descriptor. */
-#define DIR_PURPOSE_FETCH_RENDDESC 2
+#define DIR_PURPOSE_FETCH_RENDDESC 3
 /** Purpose for connection to directory server: set after a rendezvous
  * descriptor is downloaded. */
-#define DIR_PURPOSE_HAS_FETCHED_RENDDESC 3
+#define DIR_PURPOSE_HAS_FETCHED_RENDDESC 4
 /** Purpose for connection to directory server: upload a server descriptor. */
-#define DIR_PURPOSE_UPLOAD_DIR 4
+#define DIR_PURPOSE_UPLOAD_DIR 5
 /** Purpose for connection to directory server: upload a rendezvous
  * descriptor. */
-#define DIR_PURPOSE_UPLOAD_RENDDESC 5
+#define DIR_PURPOSE_UPLOAD_RENDDESC 6
 /** Purpose for connection at a directory server. */
-#define DIR_PURPOSE_SERVER 6
-#define _DIR_PURPOSE_MAX 6
+#define DIR_PURPOSE_SERVER 7
+#define _DIR_PURPOSE_MAX 7
 
 /** Circuit state: I'm the OP, still haven't done all my handshakes. */
 #define CIRCUIT_STATE_BUILDING 0
@@ -1107,11 +1110,12 @@ void dirserv_free_fingerprint_list();
 int dirserv_add_descriptor(const char **desc);
 int dirserv_init_from_directory_string(const char *dir);
 void dirserv_free_descriptors();
+void dirserv_remove_old_servers(void);
 int dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
                                      crypto_pk_env_t *private_key);
 void directory_set_dirty(void);
 size_t dirserv_get_directory(const char **cp);
-void dirserv_remove_old_servers(void);
+size_t dirserv_get_runningrouters(const char **rr);
 
 /********************************* dns.c ***************************/
 
