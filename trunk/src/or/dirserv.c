@@ -392,7 +392,7 @@ dirserv_add_descriptor(const char **desc, const char **msg)
     /* if so, decide whether to update it. */
     if (ri_old->published_on >= ri->published_on) {
       /* We already have a newer or equal-time descriptor */
-      log_fn(LOG_INFO,"We already have a new enough desc for sever %s (nickname '%s'). Not adding.",hex_digest,ri->nickname);
+      log_fn(LOG_INFO,"We already have a new enough desc for server %s (nickname '%s'). Not adding.",hex_digest,ri->nickname);
       *msg = "We already have a newer descriptor.";
       /* This isn't really an error; return success. */
       routerinfo_free(ri);
