@@ -481,7 +481,9 @@ static int do_main_loop(void) {
         /* no need to provide argc/v, they've been cached inside init_from_config */
         exit(1);
       }
-
+      if(options.ORPort) {
+        router_retry_connections();
+      }
       if(options.DirPort) {
         /* reload the fingerprint file */
         char keydir[512];
@@ -489,11 +491,6 @@ static int do_main_loop(void) {
         log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
         if(dirserv_parse_fingerprint_file(keydir) < 0) {
           log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
-        }
-
-        /* XXX do we really want to be resetting the routerlist here? */
-        if(router_set_routerlist_from_file(options.RouterFile) < 0) {
-          log(LOG_WARN,"Error reloading router list. Continuing with old list.");
         }
       } else {
         /* fetch a new directory */
