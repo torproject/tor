@@ -513,7 +513,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   log_fn(LOG_DEBUG,"Chose router %s for hop %d (exit is %s)",
          choice->nickname, cur_len, state->chosen_exit);
 
-  hop = (crypt_path_t *)tor_malloc_zero(sizeof(crypt_path_t));
+  hop = tor_malloc_zero(sizeof(crypt_path_t));
 
   /* link hop into the cpath, at the end. */
   onion_append_to_cpath(head_ptr, hop);
@@ -568,7 +568,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   pkbytes = crypto_pk_keysize(dest_router_key);
   assert(dhbytes == 128);
   assert(pkbytes == 128);
-  challenge = (char *)tor_malloc_zero(ONIONSKIN_CHALLENGE_LEN-CIPHER_KEY_LEN);
+  challenge = tor_malloc_zero(ONIONSKIN_CHALLENGE_LEN-CIPHER_KEY_LEN);
 
   if (crypto_dh_get_public(dh, challenge, dhbytes))
     goto err;

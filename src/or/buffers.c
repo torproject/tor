@@ -119,9 +119,9 @@ int find_on_inbuf(char *string, int string_len, buf_t *buf) {
  */
 buf_t *buf_new_with_capacity(size_t size) {
   buf_t *buf;
-  buf = (buf_t*)tor_malloc(sizeof(buf_t));
+  buf = tor_malloc(sizeof(buf_t));
   buf->magic = BUFFER_MAGIC;
-  buf->mem = (char *)tor_malloc(size);
+  buf->mem = tor_malloc(size);
   buf->len = size;
   buf->datalen = 0;
 //  memset(buf->mem,0,size);
