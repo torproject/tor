@@ -758,7 +758,7 @@ static void add_single_log(struct config_line_t *level_opt,
     log_fn(LOG_NOTICE, "Successfully opened LogFile '%s', redirecting output.",
            file_opt->value);
   } else if (!isDaemon) {
-    add_stream_log(levelMin, levelMax, "<stderr>", stderr);
+    add_stream_log(levelMin, levelMax, "<stdout>", stdout);
   }
 }
 
@@ -789,7 +789,7 @@ void config_init_logs(or_options_t *options)
       log_fn(LOG_WARN, "Two LogLevel options in a row without intervening LogFile");
       opt = opt->next;
     } else {
-      assert(!strcasecmp(opt->key, "LogFile"));
+      tor_assert(!strcasecmp(opt->key, "LogFile"));
       if (opt->next && !strcasecmp(opt->next->key, "LogLevel")) {
         /* LogFile followed by LogLevel */
         add_single_log(opt->next, opt, options->RunAsDaemon);
