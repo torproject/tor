@@ -117,8 +117,6 @@ void connection_free(connection_t *conn) {
     free(conn->address);
   if(conn->dest_addr)
     free(conn->dest_addr);
-  if(conn->dest_port)
-    free(conn->dest_port);
 
   if(connection_speaks_cells(conn)) {
     if (conn->f_crypto)

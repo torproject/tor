@@ -5,6 +5,7 @@
 #include "or.h"
 
 extern int global_role; /* from main.c */
+static const char socks_userid[] = "anonymous";
 
 int connection_ap_process_inbuf(connection_t *conn) {
 
@@ -19,8 +20,8 @@ int connection_ap_process_inbuf(connection_t *conn) {
 //  log(LOG_DEBUG,"connection_ap_process_inbuf(): state %d.",conn->state);
 
   switch(conn->state) {
-    case AP_CONN_STATE_SS_WAIT:
-      return ap_handshake_process_ss(conn);
+    case AP_CONN_STATE_SOCKS_WAIT:
+      return ap_handshake_process_socks(conn);
     case AP_CONN_STATE_OPEN:
       return connection_package_raw_inbuf(conn);
     default:
@@ -30,107 +31,91 @@ int connection_ap_process_inbuf(connection_t *conn) {
   return 0;
 }
 
-int ap_handshake_process_ss(connection_t *conn) {
-  uint16_t len;
+int ap_handshake_process_socks(connection_t *conn) {
+  char c;
+  socks4_t socks4_info; 
+  static char destaddr[512]; /* XXX there's a race condition waiting to happen here */
+  static int destlen=0;
 
   assert(conn);
 
-  log(LOG_DEBUG,"ap_handshake_process_ss() entered.");
+  log(LOG_DEBUG,"ap_handshake_process_socks() entered.");
 
-  if(!conn->ss_received) { /* try to pull it in */
+  if(!conn->socks_version) { /* try to pull it in */
 
-    if(conn->inbuf_datalen < sizeof(ss_t)) /* entire ss available? */
+    if(conn->inbuf_datalen < sizeof(socks4_t)) /* basic info available? */
       return 0; /* not yet */
 
-    if(connection_fetch_from_buf((char *)&conn->ss,sizeof(ss_t),conn) < 0)
+    if(connection_fetch_from_buf((char *)&socks4_info,sizeof(socks4_t),conn) < 0)
       return -1;
 
-    conn->ss_received = sizeof(ss_t);
-    log(LOG_DEBUG,"ap_handshake_process_ss(): Successfully read ss.");
+    log(LOG_DEBUG,"ap_handshake_process_socks(): Successfully read socks info.");
 
-    if ((conn->ss.version == 0) || (conn->ss.version != OR_VERSION)) { /* unsupported version */
-      log(LOG_NOTICE,"ap_handshake_process_ss(): ss: Unsupported version '%c'.",conn->ss.version);
-      if(tolower(conn->ss.version) == 'g') {
-        log(LOG_NOTICE,"ap_handshake_process_ss(): are you using the onion proxy as a web proxy?");
-      }
+    if(socks4_info.version != 4) {
+      log(LOG_NOTICE,"ap_handshake_process_socks(): Unrecognized version %d.",socks4_info.version);
+      ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
       return -1;
     }
-    if (conn->ss.addr_fmt != SS_ADDR_FMT_ASCII_HOST_PORT) { /* unrecognized address format */
-      log(LOG_DEBUG,"ap_handshake_process_ss(): ss: Unrecognized address format.");
+    conn->socks_version = socks4_info.version;
+
+    if(socks4_info.command != 1) { /* not a connect? we don't support it. */
+      log(LOG_NOTICE,"ap_handshake_process_socks(): command %d not '1'.",socks4_info.command);
+      ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
       return -1;
+    }
+
+    conn->dest_port = ntohs(*(uint16_t*)&socks4_info.destport);
+    if(!conn->dest_port) {
+      log(LOG_NOTICE,"ap_handshake_process_socks(): Port is zero.");
+      ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
+      return -1;
+    }
+    log(LOG_NOTICE,"ap_handshake_process_socks(): Dest port is %d.",conn->dest_port);
+
+    if(socks4_info.destip[0] || 
+       socks4_info.destip[1] ||
+       socks4_info.destip[2] ||
+       !socks4_info.destip[3]) { /* must be in form 0.0.0.x, at least for now */
+      log(LOG_NOTICE,"ap_handshake_process_socks(): destip not in form 0.0.0.x.");
+      ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
+      return -1;
+    }
+    log(LOG_DEBUG,"ap_handshake_process_socks(): Successfully read destip (0.0.0.x.)");
+
+  }
+
+  if(!conn->read_username) { /* the socks spec says we've got to read stuff until we get a null */
+    while(conn->inbuf_datalen) {
+      if(connection_fetch_from_buf((char *)&c,1,conn) < 0)
+        return -1;
+      if(!c) {
+        conn->read_username = 1;
+        log(LOG_DEBUG,"ap_handshake_process_socks(): Successfully read username.");
+        break;
+      }
     }
   }
 
   if(!conn->dest_addr) { /* no dest_addr found yet */
 
-    if(conn->inbuf_datalen < sizeof(uint16_t))
-      return 0; /* not yet */
-
-    if(connection_fetch_from_buf((char *)&len,sizeof(uint16_t),conn) < 0)
-      return -1;
-
-    len = ntohs(len);
-    if(len > 512) {
-      log(LOG_DEBUG,"ap_handshake_process_ss(): Addr length %d too high.",len);
-      return -1;
+    while(conn->inbuf_datalen) {
+      if(connection_fetch_from_buf((char *)&c,1,conn) < 0)
+        return -1;
+      destaddr[destlen++] = c;
+      if(destlen > 500) {
+        log(LOG_NOTICE,"ap_handshake_process_socks(): dest_addr too long!");
+        ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
+        destlen = 0;
+        return -1;
+      }
+      if(!c) { /* we found the null; we're done */
+        conn->dest_addr = strdup(destaddr);
+        destlen = 0;
+        log(LOG_NOTICE,"ap_handshake_process_socks(): successfully read dest addr '%s'",
+          conn->dest_addr);
+        break;
+      }
     }
-
-    conn->dest_addr = malloc(len+1);
-    if(!conn->dest_addr) {
-      log(LOG_DEBUG,"ap_handshake_process_ss(): Addr malloc failed");
-      return -1;
-    }
-
-    conn->dest_addr[len] = 0; /* null terminate it */
-    conn->dest_addr_len = len;
-    log(LOG_DEBUG,"Preparing a dest_addr of %d+1 bytes.",len);
-  }
-  if(conn->dest_addr_len != conn->dest_addr_received) { /* try to fetch it all in */
-
-    if(conn->inbuf_datalen < conn->dest_addr_len)
-      return 0; /* not yet */
-
-    if(connection_fetch_from_buf(conn->dest_addr,conn->dest_addr_len,conn) < 0)
-      return -1;
-    log(LOG_DEBUG,"ap_handshake_process_ss(): Read dest_addr '%s'.",conn->dest_addr);
-
-    conn->dest_addr_received = conn->dest_addr_len;
-  }
-  /* now do the same thing for port */
-  if(!conn->dest_port) { /* no dest_port found yet */
-
-    if(conn->inbuf_datalen < sizeof(uint16_t))
-      return 0; /* not yet */
-
-    if(connection_fetch_from_buf((char *)&len,sizeof(uint16_t),conn) < 0)
-      return -1;
-
-    len = ntohs(len);
-    if(len > 10) {
-      log(LOG_DEBUG,"ap_handshake_process_ss(): Port length %d too high.",len);
-      return -1;
-    }
-
-    conn->dest_port = malloc(len+1);
-    if(!conn->dest_port) {
-      log(LOG_DEBUG,"ap_handshake_process_ss(): Port malloc failed");
-      return -1;
-    }
-
-    conn->dest_port[len] = 0; /* null terminate it */
-    conn->dest_port_len = len;
-    log(LOG_DEBUG,"Preparing a dest_port of %d+1 bytes.",len);
-  }
-  if(conn->dest_port_len != conn->dest_port_received) { /* try to fetch it all in */
-
-    if(conn->inbuf_datalen < conn->dest_port_len)
-      return 0; /* not yet */
-
-    if(connection_fetch_from_buf(conn->dest_port,conn->dest_port_len,conn) < 0)
-      return -1;
-    log(LOG_DEBUG,"ap_handshake_process_ss(): Read dest_port '%s'.",conn->dest_port);
-
-    conn->dest_port_received = conn->dest_port_len;
   }
 
   /* now we're all ready to make an onion, etc */
@@ -291,6 +276,7 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit
   }
   free(tmpbuf);
 
+#if 0
   /* deliver the ss in a data cell */
   cell.command = CELL_DATA;
   cell.aci = circ->n_aci;
@@ -302,12 +288,13 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit
     circuit_close(circ);
     return -1;
   }
+#endif
 
   /* deliver the dest_addr in a data cell */
   cell.command = CELL_DATA;
   cell.aci = circ->n_aci;
-  cell.length = ap_conn->dest_addr_len+1;
-  strncpy(cell.payload, ap_conn->dest_addr, ap_conn->dest_addr_len+1);
+  strncpy(cell.payload, ap_conn->dest_addr, CELL_PAYLOAD_SIZE);
+  cell.length = strlen(cell.payload)+1;
   log(LOG_DEBUG,"ap_handshake_send_onion(): Sending a data cell for addr...");
   if(circuit_deliver_data_cell(&cell, circ, circ->n_conn, 'e') < 0) {
     log(LOG_DEBUG,"ap_handshake_send_onion(): failed to deliver addr cell. Closing.");
@@ -318,8 +305,8 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit
   /* deliver the dest_port in a data cell */
   cell.command = CELL_DATA;
   cell.aci = circ->n_aci;
-  cell.length = ap_conn->dest_port_len+1;
-  strncpy(cell.payload, ap_conn->dest_port, ap_conn->dest_port_len+1);
+  snprintf(cell.payload, CELL_PAYLOAD_SIZE, "%d", ap_conn->dest_port);
+  cell.length = strlen(cell.payload)+1;
   log(LOG_DEBUG,"ap_handshake_send_onion(): Sending a data cell for port...");
   if(circuit_deliver_data_cell(&cell, circ, circ->n_conn, 'e') < 0) {
     log(LOG_DEBUG,"ap_handshake_send_onion(): failed to deliver port cell. Closing.");
@@ -336,13 +323,24 @@ int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit
   return 0;
 }
 
-int connection_ap_send_connected(connection_t *conn) {
-  char zero=0;
+int ap_handshake_socks_reply(connection_t *conn, char result) {
+  socks4_t socks4_info; 
 
   assert(conn);
 
-  /* give the AP a "0" byte, because it wants to hear that we've connected */
-  return connection_write_to_buf(&zero, 1, conn);
+  socks4_info.version = 4;
+  socks4_info.command = result;
+  socks4_info.destport[0] = socks4_info.destport[1] = 0;
+  socks4_info.destip[0] = socks4_info.destip[1] = socks4_info.destip[2] = socks4_info.destip[3] = 0;
+
+  connection_write_to_buf((char *)&socks4_info, sizeof(socks4_t), conn); 
+  return connection_flush_buf(conn); /* try to flush it, in case we're about to close the conn */
+}
+
+int connection_ap_send_connected(connection_t *conn) {
+  assert(conn);
+
+  return ap_handshake_socks_reply(conn, SOCKS4_REQUEST_GRANTED);
 }
 
 int connection_ap_process_data_cell(cell_t *cell, connection_t *conn) {
@@ -388,7 +386,7 @@ int connection_ap_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *lo
 }
 
 int connection_ap_handle_listener_read(connection_t *conn) {
-  log(LOG_NOTICE,"AP: Received a connection request. Waiting for SS.");
-  return connection_handle_listener_read(conn, CONN_TYPE_AP, AP_CONN_STATE_SS_WAIT);
+  log(LOG_NOTICE,"AP: Received a connection request. Waiting for socksinfo.");
+  return connection_handle_listener_read(conn, CONN_TYPE_AP, AP_CONN_STATE_SOCKS_WAIT);
 } 
 

@@ -45,7 +45,7 @@ a type, or "command", which indicates what it's for.
 3.1. Role.
 
 
-3. Robustness features.
+4. Robustness features.
 
 4.1. Bandwidth throttling. Each cell-speaking connection has a maximum
 bandwidth it can use, as specified in the routers.or file. Bandwidth

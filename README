@@ -1,10 +1,13 @@
 
 Dependencies:
 
-  You're going to need openssl (0.9.5 or later) and popt (1.6 or later).
-  If you're on Linux, everything will probably work fine. OS X and BSD
-  (but see below under troubleshooting) now work too. Let us know if
-  you get it working elsewhere.
+  You're going to need Privoxy (www.privoxy.org) installed, and configured
+  to point at a socks4a proxy -- see below.
+
+  For tor itself, you're going to need openssl (0.9.5 or later) and popt
+  (1.6 or later). If you're on Linux, everything will probably work
+  fine. OS X and BSD (but see below under troubleshooting) now work
+  too. Let us know if you get it working elsewhere.
 
 If you got the source from cvs:
 
@@ -31,11 +34,9 @@ If this doesn't work for you / troubleshooting:
 
 Once you've got it compiled:
 
-  It's a bit hard to figure out what to do with the binaries. If you
-  want to run a local onion proxy (that is, you're a user, not a node
-  operator), go into src/config and look at the oprc file. You can run an
-  onion proxy by "../or/or -f oprc". In another window, run something like
-  "../httpap/httpap -f httpaprc2 -p 9051". See below for how to use it.
+  If you want to run a local onion proxy (that is, you're a user, not a
+  node operator), go into src/config and look at the oprc file. You can
+  run an onion proxy by "../or/or -f oprc". See below for how to use it.
 
   If you want to set up your own test network (that is, act like you're
   a full set of node operators), go into src/config/ and look at the
@@ -48,24 +49,24 @@ Once you've got it compiled:
   network. I recommend using a screen session (man screen), or some
   other way to handle many windows at once. I open a window for each
   onion router, go into the src/config directory, and run something like
-  "../or/or -f moria2-orrc". In yet another window, I run something like
-  "../httpap/httpap -f httpaprc -p 9051". 
+  "../or/or -f moria2-orrc".
 
 How to use it:
 
-  From here, you can point your browser/etc at localhost:9051 and treat
-  it as a web proxy. As a first test, you might telnet to it and enter
-  "GET http://seul.org/ HTTP/1.0" (without the quotes), followed by a pair
-  of carriage returns (one to separate your request from the headers,
-  and another to indicate that you're providing no headers). For more
-  convenient command-line use, I recommend making a ~/.wgetrc with
-  the line
-    http_proxy=localhost:9051
+  Download privoxy (www.privoxy.org). Install it. Add the following
+  line to your 'config' file:
+    forward-socks4a / localhost:9050 .
+  Don't forget the . at the end.
+
+  From here, you can point your browser/etc at localhost:8118 and your
+  traffic will go through Privoxy, then through the onion proxy, to the
+  onion routing network.
+
+  For more convenient command-line use, I recommend making a ~/.wgetrc
+  with the line
+    http_proxy=localhost:8118
   Then you can do things like "wget seul.org" and watch as it downloads
   from the onion routing network.
-  (You can set your Mozilla/etc to use localhost:9051 as a proxy, and it
-  will work -- but it will work even better if you tell your Mozilla to
-  speak only HTTP 1.0 (the http proxy we include doesn't do 1.1 yet.))
 
   For fun, you can wget a very large file (a megabyte or more), and
   then ^z the wget a little bit in. The onion routers will continue

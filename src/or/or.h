@@ -46,7 +46,7 @@
 			      can be overridden by config file */
 
 #define MAX_BUF_SIZE (640*1024)
-#define DEFAULT_BANDWIDTH_OP 1024
+#define DEFAULT_BANDWIDTH_OP 102400
 
 #define ACI_TYPE_LOWER 0
 #define ACI_TYPE_HIGHER 1
@@ -100,7 +100,7 @@
 #define EXIT_CONN_STATE_CLOSE_WAIT 4 /* have sent a destroy, awaiting a confirmation */
 #endif
 
-#define AP_CONN_STATE_SS_WAIT 0
+#define AP_CONN_STATE_SOCKS_WAIT 0
 #define AP_CONN_STATE_OR_WAIT 1
 #define AP_CONN_STATE_OPEN 2
 
@@ -147,6 +147,21 @@ typedef struct
   unsigned char payload[120];
 } cell_t;
 
+#define SOCKS4_REQUEST_GRANTED          90
+#define SOCKS4_REQUEST_REJECT           91
+#define SOCKS4_REQUEST_IDENT_FAILED     92
+#define SOCKS4_REQUEST_IDENT_CONFLICT   93
+
+/* structure of a socks client operation */
+typedef struct {
+   unsigned char version;     /* socks version number */
+   unsigned char command;     /* command code */
+   unsigned char destport[2]; /* destination port, network order */
+   unsigned char destip[4];   /* destination address */
+   /* userid follows, terminated by a NULL */
+   /* dest host follows, terminated by a NULL */
+} socks4_t;
+
 typedef struct
 { 
 
@@ -190,12 +205,14 @@ typedef struct
 
 /* used by exit and ap: */
 
-  ss_t ss; /* standard structure */
-  int ss_received; /* size of ss, received so far */
+//  ss_t ss; /* standard structure */
+//  int ss_received; /* size of ss, received so far */
 
-  char *dest_addr, *dest_port;
-  uint16_t dest_addr_len, dest_port_len;
-  uint16_t dest_addr_received, dest_port_received;
+  char socks_version; 
+  char read_username;
+
+  char *dest_addr;
+  uint16_t dest_port;
   
 /* used by OR, to keep state while connect()ing: Kludge. */
 
@@ -460,7 +477,7 @@ int connection_finished_flushing(connection_t *conn);
 
 int connection_ap_process_inbuf(connection_t *conn);
 
-int ap_handshake_process_ss(connection_t *conn);
+int ap_handshake_process_socks(connection_t *conn);
 
 int ap_handshake_create_onion(connection_t *conn);
 
@@ -472,6 +489,7 @@ int ap_handshake_n_conn_open(connection_t *or_conn);
 
 int ap_handshake_send_onion(connection_t *ap_conn, connection_t *or_conn, circuit_t *circ);
 
+int ap_handshake_socks_reply(connection_t *conn, char result);
 int connection_ap_send_connected(connection_t *conn);
 int connection_ap_process_data_cell(cell_t *cell, connection_t *conn);
 

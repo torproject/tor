@@ -13,8 +13,6 @@ static connection_t *connection_array[MAXCONNECTIONS] =
         { NULL };
 
 static struct pollfd poll_array[MAXCONNECTIONS];
-/*  =       { [0 ... MAXCONNECTIONS-1] = { -1, 0, 0 } };
- */
 
 static int nfds=0; /* number of connections currently active */
 

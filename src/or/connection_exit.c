@@ -93,6 +93,7 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
   switch(conn->state) {
     case EXIT_CONN_STATE_CONNECTING_WAIT:
       log(LOG_DEBUG,"connection_exit_process_data_cell(): state is connecting_wait. cell length %d.", cell->length);
+#if 0
       if(!conn->ss_received) { /* this cell contains the ss */
         if(cell->length != sizeof(ss_t)) {
           log(LOG_DEBUG,"connection_exit_process_data_cell(): Supposed to contain SS but wrong size. Closing.");
@@ -104,8 +105,10 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
           return -1;
         }
         conn->ss_received = 1;
-	log(LOG_DEBUG,"connection_exit_process_data_cell(): SS received.");
-      } else if (!conn->addr) { /* this cell contains the dest addr */
+        log(LOG_DEBUG,"connection_exit_process_data_cell(): SS received.");
+      } else 
+#endif
+      if (!conn->addr) { /* this cell contains the dest addr */
         if(!memchr(cell->payload,0,cell->length)) {
           log(LOG_DEBUG,"connection_exit_process_data_cell(): dest_addr cell has no \\0. Closing.");
           return -1;
@@ -117,7 +120,7 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
           return -1;
         }
         memcpy(&conn->addr, rent->h_addr,rent->h_length); 
-	log(LOG_DEBUG,"connection_exit_process_data_cell(): addr is %s.",cell->payload);
+        log(LOG_DEBUG,"connection_exit_process_data_cell(): addr is %s.",cell->payload);
       } else if (!conn->port) { /* this cell contains the dest port */
         if(!memchr(cell->payload,'\0',cell->length)) {
           log(LOG_DEBUG,"connection_exit_process_data_cell(): dest_port cell has no \\0. Closing.");
@@ -167,6 +170,10 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
         conn->s = s;
         connection_set_poll_socket(conn);
         conn->state = EXIT_CONN_STATE_OPEN;
+        if(connection_wants_to_flush(conn)) { /* in case there are any queued data cells */
+          log(LOG_NOTICE,"connection_exit_process_data_cell(): tell roger: newly connected conn had data waiting!");
+//          connection_start_writing(conn);
+        }
         connection_watch_events(conn, POLLIN);
 
         /* also, deliver a 'connected' cell back through the circuit. */
