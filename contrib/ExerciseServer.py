@@ -86,7 +86,8 @@ def handleEvent(s, body, circs, streamsByNonce, streamsByIdent):
         elif status in (TorControl.STREAM_STATUS.CLOSED,
                         TorControl.STREAM_STATUS.FAILED):
             circid, (host,url) = streamsByIdent[ident]
-            del circs[circid]
+            if circs.has_key(circid):
+                del circs[circid]
             del streamsByIdent[ident]
     elif event == TorControl.EVENT_TYPE.CIRCSTATUS:
         status, ident, path = args
