@@ -13,11 +13,11 @@ ARMA    - arma claims
 
 Bugs:
         o we call signal(), but we should be calling sigaction()
-        - send socks rejects when things go bad ?
+        o send socks rejects when things go bad ?
         o on solaris, need to build with
           LDFLAGS="-lsocket -lnsl" ./configure
         o on solaris, we HAVE_UNAME but the uname() call fails?
-        - should maybe make clients exit(1) when bad things happen?
+        . should maybe make clients exit(1) when bad things happen?
           e.g. clock skew.
         o client-side dns cache doesn't appear to be getting populated
           by 'connected' cells. In fact, the 'connected' cells don't even
@@ -41,10 +41,10 @@ Short-term:
         - Make tls connections tls_close intentionally
         - Add '[...truncated]' or similar to truncated log entries (like the directory
           in connection_dir_process_inbuf()).
-        - Make logs handle it better when writing to them fails.
+        . Make logs handle it better when writing to them fails.
         - leave server descriptor out of directory if it's too old
         o Rename ACI to circID
-        . integrate rep_ok functions, see what breaks
+        o integrate rep_ok functions, see what breaks
         - update tor faq
         o obey SocksBindAddress, ORBindAddress
         o warn if we're running as root
