@@ -1407,6 +1407,7 @@ typedef enum or_conn_status_event_t {
   OR_CONN_EVENT_CLOSED       = 3,
 } or_conn_status_event_t;
 
+void adjust_event_log_severity(void);
 int connection_control_finished_flushing(connection_t *conn);
 int connection_control_reached_eof(connection_t *conn);
 int connection_control_process_inbuf(connection_t *conn);

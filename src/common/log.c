@@ -373,6 +373,18 @@ int add_callback_log(int loglevelMin, int loglevelMax, log_callback cb)
   return 0;
 }
 
+void change_callback_log_severity(int loglevelMin, int loglevelMax,
+                                  log_callback cb)
+{
+  logfile_t *lf;
+  for (lf = logfiles; lf; lf = lf->next) {
+    if (lf->callback == cb) {
+      lf->loglevel = loglevelMin;
+      lf->max_loglevel = loglevelMax;
+    }
+  }
+}
+
 /** Close any log handlers added by add_temp_log or marked by mark_logs_temp */
 void close_temp_logs(void)
 {

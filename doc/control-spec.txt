@@ -215,10 +215,21 @@ the message.
 
                 Message [NUL-terminated]
 
+                <obsolete: use 0x0007-0x000B instead.>
+
       0x0006 -- New descriptors available
 
                 OR List [NUL-terminated, comma-delimited list of
                     OR identity]
+
+      0x0007 -- Debug message occurred
+      0x0008 -- Info message occurred
+      0x0009 -- Notice message occurred
+      0x000A -- Warning message occurred
+      0x000B -- Error message occurred
+
+                Message [NUL-terminated]
+
 
 3.8. AUTHENTICATE (Type 0x0007)
 
