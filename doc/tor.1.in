@@ -47,6 +47,10 @@ On startup, setgid to this user.
 \fBkeepaliveperiod \fR\fINUM\fP
 To keep firewalls from expiring connections, send a padding keepalive cell on open connections every NUM seconds. (Default: 300)
 .TP
+\fBmaxconn \fR\fINUM\fP
+Maximum number of simultaneous connections allowed.  You probably don't need
+to adjust this. (Default: 900)
+.TP
 \fBoutboundbindaddress \fR\fIP\fP
 Make all outbound connections originate from the IP address specified.  This
 is only useful when you have multiple network interfaces, and you want all
@@ -85,6 +89,17 @@ the last hop of a circuit.
 If 1, Tor will never use any nodes besides those listed in "entrynodes" for
 the first hop of a circuit.
 .TP
+\fBfascistfirewall \fR\fI0|1\fP
+If 1, Tor will only create outgoing connections to ORs running on ports that
+your firewall allows (defaults to 80 and 443; see firewallports).  This will
+allow you to run Tor as a client behind a firewall with restrictive policies,
+but will not allow you server behind such a firewall.
+.TP
+\fBfirewallports \fR\fIPORTS\fP
+A list of ports that your firewall allows you to connect to.  Only used when
+fascistfirewall is set. (Default: 80, 443.)
+.TP
+\fB 
 \fBnewcircuitperiod \fR\fINUM\fP
 Every NUM seconds consider whether to build a new circuit. (Default: 60)
 .TP
@@ -214,10 +229,6 @@ Do not use the specified nodes as introduction points for the hidden
 service.
 
 .\" UNDOCUMENTED
-.\" The following options need to be described:
-.\" fascistfirewall   (once we have a server running on 80/443)
-.\" firewallports     (once we have a server running on 80/443)
-.\" maxconn             (Why would you want to use this?)
 .\" I'm going to wait for go-ahead from arma before I document these;
 .\" there are policy issues here:
 .\" allowunverifiednodes
@@ -228,9 +239,6 @@ service.
 .\" authoritative dirservers:
 .\" authoritativedirectory
 .\" runtesting
-.\" The following options are not implemented:
-.\" linkpadding  (but connection.c refers to it!)
-.\" trafficshaping
 
 .SH FILES
 .TP
@@ -253,4 +261,3 @@ The tor process stores keys and other data here.
 Plenty, probably. It's still in alpha. Please report them.
 .SH AUTHORS
 Roger Dingledine <arma@mit.edu>, Nick Mathewson <nickm@alum.mit.edu>.
-
