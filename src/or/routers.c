@@ -518,15 +518,21 @@ static char *find_whitespace(char *s) {
 
 int router_get_list_from_string(char *s) 
 {
-  int i;
-  i = router_get_list_from_string_impl(s, &directory);
-  router_resolve_directory(directory);
-  return i;
+  if (router_get_list_from_string_impl(s, &directory)) {
+    log(LOG_ERR, "Error parsing router file");
+    return -1;
+  }
+  if (router_resolve_directory(directory)) {
+    log(LOG_ERR, "Error resolving directory");
+    return -1;
+  }
+  return 0;
 }
 
 int router_get_list_from_string_impl(char *s, directory_t **dest) {
   directory_token_t tok;
   if (router_get_next_token(&s, &tok)) {
+    log(LOG_ERR, "Error reading routers: %s", tok.val.error); 
     return -1;
   }
   return router_get_list_from_string_tok(&s, dest, &tok);
@@ -536,25 +542,41 @@ static int router_get_dir_hash(char *s, char *digest)
 {
   char *start, *end;
   start = strstr(s, "signed-directory");
-  if (!start) return -1;
+  if (!start) {
+    log(LOG_ERR,"router_get_dir_hash(): couldn't find \"signed-directory\"");
+    return -1;
+  }
   end = strstr(start, "directory-signature");
-  if (!end) return -1;
+  if (!end) {
+    log(LOG_ERR,"router_get_dir_hash(): couldn't find \"directory-signature\"");
+    return -1;
+  }
   end = strchr(end, '\n');
-  if (!end) return -1;
+  if (!end) {
+    log(LOG_ERR,"router_get_dir_hash(): couldn't find EOL");
+    return -1;
+  }
   ++end;
   
-  if (crypto_SHA_digest(start, end-start, digest))
+  if (crypto_SHA_digest(start, end-start, digest)) {
+    log(LOG_ERR,"router_get_dir_hash(): couldn't compute digest");
     return -1;
+  }
 
   return 0;
 }
 
 int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey)
 {
-  int i;
-  i = router_get_dir_from_string_impl(s, &directory, pkey);
-  router_resolve_directory(directory);
-  return i;
+  if (router_get_dir_from_string_impl(s, &directory, pkey)) {
+    log(LOG_ERR, "router_get_dir_from_string: Couldn\'t parse directory.");
+    return -1;
+  }
+  if (router_resolve_directory(directory)) {
+    log(LOG_ERR, "Error resolving directory");
+    return -1;
+  }
+  return 0;
 }
 
 int router_get_dir_from_string_impl(char *s, directory_t **dest,
@@ -578,8 +600,10 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
       return -1;                                                        \
     } } while(0)
   
-  if (router_get_dir_hash(s, digest))
+  if (router_get_dir_hash(s, digest)) {
+    log(LOG_ERR, "Unable to compute digest of directory");
     return -1;
+  }
 
   NEXT_TOK();
   TOK_IS(K_SIGNED_DIRECTORY, "signed-directory");
@@ -591,8 +615,10 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   TOK_IS(K_SERVER_SOFTWARE, "server-software");
   
   NEXT_TOK();
-  if (router_get_list_from_string_tok(&s, &new_dir, &tok))
+  if (router_get_list_from_string_tok(&s, &new_dir, &tok)) {
+    log(LOG_ERR, "Error reading routers from directory");
     return -1;
+  }
   
   TOK_IS(K_DIRECTORY_SIGNATURE, "directory-signature");
   NEXT_TOK();
@@ -637,6 +663,10 @@ static int router_get_list_from_string_tok(char **s, directory_t **dest,
 
   while (tok->tp == K_ROUTER) {
     router = router_get_entry_from_string_tok(s, tok);
+    if (!router) {
+      log(LOG_ERR, "Error reading router");
+      return -1;
+    }
     switch(router_is_me(router->addr, router->or_port)) {
       case 0: /* it's not me */
         router->next = routerlist;
@@ -694,7 +724,8 @@ router_resolve_directory(directory_t *dir)
   max = dir->n_routers;
   for (i = 0; i < max; ++i) {
     if (router_resolve(dir->routers[i])) {
-      /* ARMA: Is this the right way to remove a router from the directory? */
+      log(LOG_INFO, "Couldn\'t resolve router %s; removing",
+          dir->routers[i]->address);
       dir->routers[i]->next = NULL;
       routerlist_free(dir->routers[i]);
       dir->routers[i] = dir->routers[--max];
@@ -702,6 +733,11 @@ router_resolve_directory(directory_t *dir)
       --dir->n_routers;
     }
   }
+  /* This is quick-and-dirty, but it keeps stuff consistant. */
+  for (i = 0; i < dir->n_routers-1; ++i) {
+    dir->routers[i]->next = dir->routers[i+1];
+  }
+  dir->routers[dir->n_routers-1]->next=NULL;
   
   return 0;
 }

@@ -43,7 +43,12 @@ void directory_initiate_fetch(routerinfo_t *router) {
   conn->address = strdup(router->address);
   conn->receiver_bucket = -1; /* edge connections don't do receiver buckets */
   conn->bandwidth = -1;
-  conn->pkey = crypto_pk_dup_key(router->signing_pkey);
+  if (router->signing_pkey)
+    conn->pkey = crypto_pk_dup_key(router->signing_pkey);
+  else {
+    log(LOG_ERR, "No signing key known for directory %s; signature won\'t be checked", conn->address);
+    conn->pkey = NULL;
+  }
 
   s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if(s < 0) { 
@@ -148,7 +153,11 @@ int connection_dir_process_inbuf(connection_t *conn) {
     }
     if(router_get_dir_from_string(the_directory, conn->pkey) < 0) {
       log(LOG_DEBUG,"connection_dir_process_inbuf(): ...but parsing failed. Ignoring.");
+    } else {
+      log(LOG_DEBUG,"connection_dir_process_inbuf(): and got a %s directory; updated routers.", 
+          conn->pkey ? "authenticated" : "unauthenticated");
     }
+    
     if(options.ORPort) { /* connect to them all */
       router_retry_connections();
     }
