@@ -508,6 +508,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
           sizeof(launched->rend_query));
   launched->build_state->pending_final_cpath = cpath =
     tor_malloc_zero(sizeof(crypt_path_t));
+  cpath->magic = CRYPT_PATH_MAGIC;
   launched->build_state->expiry_time = time(NULL) + MAX_REND_TIMEOUT;
 
   cpath->handshake_state = dh;

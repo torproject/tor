@@ -707,9 +707,12 @@ typedef struct {
   char *signing_router;
 } routerlist_t;
 
+#define CRYPT_PATH_MAGIC 0x70127012u
+
 /** Holds accounting information for a single step in the layered encryption
  * performed by a circuit.  Used only at the client edge of a circuit. */
 struct crypt_path_t {
+  uint32_t magic;
 
   /* crypto environments */
   /** Encryption key and counter for cells heading towards the OR at this
