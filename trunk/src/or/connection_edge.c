@@ -20,6 +20,22 @@ static void connection_edge_consider_sending_sendme(connection_t *conn);
 static uint32_t client_dns_lookup_entry(const char *address);
 static void client_dns_set_entry(const char *address, uint32_t val);
 
+void relay_header_pack(char *dest, const relay_header_t *src) {
+  *(uint8_t*)(dest)    = src->command;
+  *(uint16_t*)(dest+1) = htons(src->recognized);
+  *(uint16_t*)(dest+3) = htons(src->stream_id);
+  *(uint32_t*)(dest+5) = htonl(src->integrity);
+  *(uint16_t*)(dest+9) = htons(src->length);
+}
+
+void relay_header_unpack(relay_header_t *dest, const char *src) {
+  dest->command    = *(uint8_t*)(src);
+  dest->recognized = ntohs(*(uint16_t*)(src+1));
+  dest->stream_id  = ntohs(*(uint16_t*)(src+3));
+  dest->integrity  = ntohl(*(uint32_t*)(src+5));
+  dest->length     = ntohs(*(uint16_t*)(src+9));
+}
+
 int connection_edge_process_inbuf(connection_t *conn) {
 
   assert(conn);
@@ -127,18 +143,16 @@ int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_lay
 int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command,
                                  void *payload, int payload_len, crypt_path_t *cpath_layer) {
   cell_t cell;
+  relay_header_t rh;
   int cell_direction;
-  int is_control_cell=0;
 
   if(!circ) {
     log_fn(LOG_WARN,"no circ. Closing.");
     return -1;
   }
 
-  if(!fromconn || relay_command == RELAY_COMMAND_BEGIN) /* XXX more */
-    is_control_cell = 1;
-
   memset(&cell, 0, sizeof(cell_t));
+  cell.command = CELL_RELAY;
 //  if(fromconn && fromconn->type == CONN_TYPE_AP) {
   if(cpath_layer) {
     cell.circ_id = circ->n_circ_id;
@@ -148,17 +162,14 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
     cell_direction = CELL_DIRECTION_IN;
   }
 
-  cell.command = CELL_RELAY;
-  SET_CELL_RELAY_COMMAND(cell, relay_command);
-  if(is_control_cell)
-    SET_CELL_STREAM_ID(cell, ZERO_STREAM);
-  else
-    SET_CELL_STREAM_ID(cell, fromconn->stream_id);
-
-  SET_CELL_RELAY_LENGTH(cell, payload_len);
-  if(payload_len) {
-    memcpy(cell.payload+RELAY_HEADER_SIZE,payload,payload_len);
-  }
+  memset(&rh, 0, sizeof(rh));
+  rh.command = relay_command;
+  if(fromconn)
+    rh.stream_id = fromconn->stream_id; /* else it's 0 */
+  rh.length = payload_len;
+  relay_header_pack(cell.payload, &rh);
+  if(payload_len)
+    memcpy(cell.payload+RELAY_HEADER_SIZE, payload, payload_len);
 
   if(cell_direction == CELL_DIRECTION_OUT) /* AP */
     relay_set_digest(cpath_layer->f_digest, &cell);
@@ -180,14 +191,14 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
  * circuit, else 0. */
 int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn,
                                        int edge_type, crypt_path_t *layer_hint) {
-  int relay_command;
   static int num_seen=0;
   uint32_t addr;
+  relay_header_t rh;
 
   assert(cell && circ);
 
-  relay_command = CELL_RELAY_COMMAND(*cell);
-//  log_fn(LOG_DEBUG,"command %d stream %d", relay_command, stream_id);
+  relay_header_unpack(&rh, cell->payload);
+//  log_fn(LOG_DEBUG,"command %d stream %d", rh.command, rh.stream_id);
   num_seen++;
   log_fn(LOG_DEBUG,"Now seen %d relay cells here.", num_seen);
 
@@ -195,9 +206,9 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
    * conn points to the recognized stream. */
 
   if(conn && conn->state != AP_CONN_STATE_OPEN && conn->state != EXIT_CONN_STATE_OPEN) {
-    if(conn->type == CONN_TYPE_EXIT && relay_command == RELAY_COMMAND_END) {
+    if(conn->type == CONN_TYPE_EXIT && rh.command == RELAY_COMMAND_END) {
       log_fn(LOG_INFO,"Exit got end (%s) before we're connected. Marking for close.",
-        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, CELL_RELAY_LENGTH(*cell)));
+        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
       if(conn->state == EXIT_CONN_STATE_RESOLVING) {
         log_fn(LOG_INFO,"...and informing resolver we don't want the answer anymore.");
         dns_cancel_pending_resolve(conn->address, conn);
@@ -207,14 +218,14 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       return 0;
     } else {
       log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
-             relay_command, conn->state, conn_state_to_string[conn->type][conn->state]);
+             rh.command, conn->state, conn_state_to_string[conn->type][conn->state]);
       if(connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer) < 0)
         log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
       return -1;
     }
   }
 
-  switch(relay_command) {
+  switch(rh.command) {
     case RELAY_COMMAND_BEGIN:
       if(edge_type == EDGE_AP) {
         log_fn(LOG_WARN,"relay begin request unsupported at AP. Dropping.");
@@ -235,12 +246,13 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
           log_fn(LOG_WARN,"2: I called connection_edge_end redundantly.");
         return -1;
       }
-      log_fn(LOG_DEBUG,"circ deliver_window now %d.", edge_type == EDGE_AP ? layer_hint->deliver_window : circ->deliver_window);
+      log_fn(LOG_DEBUG,"circ deliver_window now %d.", edge_type == EDGE_AP ?
+             layer_hint->deliver_window : circ->deliver_window);
 
       circuit_consider_sending_sendme(circ, edge_type, layer_hint);
 
       if(!conn) {
-        log_fn(LOG_INFO,"relay cell dropped, unknown stream %d.",*(int*)conn->stream_id);
+        log_fn(LOG_INFO,"data cell dropped, unknown stream.");
         return 0;
       }
 
@@ -249,19 +261,18 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         return -1; /* somebody's breaking protocol. kill the whole circuit. */
       }
 
-      stats_n_data_bytes_received += CELL_RELAY_LENGTH(*cell);
+      stats_n_data_bytes_received += rh.length;
       connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
-                              CELL_RELAY_LENGTH(*cell), conn);
+                              rh.length, conn);
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case RELAY_COMMAND_END:
       if(!conn) {
-        log_fn(LOG_INFO,"end cell (%s) dropped, unknown stream %d.",
-          connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, CELL_RELAY_LENGTH(*cell)),
-          *(int*)conn->stream_id);
+        log_fn(LOG_INFO,"end cell (%s) dropped, unknown stream.",
+          connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
         return 0;
       }
-      if(CELL_RELAY_LENGTH(*cell) >= 5 &&
+      if(rh.length >= 5 &&
          *(cell->payload+RELAY_HEADER_SIZE) == END_STREAM_REASON_EXITPOLICY) {
         /* No need to close the connection. We'll hold it open while
          * we try a new exit node.
@@ -282,8 +293,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         }
       }
       log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
-        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, CELL_RELAY_LENGTH(*cell)),
-        *(int*)conn->stream_id);
+        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length),
+        conn->stream_id);
 
 #ifdef HALF_OPEN
       conn->done_sending = 1;
@@ -344,11 +355,11 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         return 0;
       }
       if(!conn) {
-        log_fn(LOG_INFO,"connected cell dropped, unknown stream %d.",*(int*)conn->stream_id);
+        log_fn(LOG_INFO,"connected cell dropped, unknown stream.");
         return 0;
       }
       log_fn(LOG_INFO,"Connected! Notifying application.");
-      if (CELL_RELAY_LENGTH(*cell) >= 4) {
+      if (rh.length >= 4) {
         addr = ntohl(*(uint32_t*)(cell->payload + RELAY_HEADER_SIZE));
         client_dns_set_entry(conn->socks_request->address, addr);
       }
@@ -363,12 +374,14 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         if(edge_type == EDGE_AP) {
           assert(layer_hint);
           layer_hint->package_window += CIRCWINDOW_INCREMENT;
-          log_fn(LOG_DEBUG,"circ-level sendme at AP, packagewindow %d.", layer_hint->package_window);
+          log_fn(LOG_DEBUG,"circ-level sendme at AP, packagewindow %d.",
+                 layer_hint->package_window);
           circuit_resume_edge_reading(circ, EDGE_AP, layer_hint);
         } else {
           assert(!layer_hint);
           circ->package_window += CIRCWINDOW_INCREMENT;
-          log_fn(LOG_DEBUG,"circ-level sendme at exit, packagewindow %d.", circ->package_window);
+          log_fn(LOG_DEBUG,"circ-level sendme at exit, packagewindow %d.",
+                 circ->package_window);
           circuit_resume_edge_reading(circ, EDGE_EXIT, layer_hint);
         }
         return 0;
@@ -378,11 +391,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       connection_start_reading(conn);
       connection_edge_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
       return 0;
-    default:
-      log_fn(LOG_WARN,"unknown relay command %d.",relay_command);
-      return -1;
   }
-  assert(0);
+  log_fn(LOG_WARN,"unknown relay command %d.",rh.command);
   return -1;
 }
 
@@ -667,20 +677,19 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   assert(ap_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   assert(ap_conn->socks_request);
 
-  crypto_pseudo_rand(STREAM_ID_SIZE, ap_conn->stream_id);
-  /* FIXME check for collisions */
+  crypto_pseudo_rand(sizeof(ap_conn->stream_id), (unsigned char*) &ap_conn->stream_id);
+  /* XXX check for collisions */
 
   in.s_addr = htonl(client_dns_lookup_entry(ap_conn->socks_request->address));
   string_addr = in.s_addr ? inet_ntoa(in) : NULL;
 
-  memcpy(payload, ap_conn->stream_id, STREAM_ID_SIZE);
-  payload_len = STREAM_ID_SIZE + 1 +
-    snprintf(payload+STREAM_ID_SIZE,CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE-STREAM_ID_SIZE,
-             "%s:%d",
-             string_addr ? string_addr : ap_conn->socks_request->address,
-             ap_conn->socks_request->port);
+  snprintf(payload,RELAY_PAYLOAD_SIZE,
+           "%s:%d",
+           string_addr ? string_addr : ap_conn->socks_request->address,
+           ap_conn->socks_request->port);
+  payload_len = strlen(payload)+1;
 
-  log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",*(int *)ap_conn->stream_id);
+  log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",ap_conn->stream_id);
 
   if(connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_BEGIN,
                                payload, payload_len, ap_conn->cpath_layer) < 0)
@@ -734,18 +743,20 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   connection_t *n_stream;
+  relay_header_t rh;
   char *colon;
+
+  relay_header_unpack(&rh, cell->payload);
 
   /* XXX currently we don't send an end cell back if we drop the
    * begin because it's malformed.
    */
 
-  if(!memchr(cell->payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE,0,
-             CELL_RELAY_LENGTH(*cell)-STREAM_ID_SIZE)) {
+  if(!memchr(cell->payload+RELAY_HEADER_SIZE, 0, rh.length)) {
     log_fn(LOG_WARN,"relay begin cell has no \\0. Dropping.");
     return 0;
   }
-  colon = strchr(cell->payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE, ':');
+  colon = strchr(cell->payload+RELAY_HEADER_SIZE, ':');
   if(!colon) {
     log_fn(LOG_WARN,"relay begin cell has no colon. Dropping.");
     return 0;
@@ -760,8 +771,8 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   log_fn(LOG_DEBUG,"Creating new exit connection.");
   n_stream = connection_new(CONN_TYPE_EXIT);
 
-  memcpy(n_stream->stream_id, cell->payload + RELAY_HEADER_SIZE, STREAM_ID_SIZE);
-  n_stream->address = tor_strdup(cell->payload + RELAY_HEADER_SIZE + STREAM_ID_SIZE);
+  n_stream->stream_id = rh.stream_id;
+  n_stream->address = tor_strdup(cell->payload + RELAY_HEADER_SIZE);
   n_stream->port = atoi(colon+1);
   n_stream->state = EXIT_CONN_STATE_RESOLVING;
   /* leave n_stream->s at -1, because it's not yet valid */

@@ -235,35 +235,44 @@ typedef uint16_t circ_id_t;
 /*
  * Relay payload:
  *         Relay command           [1 byte]
- *         Stream ID               [7 bytes]
+ *         Recognized              [2 bytes]
+ *         Stream ID               [2 bytes]
  *         Partial SHA-1           [4 bytes]
  *         Length                  [2 bytes]
- *         Relay payload           [495 bytes]
+ *         Relay payload           [498 bytes]
  */
 
+#if 0
 #define CELL_RELAY_COMMAND(c)         (*(uint8_t*)((c).payload))
 #define SET_CELL_RELAY_COMMAND(c,cmd) (*(uint8_t*)((c).payload) = (cmd))
 
-#define STREAM_ID_SIZE 7
-#define SET_CELL_STREAM_ID(c,id)      memcpy((c).payload+1,(id),STREAM_ID_SIZE)
-#define ZERO_STREAM "\0\0\0\0\0\0\0"
+#define CELL_RELAY_RECOGNIZED(c)       (ntohs(*(uint16_t*)((c).payload+1)))
+#define SET_CELL_RELAY_RECOGNIZED(c,r) (*(uint16_t*)((c).payload+1) = htons(r))
 
-#define CELL_RELAY_COMMAND_END_REASON(c) (*(uint8_t)((c).payload+1))
+#define STREAM_ID_SIZE 2
+//#define SET_CELL_STREAM_ID(c,id)      memcpy((c).payload+1,(id),STREAM_ID_SIZE)
+#define CELL_RELAY_STREAM_ID(c)        (ntohs(*(uint16_t*)((c).payload+3)))
+#define SET_CELL_RELAY_STREAM_ID(c,id) (*(uint16_t*)((c).payload+3) = htons(id))
+#define ZERO_STREAM 0
 
 /* integrity is the first 32 bits (in network order) of a sha-1 of all
  * cell payloads that are relay cells that have been sent / delivered
  * to the hop on the * circuit (the integrity is zeroed while doing
  * each calculation)
  */
-#define CELL_RELAY_INTEGRITY(c)       (ntohl(*(uint32_t*)((c).payload+1+STREAM_ID_SIZE)))
-#define SET_CELL_RELAY_INTEGRITY(c,i) (*(uint32_t*)((c).payload+1+STREAM_ID_SIZE) = htonl(i))
+#define CELL_RELAY_INTEGRITY(c)       (ntohl(*(uint32_t*)((c).payload+5)))
+#define SET_CELL_RELAY_INTEGRITY(c,i) (*(uint32_t*)((c).payload+5) = htonl(i))
 
 /* relay length is how many bytes are used in the cell payload past relay_header_size */
-#define CELL_RELAY_LENGTH(c)         (ntohs(*(uint16_t*)((c).payload+1+STREAM_ID_SIZE+4)))
-#define SET_CELL_RELAY_LENGTH(c,len) (*(uint16_t*)((c).payload+1+STREAM_ID_SIZE+4) = htons(len))
+#define CELL_RELAY_LENGTH(c)         (ntohs(*(uint16_t*)((c).payload+9)))
+#define SET_CELL_RELAY_LENGTH(c,len) (*(uint16_t*)((c).payload+9) = htons(len))
+#endif
 
 #define CELL_PAYLOAD_SIZE 509
 #define CELL_NETWORK_SIZE 512
+
+#define RELAY_HEADER_SIZE (1+2+2+4+2)
+#define RELAY_PAYLOAD_SIZE (CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE)
 
 /* cell definition */
 typedef struct {
@@ -272,8 +281,13 @@ typedef struct {
   unsigned char payload[CELL_PAYLOAD_SIZE];
 } cell_t;
 
-#define RELAY_HEADER_SIZE (1+STREAM_ID_SIZE+4+2)
-#define RELAY_PAYLOAD_SIZE (CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE)
+typedef struct {
+  uint8_t command;
+  uint16_t recognized;
+  uint16_t stream_id;
+  uint32_t integrity;
+  uint16_t length;
+} relay_header_t;
 
 typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
@@ -327,7 +341,7 @@ struct connection_t {
                         */
 
 /* Used only by edge connections: */
-  char stream_id[STREAM_ID_SIZE];
+  uint16_t stream_id;
   struct connection_t *next_stream; /* points to the next stream at this edge, if any */
   struct crypt_path_t *cpath_layer; /* a pointer to which node in the circ this conn exits at */
   int package_window; /* how many more relay cells can i send into the circuit? */
@@ -556,9 +570,6 @@ void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell);
 int relay_check_digest(crypto_digest_env_t *digest, cell_t *cell);
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);
-int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
-                crypt_path_t **layer_hint, char *recognized, connection_t **conn);
-int relay_check_recognized(circuit_t *circ, int cell_direction, char *stream, connection_t **conn);
 
 void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
 int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
@@ -648,6 +659,8 @@ void assert_connection_ok(connection_t *conn, time_t now);
 
 /********************************* connection_edge.c ***************************/
 
+void relay_header_pack(char *dest, const relay_header_t *src);
+void relay_header_unpack(relay_header_t *dest, const char *src);
 int connection_edge_process_inbuf(connection_t *conn);
 int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer);
 
