@@ -92,6 +92,7 @@ connection_t *connection_new(int type) {
   conn->timestamp_lastread = now.tv_sec;
   conn->timestamp_lastwritten = now.tv_sec;
 
+#ifndef TOR_TLS
   if (connection_speaks_cells(conn)) {
     conn->f_crypto = crypto_new_cipher_env(CONNECTION_CIPHER);
     if (!conn->f_crypto) {
@@ -105,6 +106,7 @@ connection_t *connection_new(int type) {
       return NULL;
     }
   }
+#endif
   conn->done_sending = conn->done_receiving = 0;
   return conn;
 }
@@ -120,10 +122,16 @@ void connection_free(connection_t *conn) {
     free(conn->dest_addr);
 
   if(connection_speaks_cells(conn)) {
+    directory_set_dirty();
+#ifdef TOR_TLS
+    if (conn->SSL)
+      crypt_SSL_free(conn->SSL);
+#else
     if (conn->f_crypto)
       crypto_free_cipher_env(conn->f_crypto);
     if (conn->b_crypto)
       crypto_free_cipher_env(conn->b_crypto);
+#endif
   }
 
   if (conn->pkey)
@@ -132,9 +140,6 @@ void connection_free(connection_t *conn) {
   if(conn->s > 0) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);
     close(conn->s);
-  }
-  if(conn->type == CONN_TYPE_OR) {
-    directory_set_dirty();
   }
   free(conn);
 }
@@ -279,21 +284,51 @@ int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16
   return 0;
 }
 
+int connection_handle_read(connection_t *conn) {
+  struct timeval now;
+
+  my_gettimeofday(&now);
+  conn->timestamp_lastread = now.tv_sec;
+
+  switch(conn->type) {
+    case CONN_TYPE_OR_LISTENER:
+      return connection_or_handle_listener_read(conn);
+    case CONN_TYPE_AP_LISTENER:
+      return connection_ap_handle_listener_read(conn);
+    case CONN_TYPE_DIR_LISTENER:
+      return connection_dir_handle_listener_read(conn);
+    default:
+
+      if(connection_read_to_buf(conn) < 0) {
+        if(conn->type == CONN_TYPE_DIR && conn->state == DIR_CONN_STATE_CONNECTING) {
+           /* it's a directory server and connecting failed: forget about this router */
+           /* XXX I suspect pollerr may make Windows not get to this point. :( */
+           router_forget_router(conn->addr,conn->port); 
+             /* FIXME i don't think router_forget_router works. */
+         }
+         return -1;
+      }
+      if(connection_process_inbuf(conn) < 0) {
+        //log_fn(LOG_DEBUG,"connection_process_inbuf returned %d.",retval);
+        return -1;
+      }
+      if(!connection_state_is_open(conn) && conn->receiver_bucket == 0) {
+        log_fn(LOG_DEBUG,"receiver bucket reached 0 before handshake finished. Closing.");
+        return -1;
+      }
+      return 0;
+  } /* end switch */
+}
+
 int connection_read_to_buf(connection_t *conn) {
   int read_result;
-  struct timeval now;
   int at_most = global_read_bucket;
 
   if(connection_speaks_cells(conn)) {
     assert(conn->receiver_bucket >= 0);
-  }
-  if(!connection_speaks_cells(conn)) {
+  } else {
     assert(conn->receiver_bucket < 0);
   }
-
-  my_gettimeofday(&now);
-
-  conn->timestamp_lastread = now.tv_sec;
 
   if(conn->receiver_bucket >= 0 && at_most > conn->receiver_bucket)
     at_most = conn->receiver_bucket;
@@ -338,13 +373,44 @@ int connection_outbuf_too_full(connection_t *conn) {
 }
 
 int connection_flush_buf(connection_t *conn) {
-  return flush_buf(conn->s, &conn->outbuf, &conn->outbuflen, &conn->outbuf_flushlen, &conn->outbuf_datalen);
+  return flush_buf(conn->s, &conn->outbuf, &conn->outbuflen,
+                   &conn->outbuf_flushlen, &conn->outbuf_datalen);
+}
+
+int connection_handle_write(connection_t *conn) {
+  struct timeval now;
+  int retval;
+
+  if(connection_is_listener(conn)) {
+    log_fn(LOG_DEBUG,"Got a listener socket. Can't happen!");
+    return -1;
+  }
+
+  my_gettimeofday(&now);
+  conn->timestamp_lastwritten = now.tv_sec;
+
+#ifdef TOR_TLS
+  if(connection_speaks_cells(conn)) {
+    retval = flush_buf_SSL(conn->SSL, &conn->outbuf, &conn->outbuflen,
+                           &conn->outbuf_flushlen, &conn->outbuf_datalen);
+    ...
+
+  } else
+#endif
+  {
+    retval = flush_buf(conn->s, &conn->outbuf, &conn->outbuflen,
+                       &conn->outbuf_flushlen, &conn->outbuf_datalen);
+        /* conns in CONNECTING state will fall through... */
+
+    if(retval == 0) { /* it's done flushing */
+      retval = connection_finished_flushing(conn); /* ...and get handled here. */
+    }
+  }
+
+  return retval;
 }
 
 int connection_write_to_buf(char *string, int len, connection_t *conn) {
-  struct timeval now;
-
-  my_gettimeofday(&now);
 
   if(!len)
     return 0;
@@ -352,12 +418,10 @@ int connection_write_to_buf(char *string, int len, connection_t *conn) {
   if(conn->marked_for_close)
     return 0;
 
-  conn->timestamp_lastwritten = now.tv_sec;
-
   if( (!connection_speaks_cells(conn)) ||
       (!connection_state_is_open(conn)) ||
       (options.LinkPadding == 0) ) {
-    /* connection types other than or and op, or or/op not in 'open' state, should flush immediately */
+    /* connection types other than or, or or not in 'open' state, should flush immediately */
     /* also flush immediately if we're not doing LinkPadding, since otherwise it will never flush */
     connection_start_writing(conn);
     conn->outbuf_flushlen += len;
@@ -395,78 +459,6 @@ int connection_state_is_open(connection_t *conn) {
     return 1;
 
   return 0;
-}
-
-void connection_send_cell(connection_t *conn) {
-  cell_t cell;
-  int bytes_in_full_flushlen;
-
-  assert(0); /* this function has decayed. rewrite before using. */
-
-  /* this function only gets called if options.LinkPadding is 1 */
-  assert(options.LinkPadding == 1);
-
-  assert(conn);
-
-  if(!connection_speaks_cells(conn)) {
-    /* this conn doesn't speak cells. do nothing. */
-    return;
-  }
-
-  if(!connection_state_is_open(conn)) {
-    /* it's not in 'open' state, all data should already be waiting to be flushed */
-    assert(conn->outbuf_datalen == conn->outbuf_flushlen);
-    return;
-  }
-
-#if 0 /* use to send evenly spaced cells, but not padding */
-  if(conn->outbuf_datalen - conn->outbuf_flushlen >= sizeof(cell_t)) {
-    conn->outbuf_flushlen += sizeof(cell_t); /* instruct it to send a cell */
-    connection_start_writing(conn);
-  }
-#endif
-
-  connection_increment_send_timeval(conn); /* update when we'll send the next cell */
-
-  bytes_in_full_flushlen = conn->bandwidth / 100; /* 10ms worth */
-  if(bytes_in_full_flushlen < 10*sizeof(cell_t))
-    bytes_in_full_flushlen = 10*sizeof(cell_t); /* but at least 10 cells worth */
-
-  if(conn->outbuf_flushlen > bytes_in_full_flushlen - sizeof(cell_t)) {
-    /* if we would exceed bytes_in_full_flushlen by adding a new cell */
-    return;
-  }
-
-  if(conn->outbuf_datalen - conn->outbuf_flushlen < sizeof(cell_t)) {
-    /* we need to queue a padding cell first */
-    memset(&cell,0,sizeof(cell_t));
-    cell.command = CELL_PADDING;
-    connection_write_cell_to_buf(&cell, conn);
-  }
-
-  /* The connection_write_cell_to_buf() call doesn't increase the flushlen
-   * (if link padding is on). So if there isn't a whole cell waiting-but-
-   * not-yet-flushed, we add a padding cell. Thus in any case the gap between
-   * outbuf_datalen and outbuf_flushlen is at least sizeof(cell_t).
-   */
-  conn->outbuf_flushlen += sizeof(cell_t); /* instruct it to send a cell */
-  connection_start_writing(conn);
-}
-
-void connection_increment_send_timeval(connection_t *conn) {
-  /* add "1000000 * sizeof(cell_t) / conn->bandwidth" microseconds to conn->send_timeval */
-  /* FIXME should perhaps use ceil() of this. For now I simply add 1. */
-
-  tv_addms(&conn->send_timeval, 1+1000 * sizeof(cell_t) / conn->bandwidth);
-}
-
-void connection_init_timeval(connection_t *conn) {
-
-  assert(conn);
-
-  my_gettimeofday(&conn->send_timeval);
-
-  connection_increment_send_timeval(conn);
 }
 
 int connection_send_destroy(aci_t aci, connection_t *conn) {
