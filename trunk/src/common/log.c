@@ -8,8 +8,11 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/07/12 18:14:16  montrose
+ * removed loglevel from global namespace. severity level is set using log() with a NULL format argument now. example: log(LOG_ERR,NULL);
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.11  2002/06/14 20:44:57  mp292
  * *** empty log message ***
@@ -54,21 +57,25 @@
 #include <errno.h>
 #include "log.h"
 
-void log_internal(int severity, const char *format, va_list ap);
-
 /* Outputs a message to stdout */
 void log(int severity, const char *format, ...)
 {
-  extern int loglevel;
+  static int loglevel = LOG_DEBUG;
   va_list ap;
 
-  va_start(ap,format);
-
-  if (severity <= loglevel)
+  if ( format )
   {
-    vprintf(format,ap);
-    printf("\n");
-  }
+
+    va_start(ap,format);
   
-  va_end(ap);
+    if (severity <= loglevel)
+    {
+      vprintf(format,ap);
+      printf("\n");
+    }
+    
+    va_end(ap);
+  }
+  else
+    loglevel = severity;
 }

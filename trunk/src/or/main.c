@@ -4,7 +4,6 @@
 /********* START VARIABLES **********/
 
 static or_options_t options; /* command-line and config-file options */
-int loglevel;
 int global_role;
 
 static connection_t *connection_array[MAXCONNECTIONS] =
@@ -332,9 +331,8 @@ int main(int argc, char *argv[]) {
   signal (SIGINT, catch); /* to catch ^c so we can exit cleanly */
 
   if ( getoptions(argc,argv,&options) ) exit(1);
-  /* assign global vars from options. maybe get rid of these globals later */
-  loglevel = options.loglevel;
-  global_role = options.GlobalRole;
+  log(options.loglevel,NULL);         /* assign logging severity level from options */
+  global_role = options.GlobalRole;   /* assign global_role from options. FIX: remove from global namespace later. */
 
   ERR_load_crypto_strings();
   retval = do_main_loop();

@@ -1,7 +1,5 @@
 #include "or.h"
 
-int loglevel;
-
 int main(int ac, char **av)
 {
    or_options_t options;
