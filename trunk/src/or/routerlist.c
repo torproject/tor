@@ -311,11 +311,11 @@ routerinfo_t *router_get_by_nickname(char *nickname)
 
   for(i=0;i<routerlist->n_routers;i++) {
     router = routerlist->routers[i];
-    if (0 == strcmp(router->nickname, nickname))
+    if (0 == strcasecmp(router->nickname, nickname))
       return router;
   }
   router = router_get_my_routerinfo();
-  if (router && 0 == strcmp(router->nickname, nickname))
+  if (router && 0 == strcasecmp(router->nickname, nickname))
     return router;
 
   return NULL;

@@ -343,11 +343,16 @@ const char *router_get_my_descriptor(void) {
 
 int router_rebuild_descriptor(void) {
   routerinfo_t *ri;
+  struct in_addr addr;
+  if (!tor_inet_aton(options.Address, &addr)) {
+    log_fn(LOG_ERR, "options.Address didn't hold an IP.");
+    return -1;
+  }
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
   ri->address = tor_strdup(options.Address);
   ri->nickname = tor_strdup(options.Nickname);
-  /* No need to set addr. */
+  ri->addr = (uint32_t) addr.s_addr;
   ri->or_port = options.ORPort;
   ri->socks_port = options.SocksPort;
   ri->dir_port = options.DirPort;
