@@ -48,6 +48,8 @@ N  - add ipv6 support.
 N&R  - Update Spec
 R  X learn from ben about his openssl-reinitialization-trick to
      rotate tls keys without making new connections.
+   - Do something to prevent spurious EXTEND cells from making middleman
+     nodes connect all over.  Rate-limit failed connections, perhaps?
    - christian grothoff's attack of infinite-length circuit.
      the solution is to have a separate 'extend-data' cell type
      which is used for the first N data cells, and only
