@@ -114,9 +114,6 @@ compare Tor to other low-latency anonymity designs.
 %details on the design, assumptions, and security arguments, we refer
 %the reader to the Tor design paper~\cite{tor-design}.
 
-%\medskip
-\noindent
-{\bf How Tor works.}
 Tor provides \emph{forward privacy}, so that users can connect to
 Internet sites without revealing their logical or physical locations
 to those sites or to observers.  It also provides \emph{location-hidden
@@ -362,10 +359,19 @@ don't have built-in encryption and authentication, such as unencrypted
 HTTP or chat, and it requires no modification of those services.
 
 \subsection{Related work}
-Tor is not the only anonymity system that aims to be practical and useful.
-Commercial single-hop proxies~\cite{anonymizer}, as well as unsecured
-open proxies around the Internet, can provide good
-performance and some security against a weaker attacker. The Java
+Tor differs from other deployed systems for traffic analysis resistance
+in its security and flexibility.  Mix networks such as
+Mixmaster~\cite{mixmaster-spec} or its successor Mixminion~\cite{minion-design}
+gain the highest degrees of anonymity at the expense of introducing highly
+variable delays, making them unsuitable for applications such as web
+browsing.  Commercial single-hop
+proxies~\cite{anonymizer} can provide good performance, but
+a single compromise can expose all users' traffic, and a single-point
+eavesdropper can perform traffic analysis on the entire network.
+%Also, their proprietary implementations place any infrastructure that
+%depends on these single-hop solutions at the mercy of their providers'
+%financial health as well as network security.
+The Java
 Anon Proxy~\cite{web-mix} provides similar functionality to Tor but
 handles only web browsing rather than arbitrary TCP\@.
 %Some peer-to-peer file-sharing overlay networks such as
@@ -386,19 +392,6 @@ node discovery and circuit setup; so Tor's architecture is flexible
 enough to contain a MorphMix experiment.
 We direct the interested reader
 to~\cite{tor-design} for a more in-depth review of related work.
-
-Tor also differs from other deployed systems for traffic analysis resistance
-in its security and flexibility.  Mix networks such as
-Mixmaster~\cite{mixmaster-spec} or its successor Mixminion~\cite{minion-design}
-gain the highest degrees of anonymity at the expense of introducing highly
-variable delays, thus making them unsuitable for applications such as web
-browsing.  Commercial single-hop
-proxies~\cite{anonymizer} present a single point of failure, where
-a single compromise can expose all users' traffic, and a single-point
-eavesdropper can perform traffic analysis on the entire network.
-Also, their proprietary implementations place any infrastructure that
-depends on these single-hop solutions at the mercy of their providers'
-financial health as well as network security.
 
 %XXXX six-four. crowds. i2p.
 
