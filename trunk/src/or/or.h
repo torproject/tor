@@ -570,7 +570,7 @@ typedef struct {
 
   crypto_pk_env_t *onion_pkey; /**< Public RSA key for onions. */
   crypto_pk_env_t *identity_pkey;  /**< Public RSA key for signing. */
-  char identity_digest[DIGEST_LEN]; /** Digest of identity key */
+  char identity_digest[DIGEST_LEN]; /**< Digest of identity key */
 
   char *platform; /**< What software/operating system is this OR using? */
 

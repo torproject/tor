@@ -442,36 +442,47 @@ list_running_servers(char **nicknames_out)
   char *cp;
   int i;
   int length;
-  smartlist_t *nicknames;
+  smartlist_t *nicknames_up, *nicknames_down;
 
   *nicknames_out = NULL;
-  nicknames = smartlist_create();
-  smartlist_add(nicknames, options.Nickname);
+  nicknames_up = smartlist_create();
+  nicknames_down = smartlist_create();
+  smartlist_add(nicknames_up, options.Nickname);
 
   get_connection_array(&connection_array, &n_conns);
   for (i = 0; i<n_conns; ++i) {
     conn = connection_array[i];
-    if (conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN)
-      continue; /* only list successfully handshaked OR's. */
-    if(!conn->nickname) /* it's an OP, don't list it */
-      continue;
-    /* XXX008 need to change this to list "!nickname" for down routers */
+    if (conn->type != CONN_TYPE_OR || !conn->nickname)
+      continue; /* only list ORs. */
     if (!router_nickname_is_approved(conn->nickname))
       continue; /* If we removed them from the approved list, don't list it.*/
-    smartlist_add(nicknames, conn->nickname);
+    if(conn->state == OR_CONN_STATE_OPEN)
+      smartlist_add(nicknames_up, conn->nickname);
+    else
+      smartlist_add(nicknames_down, conn->nickname);
   }
-  length = smartlist_len(nicknames) + 1; /* spaces + EOS + 1. */
-  SMARTLIST_FOREACH(nicknames, char *, c, length += strlen(c));
+  length = smartlist_len(nicknames_up) +
+           2*smartlist_len(nicknames_down) + 1;
+           /* spaces + EOS + !'s + 1. */
+  SMARTLIST_FOREACH(nicknames_up, char *, c, length += strlen(c));
+  SMARTLIST_FOREACH(nicknames_down, char *, c, length += strlen(c));
   *nicknames_out = tor_malloc_zero(length);
   cp = *nicknames_out;
-  for (i = 0; i<smartlist_len(nicknames); ++i) {
+  for (i = 0; i<smartlist_len(nicknames_up); ++i) {
     if (i)
       strcat(cp, " ");
-    strcat(cp, (char*)smartlist_get(nicknames,i)); /* can't overflow */
+    strcat(cp, (char*)smartlist_get(nicknames_up,i)); /* can't overflow */
     while (*cp)
       ++cp;
   }
-  smartlist_free(nicknames);
+  for (i = 0; i<smartlist_len(nicknames_down); ++i) {
+    strcat(cp, " !");
+    strcat(cp, (char*)smartlist_get(nicknames_down,i)); /* can't overflow */
+    while (*cp)
+      ++cp;
+  }
+  smartlist_free(nicknames_up);
+  smartlist_free(nicknames_down);
   return 0;
 }
 
