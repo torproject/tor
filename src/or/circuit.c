@@ -1057,9 +1057,6 @@ static int n_circuit_failures = 0;
 /* Launch a new circuit and return a pointer to it. Return NULL if you failed. */
 circuit_t *circuit_launch_new(uint8_t purpose, const char *exit_nickname) {
 
-  if(!(options.SocksPort||options.RunTesting)) /* no need for circuits. */
-    return NULL;
-
   if(n_circuit_failures > 5) { /* too many failed circs in a row. don't try. */
 //    log_fn(LOG_INFO,"%d failures so far, not trying.",n_circuit_failures);
     return NULL;
@@ -1086,11 +1083,11 @@ static circuit_t *circuit_establish_circuit(uint8_t purpose,
 
   circ = circuit_new(0, NULL); /* sets circ->p_circ_id and circ->p_conn */
   circ->state = CIRCUIT_STATE_OR_WAIT;
-  circ->build_state = onion_new_cpath_build_state(exit_nickname);
+  circ->build_state = onion_new_cpath_build_state(purpose, exit_nickname);
   circ->purpose = purpose;
 
   if (! circ->build_state) {
-    log_fn(LOG_INFO,"Generating cpath length failed.");
+    log_fn(LOG_INFO,"Generating cpath failed.");
     circuit_mark_for_close(circ);
     return NULL;
   }

@@ -533,7 +533,7 @@ struct circuit_t {
   uint8_t state;
   uint8_t purpose;
 
-  /* The field rend_sevice:
+  /* The field rend_service:
    *  holds hash of location-hidden service's PK if purpose is INTRO_POINT
    *     or S_ESTABLISH_INTRO or S_RENDEZVOUSING;
    *  holds y portion of y.onion (zero-padded) if purpose is C_INTRODUCING or
@@ -570,9 +570,14 @@ typedef struct {
   char *Nickname;
   char *Address;
   char *PidFile;
+
   char *ExitNodes;
   char *EntryNodes;
   char *ExcludeNodes;
+
+  char *RendNodes;
+  char *RendExcludeNodes;
+
   char *ExitPolicy;
   char *SocksBindAddress;
   char *ORBindAddress;
@@ -919,7 +924,8 @@ int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                              char *key_out,
                              int key_out_len);
 
-cpath_build_state_t *onion_new_cpath_build_state(const char *exit_nickname);
+cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
+                                                 const char *exit_nickname);
 
 /********************************* router.c ***************************/
 

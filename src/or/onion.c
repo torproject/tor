@@ -4,6 +4,11 @@
 
 #include "or.h"
 
+/* prototypes for smartlist operations from routerlist.h
+ * they're here to prevent precedence issues with the .h files
+ */
+void router_add_running_routers_to_smartlist(smartlist_t *sl);
+
 extern or_options_t options; /* command-line and config-file options */
 
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len);
@@ -220,7 +225,34 @@ static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
   return routelen;
 }
 
-static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
+static routerinfo_t *choose_good_exit_server_rend(routerlist_t *dir)
+{
+  smartlist_t *sl, *excludednodes;
+  routerinfo_t *choice;
+
+  excludednodes = smartlist_create();
+  add_nickname_list_to_smartlist(excludednodes,options.RendExcludeNodes);
+
+  /* try the nodes in RendNodes first */
+  sl = smartlist_create();
+  add_nickname_list_to_smartlist(sl,options.RendNodes);
+  smartlist_subtract(sl,excludednodes);
+  choice = smartlist_choose(sl);
+  smartlist_free(sl);
+  if(!choice) {
+    sl = smartlist_create();
+    router_add_running_routers_to_smartlist(sl);
+    smartlist_subtract(sl,excludednodes);
+    choice = smartlist_choose(sl);
+    smartlist_free(sl);
+  }
+  smartlist_free(excludednodes);
+  if(!choice)
+    log_fn(LOG_WARN,"No available nodes when trying to choose rendezvous point. Failing.");
+  return choice;
+}
+
+static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
 {
   int *n_supported;
   int i, j;
@@ -347,7 +379,16 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   return NULL;
 }
 
-cpath_build_state_t *onion_new_cpath_build_state(const char *exit_nickname) {
+static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
+{
+  if(purpose == CIRCUIT_PURPOSE_C_GENERAL)
+    return choose_good_exit_server_general(dir);
+  else
+    return choose_good_exit_server_rend(dir);
+}
+
+cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
+                                                 const char *exit_nickname) {
   routerlist_t *rl;
   int r;
   cpath_build_state_t *info;
@@ -357,13 +398,13 @@ cpath_build_state_t *onion_new_cpath_build_state(const char *exit_nickname) {
   r = new_route_len(options.PathlenCoinWeight, rl->routers, rl->n_routers);
   if (r < 0)
     return NULL;
-  info = tor_malloc(sizeof(cpath_build_state_t));
+  info = tor_malloc_zero(sizeof(cpath_build_state_t));
   info->desired_path_len = r;
   if(exit_nickname) { /* the circuit-builder pre-requested one */
     log_fn(LOG_INFO,"Using requested exit node '%s'", exit_nickname);
     info->chosen_exit = tor_strdup(exit_nickname);
   } else { /* we have to decide one */
-    exit = choose_good_exit_server(rl);
+    exit = choose_good_exit_server(purpose, rl);
     if(!exit) {
       tor_free(info);
       return NULL;
@@ -406,11 +447,6 @@ static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
 
   return num;
 }
-
-/* prototypes for smartlist operations from routerlist.h
- * they're here to prevent precedence issues with the .h files
- */
-void router_add_running_routers_to_smartlist(smartlist_t *sl);
 
 static void remove_twins_from_smartlist(smartlist_t *sl, routerinfo_t *twin) {
   int i;
