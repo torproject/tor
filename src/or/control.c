@@ -248,7 +248,8 @@ static int handle_control_authenticate(connection_t *conn, uint16_t len,
       authentication_cookie_is_set &&
       !memcmp(authentication_cookie, body, len)) {
     goto ok;
-  } else if (options->HashedControlPassword) {
+  }
+  if (options->HashedControlPassword) {
     char expected[S2K_SPECIFIER_LEN+DIGEST_LEN];
     char received[DIGEST_LEN];
     if (base64_decode(expected,sizeof(expected),
@@ -262,6 +263,9 @@ static int handle_control_authenticate(connection_t *conn, uint16_t len,
     if (!memcmp(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
       goto ok;
   }
+  if (len == 0) { /* accept it for now */
+    goto ok;
+  }
 
  err:
   send_control_error(conn, ERR_FAILED_AUTHENTICATION,"Authentication failed");
@@ -271,7 +275,6 @@ static int handle_control_authenticate(connection_t *conn, uint16_t len,
   send_control_done(conn);
   conn->state = CONTROL_CONN_STATE_OPEN;
   return 0;
-
 }
 
 int connection_control_finished_flushing(connection_t *conn) {
@@ -288,6 +291,12 @@ int connection_control_process_inbuf(connection_t *conn) {
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_CONTROL);
+
+  if(conn->inbuf_reached_eof) {
+    log_fn(LOG_INFO,"Control connection reached EOF. Closing.");
+    connection_mark_for_close(conn);
+    return 0;
+  }
 
  again:
   switch(fetch_from_buf_control(conn->inbuf, &body_len, &command_type, &body))
