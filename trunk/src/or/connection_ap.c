@@ -11,9 +11,34 @@ int connection_ap_process_inbuf(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_AP);
 
   if(conn->inbuf_reached_eof) {
+#ifdef HALF_OPEN
+    /* eof reached; we're done reading, but we might want to write more. */ 
+    conn->done_receiving = 1;
+    shutdown(conn->s, 0); /* XXX check return, refactor NM */
+    if (conn->done_sending)
+      conn->marked_for_close = 1;
+
+    /* XXX Factor out common logic here and in circuit_about_to_close NM */
+    circ = circuit_get_by_conn(conn);
+    if (!circ)
+      return -1;
+    
+    memset(&cell, 0, sizeof(cell_t));
+    cell.command = CELL_DATA;
+    cell.length = TOPIC_HEADER_SIZE;
+    *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
+    *cell.payload = TOPIC_COMMAND_END;
+    cell.aci = circ->n_aci;
+    if (circuit_deliver_data_cell_from_edge(&cell, circ, EDGE_AP) < 0) {
+      log(LOG_DEBUG,"connection_ap_process_inbuf: circuit_deliver_data_cell_from_edge failed.  Closing");
+      circuit_close(circ);
+    }
+    return 0;
+#else 
     /* eof reached, kill it. */
     log(LOG_DEBUG,"connection_ap_process_inbuf(): conn reached eof. Closing.");
     return -1;
+#endif
   }
 
 //  log(LOG_DEBUG,"connection_ap_process_inbuf(): state %d.",conn->state);

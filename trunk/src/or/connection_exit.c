@@ -12,8 +12,6 @@ int connection_exit_process_inbuf(connection_t *conn) {
 
   if(conn->inbuf_reached_eof) {
 #ifdef HALF_OPEN
-    /* XXX!!! If this is right, duplicate it in connection_ap.c */
-
     /* eof reached; we're done reading, but we might want to write more. */ 
     conn->done_receiving = 1;
     shutdown(conn->s, 0); /* XXX check return, refactor NM */
