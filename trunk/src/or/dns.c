@@ -84,41 +84,6 @@ static void purge_expired_resolves(uint32_t now) {
   }
 }
 
-#if 0
-uint32_t dns_lookup(const char *address) {
-  struct in_addr in;
-  uint32_t now = time(NULL);
-
-  /* first take this opportunity to see if there are any expired
-     resolves in the tree.*/
-  purge_expired_resolves(now);
-
-  if (inet_aton(address, &in)) {
-    log_fn(LOG_DEBUG, "Using static address %s (%08X)", address,
-           ntohl(in.s_addr));
-    return ntohl(in.s_addr);
-  }
-
-  strncpy(search.address, address, MAX_ADDRESSLEN);
-  search.address[MAX_ADDRESSLEN-1] = 0;
-  resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
-  if(resolve) { /* it's there */
-    if(resolve->state == CACHE_STATE_VALID) {
-      in.s_addr = htonl(resolve->addr);
-      log_fn(LOG_DEBUG, "Found cached entry for address %s: %s", address,
-             inet_ntoa(in));
-      return resolve->addr;
-    }
-    log_fn(LOG_DEBUG, "Entry found for address %s but it's not valid. Returning 0.",
-           address);
-    return 0;
-  }
-  /* it's not there */
-  log_fn(LOG_DEBUG, "No entry found for address %s", address);
-  return 0;
-}
-#endif
-
 /* See if we have a cache entry for 'exitconn->address'. if so,
  * if resolve valid, put it into exitconn->addr and return 1.
  * If resolve failed, return -1.
