@@ -5,8 +5,17 @@ tor (0.0.8+0.0.9pre5-2) unreleased; urgency=low
   * Make logs readable by the system administrators (group adm).
   * Point to /var/log/tor (the directory) instead of a single
     file (/var/log/tor/log) in the debian patch of the manpage.
+  * Do not patch the default torrc to include settings we really want.
+    Instead modify the compiled in default options.  Those settings are
+    
+    - RunAsDaemon is enabled by default.
+    - PidFile is set to /var/run/tor/tor.pid.  No default upstream.
+    - default logging goes to /var/log/tor/log instead of stdout.
+    - DataDirectory is set to /var/lib/tor by default.  No default upstream.
+    
+    This is also documented in the new debian/README.Debian.
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 12 Nov 2004 17:51:13 +0100
+ -- Peter Palfrader <weasel@debian.org>  Fri, 12 Nov 2004 18:11:26 +0100
 
 tor (0.0.8+0.0.9pre5-1) unstable; urgency=low
 
