@@ -10,7 +10,7 @@ static int relay_crypt(circuit_t *circ, char *in, char cell_direction,
                 crypt_path_t **layer_hint, char *recognized);
 static connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction);
 static void circuit_free_cpath_node(crypt_path_t *victim);
-static circ_id_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type);
+static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type);
 
 unsigned long stats_n_relay_cells_relayed = 0;
 unsigned long stats_n_relay_cells_delivered = 0;
@@ -56,7 +56,7 @@ void circuit_remove(circuit_t *circ) {
   }
 }
 
-circuit_t *circuit_new(circ_id_t p_circ_id, connection_t *p_conn) {
+circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
   circuit_t *circ;
 
   circ = tor_malloc_zero(sizeof(circuit_t));
@@ -129,8 +129,8 @@ static void circuit_free_cpath_node(crypt_path_t *victim) {
 }
 
 /* return 0 if can't get a unique circ_id. */
-static circ_id_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type) {
-  circ_id_t test_circ_id;
+static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type) {
+  uint16_t test_circ_id;
   int attempts=0;
   uint16_t high_bit;
 
@@ -156,7 +156,7 @@ static circ_id_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type
   return test_circ_id;
 }
 
-circuit_t *circuit_get_by_circ_id_conn(circ_id_t circ_id, connection_t *conn) {
+circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn) {
   circuit_t *circ;
   connection_t *tmpconn;
 

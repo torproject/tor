@@ -333,9 +333,10 @@ int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
   }
   if (compare_recommended_versions(VERSION, routerlist->software_versions) < 0) {
     log(options.IgnoreVersion ? LOG_WARN : LOG_ERR,
-        "You are running Tor version %s, which is not recommended.\n"
-       "Please upgrade to one of %s.",
-        VERSION, routerlist->software_versions);
+        "You are running Tor version %s, which will not work with this network.\n"
+       "Please use %s%s.",
+        VERSION, strchr(routerlist->software_versions,',') ? "one of " : "",
+        routerlist->software_versions);
     if(options.IgnoreVersion) {
       log(LOG_WARN, "IgnoreVersion is set. If it breaks, we told you so.");
     } else {

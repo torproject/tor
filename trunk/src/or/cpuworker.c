@@ -30,18 +30,18 @@ int connection_cpu_finished_flushing(connection_t *conn) {
   return 0;
 }
 
-static void tag_pack(char *tag, uint32_t addr, uint16_t port, circ_id_t circ_id) {
-  *(uint32_t *)tag = addr;
+static void tag_pack(char *tag, uint32_t addr, uint16_t port, uint16_t circ_id) {
+  *(uint32_t *)tag     = addr;
   *(uint16_t *)(tag+4) = port;
-  *(circ_id_t *)(tag+6) = circ_id;
+  *(uint16_t *)(tag+6) = circ_id;
 }
 
-static void tag_unpack(char *tag, uint32_t *addr, uint16_t *port, circ_id_t *circ_id) {
+static void tag_unpack(char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ_id) {
   struct in_addr in;
 
-  *addr = *(uint32_t *)tag;
-  *port = *(uint16_t *)(tag+4);
-  *circ_id = *(circ_id_t *)(tag+6);
+  *addr    = *(uint32_t *)tag;
+  *port    = *(uint16_t *)(tag+4);
+  *circ_id = *(uint16_t *)(tag+6);
 
   in.s_addr = htonl(*addr);
   log_fn(LOG_DEBUG,"onion was from %s:%d, circ_id %d.", inet_ntoa(in), *port, *circ_id);
@@ -51,7 +51,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   unsigned char buf[LEN_ONION_RESPONSE];
   uint32_t addr;
   uint16_t port;
-  circ_id_t circ_id;
+  uint16_t circ_id;
   connection_t *p_conn;
   circuit_t *circ;
 
