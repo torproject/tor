@@ -8,13 +8,15 @@ Quickstart version for users:
 4) cd src/config
 5) ../or/tor -f oprc
   You don't need to run this as root, and you probably shouldn't.
+  (Once you're comfortable running it, you can run it with "-l warn",
+   which will only log things that you need to know.)
 6) point your browser to socks4 or socks5 proxy at localhost port
   9050. In mozilla, this is in edit|preferences|advanced|proxies. This
   allows you to test to make sure tor is installed correctly.
   (If you have a personal firewall, be sure to allow connections to
-  localhost port 9050.)
+   localhost port 9050.)
   (If you're using Safari as your browser, keep in mind that it claims
-  to support socks but does not. You must do step 8.)
+   to support socks but does not. You must do step 8.)
 7) make sure you've set it up correctly: go to
   http://www.junkbusters.com/cgi-bin/privacy and see what IP it says
   you're coming from. If it works, you should probably go on to step 8,
