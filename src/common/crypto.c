@@ -54,8 +54,7 @@
 #define OPENSSL_095
 #endif
 
-/*
- * Certain functions that return a success code in OpenSSL 0.9.6 return void
+/* Certain functions that return a success code in OpenSSL 0.9.6 return void
  * (and don't indicate errors) in OpenSSL version 0.9.5.
  *
  * [OpenSSL 0.9.5 matters, because it ships with Redhat 6.2.]
@@ -66,12 +65,14 @@
 #define RETURN_SSL_OUTCOME(exp) return !(exp)
 #endif
 
+/* Macro: is k a valid RSA public or private key? */
 #define PUBLIC_KEY_OK(k) ((k) && (k)->key && (k)->key->n)
+/* Macro: is k a valid RSA private key? */
 #define PRIVATE_KEY_OK(k) ((k) && (k)->key && (k)->key->p)
 
 struct crypto_pk_env_t
 {
-  int refs; /* reference counting; so we don't have to copy keys */
+  int refs; /* reference counting so we don't have to copy keys */
   RSA *key;
 };
 
@@ -85,6 +86,8 @@ struct crypto_dh_env_t {
   DH *dh;
 };
 
+/* Return the number of bytes added by padding method 'padding'
+ */
 static INLINE int
 crypto_get_rsa_padding_overhead(int padding) {
   switch(padding)
@@ -96,6 +99,8 @@ crypto_get_rsa_padding_overhead(int padding) {
     }
 }
 
+/* Given a padding method 'padding', return the correct OpenSSL constant.
+ */
 static INLINE int
 crypto_get_rsa_padding(int padding) {
   switch(padding)
@@ -107,10 +112,12 @@ crypto_get_rsa_padding(int padding) {
     }
 }
 
+/* Boolen: has OpenSSL's crypto been initialized? */
 static int _crypto_global_initialized = 0;
 
-
-/* errors */
+/* Log all pending crypto errors at level 'severity'.  Use 'doing' to describe
+ * our current activities.
+ */
 static void
 crypto_log_errors(int severity, const char *doing)
 {
@@ -128,6 +135,8 @@ crypto_log_errors(int severity, const char *doing)
     }
   }
 }
+/* Initialize the crypto library.
+ */
 int crypto_global_init()
 {
   if (!_crypto_global_initialized) {
@@ -137,13 +146,15 @@ int crypto_global_init()
   return 0;
 }
 
+/* Uninitialize the crypto library.
+ */
 int crypto_global_cleanup()
 {
   ERR_free_strings();
   return 0;
 }
 
-/* used by tortls.c */
+/* used by tortls.c: wrap an RSA* in a crypto_pk_env_t. */
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa)
 {
   crypto_pk_env_t *env;
@@ -154,13 +165,14 @@ crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa)
   return env;
 }
 
-/* used by tortls.c */
+/* used by tortls.c: return the RSA* from a crypto_pk_env_t */
 RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env)
 {
   return env->key;
 }
 
-/* used by tortls.c */
+/* used by tortls.c: get an equivalent EVP_PKEY* for a crypto_pk_env_t.  Iff
+ * private is set, include the private-key portion of the key. */
 EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private)
 {
   RSA *key = NULL;
@@ -186,11 +198,16 @@ EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private)
   return NULL;
 }
 
+/* Used by tortls.c: Get the DH* from a crypto_dh_env_t.
+ */
 DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh)
 {
   return dh->dh;
 }
 
+/* Allocate and return storage for a public key.  The key itself will not yet
+ * be set.
+ */
 crypto_pk_env_t *crypto_new_pk_env(void)
 {
   RSA *rsa;
@@ -200,6 +217,8 @@ crypto_pk_env_t *crypto_new_pk_env(void)
   return _crypto_new_pk_env_rsa(rsa);
 }
 
+/*
+ */
 void crypto_free_pk_env(crypto_pk_env_t *env)
 {
   tor_assert(env);
@@ -273,7 +292,7 @@ int crypto_pk_generate_key(crypto_pk_env_t *env)
 
   if (env->key)
     RSA_free(env->key);
-  env->key = RSA_generate_key(PK_BITS,65537, NULL, NULL);
+  env->key = RSA_generate_key(PK_BYTES*8,65537, NULL, NULL);
   if (!env->key) {
     crypto_log_errors(LOG_WARN, "generating RSA key");
     return -1;

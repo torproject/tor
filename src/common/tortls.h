@@ -7,16 +7,16 @@
 
 #include "../common/crypto.h"
 
-typedef struct tor_tls_context_st tor_tls_context;
+/* Opaque structure to hold a TLS connection. */
 typedef struct tor_tls_st tor_tls;
 
+/* Possible return values for most tor_tls_* functions. */
 #define TOR_TLS_ERROR       -4
 #define TOR_TLS_CLOSE       -3
 #define TOR_TLS_WANTREAD    -2
 #define TOR_TLS_WANTWRITE   -1
 #define TOR_TLS_DONE         0
 
-/* X509* tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname); */
 int tor_tls_context_new(crypto_pk_env_t *rsa, int isServer,
                         const char *nickname, unsigned int key_lifetime);
 tor_tls *tor_tls_new(int sock, int isServer);
@@ -33,6 +33,8 @@ int tor_tls_get_pending_bytes(tor_tls *tls);
 unsigned long tor_tls_get_n_bytes_read(tor_tls *tls);
 unsigned long tor_tls_get_n_bytes_written(tor_tls *tls);
 
+/* Log and abort if there are unhandled TLS errors in OpenSSL's error stack.
+ */
 #define assert_no_tls_errors() _assert_no_tls_errors(__FILE__,__LINE__)
 
 void _assert_no_tls_errors(const char *fname, int line);

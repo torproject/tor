@@ -205,29 +205,29 @@ void
 test_crypto_dh()
 {
   crypto_dh_env_t *dh1, *dh2;
-  char p1[CRYPTO_DH_SIZE];
-  char p2[CRYPTO_DH_SIZE];
-  char s1[CRYPTO_DH_SIZE];
-  char s2[CRYPTO_DH_SIZE];
+  char p1[DH_BYTES];
+  char p2[DH_BYTES];
+  char s1[DH_BYTES];
+  char s2[DH_BYTES];
   int s1len, s2len;
 
   dh1 = crypto_dh_new();
   dh2 = crypto_dh_new();
-  test_eq(crypto_dh_get_bytes(dh1), CRYPTO_DH_SIZE);
-  test_eq(crypto_dh_get_bytes(dh2), CRYPTO_DH_SIZE);
+  test_eq(crypto_dh_get_bytes(dh1), DH_BYTES);
+  test_eq(crypto_dh_get_bytes(dh2), DH_BYTES);
 
-  memset(p1, 0, CRYPTO_DH_SIZE);
-  memset(p2, 0, CRYPTO_DH_SIZE);
-  test_memeq(p1, p2, CRYPTO_DH_SIZE);
-  test_assert(! crypto_dh_get_public(dh1, p1, CRYPTO_DH_SIZE));
-  test_memneq(p1, p2, CRYPTO_DH_SIZE);
-  test_assert(! crypto_dh_get_public(dh2, p2, CRYPTO_DH_SIZE));
-  test_memneq(p1, p2, CRYPTO_DH_SIZE);
+  memset(p1, 0, DH_BYTES);
+  memset(p2, 0, DH_BYTES);
+  test_memeq(p1, p2, DH_BYTES);
+  test_assert(! crypto_dh_get_public(dh1, p1, DH_BYTES));
+  test_memneq(p1, p2, DH_BYTES);
+  test_assert(! crypto_dh_get_public(dh2, p2, DH_BYTES));
+  test_memneq(p1, p2, DH_BYTES);
 
-  memset(s1, 0, CRYPTO_DH_SIZE);
-  memset(s2, 0xFF, CRYPTO_DH_SIZE);
-  s1len = crypto_dh_compute_secret(dh1, p2, CRYPTO_DH_SIZE, s1, 50);
-  s2len = crypto_dh_compute_secret(dh2, p1, CRYPTO_DH_SIZE, s2, 50);
+  memset(s1, 0, DH_BYTES);
+  memset(s2, 0xFF, DH_BYTES);
+  s1len = crypto_dh_compute_secret(dh1, p2, DH_BYTES, s1, 50);
+  s2len = crypto_dh_compute_secret(dh2, p1, DH_BYTES, s2, 50);
   test_assert(s1len > 0);
   test_eq(s1len, s2len);
   test_memeq(s1, s2, s1len);

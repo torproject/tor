@@ -2,10 +2,11 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/* TLS wrappers for The Onion Router.  (Unlike other tor functions, these
+/*****
+ * tortls.c: TLS wrappers for Tor.  (Unlike other tor functions, these
  * are prefixed with tor_ in order to avoid conflicting with OpenSSL
  * functions and variables.)
- */
+ *****/
 
 #include "./crypto.h"
 #include "./tortls.h"
@@ -28,17 +29,20 @@
 /* How much clock skew do we tolerate when checking certificates? (sec) */
 #define CERT_ALLOW_SKEW (90*60)
 
-struct tor_tls_context_st {
+typedef struct tor_tls_context_st {
   SSL_CTX *ctx;
-};
+} tor_tls_context;
 
+/* Holds a SSL object and it associated data.
+ */
 struct tor_tls_st {
   SSL *ssl;
-  int socket;
+  int socket; /* The underlying fd. */
   enum {
     TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
     TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED
-  } state;
+  } state; /* The current SSL state, depending on which operatios have
+            * completed successfully. */
   int isServer;
   int wantwrite_n; /* 0 normally, >0 if we returned wantwrite last time */
 };
@@ -49,10 +53,12 @@ static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                         const char *cname_sign,
                                         unsigned int lifetime);
 
-/* global tls context, keep it here because nobody else needs to touch it */
+/* Global tls context. We keep it here because nobody else needs to touch it */
 static tor_tls_context *global_tls_context = NULL;
+/* True iff tor_tls_init() has been called. */
 static int tls_library_is_initialized = 0;
 
+/* Module-internal error codes. */
 #define _TOR_TLS_SYSCALL    -6
 #define _TOR_TLS_ZERORETURN -5
 
@@ -61,6 +67,9 @@ EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
 DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
 
+/* Log all pending tls errors at level 'severity'.  Use 'doing' to describe
+ * our current activities.
+ */
 static void
 tls_log_errors(int severity, const char *doing)
 {
@@ -82,6 +91,16 @@ tls_log_errors(int severity, const char *doing)
 #define CATCH_SYSCALL 1
 #define CATCH_ZERO    2
 
+/* Given a TLS object and the result of an SSL_* call, use
+ * SSL_get_error to determine whether an error has occurred, and if so
+ * which one.  Return one of TOR_TLS_{DONE|WANTREAD|WANTWRITE|ERROR}.
+ * If extra&CATCH_SYSCALL is true, return _TOR_TLS_SYSCALL instead of
+ * reporting syscall errors.  If extra&CATCH_ZERO is true, return
+ * _TOR_TLS_ZERORETURN instead of reporting zero-return errors.
+ *
+ * If an error has occurred, log it at level 'severity' and describe the
+ * current action as 'doing.'
+ */
 static int
 tor_tls_get_error(tor_tls *tls, int r, int extra,
                   const char *doing, int severity)
@@ -97,8 +116,13 @@ tor_tls_get_error(tor_tls *tls, int r, int extra,
     case SSL_ERROR_SYSCALL:
       if (extra&CATCH_SYSCALL)
         return _TOR_TLS_SYSCALL;
-      log(severity, "TLS error: <syscall error> (errno=%d: %s)",errno,
-          strerror(errno));
+      if (r == 0)
+        log(severity, "TLS error: unexpected close while %s", doing);
+      else {
+        int e = tor_socket_errno(tls->socket);
+        log(severity, "TLS error: <syscall error while %s> (errno=%d: %s)",
+            doing, e, strerror(e));
+      }
       tls_log_errors(severity, doing);
       return TOR_TLS_ERROR;
     case SSL_ERROR_ZERO_RETURN:
@@ -113,6 +137,8 @@ tor_tls_get_error(tor_tls *tls, int r, int extra,
   }
 }
 
+/* Initialize OpenSSL, unless it has already been initialized.
+ */
 static void
 tor_tls_init() {
   if (!tls_library_is_initialized) {
@@ -124,20 +150,24 @@ tor_tls_init() {
   }
 }
 
+/* We need to give OpenSSL a callback to verify certificates. This is
+ * it: We always accept peer certs and complete the handshake.  We
+ * don't validate them until later.
+ */
 static int always_accept_verify_cb(int preverify_ok,
                                    X509_STORE_CTX *x509_ctx)
 {
-  /* We always accept peer certs and complete the handshake.  We don't validate
-   * them until later. */
   return 1;
 }
 
-/* Generate a self-signed certificate with the private key 'rsa' and
- * identity key 'identity and commonName 'nickname'.  Return a certificate
- * on success, NULL on failure.
- * DOCDOC
+/* Generate and sign an X509 certificate with the public key 'rsa',
+ * signed by the private key 'rsa_sign'.  The commonName of the
+ * certificate will be 'cname'; the commonName of the issuer will be
+ * cname_sign. The cert will be valid for cert_lifetime seconds
+ * starting from now.  Return a certificate on success, NULL on
+ * failure.
  */
-X509 *
+static X509 *
 tor_tls_create_certificate(crypto_pk_env_t *rsa,
                            crypto_pk_env_t *rsa_sign,
                            const char *cname,
@@ -236,7 +266,13 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 /* Create a new TLS context.  If we are going to be using it as a
  * server, it must have isServer set to true, 'identity' set to the
  * identity key used to sign that certificate, and 'nickname' set to
- * the server's nickname. Return -1 if failure, else 0.
+ * the server's nickname.  If we're only going to be a client,
+ * isServer should be false, identity should be NULL, and nickname
+ * should be NULL.  Return -1 if failure, else 0.
+ *
+ * You can call this function multiple times.  Each time you call it,
+ * it generates new certificates; all new connections will be begin
+ * with the new SSL context.
  */
 int
 tor_tls_context_new(crypto_pk_env_t *identity,
@@ -254,12 +290,15 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   tor_tls_init();
 
   if (isServer) {
+    /* Generate short-term RSA key. */
     if (!(rsa = crypto_new_pk_env()))
       goto error;
     if (crypto_pk_generate_key(rsa)<0)
       goto error;
+    /* Create certificate signed by identity key. */
     cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
                                       key_lifetime);
+    /* Create self-signed certificate for identity key. */
     idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
                                         IDENTITY_CERT_LIFETIME);
     if (!cert || !idcert) {
@@ -334,7 +373,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   return -1;
 }
 
-/* Create a new TLS object from a TLS context, a filedescriptor, and
+/* Create a new TLS object from a TLS context, a file descriptor, and
  * a flag to determine whether it is functioning as a server.
  */
 tor_tls *
@@ -515,6 +554,9 @@ tor_tls_peer_has_cert(tor_tls *tls)
   return 1;
 }
 
+/* Return the nickname (if any) that the peer connected on 'tls'
+ * claims to have.
+ */
 int
 tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen)
 {
@@ -593,7 +635,7 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
   if (id_pkey)
     EVP_PKEY_free(id_pkey);
 
-  /* XXXX */
+  /* XXXX This should never get invoked, but let's make sure for now. */
   tls_log_errors(LOG_WARN, "finishing tor_tls_verify");
 
   return r;
@@ -619,12 +661,15 @@ unsigned long tor_tls_get_n_bytes_read(tor_tls *tls)
   tor_assert(tls);
   return BIO_number_read(SSL_get_rbio(tls->ssl));
 }
+/* Return the number of bytes written across the underlying socket. */
 unsigned long tor_tls_get_n_bytes_written(tor_tls *tls)
 {
   tor_assert(tls);
   return BIO_number_written(SSL_get_wbio(tls->ssl));
 }
 
+/* Implement assert_no_tls_errors: If there are any pending OpenSSL
+ * errors, log an error message and assert(0). */
 void _assert_no_tls_errors(const char *fname, int line)
 {
   if (ERR_peek_error() == 0)
@@ -635,7 +680,6 @@ void _assert_no_tls_errors(const char *fname, int line)
 
   tor_assert(0);
 }
-
 
 /*
   Local Variables:

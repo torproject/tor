@@ -653,8 +653,10 @@ static int do_main_loop(void) {
 
     /* let catch() handle things like ^c, and otherwise don't worry about it */
     if(poll_result < 0) {
-      if(errno != EINTR) { /* let the program survive things like ^z */
-        log_fn(LOG_ERR,"poll failed: %s",strerror(errno));
+      /* let the program survive things like ^z */
+      if(tor_socket_errno(-1) != EINTR) {
+        log_fn(LOG_ERR,"poll failed: %s [%d]",
+               strerror(tor_socket_errno(-1)), tor_socket_errno(-1));
         return -1;
       } else {
         log_fn(LOG_DEBUG,"poll interrupted.");

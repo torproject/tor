@@ -480,7 +480,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
   switch(conn->state) {
     case DIR_CONN_STATE_CONNECTING:
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
-        if(!ERRNO_CONN_EINPROGRESS(errno)) {
+        if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(conn->s))) {
           log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
           router_mark_as_down(conn->nickname); /* don't try him again */
           connection_mark_for_close(conn,0);

@@ -278,12 +278,14 @@ int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one, sizeof(one));
 
   if(bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
-    log_fn(LOG_WARN,"Could not bind to port %u: %s",bindport,strerror(errno));
+    log_fn(LOG_WARN,"Could not bind to port %u: %s",bindport,
+           strerror(tor_socket_errno()));
     return -1;
   }
 
   if(listen(s,SOMAXCONN) < 0) {
-    log_fn(LOG_WARN,"Could not listen on port %u: %s",bindport,strerror(errno));
+    log_fn(LOG_WARN,"Could not listen on port %u: %s",bindport,
+           strerror(tor_socket_errno()));
     return -1;
   }
 
@@ -317,14 +319,8 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
 
   news = accept(conn->s,(struct sockaddr *)&remote,&remotelen);
   if (news == -1) { /* accept() error */
-    if(ERRNO_EAGAIN(errno)) {
-#ifdef MS_WINDOWS
-      e = correct_socket_errno(conn->s);
-      if (ERRNO_EAGAIN(e))
-        return 0;
-#else
+    if(ERRNO_IS_EAGAIN(tor_socket_errno(conn->s))) {
       return 0; /* he hung up before we could accept(). that's fine. */
-#endif
     }
     /* else there was a real error. */
     log_fn(LOG_WARN,"accept() failed. Closing listener.");
@@ -396,9 +392,10 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
   log_fn(LOG_DEBUG,"Connecting to %s:%u.",address,port);
 
   if(connect(s,(struct sockaddr *)&dest_addr,sizeof(dest_addr)) < 0) {
-    if(!ERRNO_CONN_EINPROGRESS(errno)) {
+    if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(s))) {
       /* yuck. kill it. */
-      log_fn(LOG_INFO,"Connect() to %s:%u failed: %s",address,port,strerror(errno));
+      log_fn(LOG_INFO,"Connect() to %s:%u failed: %s",address,port,
+             strerror(tor_socket_errno(s)));
       tor_close_socket(s);
       return -1;
     } else {

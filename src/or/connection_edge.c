@@ -479,7 +479,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
   switch(conn->state) {
     case EXIT_CONN_STATE_CONNECTING:
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
-        if(!ERRNO_CONN_EINPROGRESS(errno)) {
+        if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(conn->s))) {
           /* yuck. kill it. */
           log_fn(LOG_DEBUG,"in-progress exit connect failed. Removing.");
           connection_mark_for_close(conn, END_STREAM_REASON_CONNECTFAILED);

@@ -190,15 +190,9 @@ int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof) {
 //  log_fn(LOG_DEBUG,"reading at most %d bytes.",at_most);
   read_result = recv(s, buf->mem+buf->datalen, at_most, 0);
   if (read_result < 0) {
-    if(!ERRNO_EAGAIN(errno)) { /* it's a real error */
+    if(!ERRNO_IS_EAGAIN(tor_socket_errno(s))) { /* it's a real error */
       return -1;
     }
-#ifdef MS_WINDOWS
-    e = correct_socket_errno(s);
-    if(!ERRNO_EAGAIN(e)) { /* no, it *is* a real error! */
-      return -1;
-    }
-#endif
     return 0;
   } else if (read_result == 0) {
     log_fn(LOG_DEBUG,"Encountered eof");
@@ -262,16 +256,11 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
 
   write_result = send(s, buf->mem, *buf_flushlen, 0);
   if (write_result < 0) {
-    if(!ERRNO_EAGAIN(errno)) { /* it's a real error */
-      tor_assert(errno != EPIPE); /* get a stack trace to find epipe bugs */
+    if(!ERRNO_IS_EAGAIN(tor_socket_errno(s))) { /* it's a real error */
+      /* get a stack trace to find epipe bugs */
+      tor_assert(tor_socket_errno(s) != EPIPE);
       return -1;
     }
-#ifdef MS_WINDOWS
-    e = correct_socket_errno(s);
-    if(!ERRNO_EAGAIN(e)) { /* no, it *is* a real error! */
-      return -1;
-    }
-#endif
     log_fn(LOG_DEBUG,"write() would block, returning.");
     return 0;
   } else {
