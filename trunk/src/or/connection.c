@@ -516,7 +516,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   tor_assert(remotelen >= sizeof(struct sockaddr_in));
   memset(addrbuf, 0, sizeof(addrbuf));
 
-  news = accept(conn->s,(struct sockaddr *)&remote,&remotelen);
+  news = accept(conn->s,(struct sockaddr *)&addrbuf,&remotelen);
   if (!SOCKET_IS_POLLABLE(news)) {
     /* accept() error, or too many conns to poll */
     int e;
