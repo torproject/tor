@@ -24,6 +24,11 @@
 #include <winsock.h>
 #endif
 
+/* by default, windows handles only 64 fd's */
+#if defined(MS_WINDOWS) && !defined(FD_SETSIZE)
+#define FD_SETSIZE MAXCONNECTIONS
+#endif
+
 #include "util.h"
 
 int
