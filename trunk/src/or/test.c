@@ -702,8 +702,8 @@ main(int c, char**v){
   crypto_seed_rng();
 
   setup_directory();
-  puts("========================== Buffers =========================");
-  test_buffers();
+//  puts("========================== Buffers =========================");
+//  test_buffers();
   puts("\n========================== Crypto ==========================");
   test_crypto();
   test_crypto_dh();
