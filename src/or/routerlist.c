@@ -202,15 +202,7 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified)
     router = smartlist_get(routerlist->routers, i);
     if(router->is_running &&
        (allow_unverified || router->is_verified)) {
-      if(!clique_mode()) {
-        smartlist_add(sl, router);
-      } else {
-        connection_t *conn =
-          connection_get_by_identity_digest(router->identity_digest,
-                                            CONN_TYPE_OR);
-        if(conn && conn->state == OR_CONN_STATE_OPEN)
-          smartlist_add(sl, router);
-      }
+      smartlist_add(sl, router);
     }
   }
 }
