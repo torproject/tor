@@ -154,7 +154,7 @@ static void parse_csv_into_smartlist(smartlist_t *lst, const char *val)
     tor_assert(cp <= end);
     tor_assert(*end == '\0' || *end == ',');
     tor_assert((!isspace(*start) && !isspace(*cp)) || start==cp);
-    smartlist_add(lst, tor_strndup(start, cp-start));
+    smartlist_add(lst, tor_strndup(start, cp-start+1));
     if (!*end)
       break;
     cp = end+1;
