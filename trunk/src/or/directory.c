@@ -41,8 +41,7 @@ directory_initiate_command(const char *address, uint32_t addr, uint16_t port,
 
 static void
 directory_send_command(connection_t *conn, const char *platform,
-                       uint16_t dir_port, int purpose,
-                       const char *payload, size_t payload_len);
+                       int purpose, const char *payload, size_t payload_len);
 static int directory_handle_command(connection_t *conn);
 
 /********* START VARIABLES **********/
@@ -195,13 +194,14 @@ directory_initiate_command(const char *address, uint32_t addr,
   conn = connection_new(CONN_TYPE_DIR);
 
   /* set up conn so it's got all the data we need to remember */
+  conn->addr = addr;
+  conn->port = dir_port;
+
   if(options.HttpProxy) {
-    conn->addr = options.HttpProxyAddr;
-    conn->port = options.HttpProxyPort;
-  } else {
-    conn->addr = addr;
-    conn->port = dir_port;
+    addr = options.HttpProxyAddr;
+    dir_port = options.HttpProxyPort;
   }
+
   conn->address = tor_strdup(address);
   /* conn->nickname = tor_strdup(router->nickname); */
   /* tor_assert(router->identity_pkey); */
@@ -217,12 +217,12 @@ directory_initiate_command(const char *address, uint32_t addr,
   if(purpose == DIR_PURPOSE_FETCH_DIR ||
      purpose == DIR_PURPOSE_UPLOAD_DIR) {
     /* then we want to connect directly */
-    switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
+    switch(connection_connect(conn, conn->address, addr, dir_port)) {
       case -1:
         router_mark_as_down(conn->identity_digest); /* don't try him again */
         if(purpose == DIR_PURPOSE_FETCH_DIR &&
            !all_trusted_directory_servers_down()) {
-          log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->nickname);
+          log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->address);
           directory_get_from_dirserver(purpose, payload, payload_len);
         }
         connection_free(conn);
@@ -232,8 +232,7 @@ directory_initiate_command(const char *address, uint32_t addr,
         /* fall through */
       case 0:
         /* queue the command on the outbuf */
-        directory_send_command(conn, platform, dir_port,
-                               purpose, payload, payload_len);
+        directory_send_command(conn, platform, purpose, payload, payload_len);
 
         connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
         /* writable indicates finish, readable indicates broken link,
@@ -254,8 +253,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     conn->state = DIR_CONN_STATE_CLIENT_SENDING;
     connection_add(conn);
     /* queue the command on the outbuf */
-    directory_send_command(conn, platform, dir_port,
-                           purpose, payload, payload_len);
+    directory_send_command(conn, platform, purpose, payload, payload_len);
     connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
   }
 }
@@ -266,8 +264,7 @@ directory_initiate_command(const char *address, uint32_t addr,
  */
 static void
 directory_send_command(connection_t *conn, const char *platform,
-                       uint16_t dir_port, int purpose,
-                       const char *payload, size_t payload_len) {
+                       int purpose, const char *payload, size_t payload_len) {
   char tmp[8192];
   char proxystring[128];
   char hoststring[128];
@@ -277,15 +274,14 @@ directory_send_command(connection_t *conn, const char *platform,
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DIR);
-  tor_assert(dir_port);
 
   /* If we don't know the platform, assume it's up-to-date. */
   use_newer = platform ? tor_version_as_new_as(platform, "0.0.9pre1"):1;
 
-  if(dir_port == 80) {
+  if(conn->port == 80) {
     strlcpy(hoststring, conn->address, sizeof(hoststring));
   } else {
-    sprintf(hoststring, "%s:%d", conn->address, dir_port);
+    sprintf(hoststring, "%s:%d", conn->address, conn->port);
   }
   if(options.HttpProxy) {
     sprintf(proxystring, "http://%s", hoststring);
