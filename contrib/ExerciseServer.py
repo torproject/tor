@@ -35,15 +35,22 @@ HOSTS_TO_TEST = [ "moria1", "ned", "tor26"]
 EXITS_TO_TEST = [ "pvt", ]
 TARGETS = [ ("belegost.mit.edu", "/"),
             ("seul.org", "/")]
-
+N_CIRCS_TO_TRY = 100
 CIRCS_AT_A_TIME = 3
 CIRC_LEN = 3
 
+
+HOST_STATUS = {}
+N_CIRCS_DONE = 0
 def launchCirc(s):
     htt = HOSTS_TO_TEST[:]
     random.shuffle(htt)
     path = htt[:CIRC_LEN-1]+[random.choice(EXITS_TO_TEST)]
     circid = TorControl.extend_circuit(s, 0, path)
+
+    for name in path:
+        lst = HOST_STATUS.setdefault(name,[0,0])
+        lst[0] += 1
     return circid, path
 
 def runControl(s):
@@ -56,7 +63,8 @@ def runControl(s):
                           [TorControl.EVENT_TYPE.CIRCSTATUS,
                            TorControl.EVENT_TYPE.STREAMSTATUS])
     TorControl.set_option(s,"__LeaveStreamsUnattached 1")
-    while 1:
+    global N_CIRCS_DONE
+    while N_CIRCS_DONE < N_CIRCS_TO_TRY:
         while len(circs) < CIRCS_AT_A_TIME:
             c,p = launchCirc(s)
             print "launching circuit %s to %s"%(c,p)
@@ -64,8 +72,13 @@ def runControl(s):
         _, tp, body = TorControl.receive_message(s)
         if tp == TorControl.MSG_TYPE.EVENT:
             handleEvent(s, body, circs, s1,s2)
+    i = HOST_STATUS.items()
+    i.sort()
+    for n,(all,good) in i:
+        print "%s in %s circuits; %s/%s ok"%(n,all,good,all)
 
 def handleEvent(s, body, circs, streamsByNonce, streamsByIdent):
+    global N_CIRCS_DONE
     event, args = TorControl.unpack_event(body)
     if event == TorControl.EVENT_TYPE.STREAMSTATUS:
         status, ident, target = args
@@ -87,7 +100,11 @@ def handleEvent(s, body, circs, streamsByNonce, streamsByIdent):
                         TorControl.STREAM_STATUS.FAILED):
             circid, (host,url) = streamsByIdent[ident]
             if circs.has_key(circid):
+                for name in circs[circid]:
+                    HOST_STATUS[name][1] += 1
                 del circs[circid]
+                N_CIRCS_DONE += 1
+                print N_CIRCS_DONE, "circuit attempts done"
             del streamsByIdent[ident]
     elif event == TorControl.EVENT_TYPE.CIRCSTATUS:
         status, ident, path = args
@@ -98,6 +115,8 @@ def handleEvent(s, body, circs, streamsByNonce, streamsByIdent):
             if circs.has_key(ident):
                 print "Circuit failed."
                 del circs[ident]
+                N_CIRCS_DONE += 1
+                print N_CIRCS_DONE, "circuit attempts done"
         elif status == TorControl.CIRC_STATUS.BUILT:
             nonce = random.randint(1,100000000)
             nonce = "%s.exnonce" % nonce
