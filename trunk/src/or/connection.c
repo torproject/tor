@@ -493,7 +493,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
       log_fn(LOG_WARN,"Outbound bind address '%s' didn't parse. Ignoring.",
              options.OutboundBindAddress);
     } else {
-      if(bind(s, (struct sockaddr*)&ext_addr, sizeof(ext_addr) < 0)) {
+      if(bind(s, (struct sockaddr*)&ext_addr, sizeof(ext_addr)) < 0) {
         log_fn(LOG_WARN,"Error binding network socket: %s",
                tor_socket_strerror(tor_socket_errno(s)));
         return -1;
