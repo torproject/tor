@@ -161,7 +161,12 @@ but will not allow you to run as a server behind such a firewall.
 A list of ports that your firewall allows you to connect to.  Only used when
 \fBFascistFirewall\fR is set. (Default: 80, 443.)
 .TP
-\fB
+\fBLongLivedPorts \fR\fIPORTS\fP
+A list of ports for services that tend to have long-running connections
+(e.g. chat and interactive shells). Circuits for streams that use these
+ports will contain only high-uptime nodes, to reduce the chance that a
+node will go down before the stream is finished.
+.TP
 \fBNewCircuitPeriod \fR\fINUM\fP
 Every NUM seconds consider whether to build a new circuit. (Default: 60)
 .TP
