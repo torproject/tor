@@ -192,13 +192,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request
     goto err;
 
   /* Check whether the digest is right... */
-  memcpy(buf, keys, DIGEST_LEN);
-  memcpy(buf+DIGEST_LEN, "INTRODUCE", 9);
-  if (crypto_digest(buf, DIGEST_LEN+9, expected_digest)) {
-    log_fn(LOG_WARN, "Error computing digest");
-    goto err;
-  }
-  if (memcmp(expected_digest, request+DH_KEY_LEN, DIGEST_LEN)) {
+  if (memcmp(keys, request+DH_KEY_LEN, DIGEST_LEN)) {
     log_fn(LOG_WARN, "Incorrect digest of key material");
     goto err;
   }
