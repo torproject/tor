@@ -926,6 +926,7 @@ void circuit_expire_unused_circuits(void) {
     if(((tmpcirc->timestamp_dirty &&
          tmpcirc->timestamp_dirty + options.NewCircuitPeriod < now) ||
         (options.RunTesting &&
+         tmpcirc->cpath &&
          tmpcirc->timestamp_created + TESTING_CIRCUIT_MAX_AGE < now))
        && !tmpcirc->p_conn
        && !tmpcirc->p_streams
