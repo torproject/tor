@@ -67,7 +67,7 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
 aes_cnt_cipher_t*
 aes_new_cipher()
 {
-  aes_cnt_cipher_t* result = (aes_cnt_cipher_t*) tor_malloc(sizeof(aes_cnt_cipher_t));
+  aes_cnt_cipher_t* result = tor_malloc(sizeof(aes_cnt_cipher_t));
   memset(result->rk, 0, 4*(MAXNR+1));
   memset(result->buf, 0, 16);
 
@@ -75,7 +75,7 @@ aes_new_cipher()
 }
 
 void
-aes_set_key(aes_cnt_cipher_t *cipher, unsigned char *key, int key_bits)
+aes_set_key(aes_cnt_cipher_t *cipher, const unsigned char *key, int key_bits)
 {
   cipher->nr = rijndaelKeySetupEnc(cipher->rk, key, key_bits);
   cipher->counter0 = 0;
@@ -93,7 +93,7 @@ aes_free_cipher(aes_cnt_cipher_t *cipher)
 }
 
 void
-aes_crypt(aes_cnt_cipher_t *cipher, char *input, int len, char *output)
+aes_crypt(aes_cnt_cipher_t *cipher, const char *input, int len, char *output)
 {
   int c = cipher->pos;
   if (!len) return;

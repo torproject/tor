@@ -354,7 +354,7 @@ circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
       continue;
     if (circ->purpose != purpose)
       continue;
-    if (!memcmp(circ->rend_pk_digest, digest, CRYPTO_SHA1_DIGEST_LEN))
+    if (!memcmp(circ->rend_pk_digest, digest, DIGEST_LEN))
       return circ;
   }
   return NULL;
@@ -1373,29 +1373,27 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
  */
 int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data)
 {
-  unsigned char iv[16];
+  unsigned char iv[CIPHER_IV_LEN];
   assert(cpath && key_data);
   assert(!(cpath->f_crypto || cpath->b_crypto ||
            cpath->f_digest || cpath->b_digest));
 
-  memset(iv, 0, 16);
+  memset(iv, 0, CIPHER_IV_LEN);
 
   log_fn(LOG_DEBUG,"hop init digest forward 0x%.8x, backward 0x%.8x.",
          (unsigned int)*(uint32_t*)key_data, (unsigned int)*(uint32_t*)(key_data+20));
-  cpath->f_digest = crypto_new_digest_env(CRYPTO_SHA1_DIGEST);
-  crypto_digest_add_bytes(cpath->f_digest, key_data, 20);
-  cpath->b_digest = crypto_new_digest_env(CRYPTO_SHA1_DIGEST);
-  crypto_digest_add_bytes(cpath->b_digest, key_data+20, 20);
+  cpath->f_digest = crypto_new_digest_env();
+  crypto_digest_add_bytes(cpath->f_digest, key_data, DIGEST_LEN);
+  cpath->b_digest = crypto_new_digest_env();
+  crypto_digest_add_bytes(cpath->b_digest, key_data+DIGEST_LEN, DIGEST_LEN);
 
   log_fn(LOG_DEBUG,"hop init cipher forward 0x%.8x, backward 0x%.8x.",
-        (unsigned int)*(uint32_t*)(key_data+40), (unsigned int)*(uint32_t*)(key_data+40+16));
-  if (!(cpath->f_crypto =
-        crypto_create_init_cipher(CIRCUIT_CIPHER,key_data+40,iv,1))) {
+         (unsigned int)*(uint32_t*)(key_data+40), (unsigned int)*(uint32_t*)(key_data+40+16));
+  if (!(cpath->f_crypto = crypto_create_init_cipher(key_data+40,iv,1))) {
     log(LOG_WARN,"forward cipher initialization failed.");
     return -1;
   }
-  if (!(cpath->b_crypto =
-        crypto_create_init_cipher(CIRCUIT_CIPHER,key_data+40+16,iv,0))) {
+  if (!(cpath->b_crypto = crypto_create_init_cipher(key_data+40+16,iv,0))) {
     log(LOG_WARN,"backward cipher initialization failed.");
     return -1;
   }
@@ -1429,7 +1427,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   crypto_dh_free(hop->handshake_state); /* don't need it anymore */
   hop->handshake_state = NULL;
   /* Remember hash of g^xy */
-  memcpy(hop->handshake_digest, reply+DH_KEY_LEN, CRYPTO_SHA1_DIGEST_LEN);
+  memcpy(hop->handshake_digest, reply+DH_KEY_LEN, DIGEST_LEN);
 
   if (circuit_init_cpath_crypto(hop, keys)<0) {
     return -1;

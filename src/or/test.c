@@ -243,12 +243,6 @@ test_crypto()
   char *data1, *data2, *data3, *cp;
   FILE *f;
   int i, j, p, len;
-  int str_ciphers[] = { CRYPTO_CIPHER_IDENTITY,
-                        CRYPTO_CIPHER_DES,
-                        CRYPTO_CIPHER_RC4,
-                        CRYPTO_CIPHER_3DES,
-                        CRYPTO_CIPHER_AES_CTR,
-                        -1 };
 
   data1 = tor_malloc(1024);
   data2 = tor_malloc(1024);
@@ -261,6 +255,7 @@ test_crypto()
   crypto_rand(100, data2);
   test_memneq(data1,data2,100);
 
+#if 0
   /* Try out identity ciphers. */
   env1 = crypto_new_cipher_env(CRYPTO_CIPHER_IDENTITY);
   test_neq(env1, 0);
@@ -273,90 +268,82 @@ test_crypto()
   crypto_cipher_encrypt(env1, data1, 1024, data2);
   test_memeq(data1, data2, 1024);
   crypto_free_cipher_env(env1);
+#endif
 
-  /* Now, test encryption and decryption with stream ciphers. */
+  /* Now, test encryption and decryption with stream cipher. */
   data1[0]='\0';
   for(i = 1023; i>0; i -= 35)
     strncat(data1, "Now is the time for all good onions", i);
-  for(i=0; str_ciphers[i] >= 0; ++i) {
-    /* For each cipher... */
-    memset(data2, 0, 1024);
-    memset(data3, 0, 1024);
-    env1 = crypto_new_cipher_env(str_ciphers[i]);
-    test_neq(env1, 0);
-    env2 = crypto_new_cipher_env(str_ciphers[i]);
-    test_neq(env2, 0);
-    j = crypto_cipher_generate_key(env1);
-    if (str_ciphers[i] != CRYPTO_CIPHER_IDENTITY) {
-      crypto_cipher_set_key(env2, crypto_cipher_get_key(env1));
-    }
-    crypto_cipher_set_iv(env1, "12345678901234567890");
-    crypto_cipher_set_iv(env2, "12345678901234567890");
-    crypto_cipher_encrypt_init_cipher(env1);
-    crypto_cipher_decrypt_init_cipher(env2);
 
-    /* Try encrypting 512 chars. */
-    crypto_cipher_encrypt(env1, data1, 512, data2);
-    crypto_cipher_decrypt(env2, data2, 512, data3);
-    test_memeq(data1, data3, 512);
-    if (str_ciphers[i] == CRYPTO_CIPHER_IDENTITY) {
-      test_memeq(data1, data2, 512);
-    } else {
-      test_memneq(data1, data2, 512);
-    }
-    /* Now encrypt 1 at a time, and get 1 at a time. */
-    for (j = 512; j < 560; ++j) {
-      crypto_cipher_encrypt(env1, data1+j, 1, data2+j);
-    }
-    for (j = 512; j < 560; ++j) {
-      crypto_cipher_decrypt(env2, data2+j, 1, data3+j);
-    }
-    test_memeq(data1, data3, 560);
-    /* Now encrypt 3 at a time, and get 5 at a time. */
-    for (j = 560; j < 1024-5; j += 3) {
-      crypto_cipher_encrypt(env1, data1+j, 3, data2+j);
-    }
-    for (j = 560; j < 1024-5; j += 5) {
-      crypto_cipher_decrypt(env2, data2+j, 5, data3+j);
-    }
-    test_memeq(data1, data3, 1024-5);
-    /* Now make sure that when we encrypt with different chunk sizes, we get
-       the same results. */
-    crypto_free_cipher_env(env2);
+  memset(data2, 0, 1024);
+  memset(data3, 0, 1024);
+  env1 = crypto_new_cipher_env();
+  test_neq(env1, 0);
+  env2 = crypto_new_cipher_env();
+  test_neq(env2, 0);
+  j = crypto_cipher_generate_key(env1);
+  crypto_cipher_set_key(env2, crypto_cipher_get_key(env1));
+  crypto_cipher_set_iv(env1, "12345678901234567890");
+  crypto_cipher_set_iv(env2, "12345678901234567890");
+  crypto_cipher_encrypt_init_cipher(env1);
+  crypto_cipher_decrypt_init_cipher(env2);
 
-    memset(data3, 0, 1024);
-    env2 = crypto_new_cipher_env(str_ciphers[i]);
-    test_neq(env2, 0);
-    if (str_ciphers[i] != CRYPTO_CIPHER_IDENTITY) {
-      crypto_cipher_set_key(env2, crypto_cipher_get_key(env1));
-    }
-    crypto_cipher_set_iv(env2, "12345678901234567890");
-    crypto_cipher_encrypt_init_cipher(env2);
-    for (j = 0; j < 1024-16; j += 17) {
-      crypto_cipher_encrypt(env2, data1+j, 17, data3+j);
-    }
-    for (j= 0; j < 1024-16; ++j) {
-      if (data2[j] != data3[j]) {
-        printf("%d:  %d\t%d\n", j, (int) data2[j], (int) data3[j]);
-      }
-    }
-    test_memeq(data2, data3, 1024-16);
-    crypto_free_cipher_env(env1);
-    crypto_free_cipher_env(env2);
+  /* Try encrypting 512 chars. */
+  crypto_cipher_encrypt(env1, data1, 512, data2);
+  crypto_cipher_decrypt(env2, data2, 512, data3);
+  test_memeq(data1, data3, 512);
+  test_memneq(data1, data2, 512);
+
+  /* Now encrypt 1 at a time, and get 1 at a time. */
+  for (j = 512; j < 560; ++j) {
+    crypto_cipher_encrypt(env1, data1+j, 1, data2+j);
   }
+  for (j = 512; j < 560; ++j) {
+    crypto_cipher_decrypt(env2, data2+j, 1, data3+j);
+  }
+  test_memeq(data1, data3, 560);
+  /* Now encrypt 3 at a time, and get 5 at a time. */
+  for (j = 560; j < 1024-5; j += 3) {
+    crypto_cipher_encrypt(env1, data1+j, 3, data2+j);
+  }
+  for (j = 560; j < 1024-5; j += 5) {
+    crypto_cipher_decrypt(env2, data2+j, 5, data3+j);
+  }
+  test_memeq(data1, data3, 1024-5);
+  /* Now make sure that when we encrypt with different chunk sizes, we get
+     the same results. */
+  crypto_free_cipher_env(env2);
+
+  memset(data3, 0, 1024);
+  env2 = crypto_new_cipher_env();
+  test_neq(env2, 0);
+  crypto_cipher_set_key(env2, crypto_cipher_get_key(env1));
+  crypto_cipher_set_iv(env2, "12345678901234567890");
+  crypto_cipher_encrypt_init_cipher(env2);
+  for (j = 0; j < 1024-16; j += 17) {
+    crypto_cipher_encrypt(env2, data1+j, 17, data3+j);
+  }
+  for (j= 0; j < 1024-16; ++j) {
+    if (data2[j] != data3[j]) {
+      printf("%d:  %d\t%d\n", j, (int) data2[j], (int) data3[j]);
+    }
+  }
+  test_memeq(data2, data3, 1024-16);
+  crypto_free_cipher_env(env1);
+  crypto_free_cipher_env(env2);
 
   /* Test vectors for stream ciphers. */
   /* XXXX Look up some test vectors for the ciphers and make sure we match. */
 
   /* Test SHA-1 with a test vector from the specification. */
-  i = crypto_SHA_digest("abc", 3, data1);
+  i = crypto_digest("abc", 3, data1);
   test_memeq(data1,
              "\xA9\x99\x3E\x36\x47\x06\x81\x6A\xBA\x3E\x25\x71\x78"
              "\x50\xC2\x6C\x9C\xD0\xD8\x9D", 20);
 
   /* Public-key ciphers */
-  pk1 = crypto_new_pk_env(CRYPTO_PK_RSA);
-  pk2 = crypto_new_pk_env(CRYPTO_PK_RSA);
+  pk1 = crypto_new_pk_env();
+  pk2 = crypto_new_pk_env();
   test_assert(pk1 && pk2);
   test_assert(! crypto_pk_generate_key(pk1));
   test_assert(! crypto_pk_write_public_key_to_string(pk1, &cp, &i));
@@ -367,25 +354,25 @@ test_crypto()
   test_eq(128, crypto_pk_keysize(pk2));
 
   test_eq(128, crypto_pk_public_encrypt(pk2, "Hello whirled.", 15, data1,
-                                        RSA_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING));
   test_eq(128, crypto_pk_public_encrypt(pk1, "Hello whirled.", 15, data2,
-                                        RSA_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING));
   /* oaep padding should make encryption not match */
   test_memneq(data1, data2, 128);
   test_eq(15, crypto_pk_private_decrypt(pk1, data1, 128, data3,
-                                        RSA_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING));
   test_streq(data3, "Hello whirled.");
   memset(data3, 0, 1024);
   test_eq(15, crypto_pk_private_decrypt(pk1, data2, 128, data3,
-                                        RSA_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING));
   test_streq(data3, "Hello whirled.");
   /* Can't decrypt with public key. */
   test_eq(-1, crypto_pk_private_decrypt(pk2, data2, 128, data3,
-                                        RSA_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING));
   /* Try again with bad padding */
   memcpy(data2+1, "XYZZY", 5);  /* This has fails ~ once-in-2^40 */
   test_eq(-1, crypto_pk_private_decrypt(pk1, data2, 128, data3,
-                                        RSA_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING));
 
   /* File operations: save and load private key */
   f = fopen("/tmp/tor_test/pkey1", "wb");
@@ -395,11 +382,11 @@ test_crypto()
   test_assert(! crypto_pk_read_private_key_from_file(pk2, f));
   fclose(f);
   test_eq(15, crypto_pk_private_decrypt(pk2, data1, 128, data3,
-                                        RSA_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING));
   test_assert(! crypto_pk_read_private_key_from_filename(pk2,
                                                "/tmp/tor_test/pkey1"));
   test_eq(15, crypto_pk_private_decrypt(pk2, data1, 128, data3,
-                                        RSA_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING));
 
   /* Now try signing. */
   strcpy(data1, "Ossifrage");
@@ -429,8 +416,8 @@ test_crypto()
       memset(data3,0,1024);
       if (i == 0 && j < 129)
         continue;
-      p = (i==0)?RSA_NO_PADDING:
-        (i==1)?RSA_PKCS1_PADDING:RSA_PKCS1_OAEP_PADDING;
+      p = (i==0)?PK_NO_PADDING:
+        (i==1)?PK_PKCS1_PADDING:PK_PKCS1_OAEP_PADDING;
       len = crypto_pk_public_hybrid_encrypt(pk1,data1,j,data2,p);
       test_assert(len>=0);
       len = crypto_pk_private_hybrid_decrypt(pk1,data2,len,data3,p);
@@ -626,7 +613,7 @@ test_onion_handshake() {
   /* shared */
   crypto_pk_env_t *pk = NULL;
 
-  pk = crypto_new_pk_env(CRYPTO_PK_RSA);
+  pk = crypto_new_pk_env();
   test_assert(! crypto_pk_generate_key(pk));
 
   /* client handshake 1. */
@@ -669,9 +656,9 @@ test_dir_format()
   struct exit_policy_t ex1, ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
 
-  test_assert( (pk1 = crypto_new_pk_env(CRYPTO_PK_RSA)) );
-  test_assert( (pk2 = crypto_new_pk_env(CRYPTO_PK_RSA)) );
-  test_assert( (pk3 = crypto_new_pk_env(CRYPTO_PK_RSA)) );
+  test_assert( (pk1 = crypto_new_pk_env()) );
+  test_assert( (pk2 = crypto_new_pk_env()) );
+  test_assert( (pk3 = crypto_new_pk_env()) );
   test_assert(! crypto_pk_generate_key(pk1));
   test_assert(! crypto_pk_generate_key(pk2));
   test_assert(! crypto_pk_generate_key(pk3));
@@ -835,7 +822,7 @@ void test_rend_fns()
   int len;
   crypto_pk_env_t *pk1;
   time_t now;
-  pk1 = crypto_new_pk_env(CRYPTO_PK_RSA);
+  pk1 = crypto_new_pk_env();
 
   test_assert(!crypto_pk_generate_key(pk1));
   d1 = tor_malloc_zero(sizeof(rend_service_descriptor_t));

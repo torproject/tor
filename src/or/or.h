@@ -251,13 +251,6 @@
 /* Reasons used by connection_mark_for_close */
 #define CLOSE_REASON_UNUSED_OR_CONN 100
 
-/* default cipher function */
-#define DEFAULT_CIPHER CRYPTO_CIPHER_AES_CTR
-/* Used to en/decrypt onion skins */
-#define ONION_CIPHER      DEFAULT_CIPHER
-/* Used to en/decrypt RELAY cells */
-#define CIRCUIT_CIPHER    DEFAULT_CIPHER
-
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
 #define EDGE_EXIT CONN_TYPE_EXIT
@@ -482,7 +475,7 @@ struct crypt_path_t {
   crypto_digest_env_t *b_digest;
 
   crypto_dh_env_t *handshake_state;
-  char handshake_digest[CRYPTO_SHA1_DIGEST_LEN];/* KH in tor-spec.txt */
+  char handshake_digest[DIGEST_LEN];/* KH in tor-spec.txt */
 
   uint32_t addr;
   uint16_t port;
@@ -501,7 +494,7 @@ struct crypt_path_t {
 #define DH_KEY_LEN CRYPTO_DH_SIZE
 #define ONIONSKIN_CHALLENGE_LEN (16+DH_KEY_LEN)
 #define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+20)
-#define REND_COOKIE_LEN CRYPTO_SHA1_DIGEST_LEN
+#define REND_COOKIE_LEN DIGEST_LEN
 
 typedef struct crypt_path_t crypt_path_t;
 
@@ -545,7 +538,7 @@ struct circuit_t {
   crypt_path_t *cpath;
 
   char onionskin[ONIONSKIN_CHALLENGE_LEN]; /* for storage while onionskin pending */
-  char handshake_digest[CRYPTO_SHA1_DIGEST_LEN]; /* Stores KH for intermediate hops */
+  char handshake_digest[DIGEST_LEN]; /* Stores KH for intermediate hops */
 
   time_t timestamp_created;
   time_t timestamp_dirty; /* when the circuit was first used, or 0 if clean */
@@ -563,7 +556,7 @@ struct circuit_t {
   /* rend_pk_digest holds a hash of location-hidden service's PK if
    * purpose is INTRO_POINT or S_ESTABLISH_INTRO or S_RENDEZVOUSING
    */
-  char rend_pk_digest[CRYPTO_SHA1_DIGEST_LEN];
+  char rend_pk_digest[DIGEST_LEN];
 
   /* Holds rendezvous cookie if purpose is REND_POINT_WAITING or
    * C_ESTABLISH_REND. Filled with zeroes otherwise.
