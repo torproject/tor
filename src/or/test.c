@@ -439,6 +439,9 @@ test_util() {
   struct timeval start, end;
   struct tm a_time;
   smartlist_t *sl;
+  char timestr[RFC1123_TIME_LEN+1];
+  time_t t_res;
+  int i;
 
   start.tv_sec = 5;
   start.tv_usec = 5000;
@@ -479,6 +482,15 @@ test_util() {
   a_time.tm_mday = 10;
   test_eq((time_t) 1076393695UL, tor_timegm(&a_time));
 
+  tor_format_rfc1123_time(timestr, 0);
+  test_streq("Thu, 01 Jan 1970 00:00:00 GMT", timestr);
+  tor_format_rfc1123_time(timestr, (time_t)1091580502UL);
+  test_streq("Wed, 04 Aug 2004 00:48:22 GMT", timestr);
+
+  t_res = 0;
+  i = tor_parse_rfc1123_time(timestr, &t_res);
+  test_eq(i,0);
+  test_eq(t_res, (time_t)1091580502UL);
 
   /* Test smartlist */
   sl = smartlist_create();
