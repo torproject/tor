@@ -317,21 +317,29 @@ int crypto_pk_generate_key(crypto_pk_env_t *env)
   return 0;
 }
 
-/** Read a PEM-encoded private key from <b>src</b> into <b>env</b>.
+/** Read a PEM-encoded private key from the string <b>s</b> into <b>env</b>.
  */
-static int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env,
-                                                FILE *src)
+static int crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
+                                                  const char *s)
 {
-  tor_assert(env && src);
+  BIO *b;
+
+  tor_assert(env && s);
+
+  /* Create a read-only memory BIO, backed by the nul-terminated string 's' */
+  b = BIO_new_mem_buf((char*)s, -1);
 
   if (env->key)
     RSA_free(env->key);
-  env->key = PEM_read_RSAPrivateKey(src, NULL, NULL, NULL);
+
+  env->key = PEM_read_bio_RSAPrivateKey(b,NULL,NULL,NULL);
+
+  BIO_free(b);
+
   if (!env->key) {
-    crypto_log_errors(LOG_WARN, "reading private key from file");
+    crypto_log_errors(LOG_WARN, "Error parsing private key");
     return -1;
   }
-
   return 0;
 }
 
@@ -340,23 +348,23 @@ static int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env,
  */
 int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *keyfile)
 {
-  FILE *f_pr;
+  char *contents;
+  int r;
 
-  tor_assert(env && keyfile);
-
-  /* open the keyfile */
-  f_pr=fopen(keyfile,"r");
-  if (!f_pr)
-    return -1;
-
-  /* read the private key */
-  if(crypto_pk_read_private_key_from_file(env, f_pr) < 0) {
-    fclose(f_pr);
+  /* Read the file into a string. */
+  contents = read_file_to_str(keyfile, 0);
+  if (!contents) {
+    log_fn(LOG_WARN, "Error reading private key from %s", keyfile);
     return -1;
   }
-  fclose(f_pr);
 
-  /* check the private key */
+  /* Try to parse it. */
+  r = crypto_pk_read_private_key_from_string(env, contents);
+  tor_free(contents);
+  if (r)
+    return -1; /* read_private_key_from_string already warned, so we don't.*/
+
+  /* Make sure it's valid. */
   if (crypto_pk_check_key(env) <= 0)
     return -1;
 
