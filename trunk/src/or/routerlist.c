@@ -694,6 +694,8 @@ routerinfo_t *routerinfo_copy(const routerinfo_t *router)
   r->address = tor_strdup(r->address);
   r->nickname = tor_strdup(r->nickname);
   r->platform = tor_strdup(r->platform);
+  if (r->signed_descriptor)
+    r->signed_descriptor = tor_strdup(r->signed_descriptor);
   if (r->onion_pkey)
     r->onion_pkey = crypto_pk_dup_key(r->onion_pkey);
   if (r->identity_pkey)
