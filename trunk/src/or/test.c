@@ -46,6 +46,7 @@ setup_directory() {
 
 void
 test_buffers() {
+#define MAX_BUF_SIZE 640*1024
   char str[256];
   char str2[256];
 
@@ -60,7 +61,7 @@ test_buffers() {
   if (!(buf = buf_new()))
     test_fail();
 
-  test_eq(buf_capacity(buf), MAX_BUF_SIZE);
+  test_eq(buf_capacity(buf), 2*1024);
   test_eq(buf_datalen(buf), 0);
 
   /****
@@ -76,7 +77,7 @@ test_buffers() {
   s = open("/tmp/tor_test/data", O_RDONLY, 0);
   eof = 0;
   i = read_to_buf(s, 10, buf, &eof);
-  test_eq(buf_capacity(buf), MAX_BUF_SIZE);
+  test_eq(buf_capacity(buf), 2*1024);
   test_eq(buf_datalen(buf), 10);
   test_eq(eof, 0);
   test_eq(i, 10);

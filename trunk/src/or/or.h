@@ -100,7 +100,6 @@
 #define MAXCONNECTIONS 1000 /* upper bound on max connections.
                               can be lowered by config file */
 
-#define MAX_BUF_SIZE (640*1024)
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 #define MAX_NICKNAME_LEN 32
 #define MAX_DIR_SIZE 50000 /* XXX, big enough? */
