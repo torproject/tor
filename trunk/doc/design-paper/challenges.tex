@@ -33,7 +33,7 @@ Tor is a low-latency anonymous communication overlay network designed
 to be practical and usable for protecting TCP streams over the
 Internet~\cite{tor-design}. We have been operating a publicly deployed
 Tor network since October 2003 that has grown to over a hundred volunteer
-nodes and carries on average over 70 megabits of traffic per second.
+nodes and sometimes as much as 80 megabits of average traffic per second.
 
 Tor has a weaker threat model than many anonymity designs in the
 literature, because our foremost goal is to deploy a
@@ -652,34 +652,10 @@ and incentive schemes \cite{price-privacy}. Similarly we can expect a
 continued use of identification by IP number as long as there is no
 workable alternative.
 
-
-
-
-\subsection{Other}
-
-[Once you build a generic overlay network, everybody wants to use it.]
-
-Tor's scope: How much should Tor aim to do? Applications that leak
-data: we can say they're not our problem, but they're somebody's problem.
-Also, the more widely deployed Tor becomes, the more people who need a
-deployed overlay network tell us they'd like to use us if only we added
-the following more features. For example, Blossom \cite{blossom} and
-random community wireless projects both want source-routable overlay
-networks for their own purposes. Fortunately, our modular design separates
-routing from node discovery; so we could implement Morphmix in Tor just
-by implementing the Morphmix-specific node discovery and path selection
-pieces. On the other hand, we could easily get distracted building a
-general-purpose overlay library, and we're only a few developers.
-
-[arma will work on this]
-
-%Should we allow revocation of anonymity if a threshold of
-%servers want to?
-
-Logging. Making logs not revealing. A happy coincidence that verbose
-logging is our \#2 performance bottleneck. Is there a way to detect
-modified servers, or to have them volunteer the information that they're
-logging verbosely? Would that actually solve any attacks?
+%Fortunately, our modular design separates
+%routing from node discovery; so we could implement Morphmix in Tor just
+%by implementing the Morphmix-specific node discovery and path selection
+%pieces.
 
 \section{Crossroads: Scaling and Design choices}
 \label{sec:crossroads-design}
@@ -1376,6 +1352,12 @@ we should put random thoughts here until there are enough for a
 conclusion.
 
 will our sustainability approach work? we'll see.
+
+Applications that leak data: we can say they're not our problem, but
+they're somebody's problem.
+The more widely deployed Tor becomes, the more people who need a
+deployed overlay network tell us they'd like to use us if only we added
+the following more features.
 
 "These are difficult and open questions, yet choosing not to solve them
 means leaving most users to a less secure network or no anonymizing
