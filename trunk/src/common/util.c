@@ -12,6 +12,9 @@
 
 #include "util.h"
 #include "log.h"
+#ifdef HAVE_UNAME
+#include <sys/utsname.h>
+#endif
 
 /*
  *    Memory
@@ -480,3 +483,28 @@ try_next_line:
   return 1;
 }
 
+static char uname_result[256];
+static int uname_result_is_set = 0;
+
+const char *
+get_uname(void)
+{
+#ifdef HAVE_UNAME
+  struct utsname u;
+#endif
+  if (!uname_result_is_set) {
+#ifdef HAVE_UNAME
+    if (!uname((&u))) {
+      snprintf(uname_result, 255, "%s %s %s %s %s",
+               u.sysname, u.nodename, u.release, u.version, u.machine);
+      uname_result[255] = '\0';
+    } else 
+#endif
+      {
+        strcpy(uname_result, "Unknown platform");
+      }
+    uname_result_is_set = 1;
+  }
+  return uname_result;
+}
+      

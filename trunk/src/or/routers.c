@@ -13,9 +13,6 @@
  */
 
 #include "or.h"
-#ifdef HAVE_UNAME
-#include <sys/utsname.h>
-#endif
 
 /****************************************************************************/
 
@@ -771,6 +768,8 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   directory_token_t *tok = &_tok;
   struct tm published;
 
+  int t;
+
 #define NEXT_TOKEN()                                                     \
   do { if (router_get_next_token(s, tok)) {                              \
       log_fn(LOG_WARNING, "Error reading directory: %s", tok->val.error);\
@@ -779,8 +778,10 @@ routerinfo_t *router_get_entry_from_string(char**s) {
 
 #define ARGS tok->val.cmd.args
 
-  if (router_get_router_hash(*s, digest) < 0)
+  if (router_get_router_hash(*s, digest) < 0) {
+    log_fn(LOG_WARNING, "Couldn't compute router hash.");
     return NULL;
+  }
 
   NEXT_TOKEN();
 
@@ -802,11 +803,15 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   }
   if (!(router->nickname = strdup(ARGS[0])))
     goto err;
-  if (strlen(router->nickname) > MAX_NICKNAME_LEN)
+  if (strlen(router->nickname) > MAX_NICKNAME_LEN) {
+    log_fn(LOG_WARNING,"Router nickname too long.");
     goto err;
+  }
   if (strspn(router->nickname, LEGAL_NICKNAME_CHARACTERS) != 
-      strlen(router->nickname))
+      strlen(router->nickname)) {
+    log_fn(LOG_WARNING, "Router nickname contains illegal characters.");
     goto err;
+  }
   
   /* read router.address */
   if (!(router->address = strdup(ARGS[1])))
@@ -830,6 +835,7 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   router->bandwidth = atoi(ARGS[5]);
   if (!router->bandwidth) {
     log_fn(LOG_WARNING,"bandwidth unreadable or 0. Failing.");
+    goto err;
   }
   
   log_fn(LOG_DEBUG,"or_port %d, ap_port %d, dir_port %d, bandwidth %d.",
@@ -900,9 +906,9 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   }
   assert (router->identity_pkey);
 
-  if (crypto_pk_public_checksig(router->identity_pkey, tok->val.signature,
-                                128, signed_digest) != 20) {
-    log_fn(LOG_WARNING, "Invalid signature");
+  if ((t=crypto_pk_public_checksig(router->identity_pkey, tok->val.signature,
+                                   128, signed_digest)) != 20) {
+    log_fn(LOG_WARNING, "Invalid signature %d",t);
     goto err;
   }
   if (memcmp(digest, signed_digest, 20)) {
@@ -1082,20 +1088,12 @@ int router_rebuild_descriptor(void) {
 
 static void get_platform_str(char *platform, int len)
 {
-#ifdef HAVE_UNAME
-  struct utsname u;
-  if (!uname(&u)) {
-    snprintf(platform, len-1, "Tor %s on %s %s %s %s %s",
-             VERSION, u.sysname, u.nodename, u.release, u.version, u.machine);
-    platform[len-1] = '\0';
-    return;
-  } else
-#endif
-    {
-      snprintf(platform, len-1, "Tor %s", VERSION);
-    }
+  snprintf(platform, len-1, "Tor %s on %s", VERSION, get_uname());
+  platform[len-1] = '\0';
+  return;
 }
 
+#define DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
 int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key) {
   char *onion_pkey;
@@ -1109,8 +1107,17 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   int written;
   int result=0;
   struct exit_policy_t *tmpe;
+#ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
+  char *s_tmp, *s_dup;
+  routerinfo_t *ri_tmp;
+#endif
   
   get_platform_str(platform, sizeof(platform));
+
+  if (crypto_pk_cmp_keys(ident_key, router->identity_pkey)) {
+    log_fn(LOG_WARNING,"Tried to sign a router with a private key that didn't match router's public key!");
+    return -1;
+  }
 
   if(crypto_pk_write_public_key_to_string(router->onion_pkey,
                                           &onion_pkey,&onion_pkeylen)<0) {
@@ -1196,6 +1203,19 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   /* include a last '\n' */
   s[written] = '\n';
   s[written+1] = 0;
+
+#ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
+  s_tmp = s_dup = strdup(s);
+  ri_tmp = router_get_entry_from_string(&s_tmp);
+  if (!ri_tmp) {
+    log_fn(LOG_ERR, "We just generated a router descriptor we can't parse: <<%s>>", 
+           s);
+    return -1;
+  }
+  free(s_dup);
+  routerinfo_free(ri_tmp);
+#endif
+
   return written+1;
 }
 

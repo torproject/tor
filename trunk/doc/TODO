@@ -44,7 +44,6 @@ ARMA    . find an application that uses half-open connections: openssh
 NICK    - instruments ORs to report stats
           - average cell fullness
           - average bandwidth used
-          - others?
         . integrate rep_ok functions, see what breaks
 ARMA    - configure log files. separate log file, separate severities.
 ARMA    - what assumptions break if we fclose(0) when we daemonize?
