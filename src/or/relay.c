@@ -555,7 +555,7 @@ connection_edge_process_relay_cell_not_open(
         /* else, conn will get closed below */
         log_fn(LOG_INFO,"Giving up on retrying (from resolvefailed); conn can't be handled.");
       } else {
-        log_fn(LOG_NOTICE,"Have tried resolving address %s at %d different places. Giving up.",
+        log_fn(LOG_NOTICE,"Have tried resolving address '%s' at %d different places. Giving up.",
                conn->socks_request->address, MAX_RESOLVE_FAILURES);
       }
     }
