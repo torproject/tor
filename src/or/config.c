@@ -161,7 +161,7 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "APPort",          CONFIG_TYPE_INT, &options->APPort) ||
     config_compare(list, "ORPort",          CONFIG_TYPE_INT, &options->ORPort) ||
     config_compare(list, "DirPort",         CONFIG_TYPE_INT, &options->DirPort) ||
-    config_compare(list, "DirFetchPeriod",  CONFIG_TYPE_INT, &options->DirFetchPeriod) ||
+    config_compare(list, "DirFetchPostPeriod",CONFIG_TYPE_INT, &options->DirFetchPostPeriod) ||
     config_compare(list, "KeepalivePeriod", CONFIG_TYPE_INT, &options->KeepalivePeriod) ||
     config_compare(list, "MaxOnionsPending",CONFIG_TYPE_INT, &options->MaxOnionsPending) ||
     config_compare(list, "NewCircuitPeriod",CONFIG_TYPE_INT, &options->NewCircuitPeriod) ||
@@ -202,7 +202,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->DataDirectory = NULL;
   options->CoinWeight = 0.8;
   options->MaxConn = 900;
-  options->DirFetchPeriod = 600;
+  options->DirFetchPostPeriod = 600;
   options->KeepalivePeriod = 300;
   options->MaxOnionsPending = 10;
   options->NewCircuitPeriod = 60; /* once a minute */
@@ -306,8 +306,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
-  if(options->DirFetchPeriod < 1) {
-    log(LOG_WARNING,"DirFetchPeriod option must be positive.");
+  if(options->DirFetchPostPeriod < 1) {
+    log(LOG_WARNING,"DirFetchPostPeriod option must be positive.");
     result = -1;
   }
 
