@@ -642,7 +642,7 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
 
   if(!connection_speaks_cells(conn)) {
      log_fn(LOG_INFO,"Aci %d: At an edge. Marking connection for close.", aci);
-     connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+     connection_edge_end(conn, END_STREAM_REASON_DESTROY, conn->cpath_layer);
      /* if they already sent a destroy, they know. XXX can just close? */
      return 0;
   }

@@ -220,7 +220,7 @@ void dns_cancel_pending_resolve(char *question, connection_t *onlyconn) {
     /* mark all pending connections to fail */
     while(resolve->pending_connections) {
       pend = resolve->pending_connections;
-      connection_edge_end(pend->conn, NULL, 0, NULL);
+      connection_edge_end(pend->conn, END_STREAM_REASON_MISC, NULL);
       resolve->pending_connections = pend->next;
       free(pend);
     }
@@ -272,9 +272,10 @@ static void dns_found_answer(char *question, uint32_t answer) {
   while(resolve->pending_connections) {
     pend = resolve->pending_connections;
     pend->conn->addr = resolve->answer;
-    if(resolve->state == CACHE_STATE_FAILED || connection_exit_connect(pend->conn) < 0) {
-      connection_edge_end(pend->conn, NULL, 0, NULL);
-    }
+    if(resolve->state == CACHE_STATE_FAILED)
+      connection_edge_end(pend->conn, END_STREAM_REASON_RESOLVEFAILED, NULL);
+    else
+      connection_exit_connect(pend->conn);
     resolve->pending_connections = pend->next;
     free(pend);
   }
