@@ -21,6 +21,7 @@ static int reading_headers=0;
 static int directory_dirty=1;
 
 static char getstring[] = "GET / HTTP/1.0\r\n\r\n";
+static char poststring[] = "POST / HTTP/1.0\r\n\r\n";
 static char answerstring[] = "HTTP/1.0 200 OK\r\n\r\n";
 
 /********* END VARIABLES ************/
@@ -132,7 +133,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
     if(router_get_dir_from_string(the_directory, conn->pkey) < 0) {
       log_fn(LOG_DEBUG,"...but parsing failed. Ignoring.");
     } else {
-      log_fn(LOG_DEBUG,"and got a %s directory; updated routers.", 
+      log_fn(LOG_DEBUG,"and got an %s directory; updated routers.", 
           conn->pkey ? "authenticated" : "unauthenticated");
     }
 
@@ -235,7 +236,6 @@ int connection_dir_finished_flushing(connection_t *conn) {
     case DIR_CONN_STATE_CONNECTING:
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
         if(!ERRNO_CONN_EINPROGRESS(errno)) {
-          /* yuck. kill it. */
           log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
           router_forget_router(conn->addr, conn->port); /* don't try him again */
           return -1;

@@ -127,11 +127,13 @@ static aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_t
   high_bit = (aci_type == ACI_TYPE_HIGHER) ? 1<<15 : 0;
   conn = connection_exact_get_by_addr_port(addr,port);
   if (!conn)
-    return 1; /* No connection exists; conflict is impossible. */
+    return (1|high_bit); /* No connection exists; conflict is impossible. */
 
   do {
     /* Sequentially iterate over test_aci=1...1<<15-1 until we find an
      * aci such that (high_bit|test_aci) is not already used. */
+    /* XXX Will loop forever if all aci's in our range are used.
+     * This matters because it's an external DoS vulnerability. */
     test_aci = conn->next_aci++;
     if (test_aci == 0 || test_aci >= 1<<15) {
       test_aci = 1;
@@ -225,13 +227,13 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
   return NULL;
 }
 
-circuit_t *circuit_get_newest_ap(void) {
+circuit_t *circuit_get_newest_open(void) {
   circuit_t *circ, *bestcirc=NULL;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->cpath && circ->state == CIRCUIT_STATE_OPEN && (!bestcirc ||
+    if(circ->cpath && circ->state == CIRCUIT_STATE_OPEN && circ->n_conn && (!bestcirc ||
       bestcirc->timestamp_created < circ->timestamp_created)) {
-      log_fn(LOG_DEBUG,"Choosing n_aci %d.", circ->n_aci);
+      log_fn(LOG_DEBUG,"Choosing circuit %s:%d:%d.", circ->n_conn->address, circ->n_port, circ->n_aci);
       assert(circ->n_aci);
       bestcirc = circ;
     }
@@ -501,7 +503,7 @@ void circuit_close(circuit_t *circ) {
 
   assert(circ);
   if(options.APPort) {
-    youngest = circuit_get_newest_ap();
+    youngest = circuit_get_newest_open();
     log_fn(LOG_DEBUG,"youngest %d, circ %d.",(int)youngest, (int)circ);
   }
   circuit_remove(circ);
@@ -610,7 +612,7 @@ void circuit_expire_unused_circuits(void) {
   circuit_t *circ, *tmpcirc;
   circuit_t *youngest;
 
-  youngest = circuit_get_newest_ap();
+  youngest = circuit_get_newest_open();
 
   circ = global_circuitlist;
   while(circ) {
