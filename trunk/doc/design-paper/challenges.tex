@@ -475,6 +475,7 @@ logging verbosely? Would that actually solve any attacks?
 \label{sec:crossroads-design}
 
 \subsection{Transporting the stream vs transporting the packets}
+\ref{subsec:stream-vs-packet}
 
 We periodically run into ex ZKS employees who tell us that the process of
 anonymizing IPs should ``obviously'' be done at the IP layer. Here are
@@ -530,24 +531,93 @@ understand which are actual roadblocks and which are easier to resolve
 than we think. We certainly wouldn't mind if Tor one day is able to
 transport a greater variety of protocols.
 
-[paul will work on this]
-
 \subsection{Mid-latency}
 \label{subsec:mid-latency}
 
-Mid-latency. Can we do traffic shape to get any defense against George's
-PET2004 paper? Will padding or long-range dummies do anything then? Will
-it kill the user base or can we get both approaches to play well together?
-
-explain what mid-latency is. propose a single network where users of
-varying latency goals can combine.
-
-Note that in practice as the network is growing and we accept cable
-modem and dsl nodes, and nodes in other continents, we're *already*
+Though Tor has always been designed to be practical and usable first
+with as much anonymity as can be built in subject to those goals, we
+have contemplated that users might need resistance to at least simple
+traffic confirmation attacks. Raising the latency of communication
+slightly might make this feasible. If the latency could be kept to two
+or three times its current overhead, this might be acceptable to the
+majority of Tor users. However, it might also destroy much of the user
+base, and it is difficult to know in advance.  Note also that in
+practice, as the network is growing and we accept cable modem, DSL
+nodes, and more nodes in various continents, we're \emph{already}
 looking at many-second delays for some transactions. The engineering
 required to get this lower is going to be extremely hard. It's worth
 considering how hard it would be to accept the fixed (higher) latency
-and improve the protection we get from it.
+and improve the protection we get from it. Thus, it may be most
+practical to run a mid-latency option over the Tor network for those
+users either willing to experiment or in need of more a priori
+anonymity in the network.  This will allow us to experiment with both
+the anonymity provided and the interest on the part of users.
+
+Adding a mid-latency option should not require significant fundamental
+change to the Tor client or server design; circuits can be labeled as
+low or mid latency on servers as they are set up. Low-latency traffic
+would be processed as now.  Packets on circuits that are mid-latency
+would be sent in uniform size chunks at synchronized intervals.  To
+some extent the chunking is already done because traffic moves through
+the network in uniform size cells, but this would occur at a courser
+granularity.  If servers forward these chunks in roughly synchronous
+fashion, it will increase the similarity of data stream timing
+signatures. By experimenting with the granularity of data chunks and
+of synchronization we can attempt once again to optimize for both
+usability and anonymity. Unlike in \cite{sync-batch}, it may be
+impractical to synchronize on network batches by dropping chunks from
+a batch that arrive late at a given node---unless Tor moves away from
+stream processing to a more loss-tolerant processing of traffic (cf.\ 
+section~\ref{subsec:stream-vs-packet}). In other words, there would
+probably be no direct attempt to synchronize on batches of data
+entering the Tor network at the same time. Rather, it is the link
+level batching that will add noise to the traffic patterns exiting the
+network.  Similarly, if end-to-end traffic confirmation is the
+concern, there is little point in mixing. It might also be feasible to
+pad chunks to uniform size as is done now for cells; if this is link
+padding rather than end-to-end, then it will take less overhead,
+especially in bursty environments. This is another way in which it
+would be fairly practical to set up a mid-latency option within the
+existing Tor network. Other padding regimens might supplement the
+mid-latency option; however, we should continue the caution with which
+we have always approached padding lest the overhead cost us either
+performance or volunteers.
+
+The distinction between traffic confirmation and traffic analysis is
+not as practically cut and dried as we might wish. In \cite{} it was
+shown that if latencies to and/or data volumes of various popular
+responder destinations are catalogued, it may not be necessary to
+observe both ends of a stream to confirm a source-destination link.
+These are likely to entail high variability and massive storage since
+routes through the network to each site will be random even if they
+have relatively unique latency or volume characteristics. So these do
+not seem an immediate practical threat. Further along similar lines, in
+\cite{attack-tor-oak05}, it was shown that an outside attacker can
+trace a stream through the Tor network while a stream is still active
+simply by observing the latency of his own traffic sent through
+various Tor nodes. These attacks are especially significant since they
+counter previous results that running one's own onion router protects
+better than using the network from the outside. The attacks do not
+show the client address, only the first server within the Tor network,
+making helper nodes all the more worthy of exploration for enclave
+protection. Setting up a mid-latency subnet as described above would
+be another significant step to evaluating resistance to such attacks.
+
+The attacks in \cite{attack-tor-oak05} are also dependent on
+cooperation of the responding application or the ability to modify or
+monitor the responder stream, in order of decreasing attack
+effectiveness.  So, another way to counter these attacks in some cases
+would be to employ caching of responses. This is infeasible for
+application data that is not relatively static and from frequently
+visited sites; however, it might be useful for DNS lookups. This is
+also likely to be trading one practical threat for another. To be
+useful, such caches would need to be distributed to any likely exit
+nodes of recurred requests for the same data.  Aside from the logistic
+difficulties and overhead of distribution, they constitute a collected
+record of destinations and/or data visited by Tor users.  While
+limited to network insiders, given the need for wide distribution
+they could serve as useful data to an attacker deciding which locations
+to target for confirmation.
 
 [nick will work on this]
 
