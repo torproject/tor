@@ -1,9 +1,12 @@
+/* Copyright 2001,2002 Roger Dingledine, Matej Pfajfar. */
+/* See LICENSE for licensing information */
+/* $Id$ */
 
 #include "or.h"
 
 /********* START VARIABLES **********/
 
-static or_options_t options; /* command-line and config-file options */
+or_options_t options; /* command-line and config-file options */
 int global_role;
 
 static connection_t *connection_array[MAXCONNECTIONS] =
@@ -89,13 +92,19 @@ int connection_remove(connection_t *conn) {
 }
 
 connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
+  /* Find a connection to the router described by addr and port,
+   *   or alternately any router which knows its key.
+   * This connection *must* be in 'open' state.
+   * If not, return NULL.
+   */
   int i;
   connection_t *conn;
 
   /* first check if it's there exactly */
   conn = connection_exact_get_by_addr_port(addr,port);
-  if(conn)
+  if(conn && connection_state_is_open(conn)) {
     return conn;
+  }
 
   /* now check if any of the other open connections are a twin for this one */
 
@@ -185,6 +194,21 @@ void connection_watch_events(connection_t *conn, short events) {
   poll_array[conn->poll_index].events = events;
 }
 
+void connection_stop_reading(connection_t *conn) {
+
+  assert(conn && conn->poll_index < nfds);
+
+  if(poll_array[conn->poll_index].events & POLLIN)
+    poll_array[conn->poll_index].events -= POLLIN;
+}
+
+void connection_start_reading(connection_t *conn) {
+
+  assert(conn && conn->poll_index < nfds);
+
+  poll_array[conn->poll_index].events |= POLLIN;
+}
+
 void check_conn_read(int i) {
   int retval;
   connection_t *conn;
@@ -193,7 +217,7 @@ void check_conn_read(int i) {
 
     conn = connection_array[i];
     assert(conn);
-    log(LOG_DEBUG,"check_conn_read(): socket %d has something to read.",conn->s);
+//    log(LOG_DEBUG,"check_conn_read(): socket %d has something to read.",conn->s);
 
     if (conn->type == CONN_TYPE_OP_LISTENER) {
       retval = connection_op_handle_listener_read(conn);
@@ -206,10 +230,14 @@ void check_conn_read(int i) {
       retval = connection_read_to_buf(conn);
       if (retval >= 0) { /* all still well */
         retval = connection_process_inbuf(conn);
-	log(LOG_DEBUG,"check_conn_read(): connection_process_inbuf returned %d.",retval);
+//	log(LOG_DEBUG,"check_conn_read(): connection_process_inbuf returned %d.",retval);
+        if(retval >= 0 && !connection_state_is_open(conn) && conn->receiver_bucket == 0) {
+          log(LOG_DEBUG,"check_conn_read(): receiver bucket reached 0 before handshake finished. Closing.");
+          retval = -1;
+        }
       }
     }
-  
+
     if(retval < 0) { /* this connection is broken. remove it */
       log(LOG_DEBUG,"check_conn_read(): Connection broken, removing."); 
       connection_remove(conn);
@@ -275,15 +303,93 @@ void check_conn_marked(int i) {
   }
 }
 
+int prepare_for_poll(int *timeout) {
+  int i;
+  int need_to_refill_buckets = 0;
+  connection_t *conn = NULL;
+  connection_t *tmpconn;
+  struct timeval now, soonest;
+  static int current_second = 0; /* from previous calls to gettimeofday */
+  int ms_until_conn;
+
+  *timeout = -1; /* set it to never timeout, possibly overridden below */
+  
+  /* first check if we need to refill buckets */
+  for(i=0;i<nfds;i++) {
+    if(connection_receiver_bucket_should_increase(connection_array[i])) {
+      need_to_refill_buckets = 1;
+      break;
+    }
+  }
+
+  if(gettimeofday(&now,NULL) < 0)
+    return -1;
+
+  if(need_to_refill_buckets) {
+    if(now.tv_sec > current_second) { /* the second has already rolled over! */
+      log(LOG_DEBUG,"prepare_for_poll(): The second has rolled over, immediately refilling.");
+      increment_receiver_buckets();
+      current_second = now.tv_sec; /* remember which second it is, for next time */
+    }
+    *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
+//    log(LOG_DEBUG,"prepare_for_poll(): %d milliseconds til next second.",*timeout);
+  }
+
+  if(options.LinkPadding) {
+    /* now check which conn wants to speak soonest */
+    for(i=0;i<nfds;i++) {
+      tmpconn = connection_array[i];
+      if(tmpconn->type != CONN_TYPE_OR && tmpconn->type != CONN_TYPE_OP)
+        continue; /* this conn type doesn't send cells */
+      if(!connection_state_is_open(tmpconn))
+        continue; /* only conns in state 'open' have a valid send_timeval */ 
+      while(tv_cmp(&tmpconn->send_timeval,&now) <= 0) { /* send_timeval has already passed, let it send a cell */
+        log(LOG_DEBUG,"prepare_for_poll(): doing backlogged connection_send_cell on socket %d (%d ms old)",tmpconn->s,
+          (now.tv_sec - tmpconn->send_timeval.tv_sec)*1000 +
+          (now.tv_usec - tmpconn->send_timeval.tv_usec)/1000
+        );
+        connection_send_cell(tmpconn);
+      }
+      if(!conn || tv_cmp(&tmpconn->send_timeval, &soonest) < 0) { /* this is the best choice so far */
+//        log(LOG_DEBUG,"prepare_for_poll(): chose socket %d as best connection so far",tmpconn->s);
+        conn = tmpconn;
+        soonest.tv_sec = conn->send_timeval.tv_sec;
+        soonest.tv_usec = conn->send_timeval.tv_usec;
+      }
+    }
+
+    if(conn) { /* we might want to set *timeout sooner */
+      ms_until_conn = (soonest.tv_sec - now.tv_sec)*1000 +
+                    (soonest.tv_usec - now.tv_usec)/1000;
+//      log(LOG_DEBUG,"prepare_for_poll(): conn %d times out in %d ms.",conn->s, ms_until_conn);
+      if(*timeout == -1 || ms_until_conn < *timeout) { /* use the new one */
+//        log(LOG_DEBUG,"prepare_for_poll(): conn %d soonest, in %d ms.",conn->s,ms_until_conn);
+        *timeout = ms_until_conn;
+      }
+    }
+  }
+
+  return 0;
+}
+
+void increment_receiver_buckets(void) {
+  int i;
+
+  for(i=0;i<nfds;i++)
+    connection_increment_receiver_bucket(connection_array[i]);
+}
+
 int do_main_loop(void) {
   int i;
+  int timeout;
+  int poll_result;
 
   /* load the routers file */
   router_array = getrouters(options.RouterFile,&rarray_len, options.ORPort);
   if (!router_array)
   {
     log(LOG_ERR,"Error loading router list.");
-    exit(1);
+    return -1;
   }
 
   /* load the private key */
@@ -291,29 +397,55 @@ int do_main_loop(void) {
   if (!prkey)
   {
     log(LOG_ERR,"Error loading private key.");
-    exit(1);
+    return -1;
   }
   log(LOG_DEBUG,"core : Loaded private key of size %u bytes.",RSA_size(prkey));
 
   /* start-up the necessary connections based on global_role. This is where we
    * try to connect to all the other ORs, and start the listeners */
-  retry_all_connections(options.GlobalRole, router_array, rarray_len, prkey, 
+  retry_all_connections(options.Role, router_array, rarray_len, prkey, 
 		        options.ORPort, options.OPPort, options.APPort);
 
   for(;;) {
-    poll(poll_array, nfds, -1); /* poll until we have an event */
+    if(prepare_for_poll(&timeout) < 0) {
+      log(LOG_DEBUG,"do_main_loop(): prepare_for_poll failed, exiting.");
+      return -1;
+    }
+    /* now timeout is the value we'll hand to poll. It's either -1, meaning
+     * don't timeout, else it indicates the soonest event (either the
+     * one-second rollover for refilling receiver buckets, or the soonest
+     * conn that needs to send a cell)
+     */
 
-    /* do all the reads first, so we can detect closed sockets */
-    for(i=0;i<nfds;i++)
-      check_conn_read(i); /* this also blows away broken connections */
+    /* if the timeout is less than 10, set it to 10 */
+    if(timeout >= 0 && timeout < 10)
+      timeout = 10;
 
-    /* then do the writes */
-    for(i=0;i<nfds;i++)
-      check_conn_write(i);
+    /* poll until we have an event, or it's time to do something */
+    poll_result = poll(poll_array, nfds, timeout);
 
-    /* any of the conns need to be closed now? */
-    for(i=0;i<nfds;i++)
-      check_conn_marked(i); 
+    if(poll_result < 0) {
+      log(LOG_ERR,"do_main_loop(): poll failed.");
+      if(errno != EINTR) /* let the program survive things like ^z */
+        return -1;
+    }
+
+    if(poll_result > 0) { /* we have at least one connection to deal with */
+      /* do all the reads first, so we can detect closed sockets */
+      for(i=0;i<nfds;i++)
+        check_conn_read(i); /* this also blows away broken connections */
+
+      /* then do the writes */
+      for(i=0;i<nfds;i++)
+        check_conn_write(i);
+
+      /* any of the conns need to be closed now? */
+      for(i=0;i<nfds;i++)
+        check_conn_marked(i); 
+    }
+    /* refilling buckets and sending cells happens at the beginning of the
+     * next iteration of the loop, inside prepare_for_poll()
+     */
   }
 }
 
@@ -332,7 +464,7 @@ int main(int argc, char *argv[]) {
 
   if ( getoptions(argc,argv,&options) ) exit(1);
   log(options.loglevel,NULL);         /* assign logging severity level from options */
-  global_role = options.GlobalRole;   /* assign global_role from options. FIX: remove from global namespace later. */
+  global_role = options.Role;   /* assign global_role from options. FIX: remove from global namespace later. */
 
   ERR_load_crypto_strings();
   retval = do_main_loop();

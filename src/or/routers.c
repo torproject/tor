@@ -1,3 +1,7 @@
+/* Copyright 2001,2002 Roger Dingledine, Matej Pfajfar. */
+/* See LICENSE for licensing information */
+/* $Id$ */
+
 /**
  * routers.c 
  * Routines for loading the list of routers and their public RSA keys.

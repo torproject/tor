@@ -1,52 +1,12 @@
+/* Copyright 2001,2002 Roger Dingledine, Matej Pfajfar. */
+/* See LICENSE for licensing information */
+/* $Id$ */
+
 /**
  * config.c 
  * Routines for loading the configuration file.
  *
  * Matej Pfajfar <mp292@cam.ac.uk>
- */
-
-/*
- * Changes :
- * $Log$
- * Revision 1.10  2002/07/15 16:42:27  montrose
- * corrected some string literals
- *
- * Revision 1.9  2002/07/11 19:03:44  montrose
- * finishing touches. think its ready for integration now.
- *
- * Revision 1.8  2002/07/11 18:38:15  montrose
- * added new option GlobalRole to getoptions()
- *
- * Revision 1.7  2002/07/11 14:50:26  montrose
- * cleaned up some, added validation to getoptions()
- *
- * Revision 1.6  2002/07/10 12:37:49  montrose
- * Added usage display on error.
- *
- * Revision 1.5  2002/07/09 19:51:41  montrose
- * Miscellaneous bug fixes / activated "make check" for src/or
- *
- * Revision 1.4  2002/07/03 19:58:18  montrose
- * minor bug fix in error checking
- *
- * Revision 1.3  2002/07/03 16:53:34  montrose
- * added error checking into getoptions()
- *
- * Revision 1.2  2002/07/03 16:31:22  montrose
- * Added getoptions() and made minor adjustment to poptReadDefaultOptions()
- *
- * Revision 1.1.1.1  2002/06/26 22:45:50  arma
- * initial commit: current code
- *
- * Revision 1.3  2002/04/02 14:28:24  badbytes
- * Final finishes.
- *
- * Revision 1.2  2002/01/27 00:42:50  mp292
- * Reviewed according to Secure-Programs-HOWTO.
- *
- * Revision 1.1  2002/01/03 10:24:05  badbytes
- * COde based on that in op. Needs to be modified.
- *
  */
 
 #include "or.h"
@@ -119,7 +79,9 @@ RETURN VALUE: 0 on success, non-zero on error
          0, "local port on which the onion proxy is running",  "<file>" },
       { "TrafficShaping",  't',  POPT_ARG_INT,     &options->TrafficShaping,
          0, "which traffic shaping policy to use",             "<policy>" },
-      { "GlobalRole",      'g',  POPT_ARG_INT,     &options->GlobalRole,
+      { "LinkPadding",     'P',  POPT_ARG_INT,     &options->LinkPadding,
+	 0, "whether to use link padding",                     "<padding>" },
+      { "Role",            'g',  POPT_ARG_INT,     &options->Role,
          0, "4-bit global role id",                            "<role>" },
       { "Verbose",         'v',  POPT_ARG_NONE,    &Verbose,
          0, "display options selected before execution",       NULL },
@@ -137,7 +99,8 @@ RETURN VALUE: 0 on success, non-zero on error
    options->LogLevel = "debug";
    options->loglevel = LOG_DEBUG;
    options->CoinWeight = 0.8;
-   options->GlobalRole = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
+   options->LinkPadding = 1;
+   options->Role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
 
    code = poptGetNextOpt(optCon);         /* first we handle command-line args */
    if ( code == -1 )
@@ -170,19 +133,20 @@ RETURN VALUE: 0 on success, non-zero on error
 
    if ( Verbose )                      
    {
-      printf("LogLevel=%s, GlobalRole=%d\n",
+      printf("LogLevel=%s, Role=%d\n",
              options->LogLevel,
-             options->GlobalRole);
+             options->Role);
       printf("RouterFile=%s, PrivateKeyFile=%s\n",
              options->RouterFile,
              options->PrivateKeyFile);
       printf("ORPort=%d, OPPort=%d, APPort=%d\n",
              options->ORPort,options->OPPort,
              options->APPort);
-      printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d\n",
+      printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d, LinkPadding=%d\n",
              options->CoinWeight,
              options->MaxConn,
-             options->TrafficShaping);
+             options->TrafficShaping,
+             options->LinkPadding);
    }
 
    /* Validate options */
@@ -260,9 +224,15 @@ RETURN VALUE: 0 on success, non-zero on error
       code = -1;
    }
 
-   if ( options->GlobalRole < 0 || options->GlobalRole > 15 )
+   if ( options->LinkPadding != 0 && options->LinkPadding != 1 )
    {
-      log(LOG_ERR,"GlobalRole option must be an integer between 0 and 15 (inclusive).");
+      log(LOG_ERR,"LinkPadding option must be either 0 or 1.");
+      code = -1;
+   }
+
+   if ( options->Role < 0 || options->Role > 15 )
+   {
+      log(LOG_ERR,"Role option must be an integer between 0 and 15 (inclusive).");
       code = -1;
    }
 

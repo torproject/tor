@@ -1,3 +1,6 @@
+/* Copyright 2001,2002 Roger Dingledine, Matej Pfajfar. */
+/* See LICENSE for licensing information */
+/* $Id$ */
 
 #include "or.h"
 
@@ -82,6 +85,7 @@ int op_handshake_process_keys(connection_t *conn) {
   EVP_DecryptInit(&conn->f_ctx, EVP_des_ofb(), conn->f_session_key, conn->f_session_iv);
 
   conn->state = OP_CONN_STATE_OPEN;
+  connection_init_timeval(conn);
   connection_watch_events(conn, POLLIN);
 
   return 0;
