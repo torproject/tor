@@ -170,6 +170,11 @@
 #define AP_CONN_STATE_OPEN 8
 #define _AP_CONN_STATE_MAX 8
 
+#define _AP_PURPOSE_MIN 1
+#define AP_PURPOSE_GENERAL 1
+#define AP_PURPOSE_
+#define _AP_PURPOSE_MAX 1
+
 #define _DIR_CONN_STATE_MIN 1
 #define DIR_CONN_STATE_CONNECTING 1
 #define DIR_CONN_STATE_CLIENT_SENDING 2
@@ -180,9 +185,9 @@
 
 #define _DIR_PURPOSE_MIN 1
 #define DIR_PURPOSE_FETCH_DIR 1
-#define DIR_PURPOSE_FETCH_HIDSERV 2
+#define DIR_PURPOSE_FETCH_RENDDESC 2
 #define DIR_PURPOSE_UPLOAD_DIR 3
-#define DIR_PURPOSE_UPLOAD_HIDSERV 4
+#define DIR_PURPOSE_UPLOAD_RENDDESC 4
 #define DIR_PURPOSE_SERVER 5
 #define _DIR_PURPOSE_MAX 5
 
@@ -234,6 +239,9 @@
 #define END_STREAM_REASON_DONE 6
 #define END_STREAM_REASON_TIMEOUT 7
 #define _MAX_END_STREAM_REASON 7
+
+/* length of 'y' portion of 'y.onion' URL. */
+#define REND_SERVICE_ID_LEN 16
 
 /* Reasons used by connection_mark_for_close */
 #define CLOSE_REASON_UNUSED_OR_CONN 100
@@ -343,7 +351,7 @@ struct connection_t {
 
   uint8_t type;
   uint8_t state;
-  uint8_t purpose; /* only used for DIR types currently */
+  uint8_t purpose; /* only used for DIR and AP types currently */
   uint8_t wants_to_read; /* should we start reading again once
                           * the bandwidth throttler allows it?
                           */
@@ -390,6 +398,9 @@ struct connection_t {
   int receiver_bucket; /* when this hits 0, stop receiving. Every second we
                         * add 'bandwidth' to this, capping it at 10*bandwidth.
                         */
+
+/* Used only by dir connections: */
+  char rend_query[REND_SERVICE_ID_LEN+1];
 
 /* Used only by edge connections: */
   uint16_t stream_id;
@@ -543,7 +554,7 @@ struct circuit_t {
   char rend_service[CRYPTO_SHA1_DIGEST_LEN];
 
   /* Holds rendezvous cookie if purpose is REND_POINT_WAITING or
-   * S_RENDEZVOUSING.  Filled with zeroes otherwise.
+   * S_RENDEZVOUSING or C_ESTABLISH_REND. Filled with zeroes otherwise.
   */
   char rend_cookie[REND_COOKIE_LEN];
 
@@ -998,9 +1009,6 @@ void rep_hist_note_extend_failed(const char *from_name, const char *to_name);
 void rep_hist_dump_stats(time_t now, int severity);
 
 /********************************* rendcommon.c ***************************/
-
-/* length of 'y' portion of 'y.onion' URL. */
-#define REND_SERVICE_ID_LEN 16
 
 typedef struct rend_service_descriptor_t {
   crypto_pk_env_t *pk;
