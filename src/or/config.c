@@ -30,13 +30,27 @@ typedef enum config_type_t {
 typedef struct config_abbrev_t {
   char *abbreviated;
   char *full;
+  int commandline_only;
 } config_abbrev_t;
+
+/* Handy macro for declaring "In the config file or on the command line,
+ * you can abbreviate <b>tok</b>s as <b>tok</b>". */
+#define PLURAL(tok) { #tok, #tok "s", 0 }
 
 /* A list of command-line abbreviations. */
 static config_abbrev_t config_abbrevs[] = {
-  { "l", "LogLevel" },
+  PLURAL(ExitNode),
+  PLURAL(EntryNodes),
+  PLURAL(ExcludeNode),
+  PLURAL(FirewallPort),
+  PLURAL(HiddenServiceNode),
+  PLURAL(HiddenServiceExcludeNode),
+  PLURAL(RendNode),
+  PLURAL(RendExcludeNode),
+  { "l",        "LogLevel" , 1},
   { NULL, NULL },
 };
+#undef PLURAL
 
 /* A variable allowed in the configuration file or on the command line */
 typedef struct config_var_t {
@@ -135,19 +149,23 @@ static int config_assign(or_options_t *options, struct config_line_t *list);
 static int parse_dir_server_line(const char *line);
 static int parse_redirect_line(or_options_t *options,
                                struct config_line_t *line);
-static const char *expand_abbrev(const char *option);
+static const char *expand_abbrev(const char *option, int commandline_only);
 static config_var_t *config_find_option(const char *key);
 
 /** If <b>option</b> is an official abbreviation for a longer option,
- * return the longer option.  Otherwise return <b>option</b> */
+ * return the longer option.  Otherwise return <b>option</b>.
+ * If <b>command_line</b> is set, apply all abbreviations.  Otherwise, only
+ * apply abbreviations that work for the config file and the command line. */
 static const char *
-expand_abbrev(const char *option)
+expand_abbrev(const char *option, int command_line)
 {
   int i;
   for (i=0; config_abbrevs[i].abbreviated; ++i) {
     /* Abbreviations aren't casei. */
-    if (!strcmp(option,config_abbrevs[i].abbreviated))
+    if (!strcmp(option,config_abbrevs[i].abbreviated) &&
+        (command_line || !config_abbrevs[i].commandline_only)) {
       return config_abbrevs[i].full;
+    }
   }
   return option;
 }
@@ -174,7 +192,7 @@ config_get_commandlines(int argc, char **argv)
     while(*s == '-')
       s++;
 
-    new->key = tor_strdup(expand_abbrev(s));
+    new->key = tor_strdup(expand_abbrev(s, 1));
     new->value = tor_strdup(argv[i+1]);
 
     log(LOG_DEBUG,"Commandline: parsed keyword '%s', value '%s'",
@@ -354,6 +372,12 @@ static int
 config_assign(or_options_t *options, struct config_line_t *list)
 {
   while (list) {
+    const char *full = expand_abbrev(list->key, 0);
+    if (strcmp(full,list->key)) {
+      tor_free(list->key);
+      list->key = tor_strdup(full);
+    }
+
     if (config_assign_line(options, list))
       return -1;
     list = list->next;
