@@ -502,20 +502,25 @@ routerinfo_t *router_choose_random_node(const char *preferred,
   excludednodes = smartlist_create();
   add_nickname_list_to_smartlist(excludednodes,excluded,0);
 
-  /* try the preferred nodes first */
+  /* Try the preferred nodes first. Ignore need_uptime and need_capacity,
+   * since the user explicitly asked for these nodes. */
   sl = smartlist_create();
   add_nickname_list_to_smartlist(sl,preferred,1);
   smartlist_subtract(sl,excludednodes);
   if (excludedsmartlist)
     smartlist_subtract(sl,excludedsmartlist);
+#if 0
   if (need_uptime)
     routerlist_sl_remove_unreliable_routers(sl);
   if (need_capacity)
     choice = routerlist_sl_choose_by_bandwidth(sl);
   else
-    choice = smartlist_choose(sl);
+#endif
+  choice = smartlist_choose(sl);
   smartlist_free(sl);
   if (!choice && !strict) {
+    /* Then give up on our preferred choices: any node
+     * will do that has the required attributes. */
     sl = smartlist_create();
     router_add_running_routers_to_smartlist(sl, allow_unverified,
                                             need_uptime, need_capacity);
