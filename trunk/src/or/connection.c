@@ -734,14 +734,14 @@ static int connection_bucket_read_limit(connection_t *conn) {
 
 /** We just read num_read onto conn. Decrement buckets appropriately. */
 static void connection_read_bucket_decrement(connection_t *conn, int num_read) {
-  global_read_bucket -= num_read; tor_assert(global_read_bucket >= 0);
+  global_read_bucket -= num_read; //tor_assert(global_read_bucket >= 0);
   if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
-    conn->receiver_bucket -= num_read; tor_assert(conn->receiver_bucket >= 0);
+    conn->receiver_bucket -= num_read; //tor_assert(conn->receiver_bucket >= 0);
   }
 }
 
 static void connection_consider_empty_buckets(connection_t *conn) {
-  if (global_read_bucket == 0) {
+  if (global_read_bucket <= 0) {
     log_fn(LOG_DEBUG,"global bucket exhausted. Pausing.");
     conn->wants_to_read = 1;
     connection_stop_reading(conn);
@@ -749,7 +749,7 @@ static void connection_consider_empty_buckets(connection_t *conn) {
   }
   if (connection_speaks_cells(conn) &&
       conn->state == OR_CONN_STATE_OPEN &&
-      conn->receiver_bucket == 0) {
+      conn->receiver_bucket <= 0) {
     log_fn(LOG_DEBUG,"receiver bucket exhausted. Pausing.");
     conn->wants_to_read = 1;
     connection_stop_reading(conn);
@@ -772,11 +772,11 @@ void connection_bucket_refill(struct timeval *now) {
   or_options_t *options = get_options();
 
   /* refill the global buckets */
-  if ((unsigned)global_read_bucket < options->BandwidthBurst) {
+  if (global_read_bucket < (int)options->BandwidthBurst) {
     global_read_bucket += (int)options->BandwidthRate;
     log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
   }
-  if ((unsigned)global_write_bucket < options->BandwidthBurst) {
+  if (global_write_bucket < (int)options->BandwidthBurst) {
     global_write_bucket += (int)options->BandwidthRate;
     log_fn(LOG_DEBUG,"global_write_bucket now %d.", global_write_bucket);
   }
@@ -878,7 +878,8 @@ loop_again:
     }
     if (!conn->marked_for_close &&
         connection_is_reading(conn) &&
-        !conn->inbuf_reached_eof)
+        !conn->inbuf_reached_eof &&
+        max_to_read > 0)
       goto loop_again; /* try reading again, in case more is here now */
   }
   /* one last try, packaging partial cells and all. */
@@ -952,6 +953,7 @@ static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
       int r2 = read_to_buf_tls(conn->tls, pending, conn->inbuf);
       if (r2<0) {
         log_fn(LOG_WARN, "Bug: apparently, reading pending bytes can fail.");
+        return -1;
       } else {
         result += r2;
       }
@@ -1482,7 +1484,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
        * gave a bad cert/etc, then we won't have assigned bandwidth,
        * yet it will be open. -RD
        */
-      tor_assert(conn->receiver_bucket >= 0);
+//      tor_assert(conn->receiver_bucket >= 0);
     }
     tor_assert(conn->addr && conn->port);
     tor_assert(conn->address);
