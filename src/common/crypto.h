@@ -12,7 +12,9 @@
 #define CIPHER_IV_LEN 0
 #define PK_BITS 1024
 #define PK_BYTES (PK_BITS/8)
-#define CRYPTO_DH_SIZE (1024 / 8)
+#define DH_BITS 1024
+#define DH_BYTES (DH_BITS/8)
+#define CRYPTO_DH_SIZE DH_BYTES
 
 #define PK_NO_PADDING         60000
 #define PK_PKCS1_PADDING      60001
