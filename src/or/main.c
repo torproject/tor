@@ -1044,6 +1044,7 @@ void handle_signals(int is_parent)
   sigaction(SIGTERM, &action, NULL); /* to terminate now */
   sigaction(SIGPIPE, &action, NULL); /* otherwise sigpipe kills us */
   sigaction(SIGUSR1, &action, NULL); /* dump stats */
+  sigaction(SIGUSR2, &action, NULL); /* go to loglevel debug */
   sigaction(SIGHUP,  &action, NULL); /* to reload config, retry conns, etc */
 #ifdef SIGXFSZ
   sigaction(SIGXFSZ, &action, NULL); /* handle file-too-big resource exhaustion */
