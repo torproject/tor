@@ -86,7 +86,7 @@ static void purge_expired_resolves(uint32_t now) {
     if(!oldest_cached_resolve) /* if there are no more, */
       newest_cached_resolve = NULL; /* then make sure the list's tail knows that too */
     SPLAY_REMOVE(cache_tree, &cache_root, resolve);
-    free(resolve);
+    tor_free(resolve);
   }
 }
 
@@ -146,7 +146,7 @@ int dns_resolve(connection_t *exitconn) {
   /* add us to the pending list */
   pending_connection = tor_malloc(sizeof(struct pending_connection_t));
   pending_connection->conn = exitconn;
-  pending_connection->next = resolve->pending_connections;
+  pending_connection->next = NULL;
   resolve->pending_connections = pending_connection;
 
   /* add us to the linked list of resolves */
@@ -178,7 +178,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   log_fn(LOG_DEBUG, "Connection (fd %d) needs to resolve '%s'; assigning to DNSWorker (fd %d)",
          exitconn->s, exitconn->address, dnsconn->s);
 
-  free(dnsconn->address);
+  tor_free(dnsconn->address);
   dnsconn->address = tor_strdup(exitconn->address);
   dnsconn->state = DNSWORKER_STATE_BUSY;
   num_dnsworkers_busy++;
@@ -213,7 +213,7 @@ void connection_dns_remove(connection_t *conn)
 
   if(pend->conn == conn) {
     resolve->pending_connections = pend->next;
-    free(pend);
+    tor_free(pend);
     log_fn(LOG_DEBUG, "Connection (fd %d) no longer waiting for resolve of '%s'",
            conn->s, conn->address);
     return;
@@ -222,7 +222,7 @@ void connection_dns_remove(connection_t *conn)
       if(pend->next->conn == conn) {
         victim = pend->next;
         pend->next = victim->next;
-        free(victim);
+        tor_free(victim);
         log_fn(LOG_DEBUG, "Connection (fd %d) no longer waiting for resolve of '%s'",
                conn->s, conn->address);
         return; /* more are pending */
@@ -256,11 +256,11 @@ void dns_cancel_pending_resolve(char *address) {
          address);
   while(resolve->pending_connections) {
     pend = resolve->pending_connections;
-    /* This calls dns_cancel_pending_resolve, which removes pend
-     * from the list, so we don't have to do it.  Beware of
-     * modify-while-iterating bugs hereabouts! */
+    /* So that mark_for_close doesn't double-remove the connection. */
+    pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
     connection_mark_for_close(pend->conn, END_STREAM_REASON_MISC);
-    assert(resolve->pending_connections != pend);
+    resolve->pending_connections = pend->next;
+    tor_free(pend);
   }
 
   /* remove resolve from the linked list */
@@ -281,7 +281,7 @@ void dns_cancel_pending_resolve(char *address) {
   /* remove resolve from the tree */
   SPLAY_REMOVE(cache_tree, &cache_root, resolve);
 
-  free(resolve);
+  tor_free(resolve);
 }
 
 static void dns_found_answer(char *address, uint32_t addr) {
@@ -322,16 +322,14 @@ static void dns_found_answer(char *address, uint32_t addr) {
     assert_connection_ok(pend->conn,time(NULL));
     pend->conn->addr = resolve->addr;
     if(resolve->state == CACHE_STATE_FAILED) {
-      /* This calls dns_cancel_pending_resolve, which removes pend
-       * from the list, so we don't have to do it.  Beware of
-       * modify-while-iterating bugs hereabouts! */
+      /* prevent double-remove */
+      pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED; 
       connection_mark_for_close(pend->conn, END_STREAM_REASON_RESOLVEFAILED);
-      assert(resolve->pending_connections != pend);
     } else {
       connection_exit_connect(pend->conn);
-      resolve->pending_connections = pend->next;
-      free(pend);
     }
+    resolve->pending_connections = pend->next;
+    tor_free(pend);
   }
 }
 
@@ -371,7 +369,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
 
   dns_found_answer(conn->address, addr);
 
-  free(conn->address);
+  tor_free(conn->address);
   conn->address = tor_strdup("<idle>");
   conn->state = DNSWORKER_STATE_IDLE;
   num_dnsworkers_busy--;
