@@ -28,10 +28,6 @@ const char directory_c_id[] = "$Id$";
  *   connection_finished_connecting() in connection.c
  */
 
-void
-directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
-                                  int private_connection, const char *resource,
-                                  const char *payload, size_t payload_len);
 static void
 directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
                                       uint8_t purpose, int private_connection,
@@ -50,6 +46,7 @@ directory_send_command(connection_t *conn, const char *platform,
                        const char *payload, size_t payload_len);
 static int directory_handle_command(connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
+static int purpose_is_private(uint8_t purpose);
 
 /********* START VARIABLES **********/
 
@@ -112,7 +109,8 @@ int dir_policy_permits_address(uint32_t addr)
   return 0;
 }
 
-int purpose_is_private(uint8_t purpose) {
+static int
+purpose_is_private(uint8_t purpose) {
   if (purpose == DIR_PURPOSE_FETCH_DIR ||
       purpose == DIR_PURPOSE_UPLOAD_DIR ||
       purpose == DIR_PURPOSE_FETCH_RUNNING_LIST)

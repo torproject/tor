@@ -362,7 +362,8 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 /** Get the maximum allowed number of file descriptors. (Some systems
  * have a low soft limit.) Make sure we set it to at least
  * <b>*limit</b>. Return a new limit if we can, or -1 if we fail. */
-int set_max_file_descriptors(int limit, int cap) {
+int
+set_max_file_descriptors(unsigned long limit, unsigned long cap) {
 #ifndef HAVE_GETRLIMIT
   log_fn(LOG_INFO,"This platform is missing getrlimit(). Proceeding.");
   if (limit > cap) {
@@ -371,7 +372,9 @@ int set_max_file_descriptors(int limit, int cap) {
   }
 #else
   struct rlimit rlim;
-  int most;
+  unsigned long most;
+  tor_assert(limit > 0);
+  tor_assert(cap > 0);
 
   if (getrlimit(RLIMIT_NOFILE, &rlim) != 0) {
     log_fn(LOG_WARN, "Could not get maximum number of file descriptors: %s",
@@ -379,13 +382,13 @@ int set_max_file_descriptors(int limit, int cap) {
     return -1;
   }
   if (rlim.rlim_max < limit) {
-    log_fn(LOG_WARN,"We need %d file descriptors available, and we're limited to %lu. Please change your ulimit -n.", limit, (unsigned long int)rlim.rlim_max);
+    log_fn(LOG_WARN,"We need %lu file descriptors available, and we're limited to %lu. Please change your ulimit -n.", limit, (unsigned long)rlim.rlim_max);
     return -1;
   }
-  most = ((rlim.rlim_max > cap) ? cap : rlim.rlim_max);
+  most = (rlim.rlim_max > cap) ? cap : (unsigned) rlim.rlim_max;
   if (most > rlim.rlim_cur) {
-    log_fn(LOG_INFO,"Raising max file descriptors from %lu to %d.",
-           (unsigned long int)rlim.rlim_cur, most);
+    log_fn(LOG_INFO,"Raising max file descriptors from %lu to %lu.",
+           (unsigned long)rlim.rlim_cur, most);
   }
   rlim.rlim_cur = most;
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
