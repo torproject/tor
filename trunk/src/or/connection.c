@@ -192,13 +192,13 @@ void connection_about_to_close_connection(connection_t *conn)
       if (conn->state != OR_CONN_STATE_OPEN) {
         /* XXX Nick: this still isn't right, because it might be
          * dying even though we didn't initiate the connect. Can
-         * you look at this more? -RD */
+         * you look at this more? -RD XXXX008 -NM*/
         if(conn->nickname)
-          rep_hist_note_connect_failed(conn->nickname, time(NULL));
+          rep_hist_note_connect_failed(conn->identity_digest, time(NULL));
       } else if (0) { // XXX reason == CLOSE_REASON_UNUSED_OR_CONN) {
-        rep_hist_note_disconnect(conn->nickname, time(NULL));
+        rep_hist_note_disconnect(conn->identity_digest, time(NULL));
       } else {
-        rep_hist_note_connection_died(conn->nickname, time(NULL));
+        rep_hist_note_connection_died(conn->identity_digest, time(NULL));
       }
       break;
     case CONN_TYPE_AP:

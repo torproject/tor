@@ -329,7 +329,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   directory_set_dirty();
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
   /* Note the success */
-  rep_hist_note_connect_succeeded(nickname, time(NULL));
+  rep_hist_note_connect_succeeded(conn->identity_digest, time(NULL));
   return 0;
 }
 

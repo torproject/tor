@@ -27,10 +27,6 @@ NICK  pre1:
           o make ORs parse-and-keep-and-serve the directory they pull down
           o authoritativedirservers should pull down directories from
             other authdirservers, to merge descriptors.
-        D Have clients and dirservers preserve reputation info over
-          reboots.
-	  [Deferred until we know what reputation info we actually want to
-	   maintain.  Our current algorithm Couldn't Possibly Work.]
         . allow dirservers to serve running-router list separately.
           o "get /running-routers" will fetch just this.
           o actually make the clients use this sometimes.
@@ -50,23 +46,25 @@ NICK  pre1:
         o write tor version at the top of each log file
 
       pre2:
-        - refer to things by key:
+        . refer to things by key:
           o extend cells need ip:port:identitykeyhash.
-	  . Lookup routers and connections by key digest; accept hex
+	  o Lookup routers and connections by key digest; accept hex
             key digest in place of nicknames.
-          . Audit all uses of lookup-by-hostname and lookup-by-addr-port
+          o Audit all uses of lookup-by-hostname and lookup-by-addr-port
             to search by digest when appropriate.
-	  - Rep-hist functions
+	  o Rep-hist functions need to store info by keyid
           - also use this in intro points and rendezvous points, and
             hidserv descs.  [XXXX This isn't enough.]
           - figure out what to do about ip:port:differentkey
         o ORs connect on demand. attach circuits to new connections, keep
           create cells around somewhere, send destroy if fail.
-        - nickname defaults to first piece of hostname
-        - running-routers list refers to nickname if verified, else
+        o nickname defaults to first piece of hostname
+        o running-routers list refers to nickname if verified, else
           hash-base64'ed.
+	- Mark routers as verified or unverified based on whether
+          running-routers list includes nickname or id hash.
         o put OR uptime in descriptor
-        - name the secret-key directory something to discourage people
+        o name the secret-key directory something to discourage people
           from mailing their identity key to tor-ops
 
       pre3:
@@ -83,6 +81,10 @@ NICK  pre1:
           - start counting again if your IP ever changes.
           - never regenerate identity keys, for now.
           - you can set a bit for not-being-an-OR.
+	- Reputation info needs to give better weight to recent events than
+	  very old ones.
+        - Have clients and dirservers preserve reputation info over
+          reboots.
         - clients choose nodes proportional to advertised bandwidth
         - authdirserver includes descriptor and lists as running iff:
           - he can connect to you

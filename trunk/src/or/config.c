@@ -467,6 +467,40 @@ static int resolve_my_address(or_options_t *options) {
   return 0;
 }
 
+static char *get_default_nickname(void)
+{
+  char localhostname[256];
+  char *cp, *out, *outp;
+
+  if(gethostname(localhostname,sizeof(localhostname)) < 0) {
+    log_fn(LOG_WARN,"Error obtaining local hostname");
+    return NULL;
+  }
+  /* Put it in lowercase; stop at the first dot. */
+  for(cp = localhostname; *cp; ++cp) {
+    if (*cp == '.') {
+      *cp = '\0';
+      break;
+    }
+    *cp = tolower(*cp);
+  }
+  /* Strip invalid characters. */
+  cp = localhostname;
+  out = outp = tor_malloc(strlen(localhostname)+1);
+  while (*cp) {
+    if (strchr(LEGAL_NICKNAME_CHARACTERS, *cp))
+      *outp++ = *cp++;
+    else
+      cp++;
+  }
+  *outp = '\0';
+  /* Enforce length. */
+  if (strlen(out) > MAX_NICKNAME_LEN)
+    out[MAX_NICKNAME_LEN]='\0';
+
+  return out;
+}
+
 /** Release storage held by <b>options</b> */
 static void free_options(or_options_t *options) {
   config_free_lines(options->LogOptions);
@@ -633,8 +667,9 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   if (options->ORPort) {
     if (options->Nickname == NULL) {
-      log_fn(LOG_WARN,"Nickname required if ORPort is set, but not found.");
-      result = -1;
+      if (!(options->Nickname = get_default_nickname()))
+        return -1;
+      log_fn(LOG_INFO, "Choosing default nickname %s", options->Nickname);
     } else {
       if (strspn(options->Nickname, LEGAL_NICKNAME_CHARACTERS) !=
                  strlen(options->Nickname)) {

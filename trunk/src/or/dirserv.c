@@ -181,16 +181,25 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
 /** Return true iff any router named <b>nickname</b> is in the fingerprint
  * list. */
 static int
-router_nickname_is_approved(const char *nickname)
+router_nickname_is_approved(const char *nickname, const char *digest)
 {
-  int i;
+  int i,j;
   fingerprint_entry_t *ent;
+  char fp[FINGERPRINT_LEN+1];
   if (!fingerprint_list)
     return 0;
 
+  for (i=j=0;i<DIGEST_LEN;++i,++j) {
+    fp[i]=digest[j];
+    if ((j%4)==3 && j != 19)
+      fp[++i]=' ';
+  }
+  fp[i]='\0';
+
   for (i=0;i<smartlist_len(fingerprint_list);++i) {
     ent = smartlist_get(fingerprint_list, i);
-    if (!strcasecmp(nickname,ent->nickname)) {
+    if (!strcasecmp(nickname,ent->nickname) &&
+        !strcasecmp(fp,ent->fingerprint)) {
       return 1;
     }
   }
@@ -227,6 +236,7 @@ typedef struct descriptor_entry_t {
   time_t published;
   size_t desc_len;
   char *descriptor;
+  int verified;
   routerinfo_t *router;
 } descriptor_entry_t;
 
@@ -368,6 +378,7 @@ dirserv_add_descriptor(const char **desc)
   strncpy(ent->descriptor, start, desc_len);
   ent->descriptor[desc_len] = '\0';
   ent->router = ri;
+  ent->verified = 1; /* XXXX008 support other possibilities. */
   smartlist_add(descriptor_list, ent);
 
   *desc = end;
@@ -447,19 +458,25 @@ list_running_servers(char **nicknames_out)
   *nicknames_out = NULL;
   nicknames_up = smartlist_create();
   nicknames_down = smartlist_create();
-  smartlist_add(nicknames_up, options.Nickname);
+  smartlist_add(nicknames_up, tor_strdup(options.Nickname));
 
   get_connection_array(&connection_array, &n_conns);
   for (i = 0; i<n_conns; ++i) {
+    char *name;
     conn = connection_array[i];
     if (conn->type != CONN_TYPE_OR || !conn->nickname)
       continue; /* only list ORs. */
-    if (!router_nickname_is_approved(conn->nickname))
-      continue; /* If we removed them from the approved list, don't list it.*/
+    if (router_nickname_is_approved(conn->nickname, conn->identity_digest)) {
+      name = tor_strdup(conn->nickname);
+    } else {
+      name = tor_malloc(HEX_DIGEST_LEN+1);
+      base16_encode(name, HEX_DIGEST_LEN, conn->identity_digest, DIGEST_LEN);
+    }
+
     if(conn->state == OR_CONN_STATE_OPEN)
-      smartlist_add(nicknames_up, conn->nickname);
+      smartlist_add(nicknames_up, name);
     else
-      smartlist_add(nicknames_down, conn->nickname);
+      smartlist_add(nicknames_down, name);
   }
   length = smartlist_len(nicknames_up) +
            2*smartlist_len(nicknames_down) + 1;
@@ -481,6 +498,8 @@ list_running_servers(char **nicknames_out)
     while (*cp)
       ++cp;
   }
+  SMARTLIST_FOREACH(nicknames_up, char *, victim, tor_free(victim));
+  SMARTLIST_FOREACH(nicknames_down, char *, victim, tor_free(victim));
   smartlist_free(nicknames_up);
   smartlist_free(nicknames_down);
   return 0;
