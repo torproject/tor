@@ -407,7 +407,7 @@ handle_control_signal(connection_t *conn, uint16_t len,
 {
   if (len != 1) {
     send_control_error(conn, ERR_SYNTAX,
-                       "Body of SIGNAL command too long or two short.");
+                       "Body of SIGNAL command too long or too short.");
   } else if (control_signal_act((uint8_t)body[0]) < 0) {
     send_control_error(conn, ERR_SYNTAX, "Unrecognized signal number.");
   } else {
