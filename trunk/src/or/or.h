@@ -554,6 +554,7 @@ struct socks_request_t {
   char socks_version;
   int replylen;
   char reply[MAX_SOCKS_REPLY_LEN];
+  int has_finished; /* has the socks handshake finished? */
   char address[MAX_SOCKS_ADDR_LEN];
   uint16_t port;
 };
@@ -749,6 +750,9 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
 int connection_edge_finished_flushing(connection_t *conn);
 
 int connection_edge_package_raw_inbuf(connection_t *conn);
+
+void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
+                                         int replylen, char success);
 
 void connection_exit_connect(connection_t *conn);
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
