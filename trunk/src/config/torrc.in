@@ -1,12 +1,25 @@
-# Configuration file for a typical tor client
-# (listen for applications only)
+# Configuration file for a typical tor user
 
 # List of routers. Tor nodes start out knowing about the directory
 # servers, and from them they get a list of currently up nodes.
 RouterFile @CONFDIR@/dirservers
 
-# Ports for various services. Comment out if you're not running that
-# service.
-#ORPort 9001
+# Comment out if you don't want to allow applications to connect.
 SocksPort 9050
+SocksBindAddress 127.0.0.1 # accept connections only from localhost
+
+##################### Below is just for servers #####################
+
+## The directory for keeping all the keys/etc for this server
+#DataDirectory @LOCALSTATEDIR@/lib/tor
+
+#Nickname moria # A unique handle for this server
+#Address moria.seul.org # The fqdn for this server
+
+#ORPort 9001 # where to listen for cell-speaking connections
+#ORBindAddress 0.0.0.0 # accept connections from anywhere
+
+## A comma-separated list of exit policies. They're considered in
+## order, first match wins.
+#ExitPolicy reject 127.0.0.1:*,accept *:*
 
