@@ -24,7 +24,6 @@ typedef struct directory_token directory_token_t;
 
 /* static function prototypes */
 void routerlist_free(routerinfo_t *list);
-static routerinfo_t **make_rarray(routerinfo_t* list, int *len);
 static char *eat_whitespace(char *s);
 static char *eat_whitespace_no_nl(char *s);
 static char *find_whitespace(char *s);
@@ -136,48 +135,35 @@ int router_is_me(uint32_t addr, uint16_t port)
 }
 
 /* delete a list of routers from memory */
-void routerlist_free(routerinfo_t *list)
+void routerinfo_free(routerinfo_t *router)
 {
-  routerinfo_t *tmp = NULL;
   struct exit_policy_t *e = NULL, *etmp = NULL;
   
-  if (!list)
+  if (!router)
     return;
-  
-  do
-  {
-    tmp=list->next;
-    if (list->address)
-      free((void *)list->address);
-    if (list->pkey)
-      crypto_free_pk_env(list->pkey);
-    e = list->exit_policy;
-    while (e) {
-      etmp = e->next;
-      if (e->string) free(e->string);
-      if (e->address) free(e->address);
-      if (e->port) free(e->port);
-      free(e);
-      e = etmp;
-    }
-    free((void *)list);
-    list = tmp;
-  }
-  while (list != NULL);
-  
-  return;
-}
 
-void rarray_free(routerinfo_t **list) {
-  if(!list)
-    return;
-  routerlist_free(*list);
-  free(list);
+  if (router->address)
+    free(router->address);
+  if (router->pkey)
+    crypto_free_pk_env(router->pkey);
+  e = router->exit_policy;
+  while (e) {
+    etmp = e->next;
+    if (e->string) free(e->string);
+    if (e->address) free(e->address);
+    if (e->port) free(e->port);
+    free(e);
+    e = etmp;
+  }
+  free(router);
 }
 
 void directory_free(directory_t *directory)
 {
-  rarray_free(directory->routers);
+  int i;
+  for (i = 0; i < directory->n_routers; ++i)
+    routerinfo_free(directory->routers[i]);
+  free(directory->routers);
   free(directory);
 }
 
@@ -202,51 +188,6 @@ void router_forget_router(uint32_t addr, uint16_t port) {
   for(; i<directory->n_routers-1;i++)
     directory->routers[i] = directory->routers[i+1];
 }
-
-/* create a NULL-terminated array of pointers pointing to elements of a router list */
-/* this is done in two passes through the list - inefficient but irrelevant as this is
- * only done once when op/or start up */
-static routerinfo_t **make_rarray(routerinfo_t* list, int *len)
-{
-  routerinfo_t *tmp=NULL;
-  int listlen = 0;
-  routerinfo_t **array=NULL;
-  routerinfo_t **p=NULL;
-  
-  if ((!list) || (!len))
-    return NULL;
-  
-  /* get the length of the list */
-  tmp = list;
-  do
-  {
-    listlen++;
-    tmp = tmp->next;
-  }
-  while (tmp != NULL);
-  
-  array = malloc((listlen+1)*sizeof(routerinfo_t *));
-  if (!array)
-  {
-    log(LOG_ERR,"Error allocating memory.");
-    return NULL;
-  }
-  
-  tmp=list;
-  p = array;
-  do
-  {
-    *p = tmp;
-    p++;
-    tmp = tmp->next;
-  }
-  while(tmp != NULL);
-  *p=NULL;
-  
-  *len = listlen;
-  return array;
-}
-
 
 /* load the router list */
 int router_get_list_from_file(char *routerfile)
@@ -655,12 +596,16 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
 static int router_get_list_from_string_tok(char **s, directory_t **dest,
                                            directory_token_t *tok)
 {
-  routerinfo_t *routerlist=NULL;
   routerinfo_t *router;
-  routerinfo_t **new_router_array;
-  int new_rarray_len;
+  routerinfo_t **rarray;
+  int rarray_len = 0;
 
   assert(s);
+
+  if (!(rarray = malloc((sizeof(routerinfo_t *))*MAX_ROUTERS_IN_DIR))) {
+    log(LOG_ERR, "router_get_list_from_string_tok(): malloc failed");
+    return -1;
+  }
 
   while (tok->tp == K_ROUTER) {
     router = router_get_entry_from_string_tok(s, tok);
@@ -668,20 +613,23 @@ static int router_get_list_from_string_tok(char **s, directory_t **dest,
       log(LOG_ERR, "Error reading router");
       return -1;
     }
-    router->next = routerlist;
-    routerlist = router;
+    if (rarray_len >= MAX_ROUTERS_IN_DIR) {
+      log(LOG_ERR, "router_get_list_from_string_tok(): too many routers");
+      routerinfo_free(router);
+      continue;
+    } 
+    rarray[rarray_len++] = router;
   }
  
-  new_router_array = make_rarray(routerlist, &new_rarray_len);
-  if(new_router_array) { /* success! replace the old one */
-    if (*dest) 
-      directory_free(*dest);
-    *dest = (directory_t*) malloc(sizeof(directory_t));
-    (*dest)->routers = new_router_array;
-    (*dest)->n_routers = new_rarray_len;
-    return 0;
+  if (*dest) 
+    directory_free(*dest);
+  if (!(*dest = (directory_t*) malloc(sizeof(directory_t)))) {
+    log(LOG_ERR, "router_get_list_from_string_tok(): malloc failed");
+    return -1;
   }
-  return -1;
+  (*dest)->routers = rarray;
+  (*dest)->n_routers = rarray_len;
+  return 0;
 }
 
 int 
@@ -715,24 +663,17 @@ router_resolve_directory(directory_t *dir)
       log(LOG_INFO, "Couldn\'t resolve router %s; removing",
           dir->routers[i]->address);
       remove = 1;
-      dir->routers[i]->next = NULL;
-      routerlist_free(dir->routers[i]);
+      routerinfo_free(dir->routers[i]);
     } else if (router_is_me(dir->routers[i]->addr, dir->routers[i]->or_port)) {
       my_routerinfo = dir->routers[i];
       remove = 1;
     }
     if (remove) {
       dir->routers[i] = dir->routers[--max];
-      dir->routers[max] = NULL;
       --dir->n_routers;
       --i;
     }
   }
-  /* This is quick-and-dirty, but it keeps stuff consistant. */
-  for (i = 0; i < dir->n_routers-1; ++i) {
-    dir->routers[i]->next = dir->routers[i+1];
-  }
-  dir->routers[dir->n_routers-1]->next=NULL;
   
   return 0;
 }
@@ -755,9 +696,11 @@ routerinfo_t *router_get_entry_from_string(char **s) {
 static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t *tok) {
   routerinfo_t *router = NULL;
 
-#define NEXT_TOKEN()                                 \
-  do { if (router_get_next_token(s, tok)) goto err;  \
-  } while(0)
+#define NEXT_TOKEN()                                                    \
+  do { if (router_get_next_token(s, tok)) {                             \
+      log(LOG_ERR, "Error reading directory: %s", tok->val.error);      \
+      goto err;                                                         \
+    } } while(0)
 
 #define ARGS tok->val.cmd.args
 
@@ -770,7 +713,9 @@ static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t
     return NULL;
   }
   memset(router,0,sizeof(routerinfo_t)); /* zero it out first */
-  router->next = NULL;
+  /* C doesn't guarantee that NULL is represented by 0 bytes.  You'll
+     thank me for this someday. */
+  router->pkey = router->signing_pkey = NULL; 
 
   if (tok->val.cmd.n_args != 6) {
     log(LOG_ERR,"router_get_entry_from_string(): Wrong # of arguments to \"router\"");
