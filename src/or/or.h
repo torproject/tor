@@ -318,6 +318,7 @@ struct connection_t {
                          */
   char *marked_for_close_file; /* for debugging: in which file were we marked
                                 * for close? */
+  int hold_open_until_flushed;
 
   buf_t *inbuf;
   int inbuf_reached_eof; /* did read() return 0 on this conn? */
@@ -668,6 +669,8 @@ int _connection_mark_for_close(connection_t *conn, char reason);
     }                                                                   \
   } while (0)
 
+void connection_expire_held_open(void);
+
 int connection_create_listener(char *bindaddress, uint16_t bindport, int type);
 
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
@@ -787,6 +790,7 @@ void connection_watch_events(connection_t *conn, short events);
 int connection_is_reading(connection_t *conn);
 void connection_stop_reading(connection_t *conn);
 void connection_start_reading(connection_t *conn);
+
 int connection_is_writing(connection_t *conn);
 void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);

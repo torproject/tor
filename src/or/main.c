@@ -229,6 +229,10 @@ static void conn_close_if_marked(int i) {
   conn = connection_array[i];
   assert_connection_ok(conn, time(NULL));
   if(conn->marked_for_close) {
+    if (conn->hold_open_until_flushed && conn->s >= 0 &&
+        connection_wants_to_flush(conn))
+      return;
+
     log_fn(LOG_INFO,"Cleaning up connection (fd %d).",conn->s);
     if(conn->s >= 0 && connection_wants_to_flush(conn)) {
       /* -1 means it's an incomplete edge connection, or that the socket
@@ -237,7 +241,6 @@ static void conn_close_if_marked(int i) {
       log_fn(LOG_WARN,
              "Conn (fd %d, type %d, state %d) marked for close, but wants to flush.",
              conn->s, conn->type, conn->state);
-
       if(connection_speaks_cells(conn)) {
         if(conn->state == OR_CONN_STATE_OPEN) {
           flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
@@ -347,6 +350,11 @@ static void run_scheduled_events(time_t now) {
    *     state to be picked up by the new circuit.
    */
   connection_ap_expire_beginning();
+
+
+  /* 2c. And expire connections that we've holding open for too long.
+   */
+  connection_expire_held_open();
 
   /* 3. Every second, we try a new circuit if there are no valid
    *    circuits. Every NewCircuitPeriod seconds, we expire circuits
