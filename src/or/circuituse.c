@@ -73,7 +73,14 @@ static int circuit_is_acceptable(circuit_t *circ,
       return 0; /* this circuit is screwed and doesn't know it yet */
     }
 
-    if(purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+    if (conn->socks_request &&
+        conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
+      /* 0.0.7 servers and earlier don't support DNS resolution.  There are no
+       * ORs running code before 0.0.7, so we only worry about 0.0.7.  Once all
+       * servers are running 0.0.8, remove this check. */
+      if (!strncmp(exitrouter->platform, "Tor 0.0.7", 9))
+        return 0;
+    } else if(purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       if(connection_ap_can_use_exit(conn, exitrouter) == ADDR_POLICY_REJECTED) {
         /* can't exit from this router */
         return 0;
@@ -618,10 +625,12 @@ circuit_get_open_circ_or_launch(connection_t *conn,
                                 circuit_t **circp) {
   circuit_t *circ;
   uint32_t addr;
+  int is_resolve;
 
   tor_assert(conn);
   tor_assert(circp);
   tor_assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
+  is_resolve = conn->socks_request->command == SOCKS_COMMAND_RESOLVE;
 
   circ = circuit_get_best(conn, 1, desired_circuit_purpose);
 
@@ -630,7 +639,8 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     return 1; /* we're happy */
   }
 
-  if(!connection_edge_is_rendezvous_stream(conn)) { /* general purpose circ */
+  /* Do we need to check exit policy? */
+  if(!is_resolve && !connection_edge_is_rendezvous_stream(conn)) {
     addr = client_dns_lookup_entry(conn->socks_request->address);
     if(router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
       log_fn(LOG_WARN,"No Tor server exists that allows exit to %s:%d. Rejecting.",
@@ -742,10 +752,13 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
       circ->timestamp_dirty = time(NULL);
 
     link_apconn_to_circ(conn, circ);
-    connection_ap_handshake_send_begin(conn, circ);
+    tor_assert(conn->socks_request);
+    if (conn->socks_request->command == SOCKS_COMMAND_CONNECT)
+      connection_ap_handshake_send_begin(conn, circ);
+    else
+      connection_ap_handshake_send_resolve(conn, circ);
 
     return 1;
-
   } else { /* we're a rendezvous conn */
     circuit_t *rendcirc=NULL, *introcirc=NULL;
 

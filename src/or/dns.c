@@ -71,6 +71,7 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome);
 static int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
 static void spawn_enough_dnsworkers(void);
+static void send_resolved_cell(connection_t *conn, uint8_t answer_type);
 
 /** Splay tree of cached_resolve objects. */
 static SPLAY_HEAD(cache_tree, cached_resolve) cache_root;
@@ -141,6 +142,34 @@ static void purge_expired_resolves(uint32_t now) {
   }
 }
 
+static void send_resolved_cell(connection_t *conn, uint8_t answer_type)
+{
+  char buf[RELAY_PAYLOAD_SIZE];
+  int buflen;
+
+  buf[0] = answer_type;
+
+  switch (answer_type)
+    {
+    case RESOLVED_TYPE_IPV4:
+      buf[1] = 4;
+      set_uint32(buf+2, htonl(conn->addr));
+      buflen = 6;
+      break;
+    case RESOLVED_TYPE_ERROR_TRANSIENT:
+    case RESOLVED_TYPE_ERROR:
+      buf[1] = 24; /* length of "error resolving hostname" */
+      strcpy(buf+2, "error resolving hostname");
+      buflen = 26;
+      break;
+    default:
+      tor_assert(0);
+    }
+  connection_edge_send_command(conn, circuit_get_by_conn(conn),
+                               RELAY_COMMAND_RESOLVED, buf, buflen,
+                               conn->cpath_layer);
+}
+
 /** See if we have a cache entry for <b>exitconn</b>-\>address. if so,
  * if resolve valid, put it into <b>exitconn</b>-\>addr and return 1.
  * If resolve failed, return -1.
@@ -179,7 +208,8 @@ int dns_resolve(connection_t *exitconn) {
     switch(resolve->state) {
       case CACHE_STATE_PENDING:
         /* add us to the pending list */
-        pending_connection = tor_malloc(sizeof(struct pending_connection_t));
+        pending_connection = tor_malloc_zero(
+                                      sizeof(struct pending_connection_t));
         pending_connection->conn = exitconn;
         pending_connection->next = resolve->pending_connections;
         resolve->pending_connections = pending_connection;
@@ -191,8 +221,12 @@ int dns_resolve(connection_t *exitconn) {
         exitconn->addr = resolve->addr;
         log_fn(LOG_DEBUG,"Connection (fd %d) found cached answer for '%s'",
                exitconn->s, exitconn->address);
+        if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
+          send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
         return 1;
       case CACHE_STATE_FAILED:
+        if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
+          send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
         return -1;
     }
     tor_assert(0);
@@ -205,7 +239,7 @@ int dns_resolve(connection_t *exitconn) {
   resolve->address[MAX_ADDRESSLEN-1] = 0;
 
   /* add us to the pending list */
-  pending_connection = tor_malloc(sizeof(struct pending_connection_t));
+  pending_connection = tor_malloc_zero(sizeof(struct pending_connection_t));
   pending_connection->conn = exitconn;
   pending_connection->next = NULL;
   resolve->pending_connections = pending_connection;
@@ -240,6 +274,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   if(!dnsconn) {
     log_fn(LOG_WARN,"no idle dns workers. Failing.");
     dns_cancel_pending_resolve(exitconn->address);
+    send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
     return -1;
   }
 
@@ -453,28 +488,42 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
     pend = resolve->pending_connections;
     assert_connection_ok(pend->conn,time(NULL));
     pend->conn->addr = resolve->addr;
+    pendconn = pend->conn; /* don't pass complex things to the
+                              connection_mark_for_close macro */
 
     if(resolve->state == CACHE_STATE_FAILED) {
-      pendconn = pend->conn; /* don't pass complex things to the
-                                connection_mark_for_close macro */
       /* prevent double-remove. */
       pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
       circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
-      connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
+      if (pendconn->purpose == EXIT_PURPOSE_CONNECT)
+        connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
+      else
+        send_resolved_cell(pendconn, RESOLVED_TYPE_ERROR);
       connection_free(pendconn);
     } else {
-      /* prevent double-remove. */
-      pend->conn->state = EXIT_CONN_STATE_CONNECTING;
+      if (pendconn->purpose == EXIT_PURPOSE_CONNECT) {
+        /* prevent double-remove. */
+        pend->conn->state = EXIT_CONN_STATE_CONNECTING;
 
-      circ = circuit_get_by_conn(pend->conn);
-      assert(circ);
-      /* unlink pend->conn from resolving_streams, */
-      circuit_detach_stream(circ, pend->conn);
-      /* and link it to n_streams */
-      pend->conn->next_stream = circ->n_streams;
-      circ->n_streams = pend->conn;
+        circ = circuit_get_by_conn(pend->conn);
+        tor_assert(circ);
+        /* unlink pend->conn from resolving_streams, */
+        circuit_detach_stream(circ, pend->conn);
+        /* and link it to n_streams */
+        pend->conn->next_stream = circ->n_streams;
+        circ->n_streams = pend->conn;
 
-      connection_exit_connect(pend->conn);
+        connection_exit_connect(pend->conn);
+      } else {
+        /* prevent double-remove.  This isn't really an accurate state,
+         * but it does the right thing. */
+        pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
+        send_resolved_cell(pendconn, RESOLVED_TYPE_IPV4);
+        circ = circuit_get_by_conn(pendconn);
+        tor_assert(circ);
+        circuit_detach_stream(circ, pendconn);
+        connection_free(pendconn);
+      }
     }
     resolve->pending_connections = pend->next;
     tor_free(pend);

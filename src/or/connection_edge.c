@@ -371,6 +371,23 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     return sockshere;
   } /* else socks handshake is done, continue processing */
 
+  if (socks->command == SOCKS_COMMAND_RESOLVE) {
+    /* Reply to resolves immediately if we can. */
+    if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
+      connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
+      conn->socks_request->has_finished = 1;
+      connection_mark_for_close(conn);
+    }
+    uint32_t answer = htonl(client_dns_lookup_entry(socks->address));
+    if (answer) {
+      connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
+                                             (char*)&answer);
+      conn->socks_request->has_finished = 1;
+      connection_mark_for_close(conn);
+      return 0;
+    }
+  }
+
   /* this call _modifies_ socks->address iff it's a hidden-service request */
   if (rend_parse_rendezvous_address(socks->address) < 0) {
     /* normal request */
@@ -487,6 +504,46 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
   return 0;
 }
 
+/** Write a relay resolve cell, using destaddr and destport from ap_conn's
+ * socks_request field, and send it down circ.
+ *
+ * If ap_conn is broken, mark it for close and return -1. Else return 0.
+ */
+int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
+{
+  int payload_len;
+  const char *string_addr;
+
+  tor_assert(ap_conn->type == CONN_TYPE_AP);
+  tor_assert(ap_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
+  tor_assert(ap_conn->socks_request);
+  tor_assert(ap_conn->socks_request->command == SOCKS_COMMAND_RESOLVE);
+  tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
+
+  ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
+  if (ap_conn->stream_id==0) {
+    /* Don't send end: there is no 'other side' yet */
+    ap_conn->has_sent_end = 1;
+    connection_mark_for_close(ap_conn);
+    circuit_mark_for_close(circ);
+    return -1;
+  }
+
+  string_addr = ap_conn->socks_request->address;
+  payload_len = strlen(string_addr);
+  tor_assert(strlen(string_addr) <= RELAY_PAYLOAD_SIZE);
+
+  log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",ap_conn->stream_id);
+
+  if(connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_RESOLVE,
+                           string_addr, payload_len, ap_conn->cpath_layer) < 0)
+    return -1; /* circuit is closed, don't continue */
+
+  ap_conn->state = AP_CONN_STATE_RESOLVE_WAIT;
+  log_fn(LOG_INFO,"Address sent for resolve, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
+  return 0;
+}
+
 /** Make an AP connection_t, do a socketpair and attach one side
  * to the conn, connection_add it, initialize it to circuit_wait,
  * and call connection_ap_handshake_attach_circuit(conn) on it.
@@ -542,6 +599,59 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
 
   log_fn(LOG_INFO,"... AP bridge created and connected.");
   return fd[1];
+}
+
+void connection_ap_handshake_socks_resolved(connection_t *conn,
+                                            int answer_type,
+                                            int answer_len,
+                                            const char *answer)
+{
+  char buf[256];
+  int replylen;
+
+  if (answer_type == RESOLVED_TYPE_IPV4) {
+    uint32_t a = get_uint32(answer);
+    client_dns_set_entry(conn->socks_request->address, ntohl(a));
+  }
+
+  if (conn->socks_request->socks_version == 4) {
+    buf[0] = 0x00; /* version */
+    if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
+      buf[1] = 90; /* "Granted" */
+      set_uint16(buf+2, 0);
+      memcpy(buf+4, answer, 4); /* address */
+      replylen = SOCKS4_NETWORK_LEN;
+   } else {
+      buf[1] = 91; /* "error" */
+      memset(buf+2, 0, 6);
+      replylen = SOCKS4_NETWORK_LEN;
+    }
+  } else {
+    /* SOCKS5 */
+    buf[0] = 0x05; /* version */
+    if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
+      buf[1] = 0; /* succeeded */
+      buf[2] = 0; /* reserved */
+      buf[3] = 0x01; /* IPv4 address type */
+      memcpy(buf+4, answer, 4); /* address */
+      set_uint16(buf+8, 0); /* port == 0. */
+      replylen = 10;
+    } else if (answer_type == RESOLVED_TYPE_IPV6 && answer_len == 16) {
+      buf[1] = 0; /* succeeded */
+      buf[2] = 0; /* reserved */
+      buf[3] = 0x04; /* IPv6 address type */
+      memcpy(buf+4, answer, 16); /* address */
+      set_uint16(buf+20, 0); /* port == 0. */
+      replylen = 22;
+    } else {
+      buf[1] = 0x04; /* host unreachable */
+      memset(buf+2, 0, 8);
+      replylen = 10;
+    }
+  }
+  connection_ap_handshake_socks_reply(conn, buf, replylen,
+                                      answer_type == RESOLVED_TYPE_IPV4 ||
+                                      answer_type == RESOLVED_TYPE_IPV6);
 }
 
 /** Send a socks reply to stream <b>conn</b>, using the appropriate
@@ -631,6 +741,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
 
   log_fn(LOG_DEBUG,"Creating new exit connection.");
   n_stream = connection_new(CONN_TYPE_EXIT);
+  n_stream->purpose = EXIT_PURPOSE_CONNECT;
 
   n_stream->stream_id = rh.stream_id;
   n_stream->port = atoi(colon+1);
@@ -688,6 +799,52 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
       /* add it into the linked list of resolving_streams on this circuit */
       n_stream->next_stream = circ->resolving_streams;
       circ->resolving_streams = n_stream;
+      assert_circuit_ok(circ);
+      ;
+  }
+  return 0;
+}
+
+/**
+ * Called when we receive a RELAY_RESOLVE cell 'cell' along the circuit 'circ';
+ * begin resolving the hostname, and (eventually) reply with a RESOLVED cell.
+ */
+int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
+  connection_t *dummy_conn;
+  relay_header_t rh;
+
+  assert_circuit_ok(circ);
+  relay_header_unpack(&rh, cell->payload);
+
+
+  /* This 'dummy_conn' only exists to remember the stream ID
+   * associated with the resolve request; and to make the
+   * implementation of dns.c more uniform.  (We really only need to
+   * remember the circuit, the stream ID, and the hostname to be
+   * resolved; but if we didn't store them in a connection like this,
+   * the housekeeping in dns.c would get way more complicated.)
+   */
+  dummy_conn = connection_new(CONN_TYPE_EXIT);
+  dummy_conn->stream_id = rh.stream_id;
+  dummy_conn->address = tor_strndup(cell->payload+RELAY_HEADER_SIZE,
+                                    rh.length);
+  dummy_conn->port = 0;
+  dummy_conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
+  dummy_conn->purpose = EXIT_PURPOSE_RESOLVE;
+
+  /* send it off to the gethostbyname farm */
+  switch(dns_resolve(dummy_conn)) {
+    case 1: /* resolve worked; resolved cell was sent. */
+      connection_free(dummy_conn);
+      return 0;
+    case -1: /* resolve failed; resolved cell was sent. */
+      log_fn(LOG_INFO,"Resolve failed (%s).",dummy_conn->address);
+      connection_free(dummy_conn);
+      break;
+    case 0: /* resolve added to pending list */
+      /* add it into the linked list of resolving_streams on this circuit */
+      dummy_conn->next_stream = circ->resolving_streams;
+      circ->resolving_streams = dummy_conn;
       assert_circuit_ok(circ);
       ;
   }
@@ -776,6 +933,12 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
   log_fn(LOG_DEBUG,"considering nickname %s, for address %s / port %d:",
          exit->nickname, conn->socks_request->address,
          conn->socks_request->port);
+  if (conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
+    /* 0.0.7 servers and earlier don't support DNS resolution.  There are no
+     * ORs running code before 0.0.7, so we only worry about 0.0.7.  Once all
+     * servers are running 0.0.8, remove this check. */
+    return strncmp(exit->platform, "Tor 0.0.7", 9) ? 1 : 0;
+  }
   addr = client_dns_lookup_entry(conn->socks_request->address);
   return router_compare_addr_to_exit_policy(addr,
            conn->socks_request->port, exit->exit_policy);
