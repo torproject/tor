@@ -674,7 +674,6 @@ void assert_buf_ok(buf_t *buf);
 /********************************* circuit.c ***************************/
 
 extern char *circuit_state_to_string[];
-void circuit_add(circuit_t *circ);
 void circuit_remove(circuit_t *circ);
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
 void circuit_close_all_marked(void);

@@ -172,9 +172,7 @@ int connection_is_writing(connection_t *conn) {
 
 /* Tell the main loop to stop notifying 'conn' of any write events. */
 void connection_stop_writing(connection_t *conn) {
-
   tor_assert(conn && conn->poll_index >= 0 && conn->poll_index < nfds);
-
   if(poll_array[conn->poll_index].events & POLLOUT)
     poll_array[conn->poll_index].events -= POLLOUT;
 }

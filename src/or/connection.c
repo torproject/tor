@@ -8,6 +8,7 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+/* Array of strings to make conn->type human-readable */
 char *conn_type_to_string[] = {
   "",            /* 0 */
   "OP listener", /* 1 */
@@ -23,6 +24,7 @@ char *conn_type_to_string[] = {
   "CPU worker",  /* 11 */
 };
 
+/* Array of string arrays to make {conn->type,conn->state} human-readable */
 char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
   { NULL }, /* no type associated with 0 */
   { NULL }, /* op listener, obsolete */
@@ -72,6 +74,19 @@ static int connection_receiver_bucket_should_increase(connection_t *conn);
 
 /**************************************************************/
 
+/* Allocate space for a new connection_t. This function just initializes
+ * conn; you must call connection_add() to link it into the main array.
+ *
+ * Set conn->type to 'type'. Set conn->s and conn->poll_index to
+ * -1 to signify they are not yet assigned.
+ *
+ * If conn is not a listener type, allocate buffers for it. If it's
+ * an AP type, allocate space to store the socks_request.
+ *
+ * Assign a pseudorandom next_circ_id between 0 and 2**15.
+ *
+ * Initialize conn's timestamps to now.
+ */
 connection_t *connection_new(int type) {
   connection_t *conn;
   time_t now = time(NULL);
@@ -99,6 +114,10 @@ connection_t *connection_new(int type) {
   return conn;
 }
 
+/* Deallocate memory used by 'conn'. Deallocate its buffers if necessary,
+ * close its socket if necessary, and mark the directory as dirty if conn
+ * is an OR or OP connection.
+ */
 void connection_free(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->magic == CONNECTION_MAGIC);
@@ -110,7 +129,7 @@ void connection_free(connection_t *conn) {
   tor_free(conn->address);
 
   if(connection_speaks_cells(conn)) {
-    directory_set_dirty();
+    directory_set_dirty(); /* XXX should only do this for an open OR conn */
     if (conn->tls)
       tor_tls_free(conn->tls);
   }

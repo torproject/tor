@@ -1,4 +1,4 @@
-/* Copyright 2001,2002,2003 Roger Dingledine, Matej Pfajfar. */
+/* Copyright 2001 Matej Pfajfar, 2001-2004 Roger Dingledine. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 
@@ -37,7 +37,10 @@ char *circuit_state_to_string[] = {
 
 /********* END VARIABLES ************/
 
-void circuit_add(circuit_t *circ) {
+/* add 'circ' to the global list of circuits. This is called only from
+ * within circuit_new.
+ */
+static void circuit_add(circuit_t *circ) {
   if(!global_circuitlist) { /* first one */
     global_circuitlist = circ;
     circ->next = NULL;

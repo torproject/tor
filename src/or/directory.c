@@ -75,9 +75,6 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
 
   conn->purpose = purpose;
 
-  /* queue the command on the outbuf */
-  directory_send_command(conn, purpose, payload, payload_len);
-
   /* give it an initial state */
   conn->state = DIR_CONN_STATE_CONNECTING;
 
@@ -93,6 +90,9 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
         conn->state = DIR_CONN_STATE_CLIENT_SENDING; /* start flushing conn */
         /* fall through */
       case 0:
+        /* queue the command on the outbuf */
+        directory_send_command(conn, purpose, payload, payload_len);
+
         connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
         /* writable indicates finish, readable indicates broken link,
            error indicates broken link in windowsland. */
@@ -111,7 +111,9 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
 
     conn->state = DIR_CONN_STATE_CLIENT_SENDING;
     connection_add(conn);
-    connection_start_reading(conn);
+    /* queue the command on the outbuf */
+    directory_send_command(conn, purpose, payload, payload_len);
+    connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
   }
 }
 
@@ -286,7 +288,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
           log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver. Malformed server descriptor?");
           break;
         case 403:
-          log_fn(LOG_WARN,"http status 403 (unapproved server) response from dirserver. Is your clock skewed? Have you mailed arma your identity fingerprint? Are you using the right key? See README.");
+          log_fn(LOG_WARN,"http status 403 (unapproved server) response from dirserver. Is your clock skewed? Have you mailed us your identity fingerprint? Are you using the right key? See README.");
 
           break;
         default:

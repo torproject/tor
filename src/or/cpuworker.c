@@ -204,7 +204,7 @@ int cpuworker_main(void *data) {
 
     if(recv(fd, &question_type, 1, 0) != 1) {
 //      log_fn(LOG_ERR,"read type failed. Exiting.");
-      log_fn(LOG_INFO,"cpuworker exiting because tor process died.");
+      log_fn(LOG_INFO,"cpuworker exiting because tor process closed connection (either rotated keys or died).");
       goto end;
     }
     tor_assert(question_type == CPUWORKER_TASK_ONION);
