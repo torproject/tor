@@ -29,7 +29,6 @@ typedef enum {
   K_SIGNED_DIRECTORY,
   K_SIGNING_KEY,
   K_ONION_KEY,
-  K_LINK_KEY, /* XXXX obsolete; remove in June. */
   K_ROUTER_SIGNATURE,
   K_PUBLISHED,
   K_RUNNING_ROUTERS,
@@ -102,7 +101,6 @@ static struct {
   { "signed-directory",    K_SIGNED_DIRECTORY,    NO_ARGS, NO_OBJ,  DIR_ONLY },
   { "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY,RTR_ONLY },
   { "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY,RTR_ONLY },
-  { "link-key",            K_LINK_KEY,            NO_ARGS, NEED_KEY,RTR_ONLY },
   { "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ,RTR_ONLY },
   { "running-routers",     K_RUNNING_ROUTERS,     ARGS,    NO_OBJ,  DIR_ONLY },
   { "ports",               K_PORTS,               ARGS,    NO_OBJ,  RTR_ONLY },
@@ -756,10 +754,6 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   /* XXX Check key length */
   router->onion_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
-
-  if ((tok = find_first_by_keyword(tokens, K_LINK_KEY))) {
-    log_fn(LOG_INFO, "Skipping obsolete link-key");
-  }
 
   if (!(tok = find_first_by_keyword(tokens, K_SIGNING_KEY))) {
     log_fn(LOG_WARN, "Missing identity key"); goto err;
