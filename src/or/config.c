@@ -583,7 +583,7 @@ config_get_assigned_option(or_options_t *options, const char *key)
   switch(var->type)
     {
     case CONFIG_TYPE_STRING:
-      result->value = tor_strdup(value ? (char*)value : "");
+      result->value = tor_strdup(*(char**)value ? *(char**)value : "");
       break;
     case CONFIG_TYPE_UINT:
       /* XXX This means every or_options_t uint or bool element
@@ -599,8 +599,8 @@ config_get_assigned_option(or_options_t *options, const char *key)
       result->value = tor_strdup(*(int*)value ? "1" : "0");
       break;
     case CONFIG_TYPE_CSV:
-      if (value)
-        result->value = smartlist_join_strings((smartlist_t*)value,",",0,NULL);
+      if (*(smartlist_t**)value)
+        result->value = smartlist_join_strings(*(smartlist_t**)value,",",0,NULL);
       else
         result->value = tor_strdup("");
       break;
@@ -909,15 +909,15 @@ options_free(or_options_t *options)
 static or_options_t *
 options_dup(or_options_t *old)
 {
-  or_options_t *new;
+  or_options_t *newopts;
   int i;
   struct config_line_t *line;
 
-  new = tor_malloc_zero(sizeof(or_options_t));
+  newopts = tor_malloc_zero(sizeof(or_options_t));
   for (i=0; config_vars[i].name; ++i) {
     line = config_get_assigned_option(old, config_vars[i].name);
     if (line) {
-      if (config_assign(new, line, 0) < 0) {
+      if (config_assign(newopts, line, 0) < 0) {
         log_fn(LOG_WARN,"Bug: config_get_assigned_option() generated "
                "something we couldn't config_assign().");
         tor_assert(0);
@@ -925,7 +925,7 @@ options_dup(or_options_t *old)
     }
     config_free_lines(line);
   }
-  return new;
+  return newopts;
 }
 
 /** Set <b>options</b> to hold reasonable defaults for most options.
