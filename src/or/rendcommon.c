@@ -170,6 +170,22 @@ void rend_cache_init(void)
   rend_cache = strmap_new();
 }
 
+static void
+_rend_cache_entry_free(void *p)
+{
+  rend_cache_entry_t *e = p;
+  rend_service_descriptor_free(e->parsed);
+  tor_free(e->desc);
+  tor_free(e);
+}
+
+void
+rend_cache_free_all(void)
+{
+  strmap_free(rend_cache, _rend_cache_entry_free);
+  rend_cache = NULL;
+}
+
 /** Removes all old entries from the service descriptor cache.
  */
 void rend_cache_clean(void)
@@ -185,9 +201,7 @@ void rend_cache_clean(void)
     ent = (rend_cache_entry_t*)val;
     if (ent->parsed->timestamp < cutoff) {
       iter = strmap_iter_next_rmv(rend_cache, iter);
-      rend_service_descriptor_free(ent->parsed);
-      tor_free(ent->desc);
-      tor_free(ent);
+      _rend_cache_entry_free(ent);
     } else {
       iter = strmap_iter_next(rend_cache, iter);
     }
