@@ -325,10 +325,9 @@ typedef struct {
   /* link info */
   uint32_t bandwidth;
   struct exit_policy_t *exit_policy;
-
-  void *next;
 } routerinfo_t;
 
+#define MAX_ROUTERS_IN_DIR 1024
 typedef struct {
   routerinfo_t **routers;
   int n_routers;
@@ -811,7 +810,7 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
                                     crypto_pk_env_t *pkey);
 routerinfo_t *router_get_entry_from_string(char **s);
 int router_compare_to_exit_policy(connection_t *conn);
-void routerlist_free(routerinfo_t *list);
+void routerinfo_free(routerinfo_t *router);
 
 #endif
 

@@ -547,7 +547,6 @@ test_dir_format()
   r1.signing_pkey = NULL;
   r1.bandwidth = 1000;
   r1.exit_policy = NULL;
-  r1.next = &r2;
 
   ex1.policy_type = EXIT_POLICY_ACCEPT;
   ex1.string = NULL;
@@ -568,7 +567,6 @@ test_dir_format()
   r2.signing_pkey = pk1;
   r2.bandwidth = 3000;
   r2.exit_policy = &ex1;
-  r2.next = NULL;
 
   test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str, 
                                                     &pk1_str_len));
@@ -636,13 +634,12 @@ test_dir_format()
   test_assert(! router_get_dir_from_string_impl(buf, &dir2, pk1));
   test_eq(2, dir2->n_routers);
   
-
   if (pk1_str) free(pk1_str);
   if (pk2_str) free(pk2_str);
   if (pk1) crypto_free_pk_env(pk1);
   if (pk2) crypto_free_pk_env(pk2);
-  if (rp1) routerlist_free(rp1);
-  if (rp2) routerlist_free(rp2);
+  if (rp1) routerinfo_free(rp1);
+  if (rp2) routerinfo_free(rp2);
   if (dir1) free(dir1); /* And more !*/
   if (dir1) free(dir2); /* And more !*/
 }
