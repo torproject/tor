@@ -1,4 +1,25 @@
 Release notes in progress for 0.0.8:
+pre2:
+  o Changes from 0.0.7.2:
+    - Security fixes:
+      - Check directory signature _before_ you decide whether you're
+        you're running an obsolete version and should exit.
+      - Check directory signature _before_ you parse the running-routers
+        list to decide who's running or verified.
+    - Bugfixes and features:
+      - Check return value of fclose while writing to disk, so we don't
+        end up with broken files when servers run out of disk space.
+      - Log a warning if the user uses an unsafe socks variant, so people
+        are more likely to learn about privoxy or socat.
+      - Dirservers now include RFC1123-style dates in the HTTP headers,
+        which one day we will use to better detect clock skew.
+
+  o Changes from 0.0.8pre1:
+    - Make it compile without warnings again on win32.
+    - Log a warning if you're running an unverified server, to let you
+      know you might want to get it verified.
+    - Only pick a default nickname if you plan to be a server.
+
 pre1:
   o Bugfixes:
     - Made our unit tests compile again on OpenBSD 3.5, and tor
