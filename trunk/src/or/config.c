@@ -927,7 +927,7 @@ resolve_my_address(const char *address, uint32_t *addr)
 }
 
 /** Called when we don't have a nickname set.  Try to guess a good
- * nickname based on the hostname, and return it. */
+ * nickname based on the hostname, and return it in a newly allocated string. */
 static char *
 get_default_nickname(void)
 {

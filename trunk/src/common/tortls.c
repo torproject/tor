@@ -586,8 +586,10 @@ tor_tls_peer_has_cert(tor_tls *tls)
   return 1;
 }
 
-/** Return the nickname (if any) that the peer connected on <b>tls</b>
- * claims to have.
+/** Write the nickname (if any) that the peer connected on <b>tls</b>
+ * claims to have into the first <b>buflen</b> characters of <b>buf</b>.
+ * Truncate the nickname if it is longer than buflen-1 characters.  Always
+ * NUL-terminate.  Return 0 on success, -1 on failure.
  */
 int
 tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, size_t buflen)
