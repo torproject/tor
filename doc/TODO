@@ -79,7 +79,7 @@ R     - revised circ selection stuff.
         attach them automatically.  ("Hidden" config option.)
       o Implement 'attach stream X to circuit Y' logic.
       - Time out never-attached streams.
-      - If we never get a CONNECTED back, we should put the stream back in
+      o If we never get a CONNECTED back, we should put the stream back in
         CONTROLLER_WAIT, not in CIRCUIT_WAIT.
     - Tests for new controller features
 R o HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
