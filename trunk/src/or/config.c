@@ -68,7 +68,7 @@ RETURN VALUE: 0 on success, non-zero on error
    int Verbose;
    int code;
    poptContext optCon;
-   char *cmd;
+   const char *cmd;
    struct poptOption opt_tab[] =
    {
       { "APPort",          'a',  POPT_ARG_INT,     &options->APPort,

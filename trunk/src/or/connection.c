@@ -522,7 +522,7 @@ int connection_encrypt_cell(cell_t *cellp, connection_t *conn) {
   printf("\n");
 #endif
 
-  if(crypto_cipher_encrypt(conn->f_crypto, (char *)cellp, sizeof(cell_t), &newcell)) {
+  if(crypto_cipher_encrypt(conn->f_crypto, (char *)cellp, sizeof(cell_t), (char *)&newcell)) {
     log(LOG_ERR,"Could not encrypt cell for connection %s:%u.",conn->address,conn->port);
     return -1;
   }

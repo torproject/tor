@@ -111,7 +111,7 @@ int connection_or_finished_flushing(connection_t *conn) {
 /*********************/
 
 void conn_or_init_crypto(connection_t *conn) {
-  int x;
+  //int x;
   unsigned char iv[16];
 
   assert(conn);
@@ -257,7 +257,7 @@ connection_t *connection_or_connect_as_op(routerinfo_t *router, crypto_pk_env_t 
 }
 
 int or_handshake_op_send_keys(connection_t *conn) {
-  int x;
+  //int x;
   uint32_t bandwidth = DEFAULT_BANDWIDTH_OP;
   unsigned char message[20]; /* bandwidth(32bits), forward key(64bits), backward key(64bits) */
   unsigned char cipher[128];
