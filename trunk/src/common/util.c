@@ -880,8 +880,15 @@ int write_bytes_to_file(const char *fname, const char *str, size_t len,
   return -1;
 }
 
-/** Read the contents of <b>filename</b> into a newly allocated string; return the
- * string on success or NULL on failure.
+/** Read the contents of <b>filename</b> into a newly allocated
+ * string; return the string on success or NULL on failure.
+ */
+/*
+ * This function <em>may</em> return an erroneous result if the file
+ * is modified while it is running, but must not crash or overflow.
+ * Right now, the error case occurs when the file length grows between
+ * the call to stat and the call to read_all: the resulting string will
+ * be truncated.
  */
 char *read_file_to_str(const char *filename, int bin) {
   int fd; /* router file */
