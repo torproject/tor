@@ -680,9 +680,11 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   }
 
   if (options->Nickname == NULL) {
-    if (!(options->Nickname = get_default_nickname()))
-      return -1;
-    log_fn(LOG_INFO, "Choosing default nickname %s", options->Nickname);
+    if(server_mode()) {
+      if (!(options->Nickname = get_default_nickname()))
+        return -1;
+      log_fn(LOG_NOTICE, "Choosing default nickname %s", options->Nickname);
+    }
   } else {
     if (strspn(options->Nickname, LEGAL_NICKNAME_CHARACTERS) !=
         strlen(options->Nickname)) {
@@ -696,7 +698,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     }
   }
 
-  if(options->ORPort) { /* get an IP for ourselves */
+  if(server_mode()) { /* get an IP for ourselves */
     if(resolve_my_address(options) < 0)
       result = -1;
   }
