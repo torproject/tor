@@ -9,11 +9,12 @@ SocksPort 9050
 SocksBindAddress 127.0.0.1 # accept connections only from localhost
 #SocksBindAddress 192.168.0.1:9100 # listen on a chosen IP/port
 
-# Entry policies to allow/deny SOCKS requests based on IP.  By default,
-# we accept all requests from SocksBindAddress.
+# Entry policies to allow/deny SOCKS requests based on IP. First
+# entry that matches wins. If no SocksPolicy is set, we accept all
+# (and only) requests from SocksBindAddress.
 #
-#SocksPolicy accept 192.168.0.1/16:*
-#SocksPolicy reject *:*
+#SocksPolicy accept 192.168.0.1/16
+#SocksPolicy reject *
 
 # By default, we send log messages to stdout.  If you want
 # them to go somewhere else, uncomment one or more of these example
@@ -53,7 +54,8 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 # Uncomment this to mirror the directory for others (please do)
 #DirPort 9030
 
-## A comma-separated list of exit policies. If you want to *replace*
+## A comma-separated list of exit policies. They're considered first
+## to last, and the first match wins. If you want to *replace*
 ## the default exit policy, end this with either a reject *:* or an
 ## accept *:*. Otherwise, you're *augmenting* (prepending to) the
 ## default exit policy. Leave commented to just use the default.
