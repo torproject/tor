@@ -48,7 +48,9 @@ typedef struct {
 smartlist_t *smartlist_create(int max_elements);
 void smartlist_free(smartlist_t *sl);
 void smartlist_add(smartlist_t *sl, void *element);
-void smartlist_remove(smartlist_t *sl, void *element);
+int smartlist_isin(smartlist_t *sl, void *element);
+int smartlist_overlap(smartlist_t *sl1, smartlist_t *sl2);
+void smartlist_intersect(smartlist_t *sl1, smartlist_t *sl2);
 void *smartlist_choose(smartlist_t *sl);
 
 const char *eat_whitespace(const char *s);
