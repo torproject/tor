@@ -636,7 +636,16 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   }
 }
 
-/* DOCDOC: 1 if complete, 0 if pending, -1 on error. */
+/** If there is a complete control message waiting on buf, then store
+ * its contents into *<b>type_out</b>, store its body's length into
+ * *<b>len_out</b>, allocate and store a string for its body into
+ * *<b>body_out</b>, and return -1.  (body_out will always be NUL-terminated,
+ * even if the control message body doesn't end with NUL.)
+ *
+ * If there is not a complete control message waiting, return 0.
+ *
+ * Return -1 on error.
+ */
 int fetch_from_buf_control(buf_t *buf, uint16_t *len_out, uint16_t *type_out,
                            char **body_out)
 {
@@ -657,8 +666,9 @@ int fetch_from_buf_control(buf_t *buf, uint16_t *len_out, uint16_t *type_out,
   *len_out = len;
   *type_out = ntohs(get_uint16(buf->mem+2));
   if (len) {
-    *body_out = tor_malloc(len);
+    *body_out = tor_malloc(len+1);
     memcpy(*body_out, buf->mem+4, len);
+    body_out[len] = '\0';
   } else {
     *body_out = NULL;
   }
