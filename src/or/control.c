@@ -375,8 +375,9 @@ handle_control_saveconf(connection_t *conn, uint16_t len,
   if (save_current_config()<0) {
     send_control_error(conn, ERR_INTERNAL,
                        "Unable to write configuration to disk.");
+  } else {
+    send_control_done(conn);
   }
-  send_control_done(conn);
   return 0;
 }
 
