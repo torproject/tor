@@ -280,8 +280,9 @@ static int assign_to_dnsworker(connection_t *exitconn) {
 
   if (!dnsconn) {
     log_fn(LOG_WARN,"no idle dns workers. Failing.");
-    dns_cancel_pending_resolve(exitconn->address);
-    send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
+    if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
+      send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
+    dns_cancel_pending_resolve(exitconn->address); /* also sends end */
     return -1;
   }
 
@@ -387,6 +388,7 @@ void dns_cancel_pending_resolve(char *address) {
   struct cached_resolve search;
   struct cached_resolve *resolve;
   connection_t *pendconn;
+  circuit_t *circ;
 
   strlcpy(search.address, address, sizeof(search.address));
 
@@ -412,9 +414,12 @@ void dns_cancel_pending_resolve(char *address) {
     pendconn = pend->conn;
     tor_assert(pendconn->s == -1);
     if (!pendconn->marked_for_close) {
-      connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
+      connection_edge_end(pendconn, END_STREAM_REASON_RESOURCELIMIT,
+                          pendconn->cpath_layer);
     }
-    circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
+    circ = circuit_get_by_conn(pendconn);
+    if (circ)
+      circuit_detach_stream(circ, pendconn);
     connection_free(pendconn);
     resolve->pending_connections = pend->next;
     tor_free(pend);

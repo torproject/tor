@@ -1328,8 +1328,8 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
-  if (options->MaxConn >= MAXCONNECTIONS) {
-    log(LOG_WARN, "MaxConn option must be less than %d.", MAXCONNECTIONS);
+  if (options->MaxConn > MAXCONNECTIONS) {
+    log(LOG_WARN, "MaxConn option must be at most %d.", MAXCONNECTIONS);
     result = -1;
   }
 

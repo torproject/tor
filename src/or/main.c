@@ -65,7 +65,7 @@ static time_t time_to_fetch_running_routers = 0;
 
 /** Array of all open connections; each element corresponds to the element of
  * poll_array in the same position.  The first nfds elements are valid. */
-static connection_t *connection_array[MAXCONNECTIONS] =
+static connection_t *connection_array[MAXCONNECTIONS+1] =
         { NULL };
 static smartlist_t *closeable_connection_lst = NULL;
 
@@ -115,7 +115,7 @@ int connection_add(connection_t *conn) {
   tor_assert(conn->s >= 0);
 
   if (nfds >= get_options()->MaxConn-1) {
-    log_fn(LOG_WARN,"failing because nfds is too high.");
+    log_fn(LOG_WARN,"Failing because we have %d connections already. Please set MaxConn higher.", nfds);
     return -1;
   }
 

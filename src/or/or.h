@@ -130,7 +130,7 @@
 
 /** Upper bound on maximum simultaneous connections; can be lowered by
  * config file. */
-#define MAXCONNECTIONS 10000
+#define MAXCONNECTIONS 15000
 
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 #define MAX_NICKNAME_LEN 19
@@ -401,7 +401,8 @@ typedef enum {
 #define END_STREAM_REASON_DESTROY 5
 #define END_STREAM_REASON_DONE 6
 #define END_STREAM_REASON_TIMEOUT 7
-#define _MAX_END_STREAM_REASON 7
+#define END_STREAM_REASON_RESOURCELIMIT 8
+#define _MAX_END_STREAM_REASON 8
 
 #define RESOLVED_TYPE_IPV4 4
 #define RESOLVED_TYPE_IPV6 6

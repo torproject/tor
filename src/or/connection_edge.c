@@ -842,7 +842,10 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
       return 0;
     case -1: /* resolve failed */
       log_fn(LOG_INFO,"Resolve failed (%s).", n_stream->address);
-      connection_edge_end(n_stream, END_STREAM_REASON_RESOLVEFAILED, n_stream->cpath_layer);
+      if (!n_stream->marked_for_close) {
+        connection_edge_end(n_stream, END_STREAM_REASON_RESOLVEFAILED,
+                            n_stream->cpath_layer);
+      }
       connection_free(n_stream);
       break;
     case 0: /* resolve added to pending list */
