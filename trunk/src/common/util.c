@@ -103,6 +103,9 @@ const char util_c_id[] = "$Id$";
 /** Allocate a chunk of <b>size</b> bytes of memory, and return a pointer to
  * result.  On error, log and terminate the process.  (Same as malloc(size),
  * but never returns NULL.)
+ *
+ * <b>file</b> and <b>line</b> are used if dmalloc is enabled, and
+ * ignored otherwise.
  */
 void *_tor_malloc(const char *file, const int line, size_t size) {
   void *result;
@@ -115,6 +118,8 @@ void *_tor_malloc(const char *file, const int line, size_t size) {
 
   if (!result) {
     log_fn(LOG_ERR, "Out of memory. Dying.");
+    /* XXX if these functions die within a worker process, they won't
+     * call spawn_exit */
     exit(1);
   }
 //  memset(result,'X',size); /* deadbeef to encourage bugs */
