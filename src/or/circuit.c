@@ -1077,6 +1077,8 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   return 0;
 }
 
+extern int has_completed_circuit;
+
 int circuit_finish_handshake(circuit_t *circ, char *reply) {
   unsigned char iv[16];
   unsigned char keys[40+32];
@@ -1128,6 +1130,10 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
 
   hop->state = CPATH_STATE_OPEN;
   log_fn(LOG_INFO,"finished");
+  if(!has_completed_circuit) {
+    has_completed_circuit=1;
+    log_fn(LOG_WARN,"Tor has successfully opened a circuit. Looks like it's working.");
+  }
   circuit_log_path(LOG_INFO,circ);
   return 0;
 }
