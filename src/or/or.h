@@ -603,9 +603,10 @@ typedef struct {
   char *signing_router;
 } routerlist_t;
 
-/* DOCDOC */
+/** Contents of a running-routers list */
 typedef struct running_routers_t {
-  time_t published_on;
+  time_t published_on; /**< When was the list marked as published? */
+  /** Which ORs are on the list?  Entries may be prefixed with ! and $. */
   smartlist_t *running_routers;
 } running_routers_t;
 

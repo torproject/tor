@@ -7,8 +7,6 @@
  * \brief Basic history functionality for reputation module.
  **/
 
-/* DOCDOC references to 'nicknames' in docs here are mostly wrong. */
-
 #include "or.h"
 
 /** History of an OR-\>OR link. */
@@ -39,12 +37,12 @@ typedef struct or_history_t {
   time_t up_since;
   /** If nonzero, we have been unable to connect since this time. */
   time_t down_since;
-  /** Map from lowercased OR2 name to a link_history_t for the link
+  /** Map from hex OR2 identity digest to a link_history_t for the link
    * from this OR to OR2. */
   strmap_t *link_history_map;
 } or_history_t;
 
-/** Map from lowercased OR nickname to or_history_t. */
+/** Map from hex OR identity digest to or_history_t. */
 static strmap_t *history_map = NULL;
 
 /** Return the or_history_t for the named OR, creating it if necessary.
@@ -66,7 +64,8 @@ static or_history_t *get_or_history(const char* id)
 }
 
 /** Return the link_history_t for the link from the first named OR to
- * the second, creating it if necessary.
+ * the second, creating it if necessary. (ORs are identified by
+ * identity digest)
  */
 static link_history_t *get_link_history(const char *from_id,
                                         const char *to_id)
@@ -108,8 +107,8 @@ void rep_hist_init(void)
   history_map = strmap_new();
 }
 
-/** Remember that an attempt to connect to the OR <b>nickname</b> failed at
- * <b>when</b>.
+/** Remember that an attempt to connect to the OR with identity digest
+ * <b>id</b> failed at <b>when</b>.
  */
 void rep_hist_note_connect_failed(const char* id, time_t when)
 {
@@ -124,8 +123,8 @@ void rep_hist_note_connect_failed(const char* id, time_t when)
     hist->down_since = when;
 }
 
-/** Remember that an attempt to connect to the OR <b>nickname</b> succeeded
- * at <b>when</b>.
+/** Remember that an attempt to connect to the OR with identity digest
+ * <b>id</b> succeeded at <b>when</b>.
  */
 void rep_hist_note_connect_succeeded(const char* id, time_t when)
 {
@@ -141,7 +140,7 @@ void rep_hist_note_connect_succeeded(const char* id, time_t when)
 }
 
 /** Remember that we intentionally closed our connection to the OR
- * <b>nickname</b> at <b>when</b>.
+ * with identity digest <b>id</b> at <b>when</b>.
  */
 void rep_hist_note_disconnect(const char* id, time_t when)
 {
@@ -154,8 +153,8 @@ void rep_hist_note_disconnect(const char* id, time_t when)
   }
 }
 
-/** Remember that our connection to the OR <b>id</b> had an error and
- * stopped working at <b>when</b>.
+/** Remember that our connection to the OR with identity digest
+ * <b>id</b> had an error and stopped working at <b>when</b>.
  */
 void rep_hist_note_connection_died(const char* id, time_t when)
 {
@@ -177,8 +176,9 @@ void rep_hist_note_connection_died(const char* id, time_t when)
     hist->down_since = when;
 }
 
-/** Remember that we successfully extended from the OR <b>from_name</b> to
- * the OR <b>to_name</b>.
+/** Remember that we successfully extended from the OR with identity
+ * digest <b>from_id</b> to the OR with identity digest
+ *  <b>to_name</b>.
  */
 void rep_hist_note_extend_succeeded(const char *from_id,
                                     const char *to_id)
@@ -189,8 +189,9 @@ void rep_hist_note_extend_succeeded(const char *from_id,
   ++hist->n_extend_ok;
 }
 
-/** Remember that we tried to extend from the OR <b>from_name</b> to the OR
- * <b>to_name</b>, but failed.
+/** Remember that we tried to extend from the OR with identity digest
+ * <b>from_id</b> to the OR with identity digest <b>to_name</b>, but
+ * failed.
  */
 void rep_hist_note_extend_failed(const char *from_id, const char *to_id)
 {

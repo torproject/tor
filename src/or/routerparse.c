@@ -153,7 +153,9 @@ int router_get_router_hash(const char *s, char *digest)
                               "router ","router-signature");
 }
 
-/** DOCDOC */
+/** Set <b>digest</b> to the SHA-1 digest of the hash of the running-routers
+ * string in <b>s</b>. Return 0 on success, nonzero on failure.
+ */
 int router_get_runningrouters_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
