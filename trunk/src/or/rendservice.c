@@ -128,7 +128,8 @@ static void add_service(rend_service_t *service)
 static rend_service_port_config_t *parse_port_config(const char *string)
 {
   int virtport;
-  uint16_t realport;
+  int realport;
+  uint16_t p;
   uint32_t addr;
   char *endptr;
   rend_service_port_config_t *result;
@@ -148,12 +149,11 @@ static rend_service_port_config_t *parse_port_config(const char *string)
     realport = virtport;
     addr = 0x7F000001u; /* 127.0.0.1 */
   } else if (strchr(string, ':') || strchr(string, '.')) {
-    if (parse_addr_port(string, NULL, &addr, &realport)<0) {
+    if (parse_addr_port(string, NULL, &addr, &p)<0) {
       log_fn(LOG_WARN,"Unparseable address in hidden service port configuration");
       return NULL;
     }
-    if (!realport)
-      realport = virtport;
+    realport = p?p:virtport;
   } else {
     /* No addr:port, no addr -- must be port. */
     realport = strtol(string, &endptr, 10);
