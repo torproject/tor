@@ -107,7 +107,7 @@ R       - learn from ben about his openssl-reinitialization-trick to
             no torrc.
           o remove notion of ->is_trusted_dir from the routerlist. that's
             no longer where you look.
-            - clean up router parsing flow, since it's simpler now?
+            o clean up router parsing flow, since it's simpler now?
           o when checking signature on a directory, look it up in
             options.TrustedDirs, and make sure there's a descriptor
             with that nickname, whose key hashes to the fingerprint,
