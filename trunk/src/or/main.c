@@ -1200,7 +1200,7 @@ void handle_signals(int is_parent)
   if (is_parent) {
     for (i = 0; signals[i] >= 0; ++i) {
       signal_set(&signal_events[i], signals[i], signal_callback,
-                 (void*)signals[i]);
+                 (void*)(uintptr_t)signals[i]);
       signal_add(&signal_events[i], NULL);
     }
   } else {
