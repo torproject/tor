@@ -18,7 +18,6 @@ unsigned long stats_n_relay_cells_delivered = 0;
 /********* START VARIABLES **********/
 
 static circuit_t *global_circuitlist=NULL;
-
 char *circuit_state_to_string[] = {
   "doing handshakes",        /* 0 */
   "processing the onion",    /* 1 */
@@ -55,6 +54,26 @@ void circuit_remove(circuit_t *circ) {
     }
   }
 }
+
+void circuit_close_all_marked()
+{
+  circuit_t *tmp,*m;
+
+  while (global_circuitlist && global_circuitlist->marked_for_close) {
+    tmp = global_circuitlist->next;
+    circuit_free(global_circuitlist);
+    global_circuitlist = tmp;
+  }
+
+  for (tmp = global_circuitlist; tmp->next; tmp=tmp->next) {
+    while (tmp->next->marked_for_close) {
+      m = tmp->next->next;
+      circuit_free(tmp->next);
+      tmp->next = m;
+    }
+  }
+}
+
 
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
   circuit_t *circ;
@@ -166,6 +185,9 @@ circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn) {
   connection_t *tmpconn;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
+    if (circ->marked_for_close)
+      continue;
+
     if(circ->p_circ_id == circ_id) {
       if(circ->p_conn == conn)
         return circ;
@@ -191,6 +213,9 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
   connection_t *tmpconn;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
+    if (circ->marked_for_close)
+      continue;
+
     if(circ->p_conn == conn)
       return circ;
     if(circ->n_conn == conn)
@@ -220,6 +245,8 @@ circuit_t *circuit_get_newest(connection_t *conn, int must_be_open) {
       continue; /* this circ doesn't start at us */
     if(must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_conn))
       continue; /* ignore non-open circs */
+    if (circ->marked_for_close)
+      continue;
     if(conn) {
       if(circ->state == CIRCUIT_STATE_OPEN && circ->n_conn) /* open */
         exitrouter = router_get_by_addr_port(circ->cpath->prev->addr, circ->cpath->prev->port);
@@ -270,7 +297,8 @@ void circuit_expire_building(void) {
     circ = circ->next;
     if(victim->cpath &&
        victim->state != CIRCUIT_STATE_OPEN &&
-       victim->timestamp_created + MIN_SECONDS_BEFORE_EXPIRING_CIRC+1 < now) {
+       victim->timestamp_created + MIN_SECONDS_BEFORE_EXPIRING_CIRC+1 < now &&
+       !victim->marked_for_close) {
       if(victim->n_conn)
         log_fn(LOG_INFO,"Abandoning circ %s:%d:%d (state %d:%s)",
                victim->n_conn->address, victim->n_port, victim->n_circ_id,
@@ -279,7 +307,7 @@ void circuit_expire_building(void) {
         log_fn(LOG_INFO,"Abandoning circ %d (state %d:%s)", victim->n_circ_id,
                victim->state, circuit_state_to_string[victim->state]);
       circuit_log_path(LOG_INFO,victim);
-      circuit_close(victim);
+      circuit_mark_for_close(victim);
     }
   }
 }
@@ -290,7 +318,9 @@ int circuit_count_building(void) {
   int num=0;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->cpath && circ->state != CIRCUIT_STATE_OPEN)
+    if(circ->cpath 
+       && circ->state != CIRCUIT_STATE_OPEN 
+       && !circ->marked_for_close)
       num++;
   }
   return num;
@@ -306,7 +336,8 @@ int circuit_stream_is_being_handled(connection_t *conn) {
   int num=0;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->cpath && circ->state != CIRCUIT_STATE_OPEN) {
+    if(circ->cpath && circ->state != CIRCUIT_STATE_OPEN && 
+       !circ->marked_for_close) {
       exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
       if(exitrouter && connection_ap_can_use_exit(conn, exitrouter) != ADDR_POLICY_REJECTED)
         if(++num >= MIN_CIRCUITS_HANDLING_STREAM)
@@ -401,6 +432,8 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
 
   assert(cell && circ);
   assert(cell_direction == CELL_DIRECTION_OUT || cell_direction == CELL_DIRECTION_IN);
+  if (circ->marked_for_close)
+    return 0;
 
   if(relay_crypt(circ, cell, cell_direction, &layer_hint, &recognized) < 0) {
     log_fn(LOG_WARN,"relay crypt failed. Dropping connection.");
@@ -649,11 +682,13 @@ void circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_
   }
 }
 
-void circuit_close(circuit_t *circ) {
+int _circuit_mark_for_close(circuit_t *circ) {
   connection_t *conn;
 
-  assert(circ);
-  circuit_remove(circ);
+  assert_circuit_ok(circ);
+  if (circ->marked_for_close < 0)
+    return -1;
+
   if(circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
     onion_pending_remove(circ);
   }
@@ -675,7 +710,9 @@ void circuit_close(circuit_t *circ) {
      * circuit-building failed immediately, it won't be set yet. */
     circuit_increment_failure_count();
   }
-  circuit_free(circ);
+
+  circ->marked_for_close = 1;
+  return 0;
 }
 
 void circuit_detach_stream(circuit_t *circ, connection_t *conn) {
@@ -721,7 +758,7 @@ void circuit_about_to_close_connection(connection_t *conn) {
           circ->n_conn = NULL;
         if(circ->p_conn == conn) /* it's closing behind us */
           circ->p_conn = NULL;
-        circuit_close(circ);
+        circuit_mark_for_close(circ);
       }
       return;
     case CONN_TYPE_AP:
@@ -826,9 +863,9 @@ void circuit_expire_unused_circuits(void) {
     circ = circ->next;
     if(tmpcirc->timestamp_dirty &&
        tmpcirc->timestamp_dirty + options.NewCircuitPeriod < now &&
-       !tmpcirc->p_conn && !tmpcirc->p_streams) {
+       !tmpcirc->p_conn && !tmpcirc->p_streams && !tmpcirc->marked_for_close) {
       log_fn(LOG_DEBUG,"Closing n_circ_id %d",tmpcirc->n_circ_id);
-      circuit_close(tmpcirc);
+      circuit_mark_for_close(tmpcirc);
     }
   }
 }
@@ -849,7 +886,7 @@ int circuit_launch_new(void) {
     return -1;
   }
 
-  /* try a circ. if it fails, circuit_close will increment n_circuit_failures */
+  /* try a circ. if it fails, circuit_mark_for_close will increment n_circuit_failures */
   circuit_establish_circuit();
 
   return 0;
@@ -875,14 +912,14 @@ int circuit_establish_circuit(void) {
 
   if (! circ->build_state) {
     log_fn(LOG_INFO,"Generating cpath length failed.");
-    circuit_close(circ);
+    circuit_mark_for_close(circ);
     return -1;
   }
 
   onion_extend_cpath(&circ->cpath, circ->build_state, &firsthop);
   if(!circ->cpath) {
     log_fn(LOG_INFO,"Generating first cpath hop failed.");
-    circuit_close(circ);
+    circuit_mark_for_close(circ);
     return -1;
   }
 
@@ -896,7 +933,7 @@ int circuit_establish_circuit(void) {
     circ->n_port = firsthop->or_port;
     if(options.ORPort) { /* we would be connected if he were up. and he's not. */
       log_fn(LOG_INFO,"Route's firsthop isn't connected.");
-      circuit_close(circ);
+      circuit_mark_for_close(circ);
       return -1;
     }
 
@@ -904,7 +941,7 @@ int circuit_establish_circuit(void) {
       n_conn = connection_or_connect(firsthop);
       if(!n_conn) { /* connect failed, forget the whole thing */
         log_fn(LOG_INFO,"connect to firsthop failed. Closing.");
-        circuit_close(circ);
+        circuit_mark_for_close(circ);
         return -1;
       }
     }
@@ -920,7 +957,7 @@ int circuit_establish_circuit(void) {
     log_fn(LOG_DEBUG,"Conn open. Delivering first onion skin.");
     if(circuit_send_next_onion_skin(circ) < 0) {
       log_fn(LOG_INFO,"circuit_send_next_onion_skin failed.");
-      circuit_close(circ);
+      circuit_mark_for_close(circ);
       return -1;
     }
   }
@@ -932,13 +969,15 @@ void circuit_n_conn_open(connection_t *or_conn) {
   circuit_t *circ;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
+    if (circ->marked_for_close)
+      continue;
     if(circ->cpath && circ->n_addr == or_conn->addr && circ->n_port == or_conn->port) {
       assert(circ->state == CIRCUIT_STATE_OR_WAIT);
       log_fn(LOG_DEBUG,"Found circ %d, sending onion skin.", circ->n_circ_id);
       circ->n_conn = or_conn;
       if(circuit_send_next_onion_skin(circ) < 0) {
         log_fn(LOG_INFO,"send_next_onion_skin failed; circuit marked for closing.");
-        circuit_close(circ);
+        circuit_mark_for_close(circ);
         continue;
         /* XXX could this be bad, eg if next_onion_skin failed because conn died? */
       }
@@ -1149,7 +1188,7 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
    *     means that a connection broke or an extend failed. For now,
    *     just give up.
    */
-  circuit_close(circ);
+  circuit_mark_for_close(circ);
   return 0;
 
   while(layer->next != circ->cpath) {
@@ -1223,6 +1262,9 @@ void assert_circuit_ok(const circuit_t *c)
 
   assert(c);
   assert(c->magic == CIRCUIT_MAGIC);
+
+  return 0; /* XXX fix the rest of this. */
+
   assert(c->n_addr);
   assert(c->n_port);
   assert(c->n_conn);

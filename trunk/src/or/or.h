@@ -458,6 +458,7 @@ struct circuit_t {
 
   int marked_for_close; /* Should we close this circuit at the end of the main
                          * loop? */
+  char *marked_for_close_file;
 
   uint32_t n_addr;
   uint16_t n_port;
@@ -487,7 +488,7 @@ struct circuit_t {
 
   uint8_t state;
 
-  void *next;
+  struct circuit_t *next;
 };
 
 typedef struct circuit_t circuit_t;
@@ -575,8 +576,22 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
 void circuit_add(circuit_t *circ);
 void circuit_remove(circuit_t *circ);
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
+void circuit_close_all_marked(void);
 void circuit_free(circuit_t *circ);
 void circuit_free_cpath(crypt_path_t *cpath);
+int _circuit_mark_for_close(circuit_t *circ);
+
+#define circuit_mark_for_close(c)                                       \
+  do {                                                                  \
+    if (_circuit_mark_for_close(c)<0) {                                 \
+      log(LOG_WARN,"Duplicate call to circuit_mark_for_close at %s:%d (first at %s:%d)", \
+          __FILE__,__LINE__,c->marked_for_close_file,c->marked_for_close); \
+    } else {                                                            \
+      c->marked_for_close_file = __FILE__;                              \
+      c->marked_for_close = __LINE__;                                   \
+    }                                                                   \
+  } while (0)
+
 
 circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
@@ -595,7 +610,6 @@ void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *l
 int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
 void circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
 
-void circuit_close(circuit_t *circ);
 void circuit_detach_stream(circuit_t *circ, connection_t *conn);
 void circuit_about_to_close_connection(connection_t *conn);
 

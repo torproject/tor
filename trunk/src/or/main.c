@@ -387,7 +387,10 @@ static void run_scheduled_events(time_t now) {
     run_connection_housekeeping(i, now);
   }
 
-  /* 6. and blow away any connections that need to die. can't do this later
+  /* 6. And remove any marked circuits... */
+  circuit_close_all_marked();
+
+  /* 7. and blow away any connections that need to die. can't do this later
    * because we might open up a circuit and not realize we're about to cull
    * the connection it's running over.
    * XXX we can remove this step once we audit circuit-building to make sure
