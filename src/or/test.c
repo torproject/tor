@@ -661,6 +661,7 @@ test_dir_format()
   routerinfo_t *rp1 = NULL, *rp2 = NULL;
   struct exit_policy_t ex1, ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
+  tor_version_t ver1, ver2;
 
   test_assert( (pk1 = crypto_new_pk_env()) );
   test_assert( (pk2 = crypto_new_pk_env()) );
@@ -824,6 +825,36 @@ test_dir_format()
   test_eq(0, is_recommended_version("a", "ab,abd,abde,abc,abcde"));
   test_eq(0, is_recommended_version("abb", "ab,abd,abde,abc,abcde"));
   test_eq(0, is_recommended_version("a", ""));
+
+  /* Try out version parsing functionality */
+  test_eq(0, tor_version_parse("0.3.4pre2-cvs", &ver1));
+  test_eq(0, ver1.major);
+  test_eq(3, ver1.minor);
+  test_eq(4, ver1.micro);
+  test_eq(VER_PRE, ver1.status);
+  test_eq(2, ver1.patchlevel);
+  test_eq(IS_CVS, ver1.cvs);
+  test_eq(0, tor_version_parse("0.3.4rc1", &ver1));
+  test_eq(0, ver1.major);
+  test_eq(3, ver1.minor);
+  test_eq(4, ver1.micro);
+  test_eq(VER_RC, ver1.status);
+  test_eq(1, ver1.patchlevel);
+  test_eq(IS_NOT_CVS, ver1.cvs);
+  test_eq(0, tor_version_parse("1.3.4", &ver1));
+  test_eq(1, ver1.major);
+  test_eq(3, ver1.minor);
+  test_eq(4, ver1.micro);
+  test_eq(VER_RELEASE, ver1.status);
+  test_eq(0, ver1.patchlevel);
+  test_eq(IS_NOT_CVS, ver1.cvs);
+  test_eq(0, tor_version_parse("1.3.4.999", &ver1));
+  test_eq(1, ver1.major);
+  test_eq(3, ver1.minor);
+  test_eq(4, ver1.micro);
+  test_eq(VER_RELEASE, ver1.status);
+  test_eq(999, ver1.patchlevel);
+  test_eq(IS_NOT_CVS, ver1.cvs);
 }
 
 void test_rend_fns()

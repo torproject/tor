@@ -1383,6 +1383,15 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
 
 /********************************* routerparse.c ************************/
 
+typedef struct tor_version_t {
+  int major;
+  int minor;
+  int micro;
+  enum { VER_PRE=0, VER_RC=1, VER_RELEASE=2 } status;
+  int patchlevel;
+  enum { IS_CVS=0, IS_NOT_CVS=1} cvs;
+} tor_version_t;
+
 int router_get_router_hash(const char *s, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_runningrouters_hash(const char *s, char *digest);
@@ -1399,7 +1408,9 @@ int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 struct exit_policy_t *router_parse_exit_policy_from_string(const char *s);
 int check_software_version_against_directory(const char *directory,
                                              int ignoreversion);
-
+int tor_version_parse(const char *s, tor_version_t *out);
+int tor_version_compare(tor_version_t *a, tor_version_t *b);
+int tor_version_compare_to_mine(const char *s);
 
 #endif
 
