@@ -551,12 +551,12 @@ void addressmap_register(const char *address, char *new_address, time_t expires)
     }
     return;
   }
-  if (ent) { /* we'll replace it */
+  if (ent && ent->new_address) { /* we'll replace it */
     if (address_is_in_virtual_range(ent->new_address)) {
       addressmap_virtaddress_remove(address, ent);
     }
     tor_free(ent->new_address);
-  } else { /* make a new one and register it */
+  } else if (!ent) { /* make a new one and register it */
     ent = tor_malloc_zero(sizeof(addressmap_entry_t));
     strmap_set(addressmap, address, ent);
   }
