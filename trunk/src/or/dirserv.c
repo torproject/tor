@@ -386,9 +386,7 @@ dirserv_add_descriptor(const char **desc)
   ent->nickname = tor_strdup(ri->nickname);
   ent->published = ri->published_on;
   ent->desc_len = desc_len;
-  ent->descriptor = tor_malloc(desc_len+1);
-  strncpy(ent->descriptor, start, desc_len);
-  ent->descriptor[desc_len] = '\0';
+  ent->descriptor = tor_strndup(start,desc_len);
   ent->router = ri;
   /* XXX008 is ent->verified useful/used for anything? */
   ent->verified = verified; /* XXXX008 support other possibilities. */

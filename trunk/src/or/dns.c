@@ -201,8 +201,7 @@ int dns_resolve(connection_t *exitconn) {
   purge_expired_resolves(now);
 
   /* now check the tree to see if 'address' is already there. */
-  strncpy(search.address, exitconn->address, MAX_ADDRESSLEN);
-  search.address[MAX_ADDRESSLEN-1] = 0;
+  strlcpy(search.address, exitconn->address, sizeof(search.address));
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(resolve) { /* already there */
     switch(resolve->state) {
@@ -237,8 +236,7 @@ int dns_resolve(connection_t *exitconn) {
   resolve = tor_malloc_zero(sizeof(struct cached_resolve));
   resolve->state = CACHE_STATE_PENDING;
   resolve->expire = now + MAX_DNS_ENTRY_AGE;
-  strncpy(resolve->address, exitconn->address, MAX_ADDRESSLEN);
-  resolve->address[MAX_ADDRESSLEN-1] = 0;
+  strlcpy(resolve->address, exitconn->address, sizeof(resolve->address));
 
   /* add us to the pending list */
   pending_connection = tor_malloc_zero(sizeof(struct pending_connection_t));
@@ -306,8 +304,7 @@ void connection_dns_remove(connection_t *conn)
   tor_assert(conn->type == CONN_TYPE_EXIT);
   tor_assert(conn->state == EXIT_CONN_STATE_RESOLVING);
 
-  strncpy(search.address, conn->address, MAX_ADDRESSLEN);
-  search.address[MAX_ADDRESSLEN-1] = 0;
+  strlcpy(search.address, conn->address, sizeof(search.address));
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
@@ -383,8 +380,7 @@ void dns_cancel_pending_resolve(char *address) {
   struct cached_resolve *resolve;
   connection_t *pendconn;
 
-  strncpy(search.address, address, MAX_ADDRESSLEN);
-  search.address[MAX_ADDRESSLEN-1] = 0;
+  strlcpy(search.address, address, sizeof(search.address));
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
@@ -454,8 +450,7 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
   connection_t *pendconn;
   circuit_t *circ;
 
-  strncpy(search.address, address, MAX_ADDRESSLEN);
-  search.address[MAX_ADDRESSLEN-1] = 0;
+  strlcpy(search.address, address, sizeof(search.address));
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
