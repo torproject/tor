@@ -837,7 +837,7 @@ void write_pidfile(char *filename) {
     log_fn(LOG_WARN, "unable to open %s for writing: %s", filename,
            strerror(errno));
   } else {
-    fprintf(pidfile, "%d", getpid());
+    fprintf(pidfile, "%d", (int)getpid());
     fclose(pidfile);
   }
 #endif
