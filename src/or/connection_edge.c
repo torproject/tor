@@ -796,6 +796,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       new_circ_purpose = desired_circuit_purpose;
 
     circ = circuit_launch_new(new_circ_purpose, exitname);
+    tor_free(exitname);
 
     if(circ &&
        (desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL)) {
