@@ -551,7 +551,6 @@ static int init_from_config(int argc, char **argv) {
     log_fn(LOG_ERR,"Reading config failed. For usage, try -h.");
     return -1;
   }
-  close_logs(); /* we'll close, then open with correct loglevel if necessary */
 
   /* Setuid/setgid as appropriate */
   if(options.User || options.Group) {
@@ -564,6 +563,8 @@ static int init_from_config(int argc, char **argv) {
   if (options.RunAsDaemon) {
     start_daemon(options.DataDirectory);
   }
+
+  close_logs(); /* we'll close, then open with correct loglevel if necessary */
 
   /* Configure the log(s) */
   config_init_logs(&options);
@@ -578,7 +579,7 @@ static int init_from_config(int argc, char **argv) {
     finish_daemon();
   }
 
-  /* Write our pid to the pid file. if we do not have write permissions we
+  /* Write our pid to the pid file. If we do not have write permissions we
    * will log a warning */
   if(options.PidFile)
     write_pidfile(options.PidFile);
@@ -852,7 +853,7 @@ void exit_function(void)
 int tor_main(int argc, char *argv[]) {
 
   /* give it somewhere to log to initially */
-  add_stream_log(LOG_INFO, LOG_ERR, "<stdout>", stdout);
+  add_stream_log(LOG_NOTICE, LOG_ERR, "<stdout>", stdout);
   log_fn(LOG_NOTICE,"Tor v%s. This is experimental software. Do not use it if you need anonymity.",VERSION);
 
   if (network_init()<0) {
