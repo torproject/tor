@@ -6,6 +6,8 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+static int connection_tls_finish_handshake(connection_t *conn);
+
 /**************************************************************/
 
 static void cell_pack(char *dest, const cell_t *src) {
@@ -138,6 +140,111 @@ connection_t *connection_or_connect(routerinfo_t *router) {
   connection_remove(conn);
   connection_free(conn);
   return NULL;
+}
+
+/* ********************************** */
+
+int connection_tls_start_handshake(connection_t *conn, int receiving) {
+  conn->state = OR_CONN_STATE_HANDSHAKING;
+  conn->tls = tor_tls_new(conn->s, receiving);
+  if(!conn->tls) {
+    log_fn(LOG_WARNING,"tor_tls_new failed. Closing.");
+    return -1;
+  }
+  connection_start_reading(conn);
+  log_fn(LOG_DEBUG,"starting the handshake");
+  if(connection_tls_continue_handshake(conn) < 0)
+    return -1;
+  return 0;
+}
+
+int connection_tls_continue_handshake(connection_t *conn) {
+  switch(tor_tls_handshake(conn->tls)) {
+    case TOR_TLS_ERROR:
+    case TOR_TLS_CLOSE:
+      log_fn(LOG_INFO,"tls error. breaking.");
+      return -1;
+    case TOR_TLS_DONE:
+     return connection_tls_finish_handshake(conn);
+    case TOR_TLS_WANTWRITE:
+      connection_start_writing(conn);
+      log_fn(LOG_DEBUG,"wanted write");
+      return 0;
+    case TOR_TLS_WANTREAD: /* handshaking conns are *always* reading */
+      log_fn(LOG_DEBUG,"wanted read");
+      return 0;
+  }
+  return 0;
+}
+
+static int connection_tls_finish_handshake(connection_t *conn) {
+  crypto_pk_env_t *pk;
+  routerinfo_t *router;
+
+  conn->state = OR_CONN_STATE_OPEN;
+  directory_set_dirty();
+  connection_watch_events(conn, POLLIN);
+  log_fn(LOG_DEBUG,"tls handshake done. verifying.");
+  if(options.OnionRouter) { /* I'm an OR */
+    if(tor_tls_peer_has_cert(conn->tls)) { /* it's another OR */
+      pk = tor_tls_verify(conn->tls);
+      if(!pk) {
+        log_fn(LOG_WARNING,"Other side has a cert but it's invalid. Closing.");
+        return -1;
+      }
+      router = router_get_by_link_pk(pk);
+      if (!router) {
+        log_fn(LOG_WARNING,"Unrecognized public key from peer. Closing.");
+        crypto_free_pk_env(pk);
+        return -1;
+      }
+      if(conn->link_pkey) { /* I initiated this connection. */
+        if(crypto_pk_cmp_keys(conn->link_pkey, pk)) {
+          log_fn(LOG_WARNING,"We connected to '%s' but he gave us a different key. Closing.",
+                 router->nickname);
+          crypto_free_pk_env(pk);
+          return -1;
+        }
+        log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
+      } else {
+        if(connection_exact_get_by_addr_port(router->addr,router->or_port)) {
+          log_fn(LOG_INFO,"Router %s is already connected. Dropping.", router->nickname);
+          return -1;
+        }
+        connection_or_init_conn_from_router(conn, router);
+      }
+      crypto_free_pk_env(pk);
+    } else { /* it's an OP */
+      conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
+    }
+  } else { /* I'm a client */
+    if(!tor_tls_peer_has_cert(conn->tls)) { /* it's a client too?! */
+      log_fn(LOG_WARNING,"Neither peer sent a cert! Closing.");
+      return -1;
+    }
+    pk = tor_tls_verify(conn->tls);
+    if(!pk) {
+      log_fn(LOG_WARNING,"Other side has a cert but it's invalid. Closing.");
+      return -1;
+    }
+    router = router_get_by_link_pk(pk);
+    if (!router) {
+      log_fn(LOG_WARNING,"Unrecognized public key from peer. Closing.");
+      crypto_free_pk_env(pk);
+      return -1;
+    }
+    if(crypto_pk_cmp_keys(conn->link_pkey, pk)) {
+      log_fn(LOG_WARNING,"We connected to '%s' but he gave us a different key. Closing.",
+             router->nickname);
+      crypto_free_pk_env(pk);
+      return -1;
+    }
+    log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
+    crypto_free_pk_env(pk);
+    conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
+    circuit_n_conn_open(conn); /* send the pending create */
+  }
+  return 0;
 }
 
 /* ********************************** */

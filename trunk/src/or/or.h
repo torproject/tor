@@ -525,8 +525,6 @@ void connection_free(connection_t *conn);
 int connection_create_listener(struct sockaddr_in *bindaddr, int type);
 int connection_handle_listener_read(connection_t *conn, int new_type);
 
-int connection_tls_start_handshake(connection_t *conn, int receiving);
-
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
 int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
 
@@ -575,6 +573,9 @@ int connection_or_finished_flushing(connection_t *conn);
 
 void connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router);
 connection_t *connection_or_connect(routerinfo_t *router);
+
+int connection_tls_start_handshake(connection_t *conn, int receiving);
+int connection_tls_continue_handshake(connection_t *conn);
 
 int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn);
 int connection_process_cell_from_inbuf(connection_t *conn);
