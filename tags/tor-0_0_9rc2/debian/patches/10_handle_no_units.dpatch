@@ -1,0 +1,44 @@
+#! /bin/sh -e
+## 10_handle_no_units.dpatch by  <weasel@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+if [ $# -lt 1 ]; then
+    echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+    exit 1
+fi
+
+[ -f debian/patches/00patch-opts ] && . debian/patches/00patch-opts
+patch_opts="${patch_opts:--f --no-backup-if-mismatch} ${2:+-d $2}"
+
+case "$1" in
+    -patch) patch -p1 ${patch_opts} < $0;;
+    -unpatch) patch -R -p1 ${patch_opts} < $0;;
+    *)
+        echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+        exit 1;;
+esac
+
+exit 0
+
+@DPATCH@
+diff -urNad tor-0.0.8+0.0.9rc1/src/or/config.c /tmp/dpep.cCb7z4/tor-0.0.8+0.0.9rc1/src/or/config.c
+--- tor-0.0.8+0.0.9rc1/src/or/config.c	2004-11-23 08:37:17.000000000 +0100
++++ /tmp/dpep.cCb7z4/tor-0.0.8+0.0.9rc1/src/or/config.c	2004-11-23 11:56:02.494532062 +0100
+@@ -2237,6 +2237,7 @@
+ };
+ 
+ static struct unit_table_t memory_units[] = {
++  { "",          1 },
+   { "b",         1<< 0 },
+   { "byte",      1<< 0 },
+   { "bytes",     1<< 0 },
+@@ -2257,6 +2258,7 @@
+ };
+ 
+ static struct unit_table_t time_units[] = {
++  { "",         1 },
+   { "second",   1 },
+   { "seconds",  1 },
+   { "minute",   60 },
