@@ -55,16 +55,6 @@
 #define ACI_TYPE_HIGHER 1
 #define ACI_TYPE_BOTH 2
 
-/* bitvector of the roles that we might want to play. You can or (|) them together */
-#define ROLE_OR_LISTEN 1
-#define ROLE_OR_CONNECT_ALL 2
-#define ROLE_OP_LISTEN 4
-#define ROLE_AP_LISTEN 8
-#define ROLE_DIR_LISTEN 16
-#define ROLE_DIR_SERVER 32
-
-#define ROLE_IS_OR(role) ((role & ROLE_OR_LISTEN) || (role & ROLE_OR_CONNECT_ALL) || (role & ROLE_OP_LISTEN))
-
 #define CONN_TYPE_OP_LISTENER 1
 #define CONN_TYPE_OP 2
 #define CONN_TYPE_OR_LISTENER 3
@@ -559,7 +549,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type);
 int connection_handle_listener_read(connection_t *conn, int new_type, int new_state);
 
 /* start all connections that should be up but aren't */
-int retry_all_connections(int role, uint16_t or_listenport, 
+int retry_all_connections(uint16_t or_listenport,
   uint16_t op_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
 
 int connection_read_to_buf(connection_t *conn);
@@ -568,9 +558,9 @@ int connection_fetch_from_buf(char *string, int len, connection_t *conn);
 
 #ifdef USE_ZLIB
 int connection_compress_from_buf(char *string, int len, connection_t *conn,
-				 int flush);
+                                 int flush);
 int connection_decompress_to_buf(char *string, int len, connection_t *conn,
-				 int flush);
+                                 int flush);
 #endif
 
 int connection_outbuf_too_full(connection_t *conn);

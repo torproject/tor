@@ -149,8 +149,8 @@ int config_compare(struct config_line *c, char *key, int type, void *arg) {
     case CONFIG_TYPE_BOOL:
       i = atoi(c->value);
       if (i != 0 && i != 1) {
-	log(LOG_ERR, "Boolean keyword '%s' expects 0 or 1", c->key);
-	return 0;
+        log(LOG_ERR, "Boolean keyword '%s' expects 0 or 1", c->key);
+        return 0;
       }
       *(int *)arg = i;
       break;
@@ -179,13 +179,11 @@ void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
 
     /* int options */
-    config_compare(list, "Role",            CONFIG_TYPE_INT, &options->Role) ||
     config_compare(list, "MaxConn",         CONFIG_TYPE_INT, &options->MaxConn) ||
     config_compare(list, "APPort",          CONFIG_TYPE_INT, &options->APPort) ||
     config_compare(list, "OPPort",          CONFIG_TYPE_INT, &options->OPPort) ||
     config_compare(list, "ORPort",          CONFIG_TYPE_INT, &options->ORPort) ||
     config_compare(list, "DirPort",         CONFIG_TYPE_INT, &options->DirPort) ||
-    config_compare(list, "DirRebuildPeriod",CONFIG_TYPE_INT, &options->DirRebuildPeriod) ||
     config_compare(list, "DirFetchPeriod",  CONFIG_TYPE_INT, &options->DirFetchPeriod) ||
     config_compare(list, "KeepalivePeriod", CONFIG_TYPE_INT, &options->KeepalivePeriod) ||
     config_compare(list, "MaxOnionsPending",CONFIG_TYPE_INT, &options->MaxOnionsPending) ||
@@ -223,12 +221,10 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->loglevel = LOG_DEBUG;
   options->CoinWeight = 0.8;
   options->LinkPadding = 0;
-  options->DirRebuildPeriod = 300;
   options->DirFetchPeriod = 600;
   options->KeepalivePeriod = 300;
   options->MaxOnionsPending = 10;
 //  options->ReconnectPeriod = 6001;
-  options->Role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
 
 /* get config lines from /etc/torrc and assign them */
   cmd = basename(argv[0]);
@@ -270,9 +266,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
 /* print config */
   if (options->loglevel == LOG_DEBUG) {
-    printf("LogLevel=%s, Role=%d\n",
-           options->LogLevel,
-           options->Role);
+    printf("LogLevel=%s\n",
+           options->LogLevel);
     printf("RouterFile=%s, PrivateKeyFile=%s\n",
            options->RouterFile ? options->RouterFile : "(undefined)",
            options->PrivateKeyFile ? options->PrivateKeyFile : "(undefined)");
@@ -284,8 +279,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
            options->MaxConn,
            options->TrafficShaping,
            options->LinkPadding);
-    printf("DirRebuildPeriod=%d, DirFetchPeriod=%d KeepalivePeriod=%d\n",
-           options->DirRebuildPeriod,
+    printf("DirFetchPeriod=%d KeepalivePeriod=%d\n",
            options->DirFetchPeriod,
            options->KeepalivePeriod);
     printf("Daemon=%d", options->Daemon);
@@ -316,74 +310,49 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     }
   }
 
-  if(options->Role < 0 || options->Role > 63) {
-    log(LOG_ERR,"Role option must be an integer between 0 and 63 (inclusive).");
-    result = -1;
-  }
-
   if(options->RouterFile == NULL) {
     log(LOG_ERR,"RouterFile option required, but not found.");
     result = -1;
   }
 
-  if(ROLE_IS_OR(options->Role) && options->PrivateKeyFile == NULL) {
-    log(LOG_ERR,"PrivateKeyFile option required for OR, but not found.");
-    result = -1;
-  }
-
-  if((options->Role & ROLE_OR_LISTEN) && options->ORPort < 1) {
+  if(options->ORPort < 0) {
     log(LOG_ERR,"ORPort option required and must be a positive integer value.");
     result = -1;
   }
 
-  if((options->Role & ROLE_OP_LISTEN) && options->OPPort < 1) {
-    log(LOG_ERR,"OPPort option required and must be a positive integer value.");
+  if(options->ORPort > 0 && options->PrivateKeyFile == NULL) {
+    log(LOG_ERR,"PrivateKeyFile option required for OR, but not found.");
     result = -1;
   }
 
-  if((options->Role & ROLE_AP_LISTEN) && options->APPort < 1) {
-    log(LOG_ERR,"APPort option required and must be a positive integer value.");
+  if(options->OPPort < 0) {
+    log(LOG_ERR,"OPPort option can't be negative.");
     result = -1;
   }
 
-  if((options->Role & ROLE_DIR_LISTEN) && options->DirPort < 1) {
-    log(LOG_ERR,"DirPort option required and must be a positive integer value.");
+  if(options->APPort < 0) {
+    log(LOG_ERR,"APPort option can't be negative.");
     result = -1;
   }
 
-  if((options->Role & ROLE_AP_LISTEN) &&
+  if(options->DirPort < 0) {
+    log(LOG_ERR,"DirPort option can't be negative.");
+    result = -1;
+  }
+
+  if(options->APPort > 1 &&
      (options->CoinWeight < 0.0 || options->CoinWeight >= 1.0)) {
-    log(LOG_ERR,"CoinWeight option must be a value from 0.0 upto 1.0, but not including 1.0.");
+    log(LOG_ERR,"CoinWeight option must be >=0.0 and <1.0.");
     result = -1;
   }
 
-  if(options->MaxConn <= 0) {
+  if(options->MaxConn < 1) {
     log(LOG_ERR,"MaxConn option must be a non-zero positive integer.");
     result = -1;
   }
 
   if(options->MaxConn >= MAXCONNECTIONS) {
     log(LOG_ERR,"MaxConn option must be less than %d.", MAXCONNECTIONS);
-    result = -1;
-  }
-
-  if(options->Daemon != 0 && options->Daemon != 1) {
-    log(LOG_ERR,"TrafficShaping option must be either 0 or 1.");
-    result = -1;
-  }
-
-  if(options->TrafficShaping != 0 && options->TrafficShaping != 1) {
-    log(LOG_ERR,"TrafficShaping option must be either 0 or 1.");
-    result = -1;
-  }
-
-  if(options->LinkPadding != 0 && options->LinkPadding != 1) {
-    log(LOG_ERR,"LinkPadding option must be either 0 or 1.");
-    result = -1;
-  }
-
-  if(options->DirRebuildPeriod < 1) {
-    log(LOG_ERR,"DirRebuildPeriod option must be positive.");
     result = -1;
   }
 

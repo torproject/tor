@@ -7,7 +7,6 @@
 /********* START VARIABLES **********/
 
 or_options_t options; /* command-line and config-file options */
-int global_role;
 
 static connection_t *connection_array[MAXCONNECTIONS] =
         { NULL };
@@ -311,7 +310,7 @@ int prepare_for_poll(int *timeout) {
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
-    if(!(options.Role & ROLE_DIR_SERVER)) {
+    if(!options.DirPort) {
       if(time_to_fetch_directory < now.tv_sec) {
         /* it's time to fetch a new directory */
         /* NOTE directory servers do not currently fetch directories.
@@ -332,7 +331,7 @@ int prepare_for_poll(int *timeout) {
       if(!connection_speaks_cells(tmpconn))
         continue; /* this conn type doesn't send cells */
       if(now.tv_sec >= tmpconn->timestamp_lastwritten + options.KeepalivePeriod) {
-        if((!(options.Role & ROLE_OR_CONNECT_ALL) && !circuit_get_by_conn(tmpconn)) ||
+        if((!options.ORPort && !circuit_get_by_conn(tmpconn)) ||
            (!connection_state_is_open(tmpconn))) {
           /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
           log(LOG_DEBUG,"prepare_for_poll(): Expiring connection to %d (%s:%d).",
@@ -415,7 +414,7 @@ int do_main_loop(void) {
   }
 
   /* load the private key, if we're supposed to have one */
-  if(ROLE_IS_OR(global_role)) {
+  if(options.ORPort) {
     prkey = crypto_new_pk_env(CRYPTO_PK_RSA);
     if (!prkey) {
       log(LOG_ERR,"Error creating a crypto environment.");
@@ -429,9 +428,11 @@ int do_main_loop(void) {
     setprivatekey(prkey);
   }
 
-  /* start-up the necessary connections based on global_role. This is where we
-   * try to connect to all the other ORs, and start the listeners */
-  retry_all_connections(options.Role, options.ORPort,
+  /* start up the necessary connections based on which ports are
+   * non-zero. This is where we try to connect to all the other ORs,
+   * and start the listeners
+   */
+  retry_all_connections(options.ORPort,
                         options.OPPort, options.APPort, options.DirPort);
 
   for(;;) {
@@ -440,7 +441,7 @@ int do_main_loop(void) {
       please_dumpstats = 0;
     }
     if(please_fetch_directory) {
-      if(options.Role & ROLE_DIR_SERVER) {
+      if(options.DirPort) {
         if(router_get_list_from_file(options.RouterFile) < 0) {
           log(LOG_ERR,"Error reloading router list. Continuing with old list.");
         }
@@ -631,12 +632,11 @@ int main(int argc, char *argv[]) {
   if(getconfig(argc,argv,&options))
     exit(1);
   log(options.loglevel,NULL);         /* assign logging severity level from options */
-  global_role = options.Role;   /* assign global_role from options. FIXME: remove from global namespace later. */
 
   if (options.Daemon)
     daemonize();
 
-  if(options.Role & ROLE_OR_LISTEN) { /* only spawn dns handlers if we're a router */
+  if(options.ORPort) { /* only spawn dns handlers if we're a router */
     if(dns_master_start() < 0) {
       log(LOG_ERR,"main(): We're running without a dns handler. Bad news.");
     }
