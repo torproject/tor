@@ -528,7 +528,6 @@ The basic adversary components we consider are:
 %  same. I reworded above, I'm thinking we should leave other concerns
 %  for later. -PS
 
-  
 \item{Hostile Tor node:} can arbitrarily manipulate the
   connections under its control, as well as creating new connections
   (that pass through itself).
@@ -653,7 +652,10 @@ run local software called an onion proxy (OP) that fetches directories,
 establishes paths (called \emph{virtual circuits}) over the network,
 and handles connections from the user applications. Onion proxies accept
 TCP streams and multiplex them across the virtual circuit. The onion
-router on the other side of the circuit connects to the destinations of
+router on the other side 
+% I don't mean other side, I mean wherever it is on the circuit. But
+% don't want to introduce complexity this early? Hm. -RD
+of the circuit connects to the destinations of
 the TCP streams and relays data.
 
 Onion routers have three types of keys. The first key is the identity
@@ -693,7 +695,8 @@ or \emph{destroy} (to tear down a circuit).
 Relay cells have an additional header (the relay header) after the
 cell header, which specifies the stream identifier (many streams can
 be multiplexed over a circuit), an end-to-end checksum for integrity
-checking, and a relay command. Relay commands can be one of: \emph{relay
+checking, the length of the relay payload, and a relay command. Relay
+commands can be one of: \emph{relay
 data} (for data flowing down the stream), \emph{relay begin} (to open a
 stream), \emph{relay end} (to close a stream), \emph{relay connected}
 (to notify the OP that a relay begin has succeeded), \emph{relay
@@ -791,16 +794,103 @@ relay cells are encrypted. Similarly, if a node on the circuit goes down,
 the adjacent node can send a relay truncated back to Alice. Thus the
 ``break a node and see which circuits go down'' attack is weakened.
 
-\SubSection{Tagging attacks on streams}
-
-end-to-end integrity checking.  (Mention tagging.)
-
 \SubSection{Opening and closing streams}
 \label{subsec:tcp}
 
-Describe how TCP connections get opened.  (Mention DNS issues)
-Descibe closing TCP connections and 2-END handshake to mirror TCP
-close handshake.
+When Alice's application wants to open a TCP connection to a given
+address and port, it asks the OP (via SOCKS) to make the connection. The
+OP chooses the newest open circuit (or creates one if none is available),
+chooses a suitable OR on that circuit to be the exit node (usually the
+last node, but maybe others due to exit policy conflicts; see Section
+\ref{sec:exit-policies}), chooses a new random stream ID for this stream,
+and delivers a relay begin cell to that exit node. It uses a stream ID
+of zero for the begin cell (so the OR will recognize it), and the relay
+payload lists the new stream ID and the destination address and port.
+Once the exit node completes the connection to the remote host, it
+responds with a relay connected cell through the circuit. Upon receipt,
+the OP notifies the application that it can begin talking.
+
+There's a catch to using SOCKS, though -- some applications hand the
+alphanumeric address to the proxy, while others resolve it into an IP
+address first and then hand the IP to the proxy. When the application
+does the DNS resolution first, Alice broadcasts her destination. Common
+applications like Mozilla and ssh have this flaw.
+
+In the case of Mozilla, we're fine: the filtering web proxy called Privoxy
+does the SOCKS call safely, and Mozilla talks to Privoxy safely. But a
+portable general solution, such as for ssh, is an open problem. We could
+modify the local nameserver, but this approach is invasive, brittle, and
+not portable. We could encourage the resolver library to do resolution
+via TCP rather than UDP, but this approach is hard to do right, and also
+has portability problems. Our current answer is to encourage the use of
+privacy-aware proxies like Privoxy wherever possible, and also provide
+a tool similar to \emph{dig} that can do a private lookup through the
+Tor network.
+
+Ending a Tor stream is analogous to ending a TCP stream: it uses a
+two-step handshake for normal operation, or a one-step handshake for
+errors. If one side of the stream closes abnormally, that node simply
+sends a relay teardown cell, and tears down the stream. If one side
+% Nick: mention relay teardown in 'cell' subsec? good enough name? -RD
+of the stream closes the connection normally, that node sends a relay
+end cell down the circuit. When the other side has sent back its own
+relay end, the stream can be torn down. This two-step handshake allows
+for TCP-based applications that, for example, close a socket for writing
+but are still willing to read.
+
+\SubSection{Tagging attacks on streams}
+
+In the old Onion Routing design, traffic was vulnerable to a malleability
+attack: since there was no integrity checking, an adversary could
+guess some of the plaintext of a cell, xor it out, and xor in his own
+plaintext. Even an external adversary could do this despite the link
+encryption!
+
+Some examples of this attack might be to change a create cell to a
+destroy cell, to change the destination address in a relay begin cell
+to the adversary's webserver, or to change a user on an ftp connection
+from typing ``dir'' to typing ``delete *''. Any node or observer along
+the path can introduce such corruption in a stream.
+
+Tor solves the tagging attack with respect to external adversaries simply
+by using TLS. Addressing the insider tagging attack is more complex.
+
+Rather than doing integrity checking of the relay cells at each hop
+(like Mixminion \cite{minion-design}), which would increase packet size
+by a function of path length\footnote{This is also the argument against
+using recent cipher modes like EAX \cite{eax} --- we don't want the added
+message-expansion overhead at each hop, and we don't want to leak the path
+length}, we choose to accept passive timing attacks, and do integrity
+checking only at the edges of the circuit. When Alice negotiates a key
+with that hop, they both start a SHA-1 with some derivative of that key,
+thus starting out with randomness that only the two of them know. From
+then on they each incrementally add all the data bytes flowing across
+the stream to the SHA-1, and each relay cell includes the first 4 bytes
+of the current value of the hash. 
+
+The attacker must be able to guess all previous bytes between Alice
+and Bob on that circuit (including the pseudorandomness from the key
+negotiation), plus the bytes in the current cell, to remove modify the
+cell. The computational overhead isn't so bad, compared to doing an AES
+crypt at each hop in the circuit. We use only four bytes per cell to
+minimize overhead; the chance that an adversary will correctly guess a
+valid hash, plus the payload the current cell, is acceptly low, given
+that Alice or Bob tear down the circuit if they receive a bad hash.
+
+%% probably don't need to even mention this, because the randomness
+%% covers it:
+%The fun SHA1 attack where the bad guy can incrementally add to a hash
+%to get a new valid hash doesn't apply to us, because we never show any
+%hashes to anybody.
+
+\SubSection{Website fingerprinting attacks}
+
+old onion routing is vulnerable to website fingerprinting attacks like
+david martin's from usenix sec and drew's from pet2002. so is tor. we
+need to send some padding or something, including long-range padding
+(to foil the first hop), to solve this. let's hope somebody writes
+a followup to \cite{defensive-dropping} that tells us what, exactly,
+to do, and why, exactly, it helps.
 
 \SubSection{Congestion control and fairness}
 \label{subsec:congestion}
@@ -824,6 +914,7 @@ anonnet stuff.
 \Section{Other design decisions}
 
 \SubSection{Resource management and DoS prevention}
+\label{subsec:dos}
 
 Describe DoS prevention. cookies before tls begins, rate limiting of
 create cells, link-to-link rate limiting, etc.
