@@ -1,7 +1,7 @@
 tor (0.0.7.1-1) unstable; urgency=medium
 
   * New upstream release.
-    Fixes a bug that allows a remote crash on exit bugs.
+    Fixes a bug that allows a remote crash on exit nodes.
   * Logrotate var/log/tor/*log instead of just var/log/tor/log, in
     case the admin wants several logs.
 
