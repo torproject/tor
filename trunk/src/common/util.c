@@ -1741,7 +1741,7 @@ void tor_mutex_free(tor_mutex_t *m) { }
 struct tor_mutex_t {
   HANDLE handle;
 };
-tor_mutex_t *tor_mutex_new(void) 
+tor_mutex_t *tor_mutex_new(void)
 {
   tor_mutex_t *m;
   m = tor_malloc_zero(sizeof(tor_mutex_t));
@@ -1760,12 +1760,12 @@ void tor_mutex_acquire(tor_mutex_t *m)
   r = WaitForSingleObject(m->handle, INFINITE);
   switch (r) {
     case WAIT_ABANDONED: /* holding thread exited. */
-	case WAIT_OBJECT_0: /* we got the mutex normally. */
+        case WAIT_OBJECT_0: /* we got the mutex normally. */
       break;
     case WAIT_TIMEOUT: /* Should never happen. */
-	  tor_assert(0);
+          tor_assert(0);
       break;
-	case WAIT_FAILED:
+        case WAIT_FAILED:
       log_fn(LOG_WARN, "Failed to acquire mutex: %d", GetLastError());
   }
 }
@@ -1774,7 +1774,7 @@ void tor_mutex_release(tor_mutex_t *m)
   BOOL r;
   r = ReleaseMutex(m->handle);
   if (!r) {
-    log_fn(LOG_WARN, "Failed to release mutex: %d", GetLastError());      
+    log_fn(LOG_WARN, "Failed to release mutex: %d", GetLastError());
   }
 }
 
