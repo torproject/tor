@@ -220,6 +220,7 @@ int write_str_to_file(const char *fname, const char *str);
 char *read_file_to_str(const char *filename);
 int parse_line_from_file(char *line, int maxlen, FILE *f, char **key_out, char **value_out);
 char *expand_filename(const char *filename);
+int replace_file(const char *from, const char *to);
 
 int spawn_func(int (*func)(void *), void *data);
 void spawn_exit();

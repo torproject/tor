@@ -1559,6 +1559,33 @@ char *expand_filename(const char *filename)
   }
 }
 
+/**
+ * Rename the file 'from' to the file 'to'.  On unix, this is the same as
+ * rename(2).  On windows, this removes 'to' first if it already exists.
+ * Returns 0 on success.  Returns -1 and sets errno on failure.
+ */
+int replace_file(const char *from, const char *to)
+{
+#ifndef MS_WINDOWS
+  return rename(from,to);
+#else
+  switch(file_status(to)) 
+    {
+    case FN_NOENT:
+      break;
+    case FN_FILE:
+      if (unlink(to)) return -1;
+      break;
+    case FN_ERROR:
+      return -1;
+    case FN_DIR:
+      errno = EISDIR;
+      return -1;
+    }
+  return rename(from,to);
+#endif
+}
+
 /** Return true iff <b>ip</b> (in host order) is an IP reserved to localhost,
  * or reserved for local networks by RFC 1918.
  */
