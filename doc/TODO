@@ -26,6 +26,8 @@ R  o pick the whole path when you start the circuit.
    - controller should have an event to learn about new addressmappings?
    - how do ulimits work on win32, anyway?
    o have a separate config option which caps bandwidth-to-advertise.
+   - Make list_server_status work right on non-directories, so that 
+     getinfo("network-status") control message can work there.
 
 For 0.1.0.x:
 
