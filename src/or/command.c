@@ -109,7 +109,7 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
   /* hand it off to the cpuworkers, and then return */
   if(assign_to_cpuworker(NULL, CPUWORKER_TASK_ONION, circ) < 0) {
     log_fn(LOG_WARN,"Failed to hand off onionskin. Closing.");
-    circuit_close(circ);
+    circuit_mark_for_close(circ);
     return;
   }
   log_fn(LOG_DEBUG,"success: handed off onionskin.");
@@ -127,7 +127,7 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
 
   if(circ->n_circ_id != cell->circ_id) {
     log_fn(LOG_WARN,"got created cell from OPward? Closing.");
-    circuit_close(circ);
+    circuit_mark_for_close(circ);
     return;
   }
 
@@ -135,13 +135,13 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
     log_fn(LOG_DEBUG,"at OP. Finishing handshake.");
     if(circuit_finish_handshake(circ, cell->payload) < 0) {
       log_fn(LOG_WARN,"circuit_finish_handshake failed.");
-      circuit_close(circ);
+      circuit_mark_for_close(circ);
       return;
     }
     log_fn(LOG_DEBUG,"Moving to next skin.");
     if(circuit_send_next_onion_skin(circ) < 0) {
       log_fn(LOG_INFO,"circuit_send_next_onion_skin failed.");
-      circuit_close(circ); /* XXX push this circuit_close lower */
+      circuit_mark_for_close(circ); /* XXX push this circuit_close lower */
       return;
     }
   } else { /* pack it into an extended relay cell, and send it. */
@@ -163,20 +163,20 @@ static void command_process_relay_cell(cell_t *cell, connection_t *conn) {
 
   if(circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
     log_fn(LOG_WARN,"circuit in create_wait. Closing.");
-    circuit_close(circ);
+    circuit_mark_for_close(circ);
     return;
   }
 
   if(cell->circ_id == circ->p_circ_id) { /* it's an outgoing cell */
     if(circuit_receive_relay_cell(cell, circ, CELL_DIRECTION_OUT) < 0) {
       log_fn(LOG_WARN,"circuit_receive_relay_cell (forward) failed. Closing.");
-      circuit_close(circ);
+      circuit_mark_for_close(circ);
       return;
     }
   } else { /* it's an ingoing cell */
     if(circuit_receive_relay_cell(cell, circ, CELL_DIRECTION_IN) < 0) {
       log_fn(LOG_WARN,"circuit_receive_relay_cell (backward) failed. Closing.");
-      circuit_close(circ);
+      circuit_mark_for_close(circ);
       return;
     }
   }
@@ -200,7 +200,7 @@ static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   if(cell->circ_id == circ->p_circ_id || circ->cpath) {
     /* either the destroy came from behind, or we're the AP */
     circ->p_conn = NULL;
-    circuit_close(circ);
+    circuit_mark_for_close(circ);
   } else { /* the destroy came from ahead */
     circ->n_conn = NULL;
     log_fn(LOG_DEBUG, "Delivering 'truncated' back.");

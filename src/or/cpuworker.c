@@ -93,12 +93,12 @@ int connection_cpu_process_inbuf(connection_t *conn) {
     assert(circ->p_conn);
     if(*buf == 0) {
       log_fn(LOG_WARN,"decoding onionskin failed. Closing.");
-      circuit_close(circ);
+      circuit_mark_for_close(circ);
       goto done_processing;
     }
     if(onionskin_answer(circ, buf+1+TAG_LEN, buf+1+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
       log_fn(LOG_WARN,"onionskin_answer failed. Closing.");
-      circuit_close(circ);
+      circuit_mark_for_close(circ);
       goto done_processing;
     }
     log_fn(LOG_DEBUG,"onionskin_answer succeeded. Yay.");

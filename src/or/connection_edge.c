@@ -187,7 +187,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
 
   if(circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer) < 0) {
     log_fn(LOG_WARN,"circuit_package_relay_cell failed. Closing.");
-    circuit_close(circ);
+    circuit_mark_for_close(circ);
     return -1;
   }
   return 0;
