@@ -320,7 +320,6 @@ the message.
       key returns the mappings set via the control interface; the 'all'
       target returns the mappings set through any mechanism.
 
-
 3.13 INFOVALUE (Type 0x000C)
 
   Sent from the server to the client in response to a GETINFO message.
@@ -343,9 +342,9 @@ the message.
   request for the server to extend an existing circuit with that ID according
   to the specified path.
 
-  If the request for a NEW circuit is successful, then the resultant DONE
-  message will contain a message body consisting of the four-octet Circuit ID
-  of the newly created circuit.
+  If the request is successful, the server sends a DONE message containing
+  a message body consisting of the four-octet Circuit ID of the newly created
+  circuit.
 
 3.15 ATTACHSTREAM (Type 0x000E)
 
