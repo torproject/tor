@@ -355,6 +355,8 @@ int router_get_list_from_string(char *s) {
       case 1: /* it is me */
         if(!my_routerinfo) /* save it, so we can use it for directories */
           my_routerinfo = router;
+        else
+          routerlist_free(router);        
         break;
       default:
         log(LOG_ERR,"router_get_list_from_string(): router_is_me returned error.");
