@@ -63,7 +63,7 @@
     char *v1=(expr1), *v2=(expr2);                              \
     if(!strcmp(v1,v2)) { printf("."); } else {                  \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n"\
-           "      (%s != %s)\n",                                \
+           "      (\"%s\" != \"%s\")\n",                        \
       __FILE__,                                                 \
       __LINE__,                                                 \
       __PRETTY_FUNCTION__,                                      \
@@ -77,7 +77,7 @@
     char *v1=(expr1), *v2=(expr2);                              \
     if(strcmp(v1,v2)) { printf("."); } else {                   \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n"\
-           "      (%s == %s)\n",                                \
+           "      (\"%s\" == \"%s\")\n",                        \
       __FILE__,                                                 \
       __LINE__,                                                 \
       __PRETTY_FUNCTION__,                                      \

@@ -9,8 +9,7 @@
 /****************************************************************************/
 
 /* router array */
-static routerinfo_t **router_array = NULL;
-static int rarray_len = 0;
+static directory_t *directory = NULL;
 
 extern or_options_t options; /* command-line and config-file options */
 extern routerinfo_t *my_routerinfo; /* from main.c */
@@ -22,7 +21,7 @@ static void routerlist_free(routerinfo_t *list);
 static routerinfo_t **make_rarray(routerinfo_t* list, int *len);
 static char *eat_whitespace(char *s);
 static char *find_whitespace(char *s);
-static routerinfo_t *router_get_entry_from_string(char **s);
+static int router_resolve(routerinfo_t *router);
 static void router_add_exit_policy(routerinfo_t *router, char *string);
 static void router_free_exit_policy(routerinfo_t *router);
 
@@ -57,8 +56,8 @@ void router_retry_connections(void) {
   int i;
   routerinfo_t *router;
 
-  for (i=0;i<rarray_len;i++) {
-    router = router_array[i];
+  for (i=0;i<directory->n_routers;i++) {
+    router = directory->routers[i];
     if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
       log(LOG_DEBUG,"retry_all_connections(): connecting to OR %s:%u.",router->address,router->or_port);
       connection_or_connect_as_or(router);
@@ -71,11 +70,11 @@ routerinfo_t *router_pick_directory_server(void) {
   int i;
   routerinfo_t *router;
   
-  if(!router_array)
+  if(!directory)
     return NULL;
 
-  for(i=0;i<rarray_len;i++) {
-    router = router_array[i];
+  for(i=0;i<directory->n_routers;i++) {
+    router = directory->routers[i];
     if(router->dir_port > 0)
       return router;
   }
@@ -87,10 +86,10 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   int i;
   routerinfo_t *router;
 
-  assert(router_array);
+  assert(directory);
 
-  for(i=0;i<rarray_len;i++) {
-    router = router_array[i];
+  for(i=0;i<directory->n_routers;i++) {
+    router = directory->routers[i];
     if ((router->addr == addr) && (router->or_port == port))
       return router;
   }
@@ -98,9 +97,8 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
-void router_get_rarray(routerinfo_t ***prouter_array, int *prarray_len) {
-  *prouter_array = router_array;
-  *prarray_len = rarray_len;
+void router_get_directory(directory_t **pdirectory) {
+  *pdirectory = directory;
 }
 
 /* return 1 if addr and port corresponds to my addr and my or_listenport. else 0,
@@ -129,6 +127,7 @@ int router_is_me(uint32_t addr, uint16_t port)
 static void routerlist_free(routerinfo_t *list)
 {
   routerinfo_t *tmp = NULL;
+  struct exit_policy_t *e = NULL, *etmp = NULL;
   
   if (!list)
     return;
@@ -136,8 +135,19 @@ static void routerlist_free(routerinfo_t *list)
   do
   {
     tmp=list->next;
-    free((void *)list->address);
-    crypto_free_pk_env(list->pkey);
+    if (list->address)
+      free((void *)list->address);
+    if (list->pkey)
+      crypto_free_pk_env(list->pkey);
+    e = list->exit_policy;
+    while (e) {
+      etmp = e->next;
+      if (e->string) free(e->string);
+      if (e->address) free(e->address);
+      if (e->port) free(e->port);
+      free(e);
+      e = etmp;
+    }
     free((void *)list);
     list = tmp;
   }
@@ -153,6 +163,12 @@ void rarray_free(routerinfo_t **list) {
   free(list);
 }
 
+void directory_free(directory_t *directory)
+{
+  rarray_free(directory->routers);
+  free(directory);
+}
+
 void router_forget_router(uint32_t addr, uint16_t port) {
   int i;
   routerinfo_t *router;
@@ -162,17 +178,17 @@ void router_forget_router(uint32_t addr, uint16_t port) {
     return;
 
   /* now walk down router_array until we get to router */
-  for(i=0;i<rarray_len;i++)
-    if(router_array[i] == router)
+  for(i=0;i<directory->n_routers;i++)
+    if(directory->routers[i] == router)
       break;
 
-  assert(i != rarray_len); /* if so then router_get_by_addr_port should have returned null */
+  assert(i != directory->n_routers); /* if so then router_get_by_addr_port should have returned null */
 
 //  free(router); /* don't actually free; we'll free it when we free the whole thing */
 
 //  log(LOG_DEBUG,"router_forget_router(): Forgot about router %d:%d",addr,port);
-  for(; i<rarray_len-1;i++)
-    router_array[i] = router_array[i+1];
+  for(; i<directory->n_routers-1;i++)
+    directory->routers[i] = directory->routers[i+1];
 }
 
 /* create a NULL-terminated array of pointers pointing to elements of a router list */
@@ -272,7 +288,13 @@ int router_get_list_from_file(char *routerfile)
   return 0;
 } 
 
-int router_get_list_from_string(char *s) {
+int router_get_list_from_string(char *s) 
+{
+  return router_get_list_from_string_impl(s, &directory);
+}
+
+int router_get_list_from_string_impl(char *s, directory_t **dest)
+{
   routerinfo_t *routerlist=NULL;
   routerinfo_t *router;
   routerinfo_t **new_router_array;
@@ -283,6 +305,11 @@ int router_get_list_from_string(char *s) {
   while(*s) { /* while not at the end of the string */
     router = router_get_entry_from_string(&s);
     if(router == NULL) {
+      routerlist_free(routerlist);
+      return -1;
+    }
+    if (router_resolve(router)) {
+      routerlist_free(router);      
       routerlist_free(routerlist);
       return -1;
     }
@@ -307,9 +334,11 @@ int router_get_list_from_string(char *s) {
  
   new_router_array = make_rarray(routerlist, &new_rarray_len);
   if(new_router_array) { /* success! replace the old one */
-    rarray_free(router_array); /* free the old one first */
-    router_array = new_router_array;
-    rarray_len = new_rarray_len;
+    if (*dest) 
+      directory_free(*dest);
+    *dest = (directory_t*) malloc(sizeof(directory_t));
+    (*dest)->routers = new_router_array;
+    (*dest)->n_routers = new_rarray_len;
     return 0;
   }
   return -1;
@@ -342,14 +371,38 @@ static char *find_whitespace(char *s) {
   return s;
 }
 
+static int 
+router_resolve(routerinfo_t *router)
+{
+  struct hostent *rent;
+
+  rent = (struct hostent *)gethostbyname(router->address);
+  if (!rent) {
+    log(LOG_ERR,"router_resolve(): Could not get address for router %s.",router->address);
+    return -1; 
+  }
+  assert(rent->h_length == 4);
+  memcpy(&router->addr, rent->h_addr,rent->h_length);
+  router->addr = ntohl(router->addr); /* get it back into host order */
+
+  return 0;
+}
+
 /* reads a single router entry from s.
  * updates s so it points to after the router it just read.
  * mallocs a new router, returns it if all goes well, else returns NULL.
  */
-static routerinfo_t *router_get_entry_from_string(char **s) {
+routerinfo_t *router_get_entry_from_string(char **s) {
   routerinfo_t *router;
   char *next;
-  struct hostent *rent;
+
+  /* Make sure that this string really starts with a router entry. */
+  *s = eat_whitespace(*s);
+  if (strncasecmp(*s, "router ", 7)) {
+    log(LOG_ERR,"router_get_entry_from_string(): Entry does not start with \"router\"");
+    return NULL;
+  }
+  puts("X");
 
   router = malloc(sizeof(routerinfo_t));
   if (!router) {
@@ -357,6 +410,7 @@ static routerinfo_t *router_get_entry_from_string(char **s) {
     return NULL;
   }
   memset(router,0,sizeof(routerinfo_t)); /* zero it out first */
+  router->next = NULL;
 
 /* Bug: if find_whitespace returns a '#', we'll squish it. */
 #define NEXT_TOKEN(s, next)    \
@@ -367,19 +421,17 @@ static routerinfo_t *router_get_entry_from_string(char **s) {
   }                            \
   *next = 0;
 
+  /* Skip the "router" */
+  NEXT_TOKEN(s, next);
+  *s = next+1;
+
   /* read router->address */
   NEXT_TOKEN(s, next);
   router->address = strdup(*s);
   *s = next+1;
 
-  rent = (struct hostent *)gethostbyname(router->address);
-  if (!rent) {
-    log(LOG_ERR,"router_get_entry_from_string(): Could not get address for router %s.",router->address);
-    goto router_read_failed;
-  }
-  assert(rent->h_length == 4);
-  memcpy(&router->addr, rent->h_addr,rent->h_length);
-  router->addr = ntohl(router->addr); /* get it back into host order */
+  /* Don't resolve address till later. */
+  router->addr = 0;
 
   /* read router->or_port */
   NEXT_TOKEN(s, next);

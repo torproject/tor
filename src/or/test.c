@@ -462,8 +462,6 @@ test_util() {
 
 void
 test_onion_handshake() {
-  int i;
-
   /* client-side */
   crypto_dh_env_t *c_dh = NULL;
   char c_buf[DH_ONIONSKIN_LEN];
@@ -500,6 +498,114 @@ test_onion_handshake() {
   test_memneq(c_keys, s_buf, 40);
 }
 
+/* from main.c */
+int dump_router_to_string(char *s, int maxlen, routerinfo_t *router);
+void dump_directory_to_string(char *s, int maxlen);
+
+void
+test_dir_format()
+{
+  
+  char buf[2048], buf2[512];
+  char *pk1_str, *pk2_str, *cp;
+  int pk1_str_len, pk2_str_len;
+  routerinfo_t r1, r2;
+  crypto_pk_env_t *pk1 = NULL, *pk2 = NULL;
+  routerinfo_t *rp1, *rp2;
+  struct exit_policy_t ex1, ex2, ex3;
+
+  int i;
+
+  test_assert( (pk1 = crypto_new_pk_env(CRYPTO_PK_RSA)) );
+  test_assert( (pk2 = crypto_new_pk_env(CRYPTO_PK_RSA)) );
+  test_assert(! crypto_pk_generate_key(pk1));
+  test_assert(! crypto_pk_generate_key(pk2));
+  
+  r1.address = "testaddr1.foo.bar";
+  r1.addr = 0xc0a80001u; /* 192.168.0.1 */
+  r1.or_port = 9000;
+  r1.op_port = 9001;
+  r1.ap_port = 9002;
+  r1.dir_port = 9003;
+  r1.pkey = pk1;
+  r1.bandwidth = 1000;
+  r1.exit_policy = NULL;
+  r1.next = &r2;
+
+  ex1.policy_type = EXIT_POLICY_ACCEPT;
+  ex1.string = NULL;
+  ex1.address = "*";
+  ex1.port = "80";
+  ex1.next = &ex2;
+  ex2.policy_type = EXIT_POLICY_REJECT;
+  ex2.address = "18.*";
+  ex2.port = "24";
+  ex2.next = NULL;
+  r2.address = "tor.tor.tor";
+  r2.addr = 0x0a030201u; /* 10.3.2.1 */
+  r2.or_port = 9005;
+  r2.op_port = 0;
+  r2.ap_port = 0;
+  r2.dir_port = 0;
+  r2.pkey = pk2;
+  r2.bandwidth = 3000;
+  r2.exit_policy = &ex1;
+  r2.next = NULL;
+
+  test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str, 
+                                                    &pk1_str_len));
+  test_assert(!crypto_pk_write_public_key_to_string(pk2 , &pk2_str, 
+                                                    &pk2_str_len));
+  strcpy(buf2, "router testaddr1.foo.bar 9000 9001 9002 9003 1000\n");
+  strcat(buf2, pk1_str);
+  strcat(buf2, "\n");
+  
+  memset(buf, 0, 2048);
+  test_assert(dump_router_to_string(buf, 2048, &r1)>0);
+  test_streq(buf, buf2);
+
+  cp = buf;
+  rp1 = router_get_entry_from_string(&cp);
+  test_assert(rp1);
+  test_streq(rp1->address, r1.address);
+  test_eq(rp1->or_port, r1.or_port);
+  test_eq(rp1->op_port, r1.op_port);
+  test_eq(rp1->ap_port, r1.ap_port);
+  test_eq(rp1->dir_port, r1.dir_port);
+  test_eq(rp1->bandwidth, r1.bandwidth);
+  test_assert(crypto_pk_cmp_keys(rp1->pkey, pk1) == 0);
+  test_assert(rp1->exit_policy == NULL);
+
+  strcpy(buf2, "router tor.tor.tor 9005 0 0 0 3000\n");
+  strcat(buf2, pk2_str);
+  strcat(buf2, "accept *:80\nreject 18.*:24\n\n");
+  test_assert(dump_router_to_string(buf, 2048, &r2)>0);
+  test_streq(buf, buf2);
+
+  cp = buf;
+  rp2 = router_get_entry_from_string(&cp);
+  test_assert(rp2);
+  test_streq(rp2->address, r2.address);
+  test_eq(rp2->or_port, r2.or_port);
+  test_eq(rp2->op_port, r2.op_port);
+  test_eq(rp2->ap_port, r2.ap_port);
+  test_eq(rp2->dir_port, r2.dir_port);
+  test_eq(rp2->bandwidth, r2.bandwidth);
+  test_assert(crypto_pk_cmp_keys(rp2->pkey, pk2) == 0);
+  test_eq(rp2->exit_policy->policy_type, EXIT_POLICY_ACCEPT);
+  test_streq(rp2->exit_policy->string, "accept *:80");
+  test_streq(rp2->exit_policy->address, "*");
+  test_streq(rp2->exit_policy->port, "80");
+  test_eq(rp2->exit_policy->next->policy_type, EXIT_POLICY_REJECT);
+  test_streq(rp2->exit_policy->next->string, "reject 18.*:24");
+  test_streq(rp2->exit_policy->next->address, "18.*");
+  test_streq(rp2->exit_policy->next->port, "24");
+  test_assert(rp2->exit_policy->next->next == NULL);
+  
+  
+  /* XXXX free everything*/
+}
+
 int 
 main(int c, char**v) {
 #if 0
@@ -511,6 +617,7 @@ main(int c, char**v) {
   log(LOG_ERR,NULL);         /* make logging quieter */
 
   setup_directory();
+#if 1
   puts("========================== Buffers =========================");
   test_buffers();
   puts("========================== Crypto ==========================");
@@ -518,8 +625,11 @@ main(int c, char**v) {
   test_crypto();
   puts("\n========================= Util ============================");
   test_util();
-  puts("\n========================= Onion Skins======================");
+  puts("\n========================= Onion Skins =====================");
   test_onion_handshake();
+#endif
+  puts("\n========================= Directory Formats ===============");
+  test_dir_format();
   puts("");
   return 0;
 }

@@ -7,7 +7,7 @@
 # DirPort is where the router listens for directory download requests
 
 # Router 1
-moria.mit.edu 9001 9011 9021 9031 1000000
+router moria.mit.edu 9001 9011 9021 9031 1000000
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
 7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
@@ -15,7 +15,7 @@ nZ7kVMRoiXCbjL6VAtNa4Zy1Af/GOm0iCIDpholeujQ95xew7rQnAgMA//8=
 -----END RSA PUBLIC KEY-----
 
 # Router 2
-moria.mit.edu 9002 9012 9022 9032 1000000
+router moria.mit.edu 9002 9012 9022 9032 1000000
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBANX/HHRuudz274MFSQ4manX8DhtsIuogNUyco9/0dr+XsfioTGd3RgMj
 aSWlD87arkZO4hHBPHe0q89Z3s1UtUsyQ/VmsxSv9g2OCnF/dU2Nz4h6+Al3iNJF
@@ -23,7 +23,7 @@ aSWlD87arkZO4hHBPHe0q89Z3s1UtUsyQ/VmsxSv9g2OCnF/dU2Nz4h6+Al3iNJF
 -----END RSA PUBLIC KEY-----
 
 # Router 3
-moria.mit.edu 9003 9013 9023 9033 1000000
+router moria.mit.edu 9003 9013 9023 9033 1000000
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAJfkNWCaNkYIRwfHT06KBU6dz8W1xDpW5ezGJwAOoxCX3/ZNoUicb/1V
 oB3OzW6VxWIiht3da/3K0ywiBOOCcf6BabKoMdiPpH7NIeu6XRmBYK2uqW13gBgh
