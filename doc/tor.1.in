@@ -69,6 +69,9 @@ A list of preferred nodes to use for the first hop in the circuit, if possible.
 \fBexitnodes \fR\fInickname,nickname,...\fP
 A list of preferred nodes to use for the last hop in the circuit, if possible.
 .TP
+\fBexcludenodes \fR\iInickname,nickname,...\fP
+A list of nodes to never use when building a circuit.
+.TP
 \fBnewcircuitperiod \fR\fINUM\fP
 Every NUM seconds consider whether to build a new circuit. (Default: 60)
 .TP
