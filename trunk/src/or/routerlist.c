@@ -250,6 +250,8 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
     /* give capacity a default, until 0.0.7 is obsolete */
     tmp = (router->bandwidthcapacity == 0) ? 200000 : router->bandwidthcapacity;
     this_bw = (tmp < router->bandwidthrate) ? tmp : router->bandwidthrate;
+    if(this_bw > 800000)
+      this_bw = 800000; /* if they claim something huge, don't believe it */
     p = tor_malloc(sizeof(uint32_t));
     *p = this_bw;
     smartlist_add(bandwidths, p);
