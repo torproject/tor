@@ -53,22 +53,29 @@ int crypto_pk_read_private_key(crypto_pk_env_t *env, FILE *src);
 int crypto_pk_read_public_key(crypto_pk_env_t *env, FILE *src);
 int crypto_pk_write_private_key(crypto_pk_env_t *env, FILE *dest);
 int crypto_pk_write_public_key(crypto_pk_env_t *env, FILE *dest);
+int crypto_pk_check_key(crypto_pk_env_t *env);
 
 int crypto_pk_set_key(crypto_pk_env_t *env, unsigned char *key);
 
+int crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding);
+int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding);
+  
 /* symmetric crypto */
 int crypto_cipher_set_iv(crypto_cipher_env_t *env, unsigned char *iv);
 int crypto_cipher_set_key(crypto_cipher_env_t *env, unsigned char *key);
-int crypto_cipher_init_cipher();
+int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env);
+int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env);
 
 int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to);
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to);
 
 /* SHA-1 */
-int crypto_SHA_digest(unsigned char *m, unsigned char *digest);
+int crypto_SHA_digest(unsigned char *m, int len, unsigned char *digest);
 
 /* random numbers */
 int crypto_rand(unsigned int n, unsigned char *to);
 int crypto_pseudo_rand(unsigned int n, unsigned char *to);
 
+/* errors */
+char *crypto_perror();
 #endif
