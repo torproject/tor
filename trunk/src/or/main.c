@@ -439,6 +439,7 @@ static void run_scheduled_events(time_t now) {
     if(!options.DirPort) {
       /* NOTE directory servers do not currently fetch directories.
        * Hope this doesn't bite us later. */
+      routerlist_remove_old_routers(); /* purge obsolete entries */
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
     } else {
       /* We're a directory; dump any old descriptors. */
@@ -450,7 +451,6 @@ static void run_scheduled_events(time_t now) {
     rend_cache_clean(); /* should this go elsewhere? */
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
   }
-
 
   /** 2. Every second, we examine pending circuits and prune the
    *    ones which have been pending for more than a few seconds.

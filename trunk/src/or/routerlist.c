@@ -348,6 +348,33 @@ int router_add_to_routerlist(routerinfo_t *router) {
   return 0;
 }
 
+/** Remove any routers from the routerlist that are more than ROUTER_MAX_AGE
+ * seconds old.
+ *
+ * (This function is just like dirserv_remove_old_servers. One day we should
+ * merge them.)
+ */
+void
+routerlist_remove_old_routers(void)
+{
+  int i;
+  time_t cutoff;
+  routerinfo_t *router;
+  if (!routerlist)
+    return;
+
+  cutoff = time(NULL) - ROUTER_MAX_AGE;
+  for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
+    router = smartlist_get(routerlist->routers, i);
+    if (router->published_on < cutoff) {
+      /* Too old.  Remove it. */
+      log_fn(LOG_INFO,"Forgetting obsolete routerinfo for node %s.", router->nickname);
+      routerinfo_free(router);
+      smartlist_del(routerlist->routers, i--);
+    }
+  }
+}
+
 /*
  * Code to parse router descriptors and directories.
  */
@@ -440,7 +467,7 @@ int is_recommended_version(const char *myversion,
   }
 }
 
-/** Replace the current routerlist with the routers stored in the
+/** Add to the current routerlist each router stored in the
  * signed directory <b>s</b>.  If pkey is provided, make sure that <b>s</b> is
  * signed with pkey. */
 int router_load_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
