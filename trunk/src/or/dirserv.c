@@ -807,6 +807,10 @@ static int dirserv_regenerate_directory(void)
   tor_free(new_directory);
   the_directory_is_dirty = 0;
 
+  /* Save the directory to disk so we re-load it quickly on startup.
+   */
+  dirserv_set_cached_directory(the_directory, time(NULL), 0);
+
   return 0;
 }
 
@@ -891,6 +895,11 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
     return -1;
   }
   runningrouters_is_dirty = 0;
+
+  /* We don't cache runnning-routers to disk, so there's no point in
+   * authdirservers caching it. */
+  /* dirserv_set_cached_directory(the_runningrouters, time(NULL), 1); */
+
   return 0;
  err:
   tor_free(s);
