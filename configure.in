@@ -15,8 +15,6 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
-dnl AC_DEFINE([HAVE_OPENSSL], 0, [Define if OpenSSL was found.])
-
 # The big search for OpenSSL
 # copied from openssh's configure.ac
 AC_ARG_WITH(ssl-dir,
@@ -103,7 +101,6 @@ int main(void)
 ])
 if (test ! -z "$ac_cv_openssldir" && test "x$ac_cv_openssldir" != "x(system)") ;
  then
-        AC_DEFINE(HAVE_OPENSSL)
         dnl Need to recover ssldir - test above runs in subshell
         ssldir=$ac_cv_openssldir
         if test ! -z "$ssldir" -a "x$ssldir" != "x/usr"; then
