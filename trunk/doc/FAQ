@@ -38,17 +38,16 @@ for you.]
 
 3. Running tor.
 
-3.1. What's this about roles? What kind of server should I run?
+3.1. What kind of server should I run?
 
 The same executable ("or") functions as both client and server, depending
-on the value of the config variable named 'Role'. Role represents a
-combination of which tasks this particular tor server will do. The default
-Role (role 15) is an onion router: it listens for onion routers, listens
-for onion proxies, listens for application proxies, and it connects to
-all other onion routers it learns about. A directory server (role 63)
-does all of the above and also serves directory requests. A simple
-onion proxy, on the other hand (role 8), only listens for application
-proxies. See part 3.1 of the HACKING document for more technical details.
+on which ports are specified in the configuration file. You can specify:
+* APPort: client applications (eg privoxy, Mozilla) can speak socks to
+  this port.
+* OPPort: onion proxies (client onion routers) connect to this port.
+* ORPort: other onion routers connect to this port
+* DirPort: onion proxies and onion routers speak http to this port, to
+  pull down a directory of which nodes are currently available.
 
 3.2. So I can just run a full onion router and join the network?
 
