@@ -1304,8 +1304,15 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
+#ifdef USE_FAKE_POLL
+  if (options->MaxConn > 1024) {
+    log(LOG_WARN, "Systems without a working poll() can't set MaxConn higher than 1024 in Tor 0.0.9.x.");
+    result = -1;
+  }
+#endif
+
   if (options->MaxConn >= MAXCONNECTIONS) {
-    log(LOG_WARN, "MaxConn option must be less than %d.", MAXCONNECTIONS);
+    log(LOG_WARN, "MaxConn option must be less than %d in Tor 0.0.9.x.", MAXCONNECTIONS);
     result = -1;
   }
 
