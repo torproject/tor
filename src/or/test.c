@@ -479,16 +479,16 @@ test_util() {
   smartlist_add(sl, (void*)2);
   smartlist_add(sl, (void*)3);
   smartlist_add(sl, (void*)4);
-  test_eq(2, (int)smartlist_del_keeporder(sl, 1));
+  test_eq((void*)2, smartlist_del_keeporder(sl, 1));
   smartlist_insert(sl, 1, (void*)22);
   smartlist_insert(sl, 0, (void*)0);
   smartlist_insert(sl, 5, (void*)555);
-  test_eq(0,  (int)smartlist_get(sl,0));
-  test_eq(1,  (int)smartlist_get(sl,1));
-  test_eq(22, (int)smartlist_get(sl,2));
-  test_eq(3,  (int)smartlist_get(sl,3));
-  test_eq(4,  (int)smartlist_get(sl,4));
-  test_eq(555, (int)smartlist_get(sl,5));
+  test_eq((void*)0,   smartlist_get(sl,0));
+  test_eq((void*)1,   smartlist_get(sl,1));
+  test_eq((void*)22,  smartlist_get(sl,2));
+  test_eq((void*)3,   smartlist_get(sl,3));
+  test_eq((void*)4,   smartlist_get(sl,4));
+  test_eq((void*)555, smartlist_get(sl,5));
   /* XXXX test older functions. */
   smartlist_free(sl);
 }
