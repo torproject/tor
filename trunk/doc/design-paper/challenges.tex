@@ -563,7 +563,7 @@ We have not formally surveyed Tor node operators to learn why they are
 running nodes, but
 from the information they have provided, it seems that many of them run Tor
 nodes for reasons of personal interest in privacy issues.  It is possible
-that others are running Tor nodes for the protection of their own
+that others are running Tor nodes to protect their own
 anonymity, but of course they are
 hardly likely to tell us specifics if they are.
 %Significantly, Tor's threat model changes the anonymity incentives for running
@@ -603,7 +603,8 @@ to reawaken at a random offset into the next billing cycle.  This feature has
 interesting policy implications, however; see
 the next section below.
 Exit policies help to limit administrative costs by limiting the frequency of
-abuse complaints. (See Section~\ref{subsec:tor-and-blacklists}.)
+abuse complaints (see Section~\ref{subsec:tor-and-blacklists}). We discuss
+technical incentive mechanisms in Section~\ref{subsec:incentives-by-design}.
 
 %[XXXX say more.  Why else would you run a node? What else can we do/do we
 %  already do to make running a node more attractive?]
@@ -1114,7 +1115,7 @@ Anti-censorship networks hoping to bridge country-level blocks face
 a variety of challenges. One of these is that they need to find enough
 exit nodes---servers on the `free' side that are willing to relay
 traffic from users to their final destinations. Anonymizing
-networks incorporating Tor are well-suited to this task since we have
+networks like Tor are well-suited to this task since we have
 already gathered a set of exit nodes that are willing to tolerate some
 political heat.
 
@@ -1152,11 +1153,11 @@ help address censorship; we wish them success.
 Tor is running today with hundreds of nodes and tens of thousands of
 users, but it will certainly not scale to millions.
 Scaling Tor involves four main challenges. First, to get a
-large initial set of nodes, we must address incentives for
+large set of nodes, we must address incentives for
 users to carry traffic for others. Next is safe node discovery, both
 while bootstrapping (Tor clients must robustly find an initial
-node list) and later (Tor client must learn about a fair sample
-of honest nodes and not let the adversary control his circuits).
+node list) and later (Tor clients must learn about a fair sample
+of honest nodes and not let the adversary control circuits).
 We must also detect and handle node speed and reliability as the network
 becomes increasingly heterogeneous: since the speed and reliability
 of a circuit is limited by its worst link, we must learn to track and
@@ -1164,6 +1165,7 @@ predict performance. Finally, we must stop assuming that all points on
 the network can connect to all other points.
 
 \subsection{Incentives by Design}
+\label{subsec:incentives-by-design}
 
 There are three behaviors we need to encourage for each Tor node: relaying
 traffic; providing good throughput and reliability while doing it;
@@ -1202,12 +1204,12 @@ service to nodes that have provided good service for them.
 
 Unfortunately, such an approach introduces new anonymity problems.
 There are many surprising ways for nodes to game the incentive and
-reputation system to undermine anonymity because such systems are
-designed to encourage fairness in storage or bandwidth usage not
+reputation system to undermine anonymity---such systems are typically
+designed to encourage fairness in storage or bandwidth usage, not
 fairness of provided anonymity. An adversary can attract more traffic
-by performing well or can provide targeted differential performance to
-individual users to undermine their anonymity. Typically a user who
-chooses evenly from all options is most resistant to an adversary
+by performing well or can target individual users by selectively
+performing, to undermine their anonymity. Typically a user who
+chooses evenly from all nodes is most resistant to an adversary
 targeting him, but that approach hampers the efficient use
 of heterogeneous nodes.
 
