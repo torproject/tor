@@ -367,7 +367,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       log_fn(LOG_DEBUG,"socks handshake not all here yet.");
     }
     if (sockshere == -1)
-      conn->socks_request->has_finished = 1;
+      socks->has_finished = 1;
     return sockshere;
   } /* else socks handshake is done, continue processing */
 
@@ -397,6 +397,8 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     return connection_ap_handshake_attach_circuit(conn);
   } else {
     /* it's a hidden-service request */
+    /* XXX008 what does it mean to socks-resolve a hidden service? should
+     * we fail those right here? */
     rend_cache_entry_t *entry;
     int r;
 
@@ -577,6 +579,7 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   conn->socks_request->has_finished = 0; /* waiting for 'connected' */
   strcpy(conn->socks_request->address, address);
   conn->socks_request->port = port;
+  conn->socks_request->command = SOCKS_COMMAND_CONNECT;
 
   conn->address = tor_strdup("(local bridge)");
   conn->addr = ntohs(0);
