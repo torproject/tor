@@ -41,6 +41,24 @@ int connection_or_finished_flushing(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_OR);
 
   switch(conn->state) {
+    case OR_CONN_STATE_OP_CONNECTING:
+      if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, &e, &len) < 0)  { /* not yet */
+        if(errno != EINPROGRESS){
+          /* yuck. kill it. */
+          log(LOG_DEBUG,"connection_or_finished_flushing(): in-progress connect failed. Removing.");
+          return -1;
+        } else {
+          return 0; /* no change, see if next time is better */
+        }
+      }
+      /* the connect has finished. */
+
+      log(LOG_DEBUG,"connection_or_finished_flushing() : Connection to router %s:%u established.",
+          conn->address,ntohs(conn->port));
+
+      return or_handshake_op_send_keys(conn);
+    case OR_CONN_STATE_OP_SENDING_KEYS:
+      return or_handshake_op_finished_sending_keys(conn);
     case OR_CONN_STATE_CLIENT_CONNECTING:
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, &e, &len) < 0)  { /* not yet */
         if(errno != EINPROGRESS){
@@ -112,28 +130,23 @@ void conn_or_init_crypto(connection_t *conn) {
   
 }
 
-/*
- *
- * auth handshake, as performed by OR *initiating* the connection
- *
+/* helper function for connection_or_connect_as_or and _as_op.
+ * returns NULL if the connection fails. If it succeeds, it sets
+ * *result to 1 if connect() returned before completing, or to 2
+ * if it completed, and returns the new conn.
  */
-
-int connect_to_router(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local) {
+connection_t *connection_or_connect(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local, 
+                                    uint16_t port, int *result) {
   connection_t *conn;
   struct sockaddr_in router_addr;
   int s;
 
-  assert(router && prkey && local);
-
-  if(router->addr == local->sin_addr.s_addr && router->port == local->sin_port) {
-    /* this is me! don't connect to me. */
-    return 0;
-  }
-
   conn = connection_new(CONN_TYPE_OR);
+  if(!conn)
+    return NULL;
 
   /* set up conn so it's got all the data we need to remember */
-  conn->addr = router->addr, conn->port = router->port;
+  conn->addr = router->addr, conn->port = router->or_port; /* NOTE we store or_port here always */
   conn->prkey = prkey;
   conn->min = router->min, conn->max = router->max;
   conn->pkey = router->pkey;
@@ -145,36 +158,37 @@ int connect_to_router(routerinfo_t *router, RSA *prkey, struct sockaddr_in *loca
   { 
     log(LOG_ERR,"Error creating network socket.");
     connection_free(conn);
-    return -1;
+    return NULL;
   }
   fcntl(s, F_SETFL, O_NONBLOCK); /* set s to non-blocking */
 
   memset((void *)&router_addr,0,sizeof(router_addr));
   router_addr.sin_family = AF_INET;
-  router_addr.sin_port = router->port;
+  router_addr.sin_port = port;
   memcpy((void *)&router_addr.sin_addr, &router->addr, sizeof(uint32_t));
 
-  log(LOG_DEBUG,"connect_to_router() : Trying to connect to %s:%u.",inet_ntoa(*(struct in_addr *)&router->addr),ntohs(router->port));
+  log(LOG_DEBUG,"connection_or_connect() : Trying to connect to %s:%u.",inet_ntoa(*(struct in_addr *)&router->addr),ntohs(port));
 
   if(connect(s,(struct sockaddr *)&router_addr,sizeof(router_addr)) < 0){
     if(errno != EINPROGRESS){
       /* yuck. kill it. */
       connection_free(conn);
-      return -1;
+      return NULL;
     } else {
       /* it's in progress. set state appropriately and return. */
       conn->s = s;
 
-      conn->state = OR_CONN_STATE_CLIENT_CONNECTING;
-
       if(connection_add(conn) < 0) { /* no space, forget it */
         connection_free(conn);
-        return -1;
+        return NULL;
       }
+
       /* i think only pollout is needed, but i'm curious if pollin ever gets caught -RD */
-      log(LOG_DEBUG,"connect_to_router() : connect in progress.");
+      log(LOG_DEBUG,"connection_or_connect() : connect in progress.");
       connection_watch_events(conn, POLLOUT | POLLIN);
-      return 0;
+      *result = 1; /* connecting */
+      return conn;
+
     }
   }
 
@@ -183,23 +197,173 @@ int connect_to_router(routerinfo_t *router, RSA *prkey, struct sockaddr_in *loca
 
   if(connection_add(conn) < 0) { /* no space, forget it */
     connection_free(conn);
-    return -1;
+    return NULL;
   }
 
-  log(LOG_DEBUG,"connect_to_router() : Connection to router %s:%u established.",router->address,ntohs(router->port));
+  log(LOG_DEBUG,"connection_or_connect() : Connection to router %s:%u established.",router->address,ntohs(port));
 
-  /* move to the next step in the handshake */
-  if(or_handshake_client_send_auth(conn) < 0) {
-    connection_remove(conn);
-    connection_free(conn);
+  *result = 2; /* connection finished */
+  return(conn);
+}
+
+/*
+ *
+ * handshake for connecting to the op_port of an onion router
+ *
+ */
+
+connection_t *connection_or_connect_as_op(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local) {
+  connection_t *conn;
+  int result=0; /* so connection_or_connect() can tell us what happened */
+
+  assert(router && prkey && local);
+
+  if(router->addr == local->sin_addr.s_addr && router->or_port == local->sin_port) {
+    /* this is me! don't connect to me. */
+    return NULL;
+  }
+
+  /* this function should never be called if we're already connected to router, but */
+  /* FIXME we should check here if we're already connected, and return the conn */
+
+  conn = connection_or_connect(router, prkey, local, router->op_port, &result);
+  if(!conn)
+    return NULL;
+
+  assert(result != 0); /* if conn is defined, then it must have set result */
+
+  /* now we know it succeeded */
+  if(result == 1) {
+    conn->state = OR_CONN_STATE_OP_CONNECTING;
+    return conn;
+  }
+
+  if(result == 2) {
+    /* move to the next step in the handshake */
+    if(or_handshake_op_send_keys(conn) < 0) {
+      connection_remove(conn);
+      connection_free(conn);
+      return NULL;
+    }
+    return conn;
+  }
+  return NULL; /* shouldn't get here; to keep gcc happy */
+}
+
+int or_handshake_op_send_keys(connection_t *conn) {
+  int x;
+  uint32_t bandwidth = DEFAULT_BANDWIDTH_OP;
+  unsigned char message[20]; /* bandwidth(32bits), forward key(64bits), backward key(64bits) */
+  unsigned char cipher[128];
+  int retval;
+
+  assert(conn && conn->type == CONN_TYPE_OR);
+
+  /* generate random keys */
+  if(!RAND_bytes(conn->f_session_key,8) ||
+     !RAND_bytes(conn->b_session_key,8)) {
+    log(LOG_ERR,"Cannot generate a secure DES key.");
     return -1;
   }
-  return 0; 
+  log(LOG_DEBUG,"or_handshake_op_send_keys() : Generated DES keys.");
+  /* compose the message */
+  memcpy((void *)message, (void *)&bandwidth, 4);
+  memcpy((void *)(message + 4), (void *)conn->f_session_key, 8);
+  memcpy((void *)(message + 12), (void *)conn->b_session_key, 8);
+  printf("f_session_key: ");
+  for(x=0;x<8;x++) {
+    printf("%d ",conn->f_session_key[x]);
+  }
+  printf("\nb_session_key: ");
+  for(x=0;x<8;x++) {
+    printf("%d ",conn->b_session_key[x]);
+  }
+  printf("\n");
+
+  /* encrypt with RSA */
+  if(RSA_public_encrypt(20, message, cipher, conn->pkey, RSA_PKCS1_PADDING) < 0) {
+    log(LOG_ERR,"or_handshake_op_send_keys(): Public key encryption failed.");
+    return -1;
+  }
+  log(LOG_DEBUG,"or_handshake_op_send_keys() : Encrypted authentication message.");
+
+  /* send message */
+
+  if(connection_write_to_buf(cipher, 128, conn) < 0) {
+    log(LOG_DEBUG,"or_handshake_op_send_keys(): my outbuf is full. Oops.");
+    return -1;
+  }
+  retval = connection_flush_buf(conn);
+  if(retval < 0) {
+    log(LOG_DEBUG,"or_handshake_op_send_keys(): bad socket while flushing.");
+    return -1;
+  }
+  if(retval > 0) {
+    /* still stuff on the buffer. */
+    conn->state = OR_CONN_STATE_OP_SENDING_KEYS;
+    connection_watch_events(conn, POLLOUT | POLLIN);
+    return 0;
+  }
+
+  /* it finished sending */
+  log(LOG_DEBUG,"or_handshake_op_send_keys(): Finished sending authentication message.");
+  return or_handshake_op_finished_sending_keys(conn);
+}
+
+int or_handshake_op_finished_sending_keys(connection_t *conn) {
+
+  /* do crypto initialization, etc */
+  conn_or_init_crypto(conn);
+
+  conn->state = OR_CONN_STATE_OPEN;
+  connection_watch_events(conn, POLLIN); /* give it a default, tho the ap_handshake call may change it */
+  ap_handshake_n_conn_open(conn); /* send the pending onion */
+  return 0;
+
+}
+
+/*
+ *
+ * auth handshake, as performed by OR *initiating* the connection
+ *
+ */
+
+connection_t *connection_or_connect_as_or(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local) {
+  connection_t *conn;
+  int result=0; /* so connection_or_connect() can tell us what happened */
+
+  assert(router && prkey && local);
+
+  if(router->addr == local->sin_addr.s_addr && router->or_port == local->sin_port) {
+    /* this is me! don't connect to me. */
+    log(LOG_DEBUG,"connection_or_connect_as_or(): This is me. Skipping.");
+    return NULL;
+  }
+
+  conn = connection_or_connect(router, prkey, local, router->or_port, &result);
+  if(!conn)
+    return NULL;
+
+  /* now we know it succeeded */
+  if(result == 1) {
+    conn->state = OR_CONN_STATE_CLIENT_CONNECTING;
+    return conn;
+  }
+
+  if(result == 2) {
+    /* move to the next step in the handshake */
+    if(or_handshake_client_send_auth(conn) < 0) {
+      connection_remove(conn);
+      connection_free(conn);
+      return NULL;
+    }
+    return conn; 
+  }
+  return NULL; /* shouldn't get here; to keep gcc happy */
 }
 
 int or_handshake_client_send_auth(connection_t *conn) {
   int retval;
-  char keys[16];
   char buf[44];
   char cipher[128];
 
@@ -207,27 +371,24 @@ int or_handshake_client_send_auth(connection_t *conn) {
     return -1;
 
   /* generate random keys */
-  retval = RAND_bytes(keys,16);
-  if (retval != 1) /* error */
-  { 
+  if(!RAND_bytes(conn->f_session_key,8) ||
+     !RAND_bytes(conn->b_session_key,8)) {
     log(LOG_ERR,"Cannot generate a secure DES key.");
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated DES keys.");
-
-  /* save keys */
-  memcpy(conn->f_session_key,keys,8);
-  memcpy(conn->b_session_key,keys+8,8);
 
   /* generate first message */
   memcpy(buf,&conn->local.sin_addr,4); /* local address */
   memcpy(buf+4,(void *)&conn->local.sin_port,2); /* local port */
   memcpy(buf+6, (void *)&conn->addr, 4); /* remote address */
   memcpy(buf+10, (void *)&conn->port, 2); /* remote port */
-  memcpy(buf+12,keys,16); /* keys */
+  memcpy(buf+12,conn->f_session_key,8); /* keys */
+  memcpy(buf+20,conn->b_session_key,8);
   *((uint32_t *)(buf+28)) = htonl(conn->min); /* min link utilisation */
   *((uint32_t *)(buf+32)) = htonl(conn->max); /* maximum link utilisation */
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated first authentication message.");
+
 
   /* encrypt message */
   retval = RSA_public_encrypt(36,buf,cipher,conn->pkey,RSA_PKCS1_PADDING);
@@ -397,8 +558,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
   retval = RSA_private_decrypt(128,cipher,buf,conn->prkey,RSA_PKCS1_PADDING);
   if (retval == -1)
   { 
-    log(LOG_ERR,"Public-key decryption failed during authentication to %s:%u.",
-        conn->address,ntohs(conn->port));
+    log(LOG_ERR,"Public-key decryption failed processing auth message from new client.");
     log(LOG_DEBUG,"or_handshake_server_process_auth() : Reason : %s.",
         ERR_reason_error_string(ERR_get_error()));
     return -1;
@@ -421,7 +581,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Router identified as %s:%u.",
-      router->address,ntohs(router->port));
+      router->address,ntohs(router->or_port));
 
   if(connection_get_by_addr_port(addr,port)) {
     log(LOG_DEBUG,"or_handshake_server_process_auth(): That router is already connected. Dropping.");
@@ -447,7 +607,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
     conn->max = max;
 
   /* copy all relevant info to conn */
-  conn->addr = router->addr, conn->port = router->port;
+  conn->addr = router->addr, conn->port = router->or_port;
   conn->pkey = router->pkey;
   conn->address = strdup(router->address);
 

@@ -52,9 +52,6 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
   circ->p_conn = p_conn;
 
   circ->state = CIRCUIT_STATE_OPEN_WAIT;
-  circ->onion = NULL;
-  circ->onionlen=0;
-  circ->recvlen=0;
 
   /* ACIs */
   circ->p_aci = p_aci;
@@ -72,9 +69,19 @@ void circuit_free(circuit_t *circ) {
 
   if(circ->onion)
     free(circ->onion);
+  if(circ->cpath)
+    circuit_free_cpath(circ->cpath, circ->cpathlen);
 
   free(circ);
+}
 
+void circuit_free_cpath(crypt_path_t **cpath, size_t cpathlen) {
+  int i;
+
+  for(i=0;i<cpathlen;i++)
+    free(cpath[i]);
+
+  free(cpath);
 }
 
 aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type) {
@@ -89,6 +96,7 @@ aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type) {
     test_aci &= htons(0x00FF);
   if(aci_type == ACI_TYPE_HIGHER)
     test_aci &= htons(0xFF00);
+  /* if aci_type == ACI_BOTH, don't filter any of it */
 
   if(test_aci == 0)
     return get_unique_aci_by_addr_port(addr, port, aci_type); /* try again */ 
@@ -110,12 +118,10 @@ int circuit_init(circuit_t *circ, int aci_type) {
   unsigned char digest1[20];
   unsigned char digest2[20];
 
-  if (!circ)
-    return -1;
+  assert(circ);
 
   ol = (onion_layer_t *)circ->onion;
-  if (!ol)
-    return -1;
+  assert(ol);
 
   log(LOG_DEBUG,"circuit_init(): starting");
   circ->n_addr = ol->addr;
@@ -204,6 +210,16 @@ int circuit_init(circuit_t *circ, int aci_type) {
   return 0;
 }
 
+circuit_t *circuit_get_by_naddr_nport(uint32_t naddr, uint16_t nport) {
+  circuit_t *circ;
+
+  for(circ=global_circuitlist;circ;circ = circ->next) {
+    if(circ->n_addr == naddr && circ->n_port == nport)
+       return circ;
+  }
+  return NULL;
+}
+
 circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn) {
   circuit_t *circ;
 
@@ -244,24 +260,24 @@ int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, connection_t *conn,
 
   if(conn->type == CONN_TYPE_EXIT) { /* send payload directly */
     log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to exit.");
-    if(connection_exit_process_data_cell(cell, conn) < 0) {
-      return -1;
-    }
-  } else { /* send it as a cell */
-    log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to connection.");
-    if(connection_write_cell_to_buf(cell, conn) < 0) {
-      return -1;
-    }
+    return connection_exit_process_data_cell(cell, conn);
   }
-  return 0; /* success */
+  if(conn->type == CONN_TYPE_AP) { /* send payload directly */
+    log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to AP.");
+    return connection_ap_process_data_cell(cell, conn);
+  }
+  /* else send it as a cell */
+  log(LOG_DEBUG,"circuit_deliver_data_cell(): Sending to connection.");
+  return connection_write_cell_to_buf(cell, conn);
 }
 
 int circuit_crypt(circuit_t *circ, char *in, size_t inlen, char crypt_type) {
   char *out;
   int outlen;
+  int i;
+  crypt_path_t *thishop;
 
-  if(!circ || !in)
-    return -1;
+  assert(circ && in);
 
   out = malloc(inlen);
   if(!out)
@@ -269,24 +285,65 @@ int circuit_crypt(circuit_t *circ, char *in, size_t inlen, char crypt_type) {
 
   if(crypt_type == 'e') {
     log(LOG_DEBUG,"circuit_crypt(): Encrypting %d bytes.",inlen);
-    if(!EVP_EncryptUpdate(&circ->p_ctx,out,&outlen,in,inlen)) {
-      log(LOG_ERR,"circuit_encrypt(): Encryption failed for ACI : %u (%s).",circ->p_aci, ERR_reason_error_string(ERR_get_error()));
-      return -1;
+    if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
+      /* 'e' means we're preparing to send it out. */
+      for (i=0; i < circ->cpathlen; i++) /* moving from last to first hop 
+                                          * Remember : cpath is in reverse order, i.e. last hop first
+                                          */
+      { 
+        log(LOG_DEBUG,"circuit_crypt() : Encrypting via cpath: Processing hop %u",circ->cpathlen-i);
+        thishop = circ->cpath[i];
+    
+        /* encrypt */
+        if(!EVP_EncryptUpdate(&thishop->f_ctx,out,&outlen,in,inlen)) {
+          log(LOG_ERR,"Error performing encryption:%s",ERR_reason_error_string(ERR_get_error()));
+          free(out);
+          return -1;
+        }
+
+        /* copy ciphertext back to buf */
+        memcpy(in,out,inlen);
+      }
+    } else { /* we're in the middle. Just one crypt. */
+      if(!EVP_EncryptUpdate(&circ->p_ctx,out,&outlen,in,inlen)) {
+        log(LOG_ERR,"circuit_encrypt(): Encryption failed for ACI : %u (%s).",
+            circ->p_aci, ERR_reason_error_string(ERR_get_error()));
+        free(out);
+        return -1;
+      }
+      memcpy(in,out,inlen);
     }
   } else if(crypt_type == 'd') {
     log(LOG_DEBUG,"circuit_crypt(): Decrypting %d bytes.",inlen);
-    if(!EVP_DecryptUpdate(&circ->n_ctx,out,&outlen,in,inlen)) {
-      log(LOG_ERR,"circuit_crypt(): Decryption failed for ACI : %u (%s).",circ->n_aci, ERR_reason_error_string(ERR_get_error()));
-      return -1;
+    if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
+      for (i=circ->cpathlen-1; i >= 0; i--) /* moving from first to last hop 
+                                       * Remember : cpath is in reverse order, i.e. last hop first
+                                       */
+      { 
+        log(LOG_DEBUG,"circuit_crypt() : Decrypting via cpath: Processing hop %u",circ->cpathlen-i);
+        thishop = circ->cpath[i];
+
+        /* encrypt */
+        if(!EVP_DecryptUpdate(&thishop->b_ctx,out,&outlen,in,inlen)) {
+          log(LOG_ERR,"Error performing decryption:%s",ERR_reason_error_string(ERR_get_error()));
+          free(out);
+          return -1;
+        }
+
+        /* copy ciphertext back to buf */
+        memcpy(in,out,inlen);
+      }
+    } else { /* we're in the middle. Just one crypt. */
+      if(!EVP_DecryptUpdate(&circ->n_ctx,out,&outlen,in,inlen)) {
+        log(LOG_ERR,"circuit_crypt(): Decryption failed for ACI : %u (%s).",
+            circ->n_aci, ERR_reason_error_string(ERR_get_error()));
+        free(out);
+        return -1;
+      }
+      memcpy(in,out,inlen);
     }
   }
 
-  if(outlen != inlen) {
-    log(LOG_DEBUG,"circuit_crypt(): %d bytes crypted to %d bytes. Weird.",inlen,outlen);
-    return -1;
-  }
-  
-  memcpy(in,out,inlen);
   free(out);
 
   return 0;
@@ -294,8 +351,10 @@ int circuit_crypt(circuit_t *circ, char *in, size_t inlen, char crypt_type) {
 
 void circuit_close(circuit_t *circ) {
   circuit_remove(circ);
-  connection_send_destroy(circ->n_aci, circ->n_conn); 
-  connection_send_destroy(circ->p_aci, circ->p_conn); 
+  if(circ->n_conn)
+    connection_send_destroy(circ->n_aci, circ->n_conn); 
+  if(circ->p_conn)
+    connection_send_destroy(circ->p_aci, circ->p_conn); 
   circuit_free(circ);
 }
 

@@ -163,11 +163,14 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp)
 	if (token)
 	{
 	  log(LOG_DEBUG,"getrouters():Token :%s",token);
-	  router->port = (uint16_t)strtoul(token,&errtest,0);
+	  router->or_port = (uint16_t)strtoul(token,&errtest,0);
 	  if ((*token != '\0') && (*errtest == '\0')) /* conversion was successful */
 	  {
+/* FIXME patch from RD. We should make it actually read these. */
+            router->op_port = htons(router->or_port + 10);
+            router->ap_port = htons(router->or_port + 20);
 	    /* convert port to network format */
-	    router->port = htons(router->port);
+	    router->or_port = htons(router->or_port);
 	    
 	    /* read min bandwidth */
 	    token = (char *)strtok(NULL,OR_ROUTERLIST_SEPCHARS);
@@ -204,7 +207,8 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp)
 			  retp=fgets(line,512,rf);
 			  if (!retp)
 			  {
-			    log(LOG_ERR,"Could not find a public key entry for router %s:%u.",router->address,router->port);
+			    log(LOG_ERR,"Could not find a public key entry for router %s:%u.",
+			        router->address,router->or_port);
 			    free((void *)router->address);
 			    free((void *)router);
 			    fclose(rf);
@@ -233,7 +237,8 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp)
 			}
 			else /* we found something else; this isn't right */
 			{
-			  log(LOG_ERR,"Could not find a public key entry for router %s:%u.",router->address,router->port);
+			  log(LOG_ERR,"Could not find a public key entry for router %s:%u.",
+			      router->address,router->or_port);
 			  free((void *)router->address);
 			  free((void *)router);
 			  fclose(rf);
@@ -247,7 +252,8 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp)
 			router->pkey = PEM_read_RSAPublicKey(rf,&router->pkey,NULL,NULL);
 			if (!router->pkey) /* something went wrong */
 			{
-			  log(LOG_ERR,"Could not read public key for router %s:%u.",router->address,router->port);
+			  log(LOG_ERR,"Could not read public key for router %s:%u.", 
+			      router->address,router->or_port);
 			  free((void *)router->address);
 			  free((void *)router);
 			  fclose(rf);
@@ -259,7 +265,7 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp)
 			  log(LOG_DEBUG,"getrouters():Public key size = %u.", RSA_size(router->pkey));
 			  if (RSA_size(router->pkey) != 128) /* keys MUST be 1024 bits in size */
 			  {
-			    log(LOG_ERR,"Key for router %s:%u is not 1024 bits. All keys must be exactly 1024 bits long.",router->address,router->port);
+			    log(LOG_ERR,"Key for router %s:%u is not 1024 bits. All keys must be exactly 1024 bits long.",router->address,router->or_port);
 			    free((void *)router->address);
 			    RSA_free(router->pkey);
 			    free((void *)router);

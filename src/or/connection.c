@@ -61,6 +61,10 @@ void connection_free(connection_t *conn) {
   buf_free(conn->outbuf);
   if(conn->address)
     free(conn->address);
+  if(conn->dest_addr)
+    free(conn->dest_addr);
+  if(conn->dest_port)
+    free(conn->dest_port);
 
  /* FIXME should we do these for all connections, or just ORs, or what */
   if(conn->type == CONN_TYPE_OR ||
@@ -161,18 +165,11 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   return 0;
 }
 
-int retry_all_connections(routerinfo_t **router_array, int rarray_len,
-  RSA *prkey, uint16_t or_port, uint16_t op_port, uint16_t ap_port) {
-
-  /* start all connections that should be up but aren't */
-
-  routerinfo_t *router;
-  int i;
-
+/* private function, to create the 'local' variable used below */
+static int learn_local(struct sockaddr_in *local) {
   /* local host information */
   char localhostname[512];
   struct hostent *localhost;
-  struct sockaddr_in local; /* local address */
 
   /* obtain local host information */
   if(gethostname(localhostname,512) < 0) {
@@ -184,29 +181,67 @@ int retry_all_connections(routerinfo_t **router_array, int rarray_len,
     log(LOG_ERR,"Error obtaining local host info.");
     return -1;
   }
-  memset((void *)&local,0,sizeof(local));
-  local.sin_family = AF_INET;
-  local.sin_addr.s_addr = INADDR_ANY;
-  local.sin_port = htons(or_port);
-  memcpy((void *)&local.sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
+  memset((void *)local,0,sizeof(struct sockaddr_in));
+  local->sin_family = AF_INET;
+  local->sin_addr.s_addr = INADDR_ANY;
+  memcpy((void *)&local->sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
 
-  for (i=0;i<rarray_len;i++) {
-    router = router_array[i];
-    if(!connection_get_by_addr_port(router->addr,router->port)) { /* not in the list */
-      connect_to_router(router, prkey, &local);
+  return 0;
+}
+
+int retry_all_connections(int role, routerinfo_t **router_array, int rarray_len,
+  RSA *prkey, uint16_t or_listenport, uint16_t op_listenport, uint16_t ap_listenport) {
+
+  /* start all connections that should be up but aren't */
+
+  routerinfo_t *router;
+  int i;
+  struct sockaddr_in local; /* local address */
+
+  if(learn_local(&local) < 0)
+    return -1;
+
+  local.sin_port = htons(or_listenport);
+  if(role & ROLE_OR_CONNECT_ALL) {
+    for (i=0;i<rarray_len;i++) {
+      router = router_array[i];
+      if(!connection_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
+        log(LOG_DEBUG,"retry_all_connections(): connecting to OR %s:%u.",router->address,ntohs(router->or_port));
+        connection_or_connect_as_or(router, prkey, &local);
+      }
     }
   }
 
-  if(!connection_get_by_type(CONN_TYPE_OR_LISTENER)) {
-    connection_or_create_listener(prkey, &local);
+  if(role & ROLE_OR_LISTEN) {
+    if(!connection_get_by_type(CONN_TYPE_OR_LISTENER)) {
+      connection_or_create_listener(prkey, &local);
+    }
   }
       
-  local.sin_port = htons(op_port);
-  if(!connection_get_by_type(CONN_TYPE_OP_LISTENER)) {
-    connection_op_create_listener(prkey, &local);
+  if(role & ROLE_OP_LISTEN) {
+    local.sin_port = htons(op_listenport);
+    if(!connection_get_by_type(CONN_TYPE_OP_LISTENER)) {
+      connection_op_create_listener(prkey, &local);
+    }
+  }
+
+  if(role & ROLE_AP_LISTEN) {
+    local.sin_port = htons(ap_listenport);
+    if(!connection_get_by_type(CONN_TYPE_AP_LISTENER)) {
+      connection_ap_create_listener(NULL, &local); /* no need to tell it the private key. */
+    }
   }
  
   return 0;
+}
+
+connection_t *connection_connect_to_router_as_op(routerinfo_t *router, RSA *prkey, uint16_t local_or_port) {
+  struct sockaddr_in local; /* local address */
+
+  if(learn_local(&local) < 0)
+    return NULL;
+  local.sin_port = htons(local_or_port);
+  return connection_or_connect_as_or(router, prkey, &local);
 }
 
 int connection_read_to_buf(connection_t *conn) {
@@ -234,6 +269,7 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
   assert(conn);
 
   if(conn->type == CONN_TYPE_OP ||
+     conn->type == CONN_TYPE_AP ||
      conn->type == CONN_TYPE_EXIT) {
      log(LOG_DEBUG,"connection_send_destroy(): At an edge. Marking connection for close.");
      conn->marked_for_close = 1;
@@ -296,10 +332,64 @@ int connection_process_inbuf(connection_t *conn) {
       return connection_or_process_inbuf(conn);
     case CONN_TYPE_EXIT:
       return connection_exit_process_inbuf(conn);
+    case CONN_TYPE_AP:
+      return connection_ap_process_inbuf(conn);
     default:
       log(LOG_DEBUG,"connection_process_inbuf() got unexpected conn->type.");
       return -1;
   }
+}
+
+int connection_package_raw_inbuf(connection_t *conn) {
+  int amount_to_process;
+  cell_t cell;
+  circuit_t *circ;
+
+  assert(conn);
+  assert(conn->type == CONN_TYPE_EXIT || conn->type == CONN_TYPE_AP);
+
+  amount_to_process = conn->inbuf_datalen;
+
+  if(!amount_to_process)
+    return 0;
+
+  if(amount_to_process > CELL_PAYLOAD_SIZE) {
+    cell.length = CELL_PAYLOAD_SIZE;
+  } else {
+    cell.length = amount_to_process;
+  }
+
+  if(connection_fetch_from_buf(cell.payload, cell.length, conn) < 0)
+    return -1;
+
+  circ = circuit_get_by_conn(conn);
+  if(!circ) {
+    log(LOG_DEBUG,"connection_raw_package_inbuf(): conn has no circuits!");
+    return -1;
+  }
+
+  log(LOG_DEBUG,"connection_raw_package_inbuf(): Packaging %d bytes.",cell.length);
+  if(circ->n_conn == conn) { /* send it backward. we're an exit. */
+    cell.aci = circ->p_aci;
+    cell.command = CELL_DATA;
+    if(circuit_deliver_data_cell(&cell, circ, circ->p_conn, 'e') < 0) {
+      log(LOG_DEBUG,"connection_raw_package_inbuf(): circuit_deliver_data_cell (backward) failed. Closing.");
+      circuit_close(circ);
+      return 0;
+    }
+  } else { /* send it forward. we're an AP */
+    cell.aci = circ->n_aci;
+    cell.command = CELL_DATA;
+    if(circuit_deliver_data_cell(&cell, circ, circ->n_conn, 'e') < 0) {
+      /* yes, we use 'e' here, because the AP connection must *encrypt* its input. */
+      log(LOG_DEBUG,"connection_raw_package_inbuf(): circuit_deliver_data_cell (forward) failed. Closing.");
+      circuit_close(circ);
+      return 0;
+    }
+  }
+  if(amount_to_process > CELL_PAYLOAD_SIZE)
+    return connection_package_raw_inbuf(conn);
+  return 0;
 }
 
 int connection_finished_flushing(connection_t *conn) {
@@ -309,6 +399,8 @@ int connection_finished_flushing(connection_t *conn) {
   log(LOG_DEBUG,"connection_finished_flushing() entered. Socket %u.", conn->s);
 
   switch(conn->type) {
+    case CONN_TYPE_AP:
+      return connection_ap_finished_flushing(conn);
     case CONN_TYPE_OP:
       return connection_op_finished_flushing(conn);
     case CONN_TYPE_OR:

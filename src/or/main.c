@@ -8,20 +8,24 @@ static char *args = "hf:e:n:l:";
 
 int loglevel = LOG_DEBUG;
 
+int global_role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
+/* FIXME defaulting to all roles for now. should make it a config option though */
+
 /* valid config file options */
 config_opt_t options[] =
 {
   {"RouterFile", CONFIG_TYPE_STRING, {0}, 0},
   {"PrivateKeyFile", CONFIG_TYPE_STRING, {0}, 0},
-  {"EntryPort", CONFIG_TYPE_INT, {0}, 0},
-  {"NetworkPort", CONFIG_TYPE_INT, {0}, 0},
+  {"APPort", CONFIG_TYPE_INT, {0}, 0},
+  {"OPPort", CONFIG_TYPE_INT, {0}, 0},
+  {"ORPort", CONFIG_TYPE_INT, {0}, 0},
+  {"CoinWeight", CONFIG_TYPE_DOUBLE, {0}, 0},
   {"MaxConn", CONFIG_TYPE_INT, {0}, 0},
-  {"MaxConnTimeout", CONFIG_TYPE_INT, {0}, 0},
   {"TrafficShaping", CONFIG_TYPE_INT, {0}, 0},
   {0}
 };
 enum opts {
-  RouterFile=0, PrivateKeyFile, EntryPort, NetworkPort, MaxConn, MaxConnTimeout, TrafficShaping
+  RouterFile=0, PrivateKeyFile, APPort, OPPort, ORPort, CoinWeight, MaxConn, TrafficShaping
 };
 
 connection_t *connection_array[MAXCONNECTIONS] =
@@ -138,12 +142,30 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   for(i=0;i<rarray_len;i++)
   {
     router = router_array[i];
-    if ((router->addr == addr) && (router->port == port))
+    if ((router->addr == addr) && (router->or_port == port))
       return router;
   }
 
   return NULL;
 
+}
+
+routerinfo_t *router_get_first_in_route(unsigned int *route, size_t routelen) {
+  return router_array[route[routelen-1]];
+}
+
+/* a wrapper around new_route. put all these in routers.c perhaps? */
+unsigned int *router_new_route(size_t *rlen) {
+  return new_route(options[CoinWeight].r.d, router_array,rarray_len, rlen);
+}
+
+/* a wrapper around create_onion */
+unsigned char *router_create_onion(unsigned int *route, size_t routelen, size_t *lenp, crypt_path_t **cpathp) {
+  return create_onion(router_array,rarray_len,route,routelen,lenp,cpathp);
+}
+
+connection_t *connect_to_router_as_op(routerinfo_t *router) {
+  return connection_connect_to_router_as_op(router, prkey, options[ORPort].r.i);
 }
 
 void connection_watch_events(connection_t *conn, short events) {
@@ -167,6 +189,8 @@ void check_conn_read(int i) {
       retval = connection_op_handle_listener_read(conn);
     } else if (conn->type == CONN_TYPE_OR_LISTENER) {
       retval = connection_or_handle_listener_read(conn);
+    } else if (conn->type == CONN_TYPE_AP_LISTENER) {
+      retval = connection_ap_handle_listener_read(conn);
     } else {
       /* else it's an OP, OR, or exit */
       retval = connection_read_to_buf(conn);
@@ -228,7 +252,10 @@ void check_conn_marked(int i) {
   assert(conn);
   if(conn->marked_for_close) {
     log(LOG_DEBUG,"check_conn_marked(): Cleaning up connection.");
-    connection_flush_buf(conn); /* flush it first */
+    if(conn->s >= 0) { /* might be an incomplete exit connection */
+      /* FIXME there's got to be a better way to check for this -- and make other checks? */
+      connection_flush_buf(conn); /* flush it first */
+    }
     connection_remove(conn);
     connection_free(conn);
     if(i<nfds) { /* we just replaced the one at i with a new one.
@@ -250,7 +277,6 @@ int do_main_loop(void) {
   }
 
   /* load the private key */
-  ERR_load_crypto_strings();
   prkey = load_prkey(options[PrivateKeyFile].r.str);
   if (!prkey)
   {
@@ -258,11 +284,12 @@ int do_main_loop(void) {
     exit(1);
   }
   log(LOG_DEBUG,"core : Loaded private key of size %u bytes.",RSA_size(prkey));
-  ERR_free_strings();
 
-  /* try to connect to all the other ORs, and start the listeners */
-  retry_all_connections(router_array, rarray_len, prkey, 
-		        options[NetworkPort].r.i,options[EntryPort].r.i, 0);
+  /* start-up the necessary connections based on global_role. This is where we
+   * try to connect to all the other ORs, and start the listeners */
+  retry_all_connections(global_role, router_array, rarray_len, prkey, 
+		        options[ORPort].r.i,options[OPPort].r.i,
+			options[APPort].r.i);
 
   for(;;) {
     poll(poll_array, nfds, -1); /* poll until we have an event */
@@ -320,14 +347,24 @@ int main(int argc, char *argv[]) {
     log(LOG_ERR,"PrivateKeyFile option required but not found.");
     exit(1);
   }
-  else if (options[EntryPort].err != 1)
-  { 
-    log(LOG_ERR,"EntryPort option required but not found.");
+  else if (options[CoinWeight].err != 1)
+  {
+    log(LOG_ERR,"Error reading the CoinWeight option.");
     exit(1);
   }
-  else if (options[NetworkPort].err != 1)
+  else if (options[APPort].err != 1)
   { 
-    log(LOG_ERR,"NetworkPort option required but not found.");
+    log(LOG_ERR,"APPort option required but not found.");
+    exit(1);
+  }
+  else if (options[OPPort].err != 1)
+  { 
+    log(LOG_ERR,"OPPort option required but not found.");
+    exit(1);
+  }
+  else if (options[ORPort].err != 1)
+  { 
+    log(LOG_ERR,"ORPort option required but not found.");
     exit(1);
   }
   else if (options[MaxConn].err != 1)
@@ -336,19 +373,6 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 #if 0
-  else if (options[MaxConnTimeout].err != 1)
-  { 
-    conn_tout.tv_sec = OR_DEFAULT_CONN_TIMEOUT;
-  }
-  else
-  { 
-    if (!options[MaxConnTimeout].r.i)
-      conn_toutp = NULL;
-    else
-      conn_tout.tv_sec = options[MaxConnTimeout].r.i;
-  }
-  conn_tout.tv_usec = 0;
-
   if (!options[TrafficShaping].err)
   { 
     options[TrafficShaping].r.i = DEFAULT_POLICY;

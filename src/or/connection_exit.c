@@ -18,51 +18,10 @@ int connection_exit_process_inbuf(connection_t *conn) {
       log(LOG_DEBUG,"connection_exit_process_inbuf(): text from server while in 'connecting' state. Leaving it on buffer.");
       return 0;
     case EXIT_CONN_STATE_OPEN:
-      return connection_exit_package_inbuf(conn);
+      return connection_package_raw_inbuf(conn);
   }
   return 0;
 
-}
-
-int connection_exit_package_inbuf(connection_t *conn) {
-  int amount_to_process;
-  cell_t cell;
-  circuit_t *circ;
-
-  assert(conn && conn->type == CONN_TYPE_EXIT);
-
-  amount_to_process = conn->inbuf_datalen;
-
-  if(!amount_to_process)
-    return 0;
-
-  if(amount_to_process > CELL_PAYLOAD_SIZE) {
-    cell.length = CELL_PAYLOAD_SIZE;
-  } else {
-    cell.length = amount_to_process;
-  }
-
-  if(connection_fetch_from_buf(cell.payload, cell.length, conn) < 0) {
-    return -1;
-  }
-
-  circ = circuit_get_by_conn(conn);
-  if(!circ) {
-    log(LOG_DEBUG,"connection_exit_package_inbuf(): conn has no circuits!");
-    return -1;
-  }
-
-  log(LOG_DEBUG,"connection_exit_package_inbuf(): Packaging %d bytes.",cell.length);
-  cell.aci = circ->p_aci;
-  cell.command = CELL_DATA;
-  if(circuit_deliver_data_cell(&cell, circ, circ->p_conn, 'e') < 0) {
-    log(LOG_DEBUG,"connection_exit_package_inbuf(): circuit_deliver_data_cell (backward) failed. Closing.");
-    circuit_close(circ);
-    return 0;
-  }
-  if(amount_to_process > CELL_PAYLOAD_SIZE)
-    return(connection_exit_package_inbuf(conn));
-  return 0;
 }
 
 int connection_exit_finished_flushing(connection_t *conn) {

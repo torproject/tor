@@ -43,7 +43,7 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
     memcpy((void *)&circ->onionlen,(void *)cell->payload, 4);
     circ->onionlen = ntohl(circ->onionlen);
     log(LOG_DEBUG,"command_process_create_cell():  Onion length is %u.",circ->onionlen);
-    if(circ->onionlen > 50000) { /* too big */
+    if(circ->onionlen > 50000 || circ->onionlen < 1) { /* too big or too small */
       log(LOG_DEBUG,"That's ludicrous. Closing.");
       circuit_close(circ);
       return;
@@ -172,6 +172,10 @@ void command_process_data_cell(cell_t *cell, connection_t *conn) {
     log(LOG_DEBUG,"command_process_data_cell(): circuit in open_wait. Dropping data cell.");
     return;
   }
+  if(circ->state == CIRCUIT_STATE_OR_WAIT) {
+    log(LOG_DEBUG,"command_process_data_cell(): circuit in or_wait. Dropping data cell.");
+    return;
+  }
 
   /* at this point both circ->n_conn and circ->p_conn are guaranteed to be set */
 
@@ -184,10 +188,18 @@ void command_process_data_cell(cell_t *cell, connection_t *conn) {
     }
   } else { /* it's an ingoing cell */
     cell->aci = circ->p_aci; /* switch it */
-    if(circuit_deliver_data_cell(cell, circ, circ->p_conn, 'e') < 0) {
-      log(LOG_DEBUG,"command_process_data_cell(): circuit_deliver_data_cell (backward) failed. Closing.");
-      circuit_close(circ);
-      return;
+    if(circ->p_conn->type == CONN_TYPE_AP) { /* we want to decrypt, not encrypt */
+      if(circuit_deliver_data_cell(cell, circ, circ->p_conn, 'd') < 0) {
+        log(LOG_DEBUG,"command_process_data_cell(): circuit_deliver_data_cell (backward to AP) failed. Closing.");
+        circuit_close(circ);
+        return;
+      }
+    } else {
+      if(circuit_deliver_data_cell(cell, circ, circ->p_conn, 'e') < 0) {
+        log(LOG_DEBUG,"command_process_data_cell(): circuit_deliver_data_cell (backward) failed. Closing.");
+        circuit_close(circ);
+        return;
+      }
     }
   }
 }
