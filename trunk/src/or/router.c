@@ -10,40 +10,61 @@ extern or_options_t options; /* command-line and config-file options */
 
 /************************************************************/
 
-/* private keys */
-static time_t onionkey_set_at=0;
+/*****
+ * Key management: ORs only.
+ *****/
+
+/* Private keys for this OR.  There is also an SSL key managed by tortls.c.
+ */
+static time_t onionkey_set_at=0; /* When was onionkey last changed? */
 static crypto_pk_env_t *onionkey=NULL;
 static crypto_pk_env_t *lastonionkey=NULL;
 static crypto_pk_env_t *identitykey=NULL;
 
+/* Replace the current onion key with 'k'.  Does not affect lastonionkey;
+ * to update onionkey correctly, call rotate_onion_key().
+ */
 void set_onion_key(crypto_pk_env_t *k) {
   onionkey = k;
   onionkey_set_at = time(NULL);
 }
 
+/* Return the current onion key.  Requires that the onion key has been
+ * loaded or generated. */
 crypto_pk_env_t *get_onion_key(void) {
   tor_assert(onionkey);
   return onionkey;
 }
 
+/* Return the onion key that was current before the most recent onion
+ * key rotation.  If no rotation has been performed since this process
+ * started, return NULL.
+ */
 crypto_pk_env_t *get_previous_onion_key(void) {
   return lastonionkey;
 }
 
+/* Return the time when the onion key was last set.  This is either the time
+ * when the process launched, or the time of the most recent key rotation since
+ * the process launched.
+ */
 time_t get_onion_key_set_at(void) {
   return onionkey_set_at;
 }
 
+/* Set the current identity key to k.
+ */
 void set_identity_key(crypto_pk_env_t *k) {
   identitykey = k;
 }
 
+/* Returns the current identity key; requires that the identity key has been
+ * set.
+ */
 crypto_pk_env_t *get_identity_key(void) {
   tor_assert(identitykey);
   return identitykey;
 }
-
-/************************************************************/
 
 /* Replace the previous onion key with the current onion key, and generate
  * a new previous onion key.  Immediately after calling this function,
@@ -134,6 +155,9 @@ crypto_pk_env_t *init_key_from_file(const char *fname)
   return NULL;
 }
 
+/* Initialize all OR private keys, and the TLS context, as necessary.
+ * On OPs, this only initializes the tls context.
+ */
 int init_keys(void) {
   char keydir[512];
   char fingerprint[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3];
@@ -150,6 +174,7 @@ int init_keys(void) {
     }
     return 0;
   }
+  /* Make sure DataDirectory exists, and is private. */
   tor_assert(options.DataDirectory);
   if (strlen(options.DataDirectory) > (512-128)) {
     log_fn(LOG_ERR, "DataDirectory is too long.");
@@ -158,6 +183,7 @@ int init_keys(void) {
   if (check_private_dir(options.DataDirectory, 1)) {
     return -1;
   }
+  /* Check the key directory. */
   sprintf(keydir,"%s/keys",options.DataDirectory);
   if (check_private_dir(keydir, 1)) {
     return -1;
@@ -178,8 +204,6 @@ int init_keys(void) {
   set_onion_key(prkey);
 
   /* 3. Initialize link key and TLS context. */
-  /* XXXX use actual rotation interval as cert lifetime, once we do
-   *  connection rotation. */
   if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
                           MAX_SSL_KEY_LIFETIME) < 0) {
     log_fn(LOG_ERR, "Error initializing TLS context");
@@ -247,11 +271,12 @@ int init_keys(void) {
   return 0;
 }
 
-/************************************************************/
+/*****
+ * Clique maintenance
+ *****/
 
-static routerinfo_t *desc_routerinfo = NULL; /* my descriptor */
-static char descriptor[8192]; /* string representation of my descriptor */
-
+/* OR only: try to open connections to all of the otehr ORs we know about.
+ */
 void router_retry_connections(void) {
   int i;
   routerinfo_t *router;
@@ -270,6 +295,18 @@ void router_retry_connections(void) {
   }
 }
 
+/*****
+ * OR descriptor generation.
+ *****/
+
+/* my routerinfo. */
+static routerinfo_t *desc_routerinfo = NULL;
+/* string representation of my descriptor, signed by me. */
+static char descriptor[8192];
+
+/* OR only: try to upload our signed descriptor to all the directory servers
+ * we know about.
+ */
 void router_upload_dir_desc_to_dirservers(void) {
   const char *s;
 
@@ -281,6 +318,13 @@ void router_upload_dir_desc_to_dirservers(void) {
   router_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, s, strlen(s));
 }
 
+/* Start a connection to every known directory server, using
+ * connection purpose 'purpose' and uploading the payload 'payload'
+ * (length 'payload_len').  The purpose should be one of
+ * 'DIR_PURPOSE_UPLOAD_DIR' or 'DIR_PURPOSE_UPLOAD_RENDDESC'.
+ */
+/* XXXX This is misnamed; it shouldn't be a router-only function; it should
+ * XXXX be in directory, since rendservice uses it too. */
 void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload_len) {
   int i;
   routerinfo_t *router;
@@ -297,7 +341,9 @@ void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload
   }
 }
 
-static void router_add_exit_policy_from_config_helper(char *s, routerinfo_t *router) {
+/* Append the comma-separated sequence of exit policies in 's' to the
+ * exit policy in 'router'. */
+static void router_add_exit_policy_from_config_helper(const char *s, routerinfo_t *router) {
   char *e;
   int last=0;
   char line[1024];
@@ -330,19 +376,24 @@ static void router_add_exit_policy_from_config_helper(char *s, routerinfo_t *rou
   }
 }
 
-#define DefaultExitPolicy "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,accept *:20-22,accept *:53,accept *:79-80,accept *:110,accept *:143,accept *:443,accept *:873,accept *:993,accept *:995,accept *:1024-65535,reject *:*"
+#define DEFAULT_EXIT_POLICY "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,accept *:20-22,accept *:53,accept *:79-80,accept *:110,accept *:143,accept *:443,accept *:873,accept *:993,accept *:995,accept *:1024-65535,reject *:*"
 
+/* Set the exit policy on 'router' to match the exit policy in the current
+ * configuration file.  If the exit policy doesn't have a catch-all rule,
+ * then append the default exit policy as well.
+ */
 static void router_add_exit_policy_from_config(routerinfo_t *router) {
   router_add_exit_policy_from_config_helper(options.ExitPolicy, router);
+  /* XXXX This is wrong; you can spell *;* many ways. */
   if(strstr(options.ExitPolicy," *:*") == NULL) {
     /* if exitpolicy includes a *:* line, then we're done. Else, append
      * the default exitpolicy. */
-    router_add_exit_policy_from_config_helper(DefaultExitPolicy, router);
+    router_add_exit_policy_from_config_helper(DEFAULT_EXIT_POLICY, router);
   }
 }
 
-/* Return false if my exit policy says to allow connection to conn.
- * Else return true.
+/* OR only: Return false if my exit policy says to allow connection to
+ * conn.  Else return true.
  */
 int router_compare_to_my_exit_policy(connection_t *conn)
 {
@@ -355,12 +406,17 @@ int router_compare_to_my_exit_policy(connection_t *conn)
 
 }
 
+/* Return true iff 'router' has the same nickname as this OR.  (For an OP,
+ * always returns false.)
+ */
 int router_is_me(routerinfo_t *router)
 {
   tor_assert(router);
   return options.Nickname && !strcasecmp(router->nickname, options.Nickname);
 }
 
+/* Return a routerinfo for this OR, rebuilding a fresh one if
+ * necessary.  Return NULL on error, or if called on an OP. */
 routerinfo_t *router_get_my_routerinfo(void)
 {
   if (!options.ORPort)
@@ -373,6 +429,9 @@ routerinfo_t *router_get_my_routerinfo(void)
   return desc_routerinfo;
 }
 
+/* OR only: Return a signed server descriptor for this OR, rebuilding a fresh
+ * one if necessary.  Return NULL on error.
+ */
 const char *router_get_my_descriptor(void) {
   if (!desc_routerinfo) {
     if (router_rebuild_descriptor())
@@ -382,6 +441,9 @@ const char *router_get_my_descriptor(void) {
   return descriptor;
 }
 
+/* Rebuild a fresh routerinfo and signed server descriptor for this
+ * OR.  Return 0 on success, -1 on error.
+ */
 int router_rebuild_descriptor(void) {
   routerinfo_t *ri;
   struct in_addr addr;
@@ -417,6 +479,10 @@ int router_rebuild_descriptor(void) {
   return 0;
 }
 
+/* Set 'platform' (max length 'len') to a NUL-terminated short string
+ * describing the version of Tor and the operating system we're
+ * currently running on.
+ */
 void get_platform_str(char *platform, int len)
 {
   snprintf(platform, len-1, "Tor %s on %s", VERSION, get_uname());
@@ -429,14 +495,20 @@ void get_platform_str(char *platform, int len)
  *     near the end of maxlen?
  */
 #define DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
+
+/* OR only: Given a routerinfo for this router, and an identity key to
+ * sign with, encode the routerinfo as a signed server descriptor and
+ * write the result into 's', using at most 'maxlen' bytes.  Return -1
+ * on failure, and the number of bytes used on success.
+ */
 int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key) {
-  char *onion_pkey;
-  char *identity_pkey;
-  struct in_addr in;
+  char *onion_pkey; /* Onion key, PEM-encoded. */
+  char *identity_pkey; /* Identity key, PEM-encoded. */
   char digest[20];
   char signature[128];
   char published[32];
+  struct in_addr in;
   int onion_pkeylen, identity_pkeylen;
   int written;
   int result=0;
@@ -447,25 +519,31 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   routerinfo_t *ri_tmp;
 #endif
 
+  /* Make sure the identity key matches the one in the routerinfo. */
   if (crypto_pk_cmp_keys(ident_key, router->identity_pkey)) {
     log_fn(LOG_WARN,"Tried to sign a router with a private key that didn't match router's public key!");
     return -1;
   }
 
+  /* PEM-encode the onion key */
   if(crypto_pk_write_public_key_to_string(router->onion_pkey,
                                           &onion_pkey,&onion_pkeylen)<0) {
     log_fn(LOG_WARN,"write onion_pkey to string failed!");
     return -1;
   }
 
+  /* PEM-encode the identity key key */
   if(crypto_pk_write_public_key_to_string(router->identity_pkey,
                                           &identity_pkey,&identity_pkeylen)<0) {
     log_fn(LOG_WARN,"write identity_pkey to string failed!");
+    tor_free(onion_pkey);
     return -1;
   }
 
+  /* Encode the publication time. */
   strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&router->published_on));
 
+  /* Generate the easy portion of the router descriptor. */
   result = snprintf(s, maxlen,
                     "router %s %s %d %d %d\n"
                     "platform %s\n"
@@ -484,17 +562,20 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     (int) router->bandwidthburst,
     onion_pkey, identity_pkey);
 
-  free(onion_pkey);
-  free(identity_pkey);
+  tor_free(onion_pkey);
+  tor_free(identity_pkey);
 
   if(result < 0 || result >= maxlen) {
     /* apparently different glibcs do different things on snprintf error.. so check both */
     return -1;
   }
+  /* From now on, we use 'written' to remember the current length of 's'. */
   written = result;
 
+  /* Write the exit policy to the end of 's'. */
   for(tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
     in.s_addr = htonl(tmpe->addr);
+    /* Write: "accept 1.2.3.4" */
     result = snprintf(s+written, maxlen-written, "%s %s",
         tmpe->policy_type == EXIT_POLICY_ACCEPT ? "accept" : "reject",
         tmpe->msk == 0 ? "*" : inet_ntoa(in));
@@ -504,6 +585,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     }
     written += result;
     if (tmpe->msk != 0xFFFFFFFFu && tmpe->msk != 0) {
+      /* Write "/255.255.0.0" */
       in.s_addr = htonl(tmpe->msk);
       result = snprintf(s+written, maxlen-written, "/%s", inet_ntoa(in));
       if (result<0 || result+written > maxlen)
@@ -511,16 +593,19 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
       written += result;
     }
     if (tmpe->prt_min == 0 && tmpe->prt_max == 65535) {
+      /* There is no port set; write ":*" */
       if (written > maxlen-4)
         return -1;
       strcat(s+written, ":*\n");
       written += 3;
     } else if (tmpe->prt_min == tmpe->prt_max) {
+      /* There is only one port; write ":80". */
       result = snprintf(s+written, maxlen-written, ":%d\n", tmpe->prt_min);
       if (result<0 || result+written > maxlen)
         return -1;
       written += result;
     } else {
+      /* There is a range of ports; write ":79-80". */
       result = snprintf(s+written, maxlen-written, ":%d-%d\n", tmpe->prt_min,
                         tmpe->prt_max);
       if (result<0 || result+written > maxlen)
@@ -531,6 +616,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   if (written > maxlen-256) /* Not enough room for signature. */
     return -1;
 
+  /* Sign the directory */
   strcat(s+written, "router-signature\n");
   written += strlen(s+written);
   s[written] = '\0';
