@@ -405,7 +405,7 @@ test_crypto()
   memcpy(data2+1, "XYZZY", 5);  /* This has fails ~ once-in-2^40 */
   test_eq(-1, crypto_pk_private_decrypt(pk1, data2, 128, data3,
                                         RSA_PKCS1_OAEP_PADDING));
-
+  
   /* File operations: save and load private key */
   f = fopen("/tmp/tor_test/pkey1", "wb");
   test_assert(! crypto_pk_write_private_key_to_file(pk1, f));
@@ -419,10 +419,27 @@ test_crypto()
                                                "/tmp/tor_test/pkey1"));
   test_eq(15, crypto_pk_private_decrypt(pk2, data1, 128, data3,
                                         RSA_PKCS1_OAEP_PADDING));
-    
 
+  /* Now try signing. */
+  strcpy(data1, "Ossifrage");
+  test_eq(128, crypto_pk_private_sign(pk1, data1, 10, data2));
+  test_eq(10, crypto_pk_public_checksig(pk1, data2, 128, data3));
+  test_streq(data3, "Ossifrage");
+  /*XXXX test failed signing*/
+    
   crypto_free_pk_env(pk1);  
   crypto_free_pk_env(pk2);  
+
+  /* Base64 tests */
+  strcpy(data1, "Test string that contains 35 chars.");
+  strcat(data1, " 2nd string that contains 35 chars.");
+
+  i = base64_encode(data2, 1024, data1, 71);
+  j = base64_decode(data3, 1024, data2, i);
+  test_streq(data3, data1);
+  test_eq(j, 71);
+  test_assert(data2[i] == '\0');
+
 
   free(data1);
   free(data2);
@@ -512,9 +529,8 @@ test_dir_format()
   routerinfo_t r1, r2;
   crypto_pk_env_t *pk1 = NULL, *pk2 = NULL;
   routerinfo_t *rp1, *rp2;
-  struct exit_policy_t ex1, ex2, ex3;
-
-  int i;
+  struct exit_policy_t ex1, ex2;
+  directory_t *dir1 = NULL, *dir2 = NULL;
 
   test_assert( (pk1 = crypto_new_pk_env(CRYPTO_PK_RSA)) );
   test_assert( (pk2 = crypto_new_pk_env(CRYPTO_PK_RSA)) );
@@ -609,8 +625,15 @@ test_dir_format()
   test_assert(rp2->exit_policy->next->next == NULL);
 
   /* Okay, now for the directories. */
+  dir1 = (directory_t*) malloc(sizeof(directory_t));
+  dir1->n_routers = 2;
+  dir1->routers = (routerinfo_t**) malloc(sizeof(routerinfo_t*)*2);
+  dir1->routers[0] = &r1;
+  dir1->routers[1] = &r2;
+  test_assert(! dump_signed_directory_to_string_impl(buf, 2048, dir1, pk1));
+  /* puts(buf); */
   
-
+  test_assert(! router_get_dir_from_string_impl(buf, &dir2, pk1));
 
   if (pk1_str) free(pk1_str);
   if (pk2_str) free(pk2_str);
@@ -618,6 +641,8 @@ test_dir_format()
   if (pk2) crypto_free_pk_env(pk2);
   if (rp1) routerlist_free(rp1);
   if (rp2) routerlist_free(rp2);
+  if (dir1) free(dir1); /* And more !*/
+  if (dir1) free(dir2); /* And more !*/
 }
 
 int 

@@ -739,6 +739,8 @@ int do_main_loop(void);
 void dumpstats(void);
 void dump_directory_to_string(char *s, int maxlen);
 void dump_directory_to_string_impl(char *s, int maxlen, directory_t *directory);
+int dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir, crypto_pk_env_t *private_key);
+                                         
 
 int main(int argc, char *argv[]);
 
@@ -790,10 +792,13 @@ void router_get_directory(directory_t **pdirectory);
 int router_is_me(uint32_t addr, uint16_t port);
 void router_forget_router(uint32_t addr, uint16_t port);
 int router_get_list_from_file(char *routerfile);
+int router_resolve(routerinfo_t *router);
 int router_get_list_from_string(char *s);
 int router_get_list_from_string_impl(char *s, directory_t **dest);
+int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey);
+int router_get_dir_from_string_impl(char *s, directory_t **dest,
+                                    crypto_pk_env_t *pkey);
 routerinfo_t *router_get_entry_from_string(char **s);
-
 int router_compare_to_exit_policy(connection_t *conn);
 void routerlist_free(routerinfo_t *list);
 

@@ -678,16 +678,17 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
 
   dump_directory_to_string_impl(s+i, maxlen-i, dir);
   i = strlen(s);
+  strncat(s, "directory-signature\n", maxlen-i);
+  i = strlen(s);
   cp = s + i;
   
   if (crypto_SHA_digest(s, i, digest))
     return -1;
-  if (crypto_pk_private_sign(private_key, digest, 20, signature))
+  if (crypto_pk_private_sign(private_key, digest, 20, signature) < 0)
     return -1;
   
-
   strncpy(cp, 
-          "directory-signature\n-----BEGIN SIGNATURE-----\n", maxlen-i);
+          "-----BEGIN SIGNATURE-----\n", maxlen-i);
           
   i = strlen(s);
   cp = s+i;

@@ -22,7 +22,7 @@ ARMA    - arma claims
 NICK            . Handle half-open connections
                         - Figure out what causes connections to close, standardize
                           when we mark a connection vs when we tear it down
-NICK            - Look at what ssl does to keep from mutating data streams
+                o Look at what ssl does to keep from mutating data streams
 NICK    . On the fly compression of each stream
         o Clean up the event loop (optimize and sanitize)
 ARMA    o Remove that awful concept of 'roles'
@@ -55,8 +55,13 @@ SPEC!!  D Non-clique topologies
         . Directory servers
                 D Automated reputation management
 NICK            . Include key in source; sign directories
+		        o Signed directory backend
+			- Document
+ARMA			- Integrate
                 - Add versions to code
 NICK            . Have directories list recommended-versions
+		        o Include (unused) line in directories
+			o Check for presence of line.
                         - Quit if running the wrong version
                         - Command-line option to override quit
                 . Add more information to directory server entries
