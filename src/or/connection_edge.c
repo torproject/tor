@@ -7,7 +7,8 @@
 extern or_options_t options; /* command-line and config-file options */
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
-static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
+static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ,
+                                              char *destaddr, uint16_t destport);
 static int connection_ap_handshake_socks_reply(connection_t *conn, char result);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
@@ -16,16 +17,6 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 #define SOCKS4_REQUEST_REJECT           91
 #define SOCKS4_REQUEST_IDENT_FAILED     92
 #define SOCKS4_REQUEST_IDENT_CONFLICT   93
-
-/* structure of a socks client operation */
-typedef struct {
-   unsigned char version;     /* socks version number */
-   unsigned char command;     /* command code */
-   unsigned char destport[2]; /* destination port, network order */
-   unsigned char destip[4];   /* destination address */
-   /* userid follows, terminated by a NULL */
-   /* dest host follows, terminated by a NULL */
-} socks4_t;
 
 int connection_edge_process_inbuf(connection_t *conn) {
 
@@ -441,86 +432,24 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
 }
 
 static int connection_ap_handshake_process_socks(connection_t *conn) {
-  socks4_t socks4_info; 
   circuit_t *circ;
-  char tmpbuf[512];
-  int amt;
+  char destaddr[200];
+  uint16_t destport;
 
   assert(conn);
 
   log_fn(LOG_DEBUG,"entered.");
 
-  if(!conn->socks_version) { /* try to pull it in */
-
-    if(conn->inbuf_datalen < sizeof(socks4_t)) /* basic info available? */
-      return 0; /* not yet */
-
-    connection_fetch_from_buf((char *)&socks4_info,sizeof(socks4_t),conn);
-
-    log_fn(LOG_DEBUG,"Successfully read socks info.");
-
-    if(socks4_info.version != 4) {
-      log_fn(LOG_NOTICE,"Unrecognized version %d.",socks4_info.version);
+  switch(fetch_from_buf_socks(conn->inbuf,&conn->inbuf_datalen,
+                              destaddr, sizeof(destaddr), &destport)) {
+    case -1:
+      log_fn(LOG_DEBUG,"Fetching socks handshake failed. Closing.");
       connection_ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
       return -1;
-    }
-    conn->socks_version = socks4_info.version;
-
-    if(socks4_info.command != 1) { /* not a connect? we don't support it. */
-      log_fn(LOG_NOTICE,"command %d not '1'.",socks4_info.command);
-      connection_ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
-      return -1;
-    }
-
-    conn->dest_port = ntohs(*(uint16_t*)&socks4_info.destport);
-    if(!conn->dest_port) {
-      log_fn(LOG_NOTICE,"Port is zero.");
-      connection_ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
-      return -1;
-    }
-    log_fn(LOG_NOTICE,"Dest port is %d.",conn->dest_port);
-
-    if(socks4_info.destip[0] || 
-       socks4_info.destip[1] ||
-       socks4_info.destip[2] ||
-       !socks4_info.destip[3]) { /* not 0.0.0.x */
-      log_fn(LOG_NOTICE,"destip not in form 0.0.0.x.");
-      sprintf(tmpbuf, "%d.%d.%d.%d", socks4_info.destip[0],
-        socks4_info.destip[1], socks4_info.destip[2], socks4_info.destip[3]);
-      conn->dest_addr = strdup(tmpbuf);
-      log_fn(LOG_DEBUG,"Successfully read destip (%s)", conn->dest_addr);
-    }
-
-  }
-
-  if(!conn->read_username) { /* the socks spec says we've got to read stuff until we get a null */
-    amt = connection_find_on_inbuf("\0", 1, conn);
-    if(amt < 0) /* not there yet */
+    case 0:
+      log_fn(LOG_DEBUG,"Fetching socks handshake, not all here yet. Ignoring.");
       return 0;
-    if(amt > 500) {
-      log_fn(LOG_NOTICE,"username too long.");    
-      connection_ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
-      return -1;
-    }
-    connection_fetch_from_buf(tmpbuf,amt,conn);
-    conn->read_username = 1;
-    log_fn(LOG_DEBUG,"Successfully read username.");
-  }
-
-  if(!conn->dest_addr) { /* no dest_addr found yet */
-    amt = connection_find_on_inbuf("\0", 1, conn);
-    if(amt < 0) /* not there yet */
-      return 0;
-    if(amt > 500) {
-      log_fn(LOG_NOTICE,"dest_addr too long.");    
-      connection_ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
-      return -1;
-    }
-    connection_fetch_from_buf(tmpbuf,amt,conn);
-
-    conn->dest_addr = strdup(tmpbuf);
-    log_fn(LOG_NOTICE,"successfully read dest addr '%s'",
-      conn->dest_addr);
+    /* case 1, fall through */
   }
 
   /* find the circuit that we should use, if there is one. */
@@ -542,7 +471,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
   conn->cpath_layer = circ->cpath->prev;
 
-  if(connection_ap_handshake_send_begin(conn, circ) < 0) {
+  if(connection_ap_handshake_send_begin(conn, circ, destaddr, destport) < 0) {
     circuit_close(circ);
     return -1;
   }
@@ -550,11 +479,12 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   return 0;
 }
 
-static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ) {
+/* deliver the destaddr:destport in a relay cell */
+static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ,
+                                              char *destaddr, uint16_t destport) {
   cell_t cell;
-
   memset(&cell, 0, sizeof(cell_t));
-  /* deliver the dest_addr in a relay cell */
+
   cell.command = CELL_RELAY;
   cell.aci = circ->n_aci;
   SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_BEGIN);
@@ -566,7 +496,7 @@ static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *
   memcpy(cell.payload+RELAY_HEADER_SIZE, ap_conn->stream_id, STREAM_ID_SIZE);
   cell.length = 
     snprintf(cell.payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE, CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE-STREAM_ID_SIZE,
-             "%s:%d", ap_conn->dest_addr, ap_conn->dest_port) + 
+             "%s:%d", destaddr, destport) + 
     1 + STREAM_ID_SIZE + RELAY_HEADER_SIZE;
   log_fn(LOG_DEBUG,"Sending relay cell (id %d) to begin stream %d.", *(int *)(cell.payload+1),*(int *)ap_conn->stream_id);
   if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, ap_conn->cpath_layer) < 0) {

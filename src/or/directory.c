@@ -141,7 +141,8 @@ int connection_dir_process_inbuf(connection_t *conn) {
     switch(conn->state) {
       case DIR_CONN_STATE_CLIENT_READING_GET:
         /* kill it, but first process the_directory and learn about new routers. */
-        switch(connection_fetch_from_buf_http(conn, NULL, 0, the_directory, MAX_DIR_SIZE)) {
+        switch(fetch_from_buf_http(conn->inbuf,&conn->inbuf_datalen,
+                                   NULL, 0, the_directory, MAX_DIR_SIZE)) {
           case -1: /* overflow */
             log_fn(LOG_DEBUG,"'get' response too large. Failing.");
             return -1;
@@ -191,7 +192,8 @@ static int directory_handle_command(connection_t *conn) {
 
   assert(conn && conn->type == CONN_TYPE_DIR);
 
-  switch(connection_fetch_from_buf_http(conn, headers, sizeof(headers), body, sizeof(body))) {
+  switch(fetch_from_buf_http(conn->inbuf,&conn->inbuf_datalen,
+                             headers, sizeof(headers), body, sizeof(body))) {
     case -1: /* overflow */
       log_fn(LOG_DEBUG,"input too large. Failing.");
       return -1;

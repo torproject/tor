@@ -215,6 +215,16 @@
 /* legal characters in a filename */
 #define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
 
+/* structure of a socks client operation */
+typedef struct {
+   unsigned char version;     /* socks version number */
+   unsigned char command;     /* command code */
+   unsigned char destport[2]; /* destination port, network order */
+   unsigned char destip[4];   /* destination address */
+   /* userid follows, terminated by a NULL */
+   /* dest host follows, terminated by a NULL */
+} socks4_t;
+
 typedef uint16_t aci_t;
 
 /* cell definition */
@@ -293,12 +303,6 @@ struct connection_t {
 
   int done_sending; /* for half-open connections; not used currently */
   int done_receiving;
-
-/* Used only by AP connections: */
-  char socks_version; /* what socks version are they speaking at me? */
-  char read_username; /* have i read the username yet? */
-  char *dest_addr; /* what address and port are this stream's destination? */
-  uint16_t dest_port; /* host order */
 };
 
 typedef struct connection_t connection_t;
@@ -443,6 +447,9 @@ int fetch_from_buf(char *string, int string_len, char **buf, int *buflen, int *b
 int fetch_from_buf_http(char *buf, int *buf_datalen,
                         char *headers_out, int max_headerlen,
                         char *body_out, int max_bodylen);
+int fetch_from_buf_socks(char *buf, int *buf_datalen,
+                         char *addr_out, int max_addrlen,
+                         uint16_t *port_out);
 int find_on_inbuf(char *string, int string_len, char *buf, int buf_datalen);
 
 /********************************* circuit.c ***************************/
@@ -510,9 +517,6 @@ int connection_handle_read(connection_t *conn);
 int connection_read_to_buf(connection_t *conn);
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn);
-int connection_fetch_from_buf_http(connection_t *conn,
-                                   char *headers_out, int max_headerlen,
-                                   char *body_out, int max_bodylen);
 int connection_find_on_inbuf(char *string, int len, connection_t *conn);
 
 int connection_wants_to_flush(connection_t *conn);

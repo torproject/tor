@@ -301,9 +301,11 @@ static void check_conn_marked(int i) {
   assert(conn);
   if(conn->marked_for_close) {
     log_fn(LOG_DEBUG,"Cleaning up connection.");
-    if(conn->s >= 0) { /* might be an incomplete exit connection */
+    if(conn->s >= 0) { /* might be an incomplete edge connection */
       /* FIXME there's got to be a better way to check for this -- and make other checks? */
-      connection_flush_buf(conn); /* flush it first */
+      connection_handle_write(conn); /* flush it first */
+      if(connection_wants_to_flush(conn)) /* not done flushing */
+        log_fn(LOG_WARNING,"Conn (socket %d) still wants to flush. Losing %d bytes!",conn->s, conn->inbuf_datalen);
     }
     connection_remove(conn);
     connection_free(conn);

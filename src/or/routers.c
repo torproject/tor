@@ -42,39 +42,35 @@ router_resolve_directory(directory_t *dir);
 int learn_my_address(struct sockaddr_in *me) {
   /* local host information */
   char localhostname[512];
-  static struct hostent *localhost;
+  struct hostent *localhost;
+  static struct sockaddr_in answer;
   static int already_learned=0;
 
-  if(already_learned) {
-    memset(me,0,sizeof(struct sockaddr_in));
-    me->sin_family = AF_INET;
-    memcpy((void *)&me->sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
-    me->sin_port = htons((uint16_t) options.ORPort);
-    return 0;
+  if(!already_learned) {
+    /* obtain local host information */
+    if(gethostname(localhostname,512) < 0) {
+      log_fn(LOG_ERR,"Error obtaining local hostname");
+      return -1;
+    }
+    log_fn(LOG_DEBUG,"localhostname is '%s'.",localhostname);
+    localhost = gethostbyname(localhostname);
+    if (!localhost) {
+      log_fn(LOG_ERR,"Error obtaining local host info.");
+      return -1;
+    }
+    memset(&answer,0,sizeof(struct sockaddr_in));
+    answer.sin_family = AF_INET;
+    memcpy((void *)&answer.sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
+    answer.sin_port = htons((uint16_t) options.ORPort);
+    log_fn(LOG_DEBUG,"chose address as '%s'.",inet_ntoa(answer.sin_addr));
+    if (!strncmp("127.",inet_ntoa(answer.sin_addr), 4) &&
+        strcasecmp(localhostname, "localhost")) {
+      /* We're a loopback IP but we're not called localhost.  Uh oh! */
+      log_fn(LOG_WARNING, "Got a loopback address: /etc/hosts may be wrong");
+    }
+    already_learned = 1;
   }
-
-  /* obtain local host information */
-  if(gethostname(localhostname,512) < 0) {
-    log_fn(LOG_ERR,"Error obtaining local hostname");
-    return -1;
-  }
-  log_fn(LOG_DEBUG,"localhostname is '%s'.",localhostname);
-  localhost = gethostbyname(localhostname);
-  if (!localhost) {
-    log_fn(LOG_ERR,"Error obtaining local host info.");
-    return -1;
-  }
-  memset(me,0,sizeof(struct sockaddr_in));
-  me->sin_family = AF_INET;
-  memcpy((void *)&me->sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
-  me->sin_port = htons((uint16_t) options.ORPort);
-  log_fn(LOG_DEBUG,"chose address as '%s'.",inet_ntoa(me->sin_addr));
-  if (!strncmp("127.",inet_ntoa(me->sin_addr), 4) &&
-      strcasecmp(localhostname, "localhost")) {
-    /* We're a loopback IP but we're not called localhost.  Uh oh! */
-    log_fn(LOG_WARNING, "Got a loopback address: /etc/hosts may be wrong");
-  }
-  already_learned=1;
+  memcpy(me,&answer,sizeof(struct sockaddr_in));
   return 0;
 }
 
