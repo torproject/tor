@@ -38,13 +38,17 @@ static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
 static INLINE int buf_ensure_capacity(buf_t *buf, size_t capacity)
 {
   size_t new_len;
-  if (buf->len >= capacity) 
+  if (buf->len >= capacity)  /* Don't grow if we're already big enough. */
     return 0;
-  if (capacity > MAX_BUF_SIZE)
+  if (capacity > MAX_BUF_SIZE) /* Don't grow past the maximum. */
     return -1;
+  /* Find the smallest new_len equal to (2**X)*len for some X; such that
+   * new_len is at least capacity.
+   */
   new_len = buf->len*2;
   while (new_len < capacity)
     new_len *= 2;
+  /* Resize the buffer. */
   log_fn(LOG_DEBUG,"Growing buffer from %d to %d bytes.",
          (int)buf->len, (int)new_len);
   buf_resize(buf,new_len);
@@ -58,8 +62,14 @@ static INLINE int buf_ensure_capacity(buf_t *buf, size_t capacity)
  */
 static INLINE void buf_shrink_if_underfull(buf_t *buf) {
   size_t new_len;
-  if (buf->datalen >= buf->len/4 || buf->len >= 2*MIN_BUF_SHRINK_SIZE)
+  /* If the buffer is at least .25 full, or if shrinking the buffer would
+   * put it onder MIN_BUF_SHRINK_SIZE, don't do it. */
+  if (buf->datalen >= buf->len/4 || buf->len < 2*MIN_BUF_SHRINK_SIZE)
     return;
+  /* Shrink new_len by powers of 2 until: datalen is at least 1/4 of
+   * new_len, OR shrinking new_len more would put it under
+   * MIN_BUF_SHRINK_SIZE.
+   */
   new_len = buf->len / 2;
   while (buf->datalen < new_len/4 && new_len/2 > MIN_BUF_SHRINK_SIZE) 
     new_len /= 2;
