@@ -6,7 +6,7 @@
 # This should be incremented whenever the spec file changes, but
 # can drop back to zero at a new Tor version
 
-%define  specver 0
+%define  specver 1
 
 ## Things users may want to change
 #
@@ -27,7 +27,7 @@
 # versions... while making as few confusing changes to the standard
 # release naming as possible.
 # XXXX009 Execept that handling cvs breaks this.
-%define version %(echo %{native_version} | sed 's/-cvs/.cvs/' -e 's/pre/.pre./' -e 's/rc/.rc./' -e 's/([0-9])$/\1.release/')
+%define version %(echo %{native_version} | sed -e 's/-cvs/.cvs/' -e 's/pre/.pre./' -e 's/rc/.rc./' -e 's/([0-9])$/\1.release/')
 
 ## Release and OS identification song and dance
 #
@@ -46,10 +46,10 @@
 
 %if %{is_fc}
 %define ostag %(sed -e 's/^.*release /fc/' -e 's/ .*$//' -e 's/\\./_/g' < /etc/fedora-release)
-%endif
-
+%else
 %if %{is_rh}
 %define ostag %(sed -e 's/^.*release /rh/' -e 's/ .*$//' -e 's/\\./_/g' < /etc/redhat-release)
+%endif
 %endif
 
 # These are probably wrong... just placeholders should we actually
