@@ -277,7 +277,7 @@ adversaries and our dispersal goals.
 
 \subsubsection{Distributed trust}
 In practice Tor's threat model is based entirely on the goal of
-dispersal and diversity. 
+dispersal and diversity.
 Tor's defense lies in having a diverse enough set of servers
 to prevent most real-world
 adversaries from being in the right places to attack users.
@@ -369,24 +369,10 @@ Tor project's \emph{image} with respect to its users and the rest of
 the Internet impacts the security it can provide.
 % No image, no sustainability -NM
 
-% Fold this into next subsec.
-As an example to motivate this section, some U.S.~Department of Energy
-penetration testing engineers are tasked with compromising DoE computers
-from the outside. They only have a limited number of ISPs from which to
-launch their attacks, and they found that the defenders were recognizing
-attacks because they came from the same IP space. These engineers wanted
-to use Tor to hide their tracks. First, from a technical standpoint,
-Tor does not support the variety of IP packets one would like to use in
-such attacks (see Section~\ref{subsec:tcp-vs-ip}). But aside from this,
-we also decided that it would probably be poor precedent to encourage
-such use---even legal use that improves national security---and managed
-to dissuade them.
-
 With this image issue in mind, this section discusses the Tor user base and
 Tor's interaction with other services on the Internet.
 
-\subsection{Image and security}
-% Communicating security? - NM
+\subsection{Communicating security}
 
 A growing field of papers argue that usability for anonymity systems
 contributes directly to their security, because how usable the system
@@ -452,9 +438,7 @@ On the other hand, while the number of active concurrent users may not
 matter as much as we'd like, it still helps to have some other users
 who use the network. We investigate this issue in the next section.
 
-\subsection{Reputability}
-% Maintaining image of social value?  Social value?  -NM
-
+\subsection{Reputability and perceived social value}
 Another factor impacting the network's security is its reputability:
 the perception of its social value based on its current user base. If Alice is
 the only user who has ever downloaded the software, it might be socially
@@ -464,16 +448,19 @@ NRA member if you prefer a contrasting example). Add a thousand
 random citizens (cancer survivors, privacy enthusiasts, and so on)
 and now she's harder to profile.
 
-The more cancer survivors on Tor, the better for the human rights
-activists. The more script kiddies, the worse for the normal users. Thus,
+Furthermore, the network's reputability effects its server base: more people
+are willing to run a service if they believe it will be used by human rights
+workers than if they believe it will be used exclusively for disreputable
+ends.  This effect becomes stronger if server operators themselves think they
+will be associated with these disreputable ends.
+
+So the more cancer survivors on Tor, the better for the human rights
+activists. The more malicious hackers, the worse for the normal users. Thus,
 reputability is an anonymity issue for two reasons. First, it impacts
 the sustainability of the network: a network that's always about to be
-shut down has difficulty attracting and keeping users, so its anonymity
-set suffers.
-% XXX but we said the anonymity set doesn't matter!
-Second, a disreputable network attracts the attention of
-powerful attackers who may not mind revealing the identities of all the
-users to uncover a few bad ones.
+shut down has difficulty attracting and keeping servers, so its diversity
+suffers. Second, a disreputable network is more vulnerable to legal and
+political attacks, since it will attract fewer supporters.
 
 While people therefore have an incentive for the network to be used for
 ``more reputable'' activities than their own, there are still tradeoffs
@@ -491,6 +478,18 @@ The impact of public perception on security is especially important
 during the bootstrapping phase of the network, where the first few
 widely publicized uses of the network can dictate the types of users it
 attracts next.
+
+As an example, some some U.S.~Department of Energy
+penetration testing engineers are tasked with compromising DoE computers
+from the outside. They only have a limited number of ISPs from which to
+launch their attacks, and they found that the defenders were recognizing
+attacks because they came from the same IP space. These engineers wanted
+to use Tor to hide their tracks. First, from a technical standpoint,
+Tor does not support the variety of IP packets one would like to use in
+such attacks (see Section~\ref{subsec:tcp-vs-ip}). But aside from this,
+we also decided that it would probably be poor precedent to encourage
+such use---even legal use that improves national security---and managed
+to dissuade them.
 
 %% "outside of academia, jap has just lost, permanently".  (That is,
 %% even though the crime detection issues are resolved and are unlikely
@@ -527,19 +526,19 @@ Still, anonymity and privacy incentives do remain for server operators:
   of ``deniability'' for traffic that originates at that exit node.  For
   example, it is likely in practice that HTTP requests from a Tor server's IP
   will be assumed to be from the Tor network.
-XXXX clarify.
-\item Maintain the sustainability of the network. XXX sentencize
+\item People and organizations who use Tor for anonymity depend on the
+  continued existence of the Tor network to do so; running a server helps to
+  keep the network operational.
 %\item Local Tor entry and exit servers allow users on a network to run in an
 %  `enclave' configuration.  [XXXX need to resolve this. They would do this
 %   for E2E encryption + auth?]
 \end{tightlist}
 
-First, we try to make the costs of running a Tor server easily minimized.
+We must try to make the costs of running a Tor server easily minimized.
 Since Tor is run by volunteers, the most crucial software usability issue is
 usability by operators: when an operator leaves, the network becomes less
 usable by everybody.  To keep operators pleased, we must try to keep Tor's
-resource and administrative demands as low as possible. [XXXX say more. E.g.,
-exit policies.]
+resource and administrative demands as low as possible.
 
 Because of ISP billing structures, many Tor operators have underused capacity
 that they are willing to donate to the network, at no additional monetary
@@ -549,15 +548,21 @@ wants to provide high bandwidth, but no more than a certain amount in a
 giving billing cycle, to become dormant once its bandwidth is exhausted, and
 to reawaken at a random offset into the next billing cycle.  This feature has
 interesting policy implications, however; see
-section~\ref{subsec:bandwidth-and-usability} below.
+section~\ref{subsec:bandwidth-and-filesharing} below.
 
-[XXXX say more.  Why else would you run a server? What else can we do/do we
-  already do to make running a server more attractive?]
-[We can enforce incentives; see Section 6.1. We can rate-limit clients.
-  We can put "top bandwidth servers lists" up a la seti@home.]
+Exit policies help to limit administrative costs by limiting the frequency of
+abuse complaints.
 
-\subsection{Bandwidth and usability}
-\label{subsec:bandwidth-and-usability}
+%[XXXX say more.  Why else would you run a server? What else can we do/do we
+%  already do to make running a server more attractive?]
+%[We can enforce incentives; see Section 6.1. We can rate-limit clients.
+%  We can put "top bandwidth servers lists" up a la seti@home.]
+
+
+\subsection{Bandwidth and filesharing}
+\label{subsec:bandwidth-and-filesharing}
+%One potentially problematical area with deploying Tor has been our response
+%to file-sharing applications.
 Once users have configured their applications to work with Tor, the largest
 remaining usability issue is bandwidth.  When websites ``feel slow,'' users
 begin to suffer.
@@ -569,22 +574,14 @@ enough capacity to provide every user with as much bandwidth as she would
 receive if she weren't using Tor, unless far more servers join the network
 (see above).
 
-Limited capacity does not destroy the network, however.  Instead, usage tends
-towards an equilibrium: when performance suffers, users who value performance
-over anonymity tend to leave the system, thus freeing capacity until the
-remaining users on the network are exactly those willing to use that capacity
-there is.
+%Limited capacity does not destroy the network, however.  Instead, usage tends
+%towards an equilibrium: when performance suffers, users who value performance
+%over anonymity tend to leave the system, thus freeing capacity until the
+%remaining users on the network are exactly those willing to use that capacity
+%there is.
 
-XXX But is it the right equilibirum?  And if it's the wrong one, we lose
-XXX users.  And if we lose the wrong users, servers won't want to help.
-
-XXX what if the file-sharers are more persistent than the journalists?
-
-\subsection{Tor and file-sharing}
-%One potentially problematical area with deploying Tor has been our response
-%to file-sharing applications.
-File-sharing applications make up an enormous
-fraction of the traffic on the Internet today, and provide two challenges to
+Much of Tor's recent bandwidth difficulties have come from file-sharing
+applications.  These applications provide two challenges to
 any anonymizing network: their intensive bandwidth requirement, and the
 degree to which they are associated (correctly or not) with copyright
 violation.
@@ -615,33 +612,35 @@ only permits exit connections to a restricted range of ports which are
 not frequently associated with file sharing.  There are increasingly few such
 ports.
 
+Other possible approaches might include rate-limiting connections, especially
+long-lived connections or connections to file-sharing ports, so that
+high-bandwidth connections do not flood the network.  We might also want to
+give priority to cells on low-bandwidth connections to keep them interactive,
+but this could have negative anonymity implications.
+
 For the moment, it seems that Tor's bandwidth issues have rendered it
 unattractive for bulk file-sharing traffic; this may continue to be so in the
 future.  Nevertheless, Tor will likely remain attractive for limited use in
-  filesharing protocols that have separate control and data channels.
+filesharing protocols that have separate control and data channels.
 
-[xxxx We should say more -- but what?  That we'll see a similar
-  equilibriating effect as with bandwidth, where sensitive ops switch to
-  middleman, and we become less useful for filesharing, so the filesharing
-  people back off, so we get more ops since there's less filesharing, so the
-  filesharers come back, etc.]
+%[We should say more -- but what?  That we'll see a similar
+%  equilibriating effect as with bandwidth, where sensitive ops switch to
+%  middleman, and we become less useful for filesharing, so the filesharing
+%  people back off, so we get more ops since there's less filesharing, so the
+%  filesharers come back, etc.]
 
-in practice, plausible deniability is hypothetical and doesn't seem very
-convincing. if ISPs find the activity antisocial, they don't care *why*
-your computer is doing that behavior.
-
-XXXX deliberately give priority to quiet circuits?
-XXXX or non file-sharing ports??
-XXXX Point is not to beat them off the network, but to keep them from
-XXXX    hogging the network.
+%XXXX
+%in practice, plausible deniability is hypothetical and doesn't seem very
+%convincing. if ISPs find the activity antisocial, they don't care *why*
+%your computer is doing that behavior.
 
 \subsection{Tor and blacklists}
 
 It was long expected that, alongside Tor's legitimate users, it would also
 attract troublemakers who exploited Tor in order to abuse services on the
-Internet.
-[XXX we're not talking bandwidth abuse here, we're talking vandalism,
-hate mails via hotmail, attacks, etc.]
+Internet with vandalism, rude mail, and so on.
+%[XXX we're not talking bandwidth abuse here, we're talking vandalism,
+%hate mails via hotmail, attacks, etc.]
 Our initial answer to this situation was to use ``exit policies''
 to allow individual Tor servers to block access to specific IP/port ranges.
 This approach was meant to make operators more willing to run Tor by allowing
@@ -675,13 +674,16 @@ No current IP blacklist, for example, allow a service provider to blacklist
 only those Tor servers that allow access to a specific IP or port, even
 though this information is readily available.  One IP blacklist even bans
 every class C network that contains a Tor server, and recommends banning SMTP
-from these networks even though Tor does not allow SMTP at all.)
-[****Since this is stupid and we oppose it, shouldn't we name names here -pfs]
-[XXX also, they're making \emph{middleman nodes leave} because they're caught
- up in the standoff!]
-[XXX Mention: it's not dumb, it's strategic!]
-[XXX Mention: for some servops, any blacklist is a blacklist too many,
-  because it is risky.  (Guy lives in apt with one IP.)]
+from these networks even though Tor does not allow SMTP at all.  This
+coarse-grained approach is typically a strategic decision to discourage the
+operation of anything resembling an open proxy by encouraging its neighbors
+to shut it down in order to get unblocked themselves.)
+%[****Since this is stupid and we oppose it, shouldn't we name names here -pfs]
+%[XXX also, they're making \emph{middleman nodes leave} because they're caught
+% up in the standoff!]
+%[XXX Mention: it's not dumb, it's strategic!]
+%[XXX Mention: for some servops, any blacklist is a blacklist too many,
+%  because it is risky.  (Guy lives in apt with one IP.)]
 
 Problems of abuse occur mainly with services such as IRC networks and
 Wikipedia, which rely on IP blocking to ban abusive users.  While at first
@@ -698,10 +700,10 @@ access abuse-prone services.  One conceivable approach would be to require
 would-be IRC users, for instance, to register accounts if they wanted to
 access the IRC network from Tor.  But in practise, this would not
 significantly impede abuse if creating new accounts were easily automatable;
-[ XXX yahoo uses captchas in exactly this situation]
 this is why services use IP blocking.  In order to deter abuse, pseudonymous
 identities need to require a significant switching cost in resources or human
 time.
+% XXX Mention captchas?
 
 %One approach, similar to that taken by Freedom, would be to bootstrap some
 %non-anonymous costly identification mechanism to allow access to a
@@ -737,12 +739,13 @@ workable alternative.
 %by implementing the Morphmix-specific node discovery and path selection
 %pieces.
 
-[XXX Mention correct DNS-RBL implementation. -NM]
+%[XXX Mention correct DNS-RBL implementation. -NM]
 
 \section{Crossroads: Design choices}
 \label{sec:crossroads-design}
 
-[XXX sentence here.]
+In addition to social issues, Tor also faces some design challenges that must
+be addressed as the network develops.
 
 \subsection{Transporting the stream vs transporting the packets}
 \label{subsec:stream-vs-packet}
