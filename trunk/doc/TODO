@@ -23,8 +23,8 @@ N&R. bring tor-spec up to date
    o Adapt version parsing code to handle new version scheme; document new
      version scheme.
 N&R. make loglevels info,debug less noisy
-R  - fix dfc/weasel's intro point bug
-R  - add goodell's .exit tld
+   D fix dfc/weasel's intro point bug
+   o add goodell's .exit tld
 
 Beyond 0.0.9:
    - server descriptor declares min log level, clients avoid servers
