@@ -313,7 +313,7 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
  *
  * Return 1 if descriptor is well-formed and accepted;
  * 0 if well-formed and server is unapproved;
- * -1 if not well-formed or other error.
+ * -1 if not well-formed or other parsing error.
  */
 int
 dirserv_add_descriptor(const char **desc, const char **msg)

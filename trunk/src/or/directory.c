@@ -482,7 +482,7 @@ parse_http_url(char *headers, char **url)
 
 /** Parse an HTTP response string <b>headers</b> of the form
  * "HTTP/1.\%d \%d\%s\r\n...".
- * If it's well-formed, assign *<b>code</b>, point  and return 0.
+ * If it's well-formed, assign *<b>code</b> and return 0.
  * If <b>date</b> is provided, set *date to the Date header in the
  * http headers, or 0 if no such header is found.  If <b>compression</b>
  * is provided, set *<b>compression</b> to the compression method given
@@ -692,6 +692,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       tor_free(body); tor_free(headers);
       return -1;
     }
+    /* xxx maybe we can tell router_... here that it was skewed so don't believe it all. */
     if (router_load_routerlist_from_directory(body, NULL, 1, 0) < 0) {
       log_fn(LOG_WARN,"I failed to parse the directory I fetched from %s:%d. Ignoring.", conn->address, conn->port);
     } else {
