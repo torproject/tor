@@ -23,7 +23,7 @@ ARMA    - arma claims
         o investigate sctp for alternate transport.
         o Document all undocumented options, or mark them as undocumented
           in the source.
-        o bandwidth buckets for write as well as read.
+R       . bandwidth buckets for write as well as read.
         . Cached-directory changes:
           o make clients store the cached-directory to disk,
           o and use it when they startup, so they don't need to bootstrap
@@ -40,7 +40,12 @@ ARMA    - arma claims
               to HTTP/1.1 and use Allowed-Encoding.  Is that really
               what we want?)
 N       - switch dirservers entries to config lines.
+N       - add three default dirplaces if we parse the whole torrc and
+          no dirplaces are specified.
+N       - allow yourself to build circuits immediately if you have a
+          recent cached directory
 N       - let tor clients use http proxies for dir fetching
+          - have a config entry to specify where to go
 N       - per-month byte allowances.
 Nr      - figure out how to handle rendezvousing with unverified nodes.
 Nr      - figure out enclaves, e.g. so we know what to recommend that people
@@ -52,6 +57,7 @@ Nr      - figure out enclaves, e.g. so we know what to recommend that people
         - learn from ben about his openssl-reinitialization-trick to
           rotate tls keys without making new connections.
         D nt services on win32.
+        - squid exit proxying
 
       0.0.8:
         - fix sprintf's to snprintf's?
