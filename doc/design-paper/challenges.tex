@@ -85,17 +85,19 @@ than Tor at the expense of significantly increased resource requirements, or
 decreased flexibility in application support (typically because of increased
 latency).  Such research does not typically abandon aspirations towards
 deployability or utility, but instead tries to maximize deployability and
-utility subject to a certain degree of anonymity.  We believe that these
+utility subject to a certain degree of inherent anonymity (inherent because
+usability and practicality affect usage which affects the actual anonymity
+provided by the network \cite{back01,econymics}). We believe that these
 approaches can be promising and useful, but that by focusing on deploying a
 usable system in the wild, Tor helps us experiment with the actual parameters
 of what makes a system ``practical'' for volunteer operators and ``useful''
 for home users, and helps illuminate undernoticed issues which any deployed
-volunteer anonymity network will need to address.
+volunteer anonymity network will need to address. 
 
 While~\cite{tor-design} gives an overall view of the Tor design and goals,
-this paper describes the policy and technical issues that Tor faces are
+this paper describes the policy and technical issues that Tor faces as
 we continue deployment. Rather than trying to provide complete solutions
-to every problem here, we try to lay out the assumptions and constraints
+to every problem here, we lay out the assumptions and constraints
 that we have observed through deploying Tor in the wild. In doing so, we
 aim to create a research agenda for others to
 help in addressing these issues. Section~\ref{sec:what-is-tor} gives an
@@ -527,6 +529,8 @@ would be good to investigate each of these items in further depth and to
 understand which are actual roadblocks and which are easier to resolve
 than we think. We certainly wouldn't mind if Tor one day is able to
 transport a greater variety of protocols.
+
+[paul will work on this]
 
 \subsection{Mid-latency}
 \label{subsec:mid-latency}
