@@ -850,6 +850,7 @@ int connection_edge_finished_flushing(connection_t *conn);
 int connection_edge_package_raw_inbuf(connection_t *conn);
 
 int connection_ap_handshake_attach_circuit(connection_t *conn);
+int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 
 int connection_ap_make_bridge(char *address, uint16_t port);
 
@@ -1041,7 +1042,7 @@ void rep_hist_dump_stats(time_t now, int severity);
 void rend_client_introcirc_is_open(circuit_t *circ);
 void rend_client_rendcirc_is_open(circuit_t *circ);
 int rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_len);
-void rend_client_rendezvous(connection_t *apconn, circuit_t *circ);
+int rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request_len);
 void rend_client_desc_fetched(char *query, int success);
 
 int rend_cmp_service_ids(char *one, char *two);
@@ -1049,6 +1050,7 @@ char *rend_get_random_intro(char *query);
 int rend_parse_rendezvous_address(char *address);
 
 int rend_client_send_establish_rendezvous(circuit_t *circ);
+int rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc);
 
 /********************************* rendcommon.c ***************************/
 

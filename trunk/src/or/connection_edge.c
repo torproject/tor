@@ -9,7 +9,6 @@ extern or_options_t options; /* command-line and config-file options */
 extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
-static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 static void connection_edge_consider_sending_sendme(connection_t *conn);
@@ -804,6 +803,18 @@ circuit_get_open_circ_or_launch(connection_t *conn,
   return 0;
 }
 
+void link_apconn_to_circ(connection_t *apconn, circuit_t *circ) {
+  /* add it into the linked list of streams on this circuit */
+  log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
+  apconn->next_stream = circ->p_streams;
+  /* assert_connection_ok(conn, time(NULL)); */
+  circ->p_streams = apconn;
+
+  assert(circ->cpath && circ->cpath->prev);
+  assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
+  apconn->cpath_layer = circ->cpath->prev;
+}
+
 /* Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
  * we don't find one: if conn cannot be handled by any known nodes,
  * warn and return -1 (conn needs to die);
@@ -835,16 +846,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
     if(!circ->timestamp_dirty)
       circ->timestamp_dirty = time(NULL);
 
-    /* add it into the linked list of streams on this circuit */
-    log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
-    conn->next_stream = circ->p_streams;
-    /* assert_connection_ok(conn, time(NULL)); */
-    circ->p_streams = conn;
-
-    assert(circ->cpath && circ->cpath->prev);
-    assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
-    conn->cpath_layer = circ->cpath->prev;
-
+    link_apconn_to_circ(conn, circ);
     connection_ap_handshake_send_begin(conn, circ);
 
     return 1;
@@ -859,16 +861,20 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
     if(retval > 0) {
       /* one is already established, attach */
-
-      log_fn(LOG_WARN,"XXX rend joined circ already here. should reuse.");
-      return -1;
+      log_fn(LOG_INFO,"rend joined circ already here. reusing.");
+      link_apconn_to_circ(conn, rendcirc);
+      if(connection_ap_handshake_send_begin(conn, rendcirc) < 0)
+        return 0; /* already marked, let them fade away */
+      return 1;
     }
 
     if(rendcirc &&
        rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY &&
        rendcirc->build_state->pending_final_cpath) {
-      log_fn(LOG_WARN,"XXX pending-join circ already here. should reuse.");
-      return -1;
+      log_fn(LOG_INFO,"pending-join circ already here. reusing.");
+      link_apconn_to_circ(conn, rendcirc);
+      /* don't send the begin, because we're still waiting for contact from bob */
+      return 1;
     }
 
     /* it's on its way. find an intro circ. */
@@ -880,8 +886,13 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
       if(rendcirc &&
          rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
         /* then we know !pending_final_cpath, from above */
-        log_fn(LOG_WARN,"XXX intro and rend are both ready. do the magic.");
-        return -1;
+        log_fn(LOG_INFO,"intro and rend circs are both ready. introducing.");
+        if(rend_client_send_introduction(introcirc, rendcirc) < 0) {
+          return -1;
+        }
+        /* now attach conn to rendcirc */
+        link_apconn_to_circ(conn, rendcirc);
+        return 1;
       }
     }
     log_fn(LOG_INFO,"Intro and rend circs are not both ready. Stalling conn.");
@@ -913,7 +924,7 @@ again:
 }
 
 /* deliver the destaddr:destport in a relay cell */
-static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
+int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
 {
   char payload[CELL_PAYLOAD_SIZE];
   int payload_len;
@@ -928,29 +939,35 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   if (ap_conn->stream_id==0) {
     /* Don't send end: there is no 'other side' yet */
     connection_mark_for_close(ap_conn, 0);
-    return;
+    circuit_mark_for_close(circ);
+    return -1;
   }
 
-  in.s_addr = htonl(client_dns_lookup_entry(ap_conn->socks_request->address));
-  string_addr = in.s_addr ? inet_ntoa(in) : NULL;
+  if(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+    in.s_addr = htonl(client_dns_lookup_entry(ap_conn->socks_request->address));
+    string_addr = in.s_addr ? inet_ntoa(in) : NULL;
 
-  snprintf(payload,RELAY_PAYLOAD_SIZE,
-           "%s:%d",
-           string_addr ? string_addr : ap_conn->socks_request->address,
-           ap_conn->socks_request->port);
+    snprintf(payload,RELAY_PAYLOAD_SIZE,
+             "%s:%d",
+             string_addr ? string_addr : ap_conn->socks_request->address,
+             ap_conn->socks_request->port);
+  } else {
+    snprintf(payload,RELAY_PAYLOAD_SIZE,
+             ":%d", ap_conn->socks_request->port);
+  }
   payload_len = strlen(payload)+1;
 
   log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",ap_conn->stream_id);
 
   if(connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_BEGIN,
                                payload, payload_len, ap_conn->cpath_layer) < 0)
-    return; /* circuit is closed, don't continue */
+    return -1; /* circuit is closed, don't continue */
 
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_CONNECT_WAIT;
   log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
-  return;
+  return 0;
 }
 
 /* make an ap connection_t, do a socketpair and attach one side

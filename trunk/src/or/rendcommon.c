@@ -281,8 +281,7 @@ void rend_process_relay_cell(circuit_t *circ, int command, int length,
       r = rend_mid_rendezvous(circ,payload,length);
       break;
     case RELAY_COMMAND_RENDEZVOUS2:
-      /* r = rend_client_rendezvous(circ,payload,length); */
-      log_fn(LOG_NOTICE, "Ignoring a rendezvous2 cell");
+      r = rend_client_receive_rendezvous(circ,payload,length);
       break;
     case RELAY_COMMAND_INTRO_ESTABLISHED:
       r = rend_service_intro_established(circ,payload,length);

@@ -111,14 +111,14 @@ rend_mid_introduce(circuit_t *circ, const char *request, int request_len)
   char hexid[9];
 
   if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
-    log_fn(LOG_WARN, "Rejecting INTRODUCE2 on non-OR or non-edge circuit %d",
+    log_fn(LOG_WARN, "Rejecting INTRODUCE1 on non-OR or non-edge circuit %d",
            circ->p_circ_id);
     goto err;
   }
 
   if (request_len < 276) {
     log_fn(LOG_WARN,
-           "Impossibly short INTRODUCE2 cell on circuit %d; dropping.",
+           "Impossibly short INTRODUCE1 cell on circuit %d; dropping.",
            circ->p_circ_id);
     goto err;
   }
@@ -130,7 +130,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, int request_len)
                              NULL, request, CIRCUIT_PURPOSE_INTRO_POINT);
   if (!intro_circ) {
     log_fn(LOG_WARN,
-           "No intro circ found for INTRODUCE2 cell (%s) from circuit %d; dropping",
+           "No intro circ found for INTRODUCE1 cell (%s) from circuit %d; dropping",
            hexid, circ->p_circ_id);
     goto err;
   }
