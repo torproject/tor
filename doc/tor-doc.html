@@ -234,9 +234,12 @@ service url</a>).</p>
 <p>We're looking for people with reasonably reliable Internet connections,
 that have at least 20 kilobytes/s each way. If you frequently have a
 lot of packet loss or really high latency, we can't handle your server
-yet. Otherwise, please help out! (If you want to read more about whether
-you should be a server, check out <a href="#client-or-server">the
-section above</a>.
+yet. Otherwise, please help out!
+</p>
+
+<p>
+To read more about whether you should be a server, check out <a
+href="#client-or-server">the section above</a>.
 </p>
 
 <p>To set up a Tor server, do the following steps after installing Tor.
@@ -248,26 +251,27 @@ native Win32.)
 </p>
 
 <ul>
-<li>1. Copy torrc.sample to torrc (in the default configuration this
-means copy /usr/local/etc/tor/torrc.sample to /usr/local/etc/tor/torrc),
-and edit the bottom part. Create the DataDirectory, and make sure it's
-owned by the uid/gid that will be running tor. Fix your system clock so
-it's not too far off. Make sure name resolution works.
+<li>1. Edit the bottom part of your torrc (if you installed from source,
+you will need to copy torrc.sample to torrc first. Look for them in
+/usr/local/etc/tor/). Create the DataDirectory if necessary, and make
+sure it's owned by the uid/gid that will be running tor. Fix your system
+clock so it's not too far off. Make sure name resolution works.
 <!--Make sure each
 process can get to 1024 file descriptors (this should be already done
 for everybody but some BSD folks). -->
-<li>2. Run tor to generate keys and then exit: <tt>tor
---list-fingerprint</tt>. Send mail to tor-ops@freehaven.net including
-a) this key fingerprint, b) who you are, so we know whom to contact if
-there's any problem, and c) what kind of connectivity the new server
-will have. If possible, PGP sign your mail.
-<li>3. If you are using a firewall, open a hole in your firewall so
+<li>2. If you are using a firewall, open a hole in your firewall so
 incoming connections can reach the ports you configured (i.e. ORPort,
 plus DirPort if you enabled it). Make sure outgoing connections can reach
 at least ports 80, 443, and 9001-9033 (to get to other onion routers),
 plus any other addresses or ports your exit policy allows.
-<li>4. Start your server: <tt>tor</tt>. If it logs any warnings,
-address them.
+<li>3. Start your server: if you installed from source you can just
+run <tt>tor</tt>, whereas packages typically launch Tor from their
+initscripts. If it logs any warnings, address them. (By default Tor
+logs to stdout, but some packages log to /var/log/tor/ instead.)
+<li>4. Send mail to tor-ops@freehaven.net including a) this key
+fingerprint, b) who you are, so we know whom to contact if there's any
+problem, and c) what kind of connectivity the new server will have. If
+possible, PGP sign your mail.
 </ul>
 
 <p>
@@ -275,7 +279,7 @@ Optionally, we recommend the following steps as well:
 </p>
 
 <ul>
-<li>1. Make a separate user to run the server. If you
+<li>5. Make a separate user to run the server. If you
 installed the deb or the rpm, this is already done. Otherwise,
 you can do it by hand. (The Tor server doesn't need to be run as
 root, so it's good practice to not run it as root. Running as a
@@ -283,24 +287,24 @@ root, so it's good practice to not run it as root. Running as a
 detect user name. If you're the paranoid sort, feel free to <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorInChroot">put Tor
 into a chroot jail</a>.)
-<li>2. Decide what exit policy you want. By default your server allows
+<li>6. Decide what exit policy you want. By default your server allows
 access to many popular services, but we restrict some (such as port 25)
-due to abuse potential. You might want an exit policy that is either
+due to abuse potential. You might want an exit policy that is
 less restrictive or more restrictive; edit your torrc appropriately.
 If you choose a particularly open exit policy, you might want to make
 sure your upstream or ISP is ok with that choice.
-<li>3. You may find the initscripts in contrib/tor.sh or
+<li>7. You may find the initscripts in contrib/tor.sh or
 contrib/torctl useful if you want to set up Tor to start at boot. Let
 the Tor developers know which script you find more useful.
-<li>4. Consider setting your hostname to 'anonymous' or
+<li>8. Consider setting your hostname to 'anonymous' or
 'proxy' or 'tor-proxy' if you can, so when other people see the address
 in their web logs or whatever, they will more quickly understand what's
 going on.
-<li>5. If you're not running anything else on port 80 or port
-443, please consider setting up port-forwarding and advertising these
+<li>9. If you're not running anything else on port 80 or port 443,
+please consider setting up port-forwarding and advertising these
 low-numbered ports as your Tor server. This will help allow users behind
-particularly restrictive firewalls to access the Tor network. See section
-4 of <a href="http://wiki.noreply.org/wiki/TheOnionRouter_2fTorFAQ">the
+particularly restrictive firewalls to access the Tor network. See <a
+href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ#ServerForFirewalledClients">the
 FAQ</a> for details of how to set this up.
 </ul>
 
