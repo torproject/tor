@@ -90,12 +90,14 @@ int tor_snprintf(char *str, size_t size, const char *format, ...)
   return r;
 }
 
-/** Replacement for vsnpritnf; behavior differs as tor_snprintf differs from
+/** Replacement for vsnprintf; behavior differs as tor_snprintf differs from
  * snprintf.
  */
 int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
 {
   int r;
+  if (size == 0)
+    return -1; /* no place for the NUL */
 #ifdef MS_WINDOWS
   r = _vsnprintf(str, size, format, args);
 #else
