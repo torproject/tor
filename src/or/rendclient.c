@@ -8,16 +8,11 @@
 void
 rend_client_introcirc_is_open(circuit_t *circ)
 {
-  circuit_t *rendcirc = NULL;
   assert(circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath);
 
   log_fn(LOG_INFO,"introcirc is open");
   connection_ap_attach_pending();
-  while ((rendcirc = circuit_get_next_by_pk_and_purpose(
-            rendcirc, circ->rend_pk_digest, CIRCUIT_PURPOSE_C_REND_READY))) {
-    rend_client_send_introduction(circ, rendcirc);
-  }
 }
 
 /* send the establish-rendezvous cell. if it fails, mark
@@ -154,6 +149,7 @@ rend_client_introduction_acked(circuit_t *circ,
   int i, r;
   rend_cache_entry_t *ent;
   char *nickname;
+  circuit_t *rendcirc;
 
   if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     log_fn(LOG_WARN, "Received REND_INTRODUCE_ACK on unexpected circuit %d",
@@ -166,7 +162,15 @@ rend_client_introduction_acked(circuit_t *circ,
 
   if (request_len == 0) {
     /* It's an ACK; the introduction point relayed our introduction request. */
-    /* So close the circuit; we won't need it any more. */
+    /* Locate the rend circ which is waiting to hear about this ack,
+     * and tell it.
+     */
+    rendcirc = circuit_get_by_rend_query_and_purpose(
+               circ->rend_query, CIRCUIT_PURPOSE_C_REND_READY);
+    if(rendcirc) { /* remember the ack */
+      rendcirc->purpose = CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED;
+    }
+    /* close the circuit: we won't need it anymore. */
     circuit_mark_for_close(circ);
   } else {
     /* It's a NAK; the introduction point didn't relay our request. */
@@ -305,13 +309,6 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request
 
   onion_append_to_cpath(&circ->cpath, hop);
   circ->build_state->pending_final_cpath = NULL; /* prevent double-free */
-
-  for(apconn = circ->p_streams; apconn; apconn = apconn->next_stream) {
-    apconn->cpath_layer = circ->cpath->prev;
-    /* now the last hop is different. be sure to send all the way. */
-    if(connection_ap_handshake_send_begin(apconn, circ) < 0)
-      return -1;
-  }
   return 0;
  err:
   circuit_mark_for_close(circ);
@@ -356,7 +353,7 @@ void rend_client_desc_fetched(char *query, int success) {
   }
 }
 
-int rend_cmp_service_ids(char *one, char *two) {
+int rend_cmp_service_ids(const char *one, const char *two) {
   return strcasecmp(one,two);
 }
 

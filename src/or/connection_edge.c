@@ -806,7 +806,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     char *exitname=NULL;
     uint8_t new_circ_purpose;
 
-    if(desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCING) {
+    if(desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
       /* need to pick an intro point */
       exitname = rend_client_get_random_intro(conn->rend_query);
       if(!exitname) {
@@ -823,6 +823,8 @@ circuit_get_open_circ_or_launch(connection_t *conn,
 
     if(desired_circuit_purpose == CIRCUIT_PURPOSE_C_REND_JOINED)
       new_circ_purpose = CIRCUIT_PURPOSE_C_ESTABLISH_REND;
+    else if(desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT)
+      new_circ_purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
     else
       new_circ_purpose = desired_circuit_purpose;
 
@@ -893,16 +895,13 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   } else { /* we're a rendezvous conn */
     circuit_t *rendcirc=NULL, *introcirc=NULL;
 
-    /* before anything else, see if we've already been attached
-     * to a rendezvous circuit */
-    if(conn->cpath_layer) {
-      return 1;
-    }
+    assert(!conn->cpath_layer);
 
-    /* else, start by finding a rendezvous circuit for us */
+    /* start by finding a rendezvous circuit for us */
 
     retval = circuit_get_open_circ_or_launch(conn, CIRCUIT_PURPOSE_C_REND_JOINED, &rendcirc);
     if(retval < 0) return -1; /* failed */
+    assert(rendcirc);
 
     if(retval > 0) {
       /* one is already established, attach */
@@ -913,36 +912,41 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
       return 1;
     }
 
-    if(rendcirc &&
-       rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY &&
-       rendcirc->build_state->pending_final_cpath) {
-      log_fn(LOG_INFO,"pending-join circ already here. reusing.");
-      link_apconn_to_circ(conn, rendcirc);
-      /* don't send the begin, because we're still waiting for contact from bob */
-      return 1;
+    if(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
+      log_fn(LOG_INFO,"pending-join circ already here, with intro ack. Stalling.");
+      return 0;
     }
 
     /* it's on its way. find an intro circ. */
-    retval = circuit_get_open_circ_or_launch(conn, CIRCUIT_PURPOSE_C_INTRODUCING, &introcirc);
+    retval = circuit_get_open_circ_or_launch(conn, CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT, &introcirc);
     if(retval < 0) return -1; /* failed */
+    assert(introcirc);
 
     if(retval > 0) {
-      log_fn(LOG_INFO,"Intro circ is ready for us");
-      if(rendcirc &&
-         rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
-        /* then we know !pending_final_cpath, from above */
-        log_fn(LOG_INFO,"intro and rend circs are both ready. introducing.");
-        /* this call marks introcirc for close */
+      /* one has already sent the intro. keep waiting. */
+      log_fn(LOG_INFO,"Intro circ present and awaiting ack. Stalling.");
+      return 0;
+    }
+
+    /* now both rendcirc and introcirc are defined, and neither is finished */
+
+    if(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
+      log_fn(LOG_INFO,"ready rend circ already here (no intro-ack yet).");
+      /* look around for any new intro circs that should introduce */
+
+      assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
+      if(introcirc->state == CIRCUIT_STATE_OPEN) {
+        log_fn(LOG_INFO,"found open intro circ; sending introduction.");
+        /* XXX here we should cannibalize the rend circ if it's a zero service id */
         if(rend_client_send_introduction(introcirc, rendcirc) < 0) {
           return -1;
         }
-        /* now attach conn to rendcirc */
-        link_apconn_to_circ(conn, rendcirc);
         if(!rendcirc->timestamp_dirty)
           rendcirc->timestamp_dirty = time(NULL);
-        return 1;
+        return 0;
       }
     }
+
     log_fn(LOG_INFO,"Intro and rend circs are not both ready. Stalling conn.");
     return 0;
   }

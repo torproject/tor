@@ -275,9 +275,10 @@ static int circuit_is_acceptable(circuit_t *circ,
   if(purpose == CIRCUIT_PURPOSE_C_REND_JOINED && !must_be_open) {
     if(circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
        circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
+       circ->purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED &&
        circ->purpose != CIRCUIT_PURPOSE_C_REND_JOINED)
       return 0;
-  } else if (purpose == CIRCUIT_PURPOSE_C_INTRODUCING) {
+  } else if (purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT && !must_be_open) {
     if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCING &&
         circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT)
       return 0;
@@ -311,8 +312,10 @@ static int circuit_is_acceptable(circuit_t *circ,
         return 0;
       }
     } else { /* not general */
-      if(rend_cmp_service_ids(conn->rend_query, circ->rend_query)) {
-        /* this circ is not for this conn */
+      if(rend_cmp_service_ids(conn->rend_query, circ->rend_query) &&
+         (circ->rend_query[0] || purpose != CIRCUIT_PURPOSE_C_REND_JOINED)) {
+        /* this circ is not for this conn, and it's not suitable
+         * for cannibalizing either */
         return 0;
       }
     }
@@ -340,9 +343,9 @@ static int circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
           return 1;
       }
       break;
-    case CIRCUIT_PURPOSE_C_INTRODUCING:
-      /* more recently created is best */
-      if(a->timestamp_created > b->timestamp_created)
+    case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
+      /* the closer it is to ack_wait the better it is */
+      if(a->purpose > b->purpose)
         return 1;
       break;
     case CIRCUIT_PURPOSE_C_REND_JOINED:
@@ -356,25 +359,28 @@ static int circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
 
 /* Find the best circ that conn can use, preferably one which is
  * dirty. Circ must not be too old.
- * If !conn, return newest.
+ * conn must be defined.
  *
  * If must_be_open, ignore circs not in CIRCUIT_STATE_OPEN.
  *
  * circ_purpose specifies what sort of circuit we must have.
- * It can be C_GENERAL, C_INTRODUCING, or C_REND_JOINED.
+ * It can be C_GENERAL, C_INTRODUCE_ACK_WAIT, or C_REND_JOINED.
  *
  * If it's REND_JOINED and must_be_open==0, then return the closest
  * rendezvous-purposed circuit that you can find.
  *
- * If circ_purpose is not GENERAL, then conn must be defined.
+ * If it's INTRODUCE_ACK_WAIT and must_be_open==0, then return the
+ * closest introduce-purposed circuit that you can find.
  */
 circuit_t *circuit_get_best(connection_t *conn,
                             int must_be_open, uint8_t purpose) {
   circuit_t *circ, *best=NULL;
   time_t now = time(NULL);
 
+  assert(conn);
+
   assert(purpose == CIRCUIT_PURPOSE_C_GENERAL ||
-         purpose == CIRCUIT_PURPOSE_C_INTRODUCING ||
+         purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT ||
          purpose == CIRCUIT_PURPOSE_C_REND_JOINED);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
@@ -389,6 +395,18 @@ circuit_t *circuit_get_best(connection_t *conn,
   }
 
   return best;
+}
+
+circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose) {
+  circuit_t *circ;
+
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    if (!circ->marked_for_close &&
+        circ->purpose == purpose &&
+        !rend_cmp_service_ids(rend_query, circ->rend_query))
+      return circ;
+  }
+  return NULL;
 }
 
 /* Return the first circuit in global_circuitlist after 'start' whose
