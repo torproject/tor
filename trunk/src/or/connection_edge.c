@@ -38,7 +38,8 @@ connection_close_unattached_ap(connection_t *conn, int endreason) {
 // be defined yet. -RD
     if (endreason == END_STREAM_REASON_ALREADY_SOCKS_REPLIED)
       log_fn(LOG_WARN,"Bug: stream (marked at %s:%d) sending two socks replies?",
-             conn->marked_for_close_file, conn->marked_for_close);
+             conn->marked_for_close_file?conn->marked_for_close_file:"", 
+             conn->marked_for_close);
 
     if (conn->socks_request->command == SOCKS_COMMAND_CONNECT)
       connection_ap_handshake_socks_reply(conn, NULL, 0, socksreason);
