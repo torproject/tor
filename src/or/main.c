@@ -310,20 +310,11 @@ int prepare_for_poll(int *timeout) {
   connection_t *conn = NULL;
   connection_t *tmpconn;
   struct timeval now, soonest;
-  static int current_second = 0; /* from previous calls to gettimeofday */
-  static int time_to_rebuild_directory = 0;
-  static int time_to_fetch_directory = 0;
+  static long current_second = 0; /* from previous calls to gettimeofday */
+  static long time_to_rebuild_directory = 0;
+  static long time_to_fetch_directory = 0;
   int ms_until_conn;
-
-  *timeout = -1; /* set it to never timeout, possibly overridden below */
-  
-  /* first check if we need to refill buckets */
-  for(i=0;i<nfds;i++) {
-    if(connection_receiver_bucket_should_increase(connection_array[i])) {
-      need_to_refill_buckets = 1;
-      break;
-    }
-  }
+  cell_t cell;
 
   if(gettimeofday(&now,NULL) < 0)
     return -1;
@@ -356,6 +347,50 @@ int prepare_for_poll(int *timeout) {
     *timeout = 1000*(time_to_fetch_directory - now.tv_sec) + (1000 - (now.tv_usec / 1000));
   }
 
+  /* check connections to see whether we should send a keepalive, expire, or wait */
+  for(i=0;i<nfds;i++) {
+    tmpconn = connection_array[i];
+    if(!connection_speaks_cells(tmpconn))
+      continue; /* this conn type doesn't send cells */
+    if(!connection_state_is_open(tmpconn)) {
+      continue; /* only conns in state 'open' need a keepalive */
+      /* XXX should time-out unfinished connections someday too */
+    }    
+    if(now.tv_sec >= tmpconn->timestamp_lastwritten + options.KeepalivePeriod) {
+      if(!(options.Role & ROLE_OR_CONNECT_ALL) && !circuit_get_by_conn(tmpconn)) {
+        /* we're an onion proxy, with no circuits. kill it. */
+        log(LOG_DEBUG,"prepare_for_poll(): Expiring connection to %d (%s:%d).",
+            i,tmpconn->address, tmpconn->port);
+        tmpconn->marked_for_close = 1;
+      } else {
+        /* either a full router, or we've got a circuit. send a padding cell. */
+//        log(LOG_DEBUG,"prepare_for_poll(): Sending keepalive to (%s:%d)",
+//            tmpconn->address, tmpconn->port);
+        memset(&cell,0,sizeof(cell_t));
+        cell.command = CELL_PADDING;
+        connection_write_cell_to_buf(&cell, tmpconn);
+      }
+    }
+    if(!tmpconn->marked_for_close &&
+       *timeout > 1000*(tmpconn->timestamp_lastwritten + options.KeepalivePeriod - now.tv_sec)) {
+      *timeout = 1000*(tmpconn->timestamp_lastwritten + options.KeepalivePeriod - now.tv_sec);
+    }
+  }
+  assert(*timeout >= 0);
+  /* blow away any connections that need to die. can't do this later
+   * because we might open up a circuit and not realize it.
+   */
+  for(i=0;i<nfds;i++)
+    check_conn_marked(i); 
+
+  /* check if we need to refill buckets */
+  for(i=0;i<nfds;i++) {
+    if(connection_receiver_bucket_should_increase(connection_array[i])) {
+      need_to_refill_buckets = 1;
+      break;
+    }
+  }
+
   if(need_to_refill_buckets) {
     if(now.tv_sec > current_second) { /* the second has already rolled over! */
 //      log(LOG_DEBUG,"prepare_for_poll(): The second has rolled over, immediately refilling.");
@@ -363,7 +398,7 @@ int prepare_for_poll(int *timeout) {
         connection_increment_receiver_bucket(connection_array[i]);
       current_second = now.tv_sec; /* remember which second it is, for next time */
     }
-    /* this timeout is definitely sooner than either of the above two */
+    /* this timeout is definitely sooner than any of the above ones */
     *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
   }
 
@@ -394,7 +429,7 @@ int prepare_for_poll(int *timeout) {
       ms_until_conn = (soonest.tv_sec - now.tv_sec)*1000 +
                     (soonest.tv_usec - now.tv_usec)/1000;
 //      log(LOG_DEBUG,"prepare_for_poll(): conn %d times out in %d ms.",conn->s, ms_until_conn);
-      if(*timeout == -1 || ms_until_conn < *timeout) { /* use the new one */
+      if(ms_until_conn < *timeout) { /* use the new one */
 //        log(LOG_DEBUG,"prepare_for_poll(): conn %d soonest, in %d ms.",conn->s,ms_until_conn);
         *timeout = ms_until_conn;
       }
@@ -517,18 +552,25 @@ static void catch(int the_signal) {
 void dumpstats (void) { /* dump stats to stdout */
   int i;
   connection_t *conn;
+  struct timeval now;
   extern char *conn_type_to_string[];
   extern char *conn_state_to_string[][15];
 
   printf("Dumping stats:\n");
+  if(gettimeofday(&now,NULL) < 0)
+    return ;
 
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
-    printf("Conn %d (socket %d) type %d (%s), state %d (%s)\n",
+    printf("Conn %d (socket %d) type %d (%s), state %d (%s), created %ld secs ago\n",
       i, conn->s, conn->type, conn_type_to_string[conn->type],
-      conn->state, conn_state_to_string[conn->type][conn->state]);
+      conn->state, conn_state_to_string[conn->type][conn->state], now.tv_sec - conn->timestamp_created);
     if(!connection_is_listener(conn)) {
       printf("Conn %d is to '%s:%d'.\n",i,conn->address, conn->port);
+      printf("Conn %d: %d bytes waiting on inbuf (last read %ld secs ago)\n",i,conn->inbuf_datalen,
+        now.tv_sec - conn->timestamp_lastread);
+      printf("Conn %d: %d bytes waiting on outbuf (last written %ld secs ago)\n",i,conn->outbuf_datalen, 
+        now.tv_sec - conn->timestamp_lastwritten);
     }
     circuit_dump_by_conn(conn); /* dump info about all the circuits using this conn */
     printf("\n");
