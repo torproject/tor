@@ -94,80 +94,58 @@ static void router_release_token(directory_token_t *tok);
 
 
 /****************************************************************************/
+
+/* pick a random running router with a positive dir_port */
 routerinfo_t *router_pick_directory_server(void) {
-  /* pick a random running router with a positive dir_port */
-  int i,j;
+  int i;
   routerinfo_t *router, *dirserver=NULL;
-  int num_dirservers=0;
+  smartlist_t *sl;
 
   if(!routerlist)
     return NULL;
 
+  sl = smartlist_create(MAX_ROUTERS_IN_DIR);
   for(i=0;i<routerlist->n_routers;i++) {
     router = routerlist->routers[i];
     if(router->dir_port > 0 && router->is_running)
-      num_dirservers++;
+      smartlist_add(sl, router);
   }
 
-  if(!num_dirservers) {
-    log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
-    /* no running dir servers found? go through and mark them all as up,
-     * and we'll cycle through the list again. */
-    for(i=0;i<routerlist->n_routers;i++) {
-      router = routerlist->routers[i];
-      if(router->dir_port > 0) {
-        router->is_running = 1;
-        dirserver = router;
-      }
-    }
-    return dirserver;
-  }
+  router = smartlist_choose(sl);
+  smartlist_free(sl);
 
-  j = crypto_pseudo_rand_int(num_dirservers);
-  for (i=0;i<routerlist->n_routers;i++) {
+  if(router)
+    return router;
+  log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
+  /* no running dir servers found? go through and mark them all as up,
+   * and we'll cycle through the list again. */
+  for(i=0;i<routerlist->n_routers;i++) {
     router = routerlist->routers[i];
-    if (router->dir_port > 0 && router->is_running) {
-      if (j)
-        --j;
-      else {
-        log_fn(LOG_DEBUG, "Chose server '%s'", router->nickname);
-        return router;
-      }
+    if(router->dir_port > 0) {
+      router->is_running = 1;
+      dirserver = router;
     }
   }
-  assert(0);
-  return NULL;
+  return dirserver;
 }
 
 routerinfo_t *router_pick_randomly_from_running(void) {
-  int i,j;
-  int num_running=0;
+  int i;
+  routerinfo_t *router;
+  smartlist_t *sl;
 
   if(!routerlist)
     return NULL;
 
-  for(i=0;i<routerlist->n_routers;i++) {
+  sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+  for(i=0;i<routerlist->n_routers;i++)
     if(routerlist->routers[i]->is_running)
-      num_running++;
-  }
+      smartlist_add(sl, routerlist->routers[i]);
 
-  if(!num_running) {
-    log_fn(LOG_INFO,"No routers are running. Returning NULL.");
-    return NULL;
-  }
-  j = crypto_pseudo_rand_int(num_running);
-  for (i=0;i<routerlist->n_routers;i++) {
-    if (routerlist->routers[i]->is_running) {
-      if (j)
-        --j;
-      else {
-        log_fn(LOG_DEBUG, "Chose server '%s'", routerlist->routers[i]->nickname);
-        return routerlist->routers[i];
-      }
-    }
-  }
-  assert(0);
-  return NULL;
+  router = smartlist_choose(sl);
+  smartlist_free(sl);
+  log_fn(LOG_DEBUG, "Chose server '%s'", router ? router->nickname : "<none>");
+  return router;
 }
 
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
