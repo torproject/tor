@@ -17,7 +17,6 @@ def socks4AResolveRequest(hostname):
 def socks4AParseResponse(response):
     RESPONSE_LEN = 8
     if len(response) < RESPONSE_LEN:
-        print "return none", len(response)
         return None
     assert len(response) >= RESPONSE_LEN
     version,status,port = struct.unpack("!BBH",response[:4])
@@ -39,16 +38,17 @@ def socks5ResolveRequest(hostname):
     rsv = 0
     port = 0
     atype = 0x03
-    reqheader = struct.pack("!BBBB",version, command, rsv, atype)
+    reqheader = struct.pack("!BBBBB",version, command, rsv, atype, len(hostname))
     portstr = struct.pack("!H",port)
-    return "%s%s\0%s"%(reqheader,hostname,port)
+    return "%s%s%s"%(reqheader,hostname,portstr)
 def socks5ParseResponse(r):
-    if len(r)<8: return None
+    if len(r)<8:
+        return None
     version, reply, rsv, atype = struct.unpack("!BBBB",r[:4])
     assert version==5
     assert rsv==0
     if reply != 0x00:
-        return "ERROR"
+        return "ERROR",reply
     assert atype in (0x01,0x04)
     expected_len = 4 + ({1:4,4:16}[atype]) + 2
     if len(r) < expected_len:
@@ -92,27 +92,28 @@ def resolve(hostname, sockshost, socksport, socksver=4):
     s.connect((sockshost,socksport))
     if socksver == 5:
         s.send(socks5Hello())
-        socksParseHello(s.recv(2))
+        socks5ParseHello(s.recv(2))
+    print len(fmt(hostname)), len(hostname)
     s.send(fmt(hostname))
-    answer = s.recv(8)
+    answer = s.recv(6)
     result = parse(answer)
     while result is None:
         more = s.recv(1)
         if not more:
-            print "Connection closed; dying."
             return None
         answer += more
         result = parse(answer)
     print "Got answer",result
     m = s.recv(1)
     if m:
-        print "Got extra data too! Ick."
+        print "Got extra data too: %r"%m
     return result
 
 if __name__ == '__main__':
     if len(sys.argv) not in (2,3,4):
         print "Syntax: resolve.py [-4|-5] hostname [sockshost:socksport]"
         sys.exit(0)
+    socksver = 4
     if sys.argv[1] in ("-4", "-5"):
         socksver = int(sys.argv[1][1])
         del sys.argv[1]
@@ -123,4 +124,4 @@ if __name__ == '__main__':
         sh,sp = parseHostAndPort(sys.argv[2])
     else:
         sh,sp = parseHostAndPort("")
-    resolve(sys.argv[1], sh, sp)
+    resolve(sys.argv[1], sh, sp, socksver)
