@@ -20,6 +20,8 @@ static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my
   /* local host information */
   char localhostname[512];
   struct hostent *localhost;
+  struct in_addr *a;
+  char *tmp1;
   
   char *addr = NULL;
   int i = 0;
@@ -39,10 +41,20 @@ static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my
   addr = localhost->h_addr_list[i++]; /* set to the first local address */
   while(addr)
   {
+    a = (struct in_addr *)addr;
+
+    tmp1 = strdup(inet_ntoa(*a)); /* can't call inet_ntoa twice in the same
+				     printf, since it overwrites its static
+				     memory each time */
+    log(LOG_DEBUG,"router_is_me(): Comparing '%s' to '%s'.",tmp1,
+       inet_ntoa( *((struct in_addr *)&or_address) ) );
+    free(tmp1);
     if (!memcmp((void *)&or_address, (void *)addr, sizeof(uint32_t))) { /* addresses match */
-/* FIXME one's a string, one's a uint32_t? does this make sense? */
-      if (or_listenport == my_or_listenport) /* ports also match */
+      log(LOG_DEBUG,"router_is_me(): Addresses match. Comparing ports.");
+      if (or_listenport == my_or_listenport) { /* ports also match */
+        log(LOG_DEBUG,"router_is_me(): Ports match too.");
         return 1;
+      }
     }
     
     addr = localhost->h_addr_list[i++];
