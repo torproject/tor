@@ -737,7 +737,7 @@ test_dir_format()
   r1.identity_pkey = pk2;
   r1.bandwidthrate = 1000;
   r1.bandwidthburst = 5000;
-  r1.advertisedbandwidth = 10000;
+  r1.bandwidthcapacity = 10000;
   r1.exit_policy = NULL;
   r1.nickname = "Magri";
   r1.platform = tor_strdup(platform);
@@ -762,7 +762,7 @@ test_dir_format()
   r2.dir_port = 0;
   r2.onion_pkey = pk2;
   r2.identity_pkey = pk1;
-  r2.bandwidthrate = r2.bandwidthburst = r2.advertisedbandwidth = 3000;
+  r2.bandwidthrate = r2.bandwidthburst = r2.bandwidthcapacity = 3000;
   r2.exit_policy = &ex1;
   r2.nickname = "Fred";
 
@@ -815,7 +815,7 @@ test_dir_format()
   test_eq(rp1->dir_port, r1.dir_port);
   test_eq(rp1->bandwidthrate, r1.bandwidthrate);
   test_eq(rp1->bandwidthburst, r1.bandwidthburst);
-  test_eq(rp1->advertisedbandwidth, r1.advertisedbandwidth);
+  test_eq(rp1->bandwidthcapacity, r1.bandwidthcapacity);
   test_assert(crypto_pk_cmp_keys(rp1->onion_pkey, pk1) == 0);
   test_assert(crypto_pk_cmp_keys(rp1->identity_pkey, pk2) == 0);
   test_assert(rp1->exit_policy == NULL);

@@ -741,7 +741,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     router->bandwidthrate = atoi(tok->args[0]);
     router->bandwidthburst = atoi(tok->args[1]);
     if(tok->n_args > 2)
-      router->advertisedbandwidth = atoi(tok->args[2]);
+      router->bandwidthcapacity = atoi(tok->args[2]);
     bw_set = 1;
   }
 
@@ -903,6 +903,7 @@ static int router_add_exit_policy(routerinfo_t *router,directory_token_t *tok)
 
 /** Given a K_ACCEPT or K_REJECT token and a router, create a new exit_policy_t
  * corresponding to the token, and add it to <b>router</b> */
+/* XXX008 NICK DOCDOC: there is no <b>router</b> */
 static struct exit_policy_t *
 router_parse_exit_policy(directory_token_t *tok) {
 

@@ -482,12 +482,6 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
       id_digest = router->identity_digest;
     } else { /* new format */
       router = router_get_by_digest(id_digest);
-#if 0
-      if(router) { /* addr/port might be different */
-        circ->n_addr = router->addr;
-        circ->n_port = router->or_port;
-      }
-#endif
     }
     tor_assert(id_digest);
 
@@ -947,11 +941,12 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
 static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
 {
   routerinfo_t *r;
+  /* XXX one day, consider picking chosen_exit knowing what's in EntryNodes */
   switch(purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
       return choose_good_exit_server_general(dir);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-      r = router_choose_random_node(options.RendNodes, options.RendExcludeNodes, NULL);
+      r = router_choose_random_node(options.RendNodes, options.RendExcludeNodes, NULL, 0, 1);
       return r;
     default:
       log_fn(LOG_WARN,"unhandled purpose %d", purpose);
@@ -1049,6 +1044,7 @@ static int count_acceptable_routers(smartlist_t *routers) {
   return num;
 }
 
+#if 0
 /** Go through smartlist <b>sl</b> of routers, and remove all elements that
  * have the same onion key as twin.
  */
@@ -1066,6 +1062,7 @@ static void remove_twins_from_smartlist(smartlist_t *sl, routerinfo_t *twin) {
     }
   }
 }
+#endif
 
 /** Add <b>new_hop</b> to the end of the doubly-linked-list <b>head_ptr</b>.
  *
@@ -1084,6 +1081,61 @@ void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
   }
 }
 
+static routerinfo_t *choose_good_middle_server(cpath_build_state_t *state,
+                                               crypt_path_t *head,
+                                               int cur_len)
+{
+  int i;
+  routerinfo_t *r, *choice;
+  crypt_path_t *cpath;
+  smartlist_t *excluded = smartlist_create();
+
+  log_fn(LOG_DEBUG, "Contemplating intermediate hop: random choice.");
+  excluded = smartlist_create();
+  if((r = router_get_by_digest(state->chosen_exit_digest)))
+    smartlist_add(excluded, r);
+  if((r = router_get_my_routerinfo()))
+    smartlist_add(excluded, r);
+  for (i = 0, cpath = head; i < cur_len; ++i, cpath=cpath->next) {
+    r = router_get_by_digest(cpath->identity_digest);
+    tor_assert(r);
+    smartlist_add(excluded, r);
+  }
+  choice = router_choose_random_node("", options.ExcludeNodes, excluded, 0, 1);
+  smartlist_free(excluded);
+  return choice;
+}
+
+static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
+{
+  routerinfo_t *r, *choice;
+  smartlist_t *excluded = smartlist_create();
+
+  if((r = router_get_by_digest(state->chosen_exit_digest)))
+    smartlist_add(excluded, r);
+  if((r = router_get_my_routerinfo()))
+    smartlist_add(excluded, r);
+  if(options.FascistFirewall) {
+    /* exclude all ORs that listen on the wrong port */
+    routerlist_t *rl;
+    int i;
+
+    router_get_routerlist(&rl);
+    if(!rl)
+      return NULL;
+
+    for(i=0; i < smartlist_len(rl->routers); i++) {
+      r = smartlist_get(rl->routers, i);
+      if(r->or_port != REQUIRED_FIREWALL_ORPORT)
+        smartlist_add(excluded, r);
+    }
+  }
+  choice = router_choose_random_node(options.EntryNodes,
+                                     options.ExcludeNodes, excluded, 0, 1);
+  smartlist_free(excluded);
+  return choice;
+}
+
 /** Choose a suitable next hop in the cpath <b>head_ptr</b>,
  * based on <b>state</b>. Add the hop info to head_ptr, and return a
  * pointer to the chosen router in <b>router_out</b>.
@@ -1094,10 +1146,8 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
 {
   int cur_len;
   crypt_path_t *cpath, *hop;
-  routerinfo_t *r;
   routerinfo_t *choice;
-  int i;
-  smartlist_t *sl, *excludednodes;
+  smartlist_t *excludednodes;
 
   tor_assert(head_ptr);
   tor_assert(router_out);
@@ -1122,58 +1172,17 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
   add_nickname_list_to_smartlist(excludednodes,options.ExcludeNodes);
 
   if(cur_len == state->desired_path_len - 1) { /* Picking last node */
-    log_fn(LOG_DEBUG, "Contemplating last hop: choice already made: %s",
-           state->chosen_exit_name);
     choice = router_get_by_digest(state->chosen_exit_digest);
-    smartlist_free(excludednodes);
-    if(!choice) {
-      log_fn(LOG_WARN,"Our chosen exit %s is no longer in the directory? Discarding this circuit.",
-             state->chosen_exit_name);
-      return -1;
-    }
   } else if(cur_len == 0) { /* picking first node */
-    /* try the nodes in EntryNodes first */
-    sl = smartlist_create();
-    add_nickname_list_to_smartlist(sl,options.EntryNodes);
-    /* XXX one day, consider picking chosen_exit knowing what's in EntryNodes */
-    remove_twins_from_smartlist(sl,router_get_by_digest(state->chosen_exit_digest));
-    remove_twins_from_smartlist(sl,router_get_my_routerinfo());
-    smartlist_subtract(sl,excludednodes);
-    choice = smartlist_choose(sl);
-    smartlist_free(sl);
-    if(!choice) {
-      sl = smartlist_create();
-      router_add_running_routers_to_smartlist(sl);
-      remove_twins_from_smartlist(sl,router_get_by_digest(state->chosen_exit_digest));
-      remove_twins_from_smartlist(sl,router_get_my_routerinfo());
-      smartlist_subtract(sl,excludednodes);
-      choice = smartlist_choose(sl);
-      smartlist_free(sl);
-    }
-    smartlist_free(excludednodes);
-    if(!choice) {
-      log_fn(LOG_WARN,"No acceptable routers while picking entry node. Discarding this circuit.");
-      return -1;
-    }
+    choice = choose_good_entry_server(state);
   } else {
-    log_fn(LOG_DEBUG, "Contemplating intermediate hop: random choice.");
-    sl = smartlist_create();
-    router_add_running_routers_to_smartlist(sl);
-    remove_twins_from_smartlist(sl,router_get_by_digest(state->chosen_exit_digest));
-    remove_twins_from_smartlist(sl,router_get_my_routerinfo());
-    for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {
-      r = router_get_by_digest(cpath->identity_digest);
-      tor_assert(r);
-      remove_twins_from_smartlist(sl,r);
-    }
-    smartlist_subtract(sl,excludednodes);
-    choice = smartlist_choose(sl);
-    smartlist_free(sl);
-    smartlist_free(excludednodes);
-    if(!choice) {
-      log_fn(LOG_WARN,"No acceptable routers while picking intermediate node. Discarding this circuit.");
-      return -1;
-    }
+    choice = choose_good_middle_server(state, *head_ptr, cur_len);
+  }
+
+  smartlist_free(excludednodes);
+  if(!choice) {
+    log_fn(LOG_WARN,"Failed to find node for hop %d of our path. Discarding this circuit.", cur_len);
+    return -1;
   }
 
   log_fn(LOG_DEBUG,"Chose router %s for hop %d (exit is %s)",

@@ -59,7 +59,8 @@ routerinfo_t *router_pick_directory_server(int requireauth, int requireothers) {
   if(choice)
     return choice;
 
-  log_fn(LOG_WARN,"No dirservers known. Reloading and trying again.");
+  log_fn(LOG_WARN,"Still no dirservers %s. Reloading and trying again.",
+         options.FascistFirewall ? "reachable" : "known");
   has_fetched_directory=0; /* reset it */
   routerlist_clear_trusted_directories();
   if(options.RouterFile) {
@@ -96,6 +97,9 @@ router_pick_directory_server_impl(int requireauth, int requireothers)
     if(requireauth && !router->is_trusted_dir)
       continue;
     if(requireothers && router_is_me(router))
+      continue;
+    if(options.FascistFirewall &&
+       router->dir_port != REQUIRED_FIREWALL_DIRPORT)
       continue;
     smartlist_add(sl, router);
   }
@@ -206,13 +210,78 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
   }
 }
 
+/** How many seconds a router must be up before we'll use it for
+ * reliability-critical node positions.
+ */
+#define ROUTER_REQUIRED_MIN_UPTIME 0
+ /* XXX008 change this once we parse router->uptime */
+
+static void
+routerlist_sl_remove_unreliable_routers(smartlist_t *sl)
+{
+  int i;
+  routerinfo_t *router;
+
+  for (i = 0; i < smartlist_len(sl); ++i) {
+    router = smartlist_get(sl, i);
+    if(router->uptime < ROUTER_REQUIRED_MIN_UPTIME) {
+      log(LOG_DEBUG, "Router %s has insufficient uptime; deleting.",
+          router->nickname);
+      smartlist_del(sl, i--);
+    }
+  }
+}
+
+static routerinfo_t *
+routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
+{
+  int i;
+  routerinfo_t *router;
+  smartlist_t *bandwidths;
+  uint32_t this_bw, tmp, total_bw=0, rand_bw;
+  uint32_t *p;
+
+  bandwidths = smartlist_create();
+  for (i = 0; i < smartlist_len(sl); ++i) {
+    router = smartlist_get(sl, i);
+    /* give capacity a default, until 0.0.7 is obsolete */
+    tmp = (router->bandwidthcapacity == 0) ? 200000 : router->bandwidthcapacity;
+    this_bw = (tmp < router->bandwidthrate) ? tmp : router->bandwidthrate;
+    p = tor_malloc(sizeof(uint32_t));
+    *p = this_bw;
+    smartlist_add(bandwidths, p);
+    total_bw += this_bw;
+//    log_fn(LOG_INFO,"Recording bw %d for node %s.", this_bw, router->nickname);
+  }
+  if(!total_bw)
+    return NULL; 
+  rand_bw = crypto_pseudo_rand_int(total_bw);
+//  log_fn(LOG_INFO,"Total bw %d. Randomly chose %d.", total_bw, rand_bw);
+  tmp = 0;
+  for(i=0; ; i++) {
+    tor_assert(i < smartlist_len(sl));
+    p = smartlist_get(bandwidths, i);
+    tmp += *p;
+    router = smartlist_get(sl, i);
+//    log_fn(LOG_INFO,"Considering %s. tmp = %d.", router->nickname, tmp);
+    if(tmp >= rand_bw)
+      break;
+  }
+  SMARTLIST_FOREACH(bandwidths, uint32_t*, p, tor_free(p));
+  smartlist_free(bandwidths);
+  router = smartlist_get(sl, i);
+  log_fn(LOG_INFO,"Picked %s.", router->nickname);
+  return router;
+}
+
 /** Return a random running router from the routerlist.  If any node
  * named in <b>preferred</b> is available, pick one of those.  Never pick a
  * node named in <b>excluded</b>, or whose routerinfo is in
  * <b>excludedsmartlist</b>, even if they are the only nodes available.
  */
 routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
-                                        smartlist_t *excludedsmartlist)
+                                        smartlist_t *excludedsmartlist,
+                                        int preferuptime, int preferbandwidth)
 {
   smartlist_t *sl, *excludednodes;
   routerinfo_t *choice;
@@ -220,13 +289,18 @@ routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
   excludednodes = smartlist_create();
   add_nickname_list_to_smartlist(excludednodes,excluded);
 
-  /* try the nodes in RendNodes first */
+  /* try the preferred nodes first */
   sl = smartlist_create();
   add_nickname_list_to_smartlist(sl,preferred);
   smartlist_subtract(sl,excludednodes);
   if(excludedsmartlist)
     smartlist_subtract(sl,excludedsmartlist);
-  choice = smartlist_choose(sl);
+  if(preferuptime)
+    routerlist_sl_remove_unreliable_routers(sl);
+  if(preferbandwidth)
+    choice = routerlist_sl_choose_by_bandwidth(sl);
+  else
+    choice = smartlist_choose(sl);
   smartlist_free(sl);
   if(!choice) {
     sl = smartlist_create();
@@ -234,7 +308,10 @@ routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
     smartlist_subtract(sl,excludednodes);
     if(excludedsmartlist)
       smartlist_subtract(sl,excludedsmartlist);
-    choice = smartlist_choose(sl);
+    if(preferuptime)
+      routerlist_sl_remove_unreliable_routers(sl);
+    if(preferbandwidth)
+      choice = routerlist_sl_choose_by_bandwidth(sl);
     smartlist_free(sl);
   }
   smartlist_free(excludednodes);
