@@ -18,7 +18,7 @@ static struct pollfd poll_array[MAXCONNECTIONS] =
 static int nfds=0; /* number of connections currently active */
 
 /* private key */
-static RSA *prkey = NULL;
+static crypto_pk_env_t *prkey;
 
 /* router array */
 static routerinfo_t **router_array = NULL;
@@ -89,20 +89,10 @@ int connection_remove(connection_t *conn) {
   return 0;  
 }
 
-int pkey_cmp(RSA *a, RSA *b) {
+int pkey_cmp(crypto_pk_env_t *a, crypto_pk_env_t *b) {
   /* return 0 if a and b are "the same key". Return non-0 otherwise. */
 
-  int result;
-
-  if(!a || !b)
-    return -1;
-
-  assert(a->n && a->e && b->n && b->e);
-
-  result = BN_cmp(a->n, b->n);
-  if(result)
-    return result;
-  return BN_cmp(a->e, b->e);
+  return crypto_pk_cmp_keys(a, b);
 }
 
 connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
@@ -431,13 +421,16 @@ int do_main_loop(void) {
   }
 
   /* load the private key */
-  prkey = load_prkey(options.PrivateKeyFile);
-  if (!prkey)
+  prkey = crypto_new_pk_env(CRYPTO_PK_RSA);
+  if (!prkey) {
+    log(LOG_ERR,"Error creating a crypto environment.");
+    return -1;
+  }
+  if (crypto_pk_read_private_key_filename(prkey, options.PrivateKeyFile))
   {
     log(LOG_ERR,"Error loading private key.");
     return -1;
   }
-  log(LOG_DEBUG,"core : Loaded private key of size %u bytes.",RSA_size(prkey));
 
   /* start-up the necessary connections based on global_role. This is where we
    * try to connect to all the other ORs, and start the listeners */
@@ -506,9 +499,9 @@ int main(int argc, char *argv[]) {
   log(options.loglevel,NULL);         /* assign logging severity level from options */
   global_role = options.Role;   /* assign global_role from options. FIX: remove from global namespace later. */
 
-  ERR_load_crypto_strings();
+  crypto_global_init();
   retval = do_main_loop();
-  ERR_free_strings();
+  crypto_global_cleanup();
 
   return retval;
 }

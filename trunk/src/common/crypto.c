@@ -2,10 +2,20 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-#include "crypto.h"
+#include <string.h>
+
+#include <openssl/err.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
 
 #include <stdlib.h>
 #include <assert.h>
+
+#include "crypto.h"
+#include "config.h"
+#include "log.h"
 
 int crypto_global_init() 
 {
@@ -201,8 +211,9 @@ int crypto_pk_read_private_key(crypto_pk_env_t *env, FILE *src)
   
   switch(env->type) {
     case CRYPTO_PK_RSA:
+/*
     if (env->key)
-      RSA_free((RSA *)env->key);
+      RSA_free((RSA *)env->key);*/
     env->key = (unsigned char *)PEM_read_RSAPrivateKey(src, (RSA **)&env->key, NULL, NULL);
     if (!env->key)
       return -1;
@@ -213,14 +224,60 @@ int crypto_pk_read_private_key(crypto_pk_env_t *env, FILE *src)
   
   return 0;
 }
+
+int crypto_pk_read_private_key_filename(crypto_pk_env_t *env, unsigned char *keyfile)
+{
+  FILE *f_pr;
+  int retval = 0;
+ 
+  assert(env && keyfile);
+  
+  if (strspn(keyfile,CONFIG_LEGAL_FILENAME_CHARACTERS) == strlen(keyfile)) /* filename contains legal characters only */
+  {
+    /* open the keyfile */
+    f_pr=fopen(keyfile,"r");
+    if (!f_pr)
+      return -1;
+      
+    /* read the private key */
+    retval = crypto_pk_read_private_key(env, f_pr);
+    fclose(f_pr);
+    if (retval == -1)
+    {
+      log(LOG_ERR,"Error reading private key : %s",crypto_perror());
+      return -1;
+    }
+      
+    /* check the private key */
+    retval = crypto_pk_check_key(env);
+    if (retval == 0)
+    {
+      log(LOG_ERR,"Private key read but is invalid : %s.", crypto_perror());
+      return -1;
+    }
+    else if (retval == -1)
+    {
+      log(LOG_ERR,"Private key read but validity checking failed : %s",crypto_perror());
+      return -1;
+    }
+    else if (retval == 1)
+    {
+      return 0;
+    }
+  } /* filename contains legal characters only */
+  
+  return -1; /* report error */
+}
+
 int crypto_pk_read_public_key(crypto_pk_env_t *env, FILE *src)
 {
   assert(env && src);
   
   switch(env->type) {
     case CRYPTO_PK_RSA:
+    /*
     if (env->key)
-      RSA_free((RSA *)env->key);
+      RSA_free((RSA *)env->key);*/
     env->key = (unsigned char *)PEM_read_RSAPublicKey(src, (RSA **)&env->key, NULL, NULL);
     if (!env->key)
       return -1;
@@ -285,9 +342,9 @@ int crypto_pk_set_key(crypto_pk_env_t *env, unsigned char *key)
   
   switch(env->type) {
     case CRYPTO_PK_RSA:
-    if (env->key)
-      RSA_free((RSA *)env->key);
-    env->key = key;
+    if (!env->key)
+      return -1;
+    memcpy((void *)env->key, (void *)key, sizeof(RSA));
     break;
     default :
     return -1;
@@ -296,6 +353,36 @@ int crypto_pk_set_key(crypto_pk_env_t *env, unsigned char *key)
   return 0;
 }
 
+int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b) {
+  int result; 
+  
+  if (!a || !b)
+    return -1;
+  
+  if (!a->key || !b->key)
+    return -1;
+  
+  if (a->type != b->type)
+    return -1;
+  
+  switch(a->type) {
+    case CRYPTO_PK_RSA:
+    assert(((RSA *)a->key)->n && ((RSA *)a->key)->e && ((RSA *)b->key)->n && ((RSA *)b->key)->e);
+    result = BN_cmp(((RSA *)a->key)->n, ((RSA *)b->key)->n);
+    if (result)
+      return result;
+    return BN_cmp(((RSA *)a->key)->e, ((RSA *)b->key)->e);
+    default:
+    return -1;
+  }
+}
+
+int crypto_pk_keysize(crypto_pk_env_t *env)
+{
+  assert(env && env->key);
+  
+  return RSA_size((RSA *)env->key);
+}
 int crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding)
 {
   assert(env && from && to);
@@ -321,6 +408,23 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *from, int fro
 }
 
 /* symmetric crypto */
+int crypto_cipher_generate_key(crypto_cipher_env_t *env)
+{
+  assert(env);
+  
+  switch(env->type) {
+    case CRYPTO_CIPHER_IDENTITY:
+    return 0;
+    case CRYPTO_CIPHER_DES:
+    return crypto_rand(8, env->key);
+    case CRYPTO_CIPHER_RC4:
+    return crypto_rand(16, env->key);
+    default:
+    return -1;
+  }
+
+}
+
 int crypto_cipher_set_iv(crypto_cipher_env_t *env, unsigned char *iv)
 {
   assert(env && iv);
@@ -329,13 +433,17 @@ int crypto_cipher_set_iv(crypto_cipher_env_t *env, unsigned char *iv)
     case CRYPTO_CIPHER_IDENTITY:
      break;
     case CRYPTO_CIPHER_DES:
+    if (!env->iv)
+      return -1;
+    memcpy((void *)env->iv, (void *)iv, 8);
+    break;
     case CRYPTO_CIPHER_RC4:
-     if (env->iv)
-      free((void *)env->iv);
-      env->iv = iv;
-      break;
+    if (!env->iv)
+      return -1;
+    memcpy((void *)env->iv, (void *)iv, 16);
+    break;
     default:
-     return -1;
+    return -1;
   }
   
   return 0;
@@ -348,10 +456,14 @@ int crypto_cipher_set_key(crypto_cipher_env_t *env, unsigned char *key)
     case CRYPTO_CIPHER_IDENTITY:
     break;
     case CRYPTO_CIPHER_DES:
+    if (!env->key)
+      return -1;
+    memcpy((void *)env->key, (void *)key, 8);
+    break;
     case CRYPTO_CIPHER_RC4:
-    if (env->key)
-      free((void *)env->key);
-    env->key = key;
+    if (!env->key)
+      return -1;
+    memcpy((void *)env->key, (void *)key, 16);
     break;
     default:
     return -1;
@@ -396,7 +508,7 @@ int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
     return 0;
 }
 
-int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to)
+int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, size_t fromlen, unsigned char *to)
 {
   int tolen;
   
@@ -405,7 +517,7 @@ int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, unsigne
   return !(EVP_EncryptUpdate((EVP_CIPHER_CTX *)env->aux, to, &tolen, from, fromlen));
 }
 
-int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to)
+int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, size_t fromlen, unsigned char *to)
 {
   int tolen;
   
@@ -425,7 +537,7 @@ int crypto_SHA_digest(unsigned char *m, int len, unsigned char *digest)
 int crypto_rand(unsigned int n, unsigned char *to)
 {
   assert(to);
-  return (RAND_bytes(to, n) == -1);
+  return (RAND_bytes(to, n) != 1);
 }
 
 int crypto_pseudo_rand(unsigned int n, unsigned char *to)

@@ -66,9 +66,11 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
 }
 
 void circuit_free(circuit_t *circ) {
-
-  EVP_CIPHER_CTX_cleanup(&circ->n_ctx);
-  EVP_CIPHER_CTX_cleanup(&circ->p_ctx);
+  
+  if (circ->n_crypto)
+    crypto_free_cipher_env(circ->n_crypto);
+  if (circ->p_crypto)
+    crypto_free_cipher_env(circ->p_crypto);
 
   if(circ->onion)
     free(circ->onion);
@@ -93,7 +95,7 @@ aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type) {
 
   log(LOG_DEBUG,"get_unique_aci_by_addr_port() trying to get a unique aci");
 
-  RAND_pseudo_bytes((unsigned char *)&test_aci, 2);
+  crypto_pseudo_rand(2, (unsigned char *)&test_aci);
 
   if(aci_type == ACI_TYPE_LOWER)
     test_aci &= htons(0x00FF);
@@ -117,7 +119,7 @@ aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type) {
 
 int circuit_init(circuit_t *circ, int aci_type) {
   onion_layer_t *ol;
-  int retval = 0;
+  unsigned char iv[16];
   unsigned char digest1[20];
   unsigned char digest2[20];
 
@@ -143,32 +145,23 @@ int circuit_init(circuit_t *circ, int aci_type) {
   log(LOG_DEBUG,"circuit_init(): Chosen ACI %u.",circ->n_aci);
 
   /* keys */
-  SHA1(ol->keyseed,16,digest1);
-  SHA1(digest1,20,digest2);
-  SHA1(digest2,20,digest1);
-  memcpy(circ->p_key,digest2,16);
-  memcpy(circ->n_key,digest1,16);
+  memset((void *)iv, 0, 16);
+  crypto_SHA_digest(ol->keyseed,16,digest1);
+  crypto_SHA_digest(digest1,20,digest2);
+  crypto_SHA_digest(digest2,20,digest1);
   log(LOG_DEBUG,"circuit_init(): Computed keys.");
-
-  /* set IVs to zero */
-  memset(circ->n_iv,0,16);
-  memset(circ->p_iv,0,16);
-
-  /* initialize cipher context */
-  EVP_CIPHER_CTX_init(&circ->n_ctx);
-  EVP_CIPHER_CTX_init(&circ->p_ctx);
 
   /* initialize crypto engines */
   switch(circ->p_f)
   {
    case ONION_CIPHER_DES :
-    retval = EVP_EncryptInit(&circ->p_ctx, EVP_des_ofb(), circ->p_key, circ->p_iv);
+    circ->p_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
     break;
    case ONION_CIPHER_RC4 :
-    retval = EVP_EncryptInit(&circ->p_ctx, EVP_rc4(), circ->p_key,circ->p_iv);
+    circ->p_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_RC4);
     break;
    case ONION_CIPHER_IDENTITY :
-    retval = EVP_EncryptInit(&circ->p_ctx, EVP_enc_null(), circ->p_key, circ->p_iv);
+    circ->p_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_IDENTITY);
     break;
    default :
     log(LOG_ERR,"Onion contains unrecognized cipher(%u) for ACI : %u.",circ->p_f,circ->n_aci);
@@ -176,36 +169,65 @@ int circuit_init(circuit_t *circ, int aci_type) {
     break;
   }
 
-  if (!retval) /* EVP_EncryptInit() error */
-  {
-    log(LOG_ERR,"Cipher initialization failed (ACI %u).",circ->n_aci);
-    EVP_CIPHER_CTX_cleanup(&circ->n_ctx);
-    EVP_CIPHER_CTX_cleanup(&circ->p_ctx);
+  if (!circ->p_crypto) {
+    log(LOG_ERR,"Could not create a cryptographic environment.");
     return -1;
   }
+  if (crypto_cipher_set_iv(circ->p_crypto, iv) == -1) {
+    log(LOG_ERR,"Could not set the IV.");
+    crypto_free_cipher_env(circ->p_crypto);
+    return -1;
+  }
+  if (crypto_cipher_set_key(circ->p_crypto, digest2) == -1) {
+    log(LOG_ERR,"Could not set encryption key.");
+    crypto_free_cipher_env(circ->p_crypto);
+    return -1;
+  }
+  if (crypto_cipher_encrypt_init_cipher(circ->p_crypto)) /* crypto_cipher_init_cipher error */
+  {
+    log(LOG_ERR,"Cipher initialization failed (ACI %u).",circ->n_aci);
+    crypto_free_cipher_env(circ->p_crypto);
+    return -1;
+  }
+  
   switch(circ->n_f)
   {
    case ONION_CIPHER_DES :
-    retval = EVP_DecryptInit(&circ->n_ctx, EVP_des_ofb(), circ->n_key, circ->n_iv);
+    circ->n_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
     break;
    case ONION_CIPHER_RC4 :
-    retval = EVP_DecryptInit(&circ->n_ctx, EVP_rc4(), circ->n_key,circ->n_iv);
+    circ->n_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_RC4);
     break;
    case ONION_CIPHER_IDENTITY :
-    retval = EVP_DecryptInit(&circ->n_ctx, EVP_enc_null(), circ->n_key, circ->n_iv);
+    circ->n_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_IDENTITY);
     break;
    default :
-    log(LOG_ERR,"Onion contains unrecognized cipher for ACI : %u.",circ->n_aci);
+    log(LOG_ERR,"Onion contains unrecognized cipher(%u) for ACI : %u.",circ->n_f,circ->n_aci);
     return -1;
     break;
   }
-  if (!retval) /* EVP_EncryptInit() error */
-  {
-    log(LOG_ERR,"Cipher initialization failed (ACI %u).",circ->n_aci);
-    EVP_CIPHER_CTX_cleanup(&circ->n_ctx);
-    EVP_CIPHER_CTX_cleanup(&circ->p_ctx);
+
+  if (!circ->n_crypto) {
+    log(LOG_ERR,"Could not create a cryptographic environment.");
     return -1;
   }
+  if (crypto_cipher_set_iv(circ->n_crypto, iv) == -1) {
+    log(LOG_ERR,"Could not set the IV.");
+    crypto_free_cipher_env(circ->n_crypto);
+    return -1;
+  }
+  if (crypto_cipher_set_key(circ->n_crypto, digest1) == -1) {
+    log(LOG_ERR,"Could not set encryption key.");
+    crypto_free_cipher_env(circ->n_crypto);
+    return -1;
+  }
+  if (crypto_cipher_decrypt_init_cipher(circ->n_crypto)) /* crypto_cipher_init_cipher error */
+  {
+    log(LOG_ERR,"Cipher initialization failed (ACI %u).",circ->n_aci);
+    crypto_free_cipher_env(circ->n_crypto);
+    return -1;
+  }
+
   log(LOG_DEBUG,"circuit_init(): Cipher initialization complete.");
 
   circ->expire = ol->expire;
@@ -276,13 +298,12 @@ int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, connection_t *conn,
 
 int circuit_crypt(circuit_t *circ, char *in, size_t inlen, char crypt_type) {
   char *out;
-  int outlen;
   int i;
   crypt_path_t *thishop;
 
   assert(circ && in);
 
-  out = malloc(inlen);
+  out = (char *)malloc(inlen);
   if(!out)
     return -1;
 
@@ -298,8 +319,8 @@ int circuit_crypt(circuit_t *circ, char *in, size_t inlen, char crypt_type) {
         thishop = circ->cpath[i];
     
         /* encrypt */
-        if(!EVP_EncryptUpdate(&thishop->f_ctx,out,&outlen,in,inlen)) {
-          log(LOG_ERR,"Error performing encryption:%s",ERR_reason_error_string(ERR_get_error()));
+        if(crypto_cipher_encrypt(thishop->f_crypto, in, inlen, (unsigned char *)out)) {
+          log(LOG_ERR,"Error performing encryption:%s",crypto_perror());
           free(out);
           return -1;
         }
@@ -308,9 +329,9 @@ int circuit_crypt(circuit_t *circ, char *in, size_t inlen, char crypt_type) {
         memcpy(in,out,inlen);
       }
     } else { /* we're in the middle. Just one crypt. */
-      if(!EVP_EncryptUpdate(&circ->p_ctx,out,&outlen,in,inlen)) {
+      if(crypto_cipher_encrypt(circ->p_crypto,in, inlen, out)) {
         log(LOG_ERR,"circuit_encrypt(): Encryption failed for ACI : %u (%s).",
-            circ->p_aci, ERR_reason_error_string(ERR_get_error()));
+            circ->p_aci, crypto_perror());
         free(out);
         return -1;
       }
@@ -327,8 +348,8 @@ int circuit_crypt(circuit_t *circ, char *in, size_t inlen, char crypt_type) {
         thishop = circ->cpath[i];
 
         /* encrypt */
-        if(!EVP_DecryptUpdate(&thishop->b_ctx,out,&outlen,in,inlen)) {
-          log(LOG_ERR,"Error performing decryption:%s",ERR_reason_error_string(ERR_get_error()));
+        if(crypto_cipher_decrypt(thishop->b_crypto, in, inlen, out)) {
+          log(LOG_ERR,"Error performing decryption:%s",crypto_perror());
           free(out);
           return -1;
         }
@@ -337,9 +358,9 @@ int circuit_crypt(circuit_t *circ, char *in, size_t inlen, char crypt_type) {
         memcpy(in,out,inlen);
       }
     } else { /* we're in the middle. Just one crypt. */
-      if(!EVP_DecryptUpdate(&circ->n_ctx,out,&outlen,in,inlen)) {
+      if(crypto_cipher_decrypt(circ->n_crypto,in, inlen, out)) {
         log(LOG_ERR,"circuit_crypt(): Decryption failed for ACI : %u (%s).",
-            circ->n_aci, ERR_reason_error_string(ERR_get_error()));
+            circ->n_aci, crypto_perror());
         free(out);
         return -1;
       }

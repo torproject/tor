@@ -86,6 +86,20 @@ connection_t *connection_new(int type) {
 
   conn->receiver_bucket = 10240; /* should be enough to do the handshake */
   conn->bandwidth = conn->receiver_bucket / 10; /* give it a default */
+  
+  if (connection_speaks_cells(conn)) {
+    conn->f_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
+    if (!conn->f_crypto) {
+      free((void *)conn);
+      return NULL;
+    }
+    conn->b_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
+    if (!conn->b_crypto) {
+      crypto_free_cipher_env(conn->f_crypto);
+      free((void *)conn);
+      return NULL;
+    }
+  }
   return conn;
 }
 
@@ -102,8 +116,10 @@ void connection_free(connection_t *conn) {
     free(conn->dest_port);
 
   if(connection_speaks_cells(conn)) {
-    EVP_CIPHER_CTX_cleanup(&conn->f_ctx);
-    EVP_CIPHER_CTX_cleanup(&conn->b_ctx);
+    if (conn->f_crypto)
+      crypto_free_cipher_env(conn->f_crypto);
+    if (conn->b_crypto)
+      crypto_free_cipher_env(conn->b_crypto);
   }
 
   if(conn->s > 0)
@@ -111,7 +127,7 @@ void connection_free(connection_t *conn) {
   free(conn);
 }
 
-int connection_create_listener(RSA *prkey, struct sockaddr_in *local, int type) {
+int connection_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local, int type) {
   connection_t *conn;
   int s;
   int one=1;
@@ -230,7 +246,7 @@ static int learn_local(struct sockaddr_in *local) {
 }
 
 int retry_all_connections(int role, routerinfo_t **router_array, int rarray_len,
-  RSA *prkey, uint16_t or_listenport, uint16_t op_listenport, uint16_t ap_listenport) {
+  crypto_pk_env_t *prkey, uint16_t or_listenport, uint16_t op_listenport, uint16_t ap_listenport) {
 
   /* start all connections that should be up but aren't */
 
@@ -275,7 +291,7 @@ int retry_all_connections(int role, routerinfo_t **router_array, int rarray_len,
   return 0;
 }
 
-connection_t *connection_connect_to_router_as_op(routerinfo_t *router, RSA *prkey, uint16_t local_or_port) {
+connection_t *connection_connect_to_router_as_op(routerinfo_t *router, crypto_pk_env_t *prkey, uint16_t local_or_port) {
   struct sockaddr_in local; /* local address */
 
   if(learn_local(&local) < 0)
@@ -488,7 +504,6 @@ int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn) {
 
 int connection_encrypt_cell_header(cell_t *cellp, connection_t *conn) {
   char newheader[8];
-  int newsize;
 #if 0
   int x;
   char *px;
@@ -501,7 +516,7 @@ int connection_encrypt_cell_header(cell_t *cellp, connection_t *conn) {
   printf("\n");
 #endif
 
-  if(!EVP_EncryptUpdate(&conn->f_ctx, newheader, &newsize, (char *)cellp, 8)) {
+  if(crypto_cipher_encrypt(conn->f_crypto, (char *)cellp, 8, newheader)) {
     log(LOG_ERR,"Could not encrypt data for connection %s:%u.",conn->address,ntohs(conn->port));
     return -1;
   }
@@ -664,7 +679,6 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
    */
   char crypted[128];
   char outbuf[1024];
-  int outlen;
 //  int x;
   cell_t *cellp;
 
@@ -683,7 +697,7 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   printf("\n");
 #endif
   /* decrypt */
-  if(!EVP_DecryptUpdate(&conn->b_ctx,(unsigned char *)outbuf,&outlen,crypted,8)) {
+  if(crypto_cipher_decrypt(conn->b_crypto,crypted,8,(unsigned char *)outbuf)) {
     log(LOG_ERR,"connection_process_cell_from_inbuf(): Decryption failed, dropping.");
     return connection_process_inbuf(conn); /* process the remainder of the buffer */
   }

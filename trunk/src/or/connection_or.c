@@ -112,24 +112,25 @@ int connection_or_finished_flushing(connection_t *conn) {
 
 void conn_or_init_crypto(connection_t *conn) {
   int x;
+  unsigned char iv[16];
 
   assert(conn);
   printf("f_session_key: ");
   for(x=0;x<8;x++) {
-    printf("%d ",conn->f_session_key[x]);
+    printf("%d ",conn->f_crypto->key[x]);
   }
   printf("\nb_session_key: ");
   for(x=0;x<8;x++) {
-    printf("%d ",conn->b_session_key[x]);
+    printf("%d ",conn->b_crypto->key[x]);
   }
   printf("\n");
 
-  memset(conn->f_session_iv,0,8);
-  memset(conn->b_session_iv,0,8);
-  EVP_CIPHER_CTX_init(&conn->f_ctx);
-  EVP_CIPHER_CTX_init(&conn->b_ctx);
-  EVP_EncryptInit(&conn->f_ctx, EVP_des_ofb(), conn->f_session_key, conn->f_session_iv);
-  EVP_DecryptInit(&conn->b_ctx, EVP_des_ofb(), conn->b_session_key, conn->b_session_iv);
+  memset((void *)iv, 0, 16);
+  crypto_cipher_set_iv(conn->f_crypto, iv);
+  crypto_cipher_set_iv(conn->b_crypto, iv);
+  
+  crypto_cipher_encrypt_init_cipher(conn->f_crypto);
+  crypto_cipher_decrypt_init_cipher(conn->b_crypto);
     /* always encrypt with f, always decrypt with b */
   
 }
@@ -139,7 +140,7 @@ void conn_or_init_crypto(connection_t *conn) {
  * *result to 1 if connect() returned before completing, or to 2
  * if it completed, and returns the new conn.
  */
-connection_t *connection_or_connect(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local, 
+connection_t *connection_or_connect(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local, 
                                     uint16_t port, int *result) {
   connection_t *conn;
   struct sockaddr_in router_addr;
@@ -215,7 +216,7 @@ connection_t *connection_or_connect(routerinfo_t *router, RSA *prkey, struct soc
  *
  */
 
-connection_t *connection_or_connect_as_op(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local) {
+connection_t *connection_or_connect_as_op(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local) {
   connection_t *conn;
   int result=0; /* so connection_or_connect() can tell us what happened */
 
@@ -263,28 +264,28 @@ int or_handshake_op_send_keys(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_OR);
 
   /* generate random keys */
-  if(!RAND_bytes(conn->f_session_key,8) ||
-     !RAND_bytes(conn->b_session_key,8)) {
+  if(crypto_cipher_generate_key(conn->f_crypto) ||
+     crypto_cipher_generate_key(conn->b_crypto)) {
     log(LOG_ERR,"Cannot generate a secure DES key.");
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_op_send_keys() : Generated DES keys.");
   /* compose the message */
   memcpy((void *)message, (void *)&bandwidth, 4);
-  memcpy((void *)(message + 4), (void *)conn->f_session_key, 8);
-  memcpy((void *)(message + 12), (void *)conn->b_session_key, 8);
+  memcpy((void *)(message + 4), (void *)conn->f_crypto->key, 8);
+  memcpy((void *)(message + 12), (void *)conn->b_crypto->key, 8);
   printf("f_session_key: ");
   for(x=0;x<8;x++) {
-    printf("%d ",conn->f_session_key[x]);
+    printf("%d ",conn->f_crypto->key[x]);
   }
   printf("\nb_session_key: ");
   for(x=0;x<8;x++) {
-    printf("%d ",conn->b_session_key[x]);
+    printf("%d ",conn->b_crypto->key[x]);
   }
   printf("\n");
 
   /* encrypt with RSA */
-  if(RSA_public_encrypt(20, message, cipher, conn->pkey, RSA_PKCS1_PADDING) < 0) {
+  if(crypto_pk_public_encrypt(conn->pkey, message, 20, cipher, RSA_PKCS1_PADDING) < 0) {
     log(LOG_ERR,"or_handshake_op_send_keys(): Public key encryption failed.");
     return -1;
   }
@@ -332,7 +333,7 @@ int or_handshake_op_finished_sending_keys(connection_t *conn) {
  *
  */
 
-connection_t *connection_or_connect_as_or(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local) {
+connection_t *connection_or_connect_as_or(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local) {
   connection_t *conn;
   int result=0; /* so connection_or_connect() can tell us what happened */
 
@@ -374,8 +375,8 @@ int or_handshake_client_send_auth(connection_t *conn) {
   assert(conn);
 
   /* generate random keys */
-  if(!RAND_bytes(conn->f_session_key,8) ||
-     !RAND_bytes(conn->b_session_key,8)) {
+  if(crypto_cipher_generate_key(conn->f_crypto) ||
+     crypto_cipher_generate_key(conn->b_crypto)) {
     log(LOG_ERR,"Cannot generate a secure DES key.");
     return -1;
   }
@@ -386,17 +387,17 @@ int or_handshake_client_send_auth(connection_t *conn) {
   memcpy(buf+4,(void *)&conn->local.sin_port,2); /* local port */
   memcpy(buf+6, (void *)&conn->addr, 4); /* remote address */
   memcpy(buf+10, (void *)&conn->port, 2); /* remote port */
-  memcpy(buf+12,conn->f_session_key,8); /* keys */
-  memcpy(buf+20,conn->b_session_key,8);
+  memcpy(buf+12,conn->f_crypto->key,8); /* keys */
+  memcpy(buf+20,conn->b_crypto->key,8);
   *((uint32_t *)(buf+28)) = htonl(conn->bandwidth); /* max link utilisation */
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated first authentication message.");
 
   /* encrypt message */
-  retval = RSA_public_encrypt(36,buf,cipher,conn->pkey,RSA_PKCS1_PADDING);
+  retval = crypto_pk_public_encrypt(conn->pkey, buf, 36, cipher,RSA_PKCS1_PADDING);
   if (retval == -1) /* error */
   { 
     log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,ntohs(conn->port));
-    log(LOG_DEBUG,"or_handshake_client_send_auth() : Reason : %s.",ERR_reason_error_string(ERR_get_error()));
+    log(LOG_DEBUG,"or_handshake_client_send_auth() : Reason : %s.",crypto_perror());
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Encrypted authentication message.");
@@ -444,13 +445,13 @@ int or_handshake_client_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_client_process_auth() : Received auth.");
 
   /* decrypt response */
-  retval = RSA_private_decrypt(128,cipher,buf,conn->prkey,RSA_PKCS1_PADDING);
+  retval = crypto_pk_private_decrypt(conn->prkey, cipher, 128, buf, RSA_PKCS1_PADDING);
   if (retval == -1)
   { 
     log(LOG_ERR,"Public-key decryption failed during authentication to %s:%u.",
         conn->address,ntohs(conn->port));
     log(LOG_DEBUG,"or_handshake_client_process_auth() : Reason : %s.",
-        ERR_reason_error_string(ERR_get_error()));
+        crypto_perror());
     return -1;
   }
   else if (retval != 44)
@@ -465,8 +466,8 @@ int or_handshake_client_process_auth(connection_t *conn) {
        (memcmp(&conn->local.sin_port, buf+4, 2)) || /* local port */
        (memcmp(&conn->addr, buf+6, 4)) || /* remote address */
        (memcmp(&conn->port, buf+10, 2)) || /* remote port */
-       (memcmp(&conn->f_session_key, buf+12, 8)) || /* keys */
-       (memcmp(&conn->b_session_key, buf+20, 8)))
+       (memcmp(conn->f_crypto->key, buf+12, 8)) || /* keys */
+       (memcmp(conn->b_crypto->key, buf+20, 8)))
   { /* incorrect response */
     log(LOG_ERR,"Router %s:%u failed to authenticate. Either the key I have is obsolete or they're doing something they're not supposed to.",conn->address,ntohs(conn->port));
     return -1;
@@ -484,11 +485,11 @@ int or_handshake_client_process_auth(connection_t *conn) {
   memcpy(buf+12, buf+36, 8);
 
   /* encrypt reply */
-  retval = RSA_public_encrypt(20,buf,cipher,conn->pkey,RSA_PKCS1_PADDING);
+  retval = crypto_pk_public_encrypt(conn->pkey, buf, 20, cipher,RSA_PKCS1_PADDING);
   if (retval == -1) /* error */
   { 
     log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,ntohs(conn->port));
-    log(LOG_DEBUG,"or_handshake_client_process_auth() : Reason : %s.",ERR_reason_error_string(ERR_get_error()));
+    log(LOG_DEBUG,"or_handshake_client_process_auth() : Reason : %s.",crypto_perror());
     return -1;
   }
 
@@ -552,12 +553,12 @@ int or_handshake_server_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Received auth.");
 
   /* decrypt response */
-  retval = RSA_private_decrypt(128,cipher,buf,conn->prkey,RSA_PKCS1_PADDING);
+  retval = crypto_pk_private_decrypt(conn->prkey, cipher, 128, buf,RSA_PKCS1_PADDING);
   if (retval == -1)
   { 
     log(LOG_ERR,"Public-key decryption failed processing auth message from new client.");
     log(LOG_DEBUG,"or_handshake_server_process_auth() : Reason : %s.",
-        ERR_reason_error_string(ERR_get_error()));
+        crypto_perror());
     return -1;
   }
   else if (retval != 36)
@@ -586,8 +587,8 @@ int or_handshake_server_process_auth(connection_t *conn) {
   }
 
   /* save keys */
-  memcpy(conn->b_session_key,buf+12,8);
-  memcpy(conn->f_session_key,buf+20,8);
+  crypto_cipher_set_key(conn->b_crypto,buf+12);
+  crypto_cipher_set_key(conn->f_crypto,buf+20);
 
   /* update link info */
   bandwidth = ntohl(*(uint32_t *)(buf+28));
@@ -603,8 +604,8 @@ int or_handshake_server_process_auth(connection_t *conn) {
   conn->address = strdup(router->address);
 
   /* generate a nonce */
-  retval = RAND_pseudo_bytes(conn->nonce,8);
-  if (retval == -1) /* error */
+  retval = crypto_pseudo_rand(8, conn->nonce);
+  if (retval) /* error */
   {
     log(LOG_ERR,"Cannot generate a nonce.");
     return -1;
@@ -616,11 +617,11 @@ int or_handshake_server_process_auth(connection_t *conn) {
   *(uint32_t *)(buf+28) = htonl(conn->bandwidth); /* send max link utilisation */
 
   /* encrypt message */
-  retval = RSA_public_encrypt(44,buf,cipher,conn->pkey,RSA_PKCS1_PADDING);
+  retval = crypto_pk_public_encrypt(conn->pkey, buf, 44, cipher,RSA_PKCS1_PADDING);
   if (retval == -1) /* error */
   {
     log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,ntohs(conn->port));
-    log(LOG_DEBUG,"or_handshake_server_process_auth() : Reason : %s.",ERR_reason_error_string(ERR_get_error()));
+    log(LOG_DEBUG,"or_handshake_server_process_auth() : Reason : %s.",crypto_perror());
     return -1;
   }
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Reply encrypted.");
@@ -668,13 +669,13 @@ int or_handshake_server_process_nonce(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_nonce() : Received auth.");
 
   /* decrypt response */
-  retval = RSA_private_decrypt(128,cipher,buf,conn->prkey,RSA_PKCS1_PADDING);
+  retval = crypto_pk_private_decrypt(conn->prkey, cipher, 128, buf,RSA_PKCS1_PADDING);
   if (retval == -1)
   {
     log(LOG_ERR,"Public-key decryption failed during authentication to %s:%u.",
         conn->address,ntohs(conn->port));
     log(LOG_DEBUG,"or_handshake_server_process_nonce() : Reason : %s.",
-        ERR_reason_error_string(ERR_get_error()));
+        crypto_perror());
     return -1;
   }
   else if (retval != 20)
@@ -709,7 +710,7 @@ int or_handshake_server_process_nonce(connection_t *conn) {
 /* ********************************** */
 
 
-int connection_or_create_listener(RSA *prkey, struct sockaddr_in *local) {
+int connection_or_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local) {
   log(LOG_DEBUG,"connection_create_or_listener starting");
   return connection_create_listener(prkey, local, CONN_TYPE_OR_LISTENER);
 }

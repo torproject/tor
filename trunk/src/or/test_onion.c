@@ -13,30 +13,27 @@ int main(int argc, char *argv[])
   unsigned char onion_pass6[268];
   
   /* RSA keys for the six layers */
-  RSA *key1 = NULL;
-  RSA *key2 = NULL;
-  RSA *key3 = NULL;
-  RSA *key4 = NULL;
-  RSA *key5 = NULL;
-  RSA *key6 = NULL;
+  crypto_pk_env_t *key1 = crypto_new_pk_env(CRYPTO_PK_RSA);
+  crypto_pk_env_t *key2 = crypto_new_pk_env(CRYPTO_PK_RSA);
+  crypto_pk_env_t *key3 = crypto_new_pk_env(CRYPTO_PK_RSA);
+  crypto_pk_env_t *key4 = crypto_new_pk_env(CRYPTO_PK_RSA);
+  crypto_pk_env_t *key5 = crypto_new_pk_env(CRYPTO_PK_RSA);
+  crypto_pk_env_t *key6 = crypto_new_pk_env(CRYPTO_PK_RSA);
+
   
   /* END VARIABLES */
 
-  ERR_load_crypto_strings();
+  crypto_global_init();
   printf("onion.c test suite ...\n");
   
   printf("\nGenerating 6 RSA keys ...\n");
-  key1 = RSA_generate_key(1024,65535, NULL, NULL);
-  key2 = RSA_generate_key(1024,65535, NULL, NULL);
-  key3 = RSA_generate_key(1024,65535, NULL, NULL);
-  key4 = RSA_generate_key(1024,65535, NULL, NULL);
-  key5 = RSA_generate_key(1024,65535, NULL, NULL);
-  key6 = RSA_generate_key(1024,65535, NULL, NULL);
+  crypto_pk_generate_key(key1);
+  crypto_pk_generate_key(key2);
+  crypto_pk_generate_key(key3);
+  crypto_pk_generate_key(key4);
+  crypto_pk_generate_key(key5);
+  crypto_pk_generate_key(key6);
   
-  if (!key1 || !key2 || !key3 || !key4 || !key5 || !key6) {
-    printf("\nFailed!\n\n");
-    exit(1);
-  }
   printf("\ndone.\n");
   
   printf("\nGenerating onion ...\n");
@@ -175,6 +172,6 @@ int main(int argc, char *argv[])
     exit(1);
   }
   printf("\nTEST PASSED.\n");
-  ERR_free_strings();
+  crypto_global_cleanup();
   return 0;
 }
