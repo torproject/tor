@@ -31,6 +31,8 @@ ARMA    - arma claims
         o Replace running-routers with a router-status line that can be used
           without a list of router descriptors.
         o Add a log handler that sends stuff to syslog.
+        o Deprecate unofficial configuration abbrevs; make official abbrevs
+          only official on the command line.
         - per-month byte allowances.
 N         - Based on bandwidth and per-month allowance, choose a
             window within month to be up.  Stay up until allowance is
@@ -178,8 +180,8 @@ NICK    . Windows port
           - a howto tutorial with examples
 * put a stub on the wiki
           o tutorial: how to set up your own tor network
-            - (need to not hardcode dirservers file in config.c)
-* this will be solved when we put dirservers in config lines
+            o (need to not hardcode dirservers file in config.c)
+            - Make tutorial reflect this.
           - port forwarding howto for ipchains, etc
 * roger add to wiki of requests
           . correct, update, polish spec
