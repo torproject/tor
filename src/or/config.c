@@ -400,6 +400,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   static int backup_argc;
   char *previous_pidfile = NULL;
   int previous_runasdaemon = 0;
+  int previous_orport = -1;
   int using_default_torrc;
 
   if(first_load) { /* first time we're called. save commandline args */
@@ -414,6 +415,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     if(options->PidFile)
       previous_pidfile = tor_strdup(options->PidFile);
     previous_runasdaemon = options->RunAsDaemon;
+    previous_orport = options->ORPort;
     free_options(options);
   }
   init_options(options);
@@ -473,6 +475,11 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   if(previous_runasdaemon && !options->RunAsDaemon) {
     log_fn(LOG_WARN,"During reload, change from RunAsDaemon=1 to =0 not allowed. Failing.");
+    return -1;
+  }
+
+  if(previous_orport == 0 && options->ORPort > 0) {
+    log_fn(LOG_WARN,"During reload, change from ORPort=0 to =%d not allowed. Failing.",options->ORPort);
     return -1;
   }
 
