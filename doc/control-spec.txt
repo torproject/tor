@@ -174,13 +174,12 @@ the message.
                    (Launched=0,connected=1,failed=2,closed=3)
                 OR nickname/identity [NUL-terminated]
 
-      0x0004 -- Bandwidth used in last N seconds.
+      0x0004 -- Bandwidth used in the last second
 
-                Number of seconds covered in interval [2 octets]
                 Bytes read [4 octets]
                 Bytes written [4 octets]
 
-      0x0005 -- Warning/error occurred
+      0x0005 -- Notice/warning/error occurred
 
                 Message [NUL-terminated]
 

@@ -262,7 +262,7 @@ options_act(void) {
   /* Close the temporary log we used while starting up, if it isn't already
    * gone. */
   close_temp_logs();
-  add_callback_log(LOG_WARN, LOG_ERR, control_event_logmsg);
+  add_callback_log(LOG_NOTICE, LOG_ERR, control_event_logmsg);
 
   /* Start backgrounding the process, if requested. */
   if (options->RunAsDaemon) {
