@@ -13,6 +13,10 @@ static void circuit_free_cpath_node(crypt_path_t *victim);
 static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type);
 static void circuit_rep_hist_note_result(circuit_t *circ);
 
+static void circuit_is_ready(circuit_t *circ);
+static void circuit_failed(circuit_t *circ);
+static int circuit_establish_circuit(uint8_t purpose);
+
 unsigned long stats_n_relay_cells_relayed = 0;
 unsigned long stats_n_relay_cells_delivered = 0;
 
@@ -259,6 +263,8 @@ circuit_t *circuit_get_newest(connection_t *conn,
   for (circ=global_circuitlist;circ;circ = circ->next) {
     if (!circ->cpath)
       continue; /* this circ doesn't start at us */
+    if (circ->purpose != CIRCUIT_PURPOSE_C_GENERAL)
+      continue; /* don't pick rendezvous circuits */
     if (must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_conn))
       continue; /* ignore non-open circs */
     if (circ->marked_for_close)
@@ -732,8 +738,10 @@ int _circuit_mark_for_close(circuit_t *circ) {
    * module then.  If it isn't OPEN, we send it there now to remember which
    * links worked and which didn't.
    */
-  if (circ->state != CIRCUIT_STATE_OPEN)
+  if (circ->state != CIRCUIT_STATE_OPEN) {
+    circuit_failed(circ); /* take actions if necessary */
     circuit_rep_hist_note_result(circ);
+  }
 
   if(circ->n_conn)
     connection_send_destroy(circ->n_circ_id, circ->n_conn);
@@ -745,13 +753,7 @@ int _circuit_mark_for_close(circuit_t *circ) {
   for(conn=circ->p_streams; conn; conn=conn->next_stream) {
     connection_edge_destroy(circ->p_circ_id, conn);
   }
-  if (circ->state == CIRCUIT_STATE_BUILDING ||
-      circ->state == CIRCUIT_STATE_OR_WAIT) {
-    /* If we never built the circuit, note it as a failure. */
-    /* Note that we can't just check circ->cpath here, because if
-     * circuit-building failed immediately, it won't be set yet. */
-    circuit_increment_failure_count();
-  }
+
   circ->marked_for_close = 1;
 
   if (circ->rend_splice && !circ->rend_splice->marked_for_close) {
@@ -981,13 +983,76 @@ void circuit_expire_unused_circuits(void) {
   smartlist_free(unused_open_circs);
 }
 
+static void circuit_is_ready(circuit_t *circ) {
+
+  /* should maybe break this into rend_circuit_is_ready() one day */
+  switch(circ->purpose) {
+    case CIRCUIT_PURPOSE_C_GENERAL:
+      /* Tell any AP connections that have been waiting for a new
+      * circuit that one is ready. */
+      connection_ap_attach_pending();
+      break;
+    case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
+      /* at Bob, waiting for introductions */
+      // do nothing?
+      break;
+    case CIRCUIT_PURPOSE_C_INTRODUCING:
+      /* at Alice, connecting to intro point */
+      // alice sends introduce1 relay cell
+      break;
+    case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
+      /* at Alice, waiting for Bob */
+      // alice launches a circuit to bob's intro point
+      break;
+    case CIRCUIT_PURPOSE_S_RENDEZVOUSING:
+      /* at Bob, connecting to rend point */
+      // bob sends rend2 cell
+      break;
+  }
+}
+
+static void circuit_failed(circuit_t *circ) {
+
+  /* we should examine circ and see if it failed because of
+   * the last hop or an earlier hop. then use this info below.
+   */
+  int failed_at_last_hop;
+
+  switch(circ->purpose) {
+    case CIRCUIT_PURPOSE_C_GENERAL:
+      if (circ->state != CIRCUIT_STATE_OPEN) {
+        /* If we never built the circuit, note it as a failure. */
+        /* Note that we can't just check circ->cpath here, because if
+         * circuit-building failed immediately, it won't be set yet. */
+        circuit_increment_failure_count();
+      }
+      break;
+    case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
+      /* at Bob, waiting for introductions */
+      // remember this somewhere?
+      break;
+    case CIRCUIT_PURPOSE_C_INTRODUCING:
+      /* at Alice, connecting to intro point */
+      // alice needs to try another intro point
+      break;
+    case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
+      /* at Alice, waiting for Bob */
+      // alice needs to pick a new rend point
+      break;
+    case CIRCUIT_PURPOSE_S_RENDEZVOUSING:
+      /* at Bob, connecting to rend point */
+      // 
+      break;
+  }
+}
+
 /* Number of consecutive failures so far; should only be touched by
  * circuit_launch_new and circuit_*_failure_count.
  */
 static int n_circuit_failures = 0;
 
 /* Return -1 if you aren't going to try to make a circuit, 0 if you did try. */
-int circuit_launch_new(void) {
+int circuit_launch_new(uint8_t purpose) {
 
   if(!(options.SocksPort||options.RunTesting)) /* no need for circuits. */
     return -1;
@@ -998,7 +1063,7 @@ int circuit_launch_new(void) {
   }
 
   /* try a circ. if it fails, circuit_mark_for_close will increment n_circuit_failures */
-  circuit_establish_circuit();
+  circuit_establish_circuit(purpose);
 
   return 0;
 }
@@ -1012,7 +1077,7 @@ void circuit_reset_failure_count(void) {
   n_circuit_failures = 0;
 }
 
-int circuit_establish_circuit(void) {
+static int circuit_establish_circuit(uint8_t purpose) {
   routerinfo_t *firsthop;
   connection_t *n_conn;
   circuit_t *circ;
@@ -1020,7 +1085,7 @@ int circuit_establish_circuit(void) {
   circ = circuit_new(0, NULL); /* sets circ->p_circ_id and circ->p_conn */
   circ->state = CIRCUIT_STATE_OR_WAIT;
   circ->build_state = onion_new_cpath_build_state();
-  circ->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  circ->purpose = purpose;
 
   if (! circ->build_state) {
     log_fn(LOG_INFO,"Generating cpath length failed.");
@@ -1097,6 +1162,8 @@ void circuit_n_conn_open(connection_t *or_conn) {
   }
 }
 
+extern int has_completed_circuit;
+
 int circuit_send_next_onion_skin(circuit_t *circ) {
   cell_t cell;
   crypt_path_t *hop;
@@ -1119,7 +1186,9 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     cell.command = CELL_CREATE;
     cell.circ_id = circ->n_circ_id;
 
-    if(onion_skin_create(circ->n_conn->onion_pkey, &(circ->cpath->handshake_state), cell.payload) < 0) {
+    if(onion_skin_create(circ->n_conn->onion_pkey,
+                         &(circ->cpath->handshake_state),
+                         cell.payload) < 0) {
       log_fn(LOG_WARN,"onion_skin_create (first hop) failed.");
       return -1;
     }
@@ -1139,6 +1208,12 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       circ->state = CIRCUIT_STATE_OPEN;
       log_fn(LOG_INFO,"circuit built!");
       circuit_reset_failure_count();
+      if(!has_completed_circuit) {
+        has_completed_circuit=1;
+        log_fn(LOG_NOTICE,"Tor has successfully opened a circuit. Looks like it's working.");
+      }
+      circuit_rep_hist_note_result(circ);
+      circuit_is_ready(circ); /* do other actions as necessary */
       /* Tell any AP connections that have been waiting for a new
        * circuit that one is ready. */
       connection_ap_attach_pending();
@@ -1233,8 +1308,6 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   return 0;
 }
 
-extern int has_completed_circuit;
-
 int circuit_finish_handshake(circuit_t *circ, char *reply) {
   unsigned char iv[16];
   unsigned char keys[40+32];
@@ -1286,12 +1359,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
 
   hop->state = CPATH_STATE_OPEN;
   log_fn(LOG_INFO,"finished");
-  if(!has_completed_circuit) {
-    has_completed_circuit=1;
-    log_fn(LOG_NOTICE,"Tor has successfully opened a circuit. Looks like it's working.");
-  }
   circuit_log_path(LOG_INFO,circ);
-  circuit_rep_hist_note_result(circ);
   return 0;
 }
 
