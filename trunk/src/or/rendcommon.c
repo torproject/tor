@@ -246,7 +246,8 @@ int rend_cache_store(char *desc, int desc_len)
   }
   e->parsed = parsed;
   e->len = desc_len;
-  e->desc = tor_strdup(desc);
+  e->desc = tor_malloc(desc_len);
+  memcpy(e->desc, desc, desc_len);
 
   log_fn(LOG_INFO,"Successfully stored rend desc '%s', len %d", query, desc_len);
   return 0;
