@@ -53,9 +53,9 @@ int router_reload_router_list(void)
 
   tor_snprintf(filename,sizeof(filename),"%s/cached-directory",
                get_options()->DataDirectory);
-  stat(filename, &st); /* ignore return value; if s is true below, it worked */
   s = read_file_to_str(filename,0);
   if (s) {
+    stat(filename, &st); /* if s is true, stat probably worked */
     log_fn(LOG_INFO, "Loading cached directory from %s", filename);
     is_recent = st.st_mtime > time(NULL) - 60*15;
     if (router_load_routerlist_from_directory(s, NULL, is_recent) < 0) {
