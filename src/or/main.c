@@ -490,7 +490,7 @@ static int do_main_loop(void) {
         return -1;
       }
       if(options.DirPort) {
-        /* reload the fingerprint file */
+        /* reload the approved-routers file */
         char keydir[512];
         sprintf(keydir,"%s/approved-routers", options.DataDirectory);
         log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
@@ -600,7 +600,7 @@ static void dumpstats(int severity) {
          "                 %10lu relay\n"
          "                        (%10lu relayed)\n"
          "                        (%10lu delivered)\n"
-         "                 %10lud destroy",
+         "                 %10lu destroy",
          stats_n_padding_cells_processed,
          stats_n_create_cells_processed,
          stats_n_created_cells_processed,
@@ -609,11 +609,11 @@ static void dumpstats(int severity) {
          stats_n_relay_cells_delivered,
          stats_n_destroy_cells_processed);
   if (stats_n_data_cells_packaged)
-    log(severity,"Average outgoing cell fullness: %2.3f%%",
+    log(severity,"Average packaged cell fullness: %2.3f%%",
            100*(((double)stats_n_data_bytes_packaged) /
                 (stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
   if (stats_n_data_cells_received)
-    log(severity,"Average incoming cell fullness: %2.3f%%",
+    log(severity,"Average delivered cell fullness: %2.3f%%",
            100*(((double)stats_n_data_bytes_received) /
                 (stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
