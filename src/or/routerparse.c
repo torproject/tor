@@ -143,7 +143,7 @@ static int check_directory_signature(const char *digest,
 int router_get_dir_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
-                              "signed-directory","directory-signature");
+                              "signed-directory","\ndirectory-signature");
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the first router in
@@ -152,7 +152,7 @@ int router_get_dir_hash(const char *s, char *digest)
 int router_get_router_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
-                              "router ","router-signature");
+                              "router ","\nrouter-signature");
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the running-routers
@@ -161,7 +161,7 @@ int router_get_router_hash(const char *s, char *digest)
 int router_get_runningrouters_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
-                              "network-status ","directory-signature");
+                              "network-status","\ndirectory-signature");
 }
 
 /** Parse a date of the format "YYYY-MM-DD hh:mm:ss" and store the result into
@@ -1339,6 +1339,11 @@ static int router_get_hash_impl(const char *s, char *digest,
   start = strstr(s, start_str);
   if (!start) {
     log_fn(LOG_WARN,"couldn't find \"%s\"",start_str);
+    return -1;
+  }
+  if (start != s && *(start-1) != '\n') {
+    log_fn(LOG_WARN, "first occurance of \"%s\" is not at the start of a line",
+           start_str);
     return -1;
   }
   end = strstr(start+strlen(start_str), end_str);
