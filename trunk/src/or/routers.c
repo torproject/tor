@@ -90,7 +90,7 @@ void router_retry_connections(void) {
 }
 
 routerinfo_t *router_pick_directory_server(void) {
-  /* currently, pick the first router with a positive dir_port */
+  /* pick the first running router with a positive dir_port */
   int i;
   routerinfo_t *router;
   
@@ -99,7 +99,7 @@ routerinfo_t *router_pick_directory_server(void) {
 
   for(i=0;i<directory->n_routers;i++) {
     router = directory->routers[i];
-    if(router->dir_port > 0)
+    if(router->dir_port > 0 && router->is_running)
       return router;
   }
 
@@ -131,7 +131,6 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
     if ((router->addr == addr) && (router->or_port == port))
       return router;
   }
-
   return NULL;
 }
 
@@ -147,12 +146,10 @@ routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk)
     if (0 == crypto_pk_cmp_keys(router->link_pkey, pk))
       return router;
   }
-  
   return NULL;
 }
 
-#if 0 
-routerinfo_t *router_get_by_identity_pk(crypto_pk_env_t *pk) 
+routerinfo_t *router_get_by_nickname(char *nickname)
 {
   int i;
   routerinfo_t *router;
@@ -161,14 +158,11 @@ routerinfo_t *router_get_by_identity_pk(crypto_pk_env_t *pk)
 
   for(i=0;i<directory->n_routers;i++) {
     router = directory->routers[i];
-    /* XXX Should this really be a separate link key? */
-    if (0 == crypto_pk_cmp_keys(router->identity_pkey, pk))
+    if (0 == strcmp(router->nickname, nickname))
       return router;
   }
-  
   return NULL;
 }
-#endif
 
 void router_get_directory(directory_t **pdirectory) {
   *pdirectory = directory;
@@ -238,27 +232,12 @@ void directory_free(directory_t *directory)
   free(directory);
 }
 
-void router_forget_router(uint32_t addr, uint16_t port) {
-  int i;
-  routerinfo_t *router;
-
-  router = router_get_by_addr_port(addr,port);
+void router_mark_as_down(char *nickname) {
+  routerinfo_t *router = router_get_by_nickname(nickname);
   if(!router) /* we don't seem to know about him in the first place */
     return;
-
-  /* now walk down router_array until we get to router */
-  for(i=0;i<directory->n_routers;i++)
-    if(directory->routers[i] == router)
-      break;
-
-  assert(i != directory->n_routers); /* if so then router_get_by_addr_port should have returned null */
-
-//  free(router); /* don't actually free; we'll free it when we free the whole thing */
-
-//  log(LOG_DEBUG,"router_forget_router(): Forgot about router %d:%d",addr,port);
-  for(; i<directory->n_routers-1;i++)
-    directory->routers[i] = directory->routers[i+1];
-  /* XXX bug, we're not decrementing n_routers here? needs more attention. -RD */
+  log_fn(LOG_DEBUG,"Marking %s as down.",router->nickname);
+  router->is_running = 0;
 }
 
 /* load the router list */
@@ -769,6 +748,8 @@ int router_get_list_from_string_impl(char **s, directory_t **dest,
           break;
         }
       }
+    } else {
+      router->is_running = 1; /* start out assuming all dirservers are up */
     }
     rarray[rarray_len++] = router;
     log_fn(LOG_DEBUG,"just added router #%d.",rarray_len);

@@ -21,8 +21,11 @@ static int directorylen=0;
 void directory_initiate_command(routerinfo_t *router, int command) {
   connection_t *conn;
 
-  if(!router) /* i guess they didn't have one in mind for me to use */
+  if(!router) { /* i guess they didn't have one in mind for me to use */
+    log_fn(LOG_WARNING,"No running dirservers known. This is really bad.");
+    /* XXX never again will a directory fetch work. Should we exit here, or what? */
     return;
+  }
 
 #if 0 /* there's no problem with parallel get/posts now. whichever 'get' ends
          last is the directory. */
@@ -43,6 +46,7 @@ void directory_initiate_command(routerinfo_t *router, int command) {
   conn->addr = router->addr;
   conn->port = router->dir_port;
   conn->address = strdup(router->address);
+  conn->nickname = strdup(router->nickname);
   if (router->identity_pkey)
     conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
   else {
@@ -58,7 +62,7 @@ void directory_initiate_command(routerinfo_t *router, int command) {
 
   switch(connection_connect(conn, router->address, router->addr, router->dir_port)) {
     case -1:
-      router_forget_router(conn->addr, conn->port); /* XXX don't try him again */
+      router_mark_as_down(conn->nickname); /* don't try him again */
       connection_free(conn);
       return;
     case 0:
@@ -237,7 +241,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
         if(!ERRNO_CONN_EINPROGRESS(errno)) {
           log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
-          router_forget_router(conn->addr, conn->port); /* don't try him again */
+          router_mark_as_down(conn->nickname); /* don't try him again */
           return -1;
         } else {
           return 0; /* no change, see if next time is better */

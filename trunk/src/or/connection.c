@@ -329,13 +329,12 @@ int connection_handle_read(connection_t *conn) {
        conn->state == DIR_CONN_STATE_CONNECTING_UPLOAD)) {
        /* it's a directory server and connecting failed: forget about this router */
        /* XXX I suspect pollerr may make Windows not get to this point. :( */
-       router_forget_router(conn->addr,conn->port); 
-         /* FIXME i don't think router_forget_router works. */
+       router_mark_as_down(conn->nickname);
     }
     return -1;
   }
   if(connection_process_inbuf(conn) < 0) {
-    //log_fn(LOG_DEBUG,"connection_process_inbuf returned %d.",retval);
+//    log_fn(LOG_DEBUG,"connection_process_inbuf returned -1.");
     return -1;
   }
   return 0;
