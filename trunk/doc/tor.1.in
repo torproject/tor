@@ -65,6 +65,10 @@ On startup, setgid to this user.
 If set, Tor will make all its directory requests through this host:port,
 rather than connecting directly to any directory servers.
 .TP
+\fBHttpsProxy\fR \fIhost\fR[:\fIport\fR]\fP
+If set, Tor will make all its OR (SSL) connections through this host:port,
+via HTTP CONNECT, rather than connecting directly to servers.
+.TP
 \fBKeepalivePeriod \fR\fINUM\fP
 To keep firewalls from expiring connections, send a padding keepalive
 cell on open connections every NUM seconds. (Default: 5 minutes.)
