@@ -63,7 +63,9 @@ Obvious things I'd like to do that won't break anything:
 
 * The parts of the code that say 'FIXME'
 
+* Clean up the number of places that get to look at prkey.
 
+* Circuits should expire sometime, say, when circuit->expire triggers?
 
 
 
@@ -126,4 +128,5 @@ analysis before we can guess which approaches are good.)
   one-hop-ack approach that Matej used.
 
 * Reply onions. Hrm.
+
 

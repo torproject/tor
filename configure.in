@@ -139,7 +139,7 @@ if (test ! -z "$ac_cv_openssldir" && test "x$ac_cv_openssldir" != "x(system)") ;
 fi
 LIBS="$saved_LIBS -lcrypto"
 
-AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h sys/poll.h sys/types.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/mman.h sys/stat.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
+AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h sys/poll.h sys/types.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
 
 AC_OUTPUT(Makefile src/Makefile src/common/Makefile src/smtpap/Makefile src/orkeygen/Makefile src/httpap/Makefile src/op/Makefile src/or/Makefile)
 
