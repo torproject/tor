@@ -375,7 +375,7 @@ connection_t *connection_or_connect_as_or(routerinfo_t *router) {
 
 int or_handshake_client_send_auth(connection_t *conn) {
   int retval;
-  char buf[46];
+  char buf[48];
   char cipher[128];
   struct sockaddr_in me; /* my router identity */
 
@@ -439,7 +439,7 @@ int or_handshake_client_send_auth(connection_t *conn) {
 }
 
 int or_handshake_client_process_auth(connection_t *conn) {
-  char buf[128]; /* only 48 of this is expected to be used */
+  char buf[128]; /* only 56 of this is expected to be used */
   char cipher[128];
   uint32_t bandwidth;
   int retval;
@@ -468,7 +468,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
         crypto_perror());
     return -1;
   }
-  else if (retval != 48)
+  else if (retval != 56)
   { 
     log(LOG_ERR,"Received an incorrect response from router %s:%u during authentication.",
         conn->address,conn->port);
@@ -496,7 +496,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
     conn->bandwidth = bandwidth;
 
   /* reply is just local addr/port, remote addr/port, nonce */
-  memcpy(buf+12, buf+32, 8);
+  memcpy(buf+12, buf+48, 8);
 
   /* encrypt reply */
   retval = crypto_pk_public_encrypt(conn->pkey, buf, 20, cipher,RSA_PKCS1_PADDING);
