@@ -259,22 +259,16 @@ either a reject *:* or an accept *:*. Otherwise, you're _augmenting_
 .IP "reject 192.168.0.0/16"
 .IP "reject 10.0.0.0/8"
 .IP "reject 172.16.0.0/12"
-.IP "accept *:20-22"
-.IP "accept *:53"
-.IP "accept *:79-81"
-.IP "accept *:110"
-.IP "accept *:143"
-.IP "accept *:443"
-.IP "accept *:706"
-.IP "accept *:873"
-.IP "accept *:993"
-.IP "accept *:995" 4
+.IP "reject *:25"
+.IP "reject *:119"
+.IP "reject *:135-139"
+.IP "reject *:445"
 .IP "reject *:1214"
 .IP "reject *:4661-4666"
 .IP "reject *:6346-6429"
+.IP "reject *:6699"
 .IP "reject *:6881-6999"
-.IP "accept *:1024-65535"
-.IP "reject *:*"
+.IP "accept *:*"
 .RE
 .PD
 .TP
