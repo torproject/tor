@@ -665,6 +665,29 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
   return 1;
 }
 
+/* Iterate over the two bytes of stream_id until we get one that is not
+ * already in use. Return 0 if can't get a unique stream_id.
+ */
+static uint16_t get_unique_stream_id_by_circ(circuit_t *circ) {
+  connection_t *tmpconn;
+  uint16_t test_stream_id;
+  uint32_t attempts=0;
+
+again:
+  test_stream_id = circ->next_stream_id++;
+  if(++attempts > 1<<16) {
+    /* Make sure we don't loop forever if all stream_id's are used. */
+    log_fn(LOG_WARN,"No unused stream IDs. Failing.");
+    return 0;
+  }
+  if (test_stream_id == 0)
+    goto again;
+  for(tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
+    if(tmpconn->stream_id == test_stream_id)
+      goto again;
+  return test_stream_id;
+}
+
 /* deliver the destaddr:destport in a relay cell */
 static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
 {
@@ -677,8 +700,11 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   assert(ap_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   assert(ap_conn->socks_request);
 
-  crypto_pseudo_rand(sizeof(ap_conn->stream_id), (unsigned char*) &ap_conn->stream_id);
-  /* XXX check for collisions */
+  ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
+  if (ap_conn->stream_id==0) {
+    ap_conn->marked_for_close = 1;
+    return;
+  }
 
   in.s_addr = htonl(client_dns_lookup_entry(ap_conn->socks_request->address));
   string_addr = in.s_addr ? inet_ntoa(in) : NULL;
