@@ -6,6 +6,13 @@ tor (0.0.9.2-X) UNRELEASED; urgency=low
 
  -- Peter Palfrader <weasel@debian.org>  Wed, 12 Jan 2005 16:43:10 +0100
 
+tor (0.0.9.3-1) unstable; urgency=low
+
+  * New upstream version.
+  * Forward port 07_log_to_file_by_default.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 23 Jan 2005 16:01:58 +0100
+
 tor (0.0.9.2-1) unstable; urgency=low
 
   * New upstream version.
