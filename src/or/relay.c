@@ -702,6 +702,10 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
 
       stats_n_data_bytes_received += rh.length;
+      if(conn->type == CONN_TYPE_AP) {
+        log_fn(LOG_DEBUG,"%d: stream size now %d.", conn->s, (int)conn->stream_size);
+        conn->stream_size += rh.length;
+      }
       connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
                               rh.length, conn);
       connection_edge_consider_sending_sendme(conn);
@@ -713,9 +717,10 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return 0;
       }
 /* XXX add to this log_fn the exit node's nickname? */
-      log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
+      log_fn(LOG_INFO,"%d: end cell (%s) for stream %d. Removing stream. Size %d.",
+        conn->s,
         connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length),
-        conn->stream_id);
+        conn->stream_id, (int)conn->stream_size);
 
 #ifdef HALF_OPEN
       conn->done_sending = 1;
@@ -899,6 +904,10 @@ repeat_connection_edge_package_raw_inbuf:
 
   log_fn(LOG_DEBUG,"(%d) Packaging %d bytes (%d waiting).", conn->s,
          (int)length, (int)buf_datalen(conn->inbuf));
+  if (conn->type == CONN_TYPE_EXIT) {
+    conn->stream_size += length;
+    log_fn(LOG_DEBUG,"%d: Stream size now %d.", conn->s, (int)conn->stream_size);
+  }
 
   if(connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
                                payload, length, conn->cpath_layer) < 0)
