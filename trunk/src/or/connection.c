@@ -202,8 +202,18 @@ void connection_about_to_close_connection(connection_t *conn)
           rep_hist_note_connect_failed(conn->identity_digest, time(NULL));
           control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
         }
-      } else if (0) { // XXX reason == CLOSE_REASON_UNUSED_OR_CONN) {
+      } else if (conn->hold_open_until_flushed) {
+        /* XXXX009 We used to have an arg that told us whether we closed the
+         * connection on purpose or not.  Can we use hold_open_until_flushed
+         * instead?  We only set it when we are intentionally closing a
+         * connection. -NM
+         *
+         * (Of course, now things we set to close which expire rather than
+         * flushing still get noted as dead, not disconnected.  But this is an
+         * improvement. -NM
+         */
         rep_hist_note_disconnect(conn->identity_digest, time(NULL));
+        control_event_or_conn_status(conn, OR_CONN_EVENT_CLOSED);
       } else if(conn->identity_digest) {
         rep_hist_note_connection_died(conn->identity_digest, time(NULL));
         control_event_or_conn_status(conn, OR_CONN_EVENT_CLOSED);
