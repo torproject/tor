@@ -291,8 +291,7 @@ router_parse_routerlist_from_directory(const char *str,
   char digest[DIGEST_LEN];
   routerlist_t *new_dir = NULL;
   char *versions = NULL;
-  int n_good_nicknames = 0;
-  char *good_nickname_lst[1024]; /* XXXX008 correct this limit. */
+  smartlist_t *good_nickname_list = NULL;
   time_t published_on;
   int i, r;
   const char *end;
@@ -355,22 +354,21 @@ router_parse_routerlist_from_directory(const char *str,
     goto err;
   }
 
-  n_good_nicknames = tok->n_args;
-  memcpy(good_nickname_lst, tok->args, n_good_nicknames*sizeof(char *));
+  good_nickname_list = smartlist_create();
+  for (i=0; i<tok->n_args; ++i) {
+    smartlist_add(good_nickname_list, tok->args[i]);
+  }
   tok->n_args = 0; /* Don't free the strings in good_nickname_lst yet. */
 
   /* Read the router list from s, advancing s up past the end of the last
    * router. */
   str = end;
   if (router_parse_list_from_string(&str, &new_dir,
-				    n_good_nicknames,
-				    (const char**)good_nickname_lst)) {
+				    good_nickname_list)) {
     log_fn(LOG_WARN, "Error reading routers from directory");
     goto err;
   }
-  for (i = 0; i < n_good_nicknames; ++i) {
-    tor_free(good_nickname_lst[i]); /* now free them */
-  }
+
   new_dir->software_versions = versions; versions = NULL;
   new_dir->published_on = published_on;
 
@@ -402,13 +400,14 @@ router_parse_routerlist_from_directory(const char *str,
   if (new_dir)
     routerlist_free(new_dir);
   tor_free(versions);
-  for (i = 0; i < n_good_nicknames; ++i) {
-    tor_free(good_nickname_lst[i]);
-  }
  done:
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
     smartlist_free(tokens);
+  }
+  if (good_nickname_list) {
+    SMARTLIST_FOREACH(good_nickname_list, char *, n, tor_free(n));
+    smartlist_free(good_nickname_list);
   }
   return r;
 }
@@ -531,22 +530,21 @@ static int check_directory_signature(const char *digest,
 }
 
 
-/** Given a string *<b>s</b> containing a concatenated
- * sequence of router descriptors, parses them and stores the result
- * in *<b>dest</b>.  If good_nickname_lst is provided, then routers whose
- * nicknames are not listed are marked as nonrunning.  Advances *s to
- * a point immediately following the last router entry.  Returns 0 on
+/** Given a string *<b>s</b> containing a concatenated sequence of router
+ * descriptors, parses them and stores the result in *<b>dest</b>.  If
+ * good_nickname_list is provided, then routers are mared as
+ * running/nonrunning and verified/unverified based on their status in the
+ * list.  Otherwise, all routers are marked running and verified.  Advances
+ * *s to a point immediately following the last router entry.  Returns 0 on
  * success and -1 on failure.
  */
 int
 router_parse_list_from_string(const char **s, routerlist_t **dest,
-			      int n_good_nicknames,
-			      const char **good_nickname_list)
+                              smartlist_t *good_nickname_list)
 {
   routerinfo_t *router;
   smartlist_t *routers;
   int rarray_len = 0;
-  int i;
   const char *end;
 
   tor_assert(s && *s);
@@ -573,16 +571,13 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
       continue;
     }
 
-    if (n_good_nicknames>=0) {
-      router->is_running = 0;
-      for (i = 0; i < n_good_nicknames; ++i) {
-        if (router_nickname_matches(router, good_nickname_list[i])) {
-          router->is_running = 1;
-          break;
-        }
-      }
+    if (good_nickname_list) {
+      router_update_status_from_smartlist(router, time(NULL),
+                                          good_nickname_list);
     } else {
       router->is_running = 1; /* start out assuming all dirservers are up */
+      router->is_verified = 1;
+      router->status_set_at = time(NULL);
     }
     smartlist_add(routers, router);
     log_fn(LOG_DEBUG,"just added router #%d.",rarray_len);
