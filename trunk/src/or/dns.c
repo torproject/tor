@@ -618,6 +618,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
 void dnsworkers_rotate(void)
 {
   connection_t *dnsconn;
+  log_fn(LOG_INFO, "Rotating DNS workers.");
   while ((dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER,
                                                  DNSWORKER_STATE_IDLE))) {
     connection_mark_for_close(dnsconn);
@@ -653,17 +654,21 @@ static int dnsworker_main(void *data) {
   int fd;
   int result;
 
+  /* log_fn(LOG_NOTICE,"After spawn: fdarray @%d has %d:%d", (int)fdarray, fdarray[0],fdarray[1]); */
+
   fd = fdarray[1]; /* this side is ours */
 #ifndef TOR_IS_MULTITHREADED
   tor_close_socket(fdarray[0]); /* this is the side of the socketpair the parent uses */
   connection_free_all(); /* so the child doesn't hold the parent's fd's open */
-#endif
   handle_signals(0); /* ignore interrupts from the keyboard, etc */
+#endif
+  tor_free(data);
 
   for (;;) {
 
     if (recv(fd, &address_len, 1, 0) != 1) {
       log_fn(LOG_INFO,"dnsworker exiting because tor process closed connection (either pruned idle dnsworker or died).");
+      log_fn(LOG_INFO,"Error on %d was %s", fd, tor_socket_strerror(tor_socket_errno(fd)));
       spawn_exit();
     }
 
@@ -704,33 +709,40 @@ static int dnsworker_main(void *data) {
 /** Launch a new DNS worker; return 0 on success, -1 on failure.
  */
 static int spawn_dnsworker(void) {
-  int fd[2];
+  int *fdarray;
+  int fd;
   connection_t *conn;
 
-  if (tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
+  fdarray = tor_malloc(sizeof(int)*2);
+  if (tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray) < 0) {
     log(LOG_ERR, "Couldn't construct socketpair: %s",
         tor_socket_strerror(tor_socket_errno(-1)));
     tor_cleanup();
+    tor_free(fdarray);
     exit(1);
   }
 
-  spawn_func(dnsworker_main, (void*)fd);
+  /* log_fn(LOG_NOTICE,"Before spawn: fdarray @%d has %d:%d", (int)fdarray, fdarray[0],fdarray[1]); */
+
+  fd = fdarray[0]; /* We copy this out here, since dnsworker_main may free fdarray */
+  spawn_func(dnsworker_main, (void*)fdarray);
   log_fn(LOG_DEBUG,"just spawned a worker.");
 #ifndef TOR_IS_MULTITHREADED
-  tor_close_socket(fd[1]); /* we don't need the worker's side of the pipe */
+  tor_close_socket(fdarray[1]); /* we don't need the worker's side of the pipe */
+  tor_free(fdarray);
 #endif
 
   conn = connection_new(CONN_TYPE_DNSWORKER);
 
-  set_socket_nonblocking(fd[0]);
+  set_socket_nonblocking(fd);
 
   /* set up conn so it's got all the data we need to remember */
-  conn->s = fd[0];
+  conn->s = fd;
   conn->address = tor_strdup("<unused>");
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_fn(LOG_WARN,"connection_add failed. Giving up.");
-    connection_free(conn); /* this closes fd[0] */
+    connection_free(conn); /* this closes fd */
     return -1;
   }
 

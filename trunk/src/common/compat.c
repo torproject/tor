@@ -331,6 +331,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     }
     fd[0] = connector;
     fd[1] = acceptor;
+
     return 0;
 
   abort_tidy_up_and_fail:
@@ -557,6 +558,11 @@ get_uname(void)
 /** Minimalist interface to run a void function in the background.  On
  * unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
  * func should not return, but rather should call spawn_exit.
+ *
+ * NOTE: if <b>data</b> is used, it should not be allocated on the stack,
+ * since in a multithreaded environment, there is no way to be sure that
+ * the caller's stack will still be around when the called function is
+ * running.
  */
 int
 spawn_func(int (*func)(void *), void *data)
