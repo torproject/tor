@@ -1,13 +1,12 @@
 # List of core onion routers in the network.
 # Line format : address ORPort OPPort APPort DirPort bandwidth(bytes/s)
 # followed by the routers public key.
-# ORport is where the router listens for other routers
-# OPPort is where the router listens for onion proxies (speaking cells)
+# ORport is where the router listens for routers/clients (speaking cells)
 # APPort is where the router listens for applications (speaking socks)
 # DirPort is where the router listens for directory download requests
 
 # Router 1
-router moria.mit.edu 9001 9011 9021 9031 1000000
+router moria.mit.edu 9001 9021 9031 1000000
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
 7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
@@ -22,7 +21,7 @@ nZ7kVMRoiXCbjL6VAtNa4Zy1Af/GOm0iCIDpholeujQ95xew7rQnAgMA//8=
 accept *:*
 
 # Router 2
-router moria.mit.edu 9002 9012 9022 9032 1000000
+router moria.mit.edu 9002 9022 9032 1000000
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBANX/HHRuudz274MFSQ4manX8DhtsIuogNUyco9/0dr+XsfioTGd3RgMj
 aSWlD87arkZO4hHBPHe0q89Z3s1UtUsyQ/VmsxSv9g2OCnF/dU2Nz4h6+Al3iNJF
@@ -36,7 +35,7 @@ aSWlD87arkZO4hHBPHe0q89Z3s1UtUsyQ/VmsxSv9g2OCnF/dU2Nz4h6+Al3iNJF
 -----END RSA PUBLIC KEY-----
 
 # Router 3
-router moria.mit.edu 9003 9013 9023 9033 1000000
+router moria.mit.edu 9003 9023 9033 1000000
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAJfkNWCaNkYIRwfHT06KBU6dz8W1xDpW5ezGJwAOoxCX3/ZNoUicb/1V
 oB3OzW6VxWIiht3da/3K0ywiBOOCcf6BabKoMdiPpH7NIeu6XRmBYK2uqW13gBgh
@@ -49,21 +48,21 @@ oB3OzW6VxWIiht3da/3K0ywiBOOCcf6BabKoMdiPpH7NIeu6XRmBYK2uqW13gBgh
 xJbQBb58Nx8Fr05XkvLG6i+vTDY3MZOW3E2/DwSe/jFzuHSD5b3nAgMA//8=
 -----END RSA PUBLIC KEY-----
 
-router moria.mit.edu 9004 9014 9024 0 1000000
+router moria.mit.edu 9004 9024 0 1000000
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAKD2BDZQpGq/aAbZ7t+/7qktZVEbhUGe097gIjWH9gXcIOIm0CJMe3rN
 MsBJsQMi5Uwqrz+Invb5n6bswrNlJp/bCKBhGTvUCfxg7c8xZy71PPSIPnTg1qXl
 p5fyAkgCYkZNgEEZzQDHv1GRvLCs92kURjSJE5y8QU0dXfbzms8PAgMA//8=
 -----END RSA PUBLIC KEY-----
 
-router mosg.cl.cam.ac.uk 9005 9015 9025 0 1000000
+router mosg.cl.cam.ac.uk 9005 9025 0 1000000
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAMMHEjhhawM6S14ETFVcvByU7D/baN2JMcCweKKJ7zcSurDnpgRH/Uo7
 05+bZE3BCy4OkAqQbGlKd/ejBOuXjEtS0mJo5xwDX9StKguhgFRk60hhrF2OFJm4
 VLItXA6U2NLOrc+FBCv/9laLpBrxOb8Wuct0l/lyZ2/OfE9yYhC3AgMA//8=
 -----END RSA PUBLIC KEY-----
 
-router 66.17.17.207 9006 9016 9026 0 1000000
+router 66.17.17.207 9006 9026 0 1000000
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAL5cpmH34kVfmHd+A00vMton3pLGHAVf7BYkSMif8e/O5zXTUXRi4w78
 jDcGNo2yFM3htTpT5/tWs/Z2+B/mx8Kz+AhHzZ9z0PdQreDSqxXjF+jmfCyx9Teq
