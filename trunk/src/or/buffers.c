@@ -258,7 +258,7 @@ int flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
     *buf_flushlen -= write_result;
     buf_remove_from_front(buf, write_result);
     log_fn(LOG_DEBUG,"%d: flushed %d bytes, %d ready to flush, %d remain.",
-           s,write_result,*buf_flushlen,(int)buf->datalen);
+           s,write_result,(int)*buf_flushlen,(int)buf->datalen);
 
     return write_result;
   }
@@ -281,7 +281,7 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen)
   *buf_flushlen -= r;
   buf_remove_from_front(buf, r);
   log_fn(LOG_DEBUG,"flushed %d bytes, %d ready to flush, %d remain.",
-    r,*buf_flushlen,(int)buf->datalen);
+         r,(int)*buf_flushlen,(int)buf->datalen);
   return r;
 }
 
@@ -300,13 +300,13 @@ int write_to_buf(const char *string, size_t string_len, buf_t *buf) {
   assert_buf_ok(buf);
 
   if (buf_ensure_capacity(buf, buf->datalen+string_len)) {
-    log_fn(LOG_WARN, "buflen too small, can't hold %d bytes.", (int)buf->datalen+string_len);
+    log_fn(LOG_WARN, "buflen too small, can't hold %d bytes.", (int)(buf->datalen+string_len));
     return -1;
   }
 
   memcpy(buf->mem+buf->datalen, string, string_len);
   buf->datalen += string_len;
-  log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",string_len, (int)buf->datalen);
+  log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",(int)string_len, (int)buf->datalen);
   return buf->datalen;
 }
 
@@ -368,14 +368,15 @@ int fetch_from_buf_http(buf_t *buf,
   body += 4; /* Skip the the CRLFCRLF */
   headerlen = body-headers; /* includes the CRLFCRLF */
   bodylen = buf->datalen - headerlen;
-  log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.", headerlen, bodylen);
+  log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.", (int)headerlen, (int)bodylen);
 
   if(max_headerlen <= headerlen) {
-    log_fn(LOG_WARN,"headerlen %d larger than %d. Failing.", headerlen, max_headerlen-1);
+    log_fn(LOG_WARN,"headerlen %d larger than %d. Failing.", (int)headerlen,
+           (int)max_headerlen-1);
     return -1;
   }
   if(max_bodylen <= bodylen) {
-    log_fn(LOG_WARN,"bodylen %d larger than %d. Failing.", bodylen, max_bodylen-1);
+    log_fn(LOG_WARN,"bodylen %d larger than %d. Failing.", (int)bodylen, (int)max_bodylen-1);
     return -1;
   }
 
@@ -390,14 +391,14 @@ int fetch_from_buf_http(buf_t *buf,
     }
     contentlen = i;
     /* if content-length is malformed, then our body length is 0. fine. */
-    log_fn(LOG_DEBUG,"Got a contentlen of %d.",contentlen);
+    log_fn(LOG_DEBUG,"Got a contentlen of %d.",(int)contentlen);
     if(bodylen < contentlen) {
       log_fn(LOG_DEBUG,"body not all here yet.");
       return 0; /* not all there yet */
     }
     if(bodylen > contentlen) {
       bodylen = contentlen;
-      log_fn(LOG_DEBUG,"bodylen reduced to %d.",bodylen);
+      log_fn(LOG_DEBUG,"bodylen reduced to %d.",(int)bodylen);
     }
   }
   /* all happy. copy into the appropriate places, and return 1 */

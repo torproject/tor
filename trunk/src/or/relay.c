@@ -892,8 +892,8 @@ repeat_connection_edge_package_raw_inbuf:
 
   connection_fetch_from_buf(payload, length, conn);
 
-  log_fn(LOG_DEBUG,"(%d) Packaging %d bytes (%d waiting).", conn->s, length,
-         (int)buf_datalen(conn->inbuf));
+  log_fn(LOG_DEBUG,"(%d) Packaging %d bytes (%d waiting).", conn->s,
+         (int)length, (int)buf_datalen(conn->inbuf));
 
   if(connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
                                payload, length, conn->cpath_layer) < 0)
@@ -940,7 +940,7 @@ void connection_edge_consider_sending_sendme(connection_t *conn) {
   }
 
   while(conn->deliver_window < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
-    log_fn(LOG_DEBUG,"Outbuf %d, Queueing stream sendme.", conn->outbuf_flushlen);
+    log_fn(LOG_DEBUG,"Outbuf %d, Queueing stream sendme.", (int)conn->outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
     if(connection_edge_send_command(conn, circ, RELAY_COMMAND_SENDME,
                                     NULL, 0, conn->cpath_layer) < 0) {

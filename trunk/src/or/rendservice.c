@@ -422,7 +422,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   ptr = rp_nickname+nickname_field_len;
   len -= nickname_field_len;
   if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
-    log_fn(LOG_WARN, "Bad length %u for INTRODUCE2 cell.", len);
+    log_fn(LOG_WARN, "Bad length %u for INTRODUCE2 cell.", (int)len);
     return -1;
   }
   r_cookie = ptr;

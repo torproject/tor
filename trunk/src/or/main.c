@@ -313,7 +313,7 @@ static void conn_close_if_marked(int i) {
         "Conn (addr %s, fd %d, type %s, state %d) marked, but wants to flush %d bytes. "
         "(Marked at %s:%d)",
         conn->address, conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state,
-        conn->outbuf_flushlen, conn->marked_for_close_file, conn->marked_for_close);
+        (int)conn->outbuf_flushlen, conn->marked_for_close_file, conn->marked_for_close);
     if(connection_speaks_cells(conn)) {
       if(conn->state == OR_CONN_STATE_OPEN) {
         retval = flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);

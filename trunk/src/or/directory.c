@@ -326,11 +326,11 @@ directory_send_command(connection_t *conn, const char *platform,
       break;
   }
 
-  snprintf(tmp, sizeof(tmp), "%s %s%s HTTP/1.0\r\nContent-Length: %d\r\nHost: %s\r\n\r\n",
+  snprintf(tmp, sizeof(tmp), "%s %s%s HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s\r\n\r\n",
            httpcommand,
            proxystring,
            url,
-           payload_len,
+           (unsigned long)payload_len,
            hoststring);
   connection_write_to_buf(tmp, strlen(tmp), conn);
 
@@ -517,7 +517,7 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if(conn->purpose == DIR_PURPOSE_FETCH_DIR) {
     /* fetch/process the directory to learn about new routers. */
-    log_fn(LOG_INFO,"Received directory (size %d):\n%s", body_len, body);
+    log_fn(LOG_INFO,"Received directory (size %d):\n%s", (int)body_len, body);
     if(status_code == 503 || body_len == 0) {
       log_fn(LOG_INFO,"Empty directory. Ignoring.");
       tor_free(body); tor_free(headers);
@@ -541,7 +541,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     running_routers_t *rrs;
     routerlist_t *rl;
     /* just update our list of running routers, if this list is new info */
-    log_fn(LOG_INFO,"Received running-routers list (size %d):\n%s", body_len, body);
+    log_fn(LOG_INFO,"Received running-routers list (size %d):\n%s", (int)body_len, body);
     if(status_code != 200) {
       log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
              status_code);
@@ -577,7 +577,7 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if(conn->purpose == DIR_PURPOSE_FETCH_RENDDESC) {
     log_fn(LOG_INFO,"Received rendezvous descriptor (size %d, status code %d)",
-           body_len, status_code);
+           (int)body_len, status_code);
     switch(status_code) {
       case 200:
         if(rend_cache_store(body, body_len) < 0) {

@@ -310,7 +310,7 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t requ
   }
 
   if (request_len != DH_KEY_LEN+DIGEST_LEN) {
-    log_fn(LOG_WARN,"Incorrect length (%d) on RENDEZVOUS2 cell.",request_len);
+    log_fn(LOG_WARN,"Incorrect length (%d) on RENDEZVOUS2 cell.",(int)request_len);
     goto err;
   }
 
