@@ -1,5 +1,52 @@
-Changes in version 0.1.0.1-rc - 2005-03-28
+Changes in version 0.1.0.2-rc - 2005-04-01
+  o Bugfixes on 0.1.0.1-rc:
+    - Fixes on reachability detection:
+      - Don't check for reachability while hibernating.
+      - If ORPort is reachable but DirPort isn't, still publish the
+        descriptor, but zero out DirPort until it's found reachable.
+      - When building testing circs for ORPort testing, use only
+        high-bandwidth nodes, so fewer circuits fail.
+      - Complain about unreachable ORPort separately from unreachable
+        DirPort, so the user knows what's going on.
+      - Make sure we only conclude ORPort reachability if we didn't
+        initiate the conn. Otherwise we could falsely conclude that
+        we're reachable just because we connected to the guy earlier
+        and he used that same pipe to extend to us.
+      - Authdirservers shouldn't do ORPort reachability detection,
+        since they're in clique mode, so it will be rare to find a
+        server not already connected to them.
+      - When building testing circuits, always pick middle hops running
+        Tor 0.0.9.7, so we avoid the "can't extend to unknown routers"
+        bug. (This is a kludge; it will go away when 0.0.9.x becomes
+        obsolete.)
+      - When we decide we're reachable, actually publish our descriptor
+        right then.
+    - Fix bug in redirectstream in the controller.
+    - Fix the state descriptor strings so logs don't claim edge streams
+      are in a different state than they actually are.
+    - Use recent libevent features when possible (this only really affects
+      win32 and osx right now, because the new libevent with these
+      features hasn't been released yet). Add code to suppress spurious
+      libevent log msgs.
+    - Prevent possible segfault in connection_close_unattached_ap().
+    - Fix newlines on torrc in win32.
+    - Improve error msgs when tor-resolve fails.
 
+  o Improvements on 0.0.9.x:
+    - New experimental script tor/contrib/ExerciseServer.py (needs more
+      work) that uses the controller interface to build circuits and
+      fetch pages over them. This will help us bootstrap servers that
+      have lots of capacity but haven't noticed it yet.
+    - New experimental script tor/contrib/PathDemo.py (needs more work)
+      that uses the controller interface to let you choose whole paths
+      via addresses like
+      "<hostname>.<path,separated by dots>.<length of path>.path"
+    - When we've connected to an OR and handshaked but didn't like
+      the result, we were closing the conn without sending destroy
+      cells back for pending circuits. Now send those destroys.
+
+
+Changes in version 0.1.0.1-rc - 2005-03-28
   o New features:
     - Add reachability testing. Your Tor server will automatically try
       to see if its ORPort and DirPort are reachable from the outside,
