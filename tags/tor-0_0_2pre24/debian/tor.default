@@ -1,0 +1,8 @@
+# Defaults for tor initscript
+# sourced by /etc/init.d/tor
+# installed at /etc/default/tor by the maintainer scripts
+
+#
+# This is a POSIX shell fragment
+#
+RUN_DAEMON="yes"
