@@ -255,12 +255,10 @@ Tor Rendezvous Spec
 
    PK_ID is the hash of Bob's public key.  RP is NUL-padded.
 
-   The data is encrypted to Bob's PK as follows: Suppose Bob's PK is L octets
-   long.  If the data to be encrypted is shorter than L-42, then it is
-   encrypted directly (with OAEP padding).  If the data is at least as long
-   as L-42, then a randomly generated 16-byte symmetric key is prepended to
-   the data, after which the first L-16-42 bytes of the data are encrypted with
-   Bob's PK; and the rest of the data is encrypted with the symmetric key.
+   The hybrid encryption to Bob's PK works just like the hybrid
+   encryption in CREATE cells (see main spec). Thus the payload of the
+   RELAY_INTRODUCE1 cell on the wire will contain 20+42+16+20+20+128=246
+   bytes.
 
 1.9. Introduction: From the Introduction Point to Bob's OP
 

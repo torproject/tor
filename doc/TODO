@@ -11,21 +11,6 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-Flag-day changes: (things which are backward incompatible)
-        o remove link key from directories, from connection_t.
-          (just get it from the tls cert)
-        o Generate link keys on startup; don't store them to disk.
-        o make onion keys include oaep padding, so you can tell
-          if you decrypted it correctly
-        o Rotate onion keys as needed
-        D Rotate TLS connections [arma]
-        o Set expiration times on X509 certs [nickm]
-        o add bandwidthrate and bandwidthburst to server descriptor [nickm]
-        o directories need to say who signed them. [nickm]
-        - remove assumption that 0.0.5 doesn't do rendezvous?
-        D what other pieces of the descriptors need to change?
-          maybe add a section for who's connected to a given router?
-          add a flexible section for reputation info?
 
 For September:
         - Windows port
@@ -69,6 +54,9 @@ For September:
             - allow non-clique topology
 
 Other details and small things:
+        - hidserv offerers shouldn't need to define a SocksPort
+        - when the client fails to pick an intro point for a hidserv,
+          it should refetch the hidserv desc.
         . should maybe make clients exit(1) when bad things happen?
           e.g. clock skew.
         - should retry exitpolicy end streams even if the end cell didn't
