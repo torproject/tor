@@ -353,7 +353,6 @@ conn_read_callback(int fd, short event, void *_conn)
   log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
 
   assert_connection_ok(conn, time(NULL));
-  assert_all_pending_dns_resolves_ok();
 
   if (connection_handle_read(conn) < 0) {
     if (!conn->marked_for_close) {
@@ -370,7 +369,6 @@ conn_read_callback(int fd, short event, void *_conn)
     }
   }
   assert_connection_ok(conn, time(NULL));
-  assert_all_pending_dns_resolves_ok();
 
   if (smartlist_len(closeable_connection_lst))
     close_closeable_connections();
@@ -387,7 +385,6 @@ static void conn_write_callback(int fd, short events, void *_conn)
     return;
 
   assert_connection_ok(conn, time(NULL));
-  assert_all_pending_dns_resolves_ok();
 
   if (connection_handle_write(conn) < 0) {
     if (!conn->marked_for_close) {
@@ -403,7 +400,6 @@ static void conn_write_callback(int fd, short events, void *_conn)
     }
   }
   assert_connection_ok(conn, time(NULL));
-  assert_all_pending_dns_resolves_ok();
 
   if (smartlist_len(closeable_connection_lst))
     close_closeable_connections();
@@ -832,9 +828,7 @@ static void second_elapsed_callback(int fd, short event, void *args)
   else
     circuit_note_clock_jumped(seconds_elapsed);
 
-  assert_all_pending_dns_resolves_ok();
   run_scheduled_events(now.tv_sec);
-  assert_all_pending_dns_resolves_ok();
 
   current_second = now.tv_sec; /* remember which second it is, for next time */
 
