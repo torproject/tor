@@ -16,7 +16,7 @@ APPort 9021
 DirPort 9031
 
 # Maximum number of connections.
-MaxConn 100
+MaxConn 900
 
 # Which traffic shaping policy to use.
 # 

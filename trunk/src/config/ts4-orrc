@@ -13,7 +13,7 @@ OPPort 9014
 APPort 9024
 
 # Maximum number of connections.
-MaxConn 100
+MaxConn 900
 
 # Which traffic shaping policy to use.
 # 
