@@ -436,6 +436,8 @@ connection_tls_finish_handshake(connection_t *conn) {
   crypto_pk_env_t *identity_rcvd=NULL;
   char digest_rcvd[DIGEST_LEN];
   or_options_t *options = get_options();
+  int severity = (authdir_mode(options) || !server_mode(options))
+                 ? LOG_WARN : LOG_INFO;
 
   conn->state = OR_CONN_STATE_OPEN;
   connection_watch_events(conn, EV_READ);
@@ -479,7 +481,9 @@ connection_tls_finish_handshake(connection_t *conn) {
   if (router && /* we know this nickname */
       router->is_verified && /* make sure it's the right guy */
       memcmp(digest_rcvd, router->identity_digest, DIGEST_LEN) != 0) {
-    log_fn(LOG_WARN, "Identity key not as expected for router claiming to be '%s' (%s:%d) ", nickname, conn->address, conn->port);
+    log_fn(severity,
+           "Identity key not as expected for router claiming to be '%s' (%s:%d)",
+           nickname, conn->address, conn->port);
     return -1;
   }
 #if 0
@@ -507,7 +511,7 @@ connection_tls_finish_handshake(connection_t *conn) {
       }
     } else if (strcasecmp(conn->nickname, nickname)) {
       /* I was aiming for a nickname.  Did I get it? */
-      log_fn(authdir_mode(options) ? LOG_WARN : LOG_INFO,
+      log_fn(severity,
              "Other side (%s:%d) is '%s', but we tried to connect to '%s'",
              conn->address, conn->port, nickname, conn->nickname);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
