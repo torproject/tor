@@ -42,7 +42,7 @@ typedef struct rend_service_t {
   crypto_pk_env_t *private_key;
   char service_id[REND_SERVICE_ID_LEN+1];
   char pk_digest[DIGEST_LEN];
-  smartlist_t *intro_nodes; /**< list of nicknames for intro points we have,
+  smartlist_t *intro_nodes; /**< list of hexdigests for intro points we have,
                              * or are trying to establish. */
   time_t intro_period_started;
   int n_intro_circuits_launched; /**< count of intro circuits we have
@@ -452,7 +452,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
     log_fn(LOG_WARN,
            "Can't launch circuit to rendezvous point '%s' for service %s",
            rp_nickname, serviceid);
-    return -1;
+    goto err;
   }
   tor_assert(launched->build_state);
   /* Fill in the circuit's state. */
@@ -846,6 +846,7 @@ void rend_services_introduce(void) {
       changed = 1;
       smartlist_add(intro_routers, router);
       smartlist_add(exclude_routers, router);
+/*XXX009 should strdup the hexdigest, not nickname */
       smartlist_add(service->intro_nodes, tor_strdup(router->nickname));
       log_fn(LOG_INFO,"Picked router %s as an intro point for %s.", router->nickname,
              service->service_id);
