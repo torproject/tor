@@ -126,6 +126,8 @@ routerinfo_t *router_pick_directory_server(void) {
       dirserver = router;
     }
   }
+  if(!dirserver)
+    log_fn(LOG_WARN,"No dirservers in directory! Returning NULL.");
   return dirserver;
 }
 
