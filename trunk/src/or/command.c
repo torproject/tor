@@ -172,38 +172,6 @@ void command_process_relay_cell(cell_t *cell, connection_t *conn) {
     return;
   }
 
-#if 0
-  if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
-    if(--circ->p_receive_circwindow < 0) { /* is it less than 0 after decrement? */
-      log(LOG_INFO,"command_process_relay_cell(): Too many relay cells for out circuit (aci %d). Closing.", circ->p_aci);
-      circuit_close(circ);
-      return;
-    }
-    log(LOG_DEBUG,"command_process_relay_cell(): p_receive_circwindow for aci %d is %d.",circ->p_aci,circ->p_receive_circwindow);
-  }
-
-  if(cell->aci == circ->n_aci) { /* it's an ingoing cell */
-    if(--circ->n_receive_circwindow < 0) { /* is it less than 0 after decrement? */
-      log(LOG_INFO,"command_process_relay_cell(): Too many relay cells for in circuit (aci %d). Closing.", circ->n_aci);
-      circuit_close(circ);
-      return;
-    }
-    log(LOG_DEBUG,"command_process_relay_cell(): n_receive_circwindow for aci %d is %d.",circ->n_aci,circ->n_receive_circwindow);
-  }
-#endif
-
-#if 0
-  if(circ->state == CIRCUIT_STATE_ONION_WAIT) {
-    log(LOG_WARNING,"command_process_relay_cell(): circuit in onion_wait. Dropping relay cell.");
-    return;
-  }
-  if(circ->state == CIRCUIT_STATE_OR_WAIT) {
-    log(LOG_WARNING,"command_process_relay_cell(): circuit in or_wait. Dropping relay cell.");
-    return;
-  }
-#endif
-  /* circ->p_conn and n_conn are only null if we're at an edge point with no connections yet */
-
   if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
     cell->aci = circ->n_aci; /* switch it */
     if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_OUT, conn->cpath_layer) < 0) {

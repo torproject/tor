@@ -80,7 +80,6 @@ void onion_pending_process_one(void) {
     return; /* it died on us */
   }
 
-  assert(ol_list->circ->p_conn);
   assert(ol_length > 0);
   circ = ol_list->circ;
 
@@ -399,12 +398,6 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
     }
     cpath = hop;
 
-#if 0
-    if (i) { /* not last hop. (last hop has 0's for these.) */
-      hop->port = rarray[route[i-1]]->or_port;
-      hop->addr = rarray[route[i-1]]->addr;
-    }
-#endif
     hop->port = rarray[route[i]]->or_port;
     hop->addr = rarray[route[i]]->addr;
 
