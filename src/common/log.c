@@ -29,7 +29,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
   struct timeval now;
   
   assert(format);
-  if (severity > loglevel)
+  if (severity < loglevel)
     return;
   my_gettimeofday(&now);
 
