@@ -1,3 +1,5 @@
+% XXX Cite SS03
+
 \documentclass[times,10pt,twocolumn]{article}
 \usepackage{latex8}
 \usepackage{times}
@@ -5,7 +7,7 @@
 \usepackage{graphics}
 \usepackage{amsmath}
 
-%\pagestyle{empty}
+\pagestyle{plain}
 
 \renewcommand\url{\begingroup \def\UrlLeft{<}\def\UrlRight{>}\urlstyle{tt}\Url}
 \newcommand\emailaddr{\begingroup \def\UrlLeft{<}\def\UrlRight{>}\urlstyle{tt}\Url}
@@ -1341,7 +1343,7 @@ the key and starts the rendezvous as described above.
 \subsection{Previous rendezvous work}
 
 Rendezvous points in low-latency anonymity systems were first
-described for use in ISDN telephony \cite{isdn-mixes,jerichow-jsac98}.
+described for use in ISDN telephony \cite{jerichow-jsac98,isdn-mixes}.
 Later low-latency designs used rendezvous points for hiding location
 of mobile phones and low-power location trackers
 \cite{federrath-ih96,reed-protocols97}.  Rendezvous for low-latency
@@ -1357,7 +1359,7 @@ via Diffie-Hellman, so plaintext is not exposed even at the rendezvous point. Th
 our design tries to minimize the exposure associated with running the
 service, to encourage volunteers to offer introduction and rendezvous
 point services. Tor's introduction points do not output any bytes to the
-clients, and the rendezvous points don't know the client or the server,
+clients; the rendezvous points don't know the client or the server,
 and can't read the data being transmitted. The indirection scheme is
 also designed to include authentication/authorization---if Alice doesn't
 include the right cookie with her request for service, Bob need not even
