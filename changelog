@@ -1,9 +1,9 @@
-tor (0.0.8+0.0.9pre5-3) unreleased; urgency=low
+tor (0.0.8+0.0.9pre6-1) unstable; urgency=low
 
-  * unreleased
+  * New upstream (pre)release.
   * Install control-spec.txt into usr/share/doc/tor/.
 
- -- Peter Palfrader <weasel@debian.org>  Sat, 13 Nov 2004 03:50:34 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 16 Nov 2004 04:49:32 +0100
 
 tor (0.0.8+0.0.9pre5-2) unstable; urgency=low
 
