@@ -63,7 +63,7 @@ int has_fetched_directory=0;
  * entry to inform the user that Tor is working. */
 int has_completed_circuit=0;
 
-#ifdef MS_WINDOWS
+#ifdef MS_WINDOWS_SERVICE
 SERVICE_STATUS service_status;
 SERVICE_STATUS_HANDLE hStatus;
 #endif
@@ -810,11 +810,12 @@ static int do_main_loop(void) {
   }
 
   for(;;) {
-#ifdef MS_WINDOWS /* Do service stuff only on windows. */
-        if (service_status.dwCurrentState != SERVICE_RUNNING) {
+#ifdef MS_WINDOWS_SERVICE /* Do service stuff only on windows. */
+    if (service_status.dwCurrentState != SERVICE_RUNNING) {
       return 0;
     }
-#else /* do signal stuff only on unix */
+#endif
+#ifndef MS_WINDOWS /* do signal stuff only on unix */
     if(please_shutdown) {
       if(!server_mode()) { /* do it now */
         log(LOG_NOTICE,"Interrupt: exiting cleanly.");
@@ -1058,7 +1059,7 @@ void tor_cleanup(void) {
   crypto_global_cleanup();
 }
 
-#ifdef MS_WINDOWS
+#ifdef MS_WINDOWS_SERVICE
 void nt_service_control(DWORD request)
 {
   switch (request) {
