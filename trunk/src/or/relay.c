@@ -659,9 +659,10 @@ connection_edge_process_relay_cell_not_open(
     if (CIRCUIT_IS_ORIGIN(circ))
       circuit_log_path(LOG_INFO,circ);
     conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
-    connection_ap_handshake_socks_reply(conn, NULL, 0,
-      connection_edge_end_reason_socks5_response(*(char *)
-        (cell->payload+RELAY_HEADER_SIZE)));
+    if (conn->type == CONN_TYPE_AP)
+      connection_ap_handshake_socks_reply(conn, NULL, 0,
+        connection_edge_end_reason_socks5_response(*(char *)
+          (cell->payload+RELAY_HEADER_SIZE)));
     connection_mark_for_close(conn);
     return 0;
   }
