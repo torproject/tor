@@ -381,7 +381,7 @@ static void run_scheduled_events(time_t now) {
 /* Build a new test circuit every 5 minutes */
 #define TESTING_CIRCUIT_INTERVAL 300
 
-    circ = circuit_get_newest(NULL, 1);
+    circ = circuit_get_newest(NULL, 1, 0);
     if(time_to_new_circuit < now) {
       client_dns_clean();
       circuit_expire_unused_circuits();

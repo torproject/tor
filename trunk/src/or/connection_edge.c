@@ -9,8 +9,10 @@ extern or_options_t options; /* command-line and config-file options */
 extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
-static int connection_ap_handshake_attach_circuit(connection_t *conn);
-static int connection_ap_handshake_attach_circuit_helper(connection_t *conn);
+static int connection_ap_handshake_attach_circuit(connection_t *conn,
+                                                  int must_be_clean);
+static int connection_ap_handshake_attach_circuit_helper(connection_t *conn,
+                                                         int must_be_clean);
 static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
@@ -367,7 +369,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         addr = ntohl(addr);
         client_dns_set_entry(conn->socks_request->address, addr);
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-        if(connection_ap_handshake_attach_circuit(conn) >= 0)
+        /* attaching to a dirty circuit is fine */
+        if(connection_ap_handshake_attach_circuit(conn, 0) >= 0)
           return 0;
         /* else, conn will get closed below */
       }
@@ -635,7 +638,8 @@ void connection_ap_expire_beginning(void) {
       circ->timestamp_dirty -= options.NewCircuitPeriod;
       /* give our stream another 15 seconds to try */
       conn->timestamp_lastread += 15;
-      if(connection_ap_handshake_attach_circuit(conn)<0) {
+      /* attaching to a dirty circuit is fine */
+      if(connection_ap_handshake_attach_circuit(conn,0)<0) {
         /* it will never work */
         /* Don't need to send end -- we're not connected */
         connection_mark_for_close(conn, 0);
@@ -658,7 +662,8 @@ void connection_ap_attach_pending(void)
     if (conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
-    if(connection_ap_handshake_attach_circuit(conn) < 0) {
+    /* attaching to a dirty circuit is fine */
+    if(connection_ap_handshake_attach_circuit(conn,0) < 0) {
       /* -1 means it will never work */
       /* Don't send end; there is no 'other side' yet */
       connection_mark_for_close(conn,0);
@@ -720,18 +725,22 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   } /* else socks handshake is done, continue processing */
 
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-  return connection_ap_handshake_attach_circuit(conn);
+  /* attaching to a dirty circuit is fine */
+  return connection_ap_handshake_attach_circuit(conn,0);
 }
 
-static int connection_ap_handshake_attach_circuit(connection_t *conn) {
+static int connection_ap_handshake_attach_circuit(connection_t *conn,
+                                                  int must_be_clean) {
   /* try attaching. launch new circuit if needed.
    * return -1 if conn needs to die, else 0. */
-  switch(connection_ap_handshake_attach_circuit_helper(conn)) {
+  switch(connection_ap_handshake_attach_circuit_helper(conn, must_be_clean)) {
     case -1: /* it will never work */
       return -1;
     case 0: /* no useful circuits available */
-      if(!circuit_get_newest(conn, 0)) /* is one already on the way? */
+      if(!circuit_get_newest(conn, 0, must_be_clean)) {
+        /* is one already on the way? */
         circuit_launch_new();
+      }
       return 0;
     default: /* case 1, it succeeded, great */
       return 0;
@@ -744,7 +753,8 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
  * Otherwise, associate conn with a safe live circuit, start
  * sending a BEGIN cell down the circuit, and return 1.
  */
-static int connection_ap_handshake_attach_circuit_helper(connection_t *conn) {
+static int connection_ap_handshake_attach_circuit_helper(connection_t *conn,
+                                                         int must_be_clean) {
   circuit_t *circ;
   uint32_t addr;
 
@@ -754,7 +764,7 @@ static int connection_ap_handshake_attach_circuit_helper(connection_t *conn) {
   assert(conn->socks_request);
 
   /* find the circuit that we should use, if there is one. */
-  circ = circuit_get_newest(conn, 1);
+  circ = circuit_get_newest(conn, 1, must_be_clean);
 
   if(!circ) {
     log_fn(LOG_INFO,"No safe circuit ready for edge connection; delaying.");
@@ -903,7 +913,8 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
   connection_start_reading(conn);
 
-  if (connection_ap_handshake_attach_circuit(conn) < 0) {
+  /* attaching to a dirty circuit is fine */
+  if (connection_ap_handshake_attach_circuit(conn, 0) < 0) {
     connection_mark_for_close(conn, 0);
     close(fd[1]);
     return -1;

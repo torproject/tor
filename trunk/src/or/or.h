@@ -658,7 +658,8 @@ int _circuit_mark_for_close(circuit_t *circ);
 
 circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
-circuit_t *circuit_get_newest(connection_t *conn, int must_be_open);
+circuit_t *circuit_get_newest(connection_t *conn,
+                              int must_be_open, int must_be_clean);
 circuit_t *circuit_get_by_service_and_purpose(const char *servid, int purpose);
 
 void circuit_expire_building(void);
