@@ -385,19 +385,20 @@ void circuit_n_conn_done(connection_t *or_conn, int status) {
 static int
 circuit_deliver_create_cell(circuit_t *circ, char *payload) {
   cell_t cell;
+  uint16_t id;
 
   tor_assert(circ);
   tor_assert(circ->n_conn);
   tor_assert(circ->n_conn->type == CONN_TYPE_OR);
   tor_assert(payload);
 
-  circuit_set_circid_orconn(circ, get_unique_circ_id_by_conn(circ->n_conn),
-                            circ->n_conn, N_CONN_CHANGED);
-  if (!circ->n_circ_id) {
+  id = get_unique_circ_id_by_conn(circ->n_conn);
+  if (!id) {
     log_fn(LOG_WARN,"failed to get unique circID.");
     return -1;
   }
-  log_fn(LOG_DEBUG,"Chosen circID %u.",circ->n_circ_id);
+  log_fn(LOG_DEBUG,"Chosen circID %u.", id);
+  circuit_set_circid_orconn(circ, id, circ->n_conn, N_CONN_CHANGED);
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_CREATE;
