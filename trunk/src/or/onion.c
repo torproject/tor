@@ -152,38 +152,6 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   return 0;
 }
 
-#if 0
-static char **parse_nickname_list(char *list, int *num) {
-  char **out;
-  char *start,*end;
-  int i;
-
-  while(isspace(*list)) list++;
-
-  i=0, start = list;
-  while(*start) {
-    while(*start && !isspace(*start)) start++;
-    i++;
-    while(isspace(*start)) start++;
-  }
-
-  out = tor_malloc(i * sizeof(char *));
-
-  i=0, start=list;
-  while(*start) {
-    end=start; while(*end && !isspace(*end)) end++;
-    out[i] = tor_malloc(MAX_NICKNAME_LEN);
-    strncpy(out[i],start,end-start);
-    out[i][end-start] = 0; /* null terminate it */
-    i++;
-    while(isspace(*end)) end++;
-    start = end;
-  }
-  *num = i;
-  return out;
-}
-#endif
-
 static void add_nickname_list_to_smartlist(smartlist_t *sl, char *list) {
   char *start,*end;
   char nick[MAX_NICKNAME_LEN];
