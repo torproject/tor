@@ -110,12 +110,12 @@ dirserv_parse_fingerprint_file(const char *fname)
   for(list=front; list; list=list->next) {
     nickname = list->key; fingerprint = list->value;
     if (strlen(nickname) > MAX_NICKNAME_LEN) {
-      log(LOG_WARN, "Nickname %s too long in fingerprint file. Skipping.", nickname);
+      log(LOG_WARN, "Nickname '%s' too long in fingerprint file. Skipping.", nickname);
       continue;
     }
     if(strlen(fingerprint) != FINGERPRINT_LEN ||
        !crypto_pk_check_fingerprint_syntax(fingerprint)) {
-      log_fn(LOG_WARN, "Invalid fingerprint (nickname %s, fingerprint %s). Skipping.",
+      log_fn(LOG_WARN, "Invalid fingerprint (nickname '%s', fingerprint %s). Skipping.",
              nickname, fingerprint);
       continue;
     }
@@ -130,7 +130,7 @@ dirserv_parse_fingerprint_file(const char *fname)
     for (i = 0; i < smartlist_len(fingerprint_list_new); ++i) {
       ent = smartlist_get(fingerprint_list_new, i);
       if (0==strcasecmp(ent->nickname, nickname)) {
-        log(LOG_WARN, "Duplicate nickname %s. Skipping.",nickname);
+        log(LOG_WARN, "Duplicate nickname '%s'. Skipping.",nickname);
         break; /* out of the for. the 'if' below means skip to the next line. */
       }
     }
@@ -176,7 +176,7 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
   }
 
   if (!found) { /* No such server known */
-    log_fn(LOG_INFO,"no fingerprint found for %s",router->nickname);
+    log_fn(LOG_INFO,"no fingerprint found for '%s'",router->nickname);
     return 0;
   }
   if (crypto_pk_get_fingerprint(router->identity_pkey, fp, 0)) {
@@ -184,10 +184,10 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
     return -1;
   }
   if (0==strcasecmp(ent->fingerprint, fp)) {
-    log_fn(LOG_DEBUG,"good fingerprint for %s",router->nickname);
+    log_fn(LOG_DEBUG,"good fingerprint for '%s'",router->nickname);
     return 1; /* Right fingerprint. */
   } else {
-    log_fn(LOG_WARN,"mismatched fingerprint for %s",router->nickname);
+    log_fn(LOG_WARN,"mismatched fingerprint for '%s'",router->nickname);
     return -1; /* Wrong fingerprint. */
   }
 }
@@ -332,17 +332,17 @@ dirserv_add_descriptor(const char **desc)
   /* Okay.  Now check whether the fingerprint is recognized. */
   r = dirserv_router_fingerprint_is_known(ri);
   if(r==-1) {
-    log_fn(LOG_WARN, "Known nickname %s, wrong fingerprint. Not adding.", ri->nickname);
+    log_fn(LOG_WARN, "Known nickname '%s', wrong fingerprint. Not adding.", ri->nickname);
     routerinfo_free(ri);
     *desc = end;
     return 0;
   }
   if(r==0) {
     char fp[FINGERPRINT_LEN+1];
-    log_fn(LOG_INFO, "Unknown nickname %s (%s:%d). Adding.",
+    log_fn(LOG_INFO, "Unknown nickname '%s' (%s:%d). Adding.",
            ri->nickname, ri->address, ri->or_port);
     if (crypto_pk_get_fingerprint(ri->identity_pkey, fp, 1) < 0) {
-      log_fn(LOG_WARN, "Error computing fingerprint for %s", ri->nickname);
+      log_fn(LOG_WARN, "Error computing fingerprint for '%s'", ri->nickname);
     } else {
       log_fn(LOG_INFO, "Fingerprint line: %s %s", ri->nickname, fp);
     }
@@ -351,13 +351,13 @@ dirserv_add_descriptor(const char **desc)
   /* Is there too much clock skew? */
   now = time(NULL);
   if (ri->published_on > now+ROUTER_ALLOW_SKEW) {
-    log_fn(LOG_WARN, "Publication time for nickname %s is too far in the future; possible clock skew. Not adding.", ri->nickname);
+    log_fn(LOG_WARN, "Publication time for nickname '%s' is too far in the future; possible clock skew. Not adding.", ri->nickname);
     routerinfo_free(ri);
     *desc = end;
     return 0;
   }
   if (ri->published_on < now-ROUTER_MAX_AGE) {
-    log_fn(LOG_WARN, "Publication time for router with nickname %s is too far in the past. Not adding.", ri->nickname);
+    log_fn(LOG_WARN, "Publication time for router with nickname '%s' is too far in the past. Not adding.", ri->nickname);
     routerinfo_free(ri);
     *desc = end;
     return 0;
@@ -375,19 +375,19 @@ dirserv_add_descriptor(const char **desc)
     /* if so, decide whether to update it. */
     if (ent->published >= ri->published_on) {
       /* We already have a newer or equal-time descriptor */
-      log_fn(LOG_INFO,"We already have a new enough desc for nickname %s. Not adding.",ri->nickname);
+      log_fn(LOG_INFO,"We already have a new enough desc for nickname '%s'. Not adding.",ri->nickname);
       /* This isn't really an error; return success. */
       routerinfo_free(ri);
       *desc = end;
       return 1;
     }
     /* We don't have a newer one; we'll update this one. */
-    log_fn(LOG_INFO,"Dirserv updating desc for nickname %s",ri->nickname);
+    log_fn(LOG_INFO,"Dirserv updating desc for nickname '%s'",ri->nickname);
     free_descriptor_entry(ent);
     smartlist_del_keeporder(descriptor_list, found);
   } else {
     /* Add at the end. */
-    log_fn(LOG_INFO,"Dirserv adding desc for nickname %s",ri->nickname);
+    log_fn(LOG_INFO,"Dirserv adding desc for nickname '%s'",ri->nickname);
   }
 
   ent = tor_malloc(sizeof(descriptor_entry_t));
@@ -420,7 +420,7 @@ directory_remove_unrecognized(void)
   for (i = 0; i < smartlist_len(descriptor_list); ++i) {
     ent = smartlist_get(descriptor_list, i);
     if (dirserv_router_fingerprint_is_known(ent->router)<=0) {
-      log(LOG_INFO, "Router %s is no longer recognized",
+      log(LOG_INFO, "Router '%s' is no longer recognized",
           ent->nickname);
       free_descriptor_entry(ent);
       smartlist_del(descriptor_list, i--);

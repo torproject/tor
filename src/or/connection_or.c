@@ -92,7 +92,7 @@ int connection_or_finished_connecting(connection_t *conn)
   tor_assert(conn->type == CONN_TYPE_OR);
   tor_assert(conn->state == OR_CONN_STATE_CONNECTING);
 
-  log_fn(LOG_INFO,"OR connect() to router %s:%u finished.",
+  log_fn(LOG_INFO,"OR connect() to router at %s:%u finished.",
          conn->address,conn->port);
 
   if(connection_tls_start_handshake(conn, 0) < 0) {
@@ -219,7 +219,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
   conn = connection_get_by_identity_digest(id_digest, CONN_TYPE_OR);
   if(conn) {
     tor_assert(conn->nickname);
-    log_fn(LOG_WARN,"Asked me to connect to %s, but there's already a connection.", conn->nickname);
+    log_fn(LOG_WARN,"Asked me to connect to router '%s', but there's already a connection.", conn->nickname);
     return conn;
   }
 
@@ -358,11 +358,11 @@ connection_tls_finish_handshake(connection_t *conn) {
            conn->address, conn->port);
     return -1;
   }
-  log_fn(LOG_DEBUG, "Other side (%s:%d) claims to be '%s'", conn->address,
-         conn->port, nickname);
+  log_fn(LOG_DEBUG, "Other side (%s:%d) claims to be router '%s'",
+         conn->address, conn->port, nickname);
 
   if(tor_tls_verify(conn->tls, &identity_rcvd) < 0) {
-    log_fn(LOG_WARN,"Other side '%s' (%s:%d) has a cert but it's invalid. Closing.",
+    log_fn(LOG_WARN,"Other side, which claims to be router '%s' (%s:%d), has a cert but it's invalid. Closing.",
            nickname, conn->address, conn->port);
     return -1;
   }
@@ -387,7 +387,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   if(router && /* we know this nickname */
      router->is_verified && /* make sure it's the right guy */
      memcmp(digest_rcvd, router->identity_digest, DIGEST_LEN) != 0) {
-    log_fn(LOG_WARN, "Identity key not as expected for %s", nickname);
+    log_fn(LOG_WARN, "Identity key not as expected for router claiming to be '%s' (%s:%d) ", nickname, conn->address, conn->port);
     return -1;
   }
   if (router_get_by_digest(digest_rcvd)) {
@@ -410,7 +410,7 @@ connection_tls_finish_handshake(connection_t *conn) {
     }
   } else {
     if((c=connection_get_by_identity_digest(digest_rcvd, CONN_TYPE_OR))) {
-      log_fn(LOG_INFO,"Router %s is already connected on fd %d. Dropping fd %d.", nickname, c->s, conn->s);
+      log_fn(LOG_INFO,"Router '%s' is already connected on fd %d. Dropping fd %d.", nickname, c->s, conn->s);
       return -1;
     }
     connection_or_init_conn_from_address(conn,conn->addr,conn->port,digest_rcvd);

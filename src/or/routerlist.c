@@ -59,7 +59,7 @@ int router_reload_router_list(void)
     log_fn(LOG_INFO, "Loading cached directory from %s", filename);
     is_recent = st.st_mtime > time(NULL) - 60*15;
     if (router_load_routerlist_from_directory(s, NULL, is_recent) < 0) {
-      log_fn(LOG_WARN, "Cached directory '%s' was unparseable; ignoring.", filename);
+      log_fn(LOG_WARN, "Cached directory at '%s' was unparseable; ignoring.", filename);
     }
     if(routerlist &&
        ((routerlist->published_on > time(NULL) - OLD_MIN_ONION_KEY_LIFETIME/2)
@@ -406,7 +406,7 @@ routerlist_sl_remove_unreliable_routers(smartlist_t *sl)
   for (i = 0; i < smartlist_len(sl); ++i) {
     router = smartlist_get(sl, i);
     if(router_is_unreliable_router(router, 1, 0)) {
-      log(LOG_DEBUG, "Router %s has insufficient uptime; deleting.",
+      log(LOG_DEBUG, "Router '%s' has insufficient uptime; deleting.",
           router->nickname);
       smartlist_del(sl, i--);
     }
@@ -719,7 +719,7 @@ void router_mark_as_down(const char *digest) {
   router = router_get_by_digest(digest);
   if(!router) /* we don't seem to know about him in the first place */
     return;
-  log_fn(LOG_DEBUG,"Marking %s as down.",router->nickname);
+  log_fn(LOG_DEBUG,"Marking router '%s' as down.",router->nickname);
   if (router_is_me(router))
     log_fn(LOG_WARN, "We just marked ourself as down. Are your external addresses reachable?");
   router->is_running = 0;
@@ -819,7 +819,7 @@ routerlist_remove_old_routers(int age)
     router = smartlist_get(routerlist->routers, i);
     if (router->published_on <= cutoff) {
       /* Too old.  Remove it. */
-      log_fn(LOG_INFO,"Forgetting obsolete routerinfo for node %s.", router->nickname);
+      log_fn(LOG_INFO,"Forgetting obsolete routerinfo for router '%s'", router->nickname);
       routerinfo_free(router);
       smartlist_del(routerlist->routers, i--);
     }
@@ -872,8 +872,8 @@ router_resolve(routerinfo_t *router)
 {
   if (tor_lookup_hostname(router->address, &router->addr) != 0
       || !router->addr) {
-    log_fn(LOG_WARN,"Could not get address for router %s (%s).",
-           router->address, router->nickname);
+    log_fn(LOG_WARN,"Could not resolve address for router '%s' at %s",
+           router->nickname, router->address);
     return -1;
   }
   router->addr = ntohl(router->addr); /* get it back into host order */
@@ -906,7 +906,8 @@ router_resolve_routerlist(routerlist_t *rl)
     } else if (r->addr) {
       /* already resolved. */
     } else if (router_resolve(r)) {
-      log_fn(LOG_WARN, "Couldn't resolve router %s; not using", r->address);
+      log_fn(LOG_WARN, "Couldn't resolve router '%s' at '%s'; not using",
+             r->nickname, r->address);
       remove = 1;
     }
     if (remove) {
