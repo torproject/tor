@@ -169,12 +169,12 @@ you've got it running.</p>
 default configuration file, and most people won't need to change any of
 the settings.</p>
 
-<p>The only setting you might need to change is "SocksAddress".
+<p>The only setting you might need to change is "SocksBindAddress".
 By default, your Tor client only listens for applications that connect
 from localhost. Connections from other computers are refused. If you
 want to torify applications on different computers than the Tor client,
 you should copy torrc.sample to torrc (it's installed by default
-to /usr/local/etc/tor/), change the SocksAddress line to
+to /usr/local/etc/tor/), change the SocksBindAddress line to
 0.0.0.0, and then hup or restart Tor.</p>
 
 <p>To test if it's working, point your browser
