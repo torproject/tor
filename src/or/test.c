@@ -869,8 +869,7 @@ test_dir_format()
 
   bw_lines = rep_hist_get_bandwidth_lines();
   test_assert(bw_lines);
-  test_assert(!strncmp(bw_lines, "opt write-history ",
-                       strlen("opt write-history ")));
+  test_assert(!strcmpstart(bw_lines, "opt write-history "));
 
   test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
                                                     &pk1_str_len));

@@ -623,7 +623,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     return 0;
   }
 
-  if(!strncmp(url,rend_fetch_url,strlen(rend_fetch_url))) {
+  if(!strcmpstart(url,rend_fetch_url)) {
     /* rendezvous descriptor fetch */
     const char *descp;
     int desc_len;
@@ -709,7 +709,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
     return 0;
   }
 
-  if(!strncmp(url,rend_publish_string,strlen(rend_publish_string))) {
+  if(!strcmpstart(url,rend_publish_string)) {
     /* rendezvous descriptor post */
     if(rend_cache_store(body, body_len) < 0)
       connection_write_to_buf(answer400, strlen(answer400), conn);

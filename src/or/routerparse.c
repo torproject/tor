@@ -591,7 +591,7 @@ router_parse_list_from_string(const char **s, routerlist_t **dest,
   while (1) {
     *s = eat_whitespace(*s);
     /* Don't start parsing the rest of *s unless it contains a router. */
-    if (strncmp(*s, "router ", 7)!=0)
+    if (strcmpstart(*s, "router ")!=0)
       break;
     if ((end = strstr(*s+1, "\nrouter "))) {
       end++;
