@@ -220,5 +220,5 @@ AC_SUBST(LOCALSTATEDIR)
 
 echo "confdir: $CONFDIR"
 
-AC_OUTPUT(Makefile contrib/tor.sh contrib/torify contrib/Makefile src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile src/config/Makefile src/common/Makefile src/or/Makefile)
+AC_OUTPUT(Makefile contrib/tor.sh contrib/torify contrib/Makefile src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile src/config/Makefile src/common/Makefile src/or/Makefile)
 
