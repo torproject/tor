@@ -41,6 +41,12 @@ ifneq (,$(findstring notest,$(DEB_BUILD_OPTIONS)))
 	RUN_TEST = no
 endif
 
+CONF_OPTIONS =
+# build against libdmalloc4 - it better be installed
+ifneq (,$(findstring with-dmalloc,$(DEB_BUILD_OPTIONS)))
+	CONF_OPTIONS += --with-dmalloc
+endif
+
 configure: patch-stamp
 config.status: configure
 	dh_testdir
@@ -51,7 +57,8 @@ config.status: configure
 		--mandir=\$${prefix}/share/man \
 		--infodir=\$${prefix}/share/info \
 		--localstatedir=/var \
-		--sysconfdir=/etc
+		--sysconfdir=/etc \
+		$(CONF_OPTIONS)
 
 
 build: build-stamp
