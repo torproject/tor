@@ -1,4 +1,9 @@
 Release notes in progress for 0.0.8:
+rc2:
+  o Make it compile on cygwin again.
+  o When picking unverified routers, skip those with low uptime and/or
+    low bandwidth, depending on what properties you care about.
+
 rc1:
   o Changes from 0.0.7.3:
     - Bugfixes:
