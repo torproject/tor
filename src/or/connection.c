@@ -81,7 +81,6 @@ connection_t *connection_new(int type) {
   conn->magic = CONNECTION_MAGIC;
   conn->s = -1; /* give it a default of 'not used' */
 
-
   conn->type = type;
   if(!connection_is_listener(conn)) { /* listeners never use their buf */
     conn->inbuf = buf_new();
@@ -140,6 +139,51 @@ void connection_free_all(void) {
   get_connection_array(&carray,&n);
   for(i=0;i<n;i++)
     connection_free(carray[i]);
+}
+
+int
+_connection_mark_for_close(connection_t *conn, char reason)
+{
+  assert_connection_ok(conn,0);
+
+  if (conn->marked_for_close) {
+    log(LOG_WARN, "Double mark-for-close on connection.");
+    return -1;
+  }
+
+  switch (conn->type)
+    {
+    case CONN_TYPE_OR_LISTENER:
+    case CONN_TYPE_AP_LISTENER:
+    case CONN_TYPE_DIR_LISTENER:
+    case CONN_TYPE_CPUWORKER:
+    case CONN_TYPE_DIR:
+      /* No special processing needed. */
+      break;
+    case CONN_TYPE_OR:
+      /* No special processing needed, I think. */
+      break;
+    case CONN_TYPE_EXIT:
+    case CONN_TYPE_AP:
+      if (conn->state == EXIT_CONN_STATE_RESOLVING)
+        dns_cancel_pending_resolve(conn->address, conn);
+      if (reason < _MIN_END_STREAM_REASON || reason > _MAX_END_STREAM_REASON)
+        reason = END_STREAM_REASON_MISC;
+      if (!conn->has_sent_end &&
+          connection_edge_end(conn, reason, conn->cpath_layer) < 0)
+        return -1;
+      break;
+    case CONN_TYPE_DNSWORKER:
+      if (conn->state == DNSWORKER_STATE_BUSY) {
+        dns_cancel_pending_resolve(conn->address, NULL);
+      }
+      break;
+    default:
+      log(LOG_ERR, "Unknown connection type %d", conn->type);
+      ;
+    }
+  conn->marked_for_close = 1;
+  return 0;
 }
 
 int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
@@ -239,7 +283,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   }
 
   if(connection_init_accepted_conn(newconn) < 0) {
-    newconn->marked_for_close = 1;
+    connection_mark_for_close(newconn,0);
     return 0;
   }
   return 0;
@@ -306,11 +350,14 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
 }
 
 static void listener_close_if_present(int type) {
+  assert(type == CONN_TYPE_OR_LISTENER ||
+         type == CONN_TYPE_AP_LISTENER ||
+         type == CONN_TYPE_DIR_LISTENER);
   connection_t *conn = connection_get_by_type(type);
   if (conn) {
     close(conn->s);
     conn->s = -1;
-    conn->marked_for_close = 1;
+    connection_mark_for_close(conn,0);
   }
 }
 
@@ -523,7 +570,7 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
 
   if(write_to_buf(string, len, conn->outbuf) < 0) {
     log_fn(LOG_WARN,"write_to_buf failed. Closing connection (fd %d).", conn->s);
-    conn->marked_for_close = 1;
+    connection_mark_for_close(conn,0);
     return;
   }
 
@@ -539,8 +586,8 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
     len -= (MIN_TLS_FLUSHLEN - conn->outbuf_flushlen);
     conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
     if(connection_handle_write(conn) < 0) {
-      conn->marked_for_close = 1;
       log_fn(LOG_WARN,"flushing failed.");
+      connection_mark_for_close(conn,0);
     }
   }
   if(len > 0) { /* if there's any left over */
@@ -693,9 +740,7 @@ int connection_send_destroy(uint16_t circ_id, connection_t *conn) {
        log_fn(LOG_INFO,"...and informing resolver we don't want the answer anymore.");
        dns_cancel_pending_resolve(conn->address, conn);
      }
-     if(connection_edge_end(conn, END_STREAM_REASON_DESTROY, conn->cpath_layer) < 0)
-       log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
-     /* if they already sent a destroy, they know. XXX can just close? */
+     connection_mark_for_close(conn, END_STREAM_REASON_DESTROY);
      return 0;
   }
 
@@ -865,4 +910,3 @@ void assert_connection_ok(connection_t *conn, time_t now)
   c-basic-offset:2
   End:
 */
-

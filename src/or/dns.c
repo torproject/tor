@@ -236,8 +236,7 @@ void dns_cancel_pending_resolve(char *address, connection_t *onlyconn) {
            address);
     while(resolve->pending_connections) {
       pend = resolve->pending_connections;
-      if(connection_edge_end(pend->conn, END_STREAM_REASON_MISC, NULL) < 0)
-        log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
+      connection_mark_for_close(pend->conn, END_STREAM_REASON_MISC);
       resolve->pending_connections = pend->next;
       free(pend);
     }
@@ -302,8 +301,7 @@ static void dns_found_answer(char *address, uint32_t addr) {
     assert_connection_ok(pend->conn,0);
     pend->conn->addr = resolve->addr;
     if(resolve->state == CACHE_STATE_FAILED) {
-      if(connection_edge_end(pend->conn, END_STREAM_REASON_RESOLVEFAILED, NULL) < 0)
-        log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
+      connection_mark_for_close(pend->conn, END_STREAM_REASON_RESOLVEFAILED);
     } else {
       assert_connection_ok(pend->conn, time(NULL));
       connection_exit_connect(pend->conn);
@@ -457,10 +455,8 @@ static void spawn_enough_dnsworkers(void) {
 
     log_fn(LOG_WARN, "%d DNS workers are spawned; all are busy. Killing one.",
            MAX_DNSWORKERS);
-    /* tell the exit connection that it's failed */
-    dns_cancel_pending_resolve(dnsconn->address, NULL);
 
-    dnsconn->marked_for_close = 1;
+    connection_mark_for_close(dnsconn,0);
     num_dnsworkers_busy--;
     num_dnsworkers--;
   }
@@ -484,7 +480,7 @@ static void spawn_enough_dnsworkers(void) {
            num_dnsworkers-num_dnsworkers_needed, num_dnsworkers);
     dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
     assert(dnsconn);
-    dnsconn->marked_for_close = 1;
+    connection_mark_for_close(dnsconn,0);
     num_dnsworkers--;
   }
 }

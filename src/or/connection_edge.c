@@ -48,8 +48,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
     conn->done_receiving = 1;
     shutdown(conn->s, 0); /* XXX check return, refactor NM */
     if (conn->done_sending) {
-      if(connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer) < 0)
-        log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
+      connection_mark_for_close(conn, END_STREAM_REASON_DONE);
     } else {
       connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_END,
                                    NULL, 0, conn->cpath_layer);
@@ -58,8 +57,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
 #else
     /* eof reached, kill it. */
     log_fn(LOG_INFO,"conn (fd %d) reached eof. Closing.", conn->s);
-    if(connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer) < 0)
-      log_fn(LOG_WARN,"2: I called connection_edge_end redundantly.");
+    connection_mark_for_close(conn, END_STREAM_REASON_DONE);
     return -1;
 #endif
   }
@@ -67,8 +65,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
   switch(conn->state) {
     case AP_CONN_STATE_SOCKS_WAIT:
       if(connection_ap_handshake_process_socks(conn) < 0) {
-        if(connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer) < 0)
-          log_fn(LOG_WARN,"3: I called connection_edge_end redundantly.");
+        connection_mark_for_close(conn, END_STREAM_REASON_MISC);
         return -1;
       }
       return 0;
@@ -79,8 +76,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
         return 0;
       }
       if(connection_edge_package_raw_inbuf(conn) < 0) {
-        if(connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer) < 0)
-          log_fn(LOG_WARN,"4: I called connection_edge_end redundantly.");
+        connection_mark_for_close(conn, END_STREAM_REASON_MISC);
         return -1;
       }
       return 0;
@@ -130,13 +126,14 @@ int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_lay
   }
 
   circ = circuit_get_by_conn(conn);
-  if(circ) {
+  if(circ && !circ->marked_for_close) {
     log_fn(LOG_DEBUG,"Marking conn (fd %d) and sending end.",conn->s);
     connection_edge_send_command(conn, circ, RELAY_COMMAND_END,
                                  payload, payload_len, cpath_layer);
+  } else {
+    log_fn(LOG_DEBUG,"Marking conn (fd %d); no circ to send end.",conn->s);
   }
 
-  conn->marked_for_close = 1;
   conn->has_sent_end = 1;
   return 0;
 }
@@ -150,7 +147,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
   if(!circ) {
     log_fn(LOG_WARN,"no circ. Closing.");
     assert(fromconn);
-    fromconn->marked_for_close = 1;
+    connection_mark_for_close(fromconn,0);
     return -1;
   }
 
@@ -207,12 +204,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
     if(rh.command == RELAY_COMMAND_END) {
       log_fn(LOG_INFO,"Exit got end (%s) before we're connected. Marking for close.",
         connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
-      if(conn->state == EXIT_CONN_STATE_RESOLVING) {
-        log_fn(LOG_INFO,"...and informing resolver we don't want the answer anymore.");
-        dns_cancel_pending_resolve(conn->address, conn);
-      }
-      conn->marked_for_close = 1;
-      conn->has_sent_end = 1;
+      conn->has_sent_end = 1; /* So we don't send an end cell. */
+      connection_mark_for_close(conn, 0);
       return 0;
     }
     if(conn->type == CONN_TYPE_AP && rh.command == RELAY_COMMAND_CONNECTED) {
@@ -231,15 +224,13 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       circuit_log_path(LOG_WARN,circ);
       if(connection_ap_handshake_socks_reply(conn, NULL, 0, 1) < 0) {
         log_fn(LOG_INFO,"Writing to socks-speaking application failed. Closing.");
-        if(connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer) < 0)
-          log_fn(LOG_WARN,"3: I called connection_edge_end redundantly.");
+        connection_mark_for_close(conn, END_STREAM_REASON_MISC);
       }
       return 0;
     } else {
       log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
              rh.command, conn->state, conn_state_to_string[conn->type][conn->state]);
-      if(connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer) < 0)
-        log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
+      connection_mark_for_close(conn, END_STREAM_REASON_MISC);
       return -1;
     }
   }
@@ -264,8 +255,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       if((edge_type == EDGE_AP && --layer_hint->deliver_window < 0) ||
          (edge_type == EDGE_EXIT && --circ->deliver_window < 0)) {
         log_fn(LOG_WARN,"(relay data) circ deliver_window below 0. Killing.");
-        if(connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer) < 0)
-          log_fn(LOG_WARN,"2: I called connection_edge_end redundantly.");
+        connection_mark_for_close(conn, END_STREAM_REASON_MISC);
         return -1;
       }
       log_fn(LOG_DEBUG,"circ deliver_window now %d.", edge_type == EDGE_AP ?
@@ -316,12 +306,12 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */
       if (conn->done_receiving) {
-        conn->marked_for_close = 1;
         conn->has_sent_end = 1; /* no need to send end, we just got one! */
+        connection_mark_for_close(conn, END_STREAM_REASON_DONE);
       }
 #else
-      conn->marked_for_close = 1;
       conn->has_sent_end = 1; /* no need to send end, we just got one! */
+      connection_mark_for_close(conn, 0);
 #endif
       return 0;
     case RELAY_COMMAND_EXTEND:
@@ -544,8 +534,8 @@ void connection_ap_expire_beginning(void) {
       conn->timestamp_lastread += 15;
       if(connection_ap_handshake_attach_circuit(conn)<0) {
         /* it will never work */
-        conn->marked_for_close = 1;
-        conn->has_sent_end = 1;
+        conn->has_sent_end = 1; /* Don't need to send end -- why? */
+        connection_mark_for_close(conn, 0);
       }
     }
   }
@@ -567,8 +557,8 @@ void connection_ap_attach_pending(void)
       continue;
     if(connection_ap_handshake_attach_circuit(conn) < 0) {
       /* it will never work */
-      conn->marked_for_close = 1;
-      conn->has_sent_end = 1;
+      conn->has_sent_end = 1; /* why? */
+      connection_mark_for_close(conn,0);
     }
   }
 }
@@ -733,7 +723,7 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
-    ap_conn->marked_for_close = 1;
+    connection_mark_for_close(ap_conn, 0);
     return;
   }
 
@@ -851,8 +841,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
       return 0;
     case -1: /* resolve failed */
       log_fn(LOG_INFO,"Resolve failed (%s).", n_stream->address);
-      if(connection_edge_end(n_stream, END_STREAM_REASON_RESOLVEFAILED, NULL) < 0)
-        log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
+      connection_mark_for_close(n_stream, END_STREAM_REASON_RESOLVEFAILED);
     /* case 0, resolve added to pending list */
   }
   return 0;
@@ -863,15 +852,13 @@ void connection_exit_connect(connection_t *conn) {
 
   if(router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.", conn->address, conn->port);
-    if(connection_edge_end(conn, END_STREAM_REASON_EXITPOLICY, NULL) < 0)
-      log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
+    connection_mark_for_close(conn, END_STREAM_REASON_EXITPOLICY);
     return;
   }
 
   switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
     case -1:
-      if(connection_edge_end(conn, END_STREAM_REASON_CONNECTFAILED, NULL) < 0)
-        log_fn(LOG_WARN,"2: I called connection_edge_end redundantly.");
+      connection_mark_for_close(conn, END_STREAM_REASON_CONNECTFAILED);
       return;
     case 0:
       connection_set_poll_socket(conn);

@@ -64,6 +64,8 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
 
   circ->timestamp_created = time(NULL);
 
+  circ->marked_for_close = 0;
+
   circ->p_circ_id = p_circ_id;
   circ->p_conn = p_conn;
 
@@ -739,9 +741,8 @@ void circuit_about_to_close_connection(connection_t *conn) {
         return;
 
       if(!conn->has_sent_end) {
-        log_fn(LOG_INFO,"Edge connection hasn't sent end yet? Bug.");
-        if(connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer) < 0)
-          log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
+        log_fn(LOG_WARN,"Edge connection hasn't sent end yet? Bug.");
+        connection_mark_for_close(conn, END_STREAM_REASON_MISC);
       }
 
       circuit_detach_stream(circ, conn);
@@ -1160,8 +1161,8 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
         /* no need to send 'end' relay cells,
          * because the other side's already dead
          */
-        stream->marked_for_close = 1;
         stream->has_sent_end = 1;
+        connection_mark_for_close(stream,0);
       }
     }
 
