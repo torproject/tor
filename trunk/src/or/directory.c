@@ -13,10 +13,6 @@ extern or_options_t options; /* command-line and config-file options */
 
 static char fetchstring[] = "GET / HTTP/1.0\r\n\r\n";
 static char answerstring[] = "HTTP/1.0 200 OK\r\n\r\n";
-/* XXX the_directory is the same name as a different variable in·
- * dirserv.c, are you crazy?? */
-static char the_directory[MAX_DIR_SIZE+1];
-static int directorylen=0;
 
 /********* END VARIABLES ************/
 
@@ -98,15 +94,17 @@ static int directory_send_command(connection_t *conn, int command) {
 }
 
 int connection_dir_process_inbuf(connection_t *conn) {
+  char directory[MAX_DIR_SIZE+1];
+  int directorylen=0;
 
   assert(conn && conn->type == CONN_TYPE_DIR);
 
   if(conn->inbuf_reached_eof) {
     switch(conn->state) {
       case DIR_CONN_STATE_CLIENT_READING_FETCH:
-        /* kill it, but first process the_directory and learn about new routers. */
+        /* kill it, but first fetch/process the directory to learn about new routers. */
         switch(fetch_from_buf_http(conn->inbuf,
-                                   NULL, 0, the_directory, MAX_DIR_SIZE)) {
+                                   NULL, 0, directory, MAX_DIR_SIZE)) {
           case -1: /* overflow */
             log_fn(LOG_WARN,"'fetch' response too large. Failing.");
             return -1;
@@ -116,13 +114,13 @@ int connection_dir_process_inbuf(connection_t *conn) {
           /* case 1, fall through */
         }
         /* XXX check headers, at least make sure returned 2xx */
-        directorylen = strlen(the_directory);
-        log_fn(LOG_INFO,"Received directory (size %d):\n%s", directorylen, the_directory);
+        directorylen = strlen(directory);
+        log_fn(LOG_INFO,"Received directory (size %d):\n%s", directorylen, directory);
         if(directorylen == 0) {
           log_fn(LOG_INFO,"Empty directory. Ignoring.");
           return -1;
         }
-        if(router_set_routerlist_from_directory(the_directory, conn->identity_pkey) < 0){
+        if(router_set_routerlist_from_directory(directory, conn->identity_pkey) < 0){
           log_fn(LOG_INFO,"...but parsing failed. Ignoring.");
         } else {
           log_fn(LOG_INFO,"updated routers.");

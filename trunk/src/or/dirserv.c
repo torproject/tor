@@ -10,10 +10,6 @@
 extern or_options_t options; /* command-line and config-file options */
 
 static int the_directory_is_dirty = 1;
-/* XXX the_directory is the same name as a different variable in 
- * directory.c, are you crazy?? */
-static char *the_directory = NULL;
-static int the_directory_len = -1;
 
 static int list_running_servers(char **nicknames_out);
 
@@ -108,7 +104,7 @@ dirserv_parse_fingerprint_file(const char *fname)
     free(fingerprint_list_tmp[i].fingerprint);
   }
   return -1;
-}    
+}
 
 /* return 1 if router's identity and nickname match,
  * -1 if they don't match, 0 if the nickname is not known. */
@@ -272,7 +268,7 @@ dirserv_add_descriptor(const char **desc)
     desc_ent_ptr = &descriptor_list[n_descriptors++];
     /* XXX check if n_descriptors is too big */
   }
-  
+
   (*desc_ent_ptr) = tor_malloc(sizeof(descriptor_entry_t));
   (*desc_ent_ptr)->nickname = tor_strdup(ri->nickname);
   (*desc_ent_ptr)->published = ri->published_on;
@@ -281,8 +277,8 @@ dirserv_add_descriptor(const char **desc)
   strncpy((*desc_ent_ptr)->descriptor, start, desc_len);
   (*desc_ent_ptr)->descriptor[desc_len] = '\0';
   *desc = end;
-  the_directory_is_dirty = 1;
-  
+  directory_set_dirty();
+
   routerinfo_free(ri);
   return 0;
  err:
@@ -378,7 +374,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
   free(cp);
   i = strlen(s);
   cp = s+i;
-  
+
   for (i = 0; i < n_descriptors; ++i) {
     strncat(cp, descriptor_list[i]->descriptor, descriptor_list[i]->desc_len);
     cp += descriptor_list[i]->desc_len;
@@ -391,7 +387,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
   strncat(s, "directory-signature\n", maxlen-i);
   i = strlen(s);
   cp = s + i;
-  
+
   if (router_get_dir_hash(s,digest)) {
     log_fn(LOG_WARN,"couldn't compute digest");
     return -1;
@@ -403,10 +399,10 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
   log(LOG_DEBUG,"generated directory digest begins with %02x:%02x:%02x:%02x",
       ((int)digest[0])&0xff,((int)digest[1])&0xff,
       ((int)digest[2])&0xff,((int)digest[3])&0xff);
-  
+
   strncpy(cp, 
           "-----BEGIN SIGNATURE-----\n", maxlen-i);
-          
+
   i = strlen(s);
   cp = s+i;
   if (base64_encode(cp, maxlen-i, signature, 128) < 0) {
@@ -425,6 +421,9 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
 
   return 0;
 }
+
+static char *the_directory = NULL;
+static int the_directory_len = -1;
 
 size_t dirserv_get_directory(const char **directory)
 {
