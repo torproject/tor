@@ -654,7 +654,7 @@ int switch_id(char *user, char *group) {
     }
   }
 
-  /* switch the group first, while we still have the priveledges to do so */
+  /* switch the group first, while we still have the privileges to do so */
   if (group) {
     gr = getgrnam(group);
     if (gr == NULL) {
