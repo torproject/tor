@@ -32,6 +32,8 @@ R       - figure out enclaves, e.g. so we know what to recommend that people
 N       - let tor servers use proxies for port 80 exits
           - Use generic port redirector for IP/bits:Port->IP:Port .
           - Make use of them when we're doing exit connections.
+N	- Make "tor -V" or "tor [-]-version" print the version and exit.
+ 
 
       0.0.9pre3:
 N       - per-month byte allowances.
@@ -88,6 +90,7 @@ R       - learn from ben about his openssl-reinitialization-trick to
         - if destination IP is running a tor node, extend a circuit there
           before sending begin.
 * don't do this for now. figure out how enclaves work. but do enclaves soon.
+        - Support egd or other non-OS-integrated strong entropy sources
 
       more features, complex:
         - Switch dirservers entries to config lines:
@@ -149,7 +152,7 @@ NICK    . Windows port
           - robust as a server
           . Usable as NT service
           - docs for building in win
-          - installer
+          - installer, including all needed libs.  
 
         - Docs
           . FAQ
