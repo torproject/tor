@@ -142,7 +142,8 @@ void connection_free(connection_t *conn) {
   tor_free(conn->address);
 
   if(connection_speaks_cells(conn)) {
-    directory_set_dirty(); /* XXX should only do this for an open OR conn */
+    if(conn->state == OR_CONN_STATE_OPEN)
+      directory_set_dirty();
     if (conn->tls)
       tor_tls_free(conn->tls);
   }
