@@ -69,11 +69,14 @@ circuit_t *onion_next_task(void) {
     return NULL; /* no onions pending, we're done */
 
   assert(ol_list->circ);
+  assert(ol_list->circ->p_conn); /* make sure it's still valid */
+#if 0
   if(!ol_list->circ->p_conn) {
     log_fn(LOG_INFO,"ol_list->circ->p_conn null, must have died?");
     onion_pending_remove(ol_list->circ);
     return onion_next_task(); /* recurse: how about the next one? */
   }
+#endif
 
   assert(ol_length > 0);
   circ = ol_list->circ;

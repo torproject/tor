@@ -552,6 +552,10 @@ void circuit_close(circuit_t *circ) {
 
   assert(circ);
   circuit_remove(circ);
+  if(circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
+    onion_pending_remove(circ);
+  }
+
   if(circ->n_conn)
     connection_send_destroy(circ->n_circ_id, circ->n_conn);
   for(conn=circ->n_streams; conn; conn=conn->next_stream) {
@@ -706,7 +710,6 @@ int circuit_launch_new(int failure_status) {
   }
 
   if(circuit_establish_circuit() < 0) {
-    failures++;
     return 0;
   }
 
@@ -746,7 +749,7 @@ int circuit_establish_circuit(void) {
     circ->n_port = firsthop->or_port;
     if(options.OnionRouter) { /* we would be connected if he were up. but he's not. */
       log_fn(LOG_INFO,"Route's firsthop isn't connected.");
-      circuit_close(circ); 
+      circuit_close(circ);
       return -1;
     }
 
