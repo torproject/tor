@@ -446,6 +446,41 @@ static int init_from_config(int argc, char **argv) {
   return 0;
 }
 
+static int do_hup(void) {
+  char keydir[512];
+
+  log_fn(LOG_WARN,"Received sighup. Reloading config.");
+  /* first, reload config variables, in case they've changed */
+  /* no need to provide argc/v, they've been cached inside init_from_config */
+  if (init_from_config(0, NULL) < 0) {
+    exit(1);
+  }
+  if(retry_all_connections() < 0) {
+    log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
+    return -1;
+  }
+  if(options.DirPort) {
+    /* reload the approved-routers file */
+    sprintf(keydir,"%s/approved-routers", options.DataDirectory);
+    log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
+    if(dirserv_parse_fingerprint_file(keydir) < 0) {
+      log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
+    }
+  } else {
+    /* fetch a new directory */
+    directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_FETCH);
+  }
+  if(options.ORPort) {
+    router_rebuild_descriptor();
+    sprintf(keydir,"%s/router.desc", options.DataDirectory);
+    log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
+    if (write_str_to_file(keydir, router_get_my_descriptor())) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
 static int do_main_loop(void) {
   int i;
   int timeout;
@@ -487,36 +522,7 @@ static int do_main_loop(void) {
       please_dumpstats = 0;
     }
     if(please_reset) {
-      char keydir[512];
-      log_fn(LOG_WARN,"Received sighup. Reloading config.");
-      /* first, reload config variables, in case they've changed */
-      /* no need to provide argc/v, they've been cached inside init_from_config */
-      if (init_from_config(0, NULL) < 0) {
-        exit(1);
-      }
-      if(retry_all_connections() < 0) {
-        log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
-        return -1;
-      }
-      if(options.DirPort) {
-        /* reload the approved-routers file */
-        sprintf(keydir,"%s/approved-routers", options.DataDirectory);
-        log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
-        if(dirserv_parse_fingerprint_file(keydir) < 0) {
-          log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
-        }
-      } else {
-        /* fetch a new directory */
-        directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_FETCH);
-      }
-      if(options.ORPort) {
-        router_rebuild_descriptor();
-        sprintf(keydir,"%s/router.desc", options.DataDirectory);
-        log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
-        if (write_str_to_file(keydir, router_get_my_descriptor())) {
-          return -1;
-        }
-
+      do_hup();
       please_reset = 0;
     }
     if(please_reap_children) {
