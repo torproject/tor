@@ -182,7 +182,7 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
   }
 }
 
-/** If we are an authoritative directory, and the list of approved
+/** If we are an authoritative dirserver, and the list of approved
  * servers contains one whose identity key digest is <b>digest</b>,
  * return that router's nickname.  Otherwise return NULL. */
 const char *dirserv_get_nickname_by_digest(const char *digest)
