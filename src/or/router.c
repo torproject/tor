@@ -374,9 +374,9 @@ int init_keys(void) {
  */
 
 /** Whether we can reach our ORPort from the outside. */
-static int can_reach_or_port = 0;
+static int can_reach_or_port = 1;
 /** Whether we can reach our DirPort from the outside. */
-static int can_reach_dir_port = 0;
+static int can_reach_dir_port = 1;
 
 void consider_testing_reachability(void) {
   routerinfo_t *me = router_get_my_routerinfo();
@@ -407,8 +407,8 @@ void router_dirport_found_reachable(void) {
 /** Our router has just moved to a new IP. Reset stats. */
 void server_has_changed_ip(void) {
   stats_n_seconds_working = 0;
-  can_reach_or_port = 0;
-  can_reach_dir_port = 0;
+//  can_reach_or_port = 0;
+//  can_reach_dir_port = 0;
   mark_my_descriptor_dirty();
 }
 
