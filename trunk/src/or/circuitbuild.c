@@ -126,39 +126,9 @@ circuit_list_path(circuit_t *circ, int verbose)
  * exit point.
  */
 void circuit_log_path(int severity, circuit_t *circ) {
-#if 1
   char *s = circuit_list_path(circ,1);
   log_fn(severity,"%s",s);
   tor_free(s);
-#else
-  char buf[1024];
-  char *s = buf;
-  struct crypt_path_t *hop;
-  const char *states[] = {"closed", "waiting for keys", "open"};
-  routerinfo_t *router;
-  tor_assert(CIRCUIT_IS_ORIGIN(circ));
-  tor_assert(circ->cpath);
-
-  tor_snprintf(s, sizeof(buf)-1, "circ (length %d, exit %s): ",
-          circ->build_state->desired_path_len, circ->build_state->chosen_exit_name);
-  hop=circ->cpath;
-  do {
-    s = buf + strlen(buf);
-    router = router_get_by_digest(hop->identity_digest);
-    if (router) {
-      tor_snprintf(s, sizeof(buf) - (s - buf), "%s(%s) ",
-               router->nickname, states[hop->state]);
-    } else {
-      if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
-        tor_snprintf(s, sizeof(buf) - (s - buf), "(rendjoin hop)");
-      } else {
-        tor_snprintf(s, sizeof(buf) - (s - buf), "UNKNOWN ");
-      }
-    }
-    hop=hop->next;
-  } while (hop!=circ->cpath);
-  log_fn(severity,"%s",buf);
-#endif
 }
 
 /** Tell the rep(utation)hist(ory) module about the status of the links
