@@ -48,7 +48,7 @@ directory_send_command(connection_t *conn, const char *platform,
                        int purpose, const char *resource,
                        const char *payload, size_t payload_len);
 static int directory_handle_command(connection_t *conn);
-static int body_is_plausible(const char *body, size_t body_len);
+static int body_is_plausible(const char *body, size_t body_len, int purpose);
 
 /********* START VARIABLES **********/
 
@@ -552,21 +552,25 @@ parse_http_response(const char *headers, int *code, time_t *date,
  * running-list or directory opening.  This is a sign of possible compression.
  **/
 static int
-body_is_plausible(const char *body, size_t len)
+body_is_plausible(const char *body, size_t len, int purpose)
 {
   int i;
   if (len < 32)
     return 0;
-  if (!strcmpstart(body,"router") ||
-      !strcmpstart(body,"signed-directory") ||
-      !strcmpstart(body,"network-status") ||
-      !strcmpstart(body,"running-routers"))
+  if (purpose != DIR_PURPOSE_FETCH_RENDDESC) {
+    if (!strcmpstart(body,"router") ||
+        !strcmpstart(body,"signed-directory") ||
+        !strcmpstart(body,"network-status") ||
+        !strcmpstart(body,"running-routers"))
     return 1;
-  for (i=0;i<32;++i) {
-    if (!isprint(body[i]) && !isspace(body[i]))
-      return 0;
+    for (i=0;i<32;++i) {
+      if (!isprint(body[i]) && !isspace(body[i]))
+        return 0;
+    }
+    return 1;
+  } else {
+    return 1;
   }
-  return 1;
 }
 
 /** We are a client, and we've finished reading the server's
@@ -618,7 +622,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
   }
 
-  plausible = body_is_plausible(body, body_len);
+  plausible = body_is_plausible(body, body_len, conn->purpose);
   if (compression || !plausible) {
     char *new_body = NULL;
     size_t new_len = 0;
@@ -628,7 +632,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       const char *description1, *description2;
       if (compression == ZLIB_METHOD)
         description1 = "as deflated";
-      else if (compression = GZIP_METHOD)
+      else if (compression == GZIP_METHOD)
         description1 = "as gzipped";
       else if (compression == 0)
         description1 = "as uncompressed";
