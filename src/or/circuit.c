@@ -760,7 +760,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
 
     cell.length = RELAY_HEADER_SIZE + 6 + DH_ONIONSKIN_LEN;
     *(uint32_t*)(cell.payload+RELAY_HEADER_SIZE) = htonl(hop->addr);
-    *(uint32_t*)(cell.payload+RELAY_HEADER_SIZE+4) = htons(hop->port);
+    *(uint16_t*)(cell.payload+RELAY_HEADER_SIZE+4) = htons(hop->port);
     if(onion_skin_create(router->pkey, &(hop->handshake_state), cell.payload+RELAY_HEADER_SIZE+6) < 0) {
       log_fn(LOG_INFO,"onion_skin_create failed.");
       return -1;
