@@ -1,4 +1,4 @@
-              How to make rendezvous points work with tor
+                   How to make rendezvous points work
 
 0. Overview
 
@@ -20,12 +20,14 @@
    We also provide the necessary glue code so that Alice can view webpages
    on a location-hidden webserver, and Bob can run a location-hidden
    server, with minimal invasive changes (see Section 3). Both Alice
-   and Bob must run local onion proxies (OPs).
+   and Bob must run local onion proxies (OPs) -- software that knows
+   how to talk to the onion routing network.
 
    The big picture follows. We direct the reader to the rest of the
    document for more details and explanation.
 
-   1) Bob chooses some Introduction Points, and advertises them on a DHT.
+   1) Bob chooses some Introduction Points, and advertises them on a
+      Distributed Hash Table (DHT).
    2) Bob establishes onion routing connections to each of his
       Introduction Points, and waits.
    3) Alice learns about Bob's service out of band (perhaps Bob gave her
@@ -34,15 +36,15 @@
    4) Alice chooses and establishes a Meeting Point for this transaction.
    5) Alice goes to one of Bob's Introduction Points, and gives it a blob
       (encrypted for Bob) which tells him about herself and the Meeting
-      Point she chose.
-   6) IP sends the blob to Bob.
-   7) Bob chooses whether to ignore the blob, or to onion route to MP.
-   8) MP plugs together Alice and Bob. Note that MP doesn't know (or care)
+      Point she chose. The Introduction Point sends the blob to Bob.
+   6) Bob chooses whether to ignore the blob, or to onion route to MP.
+      Let's assume the latter.
+   7) MP plugs together Alice and Bob. Note that MP doesn't know (or care)
       who Alice is, or who Bob is; and it can't read anything they
       transmit either, because they share a session key.
-   9) Alice sends a 'begin' cell along the circuit. It makes its way
+   8) Alice sends a 'begin' cell along the circuit. It makes its way
       to Bob's onion proxy. Bob's onion proxy connects to Bob's webserver.
-   10) Data goes back and forth as usual.
+   9) Data goes back and forth as usual.
 
 1. Introduction service
 
@@ -157,7 +159,8 @@
    his service.
 
    We assume the existence of a robust decentralized efficient lookup
-   system (call it "DHT"). Bob publishes
+   system (call it "DHT" for distributed hash table -- note that the
+   onion routers can run nodes). Bob publishes
      * Bob's Public Key for that service
      * Expiration date ("don't use after")
      * Introduction server 0 ... Introduction server N
