@@ -777,6 +777,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   crypt_path_t *hop;
   routerinfo_t *router;
   int r;
+  int circ_id_type;
 
   assert(circ && circ->cpath);
 
@@ -784,7 +785,9 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     assert(circ->n_conn && circ->n_conn->type == CONN_TYPE_OR);
     
     log_fn(LOG_DEBUG,"First skin; sending create cell.");
-    circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn, CIRC_ID_TYPE_BOTH);
+    circ_id_type = decide_circ_id_type(options.Nickname,
+                                       circ->n_conn->nickname);
+    circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn, circ_id_type);
 
     memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_CREATE;
