@@ -143,7 +143,7 @@ int
 rend_client_introduction_acked(circuit_t *circ,
                                const char *request, int request_len)
 {
-  int i;
+  int i, r;
   rend_cache_entry_t *ent;
   char *nickname;
 
@@ -170,12 +170,12 @@ rend_client_introduction_acked(circuit_t *circ,
      *
      * Or re-fetch the service descriptor? Hm....
      */
-    i = rend_cache_lookup_entry(circ->rend_query, &ent);
-    if (i<0) {
+    r = rend_cache_lookup_entry(circ->rend_query, &ent);
+    if (r<0) {
       log_fn(LOG_WARN, "Malformed service ID '%s'", circ->rend_query);
       return -1;
     }
-    if (i>0) {
+    if (r>0) {
       /* Okay, we found the right service desc.  First, remove this intro point
        * from the parsed descriptor (if it's still there!)
        */
