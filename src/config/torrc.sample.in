@@ -12,7 +12,7 @@
 
 ## Replace this with "SocksPort 0" if you plan to run Tor only as a
 ## server, and not make any local application connections yourself.
-SocksPort 9050 # what port to open for application connections
+SocksPort 9050 # what port to open for local application connections
 SocksBindAddress 127.0.0.1 # accept connections only from localhost
 #SocksBindAddress 192.168.0.1:9100 # listen on a chosen IP/port too
 
