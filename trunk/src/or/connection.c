@@ -187,7 +187,11 @@ _connection_mark_for_close(connection_t *conn, char reason)
     case CONN_TYPE_OR:
       /* Remember why we're closing this connection. */
       if (conn->state != OR_CONN_STATE_OPEN) {
-        rep_hist_note_connect_failed(conn->nickname, time(NULL));
+        /* XXX Nick: this still isn't right, because it might be
+         * dying even though we didn't initiate the connect. Can
+         * you look at this more? -RD */
+        if(conn->nickname)
+          rep_hist_note_connect_failed(conn->nickname, time(NULL));
       } else if (reason == CLOSE_REASON_UNUSED_OR_CONN) {
         rep_hist_note_disconnect(conn->nickname, time(NULL));
       } else {
