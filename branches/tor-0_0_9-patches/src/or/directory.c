@@ -591,6 +591,7 @@ connection_dir_client_reached_eof(connection_t *conn)
   int delta;
   int compression;
   int plausible;
+  int skewed=0;
 
   switch (fetch_from_buf_http(conn->inbuf,
                               &headers, MAX_HEADERS_SIZE,
@@ -617,6 +618,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       log_fn(LOG_WARN, "Received directory with skewed time: we are %d minutes %s, or the directory is %d minutes %s.",
              abs(delta)/60, delta>0 ? "ahead" : "behind",
              abs(delta)/60, delta>0 ? "behind" : "ahead");
+      skewed = 1; /* don't check the recommended-versions line */
     } else {
       log_fn(LOG_INFO, "Time on received directory is within tolerance; we are %d seconds skewed.  (That's okay.)", delta);
     }
@@ -687,8 +689,8 @@ connection_dir_client_reached_eof(connection_t *conn)
       tor_free(body); tor_free(headers);
       return -1;
     }
-    if (router_load_routerlist_from_directory(body, NULL, 1, 0) < 0) {
-      log_fn(LOG_WARN,"I failed to parse the directory I fetched from %s:%d. Ignoring.", conn->address, conn->port);
+    if (router_load_routerlist_from_directory(body, NULL, skewed, 0) < 0) {
+      log_fn(LOG_NOTICE,"I failed to parse the directory I fetched from %s:%d. Ignoring.", conn->address, conn->port);
     } else {
       log_fn(LOG_INFO,"updated routers.");
     }
