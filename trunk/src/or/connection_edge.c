@@ -10,6 +10,7 @@ extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
 static int connection_ap_handshake_attach_circuit(connection_t *conn);
+static int connection_ap_handshake_attach_circuit_helper(connection_t *conn);
 static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                                int replylen, char success);
@@ -302,16 +303,9 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         addr = ntohl(*(uint32_t*)(cell->payload+RELAY_HEADER_SIZE+1));
         client_dns_set_entry(conn->socks_request->address, addr);
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-        switch(connection_ap_handshake_attach_circuit(conn)) {
-          case -1: /* it will never work */
-            break; /* conn will get closed below */
-          case 0: /* no useful circuits available */
-            if(!circuit_get_newest(conn, 0)) /* is one already on the way? */
-              circuit_launch_new();
-            return 0;
-          case 1: /* it succeeded, great */
-            return 0;
-        }
+        if(connection_ap_handshake_attach_circuit(conn) >= 0)
+          return 0;
+        /* else, conn will get closed below */
       }
 /* XXX add to this log_fn the exit node's nickname? */
       log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
@@ -545,6 +539,14 @@ void connection_ap_expire_beginning(void) {
        * reattach to this same circuit, but that's good enough for now.
        */
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+      circuit_detach_stream(circuit_get_by_conn(conn), conn);
+      /* give it another 15 seconds to try */
+      conn->timestamp_lastread += 15;
+      if(connection_ap_handshake_attach_circuit(conn)<0) {
+        /* it will never work */
+        conn->marked_for_close = 1;
+        conn->has_sent_end = 1;
+      }
     }
   }
 }
@@ -563,19 +565,10 @@ void connection_ap_attach_pending(void)
     if (conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
-    switch(connection_ap_handshake_attach_circuit(conn)) {
-      case -1: /* it will never work */
-        conn->marked_for_close = 1;
-        conn->has_sent_end = 1;
-        break;
-      case 0: /* we need to build another circuit */
-        if(!circuit_get_newest(conn, 0)) {
-          /* if there are no acceptable clean or not-very-dirty circs on the way */
-          circuit_launch_new();
-        }
-        break;
-      case 1: /* it succeeded, great */
-        break;
+    if(connection_ap_handshake_attach_circuit(conn) < 0) {
+      /* it will never work */
+      conn->marked_for_close = 1;
+      conn->has_sent_end = 1;
     }
   }
 }
@@ -632,17 +625,22 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   } /* else socks handshake is done, continue processing */
 
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-  switch(connection_ap_handshake_attach_circuit(conn)) {
+  return connection_ap_handshake_attach_circuit(conn);
+}
+
+static int connection_ap_handshake_attach_circuit(connection_t *conn) {
+  /* try attaching. launch new circuit if needed.
+   * return -1 if conn needs to die, else 0. */
+  switch(connection_ap_handshake_attach_circuit_helper(conn)) {
     case -1: /* it will never work */
       return -1;
     case 0: /* no useful circuits available */
       if(!circuit_get_newest(conn, 0)) /* is one already on the way? */
         circuit_launch_new();
-      break;
-    case 1: /* it succeeded, great */
-      break;
+      return 0;
+    default: /* case 1, it succeeded, great */
+      return 0;
   }
-  return 0;
 }
 
 /* Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
@@ -651,7 +649,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
  * Otherwise, associate conn with a safe live circuit, start
  * sending a BEGIN cell down the circuit, and return 1.
  */
-static int connection_ap_handshake_attach_circuit(connection_t *conn) {
+static int connection_ap_handshake_attach_circuit_helper(connection_t *conn) {
   circuit_t *circ;
   uint32_t addr;
 

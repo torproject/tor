@@ -588,6 +588,7 @@ int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type, crypt_pat
 void circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
 
 void circuit_close(circuit_t *circ);
+void circuit_detach_stream(circuit_t *circ, connection_t *conn);
 void circuit_about_to_close_connection(connection_t *conn);
 
 void circuit_log_path(int severity, circuit_t *circ);
