@@ -235,7 +235,7 @@ int detect_compression_method(const char *in, size_t in_len)
   if (in_len > 2 && !memcmp(in, "\x1f\x8b", 2)) {
     return GZIP_METHOD;
   } else if (in_len > 2 && (in[0] & 0x0f) == 8 &&
-             (get_uint16(in) % 31) == 0) {
+             (ntohs(get_uint16(in)) % 31) == 0) {
     return ZLIB_METHOD;
   } else {
     return 0;
