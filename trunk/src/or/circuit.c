@@ -225,30 +225,6 @@ circuit_t *circuit_get_newest_ap(void) {
   return bestcirc;
 }
 
-int circuit_deliver_relay_cell_from_edge(cell_t *cell, circuit_t *circ,
-                                         char edge_type, crypt_path_t *layer_hint) {
-  int cell_direction;
-  static int numsent_ap=0, numsent_exit=0;
-
-  log(LOG_DEBUG,"circuit_deliver_relay_cell_from_edge(): called, edge_type %d.", edge_type);
-
-  if(edge_type == EDGE_AP) { /* i'm the AP */
-    cell_direction = CELL_DIRECTION_OUT;
-    numsent_ap++;
-    log(LOG_DEBUG,"circuit_deliver_relay_cell_from_edge(): now sent %d relay cells from ap", numsent_ap);
-  } else { /* i'm the exit */
-    cell_direction = CELL_DIRECTION_IN;
-    numsent_exit++;
-    log(LOG_DEBUG,"circuit_deliver_relay_cell_from_edge(): now sent %d relay cells from exit", numsent_exit);
-  }
-
-  if(circuit_deliver_relay_cell(cell, circ, cell_direction, layer_hint) < 0) {
-    return -1;
-  }
-
-  return 0;
-}
-
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint) {
   connection_t *conn=NULL;
@@ -483,7 +459,7 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t
     while(layer_hint->deliver_window < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
       log(LOG_DEBUG,"circuit_consider_sending_sendme(): deliver_window %d, Queueing sendme forward.", layer_hint->deliver_window);
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
-      if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type, layer_hint) < 0) {
+      if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, layer_hint) < 0) {
         return -1;
       }
     }
@@ -492,7 +468,7 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t
     while(circ->deliver_window < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
       log(LOG_DEBUG,"circuit_consider_sending_sendme(): deliver_window %d, Queueing sendme back.", circ->deliver_window);
       circ->deliver_window += CIRCWINDOW_INCREMENT;
-      if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type, layer_hint) < 0) {
+      if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_IN, layer_hint) < 0) {
         return -1;
       }
     }
@@ -801,7 +777,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
 
     log(LOG_DEBUG,"circuit_send_next_onion_skin(): Sending extend relay cell.");
     /* send it to hop->prev, because it will transfer it to a create cell and then send to hop */
-    if(circuit_deliver_relay_cell_from_edge(&cell, circ, EDGE_AP, hop->prev) < 0) {
+    if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, hop->prev) < 0) {
       log(LOG_DEBUG,"circuit_send_next_onion_skin(): failed to deliver extend cell. Closing.");
       return -1;
     }
@@ -918,6 +894,33 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
 
   hop->state = CPATH_STATE_OPEN;
   log(LOG_DEBUG,"circuit_finish_handshake(): Completed.");
+  return 0;
+}
+
+int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
+  crypt_path_t *victim;
+  connection_t *stream;
+
+  assert(circ);
+  assert(layer);
+
+  while(layer->next != circ->cpath) {
+    /* we need to clear out layer->next */
+    victim = layer->next;
+    log(LOG_DEBUG, "circuit_truncated(): Killing a layer of the cpath.");
+
+    for(stream = circ->p_streams; stream; stream=stream->next_stream) {
+      if(stream->cpath_layer == victim) {
+        log(LOG_DEBUG, "circuit_truncated(): Marking stream %d for close.", *(int*)stream->stream_id);
+        stream->marked_for_close = 1;
+      }
+    }
+
+    layer->next = victim->next;
+    circuit_free_cpath_node(victim);
+  }
+
+  log(LOG_DEBUG, "circuit_truncated(): Complete.");
   return 0;
 }
 

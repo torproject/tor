@@ -136,7 +136,7 @@ int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ) {
              "%s:%d", ap_conn->dest_addr, ap_conn->dest_port) + 
     1 + STREAM_ID_SIZE + RELAY_HEADER_SIZE;
   log(LOG_DEBUG,"ap_handshake_send_begin(): Sending relay cell (id %d) to begin stream %d.", *(int *)(cell.payload+1),*(int *)ap_conn->stream_id);
-  if(circuit_deliver_relay_cell_from_edge(&cell, circ, EDGE_AP, ap_conn->cpath_layer) < 0) {
+  if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, ap_conn->cpath_layer) < 0) {
     log(LOG_DEBUG,"ap_handshake_send_begin(): failed to deliver begin cell. Closing.");
     return -1;
   }

@@ -510,6 +510,7 @@ test_onion_handshake() {
   crypto_dh_free(c_dh);
   crypto_free_pk_env(pk);
 
+  /* FIXME sometimes (infrequently) the following fails! Why? */
   test_memeq(c_keys, s_keys, 40);
   memset(s_buf, 0, 40);
   test_memneq(c_keys, s_buf, 40);

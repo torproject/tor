@@ -122,6 +122,8 @@
 #define RELAY_COMMAND_SENDME 5
 #define RELAY_COMMAND_EXTEND 6
 #define RELAY_COMMAND_EXTENDED 7
+#define RELAY_COMMAND_TRUNCATE 8
+#define RELAY_COMMAND_TRUNCATED 9
 
 #define RELAY_HEADER_SIZE 8
 
@@ -134,6 +136,7 @@
 #define CELL_DIRECTION_OUT 2
 #define EDGE_EXIT CONN_TYPE_EXIT
 #define EDGE_AP CONN_TYPE_AP
+#define CELL_DIRECTION(x) ((x) == EDGE_EXIT ? CELL_DIRECTION_IN : CELL_DIRECTION_OUT)
 
 #define CIRCWINDOW_START 1000
 #define CIRCWINDOW_INCREMENT 100
@@ -492,8 +495,6 @@ circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest_ap(void);
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 
-int circuit_deliver_relay_cell_from_edge(cell_t *cell, circuit_t *circ,
-                                         char edge_type, crypt_path_t *layer_hint);
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);
 int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
@@ -522,6 +523,7 @@ void circuit_n_conn_open(connection_t *or_conn);
 int circuit_send_next_onion_skin(circuit_t *circ);
 int circuit_extend(cell_t *cell, circuit_t *circ);
 int circuit_finish_handshake(circuit_t *circ, char *reply);
+int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
 
 /********************************* command.c ***************************/
 
@@ -633,7 +635,7 @@ int connection_ap_handle_listener_read(connection_t *conn);
 /********************************* connection_edge.c ***************************/
 
 int connection_edge_process_inbuf(connection_t *conn);
-int connection_edge_send_command(connection_t *conn, circuit_t *circ, int relay_command);
+int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command);
 int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn, int edge_type, crypt_path_t *layer_hint);
 int connection_edge_finished_flushing(connection_t *conn);
 

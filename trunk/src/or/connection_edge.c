@@ -31,8 +31,8 @@ int connection_edge_process_inbuf(connection_t *conn) {
     SET_CELL_STREAM_ID(cell, conn->stream_id);
     cell.aci = circ->n_aci;
 
-    if (circuit_deliver_relay_cell_from_edge(&cell, circ, conn->type, conn->cpath_layer) < 0) {
-      log(LOG_DEBUG,"connection_edge_process_inbuf: circuit_deliver_relay_cell_from_edge failed.  Closing");
+    if (circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION(conn->type), conn->cpath_layer) < 0) {
+      log(LOG_DEBUG,"connection_edge_process_inbuf: circuit_deliver_relay_cell failed. Closing.");
       circuit_close(circ);
     }
     return 0;
@@ -60,30 +60,37 @@ int connection_edge_process_inbuf(connection_t *conn) {
   return 0;
 }
 
-int connection_edge_send_command(connection_t *conn, circuit_t *circ, int relay_command) {
+int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command) {
   cell_t cell;
-
-  assert(conn);
+  int cell_direction;
 
   if(!circ) {
-    log(LOG_DEBUG,"connection_edge_send_command(): conn has no circ. Closing.");
+    log(LOG_DEBUG,"connection_edge_send_command(): no circ. Closing.");
     return -1;
   }
 
   memset(&cell, 0, sizeof(cell_t));
-  if(conn->type == CONN_TYPE_AP)
+  if(fromconn && fromconn->type == CONN_TYPE_AP) {
     cell.aci = circ->n_aci;
-  else
+    cell_direction = CELL_DIRECTION_OUT;
+  } else {
+    /* NOTE: if !fromconn, we assume that it's heading towards the OP */
     cell.aci = circ->p_aci;
+    cell_direction = CELL_DIRECTION_IN;
+  }
+
   cell.command = CELL_RELAY;
   SET_CELL_RELAY_COMMAND(cell, relay_command);
-  SET_CELL_STREAM_ID(cell, conn->stream_id);
+  if(fromconn)
+    SET_CELL_STREAM_ID(cell, fromconn->stream_id);
+  else
+    SET_CELL_STREAM_ID(cell, ZERO_STREAM);
 
   cell.length = RELAY_HEADER_SIZE;
-  log(LOG_INFO,"connection_edge_send_command(): delivering %d cell %s.", relay_command, conn->type == CONN_TYPE_AP ? "forward" : "backward");
+  log(LOG_INFO,"connection_edge_send_command(): delivering %d cell %s.", relay_command, cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
 
-  if(circuit_deliver_relay_cell_from_edge(&cell, circ, conn->type, conn->cpath_layer) < 0) {
-    log(LOG_DEBUG,"connection_edge_send_command(): circuit_deliver_relay_cell_from_edge failed. Closing.");
+  if(circuit_deliver_relay_cell(&cell, circ, cell_direction, fromconn ? fromconn->cpath_layer : NULL) < 0) {
+    log(LOG_DEBUG,"connection_edge_send_command(): circuit_deliver_relay_cell failed. Closing.");
     circuit_close(circ);
     return 0;
   }
@@ -199,6 +206,23 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         return -1;
       }
       return circuit_send_next_onion_skin(circ);
+    case RELAY_COMMAND_TRUNCATE:
+      if(edge_type == EDGE_AP) {
+        log(LOG_INFO,"connection_edge_process_relay_cell(): 'truncate' unsupported at AP. Dropping.");
+        return 0;
+      }
+      if(circ->n_conn) {
+        connection_send_destroy(circ->n_aci, circ->n_conn);
+        circ->n_conn = NULL;
+      }
+      log(LOG_DEBUG, "connection_edge_process_relay_cell(): Processed 'truncate', replying.");
+      return connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED);
+    case RELAY_COMMAND_TRUNCATED:
+      if(edge_type == EDGE_EXIT) {
+        log(LOG_INFO,"connection_edge_process_relay_cell(): 'truncated' unsupported at exit. Dropping.");
+        return 0;
+      }
+      return circuit_truncated(circ, layer_hint);
     case RELAY_COMMAND_CONNECTED:
       if(edge_type == EDGE_EXIT) {
         log(LOG_INFO,"connection_edge_process_relay_cell(): 'connected' unsupported at exit. Dropping.");
