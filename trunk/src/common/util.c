@@ -113,7 +113,8 @@ void hex_encode(const char *from, int fromlen, char *to)
 {
   const unsigned char *fp = from;
   static const char TABLE[] = "0123456789abcdef";
-  while (fromlen) {
+  assert(from && fromlen>=0 && to);
+  while (fromlen--) {
     *to++ = TABLE[*fp >> 4];
     *to++ = TABLE[*fp & 7];
     ++fp;
@@ -219,11 +220,13 @@ void *smartlist_choose(smartlist_t *sl) {
 
 void *smartlist_get(smartlist_t *sl, int idx)
 {
+  assert(sl && idx>=0 && idx < sl->num_used);
   return sl->list[idx];
 }
 void *smartlist_set(smartlist_t *sl, int idx, void *val)
 {
   void *old;
+  assert(sl && idx>=0 && idx < sl->num_used);
   old = sl->list[idx];
   sl->list[idx] = val;
   return old;
@@ -231,6 +234,7 @@ void *smartlist_set(smartlist_t *sl, int idx, void *val)
 void *smartlist_del(smartlist_t *sl, int idx)
 {
   void *old;
+  assert(sl && idx>=0 && idx < sl->num_used);
   old = sl->list[idx];
   sl->list[idx] = sl->list[--sl->num_used];
   return old;
