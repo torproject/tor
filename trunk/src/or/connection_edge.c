@@ -648,7 +648,6 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {
       log_fn(LOG_INFO,"Didn't find rendezvous service (port %d)",n_stream->port);
       connection_edge_end(n_stream, END_STREAM_REASON_EXITPOLICY, n_stream->cpath_layer);
-      connection_mark_for_close(n_stream);
       connection_free(n_stream);
       circuit_mark_for_close(circ); /* knock the whole thing down, somebody screwed up */
       return 0;
@@ -683,7 +682,6 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     case -1: /* resolve failed */
       log_fn(LOG_INFO,"Resolve failed (%s).", n_stream->address);
       connection_edge_end(n_stream, END_STREAM_REASON_RESOLVEFAILED, n_stream->cpath_layer);
-      connection_mark_for_close(n_stream);
       connection_free(n_stream);
       break;
     case 0: /* resolve added to pending list */
@@ -710,7 +708,6 @@ void connection_exit_connect(connection_t *conn) {
       router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.", conn->address, conn->port);
     connection_edge_end(conn, END_STREAM_REASON_EXITPOLICY, conn->cpath_layer);
-    connection_mark_for_close(conn);
     circuit_detach_stream(circuit_get_by_conn(conn), conn);
     connection_free(conn);
     return;
@@ -720,7 +717,6 @@ void connection_exit_connect(connection_t *conn) {
   switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
     case -1:
       connection_edge_end(conn, END_STREAM_REASON_CONNECTFAILED, conn->cpath_layer);
-      connection_mark_for_close(conn);
       circuit_detach_stream(circuit_get_by_conn(conn), conn);
       connection_free(conn);
       return;
