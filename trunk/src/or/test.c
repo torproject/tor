@@ -802,11 +802,13 @@ test_gzip(void)
   size_t len1, len2;
 
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+  test_eq(detect_compression_method(buf1, strlen(buf1)), 0);
   if (is_gzip_supported()) {
     test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                    GZIP_METHOD));
     test_assert(buf2);
     test_assert(!memcmp(buf2, "\037\213", 2)); /* Gzip magic. */
+    test_eq(detect_compression_method(buf2, strlen(buf1)), GZIP_METHOD);
 
     test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1, GZIP_METHOD));
     test_assert(buf3);
@@ -820,6 +822,7 @@ test_gzip(void)
                                  ZLIB_METHOD));
   test_assert(buf2);
   test_assert(!memcmp(buf2, "\x78\xDA", 2)); /* deflate magic. */
+  test_eq(detect_compression_method(buf2, strlen(buf1)), ZLIB_METHOD);
 
   test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1, ZLIB_METHOD));
   test_assert(buf3);
