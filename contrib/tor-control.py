@@ -216,7 +216,7 @@ def do_main_loop(host,port):
   print get_option(s,"DirFetchPeriod\n")
   print `get_info(s,"version")`
   #print `get_info(s,"desc/name/moria1")`
-  #print `get_info(s,"network-status")`
+  print `get_info(s,"network-status")`
   print `get_info(s,"addr-mappings/all")`
   print `get_info(s,"addr-mappings/config")`
   print `get_info(s,"addr-mappings/cache")`

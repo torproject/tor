@@ -509,12 +509,14 @@ list_single_server_status(routerinfo_t *desc, int is_live,
   return tor_strdup(buf);
 }
 
-/** Allocate the contents of a running-routers line and a router-status line,
- * and store them in *<b>running_routers_out</b> and *<b>router_status_out</b>
- * respectively.  Return 0 on success, -1 on failure.
+/** Based on the routerinfo_ts in <b>routers</b>, allocate the
+ * contents of a running-routers line and a router-status line, and
+ * store them in *<b>running_routers_out</b> and
+ * *<b>router_status_out</b> respectively.  If either is NULL, skip
+ * it.  Return 0 on success, -1 on failure.
  */
 int
-list_server_status(char **running_routers_out, char **router_status_out)
+list_server_status(smartlist_t *routers, char **running_routers_out, char **router_status_out)
 {
   /* List of entries in running-routers style: An optional !, then either
    * a nickname or a dollar-prefixed hexdigest. */
@@ -522,26 +524,32 @@ list_server_status(char **running_routers_out, char **router_status_out)
   /* List of entries in a router-status style: An optional !, then an optional
    * equals-suffixed nickname, then a dollar-prefixed hexdigest. */
   smartlist_t *rs_entries;
-
+  /* XXXX Really, we should merge descriptor_list into routerlist.  But
+   * this is potentially tricky, since the semantics of the two lists
+   * are not quite the same.  In any case, it's not for the 0.1.0.x
+   * series.
+   */
+  int authdir_mode = get_options()->AuthoritativeDir;
   tor_assert(running_routers_out || router_status_out);
 
   rr_entries = smartlist_create();
   rs_entries = smartlist_create();
 
-  if (!descriptor_list)
-    descriptor_list = smartlist_create();
-
-  SMARTLIST_FOREACH(descriptor_list, routerinfo_t *, ri,
+  SMARTLIST_FOREACH(routers, routerinfo_t *, ri,
   {
     int is_live;
     connection_t *conn;
     conn = connection_get_by_identity_digest(
                     ri->identity_digest, CONN_TYPE_OR);
-    /* Treat a router as alive if
-     *    - It's me, and I'm not hibernating.
-     * or - we're connected to it. */
-    is_live = (router_is_me(ri) && !we_are_hibernating()) ||
-      (conn && conn->state == OR_CONN_STATE_OPEN);
+    if (authdir_mode) {
+      /* Treat a router as alive if
+       *    - It's me, and I'm not hibernating.
+       * or - we're connected to it. */
+      is_live = (router_is_me(ri) && !we_are_hibernating()) ||
+        (conn && conn->state == OR_CONN_STATE_OPEN);
+    } else {
+      is_live = ri->is_running;
+    }
     smartlist_add(rr_entries, list_single_server_status(ri, is_live, 1));
     smartlist_add(rs_entries, list_single_server_status(ri, is_live, 0));
   });
@@ -610,7 +618,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   if (!descriptor_list)
     descriptor_list = smartlist_create();
 
-  if (list_server_status(&running_routers, &router_status))
+  if (list_server_status(descriptor_list, &running_routers, &router_status))
     return -1;
 
   /* ASN.1-encode the public key.  This is a temporary measure; once
@@ -869,7 +877,10 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   time_t published_on;
   char *identity_pkey; /* Identity key, DER64-encoded. */
 
-  if (list_server_status(NULL, &router_status)) {
+  if (!descriptor_list)
+    descriptor_list = smartlist_create();
+
+  if (list_server_status(descriptor_list, NULL, &router_status)) {
     goto err;
   }
   /* ASN.1-encode the public key.  This is a temporary measure; once
