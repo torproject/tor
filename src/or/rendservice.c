@@ -295,7 +295,7 @@ int rend_service_load_keys(void)
     log_fn(LOG_INFO, "Loading hidden-service keys from '%s'", s->directory);
 
     /* Check/create directory */
-    if (check_private_dir(s->directory, 1) < 0)
+    if (check_private_dir(s->directory, CPD_CREATE) < 0)
       return -1;
 
     /* Load key */

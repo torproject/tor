@@ -88,7 +88,8 @@ int read_all(int fd, char *buf, size_t count, int isSocket);
 typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR} file_status_t;
 file_status_t file_status(const char *filename);
 
-int check_private_dir(const char *dirname, int create);
+typedef enum { CPD_NONE, CPD_CREATE, CPD_CHECK } cpd_check_t;
+int check_private_dir(const char *dirname, cpd_check_t check);
 int write_str_to_file(const char *fname, const char *str, int bin);
 int write_bytes_to_file(const char *fname, const char *str, size_t len,
                         int bin);

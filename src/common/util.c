@@ -701,9 +701,11 @@ file_status_t file_status(const char *fname)
 }
 
 /** Check whether dirname exists and is private.  If yes return 0.  If
- * it does not exist, and create is set, try to create it and return 0
- * on success.  Else return -1. */
-int check_private_dir(const char *dirname, int create)
+ * it does not exist, and check==CPD_CREATE is set, try to create it
+ * and return 0 on success. If it does not exist, and
+ * check==CPD_CHECK, and we think we can create it, return 0.  Else
+ * return -1. */
+int check_private_dir(const char *dirname, cpd_check_t check)
 {
   int r;
   struct stat st;
@@ -714,23 +716,26 @@ int check_private_dir(const char *dirname, int create)
           strerror(errno));
       return -1;
     }
-    if (!create) {
+    if (check == CPD_NONE) {
       log(LOG_WARN, "Directory %s does not exist.", dirname);
       return -1;
-    }
-    log(LOG_INFO, "Creating directory %s", dirname);
+    } else if (check == CPD_CREATE) {
+      log(LOG_INFO, "Creating directory %s", dirname);
 #ifdef MS_WINDOWS
-    r = mkdir(dirname);
+      r = mkdir(dirname);
 #else
-    r = mkdir(dirname, 0700);
+      r = mkdir(dirname, 0700);
 #endif
-    if (r) {
-      log(LOG_WARN, "Error creating directory %s: %s", dirname,
-          strerror(errno));
-      return -1;
-    } else {
-      return 0;
+      if (r) {
+        log(LOG_WARN, "Error creating directory %s: %s", dirname,
+            strerror(errno));
+        return -1;
+      }
     }
+
+    /* XXXX In the case where check==CPD_CHECK, we should look at the
+     * parent directory a little harder. */
+    return 0;
   }
   if (!(st.st_mode & S_IFDIR)) {
     log(LOG_WARN, "%s is not a directory", dirname);
