@@ -460,7 +460,7 @@ int dns_resolve(connection_t *exitconn) {
     switch(resolve->state) {
       case CACHE_STATE_PENDING:
         /* add us to the pending list */
-        pending_connection = malloc(sizeof(struct pending_connection_t));
+        pending_connection = tor_malloc(sizeof(struct pending_connection_t));
         pending_connection->conn = exitconn;
         pending_connection->next = resolve->pending_connections;
         resolve->pending_connections = pending_connection;
@@ -472,13 +472,13 @@ int dns_resolve(connection_t *exitconn) {
         return -1;
     }
   } else { /* need to add it */
-    resolve = malloc(sizeof(struct cached_resolve));
+    resolve = tor_malloc(sizeof(struct cached_resolve));
     memset(resolve, 0, sizeof(struct cached_resolve));
     resolve->state = CACHE_STATE_PENDING;
     strncpy(resolve->question, exitconn->address, MAX_ADDRESSLEN);
 
     /* add us to the pending list */
-    pending_connection = malloc(sizeof(struct pending_connection_t));
+    pending_connection = tor_malloc(sizeof(struct pending_connection_t));
     pending_connection->conn = exitconn;
     pending_connection->next = resolve->pending_connections;
     resolve->pending_connections = pending_connection;

@@ -153,7 +153,6 @@
 #define CELL_CREATED 2
 #define CELL_RELAY 3
 #define CELL_DESTROY 4
-#define CELL_SENDME 5
 
 #define CELL_PAYLOAD_SIZE 248
 #define CELL_NETWORK_SIZE 256
@@ -259,8 +258,12 @@ struct connection_t {
   char stream_id[STREAM_ID_SIZE];
   struct connection_t *next_stream;
   struct crypt_path_t *cpath_layer; /* a pointer to which node in the circ this conn exits at */
+  int package_window;
+  int deliver_window;
+#if 0
   int n_receive_streamwindow;
   int p_receive_streamwindow;
+#endif
   int done_sending;
   int done_receiving;
 #ifdef USE_ZLIB
@@ -280,10 +283,6 @@ struct connection_t {
   char *dest_addr;
   uint16_t dest_port; /* host order */
 
-/* Used by ap: */
-  char dest_tmp[512];
-  int dest_tmplen;
-  
 /* Used by everyone */
   char *address; /* strdup into this, because free_connection frees it */
 /* Used for cell connections */
@@ -351,6 +350,8 @@ struct crypt_path_t {
   struct crypt_path_t *next;
   struct crypt_path_t *prev; /* doubly linked list */
 
+  int package_window;
+  int deliver_window;
 };
 
 #define DH_KEY_LEN CRYPTO_DH_SIZE
@@ -370,8 +371,8 @@ typedef struct {
   uint16_t n_port;
   connection_t *p_conn;
   connection_t *n_conn; /* convention: first conn is the OR conn, if there is one */
-  int n_receive_circwindow;
-  int p_receive_circwindow;
+  int package_window;
+  int deliver_window;
 
   aci_t p_aci; /* connection identifiers */
   aci_t n_aci;
@@ -504,12 +505,12 @@ int circuit_deliver_relay_cell_from_edge(cell_t *cell, circuit_t *circ,
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);
 int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
-                crypt_path_t *layer_hint, char *recognized, connection_t **conn);
+                crypt_path_t **layer_hint, char *recognized, connection_t **conn);
 int relay_check_recognized(circuit_t *circ, int cell_direction, char *stream, connection_t **conn);
 
-void circuit_resume_edge_reading(circuit_t *circ, int edge_type);
-int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type);
-int circuit_consider_sending_sendme(circuit_t *circ, int edge_type);
+void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
+int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
+int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t *layer_hint);
 
 void circuit_free(circuit_t *circ);
 void circuit_free_cpath(crypt_path_t *cpath);
@@ -642,7 +643,7 @@ int connection_ap_handle_listener_read(connection_t *conn);
 
 int connection_edge_process_inbuf(connection_t *conn);
 int connection_edge_send_command(connection_t *conn, circuit_t *circ, int relay_command);
-int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn, int edge_type);
+int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn, int edge_type, crypt_path_t *layer_hint);
 int connection_edge_finished_flushing(connection_t *conn);
 
 /********************************* connection_exit.c ***************************/

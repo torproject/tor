@@ -275,9 +275,9 @@ test_crypto()
                         CRYPTO_CIPHER_3DES,
                         -1 };
 
-  data1 = malloc(1024);
-  data2 = malloc(1024);
-  data3 = malloc(1024);
+  data1 = tor_malloc(1024);
+  data2 = tor_malloc(1024);
+  data3 = tor_malloc(1024);
   test_assert(data1 && data2 && data3);
 
   /* Try out identity ciphers. */
@@ -623,9 +623,9 @@ test_dir_format()
   test_assert(rp2->exit_policy->next->next == NULL);
 
   /* Okay, now for the directories. */
-  dir1 = (directory_t*) malloc(sizeof(directory_t));
+  dir1 = (directory_t*) tor_malloc(sizeof(directory_t));
   dir1->n_routers = 2;
-  dir1->routers = (routerinfo_t**) malloc(sizeof(routerinfo_t*)*2);
+  dir1->routers = (routerinfo_t**) tor_malloc(sizeof(routerinfo_t*)*2);
   dir1->routers[0] = &r1;
   dir1->routers[1] = &r2;
   test_assert(! dump_signed_directory_to_string_impl(buf, 2048, dir1, pk1));

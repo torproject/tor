@@ -215,11 +215,7 @@ int router_get_list_from_file(char *routerfile)
     return -1;
   }
 
-  string = malloc(statbuf.st_size+1);
-  if(!string) {
-    log(LOG_ERR,"router_get_list_from_file(): Out of memory.");
-    return -1;
-  }
+  string = tor_malloc(statbuf.st_size+1);
 
   if(read(fd,string,statbuf.st_size) != statbuf.st_size) {
     log(LOG_ERR,"router_get_list_from_file(): Couldn't read all %d bytes of file '%s'.",statbuf.st_size,routerfile);
@@ -325,7 +321,7 @@ _router_get_next_token(char **s, directory_token_t *tok) {
       next = strstr(*s, OR_SIGNATURE_END_TAG);
       if (!next) { tok->val.error = "No signature end tag found"; return -1; }
       
-      signature = malloc(256);
+      signature = tor_malloc(256);
       i = base64_decode(signature, 256, *s, next-*s);
       if (i<0) {
         free(signature);
@@ -604,10 +600,7 @@ static int router_get_list_from_string_tok(char **s, directory_t **dest,
 
   assert(s);
 
-  if (!(rarray = malloc((sizeof(routerinfo_t *))*MAX_ROUTERS_IN_DIR))) {
-    log(LOG_ERR, "router_get_list_from_string_tok(): malloc failed");
-    return -1;
-  }
+  rarray = (routerinfo_t **)tor_malloc((sizeof(routerinfo_t *))*MAX_ROUTERS_IN_DIR);
 
   while (tok->tp == K_ROUTER) {
     router = router_get_entry_from_string_tok(s, tok);
@@ -625,10 +618,7 @@ static int router_get_list_from_string_tok(char **s, directory_t **dest,
  
   if (*dest) 
     directory_free(*dest);
-  if (!(*dest = (directory_t*) malloc(sizeof(directory_t)))) {
-    log(LOG_ERR, "router_get_list_from_string_tok(): malloc failed");
-    return -1;
-  }
+  *dest = (directory_t *)tor_malloc(sizeof(directory_t));
   (*dest)->routers = rarray;
   (*dest)->n_routers = rarray_len;
   return 0;
@@ -710,10 +700,8 @@ static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t
     log(LOG_ERR,"router_get_entry_from_string(): Entry does not start with \"router\"");
     return NULL;
   }
-  if (!(router = malloc(sizeof(routerinfo_t)))) {
-    log(LOG_ERR,"router_get_entry_from_string(): Could not allocate memory.");
-    return NULL;
-  }
+
+  router = tor_malloc(sizeof(routerinfo_t));
   memset(router,0,sizeof(routerinfo_t)); /* zero it out first */
   /* C doesn't guarantee that NULL is represented by 0 bytes.  You'll
      thank me for this someday. */
@@ -828,10 +816,10 @@ static int router_add_exit_policy(routerinfo_t *router,
     return -1;
   arg = tok->val.cmd.args[0];
 
-  newe = malloc(sizeof(struct exit_policy_t));
+  newe = tor_malloc(sizeof(struct exit_policy_t));
   memset(newe,0,sizeof(struct exit_policy_t));
   
-  newe->string = malloc(8+strlen(arg));
+  newe->string = tor_malloc(8+strlen(arg));
   if (tok->tp == K_REJECT) {
     strcpy(newe->string, "reject ");
     newe->policy_type = EXIT_POLICY_REJECT;

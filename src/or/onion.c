@@ -30,7 +30,7 @@ static int ol_length=0;
 int onion_pending_add(circuit_t *circ) {
   struct onion_queue_t *tmp;
 
-  tmp = malloc(sizeof(struct onion_queue_t));
+  tmp = tor_malloc(sizeof(struct onion_queue_t));
   memset(tmp, 0, sizeof(struct onion_queue_t));
   tmp->circ = circ;
 
@@ -74,6 +74,12 @@ void onion_pending_process_one(void) {
     return; /* no onions pending, we're done */
 
   assert(ol_list->circ);
+  if(!ol_list->circ->p_conn) {
+    log(LOG_INFO,"onion_pending_process_one(): ol_list->circ->p_conn null, must have died?");
+    onion_pending_remove(ol_list->circ);
+    return; /* it died on us */
+  }
+
   assert(ol_list->circ->p_conn);
   assert(ol_length > 0);
   circ = ol_list->circ;
@@ -143,9 +149,9 @@ void onion_pending_remove(circuit_t *circ) {
 struct relay_queue_t *relay_queue_add(struct relay_queue_t *list, cell_t *cell, crypt_path_t *layer_hint) {
   struct relay_queue_t *tmpd, *newd;
 
-  newd = malloc(sizeof(struct relay_queue_t));
+  newd = tor_malloc(sizeof(struct relay_queue_t));
   memset(newd, 0, sizeof(struct relay_queue_t));
-  newd->cell = malloc(sizeof(cell_t));
+  newd->cell = tor_malloc(sizeof(cell_t));
   memcpy(newd->cell, cell, sizeof(cell_t));
   newd->layer_hint = layer_hint;
 
@@ -279,11 +285,7 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
   }
 
   /* allocate memory for the new route */
-  route = (unsigned int *)malloc(*routelen * sizeof(unsigned int));
-  if (!route) {
-    log(LOG_ERR,"Memory allocation failed.");
-    return NULL;
-  }
+  route = (unsigned int *)tor_malloc(*routelen * sizeof(unsigned int));
  
   oldchoice = rarray_len;
   for(i=0;i<*routelen;i++) {
@@ -385,13 +387,7 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
     router = rarray[route[i]];
 
     /* build up the crypt_path */
-    hop = (crypt_path_t *)malloc(sizeof(crypt_path_t));
-    if(!hop) {
-      log(LOG_ERR,"Error allocating crypt path hop memory.");
-      circuit_free_cpath(cpath);
-      free(route);
-      return NULL;
-    }
+    hop = (crypt_path_t *)tor_malloc(sizeof(crypt_path_t));
     memset(hop, 0, sizeof(crypt_path_t));
 
     /* link hop into the cpath, at the front */
@@ -411,6 +407,9 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop) {
 #endif
     hop->port = rarray[route[i]]->or_port;
     hop->addr = rarray[route[i]]->addr;
+
+    hop->package_window = CIRCWINDOW_START;
+    hop->deliver_window = CIRCWINDOW_START;
 
     log(LOG_DEBUG,"onion_generate_cpath() : Building hop %u of crypt path.",i+1);
   }
@@ -457,8 +456,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   dhbytes = crypto_dh_get_bytes(dh);
   pkbytes = crypto_pk_keysize(dest_router_key);
   assert(dhbytes+16 == DH_ONIONSKIN_LEN);
-  if (!(pubkey = malloc(dhbytes+16)))
-    goto err;
+  pubkey = (char *)tor_malloc(dhbytes+16);
 
   if (crypto_rand(16, pubkey))
     goto err;

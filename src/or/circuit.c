@@ -55,9 +55,7 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
 
   my_gettimeofday(&now);
 
-  circ = (circuit_t *)malloc(sizeof(circuit_t));
-  if(!circ)
-    return NULL;
+  circ = (circuit_t *)tor_malloc(sizeof(circuit_t));
   memset(circ,0,sizeof(circuit_t)); /* zero it out */
 
   circ->timestamp_created = now.tv_sec;
@@ -71,8 +69,8 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
   circ->p_aci = p_aci;
   /* circ->n_aci remains 0 because we haven't identified the next hop yet */
 
-  circ->n_receive_circwindow = CIRCWINDOW_START;
-  circ->p_receive_circwindow = CIRCWINDOW_START;
+  circ->package_window = CIRCWINDOW_START;
+  circ->deliver_window = CIRCWINDOW_START;
 
   circuit_add(circ);
 
@@ -230,30 +228,36 @@ int circuit_deliver_relay_cell_from_edge(cell_t *cell, circuit_t *circ,
     cell_direction = CELL_DIRECTION_OUT;
     numsent_ap++;
     log(LOG_DEBUG,"circuit_deliver_relay_cell_from_edge(): now sent %d relay cells from ap", numsent_ap);
-    if(circ->p_receive_circwindow <= 0) {
-      log(LOG_DEBUG,"circuit_deliver_relay_cell_from_edge(): pwindow 0, queueing for later.");
+#if 0
+    if(layer_hint->package_window <= 0) {
+      log(LOG_DEBUG,"circuit_deliver_relay_cell_from_edge(): package_window 0, queueing for later.");
       circ->relay_queue = relay_queue_add(circ->relay_queue, cell, layer_hint);
       return 0;
     }
-    circ->p_receive_circwindow--;
-//    log(LOG_INFO,"circuit_deliver_relay_cell_from_edge(): p_receive_circwindow now %d.",circ->p_receive_circwindow);
+    layer_hint->package_window--;
+//    log(LOG_INFO,"circuit_deliver_relay_cell_from_edge(): package_window now %d.",layer_hint->package_window);
+#endif
   } else { /* i'm the exit */
     cell_direction = CELL_DIRECTION_IN;
+//    assert(layer_hint == NULL);
+//    assert(circ->cpath == NULL);
     numsent_exit++;
     log(LOG_DEBUG,"circuit_deliver_relay_cell_from_edge(): now sent %d relay cells from exit", numsent_exit);
-    if(circ->n_receive_circwindow <= 0) {
-      log(LOG_DEBUG,"circuit_deliver_relay_cell_from_edge(): nwindow 0, queueing for later.");
+#if 0
+    if(circ->package_window <= 0) {
+      log(LOG_DEBUG,"circuit_deliver_relay_cell_from_edge(): package_window 0, queueing for later.");
       circ->relay_queue = relay_queue_add(circ->relay_queue, cell, layer_hint);
       return 0;
     }
-    circ->n_receive_circwindow--;
+    circ->package_window--;
+#endif
   }
 
   if(circuit_deliver_relay_cell(cell, circ, cell_direction, layer_hint) < 0) {
     return -1;
   }
 
-  circuit_consider_stop_edge_reading(circ, edge_type); /* has window reached 0? */
+//  circuit_consider_stop_edge_reading(circ, edge_type, layer_hint); /* has window reached 0? */
   return 0;
 }
 
@@ -271,7 +275,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
 
   log(LOG_DEBUG,"circuit_deliver_relay_cell(): direction %d, streamid %d before crypt.", cell_direction, *(int*)(cell->payload+1));
 
-  if(relay_crypt(circ, buf, 1+CELL_PAYLOAD_SIZE, cell_direction, layer_hint, &recognized, &conn) < 0) {
+  if(relay_crypt(circ, buf, 1+CELL_PAYLOAD_SIZE, cell_direction, &layer_hint, &recognized, &conn) < 0) {
     log(LOG_DEBUG,"circuit_deliver_relay_cell(): relay crypt failed. Dropping connection.");
     return -1;
   }
@@ -282,11 +286,11 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   if(recognized) {
     if(cell_direction == CELL_DIRECTION_OUT) {
       log(LOG_DEBUG,"circuit_deliver_relay_cell(): Sending to exit.");
-      return connection_edge_process_relay_cell(cell, circ, conn, EDGE_EXIT);
+      return connection_edge_process_relay_cell(cell, circ, conn, EDGE_EXIT, NULL);
     }
     if(cell_direction == CELL_DIRECTION_IN) {
       log(LOG_DEBUG,"circuit_deliver_relay_cell(): Sending to AP.");
-      return connection_edge_process_relay_cell(cell, circ, conn, EDGE_AP);
+      return connection_edge_process_relay_cell(cell, circ, conn, EDGE_AP, layer_hint);
     }
   }
 
@@ -306,7 +310,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
 }
 
 int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
-                crypt_path_t *layer_hint, char *recognized, connection_t **conn) {
+                crypt_path_t **layer_hint, char *recognized, connection_t **conn) {
   crypt_path_t *thishop;
   char out[256];
 
@@ -333,8 +337,10 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
         memcpy(in,out,inlen);
         log(LOG_DEBUG,"relay_crypt(): after decrypt: %d",*(int*)(in+2));
 
-        if( (*recognized = relay_check_recognized(circ, cell_direction, in+2, conn)))
+        if( (*recognized = relay_check_recognized(circ, cell_direction, in+2, conn))) {
+          *layer_hint = thishop;
           return 0;
+        }
 
         thishop = thishop->next;
       } while(thishop != circ->cpath && thishop->state == CPATH_STATE_OPEN);
@@ -359,7 +365,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
   } else if(cell_direction == CELL_DIRECTION_OUT) { 
     if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
 
-      thishop = layer_hint; /* we already know which layer, from when we package_raw_inbuf'ed */
+      thishop = *layer_hint; /* we already know which layer, from when we package_raw_inbuf'ed */
       /* moving from last to first hop */
       do {
         assert(thishop);
@@ -435,40 +441,53 @@ int relay_check_recognized(circuit_t *circ, int cell_direction, char *stream, co
 
 }
 
-void circuit_resume_edge_reading(circuit_t *circ, int edge_type) {
+void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint) {
   connection_t *conn;
-  struct relay_queue_t *tmpd;
+  struct relay_queue_t *relay, *victim;
 
   assert(edge_type == EDGE_EXIT || edge_type == EDGE_AP);
 
+  log(LOG_DEBUG,"circuit_resume_edge_reading(): resuming");
+#if 0
   /* first, send the queue waiting at circ onto the circuit */
-  while(circ->relay_queue) {
-    assert(circ->relay_queue->cell);
+  relay = circ->relay_queue;
+  while(relay) {
+    assert(relay->cell);
     if(edge_type == EDGE_EXIT) {
-      circ->n_receive_circwindow--;
-      assert(circ->n_receive_circwindow >= 0);
+      assert(relay->layer_hint == NULL);
+      circ->package_window--;
+      assert(circ->package_window >= 0);
 
-      if(circuit_deliver_relay_cell(circ->relay_queue->cell, circ, CELL_DIRECTION_IN, circ->relay_queue->layer_hint) < 0) {
+      if(circuit_deliver_relay_cell(relay->cell, circ, CELL_DIRECTION_IN, relay->layer_hint) < 0) {
         circuit_close(circ);
         return;
       }
     } else { /* ap */
-      circ->p_receive_circwindow--;
-      assert(circ->p_receive_circwindow >= 0);
+      assert(relay->layer_hint);
+      if(relay->layer_hint != layer_hint) {
+        relay=relay->next; /* this cell isn't destined for this layer. don't send it. */
+        continue;
+      }
+      relay->layer_hint->package_window--;
+      assert(relay->layer_hint->package_window >= 0);
 
-      if(circuit_deliver_relay_cell(circ->relay_queue->cell, circ, CELL_DIRECTION_OUT, circ->relay_queue->layer_hint) < 0) {
+      if(circuit_deliver_relay_cell(relay->cell, circ, CELL_DIRECTION_OUT, relay->layer_hint) < 0) {
         circuit_close(circ);
         return;
       }
     }
-    tmpd = circ->relay_queue;
-    circ->relay_queue = tmpd->next;
-    free(tmpd->cell);
-    free(tmpd);
+    victim = relay;
+    relay=relay->next;
+    if(circ->relay_queue == victim) {
+      circ->relay_queue = relay;
+    }
+    free(victim->cell);
+    free(victim);
 
-    if(circuit_consider_stop_edge_reading(circ, edge_type))
+    if(circuit_consider_stop_edge_reading(circ, edge_type, layer_hint))
       return;
   }
+#endif
 
   if(edge_type == EDGE_EXIT)
     conn = circ->n_conn;
@@ -476,58 +495,64 @@ void circuit_resume_edge_reading(circuit_t *circ, int edge_type) {
     conn = circ->p_conn;
 
   for( ; conn; conn=conn->next_stream) {
-    if((edge_type == EDGE_EXIT && conn->n_receive_streamwindow > 0) ||
-       (edge_type == EDGE_AP   && conn->p_receive_streamwindow > 0)) {
+    if((edge_type == EDGE_EXIT && conn->package_window > 0) ||
+       (edge_type == EDGE_AP   && conn->package_window > 0 && conn->cpath_layer == layer_hint)) {
       connection_start_reading(conn);
       connection_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
     }
   }
-  circuit_consider_stop_edge_reading(circ, edge_type);
+  circuit_consider_stop_edge_reading(circ, edge_type, layer_hint);
 }
 
 /* returns 1 if the window is empty, else 0. If it's empty, tell edge conns to stop reading. */
-int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type) {
+int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *layer_hint) {
   connection_t *conn = NULL;
 
   assert(edge_type == EDGE_EXIT || edge_type == EDGE_AP);
+  assert(edge_type == EDGE_EXIT || layer_hint);
 
-  if(edge_type == EDGE_EXIT && circ->n_receive_circwindow <= 0)
+  log(LOG_DEBUG,"circuit_consider_stop_edge_reading(): considering");
+  if(edge_type == EDGE_EXIT && circ->package_window <= 0)
     conn = circ->n_conn;
-  else if(edge_type == EDGE_AP && circ->p_receive_circwindow <= 0)
+  else if(edge_type == EDGE_AP && layer_hint->package_window <= 0)
     conn = circ->p_conn;
   else
     return 0;
 
   for( ; conn; conn=conn->next_stream)
-    connection_stop_reading(conn);
+    if(!layer_hint || conn->cpath_layer == layer_hint)
+      connection_stop_reading(conn);
 
+  log(LOG_DEBUG,"circuit_consider_stop_edge_reading(): yes. stopped.");
   return 1;
 }
 
-int circuit_consider_sending_sendme(circuit_t *circ, int edge_type) {
-  cell_t sendme;
+int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t *layer_hint) {
+  cell_t cell;
 
   assert(circ);
 
-  memset(&sendme, 0, sizeof(cell_t));
-  sendme.command = CELL_SENDME;
-  sendme.length = CIRCWINDOW_INCREMENT;
+  memset(&cell, 0, sizeof(cell_t));
+  cell.command = CELL_RELAY;
+  SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_SENDME);
+  SET_CELL_STREAM_ID(cell, ZERO_STREAM);
 
+  cell.length = RELAY_HEADER_SIZE;
   if(edge_type == EDGE_AP) { /* i'm the AP */
-    while(circ->n_receive_circwindow < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
-      log(LOG_DEBUG,"circuit_consider_sending_sendme(): n_receive_circwindow %d, Queueing sendme forward.", circ->n_receive_circwindow);
-      circ->n_receive_circwindow += CIRCWINDOW_INCREMENT;
-      sendme.aci = circ->n_aci;
-      if(connection_write_cell_to_buf(&sendme, circ->n_conn) < 0) {
+    cell.aci = circ->n_aci;
+    while(layer_hint->deliver_window < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
+      log(LOG_DEBUG,"circuit_consider_sending_sendme(): deliver_window %d, Queueing sendme forward.", layer_hint->deliver_window);
+      layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
+      if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type, layer_hint) < 0) {
         return -1;
       }
     }
   } else if(edge_type == EDGE_EXIT) { /* i'm the exit */
-    while(circ->p_receive_circwindow < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
-      log(LOG_DEBUG,"circuit_consider_sending_sendme(): p_receive_circwindow %d, Queueing sendme back.", circ->p_receive_circwindow);
-      circ->p_receive_circwindow += CIRCWINDOW_INCREMENT;
-      sendme.aci = circ->p_aci;
-      if(connection_write_cell_to_buf(&sendme, circ->p_conn) < 0) {
+    cell.aci = circ->p_aci;
+    while(circ->deliver_window < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
+      log(LOG_DEBUG,"circuit_consider_sending_sendme(): deliver_window %d, Queueing sendme back.", circ->deliver_window);
+      circ->deliver_window += CIRCWINDOW_INCREMENT;
+      if(circuit_deliver_relay_cell_from_edge(&cell, circ, edge_type, layer_hint) < 0) {
         return -1;
       }
     }
