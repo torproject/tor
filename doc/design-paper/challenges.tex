@@ -14,7 +14,7 @@
 
 \begin{document}
 
-\title{Challenges in bringing low-latency stream anonymity to the masses (DRAFT)}
+\title{Challenges in practical low-latency stream anonymity (DRAFT)}
 
 \author{Roger Dingledine and Nick Mathewson}
 \institute{The Free Haven Project\\
@@ -29,12 +29,10 @@ foo
 
 \section{Introduction}
 
-Anonymous communication on the Internet today 
-
-
 Tor is a low-latency anonymous communication overlay network
-\cite{tor-design}. We have been operating a publicly deployed Tor network
-since October 2003.
+\cite{tor-design} designed to be practical and usable for securing TCP
+streams over the Internet. We have been operating a publicly deployed
+Tor network since October 2003.
 
 Tor aims to resist observers and insiders by distributing each transaction
 over several nodes in the network.  This ``distributed trust'' approach
@@ -48,38 +46,39 @@ who don't want to reveal information to their competitors, and law
 enforcement and government intelligence agencies who need
 to do operations on the Internet without being noticed.
 
-Tor has been funded by both the U.S. Navy, for use in securing government
-communications, and also the Electronic Frontier Foundation, for use in
-maintain civil liberties for ordinary citizens online.
-The Tor protocol is one of the leading choices
+Tor has been funded by the U.S. Navy, for use in securing government
+communications, and also by the Electronic Frontier Foundation, for use
+in maintaining civil liberties for ordinary citizens online. The Tor
+protocol is one of the leading choices
 to be the anonymizing layer in the European Union's PRIME directive to
 help maintain privacy in Europe. The University of Dresden in Germany
 has integrated an independent implementation of the Tor protocol into
-their popular Java Anon Proxy anonymizing client.  This wide variety of
+their popular Java Anon Proxy anonymizing client. This wide variety of
 interests helps maintain both the stability and the security of the
 network.
 
+Tor has a weaker threat model than many anonymity designs in the
+literature. This is because we our primary requirements are to have a
+practical and useful network, and from there we aim to provide as much
+anonymity as we can.
 
+%need to discuss how we take the approach of building the thing, and then
+%assuming that, how much anonymity can we get. we're not here to model or
+%to simulate or to produce equations and formulae. but those have their
+%roles too.
 
-
-We deployed this thing called Tor. it's got all these different types of
-users. it's been backed by navy and eff, and prime and anonymizer looked at
-it. Because we're this cool, you should believe us when we tell you stuff.
-
-In this paper we give the reader an understanding of Tor's context
-in the anonymity space and then we go on to describe the
-practical challenges that stand in the way of moving from a practical
-useful network to a practical useful anonymous network.
-
-% The goal of the paper is to get the PET-audience reader up to speed
-% on all the issues we have with Tor, so he can, if he wants,
-% * understand the technical and policy and legal issues and why they're
-%   tricky in practice
-% * help us out with answering some of the technical decisions
-%   (and in writing it, we'll clarify our own opinions about them)
-% * help us out with answering some of the anonymity questions
+This paper aims to give the reader enough information to understand the
+technical and policy issues that Tor faces as we continue deployment,
+and to lay a research agenda for others to help in addressing some of
+these issues. Section \ref{sec:what-is-tor} gives an overview of the Tor
+design and ours goals. We go on in Section \ref{sec:related} to describe
+Tor's context in the anonymity space. Sections \ref{sec:crossroads-policy}
+and \ref{sec:crossroads-technical} describe the practical challenges,
+both policy and technical respectively, that stand in the way of moving
+from a practical useful network to a practical useful anonymous network.
 
 \section{What Is Tor}
+\label{sec:what-is-tor}
 
 \subsection{Distributed trust: safety in numbers}
 
@@ -153,6 +152,7 @@ Tor has the following goals.
 and we made these assumptions when trying to design the thing.
 
 \section{Tor's position in the anonymity field}
+\label{sec:related}
 
 There are many other classes of systems: single-hop proxies, open proxies,
 jap, mixminion, flash mixes, freenet, i2p, mute/ants/etc, tarzan,
@@ -160,15 +160,133 @@ morphmix, freedom. Give brief descriptions and brief characterizations
 of how we differ. This is not the breakthrough stuff and we only have
 a page or two for it.
 
+have a serious discussion of morphmix's assumptions, since they would
+seem to be the direct competition. in fact tor is a flexible architecture
+that would encompass morphmix, and they're nearly identical except for
+path selection and node discovery. and the trust system morphmix has
+seems overkill (and/or insecure) based on the threat model we've picked.
 
-\section{Crossroads}
+\section{Crossroads: Policy issues}
+\label{sec:crossroads-policy}
 
-Discuss each item that Tor hasn't solved yet that isn't just coding
-work.  Perhaps we'll have so many that we can pick out the best ones to
-discuss, so it's a bit less of a laundry list. Maybe they'll even fit
-into categories. The trick to making the paper good will be to find
-the right balance between going into depth and breadth of coverage.
+Bittorrent and dmca. Should we add an IDS to autodetect protocols and
+snipe them? Takedowns and efnet abuse and wikipedia complaints and irc
+networks. Should we allow revocation of anonymity if a threshold of
+servers want to?
 
+Image: substantial non-infringing uses. Image is a security parameter,
+since it impacts user base and perceived sustainability.
+
+good uses are kept private, bad uses are publicized. not good.
+
+Sustainability. Previous attempts have been commercial which we think
+adds a lot of unnecessary complexity and accountability. Freedom didn't
+collect enough money to pay its servers; JAP bandwidth is supported by
+continued money, and they periodically ask what they will do when it
+dries up.
+
+How much should Tor aim to do? Applications that leak data. We can say
+they're not our problem, but they're somebody's problem.
+
+Logging. Making logs not revealing. A happy coincidence that verbose
+logging is our \#2 performance bottleneck. Is there a way to detect
+modified servers, or to have them volunteer the information that they're
+logging verbosely? Would that actually solve any attacks?
+
+\section{Crossroads: Scaling and Design choices}
+\label{sec:crossroads-design}
+
+\subsection{Transporting the stream vs transporting the packets}
+
+We periodically run into ZKS people who tell us that the process of
+anonymizing IPs should ``obviously'' be done at the IP layer. Here are
+the issues that need to be resolved before we'll be ready to switch Tor
+over to arbitrary IP traffic.
+
+1: we still need to do IP-level packet normalization, to stop things
+like ip fingerprinting. This is doable.
+2: we still need to be easy to integrate with user-level applications,
+so they can do application-level scrubbing. So we will still need
+application-specific proxies.
+3: we need a block-level encryption approach that can provide security despite
+packet loss and out-of-order delivery. Freedom allegedly had one, but it was
+never publicly specified. (We also believe that the Freedom and Cebolla designs
+are vulnerable to tagging attacks.)
+4: we still need to play with parameters for throughput, congestion control,
+etc -- since we need sequence numbers and maybe more to do replay detection,
+and just to handle duplicate frames. so we would be reimplementing some subset of tcp
+anyway.
+5: tls over udp is not implemented or even specified.
+6: exit policies over arbitrary IP packets seems to be an IDS-hard problem. i
+don't want to build an IDS into tor.
+7: certain protocols are going to leak information at the IP layer anyway. for
+example, if we anonymizer your dns requests, but they still go to comcast's dns servers,
+that's bad.
+8: hidden services, .exit addresses, etc are broken unless we have some way to
+reach into the application-level protocol and decide the hostname it's trying to get.
+
+\subsection{Mid-latency}
+
+Mid-latency. Can we do traffic shape to get any defense against George's
+PET2004 paper? Will padding or long-range dummies do anything then? Will
+it kill the user base or can we get both approaches to play well together?
+
+
+
+%\subsection{The DNS problem in practice}
+
+\subsection{Measuring performance and capacity}
+
+How to measure performance without letting people selectively deny service
+by distinguishing pings. Heck, just how to measure performance at all. In
+practice people have funny firewalls that don't match up to their exit
+policies and Tor doesn't deal.
+
+Network investigation: Is all this bandwidth publishing thing a good idea?
+How can we collect stats better? Note weasel's smokeping, at
+http://seppia.noreply.org/cgi-bin/smokeping.cgi?target=Tor
+which probably gives george and steven enough info to break tor?
+
+\subsection{Plausible deniability}
+
+Does running a server help you or harm you? George's Oakland attack.
+Plausible deniability -- without even running your traffic through Tor! We
+have to pick the path length so adversary can't distinguish client from
+server (how many hops is good?).
+
+\subsection{Helper nodes}
+
+When does fixing your entry or exit node help you?
+Helper nodes in the literature don't deal with churn, and
+especially active attacks to induce churn.
+
+Do general DoS attacks have anonymity implications? See e.g. Adam
+Back's IH paper, but I think there's more to be pointed out here.
+
+\subsection{Location-hidden services}
+
+Survivable services are new in practice, yes? Hidden services seem
+less hidden than we'd like, since they stay in one place and get used
+a lot. They're the epitome of the need for helper nodes. This means
+that using Tor as a building block for Free Haven is going to be really
+hard. Also, they're brittle in terms of intersection and observation
+attacks. Would be nice to have hot-swap services, but hard to design.
+
+
+
+
+%\section{Crossroads: Scaling}
+%\label{sec:crossroads-scaling}
+%P2P + anonymity issues:
+
+Incentives. Copy the page I wrote for the NSF proposal, and maybe extend
+it if we're feeling smart.
+
+Usability: fc03 paper was great, except the lower latency you are the
+less useful it seems it is.
+A Tor gui, how jap's gui is nice but does not reflect the security
+they provide.
+Public perception, and thus advertising, is a security parameter.
 
 Peer-to-peer / practical issues:
 
@@ -201,124 +319,9 @@ and we maybe we should start with a time-release IP publishing system +
 advogato based reputation system, to bound the number of IPs leaked to the
 adversary.
 
+\section{The Future}
+\label{sec:conclusion}
 
-Policy issues:
-
-Bittorrent and dmca. Should we add an IDS to autodetect protocols and
-snipe them? Takedowns and efnet abuse and wikipedia complaints and irc
-networks. Should we allow revocation of anonymity if a threshold of
-servers want to?
-
-Image: substantial non-infringing uses. Image is a security parameter,
-since it impacts user base and perceived sustainability.
-
-Sustainability. Previous attempts have been commercial which we think
-adds a lot of unnecessary complexity and accountability. Freedom didn't
-collect enough money to pay its servers; JAP bandwidth is supported by
-continued money, and they periodically ask what they will do when it
-dries up.
-
-Logging. Making logs not revealing. A happy coincidence that verbose
-logging is our \#2 performance bottleneck. Is there a way to detect
-modified servers, or to have them volunteer the information that they're
-logging verbosely? Would that actually solve any attacks?
-
-
-Anonymity issues:
-
-Transporting the stream vs transporting the packets.
-
-The DNS problem in practice.
-
-Applications that leak data. We can say they're not our problem, but
-they're somebody's problem.
-
-How to measure performance without letting people selectively deny service
-by distinguishing pings. Heck, just how to measure performance at all. In
-practice people have funny firewalls that don't match up to their exit
-policies and Tor doesn't deal.
-
-Mid-latency. Can we do traffic shape to get any defense against George's
-PET2004 paper? Will padding or long-range dummies do anything then? Will
-it kill the user base or can we get both approaches to play well together?
-
-Does running a server help you or harm you? George's Oakland attack.
-Plausible deniability -- without even running your traffic through Tor! We
-have to pick the path length so adversary can't distinguish client from
-server (how many hops is good?).
-
-When does fixing your entry or exit node help you?
-Helper nodes in the literature don't deal with churn, and
-especially active attacks to induce churn.
-
-Survivable services are new in practice, yes? Hidden services seem
-less hidden than we'd like, since they stay in one place and get used
-a lot. They're the epitome of the need for helper nodes. This means
-that using Tor as a building block for Free Haven is going to be really
-hard. Also, they're brittle in terms of intersection and observation
-attacks. Would be nice to have hot-swap services, but hard to design.
-
-
-P2P + anonymity issues:
-
-Incentives. Copy the page I wrote for the NSF proposal, and maybe extend
-it if we're feeling smart.
-
-Usability: fc03 paper was great, except the lower latency you are the
-less useful it seems it is.
-A Tor gui, how jap's gui is nice but does not reflect the security
-they provide.
-Public perception, and thus advertising, is a security parameter.
-
-Network investigation: Is all this bandwidth publishing thing a good idea?
-How can we collect stats better? Note weasel's smokeping, at
-http://seppia.noreply.org/cgi-bin/smokeping.cgi?target=Tor
-which probably gives george and steven enough info to break tor?
-
-Do general DoS attacks have anonymity implications? See e.g. Adam
-Back's IH paper, but I think there's more to be pointed out here.
-
-% need to do somewhere in the paper:
-
-have a serious discussion of morphmix's assumptions, since they would
-seem to be the direct competition. in fact tor is a flexible architecture
-that would encompass morphmix, and they're nearly identical except for
-path selection and node discovery. and the trust system morphmix has
-seems overkill (and/or insecure) based on the threat model we've picked.
-
-need to discuss how we take the approach of building the thing, and then
-assuming that, how much anonymity can we get. we're not here to model or
-to simulate or to produce equations and formulae. but those have their
-roles too.
-
-
-
-
-
-%%%
-
-
-TCP vs UDP
-argument 1: we need to do IP-level packet normalization, to block things like ip
-fingerprinting.
-argument 2: we still need to be easy to integrate with applications, so they can do
-application-level scrubbing.
-argument 3: we need a block-level encryption approach that can provide security despite
-packet loss and out-of-order delivery. i believe you that such a thing can be created,
-but no thing has yet been specified. so specify it for me if you want me to believe it.
-(freedom and cebolla are vulnerable to tagging and malleability attacks i believe.)
-argument 4: we still need to play with parameters for throughput, congestion control,
-etc -- since we need sequence numbers and maybe more to do replay detection,
-and just to handle duplicate frames. so we would be reimplementing some subset of tcp
-anyway.
-argument 5: tls over udp is not implemented or even specified.
-argument 6: exit policies over arbitrary IP packets seems to be an IDS-hard problem. i
-don't want to build an IDS into tor.
-argument 7: certain protocols are going to leak information at the IP layer anyway. for
-example, if we anonymizer your dns requests, but they still go to comcast's dns servers,
-that's bad.
-argument 8: hidden services, .exit addresses, etc are broken unless we have some way to
-reach into the application-level protocol and decide the hostname it's trying to get.
 
 \bibliographystyle{plain} \bibliography{tor-design}
 
