@@ -50,6 +50,7 @@ static int nfds=0; /**< Number of connections currently active. */
 
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
 static int please_dumpstats=0; /**< Whether we should dump stats during the loop. */
+static int please_debug=0; /**< Whether we should switch all logs to -l debug. */
 static int please_reset=0; /**< Whether we just got a sighup. */
 static int please_reap_children=0; /**< Whether we should waitpid for exited children. */
 static int please_sigpipe=0; /**< Whether we've caught a sigpipe lately. */
@@ -815,7 +816,7 @@ static int do_main_loop(void) {
     }
 #endif
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
-    if(please_shutdown) {
+    if (please_shutdown) {
       if(!server_mode(get_options())) { /* do it now */
         log(LOG_NOTICE,"Interrupt: exiting cleanly.");
         tor_cleanup();
@@ -824,16 +825,20 @@ static int do_main_loop(void) {
       hibernate_begin_shutdown();
       please_shutdown = 0;
     }
-    if(please_sigpipe) {
+    if (please_sigpipe) {
       log(LOG_NOTICE,"Caught sigpipe. Ignoring.");
       please_sigpipe = 0;
     }
-    if(please_dumpstats) {
+    if (please_dumpstats) {
       /* prefer to log it at INFO, but make sure we always see it */
       dumpstats(get_min_log_level()<LOG_INFO ? get_min_log_level() : LOG_INFO);
       please_dumpstats = 0;
     }
-    if(please_reset) {
+    if (please_debug) {
+      switch_logs_debug();
+      please_debug = 0;
+    }
+    if (please_reset) {
       if (do_hup() < 0) {
         log_fn(LOG_WARN,"Restart failed (config error?). Exiting.");
         tor_cleanup();
@@ -841,7 +846,7 @@ static int do_main_loop(void) {
       }
       please_reset = 0;
     }
-    if(please_reap_children) {
+    if (please_reap_children) {
       while(waitpid(-1,NULL,WNOHANG) > 0) ; /* keep reaping until no more zombies */
       please_reap_children = 0;
     }
@@ -853,7 +858,7 @@ static int do_main_loop(void) {
     poll_result = tor_poll(poll_array, nfds, timeout);
 
     /* let catch() handle things like ^c, and otherwise don't worry about it */
-    if(poll_result < 0) {
+    if (poll_result < 0) {
       /* let the program survive things like ^z */
       if(tor_socket_errno(-1) != EINTR) {
         log_fn(LOG_ERR,"poll failed: %s [%d]",
@@ -869,15 +874,15 @@ static int do_main_loop(void) {
     }
 
     /* do all the reads and errors first, so we can detect closed sockets */
-    for(i=0;i<nfds;i++)
+    for (i=0;i<nfds;i++)
       conn_read(i); /* this also marks broken connections */
 
     /* then do the writes */
-    for(i=0;i<nfds;i++)
+    for (i=0;i<nfds;i++)
       conn_write(i);
 
     /* any of the conns need to be closed now? */
-    for(i=0;i<nfds;i++)
+    for (i=0;i<nfds;i++)
       conn_close_if_marked(i);
 
     /* refilling buckets and sending cells happens at the beginning of the
@@ -909,6 +914,9 @@ static void catch(int the_signal) {
       break;
     case SIGUSR1:
       please_dumpstats = 1;
+      break;
+    case SIGUSR2:
+      please_debug = 1;
       break;
     case SIGCHLD:
       please_reap_children = 1;

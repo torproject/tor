@@ -211,7 +211,7 @@ update_expected_bandwidth(void)
     /* If we haven't gotten enough data last interval, guess that
      * we'll be used at our maximum capacity.  This is unlikely to be
      * so, but it will give us an okay first estimate, and we'll stay
-     * up until we send Max ytes.  Next interval, we'll choose
+     * up until we send Max bytes.  Next interval, we'll choose
      * our starting time based on how much we sent this interval.
      */
     expected_bandwidth_usage = max_configured;

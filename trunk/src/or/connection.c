@@ -718,7 +718,7 @@ static void connection_consider_empty_buckets(connection_t *conn) {
   }
 }
 
-/** Initiatialize the global read bucket to options->BandwidthBurst,
+/** Initialize the global read bucket to options->BandwidthBurst,
  * and current_time to the current time. */
 void connection_bucket_init(void) {
   or_options_t *options = get_options();
