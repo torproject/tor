@@ -85,6 +85,7 @@ int tor_vsnprintf(char *str, size_t size, const char *format, va_list args);
 #define TOR_ISSPACE(c)   isspace((int)(unsigned char)(c))
 #define TOR_ISXDIGIT(c) isxdigit((int)(unsigned char)(c))
 #define TOR_ISDIGIT(c)   isdigit((int)(unsigned char)(c))
+#define TOR_ISPRINT(c)   isprint((int)(unsigned char)(c))
 
 #define _SHORT_FILE_ (_tor_fix_source_file(__FILE__))
 const char *_tor_fix_source_file(const char *fname);
