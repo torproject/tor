@@ -432,6 +432,7 @@ int _circuit_mark_for_close(circuit_t *circ) {
       /* The other side will see a DESTROY, and infer that the connections
        * are closing because the circuit is getting torn down.  No need
        * to send an end cell*/
+      conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
       connection_mark_for_close(conn);
     }
   }
