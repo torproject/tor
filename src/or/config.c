@@ -185,6 +185,7 @@ void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "Daemon",          CONFIG_TYPE_BOOL, &options->Daemon) ||
     config_compare(list, "TrafficShaping",  CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
     config_compare(list, "LinkPadding",     CONFIG_TYPE_BOOL, &options->LinkPadding) ||
+    config_compare(list, "IgnoreVersion",   CONFIG_TYPE_BOOL, &options->IgnoreVersion) ||
 
     /* float options */
     config_compare(list, "CoinWeight",     CONFIG_TYPE_DOUBLE, &options->CoinWeight)
@@ -260,6 +261,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   config_free_lines(cl);
 
 /* print config */
+/* XXX this section is rotting. Should maybe remove it sometime. */
   if (options->loglevel == LOG_DEBUG) {
     printf("LogLevel=%s\n",
            options->LogLevel);

@@ -765,7 +765,9 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   eos = s+maxlen;
   strncpy(s, 
           "signed-directory\n"
-          "recommended-software 0.0.2pre4,0.0.2pre5,0.0.2pre6\n" /* XXX make this real */
+          "recommended-software "
+          RECOMMENDED_SOFTWARE_VERSIONS
+          "\n"
           , maxlen);
   
   i = strlen(s);
