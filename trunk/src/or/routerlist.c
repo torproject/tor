@@ -419,7 +419,7 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
           /* The exit policy is reject ???:port */
           maybe_reject = 1;
         } else {
-          /* The exit policy is acccept ???:port */
+          /* The exit policy is accept ???:port */
           maybe_accept = 1;
         }
       }

@@ -222,7 +222,6 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   connection_t **carray;
   int n_connections;
   int best_support = -1;
-  int best_support_idx = -1;
   int n_best_support=0;
   smartlist_t *sl, *preferredexits, *excludedexits;
   routerinfo_t *router;
@@ -283,7 +282,7 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
     if (n_supported[i] > best_support) {
       /* If this router is better than previous ones, remember its index
        * and goodness, and start counting how many routers are this good. */
-      best_support = n_supported[i]; best_support_idx = i; n_best_support=1;
+      best_support = n_supported[i]; n_best_support=1;
       log_fn(LOG_DEBUG,"%s is new best supported option so far.",
              dir->routers[i]->nickname);
     } else if (n_supported[i] == best_support) {
@@ -306,7 +305,7 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   /* If any routers definitely support any pending connections, choose one
    * at random. */
   if (best_support > 0) {
-    for (i = best_support_idx; i < dir->n_routers; i++)
+    for (i = 0; i < dir->n_routers; i++)
       if (n_supported[i] == best_support)
         smartlist_add(sl, dir->routers[i]);
 
@@ -320,7 +319,7 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
     if (best_support == -1) {
       log(LOG_WARN, "All routers are down or middleman -- choosing a doomed exit at random.");
     }
-    for(i = best_support_idx; i < dir->n_routers; i++)
+    for(i = 0; i < dir->n_routers; i++)
       if(n_supported[i] != -1)
         smartlist_add(sl, dir->routers[i]);
 
@@ -336,10 +335,6 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   tor_free(n_supported);
   if(router) {
     log_fn(LOG_WARN, "Chose exit server '%s'", router->nickname);
-    if(router_exit_policy_rejects_all(router))
-      log_fn(LOG_WARN,"...which will reject all. Bug.");
-    if(!strcmp(router->nickname,"tor26") || !strcmp(router->nickname,"jap"))
-      log_fn(LOG_WARN,"...which is tor26 or jap, which should reject all.");
     return router;
   }
   log_fn(LOG_WARN, "No exit routers seem to be running; can't choose an exit.");
