@@ -946,6 +946,29 @@ static void router_free_exit_policy(routerinfo_t *router) {
   }
 }
 
+int router_add_exit_policy_from_string(routerinfo_t *router,
+                                       char *s)
+{
+  directory_token_t tok;
+  char *tmp, *cp;
+  int r;
+
+  tmp = cp = tor_strdup(s);
+  if (router_get_next_token(&cp, &tok)) {
+    log_fn(LOG_WARNING, "Error reading exit policy: %s", tok.val.error);
+    free(tmp);
+    return -1;                                                        
+  }
+  if (tok.tp != K_ACCEPT && tok.tp != K_REJECT) {
+    log_fn(LOG_WARNING, "Expected 'accept' or 'reject'.");
+    free(tmp);
+    return -1;
+  }
+  r = router_add_exit_policy(router, &tok);
+  free(tmp);
+  return r;
+}
+
 static int router_add_exit_policy(routerinfo_t *router, 
                                   directory_token_t *tok) {
   struct exit_policy_t *tmpe, *newe;
