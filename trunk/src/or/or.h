@@ -588,7 +588,7 @@ typedef struct {
   uint32_t bandwidthcapacity;
   struct exit_policy_t *exit_policy; /**< What streams will this OR permit
                                       * to exit? */
-  int uptime; /**< How many seconds the router claims to have been up */
+  long uptime; /**< How many seconds the router claims to have been up */
   /* local info */
   int is_running; /**< As far as we know, is this OR currently running? */
   time_t status_set_at; /**< When did we last update is_running? */
