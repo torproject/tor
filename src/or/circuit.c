@@ -408,7 +408,7 @@ circuit_t *circuit_get_rendezvous(const char *cookie)
   return NULL;
 }
 
-#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 10
+#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 20
 /* circuits that were born at the end of their second might be expired
  * after 10.1 seconds; circuits born at the beginning might be expired
  * after closer to 11 seconds.
@@ -423,10 +423,18 @@ void circuit_expire_building(void) {
   while(circ) {
     victim = circ;
     circ = circ->next;
-    if(victim->cpath &&
-       victim->state != CIRCUIT_STATE_OPEN &&
-       victim->timestamp_created + MIN_SECONDS_BEFORE_EXPIRING_CIRC+1 < now &&
-       !victim->marked_for_close) {
+    if(!victim->cpath)
+      continue; /* didn't originate here */
+    if(victim->marked_for_close)
+      continue; /* don't mess with marked circs */
+    if(victim->timestamp_created + MIN_SECONDS_BEFORE_EXPIRING_CIRC > now)
+      continue; /* it's young still, don't mess with it */
+
+    /* if circ is !open, or if it's open but purpose is est intro or est rend,
+     * then mark it for close */
+    if(victim->state != CIRCUIT_STATE_OPEN ||
+       victim->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
+       victim->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
       if(victim->n_conn)
         log_fn(LOG_INFO,"Abandoning circ %s:%d:%d (state %d:%s)",
                victim->n_conn->address, victim->n_port, victim->n_circ_id,
