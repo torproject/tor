@@ -232,6 +232,7 @@ int connection_edge_process_relay_cell_not_open(
       addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
       client_dns_set_entry(conn->socks_request->address, addr);
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+      circuit_detach_stream(circ,conn);
       if(connection_ap_handshake_attach_circuit(conn) >= 0)
         return 0;
       /* else, conn will get closed below */
@@ -240,6 +241,7 @@ int connection_edge_process_relay_cell_not_open(
           < MAX_RESOLVE_FAILURES) {
         /* We haven't retried too many times; reattach the connection. */
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+        circuit_detach_stream(circ,conn);
         if(connection_ap_handshake_attach_circuit(conn) >= 0)
           return 0;
         /* else, conn will get closed below */
@@ -255,7 +257,6 @@ int connection_edge_process_relay_cell_not_open(
      * open til flushed */
     return 0;
   }
-
 
   if(conn->type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_CONNECTED) {
     if(conn->state != AP_CONN_STATE_CONNECT_WAIT) {
