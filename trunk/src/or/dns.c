@@ -494,11 +494,16 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
     if(resolve->state == CACHE_STATE_FAILED) {
       /* prevent double-remove. */
       pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
-      circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
-      if (pendconn->purpose == EXIT_PURPOSE_CONNECT)
+      if (pendconn->purpose == EXIT_PURPOSE_CONNECT) {
+        /*XXXX can we safely raise the detach here to happen after we
+         * send the end cell? */
+        circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
         connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
-      else
+      } else {
         send_resolved_cell(pendconn, RESOLVED_TYPE_ERROR);
+        /* This detach must happen after we send the resolved cell. */
+        circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
+      }
       connection_free(pendconn);
     } else {
       if (pendconn->purpose == EXIT_PURPOSE_CONNECT) {
