@@ -836,7 +836,6 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
 }
 
 /* ***** Client DNS code ***** */
-#define MAX_DNS_ENTRY_AGE 30*60
 
 /* XXX Perhaps this should get merged with the dns.c code somehow. */
 struct client_dns_entry {
@@ -912,15 +911,8 @@ static void client_dns_set_entry(const char *address, uint32_t val)
   assert(address);
   assert(val);
 
-  if (inet_aton(address, &in)) {
-    if (ntohl(in.s_addr) == val)
-      return;
-    in.s_addr = htonl(val);
-    log_fn(LOG_WARN, 
-        "Trying to store incompatible cached value %s for static address %s",
-        inet_ntoa(in), address);
+  if (inet_aton(address, &in))
     return;
-  }
   search.address = (char*) address;
   now = time(NULL);
   ent = SPLAY_FIND(client_dns_tree, &client_dns_root, &search);

@@ -21,7 +21,7 @@ int num_dnsworkers_busy=0;
 
 static void purge_expired_resolves(uint32_t now);
 static int assign_to_dnsworker(connection_t *exitconn);
-static void dns_found_answer(char *question, uint32_t answer);
+static void dns_found_answer(char *address, uint32_t addr);
 int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
 static void spawn_enough_dnsworkers(void);
@@ -33,8 +33,8 @@ struct pending_connection_t {
 
 struct cached_resolve {
   SPLAY_ENTRY(cached_resolve) node;
-  char question[MAX_ADDRESSLEN]; /* the hostname to be resolved */
-  uint32_t answer; /* in host order. I know I'm horrible for assuming ipv4 */
+  char address[MAX_ADDRESSLEN]; /* the hostname to be resolved */
+  uint32_t addr; /* in host order. I know I'm horrible for assuming ipv4 */
   char state; /* 0 is pending; 1 means answer is valid; 2 means resolve failed */
 #define CACHE_STATE_PENDING 0
 #define CACHE_STATE_VALID 1
@@ -44,11 +44,12 @@ struct cached_resolve {
   struct cached_resolve *next;
 };
 
-SPLAY_HEAD(cache_tree, cached_resolve) cache_root;
+static SPLAY_HEAD(cache_tree, cached_resolve) cache_root;
 
-static int compare_cached_resolves(struct cached_resolve *a, struct cached_resolve *b) {
+static int compare_cached_resolves(struct cached_resolve *a,
+                                   struct cached_resolve *b) {
   /* make this smarter one day? */
-  return strncasecmp(a->question, b->question, MAX_ADDRESSLEN);
+  return strncasecmp(a->address, b->address, MAX_ADDRESSLEN);
 }
 
 SPLAY_PROTOTYPE(cache_tree, cached_resolve, node, compare_cached_resolves);
@@ -83,7 +84,41 @@ static void purge_expired_resolves(uint32_t now) {
   }
 }
 
-/* See if the question 'exitconn->address' has been answered. if so,
+#if 0
+uint32_t dns_lookup(const char *address) {
+  struct in_addr in;
+  uint32_t now = time(NULL);
+
+  /* first take this opportunity to see if there are any expired
+     resolves in the tree.*/
+  purge_expired_resolves(now);
+
+  if (inet_aton(address, &in)) {
+    log_fn(LOG_DEBUG, "Using static address %s (%08X)", address,
+           ntohl(in.s_addr));
+    return ntohl(in.s_addr);
+  }
+
+  strncpy(search.address, address, MAX_ADDRESSLEN);
+  resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
+  if(resolve) { /* it's there */
+    if(resolve->state == CACHE_STATE_VALID) {
+      in.s_addr = htonl(resolve->addr);
+      log_fn(LOG_DEBUG, "Found cached entry for address %s: %s", address,
+             inet_ntoa(in));
+      return resolve->addr;
+    }
+    log_fn(LOG_DEBUG, "Entry found for address %s but it's not valid. Returning 0.",
+           address);
+    return 0;
+  }
+  /* it's not there */
+  log_fn(LOG_DEBUG, "No entry found for address %s", address);
+  return 0;
+}
+#endif
+
+/* See if we have an addr for 'exitconn->address'. if so,
  * if resolve valid, put it into exitconn->addr and return 1.
  * If resolve failed, return -1.
  *
@@ -103,8 +138,8 @@ int dns_resolve(connection_t *exitconn) {
      resolves in the tree.*/
   purge_expired_resolves(now);
 
-  /* now check the tree to see if 'question' is already there. */
-  strncpy(search.question, exitconn->address, MAX_ADDRESSLEN);
+  /* now check the tree to see if 'address' is already there. */
+  strncpy(search.address, exitconn->address, MAX_ADDRESSLEN);
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(resolve) { /* already there */
     switch(resolve->state) {
@@ -118,7 +153,7 @@ int dns_resolve(connection_t *exitconn) {
                exitconn->s, exitconn->address);
         return 0;
       case CACHE_STATE_VALID:
-        exitconn->addr = resolve->answer;
+        exitconn->addr = resolve->addr;
         log_fn(LOG_DEBUG,"Connection (fd %d) found cached answer for '%s'",
                exitconn->s, exitconn->address);
         return 1;
@@ -130,8 +165,8 @@ int dns_resolve(connection_t *exitconn) {
   /* not there, need to add it */
   resolve = tor_malloc_zero(sizeof(struct cached_resolve));
   resolve->state = CACHE_STATE_PENDING;
-  resolve->expire = now + 15*60; /* 15 minutes */
-  strncpy(resolve->question, exitconn->address, MAX_ADDRESSLEN);
+  resolve->expire = now + MAX_DNS_ENTRY_AGE;
+  strncpy(resolve->address, exitconn->address, MAX_ADDRESSLEN);
 
   /* add us to the pending list */
   pending_connection = tor_malloc(sizeof(struct pending_connection_t));
@@ -185,16 +220,16 @@ static int assign_to_dnsworker(connection_t *exitconn) {
  * then remove onlyconn from the pending list, and if the pending list
  * is now empty, cancel the whole thing.
  */
-void dns_cancel_pending_resolve(char *question, connection_t *onlyconn) {
+void dns_cancel_pending_resolve(char *address, connection_t *onlyconn) {
   struct pending_connection_t *pend, *victim;
   struct cached_resolve search;
   struct cached_resolve *resolve, *tmp;
 
-  strncpy(search.question, question, MAX_ADDRESSLEN);
+  strncpy(search.address, address, MAX_ADDRESSLEN);
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
-    log_fn(LOG_WARN,"Question '%s' is not pending. Dropping.", question);
+    log_fn(LOG_WARN,"Address '%s' is not pending. Dropping.", address);
     return;
   }
 
@@ -208,7 +243,7 @@ void dns_cancel_pending_resolve(char *question, connection_t *onlyconn) {
       free(pend);
       if(resolve->pending_connections) {/* more pending, don't cancel it */
         log_fn(LOG_DEBUG, "Connection (fd %d) no longer waiting for resolve of '%s'",
-               onlyconn->s, question);
+               onlyconn->s, address);
         return;
       }
     } else {
@@ -218,7 +253,7 @@ void dns_cancel_pending_resolve(char *question, connection_t *onlyconn) {
           pend->next = victim->next;
           free(victim);
           log_fn(LOG_DEBUG, "Connection (fd %d) no longer waiting for resolve of '%s'",
-                 onlyconn->s, question);
+                 onlyconn->s, address);
           return; /* more are pending */
         }
       }
@@ -227,7 +262,7 @@ void dns_cancel_pending_resolve(char *question, connection_t *onlyconn) {
   } else {
     /* mark all pending connections to fail */
     log_fn(LOG_DEBUG, "Failing all connections waiting on DNS resolve of '%s'",
-           question);
+           address);
     while(resolve->pending_connections) {
       pend = resolve->pending_connections;
       connection_edge_end(pend->conn, END_STREAM_REASON_MISC, NULL);
@@ -257,24 +292,24 @@ void dns_cancel_pending_resolve(char *question, connection_t *onlyconn) {
   free(resolve);
 }
 
-static void dns_found_answer(char *question, uint32_t answer) {
+static void dns_found_answer(char *address, uint32_t addr) {
   struct pending_connection_t *pend;
   struct cached_resolve search;
   struct cached_resolve *resolve;
 
-  strncpy(search.question, question, MAX_ADDRESSLEN);
+  strncpy(search.address, address, MAX_ADDRESSLEN);
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
-    log_fn(LOG_WARN,"Answer to unasked question '%s'? Dropping.", question);
+    log_fn(LOG_INFO,"Resolved unasked address '%s'? Dropping.", address);
     /* XXX Why drop?  Just because we don't care now doesn't mean we shouldn't
      * XXX cache the result for later. */
     return;
   }
 
   if (resolve->state != CACHE_STATE_PENDING) {
-    log_fn(LOG_WARN, "Duplicate answer to question '%s'; ignoring",
-           question);
+    log_fn(LOG_WARN, "Resolved '%s' which was already resolved; ignoring",
+           address);
     return;
   }
   /* Removed this assertion: in fact, we'll sometimes get a double answer
@@ -283,15 +318,15 @@ static void dns_found_answer(char *question, uint32_t answer) {
    * resolve X.Y.Z. */
   /* assert(resolve->state == CACHE_STATE_PENDING); */
 
-  resolve->answer = ntohl(answer);
-  if(resolve->answer)
+  resolve->addr = ntohl(addr);
+  if(resolve->addr)
     resolve->state = CACHE_STATE_VALID;
   else
     resolve->state = CACHE_STATE_FAILED;
 
   while(resolve->pending_connections) {
     pend = resolve->pending_connections;
-    pend->conn->addr = resolve->answer;
+    pend->conn->addr = resolve->addr;
     if(resolve->state == CACHE_STATE_FAILED)
       connection_edge_end(pend->conn, END_STREAM_REASON_RESOLVEFAILED, NULL);
     else
@@ -310,7 +345,7 @@ int connection_dns_finished_flushing(connection_t *conn) {
 }
 
 int connection_dns_process_inbuf(connection_t *conn) {
-  uint32_t answer;
+  uint32_t addr;
 
   assert(conn && conn->type == CONN_TYPE_DNSWORKER);
 
@@ -329,12 +364,12 @@ int connection_dns_process_inbuf(connection_t *conn) {
     return 0; /* not yet */
   assert(buf_datalen(conn->inbuf) == 4);
 
-  connection_fetch_from_buf((char*)&answer,sizeof(answer),conn);
+  connection_fetch_from_buf((char*)&addr,sizeof(addr),conn);
 
   log_fn(LOG_DEBUG, "DNSWorker (fd %d) returned answer for '%s'",
          conn->s, conn->address);
 
-  dns_found_answer(conn->address, answer);
+  dns_found_answer(conn->address, addr);
 
   free(conn->address);
   conn->address = tor_strdup("<idle>");
@@ -345,8 +380,8 @@ int connection_dns_process_inbuf(connection_t *conn) {
 }
 
 int dnsworker_main(void *data) {
-  char question[MAX_ADDRESSLEN];
-  unsigned char question_len;
+  char address[MAX_ADDRESSLEN];
+  unsigned char address_len;
   struct hostent *rent;
   int *fdarray = data;
   int fd;
@@ -356,21 +391,21 @@ int dnsworker_main(void *data) {
 
   for(;;) {
 
-    if(read(fd, &question_len, 1) != 1) {
+    if(read(fd, &address_len, 1) != 1) {
       log_fn(LOG_INFO,"read length failed. Child exiting.");
       spawn_exit();
     }
-    assert(question_len > 0);
+    assert(address_len > 0);
 
-    if(read_all(fd, question, question_len) != question_len) {
+    if(read_all(fd, address, address_len) != address_len) {
       log_fn(LOG_ERR,"read hostname failed. Child exiting.");
       spawn_exit();
     }
-    question[question_len] = 0; /* null terminate it */
+    address[address_len] = 0; /* null terminate it */
 
-    rent = gethostbyname(question);
+    rent = gethostbyname(address);
     if (!rent) {
-      log_fn(LOG_INFO,"Could not resolve dest addr %s. Returning nulls.",question);
+      log_fn(LOG_INFO,"Could not resolve dest addr %s. Returning nulls.",address);
       if(write_all(fd, "\0\0\0\0", 4) != 4) {
         log_fn(LOG_ERR,"writing nulls failed. Child exiting.");
         spawn_exit();
@@ -381,7 +416,7 @@ int dnsworker_main(void *data) {
         log_fn(LOG_INFO,"writing answer failed. Child exiting.");
         spawn_exit();
       }
-      log_fn(LOG_INFO,"Answered question '%s'.",question);
+      log_fn(LOG_INFO,"Resolved address '%s'.",address);
     }
   }
   return 0; /* windows wants this function to return an int */
@@ -426,17 +461,23 @@ static void spawn_enough_dnsworkers(void) {
   connection_t *dnsconn;
 
   /* XXX This may not be the best strategy. Maybe we should queue pending
-   * XXX requests until the old ones finish or time out: otherwise, if
-   * XXX the connection requests come fast enough, we never get any DNS done.
+   *     requests until the old ones finish or time out: otherwise, if
+   *     the connection requests come fast enough, we never get any DNS done. -NM
+   * XXX But if we queue them, then the adversary can pile even more
+   *     queries onto us, blocking legitimate requests for even longer.
+   *     Maybe we should compromise and only kill if it's been at it for
+   *     more than, e.g., 2 seconds. -RD
    */
   if(num_dnsworkers_busy == MAX_DNSWORKERS) {
     /* We always want at least one worker idle.
      * So find the oldest busy worker and kill it.
      */
-    dnsconn = connection_get_by_type_state_lastwritten(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_BUSY);
+    dnsconn = connection_get_by_type_state_lastwritten(CONN_TYPE_DNSWORKER,
+                                                       DNSWORKER_STATE_BUSY);
     assert(dnsconn);
 
-    log_fn(LOG_WARN, "%d DNS workers are spawned; all are busy. Killing one.", MAX_DNSWORKERS);
+    log_fn(LOG_WARN, "%d DNS workers are spawned; all are busy. Killing one.",
+           MAX_DNSWORKERS);
     /* tell the exit connection that it's failed */
     dns_cancel_pending_resolve(dnsconn->address, NULL);
 
