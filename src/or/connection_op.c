@@ -64,6 +64,7 @@ int op_handshake_process_keys(connection_t *conn) {
   log(LOG_DEBUG,"Successfully decrypted keys from new OP.");
 
   conn->bandwidth = ntohl(*((uint32_t *)auth_plain));
+  log(LOG_DEBUG,"op_handshake_process_keys(): Bandwidth %d requested.",conn->bandwidth);
 
   crypto_cipher_set_key(conn->b_crypto, auth_plain+4);
   crypto_cipher_set_key(conn->f_crypto, auth_plain+20);
