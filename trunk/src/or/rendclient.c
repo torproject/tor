@@ -82,6 +82,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   if (!cpath) {
     cpath = rendcirc->build_state->pending_final_cpath =
       tor_malloc_zero(sizeof(crypt_path_t));
+    cpath->magic = CRYPT_PATH_MAGIC;
     if (!(cpath->handshake_state = crypto_dh_new())) {
       log_fn(LOG_WARN, "Couldn't allocate DH");
       goto err;

@@ -739,6 +739,7 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   crypt_path_t *tmp_cpath;
 
   tmp_cpath = tor_malloc_zero(sizeof(crypt_path_t));
+  tmp_cpath->magic = CRYPT_PATH_MAGIC;
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_CREATED;
@@ -761,6 +762,7 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   circ->n_crypto = tmp_cpath->f_crypto;
   circ->p_digest = tmp_cpath->b_digest;
   circ->p_crypto = tmp_cpath->b_crypto;
+  tmp_cpath->magic = 0;
   tor_free(tmp_cpath);
 
   memcpy(circ->handshake_digest, cell.payload+DH_KEY_LEN, DIGEST_LEN);
@@ -1415,6 +1417,7 @@ onion_append_hop(crypt_path_t **head_ptr, routerinfo_t *choice) {
   /* link hop into the cpath, at the end. */
   onion_append_to_cpath(head_ptr, hop);
 
+  hop->magic = CRYPT_PATH_MAGIC;
   hop->state = CPATH_STATE_CLOSED;
 
   hop->port = choice->or_port;

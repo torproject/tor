@@ -181,6 +181,7 @@ circuit_free_cpath_node(crypt_path_t *victim) {
     crypto_free_digest_env(victim->b_digest);
   if (victim->handshake_state)
     crypto_dh_free(victim->handshake_state);
+  victim->magic = 0xDEADBEEFu;
   tor_free(victim);
 }
 
@@ -456,6 +457,8 @@ void assert_cpath_layer_ok(const crypt_path_t *cp)
 {
 //  tor_assert(cp->addr); /* these are zero for rendezvous extra-hops */
 //  tor_assert(cp->port);
+  tor_assert(cp);
+  tor_assert(cp->magic == CRYPT_PATH_MAGIC);
   switch (cp->state)
     {
     case CPATH_STATE_OPEN:
