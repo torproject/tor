@@ -245,6 +245,18 @@ int
 options_act(void) {
   struct config_line_t *cl;
   or_options_t *options = get_options();
+  static int libevent_initialized = 0;
+
+  /* XXXX009 We once had a reason to separate start_daemon and finish_daemon:
+   *    It let us have the parent process stick around until we were sure Tor
+   *    was started.  Should we make start_daemon get called earlier? -NM */
+  if (options->RunAsDaemon) {
+    start_daemon(options->DataDirectory);
+  }
+  if (!libevent_initialized) {
+    event_init();
+    libevent_initialized = 1;
+  }
 
   clear_trusted_dir_servers();
   for (cl = options->DirServers; cl; cl = cl->next) {
@@ -301,13 +313,6 @@ options_act(void) {
   }
 
   /* Start backgrounding the process, if requested. */
-
-  /* XXXX009 We once had a reason to separate start_daemon and finish_daemon:
-   *    It let us have the parent process stick around until we were sure Tor
-   *    was started.  Should we make start_daemon get called earlier? -NM */
-  if (options->RunAsDaemon) {
-    start_daemon(options->DataDirectory);
-  }
 
   /* Finish backgrounding the process */
   if (options->RunAsDaemon) {

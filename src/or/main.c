@@ -1241,8 +1241,6 @@ static int tor_init(int argc, char *argv[]) {
     return -1;
   }
   atexit(exit_function);
-  event_init(); /* This needs to happen before net stuff. Is it okay if this
-                 * happens before daemonizing? */
 
   if (init_from_config(argc,argv) < 0) {
     log_fn(LOG_ERR,"Reading config failed--see warnings above. For usage, try -h.");
