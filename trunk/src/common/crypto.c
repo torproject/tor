@@ -177,12 +177,15 @@ int crypto_global_cleanup()
   ERR_free_strings();
 #ifdef TOR_IS_MULTITHREADED
   if (_n_openssl_mutexes) {
+    int n = _n_openssl_mutexes;
+    tor_mutex_t **ms = _openssl_mutexes;
     int i;
-    for (i=0;i<_n_openssl_mutexes;++i) {
-      tor_mutex_free(_openssl_mutexes[i]);
-    }
-    tor_free(_openssl_mutexes);
+    _openssl_mutexes = NULL;
     _n_openssl_mutexes = 0;
+    for (i=0;i<n;++i) {
+      tor_mutex_free(ms[i]);
+    }
+    tor_free(ms);
   }
 #endif
   return 0;
@@ -1649,6 +1652,11 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 static void
 _openssl_locking_cb(int mode, int n, const char *file, int line)
 {
+  if (!_openssl_mutexes)
+    /* This is not a really good  fix for the
+     * "release-freed-lock-from-separate-thread-on-shutdown" problem, but
+     * it can't hurt. */
+    return;
   if (mode & CRYPTO_LOCK)
     tor_mutex_acquire(_openssl_mutexes[n]);
   else
