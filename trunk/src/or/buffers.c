@@ -497,7 +497,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           req->port = ntohs(*(uint16_t*)(buf->mem+8));
           buf_remove_from_front(buf, 10);
           if(!have_warned_about_unsafe_socks) {
-            log_fn(LOG_WARN,"Your application (socks5, on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.", req->port);
+            log_fn(LOG_WARN,"Your application (using socks5 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.", req->port);
 //            have_warned_about_unsafe_socks = 1; // (for now, warn every time)
           }
           return 1;
@@ -566,7 +566,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
 
       startaddr = next+1;
       if(socks4_prot != socks4a && !have_warned_about_unsafe_socks) {
-        log_fn(LOG_WARN,"Your application (socks4, on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.", req->port);
+        log_fn(LOG_WARN,"Your application (using socks4 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.", req->port);
 //      have_warned_about_unsafe_socks = 1; // (for now, warn every time)
       }
       if(socks4_prot == socks4a) {
