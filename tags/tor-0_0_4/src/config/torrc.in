@@ -1,0 +1,32 @@
+# Configuration file for a typical tor user
+
+# List of routers. Tor nodes start out knowing about the directory
+# servers, and from them they get a list of currently up nodes.
+RouterFile @CONFDIR@/dirservers
+
+# Comment out if you don't want to allow applications to connect.
+SocksPort 9050
+SocksBindAddress 127.0.0.1 # accept connections only from localhost
+
+##################### Below is just for servers #####################
+
+## NOTE: If you enable these, you won't be able to use tor as a client
+## or server until you've been added to the directory and can
+## authenticate to the other nodes. See the README for details.
+
+## The directory for keeping all the keys/etc for this server
+#DataDirectory @LOCALSTATEDIR@/lib/tor
+
+#Nickname moria # A unique handle for this server
+#Address moria.seul.org # The fqdn for this server
+
+#ORPort 9001 # where to listen for tor connections
+#ORBindAddress 0.0.0.0 # accept connections from anywhere
+
+## A comma-separated list of exit policies. If you want to *replace*
+## the default exit policy, end this with either a reject *:* or an
+## accept *:*. Otherwise, you're *augmenting* (prepending to) the
+## default exit policy. Leave commented to just use the default.
+#ExitPolicy accept 18.244.0.188:25,accept 18.244.0.114:25
+#ExitPolicy reject *:*
+
