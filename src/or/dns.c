@@ -115,14 +115,11 @@ int dns_resolve(connection_t *exitconn) {
   uint32_t now = time(NULL);
   assert_connection_ok(exitconn, 0);
 
-  /* XXX leave disabled for dirservers so we can find the conn-munging bug */
-  if(!options.DirPort) {
-    /* first check if exitconn->address is an IP. If so, we already
-     * know the answer. */
-    if (tor_inet_aton(exitconn->address, &in) != 0) {
-      exitconn->addr = ntohl(in.s_addr);
-      return 1;
-    }
+  /* first check if exitconn->address is an IP. If so, we already
+   * know the answer. */
+  if (tor_inet_aton(exitconn->address, &in) != 0) {
+    exitconn->addr = ntohl(in.s_addr);
+    return 1;
   }
 
   /* then take this opportunity to see if there are any expired
@@ -143,6 +140,7 @@ int dns_resolve(connection_t *exitconn) {
         resolve->pending_connections = pending_connection;
         log_fn(LOG_DEBUG,"Connection (fd %d) waiting for pending DNS resolve of '%s'",
                exitconn->s, exitconn->address);
+        exitconn->state = EXIT_CONN_STATE_RESOLVING;
         return 0;
       case CACHE_STATE_VALID:
         exitconn->addr = resolve->addr;
@@ -166,6 +164,7 @@ int dns_resolve(connection_t *exitconn) {
   pending_connection->conn = exitconn;
   pending_connection->next = NULL;
   resolve->pending_connections = pending_connection;
+  exitconn->state = EXIT_CONN_STATE_RESOLVING;
 
   /* add us to the linked list of resolves */
   if (!oldest_cached_resolve) {
@@ -182,6 +181,8 @@ int dns_resolve(connection_t *exitconn) {
 static int assign_to_dnsworker(connection_t *exitconn) {
   connection_t *dnsconn;
   unsigned char len;
+
+  assert(exitconn->state == EXIT_CONN_STATE_RESOLVING);
 
   spawn_enough_dnsworkers(); /* respawn here, to be sure there are enough */
 
@@ -376,8 +377,10 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
     pend = resolve->pending_connections;
     assert_connection_ok(pend->conn,time(NULL));
     pend->conn->addr = resolve->addr;
-    /* prevent double-remove */
+
+    /* prevent double-remove. (this may get changed below.) */
     pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
+
     if(resolve->state == CACHE_STATE_FAILED) {
       pendconn = pend->conn; /* don't pass complex things to the
                                 connection_mark_for_close macro */
