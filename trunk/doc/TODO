@@ -27,7 +27,7 @@ Bugs:
         . fix buffer unit test so it passes
 
 Short-term:
-        - put IP into the descriptor, so clients don't need to resolve things
+        o put IP into the descriptor, so clients don't need to resolve things
         o when you hup, rewrite the router.desc file (and maybe others)
         - consider handling broken socks4 implementations
         - improve how it behaves when i remove a line from the approved-routers files
