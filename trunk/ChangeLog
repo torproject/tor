@@ -33,7 +33,7 @@ pre5:
       client/server over a socket, and get/set config options, receive
       notifications of circuits and streams starting/finishing/dying,
       bandwidth used, etc. The next step is to get some GUIs working.
-      Let us know if you want to help out.
+      Let us know if you want to help out. See doc/control-spec.txt .
     - Ship a contrib/tor-control.py as an example script to interact
       with the control port.
     - "tor --hash-password zzyxz" will output a salted password for
