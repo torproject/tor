@@ -1,4 +1,29 @@
 Changes so far in 0.0.9:
+rc5:
+  o Bugfixes on 0.0.8.1:
+    - Disallow NDEBUG. We don't ever want anybody to turn off debug.
+    - Let resolve conns retry/expire also, rather than sticking around
+      forever.
+
+  o Bugfixes on 0.0.9pre:
+    - Fix integer underflow in tor_vsnprintf() that may be exploitable;
+      thanks to Ilja van Sprundel for finding it. People running 0.0.9pre5
+      or later might want to upgrade while we investigate.
+    - If anybody set DirFetchPostPeriod, give them StatuFetchPeriod
+      instead.  Impose minima and maxima for all *Period options; impose
+      even tighter maxima for fetching if we are a caching dirserver.
+      Clip rather than rejecting.
+    - Fetch cached running-routers from servers that serve it (that is,
+      authdirservers, and servers running 0.0.9rc5-cvs or later.)
+
+  o Features:
+    - Accept *:706 (silc) in default exit policy.
+    - Implement new versioning format for post 0.1.
+    - Support "foo.nickname.exit" addresses, to let Alice request the
+      address "foo" as viewed by exit node "nickname". Based on a patch
+      by Geoff Goodell.
+    - Make tor --version --version dump the cvs $Id$ of every file.
+
 rc4:
   o Bugfixes on 0.0.8.1:
     - Make windows sockets actually non-blocking (oops), and handle
