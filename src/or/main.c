@@ -4,7 +4,7 @@
 
 #include "or.h"
 
-/********* START PROTOTYPES **********/
+/********* PROTOTYPES **********/
 
 static void dumpstats(int severity); /* log stats */
 static int init_from_config(int argc, char **argv);
@@ -33,6 +33,14 @@ static int please_dumpstats=0; /* whether we should dump stats during the loop *
 static int please_reset=0; /* whether we just got a sighup */
 static int please_reap_children=0; /* whether we should waitpid for exited children */
 #endif /* signal stuff */
+
+int has_fetched_directory=0;
+/* we set this to 1 when we've fetched a dir, to know whether to complain
+ * yet about unrecognized nicknames in entrynodes, exitnodes, etc. */
+
+int has_completed_circuit=0;
+/* we set this to 1 when we've opened a circuit, so we can print a log
+ * entry to inform the user that Tor is working. */
 
 /********* END VARIABLES ************/
 

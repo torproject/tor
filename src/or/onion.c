@@ -157,6 +157,8 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   return 0;
 }
 
+extern int has_fetched_directory;
+
 static void add_nickname_list_to_smartlist(smartlist_t *sl, char *list) {
   char *start,*end;
   char nick[MAX_NICKNAME_LEN];
@@ -170,10 +172,14 @@ static void add_nickname_list_to_smartlist(smartlist_t *sl, char *list) {
     memcpy(nick,start,end-start);
     nick[end-start] = 0; /* null terminate it */
     router = router_get_by_nickname(nick);
-    if(router && router->is_running)
-      smartlist_add(sl,router);
-    else
-      log_fn(LOG_WARN,"Nickname list includes '%s' which isn't a known router.",nick);
+    if (router) {
+      if (router->is_running)
+        smartlist_add(sl,router);
+      else
+        log_fn(LOG_WARN,"Nickname list includes '%s' which is known but down.",nick);
+    } else
+      log_fn(has_fetched_directory ? LOG_WARN : LOG_INFO,
+             "Nickname list includes '%s' which isn't a known router.",nick);
     while(isspace(*end) || *end==',') end++;
     start = end;
   }
