@@ -138,7 +138,7 @@ server <a href="#server">below</a>.</p>
 href="http://freehaven.net/tor/dist/">here</a>.</p>
 
 <p>If you got Tor from a tarball, unpack it: <tt>tar xzf
-tor-0.0.7.tar.gz; cd tor-0.0.7</tt>. Run <tt>./configure</tt>, then
+tor-0.0.9.tar.gz; cd tor-0.0.9</tt>. Run <tt>./configure</tt>, then
 <tt>make</tt>, and then <tt>make install</tt> (as root if necessary). Then
 you can launch tor from the command-line by running <tt>tor</tt>.</p>
 
@@ -149,7 +149,7 @@ href="http://www.slproweb.com/products/Win32OpenSSL.html">OpenSSL
 libeay32.dll.) You might also want to run Tor in a dos window,
 so you can see its logs, and see its error messages if it
 crashes. If you don't want the default configuration, fetch the <a
-href="http://freehaven.net/tor/cvs/src/config/torrc.sample.in">torrc</a>, edit it,
+href="http://freehaven.net/tor/cvs/tor/src/config/torrc.sample.in">torrc</a>, edit it,
 and use <tt>tor.exe -f torrc</tt>.</p>
 
 <p>Otherwise, if you got it prepackaged (e.g. in the <a
@@ -251,8 +251,9 @@ href="http://moria.seul.org:9031/">here</a> or <a
 href="http://62.116.124.106:9030/">here</a> and look at the
 running-routers line to see if your server is part of the network.</p>
 
-<p>You may find the initscript in contrib/tor.sh useful if you
-want to set up Tor to start at boot.</p>
+<p>You may find the initscripts in contrib/tor.sh or contrib/torctl
+useful if you want to set up Tor to start at boot. Let us know which
+script you found more useful.</p>
 
 <a name="hidden-service"></a>
 <h2>Configuring a hidden service</h2>
@@ -283,8 +284,8 @@ you may want to set up your own separate Tor network.
 
 <p>
 To set up your own Tor network, you need to run your own directory
-servers, and you need to change the tarball so it points to your directory
-servers rather than the default ones.
+servers, and you need to configure each client and server so it knows
+about your directory servers rather than the default ones.
 
 <ul>
 <li>1: Grab the latest release. Use at least 0.0.9pre5.
@@ -301,14 +302,11 @@ the default place, or <tt>tor -f torrc --list-fingerprint</tt> to
 specify one. This will generate your keys and output a fingerprint
 line.
 </ul>
-<li>3: Create the new dirservers file. You do this by concatenating the
-"router.desc" files from each dirserver's DataDirectory: <tt>cat router1.desc
-router2.desc ... &gt; dirservers</tt>
-<li>4a: Now you need to teach clients and servers to use the new
+<li>3: Now you need to teach clients and servers to use the new
 dirservers. For each fingerprint, add a line like<br>
 <tt>DirServer 18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF</tt><br>
 to the torrc of each client and server who will be using your network.
-<li>5: Create a file called approved-routers in the DataDirectory
+<li>4: Create a file called approved-routers in the DataDirectory
 of each directory server. Collect the 'fingerprint' lines from
 each server (including directory servers), and include them (one per
 line) in each approved-routers file. You can hup the tor process for
