@@ -148,6 +148,8 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
 
   if(!circ) {
     log_fn(LOG_WARN,"no circ. Closing.");
+    assert(fromconn);
+    fromconn->marked_for_close = 1;
     return -1;
   }
 
