@@ -17,6 +17,11 @@
 
 int have_failed = 0;
 
+/* These functions are file-local, but are exposed so we can test. */
+int router_get_routerlist_from_directory_impl(
+        const char *s, routerlist_t **dest, crypto_pk_env_t *pkey);
+void add_fingerprint_to_dir(const char *nickname, const char *fp);
+
 void
 dump_hex(char *s, int len)
 {
@@ -667,6 +672,7 @@ test_dir_format()
   r2.link_pkey = pk2;
   r2.bandwidthrate = r2.bandwidthburst = 3000;
   r2.exit_policy = &ex1;
+  r2.nickname = "Fred";
 
   test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
                                                     &pk1_str_len));
@@ -740,22 +746,27 @@ test_dir_format()
   test_assert(rp2->exit_policy->next->next == NULL);
 #endif
 
-#if 0
-  /* XXX To re-enable this test, we need to separate directory generation
-   * XXX from the directory backend again.  Do this the next time we have
-   * XXX directory trouble. */
   /* Okay, now for the directories. */
-  dir1 = (directory_t*) tor_malloc(sizeof(directory_t));
-  dir1->n_routers = 2;
-  dir1->routers = (routerinfo_t**) tor_malloc(sizeof(routerinfo_t*)*2);
-  dir1->routers[0] = &r1;
-  dir1->routers[1] = &r2;
-  test_assert(! dump_signed_directory_to_string_impl(buf, 4096, dir1, pk1));
-  /* puts(buf); */
-
-  test_assert(! router_get_dir_from_string_impl(buf, &dir2, pk1));
-  test_eq(2, dir2->n_routers);
-#endif
+  crypto_pk_get_fingerprint(pk2, buf);
+  add_fingerprint_to_dir("Magri", buf);
+  crypto_pk_get_fingerprint(pk1, buf);
+  add_fingerprint_to_dir("Fred", buf);
+  /* Make sure routers aren't too far in the past any more. */
+  r1.published_on = time(NULL);
+  r2.published_on = time(NULL)-3*60*60;
+  test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
+  cp = buf;
+  test_eq(dirserv_add_descriptor((const char**)&cp), 1);
+  test_assert(router_dump_router_to_string(buf, 2048, &r2, pk1)>0);
+  cp = buf;
+  test_eq(dirserv_add_descriptor((const char**)&cp), 1);
+  extern or_options_t options;
+  options.Nickname = "DirServer";
+  test_assert(!dirserv_dump_directory_to_string(buf,8192,pk3));
+  cp = buf;
+  test_assert(!router_get_routerlist_from_directory_impl(buf, &dir1, pk3));
+  test_eq(2, dir1->n_routers);
+  dirserv_free_fingerprint_list();
 
   tor_free(pk1_str);
   tor_free(pk2_str);
@@ -763,7 +774,7 @@ test_dir_format()
   if (pk2) crypto_free_pk_env(pk2);
   if (rp1) routerinfo_free(rp1);
   if (rp2) routerinfo_free(rp2);
-  tor_free(dir1); /* And more !*/
+  tor_free(dir1); /* XXXX And more !*/
   tor_free(dir2); /* And more !*/
 
   /* make sure is_recommended_version() works */
