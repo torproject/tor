@@ -1,5 +1,4 @@
 improve how it behaves when i remove a line from the approved-routers files
-on hup, retry_all_connections (plus binding? and closing i guess. hm.)
 
 Legend:
 SPEC!!  - Not specified
@@ -43,22 +42,22 @@ Short-term:
         . integrate rep_ok functions, see what breaks
         - update tor faq
         o obey SocksBindAddress, ORBindAddress
-        - warn if we're running as root
+        o warn if we're running as root
         o make connection_flush_buf() more obviously obsolete
         o let hup reread the config file, eg so we can get new exit
           policies without restarting
         o Put recommended_versions in a config entry
-        - use times(2) rather than gettimeofday to measure how long it
+        X use times(2) rather than gettimeofday to measure how long it
           takes to process a cell
         o Separate trying to rebuild a circuit because you have none from trying 
           to rebuild a circuit because the current one is stale
         X Continue reading from socks port even while waiting for connect.
-        . Exit policies
+        o Exit policies
                 o Spec how to write the exit policies
-                . Path selection algorithms
+                o Path selection algorithms
                         o Choose path more incrementally
-                        - Let user request first/last node
-                        - And disallow certain nodes
+                        o Let user request first/last node
+                        o And disallow certain nodes
                         D Choose path by jurisdiction, etc?
                 o Make relay end cells have failure status and payload attached
         X let non-approved routers handshake.
@@ -129,12 +128,12 @@ ARMA    - Reduce streamid footprint from 7 bytes to 2 bytes
                 - Move length into the stream header too
                 - Spec the stream_id stuff. Clarify that nobody on the backward
                   stream should look at stream_id.
-        . Put CPU workers in separate processes
+        o Put CPU workers in separate processes
                 o Handle multiple cpu workers (one for each cpu, plus one)
                 o Queue for pending tasks if all workers full
                 o Support the 'process this onion' task
                 D Merge dnsworkers and cpuworkers to some extent
-                - Handle cpuworkers dying
+                o Handle cpuworkers dying
         . Scrubbing proxies
                 - Find an smtp proxy?
                         - Check the old smtp proxy code
@@ -142,7 +141,7 @@ ARMA    - Reduce streamid footprint from 7 bytes to 2 bytes
                 D Wait until there are packet redirectors for Linux
                 . Get socks4a support into Mozilla
         . Develop rendezvous points
-SPEC!!          - Handle socks commands other than connect, eg, bind?
+                X Handle socks commands other than connect, eg, bind?
                 o Design
                 - Spec
                 - Implement
@@ -169,11 +168,11 @@ NICK    . Daemonize and package
                 - deal with pollhup / reached_eof on all platforms
                 o openssl randomness
                 o inet_ntoa
-                . stdint.h
+                o stdint.h
                 - Make a script to set up a local network on your machine
-        - More flexibility in node addressing
+        o More flexibility in node addressing
                 D Support IPv6 rather than just 4
-                - Handle multihomed servers (config variable to set IP)
+                o Handle multihomed servers (config variable to set IP)
 
 In the distant future:
         D Load balancing between router twins
