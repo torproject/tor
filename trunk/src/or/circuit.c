@@ -584,7 +584,8 @@ void circuit_close(circuit_t *circ) {
   for(conn=circ->p_streams; conn; conn=conn->next_stream) {
     connection_send_destroy(circ->p_circ_id, conn); 
   }
-  if (circ->state != CIRCUIT_STATE_OPEN && circ->cpath) {
+  if (circ->state == CIRCUIT_STATE_BUILDING ||
+      circ->state == CIRCUIT_STATE_OR_WAIT) {
     /* If we never built the circuit, note it as a failure. */
     circuit_increment_failure_count();
   }
@@ -719,8 +720,10 @@ int circuit_launch_new(void) {
   if(!options.SocksPort) /* we're not an application proxy. no need for circuits. */
     return -1;
 
-  if(n_circuit_failures > 5) /* too many failed circs in a row. don't try. */
+  if(n_circuit_failures > 5) { /* too many failed circs in a row. don't try. */
+//    log_fn(LOG_INFO,"%d failures so far, not trying.",n_circuit_failures);
     return -1;
+  }
 
   /* try a circ. if it fails, circuit_close will increment n_circuit_failures */
   circuit_establish_circuit();
@@ -730,6 +733,7 @@ int circuit_launch_new(void) {
 
 void circuit_increment_failure_count(void) {
   ++n_circuit_failures;
+  log_fn(LOG_DEBUG,"n_circuit_failures now %d.",n_circuit_failures);
 }
 
 void circuit_reset_failure_count(void) {
