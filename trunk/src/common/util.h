@@ -147,6 +147,7 @@ void smartlist_add(smartlist_t *sl, void *element);
 void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2);
 void smartlist_remove(smartlist_t *sl, void *element);
 int smartlist_isin(const smartlist_t *sl, void *element);
+int smartlist_string_isin(const smartlist_t *sl, const char *element);
 int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
