@@ -48,7 +48,7 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn, int *tim
   time_passed = tv_udiff(&start, &end) ;
 
   if (time_passed > 10000) { /* more than 10ms */
-    log_fn(LOG_INFO,"That call just took %ld ms.",time_passed/1000);
+    log_fn(LOG_DEBUG,"That call just took %ld ms.",time_passed/1000);
   }
   *time += time_passed;
 }

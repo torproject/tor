@@ -1394,7 +1394,7 @@ int is_legal_nickname_or_hexdigest(const char *s);
 routerinfo_t *router_pick_directory_server(int requireauth, int requireothers);
 int all_directory_servers_down(void);
 struct smartlist_t;
-void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list);
+void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list, int warn_if_down);
 routerinfo_t *routerlist_find_my_routerinfo(void);
 int router_nickname_matches(routerinfo_t *router, const char *nickname);
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl);

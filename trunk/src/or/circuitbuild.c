@@ -435,6 +435,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   int old_format;
   char *onionskin;
   char *id_digest=NULL;
+  routerinfo_t *router;
 
   if(circ->n_conn) {
     log_fn(LOG_WARN,"n_conn already set. Bug/attack. Closing.");
@@ -458,6 +459,11 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   if (old_format) {
     n_conn = connection_exact_get_by_addr_port(circ->n_addr,circ->n_port);
     onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
+    if(!n_conn) { /* hunt around for it a bit before giving up */
+      router = router_get_by_addr_port(circ->n_addr, circ->n_port);
+      if(router)
+        n_conn = connection_get_by_identity_digest(router->identity_digest, CONN_TYPE_OR);
+    }
   } else {
     onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
     id_digest = cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
@@ -468,7 +474,6 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
      /* Note that this will close circuits where the onion has the same
      * router twice in a row in the path. I think that's ok.
      */
-    routerinfo_t *router;
     struct in_addr in;
     in.s_addr = htonl(circ->n_addr);
     log_fn(LOG_INFO,"Next router (%s:%d) not connected. Connecting.",
@@ -803,7 +808,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
   routerinfo_t *router;
 
   preferredentries = smartlist_create();
-  add_nickname_list_to_smartlist(preferredentries,options.EntryNodes);
+  add_nickname_list_to_smartlist(preferredentries,options.EntryNodes,1);
 
   get_connection_array(&carray, &n_connections);
 
@@ -892,10 +897,10 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
          n_best_support, best_support, n_pending_connections);
 
   preferredexits = smartlist_create();
-  add_nickname_list_to_smartlist(preferredexits,options.ExitNodes);
+  add_nickname_list_to_smartlist(preferredexits,options.ExitNodes,1);
 
   excludedexits = smartlist_create();
-  add_nickname_list_to_smartlist(excludedexits,options.ExcludeNodes);
+  add_nickname_list_to_smartlist(excludedexits,options.ExcludeNodes,0);
 
   sl = smartlist_create();
 
@@ -1177,7 +1182,7 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
          state->desired_path_len);
 
   excludednodes = smartlist_create();
-  add_nickname_list_to_smartlist(excludednodes,options.ExcludeNodes);
+  add_nickname_list_to_smartlist(excludednodes,options.ExcludeNodes,0);
 
   if(cur_len == state->desired_path_len - 1) { /* Picking last node */
     choice = router_get_by_digest(state->chosen_exit_digest);

@@ -152,7 +152,9 @@ int all_directory_servers_down(void) {
  * nicknames in <b>list</b> name routers in our routerlist that are
  * currently running.  Add the routerinfos for those routers to <b>sl</b>.
  */
-void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list) {
+void
+add_nickname_list_to_smartlist(smartlist_t *sl, const char *list, int warn_if_down)
+{
   const char *start,*end;
   char nick[MAX_HEX_NICKNAME_LEN+1];
   routerinfo_t *router;
@@ -177,7 +179,8 @@ void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list) {
       if (router->is_running)
         smartlist_add(sl,router);
       else
-        log_fn(LOG_WARN,"Nickname list includes '%s' which is known but down.",nick);
+        log_fn(warn_if_down ? LOG_WARN : LOG_DEBUG,
+               "Nickname list includes '%s' which is known but down.",nick);
     } else
       log_fn(has_fetched_directory ? LOG_WARN : LOG_INFO,
              "Nickname list includes '%s' which isn't a known router.",nick);
@@ -284,7 +287,7 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
   SMARTLIST_FOREACH(bandwidths, uint32_t*, p, tor_free(p));
   smartlist_free(bandwidths);
   router = smartlist_get(sl, i);
-  log_fn(LOG_INFO,"Picked %s.", router->nickname);
+//  log_fn(LOG_INFO,"Picked %s.", router->nickname);
   return router;
 }
 
@@ -304,11 +307,11 @@ routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
   routerinfo_t *choice;
 
   excludednodes = smartlist_create();
-  add_nickname_list_to_smartlist(excludednodes,excluded);
+  add_nickname_list_to_smartlist(excludednodes,excluded,0);
 
   /* try the preferred nodes first */
   sl = smartlist_create();
-  add_nickname_list_to_smartlist(sl,preferred);
+  add_nickname_list_to_smartlist(sl,preferred,1);
   smartlist_subtract(sl,excludednodes);
   if(excludedsmartlist)
     smartlist_subtract(sl,excludedsmartlist);
