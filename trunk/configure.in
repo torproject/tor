@@ -146,9 +146,9 @@ AC_CHECK_HEADERS(event.h, , AC_MSG_ERROR(Libevent header (event.h) not found. To
 
 dnl These headers are not essential
 
-AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h)
+AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h pthread.h)
 
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy strtoull getpwnam ftello)
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy strtoull getpwnam ftello pthread_create)
 AC_FUNC_FSEEKO
 
 AC_CHECK_MEMBERS([struct timeval.tv_sec])
