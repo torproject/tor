@@ -56,10 +56,11 @@ const char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
     "", /* 4 */
     "awaiting dest info",         /* app, 5 */
     "waiting for rendezvous desc",     /* 6 */
-    "waiting for safe circuit",        /* 7 */
-    "waiting for connected",           /* 8 */
-    "waiting for resolve",             /* 9 */
-    "open" },                          /* 10 */
+    "waiting for controller",          /* 7 */
+    "waiting for safe circuit",        /* 8 */
+    "waiting for connected",           /* 9 */
+    "waiting for resolve",             /* 10 */
+    "open" },                          /* 11 */
   { "ready" }, /* dir listener, 0 */
   { "",                           /* dir, 0 */
     "connecting",                      /* 1 */
