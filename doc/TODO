@@ -12,16 +12,19 @@ ARMA    - arma claims
         X Abandoned
 
 Flag-day changes: (things which are backward incompatible)
-        . remove link key from directories, from connection_t.
+        o remove link key from directories, from connection_t.
           (just get it from the tls cert)
-        . make onion keys include oaep padding, so you can tell
+	o Generate link keys on startup; don't store them to disk.
+        o make onion keys include oaep padding, so you can tell
           if you decrypted it correctly
+	- Rotate onion keys as needed
+	- Rotate TLS connections
+	- Set expiration times on X509 certs
         . add bandwidthrate and bandwidthburst to server descriptor
         - directories need to say who signed them.
         - what other pieces of the descriptors need to change?
           maybe add a section for who's connected to a given router?
           add a flexible section for reputation info?
-
 
 Bugs:
         o we call signal(), but we should be calling sigaction()
