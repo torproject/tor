@@ -372,13 +372,15 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   } /* else socks handshake is done, continue processing */
 
   if (socks->command == SOCKS_COMMAND_RESOLVE) {
+    uint32_t answer;
     /* Reply to resolves immediately if we can. */
     if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
       conn->socks_request->has_finished = 1;
       connection_mark_for_close(conn);
+      return 0;
     }
-    uint32_t answer = htonl(client_dns_lookup_entry(socks->address));
+    answer = htonl(client_dns_lookup_entry(socks->address));
     if (answer) {
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
                                              (char*)&answer);

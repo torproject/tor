@@ -409,9 +409,6 @@ int fetch_from_buf_http(buf_t *buf,
   return 1;
 }
 
-#define SOCKS_COMMAND_CONNECT 0x01
-#define SOCKS_COMMAND_RESOLVE 0xF0
-
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"
