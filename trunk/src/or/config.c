@@ -4,16 +4,6 @@
 
 #include "or.h"
 
-const char *basename(const char *filename) {
-  char *result;
-  /* XXX This won't work on windows. */
-  result = strrchr(filename, '/');
-  if (result)
-    return result;
-  else
-    return filename;
-}
-
 /* open configuration file for reading */
 FILE *config_open(const unsigned char *filename) {
   assert(filename);
@@ -189,6 +179,7 @@ void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "MaxOnionsPending",CONFIG_TYPE_INT, &options->MaxOnionsPending) ||
     config_compare(list, "NewCircuitPeriod",CONFIG_TYPE_INT, &options->NewCircuitPeriod) ||
     config_compare(list, "TotalBandwidth",  CONFIG_TYPE_INT, &options->TotalBandwidth) ||
+    config_compare(list, "NumCpus",         CONFIG_TYPE_INT, &options->NumCpus) ||
 
     config_compare(list, "OnionRouter",     CONFIG_TYPE_BOOL, &options->OnionRouter) ||
     config_compare(list, "Daemon",          CONFIG_TYPE_BOOL, &options->Daemon) ||
@@ -214,7 +205,6 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   FILE *cf;
   char fname[256];
   int i;
-  const char *cmd;
   int result = 0;
 
 /* give reasonable values for each option. Defaults to zero. */
@@ -228,11 +218,12 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->MaxOnionsPending = 10;
   options->NewCircuitPeriod = 60; /* once a minute */
   options->TotalBandwidth = 800000; /* at most 800kB/s total sustained incoming */
+  options->NumCpus = 1;
 //  options->ReconnectPeriod = 6001;
 
 /* get config lines from /etc/torrc and assign them */
-  cmd = basename(argv[0]);
-  snprintf(fname,256,"/etc/%src",cmd);
+#define rcfile "torrc"
+  snprintf(fname,256,"/etc/%s",rcfile);
 
   cf = config_open(fname);
   if(cf) {

@@ -842,8 +842,9 @@ static int router_add_exit_policy(routerinfo_t *router,
   newe->address = strdup(arg);
   newe->port = strdup(colon+1);
 
-  log(LOG_DEBUG,"router_add_exit_policy(): type %d, address '%s', port '%s'.",
-      newe->policy_type, newe->address, newe->port);
+  log(LOG_DEBUG,"router_add_exit_policy(): %s %s:%s",
+      newe->policy_type == EXIT_POLICY_REJECT ? "reject" : "accept",
+      newe->address, newe->port);
 
   /* now link newe onto the end of exit_policy */
 

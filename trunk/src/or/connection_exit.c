@@ -51,13 +51,17 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   circ->n_streams = n_stream;
 
   /* send it off to the gethostbyname farm */
-  if(dns_resolve(n_stream) < 0) {
-    log_fn(LOG_DEBUG,"Couldn't queue resolve request.");
-    connection_remove(n_stream);
-    connection_free(n_stream);
-    return 0;
+  switch(dns_resolve(n_stream)) {
+    case 1: /* resolve worked */
+      if(connection_exit_connect(n_stream) >= 0)
+        return 0;
+      /* else fall through */
+    case -1: /* resolve failed */
+      log_fn(LOG_DEBUG,"Couldn't queue resolve request.");
+      connection_remove(n_stream);
+      connection_free(n_stream);
+    case 0: /* resolve added to pending list */
   }
-
   return 0;
 }
 
