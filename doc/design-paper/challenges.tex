@@ -20,14 +20,54 @@
 \institute{The Free Haven Project\\
 \email{\{arma,nickm\}@freehaven.net}}
 
+\maketitle
+\pagestyle{empty}
+
+\begin{abstract}
+foo
+\end{abstract}
+
 \section{Introduction}
+
+Anonymous communication on the Internet today 
+
+
+Tor is a low-latency anonymous communication overlay network
+\cite{tor-design}. We have been operating a publicly deployed Tor network
+since October 2003.
+
+Tor aims to resist observers and insiders by distributing each transaction
+over several nodes in the network.  This ``distributed trust'' approach
+means the Tor network can be safely operated and used by a wide variety
+of mutually distrustful users, providing more sustainability and security
+than previous attempts at anonymizing networks.
+
+The Tor network has a broad range of users, including ordinary citizens
+who want to avoid being profiled for targeted advertisements, corporations
+who don't want to reveal information to their competitors, and law
+enforcement and government intelligence agencies who need
+to do operations on the Internet without being noticed.
+
+Tor has been funded by both the U.S. Navy, for use in securing government
+communications, and also the Electronic Frontier Foundation, for use in
+maintain civil liberties for ordinary citizens online.
+The Tor protocol is one of the leading choices
+to be the anonymizing layer in the European Union's PRIME directive to
+help maintain privacy in Europe. The University of Dresden in Germany
+has integrated an independent implementation of the Tor protocol into
+their popular Java Anon Proxy anonymizing client.  This wide variety of
+interests helps maintain both the stability and the security of the
+network.
+
+
+
 
 We deployed this thing called Tor. it's got all these different types of
 users. it's been backed by navy and eff, and prime and anonymizer looked at
 it. Because we're this cool, you should believe us when we tell you stuff.
 
 In this paper we give the reader an understanding of Tor's context
-in the anonymity space and then we go on to describe the variety of
+in the anonymity space and then we go on to describe the
 practical challenges that stand in the way of moving from a practical
 useful network to a practical useful anonymous network.
 
@@ -41,7 +81,70 @@ useful network to a practical useful anonymous network.
 
 \section{What Is Tor}
 
-Tor works like this.
+\subsection{Distributed trust: safety in numbers}
+
+Tor provides \emph{forward privacy}, so that users can connect to
+Internet sites without revealing their logical or physical locations
+to those sites or to observers.  It also provides \emph{location-hidden
+services}, so that critical servers can support authorized users without
+giving adversaries an effective vector for physical or online attacks.
+Our design provides this protection even when a portion of its own
+infrastructure is controlled by an adversary.
+
+To make private connections in Tor, users incrementally build a path or
+\emph{circuit} of encrypted connections through servers on the network,
+extending it one step at a time so that each server in the circuit only
+learns which server extended to it and which server it has been asked
+to extend to.  The client negotiates a separate set of encryption keys
+for each step along the circuit.
+
+Once a circuit has been established, the client software waits for
+applications to request TCP connections, and directs these application
+streams along the circuit.  Many streams can be multiplexed along a single
+circuit, so applications don't need to wait for keys to be negotiated
+every time they open a connection.  Because each server sees no
+more than one end of the connection, a local eavesdropper or a compromised
+server cannot use traffic analysis to link the connection's source and
+destination.  The Tor client software rotates circuits periodically
+to prevent long-term linkability between different actions by a
+single user.
+
+Tor differs from other deployed systems for traffic analysis resistance
+in its security and flexibility.  Mix networks such as Mixmaster or its
+successor Mixminion \cite{minion-design}
+gain the highest degrees of anonymity at the expense of introducing highly
+variable delays, thus making them unsuitable for applications such as web
+browsing that require quick response times.  Commercial single-hop proxies
+such as {\url{anonymizer.com}} present a single point of failure, where
+a single compromise can expose all users' traffic, and a single-point
+eavesdropper can perform traffic analysis on the entire network.
+Also, their proprietary implementations place any infrastucture that
+depends on these single-hop solutions at the mercy of their providers'
+financial health.  Tor can handle any TCP-based protocol, such as web
+browsing, instant messaging and chat, and secure shell login; and it is
+the only implemented anonymizing design with an integrated system for
+secure location-hidden services.
+
+No organization can achieve this security on its own.  If a single
+corporation or government agency were to build a private network to
+protect its operations, any connections entering or leaving that network
+would be obviously linkable to the controlling organization.  The members
+and operations of that agency would be easier, not harder, to distinguish.
+
+Instead, to protect our networks from traffic analysis, we must
+collaboratively blend the traffic from many organizations and private
+citizens, so that an eavesdropper can't tell which users are which,
+and who is looking for what information.  By bringing more users onto
+the network, all users become more secure \cite{econymics}.
+
+Naturally, organizations will not want to depend on others for their
+security.  If most participating providers are reliable, Tor tolerates
+some hostile infiltration of the network.  For maximum protection,
+the Tor design includes an enclave approach that lets data be encrypted
+(and authenticated) end-to-end, so high-sensitivity users can be sure it
+hasn't been read or modified.  This even works for Internet services that
+don't have built-in encryption and authentication, such as unencrypted
+HTTP or chat, and it requires no modification of those services to do so.
 
 weasel's graph of \# nodes and of bandwidth, ideally from week 0.
 
