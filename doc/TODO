@@ -1,8 +1,4 @@
 
-make connection_flush_buf() more obviously obsolete
-let hup reread the config file, eg so we can get new exit policies without restarting
-use times(2) rather than gettimeofday to measure how long it takes to process a cell
-
 Legend:
 SPEC!!  - Not specified
 SPEC    - Spec not finalized
@@ -16,6 +12,147 @@ ARMA    - arma claims
         X Abandoned
 
 Short-term:
+        . integrate rep_ok functions, see what breaks
+        - update tor faq
+        . obey SocksBindAddress, ORBindAddress
+        - warn if we're running as root
+        - make connection_flush_buf() more obviously obsolete
+        . let hup reread the config file, eg so we can get new exit
+          policies without restarting
+        - use times(2) rather than gettimeofday to measure how long it
+          takes to process a cell
+        . Exit policies
+                o Spec how to write the exit policies
+                - Path selection algorithms
+                        - Let user request certain nodes
+                        - And disallow certain nodes
+                        D Choose path by jurisdiction, etc?
+                - Make relay end cells have failure status and payload attached
+                - Streams that fail due to exit policy must reextend to new node
+                - Add extend_wait state to edge connections, thumb through them
+                  when the AP get an extended cell.
+        - let non-approved routers handshake.
+        - just list approved routers in directory.
+        . migrate to using nickname rather than addr:port for routers
+                o decide_aci_type
+                - generate onion skins
+                  - circuit_send_next_onion_skin
+                  - circuit_extend
+                  - onion_generate_cpath
+                - get_unique_aci_by_addr_port
+                - circ->n_addr and circ->n_port
+                  - circuit_enumerate_by_naddr_nport
+                - cpath layers
+                - connection_or_connect
+                - connection_exact_get_by_addr_port
+                - connection_twin_get_by_addr_port
+                - router_get_by_addr_port
+                - connection_or_init_conn_from_router
+                - tag_pack, tag_unpack, connection_cpu_process_inbuf
+                - directory_initiate_command
+        . Move from onions to ephemeral DH
+                o incremental path building
+                o transition circuit-level sendmes to hop-level sendmes
+                o implement truncate, truncated
+                o move from 192byte DH to 128byte DH, so it isn't so damn slow
+                - exiting from not-last hop
+                        - OP logic to decide to extend/truncate a path
+                        - make sure exiting from the not-last hop works
+                        - logic to find last *open* hop, not last hop, in cpath
+                        - choose exit nodes by exit policies
+
+On-going
+        . Better comments for functions!
+        . Go through log messages, reduce confusing error messages.
+        . make the logs include more info (fd, etc)
+        . Unit tests
+
+Mid-term:
+        . Redo scheduler
+                o fix SSL_read bug for buffered records
+                - make round-robining more fair
+        - What happens when a circuit's length is 1? What breaks?
+        . streams / circuits
+                o Implement streams
+                o Rotate circuits after N minutes?
+                X Circuits should expire when circuit->expire triggers
+NICK            . Handle half-open connections
+                        o openssh is an application that uses half-open connections
+                        o Figure out what causes connections to close, standardize
+                          when we mark a connection vs when we tear it down
+                o Look at what ssl does to keep from mutating data streams
+ARMA    - Reduce streamid footprint from 7 bytes to 2 bytes
+                - Check for collisions in streamid (now possible with
+                  just 2 bytes), and back up & replace with padding if so
+                - Use the 3 saved bytes to put pseudorandomness in each relay cell
+                - Use the 4 reserved bytes in each cell header to keep 1/5
+                  of a sha1 of the relay payload (move into stream header)
+                - Move length into the stream header too
+                - Spec the stream_id stuff. Clarify that nobody on the backward
+                  stream should look at stream_id.
+        . Put CPU workers in separate processes
+                o Handle multiple cpu workers (one for each cpu, plus one)
+                o Queue for pending tasks if all workers full
+                o Support the 'process this onion' task
+                D Merge dnsworkers and cpuworkers to some extent
+                - Handle cpuworkers dying
+        . Scrubbing proxies
+                - Find an smtp proxy?
+                        - Check the old smtp proxy code
+                o Find an ftp proxy? wget --passive
+                D Wait until there are packet redirectors for Linux
+                . Get socks4a support into Mozilla
+        . Develop rendezvous points
+SPEC!!          - Handle socks commands other than connect, eg, bind?
+                o Design
+                - Spec
+                - Implement
+        - Tests
+                o Testing harness/infrastructure
+                D System tests (how?)
+                - Performance tests, so we know when we've improved
+                        . webload infrastructure (Bruce)
+                        . httperf infrastructure (easy to set up)
+                        . oprofile (installed in RH >8.0)
+NICK    . Daemonize and package
+                o Teach it to fork and background
+                - Red Hat spec file
+                - Debian spec file equivalent
+        . Portability
+                . Which .h files are we actually using?
+                . Port to:
+                        o Linux
+                        o BSD
+                        . Solaris
+                        o Cygwin
+                        . Win32
+                        o OS X
+                - deal with pollhup / reached_eof on all platforms
+                o openssl randomness
+                o inet_ntoa
+                . stdint.h
+                - Make a script to set up a local network on your machine
+        - More flexibility in node addressing
+                D Support IPv6 rather than just 4
+                - Handle multihomed servers (config variable to set IP)
+
+In the distant future:
+        D Load balancing between router twins
+                D Keep track of load over links/nodes, to
+                  know who's hosed
+SPEC!!  D Non-clique topologies
+        D Implement our own memory management, at least for common structs
+          (Not ever necessary?)
+        D Advanced directory servers
+                D Automated reputation management
+SPEC!!          D Figure out how to do threshold directory servers
+                D jurisdiction info in dirserver entries? other info?
+
+Older (done) todo stuff:
+
+        o Get tor to act like a socks server
+                o socks4, socks4a
+                o socks5
         o routers have identity key, link key, onion key.
                 o link key certs are
                   D signed by identity key
@@ -44,84 +181,20 @@ Short-term:
           o reads that file upon boot
         o directory includes all routers, up and down
         o add "up" line to directory, listing nicknames
-ARMA    . find an application that uses half-open connections: openssh
         o instruments ORs to report stats
           o average cell fullness
           o average bandwidth used
-        . integrate rep_ok functions, see what breaks
         o configure log files. separate log file, separate severities.
         o what assumptions break if we fclose(0) when we daemonize?
         o make buffer struct elements opaque outside buffers.c
-ARMA    . Go through log messages, reduce confusing error messages.
-ARMA    . make the logs include more info (fd, etc)
         o add log convention to the HACKING file
-        . make 'make install' do the right thing
+        o make 'make install' do the right thing
         o change binary name to tor
         o change config files so you look at commandline, else look in
           /etc/torrc. no cascading.
         o have an absolute datadir with fixed names for files, and fixed-name
           keydir under that with fixed names
-ARMA    - tor faq
-          list all other systems, why we're different.
         o Move (most of) the router/directory code out of main.c
-
-Mid-term:
-        . migrate to using nickname rather than addr:port for routers
-                o decide_aci_type
-                - generate onion skins
-                  - circuit_send_next_onion_skin
-                  - circuit_extend
-                  - onion_generate_cpath
-                - get_unique_aci_by_addr_port
-                - circ->n_addr and circ->n_port
-                  - circuit_enumerate_by_naddr_nport
-                - cpath layers
-                - connection_or_connect
-                - connection_exact_get_by_addr_port
-                - connection_twin_get_by_addr_port
-                - router_get_by_addr_port
-                - connection_or_init_conn_from_router
-                - tag_pack, tag_unpack, connection_cpu_process_inbuf
-                - directory_initiate_command
-        . Redo scheduler
-                o fix SSL_read bug for buffered records
-                - make round-robining more fair
-        - What happens when a circuit's length is 1? What breaks?
-        . streams / circuits
-                o Implement streams
-                o Rotate circuits after N minutes?
-                X Circuits should expire when circuit->expire triggers
-NICK            . Handle half-open connections
-                        o Figure out what causes connections to close, standardize
-                          when we mark a connection vs when we tear it down
-                o Look at what ssl does to keep from mutating data streams
-ARMA    - Reduce streamid footprint from 7 bytes to 2 bytes
-                - Check for collisions in streamid (now possible with
-                  just 2 bytes), and back up & replace with padding if so
-                - Use the 3 saved bytes to put pseudorandomness in each relay cell
-                - Use the 4 reserved bytes in each cell header to keep 1/5
-                  of a sha1 of the relay payload (move into stream header)
-                - Move length into the stream header too
-                - Spec the stream_id stuff. Clarify that nobody on the backward
-                  stream should look at stream_id.
-ARMA    . Exit policies
-                o Spec how to write the exit policies
-                - Path selection algorithms
-                        - Let user request certain nodes
-                        - And disallow certain nodes
-                        D Choose path by jurisdiction, etc?
-                - Make relay end cells have failure status and payload attached
-                - Streams that fail due to exit policy must reextend to new node
-                - Add extend_wait state to edge connections, thumb through them
-                  when the AP get an extended cell.
-SPEC!!  D Non-clique topologies
-        D Implement our own memory management, at least for common structs
-        . Put CPU workers in separate processes
-                o Handle multiple cpu workers (one for each cpu, plus one)
-                o Queue for pending tasks if all workers full
-                o Support the 'process this onion' task
-                D Merge dnsworkers and cpuworkers to some extent
-                - Handle cpuworkers dying
         o Simple directory servers
                 o Include key in source; sign directories
                         o Signed directory backend
@@ -129,89 +202,18 @@ SPEC!!  D Non-clique topologies
                         o Integrate
                 o Add versions to code
                 o Have directories list recommended-versions
-                        o Include (unused) line in directories
+                        o Include line in directories
                         o Check for presence of line.
                         o Quit if running the wrong version
                         o Command-line option to override quit
                 o Add more information to directory server entries
                         o Exit policies
-        D Advanced directory servers
-                D Automated reputation management
-SPEC!!          D Figure out how to do threshold directory servers
-                D jurisdiction info in dirserver entries? other info?
-        . Scrubbing proxies
-                - Find an smtp proxy?
-                        - Check the old smtp proxy code
-                o Find an ftp proxy? wget --passive
-                D Wait until there are packet redirectors for Linux
-                . Get socks4a support into Mozilla
-        . Get tor to act like a socks server
-                o socks4, socks4a
-                o socks5
-SPEC!!          - Handle socks commands other than connect, eg, bind?
-        . Develop rendezvous points
-                o Design
-                - Spec
-                - Implement
-        D Deploy and manage open source development site.
-        . Documentation
-                o Discussion of socks, tsocks, etc
-                o On-the-network protocol
-                        o Onions
-                        o Cells
-                . Better comments for functions!
-        - Tests
-                o Testing harness/infrastructure
-NICK            . Unit tests
-                D System tests (how?)
-                - Performance tests, so we know when we've improved
-                        . webload infrastructure (Bruce)
-                        . httperf infrastructure (easy to set up)
-                        . oprofile (installed in RH >8.0)
-        D Deploy a widespread network
-        D Load balancing between router twins
-                D Keep track of load over links/nodes, to
-                  know who's hosed
-NICK    . Daemonize and package
-                o Teach it to fork and background
-                - Red Hat spec file
-                - Debian spec file equivalent
-        . Portability
-                . Which .h files are we actually using?
-                . Port to:
-                        o Linux
-                        o BSD
-                        . Solaris
-                        o Cygwin
-                        . Win32
-                        o OS X
-                - deal with pollhup / reached_eof on all platforms
-                o openssl randomness
-                o inet_ntoa
-                . stdint.h
-                - Make a script to set up a local network on your machine
-        X Move away from openssl
-                o Abstract out crypto calls
-                X Look at nss, others? Just include code?
         o Clearer bandwidth management 
                 o Do we want to remove bandwidth from OR handshakes?
                 o What about OP handshakes?
-        - More flexibility in node addressing
-                D Support IPv6 rather than just 4
-                - Handle multihomed servers (config variable to set IP)
-        . Move from onions to ephemeral DH
-                o incremental path building
-                o transition circuit-level sendmes to hop-level sendmes
-                o implement truncate, truncated
-                o move from 192byte DH to 128byte DH, so it isn't so damn slow
-                - exiting from not-last hop
-                        - OP logic to decide to extend/truncate a path
-                        - make sure exiting from the not-last hop works
-                        - logic to find last *open* hop, not last hop, in cpath
-                        - choose exit nodes by exit policies
-
-Older (done) todo stuff:
-
+        X Move away from openssl
+                o Abstract out crypto calls
+                X Look at nss, others? Just include code?
         o Use a stronger cipher
                 o aes now, by including the code ourselves
         X On the fly compression of each stream
