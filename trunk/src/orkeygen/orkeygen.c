@@ -8,8 +8,11 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/07/25 08:18:05  badbytes
+ * Updated to use crypto.h instead of OpenSSL.
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.1  2002/01/04 07:19:27  badbytes
  * Key generation utility.
@@ -19,9 +22,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <openssl/rsa.h>
-#include <openssl/err.h>
-#include <openssl/pem.h>
+
+#include "../common/crypto.h"
 
 int main(int argc, char *argv[])
 {
@@ -32,7 +34,7 @@ int main(int argc, char *argv[])
   FILE *f_pr = NULL;
   FILE *f_pu = NULL;
   
-  RSA *rsa_key = NULL;
+  crypto_pk_env_t *env;
  
   int retval = 0;
   
@@ -43,16 +45,24 @@ int main(int argc, char *argv[])
     exit(1);
   }
   
-  /* generate the key */
-  rsa_key = RSA_generate_key(1024,65535,NULL,NULL);
-  if (!rsa_key) /* error has occured */
+  crypto_global_init();
+  
+  env = crypto_new_pk_env(CRYPTO_PK_RSA);
+  if (!env)
   {
-    printf("%s",ERR_reason_error_string(ERR_get_error()));
+    printf("Could not create a crypto environment.");
+    exit(1);
+  }
+  
+  /* generate the key */
+  if (crypto_pk_generate_key(env)) /* error has occured */
+  {
+    printf("%s",crypto_perror());
     exit(1);
   }
   else /* keys generated */
   {
-    retval = RSA_check_key(rsa_key);
+    retval = crypto_pk_check_key(env);
     if (retval == 1)
     {
       printf("Generated key seems to be valid.\n");
@@ -61,7 +71,7 @@ int main(int argc, char *argv[])
       if (!f_pr)
       {
 	perror("fopen");
-	RSA_free(rsa_key);
+	crypto_free_pk_env(env);
 	exit(1);
       }
       
@@ -69,29 +79,27 @@ int main(int argc, char *argv[])
       if (!f_pu)
       {
 	perror("fopen");
-	RSA_free(rsa_key);
+	crypto_free_pk_env(env);
 	exit(1);
       }
       
       /* write the private key */
-      retval = PEM_write_RSAPrivateKey(f_pr,rsa_key,NULL,NULL,0,0,NULL);
-      if (retval == 0)
+      if (crypto_pk_write_private_key(env, f_pr) == -1)
       {
-	printf("%s",ERR_reason_error_string(ERR_get_error()));
+	printf("%s",crypto_perror());
 	fclose(f_pr);
 	fclose(f_pu);
-	RSA_free(rsa_key);
+        crypto_free_pk_env(env);
 	exit(1);
       }
       
       /* write the public key */
-      retval = PEM_write_RSAPublicKey(f_pu,rsa_key);
-      if (retval == 0)
+      if (crypto_pk_write_public_key(env, f_pu) == -1)
       {
-	printf("%s",ERR_reason_error_string(ERR_get_error()));
+	printf("%s",crypto_perror());
 	fclose(f_pr);
 	fclose(f_pu);
-	RSA_free(rsa_key);
+        crypto_free_pk_env(env);
 	exit(1);
       }
       
@@ -100,18 +108,19 @@ int main(int argc, char *argv[])
     else if (retval == 0)
     {
       printf("Generated key seems to be invalid. Exiting.\n");
-      RSA_free(rsa_key);
+      crypto_free_pk_env(env);
       exit(1);
     }
     else if (retval == -1)
     {
-      printf("%s",ERR_reason_error_string(ERR_get_error()));
-      RSA_free(rsa_key);
+      printf("%s",crypto_perror());
+      crypto_free_pk_env(env);
       exit(1);
     }
   }
      
-  RSA_free(rsa_key);
+  crypto_free_pk_env(env);
+  crypto_global_cleanup();
   fclose(f_pu);
   fclose(f_pr);
   exit(0);
