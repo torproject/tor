@@ -754,8 +754,7 @@ static int do_hup(void) {
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate();
-    if (server_mode())
-      dnsworkers_rotate();
+    dnsworkers_rotate();
     /* Rebuild fresh descriptor as needed. */
     router_rebuild_descriptor();
     sprintf(keydir,"%s/router.desc", get_data_directory(&options));
