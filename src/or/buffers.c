@@ -14,13 +14,13 @@ struct buf_t {
   size_t datalen;
 };
 /* Size, in bytes, for newly allocated buffers.  Should be a power of 2. */
-#define INITIAL_BUF_SIZE (4*1024)
+#define INITIAL_BUF_SIZE (512*1024) /* used to be 4*1024 */
 /* Maximum size, in bytes, for resized buffers. */
-#define MAX_BUF_SIZE (640*1024)
+#define MAX_BUF_SIZE (1024*1024)
 /* Size, in bytes, for minimum 'shrink' size for buffers.  Buffers may start
  * out smaller than this, but they will never autoshrink to less
  * than this size. */
-#define MIN_BUF_SHRINK_SIZE (16*1024)
+#define MIN_BUF_SHRINK_SIZE (512*1024) /* used to be 16*1024 */
 #define BUF_OK(b) ((b) && (b)->mem && (b)->datalen <= (b)->len)
 
 /* Change a buffer's capacity.  Must only be called when */
