@@ -13,7 +13,11 @@
 extern or_options_t options; /* command-line and config-file options */
 extern char *conn_state_to_string[][_CONN_TYPE_MAX+1]; /* from connection.c */
 
+static struct exit_policy_t *socks_policy = NULL;
+
 static int connection_ap_handshake_process_socks(connection_t *conn);
+static void parse_socks_policy(void);
+static int socks_policy_permits_address(uint32_t addr);
 
 /** Handle new bytes on conn->inbuf, or notification of eof.
  *
@@ -779,6 +783,38 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
   addr = client_dns_lookup_entry(conn->socks_request->address);
   return router_compare_addr_to_exit_policy(addr,
            conn->socks_request->port, exit->exit_policy);
+}
+
+static void parse_socks_policy(void)
+{
+  struct exit_policy_t *n;
+  if (socks_policy) {
+    exit_policy_free(socks_policy);
+    socks_policy = NULL;
+  }
+  config_parse_exit_policy(options.SocksPolicy, &socks_policy);
+  /* ports aren't used. */
+  for (n=socks_policy; n; n = n->next) {
+    n->prt_min = 1;
+    n->prt_max = 65535;
+  }
+}
+
+int socks_policy_permits_address(uint32_t addr)
+{
+  int a;
+  if (options.SocksPolicy && !socks_policy)
+    parse_socks_policy();
+
+  a = router_compare_addr_to_exit_policy(addr, 1, socks_policy);
+  if (a==-1)
+    return 0;
+  else if (a==0)
+    return 1;
+  else if (a==1) {
+    log_fn(LOG_WARN, "Got unexpected 'maybe' answer from socks policy");
+    return 1;
+  }
 }
 
 /* ***** Client DNS code ***** */

@@ -195,7 +195,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
     config_compare(list, "DebugLogFile",   CONFIG_TYPE_STRING, &options->DebugLogFile) ||
     config_compare(list, "DataDirectory",  CONFIG_TYPE_STRING, &options->DataDirectory) ||
     config_compare(list, "DirPort",        CONFIG_TYPE_INT, &options->DirPort) ||
-    config_compare(list, "DirBindAddress", CONFIG_TYPE_STRING, &options->DirBindAddress) ||
+    config_compare(list, "DirBindAddress", CONFIG_TYPE_LINELIST, &options->DirBindAddress) ||
     config_compare(list, "DirFetchPostPeriod",CONFIG_TYPE_INT, &options->DirFetchPostPeriod) ||
 
     config_compare(list, "ExitNodes",      CONFIG_TYPE_STRING, &options->ExitNodes) ||
@@ -221,7 +221,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
     config_compare(list, "NumCpus",        CONFIG_TYPE_INT, &options->NumCpus) ||
 
     config_compare(list, "ORPort",         CONFIG_TYPE_INT, &options->ORPort) ||
-    config_compare(list, "ORBindAddress",  CONFIG_TYPE_STRING, &options->ORBindAddress) ||
+    config_compare(list, "ORBindAddress",  CONFIG_TYPE_LINELIST, &options->ORBindAddress) ||
 
     config_compare(list, "PidFile",        CONFIG_TYPE_STRING, &options->PidFile) ||
     config_compare(list, "PathlenCoinWeight",CONFIG_TYPE_DOUBLE, &options->PathlenCoinWeight) ||
@@ -233,7 +233,8 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
     config_compare(list, "RendExcludeNodes",CONFIG_TYPE_STRING, &options->RendExcludeNodes) ||
 
     config_compare(list, "SocksPort",      CONFIG_TYPE_INT, &options->SocksPort) ||
-    config_compare(list, "SocksBindAddress",CONFIG_TYPE_STRING,&options->SocksBindAddress) ||
+    config_compare(list, "SocksBindAddress",CONFIG_TYPE_LINELIST,&options->SocksBindAddress) ||
+    config_compare(list, "SocksPolicy",     CONFIG_TYPE_LINELIST,&options->SocksPolicy) ||
 
     config_compare(list, "TrafficShaping", CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
 
@@ -477,14 +478,15 @@ static void free_options(or_options_t *options) {
   tor_free(options->ExcludeNodes);
   tor_free(options->RendNodes);
   tor_free(options->RendExcludeNodes);
-  tor_free(options->ExitPolicy);
-  tor_free(options->SocksBindAddress);
-  tor_free(options->ORBindAddress);
-  tor_free(options->DirBindAddress);
   tor_free(options->RecommendedVersions);
   tor_free(options->User);
   tor_free(options->Group);
   config_free_lines(options->RendConfigLines);
+  config_free_lines(options->SocksBindAddress);
+  config_free_lines(options->ORBindAddress);
+  config_free_lines(options->DirBindAddress);
+  config_free_lines(options->ExitPolicy);
+  config_free_lines(options->SocksPolicy);
 }
 
 /** Set <b>options</b> to hold reasonable defaults for most options. */
@@ -497,10 +499,11 @@ static void init_options(or_options_t *options) {
   options->ExcludeNodes = tor_strdup("");
   options->RendNodes = tor_strdup("");
   options->RendExcludeNodes = tor_strdup("");
-  options->ExitPolicy = tor_strdup("");
-  options->SocksBindAddress = tor_strdup("127.0.0.1");
-  options->ORBindAddress = tor_strdup("0.0.0.0");
-  options->DirBindAddress = tor_strdup("0.0.0.0");
+  options->ExitPolicy = NULL;
+  options->SocksPolicy = NULL;
+  options->SocksBindAddress = NULL;
+  options->ORBindAddress = NULL;
+  options->DirBindAddress = NULL;
   options->RecommendedVersions = NULL;
   options->PidFile = NULL; // tor_strdup("tor.pid");
   options->DataDirectory = NULL;
@@ -805,6 +808,57 @@ void config_init_logs(or_options_t *options)
   if (options->DebugLogFile) {
     log_fn(LOG_WARN, "DebugLogFile is deprecated; use LogFile and LogLevel instead");
     add_file_log(LOG_DEBUG, LOG_ERR, options->DebugLogFile);
+  }
+}
+
+void
+config_parse_exit_policy(struct config_line_t *cfg,
+                         struct exit_policy_t **dest)
+{
+  struct exit_policy_t **nextp;
+  char *e, *s;
+  int last=0;
+  char line[1024];
+
+  if (!cfg)
+    return;
+  nextp = dest;
+  while (*nextp)
+    nextp = &((*nextp)->next);
+
+  for (; cfg; cfg = cfg->next) {
+    s = cfg->value;
+    for (;;) {
+      e = strchr(s,',');
+      if(!e) {
+        last = 1;
+        strncpy(line,s,1023);
+      } else {
+        memcpy(line,s, ((e-s)<1023)?(e-s):1023);
+      line[e-s] = 0;
+      }
+      line[1023]=0;
+      log_fn(LOG_DEBUG,"Adding new entry '%s'",line);
+      *nextp = router_parse_exit_policy_from_string(line);
+      if(*nextp) {
+        nextp = &((*nextp)->next);
+      } else {
+        log_fn(LOG_WARN,"Malformed exit policy %s; skipping.", line);
+      }
+      if (last)
+        break;
+      s = e+1;
+    }
+  }
+}
+
+void exit_policy_free(struct exit_policy_t *p) {
+  struct exit_policy_t *e;
+  while (p) {
+    e = p;
+    p = p->next;
+    tor_free(e->string);
+    tor_free(e);
   }
 }
 

@@ -324,41 +324,6 @@ void router_upload_dir_desc_to_dirservers(void) {
   directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, s, strlen(s));
 }
 
-/** Append the comma-separated sequence of exit policies in <b>s</b> to the
- * exit policy in <b>router</b>. */
-static void router_add_exit_policy_from_config_helper(const char *s, routerinfo_t *router) {
-  char *e;
-  int last=0;
-  char line[1024];
-
-  if(!s) {
-    log_fn(LOG_INFO,"No exit policy configured. Ok.");
-    return; /* nothing to see here */
-  }
-  if(!*s) {
-    log_fn(LOG_INFO,"Exit policy is empty. Ok.");
-    return; /* nothing to see here */
-  }
-
-  for(;;) {
-    e = strchr(s,',');
-    if(!e) {
-      last = 1;
-      strncpy(line,s,1023);
-    } else {
-      memcpy(line,s, ((e-s)<1023)?(e-s):1023);
-      line[e-s] = 0;
-    }
-    line[1023]=0;
-    log_fn(LOG_DEBUG,"Adding new entry '%s'",line);
-    if(router_add_exit_policy_from_string(router,line) < 0)
-      log_fn(LOG_WARN,"Malformed exit policy %s; skipping.", line);
-    if(last)
-      return;
-    s = e+1;
-  }
-}
-
 #define DEFAULT_EXIT_POLICY "reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,accept *:20-22,accept *:53,accept *:79-81,accept *:110,accept *:143,accept *:443,accept *:873,accept *:993,accept *:995,accept *:1024-65535,reject *:*"
 
 /** Set the exit policy on <b>router</b> to match the exit policy in the
@@ -366,14 +331,22 @@ static void router_add_exit_policy_from_config_helper(const char *s, routerinfo_
  * rule, then append the default exit policy as well.
  */
 static void router_add_exit_policy_from_config(routerinfo_t *router) {
-  router_add_exit_policy_from_config_helper(options.ExitPolicy, router);
-  /* XXXX This is wrong; you can spell *:* many ways. -NM
-   * So? If they spell it sneakily, then their exit policy is bulkier. -RD */
-  if(strstr(options.ExitPolicy," *:*") == NULL) {
-    /* if exitpolicy includes a *:* line, then we're done. Else, append
-     * the default exitpolicy. */
-    router_add_exit_policy_from_config_helper(DEFAULT_EXIT_POLICY, router);
+  struct exit_policy_t *ep;
+  struct config_line_t default_policy;
+  config_parse_exit_policy(options.ExitPolicy, &router->exit_policy);
+
+  for (ep = router->exit_policy; ep; ep = ep->next) {
+    if (ep->msk == 0 && ep->prt_min <= 1 && ep->prt_max >= 65535) {
+      /* if exitpolicy includes a *:* line, then we're done. */
+      return;
+    }
   }
+
+  /* Else, append the default exitpolicy. */
+  default_policy.key = NULL;
+  default_policy.value = DEFAULT_EXIT_POLICY;
+  default_policy.next = NULL;
+  config_parse_exit_policy(&default_policy, &router->exit_policy);
 }
 
 /** OR only: Return false if my exit policy says to allow connection to

@@ -777,13 +777,14 @@ typedef struct {
   char *RendExcludeNodes; /**< Comma-separated list of nicknames not to use
                            * as introduction points. */
 
-  char *ExitPolicy; /**< Comma-separated list of exit policy components. */
-  char *SocksBindAddress; /**< Address to bind for listening for SOCKS
-                           * connections. */
-  char *ORBindAddress; /**< Address to bind for listening for OR
-                        * connections. */
-  char *DirBindAddress; /**< Address to bind for listening for directory
-                         * connections. */
+  struct config_line_t *ExitPolicy; /**< Lists of exit policy components. */
+  struct config_line_t *SocksPolicy; /**< Lists of socks policy components */
+  struct config_line_t *SocksBindAddress;
+  /**< Addresses to bind for listening for SOCKS connections. */
+  struct config_line_t *ORBindAddress;
+  /**< Addresses to bind for listening for OR connections. */
+  struct config_line_t *DirBindAddress;
+  /**< Addresses to bind for listening for directory connections. */
   char *RecommendedVersions; /**< Directory server only: which versions of
                               * Tor should we tell users to run? */
   char *User; /**< Name of user to run Tor as. */
@@ -953,6 +954,9 @@ struct config_line_t {
 int config_assign_default_dirservers(void);
 int getconfig(int argc, char **argv, or_options_t *options);
 void config_init_logs(or_options_t *options);
+void config_parse_exit_policy(struct config_line_t *cfg,
+                              struct exit_policy_t **dest);
+void exit_policy_free(struct exit_policy_t *p);
 
 /********************************* connection.c ***************************/
 
@@ -981,8 +985,6 @@ int _connection_mark_for_close(connection_t *conn);
   } while (0)
 
 void connection_expire_held_open(void);
-
-int connection_create_listener(char *bindaddress, uint16_t bindport, int type);
 
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
 int retry_all_connections(void);
@@ -1318,6 +1320,7 @@ int router_parse_routerlist_from_directory(const char *s,
                                            crypto_pk_env_t *pkey);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
+struct exit_policy_t *router_parse_exit_policy_from_string(const char *s);
 
 #endif
 

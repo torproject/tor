@@ -232,8 +232,6 @@ void router_get_routerlist(routerlist_t **prouterlist) {
 /** Free all storage held by <b>router</b>. */
 void routerinfo_free(routerinfo_t *router)
 {
-  struct exit_policy_t *e;
-
   if (!router)
     return;
 
@@ -244,12 +242,7 @@ void routerinfo_free(routerinfo_t *router)
     crypto_free_pk_env(router->onion_pkey);
   if (router->identity_pkey)
     crypto_free_pk_env(router->identity_pkey);
-  while (router->exit_policy) {
-    e = router->exit_policy;
-    router->exit_policy = e->next;
-    tor_free(e->string);
-    free(e);
-  }
+  exit_policy_free(router->exit_policy);
   free(router);
 }
 
