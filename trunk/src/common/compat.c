@@ -390,6 +390,23 @@ int switch_id(char *user, char *group) {
   return -1;
 }
 
+#ifdef HAVE_PWD_H
+/** Allocate and return a string containing the home directory for the
+ * user <b>username</b>. Only works on posix-like systems */
+char *
+get_user_homedir(const char *username)
+{
+  struct passwd *pw;
+  tor_assert(username);
+
+  if (!(pw = getpwnam(username))) {
+    log_fn(LOG_ERR,"User '%s' not found.", username);
+    return NULL;
+  }
+  return tor_strdup(pw->pw_dir);
+}
+#endif
+
 /** Set *addr to the IP address (in dotted-quad notation) stored in c.
  * Return 1 on success, 0 if c is badly formatted.  (Like inet_aton(c,addr),
  * but works on Windows and Solaris.)
