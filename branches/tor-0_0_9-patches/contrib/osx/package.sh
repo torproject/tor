@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Helpful info:
+#   http://developer.apple.com/documentation/DeveloperTools/Conceptual/SoftwareDistribution/index.html
+#   man packagemaker
+
 if [ "XX$VERSION" = 'XX' ]; then
   echo "VERSION not set."
   exit 1
