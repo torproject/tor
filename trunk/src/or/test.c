@@ -465,6 +465,7 @@ test_util() {
 }
 
 void test_onion() {
+#if 0
   char **names;
   int i,num;
 
@@ -477,6 +478,7 @@ void test_onion() {
   for(i=0;i<num;i++)
     tor_free(names[i]);
   tor_free(names);
+#endif
 }
 
 void

@@ -152,11 +152,12 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   return 0;
 }
 
-char **parse_nickname_list(char *list, int *num) {
+#if 0
+static char **parse_nickname_list(char *list, int *num) {
   char **out;
   char *start,*end;
   int i;
-   
+
   while(isspace(*list)) list++;
 
   i=0, start = list;
@@ -175,11 +176,34 @@ char **parse_nickname_list(char *list, int *num) {
     strncpy(out[i],start,end-start);
     out[i][end-start] = 0; /* null terminate it */
     i++;
-    while(*end && isspace(*end)) end++;
+    while(isspace(*end)) end++;
     start = end;
   }
   *num = i;
-  return out;  
+  return out;
+}
+#endif
+
+static void add_nickname_list_to_smartlist(smartlist_t *sl, char *list) {
+  char *start,*end;
+  char nick[MAX_NICKNAME_LEN];
+  routerinfo_t *router;
+
+  while(isspace(*list) || *list==',') list++;
+
+  start = list;
+  while(*start) {
+    end=start; while(*end && !isspace(*end) && *end != ',') end++;
+    memcpy(nick,start,end-start);
+    nick[end-start] = 0; /* null terminate it */
+    router = router_get_by_nickname(nick);
+    if(router && router->is_running)
+      smartlist_add(sl,router);
+    else
+      log_fn(LOG_WARN,"Nickname list includes '%s' which isn't a known router.",nick);
+    while(isspace(*end) || *end==',') end++;
+    start = end;
+  }
 }
 
 static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
@@ -412,6 +436,28 @@ static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
   return num;
 }
 
+/* prototypes for smartlist operations from routerlist.h
+ * they're here to prevent precedence issues with the .h files
+ */
+void router_add_running_routers_to_smartlist(smartlist_t *sl);
+
+static void remove_twins_from_smartlist(smartlist_t *sl, routerinfo_t *twin) {
+  int i;
+  routerinfo_t *r;
+
+  if(twin == NULL)
+    return;
+
+/* XXX abstraction violation: this function reaches inside smartlist :( */
+  for(i=0; i < sl->num_used; i++) {
+    r = sl->list[i];
+    if (!crypto_pk_cmp_keys(r->onion_pkey, twin->onion_pkey)) {
+      sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
+      i--; /* so we process the new i'th element */
+    }
+  }
+}
+
 int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, routerinfo_t **router_out)
 {
   int cur_len;
@@ -419,7 +465,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   routerinfo_t *r;
   routerinfo_t *choice;
   int i;
-  int n_failures;
+  smartlist_t *sl;
 
   assert(head_ptr);
   assert(router_out);
@@ -437,31 +483,10 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
            state->desired_path_len);
     return 1; 
   }
-  log_fn(LOG_DEBUG, "Path is %d long; we want %d", cur_len, 
+  log_fn(LOG_DEBUG, "Path is %d long; we want %d", cur_len,
          state->desired_path_len);
 
-  n_failures = 0;
-  goto start;
- again:
-  log_fn(LOG_DEBUG, "Picked an already-selected router for hop %d; retrying.",
-         cur_len);
-  ++n_failures;
-  if (n_failures == 50) {
-    /* XXX hack to prevent infinite loop. Ideally we should build a list
-     * of acceptable choices and then choose from it. */
-    log_fn(LOG_INFO, "Unable to continue generating circuit path");
-    return -1;
-  }
- start:
-  /* XXX through each of these, don't pick nodes that are down */
-  if(cur_len == 0) { /* picking entry node */
-    log_fn(LOG_DEBUG, "Contemplating first hop: random choice.");
-    choice = router_pick_randomly_from_running();
-    if(!choice) {
-      log_fn(LOG_WARN,"No routers are running while picking entry node. Failing.");
-      return -1;
-    }
-  } else if (cur_len == state->desired_path_len - 1) { /* Picking last node */
+  if(cur_len == state->desired_path_len - 1) { /* Picking last node */
     log_fn(LOG_DEBUG, "Contemplating last hop: choice already made.");
     choice = router_get_by_nickname(state->chosen_exit);
     if(!choice) {
@@ -469,34 +494,46 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
              state->chosen_exit);
       return -1;
     }
+  } else if(cur_len == 0) { /* picking first node */
+    /* try the nodes in EntryNodes first */
+    sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+    add_nickname_list_to_smartlist(sl,options.EntryNodes);
+    remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
+    choice = smartlist_choose(sl);
+    smartlist_free(sl);
+    if(!choice) {
+      sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+      router_add_running_routers_to_smartlist(sl);
+      remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
+      choice = smartlist_choose(sl);
+      smartlist_free(sl);
+    }
+    if(!choice) {
+      log_fn(LOG_WARN,"No acceptable routers while picking entry node. Failing.");
+      return -1;
+    }
   } else {
     log_fn(LOG_DEBUG, "Contemplating intermediate hop: random choice.");
-    choice = router_pick_randomly_from_running();
+    sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+    router_add_running_routers_to_smartlist(sl);
+    remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
+    for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {
+      r = router_get_by_addr_port(cpath->addr, cpath->port);
+      assert(r);
+      remove_twins_from_smartlist(sl,r);
+    }
+    choice = smartlist_choose(sl);
+    smartlist_free(sl);
+
     if(!choice) {
-      log_fn(LOG_WARN,"No routers are running while picking intermediate node. Failing.");
+      log_fn(LOG_WARN,"No acceptable routers while picking intermediate node. Failing.");
       return -1;
     }
   }
-  log_fn(LOG_DEBUG,"Contemplating router %s for hop %d (exit is %s)",
+
+  log_fn(LOG_DEBUG,"Chose router %s for hop %d (exit is %s)",
          choice->nickname, cur_len, state->chosen_exit);
-  if (cur_len != state->desired_path_len-1 && 
-      !strcasecmp(choice->nickname, state->chosen_exit)) {
-    /* make sure we don't pick the exit for another node in the path */
-    goto again;
-  }
 
-  for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {
-    r = router_get_by_addr_port(cpath->addr, cpath->port);
-    assert(r);
-    if (!crypto_pk_cmp_keys(r->onion_pkey, choice->onion_pkey))
-      goto again; /* same key -- it or a twin is already chosen */
-    if (options.ORPort &&
-        !(connection_twin_get_by_addr_port(choice->addr, choice->or_port)))
-      goto again; /* this node is not connected to us. */
-
-  }
-
-  /* Okay, so we haven't used 'choice' before. */
   hop = (crypt_path_t *)tor_malloc_zero(sizeof(crypt_path_t));
 
   /* link hop into the cpath, at the end. */
