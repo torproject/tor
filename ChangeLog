@@ -1,3 +1,10 @@
+Changes in version 0.0.9.1 - 2004-12-15
+  o Bugfixes on 0.0.9:
+    - Make hibernation actually work.
+    - Make HashedControlPassword config option work.
+    - When we're reporting event circuit status to a controller,
+      don't use the stream status code.
+
 
 Changes in version 0.0.9 - 2004-12-12
   o Bugfixes on 0.0.8.1 (Crashes and asserts):
