@@ -680,7 +680,7 @@ int router_rebuild_descriptor(int force) {
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
   ri->or_port = options->ORPort;
-  ri->dir_port = (hibernating || !check_whether_dirport_reachable()) ?
+  ri->dir_port = hibernating ?
                  0 : options->DirPort;
   ri->published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from main thread */
@@ -830,7 +830,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     router->nickname,
     router->address,
     router->or_port,
-    router->dir_port,
+    check_whether_dirport_reachable ? router->dir_port : 0,
     router->platform,
     published,
     fingerprint,
