@@ -592,25 +592,21 @@ int retry_all_listeners(void) {
   return 0;
 }
 
-extern int global_read_bucket;
+extern int global_read_bucket, global_write_bucket;
 
 /** How many bytes at most can we read onto this connection? */
 int connection_bucket_read_limit(connection_t *conn) {
   int at_most;
 
-  if(options.LinkPadding) {
-    at_most = global_read_bucket;
+  /* do a rudimentary round-robin so one circuit can't hog a connection */
+  if(connection_speaks_cells(conn)) {
+    at_most = 32*(CELL_NETWORK_SIZE);
   } else {
-    /* do a rudimentary round-robin so one circuit can't hog a connection */
-    if(connection_speaks_cells(conn)) {
-      at_most = 32*(CELL_NETWORK_SIZE);
-    } else {
-      at_most = 32*(RELAY_PAYLOAD_SIZE);
-    }
-
-    if(at_most > global_read_bucket)
-      at_most = global_read_bucket;
+    at_most = 32*(RELAY_PAYLOAD_SIZE);
   }
+
+  if(at_most > global_read_bucket)
+    at_most = global_read_bucket;
 
   if(connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN)
     if(at_most > conn->receiver_bucket)
@@ -620,7 +616,7 @@ int connection_bucket_read_limit(connection_t *conn) {
 }
 
 /** We just read num_read onto conn. Decrement buckets appropriately. */
-void connection_bucket_decrement(connection_t *conn, int num_read) {
+static void connection_read_bucket_decrement(connection_t *conn, int num_read) {
   global_read_bucket -= num_read; tor_assert(global_read_bucket >= 0);
   if(connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
     conn->receiver_bucket -= num_read; tor_assert(conn->receiver_bucket >= 0);
@@ -648,6 +644,7 @@ static struct timeval current_time;
 void connection_bucket_init(void) {
   tor_gettimeofday(&current_time);
   global_read_bucket = options.BandwidthBurst; /* start it at max traffic */
+  global_write_bucket = options.BandwidthBurst; /* start it at max traffic */
 }
 
 /** Some time has passed; increment buckets appropriately. */
@@ -662,10 +659,14 @@ void connection_bucket_refill(struct timeval *now) {
   current_time.tv_sec = now->tv_sec; /* update current_time */
   /* (ignore usecs for now) */
 
-  /* refill the global bucket */
+  /* refill the global buckets */
   if(global_read_bucket < options.BandwidthBurst) {
     global_read_bucket += options.BandwidthRate;
     log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
+  }
+  if(global_write_bucket < options.BandwidthBurst) {
+    global_write_bucket += options.BandwidthRate;
+    log_fn(LOG_DEBUG,"global_write_bucket now %d.", global_write_bucket);
   }
 
   /* refill the per-connection buckets */
@@ -680,6 +681,8 @@ void connection_bucket_refill(struct timeval *now) {
 
     if(conn->wants_to_read == 1 /* it's marked to turn reading back on now */
        && global_read_bucket > 0 /* and we're allowed to read */
+       && global_write_bucket > 0 /* and we're allowed to write (XXXX,
+                                   * not the best place to check this.) */
        && (!connection_speaks_cells(conn) ||
            conn->state != OR_CONN_STATE_OPEN ||
            conn->receiver_bucket > 0)) {
@@ -815,7 +818,7 @@ static int connection_read_to_buf(connection_t *conn) {
     rep_hist_note_bytes_read(result, time(NULL));
   }
 
-  connection_bucket_decrement(conn, result);
+  connection_read_bucket_decrement(conn, result);
   return 0;
 }
 
@@ -946,6 +949,8 @@ int connection_handle_write(connection_t *conn) {
   if(result > 0 && !is_local_IP(conn->addr)) { /* remember it */
     rep_hist_note_bytes_written(result, now);
   }
+
+  global_write_bucket -= result;
 
   if(!connection_wants_to_flush(conn)) { /* it's done flushing */
     if(connection_finished_flushing(conn) < 0) {

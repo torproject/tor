@@ -630,10 +630,16 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
 {
   time_t now;
   size_t z_len;
+  char filename[512];
   tor_assert(!options.AuthoritativeDir);
   now = time(NULL);
-  if (when>cached_directory_published &&
-      when<now+ROUTER_ALLOW_SKEW) {
+  if (when<=cached_directory_published) {
+    log_fn(LOG_INFO, "Ignoring old directory; not caching.");
+  } else if (when>=now+ROUTER_ALLOW_SKEW) {
+    log_fn(LOG_INFO, "Ignoring future directory; not caching.");
+  } if (when>cached_directory_published &&
+        when<now+ROUTER_ALLOW_SKEW) {
+    log_fn(LOG_DEBUG, "Caching directory.");
     tor_free(cached_directory);
     cached_directory = tor_strdup(directory);
     cached_directory_len = strlen(cached_directory);
@@ -644,6 +650,12 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
       log_fn(LOG_WARN,"Error compressing cached directory");
     }
     cached_directory_published = when;
+    if(get_data_directory(&options)) {
+      sprintf(filename,"%s/cached-directory", get_data_directory(&options));
+      if(write_str_to_file(filename,cached_directory) < 0) {
+        log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
+      }
+    }
   }
 }
 

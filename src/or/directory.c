@@ -210,6 +210,7 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
 static void directory_send_command(connection_t *conn, int purpose,
                                    const char *payload, int payload_len) {
   char fetchwholedir[] = "GET / HTTP/1.0\r\n\r\n";
+  char fetchwholedir_z[] = "GET /dir.z HTTP/1.0\r\n\r\n";
   char fetchrunninglist[] = "GET /running-routers HTTP/1.0\r\n\r\n";
   char tmp[8192];
 
@@ -288,11 +289,12 @@ parse_http_url(char *headers, char **url)
  * Otherwise, return -1.
  */
 static int
-parse_http_response(char *headers, int *code, char **message, time_t *date)
+parse_http_response(char *headers, int *code, char **message, time_t *date,
+                    int *compression)
 {
   int n1, n2;
-  const char *cp;
   char datestr[RFC1123_TIME_LEN+1];
+  smartlist_t *parsed_headers;
   tor_assert(headers && code);
 
   while(isspace((int)*headers)) headers++; /* tolerate leading whitespace */
@@ -307,22 +309,40 @@ parse_http_response(char *headers, int *code, char **message, time_t *date)
   if(message) {
     /* XXX should set *message correctly */
   }
+  parsed_headers = smartlist_create();
+  smartlist_split_string(parsed_headers, headers, "\n",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
   if (date) {
-    cp = headers;
     *date = 0;
-    while (cp && (cp = strchr(cp, '\n'))) {
-      ++cp;
-      strlcpy(datestr, cp, 7);
-      if (strcmpstart(cp, "Date: ") == 0) {
-        strlcpy(datestr, cp+6, sizeof(datestr));
+    SMARTLIST_FOREACH(parsed_headers, const char *, s,
+      if (!strcmpstart(s, "Date: ")) {
+        strlcpy(datestr, s+6, sizeof(datestr));
         /* This will do nothing on failure, so we don't need to check
            the result.   We shouldn't warn, since there are many other valid
            date formats besides the one we use. */
         parse_rfc1123_time(datestr, date);
         break;
-      }
+      });
+  }
+  if (compression) {
+    const char *enc = NULL;
+    SMARTLIST_FOREACH(parsed_headers, const char *, s,
+      if (!strcmpstart(s, "Content-Encoding: ")) {
+        enc = s+16; break;
+      });
+    if (!enc || strcmp(enc, "identity")) {
+      *compression = 0;
+    } else if (!strcmp(enc, "deflate") || !strcmp(enc, "x-deflate")) {
+      *compression = ZLIB_METHOD;
+    } else if (!strcmp(enc, "gzip") || !strcmp(enc, "x-gzip")) {
+      *compression = GZIP_METHOD;
+    } else {
+      log_fn(LOG_WARN, "Unrecognized content encoding: '%s'", enc);
+      *compression = 0;
     }
   }
+  SMARTLIST_FOREACH(parsed_headers, char *, s, tor_free(s));
+  smartlist_free(parsed_headers);
 
   return 0;
 }
@@ -342,6 +362,7 @@ connection_dir_client_reached_eof(connection_t *conn)
   int status_code;
   time_t now, date_header=0;
   int delta;
+  int compression;
 
   switch(fetch_from_buf_http(conn->inbuf,
                              &headers, MAX_HEADERS_SIZE,
@@ -355,7 +376,8 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* case 1, fall through */
   }
 
-  if(parse_http_response(headers, &status_code, NULL, &date_header) < 0) {
+  if(parse_http_response(headers, &status_code, NULL, &date_header,
+                         &compression) < 0) {
     log_fn(LOG_WARN,"Unparseable headers. Closing.");
     free(body); free(headers);
     return -1;
@@ -370,6 +392,19 @@ connection_dir_client_reached_eof(connection_t *conn)
     } else {
       log_fn(LOG_INFO, "Time on received directory is within tolerance; we are %d seconds skewed.  (That's okay.)", delta);
     }
+  }
+
+  if (compression != 0) {
+    char *new_body;
+    size_t new_len;
+    if (tor_gzip_uncompress(&new_body, &new_len, body, body_len, compression)) {
+      log_fn(LOG_WARN, "Unable to decompress HTTP body.");
+      tor_free(body); tor_free(headers);
+      return -1;
+    }
+    tor_free(body);
+    body = new_body;
+    body_len = (int)new_len;
   }
 
   if(conn->purpose == DIR_PURPOSE_FETCH_DIR) {
@@ -545,8 +580,8 @@ directory_handle_command_get(connection_t *conn, char *headers,
     return 0;
   }
 
-  if(!strcmp(url,"/")) { /* directory fetch */
-    dlen = dirserv_get_directory(&cp, 0);
+  if(!strcmp(url,"/") || !strcmp(url,"/dir.z")) { /* directory fetch */
+    dlen = dirserv_get_directory(&cp, !strcmp(url,"/dir.z"));
 
     if(dlen == 0) {
       log_fn(LOG_WARN,"My directory is empty. Closing.");
@@ -556,9 +591,10 @@ directory_handle_command_get(connection_t *conn, char *headers,
 
     log_fn(LOG_DEBUG,"Dumping directory to client.");
     format_rfc1123_time(date, time(NULL));
-    snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
+    snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\nContent-Encoding: %s\r\n\r\n",
              date,
-             (int)dlen);
+             (int)dlen,
+             strcmp(url,"/dir.z")?"identity":"deflate");
     connection_write_to_buf(tmp, strlen(tmp), conn);
     connection_write_to_buf(cp, strlen(cp), conn);
     return 0;

@@ -12,32 +12,46 @@ ARMA    - arma claims
         X Abandoned
 
       0.0.9:
-        - the user interface interface
-        - let tor clients use http proxies for dir fetching
-        - let tor servers use http proxies for port 80 exits
-        - write instructions for port-forwarding directives or programs
+        o Fix OutboundBindAddress
+        o Config defaults should be consistant with config file and no
+          config file.
+        o write instructions for port-forwarding directives or programs
           to let people run on ports 80 and 443 without needing to bind
           tor to them.
+        o clean up all the comma-separated stuff (eg exit policies) into
+          smartlists.
+        o investigate sctp for alternate transport.
+ 	o Document all undocumented options, or mark them as undocumented
+	  in the source.
+        o bandwidth buckets for write as well as read.
+        . Cached-directory changes:
+            o make clients store the cached-directory to disk,
+            o and use it when they startup, so they don't need to bootstrap
+              from the authdirservers every time they start.
+            - also, once we've reduced authdirserver entries to config
+              lines, we can have lines that list cacheddirservers too.
+        . compress the directory.
+	    o Implement gzip/zlib wrappers
+	    o Compress directories as they're cached/generated
+	    o When requested, give a compressed directory.
+	    o Decompress incoming HTTP based on Content-Encoding
+	    - Once dirservers are running new code, make clients
+	      request compressed directories.  (Alternative: Switch
+	      to HTTP/1.1 and use Allowed-Encoding.  Is that really
+	      what we want?)
+N       - switch dirservers entries to config lines.
+N       - let tor clients use http proxies for dir fetching
+N       - per-month byte allowances.
+Nr      - figure out how to handle rendezvousing with unverified nodes.
+Nr      - figure out enclaves, e.g. so we know what to recommend that people
+          do, and so running a tor server on your website is helpful.
+        - node 'groups' that are known to be in the same zone of control.
+        - let tor servers use http proxies for port 80 exits
+        - the user interface interface
+        - add ipv6 support.
         - learn from ben about his openssl-reinitialization-trick to
           rotate tls keys without making new connections.
-        - figure out how to handle rendezvousing with unverified nodes.
-        - clean up all the comma-separated stuff (eg exit policies) into
-          smartlists.
-        - per-month byte allowances.
-        - node 'groups' that are known to be in the same zone of control.
-        - figure out enclaves, e.g. so we know what to recommend that people
-          do, and so running a tor server on your website is helpful.
-        - compress the directory.
-        - switch dirservers entries to config lines.
-        - investigate sctp for alternate transport.
-        - nt services on win32.
-        - bandwidth buckets for write as well as read.
-        - make clients store the cached-directory to disk, and use it
-          when they startup, so they don't need to bootstrap from the
-          authdirservers every time they start. also, once we've reduced
-          authdirserver entries to config lines, we can have lines that
-          list cacheddirservers too.
-        - add ipv6 support.
+        D nt services on win32.
 
       0.0.8:
         - fix sprintf's to snprintf's?
@@ -94,6 +108,7 @@ NICK    . unify similar config entries that need to be split. put them
         - if destination IP is running a tor node, extend a circuit there
           before sending begin.
 * don't do this for now. figure out how enclaves work. but do enclaves soon.
+        - Track max ten-second b/w ever seen, to show operator
 
       more features, complex:
         - compress the directory. client sends http header
