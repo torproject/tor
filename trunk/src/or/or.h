@@ -1197,6 +1197,7 @@ void directory_has_arrived(void);
 int authdir_mode(void);
 int clique_mode(void);
 int server_mode(void);
+advertised_server_mode(void);
 int exit_server_mode(void);
 int proxy_mode(void);
 
