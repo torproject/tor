@@ -622,7 +622,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
              (int)dlen,
              deflated?"deflate":"identity");
     connection_write_to_buf(tmp, strlen(tmp), conn);
-    connection_write_to_buf(cp, strlen(cp), conn);
+    connection_write_to_buf(cp, dlen, conn);
     return 0;
   }
 
