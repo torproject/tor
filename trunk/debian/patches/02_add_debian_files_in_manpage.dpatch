@@ -31,8 +31,8 @@ diff -urNad tor-0.0.9pre5/doc/tor.1.in /tmp/dpep.E9VjWB/tor-0.0.9pre5/doc/tor.1.
  .I @LOCALSTATEDIR@/lib/tor/
  The tor process stores keys and other data here.
 +.TP
-+.I /var/log/tor/log
-+The tor server logs to this file.
++.I /var/log/tor/
++The tor server logs to this directory.
 +.TP
 +.I /var/run/tor/tor.pid
 +The PID of the tor (master) process is stored in this file.
