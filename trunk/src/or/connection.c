@@ -385,11 +385,17 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
 
   news = accept(conn->s,(struct sockaddr *)&remote,&remotelen);
   if (news == -1) { /* accept() error */
-    if(ERRNO_IS_EAGAIN(tor_socket_errno(conn->s))) {
+    int e = tor_socket_errno(conn->s);
+    if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
       return 0; /* he hung up before we could accept(). that's fine. */
+    } else if (ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e)) {
+      log_fn(LOG_WARN,"accept failed: %s. Dropping incomming connection.",
+             tor_socket_strerror(e));
+      return 0;
     }
     /* else there was a real error. */
-    log_fn(LOG_WARN,"accept() failed. Closing listener.");
+    log_fn(LOG_WARN,"accept() failed: %s. Closing listener.", 
+           tor_socket_strerror(e));
     connection_mark_for_close(conn);
     return -1;
   }
