@@ -1,0 +1,357 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%deffont "standard" xfont "comic sans ms-medium-r"
+%%deffont "thick" xfont "arial black-medium-r"
+%%deffont "typewriter" xfont "courier new-bold-r"
+%%deffont "type2writer" xfont "arial narrow-bold-r"
+%%deffont "standard"   tfont "standard.ttf",   tmfont "kochi-mincho.ttf"
+%%deffont "thick"      tfont "thick.ttf",      tmfont "goth.ttf"
+%%deffont "typewriter" tfont "typewriter.ttf", tmfont "goth.ttf"
+%deffont "standard" xfont "helvetica-medium-r", tfont "arial.ttf", tmfont "times.ttf"
+%deffont "thick" xfont "helvetica-bold-r", tfont "arialbd.ttf", tmfont "hoso6.ttf"
+%deffont "italic" xfont "helvetica-italic-r", tfont "ariali.ttf", tmfont "hoso6.ttf"
+%deffont "typewriter" xfont "courier-medium-r", tfont "typewriter.ttf", tmfont "hoso6.ttf"
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Default settings per each line numbers.
+%%
+%default 1 leftfill, size 8, fore "black", back "white", font "thick", hgap 1
+%default 2 size 8, vgap 10, prefix " ", ccolor "black"
+%default 3 size 6, bar "gray70", vgap 0
+%default 4 size 6, fore "black", vgap 0, prefix " ", font "standard"
+%%
+%%default 1 area 90 90, leftfill, size 9, fore "yellow", back "blue", font "thick"
+%%default 2 size 9, vgap 10, prefix " "
+%%default 3 size 7, bar "gray70", vgap 10
+%%default 4 size 7, vgap 30, prefix " ", font "standard"
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Default settings that are applied to TAB-indented lines.
+%%
+%tab 1 size 5, vgap 40, prefix "     ", icon arc "red" 50
+%tab 2 size 4, vgap 35, prefix "            ", icon delta3 "blue" 40
+%tab 3 size 3, vgap 35, prefix "                        ", icon dia "DarkViolet" 40
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+%nodefault
+%center, size 9, font "thick", back "white", fore "black"
+
+Tor: 
+%size 8
+Next-generation Onion Routing
+
+
+%size 7
+Roger Dingledine
+Nick Mathewson
+Paul Syverson
+
+The Free Haven Project
+%font "typewriter", fore "blue"
+http://freehaven.net/
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Low-latency anonymity system
+
+%leftfill
+Deployed: 20 nodes, hundreds (?) of users
+
+Many improvements on earlier design
+
+Free software -- modified BSD license
+
+Design is not covered by earlier onion routing
+patent
+
+Uses SOCKS to interface with client apps
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+We have working code
+
+(14 kloc of C)
+
+and a design document,
+and a byte-level specification,
+and a Debian package (in Unstable)
+
+Works on Linux, BSD, OSX, Cygwin, ...
+User-space, doesn't need kernel mods or root
+
+%size 9
+http://freehaven.net/tor/
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%page
+%%
+%%Talk Overview
+%%
+%%A bit about Onion Routing
+%%
+%%Improvements we've made
+%%
+%%Some related work
+%%
+%%Ask me questions
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Anonymity: Who needs it?
+
+Private citizens
+	advocacy, counseling, whistleblowing, reporting, ...
+%size 6
+Higher-level protocols
+	voting, e-cash, auctions
+%size 6
+Government applications
+	research, law enforcement
+%size 6
+Business applications
+%size 5
+(hide relationships and volumes of communication)
+	Who is visiting job sites?
+	Which groups are talking to patent lawyers?
+	Who are your suppliers and customers?
+	Is the CEO talking to a buyout partner?
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Anonymity is a network effect
+
+	Systems need traffic (many low-sensitivity users) to attract the high-sensitivity users
+	Most users do not value anonymity much
+	Weak security (fast system) can mean more users
+		which can mean 
+%cont, font "italic"
+stronger 
+%cont, font "standard"
+anonymity
+	High-sensitivity agents have incentive to run nodes
+		so they can be certain first node in their path is good
+		to attract traffic for their messages
+	There can be an optimal level of free-riding
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Onion Routing is...
+
+An overlay network
+
+Users build virtual circuits through the network
+
+One layer of encryption at each hop
+
+Fixed-size cells
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Tor's goals
+
+Conservative design
+	minimize new design work needed
+
+%size 6
+Support testing of future research
+
+Design for deployment; deploy for use
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Threat model -- what we aim for
+
+Protect against somebody watching Alice
+
+Protect against curious Bob
+
+Protect against `some' curious nodes in the middle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Differences / limitations
+
+
+We're TCP-only, not all IP (but we're user-space and very portable)
+
+Not as strong as high-latency systems (Mixmaster, Mixminion)
+
+Not peer-to-peer
+
+No protocol normalization
+
+Not unobservable (no steg, etc)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Perfect forward secrecy
+
+
+Telescoping circuit
+
+	negotiates keys at each hop
+	no more need for replay detection
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+No mixing, padding, traffic shaping (yet)
+
+
+Please show us they're worth the usability tradeoff
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%page
+%%
+%%Many TCP streams can share one circuit
+%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Many TCP streams share a circuit
+
+Previous designs built a new circuit for each stream
+
+	lots of public key ops per request
+	plus anonymity dangers from making so many circuits
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Leaky-pipe circuit topology
+
+Alice can direct cells to any node in her circuit
+
+	So we can support long-range padding,
+	have multiple streams exiting at different places in the circuit
+	etc
+
+%size 6
+Unclear whether this is dangerous or useful
+
+More research needed
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Congestion control
+
+
+Simple rate limiting
+
+Plus have to keep internal nodes from overflowing
+
+(Can't use global state or inter-node control)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Directory servers
+
+To solve the `introduction' problem
+
+Approve new servers
+
+Tell clients who's up right now
+
+	plus their keys, location, etc
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Variable exit policies
+
+
+Each server allows different outgoing connections
+
+E.g. no servers allow outgoing mail currently
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+End-to-end integrity checking
+
+
+In previous onion routing, an insider could change
+the text being transmitted:
+
+"dir" => "rm *"
+
+Even an external adversary could do this!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Rendezvous points
+
+allow hidden services
+
+don't need (brittle) reply onions
+
+	Access-controlled: Bob can control who he talks to
+	Robust: Bob's service is available even when some Tor nodes go down
+	Smear-resistant: Evil service can't frame a rendezvous router
+	Application-transparent: Don't need to modify Bob's apache
+
+%size 6
+(Not implemented yet)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+How do we compare security?
+
+Assume adversary owns c of n nodes
+	can choose which
+%size 6
+What's the chance for a random Alice and Bob that he wins?
+
+Freedom, Tor: (c/n)^2
+Peekabooty, six-four, etc: c/n
+Jap (if no padding): 1 if c>1
+Anonymizer: 1 if c>0
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+Future work
+
+Threshold directory agreement
+
+Scalability: Morphmix/p2p extensions?
+Restricted-route (non-clique topology)
+
+Non-TCP transport
+
+Implement rendezvous points
+
+Make it work better
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%page
+
+We have working code
+
+Plus a design document,
+and a byte-level specification
+and a Debian package (in Unstable)
+
+%size 9
+http://freehaven.net/tor/
+
+%size 6
+Privacy Enhancing Technologies workshop
+
+%size 9
+http://petworkshop.org/
+
