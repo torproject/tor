@@ -1300,7 +1300,7 @@ static uint32_t client_dns_lookup_entry(const char *address)
     return ntohl(in.s_addr);
   }
   ent = strmap_get_lc(client_dns_map,address);
-  if (!ent && !ent->addr) {
+  if (!ent || !ent->addr) {
     log_fn(LOG_DEBUG, "No entry found for address %s", address);
     return 0;
   } else {
