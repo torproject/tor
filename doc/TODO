@@ -10,15 +10,13 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-Tor 0.0.9rc1:
-   o Weasel wants to say 50GB rather than 50000000 in config ints.
-   o Nick wants to say "1 hour" instead of 3600 in config ints.
-   o Better hibernation flexibility
-     o Add hibernation intervals for weeks, days.
-     o Start at a time other than 0:00 GMT.
-     o Document
-   o Integrate NT service patch
+For 0.0.9:
+   - bring tor-spec up to date
+   - cache and serve running-routers on other nodes?
+   - pump up periods for fetching things
    . make loglevels info,debug less noisy
+   - fix dfc/weasel's intro point bug
+   - add goodell's .exit tld
 
 Beyond 0.0.9:
    - server descriptor declares min log level, clients avoid servers
