@@ -188,6 +188,9 @@ N - Code cleanup
       sent across sockets, not number sent inside TLS stream.
   - Hidden service improvements
     - Investigate hidden service performance/reliability
+  - Add private:* alias in exit policies to make it easier to ban all the
+    fiddly little 192.168.foo addresses.
+
 
   No
   - choose entry node to be one you're already connected to?
