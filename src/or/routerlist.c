@@ -22,7 +22,7 @@ static smartlist_t *trusted_dir_servers = NULL;
 
 /* static function prototypes */
 static routerinfo_t *
-router_pick_directory_server_impl(int requireauth, int requireothers, int fascistfirewall);
+router_pick_directory_server_impl(int requireothers, int fascistfirewall);
 static trusted_dir_server_t *
 router_pick_trusteddirserver_impl(int requireother, int fascistfirewall);
 static void mark_all_trusteddirservers_up(void);
@@ -49,17 +49,6 @@ int router_reload_router_list(void)
 {
   char filename[512];
   routerlist_clear_trusted_directories();
-  if (options.RouterFile) {
-    log_fn(LOG_INFO, "Loading router list from %s", options.RouterFile);
-    if (router_load_routerlist_from_file(options.RouterFile, 1) < 0) {
-      log_fn(LOG_ERR,"Error loading router list '%s'.", options.RouterFile);
-      return -1;
-    }
-  } else {
-    log_fn(LOG_INFO, "Loading internal default router list.");
-    if (config_assign_default_dirservers() < 0)
-      return -1;
-  }
   if (get_data_directory(&options)) {
     char *s;
     snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
@@ -70,7 +59,7 @@ int router_reload_router_list(void)
       if (router_load_routerlist_from_directory(s, NULL, 0) < 0) {
         log_fn(LOG_WARN, "Cached directory '%s' was unparseable; ignoring.", filename);
       }
-      if(routerlist->published_on > time(NULL) - OLD_MIN_ONION_KEY_LIFETIME/2) {
+      if( routerlist && routerlist->published_on > time(NULL) - OLD_MIN_ONION_KEY_LIFETIME/2) {
         /* XXX use new onion key lifetime when 0.0.8 servers are obsolete */
         directory_has_arrived(); /* do things we've been waiting to do */
       }
@@ -84,22 +73,25 @@ int router_reload_router_list(void)
  * in our routerlist, set all the authoritative ones as running again,
  * and pick one. If there are no dirservers at all in our routerlist,
  * reload the routerlist and try one last time. */
-routerinfo_t *router_pick_directory_server(int requireauth, int requireothers) {
+routerinfo_t *router_pick_directory_server(int requireothers) {
   routerinfo_t *choice;
 
-  choice = router_pick_directory_server_impl(requireauth, requireothers, options.FascistFirewall);
+  if (!routerlist)
+    
+
+  choice = router_pick_directory_server_impl(requireothers, options.FascistFirewall);
   if(choice)
     return choice;
 
-  log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
+  log_fn(LOG_INFO,"No reachable router entries for dirservers. Trying them all again.");
   /* mark all authdirservers as up again */
   mark_all_trusteddirservers_up();
   /* try again */
-  choice = router_pick_directory_server_impl(requireauth, requireothers, 0);
+  choice = router_pick_directory_server_impl(requireothers, options.FascistFirewall);
   if(choice)
     return choice;
 
-  log_fn(LOG_WARN,"Still no dirservers %s. Reloading and trying again.",
+  log_fn(LOG_INFO,"Still no %s router entries. Reloading and trying again.",
          options.FascistFirewall ? "reachable" : "known");
   has_fetched_directory=0; /* reset it */
   routerlist_clear_trusted_directories();
@@ -107,7 +99,7 @@ routerinfo_t *router_pick_directory_server(int requireauth, int requireothers) {
     return NULL;
   }
   /* give it one last try */
-  choice = router_pick_directory_server_impl(requireauth, requireothers, 0);
+  choice = router_pick_directory_server_impl(requireothers, 0);
   return choice;
 }
 
@@ -143,7 +135,7 @@ trusted_dir_server_t *router_pick_trusteddirserver(int requireothers) {
  * it has to be a trusted server. If requireothers, it cannot be us.
  */
 static routerinfo_t *
-router_pick_directory_server_impl(int requireauth, int requireothers, int fascistfirewall)
+router_pick_directory_server_impl(int requireothers, int fascistfirewall)
 {
   int i;
   routerinfo_t *router;
@@ -158,8 +150,6 @@ router_pick_directory_server_impl(int requireauth, int requireothers, int fascis
   for(i=0;i< smartlist_len(routerlist->routers); i++) {
     router = smartlist_get(routerlist->routers, i);
     if(!router->is_running || !router->dir_port)
-      continue;
-    if(requireauth && !router->is_trusted_dir)
       continue;
     if(requireothers && router_is_me(router))
       continue;
@@ -224,24 +214,11 @@ static void mark_all_trusteddirservers_up(void) {
 /** Return 0 if \exists an authoritative dirserver that's currently
  * thought to be running, else return 1.
  */
-int all_directory_servers_down(void) {
-  int i;
-  routerinfo_t *router;
-  if(!routerlist)
-    return 1; /* if no dirservers, I guess they're all down */
-  for(i=0;i< smartlist_len(routerlist->routers); i++) {
-    router = smartlist_get(routerlist->routers, i);
-    if(router->is_running && router->is_trusted_dir) {
-      tor_assert(router->dir_port > 0);
-      return 0;
-    }
-  }
-  /* XXXX NM look at trusted_dir_servers instead.
+int all_trusted_directory_servers_down(void) {
   if (!trusted_dir_servers)
     return 1;
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, dir,
                     if (dir->is_running) return 0);
-  */
   return 1;
 }
 
@@ -680,15 +657,14 @@ int router_add_to_routerlist(routerinfo_t *router) {
    */
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
     r = smartlist_get(routerlist->routers, i);
+
+    r->is_trusted_dir = router_digest_is_trusted_dir(r->identity_digest);
+
     if (!crypto_pk_cmp_keys(router->identity_pkey, r->identity_pkey)) {
       if (router->published_on > r->published_on) {
         log_fn(LOG_DEBUG, "Replacing entry for router '%s/%s' [%s]",
                router->nickname, r->nickname, hex_str(id_digest,DIGEST_LEN));
         /* Remember whether we trust this router as a dirserver. */
-        /*XXXXNM first test is redundant; second should move elsewhere */
-        if (r->is_trusted_dir ||
-            router_digest_is_trusted_dir(router->identity_digest))
-          router->is_trusted_dir = 1;
         /* If the address hasn't changed; no need to re-resolve. */
         if (!strcasecmp(r->address, router->address))
           router->addr = r->addr;
@@ -698,10 +674,6 @@ int router_add_to_routerlist(routerinfo_t *router) {
       } else {
         log_fn(LOG_DEBUG, "Skipping old entry for router '%s'",
                router->nickname);
-        /* If we now trust 'router', then we trust the one in the routerlist
-         * too. */
-        if (router->is_trusted_dir)
-          r->is_trusted_dir = 1;
         /* Update the is_running status to whatever we were told. */
         r->is_running = router->is_running;
         routerinfo_free(router);
@@ -803,7 +775,6 @@ void routerlist_clear_trusted_directories(void)
     SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
                       r->is_trusted_dir = 0);
   }
-  clear_trusted_dir_servers();
 }
 
 /** Helper function: read routerinfo elements from s, and throw out the
@@ -1154,7 +1125,7 @@ void add_trusted_dir_server(const char *addr, uint16_t port, const char *digest)
 
   ent = tor_malloc(sizeof(trusted_dir_server_t));
   ent->address = tor_strdup(addr);
-  ent->addr = a;
+  ent->addr = ntohl(a);
   ent->dir_port = port;
   ent->is_running = 1;
   memcpy(ent->digest, digest, DIGEST_LEN);

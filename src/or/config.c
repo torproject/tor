@@ -282,124 +282,6 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
   return 0;
 }
 
-const char default_dirservers_string[] =
-"router moria1 18.244.0.188 9001 9021 9031\n"
-"platform Tor 0.0.6rc1 on Linux moria.mit.edu i686\n"
-"published 2004-04-25 21:54:28\n"
-"bandwidth 800000 10000000\n"
-"onion-key\n"
-"-----BEGIN RSA PUBLIC KEY-----\n"
-"MIGJAoGBANoIvHieyHUTzIacbnWOnyTyzGrLOdXqbcjz2GGMxyHEd5K1bO1ZBNHP\n"
-"9i5qLQpN5viFk2K2rEGuG8tFgDEzSWZEtBqv3NVfUdiumdERWMBwlaQ0MVK4C+jf\n"
-"y5gZ8KI3o9ZictgPS1AQF+Kk932/vIHTuRIUKb4ILTnQilNvID0NAgMBAAE=\n"
-"-----END RSA PUBLIC KEY-----\n"
-"signing-key\n"
-"-----BEGIN RSA PUBLIC KEY-----\n"
-"MIGJAoGBAMHa0ZC/jo2Q2DrwKYF/6ZbmZ27PFYG91u4gUzzmZ/VXLpZ8wNzEV3oW\n"
-"nt+I61048fBiC1frT1/DZ351n2bLSk9zJbB6jyGZJn0380FPRX3+cXyXS0Gq8Ril\n"
-"xkhMQf5XuNFUb8UmYPSOH4WErjvYjKvU+gfjbK/82Jo9SuHpYz+BAgMBAAE=\n"
-"-----END RSA PUBLIC KEY-----\n"
-"reject 0.0.0.0/255.0.0.0:*\n"
-"reject 169.254.0.0/255.255.0.0:*\n"
-"reject 127.0.0.0/255.0.0.0:*\n"
-"reject 192.168.0.0/255.255.0.0:*\n"
-"reject 10.0.0.0/255.0.0.0:*\n"
-"reject 172.16.0.0/255.240.0.0:*\n"
-"accept *:20-22\n"
-"accept *:53\n"
-"accept *:79-80\n"
-"accept *:110\n"
-"accept *:143\n"
-"accept *:443\n"
-"accept *:873\n"
-"accept *:993\n"
-"accept *:995\n"
-"accept *:1024-65535\n"
-"reject *:*\n"
-"router-signature\n"
-"-----BEGIN SIGNATURE-----\n"
-"o1eAoRHDAEAXsnh5wN++vIwrupd+DbAJ2p3wxHDrmqxTpygzxxCnyQyhMfX03ua2\n"
-"4iplyNlwyFwzWcw0sk31otlO2HBYXT1V9G0YxGtKMOeOBMHjfGbUjGvEALHzWi4z\n"
-"8DXGJp13zgnUyP4ZA6xaGROwcT6oB5e7UlztvvpGxTg=\n"
-"-----END SIGNATURE-----\n"
-"\n"
-"router moria2 18.244.0.188 9002 9022 9032\n"
-"platform Tor 0.0.6rc1 on Linux moria.mit.edu i686\n"
-"published 2004-04-25 21:54:30\n"
-"bandwidth 800000 10000000\n"
-"onion-key\n"
-"-----BEGIN RSA PUBLIC KEY-----\n"
-"MIGJAoGBAM4Cc/npgYC54XrYLC+grVxJp7PDmNO2DRRJOxKttBBtvLpnR1UaueTi\n"
-"kyknT5kmlx+ihgZF/jmye//2dDUp2+kK/kSkpRV4xnDLXZmed+sNSQxqmm9TtZQ9\n"
-"/hjpxhp5J9HmUTYhntBs+4E4CUKokmrI6oRLoln4SA39AX9QLPcnAgMBAAE=\n"
-"-----END RSA PUBLIC KEY-----\n"
-"signing-key\n"
-"-----BEGIN RSA PUBLIC KEY-----\n"
-"MIGJAoGBAOcrht/y5rkaahfX7sMe2qnpqoPibsjTSJaDvsUtaNP/Bq0MgNDGOR48\n"
-"rtwfqTRff275Edkp/UYw3G3vSgKCJr76/bqOHCmkiZrnPV1zxNfrK18gNw2Cxre0\n"
-"nTA+fD8JQqpPtb8b0SnG9kwy75eS//sRu7TErie2PzGMxrf9LH0LAgMBAAE=\n"
-"-----END RSA PUBLIC KEY-----\n"
-"reject 0.0.0.0/255.0.0.0:*\n"
-"reject 169.254.0.0/255.255.0.0:*\n"
-"reject 127.0.0.0/255.0.0.0:*\n"
-"reject 192.168.0.0/255.255.0.0:*\n"
-"reject 10.0.0.0/255.0.0.0:*\n"
-"reject 172.16.0.0/255.240.0.0:*\n"
-"accept *:20-22\n"
-"accept *:53\n"
-"accept *:79-80\n"
-"accept *:110\n"
-"accept *:143\n"
-"accept *:443\n"
-"accept *:873\n"
-"accept *:993\n"
-"accept *:995\n"
-"accept *:1024-65535\n"
-"reject *:*\n"
-"router-signature\n"
-"-----BEGIN SIGNATURE-----\n"
-"RKROLwP1ExjTZeg6wuN0pzYqed9IJUd5lAe9hp4ritbnmJAgS6qfww6jgx61CfUR\n"
-"6SElhOLE7Q77jAdoL45Ji5pn/Y+Q+E+5lJm1E/ed9ha+YsOPaOc7z6GQ7E4mihCL\n"
-"gI1vsw92+P1Ty4RHj6fyD9DhbV19nh2Qs+pvGJOS2FY=\n"
-"-----END SIGNATURE-----\n"
-"\n"
-"router tor26 62.116.124.106 9001 9050 9030\n"
-"platform Tor 0.0.6 on Linux seppia i686\n"
-"published 2004-05-06 21:33:23\n"
-"bandwidth 500000 10000000\n"
-"onion-key\n"
-"-----BEGIN RSA PUBLIC KEY-----\n"
-"MIGJAoGBAMEHdDnpj3ik1AF1xe/VqjoguH2DbANifYqXXfempu0fS+tU9FGo6dU/\n"
-"fnVHAZwL9Ek9k2rMzumShi1RduK9p035R/Gk+PBBcLfvwYJ/Nat+ZO/L8jn/3bZe\n"
-"ieQd9CKj2LjNGKpRNry37vkwMGIOIlegwK+2us8aXJ7sIvlNts0TAgMBAAE=\n"
-"-----END RSA PUBLIC KEY-----\n"
-"signing-key\n"
-"-----BEGIN RSA PUBLIC KEY-----\n"
-"MIGJAoGBAMQgV2gXLbXgesWgeAsj8P1Uvm/zibrFXqwDq27lLKNgWGYGX2ax3LyT\n"
-"3nzI1Y5oLs4kPKTsMM5ft9aokwf417lKoCRlZc9ptfRbgxDx90c9GtWVmkrmDvCK\n"
-"ae59TMoXIiGfZiwWT6KKq5Zm9/Fu2Il3B2vHGkKJYKixmiBJRKp/AgMBAAE=\n"
-"-----END RSA PUBLIC KEY-----\n"
-"accept 62.245.184.24:25\n"
-"accept 62.116.124.106:6666-6670\n"
-"accept *:48099\n"
-"reject *:*\n"
-"router-signature\n"
-"-----BEGIN SIGNATURE-----\n"
-"qh/xRoqfLNFzPaB8VdpbdMAwRyuk5qjx4LeLVQ2pDwTZ55PqmG99+VKUNte2WTTD\n"
-"7dZEA7um2rueohGe4nYmvbhJWr20/I0ZxmWDRDvFy0b5nwzDMGvLvDw95Zu/XJQ2\n"
-"md32NE3y9VZCfbCN+GlvETX3fdR3Svzcm8Kzesg2/s4=\n"
-"-----END SIGNATURE-----\n"
-;
-
-int config_assign_default_dirservers(void) {
-  if(router_load_routerlist_from_string(default_dirservers_string, 1) < 0) {
-    log_fn(LOG_WARN,"Bug: the default dirservers internal string is corrupt.");
-    return -1;
-  }
-
-  return 0;
-}
-
 static void add_default_trusted_dirservers(void) {
   /* moria1 */
   parse_dir_server_line("18.244.0.188:9031 "
@@ -894,7 +776,6 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     }
   }
 
-  
   clear_trusted_dir_servers();
   if (!options->DirServers) {
     add_default_trusted_dirservers();
