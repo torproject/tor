@@ -157,7 +157,9 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
 
 /* Map from const char * to void*. Implemented with a splay tree. */
 typedef struct strmap_t strmap_t;
-typedef struct strmap_entry_t strmap_entry_t; typedef struct strmap_entry_t strmap_iter_t; strmap_t* strmap_new(void);
+typedef struct strmap_entry_t strmap_entry_t;
+typedef struct strmap_entry_t strmap_iter_t;
+strmap_t* strmap_new(void);
 void* strmap_set(strmap_t *map, const char *key, void *val);
 void* strmap_get(strmap_t *map, const char *key);
 void* strmap_remove(strmap_t *map, const char *key);
