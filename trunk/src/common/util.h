@@ -26,15 +26,11 @@
 #elif defined(_MSC_VER)
 #include <winsock.h>
 #endif
-#ifndef HAVE_GETTIMEOFDAY
-#ifdef HAVE_FTIME
-#define USING_FAKE_TIMEVAL
-#include <sys/timeb.h>
+#ifndef HAVE_STRUCT_TIMEVAL_TV_SEC
 struct timeval {
   time_t tv_sec;
   unsigned int tv_usec;
 };
-#endif
 #endif
 
 #ifdef MS_WINDOWS

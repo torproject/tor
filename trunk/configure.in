@@ -148,6 +148,8 @@ AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limi
 AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime)
 AC_REPLACE_FUNCS(strlcat strlcpy)
 
+AC_CHECK_MEMBERS([struct timeval.tv_sec])
+
 dnl In case we aren't given a working stdint.h, we'll need to grow our own.
 dnl Watch out.
 
