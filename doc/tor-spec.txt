@@ -13,13 +13,15 @@ protocols.
    SK -- a private key 
    K  -- a key for a symmetric cypher
 
+   a|b -- concatenation of 'a' with 'b'.
+   a[i:j] -- Bytes 'i' through 'j'-1 (inclusive) of the string a.
+
    All numeric values are encoded in network (big-endian) order.
 
    Unless otherwise specified, all symmetric ciphers are DES in OFB
    mode, with an IV of all 0 bytes.  All asymmetric ciphers are RSA
    with 1024-bit keys, and exponents of 65537.
 
-   [Comments: DES?  This should be AES.  Why are -NM]
    [We will move to AES once we can assume everybody will have it. -RD]
 
 1. System overview
@@ -198,7 +200,7 @@ which reveals the downstream node.
    protocol.  Over a connection, communicants encrypt outgoing cells
    with the connection's K_f, and decrypt incoming cells with the
    connection's K_b.
-   
+
    [Commentary: This means that OR/OP->OR connections are malleable; I
     can flip bits in cells as they go across the wire, and see flipped
     bits coming out the cells as they are decrypted at the next
@@ -213,7 +215,10 @@ which reveals the downstream node.
     know the keys that are used for de/encrypting at each hop, so couldn't
     craft hashes anyway. See the Bandwidth Throttling (threat model)
     thread on http://archives.seul.org/or/dev/Jul-2002/threads.html. -RD]
-
+   [Even if I don't control both sides of the connection, I can still
+    do evil stuff.  For instance, if I can guess that a cell is a
+    TOPIC_COMMAND_BEGIN cell to www.slashdot.org:80 , I can change the
+    address and port to point to a machine I control. -NM]
 
 3. Cell Packet format
 
@@ -224,28 +229,300 @@ which reveals the downstream node.
         ACI (anonymous circuit identifier)    [2 bytes]
         Command                               [1 byte]
         Length                                [1 byte]
-        Sequence number (unused)              [4 bytes]
+        Sequence number (unused, set to 0)    [4 bytes]
         Payload (padded with 0 bytes)         [120 bytes]
                                          [Total size: 128 bytes]
 
    The 'Command' field holds one of the following values:
-         0 -- PADDING     (Padding)
-         1 -- CREATE      (Create a circuit)
-         2 -- DATA        (End-to-end data)
-         3 -- DESTROY     (Stop using a circuit)
-         4 -- SENDME      (For flow control)
+         0 -- PADDING     (Padding)                 (See Sec 6.2)
+         1 -- CREATE      (Create a circuit)        (See Sec 4)
+         2 -- DATA        (End-to-end data)         (See Sec 5)
+         3 -- DESTROY     (Stop using a circuit)    (See Sec 4)
+         4 -- SENDME      (For flow control)        (See Sec 6.1)
 
-   The interpretation of 'Length' and 'Payload' depend on....
+   The interpretation of 'Length' and 'Payload' depend on the type of
+   the cell.
+      PADDING: Length is 0; Payload is 128 bytes of 0's. 
+      CREATE: Length is a value between 1 and 120; the first 'length'
+        bytes or payload contain a portion of an onion.
+      DATA: Length is a value between 4 [5?] and 120; the first 'length'
+        bytes of payload contain useful data.
+      DESTROY: Neither field is used.
+      SENDME: Length encodes a window size, payload is unused.
+
+   Unused fields are filled with 0 bytes.  The payload is padded with
+   0 bytes.
+
+   PADDING cells are currently used to implement connection
+   keepalive.  ORs and OPs send one another a PADDING cell every few
+   minutes.
+
+   CREATE and DESTROY cells are used to manage circuits; see section
+   4 below.
+
+   DATA cells are used to send commands and data along a circuit; see
+   section 5 below.
+
+   SENDME cells are used for flow control; see section 6 below.
 
 4. Onions and circuit management
 
+4.1. Setting up circuits
 
-5. Topic management
+   An onion is a multi-layered structure, with one layer for each node
+   in a circuit.  Each (unencrypted) layer has the following fields:
 
+         Version                  [1 byte]
+         Back cipher              [4 bits]
+         Forward cipher           [4 bits]
+         Port                     [2 bytes]
+         Address                  [4 bytes]
+         Expiration time          [4 bytes]
+         Key seed material        [16 bytes]
+                             [Total: 28 bytes]
+
+     The forward and backward ciphers fields can take the following values:
+          0: Identity 
+          1: Single DES in OFB
+	  2: RC4
+
+     The port and address field denote the IPV4 address and port of
+     the next onion router in the circuit, or are set to 0 for the
+     last hop.
+
+     The expiration time is a number of seconds since the epoch (1
+     Jan 1970); by default, it is set to the current time plus one
+     day.
+
+     The value of OR_VERSION is currently 2.
+
+   When constructing an onion to create a circuit from OR_1,
+   OR_2... OR_N,  the onion creator performs the following steps:
+
+      1. Let M = 100 random bytes.
+
+      2. For I=N downto 1:
+  
+         A. Create an onion layer L, setting Version=2,
+            BackCipher=DES/OFB(1), ForwardCipher=DES/OFB(2), 
+	    ExpirationTime=now + 1 day, and Seed=16 random bytes.
+
+            If I=N, set Port=Address=0.  Else, set Port and Address to
+            the IPV4 port and address of OR_{I+1}.
+
+         B. Let M = L | M.
+
+         C. Let K1_I = SHA1(Seed).
+            Let K2_I = SHA1(K1_I).
+            Let K3_I = SHA1(K2_I).
+
+         D. Encrypt the first 128 bytes of M with the RSA key of
+            OR_I, using no padding.  Encrypt the remaining portion of
+            M with DES/OFB, using K1_I as a key and an all-0 IV.
+
+      3. M is now the onion.
+
+  To create a connection using the onion M, an OP or OR performs the
+  following steps:
+
+       1. If not already connected to the first router in the chain,
+          open a new connection to that router.
+
+       2. Choose an ACI not already in use on the connection with the
+          first router in the chain.  If our address/port pair is
+          numerically higher than the 
+
+       3. To send M over the wire, prepend a 4-byte integer containing
+          Len(M).  Call the result M'.  Let N=ceil(Len(M')/120).
+          Divide M' into N chunks, such that:
+             Chunk_I = M'[(I-1)*120:I*120]  for 1 <= I <= N-1
+             Chunk_N = M'[(N-1)*120:Len(M')]
+
+       4. Send N CREATE cells along the connection, setting the ACI
+          on each to the selected ACI, setting the payload on each to
+          the corresponding 'Chunk_I', and setting the length on each
+          to the length of the payload.
+
+   Upon receiving a CREATE cell along a connection, an OR performs
+   the following steps:
+
+       1. If we already have an 'open' circuit along this connection
+          with this ACI, drop the cell.
+
+          Otherwise, if we have no circuit along this connection with
+	  this ACI, let L = the integer value of the first 4 bytes of 
+          the payload.  Create a half-open circuit with this ACI, and
+	  begin queueing CREATE cells for this circuit.
+
+          Otherwise, we have a half-open circuit.  If the total
+          payload length of the CREATE cells for this circuit is at
+          least equal to the onion length in the first cell (minus
+          4), then process the onion.
+  
+       2. Once we have a complete onion, decrypt the first 128 bytes
+          of the onion with this OR's RSA private key, and extract
+          the outmost onion layer.  If the version, back cipher, or
+          forward cipher is unrecognized, drop the onion [XXXX then
+          what? -NM].  If the expiration time is in the past, then
+          drop the onion [XXXX then what? -NM].
+
+          Compute K1 through K3 as above.  Use K1 to decrypt the rest
+          of the onion using DES/OFB.
+
+          If we are not the exit node, remove the first layer from the
+          decrypted onion, and send it the remainder to the next OR
+          on the circuit, as specified above.  (Note that we'll
+          choose a different ACI for this circuit on the connection
+          with the next OR.)
+
+   As an optimization, OR implementations may delay processing onions
+   until a break in traffic allows time to do so without harming
+   network latency too greatly.
+
+4.2. Tearing down circuits
+
+   Circuits are torn down when an unrecoverable error occurs along
+   the circuit, when all topics on a circuit are closed and the
+   circuit's intended lifetime is over, or when (.... ?).
+
+   To tear down a circuit, an OR or OP sends a DESTROY cell with that
+   circuit's ACI to every adjacent node on that circuit.
+
+   Upon receiving a DESTROY cell, an OR frees resources associated
+   with the corresponding circuit, and (if not the start or end of the
+   circuit) sends a DESTROY cell for that circuit to the next OR in
+   the circuit.
+
+   After a DESTROY cell has been processed, an OR ignores all data or
+   destroy cells for the corresponding circuit.
+
+4.3. Routing data cells
+
+   When an OR receives a DATA cell, it checks the cell's ACI and
+   determines whether it has a corresponding circuit along that
+   connection.  If not, the OR drops the DATA cell.
+
+   Otherwise, if the OR is not at the edge of the circuit, it
+   de/encrypts the length field and the payload with DES/OFB, as
+   follows:
+        'Forward' data cell (same direction as onion):
+            Use K2 as key; encrypt.
+        'Back' data cell (opposite direction from onion):
+            Use K3 as key; decrypt.
+
+   Otherwise, the OR is at the edge of the circuit, and it generates
+   and processes the length and payload fields of DATA cells as
+   described in section 5 below.  (To encrypt or decrypt DATA cells,
+   the OP node de/encrypts the length and payload fields with DES/OFB as
+   follows:
+         OP sends data cell:
+	    For I=1...N, decrypt with K2_I.
+         OP receives data cell:
+            For I=N...1, encrypt with K3_I
+   )
+
+5. Application connections and topic management
+
+5.1. Topics and TCP streams
+
+   Within a circuit, the OP and the exit node use the contents of DATA
+   packets to tunnel TCP connections ("Topics") across circuits.
+   These connections are initiated by the OP.
+
+   The first 4 bytes of each data cell are reserved as follows:
+         Topic command           [1 byte]
+         Unused, set to 0.       [1 byte]
+	 Topic ID                [2 bytes]
+
+   The recognized topic commands are:
+         1 -- TOPIC_BEGIN
+	 2 -- TOPIC_DATA
+	 3 -- TOPIC_END
+	 4 -- TOPIC_CONNECTED
+	 5 -- TOPIC_SENDME
+
+   All DATA cells pertaining to the same tunneled connection have the
+   same topic ID.
+
+   To create a new anonymized TCP connection, the OP sends a
+   TOPIC_BEGIN data cell with a payload encoding the address and port
+   of the destination host.  The payload format is:
+         ADDRESS ',' PORT '\000'
+   where ADDRESS may be a DNS hostname, or an IPv4 address in
+   dotted-quad format; and where PORT is encoded in decimal.
+
+   Upon receiving this packet, the exit node resolves the address as
+   necessary, and opens a new TCP connection to the target port.  If
+   the address cannot be resolved, or a connection can't be
+   established, the exit node replies with a TOPIC_END cell.
+   Otherwise, the exit node replies with a TOPIC_CONNECTED cell.
+
+   The OP waits for a TOPIC_CONNECTED cell before sending any data.
+   Once a connection has been established, the OP and exit node
+   package stream data in TOPIC_DATA cells, and upon receiving such
+   cells, echo their contents to the corresponding TCP stream.  
+
+   When one side of the TCP stream is closed, the corresponding edge
+   node sends a TOPIC_END cell along the circuit; upon receiving a
+   TOPIC_END cell, the edge node closes the corresponding TCP stream.
+
+   [This should probably become:
+
+   When one side of the TCP stream is closed, the corresponding edge
+   node sends a TOPIC_END cell along the circuit; upon receiving a
+   TOPIC_END cell, the edge node closes its side of the corresponding
+   TCP stream (by sending a FIN packet), but continues to accept and
+   package incoming data until both sides of the TCP stream are
+   closed.  At that point, the edge node sends a second TOPIC_END
+   cell, and drops its record of the topic. -NM]
 
 6. Flow control
-         
-      
 
+6.1. Link throttling
+
+   As discussed above in section 2.1, ORs and OPs negotiate a maximum
+   bandwidth upon startup.  The communicants only read up to that
+   number of bytes per second on average, though they may smooth the
+   number of bytes read over a 10-second window. 
+   [???? more detail? -NM]
+
+   Communicants rely on TCP flow control to prevent the bandwidth
+   from being exceeded.
+
+6.2. Link padding
+
+   On every cell connection, every ????/bandwidth seconds, if less
+   than MIN(bandwidth/(100*128), 10) cells are waiting to be sent
+   along a connection, nodes add a single padding cell to the cells
+   they will send along the connection.
+
+6.3. Circuit flow control
+
+   To control a circuit's bandwidth usage, each node keeps track of
+   how many cells it is allowed to send to the next hop in the circuit
+   before queueing cells.  This 'window' value is initially set to
+   1000 cells in each direction.  Each edge node on a circuit sends a
+   SENDME cell (with length=100) every time it has receives 100 cells
+   on the circuit.  When a node receives a SENDME cell for a circuit,
+   it increases the circuit's window in the corresponding by the value
+   of the cell's length field, and (if not an edge node) passes an
+   equivalent SENDME cell to the next node in the circuit.
+
+   If a window value ever reaches 0, the OR queues cells for the
+   corresponding circuit and direction until it receives an
+   appropriate SENDME cell.
+
+6.4. Topic flow control
+
+   Edge nodes use TOPIC_SENDME data cells to implement end-to-end flow
+   control for individual connections across circuits.  As with
+   circuit flow control, edge nodes begin with a window of cells (500)
+   per topic, and increment the window by a fixed value (50) upon
+   receiving a TOPIC_SENDME cell.  Edge nodes create and additional
+   TOPIC_SENDME cells when  [????] -NM
+
+7. Directories and routers
+
+[????]
 
 
