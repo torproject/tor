@@ -12,6 +12,7 @@ ARMA    - arma claims
         X Abandoned
 
       0.0.8:
+        - fix sprintf's to snprintf's?
 NICK    - Make it work on win32 with no $home
 NICK    - Why is the first entry of kill -USR1 a router with a 0 key?
 NICK?   - Tors deal appropriately when a newly-verified router has the
@@ -24,20 +25,20 @@ NICK    . put ip:port:keyhash in intro points, rendezvous points,
 NICK    - unify similar config entries that need to be split. put them
           into a smartlist, and have things take a smartlist.
 
-        . "AllowUnverifiedRouters" config option
-        o Parse it into 3 bits
-ARMA      - Consider it when picking nodes for your path
-ARMA    - if there's only one entrynode preference and multiple exit node
-          choices, don't pick the desired entrynode as exit.
-        o 'fascistfirewall' option to pick dirservers on port 80 and
-          ORs on port 443.
-          o extend it to take a range of ports
-NICK    - parse uptime into router->uptime
         - figure out what to do when somebody asks to extend to
           ip:port:differentkey
 * reject it. assuming this is as dumb as it sounds.
         - make loglevel info less noisy
 
+        o if there's only one entrynode preference, don't pick the
+          desired entrynode as exit.
+        o "AllowUnverifiedRouters" config option
+          o Parse it into 3 bits
+          o Consider it when picking nodes for your path
+        o 'fascistfirewall' option to pick dirservers on port 80 and
+          ORs on port 443.
+          o extend it to take a range of ports
+        o parse uptime into router->uptime
         o Handle servers with dynamic IP addresses: don't replace
           options->Address with the resolved one at startup.
           o detect our address right before we make a routerinfo each time.
@@ -65,7 +66,7 @@ NICK    - parse uptime into router->uptime
           the directory?
         - put expiry date on onion-key, so people don't keep trying
           old ones that they could know are expired?
-* Leave on todo list, see if pre3 onion fixes helped enough.          
+* Leave on todo list, see if pre3 onion fixes helped enough.
         - should the running-routers list put unverified routers at the
           end?
 * Cosmetic, don't do it yet.
