@@ -171,9 +171,13 @@ static int new_route_len(double cw, uint8_t purpose, smartlist_t *routers) {
 #else
   if(purpose == CIRCUIT_PURPOSE_C_GENERAL)
     routelen = 3;
-  else if(purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND)
+  else if(purpose == CIRCUIT_PURPOSE_C_INTRODUCING)
     routelen = 4;
+  else if(purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND)
+    routelen = 3;
   else if(purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
+    routelen = 3;
+  else if(purpose == CIRCUIT_PURPOSE_S_CONNECT_REND)
     routelen = 4;
   else {
     log_fn(LOG_WARN,"Unhandled purpose %d", purpose);
