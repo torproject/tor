@@ -15,6 +15,9 @@ rend_client_introcirc_is_open(circuit_t *circ)
   connection_ap_attach_pending();
 }
 
+/* send the establish-rendezvous cell. if it fails, mark
+ * the circ for close and return -1. else return 0.
+ */
 int
 rend_client_send_establish_rendezvous(circuit_t *circ)
 {
@@ -23,17 +26,85 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
 
   if (crypto_rand(REND_COOKIE_LEN, circ->rend_cookie)<0) {
     log_fn(LOG_WARN, "Couldn't get random cookie");
+    circuit_mark_for_close(circ);
     return -1;
   }
   if (connection_edge_send_command(NULL,circ,
                                    RELAY_COMMAND_ESTABLISH_RENDEZVOUS,
                                    circ->rend_cookie, REND_COOKIE_LEN,
                                    circ->cpath->prev)<0) {
+    /* circ is already marked for close */
     log_fn(LOG_WARN, "Couldn't send ESTABLISH_RENDEZVOUS cell");
     return -1;
   }
 
   return 0;
+}
+
+#define LEN_REND_INTRODUCE1 204
+
+int
+rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
+  const char *descp;
+  int desc_len;
+  char payload[LEN_REND_INTRODUCE1];
+  char tmp[LEN_REND_INTRODUCE1-20-16];
+  rend_service_descriptor_t *parsed=NULL;
+
+  assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
+  assert(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY);
+  assert(!rend_cmp_service_ids(introcirc->rend_query, rendcirc->rend_query));
+
+  if(rend_cache_lookup(introcirc->rend_query, &descp, &desc_len) < 1) {
+    log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.",
+           introcirc->rend_query);
+    goto err;
+  }
+
+  parsed = rend_parse_service_descriptor(descp,desc_len);
+  if (!parsed) {
+    log_fn(LOG_WARN,"Couldn't parse service descriptor");
+    goto err;
+  }
+
+  /* first 20 bytes of payload are the hash of bob's pk */
+  if (crypto_pk_get_digest(parsed->pk, payload)<0) {
+    log_fn(LOG_WARN, "Couldn't hash public key.");
+    goto err;
+  }
+
+  /* write the remaining items into tmp */
+  strncpy(tmp, rendcirc->build_state->chosen_exit, 20); /* nul pads */
+  memcpy(tmp+20, rendcirc->rend_cookie, 20);
+  memset(tmp+40, 0, 128); /* XXX g^x is all zero's for now */
+
+  /* XXX copy the appropriate stuff into rendcirc's pending_final_cpath */
+
+  if(crypto_pk_public_hybrid_encrypt(parsed->pk, tmp,
+                                     20+20+128, payload+20,
+                                     PK_PKCS1_OAEP_PADDING) < 0) {
+    log_fn(LOG_WARN,"hybrid pk encrypt failed.");
+    goto err;
+  }
+
+  rend_service_descriptor_free(parsed);
+
+  if (connection_edge_send_command(NULL, introcirc,
+                                   RELAY_COMMAND_INTRODUCE1,
+                                   payload, LEN_REND_INTRODUCE1,
+                                   introcirc->cpath->prev)<0) {
+    /* introcirc is already marked for close. leave rendcirc alone. */
+    log_fn(LOG_WARN, "Couldn't send INTRODUCE1 cell");
+    return -1;
+  }
+
+  return 0;
+err:
+  if(parsed)
+    rend_service_descriptor_free(parsed);
+  circuit_mark_for_close(introcirc);
+  circuit_mark_for_close(rendcirc);
+  return -1;
 }
 
 /* send the rendezvous cell */
@@ -47,7 +118,6 @@ rend_client_rendcirc_is_open(circuit_t *circ)
 
   /* generate a rendezvous cookie, store it in circ */
   if (rend_client_send_establish_rendezvous(circ) < 0) {
-    circuit_mark_for_close(circ);
     return;
   }
 
@@ -63,22 +133,38 @@ rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_l
     circuit_mark_for_close(circ);
     return -1;
   }
+  log_fn(LOG_INFO,"Got rendezvous ack. This circuit is now ready for rendezvous.");
   circ->purpose = CIRCUIT_PURPOSE_C_REND_READY;
   return 0;
 }
 
 /* bob sent us a rendezvous cell, join the circs. */
-void
-rend_client_rendezvous(connection_t *apconn, circuit_t *circ)
+int
+rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request_len)
 {
+  connection_t *apconn;
 
+  if(circ->purpose != CIRCUIT_PURPOSE_C_REND_READY ||
+     !circ->build_state->pending_final_cpath) {
+    log_fn(LOG_WARN,"Got rendezvous2 cell from Bob, but not expecting it. Closing.");
+    circuit_mark_for_close(circ);
+    return -1;
+  }
 
+  /* XXX
+   * take 'request' and 'circ->build_state->pending_final_cpath'
+   * and do the right thing to circ
+   */
+
+  circ->purpose = CIRCUIT_PURPOSE_C_REND_JOINED;
+  for(apconn = circ->p_streams; apconn; apconn = apconn->next_stream) {
+    if(connection_ap_handshake_send_begin(apconn, circ) < 0)
+      return -1;
+  }
+  return 0;
 }
 
-
-
-
-/* Find all the apconns in purpose AP_PURPOSE_RENDDESC_WAIT that
+/* Find all the apconns in state AP_CONN_STATE_RENDDESC_WAIT that
  * are waiting on query. If success==1, move them to the next state.
  * If success==0, fail them.
  */
