@@ -178,7 +178,11 @@ the message.
       0x0001 -- Circuit status changed
 
                 Status [1 octet]
-                   (Launched=0,Built=1,Extended=2,Failed=3,Closed=4)
+                   0x00 Launched - circuit ID assigned to new circuit
+                   0x01 Built    - all hops finished, can now accept streams
+                   0x02 Extended - one more hop has been completed
+                   0x03 Failed   - circuit closed (was not built)
+                   0x04 Closed   - circuit closed (was built)
                 Circuit ID [4 octets]
                    (Must be unique to Tor process/time)
                 Path [NUL-terminated comma-separated string]
