@@ -173,6 +173,8 @@ static config_var_t config_vars[] = {
 /** Largest allowed config line */
 #define CONFIG_LINE_T_MAXLEN 4096
 
+static void config_line_append(struct config_line_t **lst,
+                               const char *key, const char *val);
 static void option_reset(or_options_t *options, config_var_t *var);
 static void options_free(or_options_t *options);
 static int option_is_same(or_options_t *o1, or_options_t *o2,const char *name);
@@ -421,19 +423,22 @@ config_get_commandlines(int argc, char **argv)
 }
 
 /** Helper: allocate a new configuration option mapping 'key' to 'val',
- * prepend it to 'front', and return the newly allocated config_line_t */
-struct config_line_t *
-config_line_prepend(struct config_line_t *front,
-                    const char *key,
-                    const char *val)
+ * append it to *<b>lst</b>. */
+static void
+config_line_append(struct config_line_t **lst,
+                   const char *key,
+                   const char *val)
 {
   struct config_line_t *newline;
 
   newline = tor_malloc(sizeof(struct config_line_t));
   newline->key = tor_strdup(key);
   newline->value = tor_strdup(val);
-  newline->next = front;
-  return newline;
+  newline->next = NULL;
+  while (*lst)
+    lst = &((*lst)->next);
+
+  (*lst) = newline;
 }
 
 /** Helper: parse the config string and strdup into key/value
@@ -443,17 +448,26 @@ config_line_prepend(struct config_line_t *front,
 int
 config_get_lines(char *string, struct config_line_t **result)
 {
-  struct config_line_t *list = NULL;
+  struct config_line_t *list = NULL, **next;
   char *k, *v;
 
+  next = &list;
   do {
     string = parse_line_from_str(string, &k, &v);
     if (!string) {
       config_free_lines(list);
       return -1;
     }
-    if (k && v)
-      list = config_line_prepend(list, k, v);
+    if (k && v) {
+      /* This list can get long, so we keep a pointer to the end of it
+       * rather than using config_line_append over and over and getting n^2
+       * performance.  This is the only really long list. */
+      *next = tor_malloc(sizeof(struct config_line_t));
+      (*next)->key = tor_strdup(k);
+      (*next)->value = tor_strdup(v);
+      (*next)->next = NULL;
+      next = &((*next)->next);
+    }
   } while (*string);
 
   *result = list;
@@ -596,11 +610,7 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
 
   case CONFIG_TYPE_LINELIST:
   case CONFIG_TYPE_LINELIST_S:
-    /* Note: this reverses the order that the lines appear in.  That's
-     * just fine, since we build up the list of lines reversed in the
-     * first place. */
-    *(struct config_line_t**)lvalue =
-      config_line_prepend(*(struct config_line_t**)lvalue, c->key, c->value);
+    config_line_append((struct config_line_t**)lvalue, c->key, c->value);
     break;
 
   case CONFIG_TYPE_OBSOLETE:
@@ -857,13 +867,13 @@ static void
 add_default_trusted_dirservers(or_options_t *options)
 {
   /* moria1 */
-  options->DirServers = config_line_prepend(options->DirServers, "DirServer",
+  config_line_append(&options->DirServers, "DirServer",
        "18.244.0.188:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441");
   /* moria2 */
-  options->DirServers = config_line_prepend(options->DirServers, "DirServer",
+  config_line_append(&options->DirServers, "DirServer",
          "18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF");
   /* tor26 */
-  options->DirServers = config_line_prepend(options->DirServers, "DirServer",
+  config_line_append(&options->DirServers, "DirServer",
      "62.116.124.106:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
 //  "tor.noreply.org:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D");
 }
@@ -1181,7 +1191,7 @@ options_validate(or_options_t *options)
 
   /* Special case if no options are given. */
   if (!options->Logs) {
-    options->Logs = config_line_prepend(NULL, "Log", "notice stdout");
+    config_line_append(&options->Logs, "Log", "notice stdout");
   }
 
   if (config_init_logs(options, 1)<0) /* Validate the log(s) */
@@ -1925,7 +1935,7 @@ add_single_log_option(or_options_t *options, int minSeverity, int maxSeverity,
   }
 
   log(LOG_WARN, "The old LogLevel/LogFile/DebugLogFile/SysLog options are deprecated, and will go away soon.  Your new torrc line should be: 'Log %s'", buf);
-  options->Logs = config_line_prepend(options->Logs, "Log", buf);
+  config_line_append(&options->Logs, "Log", buf);
   return 0;
 }
 
