@@ -1,5 +1,6 @@
 tor (0.0.7.2+0.0.8pre2-1) unstable; urgency=low
 
+  * New upstream (pre)release.
   * Depend on python as we now have a python script: tor_resolve
 
  -- Peter Palfrader <weasel@debian.org>  Wed,  4 Aug 2004 20:09:26 +0200
