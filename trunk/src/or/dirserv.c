@@ -165,10 +165,8 @@ static int n_descriptors = 0;
 
 static void free_descriptor_entry(descriptor_entry_t *desc)
 {
-  if (desc->descriptor)
-    free(desc->descriptor);
-  if (desc->nickname)
-    free(desc->nickname);
+  tor_free(desc->descriptor);
+  tor_free(desc->nickname);
   free(desc);
 }
 
@@ -218,7 +216,7 @@ dirserv_add_descriptor(const char **desc)
     log(LOG_WARN, "Couldn't parse descriptor");
     goto err;
   }
-  free(desc_tmp); desc_tmp = NULL;
+  tor_free(desc_tmp);
   /* Okay.  Now check whether the fingerprint is recognized. */
   if (!dirserv_router_fingerprint_is_known(ri)) {
     log(LOG_WARN, "Identity is unrecognized for descriptor");
@@ -238,7 +236,7 @@ dirserv_add_descriptor(const char **desc)
       /* We already have a newer descriptor */
       log_fn(LOG_INFO,"We already have a newer desc for nickname %s. Not adding.",ri->nickname);
       /* This isn't really an error; return. */
-      if (desc_tmp) free(desc_tmp);
+      tor_free(desc_tmp);
       if (ri) routerinfo_free(ri);
       *desc = end;
       return 0;
@@ -263,8 +261,7 @@ dirserv_add_descriptor(const char **desc)
   routerinfo_free(ri);
   return 0;
  err:
-  if (desc_tmp)
-    free(desc_tmp);
+  tor_free(desc_tmp);
   if (ri)
     routerinfo_free(ri);
   
@@ -417,8 +414,7 @@ size_t dirserv_get_directory(const char **directory)
       free(new_directory);
       return 0;
     }
-    if (the_directory)
-      free(the_directory);
+    tor_free(the_directory);
     the_directory = new_directory;
     the_directory_len = strlen(the_directory);
     log_fn(LOG_INFO,"New directory (size %d):\n%s",the_directory_len,

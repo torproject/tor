@@ -335,7 +335,7 @@ typedef struct {
  
   uint32_t addr; /* all host order */
   uint16_t or_port;
-  uint16_t ap_port;
+  uint16_t socks_port;
   uint16_t dir_port;
 
   time_t published_on;
@@ -426,9 +426,11 @@ typedef struct {
    char *Address;
    char *PidFile;
    char *ExitPolicy;
+   char *SocksBindAddress;
+   char *ORBindAddress;
    double CoinWeight;
    int ORPort;
-   int APPort;
+   int SocksPort;
    int DirPort;
    int MaxConn;
    int OnionRouter;

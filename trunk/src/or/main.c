@@ -337,7 +337,7 @@ static void run_scheduled_events(time_t now) {
   /* 2. Every NewCircuitPeriod seconds, we expire old circuits and make a 
    *    new one as needed.
    */
-  if(options.APPort && time_to_new_circuit < now) {
+  if(options.SocksPort && time_to_new_circuit < now) {
     circuit_expire_unused_circuits();
     circuit_launch_new(-1); /* tell it to forget about previous failures */
     circ = circuit_get_newest_open();
@@ -595,7 +595,7 @@ static int do_main_loop(void) {
    * and start the listeners.
    */
   retry_all_connections((uint16_t) options.ORPort,
-                        (uint16_t) options.APPort,
+                        (uint16_t) options.SocksPort,
                         (uint16_t) options.DirPort);
 
   for(;;) {

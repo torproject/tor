@@ -85,8 +85,7 @@ void connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *route
   conn->link_pkey = crypto_pk_dup_key(router->link_pkey);
   conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
   conn->nickname = tor_strdup(router->nickname);
-  if(conn->address)
-    free(conn->address);
+  tor_free(conn->address);
   conn->address = tor_strdup(router->address);
 }
 

@@ -131,6 +131,7 @@ static int config_compare(struct config_line *c, char *key, int type, void *arg)
       *(int *)arg = i;
       break;
     case CONFIG_TYPE_STRING:
+      tor_free(*(char **)arg);
       *(char **)arg = tor_strdup(c->value);
       break;
     case CONFIG_TYPE_DOUBLE:
@@ -159,10 +160,12 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "Nickname",       CONFIG_TYPE_STRING, &options->Nickname) ||
     config_compare(list, "Address",        CONFIG_TYPE_STRING, &options->Address) ||
     config_compare(list, "ExitPolicy",     CONFIG_TYPE_STRING, &options->ExitPolicy) ||
+    config_compare(list, "SocksBindAddress",CONFIG_TYPE_STRING,&options->SocksBindAddress) ||
+    config_compare(list, "ORBindAddress",  CONFIG_TYPE_STRING, &options->ORBindAddress) ||
 
     /* int options */
     config_compare(list, "MaxConn",         CONFIG_TYPE_INT, &options->MaxConn) ||
-    config_compare(list, "APPort",          CONFIG_TYPE_INT, &options->APPort) ||
+    config_compare(list, "SocksPort",       CONFIG_TYPE_INT, &options->SocksPort) ||
     config_compare(list, "ORPort",          CONFIG_TYPE_INT, &options->ORPort) ||
     config_compare(list, "DirPort",         CONFIG_TYPE_INT, &options->DirPort) ||
     config_compare(list, "DirFetchPostPeriod",CONFIG_TYPE_INT, &options->DirFetchPostPeriod) ||
@@ -195,20 +198,27 @@ void print_usage(void) {
 
 }
 
-/* return 0 if success, <0 if failure. */
-int getconfig(int argc, char **argv, or_options_t *options) {
-  struct config_line *cl;
-  FILE *cf;
-  char *fname;
-  int i;
-  int result = 0;
+void free_options(or_options_t *options) {
+  tor_free(options->LogLevel);
+  tor_free(options->LogFile);
+  tor_free(options->DebugLogFile);
+  tor_free(options->DataDirectory);
+  tor_free(options->RouterFile);
+  tor_free(options->Nickname);
+  tor_free(options->Address);
+  tor_free(options->PidFile);
+  tor_free(options->ExitPolicy);
+}
 
+void init_options(or_options_t *options) {
 /* give reasonable values for each option. Defaults to zero. */
   memset(options,0,sizeof(or_options_t));
-  options->LogLevel = "info";
-  options->ExitPolicy = "reject 127.0.0.1:*,reject 18.244.0.188:25,accept *:*";
+  options->LogLevel = tor_strdup("info");
+  options->ExitPolicy = tor_strdup("reject 127.0.0.1:*,reject 18.244.0.188:25,accept *:*");
+  options->SocksBindAddress = tor_strdup("127.0.0.1");
+  options->ORBindAddress = tor_strdup("0.0.0.0");
   options->loglevel = LOG_INFO;
-  options->PidFile = "tor.pid";
+  options->PidFile = tor_strdup("tor.pid");
   options->DataDirectory = NULL;
   options->CoinWeight = 0.1;
   options->MaxConn = 900;
@@ -218,6 +228,17 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->NewCircuitPeriod = 60; /* once a minute */
   options->TotalBandwidth = 800000; /* at most 800kB/s total sustained incoming */
   options->NumCpus = 1;
+}
+
+/* return 0 if success, <0 if failure. */
+int getconfig(int argc, char **argv, or_options_t *options) {
+  struct config_line *cl;
+  FILE *cf;
+  char *fname;
+  int i;
+  int result = 0;
+
+  init_options(options); 
 
   if(argc > 1 && (!strcmp(argv[1], "-h") || !strcmp(argv[1],"--help"))) {
     print_usage();
@@ -295,8 +316,8 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
-  if(options->APPort < 0) {
-    log(LOG_WARN,"APPort option can't be negative.");
+  if(options->SocksPort < 0) {
+    log(LOG_WARN,"SocksPort option can't be negative.");
     result = -1;
   }
 
@@ -305,7 +326,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
-  if(options->APPort > 1 &&
+  if(options->SocksPort > 1 &&
      (options->CoinWeight < 0.0 || options->CoinWeight >= 1.0)) {
     log(LOG_WARN,"CoinWeight option must be >=0.0 and <1.0.");
     result = -1;

@@ -100,8 +100,7 @@ void connection_free(connection_t *conn) {
     buf_free(conn->inbuf);
     buf_free(conn->outbuf);
   }
-  if(conn->address)
-    free(conn->address);
+  tor_free(conn->address);
 
   if(connection_speaks_cells(conn)) {
     directory_set_dirty();
@@ -115,8 +114,7 @@ void connection_free(connection_t *conn) {
     crypto_free_pk_env(conn->link_pkey);
   if (conn->identity_pkey)
     crypto_free_pk_env(conn->identity_pkey);
-  if (conn->nickname) 
-    free(conn->nickname);
+  tor_free(conn->nickname);
 
   if(conn->s >= 0) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);
