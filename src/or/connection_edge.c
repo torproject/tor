@@ -6,6 +6,7 @@
 #include "tree.h"
 
 extern or_options_t options; /* command-line and config-file options */
+extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
 static int connection_ap_handshake_attach_circuit(connection_t *conn);
@@ -194,7 +195,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       conn->has_sent_end = 1;
       return 0;
     } else {
-      log_fn(LOG_WARN,"Got an unexpected relay cell, not in 'open' state. Closing.");
+      log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
+             relay_command, conn->state, conn_state_to_string[conn->type][conn->state]);
       connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
       return -1;
     }
@@ -304,7 +306,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         return -1;
       }
       if (circuit_send_next_onion_skin(circ)<0) {
-        log_fn(LOG_WARN,"circuit_send_next_onion_skin() failed.");
+        log_fn(LOG_INFO,"circuit_send_next_onion_skin() failed.");
         return -1;
       }
       return 0;
@@ -842,7 +844,7 @@ struct client_dns_entry {
   char *address;
   uint32_t addr;
   time_t expires;
-};      
+};
 static int client_dns_size = 0;
 static SPLAY_HEAD(client_dns_tree, client_dns_entry) client_dns_root;
 
