@@ -83,9 +83,9 @@ The fqdn of this server (e.g. moria.mit.edu).
 Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
 .TP
 \fBexitpolicy \fR\fIpolicy,policy,...\fP
-Set an exit policy for this server. Each policy is of the form "reject ADDR/MASK:PORT".  For exam
-ple, "reject 127.0.0.1:*,reject 192.168.1.0/24:*,accept *:*" would reject any traffic destined fo
-r localhost and any 192.168.1.* address, but accept anything else.
+Set an exit policy for this server. Each policy is of the form "reject ADDR/MASK:PORT".  For example,
+"reject 127.0.0.1:*,reject 192.168.1.0/24:*,accept *:*" would reject any traffic destined for
+localhost and any 192.168.1.* address, but accept anything else.
 .TP
 \fBmaxonionspending \fR\fINUM\fP
 If you have more than this number of onionskins queued for decrypt, reject new ones. (Default: 100)
