@@ -83,7 +83,7 @@ Short-term:
         X remove per-connection rate limiting
         - Make it harder to circumvent bandwidth caps: look at number of bytes
           sent across sockets, not number sent inside TLS stream.
-        - Audit users of connnection_remove and connection_free outside of
+        o Audit users of connnection_remove and connection_free outside of
           main.c; many should use mark_for_close instead.
 
 On-going

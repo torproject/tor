@@ -112,8 +112,6 @@ connection_t *connection_or_connect(routerinfo_t *router) {
   /* set up conn so it's got all the data we need to remember */
   connection_or_init_conn_from_router(conn, router);
 
-  /* XXXX Should all this stuff do mark-for-close instead? */
-
   if(connection_add(conn) < 0) { /* no space, forget it */
     connection_free(conn);
     return NULL;
@@ -121,8 +119,7 @@ connection_t *connection_or_connect(routerinfo_t *router) {
 
   switch(connection_connect(conn, router->address, router->addr, router->or_port)) {
     case -1:
-      connection_remove(conn);
-      connection_free(conn);
+      connection_mark_for_close(conn, 0);
       return NULL;
     case 0:
       connection_set_poll_socket(conn);
@@ -140,8 +137,7 @@ connection_t *connection_or_connect(routerinfo_t *router) {
     return conn;
 
   /* failure */
-  connection_remove(conn);
-  connection_free(conn);
+  connection_mark_for_close(conn, 0);
   return NULL;
 }
 
