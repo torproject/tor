@@ -6,14 +6,6 @@
  * Nick Mathewson <nickm@freehaven.net>
  */
 
-
-/*
- * Changes :
- * $Log$
- * Revision 1.1  2002/09/03 18:43:50  nickm
- * Add function to fake a poll call using select
- *
- */
 #include "fakepoll.h"
 
 #ifdef USE_FAKE_POLL

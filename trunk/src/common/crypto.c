@@ -179,7 +179,7 @@ crypto_create_init_cipher(int cipher_type, char *key, char *iv, int encrypt_mode
     r = crypto_cipher_decrypt_init_cipher(crypto);
 
   if (r) {
-    log_fn(LOG_ERR, "Unabble to initialize cipher: %s", crypto_perror());
+    log_fn(LOG_ERR, "Unable to initialize cipher: %s", crypto_perror());
     goto error;
   }
   return crypto;
@@ -800,7 +800,6 @@ int crypto_seed_rng()
     f = fopen(filenames[i], "rb");
     if (!f) continue;
     log_fn(LOG_INFO, "Seeding RNG from %s", filenames[i]);
-    buf[20]='\xff';
     n = fread(buf, 1, 20, f);
     fclose(f);
     if (n != 20) {

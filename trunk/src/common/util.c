@@ -44,14 +44,6 @@ tv_udiff(struct timeval *start, struct timeval *end)
     return LONG_MAX;
   }
 
-  /*
-    This is a no-op: "secdiff--" takes 1M from the final result,
-    and "end_usec+=100000L" puts it back.
-  if (end_usec < start->tv_usec) {
-    secdiff--;
-    end_usec += 1000000L;
-  }
-  */
   udiff = secdiff*1000000L + (end_usec - start->tv_usec);
   if(udiff < 0) {
     log_fn(LOG_NOTICE, "start is after end. Returning 0.");
