@@ -451,7 +451,6 @@ typedef struct {
   int SocksPort;
   int DirPort;
   int MaxConn;
-  int OnionRouter;
   int TrafficShaping;
   int LinkPadding;
   int IgnoreVersion;

@@ -125,7 +125,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
         } else {
           log_fn(LOG_INFO,"updated routers.");
         }
-        if(options.OnionRouter) { /* connect to them all */
+        if(options.ORPort) { /* connect to them all */
           router_retry_connections();
         }
         return -1;

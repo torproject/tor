@@ -182,7 +182,6 @@ static void config_assign(or_options_t *options, struct config_line *list) {
 
     config_compare(list, "ORPort",         CONFIG_TYPE_INT, &options->ORPort) ||
     config_compare(list, "ORBindAddress",  CONFIG_TYPE_STRING, &options->ORBindAddress) ||
-    config_compare(list, "OnionRouter",    CONFIG_TYPE_BOOL, &options->OnionRouter) ||
 
     config_compare(list, "PidFile",        CONFIG_TYPE_STRING, &options->PidFile) ||
     config_compare(list, "PathlenCoinWeight",CONFIG_TYPE_DOUBLE, &options->PathlenCoinWeight) ||
@@ -283,7 +282,6 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   static int backup_argc;
   char *previous_pidfile = NULL;
   int previous_runasdaemon = 0;
-  int previous_onionrouter = -1;
 
   if(first_load) { /* first time we're called. save commandline args */
     backup_argv = argv;
@@ -296,7 +294,6 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     /* record some previous values, so we can fail if they change */
     previous_pidfile = tor_strdup(options->PidFile);
     previous_runasdaemon = options->RunAsDaemon;
-    previous_onionrouter = options->OnionRouter;
     free_options(options);
   }
   init_options(options); 
@@ -349,11 +346,6 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     log_fn(LOG_WARN,"During reload, change from RunAsDaemon=1 to =0 not allowed. Failing.");
     return -1;
   }
-  if(previous_onionrouter >= 0 && previous_onionrouter != options->OnionRouter) {
-    log_fn(LOG_WARN,"During reload, OnionRouter changed from %d to %d. Failing.",
-           previous_onionrouter, options->OnionRouter);
-    return -1;
-  }
 
   if(options->LogLevel) {
     if(!strcmp(options->LogLevel,"err"))
@@ -380,18 +372,13 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     result = -1;
   }
 
-  if(options->OnionRouter && options->ORPort == 0) {
-    log(LOG_WARN,"If OnionRouter is set, then ORPort must be positive.");
+  if(options->ORPort && options->DataDirectory == NULL) {
+    log(LOG_WARN,"DataDirectory option required if ORPort is set, but not found.");
     result = -1;
   }
 
-  if(options->OnionRouter && options->DataDirectory == NULL) {
-    log(LOG_WARN,"DataDirectory option required for OnionRouter, but not found.");
-    result = -1;
-  }
-
-  if(options->OnionRouter && options->Nickname == NULL) {
-    log_fn(LOG_WARN,"Nickname required for OnionRouter, but not found.");
+  if(options->ORPort && options->Nickname == NULL) {
+    log_fn(LOG_WARN,"Nickname required if ORPort is set, but not found.");
     result = -1;
   }
 

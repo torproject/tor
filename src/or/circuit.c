@@ -748,7 +748,7 @@ int circuit_establish_circuit(void) {
   if(!n_conn || n_conn->state != OR_CONN_STATE_OPEN) { /* not currently connected */
     circ->n_addr = firsthop->addr;
     circ->n_port = firsthop->or_port;
-    if(options.OnionRouter) { /* we would be connected if he were up. but he's not. */
+    if(options.ORPort) { /* we would be connected if he were up. and he's not. */
       log_fn(LOG_INFO,"Route's firsthop isn't connected.");
       circuit_close(circ);
       return -1;

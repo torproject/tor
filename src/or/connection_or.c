@@ -186,7 +186,7 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   connection_watch_events(conn, POLLIN);
   log_fn(LOG_DEBUG,"tls handshake done. verifying.");
   if (! tor_tls_peer_has_cert(conn->tls)) { /* It's an OP. */
-    if (options.OnionRouter) { /* I'm an OR; good. */
+    if (options.ORPort) { /* I'm an OR; good. */
       conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
       return 0;
     } else { /* Neither side sent a certificate: ouch. */
@@ -236,7 +236,7 @@ static int connection_tls_finish_handshake(connection_t *conn) {
            nickname, conn->nickname);
     return -1;
   }
-  if (!options.OnionRouter) { /* If I'm an OP... */
+  if (!options.ORPort) { /* If I'm an OP... */
     conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
     circuit_n_conn_open(conn); /* send the pending creates, if any. */
   }
