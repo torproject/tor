@@ -1015,7 +1015,7 @@ int _circuit_mark_for_close(circuit_t *circ) {
     connection_edge_destroy(circ->n_circ_id, conn);
   }
   if(circ->p_conn)
-    connection_send_destroy(circ->n_circ_id, circ->p_conn);
+    connection_send_destroy(circ->p_circ_id, circ->p_conn);
   for(conn=circ->p_streams; conn; conn=conn->next_stream) {
     connection_edge_destroy(circ->p_circ_id, conn);
   }
