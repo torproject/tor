@@ -674,11 +674,6 @@ int dns_resolve(connection_t *exitconn);
 
 /********************************* main.c ***************************/
 
-void set_onion_key(crypto_pk_env_t *k);
-crypto_pk_env_t *get_onion_key(void);
-void set_identity_key(crypto_pk_env_t *k);
-crypto_pk_env_t *get_identity_key(void);
-crypto_pk_env_t *get_link_key(void);
 int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
 void connection_set_poll_socket(connection_t *conn);
@@ -691,8 +686,6 @@ void connection_stop_reading(connection_t *conn);
 void connection_start_reading(connection_t *conn);
 void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
-
-const char *router_get_my_descriptor(void);
 
 int main(int argc, char *argv[]);
 
@@ -728,44 +721,45 @@ int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 
 cpath_build_state_t *onion_new_cpath_build_state(void);
 
-/********************************* routers.c ***************************/
+/********************************* router.c ***************************/
+
+void set_onion_key(crypto_pk_env_t *k);
+crypto_pk_env_t *get_onion_key(void);
+void set_identity_key(crypto_pk_env_t *k);
+crypto_pk_env_t *get_identity_key(void);
+crypto_pk_env_t *get_link_key(void);
+int init_keys(void);
 
 void router_retry_connections(void);
+void router_upload_desc_to_dirservers(void);
+int router_compare_to_my_exit_policy(connection_t *conn);
+const char *router_get_my_descriptor(void);
+int router_rebuild_descriptor(void);
+int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
+                                 crypto_pk_env_t *ident_key);
+
+/********************************* routerlist.c ***************************/
+
 routerinfo_t *router_pick_directory_server(void);
 routerinfo_t *router_pick_randomly_from_running(void);
-void router_upload_desc_to_dirservers(void);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk);
 routerinfo_t *router_get_by_nickname(char *nickname);
-void router_get_directory(routerlist_t **pdirectory);
+void router_get_routerlist(routerlist_t **prouterlist);
+void routerinfo_free(routerinfo_t *router);
 void router_mark_as_down(char *nickname);
-int router_get_list_from_file(char *routerfile);
-int router_get_router_hash(char *s, char *digest);
+int router_set_routerlist_from_file(char *routerfile);
 int router_get_dir_hash(char *s, char *digest);
-
-/* Reads a list of known routers, unsigned. */
-int router_get_list_from_string(char *s);
-/* Exported for debugging */
-int router_get_list_from_string_impl(char **s, routerlist_t **dest, int n_good_nicknames, const char *good_nickname_lst[]);
-/* Reads a signed directory. */
-int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey);
-/* Exported or debugging */
-int router_get_dir_from_string_impl(char *s, routerlist_t **dest,
-                                    crypto_pk_env_t *pkey);
-routerinfo_t *router_get_entry_from_string(char **s);
+int router_get_router_hash(char *s, char *digest);
+int router_set_routerlist_from_directory(char *s, crypto_pk_env_t *pkey);
+routerinfo_t *router_get_entry_from_string(char**s);
+int router_add_exit_policy_from_string(routerinfo_t *router, char *s);
 int router_supports_exit_address(uint32_t addr, uint16_t port,
                                  routerinfo_t *router);
-int router_compare_to_my_exit_policy(connection_t *conn);
 int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
                                        struct exit_policy_t *policy);
-void routerinfo_free(routerinfo_t *router);
-int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
-                                 crypto_pk_env_t *ident_key);
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port);
 int router_exit_policy_rejects_all(routerinfo_t *router);
-const char *router_get_my_descriptor(void);
-int router_rebuild_descriptor(void);
-int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
 
 /********************************* dirserv.c ***************************/
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
