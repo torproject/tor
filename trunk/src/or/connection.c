@@ -628,6 +628,9 @@ int connection_read_to_buf(connection_t *conn) {
       return connection_tls_continue_handshake(conn);
     }
 
+    log_fn(LOG_DEBUG,"%d: starting, inbuf_datalen %d (%d pending in tls object). at_most %d.",
+           conn->s,(int)buf_datalen(conn->inbuf),tor_tls_get_pending_bytes(conn->tls), at_most);
+
     /* else open, or closing */
     result = read_to_buf_tls(conn->tls, at_most, conn->inbuf);
 
