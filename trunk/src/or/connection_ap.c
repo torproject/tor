@@ -72,12 +72,13 @@ int ap_handshake_process_socks(connection_t *conn) {
     if(socks4_info.destip[0] || 
        socks4_info.destip[1] ||
        socks4_info.destip[2] ||
-       !socks4_info.destip[3]) { /* must be in form 0.0.0.x, at least for now */
+       !socks4_info.destip[3]) { /* not 0.0.0.x */
       log(LOG_NOTICE,"ap_handshake_process_socks(): destip not in form 0.0.0.x.");
-      ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
-      return -1;
+      sprintf(conn->dest_tmp, "%d.%d.%d.%d", socks4_info.destip[0],
+        socks4_info.destip[1], socks4_info.destip[2], socks4_info.destip[3]);
+      conn->dest_addr = strdup(conn->dest_tmp);
+      log(LOG_DEBUG,"ap_handshake_process_socks(): Successfully read destip (%s)", conn->dest_addr);
     }
-    log(LOG_DEBUG,"ap_handshake_process_socks(): Successfully read destip (0.0.0.x.)");
 
   }
 
