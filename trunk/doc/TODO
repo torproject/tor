@@ -31,6 +31,10 @@ R       - figure out enclaves, e.g. so we know what to recommend that people
 N       - let tor servers use proxies for port 80 exits
           - Use generic port redirector for IP/bits:Port->IP:Port .
           - Make use of them when we're doing exit connections.
+R       - We should set things in options to NULL, not rely on memset(...0)
+          being equivalent.
+        - Once we have a trusted directory on port 80, stop falling back to
+          forbidden ports when fascistfirewall blocks all good dirservers.
 
       0.0.9pre5:
 N       - per-month byte allowances.
@@ -64,6 +68,8 @@ R       - learn from ben about his openssl-reinitialization-trick to
           which is used for the first N data cells, and only
           extend-data cells can be extend requests.
         - make loglevel info less noisy
+        - Make command-line strict about checking options; make only certain
+          option prefixes work.
         - put expiry date on onion-key, so people don't keep trying
           old ones that they could know are expired?
 * Leave on todo list, see if pre3 onion fixes helped enough.
