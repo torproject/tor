@@ -83,8 +83,9 @@ Onion Routing project published several design and analysis papers
 Routing network was deployed for some weeks, the only long-running and
 publicly accessible implementation of the original design was a fragile
 proof-of-concept that ran on a single machine. Even this simple deployment
-processed tens of thousands of connections daily from thousands of users
-worldwide. But many critical design and deployment issues were never
+processed connections from over sixty thousand distinct IP addresses from
+all over the world at an average rate of about fifty thousand per day.
+But many critical design and deployment issues were never
 resolved, and the design has not been updated in several years. Here
 we describe Tor, a protocol for asynchronous, loosely federated onion
 routers that provides the following improvements over the old Onion
@@ -979,46 +980,6 @@ require investigation.
 \SubSection{Exit policies and abuse}
 \label{subsec:exitpolicies}
 
-
-Tor offers more reliability than the high-latency fire-and-forget
-anonymous email networks, because the sender opens a TCP stream
-with the remote mail server and receives an explicit confirmation of
-acceptance. But ironically, the private exit node model works poorly for
-email, when Tor nodes are run on volunteer machines that also do other
-things, because it's quite hard to configure mail transport agents so
-normal users can send mail normally, but the Tor process can only deliver
-mail locally. Further, most organizations have specific hosts that will
-deliver mail on behalf of certain IP ranges; Tor operators must be aware
-of these hosts and consider putting them in the Tor exit policy.
-
-The abuse issues on closed (e.g. military) networks are different
-from the abuse on open networks like the Internet. While these IP-based
-access controls are still commonplace on the Internet, on closed networks,
-nearly all participants will be honest, and end-to-end authentication
-can be assumed for anything important.
-
-Tor is harder than minion because TCP doesn't include an abuse
-address. you could reach inside the http stream and change the agent
-or something, but that's a specific case and probably won't help
-much anyway.
-And volunteer nodes don't resolve to anonymizer.mit.edu so it never
-even occurs to people that it wasn't you.
-
-Preventing abuse of open exit nodes is an unsolved problem. Princeton's
-CoDeeN project \cite{darkside} gives us a glimpse of what we're in for.
-% This is more speculative than a description of our design. 
-
-but their solutions, which mainly involve rate limiting and blacklisting
-nodes which do bad things, don't translate directly to Tor. Rate limiting
-still works great, but Tor intentionally separates sender from recipient,
-so it's hard to know which sender was the one who did the bad thing,
-without just making the whole network wide open.
-
-even limiting most nodes to allow http, ssh, and aim to exit and reject
-all other stuff is sketchy, because plenty of abuse can happen over
-port 80. but it's a surprisingly good start, because it blocks most things,
-and because people are more used to the concept of port 80 abuse not
-=======
 %XXX originally, we planned to put the "users only know the hostname,
 %    not the IP, but exit policies are by IP" problem here too. Worth
 %    while still? -RD
@@ -1069,7 +1030,6 @@ limited set of well-known services, such as HTTP, SSH, or AIM.
 This is not a complete solution, since abuse opportunities for these
 protocols are still well known. Nonetheless, the benefits are real,
 since administrators seem used to the concept of port 80 abuse not
->>>>>>> 1.79
 coming from the machine's owner.
 
 A further solution may be to use proxies to clean traffic for certain
