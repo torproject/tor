@@ -49,7 +49,9 @@
 #define CONN_TYPE_OP 2
 #define CONN_TYPE_OR_LISTENER 3
 #define CONN_TYPE_OR 4
-#define CONN_TYPE_APP 5
+#define CONN_TYPE_EXIT 5
+#define CONN_TYPE_AP_LISTENER 6
+#define CONN_TYPE_AP 7
 
 #define LISTENER_STATE_READY 0
 
@@ -60,22 +62,32 @@
 #define OP_CONN_STATE_CLOSE_WAIT 3 /* have sent a destroy, awaiting a confirmation */
 #endif
 
-#define OR_CONN_STATE_CLIENT_CONNECTING 0
-#define OR_CONN_STATE_CLIENT_SENDING_AUTH 1 /* sending address and info */
-#define OR_CONN_STATE_CLIENT_AUTH_WAIT 2 /* have sent address and info, waiting */
-#define OR_CONN_STATE_CLIENT_SENDING_NONCE 3 /* sending nonce, last piece of handshake */
-#define OR_CONN_STATE_SERVER_AUTH_WAIT 4 /* waiting for address and info */
-#define OR_CONN_STATE_SERVER_SENDING_AUTH 5 /* writing auth and nonce */
-#define OR_CONN_STATE_SERVER_NONCE_WAIT 6 /* waiting for confirmation of nonce */
-#define OR_CONN_STATE_OPEN 7 /* ready to send/receive cells. */
+/* how to read these states:
+ * foo_CONN_STATE_bar_baz:
+ * "I am acting as a bar, currently in stage baz of talking with a foo."
+ */
+#define OR_CONN_STATE_OP_CONNECTING 0
+#define OR_CONN_STATE_OP_SENDING_KEYS 1
+#define OR_CONN_STATE_CLIENT_CONNECTING 2
+#define OR_CONN_STATE_CLIENT_SENDING_AUTH 3 /* sending address and info */
+#define OR_CONN_STATE_CLIENT_AUTH_WAIT 4 /* have sent address and info, waiting */
+#define OR_CONN_STATE_CLIENT_SENDING_NONCE 5 /* sending nonce, last piece of handshake */
+#define OR_CONN_STATE_SERVER_AUTH_WAIT 6 /* waiting for address and info */
+#define OR_CONN_STATE_SERVER_SENDING_AUTH 7 /* writing auth and nonce */
+#define OR_CONN_STATE_SERVER_NONCE_WAIT 8 /* waiting for confirmation of nonce */
+#define OR_CONN_STATE_OPEN 9 /* ready to send/receive cells. */
 
-#define APP_CONN_STATE_CONNECTING_WAIT 0 /* waiting for standard structure or dest info */
-#define APP_CONN_STATE_CONNECTING 1
-#define APP_CONN_STATE_OPEN 2
+#define EXIT_CONN_STATE_CONNECTING_WAIT 0 /* waiting for standard structure or dest info */
+#define EXIT_CONN_STATE_CONNECTING 1
+#define EXIT_CONN_STATE_OPEN 2
 #if 0
-#define APP_CONN_STATE_CLOSE 3 /* flushing the buffer, then will close */
-#define APP_CONN_STATE_CLOSE_WAIT 4 /* have sent a destroy, awaiting a confirmation */
+#define EXIT_CONN_STATE_CLOSE 3 /* flushing the buffer, then will close */
+#define EXIT_CONN_STATE_CLOSE_WAIT 4 /* have sent a destroy, awaiting a confirmation */
 #endif
+
+#define AP_CONN_STATE_SS_WAIT 0
+#define AP_CONN_STATE_OR_WAIT 1
+#define AP_CONN_STATE_OPEN 2
 
 #define CIRCUIT_STATE_OPEN_WAIT 0 /* receiving/processing the onion */
 #define CIRCUIT_STATE_OPEN 1 /* onion processed, ready to send data along the connection */
@@ -130,7 +142,7 @@ typedef struct
   uint32_t addr; /* these two uniquely identify a router */
   uint16_t port;
 
-/* used by app: */
+/* used by exit: */
 
   ss_t ss; /* standard structure */
   int ss_received; /* size of ss, received so far */
@@ -229,26 +241,26 @@ int getargs(int argc,char *argv[], char *args,char **conf_filename, int *logleve
 
 /********************************* buffers.c ***************************/
 
-int buf_new(char **pbuf, size_t *pbuflen, size_t *pbuf_datalen);
+int buf_new(char **buf, size_t *buflen, size_t *buf_datalen);
 
-int buf_free(char *buf);
+void buf_free(char *buf);
 
-int read_to_buf(int s, char **pbuf, size_t *pbuflen, size_t *pbuf_datalen, int *preached_eof);
+int read_to_buf(int s, char **buf, size_t *buflen, size_t *buf_datalen, int *reached_eof);
   /* grab from s, put onto buf, return how many bytes read */
 
-int flush_buf(int s, char **pbuf, size_t *pbuflen, size_t *pbuf_datalen);
+int flush_buf(int s, char **buf, size_t *buflen, size_t *buf_datalen);
   /* push from buf onto s
    * then memmove to front of buf
    * return -1 or how many bytes remain on the buf */
 
 int write_to_buf(char *string, size_t string_len,
-                 char **pbuf, size_t *pbuflen, size_t *pbuf_datalen);
+                 char **buf, size_t *buflen, size_t *buf_datalen);
   /* append string to buf (growing as needed, return -1 if "too big")
    * return total number of bytes on the buf
    */
 
 int fetch_from_buf(char *string, size_t string_len,
-		                 char **pbuf, size_t *pbuflen, size_t *pbuf_datalen);
+		                 char **buf, size_t *buflen, size_t *buf_datalen);
 	  /* if there is string_len bytes in buf, write them onto string,
 	  *    * then memmove buf back (that is, remove them from buf) */
 
@@ -305,7 +317,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
 
 /* start all connections that should be up but aren't */
 int retry_all_connections(routerinfo_t **router_array, int rarray_len,
-		  RSA *prkey, uint16_t or_port, uint16_t op_port);
+		  RSA *prkey, uint16_t or_port, uint16_t op_port, uint16_t ap_port);
 
 int connection_read_to_buf(connection_t *conn);
 
@@ -328,9 +340,6 @@ int connection_finished_flushing(connection_t *conn);
 int connection_or_process_inbuf(connection_t *conn);
 int connection_or_finished_flushing(connection_t *conn);
 
-connection_t *connection_or_new(void);
-connection_t *connection_or_listener_new(void);
-
 void conn_or_init_crypto(connection_t *conn);
 
 int or_handshake_client_process_auth(connection_t *conn);
@@ -346,9 +355,6 @@ int connection_or_handle_listener_read(connection_t *conn);
 
 /********************************* connection_op.c ***************************/
 
-connection_t *connection_op_new(void);
-connection_t *connection_op_listener_new(void);
-
 int op_handshake_process_keys(connection_t *conn);
 
 int connection_op_process_inbuf(connection_t *conn);
@@ -359,15 +365,13 @@ int connection_op_create_listener(RSA *prkey, struct sockaddr_in *local);
 
 int connection_op_handle_listener_read(connection_t *conn);
 
-/********************************* connection_app.c ***************************/
+/********************************* connection_exit.c ***************************/
 
-connection_t *connection_app_new(void);
+int connection_exit_process_inbuf(connection_t *conn);
+int connection_exit_package_inbuf(connection_t *conn);
+int connection_exit_process_data_cell(cell_t *cell, connection_t *conn);
 
-int connection_app_process_inbuf(connection_t *conn);
-int connection_app_package_inbuf(connection_t *conn);
-int connection_app_process_data_cell(cell_t *cell, connection_t *conn);
-
-int connection_app_finished_flushing(connection_t *conn);
+int connection_exit_finished_flushing(connection_t *conn);
 
 /********************************* main.c ***************************/
 

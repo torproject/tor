@@ -3,6 +3,8 @@
 
 /********* START VARIABLES **********/
 
+#if 0
+/* these are now out of date :( -RD */
 char *conn_type_to_string[] = {
   "OP listener", /* 0 */
   "OP",          /* 1 */
@@ -26,12 +28,13 @@ char *conn_state_to_string[][10] = {
     "sending auth (as server)",     /* 5 */
     "waiting for nonce (as server)",/* 6 */
     "open" },                       /* 7 */
-  { "connecting",                 /* app, 0 */
+  { "connecting",                /* exit, 0 */
     "open",                            /* 1 */
     "waiting for dest info",           /* 2 */
     "flushing buffer, then will close",/* 3 */
     "close_wait" }                     /* 4 */
 };
+#endif
 
 /********* END VARIABLES ************/
 
@@ -44,8 +47,9 @@ connection_t *connection_new(int type) {
   memset(conn,0,sizeof(connection_t)); /* zero it out to start */
 
   conn->type = type;
-  buf_new(&conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen);
-  buf_new(&conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen);
+  if(buf_new(&conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen) < 0 ||
+     buf_new(&conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen) < 0)
+    return NULL;
 
   return conn;
 }
@@ -61,8 +65,8 @@ void connection_free(connection_t *conn) {
  /* FIXME should we do these for all connections, or just ORs, or what */
   if(conn->type == CONN_TYPE_OR ||
      conn->type == CONN_TYPE_OP) {
-//    EVP_CIPHER_CTX_cleanup(&conn->f_ctx);
-//    EVP_CIPHER_CTX_cleanup(&conn->b_ctx);
+    EVP_CIPHER_CTX_cleanup(&conn->f_ctx);
+    EVP_CIPHER_CTX_cleanup(&conn->b_ctx);
   }
 
   if(conn->s > 0)
@@ -99,6 +103,8 @@ int connection_create_listener(RSA *prkey, struct sockaddr_in *local, int type) 
   fcntl(s, F_SETFL, O_NONBLOCK); /* set s to non-blocking */
 
   conn = connection_new(type);
+  if(!conn)
+    return -1;
   conn->s = s;
 
   if(connection_add(conn) < 0) { /* no space, forget it */
@@ -156,7 +162,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
 }
 
 int retry_all_connections(routerinfo_t **router_array, int rarray_len,
-  RSA *prkey, uint16_t or_port, uint16_t op_port) {
+  RSA *prkey, uint16_t or_port, uint16_t op_port, uint16_t ap_port) {
 
   /* start all connections that should be up but aren't */
 
@@ -201,7 +207,6 @@ int retry_all_connections(routerinfo_t **router_array, int rarray_len,
   }
  
   return 0;
-
 }
 
 int connection_read_to_buf(connection_t *conn) {
@@ -226,11 +231,10 @@ int connection_write_to_buf(char *string, int len, connection_t *conn) {
 int connection_send_destroy(aci_t aci, connection_t *conn) {
   cell_t cell;
 
-  if(!conn)
-    return -1;
+  assert(conn);
 
   if(conn->type == CONN_TYPE_OP ||
-     conn->type == CONN_TYPE_APP) {
+     conn->type == CONN_TYPE_EXIT) {
      log(LOG_DEBUG,"connection_send_destroy(): At an edge. Marking connection for close.");
      conn->marked_for_close = 1;
      return 0;
@@ -290,8 +294,8 @@ int connection_process_inbuf(connection_t *conn) {
       return connection_op_process_inbuf(conn);
     case CONN_TYPE_OR:
       return connection_or_process_inbuf(conn);
-    case CONN_TYPE_APP:
-      return connection_app_process_inbuf(conn);
+    case CONN_TYPE_EXIT:
+      return connection_exit_process_inbuf(conn);
     default:
       log(LOG_DEBUG,"connection_process_inbuf() got unexpected conn->type.");
       return -1;
@@ -309,8 +313,8 @@ int connection_finished_flushing(connection_t *conn) {
       return connection_op_finished_flushing(conn);
     case CONN_TYPE_OR:
       return connection_or_finished_flushing(conn);
-    case CONN_TYPE_APP:
-      return connection_app_finished_flushing(conn);
+    case CONN_TYPE_EXIT:
+      return connection_exit_finished_flushing(conn);
     default:
       log(LOG_DEBUG,"connection_finished_flushing() got unexpected conn->type.");
       return -1;

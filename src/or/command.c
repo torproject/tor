@@ -96,6 +96,9 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
       /* i've disabled making connections through OPs, but it's definitely
        * possible here. I'm not sure if it would be a bug or a feature. -RD
        */
+      /* note also that this will close circuits where the onion has the same
+       * router twice in a row in the path. i think that's ok. -RD
+       */
       log(LOG_DEBUG,"command_process_create_cell(): Next router not connected. Closing.");
       circuit_close(circ);
     }
@@ -132,15 +135,15 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
     free((void *)cellbuf);
     return;
 
-  } else { /* this is destined for an app */
-    log(LOG_DEBUG,"command_process_create_cell(): Creating new application connection.");
-    n_conn = connection_new(CONN_TYPE_APP);
+  } else { /* this is destined for an exit */
+    log(LOG_DEBUG,"command_process_create_cell(): Creating new exit connection.");
+    n_conn = connection_new(CONN_TYPE_EXIT);
     if(!n_conn) {
       log(LOG_DEBUG,"command_process_create_cell(): connection_new failed. Closing.");
       circuit_close(circ);
       return;
     }
-    n_conn->state = APP_CONN_STATE_CONNECTING_WAIT;
+    n_conn->state = EXIT_CONN_STATE_CONNECTING_WAIT;
     n_conn->s = -1; /* not yet valid */
     if(connection_add(n_conn) < 0) { /* no space, forget it */
       log(LOG_DEBUG,"command_process_create_cell(): connection_add failed. Closing.");
@@ -151,7 +154,6 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
     circ->n_conn = n_conn;
     return;
   }
-
 }
 
 void command_process_data_cell(cell_t *cell, connection_t *conn) {
@@ -207,6 +209,5 @@ void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   if(cell->aci == circ->n_aci) /* the destroy came from ahead */
     connection_send_destroy(circ->p_aci, circ->p_conn);
   circuit_free(circ);
-
 }
 

@@ -73,7 +73,6 @@ void connection_set_poll_socket(connection_t *conn) {
 }
 
 int connection_remove(connection_t *conn) {
-
   int current_index;
 
   assert(conn);
@@ -103,7 +102,6 @@ int connection_remove(connection_t *conn) {
 }
 
 connection_t *connection_get_by_addr_port(uint32_t addr, uint16_t port) {
-
   int i;
   connection_t *conn;
 
@@ -115,11 +113,9 @@ connection_t *connection_get_by_addr_port(uint32_t addr, uint16_t port) {
   }
 
   return NULL;
-
 }
 
 connection_t *connection_get_by_type(int type) {
-
   int i;
   connection_t *conn;
 
@@ -130,7 +126,6 @@ connection_t *connection_get_by_type(int type) {
   }
 
   return NULL;
-
 }
 
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
@@ -159,7 +154,6 @@ void connection_watch_events(connection_t *conn, short events) {
 }
 
 void check_conn_read(int i) {
-
   int retval;
   connection_t *conn;
 
@@ -174,7 +168,7 @@ void check_conn_read(int i) {
     } else if (conn->type == CONN_TYPE_OR_LISTENER) {
       retval = connection_or_handle_listener_read(conn);
     } else {
-      /* else it's an OP, OR, or app */
+      /* else it's an OP, OR, or exit */
       retval = connection_read_to_buf(conn);
       if (retval >= 0) { /* all still well */
         retval = connection_process_inbuf(conn);
@@ -195,7 +189,6 @@ void check_conn_read(int i) {
 }
 
 void check_conn_write(int i) {
-
   int retval;
   connection_t *conn;
 
@@ -209,7 +202,7 @@ void check_conn_write(int i) {
       log(LOG_DEBUG,"check_conn_write(): Got a listener socket. Can't happen!");
       retval = -1;
     } else {
-      /* else it's an OP, OR, or app */
+      /* else it's an OP, OR, or exit */
       retval = connection_flush_buf(conn); /* conns in CONNECTING state will fall through... */
       if(retval == 0) { /* it's done flushing */
         retval = connection_finished_flushing(conn); /* ...and get handled here. */
@@ -245,26 +238,7 @@ void check_conn_marked(int i) {
   }
 }
 
-#if 0
-void check_conn_hup(int i) {
-  connection_t *conn;
-
-  if(poll_array[i].revents & POLLHUP) { /* they've hung up */
-    conn = connection_array[i];
-    log(LOG_DEBUG,"check_conn_hup(): socket %d has hung up.",conn->s);
-    connection_remove(conn);
-    connection_free(conn);
-    
-    if(i<nfds) { /* we just replaced the one at i with a new one.
-                    process it too. */
-      check_conn_hup(i);
-    }
-  }
-}
-#endif
-
 int do_main_loop(void) {
-
   int i;
 
   /* load the routers file */
@@ -288,14 +262,14 @@ int do_main_loop(void) {
 
   /* try to connect to all the other ORs, and start the listeners */
   retry_all_connections(router_array, rarray_len, prkey, 
-		        options[NetworkPort].r.i,options[EntryPort].r.i);
+		        options[NetworkPort].r.i,options[EntryPort].r.i, 0);
 
   for(;;) {
     poll(poll_array, nfds, -1); /* poll until we have an event */
 
     /* do all the reads first, so we can detect closed sockets */
     for(i=0;i<nfds;i++)
-      check_conn_read(i);
+      check_conn_read(i); /* this also blows away broken connections */
 
     /* then do the writes */
     for(i=0;i<nfds;i++)
@@ -304,28 +278,18 @@ int do_main_loop(void) {
     /* any of the conns need to be closed now? */
     for(i=0;i<nfds;i++)
       check_conn_marked(i); 
-
-#if 0 /* no, check_conn_read() takes care of hups. */
-    /* remove the ones that have disconnected */
-    for(i=0;i<nfds;i++)
-      check_conn_hup(i);
-#endif
   }
-
 }
 
-void catch ()
-{
+void catch () {
   errno = 0; /* netcat does this. it looks fun. */
 
   log(LOG_DEBUG,"Catching ^c, exiting cleanly.");
    
   exit(0);
-  
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   int retval = 0;
 
   char *conf_filename = NULL; /* configuration file */

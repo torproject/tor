@@ -1,14 +1,6 @@
 
 #include "or.h"
 
-connection_t *connection_op_new(void) {
-  return connection_new(CONN_TYPE_OP);
-}
-
-connection_t *connection_op_listener_new(void) {
-  return connection_new(CONN_TYPE_OP_LISTENER);
-}
-
 int connection_op_process_inbuf(connection_t *conn) {
 
   assert(conn && conn->type == CONN_TYPE_OP);
