@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.6  2002/07/10 12:37:49  montrose
+ * Added usage display on error.
+ *
  * Revision 1.5  2002/07/09 19:51:41  montrose
  * Miscellaneous bug fixes / activated "make check" for src/or
  *
@@ -128,6 +131,7 @@ RETURN VALUE: 0 on success, non-zero on error
       code = 0;
       break;
    default:
+      poptPrintUsage(optCon, stderr, 0);
       fprintf(stderr, "%s: %s\n", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(code));
       break;
    }
