@@ -26,7 +26,7 @@ Description: anonymous communication system
  around the routers, and recipients, observers, and even the routers
  themselves have difficulty tracking the source of the stream.
  .
- Note that Tor does not protocol cleaning.  That means there is a danger that
+ Note that Tor does no protocol cleaning.  That means there is a danger that
  application protocols and associated programs can be induced to reveal
  information about the initiator.  Tor depends on Privoxy and similar protocol
  cleaners to solve this problem.
@@ -34,7 +34,7 @@ Description: anonymous communication system
  Client applications can use the Tor network by connecting to the local
  onion proxy.  If the application itself does not come with socks support
  you can use a socks client such as tsocks.  Some web browsers like mozilla
- and web proxies like privoxy come with socks support, you don't need an
+ and web proxies like privoxy come with socks support, so you don't need an
  extra socks client if you want to use Tor with them.
  .
  Remember that this is alpha code, and the network is very small -- Tor will
