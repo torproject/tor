@@ -150,6 +150,10 @@ void add_stream_log(int loglevel, const char *name, FILE *stream)
   logfiles = lf;
 }
 
+/*
+ * If opening the logfile fails, -1 is returned and
+ * errno is set appropriately (by fopen)
+ */
 int add_file_log(int loglevel, const char *filename) 
 {
   FILE *f;

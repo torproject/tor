@@ -602,19 +602,19 @@ static int init_from_config(int argc, char **argv) {
   close_logs(); /* we'll close, then open with correct loglevel if necessary */
   if(!options.LogFile && !options.RunAsDaemon)
     add_stream_log(options.loglevel, "<stdout>", stdout);
-  if(options.DebugLogFile)
-    add_file_log(LOG_DEBUG, options.DebugLogFile);
   if(options.LogFile)
-    add_file_log(options.loglevel, options.LogFile);
+    if (add_file_log(options.loglevel, options.LogFile) != 0) {
+      /* opening the log file failed!  Use stderr and log a warning */
+      add_stream_log(options.loglevel, "<stderr>", stderr);
+      log_fn(LOG_WARN, "Cannot write to LogFile '%s': %s.", options.LogFile, strerror(errno));
+    }
+  if(options.DebugLogFile)
+    if (add_file_log(LOG_DEBUG, options.DebugLogFile) != 0)
+      log_fn(LOG_WARN, "Cannot write to DebugLogFile '%s': %s.", options.LogFile, strerror(errno));
 
   global_read_bucket = options.TotalBandwidth; /* start it at 1 second of traffic */
   stats_prev_global_read_bucket = global_read_bucket;
 
-  /* write our pid to the pid file */
-  write_pidfile(options.PidFile);
-  /* XXX Is overwriting the pidfile ok? I think it is. -RD */
-
-  /* now that we've written the pid file, we can switch the user and group. */
   if(options.User || options.Group) {
     if(switch_id(options.User, options.Group) != 0) {
       return -1;
@@ -625,6 +625,10 @@ static int init_from_config(int argc, char **argv) {
     daemonize();
     have_daemonized = 1;
   }
+
+  /* write our pid to the pid file, if we do not have write permissions we will log a warning */
+  write_pidfile(options.PidFile);
+  /* XXX Is overwriting the pidfile ok? I think it is. -RD */
 
   return 0;
 }
