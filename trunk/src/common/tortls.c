@@ -97,7 +97,8 @@ tor_tls_get_error(tor_tls *tls, int r, int extra,
     case SSL_ERROR_SYSCALL:
       if (extra&CATCH_SYSCALL)
         return _TOR_TLS_SYSCALL;
-      log(severity, "TLS error: <syscall error> (errno=%d)",errno);
+      log(severity, "TLS error: <syscall error> (errno=%d: %s)",errno,
+          strerror(errno));
       tls_log_errors(severity, doing);
       return TOR_TLS_ERROR;
     case SSL_ERROR_ZERO_RETURN:
