@@ -502,9 +502,17 @@ connection_edge_process_relay_cell_not_open(
         log_fn(LOG_WARN,"Got an end because of exitpolicy, but we're not an AP. Closing.");
         return -1;
       }
-      log_fn(LOG_INFO,"Address %s refused due to exit policy. Retrying.",
-             conn->socks_request->address);
       addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
+      if(addr) {
+        log_fn(LOG_INFO,"Address %s refused due to exit policy. Retrying.",
+               conn->socks_request->address);
+      } else {
+        log_fn(LOG_INFO,"Address %s resolved to 0.0.0.0. Closing,",
+               conn->socks_request->address);
+        conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
+        connection_mark_for_close(conn);
+        return 0;
+      }
       client_dns_set_entry(conn->socks_request->address, addr);
 
       /* check if he *ought* to have allowed it */
@@ -564,12 +572,18 @@ connection_edge_process_relay_cell_not_open(
     }
 //    log_fn(LOG_INFO,"Connected! Notifying application.");
     conn->state = AP_CONN_STATE_OPEN;
-    if (rh->length >= 4) {
-      addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
-      client_dns_set_entry(conn->socks_request->address, addr);
-    }
     log_fn(LOG_INFO,"'connected' received after %d seconds.",
            (int)(time(NULL) - conn->timestamp_lastread));
+    if (rh->length >= 4) {
+      addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
+      if(!addr) {
+        log_fn(LOG_INFO,"...but it claims the IP address was 0.0.0.0. Closing.");
+        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+        connection_mark_for_close(conn);
+        return 0;
+      }
+      client_dns_set_entry(conn->socks_request->address, addr);
+    }
     circuit_log_path(LOG_INFO,circ);
     connection_ap_handshake_socks_reply(conn, NULL, 0, 1);
     conn->socks_request->has_finished = 1;
