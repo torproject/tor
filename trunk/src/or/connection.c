@@ -79,6 +79,7 @@ connection_t *connection_new(int type) {
   conn = tor_malloc_zero(sizeof(connection_t));
   conn->magic = CONNECTION_MAGIC;
   conn->s = -1; /* give it a default of 'not used' */
+  conn->poll_index = -1; /* also default to 'not used' */
 
   conn->type = type;
   if(!connection_is_listener(conn)) { /* listeners never use their buf */
@@ -631,8 +632,8 @@ int connection_read_to_buf(connection_t *conn) {
     switch(result) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
-        log_fn(LOG_INFO,"tls error. breaking (nickname %s).",
-               conn->nickname ? conn->nickname : "not set");
+        log_fn(LOG_INFO,"tls error. breaking (nickname %s, address %s).",
+               conn->nickname ? conn->nickname : "not set", conn->address);
         return -1; /* XXX deal with close better */
       case TOR_TLS_WANTWRITE:
         connection_start_writing(conn);
@@ -864,7 +865,7 @@ connection_t *connection_get_by_type_state_lastwritten(int type, int state) {
   return best;
 }
 
-connection_t *connection_get_by_type_rendquery(int type, char *rendquery) {
+connection_t *connection_get_by_type_rendquery(int type, const char *rendquery) {
   int i, n;
   connection_t *conn;
   connection_t **carray;

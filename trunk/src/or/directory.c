@@ -221,8 +221,8 @@ int connection_dir_process_inbuf(connection_t *conn) {
 
   /* Directory clients write, then read data until they receive EOF;
    * directory servers read data until they get an HTTP command, then
-   * write their response, mark the conn for close (?) and hold the
-   * conn open till it's flushed. (??)XXXXNMNM
+   * write their response (when it's finished flushing, they mark for
+   * close).
    */
   if(conn->inbuf_reached_eof) {
     if(conn->state != DIR_CONN_STATE_CLIENT_READING) {
@@ -360,10 +360,10 @@ static char answer404[] = "HTTP/1.0 404 Not found\r\n\r\n";
 static char answer503[] = "HTTP/1.0 503 Directory unavailable\r\n\r\n";
 
 /* Helper function: called when a dirserver gets a complete HTTP GET
- * request.  Looks for a request for a directory or for a rendezvous
- * service descriptor.  On finding one, writes a response into
+ * request.  Look for a request for a directory or for a rendezvous
+ * service descriptor.  On finding one, write a response into
  * conn->outbuf.  If the request is unrecognized, send a 404.
- * Always returns 0. */
+ * Always return 0. */
 static int directory_handle_command_get(connection_t *conn,
                                         char *headers, char *body,
                                         int body_len) {
@@ -425,11 +425,11 @@ static int directory_handle_command_get(connection_t *conn,
   return 0;
 }
 
-/* Helper function: called when a dirserver gets a complete HTTP GET
- * request.  Looks for an uploaded server descriptor or rendezvous
- * service descriptor.  On finding one, processes it and writes a
- * response into conn->outbuf.  If the request is unrecognized, sends a
- * 404.  Always returns 0. */
+/* Helper function: called when a dirserver gets a complete HTTP POST
+ * request.  Look for an uploaded server descriptor or rendezvous
+ * service descriptor.  On finding one, process it and write a
+ * response into conn->outbuf.  If the request is unrecognized, send a
+ * 404.  Always return 0. */
 static int directory_handle_command_post(connection_t *conn,
                                          char *headers, char *body,
                                          int body_len) {
@@ -519,7 +519,7 @@ static int directory_handle_command(connection_t *conn) {
 }
 
 /* Write handler for directory connections; called when all data has
- * been flushed.  Handle a completed connection; close the connection,
+ * been flushed.  Handle a completed connection: close the connection
  * or wait for a response as appropriate.
  */
 int connection_dir_finished_flushing(connection_t *conn) {

@@ -1,4 +1,4 @@
-/* Copyright 2001,2002,2003 Roger Dingledine, Matej Pfajfar. */
+/* Copyright 2001 Matej Pfajfar, 2001-2004 Roger Dingledine. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 
@@ -165,10 +165,10 @@ int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_lay
 }
 
 /* Make a relay cell out of 'relay_command' and 'payload', and
- * send it onto the open circuit 'circ'. If it's a control cell,
- * set fromconn to NULL, else it's the stream that's sending the
- * relay cell. Use cpath_layer NULL if you're responding to the OP;
- * If it's an outgoing cell it must specify the destination hop.
+ * send it onto the open circuit 'circ'. 'fromconn' is the stream
+ * that's sending the relay cell, or NULL if it's a control cell,
+ * 'cpath_layer' is NULL for OR->OP cells, or the destination hop
+ * for OP->OR cells.
  *
  * If you can't send the cell, mark the circuit for close and
  * return -1. Else return 0.
@@ -229,12 +229,15 @@ int connection_edge_process_relay_cell_not_open(
     reason = *(cell->payload+RELAY_HEADER_SIZE);
     /* We have to check this here, since we aren't connected yet. */
     if (rh->length >= 5 && reason == END_STREAM_REASON_EXITPOLICY) {
+      log_fn(LOG_INFO,"Address %s refused due to exit policy. Retrying.",
+             conn->socks_request->address);
       addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
       client_dns_set_entry(conn->socks_request->address, addr);
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
       circuit_detach_stream(circ,conn);
       if(connection_ap_handshake_attach_circuit(conn) >= 0)
         return 0;
+      log_fn(LOG_INFO,"Giving up on retrying (from exitpolicy); conn can't be handled.");
       /* else, conn will get closed below */
     } else if (rh->length && reason == END_STREAM_REASON_RESOLVEFAILED) {
       if (client_dns_incr_failures(conn->socks_request->address)
@@ -245,6 +248,10 @@ int connection_edge_process_relay_cell_not_open(
         if(connection_ap_handshake_attach_circuit(conn) >= 0)
           return 0;
         /* else, conn will get closed below */
+        log_fn(LOG_INFO,"Giving up on retrying (from resolvefailed); conn can't be handled.");
+      } else {
+        log_fn(LOG_WARN,"Have tried resolving address %s at %d different places. Giving up.",
+               conn->socks_request->address, MAX_RESOLVE_FAILURES);
       }
     }
     log_fn(LOG_INFO,"Edge got end (%s) before we're connected. Marking for close.",
@@ -253,8 +260,6 @@ int connection_edge_process_relay_cell_not_open(
       circuit_log_path(LOG_INFO,circ);
     conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
     connection_mark_for_close(conn, 0);
-    /* XXX here we should send a socks reject back if necessary, and hold
-     * open til flushed */
     return 0;
   }
 
@@ -280,12 +285,12 @@ int connection_edge_process_relay_cell_not_open(
       return 0;
     }
     return 0;
-  } else {
-    log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
-           rh->command, conn->state, conn_state_to_string[conn->type][conn->state]);
-    connection_mark_for_close(conn, END_STREAM_REASON_MISC);
-    return -1;
   }
+
+  log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
+         rh->command, conn->state, conn_state_to_string[conn->type][conn->state]);
+  connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+  return -1;
 }
 
 /* an incoming relay cell has arrived. return -1 if you want to tear down the
@@ -893,7 +898,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   if(conn_age > 60) {
     /* XXX make this cleaner than '60' */
     log_fn(LOG_WARN,"Giving up on unattached conn (%d sec old).", conn_age);
-    connection_mark_for_close(conn, 0);
+    return -1;
   }
 
   if(!connection_edge_is_rendezvous_stream(conn)) { /* we're a general conn */
@@ -1180,13 +1185,6 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   n_stream->package_window = STREAMWINDOW_START;
   n_stream->deliver_window = STREAMWINDOW_START;
 
-  log_fn(LOG_DEBUG,"finished adding conn");
-
-  /* add it into the linked list of streams on this circuit */
-  n_stream->next_stream = circ->n_streams;
-  circ->n_streams = n_stream;
-  assert_circuit_ok(circ);
-
   if(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
     log_fn(LOG_DEBUG,"begin is for rendezvous. configuring stream.");
     n_stream->address = tor_strdup("(rendezvous)");
@@ -1204,6 +1202,12 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     assert_circuit_ok(circ);
     log_fn(LOG_DEBUG,"Finished assigning addr/port");
     n_stream->cpath_layer = circ->cpath->prev; /* link it */
+
+    /* add it into the linked list of n_streams on this circuit */
+    n_stream->next_stream = circ->n_streams;
+    circ->n_streams = n_stream;
+    assert_circuit_ok(circ);
+
     connection_exit_connect(n_stream);
     return 0;
   }
@@ -1214,6 +1218,12 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   /* send it off to the gethostbyname farm */
   switch(dns_resolve(n_stream)) {
     case 1: /* resolve worked */
+
+      /* add it into the linked list of n_streams on this circuit */
+      n_stream->next_stream = circ->n_streams;
+      circ->n_streams = n_stream;
+      assert_circuit_ok(circ);
+
       connection_exit_connect(n_stream);
       return 0;
     case -1: /* resolve failed */
@@ -1222,6 +1232,10 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
       connection_free(n_stream);
       break;
     case 0: /* resolve added to pending list */
+      /* add it into the linked list of resolving_streams on this circuit */
+      n_stream->next_stream = circ->resolving_streams;
+      circ->resolving_streams = n_stream;
+      assert_circuit_ok(circ);
       ;
   }
   return 0;
@@ -1234,6 +1248,8 @@ void connection_exit_connect(connection_t *conn) {
       router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.", conn->address, conn->port);
     connection_mark_for_close(conn, END_STREAM_REASON_EXITPOLICY);
+    circuit_detach_stream(circuit_get_by_conn(conn), conn);
+    connection_free(conn);
     return;
   }
 
@@ -1241,6 +1257,7 @@ void connection_exit_connect(connection_t *conn) {
   switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
     case -1:
       connection_mark_for_close(conn, END_STREAM_REASON_CONNECTFAILED);
+      circuit_detach_stream(circuit_get_by_conn(conn), conn);
       connection_free(conn);
       return;
     case 0:
@@ -1368,7 +1385,10 @@ static int client_dns_incr_failures(const char *address)
 {
   struct client_dns_entry *ent;
   ent = _get_or_create_ent(address);
-  return ++ent->n_failures;
+  ++ent->n_failures;
+  log_fn(LOG_DEBUG,"Address %s now has %d resolve failures.",
+         address, ent->n_failures);
+  return ent->n_failures;
 }
 
 static void client_dns_set_entry(const char *address, uint32_t val)

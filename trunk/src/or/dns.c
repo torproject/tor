@@ -384,6 +384,7 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
   struct cached_resolve search;
   struct cached_resolve *resolve;
   connection_t *pendconn;
+  circuit_t *circ;
 
   strncpy(search.address, address, MAX_ADDRESSLEN);
   search.address[MAX_ADDRESSLEN-1] = 0;
@@ -426,11 +427,21 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
       pendconn = pend->conn; /* don't pass complex things to the
                                 connection_mark_for_close macro */
       /* prevent double-remove. */
-      pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
+      pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
       connection_mark_for_close(pendconn, END_STREAM_REASON_RESOLVEFAILED);
+      connection_free(pendconn);
     } else {
       /* prevent double-remove. */
       pend->conn->state = EXIT_CONN_STATE_CONNECTING;
+
+      circ = circuit_get_by_conn(pend->conn);
+      assert(circ);
+      /* unlink pend->conn from resolving_streams, */
+      circuit_detach_stream(circ, pend->conn);
+      /* and link it to n_streams */
+      pend->conn->next_stream = circ->n_streams;
+      circ->n_streams = pend->conn;
+
       connection_exit_connect(pend->conn);
     }
     resolve->pending_connections = pend->next;

@@ -389,7 +389,8 @@ static void router_add_exit_policy_from_config_helper(const char *s, routerinfo_
  */
 static void router_add_exit_policy_from_config(routerinfo_t *router) {
   router_add_exit_policy_from_config_helper(options.ExitPolicy, router);
-  /* XXXX This is wrong; you can spell *;* many ways. */
+  /* XXXX This is wrong; you can spell *:* many ways. -NM
+   * So? If they spell it sneakily, then their exit policy is bulkier. -RD */
   if(strstr(options.ExitPolicy," *:*") == NULL) {
     /* if exitpolicy includes a *:* line, then we're done. Else, append
      * the default exitpolicy. */

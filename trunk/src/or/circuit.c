@@ -227,6 +227,10 @@ circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn) {
         if(tmpconn == conn)
           return circ;
       }
+      for(tmpconn = circ->resolving_streams; tmpconn; tmpconn = tmpconn->next_stream) {
+        if(tmpconn == conn)
+          return circ;
+      }
     }
   }
   return NULL;
@@ -248,6 +252,9 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
       if(tmpconn == conn)
         return circ;
     for(tmpconn = circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream)
+      if(tmpconn == conn)
+        return circ;
+    for(tmpconn = circ->resolving_streams; tmpconn; tmpconn=tmpconn->next_stream)
       if(tmpconn == conn)
         return circ;
   }
@@ -905,6 +912,12 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
       return tmpconn;
     }
   }
+  for(tmpconn = circ->resolving_streams; tmpconn; tmpconn=tmpconn->next_stream) {
+    if(rh.stream_id == tmpconn->stream_id) {
+      log_fn(LOG_DEBUG,"found conn for stream %d.", rh.stream_id);
+      return tmpconn;
+    }
+  }
   return NULL; /* probably a begin relay cell */
 }
 
@@ -985,7 +998,7 @@ int _circuit_mark_for_close(circuit_t *circ) {
   connection_t *conn;
 
   assert_circuit_ok(circ);
-  if (circ->marked_for_close < 0)
+  if (circ->marked_for_close)
     return -1;
 
   if(circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
@@ -1010,14 +1023,18 @@ int _circuit_mark_for_close(circuit_t *circ) {
 
   if(circ->n_conn)
     connection_send_destroy(circ->n_circ_id, circ->n_conn);
-  for(conn=circ->n_streams; conn; conn=conn->next_stream) {
+  for(conn=circ->n_streams; conn; conn=conn->next_stream)
     connection_edge_destroy(circ->n_circ_id, conn);
+  while(circ->resolving_streams) {
+    conn = circ->resolving_streams;
+    circ->resolving_streams = conn->next_stream;
+    log_fn(LOG_INFO,"Freeing resolving-conn.");
+    connection_free(conn);
   }
   if(circ->p_conn)
     connection_send_destroy(circ->p_circ_id, circ->p_conn);
-  for(conn=circ->p_streams; conn; conn=conn->next_stream) {
+  for(conn=circ->p_streams; conn; conn=conn->next_stream)
     connection_edge_destroy(circ->p_circ_id, conn);
-  }
 
   circ->marked_for_close = 1;
 
@@ -1042,16 +1059,38 @@ void circuit_detach_stream(circuit_t *circ, connection_t *conn) {
     circ->n_streams = conn->next_stream;
     return;
   }
-  for(prevconn = circ->p_streams; prevconn && prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
+  if(conn == circ->resolving_streams) {
+    circ->resolving_streams = conn->next_stream;
+    return;
+  }
+
+  for(prevconn = circ->p_streams;
+      prevconn && prevconn->next_stream && prevconn->next_stream != conn;
+      prevconn = prevconn->next_stream)
+    ;
   if(prevconn && prevconn->next_stream) {
     prevconn->next_stream = conn->next_stream;
     return;
   }
-  for(prevconn = circ->n_streams; prevconn && prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
+
+  for(prevconn = circ->n_streams;
+      prevconn && prevconn->next_stream && prevconn->next_stream != conn;
+      prevconn = prevconn->next_stream)
+    ;
   if(prevconn && prevconn->next_stream) {
     prevconn->next_stream = conn->next_stream;
     return;
   }
+
+  for(prevconn = circ->resolving_streams;
+      prevconn && prevconn->next_stream && prevconn->next_stream != conn;
+      prevconn = prevconn->next_stream)
+    ;
+  if(prevconn && prevconn->next_stream) {
+    prevconn->next_stream = conn->next_stream;
+    return;
+  }
+
   log_fn(LOG_ERR,"edge conn not in circuit's list?");
   tor_assert(0); /* should never get here */
 }
