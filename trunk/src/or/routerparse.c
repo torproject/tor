@@ -561,7 +561,7 @@ static int check_directory_signature(const char *digest,
 
 /** Given a string *<b>s</b> containing a concatenated sequence of router
  * descriptors, parses them and stores the result in *<b>dest</b>.  If
- * good_nickname_list is provided, then routers are mared as
+ * good_nickname_list is provided, then routers are marked as
  * running/nonrunning and verified/unverified based on their status in the
  * list.  Otherwise, all routers are marked running and verified.  Advances
  * *s to a point immediately following the last router entry.  Returns 0 on

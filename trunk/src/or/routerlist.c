@@ -836,16 +836,17 @@ void router_update_status_from_smartlist(routerinfo_t *router,
           router->status_set_at = list_time;
           router->is_running = 1;
         }
-        router->is_verified = (name[1] != '$');
+        router->is_verified = (name[0] != '$');
         return;
       }
     } else { /* *name == '!' */
+      name++;
       if (router_nickname_matches(router, name)) {
         if (router->status_set_at < list_time) {
           router->status_set_at = list_time;
           router->is_running = 0;
         }
-        router->is_verified = (name[1] != '$');
+        router->is_verified = (name[0] != '$');
         return;
       }
     }
