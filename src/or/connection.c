@@ -1088,7 +1088,8 @@ int connection_handle_write(connection_t *conn) {
       }
     }
     /* The connection is successful. */
-    return connection_finished_connecting(conn);
+    if (connection_finished_connecting(conn)<0)
+      return -1;
   }
 
   if (connection_speaks_cells(conn)) {
