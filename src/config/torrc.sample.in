@@ -39,7 +39,7 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 #HiddenServicePort 80 127.0.0.1:80
 #HiddenServicePort 22 127.0.0.1:22
 #HiddenServiceNodes moria1,moria2
-#HiddenServiceExcludeNodes bad,other_bad
+#HiddenServiceExcludeNodes bad,otherbad
 
 #HiddenServiceDirectory /tmp/other_hidden_service/
 #HiddenServicePort 80 127.0.0.1:80
