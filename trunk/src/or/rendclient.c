@@ -205,7 +205,7 @@ int rend_cmp_service_ids(char *one, char *two) {
   return strcasecmp(one,two);
 }
 
-/* return a pointer to a nickname for a random introduction
+/* strdup a nickname for a random introduction
  * point of query. return NULL if error.
  */
 char *rend_client_get_random_intro(char *query) {
@@ -215,6 +215,7 @@ char *rend_client_get_random_intro(char *query) {
   smartlist_t *sl;
   rend_service_descriptor_t *parsed;
   char *choice;
+  char *nickname;
 
   if(rend_cache_lookup(query, &descp, &desc_len) < 1) {
     log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.", query);
@@ -234,9 +235,10 @@ char *rend_client_get_random_intro(char *query) {
     smartlist_add(sl,parsed->intro_points[i]);
 
   choice = smartlist_choose(sl);
+  nickname = tor_strdup(choice);
   smartlist_free(sl);
   rend_service_descriptor_free(parsed);
-  return choice;
+  return nickname;
 }
 
 /* If address is of the form "y.onion" with a well-formed handle y,
