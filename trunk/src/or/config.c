@@ -1094,6 +1094,7 @@ static int parse_redirect_line(or_options_t *options,
   tor_assert(line);
 
   r = tor_malloc_zero(sizeof(exit_redirect_t));
+  elements = smartlist_create();
   smartlist_split_string(elements, line->value, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(elements) != 2) {
