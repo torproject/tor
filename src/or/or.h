@@ -501,7 +501,7 @@ struct crypt_path_t {
   int deliver_window;
 };
 
-#define DH_KEY_LEN CRYPTO_DH_SIZE
+#define DH_KEY_LEN DH_BYTES
 #define ONIONSKIN_CHALLENGE_LEN (16+DH_KEY_LEN)
 #define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+20)
 #define REND_COOKIE_LEN DIGEST_LEN
@@ -732,7 +732,7 @@ void circuit_n_conn_open(connection_t *or_conn);
 int circuit_send_next_onion_skin(circuit_t *circ);
 int circuit_extend(cell_t *cell, circuit_t *circ);
 #define CPATH_KEY_MATERIAL_LEN (20*2+16*2)
-int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data);
+int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data,int reverse);
 int circuit_finish_handshake(circuit_t *circ, char *reply);
 int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
 

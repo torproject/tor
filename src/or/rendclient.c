@@ -160,6 +160,10 @@ int
 rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request_len)
 {
   connection_t *apconn;
+  crypt_path_t *hop;
+  char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
+  char buf[DIGEST_LEN+9];
+  char expected_digest[DIGEST_LEN];
 
   if(circ->purpose != CIRCUIT_PURPOSE_C_REND_READY ||
      !circ->build_state->pending_final_cpath) {
@@ -168,17 +172,49 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request
     return -1;
   }
 
-  /* XXX
-   * take 'request' and 'circ->build_state->pending_final_cpath'
-   * and do the right thing to circ
-   */
+  if (request_len != DH_KEY_LEN+DIGEST_LEN) {
+    log_fn(LOG_WARN,"Incorrect length (%d) on RENDEZVOUS2 cell.",request_len);
+    goto err;
+  }
 
+  /* first DH_KEY_LEN bytes are g^y from bob. Finish the dh handshake...*/
+  assert(circ->build_state && circ->build_state->pending_final_cpath);
+  hop = circ->build_state->pending_final_cpath;
+  assert(hop->handshake_state);
+  if (crypto_dh_compute_secret(hop->handshake_state, request, DH_KEY_LEN,
+                               keys, DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
+    log_fn(LOG_WARN, "Couldn't complete DH handshake");
+    goto err;
+  }
+  /* ... and set up cpath. */
+  if (circuit_init_cpath_crypto(hop, keys+DIGEST_LEN, 0)<0)
+    goto err;
+
+  /* Check whether the digest is right... */
+  memcpy(buf, keys, DIGEST_LEN);
+  memcpy(buf+DIGEST_LEN, "INTRODUCE", 9);
+  if (crypto_digest(buf, DIGEST_LEN+9, expected_digest)) {
+    log_fn(LOG_WARN, "Error computing digest");
+    goto err;
+  }
+  if (memcmp(expected_digest, request+DH_KEY_LEN, DIGEST_LEN)) {
+    log_fn(LOG_WARN, "Incorrect digest of key material");
+    goto err;
+  }
+
+  /* All is well. Extend the circuit. */
   circ->purpose = CIRCUIT_PURPOSE_C_REND_JOINED;
+  onion_append_to_cpath(&circ->cpath, hop);
+  circ->build_state->pending_final_cpath = NULL; /* prevent double-free */
+
   for(apconn = circ->p_streams; apconn; apconn = apconn->next_stream) {
     if(connection_ap_handshake_send_begin(apconn, circ) < 0)
       return -1;
   }
   return 0;
+ err:
+  circuit_mark_for_close(circ);
+  return -1;
 }
 
 /* Find all the apconns in state AP_CONN_STATE_RENDDESC_WAIT that
