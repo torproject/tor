@@ -103,7 +103,7 @@ static char *connection_edge_end_reason(char *payload, uint16_t length) {
     log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
     return "MALFORMED";
   }
-  if(*payload < END_STREAM_REASON_MISC || *payload > END_STREAM_REASON_DONE) {
+  if(*payload < _MIN_END_STREAM_REASON || *payload > _MAX_END_STREAM_REASON) {
     log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
     return "MALFORMED";
   }
