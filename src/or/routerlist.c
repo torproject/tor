@@ -65,7 +65,7 @@ int router_reload_router_list(void)
     s = read_file_to_str(filename,0);
     if (s) {
       log_fn(LOG_INFO, "Loading cached directory from %s", filename);
-      if (router_load_routerlist_from_string(s, 0) < 0) {
+      if (router_load_routerlist_from_directory(s, NULL) < 0) {
         log_fn(LOG_WARN, "Cached directory '%s' was unparseable; ignoring.", filename);
       }
       tor_free(s);
