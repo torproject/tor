@@ -71,7 +71,7 @@ static INLINE void buf_shrink_if_underfull(buf_t *buf) {
    * MIN_BUF_SHRINK_SIZE.
    */
   new_len = buf->len / 2;
-  while (buf->datalen < new_len/4 && new_len/2 > MIN_BUF_SHRINK_SIZE) 
+  while (buf->datalen < new_len/4 && new_len/2 > MIN_BUF_SHRINK_SIZE)
     new_len /= 2;
   log_fn(LOG_DEBUG,"Shrinking buffer from %d to %d bytes.",
          (int)buf->len, (int)new_len);
@@ -91,7 +91,7 @@ static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
  * Otherwise, return index of the first character in buf _after_ the
  * first instance of str.
  */
-static int find_str_in_str(const char *str, int str_len, 
+static int find_str_in_str(const char *str, int str_len,
                            const char *buf, int buf_len)
 {
   const char *location;
@@ -216,14 +216,14 @@ int read_to_buf_tls(tor_tls *tls, int at_most, buf_t *buf) {
     return 0;
 
   r = tor_tls_read(tls, buf->mem+buf->datalen, at_most);
-  if (r<0) 
+  if (r<0)
     return r;
   buf->datalen += r;
   log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf.",r, (int)buf->datalen);
   return r;
-} 
+}
 
-int flush_buf(int s, buf_t *buf, int *buf_flushlen) 
+int flush_buf(int s, buf_t *buf, int *buf_flushlen)
 {
 
   /* push from buf onto s
@@ -264,7 +264,7 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
   }
 }
 
-int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen) 
+int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen)
 {
   int r;
   assert(tls && BUF_OK(buf) && buf_flushlen);
@@ -325,7 +325,7 @@ int fetch_from_buf(char *string, int string_len, buf_t *buf) {
  *   them), remove them from buf, and return 1.
  *   (If headers or body is NULL, discard that part of the buf.)
  *   If a headers or body doesn't fit in the arg, return -1.
- * 
+ *
  * Else, change nothing and return 0.
  */
 int fetch_from_buf_http(buf_t *buf,
@@ -358,7 +358,7 @@ int fetch_from_buf_http(buf_t *buf,
   }
 
 #define CONTENT_LENGTH "\r\nContent-Length: "
-  i = find_str_in_str(CONTENT_LENGTH, strlen(CONTENT_LENGTH), 
+  i = find_str_in_str(CONTENT_LENGTH, strlen(CONTENT_LENGTH),
                       headers, headerlen);
   if(i > 0) {
     contentlen = atoi(headers+i);

@@ -165,7 +165,7 @@ static int directory_handle_command_get(connection_t *conn,
     return -1; /* XXX send some helpful http error code */
   }
 
-  log_fn(LOG_DEBUG,"Dumping directory to client."); 
+  log_fn(LOG_DEBUG,"Dumping directory to client.");
   connection_write_to_buf(answerstring, strlen(answerstring), conn);
   connection_write_to_buf(cp, dlen, conn);
   conn->state = DIR_CONN_STATE_SERVER_WRITING;

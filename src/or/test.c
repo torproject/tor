@@ -73,7 +73,7 @@ test_buffers() {
   }
   write(s, str, 256);
   close(s);
-  
+
   s = open("/tmp/tor_test/data", O_RDONLY, 0);
   eof = 0;
   i = read_to_buf(s, 10, buf, &eof);
@@ -99,7 +99,7 @@ test_buffers() {
   test_eq(i, 6);
   test_memeq(str+10, (char*)_buf_peek_raw_buffer(buf2), 6);
   buf_free(buf2);
-  
+
   /* Now test when buffer is filled with more data to read. */
   buf2 = buf_new_with_capacity(32);
   i = read_to_buf(s, 128, buf2, &eof);
@@ -126,14 +126,14 @@ test_buffers() {
 
   close(s);
 
-  /**** 
+  /****
    * find_on_inbuf
    ****/
   buf_free(buf);
   buf = buf_new();
   s = open("/tmp/tor_test/data", O_RDONLY, 0);
   eof = 0;
-  i = read_to_buf(s, 1024, buf, &eof); 
+  i = read_to_buf(s, 1024, buf, &eof);
   test_eq(256, i);
   close(s);
 
@@ -176,7 +176,7 @@ test_buffers() {
   /* Test when buffer is overfull. */
 #if 0
   buflen = 18;
-  test_eq(-1, write_to_buf("This string will not fit.", 25, 
+  test_eq(-1, write_to_buf("This string will not fit.", 25,
                            &buf, &buflen, &buf_datalen));
   test_eq(buf_datalen, 16);
   test_memeq(buf, "Hello worldXYZZY--", 18);
@@ -213,7 +213,7 @@ test_crypto_dh()
   test_memneq(p1, p2, CRYPTO_DH_SIZE);
   test_assert(! crypto_dh_get_public(dh2, p2, CRYPTO_DH_SIZE));
   test_memneq(p1, p2, CRYPTO_DH_SIZE);
-  
+
   memset(s1, 0, CRYPTO_DH_SIZE);
   memset(s2, 0xFF, CRYPTO_DH_SIZE);
   s1len = crypto_dh_compute_secret(dh1, p2, CRYPTO_DH_SIZE, s1, 50);
@@ -221,20 +221,20 @@ test_crypto_dh()
   test_assert(s1len > 0);
   test_eq(s1len, s2len);
   test_memeq(s1, s2, s1len);
-  
+
   crypto_dh_free(dh1);
   crypto_dh_free(dh2);
 }
 
-void 
-test_crypto() 
+void
+test_crypto()
 {
   crypto_cipher_env_t *env1, *env2;
   crypto_pk_env_t *pk1, *pk2;
   char *data1, *data2, *data3, *cp;
   FILE *f;
   int i, j;
-  int str_ciphers[] = { CRYPTO_CIPHER_IDENTITY, 
+  int str_ciphers[] = { CRYPTO_CIPHER_IDENTITY,
                         CRYPTO_CIPHER_DES,
                         CRYPTO_CIPHER_RC4,
                         CRYPTO_CIPHER_3DES,
@@ -251,7 +251,7 @@ test_crypto()
   crypto_rand(100, data1);
   crypto_rand(100, data2);
   test_memneq(data1,data2,100);
-  
+
   /* Try out identity ciphers. */
   env1 = crypto_new_cipher_env(CRYPTO_CIPHER_IDENTITY);
   test_neq(env1, 0);
@@ -261,10 +261,10 @@ test_crypto()
   for(i = 0; i < 1024; ++i) {
     data1[i] = (char) i*73;
   }
-  crypto_cipher_encrypt(env1, data1, 1024, data2); 
+  crypto_cipher_encrypt(env1, data1, 1024, data2);
   test_memeq(data1, data2, 1024);
   crypto_free_cipher_env(env1);
-  
+
   /* Now, test encryption and decryption with stream ciphers. */
   data1[0]='\0';
   for(i = 1023; i>0; i -= 35)
@@ -335,7 +335,7 @@ test_crypto()
     crypto_free_cipher_env(env1);
     crypto_free_cipher_env(env2);
   }
-  
+
   /* Test vectors for stream ciphers. */
   /* XXXX Look up some test vectors for the ciphers and make sure we match. */
 
@@ -356,7 +356,7 @@ test_crypto()
 
   test_eq(128, crypto_pk_keysize(pk1));
   test_eq(128, crypto_pk_keysize(pk2));
-  
+
   test_eq(128, crypto_pk_public_encrypt(pk2, "Hello whirled.", 15, data1,
                                         RSA_PKCS1_OAEP_PADDING));
   test_eq(128, crypto_pk_public_encrypt(pk1, "Hello whirled.", 15, data2,
@@ -377,7 +377,7 @@ test_crypto()
   memcpy(data2+1, "XYZZY", 5);  /* This has fails ~ once-in-2^40 */
   test_eq(-1, crypto_pk_private_decrypt(pk1, data2, 128, data3,
                                         RSA_PKCS1_OAEP_PADDING));
-  
+
   /* File operations: save and load private key */
   f = fopen("/tmp/tor_test/pkey1", "wb");
   test_assert(! crypto_pk_write_private_key_to_file(pk1, f));
@@ -387,7 +387,7 @@ test_crypto()
   fclose(f);
   test_eq(15, crypto_pk_private_decrypt(pk2, data1, 128, data3,
                                         RSA_PKCS1_OAEP_PADDING));
-  test_assert(! crypto_pk_read_private_key_from_filename(pk2, 
+  test_assert(! crypto_pk_read_private_key_from_filename(pk2,
                                                "/tmp/tor_test/pkey1"));
   test_eq(15, crypto_pk_private_decrypt(pk2, data1, 128, data3,
                                         RSA_PKCS1_OAEP_PADDING));
@@ -398,9 +398,9 @@ test_crypto()
   test_eq(10, crypto_pk_public_checksig(pk1, data2, 128, data3));
   test_streq(data3, "Ossifrage");
   /*XXXX test failed signing*/
-    
-  crypto_free_pk_env(pk1);  
-  crypto_free_pk_env(pk2);  
+
+  crypto_free_pk_env(pk1);
+  crypto_free_pk_env(pk2);
 
   /* Base64 tests */
   strcpy(data1, "Test string that contains 35 chars.");
@@ -419,7 +419,7 @@ test_crypto()
 
 }
 
-void 
+void
 test_util() {
   struct timeval start, end;
   struct tm a_time;
@@ -470,7 +470,7 @@ void test_onion() {
   int i,num;
 
   names = parse_nickname_list("  foo bar	 baz quux  ", &num);
-  test_eq(num,4); 
+  test_eq(num,4);
   test_streq(names[0],"foo");
   test_streq(names[1],"bar");
   test_streq(names[2],"baz");
@@ -491,7 +491,7 @@ test_onion_handshake() {
   /* server-side */
   char s_buf[ONIONSKIN_REPLY_LEN];
   char s_keys[40];
-  
+
   /* shared */
   crypto_pk_env_t *pk = NULL;
 
@@ -506,11 +506,11 @@ test_onion_handshake() {
   memset(s_buf, 0, ONIONSKIN_REPLY_LEN);
   memset(s_keys, 0, 40);
   test_assert(! onion_skin_server_handshake(c_buf, pk, s_buf, s_keys, 40));
-  
+
   /* client handshake 2 */
   memset(c_keys, 0, 40);
   test_assert(! onion_skin_client_handshake(c_dh, s_buf, c_keys, 40));
-  
+
   crypto_dh_free(c_dh);
 
   if (memcmp(c_keys, s_keys, 40)) {
@@ -544,7 +544,7 @@ test_dir_format()
   test_assert(! crypto_pk_generate_key(pk1));
   test_assert(! crypto_pk_generate_key(pk2));
   test_assert(! crypto_pk_generate_key(pk3));
-  
+
   r1.address = "testaddr1.foo.bar";
   r1.addr = 0xc0a80001u; /* 192.168.0.1 */
   r1.published_on = 0;
@@ -581,16 +581,16 @@ test_dir_format()
   r2.bandwidth = 3000;
   r2.exit_policy = &ex1;
 
-  test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str, 
+  test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
                                                     &pk1_str_len));
-  test_assert(!crypto_pk_write_public_key_to_string(pk2 , &pk2_str, 
+  test_assert(!crypto_pk_write_public_key_to_string(pk2 , &pk2_str,
                                                     &pk2_str_len));
-  test_assert(!crypto_pk_write_public_key_to_string(pk3 , &pk3_str, 
+  test_assert(!crypto_pk_write_public_key_to_string(pk3 , &pk3_str,
                                                     &pk3_str_len));
 
   memset(buf, 0, 2048);
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
-  
+
   strcpy(buf2, "router Magri testaddr1.foo.bar 9000 9002 9003 1000\n"
          "platform Tor "VERSION" on ");
   strcat(buf2, get_uname());
@@ -604,9 +604,9 @@ test_dir_format()
   strcat(buf2, pk2_str);
   strcat(buf2, "router-signature\n");
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same twice*/
-  
+
   test_streq(buf, buf2);
-  
+
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
   cp = buf;
   rp1 = router_get_entry_from_string((const char**)&cp);
@@ -621,7 +621,7 @@ test_dir_format()
   test_assert(crypto_pk_cmp_keys(rp1->identity_pkey, pk2) == 0);
   test_assert(rp1->exit_policy == NULL);
 
-#if 0 
+#if 0
   /* XXX Once we have exit policies, test this again. XXX */
   strcpy(buf2, "router tor.tor.tor 9005 0 0 3000\n");
   strcat(buf2, pk2_str);
@@ -652,7 +652,7 @@ test_dir_format()
   test_assert(rp2->exit_policy->next->next == NULL);
 #endif
 
-#if 0 
+#if 0
   /* XXX To re-enable this test, we need to separate directory generation
    * XXX from the directory backend again.  Do this the next time we have
    * XXX directory trouble. */
@@ -664,11 +664,11 @@ test_dir_format()
   dir1->routers[1] = &r2;
   test_assert(! dump_signed_directory_to_string_impl(buf, 4096, dir1, pk1));
   /* puts(buf); */
-  
+
   test_assert(! router_get_dir_from_string_impl(buf, &dir2, pk1));
   test_eq(2, dir2->n_routers);
 #endif
- 
+
   tor_free(pk1_str);
   tor_free(pk2_str);
   if (pk1) crypto_free_pk_env(pk1);
@@ -689,8 +689,8 @@ test_dir_format()
   test_eq(-1, compare_recommended_versions("a", ""));
 }
 
-int 
-main(int c, char**v){ 
+int
+main(int c, char**v){
 #if 0
   or_options_t options; /* command-line and config-file options */
 

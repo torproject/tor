@@ -118,7 +118,7 @@ connection_t *connection_or_connect(routerinfo_t *router) {
       return NULL;
     case 0:
       connection_set_poll_socket(conn);
-      connection_watch_events(conn, POLLIN | POLLOUT | POLLERR); 
+      connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link on windows */
       conn->state = OR_CONN_STATE_CONNECTING;
@@ -248,7 +248,7 @@ void connection_or_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
   assert(connection_speaks_cells(conn));
 
   cell_pack(n, cellp);
- 
+
   connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
 }
 
@@ -262,13 +262,13 @@ loop:
          conn->s,(int)buf_datalen(conn->inbuf),tor_tls_get_pending_bytes(conn->tls));
   if(buf_datalen(conn->inbuf) < CELL_NETWORK_SIZE) /* entire response available? */
     return 0; /* not yet */
- 
+
   connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, conn);
- 
+
   /* retrieve cell info from buf (create the host-order struct from the
    * network-order string) */
   cell_unpack(&cell, buf);
- 
+
   command_process_cell(&cell, conn);
 
   goto loop; /* process the remainder of the buffer */

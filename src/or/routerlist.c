@@ -75,7 +75,7 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
 static int
 router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
                                           crypto_pk_env_t *pkey);
-static int router_add_exit_policy(routerinfo_t *router, 
+static int router_add_exit_policy(routerinfo_t *router,
                                   directory_token_t *tok);
 static int router_resolve_routerlist(routerlist_t *dir);
 
@@ -87,7 +87,7 @@ static int router_get_next_token(const char **s, directory_token_t *tok);
 #else
 #define router_get_next_token _router_get_next_token
 #endif
-static int router_get_hash_impl(const char *s, char *digest, 
+static int router_get_hash_impl(const char *s, char *digest,
                                 const char *start_str,
                                 const char *end_str);
 static void router_release_token(directory_token_t *tok);
@@ -161,7 +161,7 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
-routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk) 
+routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk)
 {
   int i;
   routerinfo_t *router;
@@ -296,16 +296,16 @@ int router_get_router_hash(const char *s, char *digest)
                               "router ","router-signature");
 }
 
-/* return 0 if myversion is in versionlist. Else return -1.  (versionlist 
+/* return 0 if myversion is in versionlist. Else return -1.  (versionlist
  * contains a comma-separated list of versions.) */
-int compare_recommended_versions(const char *myversion, 
+int compare_recommended_versions(const char *myversion,
                                  const char *versionlist) {
   int len_myversion = strlen(myversion);
   char *comma;
   const char *end = versionlist + strlen(versionlist);
 
   log_fn(LOG_DEBUG,"checking '%s' in '%s'.", myversion, versionlist);
-  
+
   for(;;) {
     comma = strchr(versionlist, ',');
     if( ((comma ? comma : end) - versionlist == len_myversion) &&
@@ -356,7 +356,7 @@ router_resolve(routerinfo_t *router)
   rent = (struct hostent *)gethostbyname(router->address);
   if (!rent) {
     log_fn(LOG_WARN,"Could not get address for router %s.",router->address);
-    return -1; 
+    return -1;
   }
   assert(rent->h_length == 4);
   memcpy(&router->addr, rent->h_addr,rent->h_length);
@@ -426,7 +426,7 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
       if (tmpe->msk == 0 && (port >= tmpe->prt_min && port <= tmpe->prt_max)) {
         /* The exit policy is accept/reject *:port */
         match = 1;
-      } else if (port >= tmpe->prt_min && port <= tmpe->prt_max && 
+      } else if (port >= tmpe->prt_min && port <= tmpe->prt_max &&
                  tmpe->policy_type == EXIT_POLICY_REJECT) {
         /* The exit policy is reject ???:port */
         maybe_reject = 1;
@@ -477,7 +477,6 @@ int router_exit_policy_rejects_all(routerinfo_t *router) {
     return 0; /* no, might accept some */
 }
 
- 
 /* Helper function: parse a directory from 's' and, when done, store the
  * resulting routerlist in *dest, freeing the old value if necessary.
  * If pkey is provided, we check the directory signature with pkey.
@@ -496,7 +495,7 @@ router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
   char *good_nickname_lst[1024];
   int n_good_nicknames = 0;
   int i;
-  
+
   /* Local helper macro: get the next token from s (advancing s) and
    * bail on failure. */
 #define NEXT_TOK()                                                      \
@@ -538,7 +537,7 @@ router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
   if (!strptime(ARGS[0], "%Y-%m-%d %H:%M:%S", &published)) {
     log_fn(LOG_WARN, "Published time was unparseable"); goto err;
   }
-  published_on = tor_timegm(&published);  
+  published_on = tor_timegm(&published);
 
   NEXT_TOK();
   TOK_IS(K_RECOMMENDED_SOFTWARE, "recommended-software");
@@ -558,7 +557,7 @@ router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
   /* Read the router list from s, advancing s up past the end of the last
    * router. */
   if (router_get_list_from_string_impl(&s, &new_dir,
-                                       n_good_nicknames, 
+                                       n_good_nicknames,
                                        (const char**)good_nickname_lst)) {
     log_fn(LOG_WARN, "Error reading routers from directory");
     goto err;
@@ -588,7 +587,7 @@ router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
   NEXT_TOK();
   TOK_IS(_EOF, "end of directory");
 
-  if (*dest) 
+  if (*dest)
     routerlist_free(*dest);
   *dest = new_dir;
 
@@ -648,7 +647,7 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
       log_fn(LOG_WARN, "too many routers");
       routerinfo_free(router);
       continue;
-    } 
+    }
     if (n_good_nicknames>=0) {
       router->is_running = 0;
       for (i = 0; i < n_good_nicknames; ++i) {
@@ -714,7 +713,7 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
   }
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
-  router->onion_pkey = router->identity_pkey = router->link_pkey = NULL; 
+  router->onion_pkey = router->identity_pkey = router->link_pkey = NULL;
 
   if (N_ARGS != 6) {
     log_fn(LOG_WARN,"Wrong # of arguments to \"router\"");
@@ -725,12 +724,12 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
     log_fn(LOG_WARN,"Router nickname too long.");
     goto err;
   }
-  if (strspn(router->nickname, LEGAL_NICKNAME_CHARACTERS) != 
+  if (strspn(router->nickname, LEGAL_NICKNAME_CHARACTERS) !=
       strlen(router->nickname)) {
     log_fn(LOG_WARN, "Router nickname contains illegal characters.");
     goto err;
   }
-  
+
   /* read router.address */
   router->address = tor_strdup(ARGS[1]);
   router->addr = 0;
@@ -741,10 +740,10 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
     log_fn(LOG_WARN,"or_port unreadable or 0. Failing.");
     goto err;
   }
-  
+
   /* Router->socks_port */
   router->socks_port = atoi(ARGS[3]);
-  
+
   /* Router->dir_port */
   router->dir_port = atoi(ARGS[4]);
 
@@ -754,9 +753,9 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
     log_fn(LOG_WARN,"bandwidth unreadable or 0. Failing.");
     goto err;
   }
-  
+
   log_fn(LOG_DEBUG,"or_port %d, socks_port %d, dir_port %d, bandwidth %u.",
-    router->or_port, router->socks_port, router->dir_port, 
+    router->or_port, router->socks_port, router->dir_port,
     (unsigned) router->bandwidth);
 
   /* XXX Later, require platform before published. */
@@ -764,7 +763,7 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
   if (tok->tp == K_PLATFORM) {
     NEXT_TOKEN();
   }
-  
+
   if (tok->tp != K_PUBLISHED) {
     log_fn(LOG_WARN, "Missing published time"); goto err;
   }
@@ -809,7 +808,7 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
     router_add_exit_policy(router, tok);
     NEXT_TOKEN();
   }
-  
+
   if (tok->tp != K_ROUTER_SIGNATURE) {
     log_fn(LOG_WARN,"Missing router signature");
     goto err;
@@ -830,12 +829,12 @@ routerinfo_t *router_get_entry_from_string(const char**s) {
     log_fn(LOG_WARN, "Mismatched signature");
     goto err;
   }
-  
+
   router_release_token(tok); /* free the signature */
   return router;
 
 err:
-  router_release_token(tok); 
+  router_release_token(tok);
   routerinfo_free(router);
   return NULL;
 #undef ARGS
@@ -912,7 +911,7 @@ static int router_add_exit_policy(routerinfo_t *router,
   address = arg;
   mask = strchr(arg,'/');
   port = strchr(mask?mask:arg,':');
-  /* Break 'arg' into separate strings.  'arg' was already strdup'd by 
+  /* Break 'arg' into separate strings.  'arg' was already strdup'd by
    * _router_get_next_token, so it's safe to modify.
    */
   if (mask)
@@ -1034,7 +1033,7 @@ static void
 router_release_token(directory_token_t *tok)
 {
   int i;
-  switch (tok->tp) 
+  switch (tok->tp)
     {
     case _SIGNATURE:
       free(tok->val.signature);
@@ -1071,7 +1070,7 @@ _router_get_next_token(const char **s, directory_token_t *tok) {
   tok->val.error = "";
 
   router_release_token(tok);
-  
+
   *s = eat_whitespace(*s);
   if (!**s) {
     tok->tp = _EOF;
@@ -1086,7 +1085,7 @@ _router_get_next_token(const char **s, directory_token_t *tok) {
       if (!next) { tok->val.error = "No public key end tag found"; return -1; }
       next = strchr(next, '\n'); /* Part of OR_PUBLICKEY_END_TAG; can't fail.*/
       ++next;
-      if (!(pkey = crypto_new_pk_env(CRYPTO_PK_RSA))) 
+      if (!(pkey = crypto_new_pk_env(CRYPTO_PK_RSA)))
         return -1;
       if (crypto_pk_read_public_key_from_string(pkey, *s, next-*s)) {
         crypto_free_pk_env(pkey);
@@ -1100,7 +1099,7 @@ _router_get_next_token(const char **s, directory_token_t *tok) {
     } else if (! strncmp(*s, OR_SIGNATURE_BEGIN_TAG, next-*s)) {
       /* We have a -----BEGIN SIGNATURE----- */
       /* Advance past newline; can't fail. */
-      *s = strchr(*s, '\n'); 
+      *s = strchr(*s, '\n');
       ++*s;
       /* Find end of base64'd data */
       next = strstr(*s, OR_SIGNATURE_END_TAG);
@@ -1182,10 +1181,10 @@ _router_get_next_token(const char **s, directory_token_t *tok) {
 }
 
 #ifdef DEBUG_ROUTER_TOKENS
-static void 
+static void
 router_dump_token(directory_token_t *tok) {
   int i;
-  switch(tok->tp) 
+  switch(tok->tp)
     {
     case _SIGNATURE:
       puts("(signature)");
@@ -1239,7 +1238,7 @@ router_get_next_token(const char **s, directory_token_t *tok) {
  *
  * If no such substring exists, return -1.
  */
-static int router_get_hash_impl(const char *s, char *digest, 
+static int router_get_hash_impl(const char *s, char *digest,
                                 const char *start_str,
                                 const char *end_str)
 {

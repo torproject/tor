@@ -146,7 +146,7 @@ int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
   memcpy(&(bindaddr.sin_addr.s_addr),rent->h_addr,rent->h_length);
 
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
-  if (s < 0) { 
+  if (s < 0) {
     log_fn(LOG_WARN,"Socket creation failed.");
     return -1;
   }
@@ -246,7 +246,7 @@ static int connection_init_accepted_conn(connection_t *conn) {
   return 0;
 }
 
-/* take conn, make a nonblocking socket; try to connect to 
+/* take conn, make a nonblocking socket; try to connect to
  * addr:port (they arrive in *host order*). If fail, return -1. Else
  * assign s to conn->s: if connected return 1, if eagain return 0.
  * address is used to make the logs useful.
@@ -343,7 +343,7 @@ int connection_handle_read(connection_t *conn) {
   }
 
   if(connection_read_to_buf(conn) < 0) {
-    if(conn->type == CONN_TYPE_DIR && 
+    if(conn->type == CONN_TYPE_DIR &&
       (conn->state == DIR_CONN_STATE_CONNECTING_FETCH ||
        conn->state == DIR_CONN_STATE_CONNECTING_UPLOAD)) {
        /* it's a directory server and connecting failed: forget about this router */
@@ -485,7 +485,7 @@ int connection_handle_write(connection_t *conn) {
       /* case TOR_TLS_DONE:
        * for TOR_TLS_DONE, fall through to check if the flushlen
        * is empty, so we can stop writing.
-       */  
+       */
     }
   } else {
     if(flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen) < 0)
@@ -520,7 +520,7 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
   int i, n;
   connection_t *conn;
   connection_t **carray;
- 
+
   get_connection_array(&carray,&n);
   for(i=0;i<n;i++) {
     conn = carray[i];
@@ -547,13 +547,13 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
     log(LOG_INFO,"connection_twin_get_by_addr_port(): Found exact match.");
     return conn;
   }
- 
+
   /* now check if any of the other open connections are a twin for this one */
- 
+
   router = router_get_by_addr_port(addr,port);
   if(!router)
     return NULL;
- 
+
   get_connection_array(&carray,&n);
   for(i=0;i<n;i++) {
     conn = carray[i];
@@ -571,7 +571,7 @@ connection_t *connection_get_by_type(int type) {
   int i, n;
   connection_t *conn;
   connection_t **carray;
- 
+
   get_connection_array(&carray,&n);
   for(i=0;i<n;i++) {
     conn = carray[i];
@@ -585,7 +585,7 @@ connection_t *connection_get_by_type_state(int type, int state) {
   int i, n;
   connection_t *conn;
   connection_t **carray;
- 
+
   get_connection_array(&carray,&n);
   for(i=0;i<n;i++) {
     conn = carray[i];
@@ -599,7 +599,7 @@ connection_t *connection_get_by_type_state_lastwritten(int type, int state) {
   int i, n;
   connection_t *conn, *best=NULL;
   connection_t **carray;
- 
+
   get_connection_array(&carray,&n);
   for(i=0;i<n;i++) {
     conn = carray[i];
@@ -616,7 +616,7 @@ int connection_receiver_bucket_should_increase(connection_t *conn) {
   if(!connection_speaks_cells(conn))
     return 0; /* edge connections don't use receiver_buckets */
   if(conn->state != OR_CONN_STATE_OPEN)
-    return 0; /* only open connections play the rate limiting game */  
+    return 0; /* only open connections play the rate limiting game */
 
   assert(conn->bandwidth > 0);
   if(conn->receiver_bucket > 9*conn->bandwidth)
@@ -653,7 +653,7 @@ int connection_send_destroy(circ_id_t circ_id, connection_t *conn) {
   assert(conn);
 
   if(!connection_speaks_cells(conn)) {
-     log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.", 
+     log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.",
             circ_id);
      if(connection_edge_end(conn, END_STREAM_REASON_DESTROY, conn->cpath_layer) < 0)
        log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
@@ -682,9 +682,9 @@ int connection_process_inbuf(connection_t *conn) {
     case CONN_TYPE_DIR:
       return connection_dir_process_inbuf(conn);
     case CONN_TYPE_DNSWORKER:
-      return connection_dns_process_inbuf(conn); 
+      return connection_dns_process_inbuf(conn);
     case CONN_TYPE_CPUWORKER:
-      return connection_cpu_process_inbuf(conn); 
+      return connection_cpu_process_inbuf(conn);
     default:
       log_fn(LOG_WARN,"got unexpected conn->type %d.", conn->type);
       return -1;
@@ -724,7 +724,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
 
   /* XXX check: wants_to_read, wants_to_write, s, poll_index,
    * marked_for_close. */
-  
+
   /* buffers */
   if (!connection_is_listener(conn)) {
     assert(conn->inbuf);
@@ -735,7 +735,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
   assert(!now || conn->timestamp_lastwritten <= now);
   assert(conn->timestamp_created <= conn->timestamp_lastread);
   assert(conn->timestamp_created <= conn->timestamp_lastwritten);
-  
+
   /* XXX Fix this; no longer so.*/
 #if 0
   if(conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_DIR)
@@ -758,7 +758,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
     if (conn->state != OR_CONN_STATE_CONNECTING)
       assert(conn->tls);
   }
-  
+
   if (conn->type != CONN_TYPE_EXIT && conn->type != CONN_TYPE_AP) {
     assert(!conn->stream_id[0]);
     assert(!conn->next_stream);
@@ -768,7 +768,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
     assert(!conn->done_sending);
     assert(!conn->done_receiving);
   } else {
-    assert(!conn->next_stream || 
+    assert(!conn->next_stream ||
            conn->next_stream->type == CONN_TYPE_EXIT ||
            conn->next_stream->type == CONN_TYPE_AP);
     if(conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN)
@@ -781,7 +781,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
     assert(!conn->socks_request);
   }
 
-  switch(conn->type) 
+  switch(conn->type)
     {
     case CONN_TYPE_OR_LISTENER:
     case CONN_TYPE_AP_LISTENER:
