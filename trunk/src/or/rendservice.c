@@ -831,6 +831,7 @@ void rend_services_introduce(void) {
       if (!router || !find_intro_circuit(router,service->pk_digest)) {
         log_fn(LOG_INFO,"Giving up on %s as intro point for %s.",
                 intro, service->service_id);
+        tor_free(intro);
         smartlist_del(service->intro_nodes,j--);
         changed = service->desc_is_dirty = 1;
       }
