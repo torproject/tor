@@ -1173,6 +1173,7 @@ getconfig(int argc, char **argv)
   static char **backup_argv;
   static int backup_argc;
 
+  /* we don't use get_options() here, since it's null on the first call */
   oldoptions = global_options;
 
   if (argv) { /* first time we're called. save commandline args */
