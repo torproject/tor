@@ -216,6 +216,31 @@ int tor_strstrip(char *s, const char *strip)
   return read-s;
 }
 
+/** Set the <b>dest_len</b>-byte buffer <b>buf</b> to contain the
+ * string <b>s</b>, with the string <b>insert</b> inserted after every
+ * <b>n</b> characters.  Return 0 on success, -1 on failure.
+ */
+int tor_strpartition(char *dest, size_t dest_len,
+                     const char *s, const char *insert, size_t n)
+{
+  tor_assert(s && insert && n > 0);
+  int len_in, len_out, len_ins;
+  len_in = strlen(s);
+  len_ins = strlen(insert);
+  len_out = len_in + (len_in/n)*len_ins;
+  if (dest_len < len_out+1)
+    return -1;
+  while(len_in) {
+    strncpy(dest, s, n);
+    len_in -= n;
+    if (len_in < 0) break;
+    strcpy(dest+n, insert);
+    s += n;
+    dest += n+len_ins;
+  }
+  return 0;
+}
+
 #ifndef UNALIGNED_INT_ACCESS_OK
 /**
  * Read a 16-bit value beginning at <b>cp</b>.  Equaivalent to
