@@ -695,7 +695,7 @@ dirserv_dump_directory_to_string(char **dir_out,
            published, recommended_versions, running_routers, router_status,
            identity_pkey);
 
-  smartlist_free(recommended_versions);
+  tor_free(recommended_versions);
   tor_free(running_routers);
   tor_free(router_status);
   tor_free(identity_pkey);
