@@ -53,16 +53,15 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
   }
   hex_encode(expected_digest, 20, hexdigest);
   log_fn(LOG_INFO, "Expected digest is: %s", hexdigest);
-  hex_encode(buf+2+asn1len, 20, hexdigest);
+  hex_encode(request+2+asn1len, 20, hexdigest);
   log_fn(LOG_INFO, "Received digest is: %s", hexdigest);
-  if (memcmp(expected_digest, buf+2+asn1len, 20)) {
+  if (memcmp(expected_digest, request+2+asn1len, 20)) {
     log_fn(LOG_WARN, "Hash of session info was not as expected");
     goto err;
   }
-
   /* Rest of body: signature of previous data */
-  if (crypto_pk_public_checksig_digest(pk, buf, 22+asn1len,
-                          buf+22+asn1len, request_len-(22+asn1len))<0) {
+  if (crypto_pk_public_checksig_digest(pk, request, 22+asn1len,
+                           request+22+asn1len, request_len-(22+asn1len))<0) {
     log_fn(LOG_WARN, "Incorrect signature on ESTABLISH_INTRO cell; rejecting");
     goto err;
   }
