@@ -148,7 +148,7 @@ rend_client_rendcirc_is_open(circuit_t *circ)
   connection_ap_attach_pending();
 }
 
-/* Called when we recieve a RENDEZVOUS_ESTABLISHED cell; changes the state of
+/* Called when we receive a RENDEZVOUS_ESTABLISHED cell; changes the state of
  * the circuit to C_REND_READY.
  */
 int

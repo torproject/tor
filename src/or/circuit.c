@@ -1534,8 +1534,8 @@ void assert_cpath_layer_ok(const crypt_path_t *cp)
 {
   assert(cp->f_crypto);
   assert(cp->b_crypto);
-  assert(cp->addr);
-  assert(cp->port);
+//  assert(cp->addr); /* these are zero for rendezvous extra-hops */
+//  assert(cp->port);
   switch(cp->state)
     {
     case CPATH_STATE_CLOSED:

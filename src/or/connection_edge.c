@@ -11,6 +11,7 @@ extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 static int connection_ap_handshake_process_socks(connection_t *conn);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
+static int connection_exit_set_rendezvous_addr_port(connection_t *conn);
 static void connection_edge_consider_sending_sendme(connection_t *conn);
 
 static uint32_t client_dns_lookup_entry(const char *address);
@@ -144,8 +145,9 @@ int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_lay
 
   payload[0] = reason;
   if(reason == END_STREAM_REASON_EXITPOLICY) {
+    /* this is safe even for rend circs, because they never fail
+     * because of exitpolicy */
     set_uint32(payload+1, htonl(conn->addr));
-//    *(uint32_t *)(payload+1) = htonl(conn->addr);
     payload_len += 4;
   }
 
@@ -281,7 +283,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       log_fn(LOG_INFO,"Got a relay-level padding cell. Dropping.");
       return 0;
     case RELAY_COMMAND_BEGIN:
-      if(edge_type == EDGE_AP) {
+      if (edge_type == EDGE_AP &&
+          circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
         log_fn(LOG_WARN,"relay begin request unsupported at AP. Dropping.");
         return 0;
       }
@@ -479,10 +482,16 @@ int connection_edge_finished_flushing(connection_t *conn) {
       if(connection_wants_to_flush(conn)) /* in case there are any queued relay cells */
         connection_start_writing(conn);
       /* deliver a 'connected' relay cell back through the circuit. */
-      *(uint32_t*)connected_payload = htonl(conn->addr);
-      if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
-         RELAY_COMMAND_CONNECTED, connected_payload, 4, NULL) < 0)
-        return 0; /* circuit is closed, don't continue */
+      if(*conn->rend_query) { /* rendezvous stream */
+        if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
+           RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
+          return 0; /* circuit is closed, don't continue */
+      } else {
+        *(uint32_t*)connected_payload = htonl(conn->addr);
+        if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
+           RELAY_COMMAND_CONNECTED, connected_payload, 4, conn->cpath_layer) < 0)
+          return 0; /* circuit is closed, don't continue */
+      }
       assert(conn->package_window > 0);
       return connection_edge_process_inbuf(conn); /* in case the server has written anything */
     case AP_CONN_STATE_OPEN:
@@ -1108,9 +1117,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   n_stream = connection_new(CONN_TYPE_EXIT);
 
   n_stream->stream_id = rh.stream_id;
-  n_stream->address = tor_strdup(cell->payload + RELAY_HEADER_SIZE);
   n_stream->port = atoi(colon+1);
-  n_stream->state = EXIT_CONN_STATE_RESOLVING;
   /* leave n_stream->s at -1, because it's not yet valid */
   n_stream->package_window = STREAMWINDOW_START;
   n_stream->deliver_window = STREAMWINDOW_START;
@@ -1123,6 +1130,22 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   /* add it into the linked list of streams on this circuit */
   n_stream->next_stream = circ->n_streams;
   circ->n_streams = n_stream;
+
+  if(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
+    n_stream->address = tor_strdup("(rendezvous)");
+    strcpy(n_stream->rend_query, "yes"); /* XXX kludge */
+    if(connection_exit_set_rendezvous_addr_port(n_stream) < 0) {
+      log_fn(LOG_WARN,"Didn't find rendezvous service (port %d)",n_stream->port);
+      connection_mark_for_close(n_stream,0 /* XXX */);
+      return 0;
+    }
+    n_stream->state = EXIT_CONN_STATE_CONNECTING;
+    n_stream->cpath_layer = circ->cpath->prev; /* link it */
+    connection_exit_connect(n_stream);
+    return 0;
+  }
+  n_stream->address = tor_strdup(cell->payload + RELAY_HEADER_SIZE);
+  n_stream->state = EXIT_CONN_STATE_RESOLVING;
 
   /* send it off to the gethostbyname farm */
   switch(dns_resolve(n_stream)) {
@@ -1145,7 +1168,8 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
 void connection_exit_connect(connection_t *conn) {
   unsigned char connected_payload[4];
 
-  if(router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
+  if (!*conn->rend_query &&
+      router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.", conn->address, conn->port);
     connection_mark_for_close(conn, END_STREAM_REASON_EXITPOLICY);
     return;
@@ -1176,9 +1200,29 @@ void connection_exit_connect(connection_t *conn) {
   connection_watch_events(conn, POLLIN);
 
   /* also, deliver a 'connected' cell back through the circuit. */
-  *(uint32_t*)connected_payload = htonl(conn->addr);
-  connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
-                               connected_payload, 4, NULL);
+  if(*conn->rend_query) { /* rendezvous stream */
+    /* don't send an address back! */
+    connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
+                                 NULL, 0, conn->cpath_layer);
+  } else { /* normal stream */
+    *(uint32_t*)connected_payload = htonl(conn->addr);
+    connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
+                                 connected_payload, 4, conn->cpath_layer);
+  }
+}
+
+/* This is a beginning rendezvous stream. Look up conn->port,
+ * and assign the actual conn->addr and conn->port. Return -1
+ * if failure, or 0 for success.
+ */
+static int
+connection_exit_set_rendezvous_addr_port(connection_t *conn) {
+
+  /* XXX fill me in */
+
+  conn->addr = 0x7F000001u; /* 127.0.0.1, host order */
+
+  return 0;
 }
 
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
