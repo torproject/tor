@@ -125,6 +125,11 @@ void connection_free(connection_t *conn) {
       crypto_free_cipher_env(conn->b_crypto);
   }
 
+  if (conn->pkey)
+    crypto_free_pk_env(conn->pkey);
+  if (conn->prkey)
+    crypto_free_pk_env(conn->prkey);
+
   if(conn->s > 0) {
     log(LOG_INFO,"connection_free(): closing fd %d.",conn->s);
     close(conn->s);
@@ -175,7 +180,8 @@ int connection_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local
 
   /* remember things so you can tell the baby sockets */
   memcpy(&conn->local,local,sizeof(struct sockaddr_in));
-  conn->prkey = prkey;
+  if(prkey)
+    conn->prkey = crypto_pk_dup_key(prkey);
 
   log(LOG_DEBUG,"connection_create_listener(): Listening on local port %u.",ntohs(local->sin_port));
 
@@ -214,7 +220,8 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
 
   /* learn things from parent, so we can perform auth */
   memcpy(&newconn->local,&conn->local,sizeof(struct sockaddr_in));
-  newconn->prkey = conn->prkey;
+  if(conn->prkey)
+    newconn->prkey = crypto_pk_dup_key(conn->prkey);
   newconn->address = strdup(inet_ntoa(remote.sin_addr)); /* remember the remote address */
 
   if(connection_add(newconn) < 0) { /* no space, forget it */

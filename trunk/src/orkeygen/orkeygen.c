@@ -8,6 +8,20 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.3  2002/09/24 10:43:57  arma
+ * laying the groundwork for dynamic router lists
+ *
+ * revamped the router reading section
+ *
+ * reference counting for crypto pk env's (so we can dup them)
+ *
+ * we now read and write pem pk keys from string rather than from FILE*,
+ *   in anticipation of fetching directories over a socket
+ *   (so now on startup we slurp in the whole file, then parse it as a string)
+ *
+ * fixed a bug in the proxy side, where you could get some circuits
+ *   wedged if they showed up while the connection was being made
+ *
  * Revision 1.2  2002/07/25 08:18:05  badbytes
  * Updated to use crypto.h instead of OpenSSL.
  *
@@ -17,6 +31,13 @@
  * Revision 1.1  2002/01/04 07:19:27  badbytes
  * Key generation utility.
  *
+ *
+ */
+
+/* likely obsoleted by:
+ *
+ * openssl genrsa -out private.pem 1024
+ * openssl rsa -in private.pem -pubout -out public.pem
  *
  */
 
@@ -84,7 +105,7 @@ int main(int argc, char *argv[])
       }
       
       /* write the private key */
-      if (crypto_pk_write_private_key(env, f_pr) == -1)
+      if (crypto_pk_write_private_key_to_file(env, f_pr) == -1)
       {
 	printf("%s",crypto_perror());
 	fclose(f_pr);
@@ -94,7 +115,7 @@ int main(int argc, char *argv[])
       }
       
       /* write the public key */
-      if (crypto_pk_write_public_key(env, f_pu) == -1)
+      if (crypto_pk_write_public_key_to_file(env, f_pu) == -1)
       {
 	printf("%s",crypto_perror());
 	fclose(f_pr);

@@ -57,6 +57,7 @@ crypto_pk_env_t *crypto_new_pk_env(int type)
     return 0;
   
   env->type = type;
+  env->refs = 1;
   env->key = NULL;
   env->aux = NULL;
   
@@ -80,6 +81,9 @@ crypto_pk_env_t *crypto_new_pk_env(int type)
 void crypto_free_pk_env(crypto_pk_env_t *env)
 {
   assert(env);
+
+  if(--env->refs > 0)
+    return;
   
   switch(env->type) {
     case CRYPTO_PK_RSA:
@@ -224,7 +228,7 @@ int crypto_pk_generate_key(crypto_pk_env_t *env)
   return 0;
 }
 
-int crypto_pk_read_private_key(crypto_pk_env_t *env, FILE *src)
+int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env, FILE *src)
 {
   assert(env && src);
   
@@ -244,7 +248,7 @@ int crypto_pk_read_private_key(crypto_pk_env_t *env, FILE *src)
   return 0;
 }
 
-int crypto_pk_read_private_key_filename(crypto_pk_env_t *env, unsigned char *keyfile)
+int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, unsigned char *keyfile)
 {
   FILE *f_pr;
   int retval = 0;
@@ -259,7 +263,7 @@ int crypto_pk_read_private_key_filename(crypto_pk_env_t *env, unsigned char *key
       return -1;
       
     /* read the private key */
-    retval = crypto_pk_read_private_key(env, f_pr);
+    retval = crypto_pk_read_private_key_from_file(env, f_pr);
     fclose(f_pr);
     if (retval == -1)
     {
@@ -288,15 +292,12 @@ int crypto_pk_read_private_key_filename(crypto_pk_env_t *env, unsigned char *key
   return -1; /* report error */
 }
 
-int crypto_pk_read_public_key(crypto_pk_env_t *env, FILE *src)
+int crypto_pk_read_public_key_from_file(crypto_pk_env_t *env, FILE *src)
 {
   assert(env && src);
   
   switch(env->type) {
     case CRYPTO_PK_RSA:
-    /*
-    if (env->key)
-      RSA_free((RSA *)env->key);*/
     env->key = (unsigned char *)PEM_read_RSAPublicKey(src, (RSA **)&env->key, NULL, NULL);
     if (!env->key)
       return -1;
@@ -308,7 +309,69 @@ int crypto_pk_read_public_key(crypto_pk_env_t *env, FILE *src)
   return 0;
 }
 
-int crypto_pk_write_private_key(crypto_pk_env_t *env, FILE *dest)
+int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int *len) {
+  BUF_MEM *buf;
+  BIO *b; 
+
+  assert(env && env->key && dest);
+
+  switch(env->type) {
+    case CRYPTO_PK_RSA:
+
+        b = BIO_new(BIO_s_mem()); /* Create a memory BIO */
+
+        /* Now you can treat b as if it were a file.  Just use the
+         *          * PEM_*_bio_* functions instead of the non-bio variants.
+         *                   */
+        if(!PEM_write_bio_RSAPublicKey(b, (RSA *)env->key))
+          return -1;
+
+        BIO_get_mem_ptr(b, &buf);
+        BIO_set_close(b, BIO_NOCLOSE); /* so BIO_free doesn't free buf */
+        BIO_free(b);
+
+        *dest = malloc(buf->length+1);
+        if(!*dest)
+          return -1;
+        memcpy(*dest, buf->data, buf->length);
+        (*dest)[buf->length] = 0; /* null terminate it */
+        *len = buf->length;
+        BUF_MEM_free(buf);
+
+      break;
+    default:
+      return -1;
+  }
+  
+  return 0;
+}
+
+int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, char *src, int len) {
+  BIO *b; 
+
+  assert(env && src);
+
+  switch(env->type) {
+    case CRYPTO_PK_RSA:
+      b = BIO_new(BIO_s_mem()); /* Create a memory BIO */
+
+      BIO_write(b, src, len);
+
+      RSA_free((RSA *)env->key); 
+      env->key = (unsigned char *)PEM_read_bio_RSAPublicKey(b, NULL, NULL, NULL);
+      if(!env->key)
+        return -1;
+
+      BIO_free(b);
+      break;
+    default:
+      return -1;
+  }
+  
+  return 0;
+}
+
+int crypto_pk_write_private_key_to_file(crypto_pk_env_t *env, FILE *dest)
 {
   assert(env && dest);
   
@@ -325,7 +388,7 @@ int crypto_pk_write_private_key(crypto_pk_env_t *env, FILE *dest)
   
   return 0;
 }
-int crypto_pk_write_public_key(crypto_pk_env_t *env, FILE *dest)
+int crypto_pk_write_public_key_to_file(crypto_pk_env_t *env, FILE *dest)
 {
   assert(env && dest);
   
@@ -349,9 +412,9 @@ int crypto_pk_check_key(crypto_pk_env_t *env)
   
   switch(env->type) {
     case CRYPTO_PK_RSA:
-    return RSA_check_key((RSA *)env->key);
+      return RSA_check_key((RSA *)env->key);
     default:
-    return -1;
+      return -1;
   }
 }
 
@@ -364,6 +427,7 @@ int crypto_pk_set_key(crypto_pk_env_t *env, unsigned char *key)
     if (!env->key)
       return -1;
     memcpy((void *)env->key, (void *)key, sizeof(RSA));
+    /* XXX BUG XXX you can't memcpy an RSA, it's got a bunch of subpointers */
     break;
     default :
     return -1;
@@ -402,6 +466,21 @@ int crypto_pk_keysize(crypto_pk_env_t *env)
   
   return RSA_size((RSA *)env->key);
 }
+
+crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *env) {
+  assert(env && env->key);
+
+  switch(env->type) {
+    case CRYPTO_PK_RSA:
+      env->refs++; 
+      break;
+    default:
+      return NULL; 
+  }
+  
+  return env;
+}
+
 int crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding)
 {
   assert(env && from && to);

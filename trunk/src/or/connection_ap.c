@@ -191,7 +191,7 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
   log(LOG_DEBUG,"ap_handshake_establish_circuit(): Looking for firsthop '%s:%u'",
       firsthop->address,firsthop->or_port);
   n_conn = connection_twin_get_by_addr_port(firsthop->addr,firsthop->or_port);
-  if(!n_conn) { /* not currently connected */
+  if(!n_conn || n_conn->state != OR_CONN_STATE_OPEN) { /* not currently connected */
     circ->n_addr = firsthop->addr;
     circ->n_port = firsthop->or_port;
     if(global_role & ROLE_OR_CONNECT_ALL) { /* we would be connected if he were up. but he's not. */
@@ -199,14 +199,15 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
       circuit_close(circ); 
       return -1;
     }
-    
-    /* ok, launch the connection */
-    n_conn = connect_to_router_as_op(firsthop);
-    if(!n_conn) { /* connect failed, forget the whole thing */
-      log(LOG_DEBUG,"ap_handshake_establish_circuit(): connect to firsthop failed. Closing.");
-      circuit_close(circ);
-      return -1;
-    }   
+
+    if(!n_conn) { /* launch the connection */
+      n_conn = connect_to_router_as_op(firsthop);
+      if(!n_conn) { /* connect failed, forget the whole thing */
+        log(LOG_DEBUG,"ap_handshake_establish_circuit(): connect to firsthop failed. Closing.");
+        circuit_close(circ);
+        return -1;
+      }   
+    }
     conn->state = AP_CONN_STATE_OR_WAIT;
     connection_stop_reading(conn); /* Stop listening for input from the AP! */
     return 0; /* return success. The onion/circuit/etc will be taken care of automatically
@@ -219,21 +220,31 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
   }
 }
 
-/* find the circ that's waiting on me, if any, and get it to send its onion */
-int ap_handshake_n_conn_open(connection_t *or_conn) {
+/* find circuits that are waiting on me, if any, and get them to send the onion */
+void ap_handshake_n_conn_open(connection_t *or_conn) {
   circuit_t *circ;
+  connection_t *p_conn;
 
   log(LOG_DEBUG,"ap_handshake_n_conn_open(): Starting.");
-  circ = circuit_get_by_naddr_nport(or_conn->addr, or_conn->port);
-  if(!circ)
-    return 0; /* i'm ok with that. no need to close the connection or anything. */
+  circ = circuit_enumerate_by_naddr_nport(NULL, or_conn->addr, or_conn->port);
+  for(;;) {
+    if(!circ)
+      return;
 
-  if(circ->p_conn->state != AP_CONN_STATE_OR_WAIT) {
-    log(LOG_DEBUG,"Bug: ap_handshake_n_conn_open() got an ap_conn not in OR_WAIT state.");
+    p_conn = circ->p_conn;
+    if(p_conn->state != AP_CONN_STATE_OR_WAIT) {
+      log(LOG_WARNING,"Bug: ap_handshake_n_conn_open() got an ap_conn not in OR_WAIT state.");
+    }
+    connection_start_reading(p_conn); /* resume listening for reads */
+    log(LOG_DEBUG,"ap_handshake_n_conn_open(): Found circ, sending onion.");
+    if(ap_handshake_send_onion(p_conn, or_conn, circ)<0) {
+      log(LOG_DEBUG,"ap_handshake_n_conn_open(): circuit marked for closing.");
+      p_conn->marked_for_close = 1;
+      return; /* XXX will want to try the rest too */
+    } else {
+      circ = circuit_enumerate_by_naddr_nport(circ, or_conn->addr, or_conn->port);
+    }
   }
-  connection_start_reading(circ->p_conn); /* resume listening for reads */
-  log(LOG_DEBUG,"ap_handshake_n_conn_open(): Found circ, sending onion.");
-  return ap_handshake_send_onion(circ->p_conn, or_conn, circ);
 }
 
 int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit_t *circ) {

@@ -154,9 +154,10 @@ connection_t *connection_or_connect(routerinfo_t *router, crypto_pk_env_t *prkey
 
   /* set up conn so it's got all the data we need to remember */
   conn->addr = router->addr, conn->port = router->or_port; /* NOTE we store or_port here always */
-  conn->prkey = prkey;
-  conn->bandwidth = router->min; /* kludge, should make a router->bandwidth and use that */
-  conn->pkey = router->pkey;
+  if(prkey)
+    conn->prkey = crypto_pk_dup_key(prkey);
+  conn->bandwidth = router->bandwidth;
+  conn->pkey = crypto_pk_dup_key(router->pkey);
   conn->address = strdup(router->address);
   memcpy(&conn->local,local,sizeof(struct sockaddr_in));
 
@@ -331,8 +332,8 @@ int or_handshake_op_finished_sending_keys(connection_t *conn) {
   conn->state = OR_CONN_STATE_OPEN;
   connection_init_timeval(conn);
   connection_watch_events(conn, POLLIN); /* give it a default, tho the ap_handshake call may change it */
-  return ap_handshake_n_conn_open(conn); /* send the pending onion */
-
+  ap_handshake_n_conn_open(conn); /* send the pending onions */
+  return 0;
 }
 
 /*
@@ -601,14 +602,14 @@ int or_handshake_server_process_auth(connection_t *conn) {
   /* update link info */
   bandwidth = ntohl(*(uint32_t *)(buf+28));
 
-  conn->bandwidth = router->min; /* FIXME, should make a router->bandwidth and use that */
+  conn->bandwidth = router->bandwidth;
 
   if (conn->bandwidth > bandwidth)
     conn->bandwidth = bandwidth;
 
   /* copy all relevant info to conn */
   conn->addr = router->addr, conn->port = router->or_port;
-  conn->pkey = router->pkey;
+  conn->pkey = crypto_pk_dup_key(router->pkey);
   conn->address = strdup(router->address);
 
   /* generate a nonce */

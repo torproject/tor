@@ -87,12 +87,6 @@ int connection_remove(connection_t *conn) {
   return 0;  
 }
 
-int pkey_cmp(crypto_pk_env_t *a, crypto_pk_env_t *b) {
-  /* return 0 if a and b are "the same key". Return non-0 otherwise. */
-
-  return crypto_pk_cmp_keys(a, b);
-}
-
 connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
   /* Find a connection to the router described by addr and port,
    *   or alternately any router which knows its key.
@@ -119,7 +113,7 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
     assert(conn);
-    if(connection_state_is_open(conn) && !pkey_cmp(conn->pkey, router->pkey)) {
+    if(connection_state_is_open(conn) && !crypto_pk_cmp_keys(conn->pkey, router->pkey)) {
       log(LOG_INFO,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
       return conn;
     }
@@ -412,7 +406,7 @@ int do_main_loop(void) {
   int poll_result;
 
   /* load the routers file */
-  router_array = getrouters(options.RouterFile,&rarray_len, options.ORPort);
+  router_array = router_get_list_from_file(options.RouterFile,&rarray_len, options.ORPort);
   if (!router_array)
   {
     log(LOG_ERR,"Error loading router list.");
@@ -426,7 +420,7 @@ int do_main_loop(void) {
       log(LOG_ERR,"Error creating a crypto environment.");
       return -1;
     }
-    if (crypto_pk_read_private_key_filename(prkey, options.PrivateKeyFile))
+    if (crypto_pk_read_private_key_from_filename(prkey, options.PrivateKeyFile))
     {
       log(LOG_ERR,"Error loading private key.");
       return -1;
