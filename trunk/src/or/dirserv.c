@@ -312,8 +312,9 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
  * to NULL.
  *
  * Return 1 if descriptor is well-formed and accepted;
- * 0 if well-formed and server is unapproved;
- * -1 if not well-formed or other parsing error.
+ * 0 if well-formed and server is unapproved but accepted;
+ * -1 if well-formed but rejected;
+ * -2 if not well-formed.
  */
 int
 dirserv_add_descriptor(const char **desc, const char **msg)
@@ -335,7 +336,7 @@ dirserv_add_descriptor(const char **desc, const char **msg)
   start = strstr(*desc, "router ");
   if (!start) {
     log_fn(LOG_WARN, "no 'router' line found. This is not a descriptor.");
-    return -1;
+    return -2;
   }
   if ((end = strstr(start+6, "\nrouter "))) {
     ++end; /* Include NL. */
@@ -493,7 +494,8 @@ dirserv_load_from_directory_string(const char *dir)
     cp = strstr(cp, "\nrouter ");
     if (!cp) break;
     ++cp;
-    if (dirserv_add_descriptor(&cp,&m) < 0) {
+    if (dirserv_add_descriptor(&cp,&m) < -1) {
+      /* only fail if parsing failed; keep going if simply rejected */
       return -1;
     }
     --cp; /*Back up to newline.*/
