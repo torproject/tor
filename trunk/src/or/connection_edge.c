@@ -668,7 +668,7 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
  * Otherwise, send back a reply based on whether <b>success</b> is 1 or 0.
  */
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
-                                         int replylen, char success) {
+                                         int replylen, int success) {
   char buf[256];
 
   if(replylen) { /* we already have a reply in mind */

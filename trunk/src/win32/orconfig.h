@@ -36,7 +36,7 @@
 #undef HAVE_INET_ATON
 
 /* Define to 1 if you have the <inttypes.h> header file. */
-#define HAVE_INTTYPES_H
+/* #define HAVE_INTTYPES_H */
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H
@@ -85,6 +85,8 @@
 
 /* Define to 1 if you have the `strptime' function. */
 #undef HAVE_STRPTIME
+
+#define HAVE_STRUCT_TIMEVAL_TV_SEC
 
 /* Define to 1 if you have the <sys/fcntl.h> header file. */
 #undef HAVE_SYS_FCNTL_H
