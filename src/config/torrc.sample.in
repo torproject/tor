@@ -62,13 +62,15 @@ DirServer 62.116.124.106:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D
 
 #ORPort 9001 # what port to advertise for tor connections
 # If you want to listen on a port other than the one advertised
-# in ORPort, uncomment the line below.
+# in ORPort, uncomment the line below. You'll need to do ipchains
+# or other port forwarding yourself to make this work.
 #ORBindAddress 0.0.0.0:9090
 
 # Uncomment this to mirror the directory for others (please do)
 #DirPort 9030 # what port to advertise for directory connections
 # If you want to listen on a port other than the one advertised
-# in DirPort, uncomment the line below.
+# in DirPort, uncomment the line below. You'll need to do ipchains
+# or other port forwarding yourself to make this work.
 #DirBindAddress 0.0.0.0:9091
 
 ## A comma-separated list of exit policies. They're considered first
