@@ -10,7 +10,7 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 #SocksBindAddress 192.168.0.1:9100 # listen on a chosen IP/port
 
 # Entry policies to allow/deny SOCKS requests based on IP.  By default,
-# we accept all requests to SocksBindAddress.
+# we accept all requests from SocksBindAddress.
 #
 #SocksPolicy accept 192.168.0.1/16:*
 #SocksPolicy reject *:*
@@ -33,9 +33,9 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 
 ##################### Below is just for servers #####################
 
-## NOTE: If you enable these, you won't be able to use tor as a client
-## or server until you've been added to the directory and can
-## authenticate to the other nodes. See the README for details.
+## NOTE: If you enable these, you should consider mailing your
+## identity key fingerprint to the tor-ops, so we can verify
+## your configuration. See the README for details.
 
 ## The directory for keeping all the keys/etc for this server
 #DataDirectory @LOCALSTATEDIR@/lib/tor
@@ -46,7 +46,7 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 
 #ORPort 9001 # where to listen for tor connections
 #ORBindAddress 0.0.0.0 # accept connections from anywhere
-#ORBindAddress 0.0.0.0:9090 # accept connections from anywhere, and 
+#ORBindAddress 0.0.0.0:9090 # accept connections from anywhere, and
                             # listen on a port other than the one we
                             # advertised.
 
