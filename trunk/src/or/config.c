@@ -52,11 +52,12 @@ static config_abbrev_t config_abbrevs[] = {
 };
 #undef PLURAL
 
-/* A variable allowed in the configuration file or on the command line */
+/** A variable allowed in the configuration file or on the command line. */
 typedef struct config_var_t {
-  const char *name; /**< The full keyword (case insensitive) */
-  config_type_t type; /**< How to interpret the type and turn it into a value */
-  off_t var_offset; /**< Offset of the corresponding member of or_options_t */
+  const char *name; /**< The full keyword (case insensitive). */
+  config_type_t type; /**< How to interpret the type and turn it into a value. */
+  off_t var_offset; /**< Offset of the corresponding member of or_options_t. */
+  const char *initvalue; /**< String (or null) describing initial value. */
 } config_var_t;
 
 /** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
@@ -65,77 +66,77 @@ typedef struct config_var_t {
  * CONFIG_TYPE_<b>conftype</b>, and corresponds to
  * or_options_t.<b>member</b>"
  */
-#define VAR(name,conftype,member) \
-  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_options_t, member) }
+#define VAR(name,conftype,member,initvalue) \
+  { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_options_t, member), initvalue }
 /** An entry for config_vars: "The option <b>name</b> is obsolete." */
-#define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0 }
+#define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL }
 
 /** Array of configuration options.  Until we disallow nonstandard
  * abbreviations, order is significant, since the first matching option will
  * be chosen first.
  */
 static config_var_t config_vars[] = {
-  VAR("Address",             STRING,   Address),
-  VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes),
-  VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir),
-  VAR("BandwidthRate",       UINT,     BandwidthRate),
-  VAR("BandwidthBurst",      UINT,     BandwidthBurst),
-  VAR("ClientOnly",          BOOL,     ClientOnly),
-  VAR("ContactInfo",         STRING,   ContactInfo),
-  VAR("DebugLogFile",        STRING,   DebugLogFile),
-  VAR("DataDirectory",       STRING,   DataDirectory),
-  VAR("DirPort",             UINT,     DirPort),
-  VAR("DirBindAddress",      LINELIST, DirBindAddress),
-  VAR("DirFetchPostPeriod",  UINT,     DirFetchPostPeriod),
-  VAR("DirPolicy",           LINELIST, DirPolicy),
-  VAR("DirServer",           LINELIST, DirServers),
-  VAR("ExitNodes",           STRING,   ExitNodes),
-  VAR("EntryNodes",          STRING,   EntryNodes),
-  VAR("StrictExitNodes",     BOOL,     StrictExitNodes),
-  VAR("StrictEntryNodes",    BOOL,     StrictEntryNodes),
-  VAR("ExitPolicy",          LINELIST, ExitPolicy),
-  VAR("ExcludeNodes",        STRING,   ExcludeNodes),
-  VAR("FascistFirewall",     BOOL,     FascistFirewall),
-  VAR("FirewallPorts",       CSV,      FirewallPorts),
-  VAR("MyFamily",            STRING,   MyFamily),
-  VAR("NodeFamily",          LINELIST, NodeFamilies),
-  VAR("Group",               STRING,   Group),
-  VAR("HttpProxy",           STRING,   HttpProxy),
-  VAR("HiddenServiceDir",    LINELIST, RendConfigLines),
-  VAR("HiddenServicePort",   LINELIST, RendConfigLines),
-  VAR("HiddenServiceNodes",  LINELIST, RendConfigLines),
-  VAR("HiddenServiceExcludeNodes", LINELIST, RendConfigLines),
-  VAR("IgnoreVersion",       BOOL,     IgnoreVersion),
-  VAR("KeepalivePeriod",     UINT,     KeepalivePeriod),
-  VAR("LogLevel",            LINELIST, LogOptions),
-  VAR("LogFile",             LINELIST, LogOptions),
+  VAR("Address",             STRING,   Address,              NULL),
+  VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, NULL),
+  VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
+  VAR("BandwidthRate",       UINT,     BandwidthRate,        "800000"),
+  VAR("BandwidthBurst",      UINT,     BandwidthBurst,       "50000000"),
+  VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
+  VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
+  VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
+  VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
+  VAR("DirPort",             UINT,     DirPort,              "0"),
+  VAR("DirBindAddress",      LINELIST, DirBindAddress,       NULL),
+  VAR("DirFetchPostPeriod",  UINT,     DirFetchPostPeriod,   "600"),
+  VAR("DirPolicy",           LINELIST, DirPolicy,            NULL),
+  VAR("DirServer",           LINELIST, DirServers,           NULL),
+  VAR("ExitNodes",           STRING,   ExitNodes,            NULL),
+  VAR("EntryNodes",          STRING,   EntryNodes,           NULL),
+  VAR("StrictExitNodes",     BOOL,     StrictExitNodes,      "0"),
+  VAR("StrictEntryNodes",    BOOL,     StrictEntryNodes,     "0"),
+  VAR("ExitPolicy",          LINELIST, ExitPolicy,           NULL),
+  VAR("ExcludeNodes",        STRING,   ExcludeNodes,         NULL),
+  VAR("FascistFirewall",     BOOL,     FascistFirewall,      "0"),
+  VAR("FirewallPorts",       CSV,      FirewallPorts,        NULL),
+  VAR("MyFamily",            STRING,   MyFamily,             NULL),
+  VAR("NodeFamily",          LINELIST, NodeFamilies,         NULL),
+  VAR("Group",               STRING,   Group,                NULL),
+  VAR("HttpProxy",           STRING,   HttpProxy,            NULL),
+  VAR("HiddenServiceDir",    LINELIST, RendConfigLines,      NULL),
+  VAR("HiddenServicePort",   LINELIST, RendConfigLines,      NULL),
+  VAR("HiddenServiceNodes",  LINELIST, RendConfigLines,      NULL),
+  VAR("HiddenServiceExcludeNodes", LINELIST, RendConfigLines,NULL),
+  VAR("IgnoreVersion",       BOOL,     IgnoreVersion,        "0"),
+  VAR("KeepalivePeriod",     UINT,     KeepalivePeriod,      "300"),
+  VAR("LogLevel",            LINELIST, LogOptions,           NULL),
+  VAR("LogFile",             LINELIST, LogOptions,           NULL),
   OBSOLETE("LinkPadding"),
-  VAR("MaxConn",             UINT,     MaxConn),
-  VAR("MaxOnionsPending",    UINT,     MaxOnionsPending),
-  VAR("MonthlyAccountingStart",UINT,   AccountingStart),
-  VAR("AccountingMaxKB",     UINT,     AccountingMaxKB),
-  VAR("Nickname",            STRING,   Nickname),
-  VAR("NewCircuitPeriod",    UINT,     NewCircuitPeriod),
-  VAR("NumCpus",             UINT,     NumCpus),
-  VAR("ORPort",              UINT,     ORPort),
-  VAR("ORBindAddress",       LINELIST, ORBindAddress),
-  VAR("OutboundBindAddress", STRING,   OutboundBindAddress),
-  VAR("PidFile",             STRING,   PidFile),
-  VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight),
-  VAR("RedirectExit",        LINELIST, RedirectExit),
+  VAR("MaxConn",             UINT,     MaxConn,              "1024"),
+  VAR("MaxOnionsPending",    UINT,     MaxOnionsPending,     "100"),
+  VAR("MonthlyAccountingStart",UINT,   AccountingStart,      "0"),
+  VAR("AccountingMaxKB",     UINT,     AccountingMaxKB,      "0"),
+  VAR("Nickname",            STRING,   Nickname,             NULL),
+  VAR("NewCircuitPeriod",    UINT,     NewCircuitPeriod,     "30"),
+  VAR("NumCpus",             UINT,     NumCpus,              "1"),
+  VAR("ORPort",              UINT,     ORPort,               "0"),
+  VAR("ORBindAddress",       LINELIST, ORBindAddress,        NULL),
+  VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
+  VAR("PidFile",             STRING,   PidFile,              NULL),
+  VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
+  VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
   OBSOLETE("RouterFile"),
-  VAR("RunAsDaemon",         BOOL,     RunAsDaemon),
-  VAR("RunTesting",          BOOL,     RunTesting),
-  VAR("RecommendedVersions", LINELIST, RecommendedVersions),
-  VAR("RendNodes",           STRING,   RendNodes),
-  VAR("RendExcludeNodes",    STRING,   RendExcludeNodes),
-  VAR("SocksPort",           UINT,     SocksPort),
-  VAR("SocksBindAddress",    LINELIST, SocksBindAddress),
-  VAR("SocksPolicy",         LINELIST, SocksPolicy),
-  VAR("SysLog",              LINELIST, LogOptions),
+  VAR("RunAsDaemon",         BOOL,     RunAsDaemon,          "0"),
+  VAR("RunTesting",          BOOL,     RunTesting,           "0"),
+  VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
+  VAR("RendNodes",           STRING,   RendNodes,            NULL),
+  VAR("RendExcludeNodes",    STRING,   RendExcludeNodes,     NULL),
+  VAR("SocksPort",           UINT,     SocksPort,            "0"),
+  VAR("SocksBindAddress",    LINELIST, SocksBindAddress,     NULL),
+  VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
+  VAR("SysLog",              LINELIST, LogOptions,           NULL),
   OBSOLETE("TrafficShaping"),
-  VAR("User",                STRING,   User),
-  { NULL, CONFIG_TYPE_OBSOLETE, 0 }
+  VAR("User",                STRING,   User,                 NULL),
+  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR
 #undef OBSOLETE
@@ -589,13 +590,6 @@ static void
 init_options(or_options_t *options)
 {
   memset(options,0,sizeof(or_options_t));
-  options->ExitNodes = tor_strdup("");
-  options->EntryNodes = tor_strdup("");
-  options->StrictEntryNodes = options->StrictExitNodes = 0;
-  options->ExcludeNodes = tor_strdup("");
-  options->RendNodes = tor_strdup("");
-  options->RendExcludeNodes = tor_strdup("");
-  /* options->PidFile = tor_strdup("tor.pid"); */
   options->PathlenCoinWeight = 0.3;
   options->MaxConn = 1024;
   options->DirFetchPostPeriod = 600;
@@ -745,7 +739,7 @@ getconfig(int argc, char **argv, or_options_t *options)
       ++i;
     } else if (!strcmp(argv[i],"--list-fingerprint")) {
       options->command = CMD_LIST_FINGERPRINT;
-    }      
+    }
   }
 
   if (using_default_torrc) {
@@ -869,11 +863,13 @@ getconfig(int argc, char **argv, or_options_t *options)
     result = -1;
   }
 
-  if (options->StrictExitNodes && !strlen(options->ExitNodes)) {
+  if (options->StrictExitNodes &&
+      (!options->ExitNodes || !strlen(options->ExitNodes))) {
     log(LOG_WARN, "StrictExitNodes set, but no ExitNodes listed.");
   }
 
-  if (options->StrictEntryNodes && !strlen(options->EntryNodes)) {
+  if (options->StrictEntryNodes &&
+      (!options->EntryNodes || !strlen(options->EntryNodes))) {
     log(LOG_WARN, "StrictEntryNodes set, but no EntryNodes listed.");
   }
 

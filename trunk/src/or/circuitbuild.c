@@ -1074,7 +1074,7 @@ static routerinfo_t *choose_good_middle_server(cpath_build_state_t *state,
       routerlist_add_family(excluded, r);
     }
   }
-  choice = router_choose_random_node("", options.ExcludeNodes, excluded,
+  choice = router_choose_random_node(NULL, options.ExcludeNodes, excluded,
            0, 1, options._AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
   smartlist_free(excluded);
   return choice;
