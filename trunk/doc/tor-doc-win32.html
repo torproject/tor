@@ -15,8 +15,8 @@
 <h2>Installing Tor</h2>
 
 <p>You can get the latest releases <a
-href="http://tor.freehaven.net/dist/">here</a>. Look for the highest
-version (most recent date) that includes "-win32.exe".
+href="http://tor.freehaven.net/dist/win32/">here</a>. Look for the
+highest version (most recent date) that includes "-win32.exe".
 </p>
 
 <p>Our Tor installer should make everything pretty simple:
@@ -45,14 +45,14 @@ tray:
 
 <p>You need to configure Privoxy to use Tor. Open Privoxy's main config file:</p>
 
-<img alt="editing privoxy config" src="http://tor.freehaven.net/img/GCS_053.jpg" />
+<img border="1" alt="editing privoxy config" src="http://tor.freehaven.net/img/GCS_053.jpg" />
 
 <p>Add the line <br>
 <tt>forward-socks4a / localhost:9050 .</tt><br>
 (don't forget the dot) to privoxy's config file (you can just add it to the
 top):</p>
 
-<img alt="privoxy points to tor" src="http://tor.freehaven.net/img/GCS_006.jpg" />
+<img border="1" alt="privoxy points to tor" src="http://tor.freehaven.net/img/GCS_006.jpg" />
 
 <p>Then change your browser to http proxy at localhost port 8118.
 In Mozilla, this is in Edit|Preferences|Advanced|Proxies. In IE, it's
