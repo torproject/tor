@@ -9,8 +9,6 @@
 
 #include "or.h"
 
-extern or_options_t options; /* command-line and config-file options */
-
 /********* START VARIABLES **********/
 
 /** A global list of all circuits at this hop. */
@@ -149,7 +147,7 @@ void circuit_rep_hist_note_result(circuit_t *circ) {
      */
     return;
   }
-  if (server_mode()) {
+  if (server_mode(get_options())) {
     routerinfo_t *me = router_get_my_routerinfo();
     tor_assert(me);
     prev_digest = me->identity_digest;
@@ -354,7 +352,7 @@ circuit_deliver_create_cell(circuit_t *circ, char *payload) {
    * compare keys, not nicknames...but older servers will compare nicknames.
    * Should we check server version from the most recent directory? Hm.
    */
-  circ_id_type = decide_circ_id_type(options.Nickname,
+  circ_id_type = decide_circ_id_type(get_options()->Nickname,
                                      circ->n_conn->nickname);
   circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn, circ_id_type);
   if(!circ->n_circ_id) {
@@ -830,9 +828,10 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
   int n_best_support=0;
   smartlist_t *sl, *preferredexits, *preferredentries, *excludedexits;
   routerinfo_t *router;
+  or_options_t *options = get_options();
 
   preferredentries = smartlist_create();
-  add_nickname_list_to_smartlist(preferredentries,options.EntryNodes,1);
+  add_nickname_list_to_smartlist(preferredentries,options->EntryNodes,1);
 
   get_connection_array(&carray, &n_connections);
 
@@ -871,7 +870,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
       continue; /* skip routers that are known to be down */
     }
     if(!router->is_verified &&
-       (!(options._AllowUnverified & ALLOW_UNVERIFIED_EXIT) ||
+       (!(options->_AllowUnverified & ALLOW_UNVERIFIED_EXIT) ||
          router_is_unreliable_router(router, 1, 1))) {
       /* if it's unverified, and either we don't want it or it's unsuitable */
       n_supported[i] = -1;
@@ -923,10 +922,10 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
          n_best_support, best_support, n_pending_connections);
 
   preferredexits = smartlist_create();
-  add_nickname_list_to_smartlist(preferredexits,options.ExitNodes,1);
+  add_nickname_list_to_smartlist(preferredexits,options->ExitNodes,1);
 
   excludedexits = smartlist_create();
-  add_nickname_list_to_smartlist(excludedexits,options.ExcludeNodes,0);
+  add_nickname_list_to_smartlist(excludedexits,options->ExcludeNodes,0);
 
   sl = smartlist_create();
 
@@ -938,7 +937,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
         smartlist_add(sl, smartlist_get(dir->routers, i));
 
     smartlist_subtract(sl,excludedexits);
-    if (options.StrictExitNodes || smartlist_overlap(sl,preferredexits))
+    if (options->StrictExitNodes || smartlist_overlap(sl,preferredexits))
       smartlist_intersect(sl,preferredexits);
     router = routerlist_sl_choose_by_bandwidth(sl);
   } else {
@@ -952,7 +951,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
         smartlist_add(sl, smartlist_get(dir->routers, i));
 
     smartlist_subtract(sl,excludedexits);
-    if (options.StrictExitNodes || smartlist_overlap(sl,preferredexits))
+    if (options->StrictExitNodes || smartlist_overlap(sl,preferredexits))
       smartlist_intersect(sl,preferredexits);
     router = routerlist_sl_choose_by_bandwidth(sl);
   }
@@ -966,7 +965,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
     log_fn(LOG_INFO, "Chose exit server '%s'", router->nickname);
     return router;
   }
-  if (options.StrictExitNodes)
+  if (options->StrictExitNodes)
     log_fn(LOG_WARN, "No exit routers seem to be running; can't choose an exit.");
 
   return NULL;
@@ -985,12 +984,13 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
 static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
 {
   routerinfo_t *r;
+  or_options_t *options = get_options();
   switch(purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
       return choose_good_exit_server_general(dir);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-      r = router_choose_random_node(options.RendNodes, options.RendExcludeNodes,
-          NULL, 0, 1, options._AllowUnverified & ALLOW_UNVERIFIED_RENDEZVOUS, 0);
+      r = router_choose_random_node(options->RendNodes, options->RendExcludeNodes,
+          NULL, 0, 1, options->_AllowUnverified & ALLOW_UNVERIFIED_RENDEZVOUS, 0);
       return r;
   }
   log_fn(LOG_WARN,"Unhandled purpose %d", purpose);
@@ -1008,10 +1008,11 @@ onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest)
   int r;
   cpath_build_state_t *info;
   routerinfo_t *exit;
+
   router_get_routerlist(&rl);
   if (!rl)
     return NULL;
-  r = new_route_len(options.PathlenCoinWeight, purpose, rl->routers);
+  r = new_route_len(get_options()->PathlenCoinWeight, purpose, rl->routers);
   if (r < 1) /* must be at least 1 */
     return NULL;
   info = tor_malloc_zero(sizeof(cpath_build_state_t));
@@ -1112,8 +1113,8 @@ static routerinfo_t *choose_good_middle_server(cpath_build_state_t *state,
       routerlist_add_family(excluded, r);
     }
   }
-  choice = router_choose_random_node(NULL, options.ExcludeNodes, excluded,
-           0, 1, options._AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
+  choice = router_choose_random_node(NULL, get_options()->ExcludeNodes, excluded,
+           0, 1, get_options()->_AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
   smartlist_free(excluded);
   return choice;
 }
@@ -1122,6 +1123,7 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
 {
   routerinfo_t *r, *choice;
   smartlist_t *excluded = smartlist_create();
+  or_options_t *options = get_options();
   char buf[16];
 
   if((r = router_get_by_digest(state->chosen_exit_digest))) {
@@ -1132,7 +1134,7 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
     smartlist_add(excluded, r);
     routerlist_add_family(excluded, r);
   }
-  if(options.FascistFirewall) {
+  if(options->FascistFirewall) {
     /* exclude all ORs that listen on the wrong port */
     routerlist_t *rl;
     int i;
@@ -1144,13 +1146,13 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
     for(i=0; i < smartlist_len(rl->routers); i++) {
       r = smartlist_get(rl->routers, i);
       tor_snprintf(buf, sizeof(buf), "%d", r->or_port);
-      if (!smartlist_string_isin(options.FirewallPorts, buf))
+      if (!smartlist_string_isin(options->FirewallPorts, buf))
          smartlist_add(excluded, r);
     }
   }
-  choice = router_choose_random_node(options.EntryNodes, options.ExcludeNodes,
-           excluded, 0, 1, options._AllowUnverified & ALLOW_UNVERIFIED_ENTRY,
-           options.StrictEntryNodes);
+  choice = router_choose_random_node(options->EntryNodes, options->ExcludeNodes,
+           excluded, 0, 1, options->_AllowUnverified & ALLOW_UNVERIFIED_ENTRY,
+           options->StrictEntryNodes);
   smartlist_free(excluded);
   return choice;
 }
@@ -1188,7 +1190,7 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
          state->desired_path_len);
 
   excludednodes = smartlist_create();
-  add_nickname_list_to_smartlist(excludednodes,options.ExcludeNodes,0);
+  add_nickname_list_to_smartlist(excludednodes,get_options()->ExcludeNodes,0);
 
   if(cur_len == state->desired_path_len - 1) { /* Picking last node */
     choice = router_get_by_digest(state->chosen_exit_digest);

@@ -12,8 +12,6 @@
 
 /****************************************************************************/
 
-extern or_options_t options; /* command-line and config-file options */
-
 /** Enumeration of possible token types.  The ones starting with K_
  * correspond to directory 'keywords'.  _UNRECOGNIZED is for an
  * unrecognized keyword; _ERR is an error in the tokenizing process,
@@ -351,7 +349,7 @@ router_parse_routerlist_from_directory(const char *str,
 
   /* Now that we know the signature is okay, check the version. */
   if (check_version)
-    check_software_version_against_directory(str, options.IgnoreVersion);
+    check_software_version_against_directory(str, get_options()->IgnoreVersion);
 
   /* Now try to parse the first part of the directory. */
   if ((end = strstr(str,"\nrouter "))) {

@@ -155,19 +155,16 @@ static config_var_t config_vars[] = {
 /** Largest allowed config line */
 #define CONFIG_LINE_T_MAXLEN 4096
 
-static struct config_line_t *config_get_commandlines(int argc, char **argv);
-static int config_get_lines(FILE *f, struct config_line_t **result);
-static void config_free_lines(struct config_line_t *front);
-static int config_assign_line(or_options_t *options, struct config_line_t *c,
-                              int reset);
-static int config_assign(or_options_t *options, struct config_line_t *list,
-                         int reset);
+static void option_reset(or_options_t *options, config_var_t *var);
+static void options_free(or_options_t *options);
+static or_options_t *options_dup(or_options_t *old);
+static int options_validate(or_options_t *options);
+static int options_transition_allowed(or_options_t *old, or_options_t *new);
+static int check_nickname_list(const char *lst, const char *name);
+
 static int parse_dir_server_line(const char *line);
 static int parse_redirect_line(or_options_t *options,
                                struct config_line_t *line);
-static const char *expand_abbrev(const char *option, int commandline_only);
-static config_var_t *config_find_option(const char *key);
-static void reset_option(or_options_t *options, config_var_t *var);
 static int parse_log_severity_range(const char *range, int *min_out,
                                     int *max_out);
 static int convert_log_option(or_options_t *options,
@@ -177,6 +174,25 @@ static int add_single_log_option(or_options_t *options, int minSeverity,
                                  int maxSeverity,
                                  const char *type, const char *fname);
 static int normalize_log_options(or_options_t *options);
+
+/*
+ * Functions to read and write the global options pointer.
+ */
+
+/** Command-line and config-file options. */
+static or_options_t *global_options=NULL;
+
+or_options_t *get_options(void) {
+  tor_assert(global_options);
+  return global_options;
+}
+void set_options(or_options_t *new) {
+  global_options = new;
+}
+
+/*
+ * Functions to parse config options
+ */
 
 /** If <b>option</b> is an official abbreviation for a longer option,
  * return the longer option.  Otherwise return <b>option</b>.
@@ -249,34 +265,34 @@ config_line_prepend(struct config_line_t *front,
   return newline;
 }
 
-/** Helper: parse the config file and strdup into key/value
- * strings. Set *result to the list, or NULL if parsing the file
+/** Helper: parse the config string and strdup into key/value
+ * strings. Set *result to the list, or NULL if parsing the string
  * failed.  Return 0 on success, -1 on failure. Warn and ignore any
  * misformatted lines. */
-static int
-config_get_lines(FILE *f, struct config_line_t **result)
+int
+config_get_lines(char *string, struct config_line_t **result)
 {
-  struct config_line_t *front = NULL;
-  char line[CONFIG_LINE_T_MAXLEN];
-  int r;
-  char *key, *value;
+  struct config_line_t *list = NULL;
+  char *k, *v;
 
-  while ((r = parse_line_from_file(line, sizeof(line), f, &key, &value)) > 0) {
-    front = config_line_prepend(front, key, value);
-  }
+  do {
+    string = parse_line_from_str(string, &k, &v);
+    if (!string) {
+      config_free_lines(list);
+      return -1;
+    }
+    if (k && v)
+      list = config_line_prepend(list, k, v);
+  } while (*string);
 
-  if (r < 0) {
-    *result = NULL;
-    return -1;
-  }
-  *result = front;
+  *result = list;
   return 0;
 }
 
 /**
  * Free all the configuration lines on the linked list <b>front</b>.
  */
-static void
+void
 config_free_lines(struct config_line_t *front)
 {
   struct config_line_t *tmp;
@@ -341,7 +357,7 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
   }
 
   if (reset && !strlen(c->value)) {
-    reset_option(options, var);
+    option_reset(options, var);
     return 0;
   }
 
@@ -351,9 +367,9 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
   case CONFIG_TYPE_UINT:
     i = tor_parse_long(c->value, 10, 0, INT_MAX, &ok, NULL);
     if (!ok) {
-      log(LOG_WARN, "Int keyword '%s %s' is malformed or out of bounds. Skipping.",
+      log(LOG_WARN, "Int keyword '%s %s' is malformed or out of bounds.",
           c->key,c->value);
-      return 0;
+      return -1;
     }
     *(int *)lvalue = i;
     break;
@@ -361,8 +377,8 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
   case CONFIG_TYPE_BOOL:
     i = tor_parse_long(c->value, 10, 0, 1, &ok, NULL);
     if (!ok) {
-      log(LOG_WARN, "Boolean keyword '%s' expects 0 or 1. Skipping.", c->key);
-      return 0;
+      log(LOG_WARN, "Boolean keyword '%s' expects 0 or 1.", c->key);
+      return -1;
     }
     *(int *)lvalue = i;
     break;
@@ -384,7 +400,6 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     break;
 
-
   case CONFIG_TYPE_LINELIST:
   case CONFIG_TYPE_LINELIST_S:
     /* Note: this reverses the order that the lines appear in.  That's
@@ -404,7 +419,6 @@ config_assign_line(or_options_t *options, struct config_line_t *c, int reset)
     tor_assert(0);
     break;
   }
-
   return 0;
 }
 
@@ -418,7 +432,7 @@ config_reset_line(or_options_t *options, const char *key)
   if (!var)
     return; /* give error on next pass. */
 
-  reset_option(options, var);
+  option_reset(options, var);
 }
 
 /** Return a canonicalized list of the options assigned for key.
@@ -465,6 +479,8 @@ config_get_assigned_option(or_options_t *options, const char *key)
       result->value = tor_strdup(value ? (char*)value : "");
       break;
     case CONFIG_TYPE_UINT:
+      /* XXX This means every or_options_t uint or bool element
+       * needs to be an int. Not, say, a uint16_t or char. */
       tor_snprintf(buf, sizeof(buf), "%d", *(int*)value);
       result->value = tor_strdup(buf);
       break;
@@ -514,7 +530,7 @@ config_assign(or_options_t *options, struct config_line_t *list, int reset)
     }
   }
 
-  /* pass 2: if we're reading from a resetting souurce, clear all mentioned
+  /* pass 2: if we're reading from a resetting source, clear all mentioned
    * linelists. */
   if (reset) {
     for (p = list; p; p = p->next)
@@ -529,6 +545,89 @@ config_assign(or_options_t *options, struct config_line_t *list, int reset)
   }
   return 0;
 }
+
+/** Try assigning <b>list</b> to <b>options</b>. You do this by duping
+ * options, assigning list to the new one, then validating it. If it's
+ * ok, then through out the old one and stick with the new one. Else,
+ * revert to old and return failure.
+ */
+int
+config_trial_assign(or_options_t **options, struct config_line_t *list, int reset)
+{
+  or_options_t *trial_options = options_dup(*options);
+
+  if (config_assign(trial_options, list, reset) < 0) {
+    options_free(trial_options);
+    return -1;
+  }
+
+  if (options_validate(trial_options) < 0) {
+    options_free(trial_options);
+    return -1;
+  }
+
+  if (options_transition_allowed(*options, trial_options) < 0) {
+    options_free(trial_options);
+    return -1;
+  }
+
+  /* XXX now act on options */
+
+  options_free(*options);
+  *options = trial_options;
+  return 0;
+}
+
+/** Replace the option indexed by <b>var</b> in <b>options</b> with its
+ * default value. */
+static void
+option_reset(or_options_t *options, config_var_t *var)
+{
+  struct config_line_t *c;
+  void *lvalue;
+
+  lvalue = ((char*)options) + var->var_offset;
+  switch (var->type) {
+    case CONFIG_TYPE_STRING:
+      tor_free(*(char**)lvalue);
+      break;
+    case CONFIG_TYPE_DOUBLE:
+      *(double*)lvalue = 0.0;
+      break;
+    case CONFIG_TYPE_UINT:
+    case CONFIG_TYPE_BOOL:
+      *(int*)lvalue = 0;
+      break;
+    case CONFIG_TYPE_CSV:
+      if (*(smartlist_t**)lvalue) {
+        SMARTLIST_FOREACH(*(smartlist_t **)lvalue, char *, cp, tor_free(cp));
+        smartlist_free(*(smartlist_t **)lvalue);
+        *(smartlist_t **)lvalue = NULL;
+      }
+      break;
+    case CONFIG_TYPE_LINELIST:
+    case CONFIG_TYPE_LINELIST_S:
+      config_free_lines(*(struct config_line_t **)lvalue);
+      *(struct config_line_t **)lvalue = NULL;
+      break;
+    case CONFIG_TYPE_LINELIST_V:
+      /* handled by linelist_s. */
+      break;
+    case CONFIG_TYPE_OBSOLETE:
+      break;
+  }
+  if (var->initvalue) {
+    c = tor_malloc(sizeof(struct config_line_t));
+    c->key = tor_strdup(var->name);
+    c->value = tor_strdup(var->initvalue);
+    config_assign_line(options,c,0);
+    config_free_lines(c);
+  }
+}
+
+
+
+
 
 static void
 add_default_trusted_dirservers(void)
@@ -657,7 +756,7 @@ get_default_nickname(void)
 
 /** Release storage held by <b>options</b> */
 static void
-free_options(or_options_t *options)
+options_free(or_options_t *options)
 {
   int i;
   void *lvalue;
@@ -699,149 +798,47 @@ free_options(or_options_t *options)
   }
 }
 
-/** Replace the option indexed by <b>var</b> in <b>options</b> with its
- * default value. */
-static void
-reset_option(or_options_t *options, config_var_t *var)
+/** Copy storage held by <b>old</b> into a new or_options_t and return it. */
+static or_options_t *
+options_dup(or_options_t *old)
 {
-  struct config_line_t *c;
-  void *lvalue;
+  or_options_t *new;
+  int i;
+  struct config_line_t *line;
 
-  lvalue = ((char*)options) + var->var_offset;
-  switch (var->type) {
-    case CONFIG_TYPE_STRING:
-      tor_free(*(char**)lvalue);
-      break;
-    case CONFIG_TYPE_DOUBLE:
-      *(double*)lvalue = 0.0;
-      break;
-    case CONFIG_TYPE_UINT:
-    case CONFIG_TYPE_BOOL:
-      *(int*)lvalue = 0;
-      break;
-    case CONFIG_TYPE_CSV:
-      if (*(smartlist_t**)lvalue) {
-        SMARTLIST_FOREACH(*(smartlist_t **)lvalue, char *, cp, tor_free(cp));
-        smartlist_free(*(smartlist_t **)lvalue);
-        *(smartlist_t **)lvalue = NULL;
+  new = tor_malloc_zero(sizeof(or_options_t));
+  for (i=0; config_vars[i].name; ++i) {
+    line = config_get_assigned_option(old, config_vars[i].name);
+    if (line) {
+      if (config_assign(new, line, 0) < 0) {
+        log_fn(LOG_WARN,"Bug: config_get_assigned_option() generated "
+               "something we couldn't config_assign().");
+        tor_assert(0);
       }
-      break;
-    case CONFIG_TYPE_LINELIST:
-    case CONFIG_TYPE_LINELIST_S:
-      config_free_lines(*(struct config_line_t **)lvalue);
-      *(struct config_line_t **)lvalue = NULL;
-      break;
-    case CONFIG_TYPE_LINELIST_V:
-      /* handled by linelist_s. */
-      break;
-    case CONFIG_TYPE_OBSOLETE:
-      break;
+    }
+    config_free_lines(line);
   }
-  if (var->initvalue) {
-    c = tor_malloc(sizeof(struct config_line_t));
-    c->key = tor_strdup(var->name);
-    c->value = tor_strdup(var->initvalue);
-    config_assign_line(options,c,0);
-    config_free_lines(c);
-  }
+  return new;
 }
 
 /** Set <b>options</b> to hold reasonable defaults for most options.
  * Each option defaults to zero. */
-static void
-init_options(or_options_t *options)
+void
+options_init(or_options_t *options)
 {
   int i;
   config_var_t *var;
 
-  memset(options,0,sizeof(or_options_t));
   for (i=0; config_vars[i].name; ++i) {
     var = &config_vars[i];
     if(!var->initvalue)
       continue; /* defaults to NULL or 0 */
-    reset_option(options, var);
+    option_reset(options, var);
   }
-}
-
-#ifdef MS_WINDOWS
-static char *get_windows_conf_root(void)
-{
-  static int is_set = 0;
-  static char path[MAX_PATH+1];
-
-  LPITEMIDLIST idl;
-  IMalloc *m;
-  HRESULT result;
-
-  if (is_set)
-    return path;
-
-  /* Find X:\documents and settings\username\applicatation data\ .
-   * We would use SHGetSpecialFolder path, but that wasn't added until IE4.
-   */
-  if (!SUCCEEDED(SHGetSpecialFolderLocation(NULL, CSIDL_APPDATA,
-                                            &idl))) {
-    GetCurrentDirectory(MAX_PATH, path);
-    is_set = 1;
-    log_fn(LOG_WARN, "I couldn't find your application data folder: are you running an ancient version of Windows 95? Defaulting to '%s'", path);
-    return path;
-  }
-  /* Convert the path from an "ID List" (whatever that is!) to a path. */
-  result = SHGetPathFromIDList(idl, path);
-  /* Now we need to free the */
-  SHGetMalloc(&m);
-  if (m) {
-    m->lpVtbl->Free(m, idl);
-    m->lpVtbl->Release(m);
-  }
-  if (!SUCCEEDED(result)) {
-    return NULL;
-  }
-  strlcat(path,"\\tor",MAX_PATH);
-  is_set = 1;
-  return path;
-}
-#endif
-
-static char *
-get_default_conf_file(void)
-{
-#ifdef MS_WINDOWS
-  char *path = tor_malloc(MAX_PATH);
-  strlcpy(path, get_windows_conf_root(), MAX_PATH);
-  strlcat(path,"\\torrc",MAX_PATH);
-  return path;
-#else
-  return tor_strdup(CONFDIR "/torrc");
-#endif
-}
-
-/** Verify whether lst is a string containing valid-looking space-separated
- * nicknames, or NULL. Return 0 on success. Warn and return -1 on failure.
- */
-static int check_nickname_list(const char *lst, const char *name)
-{
-  int r = 0;
-  smartlist_t *sl;
-
-  if (!lst)
-    return 0;
-  sl = smartlist_create();
-  smartlist_split_string(sl, lst, ",", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH(sl, const char *, s,
-    {
-      if (!is_legal_nickname_or_hexdigest(s)) {
-        log_fn(LOG_WARN, "Invalid nickname '%s' in %s line", s, name);
-        r = -1;
-      }
-    });
-  SMARTLIST_FOREACH(sl, char *, s, tor_free(s));
-  smartlist_free(sl);
-  return r;
 }
 
 static int
-validate_options(or_options_t *options)
+options_validate(or_options_t *options)
 {
   int i;
   int result = 0;
@@ -853,7 +850,7 @@ validate_options(or_options_t *options)
   }
 
   if (options->Nickname == NULL) {
-    if (server_mode()) {
+    if (server_mode(options)) {
       if (!(options->Nickname = get_default_nickname()))
         return -1;
       log_fn(LOG_NOTICE, "Choosing default nickname %s", options->Nickname);
@@ -875,7 +872,7 @@ validate_options(or_options_t *options)
     }
   }
 
-  if (server_mode()) {
+  if (server_mode(options)) {
     /* confirm that our address isn't broken, so we can complain now */
     uint32_t tmp;
     if (resolve_my_address(options->Address, &tmp) < 0)
@@ -1031,14 +1028,20 @@ validate_options(or_options_t *options)
       result = -1;
   }
 
-  if (!options->RedirectExitList)
-    options->RedirectExitList = smartlist_create();
-/* XXX need to free the old one if it's there, else they just keep piling up */
+  /* free options->RedirectExitList */
+  if (options->RedirectExitList) {
+    SMARTLIST_FOREACH(options->RedirectExitList,
+                      exit_redirect_t *, p, tor_free(p));
+    smartlist_free(options->RedirectExitList);
+  }
+
+  options->RedirectExitList = smartlist_create();
   for (cl = options->RedirectExit; cl; cl = cl->next) {
     if (parse_redirect_line(options, cl)<0)
       result = -1;
   }
 
+/* XXX bug: this parsing shouldn't have side effects */
   clear_trusted_dir_servers();
   if (!options->DirServers) {
     add_default_trusted_dirservers();
@@ -1052,23 +1055,125 @@ validate_options(or_options_t *options)
   return result;
 }
 
+/** Check if any of the previous options have changed but aren't allowed to. */
+static int
+options_transition_allowed(or_options_t *old, or_options_t *new) {
+
+  if(!old)
+    return 0;
+
+  if (old->PidFile &&
+      (!new->PidFile || strcmp(old->PidFile,new->PidFile))) {
+    log_fn(LOG_WARN,"PidFile is not allowed to change. Failing.");
+    return -1;
+  }
+
+  if (old->RunAsDaemon && !new->RunAsDaemon) {
+    log_fn(LOG_WARN,"During reload, change from RunAsDaemon=1 to =0 not allowed. Failing.");
+    return -1;
+  }
+
+  if (old->ORPort != new->ORPort) {
+    log_fn(LOG_WARN,"During reload, changing ORPort is not allowed. Failing.");
+    return -1;
+  }
+
+  return 0;
+}
+
+#ifdef MS_WINDOWS
+static char *get_windows_conf_root(void)
+{
+  static int is_set = 0;
+  static char path[MAX_PATH+1];
+
+  LPITEMIDLIST idl;
+  IMalloc *m;
+  HRESULT result;
+
+  if (is_set)
+    return path;
+
+  /* Find X:\documents and settings\username\applicatation data\ .
+   * We would use SHGetSpecialFolder path, but that wasn't added until IE4.
+   */
+  if (!SUCCEEDED(SHGetSpecialFolderLocation(NULL, CSIDL_APPDATA,
+                                            &idl))) {
+    GetCurrentDirectory(MAX_PATH, path);
+    is_set = 1;
+    log_fn(LOG_WARN, "I couldn't find your application data folder: are you running an ancient version of Windows 95? Defaulting to '%s'", path);
+    return path;
+  }
+  /* Convert the path from an "ID List" (whatever that is!) to a path. */
+  result = SHGetPathFromIDList(idl, path);
+  /* Now we need to free the */
+  SHGetMalloc(&m);
+  if (m) {
+    m->lpVtbl->Free(m, idl);
+    m->lpVtbl->Release(m);
+  }
+  if (!SUCCEEDED(result)) {
+    return NULL;
+  }
+  strlcat(path,"\\tor",MAX_PATH);
+  is_set = 1;
+  return path;
+}
+#endif
+
+static char *
+get_default_conf_file(void)
+{
+#ifdef MS_WINDOWS
+  char *path = tor_malloc(MAX_PATH);
+  strlcpy(path, get_windows_conf_root(), MAX_PATH);
+  strlcat(path,"\\torrc",MAX_PATH);
+  return path;
+#else
+  return tor_strdup(CONFDIR "/torrc");
+#endif
+}
+
+/** Verify whether lst is a string containing valid-looking space-separated
+ * nicknames, or NULL. Return 0 on success. Warn and return -1 on failure.
+ */
+static int check_nickname_list(const char *lst, const char *name)
+{
+  int r = 0;
+  smartlist_t *sl;
+
+  if (!lst)
+    return 0;
+  sl = smartlist_create();
+  smartlist_split_string(sl, lst, ",", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH(sl, const char *, s,
+    {
+      if (!is_legal_nickname_or_hexdigest(s)) {
+        log_fn(LOG_WARN, "Invalid nickname '%s' in %s line", s, name);
+        r = -1;
+      }
+    });
+  SMARTLIST_FOREACH(sl, char *, s, tor_free(s));
+  smartlist_free(sl);
+  return r;
+}
+
+
 /** Read a configuration file into <b>options</b>, finding the configuration
  * file location based on the command line.  After loading the options,
  * validate them for consistency. Return 0 if success, <0 if failure. */
 int
-getconfig(int argc, char **argv, or_options_t *options)
+getconfig(int argc, char **argv)
 {
+  or_options_t *oldoptions, *newoptions;
   struct config_line_t *cl;
-  FILE *cf;
-  char *fname;
-  int i;
-  int result = 0;
+  char *cf=NULL, *fname=NULL;
+  int i, retval;
   int using_default_torrc;
   static char **backup_argv;
   static int backup_argc;
-  char *previous_pidfile = NULL;
-  int previous_runasdaemon = 0;
-  int previous_orport = -1;
+
+  oldoptions = global_options;
 
   if (argv) { /* first time we're called. save commandline args */
     backup_argv = argv;
@@ -1076,16 +1181,7 @@ getconfig(int argc, char **argv, or_options_t *options)
   } else { /* we're reloading. need to clean up old options first. */
     argv = backup_argv;
     argc = backup_argc;
-
-    /* record some previous values, so we can fail if they change */
-    if (options->PidFile)
-      previous_pidfile = tor_strdup(options->PidFile);
-    previous_runasdaemon = options->RunAsDaemon;
-    previous_orport = options->ORPort;
-    free_options(options);
   }
-  init_options(options);
-
   if (argc > 1 && (!strcmp(argv[1], "-h") || !strcmp(argv[1],"--help"))) {
     print_usage();
     exit(0);
@@ -1096,10 +1192,13 @@ getconfig(int argc, char **argv, or_options_t *options)
     exit(0);
   }
 
+  newoptions = tor_malloc_zero(sizeof(or_options_t));
+  options_init(newoptions);
+
   /* learn config file name, get config lines, assign them */
   fname = NULL;
   using_default_torrc = 1;
-  options->command = CMD_RUN_TOR;
+  newoptions->command = CMD_RUN_TOR;
   for (i = 1; i < argc; ++i) {
     if (i < argc-1 && !strcmp(argv[i],"-f")) {
       if (fname) {
@@ -1110,10 +1209,10 @@ getconfig(int argc, char **argv, or_options_t *options)
       using_default_torrc = 0;
       ++i;
     } else if (!strcmp(argv[i],"--list-fingerprint")) {
-      options->command = CMD_LIST_FINGERPRINT;
+      newoptions->command = CMD_LIST_FINGERPRINT;
     } else if (!strcmp(argv[i],"--hash-password")) {
-      options->command = CMD_HASH_PASSWORD;
-      options->command_arg = tor_strdup( (i < argc-1) ? argv[i+1] : "");
+      newoptions->command = CMD_HASH_PASSWORD;
+      newoptions->command_arg = tor_strdup( (i < argc-1) ? argv[i+1] : "");
       ++i;
     }
   }
@@ -1138,7 +1237,7 @@ getconfig(int argc, char **argv, or_options_t *options)
   tor_assert(fname);
   log(LOG_DEBUG, "Opening config file '%s'", fname);
 
-  cf = fopen(fname, "r");
+  cf = read_file_to_str(fname, 0);
   if (!cf) {
     if (using_default_torrc == 1) {
       log(LOG_NOTICE, "Configuration file '%s' not present, "
@@ -1147,51 +1246,45 @@ getconfig(int argc, char **argv, or_options_t *options)
     } else {
       log(LOG_WARN, "Unable to open configuration file '%s'.", fname);
       tor_free(fname);
-      return -1;
+      goto err;
     }
   } else { /* it opened successfully. use it. */
     tor_free(fname);
-    if (config_get_lines(cf, &cl)<0)
-      return -1;
-    if (config_assign(options,cl, 0) < 0)
-      return -1;
+    retval = config_get_lines(cf, &cl);
+    tor_free(cf);
+    if (retval < 0)
+      goto err;
+    retval = config_assign(newoptions, cl, 0);
     config_free_lines(cl);
-    fclose(cf);
+    if (retval < 0)
+      goto err;
   }
 
 /* go through command-line variables too */
   cl = config_get_commandlines(argc,argv);
-  if (config_assign(options,cl,0) < 0)
-    return -1;
+  retval = config_assign(newoptions,cl,0);
   config_free_lines(cl);
+  if (retval < 0)
+    goto err;
 
-/* Validate options */
+/* Validate newoptions */
+  if (options_validate(newoptions) < 0)
+    goto err;
 
-  /* first check if any of the previous options have changed but aren't allowed to */
-  if (previous_pidfile && strcmp(previous_pidfile,options->PidFile)) {
-    log_fn(LOG_WARN,"During reload, PidFile changed from %s to %s. Failing.",
-           previous_pidfile, options->PidFile);
-    return -1;
-  }
-  tor_free(previous_pidfile);
+  if (options_transition_allowed(oldoptions, newoptions) < 0)
+    goto err;
 
-  if (previous_runasdaemon && !options->RunAsDaemon) {
-    log_fn(LOG_WARN,"During reload, change from RunAsDaemon=1 to =0 not allowed. Failing.");
-    return -1;
-  }
+  /* XXX now act on options */
+  if (rend_config_services(newoptions) < 0)
+    goto err;
 
-  if (previous_orport == 0 && options->ORPort > 0) {
-    log_fn(LOG_WARN,"During reload, change from ORPort=0 to >0 not allowed. Failing.");
-    return -1;
-  }
-
-  if (validate_options(options) < 0)
-    result = -1;
-
-  if (rend_config_services(options) < 0) {
-    result = -1;
-  }
-  return result;
+  if(oldoptions)
+    options_free(oldoptions);
+  set_options(newoptions);
+  return 0;
+ err:
+  options_free(newoptions);
+  return -1;
 }
 
 static int
@@ -1282,6 +1375,7 @@ config_init_logs(or_options_t *options)
 {
   struct config_line_t *opt;
   int ok;
+  smartlist_t *elts;
   if (normalize_log_options(options))
     return -1;
 
@@ -1291,7 +1385,7 @@ config_init_logs(or_options_t *options)
   }
 
   ok = 1;
-  smartlist_t *elts = smartlist_create();
+  elts = smartlist_create();
   for (opt = options->Logs; opt; opt = opt->next) {
     int levelMin=LOG_DEBUG, levelMax=LOG_ERR;
     smartlist_split_string(elts, opt->value, " ",
@@ -1496,7 +1590,7 @@ static int parse_redirect_line(or_options_t *options,
   } else {
     if (parse_addr_port(smartlist_get(elements,1),NULL,&r->addr_dest,
                              &r->port_dest)) {
-      log_fn(LOG_WARN, "Error parseing dest address in RedirectExit line");
+      log_fn(LOG_WARN, "Error parsing dest address in RedirectExit line");
       goto err;
     }
     r->is_redirect = 1;
@@ -1565,17 +1659,15 @@ static int parse_dir_server_line(const char *line)
   done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
-
-  if (address)
-    tor_free(address);
-
+  tor_free(address);
   return r;
 }
 
 const char *
-get_data_directory(or_options_t *options)
+get_data_directory(void)
 {
   const char *d;
+  or_options_t *options = get_options();
 
   if (options->DataDirectory) {
     d = options->DataDirectory;

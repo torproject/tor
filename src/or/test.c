@@ -16,8 +16,6 @@
 #include "../common/test.h"
 #include "../common/torgzip.h"
 
-extern or_options_t options;
-
 int have_failed = 0;
 
 /* These functions are file-local, but are exposed so we can test. */
@@ -1094,7 +1092,7 @@ test_dir_format(void)
   test_assert(router_dump_router_to_string(buf, 2048, &r2, pk1)>0);
   cp = buf;
   test_eq(dirserv_add_descriptor((const char**)&cp), 1);
-  options.Nickname = tor_strdup("DirServer");
+  get_options()->Nickname = tor_strdup("DirServer");
   test_assert(!dirserv_dump_directory_to_string(buf,8192,pk3));
   cp = buf;
   test_assert(!router_parse_routerlist_from_directory(buf, &dir1, pk3, 1));
@@ -1202,12 +1200,9 @@ test_rend_fns(void)
 
 int
 main(int c, char**v){
-#if 0
-  or_options_t options; /* command-line and config-file options */
-
-  if(getconfig(c,v,&options))
-    exit(1);
-#endif
+  or_options_t *options = tor_malloc_zero(sizeof(or_options_t));
+  options_init(options);
+  set_options(options);
 
   crypto_seed_rng();
   setup_directory();

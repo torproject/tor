@@ -30,8 +30,6 @@ hibernating, phase 2:
 
 #define SHUTDOWN_WAIT_LENGTH 30 /* seconds */
 
-extern or_options_t options;
-
 static int hibernate_state = HIBERNATE_STATE_LIVE;
 static time_t hibernate_timeout = 0;
 
@@ -97,12 +95,12 @@ start_of_accounting_period_containing(time_t now)
   /* Only months are supported. */
   tm = gmtime(&now);
   /* If this is before the Nth, we want the Nth of last month. */
-  if (tm->tm_mday < options.AccountingStart) {
+  if (tm->tm_mday < get_options()->AccountingStart) {
     decr_month(tm, 1);
   }
   /* Otherwise, the month and year are correct.*/
 
-  tm->tm_mday = options.AccountingStart;
+  tm->tm_mday = get_options()->AccountingStart;
   tm->tm_hour = 0;
   tm->tm_min = 0;
   tm->tm_sec = 0;
@@ -146,7 +144,7 @@ static void
 update_expected_bandwidth(void)
 {
   uint64_t used;
-  uint32_t max_configured = (options.BandwidthRateBytes * 60);
+  uint32_t max_configured = (get_options()->BandwidthRateBytes * 60);
 
   if (n_seconds_active_in_interval < 1800) {
     expected_bandwidth_usage = max_configured;
@@ -183,7 +181,7 @@ static INLINE int time_to_record_bandwidth_usage(time_t now)
   static time_t last_time_noted = 0;
 
   /* ???? Maybe only do this if accountingmaxkb is set ?
-  if (!options.AccountingMaxKB)
+  if (!get_options()->AccountingMaxKB)
     return 0;
   */
 
@@ -233,7 +231,7 @@ accounting_set_wakeup_time(void)
   crypto_digest_get_digest(d, digest, DIGEST_LEN);
   crypto_free_digest_env(d);
 
-  n_days_to_exhaust_bw = (options.AccountingMaxKB/expected_bandwidth_usage)
+  n_days_to_exhaust_bw = (get_options()->AccountingMaxKB/expected_bandwidth_usage)
     /(24*60);
 
   tm = gmtime(&interval_start_time);
@@ -272,7 +270,7 @@ static int record_bandwidth_usage(time_t now)
                (unsigned long)n_seconds_active_in_interval,
                (unsigned long)expected_bandwidth_usage);
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
-               get_data_directory(&options));
+               get_data_directory());
 
   return write_str_to_file(fname, buf, 0);
 }
@@ -288,7 +286,7 @@ static int read_bandwidth_usage(void)
   int ok;
 
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
-               get_data_directory(&options));
+               get_data_directory());
   if (!(s = read_file_to_str(fname, 0))) {
     return 0;
   }
@@ -356,7 +354,7 @@ static int read_bandwidth_usage(void)
 
 static int hibernate_hard_limit_reached(void)
 {
-  uint64_t hard_limit = options.AccountingMaxKB<<10;
+  uint64_t hard_limit = get_options()->AccountingMaxKB<<10;
   if (!hard_limit)
     return 0;
   return n_bytes_read_in_interval >= hard_limit
@@ -365,7 +363,7 @@ static int hibernate_hard_limit_reached(void)
 
 static int hibernate_soft_limit_reached(void)
 {
-  uint64_t soft_limit = (uint64_t) ((options.AccountingMaxKB<<10) * .99);
+  uint64_t soft_limit = (uint64_t) ((get_options()->AccountingMaxKB<<10) * .99);
   if (!soft_limit)
     return 0;
   return n_bytes_read_in_interval >= soft_limit

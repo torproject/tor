@@ -14,10 +14,6 @@
 
 /****************************************************************************/
 
-extern or_options_t options; /**< command-line and config-file options */
-
-/* ********************************************************************** */
-
 static smartlist_t *trusted_dir_servers = NULL;
 
 /* static function prototypes */
@@ -50,9 +46,9 @@ int router_reload_router_list(void)
   char filename[512];
   int is_recent;
   struct stat st;
-  if (get_data_directory(&options)) {
+  if (get_data_directory()) {
     char *s;
-    tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
+    tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory());
     if (stat(filename, &st)) {
       log_fn(LOG_WARN, "Unable to check status for '%s': %s", filename,
              strerror(errno));
@@ -114,7 +110,7 @@ routerinfo_t *router_pick_directory_server(int requireothers,
     return choice;
 
   log_fn(LOG_INFO,"Still no %s router entries. Reloading and trying again.",
-         options.FascistFirewall ? "reachable" : "known");
+         get_options()->FascistFirewall ? "reachable" : "known");
   has_fetched_directory=0; /* reset it */
   if(router_reload_router_list()) {
     return NULL;
@@ -141,7 +137,7 @@ trusted_dir_server_t *router_pick_trusteddirserver(int requireothers,
     return choice;
 
   log_fn(LOG_WARN,"Still no dirservers %s. Reloading and trying again.",
-         options.FascistFirewall ? "reachable" : "known");
+         get_options()->FascistFirewall ? "reachable" : "known");
   has_fetched_directory=0; /* reset it */
   if(router_reload_router_list()) {
     return NULL;
@@ -165,7 +161,7 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall)
   if(!routerlist)
     return NULL;
 
-  if(options.HttpProxy)
+  if(get_options()->HttpProxy)
     fascistfirewall = 0;
 
   /* Find all the running dirservers we know about. */
@@ -178,7 +174,7 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall)
       continue;
     if(fascistfirewall) {
       tor_snprintf(buf,sizeof(buf),"%d",router->dir_port);
-      if (!smartlist_string_isin(options.FirewallPorts, buf))
+      if (!smartlist_string_isin(get_options()->FirewallPorts, buf))
         continue;
     }
     smartlist_add(sl, router);
@@ -202,7 +198,7 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
   if (!trusted_dir_servers)
     return NULL;
 
-  if(options.HttpProxy)
+  if(get_options()->HttpProxy)
     fascistfirewall = 0;
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
@@ -213,7 +209,7 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
         continue;
       if (fascistfirewall) {
         tor_snprintf(buf,sizeof(buf),"%d",d->dir_port);
-        if (!smartlist_string_isin(options.FirewallPorts, buf))
+        if (!smartlist_string_isin(get_options()->FirewallPorts, buf))
           continue;
       }
       smartlist_add(sl, d);
@@ -276,7 +272,7 @@ void routerlist_add_family(smartlist_t *sl, routerinfo_t *router) {
     });
 
 
-  for (cl = options.NodeFamilies; cl; cl = cl->next) {
+  for (cl = get_options()->NodeFamilies; cl; cl = cl->next) {
     if (router_nickname_is_in_list(router, cl->value)) {
       add_nickname_list_to_smartlist(sl, cl->value, 0);
     }
@@ -867,7 +863,7 @@ int router_load_routerlist_from_directory(const char *s,
     log_fn(LOG_WARN, "Error resolving routerlist");
     return -1;
   }
-  if (options.AuthoritativeDir) {
+  if (get_options()->AuthoritativeDir) {
     /* Learn about the descriptors in the directory. */
     dirserv_load_from_directory_string(s);
   }
