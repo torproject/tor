@@ -410,7 +410,7 @@ TODO: (very soon)
 
          ADDRESS | ':' | PORT | [00]
 
-   where  ADDRESS is be a DNS hostname, or an IPv4 address in
+   where  ADDRESS can be a DNS hostname, or an IPv4 address in
    dotted-quad format, or an IPv6 address surrounded by square brackets;
    and where PORT is encoded in decimal.
 
