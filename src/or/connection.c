@@ -188,11 +188,21 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   connection_t *newconn;
   struct sockaddr_in remote; /* information about the remote peer when connecting to other routers */
   int remotelen = sizeof(struct sockaddr_in); /* length of the remote address */
+#ifdef MS_WINDOWS
+  int e;
+#endif
 
   news = accept(conn->s,(struct sockaddr *)&remote,&remotelen);
   if (news == -1) { /* accept() error */
-    if(errno==EAGAIN)
+    if(ERRNO_EAGAIN(errno)) {
+#ifdef MS_WINDOWS
+      e = correct_socket_errno(conn->s);
+      if (ERRNO_EAGAIN(e))
+        return 0;
+#else
       return 0; /* he hung up before we could accept(). that's fine. */
+#endif
+    }
     /* else there was a real error. */
     log_fn(LOG_ERR,"accept() failed. Closing.");
     return -1;

@@ -243,7 +243,6 @@ void connection_start_writing(connection_t *conn) {
   poll_array[conn->poll_index].events |= POLLOUT;
 }
 
-
 static void conn_read(int i) {
   int retval;
   connection_t *conn;
@@ -251,6 +250,13 @@ static void conn_read(int i) {
   conn = connection_array[i];
   assert(conn);
 //  log_fn(LOG_DEBUG,"socket %d has something to read.",conn->s);
+
+#ifdef MS_WINDOWS
+  if (poll_array[i].revents & POLLERR) {
+    retval = -1;
+    goto error;
+  }
+#endif
 
   if (conn->type == CONN_TYPE_OR_LISTENER) {
     retval = connection_or_handle_listener_read(conn);
@@ -274,14 +280,17 @@ static void conn_read(int i) {
     }
   }
 
+#ifdef MS_WINDOWS
+ error:
+#endif
   if(retval < 0) { /* this connection is broken. remove it */
     log_fn(LOG_INFO,"%s connection broken, removing.", conn_type_to_string[conn->type]); 
     connection_remove(conn);
     connection_free(conn);
     if(i<nfds) { /* we just replaced the one at i with a new one.
                     process it too. */
-      if(poll_array[i].revents & POLLIN ||
-         poll_array[i].revents & POLLHUP ) /* something to read */
+      if(poll_array[i].revents & (POLLIN|POLLHUP|POLLERR))
+        /* something to read */
         conn_read(i);
     }
   }
@@ -565,10 +574,10 @@ static int do_main_loop(void) {
     }
 
     if(poll_result > 0) { /* we have at least one connection to deal with */
-      /* do all the reads first, so we can detect closed sockets */
+      /* do all the reads and errors first, so we can detect closed sockets */
       for(i=0;i<nfds;i++)
-        if(poll_array[i].revents & POLLIN ||
-           poll_array[i].revents & POLLHUP ) /* something to read */
+        if(poll_array[i].revents & (POLLIN|POLLHUP|POLLERR))
+          /* something to read, or an error. */
           conn_read(i); /* this also blows away broken connections */
 /* see http://www.greenend.org.uk/rjk/2001/06/poll.html for discussion
  * of POLLIN vs POLLHUP */

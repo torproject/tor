@@ -90,7 +90,7 @@ int connection_exit_connect(connection_t *conn) {
   log_fn(LOG_DEBUG,"Connecting to %s:%u.",conn->address,conn->port); 
 
   if(connect(s,(struct sockaddr *)&dest_addr,sizeof(dest_addr)) < 0) {
-    if(errno != EINPROGRESS){
+    if(!ERRNO_CONN_EINPROGRESS(errno)) {
       /* yuck. kill it. */
       perror("connect");
       log_fn(LOG_DEBUG,"Connect failed.");
@@ -102,7 +102,9 @@ int connection_exit_connect(connection_t *conn) {
       conn->state = EXIT_CONN_STATE_CONNECTING;
 
       log_fn(LOG_DEBUG,"connect in progress, socket %d.",s);
-      connection_watch_events(conn, POLLOUT | POLLIN);
+      connection_watch_events(conn, POLLOUT | POLLIN | POLLERR);
+      /* writable indicates finish, readable indicates broken link,
+         error indicates broken link in windowsland. */
       return 0;
     }
   }

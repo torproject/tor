@@ -62,7 +62,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       return or_handshake_op_finished_sending_keys(conn);
     case OR_CONN_STATE_CLIENT_CONNECTING:
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
-        if(errno != EINPROGRESS){
+        if(!ERRNO_CONN_EINPROGRESS(errno)){
           /* yuck. kill it. */
           log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
           return -1;
@@ -156,7 +156,7 @@ connection_t *connection_or_connect(routerinfo_t *router) {
 
   log(LOG_DEBUG,"connection_or_connect() : Trying to connect to %s:%u.",router->address,router->or_port);
   if(connect(s,(struct sockaddr *)&router_addr,sizeof(router_addr)) < 0){
-    if(errno != EINPROGRESS){
+    if(!ERRNO_CONN_EINPROGRESS(errno)) {
       /* yuck. kill it. */
       connection_free(conn);
       return NULL;
@@ -170,7 +170,9 @@ connection_t *connection_or_connect(routerinfo_t *router) {
       }
 
       log(LOG_DEBUG,"connection_or_connect() : connect in progress.");
-      connection_watch_events(conn, POLLIN | POLLOUT); /* writable indicates finish, readable indicates broken link */
+      connection_watch_events(conn, POLLIN | POLLOUT | POLLERR); 
+      /* writable indicates finish, readable indicates broken link,
+         error indicates broken link on windows */
       conn->state = OR_CONN_STATE_CLIENT_CONNECTING;
       return conn;
     }

@@ -13,6 +13,12 @@
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
+#if _MSC_VER > 1300
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#elif defined(_MSC_VER)
+#include <winsock.h>
+#endif
 #ifndef HAVE_GETTIMEOFDAY
 #ifdef HAVE_FTIME
 #define USING_FAKE_TIMEVAL
@@ -23,7 +29,7 @@
 #endif
 #endif
 
-#ifdef _MSC_VER
+#ifdef MS_WINDOWS
 /* Windows names string functions funnily. */
 #define strncasecmp strnicmp
 #define strcasecmp stricmp
@@ -54,5 +60,25 @@ int spawn_func(int (*func)(void *), void *data);
 void spawn_exit();
 
 int tor_socketpair(int family, int type, int protocol, int fd[2]);
+
+/* For stupid historical reasons, windows sockets have an independent set of 
+ * errnos which they use as the fancy strikes them.
+ */
+#ifdef MS_WINDOWS
+#define ERRNO_EAGAIN(e)           ((e) == EAGAIN || \
+                                   (e) == WSAEWOULDBLOCK || \
+                                   (e) == EWOULDBLOCK)
+#define ERRNO_EINPROGRESS(e)      ((e) == EINPROGRESS || \
+                                   (e) == WSAEINPROGRESS)
+#define ERRNO_CONN_EINPROGRESS(e) ((e) == EINPROGRESS || \
+                                   (e) == WSAEINPROGRESS || (e) == WSAEINVAL)
+int correct_socket_errno(int s);
+#else
+#define ERRNO_EAGAIN(e)           ((e) == EAGAIN)
+#define ERRNO_EINPROGRESS(e)      ((e) == EINPROGRESS)
+#define ERRNO_CONN_EINPROGRESS(e) ((e) == EINPROGRESS)
+#define correct_socket_errno(s)   (errno)
+#endif
+
 
 #endif

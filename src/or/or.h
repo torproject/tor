@@ -89,7 +89,6 @@
 #define snprintf _snprintf
 #endif
 
-
 #include "../common/crypto.h"
 #include "../common/log.h"
 #include "../common/util.h"
