@@ -352,6 +352,11 @@ static void run_connection_housekeeping(int i, time_t now) {
      !conn->marked_for_close &&
      conn->timestamp_lastwritten + 5*60 < now) {
     log_fn(LOG_WARN,"Expiring wedged directory conn (purpose %d)", conn->purpose);
+    /* XXXX This next check may help isolate where the pesky EPIPE bug
+     * really occurs. */
+    if (connection_wants_to_flush(conn)) {
+      flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
+    }
     connection_mark_for_close(conn,0);
     /* XXXX Does this next part make sense, really? */
     conn->hold_open_until_flushed = 1; /* give it a last chance */
