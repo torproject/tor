@@ -77,6 +77,16 @@ char *tor_strndup(const char *s, size_t n) {
   return dup;
 }
 
+/* Convert s to lowercase. */
+void tor_strlower(char *s)
+{
+  while (*s) {
+    *s = tolower(*s);
+    ++s;
+  }
+}
+
+
 /*
  * A simple smartlist interface to make an unordered list of acceptable
  * nodes and then choose a random one.
@@ -255,6 +265,40 @@ void* strmap_remove(strmap_t *map, const char *key)
     return NULL;
   }
 }
+
+/* Same as strmap_set, but first converts <key> to lowercase. */
+void* strmap_set_lc(strmap_t *map, const char *key, void *val)
+{
+  /* We could be a little faster by using strcasecmp instead, and a separate
+   * type, but I don't think it matters. */
+  void *v;
+  char *lc_key = tor_strdup(key);
+  tor_strlower(lc_key);
+  v = strmap_set(map,lc_key,val);
+  tor_free(lc_key);
+  return v;
+}
+/* Same as strmap_get, but first converts <key> to lowercase. */
+void* strmap_get_lc(strmap_t *map, const char *key)
+{
+  void *v;
+  char *lc_key = tor_strdup(key);
+  tor_strlower(lc_key);
+  v = strmap_get(map,lc_key);
+  tor_free(lc_key);
+  return v;
+}
+/* Same as strmap_remove, but first converts <key> to lowercase */
+void* strmap_remove_lc(strmap_t *map, const char *key)
+{
+  void *v;
+  char *lc_key = tor_strdup(key);
+  tor_strlower(lc_key);
+  v = strmap_remove(map,lc_key);
+  tor_free(lc_key);
+  return v;
+}
+
 
 /* Invoke fn() on every entry of the map, in order.  For every entry,
  * fn() is invoked with that entry's key, that entry's value, and the

@@ -966,38 +966,21 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
  *     other clients would reuse those funny addr's. Hm.
  */
 struct client_dns_entry {
-  SPLAY_ENTRY(client_dns_entry) node;
-  char *address;
   uint32_t addr;
   time_t expires;
 };
 static int client_dns_size = 0;
-static SPLAY_HEAD(client_dns_tree, client_dns_entry) client_dns_root;
-
-static int compare_client_dns_entries(struct client_dns_entry *a,
-                                      struct client_dns_entry *b)
-{
-  return strcasecmp(a->address, b->address);
-}
-
-static void client_dns_entry_free(struct client_dns_entry *ent)
-{
-  tor_free(ent->address);
-  tor_free(ent);
-}
-
-SPLAY_PROTOTYPE(client_dns_tree, client_dns_entry, node, compare_client_dns_entries);
-SPLAY_GENERATE(client_dns_tree, client_dns_entry, node, compare_client_dns_entries);
+static strmap_t *client_dns_map = NULL;
 
 void client_dns_init(void) {
-  SPLAY_INIT(&client_dns_root);
+  client_dns_map = strmap_new();
   client_dns_size = 0;
 }
 
+/* XXXX NM casei */
 static uint32_t client_dns_lookup_entry(const char *address)
 {
   struct client_dns_entry *ent;
-  struct client_dns_entry search;
   struct in_addr in;
   time_t now;
 
@@ -1008,8 +991,7 @@ static uint32_t client_dns_lookup_entry(const char *address)
            (unsigned long)ntohl(in.s_addr));
     return ntohl(in.s_addr);
   }
-  search.address = (char*)address;
-  ent = SPLAY_FIND(client_dns_tree, &client_dns_root, &search);
+  ent = strmap_get_lc(client_dns_map,address);
   if (!ent) {
     log_fn(LOG_DEBUG, "No entry found for address %s", address);
     return 0;
@@ -1017,8 +999,8 @@ static uint32_t client_dns_lookup_entry(const char *address)
     now = time(NULL);
     if (ent->expires < now) {
       log_fn(LOG_DEBUG, "Expired entry found for address %s", address);
-      SPLAY_REMOVE(client_dns_tree, &client_dns_root, ent);
-      client_dns_entry_free(ent);
+      strmap_remove_lc(client_dns_map,address);
+      tor_free(ent);
       --client_dns_size;
       return 0;
     }
@@ -1032,7 +1014,6 @@ static uint32_t client_dns_lookup_entry(const char *address)
 static void client_dns_set_entry(const char *address, uint32_t val)
 {
   struct client_dns_entry *ent;
-  struct client_dns_entry search;
   struct in_addr in;
   time_t now;
 
@@ -1041,9 +1022,8 @@ static void client_dns_set_entry(const char *address, uint32_t val)
 
   if (tor_inet_aton(address, &in))
     return;
-  search.address = (char*) address;
   now = time(NULL);
-  ent = SPLAY_FIND(client_dns_tree, &client_dns_root, &search);
+  ent = strmap_get_lc(client_dns_map, address);
   if (ent) {
     in.s_addr = htonl(val);
     log_fn(LOG_DEBUG, "Updating entry for address %s: %s", address,
@@ -1055,38 +1035,35 @@ static void client_dns_set_entry(const char *address, uint32_t val)
     log_fn(LOG_DEBUG, "Caching result for address %s: %s", address,
            inet_ntoa(in));
     ent = tor_malloc(sizeof(struct client_dns_entry));
-    ent->address = tor_strdup(address);
     ent->addr = val;
     ent->expires = now+MAX_DNS_ENTRY_AGE;
-    SPLAY_INSERT(client_dns_tree, &client_dns_root, ent);
+    strmap_set_lc(client_dns_map, address, ent);
     ++client_dns_size;
+  }
+}
+
+static void* _remove_if_expired(const char *addr,
+                                struct client_dns_entry *ent,
+                                time_t *nowp)
+{
+  if (ent->expires < *nowp) {
+    --client_dns_size;
+    tor_free(ent);
+    return NULL;
+  } else {
+    return ent;
   }
 }
 
 void client_dns_clean(void)
 {
-  struct client_dns_entry **expired_entries;
-  int n_expired_entries = 0;
   struct client_dns_entry *ent;
   time_t now;
-  int i;
 
   if(!client_dns_size)
     return;
-  expired_entries = tor_malloc(client_dns_size *
-                               sizeof(struct client_dns_entry *));
-
   now = time(NULL);
-  SPLAY_FOREACH(ent, client_dns_tree, &client_dns_root) {
-    if (ent->expires < now) {
-      expired_entries[n_expired_entries++] = ent;
-    }
-  }
-  for (i = 0; i < n_expired_entries; ++i) {
-    SPLAY_REMOVE(client_dns_tree, &client_dns_root, expired_entries[i]);
-    client_dns_entry_free(expired_entries[i]);
-  }
-  tor_free(expired_entries);
+  strmap_foreach(client_dns_map, (strmap_foreach_fn)_remove_if_expired, &now);
 }
 
 /*

@@ -539,6 +539,16 @@ void test_strmap() {
 
   /* Clean up after ourselves. */
   strmap_free(map, NULL);
+
+  /* Now try some lc functions. */
+  map = strmap_new();
+  strmap_set_lc(map,"Ab.C", (void*)1);
+  test_eq(strmap_get(map,"ab.c"), (void*)1);
+  test_eq(strmap_get_lc(map,"AB.C"), (void*)1);
+  test_eq(strmap_get(map,"AB.C"), NULL);
+  test_eq(strmap_remove_lc(map,"aB.C"), (void*)1);
+  test_eq(strmap_get_lc(map,"AB.C"), NULL);
+  strmap_free(map,NULL);
 }
 
 void test_onion() {
