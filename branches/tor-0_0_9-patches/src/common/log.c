@@ -393,9 +393,7 @@ int add_file_log(int loglevelMin, int loglevelMax, const char *filename)
   add_stream_log(loglevelMin, loglevelMax, filename, f);
   logfiles->needs_close = 1;
   if (log_tor_version(logfiles, 0) < 0) {
-    logfile_t *victim = logfiles;
-    logfiles = victim->next;
-    delete_log(victim);
+    delete_log(logfiles);
   }
   return 0;
 }
