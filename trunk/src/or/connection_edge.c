@@ -27,7 +27,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
     conn->done_receiving = 1;
     shutdown(conn->s, 0); /* XXX check return, refactor NM */
     if (conn->done_sending) {
-      connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+      connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
     } else {
       connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_END,
                                    NULL, 0, conn->cpath_layer);
@@ -36,7 +36,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
 #else 
     /* eof reached, kill it. */
     log_fn(LOG_INFO,"conn (fd %d) reached eof. Closing.", conn->s);
-    connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+    connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
     return -1;
 #endif
   }
@@ -44,14 +44,14 @@ int connection_edge_process_inbuf(connection_t *conn) {
   switch(conn->state) {
     case AP_CONN_STATE_SOCKS_WAIT:
       if(connection_ap_handshake_process_socks(conn) < 0) {
-        connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
         return -1;
       }
       return 0;
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       if(connection_edge_package_raw_inbuf(conn) < 0) {
-        connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
         return -1;
       }
       return 0;
@@ -63,15 +63,45 @@ int connection_edge_process_inbuf(connection_t *conn) {
   return 0;
 }
 
-void connection_edge_end(connection_t *conn, void *payload, int payload_len,
-                         crypt_path_t *cpath_layer) {
-  circuit_t *circ = circuit_get_by_conn(conn);
+char *connection_edge_end_reason(char *payload, unsigned char length) {
+  if(length < 1) {
+    log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
+    return "MALFORMED";
+  }
+  if(*payload < END_STREAM_REASON_MISC || *payload > END_STREAM_REASON_DONE) {
+    log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
+    return "MALFORMED";
+  }
+  switch(*payload) {
+    case END_STREAM_REASON_MISC:           return "misc error";
+    case END_STREAM_REASON_RESOLVEFAILED:  return "resolve failed";
+    case END_STREAM_REASON_CONNECTFAILED:  return "connect failed";
+    case END_STREAM_REASON_EXITPOLICY:     return "exit policy failed";
+    case END_STREAM_REASON_DESTROY:        return "destroyed";
+    case END_STREAM_REASON_DONE:           return "closed normally";
+  }
+  assert(0);
+  return "";
+}
+
+void connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer) {
+  char payload[5];
+  int payload_len=1;
+  circuit_t *circ;
 
   if(conn->has_sent_end) {
     log_fn(LOG_WARN,"It appears I've already sent the end. Are you calling me twice?");
     return;
   }
 
+  payload[0] = reason;
+  if(reason == END_STREAM_REASON_EXITPOLICY) {
+    *(uint32_t *)(payload+1) = htonl(conn->addr);
+    *(uint16_t *)(payload+5) = htons(conn->port);
+    payload_len += 6;
+  }
+
+  circ = circuit_get_by_conn(conn);
   if(circ) {
     log_fn(LOG_DEBUG,"Marking conn (fd %d) and sending end.",conn->s);
     connection_edge_send_command(conn, circ, RELAY_COMMAND_END,
@@ -145,16 +175,18 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
 
   if(conn && conn->state != AP_CONN_STATE_OPEN && conn->state != EXIT_CONN_STATE_OPEN) {
     if(conn->type == CONN_TYPE_EXIT && relay_command == RELAY_COMMAND_END) {
-      log_fn(LOG_INFO,"Exit got end before we're connected. Marking for close.");
-      conn->marked_for_close = 1;
+      log_fn(LOG_INFO,"Exit got end (%s) before we're connected. Marking for close.",
+        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, cell->length));
       if(conn->state == EXIT_CONN_STATE_RESOLVING) {
         log_fn(LOG_INFO,"...and informing resolver we don't want the answer anymore.");
         dns_cancel_pending_resolve(conn->address, conn);
       }
+      conn->marked_for_close = 1;
+      conn->has_sent_end = 1;
       return 0;
     } else {
       log_fn(LOG_WARN,"Got an unexpected relay cell, not in 'open' state. Closing.");
-      connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+      connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
       return -1;
     }
   }
@@ -175,7 +207,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       if((edge_type == EDGE_AP && --layer_hint->deliver_window < 0) ||
          (edge_type == EDGE_EXIT && --circ->deliver_window < 0)) {
         log_fn(LOG_WARN,"(relay data) circ deliver_window below 0. Killing.");
-        connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
         return -1;
       }
       log_fn(LOG_DEBUG,"circ deliver_window now %d.", edge_type == EDGE_AP ? layer_hint->deliver_window : circ->deliver_window);
@@ -203,10 +235,24 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       return 0;
     case RELAY_COMMAND_END:
       if(!conn) {
-        log_fn(LOG_INFO,"end cell dropped, unknown stream %d.",*(int*)conn->stream_id);
+        log_fn(LOG_INFO,"end cell (%s) dropped, unknown stream %d.",
+          connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, cell->length),
+          *(int*)conn->stream_id);
         return 0;
       }
-      log_fn(LOG_INFO,"end cell for stream %d. Removing stream.",*(int*)conn->stream_id);
+      log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
+        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, cell->length),
+        *(int*)conn->stream_id);
+      if(cell->length && *(cell->payload+RELAY_HEADER_SIZE) ==
+                           END_STREAM_REASON_EXITPOLICY) {
+        /* No need to close the connection. We'll hold it open while
+         * we try a new exit node.
+         * cell->payload+RELAY_HEADER_SIZE+1 holds the addr and then
+         * port of the destination. Which is good, because we've
+         * forgotten it.
+         */
+        /* XXX */
+      }
 
 #ifdef HALF_OPEN
       conn->done_sending = 1;
@@ -268,7 +314,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       log_fn(LOG_INFO,"Connected! Notifying application.");
       if(connection_ap_handshake_socks_reply(conn, NULL, 0, 1) < 0) {
         log_fn(LOG_INFO,"Writing to socks-speaking application failed. Closing.");
-        connection_edge_end(conn, NULL, 0, conn->cpath_layer);
+        connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
       }
       break;
     case RELAY_COMMAND_SENDME:
@@ -612,30 +658,28 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   /* send it off to the gethostbyname farm */
   switch(dns_resolve(n_stream)) {
     case 1: /* resolve worked */
-      if(connection_exit_connect(n_stream) >= 0)
-        return 0;
-      /* else fall through */
+      connection_exit_connect(n_stream);
+      return 0;
     case -1: /* resolve failed */
-      log_fn(LOG_WARN,"Resolve or connect failed (%s).", n_stream->address);
-      connection_edge_end(n_stream, NULL, 0, NULL);
-      connection_remove(n_stream);
-      connection_free(n_stream);
-    case 0: /* resolve added to pending list */
-      ;
+      log_fn(LOG_WARN,"Resolve failed (%s).", n_stream->address);
+      connection_edge_end(n_stream, END_STREAM_REASON_RESOLVEFAILED, NULL);
+    /* case 0, resolve added to pending list */
   }
   return 0;
 }
 
-int connection_exit_connect(connection_t *conn) {
+void connection_exit_connect(connection_t *conn) {
 
   if(router_compare_to_exit_policy(conn) < 0) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.", conn->address, conn->port);
-    return -1;
+    connection_edge_end(conn, END_STREAM_REASON_EXITPOLICY, NULL);
+    return;
   }
 
   switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
     case -1:
-      return -1;
+      connection_edge_end(conn, END_STREAM_REASON_CONNECTFAILED, NULL);
+      return;
     case 0:
       connection_set_poll_socket(conn);
       conn->state = EXIT_CONN_STATE_CONNECTING;
@@ -643,7 +687,7 @@ int connection_exit_connect(connection_t *conn) {
       connection_watch_events(conn, POLLOUT | POLLIN | POLLERR);
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link in windowsland. */
-      return 0;
+      return;
     /* case 1: fall through */
   }
 
@@ -659,7 +703,6 @@ int connection_exit_connect(connection_t *conn) {
   /* also, deliver a 'connected' cell back through the circuit. */
   connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
                                NULL, 0, conn->cpath_layer);
-  return 0;
 }
 
 /*

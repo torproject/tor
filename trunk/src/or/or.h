@@ -192,6 +192,13 @@
 
 #define RELAY_HEADER_SIZE 8
 
+#define END_STREAM_REASON_MISC 1
+#define END_STREAM_REASON_RESOLVEFAILED 2
+#define END_STREAM_REASON_CONNECTFAILED 3
+#define END_STREAM_REASON_EXITPOLICY 4
+#define END_STREAM_REASON_DESTROY 5
+#define END_STREAM_REASON_DONE 6
+
 /* default cipher function */
 #define DEFAULT_CIPHER CRYPTO_CIPHER_AES_CTR
 /* Used to en/decrypt onion skins */
@@ -225,16 +232,6 @@
 #define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
 /* legal characters in a nickname */
 #define LEGAL_NICKNAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-/* structure of a socks client operation */
-typedef struct {
-   unsigned char version;     /* socks version number */
-   unsigned char command;     /* command code */
-   uint16_t destport; /* destination port, host order */
-   uint32_t destip;   /* destination address, host order */
-   /* userid follows, terminated by a \0 */
-   /* dest host follows, terminated by a \0 */
-} socks4_t;
 
 #define SOCKS4_NETWORK_LEN 8
 
@@ -593,8 +590,7 @@ void assert_connection_ok(connection_t *conn, time_t now);
 /********************************* connection_edge.c ***************************/
 
 int connection_edge_process_inbuf(connection_t *conn);
-void connection_edge_end(connection_t *conn, void *payload, int payload_len,
-                         crypt_path_t *cpath_layer);
+void connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer);
 
 void connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command,
                                   void *payload, int payload_len, crypt_path_t *cpath_layer);
@@ -605,7 +601,7 @@ int connection_edge_finished_flushing(connection_t *conn);
 
 int connection_edge_package_raw_inbuf(connection_t *conn);
 
-int connection_exit_connect(connection_t *conn);
+void connection_exit_connect(connection_t *conn);
 
 extern uint64_t stats_n_data_cells_packaged;
 extern uint64_t stats_n_data_bytes_packaged;

@@ -163,7 +163,7 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "SocksBindAddress",CONFIG_TYPE_STRING,&options->SocksBindAddress) ||
     config_compare(list, "ORBindAddress",  CONFIG_TYPE_STRING, &options->ORBindAddress) ||
     config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User) ||
-    config_compare(list, "Group",           CONFIG_TYPE_STRING, &options->Group) ||
+    config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
 
     /* int options */
     config_compare(list, "MaxConn",         CONFIG_TYPE_INT, &options->MaxConn) ||
@@ -210,13 +210,17 @@ void free_options(or_options_t *options) {
   tor_free(options->Address);
   tor_free(options->PidFile);
   tor_free(options->ExitPolicy);
+  tor_free(options->SocksBindAddress);
+  tor_free(options->ORBindAddress);
+  tor_free(options->User);
+  tor_free(options->Group);
 }
 
 void init_options(or_options_t *options) {
 /* give reasonable values for each option. Defaults to zero. */
   memset(options,0,sizeof(or_options_t));
   options->LogLevel = tor_strdup("info");
-  options->ExitPolicy = tor_strdup("reject 127.0.0.1:*,reject 18.244.0.188:25,accept *:*");
+  options->ExitPolicy = tor_strdup("reject 127.0.0.1:*");
   options->SocksBindAddress = tor_strdup("127.0.0.1");
   options->ORBindAddress = tor_strdup("0.0.0.0");
   options->loglevel = LOG_INFO;
