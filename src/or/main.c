@@ -877,7 +877,7 @@ static void second_elapsed_callback(int fd, short event, void *args)
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
 
-  /* if more than 10s have elapsed, probably the clock changed: doesn't count. */
+  /* if more than 10s have elapsed, probably the clock jumped: doesn't count. */
   if (seconds_elapsed < 10)
     stats_n_seconds_working += seconds_elapsed;
 
@@ -1185,16 +1185,16 @@ void handle_signals(int is_parent)
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
   int i;
   static int signals[] = {
-    SIGINT,
-    SIGTERM,
-    SIGPIPE,
-    SIGUSR1,
-    SIGUSR2,
-    SIGHUP,
+    SIGINT,  /* do a controlled slow shutdown */
+    SIGTERM, /* to terminate now */
+    SIGPIPE, /* otherwise sigpipe kills us */
+    SIGUSR1, /* dump stats */
+    SIGUSR2, /* go to loglevel debug */
+    SIGHUP,  /* to reload config, retry conns, etc */
 #ifdef SIGXFSZ
-    SIGXFSZ,
+    SIGXFSZ, /* handle file-too-big resource exhaustion */
 #endif
-    SIGCHLD,
+    SIGCHLD, /* /* handle dns/cpu workers that exit */
     -1 };
   static struct event signal_events[16]; /* bigger than it has to be. */
   if (is_parent) {
@@ -1208,14 +1208,14 @@ void handle_signals(int is_parent)
     action.sa_flags = 0;
     sigemptyset(&action.sa_mask);
     action.sa_handler = SIG_IGN;
-    sigaction(SIGINT,  &action, NULL); /* do a controlled slow shutdown */
-    sigaction(SIGTERM, &action, NULL); /* to terminate now */
-    sigaction(SIGPIPE, &action, NULL); /* otherwise sigpipe kills us */
-    sigaction(SIGUSR1, &action, NULL); /* dump stats */
-    sigaction(SIGUSR2, &action, NULL); /* go to loglevel debug */
-    sigaction(SIGHUP,  &action, NULL); /* to reload config, retry conns, etc */
+    sigaction(SIGINT,  &action, NULL);
+    sigaction(SIGTERM, &action, NULL);
+    sigaction(SIGPIPE, &action, NULL);
+    sigaction(SIGUSR1, &action, NULL);
+    sigaction(SIGUSR2, &action, NULL);
+    sigaction(SIGHUP,  &action, NULL);
 #ifdef SIGXFSZ
-    sigaction(SIGXFSZ, &action, NULL); /* handle file-too-big resource exhaustion */
+    sigaction(SIGXFSZ, &action, NULL);
 #endif
 #endif /* signal stuff */
   }
@@ -1279,7 +1279,7 @@ void tor_cleanup(void) {
     accounting_record_bandwidth_usage(time(NULL));
 }
 
-/** Read/craete keys as needed, and echo our fingerprint to stdout. */
+/** Read/create keys as needed, and echo our fingerprint to stdout. */
 static void do_list_fingerprint(void)
 {
   char buf[FINGERPRINT_LEN+1];
