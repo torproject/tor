@@ -792,9 +792,8 @@ int crypto_seed_rng()
   static char *filenames[] = { 
     "/dev/srandom", "/dev/urandom", "/dev/random", NULL
   };
-  int i;
+  int i, n;
   char buf[21];
-  char *cp;
   FILE *f;
   
   for (i = 0; filenames[i]; ++i) {
@@ -802,9 +801,9 @@ int crypto_seed_rng()
     if (!f) continue;
     log(LOG_INFO, "Seeding RNG from %s", filenames[i]);
     buf[20]='\xff';
-    cp = fgets(buf, 20, f);
+    n = fread(buf, 1, 20, f);
     fclose(f);
-    if (!cp || buf[20]) {
+    if (n != 20) {
       log(LOG_INFO, "Error reading from entropy source");
       return -1;
     }
