@@ -17,8 +17,9 @@ doesn't work for you.
 
 Do you want to run a tor server?
 
-  First, copy torrc.sample to torrc and edit the middle part. Create
-  the DataDirectory, and make sure it's owned by whoever will be running
+  First, copy torrc.sample to torrc (by default it's in
+  /usr/local/etc/tor/), and edit the middle part. Create the
+  DataDirectory, and make sure it's owned by whoever will be running
   tor. Fix your system clock so it's not too far off. Make sure name
   resolution works.
 
@@ -32,11 +33,11 @@ Do you want to run a tor server?
 
 Do you want to run a hidden service?
 
-  Copy torrc.sample to torrc, and edit the bottom part. Then run Tor. It
-  will create each HiddenServiceDir you have configured, and it will
-  create a 'hostname' file which specifies the url (xyz.onion) for that
-  service. You can tell people the url, and they can connect to it via
-  their Tor proxy.
+  Copy torrc.sample to torrc (by default it's in /usr/local/etc/tor/), and
+  edit the bottom part. Then run Tor. It will create each HiddenServiceDir
+  you have configured, and it will create a 'hostname' file which
+  specifies the url (xyz.onion) for that service. You can tell people
+  the url, and they can connect to it via their Tor proxy.
 
 Configuring tsocks:
 
