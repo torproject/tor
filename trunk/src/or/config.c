@@ -617,7 +617,7 @@ option_reset(or_options_t *options, config_var_t *var)
       break;
   }
   if (var->initvalue) {
-    c = tor_malloc(sizeof(struct config_line_t));
+    c = tor_malloc_zero(sizeof(struct config_line_t));
     c->key = tor_strdup(var->name);
     c->value = tor_strdup(var->initvalue);
     config_assign_line(options,c,0);
