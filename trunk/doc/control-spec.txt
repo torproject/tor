@@ -306,7 +306,9 @@ the message.
       descriptor for a given OR, NUL-terminated.  If no such OR is known, the
       corresponding value is an empty string.
 
-    "desc/all-ids" -- a comma-separated list of all known OR identities.
+    "network-status" -- a space-separated list of all known OR identities.
+      This is in the same format as the router-status line in directories;
+      see tor-spec.txt for details.
 
     "addr-mappings/all"
     "addr-mappings/config"
