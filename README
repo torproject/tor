@@ -26,6 +26,7 @@ Do you want to run a tor server?
 
 Command-line web browsing:
 
+  (First, install and configure Privoxy as described in INSTALL.)
   For more convenient command-line use, I recommend making a ~/.wgetrc
   with the line
     http_proxy=http://localhost:8118
@@ -50,7 +51,7 @@ How to use it for ssh:
     server = 127.0.0.1
   (I had to "cd /usr/lib; ln -s /lib/libtsocks.so" to get the tsocks
    library working after install, since my libpath didn't include /lib.)
-  Then you can do "tsocks ssh arma@moria.mit.edu". But note that since
+  Then you can do "tsocks ssh arma@moria.mit.edu". But note that if
   ssh is suid root, you either need to do this as root, or cp a local
   version of ssh that isn't suid.
 
