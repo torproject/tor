@@ -49,14 +49,20 @@ EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env);
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
 
 static void
-tls_log_error(int severity, const char *doing)
+tls_log_errors(int severity, const char *doing)
 {
-  const char *msg = (const char*)ERR_reason_error_string(ERR_get_error());
-  if (!msg) msg = "(null)";
-  if (doing) {
-    log(severity, "TLS error while %s: %s", doing, msg);
-  } else {
-    log(severity, "TLS error: %s", msg);
+  int err;
+  const char *msg, *lib, *func;
+  while ((err = ERR_get_error()) != 0) {
+    msg = (const char*)ERR_reason_error_string(err);
+    lib = (const char*)ERR_lib_error_string(err);
+    func = (const char*)ERR_func_error_string(err);
+    if (!msg) msg = "(null)";
+    if (doing) {
+      log(severity, "TLS error while %s: %s (in %s:%s)", doing, msg, lib,func);
+    } else {
+      log(severity, "TLS error: %s (in %s:%s)", msg, lib, func);
+    }
   }
 }
 
@@ -79,17 +85,17 @@ tor_tls_get_error(tor_tls *tls, int r, int extra,
       if (extra&CATCH_SYSCALL)
 	return _TOR_TLS_SYSCALL;
       assert(severity != LOG_ERR); /* XXX remove me when the bug is found */
-      log(severity, "TLS error: <syscall error>.");
-      tls_log_error(severity, doing);
+      log(severity, "TLS error: <syscall error> (errno=%d)",errno);
+      tls_log_errors(severity, doing);
       return TOR_TLS_ERROR;
     case SSL_ERROR_ZERO_RETURN:
       if (extra&CATCH_ZERO)
 	return _TOR_TLS_ZERORETURN;
       log(severity, "TLS error: Zero return");
-      tls_log_error(severity, doing);
+      tls_log_errors(severity, doing);
       return TOR_TLS_ERROR;
     default:
-      tls_log_error(severity, doing);
+      tls_log_errors(severity, doing);
       return TOR_TLS_ERROR;
   }
 }
