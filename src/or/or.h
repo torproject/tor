@@ -237,8 +237,6 @@ struct connection_t {
 
   int onions_handled_this_second;
 
-//  uint16_t aci; /* anonymous connection identifier */
-
 /* used by OR and OP: */
 
   uint32_t bandwidth; /* connection bandwidth */
@@ -650,6 +648,7 @@ int connection_dir_handle_listener_read(connection_t *conn);
 
 int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
+void init_cache_tree(void);
 int dns_resolve(connection_t *exitconn);
 int dns_master_start(void);
 

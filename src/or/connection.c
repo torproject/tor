@@ -767,7 +767,7 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   printf("\n");
 #endif
 
-  /* retrieve cell info from outbuf (create the struct from the string) */
+  /* retrieve cell info from outbuf (create the host-order struct from the network-order string) */
   memset(&cell,0,sizeof(cell_t)); /* zero it out to start */
   cell.aci = ntohs(*(aci_t *)outbuf);
   cell.command = *(outbuf+2);
