@@ -79,6 +79,7 @@ time_t tor_timegm(struct tm *tm);
 void format_rfc1123_time(char *buf, time_t t);
 int parse_rfc1123_time(const char *buf, time_t *t);
 #define ISO_TIME_LEN 19
+void format_local_iso_time(char *buf, time_t t);
 void format_iso_time(char *buf, time_t t);
 int parse_iso_time(const char *buf, time_t *t);
 

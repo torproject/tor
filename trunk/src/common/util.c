@@ -617,6 +617,10 @@ int parse_rfc1123_time(const char *buf, time_t *t) {
   return 0;
 }
 
+void format_local_iso_time(char *buf, time_t t) {
+  strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", localtime(&t));
+}
+
 void format_iso_time(char *buf, time_t t) {
   strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", gmtime(&t));
 }
