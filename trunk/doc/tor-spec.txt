@@ -439,8 +439,9 @@ which reveals the downstream node.
 
 (Unless otherwise noted, tokens on the same line are space-separated.)
 
-Router ::= Router-Line  Onion-Key Link-Key Signing-Key  Exit-Policy Router-Signature NL
+Router ::= Router-Line  Date-Line Onion-Key Link-Key Signing-Key  Exit-Policy Router-Signature NL
 Router-Line ::= "router" address ORPort APPort DirPort bandwidth NL
+Date-Line ::= "published" YYYY-MM-DD HH:MM:SS NL
 Onion-key ::= "onion-key"  NL  a public key in PEM format   NL
 Link-key ::= "link-key"  NL  a public key in PEM format  NL
 Signing-Key ::= "signing-key"  NL  a public key in PEM format   NL
