@@ -509,6 +509,8 @@ int router_rebuild_descriptor(void) {
   ri->bandwidthburst = options.BandwidthBurst;
   ri->exit_policy = NULL; /* zero it out first */
   router_add_exit_policy_from_config(ri);
+  ri->is_trusted_dir = (ri->dir_port &&
+    router_digest_is_trusted_dir(ri->identity_digest));
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
   desc_routerinfo = ri;
@@ -516,8 +518,6 @@ int router_rebuild_descriptor(void) {
     log_fn(LOG_WARN, "Couldn't dump router to string.");
     return -1;
   }
-  ri->is_trusted_dir = (ri->dir_port &&
-    router_digest_is_trusted_dir(ri->identity_digest));
   return 0;
 }
 
