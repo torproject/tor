@@ -1109,15 +1109,15 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   crypto_dh_free(hop->handshake_state); /* don't need it anymore */
   hop->handshake_state = NULL;
 
-  log_fn(LOG_INFO,"hop %d init digest forward %u, backward %u.",
-         (int)hop, (unsigned)*(uint32_t*)keys, (unsigned)*(uint32_t*)(keys+20));
+  log_fn(LOG_INFO,"hop init digest forward %u, backward %u.",
+         (unsigned)*(uint32_t*)keys, (unsigned)*(uint32_t*)(keys+20));
   hop->f_digest = crypto_new_digest_env(CRYPTO_SHA1_DIGEST);
   crypto_digest_add_bytes(hop->f_digest, keys, 20);
   hop->b_digest = crypto_new_digest_env(CRYPTO_SHA1_DIGEST);
   crypto_digest_add_bytes(hop->b_digest, keys+20, 20);
 
-  log_fn(LOG_DEBUG,"hop %d init cipher forward %u, backward %u.",
-        (int)hop, (unsigned)*(uint32_t*)(keys+40), (unsigned) *(uint32_t*)(keys+40+16));
+  log_fn(LOG_DEBUG,"hop init cipher forward %u, backward %u.",
+        (unsigned)*(uint32_t*)(keys+40), (unsigned) *(uint32_t*)(keys+40+16));
   if (!(hop->f_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys+40,iv,1))) {
     log(LOG_WARN,"forward cipher initialization failed.");
@@ -1172,7 +1172,6 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
   log_fn(LOG_INFO, "finished");
   return 0;
 }
-
 
 void assert_cpath_layer_ok(const crypt_path_t *cp)
 {
