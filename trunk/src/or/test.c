@@ -333,19 +333,19 @@ test_crypto()
   /* oaep padding should make encryption not match */
   test_memneq(data1, data2, 128);
   test_eq(15, crypto_pk_private_decrypt(pk1, data1, 128, data3,
-                                        PK_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING,1));
   test_streq(data3, "Hello whirled.");
   memset(data3, 0, 1024);
   test_eq(15, crypto_pk_private_decrypt(pk1, data2, 128, data3,
-                                        PK_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING,1));
   test_streq(data3, "Hello whirled.");
   /* Can't decrypt with public key. */
   test_eq(-1, crypto_pk_private_decrypt(pk2, data2, 128, data3,
-                                        PK_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING,1));
   /* Try again with bad padding */
   memcpy(data2+1, "XYZZY", 5);  /* This has fails ~ once-in-2^40 */
   test_eq(-1, crypto_pk_private_decrypt(pk1, data2, 128, data3,
-                                        PK_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING,1));
 
   /* File operations: save and load private key */
   test_assert(! crypto_pk_write_private_key_to_filename(pk1,
@@ -354,7 +354,7 @@ test_crypto()
   test_assert(! crypto_pk_read_private_key_from_filename(pk2,
                                                   "/tmp/tor_test/pke1y"));
   test_eq(15, crypto_pk_private_decrypt(pk2, data1, 128, data3,
-                                        PK_PKCS1_OAEP_PADDING));
+                                        PK_PKCS1_OAEP_PADDING,1));
 
   /* Now try signing. */
   strcpy(data1, "Ossifrage");
@@ -388,7 +388,7 @@ test_crypto()
         (i==1)?PK_PKCS1_PADDING:PK_PKCS1_OAEP_PADDING;
       len = crypto_pk_public_hybrid_encrypt(pk1,data1,j,data2,p,0);
       test_assert(len>=0);
-      len = crypto_pk_private_hybrid_decrypt(pk1,data2,len,data3,p);
+      len = crypto_pk_private_hybrid_decrypt(pk1,data2,len,data3,p,1);
       test_eq(len,j);
       test_memeq(data1,data3,j);
     }

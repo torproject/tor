@@ -534,7 +534,7 @@ int crypto_pk_public_encrypt(crypto_pk_env_t *env, const unsigned char *from, in
  * write the result to <b>to</b>, and return the number of bytes
  * written.  On failure, return -1.
  */
-int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to, int padding)
+int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to, int padding, int warnOnFailure)
 {
   int r;
   tor_assert(env && from && to && env->key);
@@ -545,7 +545,8 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, i
   r = RSA_private_decrypt(fromlen, (unsigned char*)from, to, env->key,
                              crypto_get_rsa_padding(padding));
   if (r<0) {
-    crypto_log_errors(LOG_WARN, "performing RSA decryption");
+    crypto_log_errors(warnOnFailure?LOG_WARN:LOG_INFO,
+                      "performing RSA decryption");
     return -1;
   }
   return r;
@@ -714,7 +715,7 @@ int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
 int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
                                      const unsigned char *from,
                                      int fromlen, unsigned char *to,
-                                     int padding)
+                                     int padding, int warnOnFailure)
 {
   int overhead, pkeylen, outlen, r;
   crypto_cipher_env_t *cipher = NULL;
@@ -724,17 +725,15 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   pkeylen = crypto_pk_keysize(env);
 
   if (fromlen <= pkeylen) {
-    return crypto_pk_private_decrypt(env,from,fromlen,to,padding);
+    return crypto_pk_private_decrypt(env,from,fromlen,to,padding,warnOnFailure);
   }
-  outlen = crypto_pk_private_decrypt(env,from,pkeylen,buf,padding);
+  outlen = crypto_pk_private_decrypt(env,from,pkeylen,buf,padding,warnOnFailure);
   if (outlen<0) {
-    /* this is only log-levelinfo, because when we're decrypting
-     * onions, we try several keys to see which will work */
-    log_fn(LOG_INFO, "Error decrypting public-key data");
+    log_fn(warnOnFailure?LOG_WARN:LOG_INFO, "Error decrypting public-key data");
     return -1;
   }
   if (outlen < CIPHER_KEY_LEN) {
-    log_fn(LOG_WARN, "No room for a symmetric key");
+    log_fn(warnOnFailure?LOG_WARN:LOG_INFO, "No room for a symmetric key");
     return -1;
   }
   cipher = crypto_create_init_cipher(buf, 0);
