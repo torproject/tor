@@ -251,7 +251,7 @@ static void rend_service_update_descriptor(rend_service_t *service)
   for (i=0; i < n; ++i) {
     router = router_get_by_nickname(smartlist_get(service->intro_nodes, i));
     circ = find_intro_circuit(router, service->pk_digest);
-    if (circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
+    if (circ && circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
       /* We have an entirely established intro circuit. */
       d->intro_points[d->n_intro_points++] = tor_strdup(router->nickname);
     }
