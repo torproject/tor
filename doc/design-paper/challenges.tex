@@ -42,8 +42,18 @@ scalable network.
 
 \section{Introduction}
 
-Tor is a low-latency anonymous communication overlay network designed
-to be practical and usable for protecting TCP streams over the
+Anonymous communication is full of surprises. In this paper we will
+tell you about some of them. We will describe the challenges arising
+from our experiences with deploying, Tor, a low-latency anonymous general
+purpose communication system. We will discuss some of the difficulties
+we have experienced, how we have met them or, when we have some idea,
+how we plan to meet them. We will also discuss some tough open
+problems that have not given us any trouble in our current deployment.
+We will describe both those future challenges that we intend to and
+those that we have decided not to explore and why.
+
+Tor is an overlay network, designed
+to be practical and usable, for protecting TCP streams over the
 Internet~\cite{tor-design}. We have been operating a publicly deployed
 Tor network since October 2003 that has grown to over a hundred volunteer
 nodes and sometimes as much as 80 megabits of average traffic per second.
