@@ -49,9 +49,9 @@ static int circuit_is_acceptable(circuit_t *circ,
   /* if this circ isn't our purpose, skip. */
   if (purpose == CIRCUIT_PURPOSE_C_REND_JOINED && !must_be_open) {
     if (circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
-       circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
-       circ->purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED &&
-       circ->purpose != CIRCUIT_PURPOSE_C_REND_JOINED)
+        circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
+        circ->purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED &&
+        circ->purpose != CIRCUIT_PURPOSE_C_REND_JOINED)
       return 0;
   } else if (purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT && !must_be_open) {
     if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCING &&
@@ -555,6 +555,7 @@ void circuit_has_opened(circuit_t *circ) {
   switch (circ->purpose) {
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       rend_client_rendcirc_has_opened(circ);
+      connection_ap_attach_pending();
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
       rend_client_introcirc_has_opened(circ);
