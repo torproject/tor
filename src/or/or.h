@@ -754,7 +754,8 @@ int connection_dir_finished_flushing(connection_t *conn);
 void dns_init(void);
 int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
-void dns_cancel_pending_resolve(char *question, connection_t *onlyconn);
+void connection_dns_remove(connection_t *conn);
+void dns_cancel_pending_resolve(char *question);
 int dns_resolve(connection_t *exitconn);
 
 /********************************* main.c ***************************/
