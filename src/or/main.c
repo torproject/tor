@@ -364,7 +364,7 @@ static void run_scheduled_events(time_t now) {
     router_upload_dir_desc_to_dirservers();
   }
 
-  /* 1b. Every MAX_LINK_KEY_LIFETIME seconds, we change our TLS context. */
+  /* 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */
   if (!last_rotated_certificate)
     last_rotated_certificate = now;
   if (options.ORPort && last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
