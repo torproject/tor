@@ -1110,6 +1110,8 @@ circuit_resume_edge_reading_helper(connection_t *conn,
                                    crypt_path_t *layer_hint) {
 
   for ( ; conn; conn=conn->next_stream) {
+    if (conn->marked_for_close)
+      continue;
     if ((!layer_hint && conn->package_window > 0) ||
         (layer_hint && conn->package_window > 0 && conn->cpath_layer == layer_hint)) {
       connection_start_reading(conn);
