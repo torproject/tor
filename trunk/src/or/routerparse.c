@@ -433,10 +433,9 @@ router_parse_routerlist_from_directory(const char *str,
     static int have_warned_about_unverified_status = 0;
     routerinfo_t *me = router_get_my_routerinfo();
     if (me) {
-      if (router_update_status_from_smartlist(me, published_on,
-                                             good_nickname_list,
-                                          tok->tp==K_RUNNING_ROUTERS)==1 &&
-        me->is_verified == 0 && !have_warned_about_unverified_status) {
+      if (router_update_status_from_smartlist(me,
+            published_on, good_nickname_list, tok->tp==K_RUNNING_ROUTERS)==1 &&
+          me->is_verified == 0 && !have_warned_about_unverified_status) {
         log_fn(LOG_WARN,"Dirserver '%s' lists your server as unverified. Please consider sending your identity fingerprint to the tor-ops.", dirnickname);
         have_warned_about_unverified_status = 1;
       }

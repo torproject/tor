@@ -191,34 +191,34 @@ crypto_pk_env_t *init_key_from_file(const char *fname)
   }
 
   switch (file_status(fname)) {
-  case FN_DIR:
-  case FN_ERROR:
-    log(LOG_ERR, "Can't read key from %s", fname);
-    goto error;
-  case FN_NOENT:
-    log(LOG_INFO, "No key found in %s; generating fresh key.", fname);
-    if (crypto_pk_generate_key(prkey)) {
-      log(LOG_ERR, "Error generating onion key");
+    case FN_DIR:
+    case FN_ERROR:
+      log(LOG_ERR, "Can't read key from %s", fname);
       goto error;
-    }
-    if (crypto_pk_check_key(prkey) <= 0) {
-      log(LOG_ERR, "Generated key seems invalid");
-      goto error;
-    }
-    log(LOG_INFO, "Generated key seems valid");
-    if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
-      log(LOG_ERR, "Couldn't write generated key to %s.", fname);
-      goto error;
-    }
-    return prkey;
-  case FN_FILE:
-    if (crypto_pk_read_private_key_from_filename(prkey, fname)) {
-      log(LOG_ERR, "Error loading private key.");
-      goto error;
-    }
-    return prkey;
-  default:
-    tor_assert(0);
+    case FN_NOENT:
+      log(LOG_INFO, "No key found in %s; generating fresh key.", fname);
+      if (crypto_pk_generate_key(prkey)) {
+        log(LOG_ERR, "Error generating onion key");
+        goto error;
+      }
+      if (crypto_pk_check_key(prkey) <= 0) {
+        log(LOG_ERR, "Generated key seems invalid");
+        goto error;
+      }
+      log(LOG_INFO, "Generated key seems valid");
+      if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
+        log(LOG_ERR, "Couldn't write generated key to %s.", fname);
+        goto error;
+      }
+      return prkey;
+    case FN_FILE:
+      if (crypto_pk_read_private_key_from_filename(prkey, fname)) {
+        log(LOG_ERR, "Error loading private key.");
+        goto error;
+      }
+      return prkey;
+    default:
+      tor_assert(0);
   }
 
  error:
@@ -402,7 +402,7 @@ void router_retry_connections(void) {
     if (!clique_mode(options) && !router_is_clique_mode(router))
       continue;
     if (!connection_get_by_identity_digest(router->identity_digest,
-                                          CONN_TYPE_OR)) {
+                                           CONN_TYPE_OR)) {
       /* not in the list */
       log_fn(LOG_DEBUG,"connecting to OR at %s:%u.",router->address,router->or_port);
       connection_or_connect(router->addr, router->or_port, router->identity_digest);
@@ -650,14 +650,14 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 
   /* PEM-encode the onion key */
   if (crypto_pk_write_public_key_to_string(router->onion_pkey,
-                                          &onion_pkey,&onion_pkeylen)<0) {
+                                           &onion_pkey,&onion_pkeylen)<0) {
     log_fn(LOG_WARN,"write onion_pkey to string failed!");
     return -1;
   }
 
   /* PEM-encode the identity key key */
   if (crypto_pk_write_public_key_to_string(router->identity_pkey,
-                                          &identity_pkey,&identity_pkeylen)<0) {
+                                           &identity_pkey,&identity_pkeylen)<0) {
     log_fn(LOG_WARN,"write identity_pkey to string failed!");
     tor_free(onion_pkey);
     return -1;

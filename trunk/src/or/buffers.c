@@ -490,7 +490,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         return 0; /* not yet */
       req->command = (unsigned char) *(buf->mem+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
-         req->command != SOCKS_COMMAND_RESOLVE) {
+          req->command != SOCKS_COMMAND_RESOLVE) {
         /* not a connect or resolve? we don't support it. */
         log_fn(LOG_WARN,"socks5: command %d not recognized. Rejecting.",
                req->command);
@@ -548,7 +548,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
 
       req->command = (unsigned char) *(buf->mem+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
-         req->command != SOCKS_COMMAND_RESOLVE) {
+          req->command != SOCKS_COMMAND_RESOLVE) {
         /* not a connect or resolve? we don't support it. */
         log_fn(LOG_WARN,"socks4: command %d not recognized. Rejecting.",
                req->command);

@@ -89,7 +89,7 @@ static int circuit_is_acceptable(circuit_t *circ,
       }
     } else { /* not general */
       if (rend_cmp_service_ids(conn->rend_query, circ->rend_query) &&
-         (circ->rend_query[0] || purpose != CIRCUIT_PURPOSE_C_REND_JOINED)) {
+          (circ->rend_query[0] || purpose != CIRCUIT_PURPOSE_C_REND_JOINED)) {
         /* this circ is not for this conn, and it's not suitable
          * for cannibalizing either */
         return 0;
@@ -111,11 +111,11 @@ static int circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
        */
       if (b->timestamp_dirty) {
         if (a->timestamp_dirty &&
-           a->timestamp_dirty > b->timestamp_dirty)
+            a->timestamp_dirty > b->timestamp_dirty)
           return 1;
       } else {
         if (a->timestamp_dirty ||
-           a->timestamp_created > b->timestamp_created)
+            a->timestamp_created > b->timestamp_created)
           return 1;
       }
       break;
@@ -199,7 +199,7 @@ void circuit_expire_building(time_t now) {
 
     /* some debug logs, to help track bugs */
     if (victim->purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
-       victim->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
+        victim->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
       if (!victim->timestamp_dirty)
         log_fn(LOG_DEBUG,"Considering %sopen purp %d to %s (circid %d). (clean).",
                victim->state == CIRCUIT_STATE_OPEN ? "" : "non",
@@ -216,25 +216,25 @@ void circuit_expire_building(time_t now) {
     /* if circ is !open, or if it's open but purpose is a non-finished
      * intro or rend, then mark it for close */
     if (victim->state != CIRCUIT_STATE_OPEN ||
-       victim->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
-       victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCING ||
-       victim->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+        victim->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
+        victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCING ||
+        victim->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
 
-       /* it's a rend_ready circ, but it's already picked a query */
-       (victim->purpose == CIRCUIT_PURPOSE_C_REND_READY &&
-        victim->rend_query[0]) ||
+        /* it's a rend_ready circ, but it's already picked a query */
+        (victim->purpose == CIRCUIT_PURPOSE_C_REND_READY &&
+         victim->rend_query[0]) ||
 
-       /* c_rend_ready circs measure age since timestamp_dirty,
-        * because that's set when they switch purposes
-        */
-       /* rend and intro circs become dirty each time they
-        * make an introduction attempt. so timestamp_dirty
-        * will reflect the time since the last attempt.
-        */
-       ((victim->purpose == CIRCUIT_PURPOSE_C_REND_READY ||
-         victim->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED ||
-         victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) &&
-        victim->timestamp_dirty + MIN_SECONDS_BEFORE_EXPIRING_CIRC > now)) {
+        /* c_rend_ready circs measure age since timestamp_dirty,
+         * because that's set when they switch purposes
+         */
+        /* rend and intro circs become dirty each time they
+         * make an introduction attempt. so timestamp_dirty
+         * will reflect the time since the last attempt.
+         */
+        ((victim->purpose == CIRCUIT_PURPOSE_C_REND_READY ||
+          victim->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED ||
+          victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) &&
+         victim->timestamp_dirty + MIN_SECONDS_BEFORE_EXPIRING_CIRC > now)) {
       if (victim->n_conn)
         log_fn(LOG_INFO,"Abandoning circ %s:%d:%d (state %d:%s, purpose %d)",
                victim->n_conn->address, victim->n_port, victim->n_circ_id,
@@ -264,10 +264,12 @@ int circuit_stream_is_being_handled(connection_t *conn) {
   time_t now = time(NULL);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (CIRCUIT_IS_ORIGIN(circ) && circ->state != CIRCUIT_STATE_OPEN &&
-       !circ->marked_for_close && circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
-       (!circ->timestamp_dirty ||
-        circ->timestamp_dirty + get_options()->NewCircuitPeriod < now)) {
+    if (CIRCUIT_IS_ORIGIN(circ) &&
+        circ->state != CIRCUIT_STATE_OPEN &&
+        !circ->marked_for_close &&
+        circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
+        (!circ->timestamp_dirty ||
+         circ->timestamp_dirty + get_options()->NewCircuitPeriod < now)) {
       exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
       if (exitrouter && connection_ap_can_use_exit(conn, exitrouter))
         if (++num >= MIN_CIRCUITS_HANDLING_STREAM)
@@ -305,8 +307,9 @@ void circuit_build_needed_circs(time_t now) {
       client_dns_clean();
     circuit_expire_old_circuits();
 
-    if (get_options()->RunTesting && circ &&
-               circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
+    if (get_options()->RunTesting &&
+        circ &&
+        circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
       log_fn(LOG_INFO,"Creating a new testing circuit.");
       circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL);
     }
@@ -320,7 +323,7 @@ void circuit_build_needed_circs(time_t now) {
   /* if there's no open circ, and less than 5 are on the way,
    * go ahead and try another. */
   if (!circ && circuit_count_building(CIRCUIT_PURPOSE_C_GENERAL)
-              < CIRCUIT_MIN_BUILDING_GENERAL) {
+               < CIRCUIT_MIN_BUILDING_GENERAL) {
     circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL);
   }
 
@@ -720,7 +723,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     tor_free(exitname);
 
     if (circ &&
-       (desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL)) {
+        desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL) {
       /* then write the service_id into circ */
       strlcpy(circ->rend_query, conn->rend_query, sizeof(circ->rend_query));
     }

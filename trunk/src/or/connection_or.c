@@ -208,7 +208,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
   tor_assert(id_digest);
 
   if (server_mode(get_options()) && (me=router_get_my_routerinfo()) &&
-     !memcmp(me->identity_digest, id_digest,DIGEST_LEN)) {
+      !memcmp(me->identity_digest, id_digest,DIGEST_LEN)) {
     log_fn(LOG_WARN,"Request to connect to myself! Failing.");
     return NULL;
   }
@@ -385,8 +385,8 @@ connection_tls_finish_handshake(connection_t *conn) {
 
   router = router_get_by_nickname(nickname);
   if (router && /* we know this nickname */
-     router->is_verified && /* make sure it's the right guy */
-     memcmp(digest_rcvd, router->identity_digest, DIGEST_LEN) != 0) {
+      router->is_verified && /* make sure it's the right guy */
+      memcmp(digest_rcvd, router->identity_digest, DIGEST_LEN) != 0) {
     log_fn(LOG_WARN, "Identity key not as expected for router claiming to be '%s' (%s:%d) ", nickname, conn->address, conn->port);
     return -1;
   }
@@ -455,7 +455,7 @@ void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
  * during periods of high load we won't read the entire megabyte from
  * input before pushing any data out. */
   if (conn->outbuf_flushlen-CELL_NETWORK_SIZE < MIN_TLS_FLUSHLEN &&
-     conn->outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
+      conn->outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
     int extra = conn->outbuf_flushlen - MIN_TLS_FLUSHLEN;
     conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
     if (connection_handle_write(conn) < 0) {

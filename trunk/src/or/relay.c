@@ -111,7 +111,7 @@ static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
   relay_header_unpack(&rh, in);
 //  log_fn(LOG_DEBUG,"before crypt: %d",rh.recognized);
   if (( encrypt_mode && crypto_cipher_encrypt(cipher, out, in, CELL_PAYLOAD_SIZE)) ||
-     (!encrypt_mode && crypto_cipher_decrypt(cipher, out, in, CELL_PAYLOAD_SIZE))) {
+      (!encrypt_mode && crypto_cipher_decrypt(cipher, out, in, CELL_PAYLOAD_SIZE))) {
     log_fn(LOG_WARN,"Error during relay encryption");
     return -1;
   }
@@ -351,7 +351,7 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
     if (rh.stream_id == tmpconn->stream_id) {
       log_fn(LOG_DEBUG,"found conn for stream %d.", rh.stream_id);
       if (cell_direction == CELL_DIRECTION_OUT ||
-         connection_edge_is_rendezvous_stream(tmpconn))
+          connection_edge_is_rendezvous_stream(tmpconn))
         return tmpconn;
     }
   }
@@ -655,8 +655,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
    * conn points to the recognized stream. */
 
   if (conn &&
-     conn->state != AP_CONN_STATE_OPEN &&
-     conn->state != EXIT_CONN_STATE_OPEN) {
+      conn->state != AP_CONN_STATE_OPEN &&
+      conn->state != EXIT_CONN_STATE_OPEN) {
     return connection_edge_process_relay_cell_not_open(
              &rh, cell, circ, conn, layer_hint);
   }
@@ -679,8 +679,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       return 0;
     case RELAY_COMMAND_DATA:
       ++stats_n_data_cells_received;
-      if ((layer_hint && --layer_hint->deliver_window < 0) ||
-         (!layer_hint && --circ->deliver_window < 0)) {
+      if (( layer_hint && --layer_hint->deliver_window < 0) ||
+          (!layer_hint && --circ->deliver_window < 0)) {
         log_fn(LOG_WARN,"(relay data) circ deliver_window below 0. Killing.");
         connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
         connection_mark_for_close(conn);
@@ -910,7 +910,7 @@ repeat_connection_edge_package_raw_inbuf:
   }
 
   if (connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
-                               payload, length, conn->cpath_layer) < 0)
+                                   payload, length, conn->cpath_layer) < 0)
     return 0; /* circuit is closed, don't continue */
 
   if (!conn->cpath_layer) { /* non-rendezvous exit */
@@ -957,7 +957,7 @@ void connection_edge_consider_sending_sendme(connection_t *conn) {
     log_fn(LOG_DEBUG,"Outbuf %d, Queueing stream sendme.", (int)conn->outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
     if (connection_edge_send_command(conn, circ, RELAY_COMMAND_SENDME,
-                                    NULL, 0, conn->cpath_layer) < 0) {
+                                     NULL, 0, conn->cpath_layer) < 0) {
       log_fn(LOG_WARN,"connection_edge_send_command failed. Returning.");
       return; /* the circuit's closed, don't continue */
     }
@@ -991,7 +991,7 @@ circuit_resume_edge_reading_helper(connection_t *conn,
 
   for ( ; conn; conn=conn->next_stream) {
     if ((!layer_hint && conn->package_window > 0) ||
-       (layer_hint && conn->package_window > 0 && conn->cpath_layer == layer_hint)) {
+        (layer_hint && conn->package_window > 0 && conn->cpath_layer == layer_hint)) {
       connection_start_reading(conn);
       /* handle whatever might still be on the inbuf */
       connection_edge_package_raw_inbuf(conn, 1);
@@ -1054,14 +1054,14 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 //  log_fn(LOG_INFO,"Considering: layer_hint is %s",
 //         layer_hint ? "defined" : "null");
   while ((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <
-         CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
+          CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
     log_fn(LOG_DEBUG,"Queueing circuit sendme.");
     if (layer_hint)
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
     else
       circ->deliver_window += CIRCWINDOW_INCREMENT;
     if (connection_edge_send_command(NULL, circ, RELAY_COMMAND_SENDME,
-                                    NULL, 0, layer_hint) < 0) {
+                                     NULL, 0, layer_hint) < 0) {
       log_fn(LOG_WARN,"connection_edge_send_command failed. Circuit's closed.");
       return; /* the circuit's closed, don't continue */
     }

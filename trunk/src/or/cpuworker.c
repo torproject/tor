@@ -235,7 +235,7 @@ static int cpuworker_main(void *data) {
 
     if (question_type == CPUWORKER_TASK_ONION) {
       if (onion_skin_server_handshake(question, onion_key, last_onion_key,
-        reply_to_proxy, keys, 40+32) < 0) {
+          reply_to_proxy, keys, 40+32) < 0) {
         /* failure */
         log_fn(LOG_WARN,"onion_skin_server_handshake failed.");
         memset(buf,0,LEN_ONION_RESPONSE); /* send all zeros for failure */
