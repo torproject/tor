@@ -174,6 +174,9 @@
 /* The size of a `short', as computed by sizeof. */
 #define SIZEOF_SHORT 2
 
+/* The size of a `time_t', as computed by sizeof. */
+#define SIZEOF_TIME_T 4
+
 /* The size of a `uint16_t', as computed by sizeof. */
 #undef SIZEOF_UINT16_T
 
