@@ -27,25 +27,31 @@ ARMA    - arma claims
    o We should check for memset(0) setting things to NULL with
      autoconf, and then rely on it in the code.
 
-0.0.9pre5/6:
+0.0.9pre5/6: ("Launch" version)
    o Replace running-routers with a router-status line that can be used
      without a list of router descriptors.
    o Add a log handler that sends stuff to syslog.
    o Deprecate unofficial configuration abbrevs; make official abbrevs
      only official on the command line.
    - per-month byte allowances.
-N  - Based on bandwidth and per-month allowance, choose a
-     window within month to be up.  Stay up until allowance is
-     used.  Adjust next month's window based on outcome.  Hibernate
-     when we're not up.
-R  - Hibernate means "stop accepting connections, and start sleeping"
-     Implement hibernation.  Have a separate
-     about-to-start-hibernating state implemented in similar way to
-     will shut-down-in-30-seconds state.
+N    - Based on bandwidth and per-month allowance, choose a
+       window within month to be up.  Stay up until allowance is
+       used.  Adjust next month's window based on outcome.  Hibernate
+       when we're not up.
+R    - Hibernate means "stop accepting connections, and start sleeping"
+       Implement hibernation.  Have a separate
+       about-to-start-hibernating state implemented in similar way to
+       will shut-down-in-30-seconds state.
    - Rendezvous service bug: can we nail it down?
 R  . bandwidth buckets for write as well as read.
 N  - Make watchdogged clients check cached-directory mtime to avoid
      fetching directory in a tight loop.
+N  - Pure C tor_resolve
+N  - RPMs
+N  - Windows installer
+   - Review website; make important info more prominent.
+
+0.0.9pre6/7:
    - Implement If-Modified-Since for directories.
 N  - Handle rendezvousing with unverified nodes.
      - Specify: Stick rendezvous point's key in INTRODUCE cell.
@@ -55,7 +61,6 @@ R  - figure out enclaves, e.g. so we know what to recommend that people
      do, and so running a tor server on your website is helpful.
      - Do enclaves for same IP only.
      - Resolve first, then if IP is an OR, connect to next guy.
-N  - Pure C tor_resolve
 N  - the user interface interface
      - Skeleton only.
      - Implement parts along with trivial fun gui.
@@ -86,7 +91,7 @@ R  - learn from ben about his openssl-reinitialization-trick to
    - make loglevel info less noisy
    - Facility to automatically choose long-term helper nodes; perhaps
      on by default for hidden services.
-   - Make command-line strict about checking options; make only certain
+   o Make command-line strict about checking options; make only certain
      option prefixes work.
    - Rate-limit OR and directory connections overall and per-IP and
      maybe per subnet.
@@ -133,7 +138,6 @@ R  - learn from ben about his openssl-reinitialization-trick to
        list if you have one, else from the trusteddir list.
        * roger will do the above
    - add a listener for a ui, and a basic GUI
-     - and a basic gui
    - Have clients and dirservers preserve reputation info over
      reboots.
      * continue not doing until we have something we need to preserve
@@ -159,10 +163,10 @@ R  - learn from ben about his openssl-reinitialization-trick to
    . rename/rearrange functions for what file they're in
    - generalize our transport: add transport.c in preparation for
      http, airhook, etc transport.
-NICK    - investigate sctp for alternate transport.
+N  o investigate sctp for alternate transport.
 
 For September:
-NICK    . Windows port
+N    . Windows port
      o works as client
        - deal with pollhup / reached_eof on all platforms
      . robust as a client
