@@ -308,7 +308,9 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         connection_mark_for_close(conn, END_STREAM_REASON_DONE);
       }
 #else
-      connection_mark_for_close(conn, END_STREAM_REASON_DONE);
+      /* We just *got* an end; no reason to send one. */
+      conn->has_sent_end = 1;
+      connection_mark_for_close(conn, 0);
 #endif
       return 0;
     case RELAY_COMMAND_EXTEND:
