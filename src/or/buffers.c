@@ -13,8 +13,69 @@ struct buf_t {
   size_t len;
   size_t datalen;
 };
-
+/* Size, in bytes, for newly allocated buffers.  Should be a power of 2. */
+#define INITIAL_BUF_SIZE (4*1024)
+/* Maximum size, in bytes, for resized buffers. */
+#define MAX_BUF_SIZE (640*1024)
+/* Size, in bytes, for minimum 'shrink' size for buffers.  Buffers may start
+ * out smaller than this, but they will never autoshrink to less
+ * than this size. */
+#define MIN_BUF_SHRINK_SIZE (16*1024)
 #define BUF_OK(b) ((b) && (b)->buf && (b)->datalen <= (b)->len)
+
+/* Change a buffer's capacity.  Must only be called when */
+static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
+{
+  assert(buf->datalen <= new_capacity);
+  buf->buf = tor_realloc(buf->buf, new_capacity);
+  buf->len = new_capacity;
+}
+
+/* If the buffer is not large enough to hold "capacity" bytes, resize
+ * it so that it can.  (The new size will be a power of 2 times the old
+ * size.)
+ */
+static INLINE int buf_ensure_capacity(buf_t *buf, size_t capacity)
+{
+  size_t new_len;
+  if (buf->len >= capacity) 
+    return 0;
+  if (capacity > MAX_BUF_SIZE)
+    return -1;
+  new_len = buf->len*2;
+  while (new_len < capacity)
+    new_len *= 2;
+  log_fn(LOG_DEBUG,"Growing buffer from %ld to %ld bytes.",
+         buf->len, new_len);
+  buf_resize(buf,new_len);
+  return 0;
+}
+
+/* If the buffer is at least 2*MIN_BUF_SHRINK_SIZE bytes in capacity,
+ * and if the buffer is less than 1/4 full, shrink the buffer until
+ * one of the above no longer holds.  (We shrink the buffer by
+ * dividing by powers of 2.)
+ */
+static INLINE void buf_shrink_if_underfull(buf_t *buf) {
+  size_t new_len;
+  if (buf->datalen >= buf->len/4 || buf->len >= 2*MIN_BUF_SHRINK_SIZE)
+    return;
+  new_len = buf->len / 2;
+  while (buf->datalen < new_len/4 && new_len/2 > MIN_BUF_SHRINK_SIZE) 
+    new_len /= 2;
+  log_fn(LOG_DEBUG,"Shrinking buffer from %ld to %ld bytes.",
+         buf->len, new_len);
+  buf_resize(buf->buf, new_len);
+}
+
+/* Remove the first 'n' bytes from buf.
+ */
+static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
+  assert(buf->datalen >= n);
+  buf->datalen -= n;
+  memmove(buf->buf, buf->buf+n, buf->datalen);
+  buf_shrink_if_underfull(buf);
+}
 
 /* Find the first instance of str on buf.  If none exists, return -1.
  * Otherwise, return index of the first character in buf _after_ the
@@ -58,7 +119,7 @@ buf_t *buf_new_with_capacity(size_t size) {
 
 buf_t *buf_new()
 {
-  return buf_new_with_capacity(MAX_BUF_SIZE);
+  return buf_new_with_capacity(INITIAL_BUF_SIZE);
 }
 
 
@@ -99,7 +160,8 @@ int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof) {
 
   assert(BUF_OK(buf) && reached_eof && (s>=0));
 
-  /* this is the point where you would grow the buffer, if you want to */
+  if (buf_ensure_capacity(buf,buf->datalen+at_most))
+    return -1;
 
   if(at_most > buf->len - buf->datalen)
     at_most = buf->len - buf->datalen; /* take the min of the two */
@@ -135,6 +197,9 @@ int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof) {
 int read_to_buf_tls(tor_tls *tls, int at_most, buf_t *buf) {
   int r;
   assert(tls && BUF_OK(buf));
+
+  if (buf_ensure_capacity(buf, at_most+buf->datalen))
+    return -1;
   
   if (at_most > buf->len - buf->datalen)
     at_most = buf->len - buf->datalen;
@@ -181,11 +246,11 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
     log_fn(LOG_DEBUG,"write() would block, returning.");
     return 0;
   } else {
-    buf->datalen -= write_result;
     *buf_flushlen -= write_result;
-    memmove(buf->buf, buf->buf+write_result, buf->datalen);
+    buf_remove_from_front(buf, write_result);
     log_fn(LOG_DEBUG,"%d: flushed %d bytes, %d ready to flush, %d remain.",
            s,write_result,*buf_flushlen,(int)buf->datalen);
+
     return *buf_flushlen;
     /* XXX USE_TLS should change to return write_result like any sane function would */
   }
@@ -202,9 +267,8 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen)
   if (r < 0) {
     return r;
   }
-  buf->datalen -= r;
   *buf_flushlen -= r;
-  memmove(buf->buf, buf->buf+r, buf->datalen);
+  buf_remove_from_front(buf, r);
   log_fn(LOG_DEBUG,"flushed %d bytes, %d ready to flush, %d remain.",
     r,*buf_flushlen,(int)buf->datalen);
   return r;
@@ -217,6 +281,9 @@ int write_to_buf(const char *string, int string_len, buf_t *buf) {
    */
 
   assert(string && BUF_OK(buf));
+
+  if (buf_ensure_capacity(buf, buf->datalen+string_len))
+    return -1;
 
   /* this is the point where you would grow the buffer, if you want to */
 
@@ -242,8 +309,7 @@ int fetch_from_buf(char *string, int string_len, buf_t *buf) {
   assert(string_len <= buf->datalen); /* make sure we don't ask for too much */
 
   memcpy(string,buf->buf,string_len);
-  buf->datalen -= string_len;
-  memmove(buf->buf, buf->buf+string_len, buf->datalen);
+  buf_remove_from_front(buf, string_len);
   return buf->datalen;
 }
 
@@ -311,9 +377,7 @@ int fetch_from_buf_http(buf_t *buf,
     memcpy(body_out,buf->buf+headerlen,bodylen);
     body_out[bodylen] = 0; /* null terminate it */
   }
-  buf->datalen -= (headerlen+bodylen);
-  memmove(buf->buf, buf->buf+headerlen+bodylen, buf->datalen);
-
+  buf_remove_from_front(buf, headerlen+bodylen);
   return 1;
 }
 
@@ -362,8 +426,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
           *(reply+1) = 0xFF; /* reject all methods */
           return -1;
         }          
-        buf->datalen -= (2+nummethods); /* remove packet from buf */
-        memmove(buf->buf, buf->buf + 2 + nummethods, buf->datalen);
+        buf_remove_from_front(buf,2+nummethods);/* remove packet from buf */
 
         *replylen = 2; /* 2 bytes of response */
         *reply = 5; /* socks5 reply */
@@ -395,8 +458,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
           }
           strcpy(addr_out,tmpbuf);
           *port_out = ntohs(*(uint16_t*)(buf->buf+8));
-          buf->datalen -= 10;
-          memmove(buf->buf, buf->buf+10, buf->datalen);
+          buf_remove_from_front(buf, 10);
           return 1;
         case 3: /* fqdn */
           log_fn(LOG_DEBUG,"socks5: fqdn address type");
@@ -411,8 +473,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
           memcpy(addr_out,buf->buf+5,len);
           addr_out[len] = 0;
           *port_out = ntohs(*(uint16_t*)(buf->buf+5+len));
-          buf->datalen -= (5+len+2);
-          memmove(buf->buf, buf->buf+(5+len+2), buf->datalen);
+          buf_remove_from_front(buf, 5+len+2);
           return 1;
         default: /* unsupported */
           log_fn(LOG_WARN,"socks5: unsupported address type %d",*(buf->buf+3));
@@ -468,8 +529,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
       }
       log_fn(LOG_DEBUG,"Everything is here. Success.");
       strcpy(addr_out, socks4_prot == socks4 ? tmpbuf : startaddr);
-      buf->datalen -= (next-buf->buf+1); /* next points to the final \0 on inbuf */
-      memmove(buf->buf, next+1, buf->datalen);
+      buf_remove_from_front(buf, next-buf->buf+1); /* next points to the final \0 on inbuf */
       return 1;
 
     default: /* version is not socks4 or socks5 */
