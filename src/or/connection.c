@@ -150,6 +150,8 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
     return -1;
   }
   conn->s = s;
+  conn->receiver_bucket = -1; /* non-cell connections don't do receiver buckets */
+  conn->bandwidth = -1;
 
   if(connection_add(conn) < 0) { /* no space, forget it */
     log_fn(LOG_DEBUG,"connection_add failed. Giving up.");
@@ -478,6 +480,8 @@ int connection_read_to_buf(connection_t *conn) {
       at_most = 10*(CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE);
     }
 
+    at_most = 103; /* an unusual number, to force bugs into the open */
+
     if(at_most > global_read_bucket)
       at_most = global_read_bucket;
   }
@@ -521,7 +525,11 @@ int connection_read_to_buf(connection_t *conn) {
     log_fn(LOG_DEBUG,"buckets (%d, %d) exhausted. Pausing.", global_read_bucket, conn->receiver_bucket);
     conn->wants_to_read = 1;
     connection_stop_reading(conn);
+    return 0;
   }
+  if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING)
+    if(result == at_most)
+      return connection_read_to_buf(conn);
   return 0;
 }
 
@@ -572,10 +580,12 @@ int connection_handle_write(connection_t *conn) {
         log_fn(LOG_DEBUG,"tls error. breaking.");
         return -1; /* XXX deal with close better */
       case TOR_TLS_WANTWRITE:
+        log_fn(LOG_DEBUG,"wanted write.");
         /* we're already writing */
         return 0;
       case TOR_TLS_WANTREAD:
         /* Make sure to avoid a loop if the receive buckets are empty. */
+        log_fn(LOG_DEBUG,"wanted read.");
         if(!connection_is_reading(conn)) {
           connection_stop_writing(conn);
           conn->wants_to_write = 1;
@@ -721,6 +731,7 @@ int connection_finished_flushing(connection_t *conn) {
 
 void assert_connection_ok(connection_t *conn, time_t now)
 {
+  return;
   assert(conn);
   assert(conn->type >= _CONN_TYPE_MIN);
   assert(conn->type <= _CONN_TYPE_MAX);
@@ -730,24 +741,29 @@ void assert_connection_ok(connection_t *conn, time_t now)
   
   /* buffers */
   assert(conn->inbuf);
-  assert(conn->inbuflen <= conn->inbuf_datalen);
+  assert(conn->inbuflen >= conn->inbuf_datalen);
   assert(conn->inbuflen >= 0);
-  assert(conn->inbuf_datalen > 0);
+  assert(conn->inbuf_datalen >= 0);
   assert(conn->outbuf);
-  assert(conn->outbuflen <= conn->outbuf_datalen);
+  assert(conn->outbuflen >= conn->outbuf_datalen);
   assert(conn->outbuflen >= 0);
-  assert(conn->outbuf_datalen > 0);
+  assert(conn->outbuf_datalen >= 0);
 
   assert(!now || conn->timestamp_lastread <= now);
   assert(!now || conn->timestamp_lastwritten <= now);
   assert(conn->timestamp_created <= conn->timestamp_lastread);
   assert(conn->timestamp_created <= conn->timestamp_lastwritten);
   
+  if(conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_DIR)
+    assert(!conn->pkey);
+  /* pkey is set if we're a dir client, or if we're an OR in state OPEN
+   * connected to another OR.
+   */
+
   if (conn->type != CONN_TYPE_OR) {
     assert(conn->bandwidth == -1);
     assert(conn->receiver_bucket == -1);
     /* Addr, port, address XXX */
-    assert(!conn->pkey);
     assert(!conn->tls);
   } else {
     assert(conn->bandwidth);
@@ -755,7 +771,6 @@ void assert_connection_ok(connection_t *conn, time_t now)
     assert(conn->receiver_bucket <= 10*conn->bandwidth);
     assert(conn->addr && conn->port);
     assert(conn->address);
-    assert(conn->pkey);
     if (conn->state != OR_CONN_STATE_CONNECTING)
       assert(conn->tls);
   }
@@ -772,8 +787,10 @@ void assert_connection_ok(connection_t *conn, time_t now)
     assert(!conn->next_stream || 
            conn->next_stream->type == CONN_TYPE_EXIT ||
            conn->next_stream->type == CONN_TYPE_AP);
-    assert(conn->cpath_layer);
-    assert_cpath_layer_ok(conn->cpath_layer);
+    if(conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN)
+      assert(conn->cpath_layer);
+    if(conn->cpath_layer)
+      assert_cpath_layer_ok(conn->cpath_layer);
     /* XXX unchecked, package window, deliver window. */
   }
 

@@ -949,7 +949,7 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
 }
 
 
-void assert_cpath_layer_ok(crypt_path_t *cp)
+void assert_cpath_layer_ok(const crypt_path_t *cp)
 {
   assert(cp->f_crypto);
   assert(cp->b_crypto);
@@ -960,8 +960,10 @@ void assert_cpath_layer_ok(crypt_path_t *cp)
     case CPATH_STATE_CLOSED:
     case CPATH_STATE_OPEN:
       assert(!cp->handshake_state);
+      break;
     case CPATH_STATE_AWAITING_KEYS:
       assert(cp->handshake_state);
+      break;
     default:
       assert(0);
     }
@@ -969,7 +971,7 @@ void assert_cpath_layer_ok(crypt_path_t *cp)
   assert(cp->deliver_window >= 0);
 }
 
-void assert_cpath_ok(crypt_path_t *cp)
+void assert_cpath_ok(const crypt_path_t *cp)
 {
   while(cp->prev)
     cp = cp->prev;
@@ -989,7 +991,7 @@ void assert_cpath_ok(crypt_path_t *cp)
   }
 }
 
-void assert_circuit_ok(circuit_t *c) 
+void assert_circuit_ok(const circuit_t *c) 
 {
   connection_t *conn;
 

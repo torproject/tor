@@ -256,7 +256,7 @@ static void conn_read(int i) {
      * discussion of POLLIN vs POLLHUP */
 
   conn = connection_array[i];
-  //log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
+  log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
  
   assert_connection_ok(conn, time(NULL));
 
@@ -284,7 +284,7 @@ static void conn_write(int i) {
     return; /* this conn doesn't want to write */
 
   conn = connection_array[i];
-  //log_fn(LOG_DEBUG,"socket %d wants to write.",conn->s);
+  log_fn(LOG_DEBUG,"socket %d wants to write.",conn->s);
 
   assert_connection_ok(conn, time(NULL));
 
@@ -307,7 +307,12 @@ static void check_conn_marked(int i) {
     log_fn(LOG_DEBUG,"Cleaning up connection.");
     if(conn->s >= 0) { /* might be an incomplete edge connection */
       /* FIXME there's got to be a better way to check for this -- and make other checks? */
-      connection_handle_write(conn); /* flush it first */
+      if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING)
+        flush_buf_tls(conn->tls, &conn->outbuf, &conn->outbuflen,
+                      &conn->outbuf_flushlen, &conn->outbuf_datalen);
+      else
+        flush_buf(conn->s, &conn->outbuf, &conn->outbuflen,
+                  &conn->outbuf_flushlen, &conn->outbuf_datalen);
       if(connection_wants_to_flush(conn)) /* not done flushing */
         log_fn(LOG_WARNING,"Conn (socket %d) still wants to flush. Losing %d bytes!",conn->s, conn->inbuf_datalen);
     }
