@@ -10,6 +10,9 @@
  **/
 
 #include "or.h"
+#ifdef MS_WINDOWS
+#include <shlobj.h>
+#endif
 
 /** Enumeration of types which option values can take */
 typedef enum config_type_t {
@@ -579,6 +582,21 @@ static void init_options(or_options_t *options) {
   options->FirewallPorts = NULL;
 }
 
+static char *get_default_conf_file(void)
+{
+#ifdef MS_WINDOWS
+  char *path = tor_malloc(MAX_PATH);
+  if (!SUCCEEDED(SHGetSpecialFolderPath(NULL, path, CSIDL_APPDATA, 1))) {
+    tor_free(path);
+	return NULL;
+  }
+  strlcat(path,"\\tor\\torrc",MAX_PATH);
+  return path;
+#else
+  return tor_strdup(CONF_DIR "/torrc");
+#endif
+}
+
 /** Read a configuration file into <b>options</b>, finding the configuration
  * file location based on the command line.  After loading the options,
  * validate them for consistency. Return 0 if success, <0 if failure. */
@@ -631,19 +649,23 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   if(i < argc-1) { /* we found one */
     fname = tor_strdup(argv[i+1]);
     using_default_torrc = 0;
-  } else if (file_status(CONFDIR "/torrc")==FN_FILE) {
-    /* didn't find one, try CONFDIR */
-    fname = tor_strdup(CONFDIR "/torrc");
-    using_default_torrc = 1;
   } else {
-    char *fn = expand_filename("~/.torrc");
+    /* didn't find one, try CONFDIR */
+	char *fn;
+	using_default_torrc = 1;
+	fn = get_default_conf_file();
     if (fn && file_status(fn)==FN_FILE) {
-      fname = fn;
-    } else {
-      tor_free(fn);
-      fname = tor_strdup(CONFDIR "/torrc");
-    }
-    using_default_torrc = 1;
+       fname = fn;
+	} else {
+	   tor_free(fn);
+       fn = expand_filename("~/.torrc");
+       if (fn && file_status(fn)==FN_FILE) {
+         fname = fn;
+	   } else {
+         tor_free(fn);
+		 fname = get_default_conf_file();
+	   }
+	}
   }
   log(LOG_DEBUG,"Opening config file '%s'",fname);
 
@@ -1015,9 +1037,20 @@ const char *get_data_directory(or_options_t *options) {
   const char *d;
   if (options->DataDirectory)
     d = options->DataDirectory;
-  else if (server_mode())
+  else if (server_mode()) {
+#ifdef MS_WINDOWS
+    char *p;
+	p = tor_malloc(MAX_PATH);
+    if (!SUCCEEDED(SHGetSpecialFolderPath(NULL, p, CSIDL_APPDATA, 1))) {
+      strlcpy(p,CONFDIR, MAX_PATH);
+	}
+    strlcat(p,"\\tor",MAX_PATH);
+    options->DataDirectory = p;
+	return p;
+#else
     d = "~/.tor";
-  else
+#endif
+  } else
     d = NULL; /* XXX008 don't create datadir until we have something
                  we'll be putting in it */
 
