@@ -10,4 +10,4 @@ RUN_DAEMON="yes"
 #
 # Uncomment this if you want to get coredumps
 #
-# ulimit -c unlimited
+ulimit -c unlimited
