@@ -35,6 +35,8 @@ static void config_free_lines(struct config_line_t *front);
 static int config_compare(struct config_line_t *c, const char *key, config_type_t type, void *arg);
 static int config_assign(or_options_t *options, struct config_line_t *list);
 static int parse_dir_server_line(const char *line);
+static int parse_redirect_line(or_options_t *options,
+                               struct config_line_t *line);
 
 /** Helper: Read a list of configuration options from the command line. */
 static struct config_line_t *
@@ -481,9 +483,9 @@ free_options(or_options_t *options)
   config_free_lines(options->NodeFamilies);
   config_free_lines(options->RedirectExit);
   if (options->RedirectExitList) {
-    SMARTLIST_FOREACH(options->RedirectExit,exit_redirect_t *, p, tor_free(p));
-    smartlist_free(options->RedirectExit);
-    options->RedirectExit = NULL;                      
+    SMARTLIST_FOREACH(options->RedirectExitList,exit_redirect_t *, p, tor_free(p));
+    smartlist_free(options->RedirectExitList);
+    options->RedirectExitList = NULL;
   }
   if (options->FirewallPorts) {
     SMARTLIST_FOREACH(options->FirewallPorts, char *, cp, tor_free(cp));
@@ -1065,7 +1067,7 @@ void exit_policy_free(struct exit_policy_t *p) {
   }
 }
 
-static int parse_redirect_line(or_options_t *options, 
+static int parse_redirect_line(or_options_t *options,
                                struct config_line_t *line)
 {
   smartlist_t *elements = NULL;
