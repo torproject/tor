@@ -254,7 +254,7 @@ dirserv_add_descriptor(const char **desc)
     return -1;
   }
   if (ri->published_on < now-ROUTER_MAX_AGE) {
-    log_fn(LOG_WARN, "Publication time for router with nickanem %s is too far in the past. Not adding", ri->nickname);
+    log_fn(LOG_WARN, "Publication time for router with nickname %s is too far in the past. Not adding", ri->nickname);
     routerinfo_free(ri);
     *desc = end;
     return -1;
