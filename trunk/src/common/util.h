@@ -221,6 +221,14 @@ int parse_line_from_file(char *line, int maxlen, FILE *f, char **key_out, char *
 int spawn_func(int (*func)(void *), void *data);
 void spawn_exit();
 
+/* Because we use threads instead of processes on Windows, we need locking on Windows.
+ * On Unixy platforms, these functions are no-ops. */
+typedef struct tor_mutex_t tor_mutex_t;
+tor_mutex_t *tor_mutex_new(void);
+void tor_mutex_acquire(tor_mutex_t *m);
+void tor_mutex_release(tor_mutex_t *m);
+void tor_mutex_free(tor_mutex_t *m);
+
 int tor_socketpair(int family, int type, int protocol, int fd[2]);
 
 int is_internal_IP(uint32_t ip);

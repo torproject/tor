@@ -180,6 +180,9 @@ ine to the address where bug reports for this package should be sent. */
 /* The size of a `uint8_t', as computed by sizeof. */
 #undef SIZEOF_UINT8_T
 
+/* The size of a `void *', as computed by sizeof. */
+#define SIZEOF_VOID_P 4
+
 /* The size of a `__int64', as computed by sizeof. */
 #define SIZEOF___INT64 8
 
@@ -190,4 +193,4 @@ ine to the address where bug reports for this package should be sent. */
 #define UNALIGNED_INT_ACCESS_OK
 
 /* Version number of package */
-#define VERSION "0.0.6"
+#define VERSION "0.0.7rc1-cvs"

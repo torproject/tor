@@ -66,7 +66,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\src\win32" /I "D:\openssl\include" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\src\win32" /I "D:\openssl\include" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /FR /YX /FD /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -95,7 +95,15 @@ SOURCE=..\..\src\or\buffers.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\or\circuit.c
+SOURCE=..\..\src\or\circuitbuild.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\or\circuitlist.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\or\circuituse.c
 # End Source File
 # Begin Source File
 
@@ -155,6 +163,10 @@ SOURCE=..\..\src\or\onion.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\or\relay.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\or\rendclient.c
 # End Source File
 # Begin Source File
@@ -180,6 +192,10 @@ SOURCE=..\..\src\or\router.c
 # Begin Source File
 
 SOURCE=..\..\src\or\routerlist.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\or\routerparse.c
 # End Source File
 # Begin Source File
 

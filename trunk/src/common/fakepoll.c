@@ -11,6 +11,9 @@
 #include "orconfig.h"
 #include "fakepoll.h"
 
+#define MAXCONNECTIONS 10000 /* XXXX copied from or.h */
+#define FD_SETSIZE MAXCONNECTIONS
+
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -46,8 +49,6 @@ tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
         return poll(ufds,nfds,timeout);
 }
 #else
-
-#define FD_SETSIZE MAXCONNECTIONS
 
 int
 tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
