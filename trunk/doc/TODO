@@ -110,7 +110,7 @@ N - Clean up NT service code even more.  Document it. Enable it by default.
     Make sure it works.
 
  Documentation
-N - Document new version system.
+  o Document new version system.
 r - Correct and clarify the wiki entry on port forwarding.
   o Document where OSX logs and torrc go.
   o Document where windows logs and torrc go.
