@@ -206,12 +206,14 @@ update_expected_bandwidth(void)
 {
   uint64_t used;
   uint32_t max_configured = (get_options()->BandwidthRateBytes * 60);
-  /* XXX max_configured will be false if it exceeds
-   * get_options()->AccountingMaxKB*1000, right? -RD
-   * XXX Huh? Why? How? -NM
-   */
 
   if (n_seconds_active_in_interval < 1800) {
+    /* If we haven't gotten enough data last interval, guess that
+     * we'll be used at our maximum capacity.  This is unlikely to be
+     * so, but it will give us an okay first estimate, and we'll stay
+     * up until we send MaxKB kilobytes.  Next interval, we'll choose
+     * our starting time based on how much we sent this interval.
+     */
     expected_bandwidth_usage = max_configured;
   } else {
     used = n_bytes_written_in_interval < n_bytes_read_in_interval ?

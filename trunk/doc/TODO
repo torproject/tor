@@ -50,7 +50,8 @@ N  . Test hibernation a lot.
 Beyond 0.0.9:
    - controller should have 'getinfo' command to query about rephist,
      about rendezvous status, etc.
-   - weasel wants to say 50GB rather than 50000000 in config ints.
+   - Weasel wants to say 50GB rather than 50000000 in config ints.
+   - Nick wants to say "1 hour" instead of 3600 in config ints.
    - Better hibernation flexibility
      - Add hibernation intervals for weeks, days.
      - Start at a time other than 0:00 GMT.
