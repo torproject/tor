@@ -89,7 +89,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       conn->state = OR_CONN_STATE_OPEN;
       connection_init_timeval(conn);
       connection_watch_events(conn, POLLIN);
-      return 0;
+      return connection_process_inbuf(conn); /* in case there's anything waiting on it */
     case OR_CONN_STATE_SERVER_SENDING_AUTH:
       log(LOG_DEBUG,"connection_or_finished_flushing(): server finished sending auth.");
       conn->state = OR_CONN_STATE_SERVER_NONCE_WAIT;
@@ -331,8 +331,7 @@ int or_handshake_op_finished_sending_keys(connection_t *conn) {
   conn->state = OR_CONN_STATE_OPEN;
   connection_init_timeval(conn);
   connection_watch_events(conn, POLLIN); /* give it a default, tho the ap_handshake call may change it */
-  ap_handshake_n_conn_open(conn); /* send the pending onion */
-  return 0;
+  return ap_handshake_n_conn_open(conn); /* send the pending onion */
 
 }
 
