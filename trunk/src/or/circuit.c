@@ -969,7 +969,7 @@ int _circuit_mark_for_close(circuit_t *circ) {
    * links worked and which didn't.
    */
   if (circ->state != CIRCUIT_STATE_OPEN) {
-    if(circ->cpath) //XXX
+    if(CIRCUIT_IS_ORIGIN(circ))
       circuit_build_failed(circ); /* take actions if necessary */
     circuit_rep_hist_note_result(circ);
   }
