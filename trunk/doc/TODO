@@ -119,6 +119,7 @@ Tier two:
          of get_pending_bytes().
        - Make sure it works on more platforms.
        - Find a way to make sure we have libevent 1.0 or later.
+       - Check return from event_set, event_add, event_del.
 
    - QOI
      - Let more config options (e.g. ORPort) change dynamically.
