@@ -90,9 +90,9 @@ AllowUnverifiedNodes middle,rendezvous
 ## Contact info that will be published in the directory, so we can
 ## contact you if you need to upgrade or if something goes wrong.
 ## This is optional but recommended.
-#ContactInfo Random Person <nobody@example.com>
+#ContactInfo Random Person <nobody AT example dot com>
 ## You might also include your PGP or GPG fingerprint if you have one:
-#ContactInfo 1234D/FFFFFFFF Random Person <nobody@example.com>
+#ContactInfo 1234D/FFFFFFFF Random Person <nobody AT example dot com>
 
 ## Required: what port to advertise for tor connections
 #ORPort 9001
