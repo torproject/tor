@@ -13,6 +13,9 @@ static int directory_handle_command(connection_t *conn);
 extern or_options_t options; /* command-line and config-file options */
 extern int has_fetched_directory;
 
+char rend_publish_string[] = "/rendezvous/publish";
+char rend_fetch_url[] = "/rendezvous/";
+
 #define MAX_HEADERS_SIZE 2048
 #define MAX_BODY_SIZE 500000
 
@@ -120,13 +123,13 @@ static void directory_send_command(connection_t *conn, int purpose,
       memcpy(conn->rend_query, payload, payload_len);
       conn->rend_query[payload_len] = 0;
 
-      snprintf(tmp, sizeof(tmp), "GET /hidserv/%s HTTP/1.0\r\n\r\n", payload);
+      snprintf(tmp, sizeof(tmp), "GET %s%s HTTP/1.0\r\n\r\n", rend_fetch_url, payload);
       connection_write_to_buf(tmp, strlen(tmp), conn);
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       assert(payload);
       snprintf(tmp, sizeof(tmp),
-        "POST /hidserv/ HTTP/1.0\r\nContent-Length: %d\r\n\r\n", payload_len);
+        "POST %s HTTP/1.0\r\nContent-Length: %d\r\n\r\n", rend_publish_string, payload_len);
       connection_write_to_buf(tmp, strlen(tmp), conn);
       /* could include nuls, need to write it separately */
       connection_write_to_buf(payload, payload_len, conn);
@@ -335,7 +338,6 @@ static int directory_handle_command_get(connection_t *conn,
   const char *cp;
   char *url;
   char tmp[8192];
-  char rend_fetch_url[] = "/rendezvous/";
 
   log_fn(LOG_DEBUG,"Received GET command.");
 
@@ -395,7 +397,6 @@ static int directory_handle_command_post(connection_t *conn,
                                          int body_len) {
   const char *cp;
   char *url;
-  char rend_publish_string[] = "/rendezvous/publish";
 
   log_fn(LOG_DEBUG,"Received POST command.");
 
@@ -405,6 +406,7 @@ static int directory_handle_command_post(connection_t *conn,
     connection_write_to_buf(answer400, strlen(answer400), conn);
     return 0;
   }
+  log_fn(LOG_INFO,"url '%s' posted to us.", url);
 
   if(!strcmp(url,"/")) { /* server descriptor post */
     cp = body;
