@@ -28,9 +28,9 @@ R       - figure out enclaves, e.g. so we know what to recommend that people
           do, and so running a tor server on your website is helpful.
           - Do enclaves for same IP only.
           - Resolve first, then if IP is an OR, connect to next guy.
-N       - let tor servers use proxies for port 80 exits
-          - Use generic port redirector for IP/bits:Port->IP:Port .
-          - Make use of them when we're doing exit connections.
+        o let tor servers use proxies for port 80 exits
+          o Use generic port redirector for IP/bits:Port->IP:Port .
+          o Make use of them when we're doing exit connections.
         X We should set things in options to NULL, not rely on memset(...0)
           being equivalent.
           o We should check for memset(0) setting things to NULL with autoconf,
@@ -59,6 +59,8 @@ R       - learn from ben about his openssl-reinitialization-trick to
         D nt services on win32.
 
       0.0.9 and beyond:
+        - Should redirects change conn->addr/port or not? Either HTTP
+          proxying or exit redirection is doing the wrong thing.
         - fix sprintf's to snprintf's?
         . Make intro points and rendezvous points accept $KEYID in addition
           to nicknames.
