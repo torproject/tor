@@ -87,8 +87,8 @@ int connection_edge_process_inbuf(connection_t *conn) {
       log_fn(LOG_INFO,"text from server while in 'connecting' state at exit. Leaving it on buffer.");
       return 0;
   }
-
-  return 0;
+  log_fn(LOG_WARN,"Got unexpected state %d. Closing.",conn->state);
+  return -1;
 }
 
 static char *connection_edge_end_reason(char *payload, uint16_t length) {
@@ -212,6 +212,27 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
       conn->marked_for_close = 1;
       conn->has_sent_end = 1;
+      return 0;
+    }
+    if(conn->type == CONN_TYPE_AP && rh.command == RELAY_COMMAND_CONNECTED) {
+      if(conn->state != AP_CONN_STATE_CONNECTING) {
+        log_fn(LOG_WARN,"Got 'connected' while not in state connecting. Dropping.");
+        return 0;
+      }
+      log_fn(LOG_INFO,"Connected! Notifying application.");
+      conn->state = AP_CONN_STATE_OPEN;
+      if (rh.length >= 4) {
+        addr = ntohl(*(uint32_t*)(cell->payload + RELAY_HEADER_SIZE));
+        client_dns_set_entry(conn->socks_request->address, addr);
+      }
+      log_fn(LOG_WARN,"'connected' received after %d seconds.",
+             (int)(time(NULL) - conn->timestamp_lastread));
+      circuit_log_path(LOG_WARN,circ);
+      if(connection_ap_handshake_socks_reply(conn, NULL, 0, 1) < 0) {
+        log_fn(LOG_INFO,"Writing to socks-speaking application failed. Closing.");
+        if(connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer) < 0)
+          log_fn(LOG_WARN,"3: I called connection_edge_end redundantly.");
+      }
       return 0;
     } else {
       log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
@@ -351,25 +372,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       circuit_truncated(circ, layer_hint);
       return 0;
     case RELAY_COMMAND_CONNECTED:
-      if(edge_type == EDGE_EXIT) {
-        log_fn(LOG_WARN,"'connected' unsupported at exit. Dropping.");
-        return 0;
-      }
-      if(!conn) {
-        log_fn(LOG_INFO,"connected cell dropped, unknown stream.");
-        return 0;
-      }
-      log_fn(LOG_INFO,"Connected! Notifying application.");
-      if (rh.length >= 4) {
-        addr = ntohl(*(uint32_t*)(cell->payload + RELAY_HEADER_SIZE));
-        client_dns_set_entry(conn->socks_request->address, addr);
-      }
-      if(connection_ap_handshake_socks_reply(conn, NULL, 0, 1) < 0) {
-        log_fn(LOG_INFO,"Writing to socks-speaking application failed. Closing.");
-        if(connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer) < 0)
-          log_fn(LOG_WARN,"3: I called connection_edge_end redundantly.");
-      }
-      return 0;
+      log_fn(LOG_WARN,"'connected' unsupported while open. Closing.");
+      return -1;
     case RELAY_COMMAND_SENDME:
       if(!conn) {
         if(edge_type == EDGE_AP) {
@@ -521,6 +525,28 @@ repeat_connection_edge_package_raw_inbuf:
   goto repeat_connection_edge_package_raw_inbuf;
 }
 
+void connection_ap_expire_beginning(void) {
+  connection_t **carray;
+  connection_t *conn;
+  int n, i;
+  time_t now = time(NULL);
+
+  get_connection_array(&carray, &n);
+
+  for (i = 0; i < n; ++i) {
+    conn = carray[i];
+    if (conn->type != CONN_TYPE_AP ||
+        conn->state != AP_CONN_STATE_CONNECTING)
+      continue;
+    if (now - conn->timestamp_lastread > 30) {
+      log_fn(LOG_WARN,"Stream is %d seconds late. Closing.",
+             (int)(now - conn->timestamp_lastread));
+      /* XXX here is where it should move back into 'pending' state */
+      conn->marked_for_close = 1;
+    }
+  }
+}
+
 /* Tell any APs that are waiting for a new circuit that one is available */
 void connection_ap_attach_pending(void)
 {
@@ -649,6 +675,9 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
   connection_start_reading(conn);
 
+  /* here, print the circ's path. so people can figure out which circs are sucking. */
+  circuit_log_path(LOG_WARN,circ);
+
   if(!circ->timestamp_dirty)
     circ->timestamp_dirty = time(NULL);
 
@@ -725,12 +754,11 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
 
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
-  ap_conn->state = AP_CONN_STATE_OPEN;
+  ap_conn->state = AP_CONN_STATE_CONNECTING;
   /* XXX Right now, we rely on the socks client not to send us any data
    * XXX until we've sent back a socks reply.  (If it does, we could wind
    * XXX up packaging that data and sending it to the exit, then later having
    * XXX the exit refuse us.)
-   * XXX Perhaps we should grow an AP_CONN_STATE_CONNECTING state.
    */
   log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
   return;

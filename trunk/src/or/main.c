@@ -313,6 +313,13 @@ static void run_scheduled_events(time_t now) {
    */
   circuit_expire_building();
 
+  /* 2b. Also look at pending streams and prune the ones that 'began'
+   *     a long time ago but haven't gotten a 'connected' yet.
+   *     Do this before step 3, so we can put them back into pending
+   *     state to be picked up by the new circuit.
+   */
+  connection_ap_expire_beginning();
+
   /* 3. Every second, we try a new circuit if there are no valid
    *    circuits. Every NewCircuitPeriod seconds, we expire circuits
    *    that became dirty more than NewCircuitPeriod seconds ago,

@@ -164,8 +164,9 @@
 #define _AP_CONN_STATE_MIN 4
 #define AP_CONN_STATE_SOCKS_WAIT 4
 #define AP_CONN_STATE_CIRCUIT_WAIT 5
-#define AP_CONN_STATE_OPEN 6
-#define _AP_CONN_STATE_MAX 6
+#define AP_CONN_STATE_CONNECTING 6
+#define AP_CONN_STATE_OPEN 7
+#define _AP_CONN_STATE_MAX 7
 
 #define _DIR_CONN_STATE_MIN 1
 #define DIR_CONN_STATE_CONNECTING_FETCH 1
@@ -589,6 +590,7 @@ void circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_
 void circuit_close(circuit_t *circ);
 void circuit_about_to_close_connection(connection_t *conn);
 
+void circuit_log_path(int severity, circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 
 void circuit_expire_unused_circuits(void);
@@ -687,6 +689,7 @@ int connection_edge_package_raw_inbuf(connection_t *conn);
 
 void connection_exit_connect(connection_t *conn);
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
+void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
 
 extern uint64_t stats_n_data_cells_packaged;
