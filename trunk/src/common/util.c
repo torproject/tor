@@ -430,3 +430,53 @@ char *read_file_to_str(const char *filename) {
   return string;
 }
 
+/* read lines from f (no more than maxlen-1 bytes each) until we
+ * get one with a well-formed "key value".
+ * point *key to the first word in line, point *value to the second.
+ * Put a \0 at the end of key, remove everything at the end of value
+ * that is whitespace or comment.
+ * Return 1 if success, 0 if no more lines, -1 if error.
+ */
+int parse_line_from_file(char *line, int maxlen, FILE *f, char **key_out, char **value_out) {
+  char *s, *key, *end, *value;
+
+try_next_line:
+  if(!fgets(line, maxlen, f)) {
+    if(feof(f))
+      return 0;
+    return -1; /* real error */
+  }
+
+  if((s = strchr(line,'#'))) /* strip comments */
+    *s = 0; /* stop the line there */
+
+  /* remove end whitespace */
+  s = strchr(line, 0); /* now we're at the null */
+  do {
+    *s = 0;
+    s--;
+  } while (isspace(*s));
+
+  key = line;
+  while(isspace(*key))
+    key++;
+  if(*key == 0)
+    goto try_next_line; /* this line has nothing on it */
+  end = key;
+  while(*end && !isspace(*end))
+    end++;
+  value = end;
+  while(*value && isspace(*value))
+    value++;
+
+  if(!*end || !*value) { /* only a key on this line. no value. */
+    log_fn(LOG_WARNING,"Line has keyword '%s' but no value. Skipping.",s);
+    goto try_next_line;
+  }
+  *end = 0; /* null it out */
+
+  log_fn(LOG_DEBUG,"got keyword '%s', value '%s'", key, value);
+  *key_out = key, *value_out = value;
+  return 1;
+}
+

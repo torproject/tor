@@ -73,64 +73,26 @@ static struct config_line *config_get_commandlines(int argc, char **argv) {
   return front;
 }
 
-/* parse the config file and strdup into key/value strings. Return list.
+/* parse the config file and strdup into key/value strings. Return list,
+ * or NULL if parsing the file failed.
  * Warn and ignore mangled lines. */
 static struct config_line *config_get_lines(FILE *f) {
   struct config_line *new;
   struct config_line *front = NULL;
   char line[CONFIG_LINE_MAXLEN];
-  int lineno=0; /* current line number */
-  char *s;
-  char *start, *end;
+  int result;
+  char *key, *value;
 
-  assert(f);
-
-  fseek(f,0,SEEK_SET); /* make sure we start at the beginning of file */
-
-  while(fgets(line, CONFIG_LINE_MAXLEN, f)) {
-    lineno++;
-
-    /* first strip comments */
-    s = strchr(line,'#');
-    if(s) {
-      *s = 0; /* stop the line there */
-    }
-
-    /* walk to the end, remove end whitespace */
-    s = strchr(line, 0); /* now we're at the null */
-    do {
-      *s = 0;
-      s--;
-    } while (isspace(*s));
-
-    start = line;
-    while(isspace(*start))
-      start++;
-    if(*start == 0)
-      continue; /* this line has nothing on it */
-
-    end = start;
-    while(*end && !isspace(*end))
-      end++;
-    s = end;
-    while(*s && isspace(*s))
-      s++;
-    if(!*end || !*s) { /* only a keyword on this line. no value. */
-      log(LOG_WARNING,"Config line %d has keyword '%s' but no value. Skipping.",lineno,s);
-    }
-    *end = 0; /* null it out */
-
-    /* prepare to parse the string into key / value */
+  while( (result=parse_line_from_file(line,sizeof(line),f,&key,&value)) > 0) {
     new = tor_malloc(sizeof(struct config_line));
-    new->key = strdup(start);
-    new->value = strdup(s);
+    new->key = strdup(key);
+    new->value = strdup(value);
 
-    log(LOG_DEBUG,"Config line %d: parsed keyword '%s', value '%s'",
-      lineno, new->key, new->value);
     new->next = front;
     front = new;
   }
-
+  if(result < 0)
+    return NULL;
   return front;
 }
 
@@ -261,11 +223,12 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
   cf = config_open(fname);
   if(!cf) {
-    log(LOG_ERR, "Unable to open configuration file '%s'.",fname);
+    log(LOG_WARNING, "Unable to open configuration file '%s'.",fname);
     return -1;
   }
 
   cl = config_get_lines(cf);
+  if(!cl) return -1;
   config_assign(options,cl);
   config_free_lines(cl);
   config_close(cf);
@@ -287,69 +250,69 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     else if(!strcmp(options->LogLevel,"debug"))
       options->loglevel = LOG_DEBUG;
     else {
-      log(LOG_ERR,"LogLevel must be one of err|warning|info|debug.");
+      log(LOG_WARNING,"LogLevel must be one of err|warning|info|debug.");
       result = -1;
     }
   }
 
   if(options->RouterFile == NULL) {
-    log(LOG_ERR,"RouterFile option required, but not found.");
+    log(LOG_WARNING,"RouterFile option required, but not found.");
     result = -1;
   }
 
   if(options->ORPort < 0) {
-    log(LOG_ERR,"ORPort option can't be negative.");
+    log(LOG_WARNING,"ORPort option can't be negative.");
     result = -1;
   }
 
   if(options->OnionRouter && options->ORPort == 0) {
-    log(LOG_ERR,"If OnionRouter is set, then ORPort must be positive.");
+    log(LOG_WARNING,"If OnionRouter is set, then ORPort must be positive.");
     result = -1;
   }
 
   if(options->OnionRouter && options->DataDirectory == NULL) {
-    log(LOG_ERR,"DataDirectory option required for OnionRouter, but not found.");
+    log(LOG_WARNING,"DataDirectory option required for OnionRouter, but not found.");
     result = -1;
   }
 
   if(options->OnionRouter && options->Nickname == NULL) {
-    log_fn(LOG_ERR,"Nickname required for OnionRouter, but not found.");
+    log_fn(LOG_WARNING,"Nickname required for OnionRouter, but not found.");
     result = -1;
   }
 
   if(options->APPort < 0) {
-    log(LOG_ERR,"APPort option can't be negative.");
+    log(LOG_WARNING,"APPort option can't be negative.");
     result = -1;
   }
 
   if(options->DirPort < 0) {
-    log(LOG_ERR,"DirPort option can't be negative.");
+    log(LOG_WARNING,"DirPort option can't be negative.");
     result = -1;
   }
 
   if(options->APPort > 1 &&
      (options->CoinWeight < 0.0 || options->CoinWeight >= 1.0)) {
-    log(LOG_ERR,"CoinWeight option must be >=0.0 and <1.0.");
+    log(LOG_WARNING,"CoinWeight option must be >=0.0 and <1.0.");
     result = -1;
   }
 
   if(options->MaxConn < 1) {
-    log(LOG_ERR,"MaxConn option must be a non-zero positive integer.");
+    log(LOG_WARNING,"MaxConn option must be a non-zero positive integer.");
     result = -1;
   }
 
   if(options->MaxConn >= MAXCONNECTIONS) {
-    log(LOG_ERR,"MaxConn option must be less than %d.", MAXCONNECTIONS);
+    log(LOG_WARNING,"MaxConn option must be less than %d.", MAXCONNECTIONS);
     result = -1;
   }
 
   if(options->DirFetchPeriod < 1) {
-    log(LOG_ERR,"DirFetchPeriod option must be positive.");
+    log(LOG_WARNING,"DirFetchPeriod option must be positive.");
     result = -1;
   }
 
   if(options->KeepalivePeriod < 1) {
-    log(LOG_ERR,"KeepalivePeriod option must be positive.");
+    log(LOG_WARNING,"KeepalivePeriod option must be positive.");
     result = -1;
   }
 

@@ -191,7 +191,7 @@ static int directory_handle_command(connection_t *conn) {
 
     if(dlen == 0) {
       log_fn(LOG_WARNING,"My directory is empty. Closing.");
-      return -1;
+      return -1; /* XXX send some helpful http error code */
     }
 
     log_fn(LOG_DEBUG,"Dumping directory to client."); 
@@ -207,6 +207,11 @@ static int directory_handle_command(connection_t *conn) {
   if(!strncasecmp(headers,"POST",4)) {
     /* XXX should check url and http version */
     log_fn(LOG_DEBUG,"Received POST command, body '%s'", body);
+    cp = body;
+    if(dirserv_add_descriptor(&cp) < 0) {
+      log_fn(LOG_WARNING,"dirserv_add_descriptor() failed. Dropping.");
+      return -1; /* XXX should write an http failed code */
+    }
     if(connection_write_to_buf(answerstring, strlen(answerstring), conn) < 0) {
       log_fn(LOG_WARNING,"Failed to write answerstring to outbuf.");
       return -1;

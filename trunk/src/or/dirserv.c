@@ -8,9 +8,8 @@ static int the_directory_is_dirty = 1;
 static char *the_directory = NULL;
 static int the_directory_len = -1;
 
-/*
- *    Fingerprint handling code.
- */
+/************** Fingerprint handling code ************/
+
 typedef struct fingerprint_entry_t {
   char *nickname;
   char *fingerprint;
@@ -24,83 +23,54 @@ int
 dirserv_parse_fingerprint_file(const char *fname)
 {
   FILE *file;
-#define BUF_LEN (FINGERPRINT_LEN+MAX_NICKNAME_LEN+20)
-  char buf[BUF_LEN+1];
-  char *cp, *nickname, *fingerprint;
+  char line[FINGERPRINT_LEN+MAX_NICKNAME_LEN+20+1];
+  char *nickname, *fingerprint;
   fingerprint_entry_t fingerprint_list_tmp[MAX_ROUTERS_IN_DIR];
   int n_fingerprints_tmp = 0;
-  int lineno=0;
-  int i;
-  if (!(file = fopen(fname, "r"))) {
-    log(LOG_WARNING, "Cannot open fingerprint file %s", fname);
-    goto err;
+  int i, result;
+
+  if(!(file = fopen(fname, "r"))) {
+    log_fn(LOG_WARNING, "Cannot open fingerprint file %s", fname);
+    return -1;
   }
-  while (1) {
-    cp = fgets(buf, BUF_LEN, file);
-    ++lineno;
-    if (!cp) {
-      if (feof(file))
-        break;
-      else {
-        log(LOG_WARNING, "Error reading from fingerprint file");
-        goto err;
-      }
-    }
-    buf[BUF_LEN]='\0';
-    cp = buf;
-    while (isspace(*cp))
-      ++cp;
-    if (*cp == '#' || *cp == '\0') 
-      continue;
-    nickname = cp;
-    cp = strchr(cp, ' ');
-    if (!cp) {
-      log(LOG_WARNING, "Bad line %d of fingerprint file", lineno);
-      goto err;
-    }
-    *cp++ = '\0';
-    while (isspace(*cp))
-      ++cp;
-    if (strlen(cp) < FINGERPRINT_LEN) {
-      log(LOG_WARNING, "Bad line %d of fingerprint file", lineno);
-      goto err;
-    }
-    fingerprint = cp;
-    cp[FINGERPRINT_LEN] = '\0';
+  while( (result=parse_line_from_file(line, sizeof(line),file,&nickname,&fingerprint)) > 0) {
     if (strlen(nickname) > MAX_NICKNAME_LEN) {
-      log(LOG_WARNING, "Nickname too long on line %d of fingerprint file",
-          lineno);
-      goto err;
+      log(LOG_WARNING, "Nickname %s too long in fingerprint file. Skipping.", nickname);
+      continue;
     }
-    if (!crypto_pk_check_fingerprint_syntax(fingerprint)) {
-      log(LOG_WARNING, "Invalid fingerprint on line %d of fingerprint file",
-          lineno);
-      goto err;
+    if(strlen(fingerprint) != FINGERPRINT_LEN ||
+       !crypto_pk_check_fingerprint_syntax(fingerprint)) {
+      log_fn(LOG_WARNING, "Invalid fingerprint (nickname %s, fingerprint %s). Skipping.",
+             nickname, fingerprint);
+      continue;
     }
     for (i = 0; i < n_fingerprints_tmp; ++i) {
       if (0==strcasecmp(fingerprint_list_tmp[i].nickname, nickname)) {
-        log(LOG_WARNING, "Duplicate nickname on line %d of fingerprint file", lineno);
-        goto err;
+        log(LOG_WARNING, "Duplicate nickname %s. Skipping.",nickname);
+        break; /* out of the for. the 'if' below means skip to the next line. */
       }
     }
-    fingerprint_list_tmp[n_fingerprints_tmp].nickname = strdup(nickname);
-    fingerprint_list_tmp[n_fingerprints_tmp].fingerprint = strdup(fingerprint);
-    ++n_fingerprints_tmp;
+    if(i == n_fingerprints_tmp) { /* not a duplicate */
+      fingerprint_list_tmp[n_fingerprints_tmp].nickname = strdup(nickname);
+      fingerprint_list_tmp[n_fingerprints_tmp].fingerprint = strdup(fingerprint);
+      ++n_fingerprints_tmp;
+    }
   }
-  /* replace the global fingerprints list. */
-  dirserv_free_fingerprint_list();
-  memcpy(fingerprint_list, fingerprint_list_tmp, 
-         sizeof(fingerprint_entry_t)*n_fingerprints_tmp);
-  n_fingerprints = n_fingerprints_tmp;
-  return 0; 
-
- err:
+  fclose(file);
+  if(result == 0) { /* eof; replace the global fingerprints list. */
+    dirserv_free_fingerprint_list();
+    memcpy(fingerprint_list, fingerprint_list_tmp,
+           sizeof(fingerprint_entry_t)*n_fingerprints_tmp);
+    n_fingerprints = n_fingerprints_tmp;
+    return 0;
+  }
+  /* error */
+  log_fn(LOG_WARNING, "Error reading from fingerprint file");
   for (i = 0; i < n_fingerprints_tmp; ++i) {
     free(fingerprint_list_tmp[i].nickname);
     free(fingerprint_list_tmp[i].fingerprint);
   }
   return -1;
-#undef BUF_LEN
 }    
 
 /* return 1 if router's identity and nickname match. */
@@ -118,20 +88,17 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
     }
   }
   
-  if (!ent) {
-    /* No such server known */
+  if (!ent) { /* No such server known */
     return 0;
   }
   if (crypto_pk_get_fingerprint(router->identity_pkey, fp)) {
-    /* XXX Error computing fingerprint: log */
+    log_fn(LOG_WARNING,"error computing fingerprint");
     return 0;
   }
   if (0==strcasecmp(ent->fingerprint, fp)) {
-    /* Right fingerprint. */
-    return 1;
+    return 1; /* Right fingerprint. */
   } else {
-    /* Wrong fingerprint. */
-    return 0;
+    return 0; /* Wrong fingerprint. */
   }
 }
 

@@ -5,21 +5,14 @@
 #ifndef __UTIL_H
 #define __UTIL_H
 
-#include "orconfig.h"
+#include "../or/or.h"
 
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-#ifdef HAVE_TIME_H
-#include <time.h>
-#endif
 #if _MSC_VER > 1300
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #elif defined(_MSC_VER)
 #include <winsock.h>
 #endif
-#include <errno.h>
 #ifndef HAVE_GETTIMEOFDAY
 #ifdef HAVE_FTIME
 #define USING_FAKE_TIMEVAL
@@ -68,6 +61,7 @@ file_status_t file_status(const char *filename);
 int check_private_dir(const char *dirname, int create);
 int write_str_to_file(const char *fname, const char *str);
 char *read_file_to_str(const char *filename);
+int parse_line_from_file(char *line, int maxlen, FILE *f, char **key_out, char **value_out);
 
 /* Minimalist interface to run a void function in the background.  On
    unix calls fork, on win32 calls beginthread.  Returns -1 on failure.

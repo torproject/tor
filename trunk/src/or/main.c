@@ -912,10 +912,11 @@ void daemonize(void) {
 }
 
 int tor_main(int argc, char *argv[]) {
-  int retval = 0;
 
-  if(getconfig(argc,argv,&options))
-    exit(1);
+  if(getconfig(argc,argv,&options)) {
+    log_fn(LOG_ERR,"Reading config file failed. exiting.");
+    return -1;
+  }
   log_set_severity(options.loglevel);     /* assign logging severity level from options */
   global_read_bucket = options.TotalBandwidth; /* start it at 1 second of traffic */
 
@@ -936,10 +937,9 @@ int tor_main(int argc, char *argv[]) {
 
   crypto_global_init();
   crypto_seed_rng();
-  retval = do_main_loop();
+  do_main_loop();
   crypto_global_cleanup();
-  
-  return retval;
+  return -1;
 }
 
 /*
