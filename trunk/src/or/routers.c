@@ -19,7 +19,6 @@
 static routerinfo_t **router_array = NULL;
 static int rarray_len = 0;
 
-extern int global_role; /* from main.c */
 extern or_options_t options; /* command-line and config-file options */
 extern routerinfo_t *my_routerinfo; /* from main.c */
 
@@ -125,7 +124,7 @@ int router_is_me(uint32_t addr, uint16_t port)
 {
   struct sockaddr_in me; /* my router identity */
 
-  if(!ROLE_IS_OR(global_role)) {
+  if(!options.ORPort) {
     /* we're not an OR. This obviously isn't us. */
     return 0;
   }

@@ -286,14 +286,14 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   return 0;
 }
 
-int retry_all_connections(int role, uint16_t or_listenport,
+int retry_all_connections(uint16_t or_listenport,
   uint16_t op_listenport, uint16_t ap_listenport, uint16_t dir_listenport) {
 
   /* start all connections that should be up but aren't */
 
   struct sockaddr_in bindaddr; /* where to bind */
 
-  if(role & ROLE_OR_CONNECT_ALL) {
+  if(or_listenport) {
     router_retry_connections();
   }
 
@@ -301,28 +301,28 @@ int retry_all_connections(int role, uint16_t or_listenport,
   bindaddr.sin_family = AF_INET;
   bindaddr.sin_addr.s_addr = htonl(INADDR_ANY); /* anyone can connect */
 
-  if(role & ROLE_OR_LISTEN) {
+  if(or_listenport) {
     bindaddr.sin_port = htons(or_listenport);
     if(!connection_get_by_type(CONN_TYPE_OR_LISTENER)) {
       connection_or_create_listener(&bindaddr);
     }
   }
 
-  if(role & ROLE_OP_LISTEN) {
+  if(op_listenport) {
     bindaddr.sin_port = htons(op_listenport);
     if(!connection_get_by_type(CONN_TYPE_OP_LISTENER)) {
       connection_op_create_listener(&bindaddr);
     }
   }
 
-  if(role & ROLE_DIR_LISTEN) {
+  if(dir_listenport) {
     bindaddr.sin_port = htons(dir_listenport);
     if(!connection_get_by_type(CONN_TYPE_DIR_LISTENER)) {
       connection_dir_create_listener(&bindaddr);
     }
   }
  
-  if(role & ROLE_AP_LISTEN) {
+  if(ap_listenport) {
     bindaddr.sin_port = htons(ap_listenport);
     inet_aton("127.0.0.1", &(bindaddr.sin_addr)); /* the AP listens only on localhost! */
     if(!connection_get_by_type(CONN_TYPE_AP_LISTENER)) {

@@ -144,7 +144,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
     if(router_get_list_from_string(the_directory) < 0) {
       log(LOG_DEBUG,"connection_dir_process_inbuf(): ...but parsing failed. Ignoring.");
     }
-    if(options.Role & ROLE_OR_CONNECT_ALL) { /* connect to them all */
+    if(options.ORPort) { /* connect to them all */
       router_retry_connections();
     }
     return -1;

@@ -4,7 +4,7 @@
 
 #include "or.h"
 
-extern int global_role; /* from main.c */
+extern or_options_t options; /* command-line and config-file options */
 
 int connection_ap_process_inbuf(connection_t *conn) {
 
@@ -221,7 +221,7 @@ int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int 
   if(!n_conn || n_conn->state != OR_CONN_STATE_OPEN) { /* not currently connected */
     circ->n_addr = firsthop->addr;
     circ->n_port = firsthop->or_port;
-    if(global_role & ROLE_OR_CONNECT_ALL) { /* we would be connected if he were up. but he's not. */
+    if(options.ORPort) { /* we would be connected if he were up. but he's not. */
       log(LOG_DEBUG,"ap_handshake_establish_circuit(): Route's firsthop isn't connected.");
       circuit_close(circ); 
       return -1;

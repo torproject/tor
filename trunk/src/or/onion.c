@@ -4,7 +4,6 @@
 
 #include "or.h"
 
-extern int global_role; /* from main.c */
 extern or_options_t options; /* command-line and config-file options */
 
 static int onion_process(circuit_t *circ);
@@ -351,7 +350,7 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
 
   for(i=0;i<rarray_len;i++) {
     log(LOG_DEBUG,"Contemplating whether router %d is a new option...",i);
-    if( (global_role & ROLE_OR_CONNECT_ALL) &&
+    if(options.ORPort &&
       !connection_exact_get_by_addr_port(rarray[i]->addr, rarray[i]->or_port)) {
       log(LOG_DEBUG,"Nope, %d is not connected.",i);
       goto next_i_loop;
@@ -398,7 +397,7 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
     log(LOG_DEBUG,"new_route(): Contemplating router %u.",choice);
     if(choice == oldchoice ||
       (oldchoice < rarray_len && !crypto_pk_cmp_keys(rarray[choice]->pkey, rarray[oldchoice]->pkey)) ||
-      ((global_role & ROLE_OR_CONNECT_ALL) && !connection_twin_get_by_addr_port(rarray[choice]->addr, rarray[choice]->or_port))) {
+      (options.ORPort && !connection_twin_get_by_addr_port(rarray[choice]->addr, rarray[choice]->or_port))) {
       /* Same router as last choice, or router twin,
        *   or no routers with that key are connected to us.
        * Try again. */
