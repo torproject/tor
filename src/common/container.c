@@ -127,7 +127,7 @@ smartlist_string_remove(smartlist_t *sl, const char *element)
   tor_assert(sl);
   tor_assert(element);
   for (i = 0; i < sl->num_used; ++i) {
-    if (!strcmp(element, sl->list[i]) {
+    if (!strcmp(element, sl->list[i])) {
       sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
       i--; /* so we process the new i'th element */
     }
