@@ -301,32 +301,49 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
 /** Allocate and return a new string containing the concatenation of
  * the elements of <b>sl</b>, in order, separated by <b>join</b>.  If
  * <b>terminate</b> is true, also terminate the string with <b>join</b>.
- * Requires that every element of <b>sl</b> is NUL-terminated string.
+ * If <b>len_out</b> is not NULL, set <b>len_out</b> to the length of
+ * the returned string. Requires that every element of <b>sl</b> is
+ * NUL-terminated string.
  */
-char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate)
+char *smartlist_join_strings(smartlist_t *sl, const char *join,
+                             int terminate, size_t *len_out)
+{
+  return smartlist_join_strings2(sl,join,strlen(join),terminate,len_out);
+}
+
+/** As smartlist_join_strings2, but instead of separating/terminated with a
+ * NUL-terminated string <b>join</b>, uses the <b>join_len</b>-byte sequence
+ * at <b>join</b>.  (Useful for generating a sequenct of NUL-terminated
+ * strings.)
+ */
+char *smartlist_join_strings2(smartlist_t *sl, const char *join,
+                              size_t join_len, int terminate, size_t *len_out)
 {
   int i;
-  size_t n = 0, jlen;
+  size_t n = 0;
   char *r = NULL, *dst, *src;
 
   tor_assert(sl);
   tor_assert(join);
-  jlen = strlen(join);
+  join_len = strlen(join);
   for (i = 0; i < sl->num_used; ++i) {
     n += strlen(sl->list[i]);
-    n += jlen;
+    n += join_len;
   }
-  if (!terminate) n -= jlen;
+  if (!terminate) n -= join_len;
   dst = r = tor_malloc(n+1);
   for (i = 0; i < sl->num_used; ) {
     for (src = sl->list[i]; *src; )
       *dst++ = *src++;
     if (++i < sl->num_used || terminate) {
-      memcpy(dst, join, jlen);
-      dst += jlen;
+      memcpy(dst, join, join_len);
+      dst += join_len;
     }
   }
   *dst = '\0';
+
+  if (len_out)
+    *len_out = dst-r;
   return r;
 }
 
