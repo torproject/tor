@@ -81,6 +81,9 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
 
   router_get_trusted_dir_servers(&dirservers);
   tor_assert(dirservers);
+  /* This tries dirservers which we believe to be down, but ultimately, that's
+   * harmless, and we may as well err on the side of getting things uploaded.
+   */
   SMARTLIST_FOREACH(dirservers, trusted_dir_server_t *, ds,
     {
       /* Pay attention to fascistfirewall when we're uploading a
