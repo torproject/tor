@@ -855,18 +855,14 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
           carray[j]->marked_for_close ||
           circuit_stream_is_being_handled(carray[j]))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
-      switch (connection_ap_can_use_exit(carray[j], router))
-        {
-        case ADDR_POLICY_REJECTED:
-          log_fn(LOG_DEBUG,"%s (index %d) would reject this stream.",
-                 router->nickname, i);
-          break; /* would be rejected; try next connection */
-        case ADDR_POLICY_ACCEPTED:
-        case ADDR_POLICY_UNKNOWN:
-          ++n_supported[i];
-          log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
-                 router->nickname, i, n_supported[i]);
-        }
+      if(connection_ap_can_use_exit(carray[j], router)) {
+        ++n_supported[i];
+        log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
+               router->nickname, i, n_supported[i]);
+      } else {
+        log_fn(LOG_DEBUG,"%s (index %d) would reject this stream.",
+               router->nickname, i);
+      }
     } /* End looping over connections. */
     if (n_supported[i] > best_support) {
       /* If this router is better than previous ones, remember its index
