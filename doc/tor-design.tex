@@ -1616,8 +1616,10 @@ with a session key shared by Alice and Bob.
 As of mid-January 2004, the Tor network consists of 16 nodes
 (14 in the US, 2 in Europe), and more are joining each week as the code
 matures.\footnote{For comparison, the current remailer network
-has about 30 reliable nodes.} Each node has at least a 768Kb/768Kb
-connection, and
+has about 30 reliable nodes. We haven't asked PlanetLab to provide
+more nodes, since their AUP wouldn't allow exit nodes (see also
+\cite{darkside}) and because we aim to build a long-term community of
+node operators.} Each node has at least a 768Kb/768Kb connection, and
 most have 10Mb. The number of users varies (and of course, it's hard to
 tell for sure), but we sometimes have several hundred users---admins at
 several companies have started putting their entire department's web
@@ -1680,7 +1682,7 @@ just needs to be sufficient to not shed users \cite{econymics,back01}.
 
 Although Tor's clique topology and full-visibility directories present
 scaling problems, we still expect the network to support a few hundred
-nodes and perhaps 10,000 users, before we're forced to make the network
+nodes and perhaps 10,000 users before we're forced to make the network
 more distributed. With luck, the experience we gain running the current
 topology will help us choose among alternatives when the time comes.
 
