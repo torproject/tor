@@ -12,7 +12,7 @@ int ap_handshake_process_socks(connection_t *conn) {
 
   assert(conn);
 
-  log(LOG_DEBUG,"ap_handshake_process_socks() entered.");
+  log_fn(LOG_DEBUG,"entered.");
 
   if(!conn->socks_version) { /* try to pull it in */
 
@@ -22,38 +22,38 @@ int ap_handshake_process_socks(connection_t *conn) {
     if(connection_fetch_from_buf((char *)&socks4_info,sizeof(socks4_t),conn) < 0)
       return -1;
 
-    log(LOG_DEBUG,"ap_handshake_process_socks(): Successfully read socks info.");
+    log_fn(LOG_DEBUG,"Successfully read socks info.");
 
     if(socks4_info.version != 4) {
-      log(LOG_NOTICE,"ap_handshake_process_socks(): Unrecognized version %d.",socks4_info.version);
+      log_fn(LOG_NOTICE,"Unrecognized version %d.",socks4_info.version);
       ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
       return -1;
     }
     conn->socks_version = socks4_info.version;
 
     if(socks4_info.command != 1) { /* not a connect? we don't support it. */
-      log(LOG_NOTICE,"ap_handshake_process_socks(): command %d not '1'.",socks4_info.command);
+      log_fn(LOG_NOTICE,"command %d not '1'.",socks4_info.command);
       ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
       return -1;
     }
 
     conn->dest_port = ntohs(*(uint16_t*)&socks4_info.destport);
     if(!conn->dest_port) {
-      log(LOG_NOTICE,"ap_handshake_process_socks(): Port is zero.");
+      log_fn(LOG_NOTICE,"Port is zero.");
       ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
       return -1;
     }
-    log(LOG_NOTICE,"ap_handshake_process_socks(): Dest port is %d.",conn->dest_port);
+    log_fn(LOG_NOTICE,"Dest port is %d.",conn->dest_port);
 
     if(socks4_info.destip[0] || 
        socks4_info.destip[1] ||
        socks4_info.destip[2] ||
        !socks4_info.destip[3]) { /* not 0.0.0.x */
-      log(LOG_NOTICE,"ap_handshake_process_socks(): destip not in form 0.0.0.x.");
+      log_fn(LOG_NOTICE,"destip not in form 0.0.0.x.");
       sprintf(tmpbuf, "%d.%d.%d.%d", socks4_info.destip[0],
         socks4_info.destip[1], socks4_info.destip[2], socks4_info.destip[3]);
       conn->dest_addr = strdup(tmpbuf);
-      log(LOG_DEBUG,"ap_handshake_process_socks(): Successfully read destip (%s)", conn->dest_addr);
+      log_fn(LOG_DEBUG,"Successfully read destip (%s)", conn->dest_addr);
     }
 
   }
@@ -63,14 +63,14 @@ int ap_handshake_process_socks(connection_t *conn) {
     if(amt < 0) /* not there yet */
       return 0;
     if(amt > 500) {
-      log(LOG_NOTICE,"ap_handshake_process_socks(): username too long.");    
+      log_fn(LOG_NOTICE,"username too long.");    
       ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
       return -1;
     }
     if(connection_fetch_from_buf(tmpbuf,amt,conn) < 0)
       return -1;
     conn->read_username = 1;
-    log(LOG_DEBUG,"ap_handshake_process_socks(): Successfully read username.");
+    log_fn(LOG_DEBUG,"Successfully read username.");
   }
 
   if(!conn->dest_addr) { /* no dest_addr found yet */
@@ -78,7 +78,7 @@ int ap_handshake_process_socks(connection_t *conn) {
     if(amt < 0) /* not there yet */
       return 0;
     if(amt > 500) {
-      log(LOG_NOTICE,"ap_handshake_process_socks(): dest_addr too long.");    
+      log_fn(LOG_NOTICE,"dest_addr too long.");    
       ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
       return -1;
     }
@@ -86,7 +86,7 @@ int ap_handshake_process_socks(connection_t *conn) {
       return -1;
 
     conn->dest_addr = strdup(tmpbuf);
-    log(LOG_NOTICE,"ap_handshake_process_socks(): successfully read dest addr '%s'",
+    log_fn(LOG_NOTICE,"successfully read dest addr '%s'",
       conn->dest_addr);
   }
 
@@ -94,14 +94,14 @@ int ap_handshake_process_socks(connection_t *conn) {
   circ = circuit_get_newest_ap();
 
   if(!circ) {
-    log(LOG_INFO,"ap_handshake_process_socks(): No circuit ready. Closing.");
+    log_fn(LOG_INFO,"No circuit ready. Closing.");
     return -1;
   }
 
   circ->dirty = 1;
 
   /* add it into the linked list of streams on this circuit */
-  log(LOG_DEBUG,"ap_handshake_process_socks(): attaching new conn to circ. n_aci %d.", circ->n_aci);
+  log_fn(LOG_DEBUG,"attaching new conn to circ. n_aci %d.", circ->n_aci);
   conn->next_stream = circ->p_streams;
   circ->p_streams = conn;
 
@@ -135,15 +135,15 @@ int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ) {
     snprintf(cell.payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE, CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE-STREAM_ID_SIZE,
              "%s:%d", ap_conn->dest_addr, ap_conn->dest_port) + 
     1 + STREAM_ID_SIZE + RELAY_HEADER_SIZE;
-  log(LOG_DEBUG,"ap_handshake_send_begin(): Sending relay cell (id %d) to begin stream %d.", *(int *)(cell.payload+1),*(int *)ap_conn->stream_id);
+  log_fn(LOG_DEBUG,"Sending relay cell (id %d) to begin stream %d.", *(int *)(cell.payload+1),*(int *)ap_conn->stream_id);
   if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, ap_conn->cpath_layer) < 0) {
-    log(LOG_DEBUG,"ap_handshake_send_begin(): failed to deliver begin cell. Closing.");
+    log_fn(LOG_DEBUG,"failed to deliver begin cell. Closing.");
     return -1;
   }
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_OPEN;
-  log(LOG_INFO,"ap_handshake_send_begin(): Address/port sent, ap socket %d, n_aci %d",ap_conn->s,circ->n_aci);
+  log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_aci %d",ap_conn->s,circ->n_aci);
   return 0;
 }
 
@@ -163,7 +163,7 @@ int ap_handshake_socks_reply(connection_t *conn, char result) {
 }
 
 int connection_ap_create_listener(struct sockaddr_in *bindaddr) {
-  log(LOG_DEBUG,"connection_create_ap_listener starting");
+  log_fn(LOG_DEBUG,"starting");
   return connection_create_listener(bindaddr, CONN_TYPE_AP_LISTENER);
 }
 

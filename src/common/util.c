@@ -13,7 +13,7 @@ void *tor_malloc(size_t size) {
   result = malloc(size);
 
   if(!result) {
-    log(LOG_ERR,"tor_malloc(): Out of memory. Dying.");
+    log_fn(LOG_ERR, "Out of memory. Dying.");
     exit(1);
   }
 
@@ -24,7 +24,7 @@ void
 my_gettimeofday(struct timeval *timeval) 
 {
   if (gettimeofday(timeval, NULL)) {
-    log(LOG_ERR, "my_gettimeofday: gettimeofday failed.");
+    log_fn(LOG_ERR, "gettimeofday failed.");
     /* If gettimeofday dies, we have either given a bad timezone (we didn't),
        or segfaulted.*/
     exit(1);
@@ -40,7 +40,7 @@ tv_udiff(struct timeval *start, struct timeval *end)
   long secdiff = end->tv_sec - start->tv_sec;
 
   if (secdiff+1 > LONG_MAX/1000000) {
-    log(LOG_NOTICE, "tv_udiff(): comparing times too far apart.");
+    log_fn(LOG_NOTICE, "comparing times too far apart.");
     return LONG_MAX;
   }
 
@@ -54,7 +54,7 @@ tv_udiff(struct timeval *start, struct timeval *end)
   */
   udiff = secdiff*1000000L + (end_usec - start->tv_usec);
   if(udiff < 0) {
-    log(LOG_NOTICE, "tv_udiff(): start is after end. Returning 0.");
+    log_fn(LOG_NOTICE, "start is after end. Returning 0.");
     return 0;
   }
   return udiff;

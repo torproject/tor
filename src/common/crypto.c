@@ -159,17 +159,17 @@ crypto_create_init_cipher(int cipher_type, char *key, char *iv, int encrypt_mode
   crypto_cipher_env_t *crypto = NULL;
 
   if (! (crypto = crypto_new_cipher_env(cipher_type))) {
-    log(LOG_ERR, "Unable to allocate crypto object");
+    log_fn(LOG_ERR, "Unable to allocate crypto object");
     return NULL;
   }
 
   if (crypto_cipher_set_key(crypto, key)) {
-    log(LOG_ERR, "Unable to set key: %s", crypto_perror());
+    log_fn(LOG_ERR, "Unable to set key: %s", crypto_perror());
     goto error;
   }
 
   if (crypto_cipher_set_iv(crypto, iv)) {
-    log(LOG_ERR, "Unable to set iv: %s", crypto_perror());
+    log_fn(LOG_ERR, "Unable to set iv: %s", crypto_perror());
     goto error;
   }
   
@@ -179,7 +179,7 @@ crypto_create_init_cipher(int cipher_type, char *key, char *iv, int encrypt_mode
     r = crypto_cipher_decrypt_init_cipher(crypto);
 
   if (r) {
-    log(LOG_ERR, "Unabble to initialize cipher: %s", crypto_perror());
+    log_fn(LOG_ERR, "Unabble to initialize cipher: %s", crypto_perror());
     goto error;
   }
   return crypto;
@@ -310,7 +310,7 @@ int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, unsigned char
     fclose(f_pr);
     if (retval == -1)
     {
-      log(LOG_ERR,"Error reading private key : %s",crypto_perror());
+      log_fn(LOG_ERR,"Error reading private key : %s",crypto_perror());
       return -1;
     }
       
@@ -318,12 +318,12 @@ int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, unsigned char
     retval = crypto_pk_check_key(env);
     if (retval == 0)
     {
-      log(LOG_ERR,"Private key read but is invalid : %s.", crypto_perror());
+      log_fn(LOG_ERR,"Private key read but is invalid : %s.", crypto_perror());
       return -1;
     }
     else if (retval == -1)
     {
-      log(LOG_ERR,"Private key read but validity checking failed : %s",crypto_perror());
+      log_fn(LOG_ERR,"Private key read but validity checking failed : %s",crypto_perror());
       return -1;
     }
     else if (retval == 1)
@@ -799,19 +799,19 @@ int crypto_seed_rng()
   for (i = 0; filenames[i]; ++i) {
     f = fopen(filenames[i], "rb");
     if (!f) continue;
-    log(LOG_INFO, "Seeding RNG from %s", filenames[i]);
+    log_fn(LOG_INFO, "Seeding RNG from %s", filenames[i]);
     buf[20]='\xff';
     n = fread(buf, 1, 20, f);
     fclose(f);
     if (n != 20) {
-      log(LOG_INFO, "Error reading from entropy source");
+      log_fn(LOG_INFO, "Error reading from entropy source");
       return -1;
     }
     RAND_seed(buf, 20);
     return 0;
   }
 
-  log(LOG_INFO, "Cannot seed RNG -- no entropy source found.");
+  log_fn(LOG_INFO, "Cannot seed RNG -- no entropy source found.");
   return -1;
 }
 

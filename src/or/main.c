@@ -753,7 +753,7 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   i = strlen(s);
   cp = s+i;
   if (base64_encode(cp, maxlen-i, signature, 128) < 0) {
-    log(LOG_ERR,"dump_signed_directory_to_string(): couldn't base64-encode signature %d/%d");
+    log_fn(LOG_ERR," couldn't base64-encode signature");
     return -1;
   }
 
