@@ -63,8 +63,10 @@ control, directory servers, integrity checking, variable exit policies,
 and a practical design for rendezvous points. Tor works on the real-world
 Internet, requires no special privileges or kernel modifications, requires
 little synchronization or coordination between nodes, and provides a
-reasonable tradeoff between anonymity, usability, and efficiency. We
-close with a list of open problems in anonymous communication.
+reasonable tradeoff between anonymity, usability, and efficiency.
+We briefly describe our experiences with an international network of
+more than a dozen hosts that has been running for several months.
+We close with a list of open problems in anonymous communication.
 \end{abstract}
 
 %\begin{center}
@@ -215,14 +217,16 @@ available under a free license, and Tor
 %, as far as we know, is unencumbered by patents.
 is not covered by the patent that affected distribution and use of
 earlier versions of Onion Routing.
-We have recently begun deploying a wide-area alpha network
+We have deployed a wide-area alpha network
 to test the design in practice, to get more experience with usability
 and users, and to provide a research platform for experimentation.
+As of this writing, the network stands at sixteen nodes in thirteen
+distinct administrative domains on two continents.
 
 We review previous work in Section~\ref{sec:related-work}, describe
 our goals and assumptions in Section~\ref{sec:assumptions},
 and then address the above list of improvements in
-Sections~\ref{sec:design}-\ref{sec:rendezvous}. We summarize
+Sections~\ref{sec:design} and \ref{sec:other-design}. We summarize
 in Section~\ref{sec:attacks} how our design stands up to
 known attacks, and talk about our early deployment experiences in
 Section~\ref{sec:in-the-wild}. We conclude with a list of open problems in
@@ -402,7 +406,7 @@ patches, or separate proxies for every protocol).  We also cannot
 require non-anonymous parties (such as websites)
 to run our software.  (Our rendezvous point design does not meet
 this goal for non-anonymous users talking to hidden servers,
-however; see Section~\ref{sec:rendezvous}.)
+however; see Section~\ref{subsec:rendezvous}.)
 
 \textbf{Usability:} A hard-to-use system has fewer users---and because
 anonymity systems hide users among users, a system with fewer users
@@ -957,7 +961,57 @@ can't send a \emph{relay sendme} cell when its packaging window is empty.
 These arbitrarily chosen parameters seem to give tolerable throughput
 and delay; see Section~\ref{sec:in-the-wild}.
 
+\SubSection{Rendezvous Points and hidden services}
+\label{subsec:rendezvous}
+
+Rendezvous points are a building block for \emph{location-hidden
+services} (also known as \emph{responder anonymity}) in the Tor
+network.  Location-hidden services allow Bob to offer a TCP
+service, such as a webserver, without revealing his IP address.
+This type of anonymity protects against distributed DoS attacks:
+attackers are forced to attack the onion routing network
+because they do not know Bob's IP address.
+
+Our design for location-hidden servers has the following goals.
+\textbf{Access-controlled:} Bob needs a way to filter incoming requests,
+so an attacker cannot flood Bob simply by making many connections to him.
+\textbf{Robust:} Bob should be able to maintain a long-term pseudonymous
+identity even in the presence of router failure. Bob's service must
+not be tied to a single OR, and Bob must be able to tie his service
+to new ORs. \textbf{Smear-resistant:}
+A social attacker who offers an illegal or disreputable location-hidden
+service should not be able to ``frame'' a rendezvous router by
+making observers believe the router created that service.
+%slander-resistant? defamation-resistant?
+\textbf{Application-transparent:} Although we require users
+to run special software to access location-hidden servers, we must not
+require them to modify their applications.
+
+We provide location-hiding for Bob by allowing him to advertise
+several onion routers (his \emph{introduction points}) as contact
+points. He may do this on any robust efficient
+key-value lookup system with authenticated updates, such as a
+distributed hash table (DHT) like CFS \cite{cfs:sosp01}\footnote{
+Rather than rely on an external infrastructure, the Onion Routing network
+can run the DHT itself.  At first, we can run a simple lookup
+system on the
+directory servers.} Alice, the client, chooses an OR as her
+\emph{rendezvous point}. She connects to one of Bob's introduction
+points, informs him of her rendezvous point, and then waits for him
+to connect to the rendezvous point. This extra level of indirection
+helps Bob's introduction points avoid problems associated with serving
+unpopular files directly (for example, if Bob serves
+material that the introduction point's community finds objectionable,
+or if Bob's service tends to get attacked by network vandals).
+The extra level of indirection also allows Bob to respond to some requests
+and ignore others.
+
+In Appendix~\ref{sec:rendezvous-specifics} we provide a more detailed
+description of the rendezvous protocol, integration issues, attacks,
+and related rendezvous work.
+
 \Section{Other design decisions}
+\label{sec:other-design}
 
 \SubSection{Resource management and denial-of-service}
 \label{subsec:dos}
@@ -1204,166 +1258,6 @@ bottleneck when we have many users, and do not aid traffic analysis by
 forcing clients to periodically announce their existence to any
 central point.
 
-\Section{Rendezvous points and hidden services}
-\label{sec:rendezvous}
-
-Rendezvous points are a building block for \emph{location-hidden
-services} (also known as \emph{responder anonymity}) in the Tor
-network.  Location-hidden services allow Bob to offer a TCP
-service, such as a webserver, without revealing his IP address.
-This type of anonymity protects against distributed DoS attacks:
-attackers are forced to attack the onion routing network
-because they do not know Bob's IP address.
-
-Our design for location-hidden servers has the following goals.
-\textbf{Access-controlled:} Bob needs a way to filter incoming requests,
-so an attacker cannot flood Bob simply by making many connections to him.
-\textbf{Robust:} Bob should be able to maintain a long-term pseudonymous
-identity even in the presence of router failure. Bob's service must
-not be tied to a single OR, and Bob must be able to tie his service
-to new ORs. \textbf{Smear-resistant:}
-A social attacker who offers an illegal or disreputable location-hidden
-service should not be able to ``frame'' a rendezvous router by
-making observers believe the router created that service.
-%slander-resistant? defamation-resistant?
-\textbf{Application-transparent:} Although we require users
-to run special software to access location-hidden servers, we must not
-require them to modify their applications.
-
-We provide location-hiding for Bob by allowing him to advertise
-several onion routers (his \emph{introduction points}) as contact
-points. He may do this on any robust efficient
-key-value lookup system with authenticated updates, such as a
-distributed hash table (DHT) like CFS \cite{cfs:sosp01}\footnote{
-Rather than rely on an external infrastructure, the Onion Routing network
-can run the DHT itself.  At first, we can run a simple lookup
-system on the
-directory servers.} Alice, the client, chooses an OR as her
-\emph{rendezvous point}. She connects to one of Bob's introduction
-points, informs him of her rendezvous point, and then waits for him
-to connect to the rendezvous point. This extra level of indirection
-helps Bob's introduction points avoid problems associated with serving
-unpopular files directly (for example, if Bob serves
-material that the introduction point's community finds objectionable,
-or if Bob's service tends to get attacked by network vandals).
-The extra level of indirection also allows Bob to respond to some requests
-and ignore others.
-
-We give an overview of the steps of a rendezvous. These are
-performed on behalf of Alice and Bob by their local OPs;
-application integration is described more fully below.
-
-\begin{tightlist}
-\item Bob chooses some introduction points, and advertises them on
-      the DHT.  He can add more later.
-\item Bob builds a circuit to each of his introduction points,
-      and waits for requests.
-\item Alice learns about Bob's service out of band (perhaps Bob told her,
-      or she found it on a website). She retrieves the details of Bob's
-      service from the DHT.
-\item Alice chooses an OR to be the rendezvous point (RP) for this
-      transaction. She builds a circuit to RP, and gives it a
-      rendezvous cookie that it will use to recognize Bob.
-\item Alice opens an anonymous stream to one of Bob's introduction
-      points, and gives it a message (encrypted to Bob's public key)
-      which tells him
-      about herself, her chosen RP and the rendezvous cookie, and the
-      first half of a DH
-      handshake. The introduction point sends the message to Bob.
-\item If Bob wants to talk to Alice, he builds a circuit to Alice's
-      RP and sends the rendezvous cookie, the second half of the DH
-      handshake, and a hash of the session
-      key they now share. By the same argument as in
-      Section~\ref{subsubsec:constructing-a-circuit}, Alice knows she
-      shares the key only with Bob.
-\item The RP connects Alice's circuit to Bob's. Note that RP can't
-      recognize Alice, Bob, or the data they transmit.
-\item Alice now sends a \emph{relay begin} cell along the circuit. It
-      arrives at Bob's onion proxy. Bob's onion proxy connects to Bob's
-      webserver.
-\item An anonymous stream has been established, and Alice and Bob
-      communicate as normal.
-\end{tightlist}
-
-When establishing an introduction point, Bob provides the onion router
-with a public ``introduction'' key. The hash of this public key
-identifies a unique service, and (since Bob is required to sign his
-messages) prevents anybody else from usurping Bob's introduction point
-in the future. Bob uses the same public key when establishing the other
-introduction points for that service. Bob periodically refreshes his
-entry in the DHT.
-
-The message that Alice gives
-the introduction point includes a hash of Bob's public key to identify
-the service, along with an optional initial authorization token (the
-introduction point can do prescreening, for example to block replays). Her
-message to Bob may include an end-to-end authorization token so Bob
-can choose whether to respond.
-The authorization tokens can be used to provide selective access:
-important users get tokens to ensure uninterrupted access to the
-service. During normal situations, Bob's service might simply be offered
-directly from mirrors, while Bob gives out tokens to high-priority users. If
-the mirrors are knocked down,
-%by distributed DoS attacks or even
-%physical attack,
-those users can switch to accessing Bob's service via
-the Tor rendezvous system.
-
-Since Bob's introduction points might themselves be subject to DoS he
-could have to choose between keeping many
-introduction connections open or risking such an attack. In this case,
-he can provide selected users
-with a current list and/or future schedule of introduction points that
-are not advertised in the DHT\@. This is most likely to be practical
-if there is a relatively stable and large group of introduction points
-available. Alternatively, Bob could give secret public keys
-to selected users for consulting the DHT\@. All of these approaches
-have the advantage of limiting exposure even when
-some of the selected high-priority users collude in the DoS\@.
-
-\SubSection{Integration with user applications}
-
-Bob configures his onion proxy to know the local IP address and port of his
-service, a strategy for authorizing clients, and a public key. Bob
-publishes the public key, an expiration time (``not valid after''), and
-the current introduction points for his service into the DHT, indexed
-by the hash of the public key.  Bob's webserver is unmodified,
-and doesn't even know that it's hidden behind the Tor network.
-
-Alice's applications also work unchanged---her client interface
-remains a SOCKS proxy. We encode all of the necessary information
-into the fully qualified domain name Alice uses when establishing her
-connection. Location-hidden services use a virtual top level domain
-called {\tt .onion}: thus hostnames take the form {\tt x.y.onion} where
-{\tt x} is the authorization cookie, and {\tt y} encodes the hash of
-the public key. Alice's onion proxy
-examines addresses; if they're destined for a hidden server, it decodes
-the key and starts the rendezvous as described above.
-
-\subsection{Previous rendezvous work}
-
-Rendezvous points in low-latency anonymity systems were first
-described for use in ISDN telephony \cite{jerichow-jsac98,isdn-mixes}.
-Later low-latency designs used rendezvous points for hiding location
-of mobile phones and low-power location trackers
-\cite{federrath-ih96,reed-protocols97}.  Rendezvous for low-latency
-Internet connections was suggested in early Onion Routing work
-\cite{or-ih96}; however, the first published design of rendezvous
-points for low-latency Internet connections was by Ian Goldberg
-\cite{ian-thesis}. His design differs from
-ours in three ways. First, Goldberg suggests that Alice should manually
-hunt down a current location of the service via Gnutella; our approach
-makes lookup transparent to the user, as well as faster and more robust.
-Second, in Tor the client and server negotiate session keys
-via Diffie-Hellman, so plaintext is not exposed even at the rendezvous point. Third,
-our design tries to minimize the exposure associated with running the
-service, to encourage volunteers to offer introduction and rendezvous
-point services. Tor's introduction points do not output any bytes to the
-clients; the rendezvous points don't know the client or the server,
-and can't read the data being transmitted. The indirection scheme is
-also designed to include authentication/authorization---if Alice doesn't
-include the right cookie with her request for service, Bob need not even
-acknowledge his existence.
 
 \Section{Attacks and Defenses}
 \label{sec:attacks}
@@ -1589,35 +1483,6 @@ servers must actively test ORs by building circuits and streams as
 appropriate.  The tradeoffs of a similar approach are discussed in
 \cite{mix-acc}.\\
 
-\noindent{\large\bf Attacks against rendezvous points}\\
-\emph{Make many introduction requests.}  An attacker could
-try to deny Bob service by flooding his introduction points with
-requests.  Because the introduction points can block requests that
-lack authorization tokens, however, Bob can restrict the volume of
-requests he receives, or require a certain amount of computation for
-every request he receives.
-
-\emph{Attack an introduction point.} An attacker could
-disrupt a location-hidden service by disabling its introduction
-points.  But because a service's identity is attached to its public
-key, not its introduction point, the service can simply re-advertise
-itself at a different introduction point. Advertisements can also be
-done secretly so that only high-priority clients know the address of
-Bob's introduction points, forcing the attacker to disable all possible
-introduction points.
-
-\emph{Compromise an introduction point.} An attacker who controls
-Bob's introduction point can flood Bob with
-introduction requests, or prevent valid introduction requests from
-reaching him. Bob can notice a flood, and close the circuit.  To notice
-blocking of valid requests, however, he should periodically test the
-introduction point by sending rendezvous requests and making
-sure he receives them.
-
-\emph{Compromise a rendezvous point.}  A rendezvous
-point is no more sensitive than any other OR on
-a circuit, since all data passing through the rendezvous is encrypted
-with a session key shared by Alice and Bob.
 
 \Section{Early experiences: Tor in the Wild}
 \label{sec:in-the-wild}
@@ -1860,7 +1725,8 @@ scalable yet practical ways to distribute up-to-date snapshots of
 network status without introducing new attacks.
 
 \emph{Implement location-hidden services:} The design in
-Section~\ref{sec:rendezvous} has not yet been implemented.  While doing
+Appendix~\ref{sec:rendezvous-specifics} has not yet been implemented.
+While doing
 so we are likely to encounter additional issues that must be resolved,
 both in terms of usability and anonymity.
 
@@ -1903,6 +1769,170 @@ our overall usability.
 
 \bibliographystyle{latex8}
 \bibliography{tor-design}
+
+\appendix
+
+\Section{Rendezvous points and hidden services: Specifics}
+\label{sec:rendezvous-specifics}
+
+In this appendix we provide more specifics about the rendezvous points
+of Section~\ref{subsec:rendezvous}. We also describe integration
+issues, related work, and how well the rendezvous point design
+withstands various attacks.
+
+\SubSection{Rendezvous protocol overview}
+
+We give an overview of the steps of a rendezvous. These are
+performed on behalf of Alice and Bob by their local OPs;
+application integration is described more fully below.
+
+\begin{tightlist}
+\item Bob chooses some introduction points, and advertises them on
+      the DHT.  He can add more later.
+\item Bob builds a circuit to each of his introduction points,
+      and waits for requests.
+\item Alice learns about Bob's service out of band (perhaps Bob told her,
+      or she found it on a website). She retrieves the details of Bob's
+      service from the DHT.
+\item Alice chooses an OR to be the rendezvous point (RP) for this
+      transaction. She builds a circuit to RP, and gives it a
+      rendezvous cookie that it will use to recognize Bob.
+\item Alice opens an anonymous stream to one of Bob's introduction
+      points, and gives it a message (encrypted to Bob's public key)
+      which tells him
+      about herself, her chosen RP and the rendezvous cookie, and the
+      first half of a DH
+      handshake. The introduction point sends the message to Bob.
+\item If Bob wants to talk to Alice, he builds a circuit to Alice's
+      RP and sends the rendezvous cookie, the second half of the DH
+      handshake, and a hash of the session
+      key they now share. By the same argument as in
+      Section~\ref{subsubsec:constructing-a-circuit}, Alice knows she
+      shares the key only with Bob.
+\item The RP connects Alice's circuit to Bob's. Note that RP can't
+      recognize Alice, Bob, or the data they transmit.
+\item Alice now sends a \emph{relay begin} cell along the circuit. It
+      arrives at Bob's onion proxy. Bob's onion proxy connects to Bob's
+      webserver.
+\item An anonymous stream has been established, and Alice and Bob
+      communicate as normal.
+\end{tightlist}
+
+When establishing an introduction point, Bob provides the onion router
+with a public ``introduction'' key. The hash of this public key
+identifies a unique service, and (since Bob is required to sign his
+messages) prevents anybody else from usurping Bob's introduction point
+in the future. Bob uses the same public key when establishing the other
+introduction points for that service. Bob periodically refreshes his
+entry in the DHT.
+
+The message that Alice gives
+the introduction point includes a hash of Bob's public key to identify
+the service, along with an optional initial authorization token (the
+introduction point can do prescreening, for example to block replays). Her
+message to Bob may include an end-to-end authorization token so Bob
+can choose whether to respond.
+The authorization tokens can be used to provide selective access:
+important users get tokens to ensure uninterrupted access to the
+service. During normal situations, Bob's service might simply be offered
+directly from mirrors, while Bob gives out tokens to high-priority users. If
+the mirrors are knocked down,
+%by distributed DoS attacks or even
+%physical attack,
+those users can switch to accessing Bob's service via
+the Tor rendezvous system.
+
+Since Bob's introduction points might themselves be subject to DoS he
+could have to choose between keeping many
+introduction connections open or risking such an attack. In this case,
+he can provide selected users
+with a current list and/or future schedule of introduction points that
+are not advertised in the DHT\@. This is most likely to be practical
+if there is a relatively stable and large group of introduction points
+available. Alternatively, Bob could give secret public keys
+to selected users for consulting the DHT\@. All of these approaches
+have the advantage of limiting exposure even when
+some of the selected high-priority users collude in the DoS\@.
+
+\SubSection{Integration with user applications}
+
+Bob configures his onion proxy to know the local IP address and port of his
+service, a strategy for authorizing clients, and a public key. Bob
+publishes the public key, an expiration time (``not valid after''), and
+the current introduction points for his service into the DHT, indexed
+by the hash of the public key.  Bob's webserver is unmodified,
+and doesn't even know that it's hidden behind the Tor network.
+
+Alice's applications also work unchanged---her client interface
+remains a SOCKS proxy. We encode all of the necessary information
+into the fully qualified domain name Alice uses when establishing her
+connection. Location-hidden services use a virtual top level domain
+called {\tt .onion}: thus hostnames take the form {\tt x.y.onion} where
+{\tt x} is the authorization cookie, and {\tt y} encodes the hash of
+the public key. Alice's onion proxy
+examines addresses; if they're destined for a hidden server, it decodes
+the key and starts the rendezvous as described above.
+
+\subsection{Previous rendezvous work}
+
+Rendezvous points in low-latency anonymity systems were first
+described for use in ISDN telephony \cite{jerichow-jsac98,isdn-mixes}.
+Later low-latency designs used rendezvous points for hiding location
+of mobile phones and low-power location trackers
+\cite{federrath-ih96,reed-protocols97}.  Rendezvous for low-latency
+Internet connections was suggested in early Onion Routing work
+\cite{or-ih96}; however, the first published design of rendezvous
+points for low-latency Internet connections was by Ian Goldberg
+\cite{ian-thesis}. His design differs from
+ours in three ways. First, Goldberg suggests that Alice should manually
+hunt down a current location of the service via Gnutella; our approach
+makes lookup transparent to the user, as well as faster and more robust.
+Second, in Tor the client and server negotiate session keys
+via Diffie-Hellman, so plaintext is not exposed even at the rendezvous point. Third,
+our design tries to minimize the exposure associated with running the
+service, to encourage volunteers to offer introduction and rendezvous
+point services. Tor's introduction points do not output any bytes to the
+clients; the rendezvous points don't know the client or the server,
+and can't read the data being transmitted. The indirection scheme is
+also designed to include authentication/authorization---if Alice doesn't
+include the right cookie with her request for service, Bob need not even
+acknowledge his existence.
+
+\SubSection{Attacks against rendezvous points}
+
+We describe here attacks against rendezvous points and how well
+the system protects against them.
+
+\emph{Make many introduction requests.}  An attacker could
+try to deny Bob service by flooding his introduction points with
+requests.  Because the introduction points can block requests that
+lack authorization tokens, however, Bob can restrict the volume of
+requests he receives, or require a certain amount of computation for
+every request he receives.
+
+\emph{Attack an introduction point.} An attacker could
+disrupt a location-hidden service by disabling its introduction
+points.  But because a service's identity is attached to its public
+key, not its introduction point, the service can simply re-advertise
+itself at a different introduction point. Advertisements can also be
+done secretly so that only high-priority clients know the address of
+Bob's introduction points or so that different clients know of different
+introduction points. This forces the attacker to disable all possible
+introduction points.
+
+\emph{Compromise an introduction point.} An attacker who controls
+Bob's introduction point can flood Bob with
+introduction requests, or prevent valid introduction requests from
+reaching him. Bob can notice a flood, and close the circuit.  To notice
+blocking of valid requests, however, he should periodically test the
+introduction point by sending rendezvous requests and making
+sure he receives them.
+
+\emph{Compromise a rendezvous point.}  A rendezvous
+point is no more sensitive than any other OR on
+a circuit, since all data passing through the rendezvous is encrypted
+with a session key shared by Alice and Bob.
+
 
 \end{document}
 
