@@ -1,4 +1,51 @@
 Release notes in progress for 0.0.8:
+pre4:
+  o Changes from 0.0.7.3:
+    - Bugfixes:
+      - Fix assert triggers: if the other side returns an address 0.0.0.0,
+        don't put it into the client dns cache.
+      - If a begin failed due to exit policy, but we believe the IP
+        address should have been allowed, switch that router to exitpolicy
+        reject *:* until we get our next directory.
+    - Features:
+      - Clients choose nodes proportional to advertised bandwidth.
+      - Avoid using nodes with low uptime as introduction points.
+      - Handle servers with dynamic IP addresses: don't replace
+        options->Address with the resolved one at startup, and
+        detect our address right before we make a routerinfo each time.
+      - 'FascistFirewall' option to pick dirservers and ORs on specific
+        ports; plus 'FirewallPorts' config option to tell FascistFirewall
+        which ports are open. (Defaults to 80,443)
+      - Be more aggressive about trying to make circuits when the network
+        has changed (e.g. when you unsuspend your laptop).
+      - Check for time skew on http headers; report date in response to
+        "GET /".
+      - If the entrynode config line has only one node, don't pick it as
+        an exitnode.
+      - Add strict{entry|exit}nodes config options. If set to 1, then
+        we refuse to build circuits that don't include the specified entry
+        or exit nodes.
+      - OutboundBindAddress config option, to bind to a specific
+        IP address for outgoing connect()s.
+      - End truncated log entries (e.g. directories) with "[truncated]".
+
+  o Patches to 0.0.8preX:
+    - Bugfixes:
+      - Patches to compile and run on win32 again (maybe)?
+      - Fix crash when looking for ~/.torrc with no $HOME set.
+      - Fix a race bug in the unit tests.
+      - Handle verified/unverified name collisions better when new
+        routerinfo's arrive in a directory.
+      - Sometimes routers were getting entered into the stats before
+        we'd assigned their identity_digest. Oops.
+      - Only pick and establish intro points after we've gotten a
+        directory.
+    - Features:
+      - AllowUnverifiedNodes config option to let circuits choose no-name
+        routers in entry,middle,exit,introduction,rendezvous positions.
+        Allow middle and rendezvous positions by default.
+      - Add a man page for tor-resolve.
+
 pre3:
   o Changes from 0.0.7.2:
     - Allow multiple ORs with same nickname in routerlist -- now when
