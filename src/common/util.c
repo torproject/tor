@@ -109,6 +109,17 @@ void set_uint32(char *cp, uint32_t v)
 }
 #endif
 
+void hex_encode(const char *from, int fromlen, char *to)
+{
+  const unsigned char *fp = from;
+  static const char TABLE[] = "0123456789abcdef";
+  while (fromlen) {
+    *to++ = TABLE[*fp >> 4];
+    *to++ = TABLE[*fp & 7];
+    ++fp;
+  }
+  *to = '\0';
+}
 
 /*
  * A simple smartlist interface to make an unordered list of acceptable

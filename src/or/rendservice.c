@@ -166,7 +166,6 @@ static rend_service_port_config_t *parse_port_config(const char *string)
   return result;
 }
 
-
 /* Set up rend_service_list, based on the values of HiddenServiceDir and
  * HiddenServicePort in 'options'.  Return 0 on success and -1 on
  * failure.

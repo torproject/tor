@@ -347,7 +347,7 @@ circuit_t *circuit_get_next_by_service_and_purpose(circuit_t *start,
       continue;
     if (circ->purpose != purpose)
       continue;
-    if (!memcmp(circ->rend_service, servid, REND_COOKIE_LEN))
+    if (!memcmp(circ->rend_service, servid, CRYPTO_SHA1_DIGEST_LEN))
       return circ;
   }
   return NULL;

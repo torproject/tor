@@ -169,7 +169,9 @@ int rend_valid_service_id(char *query) {
   if(strlen(query) != REND_SERVICE_ID_LEN)
     return 0;
 
-  /* XXXX also check for bad chars. */
+  if (strspn(query, BASE32_CHARS) != REND_SERVICE_ID_LEN)
+    return 0;
+
   return 1;
 }
 

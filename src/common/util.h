@@ -81,6 +81,8 @@ void set_uint32(char *cp, uint32_t v);
 #endif
 #endif
 
+void hex_encode(const char *from, int fromlen, char *to);
+
 typedef struct smartlist_t {
   void **list;
   int num_used;

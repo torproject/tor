@@ -16,9 +16,12 @@ rend_mid_establish_intro(circuit_t *circ, char *request, int request_len)
   char pk_digest[20];
   int asn1len;
   circuit_t *c;
+  char hexid[9];
 
-  if (circ->purpose != CIRCUIT_PURPOSE_INTERMEDIATE) {
-    log_fn(LOG_WARN, "Rejecting ESTABLISH_INTRO on non-intermediate circuit");
+  log_fn(LOG_INFO, "Received an ESTABLISH_INTRO request on circuit %d", circ->p_circ_id);
+
+  if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
+    log_fn(LOG_WARN, "Rejecting ESTABLISH_INTRO on non-OR or non-edge circuit");
     goto err;
   }
   if (request_len < 22)
@@ -60,16 +63,22 @@ rend_mid_establish_intro(circuit_t *circ, char *request, int request_len)
     goto err;
   }
 
+  hex_encode(pk_digest, 4, hexid);
+
   /* Close any other intro circuits with the same pk. */
   c = NULL;
   while ((c = circuit_get_next_by_service_and_purpose(
                                 c,pk_digest,CIRCUIT_PURPOSE_INTRO_POINT))) {
+    log_fn(LOG_INFO, "Replacing old circuit %d for service %s", c->p_circ_id, hexid);
     circuit_mark_for_close(c);
   }
 
   /* Now, set up this circuit. */
   circ->purpose = CIRCUIT_PURPOSE_INTRO_POINT;
   memcpy(circ->rend_service, pk_digest, 20);
+
+  log_fn(LOG_INFO, "Established introduction point on circuit %d for service %s",
+         circ->p_circ_id, hexid);
 
   return 0;
  truncated:
@@ -123,8 +132,8 @@ rend_mid_introduce(circuit_t *circ, char *request, int request_len)
 int
 rend_mid_establish_rendezvous(circuit_t *circ, char *request, int request_len)
 {
-  if (circ->purpose != CIRCUIT_PURPOSE_INTERMEDIATE) {
-    log_fn(LOG_WARN, "Tried to establish rendezvous on non-intermediate circuit");
+  if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
+    log_fn(LOG_WARN, "Tried to establish rendezvous on non-OR or non-edge circuit");
     goto err;
   }
 
@@ -155,8 +164,8 @@ rend_mid_rendezvous(circuit_t *circ, char *request, int request_len)
 {
   circuit_t *rend_circ;
 
-  if (circ->purpose != CIRCUIT_PURPOSE_INTERMEDIATE) {
-    log_fn(LOG_WARN, "Tried to complete rendezvous on non-intermediate circuit");
+  if (circ->purpose != CIRCUIT_PURPOSE_OR || circ->n_conn) {
+    log_fn(LOG_WARN, "Tried to complete rendezvous on non-OR or non-edge circuit");
     goto err;
   }
 

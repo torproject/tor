@@ -201,7 +201,7 @@
 
 #define _CIRCUIT_PURPOSE_MIN 1
 /* these circuits were initiated elsewhere */
-#define CIRCUIT_PURPOSE_INTERMEDIATE 1 /* normal circuit, at OR. */
+#define CIRCUIT_PURPOSE_OR 1 /* normal circuit, at OR. */
 #define CIRCUIT_PURPOSE_INTRO_POINT 2 /* At OR, from Bob, waiting for intro from Alices */
 #define CIRCUIT_PURPOSE_REND_POINT_WAITING 3 /* At OR, from Alice, waiting for Bob */
 #define CIRCUIT_PURPOSE_REND_ESTABLISHED 4 /* At OR, both circuits have this purpose */
