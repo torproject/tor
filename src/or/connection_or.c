@@ -185,75 +185,62 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   directory_set_dirty();
   connection_watch_events(conn, POLLIN);
   log_fn(LOG_DEBUG,"tls handshake done. verifying.");
-  if(options.OnionRouter) { /* I'm an OR */
-    if(tor_tls_peer_has_cert(conn->tls)) { /* it's another OR */
-      if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, 256)) {
-        log_fn(LOG_WARN,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
-               conn->address, conn->port);
-        return -1;
-      }
-      log_fn(LOG_DEBUG,"Other side claims to be \"%s\"",nickname);
-      pk = tor_tls_verify(conn->tls);
-      if(!pk) {
-        log_fn(LOG_WARN,"Other side (%s:%d) has a cert but it's invalid. Closing.",
-               conn->address, conn->port);
-        return -1;
-      }
-      router = router_get_by_link_pk(pk);
-      if (!router) {
-        log_fn(LOG_WARN,"Unrecognized public key from peer (%s:%d). Closing.",
-               conn->address, conn->port);
-        crypto_free_pk_env(pk);
-        return -1;
-      }
-      if(conn->link_pkey) { /* I initiated this connection. */
-        if(crypto_pk_cmp_keys(conn->link_pkey, pk)) {
-          log_fn(LOG_WARN,"We connected to '%s' but he gave us a different key. Closing.",
-                 router->nickname);
-          crypto_free_pk_env(pk);
-          return -1;
-        }
-        log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
-      } else {
-        if(connection_exact_get_by_addr_port(router->addr,router->or_port)) {
-          log_fn(LOG_INFO,"Router %s is already connected. Dropping.", router->nickname);
-          return -1;
-        }
-        connection_or_init_conn_from_router(conn, router);
-      }
-      crypto_free_pk_env(pk);
-    } else { /* it's an OP */
+  if (! tor_tls_peer_has_cert(conn->tls)) { /* It's an OP. */
+    if (options.OnionRouter) { /* I'm an OR; good. */
       conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
-    }
-  } else { /* I'm a client */
-    if(!tor_tls_peer_has_cert(conn->tls)) { /* it's a client too?! */
+      return 0;
+    } else { /* Neither side sent a certificate: ouch. */
       log_fn(LOG_WARN,"Neither peer sent a cert! Closing.");
       return -1;
     }
-    pk = tor_tls_verify(conn->tls);
-    if(!pk) {
-      log_fn(LOG_WARN,"Other side (%s:%d) has a cert but it's invalid. Closing.",
-             conn->address, conn->port);
-      return -1;
-    }
-    router = router_get_by_link_pk(pk);
-    if (!router) {
-      log_fn(LOG_WARN,"Unrecognized public key from peer (%s:%d). Closing.",
-             conn->address, conn->port);
-      crypto_free_pk_env(pk);
-      return -1;
-    }
+  }
+  /* Okay; the other side is an OR. */
+  if (tor_tls_get_peer_cert_nickname(conn->tls, nickname, 256)) {
+    log_fn(LOG_WARN,"Other side (%s:%d) has a cert without a valid nickname. Closing.",
+           conn->address, conn->port);
+    return -1;
+  }
+  log_fn(LOG_DEBUG, "Other side claims to be '%s'", nickname);
+  pk = tor_tls_verify(conn->tls);
+  if(!pk) {
+    log_fn(LOG_WARN,"Other side (%s:%d) has a cert but it's invalid. Closing.",
+           conn->address, conn->port);
+    return -1;
+  }
+  router = router_get_by_link_pk(pk);
+  if (!router) {
+    log_fn(LOG_WARN,"Unrecognized public key from peer '%s' (%s:%d). Closing.",
+           nickname, conn->address, conn->port);
+    crypto_free_pk_env(pk);
+    return -1;
+  }
+  if(conn->link_pkey) { /* I initiated this connection. */
     if(crypto_pk_cmp_keys(conn->link_pkey, pk)) {
-      log_fn(LOG_WARN,"We connected to '%s' but he gave us a different key. Closing.",
-             router->nickname);
+      log_fn(LOG_WARN,"We connected to '%s' (%s:%d) but he gave us a different key. Closing.",
+             nickname, conn->address, conn->port);
       crypto_free_pk_env(pk);
       return -1;
     }
     log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
+  } else {
+    if(connection_exact_get_by_addr_port(router->addr,router->or_port)) {
+      log_fn(LOG_INFO,"Router %s is already connected. Dropping.", router->nickname);
+      crypto_free_pk_env(pk);
+      return -1;
+    }
+    connection_or_init_conn_from_router(conn, router);
     crypto_free_pk_env(pk);
-    conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
-    circuit_n_conn_open(conn); /* send the pending create */
+  } 
+  if (strcmp(conn->nickname, nickname)) {
+    log_fn(LOG_WARN,"Other side claims to be '%s', but we wanted '%s'",
+           nickname, conn->nickname);
+    return -1;
   }
+  if (!options.OnionRouter) {
+    /* If I'm an OP... */
+    conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
+  }
+  circuit_n_conn_open(conn); /* send the pending creates, if any. */
   return 0;
 }
 
