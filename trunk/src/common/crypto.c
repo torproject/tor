@@ -98,6 +98,49 @@ void crypto_free_pk_env(crypto_pk_env_t *env)
   return;
 }
 
+
+/* Create a new crypto_cipher_env_t for a given onion cipher type, key,
+ * iv, and encryption flag (1=encrypt, 0=decrypt).  Return the crypto object
+ * on success; NULL on failure.
+ */
+crypto_cipher_env_t *
+crypto_create_init_cipher(int cipher_type, char *key, char *iv, int encrypt_mode) 
+{
+  int r;
+  crypto_cipher_env_t *crypto = NULL;
+
+  if (! (crypto = crypto_new_cipher_env(cipher_type))) {
+    log(LOG_ERR, "Unable to allocate crypto object");
+    return NULL;
+  }
+
+  if (crypto_cipher_set_key(crypto, key)) {
+    log(LOG_ERR, "Unable to set key: %s", crypto_perror());
+    goto error;
+  }
+
+  if (crypto_cipher_set_iv(crypto, iv)) {
+    log(LOG_ERR, "Unable to set iv: %s", crypto_perror());
+    goto error;
+  }
+  
+  if (encrypt_mode)
+    r = crypto_cipher_encrypt_init_cipher(crypto);
+  else
+    r = crypto_cipher_decrypt_init_cipher(crypto);
+
+  if (r) {
+    log(LOG_ERR, "Unabble to initialize cipher: %s", crypto_perror());
+    goto error;
+  }
+  return crypto;
+
+ error:
+  if (crypto)
+    crypto_free_cipher_env(crypto);
+  return NULL;
+}
+
 crypto_cipher_env_t *crypto_new_cipher_env(int type)
 {
   crypto_cipher_env_t *env;
@@ -650,3 +693,4 @@ char *crypto_perror()
 {
   return (char *)ERR_reason_error_string(ERR_get_error());
 }
+

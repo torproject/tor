@@ -660,6 +660,9 @@ void remove_tracked_onion(tracked_onion_t *to, tracked_onion_t **tracked_onions,
 /* find a tracked onion in the linked list of tracked onions */
 tracked_onion_t *id_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t *tracked_onions);
 
+/* create a cipher by onion cipher type. */
+crypto_cipher_env_t *create_onion_cipher(int cipher_type, char *key, char *iv, int encrypt_mode);
+
 /********************************* routers.c ***************************/
 
 void router_retry_connections(struct sockaddr_in *local);

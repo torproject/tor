@@ -175,14 +175,32 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
   return route;
 }
 
+crypto_cipher_env_t *
+create_onion_cipher(int cipher_type, char *key, char *iv, int encrypt_mode)
+{
+  switch (cipher_type) {
+    case ONION_CIPHER_DES:
+      cipher_type = CRYPTO_CIPHER_DES;
+      break;
+    case ONION_CIPHER_RC4 :
+      cipher_type = ONION_CIPHER_RC4;
+      break;
+    case ONION_CIPHER_IDENTITY :
+      cipher_type = CRYPTO_CIPHER_IDENTITY;
+      break;
+    default:
+      log(LOG_ERR, "Unknown cipher type %d", cipher_type);
+      return NULL;
+  }
+  return crypto_create_init_cipher(cipher_type, key, iv, encrypt_mode);
+}
+
 /* creates a new onion from route, stores it and its length into buf and len respectively */
 unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int *route, int routelen, int *len, crypt_path_t **cpath)
 {
   int i,j;
-  int retval = 0;
   onion_layer_t *layer = NULL;
   crypt_path_t *hop = NULL;
-  unsigned char *retbuf = NULL;
   unsigned char *buf;
   routerinfo_t *router;
   unsigned char iv[16];
@@ -195,22 +213,19 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
     
     /* allocate memory for the onion */
     buf = (unsigned char *)malloc(*len);
-    if (!buf)
-    {
+    if (!buf) {
       log(LOG_ERR,"Error allocating memory.");
       return NULL;
     }
     log(LOG_DEBUG,"create_onion() : Allocated memory for the onion.");
     
-    for (retval=0; retval<routelen;retval++)
-    {
-      log(LOG_DEBUG,"create_onion() : %u : %s:%u, %u/%u",routelen-retval,inet_ntoa(*((struct in_addr *)&((rarray[route[retval]])->addr))),(rarray[route[retval]])->or_port,(rarray[route[retval]])->pkey,crypto_pk_keysize((rarray[route[retval]])->pkey));
+    for (i=0; i<routelen;i++) {
+      log(LOG_DEBUG,"create_onion() : %u : %s:%u, %u/%u",routelen-i,inet_ntoa(*((struct in_addr *)&((rarray[route[i]])->addr))),(rarray[route[i]])->or_port,(rarray[route[i]])->pkey,crypto_pk_keysize((rarray[route[i]])->pkey));
     }
     
     layer = (onion_layer_t *)(buf + *len - 128); /* pointer to innermost layer */
     /* create the onion layer by layer, starting with the innermost */
-    for (i=0;i<routelen;i++)
-    {
+    for (i=0;i<routelen;i++) {
       router = rarray[route[i]];
       
       log(LOG_DEBUG,"create_onion() : %u",router);
@@ -238,23 +253,10 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       /* Expiration Time */
       layer->expire = time(NULL) + 3600; /* NOW + 1 hour */
       /* Key Seed Material */
-      retval = crypto_rand(16, layer->keyseed);
-      if (retval) /* error */
+      if (crypto_rand(16, layer->keyseed)) /* error */
       {
 	log(LOG_ERR,"Error generating random data.");
-	free((void *)buf);
-	if (cpath)
-	{
-	  for (j=0;j<i;j++) {
-	    if (cpath[i]->f_crypto)
-	      crypto_free_cipher_env(cpath[i]->f_crypto);
-	    if (cpath[i]->b_crypto)
-	      crypto_free_cipher_env(cpath[i]->b_crypto);
-	    
-	    free((void *)cpath[i]);
-	  }
-	}
-	return NULL;
+	goto error;
       }
       log(LOG_DEBUG,"create_onion() : Onion layer %u built : %u, %u, %u, %s, %u.",i+1,layer->zero,layer->backf,layer->forwf,inet_ntoa(*((struct in_addr *)&layer->addr)),layer->port);
       
@@ -262,18 +264,9 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       if (cpath)
       {
 	cpath[i] = (crypt_path_t *)malloc(sizeof(crypt_path_t));
-	if (!cpath[i])
-	{
+	if (!cpath[i]) {
 	  log(LOG_ERR,"Error allocating memory.");
-	  free((void *)buf);
-          for (j=0;j<i;j++) {
-	    if (cpath[i]->f_crypto)
-	      crypto_free_cipher_env(cpath[i]->f_crypto);
-	    if (cpath[i]->b_crypto)
-	      crypto_free_cipher_env(cpath[i]->b_crypto);
-	    
-	    free((void *)cpath[i]);
-	  }
+	  goto error;
 	}
       
 	log(LOG_DEBUG,"create_onion() : Building hop %u of crypt path.",i+1);
@@ -294,143 +287,35 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
 	memset((void *)iv,0,16);
 	
 	/* initialize cipher engines */
-	switch(layer->forwf)
-	{
-	 case ONION_CIPHER_DES :
-	  hop->f_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
-	  break;
-	 case ONION_CIPHER_RC4 :
-	  hop->f_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_RC4);
-	  break;
-	 case ONION_CIPHER_IDENTITY :
-	  hop->f_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_IDENTITY);
-	  break;
-	}
-	if (!hop->f_crypto) /* cipher initialization failed */
-	{
+	if (! (hop->f_crypto = create_onion_cipher(hop->forwf, hop->digest3, iv, 1))) { 
+	  /* cipher initialization failed */
 	  log(LOG_ERR,"Could not create a crypto environment.");
-	  free((void *)buf);
-	  for (j=0;j<i;j++) {
-	    if (cpath[i]->f_crypto)
-	      crypto_free_cipher_env(cpath[i]->f_crypto);
-	    if (cpath[i]->b_crypto)
-	      crypto_free_cipher_env(cpath[i]->b_crypto);
-	    free((void *)cpath[i]);
-	  }
-	  return NULL;
-	}
-	/* set the key and IV */
-	if (crypto_cipher_set_key(hop->f_crypto, hop->digest3) || 
-	    crypto_cipher_set_iv(hop->f_crypto, iv)) {
-	  log(LOG_ERR,"Could not initialize the crypto engine.");
-          free((void *)buf);
-	  for (j=0;j<i;j++) {
-	    if (cpath[i]->f_crypto)
-	      crypto_free_cipher_env(cpath[i]->f_crypto);
-	    if (cpath[i]->b_crypto)
-	      crypto_free_cipher_env(cpath[i]->b_crypto);
-	    free((void *)cpath[i]);
-	  }
-	  return NULL;
+	  goto error;
 	}
 	
-	switch(layer->backf)
-	{
-	 case ONION_CIPHER_DES :
-	  hop->b_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
-	  break;
-	 case ONION_CIPHER_RC4 :
-	  hop->b_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_RC4);
-	  break;
-	 case ONION_CIPHER_IDENTITY :
-	  hop->b_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_IDENTITY);
-	  break;
-	}
-	if (!hop->b_crypto) /* cipher initialization failed */
-	{
+	if (! (hop->b_crypto = create_onion_cipher(hop->backf, hop->digest2, iv, 0))) { 
+	  /* cipher initialization failed */
 	  log(LOG_ERR,"Could not create a crypto environment.");
-	  free((void *)buf);
-	  for (j=0;j<i;j++) {
-	    if (cpath[i]->f_crypto)
-	      crypto_free_cipher_env(cpath[i]->f_crypto);
-	    if (cpath[i]->b_crypto)
-	      crypto_free_cipher_env(cpath[i]->b_crypto);
-	    free((void *)cpath[i]);
-	  }
-	  return NULL;
-	}
-	/* set the key and IV */
-	if (crypto_cipher_set_key(hop->b_crypto, hop->digest2) || 
-	    crypto_cipher_set_iv(hop->b_crypto, iv)) {
-	  log(LOG_ERR,"Could not initialize the crypto engine.");
-          free((void *)buf);
-	  for (j=0;j<i;j++) {
-	    if (cpath[i]->f_crypto)
-	      crypto_free_cipher_env(cpath[i]->f_crypto);
-	    if (cpath[i]->b_crypto)
-	      crypto_free_cipher_env(cpath[i]->b_crypto);
-	    free((void *)cpath[i]);
-	  }
-	  return NULL;
-	}
-
-        /* initialize */
-	if (crypto_cipher_encrypt_init_cipher(hop->f_crypto) || crypto_cipher_decrypt_init_cipher(hop->b_crypto)) {
-	  log(LOG_ERR,"Could not initialize the crypto engine.");
-	  free((void *)buf);
-	  for (j=0;j<i;j++) {
-	    if (cpath[i]->f_crypto)
-	      crypto_free_cipher_env(cpath[i]->f_crypto);
-	    if (cpath[i]->b_crypto)
-	      crypto_free_cipher_env(cpath[i]->b_crypto);
-	    free((void *)cpath[i]);
-	  }
-	  return NULL;
+	  goto error;
 	}
 	    
 	log(LOG_DEBUG,"create_onion() : Built corresponding crypt path hop.");
       }
       
       /* padding if this is the innermost layer */
-      if (!i)
-      {
-	retval=crypto_pseudo_rand(100, (unsigned char *)layer + 28);
-	if (retval) /* error */
-	{
+      if (!i) {
+	if (crypto_pseudo_rand(100, (unsigned char *)layer + 28)) { /* error */
 	  log(LOG_ERR,"Error generating pseudo-random data.");
-	  free((void *)buf);
-	  if (cpath)
-	  {
-	    for (j=0;j<i;j++) {
-	      if (cpath[i]->f_crypto)
-		crypto_free_cipher_env(cpath[i]->f_crypto);
-	      if (cpath[i]->b_crypto)
-		crypto_free_cipher_env(cpath[i]->b_crypto);
-	      free((void *)cpath[i]);
-	    }
-	  }
-	  return NULL;
+	  goto error;
 	}
 	log(LOG_DEBUG,"create_onion() : This is the innermost layer. Adding 100 bytes of padding.");
       }
       
       /* encrypt */
-      retbuf = encrypt_onion(layer,128+(i*28),router->pkey);
-      if (!retbuf)
-      {
+
+      if (! encrypt_onion(layer,128+(i*28),router->pkey)) {
 	log(LOG_ERR,"Error encrypting onion layer.");
-	free((void *)buf);
-	if (cpath)
-	{
-	  for (j=0;j<i;j++) {
-	    if (cpath[i]->f_crypto)
-	      crypto_free_cipher_env(cpath[i]->f_crypto);
-	    if (cpath[i]->b_crypto)
-	      crypto_free_cipher_env(cpath[i]->b_crypto);
-	    free((void *)cpath[i]);
-	  }
-	}
-	return NULL;
+	goto error;
       }
       log(LOG_DEBUG,"create_onion() : Encrypted layer.");
       
@@ -439,6 +324,19 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
     }
 
     return buf;
+ error:
+    if (buf)
+      free((void *)buf);
+    if (cpath) {
+      for (j=0;j<i;j++) {
+	if (cpath[i]->f_crypto)
+	  crypto_free_cipher_env(cpath[i]->f_crypto);
+	if (cpath[i]->b_crypto)
+	  crypto_free_cipher_env(cpath[i]->b_crypto);
+	free((void *)cpath[i]);
+      }
+    }
+    return NULL;
 }
 
 /* encrypts 128 bytes of the onion with the specified public key, the rest with 
@@ -448,9 +346,8 @@ unsigned char *encrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_
   unsigned char *tmpbuf = NULL; /* temporary buffer for crypto operations */
   unsigned char digest[20]; /* stores SHA1 output - 160 bits */
   unsigned char iv[8];
-  int retval = 0;
   
-  crypto_cipher_env_t *crypt_env; /* crypto environment */
+  crypto_cipher_env_t *crypt_env = NULL; /* crypto environment */
  
   if ( (onion) && (pkey) ) /* valid parameters */
   {
@@ -470,68 +367,49 @@ unsigned char *encrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_
     if (crypto_SHA_digest(((onion_layer_t *)onion)->keyseed,16,digest))
     {
       log(LOG_ERR,"Error computing SHA1 digest.");
-      free((void *)tmpbuf);
-      return NULL;
+      goto error;
     }
     log(LOG_DEBUG,"encrypt_onion() : Computed DES key.");
     
     log(LOG_DEBUG,"encrypt_onion() : Trying to RSA encrypt.");
     /* encrypt 128 bytes with RSA *pkey */
-    retval = crypto_pk_public_encrypt(pkey, (unsigned char *)onion, 128, tmpbuf, RSA_NO_PADDING); 
-    if (retval == -1) 
-    { 
+    if (crypto_pk_public_encrypt(pkey, (unsigned char *)onion, 128, tmpbuf, RSA_NO_PADDING) == -1) {
       log(LOG_ERR,"Error RSA-encrypting data :%s",crypto_perror());
-      free((void *)tmpbuf); 
-      return NULL; 
+      goto error;
     }
   
     log(LOG_DEBUG,"encrypt_onion() : RSA encrypted first 128 bytes of the onion."); 
     
     /* now encrypt the rest with DES OFB */
-    crypt_env = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
+    crypt_env = crypto_create_init_cipher(CRYPTO_CIPHER_DES, digest, iv, 1);
     if (!crypt_env)
     {
       log(LOG_ERR,"Error creating the crypto environment.");
-      free((void *)tmpbuf);
-      return NULL;
-    }
-    if (crypto_cipher_set_key(crypt_env, digest)) /* error */ 
-    { 
-      log(LOG_ERR,"Error initializing DES engine:%s",crypto_perror()); 
-      free((void *)tmpbuf); 
-      return NULL; 
-    } 
-    if (crypto_cipher_set_iv(crypt_env, iv))
-    {    
-      log(LOG_ERR,"Error initializing DES engine:%s",crypto_perror());
-      free((void *)tmpbuf);
-      return NULL;
-    }
-    if (crypto_cipher_encrypt_init_cipher(crypt_env)) {
-      log(LOG_ERR,"Error initializing DES engine:%s",crypto_perror());
-      free((void *)tmpbuf);
-      return NULL;
+      goto error;
     }
     
-    retval = crypto_cipher_encrypt(crypt_env,(unsigned char *)onion+128, onionlen-128, (unsigned char *)tmpbuf+128);
-    if (retval) /* error */
-    { 
+    if (crypto_cipher_encrypt(crypt_env,(unsigned char *)onion+128, onionlen-128, (unsigned char *)tmpbuf+128)) { /* error */
       log(LOG_ERR,"Error performing DES encryption:%s",crypto_perror()); 
-      free((void *)tmpbuf); 
-      return NULL; 
+      goto error;
     }
     log(LOG_DEBUG,"encrypt_onion() : DES OFB encrypted the rest of the onion.");
-  
-    crypto_free_cipher_env(crypt_env);
-  
+    
     /* now copy tmpbuf to onion */
     memcpy((void *)onion,(void *)tmpbuf,onionlen);
     log(LOG_DEBUG,"encrypt_onion() : Copied cipher to original onion buffer.");
     free((void *)tmpbuf);
+    crypto_free_cipher_env(crypt_env);
     return (unsigned char *)onion;
   } /* valid parameters */
   else
     return NULL;
+
+ error:
+  if (tmpbuf)
+    free((void *)tmpbuf);
+  if (crypt_env)
+    crypto_free_cipher_env(crypt_env);
+  return NULL;
 }
 
 /* decrypts the first 128 bytes using RSA and prkey, decrypts the rest with DES OFB with key1 */
@@ -540,87 +418,65 @@ unsigned char *decrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_
   void *tmpbuf = NULL; /* temporary buffer for crypto operations */
   unsigned char digest[20]; /* stores SHA1 output - 160 bits */
   unsigned char iv[8];
-  int retval = 0;
   
-  crypto_cipher_env_t *crypt_env; /* crypto environment */
+  crypto_cipher_env_t *crypt_env =NULL; /* crypto environment */
   
-  if ( (onion) && (prkey) ) /* valid parameters */
-  {
+  if ( (onion) && (prkey) ) { /* valid parameters */
     memset((void *)iv,0,8);
     
     /* allocate space for tmpbuf */
     tmpbuf = malloc(onionlen);
-    if (!tmpbuf)
-    {
+    if (!tmpbuf) {
       log(LOG_ERR,"Could not allocate memory.");
       return NULL;
     }
     log(LOG_DEBUG,"decrypt_onion() : Allocated memory for the temporary buffer.");
 
     /* decrypt 128 bytes with RSA *prkey */
-    retval = crypto_pk_private_decrypt(prkey, (unsigned char*)onion, 128, (unsigned char *)tmpbuf, RSA_NO_PADDING);
-    if (retval == -1)
+    if (crypto_pk_private_decrypt(prkey, (unsigned char*)onion, 128, (unsigned char *)tmpbuf, RSA_NO_PADDING) == -1)
     {
       log(LOG_ERR,"Error RSA-decrypting data :%s",crypto_perror());
-      free((void *)tmpbuf);
-      return NULL;
+      goto error;
     }
     log(LOG_DEBUG,"decrypt_onion() : RSA decryption complete.");
     
     /* get key1 = SHA1(KeySeed) */
-    retval = crypto_SHA_digest(((onion_layer_t *)tmpbuf)->keyseed,16,digest);
-    if (retval)
+    if (crypto_SHA_digest(((onion_layer_t *)tmpbuf)->keyseed,16,digest))
     {
       log(LOG_ERR,"Error computing SHA1 digest.");
-      free((void *)tmpbuf);
-      return NULL;
+      goto error;
     }
     log(LOG_DEBUG,"decrypt_onion() : Computed DES key.");
     
     /* now decrypt the rest with DES OFB */
-    crypt_env = crypto_new_cipher_env(CRYPTO_CIPHER_DES);
-    if (!crypt_env)
-    {
-      log(LOG_ERR,"Error creating the crypto environment.");
-      free((void *)tmpbuf);
-      return NULL;
+    crypt_env = crypto_create_init_cipher(CRYPTO_CIPHER_DES, digest, iv, 0);
+    if (!crypt_env) {
+      log(LOG_ERR,"Error creating crypto environment");
+      goto error;
     }
-    if (crypto_cipher_set_key(crypt_env, digest)) /* error */
-    {
-      log(LOG_ERR,"Error initializing DES engine:%s",crypto_perror());
-      free((void *)tmpbuf);
-      return NULL;
-    }
-    if (crypto_cipher_set_iv(crypt_env, iv))
-    {
-      log(LOG_ERR,"Error initializing DES engine:%s",crypto_perror());
-      free((void *)tmpbuf);
-      return NULL;
-    }
-    if (crypto_cipher_decrypt_init_cipher(crypt_env)) {
-      log(LOG_ERR,"Error initializing DES engine:%s",crypto_perror());
-      free((void *)tmpbuf);
-      return NULL;
-    }
-    
-    retval = crypto_cipher_decrypt(crypt_env,(unsigned char *)onion+128, onionlen-128,(unsigned char *)tmpbuf+128);
-    if (retval) /* error */
-    {
+ 
+    if (crypto_cipher_decrypt(crypt_env,(unsigned char *)onion+128, onionlen-128,(unsigned char *)tmpbuf+128)) {
       log(LOG_ERR,"Error performing DES decryption:%s",crypto_perror());
-      free((void *)tmpbuf);
-      return NULL;
+      goto error;
     }
     
-    crypto_free_cipher_env(crypt_env);
     log(LOG_DEBUG,"decrypt_onion() : DES decryption complete.");
     
     /* now copy tmpbuf to onion */
     memcpy((void *)onion,(void *)tmpbuf,onionlen);
     free((void *)tmpbuf);
+    crypto_free_cipher_env(crypt_env);
     return (unsigned char *)onion;
   } /* valid parameters */
   else
     return NULL;
+
+ error:
+  if (tmpbuf)
+    free((void *)tmpbuf);
+  if (crypt_env)
+    crypto_free_cipher_env(crypt_env);
+  return NULL;
 }
 
 /* delete first n bytes of the onion and pads the end with n bytes of random data */
@@ -711,4 +567,3 @@ tracked_onion_t *id_tracked_onion(unsigned char *onion, uint32_t onionlen, track
   
   return NULL;
 }
-

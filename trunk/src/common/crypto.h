@@ -74,6 +74,9 @@ int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env);
 int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to);
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to);
 
+/* convenience function: wraps crypto_create_crypto_env, set_key, set_iv, and init. */
+crypto_cipher_env_t *crypto_create_init_cipher(int cipher_type, char *key, char *iv, int encrypt_mode);
+
 /* SHA-1 */
 int crypto_SHA_digest(unsigned char *m, int len, unsigned char *digest);
 
