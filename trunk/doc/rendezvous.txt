@@ -1,0 +1,138 @@
+                  How to make rendezvous points work
+                               1-11Jun2003
+
+1. Overview
+
+   This document provides a design overview for rendezvous points, as
+   discussed by Nick and Roger after Discex.  
+
+   Rendezvous points are an implementation of server anonymity /
+   location-hidden servers in the onion routing network.  There are
+   three components needed for rendezvous points:
+
+   A) A means for the client ("Alice") to tell a server ("Bob") where
+      to contact her in order to establish a connection.  (Notification)
+   B) A means for Bob to contact Alice to actually establish the
+      connection, and for them to communicate later. (Meeting)
+   C) Necessary glue code so that Alice can view webpages on a
+      location-hidden webserver, and Bob can run a location-hidden
+      server with minimal invasive changes. (Application)
+
+   We'll tackle these in order.  In all cases, I'll assume that both
+   Alice and Bob have local OPs.
+
+2. Notification service
+
+   Bob wants to learn about client requests for communication, but
+   wants to avoid responding unnecessarily to unauthorized clients.
+   Bob's proxy opens a circuit, and tells some onion router on that
+   circuit to expect incoming connections, and notify Bob of them.
+
+   When establishing such a notification point, Bob provides the onion
+   router with a public "notification" key.  The hash of this public
+   key uniquely identifies Bob, and prevents anybody else from
+   usurping Bob's notification point in the future.  Additionally, Bob
+   can use the same public key to establish a notification point on
+   another OR, and Alice can still be confident that Bob is the same
+   server.
+  
+   (The set-up-a-notification-point command should come via a
+   RELAY_BIND_NOTIFICATION cell. This cell creates a new stream on the
+   circuit from Bob to the notification point.)
+
+   ORs that support notification run a notification service on a
+   separate port.  When Alice wants to notify Bob of a meeting point,
+   she connects (directly or via Tor) to the notification port, and
+   sends the following:
+   
+     MEETING REQUEST
+        Encrypted with server's public key:
+           Hash of Bob's public key (identifies which Bob to notify)
+           Initial authentication [optional]
+        Encrypted with Bob's public key:
+           Meeting point
+           Meeting cookie
+           End-to-end forward key
+	   End-to-end backward key
+           End-to-end authentication [optional]
+           
+   [Add a Nonce or some kind of replay prevention mechanism? -NM]
+   [Should this use DH instead? -NM]
+
+   The meeting point and meeting cookie allow Bob to contact Alice and
+   prove his identity; the end-to-end authentication enables Bob to 
+   decide whether to talk to Alice; the initial authentication enables
+   the meeting point to pre-screen notification requests before
+   sending them to Bob.  (See 3 for a discussion of meeting points;
+   see 2.1 for a proposed authentication mechanism.)
+
+   When the notification point receives a valid meeting request, it
+   sends the portion encrypted with Bob's public key along the stream
+   created by Bob's RELAY_BIND_NOTIFICATION.  Bob then, at his
+   discretion, connects to Alice's meeting point.
+
+2.1. Proposed authentication for notification services
+
+   Bob makes two short-term secrets SB and SN, and tells the
+   notification point about SN.  Bob gives Alice a cookie consisting
+   of A,B,C such that H(A|SB)=B and H(A|SN)=C.  Alice's initial
+   authentication is <A,C>; Alice's end-to-end authentication is <A,B>.
+
+   [Maybe] Bob keeps a replay cache of A values, and doesn't allow any
+   value to be used twice.  Over time, Bob rotates SB and SN.
+
+   [Maybe] Each 'A' has an expiration time built in to it.
+
+3. Meeting points
+
+   For Bob to actually reply to Alice, Alice first establishes a
+   circuit to an onion router R, and sends a RELAY_BIND_MEETING cell
+   to that onion router.  The RELAY_BIND_MEETING cell contains a 
+   'Meeting cookie' (MC) that Bob can use to authenticate to R.  R
+   remembers the cookie and associates it with Alice.
+
+   Later, Bob also routes to R and sends R a RELAY_JOIN_MEETING cell
+   with the meeting cookie MC.  After this point, R routes all traffic
+   from Bob's circuit or Alice's circuit as if the two circuits were
+   joined: any RELAY cells that are not for a recognized topic are
+   passed down Alice or Bob's circuit.
+   
+   To prevent R from reading their traffic, Alice and Bob use the two
+   end-to-end keys in Alice's original notification to Bob: Bob uses
+   the 'forward' key and Alice the 'backward' key.  (These keys are
+   used in addition to the series of encryption keys already in use on
+   Alice and Bob's circuits.)
+
+   Bob's OP accepts RELAY_BEGIN, RELAY_DATA, RELAY_END, and
+   RELAY_SENDME cells from Alice.  Alice's OP accepts RELAY_DATA,
+   RELAY_END, and RELAY_SENDME cells from Bob.  All RELAY_BEGIN cells
+   to Bob must have target IP and port of zero; Bob's OP will redirect
+   them to the actual target IP and port of Bob's server.
+
+   Alice and Bob's OPs disallow CREATE or RELAY_EXTEND cells as usual.
+
+4. Application interface
+
+4.1. Application interface: client side
+
+   Because we require that the client interface remain a SOCKS proxy,
+   we can't have clients explicitly connect to Bob.  Instead, we have
+   the OP map DNS addresses used by the client to the
+       <Notification point, Bob's PK, Authentication> 
+   tuples needed to establish a connection to Bob.
+
+   [We had earlier hoped encode this information into the DNS address,
+    but that won't work.  The data needed will be at least ~1024 bits
+    long (for Bob's public key).  You'd need over 197 characters to
+    encode a blob that long, and you'd wind up triggering pathological
+    cases in a lot of client code. -NM]
+
+   I propose that the client OP receive this mapping information
+   outside of the Tor protocol: either from true out-of-band entry, or
+   from protocol-specific transmission.
+
+   (For example of protocol-specific, an HTTP server could include
+   notification information in reply headers, or cookies, or
+   something.)
+
+
