@@ -60,13 +60,14 @@ _log_prefix(char *buf, size_t buf_len, int severity)
 {
   time_t t;
   struct timeval now;
+  struct tm tm;
   size_t n;
   int r;
 
   tor_gettimeofday(&now);
   t = (time_t)now.tv_sec;
 
-  n = strftime(buf, buf_len, "%b %d %H:%M:%S", localtime(&t));
+  n = strftime(buf, buf_len, "%b %d %H:%M:%S", tor_localtime_r(&t, &tm));
   r = tor_snprintf(buf+n, buf_len-n,
                 ".%.3ld [%s] ",
                 (long)now.tv_usec / 1000, sev_to_string(severity));

@@ -237,13 +237,13 @@ static time_t
 edge_of_accounting_period_containing(time_t now, int get_end)
 {
   int before;
-  struct tm *tm;
-  tm = localtime(&now);
+  struct tm tm;
+  tor_localtime_r(&now, &tm);
 
   /* Set 'before' to true iff the current time is before the hh:mm
    * changeover time for today. */
-  before = tm->tm_hour < cfg_start_hour ||
-    (tm->tm_hour == cfg_start_hour && tm->tm_min < cfg_start_min);
+  before = tm.tm_hour < cfg_start_hour ||
+    (tm.tm_hour == cfg_start_hour && tm.tm_min < cfg_start_min);
 
   /* Dispatch by unit.  First, find the start day of the given period;
    * then, if get_end is true, increment to the end day. */
@@ -251,14 +251,14 @@ edge_of_accounting_period_containing(time_t now, int get_end)
     {
     case UNIT_MONTH: {
       /* If this is before the Nth, we want the Nth of last month. */
-      if (tm->tm_mday < cfg_start_day ||
-          (tm->tm_mday < cfg_start_day && before)) {
-        --tm->tm_mon;
+      if (tm.tm_mday < cfg_start_day ||
+          (tm.tm_mday < cfg_start_day && before)) {
+        --tm.tm_mon;
       }
       /* Otherwise, the month is correct. */
-      tm->tm_mday = cfg_start_day;
+      tm.tm_mday = cfg_start_day;
       if (get_end)
-        ++tm->tm_mon;
+        ++tm.tm_mon;
       break;
     }
     case UNIT_WEEK: {
@@ -266,31 +266,31 @@ edge_of_accounting_period_containing(time_t now, int get_end)
          say Sunday==7; struct tm says Sunday==0.) */
       int wday = cfg_start_day % 7;
       /* How many days do we subtract from today to get to the right day? */
-      int delta = (7+tm->tm_wday-wday)%7;
+      int delta = (7+tm.tm_wday-wday)%7;
       /* If we are on the right day, but the changeover hasn't happened yet,
        * then subtract a whole week. */
       if (delta == 0 && before)
         delta = 7;
-      tm->tm_mday -= delta;
+      tm.tm_mday -= delta;
       if (get_end)
-        tm->tm_mday += 7;
+        tm.tm_mday += 7;
       break;
     }
     case UNIT_DAY:
       if (before)
-        --tm->tm_mday;
+        --tm.tm_mday;
       if (get_end)
-        ++tm->tm_mday;
+        ++tm.tm_mday;
       break;
     default:
       tor_assert(0);
   }
 
-  tm->tm_hour = cfg_start_hour;
-  tm->tm_min = cfg_start_min;
-  tm->tm_sec = 0;
-  tm->tm_isdst = -1; /* Autodetect DST */
-  return mktime(tm);
+  tm.tm_hour = cfg_start_hour;
+  tm.tm_min = cfg_start_min;
+  tm.tm_sec = 0;
+  tm.tm_isdst = -1; /* Autodetect DST */
+  return mktime(&tm);
 }
 
 /** Return the start of the accounting period containing the time

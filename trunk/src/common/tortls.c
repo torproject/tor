@@ -644,6 +644,7 @@ static void log_cert_lifetime(X509 *cert, const char *problem)
   char *s1=NULL, *s2=NULL;
   char mytime[33];
   time_t now = time(NULL);
+  struct tm tm;
 
   if (problem)
     log_fn(LOG_WARN,"Certificate %s: is your system clock set incorrectly?",
@@ -667,7 +668,7 @@ static void log_cert_lifetime(X509 *cert, const char *problem)
   BIO_get_mem_ptr(bio, &buf);
   s2 = tor_strndup(buf->data, buf->length);
 
-  strftime(mytime, 32, "%b %d %H:%M:%S %Y GMT", gmtime(&now));
+  strftime(mytime, 32, "%b %d %H:%M:%S %Y GMT", tor_gmtime_r(&now, &tm));
 
   log_fn(LOG_WARN, "(certificate lifetime runs from %s through %s. Your time is %s.)",s1,s2,mytime);
 

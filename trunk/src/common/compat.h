@@ -104,6 +104,18 @@ struct timeval {
 
 void tor_gettimeofday(struct timeval *timeval);
 
+#ifdef HAVE_LOCALTIME_R
+#define tor_localtime_r localtime_r
+#else
+struct tm *tor_localtime_r(const time_t *timep, struct tm *result);
+#endif
+
+#ifdef HAVE_GMTIME_R
+#define tor_gmtime_r gmtime_r
+#else
+struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
+#endif
+
 /* ===== File compatibility */
 int replace_file(const char *from, const char *to);
 
@@ -192,14 +204,6 @@ char *get_user_homedir(const char *username);
 int spawn_func(int (*func)(void *), void *data);
 void spawn_exit(void);
 
-/* Because we use threads instead of processes on Windows, we need locking on
- * Windows.  On Unixy platforms, these functions are no-ops. */
-typedef struct tor_mutex_t tor_mutex_t;
-tor_mutex_t *tor_mutex_new(void);
-void tor_mutex_acquire(tor_mutex_t *m);
-void tor_mutex_release(tor_mutex_t *m);
-void tor_mutex_free(tor_mutex_t *m);
-unsigned long tor_get_thread_id(void);
 
 #if defined(MS_WINDOWS)
 #define USE_WIN32_THREADS
@@ -210,6 +214,24 @@ unsigned long tor_get_thread_id(void);
 #else
 #undef TOR_IS_MULTITHREADED
 #endif
+
+/* Because we use threads instead of processes on Windows, we need locking on
+ * Windows.  On Unixy platforms, these functions are no-ops. */
+typedef struct tor_mutex_t tor_mutex_t;
+#ifdef TOR_IS_MULTITHREADED
+tor_mutex_t *tor_mutex_new(void);
+void tor_mutex_acquire(tor_mutex_t *m);
+void tor_mutex_release(tor_mutex_t *m);
+void tor_mutex_free(tor_mutex_t *m);
+unsigned long tor_get_thread_id(void);
+#else
+#define tor_mutex_new() ((tor_mutex_t*)tor_malloc(sizeof(int)))
+#define tor_mutex_acquire(m) do { } while (0)
+#define tor_mutex_release(m) do { } while (0)
+#define tor_mutex_free(m) do { tor_free(m); } while(0)
+#define tor_get_thread_id() (1UL)
+#endif
+
 
 #endif
 

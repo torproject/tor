@@ -753,6 +753,40 @@ void tor_gettimeofday(struct timeval *timeval) {
   return;
 }
 
+#ifndef HAVE_LOCALTIME_R
+struct tm *tor_localtime_r(const time_t *timep, struct tm *result)
+{
+  struct tm *r;
+#ifdef TOR_IS_MULTITHREADED
+  static tor_mutex_t *m=NULL;
+  if (!m) { m=tor_mutex_new(); }
+#endif
+  tor_assert(result);
+  tor_mutex_acquire(m);
+  r = localtime(timep);
+  memcpy(result, r, sizeof(struct tm));
+  tor_mutex_release(m);
+  return result;
+}
+#endif
+
+#ifndef HAVE_GMTIME_R
+struct tm *tor_gmtime_r(const time_t *timep, struct tm *result)
+{
+  struct tm *r;
+#ifdef TOR_IS_MULTITHREADED
+  static tor_mutex_t *m=NULL;
+  if (!m) { m=tor_mutex_new(); }
+#endif
+  tor_assert(result);
+  tor_mutex_acquire(m);
+  r = gmtime(timep);
+  memcpy(result, r, sizeof(struct tm));
+  tor_mutex_release(m);
+  return result;
+}
+#endif
+
 #ifdef USE_WIN32_THREADS
 struct tor_mutex_t {
   HANDLE handle;
@@ -833,11 +867,6 @@ tor_get_thread_id(void)
 struct tor_mutex_t {
   int _unused;
 };
-tor_mutex_t *tor_mutex_new(void) { return NULL; }
-void tor_mutex_acquire(tor_mutex_t *m) { }
-void tor_mutex_release(tor_mutex_t *m) { }
-void tor_mutex_free(tor_mutex_t *m) { }
-unsigned long tor_get_thread_id(void) { return 1; }
 #endif
 
 /**
