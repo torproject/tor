@@ -10,8 +10,9 @@ static circuit_t *global_circuitlist=NULL;
 
 char *circuit_state_to_string[] = {
   "receiving the onion",    /* 0 */
-  "connecting to firsthop", /* 1 */
-  "open"                    /* 2 */
+  "waiting to process create", /* 1 */
+  "connecting to firsthop", /* 2 */
+  "open"                    /* 3 */
 };
 
 /********* END VARIABLES ************/
@@ -57,7 +58,7 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
   circ->p_aci = p_aci;
   circ->p_conn = p_conn;
 
-  circ->state = CIRCUIT_STATE_OPEN_WAIT;
+  circ->state = CIRCUIT_STATE_ONION_WAIT;
 
   /* ACIs */
   circ->p_aci = p_aci;
@@ -128,6 +129,10 @@ int circuit_init(circuit_t *circ, int aci_type) {
   unsigned char iv[16];
   unsigned char digest1[20];
   unsigned char digest2[20];
+  struct timeval start, end;
+  int time_passed; 
+
+
 
   assert(circ);
 
@@ -146,7 +151,26 @@ int circuit_init(circuit_t *circ, int aci_type) {
 
   log(LOG_DEBUG,"circuit_init(): aci_type = %u.",aci_type);
 
+
+
+
+  gettimeofday(&start,NULL);
+
   circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, aci_type);
+
+  gettimeofday(&end,NULL);
+
+  if(end.tv_usec < start.tv_usec) {
+    end.tv_sec--;
+    end.tv_usec += 1000000;
+  }
+  time_passed = ((end.tv_sec - start.tv_sec)*1000000) + (end.tv_usec - start.tv_usec);
+  if(time_passed > 1000) { /* more than 1ms */
+    log(LOG_NOTICE,"circuit_init(): get_unique_aci just took %d us!",time_passed);
+  }
+
+
+
 
   log(LOG_DEBUG,"circuit_init(): Chosen ACI %u.",circ->n_aci);
 
