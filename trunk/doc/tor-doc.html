@@ -288,15 +288,14 @@ servers, and you need to configure each client and server so it knows
 about your directory servers rather than the default ones.
 
 <ul>
-<li>1: Grab the latest release. Use at least 0.0.9pre5.
+<li>1: Grab the latest release. Use at least 0.0.9rc6.
 <li>2: For each directory server you want,
 <ul>
 <li>2a: Set it up as a server (see <a href="#server">"setting up a
 server"</a> above), with a least ORPort, DirPort, DataDirectory, and Nickname
 defined. Set "AuthoritativeDirectory 1".
 <li>2b: Set "RecommendedVersions" to a comma-separated list of acceptable
-versions of the code for clients and servers to be running (see step
-4c below).
+versions of the code for clients and servers to be running.
 <li>2c: Run it: <tt>tor --list-fingerprint</tt> if your torrc is in
 the default place, or <tt>tor -f torrc --list-fingerprint</tt> to
 specify one. This will generate your keys and output a fingerprint
