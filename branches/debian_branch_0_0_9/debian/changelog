@@ -1,3 +1,12 @@
+tor (0.0.9.6-1) unstable; urgency=low
+
+  * New upstream version.
+  * Upstream used newer auto* tools, so hopefully the new config.sub
+    and config.guess files (2003-08-18) are good enough to build
+    tor on ppc64 (closes: #300376: FTBFS on ppc64).
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 25 Mar 2005 01:34:28 +0100
+
 tor (0.0.9.5-1) unstable; urgency=low
 
   * New upstream version.
