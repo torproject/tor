@@ -441,6 +441,15 @@ int get_min_log_level(void)
   return min;
 }
 
+/** Switch all logs to output at most verbose level. */
+void switch_logs_debug(void)
+{
+  logfile_t *lf;
+  for (lf = logfiles; lf; lf=lf->next) {
+    lf->loglevel = LOG_DEBUG;
+  }
+}
+
 /*
   Local Variables:
   mode:c

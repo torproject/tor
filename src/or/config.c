@@ -104,7 +104,7 @@ static config_var_t config_vars[] = {
   VAR("DirPort",             UINT,     DirPort,              "0"),
   VAR("DirBindAddress",      LINELIST, DirBindAddress,       NULL),
   VAR("DirFetchPeriod",      INTERVAL, DirFetchPeriod,       "1 hour"),
-  VAR("DirPostPeriod",       INTERVAL, DirPostPeriod,        "10 mintues"),
+  VAR("DirPostPeriod",       INTERVAL, DirPostPeriod,        "10 minutes"),
   VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "10 minutes"),
   VAR("DirPolicy",           LINELIST, DirPolicy,            NULL),
   VAR("DirServer",           LINELIST, DirServers,           NULL),
