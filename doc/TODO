@@ -1,5 +1,7 @@
+improve how it behaves when i remove a line from the approved-routers files
     - Rotate tls-level connections -- make new ones, expire old ones.
       Nick, can you remember why we wanted to do this?
+on hup, retry_all_connections (plus binding? and closing i guess. hm.)
 
 Legend:
 SPEC!!  - Not specified
@@ -12,6 +14,11 @@ ARMA    - arma claims
         o Done
         D Deferred
         X Abandoned
+
+For 0.0.2pre15:
+        - don't pick exit nodes which will certainly reject all things.
+        - don't pick nodes that the directory says are down
+        - choose randomly from running dirservers, not just first one
 
 For 0.0.2pre14:
         o More flexible exit policies (18.*, 18.0.0.0/8)
@@ -30,9 +37,7 @@ For 0.0.2pre14:
                 o Choose the exit node _first_, then beginning, then
                   middle nodes.
 
-
 Short-term:
-        - choose randomly from running dirservers, not just first one
         - Make tls connections tls_close intentionally
         o Rename ACI to circID
         . integrate rep_ok functions, see what breaks
@@ -55,7 +60,7 @@ Short-term:
                         - Let user request first/last node
                         - And disallow certain nodes
                         D Choose path by jurisdiction, etc?
-                . Make relay end cells have failure status and payload attached
+                o Make relay end cells have failure status and payload attached
         X let non-approved routers handshake.
         - Dirserver shouldn't put you in running-routers list if you haven't
           uploaded a descriptor recently
@@ -98,6 +103,7 @@ On-going
 Mid-term:
         - Are there anonymity issues with sequential streamIDs? Sequential
           circIDs? Eg an attacker can learn how many there have been.
+          The fix is to initialize them randomly rather than at 1.
         - Look at having smallcells and largecells
         . Redo scheduler
                 o fix SSL_read bug for buffered records
@@ -202,6 +208,7 @@ Older (done) todo stuff:
                 o in descriptors
         o router posts descriptor
                 o when it boots
+                o every DirFetchPostPeriod seconds
                 D when it changes
         o change tls stuff so certs don't get written to disk, or read from disk
         o make directory.c 'thread'safe
