@@ -7,7 +7,18 @@
 
 #ifndef __LOG_H
 
+#ifdef HAVE_SYSLOG_H
 #include <syslog.h>
+#else
+#define LOG_DEBUG   0
+#define LOG_INFO    1
+#define LOG_NOTICE  2
+#define LOG_WARNING 3
+#define LOG_ERR     4
+#define LOG_CRIT    5
+#define LOG_ALERT   6
+#define LOG_EMERG   7
+#endif
 
 /* magic to make GCC check for proper format strings. */ 
 #ifdef __GNUC__

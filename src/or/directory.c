@@ -56,7 +56,7 @@ void directory_initiate_fetch(routerinfo_t *router) {
     connection_free(conn);
     return;
   }
-  fcntl(s, F_SETFL, O_NONBLOCK); /* set s to non-blocking */
+  set_socket_nonblocking(s);
 
   memset((void *)&router_addr,0,sizeof(router_addr));
   router_addr.sin_family = AF_INET;
@@ -254,7 +254,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
 
   switch(conn->state) {
     case DIR_CONN_STATE_CONNECTING:
-      if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, &e, &len) < 0)  { /* not yet */
+      if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
         if(errno != EINPROGRESS){
           /* yuck. kill it. */
           log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");

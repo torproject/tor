@@ -382,7 +382,7 @@ static int dns_spawn_worker(void) {
     return -1;
   }
 
-  fcntl(fd[0], F_SETFL, O_NONBLOCK); /* set it to non-blocking */
+  set_socket_nonblocking(fd[0]);
 
   /* set up conn so it's got all the data we need to remember */
   conn->receiver_bucket = -1; /* non-cell connections don't do receiver buckets */

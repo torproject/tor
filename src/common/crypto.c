@@ -40,11 +40,11 @@
 #define RETURN_SSL_OUTCOME(exp) return !(exp)
 #endif
 
-static inline const EVP_CIPHER *
-crypto_cipher_evp_cipher(int type, int enc);
+/* static INLINE const EVP_CIPHER *
+   crypto_cipher_evp_cipher(int type, int enc);
+*/
 
-
-static inline int 
+static INLINE int 
 crypto_cipher_iv_length(int type) {
   /*
   printf("%d -> %d IV\n",type, EVP_CIPHER_iv_length(
@@ -61,7 +61,7 @@ crypto_cipher_iv_length(int type) {
     }
 }
 
-static inline int
+static INLINE int
 crypto_cipher_key_length(int type) {
   /*
   printf("%d -> %d\n",type, EVP_CIPHER_key_length(
@@ -78,7 +78,7 @@ crypto_cipher_key_length(int type) {
     }
 }
 
-static inline const EVP_CIPHER *
+static INLINE const EVP_CIPHER *
 crypto_cipher_evp_cipher(int type, int enc) {
   switch(type) 
     {

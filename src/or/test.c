@@ -3,7 +3,14 @@
 /* $Id$ */
 
 #include <stdio.h>
+#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
+#endif
+
+#ifdef _MSC_VER
+/* For mkdir() */
+#include <direct.h>
+#endif
 
 #include "or.h"
 #include "../common/test.h"
@@ -26,8 +33,14 @@ dump_hex(char *s, int len)
 void
 setup_directory() {
   char buf[256];
+  int r;
   sprintf(buf, "/tmp/tor_test");
-  if (mkdir(buf, 0700) && errno != EEXIST)
+#ifdef _MSC_VER
+  r = mkdir(buf);
+#else
+  r = mkdir(buf, 0700);
+#endif
+  if (r && errno != EEXIST)
     fprintf(stderr, "Can't create directory %s", buf);
 }
 

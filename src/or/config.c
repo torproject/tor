@@ -83,7 +83,7 @@ struct config_line *config_get_lines(FILE *f) {
     }
 
     /* walk to the end, remove end whitespace */
-    s = index(line, 0); /* now we're at the null */
+    s = strchr(line, 0); /* now we're at the null */
     do {
       *s = 0;
       s--;

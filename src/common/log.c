@@ -3,6 +3,7 @@
 /* $Id$ */
 
 #include "../or/or.h"
+#include "util.h"
 
 static const char *sev_to_string(int severity) {
   switch(severity) {
@@ -30,8 +31,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
   assert(format);
   if (severity > loglevel)
     return;
-  if (gettimeofday(&now,NULL) < 0)
-    return;
+  my_gettimeofday(&now);
 
   t = time(NULL);
   strftime(buf, 200, "%b %d %H:%M:%S", localtime(&t));

@@ -25,7 +25,7 @@ char *conn_type_to_string[] = {
 };
 
 char *conn_state_to_string[][15] = {
-  { },         /* no type associated with 0 */
+	{ NULL },         /* no type associated with 0 */
   { "ready" }, /* op listener, 0 */
   { "awaiting keys", /* op, 0 */
     "open",              /* 1 */
@@ -146,7 +146,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
     return -1;
   }
 
-  setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+  setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&one, sizeof(one));
 
   if(bind(s,(struct sockaddr *)bindaddr,sizeof(*bindaddr)) < 0) {
     perror("bind ");
@@ -159,7 +159,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
     return -1;
   }
 
-  fcntl(s, F_SETFL, O_NONBLOCK); /* set s to non-blocking */
+  set_socket_nonblocking(s);
 
   conn = connection_new(type);
   if(!conn) {
@@ -199,7 +199,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   }
   log(LOG_INFO,"Connection accepted on socket %d (child of fd %d).",news, conn->s);
 
-  fcntl(news, F_SETFL, O_NONBLOCK); /* set news to non-blocking */
+  set_socket_nonblocking(news);
 
   newconn = connection_new(new_type);
   newconn->s = news;
