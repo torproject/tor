@@ -618,6 +618,18 @@ unsigned long tor_tls_get_n_bytes_written(tor_tls *tls)
   return BIO_number_written(SSL_get_wbio(tls->ssl));
 }
 
+void _assert_no_tls_errors(const char *fname, int line)
+{
+  if (ERR_peek_error() == 0)
+    return;
+  log_fn(LOG_ERR, "Unhandled OpenSSL errors found at %s:%d: ",
+         fname, line);
+  tls_log_errors(LOG_ERR, NULL);
+
+  tor_assert(0);
+}
+
+
 /*
   Local Variables:
   mode:c
