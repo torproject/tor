@@ -4,7 +4,7 @@
 # servers, and from them they get a list of currently up nodes.
 RouterFile @CONFDIR@/dirservers
 
-# Comment out if you don't want to allow applications to connect.
+# Replace this with "SocksPort 0" if you don't want clients to connect.
 SocksPort 9050
 SocksBindAddress 127.0.0.1 # accept connections only from localhost
 #SocksBindAddress 192.168.0.1:9100 # listen on a chosen IP/port
