@@ -551,7 +551,7 @@ void smartlist_insert(smartlist_t *sl, int idx, void *val)
 {
   tor_assert(sl);
   tor_assert(idx>=0);
-  tor_assert(idx < sl->num_used);
+  tor_assert(idx <= sl->num_used);
   if (idx == sl->num_used) {
     smartlist_add(sl, val);
   } else {
