@@ -1061,7 +1061,6 @@ int connection_outbuf_too_full(connection_t *conn);
 int connection_handle_write(connection_t *conn);
 void connection_write_to_buf(const char *string, int len, connection_t *conn);
 
-connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_get_by_identity_digest(const char *digest, int type);
 

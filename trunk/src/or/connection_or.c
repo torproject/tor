@@ -168,8 +168,11 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
   /* this function should never be called if we're already connected to
    * id_digest, but check first to be sure */
   conn = connection_get_by_identity_digest(id_digest, CONN_TYPE_OR);
-  if(conn)
+  if(conn) {
+    tor_assert(conn->nickname);
+    log_fn(LOG_WARN,"Asked me to connect to %s, but there's already a connection.", conn->nickname);
     return conn;
+  }
 
   conn = connection_new(CONN_TYPE_OR);
 

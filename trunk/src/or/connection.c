@@ -978,45 +978,6 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
   return best;
 }
 
-/** Find a connection to the router described by addr and port,
- * or alternately any router with the same identity key.
- * This connection <em>must</em> be in an "open" state.
- * If not, return NULL.
- */
-/* XXX this twin thing is busted, now that we're rotating onion
- * keys. abandon/patch? */
-connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
-  int i, n;
-  connection_t *conn;
-  routerinfo_t *router;
-  connection_t **carray;
-
-  /* first check if it's there exactly */
-  conn = connection_exact_get_by_addr_port(addr,port);
-  if(conn && connection_state_is_open(conn)) {
-    log(LOG_DEBUG,"connection_twin_get_by_addr_port(): Found exact match.");
-    return conn;
-  }
-
-  /* now check if any of the other open connections are a twin for this one */
-
-  router = router_get_by_addr_port(addr,port);
-  if(!router)
-    return NULL;
-
-  get_connection_array(&carray,&n);
-  for(i=0;i<n;i++) {
-    conn = carray[i];
-    tor_assert(conn);
-    if(connection_state_is_open(conn) &&
-       !crypto_pk_cmp_keys(conn->identity_pkey, router->identity_pkey)) {
-      log(LOG_DEBUG,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
-      return conn;
-    }
-  }
-  return NULL;
-}
-
 connection_t *connection_get_by_identity_digest(const char *digest, int type)
 {
   int i, n;

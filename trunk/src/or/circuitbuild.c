@@ -443,8 +443,6 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   relay_header_unpack(&rh, cell->payload);
 
   if (rh.length == 4+2+ONIONSKIN_CHALLENGE_LEN) {
-    /* Once this format is no longer supported, nobody will use
-     * connection_*_get_by_addr_port. */
     old_format = 1;
   } else if (rh.length == 4+2+ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN) {
     old_format = 0;
@@ -457,7 +455,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   circ->n_port = ntohs(get_uint16(cell->payload+RELAY_HEADER_SIZE+4));
 
   if (old_format) {
-    n_conn = connection_twin_get_by_addr_port(circ->n_addr,circ->n_port);
+    n_conn = connection_exact_get_by_addr_port(circ->n_addr,circ->n_port);
     onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
   } else {
     onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
@@ -465,7 +463,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     n_conn = connection_get_by_identity_digest(id_digest, CONN_TYPE_OR);
   }
 
-  if(!n_conn) { /* we should try to open a connection */
+  if(!n_conn || n_conn->state != OR_CONN_STATE_OPEN) {
      /* Note that this will close circuits where the onion has the same
      * router twice in a row in the path. I think that's ok.
      */
@@ -478,7 +476,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     if (old_format) {
       router = router_get_by_addr_port(circ->n_addr, circ->n_port);
       if(!router) {
-        log_fn(LOG_INFO,"Next hop is an unknown router. Closing.");
+        log_fn(LOG_WARN,"Next hop is an unknown router. Closing.");
         return -1;
       }
       id_digest = router->identity_digest;
@@ -499,19 +497,26 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     /* imprint the circuit with its future n_conn->id */
     memcpy(circ->n_conn_id_digest, id_digest, DIGEST_LEN);
 
-    n_conn = connection_or_connect(circ->n_addr, circ->n_port, id_digest);
-    if(!n_conn) {
-      log_fn(LOG_INFO,"Launching n_conn failed. Closing.");
-      return -1;
+    if(n_conn) {
+      circ->n_addr = n_conn->addr;
+      circ->n_port = n_conn->port;
+    } else {
+     /* we should try to open a connection */
+      n_conn = connection_or_connect(circ->n_addr, circ->n_port, id_digest);
+      if(!n_conn) {
+        log_fn(LOG_INFO,"Launching n_conn failed. Closing.");
+        return -1;
+      }
+      log_fn(LOG_DEBUG,"connecting in progress (or finished). Good.");
     }
-    log_fn(LOG_DEBUG,"connecting in progress (or finished). Good.");
     /* return success. The onion/circuit/etc will be taken care of automatically
      * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
      */
     return 0;
   }
 
-  circ->n_addr = n_conn->addr; /* these are different if we found a twin instead */
+  /* these may be different if the router connected to us from elsewhere */
+  circ->n_addr = n_conn->addr;
   circ->n_port = n_conn->port;
 
   circ->n_conn = n_conn;
@@ -1022,7 +1027,7 @@ static int count_acceptable_routers(smartlist_t *routers) {
     if(clique_mode()) {
       conn = connection_get_by_identity_digest(r->identity_digest,
                                                CONN_TYPE_OR);
-      if(!conn || conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN) {
+      if(!conn || conn->state != OR_CONN_STATE_OPEN) {
         log_fn(LOG_DEBUG,"Nope, %d is not connected.",i);
         goto next_i_loop;
       }

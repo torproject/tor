@@ -1308,7 +1308,7 @@ static int router_get_hash_impl(const char *s, char *digest,
     return -1;
   }
   if (start != s && *(start-1) != '\n') {
-    log_fn(LOG_WARN, "first occurance of \"%s\" is not at the start of a line",
+    log_fn(LOG_WARN, "first occurrence of \"%s\" is not at the start of a line",
            start_str);
     return -1;
   }
