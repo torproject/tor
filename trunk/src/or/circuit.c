@@ -2,6 +2,12 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/**
+ * \file circuit.c
+ * \brief Manage circuits and the global circuit list. Also handle
+ * relay cell encryption/decryption.
+ **/
+
 #include "or.h"
 
 extern or_options_t options; /* command-line and config-file options */
@@ -21,13 +27,22 @@ static void circuit_is_open(circuit_t *circ);
 static void circuit_build_failed(circuit_t *circ);
 static circuit_t *circuit_establish_circuit(uint8_t purpose, const char *exit_nickname);
 
+/** Stats: how many relay cells have originated at this hop, or have
+ * been relayed onward (not recognized at this hop)?
+ */
 unsigned long stats_n_relay_cells_relayed = 0;
+/** Stats: how many relay cells have been delivered to streams at this
+ * hop?
+ */
 unsigned long stats_n_relay_cells_delivered = 0;
 
 /********* START VARIABLES **********/
 
-static int circuitlist_len=0;
+/** A global (within this file) list of all circuits at this hop. */
 static circuit_t *global_circuitlist=NULL;
+/** How many entries are in global_circuitlist? */
+static int circuitlist_len=0;
+/** Array of strings to make circ-\>state human-readable */
 char *circuit_state_to_string[] = {
   "doing handshakes",        /* 0 */
   "processing the onion",    /* 1 */
@@ -37,7 +52,7 @@ char *circuit_state_to_string[] = {
 
 /********* END VARIABLES ************/
 
-/* add 'circ' to the global list of circuits. This is called only from
+/** Add <b>circ</b> to the global list of circuits. This is called only from
  * within circuit_new.
  */
 static void circuit_add(circuit_t *circ) {
@@ -51,26 +66,9 @@ static void circuit_add(circuit_t *circ) {
   ++circuitlist_len;
 }
 
-void circuit_remove(circuit_t *circ) {
-  circuit_t *tmpcirc;
-
-  tor_assert(circ && global_circuitlist);
-
-  if(global_circuitlist == circ) {
-    global_circuitlist = global_circuitlist->next;
-    --circuitlist_len;
-    return;
-  }
-
-  for(tmpcirc = global_circuitlist;tmpcirc->next;tmpcirc = tmpcirc->next) {
-    if(tmpcirc->next == circ) {
-      tmpcirc->next = circ->next;
-      --circuitlist_len;
-      return;
-    }
-  }
-}
-
+/** Detach from the global circuit list, and deallocate, all
+ * circuits that have been marked for close.
+ */
 void circuit_close_all_marked()
 {
   circuit_t *tmp,*m;
@@ -95,6 +93,9 @@ void circuit_close_all_marked()
   }
 }
 
+/** Allocate space for a new circuit, initializing with <b>p_circ_id</b>
+ * and <b>p_conn</b>. Add it to the global circuit list.
+ */
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
   circuit_t *circ;
 
@@ -122,6 +123,8 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
   return circ;
 }
 
+/** Deallocate space associated with circ.
+ */
 void circuit_free(circuit_t *circ) {
   tor_assert(circ);
   tor_assert(circ->magic == CIRCUIT_MAGIC);
@@ -148,6 +151,7 @@ void circuit_free(circuit_t *circ) {
   free(circ);
 }
 
+/** Deallocate space associated with the linked list <b>cpath</b>. */
 void circuit_free_cpath(crypt_path_t *cpath) {
   crypt_path_t *victim, *head=cpath;
 
@@ -165,6 +169,7 @@ void circuit_free_cpath(crypt_path_t *cpath) {
   circuit_free_cpath_node(cpath);
 }
 
+/** Deallocate space associated with the cpath node <b>victim</b>. */
 static void circuit_free_cpath_node(crypt_path_t *victim) {
   if(victim->f_crypto)
     crypto_free_cipher_env(victim->f_crypto);
@@ -179,7 +184,13 @@ static void circuit_free_cpath_node(crypt_path_t *victim) {
   free(victim);
 }
 
-/* return 0 if can't get a unique circ_id. */
+/** Iterate over values of circ_id, starting from conn-\>next_circ_id,
+ * and with the high bit specified by circ_id_type (see
+ * decide_circ_id_type()), until we get a circ_id that is not in use
+ * by any other circuit on that conn.
+ *
+ * Return it, or 0 if can't get a unique circ_id.
+ */
 static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type) {
   uint16_t test_circ_id;
   int attempts=0;
@@ -207,6 +218,12 @@ static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type)
   return test_circ_id;
 }
 
+/** Return a circ such that:
+ *  - circ-\>n_circ_id or circ-\>p_circ_id is equal to <b>circ_id</b>, and
+ *  - circ is attached to <b>conn</b>, either as p_conn, n-conn, or
+ *    in p_streams or n_streams.
+ * Return NULL if no such circuit exists.
+ */
 circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn) {
   circuit_t *circ;
   connection_t *tmpconn;
@@ -239,6 +256,11 @@ circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn) {
   return NULL;
 }
 
+/** Return a circ such that circ is attached to <b>conn</b>, either as
+ * p_conn, n-conn, or in p_streams or n_streams.
+ *
+ * Return NULL if no such circuit exists.
+ */
 circuit_t *circuit_get_by_conn(connection_t *conn) {
   circuit_t *circ;
   connection_t *tmpconn;
@@ -264,7 +286,8 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
   return NULL;
 }
 
-/* Return 1 iff 'c' could be returned by circuit_get_best.
+/* Return 1 if <b>circ</b> could be returned by circuit_get_best().
+ * Else return 0.
  */
 static int circuit_is_acceptable(circuit_t *circ,
                                  connection_t *conn,
@@ -333,8 +356,8 @@ static int circuit_is_acceptable(circuit_t *circ,
   return 1;
 }
 
-/* Return 1 iff circuit 'a' is better than circuit 'b' for purpose.  Used by
- * circuit_get_best
+/* Return 1 if circuit <b>a</b> is better than circuit <b>b</b> for
+ * <b>purpose</b>, and return 0 otherwise. Used by circuit_get_best.
  */
 static int circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
 {
@@ -367,9 +390,10 @@ static int circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
   return 0;
 }
 
-/* Find the best circ that conn can use, preferably one which is
+/** Find the best circ that conn can use, preferably one which is
  * dirty. Circ must not be too old.
- * conn must be defined.
+ *
+ * Conn must be defined.
  *
  * If must_be_open, ignore circs not in CIRCUIT_STATE_OPEN.
  *
@@ -407,6 +431,12 @@ circuit_t *circuit_get_best(connection_t *conn,
   return best;
 }
 
+/** Return a circ such that:
+ *  - circ-\>rend_query is equal to <b>rend_query</b>, and
+ *  - circ-\>purpose is equal to <b>purpose</b>.
+ *
+ * Return NULL if no such circuit exists.
+ */
 circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose) {
   circuit_t *circ;
 
@@ -419,9 +449,9 @@ circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t
   return NULL;
 }
 
-/* Return the first circuit in global_circuitlist after 'start' whose
- * rend_pk_digest field is 'digest' and whose purpose is purpose. Returns
- * NULL if no circuit is found.  If 'start' is null, begin at the start of
+/** Return the first circuit in global_circuitlist after <b>start</b> whose
+ * rend_pk_digest field is <b>digest</b> and whose purpose is <b>purpose</b>. Returns
+ * NULL if no circuit is found.  If <b>start</b> is NULL, begin at the start of
  * the list.
  */
 circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
@@ -444,7 +474,7 @@ circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
   return NULL;
 }
 
-/* Return the circuit waiting for a rendezvous with the provided cookie.
+/** Return the circuit waiting for a rendezvous with the provided cookie.
  * Return NULL if no such circuit is found.
  */
 circuit_t *circuit_get_rendezvous(const char *cookie)
@@ -459,14 +489,15 @@ circuit_t *circuit_get_rendezvous(const char *cookie)
   return NULL;
 }
 
-#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 30
-/* circuits that were born at the end of their second might be expired
+/** Circuits that were born at the end of their second might be expired
  * after 30.1 seconds; circuits born at the beginning might be expired
  * after closer to 31 seconds.
  */
+#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 30
 
-/* close all circuits that start at us, aren't open, and were born
- * at least MIN_SECONDS_BEFORE_EXPIRING_CIRC seconds ago */
+/** Close all circuits that start at us, aren't open, and were born
+ * at least MIN_SECONDS_BEFORE_EXPIRING_CIRC seconds ago.
+ */
 void circuit_expire_building(time_t now) {
   circuit_t *victim, *circ = global_circuitlist;
 
@@ -531,7 +562,8 @@ void circuit_expire_building(time_t now) {
   }
 }
 
-/* count the number of circs starting at us that aren't open */
+/** Count the number of circs originating here that aren't open, and
+ * that have the specified <b>purpose</b>. */
 int circuit_count_building(uint8_t purpose) {
   circuit_t *circ;
   int num=0;
@@ -546,8 +578,12 @@ int circuit_count_building(uint8_t purpose) {
   return num;
 }
 
+/** How many circuits do we want simultaneously in-progress to handle
+ * a given stream?
+ */
 #define MIN_CIRCUITS_HANDLING_STREAM 2
-/* return 1 if at least MIN_CIRCUITS_HANDLING_STREAM non-open
+
+/** Return 1 if at least MIN_CIRCUITS_HANDLING_STREAM non-open
  * general-purpose circuits will have an acceptable exit node for
  * conn. Else return 0.
  */
@@ -571,6 +607,10 @@ int circuit_stream_is_being_handled(connection_t *conn) {
   return 0;
 }
 
+/** Return the circuit that is open, has specified <b>purpose</b>,
+ * has a timestamp_dirty value of 0, and was created most recently,
+ * or NULL if no circuit fits this description.
+ */
 static circuit_t *
 circuit_get_youngest_clean_open(uint8_t purpose) {
   circuit_t *circ;
@@ -586,10 +626,10 @@ circuit_get_youngest_clean_open(uint8_t purpose) {
   return youngest;
 }
 
-/* Build a new test circuit every 5 minutes */
+/** Build a new test circuit every 5 minutes */
 #define TESTING_CIRCUIT_INTERVAL 300
 
-/* this function is called once a second. its job is to make sure
+/** This function is called once a second. Its job is to make sure
  * all services we offer have enough circuits available. Some
  * services just want enough circuits for current tasks, whereas
  * others want a minimum set of idle circuits hanging around.
@@ -620,6 +660,10 @@ void circuit_build_needed_circs(time_t now) {
     }
   }
 
+/** How many simultaneous in-progress general-purpose circuits do we
+ * want to be building at once, if there are no open general-purpose
+ * circuits?
+ */
 #define CIRCUIT_MIN_BUILDING_GENERAL 3
   /* if there's no open circ, and less than 3 are on the way,
    * go ahead and try another. */
@@ -631,7 +675,9 @@ void circuit_build_needed_circs(time_t now) {
   /* XXX count idle rendezvous circs and build more */
 }
 
-/* update digest from the payload of cell. assign integrity part to cell. */
+/** Update digest from the payload of cell. Assign integrity part to
+ * cell.
+ */
 static void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
   char integrity[4];
   relay_header_t rh;
@@ -645,8 +691,10 @@ static void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
   relay_header_pack(cell->payload, &rh);
 }
 
-/* update digest from the payload of cell (with the integrity part set
- * to 0). If the integrity part is valid return 1, else restore digest
+/** Does the digest for this circuit indicate that this cell is for us?
+ *
+ * Update digest from the payload of cell (with the integrity part set
+ * to 0). If the integrity part is valid, return 1, else restore digest
  * and cell to their original state and return 0.
  */
 static int relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell) {
@@ -683,6 +731,13 @@ static int relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell) {
   return 1;
 }
 
+/** Apply <b>cipher</b> to CELL_PAYLOAD_SIZE bytes of <b>in</b>
+ * (in place).
+ *
+ * If <b>encrypt_mode</b> is 1 then encrypt, else decrypt.
+ *
+ * Return -1 if the crypto fails, else return 0.
+ */
 static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
                                    int encrypt_mode) {
   char out[CELL_PAYLOAD_SIZE]; /* 'in' must be this size too */
@@ -701,13 +756,15 @@ static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
   return 0;
 }
 
-/*
-receive a relay cell:
-  - crypt it (encrypt APward, decrypt at AP, decrypt exitward)
-  - check if recognized (if exitward)
-  - if recognized, check digest, find right conn, deliver to edge.
-  - else connection_or_write_cell_to_buf to the right conn
-*/
+/** Receive a relay cell:
+ *  - Crypt it (encrypt APward, decrypt at AP, decrypt exitward).
+ *  - Check if recognized (if exitward).
+ *  - If recognized and the digest checks out, then find if there's
+ *    a conn that the cell is intended for, and deliver it to 
+ *    connection_edge.
+ *  - Else connection_or_write_cell_to_buf to the conn on the other
+ *    side of the circuit.
+ */
 int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction) {
   connection_t *conn=NULL;
@@ -776,6 +833,23 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
   return 0;
 }
 
+/** Do the appropriate en/decryptions for <b>cell</b> arriving on
+ * <b>circ</b> in direction <b>cell_direction</b>.
+ *
+ * If cell_direction == CELL_DIRECTION_IN:
+ *   - If we're at the origin (we're the OP), for hops 1..N,
+ *     decrypt cell. If recognized, stop.
+ *   - Else (we're not the OP), encrypt one hop. Cell is not recognized.
+ *
+ * If cell_direction == CELL_DIRECTION_OUT:
+ *   - decrypt one hop. Check if recognized.
+ *
+ * If cell is recognized, set *recognized to 1, and set
+ * *layer_hint to the hop that recognized it.
+ *
+ * Return -1 to indicate that we should mark the circuit for close,
+ * else return 0.
+ */
 /* wrap this into receive_relay_cell one day */
 static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
                        crypt_path_t **layer_hint, char *recognized) {
@@ -786,8 +860,8 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
   tor_assert(cell_direction == CELL_DIRECTION_IN || cell_direction == CELL_DIRECTION_OUT);
 
   if(cell_direction == CELL_DIRECTION_IN) {
-    if(CIRCUIT_IS_ORIGIN(circ)) { /* we're at the beginning of the circuit.
-                                     We'll want to do layered crypts. */
+    if(CIRCUIT_IS_ORIGIN(circ)) { /* We're at the beginning of the circuit.
+                                     We'll want to do layered decrypts. */
       tor_assert(circ->cpath);
       thishop = circ->cpath;
       if(thishop->state != CPATH_STATE_OPEN) {
@@ -837,11 +911,10 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
   return 0;
 }
 
-/*
-package a relay cell:
- 1) encrypt it to the right conn
- 2) connection_or_write_cell_to_buf to the right conn
-*/
+/** Package a relay cell:
+ *  - Encrypt it to the right layer
+ *  - connection_or_write_cell_to_buf to the right conn
+ */
 int
 circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
                            int cell_direction,
@@ -886,6 +959,9 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
   return 0;
 }
 
+/** If cell's stream_id matches the stream_id of any conn that's
+ * attached to circ, return that conn, else return NULL.
+ */
 static connection_t *
 relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
 {
@@ -924,6 +1000,11 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
   return NULL; /* probably a begin relay cell */
 }
 
+/** The circuit <b>circ</b> has received a circuit-level sendme
+ * (on hop <b>layer_hint</b>, if we're the OP). Go through all the
+ * attached streams and let them resume reading and packaging, if
+ * their stream windows allow it.
+ */
 void circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint) {
 
   log_fn(LOG_DEBUG,"resuming");
@@ -933,6 +1014,10 @@ void circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint) {
     circuit_resume_edge_reading_helper(circ->p_streams, circ, layer_hint);
 }
 
+/** A helper function for circuit_resume_edge_reading() above.
+ * The arguments are the same, except that <b>conn</b> is the head
+ * of a linked list of edge streams that should each be considered.
+ */
 static int
 circuit_resume_edge_reading_helper(connection_t *conn,
                                    circuit_t *circ,
@@ -955,8 +1040,12 @@ circuit_resume_edge_reading_helper(connection_t *conn,
   return 0;
 }
 
-/* returns -1 if the window is empty, else 0.
- * If it's empty, tell edge conns to stop reading. */
+/** Check if the package window for <b>circ</b> is empty (at
+ * hop <b>layer_hint</b> if it's defined).
+ *
+ * If yes, tell edge streams to stop reading and return -1.
+ * Else return 0.
+ */
 int circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint) {
   connection_t *conn = NULL;
 
@@ -979,6 +1068,12 @@ int circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint
   return 0;
 }
 
+/** Check if the deliver_window for circuit <b>circ</b> (at hop
+ * <b>layer_hint</b> if it's defined) is low enough that we should
+ * send a circuit-level sendme back down the circuit. If so, send
+ * enough sendmes that the window would be overfull if we sent any
+ * more.
+ */
 void circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint) {
 //  log_fn(LOG_INFO,"Considering: layer_hint is %s",
 //         layer_hint ? "defined" : "null");
@@ -997,6 +1092,21 @@ void circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint) 
   }
 }
 
+/** Mark <b>circ</b> to be closed next time we call
+ * circuit_close_all_marked(). Do any cleanup needed:
+ *   - If state is onionskin_pending, remove circ from the onion_pending
+ *     list.
+ *   - If circ isn't open yet, call circuit_build_failed() if we're
+ *     the origin, and in case call circuit_rep_hist_note_result()
+ *     to note stats.
+ *   - If purpose is C_INTRODUCE_ACK_WAIT, remove the intro point we
+ *     just tried from our list of intro points for that service
+ *     descriptor.
+ *   - Send appropriate destroys and edge_destroys for conns and
+ *     streams attached to circ.
+ *   - If circ->rend_splice is set (we are the midpoint of a joined
+ *     rendezvous stream), then mark the other circuit to close as well.
+ */
 int _circuit_mark_for_close(circuit_t *circ) {
   connection_t *conn;
 
@@ -1049,6 +1159,9 @@ int _circuit_mark_for_close(circuit_t *circ) {
   return 0;
 }
 
+/** If the stream <b>conn</b> is a member of any of the linked
+ * lists of <b>circ</b>, then remove it from the list.
+ */
 void circuit_detach_stream(circuit_t *circ, connection_t *conn) {
   connection_t *prevconn;
 
@@ -1098,8 +1211,16 @@ void circuit_detach_stream(circuit_t *circ, connection_t *conn) {
   tor_assert(0); /* should never get here */
 }
 
+/** Notify the global circuit list that <b>conn</b> is about to be
+ * removed and then freed.
+ *
+ * If it's an OR conn, then mark-for-close all the circuits that use
+ * that conn.
+ *
+ * If it's an edge conn, then detach it from its circ, so we don't
+ * try to reference it later.
+ */
 void circuit_about_to_close_connection(connection_t *conn) {
-  /* send destroys for all circuits using conn */
   /* currently, we assume it's too late to flush conn's buf here.
    * down the road, maybe we'll consider that eof doesn't mean can't-write
    */
@@ -1138,6 +1259,10 @@ void circuit_about_to_close_connection(connection_t *conn) {
   } /* end switch */
 }
 
+/** Log, at severity <b>severity</b>, the nicknames of each router in
+ * circ's cpath. Also log the length of the cpath, and the intended
+ * exit point.
+ */
 void circuit_log_path(int severity, circuit_t *circ) {
   char buf[1024];
   char *s = buf;
@@ -1167,7 +1292,7 @@ void circuit_log_path(int severity, circuit_t *circ) {
   log_fn(severity,"%s",buf);
 }
 
-/* Tell the rep(utation)hist(ory) module about the status of the links
+/** Tell the rep(utation)hist(ory) module about the status of the links
  * in circ.  Hops that have become OPEN are marked as successfully
  * extended; the _first_ hop that isn't open (if any) is marked as
  * unable to extend.
@@ -1209,6 +1334,9 @@ circuit_rep_hist_note_result(circuit_t *circ)
   } while (hop!=circ->cpath);
 }
 
+/** A helper function for circuit_dump_by_conn() below. Log a bunch
+ * of information about circuit <b>circ</b>.
+ */
 static void
 circuit_dump_details(int severity, circuit_t *circ, int poll_index,
                      char *type, int this_circid, int other_circid) {
@@ -1227,6 +1355,9 @@ circuit_dump_details(int severity, circuit_t *circ, int poll_index,
   }
 }
 
+/** Log, at severity <b>severity</b>, information about each circuit
+ * that is connected to <b>conn</b>.
+ */
 void circuit_dump_by_conn(connection_t *conn, int severity) {
   circuit_t *circ;
   connection_t *tmpconn;
@@ -1253,9 +1384,15 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
   }
 }
 
-/* Don't keep more than 10 unused open circuits around. */
+/** Don't keep more than 10 unused open circuits around. */
 #define MAX_UNUSED_OPEN_CIRCUITS 10
 
+/** Find each circuit that has been dirty for too long, and has
+ * no streams on it: mark it for close.
+ *
+ * Also, if there are more than MAX_UNUSED_OPEN_CIRCUITS open and
+ * unused circuits, then mark the excess circs for close.
+ */
 void circuit_expire_old_circuits(void) {
   circuit_t *circ;
   time_t now = time(NULL);
@@ -1300,6 +1437,12 @@ void circuit_expire_old_circuits(void) {
   smartlist_free(unused_open_circs);
 }
 
+/** The circuit <b>circ</b> has just become open. Take the next
+ * step: for rendezvous circuits, we pass circ to the appropriate
+ * function in rendclient or rendservice. For general circuits, we
+ * call connection_ap_attach_pending, which looks for pending streams
+ * that could use circ.
+ */
 static void circuit_is_open(circuit_t *circ) {
 
   switch(circ->purpose) {
@@ -1328,7 +1471,7 @@ static void circuit_is_open(circuit_t *circ) {
   }
 }
 
-/* Called whenever a circuit could not be successfully built.
+/*~ Called whenever a circuit could not be successfully built.
  */
 static void circuit_build_failed(circuit_t *circ) {
 
@@ -1395,16 +1538,16 @@ static void circuit_build_failed(circuit_t *circ) {
   }
 }
 
-/* Number of consecutive failures so far; should only be touched by
+/** Number of consecutive failures so far; should only be touched by
  * circuit_launch_new and circuit_*_failure_count.
  */
 static int n_circuit_failures = 0;
 
-/* Don't retry launching a new circuit if we try this many times with no
+/** Don't retry launching a new circuit if we try this many times with no
  * success. */
 #define MAX_CIRCUIT_FAILURES 5
 
-/* Launch a new circuit and return a pointer to it. Return NULL if you failed. */
+/** Launch a new circuit and return a pointer to it. Return NULL if you failed. */
 circuit_t *circuit_launch_new(uint8_t purpose, const char *exit_nickname) {
 
   if (n_circuit_failures > MAX_CIRCUIT_FAILURES) {
@@ -1417,15 +1560,29 @@ circuit_t *circuit_launch_new(uint8_t purpose, const char *exit_nickname) {
   return circuit_establish_circuit(purpose, exit_nickname);
 }
 
+/** Record another failure at opening a general circuit. When we have
+ * too many, we'll stop trying for the remainder of this minute.
+ */
 void circuit_increment_failure_count(void) {
   ++n_circuit_failures;
   log_fn(LOG_DEBUG,"n_circuit_failures now %d.",n_circuit_failures);
 }
 
+/** Reset the failure count for opening general circuits. This means
+ * we will try MAX_CIRCUIT_FAILURES times more (if necessary) before
+ * stopping again.
+ */
 void circuit_reset_failure_count(void) {
   n_circuit_failures = 0;
 }
 
+/** Build a new circuit for <b>purpose</b>. If <b>exit_nickname</b>
+ * is defined, then use that as your exit router, else choose a suitable
+ * exit node.
+ *
+ * Also launch a connection to the first OR in the chosen path, if
+ * it's not open already.
+ */
 static circuit_t *circuit_establish_circuit(uint8_t purpose,
                                             const char *exit_nickname) {
   routerinfo_t *firsthop;
@@ -1487,7 +1644,9 @@ static circuit_t *circuit_establish_circuit(uint8_t purpose,
   return circ;
 }
 
-/* find circuits that are waiting on me, if any, and get them to send the onion */
+/** Find circuits that are waiting on <b>or_conn</b> to become open,
+ * if any, and get them to send their create cells forward.
+ */
 void circuit_n_conn_open(connection_t *or_conn) {
   circuit_t *circ;
 
@@ -1510,6 +1669,16 @@ void circuit_n_conn_open(connection_t *or_conn) {
 
 extern int has_completed_circuit;
 
+/** This is the backbone function for building circuits.
+ *
+ * If circ's first hop is closed, then we need to build a create
+ * cell and send it forward.
+ *
+ * Otherwise, we need to build a relay extend cell and send it
+ * forward.
+ *
+ * Return -1 if we want to tear down circ, else return 0.
+ */
 int circuit_send_next_onion_skin(circuit_t *circ) {
   cell_t cell;
   crypt_path_t *hop;
@@ -1593,7 +1762,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   return 0;
 }
 
-/* take the 'extend' cell, pull out addr/port plus the onion skin. Make
+/** Take the 'extend' cell, pull out addr/port plus the onion skin. Make
  * sure we're connected to the next hop, and pass it the onion skin in
  * a create cell.
  */
@@ -1657,13 +1826,13 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   return 0;
 }
 
-/* Initialize cpath->{f|b}_{crypto|digest} from the key material in
+/** Initialize cpath-\>{f|b}_{crypto|digest} from the key material in
  * key_data.  key_data must contain CPATH_KEY_MATERIAL bytes, which are
  * used as follows:
- *       20 to initialize f_digest
- *       20 to initialize b_digest
- *       16 to key f_crypto
- *       16 to key b_crypto
+ *   - 20 to initialize f_digest
+ *   - 20 to initialize b_digest
+ *   - 16 to key f_crypto
+ *   - 16 to key b_crypto
  *
  * (If 'reverse' is true, then f_XX and b_XX are swapped.)
  */
@@ -1708,6 +1877,14 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
   return 0;
 }
 
+/** A created or extended cell came back to us on the circuit,
+ * and it included <b>reply</b> (the second DH key, plus KH).
+ *
+ * Calculate the appropriate keys and digests, make sure KH is
+ * correct, and initialize this hop of the cpath.
+ *
+ * Return -1 if we want to mark circ for close, else return 0.
+ */
 int circuit_finish_handshake(circuit_t *circ, char *reply) {
   unsigned char keys[CPATH_KEY_MATERIAL_LEN];
   crypt_path_t *hop;
@@ -1747,6 +1924,12 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   return 0;
 }
 
+/** We received a relay truncated cell on circ.
+ *
+ * Since we don't ask for truncates currently, getting a truncated
+ * means that a connection broke or an extend failed. For now,
+ * just give up: for circ to close, and return 0.
+ */
 int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
   crypt_path_t *victim;
   connection_t *stream;
@@ -1784,6 +1967,9 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
   return 0;
 }
 
+/** Verify that cpath layer <b>cp</b> has all of its invariants
+ * correct. Trigger an assert if anything is invalid.
+ */
 void assert_cpath_layer_ok(const crypt_path_t *cp)
 {
   tor_assert(cp->f_crypto);
@@ -1806,6 +1992,9 @@ void assert_cpath_layer_ok(const crypt_path_t *cp)
   tor_assert(cp->deliver_window >= 0);
 }
 
+/** Verify that cpath <b>cp</b> has all of its invariants
+ * correct. Trigger an assert if anything is invalid.
+ */
 void assert_cpath_ok(const crypt_path_t *cp)
 {
   while(cp->prev)
@@ -1826,6 +2015,9 @@ void assert_cpath_ok(const crypt_path_t *cp)
   }
 }
 
+/** Verify that circuit <b>c</b> has all of its invariants
+ * correct. Trigger an assert if anything is invalid.
+ */
 void assert_circuit_ok(const circuit_t *c)
 {
   connection_t *conn;
