@@ -1091,7 +1091,7 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
 
   if(connection_add(conn) < 0) { /* no space, forget it */
     connection_free(conn); /* this closes fd[0] */
-    close(fd[1]);
+    tor_close_socket(fd[1]);
     return -1;
   }
 
@@ -1101,7 +1101,7 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   /* attaching to a dirty circuit is fine */
   if (connection_ap_handshake_attach_circuit(conn) < 0) {
     connection_mark_for_close(conn, 0);
-    close(fd[1]);
+    tor_close_socket(fd[1]);
     return -1;
   }
 

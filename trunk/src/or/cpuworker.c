@@ -149,7 +149,7 @@ int cpuworker_main(void *data) {
   char tag[TAG_LEN];
   crypto_pk_env_t *onion_key = NULL, *last_onion_key = NULL;
 
-  close(fdarray[0]); /* this is the side of the socketpair the parent uses */
+  tor_close_socket(fdarray[0]); /* this is the side of the socketpair the parent uses */
   fd = fdarray[1]; /* this side is ours */
 #ifndef MS_WINDOWS
   connection_free_all(); /* so the child doesn't hold the parent's fd's open */
@@ -220,7 +220,7 @@ static int spawn_cpuworker(void) {
 
   spawn_func(cpuworker_main, (void*)fd);
   log_fn(LOG_DEBUG,"just spawned a worker.");
-  close(fd[1]); /* we don't need the worker's side of the pipe */
+  tor_close_socket(fd[1]); /* we don't need the worker's side of the pipe */
 
   conn = connection_new(CONN_TYPE_CPUWORKER);
 

@@ -930,7 +930,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
         goto tidy_up_and_fail;
     if (size != sizeof(listen_addr))
         goto abort_tidy_up_and_fail;
-    close(listener);
+    tor_close_socket(listener);
     /* Now check we are talking to ourself by matching port and host on the
        two sockets.  */
     if (getsockname(connector, (struct sockaddr *) &connect_addr, &size) == -1)
@@ -955,11 +955,11 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     {
         int save_errno = errno;
         if (listener != -1)
-            close(listener);
+            tor_close_socket(listener);
         if (connector != -1)
-            close(connector);
+            tor_close_socket(connector);
         if (acceptor != -1)
-            close(acceptor);
+            tor_close_socket(acceptor);
         errno = save_errno;
         return -1;
     }
@@ -1319,7 +1319,7 @@ void write_pidfile(char *filename) {
     log_fn(LOG_WARN, "unable to open %s for writing: %s", filename,
            strerror(errno));
   } else {
-    fprintf(pidfile, "%d", (int)getpid());
+    fprintf(pidfile, "%d\n", (int)getpid());
     fclose(pidfile);
   }
 #endif

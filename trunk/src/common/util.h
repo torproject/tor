@@ -56,6 +56,12 @@
  } } while (0)
 #endif
 
+#ifdef MS_WINDOWS
+#define tor_close_socket(s) socketclose(s)
+#else
+#define tor_close_socket(s) close(s)
+#endif
+
 /* legal characters in a filename */
 #define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
 
