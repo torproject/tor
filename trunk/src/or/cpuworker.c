@@ -234,7 +234,7 @@ static int cpuworker_main(void *data) {
         memset(buf,0,LEN_ONION_RESPONSE); /* send all zeros for failure */
       } else {
         /* success */
-        log_fn(LOG_INFO,"onion_skin_server_handshake succeeded.");
+        log_fn(LOG_DEBUG,"onion_skin_server_handshake succeeded.");
         buf[0] = 1; /* 1 means success */
         memcpy(buf+1,tag,TAG_LEN);
         memcpy(buf+1+TAG_LEN,reply_to_proxy,ONIONSKIN_REPLY_LEN);
