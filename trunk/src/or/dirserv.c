@@ -998,3 +998,31 @@ size_t dirserv_get_runningrouters(const char **rr, int compress)
   return compress ? the_runningrouters_z_len : the_runningrouters_len;
 }
 
+void
+dirserv_free_all(void)
+{
+  if (fingerprint_list) {
+    SMARTLIST_FOREACH(fingerprint_list, fingerprint_entry_t*, fp,
+                      { tor_free(fp->nickname);
+                        tor_free(fp->fingerprint);
+                        tor_free(fp); });
+    smartlist_free(fingerprint_list);
+    fingerprint_list = NULL;
+  }
+  if (descriptor_list) {
+    SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t*, d,
+                      free_descriptor_entry(d));
+    smartlist_free(descriptor_list);
+    descriptor_list = NULL;
+  }
+  tor_free(the_directory);
+  tor_free(the_directory_z);
+  the_directory_len = 0;
+  the_directory_z_len = 0;
+  tor_free(cached_directory.dir);
+  tor_free(cached_directory.dir_z);
+  tor_free(cached_runningrouters.dir);
+  tor_free(cached_runningrouters.dir_z);
+  memset(&cached_directory, 0, sizeof(cached_directory));
+  memset(&cached_runningrouters, 0, sizeof(cached_runningrouters));
+}

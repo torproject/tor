@@ -80,7 +80,7 @@ static void rend_service_free(rend_service_t *service)
 /** Release all the storage held in rend_service_list, and allocate a new,
  * empty rend_service_list.
  */
-static void rend_service_free_all(void)
+void rend_service_free_all(void)
 {
   if (!rend_service_list) {
     rend_service_list = smartlist_create();
@@ -89,7 +89,7 @@ static void rend_service_free_all(void)
   SMARTLIST_FOREACH(rend_service_list, rend_service_t*, ptr,
                     rend_service_free(ptr));
   smartlist_free(rend_service_list);
-  rend_service_list = smartlist_create();
+  rend_service_list = NULL;
 }
 
 /** Validate <b>service</b> and add it to rend_service_list if possible.
@@ -190,8 +190,10 @@ int rend_config_services(or_options_t *options, int validate_only)
   rend_service_t *service = NULL;
   rend_service_port_config_t *portcfg;
 
-  if (!validate_only)
+  if (!validate_only) {
     rend_service_free_all();
+    rend_service_list = smartlist_create();
+  }
 
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {

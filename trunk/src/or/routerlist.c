@@ -716,6 +716,22 @@ void routerlist_free(routerlist_t *rl)
   tor_free(rl);
 }
 
+void routerlist_free_current(void)
+{
+  routerlist_free(routerlist);
+  routerlist = NULL;
+}
+
+void free_trusted_dir_servers(void)
+{
+  if (trusted_dir_servers) {
+    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+                      { tor_free(ds->address); tor_free(ds); });
+    smartlist_free(trusted_dir_servers);
+    trusted_dir_servers = NULL;
+  }
+}
+
 /** Mark the router with ID <b>digest</b> as non-running in our routerlist. */
 void router_mark_as_down(const char *digest) {
   routerinfo_t *router;

@@ -730,3 +730,9 @@ int rep_hist_get_predicted_hidserv(time_t now, int *need_uptime, int *need_capac
 void rep_hist_note_used_resolve(time_t now) { }
 int rep_hist_get_predicted_resolve(time_t now) { return 0; }
 
+void rep_hist_free_all(void)
+{
+  strmap_free(history_map, free_or_history);
+  tor_free(read_array);
+  tor_free(write_array);
+}

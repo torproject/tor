@@ -1304,8 +1304,23 @@ static int tor_init(int argc, char *argv[]) {
  *
  * Also valgrind should then report 0 reachable in its
  * leak report */
-void tor_free_all(void) {
-
+void tor_free_all(void)
+{
+  routerlist_free_current();
+  free_trusted_dir_servers();
+  client_dns_free_all();
+  free_socks_policy();
+  free_dir_policy();
+  dirserv_free_all();
+  rend_service_free_all();
+  rep_hist_free_all();
+  /* cache in dns.c */
+  /* onion queue in onion.c */
+  /* the circuits. */
+  /* the connections. */
+  /* the config */
+  /* My routerinfo_t */
+  /* all keys. */
 }
 
 /** Do whatever cleanup is necessary before shutting Tor down. */
