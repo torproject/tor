@@ -5,7 +5,7 @@ Quickstart version for users:
 1) tar xvf it, and then cd into the directory.
 2) ./configure
 3) make
-4) make install (as root)
+4) make install (as root if necessary)
 5) tor (if it doesn't work, give it the whole path or fix your path)
   You don't need to run this as root, and you probably shouldn't.
   (If you're having problems, try running it with "-l info" to get
