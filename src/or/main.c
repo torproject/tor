@@ -335,7 +335,7 @@ static int prepare_for_poll(void) {
         /* NOTE directory servers do not currently fetch directories.
          * Hope this doesn't bite us later.
          */
-        directory_initiate_fetch(router_pick_directory_server());
+        directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_GET);
         time_to_fetch_directory = now.tv_sec + options.DirFetchPeriod;
       }
     }
@@ -492,7 +492,7 @@ static int do_main_loop(void) {
           log(LOG_ERR,"Error reloading router list. Continuing with old list.");
         }
       } else {
-        directory_initiate_fetch(router_pick_directory_server());
+        directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_GET);
       }
       please_fetch_directory = 0;
     }
@@ -770,6 +770,10 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   }
 
   return 0;
+}
+
+char *router_get_my_descriptor(void) {
+  return "this is bob's descriptor";
 }
 
 void daemonize(void) {

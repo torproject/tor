@@ -189,6 +189,74 @@ int fetch_from_buf(char *string, int string_len,
   return *buf_datalen;
 }
 
+/* There is a (possibly incomplete) http statement on *buf, of the
+ * form "%s\r\n\r\n%s", headers, body.
+ * If a) the headers include a Content-Length field and all bytes in
+ * the body are present, or b) there's no Content-Length field and
+ * all headers are present, then:
+ *   copy headers and body into the supplied args (and null terminate
+ *   them), remove them from buf, and return 1.
+ *   (If headers or body is NULL, discard that part of the buf.)
+ *   If a headers or body doesn't fit in the arg, return -1.
+ * 
+ * Else, change nothing and return 0.
+ */
+int fetch_from_buf_http(char *buf, int *buf_datalen,
+                        char *headers_out, int max_headerlen,
+                        char *body_out, int max_bodylen) {
+  char *headers, *body;
+  int i;
+  int headerlen, bodylen, contentlen;
+
+  assert(buf && buf_datalen);
+
+  headers = buf;
+  i = find_on_inbuf("\r\n\r\n", 4, buf, *buf_datalen);
+  if(i < 0) {
+    log_fn(LOG_DEBUG,"headers not all here yet.");
+    return 0;
+  }
+  body = buf+i;
+  headerlen = body-headers; /* includes the CRLFCRLF */
+  bodylen = *buf_datalen - headerlen;
+  log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.",headerlen,bodylen);
+
+  if(headers_out && max_headerlen <= headerlen) {
+    log_fn(LOG_DEBUG,"headerlen %d larger than %d. Failing.", headerlen, max_headerlen-1);
+    return -1;
+  }
+  if(body_out && max_bodylen <= bodylen) {
+    log_fn(LOG_DEBUG,"bodylen %d larger than %d. Failing.", bodylen, max_bodylen-1);
+    return -1;
+  }
+
+#define CONTENT_LENGTH "Content-Length: "
+  i = find_on_inbuf(CONTENT_LENGTH, strlen(CONTENT_LENGTH), headers, headerlen);
+  /* This includes headers like Not-Content-Length. But close enough. */
+  if(i > 0) {
+    contentlen = atoi(headers+i);
+    if(bodylen < contentlen) {
+      log_fn(LOG_DEBUG,"body not all here yet.");
+      return 0; /* not all there yet */
+    }
+    bodylen = contentlen;
+    log_fn(LOG_DEBUG,"bodylen reduced to %d.",bodylen);
+  }
+  /* all happy. copy into the appropriate places, and return 1 */
+  if(headers_out) {
+    memcpy(headers_out,buf,headerlen);
+    headers_out[headerlen] = 0; /* null terminate it */
+  }
+  if(body_out) {
+    memcpy(body_out,buf+headerlen,bodylen);
+    body_out[bodylen] = 0; /* null terminate it */
+  }
+  *buf_datalen -= (headerlen+bodylen);
+  memmove(buf, buf+headerlen+bodylen, *buf_datalen);
+
+  return 1;
+}
+
 int find_on_inbuf(char *string, int string_len,
                   char *buf, int buf_datalen) {
   /* find first instance of needle 'string' on haystack 'buf'. return how

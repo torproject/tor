@@ -156,12 +156,15 @@
 #define _AP_CONN_STATE_MAX 5
 
 #define _DIR_CONN_STATE_MIN 0
-#define DIR_CONN_STATE_CONNECTING 0 /* client */
-#define DIR_CONN_STATE_SENDING_COMMAND 1 /* client */
-#define DIR_CONN_STATE_READING 2 /* client */
-#define DIR_CONN_STATE_COMMAND_WAIT 3 /* dirserver */
-#define DIR_CONN_STATE_WRITING 4 /* dirserver */
-#define _DIR_CONN_STATE_MAX 4
+#define DIR_CONN_STATE_CONNECTING_GET 0
+#define DIR_CONN_STATE_CONNECTING_POST 1
+#define DIR_CONN_STATE_CLIENT_SENDING_GET 2
+#define DIR_CONN_STATE_CLIENT_SENDING_POST 3
+#define DIR_CONN_STATE_CLIENT_READING_GET 4
+#define DIR_CONN_STATE_CLIENT_READING_POST 5
+#define DIR_CONN_STATE_SERVER_COMMAND_WAIT 6
+#define DIR_CONN_STATE_SERVER_WRITING 7
+#define _DIR_CONN_STATE_MAX 7
 
 #define CIRCUIT_STATE_BUILDING 0 /* I'm the OP, still haven't done all my handshakes */
 #define CIRCUIT_STATE_ONIONSKIN_PENDING 1 /* waiting to process the onionskin */
@@ -437,6 +440,9 @@ int flush_buf_tls(tor_tls *tls, char **buf, int *buflen, int *buf_flushlen, int 
 
 int write_to_buf(char *string, int string_len, char **buf, int *buflen, int *buf_datalen);
 int fetch_from_buf(char *string, int string_len, char **buf, int *buflen, int *buf_datalen);
+int fetch_from_buf_http(char *buf, int *buf_datalen,
+                        char *headers_out, int max_headerlen,
+                        char *body_out, int max_bodylen);
 int find_on_inbuf(char *string, int string_len, char *buf, int buf_datalen);
 
 /********************************* circuit.c ***************************/
@@ -504,6 +510,9 @@ int connection_handle_read(connection_t *conn);
 int connection_read_to_buf(connection_t *conn);
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn);
+int connection_fetch_from_buf_http(connection_t *conn,
+                                   char *headers_out, int max_headerlen,
+                                   char *body_out, int max_bodylen);
 int connection_find_on_inbuf(char *string, int len, connection_t *conn);
 
 int connection_wants_to_flush(connection_t *conn);
@@ -559,7 +568,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
 
 /********************************* directory.c ***************************/
 
-void directory_initiate_fetch(routerinfo_t *router);
+void directory_initiate_command(routerinfo_t *router, int command);
 void directory_set_dirty(void);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
@@ -602,6 +611,7 @@ int dump_signed_directory_to_string(char *s, int maxlen,
 int dump_signed_directory_to_string_impl(char *s, int maxlen, 
                                          directory_t *dir, 
                                          crypto_pk_env_t *private_key); 
+char *router_get_my_descriptor(void);
 
 int main(int argc, char *argv[]);
 
