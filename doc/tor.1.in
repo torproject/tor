@@ -339,6 +339,11 @@ pull down the directory learn whether they need to upgrade.  This
 option can appear multiple times: the values from multiple lines are
 spliced together.
 .TP
+\fBDirAllowPrivateAddresses \fR\fB0\fR|\fB1\fR\fP
+If set to 1, Tor will accept router descriptors with arbitrary "Address"
+elements. Otherwise, if the address is not an IP or is a private IP,
+it will reject the router descriptor. Defaults to 0.
+.TP
 \fBRunTesting \fR\fB0\fR|\fB1\fR\fP
 If set to 1, Tor tries to build circuits through all of the servers it
 knows about, so it can tell which are up and which are down.  This
