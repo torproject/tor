@@ -1345,6 +1345,7 @@ crypto_pk_env_t *init_key_from_file(const char *fname);
 void rotate_onion_key(void);
 
 void router_retry_connections(void);
+int router_is_clique_mode(routerinfo_t *router);
 void router_upload_dir_desc_to_dirservers(void);
 int router_compare_to_my_exit_policy(connection_t *conn);
 routerinfo_t *router_get_my_routerinfo(void);
