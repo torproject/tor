@@ -32,6 +32,15 @@ N  - Make millisecond accuracy work on win32
    - Get epic, aclu, etc running nodes.
    - Start distributing an rpm with the new version scheme.
    - Bug tracker.
+   - cache .foo.exit names better, or differently, or not.
+   - teach connection_ap_handshake_socks_reply() about ipv6 and friends
+     so connection_ap_handshake_socks_resolved() doesn't also need
+     to know about them.
+   - when we haven't explicitly sent a socks reject, sending one in
+     connection_about_to_close_connection() fails because we never give
+     it a chance to flush. right answer is to do the socks reply manually
+     in each appropriate case, and then about-to-close-connection can
+     simply warn us if we forgot one.
 
 Tier two:
 
