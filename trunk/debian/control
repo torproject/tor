@@ -8,7 +8,7 @@ Standards-Version: 3.6.1
 Package: tor
 Architecture: any
 Depends: ${shlibs:Depends}, adduser, tsocks
-Recommends: tsocks
+Recommends: privoxy
 Suggests: mixmaster, mixminion, anon-proxy
 Description: anonymizing overlay network for TCP
  Tor is a connection-based low-latency anonymous communication system which
