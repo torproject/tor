@@ -658,6 +658,8 @@ build_directory(directory_t *dir) {
     return -1;
   }
   if (my_routerinfo) {
+    log(LOG_INFO, "build_directory(): adding self (%d:%d)", 
+        my_routerinfo->address, my_routerinfo->or_port);
     routers[n++] = my_routerinfo;
   }
   for(i = 0; i<nfds; ++i) {
@@ -669,10 +671,12 @@ build_directory(directory_t *dir) {
       continue; /* we only want to list ones that successfully handshaked */
     router = router_get_by_addr_port(conn->addr,conn->port);
     if(!router) {
-      log(LOG_ERR,"dump_directory_to_string(): couldn\'t find router %d:%d!",
+      log(LOG_ERR,"build_directory(): couldn\'t find router %d:%d!",
           conn->addr,conn->port);
       continue;
     }
+    log(LOG_INFO, "build_directory(): adding router (%d:%d)",
+        router->address, router->or_port);
     routers[n++] = router;
   }
   dir->routers = routers;
