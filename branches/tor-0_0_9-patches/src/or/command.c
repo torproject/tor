@@ -31,6 +31,7 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn);
 static void command_process_relay_cell(cell_t *cell, connection_t *conn);
 static void command_process_destroy_cell(cell_t *cell, connection_t *conn);
 
+#ifdef KEEP_TIMING_STATS
 /** This is a wrapper function around the actual function that processes the
  * <b>cell</b> that just arrived on <b>conn</b>. Increment <b>*time</b>
  * by the number of microseconds used by the call to <b>*func(cell, conn)</b>.
@@ -56,6 +57,7 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn, int *tim
   }
   *time += time_passed;
 }
+#endif
 
 /** Process a <b>cell</b> that was just received on <b>conn</b>. Keep internal
  * statistics about how many of each cell we've processed so far
@@ -63,6 +65,7 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn, int *tim
  * process each type of cell.
  */
 void command_process_cell(cell_t *cell, connection_t *conn) {
+#ifdef KEEP_TIMING_STATS
   /* how many of each cell have we seen so far this second? needs better
    * name. */
   static int num_create=0, num_created=0, num_relay=0, num_destroy=0;
@@ -87,6 +90,7 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
     /* remember which second it is, for next time */
     current_second = now;
   }
+#endif
 
   switch (cell->command) {
     case CELL_PADDING:
@@ -95,27 +99,43 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
       break;
     case CELL_CREATE:
       ++stats_n_create_cells_processed;
+#ifdef KEEP_TIMING_STATS
       ++num_create;
       command_time_process_cell(cell, conn, &create_time,
                                 command_process_create_cell);
+#else
+      command_process_create_cell(cell, conn);
+#endif
       break;
     case CELL_CREATED:
       ++stats_n_created_cells_processed;
+#ifdef KEEP_TIMING_STATS
       ++num_created;
       command_time_process_cell(cell, conn, &created_time,
                                 command_process_created_cell);
+#else
+      command_process_created_cell(cell, conn);
+#endif
       break;
     case CELL_RELAY:
       ++stats_n_relay_cells_processed;
+#ifdef KEEP_TIMING_STATS
       ++num_relay;
       command_time_process_cell(cell, conn, &relay_time,
                                 command_process_relay_cell);
+#else
+      command_process_relay_cell(cell, conn);
+#endif
       break;
     case CELL_DESTROY:
       ++stats_n_destroy_cells_processed;
+#ifdef KEEP_TIMING_STATS
       ++num_destroy;
       command_time_process_cell(cell, conn, &destroy_time,
                                 command_process_destroy_cell);
+#else
+      command_process_destroy_cell(cell, conn);
+#endif
       break;
     default:
       log_fn(LOG_WARN,"Cell of unknown type (%d) received. Dropping.", cell->command);
