@@ -985,7 +985,7 @@ int socks_policy_permits_address(uint32_t addr)
   if (options.SocksPolicy && !socks_policy)
     parse_socks_policy();
 
-  if(!socks_policy)
+  if(!socks_policy) /* 'no socks policy' means 'accept' */
     return 1;
   a = router_compare_addr_to_exit_policy(addr, 1, socks_policy);
   if (a==-1)
