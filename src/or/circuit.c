@@ -449,10 +449,10 @@ circuit_t *circuit_get_rendezvous(const char *cookie)
   return NULL;
 }
 
-#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 20
+#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 30
 /* circuits that were born at the end of their second might be expired
- * after 10.1 seconds; circuits born at the beginning might be expired
- * after closer to 11 seconds.
+ * after 30.1 seconds; circuits born at the beginning might be expired
+ * after closer to 31 seconds.
  */
 
 /* close all circuits that start at us, aren't open, and were born
@@ -492,6 +492,10 @@ void circuit_expire_building(time_t now) {
        victim->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
        victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCING ||
        victim->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+
+       /* it's a rend_ready circ, but it's already picked a query */
+       (victim->purpose == CIRCUIT_PURPOSE_C_REND_READY &&
+        victim->rend_query[0]) ||
 
        /* c_rend_ready circs measure age since timestamp_dirty,
         * because that's set when they switch purposes
