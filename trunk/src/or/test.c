@@ -661,7 +661,7 @@ test_dir_format()
   routerinfo_t *rp1 = NULL, *rp2 = NULL;
   struct exit_policy_t ex1, ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
-  tor_version_t ver1, ver2;
+  tor_version_t ver1;
 
   test_assert( (pk1 = crypto_new_pk_env()) );
   test_assert( (pk2 = crypto_new_pk_env()) );
