@@ -1314,13 +1314,14 @@ void tor_free_all(void)
   dirserv_free_all();
   rend_service_free_all();
   rep_hist_free_all();
-  /* cache in dns.c */
-  /* onion queue in onion.c */
-  /* the circuits. */
-  /* the connections. */
-  /* the config */
-  /* My routerinfo_t */
-  /* all keys. */
+  dns_free_all();
+  clear_pending_onions();
+  circuit_free_all();
+  connection_free_all();
+  config_free_all();
+  router_free_all_keys();
+  /* stuff in main.c */
+  smartlist_free(closeable_connection_lst);
 }
 
 /** Do whatever cleanup is necessary before shutting Tor down. */
@@ -1333,8 +1334,8 @@ void tor_cleanup(void) {
   crypto_global_cleanup();
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL));
+  tor_free_all(); /* move tor_free_all back into the ifdef below later. XXX*/
 #ifdef USE_DMALLOC
-  tor_free_all();
   dmalloc_log_unfreed();
   dmalloc_shutdown();
 #endif

@@ -316,3 +316,15 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   return 0;
 }
 
+/** Remove all circuits from the pending list.  Called from tor_free_all. */
+void
+clear_pending_onions(void)
+{
+  while (ol_list) {
+    struct onion_queue_t *victim = ol_list;
+    ol_list = victim->next;
+    tor_free(victim);
+  }
+  ol_list = ol_tail = NULL;
+  ol_length = 0;
+}

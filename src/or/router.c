@@ -829,3 +829,16 @@ int is_legal_nickname_or_hexdigest(const char *s)
   return len == HEX_DIGEST_LEN+1 && strspn(s+1,HEX_CHARACTERS)==len-1;
 }
 
+void router_free_all_keys(void)
+{
+  if (onionkey)
+    crypto_free_pk_env(onionkey);
+  if (lastonionkey)
+    crypto_free_pk_env(lastonionkey);
+  if (identitykey)
+    crypto_free_pk_env(identitykey);
+  if (key_lock)
+    tor_mutex_free(key_lock);
+  if (desc_routerinfo)
+    routerinfo_free(desc_routerinfo);
+}

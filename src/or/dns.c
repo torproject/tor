@@ -99,6 +99,27 @@ void dns_init(void) {
   spawn_enough_dnsworkers();
 }
 
+static void
+_free_cached_resolve(struct cached_resolve *r) {
+  while(r->pending_connections) {
+    struct pending_connection_t *victim = r->pending_connections;
+    r->pending_connections = victim->next;
+    tor_free(victim);
+  }
+  tor_free(r);
+}
+
+void
+dns_free_all(void)
+{
+  struct cached_resolve *ptr, *next;
+  for (ptr = SPLAY_MIN(cache_tree, &cache_root); ptr != NULL; ptr = next) {
+    next = SPLAY_NEXT(cache_tree, &cache_root, ptr);
+    SPLAY_REMOVE(cache_tree, &cache_root, ptr);
+    _free_cached_resolve(ptr);
+  }
+}
+
 /** Linked list of resolved addresses, oldest to newest. */
 static struct cached_resolve *oldest_cached_resolve = NULL;
 static struct cached_resolve *newest_cached_resolve = NULL;

@@ -106,8 +106,9 @@ _free_link_history(void *val)
 }
 
 static void
-free_or_history(or_history_t *hist)
+free_or_history(void *_hist)
 {
+  or_history_t *hist = _hist;
   strmap_free(hist->link_history_map, _free_link_history);
   tor_free(hist);
 }
