@@ -8,7 +8,9 @@ Upstream Authors: Roger Dingledine <arma@freehaven.net>
                   Matej Pfajfar <badbytes@freehaven.net>
 
 
-Copyright (c) 2001-2004, Roger Dingledine
+Copyright (c) 2001-2004 Roger Dingledine
+Copyright (c) 2002,2003 Nick Mathewson
+Copyright (c) 2001-2003 Matej Pfajfar
 strlcat, strlcpy: Copyright (c) 1998 Todd C. Miller <Todd.Miller@courtesan.com>
 tree.h: Copyright (c) 2002 Niels Provos <provos@citi.umich.edu>
 Modifications for Debian: Copyright (c) 2004 Peter Palfrader <weasel@debian.org>
