@@ -354,10 +354,14 @@ static void run_scheduled_events(time_t now) {
    *    that became dirty more than NewCircuitPeriod seconds ago,
    *    and we make a new circ if there are no clean circuits.
    */
-  if(options.SocksPort) {
+  if(options.SocksPort || options.RunTesting) {
 
-    /* launch a new circ for any pending streams that need one */
-    connection_ap_attach_pending();
+    if (options.SocksPort)
+      /* launch a new circ for any pending streams that need one */
+      connection_ap_attach_pending();
+
+/* Build a new test circuit every 5 minutes */
+#define TESTING_CIRCUIT_INTERVAL 300
 
     circ = circuit_get_newest(NULL, 1);
     if(time_to_new_circuit < now) {
@@ -367,6 +371,10 @@ static void run_scheduled_events(time_t now) {
       if(circ && circ->timestamp_dirty) {
         log_fn(LOG_INFO,"Youngest circuit dirty; launching replacement.");
         circuit_launch_new(); /* make a new circuit */
+      } else if (options.RunTesting && circ &&
+                 circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
+        log_fn(LOG_INFO,"Creating a new testing circuit.");
+        circuit_launch_new();
       }
       time_to_new_circuit = now + options.NewCircuitPeriod;
     }
