@@ -1,3 +1,11 @@
+tor (1) UNRELEASED; urgency=low
+
+    FIXME
+  * Upstream installs a torrc.sample file now, rather than torrc.
+    Keep using torrc as dpkg handles conffile upgrades.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 30 Mar 2004 02:07:17 +0200
+
 tor (0.0.4-1) unstable; urgency=low
 
   * New upstream release (how the version numbers fly by :).
