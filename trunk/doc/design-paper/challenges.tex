@@ -1,5 +1,5 @@
 \documentclass{llncs}
-% XXXX NM: Fold ``bandwidth and usability'' into ``Tor and filesharing'' --
+% XXXX NM: Fold ``bandwidth and usability'' into ``Tor and file-sharing'' --
 % ``bandwidth and file-sharing''.
 
 \usepackage{url}
@@ -24,10 +24,11 @@
 
 \title{Challenges in deploying low-latency anonymity}
 
-\author{Roger Dingledine\inst{1} \and Nick Mathewson\inst{1} \and Paul Syverson\inst{2}}
+\author{Roger Dingledine\inst{1} \and
+Nick Mathewson\inst{1} \and
+Paul Syverson\inst{2}}
 \institute{The Free Haven Project \email{<\{arma,nickm\}@freehaven.net>} \and
 Naval Research Lab \email{<syverson@itd.nrl.navy.mil>}}
-
 
 \maketitle
 %\pagestyle{empty}
@@ -198,7 +199,7 @@ latency).  Such research does not typically abandon aspirations towards
 deployability or utility, but instead tries to maximize deployability and
 utility subject to a certain degree of inherent anonymity (inherent because
 usability and practicality affect usage which affects the actual anonymity
-provided by the network \cite{back01,econymics}).}
+provided by the network \cite{econymics,back01}).}
 %{We believe that these
 %approaches can be promising and useful, but that by focusing on deploying a
 %usable system in the wild, Tor helps us experiment with the actual parameters
@@ -257,7 +258,7 @@ while a stream is still active simply by observing the latency of his
 own traffic sent through various Tor nodes. These attacks do not show
 the client address, only the first node within the Tor network, making
 helper nodes all the more worthy of exploration (cf.,
-Section~{subsec:helper-nodes}).
+Section~\ref{subsec:helper-nodes}).
 
 Against internal attackers who sign up Tor nodes, the situation is more
 complicated.  In the simplest case, if an adversary has compromised $c$ of
@@ -268,7 +269,7 @@ complicating factors:
 (1)~If the user continues to build random circuits over time, an adversary
   is pretty certain to see a statistical sample of the user's traffic, and
   thereby can build an increasingly accurate profile of her behavior.  (See
-  \ref{subsec:helper-nodes} for possible solutions.)
+  Section~\ref{subsec:helper-nodes} for possible solutions.)
 (2)~An adversary who controls a popular service outside of the Tor network
   can be certain of observing all connections to that service; he
   therefore will trace connections to that service with probability
@@ -438,7 +439,7 @@ Tor's interaction with other services on the Internet.
 
 A growing field of papers argue that usability for anonymity systems
 contributes directly to their security, because how usable the system
-is impacts the possible anonymity set~\cite{back01,econymics}. Or
+is impacts the possible anonymity set~\cite{econymics,back01}. Or
 conversely, an unusable system attracts few users and thus can't provide
 much anonymity.
 
@@ -469,7 +470,7 @@ Mixminion, where the threat model is based on mixing messages with each
 other, there's an arms race between end-to-end statistical attacks and
 counter-strategies~\cite{statistical-disclosure,minion-design,e2e-traffic,trickle02}.
 But for low-latency systems like Tor, end-to-end \emph{traffic
-correlation} attacks~\cite{danezis-pet2004,SS03,defensive-dropping}
+correlation} attacks~\cite{danezis-pet2004,defensive-dropping,SS03}
 allow an attacker who can measure both ends of a communication
 to match packet timing and volume, quickly linking
 the initiator to her destination. This is why Tor's threat model is
@@ -483,8 +484,8 @@ attacks, because the network has fewer edges. JAP was born out of
 the ISDN mix design~\cite{isdn-mixes}, where padding made sense because
 every user had a fixed bandwidth allocation, but in its current context
 as a general Internet web anonymizer, adding sufficient padding to JAP
-would be prohibitively expensive.\footnote{Even if they could fund
-(indefinitely) higher-capacity nodes, our experience
+would be prohibitively expensive.\footnote{Even if JAP could
+fund higher-capacity nodes indefinitely, our experience
 suggests that many users would not accept the increased per-user
 bandwidth requirements, leading to an overall much smaller user base. But
 cf.\ Section \ref{subsec:mid-latency}.} Therefore, since under this threat
@@ -540,7 +541,7 @@ The impact of public perception on security is especially important
 during the bootstrapping phase of the network, where the first few
 widely publicized uses of the network can dictate the types of users it
 attracts next.
-As an example, some some U.S.~Department of Energy
+As an example, some U.S.~Department of Energy
 penetration testing engineers are tasked with compromising DoE computers
 from the outside. They only have a limited number of ISPs from which to
 launch their attacks, and they found that the defenders were recognizing
@@ -611,7 +612,7 @@ wants to provide high bandwidth, but no more than a certain amount in a
 giving billing cycle, to become dormant once its bandwidth is exhausted, and
 to reawaken at a random offset into the next billing cycle.  This feature has
 interesting policy implications, however; see
-Section~\ref{subsec:bandwidth-and-filesharing} below.
+Section~\ref{subsec:bandwidth-and-file-sharing} below.
 Exit policies help to limit administrative costs by limiting the frequency of
 abuse complaints.
 
@@ -621,8 +622,8 @@ abuse complaints.
 %  We can put "top bandwidth nodes lists" up a la seti@home.]
 
 
-\subsection{Bandwidth and filesharing}
-\label{subsec:bandwidth-and-filesharing}
+\subsection{Bandwidth and file-sharing}
+\label{subsec:bandwidth-and-file-sharing}
 %One potentially problematical area with deploying Tor has been our response
 %to file-sharing applications.
 Once users have configured their applications to work with Tor, the largest
@@ -658,13 +659,13 @@ illegal, many ISPs have policies of dropping users who get repeated legal
 threats regardless of the merits of those threats, and many operators would
 prefer to avoid receiving legal threats even if those threats have little
 merit.  So when the letters arrive, operators are likely to face
-pressure to block filesharing applications entirely, in order to avoid the
+pressure to block file-sharing applications entirely, in order to avoid the
 hassle.
 
-But blocking filesharing would not necessarily be easy; most popular
+But blocking file-sharing would not necessarily be easy; most popular
 protocols have evolved to run on a variety of non-standard ports in order to
 get around other port-based bans.  Thus, exit node operators who wanted to
-block filesharing would have to find some way to integrate Tor with a
+block file-sharing would have to find some way to integrate Tor with a
 protocol-aware exit filter.  This could be a technically expensive
 undertaking, and one with poor prospects: it is unlikely that Tor exit nodes
 would succeed where so many institutional firewalls have failed.  Another
@@ -682,13 +683,13 @@ but this could have negative anonymity implications.
 For the moment, it seems that Tor's bandwidth issues have rendered it
 unattractive for bulk file-sharing traffic; this may continue to be so in the
 future.  Nevertheless, Tor will likely remain attractive for limited use in
-filesharing protocols that have separate control and data channels.
+file-sharing protocols that have separate control and data channels.
 
 %[We should say more -- but what?  That we'll see a similar
 %  equilibriating effect as with bandwidth, where sensitive ops switch to
-%  middleman, and we become less useful for filesharing, so the filesharing
-%  people back off, so we get more ops since there's less filesharing, so the
-%  filesharers come back, etc.]
+%  middleman, and we become less useful for file-sharing, so the file-sharing
+%  people back off, so we get more ops since there's less file-sharing, so the
+%  file-sharers come back, etc.]
 
 %XXXX
 %in practice, plausible deniability is hypothetical and doesn't seem very
@@ -828,9 +829,9 @@ Tor to be easy to integrate with user-level application-specific proxies
 such as Privoxy. So it's not just a matter of capturing packets and
 anonymizing them at the IP layer.
 \item \emph{Certain protocols will still leak information.} For example,
-we must rewrite DNS requests destined for local DNS servers to
-be delivered to some unlinkable DNS server. This requires
-understanding the protocols we are transporting.
+we must rewrite DNS requests so they are
+delivered to an unlinkable DNS server; so we must
+understand the protocols we are transporting.
 \item \emph{The crypto is unspecified.} First we need a block-level encryption
 approach that can provide security despite
 packet loss and out-of-order delivery. Freedom allegedly had one, but it was
@@ -887,60 +888,34 @@ We are still working on usable solutions.
 \label{subsec:mid-latency}
 
 Some users need to resist traffic correlation attacks.  Higher-latency
-mix-networks resist these attacks by introducing variability into message
+mix-networks introduce variability into message
 arrival times: as timing variance increases, timing correlation attacks
 require increasingly more data~\cite{e2e-traffic}. Can we improve Tor's
-resistance to these attacks without losing too much usability?
+resistance without losing too much usability?
 
-First, we need to learn whether we can trade a small increase in latency
+We need to learn whether we can trade a small increase in latency
 for a large anonymity increase, or if we'll end up trading a lot of
-latency for a small security gain. It would be worthwhile even if we
+latency for a small security gain. A trade could be worthwhile even if we
 can only protect certain use cases, such as infrequent short-duration
-transactions.  To answer this question, we might
-adapt the techniques of~\cite{e2e-traffic} to a lower-latency mix
-network, where the messages are batches
-of cells in temporally clustered connections.
+transactions. % To answer this question
+We might adapt the techniques of~\cite{e2e-traffic} to a lower-latency mix
+network, where the messages are batches of cells in temporally clustered
+connections. These large fixed-size batches can also help resist volume
+signature attacks~\cite{hintz-pet02}. We can also experiment with traffic
+shaping to get a good balance of throughput and security.
+%Other padding regimens might supplement the
+%mid-latency option; however, we should continue the caution with which
+%we have always approached padding lest the overhead cost us too much
+%performance or too many volunteers.
 
-Once the anonymity questions are answered, we need to consider usability.  If
-the latency could be kept to two or three times its current overhead, this
-might be acceptable to most Tor users. However, it might also destroy much of
-the user base, and it is difficult to know in advance.  Note also that in
-practice, as the network grows to incorporate more DSL and cable-modem nodes,
-and more nodes in various continents, there are \emph{already}
-many-second increases for some transactions.  It could be possible to
-run a mid-latency option over the Tor network for those
-users either willing to experiment or in need of more
-anonymity.  This would allow us to experiment with both
-the anonymity provided and the interest on the part of users.
-
-Adding a mid-latency option should not require significant fundamental
-change to the Tor client or server design; circuits could be labeled as
-low- or mid- latency as they are constructed. Low-latency traffic
-would be processed as now, while cells on circuits that are mid-latency
-would be sent in uniform-size chunks at synchronized intervals.  (Traffic
-already moves through the Tor network in fixed-sized cells; this would
-increase the granularity.)  If nodes forward these chunks in roughly
-synchronous  fashion, it will increase the similarity of data stream timing
-signatures. By experimenting with the granularity of data chunks and
-of synchronization we can attempt once again to optimize for both
-usability and anonymity. Unlike in \cite{sync-batching}, it may be
-impractical to synchronize on end-to-end network batches.
-But, batch timing could be obscured by
-synchronizing batches at the link level.
-%Alternatively, if end-to-end traffic correlation is the
-%concern, there is little point in mixing.
-%   Why not?? -NM
-It might also be feasible to
-pad chunks to uniform size as is done now for cells; if this is link
-padding rather than end-to-end, then it will take less overhead,
-especially in bursty environments.
-% This is another way in which it
-%would be fairly practical to set up a mid-latency option within the
-%existing Tor network.
-Other padding regimens might supplement the
-mid-latency option; however, we should continue the caution with which
-we have always approached padding lest the overhead cost us too much
-performance or too many volunteers.
+We must keep usability in mind too. How much can latency increase
+before we drive away our users? We're already being forced to increase
+latency slightly, as our growing network incorporates more DSL and
+cable-modem nodes and more nodes in distant continents. Perhaps we can
+harness this increased latency to improve anonymity rather than just
+reduce usability. Further, if we let clients label certain circuits as
+mid-latency as they are constructed, we could handle both types of traffic
+on the same network, giving users a choice between speed and security.
 
 \subsection{Measuring performance and capacity}
 \label{subsec:performance}
