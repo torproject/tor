@@ -871,11 +871,14 @@ static int connection_read_to_buf(connection_t *conn) {
     result = read_to_buf_tls(conn->tls, at_most, conn->inbuf);
 
     switch(result) {
-      case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
+        log_fn(LOG_INFO,"TLS connection closed on read. Closing. (Nickname %s, address %s",
+               conn->nickname ? conn->nickname : "not set", conn->address);
+        return -1;
+      case TOR_TLS_ERROR:
         log_fn(LOG_INFO,"tls error. breaking (nickname %s, address %s).",
                conn->nickname ? conn->nickname : "not set", conn->address);
-        return -1; /* XXX deal with close better */
+        return -1;
       case TOR_TLS_WANTWRITE:
         connection_start_writing(conn);
         return 0;
@@ -993,10 +996,11 @@ int connection_handle_write(connection_t *conn) {
     switch(result) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
-        log_fn(LOG_INFO,"tls error. breaking.");
+        log_fn(LOG_INFO,result==TOR_TLS_ERROR?
+               "tls error. breaking.":"TLS connection closed on flush");
         connection_close_immediate(conn); /* Don't flush; connection is dead. */
         connection_mark_for_close(conn);
-        return -1; /* XXX deal with close better */
+        return -1;
       case TOR_TLS_WANTWRITE:
         log_fn(LOG_DEBUG,"wanted write.");
         /* we're already writing */

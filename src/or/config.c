@@ -325,6 +325,12 @@ options_act(void) {
   }
 #endif
 
+  /* Since our options changed, we might need to regenerate and upload our
+   * server descriptor.  (We could probably be more clever about only calling
+   * this when something significant changed.)
+   */
+  mark_my_descriptor_dirty();
+
   return 0;
 }
 

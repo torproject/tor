@@ -38,6 +38,7 @@ void set_onion_key(crypto_pk_env_t *k) {
   onionkey = k;
   onionkey_set_at = time(NULL);
   tor_mutex_release(key_lock);
+  mark_my_descriptor_dirty();
 }
 
 /** Return the current onion key.  Requires that the onion key has been
@@ -412,11 +413,15 @@ int router_is_clique_mode(routerinfo_t *router) {
 static routerinfo_t *desc_routerinfo = NULL;
 /** String representation of my descriptor, signed by me. */
 static char descriptor[8192];
+/** Boolean: do we need to regenerate the above? */
+static int desc_is_dirty = 1;
+/** Boolean: do we need to regenerate the above? */
+static int desc_needs_upload = 0;
 
 /** OR only: try to upload our signed descriptor to all the directory servers
- * we know about.
+ * we know about. DOCDOC force
  */
-void router_upload_dir_desc_to_dirservers(void) {
+void router_upload_dir_desc_to_dirservers(int force) {
   const char *s;
 
   s = router_get_my_descriptor();
@@ -424,6 +429,9 @@ void router_upload_dir_desc_to_dirservers(void) {
     log_fn(LOG_WARN, "No descriptor; skipping upload");
     return;
   }
+  if (!force || !desc_needs_upload)
+    return;
+  desc_needs_upload = 0;
   directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, s, strlen(s));
 }
 
@@ -489,7 +497,7 @@ routerinfo_t *router_get_my_routerinfo(void)
     return NULL;
 
   if (!desc_routerinfo) {
-    if (router_rebuild_descriptor())
+    if (router_rebuild_descriptor(1))
       return NULL;
   }
   return desc_routerinfo;
@@ -500,7 +508,7 @@ routerinfo_t *router_get_my_routerinfo(void)
  */
 const char *router_get_my_descriptor(void) {
   if (!desc_routerinfo) {
-    if (router_rebuild_descriptor())
+    if (router_rebuild_descriptor(1))
       return NULL;
   }
   log_fn(LOG_DEBUG,"my desc is '%s'",descriptor);
@@ -508,14 +516,17 @@ const char *router_get_my_descriptor(void) {
 }
 
 /** Rebuild a fresh routerinfo and signed server descriptor for this
- * OR.  Return 0 on success, -1 on error.
+ * OR.  Return 0 on success, -1 on error. DOCDOC force
  */
-int router_rebuild_descriptor(void) {
+int router_rebuild_descriptor(int force) {
   routerinfo_t *ri;
   uint32_t addr;
   char platform[256];
   struct in_addr in;
   or_options_t *options = get_options();
+
+  if (!desc_is_dirty && !force)
+    return 0;
 
   if(resolve_my_address(options->Address, &addr) < 0) {
     log_fn(LOG_WARN,"options->Address didn't resolve into an IP.");
@@ -558,7 +569,16 @@ int router_rebuild_descriptor(void) {
     log_fn(LOG_WARN, "Couldn't dump router to string.");
     return -1;
   }
+  desc_is_dirty = 0;
+  desc_needs_upload = 1;
   return 0;
+}
+
+/** DOCDOC */
+void
+mark_my_descriptor_dirty(void)
+{
+  desc_is_dirty = 1;
 }
 
 /** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short
