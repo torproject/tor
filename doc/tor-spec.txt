@@ -1,0 +1,230 @@
+$Id$ 
+
+TOR (The Onion Router) Spec
+
+Note: This is an attempt to specify TOR as it exists as implemented in
+early March, 2003.  It is not recommended that others implement this
+design as it stands; future versions of TOR will implement improved
+protocols.
+
+0. Notation:
+
+   PK -- a public key.
+   SK -- a private key 
+   K  -- a key for a symmetric cypher
+
+   All numeric values are encoded in network (big-endian) order.
+
+   Unless otherwise specified, all symmetric ciphers are DES in OFB
+   mode, with an IV of all 0 bytes.  All asymmetric ciphers are RSA
+   with 1024-bit keys, and exponents of 65537.
+
+   [Comments: DES?  This should be AES.  Why are
+
+1. System overview
+
+????
+
+2. Connections
+
+2.1. Establishing OR-to-OR connections
+
+   When one onion router opens a connection to another, the initiating
+   OR (called the 'client') and the listening OR (called the 'server')
+   perform the following handshake.
+
+   Before the handshake begins, the client and server use one
+   another's (1024-bit) public keys, IPV4 addresses, and ports.
+
+     1. Client connects to server:
+
+        The client generates a pair of 8-byte symmetric keys (one
+        [K_f] for the 'forward' stream from client to server, and one
+        [K_b] for the 'backward' stream from server to client.
+
+        The client then generates a 'Client authentication' message [M]
+        containing: 
+           The client's published IPV4 address    [4 bytes]
+           The client's published port            [2 bytes]
+           The server's published IPV4 address    [4 bytes]
+           The server's published port            [2 bytes]
+           The forward key (K_f)                  [8 bytes]
+           The backward key (K_f)                 [8 bytes]
+           The maximum bandwidth (units????)      [4 bytes]
+           Arbitrary data (BUG?????)              [4 bytes]
+                                               [Total: 36 bytes] 
+
+        The client then RSA-encrypts the message with the server's
+        public key, and PKCS1 padding to given an encrypted message
+
+        [Commentary: 1024 bytes is probably too short, and this protocol can't
+        support IPv6. -NM]
+ 
+        [Commentary: Is there a bug on line 740 of connection_or.c?  
+          I think that "conn->pkey, buf, 36, cipher, RSA_PKCS1_PADDING"
+             should be "conn->pkey, buf, 32, cipher, RSA_PKCS1_PASSING"
+          -NM]
+
+        The client then opens a TCP connection to the server, sends
+        the 128-byte RSA-encrypted data to the server, and waits for a
+        reply.
+
+     2. Server authenticates to client:
+
+        Upon receiving a TCP connection, the server waits to receive
+        128 bytes from the client.  It decrypts the message with its 
+        private key, and checks the PKCS1 padding.  If the padding is
+        incorrect, or if the message's length is other than 36 bytes,
+        the server closes the TCP connection and stops handshaking.
+
+        The server then checks the list of known ORs for one with the
+        address and port given in the client's authentication.  If no
+        such OR is known, or if the server is already connected to
+        that OR, the server closes the current TCP connection and
+        stops handshaking. 
+
+        For later use, the server sets its keys for this connection,
+	setting K_f to the client's K_b, and K_b to the client's K_f.
+
+        The server then creates a server authentication message[M2] as
+        follows: 
+               Modified client authentication         [36 bytes]
+               A random nonce [N]                     [8 bytes]
+                                                  [Total: 44 bytes]
+        The client authentication is generated from M by replacing
+        the client's preferred bandwidth [B_c] with the server's
+        preferred bandwidth [B_s], if B_s < B_c. 
+
+        The server encrypts M2 with the client's public key (found
+        from the list of known routers), using PKCS1 padding.
+
+        The server sends the 128-byte encrypted message to the client,
+        and waits for a reply.               
+
+     3. Client authenticates to server.
+
+        Once the client has received 128 bytes, it decrypts them with
+        its public key, and checks the PKCS1 padding.  If the padding
+        is invalid, or the decrypted message's length is other than 44
+        bytes, the client closes the TCP connection.
+
+        The client checks that the addresses and keys in the reply
+        message are the same as the ones it originally sent.  If not,
+        it closes the TCP connection.
+
+        The client updates the connection's bandwidth to that set by
+        the server, and generates the following authentication message [M3]:
+           The client's published IPV4 address    [4 bytes]
+           The client's published port            [2 bytes]
+           The server's published IPV4 address    [4 bytes]
+           The server's published port            [2 bytes]
+           The server-generated nonce [N]         [8 bytes]
+                                             [Total: 20 bytes]
+
+        Once again, the client encrypts this message using the
+        server's public key and PKCS1 padding, and sends the resulting
+        128-byte message to the server.
+
+     4. Server checks client authentication
+
+        The server once again waits to receive 128 bytes from the
+        client, decrypts the message with its private key, and checks
+        the PKCS1 padding.  If the padding is incorrect, or if the
+        message's length is other than 20 bytes, the server closes the
+        TCP connection and stops handshaking.
+
+        If the addresses in the decrypted message M3 match those in M
+        and M2, and if the nonce in M3 is the same as in M2, the
+        handshake is complete, and the client and server begin sending
+        cells to one another.  Otherwise, the server closes the TCP
+        connection.
+
+2.2. Establishing OP-to-OR connections
+
+   When an OP needs to establish a connection to an OR, the handshake
+   is simpler because the OR does not need to verify the OR's
+   identity.  The OP and OR establish the following steps:
+
+     1. OP connects to OR:
+        
+        First, the OP generates a pair of 8-byte symmetric keys (one
+        [K_f] for the 'forward' stream from OP to OP, and one
+        [K_b] for the 'backward' stream from OR to OP.
+
+        The OP generates a message [M] in the following format:
+           Maximum bandwidth                [4 bytes]
+           Forward key [K_f]                [8 bytes]
+           Backward key [K_b]               [8 bytes]
+                                        [Total: 20 bytes]
+
+        The OP encrypts M with the OR's public key and PKCS1 padding,
+        opens a TCP connection to the OR's TCP port, and sends the
+        resulting 128-byte encrypted message to the OR.
+
+     2. OR receives keys:
+
+        When the OR receives a connection from an OP [This is on a
+        different port, right? How does it know the difference? -NM],
+        it waits for 128 bytes of data, and decrypts the resulting
+        data with its private key, checking the PKCS1 padding.  If the
+        padding is invalid, or the message is not 20 bytes long, the
+        OR closes the connection.
+
+        Otherwise, the connection is established, and the O is ready
+        to receive cells.  
+
+        The server sets its keys for this connection, setting K_f to
+	the client's K_b, and K_b to the client's K_f.
+
+2.3. Sending cells and link encryption
+
+   Once the handshake is complete, the ORs or OR and OP send cells
+   (specified below) to one another.  Cells are sent serially,
+   encrypted with the DES-OFB keystream specified by the handshake
+   protocol.  Over a connection, communicants encrypt outgoing cells
+   with the connection's K_f, and decrypt incoming cells with the
+   connection's K_b.
+   
+   [Commentary: This means that OR/OP->OR connections are malleable; I
+    can flip bits in cells as they go across the wire, and see flipped
+    bits coming out the cells as they are decrypted at the next
+    server.  I need to look more at the data format to see whether
+    this is exploitable, but if there's no integrity checking there
+    either, I suspect we may have an attack here. -NM]
+
+3. Cell Packet format
+
+   The basic unit of communication between onion routers and onion
+   proxies is a fixed-width "Cell."  Each Cell contains the following
+   fields:
+
+        ACI (anonymous circuit identifier)    [2 bytes]
+        Command                               [1 byte]
+        Length                                [1 byte]
+        Sequence number (unused)              [4 bytes]
+        Payload (padded with 0 bytes)         [120 bytes]
+                                         [Total size: 128 bytes]
+
+   The 'Command' field holds one of the following values:
+         0 -- PADDING     (Random padding)
+         1 -- CREATE      (Create a circuit)
+         2 -- DATA        (End-to-end data)
+         3 -- DESTROY     (Stop using a circuit)
+         4 -- ACK         (unused)
+         5 -- NACK        (unused)
+         6 -- SENDME      (For flow control)
+
+   The interpretation of 'Length' and 'Payload' depend on....
+
+4. Onions and circuit management
+
+
+5. Topic management
+
+
+6. Flow control
+         
+      
+
+
+
