@@ -939,8 +939,7 @@ router_parse_exit_policy_from_string(const char *s)
   const char *cp;
   char *tmp;
   struct exit_policy_t *r;
-  size_t len;
-  int idx;
+  size_t len, idx;
 
   /* *s might not end with \n, so we need to extend it with one. */
   len = strlen(s);
