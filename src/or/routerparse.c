@@ -1445,7 +1445,7 @@ int tor_version_as_new_as(const char *platform, const char *cutoff) {
   start = (char *)eat_whitespace(platform+3);
   if (!*start) return 0;
   s = (char *)find_whitespace(start); /* also finds '\0', which is fine */
-  if(s-start+1 >= sizeof(tmp)) /* too big, no */
+  if((size_t)(s-start+1) >= sizeof(tmp)) /* too big, no */
     return 0;
   strlcpy(tmp, start, s-start+1);
 
