@@ -798,22 +798,41 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
 
   return 0;
 }
+
+#undef MIN
+#define MIN(a,b) ((a)<(b)?(a):(b))
 int crypto_dh_compute_secret(crypto_dh_env_t *dh, 
 			     char *pubkey, int pubkey_len,
-			     char *secret_out)
+			     char *secret_out, int secret_bytes_out)
 {
-  BIGNUM *pubkey_bn;
+  unsigned char hash[20];
+  unsigned char *secret_tmp = NULL;
+  BIGNUM *pubkey_bn = NULL;
   int secret_len;
+  int i;
   assert(dh);
-  
-  if (!(pubkey_bn = BN_bin2bn(pubkey, pubkey_len, NULL)))
-    return -1;
-  
-  secret_len = DH_compute_key(secret_out, pubkey_bn, dh->dh);  
-  BN_free(pubkey_bn);
-  if (secret_len == -1)
-    return -1;
+  assert(secret_bytes_out/20 <= 255);
 
+  if (!(pubkey_bn = BN_bin2bn(pubkey, pubkey_len, NULL)))
+    goto error;
+  secret_tmp = tor_malloc(crypto_dh_get_bytes(dh)+1);
+  secret_len = DH_compute_key(secret_tmp, pubkey_bn, dh->dh);
+  for (i = 0; i < secret_bytes_out; i += 20) {
+    secret_tmp[secret_len] = (unsigned char) i/20;
+    if (crypto_SHA_digest(secret_tmp, secret_len+1, hash))
+      goto error;
+    memcpy(secret_out+i, hash, MIN(20, secret_bytes_out-i));
+  }
+  secret_len = secret_bytes_out;
+
+  goto done;
+ error:
+  secret_len = -1;
+ done:
+  if (pubkey_bn)
+    BN_free(pubkey_bn);
+  if (secret_tmp)
+    free(secret_tmp);
   return secret_len;
 }
 void crypto_dh_free(crypto_dh_env_t *dh)

@@ -81,7 +81,7 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey_out,
 			 int pubkey_out_len);
 int crypto_dh_compute_secret(crypto_dh_env_t *dh, 
 			     char *pubkey, int pubkey_len,
-			     char *secret_out);
+			     char *secret_out, int secret_out_len);
 void crypto_dh_free(crypto_dh_env_t *dh);
 
 /* symmetric crypto */
