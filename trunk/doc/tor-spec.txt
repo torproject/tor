@@ -380,8 +380,8 @@ which reveals the downstream node.
    Some time after receiving a create cell, an onion router completes
    the DH handshake, and replies with a CREATED cell, containing g^y
    as its [128 byte] payload.  Upon receiving a CREATED cell, an onion
-   router packs it payload into a CREATED relay cell (see section 5),
-   and sends that cell up the circuit.  Upon receiving the CREATED
+   router packs it payload into an EXTENDED relay cell (see section 5),
+   and sends that cell up the circuit.  Upon receiving the EXTENDED
    relay cell, the OP can retrieve g^y.
 
    (As an optimization, OR implementations may delay processing onions
@@ -423,11 +423,13 @@ which reveals the downstream node.
         'Back' relay cell (opposite direction from CREATE):
             Use Kb as key; decrypt.
    If the OR recognizes the stream ID on the cell (it is either the ID
-   of an open stream or the signaling ID, zero), the OR processes the
+   of an open stream or the signaling (zero) ID), the OR processes the
    contents of the relay cell.  Otherwise, it passes the decrypted
-   relay cell along the circuit.  [What if the circuit doesn't go any
-   farther?]
-
+   relay cell along the circuit if the circuit continues, or drops the
+   cell if it's the end of the circuit. [Getting an unrecognized
+   relay cell at the end of the circuit must be allowed for now;
+   we can reexamine this once we've designed full tcp-style close
+   handshakes. -RD]
 
    Otherwise, if the data cell is coming from the OP edge of the
    circuit, the OP decrypts the length and payload fields with 3DES/OFB as
@@ -442,7 +444,7 @@ which reveals the downstream node.
             For I=N...1, 
                 Encrypt with Kb_I.  If the stream ID is a recognized
                 stream for R_I, or if the stream ID is the signaling
-                ID, zero, then process the payload.
+                ID (zero), then stop and process the payload.
 
    For more information, see section 5 below.
 
@@ -547,6 +549,9 @@ which reveals the downstream node.
    code as if RELAY_COMMAND_SENDME is now doing double duty for both
    stream flow control and circuit flow control.  I thought we wanted
    two different notions of windows. -NM]
+   [We do have two different 'levels' of windows. The relay sendme command
+    is talking about a stream for non-zero stream id, and talking about
+    the circuit for zero stream id. -RD]
 
    Each edge node on a circuit sends a SENDME cell
    (with length=100) every time it has received 100 data cells on the
