@@ -441,7 +441,7 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int 
   return 0;
 }
 
-int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, char *src, int len) {
+int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src, int len) {
   BIO *b; 
 
   assert(env && src);
@@ -820,7 +820,7 @@ crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
 
 
 /* SHA-1 */
-int crypto_SHA_digest(unsigned char *m, int len, unsigned char *digest)
+int crypto_SHA_digest(const unsigned char *m, int len, unsigned char *digest)
 {
   assert(m && digest);
   return (SHA1(m,len,digest) == NULL);
@@ -1034,7 +1034,7 @@ char *crypto_perror()
 }
 
 int 
-base64_encode(char *dest, int destlen, char *src, int srclen)
+base64_encode(char *dest, int destlen, const char *src, int srclen)
 {
   EVP_ENCODE_CTX ctx;
   int len, ret;
@@ -1046,13 +1046,13 @@ base64_encode(char *dest, int destlen, char *src, int srclen)
     return -1;
 
   EVP_EncodeInit(&ctx);
-  EVP_EncodeUpdate(&ctx, dest, &len, src, srclen);
+  EVP_EncodeUpdate(&ctx, dest, &len, (char*) src, srclen);
   EVP_EncodeFinal(&ctx, dest+len, &ret);
   ret += len;
   return ret;
 }
 int 
-base64_decode(char *dest, int destlen, char *src, int srclen)
+base64_decode(char *dest, int destlen, const char *src, int srclen)
 {
   EVP_ENCODE_CTX ctx;
   int len, ret;
@@ -1063,7 +1063,7 @@ base64_decode(char *dest, int destlen, char *src, int srclen)
     return -1;
 
   EVP_DecodeInit(&ctx);
-  EVP_DecodeUpdate(&ctx, dest, &len, src, srclen);
+  EVP_DecodeUpdate(&ctx, dest, &len, (char*) src, srclen);
   EVP_DecodeFinal(&ctx, dest, &ret);
   ret += len;
   return ret;

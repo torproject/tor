@@ -749,11 +749,11 @@ void router_get_routerlist(routerlist_t **prouterlist);
 void routerinfo_free(routerinfo_t *router);
 void router_mark_as_down(char *nickname);
 int router_set_routerlist_from_file(char *routerfile);
-int router_get_dir_hash(char *s, char *digest);
-int router_get_router_hash(char *s, char *digest);
-int router_set_routerlist_from_directory(char *s, crypto_pk_env_t *pkey);
-routerinfo_t *router_get_entry_from_string(char**s);
-int router_add_exit_policy_from_string(routerinfo_t *router, char *s);
+int router_get_dir_hash(const char *s, char *digest);
+int router_get_router_hash(const char *s, char *digest);
+int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey);
+routerinfo_t *router_get_entry_from_string(const char **s);
+int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 int router_supports_exit_address(uint32_t addr, uint16_t port,
                                  routerinfo_t *router);
 int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,

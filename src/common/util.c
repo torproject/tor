@@ -54,12 +54,21 @@ char *tor_strdup(const char *s) {
   return dup;
 }
 
+char *tor_strndup(const char *s, size_t n) {
+  char *dup;
+  assert(s);
+  dup = tor_malloc(n+1);
+  strncpy(dup, s, n);
+  dup[n] = 0;
+  return dup;
+}
+
 /*
  *    String manipulation
  */
 
 /* return the first char of s that is not whitespace and not a comment */
-char *eat_whitespace(char *s) {
+const char *eat_whitespace(const char *s) {
   assert(s);
 
   while(isspace(*s) || *s == '#') {
@@ -75,14 +84,14 @@ char *eat_whitespace(char *s) {
   return s;
 }
 
-char *eat_whitespace_no_nl(char *s) {
+const char *eat_whitespace_no_nl(const char *s) {
   while(*s == ' ' || *s == '\t') 
     ++s;
   return s;
 }
 
 /* return the first char of s that is whitespace or '#' or '\0 */
-char *find_whitespace(char *s) {
+const char *find_whitespace(const char *s) {
   assert(s);
 
   while(*s && !isspace(*s) && *s != '#')

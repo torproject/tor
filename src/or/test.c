@@ -608,7 +608,7 @@ test_dir_format()
   
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
   cp = buf;
-  rp1 = router_get_entry_from_string(&cp);
+  rp1 = router_get_entry_from_string((const char**)&cp);
   test_assert(rp1);
   test_streq(rp1->address, r1.address);
   test_eq(rp1->or_port, r1.or_port);
