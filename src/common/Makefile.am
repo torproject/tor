@@ -5,5 +5,5 @@ noinst_LIBRARIES = libor.a
 
 libor_a_SOURCES = log.c crypto.c fakepoll.c util.c
 
-noinst_HEADERS = log.h ss.h crypto.h fakepoll.h test.h util.h
+noinst_HEADERS = log.h crypto.h fakepoll.h test.h util.h
 

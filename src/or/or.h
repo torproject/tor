@@ -39,7 +39,6 @@
 
 #include "../common/crypto.h"
 #include "../common/log.h"
-#include "../common/ss.h"
 #include "../common/util.h"
 
 #define MAXCONNECTIONS 1000 /* upper bound on max connections.
