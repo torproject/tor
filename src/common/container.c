@@ -100,8 +100,9 @@ void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2)
   SMARTLIST_FOREACH(s2, void *, element, smartlist_add(sl, element));
 }
 
-/** Remove all elements E from sl such that E==element.  Does not preserve
- * the order of s1.
+/** Remove all elements E from sl such that E==element.  Preserve
+ * the order of any elements before E, but elements after E can be
+ * rearranged.
  */
 void smartlist_remove(smartlist_t *sl, void *element) {
   int i;
