@@ -868,6 +868,13 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     case -1: /* resolve failed */
       log_fn(LOG_INFO,"Resolve failed (%s).", n_stream->address);
       connection_mark_for_close(n_stream, END_STREAM_REASON_RESOLVEFAILED);
+/* XXX BUG: we're in state RESOLVING here, but we haven't been added to the
+ * 'pending' list, because the dns lookup was already cached as failed.
+ * But the mark_for_close will try to remove us from the pending list,
+ * and we'll trigger an assert (dns.c line 209).
+ * Should we add another EXIT_CONN state? Should we put an exception
+ * here? Or there?
+ */
     /* case 0, resolve added to pending list */
   }
   return 0;
