@@ -614,6 +614,7 @@ strmap_free(strmap_t *map, void (*free_val)(void*))
     tor_free(ent->key);
     if (free_val)
       tor_free(ent->val);
+    tor_free(ent);
   }
   tor_assert(SPLAY_EMPTY(&map->head));
   tor_free(map);
