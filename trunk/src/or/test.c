@@ -519,6 +519,7 @@ test_dir_format()
   
   r1.address = "testaddr1.foo.bar";
   r1.addr = 0xc0a80001u; /* 192.168.0.1 */
+  r1.published_on = 0;
   r1.or_port = 9000;
   r1.ap_port = 9002;
   r1.dir_port = 9003;
@@ -539,6 +540,7 @@ test_dir_format()
   ex2.next = NULL;
   r2.address = "tor.tor.tor";
   r2.addr = 0x0a030201u; /* 10.3.2.1 */
+  r2.published_on = 5;
   r2.or_port = 9005;
   r2.ap_port = 0;
   r2.dir_port = 0;
@@ -555,7 +557,9 @@ test_dir_format()
   test_assert(!crypto_pk_write_public_key_to_string(pk3 , &pk3_str, 
                                                     &pk3_str_len));
   
-  strcpy(buf2, "router testaddr1.foo.bar 9000 9002 9003 1000\nonion-key\n");
+  strcpy(buf2, "router testaddr1.foo.bar 9000 9002 9003 1000\n"
+         "published 1970-01-01 00:00:00\n"
+         "onion-key\n");
   strcat(buf2, pk1_str);
   strcat(buf2, "link-key\n");
   strcat(buf2, pk3_str);

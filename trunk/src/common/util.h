@@ -56,6 +56,18 @@ int read_all(int fd, void *buf, size_t count);
 
 void set_socket_nonblocking(int socket);
 
+typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR} file_status_t;
+
+/* Return FN_ERROR if filename can't be read, FN_NOENT if it doesn't
+ * exist, FN_FILE if it is a regular file, or FN_DIR if it's a
+ * directory. */
+file_status_t file_status(const char *filename);
+/* Check whether dirname exists and is private.  If yes returns
+ * 0.  Else returns -1.
+ */
+int check_private_dir(const char *dirname, int create);
+int write_str_to_file(const char *fname, const char *str);
+
 /* Minimalist interface to run a void function in the background.  On
    unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
    func should not return, but rather should call spawn_exit.

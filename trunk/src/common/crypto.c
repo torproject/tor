@@ -472,6 +472,28 @@ int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, char *src, int l
   return 0;
 }
 
+int 
+crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env, 
+                                        const char *fname)
+{
+  BIO *bio;
+  char *cp;
+  long len;
+  int r;
+  assert(env->type == CRYPTO_PK_RSA);
+  if (!(bio = BIO_new(BIO_s_mem())))
+    return -1;
+  if (PEM_write_bio_RSAPrivateKey(bio, (RSA*)env->key, NULL,NULL,0,0,NULL)) {
+    BIO_free(bio);
+    return -1;
+  }
+  len = BIO_get_mem_data(bio, &cp);
+  assert(len == strlen(cp));
+  r = write_str_to_file(fname, cp);
+  BIO_free(bio);
+  return r;
+}
+
 int crypto_pk_write_private_key_to_file(crypto_pk_env_t *env, FILE *dest)
 {
   assert(env && dest);

@@ -101,6 +101,7 @@
 
 #define MAX_BUF_SIZE (640*1024)
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
+#define MAX_NICKNAME_LEN 32
 
 #define ACI_TYPE_LOWER 0
 #define ACI_TYPE_HIGHER 1
@@ -326,6 +327,8 @@ typedef struct {
   uint16_t or_port;
   uint16_t ap_port;
   uint16_t dir_port;
+
+  time_t published_on;
  
   crypto_pk_env_t *onion_pkey; /* public RSA key for onions */
   crypto_pk_env_t *link_pkey;  /* public RSA key for TLS */

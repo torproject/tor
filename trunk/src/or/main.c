@@ -433,25 +433,6 @@ static int prepare_for_poll(void) {
   return (1000 - (now.tv_usec / 1000)); /* how many milliseconds til the next second? */
 }
 
-#define FN_ERROR -1
-#define FN_NOENT 0
-#define FN_FILE 1
-#define FN_DIR 2
-static int fn_exists(const char *fname)
-{
-  struct stat st;
-  if (stat(fname, &st)) {
-    if (errno == ENOENT) {
-      return FN_NOENT;
-    }
-    return FN_ERROR;
-  }
-  if (st.st_mode & S_IFDIR) 
-    return FN_DIR;
-  else
-    return FN_FILE;
-}
-
 static crypto_pk_env_t *init_key_from_file(const char *fname)
 {
   crypto_pk_env_t *prkey = NULL;
@@ -463,7 +444,7 @@ static crypto_pk_env_t *init_key_from_file(const char *fname)
     goto error;
   }
 
-  switch(fn_exists(fname)) {
+  switch(file_status(fname)) {
   case FN_DIR:
   case FN_ERROR:
     log(LOG_ERR, "Can't read key from %s", fname);
@@ -479,22 +460,10 @@ static crypto_pk_env_t *init_key_from_file(const char *fname)
       goto error;
     }
     log(LOG_INFO, "Generated key seems valid");
-    fd = open(fname, O_WRONLY|O_CREAT|O_TRUNC, 0400);
-    if (fd == -1) {
-      log(LOG_ERR, "Can't open %s for writing", fname);
+    if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
+      log(LOG_ERR, "Couldn't write generated key to %s.", fname);
       goto error;
     }
-    file = fdopen(fd, "w");
-    if (!file) {
-      log(LOG_ERR, "Can't fdopen %s for writing", fname);
-      goto error;
-    }
-    if (crypto_pk_write_private_key_to_file(prkey, file) < 0) {
-      log(LOG_ERR, "Can't write private key to %s", fname);
-      goto error;
-    }
-    fclose(file);
-    /* XXX fingerprint */
     return prkey;
   case FN_FILE:
     if (crypto_pk_read_private_key_from_filename(prkey, fname)) {
@@ -519,10 +488,9 @@ static crypto_pk_env_t *init_key_from_file(const char *fname)
 static int init_keys(void)
 {
   char keydir[512];
-  char fingerprint[FINGERPRINT_LEN+1];
+  char fingerprint[FINGERPRINT_LEN+MAX_NICKNAME_LEN+3]; 
   char *cp;
   crypto_pk_env_t *prkey;
-  FILE *file;
 
   /* OP's don't need keys.  Just initialize the TLS context.*/
   if (!options.OnionRouter && !options.DirPort) {
@@ -538,34 +506,12 @@ static int init_keys(void)
     return -1;
   }
   strcpy(keydir, options.DataDirectory);
-  switch (fn_exists(keydir)) {
-  case FN_NOENT:
-    log_fn(LOG_ERR, "DataDirectory does not exist");
-    return -1;
-  case FN_ERROR:
-    log_fn(LOG_ERR, "DataDirectory can't be read");
-    return -1;
-  case FN_FILE:
-    log_fn(LOG_ERR, "DataDirectory is not a directory.");
+  if (check_private_dir(keydir, 1)) {
     return -1;
   }
   strcat(keydir, "/keys");
-  switch (fn_exists(keydir)) {
-  case FN_NOENT:
-    if (mkdir(keydir, 0700)) {
-      log_fn(LOG_ERR, "Error making key directory.");
-      return -1;
-    }
-    break;
-  case FN_ERROR:
-    log_fn(LOG_ERR, "Error reading key directory.");
+  if (check_private_dir(keydir, 1)) {
     return -1;
-  case FN_FILE:
-    log_fn(LOG_ERR, "Key directory is not a directory.");
-    return -1;
-  case FN_DIR:
-    chmod(keydir, 0700);
-    break;
   }
   cp = keydir + strlen(keydir); /* End of string. */
   assert(!*cp);
@@ -600,28 +546,23 @@ static int init_keys(void)
   }
   strcpy(keydir, options.DataDirectory);
   strcat(keydir, "/router.desc");
-  file = fopen(keydir, "w");
-  if (!file) {
-    log_fn(LOG_ERR, "Error opening %s for writing", keydir);
+  if (write_str_to_file(keydir, router_get_my_descriptor())) {
     return -1;
   }
-  fputs(router_get_my_descriptor(), file);
-  fclose(file);
   /* 5. Dump fingerprint to 'fingerprint' */
   strcpy(keydir, options.DataDirectory);
   strcat(keydir, "/fingerprint");
-  file = fopen(keydir, "w");
-  if (!file) {
-    log_fn(LOG_ERR, "Error opening %s for writing", keydir);
-    return -1;
-  }
-  if (crypto_pk_get_fingerprint(get_identity_key(), fingerprint)<0) {
+  assert(strlen(options.Nickname) <= MAX_NICKNAME_LEN);
+  strcpy(fingerprint, options.Nickname);
+  strcat(fingerprint, " ");
+  if (crypto_pk_get_fingerprint(get_identity_key(),
+                                fingerprint+strlen(fingerprint))<0) {
     log_fn(LOG_ERR, "Error computing fingerprint");
     return -1;
   }
-  fprintf(file, "%s %s\n", options.Nickname, fingerprint);
-  fclose(file);
-
+  strcat(fingerprint, "\n");
+  if (write_str_to_file(keydir, fingerprint))
+    return -1;
   return 0;
 }
 
@@ -774,6 +715,7 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   char *identity_pkey;
   char digest[20];
   char signature[128];
+  char published[32];
   int onion_pkeylen, link_pkeylen, identity_pkeylen;
   int written;
   int result=0;
@@ -796,9 +738,12 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     log_fn(LOG_WARNING,"write link_pkey to string failed!");
     return -1;
   }
+  strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&router->published_on));
   
   result = snprintf(s, maxlen, 
-                    "router %s %d %d %d %d\nonion-key\n%s"
+                    "router %s %d %d %d %d\n"
+                    "published %s\n"
+                    "onion-key\n%s"
                     "link-key\n%s"
                     "signing-key\n%s",
     router->address,
@@ -806,6 +751,7 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     router->ap_port,
     router->dir_port,
     router->bandwidth,
+    published,
     onion_pkey, link_pkey, identity_pkey);
 
   free(onion_pkey);
@@ -1005,6 +951,7 @@ static int init_descriptor(void) {
   ri->or_port = options.ORPort;
   ri->ap_port = options.APPort;
   ri->dir_port = options.DirPort;
+  ri->published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key());
   ri->link_pkey = crypto_pk_dup_key(get_link_key());
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());

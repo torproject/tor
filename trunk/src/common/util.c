@@ -13,6 +13,10 @@
 #include "util.h"
 #include "log.h"
 
+/*
+ *    Memory
+ */
+
 void *tor_malloc(size_t size) {
   void *result;
 
@@ -25,6 +29,10 @@ void *tor_malloc(size_t size) {
 
   return result;
 }
+
+/*
+ *    Time
+ */
 
 void 
 my_gettimeofday(struct timeval *timeval) 
@@ -88,6 +96,10 @@ void tv_addms(struct timeval *a, long ms) {
   a->tv_usec %= 1000000;
 }
 
+/*
+ *   Low-level I/O.
+ */
+
 /* a wrapper for write(2) that makes sure to write all count bytes.
  * Only use if fd is a blocking socket. */
 int write_all(int fd, const void *buf, size_t count) {
@@ -129,6 +141,10 @@ void set_socket_nonblocking(int socket)
 #endif
 }
 
+/*
+ *   Process control
+ */
+
 int spawn_func(int (*func)(void *), void *data)
 {
 #ifdef MS_WINDOWS
@@ -164,7 +180,9 @@ void spawn_exit()
 }
 
 
-/* Fake socket pair over TCP.  Code adapted from perl 5.8.0's util.c */
+/*
+ *   Windows compatibility.
+ */
 int
 tor_socketpair(int family, int type, int protocol, int fd[2])
 {
@@ -276,3 +294,100 @@ int correct_socket_errno(int s)
   return WSAEWOULDBLOCK;
 }
 #endif
+
+/*
+ *    Filesystem operations.
+ */
+file_status_t file_status(const char *fname)
+{
+  struct stat st;
+  if (stat(fname, &st)) {
+    if (errno == ENOENT) {
+      return FN_NOENT;
+    }
+    return FN_ERROR;
+  }
+  if (st.st_mode & S_IFDIR) 
+    return FN_DIR;
+  else if (st.st_mode & S_IFREG)
+    return FN_FILE;
+  else
+    return FN_ERROR;
+}
+
+int check_private_dir(const char *dirname, int create)
+{
+  struct stat st;
+  if (stat(dirname, &st)) {
+    if (errno != ENOENT) {
+      log(LOG_ERR, "Directory %s cannot be read: %s", dirname, 
+          strerror(errno));
+      return -1;
+    } 
+    if (!create) {
+      log(LOG_ERR, "Directory %s does not exist.", dirname);
+      return -1;
+    }
+    log(LOG_INFO, "Creating directory %s", dirname); 
+    if (mkdir(dirname, 0700)) {
+      log(LOG_ERR, "Error creating directory %s: %s", dirname, 
+          strerror(errno));
+      return -1;
+    } else {
+      return 0;
+    }
+  }
+  if (!(st.st_mode & S_IFDIR)) {
+    log(LOG_ERR, "%s is not a directory", dirname);
+    return -1;
+  }
+  if (st.st_uid != getuid()) {
+    log(LOG_ERR, "%s is not owned by this UID (%d)", dirname, getuid());
+    return -1;
+  }
+  if (st.st_mode & 0077) {
+    log(LOG_WARNING, "Fixing permissions on directory %s", dirname);
+    if (chmod(dirname, 0700)) {
+      log(LOG_ERR, "Could not chmod directory %s: %s", dirname, 
+          strerror(errno));
+      return -1;
+    } else {
+      return 0;
+    }
+  }
+  return 0;
+}
+
+int
+write_str_to_file(const char *fname, const char *str)
+{
+  char tempname[1024];
+  int fd;
+  FILE *file;
+  if (strlen(fname) > 1000) {
+    log(LOG_ERR, "Filename %s is too long.", fname);
+    return -1;
+  }
+  strcpy(tempname,fname);
+  strcat(tempname,".tmp");
+  if ((fd = open(tempname, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0) {
+    log(LOG_ERR, "Couldn't open %s for writing: %s", tempname, 
+        strerror(errno));
+    return -1;
+  }
+  if (!(file = fdopen(fd, "w"))) {
+    log(LOG_ERR, "Couldn't fdopen %s for writing: %s", tempname, 
+        strerror(errno));
+    close(fd); return -1;
+  }
+  if (fputs(str,file)) {
+    log(LOG_ERR, "Error writing to %s: %s", tempname, strerror(errno));
+    fclose(file); return -1;
+  }
+  fclose(file);
+  if (rename(tempname, fname)) {
+    log(LOG_ERR, "Error replacing %s: %s", fname, strerror(errno));
+    return -1;
+  }
+  return 0;
+}

@@ -318,6 +318,7 @@ typedef enum {
   K_ONION_KEY,
   K_LINK_KEY,
   K_ROUTER_SIGNATURE,
+  K_PUBLISHED,
   _SIGNATURE, 
   _PUBLIC_KEY, 
   _ERR, 
@@ -337,6 +338,7 @@ static struct token_table_ent token_table[] = {
   { "onion-key", K_ONION_KEY },
   { "link-key", K_LINK_KEY },
   { "router-signature", K_ROUTER_SIGNATURE },
+  { "published", K_PUBLISHED },
   { NULL, -1 }
 };
 
@@ -492,6 +494,7 @@ router_dump_token(directory_token_t *tok) {
     case K_ONION_KEY: printf("Onion-key"); break;
     case K_LINK_KEY: printf("Link-key"); break;
     case K_ROUTER_SIGNATURE: printf("Router-signature"); break;
+    case K_PUBLISHED: printf("Published"); break;
     default:
       printf("?????? %d\n", tok->tp); return;
     }
@@ -511,7 +514,6 @@ router_get_next_token(char **s, directory_token_t *tok) {
 #else
 #define router_get_next_token _router_get_next_token
 #endif
-
 
 
 /* return the first char of s that is not whitespace and not a comment */
@@ -817,6 +819,7 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   char digest[128];
   directory_token_t _tok;
   directory_token_t *tok = &_tok;
+  struct tm published;
 
 #define NEXT_TOKEN()                                                     \
   do { if (router_get_next_token(s, tok)) {                              \
@@ -874,6 +877,19 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   
   log_fn(LOG_DEBUG,"or_port %d, ap_port %d, dir_port %d, bandwidth %d.",
     router->or_port, router->ap_port, router->dir_port, router->bandwidth);
+
+  NEXT_TOKEN();
+  if (tok->tp != K_PUBLISHED) {
+    log_fn(LOG_WARNING, "Missing published time"); goto err;
+  }
+  if (tok->val.cmd.n_args != 2) {
+    log_fn(LOG_WARNING, "Wrong number of arguments to published"); goto err;
+  }
+  tok->val.cmd.args[1][-1] = ' '; /* Re-insert space. */
+  if (!strptime(tok->val.cmd.args[0], "%Y-%m-%d %H:%M:%S", &published)) {
+    log_fn(LOG_WARNING, "Published time was unparseable"); goto err;
+  }
+  router->published_on = timegm(&published);
 
   NEXT_TOKEN();
   if (tok->tp != K_ONION_KEY) {
