@@ -1,10 +1,21 @@
 #!/bin/sh
+#
+#tor    The Onion Router
+#
+#chkconfig:2345 90 10
+#description: Onion Router
 
+TORUSER=
+TORGROUP=
 TORBIN=@BINDIR@/tor
-TORPID=@LOCALSTATEDIR@/run/tor.pid
+TORPID=@LOCALSTATEDIR@/run/tor/tor.pid
 TORLOG=@LOCALSTATEDIR@/log/tor/tor.log
 TORCONF=@CONFDIR@/torrc
-TORARGS="--pidfile $TORPID --logfile $TORLOG --runasdaemon 1"
+if [ "x$TORUSER" -eq "x" ]; then
+    TORARGS="--pidfile $TORPID --logfile $TORLOG --runasdaemon 1"
+else
+    TORARGS="--pidfile $TORPID --logfile $TORLOG --runasdaemon 1 --user $TORUSER --group $TORGROUP"
+fi
 RETVAL=0
 
 case "$1" in
@@ -16,7 +27,11 @@ case "$1" in
         RETVAL=1
     else 
         echo -n "Starting tor..."
-        $TORBIN -f $TORCONF $TORARGS
+        if  [ "x$TORUSER" -eq "x" ]; then
+            $TORBIN -f $TORCONF $TORARGS
+        else 
+            /bin/su -c "$TORBIN -f $TORCONF $TORARGS" $TORUSER
+        fi
         RETVAL=$?
         if [ $RETVAL -eq 0 ]; then
             echo " ok"
