@@ -135,20 +135,14 @@ int write_to_buf(char *string, int string_len,
 int fetch_from_buf(char *string, int string_len,
                    char **buf, int *buflen, int *buf_datalen) {
 
-  /* if there are string_len bytes in buf, write them onto string,
+  /* There must be string_len bytes in buf; write them onto string,
    * then memmove buf back (that is, remove them from buf).
-   *
-   * If there are not enough bytes on the buffer to fill string, return -1.
    *
    * Return the number of bytes still on the buffer. */
 
   assert(string && buf && *buf && buflen && buf_datalen);
+  assert(string_len <= *buf_datalen); /* make sure we don't ask for too much */
 
-  /* this is the point where you would grow the buffer, if you want to */
-
-  if(string_len > *buf_datalen) /* we want too much. sorry. */
-    return -1;
- 
   memcpy(string,*buf,string_len);
   *buf_datalen -= string_len;
   memmove(*buf, *buf+string_len, *buf_datalen);

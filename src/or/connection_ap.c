@@ -19,8 +19,7 @@ int ap_handshake_process_socks(connection_t *conn) {
     if(conn->inbuf_datalen < sizeof(socks4_t)) /* basic info available? */
       return 0; /* not yet */
 
-    if(connection_fetch_from_buf((char *)&socks4_info,sizeof(socks4_t),conn) < 0)
-      return -1;
+    connection_fetch_from_buf((char *)&socks4_info,sizeof(socks4_t),conn);
 
     log_fn(LOG_DEBUG,"Successfully read socks info.");
 
@@ -67,8 +66,7 @@ int ap_handshake_process_socks(connection_t *conn) {
       ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
       return -1;
     }
-    if(connection_fetch_from_buf(tmpbuf,amt,conn) < 0)
-      return -1;
+    connection_fetch_from_buf(tmpbuf,amt,conn);
     conn->read_username = 1;
     log_fn(LOG_DEBUG,"Successfully read username.");
   }
@@ -82,8 +80,7 @@ int ap_handshake_process_socks(connection_t *conn) {
       ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
       return -1;
     }
-    if(connection_fetch_from_buf(tmpbuf,amt,conn) < 0)
-      return -1;
+    connection_fetch_from_buf(tmpbuf,amt,conn);
 
     conn->dest_addr = strdup(tmpbuf);
     log_fn(LOG_NOTICE,"successfully read dest addr '%s'",

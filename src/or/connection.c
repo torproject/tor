@@ -568,9 +568,7 @@ repeat_connection_package_raw_inbuf:
     cell.length = amount_to_process;
   }
 
-  if(connection_fetch_from_buf(cell.payload+RELAY_HEADER_SIZE, 
-                               cell.length, conn) < 0)
-    return -1;
+  connection_fetch_from_buf(cell.payload+RELAY_HEADER_SIZE, cell.length, conn);
 
   circ = circuit_get_by_conn(conn);
   if(!circ) {
@@ -695,9 +693,7 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   if(conn->inbuf_datalen < CELL_NETWORK_SIZE) /* entire response available? */
     return 0; /* not yet */
 
-  if(connection_fetch_from_buf(crypted,CELL_NETWORK_SIZE,conn) < 0) {
-    return -1;
-  }
+  connection_fetch_from_buf(crypted,CELL_NETWORK_SIZE,conn);
 
 #if 0
   printf("Cell header crypttext: ");

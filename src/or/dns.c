@@ -14,6 +14,7 @@
 
 #define MAX_DNSWORKERS 50
 #define MIN_DNSWORKERS 3
+#define MAX_IDLE_DNSWORKERS 10
 
 int num_workers=0;
 int num_workers_busy=0;
@@ -118,21 +119,14 @@ int dns_resolve(connection_t *exitconn) {
 static int dns_assign_to_worker(connection_t *exitconn) {
   connection_t *dnsconn;
   unsigned char len;
-  struct hostent *rent;
 
   spawn_enough_workers(); /* respawn here, to be sure there are enough */
 
   dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
 
   if(!dnsconn) {
-    log(LOG_INFO,"dns_assign_to_worker(): no idle dns workers. Doing it myself.");
-
-    /* short version which does it all right here */
-    rent = gethostbyname(exitconn->address);
-    if (!rent) {
-      return dns_found_answer(exitconn->address, 0);
-    }
-    return dns_found_answer(exitconn->address, *(uint32_t *)rent->h_addr);
+    log(LOG_INFO,"dns_assign_to_worker(): no idle dns workers. Failing.");
+    return -1;
   }
 
   dnsconn->address = strdup(exitconn->address);
@@ -217,11 +211,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
     return 0; /* not yet */
   assert(conn->inbuf_datalen == 4);
 
-  if(connection_fetch_from_buf((char*)&answer,sizeof(answer),conn) < 0) {
-    log(LOG_ERR,"connection_dnsworker_process_inbuf(): Broken inbuf. Worker dying.");
-    /* XXX exitconn's never going to get his answer :( */
-    return -1;
-  }
+  connection_fetch_from_buf((char*)&answer,sizeof(answer),conn);
 
   dns_found_answer(conn->address, answer);
 
@@ -324,6 +314,14 @@ static int dns_spawn_worker(void) {
 static void spawn_enough_workers(void) {
   int num_workers_needed; /* aim to have 1 more than needed,
                            * but no less than min and no more than max */
+  connection_t *dnsconn;
+
+  if(num_workers_busy == MAX_DNSWORKERS) {
+    /* We always want at least one worker idle.
+     * So find the oldest busy worker and kill it.
+     */
+
+  }
 
   if(num_workers_busy >= MIN_DNSWORKERS)
     num_workers_needed = num_workers_busy+1;
@@ -341,7 +339,13 @@ static void spawn_enough_workers(void) {
     num_workers++;
   }
 
-  /* FFFF this is where we will cull extra workers */
+  while(num_workers > num_workers_needed+MAX_IDLE_DNSWORKERS) { /* too many idle? */
+    /* cull excess workers */
+    dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
+    assert(dnsconn);
+    dnsconn->marked_for_close = 1;
+    num_workers--;
+  }
 }
 
 /*
