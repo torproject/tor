@@ -489,7 +489,7 @@ test_util(void) {
   int i;
   uint32_t u32;
   uint16_t u16;
-  char *cp;
+  char *cp, *k, *v;
 
   start.tv_sec = 5;
   start.tv_usec = 5000;
@@ -673,6 +673,53 @@ test_util(void) {
   /* Test tor_parse_long. */
   test_eq(10L, tor_parse_long("10",10,0,100,NULL,NULL));
   test_eq(0L, tor_parse_long("10",10,50,100,NULL,NULL));
+
+  /* Test parse_line_from_str */
+  strlcpy(buf, "k v\n" " key    value with spaces   \n"  "keykey val\n"
+          "k2\n"
+          "k3 \n"  "\n" "   \n" "#comment\n"
+          "k4#a\n" "k5#abc\n" "k6 val #with comment\n", sizeof(buf));
+  cp = buf;
+
+  cp = parse_line_from_str(cp, &k, &v);
+  test_streq(k, "k");
+  test_streq(v, "v");
+  test_assert(!strcmpstart(cp, " key    value with"));
+
+  cp = parse_line_from_str(cp, &k, &v);
+  test_streq(k, "key");
+  test_streq(v, "value with spaces");
+  test_assert(!strcmpstart(cp, "keykey"));
+
+  cp = parse_line_from_str(cp, &k, &v);
+  test_streq(k, "keykey");
+  test_streq(v, "val");
+  test_assert(!strcmpstart(cp, "k2\n"));
+
+  cp = parse_line_from_str(cp, &k, &v);
+  test_streq(k, "k2");
+  test_streq(v, "");
+  test_assert(!strcmpstart(cp, "k3 \n"));
+
+  cp = parse_line_from_str(cp, &k, &v);
+  test_streq(k, "k3");
+  test_streq(v, "");
+  test_assert(!strcmpstart(cp, "\n   \n"));
+
+  cp = parse_line_from_str(cp, &k, &v);
+  test_streq(k, "k4");
+  test_streq(v, "");
+  test_assert(!strcmpstart(cp, "k5#abc"));
+
+  cp = parse_line_from_str(cp, &k, &v);
+  test_streq(k, "k5");
+  test_streq(v, "");
+  test_assert(!strcmpstart(cp, "k6"));
+
+  cp = parse_line_from_str(cp, &k, &v);
+  test_streq(k, "k6");
+  test_streq(v, "val");
+  test_streq(cp, "");
 
   /* XXXX test older functions. */
   smartlist_free(sl);
