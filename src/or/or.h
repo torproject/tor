@@ -128,6 +128,11 @@
 /** How often do we rotate TLS contexts? */
 #define MAX_SSL_KEY_LIFETIME (120*60)
 
+/** How old do we allow a router to get before removing it, either
+ * from the descriptor list (for dirservers) or the router list (for others)?
+ * In seconds. */
+#define ROUTER_MAX_AGE (60*60*24)
+
 #define CIRC_ID_TYPE_LOWER 0
 #define CIRC_ID_TYPE_HIGHER 1
 
@@ -1298,6 +1303,7 @@ void routerlist_clear_trusted_directories(void);
 void routerinfo_free(routerinfo_t *router);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_mark_as_down(char *nickname);
+void routerlist_remove_old_routers(void);
 int router_load_routerlist_from_file(char *routerfile, int trusted);
 int router_load_routerlist_from_string(const char *s, int trusted);
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey);

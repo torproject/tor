@@ -9,9 +9,6 @@
  * \brief Directory server core implementation.
  **/
 
-/** How old do we allow a router to get before removing it? (seconds) */
-#define ROUTER_MAX_AGE (60*60*24)
-
 /** How far in the future do we allow a router to get? (seconds) */
 #define ROUTER_ALLOW_SKEW (30*60)
 
