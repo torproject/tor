@@ -383,7 +383,7 @@ int relay_check_recognized(circuit_t *circ, int cell_direction, char *stream, co
     log_fn(LOG_DEBUG,"considered stream %d, not it.",*(int*)tmpconn->stream_id);
   }
 
-  log_fn(LOG_DEBUG,"Didn't recognize. Giving up.");
+  log_fn(LOG_DEBUG,"Didn't recognize on this iteration of decryption.");
   return 0;
 
 }
@@ -862,8 +862,8 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
         hop != circ->cpath && hop->state == CPATH_STATE_OPEN;
         hop=hop->next) ;
     if(hop == circ->cpath) { /* got an extended when we're all done? */
-      log_fn(LOG_INFO,"got extended when circ already built? Weird.");
-      return 0;
+      log_fn(LOG_INFO,"got extended when circ already built? Closing.");
+      return -1;
     }
   }
   assert(hop->state == CPATH_STATE_AWAITING_KEYS);

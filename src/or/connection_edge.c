@@ -102,12 +102,12 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
   return 0;
 }
 
+/* an incoming relay cell has arrived. return -1 if you want to tear down the
+ * circuit, else 0. */
 int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn,
                                        int edge_type, crypt_path_t *layer_hint) {
   int relay_command;
   static int num_seen=0;
-
-  /* an incoming relay cell has arrived */
 
   assert(cell && circ);
 
@@ -148,7 +148,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       if((edge_type == EDGE_AP && --layer_hint->deliver_window < 0) ||
          (edge_type == EDGE_EXIT && --circ->deliver_window < 0)) {
         log_fn(LOG_DEBUG,"circ deliver_window below 0. Killing.");
-        return -1; /* XXX kill the whole circ? */
+        return -1;
       }
       log_fn(LOG_DEBUG,"circ deliver_window now %d.", edge_type == EDGE_AP ? layer_hint->deliver_window : circ->deliver_window);
 
@@ -165,6 +165,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         return -1; /* somebody's breaking protocol. kill the whole circuit. */
       }
 
+//      printf("New text for buf (%d bytes): '%s'", cell->length - RELAY_HEADER_SIZE, cell->payload + RELAY_HEADER_SIZE);
       if(connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
                                  cell->length - RELAY_HEADER_SIZE, conn) < 0) {
         conn->marked_for_close = 1;

@@ -349,6 +349,8 @@ static int connection_tls_finish_handshake(connection_t *conn) {
         conn->pkey = pk;
         conn->bandwidth = router->bandwidth;
         conn->addr = router->addr, conn->port = router->or_port;
+        if(conn->address)
+          free(conn->address);
         conn->address = strdup(router->address);
       }
     } else { /* it's an OP */

@@ -256,7 +256,7 @@ static void conn_read(int i) {
      * discussion of POLLIN vs POLLHUP */
 
   conn = connection_array[i];
-  //log_fn(LOG_DEBUG,"socket %d has something to read.",conn->s);
+  //log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
 
   if(
       /* XXX does POLLHUP also mean it's definitely broken? */
@@ -300,7 +300,7 @@ static void check_conn_marked(int i) {
   conn = connection_array[i];
   assert(conn);
   if(conn->marked_for_close) {
-    log(LOG_DEBUG,"check_conn_marked(): Cleaning up connection.");
+    log_fn(LOG_DEBUG,"Cleaning up connection.");
     if(conn->s >= 0) { /* might be an incomplete exit connection */
       /* FIXME there's got to be a better way to check for this -- and make other checks? */
       connection_flush_buf(conn); /* flush it first */
