@@ -20,14 +20,13 @@ NICK            . Handle half-open connections
                         o Figure out what causes connections to close, standardize
                           when we mark a connection vs when we tear it down
                 o Look at what ssl does to keep from mutating data streams
-ARMA            - Reduce streamid footprint from 7 bytes to 3 bytes
-                        - Check for collisions in streamid (now possible with
-                          just 3 bytes), and back up & replace with padding if so
-                - Use the 3 saved bytes to put pseudorandomness in each cell
+ARMA    - Reduce streamid footprint from 7 bytes to 2 bytes
+                - Check for collisions in streamid (now possible with
+                  just 2 bytes), and back up & replace with padding if so
+                - Use the 3 saved bytes to put pseudorandomness in each relay cell
                 - Use the 4 reserved bytes in each cell header to keep 1/5
-                  of a sha1 of the payload
-                        - (Move these 4 bytes into the stream header)
-                - Consider moving length into the stream header too
+                  of a sha1 of the relay payload (move into stream header)
+                - Move length into the stream header too
                 - Spec the stream_id stuff. Clarify that nobody on the backward
                   stream should look at stream_id.
 ARMA    . Exit policies
@@ -49,25 +48,36 @@ SPEC!!  D Non-clique topologies
                 o Handle multiple cpu workers (one for each cpu, plus one)
                 o Queue for pending tasks if all workers full
                 o Support the 'process this onion' task
-                - Support the 'decrypt this RSA blob' handshake1 task
+NICK            - Support the 'decrypt this RSA blob' handshake1 task
+                        - Merge dnsworkers and cpuworkers to some extent
                 - Handle cpuworkers dying
                 D Support later handshake parts
-        . Directory servers
-                D Automated reputation management
+        o Simple directory servers
                 o Include key in source; sign directories
                         o Signed directory backend
                         o Document
                         o Integrate
-                - Add versions to code
-                . Have directories list recommended-versions
+                o Add versions to code
+                o Have directories list recommended-versions
                         o Include (unused) line in directories
                         o Check for presence of line.
-                        - Quit if running the wrong version
-                        - Command-line option to override quit
-                . Add more information to directory server entries
+                        o Quit if running the wrong version
+                        o Command-line option to override quit
+                o Add more information to directory server entries
                         o Exit policies
-                        D jurisdiction? others?
+        - More directory servers
+                - Add in long-term nicknames
+                - Give normal routers signing keys
+                - Let dirservers keep only {nickname, signingkey} in routers.or
+                        - dirport needs to accept 'post' requests
+                          for routers submitting (signed) new entries
+                        - routers submit new entries periodically
+                        - dirserver checks signature
+                        D client checks signature?
+        D Advanced directory servers
+                D Automated reputation management
 SPEC!!          D Figure out how to do threshold directory servers
+                D jurisdiction info in dirserver entries? other info?
         . Scrubbing proxies
                 - Find an smtp proxy?
                         - Check the old smtp proxy code
@@ -79,7 +89,8 @@ SPEC!!          D Figure out how to do threshold directory servers
                 D socks5
 SPEC!!          - Handle socks commands other than connect, eg, bind?
         . Develop rendezvous points
-                . Spec (still needs step-by-step instructions)
+                o Design
+                - Spec
                 - Implement
         D Deploy and manage open source development site.
         . Documentation
@@ -97,11 +108,9 @@ NICK            . Unit tests
                         . httperf infrastructure (easy to set up)
                         . oprofile (installed in RH >8.0)
         D Deploy a widespread network
-        . Router twins
-                o Choose twin if primary is down, when laying circuit
-                D Load balancing between twins
-                        - Keep track of load over links/nodes, to
-                          know who's hosed
+        D Load balancing between router twins
+                D Keep track of load over links/nodes, to
+                  know who's hosed
 NICK    . Daemonize and package
                 o Teach it to fork and background
                 - Red Hat spec file
@@ -113,7 +122,7 @@ NICK    . Daemonize and package
                         o BSD
                         . Solaris
                         o Cygwin
-                        . Win32
+                        o Win32
                         o OS X
                 o openssl randomness
                 o inet_ntoa
@@ -122,9 +131,9 @@ NICK    . Daemonize and package
         D Move away from openssl
                 o Abstract out crypto calls
                 D Look at nss, others? Just include code?
-        . Clearer bandwidth management 
-                - Do we want to remove bandwidth from OR handshakes?
-                - What about OP handshakes?
+        o Clearer bandwidth management 
+                o Do we want to remove bandwidth from OR handshakes?
+                o What about OP handshakes?
         - More flexibility in node addressing
                 D Support IPv6 rather than just 4
                 - Handle multihomed servers (config variable to set IP)
