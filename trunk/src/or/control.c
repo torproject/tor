@@ -769,7 +769,7 @@ control_event_stream_status(connection_t *conn, stream_status_event_t tp)
   len = strlen(buf);
   msg = tor_malloc(5+len+1);
   msg[0] = (uint8_t) tp;
-  set_uint32(msg+1, htonl(conn->s)); /* ???? Is this a security problem? */
+  set_uint32(msg+1, htonl(conn->global_identifier));
   strlcpy(msg+5, buf, len+1);
 
   send_control_event(EVENT_STREAM_STATUS, (uint16_t)(5+len+1), msg);

@@ -110,6 +110,7 @@ static int connection_bucket_read_limit(connection_t *conn);
  * Initialize conn's timestamps to now.
  */
 connection_t *connection_new(int type) {
+  static uint32_t n_connections_allocated = 0;
   connection_t *conn;
   time_t now = time(NULL);
 
@@ -117,6 +118,7 @@ connection_t *connection_new(int type) {
   conn->magic = CONNECTION_MAGIC;
   conn->s = -1; /* give it a default of 'not used' */
   conn->poll_index = -1; /* also default to 'not used' */
+  conn->global_identifier = n_connections_allocated++;
 
   conn->type = type;
   if (!connection_is_listener(conn)) { /* listeners never use their buf */
