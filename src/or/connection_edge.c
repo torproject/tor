@@ -24,7 +24,7 @@ void relay_header_pack(char *dest, const relay_header_t *src) {
   *(uint8_t*)(dest)    = src->command;
   *(uint16_t*)(dest+1) = htons(src->recognized);
   *(uint16_t*)(dest+3) = htons(src->stream_id);
-  *(uint32_t*)(dest+5) = htonl(src->integrity);
+  memcpy(dest+5, src->integrity, 4);
   *(uint16_t*)(dest+9) = htons(src->length);
 }
 
@@ -32,7 +32,7 @@ void relay_header_unpack(relay_header_t *dest, const char *src) {
   dest->command    = *(uint8_t*)(src);
   dest->recognized = ntohs(*(uint16_t*)(src+1));
   dest->stream_id  = ntohs(*(uint16_t*)(src+3));
-  dest->integrity  = ntohl(*(uint32_t*)(src+5));
+  memcpy(dest->integrity, src+5, 4);
   dest->length     = ntohs(*(uint16_t*)(src+9));
 }
 

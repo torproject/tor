@@ -314,14 +314,15 @@ int circuit_stream_is_being_handled(connection_t *conn) {
 
 /* update digest from the payload of cell. assign integrity part to cell. */
 static void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
-  uint32_t integrity;
+  char integrity[4];
   relay_header_t rh;
 
   crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
-  crypto_digest_get_digest(digest, (char *)&integrity, 4);
-  log_fn(LOG_DEBUG,"Putting digest of %u into relay cell.",integrity);
+  crypto_digest_get_digest(digest, integrity, 4);
+  log_fn(LOG_DEBUG,"Putting digest of %u %u %u %u into relay cell.",
+    integrity[0], integrity[1], integrity[2], integrity[3]);
   relay_header_unpack(&rh, cell->payload);
-  rh.integrity = integrity;
+  memcpy(rh.integrity, integrity, 4);
   relay_header_pack(cell->payload, &rh);
 }
 
@@ -330,29 +331,31 @@ static void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
  * and cell to their original state and return 0.
  */
 static int relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell) {
-  uint32_t received_integrity, calculated_integrity;
+  char received_integrity[4], calculated_integrity[4];
   relay_header_t rh;
   crypto_digest_env_t *backup_digest=NULL;
 
   backup_digest = crypto_digest_dup(digest);
 
   relay_header_unpack(&rh, cell->payload);
-  received_integrity = rh.integrity;
-  rh.integrity = 0;
+  memcpy(received_integrity, rh.integrity, 4);
+  memset(rh.integrity, 0, 4);
   relay_header_pack(cell->payload, &rh);
 
-  log_fn(LOG_DEBUG,"Reading digest of %u from relay cell.",received_integrity);
+  log_fn(LOG_DEBUG,"Reading digest of %u %u %u %u from relay cell.",
+    received_integrity[0], received_integrity[1],
+    received_integrity[2], received_integrity[3]);
 
   crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
-  crypto_digest_get_digest(digest, (char *)&calculated_integrity, 4);
+  crypto_digest_get_digest(digest, calculated_integrity, 4);
 
-  if(received_integrity != calculated_integrity) {
-    log_fn(LOG_INFO,"Recognized=0 but bad digest. Not recognizing. (%d vs %d).",
-           received_integrity, calculated_integrity);
+  if(memcmp(received_integrity, calculated_integrity, 4)) {
+    log_fn(LOG_INFO,"Recognized=0 but bad digest. Not recognizing.");
+// (%d vs %d).", received_integrity, calculated_integrity);
     /* restore digest to its old form */
     crypto_digest_assign(digest, backup_digest);
     /* restore the relay header */
-    rh.integrity = received_integrity;
+    memcpy(rh.integrity, received_integrity, 4);
     relay_header_pack(cell->payload, &rh);
     crypto_free_digest_env(backup_digest);
     return 0;
