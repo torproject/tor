@@ -552,6 +552,17 @@ static void listener_close_if_present(int type) {
   }
 }
 
+/** 
+ * Launch any configured listener connections of type <b>type</b>.  (A
+ * listener is configured if <b>port_option</b> is non-zero.  If any
+ * BindAddress configuration options are given in <b>cfg</b>, create a
+ * connection binding to each one.  Otherwise, create a single
+ * connection binding to the address <b>default_addr</b>.)
+ *
+ * If <b>force</b> is true, close and re-open all listener connections.
+ * Otherwise, only relaunch the listeners of this type if the number of 
+ * existing connections is not as configured (e.g., because one died).
+ */
 static int retry_listeners(int type, struct config_line_t *cfg,
                            int port_option, const char *default_addr,
                            int force)
