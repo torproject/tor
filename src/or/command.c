@@ -147,11 +147,11 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
    */
   if ((cell->circ_id & (1<<15)) && conn->circ_id_type == CIRC_ID_TYPE_HIGHER) {
     log_fn(LOG_INFO, "Got a high circuit ID from %s (%d); switching to low circuit IDs.",
-           conn->nickname, conn->s);
+           conn->nickname ? conn->nickname : "client", conn->s);
     conn->circ_id_type = CIRC_ID_TYPE_LOWER;
   } else if (!(cell->circ_id & (1<<15)) && conn->circ_id_type == CIRC_ID_TYPE_LOWER) {
     log_fn(LOG_INFO, "Got a low circuit ID from %s (%d); switching to high circuit IDs.",
-           conn->nickname, conn->s);
+           conn->nickname ? conn->nickname : "client", conn->s);
     conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
   }
 
