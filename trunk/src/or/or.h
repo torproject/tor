@@ -148,7 +148,7 @@
 #define EXIT_CONN_STATE_RESOLVING 1 /* waiting for response from dns farm */
 #define EXIT_CONN_STATE_CONNECTING 2 /* waiting for connect() to finish */
 #define EXIT_CONN_STATE_OPEN 3
-#define EXIT_CONN_STATE_RESOLVEFAILED 4 /* waiting to be remoed*/
+#define EXIT_CONN_STATE_RESOLVEFAILED 4 /* waiting to be removed */
 #define _EXIT_CONN_STATE_MAX 4
 #if 0
 #define EXIT_CONN_STATE_CLOSE 3 /* flushing the buffer, then will close */
