@@ -65,7 +65,7 @@ int crypto_pk_keysize(crypto_pk_env_t *env);
 int crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding);
 int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding);
 int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
-int crypto_pk_private_checksig(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
+int crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
 
 int base64_encode(char *dest, int destlen, char *src, int srclen);
 int base64_decode(char *dest, int destlen, char *src, int srclen);

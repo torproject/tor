@@ -2,7 +2,10 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+#define OR_PUBLICKEY_BEGIN_TAG "-----BEGIN RSA PUBLIC KEY-----\n"
 #define OR_PUBLICKEY_END_TAG "-----END RSA PUBLIC KEY-----\n"
+#define OR_SIGNATURE_BEGIN_TAG "-----BEGIN SIGNATURE-----\n"
+#define OR_SIGNATURE_END_TAG "-----END SIGNATURE-----\n"
 
 #include "or.h"
 
@@ -16,14 +19,22 @@ extern routerinfo_t *my_routerinfo; /* from main.c */
 
 /****************************************************************************/
 
+struct directory_token;
+typedef struct directory_token directory_token_t;
+
 /* static function prototypes */
 void routerlist_free(routerinfo_t *list);
 static routerinfo_t **make_rarray(routerinfo_t* list, int *len);
 static char *eat_whitespace(char *s);
+static char *eat_whitespace_no_nl(char *s);
 static char *find_whitespace(char *s);
-static int router_resolve(routerinfo_t *router);
-static void router_add_exit_policy(routerinfo_t *router, char *string);
 static void router_free_exit_policy(routerinfo_t *router);
+static routerinfo_t *router_get_entry_from_string_tok(char**s, 
+                                                      directory_token_t *tok);
+static int router_get_list_from_string_tok(char **s, directory_t **dest,
+                                           directory_token_t *tok);
+static int router_add_exit_policy(routerinfo_t *router, 
+                                  directory_token_t *tok);
 
 /****************************************************************************/
 
@@ -288,61 +299,189 @@ int router_get_list_from_file(char *routerfile)
   return 0;
 } 
 
-int router_get_list_from_string(char *s) 
-{
-  return router_get_list_from_string_impl(s, &directory);
-}
 
-int router_get_list_from_string_impl(char *s, directory_t **dest)
-{
-  routerinfo_t *routerlist=NULL;
-  routerinfo_t *router;
-  routerinfo_t **new_router_array;
-  int new_rarray_len;
+typedef enum {
+  K_ACCEPT,
+  K_CLIENT_SOFTWARE, 
+  K_DIRECTORY_SIGNATURE,
+  K_REJECT, 
+  K_ROUTER, 
+  K_SERVER_SOFTWARE,
+  K_SIGNED_DIRECTORY,
+  K_SIGNING_KEY,
+  _SIGNATURE, 
+  _PUBLIC_KEY, 
+  _ERR, 
+  _EOF 
+} directory_keyword;
 
-  assert(s);
+struct token_table_ent { char *t; int v; };
 
-  while(*s) { /* while not at the end of the string */
-    router = router_get_entry_from_string(&s);
-    if(router == NULL) {
-      routerlist_free(routerlist);
-      return -1;
-    }
-    if (router_resolve(router)) {
-      routerlist_free(router);      
-      routerlist_free(routerlist);
-      return -1;
-    }
-    switch(router_is_me(router->addr, router->or_port)) {
-      case 0: /* it's not me */
-        router->next = routerlist;
-        routerlist = router;
-        break;
-      case 1: /* it is me */
-        if(!my_routerinfo) /* save it, so we can use it for directories */
-          my_routerinfo = router;
-        else
-          routerlist_free(router);        
-        break;
-      default:
-        log(LOG_ERR,"router_get_list_from_string(): router_is_me returned error.");
-        routerlist_free(routerlist);
-        return -1;
-    }
-    s = eat_whitespace(s);
-  }
- 
-  new_router_array = make_rarray(routerlist, &new_rarray_len);
-  if(new_router_array) { /* success! replace the old one */
-    if (*dest) 
-      directory_free(*dest);
-    *dest = (directory_t*) malloc(sizeof(directory_t));
-    (*dest)->routers = new_router_array;
-    (*dest)->n_routers = new_rarray_len;
+static struct token_table_ent token_table[] = {
+  { "accept", K_ACCEPT },
+  { "client-software", K_CLIENT_SOFTWARE },
+  { "directory-signature", K_DIRECTORY_SIGNATURE },
+  { "reject", K_REJECT },
+  { "router", K_ROUTER },
+  { "server-software", K_SERVER_SOFTWARE },
+  { "signed-directory", K_SIGNED_DIRECTORY },
+  { "signing-key", K_SIGNING_KEY },
+  { NULL, -1 }
+};
+
+#define MAX_ARGS 8
+struct directory_token {
+  directory_keyword tp;
+  union {
+    struct {
+      char *args[MAX_ARGS+1]; 
+      int n_args;
+    } cmd;
+    char *signature;
+    char *error;
+    crypto_pk_env_t *public_key;
+  } val;
+};
+
+static int
+_router_get_next_token(char **s, directory_token_t *tok) {
+  char *next;
+  crypto_pk_env_t *pkey = NULL;
+  char *signature = NULL;
+  int i, done;
+
+  tok->tp = _ERR;
+  tok->val.error = "";
+
+  *s = eat_whitespace(*s);
+  if (!**s) {
+    tok->tp = _EOF;
     return 0;
+  } else if (**s == '-') {
+    next = strchr(*s, '\n');
+    if (! next) { tok->val.error = "No newline at EOF"; return -1; }
+    ++next;
+    if (! strncmp(*s, OR_PUBLICKEY_BEGIN_TAG, next-*s)) {
+      next = strstr(*s, OR_PUBLICKEY_END_TAG);
+      if (!next) { tok->val.error = "No public key end tag found"; return -1; }
+      next = strchr(next, '\n'); /* Part of OR_PUBLICKEY_END_TAG; can't fail.*/
+      ++next;
+      if (!(pkey = crypto_new_pk_env(CRYPTO_PK_RSA))) 
+        return -1;
+      if (crypto_pk_read_public_key_from_string(pkey, *s, next-*s)) {
+        crypto_free_pk_env(pkey);
+        tok->val.error = "Couldn't parse public key.";
+        return -1;
+      }
+      tok->tp = _PUBLIC_KEY;
+      tok->val.public_key = pkey;
+      *s = next;
+      return 0;
+    } else if (! strncmp(*s, OR_SIGNATURE_BEGIN_TAG, next-*s)) {
+      /* Advance past newline; can't fail. */
+      *s = strchr(*s, '\n'); 
+      ++*s;
+      /* Find end of base64'd data */
+      next = strstr(*s, OR_SIGNATURE_END_TAG);
+      if (!next) { tok->val.error = "No signature end tag found"; return -1; }
+      
+      signature = malloc(256);
+      i = base64_decode(signature, 256, *s, next-*s);
+      if (i<0) {
+        free(signature);
+        tok->val.error = "Error decoding signature."; return -1;
+      } else if (i != 128) {
+        free(signature);
+        tok->val.error = "Bad length on decoded signature."; return -1;
+      }
+      tok->tp = _SIGNATURE;
+      tok->val.signature = signature;
+
+      next = strchr(next, '\n'); /* Part of OR_SIGNATURE_END_TAG; can't fail.*/
+      *s = next+1;
+      return 0;
+    } else {
+      tok->val.error = "Unrecognized begin line"; return -1;
+    }
+  } else {
+    next = find_whitespace(*s);
+    if (!next) {
+      tok->val.error = "Unexpected EOF"; return -1;
+    }
+    for (i = 0 ; token_table[i].t ; ++i) {
+      if (!strncmp(token_table[i].t, *s, next-*s)) {
+        tok->tp = token_table[i].v;
+        i = 0;
+        done = (*next == '\n');
+        *s = eat_whitespace_no_nl(next);
+        while (**s != '\n' && i <= MAX_ARGS && !done) {
+          next = find_whitespace(*s);
+          if (*next == '\n')
+            done = 1;
+          *next = 0;
+          tok->val.cmd.args[i++] = *s;
+          *s = eat_whitespace_no_nl(next+1);
+        };
+        tok->val.cmd.n_args = i;
+        if (i > MAX_ARGS) {
+          tok->tp = _ERR;
+          tok->val.error = "Too many arguments"; return -1;
+        }
+        return 0;
+      }
+    }
+    tok->val.error = "Unrecognized command"; return -1;
   }
-  return -1;
 }
+
+static void 
+router_dump_token(directory_token_t *tok) {
+  int i;
+  switch(tok->tp) 
+    {
+    case _SIGNATURE:
+      puts("(signature)");
+      return;
+    case _PUBLIC_KEY:
+      puts("(public key)");
+      return;
+    case _ERR:
+      printf("(Error: %s\n)", tok->val.error);
+      return;
+    case _EOF:
+      puts("EOF");
+      return;
+    case K_ACCEPT: printf("Accept"); break;
+    case K_CLIENT_SOFTWARE: printf("Client-Software"); break;
+    case K_DIRECTORY_SIGNATURE: printf("Directory-Signature"); break;
+    case K_REJECT: printf("Reject"); break;
+    case K_ROUTER: printf("Router"); break;
+    case K_SERVER_SOFTWARE: printf("Server-Software"); break;
+    case K_SIGNED_DIRECTORY: printf("Signed-Directory"); break;
+    case K_SIGNING_KEY: printf("Signing-Key"); break;
+    default:
+      printf("?????? %d\n", tok->tp); return;
+    }
+  for (i = 0; i < tok->val.cmd.n_args; ++i) {
+    printf(" \"%s\"", tok->val.cmd.args[i]);
+  }
+  printf("\n");
+  return;
+}
+
+#ifdef DEBUG_ROUTER_TOKENS
+static int
+router_get_next_token(char **s, directory_token_t *tok) {
+  int i;
+  i = _router_get_next_token(s, tok);
+  router_dump_token(tok);
+  return i;
+}
+#else
+#define router_get_next_token _router_get_next_token
+#endif
+
+
 
 /* return the first char of s that is not whitespace and not a comment */
 static char *eat_whitespace(char *s) {
@@ -361,6 +500,12 @@ static char *eat_whitespace(char *s) {
   return s;
 }
 
+static char *eat_whitespace_no_nl(char *s) {
+  while(*s == ' ' || *s == '\t') 
+    ++s;
+  return s;
+}
+
 /* return the first char of s that is whitespace or '#' or '\0 */
 static char *find_whitespace(char *s) {
   assert(s);
@@ -371,6 +516,145 @@ static char *find_whitespace(char *s) {
   return s;
 }
 
+int router_get_list_from_string(char *s) 
+{
+  return router_get_list_from_string_impl(s, &directory);
+}
+
+int router_get_list_from_string_impl(char *s, directory_t **dest) {
+  directory_token_t tok;
+  if (router_get_next_token(&s, &tok)) {
+    return NULL;
+  }
+  return router_get_list_from_string_tok(&s, dest, &tok);
+}
+
+static int router_get_dir_hash(char *s, char *digest)
+{
+  char *start, *end;
+  start = strstr(s, "signed-directory");
+  if (!start) return -1;
+  end = strstr(start, "directory-signature");
+  if (!end) return -1;
+  end = strchr(end, '\n');
+  if (!end) return -1;
+  ++end;
+  
+  if (crypto_SHA_digest(start, end-start, digest))
+    return -1;
+
+  return 0;
+}
+
+int router_get_dir_from_string(char *s, crypto_pk_env_t *pkey)
+{
+  return router_get_dir_from_string_impl(s, &directory, pkey);
+}
+
+int router_get_dir_from_string_impl(char *s, directory_t **dest,
+                                    crypto_pk_env_t *pkey)
+{
+  directory_token_t tok;
+  char digest[20];
+  char signed_digest[128];
+  
+#define NEXT_TOK()                                                      \
+  do {                                                                  \
+    if (router_get_next_token(&s, &tok)) {                              \
+      log(LOG_ERR, "Error reading directory: %s", tok.val.error);       \
+      return -1;                                                        \
+    } } while (0)
+#define TOK_IS(type,name)                                               \
+  do {                                                                  \
+    if (tok.tp != type) {                                               \
+      log(LOG_ERR, "Error reading directory: expected %s", name);       \
+      return -1;                                                        \
+    } } while(0)
+  
+  if (router_get_dir_hash(s, digest))
+    return -1;
+
+  NEXT_TOK();
+  TOK_IS(K_SIGNED_DIRECTORY, "signed-directory");
+
+  NEXT_TOK();
+  TOK_IS(K_CLIENT_SOFTWARE, "client-software");
+
+  NEXT_TOK();
+  TOK_IS(K_SERVER_SOFTWARE, "server-software");
+  
+  NEXT_TOK();
+  if (router_get_list_from_string_tok(&s, dest, &tok))
+    return -1;
+  
+  TOK_IS(K_DIRECTORY_SIGNATURE, "directory-signature");
+  NEXT_TOK();
+  TOK_IS(_SIGNATURE, "signature");
+  if (pkey) {
+    if (crypto_pk_public_checksig(pkey, tok.val.signature, 128, signed_digest)
+        != 20) {
+      log(LOG_ERR, "Error reading directory: invalid signature.");
+      free(tok.val.signature);
+      return -1;
+    }
+    if (memcmp(digest, signed_digest, 20)) {
+      log(LOG_ERR, "Error reading directory: signature does not match.");
+      free(tok.val.signature);
+      return -1;
+    }
+  }
+  free(tok.val.signature);
+
+  NEXT_TOK();
+  TOK_IS(_EOF, "end of directory");
+
+  return 0;
+#undef NEXT_TOK
+#undef TOK_IS
+}
+
+
+static int router_get_list_from_string_tok(char **s, directory_t **dest,
+                                           directory_token_t *tok)
+{
+  routerinfo_t *routerlist=NULL;
+  routerinfo_t *router;
+  routerinfo_t **new_router_array;
+  int new_rarray_len;
+
+  assert(s);
+
+  while (tok->tp == K_ROUTER) {
+    router = router_get_entry_from_string_tok(s, tok);
+    switch(router_is_me(router->addr, router->or_port)) {
+      case 0: /* it's not me */
+        router->next = routerlist;
+        routerlist = router;
+        break;
+      case 1: /* it is me */
+        if(!my_routerinfo) /* save it, so we can use it for directories */
+          my_routerinfo = router;
+        else
+          routerlist_free(router);        
+        break;
+      default:
+        log(LOG_ERR,"router_get_list_from_string(): router_is_me returned error.");
+        routerlist_free(routerlist);
+        return -1;
+    }
+  }
+ 
+  new_router_array = make_rarray(routerlist, &new_rarray_len);
+  if(new_router_array) { /* success! replace the old one */
+    if (*dest) 
+      directory_free(*dest);
+    *dest = (directory_t*) malloc(sizeof(directory_t));
+    (*dest)->routers = new_router_array;
+    (*dest)->n_routers = new_rarray_len;
+    return 0;
+  }
+  return -1;
+}
 static int 
 router_resolve(routerinfo_t *router)
 {
@@ -388,157 +672,102 @@ router_resolve(routerinfo_t *router)
   return 0;
 }
 
+
+routerinfo_t *router_get_entry_from_string(char **s) {
+  directory_token_t tok;
+  routerinfo_t *router;
+  if (router_get_next_token(s, &tok)) return NULL;
+  router = router_get_entry_from_string_tok(s, &tok);
+  if (tok.tp != _EOF)
+    return NULL;
+  return router;
+}
+
 /* reads a single router entry from s.
  * updates s so it points to after the router it just read.
  * mallocs a new router, returns it if all goes well, else returns NULL.
  */
-routerinfo_t *router_get_entry_from_string(char **s) {
-  routerinfo_t *router;
-  char *next;
+static routerinfo_t *router_get_entry_from_string_tok(char**s, directory_token_t *tok) {
+  routerinfo_t *router = NULL;
 
-  /* Make sure that this string really starts with a router entry. */
-  *s = eat_whitespace(*s);
-  if (strncasecmp(*s, "router ", 7)) {
+#define NEXT_TOKEN()                                 \
+  do { if (router_get_next_token(s, tok)) goto err;  \
+  } while(0)
+
+#define ARGS tok->val.cmd.args
+
+  if (tok->tp != K_ROUTER) {
     log(LOG_ERR,"router_get_entry_from_string(): Entry does not start with \"router\"");
     return NULL;
   }
-
-  router = malloc(sizeof(routerinfo_t));
-  if (!router) {
+  if (!(router = malloc(sizeof(routerinfo_t)))) {
     log(LOG_ERR,"router_get_entry_from_string(): Could not allocate memory.");
     return NULL;
   }
   memset(router,0,sizeof(routerinfo_t)); /* zero it out first */
   router->next = NULL;
 
-/* Bug: if find_whitespace returns a '#', we'll squish it. */
-#define NEXT_TOKEN(s, next)    \
-  *s = eat_whitespace(*s);     \
-  next = find_whitespace(*s);  \
-  if(!*next) {                 \
-    goto router_read_failed;   \
-  }                            \
-  *next = 0;
+  if (tok->val.cmd.n_args != 6) {
+    log(LOG_ERR,"router_get_entry_from_string(): Wrong # of arguments to \"router\"");
+    goto err;
+  }
 
-  /* Skip the "router" */
-  NEXT_TOKEN(s, next);
-  *s = next+1;
-
-  /* read router->address */
-  NEXT_TOKEN(s, next);
-  router->address = strdup(*s);
-  *s = next+1;
-
-  /* Don't resolve address till later. */
+  /* read router.address */
+  if (!(router->address = strdup(ARGS[0])))
+    goto err;
   router->addr = 0;
 
-  /* read router->or_port */
-  NEXT_TOKEN(s, next);
-  router->or_port = atoi(*s);
+  /* Read router->or_port */
+  router->or_port = atoi(ARGS[1]);
   if(!router->or_port) {
-    log(LOG_ERR,"router_get_entry_from_string(): or_port '%s' unreadable or 0. Failing.",*s);
-    goto router_read_failed;
+    log(LOG_ERR,"router_get_entry_from_string(): or_port unreadable or 0. Failing.");
+    goto err;
   }
-  *s = next+1;
   
-  /* read router->op_port */
-  NEXT_TOKEN(s, next);
-  router->op_port = atoi(*s);
-  *s = next+1;
+  /* Router->op_port */
+  router->op_port = atoi(ARGS[2]);
   
-  /* read router->ap_port */
-  NEXT_TOKEN(s, next);
-  router->ap_port = atoi(*s);
-  *s = next+1;
+  /* Router->ap_port */
+  router->ap_port = atoi(ARGS[3]);
   
-  /* read router->dir_port */
-  NEXT_TOKEN(s, next);
-  router->dir_port = atoi(*s);
-  *s = next+1;
+  /* Router->dir_port */
+  router->dir_port = atoi(ARGS[4]);
 
-  /* read router->bandwidth */
-  NEXT_TOKEN(s, next);
-  router->bandwidth = atoi(*s);
-  if(!router->bandwidth) {
-    log(LOG_ERR,"router_get_entry_from_string(): bandwidth '%s' unreadable or 0. Failing.",*s);
-    goto router_read_failed;
+  /* Router->bandwidth */
+  router->bandwidth = atoi(ARGS[5]);
+  if (!router->bandwidth) {
+    log(LOG_ERR,"router_get_entry_from_string(): bandwidth unreadable or 0. Failing.");
   }
-  *s = next+1;
-
+  
   log(LOG_DEBUG,"or_port %d, op_port %d, ap_port %d, dir_port %d, bandwidth %d.",
     router->or_port, router->op_port, router->ap_port, router->dir_port, router->bandwidth);
 
-  *s = eat_whitespace(*s); 
-  next = strstr(*s,OR_PUBLICKEY_END_TAG);
-  router->pkey = crypto_new_pk_env(CRYPTO_PK_RSA);
-  if(!next || !router->pkey) {
-    log(LOG_ERR,"router_get_entry_from_string(): Couldn't find pk in string");
-    goto router_read_failed;
+  NEXT_TOKEN();
+  if (tok->tp != _PUBLIC_KEY) { 
+    log(LOG_ERR,"router_get_entry_from_string(): Missing public key");
+    goto err;
+  } /* Check key length */
+  router->pkey = tok->val.public_key;
+
+  NEXT_TOKEN();
+  if (tok->tp == K_SIGNING_KEY) {
+    NEXT_TOKEN();
+    if (tok->tp != _PUBLIC_KEY) {
+      log(LOG_ERR,"router_get_entry_from_string(): Missing signing key");
+      goto err;
+    }
+    router->signing_pkey = tok->val.public_key;
+    NEXT_TOKEN();
+  } 
+
+  while (tok->tp == K_ACCEPT || tok->tp == K_REJECT) {
+    router_add_exit_policy(router, tok);
+    NEXT_TOKEN();
   }
   
-  /* now advance *s so it's at the end of this public key */
-  next = strchr(next, '\n');
-  assert(next); /* can't fail, we just checked it was here */
-  *next = 0;
-//  log(LOG_DEBUG,"Key about to be read is: '%s'",*s);
-  if((crypto_pk_read_public_key_from_string(router->pkey, *s, strlen(*s))<0)) {
-    log(LOG_ERR,"router_get_entry_from_string(): Couldn't read pk from string");
-    goto router_read_failed;
-  }
-  log(LOG_DEBUG,"router_get_entry_from_string(): Public key size = %u.", crypto_pk_keysize(router->pkey));
-
-  if (crypto_pk_keysize(router->pkey) != 128) { /* keys MUST be 1024 bits in size */
-    log(LOG_ERR,"Key for router %s:%u is not 1024 bits. All keys must be exactly 1024 bits long.",
-      router->address,router->or_port);
-    goto router_read_failed;
-  }
-
-  *s = next+1;
-  *s = eat_whitespace(*s);
-  if (!strncasecmp(*s, "signing-key", 11)) {
-    /* We have a signing key */
-    *s = strchr(*s, '\n');
-    *s = eat_whitespace(*s); 
-    next = strstr(*s,OR_PUBLICKEY_END_TAG);
-    router->signing_pkey = crypto_new_pk_env(CRYPTO_PK_RSA);
-    if (!next || !router->signing_pkey) {
-      log(LOG_ERR,"router_get_entry_from_string(): Couldn't find signing_pk in string");
-      goto router_read_failed;
-    }
-    next = strchr(next, '\n');
-    assert(next);
-    *next = 0;
-    if ((crypto_pk_read_public_key_from_string(router->signing_pkey, *s,
-                                               strlen(*s)))<0) {
-      log(LOG_ERR,"router_get_entry_from_string(): Couldn't read signing pk from string");
-      goto router_read_failed;
-    }
-
-    log(LOG_DEBUG,"router_get_entry_from_string(): Signing key size = %u.", crypto_pk_keysize(router->signing_pkey));
-
-    if (crypto_pk_keysize(router->signing_pkey) != 128) { /* keys MUST be 1024 bits in size */
-      log(LOG_ERR,"Signing key for router %s:%u is 1024 bits. All keys must be exactly 1024 bits long.",
-          router->address,router->or_port);
-      goto router_read_failed;
-    }
-    *s = next+1;
-  }
-      
-  //  test_write_pkey(router->pkey);  
-
-  while(**s && **s != '\n') {
-    /* pull in a line of exit policy */
-    next = strchr(*s, '\n');
-    if(!next)
-      goto router_read_failed;
-    *next = 0;
-    router_add_exit_policy(router, *s);
-    *s = next+1;
-  }
-
   return router;
 
-router_read_failed:
+ err:
   if(router->address)
     free(router->address);
   if(router->pkey)
@@ -546,6 +775,8 @@ router_read_failed:
   router_free_exit_policy(router);
   free(router);
   return NULL;
+#undef ARGS
+#undef NEXT_TOKEN
 }
 
 static void router_free_exit_policy(routerinfo_t *router) {
@@ -576,43 +807,35 @@ void test_write_pkey(crypto_pk_env_t *pkey) {
 }
 #endif
 
-static void router_add_exit_policy(routerinfo_t *router, char *string) {
+static int router_add_exit_policy(routerinfo_t *router, 
+                                  directory_token_t *tok) {
   struct exit_policy_t *tmpe, *newe;
-  char *n;
+  char *arg, *colon;
 
-  string = eat_whitespace(string);
-  if(!*string) /* it was all whitespace or comment */
-    return;
+  if (tok->val.cmd.n_args != 1)
+    return -1;
+  arg = tok->val.cmd.args[0];
 
   newe = malloc(sizeof(struct exit_policy_t));
   memset(newe,0,sizeof(struct exit_policy_t));
-
-  newe->string = strdup(string);
-  n = find_whitespace(string);
-  *n = 0;
-
-  if(!strcasecmp(string,"reject")) {
+  
+  newe->string = malloc(8+strlen(arg));
+  if (tok->tp == K_REJECT) {
+    strcpy(newe->string, "reject ");
     newe->policy_type = EXIT_POLICY_REJECT;
-  } else if(!strcasecmp(string,"accept")) {
-    newe->policy_type = EXIT_POLICY_ACCEPT;
   } else {
-    goto policy_read_failed;
+    assert(tok->tp == K_ACCEPT);
+    strcpy(newe->string, "accept ");
+    newe->policy_type = EXIT_POLICY_ACCEPT;
   }
-
-  string = eat_whitespace(n+1);
-  if(!*string) {
+  strcat(newe->string, arg);
+  
+  colon = strchr(arg,':');
+  if(!colon)
     goto policy_read_failed;
-  }
-
-  n = strchr(string,':');
-  if(!n)
-    goto policy_read_failed;
-  *n = 0;
-  newe->address = strdup(string);
-  string = n+1;
-  n = find_whitespace(string);
-  *n = 0;
-  newe->port = strdup(string);
+  *colon = 0;
+  newe->address = strdup(arg);
+  newe->port = strdup(colon+1);
 
   log(LOG_DEBUG,"router_add_exit_policy(): type %d, address '%s', port '%s'.",
       newe->policy_type, newe->address, newe->port);
@@ -621,13 +844,13 @@ static void router_add_exit_policy(routerinfo_t *router, char *string) {
 
   if(!router->exit_policy) {
     router->exit_policy = newe;
-    return;
+    return 0;
   }
 
   for(tmpe=router->exit_policy; tmpe->next; tmpe=tmpe->next) ;
   tmpe->next = newe;
 
-  return;
+  return 0;
 
 policy_read_failed:
   assert(newe->string);
@@ -639,8 +862,7 @@ policy_read_failed:
   if(newe->port)
     free(newe->port);
   free(newe);
-  return;
-
+  return -1;
 }
 
 /* Return 0 if my exit policy says to allow connection to conn.

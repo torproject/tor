@@ -551,10 +551,8 @@ int crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *from, int fro
 
   switch(env->type) {
   case CRYPTO_PK_RSA:
-    if (!(((RSA*)env->key)->p))
-      return -1;
     return RSA_public_decrypt(fromlen, from, to, (RSA *)env->key, 
-			      RSA_PKCS1_OAEP_PADDING);
+			      RSA_PKCS1_PADDING);
     default:
     return -1;
   }
@@ -569,7 +567,7 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromle
     if (!(((RSA*)env->key)->p))
       return -1;
     return RSA_private_encrypt(fromlen, from, to, (RSA *)env->key, 
-			       RSA_PKCS1_OAEP_PADDING);
+			       RSA_PKCS1_PADDING);
     default:
     return -1;
   }
@@ -836,7 +834,7 @@ base64_encode(char *dest, int destlen, char *src, int srclen)
 
   EVP_EncodeInit(&ctx);
   EVP_EncodeUpdate(&ctx, dest, &len, src, srclen);
-  EVP_EncodeFinal(&ctx, dest, &ret);
+  EVP_EncodeFinal(&ctx, dest+len, &ret);
   ret += len;
   return ret;
 }
