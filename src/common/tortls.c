@@ -430,6 +430,15 @@ tor_tls_new(int sock, int isServer, int use_no_cert)
   return result;
 }
 
+/** Return whether this tls initiated the connect (client) or
+ * received it (server). */
+int
+tor_tls_is_server(tor_tls *tls)
+{
+  tor_assert(tls);
+  return tls->isServer;
+}
+
 /** Release resources associated with a TLS object.  Does not close the
  * underlying file descriptor.
  */
