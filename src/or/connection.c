@@ -155,8 +155,10 @@ void connection_close_immediate(connection_t *conn)
   }
   close(conn->s);
   conn->s = -1;
-  buf_clear(conn->outbuf);
-  conn->outbuf_flushlen = 0;
+  if(!connection_is_listener(conn)) {
+    buf_clear(conn->outbuf);
+    conn->outbuf_flushlen = 0;
+  }
 }
 
 int
