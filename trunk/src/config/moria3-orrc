@@ -5,8 +5,6 @@ Nickname moria3
 ORPort 9003
 DirPort 9033
 
-OnionRouter 1
-
 # List of routers
 RouterFile ../config/dirservers
 
