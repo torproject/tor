@@ -731,7 +731,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   routerinfo_t *router;
   int r;
 
-  assert(circ);
+  assert(circ && circ->cpath);
 
   if(circ->cpath->state == CPATH_STATE_CLOSED) {
 
