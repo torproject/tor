@@ -989,6 +989,8 @@ onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest)
   cpath_build_state_t *info;
   routerinfo_t *exit;
   router_get_routerlist(&rl);
+  if (!rl)
+    return NULL;
   r = new_route_len(options.PathlenCoinWeight, purpose, rl->routers);
   if (r < 1) /* must be at least 1 */
     return NULL;

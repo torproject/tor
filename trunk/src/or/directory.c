@@ -554,7 +554,8 @@ connection_dir_client_reached_eof(connection_t *conn)
       return -1;
     }
     router_get_routerlist(&rl);
-    routerlist_update_from_runningrouters(rl,rrs);
+    if (rl)
+      routerlist_update_from_runningrouters(rl,rrs);
     running_routers_free(rrs);
   }
 
