@@ -490,20 +490,35 @@ int client_dns_incr_failures(const char *address)
 /** Record the fact that <b>address</b> resolved to <b>val</b>.
  * We can now use this in subsequent streams via addressmap_rewrite()
  * so we can more correctly choose an exit that will allow <b>address</b>.
+ *
+ * If <b>exitname</b> is defined, then append the addresses with
+ * ".exitname.exit" before registering the mapping.
  */
-void client_dns_set_addressmap(const char *address, uint32_t val)
+void client_dns_set_addressmap(const char *address, uint32_t val, const char *exitname)
 {
   struct in_addr in;
-  char *addr;
+  char extendedaddress[MAX_SOCKS_ADDR_LEN+MAX_HEX_NICKNAME_LEN+10];
+  char valbuf[INET_NTOA_BUF_LEN];
+  char extendedval[INET_NTOA_BUF_LEN+MAX_HEX_NICKNAME_LEN+10];
 
   tor_assert(address); tor_assert(val);
 
   if (tor_inet_aton(address, &in))
     return; /* If address was an IP address already, don't add a mapping. */
   in.s_addr = htonl(val);
-  addr = tor_malloc(INET_NTOA_BUF_LEN);
-  tor_inet_ntoa(&in,addr,INET_NTOA_BUF_LEN);
-  addressmap_register(address, addr,
+  tor_inet_ntoa(&in,valbuf,sizeof(valbuf));
+  if (exitname) {
+    tor_snprintf(extendedaddress, sizeof(extendedaddress),
+                 "%s.%s.exit", address, exitname);
+    tor_snprintf(extendedval, sizeof(extendedval),
+                 "%s.%s.exit", valbuf, exitname);
+  } else {
+    tor_snprintf(extendedaddress, sizeof(extendedaddress),
+                 "%s", address);
+    tor_snprintf(extendedval, sizeof(extendedval),
+                 "%s", valbuf);
+  }
+  addressmap_register(extendedaddress, tor_strdup(extendedval),
                       time(NULL) + MAX_DNS_ENTRY_AGE);
 }
 
@@ -754,8 +769,8 @@ int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
   }
 
   string_addr = ap_conn->socks_request->address;
-  payload_len = strlen(string_addr);
-  tor_assert(strlen(string_addr) <= RELAY_PAYLOAD_SIZE);
+  payload_len = strlen(string_addr)+1;
+  tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
 
   log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",ap_conn->stream_id);
 
@@ -840,7 +855,8 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
   if (answer_type == RESOLVED_TYPE_IPV4) {
     uint32_t a = get_uint32(answer);
     if (a)
-      client_dns_set_addressmap(conn->socks_request->address, ntohl(a));
+      client_dns_set_addressmap(conn->socks_request->address, ntohl(a),
+                                conn->chosen_exit_name);
   }
 
   if (conn->socks_request->socks_version == 4) {
