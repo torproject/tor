@@ -262,7 +262,7 @@ Tor Rendezvous Spec
    PK_ID is the hash of Bob's public key.  RP is NUL-padded.
 
    Implementations must accept both variants, but should only generate the
-   first so long as Tor 0.0.7.
+   first so long as Tor 0.0.7 is in use.
 
    The hybrid encryption to Bob's PK works just like the hybrid
    encryption in CREATE cells (see main spec). Thus the payload of the
