@@ -650,7 +650,7 @@ int connection_dir_handle_listener_read(connection_t *conn);
 
 int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
-int dns_tor_to_master(connection_t *exitconn);
+int dns_resolve(connection_t *exitconn);
 int dns_master_start(void);
 
 /********************************* main.c ***************************/
@@ -665,7 +665,6 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 
 connection_t *connection_get_by_type(int type);
-connection_t *connection_get_pendingresolve_by_address(char *address);
 
 void connection_watch_events(connection_t *conn, short events);
 void connection_stop_reading(connection_t *conn);
@@ -724,7 +723,6 @@ int decrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *prke
 void pad_onion(unsigned char *onion, uint32_t onionlen, int n);
 
 void init_tracked_tree(void);
-int find_tracked_onion(unsigned char *onion, uint32_t onionlen);
 
 /********************************* routers.c ***************************/
 
