@@ -544,14 +544,9 @@ circuit_expire_old_circuits(void)
 /** A testing circuit has completed. Take whatever stats we want. */
 static void
 circuit_testing_opened(circuit_t *circ) {
-
   /* For now, we only use testing circuits to see if our ORPort is
-     reachable. So, if this circuit ends at us, remember that. */
-  routerinfo_t *exit = router_get_by_digest(circ->build_state->chosen_exit_digest);
-  if (exit && router_is_me(exit)) {
-    log_fn(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent.");
-    router_orport_found_reachable();
-  }
+     reachable. But we remember reachability in onionskin_answer(),
+     so there's no need to record anything here. Just close the circ. */
   circuit_mark_for_close(circ);
 }
 
@@ -563,7 +558,7 @@ circuit_testing_failed(circuit_t *circ, int at_last_hop) {
   if (!at_last_hop)
     circuit_launch_by_identity(CIRCUIT_PURPOSE_TESTING, me->identity_digest, 0, 0, 1);
   else
-    log_fn(LOG_NOTICE,"The testing circuit has failed. Guess you're not reachable yet.");
+    log_fn(LOG_INFO,"Our testing circuit (to see if your ORPort is reachable) has failed. I'll try again later.");
 }
 
 /** The circuit <b>circ</b> has just become open. Take the next
