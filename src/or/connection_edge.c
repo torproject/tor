@@ -329,6 +329,17 @@ void connection_ap_attach_pending(void)
   }
 }
 
+/** Return 1 if <b>address</b> has funny characters in it like
+ * colons. Return 0 if it's fine.
+ */
+static int
+address_is_invalid_destination(const char *address) {
+  /* FFFF should flesh this out */
+  if (strchr(address,':'))
+    return 1;
+  return 0;
+}
+
 /** connection_edge_process_inbuf() found a conn in state
  * socks_wait. See if conn->inbuf has the right bytes to proceed with
  * the socks handshake.
@@ -381,7 +392,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     /* .exit -- modify conn to specify the exit node. */
     char *s = strrchr(socks->address,'.');
     if (!s || s[1] == '\0') {
-      log_fn(LOG_WARN,"Malformed address '%s.exit'. Refusing.", socks->address);
+      log_fn(LOG_WARN,"Malformed exit address '%s'. Refusing.", socks->address);
       return -1;
     }
     conn->chosen_exit_name = tor_strdup(s+1);
@@ -390,6 +401,11 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 
   if (addresstype != ONION_HOSTNAME) {
     /* not a hidden-service request (i.e. normal or .exit) */
+
+    if (address_is_invalid_destination(socks->address)) {
+      log_fn(LOG_WARN,"Destination '%s' seems to be an invalid hostname. Failing.", socks->address);
+      return -1;
+    }
 
     if (socks->command == SOCKS_COMMAND_RESOLVE) {
       uint32_t answer = 0;
