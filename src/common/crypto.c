@@ -78,8 +78,7 @@ struct crypto_pk_env_t
 struct crypto_cipher_env_t
 {
   unsigned char key[CIPHER_KEY_LEN];
-  unsigned char iv[CIPHER_IV_LEN+1];
-    /* +1 because some compilers don't like a length of 0 */
+  unsigned char iv[_ARRAYSIZE(CIPHER_IV_LEN)];
   aes_cnt_cipher_t *cipher;
 };
 
