@@ -381,7 +381,9 @@ typedef enum {
 #define CIRCUIT_PURPOSE_S_CONNECT_REND 15
 /** Hidden-service-side circuit purpose: at Bob, rendezvous established. */
 #define CIRCUIT_PURPOSE_S_REND_JOINED 16
-#define _CIRCUIT_PURPOSE_MAX 16
+/** A testing circuit; not meant to be used for actual traffic. */
+#define CIRCUIT_PURPOSE_TESTING 17
+#define _CIRCUIT_PURPOSE_MAX 17
 
 /** True iff the circuit purpose <b>p</b> is for a circuit at the OP
  * that this OP has originated. */
@@ -1378,6 +1380,10 @@ void directory_post_to_dirservers(uint8_t purpose, const char *payload,
                                   size_t payload_len);
 void directory_get_from_dirserver(uint8_t purpose, const char *resource,
                                   int retry_if_no_servers);
+void directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
+                                       int private_connection, const char *resource,
+                                       const char *payload, size_t payload_len);
+
 int parse_http_response(const char *headers, int *code, time_t *date,
                         int *compression);
 
@@ -1455,13 +1461,7 @@ void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
 
 void directory_all_unreachable(time_t now);
-void directory_has_arrived(time_t now);
-
-int authdir_mode(or_options_t *options);
-int clique_mode(or_options_t *options);
-int server_mode(or_options_t *options);
-int advertised_server_mode(void);
-int proxy_mode(or_options_t *options);
+void directory_has_arrived(time_t now, char *identity_digest);
 
 int control_signal_act(int the_signal);
 void handle_signals(int is_parent);
@@ -1624,11 +1624,21 @@ void set_identity_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_identity_key(void);
 int identity_key_is_set(void);
 void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last);
-int init_keys(void);
-crypto_pk_env_t *init_key_from_file(const char *fname);
 void rotate_onion_key(void);
-void router_set_bandwidth_capacity(int bw);
-int router_get_bandwidth_capacity(void);
+crypto_pk_env_t *init_key_from_file(const char *fname);
+int init_keys(void);
+
+void consider_testing_reachability(void);
+void router_orport_found_reachable(void);
+void router_dirport_found_reachable(void);
+void server_has_changed_ip(void);
+void consider_publishable_server(time_t now, int force);
+
+int authdir_mode(or_options_t *options);
+int clique_mode(or_options_t *options);
+int server_mode(or_options_t *options);
+int advertised_server_mode(void);
+int proxy_mode(or_options_t *options);
 
 void router_retry_connections(void);
 int router_is_clique_mode(routerinfo_t *router);

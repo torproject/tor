@@ -263,7 +263,6 @@ void connection_watch_events(connection_t *conn, short events) {
 
 /** Return true iff <b>conn</b> is listening for read events. */
 int connection_is_reading(connection_t *conn) {
-  int r;
   tor_assert(conn);
 
   return conn->read_event && event_pending(conn->read_event, EV_READ, NULL);
@@ -578,8 +577,10 @@ void directory_all_unreachable(time_t now) {
   }
 }
 
-/** This function is called whenever we successfully pull down a directory */
-void directory_has_arrived(time_t now) {
+/** This function is called whenever we successfully pull down a directory.
+ * If <b>identity_digest</b> is defined, it contains the digest of the
+ * router that just gave us this directory. */
+void directory_has_arrived(time_t now, char *identity_digest) {
   or_options_t *options = get_options();
 
   log_fn(LOG_INFO, "A directory has arrived.");
@@ -597,14 +598,26 @@ void directory_has_arrived(time_t now) {
   if (!time_to_fetch_running_routers)
     time_to_fetch_running_routers = now + options->StatusFetchPeriod;
 
+  if (identity_digest) { /* if this is us, then our dirport is reachable */
+    routerinfo_t *router = router_get_by_digest(identity_digest);
+    if (!router) // XXX
+      log_fn(LOG_WARN,"Roger, router_get_by_digest doesn't find me.");
+    if (router && router_is_me(router)) {
+      log_fn(LOG_NOTICE,"Your DirPort is reachable from the outside. Excellent.");
+      router_dirport_found_reachable();
+    }
+  }
+
   if (server_mode(options) &&
       !we_are_hibernating()) { /* connect to the appropriate routers */
     router_retry_connections();
+    if (identity_digest) /* we got a fresh directory */
+      consider_testing_reachability();
   }
 }
 
 /** Perform regular maintenance tasks for a single connection.  This
- * function gets run once per second per connection by run_housekeeping.
+ * function gets run once per second per connection by run_scheduled_events.
  */
 static void run_connection_housekeeping(int i, time_t now) {
   cell_t cell;
@@ -646,81 +659,6 @@ static void run_connection_housekeeping(int i, time_t now) {
       connection_or_write_cell_to_buf(&cell, conn);
     }
   }
-}
-
-#define MIN_BW_TO_PUBLISH_DESC 5000 /* 5000 bytes/s sustained */
-#define MIN_UPTIME_TO_PUBLISH_DESC (30*60) /* half an hour */
-
-/** Decide if we're a publishable server or just a client. We are a server if:
- * - We have the AuthoritativeDirectory option set.
- * or
- * - We don't have the ClientOnly option set; and
- * - We have ORPort set; and
- * - We have been up for at least MIN_UPTIME_TO_PUBLISH_DESC seconds; and
- * - We have processed some suitable minimum bandwidth recently; and
- * - We believe we are reachable from the outside.
- */
-static int decide_if_publishable_server(time_t now) {
-  int bw;
-  or_options_t *options = get_options();
-
-  bw = rep_hist_bandwidth_assess();
-  router_set_bandwidth_capacity(bw);
-
-  if (options->ClientOnly)
-    return 0;
-  if (!options->ORPort)
-    return 0;
-
-  /* XXX for now, you're only a server if you're a server */
-  return server_mode(options);
-
-  /* here, determine if we're reachable */
-  if (0) { /* we've recently failed to reach our IP/ORPort from the outside */
-    return 0;
-  }
-
-  if (bw < MIN_BW_TO_PUBLISH_DESC)
-    return 0;
-  if (options->AuthoritativeDir)
-    return 1;
-  if (stats_n_seconds_working < MIN_UPTIME_TO_PUBLISH_DESC)
-    return 0;
-
-  return 1;
-}
-
-/** Return true iff we believe ourselves to be an authoritative
- * directory server.
- */
-int authdir_mode(or_options_t *options) {
-  return options->AuthoritativeDir != 0;
-}
-
-/** Return true iff we try to stay connected to all ORs at once.
- */
-int clique_mode(or_options_t *options) {
-  return authdir_mode(options);
-}
-
-/** Return true iff we are trying to be a server.
- */
-int server_mode(or_options_t *options) {
-  return (options->ORPort != 0 || options->ORBindAddress);
-}
-
-/** Remember if we've advertised ourselves to the dirservers. */
-static int server_is_advertised=0;
-
-/** Return true iff we have published our descriptor lately.
- */
-int advertised_server_mode(void) {
-  return server_is_advertised;
-}
-
-/** Return true iff we are trying to be a socks proxy. */
-int proxy_mode(or_options_t *options) {
-  return (options->SocksPort != 0 || options->SocksBindAddress);
 }
 
 /** Perform regular maintenance tasks.  This function gets run once per
@@ -810,13 +748,7 @@ static void run_scheduled_events(time_t now) {
   }
 
   if (time_to_force_upload_descriptor < now) {
-    if (decide_if_publishable_server(now)) {
-      server_is_advertised = 1;
-      router_rebuild_descriptor(1);
-      router_upload_dir_desc_to_dirservers(1);
-    } else {
-      server_is_advertised = 0;
-    }
+    consider_publishable_server(now, 1);
 
     rend_cache_clean(); /* this should go elsewhere? */
 
@@ -827,13 +759,7 @@ static void run_scheduled_events(time_t now) {
    * one is inaccurate. */
   if (time_to_check_descriptor < now) {
     time_to_check_descriptor = now + CHECK_DESCRIPTOR_INTERVAL;
-    if (decide_if_publishable_server(now)) {
-      server_is_advertised=1;
-      router_rebuild_descriptor(0);
-      router_upload_dir_desc_to_dirservers(0);
-    } else {
-      server_is_advertised=0;
-    }
+    consider_publishable_server(now, 0);
   }
 
   /** 3a. Every second, we examine pending circuits and prune the

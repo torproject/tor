@@ -143,19 +143,6 @@ void rotate_onion_key(void)
   log_fn(LOG_WARN, "Couldn't rotate onion key.");
 }
 
-/** The latest calculated bandwidth usage for our node. */
-static int bw_capacity = 0;
-/** Tuck <b>bw</b> away so we can produce it when somebody
- * calls router_get_bandwidth_capacity() below.
- */
-void router_set_bandwidth_capacity(int bw) {
-  bw_capacity = bw;
-}
-/** Return the value we tucked away above, or zero by default. */
-int router_get_bandwidth_capacity(void) {
-  return bw_capacity;
-}
-
 /* Read an RSA secret key key from a file that was once named fname_old,
  * but is now named fname_new.  Rename the file from old to new as needed.
  */
@@ -382,6 +369,120 @@ int init_keys(void) {
   return 0;
 }
 
+/* Keep track of whether we should upload our server descriptor,
+ * and what type of server we are.
+ */
+
+/** Whether we can reach our ORPort from the outside. */
+static int can_reach_or_port = 0;
+/** Whether we can reach our DirPort from the outside. */
+static int can_reach_dir_port = 0;
+
+void consider_testing_reachability(void) {
+  routerinfo_t *me = router_get_my_routerinfo();
+
+  if (!can_reach_or_port) {
+    circuit_launch_by_identity(CIRCUIT_PURPOSE_TESTING, me->identity_digest, 0, 0, 1);
+  }
+
+  if (!can_reach_dir_port && me->dir_port) {
+    if (me) {
+      directory_initiate_command_router(me, DIR_PURPOSE_FETCH_DIR, 1, NULL, NULL, 0);
+    } else {
+      log_fn(LOG_NOTICE,"Delaying checking DirPort reachability; can't build descriptor.");
+    }
+  }
+}
+
+/** Annotate that we found our ORPort reachable. */
+void router_orport_found_reachable(void) {
+  can_reach_or_port = 1;
+}
+
+/** Annotate that we found our DirPort reachable. */
+void router_dirport_found_reachable(void) {
+  can_reach_dir_port = 1;
+}
+
+/** Our router has just moved to a new IP. Reset stats. */
+void server_has_changed_ip(void) {
+  stats_n_seconds_working = 0;
+  can_reach_or_port = 0;
+  can_reach_dir_port = 0;
+  mark_my_descriptor_dirty();
+}
+
+/** Return true iff we believe ourselves to be an authoritative
+ * directory server.
+ */
+int authdir_mode(or_options_t *options) {
+  return options->AuthoritativeDir != 0;
+}
+/** Return true iff we try to stay connected to all ORs at once.
+ */
+int clique_mode(or_options_t *options) {
+  return authdir_mode(options);
+}
+
+/** Return true iff we are trying to be a server.
+ */
+int server_mode(or_options_t *options) {
+  return (options->ORPort != 0 || options->ORBindAddress);
+}
+
+/** Remember if we've advertised ourselves to the dirservers. */
+static int server_is_advertised=0;
+
+/** Return true iff we have published our descriptor lately.
+ */
+int advertised_server_mode(void) {
+  return server_is_advertised;
+}
+
+static void set_server_advertised(int s) {
+  server_is_advertised = s;
+}
+
+/** Return true iff we are trying to be a socks proxy. */
+int proxy_mode(or_options_t *options) {
+  return (options->SocksPort != 0 || options->SocksBindAddress);
+}
+
+/** Decide if we're a publishable server or just a client. We are a server if:
+ * - We have the AuthoritativeDirectory option set.
+ * or
+ * - We don't have the ClientOnly option set; and
+ * - We have ORPort set; and
+ * - We believe we are reachable from the outside.
+ */
+static int decide_if_publishable_server(time_t now) {
+  or_options_t *options = get_options();
+
+  if (options->ClientOnly)
+    return 0;
+  if (!server_mode(options))
+    return 0;
+  if (options->AuthoritativeDir)
+    return 1;
+
+  if (!can_reach_or_port)
+    return 0;
+  if (options->DirPort && !can_reach_dir_port)
+    return 0;
+
+  return 1;
+}
+
+void consider_publishable_server(time_t now, int force) {
+  if (decide_if_publishable_server(now)) {
+    set_server_advertised(1);
+    router_rebuild_descriptor(force);
+    router_upload_dir_desc_to_dirservers(force);
+  } else {
+    set_server_advertised(0);
+  }
+}
+
 /*
  * Clique maintenance
  */
@@ -568,7 +669,7 @@ int router_rebuild_descriptor(int force) {
   ri->platform = tor_strdup(platform);
   ri->bandwidthrate = (int)options->BandwidthRate;
   ri->bandwidthburst = (int)options->BandwidthBurst;
-  ri->bandwidthcapacity = hibernating ? 0 : router_get_bandwidth_capacity();
+  ri->bandwidthcapacity = hibernating ? 0 : rep_hist_bandwidth_assess();
   router_add_exit_policy_from_config(ri);
   if (desc_routerinfo) /* inherit values */
     ri->is_verified = desc_routerinfo->is_verified;

@@ -66,7 +66,7 @@ int router_reload_router_list(void)
     if (routerlist &&
         ((routerlist->published_on > time(NULL) - MIN_ONION_KEY_LIFETIME/2)
          || is_recent)) {
-      directory_has_arrived(st.st_mtime); /* do things we've been waiting to do */
+      directory_has_arrived(st.st_mtime, NULL); /* do things we've been waiting to do */
     }
     tor_free(s);
   }
@@ -634,11 +634,11 @@ routerinfo_t *router_get_by_digest(const char *digest) {
   routerinfo_t *router;
 
   tor_assert(digest);
-  if (!routerlist) return NULL;
   if (server_mode(get_options()) &&
       (router = router_get_my_routerinfo()) &&
       !memcmp(digest, router->identity_digest, DIGEST_LEN))
     return router;
+  if (!routerlist) return NULL;
 
   for (i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);

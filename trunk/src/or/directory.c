@@ -28,19 +28,20 @@ const char directory_c_id[] = "$Id$";
  *   connection_finished_connecting() in connection.c
  */
 
-static void
+void
 directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
-                                  const char *resource,
+                                  int private_connection, const char *resource,
                                   const char *payload, size_t payload_len);
 static void
 directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
-                                      uint8_t purpose, const char *resource,
+                                      uint8_t purpose, int private_connection,
+                                      const char *resource,
                                       const char *payload, size_t payload_len);
 static void
 directory_initiate_command(const char *address, uint32_t addr, uint16_t port,
                            const char *platform,
                            const char *digest, uint8_t purpose,
-                           const char *resource,
+                           int private_connection, const char *resource,
                            const char *payload, size_t payload_len);
 
 static void
@@ -111,6 +112,14 @@ int dir_policy_permits_address(uint32_t addr)
   return 0;
 }
 
+int purpose_is_private(uint8_t purpose) {
+  if (purpose == DIR_PURPOSE_FETCH_DIR ||
+      purpose == DIR_PURPOSE_UPLOAD_DIR ||
+      purpose == DIR_PURPOSE_FETCH_RUNNING_LIST)
+    return 0;
+  return 1;
+}
+
 /** Start a connection to every known directory server, using
  * connection purpose 'purpose' and uploading the payload 'payload'
  * (length 'payload_len').  The purpose should be one of
@@ -137,8 +146,8 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
         if (!smartlist_string_num_isin(get_options()->FirewallPorts, ds->dir_port))
           continue;
       }
-      directory_initiate_command_trusted_dir(ds, purpose, NULL,
-                                             payload, payload_len);
+      directory_initiate_command_trusted_dir(ds, purpose, purpose_is_private(purpose),
+                                             NULL, payload, payload_len);
     });
 }
 
@@ -159,6 +168,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   int directconn = purpose == DIR_PURPOSE_FETCH_DIR ||
                    purpose == DIR_PURPOSE_FETCH_RUNNING_LIST;
   int fetch_fresh_first = advertised_server_mode();
+  int priv = purpose_is_private(purpose);
 
   if (directconn) {
     if (fetch_fresh_first) {
@@ -186,9 +196,9 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   }
 
   if (r)
-    directory_initiate_command_router(r, purpose, resource, NULL, 0);
+    directory_initiate_command_router(r, purpose, priv, resource, NULL, 0);
   else if (ds)
-    directory_initiate_command_trusted_dir(ds, purpose, resource, NULL, 0);
+    directory_initiate_command_trusted_dir(ds, purpose, priv, resource, NULL, 0);
   else {
     log_fn(LOG_NOTICE,"No running dirservers known. Not trying. (purpose %d)",
            purpose);
@@ -210,25 +220,28 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
  * When fetching a rendezvous descriptor, <b>resource</b> is the service ID we
  * want to fetch.
  */
-static void
+void
 directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
-                                  const char *resource,
+                                  int private_connection, const char *resource,
                                   const char *payload, size_t payload_len)
 {
   directory_initiate_command(router->address, router->addr, router->dir_port,
                              router->platform, router->identity_digest,
-                             purpose, resource, payload, payload_len);
+                             purpose, private_connection, resource,
+                             payload, payload_len);
 }
 
 /** As directory_initiate_command_router, but send the command to a trusted
  * directory server <b>dirserv</b>. **/
 static void
 directory_initiate_command_trusted_dir(trusted_dir_server_t *dirserv,
-                                       uint8_t purpose, const char *resource,
+                                       uint8_t purpose, int private_connection,
+                                       const char *resource,
                                        const char *payload, size_t payload_len)
 {
   directory_initiate_command(dirserv->address, dirserv->addr,dirserv->dir_port,
-               NULL, dirserv->digest, purpose, resource, payload, payload_len);
+               NULL, dirserv->digest, purpose, private_connection, resource,
+               payload, payload_len);
 }
 
 /** Called when we are unable to complete our connection to a
@@ -256,7 +269,7 @@ static void
 directory_initiate_command(const char *address, uint32_t addr,
                            uint16_t dir_port, const char *platform,
                            const char *digest, uint8_t purpose,
-                           const char *resource,
+                           int private_connection, const char *resource,
                            const char *payload, size_t payload_len)
 {
   connection_t *conn;
@@ -292,17 +305,7 @@ directory_initiate_command(const char *address, uint32_t addr,
   /* set up conn so it's got all the data we need to remember */
   conn->addr = addr;
   conn->port = dir_port;
-
-  if (get_options()->HttpProxy) {
-    addr = get_options()->HttpProxyAddr;
-    dir_port = get_options()->HttpProxyPort;
-  }
-
   conn->address = tor_strdup(address);
-  /* conn->nickname = tor_strdup(router->nickname); */
-  /* tor_assert(router->identity_pkey); */
-  /* conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey); */
-  /* crypto_pk_get_digest(conn->identity_pkey, conn->identity_digest); */
   memcpy(conn->identity_digest, digest, DIGEST_LEN);
 
   conn->purpose = purpose;
@@ -310,10 +313,14 @@ directory_initiate_command(const char *address, uint32_t addr,
   /* give it an initial state */
   conn->state = DIR_CONN_STATE_CONNECTING;
 
-  if (purpose == DIR_PURPOSE_FETCH_DIR ||
-      purpose == DIR_PURPOSE_UPLOAD_DIR ||
-      purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
+  if (!private_connection) {
     /* then we want to connect directly */
+
+    if (get_options()->HttpProxy) {
+      addr = get_options()->HttpProxyAddr;
+      dir_port = get_options()->HttpProxyPort;
+    }
+
     switch (connection_connect(conn, conn->address, addr, dir_port)) {
       case -1:
         connection_dir_connect_failed(conn);
@@ -703,7 +710,8 @@ connection_dir_client_reached_eof(connection_t *conn)
     } else {
       log_fn(LOG_INFO,"updated routers.");
     }
-    directory_has_arrived(time(NULL)); /* do things we've been waiting to do */
+    /* do things we've been waiting to do */
+    directory_has_arrived(time(NULL), conn->identity_digest);
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
