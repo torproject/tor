@@ -940,7 +940,7 @@ test_dir_format(void)
   routerinfo_t r1, r2;
   crypto_pk_env_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
   routerinfo_t *rp1 = NULL, *rp2 = NULL;
-  struct addr_policy_t ex1, ex2;
+  addr_policy_t ex1, ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
   tor_version_t ver1;
   char *bw_lines = NULL;

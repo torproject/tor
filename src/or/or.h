@@ -582,7 +582,7 @@ typedef struct connection_t connection_t;
 #define ADDR_POLICY_REJECT 2
 
 /** A linked list of policy rules */
-struct addr_policy_t {
+typedef struct addr_policy_t {
   char policy_type; /**< One of ADDR_POLICY_ACCEPT or ADDR_POLICY_REJECT. */
   char *string; /**< String representation of this rule. */
   uint32_t addr; /**< Base address to accept or reject. */
@@ -592,7 +592,7 @@ struct addr_policy_t {
   uint16_t prt_max; /**< Highest port number to accept/reject. */
 
   struct addr_policy_t *next; /**< Next rule in list. */
-};
+} addr_policy_t;
 
 /** Information about another onion router in the network. */
 typedef struct {
@@ -619,7 +619,7 @@ typedef struct {
   uint32_t bandwidthburst; /**< How large is this OR's token bucket? */
   /** How many bytes/s is this router known to handle? */
   uint32_t bandwidthcapacity;
-  struct addr_policy_t *exit_policy; /**< What streams will this OR permit
+  addr_policy_t *exit_policy; /**< What streams will this OR permit
                                       * to exit? */
   long uptime; /**< How many seconds the router claims to have been up */
   /* local info */
@@ -1124,8 +1124,8 @@ void options_init(or_options_t *options);
 int init_from_config(int argc, char **argv);
 int config_init_logs(or_options_t *options, int validate_only);
 int config_parse_addr_policy(struct config_line_t *cfg,
-                             struct addr_policy_t **dest);
-void addr_policy_free(struct addr_policy_t *p);
+                             addr_policy_t **dest);
+void addr_policy_free(addr_policy_t *p);
 int config_option_is_recognized(const char *key);
 struct config_line_t *config_get_assigned_option(or_options_t *options,
                                                  const char *key);
@@ -1595,7 +1595,7 @@ void routerlist_remove_old_routers(int age);
 int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey,
                                           int check_version);
 int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
-                                       struct addr_policy_t *policy);
+                                       addr_policy_t *policy);
 #define ADDR_POLICY_ACCEPTED 0
 #define ADDR_POLICY_REJECTED -1
 #define ADDR_POLICY_UNKNOWN 1
@@ -1682,12 +1682,13 @@ int router_parse_routerlist_from_directory(const char *s,
 running_routers_t *router_parse_runningrouters(const char *str);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
-struct addr_policy_t *router_parse_addr_policy_from_string(const char *s);
+addr_policy_t *router_parse_addr_policy_from_string(const char *s);
 int check_software_version_against_directory(const char *directory,
                                              int ignoreversion);
 int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_as_new_as(const char *platform, const char *cutoff);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);
+void assert_addr_policy_ok(addr_policy_t *t);
 
 #endif
 

@@ -1130,7 +1130,7 @@ options_validate(or_options_t *options)
   int i;
   int result = 0;
   struct config_line_t *cl;
-  struct addr_policy_t *addr_policy=NULL;
+  addr_policy_t *addr_policy=NULL;
 
   if (options->ORPort < 0 || options->ORPort > 65535) {
     log(LOG_WARN, "ORPort option out of bounds.");
@@ -1975,9 +1975,9 @@ normalize_log_options(or_options_t *options)
  */
 int
 config_parse_addr_policy(struct config_line_t *cfg,
-                         struct addr_policy_t **dest)
+                         addr_policy_t **dest)
 {
-  struct addr_policy_t **nextp;
+  addr_policy_t **nextp;
   smartlist_t *entries;
   int r = 0;
 
@@ -2012,8 +2012,8 @@ config_parse_addr_policy(struct config_line_t *cfg,
 
 /** Release all storage held by <b>p</b> */
 void
-addr_policy_free(struct addr_policy_t *p) {
-  struct addr_policy_t *e;
+addr_policy_free(addr_policy_t *p) {
+  addr_policy_t *e;
 
   while (p) {
     e = p;

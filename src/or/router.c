@@ -454,7 +454,7 @@ void router_upload_dir_desc_to_dirservers(int force) {
  * rule, then append the default exit policy as well.
  */
 static void router_add_exit_policy_from_config(routerinfo_t *router) {
-  struct addr_policy_t *ep;
+  addr_policy_t *ep;
   struct config_line_t default_policy;
   config_parse_addr_policy(get_options()->ExitPolicy, &router->exit_policy);
 
@@ -627,7 +627,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   size_t onion_pkeylen, identity_pkeylen;
   size_t written;
   int result=0;
-  struct addr_policy_t *tmpe;
+  addr_policy_t *tmpe;
   char *bandwidth_usage;
   char *family_line;
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING

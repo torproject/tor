@@ -684,7 +684,7 @@ void routerinfo_free(routerinfo_t *router)
 routerinfo_t *routerinfo_copy(const routerinfo_t *router)
 {
   routerinfo_t *r;
-  struct addr_policy_t **e, *tmp;
+  addr_policy_t **e, *tmp;
 
   r = tor_malloc(sizeof(routerinfo_t));
   memcpy(r, router, sizeof(routerinfo_t));
@@ -698,8 +698,8 @@ routerinfo_t *routerinfo_copy(const routerinfo_t *router)
     r->identity_pkey = crypto_pk_dup_key(r->identity_pkey);
   e = &r->exit_policy;
   while (*e) {
-    tmp = tor_malloc(sizeof(struct addr_policy_t));
-    memcpy(tmp,*e,sizeof(struct addr_policy_t));
+    tmp = tor_malloc(sizeof(addr_policy_t));
+    memcpy(tmp,*e,sizeof(addr_policy_t));
     *e = tmp;
     (*e)->string = tor_strdup((*e)->string);
     e = & ((*e)->next);
@@ -942,14 +942,14 @@ router_resolve_routerlist(routerlist_t *rl)
  * unknown).
  */
 int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
-                                       struct addr_policy_t *policy)
+                                       addr_policy_t *policy)
 {
   int maybe_reject = 0;
   int maybe_accept = 0;
   int match = 0;
   int maybe = 0;
   struct in_addr in;
-  struct addr_policy_t *tmpe;
+  addr_policy_t *tmpe;
 
   for (tmpe=policy; tmpe; tmpe=tmpe->next) {
 //    log_fn(LOG_DEBUG,"Considering exit policy %s", tmpe->string);

@@ -125,7 +125,7 @@ static struct {
 
 /* static function prototypes */
 static int router_add_exit_policy(routerinfo_t *router,directory_token_t *tok);
-static struct addr_policy_t *router_parse_addr_policy(directory_token_t *tok);
+static addr_policy_t *router_parse_addr_policy(directory_token_t *tok);
 static int router_get_hash_impl(const char *s, char *digest,
                                 const char *start_str, const char *end_str);
 static void token_free(directory_token_t *tok);
@@ -968,13 +968,13 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
 
 /** Parse the exit policy in the string <b>s</b> and return it.
  */
-struct addr_policy_t *
+addr_policy_t *
 router_parse_addr_policy_from_string(const char *s)
 {
   directory_token_t *tok = NULL;
   const char *cp;
   char *tmp;
-  struct addr_policy_t *r;
+  addr_policy_t *r;
   size_t len, idx;
 
   /* *s might not end with \n, so we need to extend it with one. */
@@ -1009,7 +1009,7 @@ router_parse_addr_policy_from_string(const char *s)
 int
 router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
 {
-  struct addr_policy_t *newe, *tmpe;
+  addr_policy_t *newe, *tmpe;
   newe = router_parse_addr_policy_from_string(s);
   if (!newe)
     return -1;
@@ -1023,7 +1023,7 @@ router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
 static int
 router_add_exit_policy(routerinfo_t *router,directory_token_t *tok)
 {
-  struct addr_policy_t *newe, **tmpe;
+  addr_policy_t *newe, **tmpe;
   newe = router_parse_addr_policy(tok);
   if (!newe)
     return -1;
@@ -1036,10 +1036,10 @@ router_add_exit_policy(routerinfo_t *router,directory_token_t *tok)
 
 /** Given a K_ACCEPT or K_REJECT token and a router, create and return
  * a new exit_policy_t corresponding to the token. */
-static struct addr_policy_t *
+static addr_policy_t *
 router_parse_addr_policy(directory_token_t *tok) {
 
-  struct addr_policy_t *newe;
+  addr_policy_t *newe;
   struct in_addr in;
   char *arg, *address;
 
@@ -1049,7 +1049,7 @@ router_parse_addr_policy(directory_token_t *tok) {
     return NULL;
   arg = tok->args[0];
 
-  newe = tor_malloc_zero(sizeof(struct addr_policy_t));
+  newe = tor_malloc_zero(sizeof(addr_policy_t));
 
   newe->string = tor_malloc(8+strlen(arg));
 //  tor_snprintf(newe->string, 8+strlen(arg), "%s %s",
@@ -1077,6 +1077,30 @@ policy_read_failed:
   tor_free(newe->string);
   tor_free(newe);
   return NULL;
+}
+
+void
+assert_addr_policy_ok(addr_policy_t *t)
+{
+  addr_policy_t *t2;
+  while (t) {
+    tor_assert(t->policy_type == ADDR_POLICY_REJECT ||
+               t->policy_type == ADDR_POLICY_ACCEPT);
+    tor_assert(t->prt_min <= t->prt_max);
+    t2 = router_parse_addr_policy_from_string(t->string);
+    tor_assert(t2);
+    tor_assert(t2->policy_type == t->policy_type);
+    tor_assert(t2->addr == t->addr);
+    tor_assert(t2->msk == t->msk);
+    tor_assert(t2->prt_min == t->prt_min);
+    tor_assert(t2->prt_max == t->prt_max);
+    tor_assert(!strcmp(t2->string, t->string));
+    tor_assert(t2->next == NULL);
+    addr_policy_free(t2);
+
+    t = t->next;
+  }
+
 }
 
 /*

@@ -51,7 +51,7 @@ static int directory_handle_command(connection_t *conn);
 
 /********* START VARIABLES **********/
 
-static struct addr_policy_t *dir_policy = NULL;
+static addr_policy_t *dir_policy = NULL;
 
 #if 0 /* commented out for now, since for now what clients send is
          different from what servers want to receive */
@@ -74,7 +74,7 @@ char rend_fetch_url[] = "/tor/rendezvous/";
 void
 parse_dir_policy(void)
 {
-  struct addr_policy_t *n;
+  addr_policy_t *n;
   if (dir_policy) {
     addr_policy_free(dir_policy);
     dir_policy = NULL;

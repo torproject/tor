@@ -13,7 +13,7 @@ const char connection_edge_c_id[] = "$Id$";
 #include "or.h"
 #include "tree.h"
 
-static struct addr_policy_t *socks_policy = NULL;
+static addr_policy_t *socks_policy = NULL;
 /* List of exit_redirect_t */
 static smartlist_t *redirect_exit_list = NULL;
 
@@ -1045,7 +1045,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
 void
 parse_socks_policy(void)
 {
-  struct addr_policy_t *n;
+  addr_policy_t *n;
   if (socks_policy) {
     addr_policy_free(socks_policy);
     socks_policy = NULL;
