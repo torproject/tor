@@ -1,6 +1,10 @@
-mutiny: if none of the ports is defined maybe it shouldn't start.
+mutiny suggests: if none of the ports is defined maybe it shouldn't start.
 aaron got a crash in tor_timegm in tzset on os x, with -l warn but not with -l debug.
 Oct 25 04:29:17.017 [warn] directory_initiate_command(): No running dirservers known. This is really bad.
+rename ACI to CircID
+rotate tls-level connections -- make new ones, expire old ones.
+dirserver shouldn't put you in running-routers list if you haven't
+  uploading a descriptor recently
 
 Legend:
 SPEC!!  - Not specified
