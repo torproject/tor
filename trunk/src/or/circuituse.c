@@ -417,6 +417,7 @@ void circuit_detach_stream(circuit_t *circ, connection_t *conn) {
   tor_assert(conn);
 
   conn->cpath_layer = NULL; /* make sure we don't keep a stale pointer */
+  conn->on_circuit = NULL;
 
   if (conn == circ->p_streams) {
     circ->p_streams = conn->next_stream;
@@ -923,6 +924,7 @@ static void link_apconn_to_circ(connection_t *apconn, circuit_t *circ) {
   log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
   apconn->timestamp_lastread = time(NULL); /* reset it, so we can measure circ timeouts */
   apconn->next_stream = circ->p_streams;
+  apconn->on_circuit = circ;
   /* assert_connection_ok(conn, time(NULL)); */
   circ->p_streams = apconn;
 

@@ -32,6 +32,7 @@ static void circuit_free_cpath_node(crypt_path_t *victim);
 
 /********* END VARIABLES ************/
 
+/** DOCDOC This whole section */
 struct orconn_circid_circuit_map_t {
   SPLAY_ENTRY(orconn_circid_circuit_map_t) node;
   connection_t *or_conn;
@@ -298,8 +299,60 @@ circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn) {
   found = SPLAY_FIND(orconn_circid_tree, &orconn_circid_circuit_map, &search);
   if (found && found->circuit && !found->circuit->marked_for_close)
     return found->circuit;
-  else
+
+  /* The rest of this can be replaced with
+     "return NULL;" once we believe the code works. */
+
+  {
+    circuit_t *circ;
+    for (circ=global_circuitlist;circ;circ = circ->next) {
+      if (circ->marked_for_close)
+        continue;
+
+      if (circ->p_conn == conn && circ->p_circ_id == circ_id) {
+        log_fn(LOG_WARN, "circuit matches p_conn, but not in tree (Bug!)");
+        return circ;
+      }
+      if (circ->n_conn == conn && circ->n_circ_id == circ_id) {
+        log_fn(LOG_WARN, "circuit matches n_conn, but not in tree (Bug!)");
+        return circ;
+      }
+    }
     return NULL;
+  }
+
+}
+
+/** DOCDOC */
+circuit_t *circuit_get_by_stream(connection_t *conn)
+{
+  circuit_t *circ;
+  connection_t *tmpconn;
+  tor_assert(CONN_IS_EDGE(conn));
+
+  if (! conn->on_circuit) {
+    /* return NULL; */
+    circ = circuit_get_by_conn(conn);
+    if (circ) {
+      log_fn(LOG_WARN, "BUG: conn->on_circuit==NULL, but there was in fact a circuit there. ");
+    }
+    return circ;
+  }
+
+  circ = conn->on_circuit;
+  /* All this stuff here is sanity-checking. */
+  tor_assert(circ->magic == CIRCUIT_MAGIC);
+  for (tmpconn = circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream)
+    if (tmpconn == conn)
+      return circ;
+  for (tmpconn = circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream)
+    if (tmpconn == conn)
+      return circ;
+  for (tmpconn = circ->resolving_streams; tmpconn; tmpconn=tmpconn->next_stream)
+    if (tmpconn == conn)
+      return circ;
+
+  tor_assert(0);
 }
 
 /** Return a circ such that circ is attached to <b>conn</b>, either as
@@ -505,6 +558,7 @@ void _circuit_mark_for_close(circuit_t *circ, int line, const char *file)
       conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
       connection_mark_for_close(conn);
     }
+    conn->on_circuit = NULL;
   }
   if (circ->p_conn)
     connection_send_destroy(circ->p_circ_id, circ->p_conn);
