@@ -38,8 +38,8 @@ The messages take the following format:
    Body   [Length octets]
 
 Upon encountering a recognized Type, implementations behave as described in
-section 3 below.  If the type is not recognized, servers respond with a
-"STAT" message (code UNRECOGNIZED; see 3.1 below), and clients simply ignore
+section 3 below.  If the type is not recognized, servers respond with an
+"ERROR" message (code UNRECOGNIZED; see 3.1 below), and clients simply ignore
 the message.
 
 2.1. Types and encodings
@@ -186,7 +186,8 @@ the message.
 
                 Status [1 octet]
                    (Sent connect=0,sent resolve=1,succeeded=2,failed=3,
-                    closed=4, new connection=5, new resolve request=6)
+                    closed=4, new connection=5, new resolve request=6,
+                    stream detached from circuit, retriable=7)
                 Stream ID [4 octets]
                    (Must be unique to Tor process/time)
                 Target (NUL-terminated address-port string]
@@ -357,6 +358,12 @@ the message.
 
   If the circuit ID is 0, responsibility for attaching the given stream is
   returned to Tor.
+
+  {Implementation note: By default, Tor automatically attaches streams to
+  circuits itself, unless the configuration variable "__ManageConnections" is
+  set to "0".  Attempting to attach streams via TC when "__ManageConnections"
+  is true may cause a race between Tor and the controller, as both attempt to
+  attach streams to circuits.}
 
 3.16 POSTDESCRIPTOR (Type 0x000F)
 
