@@ -175,6 +175,7 @@ int parse_http_response(char *headers, int *code, char **message) {
 int connection_dir_process_inbuf(connection_t *conn) {
   char *directory;
   char *headers;
+  int dir_len=0;
   int status_code;
 
   assert(conn && conn->type == CONN_TYPE_DIR);
@@ -189,7 +190,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
 
     switch(fetch_from_buf_http(conn->inbuf,
                                &headers, MAX_HEADERS_SIZE,
-                               &directory, MAX_DIR_SIZE)) {
+                               &directory, &dir_len, MAX_DIR_SIZE)) {
       case -1: /* overflow */
         log_fn(LOG_WARN,"'fetch' response too large. Failing.");
         connection_mark_for_close(conn,0);
@@ -210,10 +211,10 @@ int connection_dir_process_inbuf(connection_t *conn) {
 
     if(conn->purpose == DIR_PURPOSE_FETCH_DIR) {
       /* fetch/process the directory to learn about new routers. */
-      int directorylen;
-      directorylen = strlen(directory);
-      log_fn(LOG_INFO,"Received directory (size %d):\n%s", directorylen, directory);
-      if(status_code == 503 || directorylen == 0) {
+      directory[dir_len] = 0; /* null terminate it, we can do this
+                                 because fetch_from_buf_http made space */
+      log_fn(LOG_INFO,"Received directory (size %d):\n%s", dir_len, directory);
+      if(status_code == 503 || dir_len == 0) {
         log_fn(LOG_INFO,"Empty directory. Ignoring.");
         free(directory); free(headers);
         connection_mark_for_close(conn,0);
@@ -277,9 +278,8 @@ int connection_dir_process_inbuf(connection_t *conn) {
     if (directory_handle_command(conn) < 0) {
       connection_mark_for_close(conn,0);
       return -1;
-    } else {
-      return 0;
     }
+    return 0;
   }
 
   /* XXX for READ states, might want to make sure inbuf isn't too big */
@@ -296,10 +296,13 @@ static char answer503[] = "HTTP/1.0 503 Directory unavailable\r\n\r\n";
 
 /* always returns 0 */
 static int directory_handle_command_get(connection_t *conn,
-                                        char *headers, char *body) {
+                                        char *headers, char *body,
+                                        int body_len) {
   size_t dlen;
   const char *cp;
   char *url;
+  char tmp[8192];
+  char rend_fetch_url[] = "/rendezvous/";
 
   log_fn(LOG_DEBUG,"Received GET command.");
 
@@ -320,19 +323,23 @@ static int directory_handle_command_get(connection_t *conn,
     }
 
     log_fn(LOG_DEBUG,"Dumping directory to client.");
-    connection_write_to_buf(answer200, strlen(answer200), conn);
-    connection_write_to_buf(cp, dlen, conn);
+    snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s",
+             dlen, cp);
+    connection_write_to_buf(tmp, strlen(tmp), conn);
     return 0;
   }
 
-  if(!strncmp(url,"/hidserv/",9)) { /* hidserv descriptor fetch */
+  if(!strncmp(url,rend_fetch_url,strlen(rend_fetch_url))) {
+    /* rendezvous descriptor fetch */
     const char *descp;
     int desc_len;
 
-    switch(rend_cache_lookup(url+9, &descp, &desc_len)) {
+    switch(rend_cache_lookup(url+strlen(rend_fetch_url), &descp, &desc_len)) {
       case 1: /* valid */
-        connection_write_to_buf(answer200, strlen(answer200), conn);
-        connection_write_to_buf(descp, desc_len, conn); /* XXXX Contains NULs*/
+        snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n",
+                 desc_len); /* can't include descp here, because it's got nuls */
+        connection_write_to_buf(tmp, strlen(tmp), conn);
+        connection_write_to_buf(descp, desc_len, conn);
         break;
       case 0: /* well-formed but not present */
         connection_write_to_buf(answer404, strlen(answer404), conn);
@@ -355,6 +362,7 @@ static int directory_handle_command_post(connection_t *conn,
                                          int body_len) {
   const char *cp;
   char *url;
+  char rend_publish_string[] = "/rendezvous/publish";
 
   log_fn(LOG_DEBUG,"Received POST command.");
 
@@ -366,6 +374,7 @@ static int directory_handle_command_post(connection_t *conn,
   }
 
   if(!strcmp(url,"/")) { /* server descriptor post */
+    body[body_len] = 0; /* dirserv_add_descriptor expects nul-terminated */
     cp = body;
     switch(dirserv_add_descriptor(&cp)) {
       case -1:
@@ -381,13 +390,16 @@ static int directory_handle_command_post(connection_t *conn,
         connection_write_to_buf(answer200, strlen(answer200), conn);
         break;
     }
+    return 0;
   }
 
-  if(!strncmp(url,"/hidserv/",9)) { /* hidserv descriptor post */
+  if(!strncmp(url,rend_publish_string,strlen(rend_publish_string))) {
+    /* rendezvous descriptor post */
     if(rend_cache_store(body, body_len) < 0)
       connection_write_to_buf(answer400, strlen(answer400), conn);
     else
       connection_write_to_buf(answer200, strlen(answer200), conn);
+    return 0;
   }
 
   /* we didn't recognize the url */
@@ -397,12 +409,14 @@ static int directory_handle_command_post(connection_t *conn,
 
 static int directory_handle_command(connection_t *conn) {
   char *headers=NULL, *body=NULL;
+  int body_len=0;
   int r;
 
   assert(conn && conn->type == CONN_TYPE_DIR);
 
   switch(fetch_from_buf_http(conn->inbuf,
-                             &headers, MAX_HEADERS_SIZE, &body, MAX_BODY_SIZE)) {
+                             &headers, MAX_HEADERS_SIZE,
+                             &body, &body_len, MAX_BODY_SIZE)) {
     case -1: /* overflow */
       log_fn(LOG_WARN,"input too large. Failing.");
       return -1;
@@ -415,10 +429,9 @@ static int directory_handle_command(connection_t *conn) {
   log_fn(LOG_DEBUG,"headers '%s', body '%s'.", headers, body);
 
   if(!strncasecmp(headers,"GET",3))
-    r = directory_handle_command_get(conn, headers, body);
+    r = directory_handle_command_get(conn, headers, body, body_len);
   else if (!strncasecmp(headers,"POST",4))
-    /* XXXX this takes a length now, and will fail if the body has NULs. */
-    r = directory_handle_command_post(conn, headers, body, strlen(body));
+    r = directory_handle_command_post(conn, headers, body, body_len);
   else {
     log_fn(LOG_WARN,"Got headers '%s' with unknown command. Closing.", headers);
     r = -1;
