@@ -21,7 +21,7 @@ char rend_publish_string[] = "/rendezvous/publish";
 /* Prefix for downloading rendezvous descriptors. */
 char rend_fetch_url[] = "/rendezvous/";
 
-#define MAX_HEADERS_SIZE 2048
+#define MAX_HEADERS_SIZE 10000
 #define MAX_BODY_SIZE 500000
 
 /********* END VARIABLES ************/
