@@ -95,7 +95,7 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
 
   circ = circuit_new(cell->aci, conn);
   circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
-  if(cell->length != 208) {
+  if(cell->length != DH_ONIONSKIN_LEN) {
     log(LOG_DEBUG,"command_process_create_cell(): Bad cell length %d. Dropping.", cell->length);
     circuit_close(circ);
     return;
@@ -127,7 +127,7 @@ void command_process_created_cell(cell_t *cell, connection_t *conn) {
     log(LOG_DEBUG,"command_process_created_cell(): got created cell from OPward? Dropping.");
     return;
   }
-  assert(cell->length == 192);
+  assert(cell->length == DH_KEY_LEN);
 
   if(circ->cpath) { /* we're the OP. Handshake this. */
     log(LOG_DEBUG,"command_process_created_cell(): at OP. Finishing handshake.");
@@ -150,7 +150,7 @@ void command_process_created_cell(cell_t *cell, connection_t *conn) {
     SET_CELL_STREAM_ID(newcell, ZERO_STREAM);
 
     newcell.length = RELAY_HEADER_SIZE + cell->length;
-    memcpy(newcell.payload+RELAY_HEADER_SIZE, cell->payload, 192);
+    memcpy(newcell.payload+RELAY_HEADER_SIZE, cell->payload, DH_KEY_LEN);
 
     log(LOG_DEBUG,"command_process_created_cell(): Sending extended relay cell.");
     if(circuit_deliver_relay_cell_from_edge(&newcell, circ, EDGE_EXIT, NULL) < 0) {

@@ -348,6 +348,9 @@ struct crypt_path_t {
 
 };
 
+#define DH_KEY_LEN 192
+#define DH_ONIONSKIN_LEN 208
+
 typedef struct crypt_path_t crypt_path_t;
 
 struct relay_queue_t {
@@ -375,7 +378,7 @@ typedef struct {
 
   crypt_path_t *cpath;
 
-  char onionskin[208]; /* for storage while onionskin pending */
+  char onionskin[DH_ONIONSKIN_LEN]; /* for storage while onionskin pending */
   long timestamp_created;
   char dirty; /* whether this circuit has been used yet */
 
@@ -393,21 +396,6 @@ struct onion_queue_t {
   struct relay_queue_t *relay_cells;
   struct onion_queue_t *next;
 };
-
-#define ONION_KEYSEED_LEN 16
-
-typedef struct {
-  uint8_t version; 
-  uint16_t port;
-  uint32_t addr;
-  uint32_t expire;
-  unsigned char keyseed[ONION_KEYSEED_LEN];
-} onion_layer_t;
-/* ugly hack XXXX */
-#define ONION_KEYSEED_OFFSET 11
-
-#define ONION_LAYER_SIZE 27
-#define ONION_PADDING_SIZE (128-ONION_LAYER_SIZE)
 
 typedef struct {
    char *LogLevel;
@@ -517,7 +505,6 @@ void circuit_resume_edge_reading(circuit_t *circ, int edge_type);
 int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type);
 int circuit_consider_sending_sendme(circuit_t *circ, int edge_type);
 
-int circuit_init(circuit_t *circ, int aci_type, onion_layer_t *layer);
 void circuit_free(circuit_t *circ);
 void circuit_free_cpath(crypt_path_t *cpath);
 void circuit_free_cpath_node(crypt_path_t *victim);
@@ -773,16 +760,16 @@ crypt_path_t *onion_generate_cpath(routerinfo_t **firsthop);
 
 int onion_skin_create(crypto_pk_env_t *router_key,
                       crypto_dh_env_t **handshake_state_out,
-                      char *onion_skin_out); /* Must be 208 bytes long */
+                      char *onion_skin_out); /* Must be DH_ONIONSKIN_LEN bytes long */
 
-int onion_skin_server_handshake(char *onion_skin, /* 208 bytes long */
+int onion_skin_server_handshake(char *onion_skin, /* DH_ONIONSKIN_LEN bytes long */
                                 crypto_pk_env_t *private_key,
-                                char *handshake_reply_out, /* 192 bytes long */
+                                char *handshake_reply_out, /* DH_KEY_LEN bytes long */
                                 char *key_out,
                                 int key_out_len);
 
 int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
-                             char *handshake_reply,/* Must be 192 bytes long*/
+                             char *handshake_reply,/* Must be DH_KEY_LEN bytes long*/
                              char *key_out,
                              int key_out_len);
 
