@@ -1318,6 +1318,7 @@ int connection_dir_reached_eof(connection_t *conn);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
+int connection_dir_failed(connection_t *conn);
 void parse_dir_policy(void);
 
 /********************************* dirserv.c ***************************/
@@ -1704,4 +1705,3 @@ int tor_version_compare(tor_version_t *a, tor_version_t *b);
 void assert_addr_policy_ok(addr_policy_t *t);
 
 #endif
-
