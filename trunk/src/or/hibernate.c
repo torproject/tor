@@ -203,7 +203,6 @@ accounting_parse_options(or_options_t *options, int validate_only)
   return -1;
 }
 
-
 /** If we want to manage the accounting system and potentially
  * hibernate, return 1, else return 0.
  */
