@@ -411,6 +411,9 @@ accounting_run_housekeeping(time_t now)
   if (time_to_record_bandwidth_usage(now)) {
     if (accounting_record_bandwidth_usage(now)) {
       log_fn(LOG_ERR, "Couldn't record bandwidth usage; exiting.");
+      /* XXX this can fail when you're out of fd's, causing a crash.
+       * Perhaps the better answer is to hold the file open all the
+       * time? */
       exit(1);
     }
   }
