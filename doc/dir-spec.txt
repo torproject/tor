@@ -169,14 +169,18 @@ Piece three: (optional)
 5. Regarding "Blossom: an unstructured overlay network for end-to-end
 connectivity."
 
+Define "transport domain" as a set of nodes who can all mutually name each
+other directly, using transport-layer (e.g. HOST:PORT) naming.
+
+Define "clique" as a set of nodes who can all mutually contact each other directly,
+using transport-layer (e.g. HOST:PORT) naming.
+
+Neither transport domains and cliques form a partition of the set of all nodes.
+Just as cliques may overlap in theoretical graphs, transport domains and
+cliques may overlap in the context of Blossom.
+
 In this section we address possible solutions to the problem of how to allow
 Tor routers in different transport domains to communicate.
-
-[Can we have a one-sentence definition of transport domain here? If there
-are 5 servers on the Internet as we know it and suddenly one link between
-a pair of them catches fire, how many transport domains are involved now?
-What if one link is down permanently but the rest work? Is "in the same
-transport domain as" a symmetric property?]
 
 First, we presume that for every interface between transport domains A and B,
 one Tor router T_A exists in transport domain A, one Tor router T_B exists in
@@ -198,17 +202,59 @@ servers.  These directory servers can be within the same transport domain, but
 they need not be.  The trick is that if a directory server is in another
 transport domain, then that directory server must know through which Tor
 routers to send messages destined for the Tor router in question.
-[We are assuming that routers in the non-primary transport domain (the
-primary one being the one with dirservers) know how to get to the primary
-transport domain, either through Tor or other voodoo, to publish to the
-hard-coded dirservers.]
-Descriptors
-for Blossom routers held by the directory server must contain a special field
-for specifying a path through the overlay (i.e. an ordered list of router
+
+Blossom routers can advertise themselves to other transport domains in two
+ways:
+
+(1) Directly push the descriptor to a directory server in the other transport
+domain.  This probably works particularly well if the other transport domain is
+"the Internet", or if there are hard-coded directory servers in "the Internet".
+The router has the responsibility to inform the directory server about which
+routers can be used to reach it.
+
+(2) Push the descriptor to a directory server in the same transport domain.
+This is the easiest solution for the router, but it relies upon the existence
+of a directory server in the same transport domain that is capable of
+communicating with directory servers in the remote transport domain.  In order
+for this to work, some individual Tor routers must have published their
+descriptors in remote transport domains (i.e. followed the first option) in
+order to provide a link by which directory servers can communiate
+bidirectionally.
+
+If all directory servers are within the same transport domain, then approach
+(1) is sufficient: routers can exist within multiple transport domains, and as
+long as the network of transport domains is fully connected by bridges, any
+router will be able to access any other router in a foreign transport domain
+simply by extending along the path specified by the directory server.  However,
+we want the system to be truly decentralized, which means not electing any
+particular transport domain to be the master domain in which entries are
+published.
+
+This is the explanation for (2): in order for a directory server to share
+information with a directory server in a foreign transport domain to which it
+cannot speak directly, it must use Tor, which means referring to the other
+directory server by using a router in the foreign transport domain.  However,
+in order to use Tor, it must be able to reach that router, which means that a
+descriptor for that router must exist in its table, along with a means of
+reaching it.  Therefore, in order for a mutual exchange of information between
+routers in transport domain A and those in transport domain B to be possible,
+when routers in transport domain A cannot establish direct connections with
+routers in transport domain B, then some router in transport domain B must have
+pushed its descriptor to a directory server in transport domain A, so that the
+directory server in transport domain A can use that router to reach the
+directory server in transport domain B.
+
+Descriptors for Blossom routers are read-only, as for regular Tor routers, so
+directory servers cannot modify them.  However, Tor directory servers also
+publish a "network-status" page that provide information about which nodes are
+up and which are not.  Directory servers could provide an additional field for
+Blossom nodes.  For each Blossom node, the directory server specifies a set of
+paths (may be only one) through the overlay (i.e. an ordered list of router
 names/IDs) to a router in a foreign transport domain.  (This field may be a set
-of paths rather than a single path.)  A new router publishing to a directory
-server in a foreign transport should include a list of routers.  This list
-should be either:
+of paths rather than a single path.)
+
+A new router publishing to a directory server in a foreign transport should
+include a list of routers.  This list should be either:
 
 a. ...a list of routers to which the router has persistent connections, or, if
 the new router does not have any persistent connections,
@@ -218,35 +264,12 @@ same transport domain.
 
 The directory server will be able to use this information to derive a path to
 the new router, as follows.  If the new router used approach (a), then the
-directory server will define the same path(s) in the descriptors for the
-router(s) specified in the list, with the corresponding specified router
-appended to each path.  If the new router used approach (b), then the directory
-server will define the same path(s) in the descriptors for the routers
-specified in the list.  The directory server will then insert the newly defined
-path into the descriptor from the router.
-[Dirservers can't modify server descriptors; they're self-certifying. -RD]
-
-If all directory servers are within the same transport domain, then the problem
-is solved: routers can exist within multiple transport domains, and as long as
-the network of transport domains is fully connected by bridges, any router will
-be able to access any other router in a foreign transport domain simply by
-extending along the path specified by the directory server.  However, we want
-the system to be truly decentralized, which means not electing any particular
-transport domain to be the master domain in which entries are published.
-
-Generally speaking, directory servers share information with each other about
-routers.  In order for a directory server to share information with a directory
-server in a foreign transport domain to which it cannot speak directly, it must
-use Tor, which means referring to the other directory server by using a router
-in the foreign transport domain.  However, in order to use Tor, it must be able
-to reach that router, which means that a descriptor for that router must exist
-in its table, along with a means of reaching it.  Therefore, in order for a
-mutual exchange of information between routers in transport domain A and those
-in transport domain B to be possible, when routers in transport domain A cannot
-establish direct connections with routers in transport domain B, then some
-router in transport domain B must have pushed its descriptor to a directory
-server in transport domain A, so that the directory server in transport domain
-A can use that router to reach the directory server in transport domain B.
+directory server will define the set of paths to the new router as union of the
+set of paths to the routers on the list with the name of the last hop appended
+to each path.  If the new router used approach (b), then the directory server
+will define the paths to the new router as the union of the set of paths to the
+routers specified in the list.  The directory server will then insert the newly
+defined path into the field in the network-status page from the router.
 
 When confronted with the choice of multiple different paths to reach the same
 router, the Blossom nodes may use a route selection protocol similar in design
@@ -254,7 +277,11 @@ to that used by BGP (may be a simple distance-vector route selection procedure
 that only takes into account path length, or may be more complex to avoid
 loops, cache results, etc.) in order to choose the best one.
 
-[How does this work with exit policies (how do we enumerate all resources
-in our transport domain?), and translating resources that we want to
-get to to servers that can reach them?]
+If a .exit name is not provided, then a path will be chosen whose nodes are all
+among the set of nodes provided by the directory server that are believed to be
+in the same transport domain (i.e. no explicit path).  Thus, there should be no
+surprises to the client.  All routers should be careful to define their exit
+policies carefully, with the knowledge that clients from potentially any
+transport domain could access that which is not explicitly restricted.
+
 
