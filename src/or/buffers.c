@@ -155,9 +155,11 @@ void buf_free(buf_t *buf) {
 }
 
 /* read from socket s, writing onto end of buf.
- * read at most 'at_most' bytes, and in any case don't read more than will fit based on buflen.
- * If read() returns 0, set *reached_eof to 1 and return 0. If you want to tear
- * down the connection return -1, else return the number of bytes read.
+ * read at most 'at_most' bytes, and in any case don't read more than
+ * will fit based on buflen.
+ * If read() returns 0, set *reached_eof to 1 and return 0. If you want
+ * to tear down the connection return -1, else return the number of
+ * bytes read.
  */
 int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof) {
 
@@ -228,7 +230,7 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
 
   /* push from buf onto s
    * then memmove to front of buf
-   * return -1 or how many bytes remain to be flushed */
+   * return -1 or how many bytes you just flushed */
 
   int write_result;
 #ifdef MS_WINDOWS
@@ -259,8 +261,7 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
     log_fn(LOG_DEBUG,"%d: flushed %d bytes, %d ready to flush, %d remain.",
            s,write_result,*buf_flushlen,(int)buf->datalen);
 
-    return *buf_flushlen;
-    /* XXX USE_TLS should change to return write_result like any sane function would */
+    return write_result;
   }
 }
 
