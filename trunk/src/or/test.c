@@ -1239,11 +1239,22 @@ test_dir_format(void)
   test_eq(1, is_obsolete_version("0.0.1", "0.0.2,Tor 0.0.3"));
   test_eq(1, is_obsolete_version("0.0.1", "0.0.3,BetterTor 0.0.1"));
   test_eq(0, is_obsolete_version("0.0.2", "Tor 0.0.2,Tor 0.0.3"));
-  test_eq(1, is_obsolete_version("0.0.2", "Tor 0.0.2pre1,Tor 0.0.3"));
+  test_eq(0, is_obsolete_version("0.0.2", "Tor 0.0.2pre1,Tor 0.0.3"));
+  test_eq(1, is_obsolete_version("0.0.2", "Tor 0.0.2.1,Tor 0.0.3"));
   test_eq(0, is_obsolete_version("0.1.0", "Tor 0.0.2,Tor 0.0.3"));
   test_eq(0, is_obsolete_version("0.0.7rc2", "0.0.7,Tor 0.0.7rc2,Tor 0.0.8"));
   test_eq(0, is_obsolete_version("0.0.5", "0.0.5-cvs"));
   test_eq(0, is_obsolete_version("0.0.5.1-cvs", "0.0.5"));
+  /* Not on list, but newer than any in same series. */
+  test_eq(0, is_obsolete_version("0.1.0.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  /* Series newer than any on list. */
+  test_eq(0, is_obsolete_version("0.1.1.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  /* Series older than any on list. */
+  test_eq(1, is_obsolete_version("0.0.1.3", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  /* Not on list, not newer than any on same series. */
+  test_eq(1, is_obsolete_version("0.1.0.1", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
+  /* On list, not newer than any on same series. */
+  test_eq(1, is_obsolete_version("0.1.0.1", "Tor 0.1.0.2,Tor 0.0.9.5,Tor 0.1.1.0"));
 
   test_eq(0, tor_version_as_new_as("Tor 0.0.5", "0.0.9pre1-cvs"));
   test_eq(1, tor_version_as_new_as(
