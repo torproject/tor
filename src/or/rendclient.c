@@ -9,7 +9,7 @@ void
 rend_client_introcirc_is_open(circuit_t *circ)
 {
   assert(circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
-  assert(circ->cpath);
+  assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath);
 
   log_fn(LOG_INFO,"introcirc is open");
   connection_ap_attach_pending();
@@ -125,7 +125,7 @@ void
 rend_client_rendcirc_is_open(circuit_t *circ)
 {
   assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
-  assert(circ->cpath);
+  assert(CIRCUIT_IS_ORIGIN(circ));
 
   log_fn(LOG_INFO,"rendcirc is open");
 

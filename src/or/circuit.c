@@ -260,7 +260,7 @@ static int circuit_is_acceptable(circuit_t *circ,
 {
   routerinfo_t *exitrouter;
 
-  if (!circ->cpath)
+  if (!CIRCUIT_IS_ORIGIN(circ))
     return 0; /* this circ doesn't start at us */
   if (must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_conn))
     return 0; /* ignore non-open circs */
@@ -442,7 +442,7 @@ void circuit_expire_building(void) {
   while(circ) {
     victim = circ;
     circ = circ->next;
-    if(!victim->cpath)
+    if(!CIRCUIT_IS_ORIGIN(victim))
       continue; /* didn't originate here */
     if(victim->marked_for_close)
       continue; /* don't mess with marked circs */
@@ -473,7 +473,7 @@ int circuit_count_building(void) {
   int num=0;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->cpath
+    if(CIRCUIT_IS_ORIGIN(circ)
        && circ->state != CIRCUIT_STATE_OPEN
        && !circ->marked_for_close)
       num++;
@@ -493,7 +493,7 @@ int circuit_stream_is_being_handled(connection_t *conn) {
   time_t now = time(NULL);
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->cpath && circ->state != CIRCUIT_STATE_OPEN &&
+    if(CIRCUIT_IS_ORIGIN(circ) && circ->state != CIRCUIT_STATE_OPEN &&
        !circ->marked_for_close && circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
        (!circ->timestamp_dirty ||
         circ->timestamp_dirty + options.NewCircuitPeriod < now)) {
@@ -661,8 +661,9 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
   assert(cell_direction == CELL_DIRECTION_IN || cell_direction == CELL_DIRECTION_OUT);
 
   if(cell_direction == CELL_DIRECTION_IN) {
-    if(circ->cpath) { /* we're at the beginning of the circuit.
-                         We'll want to do layered crypts. */
+    if(CIRCUIT_IS_ORIGIN(circ)) { /* we're at the beginning of the circuit.
+                                     We'll want to do layered crypts. */
+      assert(circ->cpath);
       thishop = circ->cpath;
       if(thishop->state != CPATH_STATE_OPEN) {
         log_fn(LOG_WARN,"Relay cell before first created cell? Closing.");
@@ -973,7 +974,7 @@ void circuit_log_path(int severity, circuit_t *circ) {
   struct crypt_path_t *hop;
   char *states[] = {"closed", "waiting for keys", "open"};
   routerinfo_t *router;
-  assert(circ->cpath);
+  assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath);
 
   snprintf(s, sizeof(buf)-1, "circ (length %d, exit %s): ",
           circ->build_state->desired_path_len, circ->build_state->chosen_exit);
@@ -1045,7 +1046,7 @@ circuit_dump_details(int severity, circuit_t *circ, int poll_index,
   log(severity,"Conn %d has %s circuit: circID %d (other side %d), state %d (%s), born %d",
       poll_index, type, this_circid, other_circid, circ->state,
       circuit_state_to_string[circ->state], (int)circ->timestamp_created);
-  if(circ->cpath) { /* circ starts at this node */
+  if(CIRCUIT_IS_ORIGIN(circ)) { /* circ starts at this node */
     if(circ->state == CIRCUIT_STATE_BUILDING)
       log(severity,"Building: desired len %d, planned exit node %s.",
           circ->build_state->desired_path_len, circ->build_state->chosen_exit);
@@ -1105,7 +1106,7 @@ void circuit_expire_unused_circuits(void) {
         !circ->p_streams) {
       log_fn(LOG_DEBUG,"Closing n_circ_id %d",circ->n_circ_id);
       circuit_mark_for_close(circ);
-    } else if (!circ->timestamp_dirty && circ->cpath &&
+    } else if (!circ->timestamp_dirty && CIRCUIT_IS_ORIGIN(circ) &&
                circ->state == CIRCUIT_STATE_OPEN) {
       /* Also, gather a list of open unused circuits that we created.
        * Because we add elements to the front of global_circuitlist,
@@ -1253,7 +1254,7 @@ static circuit_t *circuit_establish_circuit(uint8_t purpose,
   }
 
   onion_extend_cpath(&circ->cpath, circ->build_state, &firsthop);
-  if(!circ->cpath) {
+  if(!CIRCUIT_IS_ORIGIN(circ)) {
     log_fn(LOG_INFO,"Generating first cpath hop failed.");
     circuit_mark_for_close(circ);
     return NULL;
@@ -1308,7 +1309,7 @@ void circuit_n_conn_open(connection_t *or_conn) {
   for(circ=global_circuitlist;circ;circ = circ->next) {
     if (circ->marked_for_close)
       continue;
-    if(circ->cpath && circ->n_addr == or_conn->addr && circ->n_port == or_conn->port) {
+    if(CIRCUIT_IS_ORIGIN(circ) && circ->n_addr == or_conn->addr && circ->n_port == or_conn->port) {
       assert(circ->state == CIRCUIT_STATE_OR_WAIT);
       log_fn(LOG_DEBUG,"Found circ %d, sending onion skin.", circ->n_circ_id);
       circ->n_conn = or_conn;
@@ -1332,7 +1333,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   int circ_id_type;
   char payload[2+4+ONIONSKIN_CHALLENGE_LEN];
 
-  assert(circ && circ->cpath);
+  assert(circ && CIRCUIT_IS_ORIGIN(circ));
 
   if(circ->cpath->state == CPATH_STATE_CLOSED) {
     assert(circ->n_conn && circ->n_conn->type == CONN_TYPE_OR);
@@ -1518,7 +1519,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   unsigned char keys[CPATH_KEY_MATERIAL_LEN];
   crypt_path_t *hop;
 
-  assert(circ->cpath);
+  assert(CIRCUIT_IS_ORIGIN(circ));
   if(circ->cpath->state == CPATH_STATE_AWAITING_KEYS)
     hop = circ->cpath;
   else {
@@ -1557,7 +1558,7 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
   crypt_path_t *victim;
   connection_t *stream;
 
-  assert(circ);
+  assert(circ && CIRCUIT_IS_ORIGIN(circ));
   assert(layer);
 
   /* XXX Since we don't ask for truncates currently, getting a truncated
@@ -1654,11 +1655,13 @@ void assert_circuit_ok(const circuit_t *c)
   assert(c->package_window >= 0);
   if (c->state == CIRCUIT_STATE_OPEN) {
     if (c->cpath) {
+      assert(CIRCUIT_IS_ORIGIN(c));
       assert(!c->n_crypto);
       assert(!c->p_crypto);
       assert(!c->n_digest);
       assert(!c->p_digest);
     } else {
+      assert(!CIRCUIT_IS_ORIGIN(c));
       assert(c->n_crypto);
       assert(c->p_crypto);
       assert(c->n_digest);

@@ -833,7 +833,7 @@ void link_apconn_to_circ(connection_t *apconn, circuit_t *circ) {
   /* assert_connection_ok(conn, time(NULL)); */
   circ->p_streams = apconn;
 
-  assert(circ->cpath && circ->cpath->prev);
+  assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath && circ->cpath->prev);
   assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
   apconn->cpath_layer = circ->cpath->prev;
 }

@@ -190,10 +190,12 @@
 #define _CIRCUIT_PURPOSE_MIN 1
 
 /* these circuits were initiated elsewhere */
+#define _CIRCUIT_PURPOSE_OR_MIN 1
 #define CIRCUIT_PURPOSE_OR 1 /* normal circuit, at OR. */
 #define CIRCUIT_PURPOSE_INTRO_POINT 2 /* At OR, from Bob, waiting for intro from Alices */
 #define CIRCUIT_PURPOSE_REND_POINT_WAITING 3 /* At OR, from Alice, waiting for Bob */
 #define CIRCUIT_PURPOSE_REND_ESTABLISHED 4 /* At OR, both circuits have this purpose */
+#define _CIRCUIT_PURPOSE_OR_MAX 4
 
 /* these circuits originate at this node */
 
@@ -224,6 +226,9 @@
 
 #define CIRCUIT_PURPOSE_S_REND_JOINED 13 /* at Bob, rendezvous established.*/
 #define _CIRCUIT_PURPOSE_MAX 13
+
+#define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>_CIRCUIT_PURPOSE_OR_MAX)
+#define CIRCUIT_IS_ORIGIN(c) (CIRCUIT_PURPOSE_IS_ORIGIN((c)->purpose))
 
 #define RELAY_COMMAND_BEGIN 1
 #define RELAY_COMMAND_DATA 2
@@ -561,7 +566,7 @@ struct circuit_t {
   /*
    * rend_query holds y portion of y.onion (nul-terminated) if purpose
    * is C_INTRODUCING or C_ESTABLISH_REND, or is a C_GENERAL for a
-   * hidden service.
+   * hidden service, or is S_*.
    */
   char rend_query[REND_SERVICE_ID_LEN+1];
 
