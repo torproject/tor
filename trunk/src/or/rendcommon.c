@@ -136,8 +136,8 @@ int rend_get_service_id(crypto_pk_env_t *pk, char *out)
 }
 
 /* ==== Rendezvous service descriptor cache. */
-#define REND_CACHE_MAX_AGE 24*60*60
-#define REND_CACHE_MAX_SKEW 60*60
+#define REND_CACHE_MAX_AGE (24*60*60)
+#define REND_CACHE_MAX_SKEW (90*60)
 
 static strmap_t *rend_cache = NULL;
 
