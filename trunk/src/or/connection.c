@@ -140,11 +140,9 @@ connection_t *connection_new(int type) {
  * close its socket if necessary, and mark the directory as dirty if <b>conn</b>
  * is an OR or OP connection.
  */
-void connection_free(connection_t *conn) {
-  tor_assert(conn);
+static void
+_connection_free(connection_t *conn) {
   tor_assert(conn->magic == CONNECTION_MAGIC);
-  tor_assert(!connection_in_array(conn));
-  tor_assert(!connection_is_on_closeable_list(conn));
 
   if (!connection_is_listener(conn)) {
     buf_free(conn->inbuf);
@@ -181,9 +179,21 @@ void connection_free(connection_t *conn) {
   tor_free(conn);
 }
 
-/** Call connection_free() on every connection in our array.
+/** Make sure <b>conn</b> isn't in any of the global conn lists; then free it.
+ */
+void connection_free(connection_t *conn) {
+  tor_assert(conn);
+  tor_assert(!connection_is_on_closeable_list(conn));
+  tor_assert(!connection_in_array(conn));
+  _connection_free(conn);
+}
+
+/** Call _connection_free() on every connection in our array.
  * This is used by cpuworkers and dnsworkers when they fork,
  * so they don't keep resources held open (especially sockets).
+ *
+ * Don't do the checks in connection_free(), because they will
+ * fail.
  */
 void connection_free_all(void) {
   int i, n;
@@ -191,7 +201,7 @@ void connection_free_all(void) {
 
   get_connection_array(&carray,&n);
   for (i=0;i<n;i++)
-    connection_free(carray[i]);
+    _connection_free(carray[i]);
 }
 
 /** Do any cleanup needed:
