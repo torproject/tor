@@ -194,10 +194,10 @@ which reveals the downstream node.
       1. Create an onion skin, encrypting the RSA-encrypted part with
          R's public key.
 
-      2. Encrypt and send the onion skin in a RELAY_CREATE cell along
+      2. Encrypt and send the onion skin in a relay EXTEND cell along
          the circuit (see section 5).
 
-      3. When a RELAY_CREATED cell is received, calculate the shared
+      3. When a relay EXTENDED cell is received, calculate the shared
          keys.  The circuit is now extended.
 
    When an onion router receives an EXTEND relay cell, it sends a
