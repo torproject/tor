@@ -29,24 +29,25 @@ foo
 
 \section{Introduction}
 
-Tor is a low-latency anonymous communication overlay network
-\cite{tor-design} designed to be practical and usable for securing TCP
-streams over the Internet. We have been operating a publicly deployed
-Tor network since October 2003.
+Tor is a low-latency anonymous communication overlay network designed
+to be practical and usable for securing TCP streams over the Internet
+\cite{tor-design}. We have been operating a publicly deployed Tor network
+since October 2003 that has grown to over a hundred nodes and carries
+over 70 megabits per second of average traffic.
 
 Tor aims to resist observers and insiders by distributing each transaction
 over several nodes in the network.  This ``distributed trust'' approach
 means the Tor network can be safely operated and used by a wide variety
 of mutually distrustful users, providing more sustainability and security
 than previous attempts at anonymizing networks.
-
 The Tor network has a broad range of users, including ordinary citizens
 who want to avoid being profiled for targeted advertisements, corporations
 who don't want to reveal information to their competitors, and law
 enforcement and government intelligence agencies who need
 to do operations on the Internet without being noticed.
 
-Tor has been funded by the U.S. Navy, for use in securing government
+Tor research and development has been funded by the U.S. Navy, for use
+in securing government
 communications, and also by the Electronic Frontier Foundation, for use
 in maintaining civil liberties for ordinary citizens online. The Tor
 protocol is one of the leading choices
@@ -58,9 +59,9 @@ interests helps maintain both the stability and the security of the
 network.
 
 Tor has a weaker threat model than many anonymity designs in the
-literature. This is because we our primary requirements are to have a
-practical and useful network, and from there we aim to provide as much
-anonymity as we can.
+literature, because our primary requirements are to have a
+practical and useful network. Given that fixed assumption, we then aim
+to provide as much anonymity as we can.
 
 %need to discuss how we take the approach of building the thing, and then
 %assuming that, how much anonymity can we get. we're not here to model or
@@ -233,39 +234,13 @@ dries up.
 
 good uses are kept private, bad uses are publicized. not good.
 
-\subsection{Reputability}
-
-Yet another factor in the safety of a given network is its reputability:
-the perception of its social value based on its current users. If I'm
-the only user of a system, it might be socially accepted, but I'm not
-getting any anonymity. Add a thousand Communists, and I'm anonymous,
-but everyone thinks I'm a Commie. Add a thousand random citizens (cancer
-survivors, privacy enthusiasts, and so on) and now I'm hard to profile.
-
-The more cancer survivors on Tor, the better for the human rights
-activists. The more script kiddies, the worse for the normal users. Thus,
-reputability is an anonymity issue for two reasons. First, it impacts
-the sustainability of the network: a network that's always about to be
-shut down has difficulty attracting and keeping users, so its anonymity
-set suffers. Second, a disreputable network attracts the attention of
-powerful attackers who may not mind revealing the identities of all the
-users to uncover the few bad ones.
-
-While people therefore have an incentive for the network to be used for
-``more reputable'' activities than their own, there are still tradeoffs
-involved when it comes to anonymity. To follow the above example, a
-network used entirely by cancer survivors might welcome some Communists
-onto the network, though of course they'd prefer a wider variety of users.
-
-The impact of public perception on security is especially important
-during the bootstrapping phase of the network, where the first few
-widely publicized uses of the network can dictate the types of users it
-attracts next.
-
 \subsection{Tor and file-sharing}
 
 Bittorrent and dmca. Should we add an IDS to autodetect protocols and
 snipe them?
+
+because only at the exit is it evident what port or protocol a given
+tor stream is, you can't choose not to carry file-sharing traffic.
 
 \subsection{Tor and blacklists}
 
@@ -388,30 +363,30 @@ over to arbitrary IP traffic.
 \begin{enumerate}
 \setlength{\itemsep}{0mm}
 \setlength{\parsep}{0mm}
-\item [IP packets reveal OS characteristics.] We still need to do
+\item \emph{IP packets reveal OS characteristics.} We still need to do
 IP-level packet normalization, to stop things like IP fingerprinting
 \cite{ip-fingerprinting}. There exist libraries \cite{ip-normalizing}
 that can help with this.
-\item [Application-level streams still need scrubbing.] We still need
+\item \emph{Application-level streams still need scrubbing.} We still need
 Tor to be easy to integrate with user-level application-specific proxies
 such as Privoxy. So it's not just a matter of capturing packets and
 anonymizing them at the IP layer.
-\item [Certain protocols will still leak information.] For example,
+\item \emph{Certain protocols will still leak information.} For example,
 DNS requests destined for my local DNS servers need to be rewritten
 to be delivered to some other unlinkable DNS server. This requires
 understanding the protocols we are transporting.
-\item [The crypto is unspecified.] First we need a block-level encryption
+\item \emph{The crypto is unspecified.} First we need a block-level encryption
 approach that can provide security despite
 packet loss and out-of-order delivery. Freedom allegedly had one, but it was
 never publicly specified, and we believe it's likely vulnerable to tagging
 attacks \cite{tor-design}. Also, TLS over UDP is not implemented or even
 specified, though some early work has begun on that \cite{ben-tls-udp}.
-\item [We'll still need to tune network parameters]. Since the above
+\item \emph{We'll still need to tune network parameters}. Since the above
 encryption system will likely need sequence numbers and maybe more to do
 replay detection, handle duplicate frames, etc, we will be reimplementing
 some subset of TCP anyway to manage throughput, congestion control, etc.
-\item [Exit policies for arbitrary IP packets mean building a secure
-IDS.]  Our server operators tell us that exit policies are one of
+\item \emph{Exit policies for arbitrary IP packets mean building a secure
+IDS.}  Our server operators tell us that exit policies are one of
 the main reasons they're willing to run Tor over previous attempts
 at anonymizing networks.  Adding an IDS to handle exit policies would
 increase the security complexity of Tor, and would likely not work anyway,
@@ -422,7 +397,7 @@ and IP floods), so exit policies become even \emph{more} important as
 we become able to transport IP packets. We also need a way to compactly
 characterize the exit policies and let clients parse them to decide
 which nodes will allow which packets to exit.
-\item [The Tor-internal name spaces would need to be redesigned.] We
+\item \emph{The Tor-internal name spaces would need to be redesigned.} We
 support hidden service \tt{.onion} addresses, and other special addresses
 like \tt{.exit} (see Section \ref{subsec:}), by intercepting the addresses
 when they are passed to the Tor client.
@@ -568,6 +543,12 @@ helper node and also Alice, and knows which one is which. If everybody
 uses a helper node (but not Alice), then the attacker figures the real
 source was a client that is using Alice as a helper node. [How's my
 logic here?]
+
+people are using hidden services as a poor man's vpn and firewall-buster.
+rather than playing with dyndns and trying to pierce holes in their
+firewall (say, so they can ssh in from the outside), they run a hidden
+service on the inside and then rendezvous with that hidden service
+externally.
 
 in practice, sites like bloggers without borders (www.b19s.org) are
 running tor servers but more important are advertising a hidden-service
