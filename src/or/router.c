@@ -387,8 +387,6 @@ int router_compare_to_my_exit_policy(connection_t *conn)
   if (!conn->addr)
     return -1;
 
-  tor_assert(conn->addr); 
-
   return router_compare_addr_to_exit_policy(conn->addr, conn->port,
                    desc_routerinfo->exit_policy);
 
