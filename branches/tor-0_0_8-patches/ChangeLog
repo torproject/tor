@@ -14,6 +14,7 @@ Changes in version 0.0.8.1 - 2004-10-14
       in reporting stats locally.
     - Fix an assert trigger: sometimes launching circuits can fail
       immediately, e.g. because too many circuits have failed recently.
+    - Fix a compile warning on 64 bit platforms.
 
 
 Changes in version 0.0.8 - 2004-08-25
