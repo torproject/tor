@@ -244,11 +244,11 @@ Tor Rendezvous Spec
           PK_ID  Identifier for Bob's PK      [20 octets]
 
        Encrypted to Bob's PK:
-          RP     Rendezvous point's nickname  [variable]
+          RP     Rendezvous point's nickname  [20 octets]
           RC     Rendezvous cookie            [20 octets]
           g^x    Diffie-Hellman data, part 1 [128 octetes]
 
-   PK_ID is the hash of Bob's public key.  RP is NUL-terminated.
+   PK_ID is the hash of Bob's public key.  RP is NUL-padded.
 
    The data is encrypted to Bob's PK as follows: Suppose Bob's PK is L octets
    long.  If the data to be encrypted is shorter than L-42, then it is
