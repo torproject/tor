@@ -2,3 +2,4 @@ Makefile
 Makefile.in
 tor.sh
 tor.spec
+torify
