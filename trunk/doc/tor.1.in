@@ -82,6 +82,11 @@ running as a server, Tor also re-uploads information about itself to
 the directory servers.  (Tor also uploads this information whenever it 
 changes.)  (Default: 600.)
 .TP
+\fBclientonly \fR\fI0|1\fP
+If set to 1, Tor will under no circumstances run as a server.  (Usually,
+you don't need to set this; Tor is pretty smart at figuring out whether
+you are reliable and high-bandwith enough to be a good server.)
+.TP
 \fBentrynodes \fR\fInickname,nickname,...\fP
 A list of preferred nodes to use for the first hop in the circuit, if possible.
 .TP
@@ -223,7 +228,7 @@ Bind the directory service to this address. (Default: 0.0.0.0)
 STRING is a command-separated list of Tor versions currently believed to be safe. The list is included in each directory, and nodes which pull down the directory learn whether they need to upgrade.
 .TP
 \fBruntesting \fR\fI0|1\fP
-If set to 1, Tor tries to stay connected to all of the servers it
+If set to 1, Tor tries to build circuits through all of the servers it
 knows about, so it can tell which are up and which are down.  This
 option is only useful for authoritative directories, so you probably
 don't want to use it.
@@ -254,11 +259,7 @@ Do not use the specified nodes as introduction points for the hidden
 service.
 
 .\" UNDOCUMENTED
-.\" I'm going to wait for go-ahead from arma before I document these;
-.\" there are policy issues here:
-.\" clientonly
 .\" ignoreversion
-
 
 .SH FILES
 .TP
