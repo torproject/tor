@@ -740,6 +740,11 @@ void strmap_free(strmap_t *map, void (*free_val)(void*))
   tor_free(map);
 }
 
+int strmap_isempty(strmap_t *map)
+{
+  return SPLAY_EMPTY(&map->head);
+}
+
 /*
  *    String manipulation
  */

@@ -181,6 +181,7 @@ void* strmap_remove_lc(strmap_t *map, const char *key);
 typedef void* (*strmap_foreach_fn)(const char *key, void *val, void *data);
 void strmap_foreach(strmap_t *map, strmap_foreach_fn fn, void *data);
 void strmap_free(strmap_t *map, void (*free_val)(void*));
+int strmap_isempty(strmap_t *map);
 
 strmap_iter_t *strmap_iter_init(strmap_t *map);
 strmap_iter_t *strmap_iter_next(strmap_t *map, strmap_iter_t *iter);
