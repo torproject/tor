@@ -7,7 +7,6 @@
 extern or_options_t options; /* command-line and config-file options */
 
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len);
-static int onionskin_process(circuit_t *circ);
 
 int decide_aci_type(uint32_t local_addr, uint16_t local_port,
                     uint32_t remote_addr, uint16_t remote_port) {
@@ -47,7 +46,7 @@ int onion_pending_add(circuit_t *circ) {
   assert(!ol_tail->next);
 
   if(ol_length >= options.MaxOnionsPending) {
-    log(LOG_INFO,"onion_pending_add(): Already have %d onions queued. Closing.", ol_length);
+    log_fn(LOG_INFO,"Already have %d onions queued. Closing.", ol_length);
     free(tmp);
     return -1;
   }
@@ -59,38 +58,20 @@ int onion_pending_add(circuit_t *circ) {
 
 }
 
-int onion_pending_check(void) {
-  if(ol_list)
-    return 1;
-  else
-    return 0;
-}
-
-void onion_pending_process_one(void) {
-  circuit_t *circ; 
+circuit_t *onion_next_task(void) {
 
   if(!ol_list)
-    return; /* no onions pending, we're done */
+    return NULL; /* no onions pending, we're done */
 
   assert(ol_list->circ);
   if(!ol_list->circ->p_conn) {
-    log(LOG_INFO,"onion_pending_process_one(): ol_list->circ->p_conn null, must have died?");
+    log_fn(LOG_INFO,"ol_list->circ->p_conn null, must have died?");
     onion_pending_remove(ol_list->circ);
-    return; /* it died on us */
+    return onion_next_task(); /* recurse: how about the next one? */
   }
 
   assert(ol_length > 0);
-  circ = ol_list->circ;
-
-  if(onionskin_process(circ) < 0) {
-    log(LOG_DEBUG,"onion_pending_process_one(): Failed. Closing.");
-    onion_pending_remove(circ);
-    circuit_close(circ);
-  } else {
-    log(LOG_DEBUG,"onion_pending_process_one(): Succeeded.");
-    onion_pending_remove(circ);
-  }
-  return;
+  return ol_list->circ;
 }
 
 /* go through ol_list, find the onion_queue_t element which points to
@@ -130,10 +111,9 @@ void onion_pending_remove(circuit_t *circ) {
   free(victim); 
 }
 
-/* learn keys, initialize, then send a created cell back */
-static int onionskin_process(circuit_t *circ) {
+/* given a response payload and keys, initialize, then send a created cell back */
+int onionskin_process(circuit_t *circ, unsigned char *payload, unsigned char *keys) {
   unsigned char iv[16];
-  unsigned char keys[32];
   cell_t cell;
 
   memset(iv, 0, 16);
@@ -145,32 +125,28 @@ static int onionskin_process(circuit_t *circ) {
 
   circ->state = CIRCUIT_STATE_OPEN;
 
-  log(LOG_DEBUG,"onionskin_process(): Entering.");
+  log_fn(LOG_DEBUG,"Entering.");
 
-  if(onion_skin_server_handshake(circ->onionskin, get_privatekey(),
-    cell.payload, keys, 32) < 0) {
-    log(LOG_ERR,"onionskin_process(): onion_skin_server_handshake failed.");
-    return -1;
-  }
+  memcpy(cell.payload, payload, DH_KEY_LEN);
 
-  log(LOG_DEBUG,"onionskin_process: init cipher forward %d, backward %d.", *(int*)keys, *(int*)(keys+16));
+  log_fn(LOG_DEBUG,"init cipher forward %d, backward %d.", *(int*)keys, *(int*)(keys+16));
 
   if (!(circ->n_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys,iv,0))) {
-    log(LOG_ERR,"Cipher initialization failed.");
+    log_fn(LOG_ERR,"Cipher initialization failed (n).");
     return -1;
   }
 
   if (!(circ->p_crypto =
         crypto_create_init_cipher(CIRCUIT_CIPHER,keys+16,iv,1))) {
-    log(LOG_ERR,"Cipher initialization failed.");
+    log_fn(LOG_ERR,"Cipher initialization failed (p).");
     return -1;
   }
 
   if(connection_write_cell_to_buf(&cell, circ->p_conn) < 0) {
     return -1;
   }
-  log(LOG_DEBUG,"onionskin_process(): Finished sending 'created' cell.");
+  log_fn(LOG_DEBUG,"Finished sending 'created' cell.");
 
   return 0;
 }

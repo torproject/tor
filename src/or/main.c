@@ -434,12 +434,7 @@ static int prepare_for_poll(int *timeout) {
     current_second = now.tv_sec; /* remember which second it is, for next time */
   }
 
-  if(onion_pending_check()) {
-    /* there's an onion pending. check for new things to do, but don't wait any time */
-    *timeout = 0;
-  } else {
-    *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
-  }
+  *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
 
   return 0;
 }
@@ -502,9 +497,10 @@ static int do_main_loop(void) {
       return -1;
     }
     set_privatekey(prkey);
+    cpu_init(); /* launch cpuworkers. Need to do this *after* we've read the private key. */
   }
 
-  /* load the private key, if we're supposed to have one */
+  /* load the directory private key, if we're supposed to have one */
   if(options.DirPort) {
     prkey = crypto_new_pk_env(CRYPTO_PK_RSA);
     if (!prkey) {
@@ -523,8 +519,8 @@ static int do_main_loop(void) {
    * and start the listeners
    */
   retry_all_connections((uint16_t) options.ORPort,
-	                    (uint16_t) options.APPort,
-						(uint16_t) options.DirPort);
+                        (uint16_t) options.APPort,
+                        (uint16_t) options.DirPort);
 
   for(;;) {
 #ifndef MS_WIN32 /* do signal stuff only on unix */
@@ -567,11 +563,6 @@ static int do_main_loop(void) {
         return -1;
     }
 #endif
-
-    if(poll_result == 0) { 
-      /* poll timed out without anything to do. process a pending onion, if any. */
-      onion_pending_process_one();
-    }
 
     if(poll_result > 0) { /* we have at least one connection to deal with */
       /* do all the reads and errors first, so we can detect closed sockets */

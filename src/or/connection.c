@@ -21,7 +21,8 @@ char *conn_type_to_string[] = {
   "App",         /* 7 */
   "Dir listener",/* 8 */
   "Dir",         /* 9 */
-  "DNS master",  /* 10 */
+  "DNS worker",  /* 10 */
+  "CPU worker",  /* 11 */
 };
 
 char *conn_state_to_string[][15] = {
@@ -58,7 +59,11 @@ char *conn_state_to_string[][15] = {
     "reading",                         /* 2 */
     "awaiting command",                /* 3 */
     "writing" },                       /* 4 */
-  { "open" }, /* dns master, 0 */
+  { "idle",                /* dns worker, 0 */
+    "busy" },                          /* 1 */
+  { "idle",                /* cpu worker, 0 */
+    "busy with onion",                 /* 1 */
+    "busy with handshake" },           /* 2 */
 };
 
 /********* END VARIABLES ************/
@@ -542,6 +547,8 @@ int connection_process_inbuf(connection_t *conn) {
       return connection_dir_process_inbuf(conn);
     case CONN_TYPE_DNSWORKER:
       return connection_dns_process_inbuf(conn); 
+    case CONN_TYPE_CPUWORKER:
+      return connection_cpu_process_inbuf(conn); 
     default:
       log_fn(LOG_DEBUG,"got unexpected conn->type.");
       return -1;
@@ -679,6 +686,8 @@ int connection_finished_flushing(connection_t *conn) {
       return connection_dir_finished_flushing(conn);
     case CONN_TYPE_DNSWORKER:
       return connection_dns_finished_flushing(conn);
+    case CONN_TYPE_CPUWORKER:
+      return connection_cpu_finished_flushing(conn);
     default:
       log_fn(LOG_DEBUG,"got unexpected conn->type.");
       return -1;

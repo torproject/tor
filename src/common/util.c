@@ -88,6 +88,21 @@ void tv_addms(struct timeval *a, long ms) {
   a->tv_usec %= 1000000;
 }
 
+/* a wrapper for write(2) that makes sure to write all count bytes.
+ * Only use if fd is a blocking socket. */
+int write_all(int fd, const void *buf, size_t count) {
+  int written = 0;
+  int result;
+
+  while(written != count) {
+    result = write(fd, buf+written, count-written);
+    if(result<0)
+      return -1;
+    written += result;
+  }
+  return count;
+}
+
 void set_socket_nonblocking(int socket)
 {
 #ifdef MS_WINDOWS
