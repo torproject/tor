@@ -1645,11 +1645,14 @@ int tor_main(int argc, char *argv[]) {
     nt_service_main();
     return 0;
   }
-#else
+#endif
   if (tor_init(argc, argv)<0)
     return -1;
   switch (get_options()->command) {
   case CMD_RUN_TOR:
+#ifdef MS_WINDOWS_SERVICE 
+    service_status.dwCurrentState = SERVICE_RUNNING;
+#endif
     do_main_loop();
     break;
   case CMD_LIST_FINGERPRINT:
@@ -1664,6 +1667,5 @@ int tor_main(int argc, char *argv[]) {
   }
   tor_cleanup();
   return -1;
-#endif
 }
 
