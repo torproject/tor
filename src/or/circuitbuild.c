@@ -449,7 +449,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   } else if (rh.length == 4+2+ONIONSKIN_CHALLENGE_LEN+DIGEST_LEN) {
     old_format = 0;
   } else {
-    log_fn(LOG_WARN, "Wrong length on extend cell. Closing circuit.");
+    log_fn(LOG_WARN, "Wrong length %d on extend cell. Closing circuit.", rh.length);
     return -1;
   }
 
