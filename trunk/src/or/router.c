@@ -527,8 +527,8 @@ int router_rebuild_descriptor(void) {
  */
 void get_platform_str(char *platform, int len)
 {
-  snprintf(platform, len-1, "Tor %s (up %ld sec) on %s",
-           VERSION, stats_n_seconds_uptime, get_uname());
+  snprintf(platform, len-1, "Tor %s on %s",
+           VERSION, get_uname());
   platform[len-1] = '\0';
   return;
 }
@@ -591,6 +591,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                     "router %s %s %d %d %d\n"
                     "platform %s\n"
                     "published %s\n"
+                    "opt uptime %ld\n"
                     "bandwidth %d %d %d\n"
                     "onion-key\n%s"
                     "signing-key\n%s",
@@ -604,6 +605,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     router->is_trusted_dir ? router->dir_port : 0,
     router->platform,
     published,
+    stats_n_seconds_uptime,
     (int) router->bandwidthrate,
     (int) router->bandwidthburst,
     (int) router->advertisedbandwidth,
