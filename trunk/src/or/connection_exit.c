@@ -5,7 +5,7 @@
 #include "or.h"
 
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
-  connection_t *n_conn;
+  connection_t *n_stream;
   char *colon;
 
   if(!memchr(cell->payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE,0,cell->length-RELAY_HEADER_SIZE-STREAM_ID_SIZE)) {
@@ -25,36 +25,36 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   }
 
   log(LOG_DEBUG,"connection_exit_begin_conn(): Creating new exit connection.");
-  n_conn = connection_new(CONN_TYPE_EXIT);
-  if(!n_conn) {
+  n_stream = connection_new(CONN_TYPE_EXIT);
+  if(!n_stream) {
     log(LOG_DEBUG,"connection_exit_begin_conn(): connection_new failed. Dropping.");
     return 0;
   }
 
-  memcpy(n_conn->stream_id, cell->payload + RELAY_HEADER_SIZE, STREAM_ID_SIZE);
-  n_conn->address = strdup(cell->payload + RELAY_HEADER_SIZE + STREAM_ID_SIZE);
-  n_conn->port = atoi(colon+1);
-  n_conn->state = EXIT_CONN_STATE_RESOLVING;
-  n_conn->receiver_bucket = -1; /* edge connections don't do receiver buckets */
-  n_conn->bandwidth = -1;
-  n_conn->s = -1; /* not yet valid */
-  n_conn->package_window = STREAMWINDOW_START;
-  n_conn->deliver_window = STREAMWINDOW_START;
-  if(connection_add(n_conn) < 0) { /* no space, forget it */
+  memcpy(n_stream->stream_id, cell->payload + RELAY_HEADER_SIZE, STREAM_ID_SIZE);
+  n_stream->address = strdup(cell->payload + RELAY_HEADER_SIZE + STREAM_ID_SIZE);
+  n_stream->port = atoi(colon+1);
+  n_stream->state = EXIT_CONN_STATE_RESOLVING;
+  n_stream->receiver_bucket = -1; /* edge connections don't do receiver buckets */
+  n_stream->bandwidth = -1;
+  n_stream->s = -1; /* not yet valid */
+  n_stream->package_window = STREAMWINDOW_START;
+  n_stream->deliver_window = STREAMWINDOW_START;
+  if(connection_add(n_stream) < 0) { /* no space, forget it */
     log(LOG_DEBUG,"connection_exit_begin_conn(): connection_add failed. Dropping.");
-    connection_free(n_conn);
+    connection_free(n_stream);
     return 0;
   }
 
   /* add it into the linked list of streams on this circuit */
-  n_conn->next_stream = circ->n_conn;
-  circ->n_conn = n_conn;
+  n_stream->next_stream = circ->n_streams;
+  circ->n_streams = n_stream;
 
   /* send it off to the gethostbyname farm */
-  if(dns_resolve(n_conn) < 0) {
+  if(dns_resolve(n_stream) < 0) {
     log(LOG_DEBUG,"connection_exit_begin_conn(): Couldn't queue resolve request.");
-    connection_remove(n_conn);
-    connection_free(n_conn);
+    connection_remove(n_stream);
+    connection_free(n_stream);
     return 0;
   }
 
