@@ -15,7 +15,7 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 #SocksPolicy accept 192.168.0.1/16:*
 #SocksPolicy reject *:*
 
-# By default, we send log messages to the command line.  If you want
+# By default, we send log messages to stdout.  If you want
 # them to go somewhere else, uncomment one or more of these example
 # configurations.
 ### Send all messages of level 'warn' or higher to /var/log/tor/warnings
