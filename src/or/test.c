@@ -804,6 +804,40 @@ test_dir_format()
   test_eq(0, is_recommended_version("a", ""));
 }
 
+void test_rend_fns()
+{
+  rend_service_descriptor_t *d1, *d2;
+  char *encoded;
+  int len;
+  crypto_pk_env_t *pk1;
+  time_t now;
+  pk1 = crypto_new_pk_env(CRYPTO_PK_RSA);
+
+  test_assert(!crypto_pk_generate_key(pk1));
+  d1 = tor_malloc_zero(sizeof(rend_service_descriptor_t));
+  d1->pk = pk1;
+  now = time(NULL);
+  d1->timestamp = now;
+  d1->n_intro_points = 3;
+  d1->intro_points = tor_malloc(sizeof(char*)*3);
+  d1->intro_points[0] = tor_strdup("tom");
+  d1->intro_points[1] = tor_strdup("crow");
+  d1->intro_points[2] = tor_strdup("joel");
+  test_assert(! rend_encode_service_descriptor(d1, pk1, &encoded, &len));
+  d2 = rend_parse_service_descriptor(encoded, len);
+  test_assert(d2);
+
+  test_assert(!crypto_pk_cmp_keys(d1->pk, d2->pk));
+  test_eq(d2->timestamp, now);
+  test_eq(d2->n_intro_points, 3);
+  test_streq(d2->intro_points[0], "tom");
+  test_streq(d2->intro_points[1], "crow");
+  test_streq(d2->intro_points[2], "joel");
+
+  rend_service_descriptor_free(d1);
+  rend_service_descriptor_free(d2);
+}
+
 int
 main(int c, char**v){
 #if 0
@@ -830,6 +864,8 @@ main(int c, char**v){
   puts("\n========================= Directory Formats ===============");
 //  add_stream_log(LOG_DEBUG, NULL, stdout);
   test_dir_format();
+  puts("\n========================= Rendezvous functionality ========");
+  test_rend_fns();
   puts("");
 
   if (have_failed)

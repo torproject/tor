@@ -49,13 +49,36 @@ void tor_strlower(char *s);
  */
 #define get_uint16(cp) (*(uint16_t*)(cp))
 #define get_uint32(cp) (*(uint32_t*)(cp))
-#define set_uint16(cp,v) do { *(uint16_t)(cp) = (v) } while (0)
-#define set_uint32(cp,v) do { *(uint32_t)(cp) = (v) } while (0)
+#define set_uint16(cp,v) do { *(uint16_t*)(cp) = (v); } while (0)
+#define set_uint32(cp,v) do { *(uint32_t*)(cp) = (v); } while (0)
 #else
+#if 1
 uint16_t get_uint16(char *cp);
 uint32_t get_uint32(char *cp);
 void set_uint16(char *cp, uint16_t v);
 void set_uint32(char *cp, uint32_t v);
+#else
+#define get_uint16(cp)				\
+  ( ((*(((uint8_t*)(cp))+0))<<8) +		\
+    ((*(((uint8_t*)(cp))+1))   ) )
+#define get_uint32(cp)				\
+  ( ((*(((uint8_t*)(cp))+0))<<24) +		\
+    ((*(((uint8_t*)(cp))+1))<<16) +		\
+    ((*(((uint8_t*)(cp))+2))<<8 ) +		\
+    ((*(((uint8_t*)(cp))+3))    ) )
+#define set_uint16(cp,v)			\
+  do {						\
+    *(((uint8_t*)(cp))+0) = (v >> 8)&0xff;	\
+    *(((uint8_t*)(cp))+1) = (v >> 0)&0xff;	\
+  } while (0)
+#define set_uint32(cp,v)			\
+  do {						\
+    *(((uint8_t*)(cp))+0) = (v >> 24)&0xff;	\
+    *(((uint8_t*)(cp))+1) = (v >> 16)&0xff;	\
+    *(((uint8_t*)(cp))+2) = (v >> 8)&0xff;	\
+    *(((uint8_t*)(cp))+3) = (v >> 0)&0xff;	\
+  } while (0)
+#endif
 #endif
 
 typedef struct {

@@ -972,6 +972,20 @@ void rep_hist_dump_stats(time_t now, int severity);
 /* length of 'y' portion of 'y.onion' URL. */
 #define REND_SERVICE_ID_LEN 16
 
+typedef struct rend_service_descriptor_t {
+  crypto_pk_env_t *pk;
+  time_t timestamp;
+  int n_intro_points;
+  char **intro_points;
+} rend_service_descriptor_t;
+
+void rend_service_descriptor_free(rend_service_descriptor_t *desc);
+int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
+                                   crypto_pk_env_t *key,
+                                   char **str_out,
+                                   int *len_out);
+rend_service_descriptor_t *rend_parse_service_descriptor(const char *str, int len);
+
 #endif
 
 /*
