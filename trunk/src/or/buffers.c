@@ -208,13 +208,13 @@ int read_to_buf_tls(tor_tls *tls, int at_most, buf_t *buf) {
 
   if (buf_ensure_capacity(buf, at_most+buf->datalen))
     return -1;
-  
+
   if (at_most > buf->len - buf->datalen)
     at_most = buf->len - buf->datalen;
 
   if (at_most == 0)
     return 0;
-  
+
   r = tor_tls_read(tls, buf->mem+buf->datalen, at_most);
   if (r<0) 
     return r;
@@ -291,14 +291,8 @@ int write_to_buf(const char *string, int string_len, buf_t *buf) {
   assert(string && BUF_OK(buf));
 
   if (buf_ensure_capacity(buf, buf->datalen+string_len))
+    log_fn(LOG_WARN, "buflen too small, can't hold %d bytes.",buf->datalen+string_len);
     return -1;
-
-  /* this is the point where you would grow the buffer, if you want to */
-
-  if (string_len + buf->datalen > buf->len) { /* we're out of luck */
-    log_fn(LOG_WARN, "buflen too small. Time to implement growing dynamic bufs.");
-    return -1;
-  }
 
   memcpy(buf->mem+buf->datalen, string, string_len);
   buf->datalen += string_len;
