@@ -8,8 +8,8 @@ Quickstart version for users:
 4) make install
 5) tor (if it doesn't work, give it the whole path or fix your path)
   You don't need to run this as root, and you probably shouldn't.
-  (Once you're comfortable running it, you can run it with "-l warn",
-   which will only log things that you need to know.)
+  (If you're having problems, try running it with "-l info" to get
+   more details.)
 6) point your browser to socks4 or socks5 proxy at localhost port
   9050. In mozilla, this is in edit|preferences|advanced|proxies. This
   allows you to test to make sure tor is installed correctly.
