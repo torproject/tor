@@ -76,8 +76,11 @@ _log_prefix(char *buf, size_t buf_len, int severity)
 }
 
 /** If lf refers to an actual file that we have just opened, and the file
- * contains no data, log an "opening new logfile" message at the top. **/
-static void log_tor_version(logfile_t *lf, int reset)
+ * contains no data, log an "opening new logfile" message at the top.
+ *
+ * Return -1 if the log is broken and needs to be deleted, else return 0.
+ */
+static int log_tor_version(logfile_t *lf, int reset)
 {
   char buf[256];
   size_t n;
@@ -85,10 +88,10 @@ static void log_tor_version(logfile_t *lf, int reset)
 
   if (!lf->needs_close)
     /* If it doesn't get closed, it isn't really a file. */
-    return;
+    return 0;
   if (lf->is_temporary)
     /* If it's temporary, it isn't really a file. */
-    return;
+    return 0;
 #ifdef HAVE_FTELLO
   is_new = (ftello(lf->file) == 0);
 #else
@@ -97,11 +100,13 @@ static void log_tor_version(logfile_t *lf, int reset)
   if (reset && !is_new)
     /* We are resetting, but we aren't at the start of the file; no
      * need to log again. */
-    return;
+    return 0;
   n = _log_prefix(buf, sizeof(buf), LOG_NOTICE);
   tor_snprintf(buf+n, sizeof(buf)-n,
                "Tor %s opening %slog file.\n", VERSION, is_new?"new ":"");
-  fputs(buf, lf->file);
+  if (fputs(buf, lf->file) == EOF)
+    return -1; /* failed */
+  return 0;
 }
 
 /** Helper: Format a log message into a fixed-sized buffer. (This is
@@ -272,6 +277,7 @@ static void delete_log(logfile_t *victim) {
   tor_free(victim);
 }
 
+/** DOCDOC */
 static void close_log(logfile_t *victim)
 {
   if (victim->needs_close && victim->file) {
@@ -285,14 +291,16 @@ static void close_log(logfile_t *victim)
   }
 }
 
+/** DOCDOC */
 static int reset_log(logfile_t *lf)
 {
   if (lf->needs_close) {
-    if(fclose(lf->file)==EOF ||
+    if (fclose(lf->file)==EOF ||
        !(lf->file = fopen(lf->filename, "a"))) {
       return -1;
     } else {
-      log_tor_version(lf, 1);
+      if (log_tor_version(lf, 1) < 0)
+        return -1;
     }
   }
   return 0;
@@ -371,7 +379,11 @@ int add_file_log(int loglevelMin, int loglevelMax, const char *filename)
   if (!f) return -1;
   add_stream_log(loglevelMin, loglevelMax, filename, f);
   logfiles->needs_close = 1;
-  log_tor_version(logfiles, 0);
+  if (log_tor_version(logfiles, 0) < 0) {
+    logfile_t *victim = logfiles;
+    logfiles = victim->next;
+    delete_log(victim);
+  }
   return 0;
 }
 
