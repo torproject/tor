@@ -40,8 +40,8 @@ void relay_header_unpack(relay_header_t *dest, const char *src) {
  */
 int connection_edge_process_inbuf(connection_t *conn) {
 
-  assert(conn);
-  assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
 
   if(conn->inbuf_reached_eof) {
 #ifdef HALF_OPEN
@@ -99,7 +99,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
 }
 
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
-  assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
+  tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
 
   if(conn->marked_for_close)
     return 0; /* already marked; probably got an 'end' */
@@ -129,7 +129,7 @@ static char *connection_edge_end_reason(char *payload, uint16_t length) {
     case END_STREAM_REASON_DONE:           return "closed normally";
     case END_STREAM_REASON_TIMEOUT:        return "gave up (timeout)";
   }
-  assert(0);
+  tor_assert(0);
   return "";
 }
 
@@ -182,7 +182,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
 
   if(!circ) {
     log_fn(LOG_WARN,"no circ. Closing conn.");
-    assert(fromconn);
+    tor_assert(fromconn);
     connection_mark_for_close(fromconn, 0);
     return -1;
   }
@@ -296,7 +296,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   static int num_seen=0;
   relay_header_t rh;
 
-  assert(cell && circ);
+  tor_assert(cell && circ);
 
   relay_header_unpack(&rh, cell->payload);
 //  log_fn(LOG_DEBUG,"command %d stream %d", rh.command, rh.stream_id);
@@ -473,8 +473,8 @@ int connection_edge_finished_flushing(connection_t *conn) {
   unsigned char connected_payload[4];
   int e, len=sizeof(e);
 
-  assert(conn);
-  assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
 
   switch(conn->state) {
     case EXIT_CONN_STATE_CONNECTING:
@@ -509,7 +509,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
            RELAY_COMMAND_CONNECTED, connected_payload, 4, conn->cpath_layer) < 0)
           return 0; /* circuit is closed, don't continue */
       }
-      assert(conn->package_window > 0);
+      tor_assert(conn->package_window > 0);
       return connection_edge_process_inbuf(conn); /* in case the server has written anything */
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
@@ -539,8 +539,8 @@ int connection_edge_package_raw_inbuf(connection_t *conn) {
   char payload[CELL_PAYLOAD_SIZE];
   circuit_t *circ;
 
-  assert(conn);
-  assert(!connection_speaks_cells(conn));
+  tor_assert(conn);
+  tor_assert(!connection_speaks_cells(conn));
 
 repeat_connection_edge_package_raw_inbuf:
 
@@ -582,10 +582,10 @@ repeat_connection_edge_package_raw_inbuf:
     return 0; /* circuit is closed, don't continue */
 
   if(!conn->cpath_layer) { /* non-rendezvous exit */
-    assert(circ->package_window > 0);
+    tor_assert(circ->package_window > 0);
     circ->package_window--;
   } else { /* we're an AP, or an exit on a rendezvous circ */
-    assert(conn->cpath_layer->package_window > 0);
+    tor_assert(conn->cpath_layer->package_window > 0);
     conn->cpath_layer->package_window--;
   }
 
@@ -628,7 +628,7 @@ void connection_ap_expire_beginning(void) {
       }
       continue;
     }
-    assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
+    tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
     if(conn->num_retries >= MAX_STREAM_RETRIES) {
       log_fn(LOG_WARN,"Stream is %d seconds late. Giving up.",
              15*conn->num_retries);
@@ -648,7 +648,7 @@ void connection_ap_expire_beginning(void) {
       /* kludge to make us not try this circuit again, yet to allow
        * current streams on it to survive if they can: make it
        * unattractive to use for new streams */
-      assert(circ->timestamp_dirty);
+      tor_assert(circ->timestamp_dirty);
       circ->timestamp_dirty -= options.NewCircuitPeriod;
       /* give our stream another 15 seconds to try */
       conn->timestamp_lastread += 15;
@@ -714,10 +714,10 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   socks_request_t *socks;
   int sockshere;
 
-  assert(conn);
-  assert(conn->type == CONN_TYPE_AP);
-  assert(conn->state == AP_CONN_STATE_SOCKS_WAIT);
-  assert(conn->socks_request);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_AP);
+  tor_assert(conn->state == AP_CONN_STATE_SOCKS_WAIT);
+  tor_assert(conn->socks_request);
   socks = conn->socks_request;
 
   log_fn(LOG_DEBUG,"entered.");
@@ -791,9 +791,9 @@ circuit_get_open_circ_or_launch(connection_t *conn,
   circuit_t *circ;
   uint32_t addr;
 
-  assert(conn);
-  assert(circp);
-  assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
+  tor_assert(conn);
+  tor_assert(circp);
+  tor_assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
 
   circ = circuit_get_best(conn, 1, desired_circuit_purpose);
 
@@ -862,8 +862,8 @@ void link_apconn_to_circ(connection_t *apconn, circuit_t *circ) {
   /* assert_connection_ok(conn, time(NULL)); */
   circ->p_streams = apconn;
 
-  assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath && circ->cpath->prev);
-  assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath && circ->cpath->prev);
+  tor_assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
   apconn->cpath_layer = circ->cpath->prev;
 }
 
@@ -878,10 +878,10 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   int retval;
   int conn_age;
 
-  assert(conn);
-  assert(conn->type == CONN_TYPE_AP);
-  assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
-  assert(conn->socks_request);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_AP);
+  tor_assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
+  tor_assert(conn->socks_request);
 
   conn_age = time(NULL) - conn->timestamp_created;
   if(conn_age > 60) {
@@ -916,13 +916,13 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   } else { /* we're a rendezvous conn */
     circuit_t *rendcirc=NULL, *introcirc=NULL;
 
-    assert(!conn->cpath_layer);
+    tor_assert(!conn->cpath_layer);
 
     /* start by finding a rendezvous circuit for us */
 
     retval = circuit_get_open_circ_or_launch(conn, CIRCUIT_PURPOSE_C_REND_JOINED, &rendcirc);
     if(retval < 0) return -1; /* failed */
-    assert(rendcirc);
+    tor_assert(rendcirc);
 
     if(retval > 0) {
       /* one is already established, attach */
@@ -942,7 +942,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
     /* it's on its way. find an intro circ. */
     retval = circuit_get_open_circ_or_launch(conn, CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT, &introcirc);
     if(retval < 0) return -1; /* failed */
-    assert(introcirc);
+    tor_assert(introcirc);
 
     if(retval > 0) {
       /* one has already sent the intro. keep waiting. */
@@ -958,7 +958,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
              rendcirc->n_circ_id, introcirc->n_circ_id, conn_age);
       /* look around for any new intro circs that should introduce */
 
-      assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
+      tor_assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
       if(introcirc->state == CIRCUIT_STATE_OPEN) {
         log_fn(LOG_INFO,"found open intro circ %d (rend %d); sending introduction. (stream %d sec old)",
                introcirc->n_circ_id, rendcirc->n_circ_id, conn_age);
@@ -1010,9 +1010,9 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
   struct in_addr in;
   const char *string_addr;
 
-  assert(ap_conn->type == CONN_TYPE_AP);
-  assert(ap_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
-  assert(ap_conn->socks_request);
+  tor_assert(ap_conn->type == CONN_TYPE_AP);
+  tor_assert(ap_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
+  tor_assert(ap_conn->socks_request);
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
@@ -1111,7 +1111,7 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     connection_write_to_buf(reply, replylen, conn);
     return;
   }
-  assert(conn->socks_request);
+  tor_assert(conn->socks_request);
   if(conn->socks_request->socks_version == 4) {
     memset(buf,0,SOCKS4_NETWORK_LEN);
 #define SOCKS4_GRANTED          90
@@ -1190,7 +1190,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     n_stream->address = tor_strdup("(rendezvous)");
     n_stream->state = EXIT_CONN_STATE_CONNECTING;
     strcpy(n_stream->rend_query, circ->rend_query);
-    assert(n_stream->rend_query[0]);
+    tor_assert(n_stream->rend_query[0]);
     assert_circuit_ok(circ);
     if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {
       log_fn(LOG_INFO,"Didn't find rendezvous service (port %d)",n_stream->port);
@@ -1271,7 +1271,7 @@ void connection_exit_connect(connection_t *conn) {
 }
 
 int connection_edge_is_rendezvous_stream(connection_t *conn) {
-  assert(conn);
+  tor_assert(conn);
   if(*conn->rend_query) /* XXX */
     return 1;
   return 0;
@@ -1281,9 +1281,9 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
 {
   uint32_t addr;
 
-  assert(conn);
-  assert(conn->type == CONN_TYPE_AP);
-  assert(conn->socks_request);
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_AP);
+  tor_assert(conn->socks_request);
 
   log_fn(LOG_DEBUG,"considering nickname %s, for address %s / port %d:",
          exit->nickname, conn->socks_request->address,
@@ -1334,7 +1334,7 @@ static uint32_t client_dns_lookup_entry(const char *address)
   struct in_addr in;
   time_t now;
 
-  assert(address);
+  tor_assert(address);
 
   if (tor_inet_aton(address, &in)) {
     log_fn(LOG_DEBUG, "Using static address %s (%08lX)", address,
@@ -1374,8 +1374,8 @@ static void client_dns_set_entry(const char *address, uint32_t val)
   struct in_addr in;
   time_t now;
 
-  assert(address);
-  assert(val);
+  tor_assert(address);
+  tor_assert(val);
 
   if (tor_inet_aton(address, &in))
     return;

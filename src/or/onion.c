@@ -17,11 +17,11 @@ static int count_acceptable_routers(smartlist_t *routers);
 int decide_circ_id_type(char *local_nick, char *remote_nick) {
   int result;
 
-  assert(remote_nick);
+  tor_assert(remote_nick);
   if(!local_nick)
     return CIRC_ID_TYPE_LOWER;
   result = strcmp(local_nick, remote_nick);
-  assert(result);
+  tor_assert(result);
   if(result < 0)
     return CIRC_ID_TYPE_LOWER;
   return CIRC_ID_TYPE_HIGHER;
@@ -45,16 +45,16 @@ int onion_pending_add(circuit_t *circ) {
   tmp->next = NULL;
 
   if(!ol_tail) {
-    assert(!ol_list);
-    assert(!ol_length);
+    tor_assert(!ol_list);
+    tor_assert(!ol_length);
     ol_list = tmp;
     ol_tail = tmp;
     ol_length++;
     return 0;
   }
 
-  assert(ol_list);
-  assert(!ol_tail->next);
+  tor_assert(ol_list);
+  tor_assert(!ol_tail->next);
 
   if(ol_length >= options.MaxOnionsPending) {
     log_fn(LOG_WARN,"Already have %d onions queued. Closing.", ol_length);
@@ -75,9 +75,9 @@ circuit_t *onion_next_task(void) {
   if(!ol_list)
     return NULL; /* no onions pending, we're done */
 
-  assert(ol_list->circ);
-  assert(ol_list->circ->p_conn); /* make sure it's still valid */
-  assert(ol_length > 0);
+  tor_assert(ol_list->circ);
+  tor_assert(ol_list->circ->p_conn); /* make sure it's still valid */
+  tor_assert(ol_length > 0);
   circ = ol_list->circ;
   onion_pending_remove(ol_list->circ);
   return circ;
@@ -164,7 +164,7 @@ static int new_route_len(double cw, uint8_t purpose, smartlist_t *routers) {
   int num_acceptable_routers;
   int routelen;
 
-  assert((cw >= 0) && (cw < 1) && routers); /* valid parameters */
+  tor_assert((cw >= 0) && (cw < 1) && routers); /* valid parameters */
 
 #ifdef TOR_PERF
   routelen = 2;
@@ -361,7 +361,7 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
       return r;
     default:
       log_fn(LOG_WARN,"unhandled purpose %d", purpose);
-      assert(0);
+      tor_assert(0);
   }
   return NULL; /* never reached */
 }
@@ -470,8 +470,8 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   int i;
   smartlist_t *sl, *excludednodes;
 
-  assert(head_ptr);
-  assert(router_out);
+  tor_assert(head_ptr);
+  tor_assert(router_out);
 
   if (!*head_ptr) {
     cur_len = 0;
@@ -534,7 +534,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     remove_twins_from_smartlist(sl,router_get_my_routerinfo());
     for (i = 0, cpath = *head_ptr; i < cur_len; ++i, cpath=cpath->next) {
       r = router_get_by_addr_port(cpath->addr, cpath->port);
-      assert(r);
+      tor_assert(r);
       remove_twins_from_smartlist(sl,r);
     }
     smartlist_subtract(sl,excludednodes);
@@ -600,8 +600,8 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
 
   dhbytes = crypto_dh_get_bytes(dh);
   pkbytes = crypto_pk_keysize(dest_router_key);
-  assert(dhbytes == 128);
-  assert(pkbytes == 128);
+  tor_assert(dhbytes == 128);
+  tor_assert(pkbytes == 128);
   challenge = tor_malloc_zero(DH_KEY_LEN);
 
   if (crypto_dh_get_public(dh, challenge, dhbytes))
@@ -738,7 +738,7 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 {
   int len;
   char *key_material=NULL;
-  assert(crypto_dh_get_bytes(handshake_state) == DH_KEY_LEN);
+  tor_assert(crypto_dh_get_bytes(handshake_state) == DH_KEY_LEN);
 
 #ifdef DEBUG_ONION_SKINS
   printf("Client: server g^y:");

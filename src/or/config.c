@@ -25,7 +25,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list);
 
 /* open configuration file for reading */
 static FILE *config_open(const unsigned char *filename) {
-  assert(filename);
+  tor_assert(filename);
   if (strspn(filename,CONFIG_LEGAL_FILENAME_CHARACTERS) != strlen(filename)) {
     /* filename has illegal letters */
     return NULL;
@@ -35,7 +35,7 @@ static FILE *config_open(const unsigned char *filename) {
 
 /* close configuration file */
 static int config_close(FILE *f) {
-  assert(f);
+  tor_assert(f);
   return fclose(f);
 }
 
@@ -396,7 +396,7 @@ static int resolve_my_address(or_options_t *options) {
       log_fn(LOG_WARN,"Could not resolve Address %s. Failing.", options->Address);
       return -1;
     }
-    assert(rent->h_length == 4);
+    tor_assert(rent->h_length == 4);
     memcpy(&in.s_addr, rent->h_addr,rent->h_length);
   }
   if(!explicit_ip && is_internal_IP(htonl(in.s_addr))) {

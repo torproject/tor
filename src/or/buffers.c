@@ -22,13 +22,12 @@ struct buf_t {
  * out smaller than this, but they will never autoshrink to less
  * than this size. */
 #define MIN_BUF_SHRINK_SIZE (16*1024)
-#define BUF_OK(b) ((b) && (b)->mem && (b)->datalen <= (b)->len)
 
 /* Change a buffer's capacity.  Must only be called when */
 static INLINE void buf_resize(buf_t *buf, size_t new_capacity)
 {
-  assert(buf->datalen <= new_capacity);
-  assert(new_capacity);
+  tor_assert(buf->datalen <= new_capacity);
+  tor_assert(new_capacity);
   buf->mem = tor_realloc(buf->mem, new_capacity);
   buf->len = new_capacity;
 }
@@ -83,7 +82,7 @@ static INLINE void buf_shrink_if_underfull(buf_t *buf) {
 /* Remove the first 'n' bytes from buf.
  */
 static INLINE void buf_remove_from_front(buf_t *buf, size_t n) {
-  assert(buf->datalen >= n);
+  tor_assert(buf->datalen >= n);
   buf->datalen -= n;
   memmove(buf->mem, buf->mem+n, buf->datalen);
   buf_shrink_if_underfull(buf);
@@ -99,7 +98,7 @@ static int find_str_in_str(const char *str, int str_len,
   const char *location;
   const char *last_possible = buf + buf_len - str_len;
 
-  assert(str && str_len > 0 && buf);
+  tor_assert(str && str_len > 0 && buf);
 
   if(buf_len < str_len)
     return -1;
@@ -126,7 +125,7 @@ buf_t *buf_new_with_capacity(size_t size) {
   buf->datalen = 0;
 //  memset(buf->mem,0,size);
 
-  assert(BUF_OK(buf));
+  assert_buf_ok(buf);
   return buf;
 }
 
@@ -176,7 +175,8 @@ int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof) {
   int e;
 #endif
 
-  assert(BUF_OK(buf) && reached_eof && (s>=0));
+  assert_buf_ok(buf);
+  tor_assert(reached_eof && (s>=0));
 
   if (buf_ensure_capacity(buf,buf->datalen+at_most))
     return -1;
@@ -214,7 +214,8 @@ int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof) {
 
 int read_to_buf_tls(tor_tls *tls, int at_most, buf_t *buf) {
   int r;
-  assert(tls && BUF_OK(buf));
+  tor_assert(tls);
+  assert_buf_ok(buf);
 
   if (buf_ensure_capacity(buf, at_most+buf->datalen))
     return -1;
@@ -245,7 +246,8 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
   int e;
 #endif
 
-  assert(BUF_OK(buf) && buf_flushlen && (s>=0) && (*buf_flushlen <= buf->datalen));
+  assert_buf_ok(buf);
+  tor_assert(buf_flushlen && (s>=0) && (*buf_flushlen <= buf->datalen));
 
   if(*buf_flushlen == 0) /* nothing to flush */
     return 0;
@@ -253,7 +255,7 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
   write_result = send(s, buf->mem, *buf_flushlen, 0);
   if (write_result < 0) {
     if(!ERRNO_EAGAIN(errno)) { /* it's a real error */
-      assert(errno != EPIPE); /* get a stack trace to find epipe bugs */
+      tor_assert(errno != EPIPE); /* get a stack trace to find epipe bugs */
       return -1;
     }
 #ifdef MS_WINDOWS
@@ -277,7 +279,8 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
 int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen)
 {
   int r;
-  assert(tls && BUF_OK(buf) && buf_flushlen);
+  assert_buf_ok(buf);
+  tor_assert(tls && buf_flushlen);
 
   /* we want to let tls write even if flushlen is zero, because it might
    * have a partial record pending */
@@ -298,7 +301,8 @@ int write_to_buf(const char *string, int string_len, buf_t *buf) {
    * return total number of bytes on the buf
    */
 
-  assert(string && BUF_OK(buf));
+  tor_assert(string);
+  assert_buf_ok(buf);
 
   if (buf_ensure_capacity(buf, buf->datalen+string_len)) {
     log_fn(LOG_WARN, "buflen too small, can't hold %d bytes.", (int)buf->datalen+string_len);
@@ -318,8 +322,9 @@ int fetch_from_buf(char *string, int string_len, buf_t *buf) {
    *
    * Return the number of bytes still on the buffer. */
 
-  assert(string && BUF_OK(buf));
-  assert(string_len <= buf->datalen); /* make sure we don't ask for too much */
+  tor_assert(string);
+  tor_assert(string_len <= buf->datalen); /* make sure we don't ask for too much */
+  assert_buf_ok(buf);
 
   memcpy(string,buf->mem,string_len);
   buf_remove_from_front(buf, string_len);
@@ -347,7 +352,7 @@ int fetch_from_buf_http(buf_t *buf,
   int i;
   int headerlen, bodylen, contentlen;
 
-  assert(BUF_OK(buf));
+  assert_buf_ok(buf);
 
   headers = buf->mem;
   i = find_on_inbuf("\r\n\r\n", 4, buf);
@@ -390,7 +395,7 @@ int fetch_from_buf_http(buf_t *buf,
     (*headers_out)[headerlen] = 0; /* null terminate it */
   }
   if(body_out) {
-    assert(body_used);
+    tor_assert(body_used);
     *body_used = bodylen;
     *body_out = tor_malloc(bodylen+1);
     memcpy(*body_out,buf->mem+headerlen,bodylen);
@@ -431,7 +436,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
 
       if(req->socks_version != 5) { /* we need to negotiate a method */
         unsigned char nummethods = (unsigned char)*(buf->mem+1);
-        assert(!req->socks_version);
+        tor_assert(!req->socks_version);
         if(buf->datalen < 2+nummethods)
           return 0;
         if(!nummethods || !memchr(buf->mem+2, 0, nummethods)) {
@@ -494,7 +499,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           log_fn(LOG_WARN,"socks5: unsupported address type %d. Rejecting.",*(buf->mem+3));
           return -1;
       }
-      assert(0);
+      tor_assert(0);
     case 4: /* socks4 */
       /* http://archive.socks.permeo.com/protocol/socks4.protocol */
       /* http://archive.socks.permeo.com/protocol/socks4a.protocol */
@@ -587,13 +592,15 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   }
 }
 
+
 void assert_buf_ok(buf_t *buf)
 {
-  assert(buf);
-  assert(buf->magic == BUFFER_MAGIC);
-  assert(buf->mem);
-  assert(buf->datalen <= buf->len);
+  tor_assert(buf);
+  tor_assert(buf->magic == BUFFER_MAGIC);
+  tor_assert(buf->mem);
+  tor_assert(buf->datalen <= buf->len);
 }
+
 
 /*
   Local Variables:

@@ -27,7 +27,7 @@ void cpu_init(void) {
 }
 
 int connection_cpu_finished_flushing(connection_t *conn) {
-  assert(conn && conn->type == CONN_TYPE_CPUWORKER);
+  tor_assert(conn && conn->type == CONN_TYPE_CPUWORKER);
   connection_stop_writing(conn);
   return 0;
 }
@@ -70,7 +70,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   connection_t *p_conn;
   circuit_t *circ;
 
-  assert(conn && conn->type == CONN_TYPE_CPUWORKER);
+  tor_assert(conn && conn->type == CONN_TYPE_CPUWORKER);
 
   if(conn->inbuf_reached_eof) {
     log_fn(LOG_WARN,"Read eof. Worker died unexpectedly.");
@@ -90,7 +90,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   if(conn->state == CPUWORKER_STATE_BUSY_ONION) {
     if(buf_datalen(conn->inbuf) < LEN_ONION_RESPONSE) /* entire answer available? */
       return 0; /* not yet */
-    assert(buf_datalen(conn->inbuf) == LEN_ONION_RESPONSE);
+    tor_assert(buf_datalen(conn->inbuf) == LEN_ONION_RESPONSE);
 
     connection_fetch_from_buf(&success,1,conn);
     connection_fetch_from_buf(buf,LEN_ONION_RESPONSE-1,conn);
@@ -112,7 +112,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
       log_fn(LOG_INFO,"processed onion for a circ that's gone. Dropping.");
       goto done_processing;
     }
-    assert(circ->p_conn);
+    tor_assert(circ->p_conn);
     if(onionskin_answer(circ, buf+TAG_LEN, buf+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
       log_fn(LOG_WARN,"onionskin_answer failed. Closing.");
       circuit_mark_for_close(circ);
@@ -120,7 +120,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
     }
     log_fn(LOG_DEBUG,"onionskin_answer succeeded. Yay.");
   } else {
-    assert(0); /* don't ask me to do handshakes yet */
+    tor_assert(0); /* don't ask me to do handshakes yet */
   }
 
 done_processing:
@@ -167,7 +167,7 @@ int cpuworker_main(void *data) {
       log_fn(LOG_INFO,"cpuworker exiting because tor process died.");
       goto end;
     }
-    assert(question_type == CPUWORKER_TASK_ONION);
+    tor_assert(question_type == CPUWORKER_TASK_ONION);
 
     if(read_all(fd, tag, TAG_LEN, 1) != TAG_LEN) {
       log_fn(LOG_ERR,"read tag failed. Exiting.");
@@ -262,7 +262,7 @@ static void spawn_enough_cpuworkers(void) {
 static void process_pending_task(connection_t *cpuworker) {
   circuit_t *circ;
 
-  assert(cpuworker);
+  tor_assert(cpuworker);
 
   /* for now only process onion tasks */
 
@@ -284,7 +284,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
   circuit_t *circ;
   char tag[TAG_LEN];
 
-  assert(question_type == CPUWORKER_TASK_ONION);
+  tor_assert(question_type == CPUWORKER_TASK_ONION);
 
   if(question_type == CPUWORKER_TASK_ONION) {
     circ = task;
@@ -299,7 +299,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
     if (!cpuworker)
       cpuworker = connection_get_by_type_state(CONN_TYPE_CPUWORKER, CPUWORKER_STATE_IDLE);
 
-    assert(cpuworker);
+    tor_assert(cpuworker);
 
     if(!circ->p_conn) {
       log_fn(LOG_INFO,"circ->p_conn gone. Failing circ.");

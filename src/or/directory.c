@@ -45,7 +45,7 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
   conn->port = router->dir_port;
   conn->address = tor_strdup(router->address);
   conn->nickname = tor_strdup(router->nickname);
-  assert(router->identity_pkey);
+  tor_assert(router->identity_pkey);
   conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
 
   conn->purpose = purpose;
@@ -101,25 +101,25 @@ static void directory_send_command(connection_t *conn, int purpose,
   char fetchstring[] = "GET / HTTP/1.0\r\n\r\n";
   char tmp[8192];
 
-  assert(conn && conn->type == CONN_TYPE_DIR);
+  tor_assert(conn && conn->type == CONN_TYPE_DIR);
 
   switch(purpose) {
     case DIR_PURPOSE_FETCH_DIR:
-      assert(payload == NULL);
+      tor_assert(payload == NULL);
       connection_write_to_buf(fetchstring, strlen(fetchstring), conn);
       break;
     case DIR_PURPOSE_UPLOAD_DIR:
-      assert(payload);
+      tor_assert(payload);
       snprintf(tmp, sizeof(tmp), "POST / HTTP/1.0\r\nContent-Length: %d\r\n\r\n",
                payload_len);
       connection_write_to_buf(tmp, strlen(tmp), conn);
       connection_write_to_buf(payload, payload_len, conn);
       break;
     case DIR_PURPOSE_FETCH_RENDDESC:
-      assert(payload);
+      tor_assert(payload);
 
       /* this must be true or we wouldn't be doing the lookup */
-      assert(payload_len <= REND_SERVICE_ID_LEN);
+      tor_assert(payload_len <= REND_SERVICE_ID_LEN);
       memcpy(conn->rend_query, payload, payload_len);
       conn->rend_query[payload_len] = 0;
 
@@ -127,7 +127,7 @@ static void directory_send_command(connection_t *conn, int purpose,
       connection_write_to_buf(tmp, strlen(tmp), conn);
       break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
-      assert(payload);
+      tor_assert(payload);
       snprintf(tmp, sizeof(tmp),
         "POST %s HTTP/1.0\r\nContent-Length: %d\r\n\r\n", rend_publish_string, payload_len);
       connection_write_to_buf(tmp, strlen(tmp), conn);
@@ -167,7 +167,7 @@ int parse_http_url(char *headers, char **url) {
  */
 int parse_http_response(char *headers, int *code, char **message) {
   int n1, n2;
-  assert(headers && code);
+  tor_assert(headers && code);
 
   while(isspace((int)*headers)) headers++; /* tolerate leading whitespace */
 
@@ -190,7 +190,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
   int body_len=0;
   int status_code;
 
-  assert(conn && conn->type == CONN_TYPE_DIR);
+  tor_assert(conn && conn->type == CONN_TYPE_DIR);
 
   if(conn->inbuf_reached_eof) {
     if(conn->state != DIR_CONN_STATE_CLIENT_READING) {
@@ -443,7 +443,7 @@ static int directory_handle_command(connection_t *conn) {
   int body_len=0;
   int r;
 
-  assert(conn && conn->type == CONN_TYPE_DIR);
+  tor_assert(conn && conn->type == CONN_TYPE_DIR);
 
   switch(fetch_from_buf_http(conn->inbuf,
                              &headers, MAX_HEADERS_SIZE,
@@ -475,7 +475,7 @@ static int directory_handle_command(connection_t *conn) {
 int connection_dir_finished_flushing(connection_t *conn) {
   int e, len=sizeof(e);
 
-  assert(conn && conn->type == CONN_TYPE_DIR);
+  tor_assert(conn && conn->type == CONN_TYPE_DIR);
 
   switch(conn->state) {
     case DIR_CONN_STATE_CONNECTING:
