@@ -90,7 +90,14 @@ about recently joined routers.
 
 5.1. So I'm totally anonymous if I use tor?
 
+
+
 5.2. Where can I learn more about anonymity?
+
+5.3. What attacks remain against onion routing?
+
+tagging: can change bytes in the cells, even through link encryption
+end node can give back wrong data, even subtly wrong data.
 
 
 6. Comparison to related projects.
