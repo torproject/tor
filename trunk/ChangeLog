@@ -4,17 +4,18 @@ rc5:
     - Disallow NDEBUG. We don't ever want anybody to turn off debug.
     - Let resolve conns retry/expire also, rather than sticking around
       forever.
+    - If we are using select, make sure we stay within FD_SETSIZE.
 
   o Bugfixes on 0.0.9pre:
-    - Fix integer underflow in tor_vsnprintf() that may be exploitable;
-      thanks to Ilja van Sprundel for finding it. People running 0.0.9pre5
-      or later might want to upgrade while we investigate.
+    - Fix integer underflow in tor_vsnprintf() that may be exploitable,
+      but doesn't seem to be currently; thanks to Ilja van Sprundel for
+      finding it.
     - If anybody set DirFetchPostPeriod, give them StatuFetchPeriod
       instead.  Impose minima and maxima for all *Period options; impose
       even tighter maxima for fetching if we are a caching dirserver.
       Clip rather than rejecting.
     - Fetch cached running-routers from servers that serve it (that is,
-      authdirservers, and servers running 0.0.9rc5-cvs or later.)
+      authdirservers and servers running 0.0.9rc5-cvs or later.)
 
   o Features:
     - Accept *:706 (silc) in default exit policy.
