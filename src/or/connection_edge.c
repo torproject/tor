@@ -509,7 +509,7 @@ void connection_ap_attach_pending(void)
   for (i = 0; i < n; ++i) {
     conn = carray[i];
     if (conn->type != CONN_TYPE_AP ||
-        conn->type != AP_CONN_STATE_CIRCUIT_WAIT)
+        conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
     switch(connection_ap_handshake_attach_circuit(conn)) {
       case -1: /* it will never work */
@@ -825,6 +825,9 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
   assert(conn->type == CONN_TYPE_AP);
   assert(conn->socks_request);
 
+  log_fn(LOG_DEBUG,"considering nickname %s, for address %s / port %d:",
+         exit->nickname, conn->socks_request->address,
+         conn->socks_request->port);
   addr = client_dns_lookup_entry(conn->socks_request->address);
   return router_supports_exit_address(addr, conn->socks_request->port, exit);
 }

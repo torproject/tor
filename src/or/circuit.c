@@ -211,12 +211,10 @@ circuit_t *circuit_get_newest(connection_t *conn, int must_be_open) {
       }
     }
     if(!newest || newest->timestamp_created < circ->timestamp_created) {
-      assert(circ->n_circ_id);
       newest = circ;
     }
     if(conn && circ->timestamp_dirty &&
        (!leastdirty || leastdirty->timestamp_dirty < circ->timestamp_dirty)) {
-      assert(circ->n_circ_id);
       leastdirty = circ;
     }
   }

@@ -44,7 +44,7 @@ char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
     "", /* 2 */
     "", /* 3 */
     "awaiting dest info",         /* app, 4 */
-    "waiting for OR connection",       /* 5 */
+    "waiting for safe circuit",        /* 5 */
     "open" },                          /* 6 */
   { "ready" }, /* dir listener, 0 */
   { "",                           /* dir, 0 */
