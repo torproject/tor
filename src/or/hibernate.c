@@ -31,6 +31,8 @@ hibernating, phase 2:
 
 #define SHUTDOWN_WAIT_LENGTH 30 /* seconds */
 
+extern long stats_n_seconds_working; /* published uptime */
+
 static int hibernate_state = HIBERNATE_STATE_LIVE;
 /** If are hibernating, when do we plan to wake up? Set to 0 if we
  * aren't hibernating. */
@@ -693,6 +695,7 @@ hibernate_end(int new_state) {
 
   hibernate_state = new_state;
   hibernate_end_time = 0; /* no longer hibernating */
+  stats_n_seconds_working = 0; /* reset published uptime */
 }
 
 /** A wrapper around hibernate_begin, for when we get SIGINT. */
