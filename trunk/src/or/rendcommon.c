@@ -20,12 +20,11 @@ void rend_service_descriptor_free(rend_service_descriptor_t *desc)
 
 int
 rend_encode_service_descriptor(rend_service_descriptor_t *desc,
-			       crypto_pk_env_t *key,
-			       char **str_out, int *len_out)
+                               crypto_pk_env_t *key,
+                               char **str_out, int *len_out)
 {
   char *buf, *cp, *ipoint;
   int i, keylen, asn1len;
-  char digest[CRYPTO_SHA1_DIGEST_LEN];
   keylen = crypto_pk_keysize(desc->pk);
   buf = tor_malloc(keylen*2); /* XXXX */
   asn1len = crypto_pk_asn1_encode(desc->pk, buf, keylen*2);
@@ -52,12 +51,7 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
     strcpy(cp, ipoint);
     cp += strlen(ipoint)+1;
   }
-  i = crypto_SHA_digest(*str_out, cp-*str_out, digest);
-  if (i<0) {
-    tor_free(*str_out);
-    return -1;
-  }
-  i = crypto_pk_private_sign(key, digest, CRYPTO_SHA1_DIGEST_LEN, cp);
+  i = crypto_pk_private_sign_digest(key, *str_out, cp-*str_out, cp);
   if (i<0) {
     tor_free(*str_out);
     return -1;
@@ -73,8 +67,7 @@ rend_service_descriptor_t *rend_parse_service_descriptor(
   rend_service_descriptor_t *result = NULL;
   int keylen, asn1len, i;
   const char *end, *cp, *eos;
-  char *signed_data=NULL;
-  char digest_expected[CRYPTO_SHA1_DIGEST_LEN];
+
   result = tor_malloc_zero(sizeof(rend_service_descriptor_t));
   cp = str;
   end = str+len;
@@ -101,28 +94,18 @@ rend_service_descriptor_t *rend_parse_service_descriptor(
   }
   keylen = crypto_pk_keysize(result->pk);
   if (end-cp != keylen) goto truncated;
-  if (crypto_SHA_digest(str, cp-str, digest_expected)<0) {
-    log_fn(LOG_WARN, "Error computing SHA1 digest.");
+  if (crypto_pk_public_checksig_digest(result->pk,
+				       (char*)str,cp-str, /* data */
+				       (char*)cp,end-cp  /* signature*/
+				       )<0) {
+    log_fn(LOG_WARN, "Bad signature on service descriptor");
     goto error;
   }
-  signed_data = tor_malloc(keylen+1);
-  i = crypto_pk_public_checksig(result->pk, (char*)cp, end-cp, signed_data);
-  if (i<0) {
-    log_fn(LOG_WARN, "Invalid signature on service descriptor");
-    goto error;
-  }
-  if (i != CRYPTO_SHA1_DIGEST_LEN ||
-      memcmp(signed_data, digest_expected, CRYPTO_SHA1_DIGEST_LEN)) {
-    log_fn(LOG_WARN, "Mismatched signature on service descriptor");
-    goto error;
-  }
-  tor_free(signed_data);
 
   return result;
  truncated:
   log_fn(LOG_WARN, "Truncated service descriptor");
  error:
-  tor_free(signed_data);
   rend_service_descriptor_free(result);
   return NULL;
 }
@@ -283,3 +266,10 @@ int rend_parse_rendezvous_address(char *address) {
   return -1;
 }
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/
