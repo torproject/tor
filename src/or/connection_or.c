@@ -391,6 +391,7 @@ connection_tls_finish_handshake(connection_t *conn) {
     log_fn(LOG_WARN, "Identity key not as expected for router claiming to be '%s' (%s:%d) ", nickname, conn->address, conn->port);
     return -1;
   }
+#if 0
   if (router_get_by_digest(digest_rcvd)) {
     /* This is a known router; don't cut it slack with its clock skew. */
     if (tor_tls_check_lifetime(conn->tls, TIGHT_CERT_ALLOW_SKEW)<0) {
@@ -399,6 +400,7 @@ connection_tls_finish_handshake(connection_t *conn) {
       return -1;
     }
   }
+#endif
 
   if (connection_or_nonopen_was_started_here(conn)) {
     /* I initiated this connection. */
