@@ -86,8 +86,8 @@ int has_completed_circuit=0;
 /* #define MS_WINDOWS_SERVICE */
 #ifdef MS_WINDOWS_SERVICE
 #include <tchar.h>
-#define GENSRV_SERVICENAME  TEXT("tor-"VERSION)
-#define GENSRV_DISPLAYNAME  TEXT("Tor "VERSION" Win32 Service")
+#define GENSRV_SERVICENAME  TEXT("tor")
+#define GENSRV_DISPLAYNAME  TEXT("Tor Win32 Service")
 #define GENSRV_DESCRIPTION  TEXT("Provides an anonymous Internet communication system")
 SERVICE_STATUS service_status;
 SERVICE_STATUS_HANDLE hStatus;
