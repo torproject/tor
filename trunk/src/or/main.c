@@ -168,6 +168,18 @@ connection_t *connection_get_by_type(int type) {
   return NULL;
 }
 
+connection_t *connection_get_by_type_state(int type, int state) {
+  int i;
+  connection_t *conn;
+
+  for(i=0;i<nfds;i++) {
+    conn = connection_array[i];
+    if(conn->type == type && conn->state == state)
+       return conn;
+  }
+  return NULL;
+}
+
 void connection_watch_events(connection_t *conn, short events) {
 
   assert(conn && conn->poll_index < nfds);
@@ -782,16 +794,12 @@ int tor_main(int argc, char *argv[]) {
     exit(1);
   log(options.loglevel,NULL);         /* assign logging severity level from options */
 
-  if (options.Daemon)
+  if(options.Daemon)
     daemonize();
 
   if(options.OnionRouter) { /* only spawn dns handlers if we're a router */
-    if(dns_master_start() < 0) {
-      log(LOG_ERR,"main(): We're running without a dns handler. Bad news.");
-    }
+    dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
-
-  init_cache_tree(); /* initialize the dns resolve tree */
 
   signal (SIGINT,  catch); /* catch kills so we can exit cleanly */
   signal (SIGTERM, catch);

@@ -62,11 +62,12 @@
 #define CONN_TYPE_AP 7
 #define CONN_TYPE_DIR_LISTENER 8
 #define CONN_TYPE_DIR 9
-#define CONN_TYPE_DNSMASTER 10
+#define CONN_TYPE_DNSWORKER 10
 
 #define LISTENER_STATE_READY 0
 
-#define DNSMASTER_STATE_OPEN 0
+#define DNSWORKER_STATE_IDLE 0
+#define DNSWORKER_STATE_BUSY 1
 
 /* how to read these states:
  * foo_CONN_STATE_bar_baz:
@@ -83,7 +84,7 @@
 #define OR_CONN_STATE_SERVER_NONCE_WAIT 8 /* waiting for confirmation of nonce */
 #define OR_CONN_STATE_OPEN 9 /* ready to send/receive cells. */
 
-#define EXIT_CONN_STATE_RESOLVING 0 /* waiting for response from dnsmaster */
+#define EXIT_CONN_STATE_RESOLVING 0 /* waiting for response from dns farm */
 #define EXIT_CONN_STATE_CONNECTING 1 /* waiting for connect() to finish */
 #define EXIT_CONN_STATE_OPEN 2
 #if 0
@@ -267,6 +268,9 @@ struct connection_t {
 
 /* Used while negotiating OR/OR connections */
   char nonce[8];
+
+/* Used by worker connections */
+  int num_processed;
  
 };
 
@@ -646,7 +650,7 @@ int connection_dir_handle_listener_read(connection_t *conn);
 
 int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
-void init_cache_tree(void);
+void dns_init(void);
 int dns_resolve(connection_t *exitconn);
 int dns_master_start(void);
 
@@ -664,6 +668,7 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 
 connection_t *connection_get_by_type(int type);
+connection_t *connection_get_by_type_state(int type, int state);
 
 void connection_watch_events(connection_t *conn, short events);
 void connection_stop_reading(connection_t *conn);

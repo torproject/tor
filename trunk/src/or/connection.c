@@ -545,7 +545,7 @@ int connection_process_inbuf(connection_t *conn) {
       return connection_edge_process_inbuf(conn);
     case CONN_TYPE_DIR:
       return connection_dir_process_inbuf(conn);
-    case CONN_TYPE_DNSMASTER:
+    case CONN_TYPE_DNSWORKER:
       return connection_dns_process_inbuf(conn); 
     default:
       log(LOG_DEBUG,"connection_process_inbuf() got unexpected conn->type.");
@@ -686,7 +686,7 @@ int connection_finished_flushing(connection_t *conn) {
       return connection_edge_finished_flushing(conn);
     case CONN_TYPE_DIR:
       return connection_dir_finished_flushing(conn);
-    case CONN_TYPE_DNSMASTER:
+    case CONN_TYPE_DNSWORKER:
       return connection_dns_finished_flushing(conn);
     default:
       log(LOG_DEBUG,"connection_finished_flushing() got unexpected conn->type.");
