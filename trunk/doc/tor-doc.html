@@ -224,6 +224,13 @@ service url</a>).</p>
 that have at least 20 kilobytes/s each way. If you have more bandwidth
 to offer, that's even better.</p>
 
+<p>If your server is behind a NAT and it doesn't know its own IP (e.g.
+it has an IP of 192.168.x.y), then we can't use it as a server yet.
+(If you want to do dyndns DNS voodoo to get around this, feel free.) And
+if it frequently has a lot of packet loss or really high latency, we
+also can't handle it as a server yet. Otherwise, please help out!
+</p>
+
 <p>To set up a Tor server, do the following steps after installing Tor.
 (These instructions are Unix-centric; if you're excited about working
 with us to get a Tor server working on Windows, let us know and we'll
@@ -324,7 +331,7 @@ servers, and you need to configure each client and server so it knows
 about your directory servers rather than the default ones.
 
 <ul>
-<li>1: Grab the latest release. Use at least 0.0.9rc6.
+<li>1: Grab the latest release. Use at least 0.0.9.
 <li>2: For each directory server you want,
 <ul>
 <li>2a: Set it up as a server (see <a href="#server">"setting up a
