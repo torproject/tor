@@ -14,11 +14,13 @@ dist-rpm: dist
 	rm -rf /tmp/tor-rpm-build
 	mkdir /tmp/tor-rpm-build
 	for subdir in BUILD RPMS SOURCES SPECS SRPMS; do \
-	    mkdir /tmp/tor-rpm-build/$$subdir;           \
+	    mkdir /tmp/tor-rpm-build/$$subdir;		 \
 	done
 	cp tor-$(VERSION).tar.gz /tmp/tor-rpm-build/SOURCES
-	rpmbuild -ba --define '_topdir /tmp/tor-rpm-build' contrib/tor.spec
-	mv /tmp/tor-rpm-build/*RPMS/* .
+	rpmbuild -ba --define '_topdir /tmp/tor-rpm-build' tor.spec
+	mv /tmp/tor-rpm-build/SRPMS/* .
+	mv /tmp/tor-rpm-build/RPMS/*/* .
+	rm -rf /tmp/tor-rpm-build
 
 doxygen:
 	doxygen && cd doc/doxygen/latex && make
