@@ -952,11 +952,13 @@ int router_add_exit_policy_from_string(routerinfo_t *router,
   directory_token_t tok;
   char *tmp, *cp;
   int r;
-  int len;
+  int len, idx;
 
   len = strlen(s);
   tmp = cp = tor_malloc(len+2);
-  strcpy(tmp, s);
+  for (idx = 0; idx < len; ++idx) {
+    tmp[idx] = tolower(s[idx]);
+  }
   tmp[len]='\n';
   tmp[len+1]='\0';
   if (router_get_next_token(&cp, &tok)) {
