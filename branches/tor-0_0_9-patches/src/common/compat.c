@@ -583,6 +583,7 @@ void tor_gettimeofday(struct timeval *timeval) {
 
 #ifndef MS_WINDOWS
 struct tor_mutex_t {
+  int _unused;
 };
 tor_mutex_t *tor_mutex_new(void) { return NULL; }
 void tor_mutex_acquire(tor_mutex_t *m) { }
