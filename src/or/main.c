@@ -53,6 +53,7 @@ int has_completed_circuit=0;
 ****************************************************************************/
 
 int connection_add(connection_t *conn) {
+  assert(conn);
 
   if(nfds >= options.MaxConn-1) {
     log_fn(LOG_WARN,"failing because nfds is too high.");
@@ -345,9 +346,38 @@ static void run_connection_housekeeping(int i, time_t now) {
 static void run_scheduled_events(time_t now) {
   static long time_to_fetch_directory = 0;
   static time_t last_uploaded_services = 0;
+  static time_t last_rotated_certificate = 0;
   int i;
 
-  /* 1. Every DirFetchPostPeriod seconds, we get a new directory and upload
+
+  /* 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
+   *  shut down and restart all cpuworkers, and update the directory if
+   *  necessary.
+   */
+  if (options.ORPort && get_onion_key_set_at()+MIN_ONION_KEY_LIFETIME < now) {
+    rotate_onion_key();
+    cpuworkers_rotate();
+    if (router_rebuild_descriptor()<0) {
+      log_fn(LOG_WARN, "Couldn't rebuild router descriptor");
+    }
+    router_rebuild_descriptor();
+    router_upload_dir_desc_to_dirservers();
+  }
+
+  /* 1b. Every MAX_LINK_KEY_LIFETIME seconds, we change our TLS context. */
+  if (!last_rotated_certificate)
+    last_rotated_certificate = now;
+  if (options.ORPort && last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
+    if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
+                            MAX_SSL_KEY_LIFETIME) < 0) {
+      log_fn(LOG_WARN, "Error reinitializing TLS context");
+    }
+    last_rotated_certificate = now;
+    /* XXXX We should rotate TLS connections as well; this code doesn't change
+     * XXXX them at all. */
+  }
+
+  /* 1c. Every DirFetchPostPeriod seconds, we get a new directory and upload
    *    our descriptor (if any). */
   if(time_to_fetch_directory < now) {
     /* it's time to fetch a new directory and/or post our descriptor */
@@ -370,6 +400,7 @@ static void run_scheduled_events(time_t now) {
     rend_cache_clean(); /* should this go elsewhere? */
     time_to_fetch_directory = now + options.DirFetchPostPeriod;
   }
+
 
   /* 2. Every second, we examine pending circuits and prune the
    *    ones which have been pending for more than a few seconds.

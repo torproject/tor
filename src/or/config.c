@@ -655,6 +655,10 @@ int getconfig(int argc, char **argv, or_options_t *options) {
     log(LOG_WARN,"DirFetchPostPeriod option must be positive.");
     result = -1;
   }
+  if(options->DirFetchPostPeriod > MIN_ONION_KEY_LIFETIME/2) {
+    log(LOG_WARN,"DirFetchPostPeriod is too large; clipping.");
+    options->DirFetchPostPeriod = MIN_ONION_KEY_LIFETIME/2;
+  }
 
   if(options->KeepalivePeriod < 1) {
     log(LOG_WARN,"KeepalivePeriod option must be positive.");
