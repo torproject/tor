@@ -198,5 +198,7 @@
 /* Define to 1 iff unaligned int access is allowed */
 #define UNALIGNED_INT_ACCESS_OK
 
+#define HAVE_EVENT_H
+
 /* Version number of package */
 #define VERSION "0.1.0.0-alpha-cvs"
