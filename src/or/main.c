@@ -780,17 +780,21 @@ void write_pidfile(char *filename) {
 
 int tor_main(int argc, char *argv[]) {
 
+  /* give it somewhere to log to initially */
+  add_stream_log(LOG_INFO, "<stdout>", stdout);
+
   if(getconfig(argc,argv,&options)) {
     log_fn(LOG_ERR,"Reading config file failed. exiting.");
     return -1;
   }
   log_set_severity(options.loglevel); /* assign logging severity level from options */
+  close_logs(); /* close stdout, then open with correct loglevel if necessary */
+  if(!options.LogFile && !options.RunAsDaemon)
+    add_stream_log(options.loglevel, "<stdout>", stdout);
   if(options.DebugLogFile)
     add_file_log(LOG_DEBUG, options.DebugLogFile);
   if(options.LogFile)
     add_file_log(options.loglevel, options.LogFile);
-  if(!options.LogFile && !options.RunAsDaemon)
-    add_stream_log(options.loglevel, "<stdout>", stdout);
 
   global_read_bucket = options.TotalBandwidth; /* start it at 1 second of traffic */
   stats_prev_global_read_bucket = global_read_bucket;
