@@ -1399,15 +1399,15 @@ int crypto_seed_rng(void)
   char buf[DIGEST_LEN+1];
 
   if (!provider_set) {
-    if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL, 0)) {
+    if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL, CRYPT_MACHINE_KEYSET)) {
       if (GetLastError() != NTE_BAD_KEYSET) {
         log_fn(LOG_ERR,"Can't get CryptoAPI provider [1]");
         return -1;
       }
       /* Yes, we need to try it twice. */
       if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL,
-                               CRYPT_NEWKEYSET)) {
-        log_fn(LOG_ERR,"Can't get CryptoAPI provider [2]");
+                               CRYPT_MACHINE_KEYSET | CRYPT_NEWKEYSET)) {
+        log_fn(LOG_ERR,"Can't get CryptoAPI provider [2], error code: %x", GetLastError());
         return -1;
       }
     }
