@@ -32,7 +32,10 @@
 #define FD_SETSIZE MAXCONNECTIONS
 #endif
 
+#include <assert.h>
+#include <stdlib.h>
 #include "util.h"
+#include "log.h"
 
 int
 tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
