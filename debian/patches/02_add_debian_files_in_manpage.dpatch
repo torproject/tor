@@ -23,13 +23,13 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad /home/weasel/projects/tor/cvs/doc/tor.1.in cvs/doc/tor.1.in
---- /home/weasel/projects/tor/cvs/doc/tor.1.in	2004-03-01 23:41:25.000000000 +0100
-+++ cvs/doc/tor.1.in	2004-03-10 16:30:49.000000000 +0100
-@@ -137,6 +137,12 @@
+diff -urNad /home/weasel/tmp/tor/tor-0.0.7.2+0.0.8pre3cvs/doc/tor.1.in tor-0.0.7.2+0.0.8pre3cvs/doc/tor.1.in
+--- /home/weasel/tmp/tor/tor-0.0.7.2+0.0.8pre3cvs/doc/tor.1.in	2004-08-08 07:32:55.000000000 +0200
++++ tor-0.0.7.2+0.0.8pre3cvs/doc/tor.1.in	2004-08-08 15:16:27.185115824 +0200
+@@ -201,6 +201,12 @@
  .TP
  .I @LOCALSTATEDIR@/lib/tor/
- The tor server stores keys/etc here.
+ The tor process stores keys and other data here.
 +.TP
 +.I /var/log/tor/log
 +The tor server logs to this file.
