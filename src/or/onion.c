@@ -7,13 +7,6 @@
 extern int global_role; /* from main.c */
 extern or_options_t options; /* command-line and config-file options */
 
-/********* START VARIABLES **********/
-
-static tracked_onion_t *tracked_onions = NULL; /* linked list of tracked onions */
-static tracked_onion_t *last_tracked_onion = NULL;
-
-/********* END VARIABLES ************/
-
 static int onion_process(circuit_t *circ);
 static int onion_deliver_to_conn(aci_t aci, unsigned char *onion, uint32_t onionlen, connection_t *conn);
 
@@ -255,15 +248,10 @@ static int onion_process(circuit_t *circ) {
     return -1;
   }
 
-  /* check for replay */
-  if(find_tracked_onion(circ->onion, circ->onionlen, tracked_onions)) {
+  /* check for replay. at the same time, add it to the pile of tracked onions. */
+  if(find_tracked_onion(circ->onion, circ->onionlen)) {
     log(LOG_NOTICE,"process_onion(): I have just received a replayed onion. This could be a replay attack.");
     return -1;
-  }
-
-  /* track the new onion */
-  if(add_tracked_onion(circ->onion,circ->onionlen, &tracked_onions, &last_tracked_onion) < 0) {
-    log(LOG_DEBUG,"process_onion(): Onion tracking failed. Will ignore.");
   }
 
   /* now we must send create cells to the next router */
@@ -739,75 +727,85 @@ void pad_onion(unsigned char *onion, uint32_t onionlen, int n)
   crypto_pseudo_rand(n, onion+onionlen-n);
 }
 
-/* create a new tracked_onion entry */
-int add_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t **tracked_onions, tracked_onion_t **last_tracked_onion)
-{
-  tracked_onion_t *to = NULL;
-  
-  assert(onion && tracked_onions && last_tracked_onion);
-  
-  to = (tracked_onion_t *)malloc(sizeof(tracked_onion_t));
-  if (!to)
-    return -1;
-  
-  to->expire = ntohl(*(uint32_t *)(onion+8)); /* set the expiration date */
-  /* compute the SHA digest */
-  if (crypto_SHA_digest(onion, onionlen, to->digest)) {
-    log(LOG_DEBUG,"new_tracked_onion(): Failed to compute a SHA1 digest of the onion.");
+
+
+
+/* red black tree using Niels' tree.h. I used
+http://www.openbsd.org/cgi-bin/cvsweb/src/regress/sys/sys/tree/rb/rb-test.c?rev=1.2&content-type=text/x-cvsweb-markup
+as my guide */
+
+#include "tree.h"
+
+struct tracked_onion { 
+  RB_ENTRY(tracked_onion) node;
+  uint32_t expire;
+  char digest[20]; /* SHA digest of the onion */
+  struct tracked_onion *next;
+};
+
+RB_HEAD(tracked_tree, tracked_onion) tracked_root;
+
+int compare_tracked_onions(struct tracked_onion *a, struct tracked_onion *b) {
+  return memcmp(a->digest, b->digest, 20);
+}
+
+RB_PROTOTYPE(tracked_tree, tracked_onion, node, compare_tracked_onions);
+RB_GENERATE(tracked_tree, tracked_onion, node, compare_tracked_onions);
+
+void init_tracked_tree(void) {
+  RB_INIT(&tracked_root);
+}
+
+/* see if this onion has been seen before. if so, return 1, else
+ * return 0 and add the sha1 of this onion to the tree.
+ */
+int find_tracked_onion(unsigned char *onion, uint32_t onionlen) {
+  static struct tracked_onion *head_tracked_onions = NULL; /* linked list of tracked onions */
+  static struct tracked_onion *tail_tracked_onions = NULL;
+
+  uint32_t now = time(NULL); 
+  struct tracked_onion *to;
+
+  /* first take this opportunity to see if there are any expired
+   * onions in the tree. we know this in O(1) because the linked list
+   * 'tracked_onions' is ordered by when they were seen.
+   */
+  while(head_tracked_onions && (head_tracked_onions->expire < now)) {
+    to = head_tracked_onions;
+    log(LOG_DEBUG,"find_tracked_onion(): Forgetting old onion (expires %d)", to->expire);
+    head_tracked_onions = to->next;
+    if(!head_tracked_onions)          /* if there are no more, */
+      tail_tracked_onions = NULL; /* then make sure the list's tail knows that too */
+    RB_REMOVE(tracked_tree, &tracked_root, to);
     free(to);
-    return -1;
   }
-  
-  to->next = NULL;
-  
-  if (!*tracked_onions) {
-    to->prev = NULL;
-    *tracked_onions = to;
-  } else {
-    to->prev = *last_tracked_onion;
-    (*last_tracked_onion)->next = to;
-  }
-  *last_tracked_onion = to;
-  
-  return 0;
-}
 
-/* delete a tracked onion entry */
-void remove_tracked_onion(tracked_onion_t *to, tracked_onion_t **tracked_onions, tracked_onion_t **last_tracked_onion)
-{
-  assert(*tracked_onions && *last_tracked_onion && to);
-  
-  if (to->prev)
-    ((tracked_onion_t *)to->prev)->next = to->next;
-  if (to->next)
-    ((tracked_onion_t *)to->next)->prev = to->prev;
-  
-  if (to == *tracked_onions)
-    *tracked_onions = (tracked_onion_t *)to->next;
-  
-  if (to == *last_tracked_onion)
-    *last_tracked_onion = (tracked_onion_t *)to->prev;
-  
-  free(to);
-  
-  return;
-}
-
-/* find a tracked onion in the linked list of tracked onions */
-tracked_onion_t *find_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t *tracked_onions)
-{
-  tracked_onion_t *to = tracked_onions;
-  unsigned char digest[20];
+  to = malloc(sizeof(struct tracked_onion));
   
   /* compute the SHA digest of the onion */
-  crypto_SHA_digest(onion,onionlen, digest);
-  
-  while(to) {
-    if(!memcmp(digest, to->digest, 20))
-      return to;
-    to = (tracked_onion_t *)to->next;
+  crypto_SHA_digest(onion, onionlen, to->digest);
+
+  /* try adding it to the tree. if it's already there it will return it. */
+  if(RB_INSERT(tracked_tree, &tracked_root, to)) {
+    /* yes, it's already there: this is a replay. */
+    free(to);
+    return 1;
   }
   
-  return NULL;
+  /* this is a new onion. add it to the list. */
+
+  to->expire = ntohl(*(uint32_t *)(onion+8)); /* set the expiration date */
+  to->next = NULL;
+
+  if (!head_tracked_onions) {
+    head_tracked_onions = to;
+  } else {
+    tail_tracked_onions->next = to;
+  }
+  tail_tracked_onions = to;
+
+  log(LOG_DEBUG,"find_tracked_onion(): Remembered new onion (expires %d)", to->expire);
+ 
+  return 0;
 }
 

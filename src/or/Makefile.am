@@ -15,6 +15,6 @@ test_config_SOURCES = test_config.c
 
 test_config_LDADD = config.o -L../common -lor
 
-noinst_HEADERS = or.h
+noinst_HEADERS = or.h tree.h
 
 

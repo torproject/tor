@@ -355,13 +355,6 @@ typedef struct
 #define ONION_LAYER_SIZE 28
 #define ONION_PADDING_SIZE (128-ONION_LAYER_SIZE)
 
-typedef struct { 
-  uint32_t expire;
-  char digest[20]; /* SHA digest of the onion */
-  void *prev;
-  void *next;
-} tracked_onion_t;
-
 typedef struct {
    char *LogLevel;
    char *RouterFile;
@@ -669,6 +662,9 @@ int chooselen(double cw);
  */
 unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *routelen);
 
+/* create a cipher by onion cipher type. */
+crypto_cipher_env_t *create_onion_cipher(int cipher_type, char *key, char *iv, int encrypt_mode);
+
 /* creates a new onion from route, stores it and its length into bufp and lenp respectively */
 unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int *route, int routelen, int *len, crypt_path_t **cpath);
 
@@ -682,17 +678,8 @@ int decrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *prke
 /* delete first n bytes of the onion and pads the end with n bytes of random data */
 void pad_onion(unsigned char *onion, uint32_t onionlen, int n);
 
-/* create a new tracked_onion entry */
-int add_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t **tracked_onions, tracked_onion_t **last_tracked_onion);
-
-/* delete a tracked onion entry */
-void remove_tracked_onion(tracked_onion_t *to, tracked_onion_t **tracked_onions, tracked_onion_t **last_tracked_onion);
-
-/* find a tracked onion in the linked list of tracked onions */
-tracked_onion_t *find_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t *tracked_onions);
-
-/* create a cipher by onion cipher type. */
-crypto_cipher_env_t *create_onion_cipher(int cipher_type, char *key, char *iv, int encrypt_mode);
+void init_tracked_tree(void);
+int find_tracked_onion(unsigned char *onion, uint32_t onionlen);
 
 /********************************* routers.c ***************************/
 

@@ -376,31 +376,16 @@ int prepare_for_poll(int *timeout) {
   for(i=0;i<nfds;i++)
     check_conn_marked(i); 
 
-#if 0
-  /* check if we need to refill buckets or zero out any per-second stats */
-  for(i=0;i<nfds;i++) {
-    if(connection_receiver_bucket_should_increase(connection_array[i]) ||
-       connection_array[i]->onions_handled_this_second) {
-      need_to_wake_soon = 1;
-      break;
+  if(now.tv_sec > current_second) { /* the second has already rolled over! */
+    for(i=0;i<nfds;i++) {
+      connection_increment_receiver_bucket(connection_array[i]);
+      connection_array[i]->onions_handled_this_second = 0;
     }
+    current_second = now.tv_sec; /* remember which second it is, for next time */
   }
-#endif
 
-//  if(need_to_wake_soon) {
-    if(now.tv_sec > current_second) { /* the second has already rolled over! */
-//      log(LOG_DEBUG,"prepare_for_poll(): The second has rolled over, immediately refilling.");
-      for(i=0;i<nfds;i++) {
-        connection_increment_receiver_bucket(connection_array[i]);
-        connection_array[i]->onions_handled_this_second = 0;
-      }
-      current_second = now.tv_sec; /* remember which second it is, for next time */
-    }
-//    } else {
-      /* this timeout is definitely sooner than any of the above ones */
-    *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
-//    }
-//  }
+  /* this timeout is definitely sooner than any of the above ones */
+  *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
 
   if(options.LinkPadding) {
     /* now check which conn wants to speak soonest */
@@ -668,6 +653,7 @@ int main(int argc, char *argv[]) {
   global_role = options.Role;   /* assign global_role from options. FIXME: remove from global namespace later. */
 
   crypto_global_init();
+  init_tracked_tree(); /* initialize the replay detection tree */
   retval = do_main_loop();
   crypto_global_cleanup();
 
