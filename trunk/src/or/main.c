@@ -751,6 +751,7 @@ int tor_main(int argc, char *argv[]) {
 
   /* give it somewhere to log to initially */
   add_stream_log(LOG_INFO, "<stdout>", stdout);
+  log_fn(LOG_WARN,"Tor v%s. This is experimental software. Do not use it if you need anonymity.",VERSION);
 
   if(getconfig(argc,argv,&options)) {
     log_fn(LOG_ERR,"Reading config failed. For usage, try -h.");

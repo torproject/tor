@@ -130,8 +130,7 @@ int dns_resolve(connection_t *exitconn) {
     resolve = tor_malloc(sizeof(struct cached_resolve));
     memset(resolve, 0, sizeof(struct cached_resolve));
     resolve->state = CACHE_STATE_PENDING;
-    resolve->expire = now + 100; /* XXX for testing. when we're confident, switch it back */
-//    resolve->expire = now + 86400; /* now + 1 day */
+    resolve->expire = now + 15*60; /* 15 minutes */
     strncpy(resolve->question, exitconn->address, MAX_ADDRESSLEN);
 
     /* add us to the pending list */
