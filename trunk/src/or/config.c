@@ -554,7 +554,7 @@ static char *get_windows_conf_root(void)
   if (!SUCCEEDED(result)) {
     return NULL;
   }
-  strlcat(p,"\\tor",MAX_PATH);
+  strlcat(path,"\\tor",MAX_PATH);
   is_set = 1;
   return path;
 }
