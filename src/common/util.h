@@ -255,6 +255,7 @@ void start_daemon(const char *desired_cwd);
 void finish_daemon(void);
 
 void write_pidfile(char *filename);
+int set_max_file_descriptors(int required_min);
 int switch_id(char *user, char *group);
 
 struct in_addr;

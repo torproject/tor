@@ -1078,6 +1078,9 @@ static int tor_init(int argc, char *argv[]) {
 
   handle_signals(1);
 
+  if (set_max_file_descriptors(options.MaxConn) < 0)
+    return -1;
+
   crypto_global_init();
   crypto_seed_rng();
   return 0;

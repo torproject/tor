@@ -87,6 +87,12 @@
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -1971,6 +1977,39 @@ void write_pidfile(char *filename) {
 #endif
 }
 
+/** Get the maximum allowed number of file descriptors. (Some systems
+ * have a low soft limit.) Make sure we set it to at least
+ * <b>required_min</b>. Return 0 if we can, or -1 if we fail. */
+int set_max_file_descriptors(int required_min) {
+  struct rlimit rlim;
+
+#ifndef HAVE_GETRLIMIT
+  log_fn(LOG_INFO,"This platform is missing getrlimit(). Proceeding.");
+  return 0; /* hope we'll be ok */
+#endif
+
+  if (getrlimit(RLIMIT_NOFILE, &rlim) != 0) {
+    log_fn(LOG_WARN, "Could not get maximum number of file descriptors: %s",
+           strerror(errno));
+    return -1;
+  }
+  if(required_min > rlim.rlim_max) {
+    log_fn(LOG_WARN,"We need %d file descriptors available, and we're limited to %d. Please change your ulimit.", required_min, (int)rlim.rlim_max);
+    return -1;
+  }
+  if(required_min > rlim.rlim_cur) {
+    log_fn(LOG_INFO,"Raising max file descriptors from %d to %d.",
+           (int)rlim.rlim_cur, (int)rlim.rlim_max);
+  }
+  rlim.rlim_cur = rlim.rlim_max;
+  if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
+    log_fn(LOG_WARN, "Could not set maximum number of file descriptors: %s",
+           strerror(errno));
+    return -1;
+  }
+  return 0;
+}
+
 /** Call setuid and setgid to run as <b>user</b>:<b>group</b>.  Return 0 on
  * success.  On failure, log and return -1.
  */
@@ -2246,7 +2285,6 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
   return -1;
 }
 
-
 /** Extract a long from the start of s, in the given numeric base.  If
  * there is unconverted data and next is provided, set *next to the
  * first unconverted character.  An error has occurred if no characters
@@ -2391,7 +2429,6 @@ void tor_mutex_release(tor_mutex_t *m)
     log_fn(LOG_WARN, "Failed to release mutex: %d", GetLastError());
   }
 }
-
 #endif
 
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
