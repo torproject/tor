@@ -1,0 +1,7 @@
+#! /bin/sh
+# Wrapper script for use of the tsocks(8) transparent socksification library
+# See the tsocks(1) and torify(1) manpages.
+
+TSOCKS_CONF_FILE=@CONFDIR@/tor-tsocks.conf
+export TSOCKS_CONF_FILE
+exec tsocks "$@"
