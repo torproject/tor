@@ -288,6 +288,11 @@ int connection_dir_process_inbuf(connection_t *conn) {
   return 0;
 }
 
+/* XXX stubs, probably shouldn't be located here */
+#define MAX_HIDSERV_DESC_SIZE 2048
+int hidserv_lookup(char *query, char *desc, int max_desc_size) { return 0; }
+int hidserv_store(char *desc) { return 0; }
+
 static char answer200[] = "HTTP/1.0 200 OK\r\n\r\n";
 static char answer400[] = "HTTP/1.0 400 Bad request\r\n\r\n";
 static char answer403[] = "HTTP/1.0 403 Unapproved server\r\n\r\n";
@@ -326,11 +331,21 @@ static int directory_handle_command_get(connection_t *conn,
   }
 
   if(!strncmp(url,"/hidserv/",9)) { /* hidserv descriptor fetch */
-    /* ask back-end for the hidden-services descriptor in
-     * url+9, and return it with a 200 if valid, or give a 404
-     * otherwise
-     */
+    char desc[MAX_HIDSERV_DESC_SIZE];
 
+    switch(hidserv_lookup(url+9, desc, MAX_HIDSERV_DESC_SIZE)) {
+      case 1: /* valid */
+        connection_write_to_buf(answer200, strlen(answer200), conn);
+        connection_write_to_buf(desc, strlen(desc)+1, conn);
+        break;
+      case 0: /* well-formed but not present */
+        connection_write_to_buf(answer404, strlen(answer404), conn);
+        break;
+      case -1: /* not well-formed */
+        connection_write_to_buf(answer400, strlen(answer400), conn);
+        break;
+    }
+    return 0;
   }
 
   /* we didn't recognize the url */
@@ -372,9 +387,10 @@ static int directory_handle_command_post(connection_t *conn,
   }
 
   if(!strncmp(url,"/hidserv/",9)) { /* hidserv descriptor post */
-    /* pass 'body' to the backend */
-    /* return 400, 403, or 200 as appropriate */
-
+    if(hidserv_store(body) < 0)
+      connection_write_to_buf(answer400, strlen(answer400), conn);
+    else
+      connection_write_to_buf(answer200, strlen(answer200), conn);
   }
 
   /* we didn't recognize the url */
