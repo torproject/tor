@@ -212,8 +212,8 @@ handle_control_setconf(connection_t *conn, uint16_t len, char *body)
 
   if ((r=config_trial_assign(&options, lines, 1)) < 0) {
     log_fn(LOG_WARN,"Controller gave us config lines that didn't validate.");
-    if (e==-1) {
-      send_control_error(conn, ERR_UNRECOGNNIZED_CONFIG_KEY,
+    if (r==-1) {
+      send_control_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY,
                          "Unrecognized option");
     } else {
       send_control_error(conn, ERR_INVALID_CONFIG_VALUE,"Invalid option value");
