@@ -123,17 +123,23 @@ static aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_t
   connection_t *conn;
 
 #ifdef SEQUENTIAL_ACI
-  /* Right now, this is the only used aci_type.  XXX The others should
-     be removed. */
-  assert(aci_type == ACI_TYPE_BOTH); 
+  uint16_t high_bit;
+  high_bit = (aci_type == ACI_TYPE_HIGHER) ? 1<<15 : 0;
   conn = connection_exact_get_by_addr_port(addr,port);
   if (!conn)
     return 1; /* No connection exists; conflict is impossible. */
+
   do {
-    test_aci = conn->next_aci++; /* This can wrap around to 0; that's okay. */
-    if (test_aci == 0)
-      continue;
+    /* Sequentially iterate over test_aci=1...1<<15-1 until we find an
+     * aci such that (high_bit|test_aci) is not already used. */
+    test_aci = conn->next_aci++;
+    if (test_aci == 0 || test_aci >= 1<<15) {
+      test_aci = 1;
+      conn->next_aci = 2;
+    }
+    test_aci |= high_bit;
   } while(circuit_get_by_aci_conn(test_aci, conn));
+  return test_aci;
 #else
 try_again:
   log_fn(LOG_DEBUG,"trying to get a unique aci");
