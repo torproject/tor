@@ -391,8 +391,15 @@ connection_control_finished_flushing(connection_t *conn) {
   return 0;
 }
 
-/** Called when <b>conn</b> has received more bytes on its inbuf, or has
- * gotten its socket closed. */
+/** Called when <b>conn</b> has gotten its socket closed. */
+int connection_control_reached_eof(connection_t *conn) {
+  log_fn(LOG_INFO,"Control connection reached EOF. Closing.");
+  connection_mark_for_close(conn);
+  return 0;
+}
+
+/** Called when <b>conn</b> has received more bytes on its inbuf.
+ */
 int
 connection_control_process_inbuf(connection_t *conn) {
   uint16_t body_len, command_type;
@@ -400,12 +407,6 @@ connection_control_process_inbuf(connection_t *conn) {
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_CONTROL);
-
-  if(conn->inbuf_reached_eof) {
-    log_fn(LOG_INFO,"Control connection reached EOF. Closing.");
-    connection_mark_for_close(conn);
-    return 0;
-  }
 
  again:
   /* Try to suck a control message from the buffer. */

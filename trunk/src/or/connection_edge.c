@@ -18,12 +18,37 @@ static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
 
-/** Handle new bytes on conn->inbuf, or notification of eof.
- *
- * If there was an EOF, then send an end and mark the connection
- * for close.
- *
- * Otherwise handle it based on state:
+/** There was an EOF. Send an end and mark the connection for close.
+ */
+int connection_edge_reached_eof(connection_t *conn) {
+#ifdef HALF_OPEN
+  /* eof reached; we're done reading, but we might want to write more. */
+  conn->done_receiving = 1;
+  shutdown(conn->s, 0); /* XXX check return, refactor NM */
+  if (conn->done_sending) {
+    connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
+    connection_mark_for_close(conn);
+  } else {
+    connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_END,
+                                 NULL, 0, conn->cpath_layer);
+  }
+  return 0;
+#else
+  /* eof reached, kill it. */
+  log_fn(LOG_INFO,"conn (fd %d) reached eof (stream size %d). Closing.", conn->s, (int)conn->stream_size);
+  connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
+  if(!conn->marked_for_close) {
+    /* only mark it if not already marked. it's possible to
+     * get the 'end' right around when the client hangs up on us. */
+    connection_mark_for_close(conn);
+  }
+  conn->hold_open_until_flushed = 1; /* just because we shouldn't read
+                                        doesn't mean we shouldn't write */
+  return 0;
+#endif
+}
+
+/** Handle new bytes on conn->inbuf based on state:
  *   - If it's waiting for socks info, try to read another step of the
  *     socks handshake out of conn->inbuf.
  *   - If it's open, then package more relay cells from the stream.
@@ -36,34 +61,6 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
-
-  if(conn->inbuf_reached_eof) {
-#ifdef HALF_OPEN
-    /* eof reached; we're done reading, but we might want to write more. */
-    conn->done_receiving = 1;
-    shutdown(conn->s, 0); /* XXX check return, refactor NM */
-    if (conn->done_sending) {
-      connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
-      connection_mark_for_close(conn);
-    } else {
-      connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_END,
-                                   NULL, 0, conn->cpath_layer);
-    }
-    return 0;
-#else
-    /* eof reached, kill it. */
-    log_fn(LOG_INFO,"conn (fd %d) reached eof (stream size %d). Closing.", conn->s, (int)conn->stream_size);
-    connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
-    if(!conn->marked_for_close) {
-      /* only mark it if not already marked. it's possible to
-       * get the 'end' right around when the client hangs up on us. */
-      connection_mark_for_close(conn);
-    }
-    conn->hold_open_until_flushed = 1; /* just because we shouldn't read
-                                          doesn't mean we shouldn't write */
-    return 0;
-#endif
-  }
 
   switch(conn->state) {
     case AP_CONN_STATE_SOCKS_WAIT:

@@ -40,6 +40,12 @@ static void cell_unpack(cell_t *dest, const char *src) {
   memcpy(dest->payload, src+3, CELL_PAYLOAD_SIZE);
 }
 
+int connection_or_reached_eof(connection_t *conn) {
+  log_fn(LOG_INFO,"OR connection reached EOF. Closing.");
+  connection_mark_for_close(conn);
+  return 0;
+}
+
 /** Handle any new bytes that have come in on connection <b>conn</b>.
  * If conn is in 'open' state, hand it to
  * connection_or_process_cells_from_inbuf()
@@ -49,12 +55,6 @@ int connection_or_process_inbuf(connection_t *conn) {
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_OR);
-
-  if(conn->inbuf_reached_eof) {
-    log_fn(LOG_INFO,"OR connection reached EOF. Closing.");
-    connection_mark_for_close(conn);
-    return 0;
-  }
 
   if(conn->state != OR_CONN_STATE_OPEN)
     return 0; /* don't do anything */

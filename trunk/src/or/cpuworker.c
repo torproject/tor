@@ -91,9 +91,25 @@ void cpuworkers_rotate(void)
   spawn_enough_cpuworkers();
 }
 
+/** If the cpuworker closes the connection,
+ * mark it as closed and spawn a new one as needed. */
+int connection_cpu_reached_eof(connection_t *conn) {
+  log_fn(LOG_WARN,"Read eof. Worker died unexpectedly.");
+  if(conn->state != CPUWORKER_STATE_IDLE) {
+    /* the circ associated with this cpuworker will have to wait until
+     * it gets culled in run_connection_housekeeping(), since we have
+     * no way to find out which circ it was. */
+    log_fn(LOG_WARN,"...and it left a circuit queued; abandoning circ.");
+    num_cpuworkers_busy--;
+  }
+  num_cpuworkers--;
+  spawn_enough_cpuworkers(); /* try to regrow. hope we don't end up spinning. */
+  connection_mark_for_close(conn);
+  return 0;
+}
+
 /** Called when we get data from a cpuworker.  If the answer is not complete,
- * wait for a complete answer.  If the cpuworker closes the connection,
- * mark it as closed and spawn a new one as needed.  If the answer is complete,
+ * wait for a complete answer. If the answer is complete,
  * process it as appropriate.
  */
 int connection_cpu_process_inbuf(connection_t *conn) {
@@ -107,21 +123,6 @@ int connection_cpu_process_inbuf(connection_t *conn) {
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_CPUWORKER);
-
-  if(conn->inbuf_reached_eof) {
-    log_fn(LOG_WARN,"Read eof. Worker died unexpectedly.");
-    if(conn->state != CPUWORKER_STATE_IDLE) {
-      /* the circ associated with this cpuworker will have to wait until
-       * it gets culled in run_connection_housekeeping(), since we have
-       * no way to find out which circ it was. */
-      log_fn(LOG_WARN,"...and it left a circuit queued; abandoning circ.");
-      num_cpuworkers_busy--;
-    }
-    num_cpuworkers--;
-    spawn_enough_cpuworkers(); /* try to regrow. hope we don't end up spinning. */
-    connection_mark_for_close(conn);
-    return 0;
-  }
 
   if(conn->state == CPUWORKER_STATE_BUSY_ONION) {
     if(buf_datalen(conn->inbuf) < LEN_ONION_RESPONSE) /* entire answer available? */

@@ -1196,6 +1196,7 @@ int connection_or_nonopen_was_started_here(connection_t *conn);
 
 /********************************* connection_edge.c ***************************/
 
+int connection_edge_reached_eof(connection_t *conn);
 int connection_edge_process_inbuf(connection_t *conn, int package_partial);
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn);
 int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer);
@@ -1233,6 +1234,7 @@ void parse_socks_policy(void);
 
 /********************************* connection_or.c ***************************/
 
+int connection_or_reached_eof(connection_t *conn);
 int connection_or_process_inbuf(connection_t *conn);
 int connection_or_finished_flushing(connection_t *conn);
 int connection_or_finished_connecting(connection_t *conn);
@@ -1272,6 +1274,7 @@ typedef enum or_conn_status_event_t {
 } or_conn_status_event_t;
 
 int connection_control_finished_flushing(connection_t *conn);
+int connection_control_reached_eof(connection_t *conn);
 int connection_control_process_inbuf(connection_t *conn);
 
 int control_event_circuit_status(circuit_t *circ, circuit_status_event_t e);
@@ -1287,6 +1290,7 @@ int init_cookie_authentication(int enabled);
 void cpu_init(void);
 void cpuworkers_rotate(void);
 int connection_cpu_finished_flushing(connection_t *conn);
+int connection_cpu_reached_eof(connection_t *conn);
 int connection_cpu_process_inbuf(connection_t *conn);
 int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
                         void *task);
@@ -1297,6 +1301,7 @@ int dir_policy_permits_address(uint32_t addr);
 void directory_post_to_dirservers(uint8_t purpose, const char *payload,
                                   size_t payload_len);
 void directory_get_from_dirserver(uint8_t purpose, const char *resource);
+int connection_dir_reached_eof(connection_t *conn);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 int connection_dir_finished_connecting(connection_t *conn);
@@ -1325,6 +1330,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when,
 
 void dns_init(void);
 int connection_dns_finished_flushing(connection_t *conn);
+int connection_dns_reached_eof(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
 void dnsworkers_rotate(void);
 void connection_dns_remove(connection_t *conn);
