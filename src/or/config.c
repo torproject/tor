@@ -774,6 +774,10 @@ void config_init_logs(or_options_t *options)
    */
   struct config_line_t *opt = options->LogOptions;
 
+  /* Special case if nothing is specified. */
+  if(!opt)
+    add_single_log(NULL, NULL, options->RunAsDaemon);
+
   /* Special case for if first option is LogLevel. */
   if (opt && !strcasecmp(opt->key, "LogLevel")) {
     if (opt->next && !strcasecmp(opt->next->key, "LogFile")) {
