@@ -472,7 +472,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         if (!nummethods || !memchr(buf->mem+2, 0, nummethods)) {
           log_fn(LOG_WARN,"socks5: offered methods don't include 'no auth'. Rejecting.");
           req->replylen = 2; /* 2 bytes of response */
-          req->reply[0] = 5; /* socks5 reply */
+          req->reply[0] = 5;
           req->reply[1] = '\xFF'; /* reject all methods */
           return -1;
         }
@@ -480,7 +480,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
 
         req->replylen = 2; /* 2 bytes of response */
         req->reply[0] = 5; /* socks5 reply */
-        req->reply[1] = 0; /* choose the 'no auth' method */
+        req->reply[1] = SOCKS5_SUCCEEDED;
         req->socks_version = 5; /* remember that we've already negotiated auth */
         log_fn(LOG_DEBUG,"socks5: accepted method 0");
         return 0;

@@ -875,21 +875,21 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
     /* SOCKS5 */
     buf[0] = 0x05; /* version */
     if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
-      buf[1] = 0; /* succeeded */
+      buf[1] = SOCKS5_SUCCEEDED;
       buf[2] = 0; /* reserved */
       buf[3] = 0x01; /* IPv4 address type */
       memcpy(buf+4, answer, 4); /* address */
       set_uint16(buf+8, 0); /* port == 0. */
       replylen = 10;
     } else if (answer_type == RESOLVED_TYPE_IPV6 && answer_len == 16) {
-      buf[1] = 0; /* succeeded */
+      buf[1] = SOCKS5_SUCCEEDED;
       buf[2] = 0; /* reserved */
       buf[3] = 0x04; /* IPv6 address type */
       memcpy(buf+4, answer, 16); /* address */
       set_uint16(buf+20, 0); /* port == 0. */
       replylen = 22;
     } else {
-      buf[1] = 0x04; /* host unreachable */
+      buf[1] = SOCKS5_HOST_UNREACHABLE;
       memset(buf+2, 0, 8);
       replylen = 10;
     }
@@ -1156,7 +1156,8 @@ connection_exit_connect(connection_t *conn) {
   log_fn(LOG_DEBUG,"about to try connecting");
   switch (connection_connect(conn, conn->address, addr, port)) {
     case -1:
-      connection_edge_end(conn, END_STREAM_REASON_CONNECTFAILED, conn->cpath_layer);
+      connection_edge_end(conn, END_STREAM_REASON_CONNECTREFUSED,
+                          conn->cpath_layer);
       circuit_detach_stream(circuit_get_by_conn(conn), conn);
       connection_free(conn);
       return;

@@ -73,17 +73,15 @@ R . HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
     o If a version is later than the last in its series, but a version
       in the next series is recommended, that doesn't mean it's bad.
   - Do end reasons better
-    - Start using RESOURCELIMIT more.
-    - Try to use MISC a lot less.
+    . Start using RESOURCELIMIT more.
+    . Try to use MISC a lot less.
       - bug: if the exit node fails to create a socket (e.g. because it
         has too many open), we will get a generic stream end response.
-      - niels's "did it fail because conn refused or timeout or what"
+      . niels's "did it fail because conn refused or timeout or what"
         relay end feature.
-N   - Realize that unrecognized end reasons are probably features rather than
+    o Realize that unrecognized end reasons are probably features rather than
       bugs. (backport to 009x)
-N   - Start recognizing, but maybe not yet generating, more reasons and
-      needed -- aim to eliminate misc. (backport to 009x)
-N - Feed end reason back into SOCK5 as reasonable.
+N . Feed end reason back into SOCK5 as reasonable.
 R o cache .foo.exit names better, or differently, or not.
 N - make !advertised_server_mode() ORs fetch dirs less often.
 N - Clean up NT service code even more.  Document it. Enable it by default.

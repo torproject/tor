@@ -457,26 +457,105 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
  * why the stream is closing.
  */
 static const char *
-connection_edge_end_reason(char *payload, uint16_t length) {
+connection_edge_end_reason_str(char *payload, uint16_t length) {
   if (length < 1) {
     log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
-    return "MALFORMED";
-  }
-  if (*payload < _MIN_END_STREAM_REASON || *payload > _MAX_END_STREAM_REASON) {
-    log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
     return "MALFORMED";
   }
   switch (*payload) {
     case END_STREAM_REASON_MISC:           return "misc error";
     case END_STREAM_REASON_RESOLVEFAILED:  return "resolve failed";
-    case END_STREAM_REASON_CONNECTFAILED:  return "connect failed";
+    case END_STREAM_REASON_CONNECTREFUSED: return "connection refused";
     case END_STREAM_REASON_EXITPOLICY:     return "exit policy failed";
     case END_STREAM_REASON_DESTROY:        return "destroyed";
     case END_STREAM_REASON_DONE:           return "closed normally";
     case END_STREAM_REASON_TIMEOUT:        return "gave up (timeout)";
+    case END_STREAM_REASON_HIBERNATING:    return "server is hibernating";
+    case END_STREAM_REASON_INTERNAL:       return "internal error at server";
+    case END_STREAM_REASON_RESOURCELIMIT:  return "server out of resources";
+    case END_STREAM_REASON_CONNRESET:      return "connection reset";
+    default:
+      log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
+      return "unknown";
   }
-  tor_assert(0);
-  return "";
+}
+
+socks5_reply_status_t
+connection_edge_end_reason_sock5_response(char *payload, uint16_t length) {
+  if (length < 1) {
+    log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
+    return SOCKS5_GENERAL_ERROR;
+  }
+  switch (*payload) {
+    case END_STREAM_REASON_MISC:
+      return SOCKS5_GENERAL_ERROR;
+    case END_STREAM_REASON_RESOLVEFAILED:
+      return SOCKS5_HOST_UNREACHABLE;
+    case END_STREAM_REASON_CONNECTREFUSED:
+      return SOCKS5_CONNECTION_REFUSED;
+    case END_STREAM_REASON_EXITPOLICY:
+      return SOCKS5_CONNECTION_REFUSED;
+    case END_STREAM_REASON_DESTROY:
+      return SOCKS5_GENERAL_ERROR;
+    case END_STREAM_REASON_DONE:
+      return SOCKS5_SUCCEEDED;
+    case END_STREAM_REASON_TIMEOUT:
+      return SOCKS5_TTL_EXPIRED;
+    case END_STREAM_REASON_RESOURCELIMIT:
+      return SOCKS5_GENERAL_ERROR;
+    case END_STREAM_REASON_HIBERNATING:
+      return SOCKS5_GENERAL_ERROR;
+    case END_STREAM_REASON_INTERNAL:
+      return SOCKS5_GENERAL_ERROR;
+    case END_STREAM_REASON_CONNRESET:
+      return SOCKS5_CONNECTION_REFUSED;
+    default:
+      log_fn(LOG_WARN,"Reason for ending (%d) not recognized.",*payload);
+      return SOCKS5_GENERAL_ERROR;
+  }
+}
+
+#ifdef MS_WINDOWS
+#define E_CASE(s) case s: case WSA ## s
+#define W_CASE(s) case s:
+#else
+#define E_CASE(s) case s
+#define W_CASE(s)
+#endif
+
+int
+errno_to_end_reasaon(int e)
+{
+  switch (e) {
+    E_CASE(EPIPE):
+      return END_STREAM_REASON_DONE;
+    E_CASE(EBADF):
+    E_CASE(EFAULT):
+    E_CASE(EINVAL):
+    E_CASE(EISCONN):
+    E_CASE(ENOTSOCK):
+    E_CASE(EPROTONOSUPPORT):
+    E_CASE(EAFNOSUPPORT):
+    E_CASE(EACCES):
+    E_CASE(ENOTCONN):
+    E_CASE(ENETUNREACH):
+      return END_STREAM_REASON_INTERNAL;
+    E_CASE(ECONNREFUSED):
+      return END_STREAM_REASON_CONNECTREFUSED;
+    E_CASE(ECONNRESET):
+      return END_STREAM_REASON_CONNRESET;
+    E_CASE(ETIMEDOUT):
+      return END_STREAM_REASON_TIMEOUT;
+    E_CASE(ENOBUFS):
+    E_CASE(ENOMEM):
+    E_CASE(ENFILE):
+    E_CASE(EMFILE):
+      return END_STREAM_REASON_RESOURCELIMIT;
+    default:
+      log_fn(LOG_INFO, "Didn't recognize errno %d (%s); telling the OP that we are ending a stream for 'misc' reason.",
+             e, tor_socket_strerror(e));
+      return END_STREAM_REASON_MISC;
+  }
 }
 
 /** How many times will I retry a stream that fails due to DNS
@@ -567,7 +646,8 @@ connection_edge_process_relay_cell_not_open(
       }
     }
     log_fn(LOG_INFO,"Edge got end (%s) before we're connected. Marking for close.",
-      connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh->length));
+           connection_edge_end_reason_str(cell->payload+RELAY_HEADER_SIZE,
+                                          rh->length));
     if (CIRCUIT_IS_ORIGIN(circ))
       circuit_log_path(LOG_INFO,circ);
     conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
@@ -722,14 +802,16 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     case RELAY_COMMAND_END:
       if (!conn) {
         log_fn(LOG_INFO,"end cell (%s) dropped, unknown stream.",
-          connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
+               connection_edge_end_reason_str(cell->payload+RELAY_HEADER_SIZE,
+                                              rh.length));
         return 0;
       }
 /* XXX add to this log_fn the exit node's nickname? */
       log_fn(LOG_INFO,"%d: end cell (%s) for stream %d. Removing stream. Size %d.",
-        conn->s,
-        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length),
-        conn->stream_id, (int)conn->stream_size);
+             conn->s,
+             connection_edge_end_reason_str(cell->payload+RELAY_HEADER_SIZE,
+                                            rh.length),
+             conn->stream_id, (int)conn->stream_size);
 
 #ifdef HALF_OPEN
       conn->done_sending = 1;
