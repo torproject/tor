@@ -409,6 +409,9 @@ int fetch_from_buf_http(buf_t *buf,
   return 1;
 }
 
+#define SOCKS_COMMAND_CONNECT 0x01
+#define SOCKS_COMMAND_RESOLVE 0xF0
+
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"
@@ -467,8 +470,12 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       log_fn(LOG_DEBUG,"socks5: checking request");
       if(buf->datalen < 8) /* basic info plus >=2 for addr plus 2 for port */
         return 0; /* not yet */
-      if(*(buf->mem+1) != 1) { /* not a connect? we don't support it. */
-        log_fn(LOG_WARN,"socks5: command %d not '1'. Rejecting.",*(buf->mem+1));
+      req->command = (unsigned char) *(buf->mem+1);
+      if(req->command != SOCKS_COMMAND_CONNECT &&
+         req->command != SOCKS_COMMAND_RESOLVE) {
+        /* not a connect or resolve? we don't support it. */
+        log_fn(LOG_WARN,"socks5: command %d not recognized. Rejecting.",
+               req->command);
         return -1;
       }
       switch(*(buf->mem+3)) { /* address type */
@@ -516,14 +523,18 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       if(buf->datalen < SOCKS4_NETWORK_LEN) /* basic info available? */
         return 0; /* not yet */
 
-      if(*(buf->mem+1) != 1) { /* not a connect? we don't support it. */
-        log_fn(LOG_WARN,"socks4: command %d not '1'. Rejecting.",*(buf->mem+1));
+      req->command = (unsigned char) *(buf->mem+1);
+      if(req->command != SOCKS_COMMAND_CONNECT &&
+         req->command != SOCKS_COMMAND_RESOLVE) {
+        /* not a connect or resolve? we don't support it. */
+        log_fn(LOG_WARN,"socks4: command %d not recognized. Rejecting.",
+               req->command);
         return -1;
       }
 
       req->port = ntohs(*(uint16_t*)(buf->mem+2));
       destip = ntohl(*(uint32_t*)(buf->mem+4));
-      if(!req->port || !destip) {
+      if((!req->port && req->command!=SOCKS_COMMAND_RESOLVE) || !destip) {
         log_fn(LOG_WARN,"socks4: Port or DestIP is zero. Rejecting.");
         return -1;
       }

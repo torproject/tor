@@ -1276,7 +1276,10 @@ void assert_connection_ok(connection_t *conn, time_t now)
   } else {
     tor_assert(!conn->socks_request);
   }
-  if(conn->type != CONN_TYPE_DIR) {
+  if (conn->type == CONN_TYPE_EXIT) {
+    tor_assert(conn->purpose == EXIT_PURPOSE_CONNECT ||
+               conn->purpose == EXIT_PURPOSE_RESOLVE);
+  } else if(conn->type != CONN_TYPE_DIR) {
     tor_assert(!conn->purpose); /* only used for dir types currently */
   }
 

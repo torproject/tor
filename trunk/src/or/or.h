@@ -221,9 +221,11 @@
 #define AP_CONN_STATE_CIRCUIT_WAIT 7
 /** State for a SOCKS connection: sent BEGIN, waiting for CONNECTED. */
 #define AP_CONN_STATE_CONNECT_WAIT 8
+/** State for a SOCKS connection: send RESOLVE, waiting for RESOLVED. */
+#define AP_CONN_STATE_RESOLVE_WAIT 9
 /** State for a SOCKS connection: ready to send and receive. */
-#define AP_CONN_STATE_OPEN 9
-#define _AP_CONN_STATE_MAX 9
+#define AP_CONN_STATE_OPEN 10
+#define _AP_CONN_STATE_MAX 10
 
 #define _DIR_CONN_STATE_MIN 1
 /** State for connection to directory server: waiting for connect(). */
@@ -258,6 +260,11 @@
 /** Purpose for connection at a directory server. */
 #define DIR_PURPOSE_SERVER 7
 #define _DIR_PURPOSE_MAX 7
+
+#define _EXIT_PURPOSE_MIN 1
+#define EXIT_PURPOSE_CONNECT 1
+#define EXIT_PURPOSE_RESOLVE 2
+#define _EXIT_PURPOSE_MAX 2
 
 /** Circuit state: I'm the OP, still haven't done all my handshakes. */
 #define CIRCUIT_STATE_BUILDING 0
@@ -370,6 +377,11 @@
 #define END_STREAM_REASON_DONE 6
 #define END_STREAM_REASON_TIMEOUT 7
 #define _MAX_END_STREAM_REASON 7
+
+#define RESOLVED_TYPE_IPV4 4
+#define RESOLVED_TYPE_IPV6 6
+#define RESOLVED_TYPE_ERROR_TRANSIENT 0xF0
+#define RESOLVED_TYPE_ERROR 0xF1
 
 /** Length of 'y' portion of 'y.onion' URL. */
 #define REND_SERVICE_ID_LEN 16
@@ -841,9 +853,12 @@ typedef struct {
 /* XXX are these good enough defaults? */
 #define MAX_SOCKS_REPLY_LEN 1024
 #define MAX_SOCKS_ADDR_LEN 256
+#define SOCKS_COMMAND_CONNECT 0x01
+#define SOCKS_COMMAND_RESOLVE 0xF0
 /** State of a SOCKS request from a user to an OP */
 struct socks_request_t {
   char socks_version; /**< Which version of SOCKS did the client use? */
+  int command; /**< What has the user requested? One of CONNECT or RESOLVE. */
   int replylen; /**< Length of <b>reply</b>. */
   char reply[MAX_SOCKS_REPLY_LEN]; /**< Write an entry into this string if
                                     * we want to specify our own socks reply,
@@ -1048,13 +1063,18 @@ int connection_edge_finished_flushing(connection_t *conn);
 int connection_edge_finished_connecting(connection_t *conn);
 
 int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
+int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ);
 
 int connection_ap_make_bridge(char *address, uint16_t port);
-
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                          int replylen, char success);
+void connection_ap_handshake_socks_resolved(connection_t *conn,
+                                            int answer_type,
+                                            int answer_len,
+                                            const char *answer);
 
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
+int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ);
 void connection_exit_connect(connection_t *conn);
 int connection_edge_is_rendezvous_stream(connection_t *conn);
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);

@@ -562,6 +562,26 @@ connection_edge_process_relay_cell_not_open(
     }
     return 0;
   }
+  if(conn->type == CONN_TYPE_AP && rh->command == RELAY_COMMAND_RESOLVED) {
+    if (conn->state != AP_CONN_STATE_RESOLVE_WAIT) {
+      log_fn(LOG_WARN,"Got a 'resolved' cell while not in state resolve_wait. Dropping.");
+      return 0;
+    }
+    tor_assert(conn->socks_request->command == SOCKS_COMMAND_RESOLVE);
+    if (rh->length < 2 || cell->payload[RELAY_HEADER_SIZE+1]+2>rh->length) {
+      log_fn(LOG_WARN, "Dropping malformed 'resolved' cell");
+      connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+      connection_mark_for_close(conn);
+      return 0;
+    }
+    connection_ap_handshake_socks_resolved(conn,
+		   cell->payload[RELAY_HEADER_SIZE], /*answer_type*/
+		   cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
+		   cell->payload+RELAY_HEADER_SIZE+2); /* answer */
+    conn->socks_request->has_finished = 1;
+    connection_mark_for_close(conn);
+    return 0;
+  }
 
   log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
          rh->command, conn->state, conn_state_to_string[conn->type][conn->state]);
@@ -743,6 +763,27 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       log_fn(LOG_DEBUG,"stream-level sendme, packagewindow now %d.", conn->package_window);
       connection_start_reading(conn);
       connection_edge_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
+      return 0;
+    case RELAY_COMMAND_RESOLVE:
+      if (layer_hint) {
+        log_fn(LOG_WARN,"resolve request unsupported at AP; dropping.");
+	return 0;
+      } else if (conn) {
+	log_fn(LOG_WARN, "resolve request for known stream; dropping.");
+	return 0;
+      } else if (circ->purpose != CIRCUIT_PURPOSE_OR) {
+	log_fn(LOG_WARN, "resolve request on circ with purpose %d; dropping",
+	       circ->purpose);
+	return 0;
+      }
+      connection_exit_begin_resolve(cell, circ);
+      return 0;
+    case RELAY_COMMAND_RESOLVED:
+      if(conn) {
+        log_fn(LOG_WARN,"'resolved' unsupported while open. Closing circ.");
+        return -1;
+      }
+      log_fn(LOG_INFO,"'resolved' received, no conn attached anymore. Ignoring.");
       return 0;
     case RELAY_COMMAND_ESTABLISH_INTRO:
     case RELAY_COMMAND_ESTABLISH_RENDEZVOUS:
