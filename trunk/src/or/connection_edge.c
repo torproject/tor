@@ -354,6 +354,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   socks_request_t *socks;
   int sockshere;
   hostname_type_t addresstype;
+  routerinfo_t *router;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP);
@@ -411,16 +412,16 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       log_fn(LOG_WARN,"Malformed address '%s.exit'. Refusing.", socks->address);
       return -1;
     }
-    if (strlen(s+1) == HEX_DIGEST_LEN) {
-      conn->chosen_exit_name = tor_malloc(HEX_DIGEST_LEN+2);
-      *(conn->chosen_exit_name) = '$';
-      strlcpy(conn->chosen_exit_name+1, s+1, HEX_DIGEST_LEN+1);
-    } else {
-      conn->chosen_exit_name = tor_strdup(s+1);
-    }
+    conn->chosen_exit_name = tor_strdup(s+1);
     *s = 0;
-    if (!is_legal_nickname_or_hexdigest(conn->chosen_exit_name)) {
-      log_fn(LOG_WARN, "%s is not a legal exit node nickname; rejecting.",
+    router = router_get_by_nickname(conn->chosen_exit_name);
+    if(!router) {
+      log_fn(LOG_WARN,"Requested exit point '%s' is not known. Closing.",
+             conn->chosen_exit_name);
+      return -1;
+    }
+    if (!connection_ap_can_use_exit(conn, router)) {
+      log_fn(LOG_WARN, "Requested exit point '%s' would refuse request. Closing.",
              conn->chosen_exit_name);
       return -1;
     }
