@@ -142,7 +142,16 @@ AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h)
 dnl In case we aren't given a working stdint.h, we'll need to grow our own.
 dnl Watch out.
 
-AC_CHECK_TYPES([int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t])
+AC_CHECK_SIZEOF(int8_t)
+AC_CHECK_SIZEOF(int16_t)
+AC_CHECK_SIZEOF(int32_t)
+AC_CHECK_SIZEOF(int64_t)
+AC_CHECK_SIZEOF(uint8_t)
+AC_CHECK_SIZEOF(uint16_t)
+AC_CHECK_SIZEOF(uint32_t)
+AC_CHECK_SIZEOF(uint64_t)
+
+dnl AC_CHECK_TYPES([int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t])
 
 AC_CHECK_SIZEOF(char)
 AC_CHECK_SIZEOF(short)

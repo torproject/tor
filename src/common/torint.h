@@ -15,6 +15,31 @@
 #endif
 
 
+#if (SIZEOF_INT8_T != 0)
+#define HAVE_INT8_T
+#endif
+#if (SIZEOF_INT16_T != 0)
+#define HAVE_INT16_T
+#endif
+#if (SIZEOF_INT32_T != 0)
+#define HAVE_INT32_T
+#endif
+#if (SIZEOF_INT64_T != 0)
+#define HAVE_INT64_T
+#endif
+#if (SIZEOF_UINT8_T != 0)
+#define HAVE_UINT8_T
+#endif
+#if (SIZEOF_UINT16_T != 0)
+#define HAVE_UINT16_T
+#endif
+#if (SIZEOF_UINT32_T != 0)
+#define HAVE_UINT32_T
+#endif
+#if (SIZEOF_UINT64_T != 0)
+#define HAVE_UINT64_T
+#endif
+
 #if (SIZEOF_CHAR == 1)
 #ifndef HAVE_INT8_T
 typedef signed char int8_t;
