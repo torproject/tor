@@ -571,6 +571,7 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
         circuit_detach_stream(circ, pend->conn);
         /* and link it to n_streams */
         pend->conn->next_stream = circ->n_streams;
+        pend->conn->on_circuit = circ;
         circ->n_streams = pend->conn;
 
         connection_exit_connect(pend->conn);

@@ -142,18 +142,19 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
   tor_assert(CONN_IS_EDGE(conn));
 
-  if (conn->marked_for_close)
-    return 0; /* already marked; probably got an 'end' */
-  log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.",
-         circ_id);
-  if (conn->type == CONN_TYPE_AP) {
-    connection_mark_unattached_ap(conn, END_STREAM_REASON_DESTROY);
-  } else {
-    conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
-    connection_mark_for_close(conn);
-    conn->hold_open_until_flushed = 1;
+  if (!conn->marked_for_close) {
+    log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.",
+           circ_id);
+    if (conn->type == CONN_TYPE_AP) {
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_DESTROY);
+    } else {
+      conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
+      connection_mark_for_close(conn);
+      conn->hold_open_until_flushed = 1;
+    }
   }
   conn->cpath_layer = NULL;
+  conn->on_circuit = NULL;
   return 0;
 }
 
@@ -1368,6 +1369,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
 
     /* add it into the linked list of n_streams on this circuit */
     n_stream->next_stream = circ->n_streams;
+    n_stream->on_circuit = circ;
     circ->n_streams = n_stream;
     assert_circuit_ok(circ);
 
@@ -1392,6 +1394,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
 
       /* add it into the linked list of n_streams on this circuit */
       n_stream->next_stream = circ->n_streams;
+      n_stream->on_circuit = circ;
       circ->n_streams = n_stream;
       assert_circuit_ok(circ);
 
@@ -1403,6 +1406,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     case 0: /* resolve added to pending list */
       /* add it into the linked list of resolving_streams on this circuit */
       n_stream->next_stream = circ->resolving_streams;
+      n_stream->on_circuit = circ;
       circ->resolving_streams = n_stream;
       assert_circuit_ok(circ);
       ;
@@ -1447,6 +1451,7 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
       return 0;
     case 0: /* resolve added to pending list */
       dummy_conn->next_stream = circ->resolving_streams;
+      dummy_conn->on_circuit = circ;
       circ->resolving_streams = dummy_conn;
       assert_circuit_ok(circ);
       break;
