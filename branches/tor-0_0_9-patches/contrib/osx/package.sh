@@ -48,9 +48,9 @@ done
 
 ### Make Tor package.
 make install DESTDIR=$BUILD_DIR/tor_packageroot
-cp $BUILD_DIR/tor_packageroot/usr/local/etc/tor/torrc.sample $BUILD_DIR/tor_packageroot/usr/local/etc/tor/torrc
+mv $BUILD_DIR/tor_packageroot/Library/Tor/torrc.sample $BUILD_DIR/tor_packageroot/Library/Tor/torrc
 cp contrib/osx/ReadMe.rtf $BUILD_DIR/tor_resources
-cp contrib/osx/License.rtf $BUILD_DIR/tor_resources
+#cp contrib/osx/License.rtf $BUILD_DIR/tor_resources
 cp contrib/osx/TorPostflight $BUILD_DIR/tor_resources/postflight
 cp contrib/osx/addsysuser $BUILD_DIR/tor_resources/addsysuser
 cat <<EOF > $BUILD_DIR/tor_resources/Welcome.txt
@@ -101,7 +101,7 @@ MPKG=$BUILD_DIR/output/Tor\ Bundle.mpkg
 mkdir -p "$MPKG/Contents/Resources"
 echo -n "pmkrpkg1" > "$MPKG/Contents/PkgInfo"
 cp contrib/osx/ReadMe.rtf "$MPKG/Contents/Resources"
-cp contrib/osx/License.rtf "$MPKG/Contents/Resources"
+#cp contrib/osx/License.rtf "$MPKG/Contents/Resources"
 cp contrib/osx/TorBundleInfo.plist "$MPKG/Contents/Info.plist"
 cp contrib/osx/TorBundleWelcome.rtf "$MPKG/Contents/Resources/Welcome.rtf"
 cp contrib/osx/TorBundleDesc.plist "$MPKG/Contents/Resources/Description.plist"
@@ -117,7 +117,7 @@ PRIVOXY_RESDIR=$BUILD_DIR/output/.contained_packages/Privoxy.pkg/Contents/Resour
 cp $PRIVOXY_RESDIR/License.html $BUILD_DIR/output/Privoxy\ License.html
 cp $PRIVOXY_RESDIR/ReadMe.txt $BUILD_DIR/output/Privoxy\ ReadMe.txt
 cp contrib/osx/ReadMe.rtf $BUILD_DIR/output/Tor\ ReadMe.rtf
-cp contrib/osx/License.rtf $BUILD_DIR/output/Tor\ License.rtf
+cp LICENSE $BUILD_DIR/output/Tor\ License.txt
 
 ### Assemble documentation
 

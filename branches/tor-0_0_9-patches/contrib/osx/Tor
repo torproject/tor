@@ -1,11 +1,11 @@
 #!/bin/sh
 
-TORCONF=/usr/local/etc/tor/torrc
-TORDIR=/usr/local/var/lib/tor
+TORCONF=/Library/Tor/torrc
+TORDIR=/Library/Tor/var/lib/tor
 TORPID=/var/run/Tor.pid
 TORUSER=_tor
 TORGROUP=daemon
-TORCMD=/usr/local/bin/tor
+TORCMD=/Library/Tor/tor
 
 ##
 # Tor Service
