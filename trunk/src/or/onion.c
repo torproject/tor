@@ -477,6 +477,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     /* try the nodes in EntryNodes first */
     sl = smartlist_create(MAX_ROUTERS_IN_DIR);
     add_nickname_list_to_smartlist(sl,options.EntryNodes);
+    /* XXX one day, consider picking chosen_exit knowing what's in EntryNodes */
     remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
     smartlist_subtract(sl,excludednodes);
     choice = smartlist_choose(sl);
