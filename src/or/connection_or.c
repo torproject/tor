@@ -3,7 +3,20 @@
 /* $Id$ */
 
 #include "or.h"
+
 extern or_options_t options; /* command-line and config-file options */
+
+static int or_handshake_op_send_keys(connection_t *conn);
+static int or_handshake_op_finished_sending_keys(connection_t *conn);
+
+static int or_handshake_client_process_auth(connection_t *conn);
+static int or_handshake_client_send_auth(connection_t *conn);
+
+static int or_handshake_server_process_auth(connection_t *conn);
+static int or_handshake_server_process_nonce(connection_t *conn);
+
+static void connection_or_set_open(connection_t *conn);
+static void conn_or_init_crypto(connection_t *conn);
 
 /*
  *
@@ -97,28 +110,6 @@ int connection_or_finished_flushing(connection_t *conn) {
 
 /*********************/
 
-void connection_or_set_open(connection_t *conn) {
-  conn->state = OR_CONN_STATE_OPEN;
-  directory_set_dirty();
-  connection_init_timeval(conn);
-  connection_watch_events(conn, POLLIN);
-}
-
-void conn_or_init_crypto(connection_t *conn) {
-  //int x;
-  unsigned char iv[16];
-
-  assert(conn);
-
-  memset((void *)iv, 0, 16);
-  crypto_cipher_set_iv(conn->f_crypto, iv);
-  crypto_cipher_set_iv(conn->b_crypto, iv);
-
-  crypto_cipher_encrypt_init_cipher(conn->f_crypto);
-  crypto_cipher_decrypt_init_cipher(conn->b_crypto);
-    /* always encrypt with f, always decrypt with b */
-}
-
 connection_t *connection_or_connect(routerinfo_t *router) {
   connection_t *conn;
   struct sockaddr_in router_addr;
@@ -206,9 +197,30 @@ connection_t *connection_or_connect(routerinfo_t *router) {
   return NULL;
 }
 
-int or_handshake_op_send_keys(connection_t *conn) {
-  unsigned char message[38]; /* flag(16bits), bandwidth(32bits), forward key(128bits), backward key(128bits) */
-  unsigned char cipher[128];
+/* ********************************** */
+
+int connection_or_create_listener(struct sockaddr_in *bindaddr) {
+  log(LOG_DEBUG,"connection_create_or_listener starting");
+  return connection_create_listener(bindaddr, CONN_TYPE_OR_LISTENER);
+}
+
+int connection_or_handle_listener_read(connection_t *conn) {
+  log(LOG_NOTICE,"OR: Received a connection request from a router. Attempting to authenticate.");
+  return connection_handle_listener_read(conn, CONN_TYPE_OR, OR_CONN_STATE_SERVER_AUTH_WAIT);
+}
+
+/* ***************** */
+/* Helper functions to implement handshaking */
+
+#define FLAGS_LEN 2
+#define BANDWIDTH_LEN 4
+#define KEY_LEN 16
+#define PKEY_LEN 128
+
+static int 
+or_handshake_op_send_keys(connection_t *conn) {
+  unsigned char message[FLAGS_LEN + BANDWIDTH_LEN + KEY_LEN + KEY_LEN];
+  unsigned char cipher[PKEY_LEN];
   int retval;
 
   assert(conn && conn->type == CONN_TYPE_OR);
@@ -224,12 +236,14 @@ int or_handshake_op_send_keys(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_op_send_keys() : Generated 3DES keys.");
   /* compose the message */
   *(uint16_t *)(message) = htons(HANDSHAKE_AS_OP);
-  *(uint32_t *)(message+2) = htonl(conn->bandwidth);
-  memcpy((void *)(message+6), (void *)conn->f_crypto->key, 16);
-  memcpy((void *)(message+22), (void *)conn->b_crypto->key, 16);
+  *(uint32_t *)(message+FLAGS_LEN) = htonl(conn->bandwidth);
+  memcpy((void *)(message+FLAGS_LEN+BANDWIDTH_LEN), 
+         (void *)conn->f_crypto->key, 16);
+  memcpy((void *)(message+FLAGS_LEN+BANDWIDTH_LEN+KEY_LEN), 
+         (void *)conn->b_crypto->key, 16);
 
   /* encrypt with RSA */
-  if(crypto_pk_public_encrypt(conn->pkey, message, 38, cipher, RSA_PKCS1_PADDING) < 0) {
+  if(crypto_pk_public_encrypt(conn->pkey, message, sizeof(message), cipher, RSA_PKCS1_PADDING) < 0) {
     log(LOG_ERR,"or_handshake_op_send_keys(): Public key encryption failed.");
     return -1;
   }
@@ -237,7 +251,7 @@ int or_handshake_op_send_keys(connection_t *conn) {
 
   /* send message */
 
-  if(connection_write_to_buf(cipher, 128, conn) < 0) {
+  if(connection_write_to_buf(cipher, PKEY_LEN, conn) < 0) {
     log(LOG_DEBUG,"or_handshake_op_send_keys(): my outbuf is full. Oops.");
     return -1;
   }
@@ -258,7 +272,8 @@ int or_handshake_op_send_keys(connection_t *conn) {
   return or_handshake_op_finished_sending_keys(conn);
 }
 
-int or_handshake_op_finished_sending_keys(connection_t *conn) {
+static int 
+or_handshake_op_finished_sending_keys(connection_t *conn) {
 
   /* do crypto initialization, etc */
   conn_or_init_crypto(conn);
@@ -268,10 +283,12 @@ int or_handshake_op_finished_sending_keys(connection_t *conn) {
   return 0;
 }
 
-int or_handshake_client_send_auth(connection_t *conn) {
+static int 
+or_handshake_client_send_auth(connection_t *conn) {
   int retval;
-  char buf[50];
-  char cipher[128];
+  char buf[FLAGS_LEN+ADDR_LEN+PORT_LEN+ADDR_LEN+
+           PORT_LEN+KEY_LEN+KEY_LEN+BANDWIDTH_LEN];
+  char cipher[PKEY_LEN];
   struct sockaddr_in me; /* my router identity */
 
   assert(conn);
@@ -289,17 +306,20 @@ int or_handshake_client_send_auth(connection_t *conn) {
 
   /* generate first message */
   *(uint16_t*)buf = htons(HANDSHAKE_AS_OR);
-  *(uint32_t*)(buf+2) = me.sin_addr.s_addr; /* local address, network order */
-  *(uint16_t*)(buf+6) = me.sin_port; /* local port, network order */
-  *(uint32_t*)(buf+8) = htonl(conn->addr); /* remote address */
-  *(uint16_t*)(buf+12) = htons(conn->port); /* remote port */
-  memcpy(buf+14,conn->f_crypto->key,16); /* keys */
-  memcpy(buf+30,conn->b_crypto->key,16);
-  *(uint32_t *)(buf+46) = htonl(conn->bandwidth); /* max link utilisation */
+  *(uint32_t*)(buf+FLAGS_LEN) = me.sin_addr.s_addr; /* local address, network order */
+  *(uint16_t*)(buf+FLAGS_LEN+ADDR_LEN) = me.sin_port; /* local port, network order */
+  *(uint32_t*)(buf+FLAGS_LEN+ADDR_LEN+PORT_LEN) = htonl(conn->addr); /* remote address */
+  *(uint16_t*)(buf+FLAGS_LEN+ADDR_LEN+PORT_LEN+ADDR_LEN) = htons(conn->port); /* remote port */
+  memcpy(buf+FLAGS_LEN+ADDR_LEN+PORT_LEN+ADDR_LEN+PORT_LEN,
+         conn->f_crypto->key,16); /* keys */
+  memcpy(buf+FLAGS_LEN+ADDR_LEN+PORT_LEN+ADDR_LEN+PORT_LEN+KEY_LEN,
+         conn->b_crypto->key,16);
+  *(uint32_t *)(buf+FLAGS_LEN+ADDR_LEN+PORT_LEN+ADDR_LEN+PORT_LEN+
+                KEY_LEN+KEY_LEN) = htonl(conn->bandwidth); /* max link utilisation */
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated first authentication message.");
 
   /* encrypt message */
-  retval = crypto_pk_public_encrypt(conn->pkey, buf, 50, cipher,RSA_PKCS1_PADDING);
+  retval = crypto_pk_public_encrypt(conn->pkey, buf, sizeof(buf), cipher,RSA_PKCS1_PADDING);
   if (retval == -1) /* error */
   { 
     log(LOG_ERR,"Public-key encryption failed during authentication to %s:%u.",conn->address,conn->port);
@@ -310,7 +330,7 @@ int or_handshake_client_send_auth(connection_t *conn) {
 
   /* send message */
   
-  if(connection_write_to_buf(cipher, 128, conn) < 0) {
+  if(connection_write_to_buf(cipher, PKEY_LEN, conn) < 0) {
     log(LOG_DEBUG,"or_handshake_client_send_auth(): my outbuf is full. Oops.");
     return -1;
   }
@@ -334,7 +354,8 @@ int or_handshake_client_send_auth(connection_t *conn) {
 
 }
 
-int or_handshake_client_process_auth(connection_t *conn) {
+static int 
+or_handshake_client_process_auth(connection_t *conn) {
   char buf[128]; /* only 56 of this is expected to be used */
   char cipher[128];
   uint32_t bandwidth;
@@ -438,7 +459,8 @@ int or_handshake_client_process_auth(connection_t *conn) {
  *
  */
 
-int or_handshake_server_process_auth(connection_t *conn) {
+static int 
+or_handshake_server_process_auth(connection_t *conn) {
   int retval;
 
   char buf[128]; /* 50 of this is expected to be used for OR, 38 for OP */
@@ -592,7 +614,8 @@ int or_handshake_server_process_auth(connection_t *conn) {
   return -1;
 }
 
-int or_handshake_server_process_nonce(connection_t *conn) {
+static int 
+or_handshake_server_process_nonce(connection_t *conn) {
 
   char buf[128];
   char cipher[128];
@@ -648,19 +671,33 @@ int or_handshake_server_process_nonce(connection_t *conn) {
 
 }
 
+/*********************/
 
-/* ********************************** */
-
-
-int connection_or_create_listener(struct sockaddr_in *bindaddr) {
-  log(LOG_DEBUG,"connection_create_or_listener starting");
-  return connection_create_listener(bindaddr, CONN_TYPE_OR_LISTENER);
+static void 
+connection_or_set_open(connection_t *conn) {
+  conn->state = OR_CONN_STATE_OPEN;
+  directory_set_dirty();
+  connection_init_timeval(conn);
+  connection_watch_events(conn, POLLIN);
 }
 
-int connection_or_handle_listener_read(connection_t *conn) {
-  log(LOG_NOTICE,"OR: Received a connection request from a router. Attempting to authenticate.");
-  return connection_handle_listener_read(conn, CONN_TYPE_OR, OR_CONN_STATE_SERVER_AUTH_WAIT);
+static void 
+conn_or_init_crypto(connection_t *conn) {
+  //int x;
+  unsigned char iv[16];
+
+  assert(conn);
+
+  memset((void *)iv, 0, 16);
+  crypto_cipher_set_iv(conn->f_crypto, iv);
+  crypto_cipher_set_iv(conn->b_crypto, iv);
+
+  crypto_cipher_encrypt_init_cipher(conn->f_crypto);
+  crypto_cipher_decrypt_init_cipher(conn->b_crypto);
+    /* always encrypt with f, always decrypt with b */
 }
+
+
 
 /*
   Local Variables:

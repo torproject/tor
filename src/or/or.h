@@ -615,18 +615,6 @@ int connection_op_handle_listener_read(connection_t *conn);
 int connection_or_process_inbuf(connection_t *conn);
 int connection_or_finished_flushing(connection_t *conn);
 
-void connection_or_set_open(connection_t *conn);
-void conn_or_init_crypto(connection_t *conn);
-
-int or_handshake_op_send_keys(connection_t *conn);
-int or_handshake_op_finished_sending_keys(connection_t *conn);
-
-int or_handshake_client_process_auth(connection_t *conn);
-int or_handshake_client_send_auth(connection_t *conn);
-
-int or_handshake_server_process_auth(connection_t *conn);
-int or_handshake_server_process_nonce(connection_t *conn);
-
 connection_t *connection_or_connect(routerinfo_t *router);
 
 int connection_or_create_listener(struct sockaddr_in *bindaddr);
