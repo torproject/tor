@@ -1,6 +1,6 @@
 /* Copyright 2001 Matej Pfajfar.
  * Copyright 2001-2004 Roger Dingledine.
- * Copyright 2004 Roger Dingledine, Nick Mathewson. */
+ * Copyright 2004-2005 Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 const char router_c_id[] = "$Id$";
@@ -613,7 +613,6 @@ int router_compare_to_my_exit_policy(connection_t *conn)
                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
 
 }
-
 
 /** Return true iff <b>router</b> has the same nickname as this OR.  (For an
  * OP, always returns false.)

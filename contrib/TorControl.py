@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# TorControl.py -- Python module to interface with Tor Control interface.
+# Copyright 2005 Nick Mathewson -- See LICENSE for licensing information.
 #$Id$
 
 import socket
