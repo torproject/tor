@@ -284,6 +284,27 @@ dirserv_free_descriptors()
   smartlist_clear(descriptor_list);
 }
 
+/** Return -1 if <b>ri</b> has a private or otherwise bad address,
+ * unless we're configured to not care. Return 0 if all ok. */
+static int
+dirserv_router_has_valid_address(routerinfo_t *ri)
+{
+  struct in_addr iaddr;
+  if (get_options()->DirAllowPrivateAddresses)
+    return 0; /* whatever it is, we're fine with it */
+  if (!tor_inet_aton(ri->address, &iaddr)) {
+    log_fn(LOG_INFO,"Router '%s' published non-IP address '%s'. Refusing.",
+           ri->nickname, ri->address);
+    return -1;
+  }
+  if (is_internal_IP(ntohl(iaddr.s_addr))) {
+    log_fn(LOG_INFO,"Router '%s' published internal IP address '%s'. Refusing.",
+           ri->nickname, ri->address);
+    return -1; /* it's a private IP, we should reject it */
+  }
+  return 0;
+}
+
 /** Parse the server descriptor at *desc and maybe insert it into the
  * list of server descriptors, and (if the descriptor is well-formed)
  * advance *desc immediately past the descriptor's end.
@@ -340,7 +361,7 @@ dirserv_add_descriptor(const char **desc)
   }
   if (r==0) {
     char fp[FINGERPRINT_LEN+1];
-    log_fn(LOG_INFO, "Unknown nickname '%s' (%s:%d). Adding.",
+    log_fn(LOG_INFO, "Unknown nickname '%s' (%s:%d). Will try to add.",
            ri->nickname, ri->address, ri->or_port);
     if (crypto_pk_get_fingerprint(ri->identity_pkey, fp, 1) < 0) {
       log_fn(LOG_WARN, "Error computing fingerprint for '%s'", ri->nickname);
@@ -359,6 +380,12 @@ dirserv_add_descriptor(const char **desc)
   }
   if (ri->published_on < now-ROUTER_MAX_AGE) {
     log_fn(LOG_NOTICE, "Publication time for router with nickname '%s' is too far in the past. Not adding.", ri->nickname);
+    routerinfo_free(ri);
+    *desc = end;
+    return 0;
+  }
+  if (dirserv_router_has_valid_address(ri) < 0) {
+    log_fn(LOG_NOTICE, "Router with nickname '%s' has invalid address '%s'. Not adding.", ri->nickname, ri->address);
     routerinfo_free(ri);
     *desc = end;
     return 0;

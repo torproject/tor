@@ -910,9 +910,11 @@ typedef struct {
   struct config_line_t *DirBindAddress;
   /** Local address to bind outbound sockets */
   char *OutboundBindAddress;
+  /** Directory server only: which versions of
+   * Tor should we tell users to run? */
   struct config_line_t *RecommendedVersions;
-  /**< Directory server only: which versions of
-     * Tor should we tell users to run? */
+  /** Whether dirservers refuse router descriptors with private IPs. */
+  int DirAllowPrivateAddresses;
   char *User; /**< Name of user to run Tor as. */
   char *Group; /**< Name of group to run Tor as. */
   double PathlenCoinWeight; /**< Parameter used to configure average path
