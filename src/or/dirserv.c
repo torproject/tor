@@ -333,6 +333,7 @@ dirserv_add_descriptor(const char **desc)
     /* Add this at the end. */
     if (n_descriptors >= MAX_ROUTERS_IN_DIR) {
       log_fn(LOG_WARN,"Too many descriptors in directory; can't add another.");
+      return -1;
     } else {
       log_fn(LOG_INFO,"Dirserv adding desc for nickname %s",ri->nickname);
       desc_ent_ptr = &descriptor_list[n_descriptors++];

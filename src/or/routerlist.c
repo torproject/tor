@@ -323,7 +323,7 @@ int router_add_to_routerlist(routerinfo_t *router) {
           /* Remember whether we trust this router as a dirserver. */
           if (r->is_trusted_dir)
             router->is_trusted_dir = 1;
-          /* If the adress hasn't changed; no need to re-resolve. */
+          /* If the address hasn't changed; no need to re-resolve. */
           if (!strcasecmp(r->address, router->address))
             router->addr = r->addr;
           routerinfo_free(r);
