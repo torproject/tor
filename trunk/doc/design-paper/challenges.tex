@@ -24,7 +24,18 @@
 \pagestyle{empty}
 
 \begin{abstract}
-foo
+
+We describe our experiences with deploying Tor, a low-latency anonymous
+communication system that has been funded both by the U.S.~government
+and also by the Electronic Frontier Foundation.
+
+Because of its simplified threat model, Tor does not aim to defend
+against many of the attacks in the literature.
+
+We describe both policy issues that have come up from operating the
+network and technical challenges in building a more sustainable and
+scalable network.
+
 \end{abstract}
 
 \section{Introduction}
@@ -42,7 +53,7 @@ Subject to this restriction, we try to
 provide as much anonymity as we can. In particular, because we
 support interactive communications without impractically expensive padding,
 we fall prey to a variety
-of intra-network~\cite{attack-tor-oak05,flow-correlation04,bar} and
+of intra-network~\cite{back01,attack-tor-oak05,flow-correlation04} and
 end-to-end~\cite{danezis-pet2004,SS03} anonymity-breaking attacks.
 
 Tor is secure so long as adversaries are unable to
