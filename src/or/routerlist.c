@@ -366,8 +366,9 @@ routerlist_remove_old_routers(void)
   cutoff = time(NULL) - ROUTER_MAX_AGE;
   for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
     router = smartlist_get(routerlist->routers, i);
-    if (router->published_on < cutoff) {
-      /* Too old.  Remove it. */
+    if (router->published_on < cutoff &&
+      !router->dir_port) {
+      /* Too old.  Remove it. But never remove dirservers! */
       log_fn(LOG_INFO,"Forgetting obsolete routerinfo for node %s.", router->nickname);
       routerinfo_free(router);
       smartlist_del(routerlist->routers, i--);
