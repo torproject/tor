@@ -61,36 +61,57 @@ static uint16_t get_unique_circ_id_by_conn(connection_t *conn) {
   return test_circ_id;
 }
 
-/** Allocate and return a comma-separated list of the currently built
- * elements of circuit_t.
+/** If <b>verbose</b> is false, allocate and return a comma-separated
+ * list of the currently built elements of circuit_t.  If
+ * <b>verbose</b> is true, also list information about link status in
+ * a more verbose format using spaces.
  */
-char *circuit_list_path(circuit_t *circ)
+char *
+circuit_list_path(circuit_t *circ, int verbose)
 {
   struct crypt_path_t *hop;
-  routerinfo_t *r;
   smartlist_t *elements;
+  const char *states[] = {"closed", "waiting for keys", "open"};
+  char buf[128];
   char *s;
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
   tor_assert(circ->cpath);
 
   elements = smartlist_create();
 
-  for (hop = circ->cpath; hop; hop = hop->next) {
-    if (hop->state != CPATH_STATE_OPEN)
+  if (verbose) {
+    tor_snprintf(buf, sizeof(buf)-1, "circ (length %d, exit %s):",
+                 circ->build_state->desired_path_len,
+                 circ->build_state->chosen_exit_name);
+    smartlist_add(elements, tor_strdup(buf));
+  }
+
+  for (hop = circ->cpath; hop && hop != circ->cpath; hop = hop->next) {
+    const char *elt;
+    routerinfo_t *r;
+    if (!verbose && hop->state != CPATH_STATE_OPEN)
       break;
     if ((r = router_get_by_digest(hop->identity_digest))) {
-      smartlist_add(elements, tor_strdup(r->nickname));
+      elt = r->nickname;
     } else if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
-      smartlist_add(elements, tor_strdup("<rendezvous splice>"));
+      elt = "<rendezvous splice>";
     } else {
-      s = tor_malloc(HEX_DIGEST_LEN+2);
-      s[0]='$';
-      base16_encode(s+1,HEX_DIGEST_LEN+1,hop->identity_digest,DIGEST_LEN);
-      smartlist_add(elements, s);
+      buf[0]='$';
+      base16_encode(buf+1,sizeof(buf)-1,hop->identity_digest,DIGEST_LEN);
+      elt = buf;
+    }
+    if (verbose) {
+      size_t len = strlen(elt)+2+strlen(states[hop->state])+1;
+      char *v = tor_malloc(len);
+      tor_assert(hop->state <= 2);
+      tor_snprintf(v,len,"%s(%s)",elt,states[hop->state]);
+      smartlist_add(elements, v);
+    } else {
+      smartlist_add(elements, tor_strdup(elt));
     }
   }
 
-  s = smartlist_join_strings(elements, ",", 0, NULL);
+  s = smartlist_join_strings(elements, verbose?" ":",", 0, NULL);
   SMARTLIST_FOREACH(elements, char*, cp, tor_free(cp));
   return s;
 }
@@ -100,6 +121,11 @@ char *circuit_list_path(circuit_t *circ)
  * exit point.
  */
 void circuit_log_path(int severity, circuit_t *circ) {
+#if 1
+  char *s = circuit_list_path(circ,1);
+  log_fn(severity,"%s",s);
+  tor_free(s);
+#else
   char buf[1024];
   char *s = buf;
   struct crypt_path_t *hop;
@@ -127,6 +153,7 @@ void circuit_log_path(int severity, circuit_t *circ) {
     hop=hop->next;
   } while(hop!=circ->cpath);
   log_fn(severity,"%s",buf);
+#endif
 }
 
 /** Tell the rep(utation)hist(ory) module about the status of the links
@@ -631,7 +658,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   }
 
   hop->state = CPATH_STATE_OPEN;
-  log_fn(LOG_INFO,"finished");
+  log_fn(LOG_INFO,"Finished building circuit:");
   circuit_log_path(LOG_INFO,circ);
   control_event_circuit_status(circ, CIRC_EVENT_EXTENDED);
 

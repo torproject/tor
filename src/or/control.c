@@ -492,7 +492,7 @@ control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
   tor_assert(circ);
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
-  path = circuit_list_path(circ);
+  path = circuit_list_path(circ,0);
   path_len = strlen(path);
   msg = tor_malloc(1+4+path_len+1); /* event, circid, path, NUL. */
   msg[0] = (uint8_t) tp;
