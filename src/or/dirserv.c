@@ -498,7 +498,7 @@ list_server_status(char **running_routers_out, char **router_status_out)
 {
   /* List of entries in running-routers style: An optional !, then either
    * a nickname or a dollar-prefixed hexdigest. */
-  smartlist_t *rr_entries; 
+  smartlist_t *rr_entries;
   /* List of entries in a router-status style: An optional !, then an optional
    * equals-suffixed nickname, then a dollar-prefixed hexdigest. */
   smartlist_t *rs_entries;
@@ -511,11 +511,15 @@ list_server_status(char **running_routers_out, char **router_status_out)
   SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t *, d,
   {
     int is_live;
-	connection_t *conn;
+    connection_t *conn;
     tor_assert(d->router);
     conn = connection_get_by_identity_digest(
                     d->router->identity_digest, CONN_TYPE_OR);
-    is_live = (conn && conn->state == OR_CONN_STATE_OPEN);
+    /* Treat a router as alive if
+     *    - It's me, and I'm not hibernating.
+     * or - we're connected to it. */
+    is_live = (router_is_me(d->router) && !we_are_hibernating()) ||
+      (conn && conn->state == OR_CONN_STATE_OPEN);
     smartlist_add(rr_entries, list_single_server_status(d, is_live, 1));
     smartlist_add(rs_entries, list_single_server_status(d, is_live, 0));
   });
