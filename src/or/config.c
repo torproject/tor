@@ -85,6 +85,7 @@ static config_var_t config_vars[] = {
   VAR("BandwidthBurstBytes", UINT,     BandwidthBurstBytes,  "50000000"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
+  VAR("ControlPort",         UINT,     ControlPort,          "0"),
   VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
   VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
   VAR("DirPort",             UINT,     DirPort,              "0"),
@@ -499,10 +500,10 @@ static void
 print_usage(void)
 {
   printf("tor -f <torrc> [args]\n"
-         "See man page for more options. This -h is probably obsolete.\n\n"
+         "See man page for more options. This -h is obsolete.\n");
+#if 0
          "-b <bandwidth>\t\tbytes/second rate limiting\n"
          "-d <file>\t\tDebug file\n"
-//         "-m <max>\t\tMax number of connections\n"
          "-l <level>\t\tLog level\n"
          "-r <file>\t\tList of known routers\n");
   printf("\nClient options:\n"
@@ -512,6 +513,7 @@ print_usage(void)
          "-n <nick>\t\tNickname of router\n"
          "-o <port>\t\tOR port to bind to\n"
          "-p <file>\t\tPID file\n");
+#endif
 }
 
 /**
@@ -810,7 +812,7 @@ getconfig(int argc, char **argv, or_options_t *options)
       options->command = CMD_LIST_FINGERPRINT;
     } else if (!strcmp(argv[i],"--hash-password")) {
       options->command = CMD_HASH_PASSWORD;
-      options->command_arg = tor_strdup(argv[i+1]);
+      options->command_arg = tor_strdup( (i < argc-1) ? argv[i+1] : "");
       ++i;
     }
 
@@ -929,6 +931,11 @@ getconfig(int argc, char **argv, or_options_t *options)
 
   if (options->SocksPort == 0 && options->ORPort == 0) {
     log(LOG_WARN, "SocksPort and ORPort are both undefined? Quitting.");
+    result = -1;
+  }
+
+  if (options->ControlPort < 0 || options->ControlPort > 65535) {
+    log(LOG_WARN, "ControlPort option out of bounds.");
     result = -1;
   }
 
