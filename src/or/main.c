@@ -298,92 +298,93 @@ void check_conn_marked(int i) {
 
 int prepare_for_poll(int *timeout) {
   int i;
-//  int need_to_wake_soon = 0;
-  connection_t *conn = NULL;
+//  connection_t *conn = NULL;
   connection_t *tmpconn;
-  struct timeval now, soonest;
+  struct timeval now; //soonest;
   static long current_second = 0; /* from previous calls to gettimeofday */
   static long time_to_rebuild_directory = 0;
   static long time_to_fetch_directory = 0;
-  int ms_until_conn;
+//  int ms_until_conn;
   cell_t cell;
 
   if(gettimeofday(&now,NULL) < 0)
     return -1;
 
-  if(options.Role & ROLE_DIR_SERVER) {
-    if(time_to_rebuild_directory < now.tv_sec) {
-      /* it's time to rebuild our directory */
-      if(time_to_rebuild_directory == 0) { 
-        /* we just started up. if we build a directory now it will be meaningless. */
-        log(LOG_DEBUG,"prepare_for_poll(): Delaying initial dir build for 10 seconds.");
-        time_to_rebuild_directory = now.tv_sec + 10; /* try in 10 seconds */
-      } else {
-        directory_rebuild();
-        time_to_rebuild_directory = now.tv_sec + options.DirRebuildPeriod;
+  if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
+
+    if(options.Role & ROLE_DIR_SERVER) {
+      if(time_to_rebuild_directory < now.tv_sec) {
+        /* it's time to rebuild our directory */
+        if(time_to_rebuild_directory == 0) { 
+          /* we just started up. if we build a directory now it will be meaningless. */
+          log(LOG_DEBUG,"prepare_for_poll(): Delaying initial dir build for 10 seconds.");
+          time_to_rebuild_directory = now.tv_sec + 10; /* try in 10 seconds */
+        } else {
+          directory_rebuild();
+          time_to_rebuild_directory = now.tv_sec + options.DirRebuildPeriod;
+        }
+      }
+    } else {
+      if(time_to_fetch_directory < now.tv_sec) {
+        /* it's time to fetch a new directory */
+        /* NOTE directory servers do not currently fetch directories.
+         * Hope this doesn't bite us later.
+         */
+        directory_initiate_fetch(router_pick_directory_server());
+        time_to_fetch_directory = now.tv_sec + options.DirFetchPeriod;
       }
     }
-    *timeout = 1000*(time_to_rebuild_directory - now.tv_sec) + (1000 - (now.tv_usec / 1000));
-//    log(LOG_DEBUG,"prepare_for_poll(): DirBuild timeout is %d",*timeout);
-  }
 
-  if(!(options.Role & ROLE_DIR_SERVER)) {
-    if(time_to_fetch_directory < now.tv_sec) {
-      /* it's time to fetch a new directory */
-      /* NOTE directory servers do not currently fetch directories.
-       * Hope this doesn't bite us later.
-       */
-      directory_initiate_fetch(router_pick_directory_server());
-      time_to_fetch_directory = now.tv_sec + options.DirFetchPeriod;
-    }
-    *timeout = 1000*(time_to_fetch_directory - now.tv_sec) + (1000 - (now.tv_usec / 1000));
-  }
-
-  /* check connections to see whether we should send a keepalive, expire, or wait */
-  for(i=0;i<nfds;i++) {
-    tmpconn = connection_array[i];
-    if(!connection_speaks_cells(tmpconn))
-      continue; /* this conn type doesn't send cells */
-    if(now.tv_sec >= tmpconn->timestamp_lastwritten + options.KeepalivePeriod) {
-      if((!(options.Role & ROLE_OR_CONNECT_ALL) && !circuit_get_by_conn(tmpconn)) ||
-         (!connection_state_is_open(tmpconn))) {
-        /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
-        log(LOG_DEBUG,"prepare_for_poll(): Expiring connection to %d (%s:%d).",
-            i,tmpconn->address, tmpconn->port);
-        tmpconn->marked_for_close = 1;
-      } else {
-        /* either a full router, or we've got a circuit. send a padding cell. */
-//        log(LOG_DEBUG,"prepare_for_poll(): Sending keepalive to (%s:%d)",
-//            tmpconn->address, tmpconn->port);
-        memset(&cell,0,sizeof(cell_t));
-        cell.command = CELL_PADDING;
-        if(connection_write_cell_to_buf(&cell, tmpconn) < 0)
-          tmpconn->marked_for_close = 1;
-      }
-    }
-    if(!tmpconn->marked_for_close &&
-       *timeout > 1000*(tmpconn->timestamp_lastwritten + options.KeepalivePeriod - now.tv_sec)) {
-      *timeout = 1000*(tmpconn->timestamp_lastwritten + options.KeepalivePeriod - now.tv_sec);
-    }
-  }
-  assert(*timeout >= 0);
-  /* blow away any connections that need to die. can't do this later
-   * because we might open up a circuit and not realize it we're about to cull it.
-   */
-  for(i=0;i<nfds;i++)
-    check_conn_marked(i); 
-
-  if(now.tv_sec > current_second) { /* the second has already rolled over! */
+    /* do housekeeping for each connection */
     for(i=0;i<nfds;i++) {
-      connection_increment_receiver_bucket(connection_array[i]);
+      tmpconn = connection_array[i];
+      connection_increment_receiver_bucket(tmpconn);
       connection_array[i]->onions_handled_this_second = 0;
+
+      /* check connections to see whether we should send a keepalive, expire, or wait */
+      if(!connection_speaks_cells(tmpconn))
+        continue; /* this conn type doesn't send cells */
+      if(now.tv_sec >= tmpconn->timestamp_lastwritten + options.KeepalivePeriod) {
+        if((!(options.Role & ROLE_OR_CONNECT_ALL) && !circuit_get_by_conn(tmpconn)) ||
+           (!connection_state_is_open(tmpconn))) {
+          /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
+          log(LOG_DEBUG,"prepare_for_poll(): Expiring connection to %d (%s:%d).",
+              i,tmpconn->address, tmpconn->port);
+          tmpconn->marked_for_close = 1;
+        } else {
+          /* either a full router, or we've got a circuit. send a padding cell. */
+//          log(LOG_DEBUG,"prepare_for_poll(): Sending keepalive to (%s:%d)",
+//              tmpconn->address, tmpconn->port);
+//          memset(&cell,0,sizeof(cell_t));
+          cell.command = CELL_PADDING;
+          if(connection_write_cell_to_buf(&cell, tmpconn) < 0)
+            tmpconn->marked_for_close = 1;
+        }
+      }
     }
+    /* blow away any connections that need to die. can't do this later
+     * because we might open up a circuit and not realize it we're about to cull it.
+     */
+    for(i=0;i<nfds;i++)
+      check_conn_marked(i); 
+
     current_second = now.tv_sec; /* remember which second it is, for next time */
   }
 
-  /* this timeout is definitely sooner than any of the above ones */
-  *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
+  if(onion_pending_check()) {
+    /* there's an onion pending. check for new things to do, but don't wait any time */
+    *timeout = 0;
+  } else {
+    *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
+  }
 
+  return 0;
+}
+
+
+
+/* Link padding stuff left here for fun. Not used now. */
+#if 0
   if(options.LinkPadding) {
     /* now check which conn wants to speak soonest */
     for(i=0;i<nfds;i++) {
@@ -393,14 +394,9 @@ int prepare_for_poll(int *timeout) {
       if(!connection_state_is_open(tmpconn))
         continue; /* only conns in state 'open' have a valid send_timeval */ 
       while(tv_cmp(&tmpconn->send_timeval,&now) <= 0) { /* send_timeval has already passed, let it send a cell */
-//        log(LOG_DEBUG,"prepare_for_poll(): doing backlogged connection_send_cell on socket %d (%d ms old)",tmpconn->s,
-//         (now.tv_sec - tmpconn->send_timeval.tv_sec)*1000 +
-//         (now.tv_usec - tmpconn->send_timeval.tv_usec)/1000
-//        );
         connection_send_cell(tmpconn);
       }
       if(!conn || tv_cmp(&tmpconn->send_timeval, &soonest) < 0) { /* this is the best choice so far */
-//        log(LOG_DEBUG,"prepare_for_poll(): chose socket %d as best connection so far",tmpconn->s);
         conn = tmpconn;
         soonest.tv_sec = conn->send_timeval.tv_sec;
         soonest.tv_usec = conn->send_timeval.tv_usec;
@@ -417,14 +413,7 @@ int prepare_for_poll(int *timeout) {
       }
     }
   }
-
-  if(onion_pending_check()) {
-    /* there's an onion pending. check for new things to do, but don't wait any time */
-    *timeout = 0;
-  }
-
-  return 0;
-}
+#endif
 
 int do_main_loop(void) {
   int i;
@@ -482,10 +471,6 @@ int do_main_loop(void) {
      * one-second rollover for refilling receiver buckets, or the soonest
      * conn that needs to send a cell)
      */
-
-    /* if the timeout is less than 10, set it to 10 */
-    if(timeout > 0 && timeout < 10)
-      timeout = 10;
 
     /* poll until we have an event, or it's time to do something */
     poll_result = poll(poll_array, nfds, timeout);
