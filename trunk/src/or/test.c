@@ -475,7 +475,7 @@ main(int c, char**v) {
   test_buffers();
   puts("========================== Crypto ==========================");
   test_crypto_dh();
-  test_crypto(); /* this seg faults :( */
+  test_crypto(); /* this seg faults :( */  /* Still? -NM 2003/04/30 */
   puts("\n========================== Util ============================");
   test_util();
   puts("");
