@@ -85,17 +85,15 @@ static int circuit_is_acceptable(circuit_t *circ,
                                 conn->socks_request->port))
     return 0;
 
-  if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
-    if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
-      if (!connection_ap_can_use_exit(conn, exitrouter)) {
-        /* can't exit from this router */
-        return 0;
-      }
-    } else { /* not general */
-      if (rend_cmp_service_ids(conn->rend_query, circ->rend_query)) {
-        /* this circ is not for this conn */
-        return 0;
-      }
+  if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+    if (!connection_ap_can_use_exit(conn, exitrouter)) {
+      /* can't exit from this router */
+      return 0;
+    }
+  } else { /* not general */
+    if (rend_cmp_service_ids(conn->rend_query, circ->rend_query)) {
+      /* this circ is not for this conn */
+      return 0;
     }
   }
   return 1;
@@ -958,10 +956,12 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
     link_apconn_to_circ(conn, circ);
     tor_assert(conn->socks_request);
-    if (conn->socks_request->command == SOCKS_COMMAND_CONNECT)
+    if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
+//      consider_recording_trackhost(conn, circ);
       connection_ap_handshake_send_begin(conn, circ);
-    else
+    } else {
       connection_ap_handshake_send_resolve(conn, circ);
+    }
 
     return 1;
   } else { /* we're a rendezvous conn */
