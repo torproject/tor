@@ -47,7 +47,9 @@ static config_abbrev_t config_abbrevs[] = {
   PLURAL(HiddenServiceExcludeNode),
   PLURAL(RendNode),
   PLURAL(RendExcludeNode),
-  { "l",        "LogLevel" , 1},
+  { "l", "LogLevel", 1},
+  { "BandwidthRate", "BandwidthRateBytes", 1},
+  { "BandwidthBurst", "BandwidthBurstBytes", 1},
   { NULL, NULL , 0},
 };
 #undef PLURAL
@@ -79,8 +81,8 @@ static config_var_t config_vars[] = {
   VAR("Address",             STRING,   Address,              NULL),
   VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, NULL),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
-  VAR("BandwidthRate",       UINT,     BandwidthRate,        "800000"),
-  VAR("BandwidthBurst",      UINT,     BandwidthBurst,       "50000000"),
+  VAR("BandwidthRateBytes",  UINT,     BandwidthRateBytes,   "800000"),
+  VAR("BandwidthBurstBytes", UINT,     BandwidthBurstBytes,  "50000000"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
   VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
@@ -663,8 +665,8 @@ init_options(or_options_t *options)
   options->KeepalivePeriod = 300;
   options->MaxOnionsPending = 100;
   options->NewCircuitPeriod = 30; /* twice a minute */
-  options->BandwidthRate = 800000; /* at most 800kB/s total sustained incoming */
-  options->BandwidthBurst = 10000000; /* max burst on the token bucket */
+  options->BandwidthRateBytes = 800000; /* at most 800kB/s total sustained incoming */
+  options->BandwidthBurstBytes = 10000000; /* max burst on the token bucket */
   options->NumCpus = 1;
 }
 

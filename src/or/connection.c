@@ -700,11 +700,11 @@ static void connection_read_bucket_decrement(connection_t *conn, int num_read) {
   }
 }
 
-/** Initiatialize the global read bucket to options.BandwidthBurst,
+/** Initiatialize the global read bucket to options.BandwidthBurstBytes,
  * and current_time to the current time. */
 void connection_bucket_init(void) {
-  global_read_bucket = options.BandwidthBurst; /* start it at max traffic */
-  global_write_bucket = options.BandwidthBurst; /* start it at max traffic */
+  global_read_bucket = options.BandwidthBurstBytes; /* start it at max traffic */
+  global_write_bucket = options.BandwidthBurstBytes; /* start it at max traffic */
 }
 
 /** A second has rolled over; increment buckets appropriately. */
@@ -714,12 +714,12 @@ void connection_bucket_refill(struct timeval *now) {
   connection_t **carray;
 
   /* refill the global buckets */
-  if(global_read_bucket < options.BandwidthBurst) {
-    global_read_bucket += options.BandwidthRate;
+  if(global_read_bucket < options.BandwidthBurstBytes) {
+    global_read_bucket += options.BandwidthRateBytes;
     log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
   }
-  if(global_write_bucket < options.BandwidthBurst) {
-    global_write_bucket += options.BandwidthRate;
+  if(global_write_bucket < options.BandwidthBurstBytes) {
+    global_write_bucket += options.BandwidthRateBytes;
     log_fn(LOG_DEBUG,"global_write_bucket now %d.", global_write_bucket);
   }
 
