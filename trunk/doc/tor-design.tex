@@ -94,7 +94,7 @@ forcing successive nodes in the circuit to decrypt it. Rather than using
 onions to lay the circuits, Tor uses an incremental or \emph{telescoping}
 path-building design, where the initiator negotiates session keys with
 each successive hop in the circuit. Onion replay detection is no longer
-necessary, and the network as a whole is more reliable to boot, since
+necessary, and the process of building circuits is more reliable, since
 the initiator knows which hop failed and can try extending to a new node.
 
 \item \textbf{Applications talk to the onion proxy via Socks:}
@@ -343,12 +343,12 @@ cebolla (?)\\
 Like other low-latency anonymity designs, Tor seeks to frustrate
 attackers from linking communication partners, or from linking
 multiple communications to or from a single point.  Within this
-overriding goal, however, several design considerations have directed
+main goal, however, several design considerations have directed
 Tor's evolution.
 
 First, we have tried to build a {\bf deployable} system.  [XXX why?]
 This requirement precludes designs that are expensive to run (for
-example, by requiring more bandwidth than volunteers are easy to
+example, by requiring more bandwidth than volunteers will easily
 provide); designs that place a heavy liability burden on operators
 (for example, by allowing attackers to implicate operators in illegal
 activities); and designs that are difficult or expensive to implement
@@ -406,9 +406,10 @@ sending or receiving communications via Tor.
 \SubSection{Adversary Model}
 \label{subsec:adversary-model}
 
-Like all practical low-latency systems, Tor is broken against a global
-passive adversary, the most commonly assumed adversary for analysis of
-theoretical anonymous communication designs. The adversary we assume
+Like all practical low-latency systems, Tor is not secure against a
+global passive adversary, which is the most commonly assumed adversary
+for analysis of theoretical anonymous communication designs. The adversary
+we assume
 is weaker than global with respect to distribution, but it is not
 merely passive.
 We assume a threat model that expands on that from \cite{or-pet00}.
@@ -424,8 +425,8 @@ The basic adversary components we consider are:
   link. Can change all those things that an observer can observe up to
   the limits of computational ability (e.g., cannot forge signatures
   unless a key is compromised).
-\item[Hostile initiator:] can initiate (destroy) connections with
-  specific routes as well as varying the timing and content of traffic
+\item[Hostile initiator:] can initiate (or destroy) connections with
+  specific routes as well as vary the timing and content of traffic
   on the connections it creates. A special case of the disrupter with
   additional abilities appropriate to its role in forming connections.
 \item[Hostile responder:] can vary the traffic on the connections made
@@ -434,6 +435,10 @@ The basic adversary components we consider are:
   special case of the disrupter.
 \item[Key breaker:] can break the longterm private decryption key of a
   Tor-node.
+% Er, there are no long-term private decryption keys. They have
+% long-term private signing keys, and medium-term onion (decryption)
+% keys. Plus short-term link keys. Should we lump them together or
+% separate them out? -RD
 \item[Compromised Tor-node:] can arbitrarily manipulate the connections
   under its control, as well as creating new connections (that pass
   through itself).
@@ -545,7 +550,7 @@ in an offline clique.
 
 Rendezvous points are a building block for \emph{location-hidden services}
 (aka responder anonymity) in the Tor network. Location-hidden
-services means Bob can offer a tcp service, such as an Apache webserver,
+services means Bob can offer a tcp service, such as a webserver,
 without revealing the IP of that service.
 
 We provide this censorship resistance for Bob by allowing him to
@@ -739,6 +744,9 @@ them.
 \item \emph{Selectively DoS servers.}
 \item \emph{Introduce timing into messages.}
 \item \emph{Tagging attacks.}
+the exit node can change the content you're getting to try to
+trick you. similarly, when it rejects you due to exit policy,
+it could give you a bad IP that sends you somewhere else.
 \end{itemize}
 
 \item \textbf{Directory attacks}
