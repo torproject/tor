@@ -21,6 +21,7 @@ For 0.0.7:
         - break exitpolicy into multiple config lines
         - have the OP forget routers it hasn't heard about in 24 hours
         - rename/rearrange functions for what file they're in
+        - try to break apart the main clump of functions better.
 
 
 For September:
