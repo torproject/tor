@@ -29,7 +29,7 @@ Do you want to run a tor server?
 
   Then run tor to generate keys. One of the files generated
   in your DataDirectory is your 'fingerprint' file. Mail it to
-  arma@mit.edu.
+  tor-ops@freehaven.net.
 
   NOTE: You won't be able to use tor as a client or server
   in this configuration until you've been added to the directory
@@ -41,7 +41,7 @@ Do you want to run a hidden service?
   edit the bottom part. Then run Tor. It will create each HiddenServiceDir
   you have configured, and it will create a 'hostname' file which
   specifies the url (xyz.onion) for that service. You can tell people
-  the url, and they can connect to it via their Tor proxy.
+  the url, and they can connect to it via their Tor client.
 
 Configuring tsocks:
 
