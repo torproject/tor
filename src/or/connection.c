@@ -389,7 +389,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
       return 0; /* he hung up before we could accept(). that's fine. */
     } else if (ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e)) {
-      log_fn(LOG_WARN,"accept failed: %s. Dropping incomming connection.",
+      log_fn(LOG_WARN,"accept failed: %s. Dropping incoming connection.",
              tor_socket_strerror(e));
       return 0;
     }
