@@ -285,8 +285,11 @@ accounting_set_wakeup_time(void)
   crypto_digest_get_digest(d, digest, DIGEST_LEN);
   crypto_free_digest_env(d);
 
-  n_days_to_exhaust_bw =
-    (get_options()->AccountingMaxKB/expected_bandwidth_usage)/(24*60);
+  if (expected_bandwidth_usage)
+    n_days_to_exhaust_bw =
+      (get_options()->AccountingMaxKB/expected_bandwidth_usage)/(24*60);
+  else
+    n_days_to_exhaust_bw = 1;
 
   tm = gmtime(&interval_start_time);
   if (++tm->tm_mon > 11) { tm->tm_mon = 0; ++tm->tm_year; }
