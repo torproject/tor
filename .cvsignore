@@ -12,3 +12,7 @@ conftest*
 stamp-h
 stamp-h1
 tor.sh
+depcomp
+install-sh
+missing
+mkinstalldirs
