@@ -530,8 +530,8 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
  * push data out as soon as we know there's enough for a tls record, so
  * during periods of high load we won't read the entire megabyte from
  * input before pushing any data out. */
-/* We follow the same algorithm for non-tls streams, because hey, why not. */
-  if(conn->outbuf_flushlen < MIN_TLS_FLUSHLEN &&
+  if(connection_speaks_cells(conn) &&
+     conn->outbuf_flushlen < MIN_TLS_FLUSHLEN &&
      conn->outbuf_flushlen+len >= MIN_TLS_FLUSHLEN) {
     len -= (MIN_TLS_FLUSHLEN - conn->outbuf_flushlen);
     conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
