@@ -752,17 +752,7 @@ int connection_send_destroy(uint16_t circ_id, connection_t *conn) {
   cell_t cell;
 
   assert(conn);
-
-  if(!connection_speaks_cells(conn)) {
-     log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.",
-            circ_id);
-     conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
-/* XXX really, we should separate this function into two functions.
- * one of them actually sends the destroy cell, as this function's name
- * implies, and another one destroys a stream. Yes/no? -RD */
-     connection_mark_for_close(conn, END_STREAM_REASON_DESTROY);
-     return 0;
-  }
+  assert(connection_speaks_cells(conn));
 
   memset(&cell, 0, sizeof(cell_t));
   cell.circ_id = circ_id;

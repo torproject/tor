@@ -88,6 +88,16 @@ int connection_edge_process_inbuf(connection_t *conn) {
   return -1;
 }
 
+int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
+  assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
+
+  log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.",
+         circ_id);
+  conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
+  connection_mark_for_close(conn, END_STREAM_REASON_DESTROY);
+  return 0;
+}
+
 static char *connection_edge_end_reason(char *payload, uint16_t length) {
   if(length < 1) {
     log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
