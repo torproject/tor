@@ -49,7 +49,7 @@ purpose communication system. We will discuss some of the difficulties
 we have experienced, how we have met them or, when we have some idea,
 how we plan to meet them. We will also discuss some tough open
 problems that have not given us any trouble in our current deployment.
-We will describe both those future challenges that we intend to and
+We will describe both those future challenges that we intend to explore and
 those that we have decided not to explore and why.
 
 Tor is an overlay network, designed
@@ -927,6 +927,8 @@ requests to Tor so that applications can simply point their DNS resolvers at
 localhost and continue to use SOCKS for data only.
 
 \subsection{Measuring performance and capacity}
+\label{subsec:performance}
+
 One of the paradoxes with engineering an anonymity network is that we'd like
 to learn as much as we can about how traffic flows so we can improve the
 network, but we want to prevent others from learning how traffic flows in
@@ -940,7 +942,7 @@ They also try to deduce their own available bandwidth, on the basis of how
 much traffic they have been able to transfer recently, and upload this
 information as well.
 
-This is, of course, eminantly cheatable.  A malicious server can get a
+This is, of course, eminently cheatable.  A malicious server can get a
 disproportionate amount of traffic simply by claiming to have more bandiwdth
 than it does.  But better mechanisms have their problems.  If bandwidth data
 is to be measured rather than self-reported, it is usually possible for
@@ -1131,6 +1133,7 @@ a way for their users, using unmodified software, to get end-to-end
 encryption and end-to-end authentication to their website.
 
 \subsection{Trust and discovery}
+\label{subsec:trust-and-discovery}
 
 [arma will edit this and expand/retract it]
 
@@ -1199,7 +1202,7 @@ trust decisions than the Tor developers.
 %on what threats we have in mind. Really decentralized if your threat is
 %RIAA; less so if threat is to application data or individuals or...
 
-\section{Crossroads: Scaling}
+\section{Scaling}
 %\label{sec:crossroads-scaling}
 %P2P + anonymity issues:
 
@@ -1210,9 +1213,9 @@ Scaling Tor involves three main challenges.  First is safe server
 discovery, both bootstrapping -- how a Tor client can robustly find an
 initial server list -- and ongoing -- how a Tor client can learn about
 a fair sample of honest servers and not let the adversary control his
-circuits (see Section~\ref{}).  Second is detecting and handling the speed
+circuits (see Section~\ref{subsec:trust-and-discovery}).  Second is detecting and handling the speed
 and reliability of the variety of servers we must use if we want to
-accept many servers (see Section~\ref{}).
+accept many servers (see Section~\ref{subsec:performance}).
 Since the speed and reliability of a circuit is limited by its worst link,
 we must learn to track and predict performance.  Finally, in order to get
 a large set of servers in the first place, we must address incentives
@@ -1220,35 +1223,33 @@ for users to carry traffic for others (see Section incentives).
 
 \subsection{Incentives by Design}
 
-[nick will try to make this section shorter and more to the point.]
-
-[most of the technical incentive schemes in the literature introduce
-anonymity issues which we don't understand yet, and we seem to be doing
-ok without them]
-
 There are three behaviors we need to encourage for each server: relaying
 traffic; providing good throughput and reliability while doing it;
 and allowing traffic to exit the network from that server.
 
 We encourage these behaviors through \emph{indirect} incentives, that
 is, designing the system and educating users in such a way that users
-with certain goals will choose to relay traffic.  In practice, the
+with certain goals will choose to relay traffic.  One
 main incentive for running a Tor server is social benefit: volunteers
 altruistically donate their bandwidth and time.  We also keep public
 rankings of the throughput and reliability of servers, much like
-seti@home.  We further explain to users that they can get \emph{better
-security} by operating a server, because they get plausible deniability
-(indeed, they may not need to route their own traffic through Tor at all
--- blending directly with other traffic exiting Tor may be sufficient
-protection for them), and because they can use their own Tor server
+seti@home.  We further explain to users that they can get plausible
+deniability for any traffic emerging from the same address as a Tor
+exit node, and they can use their own Tor server
 as entry or exit point and be confident it's not run by the adversary.
+Further, users who need to be able to communicate anonymously
+may run a server simply because their need to increase
+expectation that such a network continues to be available to them
+and usable exceeds any countervening costs.
 Finally, we can improve the usability and feature set of the software:
 rate limiting support and easy packaging decrease the hassle of
 maintaining a server, and our configurable exit policies allow each
 operator to advertise a policy describing the hosts and ports to which
 he feels comfortable connecting.
 
-Beyond these, however, there is also a need for \emph{direct} incentives:
+To date these appear to have been adequate. As the system scales or as
+new issues emerge, however, we may also need to provide
+ \emph{direct} incentives:
 providing payment or other resources in return for high-quality service.
 Paying actual money is problematic: decentralized e-cash systems are
 not yet practical, and a centralized collection system not only reduces
@@ -1258,28 +1259,35 @@ option is to use a tit-for-tat incentive scheme: provide better service
 to nodes that have provided good service to you.
 
 Unfortunately, such an approach introduces new anonymity problems.
-Does the incentive system enable the adversary to attract more traffic by
-performing well? Typically a user who chooses evenly from all options is
-most resistant to an adversary targetting him, but that approach prevents
-us from handling heterogeneous servers \cite{casc-rep}.
-When a server (call him Steve) performs well for Alice, does Steve gain
-reputation with the entire system, or just with Alice? If the entire
-system, how does Alice tell everybody about her experience in a way that
-prevents her from lying about it yet still protects her identity? If
-Steve's behavior only affects Alice's behavior, does this allow Steve to
-selectively perform only for Alice, and then break her anonymity later
-when somebody (presumably Alice) routes through his node?
+There are many surprising ways for servers to game the incentive and
+reputation system to undermine anonymity because such systems are
+designed to encourage fairness in storage or bandwidth usage not
+fairness of provided anonymity. An adversary can attract more traffic
+by performing well or can provide targeted differential performance to
+individual users to undermine their anonymity. Typically a user who
+chooses evenly from all options is most resistant to an adversary
+targeting him, but that approach prevents from handling heterogeneous
+servers.
 
-These are difficult and open questions, yet choosing not to scale means
-leaving most users to a less secure network or no anonymizing network
-at all.  We will start with a simplified approach to the tit-for-tat
+%When a server (call him Steve) performs well for Alice, does Steve gain
+%reputation with the entire system, or just with Alice? If the entire
+%system, how does Alice tell everybody about her experience in a way that
+%prevents her from lying about it yet still protects her identity? If
+%Steve's behavior only affects Alice's behavior, does this allow Steve to
+%selectively perform only for Alice, and then break her anonymity later
+%when somebody (presumably Alice) routes through his node?
+
+A possible solution is a simplified approach to the tit-for-tat
 incentive scheme based on two rules: (1) each node should measure the
-service it receives from adjacent nodes, and provide service relative to
-the received service, but (2) when a node is making decisions that affect
-its own security (e.g. when building a circuit for its own application
-connections), it should choose evenly from a sufficiently large set of
-nodes that meet some minimum service threshold.  This approach allows us
-to discourage bad service without opening Alice up as much to attacks.
+service it receives from adjacent nodes, and provide service relative
+to the received service, but (2) when a node is making decisions that
+affect its own security (e.g. when building a circuit for its own
+application connections), it should choose evenly from a sufficiently
+large set of nodes that meet some minimum service threshold
+\cite{casc-rep}.  This approach allows us to discourage bad service
+without opening Alice up as much to attacks.  All of this requires
+further study.
+
 
 %XXX rewrite the above so it sounds less like a grant proposal and
 %more like a "if somebody were to try to solve this, maybe this is a
