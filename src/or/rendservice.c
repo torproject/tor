@@ -355,7 +355,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   }
   /* Next N bytes is encrypted with service key */
   len = crypto_pk_private_hybrid_decrypt(
-       service->private_key,request,request_len-DIGEST_LEN,buf,
+       service->private_key,request+DIGEST_LEN,request_len-DIGEST_LEN,buf,
        PK_PKCS1_OAEP_PADDING);
   if (len<0) {
     log_fn(LOG_WARN, "Couldn't decrypt INTRODUCE2 cell");
