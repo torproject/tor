@@ -409,8 +409,6 @@ OR network. Even a firewall-to-firewall connection is exposed
 if, as assumed above, our goal is to hide which local-COR is talking to
 which local-COR.
 
-
-
 \SubSection{Known attacks against low-latency anonymity systems}
 \label{subsec:known-attacks}
 
@@ -438,7 +436,77 @@ tagging attacks
 \Section{Design goals and assumptions}
 \label{sec:assumptions}
 
-[XXX Perhaps the threat model belongs here.]
+\subsection{Goals}
+% Are these really our goals? ;) -NM
+Like other low-latency anonymity designs, Tor seeks to frustrate
+attackers from linking communication partners, or from linking
+multiple communications to or from a single point.  Within this
+overriding goal, however, several design considerations have directed
+Tor's evolution.
+
+First, we have tried to build a {\bf deployable} system.  [XXX why?]
+This requirement precludes designs that are expensive to run (for
+example, by requiring more bandwidth than volunteers are easy to
+provide); designs that place a heavy liability burden on operators
+(for example, by allowing attackers to implicate operators in illegal
+activities); and designs that are difficult or expensive to implement
+(for example, by requiring kernel patches to many operating systems,
+or ).
+
+Second, the system must be {\bf usable}.  A hard-to-use system has
+fewer users---and because anonymity systems hide users among users, a
+system with fewer users provides less anonymity.  Thus, usability is
+not only a convenience, but is a security requirement for anonymity
+systems.
+
+Third, the protocol must be {\bf extensible}, so that it can serve as
+a test-bed for future research in low-latency anonymity systems.
+(Note that while an extensible protocol benefits researchers, there is
+a danger that differing choices of extensions will render users
+distinguishable.  Thus, implementations should not permit different
+protocol extensions to coexist in a single deployed network.)
+
+The protocol's design and security parameters must be {\bf
+conservative}.  Additional features impose implementation and
+complexity costs. [XXX Say that we don't want to try to come up with
+speculative solutions to problems we don't KNOW how to solve? -NM]
+
+[XXX mention something about robustness?  But we really aren't that
+  robust.  We just assume that tunneled protocols tolerate connection
+  loss. -NM]
+
+\subsection{Non-goals}
+In favoring conservative, deployable designs, we have explicitly
+deferred a number of goals---not because they are not desirable in
+anonymity systems---but because solving them is either solved
+elsewhere, or an area of active research without a generally accepted
+solution.
+
+Unlike Tarzan or Morphmix, Tor does not attempt to scale to completely
+decentralized peer-to-peer environments with thousands of short-lived
+servers. 
+
+Tor does not claim to provide a definitive solution to end-to-end
+timing or intersection attacks for users who do not run their own
+Onion Routers.
+
+Tor does not provide ``protocol normalization'' like the Anonymizer,
+Privoxy, or XXX.  In order to provide client indistinguishibility for
+complex and variable protocols such as HTTP, Tor must be layered with
+a proxy such as Privoxy or XXX.  Similarly, Tor does not currently
+integrate tunneling for non-stream-based protocols; this too must be
+provided by an external service.
+
+Tor is not steganographic. It doesn't try to conceal which users are
+sending or receiving communications via Tor.
+
+\subsection{Assumptions}
+- Threat model
+- Mostly reliable nodes: not trusted.
+- Small group of trusted dirserv ops
+- Many users of diff bandwidth come and go.
+
+[XXX what else?]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
