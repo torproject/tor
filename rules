@@ -63,6 +63,8 @@ install: build
 	dh_installdirs
 
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tor
+	# move tor to where it belongs
+	mv $(CURDIR)/debian/tor/usr/bin/tor $(CURDIR)/debian/tor/usr/sbin/tor
 	install -m 755 contrib/torify $(CURDIR)/debian/tor/usr/bin
 	install -m 644 contrib/torify.1 $(CURDIR)/debian/tor/usr/share/man/man1
 	install -m 644 contrib/tor-tsocks.conf $(CURDIR)/debian/tor/etc/tor
