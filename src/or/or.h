@@ -1101,7 +1101,7 @@ int config_trial_assign(struct config_line_t *list, int reset);
 int resolve_my_address(const char *address, uint32_t *addr);
 void options_init(or_options_t *options);
 int init_from_config(int argc, char **argv);
-int config_init_logs(or_options_t *options);
+int config_init_logs(or_options_t *options, int validate_only);
 void config_parse_exit_policy(struct config_line_t *cfg,
                               struct exit_policy_t **dest);
 void exit_policy_free(struct exit_policy_t *p);
