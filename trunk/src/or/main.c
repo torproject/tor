@@ -181,6 +181,7 @@ add_connection_to_closeable_list(connection_t *conn)
 {
   tor_assert(!smartlist_isin(closeable_connection_lst, conn));
   tor_assert(conn->marked_for_close);
+  tor_assert(conn->poll_index >= 0);
 
   smartlist_add(closeable_connection_lst, conn);
 }
