@@ -40,6 +40,8 @@ void directory_initiate_command(routerinfo_t *router, int command) {
   assert(router->identity_pkey);
   conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
 
+  conn->state = command;
+
   if(connection_add(conn) < 0) { /* no space, forget it */
     connection_free(conn);
     return;
@@ -55,7 +57,6 @@ void directory_initiate_command(routerinfo_t *router, int command) {
       connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link in windowsland. */
-      conn->state = command;
       return;
     /* case 1: fall through */
   }
@@ -76,7 +77,6 @@ static int directory_send_command(connection_t *conn, int command) {
   switch(command) {
     case DIR_CONN_STATE_CONNECTING_FETCH:
       connection_write_to_buf(fetchstring, strlen(fetchstring), conn);
-      conn->state = DIR_CONN_STATE_CLIENT_SENDING_FETCH;
       break;
     case DIR_CONN_STATE_CONNECTING_UPLOAD:
       s = router_get_my_descriptor();
@@ -87,7 +87,6 @@ static int directory_send_command(connection_t *conn, int command) {
       snprintf(tmp, sizeof(tmp), "POST / HTTP/1.0\r\nContent-Length: %d\r\n\r\n%s",
                (int)strlen(s), s);
       connection_write_to_buf(tmp, strlen(tmp), conn);
-      conn->state = DIR_CONN_STATE_CLIENT_SENDING_UPLOAD;
       break;
   }
   return 0;
