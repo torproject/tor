@@ -577,7 +577,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
         return 0;
       /* else fall through */
     case -1: /* resolve failed */
-      log_fn(LOG_WARN,"Resolve or connect failed (%s).", conn->address);
+      log_fn(LOG_WARN,"Resolve or connect failed (%s).", n_stream->address);
       connection_remove(n_stream);
       connection_free(n_stream);
     case 0: /* resolve added to pending list */
