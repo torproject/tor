@@ -400,7 +400,6 @@ static int init_from_config(int argc, char **argv) {
     log_fn(LOG_ERR,"Reading config failed. For usage, try -h.");
     return -1;
   }
-  log_set_severity(options.loglevel); /* assign logging severity level from options */
   close_logs(); /* we'll close, then open with correct loglevel if necessary */
   if(!options.LogFile && !options.RunAsDaemon)
     add_stream_log(options.loglevel, "<stdout>", stdout);
