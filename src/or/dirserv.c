@@ -20,6 +20,34 @@ typedef struct fingerprint_entry_t {
 static fingerprint_entry_t fingerprint_list[MAX_ROUTERS_IN_DIR];
 static int n_fingerprints = 0;
 
+static void
+add_fingerprint_to_dir(const char *nickname, const char *fp)
+{
+  int i;
+  for (i = 0; i < n_fingerprints; ++i) {
+    if (!strcasecmp(fingerprint_list[i].nickname,nickname)) {
+      free(fingerprint_list[i].fingerprint);
+      fingerprint_list[i].fingerprint = strdup(fp);
+      return;
+    }
+  }
+  fingerprint_list[n_fingerprints].nickname = strdup(nickname);
+  fingerprint_list[n_fingerprints].fingerprint = strdup(fp);
+  ++n_fingerprints;
+}
+
+int
+dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
+{
+  char fp[FINGERPRINT_LEN+1];
+  if (crypto_pk_get_fingerprint(pk, fp)<0) {
+    log_fn(LOG_ERR, "Error computing fingerprint");
+    return -1;
+  }
+  add_fingerprint_to_dir(nickname, fp);
+  return 0;
+}
+
 /* return 0 on success, -1 on failure */
 int 
 dirserv_parse_fingerprint_file(const char *fname)
@@ -83,7 +111,9 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
   fingerprint_entry_t *ent =NULL;
   char fp[FINGERPRINT_LEN+1];
 
+  log_fn(LOG_DEBUG, "%d fingerprints known.", n_fingerprints);
   for (i=0;i<n_fingerprints;++i) {
+    log_fn(LOG_DEBUG,"%s vs %s", router->nickname, fingerprint_list[i].nickname);
     if (!strcasecmp(router->nickname,fingerprint_list[i].nickname)) {
       ent = &fingerprint_list[i];
       break;
@@ -91,6 +121,7 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
   }
   
   if (!ent) { /* No such server known */
+    log_fn(LOG_WARNING,"no fingerprint found for %s",router->nickname);
     return 0;
   }
   if (crypto_pk_get_fingerprint(router->identity_pkey, fp)) {
@@ -98,8 +129,10 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
     return 0;
   }
   if (0==strcasecmp(ent->fingerprint, fp)) {
+    log_fn(LOG_DEBUG,"good fingerprint for %s",router->nickname);
     return 1; /* Right fingerprint. */
   } else {
+    log_fn(LOG_WARNING,"mismatched fingerprint for %s",router->nickname);
     return 0; /* Wrong fingerprint. */
   }
 }
@@ -201,7 +234,11 @@ dirserv_add_descriptor(const char **desc)
     if ((*desc_ent_ptr)->published > ri->published_on) {
       /* We already have a newer descriptor */
       log_fn(LOG_INFO,"We already have a newer desc for nickname %s. Not adding.",ri->nickname);
-      goto err;
+      /* This isn't really an error; return. */
+      if (desc_tmp) free(desc_tmp);
+      if (ri) routerinfo_free(ri);
+      *desc = end;
+      return 0;
     }
     /* We don't have a newer one; we'll update this one. */
     free_descriptor_entry(*desc_ent_ptr);
@@ -291,7 +328,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
   i = strlen(s);
   cp = s + i;
   
-  if (crypto_SHA_digest(s, i, digest)) {
+  if (router_get_dir_hash(s,digest)) {
     log_fn(LOG_WARNING,"couldn't compute digest");
     return -1;
   }
@@ -306,7 +343,7 @@ dirserv_dump_directory_to_string(char *s, int maxlen,
   i = strlen(s);
   cp = s+i;
   if (base64_encode(cp, maxlen-i, signature, 128) < 0) {
-    log_fn(LOG_WARNING," couldn't base64-encode signature");
+    log_fn(LOG_WARNING,"couldn't base64-encode signature");
     return -1;
   }
 

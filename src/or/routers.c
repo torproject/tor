@@ -570,7 +570,7 @@ static int router_get_hash_impl(char *s, char *digest, const char *start_str,
   return 0;
 }
 
-static int router_get_dir_hash(char *s, char *digest)
+int router_get_dir_hash(char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
                               "signed-directory","directory-signature");

@@ -472,8 +472,16 @@ static int init_keys(void)
     log_fn(LOG_ERR, "Error initializing descriptor.");
     return -1;
   }
+  /* We need to add our own fingerprint so it gets recognized. */
+  if (dirserv_add_own_fingerprint(options.Nickname, get_identity_key())) {
+    log_fn(LOG_ERR, "Error adding own fingerprint to approved set");
+    return -1;
+  }
   tmp = mydesc = router_get_my_descriptor();
-  dirserv_add_descriptor(&tmp);
+  if (dirserv_add_descriptor(&tmp)) {
+    log(LOG_ERR, "Unable to add own descriptor to directory.");
+    return -1;
+  }
   sprintf(keydir,"%s/router.desc", options.DataDirectory);
   log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
   if (write_str_to_file(keydir, mydesc)) {
@@ -744,7 +752,7 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   written += strlen(s+written);
   if (base64_encode(s+written, maxlen-written, signature, 128) < 0) {
     log_fn(LOG_WARNING, "Couldn't base64-encode signature");
-    /* XXX Nick: do we really mean to fall through here? */
+    return -1;
   }
   written += strlen(s+written);
   strcat(s+written, "-----END SIGNATURE-----\n");

@@ -620,6 +620,8 @@ int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
 void connection_set_poll_socket(connection_t *conn);
 
+void get_connection_array(connection_t ***array, int *n);
+
 void connection_watch_events(connection_t *conn, short events);
 int connection_is_reading(connection_t *conn);
 void connection_stop_reading(connection_t *conn);
@@ -677,6 +679,7 @@ int router_is_me(uint32_t addr, uint16_t port);
 void router_forget_router(uint32_t addr, uint16_t port);
 int router_get_list_from_file(char *routerfile);
 int router_get_router_hash(char *s, char *digest);
+int router_get_dir_hash(char *s, char *digest);
 
 /* Reads a list of known routers, unsigned. */
 int router_get_list_from_string(char *s);
@@ -692,6 +695,7 @@ int router_compare_to_exit_policy(connection_t *conn);
 void routerinfo_free(routerinfo_t *router);
 
 /********************************* dirserv.c ***************************/
+int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_parse_fingerprint_file(const char *fname);
 int dirserv_router_fingerprint_is_known(const routerinfo_t *router);
 void dirserv_free_fingerprint_list();
