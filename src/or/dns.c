@@ -343,7 +343,8 @@ void dns_cancel_pending_resolve(char *address) {
     pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
     pendconn = pend->conn; /* don't pass complex things to the
                               connection_mark_for_close macro */
-    connection_mark_for_close(pendconn, END_STREAM_REASON_MISC);
+    connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
+    connection_mark_for_close(pendconn);
     resolve->pending_connections = pend->next;
     tor_free(pend);
   }
@@ -433,7 +434,8 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
                                 connection_mark_for_close macro */
       /* prevent double-remove. */
       pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
-      connection_mark_for_close(pendconn, END_STREAM_REASON_RESOLVEFAILED);
+      connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
+      connection_mark_for_close(pendconn);
       connection_free(pendconn);
     } else {
       /* prevent double-remove. */
@@ -488,7 +490,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
       num_dnsworkers_busy--;
     }
     num_dnsworkers--;
-    connection_mark_for_close(conn,0);
+    connection_mark_for_close(conn);
     return 0;
   }
 
@@ -645,7 +647,7 @@ static void spawn_enough_dnsworkers(void) {
     log_fn(LOG_WARN, "%d DNS workers are spawned; all are busy. Killing one.",
            MAX_DNSWORKERS);
 
-    connection_mark_for_close(dnsconn,0);
+    connection_mark_for_close(dnsconn);
     num_dnsworkers_busy--;
     num_dnsworkers--;
   }
@@ -669,7 +671,7 @@ static void spawn_enough_dnsworkers(void) {
            num_dnsworkers-num_dnsworkers_needed, num_dnsworkers);
     dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
     tor_assert(dnsconn);
-    connection_mark_for_close(dnsconn,0);
+    connection_mark_for_close(dnsconn);
     num_dnsworkers--;
   }
 }

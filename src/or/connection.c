@@ -172,11 +172,19 @@ void connection_free_all(void) {
 
 void connection_about_to_close_connection(connection_t *conn)
 {
-  if(conn->type == CONN_TYPE_DIR)
-    if(conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
-      rend_client_desc_fetched(conn->rend_query, 0);
-
-
+  switch(conn->type) {
+    case CONN_TYPE_DIR:
+      if(conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
+        rend_client_desc_fetched(conn->rend_query, 0);
+      break;
+    case CONN_TYPE_AP:
+    case CONN_TYPE_EXIT:
+      if(!conn->has_sent_end) {
+        log_fn(LOG_WARN,"Edge connection hasn't sent end yet? Bug.");
+        connection_mark_for_close(conn);
+      }
+      break;
+  }
 }
 
 /** Close the underlying socket for <b>conn</b>, so we don't try to
@@ -213,9 +221,8 @@ void connection_close_immediate(connection_t *conn)
  *   - DNS conns need to fail any resolves that are pending on them.
  */
 int
-_connection_mark_for_close(connection_t *conn, char reason)
+_connection_mark_for_close(connection_t *conn)
 {
-  int retval = 0;
   assert_connection_ok(conn,0);
 
   if (conn->marked_for_close) {
@@ -240,7 +247,7 @@ _connection_mark_for_close(connection_t *conn, char reason)
          * you look at this more? -RD */
         if(conn->nickname)
           rep_hist_note_connect_failed(conn->nickname, time(NULL));
-      } else if (reason == CLOSE_REASON_UNUSED_OR_CONN) {
+      } else if (0) { // XXX reason == CLOSE_REASON_UNUSED_OR_CONN) {
         rep_hist_note_disconnect(conn->nickname, time(NULL));
       } else {
         rep_hist_note_connection_died(conn->nickname, time(NULL));
@@ -257,9 +264,6 @@ _connection_mark_for_close(connection_t *conn, char reason)
     case CONN_TYPE_EXIT:
       if (conn->state == EXIT_CONN_STATE_RESOLVING)
         connection_dns_remove(conn);
-      if (!conn->has_sent_end && reason &&
-          connection_edge_end(conn, reason, conn->cpath_layer) < 0)
-        retval = -1;
       break;
     case CONN_TYPE_DNSWORKER:
       if (conn->state == DNSWORKER_STATE_BUSY) {
@@ -277,7 +281,7 @@ _connection_mark_for_close(connection_t *conn, char reason)
    * we get our whole 15 seconds */
   conn->timestamp_lastwritten = time(NULL);
 
-  return retval;
+  return 0;
 }
 
 /** Find each connection that has hold_open_until_flushed set to
@@ -383,7 +387,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
     }
     /* else there was a real error. */
     log_fn(LOG_WARN,"accept() failed. Closing listener.");
-    connection_mark_for_close(conn,0);
+    connection_mark_for_close(conn);
     return -1;
   }
   log(LOG_INFO,"Connection accepted on socket %d (child of fd %d).",news, conn->s);
@@ -403,7 +407,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   }
 
   if(connection_init_accepted_conn(newconn) < 0) {
-    connection_mark_for_close(newconn,0);
+    connection_mark_for_close(newconn);
     return 0;
   }
   return 0;
@@ -492,7 +496,7 @@ static void listener_close_if_present(int type) {
   conn = connection_get_by_type(type);
   if (conn) {
     connection_close_immediate(conn);
-    connection_mark_for_close(conn,0);
+    connection_mark_for_close(conn);
   }
 }
 
@@ -688,7 +692,8 @@ int connection_handle_read(connection_t *conn) {
     }
     /* There's a read error; kill the connection.*/
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
-    connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+    conn->has_sent_end = 1;
+    connection_mark_for_close(conn);
     return -1;
   }
   if(connection_process_inbuf(conn) < 0) {
@@ -797,10 +802,8 @@ int connection_handle_write(connection_t *conn) {
       /* not yet */
       if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(conn->s))) {
         log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
-        /* The reason here only applies to exit connections, but it's
-         * harmless to set it elsewhere. */
         connection_close_immediate(conn);
-        connection_mark_for_close(conn,END_STREAM_REASON_CONNECTFAILED);
+        connection_mark_for_close(conn);
         if (conn->nickname)
           router_mark_as_down(conn->nickname);
         return -1;
@@ -817,7 +820,7 @@ int connection_handle_write(connection_t *conn) {
       connection_stop_writing(conn);
       if(connection_tls_continue_handshake(conn) < 0) {
         connection_close_immediate(conn); /* Don't flush; connection is dead. */
-        connection_mark_for_close(conn, 0);
+        connection_mark_for_close(conn);
         return -1;
       }
       return 0;
@@ -829,7 +832,7 @@ int connection_handle_write(connection_t *conn) {
       case TOR_TLS_CLOSE:
         log_fn(LOG_INFO,"tls error. breaking.");
         connection_close_immediate(conn); /* Don't flush; connection is dead. */
-        connection_mark_for_close(conn, 0);
+        connection_mark_for_close(conn);
         return -1; /* XXX deal with close better */
       case TOR_TLS_WANTWRITE:
         log_fn(LOG_DEBUG,"wanted write.");
@@ -855,7 +858,8 @@ int connection_handle_write(connection_t *conn) {
   } else {
     if (flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen) < 0) {
       connection_close_immediate(conn); /* Don't flush; connection is dead. */
-      connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+      conn->has_sent_end = 1;
+      connection_mark_for_close(conn);
       return -1;
     }
   }
@@ -881,7 +885,8 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
 
   if(write_to_buf(string, len, conn->outbuf) < 0) {
     log_fn(LOG_WARN,"write_to_buf failed. Closing connection (fd %d).", conn->s);
-    connection_mark_for_close(conn,0);
+    /* XXX should call connection_edge_end() ? */
+    connection_mark_for_close(conn);
     return;
   }
 

@@ -106,7 +106,7 @@ void directory_initiate_command(routerinfo_t *router, int purpose,
     conn->s = connection_ap_make_bridge(conn->address, conn->port);
     if(conn->s < 0) {
       log_fn(LOG_WARN,"Making AP bridge to dirserver failed.");
-      connection_mark_for_close(conn, 0);
+      connection_mark_for_close(conn);
       return;
     }
 
@@ -232,7 +232,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
     if(conn->state != DIR_CONN_STATE_CLIENT_READING) {
       log_fn(LOG_INFO,"conn reached eof, not reading. Closing.");
       connection_close_immediate(conn); /* it was an error; give up on flushing */
-      connection_mark_for_close(conn,0);
+      connection_mark_for_close(conn);
       return -1;
     }
 
@@ -241,11 +241,11 @@ int connection_dir_process_inbuf(connection_t *conn) {
                                &body, &body_len, MAX_DIR_SIZE)) {
       case -1: /* overflow */
         log_fn(LOG_WARN,"'fetch' response too large. Failing.");
-        connection_mark_for_close(conn,0);
+        connection_mark_for_close(conn);
         return -1;
       case 0:
         log_fn(LOG_INFO,"'fetch' response not all here, but we're at eof. Closing.");
-        connection_mark_for_close(conn,0);
+        connection_mark_for_close(conn);
         return -1;
       /* case 1, fall through */
     }
@@ -253,7 +253,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
     if(parse_http_response(headers, &status_code, NULL) < 0) {
       log_fn(LOG_WARN,"Unparseable headers. Closing.");
       free(body); free(headers);
-      connection_mark_for_close(conn,0);
+      connection_mark_for_close(conn);
       return -1;
     }
 
@@ -263,14 +263,14 @@ int connection_dir_process_inbuf(connection_t *conn) {
       if(status_code == 503 || body_len == 0) {
         log_fn(LOG_INFO,"Empty directory. Ignoring.");
         free(body); free(headers);
-        connection_mark_for_close(conn,0);
+        connection_mark_for_close(conn);
         return 0;
       }
       if(status_code != 200) {
         log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
                status_code);
         free(body); free(headers);
-        connection_mark_for_close(conn,0);
+        connection_mark_for_close(conn);
         return -1;
       }
       if(router_set_routerlist_from_directory(body, conn->identity_pkey) < 0){
@@ -338,14 +338,14 @@ int connection_dir_process_inbuf(connection_t *conn) {
       }
     }
     free(body); free(headers);
-    connection_mark_for_close(conn,0);
+    connection_mark_for_close(conn);
     return 0;
   } /* endif 'reached eof' */
 
   /* If we're on the dirserver side, look for a command. */
   if(conn->state == DIR_CONN_STATE_SERVER_COMMAND_WAIT) {
     if (directory_handle_command(conn) < 0) {
-      connection_mark_for_close(conn,0);
+      connection_mark_for_close(conn);
       return -1;
     }
     return 0;
@@ -538,7 +538,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
       return 0;
     case DIR_CONN_STATE_SERVER_WRITING:
       log_fn(LOG_INFO,"Finished writing server response. Closing.");
-      connection_mark_for_close(conn,0);
+      connection_mark_for_close(conn);
       return 0;
     default:
       log_fn(LOG_WARN,"BUG: called in unexpected state %d.", conn->state);
