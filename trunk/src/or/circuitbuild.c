@@ -810,6 +810,7 @@ circuit_all_predicted_ports_handled(time_t now) {
   int enough;
   smartlist_t *sl = circuit_get_unhandled_ports(now);
   enough = (smartlist_len(sl) == 0);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_free(sl);
   return enough;
 }
