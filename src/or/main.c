@@ -158,6 +158,9 @@ void connection_start_writing(connection_t *conn) {
 static void conn_read(int i) {
   connection_t *conn = connection_array[i];
 
+  if (conn->marked_for_close)
+    return;
+
   /* see http://www.greenend.org.uk/rjk/2001/06/poll.html for
    * discussion of POLLIN vs POLLHUP */
   if(!(poll_array[i].revents & (POLLIN|POLLHUP|POLLERR)))
@@ -165,8 +168,6 @@ static void conn_read(int i) {
        !connection_has_pending_tls_data(conn))
       return; /* this conn should not read */
 
-  if (conn->marked_for_close)
-    return;
   log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
 
   assert_connection_ok(conn, time(NULL));
@@ -204,7 +205,7 @@ static void conn_write(int i) {
   if (connection_handle_write(conn) < 0) {
     if (!conn->marked_for_close) {
       /* this connection is broken. remove it. */
-      log_fn(LOG_ERR,"Unhandled error on read for %s connection (fd %d); removing",
+      log_fn(LOG_WARN,"Unhandled error on read for %s connection (fd %d); removing",
              conn_type_to_string[conn->type], conn->s);
       connection_mark_for_close(conn,0);
     }

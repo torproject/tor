@@ -559,6 +559,7 @@ int connection_handle_write(connection_t *conn) {
       connection_mark_for_close(conn, END_STREAM_REASON_MISC);
       return -1;
     }
+    /* conns in CONNECTING state will fall through... */
   }
 
   if(!connection_wants_to_flush(conn)) /* it's done flushing */

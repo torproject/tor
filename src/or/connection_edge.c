@@ -305,7 +305,9 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */
       if (conn->done_receiving) {
-        connection_mark_for_close(conn, END_STREAM_REASON_DONE);
+        /* We just *got* an end; no reason to send one. */
+        conn->has_sent_end = 1;
+        connection_mark_for_close(conn, 0);
       }
 #else
       /* We just *got* an end; no reason to send one. */
