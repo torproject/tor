@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.4  2003/05/09 03:37:18  nickm
+ * Fix build on linux; macos is still messed up
+ *
  * Revision 1.3  2003/05/09 02:41:27  nickm
  * One is the language; the other is the compiler
  *
@@ -44,7 +47,7 @@ void log(int severity, const char *format, ...);
 
 #ifdef __GNUC__
 #define log_fn(severity, format, args...) \
-  log((severity), __PRETTY_FUNCTION__ # "(): " # format, ##args)
+  log((severity), __PRETTY_FUNCTION__ "(): " # format , ##args)
 #else
 #define log_fn log
 #endif
