@@ -250,8 +250,6 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
   write_result = send(s, buf->mem, *buf_flushlen, 0);
   if (write_result < 0) {
     if(!ERRNO_IS_EAGAIN(tor_socket_errno(s))) { /* it's a real error */
-      /* get a stack trace to find epipe bugs */
-      tor_assert(tor_socket_errno(s) != EPIPE);
       return -1;
     }
     log_fn(LOG_DEBUG,"write() would block, returning.");
