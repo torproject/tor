@@ -181,6 +181,11 @@ main(int argc, char **argv)
   if (!n_args)
     usage();
 
+  if (!strcmp(arg[0],"--version")) {
+    printf("Tor version %s.\n",VERSION);
+    return 0;
+  }
+
   if (!strcmp("-v", arg[0])) {
     add_stream_log(LOG_DEBUG, LOG_ERR, "<stderr>", stderr);
     ++arg; --n_args;
@@ -213,7 +218,7 @@ main(int argc, char **argv)
 
   if (network_init()<0) {
     log_fn(LOG_ERR,"Error initializing network; exiting.");
-    return -1;
+    return 1;
   }
 
   if (do_resolve(arg[0], sockshost, socksport, &result))
