@@ -18,24 +18,37 @@
 #ifdef HAVE_SYSLOG_H
 #include <syslog.h>
 #define LOG_WARN LOG_WARNING
+#if LOG_DEBUG < LOG_ERR
+#error "Your syslog.h thinks high numbers are more important.  We aren't prepared to deal with that."
+#endif
 #else
+/* XXXX Note: The code was originally written to refer to severities,
+ * with 0 being the least severe; while syslog's logging code refers to
+ * priorities, with 0 being the most important.  Thus, all our comparisons
+ * needed to be reversed when we added syslog support.  
+ *
+ * The upshot of this is that comments about log levels may be messed
+ * up: for "maximum severity" read "most severe" and "numerically
+ * *lowest* severity".
+ */
+
 /** Debug-level severity: for hyper-verbose messages of no interest to
  * anybody but developers. */
-#define LOG_DEBUG   0
+#define LOG_DEBUG   7
 /** Info-level severity: for messages that appear frequently during normal
  * operation. */
-#define LOG_INFO    1
+#define LOG_INFO    6
 /** Notice-level severity: for messages that appear infrequently
  * during normal operation; that the user will probably care about;
  * and that are not errors.
  */
-#define LOG_NOTICE  2
+#define LOG_NOTICE  5
 /** Warn-level severity: for messages that only appear when something has gone
  * wrong. */
-#define LOG_WARN    3
+#define LOG_WARN    4
 /** Error-level severity: for messages that only appear when something has gone
  * very wrong, and the Tor process can no longer proceed. */
-#define LOG_ERR     4
+#define LOG_ERR     3
 #endif
 
 /* magic to make GCC check for proper format strings. */
@@ -49,9 +62,12 @@
 int parse_log_level(const char *level);
 void add_stream_log(int severityMin, int severityMax, const char *name, FILE *stream);
 int add_file_log(int severityMin, int severityMax, const char *filename);
+#ifdef HAVE_SYSLOG_H
+int add_syslog_log(int loglevelMin, int loglevelMax);
+#endif
 int get_min_log_level(void);
-void close_logs();
-void reset_logs();
+void close_logs(void);
+void reset_logs(void);
 void add_temp_log(void);
 void close_temp_logs(void);
 void mark_logs_temp(void);

@@ -32,6 +32,10 @@ Set the verboseness level of the primary log. (Default: warn)
 \fBlogfile \fR\fIFILE\fP
 Rather than logging to stdout, log to FILE.
 .TP
+\fBsyslog\fP
+Rather than logging to stdout, send messages to the system log. (Not
+supported on all platforms)
+.TP
 \fBbandwidthrate \fR\fINUM\fP
 A token bucket limits the average incoming bandwidth on this node to NUM bytes per second. (Default: 800000)
 .TP

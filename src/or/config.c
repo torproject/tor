@@ -292,7 +292,7 @@ config_assign(or_options_t *options, struct config_line_t *list)
       config_compare(list, "SocksPort",      CONFIG_TYPE_UINT, &options->SocksPort) ||
       config_compare(list, "SocksBindAddress",CONFIG_TYPE_LINELIST,&options->SocksBindAddress) ||
       config_compare(list, "SocksPolicy",     CONFIG_TYPE_LINELIST,&options->SocksPolicy) ||
-
+      config_compare(list, "SysLog",          CONFIG_TYPE_LINELIST,&options->LogOptions) ||
       config_compare(list, "TrafficShaping", CONFIG_TYPE_OBSOLETE, NULL) ||
 
       config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User)
@@ -964,7 +964,8 @@ add_single_log(struct config_line_t *level_opt,
   } else {
     levelMax = LOG_ERR;
   }
-  if (file_opt) {
+
+  if (file_opt && !strcasecmp(file_opt->key, "LogFile")) {
     if (add_file_log(levelMin, levelMax, file_opt->value) < 0) {
       log_fn(LOG_WARN, "Cannot write to LogFile '%s': %s.", file_opt->value,
              strerror(errno));
@@ -972,6 +973,16 @@ add_single_log(struct config_line_t *level_opt,
     }
     log_fn(LOG_NOTICE, "Successfully opened LogFile '%s', redirecting output.",
            file_opt->value);
+  } else if (file_opt && !strcasecmp(file_opt->key, "SysLog")) {
+#ifdef HAVE_SYSLOG_H
+    if (add_syslog_log(levelMin, levelMax) < 0) {
+      log_fn(LOG_WARN, "Cannot open system log facility");
+      return -1;
+    }
+    log_fn(LOG_NOTICE, "Successfully opened system log, redirecting output.");
+#else
+    log_fn(LOG_WARN, "Tor was compiled without system logging enabled; can't enable SysLog.");
+#endif
   } else if (!isDaemon) {
     add_stream_log(levelMin, levelMax, "<stdout>", stdout);
     close_temp_logs();
@@ -998,7 +1009,8 @@ config_init_logs(or_options_t *options)
 
   /* Special case for if first option is LogLevel. */
   if (opt && !strcasecmp(opt->key, "LogLevel")) {
-    if (opt->next && !strcasecmp(opt->next->key, "LogFile")) {
+    if (opt->next && (!strcasecmp(opt->next->key, "LogFile") ||
+                      !strcasecmp(opt->next->key, "SysLog"))) {
       if (add_single_log(opt, opt->next, options->RunAsDaemon) < 0)
         return -1;
       opt = opt->next->next;
@@ -1013,17 +1025,18 @@ config_init_logs(or_options_t *options)
 
   while (opt) {
     if (!strcasecmp(opt->key, "LogLevel")) {
-      log_fn(LOG_WARN, "Two LogLevel options in a row without intervening LogFile");
+      log_fn(LOG_WARN, "Two LogLevel options in a row without intervening LogFile or SysLog");
       opt = opt->next;
     } else {
-      tor_assert(!strcasecmp(opt->key, "LogFile"));
+      tor_assert(!strcasecmp(opt->key, "LogFile") ||
+                 !strcasecmp(opt->key, "SysLog"));
       if (opt->next && !strcasecmp(opt->next->key, "LogLevel")) {
-        /* LogFile followed by LogLevel */
+        /* LogFile/SysLog followed by LogLevel */
         if (add_single_log(opt->next, opt, options->RunAsDaemon) < 0)
           return -1;
         opt = opt->next->next;
       } else {
-        /* LogFile followed by LogFile or end of list. */
+        /* LogFile/SysLog followed by LogFile/SysLog or end of list. */
         if (add_single_log(NULL, opt, options->RunAsDaemon) < 0)
           return -1;
         opt = opt->next;
