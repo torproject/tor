@@ -205,6 +205,17 @@ void connection_about_to_close_connection(connection_t *conn)
 
   switch (conn->type) {
     case CONN_TYPE_DIR:
+      if (conn->state == DIR_CONN_STATE_CONNECTING) {
+        /* it's a directory server and connecting failed: forget about
+           this router */
+        router_mark_as_down(conn->identity_digest);
+        if (conn->purpose == DIR_PURPOSE_FETCH_DIR &&
+            !all_trusted_directory_servers_down()) {
+          log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.",
+                 conn->address);
+         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL);
+        }
+      }
       if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
         rend_client_desc_fetched(conn->rend_query, 0);
       break;
@@ -854,17 +865,6 @@ loop_again:
                           conn->cpath_layer);
     }
     connection_mark_for_close(conn);
-    if (conn->type == CONN_TYPE_DIR &&
-       conn->state == DIR_CONN_STATE_CONNECTING) {
-       /* it's a directory server and connecting failed: forget about this router */
-       /* XXX I suspect pollerr may make Windows not get to this point. :( */
-       router_mark_as_down(conn->identity_digest);
-       if (conn->purpose == DIR_PURPOSE_FETCH_DIR &&
-           !all_trusted_directory_servers_down()) {
-         log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->address);
-         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL);
-       }
-    }
     return -1;
   }
   if (CONN_IS_EDGE(conn) &&
