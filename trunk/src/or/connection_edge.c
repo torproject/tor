@@ -941,7 +941,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
   if (conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
     /* 0.0.7 servers and earlier don't support DNS resolution.  There are no
      * ORs running code before 0.0.7, so we only worry about 0.0.7.  Once all
-     * servers are running 0.0.8, remove this check. */
+     * servers are running 0.0.8, remove this check. XXX */
     return strncmp(exit->platform, "Tor 0.0.7", 9) ? 1 : 0;
   }
   addr = client_dns_lookup_entry(conn->socks_request->address);
