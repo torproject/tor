@@ -4,8 +4,10 @@ tor (0.1.0.0-alpha-cvs-1) UNRELEASED; urgency=low
   * Forward port 06_add_compile_time_defaults.
   * Add libevent-dev to build-depends.
   * Update URL to tor in debian/control and debian/copyright.
+  * Set ulimit for file descriptors to 4096 in our init
+    script.
 
- -- Peter Palfrader <weasel@debian.org>  Sun, 23 Jan 2005 16:26:13 +0100
+ -- Peter Palfrader <weasel@debian.org>  Wed,  2 Feb 2005 07:19:34 +0100
 
 tor (0.0.9.3-1) unstable; urgency=low
 
