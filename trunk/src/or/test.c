@@ -617,7 +617,14 @@ test_util(void) {
   test_streq("zhasd <>  <> bnud<>", smartlist_get(sl, 4));
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
-  
+
+  smartlist_split_string(sl, "abcd\n", "\n", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  test_eq(1, smartlist_len(sl));
+  test_streq("abcd", smartlist_get(sl, 0));
+  smartlist_split_string(sl, "efgh", "\n", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  test_eq(2, smartlist_len(sl));
+  test_streq("efgh", smartlist_get(sl, 1));
+
 
   /* Test tor_strstrip() */
   strcpy(buf, "Testing 1 2 3");
