@@ -739,10 +739,12 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
     if(written < 0) { 
       log(LOG_ERR,"dump_signed_directory_to_string(): tried to exceed string length.");
       cp[maxlen-1] = 0; /* make sure it's null terminated */
+      free(dir->routers);
       return -1;
     }
     cp += written;
   }
+  free(dir->routers); /* not needed anymore */
 
   /* These multiple strlen calls are inefficient, but dwarfed by the RSA
      signature.
