@@ -23,6 +23,7 @@ typedef enum config_type_t {
   CONFIG_TYPE_CSV, /**< A list of strings, separated by commas and optional
                     * whitespace. */
   CONFIG_TYPE_LINELIST, /**< Uninterpreted config lines */
+  CONFIG_TYPE_OBSOLETE, /**< Obsolete (ignored) option. */
 } config_type_t;
 
 /** Largest allowed config line */
@@ -170,6 +171,9 @@ static int config_compare(struct config_line_t *c, const char *key, config_type_
       *(struct config_line_t**)arg =
         config_line_prepend(*(struct config_line_t**)arg, c->key, c->value);
       break;
+    case CONFIG_TYPE_OBSOLETE:
+      log_fn(LOG_WARN, "Skipping obsolete configuration option '%s'", c->key);
+      break;
   }
   return 1;
 }
@@ -225,7 +229,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
 
     config_compare(list, "LogLevel",       CONFIG_TYPE_LINELIST, &options->LogOptions) ||
     config_compare(list, "LogFile",        CONFIG_TYPE_LINELIST, &options->LogOptions) ||
-    config_compare(list, "LinkPadding",    CONFIG_TYPE_BOOL, &options->LinkPadding) ||
+    config_compare(list, "LinkPadding",    CONFIG_TYPE_OBSOLETE, NULL) ||
 
     config_compare(list, "MaxConn",        CONFIG_TYPE_INT, &options->MaxConn) ||
     config_compare(list, "MaxOnionsPending",CONFIG_TYPE_INT, &options->MaxOnionsPending) ||
@@ -252,7 +256,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
     config_compare(list, "SocksBindAddress",CONFIG_TYPE_LINELIST,&options->SocksBindAddress) ||
     config_compare(list, "SocksPolicy",     CONFIG_TYPE_LINELIST,&options->SocksPolicy) ||
 
-    config_compare(list, "TrafficShaping", CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
+    config_compare(list, "TrafficShaping", CONFIG_TYPE_OBSOLETE, NULL) ||
 
     config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User)
 
@@ -1024,7 +1028,7 @@ const char *get_data_directory(or_options_t *options) {
   const char *d;
   if (options->DataDirectory)
     d = options->DataDirectory;
-  else if (server_mode()) {
+  else {
 #ifdef MS_WINDOWS
     char *p;
     p = tor_malloc(MAX_PATH);
@@ -1037,10 +1041,7 @@ const char *get_data_directory(or_options_t *options) {
 #else
     d = "~/.tor";
 #endif
-  } else
-    d = NULL; /* XXX008 don't create datadir until we have something
-                 we'll be putting in it */
-
+  }
   if (d && strncmp(d,"~/",2)==0) {
     char *fn = expand_filename(d);
     tor_free(options->DataDirectory);

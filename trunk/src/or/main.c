@@ -21,12 +21,17 @@ extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 or_options_t options; /**< Command-line and config-file options. */
 int global_read_bucket; /**< Max number of bytes I can read this second. */
+int global_write_bucket; /**< Max number of bytes I can write this second. */
 
 /** What was the read bucket before the last call to prepare_for_pool?
  * (used to determine how many bytes we've read). */
 static int stats_prev_global_read_bucket;
-/** How many bytes have we read since we started the process? */
+/** What was the write bucket before the last call to prepare_for_pool?
+ * (used to determine how many bytes we've written). */
+static int stats_prev_global_write_bucket;
+/** How many bytes have we read/written since we started the process? */
 static uint64_t stats_n_bytes_read = 0;
+static uint64_t stats_n_bytes_written = 0;
 /** How many seconds have we been running? */
 long stats_n_seconds_uptime = 0;
 
@@ -632,8 +637,10 @@ static int prepare_for_poll(void) {
   /* Check how much bandwidth we've consumed, and increment the token
    * buckets. */
   stats_n_bytes_read += stats_prev_global_read_bucket - global_read_bucket;
+  stats_n_bytes_written += stats_prev_global_write_bucket - global_write_bucket;
   connection_bucket_refill(&now);
   stats_prev_global_read_bucket = global_read_bucket;
+  stats_prev_global_write_bucket = global_write_bucket;
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
@@ -698,6 +705,7 @@ static int init_from_config(int argc, char **argv) {
   /* Set up our buckets */
   connection_bucket_init();
   stats_prev_global_read_bucket = global_read_bucket;
+  stats_prev_global_write_bucket = global_write_bucket;
 
   /* Finish backgrounding the process */
   if(options.RunAsDaemon) {
@@ -782,15 +790,8 @@ static int do_main_loop(void) {
   }
 
   /* load the routers file, or assign the defaults. */
-  if(options.RouterFile) {
-    routerlist_clear_trusted_directories();
-    if (router_load_routerlist_from_file(options.RouterFile, 1) < 0) {
-      log_fn(LOG_ERR,"Error loading router list.");
-      return -1;
-    }
-  } else {
-    if(config_assign_default_dirservers() < 0)
-      return -1;
+  if(router_reload_router_list()) {
+    return -1;
   }
 
   if(authdir_mode()) {

@@ -40,6 +40,37 @@ static routerlist_t *routerlist = NULL;
 
 extern int has_fetched_directory; /**< from main.c */
 
+/**
+ * Reload the original list of trusted dirservers, and the most recent
+ * cached directory (if present).
+ */
+int router_reload_router_list(void)
+{
+  char filename[512];
+  routerlist_clear_trusted_directories();
+  if (options.RouterFile) {
+    if (router_load_routerlist_from_file(options.RouterFile, 1) < 0) {
+      log_fn(LOG_ERR,"Error loading router list.");
+      return -1;
+    }
+  } else {
+    if (config_assign_default_dirservers() < 0)
+      return -1;
+  }
+  if (get_data_directory(&options)) {
+    char *s;
+    sprintf(filename,"%s/cached-directory", get_data_directory(&options));
+    s = read_file_to_str(filename);
+    if (s) {
+      log_fn(LOG_INFO, "Loading cached directory from %s", filename);
+      if (router_load_routerlist_from_string(s, 0) < 0) {
+        log_fn(LOG_WARN, "Cached directory was unparseable; ignoring.");
+      }
+    }
+  }
+  return 0;
+}
+
 /** Try to find a running dirserver. If there are no running dirservers
  * in our routerlist, set all the authoritative ones as running again,
  * and pick one. If there are no dirservers at all in our routerlist,
@@ -63,12 +94,8 @@ routerinfo_t *router_pick_directory_server(int requireauth, int requireothers) {
          options.FascistFirewall ? "reachable" : "known");
   has_fetched_directory=0; /* reset it */
   routerlist_clear_trusted_directories();
-  if(options.RouterFile) {
-    if(router_load_routerlist_from_file(options.RouterFile, 1) < 0)
-      return NULL;
-  } else {
-    if(config_assign_default_dirservers() < 0)
-      return NULL;
+  if(router_reload_router_list()) {
+    return NULL;
   }
   /* give it one last try */
   choice = router_pick_directory_server_impl(requireauth, requireothers, 0);

@@ -867,8 +867,6 @@ typedef struct {
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
   int MaxConn; /**< Maximum number of simultaneous connections. */
-  int TrafficShaping; /**< Unused. */
-  int LinkPadding; /**< Unused. */
   int IgnoreVersion; /**< If true, run no matter what versions of Tor the
                       * directory recommends. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
@@ -1392,6 +1390,7 @@ int is_legal_nickname_or_hexdigest(const char *s);
 
 /********************************* routerlist.c ***************************/
 
+int router_reload_router_list(void);
 routerinfo_t *router_pick_directory_server(int requireauth, int requireothers);
 int all_directory_servers_down(void);
 struct smartlist_t;
