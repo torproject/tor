@@ -1356,7 +1356,7 @@ get_next_token(const char **s, where_syntax where) {
     if (strncmp(next, "-----END RSA PUBLIC KEY-----\n", 29))
       RET_ERR("Malformed object: mismatched end line");
     next = strchr(next,'\n')+1;
-    tok->key = crypto_new_pk_env(CRYPTO_PK_RSA);
+    tok->key = crypto_new_pk_env();
     if (crypto_pk_read_public_key_from_string(tok->key, obstart, next-obstart))
       RET_ERR("Couldn't parse public key.");
     *s = next;
@@ -1490,7 +1490,7 @@ static int router_get_hash_impl(const char *s, char *digest,
   }
   ++end;
 
-  if (crypto_SHA_digest(start, end-start, digest)) {
+  if (crypto_digest(start, end-start, digest)) {
     log_fn(LOG_WARN,"couldn't compute digest");
     return -1;
   }

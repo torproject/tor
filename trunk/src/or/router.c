@@ -54,7 +54,7 @@ crypto_pk_env_t *init_key_from_file(const char *fname)
   int fd = -1;
   FILE *file = NULL;
 
-  if (!(prkey = crypto_new_pk_env(CRYPTO_PK_RSA))) {
+  if (!(prkey = crypto_new_pk_env())) {
     log(LOG_ERR, "Error creating crypto environment.");
     goto error;
   }

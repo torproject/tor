@@ -112,7 +112,7 @@ rend_service_descriptor_t *rend_parse_service_descriptor(
 
 int rend_get_service_id(crypto_pk_env_t *pk, char *out)
 {
-  char buf[CRYPTO_SHA1_DIGEST_LEN];
+  char buf[DIGEST_LEN];
   assert(pk);
   if (crypto_pk_get_digest(pk, buf) < 0)
     return -1;

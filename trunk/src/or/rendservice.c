@@ -352,7 +352,7 @@ rend_service_introduce(circuit_t *circuit, char *request, int request_len)
   }
   /* Next N bytes is encrypted with service key */
   len = crypto_pk_private_hybrid_decrypt(
-       service->private_key,request,request_len-20,buf, RSA_PKCS1_PADDING);
+       service->private_key,request,request_len-20,buf, PK_PKCS1_PADDING);
   if (len<0) {
     log_fn(LOG_WARN, "Couldn't decrypt INTRODUCE2 cell");
     return -1;
@@ -404,7 +404,7 @@ rend_service_introduce(circuit_t *circuit, char *request, int request_len)
   assert(launched->build_state);
   /* Fill in the circuit's state. */
   memcpy(launched->rend_pk_digest, circuit->rend_pk_digest,
-         CRYPTO_SHA1_DIGEST_LEN);
+         DIGEST_LEN);
   memcpy(launched->rend_cookie, r_cookie, REND_COOKIE_LEN);
   launched->build_state->pending_final_cpath = cpath =
     tor_malloc_zero(sizeof(crypt_path_t));
@@ -442,7 +442,7 @@ rend_service_launch_establish_intro(rend_service_t *service, char *nickname)
            nickname);
     return -1;
   }
-  memcpy(launched->rend_pk_digest, service->pk_digest, CRYPTO_SHA1_DIGEST_LEN);
+  memcpy(launched->rend_pk_digest, service->pk_digest, DIGEST_LEN);
 
   return 0;
 }
@@ -456,7 +456,7 @@ rend_service_intro_is_ready(circuit_t *circuit)
   rend_service_t *service;
   int len, r;
   char buf[RELAY_PAYLOAD_SIZE];
-  char auth[CRYPTO_SHA1_DIGEST_LEN + 10];
+  char auth[DIGEST_LEN + 10];
   char hexid[9];
 
   assert(circuit->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
@@ -479,9 +479,9 @@ rend_service_intro_is_ready(circuit_t *circuit)
                               RELAY_PAYLOAD_SIZE-2);
   set_uint16(buf, len);
   len += 2;
-  memcpy(auth, circuit->cpath->prev->handshake_digest, CRYPTO_SHA1_DIGEST_LEN);
-  memcpy(auth+CRYPTO_SHA1_DIGEST_LEN, "INTRODUCE", 9);
-  if (crypto_SHA_digest(auth, CRYPTO_SHA1_DIGEST_LEN+9, buf+len))
+  memcpy(auth, circuit->cpath->prev->handshake_digest, DIGEST_LEN);
+  memcpy(auth+DIGEST_LEN, "INTRODUCE", 9);
+  if (crypto_digest(auth, DIGEST_LEN+9, buf+len))
     goto err;
   len += 20;
   r = crypto_pk_private_sign_digest(service->private_key, buf, len, buf+len);
@@ -543,7 +543,7 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
     goto err;
   }
   memcpy(buf+REND_COOKIE_LEN+DH_KEY_LEN, hop->handshake_digest,
-         CRYPTO_SHA1_DIGEST_LEN);
+         DIGEST_LEN);
 
   /* Send the cell */
   if (connection_edge_send_command(NULL, circuit, RELAY_COMMAND_RENDEZVOUS1,

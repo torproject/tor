@@ -55,6 +55,7 @@ static int tls_library_is_initialized = 0;
 /* These functions are declared in crypto.c but not exported. */
 EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env);
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
+DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
 
 static void
 tls_log_errors(int severity, const char *doing)
@@ -261,7 +262,7 @@ tor_tls_context_new(crypto_pk_env_t *rsa,
     }
   }
   dh = crypto_dh_new();
-  SSL_CTX_set_tmp_dh(result->ctx, dh->dh);
+  SSL_CTX_set_tmp_dh(result->ctx, _crypto_dh_env_get_dh(dh));
   crypto_dh_free(dh);
   SSL_CTX_set_verify(result->ctx, SSL_VERIFY_PEER,
                      always_accept_verify_cb);

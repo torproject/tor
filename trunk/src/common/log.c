@@ -3,6 +3,8 @@
 /* $Id$ */
 
 #include "../or/or.h"
+#include <stdarg.h>
+
 #ifdef MS_WINDOWS
 #define vsnprintf _vsnprintf
 #endif

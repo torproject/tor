@@ -122,10 +122,10 @@ void onion_pending_remove(circuit_t *circ) {
 
 /* given a response payload and keys, initialize, then send a created cell back */
 int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys) {
-  unsigned char iv[16];
+  unsigned char iv[CIPHER_IV_LEN];
   cell_t cell;
 
-  memset(iv, 0, 16);
+  memset(iv, 0, CIPHER_IV_LEN);
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_CREATED;
@@ -139,25 +139,23 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
 
   log_fn(LOG_INFO,"init digest forward 0x%.8x, backward 0x%.8x.",
          (unsigned int)*(uint32_t*)(keys), (unsigned int)*(uint32_t*)(keys+20));
-  circ->n_digest = crypto_new_digest_env(CRYPTO_SHA1_DIGEST);
-  crypto_digest_add_bytes(circ->n_digest, keys, 20);
-  circ->p_digest = crypto_new_digest_env(CRYPTO_SHA1_DIGEST);
-  crypto_digest_add_bytes(circ->p_digest, keys+20, 20);
+  circ->n_digest = crypto_new_digest_env();
+  crypto_digest_add_bytes(circ->n_digest, keys, DIGEST_LEN);
+  circ->p_digest = crypto_new_digest_env();
+  crypto_digest_add_bytes(circ->p_digest, keys+DIGEST_LEN, DIGEST_LEN);
 
   log_fn(LOG_DEBUG,"init cipher forward 0x%.8x, backward 0x%.8x.",
          (unsigned int)*(uint32_t*)(keys+40), (unsigned int)*(uint32_t*)(keys+40+16));
-  if (!(circ->n_crypto =
-        crypto_create_init_cipher(CIRCUIT_CIPHER,keys+40,iv,0))) {
+  if (!(circ->n_crypto = crypto_create_init_cipher(keys+40,iv,0))) {
     log_fn(LOG_WARN,"Cipher initialization failed (n).");
     return -1;
   }
-  if (!(circ->p_crypto =
-        crypto_create_init_cipher(CIRCUIT_CIPHER,keys+40+16,iv,1))) {
+  if (!(circ->p_crypto = crypto_create_init_cipher(keys+40+16,iv,1))) {
     log_fn(LOG_WARN,"Cipher initialization failed (p).");
     return -1;
   }
 
-  memcpy(circ->handshake_digest, cell.payload+DH_KEY_LEN, CRYPTO_SHA1_DIGEST_LEN);
+  memcpy(circ->handshake_digest, cell.payload+DH_KEY_LEN, DIGEST_LEN);
 
   connection_or_write_cell_to_buf(&cell, circ->p_conn);
   log_fn(LOG_DEBUG,"Finished sending 'created' cell.");
@@ -605,13 +603,13 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
 
   /* set meeting point, meeting cookie, etc here. Leave zero for now. */
 
-  cipher = crypto_create_init_cipher(ONION_CIPHER, challenge, iv, 1);
+  cipher = crypto_create_init_cipher(challenge, iv, 1);
 
   if (!cipher)
     goto err;
 
   if (crypto_pk_public_encrypt(dest_router_key, challenge, pkbytes,
-                               onion_skin_out, RSA_NO_PADDING)==-1)
+                               onion_skin_out, PK_NO_PADDING)==-1)
     goto err;
 
   if (crypto_cipher_encrypt(cipher, challenge+pkbytes, ONIONSKIN_CHALLENGE_LEN-pkbytes,
@@ -655,7 +653,7 @@ onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes *
 
   if (crypto_pk_private_decrypt(private_key,
                                 onion_skin, pkbytes,
-                                challenge, RSA_NO_PADDING) == -1)
+                                challenge, PK_NO_PADDING) == -1)
     goto err;
 
 #ifdef DEBUG_ONION_SKINS
@@ -664,7 +662,7 @@ onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes *
   puts("");
 #endif
 
-  cipher = crypto_create_init_cipher(ONION_CIPHER, challenge, iv, 0);
+  cipher = crypto_create_init_cipher(challenge, iv, 0);
 
   if (crypto_cipher_decrypt(cipher, onion_skin+pkbytes, ONIONSKIN_CHALLENGE_LEN-pkbytes,
                             challenge+pkbytes))
