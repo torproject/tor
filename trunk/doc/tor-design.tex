@@ -1135,8 +1135,8 @@ We also worry about attacks to deceive a
 client about the router membership list, topology, or current network
 state. Such \emph{partitioning attacks} on client knowledge help an
 adversary to efficiently deploy resources
-when attacking a target.
-% XXX Cite for partitioning attacks?
+when attacking a target \cite{minion-design}.
+
 
 Tor uses a small group of redundant, well-known onion routers to
 track changes in network topology and node state, including keys and
@@ -1896,8 +1896,7 @@ retrieval presents a scaling problem, since clients currently
 download a description of the entire network state every 15
 minutes.  As the state grows larger and clients more numerous, we
 may need to move to a solution in which clients only receive
-incremental updates to directory state, or where directories are
-cached at the ORs to avoid high loads on the directory servers.
+incremental updates to directory state.
 
 \emph{Implementing location-hidden servers:} While
 Section~\ref{sec:rendezvous} describes a design for rendezvous
