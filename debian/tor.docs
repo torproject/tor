@@ -11,3 +11,4 @@ doc/tor-doc.css
 doc/tor-doc.html
 doc/rend-spec.txt
 doc/tor-spec.txt
+doc/control-spec.txt
