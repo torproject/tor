@@ -999,10 +999,23 @@ int crypto_rand(unsigned int n, unsigned char *to)
   return (RAND_bytes(to, n) != 1);
 }
 
-int crypto_pseudo_rand(unsigned int n, unsigned char *to)
+void crypto_pseudo_rand(unsigned int n, unsigned char *to)
 {
   assert(to);
-  return (RAND_pseudo_bytes(to, n) == -1);
+  if (RAND_pseudo_bytes(to, n) == -1) {
+    log_fn(LOG_ERR, "RAND_pseudo_bytes failed unexpectedly.");
+    exit(1);
+  }
+}
+
+int crypto_pseudo_rand_int(int max) {
+  unsigned int val;
+  crypto_pseudo_rand(sizeof(val), (unsigned char*) &val);
+  /* Bug: Low values are _slightly_ favored over high values because
+   * ((unsigned)-1)%max != max-1 .  This shouldn't matter if max is
+   * significantly smaller than ((unsigned)-1).
+   **/
+  return val % max;
 }
 
 /* errors */

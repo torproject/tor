@@ -608,11 +608,8 @@ static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *
   assert(ap_conn->socks_request);
   assert(ap_conn->socks_request->addr);
 
-  if(crypto_pseudo_rand(STREAM_ID_SIZE, ap_conn->stream_id) < 0) {
-    /* XXX can we just make this call abort if it fails? then this func could be a void. */
-    /* FIXME check for collisions */
-    return -1;
-  }
+  crypto_pseudo_rand(STREAM_ID_SIZE, ap_conn->stream_id);
+  /* FIXME check for collisions */
 
   memcpy(payload, ap_conn->stream_id, STREAM_ID_SIZE);
   payload_len = STREAM_ID_SIZE + 1 +
