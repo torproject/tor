@@ -343,7 +343,7 @@ int dnsworker_main(void *data) {
     }
     assert(question_len > 0);
 
-    if(read(fd, question, question_len) != question_len) {
+    if(read_all(fd, question, question_len) != question_len) {
       log(LOG_INFO,"dnsworker_main(): read hostname failed. Exiting.");
       spawn_exit();
     }

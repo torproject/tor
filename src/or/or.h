@@ -330,10 +330,6 @@ struct connection_t {
   char read_username; /* have i read the username yet? */
   char *dest_addr; /* what address and port are this stream's destination? */
   uint16_t dest_port; /* host order */
-
-/* Used only by worker connections: */
-  int num_processed; /* statistics kept by dns worker */
-  struct circuit_t *circ; /* by cpu worker to know who he's working for */
 };
 
 typedef struct connection_t connection_t;
@@ -716,7 +712,7 @@ int onion_pending_add(circuit_t *circ);
 circuit_t *onion_next_task(void);
 void onion_pending_remove(circuit_t *circ);
 
-int onionskin_process(circuit_t *circ, unsigned char *payload, unsigned char *keys);
+int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
 
 /* uses a weighted coin with weight cw to choose a route length */
 int chooselen(double cw);
