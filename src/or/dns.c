@@ -191,7 +191,6 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   return 0;
 }
 
-
 void connection_dns_remove(connection_t *conn)
 {
   struct pending_connection_t *pend, *victim;
@@ -233,9 +232,8 @@ void connection_dns_remove(connection_t *conn)
   }
 }
 
-/* If onlyconn is NULL, cancel all pending connections. If onlyconn is
- * defined, then remove onlyconn from the pending list.  Does not cancel the
- * resolve itself, or remove the 'struct cached_resolve' from the cache.
+/* Cancel all pending connections. Then cancel the resolve itself,
+ * and remove the 'struct cached_resolve' from the cache.
  */
 void dns_cancel_pending_resolve(char *address) {
   struct pending_connection_t *pend;
@@ -284,7 +282,6 @@ void dns_cancel_pending_resolve(char *address) {
   SPLAY_REMOVE(cache_tree, &cache_root, resolve);
 
   free(resolve);
-
 }
 
 static void dns_found_answer(char *address, uint32_t addr) {
