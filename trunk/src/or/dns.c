@@ -16,15 +16,12 @@
 #define MIN_DNSWORKERS 3
 #define MAX_IDLE_DNSWORKERS 10
 
+#define DNS_RESOLVE_FAILED_TRANSIENT 1
+#define DNS_RESOLVE_FAILED_PERMANENT 2
+#define DNS_RESOLVE_SUCCEEDED 3
+
 int num_dnsworkers=0;
 int num_dnsworkers_busy=0;
-
-static void purge_expired_resolves(uint32_t now);
-static int assign_to_dnsworker(connection_t *exitconn);
-static void dns_found_answer(char *address, uint32_t addr);
-int dnsworker_main(void *data);
-static int spawn_dnsworker(void);
-static void spawn_enough_dnsworkers(void);
 
 struct pending_connection_t {
   struct connection_t *conn;
@@ -43,6 +40,14 @@ struct cached_resolve {
   struct pending_connection_t *pending_connections;
   struct cached_resolve *next;
 };
+
+static void purge_expired_resolves(uint32_t now);
+static int assign_to_dnsworker(connection_t *exitconn);
+static void dns_purge_resolve(struct cached_resolve *resolve);
+static void dns_found_answer(char *address, uint32_t addr, char outcome);
+int dnsworker_main(void *data);
+static int spawn_dnsworker(void);
+static void spawn_enough_dnsworkers(void);
 
 static SPLAY_HEAD(cache_tree, cached_resolve) cache_root;
 
@@ -238,7 +243,7 @@ void connection_dns_remove(connection_t *conn)
 void dns_cancel_pending_resolve(char *address) {
   struct pending_connection_t *pend;
   struct cached_resolve search;
-  struct cached_resolve *resolve, *tmp;
+  struct cached_resolve *resolve;
   connection_t *pendconn;
 
   strncpy(search.address, address, MAX_ADDRESSLEN);
@@ -266,6 +271,12 @@ void dns_cancel_pending_resolve(char *address) {
     tor_free(pend);
   }
 
+  dns_purge_resolve(resolve);
+}
+
+static void dns_purge_resolve(struct cached_resolve *resolve) {
+  struct cached_resolve *tmp;
+
   /* remove resolve from the linked list */
   if(resolve == oldest_cached_resolve) {
     oldest_cached_resolve = resolve->next;
@@ -287,7 +298,7 @@ void dns_cancel_pending_resolve(char *address) {
   tor_free(resolve);
 }
 
-static void dns_found_answer(char *address, uint32_t addr) {
+static void dns_found_answer(char *address, uint32_t addr, char outcome) {
   struct pending_connection_t *pend;
   struct cached_resolve search;
   struct cached_resolve *resolve;
@@ -316,7 +327,7 @@ static void dns_found_answer(char *address, uint32_t addr) {
   /* assert(resolve->state == CACHE_STATE_PENDING); */
 
   resolve->addr = ntohl(addr);
-  if(resolve->addr)
+  if(outcome == DNS_RESOLVE_SUCCEEDED)
     resolve->state = CACHE_STATE_VALID;
   else
     resolve->state = CACHE_STATE_FAILED;
@@ -337,6 +348,10 @@ static void dns_found_answer(char *address, uint32_t addr) {
     resolve->pending_connections = pend->next;
     tor_free(pend);
   }
+
+  if(outcome == DNS_RESOLVE_FAILED_TRANSIENT) { /* remove from cache */
+    dns_purge_resolve(resolve);
+  }
 }
 
 /******************************************************************/
@@ -348,6 +363,7 @@ int connection_dns_finished_flushing(connection_t *conn) {
 }
 
 int connection_dns_process_inbuf(connection_t *conn) {
+  char answer[5];
   uint32_t addr;
 
   assert(conn && conn->type == CONN_TYPE_DNSWORKER);
@@ -364,16 +380,19 @@ int connection_dns_process_inbuf(connection_t *conn) {
   }
 
   assert(conn->state == DNSWORKER_STATE_BUSY);
-  if(buf_datalen(conn->inbuf) < 4) /* entire answer available? */
+  if(buf_datalen(conn->inbuf) < 5) /* entire answer available? */
     return 0; /* not yet */
-  assert(buf_datalen(conn->inbuf) == 4);
+  assert(buf_datalen(conn->inbuf) == 5);
 
-  connection_fetch_from_buf((char*)&addr,sizeof(addr),conn);
+  connection_fetch_from_buf(answer,sizeof(answer),conn);
+  addr = *(uint32_t*)(answer+1);
 
   log_fn(LOG_DEBUG, "DNSWorker (fd %d) returned answer for '%s'",
          conn->s, conn->address);
 
-  dns_found_answer(conn->address, addr);
+  assert(answer[0] >= DNS_RESOLVE_FAILED_TRANSIENT);
+  assert(answer[0] <= DNS_RESOLVE_SUCCEEDED);
+  dns_found_answer(conn->address, addr, answer[0]);
 
   tor_free(conn->address);
   conn->address = tor_strdup("<idle>");
@@ -386,6 +405,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
 int dnsworker_main(void *data) {
   char address[MAX_ADDRESSLEN];
   unsigned char address_len;
+  char answer[5];
   struct hostent *rent;
   int *fdarray = data;
   int fd;
@@ -398,7 +418,6 @@ int dnsworker_main(void *data) {
   for(;;) {
 
     if(recv(fd, &address_len, 1, 0) != 1) {
-//      log_fn(LOG_INFO,"read length failed. Child exiting.");
       log_fn(LOG_INFO,"dnsworker exiting because tor process died.");
       spawn_exit();
     }
@@ -412,18 +431,23 @@ int dnsworker_main(void *data) {
 
     rent = gethostbyname(address);
     if (!rent) {
-      log_fn(LOG_INFO,"Could not resolve dest addr %s. Returning nulls.",address);
-      if(write_all(fd, "\0\0\0\0", 4, 1) != 4) {
-        log_fn(LOG_ERR,"writing nulls failed. Child exiting.");
-        spawn_exit();
+      if(h_errno == TRY_AGAIN) { /* transient error -- don't cache it */
+        log_fn(LOG_INFO,"Could not resolve dest addr %s (transient).",address);
+        answer[0] = DNS_RESOLVE_FAILED_TRANSIENT;
+      } else { /* permanent error, can be cached */
+        log_fn(LOG_INFO,"Could not resolve dest addr %s (permanent).",address);
+        answer[0] = DNS_RESOLVE_FAILED_PERMANENT;
       }
+      memset(answer+1,0,4);
     } else {
       assert(rent->h_length == 4); /* break to remind us if we move away from ipv4 */
-      if(write_all(fd, rent->h_addr, 4, 1) != 4) {
-        log_fn(LOG_INFO,"writing answer failed. Child exiting.");
-        spawn_exit();
-      }
+      answer[0] = DNS_RESOLVE_SUCCEEDED;
+      memcpy(answer+1, rent->h_addr, 4);
       log_fn(LOG_INFO,"Resolved address '%s'.",address);
+    }
+    if(write_all(fd, answer, 5, 1) != 5) {
+      log_fn(LOG_ERR,"writing answer failed. Child exiting.");
+      spawn_exit();
     }
   }
   return 0; /* windows wants this function to return an int */
