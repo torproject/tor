@@ -1170,22 +1170,27 @@ int routers_update_status_from_entry(smartlist_t *routers,
   return 0;
 }
 
-int router_update_status_from_smartlist(routerinfo_t *router,
-                                        time_t list_time,
-                                        smartlist_t *running_list,
-                                        int rr_format)
+/** As router_update_status_from_entry, but consider all entries in
+ * running_list. */
+int
+router_update_status_from_smartlist(routerinfo_t *router,
+                                    time_t list_time,
+                                    smartlist_t *running_list,
+                                    int rr_format)
 {
   smartlist_t *rl;
   rl = smartlist_create();
   smartlist_add(rl,router);
   SMARTLIST_FOREACH(running_list, const char *, cp,
             routers_update_status_from_entry(rl,list_time,cp,rr_format));
-                                                
   smartlist_free(rl);
   return 0;
 }
 
-void add_trusted_dir_server(const char *address, uint16_t port, const char *digest)
+/** Add to the list of authorized directory servers one at
+ * <b>address</b>:<b>port</b>, with identity key <b>digest</b>. */
+void
+add_trusted_dir_server(const char *address, uint16_t port, const char *digest)
 {
   trusted_dir_server_t *ent;
   uint32_t a;
