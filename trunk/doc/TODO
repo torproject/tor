@@ -34,7 +34,7 @@ R       - figure out enclaves, e.g. so we know what to recommend that people
         X We should set things in options to NULL, not rely on memset(...0)
           being equivalent.
           o We should check for memset(0) setting things to NULL with autoconf,
-	    and then rely on it in the code.
+            and then rely on it in the code.
         - Once we have a trusted directory on port 80, stop falling back to
           forbidden ports when fascistfirewall blocks all good dirservers.
 
@@ -55,6 +55,12 @@ N       - add ipv6 support.
 R       - learn from ben about his openssl-reinitialization-trick to
           rotate tls keys without making new connections.
           - (Roger grabs Ben next time he sees him on IRC) 
+        - christian grothoff's attack of infinite-length circuit.
+          the solution is to have a separate 'extend-data' cell type
+          which is used for the first N data cells, and only
+          extend-data cells can be extend requests.
+        - have a pool of circuits available, cannibalize them
+          for your purposes (e.g. rendezvous, etc).
 
         D nt services on win32.
 
@@ -65,10 +71,6 @@ R       - learn from ben about his openssl-reinitialization-trick to
                 o Specify
                 o Implement parsing
                 - Generate new formats (Not till 007 is dead)
-        - christian grothoff's attack of infinite-length circuit.
-          the solution is to have a separate 'extend-data' cell type
-          which is used for the first N data cells, and only
-          extend-data cells can be extend requests.
         - make loglevel info less noisy
         - Make command-line strict about checking options; make only certain
           option prefixes work.
@@ -86,8 +88,6 @@ R       - learn from ben about his openssl-reinitialization-trick to
 * Don't worry about this for now
         - Handle full buffers without totally borking
 * do this eventually, no rush.
-        - have a pool of circuits available, cannibalize them
-          for your purposes (e.g. rendezvous, etc).
         - do resolve before trying to attach the stream
 * don't do this for now.
         - if destination IP is running a tor node, extend a circuit there
@@ -96,23 +96,23 @@ R       - learn from ben about his openssl-reinitialization-trick to
         - Support egd or other non-OS-integrated strong entropy sources
 
       more features, complex:
-        - Switch dirservers entries to config lines:
-          - read in and parse each TrustedDir config line.
-          - stop reading dirservers file.
-          - add some default TrustedDir lines if none defined, or if
+        - password protection for on-disk identity key
+        . Switch dirservers entries to config lines:
+          o read in and parse each TrustedDir config line.
+          o stop reading dirservers file.
+          o add some default TrustedDir lines if none defined, or if
             no torrc.
           - remove notion of ->is_trusted_dir from the routerlist. that's
             no longer where you look.
             - clean up router parsing flow, since it's simpler now?
-          - when checking signature on a directory, look it up in
+          o when checking signature on a directory, look it up in
             options.TrustedDirs, and make sure there's a descriptor
             with that nickname, whose key hashes to the fingerprint,
             and who correctly signed the directory.
-* nick will do the above
-          - when fetching a directory, if you want a trusted one,
+          o when fetching a directory, if you want a trusted one,
             choose from the trusteddir list.
-            - which means keeping track of which ones are "up"
-          - if you don't need a trusted one, choose from the routerinfo
+            o which means keeping track of which ones are "up"
+          ? if you don't need a trusted one, choose from the routerinfo
             list if you have one, else from the trusteddir list.
 * roger will do the above
         - add a listener for a ui
