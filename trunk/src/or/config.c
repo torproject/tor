@@ -165,7 +165,7 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "ExitNodes",      CONFIG_TYPE_STRING, &options->ExitNodes) ||
     config_compare(list, "EntryNodes",     CONFIG_TYPE_STRING, &options->EntryNodes) ||
     config_compare(list, "ExitPolicy",     CONFIG_TYPE_STRING, &options->ExitPolicy) ||
-    config_compare(list, "ExcludedNodes",  CONFIG_TYPE_STRING, &options->ExcludedNodes) ||
+    config_compare(list, "ExcludeNodes",   CONFIG_TYPE_STRING, &options->ExcludeNodes) ||
 
     config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
 
@@ -352,7 +352,7 @@ static void free_options(or_options_t *options) {
   tor_free(options->PidFile);
   tor_free(options->ExitNodes);
   tor_free(options->EntryNodes);
-  tor_free(options->ExcludedNodes);
+  tor_free(options->ExcludeNodes);
   tor_free(options->ExitPolicy);
   tor_free(options->SocksBindAddress);
   tor_free(options->ORBindAddress);
@@ -368,7 +368,7 @@ static void init_options(or_options_t *options) {
   options->LogLevel = tor_strdup("warn");
   options->ExitNodes = tor_strdup("");
   options->EntryNodes = tor_strdup("");
-  options->ExcludedNodes = tor_strdup("");
+  options->ExcludeNodes = tor_strdup("");
   options->ExitPolicy = tor_strdup("");
   options->SocksBindAddress = tor_strdup("127.0.0.1");
   options->ORBindAddress = tor_strdup("0.0.0.0");

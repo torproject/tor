@@ -298,7 +298,7 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   add_nickname_list_to_smartlist(preferredexits,options.ExitNodes);
 
   excludedexits = smartlist_create(MAX_ROUTERS_IN_DIR);
-  add_nickname_list_to_smartlist(excludedexits,options.ExcludedNodes);
+  add_nickname_list_to_smartlist(excludedexits,options.ExcludeNodes);
 
   sl = smartlist_create(MAX_ROUTERS_IN_DIR);
 
@@ -445,7 +445,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
          state->desired_path_len);
 
   excludednodes = smartlist_create(MAX_ROUTERS_IN_DIR);
-  add_nickname_list_to_smartlist(excludednodes,options.ExcludedNodes);
+  add_nickname_list_to_smartlist(excludednodes,options.ExcludeNodes);
 
   if(cur_len == state->desired_path_len - 1) { /* Picking last node */
     log_fn(LOG_DEBUG, "Contemplating last hop: choice already made: %s",
