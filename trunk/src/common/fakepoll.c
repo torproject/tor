@@ -60,6 +60,7 @@ tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
         for (idx = 0; idx < nfds; ++idx) {
                 ufds[idx].revents = 0;
                 fd = ufds[idx].fd;
+                assert (fd >= 0);
                 if (fd > maxfd) {
                   maxfd = fd;
 #ifdef MS_WINDOWS
