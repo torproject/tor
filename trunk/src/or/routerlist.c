@@ -1159,6 +1159,7 @@ void add_trusted_dir_server(const char *addr, uint16_t port, const char *digest)
   ent->dir_port = port;
   ent->is_running = 1;
   memcpy(ent->digest, digest, DIGEST_LEN);
+  smartlist_add(trusted_dir_servers, ent);
 }
 
 static void clear_trusted_dir_servers(void)
