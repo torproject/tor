@@ -420,6 +420,9 @@ create_onion_cipher(int cipher_type, char *key, char *iv, int encrypt_mode)
     case ONION_CIPHER_DES:
       cipher_type = CRYPTO_CIPHER_DES;
       break;
+    case ONION_CIPHER_3DES:
+      cipher_type = CRYPTO_CIPHER_3DES;
+      break;
     case ONION_CIPHER_RC4 :
       cipher_type = CRYPTO_CIPHER_RC4;
       break;
@@ -624,8 +627,8 @@ int encrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *pkey
 
   log(LOG_DEBUG,"encrypt_onion() : RSA encrypted first 128 bytes of the onion."); 
     
-  /* now encrypt the rest with DES OFB */
-  crypt_env = crypto_create_init_cipher(CRYPTO_CIPHER_DES, digest, iv, 1);
+  /* now encrypt the rest with 3DES OFB */
+  crypt_env = crypto_create_init_cipher(CRYPTO_CIPHER_3DES, digest, iv, 1);
   if (!crypt_env) {
     log(LOG_ERR,"Error creating the crypto environment.");
     goto error;
@@ -635,7 +638,7 @@ int encrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *pkey
     log(LOG_ERR,"Error performing DES encryption:%s",crypto_perror()); 
     goto error;
   }
-  log(LOG_DEBUG,"encrypt_onion() : DES OFB encrypted the rest of the onion.");
+  log(LOG_DEBUG,"encrypt_onion() : 3DES OFB encrypted the rest of the onion.");
     
   /* now copy tmpbuf to onion */
   memcpy(onion,tmpbuf,onionlen);
@@ -687,8 +690,8 @@ int decrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *prke
   }
   log(LOG_DEBUG,"decrypt_onion() : Computed DES key.");
     
-  /* now decrypt the rest with DES OFB */
-  crypt_env = crypto_create_init_cipher(CRYPTO_CIPHER_DES, digest, iv, 0);
+  /* now decrypt the rest with 3DES OFB */
+  crypt_env = crypto_create_init_cipher(CRYPTO_CIPHER_3DES, digest, iv, 0);
   if (!crypt_env) {
     log(LOG_ERR,"Error creating crypto environment");
     goto error;

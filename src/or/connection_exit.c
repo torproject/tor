@@ -5,13 +5,43 @@
 #include "or.h"
 
 int connection_exit_process_inbuf(connection_t *conn) {
+  circuit_t *circ;
+  cell_t cell;
 
   assert(conn && conn->type == CONN_TYPE_EXIT);
 
   if(conn->inbuf_reached_eof) {
+#if 1
+    /* XXX!!! If this is right, duplicate it in connection_ap.c */
+
+    /* eof reached; we're done reading, but we might want to write more. */ 
+    conn->done_receiving = 1;
+    shutdown(conn->s, 0); /* XXX check return, refactor NM */
+    if (conn->done_sending)
+      conn->marked_for_close = 1;
+
+    /* XXX Factor out common logic here and in circuit_about_to_close NM */
+    circ = circuit_get_by_conn(conn);
+    if (!circ)
+      return -1;
+    
+    memset(&cell, 0, sizeof(cell_t));
+    cell.command = CELL_DATA;
+    cell.length = TOPIC_HEADER_SIZE;
+    *(uint16_t *)(cell.payload+2) = htons(conn->topic_id);
+    *cell.payload = TOPIC_COMMAND_END;
+    cell.aci = circ->p_aci;
+    if (circuit_deliver_data_cell_from_edge(&cell, circ, EDGE_EXIT) < 0) {
+      log(LOG_DEBUG,"connection_exit_process_inbuf: circuit_deliver_data_cell_from_edge failed.  Closing");
+      circuit_close(circ);
+    }
+    return 0;
+#else 
+
     /* eof reached, kill it. */
     log(LOG_DEBUG,"connection_exit_process_inbuf(): conn reached eof. Closing.");
     return -1;
+#endif
   }
 
   log(LOG_DEBUG,"connection_exit_process_inbuf(): state %d.",conn->state);
@@ -62,6 +92,10 @@ int connection_exit_finished_flushing(connection_t *conn) {
       /* FIXME down the road, we'll clear out circuits that are pending to close */
       log(LOG_DEBUG,"connection_exit_finished_flushing(): finished flushing.");
       connection_stop_writing(conn);
+#ifdef USE_ZLIB
+      if (connection_decompress_to_buf(NULL, 0, conn, Z_SYNC_FLUSH) < 0)
+        return 0;
+#endif
       connection_consider_sending_sendme(conn, EDGE_EXIT);
       return 0;
     default:
@@ -219,8 +253,8 @@ int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ) {
       log(LOG_DEBUG,"connection_exit_process_data_cell(): put %d bytes on outbuf.",cell->length - TOPIC_HEADER_SIZE);
 #ifdef USE_ZLIB
       if(connection_decompress_to_buf(cell->payload + TOPIC_HEADER_SIZE,
-				      cell->length - TOPIC_HEADER_SIZE, 
-				      conn, Z_SYNC_FLUSH) < 0) {
+                                      cell->length - TOPIC_HEADER_SIZE, 
+                                      conn, Z_SYNC_FLUSH) < 0) {
         log(LOG_INFO,"connection_exit_process_data_cell(): write to buf failed. Marking for close.");
         conn->marked_for_close = 1;
         return 0;
@@ -255,9 +289,9 @@ int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ) {
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */
       if (conn->done_receiving)
-	conn->marked_for_close = 1;
+        conn->marked_for_close = 1;
 #endif
-	
+        
       conn->marked_for_close = 1;
       break;
     case TOPIC_COMMAND_CONNECTED:
