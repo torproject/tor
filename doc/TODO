@@ -11,6 +11,41 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
+Agenda to be resolved:
+  remove truncate, truncated from spec?
+  remove exit-from-middle from spec?
+  add a bit of long-range dummy traffic -- talk to matt
+  instrument 'connected' cell.
+  find some way to report whether bandwidth limit is being hit.
+  begin reputation architecture: kill -USR2 prints opinions about nodes.
+  put IPs in directory, not hostnames. keeps OPs from stalling on resolves.
+  key rotation:
+    tls key rotation
+      symmetric and asymmetric
+    onion key rotation
+    others?
+  Advanced directory servers
+    Figure out how to do threshold directory servers
+    "secondary" directory servers?
+      what does it mean for a directory to be valid? do they expire?
+  productization:
+    preferential per-connection bandwidth limiting
+    pre- or post- tls alternate auth mechanisms.
+    what we could get from windows developers.
+  Look at having smallcells and largecells
+  Rendezvous point design and spec.
+  Non-clique topologies -- easy to implement, hard to decide topology.
+  Certification/accreditation
+  Extensible spec:
+    - e.g. 'router' line more flexible in descriptor
+    - split spec file into mini spec files? finalize some, leave others open?
+  Usability
+    - e.g. if no torrc, use acceptable defaults.
+  Synchronous design?
+  Helper nodes?
+  Interoperability with morphmix
+  plan the codecon talk.
+
 Bugs:
         - Sometimes it picks a middleman node as the exit for a circuit.
         - if you specify a non-dirserver as exitnode or entrynode, when it
@@ -136,7 +171,7 @@ NICK            . Handle half-open connections
 NICK    . Daemonize and package
                 o Teach it to fork and background
                 - Red Hat spec file
-                - Debian spec file equivalent
+                o Debian spec file equivalent
         . Portability
                 . Which .h files are we actually using?
                 . Port to:
