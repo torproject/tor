@@ -408,6 +408,7 @@ typedef struct {
    char *DataDirectory;
    char *RouterFile;
    char *Nickname;
+   char *Address;
    double CoinWeight;
    int Daemon;
    int ORPort;
