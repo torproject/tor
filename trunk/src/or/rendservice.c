@@ -657,10 +657,14 @@ int rend_services_init(void) {
   rend_service_t *service;
   char *desc, *intro;
   int changed, prev_intro_nodes, desc_len;
-  smartlist_t *intro_routers;
+  smartlist_t *intro_routers, *exclude_routers;
+  int n_old_routers;
 
   router_get_routerlist(&rl);
   intro_routers = smartlist_create();
+  exclude_routers = smartlist_create();
+  router_add_nonrendezvous_to_list(exclude_routers);
+  n_old_routers = smartlist_len(exclude_routers);
 
   for (i=0; i< smartlist_len(rend_service_list); ++i) {
     smartlist_clear(intro_routers);
@@ -688,12 +692,13 @@ int rend_services_init(void) {
     /* Remember how many introduction circuits we started with. */
     prev_intro_nodes = smartlist_len(service->intro_nodes);
 
+    smartlist_add_all(exclude_routers, intro_routers);
     /* The directory is now here. Pick three ORs as intro points. */
     for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
       router = router_choose_random_node(rl,
                                          service->intro_prefer_nodes,
                                          service->intro_exclude_nodes,
-                                         intro_routers);
+                                         exclude_routers);
       if (!router) {
         log_fn(LOG_WARN, "Can't establish more than %d introduction points",
                smartlist_len(service->intro_nodes));
@@ -701,8 +706,13 @@ int rend_services_init(void) {
       }
       changed = 1;
       smartlist_add(intro_routers, router);
+      smartlist_add(exclude_routers, router);
       smartlist_add(service->intro_nodes, tor_strdup(router->nickname));
     }
+
+    /* Reset exclude_routers to include obsolete routers only for the next
+     * time around the loop. */
+    smartlist_truncate(exclude_routers, n_old_routers);
 
     /* If there's no need to republish, stop here. */
     if (!changed)
@@ -731,6 +741,7 @@ int rend_services_init(void) {
     }
   }
   smartlist_free(intro_routers);
+  smartlist_free(exclude_routers);
 
   return 0;
 }

@@ -103,19 +103,21 @@ smartlist_t *smartlist_create();
 void smartlist_free(smartlist_t *sl);
 void smartlist_set_capacity(smartlist_t *sl, int n);
 void smartlist_clear(smartlist_t *sl);
+void smartlist_truncate(smartlist_t *sl, int n);
 void smartlist_add(smartlist_t *sl, void *element);
+void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2);
 void smartlist_remove(smartlist_t *sl, void *element);
-int smartlist_isin(smartlist_t *sl, void *element);
-int smartlist_overlap(smartlist_t *sl1, smartlist_t *sl2);
-void smartlist_intersect(smartlist_t *sl1, smartlist_t *sl2);
-void smartlist_subtract(smartlist_t *sl1, smartlist_t *sl2);
-void *smartlist_choose(smartlist_t *sl);
-void *smartlist_get(smartlist_t *sl, int idx);
+int smartlist_isin(const smartlist_t *sl, void *element);
+int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2);
+void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2);
+void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
+void *smartlist_choose(const smartlist_t *sl);
+void *smartlist_get(const smartlist_t *sl, int idx);
 void *smartlist_set(smartlist_t *sl, int idx, void *val);
 void *smartlist_del(smartlist_t *sl, int idx);
 void *smartlist_del_keeporder(smartlist_t *sl, int idx);
 void smartlist_insert(smartlist_t *sl, int idx, void *val);
-int smartlist_len(smartlist_t *sl);
+int smartlist_len(const smartlist_t *sl);
 #define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
   do {                                                          \
     int sl_idx, sl_len=smartlist_len(sl);                       \

@@ -213,13 +213,25 @@ void smartlist_clear(smartlist_t *sl) {
   sl->num_used = 0;
 }
 
-/* add element to the list, but only if there's room */
+void smartlist_truncate(smartlist_t *sl, int len)
+{
+  assert(len <= sl->num_used);
+  sl->num_used = len;
+}
+
+/* add element to the list */
 void smartlist_add(smartlist_t *sl, void *element) {
   if (sl->num_used >= sl->capacity) {
     sl->capacity *= 2;
     sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
   }
   sl->list[sl->num_used++] = element;
+}
+
+/* Add all elements from S2 to S1. */
+void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2)
+{
+  SMARTLIST_FOREACH(s2, void *, element, smartlist_add(sl, element));
 }
 
 void smartlist_remove(smartlist_t *sl, void *element) {
@@ -233,7 +245,7 @@ void smartlist_remove(smartlist_t *sl, void *element) {
     }
 }
 
-int smartlist_isin(smartlist_t *sl, void *element) {
+int smartlist_isin(const smartlist_t *sl, void *element) {
   int i;
   for(i=0; i < sl->num_used; i++)
     if(sl->list[i] == element)
@@ -241,7 +253,7 @@ int smartlist_isin(smartlist_t *sl, void *element) {
   return 0;
 }
 
-int smartlist_overlap(smartlist_t *sl1, smartlist_t *sl2) {
+int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2) {
   int i;
   for(i=0; i < sl2->num_used; i++)
     if(smartlist_isin(sl1, sl2->list[i]))
@@ -250,7 +262,7 @@ int smartlist_overlap(smartlist_t *sl1, smartlist_t *sl2) {
 }
 
 /* remove elements of sl1 that aren't in sl2 */
-void smartlist_intersect(smartlist_t *sl1, smartlist_t *sl2) {
+void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2) {
   int i;
   for(i=0; i < sl1->num_used; i++)
     if(!smartlist_isin(sl2, sl1->list[i])) {
@@ -260,19 +272,19 @@ void smartlist_intersect(smartlist_t *sl1, smartlist_t *sl2) {
 }
 
 /* remove all elements of sl2 from sl1 */
-void smartlist_subtract(smartlist_t *sl1, smartlist_t *sl2) {
+void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2) {
   int i;
   for(i=0; i < sl2->num_used; i++)
     smartlist_remove(sl1, sl2->list[i]);
 }
 
-void *smartlist_choose(smartlist_t *sl) {
+void *smartlist_choose(const smartlist_t *sl) {
   if(sl->num_used)
     return sl->list[crypto_pseudo_rand_int(sl->num_used)];
   return NULL; /* no elements to choose from */
 }
 
-void *smartlist_get(smartlist_t *sl, int idx)
+void *smartlist_get(const smartlist_t *sl, int idx)
 {
   assert(sl && idx>=0 && idx < sl->num_used);
   return sl->list[idx];
@@ -303,7 +315,7 @@ void *smartlist_del_keeporder(smartlist_t *sl, int idx)
     memmove(sl->list+idx, sl->list+idx+1, sizeof(void*)*(sl->num_used-idx));
   return old;
 }
-int smartlist_len(smartlist_t *sl)
+int smartlist_len(const smartlist_t *sl)
 {
   return sl->num_used;
 }
