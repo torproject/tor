@@ -261,18 +261,15 @@ static void check_conn_marked(int i) {
 
 static int prepare_for_poll(void) {
   int i;
-  int timeout;
   connection_t *conn;
   struct timeval now;
   static long current_second = 0; /* from previous calls to gettimeofday */
   static long time_to_fetch_directory = 0;
   static long time_to_new_circuit = 0;
-//  int ms_until_conn;
   cell_t cell;
   circuit_t *circ;
 
   my_gettimeofday(&now);
-  timeout = (1000 - (now.tv_usec / 1000)); /* how many milliseconds til the next second? */
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
@@ -327,8 +324,6 @@ static int prepare_for_poll(void) {
       /* check connections to see whether we should send a keepalive, expire, or wait */
       if(!connection_speaks_cells(conn))
         continue; /* this conn type doesn't send cells */
-      if(connection_state_is_open(conn) && tor_tls_get_pending_bytes(conn->tls))
-        timeout = 0; /* has pending bytes to read; don't let poll wait. */
       if(now.tv_sec >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
         if((!options.OnionRouter && !circuit_get_by_conn(conn)) ||
            (!connection_state_is_open(conn))) {
@@ -338,8 +333,8 @@ static int prepare_for_poll(void) {
           conn->marked_for_close = 1;
         } else {
           /* either a full router, or we've got a circuit. send a padding cell. */
-//          log_fn(LOG_DEBUG,"Sending keepalive to (%s:%d)",
-//              conn->address, conn->port);
+          log_fn(LOG_DEBUG,"Sending keepalive to (%s:%d)",
+              conn->address, conn->port);
           memset(&cell,0,sizeof(cell_t));
           cell.command = CELL_PADDING;
           if(connection_write_cell_to_buf(&cell, conn) < 0)
@@ -357,7 +352,17 @@ static int prepare_for_poll(void) {
     current_second = now.tv_sec; /* remember which second it is, for next time */
   }
 
-  return timeout;
+  for(i=0;i<nfds;i++) {
+    conn = connection_array[i];
+    if(connection_speaks_cells(conn) &&
+       connection_state_is_open(conn) &&
+       tor_tls_get_pending_bytes(conn->tls)) {
+      log_fn(LOG_DEBUG,"sock %d has pending bytes.",conn->s);
+      return 0; /* has pending bytes to read; don't let poll wait. */
+    }
+  }
+
+  return (1000 - (now.tv_usec / 1000)); /* how many milliseconds til the next second? */
 }
 
 static crypto_pk_env_t *init_key_from_file(const char *fname)
@@ -599,19 +604,18 @@ static int do_main_loop(void) {
     }
 #endif
 
-    if(poll_result > 0) { /* we have at least one connection to deal with */
-      /* do all the reads and errors first, so we can detect closed sockets */
-      for(i=0;i<nfds;i++)
-        conn_read(i); /* this also blows away broken connections */
+    /* do all the reads and errors first, so we can detect closed sockets */
+    for(i=0;i<nfds;i++)
+      conn_read(i); /* this also blows away broken connections */
 
-      /* then do the writes */
-      for(i=0;i<nfds;i++)
-        conn_write(i);
+    /* then do the writes */
+    for(i=0;i<nfds;i++)
+      conn_write(i);
 
-      /* any of the conns need to be closed now? */
-      for(i=0;i<nfds;i++)
-        check_conn_marked(i); 
-    }
+    /* any of the conns need to be closed now? */
+    for(i=0;i<nfds;i++)
+      check_conn_marked(i); 
+
     /* refilling buckets and sending cells happens at the beginning of the
      * next iteration of the loop, inside prepare_for_poll()
      */

@@ -711,10 +711,8 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
         ((int)signed_digest[2])&0xff,((int)signed_digest[3])&0xff);
     if (memcmp(digest, signed_digest, 20)) {
       log_fn(LOG_WARNING, "Error reading directory: signature does not match.");
-#if 0 /* XXX, fix me */
       free(tok.val.signature);
       goto err;
-#endif
     }
   }
   free(tok.val.signature);
