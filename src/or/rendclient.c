@@ -49,7 +49,7 @@ void rend_client_desc_fetched(char *query, int success) {
       continue;
     if (conn->purpose != AP_PURPOSE_RENDDESC_WAIT)
       continue;
-    if (rend_cmp_service_ids(conn->socks_request->address, query))
+    if (rend_cmp_service_ids(conn->rend_query, query))
       continue;
     /* great, this guy was waiting */
     if(success) {

@@ -298,7 +298,7 @@ circuit_t *circuit_get_newest(connection_t *conn,
           continue;
         }
       } else { /* not general */
-        if(rend_cmp_service_ids(conn->socks_request->address, circ->rend_query)) {
+        if(rend_cmp_service_ids(conn->rend_query, circ->rend_query)) {
           /* this circ is not for this conn */
           continue;
         }
@@ -1070,7 +1070,7 @@ static void circuit_failed(circuit_t *circ) {
   /* we should examine circ and see if it failed because of
    * the last hop or an earlier hop. then use this info below.
    */
-  int failed_at_last_hop;
+  //int failed_at_last_hop;
 
   switch(circ->purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
