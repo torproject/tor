@@ -63,6 +63,7 @@ void directory_initiate_command(routerinfo_t *router, int command) {
   switch(connection_connect(conn, router->address, router->addr, router->dir_port)) {
     case -1:
       router_mark_as_down(conn->nickname); /* don't try him again */
+      connection_remove(conn);
       connection_free(conn);
       return;
     case 0:
