@@ -325,7 +325,8 @@ static int crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
 {
   BIO *b;
 
-  tor_assert(env && s);
+  tor_assert(env);
+  tor_assert(s);
 
   /* Create a read-only memory BIO, backed by the nul-terminated string 's' */
   b = BIO_new_mem_buf((char*)s, -1);
@@ -381,7 +382,9 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, size
   BUF_MEM *buf;
   BIO *b;
 
-  tor_assert(env && env->key && dest);
+  tor_assert(env);
+  tor_assert(env->key);
+  tor_assert(dest);
 
   b = BIO_new(BIO_s_mem()); /* Create a memory BIO */
 
@@ -414,7 +417,8 @@ int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, size
 int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src, size_t len) {
   BIO *b;
 
-  tor_assert(env && src);
+  tor_assert(env);
+  tor_assert(src);
 
   b = BIO_new(BIO_s_mem()); /* Create a memory BIO */
 
@@ -479,7 +483,8 @@ int crypto_pk_DER64_encode_public_key(crypto_pk_env_t *env, char **out)
 {
   int len;
   char buf[PK_BYTES*2]; /* Too long, but hey, stacks are big. */
-  tor_assert(env && out);
+  tor_assert(env);
+  tor_assert(out);
   len = crypto_pk_asn1_encode(env, buf, sizeof(buf));
   if (len < 0) {
     return -1;
@@ -563,7 +568,8 @@ int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b) {
 /** Return the size of the public key modulus in <b>env</b>, in bytes. */
 int crypto_pk_keysize(crypto_pk_env_t *env)
 {
-  tor_assert(env && env->key);
+  tor_assert(env);
+  tor_assert(env->key);
 
   return RSA_size(env->key);
 }
@@ -571,7 +577,8 @@ int crypto_pk_keysize(crypto_pk_env_t *env)
 /** Increase the reference count of <b>env</b>, and return it.
  */
 crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *env) {
-  tor_assert(env && env->key);
+  tor_assert(env);
+  tor_assert(env->key);
 
   env->refs++;
   return env;
@@ -585,7 +592,9 @@ crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *env) {
 int crypto_pk_public_encrypt(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to, int padding)
 {
   int r;
-  tor_assert(env && from && to);
+  tor_assert(env);
+  tor_assert(from);
+  tor_assert(to);
 
   r = RSA_public_encrypt(fromlen, (unsigned char*)from, to, env->key,
                             crypto_get_rsa_padding(padding));
@@ -604,7 +613,10 @@ int crypto_pk_public_encrypt(crypto_pk_env_t *env, const unsigned char *from, in
 int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to, int padding, int warnOnFailure)
 {
   int r;
-  tor_assert(env && from && to && env->key);
+  tor_assert(env);
+  tor_assert(from);
+  tor_assert(to);
+  tor_assert(env->key);
   if (!env->key->p)
     /* Not a private key */
     return -1;
@@ -627,7 +639,9 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, i
 int crypto_pk_public_checksig(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
 {
   int r;
-  tor_assert(env && from && to);
+  tor_assert(env);
+  tor_assert(from);
+  tor_assert(to);
   r = RSA_public_decrypt(fromlen, (unsigned char*)from, to, env->key, RSA_PKCS1_PADDING);
 
   if (r<0) {
@@ -645,7 +659,9 @@ int crypto_pk_public_checksig(crypto_pk_env_t *env, const unsigned char *from, i
 int crypto_pk_private_sign(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
 {
   int r;
-  tor_assert(env && from && to);
+  tor_assert(env);
+  tor_assert(from);
+  tor_assert(to);
   if (!env->key->p)
     /* Not a private key */
     return -1;
@@ -669,7 +685,9 @@ int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const unsigned char *
   char buf[PK_BYTES+1];
   int r;
 
-  tor_assert(env && data && sig);
+  tor_assert(env);
+  tor_assert(data);
+  tor_assert(sig);
 
   if (crypto_digest(data,datalen,digest)<0) {
     log_fn(LOG_WARN, "couldn't compute digest");
@@ -728,7 +746,9 @@ int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
   crypto_cipher_env_t *cipher = NULL;
   char buf[PK_BYTES+1];
 
-  tor_assert(env && from && to);
+  tor_assert(env);
+  tor_assert(from);
+  tor_assert(to);
 
   overhead = crypto_get_rsa_padding_overhead(crypto_get_rsa_padding(padding));
   pkeylen = crypto_pk_keysize(env);
@@ -964,7 +984,8 @@ int crypto_cipher_generate_key(crypto_cipher_env_t *env)
  */
 int crypto_cipher_set_key(crypto_cipher_env_t *env, const unsigned char *key)
 {
-  tor_assert(env && key);
+  tor_assert(env);
+  tor_assert(key);
 
   if (!env->key)
     return -1;
@@ -1009,7 +1030,11 @@ int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
  */
 int crypto_cipher_encrypt(crypto_cipher_env_t *env, const unsigned char *from, unsigned int fromlen, unsigned char *to)
 {
-  tor_assert(env && env->cipher && from && fromlen && to);
+  tor_assert(env);
+  tor_assert(env->cipher);
+  tor_assert(from);
+  tor_assert(fromlen);
+  tor_assert(to);
 
   aes_crypt(env->cipher, from, fromlen, to);
   return 0;
@@ -1021,7 +1046,9 @@ int crypto_cipher_encrypt(crypto_cipher_env_t *env, const unsigned char *from, u
  */
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, const unsigned char *from, unsigned int fromlen, unsigned char *to)
 {
-  tor_assert(env && from && to);
+  tor_assert(env);
+  tor_assert(from);
+  tor_assert(to);
 
   aes_crypt(env->cipher, from, fromlen, to);
   return 0;
@@ -1054,7 +1081,8 @@ crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
  */
 int crypto_digest(const unsigned char *m, int len, unsigned char *digest)
 {
-  tor_assert(m && digest);
+  tor_assert(m);
+  tor_assert(digest);
   return (SHA1(m,len,digest) == NULL);
 }
 
@@ -1105,7 +1133,8 @@ void crypto_digest_get_digest(crypto_digest_env_t *digest,
 {
   static char r[DIGEST_LEN];
   SHA_CTX tmpctx;
-  tor_assert(digest && out);
+  tor_assert(digest);
+  tor_assert(out);
   tor_assert(out_len <= DIGEST_LEN);
   /* memcpy into a temporary ctx, since SHA1_Final clears the context */
   memcpy(&tmpctx, &digest->d, sizeof(SHA_CTX));
@@ -1133,7 +1162,8 @@ void
 crypto_digest_assign(crypto_digest_env_t *into,
                      const crypto_digest_env_t *from)
 {
-  tor_assert(into && from);
+  tor_assert(into);
+  tor_assert(from);
   memcpy(into,from,sizeof(crypto_digest_env_t));
 }
 
@@ -1154,7 +1184,8 @@ static void init_dh_param() {
 
   p = BN_new();
   g = BN_new();
-  tor_assert(p && g);
+  tor_assert(p);
+  tor_assert(g);
 
 #if 0
   /* This is from draft-ietf-ipsec-ike-modp-groups-05.txt.  It's a safe
@@ -1325,7 +1356,8 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
  */
 void crypto_dh_free(crypto_dh_env_t *dh)
 {
-  tor_assert(dh && dh->dh);
+  tor_assert(dh);
+  tor_assert(dh->dh);
   DH_free(dh->dh);
   free(dh);
 }

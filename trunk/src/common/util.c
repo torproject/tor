@@ -234,7 +234,9 @@ int tor_strpartition(char *dest, size_t dest_len,
   char *destp;
   size_t len_in, len_out, len_ins;
   int is_even, remaining;
-  tor_assert(s && insert && n > 0);
+  tor_assert(s);
+  tor_assert(insert);
+  tor_assert(n > 0);
   len_in = strlen(s);
   len_ins = strlen(insert);
   len_out = len_in + (len_in/n)*len_ins;
@@ -487,7 +489,9 @@ void *smartlist_choose(const smartlist_t *sl) {
  */
 void *smartlist_get(const smartlist_t *sl, int idx)
 {
-  tor_assert(sl && idx>=0 && idx < sl->num_used);
+  tor_assert(sl);
+  tor_assert(idx>=0);
+  tor_assert(idx < sl->num_used);
   return sl->list[idx];
 }
 /** Change the value of the <b>idx</b>th element of sl to <b>val</b>; return the old
@@ -496,7 +500,9 @@ void *smartlist_get(const smartlist_t *sl, int idx)
 void *smartlist_set(smartlist_t *sl, int idx, void *val)
 {
   void *old;
-  tor_assert(sl && idx>=0 && idx < sl->num_used);
+  tor_assert(sl);
+  tor_assert(idx>=0);
+  tor_assert(idx < sl->num_used);
   old = sl->list[idx];
   sl->list[idx] = val;
   return old;
@@ -508,7 +514,9 @@ void *smartlist_set(smartlist_t *sl, int idx, void *val)
 void *smartlist_del(smartlist_t *sl, int idx)
 {
   void *old;
-  tor_assert(sl && idx>=0 && idx < sl->num_used);
+  tor_assert(sl);
+  tor_assert(idx>=0);
+  tor_assert(idx < sl->num_used);
   old = sl->list[idx];
   sl->list[idx] = sl->list[--sl->num_used];
   return old;
@@ -520,7 +528,9 @@ void *smartlist_del(smartlist_t *sl, int idx)
 void *smartlist_del_keeporder(smartlist_t *sl, int idx)
 {
   void *old;
-  tor_assert(sl && idx>=0 && idx < sl->num_used);
+  tor_assert(sl);
+  tor_assert(idx>=0);
+  tor_assert(idx < sl->num_used);
   old = sl->list[idx];
   --sl->num_used;
   if (idx < sl->num_used)
@@ -539,7 +549,9 @@ int smartlist_len(const smartlist_t *sl)
  */
 void smartlist_insert(smartlist_t *sl, int idx, void *val)
 {
-  tor_assert(sl && idx >= 0 && idx <= sl->num_used);
+  tor_assert(sl);
+  tor_assert(idx>=0);
+  tor_assert(idx < sl->num_used);
   if (idx == sl->num_used) {
     smartlist_add(sl, val);
   } else {
@@ -572,7 +584,9 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
   const char *cp, *end, *next;
   int n = 0;
 
-  tor_assert(sl && str && sep);
+  tor_assert(sl);
+  tor_assert(str);
+  tor_assert(sep);
 
   cp = str;
   while (1) {
@@ -619,8 +633,9 @@ char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate)
   int i;
   size_t n = 0, jlen;
   char *r = NULL, *dst, *src;
-  
-  tor_assert(sl && join);
+
+  tor_assert(sl);
+  tor_assert(join);
   jlen = strlen(join);
   for (i = 0; i < sl->num_used; ++i) {
     n += strlen(sl->list[i]);
@@ -681,7 +696,9 @@ void* strmap_set(strmap_t *map, const char *key, void *val)
   strmap_entry_t *resolve;
   strmap_entry_t search;
   void *oldval;
-  tor_assert(map && key && val);
+  tor_assert(map);
+  tor_assert(key);
+  tor_assert(val);
   search.key = (char*)key;
   resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
   if (resolve) {
@@ -704,7 +721,8 @@ void* strmap_get(strmap_t *map, const char *key)
 {
   strmap_entry_t *resolve;
   strmap_entry_t search;
-  tor_assert(map && key);
+  tor_assert(map);
+  tor_assert(key);
   search.key = (char*)key;
   resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
   if (resolve) {
@@ -725,7 +743,8 @@ void* strmap_remove(strmap_t *map, const char *key)
   strmap_entry_t *resolve;
   strmap_entry_t search;
   void *oldval;
-  tor_assert(map && key);
+  tor_assert(map);
+  tor_assert(key);
   search.key = (char*)key;
   resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
   if (resolve) {
@@ -804,7 +823,8 @@ void strmap_foreach(strmap_t *map,
                     void *data)
 {
   strmap_entry_t *ptr, *next;
-  tor_assert(map && fn);
+  tor_assert(map);
+  tor_assert(fn);
   for (ptr = SPLAY_MIN(strmap_tree, &map->head); ptr != NULL; ptr = next) {
     /* This remove-in-place usage is specifically blessed in tree(3). */
     next = SPLAY_NEXT(strmap_tree, &map->head, ptr);
@@ -852,7 +872,8 @@ strmap_iter_t *strmap_iter_init(strmap_t *map)
  */
 strmap_iter_t *strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
 {
-  tor_assert(map && iter);
+  tor_assert(map);
+  tor_assert(iter);
   return SPLAY_NEXT(strmap_tree, &map->head, iter);
 }
 /** Advance the iterator <b>iter</b> a single step to the next entry, removing
@@ -861,7 +882,8 @@ strmap_iter_t *strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
 strmap_iter_t *strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
 {
   strmap_iter_t *next;
-  tor_assert(map && iter);
+  tor_assert(map);
+  tor_assert(iter);
   next = SPLAY_NEXT(strmap_tree, &map->head, iter);
   SPLAY_REMOVE(strmap_tree, &map->head, iter);
   tor_free(iter->key);
@@ -872,7 +894,9 @@ strmap_iter_t *strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
  */
 void strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
 {
-  tor_assert(iter && keyp && valp);
+  tor_assert(iter);
+  tor_assert(keyp);
+  tor_assert(valp);
   *keyp = iter->key;
   *valp = iter->val;
 }
@@ -1069,7 +1093,8 @@ time_t tor_timegm (struct tm *tm) {
   int i;
   year = tm->tm_year + 1900;
   tor_assert(year >= 1970);
-  tor_assert(tm->tm_mon >= 0 && tm->tm_mon <= 11);
+  tor_assert(tm->tm_mon >= 0);
+  tor_assert(tm->tm_mon <= 11);
   days = 365 * (year-1970) + n_leapdays(1970,year);
   for (i = 0; i < tm->tm_mon; ++i)
     days += days_per_month[i];
@@ -1094,9 +1119,11 @@ void format_rfc1123_time(char *buf, time_t t) {
   struct tm *tm = gmtime(&t);
 
   strftime(buf, RFC1123_TIME_LEN+1, "XXX, %d XXX %Y %H:%M:%S GMT", tm);
-  tor_assert(tm->tm_wday >= 0 && tm->tm_wday <= 6);
+  tor_assert(tm->tm_wday >= 0);
+  tor_assert(tm->tm_wday <= 6);
   memcpy(buf, WEEKDAY_NAMES[tm->tm_wday], 3);
-  tor_assert(tm->tm_wday >= 0 && tm->tm_mon <= 11);
+  tor_assert(tm->tm_wday >= 0);
+  tor_assert(tm->tm_mon <= 11);
   memcpy(buf+8, MONTH_NAMES[tm->tm_mon], 3);
 }
 
@@ -2010,7 +2037,8 @@ int tor_inet_aton(const char *c, struct in_addr* addr)
   return inet_aton(c, addr);
 #else
   uint32_t r;
-  tor_assert(c && addr);
+  tor_assert(c);
+  tor_assert(addr);
   if (strcmp(c, "255.255.255.255") == 0) {
     addr->s_addr = 0xFFFFFFFFu;
     return 1;
@@ -2132,8 +2160,12 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
   struct in_addr in;
   int bits;
 
-  tor_assert(s && addr_out && mask_out && port_min_out && port_max_out);
-  
+  tor_assert(s);
+  tor_assert(addr_out);
+  tor_assert(mask_out);
+  tor_assert(port_min_out);
+  tor_assert(port_max_out);
+
   address = tor_strdup(s);
   /* Break 'address' into separate strings.
    */

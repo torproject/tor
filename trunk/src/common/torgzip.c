@@ -53,7 +53,9 @@ tor_gzip_compress(char **out, size_t *out_len,
   size_t out_size;
   off_t offset;
 
-  tor_assert(out && out_len && in);
+  tor_assert(out);
+  tor_assert(out_len);
+  tor_assert(in);
 
   if (method == GZIP_METHOD && !is_gzip_supported()) {
     /* Old zlib version don't support gzip in deflateInit2 */
@@ -136,7 +138,9 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   size_t out_size;
   off_t offset;
 
-  tor_assert(out && out_len && in);
+  tor_assert(out);
+  tor_assert(out_len);
+  tor_assert(in);
 
   if (method == GZIP_METHOD && !is_gzip_supported()) {
     /* Old zlib version don't support gzip in inflateInit2 */
