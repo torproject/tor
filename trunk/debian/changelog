@@ -2,6 +2,7 @@ tor (0.0.8+0.0.9pre5-2) unreleased; urgency=low
 
   * unreleased.
   * Symlink tor(8) manpage to torrc(5).
+  * Make logs readable by the system administrators (group adm).
 
  -- Peter Palfrader <weasel@debian.org>  Fri, 12 Nov 2004 17:43:06 +0100
 
