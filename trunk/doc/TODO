@@ -142,6 +142,22 @@ N - Code cleanup
    - Windows
      - Get a controller to launch tor and keep it on the system tray.
 
+For 0.1.1.x:
+
+Decentralizing:
+  - self-measurement
+  - remote measurement
+  - remove approval crap, add blacklisting by IP
+  - gather more permanent dirservers and put their keys into the code
+  - ship with a master key, and implement a way to query dirservers for
+    a blob which is a timestamped signed newest pile of dirservers. put
+    that on disk and use it on startup rather than the built-in default.
+  - threshold belief from clients about up-ness
+  - a way for clients to get fresh enough server descriptors
+  - a way for clients to partition the set of servers in a safe way:
+    so they don't have to learn all of them but so they're not easily
+    partitionable.
+
 Tier two:
 
 N  - Handle rendezvousing with unverified nodes.
