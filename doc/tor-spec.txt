@@ -23,7 +23,7 @@ TODO: (very soon)
 
    All numeric values are encoded in network (big-endian) order.
 
-   Unless otherwise specified, all symmetric ciphers are 3DES in OFB
+   Unless otherwise specified, all symmetric ciphers are AES in counter
    mode, with an IV of all 0 bytes.  Asymmetric ciphers are either RSA
    with 1024-bit keys and exponents of 65537, or DH with the safe prime
    from rfc2409, section 6.2, whose hex representation is:
@@ -33,8 +33,6 @@ TODO: (very soon)
      "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
      "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
      "49286651ECE65381FFFFFFFFFFFFFFFF"
-
-   [We will move to AES once we can assume everybody will have it. -RD]
 
 
 1. System overview
@@ -64,7 +62,8 @@ which reveals the downstream node.
 
         The client generates a pair of 16-byte symmetric keys (one
         [K_f] for the 'forward' stream from client to server, and one
-        [K_b] for the 'backward' stream from server to client.
+        [K_b] for the 'backward' stream from server to client) to be
+        used for link encryption.
 
         The client then generates a 'Client authentication' message [M]
         containing: 
@@ -72,8 +71,8 @@ which reveals the downstream node.
         (If client is an OP)
            The number 1 to signify OP handshake [2 bytes]
            Maximum bandwidth (bytes/s)          [4 bytes]
-           Forward key [K_f]                    [16 bytes]
-           Backward key [K_b]                   [16 bytes]
+           Forward link key [K_f]               [16 bytes]
+           Backward link key [K_b]              [16 bytes]
                                              [Total: 38 bytes]
 
         (If client is an OR)
@@ -94,7 +93,7 @@ which reveals the downstream node.
         the 128-byte RSA-encrypted data to the server, and waits for a
         reply.
 
-     2. The server receives the first handshake
+     2. The server receives the first handshake:
 
         The OR waits for 128 bytes of data, and decrypts the resulting
         data with its private key, checking the PKCS1 padding. If
@@ -178,7 +177,7 @@ which reveals the downstream node.
 
    Once the handshake is complete, the two sides send cells
    (specified below) to one another.  Cells are sent serially,
-   encrypted with the 3DES-OFB keystream specified by the handshake
+   encrypted with the AES-CNT keystream specified by the handshake
    protocol.  Over a connection, communicants encrypt outgoing cells
    with the connection's K_f, and decrypt incoming cells with the
    connection's K_b.
@@ -201,6 +200,8 @@ which reveals the downstream node.
     do evil stuff.  For instance, if I can guess that a cell is a
     TOPIC_COMMAND_BEGIN cell to www.slashdot.org:80 , I can change the
     address and port to point to a machine I control. -NM]
+   [We're going to address this tagging issue with e2e-only hashes.
+    See TODO file. -RD]
 
 
 3. Cell Packet format
@@ -386,7 +387,7 @@ which reveals the downstream node.
 
    Otherwise, if the OR is not at the OP edge of the circuit (that is,
    either an 'exit node' or a non-edge node), it de/encrypts the length
-   field and the payload with 3DES/OFB, as follows:
+   field and the payload with AES/CNT, as follows:
         'Forward' relay cell (same direction as CREATE):
             Use Kf as key; encrypt.
         'Back' relay cell (opposite direction from CREATE):
@@ -401,13 +402,13 @@ which reveals the downstream node.
    handshakes. -RD]
 
    Otherwise, if the data cell is coming from the OP edge of the
-   circuit, the OP decrypts the length and payload fields with 3DES/OFB as
+   circuit, the OP decrypts the length and payload fields with AES/CNT as
    follows:
          OP sends data cell to node R_M:
             For I=1...M, decrypt with Kf_I.
 
    Otherwise, if the data cell is arriving at the OP edge if the
-   circuit, the OP encrypts the length and payload fields with 3DES/OFB as
+   circuit, the OP encrypts the length and payload fields with AES/CNT as
    follows:
          OP receives data cell:
             For I=N...1, 
@@ -465,7 +466,6 @@ which reveals the downstream node.
    Once a connection has been established, the OP and exit node
    package stream data in RELAY_DATA cells, and upon receiving such
    cells, echo their contents to the corresponding TCP stream.  
-   [XXX Mention zlib encoding. -NM]
 
 5.2. Closing streams
 
@@ -510,6 +510,10 @@ which reveals the downstream node.
    bandwidth upon startup.  The communicants only read up to that
    number of bytes per second on average, though they may use mechanisms
    to handle spikes (eg token buckets).
+
+   [This isn't true anymore. Each node has a total bandwidth it's willing
+    to accept from all nodes per second; it ignores negotiated
+    per-connection bandwidths. -RD]
 
    Communicants rely on TCP's default flow control to push back when they
    stop reading, so nodes that don't obey this bandwidth limit can't do
