@@ -158,6 +158,19 @@ Changes in version 0.1.0.1-rc - 2005-03-28
       whether the server is hibernating.
 
 
+Changes in version 0.0.9.7 - 2005-04-01
+  o Bugfixes on 0.0.9.x:
+    - Fix another race crash bug (thanks to Glenn Fink for reporting).
+    - Compare identity to identity, not to nickname, when extending to
+      a router not already in the directory. This was preventing us from
+      extending to unknown routers. Oops.
+    - Make sure to create OS X Tor user in <500 range, so we aren't
+      creating actual system users.
+    - Note where connection-that-hasn't-sent-end was marked, and fix
+      a few really loud instances of this harmless bug (it's fixed more
+      in 0.1.0.x.)
+
+
 Changes in version 0.0.9.6 - 2005-03-24
   o Bugfixes on 0.0.9.x (crashes and asserts):
     - Add new end stream reasons to maintainance branch. Fix bug where
