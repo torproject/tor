@@ -1096,7 +1096,7 @@ exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
               policy, private_networks[i].addr, private_networks[i].mask, &p)) {
         if (warn)
           log_fn(LOG_WARN, "Exit policy %s implicitly accepts %s",
-                 policy?policy->string:"(default)",
+                 p?p->string:"(default)",
                  private_networks[i].network);
         r = 1;
       }
