@@ -674,18 +674,28 @@ static void run_connection_housekeeping(int i, time_t now) {
   if (connection_speaks_cells(conn) &&
       now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
-    if ((!connection_state_is_open(conn)) ||
-        (we_are_hibernating() && !circuit_get_by_conn(conn)) ||
-        (!clique_mode(options) && !circuit_get_by_conn(conn) &&
-        (!router || !server_mode(options) || !router_is_clique_mode(router)))) {
-      /* our handshake has expired; we're hibernating;
-       * or we have no circuits and we're both either OPs or normal ORs,
-       * then kill it. */
-      log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
+    if (!connection_state_is_open(conn)) {
+      log_fn(LOG_INFO,"Expiring non-open OR connection to %d (%s:%d).",
              i,conn->address, conn->port);
-      /* flush anything waiting, e.g. a destroy for a just-expired circ */
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
+    } else if (we_are_hibernating() && !circuit_get_by_conn(conn) &&
+               !buf_datalen(conn->outbuf)) {
+      log_fn(LOG_INFO,"Expiring non-used OR connection to %d (%s:%d). [Hibernating.]",
+             i,conn->address, conn->port);
+      connection_mark_for_close(conn);
+      conn->hold_open_until_flushed = 1;
+    } else if (!clique_mode(options) && !circuit_get_by_conn(conn) &&
+               (!router || !server_mode(options) || !router_is_clique_mode(router))) {
+      log_fn(LOG_INFO,"Expiring non-used connection to %d (%s:%d). [Not in clique mode]",
+             i,conn->address, conn->port);
+      connection_mark_for_close(conn);
+      conn->hold_open_until_flushed = 1;
+    } else if (buf_datalen(conn->outbuf) &&
+            now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
+      log_fn(LOG_INFO,"Expiriing stuck connection to %d (%s:%d).",
+             i, conn->address, conn->port);
+      connection_mark_for_close(conn);
     } else {
       /* either in clique mode, or we've got a circuit. send a padding cell. */
       log_fn(LOG_DEBUG,"Sending keepalive to (%s:%d)",
