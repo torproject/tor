@@ -141,6 +141,8 @@
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS
 
+#define HAVE_LIMITS_H
+
 /* Version number of package */
 #define VERSION "0.0.2pre26"
 

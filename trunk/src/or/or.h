@@ -657,14 +657,14 @@ size_t buf_datalen(const buf_t *buf);
 size_t buf_capacity(const buf_t *buf);
 const char *_buf_peek_raw_buffer(const buf_t *buf);
 
-int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof);
-int read_to_buf_tls(tor_tls *tls, int at_most, buf_t *buf);
+int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof);
+int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf);
 
 int flush_buf(int s, buf_t *buf, int *buf_flushlen);
 int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen);
 
 int write_to_buf(const char *string, int string_len, buf_t *buf);
-int fetch_from_buf(char *string, int string_len, buf_t *buf);
+int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
 int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, int max_headerlen,
                         char **body_out, int *body_used, int max_bodylen);
@@ -1026,7 +1026,7 @@ void dirserv_free_fingerprint_list();
 int dirserv_add_descriptor(const char **desc);
 int dirserv_init_from_directory_string(const char *dir);
 void dirserv_free_descriptors();
-int dirserv_dump_directory_to_string(char *s, int maxlen,
+int dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
                                      crypto_pk_env_t *private_key);
 void directory_set_dirty(void);
 size_t dirserv_get_directory(const char **cp);

@@ -1627,7 +1627,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
  */
 int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
 {
-  unsigned char iv[CIPHER_IV_LEN];
+  unsigned char iv[_ARRAYSIZE(CIPHER_IV_LEN)];
   crypto_digest_env_t *tmp_digest;
   crypto_cipher_env_t *tmp_crypto;
 

@@ -36,8 +36,14 @@
 #define strncasecmp strnicmp
 #define strcasecmp stricmp
 #define INLINE __inline
+#define _ARRAYSIZE(x) (((x)==0)?1:0)
+/* Windows compilers before VC7 don't have __FUNCTION__. */
+#if _MSC_VER < 1300
+#define __FUNCTION__ "???"
+#endif
 #else
 #define INLINE inline
+#define _ARRAYSIZE(x) (x)
 #endif
 
 #ifdef NDEBUG
@@ -76,8 +82,8 @@ void tor_strlower(char *s);
 #define set_uint32(cp,v) do { *(uint32_t*)(cp) = (v); } while (0)
 #else
 #if 1
-uint16_t get_uint16(char *cp);
-uint32_t get_uint32(char *cp);
+uint16_t get_uint16(const char *cp);
+uint32_t get_uint32(const char *cp);
 void set_uint16(char *cp, uint16_t v);
 void set_uint32(char *cp, uint32_t v);
 #else

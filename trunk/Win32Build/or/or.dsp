@@ -155,6 +155,26 @@ SOURCE=..\..\src\or\onion.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\or\rendclient.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\or\rendcommon.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\or\rendmid.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\or\rendservice.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\or\rephist.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\or\router.c
 # End Source File
 # Begin Source File

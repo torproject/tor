@@ -407,7 +407,7 @@ dirserv_remove_old_servers(void)
  * Return 0 on success, -1 on failure.
  */
 int
-dirserv_dump_directory_to_string(char *s, int maxlen,
+dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
                                  crypto_pk_env_t *private_key)
 {
   char *cp, *eos;

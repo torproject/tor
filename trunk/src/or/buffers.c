@@ -168,7 +168,7 @@ void buf_free(buf_t *buf) {
  * to tear down the connection return -1, else return the number of
  * bytes read.
  */
-int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof) {
+int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof) {
 
   int read_result;
 #ifdef MS_WINDOWS
@@ -181,7 +181,7 @@ int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof) {
   if (buf_ensure_capacity(buf,buf->datalen+at_most))
     return -1;
 
-  if(at_most > buf->len - buf->datalen)
+  if(at_most + buf->datalen > buf->len)
     at_most = buf->len - buf->datalen; /* take the min of the two */
 
   if(at_most == 0)
@@ -212,7 +212,7 @@ int read_to_buf(int s, int at_most, buf_t *buf, int *reached_eof) {
   }
 }
 
-int read_to_buf_tls(tor_tls *tls, int at_most, buf_t *buf) {
+int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
   int r;
   tor_assert(tls);
   assert_buf_ok(buf);
@@ -223,7 +223,7 @@ int read_to_buf_tls(tor_tls *tls, int at_most, buf_t *buf) {
   if (buf_ensure_capacity(buf, at_most+buf->datalen))
     return TOR_TLS_ERROR;
 
-  if (at_most > buf->len - buf->datalen)
+  if (at_most + buf->datalen > buf->len)
     at_most = buf->len - buf->datalen;
 
   if (at_most == 0)
@@ -255,7 +255,7 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
 #endif
 
   assert_buf_ok(buf);
-  tor_assert(buf_flushlen && (s>=0) && (*buf_flushlen <= buf->datalen));
+  tor_assert(buf_flushlen && (s>=0) && ((unsigned)*buf_flushlen <= buf->datalen));
 
   if(*buf_flushlen == 0) /* nothing to flush */
     return 0;
@@ -323,7 +323,7 @@ int write_to_buf(const char *string, int string_len, buf_t *buf) {
   return buf->datalen;
 }
 
-int fetch_from_buf(char *string, int string_len, buf_t *buf) {
+int fetch_from_buf(char *string, size_t string_len, buf_t *buf) {
 
   /* There must be string_len bytes in buf; write them onto string,
    * then memmove buf back (that is, remove them from buf).
@@ -447,7 +447,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       if(req->socks_version != 5) { /* we need to negotiate a method */
         unsigned char nummethods = (unsigned char)*(buf->mem+1);
         tor_assert(!req->socks_version);
-        if(buf->datalen < 2+nummethods)
+        if(buf->datalen < 2u+nummethods)
           return 0;
         if(!nummethods || !memchr(buf->mem+2, 0, nummethods)) {
           log_fn(LOG_WARN,"socks5: offered methods don't include 'no auth'. Rejecting.");
@@ -493,7 +493,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         case 3: /* fqdn */
           log_fn(LOG_DEBUG,"socks5: fqdn address type");
           len = (unsigned char)*(buf->mem+4);
-          if(buf->datalen < 7+len) /* addr/port there? */
+          if(buf->datalen < 7u+len) /* addr/port there? */
             return 0; /* not yet */
           if(len+1 > MAX_SOCKS_ADDR_LEN) {
             log_fn(LOG_WARN,"socks5 hostname is %d bytes, which doesn't fit in %d. Rejecting.",

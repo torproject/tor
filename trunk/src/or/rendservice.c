@@ -396,7 +396,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
     log_fn(LOG_WARN, "Couldn't find a null-padded nickname in INTRODUCE2 cell");
     return -1;
   }
-  if (strspn(buf,LEGAL_NICKNAME_CHARACTERS) != ptr-buf) {
+  if ((int)strspn(buf,LEGAL_NICKNAME_CHARACTERS) != ptr-buf) {
     log_fn(LOG_WARN, "Nickname in INTRODUCE2 cell contains illegal character.");
     return -1;
   }
@@ -551,7 +551,7 @@ rend_service_intro_is_ready(circuit_t *circuit)
   /* Build the payload for a RELAY_ESTABLISH_INTRO cell. */
   len = crypto_pk_asn1_encode(service->private_key, buf+2,
                               RELAY_PAYLOAD_SIZE-2);
-  set_uint16(buf, htons(len));
+  set_uint16(buf, htons((uint16_t)len));
   len += 2;
   memcpy(auth, circuit->cpath->prev->handshake_digest, DIGEST_LEN);
   memcpy(auth+DIGEST_LEN, "INTRODUCE", 9);
