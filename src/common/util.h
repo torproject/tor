@@ -74,17 +74,6 @@ struct timeval {
 #define tor_close_socket(s) close(s)
 #endif
 
-#if 0
-/* XXXX Remove this -- These lists are incomplete, and detecting bad filenames
- * is the OS's job. -NM */
-/** Legal characters in a filename */
-#ifdef MS_WINDOWS
-#define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/\\ "
-#else
-#define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/ "
-#endif
-#endif
-
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
 
 size_t strlcat(char *dst, const char *src, size_t siz);
