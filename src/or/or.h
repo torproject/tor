@@ -1137,6 +1137,7 @@ int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
                                         int *need_capacity);
 
 int circuit_append_new_exit(circuit_t *circ, routerinfo_t *exit);
+int circuit_extend_to_new_exit(circuit_t *circ, routerinfo_t *exit);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 
 /********************************* circuitlist.c ***********************/
