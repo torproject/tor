@@ -550,6 +550,40 @@ test_util() {
   test_eq((void*)3,   smartlist_get(sl,3));
   test_eq((void*)4,   smartlist_get(sl,4));
   test_eq((void*)555, smartlist_get(sl,5));
+
+  smartlist_clear(sl);
+  smartlist_split_string(sl, "abc", ":", 0);
+  test_eq(1, smartlist_len(sl));
+  test_streq("abc", smartlist_get(sl, 0));
+  smartlist_split_string(sl, "a::bc::", "::", 0);
+  test_eq(4, smartlist_len(sl));
+  test_streq("a", smartlist_get(sl, 1));
+  test_streq("bc", smartlist_get(sl, 2));
+  test_streq("", smartlist_get(sl, 3));
+  smartlist_split_string(sl, "/def/  /ghijk", "/", 0);
+  test_eq(8, smartlist_len(sl));
+  test_streq("", smartlist_get(sl, 4));
+  test_streq("def", smartlist_get(sl, 5));
+  test_streq("  ", smartlist_get(sl, 6));
+  test_streq("ghijk", smartlist_get(sl, 7));
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  smartlist_split_string(sl, "a,bbd,cdef", ",", 1);
+  test_eq(3, smartlist_len(sl));
+  test_streq("a", smartlist_get(sl,0));
+  test_streq("bbd", smartlist_get(sl,1));
+  test_streq("cdef", smartlist_get(sl,2));
+  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>", 1);
+  test_eq(8, smartlist_len(sl));
+  test_streq("z", smartlist_get(sl,3));
+  test_streq("zhasd", smartlist_get(sl,4));
+  test_streq("", smartlist_get(sl,5));
+  test_streq("bnud", smartlist_get(sl,6));
+  test_streq("", smartlist_get(sl,7));
+
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+
   /* XXXX test older functions. */
   smartlist_free(sl);
 }
