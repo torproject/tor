@@ -93,11 +93,11 @@ static void add_service(rend_service_t *service)
   } else {
     smartlist_set_capacity(service->ports, -1);
     smartlist_add(rend_service_list, service);
-    log_fn(LOG_INFO,"Configuring service with directory %s",service->directory);
+    log_fn(LOG_DEBUG,"Configuring service with directory %s",service->directory);
     for (i = 0; i < smartlist_len(service->ports); ++i) {
       p = smartlist_get(service->ports, i);
       addr.s_addr = htonl(p->real_address);
-      log_fn(LOG_INFO,"Service maps port %d to %s:%d",
+      log_fn(LOG_DEBUG,"Service maps port %d to %s:%d",
              p->virtual_port, inet_ntoa(addr), p->real_port);
     }
   }
