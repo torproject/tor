@@ -268,11 +268,18 @@ plus any other addresses or ports your exit policy allows.
 run <tt>tor</tt>, whereas packages typically launch Tor from their
 initscripts. If it logs any warnings, address them. (By default Tor
 logs to stdout, but some packages log to /var/log/tor/ instead.)
-<li>4. One of the files generated in your DataDirectory is called
-'fingerprint'. Send mail to tor-ops@freehaven.net including a)
-this key fingerprint, b) who you are, so we know whom to contact if
-there's any problem, and c) what kind of connectivity the new server
-will have. If possible, PGP sign your mail.
+<li>4. <b>Register your server.</b>  Send mail to <a
+href="mailto:tor-ops@freehaven.net">tor-ops@freehaven.net</a> with the
+following information:
+<ul>
+<li>The fingerprint for your server's key (the contents of the
+"fingerprint" file in your DataDirectory -- look in /usr/local/var/lib/tor
+or /var/lib/tor on many platforms)</li>
+<li>Who you are, so we know whom to contact if a problem arises,
+and</li>
+<li>What kind of connectivity the new server will have.</li>
+</ul>
+If possible, sign your mail using PGP.
 </ul>
 
 <p>
