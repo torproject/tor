@@ -77,9 +77,6 @@ char *tor_strndup(const char *s, size_t n);
 void tor_strlower(char *s);
 
 #ifdef UNALIGNED_INT_ACCESS_OK
-/* XXX Not actually used yet, but would probably be faster on non-sun
- * hardare.
- */
 #define get_uint16(cp) (*(uint16_t*)(cp))
 #define get_uint32(cp) (*(uint32_t*)(cp))
 #define set_uint16(cp,v) do { *(uint16_t*)(cp) = (v); } while (0)

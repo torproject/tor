@@ -1075,11 +1075,13 @@ write_str_to_file(const char *fname, const char *str)
   if (!(file = fdopen(fd, "w"))) {
     log(LOG_WARN, "Couldn't fdopen %s for writing: %s", tempname,
         strerror(errno));
-    close(fd); return -1;
+    close(fd);
+    return -1;
   }
   if (fputs(str,file) == EOF) {
     log(LOG_WARN, "Error writing to %s: %s", tempname, strerror(errno));
-    fclose(file); return -1;
+    fclose(file);
+    return -1;
   }
   fclose(file);
   if (rename(tempname, fname)) {
