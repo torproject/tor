@@ -226,8 +226,8 @@ void check_conn_read(int i) {
       retval = connection_dir_handle_listener_read(conn);
     } else {
       retval = connection_read_to_buf(conn);
-      if (retval < 0 && conn->type == CONN_TYPE_DIR) {
-         /* as a special case: forget about this router */
+      if (retval < 0 && conn->type == CONN_TYPE_DIR && conn->state == DIR_CONN_STATE_CONNECTING) {
+         /* it's a directory server and connecting failed: forget about this router */
          router_forget_router(conn->addr,conn->port);
       }
       if (retval >= 0) { /* all still well */
