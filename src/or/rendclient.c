@@ -143,12 +143,18 @@ int
 rend_client_introduction_acked(circuit_t *circ,
                                const char *request, int request_len)
 {
+  int i;
+  rend_cache_entry_t *ent;
+  char *nickname;
+
   if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     log_fn(LOG_WARN, "Recieved REND_INTRODUCE_ACK on unexpected circuit %d",
            circ->n_circ_id);
     circuit_mark_for_close(circ);
     return -1;
   }
+
+  assert(circ->build_state->chosen_exit);
 
   if (request_len == 0) {
     /* It's an ACK; the introduction point relayed our introduction request. */
@@ -163,9 +169,60 @@ rend_client_introduction_acked(circuit_t *circ,
      * non-functional at the first intro point somehow?
      *
      * Or re-fetch the service descriptor? Hm....
-     *
-     * XXXX writeme
      */
+    i = rend_cache_lookup_entry(circ->rend_query, &ent);
+    if (i<0) {
+      log_fn(LOG_WARN, "Malformed service ID '%s'", circ->rend_query);
+      return -1;
+    }
+    if (i>0) {
+      /* Okay, we found the right service desc.  First, remove this intro point
+       * from the parsed descriptor (if it's still there!)
+       */
+      for (i=0; i < ent->parsed->n_intro_points; ++i) {
+        if (!strcasecmp(ent->parsed->intro_points[i],
+                        circ->build_state->chosen_exit)) {
+          tor_free(ent->parsed->intro_points[i]);
+          ent->parsed->intro_points[i] =
+            ent->parsed->intro_points[--ent->parsed->n_intro_points];
+          break;
+        }
+      }
+      /* If there are any introduction points left, re-extend the circuit to
+       * another intro point and try again. */
+      if (ent->parsed->n_intro_points) {
+        nickname = rend_client_get_random_intro(circ->rend_query);
+        assert(nickname);
+        if (!router_get_by_nickname(nickname)) {
+          log_fn(LOG_WARN, "Advertised intro point '%s' is not known. Closing.",
+                 nickname);
+          circuit_mark_for_close(circ);
+          return -1;
+        }
+        log_fn(LOG_INFO, "Chose new intro point %s for %s (circ %d)",
+               nickname, circ->rend_query, circ->n_circ_id);
+        circ->state = CIRCUIT_STATE_BUILDING;
+        tor_free(circ->build_state->chosen_exit);
+        circ->build_state->chosen_exit = tor_strdup(nickname);
+        ++circ->build_state->desired_path_len;
+        if (circuit_send_next_onion_skin(circ)<0) {
+          log_fn(LOG_WARN, "Couldn't extend circuit to new intro point.");
+          circuit_mark_for_close(circ);
+          return -1;
+        }
+        return 0;
+      }
+    }
+    /* Either we have no service desc, or all the intro points in that
+     * descriptor failed. So re-fetch the descriptor and try again. */
+    /* XXXX What do we do to this circ in the meantime? */
+    /* Refetch descriptor */
+    if(!connection_get_by_type_rendquery(CONN_TYPE_DIR, circ->rend_query)) {
+      /* not one already; initiate a dir rend desc lookup */
+      directory_initiate_command(router_pick_directory_server(),
+                                 DIR_PURPOSE_FETCH_RENDDESC,
+                                 circ->rend_query, strlen(circ->rend_query));
+    }
   }
   return 0;
 }
