@@ -177,6 +177,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
 
   switch(connection_connect(conn, conn->address, addr, port)) {
     case -1:
+      router_mark_as_down(conn->identity_digest);
       connection_free(conn);
       return NULL;
     case 0:
