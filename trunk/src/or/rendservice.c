@@ -30,6 +30,9 @@ typedef struct rend_service_port_config_t {
 /** Don't try to build more than this many circuits before giving up
  * for a while.*/
 #define MAX_INTRO_CIRCS_PER_PERIOD 10
+/** How many times will a hidden service operator attempt to connect to
+ * a requested rendezvous point before giving up? */
+#define MAX_REND_FAILURES 3
 
 /** Represents a single hidden service running at this OP. */
 typedef struct rend_service_t {
@@ -341,7 +344,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   char buf[RELAY_PAYLOAD_SIZE];
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN]; /* Holds KH, Df, Db, Kf, Kb */
   rend_service_t *service;
-  int r;
+  int r, i;
   size_t len, keylen;
   crypto_dh_env_t *dh = NULL;
   circuit_t *launched = NULL;
@@ -444,16 +447,19 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
 
   /* Launch a circuit to alice's chosen rendezvous point.
    */
-  launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname);
-  log_fn(LOG_INFO,
-        "Accepted intro; launching circuit to '%s' (cookie %s) for service %s",
-         rp_nickname, hexcookie, serviceid);
-  if (!launched) {
-    log_fn(LOG_WARN,
-           "Can't launch circuit to rendezvous point '%s' for service %s",
+  for(i=0;i<MAX_REND_FAILURES;i++) {
+    launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname);
+    if (launched)
+      break;
+  }
+  if(!launched) { /* give up */
+    log_fn(LOG_WARN,"Giving up launching first hop of circuit to rendezvous point '%s' for service %s",
            rp_nickname, serviceid);
     goto err;
   }
+  log_fn(LOG_INFO,
+        "Accepted intro; launching circuit to '%s' (cookie %s) for service %s",
+         rp_nickname, hexcookie, serviceid);
   tor_assert(launched->build_state);
   /* Fill in the circuit's state. */
   memcpy(launched->rend_pk_digest, circuit->rend_pk_digest,
@@ -477,10 +483,6 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   return -1;
 }
 
-/** How many times will a hidden service operator attempt to connect to
- * a requested rendezvous point before giving up? */
-#define MAX_REND_FAILURES 3
-
 /** Called when we fail building a rendezvous circuit at some point other
  * than the last hop: launches a new circuit to the same rendezvous point.
  */
@@ -499,20 +501,26 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
     return;
   }
 
-  log_fn(LOG_INFO,"Reattempting rendezvous circuit to %s",
-         oldcirc->build_state->chosen_exit_name);
+  oldstate = oldcirc->build_state;
+  tor_assert(oldstate);
 
-  newcirc = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND,
-                               oldcirc->build_state->chosen_exit_name);
-  if (!newcirc) {
-    log_fn(LOG_WARN,"Couldn't relaunch rendezvous circuit to %s",
-           oldcirc->build_state->chosen_exit_name);
+  if(oldstate->pending_final_cpath == NULL) {
+    log_fn(LOG_INFO,"Skipping relaunch of circ that failed on its first hop. Initiator will retry.");
     return;
   }
-  oldstate = oldcirc->build_state;
+
+  log_fn(LOG_INFO,"Reattempting rendezvous circuit to %s",
+         oldstate->chosen_exit_name);
+
+  newcirc = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND,
+                               oldstate->chosen_exit_name);
+  if (!newcirc) {
+    log_fn(LOG_WARN,"Couldn't relaunch rendezvous circuit to %s",
+           oldstate->chosen_exit_name);
+    return;
+  }
   newstate = newcirc->build_state;
   tor_assert(newstate);
-  tor_assert(oldstate);
   newstate->failure_count = oldstate->failure_count+1;
   newstate->pending_final_cpath = oldstate->pending_final_cpath;
   oldstate->pending_final_cpath = NULL;

@@ -1167,7 +1167,7 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
   }
 
   log_fn(LOG_DEBUG,"Chose router %s for hop %d (exit is %s)",
-         choice->nickname, cur_len, state->chosen_exit_name);
+         choice->nickname, cur_len+1, state->chosen_exit_name);
 
   hop = tor_malloc_zero(sizeof(crypt_path_t));
 
@@ -1184,7 +1184,7 @@ onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
   hop->deliver_window = CIRCWINDOW_START;
 
   log_fn(LOG_DEBUG, "Extended circuit path with %s for hop %d",
-         choice->nickname, cur_len);
+         choice->nickname, cur_len+1);
 
   *router_out = choice;
   return 0;
