@@ -287,8 +287,25 @@ options_act(void) {
   close_temp_logs();
   add_callback_log(LOG_NOTICE, LOG_ERR, control_event_logmsg);
 
-  if (set_max_file_descriptors(options->MaxConn) < 0)
+  if (options->MaxConn < 1) {
+    log(LOG_WARN, "MaxConn option must be a non-zero positive integer.");
     return -1;
+  }
+
+  if (set_max_file_descriptors(&options->MaxConn) < 0)
+    return -1;
+
+#ifdef USE_FAKE_POLL
+  if (options->MaxConn > 1024) {
+    log(LOG_INFO, "Systems without a working poll() can't set MaxConn higher than 1024 in Tor 0.0.9.x. Capping.");
+    options->MaxConn = 1024;
+  }
+#endif
+
+  if (options->MaxConn > MAXCONNECTIONS) {
+    log(LOG_INFO, "MaxConn option must be at most %d. Capping it.", MAXCONNECTIONS);
+    options->MaxConn = MAXCONNECTIONS;
+  }
 
   {
     smartlist_t *sl = smartlist_create();
@@ -1296,23 +1313,6 @@ options_validate(or_options_t *options)
   if (options->SocksPort >= 1 &&
       (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0)) {
     log(LOG_WARN, "PathlenCoinWeight option must be >=0.0 and <1.0.");
-    result = -1;
-  }
-
-  if (options->MaxConn < 1) {
-    log(LOG_WARN, "MaxConn option must be a non-zero positive integer.");
-    result = -1;
-  }
-
-#ifdef USE_FAKE_POLL
-  if (options->MaxConn > 1024) {
-    log(LOG_WARN, "Systems without a working poll() can't set MaxConn higher than 1024 in Tor 0.0.9.x.");
-    result = -1;
-  }
-#endif
-
-  if (options->MaxConn > MAXCONNECTIONS) {
-    log(LOG_WARN, "MaxConn option must be at most %d.", MAXCONNECTIONS);
     result = -1;
   }
 
