@@ -125,6 +125,7 @@ static aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_t
 
   high_bit = (aci_type == ACI_TYPE_HIGHER) ? 1<<15 : 0;
   conn = connection_exact_get_by_addr_port(addr,port);
+  /* XXX race condition: if conn is marked_for_close it won't be noticed */
   if (!conn)
     return (1|high_bit); /* No connection exists; conflict is impossible. */
 
@@ -910,7 +911,7 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
     for(stream = circ->p_streams; stream; stream=stream->next_stream) {
       if(stream->cpath_layer == victim) {
         log_fn(LOG_INFO, "Marking stream %d for close.", *(int*)stream->stream_id);
-        stream->marked_for_close = 1;
+/*ENDCLOSE*/    stream->marked_for_close = 1;
       }
     }
 

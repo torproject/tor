@@ -225,7 +225,7 @@ void dns_cancel_pending_resolve(char *question, connection_t *onlyconn) {
     /* mark all pending connections to fail */
     while(resolve->pending_connections) {
       pend = resolve->pending_connections;
-      pend->conn->marked_for_close = 1;
+/*ENDCLOSE*/  pend->conn->marked_for_close = 1;
       resolve->pending_connections = pend->next;
       free(pend);
     }
@@ -278,7 +278,7 @@ static void dns_found_answer(char *question, uint32_t answer) {
     pend = resolve->pending_connections;
     pend->conn->addr = resolve->answer;
     if(resolve->state == CACHE_STATE_FAILED || connection_exit_connect(pend->conn) < 0) {
-      pend->conn->marked_for_close = 1;
+/*ENDCLOSE*/  pend->conn->marked_for_close = 1;
     }
     resolve->pending_connections = pend->next;
     free(pend);
@@ -386,8 +386,6 @@ static int spawn_dnsworker(void) {
   set_socket_nonblocking(fd[0]);
 
   /* set up conn so it's got all the data we need to remember */
-  conn->receiver_bucket = -1; /* non-cell connections don't do receiver buckets */
-  conn->bandwidth = -1;
   conn->s = fd[0];
   conn->address = strdup("localhost");
 
@@ -420,6 +418,7 @@ static void spawn_enough_dnsworkers(void) {
 
     dnsconn->marked_for_close = 1;
     num_dnsworkers_busy--;
+    num_dnsworkers--;
   }
 
   if(num_dnsworkers_busy >= MIN_DNSWORKERS)
