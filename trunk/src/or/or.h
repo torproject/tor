@@ -387,8 +387,16 @@ int write_to_buf(char *string, int string_len,
 
 int fetch_from_buf(char *string, int string_len,
 		                 char **buf, int *buflen, int *buf_datalen);
-	  /* if there is string_len bytes in buf, write them onto string,
-	  *    * then memmove buf back (that is, remove them from buf) */
+  /* if there is string_len bytes in buf, write them onto string,
+   * then memmove buf back (that is, remove them from buf)
+   */
+
+int find_on_inbuf(char *string, int string_len,
+                  char *buf, int buf_datalen);
+  /* find first instance of needle 'string' on haystack 'buf'. return how
+   * many bytes from the beginning of buf to the end of string.
+   * If it's not there, return -1.
+   */
 
 /********************************* cell.c ***************************/
 
@@ -463,6 +471,7 @@ int connection_read_to_buf(connection_t *conn);
 int connection_fetch_from_buf(char *string, int len, connection_t *conn);
 
 int connection_outbuf_too_full(connection_t *conn);
+int connection_find_on_inbuf(char *string, int len, connection_t *conn);
 int connection_wants_to_flush(connection_t *conn);
 int connection_flush_buf(connection_t *conn);
 
