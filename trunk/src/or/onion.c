@@ -217,16 +217,13 @@ static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
 static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
 {
   int *n_supported;
-  int *n_maybe_supported;
   int i, j;
   int n_pending_connections = 0;
   connection_t **carray;
   int n_connections;
   int best_support = -1;
-  int best_maybe_support = -1;
   int best_support_idx = -1;
-  int best_maybe_support_idx = -1;
-  int n_best_support=0, n_best_maybe_support=0;
+  int n_best_support=0;
   smartlist_t *sl, *preferredexits, *excludedexits;
   routerinfo_t *router;
 
@@ -244,29 +241,26 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   }
   log_fn(LOG_DEBUG, "Choosing exit node; %d connections are pending",
          n_pending_connections);
-  /* Now we count, for each of the routers in the directory: how many
-   * of the pending connections could _definitely_ exit from that
-   * router (n_supported[i]) and how many could _possibly_ exit from
-   * that router (n_maybe_supported[i]).  (We can't be sure about
-   * cases where we don't know the IP address of the pending
-   * connection.)
+  /* Now we count, for each of the routers in the directory, how many
+   * of the pending connections could possibly exit from that
+   * router (n_supported[i]). (We can't be sure about cases where we
+   * don't know the IP address of the pending connection.)
    */
   n_supported = tor_malloc(sizeof(int)*dir->n_routers);
-  n_maybe_supported = tor_malloc(sizeof(int)*dir->n_routers);
   for (i = 0; i < dir->n_routers; ++i) { /* iterate over routers */
     if(!dir->routers[i]->is_running) {
-      n_supported[i] = n_maybe_supported[i] = -1;
+      n_supported[i] = -1;
       log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- directory says it's not running.",
              dir->routers[i]->nickname, i);
       continue; /* skip routers that are known to be down */
     }
     if(router_exit_policy_rejects_all(dir->routers[i])) {
-      n_supported[i] = n_maybe_supported[i] = -1;
+      n_supported[i] = -1;
       log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- it rejects all.",
              dir->routers[i]->nickname, i);
       continue; /* skip routers that reject all */
     }
-    n_supported[i] = n_maybe_supported[i] = 0;
+    n_supported[i] = 0;
     for (j = 0; j < n_connections; ++j) { /* iterate over connections */
       if (carray[j]->type != CONN_TYPE_AP ||
           carray[j]->state != AP_CONN_STATE_CIRCUIT_WAIT ||
@@ -280,14 +274,10 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
                  dir->routers[i]->nickname, i);
           break; /* would be rejected; try next connection */
         case 0:
+        case 1:
           ++n_supported[i];
           log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
                  dir->routers[i]->nickname, i, n_supported[i]);
-          ; /* Fall through: If it is supported, it is also maybe supported. */
-        case 1:
-          ++n_maybe_supported[i];
-          log_fn(LOG_DEBUG,"%s is maybe supported. n_maybe_supported[%d] now %d.",
-                 dir->routers[i]->nickname, i, n_maybe_supported[i]);
         }
     } /* End looping over connections. */
     if (n_supported[i] > best_support) {
@@ -301,20 +291,9 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
        * count of equally good routers.*/
       ++n_best_support;
     }
-    /* As above, but for 'maybe-supported' connections */
-    if (n_maybe_supported[i] > best_maybe_support) {
-      best_maybe_support = n_maybe_supported[i]; best_maybe_support_idx = i;
-      n_best_maybe_support = 1;
-      log_fn(LOG_DEBUG,"%s is new best maybe-supported option so far.",
-             dir->routers[i]->nickname);
-    } else if (n_maybe_supported[i] == best_maybe_support) {
-      ++n_best_maybe_support;
-    }
   }
-  log_fn(LOG_INFO, "Found %d servers that will definitely support %d/%d "
-                   "pending connections, and %d that might support %d/%d.",
-         n_best_support, best_support, n_pending_connections,
-         n_best_maybe_support, best_maybe_support, n_pending_connections);
+  log_fn(LOG_INFO, "Found %d servers that might support %d/%d pending connections.",
+         n_best_support, best_support, n_pending_connections);
 
   preferredexits = smartlist_create(MAX_ROUTERS_IN_DIR);
   add_nickname_list_to_smartlist(preferredexits,options.ExitNodes);
@@ -335,24 +314,13 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
     if (smartlist_overlap(sl,preferredexits))
       smartlist_intersect(sl,preferredexits);
     router = smartlist_choose(sl);
-  } else if (best_maybe_support > 0) {
-    /* If any routers _maybe_ support pending connections, choose one at
-     * random, as above.  */
-    for(i = best_maybe_support_idx; i < dir->n_routers; i++)
-      if(n_maybe_supported[i] == best_maybe_support)
-        smartlist_add(sl, dir->routers[i]);
-
-    smartlist_subtract(sl,excludedexits);
-    if (smartlist_overlap(sl,preferredexits))
-      smartlist_intersect(sl,preferredexits);
-    router = smartlist_choose(sl);
   } else {
     /* Either there are no pending connections, or no routers even seem to
      * possibly support any of them.  Choose a router at random. */
-    if (best_maybe_support == -1) {
+    if (best_support == -1) {
       log(LOG_WARN, "All routers are down or middleman -- choosing a doomed exit at random.");
     }
-    for(i = best_maybe_support_idx; i < dir->n_routers; i++)
+    for(i = best_support_idx; i < dir->n_routers; i++)
       if(n_supported[i] != -1)
         smartlist_add(sl, dir->routers[i]);
 
@@ -365,9 +333,13 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   smartlist_free(preferredexits);
   smartlist_free(excludedexits);
   smartlist_free(sl);
-  tor_free(n_supported); tor_free(n_maybe_supported);
+  tor_free(n_supported);
   if(router) {
-    log_fn(LOG_DEBUG, "Chose exit server '%s'", router->nickname);
+    log_fn(LOG_WARN, "Chose exit server '%s'", router->nickname);
+    if(router_exit_policy_rejects_all(router))
+      log_fn(LOG_WARN,"...which will reject all. Bug.");
+    if(!strcmp(router->nickname,"tor26") || !strcmp(router->nickname,"jap"))
+      log_fn(LOG_WARN,"...which is tor26 or jap, which should reject all.");
     return router;
   }
   log_fn(LOG_WARN, "No exit routers seem to be running; can't choose an exit.");
