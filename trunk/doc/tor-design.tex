@@ -1314,11 +1314,11 @@ entry in the DHT.
 
 The message that Alice gives
 the introduction point includes a hash of Bob's public key to identify
-the service, along with an optional initial authentication token (the
+the service, along with an optional initial authorization token (the
 introduction point can do prescreening, for example to block replays). Her
-message to Bob may include an end-to-end authentication token so Bob
+message to Bob may include an end-to-end authorization token so Bob
 can choose whether to respond.
-The authentication tokens can be used to provide selective access:
+The authorization tokens can be used to provide selective access:
 important users get tokens to ensure uninterrupted access to the
 service. During normal situations, Bob's service might simply be offered
 directly from mirrors, while Bob gives out tokens to high-priority users. If
@@ -1354,7 +1354,7 @@ remains a SOCKS proxy. We encode all of the necessary information
 into the fully qualified domain name Alice uses when establishing her
 connection. Location-hidden services use a virtual top level domain
 called {\tt .onion}: thus hostnames take the form {\tt x.y.onion} where
-{\tt x} is the authentication cookie, and {\tt y} encodes the hash of
+{\tt x} is the authorization cookie, and {\tt y} encodes the hash of
 the public key. Alice's onion proxy
 examines addresses; if they're destined for a hidden server, it decodes
 the key and starts the rendezvous as described above.
@@ -1565,8 +1565,8 @@ us) that comes without source.\\
 
 \noindent{\large\bf Directory attacks}\\
 \emph{Destroy directory servers.}  If a few directory
-servers disappear, the others still arrive at a final
-directory.  So long as any any directory servers remain in operation,
+servers disappear, the others still decide on a valid
+directory.  So long as any directory servers remain in operation,
 they will still broadcast their views of the network and generate a
 consensus directory.  (If more than half are destroyed, this
 directory will not, however, have enough signatures for clients to
@@ -1580,19 +1580,17 @@ at worst cast a tie-breaking vote to decide whether to include
 marginal ORs.  It remains to be seen how often such marginal cases
 occur in practice.
 
-\emph{Subvert a majority of directory servers.}  If the
-adversary controls more than half of the directory servers, he can
-decide on a final directory, and thus can include as many
-compromised ORs in the final directory as he wishes. 
-Tor does not address this possibility, except to try to ensure that
-directory server operators are independent and attack resistant.
+\emph{Subvert a majority of directory servers.} An adversary who controls
+more than half the directory servers can include as many compromised
+ORs in the final directory as he wishes. We must ensure that directory
+server operators are independent and attack resistant.
 
 \emph{Encourage directory server dissent.}  The directory
-agreement protocol requires that directory server operators agree on 
-the list of directory servers.  An adversary who can persuade some
+agreement protocol assumes that directory server operators agree on 
+the set of directory servers.  An adversary who can persuade some
 of the directory server operators to distrust one another could
 split the quorum into mutually hostile camps, thus partitioning
-users based on which directory they used.  Tor does not address
+users based on which directory they use.  Tor does not address
 this attack.
 
 \emph{Trick the directory servers into listing a hostile OR.}
@@ -1614,7 +1612,7 @@ appropriate.  The tradeoffs of a similar approach are discussed in
 \emph{Make many introduction requests.}  An attacker could
 try to deny Bob service by flooding his introduction points with
 requests.  Because the introduction points can block requests that
-lack authentication tokens, however, Bob can restrict the volume of
+lack authorization tokens, however, Bob can restrict the volume of
 requests he receives, or require a certain amount of computation for
 every request he receives.
   
@@ -1622,22 +1620,17 @@ every request he receives.
 disrupt a location-hidden service by disabling its introduction
 points.  But because a service's identity is attached to its public
 key, not its introduction point, the service can simply re-advertise
-itself at a different introduction point.
-An attacker who disables all the introduction points for a given
-service can block access to the service. However, re-advertisement of
-introduction points can still be done secretly so that only
-high-priority clients know the address of Bob's introduction
-points. (These selective secret authorizations can also be issued
-during normal operation.) Thus an attacker must disable
-all possible introduction points.
+itself at a different introduction point. Advertisements can also be
+done secretly so that only high-priority clients know the address of
+Bob's introduction points, forcing the attacker to disable all possible
+introduction points.
 
-\emph{Compromise an introduction point.} If an attacker controls
-Bob's an introduction point, he can flood Bob with
+\emph{Compromise an introduction point.} An attacker who controls
+Bob's introduction point can flood Bob with
 introduction requests, or prevent valid introduction requests from
-reaching him. Bob will notice a flooding
-attempt if it receives many introduction requests.  To notice
+reaching him. Bob can notice a flood, and close the circuit.  To notice
 blocking of valid requests, however, he should periodically test the
-introduction point by sending it introduction requests, and making
+introduction point by sending rendezvous requests and making
 sure he receives them.
 
 \emph{Compromise a rendezvous point.}  A rendezvous
