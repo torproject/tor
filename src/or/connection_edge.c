@@ -72,6 +72,9 @@ void relay_header_unpack(relay_header_t *dest, const char *src) {
 #endif
 }
 
+/* mark and return -1 if there was an unexpected error with the conn,
+ * else return 0.
+ */
 int connection_edge_process_inbuf(connection_t *conn) {
 
   assert(conn);
@@ -119,10 +122,14 @@ int connection_edge_process_inbuf(connection_t *conn) {
       }
       return 0;
     case EXIT_CONN_STATE_CONNECTING:
-      log_fn(LOG_INFO,"text from server while in 'connecting' state at exit. Leaving it on buffer.");
+    case AP_CONN_STATE_CIRCUIT_WAIT:
+    case AP_CONN_STATE_CONNECT_WAIT:
+      log_fn(LOG_INFO,"data from edge while in '%s' state. Leaving it on buffer.",
+                      conn_state_to_string[conn->type][conn->state]);
       return 0;
   }
   log_fn(LOG_WARN,"Got unexpected state %d. Closing.",conn->state);
+  connection_mark_for_close(conn, END_STREAM_REASON_MISC);
   return -1;
 }
 
@@ -192,8 +199,9 @@ int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_lay
   return 0;
 }
 
-int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command,
-                                 void *payload, int payload_len, crypt_path_t *cpath_layer) {
+int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
+                                 int relay_command, void *payload,
+                                 int payload_len, crypt_path_t *cpath_layer) {
   cell_t cell;
   relay_header_t rh;
   int cell_direction;
@@ -207,7 +215,6 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_RELAY;
-//  if(fromconn && fromconn->type == CONN_TYPE_AP) {
   if(cpath_layer) {
     cell.circ_id = circ->n_circ_id;
     cell_direction = CELL_DIRECTION_OUT;
@@ -238,8 +245,9 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
 
 /* an incoming relay cell has arrived. return -1 if you want to tear down the
  * circuit, else 0. */
-int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn,
-                                       int edge_type, crypt_path_t *layer_hint) {
+int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
+                                       connection_t *conn, int edge_type,
+                                       crypt_path_t *layer_hint) {
   static int num_seen=0;
   uint32_t addr;
   relay_header_t rh;
@@ -275,7 +283,6 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       if (rh.length >= 4) {
         memcpy(&addr, cell->payload + RELAY_HEADER_SIZE, 4);
         addr = ntohl(addr);
-//        addr = ntohl(*(uint32_t*)(cell->payload + RELAY_HEADER_SIZE));
         client_dns_set_entry(conn->socks_request->address, addr);
       }
       log_fn(LOG_INFO,"'connected' received after %d seconds.",
@@ -283,6 +290,11 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       circuit_log_path(LOG_INFO,circ);
       connection_ap_handshake_socks_reply(conn, NULL, 0, 1);
       conn->socks_request->has_finished = 1;
+      /* handle anything that might have queued */
+      if (connection_edge_package_raw_inbuf(conn) < 0) {
+        connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+        return 0;
+      }
       return 0;
     } else {
       log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
@@ -353,7 +365,6 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
          */
         memcpy(&addr, cell->payload+RELAY_HEADER_SIZE+1, 4);
         addr = ntohl(addr);
-//        addr = ntohl(*(uint32_t*)(cell->payload+RELAY_HEADER_SIZE+1));
         client_dns_set_entry(conn->socks_request->address, addr);
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
         if(connection_ap_handshake_attach_circuit(conn) >= 0)
@@ -503,7 +514,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
       connection_stop_writing(conn);
       return 0;
     default:
-      log_fn(LOG_WARN,"BUG: called in unexpected state: %d", conn->state);
+      log_fn(LOG_WARN,"BUG: called in unexpected state %d.", conn->state);
       return -1;
   }
   return 0;
@@ -849,6 +860,59 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   return;
 }
 
+/* make an ap connection_t, do a socketpair and attach one side
+ * to the conn, connection_add it, initialize it to circuit_wait,
+ * and call connection_ap_handshake_attach_circuit(conn) on it.
+ * Return the other end of the socketpair, or -1 if error.
+ */
+int connection_ap_make_bridge(char *address, uint16_t port) {
+  int fd[2];
+  connection_t *conn;
+
+  log_fn(LOG_INFO,"Making AP bridge to %s:%d ...",address,port);
+
+  if(tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
+    log(LOG_ERR, "Couldn't construct socketpair: %s", strerror(errno));
+    exit(1);
+  }
+
+  set_socket_nonblocking(fd[0]);
+  set_socket_nonblocking(fd[1]);
+
+  conn = connection_new(CONN_TYPE_AP);
+  conn->s = fd[0];
+
+  /* populate conn->socks_request */
+
+  /* leave version at zero, so the socks_reply is empty */
+  conn->socks_request->socks_version = 0;
+  conn->socks_request->has_finished = 0; /* waiting for 'connected' */
+  strcpy(conn->socks_request->address, address);
+  conn->socks_request->port = port;
+
+  conn->address = tor_strdup("(local bridge)");
+  conn->addr = ntohs(0);
+  conn->port = 0;
+
+  if(connection_add(conn) < 0) { /* no space, forget it */
+    connection_free(conn); /* this closes fd[0] */
+    close(fd[1]);
+    return -1;
+  }
+
+  conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+  connection_start_reading(conn);
+
+  if (connection_ap_handshake_attach_circuit(conn) < 0) {
+    connection_mark_for_close(conn, 0);
+    close(fd[1]);
+    return -1;
+  }
+
+  log_fn(LOG_INFO,"... AP bridge created and connected.");
+  return fd[1];
+}
+
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                          int replylen, char success) {
   char buf[256];
@@ -877,7 +941,8 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                           The spec doesn't seem to say what to do here. -RD */
     connection_write_to_buf(buf,10,conn);
   }
-  /* if socks_version isn't 4 or 5, don't send anything */
+  /* If socks_version isn't 4 or 5, don't send anything.
+   * This can happen in the case of AP bridges. */
   return;
 }
 

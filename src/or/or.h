@@ -793,15 +793,17 @@ void relay_header_unpack(relay_header_t *dest, const char *src);
 int connection_edge_process_inbuf(connection_t *conn);
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn);
 int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer);
-
-int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int relay_command,
-                                 void *payload, int payload_len, crypt_path_t *cpath_layer);
-
-int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn,
-                                       int edge_type, crypt_path_t *layer_hint);
+int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
+                                 int relay_command, void *payload,
+                                 int payload_len, crypt_path_t *cpath_layer);
+int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
+                                       connection_t *conn, int edge_type,
+                                       crypt_path_t *layer_hint);
 int connection_edge_finished_flushing(connection_t *conn);
 
 int connection_edge_package_raw_inbuf(connection_t *conn);
+
+int connection_ap_make_bridge(char *address, uint16_t port);
 
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                          int replylen, char success);
@@ -843,7 +845,8 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
 
 /********************************* directory.c ***************************/
 
-void directory_initiate_command(routerinfo_t *router, int purpose, const char *payload);
+void directory_initiate_command(routerinfo_t *router, int purpose,
+                                const char *payload, int payload_len);
 int connection_dir_process_inbuf(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
 
@@ -873,6 +876,8 @@ void connection_start_reading(connection_t *conn);
 int connection_is_writing(connection_t *conn);
 void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
+
+void directory_has_arrived(void);
 
 int main(int argc, char *argv[]);
 

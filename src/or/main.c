@@ -277,6 +277,15 @@ static void conn_close_if_marked(int i) {
   }
 }
 
+void directory_has_arrived(void) {
+
+  log_fn(LOG_INFO, "We now have a directory.");
+
+  directory_initiate_command(router_pick_directory_server(),
+                             DIR_PURPOSE_FETCH_HIDSERV, "foo", 3);
+
+}
+
 /* Perform regular maintenance tasks for a single connection.  This
  * function gets run once per second per connection by run_housekeeping.
  */
@@ -329,7 +338,7 @@ static void run_scheduled_events(time_t now) {
       /* NOTE directory servers do not currently fetch directories.
        * Hope this doesn't bite us later. */
       directory_initiate_command(router_pick_directory_server(),
-                                 DIR_PURPOSE_FETCH_DIR, NULL);
+                                 DIR_PURPOSE_FETCH_DIR, NULL, 0);
     } else {
       /* We're a directory; dump any old descriptors. */
       dirserv_remove_old_servers();
@@ -362,7 +371,7 @@ static void run_scheduled_events(time_t now) {
    *    that became dirty more than NewCircuitPeriod seconds ago,
    *    and we make a new circ if there are no clean circuits.
    */
-  if((has_fetched_directory || options.DirPort) &&
+  if(has_fetched_directory &&
      (options.SocksPort || options.RunTesting)) {
 
     if (options.SocksPort)
@@ -521,7 +530,7 @@ static int do_hup(void) {
   } else {
     /* fetch a new directory */
     directory_initiate_command(router_pick_directory_server(),
-                               DIR_PURPOSE_FETCH_DIR, NULL);
+                               DIR_PURPOSE_FETCH_DIR, NULL, 0);
   }
   if(options.ORPort) {
     router_rebuild_descriptor();
@@ -556,6 +565,11 @@ static int do_main_loop(void) {
   if (init_keys() < 0 || rend_service_init_keys() < 0) {
     log_fn(LOG_ERR,"Error initializing keys; exiting");
     return -1;
+  }
+
+  if(options.DirPort) { /* the directory is already here, run startup things */
+    has_fetched_directory = 1;
+    directory_has_arrived();
   }
 
   if(options.ORPort) {
