@@ -570,7 +570,7 @@ connection_edge_process_relay_cell_not_open(
     tor_assert(conn->socks_request->command == SOCKS_COMMAND_RESOLVE);
     if (rh->length < 2 || cell->payload[RELAY_HEADER_SIZE+1]+2>rh->length) {
       log_fn(LOG_WARN, "Dropping malformed 'resolved' cell");
-      connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
+      conn->has_sent_end = 1;
       connection_mark_for_close(conn);
       return 0;
     }
