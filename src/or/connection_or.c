@@ -63,6 +63,9 @@ int connection_or_process_inbuf(connection_t *conn) {
  * begin the tls handshake if the connect succeeded.
  *
  * Otherwise it's in state 'open': stop writing and return.
+ *
+ * If <b>conn</b> is broken, mark it for close and return -1, else
+ * return 0.
  */
 int connection_or_finished_flushing(connection_t *conn) {
   int e, len=sizeof(e);
