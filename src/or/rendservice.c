@@ -459,7 +459,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   /* Launch a circuit to alice's chosen rendezvous point.
    */
   for (i=0;i<MAX_REND_FAILURES;i++) {
-    launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname);
+    launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname, 0, 1);
     if (launched)
       break;
   }
@@ -524,7 +524,7 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
          oldstate->chosen_exit_name);
 
   newcirc = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_CONNECT_REND,
-                               oldstate->chosen_exit_name);
+                               oldstate->chosen_exit_name, 0, 1);
   if (!newcirc) {
     log_fn(LOG_WARN,"Couldn't relaunch rendezvous circuit to %s",
            oldstate->chosen_exit_name);
@@ -553,7 +553,7 @@ rend_service_launch_establish_intro(rend_service_t *service, const char *nicknam
          nickname, service->service_id);
 
   ++service->n_intro_circuits_launched;
-  launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, nickname);
+  launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, nickname, 1, 0);
   if (!launched) {
     log_fn(LOG_WARN, "Can't launch circuit to establish introduction at '%s'",
            nickname);

@@ -722,6 +722,10 @@ typedef struct {
   char *chosen_exit_name;
   /** Identity of planned exit node. */
   char chosen_exit_digest[DIGEST_LEN];
+  /** Whether every node in the circ must have adequate uptime. */
+  int need_uptime;
+  /** Whether every node in the circ must have adequate capacity. */
+  int need_capacity;
   /** The crypt_path_t to append after rendezvous: used for rendezvous. */
   struct crypt_path_t *pending_final_cpath;
   /** How many times has building a circuit for this task failed? */
@@ -930,7 +934,9 @@ typedef struct {
                       * directory recommends. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
   int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
-  smartlist_t *FirewallPorts; /** Which ports our firewall allows. */
+  smartlist_t *FirewallPorts; /**< Which ports our firewall allows (strings). */
+  /** Application ports that require all nodes in circ to have sufficient uptime. */
+  smartlist_t *LongLivedPorts;
   int DirFetchPeriod; /**< How often do we fetch new directories? */
   int DirPostPeriod; /**< How often do we post our server descriptor to the
                       * authoritative directory servers? */
@@ -1040,8 +1046,8 @@ char *circuit_list_path(circuit_t *circ, int verbose);
 void circuit_log_path(int severity, circuit_t *circ);
 void circuit_rep_hist_note_result(circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
-circuit_t *circuit_establish_circuit(uint8_t purpose,
-                                     const char *exit_digest);
+circuit_t *circuit_establish_circuit(uint8_t purpose, const char *exit_digest,
+                                     int need_uptime, int need_capacity);
 void circuit_n_conn_done(connection_t *or_conn, int status);
 int circuit_send_next_onion_skin(circuit_t *circ);
 int circuit_extend(cell_t *cell, circuit_t *circ);
@@ -1049,7 +1055,9 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse);
 int circuit_finish_handshake(circuit_t *circ, char *reply);
 int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
 int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
-int circuit_all_predicted_ports_handled(time_t now);
+int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
+                                        int *need_capacity);
+
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 
 /********************************* circuitlist.c ***********************/
@@ -1092,8 +1100,10 @@ void circuit_detach_stream(circuit_t *circ, connection_t *conn);
 void circuit_about_to_close_connection(connection_t *conn);
 void circuit_has_opened(circuit_t *circ);
 void circuit_build_failed(circuit_t *circ);
-circuit_t *circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname);
-circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest);
+circuit_t *circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
+                                      int need_uptime, int need_capacity);
+circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest,
+                                      int need_uptime, int need_capacity);
 void circuit_reset_failure_count(int timeout);
 int connection_ap_handshake_attach_circuit(connection_t *conn);
 
@@ -1592,15 +1602,15 @@ int router_nickname_matches(routerinfo_t *router, const char *nickname);
 /** How many seconds a router must be up before we'll use it for
  * reliability-critical node positions.
  */
-#define ROUTER_REQUIRED_MIN_UPTIME 3600 /* an hour */
+#define ROUTER_REQUIRED_MIN_UPTIME (24*3600) /* a day */
 #define ROUTER_REQUIRED_MIN_BANDWIDTH 10000
 
-int router_is_unreliable_router(routerinfo_t *router, int need_uptime, int need_bw);
+int router_is_unreliable(routerinfo_t *router, int need_uptime, int need_capacity);
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl);
 routerinfo_t *router_choose_random_node(const char *preferred,
                                         const char *excluded,
                                         struct smartlist_t *excludedsmartlist,
-                                        int preferuptime, int preferbandwidth,
+                                        int need_uptime, int need_bandwidth,
                                         int allow_unverified, int strict);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_nickname(const char *nickname);
@@ -1621,7 +1631,9 @@ int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
 #define ADDR_POLICY_ACCEPTED 0
 #define ADDR_POLICY_REJECTED -1
 #define ADDR_POLICY_UNKNOWN 1
-int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port);
+int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
+                                          int need_uptime);
+
 int router_exit_policy_rejects_all(routerinfo_t *router);
 void running_routers_free(running_routers_t *rr);
 void routerlist_update_from_runningrouters(routerlist_t *list,

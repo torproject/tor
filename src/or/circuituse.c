@@ -78,6 +78,11 @@ static int circuit_is_acceptable(circuit_t *circ,
       return 0; /* this circuit is screwed and doesn't know it yet */
     }
 
+    if (!circ->build_state->need_uptime &&
+        smartlist_string_num_isin(get_options()->LongLivedPorts,
+                                  conn->socks_request->port))
+      return 0;
+
     if (conn->socks_request &&
         conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
       /* 0.0.8 servers have buggy resolve support. */
@@ -311,6 +316,7 @@ int circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min) 
 void circuit_build_needed_circs(time_t now) {
   static long time_to_new_circuit = 0;
   circuit_t *circ;
+  int need_uptime=0, need_capacity=1;
 
   /* launch a new circ for any pending streams that need one */
   connection_ap_attach_pending();
@@ -332,7 +338,7 @@ void circuit_build_needed_circs(time_t now) {
         circ &&
         circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
       log_fn(LOG_INFO,"Creating a new testing circuit.");
-      circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL);
+      circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL, 0, 0);
     }
   }
 
@@ -353,8 +359,9 @@ void circuit_build_needed_circs(time_t now) {
   /* if we know of a port that's been requested recently and no
    * circuit is currently available that can handle it, start one
    * for that too. */
-  if (!circuit_all_predicted_ports_handled(now)) {
-    circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL);
+  if (!circuit_all_predicted_ports_handled(now, &need_uptime, &need_capacity)) {
+    circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL,
+                               need_uptime, need_capacity);
   }
 
   /* XXX count idle rendezvous circs and build more */
@@ -637,7 +644,9 @@ static int did_circs_fail_last_period = 0;
  * success. */
 #define MAX_CIRCUIT_FAILURES 5
 
-circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest)
+circuit_t *
+circuit_launch_by_identity(uint8_t purpose, const char *exit_digest,
+                           int need_uptime, int need_capacity)
 {
   if (!has_fetched_directory) {
     log_fn(LOG_DEBUG,"Haven't fetched directory yet; canceling circuit launch.");
@@ -652,11 +661,14 @@ circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest)
   }
 
   /* try a circ. if it fails, circuit_mark_for_close will increment n_circuit_failures */
-  return circuit_establish_circuit(purpose, exit_digest);
+  return circuit_establish_circuit(purpose, exit_digest,
+                                   need_uptime, need_capacity);
 }
 
 /** Launch a new circuit and return a pointer to it. Return NULL if you failed. */
-circuit_t *circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname)
+circuit_t *
+circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
+                           int need_uptime, int need_capacity)
 {
   const char *digest = NULL;
 
@@ -668,7 +680,8 @@ circuit_t *circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname
     }
     digest = r->identity_digest;
   }
-  return circuit_launch_by_identity(purpose, digest);
+  return circuit_launch_by_identity(purpose, digest,
+                                    need_uptime, need_capacity);
 }
 
 /** Record another failure at opening a general circuit. When we have
@@ -704,6 +717,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
   circuit_t *circ;
   uint32_t addr;
   int is_resolve;
+  int need_uptime;
 
   tor_assert(conn);
   tor_assert(circp);
@@ -729,10 +743,14 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     return 0;
   }
 
+  need_uptime = smartlist_string_num_isin(get_options()->LongLivedPorts,
+                                          conn->socks_request->port);
+
   /* Do we need to check exit policy? */
   if (!is_resolve && !connection_edge_is_rendezvous_stream(conn)) {
     addr = client_dns_lookup_entry(conn->socks_request->address);
-    if (router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
+    if (router_exit_policy_all_routers_reject(addr, conn->socks_request->port,
+                                              need_uptime)) {
       log_fn(LOG_NOTICE,"No Tor server exists that allows exit to %s:%d. Rejecting.",
              conn->socks_request->address, conn->socks_request->port);
       return -1;
@@ -783,7 +801,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     else
       new_circ_purpose = desired_circuit_purpose;
 
-    circ = circuit_launch_by_nickname(new_circ_purpose, exitname);
+    circ = circuit_launch_by_nickname(new_circ_purpose, exitname, need_uptime, 1);
     tor_free(exitname);
 
     if (circ &&
