@@ -33,6 +33,10 @@ static uint64_t stats_n_bytes_written = 0;
 long stats_n_seconds_uptime = 0;
 /** When do we next download a directory? */
 static time_t time_to_fetch_directory = 0;
+/** When do we next upload our descriptor? */
+static time_t time_to_force_upload_descriptor = 0;
+/** When do we next download a running-routers summary? */
+static time_t time_to_fetch_running_routers = 0;
 
 /** Array of all open connections; each element corresponds to the element of
  * poll_array in the same position.  The first nfds elements are valid. */
@@ -372,12 +376,17 @@ void directory_has_arrived(time_t now) {
   log_fn(LOG_INFO, "A directory has arrived.");
 
   has_fetched_directory=1;
-  /* Don't try to upload or download anything for DirFetchPostPeriod
-   * seconds after the directory we had when we started.
+  /* Don't try to upload or download anything for a while
+   * after the directory we had when we started.
    */
   if (!time_to_fetch_directory)
-    /*XXX *5 is unreasonable.  We should have separate options for these cases.*/
-    time_to_fetch_directory = now + options->DirFetchPostPeriod*5;
+    time_to_fetch_directory = now + options->DirFetchPeriod;
+
+  if(!time_to_force_upload_descriptor)
+    time_to_force_upload_descriptor = now + options->DirPostPeriod;
+
+  if(!time_to_fetch_running_routers)
+    time_to_fetch_running_routers = now + options->StatusFetchPeriod;
 
   if (server_mode(options) &&
       !we_are_hibernating()) { /* connect to the appropriate routers */
@@ -509,12 +518,9 @@ int proxy_mode(or_options_t *options) {
  * second by prepare_for_poll.
  */
 static void run_scheduled_events(time_t now) {
-  static time_t last_uploaded_services = 0;
   static time_t last_rotated_certificate = 0;
   static time_t time_to_check_listeners = 0;
   static time_t time_to_check_descriptor = 0;
-  static time_t time_to_force_upload_descriptor = 0;
-  static time_t time_to_fetch_running_routers = 0;
   or_options_t *options = get_options();
   int i;
 
@@ -559,9 +565,9 @@ static void run_scheduled_events(time_t now) {
   if (accounting_is_enabled(options))
     accounting_run_housekeeping(now);
 
-  /** 2. Every DirFetchPostPeriod seconds, we get a new directory and
-   *    force-upload our descriptor (if we've passed our internal
-   *    checks). */
+  /** 2. Periodically, we consider getting a new directory, getting a
+   * new running-routers list, and/or force-uploading our descriptor
+   * (if we've passed our internal checks). */
   if(time_to_fetch_directory < now) {
     /* purge obsolete entries */
     routerlist_remove_old_routers(ROUTER_MAX_AGE);
@@ -577,21 +583,20 @@ static void run_scheduled_events(time_t now) {
     }
 
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL);
-    /*XXX *5 is unreasonable.  We should have separate options for these cases.*/
-    time_to_fetch_directory = now + options->DirFetchPostPeriod*5;
-    time_to_fetch_running_routers = now + options->DirFetchPostPeriod;
+    time_to_fetch_directory = now + options->DirFetchPeriod;
+    if (time_to_fetch_running_routers < now + options->StatusFetchPeriod) {
+      time_to_fetch_running_routers = now + options->StatusFetchPeriod;
+    }
   }
 
   if (time_to_fetch_running_routers < now) {
     if (!authdir_mode(options)) {
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL);
     }
-    time_to_fetch_running_routers = now + options->DirFetchPostPeriod;
+    time_to_fetch_running_routers = now + options->StatusFetchPeriod;
   }
 
   if (time_to_force_upload_descriptor < now) {
-    /*XXX Separate option for this, too. */
-    time_to_force_upload_descriptor = now + options->DirFetchPostPeriod;
     if(decide_if_publishable_server(now)) {
       server_is_advertised = 1;
       router_rebuild_descriptor(1);
@@ -600,14 +605,9 @@ static void run_scheduled_events(time_t now) {
       server_is_advertised = 0;
     }
 
-    if(!we_are_hibernating()) {
-      /* Force an upload of our rend descriptors every DirFetchPostPeriod seconds. */
-      rend_services_upload(1);
-      last_uploaded_services = now;
-    }
     rend_cache_clean(); /* this should go elsewhere? */
 
-    time_to_force_upload_descriptor = now + options->DirFetchPostPeriod;
+    time_to_force_upload_descriptor = now + options->DirPostPeriod;
   }
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
@@ -625,14 +625,14 @@ static void run_scheduled_events(time_t now) {
 
   /** 3a. Every second, we examine pending circuits and prune the
    *    ones which have been pending for more than a few seconds.
-   *    We do this before step 3, so it can try building more if
+   *    We do this before step 4, so it can try building more if
    *    it's not comfortable with the number of available circuits.
    */
   circuit_expire_building(now);
 
   /** 3b. Also look at pending streams and prune the ones that 'began'
    *     a long time ago but haven't gotten a 'connected' yet.
-   *     Do this before step 3, so we can put them back into pending
+   *     Do this before step 4, so we can put them back into pending
    *     state to be picked up by the new circuit.
    */
   connection_ap_expire_beginning();
@@ -663,12 +663,9 @@ static void run_scheduled_events(time_t now) {
   /** 6. And remove any marked circuits... */
   circuit_close_all_marked();
 
-  /** 7. And upload service descriptors for any services whose intro points
-   *    have changed in the last second. */
-  if (last_uploaded_services < now-5) {
-    rend_services_upload(0);
-    last_uploaded_services = now;
-  }
+  /** 7. And upload service descriptors if necessary. */
+  if(!we_are_hibernating())
+    rend_consider_services_upload(now);
 
   /** 8. and blow away any connections that need to die. have to do this now,
    * because if we marked a conn for close and left its socket -1, then

@@ -50,6 +50,7 @@ typedef struct rend_service_t {
                                   * established in this period. */
   rend_service_descriptor_t *desc;
   int desc_is_dirty;
+  time_t next_upload_time;
 } rend_service_t;
 
 /** A list of rend_service_t's for services run on this OP.
@@ -759,8 +760,7 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   return NULL;
 }
 
-/** If the directory servers don't have an up-to-date descriptor for
- * <b>service</b>, encode and sign the service descriptor for <b>service</b>,
+/** Encode and sign an up-to-date service descriptor for <b>service</b>,
  * and upload it to all the dirservers.
  */
 static void
@@ -768,8 +768,6 @@ upload_service_descriptor(rend_service_t *service)
 {
   char *desc;
   size_t desc_len;
-  if (!service->desc_is_dirty)
-    return;
 
   /* Update the descriptor. */
   rend_service_update_descriptor(service);
@@ -893,22 +891,34 @@ void rend_services_introduce(void) {
 }
 
 /** Regenerate and upload rendezvous service descriptors for all
- * services.  If <b>force</b> is false, skip services where we've already
- * uploaded an up-to-date copy; if <b>force</b> is true, regenerate and
- * upload everything.
+ * services, if necessary. If the descriptor has been dirty enough
+ * for long enough, definitely upload; else only upload when the
+ * periodic timeout has expired.
+ *
+ * For the first upload, pick a random time between now and two periods
+ * from now, and pick it independently for each service.
  */
 void
-rend_services_upload(int force)
-{
+rend_consider_services_upload(time_t now) {
   int i;
   rend_service_t *service;
+  int rendpostperiod = get_options()->RendPostPeriod;
 
   for (i=0; i< smartlist_len(rend_service_list); ++i) {
     service = smartlist_get(rend_service_list, i);
-    if (force)
-      service->desc_is_dirty = 1;
-    if (service->desc_is_dirty)
+    if (!service->next_upload_time) { /* never been uploaded yet */
+      service->next_upload_time =
+        now + crypto_pseudo_rand_int(2*rendpostperiod);
+    }
+    if (service->next_upload_time < now ||
+        (service->desc_is_dirty &&
+         service->next_upload_time < now-5)) {
+      /* if it's time, or if the directory servers have a wrong service
+       * descriptor and this has been the case for 5 seconds, upload a
+       * new one. */
       upload_service_descriptor(service);
+      service->next_upload_time = now + rendpostperiod;
+    }
   }
 }
 

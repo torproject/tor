@@ -57,6 +57,7 @@ static config_abbrev_t config_abbrevs[] = {
   { "l", "Log", 1},
   { "BandwidthRate", "BandwidthRateBytes", 0},
   { "BandwidthBurst", "BandwidthBurstBytes", 0},
+  { "DirFetchPostPeriod", "DirFetchPeriod", 0},
   { NULL, NULL , 0},
 };
 #undef PLURAL
@@ -98,7 +99,9 @@ static config_var_t config_vars[] = {
   VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
   VAR("DirPort",             UINT,     DirPort,              "0"),
   VAR("DirBindAddress",      LINELIST, DirBindAddress,       NULL),
-  VAR("DirFetchPostPeriod",  UINT,     DirFetchPostPeriod,   "600"),
+  VAR("DirFetchPeriod",      UINT,     DirFetchPeriod,       "3600"),
+  VAR("DirPostPeriod",       UINT,     DirPostPeriod,        "600"),
+  VAR("RendPostPeriod",      UINT,     RendPostPeriod,       "600"),
   VAR("DirPolicy",           LINELIST, DirPolicy,            NULL),
   VAR("DirServer",           LINELIST, DirServers,           NULL),
   VAR("ExitNodes",           STRING,   ExitNodes,            NULL),
@@ -147,6 +150,7 @@ static config_var_t config_vars[] = {
   VAR("SocksPort",           UINT,     SocksPort,            "9050"),
   VAR("SocksBindAddress",    LINELIST, SocksBindAddress,     NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
+  VAR("StatusFetchPeriod",   UINT,     StatusFetchPeriod,    "1200"),
   VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
   OBSOLETE("TrafficShaping"),
   VAR("User",                STRING,   User,                 NULL),
@@ -1227,13 +1231,25 @@ options_validate(or_options_t *options)
   }
 
 #define MIN_DIRFETCHPOSTPERIOD 60
-  if (options->DirFetchPostPeriod < MIN_DIRFETCHPOSTPERIOD) {
-    log(LOG_WARN, "DirFetchPostPeriod option must be at least %d.", MIN_DIRFETCHPOSTPERIOD);
+  if (options->DirFetchPeriod < MIN_DIRFETCHPOSTPERIOD) {
+    log(LOG_WARN, "DirFetchPeriod option must be at least %d.", MIN_DIRFETCHPOSTPERIOD);
     result = -1;
   }
-  if (options->DirFetchPostPeriod > MIN_ONION_KEY_LIFETIME / 2) {
-    log(LOG_WARN, "DirFetchPostPeriod is too large; clipping.");
-    options->DirFetchPostPeriod = MIN_ONION_KEY_LIFETIME / 2;
+  if (options->StatusFetchPeriod < MIN_DIRFETCHPOSTPERIOD) {
+    log(LOG_WARN, "StatusFetchPeriod option must be at least %d.", MIN_DIRFETCHPOSTPERIOD);
+    result = -1;
+  }
+  if (options->DirPostPeriod < MIN_DIRFETCHPOSTPERIOD) {
+    log(LOG_WARN, "DirPostPeriod option must be at least %d.", MIN_DIRFETCHPOSTPERIOD);
+    result = -1;
+  }
+  if (options->DirFetchPeriod > MIN_ONION_KEY_LIFETIME / 2) {
+    log(LOG_WARN, "DirFetchPeriod is too large; clipping.");
+    options->DirFetchPeriod = MIN_ONION_KEY_LIFETIME / 2;
+  }
+  if (options->DirPostPeriod > MIN_ONION_KEY_LIFETIME / 2) {
+    log(LOG_WARN, "DirPostPeriod is too large; clipping.");
+    options->DirPostPeriod = MIN_ONION_KEY_LIFETIME / 2;
   }
 
   if (options->KeepalivePeriod < 1) {
