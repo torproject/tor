@@ -254,7 +254,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
           log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver. Malformed server descriptor?");
           break;
         case 403:
-          log_fn(LOG_WARN,"http status 403 (unapproved server) response from dirserver. Is your clock skewed? Have you mailed arma your identity fingerprint? Are you using the right key?");
+          log_fn(LOG_WARN,"http status 403 (unapproved server) response from dirserver. Is your clock skewed? Have you mailed arma your identity fingerprint? Are you using the right key? See README.");
 
           break;
         default:
