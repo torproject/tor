@@ -13,7 +13,7 @@ const char circuituse_c_id[] = "$Id$";
 #include "or.h"
 
 /** Longest time to wait for a circuit before closing an AP connection */
-#define CONN_AP_MAX_ATTACH_DELAY 60
+#define CONN_AP_MAX_ATTACH_DELAY 59
 
 /********* START VARIABLES **********/
 

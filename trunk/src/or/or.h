@@ -566,7 +566,6 @@ struct connection_t {
   int done_receiving; /**< For half-open connections; not used currently. */
   char has_sent_end; /**< For debugging: set once we've set the stream end,
                         and check in circuit_about_to_close_connection(). */
-  char num_retries; /**< How many times have we re-tried beginning this stream?  (Edge only) */
 
   /* Used only by AP connections */
   socks_request_t *socks_request; /**< SOCKS structure describing request (AP

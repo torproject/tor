@@ -35,7 +35,7 @@ int connection_edge_reached_eof(connection_t *conn) {
   }
   return 0;
 #else
-  if (buf_datalen(conn->inbuf)) {
+  if (buf_datalen(conn->inbuf) && connection_state_is_open(conn)) {
     /* it still has stuff to process. don't let it die yet. */
     return 0;
   }
@@ -222,12 +222,6 @@ int connection_edge_finished_connecting(connection_t *conn)
   return connection_edge_process_inbuf(conn, 1);
 }
 
-/** How many times do we retry a general-purpose stream (detach it from
- * one circuit and try another, after we wait a while with no 'connected'
- * cell) before giving up?
- */
-#define MAX_STREAM_RETRIES 4
-
 /** Find all general-purpose AP streams waiting for a response that sent
  * their begin/resolve cell >=15 seconds ago. Detach from their current circuit,
  * and mark their current circuit as unsuitable for new streams. Then call
@@ -256,55 +250,47 @@ void connection_ap_expire_beginning(void) {
       continue;
     if (now - conn->timestamp_lastread < 15)
       continue;
-    conn->num_retries++;
     circ = circuit_get_by_conn(conn);
     if (!circ) { /* it's vanished? */
-      log_fn(LOG_INFO,"Conn is waiting, but lost its circ.");
+      log_fn(LOG_WARN,"Conn is waiting (address %s), but lost its circ.",
+             conn->socks_request->address);
       connection_mark_for_close(conn);
       continue;
     }
     if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
       if (now - conn->timestamp_lastread > 45) {
-        log_fn(LOG_WARN,"Rend stream is %d seconds late. Giving up.",
-               (int)(now - conn->timestamp_lastread));
+        log_fn(LOG_WARN,"Rend stream is %d seconds late. Giving up on address '%s'.",
+               (int)(now - conn->timestamp_lastread), conn->socks_request->address);
         connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
         connection_mark_for_close(conn);
       }
       continue;
     }
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
-    if (conn->num_retries >= MAX_STREAM_RETRIES) {
-      log_fn(LOG_WARN,"Stream is %d seconds old. Giving up.",
-             (int)(now - conn->timestamp_created));
-      circuit_log_path(LOG_WARN, circ);
-      connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
+    log_fn(LOG_NOTICE,"Stream is %d seconds late on address '%s'. Retrying.",
+           (int)(now - conn->timestamp_lastread), conn->socks_request->address);
+    circuit_log_path(LOG_WARN, circ);
+    /* send an end down the circuit */
+    connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
+    /* un-mark it as ending, since we're going to reuse it */
+    conn->has_sent_end = 0;
+    /* move it back into 'pending' state. */
+    conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+    circuit_detach_stream(circ, conn);
+    /* kludge to make us not try this circuit again, yet to allow
+     * current streams on it to survive if they can: make it
+     * unattractive to use for new streams */
+    tor_assert(circ->timestamp_dirty);
+    circ->timestamp_dirty -= options->NewCircuitPeriod;
+    /* give our stream another 15 seconds to try */
+    conn->timestamp_lastread += 15;
+    /* attaching to a dirty circuit is fine */
+    if (connection_ap_handshake_attach_circuit(conn)<0) {
+      /* it will never work */
+      /* Don't need to send end -- we're not connected */
+      conn->has_sent_end = 1;
       connection_mark_for_close(conn);
-    } else {
-      log_fn(LOG_NOTICE,"Stream is %d seconds late. Retrying.",
-             (int)(now - conn->timestamp_lastread));
-      circuit_log_path(LOG_WARN, circ);
-      /* send an end down the circuit */
-      connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
-      /* un-mark it as ending, since we're going to reuse it */
-      conn->has_sent_end = 0;
-      /* move it back into 'pending' state. */
-      conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-      circuit_detach_stream(circ, conn);
-      /* kludge to make us not try this circuit again, yet to allow
-       * current streams on it to survive if they can: make it
-       * unattractive to use for new streams */
-      tor_assert(circ->timestamp_dirty);
-      circ->timestamp_dirty -= options->NewCircuitPeriod;
-      /* give our stream another 15 seconds to try */
-      conn->timestamp_lastread += 15;
-      /* attaching to a dirty circuit is fine */
-      if (connection_ap_handshake_attach_circuit(conn)<0) {
-        /* it will never work */
-        /* Don't need to send end -- we're not connected */
-        conn->has_sent_end = 1;
-        connection_mark_for_close(conn);
-      }
-    } /* end if max_retries */
+    }
   } /* end for */
 }
 
