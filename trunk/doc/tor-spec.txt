@@ -7,6 +7,11 @@ early June, 2003.  It is not recommended that others implement this
 design as it stands; future versions of TOR will implement improved
 protocols.
 
+TODO: (very soon)
+      - Specify truncate/truncated
+      - Sendme w/stream0 is circuit sendme
+      - Integrate -NM and -RD comments
+
 0. Notation:
 
    PK -- a public key.
@@ -341,6 +346,7 @@ which reveals the downstream node.
       3. When a RELAY_CREATED cell is received, calculate the shared
          keys.  The circuit is now extended.
 
+   [ This next part is old. Update it. -NM]
    Upon receiving a CREATE cell along a connection, an OR performs
    the following steps:
 
@@ -388,7 +394,7 @@ which reveals the downstream node.
    until a break in traffic allows time to do so without harming
    network latency too greatly.)
 
-4.2. Tearing down circuits
+4.4. Tearing down circuits
 
    [Note: this section is untouched; the code doesn't seem to match
    what I remembered discussing.  Let's sort it out. -NM]
@@ -409,7 +415,7 @@ which reveals the downstream node.
    After a DESTROY cell has been processed, an OR ignores all data or
    destroy cells for the corresponding circuit.
 
-4.3. Routing data cells
+4.5. Routing data cells
 
    When an OR receives a RELAY cell, it checks the cell's ACI and
    determines whether it has a corresponding circuit along that
