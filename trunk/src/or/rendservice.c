@@ -734,7 +734,7 @@ void rend_services_introduce(void) {
       router = router_get_by_nickname(smartlist_get(service->intro_nodes,j));
       if (!router || !find_intro_circuit(router,service->pk_digest)) {
         smartlist_del(service->intro_nodes,j--);
-        changed = 1;
+        changed = service->desc_is_dirty = 1;
       }
       smartlist_add(intro_routers, router);
     }
