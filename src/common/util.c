@@ -69,6 +69,10 @@
 void *tor_malloc(size_t size) {
   void *result;
 
+  /* Some libcs don't do the right thing on size==0. Override them. */
+  if (size==0) {
+    size=1;
+  }
   result = malloc(size);
 
   if(!result) {
