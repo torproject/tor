@@ -375,7 +375,7 @@ _addressmap_remove_if_expired(const char *addr,
                               addressmap_entry_t *ent,
                               time_t *nowp) {
   if (ent->expires && ent->expires < *nowp) {
-    log(LOG_NOTICE, "Addressmap: expiring remap (%s to %s)",
+    log(LOG_INFO, "Addressmap: expiring remap (%s to %s)",
            addr, ent->new_address);
     addressmap_ent_free(ent);
     return NULL;
@@ -413,7 +413,7 @@ void addressmap_rewrite(char *address, size_t maxlen) {
     if (!ent || !ent->new_address)
       return; /* done, no rewrite needed */
 
-    log_fn(LOG_NOTICE, "Addressmap: rewriting '%s' to '%s'",
+    log_fn(LOG_INFO, "Addressmap: rewriting '%s' to '%s'",
            address, ent->new_address);
     strlcpy(address, ent->new_address, maxlen);
   }
@@ -438,7 +438,7 @@ void addressmap_register(const char *address, char *new_address, time_t expires)
 
   ent = strmap_get(addressmap, address);
   if (ent && ent->new_address && expires) {
-    log_fn(LOG_NOTICE,"Addressmap ('%s' to '%s') not performed, since it's already mapped to '%s'", address, new_address, ent->new_address);
+    log_fn(LOG_INFO,"Addressmap ('%s' to '%s') not performed, since it's already mapped to '%s'", address, new_address, ent->new_address);
     tor_free(new_address);
     return;
   }
@@ -452,7 +452,7 @@ void addressmap_register(const char *address, char *new_address, time_t expires)
   ent->expires = expires;
   ent->num_resolve_failures = 0;
 
-  log_fn(LOG_NOTICE, "Addressmap: (re)mapped '%s' to '%s'",
+  log_fn(LOG_INFO, "Addressmap: (re)mapped '%s' to '%s'",
          address, ent->new_address);
 }
 
@@ -470,7 +470,7 @@ int client_dns_incr_failures(const char *address)
     strmap_set(addressmap,address,ent);
   }
   ++ent->num_resolve_failures;
-  log_fn(LOG_NOTICE,"Address %s now has %d resolve failures.",
+  log_fn(LOG_INFO,"Address %s now has %d resolve failures.",
          address, ent->num_resolve_failures);
   return ent->num_resolve_failures;
 }
