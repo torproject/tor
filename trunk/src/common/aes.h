@@ -7,7 +7,7 @@
 #ifndef __AES_H
 #define __AES_H
 
-#include <stdint.h>
+#include "../common/torint.h"
 
 struct aes_cnt_cipher;
 typedef struct aes_cnt_cipher aes_cnt_cipher_t;

@@ -10,7 +10,6 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 #include "../../orconfig.h"
 #include "./aes.h"
 #include "util.h"
