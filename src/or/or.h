@@ -1480,6 +1480,10 @@ size_t dirserv_get_directory(const char **cp, int compress);
 size_t dirserv_get_runningrouters(const char **rr, int compress);
 void dirserv_set_cached_directory(const char *directory, time_t when,
                                   int is_running_routers);
+void dirserv_orconn_tls_done(const char *address,
+                             uint16_t or_port,
+                             const char *digest_rcvd,
+                             const char *nickname);
 void dirserv_free_all(void);
 
 /********************************* dns.c ***************************/

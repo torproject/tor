@@ -993,6 +993,53 @@ size_t dirserv_get_runningrouters(const char **rr, int compress)
   return compress ? the_runningrouters_z_len : the_runningrouters_len;
 }
 
+/** Called when a TLS handshake has completed successfully with a
+ * router listening at <b>address</b>:<b>or_port</b>, and has yielded
+ * a certificate with digest <b>digest_rcvd</b> and nickname
+ * <b>nickname_rcvd</b>.  When this happens, it's clear that any other
+ * descriptors for that address/port combination must be unusable:
+ * delete them if they are not verified.
+ */
+void
+dirserv_orconn_tls_done(const char *address,
+                        uint16_t or_port,
+                        const char *digest_rcvd,
+                        const char *nickname_rcvd)
+{
+  int i;
+  tor_assert(address);
+  tor_assert(digest_rcvd);
+  tor_assert(nickname_rcvd);
+
+  if (!descriptor_list)
+    return;
+
+  for (i = 0; i < smartlist_len(descriptor_list); ++i) {
+    routerinfo_t *ri = smartlist_get(descriptor_list, i);
+    int drop = 0;
+    if (ri->is_verified)
+      continue;
+    if (!strcasecmp(address, ri->address) &&
+        or_port == ri->or_port) {
+      /* We have a router at the same address! */
+      if (strcasecmp(ri->nickname, nickname_rcvd)) {
+        log_fn(LOG_WARN, "Dropping descriptor: nickname '%s' does not match nickname '%s' in cert from %s:%d",
+               ri->nickname, nickname_rcvd, address, or_port);
+        drop = 1;
+      } else if (memcmp(ri->identity_digest, digest_rcvd, DIGEST_LEN)) {
+        log_fn(LOG_WARN, "Dropping descriptor: identity key does not match key in cert from %s:%d",
+               address, or_port);
+        drop = 1;
+      }
+      if (drop) {
+        routerinfo_free(ri);
+        smartlist_del(descriptor_list, i--);
+        directory_set_dirty();
+      }
+    }
+  }
+}
+
 void
 dirserv_free_all(void)
 {
