@@ -10,3 +10,5 @@ OnionRouter 1
 # List of routers
 RouterFile ../config/dirservers
 
+ExitPolicy reject 127.0.0.1:*,reject 18.244.0.188:25,accept *:*
+

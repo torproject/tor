@@ -3,20 +3,24 @@
 # The directory for keeping all the config/data for this node
 DataDirectory @LOCALSTATEDIR@/lib/tor
 # A unique handle for this node
-Nickname moria4
+Nickname moria
 # The fqdn for this node
 Address moria.seul.org
 
 # Ports for various services. Comment out or set to 0 if you're not
 # offering that service.
-ORPort 9004 # listening for cell-speaking connections
-SocksPort 9024 # listening for socks-speaking connections
+ORPort 9001 # listening for cell-speaking connections
+SocksPort 9050 # listening for socks-speaking connections
 #DirPort 0
-
-# Leave this set, or we'll be treated like a client.
-OnionRouter 1
 
 # List of routers. Tor nodes start out knowing about the directory
 # servers, and from them they get a list of currently up nodes.
 RouterFile @CONFDIR@/dirservers
+
+# A comma-separated list of exit policies. They're considered in
+# order, first match wins.
+ExitPolicy reject 127.0.0.1:*,reject 18.244.0.188:25,accept *:*
+
+# Leave this set, or we'll be treated like a client.
+OnionRouter 1
 
