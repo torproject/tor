@@ -11,7 +11,7 @@ int connection_exit_process_inbuf(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_EXIT);
 
   if(conn->inbuf_reached_eof) {
-#if 1
+#ifdef HALF_OPEN
     /* XXX!!! If this is right, duplicate it in connection_ap.c */
 
     /* eof reached; we're done reading, but we might want to write more. */ 
@@ -94,7 +94,7 @@ int connection_exit_finished_flushing(connection_t *conn) {
       connection_stop_writing(conn);
 #ifdef USE_ZLIB
       if (connection_decompress_to_buf(NULL, 0, conn, Z_SYNC_FLUSH) < 0)
-        return 0;
+        return -1;
 #endif
       connection_consider_sending_sendme(conn, EDGE_EXIT);
       return 0;
@@ -285,7 +285,7 @@ int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ) {
       for(prevconn = circ->n_conn; prevconn->next_topic != conn; prevconn = prevconn->next_topic) ;
       prevconn->next_topic = conn->next_topic;
 #endif
-#if 0
+#ifdef HALF_OPEN
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */
       if (conn->done_receiving)
