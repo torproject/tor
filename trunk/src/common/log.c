@@ -8,7 +8,6 @@
  * \brief Functions to send messages to log files or the console.
  */
 
-#include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
 #include <stdlib.h>
