@@ -589,7 +589,6 @@ void write_pidfile(char *filename) {
 
 int switch_id(char *user, char *group) {
 #ifndef MS_WINDOWS
-  int status;
   struct passwd *pw = NULL;
   struct group *gr = NULL;
 
@@ -609,24 +608,21 @@ int switch_id(char *user, char *group) {
       return -1;
     }
 
-    status = setgid(gr->gr_gid);
-    if (status != 0) {
+    if (setgid(gr->gr_gid) != 0) {
       log_fn(LOG_ERR,"Error setting GID: %s", strerror(errno));
       return -1;
     }
   } else if (user) {
-    status = setgid(pw->pw_gid);
-    if (status != 0) {
+    if (setgid(pw->pw_gid) != 0) {
       log_fn(LOG_ERR,"Error setting GID: %s", strerror(errno));
       return -1;
     }
   }
 
   /* now that the group is switched, we can switch users and lose
-     priviledges */
+     privileges */
   if (user) {
-    status = setuid(pw->pw_uid);
-    if (status != 0) {
+    if (setuid(pw->pw_uid) != 0) {
       log_fn(LOG_ERR,"Error setting UID: %s", strerror(errno));
       return -1;
     }
