@@ -91,25 +91,25 @@ Short-term:
 
 Rendezvous service:
         o Design and specify protocol
-        - Possible preliminary refactoring:
-            - Should we break circuits up into "circuit-with-cpath" and
+        o Possible preliminary refactoring:
+            o Should we break circuits up into "circuit-with-cpath" and
               "circuit-without-cpath"?
-            - We need a way to tag circuits as special-purpose circuits for:
-                - Connecting from Bob's OP to the introduction point
-                - Sending introduction requests from the IPoint to Bob
-                - Connecting from Alice to the rendezvous point for Bob
-                - Connecting from Bob to the rendezvous point for Alice
-                - Waiting at a rendezvous point to be joined
-                - Joined to another circuit at the rendezvous point.
+            o We need a way to tag circuits as special-purpose circuits for:
+                o Connecting from Bob's OP to the introduction point
+                o Sending introduction requests from the IPoint to Bob
+                o Connecting from Alice to the rendezvous point for Bob
+                o Connecting from Bob to the rendezvous point for Alice
+                o Waiting at a rendezvous point to be joined
+                o Joined to another circuit at the rendezvous point.
               (We should also enumerate all the states that these operations
               can be in.) [NM]
-            - Add circuit metadata [NM] 3 hours
+            o Add circuit metadata [NM] 3 hours
         - Code to configure hidden services [NM] 4 hours
         - Service descriptors
             - OPs need to maintain identity keys for hidden services [NM] 1 hour
             - Code to generate and parse service descriptors [NM] 4 hours
         - Advertisement
-            - Generate y.onion hostnames [NM] 1 hour
+            . Generate y.onion hostnames [NM] 1 hour
             - Code to do an HTTP connection over Tor from within Tor [RD]
             - Publish service descriptors to directory [RD]
             - Directory accepts and remembers service descriptors, and

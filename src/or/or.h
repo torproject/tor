@@ -188,19 +188,17 @@
 
 #define _CIRCUIT_PURPOSE_MIN 1
 /* these circuits were initiated elsewhere */
-#define CIRCUIT_PURPOSE_INTERMEDIATE 1 /* normal circuit */
-#define CIRCUIT_PURPOSE_INTRO_POINT 2 /* from Bob, waiting for intro from Alices */
-#define CIRCUIT_PURPOSE_REND_POINT_WAITING 3 /* from Alice, waiting for Bob */
-#define CIRCUIT_PURPOSE_REND_ESTABLISHED 4 /* both circuits have this purpose */
-/* these circuits were initiated at this node */
+#define CIRCUIT_PURPOSE_INTERMEDIATE 1 /* normal circuit, at OR. */
+#define CIRCUIT_PURPOSE_INTRO_POINT 2 /* At OR, from Bob, waiting for intro from Alices */
+#define CIRCUIT_PURPOSE_REND_POINT_WAITING 3 /* At OR, from Alice, waiting for Bob */
+#define CIRCUIT_PURPOSE_REND_ESTABLISHED 4 /* At OR, both circuits have this purpose */
+/* these circuits originate at this node */
 #define CIRCUIT_PURPOSE_C_GENERAL 5 /* normal circuit, with cpath */
 #define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 6 /* at Bob, waiting for introductions */
 #define CIRCUIT_PURPOSE_C_INTRODUCING 7 /* at Alice, connecting to intro point */
 #define CIRCUIT_PURPOSE_C_ESTABLISH_REND 8 /* at Alice, waiting for Bob */
 #define CIRCUIT_PURPOSE_S_RENDEZVOUSING 9 /* at Bob, connecting to rend point */
-#define CIRCUIT_PURPOSE_S_UPLOAD_SERVICE_DESC 10
-#define CIRCUIT_PURPOSE_C_FETCH_SERVICE_DESC 11
-#define _CIRCUIT_PURPOSE_MAX 11
+#define _CIRCUIT_PURPOSE_MAX 9
 
 #define RELAY_COMMAND_BEGIN 1
 #define RELAY_COMMAND_DATA 2
@@ -473,6 +471,7 @@ struct crypt_path_t {
 #define DH_KEY_LEN CRYPTO_DH_SIZE
 #define ONIONSKIN_CHALLENGE_LEN (16+DH_KEY_LEN)
 #define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+20)
+#define REND_COOKIE_LEN CRYPTO_SHA1_DIGEST_LEN
 
 typedef struct crypt_path_t crypt_path_t;
 
@@ -517,11 +516,34 @@ struct circuit_t {
   time_t timestamp_dirty; /* when the circuit was first used, or 0 if clean */
 
   uint8_t state;
+  uint8_t purpose;
+
+  /*
+   * holds hash of location-hidden service's PK if purpose is INTRO_POINT
+   *    or S_ESTABLISH_INTRO or S_RENDEZVOUSING;
+   * holds y portion of y.onion (zero-padded) if purpose is C_INTRODUCING or
+   *    C_ESTABLISH_REND, or is a C_GENERAL for a hidden service.
+   * filled with zeroes otherwise.
+   */
+  char rend_service[CRYPTO_SHA1_DIGEST_LEN];
+  /* Holds rendezvous cookie if purpose is REND_POINT_WAITING or
+   * S_RENDEZVOUSING.  Filled with zeroes otherwise.
+  */
+  char rend_cookie[REND_COOKIE_LEN];
+
+  /* Points to spliced circuit if purpose is REND_ESTABLISHED, and circuit
+   * is not marked for close. */
+  struct circuit_t *rend_splice;
 
   struct circuit_t *next;
 };
 
 typedef struct circuit_t circuit_t;
+
+typedef struct circuit_data_rend_point_t {
+  /* for CIRCUIT_PURPOSE_INTRO_POINT (at OR, from Bob, waiting for intro) */
+  char rend_cookie[20];
+} circuit_data_intro_point_t;
 
 typedef struct {
   char *LogLevel;
@@ -630,6 +652,7 @@ int _circuit_mark_for_close(circuit_t *circ);
 circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest(connection_t *conn, int must_be_open);
+circuit_t *circuit_get_by_service_and_purpose(const char *servid, int purpose);
 
 void circuit_expire_building(void);
 int circuit_count_building(void);
@@ -938,6 +961,10 @@ void rep_hist_note_extend_succeeded(const char *from_name,
 void rep_hist_note_extend_failed(const char *from_name, const char *to_name);
 void rep_hist_dump_stats(time_t now, int severity);
 
+/********************************* rendcommon.c ***************************/
+
+/* length of 'y' portion of 'y.onion' URL. */
+#define REND_SERVICE_ID_LEN 16
 
 #endif
 
