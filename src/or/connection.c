@@ -121,7 +121,7 @@ void connection_free(connection_t *conn) {
 
   if(conn->s >= 0) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);
-    close(conn->s);
+    tor_close_socket(conn->s);
   }
   memset(conn, 0xAA, sizeof(connection_t)); /* poison memory */
   free(conn);
@@ -150,7 +150,7 @@ void connection_close_immediate(connection_t *conn)
     log_fn(LOG_INFO,"Closing connection (fd %d, type %s, state %d) with data on outbuf.",
            conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state);
   }
-  close(conn->s);
+  tor_close_socket(conn->s);
   conn->s = -1;
   if(!connection_is_listener(conn)) {
     buf_clear(conn->outbuf);
@@ -399,7 +399,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
     if(!ERRNO_CONN_EINPROGRESS(errno)) {
       /* yuck. kill it. */
       log_fn(LOG_INFO,"Connect() to %s:%u failed: %s",address,port,strerror(errno));
-      close(s);
+      tor_close_socket(s);
       return -1;
     } else {
       /* it's in progress. set state appropriately and return. */
