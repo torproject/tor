@@ -88,12 +88,12 @@ connection_t *connection_new(int type) {
   conn->timestamp_lastwritten = now.tv_sec;
 
   if (connection_speaks_cells(conn)) {
-    conn->f_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_3DES);
+    conn->f_crypto = crypto_new_cipher_env(CONNECTION_CIPHER);
     if (!conn->f_crypto) {
       free((void *)conn);
       return NULL;
     }
-    conn->b_crypto = crypto_new_cipher_env(CRYPTO_CIPHER_3DES);
+    conn->b_crypto = crypto_new_cipher_env(CONNECTION_CIPHER);
     if (!conn->b_crypto) {
       crypto_free_cipher_env(conn->f_crypto);
       free((void *)conn);

@@ -232,10 +232,10 @@ or_handshake_op_send_keys(connection_t *conn) {
   /* generate random keys */
   if(crypto_cipher_generate_key(conn->f_crypto) ||
      crypto_cipher_generate_key(conn->b_crypto)) {
-    log(LOG_ERR,"Cannot generate a secure 3DES key.");
+    log(LOG_ERR,"Cannot generate a secure symmetric key.");
     return -1;
   }
-  log(LOG_DEBUG,"or_handshake_op_send_keys() : Generated 3DES keys.");
+  log(LOG_DEBUG,"or_handshake_op_send_keys() : Generated symmetric keys.");
   /* compose the message */
   *(uint16_t *)(message) = htons(HANDSHAKE_AS_OP);
   *(uint32_t *)(message+FLAGS_LEN) = htonl(conn->bandwidth);
@@ -301,10 +301,10 @@ or_handshake_client_send_auth(connection_t *conn) {
   /* generate random keys */
   if(crypto_cipher_generate_key(conn->f_crypto) ||
      crypto_cipher_generate_key(conn->b_crypto)) {
-    log(LOG_ERR,"Cannot generate a secure DES key.");
+    log(LOG_ERR,"Cannot generate a secure symmetric key.");
     return -1;
   }
-  log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated DES keys.");
+  log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated symmetric keys.");
 
   /* generate first message */
   *(uint16_t*)buf = htons(HANDSHAKE_AS_OR);
