@@ -575,13 +575,13 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
 
   if (crypto_rand(16, pubkey))
     goto err;
-  
-  /* XXXX You can't just run around RSA-encrypting any bitstream: if it's
-   *      greater than the RSA key, then OpenSSL will happily encrypt,
-   *      and later decrypt to the wrong value.  So we set the first bit
-   *      of 'pubkey' to 0.  This means that our symmetric key is really only
-   *      127 bits long, but since it shouldn't be necessary to encrypt
-   *      DH public keys values in the first place, we should be fine.
+
+  /* You can't just run around RSA-encrypting any bitstream: if it's
+   * greater than the RSA key, then OpenSSL will happily encrypt,
+   * and later decrypt to the wrong value.  So we set the first bit
+   * of 'pubkey' to 0.  This means that our symmetric key is really only
+   * 127 bits long, but since it shouldn't be necessary to encrypt
+   * DH public keys values in the first place, we should be fine.
    */
   pubkey[0] &= 0x7f; 
 
