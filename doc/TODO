@@ -105,19 +105,21 @@ Rendezvous service:
               can be in.) [NM]
             o Add circuit metadata [NM]
         o Code to configure hidden services [NM] 4 hours
+        - a section in the README (or its own README): how to configure
+          hidden services
         o Service descriptors
             o OPs need to maintain identity keys for hidden services [NM]
             o Code to generate and parse service descriptors [NM]
         . Advertisement
             o Generate y.onion hostnames [NM]
-	        o Store y.onion hostnames to disk. [NM]
-            - Code to do an HTTP connection over Tor from within Tor [RD]
-            - Publish service descriptors to directory [RD]
-            - Directory accepts and remembers service descriptors, and
+                o Store y.onion hostnames to disk. [NM]
+            o Code to do an HTTP connection over Tor from within Tor [RD]
+            . Publish service descriptors to directory [RD]
+            o Directory accepts and remembers service descriptors, and
               delivers them as requested
-                - Frontend [RD]
+                o Frontend [RD]
                 o Backend [NM]
-            - Code for OPs to retrieve (and cache?) service descriptors [RD]
+            . Code for OPs to retrieve (and cache?) service descriptors [RD]
         - Rendezvous
             - Code as needed to generate and parse all rendezvous-related
               cell types, and do all handshaking [NM]
