@@ -4,8 +4,6 @@
 
 #include "or.h"
 
-extern or_options_t options; /* command-line and config-file options */
-
 int ap_handshake_process_socks(connection_t *conn) {
   char c;
   socks4_t socks4_info; 
@@ -96,211 +94,25 @@ int ap_handshake_process_socks(connection_t *conn) {
   }
 
   /* find the circuit that we should use, if there is one. */
-  circ = circuit_get_by_edge_type(EDGE_AP);
+  circ = circuit_get_newest_by_edge_type(EDGE_AP);
+  circ->dirty = 1;
 
   /* now we're all ready to make an onion or send a begin */
 
-  if(circ && circ->state == CIRCUIT_STATE_OPEN) {
-    /* FIXME if circ not yet open, figure out how to queue this begin? */
-    /* add it into the linked list of topics on this circuit */
-    log(LOG_DEBUG,"ap_handshake_process_socks(): attaching new conn to circ. n_aci %d.", circ->n_aci);
-    conn->next_topic = circ->p_conn;
-    circ->p_conn = conn;
-
-    if(ap_handshake_send_begin(conn, circ) < 0) {
-      circuit_close(circ);
-      return -1;
-    }
-  } else {
-    if(ap_handshake_create_onion(conn) < 0) {
-      if(circ)
-        circuit_close(circ);
-      return -1;
-    }
-  }
-  return 0;
-}
-
-int ap_handshake_create_onion(connection_t *conn) {
-  int i;
-  int routelen = 0; /* length of the route */
-  unsigned int *route = NULL; /* hops in the route as an array of indexes into rarray */
-  unsigned char *onion = NULL; /* holds the onion */
-  int onionlen = 0; /* onion length in host order */
-  crypt_path_t **cpath = NULL; /* defines the crypt operations that need to be performed on incoming/outgoing data */
-
-  assert(conn);
-
-  /* choose a route */
-  route = (unsigned int *)router_new_route(&routelen);
-  if (!route) { 
-    log(LOG_ERR,"ap_handshake_create_onion(): Error choosing a route through the OR network.");
-    return -1;
-  }
-  log(LOG_DEBUG,"ap_handshake_create_onion(): Chosen a route of length %u : ",routelen);
-#if 0
-  for (i=routelen-1;i>=0;i--)
-  { 
-    log(LOG_DEBUG,"ap_handshake_process_ss() : %u : %s:%u, %u",routelen-i,(routerarray[route[i]])->address,ntohs((routerarray[route[i]])->port),RSA_size((routerarray[route[i]])->pkey));
-  }
-#endif
-
-  /* allocate memory for the crypt path */
-  cpath = malloc(routelen * sizeof(crypt_path_t *));
-  if (!cpath) { 
-    log(LOG_ERR,"ap_handshake_create_onion(): Error allocating memory for cpath.");
-    free(route);
+  if(!circ) {
+    log(LOG_INFO,"ap_handshake_process_socks(): No circuit ready. Closing.");
     return -1;
   }
 
-  /* create an onion and calculate crypto keys */
-  onion = router_create_onion(route,routelen,&onionlen,cpath);
-  if (!onion) {
-    log(LOG_ERR,"ap_handshake_create_onion(): Error creating an onion.");
-    free(route);
-    free(cpath); /* it's got nothing in it, since !onion */
+  /* add it into the linked list of topics on this circuit */
+  log(LOG_DEBUG,"ap_handshake_process_socks(): attaching new conn to circ. n_aci %d.", circ->n_aci);
+  conn->next_topic = circ->p_conn;
+  circ->p_conn = conn;
+
+  if(ap_handshake_send_begin(conn, circ) < 0) {
+    circuit_close(circ);
     return -1;
   }
-  log(LOG_DEBUG,"ap_handshake_create_onion(): Created an onion of size %u bytes.",onionlen);
-  log(LOG_DEBUG,"ap_handshake_create_onion(): Crypt path :");
-  for (i=0;i<routelen;i++) {
-    log(LOG_DEBUG,"ap_handshake_create_onion() : %u/%u",(cpath[i])->forwf, (cpath[i])->backf);
-  }
-
-  return ap_handshake_establish_circuit(conn, route, routelen, onion, onionlen, cpath);
-}
-
-int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int routelen, char *onion,
-                                   int onionlen, crypt_path_t **cpath) {
-  routerinfo_t *firsthop;
-  connection_t *n_conn;
-  circuit_t *circ;
-
-  /* now see if we're already connected to the first OR in 'route' */
-  firsthop = router_get_first_in_route(route, routelen);
-  assert(firsthop); /* should always be defined */
-  free(route); /* we don't need it anymore */
-
-  circ = circuit_new(0, conn); /* sets circ->p_aci and circ->p_conn */
-  circ->state = CIRCUIT_STATE_OR_WAIT;
-  circ->onion = onion;
-  circ->onionlen = onionlen;
-  circ->cpath = cpath;
-  circ->cpathlen = routelen;
-
-  log(LOG_DEBUG,"ap_handshake_establish_circuit(): Looking for firsthop '%s:%u'",
-      firsthop->address,firsthop->or_port);
-  n_conn = connection_twin_get_by_addr_port(firsthop->addr,firsthop->or_port);
-  if(!n_conn || n_conn->state != OR_CONN_STATE_OPEN) { /* not currently connected */
-    circ->n_addr = firsthop->addr;
-    circ->n_port = firsthop->or_port;
-    if(options.ORPort) { /* we would be connected if he were up. but he's not. */
-      log(LOG_DEBUG,"ap_handshake_establish_circuit(): Route's firsthop isn't connected.");
-      circuit_close(circ); 
-      return -1;
-    }
-
-    conn->state = AP_CONN_STATE_OR_WAIT;
-    connection_stop_reading(conn); /* Stop listening for input from the AP! */
-
-    if(!n_conn) { /* launch the connection */
-      n_conn = connection_or_connect_as_op(firsthop);
-      if(!n_conn) { /* connect failed, forget the whole thing */
-        log(LOG_DEBUG,"ap_handshake_establish_circuit(): connect to firsthop failed. Closing.");
-        circuit_close(circ);
-        return -1;
-      }   
-    }
-
-    return 0; /* return success. The onion/circuit/etc will be taken care of automatically
-               * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
-               */ 
-  } else { /* it (or a twin) is already open. use it. */
-    circ->n_addr = n_conn->addr;
-    circ->n_port = n_conn->port;
-    return ap_handshake_send_onion(conn, n_conn, circ);
-  }
-}
-
-/* find circuits that are waiting on me, if any, and get them to send the onion */
-void ap_handshake_n_conn_open(connection_t *or_conn) {
-  circuit_t *circ;
-  connection_t *p_conn;
-
-  log(LOG_DEBUG,"ap_handshake_n_conn_open(): Starting.");
-  circ = circuit_enumerate_by_naddr_nport(NULL, or_conn->addr, or_conn->port);
-  for(;;) {
-    if(!circ)
-      return;
-
-    p_conn = circ->p_conn;
-    if(p_conn->state != AP_CONN_STATE_OR_WAIT) {
-      log(LOG_WARNING,"Bug: ap_handshake_n_conn_open() got an ap_conn not in OR_WAIT state.");
-    }
-    connection_start_reading(p_conn); /* resume listening for reads */
-    log(LOG_DEBUG,"ap_handshake_n_conn_open(): Found circ, sending onion.");
-    if(ap_handshake_send_onion(p_conn, or_conn, circ) < 0) {
-      log(LOG_DEBUG,"ap_handshake_n_conn_open(): circuit marked for closing.");
-      circuit_close(circ);
-      return; /* FIXME will want to try the other circuits too? */
-    }
-    for(p_conn = p_conn->next_topic; p_conn; p_conn = p_conn->next_topic) { /* start up any other pending topics */
-      if(ap_handshake_send_begin(p_conn, circ) < 0) {
-        circuit_close(circ);
-        return;
-      }
-    }
-    circ = circuit_enumerate_by_naddr_nport(circ, or_conn->addr, or_conn->port);
-  }
-}
-
-int ap_handshake_send_onion(connection_t *ap_conn, connection_t *n_conn, circuit_t *circ) {
-  cell_t cell;
-  int tmpbuflen, dataleft;
-  char *tmpbuf;
-
-  circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, ACI_TYPE_BOTH);
-  circ->n_conn = n_conn;
-  log(LOG_DEBUG,"ap_handshake_send_onion(): n_conn is %s:%u",n_conn->address,n_conn->port);
-
-  /* deliver the onion as one or more create cells */
-  cell.command = CELL_CREATE;
-  cell.aci = circ->n_aci;
-
-  tmpbuflen = circ->onionlen+4;
-  tmpbuf = malloc(tmpbuflen);
-  if(!tmpbuf)
-    return -1;
-  *(uint32_t*)tmpbuf = htonl(circ->onionlen);
-  memcpy(tmpbuf+4, circ->onion, circ->onionlen);
-
-  dataleft = tmpbuflen;
-  while(dataleft) {
-    cell.command = CELL_CREATE;
-    cell.aci = circ->n_aci;
-    log(LOG_DEBUG,"ap_handshake_send_onion(): Sending a create cell for the onion...");
-    if(dataleft >= CELL_PAYLOAD_SIZE) {
-      cell.length = CELL_PAYLOAD_SIZE;
-      memcpy(cell.payload, tmpbuf + tmpbuflen - dataleft, CELL_PAYLOAD_SIZE);
-      connection_write_cell_to_buf(&cell, n_conn);
-      dataleft -= CELL_PAYLOAD_SIZE;
-    } else { /* last cell */
-      cell.length = dataleft;
-      memcpy(cell.payload, tmpbuf + tmpbuflen - dataleft, dataleft);
-      /* fill extra space with 0 bytes */
-      memset(cell.payload + dataleft, 0, CELL_PAYLOAD_SIZE - dataleft);
-      connection_write_cell_to_buf(&cell, n_conn);
-      dataleft = 0;
-    }
-  }
-  free(tmpbuf);
-
-  if(ap_handshake_send_begin(ap_conn, circ) < 0) {
-    return -1;
-  }
-
-  circ->state = CIRCUIT_STATE_OPEN;
-  /* FIXME should set circ->expire to something here */
 
   return 0;
 }

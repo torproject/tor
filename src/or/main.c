@@ -302,8 +302,10 @@ int prepare_for_poll(int *timeout) {
   struct timeval now; //soonest;
   static long current_second = 0; /* from previous calls to gettimeofday */
   static long time_to_fetch_directory = 0;
+  static long time_to_new_circuit = 0;
 //  int ms_until_conn;
   cell_t cell;
+  circuit_t *circ;
 
   if(gettimeofday(&now,NULL) < 0)
     return -1;
@@ -319,6 +321,17 @@ int prepare_for_poll(int *timeout) {
         directory_initiate_fetch(router_pick_directory_server());
         time_to_fetch_directory = now.tv_sec + options.DirFetchPeriod;
       }
+    }
+
+    if(options.APPort && time_to_new_circuit < now.tv_sec) {
+      circuit_expire_unused_circuits();
+      circuit_launch_new(-1); /* tell it to forget about previous failures */
+      circ = circuit_get_newest_by_edge_type(EDGE_AP);
+      if(!circ || circ->dirty) {
+        log(LOG_INFO,"prepare_for_poll(): Youngest circuit missing or dirty; launching replacement.");
+        circuit_launch_new(0); /* make an onion and lay the circuit */
+      }
+      time_to_new_circuit = now.tv_sec + options.NewCircuitPeriod;
     }
 
     /* do housekeeping for each connection */
@@ -514,7 +527,7 @@ static void catch(int the_signal) {
   }
 }
 
-void dumpstats (void) { /* dump stats to stdout */
+void dumpstats(void) { /* dump stats to stdout */
   int i;
   connection_t *conn;
   struct timeval now;
@@ -638,7 +651,7 @@ void dump_directory_to_string(char *s, int maxlen) {
 
 }
 
-void daemonize() {
+void daemonize(void) {
   /* Fork; parent exits. */
   if (fork())
     exit(0);

@@ -337,9 +337,9 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
 {
   int i, j;
   int num_acceptable_routers;
-  unsigned int *route = NULL;
+  unsigned int *route;
   unsigned int oldchoice, choice;
-  
+
   assert((cw >= 0) && (cw < 1) && (rarray) && (routelen) ); /* valid parameters */
 
   *routelen = chooselen(cw);
@@ -350,6 +350,11 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
   log(LOG_DEBUG,"new_route(): Chosen route length %d.",*routelen);
 
   num_acceptable_routers = count_acceptable_routers(rarray, rarray_len);
+
+  if(num_acceptable_routers < 2) {
+    log(LOG_INFO,"new_route(): Not enough acceptable routers. Failing.");
+    return NULL;
+  }
 
   if(num_acceptable_routers < *routelen) {
     log(LOG_DEBUG,"new_route(): Cutting routelen from %d to %d.",*routelen, num_acceptable_routers);
@@ -399,13 +404,16 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
 static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
   int i, j;
   int num=0;
+  connection_t *conn;
 
   for(i=0;i<rarray_len;i++) {
     log(LOG_DEBUG,"Contemplating whether router %d is a new option...",i);
-    if(options.ORPort &&
-      !connection_exact_get_by_addr_port(rarray[i]->addr, rarray[i]->or_port)) {
-      log(LOG_DEBUG,"Nope, %d is not connected.",i);
-      goto next_i_loop;
+    if(options.ORPort) {
+      conn = connection_exact_get_by_addr_port(rarray[i]->addr, rarray[i]->or_port);
+      if(!conn || conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN) {
+        log(LOG_DEBUG,"Nope, %d is not connected.",i);
+        goto next_i_loop;
+      }
     }
     for(j=0;j<i;j++) {
       if(!crypto_pk_cmp_keys(rarray[i]->pkey, rarray[j]->pkey)) {
