@@ -8,6 +8,12 @@
 #include <sys/utsname.h>
 #endif
 
+/* used by inet_addr, not defined on solaris anywhere!? */
+#ifndef INADDR_NONE
+#define INADDR_NONE ((unsigned long) -1)
+#endif
+
+/* in-line the strl functions */
 #ifndef HAVE_STRLCPY
 #include "strlcpy.c"
 #endif
