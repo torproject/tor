@@ -15,6 +15,8 @@
  * \brief Headers for log.c
  */
 
+#include "../common/compat.h"
+
 #ifdef HAVE_SYSLOG_H
 #include <syslog.h>
 #define LOG_WARN LOG_WARNING
@@ -49,14 +51,6 @@
 /** Error-level severity: for messages that only appear when something has gone
  * very wrong, and the Tor process can no longer proceed. */
 #define LOG_ERR     3
-#endif
-
-/* magic to make GCC check for proper format strings. */
-#ifdef __GNUC__
-#define CHECK_PRINTF(formatIdx, firstArg) \
-   __attribute__ ((format (printf, formatIdx, firstArg)))
-#else
-#define CHECK_PRINTF(formatIdx, firstArg)
 #endif
 
 int parse_log_level(const char *level);

@@ -6,7 +6,7 @@
  * \file util.c
  *
  * \brief Common functions for strings, IO, network, data structures,
- * process control, and cross-platform portability.
+ * process control.
  **/
 
 /* This is required on rh7 to make strptime not complain.
@@ -15,16 +15,8 @@
 
 #include "orconfig.h"
 
+/* XXXX probably some of these are unneeded. find out which. */
 #ifdef MS_WINDOWS
-#define WIN32_WINNT 0x400
-#define _WIN32_WINNT 0x400
-#define WIN32_LEAN_AND_MEAN
-#if _MSC_VER > 1300
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#elif defined(_MSC_VER)
-#include <winsock.h>
-#endif
 #include <io.h>
 #include <process.h>
 #include <direct.h>
@@ -35,23 +27,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#ifndef HAVE_GETTIMEOFDAY
-#ifdef HAVE_FTIME
-#include <sys/timeb.h>
-#endif
-#endif
 
 #include "util.h"
 #include "log.h"
 #include "crypto.h"
-#include "../or/tree.h"
 
-#ifdef HAVE_UNAME
-#include <sys/utsname.h>
-#endif
-#ifdef HAVE_CTYPE_H
-#include <ctype.h>
-#endif
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
@@ -63,9 +43,6 @@
 #endif
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
-#endif
-#ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h> /* FreeBSD needs this to know what version it is */
 #endif
 #ifdef HAVE_SYS_LIMITS_H
 #include <sys/limits.h>
@@ -90,9 +67,6 @@
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
-#ifdef HAVE_SYS_RESOURCE_H
-#include <sys/resource.h>
-#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -101,12 +75,6 @@
 #endif
 #ifdef HAVE_SYS_FCNTL_H
 #include <sys/fcntl.h>
-#endif
-#ifdef HAVE_PWD_H
-#include <pwd.h>
-#endif
-#ifdef HAVE_GRP_H
-#include <grp.h>
 #endif
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
@@ -128,6 +96,10 @@
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
+
+/* =====
+ * Memory management
+ * ===== */
 
 /** Allocate a chunk of <b>size</b> bytes of memory, and return a pointer to
  * result.  On error, log and terminate the process.  (Same as malloc(size),
@@ -205,6 +177,10 @@ char *tor_strndup(const char *s, size_t n) {
   return dup;
 }
 
+/* =====
+ * String manipulation
+ * ===== */
+
 /** Remove from the string <b>s</b> every character which appears in
  * <b>strip</b>.  Return the number of characters removed. */
 int tor_strstrip(char *s, const char *strip)
@@ -280,48 +256,6 @@ int tor_strpartition(char *dest, size_t dest_len,
   return 0;
 }
 
-#ifndef UNALIGNED_INT_ACCESS_OK
-/**
- * Read a 16-bit value beginning at <b>cp</b>.  Equaivalent to
- * *(uint16_t*)(cp), but will not cause segfaults on platforms that forbid
- * unaligned memory access.
- */
-uint16_t get_uint16(const char *cp)
-{
-  uint16_t v;
-  memcpy(&v,cp,2);
-  return v;
-}
-/**
- * Read a 32-bit value beginning at <b>cp</b>.  Equaivalent to
- * *(uint32_t*)(cp), but will not cause segfaults on platforms that forbid
- * unaligned memory access.
- */
-uint32_t get_uint32(const char *cp)
-{
-  uint32_t v;
-  memcpy(&v,cp,4);
-  return v;
-}
-/**
- * Set a 16-bit value beginning at <b>cp</b> to <b>v</b>. Equivalent to
- * *(uint16_t)(cp) = v, but will not cause segfaults on platforms that forbid
- * unaligned memory access. */
-void set_uint16(char *cp, uint16_t v)
-{
-  memcpy(cp,&v,2);
-}
-/**
- * Set a 32-bit value beginning at <b>cp</b> to <b>v</b>. Equivalent to
- * *(uint32_t)(cp) = v, but will not cause segfaults on platforms that forbid
- * unaligned memory access. */
-void set_uint32(char *cp, uint32_t v)
-{
-  memcpy(cp,&v,4);
-}
-#endif
-
-
 /** Return a pointer to a NUL-terminated hexidecimal string encoding
  * the first <b>fromlen</b> bytes of <b>from</b>. (fromlen must be \<= 32.) The
  * result does not need to be deallocated, but repeated calls to
@@ -335,599 +269,6 @@ const char *hex_str(const char *from, size_t fromlen)
   base16_encode(buf,sizeof(buf),from,fromlen);
   return buf;
 }
-
-/*****
- * smartlist_t: a simple resizeable array abstraction.
- *****/
-
-/* All newly allocated smartlists have this capacity.
- */
-#define SMARTLIST_DEFAULT_CAPACITY 32
-
-
-struct smartlist_t {
-  /** <b>list</b> has enough capacity to store exactly <b>capacity</b> elements
-   * before it needs to be resized.  Only the first <b>num_used</b> (\<=
-   * capacity) elements point to valid data.
-   */
-  void **list;
-  int num_used;
-  int capacity;
-};
-
-/** Allocate and return an empty smartlist.
- */
-smartlist_t *smartlist_create() {
-  smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
-  sl->num_used = 0;
-  sl->capacity = SMARTLIST_DEFAULT_CAPACITY;
-  sl->list = tor_malloc(sizeof(void *) * sl->capacity);
-  return sl;
-}
-
-/** Deallocate a smartlist.  Does not release storage associated with the
- * list's elements.
- */
-void smartlist_free(smartlist_t *sl) {
-  free(sl->list);
-  free(sl);
-}
-
-/** Change the capacity of the smartlist to <b>n</b>, so that we can grow
- * the list up to <b>n</b> elements with no further reallocation or wasted
- * space.  If <b>n</b> is less than or equal to the number of elements
- * currently in the list, reduce the list's capacity as much as
- * possible without losing elements.
- */
-void smartlist_set_capacity(smartlist_t *sl, int n) {
-  if (n < sl->num_used)
-    n = sl->num_used;
-  if (sl->capacity != n) {
-    sl->capacity = n;
-    sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
-  }
-}
-
-/** Remove all elements from the list.
- */
-void smartlist_clear(smartlist_t *sl) {
-  sl->num_used = 0;
-}
-
-/** Set the list's new length to <b>len</b> (which must be \<= the list's
- * current size). Remove the last smartlist_len(sl)-len elements from the
- * list.
- */
-void smartlist_truncate(smartlist_t *sl, int len)
-{
-  tor_assert(len <= sl->num_used);
-  sl->num_used = len;
-}
-
-/** Append element to the end of the list. */
-void smartlist_add(smartlist_t *sl, void *element) {
-  if (sl->num_used >= sl->capacity) {
-    sl->capacity *= 2;
-    sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
-  }
-  sl->list[sl->num_used++] = element;
-}
-
-/** Append each element from S2 to the end of S1. */
-void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2)
-{
-  SMARTLIST_FOREACH(s2, void *, element, smartlist_add(sl, element));
-}
-
-/** Remove all elements E from sl such that E==element.  Does not preserve
- * the order of s1.
- */
-void smartlist_remove(smartlist_t *sl, void *element) {
-  int i;
-  if(element == NULL)
-    return;
-  for(i=0; i < sl->num_used; i++)
-    if(sl->list[i] == element) {
-      sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
-      i--; /* so we process the new i'th element */
-    }
-}
-
-/** Return true iff some element E of sl has E==element.
- */
-int smartlist_isin(const smartlist_t *sl, void *element) {
-  int i;
-  for(i=0; i < sl->num_used; i++)
-    if(sl->list[i] == element)
-      return 1;
-  return 0;
-}
-
-int smartlist_string_isin(const smartlist_t *sl, const char *element) {
-  int i;
-  for(i=0; i < sl->num_used; i++)
-    if(strcmp((const char*)sl->list[i],element)==0)
-      return 1;
-  return 0;
-}
-
-/** Return true iff some element E of sl2 has smartlist_isin(sl1,E).
- */
-int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2) {
-  int i;
-  for(i=0; i < sl2->num_used; i++)
-    if(smartlist_isin(sl1, sl2->list[i]))
-      return 1;
-  return 0;
-}
-
-/** Remove every element E of sl1 such that !smartlist_isin(sl2,E).
- * Does not preserve the order of sl1.
- */
-void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2) {
-  int i;
-  for(i=0; i < sl1->num_used; i++)
-    if(!smartlist_isin(sl2, sl1->list[i])) {
-      sl1->list[i] = sl1->list[--sl1->num_used]; /* swap with the end */
-      i--; /* so we process the new i'th element */
-    }
-}
-
-/** Remove every element E of sl1 such that smartlist_isin(sl2,E).
- * Does not preserve the order of sl1.
- */
-void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2) {
-  int i;
-  for(i=0; i < sl2->num_used; i++)
-    smartlist_remove(sl1, sl2->list[i]);
-}
-
-/** Return the <b>idx</b>th element of sl.
- */
-void *smartlist_get(const smartlist_t *sl, int idx)
-{
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx < sl->num_used);
-  return sl->list[idx];
-}
-/** Change the value of the <b>idx</b>th element of sl to <b>val</b>; return the old
- * value of the <b>idx</b>th element.
- */
-void *smartlist_set(smartlist_t *sl, int idx, void *val)
-{
-  void *old;
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx < sl->num_used);
-  old = sl->list[idx];
-  sl->list[idx] = val;
-  return old;
-}
-/** Remove the <b>idx</b>th element of sl; if idx is not the last
- * element, swap the last element of sl into the <b>idx</b>th space.
- * Return the old value of the <b>idx</b>th element.
- */
-void *smartlist_del(smartlist_t *sl, int idx)
-{
-  void *old;
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx < sl->num_used);
-  old = sl->list[idx];
-  sl->list[idx] = sl->list[--sl->num_used];
-  return old;
-}
-/** Remove the <b>idx</b>th element of sl; if idx is not the last element,
- * moving all subsequent elements back one space. Return the old value
- * of the <b>idx</b>th element.
- */
-void *smartlist_del_keeporder(smartlist_t *sl, int idx)
-{
-  void *old;
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx < sl->num_used);
-  old = sl->list[idx];
-  --sl->num_used;
-  if (idx < sl->num_used)
-    memmove(sl->list+idx, sl->list+idx+1, sizeof(void*)*(sl->num_used-idx));
-  return old;
-}
-/** Return the number of items in sl.
- */
-int smartlist_len(const smartlist_t *sl)
-{
-  return sl->num_used;
-}
-/** Insert the value <b>val</b> as the new <b>idx</b>th element of
- * <b>sl</b>, moving all items previously at <b>idx</b> or later
- * forward one space.
- */
-void smartlist_insert(smartlist_t *sl, int idx, void *val)
-{
-  tor_assert(sl);
-  tor_assert(idx>=0);
-  tor_assert(idx <= sl->num_used);
-  if (idx == sl->num_used) {
-    smartlist_add(sl, val);
-  } else {
-    /* Ensure sufficient capacity */
-    if (sl->num_used >= sl->capacity) {
-      sl->capacity *= 2;
-      sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
-    }
-    /* Move other elements away */
-    if (idx < sl->num_used)
-      memmove(sl->list + idx + 1, sl->list + idx,
-              sizeof(void*)*(sl->num_used-idx));
-    sl->num_used++;
-    sl->list[idx] = val;
-  }
-}
-
-/**
- * Split a string <b>str</b> along all occurences of <b>sep</b>,
- * adding the split strings, in order, to <b>sl</b>.  If
- * <b>flags</b>&amp;SPLIT_SKIP_SPACE is true, remove initial and
- * trailing space from each entry.  If
- * <b>flags</b>&amp;SPLIT_IGNORE_BLANK is true, remove any entries of
- * length 0.  If max>0, divide the string into no more than <b>max</b>
- * pieces.
- */
-int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
-                           int flags, int max)
-{
-  const char *cp, *end, *next;
-  int n = 0;
-
-  tor_assert(sl);
-  tor_assert(str);
-  tor_assert(sep);
-
-  cp = str;
-  while (1) {
-    if (flags&SPLIT_SKIP_SPACE) {
-      while (isspace((int)*cp)) ++cp;
-    }
-
-    if (max>0 && n == max-1) {
-      end = strchr(cp,'\0');
-    } else {
-      end = strstr(cp,sep);
-      if (!end)
-        end = strchr(cp,'\0');
-    }
-    if (!*end) {
-      next = NULL;
-    } else {
-      next = end+strlen(sep);
-    }
-
-    if (flags&SPLIT_SKIP_SPACE) {
-      while (end > cp && isspace((int)*(end-1)))
-        --end;
-    }
-    if (end != cp || !(flags&SPLIT_IGNORE_BLANK)) {
-      smartlist_add(sl, tor_strndup(cp, end-cp));
-      ++n;
-    }
-    if (!next)
-      break;
-    cp = next;
-  }
-
-  return n;
-}
-
-/** Allocate and return a new string containing the concatenation of
- * the elements of <b>sl</b>, in order, separated by <b>join</b>.  If
- * <b>terminate</b> is true, also terminate the string with <b>join</b>.
- * Requires that every element of <b>sl</b> is NUL-terminated string.
- */
-char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate)
-{
-  int i;
-  size_t n = 0, jlen;
-  char *r = NULL, *dst, *src;
-
-  tor_assert(sl);
-  tor_assert(join);
-  jlen = strlen(join);
-  for (i = 0; i < sl->num_used; ++i) {
-    n += strlen(sl->list[i]);
-    n += jlen;
-  }
-  if (!terminate) n -= jlen;
-  dst = r = tor_malloc(n+1);
-  for (i = 0; i < sl->num_used; ) {
-    for (src = sl->list[i]; *src; )
-      *dst++ = *src++;
-    if (++i < sl->num_used || terminate) {
-      memcpy(dst, join, jlen);
-      dst += jlen;
-    }
-  }
-  *dst = '\0';
-  return r;
-}
-
-/* Splay-tree implementation of string-to-void* map
- */
-struct strmap_entry_t {
-  SPLAY_ENTRY(strmap_entry_t) node;
-  char *key;
-  void *val;
-};
-
-struct strmap_t {
-  SPLAY_HEAD(strmap_tree, strmap_entry_t) head;
-};
-
-static int compare_strmap_entries(struct strmap_entry_t *a,
-                                 struct strmap_entry_t *b)
-{
-  return strcmp(a->key, b->key);
-}
-
-SPLAY_PROTOTYPE(strmap_tree, strmap_entry_t, node, compare_strmap_entries);
-SPLAY_GENERATE(strmap_tree, strmap_entry_t, node, compare_strmap_entries);
-
-/** Create a new empty map from strings to void*'s.
- */
-strmap_t* strmap_new(void)
-{
-  strmap_t *result;
-  result = tor_malloc(sizeof(strmap_t));
-  SPLAY_INIT(&result->head);
-  return result;
-}
-
-/** Set the current value for <b>key</b> to <b>val</b>.  Returns the previous
- * value for <b>key</b> if one was set, or NULL if one was not.
- *
- * This function makes a copy of <b>key</b> if necessary, but not of <b>val</b>.
- */
-void* strmap_set(strmap_t *map, const char *key, void *val)
-{
-  strmap_entry_t *resolve;
-  strmap_entry_t search;
-  void *oldval;
-  tor_assert(map);
-  tor_assert(key);
-  tor_assert(val);
-  search.key = (char*)key;
-  resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
-  if (resolve) {
-    oldval = resolve->val;
-    resolve->val = val;
-    return oldval;
-  } else {
-    resolve = tor_malloc_zero(sizeof(strmap_entry_t));
-    resolve->key = tor_strdup(key);
-    resolve->val = val;
-    SPLAY_INSERT(strmap_tree, &map->head, resolve);
-    return NULL;
-  }
-}
-
-/** Return the current value associated with <b>key</b>, or NULL if no
- * value is set.
- */
-void* strmap_get(strmap_t *map, const char *key)
-{
-  strmap_entry_t *resolve;
-  strmap_entry_t search;
-  tor_assert(map);
-  tor_assert(key);
-  search.key = (char*)key;
-  resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
-  if (resolve) {
-    return resolve->val;
-  } else {
-    return NULL;
-  }
-}
-
-/** Remove the value currently associated with <b>key</b> from the map.
- * Return the value if one was set, or NULL if there was no entry for
- * <b>key</b>.
- *
- * Note: you must free any storage associated with the returned value.
- */
-void* strmap_remove(strmap_t *map, const char *key)
-{
-  strmap_entry_t *resolve;
-  strmap_entry_t search;
-  void *oldval;
-  tor_assert(map);
-  tor_assert(key);
-  search.key = (char*)key;
-  resolve = SPLAY_FIND(strmap_tree, &map->head, &search);
-  if (resolve) {
-    oldval = resolve->val;
-    SPLAY_REMOVE(strmap_tree, &map->head, resolve);
-    tor_free(resolve->key);
-    tor_free(resolve);
-    return oldval;
-  } else {
-    return NULL;
-  }
-}
-
-/** Same as strmap_set, but first converts <b>key</b> to lowercase. */
-void* strmap_set_lc(strmap_t *map, const char *key, void *val)
-{
-  /* We could be a little faster by using strcasecmp instead, and a separate
-   * type, but I don't think it matters. */
-  void *v;
-  char *lc_key = tor_strdup(key);
-  tor_strlower(lc_key);
-  v = strmap_set(map,lc_key,val);
-  tor_free(lc_key);
-  return v;
-}
-/** Same as strmap_get, but first converts <b>key</b> to lowercase. */
-void* strmap_get_lc(strmap_t *map, const char *key)
-{
-  void *v;
-  char *lc_key = tor_strdup(key);
-  tor_strlower(lc_key);
-  v = strmap_get(map,lc_key);
-  tor_free(lc_key);
-  return v;
-}
-/** Same as strmap_remove, but first converts <b>key</b> to lowercase */
-void* strmap_remove_lc(strmap_t *map, const char *key)
-{
-  void *v;
-  char *lc_key = tor_strdup(key);
-  tor_strlower(lc_key);
-  v = strmap_remove(map,lc_key);
-  tor_free(lc_key);
-  return v;
-}
-
-/** Invoke fn() on every entry of the map, in order.  For every entry,
- * fn() is invoked with that entry's key, that entry's value, and the
- * value of <b>data</b> supplied to strmap_foreach.  fn() must return a new
- * (possibly unmodified) value for each entry: if fn() returns NULL, the
- * entry is removed.
- *
- * Example:
- * \code
- *   static void* upcase_and_remove_empty_vals(const char *key, void *val,
- *                                             void* data) {
- *     char *cp = (char*)val;
- *     if (!*cp) {  // val is an empty string.
- *       free(val);
- *       return NULL;
- *     } else {
- *       for (; *cp; cp++)
- *         *cp = toupper(*cp);
- *       }
- *       return val;
- *     }
- *   }
- *
- *   ...
- *
- *   strmap_foreach(map, upcase_and_remove_empty_vals, NULL);
- * \endcode
- */
-void strmap_foreach(strmap_t *map,
-                    void* (*fn)(const char *key, void *val, void *data),
-                    void *data)
-{
-  strmap_entry_t *ptr, *next;
-  tor_assert(map);
-  tor_assert(fn);
-  for (ptr = SPLAY_MIN(strmap_tree, &map->head); ptr != NULL; ptr = next) {
-    /* This remove-in-place usage is specifically blessed in tree(3). */
-    next = SPLAY_NEXT(strmap_tree, &map->head, ptr);
-    ptr->val = fn(ptr->key, ptr->val, data);
-    if (!ptr->val) {
-      SPLAY_REMOVE(strmap_tree, &map->head, ptr);
-      tor_free(ptr->key);
-      tor_free(ptr);
-    }
-  }
-}
-
-/** return an <b>iterator</b> pointer to the front of a map.
- *
- * Iterator example:
- *
- * \code
- * // uppercase values in "map", removing empty values.
- *
- * strmap_iter_t *iter;
- * const char *key;
- * void *val;
- * char *cp;
- *
- * for (iter = strmap_iter_init(map); !strmap_iter_done(iter); ) {
- *    strmap_iter_get(iter, &key, &val);
- *    cp = (char*)val;
- *    if (!*cp) {
- *       iter = strmap_iter_next_rmv(iter);
- *       free(val);
- *    } else {
- *       for(;*cp;cp++) *cp = toupper(*cp);
- *       iter = strmap_iter_next(iter);
- *    }
- * }
- * \endcode
- *
- */
-strmap_iter_t *strmap_iter_init(strmap_t *map)
-{
-  tor_assert(map);
-  return SPLAY_MIN(strmap_tree, &map->head);
-}
-/** Advance the iterator <b>iter</b> for map a single step to the next entry.
- */
-strmap_iter_t *strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
-{
-  tor_assert(map);
-  tor_assert(iter);
-  return SPLAY_NEXT(strmap_tree, &map->head, iter);
-}
-/** Advance the iterator <b>iter</b> a single step to the next entry, removing
- * the current entry.
- */
-strmap_iter_t *strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
-{
-  strmap_iter_t *next;
-  tor_assert(map);
-  tor_assert(iter);
-  next = SPLAY_NEXT(strmap_tree, &map->head, iter);
-  SPLAY_REMOVE(strmap_tree, &map->head, iter);
-  tor_free(iter->key);
-  tor_free(iter);
-  return next;
-}
-/** Set *keyp and *valp to the current entry pointed to by iter.
- */
-void strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
-{
-  tor_assert(iter);
-  tor_assert(keyp);
-  tor_assert(valp);
-  *keyp = iter->key;
-  *valp = iter->val;
-}
-/** Return true iff iter has advanced past the last entry of map.
- */
-int strmap_iter_done(strmap_iter_t *iter)
-{
-  return iter == NULL;
-}
-/** Remove all entries from <b>map</b>, and deallocate storage for those entries.
- * If free_val is provided, it is invoked on every value in <b>map</b>.
- */
-void strmap_free(strmap_t *map, void (*free_val)(void*))
-{
-  strmap_entry_t *ent, *next;
-  for (ent = SPLAY_MIN(strmap_tree, &map->head); ent != NULL; ent = next) {
-    next = SPLAY_NEXT(strmap_tree, &map->head, ent);
-    SPLAY_REMOVE(strmap_tree, &map->head, ent);
-    tor_free(ent->key);
-    if (free_val)
-      tor_free(ent->val);
-  }
-  tor_assert(SPLAY_EMPTY(&map->head));
-  tor_free(map);
-}
-
-int strmap_isempty(strmap_t *map)
-{
-  return SPLAY_EMPTY(&map->head);
-}
-
-/*
- *    String manipulation
- */
 
 /** Convert all alphabetic characters in the nul-terminated string <b>s</b> to
  * lowercase. */
@@ -988,31 +329,126 @@ const char *find_whitespace(const char *s) {
   return s;
 }
 
-/*
- * Time
+/** Extract a long from the start of s, in the given numeric base.  If
+ * there is unconverted data and next is provided, set *next to the
+ * first unconverted character.  An error has occurred if no characters
+ * are converted; or if there are unconverted characters and next is NULL; or
+ * if the parsed value is not between min and max.  When no error occurs,
+ * return the parsed value and set *ok (if provided) to 1.  When an error
+ * ocurs, return 0 and set *ok (if provided) to 0.
  */
+long
+tor_parse_long(const char *s, int base, long min, long max,
+               int *ok, char **next)
+{
+  char *endptr;
+  long r;
 
-/** Set *timeval to the current time of day.  On error, log and terminate.
- * (Same as gettimeofday(timeval,NULL), but never returns -1.)
- */
-void tor_gettimeofday(struct timeval *timeval) {
-#ifdef HAVE_GETTIMEOFDAY
-  if (gettimeofday(timeval, NULL)) {
-    log_fn(LOG_ERR, "gettimeofday failed.");
-    /* If gettimeofday dies, we have either given a bad timezone (we didn't),
-       or segfaulted.*/
-    exit(1);
-  }
-#elif defined(HAVE_FTIME)
-  struct timeb tb;
-  ftime(&tb);
-  timeval->tv_sec = tb.time;
-  timeval->tv_usec = tb.millitm * 1000;
-#else
-#error "No way to get time."
-#endif
-  return;
+  r = strtol(s, &endptr, base);
+  /* Was at least one character converted? */
+  if (endptr == s)
+    goto err;
+  /* Were there unexpected unconverted characters? */
+  if (!next && *endptr)
+    goto err;
+  /* Is r within limits? */
+  if (r < min || r > max)
+    goto err;
+
+  if (ok) *ok = 1;
+  if (next) *next = endptr;
+  return r;
+ err:
+  if (ok) *ok = 0;
+  if (next) *next = endptr;
+  return 0;
 }
+
+unsigned long
+tor_parse_ulong(const char *s, int base, unsigned long min,
+                unsigned long max, int *ok, char **next)
+{
+  char *endptr;
+  unsigned long r;
+
+  r = strtol(s, &endptr, base);
+  /* Was at least one character converted? */
+  if (endptr == s)
+    goto err;
+  /* Were there unexpected unconverted characters? */
+  if (!next && *endptr)
+    goto err;
+  /* Is r within limits? */
+  if (r < min || r > max)
+    goto err;
+
+  if (ok) *ok = 1;
+  if (next) *next = endptr;
+  return r;
+ err:
+  if (ok) *ok = 0;
+  if (next) *next = endptr;
+  return 0;
+}
+
+void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
+{
+  const char *end;
+  char *cp;
+
+  tor_assert(destlen >= srclen*2+1);
+
+  cp = dest;
+  end = src+srclen;
+  while (src<end) {
+    sprintf(cp,"%02X",*(const uint8_t*)src);
+    ++src;
+    cp += 2;
+  }
+  *cp = '\0';
+}
+
+static const char HEX_DIGITS[] = "0123456789ABCDEFabcdef";
+
+static INLINE int hex_decode_digit(char c)
+{
+  const char *cp;
+  int n;
+  cp = strchr(HEX_DIGITS, c);
+  if (!cp)
+    return -1;
+  n = cp-HEX_DIGITS;
+  if (n<=15)
+    return n; /* digit or uppercase */
+  else
+    return n-6; /* lowercase */
+}
+
+int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
+{
+  const char *end;
+  int v1,v2;
+  if ((srclen % 2) != 0)
+    return -1;
+  if (destlen < srclen/2)
+    return -1;
+  end = src+srclen;
+  while (src<end) {
+    v1 = hex_decode_digit(*src);
+    v2 = hex_decode_digit(*(src+1));
+    if(v1<0||v2<0)
+      return -1;
+    *(uint8_t*)dest = (v1<<4)|v2;
+    ++dest;
+    src+=2;
+  }
+  return 0;
+}
+
+
+/* =====
+ * Time
+ * ===== */
 
 /** Return the number of microseconds elapsed between *start and *end.
  * If start is after end, return 0.
@@ -1189,10 +625,9 @@ int parse_iso_time(const char *cp, time_t *t) {
   return 0;
 }
 
-
-/*
- *   Low-level I/O.
- */
+/* =====
+ * File helpers
+ * ===== */
 
 /** Write <b>count</b> bytes from <b>buf</b> to <b>fd</b>.  <b>isSocket</b>
  * must be 1 if fd was returned by socket() or accept(), and 0 if fd
@@ -1237,277 +672,6 @@ int read_all(int fd, char *buf, size_t count, int isSocket) {
   }
   return count;
 }
-
-/** Turn <b>socket</b> into a nonblocking socket.
- */
-void set_socket_nonblocking(int socket)
-{
-#ifdef MS_WINDOWS
-  /* Yes means no and no means yes.  Do you not want to be nonblocking? */
-  int nonblocking = 0;
-  ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
-#else
-  fcntl(socket, F_SETFL, O_NONBLOCK);
-#endif
-}
-
-/*
- *   Process control
- */
-
-/** Minimalist interface to run a void function in the background.  On
- * unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
- * func should not return, but rather should call spawn_exit.
- */
-int spawn_func(int (*func)(void *), void *data)
-{
-#ifdef MS_WINDOWS
-  int rv;
-  rv = _beginthread(func, 0, data);
-  if (rv == (unsigned long) -1)
-    return -1;
-  return 0;
-#else
-  pid_t pid;
-  pid = fork();
-  if (pid<0)
-    return -1;
-  if (pid==0) {
-    /* Child */
-    func(data);
-    tor_assert(0); /* Should never reach here. */
-    return 0; /* suppress "control-reaches-end-of-non-void" warning. */
-  } else {
-    /* Parent */
-    return 0;
-  }
-#endif
-}
-
-/** End the current thread/process.
- */
-void spawn_exit()
-{
-#ifdef MS_WINDOWS
-  _endthread();
-#else
-  exit(0);
-#endif
-}
-
-
-/**
- * Allocate a pair of connected sockets.  (Like socketpair(family,
- * type,protocol,fd), but works on systems that don't have
- * socketpair.)
- *
- * Currently, only (AF_UNIX, SOCK_STREAM, 0 ) sockets are supported.
- *
- * Note that on systems without socketpair, this call will fail if
- * localhost is inaccessible (for example, if the networking
- * stack is down). And even if it succeeds, the socket pair will not
- * be able to read while localhost is down later (the socket pair may
- * even close, depending on OS-specific timeouts).
- **/
-int
-tor_socketpair(int family, int type, int protocol, int fd[2])
-{
-#ifdef HAVE_SOCKETPAIR
-    return socketpair(family, type, protocol, fd);
-#else
-    /* This socketpair does not work when localhost is down. So
-     * it's really not the same thing at all. But it's close enough
-     * for now, and really, when localhost is down sometimes, we
-     * have other problems too.
-     */
-    int listener = -1;
-    int connector = -1;
-    int acceptor = -1;
-    struct sockaddr_in listen_addr;
-    struct sockaddr_in connect_addr;
-    int size;
-
-    if (protocol
-#ifdef AF_UNIX
-        || family != AF_UNIX
-#endif
-        ) {
-#ifdef MS_WINDOWS
-        errno = WSAEAFNOSUPPORT;
-#else
-        errno = EAFNOSUPPORT;
-#endif
-        return -1;
-    }
-    if (!fd) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    listener = socket(AF_INET, type, 0);
-    if (listener == -1)
-      return -1;
-    memset (&listen_addr, 0, sizeof (listen_addr));
-    listen_addr.sin_family = AF_INET;
-    listen_addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-    listen_addr.sin_port = 0;   /* kernel choses port.  */
-    if (bind(listener, (struct sockaddr *) &listen_addr, sizeof (listen_addr))
-        == -1)
-        goto tidy_up_and_fail;
-    if (listen(listener, 1) == -1)
-        goto tidy_up_and_fail;
-
-    connector = socket(AF_INET, type, 0);
-    if (connector == -1)
-        goto tidy_up_and_fail;
-    /* We want to find out the port number to connect to.  */
-    size = sizeof (connect_addr);
-    if (getsockname(listener, (struct sockaddr *) &connect_addr, &size) == -1)
-        goto tidy_up_and_fail;
-    if (size != sizeof (connect_addr))
-        goto abort_tidy_up_and_fail;
-    if (connect(connector, (struct sockaddr *) &connect_addr,
-                sizeof (connect_addr)) == -1)
-        goto tidy_up_and_fail;
-
-    size = sizeof (listen_addr);
-    acceptor = accept(listener, (struct sockaddr *) &listen_addr, &size);
-    if (acceptor == -1)
-        goto tidy_up_and_fail;
-    if (size != sizeof(listen_addr))
-        goto abort_tidy_up_and_fail;
-    tor_close_socket(listener);
-    /* Now check we are talking to ourself by matching port and host on the
-       two sockets.  */
-    if (getsockname(connector, (struct sockaddr *) &connect_addr, &size) == -1)
-        goto tidy_up_and_fail;
-    if (size != sizeof (connect_addr)
-        || listen_addr.sin_family != connect_addr.sin_family
-        || listen_addr.sin_addr.s_addr != connect_addr.sin_addr.s_addr
-        || listen_addr.sin_port != connect_addr.sin_port) {
-        goto abort_tidy_up_and_fail;
-    }
-    fd[0] = connector;
-    fd[1] = acceptor;
-    return 0;
-
-  abort_tidy_up_and_fail:
-#ifdef MS_WINDOWS
-  errno = WSAECONNABORTED;
-#else
-  errno = ECONNABORTED; /* I hope this is portable and appropriate.  */
-#endif
-  tidy_up_and_fail:
-    {
-        int save_errno = errno;
-        if (listener != -1)
-            tor_close_socket(listener);
-        if (connector != -1)
-            tor_close_socket(connector);
-        if (acceptor != -1)
-            tor_close_socket(acceptor);
-        errno = save_errno;
-        return -1;
-    }
-#endif
-}
-
-/**
- * On Windows, WSAEWOULDBLOCK is not always correct: when you see it,
- * you need to ask the socket for its actual errno.  Also, you need to
- * get your errors from WSAGetLastError, not errno.  (If you supply a
- * socket of -1, we check WSAGetLastError, but don't correct
- * WSAEWOULDBLOCKs.)
- */
-#ifdef MS_WINDOWS
-int tor_socket_errno(int sock)
-{
-  int optval, optvallen=sizeof(optval);
-  int err = WSAGetLastError();
-  if (err == WSAEWOULDBLOCK && sock >= 0) {
-    if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (void*)&optval, &optvallen))
-      return err;
-    if (optval)
-      return optval;
-  }
-  return err;
-}
-#endif
-
-#ifdef MS_WINDOWS
-#define E(code, s) { code, (s " [" #code " ]") }
-struct { int code; const char *msg; } windows_socket_errors[] = {
-  E(WSAEINTR, "Interrupted function call"),
-  E(WSAEACCES, "Permission denied"),
-  E(WSAEFAULT, "Bad address"),
-  E(WSAEINVAL, "Invalid argument"),
-  E(WSAEMFILE, "Too many open files"),
-  E(WSAEWOULDBLOCK,  "Resource temporarily unavailable"),
-  E(WSAEINPROGRESS, "Operation now in progress"),
-  E(WSAEALREADY, "Operation already in progress"),
-  E(WSAENOTSOCK, "Socket operation on nonsocket"),
-  E(WSAEDESTADDRREQ, "Destination address required"),
-  E(WSAEMSGSIZE, "Message too long"),
-  E(WSAEPROTOTYPE, "Protocol wrong for socket"),
-  E(WSAENOPROTOOPT, "Bad protocol option"),
-  E(WSAEPROTONOSUPPORT, "Protocol not supported"),
-  E(WSAESOCKTNOSUPPORT, "Socket type not supported"),
-  /* What's the difference between NOTSUPP and NOSUPPORT? :) */
-  E(WSAEOPNOTSUPP, "Operation not supported"),
-  E(WSAEPFNOSUPPORT,  "Protocol family not supported"),
-  E(WSAEAFNOSUPPORT, "Address family not supported by protocol family"),
-  E(WSAEADDRINUSE, "Address already in use"),
-  E(WSAEADDRNOTAVAIL, "Cannot assign requested address"),
-  E(WSAENETDOWN, "Network is down"),
-  E(WSAENETUNREACH, "Network is unreachable"),
-  E(WSAENETRESET, "Network dropped connection on reset"),
-  E(WSAECONNABORTED, "Software caused connection abort"),
-  E(WSAECONNRESET, "Connection reset by peer"),
-  E(WSAENOBUFS, "No buffer space avaialable"),
-  E(WSAEISCONN, "Socket is already connected"),
-  E(WSAENOTCONN, "Socket is not connected"),
-  E(WSAESHUTDOWN, "Cannot send after socket shutdown"),
-  E(WSAETIMEDOUT, "Connection timed out"),
-  E(WSAECONNREFUSED, "Connection refused"),
-  E(WSAEHOSTDOWN, "Host is down"),
-  E(WSAEHOSTUNREACH, "No route to host"),
-  E(WSAEPROCLIM, "Too many processes"),
-  /* Yes, some of these start with WSA, not WSAE. No, I don't know why. */
-  E(WSASYSNOTREADY, "Network subsystem is unavailable"),
-  E(WSAVERNOTSUPPORTED, "Winsock.dll out of range"),
-  E(WSANOTINITIALISED, "Successful WSAStartup not yet performed"),
-  E(WSAEDISCON, "Graceful shutdown now in progress"),
-#ifdef WSATYPE_NOT_FOUND
-  E(WSATYPE_NOT_FOUND, "Class type not found"),
-#endif
-  E(WSAHOST_NOT_FOUND, "Host not found"),
-  E(WSATRY_AGAIN, "Nonauthoritative host not found"),
-  E(WSANO_RECOVERY, "This is a nonrecoverable error"),
-  E(WSANO_DATA, "Valid name, no data record of requested type)"),
-
-  /* There are some more error codes whose numeric values are marked
-   * <b>OS dependent</b>. They start with WSA_, apparently for the same
-   * reason that practitioners of some craft traditions deliberately
-   * introduce imperfections into their baskets and rugs "to allow the
-   * evil spirits to escape."  If we catch them, then our binaries
-   * might not report consistent results across versions of Windows.
-   * Thus, I'm going to let them all fall through.
-   */
-  { -1, NULL },
-};
-/** There does not seem to be a strerror equivalent for winsock errors.
- * Naturally, we have to roll our own.
- */
-const char *tor_socket_strerror(int e)
-{
-  int i;
-  for (i=0; windows_socket_errors[i].code >= 0; ++i) {
-    if (e == windows_socket_errors[i].code)
-      return windows_socket_errors[i].msg;
-  }
-  return strerror(e);
-}
-#endif
 
 /*
  *    Filesystem operations.
@@ -1623,6 +787,7 @@ write_str_to_file(const char *fname, const char *str, int bin)
     return -1;
   }
 
+  /* XXXX use replace_file() instead. */
 #ifdef MS_WINDOWS
   /* On Windows, rename doesn't replace.  We could call ReplaceFile, but
    * that's hard, and we can probably sneak by without atomicity. */
@@ -1778,32 +943,9 @@ char *expand_filename(const char *filename)
   }
 }
 
-/**
- * Rename the file 'from' to the file 'to'.  On unix, this is the same as
- * rename(2).  On windows, this removes 'to' first if it already exists.
- * Returns 0 on success.  Returns -1 and sets errno on failure.
- */
-int replace_file(const char *from, const char *to)
-{
-#ifndef MS_WINDOWS
-  return rename(from,to);
-#else
-  switch(file_status(to))
-    {
-    case FN_NOENT:
-      break;
-    case FN_FILE:
-      if (unlink(to)) return -1;
-      break;
-    case FN_ERROR:
-      return -1;
-    case FN_DIR:
-      errno = EISDIR;
-      return -1;
-    }
-  return rename(from,to);
-#endif
-}
+/* =====
+ * Net helpers
+ * ===== */
 
 /** Return true iff <b>ip</b> (in host order) is an IP reserved to localhost,
  * or reserved for local networks by RFC 1918.
@@ -1826,265 +968,6 @@ int is_internal_IP(uint32_t ip) {
  */
 int is_local_IP(uint32_t ip) {
   return is_internal_IP(ip);
-}
-
-/* Hold the result of our call to <b>uname</b>. */
-static char uname_result[256];
-/* True iff uname_result is set. */
-static int uname_result_is_set = 0;
-
-/* Return a pointer to a description of our platform.
- */
-const char *
-get_uname(void)
-{
-#ifdef HAVE_UNAME
-  struct utsname u;
-#endif
-  if (!uname_result_is_set) {
-#ifdef HAVE_UNAME
-    if (uname(&u) != -1) {
-      /* (linux says 0 is success, solaris says 1 is success) */
-      tor_snprintf(uname_result, sizeof(uname_result), "%s %s %s",
-               u.sysname, u.nodename, u.machine);
-    } else
-#endif
-      {
-        strlcpy(uname_result, "Unknown platform", sizeof(uname_result));
-      }
-    uname_result_is_set = 1;
-  }
-  return uname_result;
-}
-
-#ifndef MS_WINDOWS
-/* Based on code contributed by christian grothoff */
-static int start_daemon_called = 0;
-static int finish_daemon_called = 0;
-static int daemon_filedes[2];
-/** Start putting the process into daemon mode: fork and drop all resources
- * except standard fds.  The parent process never returns, but stays around
- * until finish_daemon is called.  (Note: it's safe to call this more
- * than once: calls after the first are ignored.)
- */
-void start_daemon(const char *desired_cwd)
-{
-  pid_t pid;
-
-  if (start_daemon_called)
-    return;
-  start_daemon_called = 1;
-
-  if(!desired_cwd)
-    desired_cwd = "/";
-   /* Don't hold the wrong FS mounted */
-  if (chdir(desired_cwd) < 0) {
-    log_fn(LOG_ERR,"chdir to %s failed. Exiting.",desired_cwd);
-    exit(1);
-  }
-
-  pipe(daemon_filedes);
-  pid = fork();
-  if (pid < 0) {
-    log_fn(LOG_ERR,"fork failed. Exiting.");
-    exit(1);
-  }
-  if (pid) {  /* Parent */
-    int ok;
-    char c;
-
-    close(daemon_filedes[1]); /* we only read */
-    ok = -1;
-    while (0 < read(daemon_filedes[0], &c, sizeof(char))) {
-      if (c == '.')
-        ok = 1;
-    }
-    fflush(stdout);
-    if (ok == 1)
-      exit(0);
-    else
-      exit(1); /* child reported error */
-  } else { /* Child */
-    close(daemon_filedes[0]); /* we only write */
-
-    pid = setsid(); /* Detach from controlling terminal */
-    /*
-     * Fork one more time, so the parent (the session group leader) can exit.
-     * This means that we, as a non-session group leader, can never regain a
-     * controlling terminal.   This part is recommended by Stevens's
-     * _Advanced Programming in the Unix Environment_.
-     */
-    if (fork() != 0) {
-      exit(0);
-    }
-    return;
-  }
-}
-
-/** Finish putting the process into daemon mode: drop standard fds, and tell
- * the parent process to exit.  (Note: it's safe to call this more than once:
- * calls after the first are ignored.  Calls start_daemon first if it hasn't
- * been called already.)
- */
-void finish_daemon(void)
-{
-  int nullfd;
-  char c = '.';
-  if (finish_daemon_called)
-    return;
-  if (!start_daemon_called)
-    start_daemon(NULL);
-  finish_daemon_called = 1;
-
-  nullfd = open("/dev/null",
-                O_CREAT | O_RDWR | O_APPEND);
-  if (nullfd < 0) {
-    log_fn(LOG_ERR,"/dev/null can't be opened. Exiting.");
-    exit(1);
-  }
-  /* close fds linking to invoking terminal, but
-   * close usual incoming fds, but redirect them somewhere
-   * useful so the fds don't get reallocated elsewhere.
-   */
-  if (dup2(nullfd,0) < 0 ||
-      dup2(nullfd,1) < 0 ||
-      dup2(nullfd,2) < 0) {
-    log_fn(LOG_ERR,"dup2 failed. Exiting.");
-    exit(1);
-  }
-  write(daemon_filedes[1], &c, sizeof(char)); /* signal success */
-  close(daemon_filedes[1]);
-}
-#else
-/* defined(MS_WINDOWS) */
-void start_daemon(const char *cp) {}
-void finish_daemon(void) {}
-#endif
-
-/** Write the current process ID, followed by NL, into <b>filename</b>.
- */
-void write_pidfile(char *filename) {
-#ifndef MS_WINDOWS
-  FILE *pidfile;
-
-  if ((pidfile = fopen(filename, "w")) == NULL) {
-    log_fn(LOG_WARN, "Unable to open %s for writing: %s", filename,
-           strerror(errno));
-  } else {
-    fprintf(pidfile, "%d\n", (int)getpid());
-    fclose(pidfile);
-  }
-#endif
-}
-
-/** Get the maximum allowed number of file descriptors. (Some systems
- * have a low soft limit.) Make sure we set it to at least
- * <b>required_min</b>. Return 0 if we can, or -1 if we fail. */
-int set_max_file_descriptors(int required_min) {
-  struct rlimit rlim;
-
-#ifndef HAVE_GETRLIMIT
-  log_fn(LOG_INFO,"This platform is missing getrlimit(). Proceeding.");
-  return 0; /* hope we'll be ok */
-#endif
-
-  if (getrlimit(RLIMIT_NOFILE, &rlim) != 0) {
-    log_fn(LOG_WARN, "Could not get maximum number of file descriptors: %s",
-           strerror(errno));
-    return -1;
-  }
-  if(required_min > rlim.rlim_max) {
-    log_fn(LOG_WARN,"We need %d file descriptors available, and we're limited to %d. Please change your ulimit.", required_min, (int)rlim.rlim_max);
-    return -1;
-  }
-  if(required_min > rlim.rlim_cur) {
-    log_fn(LOG_INFO,"Raising max file descriptors from %d to %d.",
-           (int)rlim.rlim_cur, (int)rlim.rlim_max);
-  }
-  rlim.rlim_cur = rlim.rlim_max;
-  if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
-    log_fn(LOG_WARN, "Could not set maximum number of file descriptors: %s",
-           strerror(errno));
-    return -1;
-  }
-  return 0;
-}
-
-/** Call setuid and setgid to run as <b>user</b>:<b>group</b>.  Return 0 on
- * success.  On failure, log and return -1.
- */
-int switch_id(char *user, char *group) {
-#ifndef MS_WINDOWS
-  struct passwd *pw = NULL;
-  struct group *gr = NULL;
-
-  if (user) {
-    pw = getpwnam(user);
-    if (pw == NULL) {
-      log_fn(LOG_ERR,"User '%s' not found.", user);
-      return -1;
-    }
-  }
-
-  /* switch the group first, while we still have the privileges to do so */
-  if (group) {
-    gr = getgrnam(group);
-    if (gr == NULL) {
-      log_fn(LOG_ERR,"Group '%s' not found.", group);
-      return -1;
-    }
-
-    if (setgid(gr->gr_gid) != 0) {
-      log_fn(LOG_ERR,"Error setting GID: %s", strerror(errno));
-      return -1;
-    }
-  } else if (user) {
-    if (setgid(pw->pw_gid) != 0) {
-      log_fn(LOG_ERR,"Error setting GID: %s", strerror(errno));
-      return -1;
-    }
-  }
-
-  /* now that the group is switched, we can switch users and lose
-     privileges */
-  if (user) {
-    if (setuid(pw->pw_uid) != 0) {
-      log_fn(LOG_ERR,"Error setting UID: %s", strerror(errno));
-      return -1;
-    }
-  }
-
-  return 0;
-#endif
-
-  log_fn(LOG_ERR,
-         "User or group specified, but switching users is not supported.");
-
-  return -1;
-}
-
-/** Set *addr to the IP address (in dotted-quad notation) stored in c.
- * Return 1 on success, 0 if c is badly formatted.  (Like inet_aton(c,addr),
- * but works on Windows and Solaris.)
- */
-int tor_inet_aton(const char *c, struct in_addr* addr)
-{
-#ifdef HAVE_INET_ATON
-  return inet_aton(c, addr);
-#else
-  uint32_t r;
-  tor_assert(c);
-  tor_assert(addr);
-  if (strcmp(c, "255.255.255.255") == 0) {
-    addr->s_addr = 0xFFFFFFFFu;
-    return 1;
-  }
-  r = inet_addr(c);
-  if (r == INADDR_NONE)
-    return 0;
-  addr->s_addr = r;
-  return 1;
-#endif
 }
 
 /** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
@@ -2285,204 +1168,128 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
   return -1;
 }
 
-/** Extract a long from the start of s, in the given numeric base.  If
- * there is unconverted data and next is provided, set *next to the
- * first unconverted character.  An error has occurred if no characters
- * are converted; or if there are unconverted characters and next is NULL; or
- * if the parsed value is not between min and max.  When no error occurs,
- * return the parsed value and set *ok (if provided) to 1.  When an error
- * ocurs, return 0 and set *ok (if provided) to 0.
- */
-long
-tor_parse_long(const char *s, int base, long min, long max,
-               int *ok, char **next)
-{
-  char *endptr;
-  long r;
-
-  r = strtol(s, &endptr, base);
-  /* Was at least one character converted? */
-  if (endptr == s)
-    goto err;
-  /* Were there unexpected unconverted characters? */
-  if (!next && *endptr)
-    goto err;
-  /* Is r within limits? */
-  if (r < min || r > max)
-    goto err;
-
-  if (ok) *ok = 1;
-  if (next) *next = endptr;
-  return r;
- err:
-  if (ok) *ok = 0;
-  if (next) *next = endptr;
-  return 0;
-}
-
-unsigned long
-tor_parse_ulong(const char *s, int base, unsigned long min,
-                unsigned long max, int *ok, char **next)
-{
-  char *endptr;
-  unsigned long r;
-
-  r = strtol(s, &endptr, base);
-  /* Was at least one character converted? */
-  if (endptr == s)
-    goto err;
-  /* Were there unexpected unconverted characters? */
-  if (!next && *endptr)
-    goto err;
-  /* Is r within limits? */
-  if (r < min || r > max)
-    goto err;
-
-  if (ok) *ok = 1;
-  if (next) *next = endptr;
-  return r;
- err:
-  if (ok) *ok = 0;
-  if (next) *next = endptr;
-  return 0;
-}
-
-/** Replacement for snprintf.  Differs from platform snprintf in two
- * ways: First, always NUL-terminates its output.  Second, always
- * returns -1 if the result is truncated.  (Note that this return
- * behavior does <i>not</i> conform to C99; it just happens to be the
- * easiest to emulate "return -1" with conformant implementations than
- * it is to emulate "return number that would be written" with
- * non-conformant implementations.) */
-int tor_snprintf(char *str, size_t size, const char *format, ...)
-{
-  va_list ap;
-  int r;
-  va_start(ap,format);
-  r = tor_vsnprintf(str,size,format,ap);
-  va_end(ap);
-  return r;
-}
-
-/** Replacement for vsnpritnf; behavior differs as tor_snprintf differs from
- * snprintf.
- */
-int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
-{
-  int r;
-#ifdef MS_WINDOWS
-  r = _vsnprintf(str, size, format, args);
-#else
-  r = vsnprintf(str, size, format, args);
-#endif
-  str[size-1] = '\0';
-  if (r < 0 || ((size_t)r) >= size)
-    return -1;
-  return r;
-}
-
+/* =====
+ * Process helpers
+ * ===== */
 
 #ifndef MS_WINDOWS
-struct tor_mutex_t {
-};
-tor_mutex_t *tor_mutex_new(void) { return NULL; }
-void tor_mutex_acquire(tor_mutex_t *m) { }
-void tor_mutex_release(tor_mutex_t *m) { }
-void tor_mutex_free(tor_mutex_t *m) { }
+/* Based on code contributed by christian grothoff */
+static int start_daemon_called = 0;
+static int finish_daemon_called = 0;
+static int daemon_filedes[2];
+/** Start putting the process into daemon mode: fork and drop all resources
+ * except standard fds.  The parent process never returns, but stays around
+ * until finish_daemon is called.  (Note: it's safe to call this more
+ * than once: calls after the first are ignored.)
+ */
+void start_daemon(const char *desired_cwd)
+{
+  pid_t pid;
+
+  if (start_daemon_called)
+    return;
+  start_daemon_called = 1;
+
+  if(!desired_cwd)
+    desired_cwd = "/";
+   /* Don't hold the wrong FS mounted */
+  if (chdir(desired_cwd) < 0) {
+    log_fn(LOG_ERR,"chdir to %s failed. Exiting.",desired_cwd);
+    exit(1);
+  }
+
+  pipe(daemon_filedes);
+  pid = fork();
+  if (pid < 0) {
+    log_fn(LOG_ERR,"fork failed. Exiting.");
+    exit(1);
+  }
+  if (pid) {  /* Parent */
+    int ok;
+    char c;
+
+    close(daemon_filedes[1]); /* we only read */
+    ok = -1;
+    while (0 < read(daemon_filedes[0], &c, sizeof(char))) {
+      if (c == '.')
+        ok = 1;
+    }
+    fflush(stdout);
+    if (ok == 1)
+      exit(0);
+    else
+      exit(1); /* child reported error */
+  } else { /* Child */
+    close(daemon_filedes[0]); /* we only write */
+
+    pid = setsid(); /* Detach from controlling terminal */
+    /*
+     * Fork one more time, so the parent (the session group leader) can exit.
+     * This means that we, as a non-session group leader, can never regain a
+     * controlling terminal.   This part is recommended by Stevens's
+     * _Advanced Programming in the Unix Environment_.
+     */
+    if (fork() != 0) {
+      exit(0);
+    }
+    return;
+  }
+}
+
+/** Finish putting the process into daemon mode: drop standard fds, and tell
+ * the parent process to exit.  (Note: it's safe to call this more than once:
+ * calls after the first are ignored.  Calls start_daemon first if it hasn't
+ * been called already.)
+ */
+void finish_daemon(void)
+{
+  int nullfd;
+  char c = '.';
+  if (finish_daemon_called)
+    return;
+  if (!start_daemon_called)
+    start_daemon(NULL);
+  finish_daemon_called = 1;
+
+  nullfd = open("/dev/null",
+                O_CREAT | O_RDWR | O_APPEND);
+  if (nullfd < 0) {
+    log_fn(LOG_ERR,"/dev/null can't be opened. Exiting.");
+    exit(1);
+  }
+  /* close fds linking to invoking terminal, but
+   * close usual incoming fds, but redirect them somewhere
+   * useful so the fds don't get reallocated elsewhere.
+   */
+  if (dup2(nullfd,0) < 0 ||
+      dup2(nullfd,1) < 0 ||
+      dup2(nullfd,2) < 0) {
+    log_fn(LOG_ERR,"dup2 failed. Exiting.");
+    exit(1);
+  }
+  write(daemon_filedes[1], &c, sizeof(char)); /* signal success */
+  close(daemon_filedes[1]);
+}
 #else
-struct tor_mutex_t {
-  HANDLE handle;
-};
-tor_mutex_t *tor_mutex_new(void)
-{
-  tor_mutex_t *m;
-  m = tor_malloc_zero(sizeof(tor_mutex_t));
-  m->handle = CreateMutex(NULL, FALSE, NULL);
-  tor_assert(m->handle != NULL);
-  return m;
-}
-void tor_mutex_free(tor_mutex_t *m)
-{
-  CloseHandle(m->handle);
-  tor_free(m);
-}
-void tor_mutex_acquire(tor_mutex_t *m)
-{
-  DWORD r;
-  r = WaitForSingleObject(m->handle, INFINITE);
-  switch (r) {
-    case WAIT_ABANDONED: /* holding thread exited. */
-        case WAIT_OBJECT_0: /* we got the mutex normally. */
-      break;
-    case WAIT_TIMEOUT: /* Should never happen. */
-          tor_assert(0);
-      break;
-        case WAIT_FAILED:
-      log_fn(LOG_WARN, "Failed to acquire mutex: %d", GetLastError());
-  }
-}
-void tor_mutex_release(tor_mutex_t *m)
-{
-  BOOL r;
-  r = ReleaseMutex(m->handle);
-  if (!r) {
-    log_fn(LOG_WARN, "Failed to release mutex: %d", GetLastError());
-  }
-}
+/* defined(MS_WINDOWS) */
+void start_daemon(const char *cp) {}
+void finish_daemon(void) {}
 #endif
 
-void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
-{
-  const char *end;
-  char *cp;
+/** Write the current process ID, followed by NL, into <b>filename</b>.
+ */
+void write_pidfile(char *filename) {
+#ifndef MS_WINDOWS
+  FILE *pidfile;
 
-  tor_assert(destlen >= srclen*2+1);
-
-  cp = dest;
-  end = src+srclen;
-  while (src<end) {
-    sprintf(cp,"%02X",*(const uint8_t*)src);
-    ++src;
-    cp += 2;
+  if ((pidfile = fopen(filename, "w")) == NULL) {
+    log_fn(LOG_WARN, "Unable to open %s for writing: %s", filename,
+           strerror(errno));
+  } else {
+    fprintf(pidfile, "%d\n", (int)getpid());
+    fclose(pidfile);
   }
-  *cp = '\0';
-}
-
-static const char HEX_DIGITS[] = "0123456789ABCDEFabcdef";
-
-static INLINE int hex_decode_digit(char c)
-{
-  const char *cp;
-  int n;
-  cp = strchr(HEX_DIGITS, c);
-  if (!cp)
-    return -1;
-  n = cp-HEX_DIGITS;
-  if (n<=15)
-    return n; /* digit or uppercase */
-  else
-    return n-6; /* lowercase */
-}
-
-int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
-{
-  const char *end;
-  int v1,v2;
-  if ((srclen % 2) != 0)
-    return -1;
-  if (destlen < srclen/2)
-    return -1;
-  end = src+srclen;
-  while (src<end) {
-    v1 = hex_decode_digit(*src);
-    v2 = hex_decode_digit(*(src+1));
-    if(v1<0||v2<0)
-      return -1;
-    *(uint8_t*)dest = (v1<<4)|v2;
-    ++dest;
-    src+=2;
-  }
-  return 0;
+#endif
 }
 
 /*

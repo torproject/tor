@@ -53,6 +53,7 @@
 #include "log.h"
 #include "aes.h"
 #include "util.h"
+#include "container.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x00905000l
 #error "We require openssl >= 0.9.5"
