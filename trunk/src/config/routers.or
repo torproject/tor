@@ -4,7 +4,7 @@
 # router-port is where the router is accepting connections from other routers.
 
 # Router 1
-moria.mit.edu 9001 10240 10240
+moria.mit.edu 9001 102400 10240
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
 7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
@@ -12,7 +12,7 @@ nZ7kVMRoiXCbjL6VAtNa4Zy1Af/GOm0iCIDpholeujQ95xew7rQnAgMA//8=
 -----END RSA PUBLIC KEY-----
 
 # Router 2
-moria.mit.edu 9002 10240 10240
+moria.mit.edu 9002 102400 10240
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBANX/HHRuudz274MFSQ4manX8DhtsIuogNUyco9/0dr+XsfioTGd3RgMj
 aSWlD87arkZO4hHBPHe0q89Z3s1UtUsyQ/VmsxSv9g2OCnF/dU2Nz4h6+Al3iNJF
@@ -20,28 +20,28 @@ aSWlD87arkZO4hHBPHe0q89Z3s1UtUsyQ/VmsxSv9g2OCnF/dU2Nz4h6+Al3iNJF
 -----END RSA PUBLIC KEY-----
 
 # Router 3
-moria.mit.edu 9003 10240 10240
+moria.mit.edu 9003 102400 10240
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAJfkNWCaNkYIRwfHT06KBU6dz8W1xDpW5ezGJwAOoxCX3/ZNoUicb/1V
 oB3OzW6VxWIiht3da/3K0ywiBOOCcf6BabKoMdiPpH7NIeu6XRmBYK2uqW13gBgh
 xJbQBb58Nx8Fr05XkvLG6i+vTDY3MZOW3E2/DwSe/jFzuHSD5b3nAgMA//8=
 -----END RSA PUBLIC KEY-----
 
-town-square.reputation.com 9004 10240 10240
+town-square.reputation.com 9004 102400 10240
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAKD2BDZQpGq/aAbZ7t+/7qktZVEbhUGe097gIjWH9gXcIOIm0CJMe3rN
 MsBJsQMi5Uwqrz+Invb5n6bswrNlJp/bCKBhGTvUCfxg7c8xZy71PPSIPnTg1qXl
 p5fyAkgCYkZNgEEZzQDHv1GRvLCs92kURjSJE5y8QU0dXfbzms8PAgMA//8=
 -----END RSA PUBLIC KEY-----
 
-moria.mit.edu 9004 10240 10240
+moria.mit.edu 9004 102400 10240
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAKD2BDZQpGq/aAbZ7t+/7qktZVEbhUGe097gIjWH9gXcIOIm0CJMe3rN
 MsBJsQMi5Uwqrz+Invb5n6bswrNlJp/bCKBhGTvUCfxg7c8xZy71PPSIPnTg1qXl
 p5fyAkgCYkZNgEEZzQDHv1GRvLCs92kURjSJE5y8QU0dXfbzms8PAgMA//8=
 -----END RSA PUBLIC KEY-----
 
-mosg.cl.cam.ac.uk 9005 10240 10240
+mosg.cl.cam.ac.uk 9005 102400 10240
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAMMHEjhhawM6S14ETFVcvByU7D/baN2JMcCweKKJ7zcSurDnpgRH/Uo7
 05+bZE3BCy4OkAqQbGlKd/ejBOuXjEtS0mJo5xwDX9StKguhgFRk60hhrF2OFJm4

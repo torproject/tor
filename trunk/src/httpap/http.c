@@ -8,6 +8,14 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.3  2002/09/09 04:10:58  arma
+ * port to actual BSD
+ *
+ * (hey nick, does this break the os x build?)
+ *
+ * you still need to add some stuff to the ./configure commandline...
+ * anybody know a better solution?
+ *
  * Revision 1.2  2002/08/24 07:56:22  arma
  * proxies send port in host order as ascii string
  *
@@ -32,7 +40,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <stdint.h>
+#include <limits.h>
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>

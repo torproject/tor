@@ -16,7 +16,12 @@ If you got the source from a tarball:
   Run ./configure and make as usual. There isn't much point in 
   'make install' yet.
 
-If this doesn't work for you:
+If this doesn't work for you / troubleshooting:
+
+  If you couldn't find popt (eg you're on BSD), try
+    CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
+    ./configure
+  rather than simply ./configure.
 
   Check out the list archives at http://archives.seul.org/or/dev/ and see
   if somebody else has reported your problem. If not, please subscribe

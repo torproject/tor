@@ -8,6 +8,14 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.5  2002/09/09 04:10:58  arma
+ * port to actual BSD
+ *
+ * (hey nick, does this break the os x build?)
+ *
+ * you still need to add some stuff to the ./configure commandline...
+ * anybody know a better solution?
+ *
  * Revision 1.4  2002/09/03 18:44:24  nickm
  * Port to MacOS X
  *
@@ -128,7 +136,7 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <ctype.h>
-#include <stdint.h>
+#include <limits.h>
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>

@@ -10,7 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
+#include <limits.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
