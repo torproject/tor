@@ -409,7 +409,8 @@ dirserv_add_descriptor(const char **desc, const char **msg)
     *msg = verified?"Verified server added":"Unverified server added. (Have you sent us your key fingerprint?)";
   }
 
-  ri->is_verified = verified;
+  ri->is_verified = verified ||
+                    tor_version_as_new_as(ri->platform,"0.1.0.2-rc");
   smartlist_add(descriptor_list, ri);
 
   *desc = end;
