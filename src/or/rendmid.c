@@ -124,7 +124,7 @@ rend_mid_introduce(circuit_t *circ, const char *request, int request_len)
     goto err;
   }
 
-  if (request_len < 276) {
+  if (request_len < 246) {
     log_fn(LOG_WARN,
            "Impossibly short INTRODUCE1 cell on circuit %d; dropping.",
            circ->p_circ_id);

@@ -41,14 +41,14 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
   return 0;
 }
 
-#define LEN_REND_INTRODUCE1 204
+#define LEN_REND_INTRODUCE1 (20+20+20+16+128+42)
 
 int
 rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   const char *descp;
   int desc_len;
   char payload[LEN_REND_INTRODUCE1];
-  char tmp[LEN_REND_INTRODUCE1-20-16];
+  char tmp[20+20+128];
   rend_service_descriptor_t *parsed=NULL;
 
   assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);

@@ -326,6 +326,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
     return -1;
   }
 
+  /* XXX NM this is wrong, right? */
   /* min key length plus digest length plus nickname length */
   if (request_len < 148) {
     log_fn(LOG_WARN, "Got a truncated INTRODUCE2 cell on circ %d",
