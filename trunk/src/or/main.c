@@ -18,6 +18,8 @@ static struct pollfd poll_array[MAXCONNECTIONS];
 
 static int nfds=0; /* number of connections currently active */
 
+static int please_dumpstats=0; /* whether we should dump stats during the loop */
+
 /* private key */
 static crypto_pk_env_t *prkey;
 
@@ -439,6 +441,9 @@ int do_main_loop(void) {
 		        options.ORPort, options.OPPort, options.APPort);
 
   for(;;) {
+    if(please_dumpstats) {
+      dumpstats();
+    }
     if(prepare_for_poll(&timeout) < 0) {
       log(LOG_DEBUG,"do_main_loop(): prepare_for_poll failed, exiting.");
       return -1;
@@ -483,18 +488,46 @@ int do_main_loop(void) {
   }
 }
 
-void catch () {
+void catchint () {
   errno = 0; /* netcat does this. it looks fun. */
 
-  log(LOG_DEBUG,"Catching ^c, exiting cleanly.");
+  log(LOG_NOTICE,"Catching ^c, exiting cleanly.");
    
   exit(0);
+}
+
+void catchusr1 () {
+  please_dumpstats = 1;
+}
+
+void dumpstats (void) { /* dump stats to stdout */
+  int i;
+  connection_t *conn;
+  extern char *conn_type_to_string[];
+  extern char *conn_state_to_string[][10];
+
+  printf("Dumping stats:\n");
+
+  for(i=0;i<nfds;i++) {
+    conn = connection_array[i];
+    printf("Conn %d (socket %d) type %d (%s), state %d (%s)\n",
+      i, conn->s, conn->type, conn_type_to_string[conn->type],
+      conn->state, conn_state_to_string[conn->type][conn->state]);
+    if(!connection_is_listener(conn)) {
+      printf("Conn %d is to '%s:%d'.\n",i,conn->address, conn->port);
+    }
+    circuit_dump_by_conn(conn); /* dump info about all the circuits using this conn */
+    printf("\n");
+  }
+
+  please_dumpstats = 0;
 }
 
 int main(int argc, char *argv[]) {
   int retval = 0;
 
-  signal (SIGINT, catch); /* to catch ^c so we can exit cleanly */
+  signal (SIGINT, catchint); /* to catch ^c so we can exit cleanly */
+  signal (SIGUSR1, catchusr1); /* to dump stats to stdout */
 
   if ( getoptions(argc,argv,&options) ) exit(1);
   log(options.loglevel,NULL);         /* assign logging severity level from options */

@@ -8,38 +8,43 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
-#if 0
-/* these are now out of date :( -RD */
 char *conn_type_to_string[] = {
-  "OP listener", /* 0 */
-  "OP",          /* 1 */
-  "OR listener", /* 2 */
-  "OR",          /* 3 */
-  "App"          /* 4 */
+  "",            /* 0 */
+  "OP listener", /* 1 */
+  "OP",          /* 2 */
+  "OR listener", /* 3 */
+  "OR",          /* 4 */
+  "Exit",        /* 5 */
+  "App listener",/* 6 */
+  "App"          /* 7 */
 };
 
 char *conn_state_to_string[][10] = {
+  { },         /* no type associated with 0 */
   { "ready" }, /* op listener, 0 */
   { "awaiting keys", /* op, 0 */
     "open",              /* 1 */
     "close",             /* 2 */
     "close_wait" },      /* 3 */
   { "ready" }, /* or listener, 0 */
-  { "connecting (as client)",   /* or, 0 */
-    "sending auth (as client)",     /* 1 */
-    "waiting for auth (as client)", /* 2 */
-    "sending nonce (as client)",    /* 3 */
-    "waiting for auth (as server)", /* 4 */
-    "sending auth (as server)",     /* 5 */
-    "waiting for nonce (as server)",/* 6 */
-    "open" },                       /* 7 */
-  { "connecting",                /* exit, 0 */
-    "open",                            /* 1 */
-    "waiting for dest info",           /* 2 */
-    "flushing buffer, then will close",/* 3 */
-    "close_wait" }                     /* 4 */
+  { "connecting (as OP)",       /* or, 0 */
+    "sending keys (as OP)",         /* 1 */
+    "connecting (as client)",       /* 2 */
+    "sending auth (as client)",     /* 3 */
+    "waiting for auth (as client)", /* 4 */
+    "sending nonce (as client)",    /* 5 */
+    "waiting for auth (as server)", /* 6 */
+    "sending auth (as server)",     /* 7 */
+    "waiting for nonce (as server)",/* 8 */
+    "open" },                       /* 9 */
+  { "waiting for dest info",     /* exit, 0 */
+    "connecting",                      /* 1 */
+    "open" },                          /* 2 */
+  { "ready" }, /* app listener, 0 */
+  { "awaiting dest info",         /* app, 0 */
+    "waiting for OR connection",       /* 1 */
+    "open" }                           /* 2 */
 };
-#endif
 
 /********* END VARIABLES ************/
 
@@ -399,6 +404,14 @@ int connection_speaks_cells(connection_t *conn) {
   if(conn->type == CONN_TYPE_OR || conn->type == CONN_TYPE_OP)
     return 1;
 
+  return 0;
+}
+
+int connection_is_listener(connection_t *conn) {
+  if(conn->type == CONN_TYPE_OP_LISTENER ||
+     conn->type == CONN_TYPE_OR_LISTENER ||
+     conn->type == CONN_TYPE_AP_LISTENER)
+    return 1;
   return 0;
 }
 
