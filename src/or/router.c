@@ -381,6 +381,15 @@ static int can_reach_or_port = 0;
 /** Whether we can reach our DirPort from the outside. */
 static int can_reach_dir_port = 0;
 
+/** Return 1 if all open ports are known reachable; else return 0. */
+int check_whether_ports_reachable(void) {
+  if (!can_reach_or_port)
+    return 0;
+  if (get_options()->DirPort && !can_reach_dir_port)
+    return 0;
+  return 1;
+}
+
 void consider_testing_reachability(void) {
   routerinfo_t *me = router_get_my_routerinfo();
 
@@ -397,11 +406,17 @@ void consider_testing_reachability(void) {
   }
 }
 
+static void ports_now_reachable(void) {
+  log_fn(LOG_NOTICE,"Your server is reachable. Publishing server descriptor.");
+}
+
 /** Annotate that we found our ORPort reachable. */
 void router_orport_found_reachable(void) {
   if (!can_reach_or_port) {
     log_fn(LOG_NOTICE,"Your ORPort is reachable from the outside. Excellent.");
     can_reach_or_port = 1;
+    if (check_whether_ports_reachable())
+      ports_now_reachable();
   }
 }
 
@@ -410,6 +425,8 @@ void router_dirport_found_reachable(void) {
   if (!can_reach_dir_port) {
     log_fn(LOG_NOTICE,"Your DirPort is reachable from the outside. Excellent.");
     can_reach_dir_port = 1;
+    if (check_whether_ports_reachable())
+      ports_now_reachable();
   }
 }
 
@@ -474,12 +491,7 @@ static int decide_if_publishable_server(time_t now) {
   if (options->AuthoritativeDir)
     return 1;
 
-  if (!can_reach_or_port)
-    return 0;
-  if (options->DirPort && !can_reach_dir_port)
-    return 0;
-
-  return 1;
+  return check_whether_ports_reachable();
 }
 
 void consider_publishable_server(time_t now, int force) {

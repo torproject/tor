@@ -1163,7 +1163,6 @@ int connection_handle_write(connection_t *conn) {
         connection_edge_end_errno(conn, conn->cpath_layer);
 
       connection_close_immediate(conn); /* Don't flush; connection is dead. */
-      conn->has_sent_end = 1;
       connection_mark_for_close(conn);
       return -1;
     }
