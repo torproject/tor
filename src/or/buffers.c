@@ -156,6 +156,9 @@ int compress_from_buf(char *string, int string_len,
     {
     case Z_OK:
     case Z_STREAM_END:
+      log(LOG_DEBUG, "Compressed (%d/%d); filled (%d/%d).",
+	  *buf_datalen_in-zstream->avail_in, *buf_datalen_in,
+	  string_len-zstream->avail_out, string_len);
       memmove(*buf_in, zstream->next_in, zstream->avail_in);
       *buf_datalen_in = zstream->avail_in;
       return string_len - zstream->avail_out;
