@@ -249,18 +249,22 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
  * If !conn, return newest.
  *
  * If must_be_open, ignore circs not in CIRCUIT_STATE_OPEN.
+ * If must_be_clean, ignore circs that have been used before.
  */
-circuit_t *circuit_get_newest(connection_t *conn, int must_be_open) {
+circuit_t *circuit_get_newest(connection_t *conn,
+                              int must_be_open, int must_be_clean) {
   circuit_t *circ, *newest=NULL, *leastdirty=NULL;
   routerinfo_t *exitrouter;
 
-  for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(!circ->cpath)
+  for (circ=global_circuitlist;circ;circ = circ->next) {
+    if (!circ->cpath)
       continue; /* this circ doesn't start at us */
-    if(must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_conn))
+    if (must_be_open && (circ->state != CIRCUIT_STATE_OPEN || !circ->n_conn))
       continue; /* ignore non-open circs */
     if (circ->marked_for_close)
       continue;
+    if (must_be_clean && circ->timestamp_dirty)
+      continue; /* ignore dirty circs */
     if(conn) {
       if(circ->state == CIRCUIT_STATE_OPEN && circ->n_conn) /* open */
         exitrouter = router_get_by_addr_port(circ->cpath->prev->addr, circ->cpath->prev->port);
