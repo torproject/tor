@@ -73,28 +73,27 @@ void
 directory_post_to_dirservers(uint8_t purpose, const char *payload,
                              size_t payload_len)
 {
-  int i;
+  smartlist_t *dirservers;
+
   routerinfo_t *router;
   routerlist_t *rl;
   char buf[16];
 
-  router_get_routerlist(&rl);
-  if(!rl)
-    return;
-
-  for(i=0; i < smartlist_len(rl->routers); i++) {
-    router = smartlist_get(rl->routers, i);
-    /* Note: this posts our descriptor to ourselves, if we're an
-     * authdirserver. But I think that's ok. */
-    if(!router->is_trusted_dir)
-      continue;
-    if (options.FascistFirewall && purpose == DIR_PURPOSE_UPLOAD_DIR) {
-      sprintf(buf,"%d",router->dir_port);
-      if (!smartlist_string_isin(options.FirewallPorts, buf))
-        continue;      
-    }
-    directory_initiate_command_router(router, purpose, payload, payload_len);
-  }
+  router_get_trusted_dir_servers(&dirservers);
+  tor_assert(dirservers);
+  SMARTLIST_FOREACH(dirservers, trusted_dir_server_t *, ds,
+    {
+      /* Pay attention to fascistfirewall when we're uploading a
+       * router descriptor, but not when uploading a service
+       * descriptor -- those use Tor. */
+      if (options.FascistFirewall && purpose == DIR_PURPOSE_UPLOAD_DIR &&
+          !options.HttpProxy) {
+        sprintf(buf,"%d",ds->dir_port);
+        if (!smartlist_string_isin(options.FirewallPorts, buf))
+          continue;
+      }
+      directory_initiate_command_trusted_dir(ds, purpose, payload, payload_len);
+    });
 }
 
 /** Start a connection to a random running directory server, using
