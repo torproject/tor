@@ -46,7 +46,7 @@ void directory_initiate_fetch(routerinfo_t *router) {
   if (router->signing_pkey)
     conn->pkey = crypto_pk_dup_key(router->signing_pkey);
   else {
-    log(LOG_ERR, "No signing key known for directory %s; signature won\'t be checked", conn->address);
+    log(LOG_ERR, "No signing key known for directory %s; signature won't be checked", conn->address);
     conn->pkey = NULL;
   }
 
