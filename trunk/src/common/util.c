@@ -2117,6 +2117,106 @@ parse_addr_port(const char *addrport, char **address, uint32_t *addr,
   return ok ? 0 : -1;
 }
 
+/** Parse a string <b>s</b> in the format of
+ * (IP(/mask|/mask-bits)?|*):(*|port(-maxport)?), setting the various
+ * *out pointers as appropriate.  Return 0 on success, -1 on failure.
+ */
+int
+parse_addr_and_port_range(const char *s, uint32_t *addr_out,
+                          uint32_t *mask_out, uint16_t *port_min_out,
+                          uint16_t *port_max_out)
+{
+  char *address;
+  char *mask, *port, *endptr;
+  struct in_addr in;
+  int bits;
+
+  tor_assert(s && addr_out && mask_out && port_min_out && port_max_out);
+  
+  address = tor_strdup(s);
+  /* Break 'address' into separate strings.
+   */
+  mask = strchr(address,'/');
+  port = strchr(mask?mask:address,':');
+  if (mask)
+    *mask++ = '\0';
+  if (port)
+    *port++ = '\0';
+  /* Now "address" is the IP|'*' part...
+   *     "mask" is the Mask|Maskbits part...
+   * and "port" is the *|port|min-max part.
+   */
+  
+  if (strcmp(address,"*")==0) {
+    *addr_out = 0;
+  } else if (tor_inet_aton(address, &in) != 0) {
+    *addr_out = ntohl(in.s_addr);
+  } else {
+    log_fn(LOG_WARN, "Malformed IP %s in address pattern; rejecting.",address);
+    goto err;
+  }
+
+  if (!mask) {
+    if (strcmp(address,"*")==0)
+      *mask_out = 0;
+    else
+      *mask_out = 0xFFFFFFFFu;
+  } else {
+    endptr = NULL;
+    bits = (int) strtol(mask, &endptr, 10);
+    if (!*endptr) {
+      /* strtol handled the whole mask. */
+      if (bits < 0 || bits > 32) {
+        log_fn(LOG_WARN, "Bad number of mask bits on address range; rejecting.");
+        goto err;
+      }
+      *mask_out = ~((1<<(32-bits))-1);
+    } else if (tor_inet_aton(mask, &in) != 0) {
+      *mask_out = ntohl(in.s_addr);
+    } else {
+      log_fn(LOG_WARN, "Malformed mask %s on address range; rejecting.",
+             mask);
+      goto err;
+    }
+  }
+
+  if (!port || strcmp(port, "*") == 0) {
+    *port_min_out = 1;
+    *port_max_out = 65535;
+  } else {
+    endptr = NULL;
+    *port_min_out =  (uint16_t) tor_parse_long(port, 10, 1, 65535,
+                                               NULL, &endptr);
+    if (*endptr == '-') {
+      port = endptr+1;
+      endptr = NULL;
+      *port_max_out = (uint16_t) tor_parse_long(port, 10, 1, 65535, NULL,
+                                                &endptr);
+      if (*endptr || !*port_max_out) {
+      log_fn(LOG_WARN, "Malformed port %s on address range rejecting.",
+             port);
+      }
+    } else if (*endptr || !*port_min_out) {
+      log_fn(LOG_WARN, "Malformed port %s on address range; rejecting.",
+             port);
+      goto err;
+    } else {
+      *port_max_out = *port_min_out;
+    }
+    if (*port_min_out > *port_max_out) {
+      log_fn(LOG_WARN,"Insane port range on address policy; rejecting.");
+      goto err;
+    }
+  }
+
+  tor_free(address);
+  return 0;
+ err:
+  tor_free(address);
+  return -1;
+}
+
+
 /** Extract a long from the start of s, in the given numeric base.  If
  * there is unconverted data and next is provided, set *next to the
  * first unconverted character.  An error has occurred if no characters
