@@ -2,11 +2,15 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/*****
- * tortls.c: TLS wrappers for Tor.  (Unlike other tor functions, these
+/**
+ * \file tortls.c
+ *
+ * \brief TLS wrappers for Tor.
+ **/
+/* (Unlike other tor functions, these
  * are prefixed with tor_ in order to avoid conflicting with OpenSSL
  * functions and variables.)
- *****/
+ */
 
 #include "./crypto.h"
 #include "./tortls.h"
@@ -24,27 +28,28 @@
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 
-/* How long do identity certificates live? (sec) */
+/** How long do identity certificates live? (sec) */
 #define IDENTITY_CERT_LIFETIME  (365*24*60*60)
-/* How much clock skew do we tolerate when checking certificates? (sec) */
+/** How much clock skew do we tolerate when checking certificates? (sec) */
 #define CERT_ALLOW_SKEW (90*60)
 
 typedef struct tor_tls_context_st {
   SSL_CTX *ctx;
 } tor_tls_context;
 
-/* Holds a SSL object and its associated data.
+/** Holds a SSL object and its associated data.  Members are only
+ * accessed from within tortls.c
  */
 struct tor_tls_st {
-  SSL *ssl;
-  int socket; /* The underlying fd. */
+  SSL *ssl; /**< An OpenSSL SSL object */
+  int socket; /**< The underlying file descriptor for this TLS connection */
   enum {
     TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
     TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED
-  } state; /* The current SSL state, depending on which operations have
+  } state; /**< The current SSL state, depending on which operations have
             * completed successfully. */
   int isServer;
-  int wantwrite_n; /* 0 normally, >0 if we returned wantwrite last time */
+  int wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last time */
 };
 
 static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
@@ -53,9 +58,10 @@ static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                         const char *cname_sign,
                                         unsigned int lifetime);
 
-/* Global tls context. We keep it here because nobody else needs to touch it */
+/** Global tls context. We keep it here because nobody else needs to
+ * touch it */
 static tor_tls_context *global_tls_context = NULL;
-/* True iff tor_tls_init() has been called. */
+/** True iff tor_tls_init() has been called. */
 static int tls_library_is_initialized = 0;
 
 /* Module-internal error codes. */
@@ -67,8 +73,8 @@ EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
 DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
 
-/* Log all pending tls errors at level 'severity'.  Use 'doing' to describe
- * our current activities.
+/** Log all pending tls errors at level <b>severity</b>.  Use
+ * <b>doing</b> to describe our current activities.
  */
 static void
 tls_log_errors(int severity, const char *doing)
@@ -91,15 +97,15 @@ tls_log_errors(int severity, const char *doing)
 #define CATCH_SYSCALL 1
 #define CATCH_ZERO    2
 
-/* Given a TLS object and the result of an SSL_* call, use
+/** Given a TLS object and the result of an SSL_* call, use
  * SSL_get_error to determine whether an error has occurred, and if so
  * which one.  Return one of TOR_TLS_{DONE|WANTREAD|WANTWRITE|ERROR}.
  * If extra&CATCH_SYSCALL is true, return _TOR_TLS_SYSCALL instead of
  * reporting syscall errors.  If extra&CATCH_ZERO is true, return
  * _TOR_TLS_ZERORETURN instead of reporting zero-return errors.
  *
- * If an error has occurred, log it at level 'severity' and describe the
- * current action as 'doing'.
+ * If an error has occurred, log it at level <b>severity</b> and describe the
+ * current action as <b>doing</b>.
  */
 static int
 tor_tls_get_error(tor_tls *tls, int r, int extra,
@@ -137,7 +143,7 @@ tor_tls_get_error(tor_tls *tls, int r, int extra,
   }
 }
 
-/* Initialize OpenSSL, unless it has already been initialized.
+/** Initialize OpenSSL, unless it has already been initialized.
  */
 static void
 tor_tls_init() {
@@ -150,7 +156,7 @@ tor_tls_init() {
   }
 }
 
-/* We need to give OpenSSL a callback to verify certificates. This is
+/** We need to give OpenSSL a callback to verify certificates. This is
  * it: We always accept peer certs and complete the handshake.  We
  * don't validate them until later.
  */
@@ -160,10 +166,10 @@ static int always_accept_verify_cb(int preverify_ok,
   return 1;
 }
 
-/* Generate and sign an X509 certificate with the public key 'rsa',
- * signed by the private key 'rsa_sign'.  The commonName of the
- * certificate will be 'cname'; the commonName of the issuer will be
- * cname_sign. The cert will be valid for cert_lifetime seconds
+/** Generate and sign an X509 certificate with the public key <b>rsa</b>,
+ * signed by the private key <b>rsa_sign</b>.  The commonName of the
+ * certificate will be <b>cname</b>; the commonName of the issuer will be
+ * <b>cname_sign</b>. The cert will be valid for <b>cert_lifetime</b> seconds
  * starting from now.  Return a certificate on success, NULL on
  * failure.
  */
@@ -263,9 +269,9 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 #define CIPHER_LIST SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA
 #endif
 
-/* Create a new TLS context.  If we are going to be using it as a
- * server, it must have isServer set to true, 'identity' set to the
- * identity key used to sign that certificate, and 'nickname' set to
+/** Create a new TLS context.  If we are going to be using it as a
+ * server, it must have isServer set to true, <b>identity</b> set to the
+ * identity key used to sign that certificate, and <b>nickname</b> set to
  * the server's nickname.  If we're only going to be a client,
  * isServer should be false, identity should be NULL, and nickname
  * should be NULL.  Return -1 if failure, else 0.
@@ -373,8 +379,8 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   return -1;
 }
 
-/* Create a new TLS object from a TLS context, a file descriptor, and
- * a flag to determine whether it is functioning as a server.
+/** Create a new TLS object from a file descriptor, and a flag to
+ * determine whether it is functioning as a server.
  */
 tor_tls *
 tor_tls_new(int sock, int isServer)
@@ -391,7 +397,7 @@ tor_tls_new(int sock, int isServer)
   return result;
 }
 
-/* Release resources associated with a TLS object.  Does not close the
+/** Release resources associated with a TLS object.  Does not close the
  * underlying file descriptor.
  */
 void
@@ -401,10 +407,10 @@ tor_tls_free(tor_tls *tls)
   free(tls);
 }
 
-/* Underlying function for TLS reading.  Reads up to 'len' characters
- * from 'tls' into 'cp'.  On success, returns the number of characters
- * read.  On failure, returns TOR_TLS_ERROR, TOR_TLS_CLOSE,
- * TOR_TLS_WANTREAD, or TOR_TLS_WANTWRITE.
+/** Underlying function for TLS reading.  Reads up to <b>len</b>
+ * characters from <b>tls</b> into <b>cp</b>.  On success, returns the
+ * number of characters read.  On failure, returns TOR_TLS_ERROR,
+ * TOR_TLS_CLOSE, TOR_TLS_WANTREAD, or TOR_TLS_WANTWRITE.
  */
 int
 tor_tls_read(tor_tls *tls, char *cp, int len)
@@ -426,10 +432,10 @@ tor_tls_read(tor_tls *tls, char *cp, int len)
   }
 }
 
-/* Underlying function for TLS writing.  Write up to 'n' characters
- * from 'cp' onto 'tls'.  On success, returns the number of characters
- * written.  On failure, returns TOR_TLS_ERROR, TOR_TLS_WANTREAD,
- * or TOR_TLS_WANTWRITE.
+/** Underlying function for TLS writing.  Write up to <b>n</b>
+ * characters from <b>cp</b> onto <b>tls</b>.  On success, returns the
+ * number of characters written.  On failure, returns TOR_TLS_ERROR,
+ * TOR_TLS_WANTREAD, or TOR_TLS_WANTWRITE.
  */
 int
 tor_tls_write(tor_tls *tls, char *cp, int n)
@@ -459,7 +465,7 @@ tor_tls_write(tor_tls *tls, char *cp, int n)
   return err;
 }
 
-/* Perform initial handshake on 'tls'.  When finished, returns
+/** Perform initial handshake on <b>tls</b>.  When finished, returns
  * TOR_TLS_DONE.  On failure, returns TOR_TLS_ERROR, TOR_TLS_WANTREAD,
  * or TOR_TLS_WANTWRITE.
  */
@@ -481,7 +487,7 @@ tor_tls_handshake(tor_tls *tls)
   return r;
 }
 
-/* Shut down an open tls connection 'tls'.  When finished, returns
+/** Shut down an open tls connection <b>tls</b>.  When finished, returns
  * TOR_TLS_DONE.  On failure, returns TOR_TLS_ERROR, TOR_TLS_WANTREAD,
  * or TOR_TLS_WANTWRITE.
  */
@@ -542,7 +548,7 @@ tor_tls_shutdown(tor_tls *tls)
   } /* end loop */
 }
 
-/* Return true iff this TLS connection is authenticated.
+/** Return true iff this TLS connection is authenticated.
  */
 int
 tor_tls_peer_has_cert(tor_tls *tls)
@@ -554,7 +560,7 @@ tor_tls_peer_has_cert(tor_tls *tls)
   return 1;
 }
 
-/* Return the nickname (if any) that the peer connected on 'tls'
+/** Return the nickname (if any) that the peer connected on <b>tls</b>
  * claims to have.
  */
 int
@@ -592,9 +598,9 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen)
   return -1;
 }
 
-/* If the provided tls connection is authenticated and has a
+/** If the provided tls connection is authenticated and has a
  * certificate that is currently valid and is correctly signed by
- * identity_key, return 0.  Else, return -1.
+ * <b>identity_key</b>, return 0.  Else, return -1.
  */
 int
 tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
@@ -641,6 +647,8 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
   return r;
 }
 
+/** Return the number of bytes available for reading from <b>tls</b>.
+ */
 int
 tor_tls_get_pending_bytes(tor_tls *tls)
 {
@@ -655,20 +663,20 @@ tor_tls_get_pending_bytes(tor_tls *tls)
 
 }
 
-/* Return the number of bytes read across the underlying socket. */
+/** Return the number of bytes read across the underlying socket. */
 unsigned long tor_tls_get_n_bytes_read(tor_tls *tls)
 {
   tor_assert(tls);
   return BIO_number_read(SSL_get_rbio(tls->ssl));
 }
-/* Return the number of bytes written across the underlying socket. */
+/** Return the number of bytes written across the underlying socket. */
 unsigned long tor_tls_get_n_bytes_written(tor_tls *tls)
 {
   tor_assert(tls);
   return BIO_number_written(SSL_get_wbio(tls->ssl));
 }
 
-/* Implement assert_no_tls_errors: If there are any pending OpenSSL
+/** Implement assert_no_tls_errors: If there are any pending OpenSSL
  * errors, log an error message and assert(0). */
 void _assert_no_tls_errors(const char *fname, int line)
 {

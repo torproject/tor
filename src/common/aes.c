@@ -2,10 +2,11 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/* Implementation of a simple AES counter mode.  We include AES because
- *   1) it didn't come with any versions of OpenSSL before 0.9.7.
- * We include counter mode because OpenSSL doesn't do it right.
- */
+/**
+ * \file aes.c
+ *
+ * \brief Implementation of a simple AES counter mode.
+ **/
 
 #include <assert.h>
 #include <stdlib.h>
@@ -40,6 +41,10 @@ struct aes_cnt_cipher {
   u8 pos;
 };
 
+/**
+ * Helper function: set <b>cipher</b>'s internal buffer to the encrypted
+ * value of the current counter.
+ */
 static void
 _aes_fill_buf(aes_cnt_cipher_t *cipher)
 {
@@ -59,6 +64,9 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
   rijndaelEncrypt(cipher->rk, cipher->nr, buf, cipher->buf);
 }
 
+/**
+ * Return a newly allocated counter-mode AES128 cipher implementation.
+ */
 aes_cnt_cipher_t*
 aes_new_cipher()
 {
@@ -69,6 +77,10 @@ aes_new_cipher()
   return result;
 }
 
+/** Set the key of <b>cipher</b> to <b>key</b>, which is
+ * <b>key_bits</b> bits long (must be 128, 192, or 256).  Also resets
+ * the counter to 0.
+ */
 void
 aes_set_key(aes_cnt_cipher_t *cipher, const unsigned char *key, int key_bits)
 {
@@ -79,6 +91,8 @@ aes_set_key(aes_cnt_cipher_t *cipher, const unsigned char *key, int key_bits)
   _aes_fill_buf(cipher);
 }
 
+/** Release storage held by <b>cipher</b>
+ */
 void
 aes_free_cipher(aes_cnt_cipher_t *cipher)
 {
@@ -87,6 +101,10 @@ aes_free_cipher(aes_cnt_cipher_t *cipher)
   free(cipher);
 }
 
+/** Encrypt <b>len</b> bytes from <b>input</b>, storing the result in
+ * <b>output</b>.  Uses the key in <b>cipher</b>, and advances the counter
+ * by <b>len</b> bytes as it encrypts.
+ */
 void
 aes_crypt(aes_cnt_cipher_t *cipher, const char *input, int len, char *output)
 {
@@ -105,6 +123,7 @@ aes_crypt(aes_cnt_cipher_t *cipher, const char *input, int len, char *output)
   }
 }
 
+/** Return the current value of <b>cipher</b>'s counter. */
 u64
 aes_get_counter(aes_cnt_cipher_t *cipher)
 {
@@ -114,6 +133,7 @@ aes_get_counter(aes_cnt_cipher_t *cipher)
   return counter;
 }
 
+/** Set <b>cipher</b>'s counter to <b>counter</b>. */
 void
 aes_set_counter(aes_cnt_cipher_t *cipher, u64 counter)
 {
@@ -123,6 +143,7 @@ aes_set_counter(aes_cnt_cipher_t *cipher, u64 counter)
   _aes_fill_buf(cipher);
 }
 
+/** Increment <b>cipher</b>'s counter by <b>delta</b>. */
 void
 aes_adjust_counter(aes_cnt_cipher_t *cipher, long delta)
 {
