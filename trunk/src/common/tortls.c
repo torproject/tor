@@ -50,7 +50,7 @@ struct tor_tls_st {
   } state; /**< The current SSL state, depending on which operations have
             * completed successfully. */
   int isServer;
-  int wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last time. */
+  size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last time. */
 };
 
 static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
@@ -429,7 +429,7 @@ tor_tls_free(tor_tls *tls)
  * TOR_TLS_CLOSE, TOR_TLS_WANTREAD, or TOR_TLS_WANTWRITE.
  */
 int
-tor_tls_read(tor_tls *tls, char *cp, int len)
+tor_tls_read(tor_tls *tls, char *cp, size_t len)
 {
   int r, err;
   tor_assert(tls && tls->ssl);
@@ -454,7 +454,7 @@ tor_tls_read(tor_tls *tls, char *cp, int len)
  * TOR_TLS_WANTREAD, or TOR_TLS_WANTWRITE.
  */
 int
-tor_tls_write(tor_tls *tls, char *cp, int n)
+tor_tls_write(tor_tls *tls, char *cp, size_t n)
 {
   int r, err;
   tor_assert(tls && tls->ssl);
@@ -580,7 +580,7 @@ tor_tls_peer_has_cert(tor_tls *tls)
  * claims to have.
  */
 int
-tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen)
+tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, size_t buflen)
 {
   X509 *cert = NULL;
   X509_NAME *name = NULL;

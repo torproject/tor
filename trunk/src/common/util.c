@@ -1650,7 +1650,7 @@ char *read_file_to_str(const char *filename, int bin) {
  * that is whitespace or comment.
  * Return 1 if success, 0 if no more lines, -1 if error.
  */
-int parse_line_from_file(char *line, int maxlen, FILE *f, char **key_out, char **value_out) {
+int parse_line_from_file(char *line, size_t maxlen, FILE *f, char **key_out, char **value_out) {
   char *s, *key, *end, *value;
 
 try_next_line:
