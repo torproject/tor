@@ -1398,10 +1398,15 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
  *       20 to initialize b_digest
  *       16 to key f_crypto
  *       16 to key b_crypto
+ *
+ * (If 'reverse' is true, then f_XX and b_XX are swapped.)
  */
-int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data)
+int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
 {
   unsigned char iv[CIPHER_IV_LEN];
+  crypto_digest_env_t *tmp_digest;
+  crypto_cipher_env_t *tmp_crypto;
+
   assert(cpath && key_data);
   assert(!(cpath->f_crypto || cpath->b_crypto ||
            cpath->f_digest || cpath->b_digest));
@@ -1424,6 +1429,15 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data)
   if (!(cpath->b_crypto = crypto_create_init_cipher(key_data+40+16,iv,0))) {
     log(LOG_WARN,"backward cipher initialization failed.");
     return -1;
+  }
+
+  if (reverse) {
+    tmp_digest = cpath->f_digest;
+    cpath->f_digest = cpath->b_digest;
+    cpath->b_digest = tmp_digest;
+    tmp_crypto = cpath->f_crypto;
+    cpath->f_crypto = cpath->b_crypto;
+    cpath->b_crypto = tmp_crypto;
   }
 
   return 0;
@@ -1457,7 +1471,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   /* Remember hash of g^xy */
   memcpy(hop->handshake_digest, reply+DH_KEY_LEN, DIGEST_LEN);
 
-  if (circuit_init_cpath_crypto(hop, keys)<0) {
+  if (circuit_init_cpath_crypto(hop, keys, 0)<0) {
     return -1;
   }
 
