@@ -178,19 +178,27 @@ static rend_service_port_config_t *parse_port_config(const char *string)
 
 /** Set up rend_service_list, based on the values of HiddenServiceDir and
  * HiddenServicePort in <b>options</b>.  Return 0 on success and -1 on
- * failure.
+ * failure.  (If <b>validate_only</b> is set, parse, warn and return as
+ * normal, but don't actually change the configured services.)
  */
-int rend_config_services(or_options_t *options)
+
+int rend_config_services(or_options_t *options, int validate_only)
 {
   struct config_line_t *line;
   rend_service_t *service = NULL;
   rend_service_port_config_t *portcfg;
-  rend_service_free_all();
+
+  if (!validate_only)
+    rend_service_free_all();
 
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
-      if (service)
-        add_service(service);
+      if (service) {
+        if (validate_only)
+          rend_service_free(service);
+        else
+          add_service(service);
+      }
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
       service->ports = smartlist_create();
@@ -225,8 +233,12 @@ int rend_config_services(or_options_t *options)
       service->intro_exclude_nodes = tor_strdup(line->value);
     }
   }
-  if (service)
-    add_service(service);
+  if (service) {
+    if (validate_only)
+      rend_service_free(service);
+    else
+      add_service(service);
+  }
 
   return 0;
 }

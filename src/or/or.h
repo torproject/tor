@@ -1092,7 +1092,7 @@ struct config_line_t {
 };
 
 or_options_t *get_options(void);
-void set_options(or_options_t *new);
+void set_options(or_options_t *new_val);
 
 int config_get_lines(char *string, struct config_line_t **result);
 void config_free_lines(struct config_line_t *front);
@@ -1462,7 +1462,7 @@ int rend_cache_store(const char *desc, size_t desc_len);
 
 /********************************* rendservice.c ***************************/
 
-int rend_config_services(or_options_t *options);
+int rend_config_services(or_options_t *options, int validate_only);
 int rend_service_load_keys(void);
 void rend_services_init(void);
 void rend_services_introduce(void);
