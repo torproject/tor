@@ -184,6 +184,8 @@ config_get_commandlines(int argc, char **argv)
 //      log(LOG_DEBUG,"Commandline: skipping over -f.");
       i += 2; /* this is the config file option. ignore it. */
       continue;
+    } else if (!strcmp(argv[i],"--list-fingerprint")) {
+      i += 1; /* command-line option. ignore it. */
     }
 
     new = tor_malloc(sizeof(struct config_line_t));
@@ -726,19 +728,27 @@ getconfig(int argc, char **argv, or_options_t *options)
     exit(0);
   }
 
-/* learn config file name, get config lines, assign them */
-  i = 1;
-  while (i < argc-1 && strcmp(argv[i],"-f")) {
-    i++;
+  /* learn config file name, get config lines, assign them */
+  fname = NULL;
+  using_default_torrc = 1;
+  options->command = CMD_RUN_TOR;
+  for (i = 1; i < argc; ++i) {
+    if (i < argc-1 && !strcmp(argv[i],"-f")) {
+      if (fname) {
+        log(LOG_WARN, "Duplicate -f options on command line.");
+        tor_free(fname);
+      }
+      fname = tor_strdup(argv[i+1]);
+      using_default_torrc = 0;
+      ++i;
+    } else if (!strcmp(argv[i],"--list-fingerprint")) {
+      options->command = CMD_LIST_FINGERPRINT;
+    }      
   }
 
-  if (i < argc-1) { /* we found one */
-    fname = tor_strdup(argv[i+1]);
-    using_default_torrc = 0;
-  } else {
+  if (using_default_torrc) {
     /* didn't find one, try CONFDIR */
     char *fn;
-    using_default_torrc = 1;
     fn = get_default_conf_file();
     if (fn && file_status(fn) == FN_FILE) {
       fname = fn;
