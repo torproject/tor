@@ -54,7 +54,7 @@ int has_completed_circuit=0;
 int connection_add(connection_t *conn) {
 
   if(nfds >= options.MaxConn-1) {
-    log(LOG_WARN,"connection_add(): failing because nfds is too high.");
+    log_fn(LOG_WARN,"failing because nfds is too high.");
     return -1;
   }
 
@@ -68,7 +68,7 @@ int connection_add(connection_t *conn) {
 
   nfds++;
 
-  log(LOG_INFO,"connection_add(): new conn type %s, socket %d, nfds %d.",
+  log_fn(LOG_INFO,"new conn type %s, socket %d, nfds %d.",
       CONN_TYPE_TO_STRING(conn->type), conn->s, nfds);
 
   return 0;
@@ -102,7 +102,7 @@ int connection_remove(connection_t *conn) {
     return 0;
   }
 
-  /* we replace this one with the one at the end, then free it */
+  /* replace this one with the one at the end */
   nfds--;
   poll_array[current_index].fd = poll_array[nfds].fd;
   poll_array[current_index].events = poll_array[nfds].events;
