@@ -161,7 +161,7 @@ Rendezvous service:
         - cannibalize general circs?
         D how to set up multiple locations for a hidden service?
         o make bob publish only established intro circs?
-        - when bob tries to connect to alice's chosen rend point, but
+        o when bob tries to connect to alice's chosen rend point, but
           can't, but it's not the fault of the last hop in the rend
           circ, then he should retry?
 

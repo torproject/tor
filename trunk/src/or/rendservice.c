@@ -457,6 +457,44 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   return -1;
 }
 
+#define MAX_REND_FAILURES 3
+void
+rend_service_relaunch_rendezvous(circuit_t *oldcirc)
+{
+  circuit_t *newcirc;
+  cpath_build_state_t *newstate, *oldstate;
+
+  /* XXXX assert type and build_state */
+
+  if (!oldcirc->build_state ||
+      oldcirc->build_state->failure_count > MAX_REND_FAILURES) {
+    log_fn(LOG_INFO,"Attempt to build circuit to %s for rendezvous has failed too many times; giving up.",
+           oldcirc->build_state->chosen_exit);
+    return;
+  }
+
+  log_fn(LOG_INFO,"Reattempting rendezvous circuit to %s",
+         oldcirc->build_state->chosen_exit);
+
+  newcirc = circuit_launch_new(CIRCUIT_PURPOSE_S_CONNECT_REND,
+                               oldcirc->build_state->chosen_exit);
+  if (!newcirc) {
+    log_fn(LOG_WARN,"Couldn't relaunch rendezvous circuit to %s",
+           oldcirc->build_state->chosen_exit);
+    return;
+  }
+  oldstate = oldcirc->build_state;
+  newstate = newcirc->build_state;
+  assert(newstate && oldstate);
+  newstate->failure_count = oldstate->failure_count+1;
+  newstate->pending_final_cpath = oldstate->pending_final_cpath;
+  oldstate->pending_final_cpath = NULL;
+
+  memcpy(newcirc->rend_query, oldcirc->rend_query, REND_SERVICE_ID_LEN+1);
+  memcpy(newcirc->rend_pk_digest, oldcirc->rend_pk_digest, DIGEST_LEN);
+  memcpy(newcirc->rend_splice, oldcirc->rend_splice, REND_COOKIE_LEN);
+}
+
 /* Launch a circuit to serve as an introduction point.
  */
 static int

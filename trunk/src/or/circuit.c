@@ -1253,7 +1253,14 @@ static void circuit_build_failed(circuit_t *circ) {
   /* we should examine circ and see if it failed because of
    * the last hop or an earlier hop. then use this info below.
    */
-  //int failed_at_last_hop;
+  int failed_at_last_hop = 0;
+  /* If the last hop isn't open, and the second-to-last is, we failed
+   * at the last hop. */
+  if (circ->cpath &&
+      circ->cpath->prev->state != CPATH_STATE_OPEN &&
+      circ->cpath->prev->prev->state == CPATH_STATE_OPEN) {
+      failed_at_last_hop = 1;
+  }
 
   switch(circ->purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
@@ -1291,7 +1298,13 @@ static void circuit_build_failed(circuit_t *circ) {
       /* at Bob, connecting to rend point */
       /* Don't increment failure count, since Alice may have picked
        * the rendezvous point maliciously */
-      log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s. Sucks to be Alice.", circ->build_state->chosen_exit);
+      if (failed_at_last_hop) {
+        log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s. Sucks to be Alice.", circ->build_state->chosen_exit);
+      } else {
+        log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s, because an earlier node failed.",
+               circ->build_state->chosen_exit);
+        rend_service_relaunch_rendezvous(circ);
+      }
       break;
     default:
       /* Other cases are impossible, since this function is only called with
