@@ -1,0 +1,60 @@
+
+0. Intro.
+Onion Routing is still very much in development stages. This document
+aims to get you started in the right direction if you want to understand
+the code, add features, fix bugs, etc.
+
+Read the README file first, so you can get familiar with the basics.
+
+1. The pieces.
+
+1.1 Connections. A connection is a long-standing tcp socket between
+nodes. A connection is named based on what it's connected to -- an "OR
+connection" has an onion router on the other end, an "OP connection" has
+an onion proxy on the other end, an "exit connection" has a website or
+other server on the other end, and an "AP connection" has an application
+proxy (and thus a user) on the other end.
+
+1.2. Circuits. A circuit is a single conversation between two
+participants over the onion routing network. One end of the circuit has
+an AP connection, and the other end has an exit connection. AP and exit
+connections have only one circuit associated with them, whereas OP and
+OR connections multiplex many circuits at once.
+
+1.3. Cells. Some connections, specifically OR and OP connections, speak
+"cells". This means that data over that connection is bundled into 128
+byte packets (8 bytes of header and 120 bytes of payload). Each cell has
+a type, or "command", which indicates what it's for.
+
+
+
+
+2. Other features.
+
+2.1. Bandwidth throttling. Each cell-speaking connection has a maximum
+bandwidth it can use, as specified in the routers.or file. Bandwidth
+throttling occurs on both the sender side and the receiving side. The
+sending side sends cells at regularly spaced intervals (e.g., a connection
+with a bandwidth of 12800B/s would queue a cell every 10ms). The receiving
+side protects against misbehaving servers that send cells more frequently,
+by using a simple token bucket:
+
+Each connection has a token bucket with a specified capacity. Tokens are
+added to the bucket each second (when the bucket is full, new tokens
+are discarded.) Each token represents permission to receive one byte
+from the network --- to receive a byte, the connection must remove a
+token from the bucket. Thus if the bucket is empty, that connection must
+wait until more tokens arrive. The number of tokens we add enforces a
+longterm average rate of incoming bytes, yet we still permit short-term
+bursts above the allowed bandwidth. Currently bucket sizes are set to
+ten seconds worth of traffic.
+
+The bandwidth throttling uses TCP to push back when we stop reading.
+We extend it with token buckets to allow more flexibility for traffic
+bursts.
+
+2.2. Data congestion control. 
+
+
+
+

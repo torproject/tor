@@ -1,25 +1,55 @@
-README
-------
 
-> ./autogen.sh 
+If you got the source from cvs:
 
-runs auto* and then ./configure
+  Run "./autogen.sh", which will run the various auto* programs and then
+  run ./configure for you. From there, you should be able to run 'make'
+  and you'll be on your way.
 
-It should be all you need to do to get working Makefiles on your
-platform, whatever your platform is. :)
+If you got the source from a tarball:
 
-Then just do 
+  Run ./configure, make, make install as usual.
 
-> make
+If this doesn't work for you:
 
-Roger:
+  Check out the list archives at http://archives.seul.org/or/dev/ and see
+  if somebody else has reported your problem. If not, please subscribe
+  and let us know what you did to fix it, or give us the details and
+  we'll see what we can do.
 
-The summary is that I'm requiring all developers to have auto*
-(aclocal, autoconf, automake) installed on their machine.
+Once you've got it compiled:
+  (these notes assume you started with source from cvs)
 
-Since different versions of auto* generate vastly different output,
-I'm going to leave its output out of the repository. This means that
-whenever you check out a repository, you need to run auto* to generate
-a configure file, then run ./configure to get a Makefile, then build.
+  It's a bit hard to figure out what to do with the binaries. If you
+  want to set up your own test network, go into src/config/ and look
+  at the routers.or file. Also in that directory are public and private
+  keys for various nodes (*-public, *-private) and configuration files
+  for the nodes (*-orrc). You can generate your own keypairs with the
+  orkeygen program, or use the provided ones for testing.
 
+  Once you've got your config files ready, you're ready to start up your
+  network. I recommend using a screen session (man screen), or some
+  other way to handle many windows at once. I open a window for each
+  onion router, go into the src/config directory, and run something like
+  "../or/or -f moria2-orrc". In yet another window, I run something like
+  "../httpap/httpap -f httpaprc -p 9051". 
+
+  From here, you can point your browser/etc at localhost:9051 and treat
+  it as a web proxy. As a first test, you might telnet to it and enter
+  "GET http://seul.org/ HTTP/1.0" (without the quotes), followed by a pair
+  of carriage returns (one to separate your request from the headers,
+  and another to indicate that you're providing no headers). For more
+  convenient command-line use, I recommend making a ~/.wgetrc with
+  the line
+    http_proxy=localhost:9051"
+  Then you can do things like "wget seul.org" and watch as it downloads
+  from the onion routing network.
+
+  For fun, you can wget a very large file (a megabyte or more), and
+  then ^z the wget a little bit in. The onion routers will continue
+  talking for a while, queueing around 500k in the kernel-level buffers.
+  When the kernel buffers are full, and the outbuf for the AP connection
+  also fills, the internal congestion control will kick in and the
+  exit connection will stop reading from the webserver. The circuit
+  will wait until you fg the wget -- and other circuits will work just
+  fine throughout.
 
