@@ -524,7 +524,7 @@ int router_get_list_from_string(char *s)
 int router_get_list_from_string_impl(char *s, directory_t **dest) {
   directory_token_t tok;
   if (router_get_next_token(&s, &tok)) {
-    return NULL;
+    return -1;
   }
   return router_get_list_from_string_tok(&s, dest, &tok);
 }
@@ -557,6 +557,7 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   directory_token_t tok;
   char digest[20];
   char signed_digest[128];
+  directory_t *new_dir = NULL;
   
 #define NEXT_TOK()                                                      \
   do {                                                                  \
@@ -584,7 +585,7 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   TOK_IS(K_SERVER_SOFTWARE, "server-software");
   
   NEXT_TOK();
-  if (router_get_list_from_string_tok(&s, dest, &tok))
+  if (router_get_list_from_string_tok(&s, &new_dir, &tok))
     return -1;
   
   TOK_IS(K_DIRECTORY_SIGNATURE, "directory-signature");
@@ -607,6 +608,10 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
 
   NEXT_TOK();
   TOK_IS(_EOF, "end of directory");
+
+  if (*dest) 
+    directory_free(*dest);
+  *dest = new_dir;
 
   return 0;
 #undef NEXT_TOK
@@ -655,7 +660,8 @@ static int router_get_list_from_string_tok(char **s, directory_t **dest,
   }
   return -1;
 }
-static int 
+
+int 
 router_resolve(routerinfo_t *router)
 {
   struct hostent *rent;
