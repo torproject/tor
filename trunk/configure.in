@@ -231,7 +231,7 @@ fi
 # Whether we should use the dmalloc memory allocation debugging library.
 AC_MSG_CHECKING(whether to use dmalloc (debug memory allocation library))
 AC_ARG_WITH(dmalloc,
-[  --with-dmalloc        Use debug memory allocation library. ],
+[  --with-dmalloc          Use debug memory allocation library. ],
 [if [[ "$withval" = "yes" ]]; then
   dmalloc=1
   AC_MSG_RESULT(yes)
