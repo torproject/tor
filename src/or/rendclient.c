@@ -102,6 +102,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
     goto err;
   }
 
+  assert(DIGEST_LEN + r <= RELAY_PAYLOAD_SIZE); /* we overran something */
   payload_len = DIGEST_LEN + r;
 
   if (connection_edge_send_command(NULL, introcirc,
