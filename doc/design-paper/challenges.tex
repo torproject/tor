@@ -30,7 +30,7 @@ Naval Research Lab \email{<syverson@itd.nrl.navy.mil>}}
 
 
 \maketitle
-\pagestyle{empty}
+%\pagestyle{empty}
 
 \begin{abstract}
   There are many unexpected or unexpectedly difficult obstacles to
@@ -891,16 +891,14 @@ mix-networks resist these attacks by introducing variability into message
 arrival times: as timing variance increases, timing correlation attacks
 require increasingly more data~\cite{e2e-traffic}. Can we improve Tor's
 resistance to these attacks without losing too much usability?
-%by introducing batching
-%and delaying strategies to the Tor messages?
 
 First, we need to learn whether we can trade a small increase in latency
 for a large anonymity increase, or if we'll end up trading a lot of
 latency for a small security gain. It would be worthwhile even if we
 can only protect certain use cases, such as infrequent short-duration
-transactions.  In order to answer this question, we might
-try to adapt the techniques of~\cite{e2e-traffic} to a lower-latency mix
-network, where instead of sending messages, users send batches
+transactions.  To answer this question, we might
+adapt the techniques of~\cite{e2e-traffic} to a lower-latency mix
+network, where the messages are batches
 of cells in temporally clustered connections.
 
 Once the anonymity questions are answered, we need to consider usability.  If
@@ -943,7 +941,6 @@ Other padding regimens might supplement the
 mid-latency option; however, we should continue the caution with which
 we have always approached padding lest the overhead cost us too much
 performance or too many volunteers.
-
 
 \subsection{Measuring performance and capacity}
 \label{subsec:performance}
@@ -1114,7 +1111,6 @@ produce traffic. They seem the ideal use case for our above discussion
 of helper nodes. This insecurity means that they may not be suitable as
 a building block for Free Haven~\cite{freehaven-berk} or other anonymous
 publishing systems that aim to provide long-term security.
-%Also, they're brittle in terms of intersection and observation attacks.
 
 \emph{Hot-swap} hidden services, where more than one location can
 provide the service and loss of any one location does not imply a
@@ -1144,8 +1140,6 @@ encryption and end-to-end authentication to their website.
 
 \subsection{Trust and discovery}
 \label{subsec:trust-and-discovery}
-
-[arma will edit this and expand/retract it]
 
 The published Tor design adopted a deliberately simplistic design for
 authorizing new nodes and informing clients about Tor nodes and their status.
@@ -1548,60 +1542,12 @@ minute burst in each 4 hour period.}
 \end{figure}
 
 
-\section{Things to cut?}
-\subsection{Peer-to-peer / practical issues}
-
-[leave this section for now, and make sure things here are covered
-elsewhere. then remove it.]
-
-Making use of nodes with little bandwidth. How to handle hammering by
-certain applications.
-
-Handling nodes that are far away from the rest of the network, e.g. on
-the continents that aren't North America and Europe. High latency,
-often high packet loss.
+Making use of nodes with little bandwidth, or high latency/packet loss.
 
 Running Tor nodes behind NATs, behind great-firewalls-of-China, etc.
 Restricted routes. How to propagate to everybody the topology? BGP
 style doesn't work because we don't want just *one* path. Point to
 Geoff's stuff.
-
-\subsection{Caching stuff: If a topic's gotta go for space, I think this
-is the best candidate}
-
-The attacks in \cite{attack-tor-oak05} are also dependent on
-cooperation of the responding application or the ability to modify or
-monitor the responder stream, in order of decreasing attack
-effectiveness.  So, another way to slow some of these attacks
-would be to cache responses at exit nodes where possible, as it is with
-DNS lookups and cacheable HTTP responses.  Caching would, however,
-create threats of its own. First, a Tor network is expected to contain
-hostile nodes. If one of these is the repository of a cache, the
-attack is still possible. Though more work to set up a Tor node and
-cache repository, the payoff of such an attack is potentially
-higher.
-%To be
-%useful, such caches would need to be distributed to any likely exit
-%nodes of recurred requests for the same data.
-%   Even local caches could be useful, I think. -NM
-%
-%Added some clarification -PFS
-Besides allowing any other insider attacks, caching nodes would hold a
-record of destinations and data visited by Tor users reducing forward
-anonymity. Worse, for the cache to be widely useful much beyond the
-client that caused it there would have to either be a new mechanism to
-distribute cache information around the network and a way for clients
-to make use of it or the caches themselves would need to be
-distributed widely. Either way the record of visited sites and
-downloaded information is made automatically available to an attacker
-without having to actively gather it himself.  Besides its inherent
-value, this could serve as useful data to an attacker deciding which
-locations to target for confirmation. A way to counter this
-distribution threat might be to only cache at certain semitrusted
-helper nodes.  This might help specific clients, but it would limit
-the general value of caching.
-
-
 
 \end{document}
 
