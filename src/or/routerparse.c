@@ -644,7 +644,6 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   smartlist_t *tokens = NULL, *exit_policy_tokens = NULL;
   directory_token_t *tok;
   int t;
-  long lng;
   int ports_set, bw_set;
 
   if (!end) {

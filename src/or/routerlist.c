@@ -565,6 +565,23 @@ int router_add_to_routerlist(routerinfo_t *router) {
         routerinfo_free(router);
         return -1;
       }
+    } else if (!strcmp(router->nickname, r->nickname)) {
+      /* nicknames match, keys don't. */
+      if (router->is_verified) {
+        /* The new verified router replaces the old one; remove the
+         * old one.  and carry on to the end of the list, in case
+         * there are more old unverifed routers with this nickname
+         */
+        routerinfo_free(r);
+        smartlist_del_keeporder(routerlist->routers, i--);
+        /* XXXX What do we do about any connections using the old key? */
+      } else if (r->is_verified) {
+        /* Can't replace a verified router with an unverified one. */
+        log_fn(LOG_DEBUG, "Skipping unverified entry for verified router '%s'",
+               router->nickname);
+        routerinfo_free(router);
+        return -1;
+      }
     }
   }
   /* We haven't seen a router with this name before.  Add it to the end of
