@@ -186,7 +186,8 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
 
   for(i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
-    if(router->is_running &&
+    /* XXX008 for now, only choose verified routers */
+    if(router->is_running && router->is_verified &&
        (!clique_mode() ||
         connection_get_by_identity_digest(router->identity_digest,
                                           CONN_TYPE_OR)))
