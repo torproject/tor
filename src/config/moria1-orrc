@@ -1,5 +1,7 @@
 # Configuration file for or
 
+OnionRouter 1
+
 # List of routers
 RouterFile ../config/routers.or
 
@@ -10,7 +12,6 @@ SigningPrivateKeyFile moria1-private
 CoinWeight 0.01
 
 ORPort 9001
-OPPort 9011
 APPort 9021
 DirPort 9031
 

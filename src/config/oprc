@@ -16,7 +16,6 @@ CoinWeight 0.01
 # Ports for various services. Comment out if you're not running that
 # service.
 #ORPort 9001
-#OPPort 9011
 APPort 9050
 
 # Maximum number of sockets (of any sort) this node can have open
