@@ -409,10 +409,6 @@ int fetch_from_buf_http(buf_t *buf,
   return 1;
 }
 
-/** If the user connects with socks4 or the wrong variant of socks5,
- * then log one warning to let him know that it might be unwise. */
-static int have_warned_about_unsafe_socks = 0;
-
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"
@@ -439,6 +435,10 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   enum {socks4, socks4a} socks4_prot = socks4a;
   char *next, *startaddr;
   struct in_addr in;
+
+  /* If the user connects with socks4 or the wrong variant of socks5,
+   * then log a warning to let him know that it might be unwise. */
+  static int have_warned_about_unsafe_socks = 0;
 
   if(buf->datalen < 2) /* version and another byte */
     return 0;
