@@ -16,10 +16,12 @@ char *conn_type_to_string[] = {
   "OR",          /* 4 */
   "Exit",        /* 5 */
   "App listener",/* 6 */
-  "App"          /* 7 */
+  "App",         /* 7 */
+  "Dir listener",/* 8 */
+  "Dir",         /* 9 */
 };
 
-char *conn_state_to_string[][10] = {
+char *conn_state_to_string[][15] = {
   { },         /* no type associated with 0 */
   { "ready" }, /* op listener, 0 */
   { "awaiting keys", /* op, 0 */
@@ -43,7 +45,13 @@ char *conn_state_to_string[][10] = {
   { "ready" }, /* app listener, 0 */
   { "awaiting dest info",         /* app, 0 */
     "waiting for OR connection",       /* 1 */
-    "open" }                           /* 2 */
+    "open" },                          /* 2 */
+  { "ready" }, /* dir listener, 0 */
+  { "connecting",                      /* 0 */
+    "sending command",                 /* 1 */
+    "reading",                         /* 2 */
+    "awaiting command",                /* 3 */
+    "writing" },                       /* 4 */
 };
 
 /********* END VARIABLES ************/
@@ -261,27 +269,20 @@ static int learn_local(struct sockaddr_in *local) {
   return 0;
 }
 
-int retry_all_connections(int role, routerinfo_t **router_array, int rarray_len,
-  crypto_pk_env_t *prkey, uint16_t or_listenport, uint16_t op_listenport, uint16_t ap_listenport) {
+int retry_all_connections(int role, crypto_pk_env_t *prkey, uint16_t or_listenport,
+  uint16_t op_listenport, uint16_t ap_listenport, uint16_t dir_listenport) {
 
   /* start all connections that should be up but aren't */
 
-  routerinfo_t *router;
-  int i;
   struct sockaddr_in local; /* local address */
 
   if(learn_local(&local) < 0)
     return -1;
 
   local.sin_port = htons(or_listenport);
+
   if(role & ROLE_OR_CONNECT_ALL) {
-    for (i=0;i<rarray_len;i++) {
-      router = router_array[i];
-      if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
-        log(LOG_DEBUG,"retry_all_connections(): connecting to OR %s:%u.",router->address,router->or_port);
-        connection_or_connect_as_or(router, prkey, &local);
-      }
-    }
+    router_retry_connections(prkey, &local);
   }
 
   if(role & ROLE_OR_LISTEN) {
@@ -301,6 +302,13 @@ int retry_all_connections(int role, routerinfo_t **router_array, int rarray_len,
     local.sin_port = htons(ap_listenport);
     if(!connection_get_by_type(CONN_TYPE_AP_LISTENER)) {
       connection_ap_create_listener(NULL, &local); /* no need to tell it the private key. */
+    }
+  }
+
+  if(role & ROLE_DIR_LISTEN) {
+    local.sin_port = htons(dir_listenport);
+    if(!connection_get_by_type(CONN_TYPE_DIR_LISTENER)) {
+      connection_dir_create_listener(NULL, &local); /* no need to tell it the private key. */
     }
   }
  
@@ -415,7 +423,8 @@ int connection_speaks_cells(connection_t *conn) {
 int connection_is_listener(connection_t *conn) {
   if(conn->type == CONN_TYPE_OP_LISTENER ||
      conn->type == CONN_TYPE_OR_LISTENER ||
-     conn->type == CONN_TYPE_AP_LISTENER)
+     conn->type == CONN_TYPE_AP_LISTENER ||
+     conn->type == CONN_TYPE_DIR_LISTENER)
     return 1;
   return 0;
 }
@@ -586,6 +595,8 @@ int connection_process_inbuf(connection_t *conn) {
       return connection_exit_process_inbuf(conn);
     case CONN_TYPE_AP:
       return connection_ap_process_inbuf(conn);
+    case CONN_TYPE_DIR:
+      return connection_dir_process_inbuf(conn);
     default:
       log(LOG_DEBUG,"connection_process_inbuf() got unexpected conn->type.");
       return -1;
@@ -709,6 +720,8 @@ int connection_finished_flushing(connection_t *conn) {
       return connection_or_finished_flushing(conn);
     case CONN_TYPE_EXIT:
       return connection_exit_finished_flushing(conn);
+    case CONN_TYPE_DIR:
+      return connection_dir_finished_flushing(conn);
     default:
       log(LOG_DEBUG,"connection_finished_flushing() got unexpected conn->type.");
       return -1;
