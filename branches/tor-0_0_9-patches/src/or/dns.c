@@ -518,7 +518,8 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
       /* prevent double-remove. */
       pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
       if (pendconn->purpose == EXIT_PURPOSE_CONNECT) {
-        connection_edge_end(pendconn, END_STREAM_REASON_RESOLVEFAILED, pendconn->cpath_layer);
+        if (!pendconn->has_sent_end) /* XXX prevent warn, but not fix bug */
+          connection_edge_end(pendconn, END_STREAM_REASON_RESOLVEFAILED, pendconn->cpath_layer);
         /* This detach must happen after we send the end cell. */
         circuit_detach_stream(circuit_get_by_conn(pendconn), pendconn);
       } else {
