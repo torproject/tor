@@ -307,14 +307,16 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
 
 /** Parse the server descriptor at *desc and maybe insert it into the
  * list of server descriptors, and (if the descriptor is well-formed)
- * advance *desc immediately past the descriptor's end.
+ * advance *desc immediately past the descriptor's end.  Set msg to a
+ * message that should be passed back to the origin of this descriptor, or
+ * to NULL.
  *
  * Return 1 if descriptor is well-formed and accepted;
  * 0 if well-formed and server is unapproved;
  * -1 if not well-formed or other error.
  */
 int
-dirserv_add_descriptor(const char **desc)
+dirserv_add_descriptor(const char **desc, const char **msg)
 {
   descriptor_entry_t *ent = NULL;
   routerinfo_t *ri = NULL;
@@ -325,7 +327,8 @@ dirserv_add_descriptor(const char **desc)
   size_t desc_len;
   time_t now;
   int verified=1; /* whether we knew its fingerprint already */
-
+  tor_assert(msg);
+  *msg = NULL;
   if (!descriptor_list)
     descriptor_list = smartlist_create();
 
@@ -349,15 +352,17 @@ dirserv_add_descriptor(const char **desc)
   tor_free(desc_tmp);
   if (!ri) {
     log(LOG_WARN, "Couldn't parse descriptor");
+    *msg = "Rejected: Couldn't parse server descriptor.";
     return -1;
   }
   /* Okay.  Now check whether the fingerprint is recognized. */
   r = dirserv_router_fingerprint_is_known(ri);
   if (r==-1) {
     log_fn(LOG_WARN, "Known nickname '%s', wrong fingerprint. Not adding.", ri->nickname);
+    *msg = "Rejected: There is already a verified server with this nickname and a different fingerprint.";
     routerinfo_free(ri);
     *desc = end;
-    return 0;
+    return -1;
   }
   if (r==0) {
     char fp[FINGERPRINT_LEN+1];
@@ -374,21 +379,24 @@ dirserv_add_descriptor(const char **desc)
   now = time(NULL);
   if (ri->published_on > now+ROUTER_ALLOW_SKEW) {
     log_fn(LOG_NOTICE, "Publication time for nickname '%s' is too far in the future; possible clock skew. Not adding.", ri->nickname);
+    *msg = "Rejected: Your clock is set too far in the future, or your timezone is not correct.";
     routerinfo_free(ri);
     *desc = end;
-    return 0;
+    return -1;
   }
   if (ri->published_on < now-ROUTER_MAX_AGE) {
     log_fn(LOG_NOTICE, "Publication time for router with nickname '%s' is too far in the past. Not adding.", ri->nickname);
+    *msg = "Rejected: Server is expired, or your clock is too far in the past, or your timezone is not correct.";
     routerinfo_free(ri);
     *desc = end;
-    return 0;
+    return -1;
   }
   if (dirserv_router_has_valid_address(ri) < 0) {
     log_fn(LOG_NOTICE, "Router with nickname '%s' has invalid address '%s'. Not adding.", ri->nickname, ri->address);
+    *msg = "Rejected: Address is not an IP, or IP is a private address.";
     routerinfo_free(ri);
     *desc = end;
-    return 0;
+    return -1;
   }
 
   /* Do we already have an entry for this router? */
@@ -404,6 +412,7 @@ dirserv_add_descriptor(const char **desc)
     if (ent->published >= ri->published_on) {
       /* We already have a newer or equal-time descriptor */
       log_fn(LOG_INFO,"We already have a new enough desc for nickname '%s'. Not adding.",ri->nickname);
+      *msg = "We already have a newer descriptor.";
       /* This isn't really an error; return success. */
       routerinfo_free(ri);
       *desc = end;
@@ -411,11 +420,13 @@ dirserv_add_descriptor(const char **desc)
     }
     /* We don't have a newer one; we'll update this one. */
     log_fn(LOG_INFO,"Dirserv updating desc for nickname '%s'",ri->nickname);
+    *msg = verified?"Verified server updated":"Unverified server updated (Have you sent us your key fingerprint?)";
     free_descriptor_entry(ent);
     smartlist_del_keeporder(descriptor_list, found);
   } else {
     /* Add at the end. */
     log_fn(LOG_INFO,"Dirserv adding desc for nickname '%s'",ri->nickname);
+    *msg = verified?"Verified server added":"Unverified server added (Have you sent us your key fingerprint?)";
   }
 
   ent = tor_malloc(sizeof(descriptor_entry_t));
@@ -477,12 +488,12 @@ directory_set_dirty()
 int
 dirserv_load_from_directory_string(const char *dir)
 {
-  const char *cp = dir;
+  const char *cp = dir, *m;
   while (1) {
     cp = strstr(cp, "\nrouter ");
     if (!cp) break;
     ++cp;
-    if (dirserv_add_descriptor(&cp) < 0) {
+    if (dirserv_add_descriptor(&cp,&m) < 0) {
       return -1;
     }
     --cp; /*Back up to newline.*/

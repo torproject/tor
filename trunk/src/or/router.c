@@ -315,13 +315,15 @@ int init_keys(void) {
     return -1;
   }
   if (authdir_mode(options)) {
+    const char *m;
     /* We need to add our own fingerprint so it gets recognized. */
     if (dirserv_add_own_fingerprint(options->Nickname, get_identity_key())) {
       log_fn(LOG_ERR, "Error adding own fingerprint to approved set");
       return -1;
     }
-    if (dirserv_add_descriptor(&tmp) != 1) {
-      log(LOG_ERR, "Unable to add own descriptor to directory.");
+    if (dirserv_add_descriptor(&tmp, &m) != 1) {
+      log(LOG_ERR, "Unable to add own descriptor to directory: %s",
+          m?m:"<unknown error>");
       return -1;
     }
   }
