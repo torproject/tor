@@ -1,4 +1,4 @@
-Changes in version 0.1.0.1-rc1 - 2005-03-xx
+Changes in version 0.1.0.1-rc1 - 2005-03-28
 
   o New features:
     - Add reachability testing. Your Tor server will automatically try
@@ -91,6 +91,8 @@ Changes in version 0.1.0.1-rc1 - 2005-03-xx
       and to take errno into account where possible.
 
   o Bug fixes:
+    - Fix a race condition that can trigger an assert, when we have a
+      pending create cell and an OR connection fails right then.
     - Fix several double-mark-for-close bugs, e.g. where we were finding
       a conn for a cell even if that conn is already marked for close.
     - Make sequence of log messages when starting on win32 with no config
@@ -120,6 +122,8 @@ Changes in version 0.1.0.1-rc1 - 2005-03-xx
       series, but there are some recommended versions in a newer series.
       A version is "new" if it is newer than any recommended version in
       the same series.
+    - Stop most cases of hanging up on a socks connection without sending
+      the socks reject.
 
   o Helpful fixes:
     - Require BandwidthRate to be at least 20kB/s for servers
