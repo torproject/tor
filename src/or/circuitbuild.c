@@ -1083,10 +1083,10 @@ static routerinfo_t *choose_good_middle_server(cpath_build_state_t *state,
     routerlist_add_friends(excluded, r);
   }
   for (i = 0, cpath = head; i < cur_len; ++i, cpath=cpath->next) {
-    r = router_get_by_digest(cpath->identity_digest);
-    tor_assert(r);
-    smartlist_add(excluded, r);
-    routerlist_add_friends(excluded, r);
+    if((r = router_get_by_digest(cpath->identity_digest))) {
+      smartlist_add(excluded, r);
+      routerlist_add_friends(excluded, r);
+    }
   }
   choice = router_choose_random_node("", options.ExcludeNodes, excluded,
            0, 1, options._AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
