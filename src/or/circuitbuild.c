@@ -842,6 +842,13 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
              router->nickname, i);
       continue; /* skip routers that are known to be down */
     }
+    if(!router->is_verified) {
+      n_supported[i] = -1;
+      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- unverified router.",
+             router->nickname, i);
+      /* XXX008 maybe one day allow unverified routers as exits */
+      continue; /* skip unverified routers */
+    }
     if(router_exit_policy_rejects_all(router)) {
       n_supported[i] = -1;
       log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- it rejects all.",
@@ -1011,6 +1018,10 @@ static int count_acceptable_routers(smartlist_t *routers) {
     if(r->is_running == 0) {
       log_fn(LOG_DEBUG,"Nope, the directory says %d is not running.",i);
       goto next_i_loop;
+    }
+    if(r->is_verified == 0) {
+      log_fn(LOG_DEBUG,"Nope, the directory says %d is not verified.",i);
+      goto next_i_loop; /* XXX008 */
     }
     if(clique_mode()) {
       conn = connection_get_by_identity_digest(r->identity_digest,
