@@ -1,4 +1,34 @@
 Changes so far in 0.0.9:
+rc6:
+  o Bugfixes on 0.0.9pre:
+    - Clean up some more integer underflow opportunities (not exploitable
+      we think).
+    - While hibernating, hup should not regrow our listeners.
+    - Send an end to the streams we close when we hibernate, rather
+      than just chopping them off.
+    - React to eof immediately on non-open edge connections.
+
+  o Bugfixes on 0.0.8.1:
+    - Calculate timeout for waiting for a connected cell from the time
+      we sent the begin cell, not from the time the stream started. If
+      it took a long time to establish the circuit, we would time out
+      right after sending the begin cell.
+    - Fix router_compare_addr_to_addr_policy: it was not treating a port
+      of * as always matching, so we were picking reject *:* nodes as
+      exit nodes too. Oops.
+
+  o Features:
+    - New circuit building strategy: keep a list of ports that we've
+      used in the past 6 hours, and always try to have 2 circuits open
+      or on the way that will handle each such port. Seed us with port
+      80 so web users won't complain that Tor is "slow to start up".
+    - Make kill -USR1 dump more useful stats about circuits.
+    - When warning about retrying or giving up, print the address, so
+      the user knows which one it's talking about.
+    - If you haven't used a clean circuit in an hour, throw it away,
+      just to be on the safe side. (This means after 6 hours a totally
+      unused Tor client will have no circuits open.)
+
 rc5:
   o Bugfixes on 0.0.8.1:
     - Disallow NDEBUG. We don't ever want anybody to turn off debug.
