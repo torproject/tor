@@ -281,7 +281,7 @@ void connection_about_to_close_connection(connection_t *conn)
       if (conn->socks_request->has_finished == 0) {
         /* since conn gets removed right after this function finishes,
          * there's no point trying to send back a reply at this point. */
-        log_fn(LOG_INFO,"Bug: Closing stream without sending back a socks reply.");
+        log_fn(LOG_WARN,"Bug: Closing stream without sending back a socks reply.");
       } else {
         control_event_stream_status(conn, STREAM_EVENT_CLOSED);
       }
