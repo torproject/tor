@@ -633,7 +633,8 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
 
   if (answer_type == RESOLVED_TYPE_IPV4) {
     uint32_t a = get_uint32(answer);
-    client_dns_set_entry(conn->socks_request->address, ntohl(a));
+    if(a)
+      client_dns_set_entry(conn->socks_request->address, ntohl(a));
   }
 
   if (conn->socks_request->socks_version == 4) {
