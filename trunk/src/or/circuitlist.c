@@ -9,8 +9,6 @@
 
 #include "or.h"
 
-extern or_options_t options; /* command-line and config-file options */
-
 /********* START VARIABLES **********/
 
 /** A global list of all circuits at this hop. */

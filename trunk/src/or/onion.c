@@ -10,8 +10,6 @@
 
 #include "or.h"
 
-extern or_options_t options; /**< command-line and config-file options */
-
 struct onion_queue_t {
   circuit_t *circ;
   struct onion_queue_t *next;
@@ -44,7 +42,7 @@ int onion_pending_add(circuit_t *circ) {
   tor_assert(ol_list);
   tor_assert(!ol_tail->next);
 
-  if(ol_length >= options.MaxOnionsPending) {
+  if(ol_length >= get_options()->MaxOnionsPending) {
     log_fn(LOG_WARN,"Already have %d onions queued. Closing.", ol_length);
     tor_free(tmp);
     return -1;

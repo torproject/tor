@@ -14,8 +14,6 @@
 /** How many seconds do we wait before regenerating the directory? */
 #define DIR_REGEN_SLACK_TIME 10
 
-extern or_options_t options; /**< command-line and config-file options */
-
 /** Do we need to regenerate the directory when someone asks for it? */
 static int the_directory_is_dirty = 1;
 static int runningrouters_is_dirty = 1;
@@ -87,19 +85,29 @@ dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
 int
 dirserv_parse_fingerprint_file(const char *fname)
 {
-  FILE *file;
-  char line[FINGERPRINT_LEN+MAX_NICKNAME_LEN+20+1];
+  char *cf;
   char *nickname, *fingerprint;
   smartlist_t *fingerprint_list_new;
   int i, result;
   fingerprint_entry_t *ent;
+  struct config_line_t *front=NULL, *list;
 
-  if(!(file = fopen(fname, "r"))) {
+  cf = read_file_to_str(fname, 0);
+  if (!cf) {
     log_fn(LOG_WARN, "Cannot open fingerprint file %s", fname);
     return -1;
   }
+  result = config_get_lines(cf, &front);
+  tor_free(cf);
+  if (result < 0) {
+    log_fn(LOG_WARN, "Error reading from fingerprint file");
+    return -1;
+  }
+
   fingerprint_list_new = smartlist_create();
-  while( (result=parse_line_from_file(line, sizeof(line),file,&nickname,&fingerprint)) > 0) {
+
+  for(list=front; list; list=list->next) {
+    nickname = list->key; fingerprint = list->value;
     if (strlen(nickname) > MAX_NICKNAME_LEN) {
       log(LOG_WARN, "Nickname %s too long in fingerprint file. Skipping.", nickname);
       continue;
@@ -125,24 +133,13 @@ dirserv_parse_fingerprint_file(const char *fname)
       smartlist_add(fingerprint_list_new, ent);
     }
   }
-  fclose(file);
-  if(result == 0) { /* eof; replace the global fingerprints list. */
-    dirserv_free_fingerprint_list();
-    fingerprint_list = fingerprint_list_new;
-    /* Delete any routers whose fingerprints we no longer recognize */
-    directory_remove_unrecognized();
-    return 0;
-  }
-  /* error */
-  log_fn(LOG_WARN, "Error reading from fingerprint file");
-  for (i = 0; i < smartlist_len(fingerprint_list_new); ++i) {
-    ent = smartlist_get(fingerprint_list_new, i);
-    tor_free(ent->nickname);
-    tor_free(ent->fingerprint);
-    tor_free(ent);
-  }
-  smartlist_free(fingerprint_list_new);
-  return -1;
+
+  config_free_lines(front);
+  dirserv_free_fingerprint_list();
+  fingerprint_list = fingerprint_list_new;
+  /* Delete any routers whose fingerprints we no longer recognize */
+  directory_remove_unrecognized();
+  return 0;
 }
 
 /** Check whether <b>router</b> has a nickname/identity key combination that
@@ -607,7 +604,7 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
     smartlist_t *versions;
     struct config_line_t *ln;
     versions = smartlist_create();
-    for (ln = options.RecommendedVersions; ln; ln = ln->next) {
+    for (ln = get_options()->RecommendedVersions; ln; ln = ln->next) {
       smartlist_split_string(versions, ln->value, ",", 
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     }
@@ -644,7 +641,7 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
   */
   if (strlcat(s, "directory-signature ", maxlen) >= maxlen)
     goto truncated;
-  if (strlcat(s, options.Nickname, maxlen) >= maxlen)
+  if (strlcat(s, get_options()->Nickname, maxlen) >= maxlen)
     goto truncated;
   if (strlcat(s, "\n", maxlen) >= maxlen)
     goto truncated;
@@ -694,7 +691,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
 {
   time_t now;
   char filename[512];
-  tor_assert(!options.AuthoritativeDir);
+  tor_assert(!get_options()->AuthoritativeDir);
   now = time(NULL);
   if (when<=cached_directory_published) {
     log_fn(LOG_INFO, "Ignoring old directory; not caching.");
@@ -713,8 +710,8 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
       log_fn(LOG_WARN,"Error compressing cached directory");
     }
     cached_directory_published = when;
-    if(get_data_directory(&options)) {
-      tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
+    if(get_data_directory()) {
+      tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory());
       if(write_str_to_file(filename,cached_directory,0) < 0) {
         log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
       }
@@ -726,7 +723,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
  * directory, generating a new one as necessary. */
 size_t dirserv_get_directory(const char **directory, int compress)
 {
-  if (!options.AuthoritativeDir) {
+  if (!get_options()->AuthoritativeDir) {
     if (compress?cached_directory_z:cached_directory) {
       *directory = compress?cached_directory_z:cached_directory;
       return compress?cached_directory_z_len:cached_directory_len;
@@ -835,7 +832,7 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
              "opt dir-signing-key %s\n"
              "directory-signature %s\n"
              "-----BEGIN SIGNATURE-----\n",
-          published, router_status, identity_pkey, options.Nickname);
+          published, router_status, identity_pkey, get_options()->Nickname);
   tor_free(router_status);
   tor_free(identity_pkey);
   if (router_get_runningrouters_hash(s,digest)) {

@@ -11,7 +11,6 @@
  **/
 
 #include "or.h"
-extern or_options_t options; /* command-line and config-file options */
 
 /** The maximum number of cpuworker processes we will keep around. */
 #define MAX_CPUWORKERS 16
@@ -302,7 +301,7 @@ static int spawn_cpuworker(void) {
  * or kill idle ones.
  */
 static void spawn_enough_cpuworkers(void) {
-  int num_cpuworkers_needed = options.NumCpus;
+  int num_cpuworkers_needed = get_options()->NumCpus;
 
   if(num_cpuworkers_needed < MIN_CPUWORKERS)
     num_cpuworkers_needed = MIN_CPUWORKERS;

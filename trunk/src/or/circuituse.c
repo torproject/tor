@@ -9,8 +9,6 @@
 
 #include "or.h"
 
-extern or_options_t options; /* command-line and config-file options */
-
 /********* START VARIABLES **********/
 
 extern circuit_t *global_circuitlist; /* from circuitlist.c */
@@ -57,7 +55,7 @@ static int circuit_is_acceptable(circuit_t *circ,
 
   if(purpose == CIRCUIT_PURPOSE_C_GENERAL)
     if(circ->timestamp_dirty &&
-       circ->timestamp_dirty+options.NewCircuitPeriod <= now)
+       circ->timestamp_dirty+get_options()->NewCircuitPeriod <= now)
       return 0;
 
   if(conn) {
@@ -264,7 +262,7 @@ int circuit_stream_is_being_handled(connection_t *conn) {
     if(CIRCUIT_IS_ORIGIN(circ) && circ->state != CIRCUIT_STATE_OPEN &&
        !circ->marked_for_close && circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
        (!circ->timestamp_dirty ||
-        circ->timestamp_dirty + options.NewCircuitPeriod < now)) {
+        circ->timestamp_dirty + get_options()->NewCircuitPeriod < now)) {
       exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
       if(exitrouter && connection_ap_can_use_exit(conn, exitrouter))
         if(++num >= MIN_CIRCUITS_HANDLING_STREAM)
@@ -297,12 +295,12 @@ void circuit_build_needed_circs(time_t now) {
 
   if(time_to_new_circuit < now) {
     circuit_reset_failure_count(1);
-    time_to_new_circuit = now + options.NewCircuitPeriod;
-    if(proxy_mode())
+    time_to_new_circuit = now + get_options()->NewCircuitPeriod;
+    if(proxy_mode(get_options()))
       client_dns_clean();
     circuit_expire_old_circuits();
 
-    if(options.RunTesting && circ &&
+    if(get_options()->RunTesting && circ &&
                circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
       log_fn(LOG_INFO,"Creating a new testing circuit.");
       circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL);
@@ -452,7 +450,7 @@ circuit_expire_old_circuits(void)
      * on it, mark it for close.
      */
     if (circ->timestamp_dirty &&
-        circ->timestamp_dirty + options.NewCircuitPeriod < now &&
+        circ->timestamp_dirty + get_options()->NewCircuitPeriod < now &&
         !circ->p_conn && /* we're the origin */
         !circ->p_streams /* nothing attached */ ) {
       log_fn(LOG_DEBUG,"Closing n_circ_id %d (dirty %d secs ago, purp %d)",circ->n_circ_id,

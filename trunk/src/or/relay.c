@@ -10,8 +10,6 @@
 
 #include "or.h"
 
-extern or_options_t options; /* command-line and config-file options */
-
 static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
                 crypt_path_t **layer_hint, char *recognized);
 static connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction);
@@ -546,7 +544,7 @@ connection_edge_process_relay_cell_not_open(
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
         circuit_detach_stream(circ,conn);
         tor_assert(circ->timestamp_dirty);
-        circ->timestamp_dirty -= options.NewCircuitPeriod;
+        circ->timestamp_dirty -= get_options()->NewCircuitPeriod;
         /* make sure not to expire/retry the stream quite yet */
         conn->timestamp_lastread = time(NULL);
         if(connection_ap_handshake_attach_circuit(conn) >= 0)

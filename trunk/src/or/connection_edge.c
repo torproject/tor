@@ -10,8 +10,6 @@
 #include "or.h"
 #include "tree.h"
 
-extern or_options_t options; /* command-line and config-file options */
-
 static struct exit_policy_t *socks_policy = NULL;
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
@@ -245,6 +243,7 @@ void connection_ap_expire_beginning(void) {
   circuit_t *circ;
   int n, i;
   time_t now = time(NULL);
+  or_options_t *options = get_options();
 
   get_connection_array(&carray, &n);
 
@@ -293,7 +292,7 @@ void connection_ap_expire_beginning(void) {
        * current streams on it to survive if they can: make it
        * unattractive to use for new streams */
       tor_assert(circ->timestamp_dirty);
-      circ->timestamp_dirty -= options.NewCircuitPeriod;
+      circ->timestamp_dirty -= options->NewCircuitPeriod;
       /* give our stream another 15 seconds to try */
       conn->timestamp_lastread += 15;
       /* attaching to a dirty circuit is fine */
@@ -899,6 +898,7 @@ void connection_exit_connect(connection_t *conn) {
   unsigned char connected_payload[4];
   uint32_t addr;
   uint16_t port;
+  or_options_t *options = get_options();
 
   if (!connection_edge_is_rendezvous_stream(conn) &&
       router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
@@ -911,7 +911,7 @@ void connection_exit_connect(connection_t *conn) {
 
   addr = conn->addr;
   port = conn->port;
-  SMARTLIST_FOREACH(options.RedirectExitList, exit_redirect_t *, r,
+  SMARTLIST_FOREACH(options->RedirectExitList, exit_redirect_t *, r,
     {
       if ((addr&r->mask)==(r->addr&r->mask) &&
           (r->port_min <= port) && (port <= r->port_max)) {
@@ -1003,7 +1003,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
 
 /** A helper function for socks_policy_permits_address() below.
  *
- * Parse options.SocksPolicy in the same way that the exit policy
+ * Parse options->SocksPolicy in the same way that the exit policy
  * is parsed, and put the processed version in &socks_policy.
  * Ignore port specifiers.
  */
@@ -1014,7 +1014,7 @@ static void parse_socks_policy(void)
     exit_policy_free(socks_policy);
     socks_policy = NULL;
   }
-  config_parse_exit_policy(options.SocksPolicy, &socks_policy);
+  config_parse_exit_policy(get_options()->SocksPolicy, &socks_policy);
   /* ports aren't used. */
   for (n=socks_policy; n; n = n->next) {
     n->prt_min = 1;
@@ -1028,7 +1028,8 @@ static void parse_socks_policy(void)
 int socks_policy_permits_address(uint32_t addr)
 {
   int a;
-  if (options.SocksPolicy && !socks_policy)
+  or_options_t *options = get_options();
+  if (options->SocksPolicy && !socks_policy)
     parse_socks_policy();
 
   if(!socks_policy) /* 'no socks policy' means 'accept' */

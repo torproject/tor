@@ -43,8 +43,6 @@ static const char *CONTROL_COMMANDS[] = {
   "authenticate",
 };
 
-extern or_options_t options;
-
 static uint32_t global_event_mask = 0;
 
 #define AUTHENTICATION_COOKIE_LEN 32
@@ -141,26 +139,25 @@ static int
 handle_control_setconf(connection_t *conn, uint16_t len,
                        char *body)
 {
-  char *k, *v;
-  struct config_line_t *lines = NULL;
+  struct config_line_t *lines=NULL;
+  or_options_t *options = get_options();
 
-  /* XXXX009 move this logic into config.c someplace. */
+  if (config_get_lines(body, &lines) < 0) {
+    log_fn(LOG_WARN,"Controller gave us config lines we can't parse.");
+    send_control_error(conn, ERR_UNSPECIFIED, "Couldn't parse configuration");
+    return 0;
+  }
 
-  do {
-    body = parse_line_from_str(body, &k, &v);
-    if (!body) {
-      goto err;
-    }
-    if (k && v)
-      lines = config_line_prepend(lines, k, v);
-  } while (*body);
+  if (config_trial_assign(&options, lines, 1) < 0) {
+    log_fn(LOG_WARN,"Controller gave us config lines that didn't validate.");
+    send_control_error(conn, ERR_UNSPECIFIED, "Configuration was invalid");
+    config_free_lines(lines);
+    return 0;
+  }
 
-  /* XXXX009 NM */
-
-  return 0;
- err:
-  send_control_error(conn, ERR_UNSPECIFIED, "Couldn't parse configuration");
-  /* config_free_lines(lines); */
+  set_options(options); /* put the new one into place */
+  config_free_lines(lines);
+  send_control_done(conn);
   return 0;
 }
 
@@ -172,6 +169,7 @@ handle_control_getconf(connection_t *conn, uint16_t body_len,
   smartlist_t *answers = NULL;
   char *msg = NULL;
   size_t msg_len;
+  or_options_t *options = get_options();
 
   questions = smartlist_create();
   smartlist_split_string(questions, body, "\n",
@@ -179,7 +177,7 @@ handle_control_getconf(connection_t *conn, uint16_t body_len,
   answers = smartlist_create();
   SMARTLIST_FOREACH(questions, const char *, q,
   {
-    struct config_line_t *answer = config_get_assigned_option(&options,q);
+    struct config_line_t *answer = config_get_assigned_option(options,q);
     if (!answer) {
       send_control_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, body);
       goto done;
@@ -245,16 +243,17 @@ static int handle_control_setevents(connection_t *conn, uint16_t len,
 static int handle_control_authenticate(connection_t *conn, uint16_t len,
                                        const char *body)
 {
+  or_options_t *options = get_options();
   if (len == AUTHENTICATION_COOKIE_LEN &&
       authentication_cookie_is_set &&
       !memcmp(authentication_cookie, body, len)) {
     goto ok;
-  } else if (options.HashedControlPassword) {
+  } else if (options->HashedControlPassword) {
     char expected[S2K_SPECIFIER_LEN+DIGEST_LEN];
     char received[DIGEST_LEN];
     if (base64_decode(expected,sizeof(expected),
-                      options.HashedControlPassword,
-                      strlen(options.HashedControlPassword))<0) {
+                      options->HashedControlPassword,
+                      strlen(options->HashedControlPassword))<0) {
       /* XXXX009 NM we should warn sooner. */
       log_fn(LOG_WARN,"Couldn't decode HashedControlPassword: invalid base64");
       goto err;
@@ -448,7 +447,7 @@ int init_cookie_authentication(void)
   /* XXXX009 NM add config option to disable this. */
 
   tor_snprintf(fname, sizeof(fname), "%s/control_auth_cookie",
-               get_data_directory(&options));
+               get_data_directory());
   crypto_rand(authentication_cookie, AUTHENTICATION_COOKIE_LEN);
   authentication_cookie_is_set = 1;
   if (write_bytes_to_file(fname, authentication_cookie,

@@ -15,8 +15,6 @@
 #include "or.h"
 #include "tree.h"
 
-extern or_options_t options; /* command-line and config-file options */
-
 /** Longest hostname we're willing to resolve. */
 #define MAX_ADDRESSLEN 256
 

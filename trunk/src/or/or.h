@@ -1089,14 +1089,20 @@ struct config_line_t {
   struct config_line_t *next;
 };
 
-int config_assign_default_dirservers(void);
+or_options_t *get_options(void);
+void set_options(or_options_t *new);
+
+int config_get_lines(char *string, struct config_line_t **result);
+void config_free_lines(struct config_line_t *front);
+int config_trial_assign(or_options_t **options, struct config_line_t *list, int reset);
 int resolve_my_address(const char *address, uint32_t *addr);
-int getconfig(int argc, char **argv, or_options_t *options);
+void options_init(or_options_t *options);
+int getconfig(int argc, char **argv);
 int config_init_logs(or_options_t *options);
 void config_parse_exit_policy(struct config_line_t *cfg,
                               struct exit_policy_t **dest);
 void exit_policy_free(struct exit_policy_t *p);
-const char *get_data_directory(or_options_t *options);
+const char *get_data_directory(void);
 struct config_line_t *config_get_assigned_option(or_options_t *options,
                                                  const char *key);
 struct config_line_t *config_line_prepend(struct config_line_t *front,
@@ -1330,11 +1336,11 @@ void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
 
 void directory_has_arrived(time_t now);
-int authdir_mode(void);
-int clique_mode(void);
-int server_mode(void);
+int authdir_mode(or_options_t *options);
+int clique_mode(or_options_t *options);
+int server_mode(or_options_t *options);
 int advertised_server_mode(void);
-int proxy_mode(void);
+int proxy_mode(or_options_t *options);
 
 void handle_signals(int is_parent);
 void tor_cleanup(void);

@@ -12,8 +12,6 @@
 
 /********* START VARIABLES **********/
 
-extern or_options_t options; /* command-line and config-file options */
-
 /** Array of strings to make conn-\>type human-readable. */
 const char *conn_type_to_string[] = {
   "",            /* 0 */
@@ -488,6 +486,7 @@ static int connection_init_accepted_conn(connection_t *conn) {
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port) {
   int s;
   struct sockaddr_in dest_addr;
+  or_options_t *options = get_options();
 
   s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
@@ -496,15 +495,15 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
     return -1;
   }
 
-  if (options.OutboundBindAddress) {
+  if (options->OutboundBindAddress) {
     struct sockaddr_in ext_addr;
 
     memset(&ext_addr, 0, sizeof(ext_addr));
     ext_addr.sin_family = AF_INET;
     ext_addr.sin_port = 0;
-    if (!tor_inet_aton(options.OutboundBindAddress, &ext_addr.sin_addr)) {
+    if (!tor_inet_aton(options->OutboundBindAddress, &ext_addr.sin_addr)) {
       log_fn(LOG_WARN,"Outbound bind address '%s' didn't parse. Ignoring.",
-             options.OutboundBindAddress);
+             options->OutboundBindAddress);
     } else {
       if(bind(s, (struct sockaddr*)&ext_addr, sizeof(ext_addr)) < 0) {
         log_fn(LOG_WARN,"Error binding network socket: %s",
@@ -641,18 +640,19 @@ static int retry_listeners(int type, struct config_line_t *cfg,
  * connections for a given type.
  */
 int retry_all_listeners(int force) {
+  or_options_t *options = get_options();
 
-  if (retry_listeners(CONN_TYPE_OR_LISTENER, options.ORBindAddress,
-                      options.ORPort, "0.0.0.0", force)<0)
+  if (retry_listeners(CONN_TYPE_OR_LISTENER, options->ORBindAddress,
+                      options->ORPort, "0.0.0.0", force)<0)
     return -1;
-  if (retry_listeners(CONN_TYPE_DIR_LISTENER, options.DirBindAddress,
-                      options.DirPort, "0.0.0.0", force)<0)
+  if (retry_listeners(CONN_TYPE_DIR_LISTENER, options->DirBindAddress,
+                      options->DirPort, "0.0.0.0", force)<0)
     return -1;
-  if (retry_listeners(CONN_TYPE_AP_LISTENER, options.SocksBindAddress,
-                      options.SocksPort, "127.0.0.1", force)<0)
+  if (retry_listeners(CONN_TYPE_AP_LISTENER, options->SocksBindAddress,
+                      options->SocksPort, "127.0.0.1", force)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_CONTROL_LISTENER, NULL,
-                      options.ControlPort, "127.0.0.1", force)<0)
+                      options->ControlPort, "127.0.0.1", force)<0)
     return -1;
 
   return 0;
@@ -702,11 +702,12 @@ static void connection_read_bucket_decrement(connection_t *conn, int num_read) {
   }
 }
 
-/** Initiatialize the global read bucket to options.BandwidthBurstBytes,
+/** Initiatialize the global read bucket to options->BandwidthBurstBytes,
  * and current_time to the current time. */
 void connection_bucket_init(void) {
-  global_read_bucket = options.BandwidthBurstBytes; /* start it at max traffic */
-  global_write_bucket = options.BandwidthBurstBytes; /* start it at max traffic */
+  or_options_t *options = get_options();
+  global_read_bucket = options->BandwidthBurstBytes; /* start it at max traffic */
+  global_write_bucket = options->BandwidthBurstBytes; /* start it at max traffic */
 }
 
 /** A second has rolled over; increment buckets appropriately. */
@@ -714,14 +715,15 @@ void connection_bucket_refill(struct timeval *now) {
   int i, n;
   connection_t *conn;
   connection_t **carray;
+  or_options_t *options = get_options();
 
   /* refill the global buckets */
-  if(global_read_bucket < options.BandwidthBurstBytes) {
-    global_read_bucket += options.BandwidthRateBytes;
+  if(global_read_bucket < options->BandwidthBurstBytes) {
+    global_read_bucket += options->BandwidthRateBytes;
     log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
   }
-  if(global_write_bucket < options.BandwidthBurstBytes) {
-    global_write_bucket += options.BandwidthRateBytes;
+  if(global_write_bucket < options->BandwidthBurstBytes) {
+    global_write_bucket += options->BandwidthRateBytes;
     log_fn(LOG_DEBUG,"global_write_bucket now %d.", global_write_bucket);
   }
 

@@ -46,8 +46,6 @@ static int directory_handle_command(connection_t *conn);
 
 /********* START VARIABLES **********/
 
-extern or_options_t options; /* command-line and config-file options */
-
 static struct exit_policy_t *dir_policy = NULL;
 
 #if 0 /* commented out for now, since for now what clients send is
@@ -67,7 +65,7 @@ char rend_fetch_url[] = "/tor/rendezvous/";
 
 /** A helper function for dir_policy_permits_address() below.
  *
- * Parse options.DirPolicy in the same way that the exit policy
+ * Parse options->DirPolicy in the same way that the exit policy
  * is parsed, and put the processed version in &dir_policy.
  * Ignore port specifiers.
  */
@@ -78,7 +76,7 @@ static void parse_dir_policy(void)
     exit_policy_free(dir_policy);
     dir_policy = NULL;
   }
-  config_parse_exit_policy(options.DirPolicy, &dir_policy);
+  config_parse_exit_policy(get_options()->DirPolicy, &dir_policy);
   /* ports aren't used. */
   for (n=dir_policy; n; n = n->next) {
     n->prt_min = 1;
@@ -92,7 +90,7 @@ static void parse_dir_policy(void)
 int dir_policy_permits_address(uint32_t addr)
 {
   int a;
-  if (options.DirPolicy && !dir_policy)
+  if (get_options()->DirPolicy && !dir_policy)
     parse_dir_policy();
 
   if(!dir_policy) /* 'no dir policy' means 'accept' */
@@ -129,10 +127,10 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
       /* Pay attention to fascistfirewall when we're uploading a
        * router descriptor, but not when uploading a service
        * descriptor -- those use Tor. */
-      if (options.FascistFirewall && purpose == DIR_PURPOSE_UPLOAD_DIR &&
-          !options.HttpProxy) {
+      if (get_options()->FascistFirewall && purpose == DIR_PURPOSE_UPLOAD_DIR &&
+          !get_options()->HttpProxy) {
         tor_snprintf(buf,sizeof(buf),"%d",ds->dir_port);
-        if (!smartlist_string_isin(options.FirewallPorts, buf))
+        if (!smartlist_string_isin(get_options()->FirewallPorts, buf))
           continue;
       }
       directory_initiate_command_trusted_dir(ds, purpose, payload, payload_len);
@@ -154,13 +152,13 @@ directory_get_from_dirserver(uint8_t purpose, const char *payload,
   if (purpose == DIR_PURPOSE_FETCH_DIR) {
     if (advertised_server_mode()) {
       /* only ask authdirservers, and don't ask myself */
-      ds = router_pick_trusteddirserver(1, options.FascistFirewall);
+      ds = router_pick_trusteddirserver(1, get_options()->FascistFirewall);
     } else {
       /* anybody with a non-zero dirport will do */
-      r = router_pick_directory_server(1, options.FascistFirewall);
+      r = router_pick_directory_server(1, get_options()->FascistFirewall);
       if (!r) {
         log_fn(LOG_INFO, "No router found for directory; falling back to dirserver list");
-        ds = router_pick_trusteddirserver(1, options.FascistFirewall);
+        ds = router_pick_trusteddirserver(1, get_options()->FascistFirewall);
       }
     }
   } else { // (purpose == DIR_PURPOSE_FETCH_RENDDESC)
@@ -241,9 +239,9 @@ directory_initiate_command(const char *address, uint32_t addr,
   conn->addr = addr;
   conn->port = dir_port;
 
-  if(options.HttpProxy) {
-    addr = options.HttpProxyAddr;
-    dir_port = options.HttpProxyPort;
+  if(get_options()->HttpProxy) {
+    addr = get_options()->HttpProxyAddr;
+    dir_port = get_options()->HttpProxyPort;
   }
 
   conn->address = tor_strdup(address);
@@ -327,7 +325,7 @@ directory_send_command(connection_t *conn, const char *platform,
   } else {
     tor_snprintf(hoststring, sizeof(hoststring),"%s:%d",conn->address, conn->port);
   }
-  if(options.HttpProxy) {
+  if(get_options()->HttpProxy) {
     tor_snprintf(proxystring, sizeof(proxystring),"http://%s", hoststring);
   } else {
     proxystring[0] = 0;
@@ -768,7 +766,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
 
   if(!strcmp(url,"/tor/running-routers")) { /* running-routers fetch */
     tor_free(url);
-    if(!authdir_mode()) {
+    if(!authdir_mode(get_options())) {
       /* XXX008 for now, we don't cache running-routers. Reject. */
       connection_write_to_buf(answer400, strlen(answer400), conn);
       return 0;
@@ -793,7 +791,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     const char *descp;
     size_t desc_len;
 
-    if(!authdir_mode()) {
+    if(!authdir_mode(get_options())) {
       /* We don't hand out rend descs. In fact, it could be a security
        * risk, since rend_cache_lookup_desc() below would provide it
        * if we're gone to the site recently, and 404 if we haven't.
@@ -845,7 +843,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
 
   conn->state = DIR_CONN_STATE_SERVER_WRITING;
 
-  if(!authdir_mode()) {
+  if(!authdir_mode(get_options())) {
     /* we just provide cached directories; we don't want to
      * receive anything. */
     connection_write_to_buf(answer400, strlen(answer400), conn);

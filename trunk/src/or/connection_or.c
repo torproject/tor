@@ -10,8 +10,6 @@
 
 #include "or.h"
 
-extern or_options_t options; /**< command-line and config-file options */
-
 static int connection_tls_finish_handshake(connection_t *conn);
 static int connection_or_process_cells_from_inbuf(connection_t *conn);
 
@@ -121,10 +119,10 @@ connection_or_init_conn_from_address(connection_t *conn,
                                      uint32_t addr, uint16_t port,
                                      const char *id_digest)
 {
-  routerinfo_t *r;
   struct in_addr in;
   const char *n;
-  r = router_get_by_digest(id_digest);
+  or_options_t *options = get_options();
+  routerinfo_t *r = router_get_by_digest(id_digest);
   if (r) {
     connection_or_init_conn_from_router(conn,r);
     return;
@@ -132,7 +130,7 @@ connection_or_init_conn_from_address(connection_t *conn,
   conn->addr = addr;
   conn->port = port;
   /* This next part isn't really right, but it's good enough for now. */
-  conn->receiver_bucket = conn->bandwidth = options.BandwidthBurstBytes;
+  conn->receiver_bucket = conn->bandwidth = options->BandwidthBurstBytes;
   memcpy(conn->identity_digest, id_digest, DIGEST_LEN);
   /* If we're an authoritative directory server, we may know a
    * nickname for this router. */
@@ -203,7 +201,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
 
   tor_assert(id_digest);
 
-  if(server_mode() && (me=router_get_my_routerinfo()) &&
+  if(server_mode(get_options()) && (me=router_get_my_routerinfo()) &&
      !memcmp(me->identity_digest, id_digest,DIGEST_LEN)) {
     log_fn(LOG_WARN,"Request to connect to myself! Failing.");
     return NULL;
@@ -334,12 +332,13 @@ connection_tls_finish_handshake(connection_t *conn) {
   connection_t *c;
   crypto_pk_env_t *identity_rcvd=NULL;
   char digest_rcvd[DIGEST_LEN];
+  or_options_t *options = get_options();
 
   conn->state = OR_CONN_STATE_OPEN;
   connection_watch_events(conn, POLLIN);
   log_fn(LOG_DEBUG,"tls handshake done. verifying.");
   if (! tor_tls_peer_has_cert(conn->tls)) { /* It's an OP. */
-    if (server_mode()) { /* I'm an OR; good. */
+    if (server_mode(options)) { /* I'm an OR; good. */
       conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
       return 0;
     } else { /* Neither side sent a certificate: ouch. */
@@ -376,7 +375,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   if (connection_or_nonopen_was_started_here(conn)) {
     /* I initiated this connection. */
     if (strcasecmp(conn->nickname, nickname)) {
-      log_fn(options.DirPort ? LOG_WARN : LOG_INFO,
+      log_fn(options->DirPort ? LOG_WARN : LOG_INFO,
              "Other side (%s:%d) is '%s', but we tried to connect to '%s'",
              conn->address, conn->port, nickname, conn->nickname);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
@@ -390,7 +389,7 @@ connection_tls_finish_handshake(connection_t *conn) {
     connection_or_init_conn_from_address(conn,conn->addr,conn->port,digest_rcvd);
   }
 
-  if (!server_mode()) { /* If I'm an OP... */
+  if (!server_mode(options)) { /* If I'm an OP... */
     conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
   }
   directory_set_dirty();

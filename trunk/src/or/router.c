@@ -10,7 +10,6 @@
  * and uploading server descriptors, retrying OR connections.
  **/
 
-extern or_options_t options; /* command-line and config-file options */
 extern long stats_n_seconds_uptime;
 
 /** Exposed for test.c. */ void get_platform_str(char *platform, size_t len);
@@ -102,9 +101,9 @@ void rotate_onion_key(void)
   char fname_prev[512];
   crypto_pk_env_t *prkey;
   tor_snprintf(fname,sizeof(fname),
-           "%s/keys/secret_onion_key",get_data_directory(&options));
+           "%s/keys/secret_onion_key",get_data_directory());
   tor_snprintf(fname_prev,sizeof(fname_prev),
-           "%s/keys/secret_onion_key.old",get_data_directory(&options));
+           "%s/keys/secret_onion_key.old",get_data_directory());
   if (!(prkey = crypto_new_pk_env())) {
     log(LOG_ERR, "Error creating crypto environment.");
     goto error;
@@ -231,13 +230,14 @@ int init_keys(void) {
   const char *tmp, *mydesc, *datadir;
   crypto_pk_env_t *prkey;
   char digest[20];
+  or_options_t *options = get_options();
 
   if (!key_lock)
     key_lock = tor_mutex_new();
 
   /* OP's don't need persistant keys; just make up an identity and
    * initialize the TLS context. */
-  if (!server_mode()) {
+  if (!server_mode(options)) {
     if (!(prkey = crypto_new_pk_env()))
       return -1;
     if (crypto_pk_generate_key(prkey))
@@ -245,8 +245,8 @@ int init_keys(void) {
     set_identity_key(prkey);
     /* XXX NM: do we have a convention for what client's Nickname is?
      * No.  Let me propose one: */
-    if (tor_tls_context_new(get_identity_key(), 1, 
-                            options.Nickname ? options.Nickname : "client",
+    if (tor_tls_context_new(get_identity_key(), 1,
+                            options->Nickname ? options->Nickname : "client",
                             MAX_SSL_KEY_LIFETIME) < 0) {
       log_fn(LOG_ERR, "Error creating TLS context for OP.");
       return -1;
@@ -254,7 +254,7 @@ int init_keys(void) {
     return 0;
   }
   /* Make sure DataDirectory exists, and is private. */
-  datadir = get_data_directory(&options);
+  datadir = get_data_directory();
   tor_assert(datadir);
   if (strlen(datadir) > (512-128)) {
     log_fn(LOG_ERR, "DataDirectory is too long.");
@@ -292,7 +292,7 @@ int init_keys(void) {
   }
 
   /* 3. Initialize link key and TLS context. */
-  if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
+  if (tor_tls_context_new(get_identity_key(), 1, options->Nickname,
                           MAX_SSL_KEY_LIFETIME) < 0) {
     log_fn(LOG_ERR, "Error initializing TLS context");
     return -1;
@@ -304,9 +304,9 @@ int init_keys(void) {
     log_fn(LOG_ERR, "Error initializing descriptor.");
     return -1;
   }
-  if(authdir_mode()) {
+  if(authdir_mode(options)) {
     /* We need to add our own fingerprint so it gets recognized. */
-    if (dirserv_add_own_fingerprint(options.Nickname, get_identity_key())) {
+    if (dirserv_add_own_fingerprint(options->Nickname, get_identity_key())) {
       log_fn(LOG_ERR, "Error adding own fingerprint to approved set");
       return -1;
     }
@@ -324,8 +324,8 @@ int init_keys(void) {
   /* 5. Dump fingerprint to 'fingerprint' */
   tor_snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
   log_fn(LOG_INFO,"Dumping fingerprint to %s...",keydir);
-  tor_assert(strlen(options.Nickname) <= MAX_NICKNAME_LEN);
-  strlcpy(fingerprint, options.Nickname, sizeof(fingerprint));
+  tor_assert(strlen(options->Nickname) <= MAX_NICKNAME_LEN);
+  strlcpy(fingerprint, options->Nickname, sizeof(fingerprint));
   strlcat(fingerprint, " ", sizeof(fingerprint));
   if (crypto_pk_get_fingerprint(get_identity_key(),
                                 fingerprint+strlen(fingerprint), 1)<0) {
@@ -335,7 +335,7 @@ int init_keys(void) {
   strlcat(fingerprint, "\n", sizeof(fingerprint));
   if (write_str_to_file(keydir, fingerprint, 0))
     return -1;
-  if(!authdir_mode())
+  if(!authdir_mode(options))
     return 0;
   /* 6. [authdirserver only] load approved-routers file */
   tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", datadir);
@@ -347,7 +347,7 @@ int init_keys(void) {
   /* 6b. [authdirserver only] add own key to approved directories. */
   crypto_pk_get_digest(get_identity_key(), digest);
   if (!router_digest_is_trusted_dir(digest)) {
-    add_trusted_dir_server(options.Address, (uint16_t)options.DirPort, digest);
+    add_trusted_dir_server(options->Address, (uint16_t)options->DirPort, digest);
   }
   /* 7. [authdirserver only] load old directory, if it's there */
   tor_snprintf(keydir,sizeof(keydir),"%s/cached-directory", datadir);
@@ -380,8 +380,9 @@ void router_retry_connections(void) {
   int i;
   routerinfo_t *router;
   routerlist_t *rl;
+  or_options_t *options = get_options();
 
-  tor_assert(server_mode());
+  tor_assert(server_mode(options));
 
   router_get_routerlist(&rl);
   if (!rl) return;
@@ -389,7 +390,7 @@ void router_retry_connections(void) {
     router = smartlist_get(rl->routers, i);
     if(router_is_me(router))
       continue;
-    if(!clique_mode() && !router_is_clique_mode(router))
+    if(!clique_mode(options) && !router_is_clique_mode(router))
       continue;
     if(!connection_get_by_identity_digest(router->identity_digest,
                                           CONN_TYPE_OR)) {
@@ -438,7 +439,7 @@ void router_upload_dir_desc_to_dirservers(void) {
 static void router_add_exit_policy_from_config(routerinfo_t *router) {
   struct exit_policy_t *ep;
   struct config_line_t default_policy;
-  config_parse_exit_policy(options.ExitPolicy, &router->exit_policy);
+  config_parse_exit_policy(get_options()->ExitPolicy, &router->exit_policy);
 
   for (ep = router->exit_policy; ep; ep = ep->next) {
     if (ep->msk == 0 && ep->prt_min <= 1 && ep->prt_max >= 65535) {
@@ -487,7 +488,7 @@ int router_is_me(routerinfo_t *router)
  * necessary.  Return NULL on error, or if called on an OP. */
 routerinfo_t *router_get_my_routerinfo(void)
 {
-  if (!server_mode())
+  if (!server_mode(get_options()))
     return NULL;
 
   if (!desc_routerinfo) {
@@ -517,20 +518,21 @@ int router_rebuild_descriptor(void) {
   uint32_t addr;
   char platform[256];
   struct in_addr in;
+  or_options_t *options = get_options();
 
-  if(resolve_my_address(options.Address, &addr) < 0) {
-    log_fn(LOG_WARN,"options.Address didn't resolve into an IP.");
+  if(resolve_my_address(options->Address, &addr) < 0) {
+    log_fn(LOG_WARN,"options->Address didn't resolve into an IP.");
     return -1;
   }
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
   in.s_addr = htonl(addr);
   ri->address = tor_strdup(inet_ntoa(in));
-  ri->nickname = tor_strdup(options.Nickname);
+  ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
-  ri->or_port = options.ORPort;
-  ri->socks_port = options.SocksPort;
-  ri->dir_port = options.DirPort;
+  ri->or_port = options->ORPort;
+  ri->socks_port = options->SocksPort;
+  ri->dir_port = options->DirPort;
   ri->published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from main thread */
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
@@ -540,15 +542,15 @@ int router_rebuild_descriptor(void) {
   }
   get_platform_str(platform, sizeof(platform));
   ri->platform = tor_strdup(platform);
-  ri->bandwidthrate = options.BandwidthRateBytes;
-  ri->bandwidthburst = options.BandwidthBurstBytes;
+  ri->bandwidthrate = options->BandwidthRateBytes;
+  ri->bandwidthburst = options->BandwidthBurstBytes;
   ri->bandwidthcapacity = router_get_bandwidth_capacity();
   router_add_exit_policy_from_config(ri);
   if(desc_routerinfo) /* inherit values */
     ri->is_verified = desc_routerinfo->is_verified;
-  if (options.MyFamily) {
+  if (options->MyFamily) {
     ri->declared_family = smartlist_create();
-    smartlist_split_string(ri->declared_family, options.MyFamily, ",",
+    smartlist_split_string(ri->declared_family, options->MyFamily, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   }
 
@@ -686,9 +688,9 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   /* From now on, we use 'written' to remember the current length of 's'. */
   written = result;
 
-  if (options.ContactInfo && strlen(options.ContactInfo)) {
+  if (get_options()->ContactInfo && strlen(get_options()->ContactInfo)) {
     result = tor_snprintf(s+written,maxlen-written, "opt contact %s\n",
-                      options.ContactInfo);
+                      get_options()->ContactInfo);
     if (result<0 || result+written > maxlen)
       return -1;
     written += result;

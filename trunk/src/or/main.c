@@ -16,7 +16,6 @@ static int init_from_config(int argc, char **argv);
 
 /********* START VARIABLES **********/
 
-or_options_t options; /**< Command-line and config-file options. */
 int global_read_bucket; /**< Max number of bytes I can read this second. */
 int global_write_bucket; /**< Max number of bytes I can write this second. */
 
@@ -84,7 +83,7 @@ int connection_add(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->s >= 0);
 
-  if(nfds >= options.MaxConn-1) {
+  if(nfds >= get_options()->MaxConn-1) {
     log_fn(LOG_WARN,"failing because nfds is too high.");
     return -1;
   }
@@ -355,6 +354,7 @@ static void conn_close_if_marked(int i) {
 
 /** This function is called whenever we successfully pull down a directory */
 void directory_has_arrived(time_t now) {
+  or_options_t *options = get_options();
 
   log_fn(LOG_INFO, "A directory has arrived.");
 
@@ -363,9 +363,9 @@ void directory_has_arrived(time_t now) {
    * seconds after the directory we had when we started.
    */
   if (!time_to_fetch_directory)
-    time_to_fetch_directory = now + options.DirFetchPostPeriod;
+    time_to_fetch_directory = now + options->DirFetchPostPeriod;
 
-  if (server_mode() &&
+  if (server_mode(options) &&
       !we_are_hibernating()) { /* connect to the appropriate routers */
     router_retry_connections();
   }
@@ -378,6 +378,7 @@ void directory_has_arrived(time_t now) {
 static void run_connection_housekeeping(int i, time_t now) {
   cell_t cell;
   connection_t *conn = connection_array[i];
+  or_options_t *options = get_options();
 
   /* Expire any directory connections that haven't sent anything for 5 min */
   if(conn->type == CONN_TYPE_DIR &&
@@ -391,12 +392,12 @@ static void run_connection_housekeeping(int i, time_t now) {
   /* If we haven't written to an OR connection for a while, then either nuke
      the connection or send a keepalive, depending. */
   if(connection_speaks_cells(conn) &&
-     now >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
+     now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     if((!connection_state_is_open(conn)) ||
        (we_are_hibernating() && !circuit_get_by_conn(conn)) ||
-       (!clique_mode() && !circuit_get_by_conn(conn) &&
-       (!router || !server_mode() || !router_is_clique_mode(router)))) {
+       (!clique_mode(options) && !circuit_get_by_conn(conn) &&
+       (!router || !server_mode(options) || !router_is_clique_mode(router)))) {
       /* our handshake has expired; we're hibernating;
        * or we have no circuits and we're both either OPs or normal ORs,
        * then kill it. */
@@ -430,17 +431,18 @@ static void run_connection_housekeeping(int i, time_t now) {
  */
 static int decide_if_publishable_server(time_t now) {
   int bw;
+  or_options_t *options = get_options();
 
   bw = rep_hist_bandwidth_assess();
   router_set_bandwidth_capacity(bw);
 
-  if(options.ClientOnly)
+  if(options->ClientOnly)
     return 0;
-  if(!options.ORPort)
+  if(!options->ORPort)
     return 0;
 
   /* XXX008 for now, you're only a server if you're a server */
-  return server_mode();
+  return server_mode(options);
 
   /* here, determine if we're reachable */
   if(0) { /* we've recently failed to reach our IP/ORPort from the outside */
@@ -449,7 +451,7 @@ static int decide_if_publishable_server(time_t now) {
 
   if(bw < MIN_BW_TO_PUBLISH_DESC)
     return 0;
-  if(options.AuthoritativeDir)
+  if(options->AuthoritativeDir)
     return 1;
   if(stats_n_seconds_uptime < MIN_UPTIME_TO_PUBLISH_DESC)
     return 0;
@@ -460,20 +462,20 @@ static int decide_if_publishable_server(time_t now) {
 /** Return true iff we believe ourselves to be an authoritative
  * directory server.
  */
-int authdir_mode(void) {
-  return (options.AuthoritativeDir != 0);
+int authdir_mode(or_options_t *options) {
+  return options->AuthoritativeDir != 0;
 }
 
 /** Return true iff we try to stay connected to all ORs at once.
  */
-int clique_mode(void) {
-  return authdir_mode();
+int clique_mode(or_options_t *options) {
+  return authdir_mode(options);
 }
 
 /** Return true iff we are trying to be a server.
  */
-int server_mode(void) {
-  return (options.ORPort != 0 || options.ORBindAddress);
+int server_mode(or_options_t *options) {
+  return (options->ORPort != 0 || options->ORBindAddress);
 }
 
 /** Remember if we've advertised ourselves to the dirservers. */
@@ -486,8 +488,8 @@ int advertised_server_mode(void) {
 }
 
 /** Return true iff we are trying to be a socks proxy. */
-int proxy_mode(void) {
-  return (options.SocksPort != 0 || options.SocksBindAddress);
+int proxy_mode(or_options_t *options) {
+  return (options->SocksPort != 0 || options->SocksBindAddress);
 }
 
 /** Perform regular maintenance tasks.  This function gets run once per
@@ -497,6 +499,7 @@ static void run_scheduled_events(time_t now) {
   static time_t last_uploaded_services = 0;
   static time_t last_rotated_certificate = 0;
   static time_t time_to_check_listeners = 0;
+  or_options_t *options = get_options();
   int i;
 
   /** 0. See if we've been asked to shut down and our timeout has
@@ -509,7 +512,8 @@ static void run_scheduled_events(time_t now) {
    *  shut down and restart all cpuworkers, and update the directory if
    *  necessary.
    */
-  if (server_mode() && get_onion_key_set_at()+MIN_ONION_KEY_LIFETIME < now) {
+  if (server_mode(options) &&
+      get_onion_key_set_at()+MIN_ONION_KEY_LIFETIME < now) {
     log_fn(LOG_INFO,"Rotating onion key.");
     rotate_onion_key();
     cpuworkers_rotate();
@@ -525,7 +529,7 @@ static void run_scheduled_events(time_t now) {
     last_rotated_certificate = now;
   if (last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
     log_fn(LOG_INFO,"Rotating tls context.");
-    if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
+    if (tor_tls_context_new(get_identity_key(), 1, get_options()->Nickname,
                             MAX_SSL_KEY_LIFETIME) < 0) {
       log_fn(LOG_WARN, "Error reinitializing TLS context");
     }
@@ -553,11 +557,11 @@ static void run_scheduled_events(time_t now) {
     /* purge obsolete entries */
     routerlist_remove_old_routers(ROUTER_MAX_AGE);
 
-    if(authdir_mode()) {
+    if(authdir_mode(options)) {
       /* We're a directory; dump any old descriptors. */
       dirserv_remove_old_servers(ROUTER_MAX_AGE);
     }
-    if(server_mode() && !we_are_hibernating()) {
+    if(server_mode(options) && !we_are_hibernating()) {
       /* dirservers try to reconnect, in case connections have failed;
        * and normal servers try to reconnect to dirservers */
       router_retry_connections();
@@ -572,7 +576,7 @@ static void run_scheduled_events(time_t now) {
     }
     rend_cache_clean(); /* should this go elsewhere? */
 
-    time_to_fetch_directory = now + options.DirFetchPostPeriod;
+    time_to_fetch_directory = now + get_options()->DirFetchPostPeriod;
   }
 
   /** 3a. Every second, we examine pending circuits and prune the
@@ -685,34 +689,38 @@ static int prepare_for_poll(void) {
  * configuration file.
  */
 static int init_from_config(int argc, char **argv) {
-  /* read the configuration file. */
-  if(getconfig(argc,argv,&options)) {
+  or_options_t *options;
+
+  /* read the configuration file. init and assign options. */
+  if(getconfig(argc,argv) < 0) {
     log_fn(LOG_ERR,"Reading config failed--see warnings above. For usage, try -h.");
     return -1;
   }
 
+  options = get_options();
+
   /* Setuid/setgid as appropriate */
-  if(options.User || options.Group) {
-    if(switch_id(options.User, options.Group) != 0) {
+  if(options->User || options->Group) {
+    if(switch_id(options->User, options->Group) != 0) {
       return -1;
     }
   }
 
   /* Ensure data directory is private; create if possible. */
-  if (get_data_directory(&options) &&
-      check_private_dir(get_data_directory(&options), 1) != 0) {
+  if (get_data_directory() &&
+      check_private_dir(get_data_directory(), 1) != 0) {
     log_fn(LOG_ERR, "Couldn't access/create private data directory %s",
-           get_data_directory(&options));
+           get_data_directory());
     return -1;
   }
 
   /* Bail out at this point if we're not going to be a server: we want
    * to not fork, and to log stuff to stderr. */
-  if (options.command != CMD_RUN_TOR)
+  if (options->command != CMD_RUN_TOR)
     return 0;
 
   /* Configure the log(s) */
-  if (config_init_logs(&options)<0)
+  if (config_init_logs(options)<0)
     return -1;
   /* Close the temporary log we used while starting up, if it isn't already
    * gone. */
@@ -720,8 +728,8 @@ static int init_from_config(int argc, char **argv) {
   add_callback_log(LOG_WARN, LOG_ERR, control_event_logmsg);
 
   /* Start backgrounding the process, if requested. */
-  if (options.RunAsDaemon) {
-    start_daemon(get_data_directory(&options));
+  if (options->RunAsDaemon) {
+    start_daemon(get_data_directory());
   }
 
   /* Set up our buckets */
@@ -730,15 +738,15 @@ static int init_from_config(int argc, char **argv) {
   stats_prev_global_write_bucket = global_write_bucket;
 
   /* Finish backgrounding the process */
-  if(options.RunAsDaemon) {
+  if(options->RunAsDaemon) {
     /* XXXX Can we delay this any more? */
     finish_daemon();
   }
 
   /* Write our pid to the pid file. If we do not have write permissions we
    * will log a warning */
-  if(options.PidFile)
-    write_pidfile(options.PidFile);
+  if(options->PidFile)
+    write_pidfile(options->PidFile);
 
   return 0;
 }
@@ -765,9 +773,9 @@ static int do_hup(void) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
   }
-  if(authdir_mode()) {
+  if(authdir_mode(get_options())) {
     /* reload the approved-routers file */
-    tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", get_data_directory(&options));
+    tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", get_data_directory());
     log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
     if(dirserv_parse_fingerprint_file(keydir) < 0) {
       log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
@@ -775,14 +783,14 @@ static int do_hup(void) {
   }
   /* Fetch a new directory. Even authdirservers do this. */
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
-  if(server_mode()) {
+  if(server_mode(get_options())) {
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate();
     dnsworkers_rotate();
     /* Rebuild fresh descriptor as needed. */
     router_rebuild_descriptor();
-    tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", get_data_directory(&options));
+    tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", get_data_directory());
     log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
     if (write_str_to_file(keydir, router_get_my_descriptor(), 0)) {
       return -1;
@@ -817,12 +825,12 @@ static int do_main_loop(void) {
     return -1;
   }
 
-  if(authdir_mode()) {
+  if(authdir_mode(get_options())) {
     /* the directory is already here, run startup things */
     router_retry_connections();
   }
 
-  if(server_mode()) {
+  if(server_mode(get_options())) {
     /* launch cpuworkers. Need to do this *after* we've read the onion key. */
     cpu_init();
   }
@@ -841,7 +849,7 @@ static int do_main_loop(void) {
 #endif
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
     if(please_shutdown) {
-      if(!server_mode()) { /* do it now */
+      if(!server_mode(get_options())) { /* do it now */
         log(LOG_NOTICE,"Interrupt: exiting cleanly.");
         tor_cleanup();
         exit(0);
@@ -1074,16 +1082,16 @@ static int tor_init(int argc, char *argv[]) {
     log_fn(LOG_WARN,"You are running Tor as root. You don't need to, and you probably shouldn't.");
 #endif
 
-  if(server_mode()) { /* only spawn dns handlers if we're a router */
+  if(server_mode(get_options())) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
-  if(proxy_mode()) {
+  if(proxy_mode(get_options())) {
     client_dns_init(); /* init the client dns cache */
   }
 
   handle_signals(1);
 
-  if (set_max_file_descriptors(options.MaxConn) < 0)
+  if (set_max_file_descriptors(get_options()->MaxConn) < 0)
     return -1;
 
   crypto_global_init();
@@ -1093,10 +1101,11 @@ static int tor_init(int argc, char *argv[]) {
 
 /** Do whatever cleanup is necessary before shutting Tor down. */
 void tor_cleanup(void) {
+  or_options_t *options = get_options();
   /* Remove our pid file. We don't care if there was an error when we
    * unlink, nothing we could do about it anyways. */
-  if(options.PidFile && options.command == CMD_RUN_TOR)
-    unlink(options.PidFile);
+  if(options->PidFile && options->command == CMD_RUN_TOR)
+    unlink(options->PidFile);
   crypto_global_cleanup();
 }
 
@@ -1117,8 +1126,7 @@ static void do_list_fingerprint(void)
     log_fn(LOG_ERR, "Error computing fingerprint");
     return;
   }
-  /*XXX is options.Nickname for-sure defined yet here? */
-  printf("%s %s\n", options.Nickname, buf);
+  printf("%s %s\n", get_options()->Nickname, buf);
 }
 
 /** DOCDOC **/
@@ -1131,7 +1139,7 @@ static void do_hash_password(void)
   crypto_rand(key, S2K_SPECIFIER_LEN-1);
   key[S2K_SPECIFIER_LEN-1] = (uint8_t)96; /* Hash 64 K of data. */
   secret_to_key(key+S2K_SPECIFIER_LEN, DIGEST_LEN,
-                options.command_arg, strlen(options.command_arg),
+                get_options()->command_arg, strlen(get_options()->command_arg),
                 key);
   if (base64_encode(output, sizeof(output), key, sizeof(key))<0) {
     log_fn(LOG_ERR, "Unable to compute base64");
@@ -1209,7 +1217,7 @@ int tor_main(int argc, char *argv[]) {
 #else
   if (tor_init(argc, argv)<0)
     return -1;
-  switch (options.command) {
+  switch (get_options()->command) {
   case CMD_RUN_TOR:
     do_main_loop();
     break;
@@ -1221,7 +1229,7 @@ int tor_main(int argc, char *argv[]) {
     break;
   default:
     log_fn(LOG_ERR, "Illegal command number %d: internal error.",
-           options.command);
+           get_options()->command);
   }
   tor_cleanup();
   return -1;
