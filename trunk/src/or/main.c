@@ -625,7 +625,7 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router) {
 void dump_directory_to_string(char *s, int maxlen) 
 {
   directory_t dir;
-  routerinfo_t **routers = NULL;;
+  routerinfo_t **routers = NULL;
   connection_t *conn;
   routerinfo_t *router;
   int i, n = 0;
