@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleGetInfoString</key>
-	<string>Tor 0.1.0.0-alpha-cvs</string>
+	<string>Tor 0.1.0.1-rc</string>
 	<key>CFBundleName</key>
 	<string>Tor</string>
 	<key>CFBundleSortVersionString</key>
-	<string>0.1.0.0-alpha-cvs</string>
+	<string>0.1.0.1-rc</string>
 	<key>IFPkgFlagAllowBackRev</key>
 	<true/>
 	<key>IFPkgFlagAuthorizationAction</key>
