@@ -3,6 +3,13 @@
 /* $Id$ */
 
 #include "../or/or.h"
+
+#ifdef _MSC_VER
+#include <io.h>
+#include <limits.h>
+#include <process.h>
+#endif
+
 #include "util.h"
 #include "log.h"
 
@@ -146,7 +153,11 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
         || family != AF_UNIX
 #endif
         ) {
+#ifdef _MSC_VER
+		errno = WSAEAFNOSUPPORT;
+#else
         errno = EAFNOSUPPORT;
+#endif
         return -1;
     }
     if (!fd) {
@@ -202,7 +213,11 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     return 0;
 
   abort_tidy_up_and_fail:
+#ifdef _MSC_VER
+  errno = WSAECONNABORTED;
+#else
   errno = ECONNABORTED; /* I hope this is portable and appropriate.  */
+#endif
   tidy_up_and_fail:
     {
         int save_errno = errno;

@@ -15,6 +15,7 @@
 #endif
 #ifndef HAVE_GETTIMEOFDAY
 #ifdef HAVE_FTIME
+#define USING_FAKE_TIMEVAL
 #include <sys/timeb.h>
 #define timeval timeb
 #define tv_sec time

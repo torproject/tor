@@ -122,9 +122,9 @@ aes_get_counter(aes_cnt_cipher_t *cipher)
 void
 aes_set_counter(aes_cnt_cipher_t *cipher, u64 counter)
 {
-  cipher->pos = counter & 0x0f;
-  cipher->counter0 = (counter >> 4) & 0xffffffff;
-  cipher->counter1 = (counter >> 36);
+  cipher->pos = (u8)(counter & 0x0f);
+  cipher->counter0 = (u32) ((counter >> 4) & 0xffffffff);
+  cipher->counter1 = (u32) (counter >> 36);
   _aes_fill_buf(cipher);
 }
 
