@@ -1061,7 +1061,7 @@ static int do_main_loop(void) {
 int
 control_signal_act(int the_signal)
 {
-  switch(the_signal)
+  switch (the_signal)
     {
     case 1:
       signal_callback(0,0,(void*)(uintptr_t)SIGHUP);
