@@ -49,6 +49,7 @@ static int nfds=0; /**< Number of connections currently active. */
 static int please_dumpstats=0; /**< Whether we should dump stats during the loop. */
 static int please_reset=0; /**< Whether we just got a sighup. */
 static int please_reap_children=0; /**< Whether we should waitpid for exited children. */
+static int please_sigpipe=0; /**< Whether we've caught a sigpipe lately. */
 static int please_shutdown=0; /**< Whether we should shut down Tor. */
 #endif /* signal stuff */
 
@@ -833,6 +834,10 @@ static int do_main_loop(void) {
       }
       please_shutdown = 0;
     }
+    if(please_sigpipe) {
+      log(LOG_NOTICE,"Caught sigpipe. Ignoring.");
+      please_sigpipe = 0;
+    }
     if(please_dumpstats) {
       /* prefer to log it at INFO, but make sure we always see it */
       dumpstats(get_min_log_level()>LOG_INFO ? get_min_log_level() : LOG_INFO);
@@ -898,7 +903,9 @@ static void catch(int the_signal) {
       please_shutdown = 1;
       break;
     case SIGPIPE:
-      log(LOG_NOTICE,"Caught sigpipe. Ignoring.");
+      /* don't log here, since it's possible you got the sigpipe because
+       * your log failed! */
+      please_sigpipe = 1;
       break;
     case SIGHUP:
       please_reset = 1;
@@ -911,6 +918,8 @@ static void catch(int the_signal) {
       break;
     default:
       log(LOG_WARN,"Caught signal %d that we can't handle??", the_signal);
+      tor_cleanup();
+      exit(1);
   }
 #endif /* signal stuff */
 }
