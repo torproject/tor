@@ -122,7 +122,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
           log_fn(LOG_INFO,"Empty directory. Ignoring.");
           free(directory);
           connection_mark_for_close(conn,0);
-          return -1;
+          return 0;
         }
         if(router_set_routerlist_from_directory(directory, conn->identity_pkey) < 0){
           log_fn(LOG_INFO,"...but parsing failed. Ignoring.");

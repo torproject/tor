@@ -176,13 +176,14 @@ static void conn_read(int i) {
 #ifdef MS_WINDOWS
       (poll_array[i].revents & POLLERR) ||
 #endif
-      (connection_handle_read(conn) < 0 && !conn->marked_for_close))
-    {
-      /* this connection is broken. remove it */
-      /* XXX This shouldn't ever happen anymore. */
-      log_fn(LOG_ERR,"Unhandled error on read for %s connection (fd %d); removing",
-             conn_type_to_string[conn->type], conn->s);
-      connection_mark_for_close(conn,0);
+      connection_handle_read(conn) < 0) {
+      if (!conn->marked_for_close) {
+        /* this connection is broken. remove it */
+        /* XXX This shouldn't ever happen anymore. */
+        log_fn(LOG_ERR,"Unhandled error on read for %s connection (fd %d); removing",
+               conn_type_to_string[conn->type], conn->s);
+        connection_mark_for_close(conn,0);
+      }
     }
     assert_connection_ok(conn, time(NULL));
 }
@@ -200,11 +201,13 @@ static void conn_write(int i) {
 
   assert_connection_ok(conn, time(NULL));
 
-  if(connection_handle_write(conn) < 0 && !conn->marked_for_close) {
-    /* this connection is broken. remove it. */
-    log_fn(LOG_ERR,"Unhandled error on read for %s connection (fd %d); removing",
-           conn_type_to_string[conn->type], conn->s);
-    connection_mark_for_close(conn,0);
+  if (connection_handle_write(conn) < 0) {
+    if (!conn->marked_for_close) {
+      /* this connection is broken. remove it. */
+      log_fn(LOG_ERR,"Unhandled error on read for %s connection (fd %d); removing",
+             conn_type_to_string[conn->type], conn->s);
+      connection_mark_for_close(conn,0);
+    }
   }
   assert_connection_ok(conn, time(NULL));
 }
