@@ -380,7 +380,7 @@ write_str_to_file(const char *fname, const char *str)
         strerror(errno));
     close(fd); return -1;
   }
-  if (fputs(str,file)) {
+  if (fputs(str,file) == EOF) {
     log(LOG_ERR, "Error writing to %s: %s", tempname, strerror(errno));
     fclose(file); return -1;
   }
