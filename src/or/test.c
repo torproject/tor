@@ -608,7 +608,7 @@ void test_onion() {
   char **names;
   int i,num;
 
-  names = parse_nickname_list("  foo bar	 baz quux  ", &num);
+  names = parse_nickname_list("  foo bar\t baz quux  ", &num);
   test_eq(num,4);
   test_streq(names[0],"foo");
   test_streq(names[1],"bar");

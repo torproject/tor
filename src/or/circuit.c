@@ -1152,7 +1152,7 @@ static void circuit_failed(circuit_t *circ) {
       break;
     case CIRCUIT_PURPOSE_S_CONNECT_REND:
       /* at Bob, connecting to rend point */
-      // 
+      //
       break;
   }
 }

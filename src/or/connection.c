@@ -247,7 +247,7 @@ void connection_expire_held_open(void)
     if (conn->hold_open_until_flushed) {
       assert(conn->marked_for_close);
       if (now - conn->timestamp_lastwritten >= 15) {
-        log_fn(LOG_WARN,"Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %d).", 
+        log_fn(LOG_WARN,"Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %d).",
                conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state);
         conn->hold_open_until_flushed = 0;
       }
@@ -449,7 +449,7 @@ int retry_all_connections(void) {
 
   if(options.DirPort) {
     listener_close_if_present(CONN_TYPE_DIR_LISTENER);
-    if(connection_create_listener(options.DirBindAddress, 
+    if(connection_create_listener(options.DirBindAddress,
                                   (uint16_t) options.DirPort,
                                   CONN_TYPE_DIR_LISTENER) < 0)
       return -1;
