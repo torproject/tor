@@ -487,8 +487,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           }
           memcpy(req->address,buf->mem+5,len);
           req->address[len] = 0;
-          memcpy(&req->port, buf->mem+5+len, 2);
-          req->port = ntohs(req->port);
+          req->port = ntohs(get_uint16(buf->mem+5+len));
           buf_remove_from_front(buf, 5+len+2);
           return 1;
         default: /* unsupported */
