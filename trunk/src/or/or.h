@@ -616,6 +616,7 @@ void set_onion_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_onion_key(void);
 void set_identity_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_identity_key(void);
+crypto_pk_env_t *get_link_key(void);
 int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
 void connection_set_poll_socket(connection_t *conn);
@@ -628,8 +629,6 @@ void connection_stop_reading(connection_t *conn);
 void connection_start_reading(connection_t *conn);
 void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
-
-int list_running_servers(char **nicknames_out);
 
 const char *router_get_my_descriptor(void);
 
@@ -691,6 +690,10 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
 routerinfo_t *router_get_entry_from_string(char **s);
 int router_compare_to_exit_policy(connection_t *conn);
 void routerinfo_free(routerinfo_t *router);
+int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
+                                 crypto_pk_env_t *ident_key);
+const routerinfo_t *router_get_desc_routerinfo(void);
+const char *router_get_my_descriptor(void);
 
 /********************************* dirserv.c ***************************/
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);

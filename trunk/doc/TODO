@@ -60,7 +60,7 @@ ARMA    . add log convention to the HACKING file
           keydir under that with fixed names
 ARMA    - tor faq
           list all other systems, why we're different.
-NICK    - Move (most of) the router/directory code out of main.c
+        o Move (most of) the router/directory code out of main.c
 
 Mid-term:
         . Redo scheduler

@@ -3,9 +3,6 @@
 /* $Id$ */
 
 #include "or.h"
-#ifdef HAVE_UNAME
-#include <sys/utsname.h>
-#endif
 
 /********* START PROTOTYPES **********/
 
@@ -37,8 +34,6 @@ static int please_reap_children=0; /* whether we should waitpid for exited child
 static crypto_pk_env_t *onionkey=NULL;
 static crypto_pk_env_t *linkkey=NULL;
 static crypto_pk_env_t *identitykey=NULL;
-
-routerinfo_t *my_routerinfo=NULL;
 
 /********* END VARIABLES ************/
 
@@ -279,11 +274,7 @@ static int prepare_for_poll(void) {
     if(time_to_fetch_directory < now.tv_sec) {
       /* it's time to fetch a new directory and/or post our descriptor */
       if(options.OnionRouter) {
-        if (init_descriptor()<0) {
-          log_fn(LOG_WARNING, "Error initializing descriptor. Not uploading desc.");
-        } else {
-          router_upload_desc_to_dirservers();
-        }
+           router_upload_desc_to_dirservers();
       }
       if(!options.DirPort) {
         /* NOTE directory servers do not currently fetch directories.
@@ -482,7 +473,7 @@ static int init_keys(void)
   }
   /* 4. Dump router descriptor to 'router.desc' */
   /* Must be called after keys are initialized. */
-  if (init_descriptor()<0) {
+  if (!(router_get_my_descriptor())) {
     log_fn(LOG_ERR, "Error initializing descriptor.");
     return -1;
   }
@@ -679,204 +670,6 @@ static void dumpstats(void) { /* dump stats to stdout */
     circuit_dump_by_conn(conn); /* dump info about all the circuits using this conn */
     printf("\n");
   }
-}
-
-static void get_platform_str(char *platform, int len)
-{
-#ifdef HAVE_UNAME
-  struct utsname u;
-  if (!uname(&u)) {
-    snprintf(platform, len-1, "Tor %s on %s %s %s %s %s",
-             VERSION, u.sysname, u.nodename, u.release, u.version, u.machine);
-    platform[len-1] = '\0';
-    return;
-  } else
-#endif
-    {
-      snprintf(platform, len-1, "Tor %s", VERSION);
-    }
-}
-
-int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
-                          crypto_pk_env_t *ident_key) {
-  char *onion_pkey;
-  char *link_pkey;
-  char *identity_pkey;
-  char platform[256];
-  char digest[20];
-  char signature[128];
-  char published[32];
-  int onion_pkeylen, link_pkeylen, identity_pkeylen;
-  int written;
-  int result=0;
-  struct exit_policy_t *tmpe;
-  
-  get_platform_str(platform, sizeof(platform));
-
-  if(crypto_pk_write_public_key_to_string(router->onion_pkey,
-                                          &onion_pkey,&onion_pkeylen)<0) {
-    log_fn(LOG_WARNING,"write onion_pkey to string failed!");
-    return -1;
-  }
-
-  if(crypto_pk_write_public_key_to_string(router->identity_pkey,
-                                          &identity_pkey,&identity_pkeylen)<0) {
-    log_fn(LOG_WARNING,"write identity_pkey to string failed!");
-    return -1;
-  }
-
-  if(crypto_pk_write_public_key_to_string(router->link_pkey,
-                                          &link_pkey,&link_pkeylen)<0) {
-    log_fn(LOG_WARNING,"write link_pkey to string failed!");
-    return -1;
-  }
-  strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&router->published_on));
-  
-  result = snprintf(s, maxlen, 
-                    "router %s %s %d %d %d %d\n"
-                    "platform %s\n"
-                    "published %s\n"
-                    "onion-key\n%s"
-                    "link-key\n%s"
-                    "signing-key\n%s",
-    router->nickname,             
-    router->address,
-    router->or_port,
-    router->ap_port,
-    router->dir_port,
-    router->bandwidth,
-    platform,
-    published,
-    onion_pkey, link_pkey, identity_pkey);
-
-  free(onion_pkey);
-  free(link_pkey);
-  free(identity_pkey);
-
-  if(result < 0 || result >= maxlen) {
-    /* apparently different glibcs do different things on snprintf error.. so check both */
-    return -1;
-  }
-  written = result;
-
-  for(tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
-    result = snprintf(s+written, maxlen-written, "%s %s:%s\n", 
-      tmpe->policy_type == EXIT_POLICY_ACCEPT ? "accept" : "reject",
-      tmpe->address, tmpe->port);
-    if(result < 0 || result+written > maxlen) {
-      /* apparently different glibcs do different things on snprintf error.. so check both */
-      return -1;
-    }
-    written += result;
-  }
-  if (written > maxlen-256) /* Not enough room for signature. */
-    return -1;
-
-  strcat(s+written, "router-signature\n");
-  written += strlen(s+written);
-  s[written] = '\0';
-  if (router_get_router_hash(s, digest) < 0)
-    return -1;
-
-  if (crypto_pk_private_sign(ident_key, digest, 20, signature) < 0) {
-    log_fn(LOG_WARNING, "Error signing digest");
-    return -1;
-  }
-  strcat(s+written, "-----BEGIN SIGNATURE-----\n");
-  written += strlen(s+written);
-  if (base64_encode(s+written, maxlen-written, signature, 128) < 0) {
-    log_fn(LOG_WARNING, "Couldn't base64-encode signature");
-    return -1;
-  }
-  written += strlen(s+written);
-  strcat(s+written, "-----END SIGNATURE-----\n");
-  written += strlen(s+written);
-  
-  if (written > maxlen-2) 
-    return -1;
-  /* include a last '\n' */
-  s[written] = '\n';
-  s[written+1] = 0;
-  return written+1;
-}
-
-int 
-list_running_servers(char **nicknames_out)
-{
-  char *nickname_lst[MAX_ROUTERS_IN_DIR];
-  connection_t *conn;
-  char *cp;
-  int n = 0, i;
-  int length;
-  *nicknames_out = NULL;
-  if (my_routerinfo)
-    nickname_lst[n++] = my_routerinfo->nickname;
-  for (i = 0; i<nfds; ++i) {
-    conn = connection_array[i];
-    if (conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN)
-      continue; /* only list successfully handshaked OR's. */
-    if(!conn->nickname) /* it's an OP, don't list it */
-      continue;
-    nickname_lst[n++] = conn->nickname;
-  }
-  length = n + 1; /* spaces + EOS + 1. */
-  for (i = 0; i<n; ++i) {
-    length += strlen(nickname_lst[i]);
-  }
-  *nicknames_out = tor_malloc(length);
-  cp = *nicknames_out;
-  memset(cp,0,length);
-  for (i = 0; i<n; ++i) {
-    if (i)
-      strcat(cp, " ");
-    strcat(cp, nickname_lst[i]);
-    while (*cp) 
-      ++cp;
-  }
-  return 0;
-}
-
-static char descriptor[8192];
-/* XXX should this replace my_routerinfo? */
-static routerinfo_t *desc_routerinfo; 
-const char *router_get_my_descriptor(void) {
-  log_fn(LOG_DEBUG,"my desc is '%s'",descriptor);	
-  return descriptor;
-}
-
-static int init_descriptor(void) {
-  routerinfo_t *ri;
-  char localhostname[256];
-  char *address = options.Address;
-
-  if(!address) { /* if not specified in config, we find a default */
-    if(gethostname(localhostname,sizeof(localhostname)) < 0) {
-      log_fn(LOG_WARNING,"Error obtaining local hostname");
-      return -1;
-    }
-    address = localhostname;
-  }
-  ri = tor_malloc(sizeof(routerinfo_t));
-  ri->address = strdup(address);
-  ri->nickname = strdup(options.Nickname);
-  /* No need to set addr. */
-  ri->or_port = options.ORPort;
-  ri->ap_port = options.APPort;
-  ri->dir_port = options.DirPort;
-  ri->published_on = time(NULL);
-  ri->onion_pkey = crypto_pk_dup_key(get_onion_key());
-  ri->link_pkey = crypto_pk_dup_key(get_link_key());
-  ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
-  ri->bandwidth = options.TotalBandwidth;
-  ri->exit_policy = NULL; /* XXX implement this. */
-  if (desc_routerinfo)
-    routerinfo_free(desc_routerinfo);
-  desc_routerinfo = ri;
-  if (dump_router_to_string(descriptor, 8192, ri, get_identity_key())<0) {
-    log_fn(LOG_WARNING, "Couldn't dump router to string.");
-    return -1;
-  }
-  return 0;
 }
 
 void daemonize(void) {
