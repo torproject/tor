@@ -214,7 +214,7 @@ void connection_dns_remove(connection_t *conn)
   if(pend->conn == conn) {
     resolve->pending_connections = pend->next;
     tor_free(pend);
-    log_fn(LOG_DEBUG, "Connection (fd %d) no longer waiting for resolve of '%s'",
+    log_fn(LOG_DEBUG, "First connection (fd %d) no longer waiting for resolve of '%s'",
            conn->s, conn->address);
     return;
   } else {
@@ -239,6 +239,7 @@ void dns_cancel_pending_resolve(char *address) {
   struct pending_connection_t *pend;
   struct cached_resolve search;
   struct cached_resolve *resolve, *tmp;
+  connection_t *pendconn;
 
   strncpy(search.address, address, MAX_ADDRESSLEN);
   search.address[MAX_ADDRESSLEN-1] = 0;
@@ -258,7 +259,9 @@ void dns_cancel_pending_resolve(char *address) {
     pend = resolve->pending_connections;
     /* So that mark_for_close doesn't double-remove the connection. */
     pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
-    connection_mark_for_close(pend->conn, END_STREAM_REASON_MISC);
+    pendconn = pend->conn; /* don't pass complex things to the
+                              connection_mark_for_close macro */
+    connection_mark_for_close(pendconn, END_STREAM_REASON_MISC);
     resolve->pending_connections = pend->next;
     tor_free(pend);
   }
@@ -288,6 +291,7 @@ static void dns_found_answer(char *address, uint32_t addr) {
   struct pending_connection_t *pend;
   struct cached_resolve search;
   struct cached_resolve *resolve;
+  connection_t *pendconn;
 
   strncpy(search.address, address, MAX_ADDRESSLEN);
   search.address[MAX_ADDRESSLEN-1] = 0;
@@ -324,7 +328,9 @@ static void dns_found_answer(char *address, uint32_t addr) {
     if(resolve->state == CACHE_STATE_FAILED) {
       /* prevent double-remove */
       pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED; 
-      connection_mark_for_close(pend->conn, END_STREAM_REASON_RESOLVEFAILED);
+      pendconn = pend->conn; /* don't pass complex things to the
+                                connection_mark_for_close macro */
+      connection_mark_for_close(pendconn, END_STREAM_REASON_RESOLVEFAILED);
     } else {
       connection_exit_connect(pend->conn);
     }
