@@ -445,7 +445,7 @@ directory_remove_unrecognized(void)
       log(LOG_INFO, "Router '%s' is now approved.", ent->nickname);
       ent->is_verified = 1;
     } else if (r==0 && ent->is_verified) {
-      log(LOG_INFO, "Router '%s' is no longer approved." ent->nickname);
+      log(LOG_INFO, "Router '%s' is no longer approved.", ent->nickname);
       ent->is_verified = 0;
     }
   }
