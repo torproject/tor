@@ -123,7 +123,7 @@ void connection_free(connection_t *conn) {
     crypto_free_pk_env(conn->pkey);
 
   if(conn->s > 0) {
-    log(LOG_INFO,"connection_free(): closing fd %d.",conn->s);
+    log_fn(LOG_INFO,"closing fd %d.",conn->s);
     close(conn->s);
   }
   if(conn->type == CONN_TYPE_OR) {
@@ -140,7 +140,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0)
   { 
-    log(LOG_ERR,"connection_create_listener(): Socket creation failed.");
+    log_fn(LOG_ERR,"Socket creation failed.");
     return -1;
   }
 
@@ -161,18 +161,18 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
 
   conn = connection_new(type);
   if(!conn) {
-    log(LOG_DEBUG,"connection_create_listener(): connection_new failed. Giving up.");
+    log_fn(LOG_DEBUG,"connection_new failed. Giving up.");
     return -1;
   }
   conn->s = s;
 
   if(connection_add(conn) < 0) { /* no space, forget it */
-    log(LOG_DEBUG,"connection_create_listener(): connection_add failed. Giving up.");
+    log_fn(LOG_DEBUG,"connection_add failed. Giving up.");
     connection_free(conn);
     return -1;
   }
 
-  log(LOG_DEBUG,"connection_create_listener(): Listening on port %u.",ntohs(bindaddr->sin_port));
+  log_fn(LOG_DEBUG,"Listening on port %u.",ntohs(bindaddr->sin_port));
 
   conn->state = LISTENER_STATE_READY;
   connection_start_reading(conn);
@@ -192,7 +192,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
     if(errno==EAGAIN)
       return 0; /* he hung up before we could accept(). that's fine. */
     /* else there was a real error. */
-    log(LOG_ERR,"connection_handle_listener_read(): accept() failed. Closing.");
+    log_fn(LOG_ERR,"accept() failed. Closing.");
     return -1;
   }
   log(LOG_INFO,"Connection accepted on socket %d (child of fd %d).",news, conn->s);
@@ -475,7 +475,7 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
   assert(conn);
 
   if(!connection_speaks_cells(conn)) {
-     log(LOG_INFO,"connection_send_destroy(): Aci %d: At an edge. Marking connection for close.", aci);
+     log_fn(LOG_INFO,"Aci %d: At an edge. Marking connection for close.", aci);
      conn->marked_for_close = 1;
      return 0;
   }
@@ -483,7 +483,7 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
   memset(&cell, 0, sizeof(cell_t));
   cell.aci = aci;
   cell.command = CELL_DESTROY;
-  log(LOG_INFO,"connection_send_destroy(): Sending destroy (aci %d).",aci);
+  log_fn(LOG_INFO,"Sending destroy (aci %d).",aci);
   return connection_write_cell_to_buf(&cell, conn);
 }
 
@@ -548,7 +548,7 @@ int connection_process_inbuf(connection_t *conn) {
     case CONN_TYPE_DNSWORKER:
       return connection_dns_process_inbuf(conn); 
     default:
-      log(LOG_DEBUG,"connection_process_inbuf() got unexpected conn->type.");
+      log_fn(LOG_DEBUG,"got unexpected conn->type.");
       return -1;
   }
 }
@@ -584,11 +584,11 @@ repeat_connection_package_raw_inbuf:
 
   circ = circuit_get_by_conn(conn);
   if(!circ) {
-    log(LOG_DEBUG,"connection_package_raw_inbuf(): conn has no circuits!");
+    log_fn(LOG_DEBUG,"conn has no circuits!");
     return -1;
   }
 
-  log(LOG_DEBUG,"connection_package_raw_inbuf(): (%d) Packaging %d bytes (%d waiting).",conn->s,cell.length, conn->inbuf_datalen);
+  log_fn(LOG_DEBUG,"(%d) Packaging %d bytes (%d waiting).",conn->s,cell.length, conn->inbuf_datalen);
 
 
   cell.command = CELL_RELAY;
@@ -599,7 +599,7 @@ repeat_connection_package_raw_inbuf:
   if(conn->type == CONN_TYPE_EXIT) {
     cell.aci = circ->p_aci;
     if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_IN, NULL) < 0) {
-      log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_relay_cell (backward) failed. Closing.");
+      log_fn(LOG_DEBUG,"circuit_deliver_relay_cell (backward) failed. Closing.");
       circuit_close(circ);
       return 0;
     }
@@ -609,7 +609,7 @@ repeat_connection_package_raw_inbuf:
     assert(conn->type == CONN_TYPE_AP);
     cell.aci = circ->n_aci;
     if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, conn->cpath_layer) < 0) {
-      log(LOG_DEBUG,"connection_package_raw_inbuf(): circuit_deliver_relay_cell (forward) failed. Closing.");
+      log_fn(LOG_DEBUG,"circuit_deliver_relay_cell (forward) failed. Closing.");
       circuit_close(circ);
       return 0;
     }
@@ -624,11 +624,10 @@ repeat_connection_package_raw_inbuf:
   assert(conn->package_window > 0);
   if(--conn->package_window <= 0) { /* is it 0 after decrement? */
     connection_stop_reading(conn);
-    log(LOG_DEBUG,"connection_package_raw_inbuf(): conn->package_window reached 0.");
+    log_fn(LOG_DEBUG,"conn->package_window reached 0.");
     return 0; /* don't process the inbuf any more */
   }
-  log(LOG_DEBUG,"connection_package_raw_inbuf(): conn->package_window is %d",conn->package_window);
-
+  log_fn(LOG_DEBUG,"conn->package_window is %d",conn->package_window);
 
   /* handle more if there's more, or return 0 if there isn't */
   goto repeat_connection_package_raw_inbuf;
@@ -644,7 +643,7 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
   circ = circuit_get_by_conn(conn);
   if(!circ) {
     /* this can legitimately happen if the destroy has already arrived and torn down the circuit */
-    log(LOG_DEBUG,"connection_consider_sending_sendme(): No circuit associated with conn. Skipping.");
+    log_fn(LOG_DEBUG,"No circuit associated with conn. Skipping.");
     return 0;
   }
 
@@ -660,10 +659,10 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
     cell.aci = circ->n_aci;
 
   while(conn->deliver_window < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
-    log(LOG_DEBUG,"connection_consider_sending_sendme(): Outbuf %d, Queueing stream sendme.", conn->outbuf_flushlen);
+    log_fn(LOG_DEBUG,"Outbuf %d, Queueing stream sendme.", conn->outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
     if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION(edge_type), conn->cpath_layer) < 0) {
-      log(LOG_DEBUG,"connection_consider_sending_sendme(): circuit_deliver_relay_cell failed. Closing.");
+      log_fn(LOG_DEBUG,"circuit_deliver_relay_cell failed. Closing.");
       circuit_close(circ);
       return 0;
     }
@@ -676,7 +675,7 @@ int connection_finished_flushing(connection_t *conn) {
 
   assert(conn);
 
-//  log(LOG_DEBUG,"connection_finished_flushing() entered. Socket %u.", conn->s);
+//  log_fn(LOG_DEBUG,"entered. Socket %u.", conn->s);
 
   switch(conn->type) {
     case CONN_TYPE_OR:
@@ -689,7 +688,7 @@ int connection_finished_flushing(connection_t *conn) {
     case CONN_TYPE_DNSWORKER:
       return connection_dns_finished_flushing(conn);
     default:
-      log(LOG_DEBUG,"connection_finished_flushing() got unexpected conn->type.");
+      log_fn(LOG_DEBUG,"got unexpected conn->type.");
       return -1;
   }
 }
@@ -719,10 +718,10 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
 #endif
   /* decrypt */
   if(crypto_cipher_decrypt(conn->b_crypto,crypted,CELL_NETWORK_SIZE,outbuf)) {
-    log(LOG_ERR,"connection_process_cell_from_inbuf(): Decryption failed, dropping.");
+    log_fn(LOG_ERR,"Decryption failed, dropping.");
     return connection_process_inbuf(conn); /* process the remainder of the buffer */
   }
-//  log(LOG_DEBUG,"connection_process_cell_from_inbuf(): Cell decrypted (%d bytes).",outlen);
+//  log_fn(LOG_DEBUG,"Cell decrypted (%d bytes).",outlen);
 #if 0
   printf("Cell header plaintext: ");
   for(x=0;x<8;x++) {
@@ -734,7 +733,7 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   /* retrieve cell info from outbuf (create the host-order struct from the network-order string) */
   cell_unpack(&cell, outbuf);
 
-//  log(LOG_DEBUG,"connection_process_cell_from_inbuf(): Decrypted cell is of type %u (ACI %u).",cellp->command,cellp->aci);
+//  log_fn(LOG_DEBUG,"Decrypted cell is of type %u (ACI %u).",cellp->command,cellp->aci);
   command_process_cell(&cell, conn);
 
   return connection_process_inbuf(conn); /* process the remainder of the buffer */

@@ -140,7 +140,7 @@ int config_compare(struct config_line *c, char *key, int type, void *arg) {
     return 0;
 
   /* it's a match. cast and assign. */
-  log(LOG_DEBUG,"config_compare(): Recognized keyword '%s' as %s, using value '%s'.",c->key,key,c->value);
+  log_fn(LOG_DEBUG,"Recognized keyword '%s' as %s, using value '%s'.",c->key,key,c->value);
 
   switch(type) {
     case CONFIG_TYPE_INT:   
@@ -200,7 +200,7 @@ void config_assign(or_options_t *options, struct config_line *list) {
     ) {
       /* then we're ok. it matched something. */
     } else {
-      log(LOG_WARNING,"config_assign(): Ignoring unknown keyword '%s'.",list->key);
+      log_fn(LOG_WARNING,"Ignoring unknown keyword '%s'.",list->key);
     }
 
     list = list->next;

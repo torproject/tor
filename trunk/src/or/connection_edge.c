@@ -32,13 +32,13 @@ int connection_edge_process_inbuf(connection_t *conn) {
     cell.aci = circ->n_aci;
 
     if (circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION(conn->type), conn->cpath_layer) < 0) {
-      log(LOG_DEBUG,"connection_edge_process_inbuf: circuit_deliver_relay_cell failed. Closing.");
+      log(LOG_DEBUG,"circuit_deliver_relay_cell failed. Closing.");
       circuit_close(circ);
     }
     return 0;
 #else 
     /* eof reached, kill it. */
-    log(LOG_DEBUG,"connection_edge_process_inbuf(): conn reached eof. Closing.");
+    log_fn(LOG_DEBUG,"conn reached eof. Closing.");
     return -1;
 #endif
   }
@@ -53,7 +53,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
       circuit_consider_stop_edge_reading(circuit_get_by_conn(conn), conn->type == CONN_TYPE_AP ? EDGE_AP : EDGE_EXIT, conn->cpath_layer);
       return 0;
     case EXIT_CONN_STATE_CONNECTING:
-      log(LOG_DEBUG,"connection_edge_process_inbuf(): text from server while in 'connecting' state at exit. Leaving it on buffer.");
+      log_fn(LOG_DEBUG,"text from server while in 'connecting' state at exit. Leaving it on buffer.");
       return 0;
   }
 
@@ -65,7 +65,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
   int cell_direction;
 
   if(!circ) {
-    log(LOG_DEBUG,"connection_edge_send_command(): no circ. Closing.");
+    log_fn(LOG_DEBUG,"no circ. Closing.");
     return -1;
   }
 
@@ -87,10 +87,10 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
     SET_CELL_STREAM_ID(cell, ZERO_STREAM);
 
   cell.length = RELAY_HEADER_SIZE;
-  log(LOG_INFO,"connection_edge_send_command(): delivering %d cell %s.", relay_command, cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
+  log_fn(LOG_INFO,"delivering %d cell %s.", relay_command, cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
 
   if(circuit_deliver_relay_cell(&cell, circ, cell_direction, fromconn ? fromconn->cpath_layer : NULL) < 0) {
-    log(LOG_DEBUG,"connection_edge_send_command(): circuit_deliver_relay_cell failed. Closing.");
+    log_fn(LOG_DEBUG,"circuit_deliver_relay_cell failed. Closing.");
     circuit_close(circ);
     return 0;
   }
@@ -107,19 +107,19 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
   assert(cell && circ);
 
   relay_command = CELL_RELAY_COMMAND(*cell);
-//  log(LOG_DEBUG,"connection_edge_process_relay_cell(): command %d stream %d", relay_command, stream_id);
+//  log_fn(LOG_DEBUG,"command %d stream %d", relay_command, stream_id);
   num_seen++;
-  log(LOG_DEBUG,"connection_edge_process_relay_cell(): Now seen %d relay cells here.", num_seen);
+  log_fn(LOG_DEBUG,"Now seen %d relay cells here.", num_seen);
 
   /* either conn is NULL, in which case we've got a control cell, or else
    * conn points to the recognized stream. */
 
   if(conn && conn->state != AP_CONN_STATE_OPEN && conn->state != EXIT_CONN_STATE_OPEN) {
     if(conn->type == CONN_TYPE_EXIT && relay_command == RELAY_COMMAND_END) {
-      log(LOG_INFO,"connection_edge_process_relay_cell(): Exit got end before we're connected. Marking for close.");
+      log_fn(LOG_INFO,"Exit got end before we're connected. Marking for close.");
       conn->marked_for_close = 1;
     } else {
-      log(LOG_DEBUG,"connection_edge_process_relay_cell(): Got an unexpected relay cell, not in 'open' state. Dropping.");
+      log_fn(LOG_DEBUG,"Got an unexpected relay cell, not in 'open' state. Dropping.");
     }
     return 0;
   }
@@ -127,32 +127,32 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
   switch(relay_command) {
     case RELAY_COMMAND_BEGIN:
       if(edge_type == EDGE_AP) {
-        log(LOG_INFO,"connection_edge_process_relay_cell(): relay begin request unsupported. Dropping.");
+        log_fn(LOG_INFO,"relay begin request unsupported. Dropping.");
         return 0;
       }
       if(conn) {
-        log(LOG_INFO,"connection_edge_process_relay_cell(): begin cell for known stream. Dropping.");
+        log_fn(LOG_INFO,"begin cell for known stream. Dropping.");
         return 0;
       }
       return connection_exit_begin_conn(cell, circ);
     case RELAY_COMMAND_DATA:
       if((edge_type == EDGE_AP && --layer_hint->deliver_window < 0) ||
          (edge_type == EDGE_EXIT && --circ->deliver_window < 0)) {
-        log(LOG_DEBUG,"connection_edge_process_relay_cell(): circ deliver_window below 0. Killing.");
+        log_fn(LOG_DEBUG,"circ deliver_window below 0. Killing.");
         return -1; /* XXX kill the whole circ? */
       }
-      log(LOG_DEBUG,"connection_edge_process_relay_cell(): circ deliver_window now %d.", edge_type == EDGE_AP ? layer_hint->deliver_window : circ->deliver_window);
+      log_fn(LOG_DEBUG,"circ deliver_window now %d.", edge_type == EDGE_AP ? layer_hint->deliver_window : circ->deliver_window);
 
       if(circuit_consider_sending_sendme(circ, edge_type, layer_hint) < 0)
         return -1;
 
       if(!conn) {
-        log(LOG_DEBUG,"connection_edge_process_relay_cell(): relay cell dropped, unknown stream %d.",*(int*)conn->stream_id);
+        log_fn(LOG_DEBUG,"relay cell dropped, unknown stream %d.",*(int*)conn->stream_id);
         return 0;
       }
 
       if(--conn->deliver_window < 0) { /* is it below 0 after decrement? */
-        log(LOG_DEBUG,"connection_edge_process_relay_cell(): conn deliver_window below 0. Killing.");
+        log_fn(LOG_DEBUG,"conn deliver_window below 0. Killing.");
         return -1; /* somebody's breaking protocol. kill the whole circuit. */
       }
 
@@ -166,10 +166,10 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       return 0;
     case RELAY_COMMAND_END:
       if(!conn) {
-        log(LOG_DEBUG,"connection_edge_process_relay_cell(): end cell dropped, unknown stream %d.",*(int*)conn->stream_id);
+        log_fn(LOG_DEBUG,"end cell dropped, unknown stream %d.",*(int*)conn->stream_id);
         return 0;
       }
-      log(LOG_DEBUG,"connection_edge_process_relay_cell(): end cell for stream %d. Removing stream.",*(int*)conn->stream_id);
+      log_fn(LOG_DEBUG,"end cell for stream %d. Removing stream.",*(int*)conn->stream_id);
 
 #ifdef HALF_OPEN
       conn->done_sending = 1;
@@ -181,48 +181,48 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       break;
     case RELAY_COMMAND_EXTEND:
       if(conn) {
-        log(LOG_INFO,"connection_edge_process_relay_cell(): 'extend' for non-zero stream. Dropping.");
+        log_fn(LOG_INFO,"'extend' for non-zero stream. Dropping.");
         return 0;
       }
       return circuit_extend(cell, circ);
     case RELAY_COMMAND_EXTENDED:
       if(edge_type == EDGE_EXIT) {
-        log(LOG_INFO,"connection_edge_process_relay_cell(): 'extended' unsupported at exit. Dropping.");
+        log_fn(LOG_INFO,"'extended' unsupported at exit. Dropping.");
         return 0;
       }
-      log(LOG_DEBUG,"connection_edge_process_relay_cell(): Got an extended cell! Yay.");
+      log_fn(LOG_DEBUG,"Got an extended cell! Yay.");
       if(circuit_finish_handshake(circ, cell->payload+RELAY_HEADER_SIZE) < 0) {
-        log(LOG_INFO,"connection_edge_process_relay_cell(): circuit_finish_handshake failed.");
+        log_fn(LOG_INFO,"circuit_finish_handshake failed.");
         return -1;
       }
       return circuit_send_next_onion_skin(circ);
     case RELAY_COMMAND_TRUNCATE:
       if(edge_type == EDGE_AP) {
-        log(LOG_INFO,"connection_edge_process_relay_cell(): 'truncate' unsupported at AP. Dropping.");
+        log_fn(LOG_INFO,"'truncate' unsupported at AP. Dropping.");
         return 0;
       }
       if(circ->n_conn) {
         connection_send_destroy(circ->n_aci, circ->n_conn);
         circ->n_conn = NULL;
       }
-      log(LOG_DEBUG, "connection_edge_process_relay_cell(): Processed 'truncate', replying.");
+      log_fn(LOG_DEBUG, "Processed 'truncate', replying.");
       return connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED);
     case RELAY_COMMAND_TRUNCATED:
       if(edge_type == EDGE_EXIT) {
-        log(LOG_INFO,"connection_edge_process_relay_cell(): 'truncated' unsupported at exit. Dropping.");
+        log_fn(LOG_INFO,"'truncated' unsupported at exit. Dropping.");
         return 0;
       }
       return circuit_truncated(circ, layer_hint);
     case RELAY_COMMAND_CONNECTED:
       if(edge_type == EDGE_EXIT) {
-        log(LOG_INFO,"connection_edge_process_relay_cell(): 'connected' unsupported at exit. Dropping.");
+        log_fn(LOG_INFO,"'connected' unsupported at exit. Dropping.");
         return 0;
       }
       if(!conn) {
-        log(LOG_DEBUG,"connection_edge_process_relay_cell(): connected cell dropped, unknown stream %d.",*(int*)conn->stream_id);
+        log_fn(LOG_DEBUG,"connected cell dropped, unknown stream %d.",*(int*)conn->stream_id);
         break;
       }
-      log(LOG_DEBUG,"connection_edge_process_relay_cell(): Connected! Notifying application.");
+      log_fn(LOG_DEBUG,"Connected! Notifying application.");
       if(ap_handshake_socks_reply(conn, SOCKS4_REQUEST_GRANTED) < 0) {
         conn->marked_for_close = 1;
       }
@@ -232,12 +232,12 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         if(edge_type == EDGE_AP) {
           assert(layer_hint);
           layer_hint->package_window += CIRCWINDOW_INCREMENT;
-          log(LOG_DEBUG,"connection_edge_process_relay_cell(): circ-level sendme at AP, packagewindow %d.", layer_hint->package_window);
+          log_fn(LOG_DEBUG,"circ-level sendme at AP, packagewindow %d.", layer_hint->package_window);
           circuit_resume_edge_reading(circ, EDGE_AP, layer_hint);
         } else {
           assert(!layer_hint);
           circ->package_window += CIRCWINDOW_INCREMENT;
-          log(LOG_DEBUG,"connection_edge_process_relay_cell(): circ-level sendme at exit, packagewindow %d.", circ->package_window);
+          log_fn(LOG_DEBUG,"circ-level sendme at exit, packagewindow %d.", circ->package_window);
           circuit_resume_edge_reading(circ, EDGE_EXIT, layer_hint);
         }
         return 0;
@@ -248,7 +248,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       circuit_consider_stop_edge_reading(circ, edge_type, layer_hint);
       break;
     default:
-      log(LOG_DEBUG,"connection_edge_process_relay_cell(): unknown relay command %d.",relay_command);
+      log_fn(LOG_DEBUG,"unknown relay command %d.",relay_command);
   }
   return 0;
 }
@@ -264,16 +264,16 @@ int connection_edge_finished_flushing(connection_t *conn) {
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, &e, &len) < 0)  { /* not yet */
         if(errno != EINPROGRESS){
           /* yuck. kill it. */
-          log(LOG_DEBUG,"connection_edge_finished_flushing(): in-progress exit connect failed. Removing.");
+          log_fn(LOG_DEBUG,"in-progress exit connect failed. Removing.");
           return -1;
         } else {
-          log(LOG_DEBUG,"connection_edge_finished_flushing(): in-progress exit connect still waiting.");
+          log_fn(LOG_DEBUG,"in-progress exit connect still waiting.");
           return 0; /* no change, see if next time is better */
         }
       }
       /* the connect has finished. */
 
-      log(LOG_DEBUG,"connection_edge_finished_flushing(): Exit connection to %s:%u established.",
+      log_fn(LOG_DEBUG,"Exit connection to %s:%u established.",
           conn->address,conn->port);
 
       conn->state = EXIT_CONN_STATE_OPEN;
@@ -288,7 +288,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
       connection_stop_writing(conn);
       return connection_consider_sending_sendme(conn, conn->type);
     default:
-      log(LOG_DEBUG,"Bug: connection_edge_finished_flushing() called in unexpected state.");
+      log_fn(LOG_DEBUG,"BUG: called in unexpected state.");
       return 0;
   }
 

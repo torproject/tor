@@ -31,7 +31,7 @@ void directory_initiate_fetch(routerinfo_t *router) {
   if(connection_get_by_type(CONN_TYPE_DIR)) /* there's already a fetch running */
     return;
 
-  log(LOG_DEBUG,"directory_initiate_fetch(): initiating directory fetch");
+  log_fn(LOG_DEBUG,"initiating directory fetch");
 
   conn = connection_new(CONN_TYPE_DIR);
   if(!conn)
@@ -46,13 +46,13 @@ void directory_initiate_fetch(routerinfo_t *router) {
   if (router->signing_pkey)
     conn->pkey = crypto_pk_dup_key(router->signing_pkey);
   else {
-    log(LOG_ERR, "No signing key known for directory %s; signature won't be checked", conn->address);
+    log_fn(LOG_ERR, "No signing key known for directory %s; signature won't be checked", conn->address);
     conn->pkey = NULL;
   }
 
   s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if(s < 0) { 
-    log(LOG_ERR,"directory_initiate_fetch(): Error creating network socket.");
+    log_fn(LOG_ERR,"Error creating network socket.");
     connection_free(conn);
     return;
   }
@@ -63,7 +63,7 @@ void directory_initiate_fetch(routerinfo_t *router) {
   router_addr.sin_port = htons(router->dir_port);
   router_addr.sin_addr.s_addr = htonl(router->addr);
 
-  log(LOG_DEBUG,"directory_initiate_fetch(): Trying to connect to %s:%u.",router->address,router->dir_port);
+  log_fn(LOG_DEBUG,"Trying to connect to %s:%u.",router->address,router->dir_port);
 
   if(connect(s,(struct sockaddr *)&router_addr,sizeof(router_addr)) < 0){
     if(errno != EINPROGRESS){
@@ -80,7 +80,7 @@ void directory_initiate_fetch(routerinfo_t *router) {
         return;
       }
 
-      log(LOG_DEBUG,"directory_initiate_fetch(): connect in progress.");
+      log_fn(LOG_DEBUG,"connect in progress.");
       connection_watch_events(conn, POLLIN | POLLOUT); /* writable indicates finish, readable indicates broken link */
       conn->state = DIR_CONN_STATE_CONNECTING;
       return;
@@ -95,7 +95,7 @@ void directory_initiate_fetch(routerinfo_t *router) {
     return;
   }
 
-  log(LOG_DEBUG,"directory_initiate_fetch(): Connection to router %s:%u established.",router->address,router->dir_port);
+  log_fn(LOG_DEBUG,"Connection to router %s:%u established.",router->address,router->dir_port);
 
   if(directory_send_command(conn) < 0) {
     connection_remove(conn);
@@ -108,7 +108,7 @@ int directory_send_command(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_DIR);
 
   if(connection_write_to_buf(getstring, strlen(getstring), conn) < 0) {
-    log(LOG_DEBUG,"directory_send_command(): Couldn't write command to buffer.");
+    log_fn(LOG_DEBUG,"Couldn't write command to buffer.");
     return -1;
   }
 
@@ -141,20 +141,19 @@ int connection_dir_process_inbuf(connection_t *conn) {
 
   if(conn->inbuf_reached_eof) {
     if(conn->state != DIR_CONN_STATE_READING) {
-      log(LOG_DEBUG,"connection_dir_process_inbuf(): conn reached eof, not reading. Closing.");
+      log_fn(LOG_DEBUG,"conn reached eof, not reading. Closing.");
       return -1;
     }
     /* eof reached, kill it, but first process the_directory and learn about new routers. */
-//    log(LOG_DEBUG,"connection_dir_process_inbuf(): conn reached eof. Processing directory.");
-    log(LOG_DEBUG,"connection_dir_process_inbuf(): Received directory (size %d)\n%s", directorylen, the_directory);
+    log_fn(LOG_DEBUG,"Received directory (size %d)\n%s", directorylen, the_directory);
     if(directorylen == 0) {
-      log(LOG_DEBUG,"connection_dir_process_inbuf(): Empty directory. Ignoring.");
+      log_fn(LOG_DEBUG,"Empty directory. Ignoring.");
       return -1;
     }
     if(router_get_dir_from_string(the_directory, conn->pkey) < 0) {
-      log(LOG_DEBUG,"connection_dir_process_inbuf(): ...but parsing failed. Ignoring.");
+      log_fn(LOG_DEBUG,"...but parsing failed. Ignoring.");
     } else {
-      log(LOG_DEBUG,"connection_dir_process_inbuf(): and got a %s directory; updated routers.", 
+      log_fn(LOG_DEBUG,"and got a %s directory; updated routers.", 
           conn->pkey ? "authenticated" : "unauthenticated");
     }
 
@@ -170,7 +169,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
     case DIR_CONN_STATE_READING:
       return directory_handle_reading(conn);
     default:
-      log(LOG_DEBUG,"connection_dir_process_inbuf(): Got data while writing; Ignoring.");
+      log_fn(LOG_DEBUG,"Got data while writing; Ignoring.");
       break;
   }
 
@@ -183,7 +182,7 @@ int directory_handle_command(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_DIR);
 
   if(conn->inbuf_datalen < strlen(getstring)) { /* entire response available? */
-    log(LOG_DEBUG,"directory_handle_command(): Entire command not here yet. Waiting.");
+    log_fn(LOG_DEBUG,"Entire command not here yet. Waiting.");
     return 0; /* not yet */
   }
 
@@ -192,21 +191,21 @@ int directory_handle_command(connection_t *conn) {
   }
 
   if(strncasecmp(buf,getstring,strlen("GET / HTTP/"))) {
-    log(LOG_DEBUG,"directory_handle_command(): Command doesn't seem to be a get. Closing,");
+    log_fn(LOG_DEBUG,"Command doesn't seem to be a get. Closing,");
     return -1;
   }
 
   directory_rebuild(); /* rebuild it now, iff it's dirty */
 
   if(directorylen == 0) {
-    log(LOG_DEBUG,"directory_handle_command(): My directory is empty. Closing.");
+    log_fn(LOG_DEBUG,"My directory is empty. Closing.");
     return -1;
   }
 
-  log(LOG_DEBUG,"directory_handle_command(): Dumping directory to client."); 
+  log_fn(LOG_DEBUG,"Dumping directory to client."); 
   if((connection_write_to_buf(answerstring, strlen(answerstring), conn) < 0) ||
      (connection_write_to_buf(the_directory, directorylen, conn) < 0)) {
-    log(LOG_DEBUG,"directory_handle_command(): my outbuf is full. Oops.");
+    log_fn(LOG_DEBUG,"my outbuf is full. Oops.");
     return -1;
   }
 
@@ -226,7 +225,7 @@ int directory_handle_reading(connection_t *conn) {
       return 0;
     headers = tor_malloc(amt+1);
     if(connection_fetch_from_buf(headers,amt,conn) < 0) {
-      log(LOG_DEBUG,"directory_handle_reading(): fetch_from_buf failed (reading headers).");
+      log_fn(LOG_DEBUG,"fetch_from_buf failed (reading headers).");
       return -1;
     }
     headers[amt] = 0; /* null terminate it, */
@@ -237,15 +236,15 @@ int directory_handle_reading(connection_t *conn) {
   amt = conn->inbuf_datalen;
 
   if(amt + directorylen >= MAX_DIR_SIZE) {
-    log(LOG_DEBUG,"directory_handle_reading(): Directory too large. Failing messily.");
+    log_fn(LOG_DEBUG,"Directory too large. Failing messily.");
     return -1;
   }
 
-  log(LOG_DEBUG,"directory_handle_reading(): Pulling %d bytes in at offset %d.",
+  log_fn(LOG_DEBUG,"Pulling %d bytes in at offset %d.",
     amt, directorylen);
 
   if(connection_fetch_from_buf(the_directory+directorylen,amt,conn) < 0) {
-    log(LOG_DEBUG,"directory_handle_reading(): fetch_from_buf failed (reading dir).");
+    log_fn(LOG_DEBUG,"fetch_from_buf failed (reading dir).");
     return -1;    
   }
 
@@ -266,7 +265,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, &e, &len) < 0)  { /* not yet */
         if(errno != EINPROGRESS){
           /* yuck. kill it. */
-          log(LOG_DEBUG,"connection_dir_finished_flushing(): in-progress connect failed. Removing.");
+          log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
           router_forget_router(conn->addr, conn->port); /* don't try him again */
           return -1;
         } else {
@@ -275,22 +274,22 @@ int connection_dir_finished_flushing(connection_t *conn) {
       }
       /* the connect has finished. */
 
-      log(LOG_DEBUG,"connection_dir_finished_flushing(): Dir connection to router %s:%u established.",
+      log_fn(LOG_DEBUG,"Dir connection to router %s:%u established.",
           conn->address,conn->port);
 
       return directory_send_command(conn);
     case DIR_CONN_STATE_SENDING_COMMAND:
-      log(LOG_DEBUG,"connection_dir_finished_flushing(): client finished sending command.");
+      log_fn(LOG_DEBUG,"client finished sending command.");
       directorylen = 0;
       reading_headers = 1;
       conn->state = DIR_CONN_STATE_READING;
       connection_watch_events(conn, POLLIN);
       return 0;
     case DIR_CONN_STATE_WRITING:
-      log(LOG_DEBUG,"connection_dir_finished_flushing(): Finished writing directory. Closing.");
+      log_fn(LOG_DEBUG,"Finished writing directory. Closing.");
       return -1; /* kill it */
     default:
-      log(LOG_DEBUG,"Bug: connection_dir_finished_flushing() called in unexpected state.");
+      log_fn(LOG_DEBUG,"BUG: called in unexpected state.");
       return 0;
   }
 
@@ -298,7 +297,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
 }
 
 int connection_dir_create_listener(struct sockaddr_in *bindaddr) {
-  log(LOG_DEBUG,"connection_create_dir_listener starting");
+  log_fn(LOG_DEBUG,"starting");
   return connection_create_listener(bindaddr, CONN_TYPE_DIR_LISTENER);
 }
 

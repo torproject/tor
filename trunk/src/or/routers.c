@@ -218,7 +218,8 @@ int router_get_list_from_file(char *routerfile)
   string = tor_malloc(statbuf.st_size+1);
 
   if(read(fd,string,statbuf.st_size) != statbuf.st_size) {
-    log_fn(LOG_ERR,"Couldn't read all %d bytes of file '%s'.",statbuf.st_size,routerfile);
+    log_fn(LOG_ERR,"Couldn't read all %ld bytes of file '%s'.",
+           (long)statbuf.st_size,routerfile);
     free(string);
     close(fd);
     return -1;

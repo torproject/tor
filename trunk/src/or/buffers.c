@@ -60,7 +60,7 @@ int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, i
      */
   }
 
-//  log(LOG_DEBUG,"read_to_buf(): reading at most %d bytes.",at_most);
+//  log_fn(LOG_DEBUG,"reading at most %d bytes.",at_most);
   read_result = read(s, *buf+*buf_datalen, at_most);
   if (read_result < 0) {
     if(errno!=EAGAIN) { /* it's a real error */
@@ -68,12 +68,12 @@ int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, i
     }
     return 0;
   } else if (read_result == 0) {
-    log(LOG_DEBUG,"read_to_buf(): Encountered eof");
+    log_fn(LOG_DEBUG,"Encountered eof");
     *reached_eof = 1;
     return 0;
   } else { /* we read some bytes */
     *buf_datalen += read_result;
-//    log(LOG_DEBUG,"read_to_buf(): Read %d bytes. %d on inbuf.",read_result, *buf_datalen);
+//    log_fn(LOG_DEBUG,"Read %d bytes. %d on inbuf.",read_result, *buf_datalen);
     return read_result;
   }
 }
@@ -98,13 +98,13 @@ int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datale
     if(errno!=EAGAIN) { /* it's a real error */
       return -1;
     }
-    log(LOG_DEBUG,"flush_buf(): write() would block, returning.");
+    log_fn(LOG_DEBUG,"write() would block, returning.");
     return 0;
   } else {
     *buf_datalen -= write_result;
     *buf_flushlen -= write_result;
     memmove(*buf, *buf+write_result, *buf_datalen);
-//    log(LOG_DEBUG,"flush_buf(): flushed %d bytes, %d ready to flush, %d remain.",
+//    log_fn(LOG_DEBUG,"flushed %d bytes, %d ready to flush, %d remain.",
 //       write_result,*buf_flushlen,*buf_datalen);
     return *buf_flushlen;
   }
@@ -122,13 +122,13 @@ int write_to_buf(char *string, int string_len,
   /* this is the point where you would grow the buffer, if you want to */
 
   if (string_len + *buf_datalen > *buflen) { /* we're out of luck */
-    log(LOG_DEBUG, "write_to_buf(): buflen too small. Time to implement growing dynamic bufs.");
+    log_fn(LOG_DEBUG, "buflen too small. Time to implement growing dynamic bufs.");
     return -1;
   }
 
   memcpy(*buf+*buf_datalen, string, string_len);
   *buf_datalen += string_len;
-//  log(LOG_DEBUG,"write_to_buf(): added %d bytes to buf (now %d total).",string_len, *buf_datalen);
+//  log_fn(LOG_DEBUG,"added %d bytes to buf (now %d total).",string_len, *buf_datalen);
   return *buf_datalen;
 }
 

@@ -17,7 +17,7 @@ int connection_or_process_inbuf(connection_t *conn) {
 
   if(conn->inbuf_reached_eof) {
     /* eof reached, kill it. */
-    log(LOG_DEBUG,"connection_or_process_inbuf(): conn reached eof. Closing.");
+    log_fn(LOG_DEBUG,"conn reached eof. Closing.");
     return -1;
   }
 
@@ -33,7 +33,7 @@ int connection_or_process_inbuf(connection_t *conn) {
     case OR_CONN_STATE_OPEN:
       return connection_process_cell_from_inbuf(conn);
     default:
-      log(LOG_DEBUG,"connection_or_process_inbuf() called in state where I'm writing. Ignoring buf for now.");
+      log_fn(LOG_DEBUG,"called in state where I'm writing. Ignoring buf for now.");
   }
 
   return 0;
@@ -51,7 +51,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, &e, &len) < 0)  { /* not yet */
         if(errno != EINPROGRESS){
           /* yuck. kill it. */
-          log(LOG_DEBUG,"connection_or_finished_flushing(): in-progress connect failed. Removing.");
+          log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
           return -1;
         } else {
           return 0; /* no change, see if next time is better */
@@ -59,7 +59,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       }
       /* the connect has finished. */
 
-      log(LOG_DEBUG,"connection_or_finished_flushing() : OR connection to router %s:%u established.",
+      log_fn(LOG_DEBUG,"OR connection to router %s:%u established.",
           conn->address,conn->port);
 
       if(options.OnionRouter)
@@ -67,18 +67,18 @@ int connection_or_finished_flushing(connection_t *conn) {
       else
         return or_handshake_op_send_keys(conn);
     case OR_CONN_STATE_CLIENT_SENDING_AUTH:
-      log(LOG_DEBUG,"connection_or_finished_flushing(): client finished sending auth.");
+      log_fn(LOG_DEBUG,"client finished sending auth.");
       conn->state = OR_CONN_STATE_CLIENT_AUTH_WAIT;
       connection_watch_events(conn, POLLIN);
       return 0;
     case OR_CONN_STATE_CLIENT_SENDING_NONCE:
-      log(LOG_DEBUG,"connection_or_finished_flushing(): client finished sending nonce.");
+      log_fn(LOG_DEBUG,"client finished sending nonce.");
       conn_or_init_crypto(conn);
       connection_or_set_open(conn);
 
       return connection_process_inbuf(conn); /* in case there's anything waiting on it */
     case OR_CONN_STATE_SERVER_SENDING_AUTH:
-      log(LOG_DEBUG,"connection_or_finished_flushing(): server finished sending auth.");
+      log_fn(LOG_DEBUG,"server finished sending auth.");
       conn->state = OR_CONN_STATE_SERVER_NONCE_WAIT;
       connection_watch_events(conn, POLLIN);
       return 0;
@@ -87,7 +87,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       connection_stop_writing(conn);
       return 0;
     default:
-      log(LOG_DEBUG,"Bug: connection_or_finished_flushing() called in unexpected state.");
+      log_fn(LOG_DEBUG,"BUG: called in unexpected state.");
       return 0;
   }
 
