@@ -505,9 +505,7 @@ int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
 static int
 router_resolve(routerinfo_t *router)
 {
-  struct hostent *rent;
-
-  if (tor_lookup_hostname(router->address, &router->addr)) {
+  if (tor_lookup_hostname(router->address, &router->addr) != 0) {
     log_fn(LOG_WARN,"Could not get address for router %s (%s).",
            router->address, router->nickname);
     return -1;
