@@ -13,7 +13,7 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
-
+#include <assert.h>
 
 /* =====
  * smartlist_t: a simple resizeable array abstraction.
