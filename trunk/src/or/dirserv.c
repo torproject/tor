@@ -32,8 +32,7 @@ typedef struct fingerprint_entry_t {
 
 /** List of nickname-\>identity fingerprint mappings for all the routers
  * that we recognize. Used to prevent Sybil attacks. */
-static fingerprint_entry_t fingerprint_list[MAX_ROUTERS_IN_DIR];
-static int n_fingerprints = 0;
+static smartlist_t *fingerprint_list = NULL;
 
 /** Add the fingerprint <b>fp</b> for the nickname <b>nickname</b> to
  * the global list of recognized identity key fingerprints.
@@ -42,16 +41,22 @@ void /* Should be static; exposed for testing */
 add_fingerprint_to_dir(const char *nickname, const char *fp)
 {
   int i;
-  for (i = 0; i < n_fingerprints; ++i) {
-    if (!strcasecmp(fingerprint_list[i].nickname,nickname)) {
-      free(fingerprint_list[i].fingerprint);
-      fingerprint_list[i].fingerprint = tor_strdup(fp);
+  fingerprint_entry_t *ent;
+  if (!fingerprint_list)
+    fingerprint_list = smartlist_create();
+
+  for (i = 0; i < smartlist_len(fingerprint_list); ++i) {
+    ent = smartlist_get(fingerprint_list, i);
+    if (!strcasecmp(ent->nickname,nickname)) {
+      tor_free(ent->fingerprint);
+      ent->fingerprint = tor_strdup(fp);
       return;
     }
   }
-  fingerprint_list[n_fingerprints].nickname = tor_strdup(nickname);
-  fingerprint_list[n_fingerprints].fingerprint = tor_strdup(fp);
-  ++n_fingerprints;
+  ent = tor_malloc(sizeof(fingerprint_entry_t));
+  ent->nickname = tor_strdup(nickname);
+  ent->fingerprint = tor_strdup(fp);
+  smartlist_add(fingerprint_list, ent);
 }
 
 /** Add the nickname and fingerprint for this OR to the recognized list.
@@ -80,14 +85,15 @@ dirserv_parse_fingerprint_file(const char *fname)
   FILE *file;
   char line[FINGERPRINT_LEN+MAX_NICKNAME_LEN+20+1];
   char *nickname, *fingerprint;
-  fingerprint_entry_t fingerprint_list_tmp[MAX_ROUTERS_IN_DIR];
-  int n_fingerprints_tmp = 0;
+  smartlist_t *fingerprint_list_new;
   int i, result;
+  fingerprint_entry_t *ent;
 
   if(!(file = fopen(fname, "r"))) {
     log_fn(LOG_WARN, "Cannot open fingerprint file %s", fname);
     return -1;
   }
+  fingerprint_list_new = smartlist_create();
   while( (result=parse_line_from_file(line, sizeof(line),file,&nickname,&fingerprint)) > 0) {
     if (strlen(nickname) > MAX_NICKNAME_LEN) {
       log(LOG_WARN, "Nickname %s too long in fingerprint file. Skipping.", nickname);
@@ -99,34 +105,37 @@ dirserv_parse_fingerprint_file(const char *fname)
              nickname, fingerprint);
       continue;
     }
-    for (i = 0; i < n_fingerprints_tmp; ++i) {
-      if (0==strcasecmp(fingerprint_list_tmp[i].nickname, nickname)) {
+    for (i = 0; i < smartlist_len(fingerprint_list_new); ++i) {
+      ent = smartlist_get(fingerprint_list_new, i);
+      if (0==strcasecmp(ent->nickname, nickname)) {
         log(LOG_WARN, "Duplicate nickname %s. Skipping.",nickname);
         break; /* out of the for. the 'if' below means skip to the next line. */
       }
     }
-    if(i == n_fingerprints_tmp) { /* not a duplicate */
-      fingerprint_list_tmp[n_fingerprints_tmp].nickname = tor_strdup(nickname);
-      fingerprint_list_tmp[n_fingerprints_tmp].fingerprint = tor_strdup(fingerprint);
-      ++n_fingerprints_tmp;
+    if(i == smartlist_len(fingerprint_list_new)) { /* not a duplicate */
+      ent = tor_malloc(sizeof(fingerprint_entry_t));
+      ent->nickname = tor_strdup(nickname);
+      ent->fingerprint = tor_strdup(fingerprint);
+      smartlist_add(fingerprint_list_new, ent);
     }
   }
   fclose(file);
   if(result == 0) { /* eof; replace the global fingerprints list. */
     dirserv_free_fingerprint_list();
-    memcpy(fingerprint_list, fingerprint_list_tmp,
-           sizeof(fingerprint_entry_t)*n_fingerprints_tmp);
-    n_fingerprints = n_fingerprints_tmp;
+    fingerprint_list = fingerprint_list_new;
     /* Delete any routers whose fingerprints we no longer recognize */
     directory_remove_unrecognized();
     return 0;
   }
   /* error */
   log_fn(LOG_WARN, "Error reading from fingerprint file");
-  for (i = 0; i < n_fingerprints_tmp; ++i) {
-    free(fingerprint_list_tmp[i].nickname);
-    free(fingerprint_list_tmp[i].fingerprint);
+  for (i = 0; i < smartlist_len(fingerprint_list_new); ++i) {
+    ent = smartlist_get(fingerprint_list_new, i);
+    tor_free(ent->nickname);
+    tor_free(ent->fingerprint);
+    tor_free(ent);
   }
+  smartlist_free(fingerprint_list_new);
   return -1;
 }
 
@@ -137,20 +146,24 @@ dirserv_parse_fingerprint_file(const char *fname)
 int
 dirserv_router_fingerprint_is_known(const routerinfo_t *router)
 {
-  int i;
+  int i, found=0;
   fingerprint_entry_t *ent =NULL;
   char fp[FINGERPRINT_LEN+1];
 
-  log_fn(LOG_DEBUG, "%d fingerprints known.", n_fingerprints);
-  for (i=0;i<n_fingerprints;++i) {
-    log_fn(LOG_DEBUG,"%s vs %s", router->nickname, fingerprint_list[i].nickname);
-    if (!strcasecmp(router->nickname,fingerprint_list[i].nickname)) {
-      ent = &fingerprint_list[i];
+  if (!fingerprint_list)
+    fingerprint_list = smartlist_create();
+
+  log_fn(LOG_DEBUG, "%d fingerprints known.", smartlist_len(fingerprint_list));
+  for (i=0;i<smartlist_len(fingerprint_list);++i) {
+    ent = smartlist_get(fingerprint_list, i);
+    log_fn(LOG_DEBUG,"%s vs %s", router->nickname, ent->nickname);
+    if (!strcasecmp(router->nickname,ent->nickname)) {
+      found = 1;
       break;
     }
   }
 
-  if (!ent) { /* No such server known */
+  if (!found) { /* No such server known */
     log_fn(LOG_INFO,"no fingerprint found for %s",router->nickname);
     return 0;
   }
@@ -173,8 +186,13 @@ static int
 router_nickname_is_approved(const char *nickname)
 {
   int i;
-  for (i=0;i<n_fingerprints;++i) {
-    if (!strcasecmp(nickname,fingerprint_list[i].nickname)) {
+  fingerprint_entry_t *ent;
+  if (!fingerprint_list)
+    return 0;
+
+  for (i=0;i<smartlist_len(fingerprint_list);++i) {
+    ent = smartlist_get(fingerprint_list, i);
+    if (!strcasecmp(nickname,ent->nickname)) {
       return 1;
     }
   }
@@ -186,11 +204,18 @@ void
 dirserv_free_fingerprint_list()
 {
   int i;
-  for (i = 0; i < n_fingerprints; ++i) {
-    free(fingerprint_list[i].nickname);
-    free(fingerprint_list[i].fingerprint);
+  fingerprint_entry_t *ent;
+  if (!fingerprint_list)
+    return;
+
+  for (i = 0; i < smartlist_len(fingerprint_list); ++i) {
+    ent = smartlist_get(fingerprint_list, i);
+    tor_free(ent->nickname);
+    tor_free(ent->fingerprint);
+    tor_free(ent);
   }
-  n_fingerprints = 0;
+  smartlist_free(fingerprint_list);
+  fingerprint_list = NULL;
 }
 
 /*
@@ -208,8 +233,7 @@ typedef struct descriptor_entry_t {
 } descriptor_entry_t;
 
 /** List of all server descriptors that this dirserv is holding. */
-static descriptor_entry_t *descriptor_list[MAX_ROUTERS_IN_DIR];
-static int n_descriptors = 0;
+static smartlist_t *descriptor_list = NULL;
 
 /** Release the storage held by <b>desc</b> */
 static void free_descriptor_entry(descriptor_entry_t *desc)
@@ -225,11 +249,11 @@ static void free_descriptor_entry(descriptor_entry_t *desc)
 void
 dirserv_free_descriptors()
 {
-  int i;
-  for (i = 0; i < n_descriptors; ++i) {
-    free_descriptor_entry(descriptor_list[i]);
-  }
-  n_descriptors = 0;
+  if (!descriptor_list)
+    return;
+  SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t *, d,
+                    free_descriptor_entry(d));
+  smartlist_clear(descriptor_list);
 }
 
 /** Parse the server descriptor at *desc and maybe insert it into the
@@ -243,14 +267,17 @@ dirserv_free_descriptors()
 int
 dirserv_add_descriptor(const char **desc)
 {
-  descriptor_entry_t **desc_ent_ptr;
+  descriptor_entry_t *ent = NULL;
   routerinfo_t *ri = NULL;
-  int i, r;
+  int i, r, found=-1;
   char *start, *end;
   char *desc_tmp = NULL;
   const char *cp;
   size_t desc_len;
   time_t now;
+
+  if (!descriptor_list)
+    descriptor_list = smartlist_create();
 
   start = strstr(*desc, "router ");
   if (!start) {
@@ -309,16 +336,16 @@ dirserv_add_descriptor(const char **desc)
   }
 
   /* Do we already have an entry for this router? */
-  desc_ent_ptr = NULL;
-  for (i = 0; i < n_descriptors; ++i) {
-    if (!strcasecmp(ri->nickname, descriptor_list[i]->nickname)) {
-      desc_ent_ptr = &descriptor_list[i];
+  for (i = 0; i < smartlist_len(descriptor_list); ++i) {
+    ent = smartlist_get(descriptor_list, i);
+    if (!strcasecmp(ri->nickname, ent->nickname)) {
+      found = i;
       break;
     }
   }
-  if (desc_ent_ptr) {
+  if (found >= 0) {
     /* if so, decide whether to update it. */
-    if ((*desc_ent_ptr)->published > ri->published_on) {
+    if (ent->published > ri->published_on) {
       /* We already have a newer descriptor */
       log_fn(LOG_INFO,"We already have a newer desc for nickname %s. Not adding.",ri->nickname);
       /* This isn't really an error; return success. */
@@ -328,26 +355,23 @@ dirserv_add_descriptor(const char **desc)
     }
     /* We don't have a newer one; we'll update this one. */
     log_fn(LOG_INFO,"Dirserv updating desc for nickname %s",ri->nickname);
-    free_descriptor_entry(*desc_ent_ptr);
+    free_descriptor_entry(ent);
+    smartlist_del_keeporder(descriptor_list, found);
   } else {
-    /* Add this at the end. */
-    if (n_descriptors >= MAX_ROUTERS_IN_DIR) {
-      log_fn(LOG_WARN,"Too many descriptors in directory; can't add another.");
-      return -1;
-    } else {
-      log_fn(LOG_INFO,"Dirserv adding desc for nickname %s",ri->nickname);
-      desc_ent_ptr = &descriptor_list[n_descriptors++];
-    }
+    /* Add at the end. */
+    log_fn(LOG_INFO,"Dirserv adding desc for nickname %s",ri->nickname);
   }
 
-  (*desc_ent_ptr) = tor_malloc(sizeof(descriptor_entry_t));
-  (*desc_ent_ptr)->nickname = tor_strdup(ri->nickname);
-  (*desc_ent_ptr)->published = ri->published_on;
-  (*desc_ent_ptr)->desc_len = desc_len;
-  (*desc_ent_ptr)->descriptor = tor_malloc(desc_len+1);
-  strncpy((*desc_ent_ptr)->descriptor, start, desc_len);
-  (*desc_ent_ptr)->descriptor[desc_len] = '\0';
-  (*desc_ent_ptr)->router = ri;
+  ent = tor_malloc(sizeof(descriptor_entry_t));
+  ent->nickname = tor_strdup(ri->nickname);
+  ent->published = ri->published_on;
+  ent->desc_len = desc_len;
+  ent->descriptor = tor_malloc(desc_len+1);
+  strncpy(ent->descriptor, start, desc_len);
+  ent->descriptor[desc_len] = '\0';
+  ent->router = ri;
+  smartlist_add(descriptor_list, ent);
+
   *desc = end;
   directory_set_dirty();
 
@@ -362,12 +386,17 @@ static void
 directory_remove_unrecognized(void)
 {
   int i;
-  for (i = 0; i < n_descriptors; ++i) {
-    if (dirserv_router_fingerprint_is_known(descriptor_list[i]->router)<=0) {
+  descriptor_entry_t *ent;
+  if (!descriptor_list)
+    descriptor_list = smartlist_create();
+
+  for (i = 0; i < smartlist_len(descriptor_list); ++i) {
+    ent = smartlist_get(descriptor_list, i);
+    if (dirserv_router_fingerprint_is_known(ent->router)<=0) {
       log(LOG_INFO, "Router %s is no longer recognized",
-          descriptor_list[i]->nickname);
-      free_descriptor_entry(descriptor_list[i]);
-      descriptor_list[i--] = descriptor_list[--n_descriptors];
+          ent->nickname);
+      free_descriptor_entry(ent);
+      smartlist_del(descriptor_list, i--);
     }
   }
 }
@@ -408,15 +437,15 @@ dirserv_init_from_directory_string(const char *dir)
 static int
 list_running_servers(char **nicknames_out)
 {
-  char *nickname_lst[MAX_ROUTERS_IN_DIR];
   connection_t **connection_array;
   int n_conns;
   connection_t *conn;
   char *cp;
-  int n = 0, i;
+  int i;
   int length;
   *nicknames_out = NULL;
-  nickname_lst[n++] = options.Nickname;
+  smartlist_t *nicknames = smartlist_create();
+  smartlist_add(nicknames, options.Nickname);
 
   get_connection_array(&connection_array, &n_conns);
   for (i = 0; i<n_conns; ++i) {
@@ -427,21 +456,20 @@ list_running_servers(char **nicknames_out)
       continue;
     if (!router_nickname_is_approved(conn->nickname))
       continue; /* If we removed them from the approved list, don't list it.*/
-    nickname_lst[n++] = conn->nickname;
+    smartlist_add(nicknames, conn->nickname);
   }
-  length = n + 1; /* spaces + EOS + 1. */
-  for (i = 0; i<n; ++i) {
-    length += strlen(nickname_lst[i]);
-  }
+  length = smartlist_len(nicknames) + 1; /* spaces + EOS + 1. */
+  SMARTLIST_FOREACH(nicknames, char *, c, length += strlen(c));
   *nicknames_out = tor_malloc_zero(length);
   cp = *nicknames_out;
-  for (i = 0; i<n; ++i) {
+  for (i = 0; i<smartlist_len(nicknames); ++i) {
     if (i)
       strcat(cp, " ");
-    strcat(cp, nickname_lst[i]); /* can't overflow */
+    strcat(cp, (char*)smartlist_get(nicknames,i)); /* can't overflow */
     while (*cp)
       ++cp;
   }
+  smartlist_free(nicknames);
   return 0;
 }
 
@@ -453,15 +481,18 @@ dirserv_remove_old_servers(void)
 {
   int i;
   time_t cutoff;
+  descriptor_entry_t *ent;
+  if (!descriptor_list)
+    descriptor_list = smartlist_create();
+
   cutoff = time(NULL) - ROUTER_MAX_AGE;
-  for (i = 0; i < n_descriptors; ++i) {
-    if (descriptor_list[i]->published < cutoff) {
+  for (i = 0; i < smartlist_len(descriptor_list); ++i) {
+    ent = smartlist_get(descriptor_list, i);
+    if (ent->published < cutoff) {
       /* descriptor_list[i] is too old.  Remove it. */
-      free_descriptor_entry(descriptor_list[i]);
-      descriptor_list[i] = descriptor_list[n_descriptors-1];
-      --n_descriptors;
+      free_descriptor_entry(ent);
+      smartlist_del(descriptor_list, i--);
       directory_set_dirty();
-      --i; /* Don't advance the index; consider the new value now at i. */
     }
   }
 }
@@ -483,6 +514,9 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
   int i;
   eos = s+maxlen;
 
+  if (!descriptor_list)
+    descriptor_list = smartlist_create();
+
   if (list_running_servers(&cp))
     return -1;
   dirserv_remove_old_servers();
@@ -497,10 +531,10 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
   i = strlen(s);
   cp = s+i;
 
-  for (i = 0; i < n_descriptors; ++i) {
-    if (strlcat(s, descriptor_list[i]->descriptor, maxlen) >= maxlen)
-      goto truncated;
-  }
+  SMARTLIST_FOREACH(descriptor_list, descriptor_entry_t *, d,
+    if (strlcat(s, d->descriptor, maxlen) >= maxlen)
+      goto truncated);
+
   /* These multiple strlcat calls are inefficient, but dwarfed by the RSA
      signature.
   */
@@ -510,7 +544,6 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
     goto truncated;
   if (strlcat(s, "\n", maxlen) >= maxlen)
     goto truncated;
-
 
   if (router_get_dir_hash(s,digest)) {
     log_fn(LOG_WARN,"couldn't compute digest");

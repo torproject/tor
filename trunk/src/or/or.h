@@ -557,7 +557,6 @@ typedef struct {
 
 } routerinfo_t;
 
-#define MAX_ROUTERS_IN_DIR 1024
 /** Contents of a directory of onion routers. */
 typedef struct {
   /** List of routerinfo_t */
