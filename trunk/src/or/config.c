@@ -337,7 +337,7 @@ options_act(void) {
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
 
-  if (retry_all_listeners(1) < 0) {
+  if (!we_are_hibernating() && retry_all_listeners(1) < 0) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
   }
