@@ -225,7 +225,7 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
   relay_header_t rh;
 
   tor_assert(circ && cell && recognized);
-  tor_assert(cell_direction == CELL_DIRECTION_IN || cell_direction == CELL_DIRECTION_OUT); 
+  tor_assert(cell_direction == CELL_DIRECTION_IN || cell_direction == CELL_DIRECTION_OUT);
 
   if(cell_direction == CELL_DIRECTION_IN) {
     if(CIRCUIT_IS_ORIGIN(circ)) { /* We're at the beginning of the circuit.
@@ -287,7 +287,7 @@ static int
 circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
                            int cell_direction,
                            crypt_path_t *layer_hint)
-{ 
+{
   connection_t *conn; /* where to send the cell */
   crypt_path_t *thishop; /* counter for repeated crypts */
 
@@ -575,9 +575,9 @@ connection_edge_process_relay_cell_not_open(
       return 0;
     }
     connection_ap_handshake_socks_resolved(conn,
-		   cell->payload[RELAY_HEADER_SIZE], /*answer_type*/
-		   cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
-		   cell->payload+RELAY_HEADER_SIZE+2); /* answer */
+                   cell->payload[RELAY_HEADER_SIZE], /*answer_type*/
+                   cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
+                   cell->payload+RELAY_HEADER_SIZE+2); /* answer */
     conn->socks_request->has_finished = 1;
     connection_mark_for_close(conn);
     return 0;
@@ -767,14 +767,14 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     case RELAY_COMMAND_RESOLVE:
       if (layer_hint) {
         log_fn(LOG_WARN,"resolve request unsupported at AP; dropping.");
-	return 0;
+        return 0;
       } else if (conn) {
-	log_fn(LOG_WARN, "resolve request for known stream; dropping.");
-	return 0;
+        log_fn(LOG_WARN, "resolve request for known stream; dropping.");
+        return 0;
       } else if (circ->purpose != CIRCUIT_PURPOSE_OR) {
-	log_fn(LOG_WARN, "resolve request on circ with purpose %d; dropping",
-	       circ->purpose);
-	return 0;
+        log_fn(LOG_WARN, "resolve request on circ with purpose %d; dropping",
+               circ->purpose);
+        return 0;
       }
       connection_exit_begin_resolve(cell, circ);
       return 0;

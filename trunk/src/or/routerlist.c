@@ -851,7 +851,7 @@ void router_update_status_from_smartlist(routerinfo_t *router,
     strlcat(cp, name, n);
     strlcat(cp, " ", n);
   }
-  log_fn(LOG_DEBUG, "Updating status of %s from list \"%s\"", 
+  log_fn(LOG_DEBUG, "Updating status of %s from list \"%s\"",
          router->nickname, cp);
   tor_free(cp);
 #endif

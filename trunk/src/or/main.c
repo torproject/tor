@@ -1081,7 +1081,7 @@ void nt_service_body(int argc, char **argv)
   fclose(f);
   service_status.dwServiceType = SERVICE_WIN32;
   service_status.dwCurrentState = SERVICE_START_PENDING;
-  service_status.dwControlsAccepted = 
+  service_status.dwControlsAccepted =
         SERVICE_ACCEPT_STOP |
                 SERVICE_ACCEPT_SHUTDOWN;
   service_status.dwWin32ExitCode = 0;
