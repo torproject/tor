@@ -204,11 +204,15 @@ void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
     onion_pending_remove(circ);
   }
 
-  if(cell->aci == circ->p_aci) /* the destroy came from behind */
+  if(cell->aci == circ->p_aci || circ->cpath) {
+    /* either the destroy came from behind, or we're the AP */
     circ->p_conn = NULL;
-  if(cell->aci == circ->n_aci) /* the destroy came from ahead */
+    circuit_close(circ);
+  } else { /* the destroy came from ahead */
     circ->n_conn = NULL;
-  circuit_close(circ);
+    log(LOG_DEBUG, "command_process_destroy_cell(): Delivering 'truncated' back.");
+    connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED);
+  }
 }
 
 /*
