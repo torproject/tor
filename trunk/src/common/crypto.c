@@ -55,6 +55,7 @@ const char crypto_c_id[] = "$Id$";
 #include "aes.h"
 #include "util.h"
 #include "container.h"
+#include "compat.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x00905000l
 #error "We require openssl >= 0.9.5"
@@ -99,6 +100,8 @@ crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
 RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env);
 EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
 DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
+
+static int setup_openssl_threading(void);
 
 /** Return the number of bytes added by padding method <b>padding</b>.
  */
@@ -157,6 +160,7 @@ int crypto_global_init()
   if (!_crypto_global_initialized) {
       ERR_load_crypto_strings();
       _crypto_global_initialized = 1;
+      setup_openssl_threading();
   }
   return 0;
 }
@@ -1626,3 +1630,27 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
   crypto_free_digest_env(d);
 }
 
+#ifdef TOR_IS_MULTITHREADED
+static tor_mutex_t **_openssl_mutexes = NULL;
+static void
+_openssl_locking_cb(int mode, int n, const char *file, int line)
+{
+  if (mode & CRYPTO_LOCK)
+    tor_mutex_acquire(_openssl_mutexes[n]);
+  else
+    tor_mutex_release(_openssl_mutexes[n]);
+}
+static int
+setup_openssl_threading(void) {
+  int i;
+  int n = CRYPTO_num_locks();
+  _openssl_mutexes = tor_malloc(n*sizeof(tor_mutex_t *));
+  for (i=0; i <n; ++i)
+    _openssl_mutexes[i] = tor_mutex_new();
+  CRYPTO_set_locking_callback(_openssl_locking_cb);
+  CRYPTO_set_id_callback(tor_get_thread_id);
+  return 0;
+}
+#else
+static int setup_openssl_threading(void) { return 0; }
+#endif
