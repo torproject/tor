@@ -211,8 +211,8 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
     return NULL;
   }
 
-  onion_extend_cpath(&circ->cpath, circ->build_state, &firsthop);
-  if(!CIRCUIT_IS_ORIGIN(circ)) {
+  if(onion_extend_cpath(&circ->cpath, circ->build_state, &firsthop)<0 ||
+     !CIRCUIT_IS_ORIGIN(circ)) {
     log_fn(LOG_INFO,"Generating first cpath hop failed.");
     circuit_mark_for_close(circ);
     return NULL;
@@ -220,6 +220,7 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
 
   /* now see if we're already connected to the first OR in 'route' */
 
+  tor_assert(firsthop);
   log_fn(LOG_DEBUG,"Looking for firsthop '%s:%u'",
       firsthop->address,firsthop->or_port);
   /* imprint the circuit with its future n_conn->id */
@@ -980,7 +981,7 @@ onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest)
   routerinfo_t *exit;
   router_get_routerlist(&rl);
   r = new_route_len(options.PathlenCoinWeight, purpose, rl->routers);
-  if (r < 0)
+  if (r < 1) /* must be at least 1 */
     return NULL;
   info = tor_malloc_zero(sizeof(cpath_build_state_t));
   info->desired_path_len = r;
