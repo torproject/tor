@@ -197,6 +197,7 @@ get_recommended_software_from_directory(const char *str)
   char *version, *comma, *cp;
   tor_version_t mine, other;
   int found_newer = 0, r;
+  static int warned_too_new=0;
 
   vl = versionlist;
 
@@ -234,8 +235,11 @@ get_recommended_software_from_directory(const char *str)
       break;
   }
   if (!found_newer) {
-    log_fn(LOG_WARN, "This version of Tor (%s) is newer than any on the recommended list (%s)",
-           myversion, versionlist);
+    if (!warned_too_new) {
+      log_fn(LOG_WARN, "This version of Tor (%s) is newer than any on the recommended list (%s)",
+             myversion, versionlist);
+      warned_too_new=1;
+    }
     return 0;
   } else {
     return 1;
