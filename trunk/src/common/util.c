@@ -234,22 +234,6 @@ void set_uint32(char *cp, uint32_t v)
 }
 #endif
 
-/** Encode the first <b>fromlen</b> bytes stored at <b>from</b> in hexidecimal;
- * write the result as a NUL-terminated string to <b>to</b>.  <b>to</b> must
- * have at least (2*fromlen)+1 bytes of free space.
- */
-void hex_encode(const char *from, int fromlen, char *to)
-{
-  const unsigned char *fp = from;
-  static const char TABLE[] = "0123456789abcdef";
-  tor_assert(from && fromlen>=0 && to);
-  while (fromlen--) {
-    *to++ = TABLE[*fp >> 4];
-    *to++ = TABLE[*fp & 7];
-    ++fp;
-  }
-  *to = '\0';
-}
 
 /** Return a pointer to a NUL-terminated hexidecimal string encoding
  * the first <b>fromlen</b> bytes of <b>from</b>. (fromlen must be \<= 32.) The
@@ -261,7 +245,7 @@ const char *hex_str(const char *from, int fromlen)
   static char buf[65];
   if (fromlen>(sizeof(buf)-1)/2)
     fromlen = (sizeof(buf)-1)/2;
-  hex_encode(from,fromlen,buf);
+  base16_encode(buf,64,from,fromlen);
   return buf;
 }
 

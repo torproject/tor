@@ -417,7 +417,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
     return -1;
   }
   r_cookie = ptr;
-  hex_encode(r_cookie,4,hexcookie);
+  base16_encode(hexcookie,9,r_cookie,4);
 
   /* Try DH handshake... */
   dh = crypto_dh_new();
@@ -637,7 +637,7 @@ rend_service_rendezvous_has_opened(circuit_t *circuit)
   hop = circuit->build_state->pending_final_cpath;
   tor_assert(hop);
 
-  hex_encode(circuit->rend_cookie, 4, hexcookie);
+  base16_encode(hexcookie,9,circuit->rend_cookie,4);
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                 circuit->rend_pk_digest,10);
 
