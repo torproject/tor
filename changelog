@@ -7,8 +7,9 @@ tor (0.1.0.0-alpha-cvs-1) UNRELEASED; urgency=low
   * Add a snippet to disable epoll in etc/default/tor, commented out.
   * Add a snippet to set nice level in etc/default/tor.
   * Wait for 60 seconds in init stop.  35 is too little.
+  * Don't depend on python anymore - tor-resolve is C now.
 
- -- Peter Palfrader <weasel@debian.org>  Thu, 10 Mar 2005 19:18:28 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 15 Mar 2005 23:33:54 +0100
 
 tor (0.0.9.4-1) unstable; urgency=low
 
