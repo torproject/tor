@@ -20,8 +20,8 @@ int tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickna
 int tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer);
 tor_tls *tor_tls_new(int sock, int isServer);
 void tor_tls_free(tor_tls *tls);
-int tor_tls_peer_is_valid(tor_tls *tls);
-crypto_pk_env_t *tor_tls_get_peer_pk(tor_tls *tls);
+int tor_tls_peer_has_cert(tor_tls *tls);
+crypto_pk_env_t *tor_tls_verify(tor_tls *tls);
 int tor_tls_read(tor_tls *tls, char *cp, int len);
 int tor_tls_write(tor_tls *tls, char *cp, int n);
 int tor_tls_handshake(tor_tls *tls);
