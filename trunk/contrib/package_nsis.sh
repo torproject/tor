@@ -24,14 +24,14 @@ man2html doc/tor.1.in > win_tmp/tmp/tor-reference.html
 man2html doc/tor-resolve.1 > win_tmp/tmp/tor-resolve.html
 
 clean_newlines() {
-    perl -pe 'BEGIN {undef $/;} s/^\n$/\r\n/mg; s/([^\r])\n$/\1\r\n/mg;' $1 >$2
+    perl -pe 's/^\n$/\r\n/mg; s/([^\r])\n$/\1\r\n/mg;' $1 >$2
 }
 
 clean_localstatedir() {
-    perl -pe 'BEGIN {undef $/;} s/^\n$/\r\n/mg; s/([^\r])\n$/\1\r\n/mg; s{\@LOCALSTATEDIR\@/(lib|log)/tor/}{C:\\Documents and Settings\\Application Data\\Tor\\}' $1 >$2
+    perl -pe 's/^\n$/\r\n/mg; s/([^\r])\n$/\1\r\n/mg; s{\@LOCALSTATEDIR\@/(lib|log)/tor/}{C:\\Documents and Settings\\Application Data\\Tor\\}' $1 >$2
 }
 
-for fn in CLIENTS tor-spec.txt HACKING rend-spec.txt control-spec.txt \
+For fn in CLIENTS tor-spec.txt HACKING rend-spec.txt control-spec.txt \
    tor-doc.html tor-doc.css version-spec.txt; do
     clean_newlines doc/$fn win_tmp/doc/$fn
 done
