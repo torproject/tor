@@ -1070,9 +1070,10 @@ int _circuit_mark_for_close(circuit_t *circ);
   do {                                                                  \
     if (_circuit_mark_for_close(c)<0) {                                 \
       log(LOG_WARN,"Duplicate call to circuit_mark_for_close at %s:%d (first at %s:%d)", \
-          __FILE__,__LINE__,c->marked_for_close_file,c->marked_for_close); \
+          _SHORT_FILE_,__LINE__,                                        \
+          c->marked_for_close_file,c->marked_for_close);                \
     } else {                                                            \
-      c->marked_for_close_file = __FILE__;                              \
+      c->marked_for_close_file = _SHORT_FILE_;                          \
       c->marked_for_close = __LINE__;                                   \
     }                                                                   \
   } while (0)
@@ -1154,9 +1155,10 @@ int _connection_mark_for_close(connection_t *conn);
   do {                                                                  \
     if (_connection_mark_for_close(c)<0) {                              \
       log(LOG_WARN,"Duplicate call to connection_mark_for_close at %s:%d (first at %s:%d)", \
-          __FILE__,__LINE__,c->marked_for_close_file,c->marked_for_close); \
+          _SHORT_FILE_,__LINE__,                                        \
+          c->marked_for_close_file,c->marked_for_close);                \
     } else {                                                            \
-      c->marked_for_close_file = __FILE__;                              \
+      c->marked_for_close_file = _SHORT_FILE_;                          \
       c->marked_for_close = __LINE__;                                   \
     }                                                                   \
   } while (0)

@@ -13,6 +13,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include "compat.h"
 
 #define STMT_BEGIN  do {
 #define STMT_END    } while (0)
@@ -29,7 +30,7 @@ extern int have_failed;
   STMT_BEGIN                                                    \
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): assertion failed.",        \
-      __FILE__,                                                 \
+      _SHORT_FILE_,                                             \
       __LINE__,                                                 \
       PRETTY_FUNCTION);                                         \
     return;                                                     \
@@ -40,7 +41,7 @@ extern int have_failed;
   if (expr) { printf("."); fflush(stdout); } else {             \
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): assertion failed: (%s)\n", \
-      __FILE__,                                                 \
+      _SHORT_FILE_,                                             \
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr);                                                   \
@@ -54,7 +55,7 @@ extern int have_failed;
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n"\
            "      (%ld != %ld)\n",                              \
-      __FILE__,                                                 \
+      _SHORT_FILE_,                                             \
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2,                                           \
@@ -69,7 +70,7 @@ extern int have_failed;
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n"\
            "      (%ld == %ld)\n",                              \
-      __FILE__,                                                 \
+      _SHORT_FILE_,                                             \
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2,                                           \
@@ -84,7 +85,7 @@ extern int have_failed;
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n"\
            "      (\"%s\" != \"%s\")\n",                        \
-      __FILE__,                                                 \
+      _SHORT_FILE_,                                             \
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2,                                           \
@@ -99,7 +100,7 @@ extern int have_failed;
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n"\
            "      (\"%s\" == \"%s\")\n",                        \
-      __FILE__,                                                 \
+      _SHORT_FILE_,                                             \
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2,                                           \
@@ -113,7 +114,7 @@ extern int have_failed;
     if (!memcmp(v1,v2,(len))) { printf("."); fflush(stdout); } else {\
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n", \
-      __FILE__,                                                 \
+      _SHORT_FILE_,                                             \
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2);                                          \
@@ -126,7 +127,7 @@ extern int have_failed;
     if (memcmp(v1,v2,(len))) { printf("."); fflush(stdout); } else {\
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n", \
-      __FILE__,                                                 \
+      _SHORT_FILE_,                                             \
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2);                                          \
