@@ -32,6 +32,8 @@ Bugs:
         . fix buffer unit test so it passes
 
 Short-term:
+        - make recommendedversions different for clients and servers.
+          e.g. C0.0.3 vs S0.0.3?
         o put IP into the descriptor, so clients don't need to resolve things
         o when you hup, rewrite the router.desc file (and maybe others)
         - consider handling broken socks4 implementations
