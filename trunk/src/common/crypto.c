@@ -78,7 +78,6 @@ struct crypto_pk_env_t
 struct crypto_cipher_env_t
 {
   unsigned char key[CIPHER_KEY_LEN];
-  unsigned char iv[_ARRAYSIZE(CIPHER_IV_LEN)];
   aes_cnt_cipher_t *cipher;
 };
 
@@ -214,13 +213,12 @@ void crypto_free_pk_env(crypto_pk_env_t *env)
   free(env);
 }
 
-
 /* Create a new crypto_cipher_env_t for a given onion cipher type, key,
  * iv, and encryption flag (1=encrypt, 0=decrypt).  Return the crypto object
  * on success; NULL on failure.
  */
 crypto_cipher_env_t *
-crypto_create_init_cipher(const char *key, const char *iv, int encrypt_mode)
+crypto_create_init_cipher(const char *key, int encrypt_mode)
 {
   int r;
   crypto_cipher_env_t *crypto = NULL;
@@ -232,11 +230,6 @@ crypto_create_init_cipher(const char *key, const char *iv, int encrypt_mode)
 
   if (crypto_cipher_set_key(crypto, key)) {
     crypto_log_errors(LOG_WARN, "setting symmetric key");
-    goto error;
-  }
-
-  if (crypto_cipher_set_iv(crypto, iv)) {
-    crypto_log_errors(LOG_WARN, "setting IV");
     goto error;
   }
 
@@ -653,7 +646,7 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
     log_fn(LOG_WARN, "No room for a symmetric key");
     return -1;
   }
-  cipher = crypto_create_init_cipher(buf, NULL, 0);
+  cipher = crypto_create_init_cipher(buf, 0);
   if (!cipher) {
     return -1;
   }
@@ -798,21 +791,6 @@ int crypto_cipher_generate_key(crypto_cipher_env_t *env)
   tor_assert(env);
 
   return crypto_rand(CIPHER_KEY_LEN, env->key);
-}
-
-int crypto_cipher_set_iv(crypto_cipher_env_t *env, const unsigned char *iv)
-{
-  tor_assert(env && (CIPHER_IV_LEN==0 || iv));
-
-  if (!CIPHER_IV_LEN)
-    return 0;
-
-  if (!env->iv)
-    return -1;
-
-  memcpy(env->iv, iv, CIPHER_IV_LEN);
-
-  return 0;
 }
 
 int crypto_cipher_set_key(crypto_cipher_env_t *env, const unsigned char *key)

@@ -9,7 +9,6 @@
 
 #define DIGEST_LEN 20
 #define CIPHER_KEY_LEN 16
-#define CIPHER_IV_LEN 0
 #define PK_BITS 1024
 #define PK_BYTES (PK_BITS/8)
 #define DH_BITS 1024
@@ -90,7 +89,6 @@ void crypto_dh_free(crypto_dh_env_t *dh);
 
 /* symmetric crypto */
 int crypto_cipher_generate_key(crypto_cipher_env_t *env);
-int crypto_cipher_set_iv(crypto_cipher_env_t *env, const unsigned char *iv);
 int crypto_cipher_set_key(crypto_cipher_env_t *env, const unsigned char *key);
 int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env);
 int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env);
@@ -103,8 +101,8 @@ int crypto_cipher_decrypt(crypto_cipher_env_t *env, const unsigned char *from, u
 int crypto_cipher_rewind(crypto_cipher_env_t *env, long delta);
 int crypto_cipher_advance(crypto_cipher_env_t *env, long delta);
 
-/* convenience function: wraps crypto_create_crypto_env, set_key, set_iv, and init. */
-crypto_cipher_env_t *crypto_create_init_cipher(const char *key, const char *iv, int encrypt_mode);
+/* convenience function: wraps crypto_create_crypto_env, set_key, and init. */
+crypto_cipher_env_t *crypto_create_init_cipher(const char *key, int encrypt_mode);
 
 /* SHA-1 */
 int crypto_digest(const unsigned char *m, int len, unsigned char *digest);

@@ -1627,15 +1627,12 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
  */
 int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
 {
-  unsigned char iv[_ARRAYSIZE(CIPHER_IV_LEN)];
   crypto_digest_env_t *tmp_digest;
   crypto_cipher_env_t *tmp_crypto;
 
   tor_assert(cpath && key_data);
   tor_assert(!(cpath->f_crypto || cpath->b_crypto ||
              cpath->f_digest || cpath->b_digest));
-
-  memset(iv, 0, CIPHER_IV_LEN);
 
   log_fn(LOG_DEBUG,"hop init digest forward 0x%.8x, backward 0x%.8x.",
          (unsigned int)*(uint32_t*)key_data, (unsigned int)*(uint32_t*)(key_data+20));
@@ -1647,12 +1644,12 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
   log_fn(LOG_DEBUG,"hop init cipher forward 0x%.8x, backward 0x%.8x.",
          (unsigned int)*(uint32_t*)(key_data+40), (unsigned int)*(uint32_t*)(key_data+40+16));
   if (!(cpath->f_crypto =
-        crypto_create_init_cipher(key_data+(2*DIGEST_LEN),iv,1))) {
+        crypto_create_init_cipher(key_data+(2*DIGEST_LEN),1))) {
     log(LOG_WARN,"forward cipher initialization failed.");
     return -1;
   }
   if (!(cpath->b_crypto =
-     crypto_create_init_cipher(key_data+(2*DIGEST_LEN)+CIPHER_KEY_LEN,iv,0))) {
+     crypto_create_init_cipher(key_data+(2*DIGEST_LEN)+CIPHER_KEY_LEN,0))) {
     log(LOG_WARN,"backward cipher initialization failed.");
     return -1;
   }
