@@ -776,7 +776,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     n_stream->address = tor_strdup("(rendezvous)");
     n_stream->state = EXIT_CONN_STATE_CONNECTING;
     strcpy(n_stream->rend_query, circ->rend_query);
-    tor_assert(n_stream->rend_query[0]);
+    tor_assert(connection_edge_is_rendezvous_stream(n_stream));
     assert_circuit_ok(circ);
     if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {
       log_fn(LOG_INFO,"Didn't find rendezvous service (port %d)",n_stream->port);
