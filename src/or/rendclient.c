@@ -41,12 +41,15 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
   return 0;
 }
 
+/* Called when we're trying to connect an ap conn; sends an INTRODUCE1 cell
+ * down introcirc if possible.
+ */
 int
 rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   const char *descp;
   int desc_len, payload_len, r;
   char payload[RELAY_PAYLOAD_SIZE];
-  char tmp[20+20+128];
+  char tmp[(MAX_NICKNAME_LEN+1)+REND_COOKIE_LEN+DH_KEY_LEN];
   rend_service_descriptor_t *parsed=NULL;
   crypt_path_t *cpath;
 
@@ -85,22 +88,25 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   }
 
   /* write the remaining items into tmp */
-  strncpy(tmp, rendcirc->build_state->chosen_exit, 20); /* nul pads */
-  memcpy(tmp+20, rendcirc->rend_cookie, 20);
-  if (crypto_dh_get_public(cpath->handshake_state, tmp+40, 128)<0) {
+  strncpy(tmp, rendcirc->build_state->chosen_exit, (MAX_NICKNAME_LEN+1)); /* nul pads */
+  memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_cookie, REND_COOKIE_LEN);
+  if (crypto_dh_get_public(cpath->handshake_state,
+                           tmp+MAX_NICKNAME_LEN+1+REND_COOKIE_LEN,
+                           DH_KEY_LEN)<0) {
     log_fn(LOG_WARN, "Couldn't extract g^x");
     goto err;
   }
 
   r = crypto_pk_public_hybrid_encrypt(parsed->pk, tmp,
-                                      20+20+128, payload+20,
+                           MAX_NICKNAME_LEN+1+REND_COOKIE_LEN+DH_KEY_LEN,
+                                      payload+DIGEST_LEN,
                                       PK_PKCS1_OAEP_PADDING);
   if (r<0) {
     log_fn(LOG_WARN,"hybrid pk encrypt failed.");
     goto err;
   }
 
-  payload_len = 20 + r;
+  payload_len = DIGEST_LEN + r;
 
   rend_service_descriptor_free(parsed);
 
@@ -142,6 +148,9 @@ rend_client_rendcirc_is_open(circuit_t *circ)
   connection_ap_attach_pending();
 }
 
+/* Called when we recieve a RENDEZVOUS_ESTABLISHED cell; changes the state of
+ * the circuit to C_REND_READY.
+ */
 int
 rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_len)
 {

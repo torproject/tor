@@ -584,3 +584,11 @@ unsigned long tor_tls_get_n_bytes_written(tor_tls *tls)
   assert(tls);
   return BIO_number_written(SSL_get_wbio(tls->ssl));
 }
+
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

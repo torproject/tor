@@ -33,3 +33,11 @@ unsigned long tor_tls_get_n_bytes_read(tor_tls *tls);
 unsigned long tor_tls_get_n_bytes_written(tor_tls *tls);
 
 #endif
+
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

@@ -170,3 +170,10 @@ int add_file_log(int loglevel, const char *filename)
   return 0;
 }
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/

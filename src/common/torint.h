@@ -152,5 +152,12 @@ typedef unsigned __int64 uint64_t;
 #error "Missing type uint64_t"
 #endif
 
-
 #endif /* __TORINT_H */
+
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/
