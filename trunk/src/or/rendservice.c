@@ -31,7 +31,10 @@ typedef struct rend_service_port_config_t {
 #define MAX_INTRO_CIRCS_PER_PERIOD 10
 /** How many times will a hidden service operator attempt to connect to
  * a requested rendezvous point before giving up? */
-#define MAX_REND_FAILURES 3
+#define MAX_REND_FAILURES 30
+/** How many seconds should we spend trying to connect to a requested
+ * rendezvous point before giving up? */
+#define MAX_REND_TIMEOUT 30
 
 /** Represents a single hidden service running at this OP. */
 typedef struct rend_service_t {
@@ -505,6 +508,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
           sizeof(launched->rend_query));
   launched->build_state->pending_final_cpath = cpath =
     tor_malloc_zero(sizeof(crypt_path_t));
+  launched->build_state->expiry_time = time(NULL) + MAX_REND_TIMEOUT;
 
   cpath->handshake_state = dh;
   dh = NULL;
@@ -531,8 +535,9 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
   tor_assert(oldcirc->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
 
   if (!oldcirc->build_state ||
-      oldcirc->build_state->failure_count > MAX_REND_FAILURES) {
-    log_fn(LOG_INFO,"Attempt to build circuit to %s for rendezvous has failed too many times; giving up.",
+      oldcirc->build_state->failure_count > MAX_REND_FAILURES ||
+      oldcirc->build_state->expiry_time < time(NULL)) {
+    log_fn(LOG_INFO,"Attempt to build circuit to %s for rendezvous has failed too many times or expired; giving up.",
            oldcirc->build_state->chosen_exit_name);
     return;
   }
@@ -558,6 +563,7 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
   newstate = newcirc->build_state;
   tor_assert(newstate);
   newstate->failure_count = oldstate->failure_count+1;
+  newstate->expiry_time = oldstate->expiry_time;
   newstate->pending_final_cpath = oldstate->pending_final_cpath;
   oldstate->pending_final_cpath = NULL;
 

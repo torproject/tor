@@ -656,13 +656,10 @@ void circuit_build_failed(circuit_t *circ) {
       /* at Bob, connecting to rend point */
       /* Don't increment failure count, since Alice may have picked
        * the rendezvous point maliciously */
-      if (failed_at_last_hop) {
-        log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s. Sucks to be Alice.", circ->build_state->chosen_exit_name);
-      } else {
-        log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s, because an earlier node failed.",
-               circ->build_state->chosen_exit_name);
-        rend_service_relaunch_rendezvous(circ);
-      }
+      log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s (%s hop failed).",
+             failed_at_last_hop?"last":"non-last",
+             circ->build_state->chosen_exit_name);
+      rend_service_relaunch_rendezvous(circ);
       break;
     default:
       /* Other cases are impossible, since this function is only called with
