@@ -1,0 +1,30 @@
+#!/usr/bin/perl
+
+require 'sys/syscall.ph';
+use POSIX qw(strftime);
+$|=1;
+
+$total = 1;
+
+for($i=0;$i<$total;$i++) {
+  print "Starting client $i\n";
+  $pid = fork();
+  if(!$pid) {
+    open(FD,"wget -q -O - http://www.cnn.com/|");
+    $c = 0;
+    while(<FD>) {
+      $c += length($_);
+    }
+    ($s, $usec) = gettimeofday;
+    $TIMEVAL_T = "LL";
+    $now = pack($TIMEVAL_T, ());
+    syscall(&SYS_gettimeofday, $now, 0) != -1 or die "gettimeofday: $!";
+    @now = unpack($TIMEVAL_T, $now);
+#    $now_string = strftime "%b %d %H:%M:%S", gmtime;
+#    $now_string .= $now[1]/1000;
+    print "Client $i exiting ($c chars: $now[1]).\n";
+    exit(0);
+  }
+# sleep(1);
+}
+
