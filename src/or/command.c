@@ -181,7 +181,7 @@ void command_process_sendme_cell(cell_t *cell, connection_t *conn) {
   if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
     circ->n_receive_circwindow += cell->length;
     assert(circ->n_receive_circwindow <= CIRCWINDOW_START);
-    log(LOG_INFO,"command_process_sendme_cell(): n_receive_circwindow for aci %d is %d.",circ->n_aci,circ->n_receive_circwindow);
+    log(LOG_DEBUG,"command_process_sendme_cell(): n_receive_circwindow for aci %d is %d.",circ->n_aci,circ->n_receive_circwindow);
     if(!circ->n_conn || circ->n_conn->type == CONN_TYPE_EXIT) {
       circuit_resume_edge_reading(circ, EDGE_EXIT);
     } else {
@@ -194,7 +194,7 @@ void command_process_sendme_cell(cell_t *cell, connection_t *conn) {
   } else { /* it's an ingoing cell */
     assert(cell->aci == circ->n_aci);
     circ->p_receive_circwindow += cell->length;
-    log(LOG_INFO,"command_process_sendme_cell(): p_receive_circwindow for aci %d is %d.",circ->p_aci,circ->p_receive_circwindow);
+    log(LOG_DEBUG,"command_process_sendme_cell(): p_receive_circwindow for aci %d is %d.",circ->p_aci,circ->p_receive_circwindow);
     assert(circ->p_receive_circwindow <= CIRCWINDOW_START);
     if(!circ->p_conn || circ->p_conn->type == CONN_TYPE_AP) {
       circuit_resume_edge_reading(circ, EDGE_AP);
