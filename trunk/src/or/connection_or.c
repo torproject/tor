@@ -115,6 +115,7 @@ void conn_or_init_crypto(connection_t *conn) {
   unsigned char iv[16];
 
   assert(conn);
+#if 0
   printf("f_session_key: ");
   for(x=0;x<8;x++) {
     printf("%d ",conn->f_crypto->key[x]);
@@ -124,6 +125,7 @@ void conn_or_init_crypto(connection_t *conn) {
     printf("%d ",conn->b_crypto->key[x]);
   }
   printf("\n");
+#endif
 
   memset((void *)iv, 0, 16);
   crypto_cipher_set_iv(conn->f_crypto, iv);
@@ -170,7 +172,7 @@ connection_t *connection_or_connect(routerinfo_t *router, crypto_pk_env_t *prkey
   memset((void *)&router_addr,0,sizeof(router_addr));
   router_addr.sin_family = AF_INET;
   router_addr.sin_port = port;
-  memcpy((void *)&router_addr.sin_addr, &router->addr, sizeof(uint32_t));
+  router_addr.sin_addr.s_addr = router->addr;
 
   log(LOG_DEBUG,"connection_or_connect() : Trying to connect to %s:%u.",inet_ntoa(*(struct in_addr *)&router->addr),ntohs(port));
 
@@ -271,9 +273,10 @@ int or_handshake_op_send_keys(connection_t *conn) {
   }
   log(LOG_DEBUG,"or_handshake_op_send_keys() : Generated DES keys.");
   /* compose the message */
-  memcpy((void *)message, (void *)&bandwidth, 4);
+  *(uint32_t *)message = htonl(bandwidth);
   memcpy((void *)(message + 4), (void *)conn->f_crypto->key, 8);
   memcpy((void *)(message + 12), (void *)conn->b_crypto->key, 8);
+#if 0
   printf("f_session_key: ");
   for(x=0;x<8;x++) {
     printf("%d ",conn->f_crypto->key[x]);
@@ -283,6 +286,7 @@ int or_handshake_op_send_keys(connection_t *conn) {
     printf("%d ",conn->b_crypto->key[x]);
   }
   printf("\n");
+#endif
 
   /* encrypt with RSA */
   if(crypto_pk_public_encrypt(conn->pkey, message, 20, cipher, RSA_PKCS1_PADDING) < 0) {
@@ -383,13 +387,13 @@ int or_handshake_client_send_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated DES keys.");
 
   /* generate first message */
-  memcpy(buf,&conn->local.sin_addr,4); /* local address */
-  memcpy(buf+4,(void *)&conn->local.sin_port,2); /* local port */
-  memcpy(buf+6, (void *)&conn->addr, 4); /* remote address */
-  memcpy(buf+10, (void *)&conn->port, 2); /* remote port */
+  *(uint32_t*)buf = htonl(conn->local.sin_addr.s_addr); /* local address */
+  *(uint16_t*)(buf+4) = conn->local.sin_port; /* local port, already network order */
+  *(uint32_t*)(buf+6) = htonl(conn->addr); /* remote address */
+  *(uint16_t*)(buf+10) = conn->port; /* remote port, already network order */
   memcpy(buf+12,conn->f_crypto->key,8); /* keys */
   memcpy(buf+20,conn->b_crypto->key,8);
-  *((uint32_t *)(buf+28)) = htonl(conn->bandwidth); /* max link utilisation */
+  *(uint32_t *)(buf+28) = htonl(conn->bandwidth); /* max link utilisation */
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated first authentication message.");
 
   /* encrypt message */
@@ -462,12 +466,12 @@ int or_handshake_client_process_auth(connection_t *conn) {
   }
   log(LOG_DEBUG,"or_handshake_client_process_auth() : Decrypted response.");
   /* check validity */
-  if ( (memcmp(&conn->local.sin_addr, buf, 4)) || /* local address */
-       (memcmp(&conn->local.sin_port, buf+4, 2)) || /* local port */
-       (memcmp(&conn->addr, buf+6, 4)) || /* remote address */
-       (memcmp(&conn->port, buf+10, 2)) || /* remote port */
+  if ( (ntohl(*(uint32_t*)buf) != conn->local.sin_addr.s_addr) || /* local address */
+        (*(uint16_t*)(buf+4) != conn->local.sin_port) || /* local port, keep network order */
+       (ntohl(*(uint32_t*)(buf+6)) != conn->addr) || /* remote address */
+        (*(uint16_t*)(buf+10) != conn->port) || /* remote port, keep network order */
        (memcmp(conn->f_crypto->key, buf+12, 8)) || /* keys */
-       (memcmp(conn->b_crypto->key, buf+20, 8)))
+       (memcmp(conn->b_crypto->key, buf+20, 8)) )
   { /* incorrect response */
     log(LOG_ERR,"Router %s:%u failed to authenticate. Either the key I have is obsolete or they're doing something they're not supposed to.",conn->address,ntohs(conn->port));
     return -1;
@@ -553,7 +557,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Received auth.");
 
   /* decrypt response */
-  retval = crypto_pk_private_decrypt(conn->prkey, cipher, 128, buf,RSA_PKCS1_PADDING);
+  retval = crypto_pk_private_decrypt(conn->prkey, cipher, 128, buf, RSA_PKCS1_PADDING);
   if (retval == -1)
   { 
     log(LOG_ERR,"Public-key decryption failed processing auth message from new client.");
@@ -569,8 +573,8 @@ int or_handshake_server_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_auth() : Decrypted authentication message.");
 
   /* identify the router */
-  memcpy(&addr,buf,4); /* save the IP address */
-  memcpy(&port,buf+4,2); /* save the port */
+  addr = ntohl(*(uint32_t*)buf); /* save the IP address */
+  port = *(uint16_t*)(buf+4); /* save the port  *IN NETWORK ORDER* */
 
   router = router_get_by_addr_port(addr,port);
   if (!router)
@@ -687,10 +691,10 @@ int or_handshake_server_process_nonce(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_server_process_nonce() : Response decrypted.");
 
   /* check validity */
-  if ((memcmp(&conn->addr,buf, 4)) || /* remote address */
-      (memcmp(&conn->port,buf+4,2)) || /* remote port */
-      (memcmp(&conn->local.sin_addr,buf+6,4)) || /* local address */
-      (memcmp(&conn->local.sin_port,buf+10,2)) || /* local port */
+  if ((ntohl(*(uint32_t*)buf) != conn->addr) || /* remote address */
+       (*(uint16_t*)(buf+4) != conn->port) || /* remote port, network order */ 
+      (ntohl(*(uint32_t*)(buf+6)) != conn->local.sin_addr.s_addr) || /* local address */
+       (*(uint16_t*)(buf+10) != conn->local.sin_port) || /* local port, network order */
       (memcmp(conn->nonce,buf+12,8))) /* nonce */
   { 
     log(LOG_ERR,"Router %s:%u failed to authenticate. Either the key I have is obsolete or they're doing something they're not supposed to.",conn->address,ntohs(conn->port));
