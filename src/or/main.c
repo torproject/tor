@@ -586,8 +586,7 @@ static int do_main_loop(void) {
 
   if(options.OnionRouter) {
     cpu_init(); /* launch cpuworkers. Need to do this *after* we've read the onion key. */
-    if(options.DirPort == 0) /* not a dirserver; XXX eventually do this for dirservers too */
-      router_upload_desc_to_dirservers(); /* upload our descriptor to all dirservers */
+    router_upload_desc_to_dirservers(); /* upload our descriptor to all dirservers */
   }
 
   /* start up the necessary connections based on which ports are
