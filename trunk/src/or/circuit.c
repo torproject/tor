@@ -602,8 +602,6 @@ void circuit_about_to_close_connection(connection_t *conn) {
   } /* end switch */
 }
 
-
-/* FIXME this now leaves some out */
 void circuit_dump_by_conn(connection_t *conn, int severity) {
   circuit_t *circ;
   connection_t *tmpconn;

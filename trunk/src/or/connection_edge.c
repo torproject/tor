@@ -206,7 +206,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         log_fn(LOG_WARN,"begin cell for known stream. Dropping.");
         return 0;
       }
-      return connection_exit_begin_conn(cell, circ);
+      connection_exit_begin_conn(cell, circ);
+      return 0;
     case RELAY_COMMAND_DATA:
       ++stats_n_data_cells_received;
       if((edge_type == EDGE_AP && --layer_hint->deliver_window < 0) ||
@@ -218,6 +219,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       log_fn(LOG_DEBUG,"circ deliver_window now %d.", edge_type == EDGE_AP ? layer_hint->deliver_window : circ->deliver_window);
 
       if(circuit_consider_sending_sendme(circ, edge_type, layer_hint) < 0) {
+        log_fn(LOG_WARN,"circuit_consider_sending_sendme() failed.");
         conn->has_sent_end = 1; /* we failed because conn is broken. can't send end. */
         return -1;
       }
@@ -235,7 +237,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
 //      printf("New text for buf (%d bytes): '%s'", cell->length - RELAY_HEADER_SIZE, cell->payload + RELAY_HEADER_SIZE);
       stats_n_data_bytes_received += (cell->length - RELAY_HEADER_SIZE);
       connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
-                             cell->length - RELAY_HEADER_SIZE, conn);
+                              cell->length - RELAY_HEADER_SIZE, conn);
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case RELAY_COMMAND_END:
@@ -273,7 +275,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       conn->marked_for_close = 1;
       conn->has_sent_end = 1; /* no need to send end, we just got one! */
 #endif
-      break;
+      return 0;
     case RELAY_COMMAND_EXTEND:
       if(conn) {
         log_fn(LOG_WARN,"'extend' for non-zero stream. Dropping.");
@@ -290,7 +292,11 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         log_fn(LOG_WARN,"circuit_finish_handshake failed.");
         return -1;
       }
-      return circuit_send_next_onion_skin(circ);
+      if (circuit_send_next_onion_skin(circ)<0) {
+        log_fn(LOG_WARN,"circuit_send_next_onion_skin() failed.");
+        return -1;
+      }
+      return 0;
     case RELAY_COMMAND_TRUNCATE:
       if(edge_type == EDGE_AP) {
         log_fn(LOG_WARN,"'truncate' unsupported at AP. Dropping.");
@@ -309,7 +315,8 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         log_fn(LOG_WARN,"'truncated' unsupported at exit. Dropping.");
         return 0;
       }
-      return circuit_truncated(circ, layer_hint);
+      circuit_truncated(circ, layer_hint);
+      return 0;
     case RELAY_COMMAND_CONNECTED:
       if(edge_type == EDGE_EXIT) {
         log_fn(LOG_WARN,"'connected' unsupported at exit. Dropping.");
@@ -317,7 +324,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
       if(!conn) {
         log_fn(LOG_INFO,"connected cell dropped, unknown stream %d.",*(int*)conn->stream_id);
-        break;
+        return 0;
       }
       log_fn(LOG_INFO,"Connected! Notifying application.");
       if (cell->length-RELAY_HEADER_SIZE == 4) {
@@ -328,7 +335,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         log_fn(LOG_INFO,"Writing to socks-speaking application failed. Closing.");
         connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
       }
-      break;
+      return 0;
     case RELAY_COMMAND_SENDME:
       if(!conn) {
         if(edge_type == EDGE_AP) {
@@ -348,12 +355,13 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       log_fn(LOG_DEBUG,"stream-level sendme, packagewindow now %d.", conn->package_window);
       connection_start_reading(conn);
       connection_edge_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
-      break;
+      return 0;
     default:
       log_fn(LOG_WARN,"unknown relay command %d.",relay_command);
       return -1;
   }
-  return 0;
+  assert(0);
+  return -1;
 }
 
 int connection_edge_finished_flushing(connection_t *conn) {
