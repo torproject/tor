@@ -78,21 +78,11 @@ circuit_t *circuit_new(aci_t p_aci, connection_t *p_conn) {
 }
 
 void circuit_free(circuit_t *circ) {
-  struct relay_queue_t *tmpd;
-  
   if (circ->n_crypto)
     crypto_free_cipher_env(circ->n_crypto);
   if (circ->p_crypto)
     crypto_free_cipher_env(circ->p_crypto);
-
   circuit_free_cpath(circ->cpath);
-  while(circ->relay_queue) {
-    tmpd = circ->relay_queue;
-    circ->relay_queue = tmpd->next;
-    free(tmpd->cell);
-    free(tmpd);
-  }
-
   free(circ);
 }
 

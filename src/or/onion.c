@@ -67,7 +67,6 @@ int onion_pending_check(void) {
 }
 
 void onion_pending_process_one(void) {
-  struct relay_queue_t *tmpd;
   circuit_t *circ; 
 
   if(!ol_list)
@@ -88,11 +87,7 @@ void onion_pending_process_one(void) {
     onion_pending_remove(circ);
     circuit_close(circ);
   } else {
-    log(LOG_DEBUG,"onion_pending_process_one(): Succeeded. Delivering queued relay cells.");
-    for(tmpd = ol_list->relay_cells; tmpd; tmpd=tmpd->next) {
-      log(LOG_DEBUG,"onion_pending_process_one(): Delivering relay cell...");
-      command_process_relay_cell(tmpd->cell, circ->p_conn); 
-    }
+    log(LOG_DEBUG,"onion_pending_process_one(): Succeeded.");
     onion_pending_remove(circ);
   }
   return;
@@ -103,7 +98,6 @@ void onion_pending_process_one(void) {
  */
 void onion_pending_remove(circuit_t *circ) {
   struct onion_queue_t *tmpo, *victim;
-  struct relay_queue_t *tmpd;
 
   if(!ol_list)
     return; /* nothing here. */
@@ -133,49 +127,7 @@ void onion_pending_remove(circuit_t *circ) {
 
   /* now victim points to the element that needs to be removed */
 
-  /* first dump the attached relay cells too, if any */
-  while(victim->relay_cells) {
-    tmpd = victim->relay_cells;
-    victim->relay_cells = tmpd->next;
-    free(tmpd->cell);
-    free(tmpd);
-  }
- 
   free(victim); 
-
-}
-
-struct relay_queue_t *relay_queue_add(struct relay_queue_t *list, cell_t *cell, crypt_path_t *layer_hint) {
-  struct relay_queue_t *tmpd, *newd;
-
-  newd = tor_malloc(sizeof(struct relay_queue_t));
-  memset(newd, 0, sizeof(struct relay_queue_t));
-  newd->cell = tor_malloc(sizeof(cell_t));
-  memcpy(newd->cell, cell, sizeof(cell_t));
-  newd->layer_hint = layer_hint;
-
-  if(!list) {
-    return newd;
-  }
-  for(tmpd = list; tmpd->next; tmpd=tmpd->next) ;
-  /* now tmpd->next is null */
-  tmpd->next = newd;
-  return list;
-}
-
-/* a relay cell has arrived for a circuit which is still pending. Find
- * the right entry in ol_list, and add it to the end of the 'relay_cells'
- * list.
- */
-void onion_pending_relay_add(circuit_t *circ, cell_t *cell) {
-  struct onion_queue_t *tmpo;
-
-  for(tmpo=ol_list; tmpo; tmpo=tmpo->next) {
-    if(tmpo->circ == circ) {
-      tmpo->relay_cells = relay_queue_add(tmpo->relay_cells, cell, NULL);
-      return;
-    }
-  }
 }
 
 /* learn keys, initialize, then send a created cell back */
