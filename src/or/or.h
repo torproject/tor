@@ -432,6 +432,8 @@ typedef struct {
   char *Nickname;
   char *Address;
   char *PidFile;
+  char *ExitNodes;
+  char *EntryNodes;
   char *ExitPolicy;
   char *SocksBindAddress;
   char *ORBindAddress;
@@ -692,6 +694,8 @@ circuit_t *onion_next_task(void);
 void onion_pending_remove(circuit_t *circ);
 
 int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
+
+char **parse_nickname_list(char *start, int *num);
 
 int onion_extend_cpath(crypt_path_t **head_ptr, int path_len, routerinfo_t **router_out);
 

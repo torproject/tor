@@ -766,7 +766,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
        * circuit that one is ready. */
       connection_ap_attach_pending();
       return 0;
-    } else if (r<0 || !router) {
+    } else if (r<0) {
       log_fn(LOG_WARN,"Unable to extend circuit path.");
       return -1;
     }

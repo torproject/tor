@@ -157,6 +157,36 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   return 0;
 }
 
+char **parse_nickname_list(char *list, int *num) {
+  char **out;
+  char *start,*end;
+  int i;
+   
+  while(isspace(*list)) list++;
+
+  i=0, start = list;
+  while(*start) {
+    while(*start && !isspace(*start)) start++;
+    i++;
+    while(isspace(*start)) start++;
+  }
+
+  out = tor_malloc(i * sizeof(char *));
+
+  i=0, start=list;
+  while(*start) {
+    end=start; while(*end && !isspace(*end)) end++;
+    out[i] = tor_malloc(MAX_NICKNAME_LEN);
+    strncpy(out[i],start,end-start);
+    out[i][end-start] = 0; /* null terminate it */
+    i++;
+    while(isspace(*end)) end++;
+    start = end;
+  }
+  *num = i;
+  return out;  
+}
+
 /* uses a weighted coin with weight cw to choose a route length */
 static int chooselen(double cw) {
   int len = 2;
@@ -254,10 +284,11 @@ int onion_extend_cpath(crypt_path_t **head_ptr, int path_len, routerinfo_t **rou
   int rarray_len;
   int i;
   directory_t *dir;
+  char **nicknames;
+  int num_nicknames;
 
   assert(head_ptr);
-  if (router_out)
-    *router_out = NULL;
+  assert(router_out);
 
   router_get_directory(&dir);
   rarray = dir->routers;
@@ -275,6 +306,10 @@ int onion_extend_cpath(crypt_path_t **head_ptr, int path_len, routerinfo_t **rou
   log_fn(LOG_DEBUG, "Path is %d long; we want %d", cur_len, path_len);
 
  again:
+  if(cur_len == 0) { /* picking entry node */
+
+
+  }
   choice = crypto_pseudo_rand_int(rarray_len);
   log_fn(LOG_DEBUG,"Contemplating router %s for hop %d",
          rarray[choice]->nickname, cur_len);
@@ -318,8 +353,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, int path_len, routerinfo_t **rou
   log_fn(LOG_DEBUG, "Extended circuit path with %s for hop %d", 
          rarray[choice]->nickname, cur_len);
   
-  if (router_out)
-    *router_out = rarray[choice];
+  *router_out = rarray[choice];
   return 0;
 }
 
