@@ -388,7 +388,8 @@ they avoid the well-known inefficiencies of tunneling TCP over TCP
 
 Distributed-trust anonymizing systems need to prevent attackers from
 adding too many servers and thus compromising too many user paths.
-Tor relies on a small set of well-known servers to make
+Tor relies on a small set of well-known directory servers, run by
+independent parties, to make
 decisions about which nodes can join. Tarzan
 and MorphMix allow unknown users to run servers, and limit an attacker
 from becoming too much of the network based on a limited resource such
@@ -396,7 +397,7 @@ as number of IPs controlled. Crowds suggests requiring written, notarized
 requests from potential crowd members.
 
 Anonymous communication is an essential component of censorship-resistant
-systems like Eternity \cite{eternity}, Free Haven \cite{freehaven-berk},
+systems like Eternity \cite{eternity}, Free~Haven \cite{freehaven-berk},
 Publius \cite{publius}, and Tangler \cite{tangler}. Tor's rendezvous
 points enable connections between mutually anonymous entities; they
 are a building block for location-hidden servers, which are needed by
@@ -918,7 +919,7 @@ see Section~\ref{sec:maintaining-anonymity} for more discussion.
 
 \Section{Other design decisions}
 
-\SubSection{Resource management and DoS prevention}
+\SubSection{Resource management and denial-of-service prevention}
 \label{subsec:dos}
 
 Providing Tor as a public service provides many opportunities for an
@@ -1203,7 +1204,7 @@ services} (also known as ``responder anonymity'') in the Tor
 network.  Location-hidden services allow a server Bob to offer a TCP
 service, such as a webserver, without revealing the IP of his service.
 Besides allowing Bob to provided services anonymously, location
-privacy also seeks to provide some protection against DDoS attacks:
+privacy also seeks to provide some protection against distributed DoS attacks:
 attackers are forced to attack the onion routing network as a whole
 rather than just Bob's IP.
 
@@ -1243,7 +1244,7 @@ to connect to the rendezvous point. This extra level of indirection
 helps Bob's introduction points avoid problems associated with serving
 unpopular files directly, as could occur, for example, if Bob chooses
 an introduction point in Texas to serve anti-ranching propaganda,
-or if Bob's service tends to get DDoS'ed by network vandals.
+or if Bob's service tends to get attacked by network vandals.
 The extra level of indirection also allows Bob to respond to some requests
 and ignore others.
 
@@ -1301,7 +1302,8 @@ The authentication tokens can be used to provide selective access to users
 proportional to how important it is that they main uninterrupted access
 to the service. During normal situations, Bob's service might simply be
 offered directly from mirrors; Bob can also give out authentication cookies
-to high-priority users. If those mirrors are knocked down by DDoS attacks,
+to high-priority users. If those mirrors are knocked down by
+distributed DoS attacks,
 those users can switch to accessing Bob's service via the Tor
 rendezvous system.
 
@@ -1639,16 +1641,69 @@ them.
   Exit policies can help reduce the possibilities for abuse, but
   ultimately, the network will require volunteers who can tolerate
   some political heat.
+
+\item \emph{Distribute hostile code.} An attacker could trick users
+  into running subverted Tor software that did not, in fact, anonymize
+  their connections---or worse, trick ORs into running weakened
+  software that provided users with less anonymity.  We address this
+  problem (but do not solve it completely) by signing all Tor releases
+  with an official public key, and including an entry the directory
+  describing which versions are currently believed to be secure.  To
+  prevent an attacker from subverting the official release itself
+  (through threats, bribery, or insider attacks), we provide all
+  releases in source code form, encourage source audits, and
+  frequently warn our users never to trust any software (even from
+  us!) that comes without source.
 \end{tightlist}
 
 \subsubsection*{Directory attacks}
 \begin{tightlist}
-\item knock out a dirserver
-\item knock out half the dirservers
-\item trick user into using different software (with different dirserver
-keys)
-\item OR connects to the dirservers but nowhere else
-\item foo
+\item \emph{Destroy directory servers.}  If a single directory
+  server drops out of operation, the others still arrive at a final
+  directory.  So long as any directory servers remain in operation,
+  they will still broadcast their views of the network and generate a
+  consensus directory.  (If more than half are destroyed, this
+  directory will not, however, have enough signatures for clients to
+  use it automatically; human intervention will be necessary for
+  clients to decide whether to trust the resulting directory.)
+
+\item \emph{Subvert a directory server.}  By taking over a directory
+  server, an attacker can influence (but not control) the final
+  directory.  Since ORs are included or excluded by majority vote,
+  the corrupt directory can at worst cast a tie-breaking vote to
+  decide whether to include marginal ORs.  How often such marginal
+  cases will occur in practice, however, remains to be seen.
+
+\item \emph{Subvert a majority of directory servers.}  If the
+  adversary controls more than half of the directory servers, he can
+  decide on a final directory, and thus can include as many
+  compromised ORs in the final directory as he wishes.  Other than
+  trying to ensure that directory server operators are truly
+  independent and resistant to attack, Tor does not address this
+  possibility.
+
+\item \emph{Encourage directory server dissent.}  The directory
+  agreement protocol requires that directory server operators agree on 
+  the list of directory servers.  An adversary who can persuade some
+  of the directory server operators to distrust one another could
+  split the quorum into mutually hostile camps, thus partitioning
+  users based on which directory they used.  Tor does not address
+  this attack.
+
+\item \emph{Trick the directory servers into listing a hostile OR.}
+  Our threat model explicitly assumes directory server operators will
+  be able to filter out most hostile ORs.  If this is not true, an
+  attacker can flood the directory with compromised servers.
+
+\item \emph{Convince the directories that a malfunctioning OR is
+  working.}  In the current Tor implementation, directory servers
+  assume that if they can start a TLS connection to an an OR, that OR
+  must be running correctly.  It would be easy for a hostile OR to
+  subvert this test by only accepting TLS connections from ORs, and
+  ignoring all cells. Thus, directory servers must actively test ORs
+  by building circuits and streams as appropriate.  The benefits and
+  hazards of a similar approach are discussed in \cite{mix-acc}.
+  
 \end{tightlist}
 
 \subsubsection*{Attacks against rendezvous points}
@@ -1719,15 +1774,17 @@ too-frequent updates the directory servers are overloaded.
 %Email from between roger and me to beginning of section above. Fix and move.
 
 Throughout this paper, we have assumed that end-to-end traffic
-analysis cannot yet be defeated.  But even high-latency anonymity
+analysis will immediately and automatically defeat a low-latency
+anonymity system. Even high-latency anonymity
 systems can be vulnerable to end-to-end traffic analysis, if the
 traffic volumes are high enough, and if users' habits are sufficiently
-distinct \cite{limits-open,statistical-disclosure}.  \emph{What can be
-  done to limit the effectiveness of these attacks against low-latency
-  systems?}  Tor already makes some effort to conceal the starts and
+distinct \cite{limits-open,statistical-disclosure}.  \emph{Can
+  anything be donw to make low-latency systems resist these attacks as
+  well as high-latency systems?}
+Tor already makes some effort to conceal the starts and
 ends of streams by wrapping all long-range control commands in
 identical-looking relay cells, but more analysis is needed.  Link
-padding could frustrate passive observer who count packets; long-range
+padding could frustrate passive observers who count packets; long-range
 padding could work against observers who own the first hop in a
 circuit.  But more research needs to be done in order to find an
 efficient and practical approach.  Volunteers prefer not to run
