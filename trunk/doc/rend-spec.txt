@@ -244,15 +244,11 @@ Tor Rendezvous Spec
    PK_ID is the hash of Bob's public key.  RP is NUL-terminated.
 
    The data is encrypted to Bob's PK as follows: Suppose Bob's PK is L octets
-   long.  If the data to be encrypted is shorter than L, then it is encrypted
-   directly (with no padding).  If the data is at least as long as L, then a
-   randomly generated 16-byte symmetric key is prepended to the data, after
-   which the first L-16 bytes of the data are encrypted with Bob's PK; and the
-   rest of the data is encrypted with the symmetric key.
-
-   [There's very little here is that is recognizable by Bob to let him
-    know if he decrypted it correctly. Perhaps we should add OAEP padding
-    to the RSA -- there is space -RD]
+   long.  If the data to be encrypted is shorter than L-42, then it is
+   encrypted directly (with OAEP padding).  If the data is at least as long
+   as L-42, then a randomly generated 16-byte symmetric key is prepended to
+   the data, after which the first L-16-42 bytes of the data are encrypted with
+   Bob's PK; and the rest of the data is encrypted with the symmetric key.
 
 1.9. Introduction: From the Introduction Point to Bob's OP
 
