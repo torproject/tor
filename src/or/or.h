@@ -482,7 +482,7 @@ struct crypt_path_t {
   crypto_digest_env_t *b_digest;
 
   crypto_dh_env_t *handshake_state;
-  char handshake_digest[CRYPTO_SHA1_DIGEST];/* KH in tor-spec.txt */
+  char handshake_digest[CRYPTO_SHA1_DIGEST_LEN];/* KH in tor-spec.txt */
 
   uint32_t addr;
   uint16_t port;
