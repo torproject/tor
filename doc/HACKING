@@ -454,7 +454,7 @@ the distant future, stuff may have changed.)
        struct foo {
          /** You can put the comment before an element; */
          int a;
-         int b, /**< Or use this form to put the comment after the element. */
+         int b; /**< Or use the less-than symbol to put the comment after the element. */
        };
 
   5. See the Doxygen manual for more information; this summary just scratches
