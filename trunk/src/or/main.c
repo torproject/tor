@@ -872,6 +872,10 @@ static void catch(int the_signal) {
     case SIGCHLD:
       please_reap_children = 1;
       break;
+#ifdef SIGXFSZ
+    case SIGXFSZ: /* this happens when write fails with etoobig */
+      break; /* ignore; write will fail and we'll look at errno. */
+#endif
     default:
       log(LOG_WARN,"Caught signal %d that we can't handle??", the_signal);
       tor_cleanup();
@@ -983,6 +987,9 @@ void handle_signals(int is_parent)
   sigaction(SIGPIPE, &action, NULL); /* otherwise sigpipe kills us */
   sigaction(SIGUSR1, &action, NULL); /* dump stats */
   sigaction(SIGHUP,  &action, NULL); /* to reload config, retry conns, etc */
+#ifdef SIGXFSZ
+  sigaction(SIGXFSZ, &action, NULL); /* handle file-too-big resource exhaustion */
+#endif
   if(is_parent)
     sigaction(SIGCHLD, &action, NULL); /* handle dns/cpu workers that exit */
 #endif /* signal stuff */
