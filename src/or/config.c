@@ -1045,7 +1045,8 @@ const char *get_data_directory(or_options_t *options) {
   if (d && strncmp(d,"~/",2)==0) {
     char *fn = expand_filename(d);
     if(!fn) {
-      /* XXX complain and exit(1) here */
+      log_fn(LOG_ERR,"Failed to expand filename '%s'. Exiting.",d);
+      exit(1);
     }
     tor_free(options->DataDirectory);
     options->DataDirectory = fn;
