@@ -2,17 +2,25 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/**
+ * /file config.c
+ *
+ * /brief Code to parse and interpret configuration files.
+ *
+ **/
+
 #include "or.h"
 
-/* enumeration of types which option values can take */
-#define CONFIG_TYPE_STRING  0
-#define CONFIG_TYPE_CHAR    1
-#define CONFIG_TYPE_INT     2
-#define CONFIG_TYPE_LONG    3
-#define CONFIG_TYPE_DOUBLE  4
-#define CONFIG_TYPE_BOOL    5
-#define CONFIG_TYPE_LINELIST 6
+/** Enumeration of types which option values can take */
+typedef enum config_type_t {
+  CONFIG_TYPE_STRING = 0, /**< An arbitrary string. */
+  CONFIG_TYPE_INT, /**< An integer */
+  CONFIG_TYPE_DOUBLE, /**< A floating-point value */
+  CONFIG_TYPE_BOOL, /**< A boolean value, expressed as 0 or 1. */
+  CONFIG_TYPE_LINELIST, /**< Uninterpreted config lines */
+} config_type_t;
 
+/** Largest allowed config line */
 #define CONFIG_LINE_T_MAXLEN 4096
 
 static FILE *config_open(const unsigned char *filename);
@@ -20,10 +28,10 @@ static int config_close(FILE *f);
 static struct config_line_t *config_get_commandlines(int argc, char **argv);
 static struct config_line_t *config_get_lines(FILE *f);
 static void config_free_lines(struct config_line_t *front);
-static int config_compare(struct config_line_t *c, char *key, int type, void *arg);
+static int config_compare(struct config_line_t *c, char *key, config_type_t type, void *arg);
 static int config_assign(or_options_t *options, struct config_line_t *list);
 
-/* open configuration file for reading */
+/** Open a configuration file for reading */
 static FILE *config_open(const unsigned char *filename) {
   tor_assert(filename);
   if (strspn(filename,CONFIG_LEGAL_FILENAME_CHARACTERS) != strlen(filename)) {
@@ -33,12 +41,13 @@ static FILE *config_open(const unsigned char *filename) {
   return fopen(filename, "r");
 }
 
-/* close configuration file */
+/** Close the configuration file */
 static int config_close(FILE *f) {
   tor_assert(f);
   return fclose(f);
 }
 
+/** Helper: Read a list of configuration options from the command line. */
 static struct config_line_t *config_get_commandlines(int argc, char **argv) {
   struct config_line_t *new;
   struct config_line_t *front = NULL;
@@ -68,6 +77,8 @@ static struct config_line_t *config_get_commandlines(int argc, char **argv) {
   return front;
 }
 
+/** Helper: allocate a new configuration option mapping 'key' to 'val',
+ * prepend it to 'front', and return the newly allocated config_line_t */
 static struct config_line_t *
 config_line_prepend(struct config_line_t *front,
                     const char *key,
@@ -81,9 +92,9 @@ config_line_prepend(struct config_line_t *front,
   return newline;
 }
 
-/* parse the config file and strdup into key/value strings. Return list,
- * or NULL if parsing the file failed.
- * Warn and ignore mangled lines. */
+/** Herlper: parse the config file and strdup into key/value
+ * strings. Return list, or NULL if parsing the file failed.  Warn and
+ * ignore any misformatted lines. */
 static struct config_line_t *config_get_lines(FILE *f) {
 
   struct config_line_t *front = NULL;
@@ -99,6 +110,9 @@ static struct config_line_t *config_get_lines(FILE *f) {
   return front;
 }
 
+/**
+ * Free all the configuration lines on the linked list <b>front</b>.
+ */
 static void config_free_lines(struct config_line_t *front) {
   struct config_line_t *tmp;
 
@@ -112,7 +126,12 @@ static void config_free_lines(struct config_line_t *front) {
   }
 }
 
-static int config_compare(struct config_line_t *c, char *key, int type, void *arg) {
+/** Search the linked list <b>c</b> for any option whose key is <b>key</b>.
+ * If such an option is found, interpret it as of type <b>type</b>, and store
+ * the result in <b>arg</b>.  If the option is misformatted, log a warning and
+ * skip it.
+ */
+static int config_compare(struct config_line_t *c, char *key, config_type_t type, void *arg) {
   int i;
 
   if(strncasecmp(c->key,key,strlen(c->key)))
@@ -151,8 +170,8 @@ static int config_compare(struct config_line_t *c, char *key, int type, void *ar
   return 1;
 }
 
-/* Iterate through list.
- * For each item, convert as appropriate and assign to 'options'.
+/** Iterate through the linked list of options <b>list</b>.
+ * For each item, convert as appropriate and assign to <b>options</b>.
  * If an item is unrecognized, return -1 immediately,
  * else return 0 for success. */
 static int config_assign(or_options_t *options, struct config_line_t *list) {
@@ -350,8 +369,10 @@ int config_assign_default_dirservers(void) {
   return 0;
 }
 
-/* Call this function when they're using the default torrc but
- * we can't find it. For now, just hard-code what comes in the
+/** Set <b>options</b> to a reasonable default.
+ *
+ * Call this function when they're using the default torrc but
+ * we can't find it. For now, we just hard-code what comes in the
  * default torrc.
  */
 static int config_assign_default(or_options_t *options) {
@@ -365,7 +386,7 @@ static int config_assign_default(or_options_t *options) {
   return 0;
 }
 
-/* prints the usage of tor. */
+/** Print a usage message for tor. */
 static void print_usage(void) {
   printf("tor -f <torrc> [args]\n"
          "See man page for more options. This -h is probably obsolete.\n\n"
@@ -385,6 +406,9 @@ static void print_usage(void) {
          );
 }
 
+/**
+ * Adjust <b>options</b> to contain a reasonable value for Address.
+ */
 static int resolve_my_address(or_options_t *options) {
   struct in_addr in;
   struct hostent *rent;
@@ -434,6 +458,7 @@ static int resolve_my_address(or_options_t *options) {
   return 0;
 }
 
+/** Release storage held by <b>options</b> */
 static void free_options(or_options_t *options) {
   tor_free(options->LogLevel);
   tor_free(options->LogFile);
@@ -458,6 +483,7 @@ static void free_options(or_options_t *options) {
   config_free_lines(options->RendConfigLines);
 }
 
+/** Set <b>options</b> to hold reasonable defaults for most options. */
 static void init_options(or_options_t *options) {
 /* give reasonable values for each option. Defaults to zero. */
   memset(options,0,sizeof(or_options_t));
@@ -487,7 +513,9 @@ static void init_options(or_options_t *options) {
   options->RendConfigLines = NULL;
 }
 
-/* return 0 if success, <0 if failure. */
+/** Read a configuration file into <b>options</b>, finding the configuration
+ * file location based on the command line.  After loading the options,
+ * validate them for consistency. Return 0 if success, <0 if failure. */
 int getconfig(int argc, char **argv, or_options_t *options) {
   struct config_line_t *cl;
   FILE *cf;
