@@ -90,10 +90,6 @@ rend_service_descriptor_t *rend_parse_service_descriptor(
   cp += 4;
   if (end-cp < 2) goto truncated;
   result->n_intro_points = get_uint16(cp);
-  if(result->n_intro_points < 1) {
-    log_fn(LOG_WARN,"Service descriptor listed no intro points.");
-    goto error;
-  }
   result->intro_points = tor_malloc_zero(sizeof(char*)*result->n_intro_points);
   cp += 2;
   for (i=0;i<result->n_intro_points;++i) {
