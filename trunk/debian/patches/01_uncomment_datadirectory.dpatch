@@ -23,9 +23,9 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad /home/weasel/projects/tor/cvs/src/config/torrc.in cvs/src/config/torrc.in
---- /home/weasel/projects/tor/cvs/src/config/torrc.in	2004-03-01 23:41:26.000000000 +0100
-+++ cvs/src/config/torrc.in	2004-03-03 13:47:25.000000000 +0100
+diff -urNad /home/weasel/projects/tor/cvs/src/config/torrc.sample.in cvs/src/config/torrc.sample.in
+--- /home/weasel/projects/tor/cvs/src/config/torrc.sample.in	2004-03-01 23:41:26.000000000 +0100
++++ cvs/src/config/torrc.sample.in	2004-03-03 13:47:25.000000000 +0100
 @@ -11,7 +11,7 @@
  ##################### Below is just for servers #####################
  
