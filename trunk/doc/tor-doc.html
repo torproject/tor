@@ -192,8 +192,8 @@ not.)</p>
 href="http://www.privoxy.org/">privoxy</a>, which is a filtering web
 proxy that integrates well with Tor. Add the line <br>
 <tt>forward-socks4a / localhost:9050 .</tt><br>
-(don't forget the dot) to its
-config file. Then change your mozilla to http proxy at localhost port 8118
+(don't forget the dot) to its config file (you can just add it to the
+top). Then change your mozilla to http proxy at localhost port 8118
 (and no socks proxy). You should also set your SSL proxy to the same
 thing, to hide your https traffic. Using privoxy is necessary because
 <a href="http://freehaven.net/tor/cvs/doc/CLIENTS">Mozilla leaks your
