@@ -550,12 +550,20 @@ int connection_package_raw_inbuf(connection_t *conn) {
 
   assert(conn);
   assert(!connection_speaks_cells(conn));
-  /* this function should never get called if either package_window is 0 */
- 
+
 repeat_connection_package_raw_inbuf:
 
+  circ = circuit_get_by_conn(conn);
+  if(!circ) {
+    log_fn(LOG_DEBUG,"conn has no circuits!");
+    return -1;
+  }
+
+  if(circuit_consider_stop_edge_reading(circ, conn->type, conn->cpath_layer))
+    return 0;
+
   amount_to_process = conn->inbuf_datalen;
-  
+
   if(!amount_to_process)
     return 0;
 
@@ -569,12 +577,6 @@ repeat_connection_package_raw_inbuf:
   }
 
   connection_fetch_from_buf(cell.payload+RELAY_HEADER_SIZE, cell.length, conn);
-
-  circ = circuit_get_by_conn(conn);
-  if(!circ) {
-    log_fn(LOG_DEBUG,"conn has no circuits!");
-    return -1;
-  }
 
   log_fn(LOG_DEBUG,"(%d) Packaging %d bytes (%d waiting).",conn->s,cell.length, conn->inbuf_datalen);
 
@@ -605,14 +607,11 @@ repeat_connection_package_raw_inbuf:
     conn->cpath_layer->package_window--;
   }
 
-  if(circuit_consider_stop_edge_reading(circ,
-     conn->type == CONN_TYPE_EXIT ? EDGE_EXIT : EDGE_AP, conn->cpath_layer))
-    return 0;
-
   assert(conn->package_window > 0);
   if(--conn->package_window <= 0) { /* is it 0 after decrement? */
     connection_stop_reading(conn);
     log_fn(LOG_DEBUG,"conn->package_window reached 0.");
+    circuit_consider_stop_edge_reading(circ, conn->type, conn->cpath_layer);
     return 0; /* don't process the inbuf any more */
   }
   log_fn(LOG_DEBUG,"conn->package_window is %d",conn->package_window);

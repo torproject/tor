@@ -50,7 +50,6 @@ int connection_edge_process_inbuf(connection_t *conn) {
     case EXIT_CONN_STATE_OPEN:
       if(connection_package_raw_inbuf(conn) < 0)
         return -1;
-      circuit_consider_stop_edge_reading(circuit_get_by_conn(conn), conn->type == CONN_TYPE_AP ? EDGE_AP : EDGE_EXIT, conn->cpath_layer);
       return 0;
     case EXIT_CONN_STATE_CONNECTING:
       log_fn(LOG_DEBUG,"text from server while in 'connecting' state at exit. Leaving it on buffer.");
@@ -247,9 +246,9 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         return 0;
       }
       conn->package_window += STREAMWINDOW_INCREMENT;
+      log_fn(LOG_DEBUG,"stream-level sendme, packagewindow now %d.", conn->package_window);
       connection_start_reading(conn);
-      if(!circuit_consider_stop_edge_reading(circ, edge_type, layer_hint))
-        connection_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
+      connection_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
       break;
     default:
       log_fn(LOG_DEBUG,"unknown relay command %d.",relay_command);
