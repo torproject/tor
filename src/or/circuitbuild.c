@@ -389,6 +389,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       if(!has_completed_circuit) {
         has_completed_circuit=1;
         log_fn(LOG_NOTICE,"Tor has successfully opened a circuit. Looks like it's working.");
+// XXX008 put a count of known routers here
       }
       circuit_rep_hist_note_result(circ);
       circuit_has_opened(circ); /* do other actions as necessary */

@@ -124,7 +124,7 @@ void rotate_onion_key(void)
   log_fn(LOG_WARN, "Couldn't rotate onion key.");
 }
 
-/** The last calculated bandwidth usage for our node. */
+/** The latest calculated bandwidth usage for our node. */
 static int advertised_bw = 0;
 /** Tuck <b>bw</b> away so we can produce it when somebody
  * calls router_get_advertised_bandwidth() below.
