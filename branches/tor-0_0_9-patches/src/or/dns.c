@@ -282,7 +282,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
     log_fn(LOG_WARN,"no idle dns workers. Failing.");
     if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
       send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
-    dns_cancel_pending_resolve(exitconn->address);
+    dns_cancel_pending_resolve(exitconn->address); /* also marks it */
     return -1;
   }
 
@@ -414,7 +414,8 @@ void dns_cancel_pending_resolve(char *address) {
     pendconn = pend->conn;
     tor_assert(pendconn->s == -1);
     if (!pendconn->marked_for_close) {
-      connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
+      connection_edge_end(pendconn, END_STREAM_REASON_RESOURCELIMIT,
+                          pendconn->cpath_layer);
     }
     circ = circuit_get_by_conn(pendconn);
     if (circ)
