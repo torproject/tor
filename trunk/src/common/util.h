@@ -132,8 +132,8 @@ int tor_inet_ntoa(struct in_addr *in, char *buf, size_t buf_len);
 int is_plausible_address(const char *name);
 
 /* Process helpers */
-void start_daemon(const char *desired_cwd);
-void finish_daemon(void);
+void start_daemon(void);
+void finish_daemon(const char *desired_cwd);
 void write_pidfile(char *filename);
 
 #endif

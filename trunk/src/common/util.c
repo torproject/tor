@@ -1334,21 +1334,13 @@ static int daemon_filedes[2];
  * until finish_daemon is called.  (Note: it's safe to call this more
  * than once: calls after the first are ignored.)
  */
-void start_daemon(const char *desired_cwd)
+void start_daemon(void)
 {
   pid_t pid;
 
   if (start_daemon_called)
     return;
   start_daemon_called = 1;
-
-  if (!desired_cwd)
-    desired_cwd = "/";
-   /* Don't hold the wrong FS mounted */
-  if (chdir(desired_cwd) < 0) {
-    log_fn(LOG_ERR,"chdir to %s failed. Exiting.",desired_cwd);
-    exit(1);
-  }
 
   pipe(daemon_filedes);
   pid = fork();
@@ -1393,15 +1385,23 @@ void start_daemon(const char *desired_cwd)
  * calls after the first are ignored.  Calls start_daemon first if it hasn't
  * been called already.)
  */
-void finish_daemon(void)
+void finish_daemon(const char *desired_cwd)
 {
   int nullfd;
   char c = '.';
   if (finish_daemon_called)
     return;
   if (!start_daemon_called)
-    start_daemon(NULL);
+    start_daemon();
   finish_daemon_called = 1;
+
+  if (!desired_cwd)
+    desired_cwd = "/";
+   /* Don't hold the wrong FS mounted */
+  if (chdir(desired_cwd) < 0) {
+    log_fn(LOG_ERR,"chdir to %s failed. Exiting.",desired_cwd);
+    exit(1);
+  }
 
   nullfd = open("/dev/null",
                 O_CREAT | O_RDWR | O_APPEND);
@@ -1424,8 +1424,8 @@ void finish_daemon(void)
 }
 #else
 /* defined(MS_WINDOWS) */
-void start_daemon(const char *cp) {}
-void finish_daemon(void) {}
+void start_daemon(void) {}
+void finish_daemon(const char *cp) {}
 #endif
 
 /** Write the current process ID, followed by NL, into <b>filename</b>.
