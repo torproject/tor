@@ -207,6 +207,22 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified)
   }
 }
 
+routerinfo_t *
+routerlist_find_my_routerinfo(void) {
+  routerinfo_t *router;
+  int i;
+
+  if(!routerlist)
+    return NULL;
+
+  for(i=0;i<smartlist_len(routerlist->routers);i++) {
+    router = smartlist_get(routerlist->routers, i);
+    if(router_is_me(router))
+      return router;
+  }
+  return NULL;
+}
+
 /** How many seconds a router must be up before we'll use it for
  * reliability-critical node positions.
  */
