@@ -58,6 +58,7 @@ requires little synchronization or coordination between nodes, and
 protects against known anonymity-breaking attacks as well
 as or better than other systems with similar design parameters.
 % and we present a big list of open problems at the end
+% and we present a new practical design for rendezvous points
 \end{abstract}
 
 %\begin{center}
@@ -773,7 +774,7 @@ perfect forward secrecy, key freshness, etc.
 \end{aligned}
 \end{equation}
 
-Being able to prove knowledge of this $K$ shows both that it was Bob
+The second step shows both that it was Bob
 who received $g^x$, and that it was Bob who came up with $y$. We use
 PK encryption in the first step (rather than, eg, using the first two
 steps of STS, which has a signature in the second step) because we
@@ -804,8 +805,8 @@ down the circuit, the OR decrypts the cell payload and checks whether
 it recognizes the stream ID. A stream ID is recognized either if it
 is an already open stream at that OR, or if it is equal to zero. The
 zero stream ID is treated specially, and is used for control messages,
-e.g.  starting a new stream. If the stream ID is unrecognized, the OR
-sends the relay cell downstream. This \emph{leaky pipe} circuit design
+e.g. starting a new stream. If the stream ID is unrecognized, the OR
+passes the relay cell downstream. This \emph{leaky pipe} circuit design
 allows Alice's streams to exit at different ORs, for example to tolerate
 different exit policies, or to keep the ORs from knowing that two streams
 originate at the same person.
@@ -815,9 +816,9 @@ in the circuit receives the destroy cell, closes all open streams on
 that circuit, and passes a new destroy cell forward. But since circuits
 can be built incrementally, they can also be torn down incrementally:
 Alice can send a relay truncate cell to a node along the circuit. That
-node will send a destroy cell forward, and reply with a relay truncated
-acknowledgement. Alice might truncate her circuit so she can extend it
-to different nodes without notifying the first few nodes (or somebody
+node will send a destroy cell forward, and reply with an acknowledgement
+(relay truncated). Alice might truncate her circuit so she can extend it
+to different nodes without signaling to the first few nodes (or somebody
 observing them) that she is changing her circuit. That is, nodes in the
 middle are not even aware that the circuit was truncated, because the
 relay cells are encrypted. Similarly, if a node on the circuit goes down,
@@ -868,29 +869,31 @@ relay end, the stream can be torn down. This two-step handshake allows
 for TCP-based applications that, for example, close a socket for writing
 but are still willing to read.
 
-\SubSection{Tagging attacks on streams}
+\SubSection{Integrity checking on streams}
 
 In the old Onion Routing design, traffic was vulnerable to a malleability
-attack: since there was no integrity checking, an adversary could
+attack: without integrity checking, an adversary could
 guess some of the plaintext of a cell, xor it out, and xor in his own
 plaintext. Even an external adversary could do this despite the link
 encryption!
 
-Some examples of this attack might be to change a create cell to a
-destroy cell, to change the destination address in a relay begin cell
-to the adversary's webserver, or to change a user on an ftp connection
+For example, an adversary could change a create cell to a
+destroy cell; change the destination address in a relay begin cell
+to the adversary's webserver; or change a user on an ftp connection
 from typing ``dir'' to typing ``delete *''. Any node or observer along
 the path can introduce such corruption in a stream.
 
-Tor solves the tagging attack with respect to external adversaries simply
-by using TLS. Addressing the insider tagging attack is more complex.
+Tor solves this malleability attack with respect to external adversaries
+simply by using TLS. Addressing the insider malleability attack is more
+complex.
 
 Rather than doing integrity checking of the relay cells at each hop
 (like Mixminion \cite{minion-design}), which would increase packet size
 by a function of path length\footnote{This is also the argument against
 using recent cipher modes like EAX \cite{eax} --- we don't want the added
 message-expansion overhead at each hop, and we don't want to leak the path
-length}, we choose to accept passive timing attacks, and do integrity
+length (or pad to some max path length).}, we choose to accept passive
+timing attacks, and do integrity
 checking only at the edges of the circuit. When Alice negotiates a key
 with that hop, they both start a SHA-1 with some derivative of that key,
 thus starting out with randomness that only the two of them know. From
@@ -915,6 +918,7 @@ that Alice or Bob tear down the circuit if they receive a bad hash.
 
 \SubSection{Website fingerprinting attacks}
 
+% this subsection probably wants to move to analysis -RD
 old onion routing is vulnerable to website fingerprinting attacks like
 david martin's from usenix sec and drew's from pet2002. so is tor. we
 need to send some padding or something, including long-range padding
@@ -922,24 +926,97 @@ need to send some padding or something, including long-range padding
 a followup to \cite{defensive-dropping} that tells us what, exactly,
 to do, and why, exactly, it helps.
 
-\SubSection{Congestion control and fairness}
+\SubSection{Rate limiting and fairness}
+
+Nodes use a token bucket approach \cite{foo} to limit the number of
+bytes they receive. Tokens are added to the bucket each second (when
+the bucket is full, new tokens are discarded.) Each token represents
+permission to receive one byte from the network --- to receive a byte,
+the connection must remove a token from the bucket. Thus if the bucket
+is empty, that connection must wait until more tokens arrive. The number
+of tokens we add enforces a longterm average rate of incoming bytes, yet
+we still permit short-term bursts above the allowed bandwidth. Currently
+bucket sizes are set to ten seconds worth of traffic.
+
+Further, we want to avoid starving any Tor streams. Entire circuits
+could starve if we read greedily from connections and one connection
+uses all the remaining bandwidth. We solve this by dividing the number
+of tokens in the bucket by the number of connections that want to read,
+and reading at most that number of bytes from each connection. We iterate
+this procedure until the number of tokens in the bucket is under some
+threshold (eg 10KB), at which point we greedily read from connections.
+
+Because the number of bytes going out of a node is roughly the same
+as the number of bytes that have come in, doing rate limiting only on
+incoming bytes should be sufficient.
+
+Further, inspired by Rennhard et al's design in \cite{anonnet}, the edges
+of the circuit can automatically distinguish interactive streams compared
+to bulk streams --- interactive streams supply cells only rarely. We can
+get good latency for these streams by giving them preferential service,
+while still getting good overall throughput to the bulk streams. Such
+preferential treatment can have impact on anonymity, but an adversary
+who can observe the stream can already learn this information through
+timing attacks.
+
+\SubSection{Congestion control}
 \label{subsec:congestion}
 
-Even with bandwidth throttling, we still need to worry about congestion,
-either accidental or intentional. If a lot of people make circuits into
-the same node, and they all come out through the same connection, then
-that connection may become saturated (be unable to send out cells as
-quickly as it wants to). For example, an adversary can make a 'put'
-request through the onion routing network to a webserver he owns,
+Even with bandwidth rate limiting, we still need to worry about
+congestion, either accidental or intentional. If enough users choose
+the same OR-to-OR connection for their circuits, that connection
+will become saturated. For example, an adversary can make a `put'
+request through the onion routing network to a webserver he runs,
 and then refuse to read any of the bytes at the webserver end of the
-circuit. These bottlenecks can propagate back through the entire network,
-mucking up everything.
+circuit. Without some congestion control mechanism, these bottlenecks
+can propagate back through the entire network.
 
+\subsubsection{Circuit-level}
 
-Describe circuit-level and stream-level
-congestion control issues and solutions.
-Describe circuit-level and stream-level fairness issues; cite Marc's
-anonnet stuff.
+To control a circuit's bandwidth usage, each OR keeps track of two
+windows. The package window tracks how many relay data cells the OR is
+allowed to package (from outside streams) for transmission back to the OP,
+and the deliver window tracks how many relay data cells it is willing
+to deliver to streams outside the network. Each window is initialized
+(say, to 1000 data cells). When a data cell is packaged or delivered,
+the appropriate window is decremented. When an OR has received enough
+data cells (currently 100), it sends a relay sendme cell towards the OP,
+with stream ID zero. When an OR receives a relay sendme cell with stream
+ID zero, it increments its packaging window. Either of these cells
+increments the corresponding window by 100. If the packaging window
+reaches 0, the OR stops reading from TCP connections for all streams
+on the corresponding circuit, and sends no more relay data cells until
+receiving a relay sendme cell.
+
+The OP behaves identically, except that it must track a packaging window
+and a delivery window for every OR in the circuit. If a packaging window
+reaches 0, it stops reading from streams destined for that OR.
+
+\subsubsection{Stream-level}
+
+The stream-level congestion control mechanism is similar to the
+circuit-level mechanism above. ORs and OPs use relay sendme cells
+to implement end-to-end flow control for individual streams across
+circuits. Each stream begins with a package window (e.g. 500 cells),
+and increments the window by a fixed value (50) upon receiving a relay
+sendme cell. Rather than always returning a relay sendme cell as soon
+as enough cells have arrived, the stream-level congestion control also
+has to check whether data has been successfully flushed onto the TCP
+stream; it sends a relay sendme only when the number of bytes pending
+to be flushed is under some threshold (currently 10 cells worth).
+
+Currently, non-data relay cells do not affect the windows. Thus we
+avoid potential deadlock issues, e.g. because a stream can't send a
+relay sendme cell because its packaging window is empty.
+
+\subsubsection{Needs more research}
+
+We don't need to reimplement full TCP windows (with sequence numbers,
+the ability to drop cells when we're full and retransmit later, etc),
+because the TCP streams already guarantee in-order delivery of each
+cell. But we need to investigate further the effects of the current
+parameters on throughput and latency, while also keeping privacy in mind;
+see Section \ref{sec:maintaining-anonymity} for more discussion.
 
 \Section{Other design decisions}
 
@@ -1159,9 +1236,11 @@ their existence to any central point.
 \label{sec:rendezvous}
 
 Rendezvous points are a building block for \emph{location-hidden services}
-(aka responder anonymity) in the Tor network. Location-hidden
-services means Bob can offer a tcp service, such as a webserver,
-without revealing the IP of that service.
+(aka responder anonymity) in the Tor network. Location-hidden services
+means Bob can offer a TCP service, such as a webserver, without revealing
+the IP of that service. One motivation for location privacy is to provide
+protection against DDoS attacks: attackers are forced to attack the
+onion routing network as a whole rather than just Bob's IP.
 
 We provide this censorship resistance for Bob by allowing him to
 advertise several onion routers (his \emph{Introduction Points}) as his
@@ -1171,8 +1250,12 @@ about her rendezvous point, and then waits for him to connect to the
 rendezvous
 point. This extra level of indirection means Bob's introduction points
 don't open themselves up to abuse by serving files directly, eg if Bob
-chooses a node in France to serve material distateful to the French. The
-extra level of indirection also allows Bob to respond to some requests
+chooses a node in France to serve material distateful to the French,
+%
+% We need a more legitimate-sounding reason here.
+%
+or if Bob's service tends to get DDoS'ed by script kiddies.
+The extra level of indirection also allows Bob to respond to some requests
 and ignore others.
 
 We provide the necessary glue so that Alice can view webpages from Bob's
@@ -1220,9 +1303,13 @@ and the first half of a DH key exchange. When Bob connects to RP
 and gets connected to Alice's pipe, his first cell contains the
 other half of the DH key exchange.
 
-% briefly talk about our notion of giving cookies to people proportional
-% to how important they are, for location-protected servers hardened
-% against DDoS threat? -RD
+The authentication tokens can be used to provide selective access to users
+proportional to how important it is that they main uninterrupted access
+to the service. During normal situations, Bob's service might simply be
+offered directly from mirrors; Bob also gives out authentication cookies
+to special users. When those mirrors are knocked down by DDoS attacks,
+those special users can switch to accessing Bob's service via the Tor
+rendezvous system.
 
 \subsection{Integration with user applications}
 
