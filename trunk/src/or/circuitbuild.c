@@ -478,7 +478,6 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   relay_header_t rh;
   char *onionskin;
   char *id_digest=NULL;
-  routerinfo_t *router;
 
   if (circ->n_conn) {
     log_fn(LOG_WARN,"n_conn already set. Bug/attack. Closing.");
@@ -507,8 +506,6 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     in.s_addr = htonl(circ->n_addr);
     log_fn(LOG_INFO,"Next router (%s:%d) not connected. Connecting.",
            inet_ntoa(in), circ->n_port);
-
-    router = router_get_by_digest(id_digest);
 
     memcpy(circ->onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
     circ->state = CIRCUIT_STATE_OR_WAIT;
