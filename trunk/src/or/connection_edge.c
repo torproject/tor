@@ -430,8 +430,11 @@ int addressmap_already_mapped(const char *address) {
 /** Register a request to map <b>address</b> to <b>new_address</b>,
  * which will expire on <b>expires</b> (or 0 if never expires).
  *
- * new_address should be a newly dup'ed string, which we'll use or
+ * <b>new_address</b> should be a newly dup'ed string, which we'll use or
  * free as appropriate. We will leave address alone.
+ *
+ * If <b>new_address</b> is NULL, or equal to <b>address</b>, remove
+ * any mappings that exist from <b>address</b>.
  */
 void addressmap_register(const char *address, char *new_address, time_t expires) {
   addressmap_entry_t *ent;
@@ -440,6 +443,15 @@ void addressmap_register(const char *address, char *new_address, time_t expires)
   if (ent && ent->new_address && expires) {
     log_fn(LOG_INFO,"Addressmap ('%s' to '%s') not performed, since it's already mapped to '%s'", address, new_address, ent->new_address);
     tor_free(new_address);
+    return;
+  }
+  if (!new_address || !strcasecmp(address,new_address)) {
+    tor_free(new_address);
+    /* Remove the old mapping, if any. */
+    if (ent) {
+      addressmap_ent_free(ent);
+      strmap_remove(addressmap, address);
+    }
     return;
   }
   if (ent) { /* we'll replace it */
@@ -487,7 +499,7 @@ void client_dns_set_addressmap(const char *address, uint32_t val)
   tor_assert(address); tor_assert(val);
 
   if (tor_inet_aton(address, &in))
-    return; /* don't set an addressmap back to ourselves! */
+    return; /* don't set an addresmap back to ourselves! ????NM*/
   in.s_addr = htonl(val);
   addr = tor_malloc(INET_NTOA_BUF_LEN);
   tor_inet_ntoa(&in,addr,INET_NTOA_BUF_LEN);
