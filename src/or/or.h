@@ -216,6 +216,8 @@ typedef struct
 
   long timestamp_created;
 
+  int onions_handled_this_second;
+
 //  uint16_t aci; /* anonymous connection identifier */
 
 /* used by OR and OP: */
@@ -376,6 +378,7 @@ typedef struct
    int DirRebuildPeriod;
    int DirFetchPeriod;
    int KeepalivePeriod;
+   int OnionsPerSecond;
    int Role;
    int loglevel;
 } or_options_t;
