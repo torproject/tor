@@ -311,9 +311,9 @@ TODO: (very soon)
    either an 'exit node' or a non-edge node), it de/encrypts the payload
    with AES/CTR, as follows:
         'Forward' relay cell (same direction as CREATE):
-            Use Kf as key; encrypt.
+            Use Kf as key; decrypt.
         'Back' relay cell (opposite direction from CREATE):
-            Use Kb as key; decrypt.
+            Use Kb as key; encrypt.
 
    The OR then decides whether it recognizes the relay cell, by
    inspecting the payload as described in section 5.1 below.  If the OR
@@ -323,11 +323,11 @@ TODO: (very soon)
    encounters an unrecognized relay cell, an error has occurred: the OR
    sends a DESTROY cell to tear down the circuit.
 
-   When a relay cell arrives at an OP, it the OP encrypts the length and
-   payload fields with AES/CTR as follows:
+   When a relay cell arrives at an OP, the OP decrypts the payload
+   with AES/CTR as follows:
          OP receives data cell:
             For I=N...1,
-                Encrypt with Kb_I.  If the payload is recognized (see
+                Decrypt with Kb_I.  If the payload is recognized (see
                 section 5.1), then stop and process the payload.
 
    For more information, see section 5 below.
