@@ -32,18 +32,16 @@
 #define INLINE inline
 #endif
 
-#define xfree(p) do {if(p) {free(p); (p)=NULL;}} while(0) /* XXX use everywhere? */
 void *tor_malloc(size_t size);
 void *tor_realloc(void *ptr, size_t size);
 char *tor_strdup(const char *s);
+#define tor_free(p) do {if(p) {free(p); (p)=NULL;}} while(0)
+
 void tor_gettimeofday(struct timeval *timeval);
-
 long tv_udiff(struct timeval *start, struct timeval *end);
-
 void tv_addms(struct timeval *a, long ms);
 void tv_add(struct timeval *a, struct timeval *b);
 int tv_cmp(struct timeval *a, struct timeval *b);
-
 time_t tor_timegm (struct tm *tm);
 
 int write_all(int fd, const char *buf, size_t count);

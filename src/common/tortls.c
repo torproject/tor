@@ -467,7 +467,6 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen)
   X509_NAME *name = NULL;
   int nid;
   int lenout;
-  int i;
   
   if (!(cert = SSL_get_peer_certificate(tls->ssl))) {
     log_fn(LOG_WARN, "Peer has no certificate");
