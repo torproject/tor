@@ -16,8 +16,6 @@
 #define WIN32_WINNT 0x400
 #define _WIN32_WINNT 0x400
 #define WIN32_LEAN_AND_MEAN
-/* Number of fds that select will accept; default is 64. */
-#define FD_SETSIZE 512
 #endif
 
 #include <stdio.h>
@@ -118,7 +116,7 @@
 
 /** Upper bound on maximum simultaneous connections; can be lowered by
  * config file. */
-#define MAXCONNECTIONS 1000
+#define MAXCONNECTIONS 10000
 
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 #define MAX_NICKNAME_LEN 19
