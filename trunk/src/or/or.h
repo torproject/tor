@@ -600,7 +600,6 @@ typedef struct {
 
   uint32_t addr; /**< IPv4 address of OR, in host order. */
   uint16_t or_port; /**< Port for OR-to-OR and OP-to-OR connections. */
-  uint16_t socks_port; /**< Port for SOCKS connections. */
   uint16_t dir_port; /**< Port for HTTP directory connections. */
 
   time_t published_on; /**< When was the information in this routerinfo_t

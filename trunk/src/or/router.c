@@ -552,7 +552,6 @@ int router_rebuild_descriptor(int force) {
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
   ri->or_port = options->ORPort;
-  ri->socks_port = hibernating ? 0 : options->SocksPort;
   ri->dir_port = hibernating ? 0 : options->DirPort;
   ri->published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from main thread */
@@ -683,7 +682,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 
   /* Generate the easy portion of the router descriptor. */
   result = tor_snprintf(s, maxlen,
-                    "router %s %s %d %d %d\n"
+                    "router %s %s %d 0 %d\n"
                     "platform %s\n"
                     "published %s\n"
                     "opt fingerprint %s\n"
@@ -694,7 +693,6 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     router->nickname,
     router->address,
     router->or_port,
-    router->socks_port,
     router->dir_port,
     router->platform,
     published,

@@ -805,7 +805,6 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
 
     if (tok->n_args >= 5) {
       router->or_port = (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
-      router->socks_port = (uint16_t) tor_parse_long(tok->args[3],10,0,65535,NULL,NULL);
       router->dir_port = (uint16_t) tor_parse_long(tok->args[4],10,0,65535,NULL,NULL);
       ports_set = 1;
     }
@@ -824,7 +823,6 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
       goto err;
     }
     router->or_port = (uint16_t) tor_parse_long(tok->args[0],10,0,65535,NULL,NULL);
-    router->socks_port = (uint16_t) tor_parse_long(tok->args[1],10,0,65535,NULL,NULL);
     router->dir_port = (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
     ports_set = 1;
   }
@@ -951,8 +949,8 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     router->platform = tor_strdup("<unknown>");
   }
 
-//  log_fn(LOG_DEBUG,"or_port %d, socks_port %d, dir_port %d, bandwidthrate %u, bandwidthburst %u.",
-//    router->or_port, router->socks_port, router->dir_port,
+//  log_fn(LOG_DEBUG,"or_port %d, dir_port %d, bandwidthrate %u, bandwidthburst %u.",
+//    router->or_port, router->dir_port,
 //    (unsigned) router->bandwidthrate, (unsigned) router->bandwidthburst);
 
   goto done;
