@@ -281,8 +281,10 @@ static void conn_read(int i) {
       connection_handle_read(conn) < 0) {
     if (!conn->marked_for_close) {
       /* this connection is broken. remove it */
+#ifndef MS_WINDOWS
       log_fn(LOG_WARN,"Bug: unhandled error on read for %s connection (fd %d); removing",
              CONN_TYPE_TO_STRING(conn->type), conn->s);
+#endif
       connection_mark_for_close(conn);
     }
   }
