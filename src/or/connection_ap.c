@@ -365,8 +365,7 @@ int connection_ap_finished_flushing(connection_t *conn) {
     case AP_CONN_STATE_OPEN:
       /* FIXME down the road, we'll clear out circuits that are pending to close */
       connection_stop_writing(conn);
-      connection_consider_sending_sendme(conn);
-      return 0;
+      return connection_consider_sending_sendme(conn);
     default:
       log(LOG_DEBUG,"Bug: connection_ap_finished_flushing() called in unexpected state.");
       return 0;

@@ -635,8 +635,9 @@ int connection_consider_sending_sendme(connection_t *conn) {
 
   circ = circuit_get_by_conn(conn);
   if(!circ) {
-    log(LOG_DEBUG,"connection_consider_sending_sendme(): Bug: no circuit associated with conn. Closing.");
-    return -1;
+    /* this can legitimately happen if the destroy has already arrived and torn down the circuit */
+    log(LOG_DEBUG,"connection_consider_sending_sendme(): No circuit associated with conn. Skipping.");
+    return 0;
   }
   sendme.command = CELL_SENDME;
   sendme.length = RECEIVE_WINDOW_INCREMENT;
