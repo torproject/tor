@@ -449,7 +449,6 @@ test_crypto()
   test_streq(data2, "gvrwq4tt");
 
   strcpy(data1, "\xFF\xF5\x6D\x44\xAE\x0D\x5C\xC9\x62\xC4");
-  printf("-------\n");
   i = base32_encode(data2, 30, data1, 10);
   test_eq(i,0);
   test_streq(data2, "772w2rfobvomsywe");
