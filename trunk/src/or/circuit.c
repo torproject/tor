@@ -98,7 +98,7 @@ aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type) {
   if(test_aci == 0)
     return get_unique_aci_by_addr_port(addr, port, aci_type); /* try again */ 
 
-  conn = connection_get_by_addr_port(addr,port);  
+  conn = connection_exact_get_by_addr_port(addr,port);
   if(!conn) /* there can't be a conflict -- no connection of that sort yet */
     return test_aci;
 

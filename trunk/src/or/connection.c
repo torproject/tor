@@ -205,7 +205,7 @@ int retry_all_connections(int role, routerinfo_t **router_array, int rarray_len,
   if(role & ROLE_OR_CONNECT_ALL) {
     for (i=0;i<rarray_len;i++) {
       router = router_array[i];
-      if(!connection_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
+      if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) { /* not in the list */
         log(LOG_DEBUG,"retry_all_connections(): connecting to OR %s:%u.",router->address,ntohs(router->or_port));
         connection_or_connect_as_or(router, prkey, &local);
       }
