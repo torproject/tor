@@ -165,7 +165,6 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "ExitNodes",      CONFIG_TYPE_STRING, &options->ExitNodes) ||
     config_compare(list, "EntryNodes",     CONFIG_TYPE_STRING, &options->EntryNodes) ||
     config_compare(list, "ExitPolicy",     CONFIG_TYPE_STRING, &options->ExitPolicy) ||
-    config_compare(list, "ExitPolicyPrepend",CONFIG_TYPE_STRING, &options->ExitPolicyPrepend) ||
     config_compare(list, "ExcludedNodes",  CONFIG_TYPE_STRING, &options->ExcludedNodes) ||
 
     config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
@@ -244,7 +243,6 @@ void free_options(or_options_t *options) {
   tor_free(options->EntryNodes);
   tor_free(options->ExcludedNodes);
   tor_free(options->ExitPolicy);
-  tor_free(options->ExitPolicyPrepend);
   tor_free(options->SocksBindAddress);
   tor_free(options->ORBindAddress);
   tor_free(options->DirBindAddress);
@@ -260,8 +258,7 @@ void init_options(or_options_t *options) {
   options->ExitNodes = tor_strdup("");
   options->EntryNodes = tor_strdup("");
   options->ExcludedNodes = tor_strdup("");
-  options->ExitPolicy = tor_strdup("reject 0.0.0.0/8,reject 169.254.0.0/16,reject 127.0.0.0/8,reject 192.168.0.0/16,reject 10.0.0.0/8,reject 172.16.0.0/12,accept *:20-22,accept *:53,accept *:79-80,accept *:110,accept *:143,accept *:443,accept *:873,accept *:993,accept *:995,accept *:1024-65535,reject *:*");
-  options->ExitPolicyPrepend = tor_strdup("");
+  options->ExitPolicy = tor_strdup("");
   options->SocksBindAddress = tor_strdup("127.0.0.1");
   options->ORBindAddress = tor_strdup("0.0.0.0");
   options->DirBindAddress = tor_strdup("0.0.0.0");
