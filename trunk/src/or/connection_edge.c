@@ -9,7 +9,6 @@ extern or_options_t options; /* command-line and config-file options */
 extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
-static int connection_ap_handshake_attach_circuit(connection_t *conn);
 static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
@@ -745,8 +744,9 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     const char *descp;
     int desc_len;
 
+    strcpy(conn->rend_query, socks->address);
     /* see if we already have it cached */
-    if (rend_cache_lookup(socks->address, &descp, &desc_len) == 1) {
+    if (rend_cache_lookup(conn->rend_query, &descp, &desc_len) == 1) {
       conn->purpose = AP_PURPOSE_RENDPOINT_WAIT;
       return connection_ap_handshake_attach_circuit(conn);
       //circuit_launch_new(CIRCUIT_PURPOSE_C_ESTABLISH_REND, NULL);
@@ -755,7 +755,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       /* initiate a dir hidserv desc lookup */
       directory_initiate_command(router_pick_directory_server(),
                                  DIR_PURPOSE_FETCH_RENDDESC,
-                                 socks->address, strlen(socks->address));
+                                 conn->rend_query, strlen(conn->rend_query));
       return 0;
     }
   }
@@ -769,7 +769,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
  * Otherwise, associate conn with a safe live circuit, do the
  * right next step, and return 1.
  */
-static int connection_ap_handshake_attach_circuit(connection_t *conn) {
+int connection_ap_handshake_attach_circuit(connection_t *conn) {
   circuit_t *circ;
   uint32_t addr;
   uint8_t desired_circuit_purpose;
@@ -820,8 +820,7 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
       if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL ||
           desired_circuit_purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
         /* then write the service_id into circ */
-        strncpy(circ->rend_query, conn->socks_request->address,
-                CRYPTO_SHA1_DIGEST_LEN); /* pad with nuls */
+        strcpy(circ->rend_query, conn->rend_query);
       }
     }
     return 0;

@@ -404,7 +404,7 @@ struct connection_t {
                         * add 'bandwidth' to this, capping it at 10*bandwidth.
                         */
 
-/* Used only by dir connections: */
+/* Used only by DIR and AP connections: */
   char rend_query[REND_SERVICE_ID_LEN+1];
 
 /* Used only by edge connections: */
@@ -845,6 +845,8 @@ int connection_edge_finished_flushing(connection_t *conn);
 
 int connection_edge_package_raw_inbuf(connection_t *conn);
 
+int connection_ap_handshake_attach_circuit(connection_t *conn);
+
 int connection_ap_make_bridge(char *address, uint16_t port);
 
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
@@ -978,6 +980,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 /********************************* routerlist.c ***************************/
 
 routerinfo_t *router_pick_directory_server(void);
+struct smartlist_t;
 routerinfo_t *router_choose_random_node(routerlist_t *dir,
                                         char *preferred, char *excluded,
                                         struct smartlist_t *excludedsmartlist);
