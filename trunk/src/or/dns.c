@@ -568,9 +568,13 @@ int connection_dns_process_inbuf(connection_t *conn) {
     return 0;
   }
 
-  tor_assert(conn->state == DNSWORKER_STATE_BUSY);
+  if(conn->state != DNSWORKER_STATE_BUSY) {
+    log_fn(LOG_WARN,"Bug: poll() indicated than an idle dns worker was readable. Please report.");
+    return 0;
+  }
   if(buf_datalen(conn->inbuf) < 5) /* entire answer available? */
     return 0; /* not yet */
+  tor_assert(conn->state == DNSWORKER_STATE_BUSY);
   tor_assert(buf_datalen(conn->inbuf) == 5);
 
   connection_fetch_from_buf(&success,1,conn);
@@ -646,7 +650,7 @@ static int dnsworker_main(void *data) {
   for(;;) {
 
     if(recv(fd, &address_len, 1, 0) != 1) {
-      log_fn(LOG_INFO,"dnsworker exiting because tor process died.");
+      log_fn(LOG_INFO,"dnsworker exiting because tor process closed connection (either pruned idle dnsworker or died).");
       spawn_exit();
     }
 
