@@ -60,7 +60,7 @@ int router_reload_router_list(void)
   if (get_data_directory(&options)) {
     char *s;
     sprintf(filename,"%s/cached-directory", get_data_directory(&options));
-    s = read_file_to_str(filename);
+    s = read_file_to_str(filename,0);
     if (s) {
       log_fn(LOG_INFO, "Loading cached directory from %s", filename);
       if (router_load_routerlist_from_string(s, 0) < 0) {
@@ -693,7 +693,7 @@ int router_load_routerlist_from_file(char *routerfile, int trusted)
 {
   char *string;
 
-  string = read_file_to_str(routerfile);
+  string = read_file_to_str(routerfile,0);
   if(!string) {
     log_fn(LOG_WARN,"Failed to load routerfile %s.",routerfile);
     return -1;

@@ -119,6 +119,10 @@
 #include "strlcat.c"
 #endif
 
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
 /** Allocate a chunk of <b>size</b> bytes of memory, and return a pointer to
  * result.  On error, log and terminate the process.  (Same as malloc(size),
  * but never returns NULL.)
@@ -1459,33 +1463,29 @@ int check_private_dir(const char *dirname, int create)
  * This function replaces the old file atomically, if possible.
  */
 int
-write_str_to_file(const char *fname, const char *str)
+write_str_to_file(const char *fname, const char *str, int bin)
 {
   char tempname[1024];
   int fd;
-  FILE *file;
+  size_t len;
   if ((strlcpy(tempname,fname,1024) >= 1024) ||
       (strlcat(tempname,".tmp",1024) >= 1024)) {
     log(LOG_WARN, "Filename %s.tmp too long (>1024 chars)", fname);
     return -1;
   }
-  if ((fd = open(tempname, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0) {
+  if ((fd = open(tempname, O_WRONLY|O_CREAT|O_TRUNC|(bin?O_BINARY:0), 0600))
+      < 0) {
     log(LOG_WARN, "Couldn't open %s for writing: %s", tempname,
         strerror(errno));
     return -1;
   }
-  if (!(file = fdopen(fd, "w"))) {
-    log(LOG_WARN, "Couldn't fdopen %s for writing: %s", tempname,
-        strerror(errno));
+  len = strlen(str);
+  if (write_all(fd, str, len, 0) != len) {
+    log(LOG_WARN, "Error writing to %s: %s", tempname, strerror(errno));
     close(fd);
     return -1;
   }
-  if (fputs(str,file) == EOF) {
-    log(LOG_WARN, "Error writing to %s: %s", tempname, strerror(errno));
-    fclose(file);
-    return -1;
-  }
-  if (fclose(file) == EOF) {
+  if (close(fd)) {
     log(LOG_WARN,"Error flushing to %s: %s", tempname, strerror(errno));
     return -1;
   }
@@ -1521,7 +1521,7 @@ write_str_to_file(const char *fname, const char *str)
 /** Read the contents of <b>filename</b> into a newly allocated string; return the
  * string on success or NULL on failure.
  */
-char *read_file_to_str(const char *filename) {
+char *read_file_to_str(const char *filename, int bin) {
   int fd; /* router file */
   struct stat statbuf;
   char *string;
@@ -1533,7 +1533,7 @@ char *read_file_to_str(const char *filename) {
     return NULL;
   }
 
-  fd = open(filename,O_RDONLY,0);
+  fd = open(filename,O_RDONLY|(bin?O_BINARY:0),0);
   if (fd<0) {
     log_fn(LOG_WARN,"Could not open %s.",filename);
     return NULL;

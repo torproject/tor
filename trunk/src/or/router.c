@@ -319,7 +319,7 @@ int init_keys(void) {
 
   sprintf(keydir,"%s/router.desc", datadir);
   log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
-  if (write_str_to_file(keydir, mydesc)) {
+  if (write_str_to_file(keydir, mydesc,0)) {
     return -1;
   }
   /* 5. Dump fingerprint to 'fingerprint' */
@@ -334,7 +334,7 @@ int init_keys(void) {
     return -1;
   }
   strcat(fingerprint, "\n");
-  if (write_str_to_file(keydir, fingerprint))
+  if (write_str_to_file(keydir, fingerprint, 0))
     return -1;
   if(!authdir_mode())
     return 0;
@@ -348,7 +348,7 @@ int init_keys(void) {
   /* 7. [authdirserver only] load old directory, if it's there */
   sprintf(keydir,"%s/cached-directory", datadir);
   log_fn(LOG_INFO,"Loading cached directory from %s...",keydir);
-  cp = read_file_to_str(keydir);
+  cp = read_file_to_str(keydir,0);
   if(!cp) {
     log_fn(LOG_INFO,"Cached directory %s not present. Ok.",keydir);
   } else {
