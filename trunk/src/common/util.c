@@ -837,10 +837,14 @@ void spawn_exit()
 int
 tor_socketpair(int family, int type, int protocol, int fd[2])
 {
-#ifdef HAVE_SOCKETPAIR_XXXX
-    /* For testing purposes, we never fall back to real socketpairs. */
+#ifdef HAVE_SOCKETPAIR
     return socketpair(family, type, protocol, fd);
 #else
+    /* This socketpair does not work when localhost is down. So
+     * it's really not the same thing at all. But it's close enough
+     * for now, and really, when localhost is down sometimes, we
+     * have other problems too.
+     */
     int listener = -1;
     int connector = -1;
     int acceptor = -1;
