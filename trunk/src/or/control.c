@@ -11,8 +11,8 @@
 #include "or.h"
 
 /* Protocol outline: a bidirectional stream, over which each side
- * sends a series of messages.  Each message has a two-byte typecode,
- * a two-byte length field, and a variable-length body whose length is
+ * sends a series of messages.  Each message has a two-byte length field,
+ * a two-byte typecode, and a variable-length body whose length is
  * given in the length field.
  *
  * By default, the server only sends messages in response to client messages.
@@ -37,7 +37,8 @@
 #define CONTROL_CMD_SETEVENTS    0x0005
 #define CONTROL_CMD_EVENT        0x0006
 #define CONTROL_CMD_AUTHENTICATE 0x0007
-#define _CONTROL_CMD_MAX_RECOGNIZED 0x0007
+#define CONTROL_CMD_SAFECONF     0x0008
+#define _CONTROL_CMD_MAX_RECOGNIZED 0x0008
 
 /* Recognized error codes. */
 #define ERR_UNSPECIFIED             0x0000
@@ -47,6 +48,7 @@
 #define ERR_UNRECOGNIZED_EVENT_CODE 0x0004
 #define ERR_UNAUTHORIZED_USER       0x0005
 #define ERR_FAILED_AUTHENTICATION   0x0006
+#define ERR_FAILED_SAVECONF         0x0007
 
 /* Recongized asynchonous event types. */
 #define _EVENT_MIN            0x0001
@@ -68,9 +70,10 @@ static const char * CONTROL_COMMANDS[] = {
   "setevents",
   "events",
   "authenticate",
+  "saveconf",
 };
 
-/** Bitfield: The bit 1&lt;&lt;e is be set if <b>any</b> open control
+/** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
  * connection is interested in events of type <b>e</b>.  We use this
  * so that we can decide to skip generating event messages that nobody
  * is interest in without having to walk over the global connection
@@ -106,6 +109,8 @@ static int handle_control_setevents(connection_t *conn, uint16_t len,
                                     const char *body);
 static int handle_control_authenticate(connection_t *conn, uint16_t len,
                                        const char *body);
+static int handle_control_saveconf(connection_t *conn, uint16_t len,
+                                   const char *body);
 
 /** Given a possibly invalid message type code <b>cmd</b>, return a
  * human-readable string equivalent. */
@@ -324,8 +329,11 @@ handle_control_authenticate(connection_t *conn, uint16_t len, const char *body)
     secret_to_key(received,DIGEST_LEN,body,len,expected);
     if (!memcmp(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
       goto ok;
+    goto err;
   }
-  if (len == 0) { /* accept it for now */
+  if (len == 0) {
+    /* if Tor doesn't demand any stronger authentication, then
+     * the controller can get in with a blank auth line. */
     goto ok;
   }
 
@@ -336,6 +344,14 @@ handle_control_authenticate(connection_t *conn, uint16_t len, const char *body)
   log_fn(LOG_INFO, "Authenticated control connection (%d)", conn->s);
   send_control_done(conn);
   conn->state = CONTROL_CONN_STATE_OPEN;
+  return 0;
+}
+
+static int
+handle_control_saveconf(connection_t *conn, uint16_t len,
+                        const char *body)
+{
+  send_control_error(conn, ERR_FAILED_SAVECONF, "Not implemented");
   return 0;
 }
 
@@ -410,6 +426,10 @@ connection_control_process_inbuf(connection_t *conn) {
       break;
     case CONTROL_CMD_AUTHENTICATE:
       if (handle_control_authenticate(conn, body_len, body))
+        return -1;
+      break;
+    case CONTROL_CMD_SAFECONF:
+      if (handle_control_saveconf(conn, body_len, body))
         return -1;
       break;
     case CONTROL_CMD_ERROR:
