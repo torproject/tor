@@ -29,7 +29,6 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
-#include "../common/cell.h"
 #include "../common/config.h"
 #include "../common/key.h"
 #include "../common/log.h"
@@ -115,7 +114,28 @@
 #define RECEIVE_WINDOW_START 100
 #define RECEIVE_WINDOW_INCREMENT 10
 
+/* cell commands */
+#define CELL_PADDING 0
+#define CELL_CREATE 1
+#define CELL_DATA 2
+#define CELL_DESTROY 3
+#define CELL_ACK 4
+#define CELL_NACK 5
+#define CELL_SENDME 6
+
+#define CELL_PAYLOAD_SIZE 120
+
 typedef uint16_t aci_t;
+
+/* cell definition */
+typedef struct
+{ 
+  aci_t aci; /* Anonymous Connection Identifier */
+  unsigned char command;
+  unsigned char length; /* of payload if data cell, else value of sendme */
+  uint32_t seq; /* sequence number */
+  unsigned char payload[120];
+} cell_t;
 
 typedef struct
 { 
@@ -342,7 +362,7 @@ int fetch_from_buf(char *string, size_t string_len,
 
 /********************************* cell.c ***************************/
 
-int check_sane_cell(cell_t *cell);
+int pack_create(uint16_t aci, unsigned char *onion, uint32_t onionlen, unsigned char **cellbuf, unsigned int *cellbuflen);
 
 /********************************* circuit.c ***************************/
 
