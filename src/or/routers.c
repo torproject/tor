@@ -188,7 +188,8 @@ void directory_free(directory_t *directory)
   for (i = 0; i < directory->n_routers; ++i)
     routerinfo_free(directory->routers[i]);
   free(directory->routers);
-  /* XXX are we leaking directory->software_versions here? */
+  if(directory->software_versions)
+    free(directory->software_versions);
   free(directory);
 }
 
@@ -697,6 +698,7 @@ static int router_get_list_from_string_tok(char **s, directory_t **dest,
   *dest = (directory_t *)tor_malloc(sizeof(directory_t));
   (*dest)->routers = rarray;
   (*dest)->n_routers = rarray_len;
+  (*dest)->software_versions = NULL;
   return 0;
 }
 

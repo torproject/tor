@@ -7,7 +7,7 @@
 
 #include "orconfig.h"
 
-//#define USE_TLS
+#define USE_TLS
 
 #include <stdio.h>
 #include <stdlib.h>
