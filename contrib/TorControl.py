@@ -206,7 +206,7 @@ def receive_reply(s, expected=None):
         _, tp, body = receive_message(s)
         if tp == MSG_TYPE.EVENT:
             if _event_handler is not None:
-                _event_handler(tp, body)
+                _event_handler(body)
         elif tp == MSG_TYPE.ERROR:
             if len(body)<2:
                 raise ProtocolError("(Truncated error message)")
