@@ -122,6 +122,19 @@ static aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_t
   aci_t test_aci;
   connection_t *conn;
 
+#ifdef SEQUENTIAL_ACI
+  /* Right now, this is the only used aci_type.  XXX The others should
+     be removed. */
+  assert(aci_type == ACI_TYPE_BOTH); 
+  conn = connection_exact_get_by_addr_port(addr,port);
+  if (!conn)
+    return 1; /* No connection exists; conflict is impossible. */
+  do {
+    test_aci = conn->next_aci++; /* This can wrap around to 0; that's okay. */
+    if (test_aci == 0)
+      continue;
+  } while(circuit_get_by_aci_conn(test_aci, conn));
+#else
 try_again:
   log_fn(LOG_DEBUG,"trying to get a unique aci");
 
@@ -143,6 +156,7 @@ try_again:
 
   if(circuit_get_by_aci_conn(test_aci, conn))
     goto try_again;
+#endif
 
   return test_aci;
 }
