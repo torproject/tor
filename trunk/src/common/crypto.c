@@ -1188,6 +1188,9 @@ base64_decode(char *dest, int destlen, const char *src, int srclen)
   return ret;
 }
 
+/* Implement base32 encoding as in rfc3548.  Limitation: Requires that
+ * srclen is a multiple of 5.
+ */
 int
 base32_encode(char *dest, int destlen, const char *src, int srclen)
 {
@@ -1197,14 +1200,14 @@ base32_encode(char *dest, int destlen, const char *src, int srclen)
   if ((nbits%5) != 0)
     /* We need an even multiple of 5 bits. */
     return -1;
-  if ((nbits/5)+1 < destlen)
+  if ((nbits/5)+1 > destlen)
     /* Not enough space. */
     return -1;
 
   for (i=0,bit=0; bit < nbits; ++i, bit+=5) {
     /* set v to the 16-bit value starting at src[bits/8], 0-padded. */
-    v = ((unsigned char)src[bit/8]) << 8;
-    if (bit+5<nbits) v += src[(bit/8)+1];
+    v = ((uint8_t)src[bit/8]) << 8;
+    if (bit+5<nbits) v += (uint8_t)src[(bit/8)+1];
     /* set u to the 5-bit value at the bit'th bit of src. */
     u = (v >> (11-(bit%8))) & 0x1F;
     dest[i] = BASE32_CHARS[u];
