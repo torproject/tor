@@ -563,7 +563,6 @@ TODO: (very soon)
    cells when both a) the window is <= 450, and b) there are less than
    ten cell payloads remaining to be flushed at that edge.
 
-
 7. Directories and routers
 
 7.1. Extensible information format
@@ -712,7 +711,7 @@ items, a directory includes any number of router descriptors, and a single
 
     "signed-directory"
 
-        Indicates the start of a 
+        Indicates the start of a
 
     "published" YYYY-MM-DD HH:MM:SS
 
@@ -756,7 +755,7 @@ items, a directory includes any number of router descriptors, and a single
         'verified' if its nickname AND digest match the one provided.
         [XXXX 'router-status' was added in 0.0.9pre5; older directory code
         uses 'running-routers' instead.]
- 
+
     "directory-signature" nickname-of-dirserver NL Signature
 
 Note:  The router descriptor for the directory server MUST appear first.

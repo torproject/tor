@@ -31,11 +31,11 @@ case "$1" in
         echo "tor appears to be already running (pid file exists)"
         echo "Maybe you should run: $0 restart ?"
         RETVAL=1
-    else 
+    else
         echo -n "Starting tor..."
         if  [ "x$TORUSER" = "x" ]; then
             $TORBIN -f $TORCONF $TORARGS
-        else 
+        else
             /bin/su -c "$TORBIN -f $TORCONF $TORARGS" $TORUSER
         fi
         RETVAL=$?
@@ -87,7 +87,6 @@ case "$1" in
     $0 start
     ;;
 
-
     status)
     PID=`cat $TORPID 2>/dev/null`
     if [ "$PID" != "" ]; then
@@ -105,7 +104,7 @@ case "$1" in
     log)
     cat $TORLOG
     ;;
-    
+
     *)
     echo "Usage: $0 (start|stop|restart|status|log)"
     exit 1
