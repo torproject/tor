@@ -678,7 +678,9 @@ void spawn_exit()
 #elif defined(USE_PTHREADS)
   pthread_exit(NULL);
 #else
-  exit(0);
+  /* http://www.erlenstar.demon.co.uk/unix/faq_2.html says we should
+   * call _exit, not exit, from child processes. */
+  _exit(0);
 #endif
 }
 
