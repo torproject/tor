@@ -1,6 +1,24 @@
 Changes so far in 0.0.9:
+rc7:
+  o Bugfixes on 0.0.9rc:
+    - Fix a stack-trashing crash when an exit node begins hibernating.
+    - Avoid looking at unallocated memory while considering which
+      ports we need to build circuits to cover.
+    - Stop a sigpipe: when an 'end' cell races with eof from the app,
+      we shouldn't hold-open-until-flush if the eof arrived first.
+    - Fix a bug with init_cookie_authentication() in the controller.
+    - When recommending new-format log lines, if the upper bound is
+      LOG_ERR, leave it implicit.
+
+  o Bugfixes on 0.0.8.1:
+    - Fix a whole slew of memory leaks.
+    - Fix parse_iso_time on platforms without strptime (eg win32).
+    - win32: tolerate extra "readable" events better.
+    - win32: when being multithreaded, leave parent fdarray open.
+    - Make unit tests work on win32.
+
 rc6:
-  o Bugfixes on 0.0.9pre:
+  o Bugfixes on 0.0.9rc:
     - Clean up some more integer underflow opportunities (not exploitable
       we think).
     - While hibernating, hup should not regrow our listeners.
