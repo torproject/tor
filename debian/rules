@@ -63,7 +63,6 @@ build-stamp:  config.status
 	@echo
 	@echo
 	# Running unit tests
-	date
 	if [ "$(RUN_TEST)" != "no" ]; then \
 		src/or/test; \
 	else \
@@ -72,7 +71,6 @@ build-stamp:  config.status
 	@echo
 
 	# make design paper
-	date
 	if [ "$(BUILD_DOC)" != "no" ]; then \
 		make -C doc/design-paper tor-design.ps tor-design.pdf || \
 		( echo -e "*\n*\n*\n*"; \
@@ -87,7 +85,6 @@ build-stamp:  config.status
 		echo -e "\n\nSkipping tor-design.{ps,pdf}\n\n"; \
 	fi
 
-	date
 	touch build-stamp
 
 clean: unpatch
