@@ -233,7 +233,8 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   }
   crypto_free_pk_env(pk);
   if (strcmp(conn->nickname, nickname)) {
-    log_fn(LOG_WARN,"Other side claims to be '%s', but we wanted '%s'",
+    log_fn(options.DirPort ? LOG_WARN : LOG_INFO,
+           "Other side claims to be '%s', but we expected '%s'",
            nickname, conn->nickname);
     return -1;
   }
