@@ -999,7 +999,7 @@ config_parse_exit_policy(struct config_line_t *cfg,
 
   entries = smartlist_create();
   for (; cfg; cfg = cfg->next) {
-    smartlist_split_string(entries,cfg->value,",",SPLIT_SKIP_SPACE,0);
+    smartlist_split_string(entries,cfg->value,",",SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK,0);
     SMARTLIST_FOREACH(entries, const char *, ent, {
       log_fn(LOG_DEBUG,"Adding new entry '%s'",ent);
       *nextp = router_parse_exit_policy_from_string(ent);
