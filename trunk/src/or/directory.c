@@ -102,7 +102,7 @@ int dir_policy_permits_address(uint32_t addr)
   else if (a==0)
     return 1;
   tor_assert(a==1);
-  log_fn(LOG_WARN, "Got unexpected 'maybe' answer from dir policy");
+  log_fn(LOG_WARN, "Bug: got unexpected 'maybe' answer from dir policy");
   return 0;
 }
 
@@ -764,7 +764,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     tor_free(url);
 
     if (dlen == 0) {
-      log_fn(LOG_WARN,"My directory is empty. Closing.");
+      log_fn(LOG_NOTICE,"My directory is empty. Closing.");
       connection_write_to_buf(answer503, strlen(answer503), conn);
       return 0;
     }
@@ -967,7 +967,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
       connection_mark_for_close(conn);
       return 0;
     default:
-      log_fn(LOG_WARN,"BUG: called in unexpected state %d.", conn->state);
+      log_fn(LOG_WARN,"Bug: called in unexpected state %d.", conn->state);
       return -1;
   }
   return 0;

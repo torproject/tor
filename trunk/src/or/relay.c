@@ -525,7 +525,7 @@ connection_edge_process_relay_cell_not_open(
         return 0; /* this circuit is screwed and doesn't know it yet */
       }
       if (connection_ap_can_use_exit(conn, exitrouter)) {
-        log_fn(LOG_WARN,"Exitrouter %s seems to be more restrictive than its exit policy. Not using this router as exit for now,", exitrouter->nickname);
+        log_fn(LOG_NOTICE,"Exitrouter %s seems to be more restrictive than its exit policy. Not using this router as exit for now,", exitrouter->nickname);
         addr_policy_free(exitrouter->exit_policy);
         exitrouter->exit_policy =
           router_parse_addr_policy_from_string("reject *:*");
@@ -555,7 +555,7 @@ connection_edge_process_relay_cell_not_open(
         /* else, conn will get closed below */
         log_fn(LOG_INFO,"Giving up on retrying (from resolvefailed); conn can't be handled.");
       } else {
-        log_fn(LOG_WARN,"Have tried resolving address %s at %d different places. Giving up.",
+        log_fn(LOG_NOTICE,"Have tried resolving address %s at %d different places. Giving up.",
                conn->socks_request->address, MAX_RESOLVE_FAILURES);
       }
     }

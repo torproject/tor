@@ -46,7 +46,7 @@ int onion_pending_add(circuit_t *circ) {
   tor_assert(!ol_tail->next);
 
   if (ol_length >= get_options()->MaxOnionsPending) {
-    log_fn(LOG_WARN,"Already have %d onions queued. Closing.", ol_length);
+    log_fn(LOG_NOTICE,"Already have %d onions queued. Closing.", ol_length);
     tor_free(tmp);
     return -1;
   }

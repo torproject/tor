@@ -210,7 +210,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
 
   if (server_mode(get_options()) && (me=router_get_my_routerinfo()) &&
       !memcmp(me->identity_digest, id_digest,DIGEST_LEN)) {
-    log_fn(LOG_WARN,"Request to connect to myself! Failing.");
+    log_fn(LOG_WARN,"Bug: Request to connect to myself! Failing.");
     return NULL;
   }
 
@@ -403,7 +403,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   if (connection_or_nonopen_was_started_here(conn)) {
     /* I initiated this connection. */
     if (strcasecmp(conn->nickname, nickname)) {
-      log_fn(options->DirPort ? LOG_WARN : LOG_INFO,
+      log_fn(authdir_mode(options) ? LOG_WARN : LOG_INFO,
              "Other side (%s:%d) is '%s', but we tried to connect to '%s'",
              conn->address, conn->port, nickname, conn->nickname);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);

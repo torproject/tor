@@ -270,7 +270,7 @@ static void conn_read(int i) {
       connection_handle_read(conn) < 0) {
     if (!conn->marked_for_close) {
       /* this connection is broken. remove it */
-      log_fn(LOG_WARN,"Unhandled error on read for %s connection (fd %d); removing",
+      log_fn(LOG_WARN,"Bug: unhandled error on read for %s connection (fd %d); removing",
              CONN_TYPE_TO_STRING(conn->type), conn->s);
       connection_mark_for_close(conn);
     }
@@ -300,7 +300,7 @@ static void conn_write(int i) {
   if (connection_handle_write(conn) < 0) {
     if (!conn->marked_for_close) {
       /* this connection is broken. remove it. */
-      log_fn(LOG_WARN,"Unhandled error on write for %s connection (fd %d); removing",
+      log_fn(LOG_WARN,"Bug: unhandled error on write for %s connection (fd %d); removing",
              CONN_TYPE_TO_STRING(conn->type), conn->s);
       conn->has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
       /* XXX do we need a close-immediate here, so we don't try to flush? */
@@ -355,7 +355,7 @@ static void conn_close_if_marked(int i) {
       return;
     }
     if (connection_wants_to_flush(conn)) {
-      log_fn(LOG_WARN,"Conn (addr %s, fd %d, type %s, state %d) still wants to flush. Losing %d bytes! (Marked at %s:%d)",
+      log_fn(LOG_NOTICE,"Conn (addr %s, fd %d, type %s, state %d) still wants to flush. Losing %d bytes! (Marked at %s:%d)",
              conn->address, conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state,
              (int)buf_datalen(conn->outbuf), conn->marked_for_close_file,
              conn->marked_for_close);
@@ -563,6 +563,7 @@ static void run_scheduled_events(time_t now) {
     if (tor_tls_context_new(get_identity_key(), 1, options->Nickname,
                             MAX_SSL_KEY_LIFETIME) < 0) {
       log_fn(LOG_WARN, "Error reinitializing TLS context");
+      /* XXX is it a bug here, that we just keep going? */
     }
     last_rotated_certificate = now;
     /* XXXX We should rotate TLS connections as well; this code doesn't change
@@ -761,7 +762,7 @@ static int do_hup(void) {
     tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", options->DataDirectory);
     log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
     if (dirserv_parse_fingerprint_file(keydir) < 0) {
-      log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
+      log_fn(LOG_NOTICE, "Error reloading fingerprints. Continuing with old list.");
     }
   }
   /* Fetch a new directory. Even authdirservers do this. */

@@ -573,12 +573,12 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
 //         (unsigned int)*(uint32_t*)(key_data+40), (unsigned int)*(uint32_t*)(key_data+40+16));
   if (!(cpath->f_crypto =
         crypto_create_init_cipher(key_data+(2*DIGEST_LEN),1))) {
-    log(LOG_WARN,"forward cipher initialization failed.");
+    log(LOG_WARN,"Bug: forward cipher initialization failed.");
     return -1;
   }
   if (!(cpath->b_crypto =
         crypto_create_init_cipher(key_data+(2*DIGEST_LEN)+CIPHER_KEY_LEN,0))) {
-    log(LOG_WARN,"backward cipher initialization failed.");
+    log(LOG_WARN,"Bug: backward cipher initialization failed.");
     return -1;
   }
 
@@ -758,7 +758,7 @@ static int new_route_len(double cw, uint8_t purpose, smartlist_t *routers) {
   else if (purpose == CIRCUIT_PURPOSE_S_CONNECT_REND)
     routelen = 4;
   else {
-    log_fn(LOG_WARN,"Unhandled purpose %d", purpose);
+    log_fn(LOG_WARN,"Bug: unhandled purpose %d", purpose);
     return -1;
   }
 #endif
@@ -985,7 +985,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
     smartlist_t *needed_ports = circuit_get_unhandled_ports(time(NULL));
 
     if (best_support == -1) {
-      log(LOG_WARN, "All routers are down or middleman -- choosing a doomed exit at random.");
+      log(LOG_NOTICE, "All routers are down or middleman -- choosing a doomed exit at random.");
     }
     for (try = 0; try < 2; try++) {
       /* try once to pick only from routers that satisfy a needed port,
@@ -1047,7 +1047,7 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
           NULL, 0, 1, options->_AllowUnverified & ALLOW_UNVERIFIED_RENDEZVOUS, 0);
       return r;
   }
-  log_fn(LOG_WARN,"Unhandled purpose %d", purpose);
+  log_fn(LOG_WARN,"Bug: unhandled purpose %d", purpose);
   return NULL;
 }
 

@@ -111,19 +111,19 @@ dirserv_parse_fingerprint_file(const char *fname)
   for (list=front; list; list=list->next) {
     nickname = list->key; fingerprint = list->value;
     if (strlen(nickname) > MAX_NICKNAME_LEN) {
-      log(LOG_WARN, "Nickname '%s' too long in fingerprint file. Skipping.", nickname);
+      log(LOG_NOTICE, "Nickname '%s' too long in fingerprint file. Skipping.", nickname);
       continue;
     }
     if (strlen(fingerprint) != FINGERPRINT_LEN ||
         !crypto_pk_check_fingerprint_syntax(fingerprint)) {
-      log_fn(LOG_WARN, "Invalid fingerprint (nickname '%s', fingerprint %s). Skipping.",
+      log_fn(LOG_NOTICE, "Invalid fingerprint (nickname '%s', fingerprint %s). Skipping.",
              nickname, fingerprint);
       continue;
     }
     if (0==strcasecmp(nickname, DEFAULT_CLIENT_NICKNAME)) {
       /* If you approved an OR called "client", then clients who use
        * the default nickname could all be rejected.  That's no good. */
-      log(LOG_WARN,
+      log(LOG_NOTICE,
           "Authorizing a nickname '%s' would break many clients; skipping.",
           DEFAULT_CLIENT_NICKNAME);
       continue;
@@ -131,7 +131,7 @@ dirserv_parse_fingerprint_file(const char *fname)
     for (i = 0; i < smartlist_len(fingerprint_list_new); ++i) {
       ent = smartlist_get(fingerprint_list_new, i);
       if (0==strcasecmp(ent->nickname, nickname)) {
-        log(LOG_WARN, "Duplicate nickname '%s'. Skipping.",nickname);
+        log(LOG_NOTICE, "Duplicate nickname '%s'. Skipping.",nickname);
         break; /* out of the for. the 'if' below means skip to the next line. */
       }
     }
@@ -352,13 +352,13 @@ dirserv_add_descriptor(const char **desc)
   /* Is there too much clock skew? */
   now = time(NULL);
   if (ri->published_on > now+ROUTER_ALLOW_SKEW) {
-    log_fn(LOG_WARN, "Publication time for nickname '%s' is too far in the future; possible clock skew. Not adding.", ri->nickname);
+    log_fn(LOG_NOTICE, "Publication time for nickname '%s' is too far in the future; possible clock skew. Not adding.", ri->nickname);
     routerinfo_free(ri);
     *desc = end;
     return 0;
   }
   if (ri->published_on < now-ROUTER_MAX_AGE) {
-    log_fn(LOG_WARN, "Publication time for router with nickname '%s' is too far in the past. Not adding.", ri->nickname);
+    log_fn(LOG_NOTICE, "Publication time for router with nickname '%s' is too far in the past. Not adding.", ri->nickname);
     routerinfo_free(ri);
     *desc = end;
     return 0;
@@ -737,7 +737,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when,
       char filename[512];
       tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_options()->DataDirectory);
       if (write_str_to_file(filename,cached_directory.dir,0) < 0) {
-        log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
+        log_fn(LOG_NOTICE, "Couldn't write cached directory to disk. Ignoring.");
       }
     }
   }

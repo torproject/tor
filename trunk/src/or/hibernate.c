@@ -765,7 +765,7 @@ hibernate_end_time_elapsed(time_t now)
   }
 }
 
-/** The big function. Consider our environment and decide if it's time
+/** Consider our environment and decide if it's time
  * to start/stop hibernating.
  */
 void consider_hibernation(time_t now) {
