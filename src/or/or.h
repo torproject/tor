@@ -491,6 +491,8 @@ typedef struct crypt_path_t crypt_path_t;
 typedef struct {
   int desired_path_len;
   char *chosen_exit; /* nickname of planned exit node */
+  crypto_dh_env_t *rend_handshake_state; /*XXXXDOCDOC*/
+  unsigned char rend_key_material[52]; /*XXXXDOCDOC*/
 } cpath_build_state_t;
 
 /* struct for a path (circuit) through the network */
@@ -531,14 +533,15 @@ struct circuit_t {
   uint8_t state;
   uint8_t purpose;
 
-  /*
-   * holds hash of location-hidden service's PK if purpose is INTRO_POINT
-   *    or S_ESTABLISH_INTRO or S_RENDEZVOUSING;
-   * holds y portion of y.onion (zero-padded) if purpose is C_INTRODUCING or
-   *    C_ESTABLISH_REND, or is a C_GENERAL for a hidden service.
-   * filled with zeroes otherwise.
+  /* The field rend_sevice:
+   *  holds hash of location-hidden service's PK if purpose is INTRO_POINT
+   *     or S_ESTABLISH_INTRO or S_RENDEZVOUSING;
+   *  holds y portion of y.onion (zero-padded) if purpose is C_INTRODUCING or
+   *     C_ESTABLISH_REND, or is a C_GENERAL for a hidden service.
+   *  is filled with zeroes otherwise.
    */
   char rend_service[CRYPTO_SHA1_DIGEST_LEN];
+
   /* Holds rendezvous cookie if purpose is REND_POINT_WAITING or
    * S_RENDEZVOUSING.  Filled with zeroes otherwise.
   */

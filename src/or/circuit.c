@@ -127,8 +127,11 @@ void circuit_free(circuit_t *circ) {
     crypto_free_digest_env(circ->n_digest);
   if (circ->p_digest)
     crypto_free_digest_env(circ->p_digest);
-  if(circ->build_state)
+  if(circ->build_state) {
     tor_free(circ->build_state->chosen_exit);
+    if (circ->build_state->rend_handshake_state)
+      crypto_dh_free(circ->build_state->rend_handshake_state);
+  }
   tor_free(circ->build_state);
   circuit_free_cpath(circ->cpath);
   if (circ->rend_splice) {
