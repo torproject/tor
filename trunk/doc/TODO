@@ -143,6 +143,8 @@ R  o client software not upload descriptor until:
        * no need to do this yet. few people define their ORPort.
 
  Arguable
+N - Script to try pulling bytes through slow-seeming servers so they can
+    notice that they might be fast.
 N . Reverse DNS
     o specify
     - implement
