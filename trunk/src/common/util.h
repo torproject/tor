@@ -32,9 +32,10 @@
 #endif
 
 #ifdef MS_WINDOWS
-/* Windows names string functions funnily. */
+/* Windows names string functions differently from most other platforms. */
 #define strncasecmp strnicmp
 #define strcasecmp stricmp
+/* "inline" is __inline on windows. " */
 #define INLINE __inline
 /* Windows compilers before VC7 don't have __FUNCTION__. */
 #if _MSC_VER < 1300
@@ -44,6 +45,9 @@
 #define INLINE inline
 #endif
 
+/* Replace assert() with a variant that sends failures to the log before
+ * calling assert() normally.
+ */
 #ifdef NDEBUG
 #define tor_assert(expr) do {} while(0)
 #else
@@ -56,6 +60,12 @@
  } } while (0)
 #endif
 
+/* On windows, you have to call close() on fds returned by open(), and
+ * closesocket() on fds returned by socket().  On Unix, everything
+ * gets close()'d.  We abstract this difference by always using the
+ * following macro to close sockets, and always using close() on
+ * files.
+ */
 #ifdef MS_WINDOWS
 #define tor_close_socket(s) closesocket(s)
 #else
@@ -63,6 +73,7 @@
 #endif
 
 /* legal characters in a filename */
+/* XXXX This isn't so on windows. */
 #define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
 
 size_t strlcat(char *dst, const char *src, size_t siz);
@@ -76,6 +87,10 @@ char *tor_strndup(const char *s, size_t n);
 #define tor_free(p) do {if(p) {free(p); (p)=NULL;}} while(0)
 void tor_strlower(char *s);
 
+/* Some platforms segfault when you try to access a multi-byte type
+ * that isn't aligned to a word boundary.  The macros and/or functions
+ * below can be used to access unaligned data on any platform.
+ */
 #ifdef UNALIGNED_INT_ACCESS_OK
 #define get_uint16(cp) (*(uint16_t*)(cp))
 #define get_uint32(cp) (*(uint32_t*)(cp))
@@ -116,6 +131,7 @@ void set_uint32(char *cp, uint32_t v);
 void hex_encode(const char *from, int fromlen, char *to);
 const char *hex_str(const char *from, int fromlen);
 
+/* Resizeable array. */
 typedef struct smartlist_t smartlist_t;
 
 smartlist_t *smartlist_create();
@@ -168,10 +184,12 @@ void strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp);
 
 int strmap_iter_done(strmap_iter_t *iter);
 
+/* String manipulation */
 const char *eat_whitespace(const char *s);
 const char *eat_whitespace_no_nl(const char *s);
 const char *find_whitespace(const char *s);
 
+/* Time helpers */
 void tor_gettimeofday(struct timeval *timeval);
 long tv_udiff(struct timeval *start, struct timeval *end);
 void tv_addms(struct timeval *a, long ms);
@@ -221,19 +239,22 @@ struct in_addr;
 int tor_inet_aton(const char *cp, struct in_addr *addr);
 int tor_lookup_hostname(const char *name, uint32_t *addr);
 
-/* For stupid historical reasons, windows sockets have an independent set of
- * errnos which they use as the fancy strikes them.
+/* For stupid historical reasons, windows sockets have an independent
+ * set of errnos, and an independent way to get them.  Also, you can't
+ * always believe WSAEWOULDBLOCK.  Use the macros below to compare
+ * errnos against expected values, and use tor_socket_errno to find
+ * the actual errno after a socket operation fails.
  */
 #ifdef MS_WINDOWS
-#define ERRNO_EAGAIN(e)           ((e) == EAGAIN || (e) == WSAEWOULDBLOCK)
-#define ERRNO_EINPROGRESS(e)      ((e) == WSAEINPROGRESS)
-#define ERRNO_CONN_EINPROGRESS(e) ((e) == WSAEINPROGRESS || (e) == WSAEINVAL)
-int correct_socket_errno(int s);
+#define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN || (e) == WSAEWOULDBLOCK)
+#define ERRNO_IS_EINPROGRESS(e)      ((e) == WSAEINPROGRESS)
+#define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == WSAEINPROGRESS || (e)== WSAEINVAL)
+int tor_socket_errno(int sock);
 #else
-#define ERRNO_EAGAIN(e)           ((e) == EAGAIN)
-#define ERRNO_EINPROGRESS(e)      ((e) == EINPROGRESS)
-#define ERRNO_CONN_EINPROGRESS(e) ((e) == EINPROGRESS)
-#define correct_socket_errno(s)   (errno)
+#define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN)
+#define ERRNO_IS_EINPROGRESS(e)      ((e) == EINPROGRESS)
+#define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == EINPROGRESS)
+#define tor_socket_errno(sock)       (errno)
 #endif
 
 #endif

@@ -16,7 +16,7 @@
 #endif
 
 /* If _POLL_EMUL_H_ is defined, then poll is just a just a thin wrapper around
- * select.  On Mac OS 10.3, this wrapper is kinda flakey, and we should
+ * select.  On Mac OS 10.3, this wrapper is kinda flaky, and we should
  * use our own.
  */
 #if (defined(HAVE_POLL_H)||defined(HAVE_SYS_POLL_H)) && !defined(_POLL_EMUL_H_)

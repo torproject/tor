@@ -7,20 +7,28 @@
 
 #include <stdio.h>
 
+/* Length of the output of our message digest. */
 #define DIGEST_LEN 20
+/* Length of our symmetric cipher's keys. */
 #define CIPHER_KEY_LEN 16
-#define PK_BITS 1024
-#define PK_BYTES (PK_BITS/8)
-#define DH_BITS 1024
-#define DH_BYTES (DH_BITS/8)
-#define CRYPTO_DH_SIZE DH_BYTES
+/* Length of our public keys. */
+#define PK_BYTES (1024/8)
+/* Length of our DH keys. */
+#define DH_BYTES (1024/8)
 
+/* Constants used to indicate disired public-key padding functions. */
 #define PK_NO_PADDING         60000
 #define PK_PKCS1_PADDING      60001
 #define PK_PKCS1_OAEP_PADDING 60002
 
+/* Bytes added for PKCS1 padding. */
 #define PKCS1_PADDING_OVERHEAD 11
+/* Bytes added for PKCS1-OAEP padding. */
 #define PKCS1_OAEP_PADDING_OVERHEAD 42
+
+/* Length of encoded public key fingerprints, including space and NUL. */
+#define FINGERPRINT_LEN 49
+
 
 typedef struct crypto_pk_env_t crypto_pk_env_t;
 typedef struct crypto_cipher_env_t crypto_cipher_env_t;
@@ -64,7 +72,6 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
                                      const unsigned char *from, int fromlen,
                                      unsigned char *to,int padding);
 
-#define FINGERPRINT_LEN 49
 int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len);
 crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len);
 int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out);
