@@ -603,7 +603,7 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
     log_fn(LOG_WARN,"couldn't base64-encode signature");
     return -1;
   }
-  
+
   if (strlcat(s, "-----END SIGNATURE-----\n", maxlen) >= maxlen)
     goto truncated;
 
