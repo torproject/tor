@@ -16,14 +16,6 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
 dnl AC_DEFINE([HAVE_OPENSSL], 0, [Define if OpenSSL was found.])
-dnl AC_DEFINE([HAVE_POPT], 0, [Define if popt was found.])
-
-AC_CHECK_LIB(popt,poptParseArgvString,
-	AC_DEFINE(HAVE_POPT),
-	AC_MSG_ERROR(required library not found: popt)
-)
-
-LIBS="$LIBS -lpopt"
 
 # The big search for OpenSSL
 # copied from openssh's configure.ac

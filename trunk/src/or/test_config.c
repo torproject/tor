@@ -6,7 +6,7 @@ int main(int ac, char **av)
    int argc, rtn_val, failures, total;
    char fname[512];
    FILE *pipe;
-   char *argv[] = { "or", "-v", "-f", fname, NULL };
+   char *argv[] = { "or", "-f", fname, NULL };
    argc = 4;
    failures = total = 0;
    printf("Config file test suite...\n\n");
@@ -15,7 +15,7 @@ int main(int ac, char **av)
    {
       fname[strlen(fname)-1] = '\0';
       printf("%s\n--------------------\n", fname);
-      rtn_val = getoptions(argc,argv,&options);
+      rtn_val = getconfig(argc,argv,&options);
       ++total;
       if ( rtn_val)
       {

@@ -1,4 +1,3 @@
-
 [First four are all equally first.
 Others follow in order of priority.]
 
@@ -34,7 +33,7 @@ and directory/network state monitoring.
 debian / red hat spec file
 handle starting things as a system daemon
 transition addr to sin_addr
-
+get proxy to choose the same conn if it's open
 
 Obvious things I'd like to do that won't break anything:
 

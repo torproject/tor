@@ -2,22 +2,9 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/**
- * config.c 
- * Routines for loading the configuration file.
- *
- * Matej Pfajfar <mp292@cam.ac.uk>
- */
-
 #include "or.h"
 
-#ifndef POPT_TABLEEND /* handle popt 1.6 before 1.6.2 */
-#define POPT_TABLEEND { NULL, '\0', 0, 0, 0, NULL, NULL }
-#endif
-
-const char * 
-basename(const char *filename)
-{
+const char *basename(const char *filename) {
   char *result;
   /* XXX This won't work on windows. */
   result = strrchr(filename, '/');
@@ -27,279 +14,369 @@ basename(const char *filename)
     return filename;
 }
 
-/* loads the configuration file */
-int getconfig(char *conf_filename, config_opt_t *options)
-{
-  FILE *cf = NULL;
-  int retval = 0;
-  
-  if ((!conf_filename) || (!options))
-    return -1;
-  
-  /* load config file */
-  cf = open_config(conf_filename);
-  if (!cf)
-  {
-    log(LOG_ERR,"Could not open configuration file %s.",conf_filename);
-    return -1;
+/* open configuration file for reading */
+FILE *config_open(const unsigned char *filename) {
+  assert(filename);
+  if (strspn(filename,CONFIG_LEGAL_FILENAME_CHARACTERS) != strlen(filename)) {
+    /* filename has illegal letters */
+    return NULL;
   }
-  retval = parse_config(cf,options);
-  if (retval)
-    return -1;
-
-  return 0;
+  return fopen(filename, "r");
 }
 
-int getoptions(int argc, char **argv, or_options_t *options)
-/**
+/* close configuration file */
+int config_close(FILE *f) {
+  assert(f);
+  return fclose(f);
+}
 
-A replacement for getargs() and getconfig() which uses the <popt> library to parse
-both command-line arguments and configuration files. A specific configuration file
-may be specified using the --ConfigFile option. If one is not specified, then the
-configuration files at /etc/<cmd>rc and ~/.<cmd>rc will be loaded in that order so
-user preferences will override the ones specified in /etc.
+struct config_line *config_get_commandlines(int argc, char **argv) {
+  struct config_line *new;
+  struct config_line *front = NULL;
+  char *s;
+  int i = 1;
 
-The --ConfigFile (-f) option may only be used on the command-line. All other command-line
-options may also be specified in configuration files. <popt> aliases are enabled
-so a user can define their own options in the /etc/popt or ~/.popt files as outlined
-in "man popt" pages.
+  while(i < argc-1) { 
+    if(!strcmp(argv[i],"-f")) {
+//      log(LOG_DEBUG,"Commandline: skipping over -f.");
+      i+=2; /* this is the config file option. ignore it. */
+      continue;
+    }
 
-RETURN VALUE: 0 on success, non-zero on error
-**/
-{
-   char *ConfigFile;
-   int Verbose;
-   int code;
-   poptContext optCon;
-   const char *cmd;
-   struct poptOption opt_tab[] =
-   {
-      { "APPort",          'a',  POPT_ARG_INT,     &options->APPort,
-         0, "application proxy port",                          "<port>" },
-      { "CoinWeight",      'w',  POPT_ARG_FLOAT,   &options->CoinWeight,
-         0, "coin weight used in determining routes",          "<weight>" },
-      { "ConfigFile",      'f',  POPT_ARG_STRING,  &ConfigFile,
-         0, "user specified configuration file",               "<file>" },
-      { "LogLevel",        'l',  POPT_ARG_STRING,  &options->LogLevel,
-         0, "emerg|alert|crit|err|warning|notice|info|debug",  "<level>" },
-      { "MaxConn",         'm',  POPT_ARG_INT,     &options->MaxConn,
-         0, "maximum number of incoming connections",          "<max>" },
-      { "OPPort",          'o',  POPT_ARG_INT,     &options->OPPort,
-         0, "onion proxy port",                                "<port>" },
-      { "ORPort",          'p',  POPT_ARG_INT,     &options->ORPort,
-         0, "onion router port",                               "<port>" },
-      { "DirPort",         'd',  POPT_ARG_INT,     &options->DirPort,
-         0, "directory server port",                           "<port>" },
-      { "PrivateKeyFile",  'k',  POPT_ARG_STRING,  &options->PrivateKeyFile,
-         0, "maximum number of incoming connections",          "<file>" },
-      { "RouterFile",      'r',  POPT_ARG_STRING,  &options->RouterFile,
-         0, "local port on which the onion proxy is running",  "<file>" },
-      { "TrafficShaping",  't',  POPT_ARG_INT,     &options->TrafficShaping,
-         0, "which traffic shaping policy to use",             "<policy>" },
-      { "LinkPadding",     'P',  POPT_ARG_INT,     &options->LinkPadding,
-         0, "whether to use link padding",                     "<padding>" },
-      { "DirRebuildPeriod",'D',  POPT_ARG_INT,     &options->DirRebuildPeriod,
-         0, "how many seconds between directory rebuilds",     "<rebuildperiod>" },
-      { "DirFetchPeriod",  'F',  POPT_ARG_INT,     &options->DirFetchPeriod,
-         0, "how many seconds between directory fetches",     "<fetchperiod>" },
-      { "KeepalivePeriod", 'K',  POPT_ARG_INT,     &options->KeepalivePeriod,
-         0, "how many seconds between keepalives",            "<keepaliveperiod>" },
-//      { "ReconnectPeriod", 'e',  POPT_ARG_INT,     &options->ReconnectPeriod,
-//         0, "how many seconds between retrying all OR connections", "<reconnectperiod>" },
-      { "Role",            'R',  POPT_ARG_INT,     &options->Role,
-         0, "4-bit global role id",                            "<role>" },
-      { "Verbose",         'v',  POPT_ARG_NONE,    &Verbose,
-         0, "display options selected before execution",       NULL },
-      POPT_AUTOHELP  /* handles --usage and --help automatically */
-      POPT_TABLEEND  /* marks end of table */
-   };
-   cmd = basename(argv[0]);
-   optCon = poptGetContext(cmd,argc,(const char **)argv,opt_tab,0);
+    new = malloc(sizeof(struct config_line));
+    s = argv[i];
+    while(*s == '-')
+      s++;
+    new->key = strdup(s);
+    new->value = strdup(argv[i+1]);
 
-   poptReadDefaultConfig(optCon,0);       /* read <popt> alias definitions */
+    log(LOG_DEBUG,"Commandline: parsed keyword '%s', value '%s'",
+      new->key, new->value);
+    new->next = front;
+    front = new;
+    i += 2;
+  }
+  return front;
+}
 
-   /* assign default option values */
+/* parse the config file and strdup into key/value strings. Return list.
+ *  * Warn and ignore mangled lines. */
+struct config_line *config_get_lines(FILE *f) {
+  struct config_line *new;
+  struct config_line *front = NULL;
+  char line[CONFIG_LINE_MAXLEN];
+  int lineno=0; /* current line number */
+  char *s;
+  char *start, *end;
 
-   bzero(options,sizeof(or_options_t));
-   options->LogLevel = "debug";
-   options->loglevel = LOG_DEBUG;
-   options->CoinWeight = 0.8;
-   options->LinkPadding = 0;
-   options->DirRebuildPeriod = 600;
-   options->DirFetchPeriod = 6000;
-   options->KeepalivePeriod = 300;
-//   options->ReconnectPeriod = 6001;
-   options->Role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
+  assert(f);
 
-   code = poptGetNextOpt(optCon);         /* first we handle command-line args */
-   if ( code == -1 )
-   {
-      if ( ConfigFile )                   /* handle user-specified config file */
-         code = poptReadOptions(optCon,ConfigFile);
-      else                                /* load Default configuration files */
-         code = poptReadDefaultOptions(cmd,optCon);
-   }
+  fseek(f,0,SEEK_SET); /* make sure we start at the beginning of file */
 
-   switch(code)                           /* error checking */
-   {
-   case INT_MIN:
-      log(LOG_ERR, "%s: Unable to open configuration file.\n", ConfigFile);
+  while(fgets(line, CONFIG_LINE_MAXLEN, f)) {
+    lineno++;
+
+    /* first strip comments */
+    s = strchr(line,'#');
+    if(s) {
+      *s = 0; /* stop the line there */
+    }
+
+    /* walk to the end, remove end whitespace */
+    s = index(line, 0); /* now we're at the null */
+    do {
+      *s = 0;
+      s--;
+    } while (isspace(*s));
+
+    start = line;
+    while(isspace(*start))
+      start++;
+    if(*start == 0)
+      continue; /* this line has nothing on it */
+
+    end = start;
+    while(*end && !isspace(*end))
+      end++;
+    s = end;
+    while(*s && isspace(*s))
+      s++;
+    if(!*end || !*s) { /* only a keyword on this line. no value. */
+      log(LOG_WARNING,"Config line %d has keyword '%s' but no value. Skipping.",lineno,s);
+    }
+    *end = 0; /* null it out */
+
+    /* prepare to parse the string into key / value */
+    new = malloc(sizeof(struct config_line));
+    new->key = strdup(start);
+    new->value = strdup(s);
+
+    log(LOG_DEBUG,"Config line %d: parsed keyword '%s', value '%s'",
+      lineno, new->key, new->value);
+    new->next = front;
+    front = new;
+  }
+
+  return front;
+}
+
+void config_free_lines(struct config_line *front) {
+  struct config_line *tmp;
+
+  while(front) {
+    tmp = front;
+    front = tmp->next;
+
+    free(tmp->key);
+    free(tmp->value);
+    free(tmp);
+  }
+}
+
+int config_compare(struct config_line *c, char *key, int type, void *arg) {
+
+  if(strncasecmp(c->key,key,strlen(c->key)))
+    return 0;
+
+  /* it's a match. cast and assign. */
+  log(LOG_DEBUG,"config_compare(): Recognized keyword '%s' as %s, using value '%s'.",c->key,key,c->value);
+
+  switch(type) {
+    case CONFIG_TYPE_INT:   
+      *(int *)arg = atoi(c->value);
       break;
-   case -1:
-      code = 0;
+    case CONFIG_TYPE_STRING:
+      *(char **)arg = strdup(c->value);
       break;
-   default:
-      poptPrintUsage(optCon, stderr, 0);
-      log(LOG_ERR, "%s: %s\n", poptBadOption(optCon, POPT_BADOPTION_NOALIAS), poptStrerror(code));
+    case CONFIG_TYPE_DOUBLE:
+      *(double *)arg = atof(c->value);
       break;
-   }
+  }
+  return 1;
+}
 
-   poptFreeContext(optCon);
+void config_assign(or_options_t *options, struct config_line *list) {
 
-   if ( code ) return code;      /* return here if we encountered any problems */
+  /* iterate through list. for each item convert as appropriate and assign to 'options'. */
 
-   /* Display options upon user request */
+  while(list) {
+    if(
 
-   if ( Verbose )                      
-   {
-      printf("LogLevel=%s, Role=%d\n",
-             options->LogLevel,
-             options->Role);
-      printf("RouterFile=%s, PrivateKeyFile=%s\n",
-             options->RouterFile,
-             options->PrivateKeyFile);
-      printf("ORPort=%d, OPPort=%d, APPort=%d DirPort=%d\n",
-             options->ORPort,options->OPPort,
-             options->APPort,options->DirPort);
-      printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d, LinkPadding=%d\n",
-             options->CoinWeight,
-             options->MaxConn,
-             options->TrafficShaping,
-             options->LinkPadding);
-      printf("DirRebuildPeriod=%d, DirFetchPeriod=%d KeepalivePeriod=%d\n",
-             options->DirRebuildPeriod,
-             options->DirFetchPeriod,
-             options->KeepalivePeriod);
-   }
+    /* order matters here! abbreviated arguments use the first match. */
 
-   /* Validate options */
+    /* string options */
+    config_compare(list, "LogLevel",       CONFIG_TYPE_STRING, &options->LogLevel) ||
+    config_compare(list, "PrivateKeyFile", CONFIG_TYPE_STRING, &options->PrivateKeyFile) ||
+    config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
 
-   if ( options->LogLevel )
-   {
-      if (!strcmp(options->LogLevel,"emerg"))
-         options->loglevel = LOG_EMERG;
-      else if (!strcmp(options->LogLevel,"alert"))
-         options->loglevel = LOG_ALERT;
-      else if (!strcmp(options->LogLevel,"crit"))
-         options->loglevel = LOG_CRIT;
-      else if (!strcmp(options->LogLevel,"err"))
-         options->loglevel = LOG_ERR;
-      else if (!strcmp(options->LogLevel,"warning"))
-         options->loglevel = LOG_WARNING;
-      else if (!strcmp(options->LogLevel,"notice"))
-         options->loglevel = LOG_NOTICE;
-      else if (!strcmp(options->LogLevel,"info"))
-         options->loglevel = LOG_INFO;
-      else if (!strcmp(options->LogLevel,"debug"))
-         options->loglevel = LOG_DEBUG;
-      else
-      {
-         log(LOG_ERR,"LogLevel must be one of emerg|alert|crit|err|warning|notice|info|debug.");
-         code = -1;
-      }
-   }
+    /* int options */
+    config_compare(list, "Role",            CONFIG_TYPE_INT, &options->Role) ||
+    config_compare(list, "MaxConn",         CONFIG_TYPE_INT, &options->MaxConn) ||
+    config_compare(list, "APPort",          CONFIG_TYPE_INT, &options->APPort) ||
+    config_compare(list, "OPPort",          CONFIG_TYPE_INT, &options->OPPort) ||
+    config_compare(list, "ORPort",          CONFIG_TYPE_INT, &options->ORPort) ||
+    config_compare(list, "DirPort",         CONFIG_TYPE_INT, &options->DirPort) ||
+    config_compare(list, "TrafficShaping",  CONFIG_TYPE_INT, &options->TrafficShaping) ||
+    config_compare(list, "LinkPadding",     CONFIG_TYPE_INT, &options->LinkPadding) ||
+    config_compare(list, "DirRebuildPeriod",CONFIG_TYPE_INT, &options->DirRebuildPeriod) ||
+    config_compare(list, "DirFetchPeriod",  CONFIG_TYPE_INT, &options->DirFetchPeriod) ||
+    config_compare(list, "KeepalivePeriod", CONFIG_TYPE_INT, &options->KeepalivePeriod) ||
 
-   if ( options->Role < 0 || options->Role > 63 )
-   {
-      log(LOG_ERR,"Role option must be an integer between 0 and 63 (inclusive).");
-      code = -1;
-   }
+    /* float options */
+    config_compare(list, "CoinWeight",     CONFIG_TYPE_DOUBLE, &options->CoinWeight)
 
-   if ( options->RouterFile == NULL )
-   {
-      log(LOG_ERR,"RouterFile option required, but not found.");
-      code = -1;
-   }
+    ) {
+      /* then we're ok. it matched something. */
+    } else {
+      log(LOG_WARNING,"config_assign(): Ignoring unknown keyword '%s'.",list->key);
+    }
 
-   if ( ROLE_IS_OR(options->Role) && options->PrivateKeyFile == NULL )
-   {
-      log(LOG_ERR,"PrivateKeyFile option required for OR, but not found.");
-      code = -1;
-   }
+    list = list->next;
+  }  
+}
 
-   if ( (options->Role & ROLE_OR_LISTEN) && options->ORPort < 1 )
-   {
-      log(LOG_ERR,"ORPort option required and must be a positive integer value.");
-      code = -1;
-   }
+/* return 0 if success, <0 if failure. */
+int getconfig(int argc, char **argv, or_options_t *options) {
+  struct config_line *cl;
+  FILE *cf;
+  char fname[256];
+  int i;
+  const char *cmd;
+  int result = 0;
 
-   if ( (options->Role & ROLE_OP_LISTEN) && options->OPPort < 1 )
-   {
-      log(LOG_ERR,"OPPort option required and must be a positive integer value.");
-      code = -1;
-   }
+/* give reasonable defaults for each option */
+  memset(options,0,sizeof(or_options_t));
+  options->LogLevel = "debug";
+  options->loglevel = LOG_DEBUG;
+  options->CoinWeight = 0.8;
+  options->LinkPadding = 0;
+  options->DirRebuildPeriod = 600;
+  options->DirFetchPeriod = 6000;
+  options->KeepalivePeriod = 300;
+//  options->ReconnectPeriod = 6001;
+  options->Role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
 
-   if ( (options->Role & ROLE_AP_LISTEN) && options->APPort < 1 )
-   {
-      log(LOG_ERR,"APPort option required and must be a positive integer value.");
-      code = -1;
-   }
+/* get config lines from /etc/torrc and assign them */
+  cmd = basename(argv[0]);
+  snprintf(fname,256,"/etc/%src",cmd);
 
-   if ( (options->Role & ROLE_DIR_LISTEN) && options->DirPort < 1 )
-   {
-      log(LOG_ERR,"DirPort option required and must be a positive integer value.");
-      code = -1;
-   }
+  cf = config_open(fname);
+  if(cf) {
+    /* we got it open. pull out the config lines. */
+    cl = config_get_lines(cf);
+    config_assign(options,cl);
+    config_free_lines(cl);
+    config_close(cf);
+  }
+  /* if we failed to open it, ignore */
 
-   if ( (options->Role & ROLE_AP_LISTEN) &&
-        (options->CoinWeight < 0.0 || options->CoinWeight >= 1.0) )
-   {
-      log(LOG_ERR,"CoinWeight option must be a value from 0.0 upto 1.0, but not including 1.0.");
-      code = -1;
-   }
+/* learn config file name, get config lines, assign them */
+  i = 1;
+  while(i < argc-1 && strcmp(argv[i],"-f")) {
+//    log(LOG_DEBUG,"examining arg %d (%s), it's not -f.",i,argv[i]);
+    i++;
+  }
+  if(i < argc-1) { /* we found one */
+    log(LOG_DEBUG,"Opening specified config file '%s'",argv[i+1]);
+    cf = config_open(argv[i+1]);
+    if(!cf) { /* it's defined but not there. that's no good. */
+      log(LOG_ERR, "Unable to open configuration file '%s'.",argv[i+1]);
+      return -1;
+    }
+    cl = config_get_lines(cf);
+    config_assign(options,cl);
+    config_free_lines(cl);
+    config_close(cf);
+  }
+ 
+/* go through command-line variables too */
+  cl = config_get_commandlines(argc,argv);
+  config_assign(options,cl);
+  config_free_lines(cl);
 
-   if ( options->MaxConn <= 0 )
-   {
-      log(LOG_ERR,"MaxConn option must be a non-zero positive integer.");
-      code = -1;
-   }
+/* print config */
+  if (options->loglevel == LOG_DEBUG) {
+    printf("LogLevel=%s, Role=%d\n",
+           options->LogLevel,
+           options->Role);
+    printf("RouterFile=%s, PrivateKeyFile=%s\n",
+           options->RouterFile ? options->RouterFile : "(undefined)",
+           options->PrivateKeyFile ? options->PrivateKeyFile : "(undefined)");
+    printf("ORPort=%d, OPPort=%d, APPort=%d DirPort=%d\n",
+           options->ORPort,options->OPPort,
+           options->APPort,options->DirPort);
+    printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d, LinkPadding=%d\n",
+           options->CoinWeight,
+           options->MaxConn,
+           options->TrafficShaping,
+           options->LinkPadding);
+    printf("DirRebuildPeriod=%d, DirFetchPeriod=%d KeepalivePeriod=%d\n",
+           options->DirRebuildPeriod,
+           options->DirFetchPeriod,
+           options->KeepalivePeriod);
+  }
 
-   if ( options->MaxConn >= MAXCONNECTIONS )
-   {
-      log(LOG_ERR,"MaxConn option must be less than %d.", MAXCONNECTIONS);
-      code = -1;
-   }
+/* Validate options */
 
-   if ( options->TrafficShaping != 0 && options->TrafficShaping != 1 )
-   {
-      log(LOG_ERR,"TrafficShaping option must be either 0 or 1.");
-      code = -1;
-   }
+  if(options->LogLevel) {
+    if(!strcmp(options->LogLevel,"emerg"))
+      options->loglevel = LOG_EMERG;
+    else if(!strcmp(options->LogLevel,"alert"))
+      options->loglevel = LOG_ALERT;
+    else if(!strcmp(options->LogLevel,"crit"))
+      options->loglevel = LOG_CRIT;
+    else if(!strcmp(options->LogLevel,"err"))
+      options->loglevel = LOG_ERR;
+    else if(!strcmp(options->LogLevel,"warning"))
+      options->loglevel = LOG_WARNING;
+    else if(!strcmp(options->LogLevel,"notice"))
+      options->loglevel = LOG_NOTICE;
+    else if(!strcmp(options->LogLevel,"info"))
+      options->loglevel = LOG_INFO;
+    else if(!strcmp(options->LogLevel,"debug"))
+      options->loglevel = LOG_DEBUG;
+    else {
+      log(LOG_ERR,"LogLevel must be one of emerg|alert|crit|err|warning|notice|info|debug.");
+      result = -1;
+    }
+  }
 
-   if ( options->LinkPadding != 0 && options->LinkPadding != 1 )
-   {
-      log(LOG_ERR,"LinkPadding option must be either 0 or 1.");
-      code = -1;
-   }
+  if(options->Role < 0 || options->Role > 63) {
+    log(LOG_ERR,"Role option must be an integer between 0 and 63 (inclusive).");
+    result = -1;
+  }
 
-   if ( options->DirRebuildPeriod < 1)
-   {
-      log(LOG_ERR,"DirRebuildPeriod option must be positive.");
-      code = -1;
-   }
+  if(options->RouterFile == NULL) {
+    log(LOG_ERR,"RouterFile option required, but not found.");
+    result = -1;
+  }
 
-   if ( options->DirFetchPeriod < 1)
-   {
-      log(LOG_ERR,"DirFetchPeriod option must be positive.");
-      code = -1;
-   }
+  if(ROLE_IS_OR(options->Role) && options->PrivateKeyFile == NULL) {
+    log(LOG_ERR,"PrivateKeyFile option required for OR, but not found.");
+    result = -1;
+  }
 
-   if ( options->KeepalivePeriod < 1)
-   {
-      log(LOG_ERR,"KeepalivePeriod option must be positive.");
-      code = -1;
-   }
+  if((options->Role & ROLE_OR_LISTEN) && options->ORPort < 1) {
+    log(LOG_ERR,"ORPort option required and must be a positive integer value.");
+    result = -1;
+  }
 
-   return code;
+  if((options->Role & ROLE_OP_LISTEN) && options->OPPort < 1) {
+    log(LOG_ERR,"OPPort option required and must be a positive integer value.");
+    result = -1;
+  }
+
+  if((options->Role & ROLE_AP_LISTEN) && options->APPort < 1) {
+    log(LOG_ERR,"APPort option required and must be a positive integer value.");
+    result = -1;
+  }
+
+  if((options->Role & ROLE_DIR_LISTEN) && options->DirPort < 1) {
+    log(LOG_ERR,"DirPort option required and must be a positive integer value.");
+    result = -1;
+  }
+
+  if((options->Role & ROLE_AP_LISTEN) &&
+     (options->CoinWeight < 0.0 || options->CoinWeight >= 1.0)) {
+    log(LOG_ERR,"CoinWeight option must be a value from 0.0 upto 1.0, but not including 1.0.");
+    result = -1;
+  }
+
+  if(options->MaxConn <= 0) {
+    log(LOG_ERR,"MaxConn option must be a non-zero positive integer.");
+    result = -1;
+  }
+
+  if(options->MaxConn >= MAXCONNECTIONS) {
+    log(LOG_ERR,"MaxConn option must be less than %d.", MAXCONNECTIONS);
+    result = -1;
+  }
+
+  if(options->TrafficShaping != 0 && options->TrafficShaping != 1) {
+    log(LOG_ERR,"TrafficShaping option must be either 0 or 1.");
+    result = -1;
+  }
+
+  if(options->LinkPadding != 0 && options->LinkPadding != 1) {
+    log(LOG_ERR,"LinkPadding option must be either 0 or 1.");
+    result = -1;
+  }
+
+  if(options->DirRebuildPeriod < 1) {
+    log(LOG_ERR,"DirRebuildPeriod option must be positive.");
+    result = -1;
+  }
+
+  if(options->DirFetchPeriod < 1) {
+    log(LOG_ERR,"DirFetchPeriod option must be positive.");
+    result = -1;
+  }
+
+  if(options->KeepalivePeriod < 1) {
+    log(LOG_ERR,"KeepalivePeriod option must be positive.");
+    result = -1;
+  }
+
+  return result;
 }
 

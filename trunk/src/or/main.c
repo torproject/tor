@@ -645,9 +645,10 @@ int main(int argc, char *argv[]) {
   signal (SIGUSR1, catch); /* to dump stats to stdout */
   signal (SIGHUP, catch); /* to reload directory */
 
-  if ( getoptions(argc,argv,&options) ) exit(1);
+  if(getconfig(argc,argv,&options))
+    exit(1);
   log(options.loglevel,NULL);         /* assign logging severity level from options */
-  global_role = options.Role;   /* assign global_role from options. FIX: remove from global namespace later. */
+  global_role = options.Role;   /* assign global_role from options. FIXME: remove from global namespace later. */
 
   crypto_global_init();
   retval = do_main_loop();

@@ -15,7 +15,7 @@
 #include <assert.h>
 
 #include "crypto.h"
-#include "config.h"
+#include "../or/or.h"
 #include "log.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x00905000l
