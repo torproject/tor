@@ -12,6 +12,8 @@ rc7:
 
   o Bugfixes on 0.0.8.1:
     - Fix a whole slew of memory leaks.
+    - Fix isspace() and friends so they still make Solaris happy
+      but also so they don't trigger asserts on win32.
     - Fix parse_iso_time on platforms without strptime (eg win32).
     - win32: tolerate extra "readable" events better.
     - win32: when being multithreaded, leave parent fdarray open.
