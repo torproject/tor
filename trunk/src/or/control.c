@@ -59,6 +59,7 @@ const char control_c_id[] = "$Id$";
 #define ERR_UNAUTHORIZED            0x0007
 #define ERR_REJECTED_AUTHENTICATION 0x0008
 #define ERR_RESOURCE_EXHAUSETED     0x0009
+#define ERR_TOO_LONG                0x000A
 
 /* Recognized asynchronous event types. */
 #define _EVENT_MIN            0x0001
@@ -447,10 +448,79 @@ handle_control_mapaddress(connection_t *conn, uint16_t len, const char *body)
   send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
   return 0;
 }
+
+static char *
+handle_getinfo_helper(const char *question)
+{
+  if (!strcmp(question, "version")) {
+    return tor_strdup(VERSION);
+  } else if (!strcmpstart(question, "desc/id/")) {
+    return NULL; /* XXXX */
+  } else if (!strcmp(question, "desc/all-ids")) {
+    routerlist_t *rl;
+    char *answer, *cp;
+    router_get_routerlist(&rl);
+    if (!rl)
+      return tor_strdup("");
+    answer = tor_malloc(smartlist_len(rl->routers)*(HEX_DIGEST_LEN+1)+1);
+    cp = answer;
+    SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
+    {
+      base16_encode(cp, HEX_DIGEST_LEN+1, r->identity_digest, DIGEST_LEN);
+      cp += HEX_DIGEST_LEN;
+      *cp++ = ',';
+    });
+    return answer;
+  } else if (!strcmp(question, "addr-mappings")) {
+    return NULL; /* XXXX */
+  } else {
+    /* unrecognized key */
+    return NULL;
+  }
+}
+
 static int
 handle_control_getinfo(connection_t *conn, uint16_t len, const char *body)
 {
-  send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
+  smartlist_t *questions = NULL;
+  smartlist_t *answers = NULL;
+  char *msg = NULL, *ans;
+  size_t msg_len;
+
+  questions = smartlist_create();
+  smartlist_split_string(questions, body, "\n",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  answers = smartlist_create();
+  SMARTLIST_FOREACH(questions, const char *, q,
+  {
+    ans = handle_getinfo_helper(q);
+    if (!ans) {
+      send_control_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, body);
+      goto done;
+    } else {
+      smartlist_add(answers, tor_strdup(q));
+      smartlist_add(answers, ans);
+      msg_len += 2 + strlen(ans) + strlen(q);
+    }
+  });
+
+  if (msg_len > 65535) {
+    /* XXXX What if it *is* this long? */
+    send_control_error(conn, ERR_TOO_LONG, body);
+    goto done;
+  }
+
+  msg = smartlist_join_strings2(answers, "\0", 1, 1, &msg_len);
+  send_control_message(conn, CONTROL_CMD_INFOVALUE,
+                       (uint16_t)msg_len, msg_len?msg:NULL);
+
+ done:
+  if (answers) SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
+  if (questions) SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
+  smartlist_free(answers);
+  smartlist_free(questions);
+  tor_free(msg);
+
   return 0;
 }
 static int
