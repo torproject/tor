@@ -85,6 +85,10 @@ connection_t *connection_new(int type) {
     conn->inbuf = buf_new();
     conn->outbuf = buf_new();
   }
+  if (type == CONN_TYPE_AP) {
+    conn->socks_request = tor_malloc(sizeof(socks_request_t));
+    memset(conn->socks_request, 0, sizeof(socks_request_t));
+  }
 
   conn->timestamp_created = now;
   conn->timestamp_lastread = now;
@@ -115,6 +119,7 @@ void connection_free(connection_t *conn) {
   if (conn->identity_pkey)
     crypto_free_pk_env(conn->identity_pkey);
   tor_free(conn->nickname);
+  tor_free(conn->socks_request);
 
   if(conn->s >= 0) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);
@@ -760,6 +765,9 @@ void assert_connection_ok(connection_t *conn, time_t now)
       assert_cpath_layer_ok(conn->cpath_layer);
     /* XXX unchecked, package window, deliver window. */
   }
+  if (conn->type != CONN_TYPE_AP) {
+    assert(!conn->socks_request);
+  }
 
   switch(conn->type) 
     {
@@ -779,6 +787,12 @@ void assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_AP:
       assert(conn->state >= _AP_CONN_STATE_MIN &&
              conn->state <= _AP_CONN_STATE_MAX);
+      if (conn->state == AP_CONN_STATE_SOCKS_WAIT ||
+          conn->state == AP_CONN_STATE_CIRCUIT_WAIT) {
+        assert(conn->socks_request);
+      } else {
+        assert(!conn->socks_request);
+      }
       break;
     case CONN_TYPE_DIR:
       assert(conn->state >= _DIR_CONN_STATE_MIN &&

@@ -755,6 +755,9 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     if(hop == circ->cpath) { /* done building the circuit. whew. */
       circ->state = CIRCUIT_STATE_OPEN;
       log_fn(LOG_INFO,"circuit built!");
+      /* Tell any AP connections that have been waiting for a new
+       * circuit that one is ready. */
+      connection_ap_attach_pending();
       return 0;
     }
 
