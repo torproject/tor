@@ -10,7 +10,8 @@ protocols.
 TODO: (very soon)
       - Specify truncate/truncated payloads?
       - Specify RELAY_END payloads. [It's 1 byte of reason, then X bytes of
-        data, right?]
+        data, right? -NM]
+        [Right, where X=4 and it's an IP, currently. -RD]
       - Sendme w/stream0 is circuit sendme
       - Integrate -NM and -RD comments
       - EXTEND cells should have hostnames or nicknames, so that OPs never
@@ -19,7 +20,7 @@ TODO: (very soon)
 
 EVEN LATER:
       - Do TCP-style sequencing and ACKing of DATA cells so that we can afford
-        to lose some data cells.
+        to lose some data cells. [Actually, we'll probably never do this. -RD]
 
 0. Notation:
 
@@ -62,7 +63,11 @@ EVEN LATER:
    allows mutual authentication.
 
    Tor uses TLS for link encryption, using the cipher suite
-   "TLS_DHE_RSA_WITH_AES_128_CBC_SHA".  An OR always sends a
+   "TLS_DHE_RSA_WITH_AES_128_CBC_SHA".
+   [That's cool, except it's not what we use currently. We use
+    3DES because most people don't have openssl 0.9.7 and thus
+    don't have AES. -RD]
+   An OR always sends a
    self-signed X.509 certificate whose commonName is the server's
    nickname, and whose public key is in the server directory.
 
@@ -178,7 +183,8 @@ EVEN LATER:
 
       1. Choose a chain of N onion routers (R_1...R_N) to constitute
          the path, such that no router appears in the path twice.
-         [this is wrong, see October 2003 discussion on or-dev]
+         [this is wrong, now we choose the last hop and then choose
+          new hops lazily -RD]
 
       2. If not already connected to the first router in the chain,
          open a new connection to that router.
@@ -213,7 +219,9 @@ EVEN LATER:
    CREATE cell to the next onion router, with the enclosed onion skin
    as its payload.  The initiating onion router chooses some circID not
    yet used on the connection between the two onion routers.  (But see
-   section 4.3. above, concerning choosing circIDs.)
+   section 4.3. above, concerning choosing circIDs. [What? This
+   is 4.3. Maybe we mean to remind about lexicographic order of
+   nicknames? -RD])
 
    As an extension (called router twins), if the desired next onion
    router R in the circuit is down, and some other onion router R'
@@ -221,7 +229,7 @@ EVEN LATER:
 
    When an onion router receives a CREATE cell, if it already has a
    circuit on the given connection with the given circID, it drops the
-   cell.  Otherwise, sometime after receiving the CREATE cell, it completes
+   cell.  Otherwise, after receiving the CREATE cell, it completes
    the DH handshake, and replies with a CREATED cell, containing g^y
    as its [128 byte] payload.  Upon receiving a CREATED cell, an onion
    router packs it payload into an EXTENDED relay cell (see section 5),
@@ -252,6 +260,7 @@ EVEN LATER:
    After a DESTROY cell has been processed, an OR ignores all data or
    destroy cells for the corresponding circuit.
 
+   [This next paragraph is never used, and should perhaps go away. -RD]
    To tear down part of a circuit, the OP sends a RELAY_TRUNCATE cell
    signaling a given OR (Stream ID zero).  That OR sends a DESTROY
    cell to the next node in the circuit, and replies to the OP with a
@@ -264,7 +273,8 @@ EVEN LATER:
    should send a DESTROY cell down the circuit.
 
    [We'll have to reevaluate this section once we figure out cleaner
-    circuit/connection killing conventions. -RD]
+    circuit/connection killing conventions. Possibly the right answer
+    is to not use most of the extensions. -RD]
 
 4.5. Routing relay cells
 
@@ -279,6 +289,9 @@ EVEN LATER:
             Use Kf as key; encrypt.
         'Back' relay cell (opposite direction from CREATE):
             Use Kb as key; decrypt.
+   [This part is now wrong. There's a 'recognized' field. If it crypts
+    to 0, then check the digest. Speaking of which, there's a digest
+    field. We should mention this. -RD]
    If the OR recognizes the stream ID on the cell (it is either the ID
    of an open stream or the signaling (zero) ID), the OR processes the
    contents of the relay cell.  Otherwise, it passes the decrypted
@@ -286,7 +299,8 @@ EVEN LATER:
    cell if it's the end of the circuit. [Getting an unrecognized
    relay cell at the end of the circuit must be allowed for now;
    we can reexamine this once we've designed full tcp-style close
-   handshakes. -RD]
+   handshakes. -RD [No longer true, an unrecognized relay cell at
+   the end can be met with a destroy cell -- I think. -RD]]
 
    Otherwise, if the data cell is coming from the OP edge of the
    circuit, the OP decrypts the length and payload fields with AES/CTR as
@@ -318,6 +332,9 @@ EVEN LATER:
          Relay command           [1 byte]
          Stream ID               [7 bytes]
 
+   [command 1 byte, recognized 2 bytes, streamid 2 bytes, digest 4 bytes,
+    length 2 bytes == 11 bytes of header -RD]
+
    The relay commands are:
          1 -- RELAY_BEGIN
          2 -- RELAY_DATA
@@ -337,6 +354,8 @@ EVEN LATER:
    circuit, or if the stream ID is equal to the signaling stream ID,
    which is all zero: [00 00 00 00 00 00 00]
 
+   [This next paragraph is wrong: to begin a new stream, it simply
+    uses the new streamid. No need to send it separately. -RD]
    To create a new anonymized TCP connection, the OP sends a
    RELAY_BEGIN data cell with a payload encoding the address and port
    of the destination host.  The stream ID is zero.  The payload format is:
