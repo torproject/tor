@@ -45,9 +45,9 @@ int connection_edge_reached_eof(connection_t *conn) {
     /* only mark it if not already marked. it's possible to
      * get the 'end' right around when the client hangs up on us. */
     connection_mark_for_close(conn);
+    conn->hold_open_until_flushed = 1; /* just because we shouldn't read
+                                          doesn't mean we shouldn't write */
   }
-  conn->hold_open_until_flushed = 1; /* just because we shouldn't read
-                                        doesn't mean we shouldn't write */
   return 0;
 #endif
 }
