@@ -272,7 +272,7 @@ handle_control_getconf(connection_t *conn, uint16_t body_len, const char *body)
 
   msg = smartlist_join_strings(answers, "", 0, &msg_len);
   send_control_message(conn, CONTROL_CMD_CONFVALUE,
-                       (uint16_t)msg_len, msg);
+                       (uint16_t)msg_len, msg_len?msg:NULL);
 
  done:
   if (answers) SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
