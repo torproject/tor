@@ -879,7 +879,7 @@ repeat_connection_edge_package_raw_inbuf:
     return 0;
 
   if(conn->package_window <= 0) {
-    log_fn(LOG_WARN,"called with package_window %d. Tell Roger.", conn->package_window);
+    log_fn(LOG_INFO,"called with package_window %d. Skipping.", conn->package_window);
     connection_stop_reading(conn);
     return 0;
   }
