@@ -80,8 +80,8 @@ int op_handshake_process_keys(connection_t *conn) {
 #endif
   
   memset(iv, 0, 16);
-  crypto_cipher_set_key(conn->b_crypto, iv);
-  crypto_cipher_set_key(conn->f_crypto, iv);
+  crypto_cipher_set_iv(conn->b_crypto, iv);
+  crypto_cipher_set_iv(conn->f_crypto, iv);
 
   crypto_cipher_encrypt_init_cipher(conn->b_crypto);
   crypto_cipher_decrypt_init_cipher(conn->f_crypto);
