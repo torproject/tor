@@ -86,7 +86,9 @@
 /* Define to 1 if you have the `strptime' function. */
 #undef HAVE_STRPTIME
 
+/* Define to 1 if your timeval has a tv_sec element. */
 #define HAVE_STRUCT_TIMEVAL_TV_SEC
+/* Change to #undef if you're using BCC */
 
 /* Define to 1 if you have the <sys/fcntl.h> header file. */
 #undef HAVE_SYS_FCNTL_H
