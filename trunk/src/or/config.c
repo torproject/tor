@@ -369,6 +369,71 @@ config_assign_line(or_options_t *options, struct config_line_t *c)
   return 0;
 }
 
+/** Return a canonicalized list of the options assigned for key.
+ */
+struct config_line_t *
+config_get_assigned_option(or_options_t *options, const char *key)
+{
+  config_var_t *var;
+  const void *value;
+  char buf[32];
+  struct config_line_t *result;
+
+  var = config_find_option(key);
+  if (!var) {
+    log_fn(LOG_WARN, "Unknown option '%s'.  Failing.", key);
+    return NULL;
+  }
+  value = ((char*)options) + var->var_offset;
+
+  if (var->type == CONFIG_TYPE_LINELIST) {
+    /* Linelist requires special handling: we just copy and return it. */
+    const struct config_line_t *next_in = value;
+    struct config_line_t **next_out = &result;
+    while (next_in) {
+      *next_out = tor_malloc(sizeof(struct config_line_t));
+      (*next_out)->key = tor_strdup(next_in->key);
+      (*next_out)->value = tor_strdup(next_in->value);
+      next_in = next_in->next;
+      next_out = &((*next_out)->next);
+    }
+    (*next_out) = NULL;
+    return result;
+  }
+
+  result = tor_malloc_zero(sizeof(struct config_line_t));
+  result->key = tor_strdup(var->name);
+  switch(var->type)
+    {
+    case CONFIG_TYPE_STRING:
+      result->value = tor_strdup(value ? (char*)value : "");
+      break;
+    case CONFIG_TYPE_UINT:
+      tor_snprintf(buf, sizeof(buf), "%d", *(int*)value);
+      result->value = tor_strdup(buf);
+      break;
+    case CONFIG_TYPE_DOUBLE:
+      tor_snprintf(buf, sizeof(buf), "%f", *(double*)value);
+      result->value = tor_strdup(buf);
+      break;
+    case CONFIG_TYPE_BOOL:
+      result->value = tor_strdup(*(int*)value ? "1" : "0");
+      break;
+    case CONFIG_TYPE_CSV:
+      if (value)
+        result->value = smartlist_join_strings((smartlist_t*)value,",",0,NULL);
+      else
+        result->value = tor_strdup("");
+      break;
+    default:
+      tor_free(result->key);
+      tor_free(result);
+      return NULL;
+    }
+
+  return result;
+}
+
 /** Iterate through the linked list of options <b>list</b>.
  * For each item, convert as appropriate and assign to <b>options</b>.
  * If an item is unrecognized, return -1 immediately,
@@ -387,7 +452,6 @@ config_assign(or_options_t *options, struct config_line_t *list)
       return -1;
     list = list->next;
   }
-  
   return 0;
 }
 
