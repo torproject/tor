@@ -124,7 +124,7 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
     num_acceptable_routers++;
     log(LOG_DEBUG,"I like %d. num_acceptable_routers now %d.",i, num_acceptable_routers);
     next_i_loop:
-           ;
+      ; /* our compiler may need an explicit statement after the label */
   }
       
   if(num_acceptable_routers < *routelen) {
