@@ -156,12 +156,12 @@
 #define _AP_CONN_STATE_MAX 5
 
 #define _DIR_CONN_STATE_MIN 0
-#define DIR_CONN_STATE_CONNECTING_GET 0
-#define DIR_CONN_STATE_CONNECTING_POST 1
-#define DIR_CONN_STATE_CLIENT_SENDING_GET 2
-#define DIR_CONN_STATE_CLIENT_SENDING_POST 3
-#define DIR_CONN_STATE_CLIENT_READING_GET 4
-#define DIR_CONN_STATE_CLIENT_READING_POST 5
+#define DIR_CONN_STATE_CONNECTING_FETCH 0
+#define DIR_CONN_STATE_CONNECTING_UPLOAD 1
+#define DIR_CONN_STATE_CLIENT_SENDING_FETCH 2
+#define DIR_CONN_STATE_CLIENT_SENDING_UPLOAD 3
+#define DIR_CONN_STATE_CLIENT_READING_FETCH 4
+#define DIR_CONN_STATE_CLIENT_READING_UPLOAD 5
 #define DIR_CONN_STATE_SERVER_COMMAND_WAIT 6
 #define DIR_CONN_STATE_SERVER_WRITING 7
 #define _DIR_CONN_STATE_MAX 7
@@ -219,11 +219,13 @@
 typedef struct {
    unsigned char version;     /* socks version number */
    unsigned char command;     /* command code */
-   unsigned char destport[2]; /* destination port, network order */
-   unsigned char destip[4];   /* destination address */
-   /* userid follows, terminated by a NULL */
-   /* dest host follows, terminated by a NULL */
+   uint16_t destport; /* destination port, network order */
+   uint32_t destip;   /* destination address, host order */
+   /* userid follows, terminated by a \0 */
+   /* dest host follows, terminated by a \0 */
 } socks4_t;
+
+#define SOCKS4_NETWORK_LEN 8
 
 typedef uint16_t aci_t;
 

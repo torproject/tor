@@ -47,11 +47,14 @@ char *conn_state_to_string[][15] = {
     "waiting for OR connection",       /* 4 */
     "open" },                          /* 5 */
   { "ready" }, /* dir listener, 0 */
-  { "connecting",                      /* 0 */
-    "sending command",                 /* 1 */
-    "reading",                         /* 2 */
-    "awaiting command",                /* 3 */
-    "writing" },                       /* 4 */
+  { "connecting (fetch)",              /* 0 */
+    "connecting (upload)",             /* 1 */
+    "client sending fetch",            /* 2 */
+    "client sending upload",           /* 3 */
+    "client reading fetch",            /* 4 */
+    "client reading upload",           /* 5 */
+    "awaiting command",                /* 6 */
+    "writing" },                       /* 7 */
   { "idle",                /* dns worker, 0 */
     "busy" },                          /* 1 */
   { "idle",                /* cpu worker, 0 */
@@ -437,7 +440,8 @@ int connection_handle_read(connection_t *conn) {
 
   if(connection_read_to_buf(conn) < 0) {
     if(conn->type == CONN_TYPE_DIR && 
-      (conn->state == DIR_CONN_STATE_CONNECTING_GET || DIR_CONN_STATE_CONNECTING_POST)) {
+      (conn->state == DIR_CONN_STATE_CONNECTING_FETCH ||
+       conn->state == DIR_CONN_STATE_CONNECTING_UPLOAD)) {
        /* it's a directory server and connecting failed: forget about this router */
        /* XXX I suspect pollerr may make Windows not get to this point. :( */
        router_forget_router(conn->addr,conn->port); 

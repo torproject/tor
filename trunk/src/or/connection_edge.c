@@ -433,7 +433,7 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
 
 static int connection_ap_handshake_process_socks(connection_t *conn) {
   circuit_t *circ;
-  char destaddr[200];
+  char destaddr[200]; /* XXX why 200? but not 256, because it won't fit in a cell */
   uint16_t destport;
 
   assert(conn);
@@ -511,16 +511,16 @@ static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *
 }
 
 static int connection_ap_handshake_socks_reply(connection_t *conn, char result) {
-  socks4_t socks4_info; 
+  char buf[SOCKS4_NETWORK_LEN];
 
   assert(conn);
 
-  socks4_info.version = 0;
-  socks4_info.command = result;
-  socks4_info.destport[0] = socks4_info.destport[1] = 0;
-  socks4_info.destip[0] = socks4_info.destip[1] = socks4_info.destip[2] = socks4_info.destip[3] = 0;
+  /* an inlined socks4_pack() */
+  memset(buf,0,sizeof(buf));
+  buf[1] = result; /* command */
+  /* leave version, destport, destip zero */
 
-  if(connection_write_to_buf((char *)&socks4_info, sizeof(socks4_t), conn) < 0)
+  if(connection_write_to_buf(buf, sizeof(buf), conn) < 0)
     return -1;
   return connection_flush_buf(conn); /* try to flush it, in case we're about to close the conn */
 }

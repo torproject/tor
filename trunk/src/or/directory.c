@@ -18,8 +18,8 @@ static char the_directory[MAX_DIR_SIZE+1];
 static int directorylen=0;
 static int directory_dirty=1;
 
-static char getstring[] = "GET / HTTP/1.0\r\n\r\n";
-static char poststring[] = "POST / HTTP/1.0\r\n\r\n";
+static char fetchstring[] = "GET / HTTP/1.0\r\n\r\n";
+static char uploadstring[] = "POST / HTTP/1.0\r\n\r\n";
 static char answerstring[] = "HTTP/1.0 200 OK\r\n\r\n";
 
 /********* END VARIABLES ************/
@@ -35,10 +35,10 @@ void directory_initiate_command(routerinfo_t *router, int command) {
     return;
   }
 
-  if(command == DIR_CONN_STATE_CONNECTING_GET)
-    log_fn(LOG_DEBUG,"initiating directory get");
+  if(command == DIR_CONN_STATE_CONNECTING_FETCH)
+    log_fn(LOG_DEBUG,"initiating directory fetch");
   else
-    log_fn(LOG_DEBUG,"initiating directory post");
+    log_fn(LOG_DEBUG,"initiating directory upload");
 
   conn = connection_new(CONN_TYPE_DIR);
   if(!conn)
@@ -90,25 +90,25 @@ static int directory_send_command(connection_t *conn, int command) {
   assert(conn && conn->type == CONN_TYPE_DIR);
 
   switch(command) {
-    case DIR_CONN_STATE_CONNECTING_GET:
-      if(connection_write_to_buf(getstring, strlen(getstring), conn) < 0) {
-        log_fn(LOG_DEBUG,"Couldn't write get to buffer.");
+    case DIR_CONN_STATE_CONNECTING_FETCH:
+      if(connection_write_to_buf(fetchstring, strlen(fetchstring), conn) < 0) {
+        log_fn(LOG_DEBUG,"Couldn't write fetch to buffer.");
         return -1;
       }
-      conn->state = DIR_CONN_STATE_CLIENT_SENDING_GET;
+      conn->state = DIR_CONN_STATE_CLIENT_SENDING_FETCH;
       break;
-    case DIR_CONN_STATE_CONNECTING_POST:
+    case DIR_CONN_STATE_CONNECTING_UPLOAD:
       s = router_get_my_descriptor();
       if(!s) {
         log_fn(LOG_DEBUG,"Failed to get my descriptor.");
         return -1;
       }
-      if(connection_write_to_buf(poststring, strlen(poststring), conn) < 0 ||
+      if(connection_write_to_buf(uploadstring, strlen(uploadstring), conn) < 0 ||
          connection_write_to_buf(s, strlen(s), conn) < 0) {
         log_fn(LOG_DEBUG,"Couldn't write post/descriptor to buffer.");
         return -1;
       }
-      conn->state = DIR_CONN_STATE_CLIENT_SENDING_POST;
+      conn->state = DIR_CONN_STATE_CLIENT_SENDING_UPLOAD;
       break;
   }
   return 0;
@@ -139,18 +139,19 @@ int connection_dir_process_inbuf(connection_t *conn) {
 
   if(conn->inbuf_reached_eof) {
     switch(conn->state) {
-      case DIR_CONN_STATE_CLIENT_READING_GET:
+      case DIR_CONN_STATE_CLIENT_READING_FETCH:
         /* kill it, but first process the_directory and learn about new routers. */
         switch(fetch_from_buf_http(conn->inbuf,&conn->inbuf_datalen,
                                    NULL, 0, the_directory, MAX_DIR_SIZE)) {
           case -1: /* overflow */
-            log_fn(LOG_DEBUG,"'get' response too large. Failing.");
+            log_fn(LOG_DEBUG,"'fetch' response too large. Failing.");
             return -1;
           case 0:
-            log_fn(LOG_DEBUG,"'get' response not all here, but we're at eof. Closing.");
+            log_fn(LOG_DEBUG,"'fetch' response not all here, but we're at eof. Closing.");
             return -1;
           /* case 1, fall through */
         }
+        /* XXX check headers, at least make sure returned 2xx */
         directorylen = strlen(the_directory);
         log_fn(LOG_DEBUG,"Received directory (size %d):\n%s", directorylen, the_directory);
         if(directorylen == 0) {
@@ -167,9 +168,9 @@ int connection_dir_process_inbuf(connection_t *conn) {
           router_retry_connections();
         }
         return -1;
-      case DIR_CONN_STATE_CLIENT_READING_POST:
+      case DIR_CONN_STATE_CLIENT_READING_UPLOAD:
         /* XXX make sure there's a 200 OK on the buffer */
-        log_fn(LOG_DEBUG,"eof while reading post response. Finished.");
+        log_fn(LOG_DEBUG,"eof while reading upload response. Finished.");
         return -1;
       default:
         log_fn(LOG_DEBUG,"conn reached eof, not reading. Closing.");
@@ -205,6 +206,7 @@ static int directory_handle_command(connection_t *conn) {
 
   log_fn(LOG_DEBUG,"headers '%s', body '%s'.",headers,body);
   if(!strncasecmp(headers,"GET",3)) {
+    /* XXX should check url and http version */
 
     directory_rebuild(); /* rebuild it now, iff it's dirty */
 
@@ -224,6 +226,7 @@ static int directory_handle_command(connection_t *conn) {
   }
 
   if(!strncasecmp(headers,"POST",4)) {
+    /* XXX should check url and http version */
     log_fn(LOG_DEBUG,"Received POST command, body '%s'", body);
     if(connection_write_to_buf(answerstring, strlen(answerstring), conn) < 0) {
       log_fn(LOG_DEBUG,"Failed to write answerstring to outbuf.");
@@ -243,8 +246,8 @@ int connection_dir_finished_flushing(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_DIR);
 
   switch(conn->state) {
-    case DIR_CONN_STATE_CONNECTING_GET:
-    case DIR_CONN_STATE_CONNECTING_POST:
+    case DIR_CONN_STATE_CONNECTING_FETCH:
+    case DIR_CONN_STATE_CONNECTING_UPLOAD:
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
         if(!ERRNO_CONN_EINPROGRESS(errno)) {
           log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
@@ -260,14 +263,14 @@ int connection_dir_finished_flushing(connection_t *conn) {
           conn->address,conn->port);
 
       return directory_send_command(conn, conn->state);
-    case DIR_CONN_STATE_CLIENT_SENDING_GET:
-      log_fn(LOG_DEBUG,"client finished sending 'get' command.");
-      conn->state = DIR_CONN_STATE_CLIENT_READING_GET;
+    case DIR_CONN_STATE_CLIENT_SENDING_FETCH:
+      log_fn(LOG_DEBUG,"client finished sending fetch command.");
+      conn->state = DIR_CONN_STATE_CLIENT_READING_FETCH;
       connection_watch_events(conn, POLLIN);
       return 0;
-    case DIR_CONN_STATE_CLIENT_SENDING_POST:
-      log_fn(LOG_DEBUG,"client finished sending 'post' command.");
-      conn->state = DIR_CONN_STATE_CLIENT_READING_POST;
+    case DIR_CONN_STATE_CLIENT_SENDING_UPLOAD:
+      log_fn(LOG_DEBUG,"client finished sending upload command.");
+      conn->state = DIR_CONN_STATE_CLIENT_READING_UPLOAD;
       connection_watch_events(conn, POLLIN);
       return 0;
     case DIR_CONN_STATE_SERVER_WRITING:
