@@ -101,21 +101,24 @@ Rendezvous service:
                 - Waiting at a rendezvous point to be joined
                 - Joined to another circuit at the rendezvous point.
               (We should also enumerate all the states that these operations
-              can be in.)
-        - Code to configure hidden services
+              can be in.) [NM]
+	    - Add circuit metadata [NM]
+        - Code to configure hidden services [NM]
         - Service descriptors
             - OPs need to maintain identity keys for hidden services [NM]
             - Code to generate and parse service descriptors [NM]
         - Advertisement
             - Generate y.onion hostnames [NM]
-            - Code to do an HTTP connection over Tor from within Tor.
-            - Publish service descriptors to directory
+            - Code to do an HTTP connection over Tor from within Tor [RD]
+            - Publish service descriptors to directory [RD]
             - Directory accepts and remembers service descriptors, and
               delivers them as requested
-            - Code for OPs to retrieve (and cache?) service descriptors
+                - Frontend [RD]
+		- Backend [NM]
+            - Code for OPs to retrieve (and cache?) service descriptors [RD]
         - Rendezvous
             - Code as needed to generate and parse all rendezvous-related
-              cell types, and do all handshaking.
+              cell types, and do all handshaking [NM]
             - ORs implement introduction points
             - OPs with hidden services establish introduction points
             - ORs implement rendezvous points
