@@ -1334,6 +1334,9 @@ int router_parse_routerlist_from_directory(const char *s,
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 struct exit_policy_t *router_parse_exit_policy_from_string(const char *s);
+int check_software_version_against_directory(const char *directory,
+                                             int ignoreversion);
+
 
 #endif
 

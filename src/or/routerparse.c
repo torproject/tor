@@ -176,6 +176,89 @@ static int parse_time(const char *cp, time_t *t)
   return 0;
 }
 
+/**
+ * Find the first instance of "recommended-software ...\n" at the start of
+ * a line; return a newly allocated string containing the "..." portion.
+ * Return NULL if no such instance was found.
+ */
+static char *
+get_recommended_software_from_directory(const char *str)
+{
+#define REC "recommended-software "
+  const char *cp = str, *eol;
+  int len = strlen(REC);
+  cp = str;
+  if (strncmp(str, REC, len)==0) {
+    cp += len;
+  } else {
+    cp = strstr(str, "\n"REC);
+    if (!cp)
+      return NULL;
+    cp += len+1;
+  }
+  eol = strchr(cp, '\n');
+  if (!eol)
+    return NULL;
+  return tor_strndup(cp, eol-cp);
+#undef REC
+}
+
+/** Return 1 if myversion is in versionlist. Else return 0.
+ * (versionlist is a comma-separated list of versions.) */
+/* static */ int is_recommended_version(const char *myversion,
+                           const char *versionlist) {
+  int len_myversion = strlen(myversion);
+  char *comma;
+  const char *end = versionlist + strlen(versionlist);
+
+  log_fn(LOG_DEBUG,"checking '%s' in '%s'.", myversion, versionlist);
+
+  for(;;) {
+    comma = strchr(versionlist, ',');
+    if( ((comma ? comma : end) - versionlist == len_myversion) &&
+       !strncmp(versionlist, myversion, len_myversion))
+      /* only do strncmp if the length matches */
+      return 1; /* success, it's there */
+    if(!comma)
+      return 0; /* nope */
+    versionlist = comma+1;
+  }
+}
+
+/* Return 0 if myversion is supported; else log a message and return
+ * -1 (or exit if ignoreversions is false) */
+int check_software_version_against_directory(const char *directory,
+                                             int ignoreversion)
+{
+  char *v;
+  v = get_recommended_software_from_directory(directory);
+  if (!v) {
+    log_fn(LOG_WARN, "No recommended-versions string found in directory");
+    return -1;
+  }
+  /* Look for versions of the form "0.1.0" and of the form "Tor 0.1.0".
+   * Eventually, we should deprecate the first form.
+   */
+  if (is_recommended_version(VERSION, v) ||
+      is_recommended_version("Tor "VERSION, v)) {
+    tor_free(v);
+    return 0;
+  }
+  log(ignoreversion ? LOG_WARN : LOG_ERR,
+     "You are running Tor version %s, which will not work with this network.\n"
+     "Please use %s%s.",
+      VERSION, strchr(v,',') ? "one of " : "", v);
+  tor_free(v);
+
+  if(ignoreversion) {
+    log(LOG_WARN, "IgnoreVersion is set. If it breaks, we told you so.");
+    return -1;
+  } else {
+    fflush(0);
+    exit(0);
+    return -1; /* never reached */
+  }
+}
 
 /** Parse a directory from <b>s</b> and, when done, store the
  * resulting routerlist in *<b>dest</b>, freeing the old value if necessary.

@@ -635,8 +635,8 @@ test_onion_handshake() {
   crypto_free_pk_env(pk);
 }
 
-/* from routers.c */
-int is_recommended_version(char *myversion, char *start);
+/* from routerparse.c */
+int is_recommended_version(const char *myversion, const char *start);
 
 void
 test_dir_format()
