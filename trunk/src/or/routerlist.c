@@ -11,23 +11,17 @@
 
 /**
  * \file routerlist.c
+ *
  * \brief Code to parse descriptors and directories, and to
  * maintain and access the global list of routerinfos for known
  * servers.
  **/
-
 
 /****************************************************************************/
 
 extern or_options_t options; /**< command-line and config-file options */
 
 /****************************************************************************/
-
-/** We parse a directory by breaking it into "tokens", each consisting
- * of a keyword, a line full of arguments, and a binary object.  The
- * arguments and object are both optional, depending on the keyword
- * type.
- */
 
 /** Enumeration of possible token types.  The ones starting with K_
  * correspond to directory 'keywords'.  _UNRECOGNIZED is for an
@@ -58,7 +52,12 @@ typedef enum {
   _NIL
 } directory_keyword;
 
-/** Structure to hold a single directory tokon.
+/** Structure to hold a single directory token.
+ *
+ * We parse a directory by breaking it into "tokens", each consisting
+ * of a keyword, a line full of arguments, and a binary object.  The
+ * arguments and object are both optional, depending on the keyword
+ * type.
  */
 typedef struct directory_token_t {
   directory_keyword tp;        /**< Type of the token. */
@@ -223,8 +222,8 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
 }
 
 /** Given a comma-and-whitespace separated list of nicknames, see which
- * nicknames in 'list' name routers in our routerlist that are
- * currently running.  Add the routerinfos for those routers to 'sl'.
+ * nicknames in <b>list</b> name routers in our routerlist that are
+ * currently running.  Add the routerinfos for those routers to <b>sl</b>.
  */
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list) {
   const char *start,*end;
@@ -255,7 +254,8 @@ void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list) {
   }
 }
 
-/** Add every router from our routerlist that is currently running to 'sl'.
+/** Add every router from our routerlist that is currently running to
+ * <b>sl</b>.
  */
 void router_add_running_routers_to_smartlist(smartlist_t *sl) {
   routerinfo_t *router;
@@ -273,10 +273,10 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
   }
 }
 
-/** Pick a random running router from a routerlist 'dir'.  If any node
- * named in 'preferred' is available, pick one of those.  Never pick a
- * node named in 'excluded', or whose routerinfo is in
- * 'excludedsmartlist', even if they are the only nodes available.
+/** Pick a random running router from a routerlist <b>dir</b>.  If any node
+ * named in <b>preferred</b> is available, pick one of those.  Never pick a
+ * node named in <b>excluded</b>, or whose routerinfo is in
+ * <b>excludedsmartlist</b>, even if they are the only nodes available.
  */
 routerinfo_t *router_choose_random_node(routerlist_t *dir,
                                         char *preferred, char *excluded,
@@ -311,8 +311,8 @@ routerinfo_t *router_choose_random_node(routerlist_t *dir,
   return choice;
 }
 
-/** Return the router in our routerlist whose address is 'addr' and
- * whose OR port is 'port'. Return NULL if no such router is known.
+/** Return the router in our routerlist whose address is <b>addr</b> and
+ * whose OR port is <b>port</b>. Return NULL if no such router is known.
  */
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   int i;
@@ -328,7 +328,7 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
-/** Return the router in our routerlist whose nickname is 'nickname'
+/** Return the router in our routerlist whose nickname is <b>nickname</b>
  * (case insensitive).  Return NULL if no such router is known.
  */
 routerinfo_t *router_get_by_nickname(char *nickname)
@@ -347,12 +347,12 @@ routerinfo_t *router_get_by_nickname(char *nickname)
   return NULL;
 }
 
-/** Set *prouterlist to the current list of all known routers. */
+/** Set *<b>prouterlist</b> to the current list of all known routers. */
 void router_get_routerlist(routerlist_t **prouterlist) {
   *prouterlist = routerlist;
 }
 
-/** Free all storage held by 'router'. */
+/** Free all storage held by <b>router</b>. */
 void routerinfo_free(routerinfo_t *router)
 {
   struct exit_policy_t *e;
@@ -376,7 +376,7 @@ void routerinfo_free(routerinfo_t *router)
   free(router);
 }
 
-/** Allocate a fresh copy of 'router' */
+/** Allocate a fresh copy of <b>router</b> */
 routerinfo_t *routerinfo_copy(const routerinfo_t *router)
 {
   routerinfo_t *r;
@@ -403,7 +403,7 @@ routerinfo_t *routerinfo_copy(const routerinfo_t *router)
   return r;
 }
 
-/** Free all storage held by a routerlist 'rl' */
+/** Free all storage held by a routerlist <b>rl</b> */
 static void routerlist_free(routerlist_t *rl)
 {
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
@@ -413,7 +413,7 @@ static void routerlist_free(routerlist_t *rl)
   tor_free(rl);
 }
 
-/** Mark the router named 'nickname' as non-running in our routerlist. */
+/** Mark the router named <b>nickname</b> as non-running in our routerlist. */
 void router_mark_as_down(char *nickname) {
   routerinfo_t *router = router_get_by_nickname(nickname);
   if(!router) /* we don't seem to know about him in the first place */
@@ -422,11 +422,12 @@ void router_mark_as_down(char *nickname) {
   router->is_running = 0;
 }
 
-/*****
+/*
  * Code to parse router descriptors and directories.
- *****/
+ */
 
-/** Replace the current router list with the one stored in 'routerfile'. */
+/** Replace the current router list with the one stored in
+ * <b>routerfile</b>. */
 int router_set_routerlist_from_file(char *routerfile)
 {
   char *string;
@@ -466,8 +467,8 @@ int router_set_routerlist_from_string(const char *s)
   return 0;
 }
 
-/** Set 'digest' to the SHA-1 digest of the hash of the directory in 's'.
- * Return 0 on success, nonzero on failure.
+/** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
+ * <b>s</b>.  Return 0 on success, nonzero on failure.
  */
 int router_get_dir_hash(const char *s, char *digest)
 {
@@ -475,8 +476,8 @@ int router_get_dir_hash(const char *s, char *digest)
                               "signed-directory","directory-signature");
 }
 
-/** Set 'digest' to the SHA-1 digest of the hash of the first router in 's'.
- * Return 0 on success, nonzero on failure.
+/** Set <b>digest</b> to the SHA-1 digest of the hash of the first router in
+ * <b>s</b>. Return 0 on success, nonzero on failure.
  */
 int router_get_router_hash(const char *s, char *digest)
 {
@@ -507,7 +508,7 @@ int is_recommended_version(const char *myversion,
 }
 
 /** Replace the current routerlist with the routers stored in the
- * signed directory 's'.  If pkey is provided, make sure that 's' is
+ * signed directory <b>s</b>.  If pkey is provided, make sure that <b>s</b> is
  * signed with pkey. */
 int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
 {
@@ -535,7 +536,7 @@ int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
   return 0;
 }
 
-/** Helper function: resolve the hostname for 'router'. */
+/** Helper function: resolve the hostname for <b>router</b>. */
 static int
 router_resolve(routerinfo_t *router)
 {
@@ -585,10 +586,10 @@ router_resolve_routerlist(routerlist_t *rl)
 }
 
 /** Decide whether a given addr:port is definitely accepted, definitely
- * rejected, or neither by a given exit policy.  If 'addr' is 0, we
+ * rejected, or neither by a given exit policy.  If <b>addr</b> is 0, we
  * don't know the IP of the target address.
  *
- * Returns -1 for 'rejected', 0 for accepted, 1 for 'maybe' (since IP is
+ * Returns -1 for "rejected", 0 for "accepted", 1 for "maybe" (since IP is
  * unknown).
  */
 int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
@@ -666,15 +667,15 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
   return 1; /* all will reject. */
 }
 
-/** Return true iff 'router' does not permit exit streams.
+/** Return true iff <b>router</b> does not permit exit streams.
  */
 int router_exit_policy_rejects_all(routerinfo_t *router) {
   return router_compare_addr_to_exit_policy(0, 0, router->exit_policy)
     == ADDR_POLICY_REJECTED;
 }
 
-/** Parse a date of the format 'YYYY-MM-DD hh:mm:ss" and store the result into
- * *t.
+/** Parse a date of the format "YYYY-MM-DD hh:mm:ss" and store the result into
+ * *<b>t</b>.
  */
 /* XXX this should go in util.c, yes? -RD */
 static int parse_time(const char *cp, time_t *t)
@@ -706,9 +707,9 @@ static int parse_time(const char *cp, time_t *t)
 }
 
 
-/** Helper function: parse a directory from 's' and, when done, store the
- * resulting routerlist in *dest, freeing the old value if necessary.
- * If pkey is provided, we check the directory signature with pkey.
+/** Helper function: parse a directory from <b>s</b> and, when done, store the
+ * resulting routerlist in *<b>dest</b>, freeing the old value if necessary.
+ * If <b>pkey</b> is provided, we check the directory signature with pkey.
  */
 int /* Should be static; exposed for unit tests */
 router_get_routerlist_from_directory_impl(const char *str,
@@ -856,9 +857,9 @@ router_get_routerlist_from_directory_impl(const char *str,
   return r;
 }
 
-/** Helper function: Given a string *s containing a concatenated
+/** Helper function: Given a string *<b>s</b> containing a concatenated
  * sequence of router descriptors, parses them and stores the result
- * in *dest.  If good_nickname_lst is provided, then routers whose
+ * in *<b>dest</b>.  If good_nickname_lst is provided, then routers whose
  * nicknames are not listed are marked as nonrunning.  Advances *s to
  * a point immediately following the last router entry.  Returns 0 on
  * success and -1 on failure.
@@ -923,9 +924,9 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
 }
 
 
-/** Helper function: reads a single router entry from *s ... *end.
- * Mallocs a new router and returns it if all goes well, else returns
- * NULL.
+/** Helper function: reads a single router entry from *<b>s</b> ...
+ * *<b>end</b>.  Mallocs a new router and returns it if all goes well, else
+ * returns NULL.
  */
 routerinfo_t *router_get_entry_from_string(const char *s,
                                            const char *end) {
@@ -1120,7 +1121,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   return router;
 }
 
-/** Parse the exit policy in the string 's' and add it to 'router'.
+/** Parse the exit policy in the string <b>s</b> and add it to <b>router</b>.
  */
 int
 router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
@@ -1161,7 +1162,7 @@ router_add_exit_policy_from_string(routerinfo_t *router, const char *s)
 }
 
 /** Given a K_ACCEPT or K_REJECT token and a router, create a new exit_policy_t
- * corresponding to the token, and add it to 'router' */
+ * corresponding to the token, and add it to <b>router</b> */
 static int
 router_add_exit_policy(routerinfo_t *router, directory_token_t *tok) {
 
@@ -1278,12 +1279,12 @@ policy_read_failed:
   return -1;
 }
 
-/*****
+/*
  * Low-level tokenizer for router descriptors and directories.
- *****/
+ */
 
 
-/** Free all resources allocated for 'tok' */
+/** Free all resources allocated for <b>tok</b> */
 static void
 token_free(directory_token_t *tok)
 {
@@ -1487,8 +1488,8 @@ get_next_token(const char **s, where_syntax where) {
 #undef RET_ERR
 }
 
-/** Read all tokens from a string between 'start' and 'end', and add
- * them to 'out'.  If 'is_dir' is true, reject all non-directory
+/** Read all tokens from a string between <b>start</b> and <b>end</b>, and add
+ * them to <b>out</b>.  If <b>is_dir</b> is true, reject all non-directory
  * tokens; else reject all non-routerdescriptor tokens.
  */
 static int
@@ -1512,8 +1513,8 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
   return 0;
 }
 
-/** Find the first token in 's' whose keyword is 'keyword'; return NULL if no
- * such keyword is found.
+/** Find the first token in <b>s</b> whose keyword is <b>keyword</b>; return
+ * NULL if no such keyword is found.
  */
 static directory_token_t *
 find_first_by_keyword(smartlist_t *s, directory_keyword keyword)
@@ -1522,7 +1523,8 @@ find_first_by_keyword(smartlist_t *s, directory_keyword keyword)
   return NULL;
 }
 
-/** Return a newly allocated smartlist of all accept or reject tokens in 's'.
+/** Return a newly allocated smartlist of all accept or reject tokens in
+ * <b>s</b>.
  */
 static smartlist_t *
 find_all_exitpolicy(smartlist_t *s)
@@ -1535,10 +1537,10 @@ find_all_exitpolicy(smartlist_t *s)
 }
 
 
-/** Compute the SHA digest of the substring of s taken from the first
- * occurrence of start_str through the first newline after the first
- * subsequent occurrence of end_str; store the 20-byte result in 'digest';
- * return 0 on success.
+/** Compute the SHA digest of the substring of <b>s</b> taken from the first
+ * occurrence of <b>start_str</b> through the first newline after the first
+ * subsequent occurrence of <b>end_str</b>; store the 20-byte result in
+ * <b>digest</b>; return 0 on success.
  *
  * If no such substring exists, return -1.
  */

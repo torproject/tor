@@ -59,10 +59,10 @@ int connection_or_process_inbuf(connection_t *conn) {
 /** Connection <b>conn</b> has finished writing and has no bytes left on
  * its outbuf.
  *
- * If it's in state 'connecting', then take a look at the socket, and
+ * If it's in state "connecting", then take a look at the socket, and
  * begin the tls handshake if the connect succeeded.
  *
- * Otherwise it's in state 'open': stop writing and return.
+ * Otherwise it's in state "open": stop writing and return.
  *
  * If <b>conn</b> is broken, mark it for close and return -1, else
  * return 0.

@@ -44,7 +44,7 @@ typedef struct rend_service_t {
  */
 static smartlist_t *rend_service_list = NULL;
 
-/** Release the storage held by 'service'.
+/** Release the storage held by <b>service</b>.
  */
 static void rend_service_free(rend_service_t *service)
 {
@@ -78,7 +78,7 @@ static void rend_service_free_all(void)
   rend_service_list = smartlist_create();
 }
 
-/** Validate 'service' and add it to rend_service_list if possible.
+/** Validate <b>service<b> and add it to rend_service_list if possible.
  */
 static void add_service(rend_service_t *service)
 {
@@ -111,7 +111,8 @@ static void add_service(rend_service_t *service)
  * rend_service_port_config_t.
  *
  * The format is: VirtualPort (IP|RealPort|IP:RealPort)?
- *    IP defaults to 127.0.0.1; RealPort defaults to VirtualPort.
+ *
+ * IP defaults to 127.0.0.1; RealPort defaults to VirtualPort.
  */
 static rend_service_port_config_t *parse_port_config(const char *string)
 {
@@ -176,7 +177,7 @@ static rend_service_port_config_t *parse_port_config(const char *string)
 }
 
 /** Set up rend_service_list, based on the values of HiddenServiceDir and
- * HiddenServicePort in 'options'.  Return 0 on success and -1 on
+ * HiddenServicePort in <b>options</b>.  Return 0 on success and -1 on
  * failure.
  */
 int rend_config_services(or_options_t *options)
@@ -229,7 +230,7 @@ int rend_config_services(or_options_t *options)
   return 0;
 }
 
-/** Replace the old value of service->desc with one that reflects
+/** Replace the old value of <b>service</b>-\>desc with one that reflects
  * the other fields in service.
  */
 static void rend_service_update_descriptor(rend_service_t *service)
@@ -310,7 +311,7 @@ int rend_service_load_keys(void)
   return 0;
 }
 
-/** Return the service whose public key has a digest of 'digest'. Return
+/** Return the service whose public key has a digest of <b>digest</b>. Return
  * NULL if no such service exists.
  */
 static rend_service_t *
@@ -503,7 +504,7 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
 }
 
 /** Launch a circuit to serve as an introduction point for the service
- * 'service' at the introduction point 'nickname'
+ * <b>service</b> at the introduction point <b>nickname</b>
  */
 static int
 rend_service_launch_establish_intro(rend_service_t *service, const char *nickname)
@@ -687,12 +688,12 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
   circuit_mark_for_close(circuit);
 }
 
-/******
+/*
  * Manage introduction points
- ******/
+ */
 
 /** Return the (possibly non-open) introduction circuit ending at
- * 'router' for the service whose public key is 'pk_digest'.  Return
+ * <b>router</b> for the service whose public key is <b>pk_digest</b>.  Return
  * NULL if no such service is found.
  */
 static circuit_t *
@@ -722,7 +723,7 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
 }
 
 /** If the directory servers don't have an up-to-date descriptor for
- * 'service', Encode and sign the service descriptor for 'service',
+ * <b>service</b>, encode and sign the service descriptor for <b>service</b>,
  * and upload it to all the dirservers.
  */
 static void
@@ -841,8 +842,8 @@ void rend_services_introduce(void) {
 }
 
 /** Regenerate and upload rendezvous service descriptors for all
- * services.  If 'force' is false, skip services where we've already
- * uploaded an up-to-date copy; if 'force' is true, regenerate and
+ * services.  If <b>force</b> is false, skip services where we've already
+ * uploaded an up-to-date copy; if <b>force</b> is true, regenerate and
  * upload everything.
  */
 void
@@ -861,7 +862,7 @@ rend_services_upload(int force)
 }
 
 /** Log the status of introduction points for all rendezvous services
- * at log severity 'serverity'.
+ * at log severity <b>serverity</b>.
  */
 void
 rend_service_dump_stats(int severity)
@@ -893,9 +894,9 @@ rend_service_dump_stats(int severity)
   }
 }
 
-/** 'conn' is a rendezvous exit stream. Look up the hidden service for
- * 'circ', and look up the port and address based on conn->port.
- * Assign the actual conn->addr and conn->port. Return -1 if failure,
+/** Given <b>conn</a>, a rendezvous exit stream, look up the hidden service for
+ * 'circ', and look up the port and address based on conn-\>port.
+ * Assign the actual conn-\>addr and conn-\>port. Return -1 if failure,
  * or 0 for success.
  */
 int

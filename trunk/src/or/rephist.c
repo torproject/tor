@@ -2,49 +2,50 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-/*****
- * rephist.c: Basic history functionality for reputation module.
- *****/
+/**
+ * \file rephist.c
+ * \brief Basic history functionality for reputation module.
+ **/
 
 #include "or.h"
 
-/* History of an or->or link. */
+/** History of an OR-\>OR link. */
 typedef struct link_history_t {
-  /* When did we start tracking this list? */
+  /** When did we start tracking this list? */
   time_t since;
-  /* How many times did extending from OR1 to OR2 succeeed? */
+  /** How many times did extending from OR1 to OR2 succeeed? */
   unsigned long n_extend_ok;
-  /* How many times did extending from OR1 to OR2 fail? */
+  /** How many times did extending from OR1 to OR2 fail? */
   unsigned long n_extend_fail;
 } link_history_t;
 
-/* History of an OR. */
+/** History of an OR. */
 typedef struct or_history_t {
-  /* When did we start tracking this OR? */
+  /** When did we start tracking this OR? */
   time_t since;
-  /* How many times did we successfully connect? */
+  /** How many times did we successfully connect? */
   unsigned long n_conn_ok;
-  /*How many times did we try to connect and fail?*/
+  /** How many times did we try to connect and fail?*/
   unsigned long n_conn_fail;
-  /* How many seconds have we been connected to this OR before
+  /** How many seconds have we been connected to this OR before
    * 'up_since'? */
   unsigned long uptime;
-  /* How many seconds have we been unable to connect to this OR before
+  /** How many seconds have we been unable to connect to this OR before
    * 'down_since'? */
   unsigned long downtime;
-  /* If nonzero, we have been connected since this time. */
+  /** If nonzero, we have been connected since this time. */
   time_t up_since;
-  /* If nonzero, we have been unable to connect since this time. */
+  /** If nonzero, we have been unable to connect since this time. */
   time_t down_since;
-  /* Map from lowercased OR2 name to a link_history_t for the link
+  /** Map from lowercased OR2 name to a link_history_t for the link
    * from this OR to OR2. */
   strmap_t *link_history_map;
 } or_history_t;
 
-/* Map from lowercased OR nickname to or_history_t. */
+/** Map from lowercased OR nickname to or_history_t. */
 static strmap_t *history_map = NULL;
 
-/* Return the or_history_t for the named OR, creating it if necessary.
+/** Return the or_history_t for the named OR, creating it if necessary.
  */
 static or_history_t *get_or_history(const char* nickname)
 {
@@ -59,7 +60,7 @@ static or_history_t *get_or_history(const char* nickname)
   return hist;
 }
 
-/* Return the link_history_t for the link from the first named OR to
+/** Return the link_history_t for the link from the first named OR to
  * the second, creating it if necessary.
  */
 static link_history_t *get_link_history(const char *from_name,
@@ -77,8 +78,8 @@ static link_history_t *get_link_history(const char *from_name,
   return lhist;
 }
 
-/* Update an or_history_t object so that its uptime/downtime count is
- * up-to-date as of 'when'.
+/** Update an or_history_t object <b>hist</b> so that its uptime/downtime
+ * count is up-to-date as of <b>when</b>.
  */
 static void update_or_history(or_history_t *hist, time_t when)
 {
@@ -93,15 +94,15 @@ static void update_or_history(or_history_t *hist, time_t when)
   }
 }
 
-/* Initialize the static data structures for tracking history.
+/** Initialize the static data structures for tracking history.
  */
 void rep_hist_init(void)
 {
   history_map = strmap_new();
 }
 
-/* Remember that an attempt to connect to the OR 'nickname' failed at
- * 'when'.
+/** Remember that an attempt to connect to the OR <b>nickname</b> failed at
+ * <b>when</b>.
  */
 void rep_hist_note_connect_failed(const char* nickname, time_t when)
 {
@@ -116,8 +117,8 @@ void rep_hist_note_connect_failed(const char* nickname, time_t when)
     hist->down_since = when;
 }
 
-/* Remember that an attempt to connect to the OR 'nickname' succeeded
- * at 'when'.
+/** Remember that an attempt to connect to the OR <b>nickname</b> succeeded
+ * at <b>when</b>.
  */
 void rep_hist_note_connect_succeeded(const char* nickname, time_t when)
 {
@@ -132,8 +133,8 @@ void rep_hist_note_connect_succeeded(const char* nickname, time_t when)
     hist->up_since = when;
 }
 
-/* Remember that we intentionally closed our connection to the OR
- * 'nickname' at 'when'.
+/** Remember that we intentionally closed our connection to the OR
+ * <b>nickname</b> at <b>when</b>.
  */
 void rep_hist_note_disconnect(const char* nickname, time_t when)
 {
@@ -146,8 +147,8 @@ void rep_hist_note_disconnect(const char* nickname, time_t when)
   }
 }
 
-/* Remember that our connection to the OR 'nickname' had an error and
- * stopped working at 'when'.
+/** Remember that our connection to the OR <b>nickname</b> had an error and
+ * stopped working at <b>when</b>.
  */
 void rep_hist_note_connection_died(const char* nickname, time_t when)
 {
@@ -169,8 +170,8 @@ void rep_hist_note_connection_died(const char* nickname, time_t when)
     hist->down_since = when;
 }
 
-/* Remember that we successfully extended from the OR 'from_name' to
- * the OR 'to_name'.
+/** Remember that we successfully extended from the OR <b>from_name</b> to
+ * the OR <b>to_name</b>.
  */
 void rep_hist_note_extend_succeeded(const char *from_name,
                                     const char *to_name)
@@ -181,8 +182,8 @@ void rep_hist_note_extend_succeeded(const char *from_name,
   ++hist->n_extend_ok;
 }
 
-/* Remember that we tried to extend from the OR 'from_name' to the OR
- * 'to_name', but failed.
+/** Remember that we tried to extend from the OR <b>from_name</b> to the OR
+ * <b>to_name</b>, but failed.
  */
 void rep_hist_note_extend_failed(const char *from_name, const char *to_name)
 {
@@ -192,7 +193,7 @@ void rep_hist_note_extend_failed(const char *from_name, const char *to_name)
   ++hist->n_extend_fail;
 }
 
-/* Log all the reliability data we have rememberred, with the chosen
+/** Log all the reliability data we have rememberred, with the chosen
  * severity.
  */
 void rep_hist_dump_stats(time_t now, int severity)

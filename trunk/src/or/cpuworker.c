@@ -61,7 +61,7 @@ static void tag_pack(char *tag, uint32_t addr, uint16_t port, uint16_t circ_id) 
   *(uint16_t *)(tag+6) = circ_id;
 }
 
-/** Unpack 'tag' into addr, port, and circ_id.
+/** Unpack <b>tag</b> into addr, port, and circ_id.
  */
 static void tag_unpack(const char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ_id) {
   struct in_addr in;

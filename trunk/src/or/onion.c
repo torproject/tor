@@ -9,8 +9,8 @@
 
 #include "or.h"
 
-/** prototypes for smartlist operations from routerlist.h
- * they're here to prevent precedence issues with the .h files
+/* prototypes for smartlist operations from routerlist.h
+ * They're here to prevent precedence issues with the .h files
  */
 void router_add_running_routers_to_smartlist(smartlist_t *sl);
 void add_nickname_list_to_smartlist(smartlist_t *sl, char *list);

@@ -99,7 +99,7 @@ void dns_init(void) {
 static struct cached_resolve *oldest_cached_resolve = NULL;
 static struct cached_resolve *newest_cached_resolve = NULL;
 
-/** Remove every cached_resolve whose 'expire' time is before 'now'
+/** Remove every cached_resolve whose <b>expire</b> time is before <b>now</b>
  * from the cache. */
 static void purge_expired_resolves(uint32_t now) {
   struct cached_resolve *resolve;
@@ -124,8 +124,8 @@ static void purge_expired_resolves(uint32_t now) {
   }
 }
 
-/** See if we have a cache entry for 'exitconn->address'. if so,
- * if resolve valid, put it into exitconn->addr and return 1.
+/** See if we have a cache entry for <b>exitconn</b>-\>address. if so,
+ * if resolve valid, put it into <b>exitconn</b>-\>addr and return 1.
  * If resolve failed, return -1.
  *
  * Else, if seen before and pending, add conn to the pending list,
@@ -206,7 +206,7 @@ int dns_resolve(connection_t *exitconn) {
 }
 
 /** Find or spawn a dns worker process to handle resolving
- * exitconn->address; tell that dns worker to begin resolving.
+ * <b>exitconn</b>-\>address; tell that dns worker to begin resolving.
  */
 static int assign_to_dnsworker(connection_t *exitconn) {
   connection_t *dnsconn;
@@ -240,7 +240,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   return 0;
 }
 
-/** Remove 'conn' from the list of connections waiting for conn->address.
+/** Remove <b>conn</b> from the list of connections waiting for conn-\>address.
  */
 void connection_dns_remove(connection_t *conn)
 {
@@ -313,9 +313,9 @@ void assert_all_pending_dns_resolves_ok(void) {
   }
 }
 
-/** Mark all connections waiting for 'address' for close.  Then cancel
- * the resolve for 'address' itself, and remove any cached results for
- * 'address' from the cache.
+/** Mark all connections waiting for <b>address</b> for close.  Then cancel
+ * the resolve for <b>address</b> itself, and remove any cached results for
+ * <b>address</b> from the cache.
  */
 void dns_cancel_pending_resolve(char *address) {
   struct pending_connection_t *pend;
@@ -351,7 +351,7 @@ void dns_cancel_pending_resolve(char *address) {
   dns_purge_resolve(resolve);
 }
 
-/** Remove 'resolve' from the cache.
+/** Remove <b>resolve</b> from the cache.
  */
 static void dns_purge_resolve(struct cached_resolve *resolve) {
   struct cached_resolve *tmp;
@@ -379,9 +379,10 @@ static void dns_purge_resolve(struct cached_resolve *resolve) {
 
 /** Called on the OR side when a DNS worker tells us the outcome of a DNS
  * resolve: tell all pending connections about the result of the lookup, and
- * cache the value.  ('address' is a NUL-terminated string containing the
- * address to look up; 'addr' is an IPv4 address in host order; 'outcome' is
- * one of DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
+ * cache the value.  (<b>address</b> is a NUL-terminated string containing the
+ * address to look up; <b>addr</b> is an IPv4 address in host order;
+ * <b>outcome</b> is one of
+ * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
  */
 static void dns_found_answer(char *address, uint32_t addr, char outcome) {
   struct pending_connection_t *pend;
@@ -459,9 +460,9 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
 
 /******************************************************************/
 
-/*****
+/*
  * Connection between OR and dnsworker
- *****/
+ */
 
 /** Write handler: called when we've pushed a request to a dnsworker. */
 int connection_dns_finished_flushing(connection_t *conn) {
@@ -518,12 +519,12 @@ int connection_dns_process_inbuf(connection_t *conn) {
  * execution context.  It takes as its argument an fdarray as returned
  * by socketpair(), and communicates via fdarray[1].  The protocol is
  * as follows:
- *     The OR says:
- *           ADDRESSLEN [1 byte]
- *           ADDRESS    [ADDRESSLEN bytes]
- *     The DNS worker does the lookup, and replies:
- *           OUTCOME    [1 byte]
- *           IP         [4 bytes]
+ *    - The OR says:
+ *         - ADDRESSLEN [1 byte]
+ *         - ADDRESS    [ADDRESSLEN bytes]
+ *    - The DNS worker does the lookup, and replies:
+ *         - OUTCOME    [1 byte]
+ *         - IP         [4 bytes]
  *
  * OUTCOME is one of DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
  * IP is in host order.
