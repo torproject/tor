@@ -672,7 +672,8 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     buf[1] = success ? SOCKS5_SUCCESS : SOCKS5_GENERIC_ERROR;
     buf[2] = 0;
     buf[3] = 1; /* ipv4 addr */
-    memset(buf+4,0,6); /* XXX set external addr/port to 0, see what breaks */
+    memset(buf+4,0,6); /* Set external addr/port to 0.
+                          The spec doesn't seem to say what to do here. -RD */
     connection_write_to_buf(buf,10,conn);
     return flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen); /* try to flush it */
   }

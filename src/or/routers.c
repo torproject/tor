@@ -763,8 +763,7 @@ routerinfo_t *router_get_entry_from_string(char**s) {
     return NULL;
   }
 
-  router = tor_malloc(sizeof(routerinfo_t));
-  memset(router,0,sizeof(routerinfo_t)); /* zero it out first */
+  router = tor_malloc_zero(sizeof(routerinfo_t));
   router->onion_pkey = router->identity_pkey = router->link_pkey = NULL; 
 
   if (tok->val.cmd.n_args != 6) {
@@ -970,9 +969,8 @@ static int router_add_exit_policy(routerinfo_t *router,
     return -1;
   arg = tok->val.cmd.args[0];
 
-  newe = tor_malloc(sizeof(struct exit_policy_t));
-  memset(newe,0,sizeof(struct exit_policy_t));
-  
+  newe = tor_malloc_zero(sizeof(struct exit_policy_t));
+
   newe->string = tor_malloc(8+strlen(arg));
   if (tok->tp == K_REJECT) {
     strcpy(newe->string, "reject ");
