@@ -153,7 +153,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 
   start_time = time(NULL);
 
-  assert(rsa && cname && rsa_sign && cname_sign);
+  tor_assert(rsa && cname && rsa_sign && cname_sign);
   if (!(sign_pkey = _crypto_pk_env_get_evp_pkey(rsa_sign,1)))
     goto error;
   if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,0)))
@@ -286,7 +286,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
     goto error;
   SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
   if (isServer) {
-    assert(rsa);
+    tor_assert(rsa);
     if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,1)))
       goto error;
     if (!SSL_CTX_use_PrivateKey(result->ctx, pkey))
@@ -338,7 +338,7 @@ tor_tls *
 tor_tls_new(int sock, int isServer)
 {
   tor_tls *result = tor_malloc(sizeof(tor_tls));
-  assert(global_tls_context); /* make sure somebody made it first */
+  tor_assert(global_tls_context); /* make sure somebody made it first */
   if (!(result->ssl = SSL_new(global_tls_context->ctx)))
     return NULL;
   result->socket = sock;
@@ -368,8 +368,8 @@ int
 tor_tls_read(tor_tls *tls, char *cp, int len)
 {
   int r, err;
-  assert(tls && tls->ssl);
-  assert(tls->state == TOR_TLS_ST_OPEN);
+  tor_assert(tls && tls->ssl);
+  tor_assert(tls->state == TOR_TLS_ST_OPEN);
   r = SSL_read(tls->ssl, cp, len);
   if (r > 0)
     return r;
@@ -378,7 +378,7 @@ tor_tls_read(tor_tls *tls, char *cp, int len)
     tls->state = TOR_TLS_ST_CLOSED;
     return TOR_TLS_CLOSE;
   } else {
-    assert(err != TOR_TLS_DONE);
+    tor_assert(err != TOR_TLS_DONE);
     return err;
   }
 }
@@ -392,13 +392,13 @@ int
 tor_tls_write(tor_tls *tls, char *cp, int n)
 {
   int r, err;
-  assert(tls && tls->ssl);
-  assert(tls->state == TOR_TLS_ST_OPEN);
+  tor_assert(tls && tls->ssl);
+  tor_assert(tls->state == TOR_TLS_ST_OPEN);
   if (n == 0)
     return 0;
   if(tls->wantwrite_n) {
     /* if WANTWRITE last time, we must use the _same_ n as before */
-    assert(n >= tls->wantwrite_n);
+    tor_assert(n >= tls->wantwrite_n);
     log_fn(LOG_DEBUG,"resuming pending-write, (%d to flush, reusing %d)",
            n, tls->wantwrite_n);
     n = tls->wantwrite_n;
@@ -424,8 +424,8 @@ int
 tor_tls_handshake(tor_tls *tls)
 {
   int r;
-  assert(tls && tls->ssl);
-  assert(tls->state == TOR_TLS_ST_HANDSHAKE);
+  tor_assert(tls && tls->ssl);
+  tor_assert(tls->state == TOR_TLS_ST_HANDSHAKE);
   if (tls->isServer) {
     r = SSL_accept(tls->ssl);
   } else {
@@ -447,7 +447,7 @@ tor_tls_shutdown(tor_tls *tls)
 {
   int r, err;
   char buf[128];
-  assert(tls && tls->ssl);
+  tor_assert(tls && tls->ssl);
 
   while (1) {
     if (tls->state == TOR_TLS_ST_SENTCLOSE) {
@@ -593,19 +593,19 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
 int
 tor_tls_get_pending_bytes(tor_tls *tls)
 {
-  assert(tls);
+  tor_assert(tls);
   return SSL_pending(tls->ssl);
 }
 
 /* Return the number of bytes read across the underlying socket. */
 unsigned long tor_tls_get_n_bytes_read(tor_tls *tls)
 {
-  assert(tls);
+  tor_assert(tls);
   return BIO_number_read(SSL_get_rbio(tls->ssl));
 }
 unsigned long tor_tls_get_n_bytes_written(tor_tls *tls)
 {
-  assert(tls);
+  tor_assert(tls);
   return BIO_number_written(SSL_get_wbio(tls->ssl));
 }
 
