@@ -92,6 +92,7 @@ int write_bytes_to_file(const char *fname, const char *str, size_t len,
                         int bin);
 char *read_file_to_str(const char *filename, int bin);
 int parse_line_from_file(char *line, size_t maxlen, FILE *f, char **key_out, char **value_out);
+char *parse_line_from_str(char *line, char **key_out, char **value_out);
 char *expand_filename(const char *filename);
 
 /* Net helpers */

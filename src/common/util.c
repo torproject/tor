@@ -875,7 +875,7 @@ char *read_file_to_str(const char *filename, int bin) {
 int
 parse_line_from_file(char *line, size_t maxlen, FILE *f,
                      char **key_out, char **value_out) {
-  char *s, *key, *end, *value;
+  char *s;
 
 try_next_line:
   if(!fgets(line, maxlen, f)) {
@@ -883,6 +883,17 @@ try_next_line:
       return 0;
     return -1; /* real error */
   }
+  line[maxlen-1] = '\0';
+
+  s = parse_line_from_str(line, key_out, value_out);
+  if (!s)
+    return -1;
+  if (!*key_out)
+    goto try_next_line;
+
+  return 1;
+
+#if 0
 
   if((s = strchr(line,'#'))) /* strip comments */
     *s = 0; /* stop the line there */
@@ -920,6 +931,73 @@ try_next_line:
   log_fn(LOG_DEBUG,"got keyword '%s', value '%s'", key, value);
   *key_out = key, *value_out = value;
   return 1;
+#endif
+}
+
+
+/** DOCDOC.
+ *
+ * Return next line or end of string on success, NULL on failure.
+ */
+char *
+parse_line_from_str(char *line, char **key_out, char **value_out)
+{
+  char *key, *val, *cp;
+
+  tor_assert(key_out);
+  tor_assert(value_out);
+
+  *key_out = *value_out = key = val = NULL;
+  /* Skip until the first keyword. */
+  while (1) {
+    while (isspace(*line))
+      ++line;
+    if (*line == '#') {
+      while (*line && *line != '\n')
+        ++line;
+    } else {
+      break;
+    }
+  }
+
+  if (!*line) { /* End of string? */
+    *key_out = *value_out = NULL;
+    return line;
+  }
+
+  /* Skip until the next space. */
+  key = line;
+  while (*line && !isspace(*line) && *line != '#')
+    ++line;
+
+  /* Skip until the value */
+  while (*line == ' ' || *line == '\t')
+    *line++ = '\0';
+  val = line;
+
+  /* Find the end of the line. */
+  while (*line && *line != '\n' && *line != '#')
+    ++line;
+  if (*line == '\n')
+    cp = line++;
+  else {
+    cp = line-1;
+  }
+  while (cp>=val && isspace(*cp))
+    *cp-- = '\0';
+
+  if (*line == '#') {
+    do {
+      *line++ = '\0';
+    } while (*line && *line != '\n');
+    if (*line == '\n')
+      ++line;
+  }
+
+  *key_out = key;
+  *value_out = val;
+
+  return line;
 }
 
 /** Expand any homedir prefix on 'filename'; return a newly allocated
