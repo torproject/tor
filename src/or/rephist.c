@@ -295,7 +295,7 @@ void write_rep_history(const char *filename)
  * Add num_bytes to the current running total for <b>when</b>.
  *
  * <b>when</b> can go back to time, but it's safe to ignore calls
- * earlier that the latest <b>when</b> you've heard of.
+ * earlier than the latest <b>when</b> you've heard of.
  */
 void rep_hist_note_bytes_written(int num_bytes, time_t when) {
 /* Maybe a circular array for recent seconds, and step to a new point
@@ -327,7 +327,7 @@ int rep_hist_bandwidth_assess(time_t when) {
 /* To get a handle on space complexity, I promise I will call this
  * function at most every options.DirFetchPostPeriod seconds. So in
  * rep_hist_note_bytes_foo() above, you could keep a running max sum
- * for the current period, and when the period ends you can tuck it away
+ * for the current period, and when the period ends you can tuck its max away
  * in a circular array of more managable size. We lose a bit of precision,
  * but this is all guesswork anyway.
  */

@@ -711,7 +711,7 @@ int connection_handle_read(connection_t *conn) {
   if(connection_read_to_buf(conn) < 0) {
     /* There's a read error; kill the connection.*/
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
-    conn->has_sent_end = 1;
+    conn->has_sent_end = 1; /* XXX have we already sent the end? really? */
     connection_mark_for_close(conn);
     if(conn->type == CONN_TYPE_DIR &&
        conn->state == DIR_CONN_STATE_CONNECTING) {
@@ -779,6 +779,10 @@ static int connection_read_to_buf(connection_t *conn) {
 
     if(result < 0)
       return -1;
+  }
+
+  if(result > 0 && !is_local_IP(conn->addr)) { /* remember it */
+    rep_hist_note_bytes_read(result, time(NULL));
   }
 
   connection_bucket_decrement(conn, result);
@@ -900,7 +904,7 @@ int connection_handle_write(connection_t *conn) {
     }
   }
 
-  if(result > 0) { /* remember it */
+  if(result > 0 && !is_local_IP(conn->addr)) { /* remember it */
     rep_hist_note_bytes_written(result, now);
   }
 
