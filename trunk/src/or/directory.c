@@ -48,6 +48,8 @@ static int directory_handle_command(connection_t *conn);
 
 extern or_options_t options; /* command-line and config-file options */
 
+static struct exit_policy_t *dir_policy = NULL;
+
 #if 0 /* commented out for now, since for now what clients send is
          different from what servers want to receive */
 /** URL for publishing rendezvous descriptors. */
@@ -62,6 +64,48 @@ char rend_fetch_url[] = "/tor/rendezvous/";
 #define ALLOW_DIRECTORY_TIME_SKEW 30*60
 
 /********* END VARIABLES ************/
+
+/** A helper function for dir_policy_permits_address() below.
+ *
+ * Parse options.DirPolicy in the same way that the exit policy
+ * is parsed, and put the processed version in &dir_policy.
+ * Ignore port specifiers.
+ */
+static void parse_dir_policy(void)
+{
+  struct exit_policy_t *n;
+  if (dir_policy) {
+    exit_policy_free(dir_policy);
+    dir_policy = NULL;
+  }
+  config_parse_exit_policy(options.DirPolicy, &dir_policy);
+  /* ports aren't used. */
+  for (n=dir_policy; n; n = n->next) {
+    n->prt_min = 1;
+    n->prt_max = 65535;
+  }
+}
+
+/** Return 1 if <b>addr</b> is permitted to connect to our dir port,
+ * based on <b>dir_policy</b>. Else return 0.
+ */
+int dir_policy_permits_address(uint32_t addr)
+{
+  int a;
+  if (options.DirPolicy && !dir_policy)
+    parse_dir_policy();
+
+  if(!dir_policy) /* 'no dir policy' means 'accept' */
+    return 1;
+  a = router_compare_addr_to_exit_policy(addr, 1, dir_policy);
+  if (a==-1)
+    return 0;
+  else if (a==0)
+    return 1;
+  tor_assert(a==1);
+  log_fn(LOG_WARN, "Got unexpected 'maybe' answer from dir policy");
+  return 0;
+}
 
 /** Start a connection to every known directory server, using
  * connection purpose 'purpose' and uploading the payload 'payload'
