@@ -13,6 +13,9 @@ ARMA    - arma claims
 
 0.0.9pre5:
 NM - add hibernation stuff to man page
+NM - split init_keys() into stuff that happens once and stuff
+     that can happen many times. call the many-time stuff from
+     options_act. maybe this is just 6 and 6b. what about 7?
    o "tor --list-fingerprint" to print fingerprint and exit.
    o add and document DirPolicy config option
    o Replace syslog/debuglogfile/logfile/loglevel with a new option,
