@@ -141,10 +141,10 @@ int connection_cpu_process_inbuf(connection_t *conn) {
     /* parse out the circ it was talking about */
     tag_unpack(buf, &addr, &port, &circ_id);
     circ = NULL;
-    /* (Here we use connection_exact_get_by_addr_port rather than
+    /* (Here we use connection_or_exact_get_by_addr_port rather than
      * get_by_identity_digest: we want a specific port here in
      * case there are multiple connections.) */
-    p_conn = connection_exact_get_by_addr_port(addr,port);
+    p_conn = connection_or_exact_get_by_addr_port(addr,port);
     if (p_conn)
       circ = circuit_get_by_circid_orconn(circ_id, p_conn);
 
@@ -356,8 +356,8 @@ static void process_pending_task(connection_t *cpuworker) {
     log_fn(LOG_WARN,"assign_to_cpuworker failed. Ignoring.");
 }
 
-/** if cpuworker is defined, assert that he's idle, and use him. else,
- * look for an idle cpuworker and use him. if none idle, queue task onto
+/** If cpuworker is defined, assert that he's idle, and use him. Else,
+ * look for an idle cpuworker and use him. If none idle, queue task onto
  * the pending onion list and return.
  * If question_type is CPUWORKER_TASK_ONION then task is a circ.
  * No other question_types are allowed.
