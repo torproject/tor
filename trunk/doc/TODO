@@ -129,6 +129,10 @@ NICK    - Reputation info needs to give better weight to recent events than
           "transfer-encoding: gzip". ta-da.
           - grow a zlib dependency. keep a cached compressed directory.
         - Why is the first entry of kill -USR1 a router with a 0 key?
+        o don't warn about being unverified if you're not in the
+          running-routers list at all.
+        - put expiry date on onion-key, so people don't keep trying
+          old ones that they could know are expired?
 
 
       ongoing:
