@@ -939,6 +939,78 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
   return 0;
 }
 
+
+void assert_cpath_layer_ok(crypt_path_t *cp)
+{
+  assert(cp->f_crypto);
+  assert(cp->b_crypto);
+  assert(cp->addr);
+  assert(cp->port);
+  switch(cp->state) 
+    {
+    case CPATH_STATE_CLOSED:
+    case CPATH_STATE_OPEN:
+      assert(!cp->handshake_state);
+    case CPATH_STATE_AWAITING_KEYS:
+      assert(cp->handshake_state);
+    default:
+      assert(0);
+    }
+  assert(cp->package_window >= 0);
+  assert(cp->deliver_window >= 0);
+}
+
+void assert_cpath_ok(crypt_path_t *cp)
+{
+  while(cp->prev)
+    cp = cp->prev;
+
+  while(cp->next) {
+    assert_cpath_layer_ok(cp);
+    /* layers must be in sequence of: "open* awaiting? closed*" */
+    if (cp->prev) {
+      if (cp->prev->state == CPATH_STATE_OPEN) {
+        assert(cp->state == CPATH_STATE_CLOSED ||
+               cp->state == CPATH_STATE_AWAITING_KEYS);
+      } else {
+        assert(cp->state == CPATH_STATE_CLOSED);
+      }
+    }
+    cp = cp->next;
+  }
+}
+
+void assert_circuit_ok(circuit_t *c) 
+{
+  connection_t *conn;
+
+  assert(c->n_addr);
+  assert(c->n_port);
+  assert(c->n_conn);
+  assert(c->n_conn->type == CONN_TYPE_OR);
+  if (c->p_conn)
+    assert(c->p_conn->type == CONN_TYPE_OR);
+  for (conn = c->p_streams; conn; conn = conn->next_stream)
+    assert(c->p_conn->type == CONN_TYPE_EXIT);
+  for (conn = c->n_streams; conn; conn = conn->next_stream)
+    assert(conn->type == CONN_TYPE_EXIT);
+
+  assert(c->deliver_window >= 0);
+  assert(c->package_window >= 0);
+  if (c->state == CIRCUIT_STATE_OPEN) {
+    if (c->cpath) {
+      assert(!c->n_crypto);
+      assert(!c->p_crypto);
+    } else {
+      assert(c->n_crypto);
+      assert(c->p_crypto);
+    }
+  }
+  if (c->cpath) {
+    assert_cpath_ok(c->cpath);
+  }
+}
+
 /*
   Local Variables:
   mode:c
