@@ -50,15 +50,42 @@ the message.
 
   The body of the message begins with a 2-byte error code.  The following
   values are defined:
+
         0x0000 Unspecified error
-        0x0001 Unrecognized message type
-        0x0002 Unrecognized configuration key
-        0x0003 Invalid configuration value
-        0x0004 Unrecognized event code
-        0x0005 Unauthorized user
-        0x0006 Failed authentication attempt
+               []
+
+        0x0001 Internal error
+               [Something went wrong inside Tor, so that the client's
+                request couldn't be fulfilled.]
+
+        0x0002 Unrecognized message type
+               [The client sent a message type we don't understand.]
+
+        0x0003 Syntax error
+               [The client sent a message body in a format we can't parse.]
+
+        0x0004 Unrecognized configuration key
+               [The client tried to get or set a configuration option we don't
+                recognize.]
+
+        0x0005 Invalid configuration value
+               [The client tried to set a configuration option to an
+                incorrect, ill-formed, or impossible value.]
+
+        0x0006 Unrecognized event code
+               [The client tried to set an event code that we don't recognize.]
+
+        0x0007 Unauthorized.
+               [The client tried to send a command that requires
+                authorization, but it hasn't sent a valid AUTHENTICATE message.]
+
+        0x0008 Failed authentication attempt
+               [The client sent a well-formed authorization message.]
 
   The rest of the body should be a human-readable description of the error.
+
+  In general, new error codes should only be added when they don't fall under
+  one of the existing error codes.
 
 3.2. DONE (Type 0x0001)
 
