@@ -67,7 +67,7 @@ tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
         for (idx = 0; idx < nfds; ++idx) {
                 ufds[idx].revents = 0;
                 fd = ufds[idx].fd;
-                tor_assert(SOCKET_SEEMS_POLLABLE(fd));
+                tor_assert(SOCKET_IS_POLLABLE(fd));
                 if (fd > maxfd) {
                   maxfd = fd;
 #ifdef MS_WINDOWS
