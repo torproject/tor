@@ -215,7 +215,7 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   int best_support_idx = -1;
   int best_maybe_support_idx = -1;
   int n_best_support=0, n_best_maybe_support=0;
-  smartlist_t *sl, *preferredexits;
+  smartlist_t *sl, *preferredexits, *excludedexits;
   routerinfo_t *router;
 
   get_connection_array(&carray, &n_connections);
@@ -307,56 +307,51 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   preferredexits = smartlist_create(MAX_ROUTERS_IN_DIR);
   add_nickname_list_to_smartlist(preferredexits,options.ExitNodes);
 
+  excludedexits = smartlist_create(MAX_ROUTERS_IN_DIR);
+  add_nickname_list_to_smartlist(excludedexits,options.ExcludedNodes);
+
+  sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+
   /* If any routers definitely support any pending connections, choose one
    * at random. */
   if (best_support > 0) {
-    sl = smartlist_create(MAX_ROUTERS_IN_DIR);
     for (i = best_support_idx; i < dir->n_routers; i++)
       if (n_supported[i] == best_support)
         smartlist_add(sl, dir->routers[i]);
 
+    smartlist_subtract(sl,excludedexits);
     if (smartlist_overlap(sl,preferredexits))
       smartlist_intersect(sl,preferredexits);
     router = smartlist_choose(sl);
-    smartlist_free(preferredexits);
-    smartlist_free(sl);
-    tor_free(n_supported); tor_free(n_maybe_supported);
-    log_fn(LOG_DEBUG, "Chose exit server '%s'", router->nickname);
-    return router;
-  }
-
-  /* If any routers _maybe_ support pending connections, choose one at
-   * random, as above.  */
-  if (best_maybe_support > 0) {
-    sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+  } else if (best_maybe_support > 0) {
+    /* If any routers _maybe_ support pending connections, choose one at
+     * random, as above.  */
     for(i = best_maybe_support_idx; i < dir->n_routers; i++)
       if(n_maybe_supported[i] == best_maybe_support)
         smartlist_add(sl, dir->routers[i]);
 
+    smartlist_subtract(sl,excludedexits);
     if (smartlist_overlap(sl,preferredexits))
       smartlist_intersect(sl,preferredexits);
     router = smartlist_choose(sl);
-    smartlist_free(preferredexits);
-    smartlist_free(sl);
-    tor_free(n_supported); tor_free(n_maybe_supported);
-    log_fn(LOG_DEBUG, "Chose exit server '%s'", router->nickname);
-    return router;
+  } else {
+    /* Either there are no pending connections, or no routers even seem to
+     * possibly support any of them.  Choose a router at random. */
+    for(i = best_maybe_support_idx; i < dir->n_routers; i++)
+      if(n_supported[i] != -1)
+        smartlist_add(sl, dir->routers[i]);
+
+    smartlist_subtract(sl,excludedexits);
+    if (smartlist_overlap(sl,preferredexits))
+      smartlist_intersect(sl,preferredexits);
+    router = smartlist_choose(sl);
   }
 
-  /* Either there are no pending connections, or no routers even seem to
-   * possibly support any of them.  Choose a router at random. */
-  sl = smartlist_create(MAX_ROUTERS_IN_DIR);
-  for(i = best_maybe_support_idx; i < dir->n_routers; i++)
-    if(n_supported[i] != -1)
-      smartlist_add(sl, dir->routers[i]);
-
-  if (smartlist_overlap(sl,preferredexits))
-    smartlist_intersect(sl,preferredexits);
-  router = smartlist_choose(sl);
   smartlist_free(preferredexits);
+  smartlist_free(excludedexits);
   smartlist_free(sl);
+  tor_free(n_supported); tor_free(n_maybe_supported);
   if(router) {
-    tor_free(n_supported); tor_free(n_maybe_supported);
     log_fn(LOG_DEBUG, "Chose exit server '%s'", router->nickname);
     return router;
   }
@@ -446,7 +441,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   routerinfo_t *r;
   routerinfo_t *choice;
   int i;
-  smartlist_t *sl;
+  smartlist_t *sl, *excludednodes;
 
   assert(head_ptr);
   assert(router_out);
@@ -467,6 +462,9 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
   log_fn(LOG_DEBUG, "Path is %d long; we want %d", cur_len,
          state->desired_path_len);
 
+  excludednodes = smartlist_create(MAX_ROUTERS_IN_DIR);
+  add_nickname_list_to_smartlist(excludednodes,options.ExcludedNodes);
+
   if(cur_len == state->desired_path_len - 1) { /* Picking last node */
     log_fn(LOG_DEBUG, "Contemplating last hop: choice already made.");
     choice = router_get_by_nickname(state->chosen_exit);
@@ -480,15 +478,18 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     sl = smartlist_create(MAX_ROUTERS_IN_DIR);
     add_nickname_list_to_smartlist(sl,options.EntryNodes);
     remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
+    smartlist_subtract(sl,excludednodes);
     choice = smartlist_choose(sl);
     smartlist_free(sl);
     if(!choice) {
       sl = smartlist_create(MAX_ROUTERS_IN_DIR);
       router_add_running_routers_to_smartlist(sl);
       remove_twins_from_smartlist(sl,router_get_by_nickname(state->chosen_exit));
+      smartlist_subtract(sl,excludednodes);
       choice = smartlist_choose(sl);
       smartlist_free(sl);
     }
+    smartlist_free(excludednodes);
     if(!choice) {
       log_fn(LOG_WARN,"No acceptable routers while picking entry node. Failing.");
       return -1;
@@ -503,9 +504,10 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
       assert(r);
       remove_twins_from_smartlist(sl,r);
     }
+    smartlist_subtract(sl,excludednodes);
     choice = smartlist_choose(sl);
     smartlist_free(sl);
-
+    smartlist_free(excludednodes);
     if(!choice) {
       log_fn(LOG_WARN,"No acceptable routers while picking intermediate node. Failing.");
       return -1;
