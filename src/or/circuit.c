@@ -241,10 +241,14 @@ int circuit_init(circuit_t *circ, int aci_type) {
   return 0;
 }
 
-circuit_t *circuit_get_by_naddr_nport(uint32_t naddr, uint16_t nport) {
-  circuit_t *circ;
+circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *circ, uint32_t naddr, uint16_t nport) {
 
-  for(circ=global_circuitlist;circ;circ = circ->next) {
+  if(!circ) /* use circ if it's defined, else start from the beginning */
+    circ = global_circuitlist; 
+  else
+    circ = circ->next;
+
+  for( ;circ;circ = circ->next) {
     if(circ->n_addr == naddr && circ->n_port == nport)
        return circ;
   }

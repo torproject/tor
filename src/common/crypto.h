@@ -18,6 +18,7 @@
 typedef struct 
 {
   int type;
+  int refs; /* reference counting; so we don't have to copy keys */
   unsigned char *key;
   /* auxiliary data structure(s) used by the underlying crypto library */
   unsigned char *aux;
@@ -46,15 +47,18 @@ void crypto_free_cipher_env(crypto_cipher_env_t *env);
 /* public key crypto */
 int crypto_pk_generate_key(crypto_pk_env_t *env);
 
-int crypto_pk_read_private_key(crypto_pk_env_t *env, FILE *src);
-int crypto_pk_read_public_key(crypto_pk_env_t *env, FILE *src);
-int crypto_pk_write_private_key(crypto_pk_env_t *env, FILE *dest);
-int crypto_pk_write_public_key(crypto_pk_env_t *env, FILE *dest);
+int crypto_pk_read_private_key_from_file(crypto_pk_env_t *env, FILE *src);
+int crypto_pk_read_public_key_from_file(crypto_pk_env_t *env, FILE *src);
+int crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest, int *len);
+int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, char *src, int len);
+int crypto_pk_write_private_key_to_file(crypto_pk_env_t *env, FILE *dest);
+int crypto_pk_write_public_key_to_file(crypto_pk_env_t *env, FILE *dest);
 int crypto_pk_check_key(crypto_pk_env_t *env);
-int crypto_pk_read_private_key_filename(crypto_pk_env_t *env, unsigned char *keyfile);
+int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, unsigned char *keyfile);
 
 int crypto_pk_set_key(crypto_pk_env_t *env, unsigned char *key);
 int crypto_pk_cmp_keys(crypto_pk_env_t *a, crypto_pk_env_t *b);
+crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *orig);
 int crypto_pk_keysize(crypto_pk_env_t *env);
 
 int crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to, int padding);

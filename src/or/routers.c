@@ -9,12 +9,19 @@
  * Matej Pfajfar <mp292@cam.ac.uk>
  */
 
-#define OR_ROUTERLIST_SEPCHARS " \t\n"
-#define OR_PUBLICKEY_BEGIN_TAG "-----BEGIN RSA PUBLIC KEY-----\n"
+#define OR_PUBLICKEY_END_TAG "-----END RSA PUBLIC KEY-----\n"
 
 #include "or.h"
 
 extern int global_role; /* from main.c */
+
+/* static function prototypes */
+static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my_or_listenport);
+static void routerlist_free(routerinfo_t *list);
+static routerinfo_t **make_rarray(routerinfo_t* list, int *len);
+static char *eat_whitespace(char *s);
+static char *find_whitespace(char *s);
+static routerinfo_t *router_get_entry_from_string(char **s);
 
 /* private function, to determine whether the current entry in the router list is actually us */
 static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my_or_listenport)
@@ -35,12 +42,12 @@ static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my
   
   /* obtain local host information */
   if (gethostname(localhostname,512) < 0) {
-    log(LOG_ERR,"Error obtaining local hostname.");
+    log(LOG_ERR,"router_is_me(): Error obtaining local hostname.");
     return -1;
   }
   localhost = gethostbyname(localhostname);
   if (!localhost) {
-    log(LOG_ERR,"Error obtaining local host info.");
+    log(LOG_ERR,"router_is_me(): Error obtaining local host info.");
     return -1;
   }
   
@@ -71,7 +78,7 @@ static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my
 }
 
 /* delete a list of routers from memory */
-void delete_routerlist(routerinfo_t *list)
+static void routerlist_free(routerinfo_t *list)
 {
   routerinfo_t *tmp = NULL;
   
@@ -91,10 +98,17 @@ void delete_routerlist(routerinfo_t *list)
   return;
 }
 
+void rarray_free(routerinfo_t **list) {
+  if(!list)
+    return;
+  routerlist_free(*list);
+  free(list);
+}
+
 /* create a NULL-terminated array of pointers pointing to elements of a router list */
 /* this is done in two passes through the list - inefficient but irrelevant as this is
  * only done once when op/or start up */
-routerinfo_t **make_rarray(routerinfo_t* list, int *len)
+static routerinfo_t **make_rarray(routerinfo_t* list, int *len)
 {
   routerinfo_t *tmp=NULL;
   int listlen = 0;
@@ -135,303 +149,220 @@ routerinfo_t **make_rarray(routerinfo_t* list, int *len)
   return array;
 }
 
+
 /* load the router list */
-routerinfo_t **getrouters(char *routerfile, int *len, uint16_t or_listenport)
+routerinfo_t **router_get_list_from_file(char *routerfile, int *len, uint16_t or_listenport)
 {
-  int retval = 0;
-  char *retp = NULL;
-  routerinfo_t *router=NULL, *routerlist=NULL, *lastrouter=NULL;
-  FILE *rf; /* router file */
-  fpos_t fpos;
-  char line[512];
-  char *token;
-  char *errtest; /* detecting errors in strtoul() calls */
-  struct hostent *rent;
+  routerinfo_t *routerlist=NULL;
+  routerinfo_t *router;
+  int fd; /* router file */
+  struct stat statbuf;
+  char *string;
+  char *tmps;
 
   assert(routerfile && len);
   
   if (strcspn(routerfile,CONFIG_LEGAL_FILENAME_CHARACTERS) != 0) {
-    log(LOG_ERR,"Filename %s contains illegal characters.",routerfile);
+    log(LOG_ERR,"router_get_list_from_file(): Filename %s contains illegal characters.",routerfile);
     return NULL;
   }
   
-  /* open the router list */
-  rf = fopen(routerfile,"r");
-  if (!rf) {
-    log(LOG_ERR,"Could not open %s.",routerfile);
+  if(stat(routerfile, &statbuf) < 0) {
+    log(LOG_ERR,"router_get_list_from_file(): Could not stat %s.",routerfile);
     return NULL;
   }
-  
-  retp = fgets(line,512,rf);
-  while (retp) {
-    log(LOG_DEBUG,"getrouters():Line :%s",line);
-    token = (char *)strtok(line,OR_ROUTERLIST_SEPCHARS);
-    if (token)
-    {
-      log(LOG_DEBUG,"getrouters():Token : %s",token);
-      if (token[0] != '#') /* ignore comment lines */
-      {
-	router = malloc(sizeof(routerinfo_t));
-	if (!router)
-	{
-	  log(LOG_ERR,"Could not allocate memory.");
-	  fclose(rf);
-	  delete_routerlist(routerlist);
-	  return NULL;
-	}
-	
-	/* read the address */
-	router->address = malloc(strlen(token)+1);
-	if (!router->address)
-	{
-	  log(LOG_ERR,"Could not allocate memory.");
-	  fclose(rf);
-	  free((void *)router);
-	  delete_routerlist(routerlist);
-	  return NULL;
-	}
-	strcpy(router->address,token);
-	
-	rent = (struct hostent *)gethostbyname(router->address);
-	if (!rent)
-	{
-	  log(LOG_ERR,"Could not get address for router %s.",router->address);
-	  fclose(rf);
-	  free((void *)router->address);
-	  free((void *)router);
-	  delete_routerlist(routerlist);
-	  return NULL;
-	}
 
-	memcpy(&router->addr, rent->h_addr,rent->h_length);
-	
-	/* read the port */
-	token = (char *)strtok(NULL,OR_ROUTERLIST_SEPCHARS);
-	if (token)
-	{
-	  log(LOG_DEBUG,"getrouters():Token :%s",token);
-	  router->or_port = (uint16_t)strtoul(token,&errtest,0);
-	  if ((*token != '\0') && (*errtest == '\0')) /* conversion was successful */
-	  {
-/* FIXME patch from RD. We should make it actually read these. */
-	    router->op_port = router->or_port + 10;
-	    router->ap_port = router->or_port + 20;
-	    
-	    /* read min bandwidth */
-	    token = (char *)strtok(NULL,OR_ROUTERLIST_SEPCHARS);
-	    if (token) /* min bandwidth */
-	    {
-	      router->min = (uint32_t)strtoul(token,&errtest,0);
-	      if ((*token != '\0') && (*errtest == '\0')) /* conversion was successful */
-	      {
-		if (router->min) /* must not be zero */
-		{
-		  /* read max bandwidth */
-		  token = (char *)strtok(NULL,OR_ROUTERLIST_SEPCHARS);
-		  if (token) /* max bandwidth */
-		  {
-		    router->max = (uint32_t)strtoul(token,&errtest,0);
-		    if ((*token != '\0') && (*errtest == '\0')) /* conversion was successful */
-		    {
-		      if (router->max) /* must not be zero */
-		      {
-			/* check that there is a public key entry for that router */
-			retval = fgetpos(rf, &fpos); /* save the current file position
-						      * we wil return to it later if we find a public key */
-			if (retval == -1)
-			{
-			  log(LOG_ERR,"Could not save position in %s.",routerfile);
-			  free((void *)router->address);
-			  free((void *)router);
-			  fclose(rf);
-			  delete_routerlist(routerlist);
-			  return NULL;
-			}
-			do /* read through to the next non-empty line */
-			{
-			  retp=fgets(line,512,rf);
-			  if (!retp)
-			  {
-			    log(LOG_ERR,"Could not find a public key entry for router %s:%u.",
-				router->address,router->or_port);
-			    free((void *)router->address);
-			    free((void *)router);
-			    fclose(rf);
-			    delete_routerlist(routerlist);
-			    return NULL;
-			  }
-			  log(LOG_DEBUG,"getrouters():Line:%s",line);
-			  if ((*line != '#') && ( strspn(line,OR_ROUTERLIST_SEPCHARS) != strlen(line) ))
-			  {
-			    break;
-			  }
-			} while (1);
-			
-			if (!strcmp(line,OR_PUBLICKEY_BEGIN_TAG)) /* we've got the public key */
-			{
-			  retval = fsetpos(rf,&fpos); /* get us back to where we were otherwise crypto lib won't find the key */
-			  if (retval == -1)
-			  {
-			    log(LOG_ERR,"Could not set position in %s.",routerfile);
-			    free((void *)router->address);
-			    free((void *)router);
-			    fclose(rf);
-			    delete_routerlist(routerlist);
-			    return NULL;
-			  }
-			}
-			else /* we found something else; this isn't right */
-			{
-			  log(LOG_ERR,"Could not find a public key entry for router %s:%u.",
-			      router->address,router->or_port);
-			  free((void *)router->address);
-			  free((void *)router);
-			  fclose(rf);
-			  delete_routerlist(routerlist);
-			  return NULL;
-			}
-			
-			log(LOG_DEBUG,"getrouters():Reading the key ...");
-			/* read the public key into router->pkey */
-			router->pkey = crypto_new_pk_env(CRYPTO_PK_RSA);
-			if (crypto_pk_read_public_key(router->pkey, rf)) /* something went wrong */
-			{
-			  log(LOG_ERR,"Could not read public key for router %s:%u.", 
-			      router->address,router->or_port);
-			  free((void *)router->address);
-			  free((void *)router);
-			  fclose(rf);
-			  delete_routerlist(routerlist);
-			  return NULL;
-			}
-			else /* read the key */
-			{
-			  log(LOG_DEBUG,"getrouters():Public key size = %u.", crypto_pk_keysize(router->pkey));
-			  if (crypto_pk_keysize(router->pkey) != 128) /* keys MUST be 1024 bits in size */
-			  {
-			    log(LOG_ERR,"Key for router %s:%u is not 1024 bits. All keys must be exactly 1024 bits long.",router->address,router->or_port);
-			    free((void *)router->address);
-			    crypto_free_pk_env(router->pkey);
-			    free((void *)router);
-			    fclose(rf);
-			    delete_routerlist(routerlist);
-			    return NULL;
-			  }
-			  
-			  /* check that this router doesn't actually represent us */
-			  retval = router_is_me(router->addr, router->or_port, or_listenport);
-			  if (!retval) { /* this isn't us, continue */
-			    router->next = NULL;
-			    /* save the entry into the routerlist linked list */
-			    if (!routerlist) /* this is the first entry */
-				    routerlist = router;
-			    else
-				    lastrouter->next = (void *)router;
-			    lastrouter = router;
-			  }
-			  else if (retval == 1) /* this is us, ignore */
-			  {
-			    log(LOG_DEBUG,"getrouters(): This entry is actually me. Ignoring.");
-			    free((void *)router->address);
-			    crypto_free_pk_env(router->pkey);
-			    free((void *)router);
-			  }
-			  else /* router_is_me() returned an error */
-			  {
-			    free((void *)router->address);
-			    crypto_free_pk_env(router->pkey);
-			    free((void *)router);
-			    fclose(rf);
-			    delete_routerlist(routerlist);
-			    return NULL;
-			  }
-			}
-		      }
-		      else /* maximum link utilisation is zero */
-		      {
-			log(LOG_ERR,"Entry for router %s doesn't contain a valid maximum bandwidth entry (must be > 0).",router->address);
-			free((void *)router->address);
-			free((void *)router);
-			fclose(rf);
-			delete_routerlist(routerlist);
-			return NULL;
-		      }
-		    }
-		    else
-		    {
-		      log(LOG_ERR,"Entry for router %s doesn't seem to contain a valid maximum bandwidth entry.",router->address);
-		      free((void *)router->address);
-		      free((void *)router);
-		      fclose(rf);
-		      delete_routerlist(routerlist);
-		      return NULL;
-		    }
-		  }
-		  else
-		  {
-		    log(LOG_ERR,"Entry for router %s doesn't seem to contain a maximum bandwidth entry.",router->address);
-		    free((void *)router->address);
-		    free((void *)router);
-		    fclose(rf);
-		    delete_routerlist(routerlist);
-		    return NULL;
-		  }
-		}
-		else
-		{
-		  log(LOG_ERR,"Entry for router %s doesn't contain a valid minimum bandwidth entry (must be > 0).",router->address);
-		  free((void *)router->address);
-		  free((void *)router);
-		  fclose(rf);
-		  delete_routerlist(routerlist);
-		  return NULL;
-		}
-	      }
-	      else
-	      {
-		log(LOG_ERR,"Entry for router %s doesn't seem to contain a valid minimum bandwidth entry.",router->address);
-		free((void *)router->address);
-		free((void *)router);
-		fclose(rf);
-		delete_routerlist(routerlist);
-		return NULL;
-	      }
-	    }
-	    else
-	    {
-	      log(LOG_ERR,"Entry for router %s doesn't seem to contain a minimum bandwidth entry.",router->address);
-	      free((void *)router->address);
-	      free((void *)router);
-	      fclose(rf);
-	      delete_routerlist(routerlist);
-	      return NULL;
-	    }
-	  }
-	  else
-	  {
-	    log(LOG_ERR,"Entry for router %s doesn't seem to contain a valid port number.",router->address);
-	    free((void *)router->address);
-	    free((void *)router);
-	    fclose(rf);
-	    delete_routerlist(routerlist);
-	    return NULL;
-	  }
-	}
-	else
-	{
-	  log(LOG_ERR,"Entry for router %s doesn't seem to contain a port number.",router->address);
-	  free((void *)router->address);
-	  free((void *)router);
-	  fclose(rf);
-	  delete_routerlist(routerlist);
-	  return NULL;
-	}
-      }
+  /* open the router list */
+  fd = open(routerfile,O_RDONLY,0);
+  if (fd<0) {
+    log(LOG_ERR,"router_get_list_from_file(): Could not open %s.",routerfile);
+    return NULL;
+  }
+
+  string = malloc(statbuf.st_size+1);
+  if(!string) {
+    log(LOG_ERR,"router_get_list_from_file(): Out of memory.");
+    return NULL;
+  }
+
+  if(read(fd,string,statbuf.st_size) != statbuf.st_size) {
+    log(LOG_ERR,"router_get_list_from_file(): Couldn't read all %d bytes of file '%s'.",statbuf.st_size,routerfile);
+    return NULL;
+  }
+  close(fd);
+  
+  string[statbuf.st_size] = 0; /* null terminate it */
+  tmps = string;
+  while(*tmps) { /* while not at the end of the string */
+    router = router_get_entry_from_string(&tmps);
+    if(router == NULL) {
+      routerlist_free(routerlist);
+      free(string);
+      return NULL;
     }
-    retp=fgets(line,512,rf);
+    if(!router_is_me(router->addr, router->or_port, or_listenport)) {
+      router->next = routerlist;
+      routerlist = router;
+    }
+    tmps = eat_whitespace(tmps);
+  }
+  free(string);
+  return make_rarray(routerlist, len);
+} 
+
+/* return the first char of s that is not whitespace and not a comment */
+static char *eat_whitespace(char *s) {
+  assert(s);
+
+  while(isspace(*s) || *s == '#') {
+    while(isspace(*s))
+      s++;
+    if(*s == '#') { /* read to a \n or \0 */
+      while(*s && *s != '\n')
+        s++;
+      if(!*s)
+        return s;
+    }
+  }
+  return s;
+}
+
+/* return the first char of s that is whitespace or '#' or '\0 */
+static char *find_whitespace(char *s) {
+  assert(s);
+
+  while(*s && !isspace(*s) && *s != '#')
+    s++;
+
+  return s;
+}
+
+/* reads a single router entry from s.
+ * updates s so it points to after the router it just read.
+ * mallocs a new router, returns it if all goes well, else returns NULL.
+ */
+static routerinfo_t *router_get_entry_from_string(char **s) {
+  routerinfo_t *router;
+  char *next;
+  struct hostent *rent;
+
+  router = malloc(sizeof(routerinfo_t));
+  if (!router) {
+    log(LOG_ERR,"router_get_entry_from_string(): Could not allocate memory.");
+    return NULL;
+  }
+  memset(router,0,sizeof(routerinfo_t)); /* zero it out first */
+
+#define NEXT_TOKEN(s, next)    \
+  *s = eat_whitespace(*s);     \
+  next = find_whitespace(*s);  \
+  if(!*next) {                 \
+    goto router_read_failed;   \
+  }                            \
+  *next = 0;
+
+  /* read router->address */
+  NEXT_TOKEN(s, next);
+  router->address = strdup(*s);
+  *s = next+1;
+
+  rent = (struct hostent *)gethostbyname(router->address);
+  if (!rent) {
+    log(LOG_ERR,"router_get_entry_from_string(): Could not get address for router %s.",router->address);
+    goto router_read_failed;
+  }
+  assert(rent->h_length == 4);
+  memcpy(&router->addr, rent->h_addr,rent->h_length);
+
+  /* read router->or_port */
+  NEXT_TOKEN(s, next);
+  router->or_port = atoi(*s);
+  if(!router->or_port) {
+    log(LOG_ERR,"router_get_entry_from_string(): or_port '%s' unreadable or 0. Failing.",*s);
+    goto router_read_failed;
+  }
+  *s = next+1;
+  
+  /* read router->op_port */
+  NEXT_TOKEN(s, next);
+  router->op_port = atoi(*s);
+  *s = next+1;
+  
+  /* read router->ap_port */
+  NEXT_TOKEN(s, next);
+  router->ap_port = atoi(*s);
+  *s = next+1;
+  
+  /* read router->dir_port */
+  NEXT_TOKEN(s, next);
+  router->dir_port = atoi(*s);
+  *s = next+1;
+
+  /* read router->bandwidth */
+  NEXT_TOKEN(s, next);
+  router->bandwidth = atoi(*s);
+  if(!router->bandwidth) {
+    log(LOG_ERR,"router_get_entry_from_string(): bandwidth '%s' unreadable or 0. Failing.",*s);
+    goto router_read_failed;
+  }
+  *s = next+1;
+
+  log(LOG_DEBUG,"or_port %d, op_port %d, ap_port %d, dir_port %d, bandwidth %d.",
+    router->or_port, router->op_port, router->ap_port, router->dir_port, router->bandwidth);
+
+  *s = eat_whitespace(*s); 
+  next = strstr(*s,OR_PUBLICKEY_END_TAG);
+  router->pkey = crypto_new_pk_env(CRYPTO_PK_RSA);
+  if(!next || !router->pkey) {
+    log(LOG_ERR,"router_get_entry_from_string(): Couldn't find pk in string");
+    goto router_read_failed;
   }
   
-  fclose(rf);
-  return make_rarray(routerlist, len);
+  /* now advance *s so it's at the end of this router entry */
+  next = strchr(next, '\n');
+  assert(next); /* can't fail, we just checked it was here */
+  *next = 0;
+  log(LOG_DEBUG,"Key about to be read is: '%s'",*s);
+  if((crypto_pk_read_public_key_from_string(router->pkey, *s, strlen(*s))<0)) {
+    log(LOG_ERR,"router_get_entry_from_string(): Couldn't read pk from string");
+    goto router_read_failed;
+  }
+  log(LOG_DEBUG,"router_get_entry_from_string(): Public key size = %u.", crypto_pk_keysize(router->pkey));
+
+  if (crypto_pk_keysize(router->pkey) != 128) { /* keys MUST be 1024 bits in size */
+    log(LOG_ERR,"Key for router %s:%u is not 1024 bits. All keys must be exactly 1024 bits long.",
+      router->address,router->or_port);
+    goto router_read_failed;
+  }
+
+//  test_write_pkey(router->pkey);  
+
+  *s = next+1;
+
+  /* success */
+  return(router);
+
+router_read_failed:
+  if(router->address)
+    free(router->address);
+  if(router->pkey)
+    crypto_free_pk_env(router->pkey);
+  free(router);
+  return NULL;
 }
+
+#if 0
+void test_write_pkey(crypto_pk_env_t *pkey) {
+  char *string;
+  int len;
+
+  log(LOG_DEBUG,"Trying test write.");
+  if(crypto_pk_write_public_key_to_string(pkey,&string,&len)<0) {
+    log(LOG_DEBUG,"router_get_entry_from_string(): write pkey to string failed\n");
+    return;
+  }
+  log(LOG_DEBUG,"I did it: len %d, string '%s'.",len,string);
+  free(string);
+}
+#endif
 

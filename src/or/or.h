@@ -30,6 +30,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
@@ -244,12 +245,13 @@ typedef struct
   uint16_t or_port;
   uint16_t op_port;
   uint16_t ap_port;
+  uint16_t dir_port;
  
   crypto_pk_env_t *pkey; /* public RSA key */
  
   /* link info */
-  uint32_t min;
-  uint32_t max;
+  uint32_t bandwidth;
+
 //  struct timeval  min_interval;
  
   /* time when last data was sent to that router */
@@ -392,7 +394,7 @@ aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type);
 
 circuit_t *circuit_get_by_aci_conn(aci_t aci, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
-circuit_t *circuit_get_by_naddr_nport(uint32_t naddr, uint16_t nport);
+circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 
 int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, connection_t *conn, int crypt_type);
 int circuit_crypt(circuit_t *circ, char *in, int inlen, char crypt_type);
@@ -487,8 +489,7 @@ int ap_handshake_create_onion(connection_t *conn);
 int ap_handshake_establish_circuit(connection_t *conn, unsigned int *route, int routelen, char *onion,
 		                                   int onionlen, crypt_path_t **cpath);
 
-/* find the circ that's waiting on me, if any, and get it to send its onion */
-int ap_handshake_n_conn_open(connection_t *or_conn);
+void ap_handshake_n_conn_open(connection_t *or_conn);
 
 int ap_handshake_send_onion(connection_t *ap_conn, connection_t *or_conn, circuit_t *circ);
 
@@ -553,7 +554,6 @@ int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
 void connection_set_poll_socket(connection_t *conn);
 
-int pkey_cmp(crypto_pk_env_t *a, crypto_pk_env_t *b);
 connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 
@@ -625,10 +625,6 @@ tracked_onion_t *id_tracked_onion(unsigned char *onion, uint32_t onionlen, track
 
 /********************************* routers.c ***************************/
 
-routerinfo_t **getrouters(char *routerfile, int *listlenp, uint16_t or_listenport);
-void delete_routerlist(routerinfo_t *list);
-/* create an NULL-terminated array of pointers pointing to elements of a router list */
-routerinfo_t **make_rarray(routerinfo_t* list, int *len);
-
+routerinfo_t **router_get_list_from_file(char *routerfile, int *len, uint16_t or_listenport);
 
 #endif

@@ -118,7 +118,7 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
       goto next_i_loop;
     }
     for(j=0;j<i;j++) {
-      if(!pkey_cmp(rarray[i]->pkey, rarray[j]->pkey)) {
+      if(!crypto_pk_cmp_keys(rarray[i]->pkey, rarray[j]->pkey)) {
         /* these guys are twins. so we've already counted him. */
         log(LOG_DEBUG,"Nope, %d is a twin of %d.",i,j);
         goto next_i_loop;
@@ -158,7 +158,7 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *r
     choice = choice % (rarray_len);
     log(LOG_DEBUG,"new_route(): Contemplating router %u.",choice);
     if(choice == oldchoice ||
-      (oldchoice < rarray_len && !pkey_cmp(rarray[choice]->pkey, rarray[oldchoice]->pkey)) ||
+      (oldchoice < rarray_len && !crypto_pk_cmp_keys(rarray[choice]->pkey, rarray[oldchoice]->pkey)) ||
       ((global_role & ROLE_OR_CONNECT_ALL) && !connection_twin_get_by_addr_port(rarray[choice]->addr, rarray[choice]->or_port))) {
       /* Same router as last choice, or router twin,
        *   or no routers with that key are connected to us.
