@@ -251,7 +251,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
           *(int*)conn->stream_id);
         return 0;
       }
-      if(cell->length-RELAY_HEADER_SIZE >= 5 && 
+      if(cell->length-RELAY_HEADER_SIZE >= 5 &&
          *(cell->payload+RELAY_HEADER_SIZE) == END_STREAM_REASON_EXITPOLICY) {
         /* No need to close the connection. We'll hold it open while
          * we try a new exit node.
@@ -260,9 +260,16 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         addr = ntohl(*(uint32_t*)(cell->payload+RELAY_HEADER_SIZE+1));
         client_dns_set_entry(conn->socks_request->address, addr);
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-        if(connection_ap_handshake_attach_circuit(conn) < 0)
-          circuit_launch_new(); /* Build another circuit to handle this stream */
-        return 0;
+        switch(connection_ap_handshake_attach_circuit(conn)) {
+          case -1: /* it will never work */
+            break; /* conn will get closed below */
+          case 0: /* no useful circuits available */
+            if(!circuit_get_newest(conn, 0)) /* is one already on the way? */
+              circuit_launch_new();
+            return 0;
+          case 1: /* it succeeded, great */
+            return 0;
+        }
       }
       log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
         connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, cell->length),
@@ -494,19 +501,29 @@ repeat_connection_edge_package_raw_inbuf:
 void connection_ap_attach_pending(void)
 {
   connection_t **carray;
+  connection_t *conn;
   int n, i;
 
   get_connection_array(&carray, &n);
 
   for (i = 0; i < n; ++i) {
-    if (carray[i]->type != CONN_TYPE_AP || 
-        carray[i]->type != AP_CONN_STATE_CIRCUIT_WAIT)
+    conn = carray[i];
+    if (conn->type != CONN_TYPE_AP ||
+        conn->type != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
-    if (connection_ap_handshake_attach_circuit(carray[i])<0) {
-      if(!circuit_get_newest(carray[i], 0)) {
-        /* if there are no acceptable clean or not-very-dirty circs on the way */
-        circuit_launch_new();
-      }
+    switch(connection_ap_handshake_attach_circuit(conn)) {
+      case -1: /* it will never work */
+        conn->marked_for_close = 1;
+        conn->has_sent_end = 1;
+        break;
+      case 0: /* we need to build another circuit */
+        if(!circuit_get_newest(conn, 0)) {
+          /* if there are no acceptable clean or not-very-dirty circs on the way */
+          circuit_launch_new();
+        }
+        break;
+      case 1: /* it succeeded, great */
+        break;
     }
   }
 }
@@ -563,18 +580,28 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   } /* else socks handshake is done, continue processing */
 
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-  if(connection_ap_handshake_attach_circuit(conn) < 0)
-    circuit_launch_new(); /* Build another circuit to handle this stream */
+  switch(connection_ap_handshake_attach_circuit(conn)) {
+    case -1: /* it will never work */
+      return -1;
+    case 0: /* no useful circuits available */
+      if(!circuit_get_newest(conn, 0)) /* is one already on the way? */
+        circuit_launch_new();
+      break;
+    case 1: /* it succeeded, great */
+      break;
+  }
   return 0;
 }
 
-/* Try to find a live circuit.  If we don't find one, tell 'conn' to
- * stop reading and return 0.  Otherwise, associate the CONN_TYPE_AP
- * connection 'conn' with a safe live circuit, start sending a
- * BEGIN cell down the circuit, and return 1.
+/* Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
+ * we don't find one: if conn cannot be handled by any known nodes,
+ * warn and return -1; else tell conn to stop reading and return 0.
+ * Otherwise, associate conn with a safe live circuit, start
+ * sending a BEGIN cell down the circuit, and return 1.
  */
 static int connection_ap_handshake_attach_circuit(connection_t *conn) {
   circuit_t *circ;
+  uint32_t addr;
 
   assert(conn);
   assert(conn->type == CONN_TYPE_AP);
@@ -586,8 +613,14 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
   if(!circ) {
     log_fn(LOG_INFO,"No safe circuit ready for edge connection; delaying.");
+    addr = client_dns_lookup_entry(conn->socks_request->address);
+    if(router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
+      log_fn(LOG_WARN,"No node exists that will handle exit to %s:%d. Rejecting.",
+             conn->socks_request->address, conn->socks_request->port);
+      return -1;
+    }
     connection_stop_reading(conn); /* don't read until the connected cell arrives */
-    return -1;
+    return 0;
   }
 
   connection_start_reading(conn);
@@ -607,7 +640,7 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
   connection_ap_handshake_send_begin(conn, circ);
 
-  return 0;
+  return 1;
 }
 
 /* deliver the destaddr:destport in a relay cell */
@@ -748,7 +781,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
 void connection_exit_connect(connection_t *conn) {
   unsigned char connected_payload[4];
 
-  if(router_compare_to_exit_policy(conn) < 0) {
+  if(router_compare_to_my_exit_policy(conn) < 0) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.", conn->address, conn->port);
     connection_edge_end(conn, END_STREAM_REASON_EXITPOLICY, NULL);
     return;
@@ -793,7 +826,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
   assert(conn->socks_request);
 
   addr = client_dns_lookup_entry(conn->socks_request->address);
-  return router_supports_exit_address(addr, conn->port, exit);
+  return router_supports_exit_address(addr, conn->socks_request->port, exit);
 }
 
 /* ***** Client DNS code ***** */

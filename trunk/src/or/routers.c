@@ -197,7 +197,7 @@ int router_get_list_from_file(char *routerfile)
     log_fn(LOG_WARN,"Failed to load routerfile %s.",routerfile);
     return -1;
   }
-  
+
   if(router_get_list_from_string(string) < 0) {
     log_fn(LOG_WARN,"The routerfile itself was corrupt.");
     free(string);
@@ -206,7 +206,7 @@ int router_get_list_from_file(char *routerfile)
 
   free(string);
   return 0;
-} 
+}
 
 
 typedef enum {
@@ -322,7 +322,7 @@ _router_get_next_token(char **s, directory_token_t *tok) {
       /* Find end of base64'd data */
       next = strstr(*s, OR_SIGNATURE_END_TAG);
       if (!next) { tok->val.error = "No signature end tag found"; return -1; }
-      
+
       signature = tor_malloc(256);
       i = base64_decode(signature, 256, *s, next-*s);
       if (i<0) {
@@ -675,8 +675,8 @@ int router_get_list_from_string_impl(char **s, directory_t **dest,
     rarray[rarray_len++] = router;
     log_fn(LOG_DEBUG,"just added router #%d.",rarray_len);
   }
- 
-  if (*dest) 
+
+  if (*dest)
     directory_free(*dest);
   *dest = (directory_t *)tor_malloc(sizeof(directory_t));
   (*dest)->routers = rarray;
@@ -948,7 +948,7 @@ router_add_exit_policy_from_string(routerinfo_t *router,
   if (router_get_next_token(&cp, &tok)) {
     log_fn(LOG_WARN, "Error reading exit policy: %s", tok.val.error);
     free(tmp);
-    return -1;                                                        
+    return -1;
   }
   if (tok.tp != K_ACCEPT && tok.tp != K_REJECT) {
     log_fn(LOG_WARN, "Expected 'accept' or 'reject'.");
@@ -1089,7 +1089,7 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
     log_fn(LOG_DEBUG,"Considering exit policy %s", tmpe->string);
     if (!addr) {
       /* Address is unknown. */
-      if (tmpe->msk == 0 && port == tmpe->prt) {
+      if (tmpe->msk == 0 && (!tmpe || port == tmpe->prt)) {
         /* The exit policy is accept/reject *:port */
         match = 1;
       } else if ((!tmpe->prt || port == tmpe->prt) && 
@@ -1124,14 +1124,38 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
 /* Return 0 if my exit policy says to allow connection to conn.
  * Else return -1.
  */
-int router_compare_to_exit_policy(connection_t *conn) {
+int router_compare_to_my_exit_policy(connection_t *conn) {
   assert(desc_routerinfo);
-  
+  assert(conn->addr); /* make sure it's resolved to something. this
+                         way we can't get a 'maybe' below. */
+
   if (router_compare_addr_to_exit_policy(conn->addr, conn->port,
-                                         desc_routerinfo->exit_policy))
-    return -1;
-  else 
+                                         desc_routerinfo->exit_policy) == 0)
     return 0;
+  else
+    return -1;
+}
+
+/* return 1 if all running routers will reject addr:port, return 0 if
+   any might accept it. */
+int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
+  int i;
+  routerinfo_t *router;
+
+  for (i=0;i<directory->n_routers;i++) {
+    router = directory->routers[i];
+    if (router->is_running && router_compare_addr_to_exit_policy(addr,
+        port, router->exit_policy) >= 0)
+      return 0; /* this one could be ok. good enough. */
+  }
+  return 1; /* all will reject. */
+}
+
+int router_exit_policy_rejects_all(routerinfo_t *router) {
+  if (router_compare_addr_to_exit_policy(0, 0, router->exit_policy) < 0)
+    return 1; /* yes, rejects all */
+  else
+    return 0; /* no, might accept some */
 }
 
 const char *router_get_my_descriptor(void) {

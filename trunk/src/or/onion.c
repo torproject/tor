@@ -256,15 +256,19 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
    */
   n_supported = tor_malloc(sizeof(int)*dir->n_routers);
   n_maybe_supported = tor_malloc(sizeof(int)*dir->n_routers);
-  for (i = 0; i < dir->n_routers; ++i) {   /* iterate over routers */
-    n_supported[i] = n_maybe_supported[i] = 0;
+  for (i = 0; i < dir->n_routers; ++i) { /* iterate over routers */
     if(!dir->routers[i]->is_running) {
       n_supported[i] = n_maybe_supported[i] = -1;
-      continue; /* skip routers which are known to be down */
+      continue; /* skip routers that are known to be down */
     }
+    if(router_exit_policy_rejects_all(dir->routers[i])) {
+      n_supported[i] = n_maybe_supported[i] = -1;
+      continue; /* skip routers that reject all */
+    }
+    n_supported[i] = n_maybe_supported[i] = 0;
     ++n_running_routers;
     for (j = 0; j < n_connections; ++j) { /* iterate over connections */
-      if (carray[j]->type != CONN_TYPE_AP || 
+      if (carray[j]->type != CONN_TYPE_AP ||
           carray[j]->state == AP_CONN_STATE_CIRCUIT_WAIT ||
           carray[j]->marked_for_close)
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
@@ -308,11 +312,12 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
      */
     for (j = best_support_idx; j < dir->n_routers; ++j) {
       if (n_supported[j] == best_support) {
-        if (i) 
+        if (i)
           --i;
         else {
           tor_free(n_supported); tor_free(n_maybe_supported);
-          return dir->routers[i];
+          log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[j]->nickname);
+          return dir->routers[j];
         }
       }
     }
@@ -325,11 +330,12 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
     i = crypto_pseudo_rand_int(n_best_maybe_support);
     for (j = best_maybe_support_idx; j < dir->n_routers; ++j) {
       if (n_maybe_supported[j] == best_maybe_support) {
-        if (i) 
+        if (i)
           --i;
         else {
           tor_free(n_supported); tor_free(n_maybe_supported);
-          return dir->routers[i];
+          log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[j]->nickname);
+          return dir->routers[j];
         }
       }
     }
@@ -338,19 +344,19 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
   }
   /* Either there are no pending connections, or no routers even seem to
    * possibly support any of them.  Choose a router at random. */
-  tor_free(n_supported); tor_free(n_maybe_supported);
   if (!n_running_routers) {
-    log_fn(LOG_WARN, "No routers seem to be running; can't choose an exit.");
+    log_fn(LOG_WARN, "No exit routers seem to be running; can't choose an exit.");
     return NULL;
   }
-  i = crypto_pseudo_rand_int(n_running_routers);
   /* Iterate over the routers, till we find the i'th one that has ->is_running
-   */
+   * and allows exits. */
+  i = crypto_pseudo_rand_int(n_running_routers);
   for (j = 0; j < dir->n_routers; ++j) {
-    if (dir->routers[j]->is_running) {
-      if (i) {
+    if (n_supported[j] != -1) {
+      if (i)
         --i;
-      } else {
+      else {
+        tor_free(n_supported); tor_free(n_maybe_supported);
         log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[j]->nickname);
         return dir->routers[j];
       }
