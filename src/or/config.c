@@ -419,7 +419,7 @@ static void free_options(or_options_t *options) {
 static void init_options(or_options_t *options) {
 /* give reasonable values for each option. Defaults to zero. */
   memset(options,0,sizeof(or_options_t));
-  options->LogLevel = tor_strdup("warn");
+  options->LogLevel = tor_strdup("notice");
   options->ExitNodes = tor_strdup("");
   options->EntryNodes = tor_strdup("");
   options->ExcludeNodes = tor_strdup("");
@@ -501,8 +501,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   cf = config_open(fname);
   if(!cf) {
     if(using_default_torrc == 1) {
-      log(LOG_WARN, "Configuration file '%s' not found, using defaults (this is fine).",fname);
-      /* XXX change this WARN to INFO once we start using this feature */
+      log(LOG_NOTICE, "Configuration file '%s' not present, using reasonable defaults.",fname);
       if(config_assign_default(options) < 0)
         return -1;
     } else {
@@ -549,12 +548,14 @@ int getconfig(int argc, char **argv, or_options_t *options) {
       options->loglevel = LOG_ERR;
     else if(!strcmp(options->LogLevel,"warn"))
       options->loglevel = LOG_WARN;
+    else if(!strcmp(options->LogLevel,"notice"))
+      options->loglevel = LOG_NOTICE;
     else if(!strcmp(options->LogLevel,"info"))
       options->loglevel = LOG_INFO;
     else if(!strcmp(options->LogLevel,"debug"))
       options->loglevel = LOG_DEBUG;
     else {
-      log(LOG_WARN,"LogLevel must be one of err|warn|info|debug.");
+      log(LOG_WARN,"LogLevel must be one of err|warn|notice|info|debug.");
       result = -1;
     }
   }
