@@ -117,6 +117,7 @@ static int circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
           return 1;
       } else {
         if (a->timestamp_dirty ||
+            b->build_state->is_internal ||
             a->timestamp_created > b->timestamp_created)
           return 1;
       }
