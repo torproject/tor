@@ -113,6 +113,29 @@ int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
   return r;
 }
 
+/** Take a filename and return a pointer to its final element.  This
+ * function is called on __FILE__ to fix a MSVC nit where __FILE__
+ * contains the full path to the file.  This is bad, because it
+ * confuses users to find the home directory of the person who
+ * compiled the binary in their warrning messages.
+ */
+const char *
+_tor_fix_source_file(const char *fname)
+{
+  const char *cp1, *cp2;
+  cp1 = strrchr(fname, '/');
+  cp2 = strrchr(fname, '\\');
+  if (cp1 && cp2) {
+    return (cp1<cp2)?(cp2+1):(cp1+1);
+  } else if (cp1) {
+    return cp1+1;
+  } else if (cp2) {
+    return cp2+2;
+  } else {
+    return fname;
+  }
+}
+
 #ifndef UNALIGNED_INT_ACCESS_OK
 /**
  * Read a 16-bit value beginning at <b>cp</b>.  Equivalent to
