@@ -1189,7 +1189,7 @@ static void init_dh_param() {
   dh_param_g = g;
 }
 
-/** Allocate and return a new DH object for a key echange.
+/** Allocate and return a new DH object for a key exchange.
  */
 crypto_dh_env_t *crypto_dh_new()
 {
