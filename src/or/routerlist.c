@@ -196,6 +196,9 @@ void add_nickname_list_to_smartlist(smartlist_t *sl, char *list) {
   char nick[MAX_NICKNAME_LEN];
   routerinfo_t *router;
 
+  assert(sl);
+  assert(list);
+
   while(isspace((int)*list) || *list==',') list++;
 
   start = list;

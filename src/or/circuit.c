@@ -298,7 +298,7 @@ circuit_t *circuit_get_newest(connection_t *conn,
           continue;
         }
       } else { /* not general */
-        if(rend_cmp_service_ids(conn->socks_request->address, circ->rend_service)) {
+        if(rend_cmp_service_ids(conn->socks_request->address, circ->rend_query)) {
           /* this circ is not for this conn */
           continue;
         }
@@ -1046,20 +1046,17 @@ static void circuit_is_ready(circuit_t *circ) {
   switch(circ->purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* Tell any AP connections that have been waiting for a new
-      * circuit that one is ready. */
+       * circuit that one is ready. */
+    case CIRCUIT_PURPOSE_C_INTRODUCING:
+      /* at Alice, connecting to intro point */
+    case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
+      /* at Alice, waiting for Bob */
+
       connection_ap_attach_pending();
       break;
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
       /* at Bob, waiting for introductions */
       rend_service_intro_is_ready(circ);
-      break;
-    case CIRCUIT_PURPOSE_C_INTRODUCING:
-      /* at Alice, connecting to intro point */
-      rend_client_intro_is_ready(circ);
-      break;
-    case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-      /* at Alice, waiting for Bob */
-      rend_client_rendezvous_is_ready(circ);
       break;
     case CIRCUIT_PURPOSE_S_CONNECT_REND:
       /* at Bob, connecting to rend point */

@@ -553,14 +553,17 @@ struct circuit_t {
   uint8_t state;
   uint8_t purpose;
 
-  /* The field rend_service:
-   *  holds hash of location-hidden service's PK if purpose is INTRO_POINT
-   *     or S_ESTABLISH_INTRO or S_RENDEZVOUSING;
-   *  holds y portion of y.onion (zero-padded) if purpose is C_INTRODUCING or
-   *     C_ESTABLISH_REND, or is a C_GENERAL for a hidden service.
-   *  is filled with zeroes otherwise.
+  /*
+   * rend_query holds y portion of y.onion (nul-terminated) if purpose
+   * is C_INTRODUCING or C_ESTABLISH_REND, or is a C_GENERAL for a
+   * hidden service.
    */
-  char rend_service[CRYPTO_SHA1_DIGEST_LEN];
+  char rend_query[REND_SERVICE_ID_LEN+1];
+
+  /* rend_pk_digest holds a hash of location-hidden service's PK if
+   * purpose is INTRO_POINT or S_ESTABLISH_INTRO or S_RENDEZVOUSING
+   */
+  char rend_pk_digest[CRYPTO_SHA1_DIGEST_LEN];
 
   /* Holds rendezvous cookie if purpose is REND_POINT_WAITING or
    * C_ESTABLISH_REND. Filled with zeroes otherwise.
@@ -1028,8 +1031,10 @@ void rep_hist_dump_stats(time_t now, int severity);
 
 /********************************* rendclient.c ***************************/
 
-void rend_client_desc_fetched(char *query);
-void rend_client_desc_not_fetched(char *query);
+void rend_client_introcirc_is_ready(connection_t *apconn, circuit_t *circ);
+void rend_client_rendcirc_is_ready(connection_t *apconn, circuit_t *circ);
+void rend_client_rendezvous(connection_t *apconn, circuit_t *circ);
+void rend_client_desc_fetched(char *query, int success);
 
 /********************************* rendcommon.c ***************************/
 

@@ -772,7 +772,6 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 static int connection_ap_handshake_attach_circuit(connection_t *conn) {
   circuit_t *circ;
   uint32_t addr;
-  int must_be_clean;
   uint8_t desired_circuit_purpose;
 
   assert(conn);
@@ -780,9 +779,11 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
   assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   assert(conn->socks_request);
 
+  if(conn->purpose == AP_PURPOSE_RENDDESC_WAIT)
+    return 0; /* these guys don't attach to circuits directly */
+
   switch(conn->purpose) {
     case AP_PURPOSE_GENERAL:
-    case AP_PURPOSE_RENDDESC_WAIT:
       desired_circuit_purpose = CIRCUIT_PURPOSE_C_GENERAL;
       break;
     case AP_PURPOSE_RENDPOINT_WAIT:
@@ -800,20 +801,33 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
   circ = circuit_get_newest(conn, 1, desired_circuit_purpose);
 
   if(!circ) {
-//XXX
-    log_fn(LOG_INFO,"No safe circuit ready for edge connection; delaying.");
-    addr = client_dns_lookup_entry(conn->socks_request->address);
-    if(router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
-      log_fn(LOG_WARN,"No Tor server exists that allows exit to %s:%d. Rejecting.",
-             conn->socks_request->address, conn->socks_request->port);
-      return -1;
+
+    log_fn(LOG_INFO,"No safe circuit (purpose %d) ready for edge connection; delaying.",
+           desired_circuit_purpose);
+
+    if(conn->purpose == AP_PURPOSE_GENERAL) {
+      addr = client_dns_lookup_entry(conn->socks_request->address);
+      if(router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
+        log_fn(LOG_WARN,"No Tor server exists that allows exit to %s:%d. Rejecting.",
+               conn->socks_request->address, conn->socks_request->port);
+        return -1;
+      }
     }
     if(!circuit_get_newest(conn, 0, desired_circuit_purpose)) {
       /* is one already on the way? */
-      circuit_launch_new(desired_circuit_purpose, NULL);
+      circ = circuit_launch_new(desired_circuit_purpose, NULL);
+      /* depending on purpose, store stuff into circ */
+      if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+          desired_circuit_purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
+        /* then write the service_id into circ */
+        strncpy(circ->rend_query, conn->socks_request->address,
+                CRYPTO_SHA1_DIGEST_LEN); /* pad with nuls */
+      }
     }
     return 0;
   }
+
+  /* We have found a suitable circuit for our conn. Hurray. */
 
   /* here, print the circ's path. so people can figure out which circs are sucking. */
   circuit_log_path(LOG_INFO,circ);
@@ -823,7 +837,6 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
   switch(conn->purpose) {
     case AP_PURPOSE_GENERAL:
-    case AP_PURPOSE_RENDDESC_WAIT:
       /* add it into the linked list of streams on this circuit */
       log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
       conn->next_stream = circ->p_streams;
@@ -837,7 +850,11 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
       connection_ap_handshake_send_begin(conn, circ);
       break;
     case AP_PURPOSE_RENDPOINT_WAIT:
+      rend_client_rendcirc_is_ready(conn, circ);
+      break;
     case AP_PURPOSE_INTROPOINT_WAIT:
+      rend_client_introcirc_is_ready(conn, circ);
+      break;
   }
 
   return 1;
