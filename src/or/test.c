@@ -22,14 +22,15 @@ int have_failed = 0;
 
 /* These functions are file-local, but are exposed so we can test. */
 void add_fingerprint_to_dir(const char *nickname, const char *fp);
-void get_platform_str(char *platform, int len);
+void get_platform_str(char *platform, size_t len);
 
 void
-dump_hex(char *s, int len)
+dump_hex(char *s, size_t len)
 {
   static const char TABLE[] = "0123456789ABCDEF";
   unsigned char *d = s;
-  int i, j, nyb;
+  size_t i;
+  int j, nyb;
   for(i=0;i<len;++i) {
     for (j=1;j>=0;--j) {
       nyb = (((int) d[i]) >> (j*4)) & 0x0f;
@@ -263,6 +264,7 @@ test_crypto()
   crypto_pk_env_t *pk1, *pk2;
   char *data1, *data2, *data3, *cp;
   int i, j, p, len;
+  int size;
 
   data1 = tor_malloc(1024);
   data2 = tor_malloc(1024);
@@ -362,8 +364,8 @@ test_crypto()
   pk2 = crypto_new_pk_env();
   test_assert(pk1 && pk2);
   test_assert(! crypto_pk_generate_key(pk1));
-  test_assert(! crypto_pk_write_public_key_to_string(pk1, &cp, &i));
-  test_assert(! crypto_pk_read_public_key_from_string(pk2, cp, i));
+  test_assert(! crypto_pk_write_public_key_to_string(pk1, &cp, &size));
+  test_assert(! crypto_pk_read_public_key_from_string(pk2, cp, size));
   test_eq(0, crypto_pk_cmp_keys(pk1, pk2));
   tor_free(cp);
 
@@ -860,7 +862,7 @@ test_dir_format()
   char platform[256];
   char fingerprint[FINGERPRINT_LEN+1];
   char *pk1_str = NULL, *pk2_str = NULL, *pk3_str = NULL, *cp;
-  int pk1_str_len, pk2_str_len, pk3_str_len;
+  size_t pk1_str_len, pk2_str_len, pk3_str_len;
   routerinfo_t r1, r2;
   crypto_pk_env_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
   routerinfo_t *rp1 = NULL, *rp2 = NULL;

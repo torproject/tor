@@ -55,7 +55,6 @@ int onion_pending_add(circuit_t *circ) {
   ol_tail->next = tmp;
   ol_tail = tmp;
   return 0;
-
 }
 
 /** Remove the first item from ol_list and return it, or return
@@ -192,7 +191,7 @@ onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes *
                             crypto_pk_env_t *prev_private_key,
                             char *handshake_reply_out, /* ONIONSKIN_REPLY_LEN bytes */
                             char *key_out,
-                            int key_out_len)
+                            size_t key_out_len)
 {
   char challenge[ONIONSKIN_CHALLENGE_LEN];
   crypto_dh_env_t *dh = NULL;
@@ -277,7 +276,7 @@ int
 onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                             char *handshake_reply, /* Must be ONIONSKIN_REPLY_LEN bytes */
                             char *key_out,
-                            int key_out_len)
+                            size_t key_out_len)
 {
   int len;
   char *key_material=NULL;

@@ -237,12 +237,12 @@ int read_to_buf_tls(tor_tls *tls, size_t at_most, buf_t *buf) {
  * from the buffer.  Return the number of bytes written on success,
  * -1 on failure.  Return 0 if write() would block.
  */
-int flush_buf(int s, buf_t *buf, int *buf_flushlen)
+int flush_buf(int s, buf_t *buf, size_t *buf_flushlen)
 {
   int write_result;
 
   assert_buf_ok(buf);
-  tor_assert(buf_flushlen && (s>=0) && ((unsigned)*buf_flushlen <= buf->datalen));
+  tor_assert(buf_flushlen && (s>=0) && (*buf_flushlen <= buf->datalen));
 
   if(*buf_flushlen == 0) /* nothing to flush */
     return 0;
@@ -266,7 +266,7 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
 
 /** As flush_buf, but writes data to a TLS connection.
  */
-int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen)
+int flush_buf_tls(tor_tls *tls, buf_t *buf, size_t *buf_flushlen)
 {
   int r;
   assert_buf_ok(buf);
@@ -290,7 +290,7 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen)
  *
  * Return the new length of the buffer on success, -1 on failure.
  */
-int write_to_buf(const char *string, int string_len, buf_t *buf) {
+int write_to_buf(const char *string, size_t string_len, buf_t *buf) {
 
   /* append string to buf (growing as needed, return -1 if "too big")
    * return total number of bytes on the buf
@@ -348,10 +348,10 @@ int fetch_from_buf(char *string, size_t string_len, buf_t *buf) {
  * Else, change nothing and return 0.
  */
 int fetch_from_buf_http(buf_t *buf,
-                        char **headers_out, int max_headerlen,
-                        char **body_out, int *body_used, int max_bodylen) {
+                        char **headers_out, size_t max_headerlen,
+                        char **body_out, size_t *body_used, size_t max_bodylen) {
   char *headers, *body, *p;
-  int headerlen, bodylen, contentlen;
+  size_t headerlen, bodylen, contentlen;
 
   assert_buf_ok(buf);
 
@@ -382,11 +382,13 @@ int fetch_from_buf_http(buf_t *buf,
 #define CONTENT_LENGTH "\r\nContent-Length: "
   p = strstr(headers, CONTENT_LENGTH);
   if (p) {
-    contentlen = atoi(p+strlen(CONTENT_LENGTH));
-    if (contentlen < 0) {
+    int i;
+    i = atoi(p+strlen(CONTENT_LENGTH));
+    if (i < 0) {
       log_fn(LOG_WARN, "Content-Length is less than zero; it looks like someone is trying to crash us.");
       return -1;
     }
+    contentlen = i;
     /* if content-length is malformed, then our body length is 0. fine. */
     log_fn(LOG_DEBUG,"Got a contentlen of %d.",contentlen);
     if(bodylen < contentlen) {

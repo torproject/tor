@@ -52,7 +52,8 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
  */
 int
 rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
-  int payload_len, r;
+  size_t payload_len;
+  int r;
   char payload[RELAY_PAYLOAD_SIZE];
   char tmp[(MAX_NICKNAME_LEN+1)+REND_COOKIE_LEN+DH_KEY_LEN];
   rend_cache_entry_t *entry;
@@ -152,7 +153,7 @@ rend_client_rendcirc_has_opened(circuit_t *circ)
  */
 int
 rend_client_introduction_acked(circuit_t *circ,
-                               const char *request, int request_len)
+                               const char *request, size_t request_len)
 {
   char *nickname;
   circuit_t *rendcirc;
@@ -280,7 +281,7 @@ rend_client_remove_intro_point(char *failed_intro, const char *query)
  * the circuit to C_REND_READY.
  */
 int
-rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_len)
+rend_client_rendezvous_acked(circuit_t *circ, const char *request, size_t request_len)
 {
   /* we just got an ack for our establish-rendezvous. switch purposes. */
   if(circ->purpose != CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
@@ -295,7 +296,7 @@ rend_client_rendezvous_acked(circuit_t *circ, const char *request, int request_l
 
 /** Bob sent us a rendezvous cell; join the circuits. */
 int
-rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request_len)
+rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t request_len)
 {
   crypt_path_t *hop;
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];

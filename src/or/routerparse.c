@@ -59,7 +59,7 @@ typedef struct directory_token_t {
   int n_args;                  /**< Number of elements in args */
   char **args;                 /**< Array of arguments from keyword line. */
   char *object_type;           /**< -----BEGIN [object_type]-----*/
-  int object_size;             /**< Bytes in object_body */
+  size_t object_size;             /**< Bytes in object_body */
   char *object_body;           /**< Contents of object, base64-decoded. */
   crypto_pk_env_t *key;        /**< For public keys only. */
   char *error;                 /**< For _ERR tokens only. */
@@ -173,7 +173,7 @@ get_recommended_software_from_directory(const char *str)
 {
 #define REC "recommended-software "
   const char *cp = str, *eol;
-  int len = strlen(REC);
+  size_t len = strlen(REC);
   cp = str;
   if (strcmpstart(str, REC)==0) {
     cp += len;
@@ -611,7 +611,6 @@ static int check_directory_signature(const char *digest,
   char signed_digest[PK_BYTES];
   routerinfo_t *r;
   crypto_pk_env_t *_pkey = NULL;
-  
 
   if (tok->n_args != 1) {
     log_fn(LOG_WARN, "Too many or too few arguments to directory-signature");
@@ -621,7 +620,7 @@ static int check_directory_signature(const char *digest,
   if (declared_key) {
     if (dir_signing_key_is_trusted(declared_key))
       _pkey = declared_key;
-  } 
+  }
   if (!_pkey) {
     r = router_get_by_nickname(tok->args[0]);
     log_fn(LOG_DEBUG, "Got directory signed by %s", tok->args[0]);
@@ -660,7 +659,6 @@ static int check_directory_signature(const char *digest,
   }
   return 0;
 }
-
 
 /** Given a string *<b>s</b> containing a concatenated sequence of router
  * descriptors, parses them and stores the result in *<b>dest</b>.  If
@@ -941,7 +939,8 @@ router_parse_exit_policy_from_string(const char *s)
   const char *cp;
   char *tmp;
   struct exit_policy_t *r;
-  int len, idx;
+  size_t len;
+  int idx;
 
   /* *s might not end with \n, so we need to extend it with one. */
   len = strlen(s);
@@ -1121,7 +1120,6 @@ policy_read_failed:
 /*
  * Low-level tokenizer for router descriptors and directories.
  */
-
 
 /** Free all resources allocated for <b>tok</b> */
 static void

@@ -145,7 +145,7 @@ static void purge_expired_resolves(uint32_t now) {
 static void send_resolved_cell(connection_t *conn, uint8_t answer_type)
 {
   char buf[RELAY_PAYLOAD_SIZE];
-  int buflen;
+  size_t buflen;
 
   buf[0] = answer_type;
 

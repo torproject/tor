@@ -1067,7 +1067,7 @@ int router_update_status_from_smartlist(routerinfo_t *router,
   const char *name;
 #if 1
   char *cp;
-  int n;
+  size_t n;
   n = 0;
   for (i=0; i<smartlist_len(running_list); ++i) {
     name = smartlist_get(running_list, i);

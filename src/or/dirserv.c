@@ -468,7 +468,7 @@ list_running_servers(char **nicknames_out)
   connection_t *conn;
   char *cp;
   int i;
-  int length;
+  size_t length;
   smartlist_t *nicknames_up, *nicknames_down;
   char *name;
   const char *s;
@@ -554,7 +554,7 @@ dirserv_remove_old_servers(int age)
  * failure.
  */
 int
-dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
+dirserv_dump_directory_to_string(char *s, size_t maxlen,
                                  crypto_pk_env_t *private_key)
 {
   char *cp, *eos;
