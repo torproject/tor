@@ -279,13 +279,13 @@ int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
 
   if(bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
     log_fn(LOG_WARN,"Could not bind to port %u: %s",bindport,
-           strerror(tor_socket_errno()));
+           strerror(tor_socket_errno(s)));
     return -1;
   }
 
   if(listen(s,SOMAXCONN) < 0) {
     log_fn(LOG_WARN,"Could not listen on port %u: %s",bindport,
-           strerror(tor_socket_errno()));
+           strerror(tor_socket_errno(s)));
     return -1;
   }
 
@@ -313,9 +313,6 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   connection_t *newconn;
   struct sockaddr_in remote; /* information about the remote peer when connecting to other routers */
   int remotelen = sizeof(struct sockaddr_in); /* length of the remote address */
-#ifdef MS_WINDOWS
-  int e;
-#endif
 
   news = accept(conn->s,(struct sockaddr *)&remote,&remotelen);
   if (news == -1) { /* accept() error */

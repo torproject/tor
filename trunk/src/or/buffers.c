@@ -171,9 +171,6 @@ void buf_free(buf_t *buf) {
 int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof) {
 
   int read_result;
-#ifdef MS_WINDOWS
-  int e;
-#endif
 
   assert_buf_ok(buf);
   tor_assert(reached_eof && (s>=0));
@@ -244,9 +241,6 @@ int flush_buf(int s, buf_t *buf, int *buf_flushlen)
    * return -1 or how many bytes you just flushed */
 
   int write_result;
-#ifdef MS_WINDOWS
-  int e;
-#endif
 
   assert_buf_ok(buf);
   tor_assert(buf_flushlen && (s>=0) && ((unsigned)*buf_flushlen <= buf->datalen));
