@@ -200,15 +200,20 @@ static void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
     onion_pending_remove(circ);
   }
 
-  if(cell->circ_id == circ->p_circ_id || CIRCUIT_IS_ORIGIN(circ)) {
-    /* either the destroy came from behind, or we're the AP */
+  if(cell->circ_id == circ->p_circ_id) {
+    /* the destroy came from behind */
     circ->p_conn = NULL;
     circuit_mark_for_close(circ);
   } else { /* the destroy came from ahead */
     circ->n_conn = NULL;
-    log_fn(LOG_DEBUG, "Delivering 'truncated' back.");
-    connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
-                                 NULL, 0, NULL);
+#if 0
+    if(!CIRCUIT_IS_ORIGIN(circ)) {
+      log_fn(LOG_DEBUG, "Delivering 'truncated' back.");
+      connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
+                                   NULL, 0, NULL);
+    }
+#endif
+    circuit_mark_for_close(circ);
   }
 }
 

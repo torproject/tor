@@ -1573,9 +1573,12 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     struct in_addr in;
     in.s_addr = htonl(circ->n_addr);
     log_fn(LOG_INFO,"Next router (%s:%d) not connected. Closing.", inet_ntoa(in), circ->n_port);
+#if 0 /* if we do truncateds, no need to kill circ */
     connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
                                  NULL, 0, NULL);
     return 0;
+#endif
+    return -1;
   }
 
   circ->n_addr = n_conn->addr; /* these are different if we found a twin instead */
