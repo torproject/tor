@@ -81,7 +81,7 @@ static SPLAY_HEAD(cache_tree, cached_resolve) cache_root;
 static int compare_cached_resolves(struct cached_resolve *a,
                                    struct cached_resolve *b) {
   /* make this smarter one day? */
-  return strncasecmp(a->address, b->address, MAX_ADDRESSLEN);
+  return strncmp(a->address, b->address, MAX_ADDRESSLEN);
 }
 
 SPLAY_PROTOTYPE(cache_tree, cached_resolve, node, compare_cached_resolves);
@@ -245,6 +245,9 @@ int dns_resolve(connection_t *exitconn) {
   /* then take this opportunity to see if there are any expired
    * resolves in the tree. */
   purge_expired_resolves(now);
+
+  /* lower-case exitconn->address, so it's in canonical form */
+  tor_strlower(exitconn->address);
 
   /* now check the tree to see if 'address' is already there. */
   strlcpy(search.address, exitconn->address, sizeof(search.address));
