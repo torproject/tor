@@ -423,7 +423,7 @@ financial health as well as network security.
 % this para should probably move to the scalability / directory system. -RD
 % Nope. Cut for space, except for small comment added above -PFS
 
-\section{Policy issues}
+\section{Social challenges}
 
 Many of the issues the Tor project needs to address extend beyond
 system design and technology development. In particular, the
@@ -498,7 +498,7 @@ accurately communicating security levels to its users.
 
 On the other hand, while the number of active concurrent users may not
 matter as much as we'd like, it still helps to have some other users
-who use the network. We investigate this issue in the next section.
+on the network. We investigate this issue next.
 
 \subsection{Reputability and perceived social value}
 Another factor impacting the network's security is its reputability:
@@ -803,8 +803,8 @@ time.
 
 \section{Design choices}
 
-In addition to social issues, Tor also faces some design challenges that must
-be addressed as the network develops.
+In addition to social issues, Tor also faces some design tradeoffs that must
+be investigated as the network develops.
 
 \subsection{Transporting the stream vs transporting the packets}
 \label{subsec:stream-vs-packet}
@@ -914,54 +914,6 @@ harness this increased latency to improve anonymity rather than just
 reduce usability. Further, if we let clients label certain circuits as
 mid-latency as they are constructed, we could handle both types of traffic
 on the same network, giving users a choice between speed and security.
-
-\subsection{Measuring performance and capacity}
-\label{subsec:performance}
-
-One of the paradoxes with engineering an anonymity network is that we'd like
-to learn as much as we can about how traffic flows so we can improve the
-network, but we want to prevent others from learning how traffic flows in
-order to trace users' connections through the network.  Furthermore, many
-mechanisms that help Tor run efficiently
-require measurements about the network.
-
-Currently, nodes try to deduce their own available bandwidth (based on how
-much traffic they have been able to transfer recently) and include this
-information in the descriptors they upload to the directory. Clients
-choose servers weighted by their bandwidth, neglecting really slow
-servers and capping the influence of really fast ones.
-
-This is, of course, eminently cheatable.  A malicious node can get a
-disproportionate amount of traffic simply by claiming to have more bandwidth
-than it does.  But better mechanisms have their problems.  If bandwidth data
-is to be measured rather than self-reported, it is usually possible for
-nodes to selectively provide better service for the measuring party, or
-sabotage the measured value of other nodes.  Complex solutions for
-mix networks have been proposed, but do not address the issues
-completely~\cite{mix-acc,casc-rep}.
-
-Even with no cheating, network measurement is complex.  It is common
-for views of a node's latency and/or bandwidth to vary wildly between
-observers.  Further, it is unclear whether total bandwidth is really
-the right measure; perhaps clients should instead be considering nodes
-based on unused bandwidth or observed throughput.
-% XXXX say more here?
-
-%How to measure performance without letting people selectively deny service
-%by distinguishing pings. Heck, just how to measure performance at all. In
-%practice people have funny firewalls that don't match up to their exit
-%policies and Tor doesn't deal.
-
-%Network investigation: Is all this bandwidth publishing thing a good idea?
-%How can we collect stats better? Note weasel's smokeping, at
-%http://seppia.noreply.org/cgi-bin/smokeping.cgi?target=Tor
-%which probably gives george and steven enough info to break tor?
-
-Even if we can collect and use this network information effectively, we need
-to make sure that it is not more useful to attackers than to us.  While it
-seems plausible that bandwidth data alone is not enough to reveal
-sender-recipient connections under most circumstances, it could certainly
-reveal the path taken by large traffic flows under low-usage circumstances.
 
 \subsection{Running a Tor node, path length, and helper nodes}
 \label{subsec:helper-nodes}
@@ -1111,177 +1063,6 @@ of the Tor project and their support for privacy, and secondly to offer
 a way for their users, using unmodified software, to get end-to-end
 encryption and end-to-end authentication to their website.
 
-\subsection{Trust and discovery}
-\label{subsec:trust-and-discovery}
-
-The published Tor design adopted a deliberately simplistic design for
-authorizing new nodes and informing clients about Tor nodes and their status.
-In the early Tor designs, all nodes periodically uploaded a signed description
-of their locations, keys, and capabilities to each of several well-known {\it
-  directory servers}.  These directory servers constructed a signed summary
-of all known Tor nodes (a ``directory''), and a signed statement of which
-nodes they
-believed to be operational at any given time (a ``network status'').  Clients
-periodically downloaded a directory in order to learn the latest nodes and
-keys, and more frequently downloaded a network status to learn which nodes are
-likely to be running.  Tor nodes also operate as directory caches, in order to
-lighten the bandwidth on the authoritative directory servers.
-
-In order to prevent Sybil attacks (wherein an adversary signs up many
-purportedly independent nodes in order to increase her chances of observing
-a stream as it enters and leaves the network), the early Tor directory design
-required the operators of the authoritative directory servers to manually
-approve new nodes.  Unapproved nodes were included in the directory,
-but clients
-did not use them at the start or end of their circuits.  In practice,
-directory administrators performed little actual verification, and tended to
-approve any Tor node whose operator could compose a coherent email.
-This procedure
-may have prevented trivial automated Sybil attacks, but would do little
-against a clever attacker.
-
-There are a number of flaws in this system that need to be addressed as we
-move forward.  They include:
-\begin{tightlist}
-\item Each directory server represents an independent point of failure; if
-  any one were compromised, it could immediately compromise all of its users
-  by recommending only compromised nodes.
-\item The more nodes join the network, the more unreasonable it
-  becomes to expect clients to know about them all.  Directories
-  become infeasibly large, and downloading the list of nodes becomes
-  burdensome.
-\item The validation scheme may do as much harm as it does good.  It is not
-  only incapable of preventing clever attackers from mounting Sybil attacks,
-  but may deter node operators from joining the network.  (For instance, if
-  they expect the validation process to be difficult, or if they do not share
-  any languages in common with the directory server operators.)
-\end{tightlist}
-
-We could try to move the system in several directions, depending on our
-choice of threat model and requirements.  If we did not need to increase
-network capacity in order to support more users, we could simply
- adopt even stricter validation requirements, and reduce the number of
-nodes in the network to a trusted minimum.  
-But, we can only do that if can simultaneously make node capacity
-scale much more than we anticipate feasible soon, and if we can find
-entities willing to run such nodes, an equally daunting prospect.
-
-
-In order to address the first two issues, it seems wise to move to a system
-including a number of semi-trusted directory servers, no one of which can
-compromise a user on its own.  Ultimately, of course, we cannot escape the
-problem of a first introducer: since most users will run Tor in whatever
-configuration the software ships with, the Tor distribution itself will
-remain a potential single point of failure so long as it includes the seed
-keys for directory servers, a list of directory servers, or any other means
-to learn which nodes are on the network.  But omitting this information
-from the Tor distribution would only delegate the trust problem to the
-individual users, most of whom are presumably less informed about how to make
-trust decisions than the Tor developers.
-
-%Network discovery, sybil, node admission, scaling. It seems that the code
-%will ship with something and that's our trust root. We could try to get
-%people to build a web of trust, but no. Where we go from here depends
-%on what threats we have in mind. Really decentralized if your threat is
-%RIAA; less so if threat is to application data or individuals or...
-
-\section{Scaling}
-\label{sec:scaling}
-
-Tor is running today with hundreds of nodes and tens of thousands of
-users, but it will certainly not scale to millions.
-
-Scaling Tor involves three main challenges.  First is safe node
-discovery, both bootstrapping -- how a Tor client can robustly find an
-initial node list -- and ongoing -- how a Tor client can learn about
-a fair sample of honest nodes and not let the adversary control his
-circuits (see Section~\ref{subsec:trust-and-discovery}).  Second is detecting and handling the speed
-and reliability of the variety of nodes we must use if we want to
-accept many nodes (see Section~\ref{subsec:performance}).
-Since the speed and reliability of a circuit is limited by its worst link,
-we must learn to track and predict performance.  Finally, in order to get
-a large set of nodes in the first place, we must address incentives
-for users to carry traffic for others (see Section incentives).
-
-\subsection{Incentives by Design}
-
-There are three behaviors we need to encourage for each Tor node: relaying
-traffic; providing good throughput and reliability while doing it;
-and allowing traffic to exit the network from that node.
-
-We encourage these behaviors through \emph{indirect} incentives, that
-is, designing the system and educating users in such a way that users
-with certain goals will choose to relay traffic.  One
-main incentive for running a Tor node is social benefit: volunteers
-altruistically donate their bandwidth and time.  We also keep public
-rankings of the throughput and reliability of nodes, much like
-seti@home.  We further explain to users that they can get plausible
-deniability for any traffic emerging from the same address as a Tor
-exit node, and they can use their own Tor node
-as entry or exit point and be confident it's not run by the adversary.
-Further, users who need to be able to communicate anonymously
-may run a node simply because their need to increase
-expectation that such a network continues to be available to them
-and usable exceeds any countervening costs.
-Finally, we can improve the usability and feature set of the software:
-rate limiting support and easy packaging decrease the hassle of
-maintaining a node, and our configurable exit policies allow each
-operator to advertise a policy describing the hosts and ports to which
-he feels comfortable connecting.
-
-To date these appear to have been adequate. As the system scales or as
-new issues emerge, however, we may also need to provide
- \emph{direct} incentives:
-providing payment or other resources in return for high-quality service.
-Paying actual money is problematic: decentralized e-cash systems are
-not yet practical, and a centralized collection system not only reduces
-robustness, but also has failed in the past (the history of commercial
-anonymizing networks is littered with failed attempts).  A more promising
-option is to use a tit-for-tat incentive scheme: provide better service
-to nodes that have provided good service to you.
-
-Unfortunately, such an approach introduces new anonymity problems.
-There are many surprising ways for nodes to game the incentive and
-reputation system to undermine anonymity because such systems are
-designed to encourage fairness in storage or bandwidth usage not
-fairness of provided anonymity. An adversary can attract more traffic
-by performing well or can provide targeted differential performance to
-individual users to undermine their anonymity. Typically a user who
-chooses evenly from all options is most resistant to an adversary
-targeting him, but that approach prevents from handling heterogeneous
-nodes.
-
-%When a node (call him Steve) performs well for Alice, does Steve gain
-%reputation with the entire system, or just with Alice? If the entire
-%system, how does Alice tell everybody about her experience in a way that
-%prevents her from lying about it yet still protects her identity? If
-%Steve's behavior only affects Alice's behavior, does this allow Steve to
-%selectively perform only for Alice, and then break her anonymity later
-%when somebody (presumably Alice) routes through his node?
-
-A possible solution is a simplified approach to the tit-for-tat
-incentive scheme based on two rules: (1) each node should measure the
-service it receives from adjacent nodes, and provide service relative
-to the received service, but (2) when a node is making decisions that
-affect its own security (e.g. when building a circuit for its own
-application connections), it should choose evenly from a sufficiently
-large set of nodes that meet some minimum service threshold
-\cite{casc-rep}.  This approach allows us to discourage bad service
-without opening Alice up as much to attacks.  All of this requires
-further study.
-
-
-%XXX rewrite the above so it sounds less like a grant proposal and
-%more like a "if somebody were to try to solve this, maybe this is a
-%good first step".
-
-%We should implement the above incentive scheme in the
-%deployed Tor network, in conjunction with our plans to add the necessary
-%associated scalability mechanisms.  We will do experiments (simulated
-%and/or real) to determine how much the incentive system improves
-%efficiency over baseline, and also to determine how far we are from
-%optimal efficiency (what we could get if we ignored the anonymity goals).
-
 \subsection{Location diversity and ISP-class adversaries}
 \label{subsec:routing-zones}
 
@@ -1396,6 +1177,225 @@ help address censorship; we wish them luck.
 
 %\cite{infranet}
 
+\section{Scaling}
+\label{sec:scaling}
+
+Tor is running today with hundreds of nodes and tens of thousands of
+users, but it will certainly not scale to millions.
+
+Scaling Tor involves three main challenges.  First is safe node
+discovery, both bootstrapping -- how a Tor client can robustly find an
+initial node list -- and ongoing -- how a Tor client can learn about
+a fair sample of honest nodes and not let the adversary control his
+circuits (see Section~\ref{subsec:trust-and-discovery}).  Second is detecting and handling the speed
+and reliability of the variety of nodes we must use if we want to
+accept many nodes (see Section~\ref{subsec:performance}).
+Since the speed and reliability of a circuit is limited by its worst link,
+we must learn to track and predict performance.  Finally, in order to get
+a large set of nodes in the first place, we must address incentives
+for users to carry traffic for others (see Section incentives).
+
+\subsection{Incentives by Design}
+
+There are three behaviors we need to encourage for each Tor node: relaying
+traffic; providing good throughput and reliability while doing it;
+and allowing traffic to exit the network from that node.
+
+We encourage these behaviors through \emph{indirect} incentives, that
+is, designing the system and educating users in such a way that users
+with certain goals will choose to relay traffic.  One
+main incentive for running a Tor node is social benefit: volunteers
+altruistically donate their bandwidth and time.  We also keep public
+rankings of the throughput and reliability of nodes, much like
+seti@home.  We further explain to users that they can get plausible
+deniability for any traffic emerging from the same address as a Tor
+exit node, and they can use their own Tor node
+as entry or exit point and be confident it's not run by the adversary.
+Further, users who need to be able to communicate anonymously
+may run a node simply because their need to increase
+expectation that such a network continues to be available to them
+and usable exceeds any countervening costs.
+Finally, we can improve the usability and feature set of the software:
+rate limiting support and easy packaging decrease the hassle of
+maintaining a node, and our configurable exit policies allow each
+operator to advertise a policy describing the hosts and ports to which
+he feels comfortable connecting.
+
+To date these appear to have been adequate. As the system scales or as
+new issues emerge, however, we may also need to provide
+ \emph{direct} incentives:
+providing payment or other resources in return for high-quality service.
+Paying actual money is problematic: decentralized e-cash systems are
+not yet practical, and a centralized collection system not only reduces
+robustness, but also has failed in the past (the history of commercial
+anonymizing networks is littered with failed attempts).  A more promising
+option is to use a tit-for-tat incentive scheme: provide better service
+to nodes that have provided good service to you.
+
+Unfortunately, such an approach introduces new anonymity problems.
+There are many surprising ways for nodes to game the incentive and
+reputation system to undermine anonymity because such systems are
+designed to encourage fairness in storage or bandwidth usage not
+fairness of provided anonymity. An adversary can attract more traffic
+by performing well or can provide targeted differential performance to
+individual users to undermine their anonymity. Typically a user who
+chooses evenly from all options is most resistant to an adversary
+targeting him, but that approach prevents from handling heterogeneous
+nodes.
+
+%When a node (call him Steve) performs well for Alice, does Steve gain
+%reputation with the entire system, or just with Alice? If the entire
+%system, how does Alice tell everybody about her experience in a way that
+%prevents her from lying about it yet still protects her identity? If
+%Steve's behavior only affects Alice's behavior, does this allow Steve to
+%selectively perform only for Alice, and then break her anonymity later
+%when somebody (presumably Alice) routes through his node?
+
+A possible solution is a simplified approach to the tit-for-tat
+incentive scheme based on two rules: (1) each node should measure the
+service it receives from adjacent nodes, and provide service relative
+to the received service, but (2) when a node is making decisions that
+affect its own security (e.g. when building a circuit for its own
+application connections), it should choose evenly from a sufficiently
+large set of nodes that meet some minimum service threshold
+\cite{casc-rep}.  This approach allows us to discourage bad service
+without opening Alice up as much to attacks.  All of this requires
+further study.
+
+
+%XXX rewrite the above so it sounds less like a grant proposal and
+%more like a "if somebody were to try to solve this, maybe this is a
+%good first step".
+
+%We should implement the above incentive scheme in the
+%deployed Tor network, in conjunction with our plans to add the necessary
+%associated scalability mechanisms.  We will do experiments (simulated
+%and/or real) to determine how much the incentive system improves
+%efficiency over baseline, and also to determine how far we are from
+%optimal efficiency (what we could get if we ignored the anonymity goals).
+
+\subsection{Trust and discovery}
+\label{subsec:trust-and-discovery}
+
+The published Tor design adopted a deliberately simplistic design for
+authorizing new nodes and informing clients about Tor nodes and their status.
+In the early Tor designs, all nodes periodically uploaded a signed description
+of their locations, keys, and capabilities to each of several well-known {\it
+  directory servers}.  These directory servers constructed a signed summary
+of all known Tor nodes (a ``directory''), and a signed statement of which
+nodes they
+believed to be operational at any given time (a ``network status'').  Clients
+periodically downloaded a directory in order to learn the latest nodes and
+keys, and more frequently downloaded a network status to learn which nodes are
+likely to be running.  Tor nodes also operate as directory caches, in order to
+lighten the bandwidth on the authoritative directory servers.
+
+In order to prevent Sybil attacks (wherein an adversary signs up many
+purportedly independent nodes in order to increase her chances of observing
+a stream as it enters and leaves the network), the early Tor directory design
+required the operators of the authoritative directory servers to manually
+approve new nodes.  Unapproved nodes were included in the directory,
+but clients
+did not use them at the start or end of their circuits.  In practice,
+directory administrators performed little actual verification, and tended to
+approve any Tor node whose operator could compose a coherent email.
+This procedure
+may have prevented trivial automated Sybil attacks, but would do little
+against a clever attacker.
+
+There are a number of flaws in this system that need to be addressed as we
+move forward.  They include:
+\begin{tightlist}
+\item Each directory server represents an independent point of failure; if
+  any one were compromised, it could immediately compromise all of its users
+  by recommending only compromised nodes.
+\item The more nodes join the network, the more unreasonable it
+  becomes to expect clients to know about them all.  Directories
+  become infeasibly large, and downloading the list of nodes becomes
+  burdensome.
+\item The validation scheme may do as much harm as it does good.  It is not
+  only incapable of preventing clever attackers from mounting Sybil attacks,
+  but may deter node operators from joining the network.  (For instance, if
+  they expect the validation process to be difficult, or if they do not share
+  any languages in common with the directory server operators.)
+\end{tightlist}
+
+We could try to move the system in several directions, depending on our
+choice of threat model and requirements.  If we did not need to increase
+network capacity in order to support more users, we could simply
+ adopt even stricter validation requirements, and reduce the number of
+nodes in the network to a trusted minimum.  
+But, we can only do that if can simultaneously make node capacity
+scale much more than we anticipate feasible soon, and if we can find
+entities willing to run such nodes, an equally daunting prospect.
+
+
+In order to address the first two issues, it seems wise to move to a system
+including a number of semi-trusted directory servers, no one of which can
+compromise a user on its own.  Ultimately, of course, we cannot escape the
+problem of a first introducer: since most users will run Tor in whatever
+configuration the software ships with, the Tor distribution itself will
+remain a potential single point of failure so long as it includes the seed
+keys for directory servers, a list of directory servers, or any other means
+to learn which nodes are on the network.  But omitting this information
+from the Tor distribution would only delegate the trust problem to the
+individual users, most of whom are presumably less informed about how to make
+trust decisions than the Tor developers.
+
+%Network discovery, sybil, node admission, scaling. It seems that the code
+%will ship with something and that's our trust root. We could try to get
+%people to build a web of trust, but no. Where we go from here depends
+%on what threats we have in mind. Really decentralized if your threat is
+%RIAA; less so if threat is to application data or individuals or...
+
+\subsection{Measuring performance and capacity}
+\label{subsec:performance}
+
+One of the paradoxes with engineering an anonymity network is that we'd like
+to learn as much as we can about how traffic flows so we can improve the
+network, but we want to prevent others from learning how traffic flows in
+order to trace users' connections through the network.  Furthermore, many
+mechanisms that help Tor run efficiently
+require measurements about the network.
+
+Currently, nodes try to deduce their own available bandwidth (based on how
+much traffic they have been able to transfer recently) and include this
+information in the descriptors they upload to the directory. Clients
+choose servers weighted by their bandwidth, neglecting really slow
+servers and capping the influence of really fast ones.
+
+This is, of course, eminently cheatable.  A malicious node can get a
+disproportionate amount of traffic simply by claiming to have more bandwidth
+than it does.  But better mechanisms have their problems.  If bandwidth data
+is to be measured rather than self-reported, it is usually possible for
+nodes to selectively provide better service for the measuring party, or
+sabotage the measured value of other nodes.  Complex solutions for
+mix networks have been proposed, but do not address the issues
+completely~\cite{mix-acc,casc-rep}.
+
+Even with no cheating, network measurement is complex.  It is common
+for views of a node's latency and/or bandwidth to vary wildly between
+observers.  Further, it is unclear whether total bandwidth is really
+the right measure; perhaps clients should instead be considering nodes
+based on unused bandwidth or observed throughput.
+% XXXX say more here?
+
+%How to measure performance without letting people selectively deny service
+%by distinguishing pings. Heck, just how to measure performance at all. In
+%practice people have funny firewalls that don't match up to their exit
+%policies and Tor doesn't deal.
+
+%Network investigation: Is all this bandwidth publishing thing a good idea?
+%How can we collect stats better? Note weasel's smokeping, at
+%http://seppia.noreply.org/cgi-bin/smokeping.cgi?target=Tor
+%which probably gives george and steven enough info to break tor?
+
+Even if we can collect and use this network information effectively, we need
+to make sure that it is not more useful to attackers than to us.  While it
+seems plausible that bandwidth data alone is not enough to reveal
+sender-recipient connections under most circumstances, it could certainly
+reveal the path taken by large traffic flows under low-usage circumstances.
+
 \subsection{Non-clique topologies}
 
 Tor's comparatively  weak model makes it easier to scale than other mix net
@@ -1493,7 +1493,7 @@ coexist with the variety of Internet services and their established
 authentication mechanisms. We can't just keep escalating the blacklist
 standoff forever.
 %
-Fourth, as described in Section~\ref{sec:scaling}, the current Tor
+Fourth, the current Tor
 architecture does not scale even to handle current user demand. We must
 find designs and incentives to let clients relay traffic too, without
 sacrificing too much anonymity.
