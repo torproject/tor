@@ -116,7 +116,6 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
                              size_t payload_len)
 {
   smartlist_t *dirservers;
-  char buf[16];
 
   router_get_trusted_dir_servers(&dirservers);
   tor_assert(dirservers);
@@ -130,8 +129,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
        * descriptor -- those use Tor. */
       if (get_options()->FascistFirewall && purpose == DIR_PURPOSE_UPLOAD_DIR &&
           !get_options()->HttpProxy) {
-        tor_snprintf(buf,sizeof(buf),"%d",ds->dir_port);
-        if (!smartlist_string_isin(get_options()->FirewallPorts, buf))
+        if (!smartlist_string_num_isin(get_options()->FirewallPorts, ds->dir_port))
           continue;
       }
       directory_initiate_command_trusted_dir(ds, purpose, NULL,
@@ -244,7 +242,7 @@ connection_dir_connect_failed(connection_t *conn)
   }
 }
 
-/** Helper for directory_initiate_command(router|trusted_dir): send the
+/** Helper for directory_initiate_command_(router|trusted_dir): send the
  * command to a server whose address is <b>address</b>, whose IP is
  * <b>addr</b>, whose directory port is <b>dir_port</b>, whose tor version is
  * <b>platform</b>, and whose identity key digest is <b>digest</b>. The

@@ -166,7 +166,6 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall,
   int i;
   routerinfo_t *router;
   smartlist_t *sl;
-  char buf[16];
 
   if (!routerlist)
     return NULL;
@@ -183,8 +182,7 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall,
     if (requireothers && router_is_me(router))
       continue;
     if (fascistfirewall) {
-      tor_snprintf(buf,sizeof(buf),"%d",router->dir_port);
-      if (!smartlist_string_isin(get_options()->FirewallPorts, buf))
+      if (!smartlist_string_num_isin(get_options()->FirewallPorts, router->dir_port))
         continue;
     }
     /* before 0.0.9rc5-cvs, only trusted dirservers served status info. */
@@ -205,7 +203,6 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
 {
   smartlist_t *sl;
   routerinfo_t *me;
-  char buf[16];
   trusted_dir_server_t *ds;
   sl = smartlist_create();
   me = router_get_my_routerinfo();
@@ -223,8 +220,7 @@ router_pick_trusteddirserver_impl(int requireother, int fascistfirewall)
           !memcmp(me->identity_digest, d->digest, DIGEST_LEN))
         continue;
       if (fascistfirewall) {
-        tor_snprintf(buf,sizeof(buf),"%d",d->dir_port);
-        if (!smartlist_string_isin(get_options()->FirewallPorts, buf))
+        if (!smartlist_string_num_isin(get_options()->FirewallPorts, d->dir_port))
           continue;
       }
       smartlist_add(sl, d);
@@ -360,7 +356,7 @@ router_nickname_is_in_list(routerinfo_t *router, const char *list)
  */
 static void
 router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified,
-                                        int preferuptime, int preferbandwidth)
+                                        int need_uptime, int need_capacity)
 {
   routerinfo_t *router;
   int i;
@@ -373,7 +369,7 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified,
     if (router->is_running &&
         (router->is_verified ||
         (allow_unverified &&
-         !router_is_unreliable_router(router, preferuptime, preferbandwidth)))) {
+         !router_is_unreliable(router, need_uptime, need_capacity)))) {
       /* If it's running, and either it's verified or we're ok picking
        * unverified routers and this one is suitable.
        */
@@ -399,11 +395,11 @@ routerlist_find_my_routerinfo(void) {
 }
 
 int
-router_is_unreliable_router(routerinfo_t *router, int need_uptime, int need_bw)
+router_is_unreliable(routerinfo_t *router, int need_uptime, int need_capacity)
 {
   if (need_uptime && router->uptime < ROUTER_REQUIRED_MIN_UPTIME)
     return 1;
-  if (need_bw && router->bandwidthcapacity < ROUTER_REQUIRED_MIN_BANDWIDTH)
+  if (need_capacity && router->bandwidthcapacity < ROUTER_REQUIRED_MIN_BANDWIDTH)
     return 1;
   return 0;
 }
@@ -416,7 +412,7 @@ routerlist_sl_remove_unreliable_routers(smartlist_t *sl)
 
   for (i = 0; i < smartlist_len(sl); ++i) {
     router = smartlist_get(sl, i);
-    if (router_is_unreliable_router(router, 1, 0)) {
+    if (router_is_unreliable(router, 1, 0)) {
       log(LOG_DEBUG, "Router '%s' has insufficient uptime; deleting.",
           router->nickname);
       smartlist_del(sl, i--);
@@ -480,7 +476,7 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
 routerinfo_t *router_choose_random_node(const char *preferred,
                                         const char *excluded,
                                         smartlist_t *excludedsmartlist,
-                                        int preferuptime, int preferbandwidth,
+                                        int need_uptime, int need_capacity,
                                         int allow_unverified, int strict)
 {
   smartlist_t *sl, *excludednodes;
@@ -495,9 +491,9 @@ routerinfo_t *router_choose_random_node(const char *preferred,
   smartlist_subtract(sl,excludednodes);
   if (excludedsmartlist)
     smartlist_subtract(sl,excludedsmartlist);
-  if (preferuptime)
+  if (need_uptime)
     routerlist_sl_remove_unreliable_routers(sl);
-  if (preferbandwidth)
+  if (need_capacity)
     choice = routerlist_sl_choose_by_bandwidth(sl);
   else
     choice = smartlist_choose(sl);
@@ -505,13 +501,13 @@ routerinfo_t *router_choose_random_node(const char *preferred,
   if (!choice && !strict) {
     sl = smartlist_create();
     router_add_running_routers_to_smartlist(sl, allow_unverified,
-                                            preferuptime, preferbandwidth);
+                                            need_uptime, need_capacity);
     smartlist_subtract(sl,excludednodes);
     if (excludedsmartlist)
       smartlist_subtract(sl,excludedsmartlist);
-    if (preferuptime)
+    if (need_uptime)
       routerlist_sl_remove_unreliable_routers(sl);
-    if (preferbandwidth)
+    if (need_capacity)
       choice = routerlist_sl_choose_by_bandwidth(sl);
     else
       choice = smartlist_choose(sl);
@@ -1007,16 +1003,19 @@ int router_compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
   return maybe_reject ? ADDR_POLICY_UNKNOWN : ADDR_POLICY_ACCEPTED;
 }
 
-/** Return 1 if all running routers will reject addr:port, return 0 if
- * any might accept it. */
-int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
+/** Return 1 if all running sufficiently-stable routers will reject
+ * addr:port, return 0 if any might accept it. */
+int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
+                                          int need_uptime) {
   int i;
   routerinfo_t *router;
   if (!routerlist) return 1;
 
   for (i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
-    if (router->is_running && router_compare_addr_to_addr_policy(
+    if (router->is_running &&
+        !router_is_unreliable(router, need_uptime, 0) &&
+        router_compare_addr_to_addr_policy(
              addr, port, router->exit_policy) != ADDR_POLICY_REJECTED)
       return 0; /* this one could be ok. good enough. */
   }

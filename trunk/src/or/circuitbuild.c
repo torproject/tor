@@ -21,8 +21,9 @@ extern circuit_t *global_circuitlist;
 
 static int
 circuit_deliver_create_cell(circuit_t *circ, char *payload);
-static cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
-                                                   const char *exit_digest);
+static cpath_build_state_t *
+onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest,
+                            int need_uptime, int need_capacity);
 static int onion_extend_cpath(crypt_path_t **head_ptr,
                        cpath_build_state_t *state, routerinfo_t **router_out);
 static int count_acceptable_routers(smartlist_t *routers);
@@ -233,15 +234,17 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
  * Also launch a connection to the first OR in the chosen path, if
  * it's not open already.
  */
-circuit_t *circuit_establish_circuit(uint8_t purpose,
-                                     const char *exit_digest) {
+circuit_t *
+circuit_establish_circuit(uint8_t purpose, const char *exit_digest,
+                          int need_uptime, int need_capacity) {
   routerinfo_t *firsthop;
   connection_t *n_conn;
   circuit_t *circ;
 
   circ = circuit_new(0, NULL); /* sets circ->p_circ_id and circ->p_conn */
   circ->state = CIRCUIT_STATE_OR_WAIT;
-  circ->build_state = onion_new_cpath_build_state(purpose, exit_digest);
+  circ->build_state = onion_new_cpath_build_state(purpose, exit_digest,
+                                                  need_uptime, need_capacity);
   circ->purpose = purpose;
 
   if (! circ->build_state) {
@@ -811,13 +814,24 @@ circuit_get_unhandled_ports(time_t now) {
 
 /** Return 1 if we already have circuits present or on the way for
  * all anticipated ports. Return 0 if we should make more.
+ *
+ * If we're returning 0, set need_uptime and need_capacity to
+ * indicate any requirements that the unhandled ports have.
  */
 int
-circuit_all_predicted_ports_handled(time_t now) {
-  int enough;
+circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
+                                    int *need_capacity) {
+  int i, enough;
+  uint16_t *port;
   smartlist_t *sl = circuit_get_unhandled_ports(now);
+  smartlist_t *LongLivedServices = get_options()->LongLivedPorts;
   enough = (smartlist_len(sl) == 0);
-  SMARTLIST_FOREACH(sl, uint16_t *, cp, tor_free(cp));
+  for (i = 0; i < smartlist_len(sl); ++i) {
+    port = smartlist_get(sl, i);
+    if (smartlist_string_num_isin(LongLivedServices, *port))
+      *need_uptime = 1;
+    tor_free(port);
+  }
   smartlist_free(sl);
   return enough;
 }
@@ -853,7 +867,9 @@ router_handles_some_port(routerinfo_t *router, smartlist_t *needed_ports) {
  *
  * Return NULL if we can't find any suitable routers.
  */
-static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
+static routerinfo_t *
+choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
+                                int need_capacity)
 {
   int *n_supported;
   int i, j;
@@ -905,9 +921,13 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
 //             router->nickname, i);
       continue; /* skip routers that are known to be down */
     }
+    if (router_is_unreliable(router, need_uptime, need_capacity)) {
+      n_supported[i] = -1;
+      continue; /* skip routers that are not suitable */
+    }
     if (!router->is_verified &&
         (!(options->_AllowUnverified & ALLOW_UNVERIFIED_EXIT) ||
-         router_is_unreliable_router(router, 1, 1))) {
+         router_is_unreliable(router, 1, 1))) {
       /* if it's unverified, and either we don't want it or it's unsuitable */
       n_supported[i] = -1;
 //      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- unverified router.",
@@ -1035,16 +1055,19 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
  * For client-side rendezvous circuits, choose a random node, weighted
  * toward the preferences in 'options'.
  */
-static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
+static routerinfo_t *
+choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
+                        int need_uptime, int need_capacity)
 {
   routerinfo_t *r;
   or_options_t *options = get_options();
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
-      return choose_good_exit_server_general(dir);
+      return choose_good_exit_server_general(dir, need_uptime, need_capacity);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       r = router_choose_random_node(options->RendNodes, options->RendExcludeNodes,
-          NULL, 0, 1, options->_AllowUnverified & ALLOW_UNVERIFIED_RENDEZVOUS, 0);
+          NULL, need_uptime, need_capacity,
+          options->_AllowUnverified & ALLOW_UNVERIFIED_RENDEZVOUS, 0);
       return r;
   }
   log_fn(LOG_WARN,"Bug: unhandled purpose %d", purpose);
@@ -1056,7 +1079,8 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
  * return it.
  */
 static cpath_build_state_t *
-onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest)
+onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest,
+                            int need_uptime, int need_capacity)
 {
   routerlist_t *rl;
   int r;
@@ -1071,6 +1095,8 @@ onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest)
     return NULL;
   info = tor_malloc_zero(sizeof(cpath_build_state_t));
   info->desired_path_len = r;
+  info->need_uptime = need_uptime;
+  info->need_capacity = need_capacity;
   if (exit_digest) { /* the circuit-builder pre-requested one */
     memcpy(info->chosen_exit_digest, exit_digest, DIGEST_LEN);
     exit = router_get_by_digest(exit_digest);
@@ -1083,7 +1109,7 @@ onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest)
     }
     log_fn(LOG_INFO,"Using requested exit node '%s'", info->chosen_exit_name);
   } else { /* we have to decide one */
-    exit = choose_good_exit_server(purpose, rl);
+    exit = choose_good_exit_server(purpose, rl, need_uptime, need_capacity);
     if (!exit) {
       log_fn(LOG_WARN,"failed to choose an exit server");
       tor_free(info);
@@ -1169,7 +1195,8 @@ static routerinfo_t *choose_good_middle_server(cpath_build_state_t *state,
     }
   }
   choice = router_choose_random_node(NULL, get_options()->ExcludeNodes, excluded,
-           0, 1, get_options()->_AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
+           state->need_uptime, state->need_capacity,
+           get_options()->_AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
   smartlist_free(excluded);
   return choice;
 }
@@ -1179,7 +1206,6 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
   routerinfo_t *r, *choice;
   smartlist_t *excluded = smartlist_create();
   or_options_t *options = get_options();
-  char buf[16];
 
   if ((r = router_get_by_digest(state->chosen_exit_digest))) {
     smartlist_add(excluded, r);
@@ -1200,13 +1226,13 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
 
     for (i=0; i < smartlist_len(rl->routers); i++) {
       r = smartlist_get(rl->routers, i);
-      tor_snprintf(buf, sizeof(buf), "%d", r->or_port);
-      if (!smartlist_string_isin(options->FirewallPorts, buf))
+      if (!smartlist_string_num_isin(options->FirewallPorts, r->or_port))
          smartlist_add(excluded, r);
     }
   }
   choice = router_choose_random_node(options->EntryNodes, options->ExcludeNodes,
-           excluded, 0, 1, options->_AllowUnverified & ALLOW_UNVERIFIED_ENTRY,
+           excluded, state->need_uptime, state->need_capacity,
+           options->_AllowUnverified & ALLOW_UNVERIFIED_ENTRY,
            options->StrictEntryNodes);
   smartlist_free(excluded);
   return choice;

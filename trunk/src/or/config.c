@@ -53,6 +53,7 @@ static config_abbrev_t config_abbrevs[] = {
   PLURAL(EntryNode),
   PLURAL(ExcludeNode),
   PLURAL(FirewallPort),
+  PLURAL(LongLivedPort),
   PLURAL(HiddenServiceNode),
   PLURAL(HiddenServiceExcludeNode),
   PLURAL(RendNode),
@@ -149,6 +150,7 @@ static config_var_t config_vars[] = {
   VAR("ORBindAddress",       LINELIST, ORBindAddress,        NULL),
   VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
   VAR("PidFile",             STRING,   PidFile,              NULL),
+  VAR("LongLivedPorts",      CSV,      LongLivedPorts,       "22,6667"),
   VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
   VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
   OBSOLETE("RouterFile"),
@@ -1137,13 +1139,32 @@ config_dump_options(or_options_t *options, int minimal)
   return result;
 }
 
+static int
+validate_ports_csv(smartlist_t *sl, char *name) {
+  int i;
+  int result = 0;
+  tor_assert(name);
+
+  if(!sl)
+    return 0;
+
+  SMARTLIST_FOREACH(sl, const char *, cp,
+  {
+    i = atoi(cp);
+    if (i < 1 || i > 65535) {
+      log(LOG_WARN, "Port '%s' out of range in %s", cp, name);
+      result=-1;
+    }
+  });
+  return result;
+}
+
 /** Return 0 if every setting in <b>options</b> is reasonable.  Else
  * warn and return -1.  Should have no side effects, except for
  * normalizing the contents of <b>options</b>. */
 static int
 options_validate(or_options_t *options)
 {
-  int i;
   int result = 0;
   struct config_line_t *cl;
   addr_policy_t *addr_policy=NULL;
@@ -1261,16 +1282,14 @@ options_validate(or_options_t *options)
     options->_AccountingMaxKB = 0;
   }
 
-  if (options->FirewallPorts) {
-    SMARTLIST_FOREACH(options->FirewallPorts, const char *, cp,
-    {
-      i = atoi(cp);
-      if (i < 1 || i > 65535) {
-        log(LOG_WARN, "Port '%s' out of range in FirewallPorts", cp);
-        result=-1;
-      }
-    });
-  }
+  if (validate_ports_csv(options->FirewallPorts,
+                         "FirewallPorts") < 0)
+    result = -1;
+
+  if (validate_ports_csv(options->LongLivedPorts,
+                         "LongLivedPorts") < 0)
+    result = -1;
+
   options->_AllowUnverified = 0;
   if (options->AllowUnverifiedNodes) {
     SMARTLIST_FOREACH(options->AllowUnverifiedNodes, const char *, cp, {
@@ -1287,7 +1306,7 @@ options_validate(or_options_t *options)
         else {
           log(LOG_WARN, "Unrecognized value '%s' in AllowUnverifiedNodes",
               cp);
-          result=-1;
+          result = -1;
         }
       });
   }
