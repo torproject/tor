@@ -74,15 +74,21 @@ parse_socks4a_resolve_response(const char *response, size_t len,
   tor_assert(response);
   tor_assert(addr_out);
 
-  if (len < RESPONSE_LEN)
+  if (len < RESPONSE_LEN) {
+    log_fn(LOG_WARN,"Truncated socks response.");
     return -1;
-  if (((uint8_t)response[0])!=0) /* version: 0 */
+  }
+  if (((uint8_t)response[0])!=0) { /* version: 0 */
+    log_fn(LOG_WARN,"Nonzero version in socks response: bad format.");
     return -1;
+  }
   status = (uint8_t)response[1];
-  if (get_uint16(response+2)!=0) /* port: 0 */
+  if (get_uint16(response+2)!=0) { /* port: 0 */
+    log_fn(LOG_WARN,"Nonzero port in socks response: bad format.");
     return -1;
+  }
   if (status != 90) {
-    log_fn(LOG_WARN,"Got status response '%d', meaning not success.", status);
+    log_fn(LOG_WARN,"Got status response '%d': socks request failed.", status);
     return -1;
   }
 
@@ -151,7 +157,6 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   }
 
   if (parse_socks4a_resolve_response(response_buf, RESPONSE_LEN,result_addr)<0){
-    log_fn(LOG_ERR, "Error parsing SOCKS response");
     return -1;
   }
 
