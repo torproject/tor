@@ -1,4 +1,4 @@
-/* Copyright 2001,2002,2003 Roger Dingledine, Matej Pfajfar. */
+/* Copyright 2001,2002,2003 Roger Dingledine. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 
