@@ -595,6 +595,15 @@ void connection_ap_expire_beginning(void) {
       continue;
     conn->num_retries++;
     circ = circuit_get_by_conn(conn);
+    if(circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
+      if (now - conn->timestamp_lastread > 45) {
+        log_fn(LOG_WARN,"Rend stream is %d seconds late. Giving up.",
+               (int)(now - conn->timestamp_lastread));
+        connection_mark_for_close(conn,END_STREAM_REASON_TIMEOUT);
+      }
+      continue;
+    }
+    assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
     if(conn->num_retries >= MAX_STREAM_RETRIES) {
       log_fn(LOG_WARN,"Stream is %d seconds late. Giving up.",
              15*conn->num_retries);
