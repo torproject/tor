@@ -736,8 +736,28 @@ void circuit_about_to_close_connection(connection_t *conn) {
   } /* end switch */
 }
 
-void circuit_dump_details(int severity, circuit_t *circ, int poll_index,
-                          char *type, int this_circid, int other_circid) {
+void circuit_log_path(int severity, circuit_t *circ) {
+  static char b[1024];
+  struct crypt_path_t *hop;
+  routerinfo_t *router;
+  assert(circ->cpath);
+  strcpy(b,"Stream is on circ: ");
+  for(hop=circ->cpath;hop->next != circ->cpath; hop=hop->next) {
+    router = router_get_by_addr_port(hop->addr,hop->port);
+    if(router) {
+      /* XXX strcat causes buffer overflow */
+      strcat(b,router->nickname);
+      strcat(b,",");
+    } else {
+      strcat(b,"UNKNOWN,");
+    }
+  }
+  log_fn(severity,"%s",b);
+}
+
+static void
+circuit_dump_details(int severity, circuit_t *circ, int poll_index,
+                     char *type, int this_circid, int other_circid) {
   struct crypt_path_t *hop;
   log(severity,"Conn %d has %s circuit: circID %d (other side %d), state %d (%s), born %d",
       poll_index, type, this_circid, other_circid, circ->state,
