@@ -38,6 +38,11 @@ static tor_tls_context *global_tls_context=NULL;
 #define _TOR_TLS_SYSCALL    -6
 #define _TOR_TLS_ZERORETURN -5
 
+
+/* These functions are declared in crypto.c but not exported. */
+RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env);
+crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
+
 static int
 tor_tls_get_error(tor_tls *tls, int r, int extra)
 {
@@ -83,8 +88,8 @@ tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
   
   start_time = time(NULL);
 
-  assert(rsa && rsa->type == CRYPTO_PK_RSA);
-  if (!(_rsa = RSAPrivateKey_dup((RSA*)rsa->key)))
+  assert(rsa);
+  if (!(_rsa = RSAPrivateKey_dup(_crypto_pk_env_get_rsa(rsa))))
     /* XXX we have a crypto_pk_dup_key(), it's a shame we can't use it here */
     return -1;
   if (!(pkey = EVP_PKEY_new()))
@@ -144,7 +149,6 @@ tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer)
   EVP_PKEY *pkey = NULL;
   tor_tls_context *result;
 
-  assert(!rsa || rsa->type == CRYPTO_PK_RSA);
   assert((certfile && rsa) || (!certfile && !rsa));
 
   result = tor_malloc(sizeof(tor_tls_context));
@@ -159,7 +163,7 @@ tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer)
     return -1;
   SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
   if (rsa) {
-    if (!(_rsa = RSAPrivateKey_dup((RSA*)rsa->key)))
+    if (!(_rsa = RSAPrivateKey_dup(_crypto_pk_env_get_rsa(rsa))))
       return -1;
     if (!(pkey = EVP_PKEY_new()))
       return -1;
@@ -329,3 +333,60 @@ tor_tls_shutdown(tor_tls *tls)
   }
 }
 
+/* Return true iff this TLS connection is authenticated.
+ */
+int
+tor_tls_peer_has_cert(tor_tls *tls)
+{
+  X509 *cert;
+  if (!(cert = SSL_get_peer_certificate(tls->ssl)))
+    return 0;
+  X509_free(cert);
+  return 1;
+}
+
+/* If the provided tls connection is authenticated and has a
+ * certificate that is currently valid and is correctly self-signed,
+ * return its public key.  Otherwise return NULL.
+ */
+crypto_pk_env_t *
+tor_tls_verify(tor_tls *tls)
+{
+  X509 *cert = NULL;
+  EVP_PKEY *pkey = NULL;
+  RSA *rsa = NULL;
+  time_t now;
+  crypto_pk_env_t *r = NULL;
+  if (!(cert = SSL_get_peer_certificate(tls->ssl)))
+    return 0;
+  
+  now = time(NULL);
+  if (X509_cmp_time(X509_get_notBefore(cert), &now) > 0)
+    goto done;
+  if (X509_cmp_time(X509_get_notAfter(cert), &now) < 0)
+    goto done;
+  
+  /* Get the public key. */
+  if (!(pkey = X509_get_pubkey(cert)))
+    goto done;
+  if (X509_verify(cert, pkey) <= 0)
+    goto done;
+
+  rsa = EVP_PKEY_get1_RSA(pkey);
+  EVP_PKEY_free(pkey);
+  pkey = NULL;
+  if (!rsa)
+    goto done;
+
+  r = _crypto_new_pk_env_rsa(rsa);
+  rsa = NULL;
+  
+ done:
+  if (cert)
+    X509_free(cert);
+  if (pkey)
+    EVP_PKEY_free(pkey);
+  if (rsa)
+    RSA_free(rsa);
+  return r;
+}
