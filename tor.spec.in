@@ -6,7 +6,7 @@
 # This should be incremented whenever the spec file changes, but
 # can drop back to zero at a new Tor version
 
-%define  specver 2
+%define  specver 3
 
 ## Things users may want to change
 #
@@ -235,6 +235,11 @@ exit 0
 
 %preun
 /sbin/chkconfig --del %{name}
+%__rm -f ${_localstatedir}/lib/%{name}/cached-directory
+%__rm -f ${_localstatedir}/lib/%{name}/bw_accounting
+%__rm -f ${_localstatedir}/lib/%{name}/control_auth_cookie
+%__rm -f ${_localstatedir}/lib/%{name}/router.desc
+%__rm -f ${_localstatedir}/lib/%{name}/fingerprint
 exit 0
 
 %files
