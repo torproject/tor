@@ -543,7 +543,7 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
 /* For every service, check how many intro points it currently has, and:
  *  - Pick new intro points as necessary.
  *  - Launch circuits to any new intro points.
- *  -
+ *  - Upload a fresh service descriptor if anything has changed.
  */
 int rend_services_init(void) {
   int i,j,r;
