@@ -113,10 +113,12 @@ static void add_service(rend_service_t *service)
     smartlist_add(rend_service_list, service);
     log_fn(LOG_DEBUG,"Configuring service with directory %s",service->directory);
     for (i = 0; i < smartlist_len(service->ports); ++i) {
+      char addrbuf[INET_NTOA_BUF_LEN];
       p = smartlist_get(service->ports, i);
       addr.s_addr = htonl(p->real_address);
+      tor_inet_ntoa(&addr, addrbuf, sizeof(addrbuf));
       log_fn(LOG_DEBUG,"Service maps port %d to %s:%d",
-             p->virtual_port, inet_ntoa(addr), p->real_port);
+             p->virtual_port, addrbuf, p->real_port);
     }
   }
 }

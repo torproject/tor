@@ -448,7 +448,7 @@ int fetch_from_buf_http(buf_t *buf,
  */
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   unsigned char len;
-  char *tmpbuf=NULL;
+  char tmpbuf[INET_NTOA_BUF_LEN];
   uint32_t destip;
   enum {socks4, socks4a} socks4_prot = socks4a;
   char *next, *startaddr;
@@ -505,7 +505,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
 
           destip = ntohl(*(uint32_t*)(buf->mem+4));
           in.s_addr = htonl(destip);
-          tmpbuf = inet_ntoa(in);
+          tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
           if (strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
             log_fn(LOG_WARN,"socks5 IP takes %d bytes, which doesn't fit in %d. Rejecting.",
                    (int)strlen(tmpbuf)+1,(int)MAX_SOCKS_ADDR_LEN);
@@ -565,7 +565,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       if (destip >> 8) {
         log_fn(LOG_DEBUG,"socks4: destip not in form 0.0.0.x.");
         in.s_addr = htonl(destip);
-        tmpbuf = inet_ntoa(in);
+        tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
         if (strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
           log_fn(LOG_WARN,"socks4 addr (%d bytes) too long. Rejecting.",
                  (int)strlen(tmpbuf));

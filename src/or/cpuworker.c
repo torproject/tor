@@ -67,13 +67,15 @@ static void tag_pack(char *tag, uint32_t addr, uint16_t port, uint16_t circ_id) 
  */
 static void tag_unpack(const char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ_id) {
   struct in_addr in;
+  char addrbuf[INET_NTOA_BUF_LEN];
 
   *addr    = *(const uint32_t *)tag;
   *port    = *(const uint16_t *)(tag+4);
   *circ_id = *(const uint16_t *)(tag+6);
 
   in.s_addr = htonl(*addr);
-  log_fn(LOG_DEBUG,"onion was from %s:%d, circ_id %d.", inet_ntoa(in), *port, *circ_id);
+  tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
+  log_fn(LOG_DEBUG,"onion was from %s:%d, circ_id %d.", addrbuf, *port, *circ_id);
 }
 
 /** Called when the onion key has changed and we need to spawn new

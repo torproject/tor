@@ -541,6 +541,7 @@ int router_rebuild_descriptor(int force) {
   struct in_addr in;
   int hibernating = we_are_hibernating();
   or_options_t *options = get_options();
+  char addrbuf[INET_NTOA_BUF_LEN];
 
   if (!desc_is_dirty && !force)
     return 0;
@@ -552,7 +553,8 @@ int router_rebuild_descriptor(int force) {
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
   in.s_addr = htonl(addr);
-  ri->address = tor_strdup(inet_ntoa(in));
+  tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
+  ri->address = tor_strdup(addrbuf);
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
   ri->or_port = options->ORPort;
@@ -628,6 +630,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   char published[32];
   char fingerprint[FINGERPRINT_LEN+1];
   struct in_addr in;
+  char addrbuf[INET_NTOA_BUF_LEN];
   size_t onion_pkeylen, identity_pkeylen;
   size_t written;
   int result=0;
@@ -729,16 +732,18 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   for (tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
     in.s_addr = htonl(tmpe->addr);
     /* Write: "accept 1.2.3.4" */
+    tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
     result = tor_snprintf(s+written, maxlen-written, "%s %s",
         tmpe->policy_type == ADDR_POLICY_ACCEPT ? "accept" : "reject",
-        tmpe->msk == 0 ? "*" : inet_ntoa(in));
+        tmpe->msk == 0 ? "*" : addrbuf);
     if (result < 0)
       return -1;
     written += result;
     if (tmpe->msk != 0xFFFFFFFFu && tmpe->msk != 0) {
       /* Write "/255.255.0.0" */
+      tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
       in.s_addr = htonl(tmpe->msk);
-      result = tor_snprintf(s+written, maxlen-written, "/%s", inet_ntoa(in));
+      result = tor_snprintf(s+written, maxlen-written, "/%s", addrbuf);
       if (result<0)
         return -1;
       written += result;

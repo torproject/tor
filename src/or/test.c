@@ -791,6 +791,14 @@ test_util(void) {
   test_assert(strcmpend("abcdef", "dee")>0);
   test_assert(strcmpend("ab", "abb")<0);
 
+  {
+    char tmpbuf[INET_NTOA_BUF_LEN];
+    struct in_addr in;
+    tor_inet_aton("18.244.0.188",&in);
+    tor_inet_ntoa(&in, tmpbuf, sizeof(tmpbuf));
+    test_streq(tmpbuf, "18.244.0.188");
+  }
+
   /* XXXX test older functions. */
   smartlist_free(sl);
 }
