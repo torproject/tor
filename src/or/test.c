@@ -652,6 +652,7 @@ test_dir_format()
 {
   char buf[8192], buf2[8192];
   char platform[256];
+  char fingerprint[FINGERPRINT_LEN+1];
   char *pk1_str = NULL, *pk2_str = NULL, *pk3_str = NULL, *cp;
   int pk1_str_len, pk2_str_len, pk3_str_len;
   routerinfo_t r1, r2;
@@ -725,7 +726,10 @@ test_dir_format()
   strcat(buf2, get_uname());
   strcat(buf2, "\n"
          "published 1970-01-01 00:00:00\n"
-         "opt uptime 0\n"
+         "opt fingerprint ");
+  crypto_pk_get_fingerprint(pk2, fingerprint);
+  strcat(buf2, fingerprint);
+  strcat(buf2, "\nopt uptime 0\n"
   /* XXX the "0" above is hardcoded, but even if we made it reflect
    * uptime, that still wouldn't make it right, because the two
    * descriptors might be made on different seconds... hm. */
