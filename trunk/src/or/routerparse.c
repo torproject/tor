@@ -1335,6 +1335,37 @@ static int router_get_hash_impl(const char *s, char *digest,
   return 0;
 }
 
+/** Parse the Tor version of the platform string <b>platform</b>,
+ * and compare it to the version in <b>cutoff</b>. Return 1 if
+ * the router is at least as new as the cutoff, else return 0.
+ */
+int tor_version_as_new_as(const char *platform, const char *cutoff) {
+  tor_version_t cutoff_version, router_version;
+  char *s, *start;
+  char tmp[128];
+
+  if(tor_version_parse(cutoff, &cutoff_version)<0) {
+    log_fn(LOG_WARN,"Bug: cutoff version '%s' unparsable.",cutoff);
+    return 0;
+  }
+  if(strcmpstart(platform,"Tor ")) /* nonstandard Tor; be safe and say yes */
+    return 1;
+
+  start = (char *)eat_whitespace(platform+3);
+  if (!*start) return 0;
+  s = (char *)find_whitespace(start); /* also finds '\0', which is fine */
+  if(s-start+1 >= sizeof(tmp)) /* too big, no */
+    return 0;
+  strlcpy(tmp, start, s-start+1);
+
+  if(tor_version_parse(tmp, &router_version)<0) {
+    log_fn(LOG_INFO,"Router version '%s' unparsable.",tmp);
+    return 1; /* be safe and say yes */
+  }
+
+  return tor_version_compare(&router_version, &cutoff_version) >= 0;
+}
+
 int tor_version_parse(const char *s, tor_version_t *out)
 {
   char *eos=NULL, *cp=NULL;

@@ -397,7 +397,7 @@ void router_retry_connections(void) {
 int router_is_clique_mode(routerinfo_t *router) {
   if(router->is_trusted_dir)
     return 1;
-  if(!strcmpstart(router->platform, "Tor 0.0.7"))
+  if(!tor_version_as_new_as(router->platform, "0.0.8pre1"))
     return 1;
   return 0;
 }

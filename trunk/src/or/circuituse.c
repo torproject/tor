@@ -76,10 +76,10 @@ static int circuit_is_acceptable(circuit_t *circ,
 
     if (conn->socks_request &&
         conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
-      /* 0.0.7 servers and earlier don't support DNS resolution.  There are no
-       * ORs running code before 0.0.7, so we only worry about 0.0.7.  Once all
-       * servers are running 0.0.8, remove this check. */
-      if (!strcmpstart(exitrouter->platform, "Tor 0.0.7"))
+      /* 0.0.7 servers and earlier don't support DNS resolution.  0.0.8 servers
+       * have buggy resolve support. Once there are more 0.0.9 servers, change
+       * this to 0.0.9pre1. XXX */
+      if (!tor_version_as_new_as(exitrouter->platform, "0.0.8"))
         return 0;
     } else if(purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       if(!connection_ap_can_use_exit(conn, exitrouter)) {
