@@ -146,7 +146,7 @@ send_control_message(connection_t *conn, uint16_t type, uint16_t len,
 {
   char buf[4];
   tor_assert(conn);
-  tor_assert(len || !body);
+  tor_assert(len || !body || !strlen(body));
   tor_assert(type <= _CONTROL_CMD_MAX_RECOGNIZED);
   set_uint32(buf, htons(len));
   set_uint32(buf+2, htons(type));
@@ -249,11 +249,13 @@ handle_control_getconf(connection_t *conn, uint16_t body_len, const char *body)
   answers = smartlist_create();
   SMARTLIST_FOREACH(questions, const char *, q,
   {
-    struct config_line_t *answer = config_get_assigned_option(options,q);
-    if (!answer) {
+    int recognized = config_option_is_recognized(q);
+    if (!recognized) {
       send_control_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, body);
       goto done;
     } else {
+      struct config_line_t *answer = config_get_assigned_option(options,q);
+
       while (answer) {
         struct config_line_t *next;
         size_t alen = strlen(answer->key)+strlen(answer->value)+2;
