@@ -53,6 +53,8 @@ well for behemoths like Mozilla.
 
 http: Mozilla: set your socks4 proxy to be the onion proxy (but see above)
       privoxy: set your socks4a proxy to be the onion proxy
+      wget: run privoxy, and then add the line
+        "http_proxy=http://localhost:8118" to your ~/.wgetrc.
 ssh: tsocks ssh arma@18.244.0.188
 ftp: tsocks wget ftp://18.244.0.188/quux.tar --passive
      Mozilla: set your socks4 proxy to be the onion proxy
