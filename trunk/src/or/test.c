@@ -581,6 +581,22 @@ test_util() {
   test_streq("a", smartlist_get(sl, 1));
   test_streq("bc", smartlist_get(sl, 2));
   test_streq("", smartlist_get(sl, 3));
+  cp = smartlist_join_strings(sl, "", 0);
+  test_streq(cp, "abcabc");
+  tor_free(cp);
+  cp = smartlist_join_strings(sl, "!", 0);
+  test_streq(cp, "abc!a!bc!");
+  tor_free(cp);
+  cp = smartlist_join_strings(sl, "XY", 0);
+  test_streq(cp, "abcXYaXYbcXY");
+  tor_free(cp);
+  cp = smartlist_join_strings(sl, "XY", 1);
+  test_streq(cp, "abcXYaXYbcXYXY");
+  tor_free(cp);
+  cp = smartlist_join_strings(sl, "", 1);
+  test_streq(cp, "abcabc");
+  tor_free(cp);
+
   smartlist_split_string(sl, "/def/  /ghijk", "/", 0, 0);
   test_eq(8, smartlist_len(sl));
   test_streq("", smartlist_get(sl, 4));
@@ -615,6 +631,9 @@ test_util() {
   test_eq(5, smartlist_len(sl));
   test_streq("z", smartlist_get(sl, 3));
   test_streq("zhasd <>  <> bnud<>", smartlist_get(sl, 4));
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+  
 
   /* Test tor_strstrip() */
   strcpy(buf, "Testing 1 2 3");

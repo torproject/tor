@@ -609,6 +609,32 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
   return n;
 }
 
+char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate)
+{
+  int i;
+  size_t n = 0, jlen;
+  char *r = NULL, *dst, *src;
+  
+  tor_assert(sl && join);
+  jlen = strlen(join);
+  for (i = 0; i < sl->num_used; ++i) {
+    n += strlen(sl->list[i]);
+    n += jlen;
+  }
+  if (!terminate) n -= jlen;
+  dst = r = tor_malloc(n+1);
+  for (i = 0; i < sl->num_used; ) {
+    for (src = sl->list[i]; *src; )
+      *dst++ = *src++;
+    if (++i < sl->num_used || terminate) {
+      memcpy(dst, join, jlen);
+      dst += jlen;
+    }
+  }
+  *dst = '\0';
+  return r;
+}
+
 /* Splay-tree implementation of string-to-void* map
  */
 struct strmap_entry_t {
