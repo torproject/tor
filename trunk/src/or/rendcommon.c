@@ -254,19 +254,26 @@ int rend_cache_store(char *desc, int desc_len)
 /* ==== General utility functions for rendezvous. */
 
 /* If address is of the form "y.onion" with a well-formed handle y,
- * then put a '\0' after y and return 0.
+ * then put a '\0' after y, lower-case it, and return 0.
  * Else return -1 and change nothing.
  */
 int rend_parse_rendezvous_address(char *address) {
   char *s;
+  char query[REND_SERVICE_ID_LEN+1];
 
   s = strchr(address,'.');
   if(!s) return -1; /* no dot */
-  if(strcmp(s+1,"onion")) return -1; /* not .onion */
+  if(strcasecmp(s+1,"onion")) return -1; /* not .onion */
 
   *s = 0; /* null terminate it */
-  if(rend_valid_service_id(address))
+  if(strlcpy(query, address, REND_SERVICE_ID_LEN+1) >= REND_SERVICE_ID_LEN+1)
+    goto failed;
+  tor_strlower(query);
+  if(rend_valid_service_id(query)) {
+    tor_strlower(address);
     return 0; /* success */
+  }
+failed:
   /* otherwise, return to previous state and return -1 */
   *s = '.';
   return -1;
