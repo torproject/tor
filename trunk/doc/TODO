@@ -9,6 +9,14 @@ look at having smallcells and largecells
 separate trying to rebuild a circuit because you have none from trying to rebuild a
   circuit because the current one is stale
 
+<nickm> If I compromise a node, and streamIDs are sequential, I learn
+how many streams have been open and closed on this circuit at this point.
+> hm. you learn this for circuits too, do you not?
+<nickm> True.  But how-many-circuits-from-A-to-B only leaks how long
+the connection from A to B has been alive and how much use it's seen.
+> ok. needs more investigation.
+
+
 Legend:
 SPEC!!  - Not specified
 SPEC    - Spec not finalized
