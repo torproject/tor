@@ -363,7 +363,7 @@ int connection_dns_finished_flushing(connection_t *conn) {
 }
 
 int connection_dns_process_inbuf(connection_t *conn) {
-  char answer[5];
+  char success;
   uint32_t addr;
 
   assert(conn && conn->type == CONN_TYPE_DNSWORKER);
@@ -384,15 +384,15 @@ int connection_dns_process_inbuf(connection_t *conn) {
     return 0; /* not yet */
   assert(buf_datalen(conn->inbuf) == 5);
 
-  connection_fetch_from_buf(answer,sizeof(answer),conn);
-  addr = *(uint32_t*)(answer+1);
+  connection_fetch_from_buf(&success,1,conn);
+  connection_fetch_from_buf((char *)&addr,sizeof(uint32_t),conn);
 
   log_fn(LOG_DEBUG, "DNSWorker (fd %d) returned answer for '%s'",
          conn->s, conn->address);
 
-  assert(answer[0] >= DNS_RESOLVE_FAILED_TRANSIENT);
-  assert(answer[0] <= DNS_RESOLVE_SUCCEEDED);
-  dns_found_answer(conn->address, addr, answer[0]);
+  assert(success >= DNS_RESOLVE_FAILED_TRANSIENT);
+  assert(success <= DNS_RESOLVE_SUCCEEDED);
+  dns_found_answer(conn->address, addr, success);
 
   tor_free(conn->address);
   conn->address = tor_strdup("<idle>");
