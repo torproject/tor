@@ -893,8 +893,8 @@ static uint32_t client_dns_lookup_entry(const char *address)
   assert(address);
 
   if (inet_aton(address, &in)) {
-    log_fn(LOG_DEBUG, "Using static address %s (%08lX)", address, 
-           ntohl(in.s_addr));
+    log_fn(LOG_DEBUG, "Using static address %s (%08lX)", address,
+           (unsigned long)ntohl(in.s_addr));
     return ntohl(in.s_addr);
   }
   search.address = (char*)address;
