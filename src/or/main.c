@@ -729,7 +729,7 @@ int tor_main(int argc, char *argv[]) {
   if(geteuid()==0)
     log_fn(LOG_WARN,"You are running Tor as root. You don't need to, and you probably shouldn't.");
 #endif
-  
+
   if(options.ORPort) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
@@ -738,12 +738,19 @@ int tor_main(int argc, char *argv[]) {
   }
 
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
-  signal (SIGINT,  catch); /* catch kills so we can exit cleanly */
-  signal (SIGTERM, catch);
-  signal (SIGPIPE, catch);
-  signal (SIGUSR1, catch); /* to dump stats */
-  signal (SIGHUP,  catch); /* to reload directory */
-  signal (SIGCHLD, catch); /* for exiting dns/cpu workers */
+{
+  struct sigaction action;
+  action.sa_flags = 0;
+  sigemptyset(&action.sa_mask);
+
+  action.sa_handler = catch;
+  sigaction(SIGINT,  &action, NULL);
+  sigaction(SIGTERM, &action, NULL);
+  sigaction(SIGPIPE, &action, NULL);
+  sigaction(SIGUSR1, &action, NULL);
+  sigaction(SIGHUP,  &action, NULL); /* to reload config, retry conns, etc */
+  sigaction(SIGCHLD, &action, NULL); /* handle dns/cpu workers that exit */
+}
 #endif /* signal stuff */
 
   crypto_global_init();
