@@ -426,7 +426,7 @@ int connection_speaks_cells(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 
 int connection_send_destroy(aci_t aci, connection_t *conn);
-int connection_encrypt_cell_header(cell_t *cellp, connection_t *conn);
+int connection_encrypt_cell(cell_t *cellp, connection_t *conn);
 int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn);
 
 int connection_process_inbuf(connection_t *conn);
