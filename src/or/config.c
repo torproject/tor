@@ -975,6 +975,8 @@ options_free(or_options_t *options)
   int i;
   void *lvalue;
 
+  tor_assert(options);
+
   for (i=0; config_vars[i].name; ++i) {
     lvalue = ((char*)options) + config_vars[i].var_offset;
     switch (config_vars[i].type) {
@@ -1005,6 +1007,7 @@ options_free(or_options_t *options)
         break;
     }
   }
+  tor_free(options);
 }
 
 /** Return true iff the option <b>var</b> has the same value in <b>o1</b>
