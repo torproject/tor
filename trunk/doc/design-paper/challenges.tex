@@ -874,7 +874,7 @@ to discourage bad service without opening Alice up as much to attacks.
 \subsection{Peer-to-peer / practical issues}
 
 [leave this section for now, and make sure things here are covered
-elsewhere.]
+elsewhere. then remove it.]
 
 Making use of servers with little bandwidth. How to handle hammering by
 certain applications.
@@ -888,12 +888,67 @@ Restricted routes. How to propagate to everybody the topology? BGP
 style doesn't work because we don't want just *one* path. Point to
 Geoff's stuff.
 
-\subsection{ISP-class adversaries}
+\subsection{Location diversity and ISP-class adversaries}
 
-[arma will write this]
+Anonymity networks have long relied on diversity of node location for
+protection against attacks---typically an adversary who can observe a
+larger fraction of the network can launch a more effective attack. One
+way to achieve dispersal involves growing the network so a given adversary
+sees less. Alternately, we can arrange the topology so traffic can enter
+or exit at many places (for example, by using a free-route network
+like Tor rather than a cascade network like JAP). Lastly, we can use
+distributed trust to spread each transaction over multiple jurisdictions.
+But how do we decide whether two nodes are in related locations?
 
-Routing-zones. It seems that our threat model comes down to diversity and
-dispersal. But hard for Alice to know how to act. Many questions remain.
+Feamster and Dingledine defined a \emph{location diversity} metric
+in \cite{routing-zones}, and began investigating a variant of location
+diversity based on the fact that the Internet is divided into thousands of
+independently operated networks called {\em autonomous systems} (ASes).
+The key insight from this paper is that while we typically think of a
+connection as going directly from the Tor client to her first Tor node,
+actually it traverses many different ASes on each hop. An adversary at
+any of these ASes can monitor or influence traffic. Specifically, given
+plausible initiators and recipients and path random path selection,
+some ASes in the simulation were able to observe 10\% to 30\% of the
+transactions (that is, learn both the origin and the destination) on
+the deployed Tor network (33 nodes as of June 2004).
+
+The paper concludes that for best protection against the AS-level
+adversary, nodes should be in ASes that have the most links to other ASes:
+Tier-1 ISPs such as AT\&T and Abovenet. Further, a given transaction
+is safest when it starts or ends in a Tier-1 ISP. Therefore, assuming
+initiator and responder are both in the U.S., it actually \emph{hurts}
+our location diversity to add far-flung nodes in continents like Asia
+or South America.
+
+Many open questions remain. First, it will be an immense engineering
+challenge to get an entire BGP routing table to each Tor client, or at
+least summarize it sufficiently. Without a local copy, clients won't be
+able to safely predict what ASes will be traversed on the various paths
+through the Tor network to the final destination. Tarzan~\cite{tarzan}
+and MorphMix~\cite{morphmix} suggest that we compare IP prefixes to
+determine location diversity; but the above paper showed that in practice
+many of the Mixmaster nodes that share a single AS have entirely different
+IP prefixes. When the network has scaled to thousands of nodes, does IP
+prefix comparison become a more useful approximation?
+%
+Second, can take advantage of caching certain content at the exit nodes, to
+limit the number of requests that need to leave the network at all.
+what about taking advantage of caches like akamai's or googles? what
+about treating them as adversaries?
+%
+Third, if we follow the paper's recommendations and tailor path selection
+to avoid choosing endpoints in similar locations, how much are we hurting
+anonymity against larger real-world adversaries who can take advantage
+of knowing our algorithm?
+%
+Lastly, can we use this knowledge to figure out which gaps in our network
+would most improve our robustness to this class of attack, and go recruit
+new servers with those ASes in mind?
+
+Tor's security relies in large part on the dispersal properties of its
+network. We need to be more aware of the anonymity properties of various
+approaches we can make better design decisions in the future.
 
 \subsection{The China problem}
 
