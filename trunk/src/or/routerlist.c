@@ -212,7 +212,8 @@ routerinfo_t *router_get_by_nickname(char *nickname)
   routerinfo_t *router;
 
   tor_assert(nickname);
-  tor_assert(routerlist);
+  if (!routerlist)
+    return NULL;
 
   for(i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
@@ -446,9 +447,10 @@ int router_load_routerlist_from_string(const char *s, int trusted)
 }
 
 /** Add to the current routerlist each router stored in the
- * signed directory <b>s</b>.  If pkey is provided, make sure that <b>s</b> is
- * signed with pkey. */
-int router_load_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey)
+ * signed directory <b>s</b>.  If pkey is provided, check the signature against
+ * pkey; else check against the pkey of the signing directory server. */
+int router_load_routerlist_from_directory(const char *s,
+                                          crypto_pk_env_t *pkey)
 {
   routerlist_t *new_list = NULL;
   check_software_version_against_directory(s, options.IgnoreVersion);

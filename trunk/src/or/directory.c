@@ -336,7 +336,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
         connection_mark_for_close(conn);
         return -1;
       }
-      if(router_load_routerlist_from_directory(body, conn->identity_pkey) < 0){
+      if(router_load_routerlist_from_directory(body, NULL) < 0){
         log_fn(LOG_INFO,"...but parsing failed. Ignoring.");
       } else {
         log_fn(LOG_INFO,"updated routers.");
