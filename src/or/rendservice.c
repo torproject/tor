@@ -22,6 +22,8 @@ typedef struct rend_service_t {
   /* Fields specified in config file */
   char *directory;
   smartlist_t *ports;
+  char *intro_nodes;
+  char *intro_exclude_nodes;
   /* Other fields */
   crypto_pk_env_t *private_key;
   char service_id[REND_SERVICE_ID_LEN+1];
@@ -165,19 +167,33 @@ int rend_config_services(or_options_t *options)
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
       service->ports = smartlist_create();
-    } else {
-      assert(!strcasecmp(line->key, "HiddenServicePort"));
-      if (!service) {
-	log_fn(LOG_WARN, "HiddenServicePort with no preceeding HiddenServiceDir directive");
-	rend_service_free(service);
-	return -1;
-      }
+      continue;
+    }
+    if (!service) {
+      log_fn(LOG_WARN, "HiddenServicePort with no preceeding HiddenServiceDir directive");
+      rend_service_free(service);
+      return -1;
+    }
+    if (!strcasecmp(line->key, "HiddenServicePort")) {
       portcfg = parse_port_config(line->value);
       if (!portcfg) {
 	rend_service_free(service);
 	return -1;
       }
       smartlist_add(service->ports, portcfg);
+    } else if (!strcasecmp(line->key, "HiddenServiceNodes")) {
+      if (service->intro_nodes) {
+        log_fn(LOG_WARN, "Got multiple HiddenServiceNodes lines for a single service");
+        return -1;
+      }
+      service->intro_nodes = tor_strdup(line->value);
+    } else {
+      assert(!strcasecmp(line->key, "HiddenServiceExcludeNodes"));
+      if (service->intro_exclude_nodes) {
+        log_fn(LOG_WARN, "Got multiple HiddenServiceExcludedNodes lines for a single service");
+        return -1;
+      }
+      service->intro_exclude_nodes = tor_strdup(line->value);
     }
   }
   if (service)

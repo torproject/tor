@@ -215,8 +215,10 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
 
     config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User) ||
     config_compare(list, "RunTesting",     CONFIG_TYPE_BOOL, &options->RunTesting) ||
-    config_compare(list, "HiddenServiceDir", CONFIG_TYPE_LINELIST, &options->RendConfigLines) ||
-    config_compare(list, "HiddenServicePort", CONFIG_TYPE_LINELIST, &options->RendConfigLines)
+    config_compare(list, "HiddenServiceDir", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
+    config_compare(list, "HiddenServicePort", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
+    config_compare(list, "HiddenServiceNodes", CONFIG_TYPE_LINELIST, &options->RendConfigLines)||
+    config_compare(list, "HiddenServiceExcludeNodes", CONFIG_TYPE_LINELIST, &options->RendConfigLines)
     ) {
       /* then we're ok. it matched something. */
     } else {
