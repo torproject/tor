@@ -483,9 +483,9 @@ void connection_ap_attach_pending(void)
       /* r<0: There was an error sending the begin cell; other pending  
        *   AP connections may succeed.
        */
-      /* XXX Is this right? How do we say that the connection failed?
-       * Should I close it?  mark it for close? -NM */
       connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
+      conn->marked_for_close = 1;
+      conn->has_sent_end = 1; /* if the begin failed, don't try an end */
     }
   }
 }
@@ -551,7 +551,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 /* Try to find a live circuit.  If we don't find one, tell 'conn' to
  * stop reading and return 1.  Otherwise, associate the CONN_TYPE_AP
  * connection 'conn' with the newest live circuit, and start sending a
- * BEGIN cell down the circuit.  Returns 0 on success, and -1 on
+ * BEGIN cell down the circuit.  Return 0 on success, and -1 on
  * error.
  */
 static int connection_ap_handshake_attach_circuit(connection_t *conn) {
@@ -567,10 +567,15 @@ static int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
   if(!circ) {
     log_fn(LOG_INFO,"No circuit ready for edge connection; delaying.");
-    connection_stop_reading(conn); /* XXX Is this correct? -NM */
+    connection_stop_reading(conn);
+    /* XXX both this and the start_reading below can go away if we
+     *     remove our notion that we shouldn't read from a socks
+     *     client until we're connected. the socks spec promises that it
+     *     won't write. is that good enough?
+     */
     return 1;
   }
-  connection_start_reading(conn); /* XXX Is this correct? -NM */
+  connection_start_reading(conn);
 
   circ->dirty = 1;
 
@@ -600,6 +605,7 @@ static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *
   assert(ap_conn->type == CONN_TYPE_AP);
   assert(ap_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   assert(ap_conn->socks_request);
+  assert(ap_conn->socks_request->addr);
 
   if(crypto_pseudo_rand(STREAM_ID_SIZE, ap_conn->stream_id) < 0)
     return -1;
@@ -619,8 +625,7 @@ static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *
   ap_conn->package_window = STREAMWINDOW_START;
   ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_OPEN;
-  tor_free(ap_conn->socks_request);
-  ap_conn->socks_request = NULL;
+  tor_free(ap_conn->socks_request); /* this also NULLs it out */
   log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
   return 0;
 }
