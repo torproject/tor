@@ -1069,6 +1069,9 @@ static void circuit_is_ready(circuit_t *circ) {
       /* at Bob, connecting to rend point */
       rend_service_rendezvous_is_ready(circ);
       break;
+    default:
+      log_fn(LOG_ERR,"unhandled purpose %d",circ->purpose);
+      assert(0);
   }
 }
 

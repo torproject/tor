@@ -763,6 +763,53 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   return 0;
 }
 
+/* find an open circ that we're happy with: return 1. if there isn't
+ * one, launch one and return 0. if it will never work, return -1.
+ * write the found or launched circ into *circp.
+ */
+static int
+get_open_circ_or_launch(connection_t *conn,
+                        uint8_t desired_circuit_purpose,
+                        circuit_t **circp) {
+  circuit_t *circ;
+  uint32_t addr;
+
+  assert(conn);
+  assert(circp);
+
+  circ = circuit_get_newest(conn, 1, desired_circuit_purpose);
+
+  if(circ) {
+    *circp = circ;
+    return 1; /* we're happy */
+  }
+
+  log_fn(LOG_INFO,"No safe circuit (purpose %d) ready for edge connection; delaying.",
+         desired_circuit_purpose);
+
+  if(conn->purpose == AP_PURPOSE_GENERAL) {
+    addr = client_dns_lookup_entry(conn->socks_request->address);
+    if(router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
+      log_fn(LOG_WARN,"No Tor server exists that allows exit to %s:%d. Rejecting.",
+             conn->socks_request->address, conn->socks_request->port);
+      return -1;
+    }
+  }
+  if(!circuit_get_newest(conn, 0, desired_circuit_purpose)) {
+    /* is one already on the way? */
+    circ = circuit_launch_new(desired_circuit_purpose, NULL);
+    /* depending on purpose, store stuff into circ */
+    if(circ &&
+       (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+        desired_circuit_purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND)) {
+      /* then write the service_id into circ */
+      strcpy(circ->rend_query, conn->rend_query);
+    }
+  }
+  *circp = circ;
+  return 0;
+}
+
 /* Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
  * we don't find one: if conn cannot be handled by any known nodes,
  * warn and return -1 (conn needs to die);
@@ -771,9 +818,9 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
  * right next step, and return 1.
  */
 int connection_ap_handshake_attach_circuit(connection_t *conn) {
-  circuit_t *circ;
-  uint32_t addr;
+  circuit_t *circ=NULL;
   uint8_t desired_circuit_purpose;
+  int retval;
 
   assert(conn);
   assert(conn->type == CONN_TYPE_AP);
@@ -799,34 +846,9 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   }
 
   /* find the circuit that we should use, if there is one. */
-  circ = circuit_get_newest(conn, 1, desired_circuit_purpose);
-
-  if(!circ) {
-
-    log_fn(LOG_INFO,"No safe circuit (purpose %d) ready for edge connection; delaying.",
-           desired_circuit_purpose);
-
-    if(conn->purpose == AP_PURPOSE_GENERAL) {
-      addr = client_dns_lookup_entry(conn->socks_request->address);
-      if(router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
-        log_fn(LOG_WARN,"No Tor server exists that allows exit to %s:%d. Rejecting.",
-               conn->socks_request->address, conn->socks_request->port);
-        return -1;
-      }
-    }
-    if(!circuit_get_newest(conn, 0, desired_circuit_purpose)) {
-      /* is one already on the way? */
-      circ = circuit_launch_new(desired_circuit_purpose, NULL);
-      /* depending on purpose, store stuff into circ */
-      if(circ &&
-         (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL ||
-          desired_circuit_purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND)) {
-        /* then write the service_id into circ */
-        strcpy(circ->rend_query, conn->rend_query);
-      }
-    }
-    return 0;
-  }
+  retval = get_open_circ_or_launch(conn, desired_circuit_purpose, &circ);
+  if(retval < 1)
+    return retval;
 
   /* We have found a suitable circuit for our conn. Hurray. */
 
