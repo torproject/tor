@@ -833,6 +833,14 @@ circuit_rep_hist_note_result(circuit_t *circ)
   char *prev_nickname = NULL;
   routerinfo_t *router;
   hop = circ->cpath;
+  if(!hop) {
+    /* XXX
+     * if !hop, then we're not the beginning of this circuit.
+     * for now, just forget about it. later, we should remember when
+     * extends-through-us failed, too.
+     */
+    return;
+  }
   if (options.ORPort) {
     prev_nickname = options.Nickname;
   }
