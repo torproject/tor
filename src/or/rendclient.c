@@ -229,7 +229,8 @@ rend_client_introduction_acked(circuit_t *circ,
     }
     /* Either we have no service desc, or all the intro points in that
      * descriptor failed. So re-fetch the descriptor and try again. */
-    /* XXXX What do we do to this circ in the meantime? */
+    circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
+    /* XXX anything else we need to do to circ? */
     /* Refetch descriptor */
     if(!connection_get_by_type_rendquery(CONN_TYPE_DIR, circ->rend_query)) {
       /* not one already; initiate a dir rend desc lookup */
