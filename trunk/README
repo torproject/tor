@@ -20,8 +20,7 @@ Do you want to run a tor server?
   First, copy torrc.sample to torrc and edit the bottom part. Create the
   DataDirectory, and make sure it's owned by whoever will be running
   tor. Fix your system clock so it's not too far off. Make sure name
-  resolution works. Make sure other people can reliably resolve the
-  Address you chose.
+  resolution works.
 
   Then run tor to generate keys. One of the files generated
   in your DataDirectory is your 'fingerprint' file. Mail it to
