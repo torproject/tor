@@ -548,7 +548,8 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         socks4_prot = socks4;
       }
 
-      next = memchr(buf->mem+SOCKS4_NETWORK_LEN, 0, buf->datalen);
+      next = memchr(buf->mem+SOCKS4_NETWORK_LEN, 0,
+                    buf->datalen-SOCKS4_NETWORK_LEN);
       if(!next) {
         log_fn(LOG_DEBUG,"socks4: Username not here yet.");
         return 0;
