@@ -85,8 +85,8 @@ TODO: (very soon)
    the key is not as expected, the party must close the connection.
 
    All parties SHOULD reject connections to or from ORs that have malformed
-   or missing certificates.  ORs MAY accept connections from OPs with
-   malformed or missing certificates.
+   or missing certificates.  ORs MAY accept or reject connections from OPs
+   with malformed or missing certificates.
 
    Once a TLS connection is established, the two sides send cells
    (specified below) to one another.  Cells are sent serially.  All
