@@ -201,6 +201,12 @@ def map_address(s, kv):
   tp, body = receive_reply(s,[MSG_TYPE_DONE])
   return _parseKV(body)
 
+def extend_circuit(s, circid, hops):
+  msg = struct.pack("!L",circid) + ",".join(hops) + "\0"
+  send_message(s,MSG_TYPE_EXTENDCIRCUIT,msg)
+  tp, body = receive_reply(s,[MSG_TYPE_DONE])
+  return body
+
 def listen_for_events(s):
   while(1):
     _,type,body = receive_message(s)
@@ -225,6 +231,7 @@ def do_main_loop(host,port):
                          ("1.2.3.4", "foobaz.com"),
                          ("frebnitz.com", "5.6.7.8"),
                          (".", "abacinator.onion")])`
+  print `extend_circuit(s,0,["moria1"])`
   send_signal(s,1)
   #save_conf(s)
 

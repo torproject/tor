@@ -636,6 +636,7 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
   smartlist_t *router_nicknames, *routers;
   uint32_t circ_id;
   circuit_t *circ;
+  char reply[4];
   if (len<5) {
     send_control_error(conn, ERR_SYNTAX, "extendcircuit message too short");
     return 0;
@@ -643,12 +644,12 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
 
   router_nicknames = smartlist_create();
   routers = smartlist_create();
-  smartlist_split_string(router_nicknames, body, ",", 0, 0);
+  smartlist_split_string(router_nicknames, body+4, ",", 0, 0);
   SMARTLIST_FOREACH(router_nicknames, const char *, n,
     {
       routerinfo_t *r = router_get_by_nickname(n);
       if (!r) {
-        send_control_error(conn, ERR_NO_ROUTER, "Unrecognized router name");
+        send_control_error(conn, ERR_NO_ROUTER, n);
         goto done;
       }
       smartlist_add(routers, r);
@@ -682,6 +683,8 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
   if (!circ_id) {
     if (circuit_handle_first_hop(circ) < 0) {
       circuit_mark_for_close(circ);
+      send_control_error(conn, ERR_INTERNAL, "couldn't start circuit");
+      goto done;
     }
   } else {
     if (circ->state == CIRCUIT_STATE_OPEN) {
@@ -689,11 +692,14 @@ handle_control_extendcircuit(connection_t *conn, uint32_t len,
       if (circuit_send_next_onion_skin(circ) < 0) {
         log_fn(LOG_INFO,"send_next_onion_skin failed; circuit marked for closing.");
         circuit_mark_for_close(circ);
+        send_control_error(conn, ERR_INTERNAL, "couldn't send onion skin");
+        goto done;
       }
     }
   }
 
-  send_control_done(conn);
+  set_uint32(reply, htonl(circ->global_identifier));
+  send_control_done2(conn, reply, sizeof(reply));
  done:
   SMARTLIST_FOREACH(router_nicknames, char *, n, tor_free(n));
   smartlist_free(router_nicknames);
