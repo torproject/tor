@@ -721,21 +721,53 @@ adversary.
 
 Because of its threat model that is substantially weaker than high
 latency mixnets, Tor is actually in a potentially better position to
-scale at least initially. The issues for scaling include how many
-neighbors can nodes support and how many users (alternatively how much
-application traffic capacity) can the network handle for each new node
-that comes into the network. This depends on many things, most notably
-the traffic capacity of the new nodes.  We can observe, however, that
-adding a tor node of any feasible bandwidth will increase the traffic
-capacity of the network. This means that, as a first step to scaling,
-we can focus on the interconnectivity of the nodes, followed by
-directories, discovery, etc.
+scale at least initially. From the perspective of a mix network, one
+of the worst things that can happen is partitioning. The more
+potential senders of messages entering the network the better the
+anonymity.  Roughly, if a network is, e.g., split in half, then your
+anonymity is cut in half. Attacks become half as hard (if they're
+linear in network size), etc. In some sense this is still true for
+Tor: if you want to know who Alice is talking to, you can watch her
+for one end of a circuit. For a half size network, you then only have
+to brute force examine half as many nodes to find the other end. But
+Tor is not meant to cope with someone directly attacking many dozens
+of nodes in a few minutes. It was meant to cope with traffic
+confirmation attacks. And, these are independent of the size of the
+network.  So, a simple possibility when the scale of a Tor network
+exceeds some size is to simply split it. Care could be taken in
+allocating which nodes go to which network along the lines of
+\cite{casc-rep} to insure that collaborating hostile nodes are not
+able to gain any advantage in network splitting that they do not
+already have in joining a network.
+
+The attacks in \cite{attack-tor-oak04} show that certain types of
+brute force attacks are in fact feasible; however they make the
+above point stronger not weaker. The attacks do not appear to be
+significantly more difficult to mount against a network that is
+twice the size. Also, they only identify the Tor nodes used in a
+circuit, not the client. Finally note that even if the network is split,
+a client does not need to use just one of the two resulting networks.
+Alice could use either of them, and it would not be difficult to make
+the Tor client able to access several such network on a per circuit
+basis. More analysis is needed; we simply note here that splitting
+a Tor network is an easy way to achieve moderate scalability and that
+it does not necessarily have the same implications as splitting a mixnet.
+
+Alternatively, we can try to scale a single network.  Some issues for
+scaling include how many neighbors can nodes support and how many
+users (and how much application traffic capacity) can the network
+handle for each new node that comes into the network. This depends on
+many things, most notably the traffic capacity of the new nodes.  We
+can observe, however, that adding a tor node of any feasible bandwidth
+will increase the traffic capacity of the network. This means that, as
+a first step to scaling, we can focus on the interconnectivity of the
+nodes, followed by directories, discovery, etc.
 
 By reducing the connectivity of the network we increase the total
 number of nodes that the network can contain. Anonymity implications
-of restricted routes for mix networks has already been explored by
+of restricted routes for mix networks have already been explored by
 Danezis~\cite{danezis-pets03}.  That paper explicitly considered only
-traffic analysis resistance provided by the network and sidestepped
+traffic analysis resistance provided by a mix network and sidestepped
 questions of traffic confirmation resistance. But, Tor is designed
 only to resist traffic confirmation. For this and other reasons, we
 cannot simply adopt his mixnet results to onion routing networks.  If
@@ -744,45 +776,34 @@ the endpoints of a Tor circuit through a sparse network (vs.\ a clique
 on the same node set), then the restriction will have had minimal
 impact on the anonymity provided by that network.
 
-As Danezis noted, what is wanted is an expander graph, i.e., a graph
-in which any subgraph of nodes is likely to have lots of nodes as
-neighbors. For Tor we can be a bit more specific. As long as most
-(non-enclave) circuits have three nodes, then ideally any pair of nodes
-should be linked to every node in the network with high probability.
+The approach Danezis describes is based on expander graphs, i.e.,
+graphs in which any subgraph of nodes is likely to have lots of nodes
+as neighbors. For Tor, we may not need to have an expander per se, it
+may be enough to have a single subnet that is highly connected.  As an
+example, assume fifty nodes of relatively high traffic capacity.  This
+\emph{center} forms are a clique.  Assume each center node can each
+handle 200 connections to other nodes (including the other ones in the
+center). Assume every noncenter node connects to three nodes in the
+center and anyone out of the center that they want to.  Then the
+network easily scales to c. 2500 nodes with commensurate increase in
+bandwidth. There are many open questions: how directory information
+is distributed (presumably information about the center nodes could
+be given to any new nodes with their codebase), whether center nodes
+will need to function as a `backbone', etc. As above the point is
+that this would create problems for the expected anonymity for a mixnet,
+but for an onion routing network where anonymity derives largely from
+the edges, it may be feasible.
 
-I need to work out some numbers here: Consider networks of 100,
-200, 500, and 1000 nodes with this property. Figure out the savings
-in connectivity in each case. Consider also reducing the probability.
-Something to do tomorrow.
+Another point is that we already have a non-clique topology.
+Individuals can set up and run Tor nodes without informing the
+directory servers. This will allow, e.g., dissident groups to run a
+local Tor network of such nodes that connects to the public Tor
+network. This network is hidden behind the Tor network and its
+only visible connection to Tor at those points where it connects.
+As far as the public network is concerned or anyone observing it,
+they are running clients.
 
-Need to tell some story a la the FC02 paper about assigning the
-links in the graph. Also tomorrow or so.
 
-This approach does not take different node bandwidth into account. We
-could consider a clique of high bandwidth/high reliability nodes that
-is connected to all nodes in the network. All circuits would then go
-through this `backbone'. This simplifies many issues but makes the
-expected minimum path length four. On the other hand, it is not
-likely that there will be substantial increase in network latency
-given that the added hop will always be between high bandwidth nodes.
-
-Directories need not be too much more of a problem. They can list the
-Top tier nodes, then for each of those, to which nodes they are
-connected.  For non-enclave purposes, it is enough to download the top
-tier list and a few of those below it.  Lots of threat issues here,
-can address them with witness connections or other means. (E.g., does
-it make sense to favor the nodes that are listed by more than one node
-at the top?)
-
-Been making this too hard. Save elegant answers for another venue.
-Just assume 50 node clique (center).  Assume these can each handle 125
-connections to other nodes. Assume everyone else connects to 3 nodes
-in the center and anyone out of the center that they want to. All
-3-node paths choose a center node for their second hop. Then the
-network easily scales to c. 1300 nodes with commensurate increase in
-bandwidth. Distribute the center hardwired to new nodes or publicize.
-Let directories tell about other nodes in the network.  50-50 that
-path goes whatever-center-center.
 
 
 \section{The Future}
