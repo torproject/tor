@@ -902,6 +902,8 @@ void client_dns_clean(void)
   time_t now;
   int i;
 
+  if(!client_dns_size)
+    return;
   expired_entries = tor_malloc(client_dns_size * 
                                sizeof(struct client_dns_entry *));
 
