@@ -1,4 +1,4 @@
-Changes so far in 0.0.7pre1:
+Changes so far in 0.0.7:
   o Fixes for crashes and other obnoxious bugs:
     - Fix an epipe bug: sometimes when directory connections failed
       to connect, we would give them a chance to flush before closing
@@ -32,6 +32,9 @@ Changes so far in 0.0.7pre1:
     - Allow backslash in Win32 filenames.
     - Made Tor build complain-free on FreeBSD, hopefully without
       breaking other BSD builds. We'll see.
+    - Check directory signatures based on name of signer, not on whom
+      we got the directory from. This will let us cache directories more
+      easily.
   o Features:
     - Doxygen markup on all functions and global variables.
     - Make directory functions update routerlist, not replace it. So
