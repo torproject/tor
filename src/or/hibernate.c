@@ -657,9 +657,11 @@ static int hibernate_soft_limit_reached(void)
 static void hibernate_begin(int new_state, time_t now) {
   connection_t *conn;
 
-  if (hibernate_state == HIBERNATE_STATE_EXITING) {
-    /* we've been called twice now. close immediately. */
-    log(LOG_NOTICE,"Second sigint received; exiting now.");
+  if (new_state == HIBERNATE_STATE_EXITING &&
+      hibernate_state != HIBERNATE_STATE_LIVE) {
+    log(LOG_NOTICE,"Sigint received %s; exiting now.",
+        hibernate_state == HIBERNATE_STATE_EXITING ?
+          "a second time" : "while hibernating");
     tor_cleanup();
     exit(0);
   }
