@@ -1,6 +1,6 @@
 
 AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.0.2)
+AM_INIT_AUTOMAKE(tor, 0.0.3)
 AM_CONFIG_HEADER(orconfig.h)
 
 CFLAGS="$CFLAGS -Wall -g -O2 -I/usr/kerberos/include"
@@ -130,7 +130,7 @@ LIBS="$saved_LIBS -lssl -lcrypto"
 
 dnl The warning message here is no longer strictly accurate.
 
-AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h poll.h sys/stat.h sys/poll.h sys/types.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h time.h pwd.h grp.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
+AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h poll.h sys/stat.h sys/poll.h sys/types.h fcntl.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h time.h pwd.h grp.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
 
 dnl These headers are not essential
 
