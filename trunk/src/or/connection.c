@@ -540,14 +540,9 @@ static int retry_listeners(int type, struct config_line_t *cfg,
   return 0;
 }
 
-/** Start all connections that should be up but aren't.
- *  - Connect to all ORs if you're an OR.
- *  - Relaunch listeners for each port you have open.
+/** (Re)launch listeners for each port you should have open.
  */
-int retry_all_connections(void) {
-  if(clique_mode()) {
-    router_retry_connections();
-  }
+int retry_all_listeners(void) {
 
   if (retry_listeners(CONN_TYPE_OR_LISTENER, options.ORBindAddress,
                       options.ORPort, "0.0.0.0")<0)

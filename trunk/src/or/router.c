@@ -280,20 +280,23 @@ int init_keys(void) {
   }
   /* 4. Dump router descriptor to 'router.desc' */
   /* Must be called after keys are initialized. */
-  if (!(router_get_my_descriptor())) {
+  tmp = mydesc = router_get_my_descriptor();
+  if (!mydesc) {
     log_fn(LOG_ERR, "Error initializing descriptor.");
     return -1;
   }
-  /* We need to add our own fingerprint so it gets recognized. */
-  if (dirserv_add_own_fingerprint(options.Nickname, get_identity_key())) {
-    log_fn(LOG_ERR, "Error adding own fingerprint to approved set");
-    return -1;
+  if(authdir_mode()) {
+    /* We need to add our own fingerprint so it gets recognized. */
+    if (dirserv_add_own_fingerprint(options.Nickname, get_identity_key())) {
+      log_fn(LOG_ERR, "Error adding own fingerprint to approved set");
+      return -1;
+    }
+    if (dirserv_add_descriptor(&tmp) != 1) {
+      log(LOG_ERR, "Unable to add own descriptor to directory.");
+      return -1;
+    }
   }
-  tmp = mydesc = router_get_my_descriptor();
-  if (dirserv_add_descriptor(&tmp) != 1) {
-    log(LOG_ERR, "Unable to add own descriptor to directory.");
-    return -1;
-  }
+
   sprintf(keydir,"%s/router.desc", datadir);
   log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
   if (write_str_to_file(keydir, mydesc)) {
@@ -313,31 +316,26 @@ int init_keys(void) {
   strcat(fingerprint, "\n");
   if (write_str_to_file(keydir, fingerprint))
     return -1;
-  if(!options.DirPort)
+  if(!authdir_mode())
     return 0;
-  /* 6. [dirserver only] load approved-routers file */
+  /* 6. [authdirserver only] load approved-routers file */
   sprintf(keydir,"%s/approved-routers", datadir);
   log_fn(LOG_INFO,"Loading approved fingerprints from %s...",keydir);
   if(dirserv_parse_fingerprint_file(keydir) < 0) {
     log_fn(LOG_ERR, "Error loading fingerprints");
     return -1;
   }
-  /* 7. [dirserver only] load old directory, if it's there */
+  /* 7. [authdirserver only] load old directory, if it's there */
   sprintf(keydir,"%s/cached-directory", datadir);
   log_fn(LOG_INFO,"Loading cached directory from %s...",keydir);
   cp = read_file_to_str(keydir);
   if(!cp) {
     log_fn(LOG_INFO,"Cached directory %s not present. Ok.",keydir);
   } else {
-    if(options.AuthoritativeDir) {
-      if(dirserv_load_from_directory_string(cp) < 0){
-        log_fn(LOG_ERR, "Cached directory %s is corrupt", keydir);
-        tor_free(cp);
-        return -1;
-      }
-    } else {
-      /* set time to 1 so it will be replaced on first download. */
-      dirserv_set_cached_directory(cp, 1);
+    if(dirserv_load_from_directory_string(cp) < 0){
+      log_fn(LOG_ERR, "Cached directory %s is corrupt", keydir);
+      tor_free(cp);
+      return -1;
     }
     tor_free(cp);
   }
@@ -510,6 +508,10 @@ int router_rebuild_descriptor(void) {
     log_fn(LOG_WARN, "Couldn't dump router to string.");
     return -1;
   }
+  /* XXX008 NM: no, we shouldn't just blindly assume we're an
+   * authdirserver just because our dir_port is set. We should
+   * take these next two lines out, and then set our is_trusted_dir
+   * variable if we find ourselves in the dirservers file. Yes/no? */
   if (ri->dir_port)
     ri->is_trusted_dir = 1;
   return 0;

@@ -619,7 +619,6 @@ static int cached_directory_len = -1;
 void dirserv_set_cached_directory(const char *directory, time_t when)
 {
   time_t now;
-  char filename[512];
   tor_assert(!options.AuthoritativeDir);
   now = time(NULL);
   if (when>cached_directory_published &&
@@ -628,10 +627,6 @@ void dirserv_set_cached_directory(const char *directory, time_t when)
     cached_directory = tor_strdup(directory);
     cached_directory_len = strlen(cached_directory);
     cached_directory_published = when;
-    sprintf(filename,"%s/cached-directory", get_data_directory(&options));
-    if(write_str_to_file(filename,cached_directory) < 0) {
-      log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
-    }
   }
 }
 

@@ -361,7 +361,7 @@ static void run_connection_housekeeping(int i, time_t now) {
   if(conn->type == CONN_TYPE_DIR &&
      !conn->marked_for_close &&
      conn->timestamp_lastwritten + 5*60 < now) {
-    log_fn(LOG_WARN,"Expiring wedged directory conn (fd %d, purpose %d)", conn->s, conn->purpose);
+    log_fn(LOG_INFO,"Expiring wedged directory conn (fd %d, purpose %d)", conn->s, conn->purpose);
     connection_mark_for_close(conn);
     return;
   }
@@ -403,28 +403,49 @@ static void run_connection_housekeeping(int i, time_t now) {
  * - We believe we are reachable from the outside.
  */
 static int decide_if_publishable_server(time_t now) {
+  int r;
 
-  if(options.AuthoritativeDir)
-    return 1;
   if(options.ClientOnly)
     return 0;
   if(!options.ORPort)
     return 0;
 
-  /* here, determine if we're reachable */
 
+  /* XXX008 for now, you're only a server if you're a server */
+  return server_mode();
+
+
+  /* here, determine if we're reachable */
+  if(0) { /* we've recently failed to reach our IP/ORPort from the outside */
+    return 0;
+  }
+
+  r = rep_hist_bandwidth_assess(now);
+
+
+//  set_advertised_bandwidth(r);
+
+  if(r < MIN_BW_TO_PUBLISH_DESC)
+    return 0;
+  if(options.AuthoritativeDir)
+    return 1;
   if(stats_n_seconds_uptime < MIN_UPTIME_TO_PUBLISH_DESC)
     return 0;
-  if(rep_hist_bandwidth_assess(now) < MIN_BW_TO_PUBLISH_DESC)
-    return 0;
+
   return 1;
 }
 
-/** Return true iff we try to stay connected to all ORs at once.  This
- * option should go away as Tor becomes more P2P.
+/** Return true iff we believe ourselves to be an authoritative
+ * directory server.
+ */
+int authdir_mode(void) {
+  return (options.AuthoritativeDir != 0);
+}
+
+/** Return true iff we try to stay connected to all ORs at once.
  */
 int clique_mode(void) {
-  return (options.ORPort != 0);
+  return authdir_mode();
 }
 
 /** Return true iff we are trying to be a server.
@@ -495,10 +516,10 @@ static void run_scheduled_events(time_t now) {
 
     routerlist_remove_old_routers(); /* purge obsolete entries */
 
-    if(options.AuthoritativeDir) {
+    if(authdir_mode()) {
       /* We're a directory; dump any old descriptors. */
       dirserv_remove_old_servers();
-      /* dirservers try to reconnect too, in case connections have failed */
+      /* dirservers try to reconnect, in case connections have failed */
       router_retry_connections();
     }
 
@@ -582,7 +603,8 @@ static int prepare_for_poll(void) {
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
-    stats_n_seconds_uptime += (now.tv_sec - current_second);
+    if(current_second)
+      stats_n_seconds_uptime += (now.tv_sec - current_second);
     assert_all_pending_dns_resolves_ok();
     run_scheduled_events(now.tv_sec);
     assert_all_pending_dns_resolves_ok();
@@ -674,11 +696,11 @@ static int do_hup(void) {
     log_fn(LOG_ERR,"Error reloading rendezvous service keys");
     exit(1);
   }
-  if(retry_all_connections() < 0) {
+  if(retry_all_listeners() < 0) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
   }
-  if(options.DirPort) {
+  if(authdir_mode()) {
     /* reload the approved-routers file */
     sprintf(keydir,"%s/approved-routers", get_data_directory(&options));
     log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
@@ -688,10 +710,9 @@ static int do_hup(void) {
     /* Since we aren't fetching a directory, we won't retry rendezvous points
      * when it gets in.  Try again now. */
     rend_services_introduce();
-  } else {
-    /* fetch a new directory */
-    directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
   }
+  /* Fetch a new directory. Even authdirservers do this. */
+  directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
   if(server_mode()) {
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
@@ -736,20 +757,18 @@ static int do_main_loop(void) {
     }
   }
 
-  if(options.DirPort) { /* the directory is already here, run startup things */
-    has_fetched_directory = 1;
+  if(authdir_mode()) {
+    /* the directory is already here, run startup things */
     directory_has_arrived();
   }
 
   if(server_mode()) {
-    cpu_init(); /* launch cpuworkers. Need to do this *after* we've read the onion key. */
+    /* launch cpuworkers. Need to do this *after* we've read the onion key. */
+    cpu_init();
   }
 
-  /* start up the necessary connections based on which ports are
-   * non-zero. This is where we try to connect to all the other ORs,
-   * and start the listeners.
-   */
-  if(retry_all_connections() < 0) {
+  /* start up the necessary listeners based on which ports are non-zero. */
+  if(retry_all_listeners() < 0) {
     log_fn(LOG_ERR,"Failed to bind one of the listener ports.");
     return -1;
   }
