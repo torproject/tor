@@ -138,52 +138,52 @@ int rend_get_service_id(crypto_pk_env_t *pk, char *out)
   return 0;
 }
 
-/* ==== Hidden service descriptor cache. */
-#define HIDSERV_MAX_AGE 24*60*60
-#define HIDSERV_MAX_SKEW 60*60
+/* ==== Rendezvous service descriptor cache. */
+#define REND_CACHE_MAX_AGE 24*60*60
+#define REND_CACHE_MAX_SKEW 60*60
 
-typedef struct hidserv_cache_entry_t {
+typedef struct rend_cache_entry_t {
   int len;
   char *desc;
   rend_service_descriptor_t *parsed;
-} hidserv_cache_entry_t;
+} rend_cache_entry_t;
 
-static strmap_t *hidserv_cache = NULL;
+static strmap_t *rend_cache = NULL;
 
-void hidserv_cache_init(void)
+void rend_cache_init(void)
 {
-  hidserv_cache = strmap_new();
+  rend_cache = strmap_new();
 }
 
-void hidserv_cache_clean(void)
+void rend_cache_clean(void)
 {
   strmap_iter_t *iter;
   const char *key;
   void *val;
-  hidserv_cache_entry_t *ent;
+  rend_cache_entry_t *ent;
   time_t cutoff;
-  cutoff = time(NULL) - HIDSERV_MAX_AGE;
-  for (iter = strmap_iter_init(hidserv_cache); !strmap_iter_done(iter); ) {
+  cutoff = time(NULL) - REND_CACHE_MAX_AGE;
+  for (iter = strmap_iter_init(rend_cache); !strmap_iter_done(iter); ) {
     strmap_iter_get(iter, &key, &val);
-    ent = (hidserv_cache_entry_t*)val;
+    ent = (rend_cache_entry_t*)val;
     if (ent->parsed->timestamp < cutoff) {
-      iter = strmap_iter_next_rmv(hidserv_cache, iter);
+      iter = strmap_iter_next_rmv(rend_cache, iter);
       rend_service_descriptor_free(ent->parsed);
       tor_free(ent->desc);
       tor_free(ent);
     } else {
-      iter = strmap_iter_next(hidserv_cache, iter);
+      iter = strmap_iter_next(rend_cache, iter);
     }
   }
 }
 
-int hidserv_lookup(char *query, const char **desc, int *desc_len)
+int rend_cache_lookup(char *query, const char **desc, int *desc_len)
 {
-  hidserv_cache_entry_t *e;
-  assert(hidserv_cache);
+  rend_cache_entry_t *e;
+  assert(rend_cache);
   if (strlen(query) != REND_SERVICE_ID_LEN)
     return -1; /* XXXX also check for bad chars. */
-  e = (hidserv_cache_entry_t*) strmap_get_lc(hidserv_cache, query);
+  e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, query);
   if (!e)
     return 0;
   *desc = e->desc;
@@ -191,13 +191,13 @@ int hidserv_lookup(char *query, const char **desc, int *desc_len)
   return 1;
 }
 
-int hidserv_store(char *desc, int desc_len)
+int rend_cache_store(char *desc, int desc_len)
 {
-  hidserv_cache_entry_t *e;
+  rend_cache_entry_t *e;
   rend_service_descriptor_t *parsed;
   char query[REND_SERVICE_ID_LEN+1];
   time_t now;
-  assert(hidserv_cache);
+  assert(rend_cache);
   parsed = rend_parse_service_descriptor(desc,desc_len);
   if (!parsed) {
     log_fn(LOG_WARN,"Couldn't parse service descriptor");
@@ -209,17 +209,17 @@ int hidserv_store(char *desc, int desc_len)
     return -1;
   }
   now = time(NULL);
-  if (parsed->timestamp < now-HIDSERV_MAX_AGE) {
+  if (parsed->timestamp < now-REND_CACHE_MAX_AGE) {
     log_fn(LOG_WARN,"Service descriptor is too old");
     rend_service_descriptor_free(parsed);
     return -1;
   }
-  if (parsed->timestamp > now+HIDSERV_MAX_SKEW) {
+  if (parsed->timestamp > now+REND_CACHE_MAX_SKEW) {
     log_fn(LOG_WARN,"Service descriptor is too far in the future");
     rend_service_descriptor_free(parsed);
     return -1;
   }
-  e = (hidserv_cache_entry_t*) strmap_get_lc(hidserv_cache, query);
+  e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, query);
   if (e && e->parsed->timestamp > parsed->timestamp) {
     log_fn(LOG_WARN,"We already have a newer service descriptor with the same ID");
     rend_service_descriptor_free(parsed);
@@ -231,8 +231,8 @@ int hidserv_store(char *desc, int desc_len)
     return -1;
   }
   if (!e) {
-    e = tor_malloc_zero(sizeof(hidserv_cache_entry_t));
-    strmap_set_lc(hidserv_cache, query, e);
+    e = tor_malloc_zero(sizeof(rend_cache_entry_t));
+    strmap_set_lc(rend_cache, query, e);
   } else {
     rend_service_descriptor_free(e->parsed);
     tor_free(e->desc);
