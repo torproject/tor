@@ -236,7 +236,7 @@ void connection_close_immediate(connection_t *conn)
   if (conn->outbuf_flushlen) {
     log_fn(LOG_INFO,"fd %d, type %s, state %d, %d bytes on outbuf.",
            conn->s, CONN_TYPE_TO_STRING(conn->type),
-           conn->state, conn->outbuf_flushlen);
+           conn->state, (int)conn->outbuf_flushlen);
   }
   tor_close_socket(conn->s);
   conn->s = -1;
