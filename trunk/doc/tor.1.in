@@ -82,7 +82,10 @@ Paths are 3 hops plus a geometric distribution centered around this coinweight. 
 Bind to this port to listen for connections from socks-speaking applications.
 .TP
 \fBsocksbindaddress \fR\fIIP\fP
-Bind to this address to listen for connections from socks-speaking applications. (Default: 127.0.0.1)
+Bind to this address to listen for connections from socks-speaking applications. (Default: 127.0.0.1) You can also specify a port (e.g. 192.168.0.1:9100). This directive can be specified multiple times to bind to multiple addresses/ports.
+.TP
+\fBsockspolicy \fR\fIpolicy,policy,...\fP
+Set an entrance policy for this server, so limit who can connect to the socks ports. The policies have the same form as exit policies below.
 
 .SH SERVER OPTIONS
 .PP
@@ -97,7 +100,7 @@ Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
 \fBexitpolicy \fR\fIpolicy,policy,...\fP
 Set an exit policy for this server. Each policy is of the form
 "\fBreject\fP \fIADDR\fP\fB/\fP\fIMASK\fP\fB:\fP\fIPORT\fP".
-If \fB/\fP\fIMASK\fP is ommitted then this policy just applies to the host
+If \fB/\fP\fIMASK\fP is omitted then this policy just applies to the host
 given.  Instead of giving a host or network you can also use "\fB*\fP" to
 denote the universe (0.0.0.0/0).  \fIPORT\fP can either be a single port number
 or an interval of ports: "\fIFROM_PORT\fP\fB-\fP\fITO_PORT\fP".
@@ -105,6 +108,8 @@ or an interval of ports: "\fIFROM_PORT\fP\fB-\fP\fITO_PORT\fP".
 For example, "reject 127.0.0.1:*,reject 192.168.1.0/24:*,accept *:*" would
 reject any traffic destined for localhost and any 192.168.1.* address, but
 accept anything else.
+
+This directive can be specified multiple times so you don't have to put it all on one line.
 .TP
 \fBmaxonionspending \fR\fINUM\fP
 If you have more than this number of onionskins queued for decrypt, reject new ones. (Default: 100)
