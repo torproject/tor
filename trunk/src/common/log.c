@@ -116,14 +116,14 @@ void _log_fn(int severity, const char *fn, const char *format, ...)
 
 void close_logs()
 {
-  logfile_t *next, *lf;
-  for (lf = logfiles; lf; lf = lf->next) {
-    if (lf->needs_close)
-      fclose(lf->file);
-    next = lf->next;
-    free(lf);
+  logfile_t *victim;
+  while(logfiles) {
+    victim = logfiles;
+    logfiles = logfiles->next;
+    if (victim->needs_close)
+      fclose(victim->file);
+    free(victim);
   }
-  logfiles = NULL;
 }
 
 void reset_logs()

@@ -21,7 +21,7 @@ void *tor_malloc(size_t size) {
     log_fn(LOG_ERR, "Out of memory. Dying.");
     exit(1);
   }
-  memset(result,'X',size); /* XXX deadbeef to encourage bugs */
+//  memset(result,'X',size); /* deadbeef to encourage bugs */
   return result;
 }
 
