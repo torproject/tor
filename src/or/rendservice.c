@@ -25,6 +25,7 @@ typedef struct rend_service_t {
   /* Other fields */
   crypto_pk_env_t *private_key;
   char service_id[REND_SERVICE_ID_LEN+1];
+  char pk_digest[20];
 } rend_service_t;
 
 /* A list of rend_service_t.
@@ -218,6 +219,10 @@ int rend_service_init_keys(void)
       log_fn(LOG_WARN, "Couldn't encode service ID");
       return -1;
     }
+    if (crypto_pk_get_digest(s->private_key, s->pk_digest)<0) {
+      log_fn(LOG_WARN, "Couldn't compute hash of public key");
+      return -1;
+    }
     if (strlcpy(fname,s->directory,512) >= 512 ||
 	strlcat(fname,"/hostname",512) >= 512) {
       log_fn(LOG_WARN, "Directory name too long: '%s'", s->directory);
@@ -230,6 +235,108 @@ int rend_service_init_keys(void)
   return 0;
 }
 
+/*DOCDOC*/
+rend_service_t *
+rend_service_get_by_pk_digest(const char* digest)
+{
+  int i;
+  rend_service_t *s;
+  for (i = 0; i < rend_service_list->num_used; ++i) {
+    s = (rend_service_t*)rend_service_list->list[i];
+    if (!memcmp(s->pk_digest, digest, 20))
+      return s;
+  }
+  return NULL;
+}
+
+/******
+ * Handle cells
+ ******/
+
+typedef struct rend_introduction_t {
+  /* Digest of the hidden service's PK. */
+  char key_digest[20];
+  /* Nickname of OR running rendezvous point. */
+  char *rendezvous_point;
+  /* Cookie that we'll use to recognize the rendezvous point. */
+  char cookie[20];
+  /* g^xy */
+  char shared_secret[128];
+} rend_introduction_t;
+
+int
+rend_service_introduce(circuit_t *circuit,const char *request, int request_len)
+{
+  char *ptr, *rp_nickname, *r_cookie;
+  char pk_digest[20];
+  char decrypted[1024];
+  rend_service_t *service;
+  int len, keylen;
+  crypto_cipher_env_t *cipher;
+
+  if (circuit->purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
+    log_fn(LOG_WARN, "Got an INTRODUCE2 over a non-introduction circuit.");
+    return -1;
+  }
+
+  /* min key length plus digest length */
+  if (request_len < 148) {
+    log_fn(LOG_WARN, "Got a truncated INTRODUCE2 cell.");
+    return -1;
+  }
+
+  /* first 20 bytes of request is service pk digest */
+  service = rend_service_get_by_pk_digest(request);
+  if (!service) {
+    log_fn(LOG_WARN, "Got an INTRODUCE2 cell for an unrecognized service");
+    return -1;
+  }
+  if (!memcmp(circuit->rend_service, request, 20)) {
+    log_fn(LOG_WARN, "Got an INTRODUCE2 cell for the wrong service");
+    return -1;
+  }
+
+  keylen = crypto_pk_keysize(service->private_key);
+  if (request_len < keylen+20) {
+    log_fn(LOG_WARN, "PK-encrypted portion of INTRODUCE2 cell was truncated");
+    return -1;
+  }
+  /* Next N bytes is encrypted with service key */
+  len = crypto_pk_private_hybrid_decrypt(
+       service->private_key,request,request_len-20,buf, RSA_PKCS1_PADDING);
+  if (len<0) {
+    log_fn(LOG_WARN, "Couldn't decrypt INTRODUCE2 cell");
+    return -1;
+  }
+  ptr=memchr(buf,0,len);
+  if (!ptr || ptr == buf) {
+    log_fn(LOG_WARN, "Couldn't find a null-terminated nickname in INTRODUCE2 cell");
+    return -1;
+  }
+  if (strspn(buf,LEGAL_NICKNAME_CHARACTERS) != ptr-buf) {
+    log_fn(LOG_WARN, "Nickname in INTRODUCE2 cell contains illegal character.");
+    return -1;
+  }
+  rp_nickname = buf;
+  ++ptr;
+  len -= (ptr-buf);
+  if (len != 20+128) {
+    log_fn(LOG_WARN, "Bad length for INTRODUCE2 cell.");
+    return -1;
+  }
+
+  /* XXXX 1. Do the DH jumping-jacks, and put our key "someplace".
+   * XXXX 2. Store the cell that we will send once we're connected "someplace".
+   * XXXX 3. Launch a circuit to rp_nickname.
+   * XXXX 4. Once we've build the circuit, send the cell.
+   */
+
+  return 0;
+}
+
+/******
+ * Manage introduction points
+ ******/
 
 #define NUM_INTRO_POINTS 3
 int rend_services_init(void) {
@@ -265,3 +372,10 @@ int rend_services_init(void) {
     // anything else?
 }
 
+/*
+  Local Variables:
+  mode:c
+  indent-tabs-mode:nil
+  c-basic-offset:2
+  End:
+*/
