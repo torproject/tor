@@ -85,9 +85,13 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
       format_msg(buf, 10024, severity, funcname, format, ap);
       formatted = 1;
     }
-    fputs(buf, lf->file);
-    fflush(lf->file);
-    /* XXX check for EOF */
+    if(fputs(buf, lf->file) == EOF) { /* error */
+      assert(0); /* XXX */
+    }
+    if(fflush(lf->file) == EOF) { /* error */
+      /* don't log the error! */
+      assert(0); /* XXX fail for now. what's better to do? */
+    }
   }
 }
 
