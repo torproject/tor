@@ -140,7 +140,7 @@ try_again:
   return test_aci;
 }
 
-int circuit_init(circuit_t *circ, int aci_type) {
+int circuit_init(circuit_t *circ, int aci_type, onion_layer_t *layer) {
   unsigned char iv[16];
   unsigned char digest1[20];
   unsigned char digest2[20];
@@ -150,18 +150,12 @@ int circuit_init(circuit_t *circ, int aci_type) {
   assert(circ && circ->onion);
 
   log(LOG_DEBUG,"circuit_init(): starting");
-  circ->n_port = ntohs(*(uint16_t *)(circ->onion+2));
+  circ->n_port = layer->port;
   log(LOG_DEBUG,"circuit_init(): Set port to %u.",circ->n_port);
-  circ->n_addr = ntohl(*(uint32_t *)(circ->onion+4));
-  circ->p_f = *(circ->onion+1) >> 4; /* backf */
-  log(LOG_DEBUG,"circuit_init(): Set BACKF to %u.",circ->p_f);
-  circ->n_f = *(circ->onion+1) & 0x0f; /* forwf */
-  log(LOG_DEBUG,"circuit_init(): Set FORWF to %u.",circ->n_f);
+  circ->n_addr = layer->addr;
   circ->state = CIRCUIT_STATE_OPEN;
 
   log(LOG_DEBUG,"circuit_init(): aci_type = %u.",aci_type);
-
-
 
   gettimeofday(&start,NULL);
 
@@ -188,24 +182,26 @@ int circuit_init(circuit_t *circ, int aci_type) {
 
   /* keys */
   memset(iv, 0, 16);
-  crypto_SHA_digest(circ->onion+12,16,digest1);
+  crypto_SHA_digest(layer->keyseed,16,digest1);
   crypto_SHA_digest(digest1,20,digest2);
   crypto_SHA_digest(digest2,20,digest1);
   log(LOG_DEBUG,"circuit_init(): Computed keys.");
 
-  if (!(circ->p_crypto = create_onion_cipher(circ->p_f,digest2,iv,1))) {
+  if (!(circ->p_crypto = 
+        crypto_create_init_cipher(DEFAULT_CIPHER,digest2,iv,1))) {
     log(LOG_ERR,"Cipher initialization failed (ACI %u).",circ->n_aci);
     return -1;
   }
   
-  if (!(circ->n_crypto = create_onion_cipher(circ->n_f, digest1, iv, 0))) {
+  if (!(circ->n_crypto = 
+        crypto_create_init_cipher(DEFAULT_CIPHER,digest1,iv,0))) {
     log(LOG_ERR,"Cipher initialization failed (ACI %u).",circ->n_aci);
     return -1;
   }
 
   log(LOG_DEBUG,"circuit_init(): Cipher initialization complete.");
 
-  circ->expire = ntohl(*(uint32_t *)(circ->onion+8));
+  circ->expire = layer->expire;
 
   return 0;
 }
@@ -678,7 +674,6 @@ retry_circuit:
 }
 
 int circuit_create_onion(void) {
-  int i;
   int routelen; /* length of the route */
   unsigned int *route; /* hops in the route as an array of indexes into rarray */
   unsigned char *onion; /* holds the onion */
@@ -711,9 +706,6 @@ int circuit_create_onion(void) {
   }
   log(LOG_DEBUG,"circuit_create_onion(): Created an onion of size %u bytes.",onionlen);
   log(LOG_DEBUG,"circuit_create_onion(): Crypt path :");
-  for (i=0;i<routelen;i++) {
-    log(LOG_DEBUG,"circuit_create_onion() : %u/%u",(cpath[i])->forwf, (cpath[i])->backf);
-  }
 
   return circuit_establish_circuit(route, routelen, onion, onionlen, cpath);
 }

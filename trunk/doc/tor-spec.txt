@@ -273,13 +273,11 @@ which reveals the downstream node.
    in a circuit.  Each (unencrypted) layer has the following fields:
 
          Version                  [1 byte]
-         Back cipher              [4 bits]
-         Forward cipher           [4 bits]
          Port                     [2 bytes]
          Address                  [4 bytes]
          Expiration time          [4 bytes]
          Key seed material        [16 bytes]
-                             [Total: 28 bytes]
+                             [Total: 27 bytes]
 
      The value of Version is currently 2.
 
@@ -287,7 +285,7 @@ which reveals the downstream node.
           0: Identity 
           1: Single DES in OFB
           2: RC4
-          3: Triple DES in OFB
+          3: Triple DES (encrypt-decrypt-encrypt) in OFB
 
      The port and address field denote the IPV4 address and port of
      the next onion router in the circuit, or are set to 0 for the
@@ -305,7 +303,6 @@ which reveals the downstream node.
       2. For I=N downto 1:
   
          A. Create an onion layer L, setting Version=2,
-            BackCipher=DES/OFB(1), ForwardCipher=DES/OFB(2), 
             ExpirationTime=now + 1 day, and Seed=16 random bytes.
 
             If I=N, set Port=Address=0.  Else, set Port and Address to
