@@ -10,6 +10,8 @@
 
 #include "or.h"
 
+extern or_options_t options; /* command-line and config-file options */
+
 static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
                 crypt_path_t **layer_hint, char *recognized);
 static connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction);
@@ -281,7 +283,7 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
  *  - Encrypt it to the right layer
  *  - connection_or_write_cell_to_buf to the right conn
  */
-int
+static int
 circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
                            int cell_direction,
                            crypt_path_t *layer_hint)
@@ -509,8 +511,15 @@ connection_edge_process_relay_cell_not_open(
       if (client_dns_incr_failures(conn->socks_request->address)
           < MAX_RESOLVE_FAILURES) {
         /* We haven't retried too many times; reattach the connection. */
+        log_fn(LOG_INFO,"Resolve of '%s' failed, trying again.",
+               conn->socks_request->address);
+        circuit_log_path(LOG_INFO,circ);
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
         circuit_detach_stream(circ,conn);
+        tor_assert(circ->timestamp_dirty);
+        circ->timestamp_dirty -= options.NewCircuitPeriod;
+        /* make sure not to expire/retry the stream quite yet */
+        conn->timestamp_lastread = time(NULL);
         if(connection_ap_handshake_attach_circuit(conn) >= 0)
           return 0;
         /* else, conn will get closed below */
