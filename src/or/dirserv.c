@@ -482,7 +482,7 @@ list_running_servers(char **nicknames_out)
   for (i = 0; i<n_conns; ++i) {
     conn = connection_array[i];
     if (conn->type != CONN_TYPE_OR || !conn->nickname)
-      continue; /* only list ORs. */
+      continue; /* only list connections to ORs with certificates. */
     s = dirserv_get_nickname_by_digest(conn->identity_digest);
     if (s) {
       name = tor_strdup(s);
