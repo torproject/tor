@@ -1,0 +1,20 @@
+# Configuration file for a typical tor node
+
+# The directory for keeping all the config/data for this node
+DataDirectory @LOCALSTATEDIR@/lib/tor
+# A unique handle for this node
+Nickname moria4
+
+# Ports for various services. Comment out or set to 0 if you're not
+# offering that service.
+ORPort 9004 # listening for cell-speaking connections
+APPort 9024 # listening for socks-speaking connections
+#DirPort 0
+
+# Leave this set, or we'll be treated like a client.
+OnionRouter 1
+
+# List of routers. Tor nodes only know about the directory servers
+# at the beginning, and from them they get a list of currently up nodes.
+RouterFile @CONFDIR@/dirservers
+

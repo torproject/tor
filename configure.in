@@ -159,5 +159,30 @@ AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(__int64)
 
-AC_OUTPUT(Makefile src/Makefile doc/Makefile src/config/Makefile src/common/Makefile src/or/Makefile)
+# $prefix stores the value of the --prefix command line option, or
+# NONE if the option wasn't set.  In the case that it wasn't set, make
+# it be the default, so that we can use it to expand directories now.
+if test "x$prefix" = "xNONE"; then
+  prefix=$ac_default_prefix
+fi
+
+# and similarly for $exec_prefix
+if test "x$exec_prefix" = "xNONE"; then
+  exec_prefix=$prefix
+fi
+
+CONFDIR=`eval echo $sysconfdir/tor`
+AC_SUBST(CONFDIR)
+AC_DEFINE_UNQUOTED(CONFDIR,"$CONFDIR")
+AC_DEFINE([CONFDIR], [], [tor's configuration directory])
+
+BINDIR=`eval echo $bindir`
+AC_SUBST(BINDIR)
+
+LOCALSTATEDIR=`eval echo $localstatedir`
+AC_SUBST(LOCALSTATEDIR)
+
+echo "confdir: $CONFDIR"
+
+AC_OUTPUT(Makefile tor.sh src/config/torrc src/config/sample-server-torrc src/Makefile doc/Makefile src/config/Makefile src/common/Makefile src/or/Makefile)
 
