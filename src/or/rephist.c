@@ -266,30 +266,29 @@ void rep_hist_dump_stats(time_t now, int severity)
         or_history->n_conn_ok, or_history->n_conn_fail+or_history->n_conn_ok,
         upt, upt+downt, uptime*100.0);
 
-    if (!strmap_isempty(or_history->link_history_map))
+    if (!strmap_isempty(or_history->link_history_map)) {
       strcpy(buffer, "    Good extend attempts: ");
-    else
-      *buffer = '\0';
-    len = strlen(buffer);
-    for (lhist_it = strmap_iter_init(or_history->link_history_map);
-         !strmap_iter_done(lhist_it);
-         lhist_it = strmap_iter_next(or_history->link_history_map, lhist_it)) {
-      strmap_iter_get(lhist_it, &hexdigest2, &link_history_p);
-      if ((r = router_get_by_hexdigest(hexdigest2)))
-        name2 = r->nickname;
-      else
-        name2 = "(unknown)";
+      len = strlen(buffer);
+      for (lhist_it = strmap_iter_init(or_history->link_history_map);
+           !strmap_iter_done(lhist_it);
+           lhist_it = strmap_iter_next(or_history->link_history_map, lhist_it)) {
+        strmap_iter_get(lhist_it, &hexdigest2, &link_history_p);
+        if ((r = router_get_by_hexdigest(hexdigest2)))
+          name2 = r->nickname;
+        else
+          name2 = "(unknown)";
 
-      link_history = (link_history_t*) link_history_p;
-      len += snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
-                      link_history->n_extend_ok,
-                      link_history->n_extend_ok+link_history->n_extend_fail);
-      if (len >= 2048) {
-        buffer[2047]='\0';
-        break;
+        link_history = (link_history_t*) link_history_p;
+        len += snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
+                        link_history->n_extend_ok,
+                        link_history->n_extend_ok+link_history->n_extend_fail);
+        if (len >= 2048) {
+          buffer[2047]='\0';
+          break;
+        }
       }
+      log(severity, buffer);
     }
-    log(severity, buffer);
   }
 }
 
