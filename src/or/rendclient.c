@@ -166,6 +166,7 @@ rend_client_introduction_acked(circuit_t *circ,
     /* Locate the rend circ which is waiting to hear about this ack,
      * and tell it.
      */
+    log_fn(LOG_INFO,"Received ack. Telling rend circ.");
     rendcirc = circuit_get_by_rend_query_and_purpose(
                circ->rend_query, CIRCUIT_PURPOSE_C_REND_READY);
     if(rendcirc) { /* remember the ack */
