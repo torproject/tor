@@ -422,6 +422,7 @@ test_crypto()
 void 
 test_util() {
   struct timeval start, end;
+  struct tm a_time;
 
   start.tv_sec = 5;
   start.tv_usec = 5000;
@@ -447,6 +448,20 @@ test_util() {
 
   test_eq(0L, tv_udiff(&start, &end));
 
+  /* The test values here are confirmed to be correct on a platform
+   * with a working timgm. */
+  a_time.tm_year = 2003-1900;
+  a_time.tm_mon = 7;
+  a_time.tm_mday = 30;
+  a_time.tm_hour = 6;
+  a_time.tm_min = 14;
+  a_time.tm_sec = 55;
+  test_eq((time_t) 1062224095UL, tor_timegm(&a_time));
+  a_time.tm_year = 2004-1900; /* Try a leap year, after feb. */
+  test_eq((time_t) 1093846495UL, tor_timegm(&a_time));
+  a_time.tm_mon = 1;          /* Try a leap year, in feb. */
+  a_time.tm_mday = 10;
+  test_eq((time_t) 1076393695UL, tor_timegm(&a_time));
 }
 
 void

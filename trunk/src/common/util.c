@@ -112,19 +112,36 @@ void tv_addms(struct timeval *a, long ms) {
   a->tv_usec %= 1000000;
 }
 
-time_t tor_timegm (struct tm *tm) {
-  time_t ret;
-  char *tz;
 
-  tz = getenv("TZ");
-  setenv("TZ", "", 1);
-  tzset();
-  ret = mktime(tm);
-  if (tz)
-      setenv("TZ", tz, 1);
-  else
-      unsetenv("TZ");
-  tzset();
+#define IS_LEAPYEAR(y) (!(y % 4) && ((y % 100) || !(y % 400)))
+static int n_leapdays(int y1, int y2) {
+  --y1;
+  --y2;
+  return (y2/4 - y1/4) - (y2/100 - y1/100) + (y2/400 - y1/400);
+}
+static const int days_per_month[] = 
+  { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+time_t tor_timegm (struct tm *tm) {
+  /* This is a pretty ironclad timegm implementation, snarfed from Python2.2. 
+   * It's way more brute-force than fiddling with tzset().
+   */
+  time_t ret;
+  unsigned long year, days, hours, minutes;
+  int i;
+  year = tm->tm_year + 1900;
+  assert(year >= 1970);
+  assert(tm->tm_mon >= 0 && tm->tm_mon <= 11);
+  days = 365 * (year-1970) + n_leapdays(1970,year);
+  for (i = 0; i < tm->tm_mon; ++i)
+    days += days_per_month[i];
+  if (tm->tm_mon > 1 && IS_LEAPYEAR(year))
+    ++days;
+  days += tm->tm_mday - 1;
+  hours = days*24 + tm->tm_hour;
+  
+  minutes = hours*60 + tm->tm_min;
+  ret = minutes*60 + tm->tm_sec;
   return ret;
 }
 
