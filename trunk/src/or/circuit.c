@@ -1140,19 +1140,22 @@ static void circuit_failed(circuit_t *circ) {
       break;
     case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
       /* at Bob, waiting for introductions */
-      // remember this somewhere?
+      /* no need to care here, because bob will rebuild intro
+       * points periodically. */
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
       /* at Alice, connecting to intro point */
-      // alice needs to try another intro point
+      /* Alice will pick a new intro point when this one dies, if
+       * the stream in question still cares. No need to act here. */
       break;
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       /* at Alice, waiting for Bob */
-      // alice needs to pick a new rend point
+      /* Alice will pick a new rend point when this one dies, if
+       * the stream in question still cares. No need to act here. */
       break;
     case CIRCUIT_PURPOSE_S_CONNECT_REND:
       /* at Bob, connecting to rend point */
-      //
+      log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s. Sucks to be Alice.", circ->build_state->chosen_exit);
       break;
   }
 }
