@@ -216,6 +216,8 @@ int dns_resolve(connection_t *exitconn) {
    * know the answer. */
   if (tor_inet_aton(exitconn->address, &in) != 0) {
     exitconn->addr = ntohl(in.s_addr);
+    if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
+      send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
     return 1;
   }
 
