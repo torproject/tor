@@ -631,6 +631,9 @@ static void catch(int the_signal) {
       if(options.PidFile)
         unlink(options.PidFile);
       exit(0);
+    case SIGPIPE:
+      log(LOG_WARN,"Bug: caught sigpipe. Ignoring.");
+      break;
     case SIGHUP:
       please_reset = 1;
       break;
@@ -751,6 +754,7 @@ int tor_main(int argc, char *argv[]) {
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
   signal (SIGINT,  catch); /* catch kills so we can exit cleanly */
   signal (SIGTERM, catch);
+  signal (SIGPIPE, catch);
   signal (SIGUSR1, catch); /* to dump stats */
   signal (SIGHUP,  catch); /* to reload directory */
   signal (SIGCHLD, catch); /* for exiting dns/cpu workers */
