@@ -423,8 +423,8 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     /* This actually happens with P=1/30,000,000 when we _could_ build a
      * circuit.  For now, let's leave it in.
      */
-    log_fn(LOG_ERR, "Infinite loop in exit path selection");
-    exit(1);
+    log_fn(LOG_INFO, "Unable to continue generating circuit path");
+    return -1;
   }
  start:
   if(cur_len == 0) { /* picking entry node */
