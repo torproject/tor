@@ -1003,7 +1003,7 @@ static uint32_t client_dns_lookup_entry(const char *address)
 
   assert(address);
 
-  if (inet_aton(address, &in)) {
+  if (tor_inet_aton(address, &in)) {
     log_fn(LOG_DEBUG, "Using static address %s (%08lX)", address,
            (unsigned long)ntohl(in.s_addr));
     return ntohl(in.s_addr);
@@ -1039,7 +1039,7 @@ static void client_dns_set_entry(const char *address, uint32_t val)
   assert(address);
   assert(val);
 
-  if (inet_aton(address, &in))
+  if (tor_inet_aton(address, &in))
     return;
   search.address = (char*) address;
   now = time(NULL);

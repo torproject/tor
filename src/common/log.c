@@ -3,6 +3,9 @@
 /* $Id$ */
 
 #include "../or/or.h"
+#ifdef MS_WINDOWS
+#define vsnprintf _vsnprintf
+#endif
 
 struct logfile_t;
 typedef struct logfile_t {
@@ -35,7 +38,7 @@ static INLINE void format_msg(char *buf, size_t buf_len,
 {
   time_t t;
   struct timeval now;
-  int n;
+  size_t n;
 
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
 

@@ -32,7 +32,7 @@
 int
 tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 {
-        int idx, maxfd, fd;
+        unsigned int idx, maxfd, fd;
         int r;
 #ifdef MS_WINDOWS
         int any_fds_set = 0;

@@ -85,6 +85,7 @@
 #ifdef MS_WINDOWS
 #include <io.h>
 #include <process.h>
+#include <direct.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #define snprintf _snprintf
@@ -349,7 +350,7 @@ struct connection_t {
                           * This is always in the range 0..1<<15-1.*/
 
   /* bandwidth and receiver_bucket only used by ORs in OPEN state: */
-  uint32_t bandwidth; /* connection bandwidth. */
+  int bandwidth; /* connection bandwidth. */
   int receiver_bucket; /* when this hits 0, stop receiving. Every second we
                         * add 'bandwidth' to this, capping it at 10*bandwidth.
                         */

@@ -493,7 +493,7 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen)
   lenout = X509_NAME_get_text_by_NID(name, nid, buf, buflen);
   if (lenout == -1)
     goto error;
-  if (strspn(buf, LEGAL_NICKNAME_CHARACTERS) != lenout) {
+  if (((int)strspn(buf, LEGAL_NICKNAME_CHARACTERS)) < lenout) {
     log_fn(LOG_WARN, "Peer certificate nickname has illegal characters.");
     goto error;
   }

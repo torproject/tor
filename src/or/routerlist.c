@@ -541,6 +541,36 @@ int router_exit_policy_rejects_all(routerinfo_t *router) {
     == ADDR_POLICY_REJECTED;
 }
 
+static time_t parse_time(const char *cp)
+{
+  struct tm st_tm;
+  /* XXXX WWWW should be HAVE_STRPTIME */
+#ifndef MS_WINDOWS
+  if (!strptime(cp, "%Y-%m-%d %H:%M:%S", &st_tm)) {
+    log_fn(LOG_WARN, "Published time was unparseable"); return 0;
+  }
+#else 
+  unsigned int year=0, month=0, day=0, hour=100, minute=100, second=100;
+  if (scanf("%u-%u-%u %u:%u:%u", cp, &year, &month, 
+	        &day, &hour, &minute, &second) < 6) {
+	log_fn(LOG_WARN, "Published time was unparseable"); return 0;
+  }
+  if (year < 2000 || month < 1 || month > 12 || day < 1 || day > 31 ||
+	  hour > 24 || minute > 61 || second > 62) {
+	log_fn(LOG_WARN, "Published time was nonsensical"); return 0;
+  }
+  st_tm.tm_year = year;
+  st_tm.tm_mon = month;
+  st_tm.tm_mday = day;
+  st_tm.tm_hour = hour;
+  st_tm.tm_min = minute;
+  st_tm.tm_sec = second;
+#endif
+  return tor_timegm(&st_tm);
+
+}
+
+
 /* Helper function: parse a directory from 's' and, when done, store the
  * resulting routerlist in *dest, freeing the old value if necessary.
  * If pkey is provided, we check the directory signature with pkey.
@@ -555,7 +585,6 @@ router_get_routerlist_from_directory_impl(const char *str,
   char signed_digest[128];
   routerlist_t *new_dir = NULL;
   char *versions = NULL;
-  struct tm published;
   time_t published_on;
   char *good_nickname_lst[1024];
   int n_good_nicknames = 0;
@@ -604,10 +633,9 @@ router_get_routerlist_from_directory_impl(const char *str,
   }
   assert(tok->n_args == 1);
   
-  if (!strptime(tok->args[0], "%Y-%m-%d %H:%M:%S", &published)) {
-    log_fn(LOG_WARN, "Published time was unparseable"); goto err;
+  if (!(published_on = parse_time(tok->args[0]))) {
+     goto err;
   }
-  published_on = tor_timegm(&published);
 
   if (!(tok = find_first_by_keyword(tokens, K_RECOMMENDED_SOFTWARE))) {
     log_fn(LOG_WARN, "Missing recommended-software line from directory.");
@@ -781,7 +809,6 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   char digest[128];
   smartlist_t *tokens = NULL, *exit_policy_tokens = NULL;
   directory_token_t *tok;
-  struct tm published;
   int t, i;
   int ports_set, bw_set;
 
@@ -876,11 +903,8 @@ routerinfo_t *router_get_entry_from_string(const char *s,
     log_fn(LOG_WARN, "Missing published time"); goto err;
   }
   assert(tok->n_args == 1);
-  if (!strptime(tok->args[0], "%Y-%m-%d %H:%M:%S", &published)) {
-    log_fn(LOG_WARN, "Published time was unparseable"); goto err;
-  }
-  router->published_on = tor_timegm(&published);
-
+  if (!(router->published_on = parse_time(tok->args[0]))) 
+	  goto err;
 
   if (!(tok = find_first_by_keyword(tokens, K_ONION_KEY))) {
     log_fn(LOG_WARN, "Missing onion key"); goto err;
@@ -1056,7 +1080,7 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok) {
 
   if (strcmp(address, "*") == 0) {
     newe->addr = 0;
-  } else if (inet_aton(address, &in) != 0) {
+  } else if (tor_inet_aton(address, &in) != 0) {
     newe->addr = ntohl(in.s_addr);
   } else {
     log_fn(LOG_WARN, "Malformed IP %s in exit policy; rejecting.",
@@ -1074,7 +1098,7 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok) {
     if (!*endptr) {
       /* strtol handled the whole mask. */
       newe->msk = ~((1<<(32-bits))-1);
-    } else if (inet_aton(mask, &in) != 0) {
+    } else if (tor_inet_aton(mask, &in) != 0) {
       newe->msk = ntohl(in.s_addr);
     } else {
       log_fn(LOG_WARN, "Malformed mask %s on exit policy; rejecting.",
@@ -1087,11 +1111,11 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok) {
     newe->prt_max = 65535;
   } else {
     endptr = NULL;
-    newe->prt_min = strtol(port, &endptr, 10);
+    newe->prt_min = (uint16_t) strtol(port, &endptr, 10);
     if (*endptr == '-') {
       port = endptr+1;
       endptr = NULL;
-      newe->prt_max = strtol(port, &endptr, 10);
+      newe->prt_max = (uint16_t) strtol(port, &endptr, 10);
       if (*endptr) {
       log_fn(LOG_WARN, "Malformed port %s on exit policy; rejecting.",
              port);
