@@ -132,6 +132,7 @@
 #define CELL_ACK 4
 #define CELL_NACK 5
 #define CELL_SENDME 6
+#define CELL_CONNECTED 7
 
 #define CELL_PAYLOAD_SIZE 120
 
@@ -394,6 +395,7 @@ void command_process_create_cell(cell_t *cell, connection_t *conn);
 void command_process_sendme_cell(cell_t *cell, connection_t *conn);
 void command_process_data_cell(cell_t *cell, connection_t *conn);
 void command_process_destroy_cell(cell_t *cell, connection_t *conn);
+void command_process_connected_cell(cell_t *cell, connection_t *conn);
 
 /********************************* config.c ***************************/
 
@@ -441,6 +443,7 @@ int connection_speaks_cells(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 
 int connection_send_destroy(aci_t aci, connection_t *conn);
+int connection_send_connected(aci_t aci, connection_t *conn);
 int connection_encrypt_cell(cell_t *cellp, connection_t *conn);
 int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn);
 
@@ -467,6 +470,7 @@ int ap_handshake_n_conn_open(connection_t *or_conn);
 
 int ap_handshake_send_onion(connection_t *ap_conn, connection_t *or_conn, circuit_t *circ);
 
+int connection_ap_send_connected(connection_t *conn);
 int connection_ap_process_data_cell(cell_t *cell, connection_t *conn);
 
 int connection_ap_finished_flushing(connection_t *conn);
@@ -479,6 +483,7 @@ int connection_ap_handle_listener_read(connection_t *conn);
 
 int connection_exit_process_inbuf(connection_t *conn);
 int connection_exit_package_inbuf(connection_t *conn);
+int connection_exit_send_connected(connection_t *conn);
 int connection_exit_process_data_cell(cell_t *cell, connection_t *conn);
 
 int connection_exit_finished_flushing(connection_t *conn);

@@ -496,7 +496,23 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
   cell.command = CELL_DESTROY;
   log(LOG_INFO,"connection_send_destroy(): Sending destroy (aci %d).",aci);
   return connection_write_cell_to_buf(&cell, conn);
+}
 
+int connection_send_connected(aci_t aci, connection_t *conn) {
+  cell_t cell;
+
+  assert(conn);
+
+  if(!connection_speaks_cells(conn)) {
+    log(LOG_INFO,"connection_send_connected(): Aci %d: At entry point. Notifying proxy.", aci);
+    connection_ap_send_connected(conn);
+    return 0;
+  }
+
+  cell.aci = aci;
+  cell.command = CELL_CONNECTED;
+  log(LOG_INFO,"connection_send_connected(): passing back cell (aci %d).",aci);
+  return connection_write_cell_to_buf(&cell, conn);
 }
 
 int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn) {
