@@ -123,8 +123,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
         if(router_get_dir_from_string(the_directory, conn->identity_pkey) < 0){
           log_fn(LOG_INFO,"...but parsing failed. Ignoring.");
         } else {
-          log_fn(LOG_INFO,"and got an %s directory; updated routers.", 
-              conn->identity_pkey ? "authenticated" : "unauthenticated");
+          log_fn(LOG_INFO,"updated routers.");
         }
         if(options.OnionRouter) { /* connect to them all */
           router_retry_connections();
