@@ -100,6 +100,7 @@ uint32_t dns_lookup(const char *address) {
   }
 
   strncpy(search.address, address, MAX_ADDRESSLEN);
+  search.address[MAX_ADDRESSLEN-1] = 0;
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(resolve) { /* it's there */
     if(resolve->state == CACHE_STATE_VALID) {
@@ -118,7 +119,7 @@ uint32_t dns_lookup(const char *address) {
 }
 #endif
 
-/* See if we have an addr for 'exitconn->address'. if so,
+/* See if we have a cache entry for 'exitconn->address'. if so,
  * if resolve valid, put it into exitconn->addr and return 1.
  * If resolve failed, return -1.
  *
@@ -140,6 +141,7 @@ int dns_resolve(connection_t *exitconn) {
 
   /* now check the tree to see if 'address' is already there. */
   strncpy(search.address, exitconn->address, MAX_ADDRESSLEN);
+  search.address[MAX_ADDRESSLEN-1] = 0;
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(resolve) { /* already there */
     switch(resolve->state) {
@@ -167,6 +169,7 @@ int dns_resolve(connection_t *exitconn) {
   resolve->state = CACHE_STATE_PENDING;
   resolve->expire = now + MAX_DNS_ENTRY_AGE;
   strncpy(resolve->address, exitconn->address, MAX_ADDRESSLEN);
+  resolve->address[MAX_ADDRESSLEN-1] = 0;
 
   /* add us to the pending list */
   pending_connection = tor_malloc(sizeof(struct pending_connection_t));
@@ -226,6 +229,7 @@ void dns_cancel_pending_resolve(char *address, connection_t *onlyconn) {
   struct cached_resolve *resolve, *tmp;
 
   strncpy(search.address, address, MAX_ADDRESSLEN);
+  search.address[MAX_ADDRESSLEN-1] = 0;
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
@@ -299,6 +303,7 @@ static void dns_found_answer(char *address, uint32_t addr) {
   struct cached_resolve *resolve;
 
   strncpy(search.address, address, MAX_ADDRESSLEN);
+  search.address[MAX_ADDRESSLEN-1] = 0;
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
