@@ -979,7 +979,7 @@ static void dumpstats(int severity) {
 #else
         "Average bandwidth used: %llu/%ld = %d bytes/sec",
 #endif
-        stats_n_bytes_read, stats_n_seconds_uptime,
+        (long long unsigned int)stats_n_bytes_read, stats_n_seconds_uptime,
         (int) (stats_n_bytes_read/stats_n_seconds_uptime));
 
   rep_hist_dump_stats(now,severity);

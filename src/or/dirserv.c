@@ -643,14 +643,14 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
 
 /** Most recently generated encoded signed directory. */
 static char *the_directory = NULL;
-static int the_directory_len = -1;
+static size_t the_directory_len = 0;
 static char *the_directory_z = NULL;
-static int the_directory_z_len = -1;
+static size_t the_directory_z_len = 0;
 
 static char *cached_directory = NULL; /* used only by non-auth dirservers */
-static int cached_directory_len = -1;
+static size_t cached_directory_len = 0;
 static char *cached_directory_z = NULL;
-static int cached_directory_z_len = -1;
+static size_t cached_directory_z_len = 0;
 static time_t cached_directory_published = 0;
 
 void dirserv_set_cached_directory(const char *directory, time_t when)
@@ -692,7 +692,7 @@ size_t dirserv_get_directory(const char **directory, int compress)
   if (!options.AuthoritativeDir) {
     if (compress?cached_directory_z:cached_directory) {
       *directory = compress?cached_directory_z:cached_directory;
-      return (size_t) (compress?cached_directory_z_len:cached_directory_len);
+      return compress?cached_directory_z_len:cached_directory_len;
     } else {
       /* no directory yet retrieved */
       return 0;
@@ -717,7 +717,6 @@ static int dirserv_regenerate_directory(void)
   char *new_directory;
   char filename[512];
 
-  size_t z_dir_len;
   new_directory = tor_malloc(MAX_DIR_SIZE);
   if (dirserv_dump_directory_to_string(new_directory, MAX_DIR_SIZE,
                                        get_identity_key())) {
@@ -728,16 +727,15 @@ static int dirserv_regenerate_directory(void)
   tor_free(the_directory);
   the_directory = new_directory;
   the_directory_len = strlen(the_directory);
-  log_fn(LOG_INFO,"New directory (size %d):\n%s",the_directory_len,
+  log_fn(LOG_INFO,"New directory (size %d):\n%s",(int)the_directory_len,
          the_directory);
   tor_free(the_directory_z);
-  if (tor_gzip_compress(&the_directory_z, &z_dir_len,
+  if (tor_gzip_compress(&the_directory_z, &the_directory_z_len,
                         the_directory, the_directory_len,
                         ZLIB_METHOD)) {
     log_fn(LOG_WARN, "Error gzipping directory.");
     return -1;
   }
-  the_directory_z_len = (int)z_dir_len;
 
   /* Now read the directory we just made in order to update our own
    * router lists.  This does more signature checking than is strictly
