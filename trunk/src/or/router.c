@@ -22,7 +22,7 @@ void set_onion_key(crypto_pk_env_t *k) {
 }
 
 crypto_pk_env_t *get_onion_key(void) {
-  assert(onionkey);
+  tor_assert(onionkey);
   return onionkey;
 }
 
@@ -39,7 +39,7 @@ void set_identity_key(crypto_pk_env_t *k) {
 }
 
 crypto_pk_env_t *get_identity_key(void) {
-  assert(identitykey);
+  tor_assert(identitykey);
   return identitykey;
 }
 
@@ -124,7 +124,7 @@ crypto_pk_env_t *init_key_from_file(const char *fname)
     }
     return prkey;
   default:
-    assert(0);
+    tor_assert(0);
   }
 
  error:
@@ -146,14 +146,14 @@ int init_keys(void) {
 
   /* OP's don't need keys.  Just initialize the TLS context.*/
   if (!options.ORPort) {
-    assert(!options.DirPort);
+    tor_assert(!options.DirPort);
     if (tor_tls_context_new(NULL, 0, NULL, 0)<0) {
       log_fn(LOG_ERR, "Error creating TLS context for OP.");
       return -1;
     }
     return 0;
   }
-  assert(options.DataDirectory);
+  tor_assert(options.DataDirectory);
   if (strlen(options.DataDirectory) > (512-128)) {
     log_fn(LOG_ERR, "DataDirectory is too long.");
     return -1;
@@ -212,7 +212,7 @@ int init_keys(void) {
   /* 5. Dump fingerprint to 'fingerprint' */
   sprintf(keydir,"%s/fingerprint", options.DataDirectory);
   log_fn(LOG_INFO,"Dumping fingerprint to %s...",keydir);
-  assert(strlen(options.Nickname) <= MAX_NICKNAME_LEN);
+  tor_assert(strlen(options.Nickname) <= MAX_NICKNAME_LEN);
   strcpy(fingerprint, options.Nickname);
   strcat(fingerprint, " ");
   if (crypto_pk_get_fingerprint(get_identity_key(),
@@ -349,9 +349,9 @@ static void router_add_exit_policy_from_config(routerinfo_t *router) {
  */
 int router_compare_to_my_exit_policy(connection_t *conn)
 {
-  assert(desc_routerinfo);
-  assert(conn->addr); /* make sure it's resolved to something. this
-                         way we can't get a 'maybe' below. */
+  tor_assert(desc_routerinfo);
+  tor_assert(conn->addr); /* make sure it's resolved to something. this
+                             way we can't get a 'maybe' below. */
 
   return router_compare_addr_to_exit_policy(conn->addr, conn->port,
                    desc_routerinfo->exit_policy);
@@ -360,7 +360,7 @@ int router_compare_to_my_exit_policy(connection_t *conn)
 
 int router_is_me(routerinfo_t *router)
 {
-  assert(router);
+  tor_assert(router);
   return options.Nickname && !strcasecmp(router->nickname, options.Nickname);
 }
 

@@ -150,7 +150,7 @@ int dns_resolve(connection_t *exitconn) {
       case CACHE_STATE_FAILED:
         return -1;
     }
-    assert(0);
+    tor_assert(0);
   }
   /* not there, need to add it */
   resolve = tor_malloc_zero(sizeof(struct cached_resolve));
@@ -182,7 +182,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   connection_t *dnsconn;
   unsigned char len;
 
-  assert(exitconn->state == EXIT_CONN_STATE_RESOLVING);
+  tor_assert(exitconn->state == EXIT_CONN_STATE_RESOLVING);
 
   spawn_enough_dnsworkers(); /* respawn here, to be sure there are enough */
 
@@ -225,7 +225,7 @@ void connection_dns_remove(connection_t *conn)
     return;
   }
 
-  assert(resolve->pending_connections);
+  tor_assert(resolve->pending_connections);
   assert_connection_ok(conn,0);
 
   pend = resolve->pending_connections;
@@ -247,7 +247,7 @@ void connection_dns_remove(connection_t *conn)
         return; /* more are pending */
       }
     }
-    assert(0); /* not reachable unless onlyconn not in pending list */
+    tor_assert(0); /* not reachable unless onlyconn not in pending list */
   }
 }
 
@@ -259,7 +259,7 @@ void assert_connection_edge_not_dns_pending(connection_t *conn) {
     for(pend = resolve->pending_connections;
         pend;
         pend = pend->next) {
-      assert(pend->conn != conn);
+      tor_assert(pend->conn != conn);
     }
   }
 }
@@ -295,7 +295,7 @@ void dns_cancel_pending_resolve(char *address) {
     return;
   }
 
-  assert(resolve->pending_connections);
+  tor_assert(resolve->pending_connections);
 
   /* mark all pending connections to fail */
   log_fn(LOG_DEBUG, "Failing all connections waiting on DNS resolve of '%s'",
@@ -325,7 +325,7 @@ static void dns_purge_resolve(struct cached_resolve *resolve) {
   } else {
     /* FFFF make it a doubly linked list if this becomes too slow */
     for(tmp=oldest_cached_resolve; tmp && tmp->next != resolve; tmp=tmp->next) ;
-    assert(tmp); /* it's got to be in the list, or we screwed up somewhere else */
+    tor_assert(tmp); /* it's got to be in the list, or we screwed up somewhere else */
     tmp->next = resolve->next; /* unlink it */
 
     if(newest_cached_resolve == resolve)
@@ -358,14 +358,14 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
   if (resolve->state != CACHE_STATE_PENDING) {
     log_fn(LOG_WARN, "Resolved '%s' which was already resolved; ignoring",
            address);
-    assert(resolve->pending_connections == NULL);
+    tor_assert(resolve->pending_connections == NULL);
     return;
   }
   /* Removed this assertion: in fact, we'll sometimes get a double answer
    * to the same question.  This can happen when we ask one worker to resolve
    * X.Y.Z., then we cancel the request, and then we ask another worker to
    * resolve X.Y.Z. */
-  /* assert(resolve->state == CACHE_STATE_PENDING); */
+  /* tor_assert(resolve->state == CACHE_STATE_PENDING); */
 
   resolve->addr = ntohl(addr);
   if(outcome == DNS_RESOLVE_SUCCEEDED)
@@ -402,7 +402,7 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
 /******************************************************************/
 
 int connection_dns_finished_flushing(connection_t *conn) {
-  assert(conn && conn->type == CONN_TYPE_DNSWORKER);
+  tor_assert(conn && conn->type == CONN_TYPE_DNSWORKER);
   connection_stop_writing(conn);
   return 0;
 }
@@ -411,7 +411,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
   char success;
   uint32_t addr;
 
-  assert(conn && conn->type == CONN_TYPE_DNSWORKER);
+  tor_assert(conn && conn->type == CONN_TYPE_DNSWORKER);
 
   if(conn->inbuf_reached_eof) {
     log_fn(LOG_WARN,"Read eof. Worker died unexpectedly.");
@@ -424,10 +424,10 @@ int connection_dns_process_inbuf(connection_t *conn) {
     return 0;
   }
 
-  assert(conn->state == DNSWORKER_STATE_BUSY);
+  tor_assert(conn->state == DNSWORKER_STATE_BUSY);
   if(buf_datalen(conn->inbuf) < 5) /* entire answer available? */
     return 0; /* not yet */
-  assert(buf_datalen(conn->inbuf) == 5);
+  tor_assert(buf_datalen(conn->inbuf) == 5);
 
   connection_fetch_from_buf(&success,1,conn);
   connection_fetch_from_buf((char *)&addr,sizeof(uint32_t),conn);
@@ -435,8 +435,8 @@ int connection_dns_process_inbuf(connection_t *conn) {
   log_fn(LOG_DEBUG, "DNSWorker (fd %d) returned answer for '%s'",
          conn->s, conn->address);
 
-  assert(success >= DNS_RESOLVE_FAILED_TRANSIENT);
-  assert(success <= DNS_RESOLVE_SUCCEEDED);
+  tor_assert(success >= DNS_RESOLVE_FAILED_TRANSIENT);
+  tor_assert(success <= DNS_RESOLVE_SUCCEEDED);
   dns_found_answer(conn->address, addr, success);
 
   tor_free(conn->address);
@@ -467,7 +467,7 @@ int dnsworker_main(void *data) {
       log_fn(LOG_INFO,"dnsworker exiting because tor process died.");
       spawn_exit();
     }
-    assert(address_len > 0);
+    tor_assert(address_len > 0);
 
     if(read_all(fd, address, address_len, 1) != address_len) {
       log_fn(LOG_ERR,"read hostname failed. Child exiting.");
@@ -486,7 +486,7 @@ int dnsworker_main(void *data) {
       }
       memset(answer+1,0,4);
     } else {
-      assert(rent->h_length == 4); /* break to remind us if we move away from ipv4 */
+      tor_assert(rent->h_length == 4); /* break to remind us if we move away from ipv4 */
       answer[0] = DNS_RESOLVE_SUCCEEDED;
       memcpy(answer+1, rent->h_addr, 4);
       log_fn(LOG_INFO,"Resolved address '%s'.",address);
@@ -551,7 +551,7 @@ static void spawn_enough_dnsworkers(void) {
      */
     dnsconn = connection_get_by_type_state_lastwritten(CONN_TYPE_DNSWORKER,
                                                        DNSWORKER_STATE_BUSY);
-    assert(dnsconn);
+    tor_assert(dnsconn);
 
     log_fn(LOG_WARN, "%d DNS workers are spawned; all are busy. Killing one.",
            MAX_DNSWORKERS);
@@ -579,7 +579,7 @@ static void spawn_enough_dnsworkers(void) {
     log_fn(LOG_WARN,"%d of %d dnsworkers are idle. Killing one.",
            num_dnsworkers-num_dnsworkers_needed, num_dnsworkers);
     dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
-    assert(dnsconn);
+    tor_assert(dnsconn);
     connection_mark_for_close(dnsconn,0);
     num_dnsworkers--;
   }

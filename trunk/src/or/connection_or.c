@@ -27,7 +27,7 @@ static void cell_unpack(cell_t *dest, const char *src) {
 
 int connection_or_process_inbuf(connection_t *conn) {
 
-  assert(conn && conn->type == CONN_TYPE_OR);
+  tor_assert(conn && conn->type == CONN_TYPE_OR);
 
   if(conn->inbuf_reached_eof) {
     log_fn(LOG_INFO,"OR connection reached EOF. Closing.");
@@ -43,7 +43,7 @@ int connection_or_process_inbuf(connection_t *conn) {
 int connection_or_finished_flushing(connection_t *conn) {
   int e, len=sizeof(e);
 
-  assert(conn && conn->type == CONN_TYPE_OR);
+  tor_assert(conn && conn->type == CONN_TYPE_OR);
   assert_connection_ok(conn,0);
 
   switch(conn->state) {
@@ -92,7 +92,7 @@ void connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *route
 connection_t *connection_or_connect(routerinfo_t *router) {
   connection_t *conn;
 
-  assert(router);
+  tor_assert(router);
 
   if(router_is_me(router)) {
     log_fn(LOG_WARN,"You asked me to connect to myself! Failing.");
@@ -245,8 +245,8 @@ void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
   char networkcell[CELL_NETWORK_SIZE];
   char *n = networkcell;
 
-  assert(cell && conn);
-  assert(connection_speaks_cells(conn));
+  tor_assert(cell && conn);
+  tor_assert(connection_speaks_cells(conn));
 
   cell_pack(n, cell);
 

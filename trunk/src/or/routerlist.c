@@ -196,8 +196,8 @@ void add_nickname_list_to_smartlist(smartlist_t *sl, char *list) {
   char nick[MAX_NICKNAME_LEN+1];
   routerinfo_t *router;
 
-  assert(sl);
-  assert(list);
+  tor_assert(sl);
+  tor_assert(list);
 
   while(isspace((int)*list) || *list==',') list++;
 
@@ -295,7 +295,7 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   int i;
   routerinfo_t *router;
 
-  assert(routerlist);
+  tor_assert(routerlist);
 
   for(i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
@@ -310,7 +310,7 @@ routerinfo_t *router_get_by_nickname(char *nickname)
   int i;
   routerinfo_t *router;
 
-  assert(routerlist);
+  tor_assert(routerlist);
 
   for(i=0;i<smartlist_len(routerlist->routers);i++) {
     router = smartlist_get(routerlist->routers, i);
@@ -395,6 +395,7 @@ void router_mark_as_down(char *nickname) {
 
 /* ------------------------------------------------------------ */
 
+#if 0
 static void dump_onion_keys(int severity)
 {
   int i;
@@ -408,6 +409,7 @@ static void dump_onion_keys(int severity)
     log_fn(severity, "%10s: %s", r->nickname, buf);
   }
 }
+#endif
 
 /* Replace the current router list with the one stored in 'routerfile'. */
 int router_set_routerlist_from_file(char *routerfile)
@@ -529,7 +531,7 @@ router_resolve(routerinfo_t *router)
            router->address, router->nickname);
     return -1;
   }
-  assert(rent->h_length == 4);
+  tor_assert(rent->h_length == 4);
   memcpy(&router->addr, rent->h_addr,rent->h_length);
   router->addr = ntohl(router->addr); /* get it back into host order */
 
@@ -743,7 +745,7 @@ router_get_routerlist_from_directory_impl(const char *str,
     log_fn(LOG_WARN, "Missing published time on directory.");
     goto err;
   }
-  assert(tok->n_args == 1);
+  tor_assert(tok->n_args == 1);
 
   if (parse_time(tok->args[0], &published_on) < 0) {
      goto err;
@@ -853,7 +855,7 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
   int i;
   const char *end;
 
-  assert(s && *s);
+  tor_assert(s && *s);
 
   routers = smartlist_create();
 
@@ -1015,7 +1017,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
     log_fn(LOG_WARN, "Missing published time"); goto err;
   }
-  assert(tok->n_args == 1);
+  tor_assert(tok->n_args == 1);
   if (parse_time(tok->args[0], &router->published_on) < 0)
           goto err;
 
@@ -1152,7 +1154,7 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok) {
   char *arg, *address, *mask, *port, *endptr;
   int bits;
 
-  assert(tok->tp == K_REJECT || tok->tp == K_ACCEPT);
+  tor_assert(tok->tp == K_REJECT || tok->tp == K_ACCEPT);
 
   if (tok->n_args != 1)
     return -1;
@@ -1253,7 +1255,7 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok) {
   return 0;
 
 policy_read_failed:
-  assert(newe->string);
+  tor_assert(newe->string);
   log_fn(LOG_WARN,"Couldn't parse line '%s'. Dropping", newe->string);
   tor_free(newe->string);
   free(newe);
@@ -1271,7 +1273,7 @@ static void
 token_free(directory_token_t *tok)
 {
   int i;
-  assert(tok);
+  tor_assert(tok);
   if (tok->args) {
     for (i = 0; i < tok->n_args; ++i) {
       tor_free(tok->args[i]);
@@ -1360,7 +1362,7 @@ get_next_token(const char **s, where_syntax where) {
         *s = eat_whitespace_no_nl(next+1);
       } else {
         /* The keyword takes no arguments. */
-        assert(a_syn == NO_ARGS);
+        tor_assert(a_syn == NO_ARGS);
         *s = eat_whitespace_no_nl(next);
         if (**s != '\n') {
           RET_ERR("Unexpected arguments");

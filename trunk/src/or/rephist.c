@@ -61,9 +61,9 @@ static link_history_t *get_link_history(const char *from_name,
  */
 static void update_or_history(or_history_t *hist, time_t when)
 {
-  assert(hist);
+  tor_assert(hist);
   if (hist->up_since) {
-    assert(!hist->down_since);
+    tor_assert(!hist->down_since);
     hist->uptime += (when - hist->up_since);
     hist->up_since = when;
   } else if (hist->down_since) {

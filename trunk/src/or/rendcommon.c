@@ -62,7 +62,7 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
     return -1;
   }
   cp += i;
-  assert(*len_out == (cp-*str_out));
+  tor_assert(*len_out == (cp-*str_out));
   return 0;
 }
 
@@ -127,7 +127,7 @@ rend_service_descriptor_t *rend_parse_service_descriptor(
 int rend_get_service_id(crypto_pk_env_t *pk, char *out)
 {
   char buf[DIGEST_LEN];
-  assert(pk);
+  tor_assert(pk);
   if (crypto_pk_get_digest(pk, buf) < 0)
     return -1;
   if (base32_encode(out, REND_SERVICE_ID_LEN+1, buf, 10) < 0)
@@ -185,7 +185,7 @@ int rend_valid_service_id(char *query) {
 
 int rend_cache_lookup_entry(char *query, rend_cache_entry_t **e)
 {
-  assert(rend_cache);
+  tor_assert(rend_cache);
   if (!rend_valid_service_id(query))
     return -1;
   *e = strmap_get_lc(rend_cache, query);
@@ -222,7 +222,7 @@ int rend_cache_store(char *desc, int desc_len)
   rend_service_descriptor_t *parsed;
   char query[REND_SERVICE_ID_LEN+1];
   time_t now;
-  assert(rend_cache);
+  tor_assert(rend_cache);
   parsed = rend_parse_service_descriptor(desc,desc_len);
   if (!parsed) {
     log_fn(LOG_WARN,"Couldn't parse service descriptor");
@@ -307,7 +307,7 @@ void rend_process_relay_cell(circuit_t *circ, int command, int length,
       r = rend_client_rendezvous_acked(circ,payload,length);
       break;
     default:
-      assert(0);
+      tor_assert(0);
   }
 }
 

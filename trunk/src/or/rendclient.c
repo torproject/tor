@@ -8,8 +8,8 @@
 void
 rend_client_introcirc_is_open(circuit_t *circ)
 {
-  assert(circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
-  assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath);
+  tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath);
 
   log_fn(LOG_INFO,"introcirc is open");
   connection_ap_attach_pending();
@@ -21,7 +21,7 @@ rend_client_introcirc_is_open(circuit_t *circ)
 int
 rend_client_send_establish_rendezvous(circuit_t *circ)
 {
-  assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
+  tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
   log_fn(LOG_INFO, "Sending an ESTABLISH_RENDEZVOUS cell");
 
   if (crypto_rand(REND_COOKIE_LEN, circ->rend_cookie)<0) {
@@ -52,9 +52,9 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   rend_cache_entry_t *entry;
   crypt_path_t *cpath;
 
-  assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
-  assert(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY);
-  assert(!rend_cmp_service_ids(introcirc->rend_query, rendcirc->rend_query));
+  tor_assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
+  tor_assert(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY);
+  tor_assert(!rend_cmp_service_ids(introcirc->rend_query, rendcirc->rend_query));
 
   if(rend_cache_lookup_entry(introcirc->rend_query, &entry) < 1) {
     log_fn(LOG_WARN,"query '%s' didn't have valid rend desc in cache. Failing.",
@@ -102,7 +102,7 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
     goto err;
   }
 
-  assert(DIGEST_LEN + r <= RELAY_PAYLOAD_SIZE); /* we overran something */
+  tor_assert(DIGEST_LEN + r <= RELAY_PAYLOAD_SIZE); /* we overran something */
   payload_len = DIGEST_LEN + r;
 
   if (connection_edge_send_command(NULL, introcirc,
@@ -128,8 +128,8 @@ err:
 void
 rend_client_rendcirc_is_open(circuit_t *circ)
 {
-  assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
-  assert(CIRCUIT_IS_ORIGIN(circ));
+  tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
   log_fn(LOG_INFO,"rendcirc is open");
 
@@ -157,7 +157,7 @@ rend_client_introduction_acked(circuit_t *circ,
     return -1;
   }
 
-  assert(circ->build_state->chosen_exit);
+  tor_assert(circ->build_state->chosen_exit);
 
   if (request_len == 0) {
     /* It's an ACK; the introduction point relayed our introduction request. */
@@ -185,7 +185,7 @@ rend_client_introduction_acked(circuit_t *circ,
       /* There are introduction points left. re-extend the circuit to
        * another intro point and try again. */
       nickname = rend_client_get_random_intro(circ->rend_query);
-      assert(nickname);
+      tor_assert(nickname);
       log_fn(LOG_INFO,"Got nack for %s from %s, extending to %s.", circ->rend_query, circ->build_state->chosen_exit, nickname);
       if (!router_get_by_nickname(nickname)) {
         log_fn(LOG_WARN, "Advertised intro point '%s' for %s is not known. Closing.",
@@ -301,9 +301,9 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request
   }
 
   /* first DH_KEY_LEN bytes are g^y from bob. Finish the dh handshake...*/
-  assert(circ->build_state && circ->build_state->pending_final_cpath);
+  tor_assert(circ->build_state && circ->build_state->pending_final_cpath);
   hop = circ->build_state->pending_final_cpath;
-  assert(hop->handshake_state);
+  tor_assert(hop->handshake_state);
   if (crypto_dh_compute_secret(hop->handshake_state, request, DH_KEY_LEN,
                                keys, DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
     log_fn(LOG_WARN, "Couldn't complete DH handshake");

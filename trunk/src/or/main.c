@@ -53,7 +53,7 @@ int has_completed_circuit=0;
 ****************************************************************************/
 
 int connection_add(connection_t *conn) {
-  assert(conn);
+  tor_assert(conn);
 
   if(nfds >= options.MaxConn-1) {
     log_fn(LOG_WARN,"failing because nfds is too high.");
@@ -87,8 +87,8 @@ void connection_set_poll_socket(connection_t *conn) {
 int connection_remove(connection_t *conn) {
   int current_index;
 
-  assert(conn);
-  assert(nfds>0);
+  tor_assert(conn);
+  tor_assert(nfds>0);
 
   log_fn(LOG_INFO,"removing socket %d (type %s), nfds now %d",
          conn->s, CONN_TYPE_TO_STRING(conn->type), nfds-1);
@@ -122,7 +122,7 @@ void get_connection_array(connection_t ***array, int *n) {
 
 void connection_watch_events(connection_t *conn, short events) {
 
-  assert(conn && conn->poll_index < nfds);
+  tor_assert(conn && conn->poll_index < nfds);
 
   poll_array[conn->poll_index].events = events;
 }
@@ -133,7 +133,7 @@ int connection_is_reading(connection_t *conn) {
 
 void connection_stop_reading(connection_t *conn) {
 
-  assert(conn && conn->poll_index < nfds);
+  tor_assert(conn && conn->poll_index < nfds);
 
   log(LOG_DEBUG,"connection_stop_reading() called.");
   if(poll_array[conn->poll_index].events & POLLIN)
@@ -142,7 +142,7 @@ void connection_stop_reading(connection_t *conn) {
 
 void connection_start_reading(connection_t *conn) {
 
-  assert(conn && conn->poll_index < nfds);
+  tor_assert(conn && conn->poll_index < nfds);
 
   poll_array[conn->poll_index].events |= POLLIN;
 }
@@ -153,7 +153,7 @@ int connection_is_writing(connection_t *conn) {
 
 void connection_stop_writing(connection_t *conn) {
 
-  assert(conn && conn->poll_index < nfds);
+  tor_assert(conn && conn->poll_index < nfds);
 
   if(poll_array[conn->poll_index].events & POLLOUT)
     poll_array[conn->poll_index].events -= POLLOUT;
@@ -161,7 +161,7 @@ void connection_stop_writing(connection_t *conn) {
 
 void connection_start_writing(connection_t *conn) {
 
-  assert(conn && conn->poll_index < nfds);
+  tor_assert(conn && conn->poll_index < nfds);
 
   poll_array[conn->poll_index].events |= POLLOUT;
 }

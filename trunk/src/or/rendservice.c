@@ -214,7 +214,7 @@ int rend_config_services(or_options_t *options)
       }
       service->intro_prefer_nodes = tor_strdup(line->value);
     } else {
-      assert(!strcasecmp(line->key, "HiddenServiceExcludeNodes"));
+      tor_assert(!strcasecmp(line->key, "HiddenServiceExcludeNodes"));
       if (service->intro_exclude_nodes) {
         log_fn(LOG_WARN, "Got multiple HiddenServiceExcludedNodes lines for a single service");
         return -1;
@@ -435,7 +435,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
            rp_nickname, serviceid);
     return -1;
   }
-  assert(launched->build_state);
+  tor_assert(launched->build_state);
   /* Fill in the circuit's state. */
   memcpy(launched->rend_pk_digest, circuit->rend_pk_digest,
          DIGEST_LEN);
@@ -485,7 +485,7 @@ rend_service_relaunch_rendezvous(circuit_t *oldcirc)
   }
   oldstate = oldcirc->build_state;
   newstate = newcirc->build_state;
-  assert(newstate && oldstate);
+  tor_assert(newstate && oldstate);
   newstate->failure_count = oldstate->failure_count+1;
   newstate->pending_final_cpath = oldstate->pending_final_cpath;
   oldstate->pending_final_cpath = NULL;
@@ -529,12 +529,12 @@ rend_service_intro_is_ready(circuit_t *circuit)
   char auth[DIGEST_LEN + 9];
   char serviceid[REND_SERVICE_ID_LEN+1];
 
-  assert(circuit->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
-  assert(CIRCUIT_IS_ORIGIN(circuit) && circuit->cpath);
+  tor_assert(circuit->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
+  tor_assert(CIRCUIT_IS_ORIGIN(circuit) && circuit->cpath);
 
   if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                     circuit->rend_pk_digest,10)) {
-    assert(0);
+    tor_assert(0);
   }
 
   service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);
@@ -615,16 +615,16 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
   char serviceid[REND_SERVICE_ID_LEN+1];
   char hexcookie[9];
 
-  assert(circuit->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
-  assert(circuit->cpath);
-  assert(circuit->build_state);
+  tor_assert(circuit->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
+  tor_assert(circuit->cpath);
+  tor_assert(circuit->build_state);
   hop = circuit->build_state->pending_final_cpath;
-  assert(hop);
+  tor_assert(hop);
 
   hex_encode(circuit->rend_cookie, 4, hexcookie);
   if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                     circuit->rend_pk_digest,10)) {
-    assert(0);
+    tor_assert(0);
   }
 
   log_fn(LOG_INFO,
@@ -692,7 +692,7 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
 
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                                   CIRCUIT_PURPOSE_S_INTRO))) {
-    assert(circ->cpath);
+    tor_assert(circ->cpath);
     if (circ->build_state->chosen_exit &&
         !strcasecmp(circ->build_state->chosen_exit, router->nickname)) {
       return circ;
@@ -702,7 +702,7 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   circ = NULL;
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                         CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
-    assert(circ->cpath);
+    tor_assert(circ->cpath);
     if (circ->build_state->chosen_exit &&
         !strcasecmp(circ->build_state->chosen_exit, router->nickname)) {
       return circ;
@@ -764,7 +764,7 @@ void rend_services_introduce(void) {
     smartlist_clear(intro_routers);
     service = smartlist_get(rend_service_list, i);
 
-    assert(service);
+    tor_assert(service);
     changed = 0;
 
     /* Find out which introduction points we have in progress for this service. */
@@ -888,7 +888,7 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
   rend_service_port_config_t *p;
   char serviceid[REND_SERVICE_ID_LEN+1];
 
-  assert(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
+  tor_assert(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
   log_fn(LOG_DEBUG,"beginning to hunt for addr/port");
   if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                     circ->rend_pk_digest,10)) {

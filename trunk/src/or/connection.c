@@ -99,8 +99,8 @@ connection_t *connection_new(int type) {
 }
 
 void connection_free(connection_t *conn) {
-  assert(conn);
-  assert(conn->magic == CONNECTION_MAGIC);
+  tor_assert(conn);
+  tor_assert(conn->magic == CONNECTION_MAGIC);
 
   if(!connection_is_listener(conn)) {
     buf_free(conn->inbuf);
@@ -245,7 +245,7 @@ void connection_expire_held_open(void)
      * for 15 seconds...
      */
     if (conn->hold_open_until_flushed) {
-      assert(conn->marked_for_close);
+      tor_assert(conn->marked_for_close);
       if (now - conn->timestamp_lastwritten >= 15) {
         log_fn(LOG_WARN,"Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %d).",
                conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state);
@@ -422,9 +422,9 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
 
 static void listener_close_if_present(int type) {
   connection_t *conn;
-  assert(type == CONN_TYPE_OR_LISTENER ||
-         type == CONN_TYPE_AP_LISTENER ||
-         type == CONN_TYPE_DIR_LISTENER);
+  tor_assert(type == CONN_TYPE_OR_LISTENER ||
+             type == CONN_TYPE_AP_LISTENER ||
+             type == CONN_TYPE_DIR_LISTENER);
   conn = connection_get_by_type(type);
   if (conn) {
     connection_close_immediate(conn);
@@ -495,9 +495,9 @@ int connection_bucket_read_limit(connection_t *conn) {
 
 /* we just read num_read onto conn. Decrement buckets appropriately. */
 void connection_bucket_decrement(connection_t *conn, int num_read) {
-  global_read_bucket -= num_read; assert(global_read_bucket >= 0);
+  global_read_bucket -= num_read; tor_assert(global_read_bucket >= 0);
   if(connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
-    conn->receiver_bucket -= num_read; assert(conn->receiver_bucket >= 0);
+    conn->receiver_bucket -= num_read; tor_assert(conn->receiver_bucket >= 0);
   }
   if(global_read_bucket == 0) {
     log_fn(LOG_DEBUG,"global bucket exhausted. Pausing.");
@@ -568,14 +568,14 @@ void connection_bucket_refill(struct timeval *now) {
 }
 
 static int connection_receiver_bucket_should_increase(connection_t *conn) {
-  assert(conn);
+  tor_assert(conn);
 
   if(!connection_speaks_cells(conn))
     return 0; /* edge connections don't use receiver_buckets */
   if(conn->state != OR_CONN_STATE_OPEN)
     return 0; /* only open connections play the rate limiting game */
 
-  assert(conn->bandwidth > 0);
+  tor_assert(conn->bandwidth > 0);
   if(conn->receiver_bucket > 9*conn->bandwidth)
     return 0;
 
@@ -677,7 +677,7 @@ int connection_outbuf_too_full(connection_t *conn) {
 /* return -1 if you want to break the conn, else return 0 */
 int connection_handle_write(connection_t *conn) {
 
-  assert(!connection_is_listener(conn));
+  tor_assert(!connection_is_listener(conn));
 
   conn->timestamp_lastwritten = time(NULL);
 
@@ -815,7 +815,7 @@ connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port) {
   get_connection_array(&carray,&n);
   for(i=0;i<n;i++) {
     conn = carray[i];
-    assert(conn);
+    tor_assert(conn);
     if(connection_state_is_open(conn) &&
        !crypto_pk_cmp_keys(conn->identity_pkey, router->identity_pkey)) {
       log(LOG_DEBUG,"connection_twin_get_by_addr_port(): Found twin (%s).",conn->address);
@@ -893,7 +893,7 @@ int connection_is_listener(connection_t *conn) {
 }
 
 int connection_state_is_open(connection_t *conn) {
-  assert(conn);
+  tor_assert(conn);
 
   if(conn->marked_for_close)
     return 0;
@@ -909,8 +909,8 @@ int connection_state_is_open(connection_t *conn) {
 int connection_send_destroy(uint16_t circ_id, connection_t *conn) {
   cell_t cell;
 
-  assert(conn);
-  assert(connection_speaks_cells(conn));
+  tor_assert(conn);
+  tor_assert(connection_speaks_cells(conn));
 
   memset(&cell, 0, sizeof(cell_t));
   cell.circ_id = circ_id;
@@ -922,7 +922,7 @@ int connection_send_destroy(uint16_t circ_id, connection_t *conn) {
 
 int connection_process_inbuf(connection_t *conn) {
 
-  assert(conn);
+  tor_assert(conn);
 
   switch(conn->type) {
     case CONN_TYPE_OR:
@@ -944,7 +944,7 @@ int connection_process_inbuf(connection_t *conn) {
 
 int connection_finished_flushing(connection_t *conn) {
 
-  assert(conn);
+  tor_assert(conn);
 
 //  log_fn(LOG_DEBUG,"entered. Socket %u.", conn->s);
 
@@ -968,17 +968,17 @@ int connection_finished_flushing(connection_t *conn) {
 
 void assert_connection_ok(connection_t *conn, time_t now)
 {
-  assert(conn);
-  assert(conn->magic == CONNECTION_MAGIC);
-  assert(conn->type >= _CONN_TYPE_MIN);
-  assert(conn->type <= _CONN_TYPE_MAX);
+  tor_assert(conn);
+  tor_assert(conn->magic == CONNECTION_MAGIC);
+  tor_assert(conn->type >= _CONN_TYPE_MIN);
+  tor_assert(conn->type <= _CONN_TYPE_MAX);
 
   if(conn->outbuf_flushlen > 0) {
-    assert(connection_is_writing(conn) || conn->wants_to_write);
+    tor_assert(connection_is_writing(conn) || conn->wants_to_write);
   }
 
   if(conn->hold_open_until_flushed)
-    assert(conn->marked_for_close);
+    tor_assert(conn->marked_for_close);
 
   /* XXX check: wants_to_read, wants_to_write, s, poll_index,
    * marked_for_close. */
@@ -990,62 +990,62 @@ void assert_connection_ok(connection_t *conn, time_t now)
   }
 
 #if 0 /* computers often go back in time; no way to know */
-  assert(!now || conn->timestamp_lastread <= now);
-  assert(!now || conn->timestamp_lastwritten <= now);
-  assert(conn->timestamp_created <= conn->timestamp_lastread);
-  assert(conn->timestamp_created <= conn->timestamp_lastwritten);
+  tor_assert(!now || conn->timestamp_lastread <= now);
+  tor_assert(!now || conn->timestamp_lastwritten <= now);
+  tor_assert(conn->timestamp_created <= conn->timestamp_lastread);
+  tor_assert(conn->timestamp_created <= conn->timestamp_lastwritten);
 #endif
 
   /* XXX Fix this; no longer so.*/
 #if 0
   if(conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_DIR)
-    assert(!conn->pkey);
+    tor_assert(!conn->pkey);
   /* pkey is set if we're a dir client, or if we're an OR in state OPEN
    * connected to another OR.
    */
 #endif
 
   if (conn->type != CONN_TYPE_OR) {
-    assert(!conn->tls);
+    tor_assert(!conn->tls);
   } else {
     if(conn->state == OR_CONN_STATE_OPEN) {
-      /* assert(conn->bandwidth > 0); */
+      /* tor_assert(conn->bandwidth > 0); */
       /* the above isn't necessarily true: if we just did a TLS
        * handshake but we didn't recognize the other peer, or it
        * gave a bad cert/etc, then we won't have assigned bandwidth,
        * yet it will be open. -RD
        */
-      assert(conn->receiver_bucket >= 0);
+      tor_assert(conn->receiver_bucket >= 0);
     }
-    assert(conn->addr && conn->port);
-    assert(conn->address);
+    tor_assert(conn->addr && conn->port);
+    tor_assert(conn->address);
     if (conn->state != OR_CONN_STATE_CONNECTING)
-      assert(conn->tls);
+      tor_assert(conn->tls);
   }
 
   if (conn->type != CONN_TYPE_EXIT && conn->type != CONN_TYPE_AP) {
-    assert(!conn->stream_id);
-    assert(!conn->next_stream);
-    assert(!conn->cpath_layer);
-    assert(!conn->package_window);
-    assert(!conn->deliver_window);
-    assert(!conn->done_sending);
-    assert(!conn->done_receiving);
+    tor_assert(!conn->stream_id);
+    tor_assert(!conn->next_stream);
+    tor_assert(!conn->cpath_layer);
+    tor_assert(!conn->package_window);
+    tor_assert(!conn->deliver_window);
+    tor_assert(!conn->done_sending);
+    tor_assert(!conn->done_receiving);
   } else {
     /* XXX unchecked: package window, deliver window. */
   }
   if (conn->type == CONN_TYPE_AP) {
-    assert(conn->socks_request);
+    tor_assert(conn->socks_request);
     if (conn->state == AP_CONN_STATE_OPEN) {
-      assert(conn->socks_request->has_finished);
-      assert(conn->cpath_layer);
+      tor_assert(conn->socks_request->has_finished);
+      tor_assert(conn->cpath_layer);
       assert_cpath_layer_ok(conn->cpath_layer);
     }
   } else {
-    assert(!conn->socks_request);
+    tor_assert(!conn->socks_request);
   }
   if(conn->type != CONN_TYPE_DIR) {
-    assert(!conn->purpose); /* only used for dir types currently */
+    tor_assert(!conn->purpose); /* only used for dir types currently */
   }
 
   switch(conn->type)
@@ -1053,37 +1053,37 @@ void assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_OR_LISTENER:
     case CONN_TYPE_AP_LISTENER:
     case CONN_TYPE_DIR_LISTENER:
-      assert(conn->state == LISTENER_STATE_READY);
+      tor_assert(conn->state == LISTENER_STATE_READY);
       break;
     case CONN_TYPE_OR:
-      assert(conn->state >= _OR_CONN_STATE_MIN &&
-             conn->state <= _OR_CONN_STATE_MAX);
+      tor_assert(conn->state >= _OR_CONN_STATE_MIN &&
+                 conn->state <= _OR_CONN_STATE_MAX);
       break;
     case CONN_TYPE_EXIT:
-      assert(conn->state >= _EXIT_CONN_STATE_MIN &&
-             conn->state <= _EXIT_CONN_STATE_MAX);
+      tor_assert(conn->state >= _EXIT_CONN_STATE_MIN &&
+                 conn->state <= _EXIT_CONN_STATE_MAX);
       break;
     case CONN_TYPE_AP:
-      assert(conn->state >= _AP_CONN_STATE_MIN &&
-             conn->state <= _AP_CONN_STATE_MAX);
-      assert(conn->socks_request);
+      tor_assert(conn->state >= _AP_CONN_STATE_MIN &&
+                 conn->state <= _AP_CONN_STATE_MAX);
+      tor_assert(conn->socks_request);
       break;
     case CONN_TYPE_DIR:
-      assert(conn->state >= _DIR_CONN_STATE_MIN &&
-             conn->state <= _DIR_CONN_STATE_MAX);
-      assert(conn->purpose >= _DIR_PURPOSE_MIN &&
-             conn->purpose <= _DIR_PURPOSE_MAX);
+      tor_assert(conn->state >= _DIR_CONN_STATE_MIN &&
+                 conn->state <= _DIR_CONN_STATE_MAX);
+      tor_assert(conn->purpose >= _DIR_PURPOSE_MIN &&
+                 conn->purpose <= _DIR_PURPOSE_MAX);
       break;
     case CONN_TYPE_DNSWORKER:
-      assert(conn->state == DNSWORKER_STATE_IDLE ||
-             conn->state == DNSWORKER_STATE_BUSY);
+      tor_assert(conn->state == DNSWORKER_STATE_IDLE ||
+                 conn->state == DNSWORKER_STATE_BUSY);
       break;
     case CONN_TYPE_CPUWORKER:
-      assert(conn->state >= _CPUWORKER_STATE_MIN &&
-             conn->state <= _CPUWORKER_STATE_MAX);
+      tor_assert(conn->state >= _CPUWORKER_STATE_MIN &&
+                 conn->state <= _CPUWORKER_STATE_MAX);
       break;
     default:
-      assert(0);
+      tor_assert(0);
   }
 }
 

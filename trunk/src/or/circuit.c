@@ -51,7 +51,7 @@ void circuit_add(circuit_t *circ) {
 void circuit_remove(circuit_t *circ) {
   circuit_t *tmpcirc;
 
-  assert(circ && global_circuitlist);
+  tor_assert(circ && global_circuitlist);
 
   if(global_circuitlist == circ) {
     global_circuitlist = global_circuitlist->next;
@@ -120,8 +120,8 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
 }
 
 void circuit_free(circuit_t *circ) {
-  assert(circ);
-  assert(circ->magic == CIRCUIT_MAGIC);
+  tor_assert(circ);
+  tor_assert(circ->magic == CIRCUIT_MAGIC);
   if (circ->n_crypto)
     crypto_free_cipher_env(circ->n_crypto);
   if (circ->p_crypto)
@@ -182,7 +182,7 @@ static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type)
   int attempts=0;
   uint16_t high_bit;
 
-  assert(conn && conn->type == CONN_TYPE_OR);
+  tor_assert(conn && conn->type == CONN_TYPE_OR);
   high_bit = (circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
   do {
     /* Sequentially iterate over test_circ_id=1...1<<15-1 until we find a
@@ -377,11 +377,11 @@ circuit_t *circuit_get_best(connection_t *conn,
   circuit_t *circ, *best=NULL;
   time_t now = time(NULL);
 
-  assert(conn);
+  tor_assert(conn);
 
-  assert(purpose == CIRCUIT_PURPOSE_C_GENERAL ||
-         purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT ||
-         purpose == CIRCUIT_PURPOSE_C_REND_JOINED);
+  tor_assert(purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+             purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT ||
+             purpose == CIRCUIT_PURPOSE_C_REND_JOINED);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
     if (!circuit_is_acceptable(circ,conn,must_be_open,purpose,now))
@@ -705,8 +705,8 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
   crypt_path_t *layer_hint=NULL;
   char recognized=0;
 
-  assert(cell && circ);
-  assert(cell_direction == CELL_DIRECTION_OUT || cell_direction == CELL_DIRECTION_IN);
+  tor_assert(cell && circ);
+  tor_assert(cell_direction == CELL_DIRECTION_OUT || cell_direction == CELL_DIRECTION_IN);
   if (circ->marked_for_close)
     return 0;
 
@@ -747,8 +747,8 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
 
   if(!conn) {
     if (circ->rend_splice && cell_direction == CELL_DIRECTION_OUT) {
-      assert(circ->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
-      assert(circ->rend_splice->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
+      tor_assert(circ->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
+      tor_assert(circ->rend_splice->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
       cell->circ_id = circ->rend_splice->p_circ_id;
       if (circuit_receive_relay_cell(cell, circ->rend_splice, CELL_DIRECTION_IN)<0) {
         log_fn(LOG_WARN, "Error relaying cell across rendezvous; closing circuits");
@@ -773,20 +773,20 @@ static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
   crypt_path_t *thishop;
   relay_header_t rh;
 
-  assert(circ && cell && recognized);
-  assert(cell_direction == CELL_DIRECTION_IN || cell_direction == CELL_DIRECTION_OUT);
+  tor_assert(circ && cell && recognized);
+  tor_assert(cell_direction == CELL_DIRECTION_IN || cell_direction == CELL_DIRECTION_OUT);
 
   if(cell_direction == CELL_DIRECTION_IN) {
     if(CIRCUIT_IS_ORIGIN(circ)) { /* we're at the beginning of the circuit.
                                      We'll want to do layered crypts. */
-      assert(circ->cpath);
+      tor_assert(circ->cpath);
       thishop = circ->cpath;
       if(thishop->state != CPATH_STATE_OPEN) {
         log_fn(LOG_WARN,"Relay cell before first created cell? Closing.");
         return -1;
       }
       do { /* Remember: cpath is in forward order, that is, first hop first. */
-        assert(thishop);
+        tor_assert(thishop);
 
         if(relay_crypt_one_payload(thishop->b_crypto, cell->payload, 0) < 0)
           return -1;
@@ -852,7 +852,7 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
     thishop = layer_hint;
     /* moving from farthest to nearest hop */
     do {
-      assert(thishop);
+      tor_assert(thishop);
 
       log_fn(LOG_DEBUG,"crypting a layer of the relay cell.");
       if(relay_crypt_one_payload(thishop->f_crypto, cell->payload, 1) < 0) {
@@ -1002,7 +1002,7 @@ int _circuit_mark_for_close(circuit_t *circ) {
     circuit_rep_hist_note_result(circ);
   }
   if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
-    assert(circ->state == CIRCUIT_STATE_OPEN);
+    tor_assert(circ->state == CIRCUIT_STATE_OPEN);
     /* treat this like getting a nack from it */
     log_fn(LOG_INFO,"Failed intro circ %s to %s (awaiting ack). Removing from descriptor.",
            circ->rend_query, circ->build_state->chosen_exit);
@@ -1033,8 +1033,7 @@ int _circuit_mark_for_close(circuit_t *circ) {
 void circuit_detach_stream(circuit_t *circ, connection_t *conn) {
   connection_t *prevconn;
 
-  assert(circ);
-  assert(conn);
+  tor_assert(circ && conn);
 
   if(conn == circ->p_streams) {
     circ->p_streams = conn->next_stream;
@@ -1055,7 +1054,7 @@ void circuit_detach_stream(circuit_t *circ, connection_t *conn) {
     return;
   }
   log_fn(LOG_ERR,"edge conn not in circuit's list?");
-  assert(0); /* should never get here */
+  tor_assert(0); /* should never get here */
 }
 
 void circuit_about_to_close_connection(connection_t *conn) {
@@ -1104,7 +1103,7 @@ void circuit_log_path(int severity, circuit_t *circ) {
   struct crypt_path_t *hop;
   char *states[] = {"closed", "waiting for keys", "open"};
   routerinfo_t *router;
-  assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ) && circ->cpath);
 
   snprintf(s, sizeof(buf)-1, "circ (length %d, exit %s): ",
           circ->build_state->desired_path_len, circ->build_state->chosen_exit);
@@ -1277,7 +1276,7 @@ static void circuit_is_open(circuit_t *circ) {
       break;
     default:
       log_fn(LOG_ERR,"unhandled purpose %d",circ->purpose);
-      assert(0);
+      tor_assert(0);
   }
 }
 
@@ -1344,7 +1343,7 @@ static void circuit_build_failed(circuit_t *circ) {
     default:
       /* Other cases are impossible, since this function is only called with
        * unbuilt circuits. */
-      assert(0);
+      tor_assert(0);
   }
 }
 
@@ -1448,7 +1447,7 @@ void circuit_n_conn_open(connection_t *or_conn) {
     if (circ->marked_for_close)
       continue;
     if(CIRCUIT_IS_ORIGIN(circ) && circ->n_addr == or_conn->addr && circ->n_port == or_conn->port) {
-      assert(circ->state == CIRCUIT_STATE_OR_WAIT);
+      tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
       log_fn(LOG_DEBUG,"Found circ %d, sending onion skin.", circ->n_circ_id);
       circ->n_conn = or_conn;
       if(circuit_send_next_onion_skin(circ) < 0) {
@@ -1471,10 +1470,10 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   int circ_id_type;
   char payload[2+4+ONIONSKIN_CHALLENGE_LEN];
 
-  assert(circ && CIRCUIT_IS_ORIGIN(circ));
+  tor_assert(circ && CIRCUIT_IS_ORIGIN(circ));
 
   if(circ->cpath->state == CPATH_STATE_CLOSED) {
-    assert(circ->n_conn && circ->n_conn->type == CONN_TYPE_OR);
+    tor_assert(circ->n_conn && circ->n_conn->type == CONN_TYPE_OR);
 
     log_fn(LOG_DEBUG,"First skin; sending create cell.");
     circ_id_type = decide_circ_id_type(options.Nickname,
@@ -1505,8 +1504,8 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     circ->state = CIRCUIT_STATE_BUILDING;
     log_fn(LOG_DEBUG,"first skin; finished sending create cell.");
   } else {
-    assert(circ->cpath->state == CPATH_STATE_OPEN);
-    assert(circ->state == CIRCUIT_STATE_BUILDING);
+    tor_assert(circ->cpath->state == CPATH_STATE_OPEN);
+    tor_assert(circ->state == CIRCUIT_STATE_BUILDING);
     log_fn(LOG_DEBUG,"starting to send subsequent skin.");
     r = onion_extend_cpath(&circ->cpath, circ->build_state, &router);
     if (r==1) {
@@ -1622,9 +1621,9 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
   crypto_digest_env_t *tmp_digest;
   crypto_cipher_env_t *tmp_crypto;
 
-  assert(cpath && key_data);
-  assert(!(cpath->f_crypto || cpath->b_crypto ||
-           cpath->f_digest || cpath->b_digest));
+  tor_assert(cpath && key_data);
+  tor_assert(!(cpath->f_crypto || cpath->b_crypto ||
+             cpath->f_digest || cpath->b_digest));
 
   memset(iv, 0, CIPHER_IV_LEN);
 
@@ -1664,7 +1663,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   unsigned char keys[CPATH_KEY_MATERIAL_LEN];
   crypt_path_t *hop;
 
-  assert(CIRCUIT_IS_ORIGIN(circ));
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
   if(circ->cpath->state == CPATH_STATE_AWAITING_KEYS)
     hop = circ->cpath;
   else {
@@ -1676,7 +1675,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
       return -1;
     }
   }
-  assert(hop->state == CPATH_STATE_AWAITING_KEYS);
+  tor_assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
   if(onion_skin_client_handshake(hop->handshake_state, reply, keys,
                                  DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
@@ -1703,8 +1702,8 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
   crypt_path_t *victim;
   connection_t *stream;
 
-  assert(circ && CIRCUIT_IS_ORIGIN(circ));
-  assert(layer);
+  tor_assert(circ && CIRCUIT_IS_ORIGIN(circ));
+  tor_assert(layer);
 
   /* XXX Since we don't ask for truncates currently, getting a truncated
    *     means that a connection broke or an extend failed. For now,
@@ -1738,24 +1737,24 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
 
 void assert_cpath_layer_ok(const crypt_path_t *cp)
 {
-  assert(cp->f_crypto);
-  assert(cp->b_crypto);
-//  assert(cp->addr); /* these are zero for rendezvous extra-hops */
-//  assert(cp->port);
+  tor_assert(cp->f_crypto);
+  tor_assert(cp->b_crypto);
+//  tor_assert(cp->addr); /* these are zero for rendezvous extra-hops */
+//  tor_assert(cp->port);
   switch(cp->state)
     {
     case CPATH_STATE_CLOSED:
     case CPATH_STATE_OPEN:
-      assert(!cp->handshake_state);
+      tor_assert(!cp->handshake_state);
       break;
     case CPATH_STATE_AWAITING_KEYS:
-      assert(cp->handshake_state);
+      tor_assert(cp->handshake_state);
       break;
     default:
-      assert(0);
+      tor_assert(0);
     }
-  assert(cp->package_window >= 0);
-  assert(cp->deliver_window >= 0);
+  tor_assert(cp->package_window >= 0);
+  tor_assert(cp->deliver_window >= 0);
 }
 
 void assert_cpath_ok(const crypt_path_t *cp)
@@ -1768,10 +1767,10 @@ void assert_cpath_ok(const crypt_path_t *cp)
     /* layers must be in sequence of: "open* awaiting? closed*" */
     if (cp->prev) {
       if (cp->prev->state == CPATH_STATE_OPEN) {
-        assert(cp->state == CPATH_STATE_CLOSED ||
-               cp->state == CPATH_STATE_AWAITING_KEYS);
+        tor_assert(cp->state == CPATH_STATE_CLOSED ||
+                   cp->state == CPATH_STATE_AWAITING_KEYS);
       } else {
-        assert(cp->state == CPATH_STATE_CLOSED);
+        tor_assert(cp->state == CPATH_STATE_CLOSED);
       }
     }
     cp = cp->next;
@@ -1782,35 +1781,35 @@ void assert_circuit_ok(const circuit_t *c)
 {
   connection_t *conn;
 
-  assert(c);
-  assert(c->magic == CIRCUIT_MAGIC);
-  assert(c->purpose >= _CIRCUIT_PURPOSE_MIN &&
-         c->purpose <= _CIRCUIT_PURPOSE_MAX);
+  tor_assert(c);
+  tor_assert(c->magic == CIRCUIT_MAGIC);
+  tor_assert(c->purpose >= _CIRCUIT_PURPOSE_MIN &&
+             c->purpose <= _CIRCUIT_PURPOSE_MAX);
 
   if (c->n_conn)
-    assert(c->n_conn->type == CONN_TYPE_OR);
+    tor_assert(c->n_conn->type == CONN_TYPE_OR);
   if (c->p_conn)
-    assert(c->p_conn->type == CONN_TYPE_OR);
+    tor_assert(c->p_conn->type == CONN_TYPE_OR);
   for (conn = c->p_streams; conn; conn = conn->next_stream)
-    assert(conn->type == CONN_TYPE_AP);
+    tor_assert(conn->type == CONN_TYPE_AP);
   for (conn = c->n_streams; conn; conn = conn->next_stream)
-    assert(conn->type == CONN_TYPE_EXIT);
+    tor_assert(conn->type == CONN_TYPE_EXIT);
 
-  assert(c->deliver_window >= 0);
-  assert(c->package_window >= 0);
+  tor_assert(c->deliver_window >= 0);
+  tor_assert(c->package_window >= 0);
   if (c->state == CIRCUIT_STATE_OPEN) {
     if (c->cpath) {
-      assert(CIRCUIT_IS_ORIGIN(c));
-      assert(!c->n_crypto);
-      assert(!c->p_crypto);
-      assert(!c->n_digest);
-      assert(!c->p_digest);
+      tor_assert(CIRCUIT_IS_ORIGIN(c));
+      tor_assert(!c->n_crypto);
+      tor_assert(!c->p_crypto);
+      tor_assert(!c->n_digest);
+      tor_assert(!c->p_digest);
     } else {
-      assert(!CIRCUIT_IS_ORIGIN(c));
-      assert(c->n_crypto);
-      assert(c->p_crypto);
-      assert(c->n_digest);
-      assert(c->p_digest);
+      tor_assert(!CIRCUIT_IS_ORIGIN(c));
+      tor_assert(c->n_crypto);
+      tor_assert(c->p_crypto);
+      tor_assert(c->n_digest);
+      tor_assert(c->p_digest);
     }
   }
   if (c->cpath) {
@@ -1818,12 +1817,12 @@ void assert_circuit_ok(const circuit_t *c)
   }
   if (c->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED) {
     if (!c->marked_for_close) {
-      assert(c->rend_splice);
-      assert(c->rend_splice->rend_splice == c);
+      tor_assert(c->rend_splice);
+      tor_assert(c->rend_splice->rend_splice == c);
     }
-    assert(c->rend_splice != c);
+    tor_assert(c->rend_splice != c);
   } else {
-    assert(!c->rend_splice);
+    tor_assert(!c->rend_splice);
   }
 }
 
