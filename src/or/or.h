@@ -317,7 +317,6 @@ struct connection_t {
                         and check in circuit_about_to_close_connection() */
   
   /* Used only by AP connections */
-  char socks_version;
   socks_request_t *socks_request;
 };
 

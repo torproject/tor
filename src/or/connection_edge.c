@@ -528,7 +528,6 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   log_fn(LOG_DEBUG,"entered.");
 
   sockshere = fetch_from_buf_socks(conn->inbuf, socks);
-  conn->socks_version = socks->socks_version;
   if(sockshere == -1 || sockshere == 0) {
     if(socks->replylen) { /* we should send reply back */
       log_fn(LOG_DEBUG,"reply is already set for us. Using it.");
@@ -638,7 +637,8 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     connection_write_to_buf(reply, replylen, conn);
     return flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen); /* try to flush it */
   }
-  if(conn->socks_version == 4) {
+  assert(conn->socks_request);
+  if(conn->socks_request->socks_version == 4) {
     memset(buf,0,SOCKS4_NETWORK_LEN);
 #define SOCKS4_GRANTED          90
 #define SOCKS4_REJECT           91
@@ -647,7 +647,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     connection_write_to_buf(buf, SOCKS4_NETWORK_LEN, conn);
     return flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen); /* try to flush it */
   }
-  if(conn->socks_version == 5) {
+  if(conn->socks_request->socks_version == 5) {
     buf[0] = 5; /* version 5 */
 #define SOCKS5_SUCCESS          0
 #define SOCKS5_GENERIC_ERROR    1
