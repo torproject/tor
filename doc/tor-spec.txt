@@ -177,7 +177,7 @@ which reveals the downstream node.
 
    Once the handshake is complete, the two sides send cells
    (specified below) to one another.  Cells are sent serially,
-   encrypted with the AES-CNT keystream specified by the handshake
+   encrypted with the AES-CTR keystream specified by the handshake
    protocol.  Over a connection, communicants encrypt outgoing cells
    with the connection's K_f, and decrypt incoming cells with the
    connection's K_b.
@@ -332,6 +332,10 @@ which reveals the downstream node.
    as its payload.  The initiating onion router chooses some random
    ACI not yet used on the connection between the two onion routers.
 
+   As an extension (called router twins), if the desired next onion
+   router R in the circuit is down, and some other onion router R'
+   has the same key as R, then it's ok to extend to R' rather than R.
+
    When an onion router receives a CREATE cell, if it already has a
    circuit on the given connection with the given ACI, it drops the
    cell.  Otherwise, sometime after receiving the CREATE cell, it completes
@@ -387,7 +391,7 @@ which reveals the downstream node.
 
    Otherwise, if the OR is not at the OP edge of the circuit (that is,
    either an 'exit node' or a non-edge node), it de/encrypts the length
-   field and the payload with AES/CNT, as follows:
+   field and the payload with AES/CTR, as follows:
         'Forward' relay cell (same direction as CREATE):
             Use Kf as key; encrypt.
         'Back' relay cell (opposite direction from CREATE):
@@ -402,13 +406,13 @@ which reveals the downstream node.
    handshakes. -RD]
 
    Otherwise, if the data cell is coming from the OP edge of the
-   circuit, the OP decrypts the length and payload fields with AES/CNT as
+   circuit, the OP decrypts the length and payload fields with AES/CTR as
    follows:
          OP sends data cell to node R_M:
             For I=1...M, decrypt with Kf_I.
 
    Otherwise, if the data cell is arriving at the OP edge if the
-   circuit, the OP encrypts the length and payload fields with AES/CNT as
+   circuit, the OP encrypts the length and payload fields with AES/CTR as
    follows:
          OP receives data cell:
             For I=N...1, 
@@ -615,4 +619,9 @@ The signature is computed by computing the SHA-1 hash of the
 directory, from the characters "signed-directory", through the newline
 after "directory-signature".  This digest is then padded with PKCS.1,
 and signed with the directory server's signing key.
+
+7.3. Behavior of a directory server
+
+lists nodes that are connected currently
+speaks http on a socket, spits out directory on request
 
