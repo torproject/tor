@@ -68,22 +68,45 @@ the message.
 
 3.3. SETCONF (Type 0x0002)
 
-  Change the value of a configuration variable. The body contains
-  two nul-terminated strings: a configuration key and a configuration value.
+  Change the value of a configuration variable. The body contains a list of
+  newline-terminated key-value configuration lines.
   The server behaves as though it had just read the key-value pair in its
-  configuration file.  The server responds with a DONE message on success,
-  or an ERROR message on failure.
+  configuration file.
+
+  The server responds with a DONE message on success, or an ERROR message on
+  failure.
+
+  When a configuration options takes multiple values, or when multiple
+  configuration keys form a context-sensitive group (see below), then
+  setting _any_ of the options in a SETCONF command is taken to reset all of
+  the others.  For example, if two ORBindAddress values are provided,
+  and a SETCONF command arrives containing a single ORBindAddress value, the
+  new command's value replaces the two old values.
+
+  To _remove_ all settings for a given option entirely, send a single line
+  containing the key and no value.
 
 3.4. GETCONF (Type 0x0003)
 
   Request the value of a configuration variable.  The body contains one or
-  more nul-terminated strings for configuration keys.  The server replies
+  more NL-terminated strings for configuration keys.  The server replies
   with a CONFVALUE message.
+
+  If an option appears multiple times in the configuration, all of its
+  key-value pairs are returned in order.
+
+  Some options are context-sensitive, and depend on other options with
+  different keywords.  These cannot be fetched directly.  Instead, clients
+  should use the "LogOptions" virtual keyword to get all LogFile, LogLevel,
+  and SysLog option settings; and "HiddenServiceOptions" to get all
+  HiddenServiceDir, HiddenServicePort, HiddenServiceNodes, and
+  HiddenServiceExcludeNodes options.
 
 3.5. CONFVALUE (Type 0x0004)
 
-  Sent in response to a GETCONF message; contains a list of nul-terminated
-  key strings followed by nul-terminated value strings.
+  Sent in response to a GETCONF message; contains a list of list of "Key
+  Value\n" (A non-whitespace keyword, a single space, a non-NL value, a NL)
+  strings.
 
   [XXXX note that you'll get more keys than you expect with things like
   loglevel.]
