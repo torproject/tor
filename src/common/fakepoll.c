@@ -7,6 +7,7 @@
  */
 
 #include "orconfig.h"
+#include "fakepoll.h"
 #ifdef USE_FAKE_POLL
 #include <sys/types.h>
 #ifdef HAVE_UNISTD_H
@@ -22,7 +23,6 @@
 #include <winsock.h>
 #endif
 
-#include "fakepoll.h"
 #include "util.h"
 
 int
