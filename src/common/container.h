@@ -60,7 +60,7 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   do {                                                          \
     int var ## _sl_idx, var ## _sl_len=smartlist_len(sl);       \
     type var;                                                   \
-    for(var ## _sl_idx = 0; var ## _sl_idx < var ## _sl_len;    \
+    for (var ## _sl_idx = 0; var ## _sl_idx < var ## _sl_len;   \
         ++var ## _sl_idx) {                                     \
       var = smartlist_get((sl),var ## _sl_idx);                 \
       cmd;                                                      \

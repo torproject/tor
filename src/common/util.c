@@ -108,7 +108,7 @@ void *tor_malloc(size_t size) {
   }
   result = malloc(size);
 
-  if(!result) {
+  if (!result) {
     log_fn(LOG_ERR, "Out of memory. Dying.");
     exit(1);
   }
@@ -150,7 +150,7 @@ char *tor_strdup(const char *s) {
   tor_assert(s);
 
   dup = strdup(s);
-  if(!dup) {
+  if (!dup) {
     log_fn(LOG_ERR,"Out of memory. Dying.");
     exit(1);
   }
@@ -221,7 +221,7 @@ int tor_strpartition(char *dest, size_t dest_len,
   len_ins = strlen(insert);
   len_out = len_in + (len_in/n)*len_ins;
   is_even = (len_in%n) == 0;
-  switch(rule)
+  switch (rule)
     {
     case ALWAYS_TERMINATE:
       if (!is_even) len_out += len_ins;
@@ -236,7 +236,7 @@ int tor_strpartition(char *dest, size_t dest_len,
     return -1;
   destp = dest;
   remaining = len_in;
-  while(remaining) {
+  while (remaining) {
     strncpy(destp, s, n);
     remaining -= n;
     if (remaining < 0) {
@@ -306,13 +306,13 @@ int strcmpend(const char *s1, const char *s2)
 const char *eat_whitespace(const char *s) {
   tor_assert(s);
 
-  while(isspace((int)*s) || *s == '#') {
-    while(isspace((int)*s))
+  while (isspace((int)*s) || *s == '#') {
+    while (isspace((int)*s))
       s++;
-    if(*s == '#') { /* read to a \n or \0 */
-      while(*s && *s != '\n')
+    if (*s == '#') { /* read to a \n or \0 */
+      while (*s && *s != '\n')
         s++;
-      if(!*s)
+      if (!*s)
         return s;
     }
   }
@@ -322,7 +322,7 @@ const char *eat_whitespace(const char *s) {
 /** Return a pointer to the first char of s that is not a space or a tab,
  * or to the terminating NUL if no such character exists. */
 const char *eat_whitespace_no_nl(const char *s) {
-  while(*s == ' ' || *s == '\t')
+  while (*s == ' ' || *s == '\t')
     ++s;
   return s;
 }
@@ -333,7 +333,7 @@ const char *eat_whitespace_no_nl(const char *s) {
 const char *find_whitespace(const char *s) {
   tor_assert(s);
 
-  while(*s && !isspace((int)*s) && *s != '#')
+  while (*s && !isspace((int)*s) && *s != '#')
     s++;
 
   return s;
@@ -402,8 +402,8 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
   tor_assert(base <= 10);
   r = (uint64_t)_atoi64(s);
   endptr = (char*)s;
-  while(isspace(*endptr)) endptr++;
-  while(isdigit(*endptr)) endptr++;
+  while (isspace(*endptr)) endptr++;
+  while (isdigit(*endptr)) endptr++;
 #else
   r = (uint64_t)_strtoui64(s, &endptr, base);
 #endif
@@ -461,7 +461,7 @@ int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   while (src<end) {
     v1 = hex_decode_digit(*src);
     v2 = hex_decode_digit(*(src+1));
-    if(v1<0||v2<0)
+    if (v1<0||v2<0)
       return -1;
     *(uint8_t*)dest = (v1<<4)|v2;
     ++dest;
@@ -659,12 +659,12 @@ int write_all(int fd, const char *buf, size_t count, int isSocket) {
   size_t written = 0;
   int result;
 
-  while(written != count) {
+  while (written != count) {
     if (isSocket)
       result = send(fd, buf+written, count-written, 0);
     else
       result = write(fd, buf+written, count-written);
-    if(result<0)
+    if (result<0)
       return -1;
     written += result;
   }
@@ -681,12 +681,12 @@ int read_all(int fd, char *buf, size_t count, int isSocket) {
   size_t numread = 0;
   int result;
 
-  while(numread != count) {
+  while (numread != count) {
     if (isSocket)
       result = recv(fd, buf+numread, count-numread, 0);
     else
       result = read(fd, buf+numread, count-numread);
-    if(result<0)
+    if (result<0)
       return -1;
     else if (result == 0)
       break;
@@ -815,7 +815,7 @@ int write_bytes_to_file(const char *fname, const char *str, size_t len,
     return -1;
   }
   result = write_all(fd, str, len, 0);
-  if(result < 0 || (size_t)result != len) {
+  if (result < 0 || (size_t)result != len) {
     log(LOG_WARN, "Error writing to %s: %s", tempname, strerror(errno));
     close(fd);
     return -1;
@@ -842,7 +842,7 @@ char *read_file_to_str(const char *filename, int bin) {
 
   tor_assert(filename);
 
-  if(stat(filename, &statbuf) < 0) {
+  if (stat(filename, &statbuf) < 0) {
     log_fn(LOG_INFO,"Could not stat %s.",filename);
     return NULL;
   }
@@ -1260,7 +1260,7 @@ void start_daemon(const char *desired_cwd)
     return;
   start_daemon_called = 1;
 
-  if(!desired_cwd)
+  if (!desired_cwd)
     desired_cwd = "/";
    /* Don't hold the wrong FS mounted */
   if (chdir(desired_cwd) < 0) {

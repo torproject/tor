@@ -176,7 +176,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   stream->avail_out = out_size;
 
   while (1) {
-    switch(inflate(stream, Z_FINISH))
+    switch (inflate(stream, Z_FINISH))
       {
       case Z_STREAM_END:
         goto done;

@@ -104,10 +104,10 @@ void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2)
  */
 void smartlist_remove(smartlist_t *sl, void *element) {
   int i;
-  if(element == NULL)
+  if (element == NULL)
     return;
-  for(i=0; i < sl->num_used; i++)
-    if(sl->list[i] == element) {
+  for (i=0; i < sl->num_used; i++)
+    if (sl->list[i] == element) {
       sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
       i--; /* so we process the new i'th element */
     }
@@ -117,16 +117,16 @@ void smartlist_remove(smartlist_t *sl, void *element) {
  */
 int smartlist_isin(const smartlist_t *sl, void *element) {
   int i;
-  for(i=0; i < sl->num_used; i++)
-    if(sl->list[i] == element)
+  for (i=0; i < sl->num_used; i++)
+    if (sl->list[i] == element)
       return 1;
   return 0;
 }
 
 int smartlist_string_isin(const smartlist_t *sl, const char *element) {
   int i;
-  for(i=0; i < sl->num_used; i++)
-    if(strcmp((const char*)sl->list[i],element)==0)
+  for (i=0; i < sl->num_used; i++)
+    if (strcmp((const char*)sl->list[i],element)==0)
       return 1;
   return 0;
 }
@@ -135,8 +135,8 @@ int smartlist_string_isin(const smartlist_t *sl, const char *element) {
  */
 int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2) {
   int i;
-  for(i=0; i < sl2->num_used; i++)
-    if(smartlist_isin(sl1, sl2->list[i]))
+  for (i=0; i < sl2->num_used; i++)
+    if (smartlist_isin(sl1, sl2->list[i]))
       return 1;
   return 0;
 }
@@ -146,8 +146,8 @@ int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2) {
  */
 void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2) {
   int i;
-  for(i=0; i < sl1->num_used; i++)
-    if(!smartlist_isin(sl2, sl1->list[i])) {
+  for (i=0; i < sl1->num_used; i++)
+    if (!smartlist_isin(sl2, sl1->list[i])) {
       sl1->list[i] = sl1->list[--sl1->num_used]; /* swap with the end */
       i--; /* so we process the new i'th element */
     }
@@ -158,7 +158,7 @@ void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2) {
  */
 void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2) {
   int i;
-  for(i=0; i < sl2->num_used; i++)
+  for (i=0; i < sl2->num_used; i++)
     smartlist_remove(sl1, sl2->list[i]);
 }
 
@@ -544,7 +544,7 @@ void strmap_foreach(strmap_t *map,
  *       iter = strmap_iter_next_rmv(iter);
  *       free(val);
  *    } else {
- *       for(;*cp;cp++) *cp = toupper(*cp);
+ *       for (;*cp;cp++) *cp = toupper(*cp);
  *       iter = strmap_iter_next(iter);
  *    }
  * }

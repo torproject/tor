@@ -118,7 +118,7 @@ connection_t *connection_new(int type) {
   conn->poll_index = -1; /* also default to 'not used' */
 
   conn->type = type;
-  if(!connection_is_listener(conn)) { /* listeners never use their buf */
+  if (!connection_is_listener(conn)) { /* listeners never use their buf */
     conn->inbuf = buf_new();
     conn->outbuf = buf_new();
   }
@@ -143,14 +143,14 @@ void connection_free(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->magic == CONNECTION_MAGIC);
 
-  if(!connection_is_listener(conn)) {
+  if (!connection_is_listener(conn)) {
     buf_free(conn->inbuf);
     buf_free(conn->outbuf);
   }
   tor_free(conn->address);
 
-  if(connection_speaks_cells(conn)) {
-    if(conn->state == OR_CONN_STATE_OPEN)
+  if (connection_speaks_cells(conn)) {
+    if (conn->state == OR_CONN_STATE_OPEN)
       directory_set_dirty();
     if (conn->tls)
       tor_tls_free(conn->tls);
@@ -161,7 +161,7 @@ void connection_free(connection_t *conn) {
   tor_free(conn->nickname);
   tor_free(conn->socks_request);
 
-  if(conn->s >= 0) {
+  if (conn->s >= 0) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);
     tor_close_socket(conn->s);
   }
@@ -178,7 +178,7 @@ void connection_free_all(void) {
   connection_t **carray;
 
   get_connection_array(&carray,&n);
-  for(i=0;i<n;i++)
+  for (i=0;i<n;i++)
     connection_free(carray[i]);
 }
 
@@ -196,20 +196,20 @@ void connection_about_to_close_connection(connection_t *conn)
 
   assert(conn->marked_for_close);
 
-  if(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
-    if(!conn->has_sent_end)
+  if (conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
+    if (!conn->has_sent_end)
       log_fn(LOG_WARN,"Edge connection hasn't sent end yet? Bug.");
   }
 
-  switch(conn->type) {
+  switch (conn->type) {
     case CONN_TYPE_DIR:
-      if(conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
+      if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
         rend_client_desc_fetched(conn->rend_query, 0);
       break;
     case CONN_TYPE_OR:
       /* Remember why we're closing this connection. */
       if (conn->state != OR_CONN_STATE_OPEN) {
-        if(connection_or_nonopen_was_started_here(conn)) {
+        if (connection_or_nonopen_was_started_here(conn)) {
           rep_hist_note_connect_failed(conn->identity_digest, time(NULL));
           control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
         }
@@ -225,7 +225,7 @@ void connection_about_to_close_connection(connection_t *conn)
          */
         rep_hist_note_disconnect(conn->identity_digest, time(NULL));
         control_event_or_conn_status(conn, OR_CONN_EVENT_CLOSED);
-      } else if(conn->identity_digest) {
+      } else if (conn->identity_digest) {
         rep_hist_note_connection_died(conn->identity_digest, time(NULL));
         control_event_or_conn_status(conn, OR_CONN_EVENT_CLOSED);
       }
@@ -272,7 +272,7 @@ void connection_close_immediate(connection_t *conn)
   }
   tor_close_socket(conn->s);
   conn->s = -1;
-  if(!connection_is_listener(conn)) {
+  if (!connection_is_listener(conn)) {
     buf_clear(conn->outbuf);
     conn->outbuf_flushlen = 0;
   }
@@ -365,13 +365,13 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
 
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one, sizeof(one));
 
-  if(bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
+  if (bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
     log_fn(LOG_WARN,"Could not bind to port %u: %s",usePort,
            tor_socket_strerror(tor_socket_errno(s)));
     return -1;
   }
 
-  if(listen(s,SOMAXCONN) < 0) {
+  if (listen(s,SOMAXCONN) < 0) {
     log_fn(LOG_WARN,"Could not listen on port %u: %s",usePort,
            tor_socket_strerror(tor_socket_errno(s)));
     return -1;
@@ -382,7 +382,7 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
   conn = connection_new(type);
   conn->s = s;
 
-  if(connection_add(conn) < 0) { /* no space, forget it */
+  if (connection_add(conn) < 0) { /* no space, forget it */
     log_fn(LOG_WARN,"connection_add failed. Giving up.");
     connection_free(conn);
     return -1;
@@ -428,18 +428,18 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   set_socket_nonblocking(news);
 
   /* process entrance policies here, before we even create the connection */
-  if(new_type == CONN_TYPE_AP) {
+  if (new_type == CONN_TYPE_AP) {
     /* check sockspolicy to see if we should accept it */
-    if(socks_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
+    if (socks_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
       log_fn(LOG_WARN,"Denying socks connection from untrusted address %s.",
              inet_ntoa(remote.sin_addr));
       tor_close_socket(news);
       return 0;
     }
   }
-  if(new_type == CONN_TYPE_DIR) {
+  if (new_type == CONN_TYPE_DIR) {
     /* check dirpolicy to see if we should accept it */
-    if(dir_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
+    if (dir_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
       log_fn(LOG_WARN,"Denying dir connection from address %s.",
              inet_ntoa(remote.sin_addr));
       tor_close_socket(news);
@@ -454,12 +454,12 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   newconn->addr = ntohl(remote.sin_addr.s_addr);
   newconn->port = ntohs(remote.sin_port);
 
-  if(connection_add(newconn) < 0) { /* no space, forget it */
+  if (connection_add(newconn) < 0) { /* no space, forget it */
     connection_free(newconn);
     return 0; /* no need to tear down the parent */
   }
 
-  if(connection_init_accepted_conn(newconn) < 0) {
+  if (connection_init_accepted_conn(newconn) < 0) {
     connection_mark_for_close(newconn);
     return 0;
   }
@@ -473,7 +473,7 @@ static int connection_init_accepted_conn(connection_t *conn) {
 
   connection_start_reading(conn);
 
-  switch(conn->type) {
+  switch (conn->type) {
     case CONN_TYPE_OR:
       return connection_tls_start_handshake(conn, 1);
     case CONN_TYPE_AP:
@@ -520,7 +520,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
       log_fn(LOG_WARN,"Outbound bind address '%s' didn't parse. Ignoring.",
              options->OutboundBindAddress);
     } else {
-      if(bind(s, (struct sockaddr*)&ext_addr, sizeof(ext_addr)) < 0) {
+      if (bind(s, (struct sockaddr*)&ext_addr, sizeof(ext_addr)) < 0) {
         log_fn(LOG_WARN,"Error binding network socket: %s",
                tor_socket_strerror(tor_socket_errno(s)));
         return -1;
@@ -537,9 +537,9 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
 
   log_fn(LOG_DEBUG,"Connecting to %s:%u.",address,port);
 
-  if(connect(s,(struct sockaddr *)&dest_addr,sizeof(dest_addr)) < 0) {
+  if (connect(s,(struct sockaddr *)&dest_addr,sizeof(dest_addr)) < 0) {
     int e = tor_socket_errno(s);
-    if(!ERRNO_IS_CONN_EINPROGRESS(e)) {
+    if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
       /* yuck. kill it. */
       log_fn(LOG_INFO,"Connect() to %s:%u failed: %s",address,port,
              tor_socket_strerror(e));
@@ -548,7 +548,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
     } else {
       /* it's in progress. set state appropriately and return. */
       conn->s = s;
-      if(connection_add(conn) < 0) /* no space, forget it */
+      if (connection_add(conn) < 0) /* no space, forget it */
         return -1;
       log_fn(LOG_DEBUG,"connect in progress, socket %d.",s);
       return 0;
@@ -558,7 +558,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
   /* it succeeded. we're connected. */
   log_fn(LOG_INFO,"Connection to %s:%u established.",address,port);
   conn->s = s;
-  if(connection_add(conn) < 0) /* no space, forget it */
+  if (connection_add(conn) < 0) /* no space, forget it */
     return -1;
   return 1;
 }
@@ -575,7 +575,7 @@ static void listener_close_if_present(int type) {
              type == CONN_TYPE_DIR_LISTENER ||
              type == CONN_TYPE_CONTROL_LISTENER);
   get_connection_array(&carray,&n);
-  for(i=0;i<n;i++) {
+  for (i=0;i<n;i++) {
     conn = carray[i];
     if (conn->type == type && !conn->marked_for_close) {
       connection_close_immediate(conn);
@@ -618,7 +618,7 @@ static int retry_listeners(int type, struct config_line_t *cfg,
     /* How many are there actually? */
     have = 0;
     get_connection_array(&carray,&n_conn);
-    for(i=0;i<n_conn;i++) {
+    for (i=0;i<n_conn;i++) {
       conn = carray[i];
       if (conn->type == type && !conn->marked_for_close)
         ++have;
@@ -681,17 +681,17 @@ static int connection_bucket_read_limit(connection_t *conn) {
   int at_most;
 
   /* do a rudimentary round-robin so one circuit can't hog a connection */
-  if(connection_speaks_cells(conn)) {
+  if (connection_speaks_cells(conn)) {
     at_most = 32*(CELL_NETWORK_SIZE);
   } else {
     at_most = 32*(RELAY_PAYLOAD_SIZE);
   }
 
-  if(at_most > global_read_bucket)
+  if (at_most > global_read_bucket)
     at_most = global_read_bucket;
 
-  if(connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN)
-    if(at_most > conn->receiver_bucket)
+  if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN)
+    if (at_most > conn->receiver_bucket)
       at_most = conn->receiver_bucket;
 
   return at_most;
@@ -700,19 +700,19 @@ static int connection_bucket_read_limit(connection_t *conn) {
 /** We just read num_read onto conn. Decrement buckets appropriately. */
 static void connection_read_bucket_decrement(connection_t *conn, int num_read) {
   global_read_bucket -= num_read; tor_assert(global_read_bucket >= 0);
-  if(connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
+  if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
     conn->receiver_bucket -= num_read; tor_assert(conn->receiver_bucket >= 0);
   }
 }
 
 static void connection_consider_empty_buckets(connection_t *conn) {
-  if(global_read_bucket == 0) {
+  if (global_read_bucket == 0) {
     log_fn(LOG_DEBUG,"global bucket exhausted. Pausing.");
     conn->wants_to_read = 1;
     connection_stop_reading(conn);
     return;
   }
-  if(connection_speaks_cells(conn) &&
+  if (connection_speaks_cells(conn) &&
      conn->state == OR_CONN_STATE_OPEN &&
      conn->receiver_bucket == 0) {
       log_fn(LOG_DEBUG,"receiver bucket exhausted. Pausing.");
@@ -737,26 +737,26 @@ void connection_bucket_refill(struct timeval *now) {
   or_options_t *options = get_options();
 
   /* refill the global buckets */
-  if((unsigned)global_read_bucket < options->BandwidthBurst) {
+  if ((unsigned)global_read_bucket < options->BandwidthBurst) {
     global_read_bucket += (int)options->BandwidthRate;
     log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
   }
-  if((unsigned)global_write_bucket < options->BandwidthBurst) {
+  if ((unsigned)global_write_bucket < options->BandwidthBurst) {
     global_write_bucket += (int)options->BandwidthRate;
     log_fn(LOG_DEBUG,"global_write_bucket now %d.", global_write_bucket);
   }
 
   /* refill the per-connection buckets */
   get_connection_array(&carray,&n);
-  for(i=0;i<n;i++) {
+  for (i=0;i<n;i++) {
     conn = carray[i];
 
-    if(connection_receiver_bucket_should_increase(conn)) {
+    if (connection_receiver_bucket_should_increase(conn)) {
       conn->receiver_bucket += conn->bandwidth;
       //log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i, conn->receiver_bucket);
     }
 
-    if(conn->wants_to_read == 1 /* it's marked to turn reading back on now */
+    if (conn->wants_to_read == 1 /* it's marked to turn reading back on now */
        && global_read_bucket > 0 /* and we're allowed to read */
        && global_write_bucket > 0 /* and we're allowed to write (XXXX,
                                    * not the best place to check this.) */
@@ -767,7 +767,7 @@ void connection_bucket_refill(struct timeval *now) {
       log_fn(LOG_DEBUG,"waking up conn (fd %d)",conn->s);
       conn->wants_to_read = 0;
       connection_start_reading(conn);
-      if(conn->wants_to_write == 1) {
+      if (conn->wants_to_write == 1) {
         conn->wants_to_write = 0;
         connection_start_writing(conn);
       }
@@ -781,13 +781,13 @@ void connection_bucket_refill(struct timeval *now) {
 static int connection_receiver_bucket_should_increase(connection_t *conn) {
   tor_assert(conn);
 
-  if(!connection_speaks_cells(conn))
+  if (!connection_speaks_cells(conn))
     return 0; /* edge connections don't use receiver_buckets */
-  if(conn->state != OR_CONN_STATE_OPEN)
+  if (conn->state != OR_CONN_STATE_OPEN)
     return 0; /* only open connections play the rate limiting game */
 
   tor_assert(conn->bandwidth > 0);
-  if(conn->receiver_bucket > 9*conn->bandwidth)
+  if (conn->receiver_bucket > 9*conn->bandwidth)
     return 0;
 
   return 1;
@@ -810,7 +810,7 @@ int connection_handle_read(connection_t *conn) {
 
   conn->timestamp_lastread = time(NULL);
 
-  switch(conn->type) {
+  switch (conn->type) {
     case CONN_TYPE_OR_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_OR);
     case CONN_TYPE_AP_LISTENER:
@@ -838,7 +838,7 @@ loop_again:
        /* it's a directory server and connecting failed: forget about this router */
        /* XXX I suspect pollerr may make Windows not get to this point. :( */
        router_mark_as_down(conn->identity_digest);
-       if(conn->purpose == DIR_PURPOSE_FETCH_DIR &&
+       if (conn->purpose == DIR_PURPOSE_FETCH_DIR &&
           !all_trusted_directory_servers_down()) {
          log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->address);
          directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL);
@@ -883,13 +883,13 @@ loop_again:
 static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
   int result, at_most = *max_to_read;
 
-  if(at_most == -1) { /* we need to initialize it */
+  if (at_most == -1) { /* we need to initialize it */
     /* how many bytes are we allowed to read? */
     at_most = connection_bucket_read_limit(conn);
   }
 
-  if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
-    if(conn->state == OR_CONN_STATE_HANDSHAKING) {
+  if (connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
+    if (conn->state == OR_CONN_STATE_HANDSHAKING) {
       /* continue handshaking even if global token bucket is empty */
       return connection_tls_continue_handshake(conn);
     }
@@ -900,7 +900,7 @@ static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
     /* else open, or closing */
     result = read_to_buf_tls(conn->tls, at_most, conn->inbuf);
 
-    switch(result) {
+    switch (result) {
       case TOR_TLS_CLOSE:
         log_fn(LOG_INFO,"TLS connection closed on read. Closing. (Nickname %s, address %s",
                conn->nickname ? conn->nickname : "not set", conn->address);
@@ -923,7 +923,7 @@ static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
 
 //  log(LOG_DEBUG,"connection_read_to_buf(): read_to_buf returned %d.",read_result);
 
-    if(result < 0)
+    if (result < 0)
       return -1;
   }
 
@@ -994,9 +994,9 @@ int connection_handle_write(connection_t *conn) {
       connection_mark_for_close(conn);
       return -1;
     }
-    if(e) {
+    if (e) {
       /* some sort of error, but maybe just inprogress still */
-      if(!ERRNO_IS_CONN_EINPROGRESS(e)) {
+      if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
         log_fn(LOG_INFO,"in-progress connect failed. Removing.");
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
@@ -1017,7 +1017,7 @@ int connection_handle_write(connection_t *conn) {
   if (connection_speaks_cells(conn)) {
     if (conn->state == OR_CONN_STATE_HANDSHAKING) {
       connection_stop_writing(conn);
-      if(connection_tls_continue_handshake(conn) < 0) {
+      if (connection_tls_continue_handshake(conn) < 0) {
         connection_close_immediate(conn); /* Don't flush; connection is dead. */
         connection_mark_for_close(conn);
         return -1;
@@ -1027,7 +1027,7 @@ int connection_handle_write(connection_t *conn) {
 
     /* else open, or closing */
     result = flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
-    switch(result) {
+    switch (result) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
         log_fn(LOG_INFO,result==TOR_TLS_ERROR?
@@ -1042,7 +1042,7 @@ int connection_handle_write(connection_t *conn) {
       case TOR_TLS_WANTREAD:
         /* Make sure to avoid a loop if the receive buckets are empty. */
         log_fn(LOG_DEBUG,"wanted read.");
-        if(!connection_is_reading(conn)) {
+        if (!connection_is_reading(conn)) {
           connection_stop_writing(conn);
           conn->wants_to_write = 1;
           /* we'll start reading again when the next second arrives,
@@ -1066,13 +1066,13 @@ int connection_handle_write(connection_t *conn) {
     }
   }
 
-  if(result > 0 && !is_local_IP(conn->addr)) { /* remember it */
+  if (result > 0 && !is_local_IP(conn->addr)) { /* remember it */
     rep_hist_note_bytes_written(result, now);
     global_write_bucket -= result;
   }
 
-  if(!connection_wants_to_flush(conn)) { /* it's done flushing */
-    if(connection_finished_flushing(conn) < 0) {
+  if (!connection_wants_to_flush(conn)) { /* it's done flushing */
+    if (connection_finished_flushing(conn) < 0) {
       /* already marked */
       return -1;
     }
@@ -1086,11 +1086,11 @@ int connection_handle_write(connection_t *conn) {
  */
 void connection_write_to_buf(const char *string, size_t len, connection_t *conn) {
 
-  if(!len || conn->marked_for_close)
+  if (!len || conn->marked_for_close)
     return;
 
-  if(write_to_buf(string, len, conn->outbuf) < 0) {
-    if(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
+  if (write_to_buf(string, len, conn->outbuf) < 0) {
+    if (conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
       /* if it failed, it means we have our package/delivery windows set
          wrong compared to our max outbuf size. close the whole circuit. */
       log_fn(LOG_WARN,"write_to_buf failed. Closing circuit (fd %d).", conn->s);
@@ -1114,9 +1114,9 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
   connection_t **carray;
 
   get_connection_array(&carray,&n);
-  for(i=0;i<n;i++) {
+  for (i=0;i<n;i++) {
     conn = carray[i];
-    if(conn->addr == addr && conn->port == port && !conn->marked_for_close &&
+    if (conn->addr == addr && conn->port == port && !conn->marked_for_close &&
        (!best || best->timestamp_created < conn->timestamp_created))
       best = conn;
   }
@@ -1130,7 +1130,7 @@ connection_t *connection_get_by_identity_digest(const char *digest, int type)
   connection_t **carray;
 
   get_connection_array(&carray,&n);
-  for(i=0;i<n;i++) {
+  for (i=0;i<n;i++) {
     conn = carray[i];
     if (conn->type != type)
       continue;
@@ -1151,9 +1151,9 @@ connection_t *connection_get_by_type(int type) {
   connection_t **carray;
 
   get_connection_array(&carray,&n);
-  for(i=0;i<n;i++) {
+  for (i=0;i<n;i++) {
     conn = carray[i];
-    if(conn->type == type && !conn->marked_for_close)
+    if (conn->type == type && !conn->marked_for_close)
       return conn;
   }
   return NULL;
@@ -1168,9 +1168,9 @@ connection_t *connection_get_by_type_state(int type, int state) {
   connection_t **carray;
 
   get_connection_array(&carray,&n);
-  for(i=0;i<n;i++) {
+  for (i=0;i<n;i++) {
     conn = carray[i];
-    if(conn->type == type && conn->state == state && !conn->marked_for_close)
+    if (conn->type == type && conn->state == state && !conn->marked_for_close)
       return conn;
   }
   return NULL;
@@ -1186,10 +1186,10 @@ connection_t *connection_get_by_type_state_lastwritten(int type, int state) {
   connection_t **carray;
 
   get_connection_array(&carray,&n);
-  for(i=0;i<n;i++) {
+  for (i=0;i<n;i++) {
     conn = carray[i];
-    if(conn->type == type && conn->state == state && !conn->marked_for_close)
-      if(!best || conn->timestamp_lastwritten < best->timestamp_lastwritten)
+    if (conn->type == type && conn->state == state && !conn->marked_for_close)
+      if (!best || conn->timestamp_lastwritten < best->timestamp_lastwritten)
         best = conn;
   }
   return best;
@@ -1204,9 +1204,9 @@ connection_t *connection_get_by_type_rendquery(int type, const char *rendquery) 
   connection_t **carray;
 
   get_connection_array(&carray,&n);
-  for(i=0;i<n;i++) {
+  for (i=0;i<n;i++) {
     conn = carray[i];
-    if(conn->type == type &&
+    if (conn->type == type &&
        !conn->marked_for_close &&
        !rend_cmp_service_ids(rendquery, conn->rend_query))
       return conn;
@@ -1216,7 +1216,7 @@ connection_t *connection_get_by_type_rendquery(int type, const char *rendquery) 
 
 /** Return 1 if <b>conn</b> is a listener conn, else return 0. */
 int connection_is_listener(connection_t *conn) {
-  if(conn->type == CONN_TYPE_OR_LISTENER ||
+  if (conn->type == CONN_TYPE_OR_LISTENER ||
      conn->type == CONN_TYPE_AP_LISTENER ||
      conn->type == CONN_TYPE_DIR_LISTENER ||
      conn->type == CONN_TYPE_CONTROL_LISTENER)
@@ -1230,10 +1230,10 @@ int connection_is_listener(connection_t *conn) {
 int connection_state_is_open(connection_t *conn) {
   tor_assert(conn);
 
-  if(conn->marked_for_close)
+  if (conn->marked_for_close)
     return 0;
 
-  if((conn->type == CONN_TYPE_OR && conn->state == OR_CONN_STATE_OPEN) ||
+  if ((conn->type == CONN_TYPE_OR && conn->state == OR_CONN_STATE_OPEN) ||
      (conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN) ||
      (conn->type == CONN_TYPE_EXIT && conn->state == EXIT_CONN_STATE_OPEN) ||
      (conn->type == CONN_TYPE_CONTROL && conn->state ==CONTROL_CONN_STATE_OPEN))
@@ -1290,7 +1290,7 @@ static int connection_process_inbuf(connection_t *conn, int package_partial) {
 
   tor_assert(conn);
 
-  switch(conn->type) {
+  switch (conn->type) {
     case CONN_TYPE_OR:
       return connection_or_process_inbuf(conn);
     case CONN_TYPE_EXIT:
@@ -1322,7 +1322,7 @@ static int connection_finished_flushing(connection_t *conn) {
 
 //  log_fn(LOG_DEBUG,"entered. Socket %u.", conn->s);
 
-  switch(conn->type) {
+  switch (conn->type) {
     case CONN_TYPE_OR:
       return connection_or_finished_flushing(conn);
     case CONN_TYPE_AP:
@@ -1397,11 +1397,11 @@ void assert_connection_ok(connection_t *conn, time_t now)
   tor_assert(conn->type >= _CONN_TYPE_MIN);
   tor_assert(conn->type <= _CONN_TYPE_MAX);
 
-  if(conn->outbuf_flushlen > 0) {
+  if (conn->outbuf_flushlen > 0) {
     tor_assert(connection_is_writing(conn) || conn->wants_to_write);
   }
 
-  if(conn->hold_open_until_flushed)
+  if (conn->hold_open_until_flushed)
     tor_assert(conn->marked_for_close);
 
   /* XXX check: wants_to_read, wants_to_write, s, poll_index,
@@ -1422,7 +1422,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
 
   /* XXX Fix this; no longer so.*/
 #if 0
-  if(conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_DIR)
+  if (conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_DIR)
     tor_assert(!conn->pkey);
   /* pkey is set if we're a dir client, or if we're an OR in state OPEN
    * connected to another OR.
@@ -1432,7 +1432,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
   if (conn->type != CONN_TYPE_OR) {
     tor_assert(!conn->tls);
   } else {
-    if(conn->state == OR_CONN_STATE_OPEN) {
+    if (conn->state == OR_CONN_STATE_OPEN) {
       /* tor_assert(conn->bandwidth > 0); */
       /* the above isn't necessarily true: if we just did a TLS
        * handshake but we didn't recognize the other peer, or it
@@ -1471,11 +1471,11 @@ void assert_connection_ok(connection_t *conn, time_t now)
   if (conn->type == CONN_TYPE_EXIT) {
     tor_assert(conn->purpose == EXIT_PURPOSE_CONNECT ||
                conn->purpose == EXIT_PURPOSE_RESOLVE);
-  } else if(conn->type != CONN_TYPE_DIR) {
+  } else if (conn->type != CONN_TYPE_DIR) {
     tor_assert(!conn->purpose); /* only used for dir types currently */
   }
 
-  switch(conn->type)
+  switch (conn->type)
     {
     case CONN_TYPE_OR_LISTENER:
     case CONN_TYPE_AP_LISTENER:

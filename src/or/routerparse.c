@@ -276,7 +276,7 @@ int check_software_version_against_directory(const char *directory,
       VERSION, strchr(v,',') ? "one of " : "", v);
   tor_free(v);
 
-  if(ignoreversion) {
+  if (ignoreversion) {
     log(LOG_WARN, "IgnoreVersion is set. If it breaks, we told you so.");
     return -1;
   } else {
@@ -331,7 +331,7 @@ router_parse_routerlist_from_directory(const char *str,
     log_fn(LOG_WARN, "Unexpected number of tokens in signature"); goto err;
   }
   tok=smartlist_get(tokens,0);
-  if(tok->tp != K_DIRECTORY_SIGNATURE) {
+  if (tok->tp != K_DIRECTORY_SIGNATURE) {
     log_fn(LOG_WARN,"Expected a single directory signature"); goto err;
   }
   declared_key = find_dir_signing_key(str);
@@ -432,8 +432,8 @@ router_parse_routerlist_from_directory(const char *str,
   {
     static int have_warned_about_unverified_status = 0;
     routerinfo_t *me = router_get_my_routerinfo();
-    if(me) {
-      if(router_update_status_from_smartlist(me, published_on,
+    if (me) {
+      if (router_update_status_from_smartlist(me, published_on,
                                              good_nickname_list,
                                           tok->tp==K_RUNNING_ROUTERS)==1 &&
         me->is_verified == 0 && !have_warned_about_unverified_status) {
@@ -612,7 +612,7 @@ static int dir_signing_key_is_trusted(crypto_pk_env_t *key)
     log_fn(LOG_WARN, "Error computing dir-signing-key digest");
     return 0;
   }
-  if(!router_digest_is_trusted_dir(digest)) {
+  if (!router_digest_is_trusted_dir(digest)) {
     log_fn(LOG_WARN, "Listed dir-signing-key is not trusted");
     return 0;
   }
@@ -933,7 +933,7 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
   if (!bw_set) {
     log_fn(LOG_WARN,"No bandwidth declared; failing."); goto err;
   }
-  if(!router->or_port) {
+  if (!router->or_port) {
     log_fn(LOG_WARN,"or_port unreadable or 0. Failing.");
     goto err;
   }
@@ -1262,7 +1262,7 @@ get_next_token(const char **s, where_syntax where) {
     }
     *s += i+6;
   }
-  switch(o_syn)
+  switch (o_syn)
     {
     case NO_OBJ:
       if (tok->object_body)
@@ -1298,7 +1298,7 @@ get_next_token(const char **s, where_syntax where) {
     if (tok->tp == _EOF) fputs("EOF",stdout);
     if (tok->tp == _NIL) fputs("_NIL",stdout);
   }
-  for(i = 0; i < tok->n_args; ++i) {
+  for (i = 0; i < tok->n_args; ++i) {
     fprintf(stdout," \"%s\"", tok->args[i]);
   }
   if (tok->error) { fprintf(stdout," *%s*", tok->error); }
@@ -1408,21 +1408,21 @@ int tor_version_as_new_as(const char *platform, const char *cutoff) {
   char *s, *start;
   char tmp[128];
 
-  if(tor_version_parse(cutoff, &cutoff_version)<0) {
+  if (tor_version_parse(cutoff, &cutoff_version)<0) {
     log_fn(LOG_WARN,"Bug: cutoff version '%s' unparsable.",cutoff);
     return 0;
   }
-  if(strcmpstart(platform,"Tor ")) /* nonstandard Tor; be safe and say yes */
+  if (strcmpstart(platform,"Tor ")) /* nonstandard Tor; be safe and say yes */
     return 1;
 
   start = (char *)eat_whitespace(platform+3);
   if (!*start) return 0;
   s = (char *)find_whitespace(start); /* also finds '\0', which is fine */
-  if((size_t)(s-start+1) >= sizeof(tmp)) /* too big, no */
+  if ((size_t)(s-start+1) >= sizeof(tmp)) /* too big, no */
     return 0;
   strlcpy(tmp, start, s-start+1);
 
-  if(tor_version_parse(tmp, &router_version)<0) {
+  if (tor_version_parse(tmp, &router_version)<0) {
     log_fn(LOG_INFO,"Router version '%s' unparsable.",tmp);
     return 1; /* be safe and say yes */
   }

@@ -410,7 +410,7 @@ connection_control_process_inbuf(connection_t *conn) {
 
  again:
   /* Try to suck a control message from the buffer. */
-  switch(fetch_from_buf_control(conn->inbuf, &body_len, &command_type, &body))
+  switch (fetch_from_buf_control(conn->inbuf, &body_len, &command_type, &body))
     {
     case -1:
       tor_free(body);
@@ -438,7 +438,7 @@ connection_control_process_inbuf(connection_t *conn) {
   }
 
   /* Okay, we're willing to process the command. */
-  switch(command_type)
+  switch (command_type)
     {
     case CONTROL_CMD_SETCONF:
       if (handle_control_setconf(conn, body_len, body))

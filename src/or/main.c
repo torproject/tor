@@ -97,7 +97,7 @@ int connection_add(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->s >= 0);
 
-  if(nfds >= get_options()->MaxConn-1) {
+  if (nfds >= get_options()->MaxConn-1) {
     log_fn(LOG_WARN,"failing because nfds is too high.");
     return -1;
   }
@@ -135,7 +135,7 @@ int connection_remove(connection_t *conn) {
 
   tor_assert(conn->poll_index >= 0);
   current_index = conn->poll_index;
-  if(current_index == nfds-1) { /* this is the end */
+  if (current_index == nfds-1) { /* this is the end */
     nfds--;
     return 0;
   }
@@ -240,7 +240,7 @@ static void conn_read(int i) {
 
   /* see http://www.greenend.org.uk/rjk/2001/06/poll.html for
    * discussion of POLLIN vs POLLHUP */
-  if(!(poll_array[i].revents & (POLLIN|POLLHUP|POLLERR)))
+  if (!(poll_array[i].revents & (POLLIN|POLLHUP|POLLERR)))
     /* Sometimes read events get triggered for things that didn't ask
      * for them (XXX due to unknown poll wonkiness) and sometime we
      * want to read even though there was no read event (due to
@@ -251,7 +251,7 @@ static void conn_read(int i) {
      * something sane may result.  Nick suspects that the || below
      * should be a &&.
      */
-    if(!connection_is_reading(conn) ||
+    if (!connection_is_reading(conn) ||
        !connection_has_pending_tls_data(conn))
       return; /* this conn should not read */
 
@@ -260,7 +260,7 @@ static void conn_read(int i) {
   assert_connection_ok(conn, time(NULL));
   assert_all_pending_dns_resolves_ok();
 
-  if(
+  if (
     /* XXX does POLLHUP also mean it's definitely broken? */
 #ifdef MS_WINDOWS
     (poll_array[i].revents & POLLERR) ||
@@ -284,7 +284,7 @@ static void conn_read(int i) {
 static void conn_write(int i) {
   connection_t *conn;
 
-  if(!(poll_array[i].revents & POLLOUT))
+  if (!(poll_array[i].revents & POLLOUT))
     return; /* this conn doesn't want to write */
 
   conn = connection_array[i];
@@ -325,34 +325,34 @@ static void conn_close_if_marked(int i) {
   conn = connection_array[i];
   assert_connection_ok(conn, time(NULL));
   assert_all_pending_dns_resolves_ok();
-  if(!conn->marked_for_close)
+  if (!conn->marked_for_close)
     return; /* nothing to see here, move along */
 
   log_fn(LOG_INFO,"Cleaning up connection (fd %d).",conn->s);
-  if(conn->s >= 0 && connection_wants_to_flush(conn)) {
+  if (conn->s >= 0 && connection_wants_to_flush(conn)) {
     /* -1 means it's an incomplete edge connection, or that the socket
      * has already been closed as unflushable. */
-    if(!conn->hold_open_until_flushed)
+    if (!conn->hold_open_until_flushed)
       log_fn(LOG_INFO,
         "Conn (addr %s, fd %d, type %s, state %d) marked, but wants to flush %d bytes. "
         "(Marked at %s:%d)",
         conn->address, conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state,
         (int)conn->outbuf_flushlen, conn->marked_for_close_file, conn->marked_for_close);
-    if(connection_speaks_cells(conn)) {
-      if(conn->state == OR_CONN_STATE_OPEN) {
+    if (connection_speaks_cells(conn)) {
+      if (conn->state == OR_CONN_STATE_OPEN) {
         retval = flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen);
       } else
         retval = -1; /* never flush non-open broken tls connections */
     } else {
       retval = flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen);
     }
-    if(retval >= 0 &&
+    if (retval >= 0 &&
        conn->hold_open_until_flushed && connection_wants_to_flush(conn)) {
       log_fn(LOG_INFO,"Holding conn (fd %d) open for more flushing.",conn->s);
       /* XXX should we reset timestamp_lastwritten here? */
       return;
     }
-    if(connection_wants_to_flush(conn)) {
+    if (connection_wants_to_flush(conn)) {
       log_fn(LOG_WARN,"Conn (addr %s, fd %d, type %s, state %d) still wants to flush. Losing %d bytes! (Marked at %s:%d)",
              conn->address, conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state,
              (int)buf_datalen(conn->outbuf), conn->marked_for_close_file,
@@ -366,11 +366,11 @@ static void conn_close_if_marked(int i) {
   circuit_about_to_close_connection(conn);
   connection_about_to_close_connection(conn);
   connection_remove(conn);
-  if(conn->type == CONN_TYPE_EXIT) {
+  if (conn->type == CONN_TYPE_EXIT) {
     assert_connection_edge_not_dns_pending(conn);
   }
   connection_free(conn);
-  if(i<nfds) { /* we just replaced the one at i with a new one.
+  if (i<nfds) { /* we just replaced the one at i with a new one.
                   process it too. */
     conn_close_if_marked(i);
   }
@@ -389,10 +389,10 @@ void directory_has_arrived(time_t now) {
   if (!time_to_fetch_directory)
     time_to_fetch_directory = now + options->DirFetchPeriod;
 
-  if(!time_to_force_upload_descriptor)
+  if (!time_to_force_upload_descriptor)
     time_to_force_upload_descriptor = now + options->DirPostPeriod;
 
-  if(!time_to_fetch_running_routers)
+  if (!time_to_fetch_running_routers)
     time_to_fetch_running_routers = now + options->StatusFetchPeriod;
 
   if (server_mode(options) &&
@@ -410,7 +410,7 @@ static void run_connection_housekeeping(int i, time_t now) {
   or_options_t *options = get_options();
 
   /* Expire any directory connections that haven't sent anything for 5 min */
-  if(conn->type == CONN_TYPE_DIR &&
+  if (conn->type == CONN_TYPE_DIR &&
      !conn->marked_for_close &&
      conn->timestamp_lastwritten + 5*60 < now) {
     log_fn(LOG_INFO,"Expiring wedged directory conn (fd %d, purpose %d)", conn->s, conn->purpose);
@@ -420,10 +420,10 @@ static void run_connection_housekeeping(int i, time_t now) {
 
   /* If we haven't written to an OR connection for a while, then either nuke
      the connection or send a keepalive, depending. */
-  if(connection_speaks_cells(conn) &&
+  if (connection_speaks_cells(conn) &&
      now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
-    if((!connection_state_is_open(conn)) ||
+    if ((!connection_state_is_open(conn)) ||
        (we_are_hibernating() && !circuit_get_by_conn(conn)) ||
        (!clique_mode(options) && !circuit_get_by_conn(conn) &&
        (!router || !server_mode(options) || !router_is_clique_mode(router)))) {
@@ -465,24 +465,24 @@ static int decide_if_publishable_server(time_t now) {
   bw = rep_hist_bandwidth_assess();
   router_set_bandwidth_capacity(bw);
 
-  if(options->ClientOnly)
+  if (options->ClientOnly)
     return 0;
-  if(!options->ORPort)
+  if (!options->ORPort)
     return 0;
 
   /* XXX for now, you're only a server if you're a server */
   return server_mode(options);
 
   /* here, determine if we're reachable */
-  if(0) { /* we've recently failed to reach our IP/ORPort from the outside */
+  if (0) { /* we've recently failed to reach our IP/ORPort from the outside */
     return 0;
   }
 
-  if(bw < MIN_BW_TO_PUBLISH_DESC)
+  if (bw < MIN_BW_TO_PUBLISH_DESC)
     return 0;
-  if(options->AuthoritativeDir)
+  if (options->AuthoritativeDir)
     return 1;
-  if(stats_n_seconds_uptime < MIN_UPTIME_TO_PUBLISH_DESC)
+  if (stats_n_seconds_uptime < MIN_UPTIME_TO_PUBLISH_DESC)
     return 0;
 
   return 1;
@@ -549,7 +549,7 @@ static void run_scheduled_events(time_t now) {
     if (router_rebuild_descriptor(1)<0) {
       log_fn(LOG_WARN, "Couldn't rebuild router descriptor");
     }
-    if(advertised_server_mode())
+    if (advertised_server_mode())
       router_upload_dir_desc_to_dirservers(0);
   }
 
@@ -575,15 +575,15 @@ static void run_scheduled_events(time_t now) {
   /** 2. Periodically, we consider getting a new directory, getting a
    * new running-routers list, and/or force-uploading our descriptor
    * (if we've passed our internal checks). */
-  if(time_to_fetch_directory < now) {
+  if (time_to_fetch_directory < now) {
     /* purge obsolete entries */
     routerlist_remove_old_routers(ROUTER_MAX_AGE);
 
-    if(authdir_mode(options)) {
+    if (authdir_mode(options)) {
       /* We're a directory; dump any old descriptors. */
       dirserv_remove_old_servers(ROUTER_MAX_AGE);
     }
-    if(server_mode(options) && !we_are_hibernating()) {
+    if (server_mode(options) && !we_are_hibernating()) {
       /* dirservers try to reconnect, in case connections have failed;
        * and normal servers try to reconnect to dirservers */
       router_retry_connections();
@@ -607,7 +607,7 @@ static void run_scheduled_events(time_t now) {
   }
 
   if (time_to_force_upload_descriptor < now) {
-    if(decide_if_publishable_server(now)) {
+    if (decide_if_publishable_server(now)) {
       server_is_advertised = 1;
       router_rebuild_descriptor(1);
       router_upload_dir_desc_to_dirservers(1);
@@ -662,11 +662,11 @@ static void run_scheduled_events(time_t now) {
    *    that became dirty more than NewCircuitPeriod seconds ago,
    *    and we make a new circ if there are no clean circuits.
    */
-  if(has_fetched_directory && !we_are_hibernating())
+  if (has_fetched_directory && !we_are_hibernating())
     circuit_build_needed_circs(now);
 
   /** 5. We do housekeeping for each connection... */
-  for(i=0;i<nfds;i++) {
+  for (i=0;i<nfds;i++) {
     run_connection_housekeeping(i, now);
   }
 
@@ -674,14 +674,14 @@ static void run_scheduled_events(time_t now) {
   circuit_close_all_marked();
 
   /** 7. And upload service descriptors if necessary. */
-  if(!we_are_hibernating())
+  if (!we_are_hibernating())
     rend_consider_services_upload(now);
 
   /** 8. and blow away any connections that need to die. have to do this now,
    * because if we marked a conn for close and left its socket -1, then
    * we'll pass it to poll/select and bad things will happen.
    */
-  for(i=0;i<nfds;i++)
+  for (i=0;i<nfds;i++)
     conn_close_if_marked(i);
 }
 
@@ -697,7 +697,7 @@ static int prepare_for_poll(void) {
 
   tor_gettimeofday(&now);
 
-  if(now.tv_sec > current_second) {
+  if (now.tv_sec > current_second) {
     /* the second has rolled over. check more stuff. */
     size_t bytes_written;
     size_t bytes_read;
@@ -724,9 +724,9 @@ static int prepare_for_poll(void) {
     current_second = now.tv_sec; /* remember which second it is, for next time */
   }
 
-  for(i=0;i<nfds;i++) {
+  for (i=0;i<nfds;i++) {
     conn = connection_array[i];
-    if(connection_has_pending_tls_data(conn) &&
+    if (connection_has_pending_tls_data(conn) &&
        connection_is_reading(conn)) {
       log_fn(LOG_DEBUG,"sock %d has pending bytes.",conn->s);
       return 0; /* has pending bytes to read; don't let poll wait. */
@@ -754,17 +754,17 @@ static int do_hup(void) {
     return -1;
   }
   options = get_options();
-  if(authdir_mode(options)) {
+  if (authdir_mode(options)) {
     /* reload the approved-routers file */
     tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", options->DataDirectory);
     log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
-    if(dirserv_parse_fingerprint_file(keydir) < 0) {
+    if (dirserv_parse_fingerprint_file(keydir) < 0) {
       log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
     }
   }
   /* Fetch a new directory. Even authdirservers do this. */
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL);
-  if(server_mode(options)) {
+  if (server_mode(options)) {
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate();
@@ -801,21 +801,21 @@ static int do_main_loop(void) {
   stats_prev_global_write_bucket = global_write_bucket;
 
   /* load the routers file, or assign the defaults. */
-  if(router_reload_router_list()) {
+  if (router_reload_router_list()) {
     return -1;
   }
 
-  if(authdir_mode(get_options())) {
+  if (authdir_mode(get_options())) {
     /* the directory is already here, run startup things */
     router_retry_connections();
   }
 
-  if(server_mode(get_options())) {
+  if (server_mode(get_options())) {
     /* launch cpuworkers. Need to do this *after* we've read the onion key. */
     cpu_init();
   }
 
-  for(;;) {
+  for (;;) {
 #ifdef MS_WINDOWS_SERVICE /* Do service stuff only on windows. */
     if (service_status.dwCurrentState == SERVICE_STOP_PENDING) {
       service_status.dwWin32ExitCode = 0;
@@ -826,7 +826,7 @@ static int do_main_loop(void) {
 #endif
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
     if (please_shutdown) {
-      if(!server_mode(get_options())) { /* do it now */
+      if (!server_mode(get_options())) { /* do it now */
         log(LOG_NOTICE,"Interrupt: exiting cleanly.");
         tor_cleanup();
         exit(0);
@@ -857,7 +857,7 @@ static int do_main_loop(void) {
       please_reset = 0;
     }
     if (please_reap_children) {
-      while(waitpid(-1,NULL,WNOHANG) > 0) ; /* keep reaping until no more zombies */
+      while (waitpid(-1,NULL,WNOHANG) > 0) ; /* keep reaping until no more zombies */
       please_reap_children = 0;
     }
 #endif /* signal stuff */
@@ -871,7 +871,7 @@ static int do_main_loop(void) {
     if (poll_result < 0) {
       int e = tor_socket_errno(-1);
       /* let the program survive things like ^z */
-      if(e != EINTR) {
+      if (e != EINTR) {
         log_fn(LOG_ERR,"poll failed: %s [%d]",
                tor_socket_strerror(e), e);
         return -1;
@@ -905,7 +905,7 @@ static int do_main_loop(void) {
 static void catch(int the_signal) {
 
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
-  switch(the_signal) {
+  switch (the_signal) {
 //    case SIGABRT:
     case SIGTERM:
       log(LOG_ERR,"Catching signal %d, exiting cleanly.", the_signal);
@@ -952,12 +952,12 @@ static void dumpstats(int severity) {
 
   log(severity, "Dumping stats:");
 
-  for(i=0;i<nfds;i++) {
+  for (i=0;i<nfds;i++) {
     conn = connection_array[i];
     log(severity, "Conn %d (socket %d) type %d (%s), state %d (%s), created %d secs ago",
       i, conn->s, conn->type, CONN_TYPE_TO_STRING(conn->type),
       conn->state, conn_state_to_string[conn->type][conn->state], (int)(now - conn->timestamp_created));
-    if(!connection_is_listener(conn)) {
+    if (!connection_is_listener(conn)) {
       log(severity,"Conn %d is to '%s:%d'.",i,conn->address, conn->port);
       log(severity,"Conn %d: %d bytes waiting on inbuf (last read %d secs ago)",i,
              (int)buf_datalen(conn->inbuf),
@@ -1050,7 +1050,7 @@ void handle_signals(int is_parent)
 #ifdef SIGXFSZ
   sigaction(SIGXFSZ, &action, NULL); /* handle file-too-big resource exhaustion */
 #endif
-  if(is_parent)
+  if (is_parent)
     sigaction(SIGCHLD, &action, NULL); /* handle dns/cpu workers that exit */
 #endif /* signal stuff */
 }
@@ -1081,11 +1081,11 @@ static int tor_init(int argc, char *argv[]) {
   }
 
 #ifndef MS_WINDOWS
-  if(geteuid()==0)
+  if (geteuid()==0)
     log_fn(LOG_WARN,"You are running Tor as root. You don't need to, and you probably shouldn't.");
 #endif
 
-  if(server_mode(get_options())) { /* only spawn dns handlers if we're a router */
+  if (server_mode(get_options())) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
 
@@ -1101,7 +1101,7 @@ void tor_cleanup(void) {
   or_options_t *options = get_options();
   /* Remove our pid file. We don't care if there was an error when we
    * unlink, nothing we could do about it anyways. */
-  if(options->PidFile && options->command == CMD_RUN_TOR)
+  if (options->PidFile && options->command == CMD_RUN_TOR)
     unlink(options->PidFile);
   crypto_global_cleanup();
   if (accounting_is_enabled(options))
@@ -1279,7 +1279,7 @@ int nt_service_install()
     return 0;
   }
 
-  if((hService = CreateService(hSCManager, GENSRV_SERVICENAME, GENSRV_DISPLAYNAME,
+  if ((hService = CreateService(hSCManager, GENSRV_SERVICENAME, GENSRV_DISPLAYNAME,
     SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START,
     SERVICE_ERROR_IGNORE, command, NULL, NULL,
     NULL, NULL, NULL)) == NULL) {
@@ -1319,7 +1319,7 @@ int nt_service_remove()
   if (result) {
     while (QueryServiceStatus(hService, &service_status))
     {
-      if(service_status.dwCurrentState == SERVICE_STOP_PENDING)
+      if (service_status.dwCurrentState == SERVICE_STOP_PENDING)
         Sleep(500);
       else
         break;
@@ -1347,9 +1347,9 @@ int tor_main(int argc, char *argv[]) {
 #ifdef MS_WINDOWS_SERVICE
   backup_argv = argv;
   backup_argc = argc;
-  if((argc >= 2) && !strcmp(argv[1], "-install"))
+  if ((argc >= 2) && !strcmp(argv[1], "-install"))
     return nt_service_install();
-  if((argc >= 2) && !strcmp(argv[1], "-remove"))
+  if ((argc >= 2) && !strcmp(argv[1], "-remove"))
     return nt_service_remove();
   nt_service_main();
   return 0;

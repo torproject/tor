@@ -95,7 +95,7 @@ int dir_policy_permits_address(uint32_t addr)
 {
   int a;
 
-  if(!dir_policy) /* 'no dir policy' means 'accept' */
+  if (!dir_policy) /* 'no dir policy' means 'accept' */
     return 1;
   a = router_compare_addr_to_addr_policy(addr, 1, dir_policy);
   if (a==-1)
@@ -259,7 +259,7 @@ directory_initiate_command(const char *address, uint32_t addr,
   conn->addr = addr;
   conn->port = dir_port;
 
-  if(get_options()->HttpProxy) {
+  if (get_options()->HttpProxy) {
     addr = get_options()->HttpProxyAddr;
     dir_port = get_options()->HttpProxyPort;
   }
@@ -276,14 +276,14 @@ directory_initiate_command(const char *address, uint32_t addr,
   /* give it an initial state */
   conn->state = DIR_CONN_STATE_CONNECTING;
 
-  if(purpose == DIR_PURPOSE_FETCH_DIR ||
+  if (purpose == DIR_PURPOSE_FETCH_DIR ||
      purpose == DIR_PURPOSE_UPLOAD_DIR ||
      purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
     /* then we want to connect directly */
-    switch(connection_connect(conn, conn->address, addr, dir_port)) {
+    switch (connection_connect(conn, conn->address, addr, dir_port)) {
       case -1:
         router_mark_as_down(conn->identity_digest); /* don't try him again */
-        if(purpose == DIR_PURPOSE_FETCH_DIR &&
+        if (purpose == DIR_PURPOSE_FETCH_DIR &&
            !all_trusted_directory_servers_down()) {
           log_fn(LOG_INFO,"Giving up on dirserver '%s'; trying another.", conn->address);
           directory_get_from_dirserver(purpose, NULL);
@@ -307,7 +307,7 @@ directory_initiate_command(const char *address, uint32_t addr,
      * socketpair and hook up both sides
      */
     conn->s = connection_ap_make_bridge(conn->address, conn->port);
-    if(conn->s < 0) {
+    if (conn->s < 0) {
       log_fn(LOG_WARN,"Making AP bridge to dirserver failed.");
       connection_mark_for_close(conn);
       return;
@@ -342,18 +342,18 @@ directory_send_command(connection_t *conn, const char *platform,
   /* If we don't know the platform, assume it's up-to-date. */
   use_newer = platform ? tor_version_as_new_as(platform, "0.0.9pre1"):1;
 
-  if(conn->port == 80) {
+  if (conn->port == 80) {
     strlcpy(hoststring, conn->address, sizeof(hoststring));
   } else {
     tor_snprintf(hoststring, sizeof(hoststring),"%s:%d",conn->address, conn->port);
   }
-  if(get_options()->HttpProxy) {
+  if (get_options()->HttpProxy) {
     tor_snprintf(proxystring, sizeof(proxystring),"http://%s", hoststring);
   } else {
     proxystring[0] = 0;
   }
 
-  switch(purpose) {
+  switch (purpose) {
     case DIR_PURPOSE_FETCH_DIR:
       tor_assert(!resource);
       tor_assert(!payload);
@@ -403,7 +403,7 @@ directory_send_command(connection_t *conn, const char *platform,
            hoststring);
   connection_write_to_buf(tmp, strlen(tmp), conn);
 
-  if(payload) {
+  if (payload) {
     /* then send the payload afterwards too */
     connection_write_to_buf(payload, payload_len, conn);
   }
@@ -432,20 +432,20 @@ parse_http_url(char *headers, char **url)
   if (!*s) return -1;
 
   /* tolerate the http[s] proxy style of putting the hostname in the url */
-  if(s-start >= 4 && !strcmpstart(start,"http")) {
+  if (s-start >= 4 && !strcmpstart(start,"http")) {
     tmp = start + 4;
-    if(*tmp == 's')
+    if (*tmp == 's')
       tmp++;
-    if(s-tmp >= 3 && !strcmpstart(tmp,"://")) {
+    if (s-tmp >= 3 && !strcmpstart(tmp,"://")) {
       tmp = strchr(tmp+3, '/');
-      if(tmp && tmp < s) {
+      if (tmp && tmp < s) {
         log_fn(LOG_DEBUG,"Skipping over 'http[s]://hostname' string");
         start = tmp;
       }
     }
   }
 
-  if(s-start < 5 || strcmpstart(start,"/tor/")) { /* need to rewrite it */
+  if (s-start < 5 || strcmpstart(start,"/tor/")) { /* need to rewrite it */
     *url = tor_malloc(s - start + 5);
     strlcpy(*url,"/tor", s-start+5);
     strlcat((*url)+4, start, s-start+1);
@@ -472,9 +472,9 @@ parse_http_response(const char *headers, int *code, time_t *date,
   tor_assert(headers);
   tor_assert(code);
 
-  while(isspace((int)*headers)) headers++; /* tolerate leading whitespace */
+  while (isspace((int)*headers)) headers++; /* tolerate leading whitespace */
 
-  if(sscanf(headers, "HTTP/1.%d %d", &n1, &n2) < 2 ||
+  if (sscanf(headers, "HTTP/1.%d %d", &n1, &n2) < 2 ||
      (n1 != 0 && n1 != 1) ||
      (n2 < 100 || n2 >= 600)) {
     log_fn(LOG_WARN,"Failed to parse header '%s'",headers);
@@ -537,7 +537,7 @@ connection_dir_client_reached_eof(connection_t *conn)
   int delta;
   int compression;
 
-  switch(fetch_from_buf_http(conn->inbuf,
+  switch (fetch_from_buf_http(conn->inbuf,
                              &headers, MAX_HEADERS_SIZE,
                              &body, &body_len, MAX_DIR_SIZE)) {
     case -1: /* overflow */
@@ -549,7 +549,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     /* case 1, fall through */
   }
 
-  if(parse_http_response(headers, &status_code, &date_header,
+  if (parse_http_response(headers, &status_code, &date_header,
                          &compression) < 0) {
     log_fn(LOG_WARN,"Unparseable headers. Closing.");
     tor_free(body); tor_free(headers);
@@ -580,21 +580,21 @@ connection_dir_client_reached_eof(connection_t *conn)
     body_len = new_len;
   }
 
-  if(conn->purpose == DIR_PURPOSE_FETCH_DIR) {
+  if (conn->purpose == DIR_PURPOSE_FETCH_DIR) {
     /* fetch/process the directory to learn about new routers. */
     log_fn(LOG_INFO,"Received directory (size %d):\n%s", (int)body_len, body);
-    if(status_code == 503 || body_len == 0) {
+    if (status_code == 503 || body_len == 0) {
       log_fn(LOG_INFO,"Empty directory. Ignoring.");
       tor_free(body); tor_free(headers);
       return 0;
     }
-    if(status_code != 200) {
+    if (status_code != 200) {
       log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
              status_code);
       tor_free(body); tor_free(headers);
       return -1;
     }
-    if(router_load_routerlist_from_directory(body, NULL, 1) < 0) {
+    if (router_load_routerlist_from_directory(body, NULL, 1) < 0) {
       log_fn(LOG_WARN,"I failed to parse the directory I fetched from %s:%d. Ignoring.", conn->address, conn->port);
     } else {
       log_fn(LOG_INFO,"updated routers.");
@@ -602,12 +602,12 @@ connection_dir_client_reached_eof(connection_t *conn)
     directory_has_arrived(time(NULL)); /* do things we've been waiting to do */
   }
 
-  if(conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
+  if (conn->purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
     running_routers_t *rrs;
     routerlist_t *rl;
     /* just update our list of running routers, if this list is new info */
     log_fn(LOG_INFO,"Received running-routers list (size %d):\n%s", (int)body_len, body);
-    if(status_code != 200) {
+    if (status_code != 200) {
       log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
              status_code);
       tor_free(body); tor_free(headers);
@@ -624,8 +624,8 @@ connection_dir_client_reached_eof(connection_t *conn)
     running_routers_free(rrs);
   }
 
-  if(conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {
-    switch(status_code) {
+  if (conn->purpose == DIR_PURPOSE_UPLOAD_DIR) {
+    switch (status_code) {
       case 200:
         log_fn(LOG_INFO,"eof (status 200) after uploading server descriptor: finished.");
         break;
@@ -641,12 +641,12 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
   }
 
-  if(conn->purpose == DIR_PURPOSE_FETCH_RENDDESC) {
+  if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC) {
     log_fn(LOG_INFO,"Received rendezvous descriptor (size %d, status code %d)",
            (int)body_len, status_code);
-    switch(status_code) {
+    switch (status_code) {
       case 200:
-        if(rend_cache_store(body, body_len) < 0) {
+        if (rend_cache_store(body, body_len) < 0) {
           log_fn(LOG_WARN,"Failed to store rendezvous descriptor.");
           /* alice's ap_stream will notice when connection_mark_for_close
            * cleans it up */
@@ -666,8 +666,8 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
   }
 
-  if(conn->purpose == DIR_PURPOSE_UPLOAD_RENDDESC) {
-    switch(status_code) {
+  if (conn->purpose == DIR_PURPOSE_UPLOAD_RENDDESC) {
+    switch (status_code) {
       case 200:
         log_fn(LOG_INFO,"eof (status 200) after uploading rendezvous descriptor: finished.");
         break;
@@ -685,7 +685,7 @@ connection_dir_client_reached_eof(connection_t *conn)
 
 int connection_dir_reached_eof(connection_t *conn) {
   int retval;
-  if(conn->state != DIR_CONN_STATE_CLIENT_READING) {
+  if (conn->state != DIR_CONN_STATE_CLIENT_READING) {
     log_fn(LOG_INFO,"conn reached eof, not reading. Closing.");
     connection_close_immediate(conn); /* it was an error; give up on flushing */
     connection_mark_for_close(conn);
@@ -712,7 +712,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
    */
 
   /* If we're on the dirserver side, look for a command. */
-  if(conn->state == DIR_CONN_STATE_SERVER_COMMAND_WAIT) {
+  if (conn->state == DIR_CONN_STATE_SERVER_COMMAND_WAIT) {
     if (directory_handle_command(conn) < 0) {
       connection_mark_for_close(conn);
       return -1;
@@ -757,13 +757,13 @@ directory_handle_command_get(connection_t *conn, char *headers,
   }
   log_fn(LOG_INFO,"rewritten url as '%s'.", url);
 
-  if(!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir.z")) { /* directory fetch */
+  if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir.z")) { /* directory fetch */
     int deflated = !strcmp(url,"/tor/dir.z");
     dlen = dirserv_get_directory(&cp, deflated);
 
     tor_free(url);
 
-    if(dlen == 0) {
+    if (dlen == 0) {
       log_fn(LOG_WARN,"My directory is empty. Closing.");
       connection_write_to_buf(answer503, strlen(answer503), conn);
       return 0;
@@ -781,17 +781,17 @@ directory_handle_command_get(connection_t *conn, char *headers,
     return 0;
   }
 
-  if(!strcmp(url,"/tor/running-routers") ||
+  if (!strcmp(url,"/tor/running-routers") ||
      !strcmp(url,"/tor/running-routers.z")) { /* running-routers fetch */
     int deflated = !strcmp(url,"/tor/dir.z");
     tor_free(url);
-    if(!authdir_mode(get_options())) {
+    if (!authdir_mode(get_options())) {
       /* For now, we don't cache running-routers. Reject. */
       connection_write_to_buf(answer400, strlen(answer400), conn);
       return 0;
     }
     dlen = dirserv_get_runningrouters(&cp, deflated);
-    if(!dlen) { /* we failed to create/cache cp */
+    if (!dlen) { /* we failed to create/cache cp */
       connection_write_to_buf(answer503, strlen(answer503), conn);
       return 0;
     }
@@ -806,12 +806,12 @@ directory_handle_command_get(connection_t *conn, char *headers,
     return 0;
   }
 
-  if(!strcmpstart(url,"/tor/rendezvous/")) {
+  if (!strcmpstart(url,"/tor/rendezvous/")) {
     /* rendezvous descriptor fetch */
     const char *descp;
     size_t desc_len;
 
-    if(!authdir_mode(get_options())) {
+    if (!authdir_mode(get_options())) {
       /* We don't hand out rend descs. In fact, it could be a security
        * risk, since rend_cache_lookup_desc() below would provide it
        * if we're gone to the site recently, and 404 if we haven't.
@@ -821,7 +821,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
       tor_free(url);
       return 0;
     }
-    switch(rend_cache_lookup_desc(url+strlen("/tor/rendezvous/"), &descp, &desc_len)) {
+    switch (rend_cache_lookup_desc(url+strlen("/tor/rendezvous/"), &descp, &desc_len)) {
       case 1: /* valid */
         format_rfc1123_time(date, time(NULL));
         tor_snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
@@ -863,7 +863,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
 
   conn->state = DIR_CONN_STATE_SERVER_WRITING;
 
-  if(!authdir_mode(get_options())) {
+  if (!authdir_mode(get_options())) {
     /* we just provide cached directories; we don't want to
      * receive anything. */
     connection_write_to_buf(answer400, strlen(answer400), conn);
@@ -876,9 +876,9 @@ directory_handle_command_post(connection_t *conn, char *headers,
   }
   log_fn(LOG_INFO,"rewritten url as '%s'.", url);
 
-  if(!strcmp(url,"/tor/")) { /* server descriptor post */
+  if (!strcmp(url,"/tor/")) { /* server descriptor post */
     cp = body;
-    switch(dirserv_add_descriptor(&cp)) {
+    switch (dirserv_add_descriptor(&cp)) {
       case -1:
         /* malformed descriptor, or something wrong */
         connection_write_to_buf(answer400, strlen(answer400), conn);
@@ -896,9 +896,9 @@ directory_handle_command_post(connection_t *conn, char *headers,
     return 0;
   }
 
-  if(!strcmpstart(url,"/tor/rendezvous/publish")) {
+  if (!strcmpstart(url,"/tor/rendezvous/publish")) {
     /* rendezvous descriptor post */
-    if(rend_cache_store(body, body_len) < 0)
+    if (rend_cache_store(body, body_len) < 0)
       connection_write_to_buf(answer400, strlen(answer400), conn);
     else
       connection_write_to_buf(answer200, strlen(answer200), conn);
@@ -925,7 +925,7 @@ static int directory_handle_command(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DIR);
 
-  switch(fetch_from_buf_http(conn->inbuf,
+  switch (fetch_from_buf_http(conn->inbuf,
                              &headers, MAX_HEADERS_SIZE,
                              &body, &body_len, MAX_BODY_SIZE)) {
     case -1: /* overflow */
@@ -939,7 +939,7 @@ static int directory_handle_command(connection_t *conn) {
 
   log_fn(LOG_DEBUG,"headers '%s', body '%s'.", headers, body);
 
-  if(!strncasecmp(headers,"GET",3))
+  if (!strncasecmp(headers,"GET",3))
     r = directory_handle_command_get(conn, headers, body, body_len);
   else if (!strncasecmp(headers,"POST",4))
     r = directory_handle_command_post(conn, headers, body, body_len);
@@ -961,7 +961,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_DIR);
 
-  switch(conn->state) {
+  switch (conn->state) {
     case DIR_CONN_STATE_CLIENT_SENDING:
       log_fn(LOG_DEBUG,"client finished sending command.");
       conn->state = DIR_CONN_STATE_CLIENT_READING;

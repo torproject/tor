@@ -107,13 +107,13 @@ dirserv_parse_fingerprint_file(const char *fname)
 
   fingerprint_list_new = smartlist_create();
 
-  for(list=front; list; list=list->next) {
+  for (list=front; list; list=list->next) {
     nickname = list->key; fingerprint = list->value;
     if (strlen(nickname) > MAX_NICKNAME_LEN) {
       log(LOG_WARN, "Nickname '%s' too long in fingerprint file. Skipping.", nickname);
       continue;
     }
-    if(strlen(fingerprint) != FINGERPRINT_LEN ||
+    if (strlen(fingerprint) != FINGERPRINT_LEN ||
        !crypto_pk_check_fingerprint_syntax(fingerprint)) {
       log_fn(LOG_WARN, "Invalid fingerprint (nickname '%s', fingerprint %s). Skipping.",
              nickname, fingerprint);
@@ -134,7 +134,7 @@ dirserv_parse_fingerprint_file(const char *fname)
         break; /* out of the for. the 'if' below means skip to the next line. */
       }
     }
-    if(i == smartlist_len(fingerprint_list_new)) { /* not a duplicate */
+    if (i == smartlist_len(fingerprint_list_new)) { /* not a duplicate */
       ent = tor_malloc(sizeof(fingerprint_entry_t));
       ent->nickname = tor_strdup(nickname);
       ent->fingerprint = tor_strdup(fingerprint);
@@ -331,13 +331,13 @@ dirserv_add_descriptor(const char **desc)
   }
   /* Okay.  Now check whether the fingerprint is recognized. */
   r = dirserv_router_fingerprint_is_known(ri);
-  if(r==-1) {
+  if (r==-1) {
     log_fn(LOG_WARN, "Known nickname '%s', wrong fingerprint. Not adding.", ri->nickname);
     routerinfo_free(ri);
     *desc = end;
     return 0;
   }
-  if(r==0) {
+  if (r==0) {
     char fp[FINGERPRINT_LEN+1];
     log_fn(LOG_INFO, "Unknown nickname '%s' (%s:%d). Adding.",
            ri->nickname, ri->address, ri->or_port);
@@ -437,9 +437,9 @@ directory_set_dirty()
 {
   time_t now = time(NULL);
 
-  if(!the_directory_is_dirty)
+  if (!the_directory_is_dirty)
     the_directory_is_dirty = now;
-  if(!runningrouters_is_dirty)
+  if (!runningrouters_is_dirty)
     runningrouters_is_dirty = now;
 }
 
@@ -450,7 +450,7 @@ int
 dirserv_load_from_directory_string(const char *dir)
 {
   const char *cp = dir;
-  while(1) {
+  while (1) {
     cp = strstr(cp, "\nrouter ");
     if (!cp) break;
     ++cp;
@@ -599,14 +599,14 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
    * PEM-encoded key instead.
    */
 #if 1
-  if(crypto_pk_DER64_encode_public_key(private_key, &identity_pkey)<0) {
+  if (crypto_pk_DER64_encode_public_key(private_key, &identity_pkey)<0) {
     log_fn(LOG_WARN,"write identity_pkey to string failed!");
     return -1;
   }
 #else
   {
     int l;
-    if(crypto_pk_write_public_key_to_string(private_key,&identity_pkey,&l)<0) {
+    if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,&l)<0) {
       log_fn(LOG_WARN,"write identity_pkey to string failed!");
       return -1;
     }
@@ -735,7 +735,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when,
     if (!is_running_routers) {
       char filename[512];
       tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_options()->DataDirectory);
-      if(write_str_to_file(filename,cached_directory.dir,0) < 0) {
+      if (write_str_to_file(filename,cached_directory.dir,0) < 0) {
         log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
       }
     }
@@ -843,14 +843,14 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
    * PEM-encoded key instead.
    */
 #if 1
-  if(crypto_pk_DER64_encode_public_key(private_key, &identity_pkey)<0) {
+  if (crypto_pk_DER64_encode_public_key(private_key, &identity_pkey)<0) {
     log_fn(LOG_WARN,"write identity_pkey to string failed!");
     goto err;
   }
 #else
   {
     int l;
-    if(crypto_pk_write_public_key_to_string(private_key,&identity_pkey,&l)<0) {
+    if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,&l)<0) {
       log_fn(LOG_WARN,"write identity_pkey to string failed!");
       goto err;
     }
@@ -926,7 +926,7 @@ size_t dirserv_get_runningrouters(const char **rr, int compress)
   }
   if (runningrouters_is_dirty &&
       runningrouters_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL)) {
-    if(generate_runningrouters(get_identity_key())) {
+    if (generate_runningrouters(get_identity_key())) {
       log_fn(LOG_ERR, "Couldn't generate running-routers list?");
       return 0;
     }

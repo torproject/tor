@@ -466,7 +466,7 @@ tor_tls_write(tor_tls *tls, char *cp, size_t n)
   tor_assert(tls->state == TOR_TLS_ST_OPEN);
   if (n == 0)
     return 0;
-  if(tls->wantwrite_n) {
+  if (tls->wantwrite_n) {
     /* if WANTWRITE last time, we must use the _same_ n as before */
     tor_assert(n >= tls->wantwrite_n);
     log_fn(LOG_DEBUG,"resuming pending-write, (%d to flush, reusing %d)",

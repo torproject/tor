@@ -267,7 +267,7 @@ test_crypto(void)
   test_neq(env1, 0);
   test_eq(crypto_cipher_generate_key(env1), 0);
   test_eq(crypto_cipher_encrypt_init_cipher(env1), 0);
-  for(i = 0; i < 1024; ++i) {
+  for (i = 0; i < 1024; ++i) {
     data1[i] = (char) i*73;
   }
   crypto_cipher_encrypt(env1, data2, data1, 1024);
@@ -277,7 +277,7 @@ test_crypto(void)
 
   /* Now, test encryption and decryption with stream cipher. */
   data1[0]='\0';
-  for(i = 1023; i>0; i -= 35)
+  for (i = 1023; i>0; i -= 35)
     strncat(data1, "Now is the time for all good onions", i);
 
   memset(data2, 0, 1024);
@@ -879,7 +879,7 @@ test_onion(void)
   test_streq(names[1],"bar");
   test_streq(names[2],"baz");
   test_streq(names[3],"quux");
-  for(i=0;i<num;i++)
+  for (i=0;i<num;i++)
     tor_free(names[i]);
   tor_free(names);
 #endif

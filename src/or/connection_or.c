@@ -56,7 +56,7 @@ int connection_or_process_inbuf(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_OR);
 
-  if(conn->state != OR_CONN_STATE_OPEN)
+  if (conn->state != OR_CONN_STATE_OPEN)
     return 0; /* don't do anything */
   return connection_or_process_cells_from_inbuf(conn);
 }
@@ -95,7 +95,7 @@ int connection_or_finished_connecting(connection_t *conn)
   log_fn(LOG_INFO,"OR connect() to router at %s:%u finished.",
          conn->address,conn->port);
 
-  if(connection_tls_start_handshake(conn, 0) < 0) {
+  if (connection_tls_start_handshake(conn, 0) < 0) {
     /* TLS handshaking error of some kind. */
     connection_mark_for_close(conn);
     return -1;
@@ -207,7 +207,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
 
   tor_assert(id_digest);
 
-  if(server_mode(get_options()) && (me=router_get_my_routerinfo()) &&
+  if (server_mode(get_options()) && (me=router_get_my_routerinfo()) &&
      !memcmp(me->identity_digest, id_digest,DIGEST_LEN)) {
     log_fn(LOG_WARN,"Request to connect to myself! Failing.");
     return NULL;
@@ -217,7 +217,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
    * id_digest, but check first to be sure */
   /*XXX this is getting called, at least by dirservers. */
   conn = connection_get_by_identity_digest(id_digest, CONN_TYPE_OR);
-  if(conn) {
+  if (conn) {
     tor_assert(conn->nickname);
     log_fn(LOG_WARN,"Asked me to connect to router '%s', but there's already a connection.", conn->nickname);
     return conn;
@@ -230,7 +230,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
   conn->state = OR_CONN_STATE_CONNECTING;
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED);
 
-  switch(connection_connect(conn, conn->address, addr, port)) {
+  switch (connection_connect(conn, conn->address, addr, port)) {
     case -1:
       router_mark_as_down(conn->identity_digest);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
@@ -244,7 +244,7 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
     /* case 1: fall through */
   }
 
-  if(connection_tls_start_handshake(conn, 0) >= 0)
+  if (connection_tls_start_handshake(conn, 0) >= 0)
     return conn;
 
   /* failure */
@@ -263,13 +263,13 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
 int connection_tls_start_handshake(connection_t *conn, int receiving) {
   conn->state = OR_CONN_STATE_HANDSHAKING;
   conn->tls = tor_tls_new(conn->s, receiving, 0);
-  if(!conn->tls) {
+  if (!conn->tls) {
     log_fn(LOG_WARN,"tor_tls_new failed. Closing.");
     return -1;
   }
   connection_start_reading(conn);
   log_fn(LOG_DEBUG,"starting the handshake");
-  if(connection_tls_continue_handshake(conn) < 0) {
+  if (connection_tls_continue_handshake(conn) < 0) {
     return -1;
   }
   return 0;
@@ -281,7 +281,7 @@ int connection_tls_start_handshake(connection_t *conn, int receiving) {
  * Return -1 if <b>conn</b> is broken, else return 0.
  */
 int connection_tls_continue_handshake(connection_t *conn) {
-  switch(tor_tls_handshake(conn->tls)) {
+  switch (tor_tls_handshake(conn->tls)) {
     case TOR_TLS_ERROR:
     case TOR_TLS_CLOSE:
       log_fn(LOG_INFO,"tls error. breaking.");
@@ -361,13 +361,13 @@ connection_tls_finish_handshake(connection_t *conn) {
   log_fn(LOG_DEBUG, "Other side (%s:%d) claims to be router '%s'",
          conn->address, conn->port, nickname);
 
-  if(tor_tls_verify(conn->tls, &identity_rcvd) < 0) {
+  if (tor_tls_verify(conn->tls, &identity_rcvd) < 0) {
     log_fn(LOG_WARN,"Other side, which claims to be router '%s' (%s:%d), has a cert but it's invalid. Closing.",
            nickname, conn->address, conn->port);
     return -1;
   }
 #if 0
-  if(tor_tls_check_lifetime(conn->tls, LOOSE_CERT_ALLOW_SKEW)<0) {
+  if (tor_tls_check_lifetime(conn->tls, LOOSE_CERT_ALLOW_SKEW)<0) {
     log_fn(LOG_WARN,"Other side '%s' (%s:%d) has a very highly skewed clock, or an expired certificate.  Closing.",
            nickname, conn->address, conn->port);
     return -1;
@@ -384,7 +384,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   crypto_free_pk_env(identity_rcvd);
 
   router = router_get_by_nickname(nickname);
-  if(router && /* we know this nickname */
+  if (router && /* we know this nickname */
      router->is_verified && /* make sure it's the right guy */
      memcmp(digest_rcvd, router->identity_digest, DIGEST_LEN) != 0) {
     log_fn(LOG_WARN, "Identity key not as expected for router claiming to be '%s' (%s:%d) ", nickname, conn->address, conn->port);
@@ -392,7 +392,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   }
   if (router_get_by_digest(digest_rcvd)) {
     /* This is a known router; don't cut it slack with its clock skew. */
-    if(tor_tls_check_lifetime(conn->tls, TIGHT_CERT_ALLOW_SKEW)<0) {
+    if (tor_tls_check_lifetime(conn->tls, TIGHT_CERT_ALLOW_SKEW)<0) {
       log_fn(LOG_WARN,"Router '%s' (%s:%d) has a skewed clock, or an expired certificate; or else our clock is skewed. Closing.",
              nickname, conn->address, conn->port);
       return -1;
@@ -409,7 +409,7 @@ connection_tls_finish_handshake(connection_t *conn) {
       return -1;
     }
   } else {
-    if((c=connection_get_by_identity_digest(digest_rcvd, CONN_TYPE_OR))) {
+    if ((c=connection_get_by_identity_digest(digest_rcvd, CONN_TYPE_OR))) {
       log_fn(LOG_INFO,"Router '%s' is already connected on fd %d. Dropping fd %d.", nickname, c->s, conn->s);
       return -1;
     }
@@ -454,15 +454,15 @@ void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
  * push data out as soon as we know there's enough for a tls record, so
  * during periods of high load we won't read the entire megabyte from
  * input before pushing any data out. */
-  if(conn->outbuf_flushlen-CELL_NETWORK_SIZE < MIN_TLS_FLUSHLEN &&
+  if (conn->outbuf_flushlen-CELL_NETWORK_SIZE < MIN_TLS_FLUSHLEN &&
      conn->outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
     int extra = conn->outbuf_flushlen - MIN_TLS_FLUSHLEN;
     conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
-    if(connection_handle_write(conn) < 0) {
+    if (connection_handle_write(conn) < 0) {
       log_fn(LOG_WARN,"flushing failed.");
       return;
     }
-    if(extra) {
+    if (extra) {
       conn->outbuf_flushlen += extra;
       connection_start_writing(conn);
     }
@@ -485,7 +485,7 @@ static int connection_or_process_cells_from_inbuf(connection_t *conn) {
 loop:
   log_fn(LOG_DEBUG,"%d: starting, inbuf_datalen %d (%d pending in tls object).",
          conn->s,(int)buf_datalen(conn->inbuf),tor_tls_get_pending_bytes(conn->tls));
-  if(buf_datalen(conn->inbuf) < CELL_NETWORK_SIZE) /* entire response available? */
+  if (buf_datalen(conn->inbuf) < CELL_NETWORK_SIZE) /* entire response available? */
     return 0; /* not yet */
 
   connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, conn);
