@@ -13,7 +13,9 @@ class _Enum:
             setattr(self,name,idx)
             self.nameOf[idx] = name
             idx += 1
-
+class _Enum2:
+    def __init__(self, **args):
+        self.__dict__.update(args)
 
 MSG_TYPE = _Enum(0x0000,
                  ["ERROR",
@@ -39,16 +41,35 @@ MSG_TYPE = _Enum(0x0000,
                   "CLOSECIRCUIT",
                   ])
 
-assert MSG_TYPE.SAVECONF = 0x0008
-assert MSG_TYPE.CLOSECIRCUIT = 0x0014
+assert MSG_TYPE.SAVECONF == 0x0008
+assert MSG_TYPE.CLOSECIRCUIT == 0x0014
 
-EVENT_TYPE = _ENUM(0x0001,
+EVENT_TYPE = _Enum(0x0001,
                    ["CIRCSTATUS",
                     "STREAMSTATUS",
                     "ORCONNSTATUS",
                     "BANDWIDTH",
                     "WARN",
                     "NEWDESC"])
+
+CIRC_STATUS = _Enum(0x00,
+                    ["LAUNCHED",
+                     "BUILT",
+                     "EXTENDED",
+                     "FAILED",
+                     "CLOSED"])
+STREAM_STATUS = _Enum(0x00,
+                      ["SENT_CONNECT",
+                       "SENT_RESOLVE",
+                       "SUCCEEDED",
+                       "FAILED",
+                       "CLOSED",
+                       "NEW_CONNECT",
+                       "NEW_RESOLVE",
+                       "DETACHED"])
+OR_CONN_STATUS = _Enum(0x00,
+                       ["LAUNCHED","CONNECTED","FAILED","CLOSED"])
+SIGNAL = _Enum2(HUP=0x01,INT=0x02,USR1=0x0A,USR2=0x0C,TERM=0x0F)
 
 ERR_CODES = {
   0x0000 : "Unspecified error",
@@ -104,6 +125,13 @@ def _unpack_msg(msg):
     else:
         return None,4+length,msg
 
+def _minLengthToPack(bytes):
+    whole,left = divmod(bytes,65535)
+    if left:
+        return whole*(65535+4)+4+left
+    else:
+        return whole*(65535+4)
+
 def unpack_msg(msg):
     "returns as for _unpack_msg"
     tp,body,rest = _unpack_msg(msg)
@@ -116,28 +144,34 @@ def unpack_msg(msg):
     realType,realLength = struct.unpack("!HL", body[:6])
 
     # Okay; could the message _possibly_ be here?
-    minPackets,minSlop = divmod(realLength+6,65535)
-    minLength = (minPackets*(65535+4))+4+minSlop
+    minLength = _minLengthToPack(realLength+6)
     if len(msg) < minLength:
         return None,  minLength, msg
 
     # Okay; optimistically try to build up the msg.
     soFar = [ body[6:] ]
     lenSoFarLen = len(body)-6
-    while rest and lenSoFar < realLength:
-        ln, tp = struct.unpack("!HH" rest[:4])
+    while len(rest)>=4 and lenSoFar < realLength:
+        ln, tp = struct.unpack("!HH", rest[:4])
         if tp != MSG_TYPE.FRAGMENT:
             raise ProtocolError("Missing FRAGMENT message")
         soFar.append(rest[4:4+ln])
         lenSoFar += ln
-        rest = rest[4+ln:]
+        if 4+ln > len(rest):
+            rest = ""
+            leftInPacket = 4+ln-len(rest)
+        else:
+            rest = rest[4+ln:]
+            leftInPacket=0
 
     if lenSoFar == realLength:
         return realType, "".join(soFar), rest
     elif lenSoFar > realLength:
         raise ProtocolError("Bad fragmentation: message longer than declared")
     else:
-        return None, len(msg)+(realLength-lenSoFar), msg
+        inOtherPackets = realLength-lenSoFar-leftInPacket
+        minLength = _minLengthToPack(inOtherPackets)
+        return None, len(msg)+leftInPacket+inOtherPackets, msg
 
 def receive_message(s):
     length, tp, body = _receive_msg(s)
@@ -259,7 +293,56 @@ def extend_circuit(s, circid, hops):
     msg = struct.pack("!L",circid) + ",".join(hops) + "\0"
     send_message(s,MSG_TYPE.EXTENDCIRCUIT,msg)
     tp, body = receive_reply(s,[MSG_TYPE.DONE])
-    return body
+    if len(body) != 4:
+        raise ProtocolError("Extendcircuit reply too short or long")
+    return struct.unpack("!L",body)
+
+def redirect_stream(s, streamid, newtarget):
+    msg = struct.pack("!L",streamid) + newtarget + "\0"
+    tp,body = receive_reply(s,[MSG_TYPE.DONE])
+
+def _unterminate(s):
+    if s[-1] == '\0':
+        return s[:-1]
+    else:
+        return s
+
+def unpack_event(body):
+    if len(body)<2:
+        raise ProtocolError("EVENT body too short.")
+    evtype = struct.unpack("!H", body[:2])
+    body = body[2:]
+    if evtype == EVENT_TYPE.CIRCUITSTATUS:
+        if len(body)<5:
+            raise ProtocolError("CIRCUITSTATUS event too short.")
+        status,ident = struct.unpack("!BL", body[:5])
+        path = _unterminate(body[5:]).split(",")
+        args = status, ident, path
+    elif evtype == EVENT_TYPE.STREAMSTATUS:
+        if len(body)<5:
+            raise ProtocolError("CIRCUITSTATUS event too short.")
+        status,ident = struct.unpack("!BL", body[:5])
+        target = _unterminate(body[5:])
+        args = status, ident, target
+    elif evtype == EVENT_TYPE.ORCONNSTATUS:
+        if len(body)<2:
+            raise ProtocolError("CIRCUITSTATUS event too short.")
+        status = ord(body[0])
+        target = _unterminate(body[1:])
+        args = status, target
+    elif evtype == EVENT_TYPE.BANDWIDTH:
+        if len(body)<8:
+            raise ProtocolError("BANDWIDTH event too short.")
+        read, written = struct.unpack("!LL",body[:8])
+        args = read, written
+    elif evtype == EVENT_TYPE.WARN:
+        args = (_unterminate(body),)
+    elif evtype == EVENT_TYPE.NEWDESC:
+        args = (_unterminate(body).split(","),)
+    else:
+        args = (body,)
+
+    return evtype, args
 
 def listen_for_events(s):
     while(1):
