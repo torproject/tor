@@ -41,7 +41,7 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 #DataDirectory @LOCALSTATEDIR@/lib/tor
 
 #Nickname moria # A unique handle for this server
-#Address moria.seul.org # The fqdn for this server
+#Address moria.seul.org # The IP or fqdn for this server
 
 #ORPort 9001 # where to listen for tor connections
 #ORBindAddress 0.0.0.0 # accept connections from anywhere
