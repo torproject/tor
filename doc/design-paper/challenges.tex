@@ -178,7 +178,12 @@ in practice tor's threat model is based entirely on the goal of dispersal
 and diversity. george and steven describe an attack \cite{draft} that
 lets them determine the nodes used in a circuit; yet they can't identify
 alice or bob through this attack. so it's really just the endpoints that
-remain secure. see \ref{subsec:routing-zones} for discussion of larger
+remain secure. and the enclave model seems particularly threatened by
+this, since this attack lets us identify endpoints when they're servers.
+see \ref{subsec:helper-nodes} for discussion of some ways to address this
+issue.
+
+see \ref{subsec:routing-zones} for discussion of larger
 adversaries and our dispersal goals.
 
 \section{Crossroads: Policy issues}
@@ -318,12 +323,24 @@ IDS.]  Our server operators tell us that exit policies are one of
 the main reasons they're willing to run Tor over previous attempts
 at anonymizing networks.  Adding an IDS to handle exit policies would
 increase the security complexity of Tor, and would likely not work anyway,
-as evidenced by the entire field of IDS and counter-IDS papers.
+as evidenced by the entire field of IDS and counter-IDS papers. Many
+potential abuse issues are resolved by the fact that Tor only transports
+valid TCP streams (as opposed to arbitrary IP including malformed packets
+and IP floods), so exit policies become even \emph{more} important as
+we become able to transport IP packets. We also need a way to compactly
+characterize the exit policies and let clients parse them to decide
+which nodes will allow which packets to exit.
 \item [The Tor-internal name spaces would need to be redesigned.] We
 support hidden service \tt{.onion} addresses, and other special addresses
 like \tt{.exit} (see Section \ref{subsec:}), by intercepting the addresses
 when they are passed to the Tor client.
 \end{enumerate}
+
+This list is discouragingly long right now, but we recognize that it
+would be good to investigate each of these items in further depth and to
+understand which are actual roadblocks and which are easier to resolve
+than we think. We certainly wouldn't mind if Tor one day is able to
+transport a greater variety of protocols.
 
 \subsection{Mid-latency}
 
@@ -381,6 +398,16 @@ a lot. They're the epitome of the need for helper nodes. This means
 that using Tor as a building block for Free Haven is going to be really
 hard. Also, they're brittle in terms of intersection and observation
 attacks. Would be nice to have hot-swap services, but hard to design.
+
+Game theory for helper nodes: if Alice offers a hidden service on a
+server (enclave model), and nobody ever uses helper nodes, then against
+George+Steven's attack she's totally nailed. If only Alice uses a helper
+node, then she's still identified as the source of the data. If everybody
+uses a helper node (including Alice), then the attack identifies the
+helper node and also Alice, and knows which one is which. If everybody
+uses a helper node (but not Alice), then the attacker figures the real
+source was a client that is using Alice as a helper node. [How's my
+logic here?]
 
 in practice, sites like bloggers without borders (www.b19s.org) are
 running tor servers but more important are advertising a hidden-service
