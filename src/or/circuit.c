@@ -83,6 +83,10 @@ void circuit_free(circuit_t *circ) {
     crypto_free_cipher_env(circ->n_crypto);
   if (circ->p_crypto)
     crypto_free_cipher_env(circ->p_crypto);
+  if (circ->n_digest)
+    crypto_free_digest_env(circ->n_digest);
+  if (circ->p_digest)
+    crypto_free_digest_env(circ->p_digest);
   if(circ->build_state)
     tor_free(circ->build_state->chosen_exit);
   tor_free(circ->build_state);
@@ -309,6 +313,7 @@ void relay_set_digest(crypto_digest_env_t *digest, cell_t *cell) {
 
   crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
   crypto_digest_get_digest(digest, (char *)&integrity, 4);
+  log_fn(LOG_DEBUG,"Putting digest of %u into relay cell.",integrity);
   SET_CELL_RELAY_INTEGRITY(*cell, integrity);
 }
 
@@ -319,6 +324,7 @@ int relay_check_digest(crypto_digest_env_t *digest, cell_t *cell) {
   uint32_t received_integrity, calculated_integrity;
 
   received_integrity = CELL_RELAY_INTEGRITY(*cell);
+  log_fn(LOG_DEBUG,"Reading digest of %u from relay cell.",received_integrity);
   SET_CELL_RELAY_INTEGRITY(*cell, 0);
 
   crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
@@ -854,6 +860,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
   routerinfo_t *router;
   int r;
   int circ_id_type;
+  char payload[6+ONIONSKIN_CHALLENGE_LEN];
 
   assert(circ && circ->cpath);
 
@@ -899,27 +906,20 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     }
     hop = circ->cpath->prev;
 
-    memset(&cell, 0, sizeof(cell_t));
-    cell.command = CELL_RELAY; 
-    cell.circ_id = circ->n_circ_id;
-    SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_EXTEND);
-    SET_CELL_STREAM_ID(cell, ZERO_STREAM);
-    SET_CELL_RELAY_LENGTH(cell, 6+ONIONSKIN_CHALLENGE_LEN);
-
-    *(uint32_t*)(cell.payload+RELAY_HEADER_SIZE) = htonl(hop->addr);
-    *(uint16_t*)(cell.payload+RELAY_HEADER_SIZE+4) = htons(hop->port);
-    if(onion_skin_create(router->onion_pkey, &(hop->handshake_state),
-                         cell.payload+RELAY_HEADER_SIZE+6) < 0) {
+    *(uint32_t*)payload = htonl(hop->addr);
+    *(uint16_t*)(payload+4) = htons(hop->port);
+    if(onion_skin_create(router->onion_pkey, &(hop->handshake_state), payload+6) < 0) {
       log_fn(LOG_WARN,"onion_skin_create failed.");
       return -1;
     }
 
     log_fn(LOG_DEBUG,"Sending extend relay cell.");
-    /* send it to hop->prev, because it will transfer it to a create cell and then send to hop */
-    if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION_OUT, hop->prev) < 0) {
-      log_fn(LOG_WARN,"failed to deliver extend cell. Closing.");
-      return -1;
-    }
+    /* send it to hop->prev, because it will transfer
+     * it to a create cell and then send to hop */
+    if(connection_edge_send_command(NULL, circ, RELAY_COMMAND_EXTEND,
+                               payload, sizeof(payload), hop->prev) < 0)
+      return -1; /* circuit is closed */
+
     hop->state = CPATH_STATE_AWAITING_KEYS;
   }
   return 0;
@@ -987,7 +987,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
 
 int circuit_finish_handshake(circuit_t *circ, char *reply) {
   unsigned char iv[16];
-  unsigned char keys[32];
+  unsigned char keys[40+32];
   crypt_path_t *hop;
 
   memset(iv, 0, 16);
@@ -1006,7 +1006,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   }
   assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
-  if(onion_skin_client_handshake(hop->handshake_state, reply, keys, 32) < 0) {
+  if(onion_skin_client_handshake(hop->handshake_state, reply, keys, 40+32) < 0) {
     log_fn(LOG_WARN,"onion_skin_client_handshake failed.");
     return -1;
   }
@@ -1014,16 +1014,22 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   crypto_dh_free(hop->handshake_state); /* don't need it anymore */
   hop->handshake_state = NULL;
 
-  log_fn(LOG_DEBUG,"hop %d init cipher forward %u, backward %u.", 
-        (int)hop, (unsigned)*(uint32_t*)keys, (unsigned) *(uint32_t*)(keys+16));
+  log_fn(LOG_INFO,"hop %d init digest forward %u, backward %u.",
+         (int)hop, (unsigned)*(uint32_t*)keys, (unsigned)*(uint32_t*)(keys+20));
+  hop->f_digest = crypto_new_digest_env(CRYPTO_SHA1_DIGEST);
+  crypto_digest_add_bytes(hop->f_digest, keys, 20);
+  hop->b_digest = crypto_new_digest_env(CRYPTO_SHA1_DIGEST);
+  crypto_digest_add_bytes(hop->b_digest, keys+20, 20);
+
+  log_fn(LOG_DEBUG,"hop %d init cipher forward %u, backward %u.",
+        (int)hop, (unsigned)*(uint32_t*)(keys+40), (unsigned) *(uint32_t*)(keys+40+16));
   if (!(hop->f_crypto =
-        crypto_create_init_cipher(CIRCUIT_CIPHER,keys,iv,1))) {
+        crypto_create_init_cipher(CIRCUIT_CIPHER,keys+40,iv,1))) {
     log(LOG_WARN,"forward cipher initialization failed.");
     return -1;
   }
-
   if (!(hop->b_crypto =
-        crypto_create_init_cipher(CIRCUIT_CIPHER,keys+16,iv,0))) {
+        crypto_create_init_cipher(CIRCUIT_CIPHER,keys+40+16,iv,0))) {
     log(LOG_WARN,"backward cipher initialization failed.");
     return -1;
   }
@@ -1135,9 +1141,13 @@ void assert_circuit_ok(const circuit_t *c)
     if (c->cpath) {
       assert(!c->n_crypto);
       assert(!c->p_crypto);
+      assert(!c->n_digest);
+      assert(!c->p_digest);
     } else {
       assert(c->n_crypto);
       assert(c->p_crypto);
+      assert(c->n_digest);
+      assert(c->p_digest);
     }
   }
   if (c->cpath) {
