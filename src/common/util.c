@@ -603,15 +603,17 @@ static const char *MONTH_NAMES[] =
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
 void format_rfc1123_time(char *buf, time_t t) {
-  struct tm *tm = gmtime(&t);
+  struct tm tm;
 
-  strftime(buf, RFC1123_TIME_LEN+1, "___, %d ___ %Y %H:%M:%S GMT", tm);
-  tor_assert(tm->tm_wday >= 0);
-  tor_assert(tm->tm_wday <= 6);
-  memcpy(buf, WEEKDAY_NAMES[tm->tm_wday], 3);
-  tor_assert(tm->tm_wday >= 0);
-  tor_assert(tm->tm_mon <= 11);
-  memcpy(buf+8, MONTH_NAMES[tm->tm_mon], 3);
+  tor_gmtime_r(&t, &tm);
+
+  strftime(buf, RFC1123_TIME_LEN+1, "___, %d ___ %Y %H:%M:%S GMT", &tm);
+  tor_assert(tm.tm_wday >= 0);
+  tor_assert(tm.tm_wday <= 6);
+  memcpy(buf, WEEKDAY_NAMES[tm.tm_wday], 3);
+  tor_assert(tm.tm_wday >= 0);
+  tor_assert(tm.tm_mon <= 11);
+  memcpy(buf+8, MONTH_NAMES[tm.tm_mon], 3);
 }
 
 int parse_rfc1123_time(const char *buf, time_t *t) {
@@ -649,11 +651,13 @@ int parse_rfc1123_time(const char *buf, time_t *t) {
 }
 
 void format_local_iso_time(char *buf, time_t t) {
-  strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", localtime(&t));
+  struct tm tm;
+  strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", tor_localtime_r(&t, &tm));
 }
 
 void format_iso_time(char *buf, time_t t) {
-  strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", gmtime(&t));
+  struct tm tm;
+  strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", tor_gmtime_r(&t, &tm));
 }
 
 int parse_iso_time(const char *cp, time_t *t) {
