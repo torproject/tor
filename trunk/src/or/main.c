@@ -513,10 +513,12 @@ static int do_main_loop(void) {
    * non-zero. This is where we try to connect to all the other ORs,
    * and start the listeners
    */
-  retry_all_connections(options.ORPort, options.APPort, options.DirPort);
+  retry_all_connections((uint16_t) options.ORPort,
+	                    (uint16_t) options.APPort,
+						(uint16_t) options.DirPort);
 
   for(;;) {
-#ifndef MS_WINDOWS /* do signal stuff only on unix */
+#ifndef MS_WIN32 /* do signal stuff only on unix */
     if(please_dumpstats) {
       dumpstats();
       please_dumpstats = 0;
@@ -588,7 +590,7 @@ static int do_main_loop(void) {
 
 static void catch(int the_signal) {
 
-#ifndef MS_WINDOWS /* do signal stuff only on unix */
+#ifndef MS_WIN32 /* do signal stuff only on unix */
   switch(the_signal) {
 //    case SIGABRT:
     case SIGTERM:
@@ -822,6 +824,7 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
 }
 
 void daemonize(void) {
+#ifndef MS_WINDOWS
   /* Fork; parent exits. */
   if (fork())
     exit(0);
@@ -837,6 +840,7 @@ void daemonize(void) {
   fclose(stdin);
   fclose(stdout); /* XXX Nick: this closes our log, right? is it safe to leave this open? */
   fclose(stderr);
+#endif
 }
 
 int tor_main(int argc, char *argv[]) {
