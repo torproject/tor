@@ -360,7 +360,6 @@ static void run_scheduled_events(time_t now) {
     if (router_rebuild_descriptor()<0) {
       log_fn(LOG_WARN, "Couldn't rebuild router descriptor");
     }
-    router_rebuild_descriptor();
     router_upload_dir_desc_to_dirservers();
   }
 
