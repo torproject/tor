@@ -387,10 +387,11 @@ router_parse_routerlist_from_directory(const char *str,
     log_fn(LOG_WARN, "Missing recommended-software line from directory.");
     goto err;
   }
-  if (tok->n_args != 1) {
-    log_fn(LOG_WARN, "Invalid recommended-software line"); goto err;
+  if (tok->n_args > 1) {
+    log_fn(LOG_WARN, "Invalid recommended-software line", tok->n_args);goto err;
+           
   }
-  versions = tor_strdup(tok->args[0]);
+  versions = tor->n_args ? tor_strdup(tok->args[0]) : tor_strdup("");
 
   if (!(tok = find_first_by_keyword(tokens, K_RUNNING_ROUTERS))) {
     log_fn(LOG_WARN, "Missing running-routers line from directory.");
@@ -1016,10 +1017,9 @@ static int router_add_exit_policy(routerinfo_t *router,directory_token_t *tok)
 static struct exit_policy_t *
 router_parse_exit_policy(directory_token_t *tok) {
 
-  struct exit_policy_t*newe;
+  struct exit_policy_t *newe;
   struct in_addr in;
-  char *arg, *address, *mask, *port, *endptr;
-  int bits;
+  char *arg, *address;
 
   tor_assert(tok->tp == K_REJECT || tok->tp == K_ACCEPT);
 
@@ -1039,77 +1039,10 @@ router_parse_exit_policy(directory_token_t *tok) {
   }
   strcat(newe->string, arg); /* can't overflow */
 
-  address = arg;
-  mask = strchr(arg,'/');
-  port = strchr(mask?mask:arg,':');
-  /* Break 'arg' into separate strings.  'arg' was already strdup'd by
-   * _router_get_next_token, so it's safe to modify.
-   */
-  if (mask)
-    *mask++ = 0;
-  if (port)
-    *port++ = 0;
-
-  if (strcmp(address, "*") == 0) {
-    newe->addr = 0;
-  } else if (tor_inet_aton(address, &in) != 0) {
-    newe->addr = ntohl(in.s_addr);
-  } else {
-    log_fn(LOG_WARN, "Malformed IP %s in exit policy; rejecting.",
-           address);
+  if (parse_addr_and_port_range(arg, &newe->addr, &newe->msk,
+                                &newe->prt_min, &newe->prt_max))
     goto policy_read_failed;
-  }
-  if (!mask) {
-    if (strcmp(address, "*") == 0)
-      newe->msk = 0;
-    else
-      newe->msk = 0xFFFFFFFFu;
-  } else {
-    endptr = NULL;
-    bits = (int) strtol(mask, &endptr, 10);
-    if (!*endptr) {
-      /* strtol handled the whole mask. */
-      if (bits < 0 || bits > 32) {
-        log_fn(LOG_WARN, "Bad number of mask bits on exit policy; rejecting.");
-        goto policy_read_failed;
-      }
-      newe->msk = ~((1<<(32-bits))-1);
-    } else if (tor_inet_aton(mask, &in) != 0) {
-      newe->msk = ntohl(in.s_addr);
-    } else {
-      log_fn(LOG_WARN, "Malformed mask %s on exit policy; rejecting.",
-             mask);
-      goto policy_read_failed;
-    }
-  }
-  if (!port || strcmp(port, "*") == 0) {
-    newe->prt_min = 0;
-    newe->prt_max = 65535;
-  } else {
-    endptr = NULL;
-    newe->prt_min = (uint16_t) tor_parse_long(port, 10, 1, 65535,
-                                              NULL, &endptr);
-    if (*endptr == '-') {
-      port = endptr+1;
-      endptr = NULL;
-      newe->prt_max = (uint16_t) tor_parse_long(port, 10, 1, 65535, NULL,
-                                                &endptr);
-      if (*endptr || !newe->prt_max) {
-      log_fn(LOG_WARN, "Malformed port %s on exit policy; rejecting.",
-             port);
-      }
-    } else if (*endptr || !newe->prt_min) {
-      log_fn(LOG_WARN, "Malformed port %s on exit policy; rejecting.",
-             port);
-      goto policy_read_failed;
-    } else {
-      newe->prt_max = newe->prt_min;
-    }
-    if (newe->prt_min > newe->prt_max) {
-      log_fn(LOG_WARN,"Insane port range on exit policy; rejecting.");
-      goto policy_read_failed;
-    }
-  }
+  
 
   in.s_addr = htonl(newe->addr);
   address = tor_strdup(inet_ntoa(in));
