@@ -211,8 +211,6 @@ int connection_dir_process_inbuf(connection_t *conn) {
 
     if(conn->purpose == DIR_PURPOSE_FETCH_DIR) {
       /* fetch/process the directory to learn about new routers. */
-      directory[dir_len] = 0; /* null terminate it, we can do this
-                                 because fetch_from_buf_http made space */
       log_fn(LOG_INFO,"Received directory (size %d):\n%s", dir_len, directory);
       if(status_code == 503 || dir_len == 0) {
         log_fn(LOG_INFO,"Empty directory. Ignoring.");
@@ -374,7 +372,6 @@ static int directory_handle_command_post(connection_t *conn,
   }
 
   if(!strcmp(url,"/")) { /* server descriptor post */
-    body[body_len] = 0; /* dirserv_add_descriptor expects nul-terminated */
     cp = body;
     switch(dirserv_add_descriptor(&cp)) {
       case -1:
