@@ -13,7 +13,7 @@ ARMA    - arma claims
 
       0.0.9:
         o Fix OutboundBindAddress
-        o Config defaults should be consistant with config file and no
+        o Config defaults should be consistent with config file and no
           config file.
         o write instructions for port-forwarding directives or programs
           to let people run on ports 80 and 443 without needing to bind
@@ -21,24 +21,24 @@ ARMA    - arma claims
         o clean up all the comma-separated stuff (eg exit policies) into
           smartlists.
         o investigate sctp for alternate transport.
- 	o Document all undocumented options, or mark them as undocumented
-	  in the source.
+        o Document all undocumented options, or mark them as undocumented
+          in the source.
         o bandwidth buckets for write as well as read.
         . Cached-directory changes:
-            o make clients store the cached-directory to disk,
-            o and use it when they startup, so they don't need to bootstrap
-              from the authdirservers every time they start.
-            - also, once we've reduced authdirserver entries to config
-              lines, we can have lines that list cacheddirservers too.
+          o make clients store the cached-directory to disk,
+          o and use it when they startup, so they don't need to bootstrap
+            from the authdirservers every time they start.
+          - also, once we've reduced authdirserver entries to config
+            lines, we can have lines that list cacheddirservers too.
         . compress the directory.
-	    o Implement gzip/zlib wrappers
-	    o Compress directories as they're cached/generated
-	    o When requested, give a compressed directory.
-	    o Decompress incoming HTTP based on Content-Encoding
-	    - Once dirservers are running new code, make clients
-	      request compressed directories.  (Alternative: Switch
-	      to HTTP/1.1 and use Allowed-Encoding.  Is that really
-	      what we want?)
+          o Implement gzip/zlib wrappers
+          o Compress directories as they're cached/generated
+            o When requested, give a compressed directory.
+            o Decompress incoming HTTP based on Content-Encoding
+            - Once dirservers are running new code, make clients
+              request compressed directories.  (Alternative: Switch
+              to HTTP/1.1 and use Allowed-Encoding.  Is that really
+              what we want?)
 N       - switch dirservers entries to config lines.
 N       - let tor clients use http proxies for dir fetching
 N       - per-month byte allowances.
