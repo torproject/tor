@@ -86,7 +86,7 @@ int connection_or_finished_flushing(connection_t *conn) {
           conn->address,conn->port);
 
 #ifdef USE_TLS
-      if(connection_tls_start_handshake(conn) < 0)
+      if(connection_tls_start_handshake(conn, 0) < 0)
         return -1;
 #else
       if(options.OnionRouter)
@@ -205,7 +205,7 @@ connection_t *connection_or_connect(routerinfo_t *router) {
       router->address, router->or_port);
 
 #ifdef USE_TLS
-  if(connection_tls_start_handshake(conn) >= 0)
+  if(connection_tls_start_handshake(conn, 0) >= 0)
     return conn;
 #else
   if((options.OnionRouter && or_handshake_client_send_auth(conn) >= 0) ||
