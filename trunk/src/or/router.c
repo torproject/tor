@@ -709,7 +709,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
         return -1;
       written += result;
     }
-    if (tmpe->prt_min == 0 && tmpe->prt_max == 65535) {
+    if (tmpe->prt_min <= 1 && tmpe->prt_max == 65535) {
       /* There is no port set; write ":*" */
       if (written > maxlen-4)
         return -1;
@@ -729,6 +729,9 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
         return -1;
       written += result;
     }
+    if (tmpe->msk == 0 && tmpe->prt_min <= 1 && tmpe->prt_max == 65535)
+      /* This was a catch-all rule, so future rules are irrelevant. */
+      break;
   } /* end for */
   if (written > maxlen-256) /* Not enough room for signature. */
     return -1;
