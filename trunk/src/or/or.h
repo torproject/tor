@@ -144,14 +144,14 @@ typedef struct
   int marked_for_close;
 
   char *inbuf;
-  size_t inbuflen;
-  size_t inbuf_datalen;
+  int inbuflen;
+  int inbuf_datalen;
   int inbuf_reached_eof;
 
   char *outbuf;
-  size_t outbuflen; /* how many bytes are allocated for the outbuf? */
-  size_t outbuf_flushlen; /* how much data should we try to flush from the outbuf? */
-  size_t outbuf_datalen; /* how much data is there total on the outbuf? */
+  int outbuflen; /* how many bytes are allocated for the outbuf? */
+  int outbuf_flushlen; /* how much data should we try to flush from the outbuf? */
+  int outbuf_datalen; /* how much data is there total on the outbuf? */
 
 //  uint16_t aci; /* anonymous connection identifier */
 
@@ -263,7 +263,7 @@ typedef struct
   crypto_cipher_env_t *n_crypto;
 
   crypt_path_t **cpath;
-  size_t cpathlen; 
+  int cpathlen; 
 
   uint32_t expire; /* expiration time for the corresponding onion */
 
@@ -318,26 +318,26 @@ typedef struct
 
 /********************************* buffers.c ***************************/
 
-int buf_new(char **buf, size_t *buflen, size_t *buf_datalen);
+int buf_new(char **buf, int *buflen, int *buf_datalen);
 
 void buf_free(char *buf);
 
-int read_to_buf(int s, int at_most, char **buf, size_t *buflen, size_t *buf_datalen, int *reached_eof);
+int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, int *reached_eof);
   /* grab from s, put onto buf, return how many bytes read */
 
-int flush_buf(int s, char **buf, size_t *buflen, size_t *buf_flushlen, size_t *buf_datalen);
+int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen);
   /* push from buf onto s
    * then memmove to front of buf
    * return -1 or how many bytes remain on the buf */
 
-int write_to_buf(char *string, size_t string_len,
-                 char **buf, size_t *buflen, size_t *buf_datalen);
+int write_to_buf(char *string, int string_len,
+                 char **buf, int *buflen, int *buf_datalen);
   /* append string to buf (growing as needed, return -1 if "too big")
    * return total number of bytes on the buf
    */
 
-int fetch_from_buf(char *string, size_t string_len,
-		                 char **buf, size_t *buflen, size_t *buf_datalen);
+int fetch_from_buf(char *string, int string_len,
+		                 char **buf, int *buflen, int *buf_datalen);
 	  /* if there is string_len bytes in buf, write them onto string,
 	  *    * then memmove buf back (that is, remove them from buf) */
 
@@ -360,11 +360,11 @@ circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_by_naddr_nport(uint32_t naddr, uint16_t nport);
 
 int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, connection_t *conn, int crypt_type);
-int circuit_crypt(circuit_t *circ, char *in, size_t inlen, char crypt_type);
+int circuit_crypt(circuit_t *circ, char *in, int inlen, char crypt_type);
 
 int circuit_init(circuit_t *circ, int aci_type);
 void circuit_free(circuit_t *circ);
-void circuit_free_cpath(crypt_path_t **cpath, size_t cpathlen);
+void circuit_free_cpath(crypt_path_t **cpath, int cpathlen);
 
 void circuit_close(circuit_t *circ);
 
@@ -517,9 +517,9 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_get_by_type(int type);
 
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
-unsigned int *router_new_route(size_t *rlen);
-unsigned char *router_create_onion(unsigned int *route, size_t routelen, size_t *lenp, crypt_path_t **cpathp);
-routerinfo_t *router_get_first_in_route(unsigned int *route, size_t routelen);
+unsigned int *router_new_route(int *routelen);
+unsigned char *router_create_onion(unsigned int *route, int routelen, int *len, crypt_path_t **cpath);
+routerinfo_t *router_get_first_in_route(unsigned int *route, int routelen);
 connection_t *connect_to_router_as_op(routerinfo_t *router);
 
 void connection_watch_events(connection_t *conn, short events);
@@ -552,10 +552,10 @@ int chooselen(double cw);
  * int cw is the coin weight to use when choosing the route 
  * order of routers is from last to first
  */
-unsigned int *new_route(double cw, routerinfo_t **rarray, size_t rarray_len, size_t *rlen);
+unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *routelen);
 
 /* creates a new onion from route, stores it and its length into bufp and lenp respectively */
-unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned int *route, size_t routelen, size_t *lenp, crypt_path_t **cpathp);
+unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int *route, int routelen, int *len, crypt_path_t **cpath);
 
 /* encrypts 128 bytes of the onion with the specified public key, the rest with 
  * DES OFB with the key as defined in the outter layer */
@@ -565,7 +565,7 @@ unsigned char *encrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_
 unsigned char *decrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_env_t *prkey);
 
 /* delete first n bytes of the onion and pads the end with n bytes of random data */
-void pad_onion(unsigned char *onion, uint32_t onionlen, size_t n);
+void pad_onion(unsigned char *onion, uint32_t onionlen, int n);
 
 /* create a new tracked_onion entry */
 tracked_onion_t *new_tracked_onion(unsigned char *onion, uint32_t onionlen, tracked_onion_t **tracked_onions, tracked_onion_t **last_tracked_onion);
@@ -578,10 +578,10 @@ tracked_onion_t *id_tracked_onion(unsigned char *onion, uint32_t onionlen, track
 
 /********************************* routers.c ***************************/
 
-routerinfo_t **getrouters(char *routerfile, size_t *listlenp, uint16_t or_listenport);
+routerinfo_t **getrouters(char *routerfile, int *listlenp, uint16_t or_listenport);
 void delete_routerlist(routerinfo_t *list);
 /* create an NULL-terminated array of pointers pointing to elements of a router list */
-routerinfo_t **make_rarray(routerinfo_t* list, size_t *listlenp);
+routerinfo_t **make_rarray(routerinfo_t* list, int *len);
 
 
 #endif

@@ -8,7 +8,7 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
-int buf_new(char **buf, size_t *buflen, size_t *buf_datalen) {
+int buf_new(char **buf, int *buflen, int *buf_datalen) {
 
   assert(buf && buflen && buf_datalen);
 
@@ -26,7 +26,7 @@ void buf_free(char *buf) {
   free(buf);
 }
 
-int read_to_buf(int s, int at_most, char **buf, size_t *buflen, size_t *buf_datalen, int *reached_eof) {
+int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, int *reached_eof) {
 
   /* read from socket s, writing onto buf+buf_datalen. If at_most is >= 0 then
    * read at most 'at_most' bytes, and in any case don't read more than will fit based on buflen.
@@ -48,8 +48,8 @@ int read_to_buf(int s, int at_most, char **buf, size_t *buflen, size_t *buf_data
     return 0; /* we shouldn't read anything */
 
   if(!options.LinkPadding && at_most > 10*sizeof(cell_t)) {
-    /* if no linkpadding. do a rudimentary round-robin so one
-     * connection can't hog our receiver bucket
+    /* if no linkpadding: do a rudimentary round-robin so one
+     * connection can't hog an outgoing connection
      */
     at_most = 10*sizeof(cell_t);
   }
@@ -73,7 +73,7 @@ int read_to_buf(int s, int at_most, char **buf, size_t *buflen, size_t *buf_data
 
 }
 
-int flush_buf(int s, char **buf, size_t *buflen, size_t *buf_flushlen, size_t *buf_datalen) {
+int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datalen) {
 
   /* push from buf onto s
    * then memmove to front of buf
@@ -105,8 +105,8 @@ int flush_buf(int s, char **buf, size_t *buflen, size_t *buf_flushlen, size_t *b
   }
 }
 
-int write_to_buf(char *string, size_t string_len,
-                 char **buf, size_t *buflen, size_t *buf_datalen) {
+int write_to_buf(char *string, int string_len,
+                 char **buf, int *buflen, int *buf_datalen) {
 
   /* append string to buf (growing as needed, return -1 if "too big")
    * return total number of bytes on the buf
@@ -128,8 +128,8 @@ int write_to_buf(char *string, size_t string_len,
 
 }
 
-int fetch_from_buf(char *string, size_t string_len,
-                 char **buf, size_t *buflen, size_t *buf_datalen) {
+int fetch_from_buf(char *string, int string_len,
+                 char **buf, int *buflen, int *buf_datalen) {
 
   /* if there is string_len bytes in buf, write them onto string,
    * then memmove buf back (that is, remove them from buf) */
