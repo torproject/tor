@@ -316,7 +316,7 @@ int strcmpend(const char *s1, const char *s2)
 int strcasecmpend(const char *s1, const char *s2)
 {
   size_t n1 = strlen(s1), n2 = strlen(s2);
-  if (n2>n1)
+  if (n2>n1) /* then they can't be the same; figure out which is bigger */
     return strcasecmp(s1,s2);
   else
     return strncasecmp(s1+(n1-n2), s2, n2);

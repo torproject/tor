@@ -178,7 +178,7 @@ main(int argc, char **argv)
   arg = &argv[1];
   n_args = argc-1;
 
-  if (argc < 2)
+  if (!n_args)
     usage();
 
   if (!strcmp("-v", arg[0])) {
