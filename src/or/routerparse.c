@@ -214,7 +214,7 @@ get_recommended_software_from_directory(const char *str)
     comma = strchr(vl, ',');
     version = tor_strndup(vl, comma?(comma-vl):strlen(vl));
     cp = version;
-    while (isspace(*cp))
+    while (isspace((int)*cp))
       ++cp;
     if (!strncmp(cp, "Tor ", 4))
       cp += 4;

@@ -497,7 +497,7 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
   cp = str;
   while (1) {
     if (skipSpace) {
-      while (isspace(*cp)) ++cp;
+      while (isspace((int)*cp)) ++cp;
     }
     end = strstr(cp,sep);
     if (!end) {
@@ -508,7 +508,7 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
     }
 
     if (skipSpace) {
-      while (end > cp && isspace(*(end-1)))
+      while (end > cp && isspace((int)*(end-1)))
         --end;
     }
     smartlist_add(sl, tor_strndup(cp, end-cp));
@@ -873,6 +873,12 @@ tv_udiff(struct timeval *start, struct timeval *end)
 {
   long udiff;
   long secdiff = end->tv_sec - start->tv_sec;
+
+/* XXX some SunOS machines don't have LONG_MAX defined in the includes
+ * we use. Surely there is a better fix... */
+#ifndef LONG_MAX
+#define LONG_MAX 2147483647L
+#endif
 
   if (secdiff+1 > LONG_MAX/1000000) {
     log_fn(LOG_WARN, "comparing times too far apart.");
