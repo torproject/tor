@@ -73,7 +73,7 @@ close with a list of open problems in anonymous communication.
 Onion Routing is a distributed overlay network designed to anonymize
 low-latency TCP-based applications such as web browsing, secure shell,
 and instant messaging. Clients choose a path through the network and
-build a \emph{virtual circuit}, in which each node (or ``onion router'')
+build a \emph{circuit}, in which each node (or ``onion router'')
 in the path knows its predecessor and successor, but no other nodes in
 the circuit.  Traffic flowing down the circuit is sent in fixed-size
 \emph{cells}, which are unwrapped by a symmetric key at each node
@@ -118,9 +118,9 @@ to duplicate those features itself.
 
 \item \textbf{No mixing, padding, or traffic shaping yet:} The original
 Onion
-Routing design called for batching and reordering the cells arriving from
+Routing design called for batching and reordering cells arriving from
 each source. It also included padding between onion routers and, in a
-later design, between onion proxies (that is, users) and onion routers
+later design, between onion proxies (users) and onion routers
 \cite{or-ih96,or-jsac98}.  The trade-off between padding protection
 and cost was discussed, but no general padding scheme was suggested. In
 \cite{or-pet00} it was theorized \emph{traffic shaping} would generally
@@ -138,7 +138,7 @@ application-level request.  This hurt performance by requiring
 multiple public key operations for every request, and also presented
 a threat to anonymity from building so many different circuits; see
 Section~\ref{sec:maintaining-anonymity}.  Tor multiplexes multiple TCP
-streams along each virtual circuit to improve efficiency and anonymity.
+streams along each circuit to improve efficiency and anonymity.
 
 \item \textbf{Leaky-pipe circuit topology:} Through in-band signaling
 within the circuit, Tor initiators can direct traffic to nodes partway
@@ -192,7 +192,7 @@ the first place.
 \item \textbf{Rendezvous points and location-protected servers:}
 Tor provides an integrated mechanism for responder anonymity via
 location-protected servers.  Previous Onion Routing designs included
-long-lived ``reply onions'' that could be used to build virtual circuits
+long-lived ``reply onions'' that could be used to build circuits
 to a hidden server, but these reply onions did not provide forward
 security, and became useless if any node in the path went down
 or rotated its keys.  In Tor, clients negotiate {\it rendezvous points}
@@ -275,9 +275,8 @@ The simplest low-latency designs are single-hop proxies such as the
 data's origin before relaying it.  These designs are easy to
 analyze, but users must trust the anonymizing proxy. 
 Concentrating the traffic to a single point increases the anonymity set
-(the people a given user is hiding among), but can make traffic
-analysis easier: an adversary need only eavesdrop on the proxy to observe
-the entire system.
+(the people a given user is hiding among), but it is vulnerable if the
+adversary can observe all traffic going into and out of the proxy.
 
 More complex are distributed-trust, circuit-based anonymizing systems.
 In these designs, a user establishes one or more medium-term bidirectional
@@ -460,7 +459,8 @@ Similarly, Tor does not currently integrate
 tunneling for non-stream-based protocols like UDP; this too must be
 provided by an external service.
 
-\textbf{Not steganographic:} Tor does not try to conceal which users are
+\textbf{Does not provide untraceability:} Tor does not try to conceal
+which users are
 sending or receiving communications; it only tries to conceal with whom
 they communicate.
 
@@ -481,9 +481,9 @@ responder. By observing both ends, passive attackers can confirm a
 suspicion that Alice is 
 talking to Bob if the timing and volume patterns of the traffic on the
 connection are distinct enough; active attackers can induce timing
-signatures on the traffic to \emph{force} distinct patterns. Tor
-does not yet address these \emph{traffic confirmation} attacks.
-Rather, we aim to prevent \emph{traffic
+signatures on the traffic to force distinct patterns. Rather
+than focusing on these \emph{traffic confirmation} attacks,
+we aim to prevent \emph{traffic
 analysis} attacks, where the adversary uses traffic patterns to learn
 which points in the network he should attack.
 
@@ -515,20 +515,20 @@ each of them.
 \Section{The Tor Design}
 \label{sec:design}
 
-The Tor network is an overlay network; each node is called an onion router
-(OR). Onion routers run as normal user-level processes without needing
-any special
-privileges.  Currently, each OR maintains a long-term TLS \cite{TLS}
-connection to every other
-OR.  (We further discuss this clique-topology assumption in
-Section~\ref{sec:maintaining-anonymity}.) A subset of the ORs also act as
-directory servers, tracking which routers are in the network;
-see Section~\ref{subsec:dirservers} for directory server details.
+The Tor network is an overlay network; onion routers run as normal
+user-level processes without needing any special privileges.
+Each onion router maintains a long-term TLS \cite{TLS}
+connection to every other onion router.
+%(We further discuss this clique-topology assumption in
+%Section~\ref{sec:maintaining-anonymity}.)
+% A subset of the ORs also act as
+%directory servers, tracking which routers are in the network;
+%see Section~\ref{subsec:dirservers} for directory server details.
 Each user
 runs local software called an onion proxy (OP) to fetch directories,
-establish paths (called \emph{virtual circuits}) across the network,
+establish circuits across the network,
 and handle connections from user applications.  These onion proxies accept
-TCP streams and multiplex them across the virtual circuit. The onion
+TCP streams and multiplex them across the circuit. The onion
 router on the other side 
 of the circuit connects to the destinations of
 the TCP streams and relays data.
@@ -547,7 +547,7 @@ independently, to limit the impact of key compromise.
 
 Section~\ref{subsec:cells} discusses the structure of the fixed-size
 \emph{cells} that are the unit of communication in Tor. We describe
-in Section~\ref{subsec:circuits} how virtual circuits are
+in Section~\ref{subsec:circuits} how circuits are
 built, extended, truncated, and destroyed. Section~\ref{subsec:tcp}
 describes how TCP streams are routed through the network, and finally
 Section~\ref{subsec:congestion} talks about congestion control and
@@ -840,7 +840,7 @@ is vulnerable to end-to-end timing attacks; tagging attacks performed
 within the circuit provide no additional information to the attacker.
 
 Thus, we check integrity only at the edges of each stream. When Alice
-negotiates a key with a new hop, they both initialize a pair of SHA-1 
+negotiates a key with a new hop, they both initialize a pair of SHA-1
 digests with a derivative of that key,
 thus beginning with randomness that only the two of them know. From
 then on they each incrementally add to the SHA-1 digests the contents of 
@@ -1082,7 +1082,7 @@ Java Anon Proxy
 cascade model, wherein only one node in each cascade needs to handle
 abuse complaints---but an adversary only needs to observe the entry
 and exit of a cascade to perform traffic analysis on all that
-cascade's users. The Hydra model (many entries, few exits) presents a
+cascade's users. The hydra model (many entries, few exits) presents a
 different compromise: only a few exit nodes are needed, but an
 adversary needs to work harder to watch all the clients; see
 Section~\ref{sec:conclusion}.
@@ -1193,7 +1193,7 @@ bottleneck when we have many users, and do not aid traffic analysis by
 forcing clients to periodically announce their existence to any
 central point.
 
-\Section{Rendezvous points and location privacy}
+\Section{Rendezvous points and hidden services}
 \label{sec:rendezvous}
 
 Rendezvous points are a building block for \emph{location-hidden
@@ -1205,15 +1205,17 @@ attackers are forced to attack the onion routing network as a whole
 rather than just Bob's IP address.
 
 Our design for location-hidden servers has the following goals.
-\textbf{Flood-proof:} Bob needs a way to filter incoming requests,
-so an attacker cannot flood Bob simply by sending many requests.
+\textbf{Access-controlled:} Bob needs a way to filter incoming requests,
+so an attacker cannot flood Bob simply by making many connections to him.
 \textbf{Robust:} Bob should be able to maintain a long-term pseudonymous
 identity even in the presence of router failure. Bob's service must
 not be tied to a single OR, and Bob must be able to tie his service
-to new ORs. \textbf{Smear-resistant:} if a social attacker offers a
-location-hidden service that is illegal or disreputable, it should not
-appear---even to a casual observer---that a rendezvous router is hosting
-that service. \textbf{Application-transparent:} Although we require users
+to new ORs. \textbf{Smear-resistant:}
+A social attacker who offers an illegal or disreputable location-hidden
+service should not be able to ``frame'' a rendezvous router---that is,
+make observers believe that the router created that service.
+%slander-resistant? defamation-resistant?
+\textbf{Application-transparent:} Although we require users
 to run special software to access location-hidden servers, we must not
 require them to modify their applications.
 
@@ -1250,13 +1252,16 @@ application integration is described more fully below.
       transaction. She establishes a circuit to RP, and gives it a
       rendezvous cookie, which it will use to recognize Bob.
 \item Alice opens an anonymous stream to one of Bob's introduction
-      points, and gives it a message (encrypted for Bob) which tells him
+      points, and gives it a message (encrypted to Bob's public key) which tells him
       about herself, her chosen RP and the rendezvous cookie, and the
       first half of an ephemeral
       key handshake. The introduction point sends the message to Bob.
 \item If Bob wants to talk to Alice, he builds a new circuit to Alice's
       RP and provides the rendezvous cookie and the second half of the DH
-      handshake (along with a hash of the session key they now share).
+      handshake (along with a hash of the session
+      key they now share---by the same argument as in
+      Section~\ref{subsubsec:constructing-a-circuit}, Alice knows she
+      shares the key only with the intended Bob).
 \item The RP connects Alice's circuit to Bob's. Note that RP can't
       recognize Alice, Bob, or the data they transmit.
 \item Alice now sends a \emph{relay begin} cell along the circuit. It
@@ -1330,9 +1335,9 @@ Internet connections was suggested in early Onion Routing work
 points for low-latency Internet connections was by Ian Goldberg
 \cite{ian-thesis}. His design differs from
 ours in three ways. First, Goldberg suggests that Alice should manually
-hunt down a current location of the service via Gnutella; whereas our
-use of CFS makes lookup faster, more robust, and transparent to the
-user. Second, in Tor the client and server negotiate ephemeral keys
+hunt down a current location of the service via Gnutella; our approach
+makes lookup transparent to the user, as well as faster and more robust.
+Second, in Tor the client and server negotiate ephemeral keys
 via Diffie-Hellman, so plaintext is not exposed at any point. Third,
 our design tries to minimize the exposure associated with running the
 service, to encourage volunteers to offer introduction and rendezvous
@@ -1848,6 +1853,7 @@ these bottlenecks.
 
 \emph{Incentives:} Volunteers may want to run nodes for publicity
 or better anonymity \cite{econymics}. 
+more users -> more anonymity
 
 \emph{Cover traffic:} Currently we avoid cover traffic because
 whereas its costs in performance and bandwidth are clear, and because its
