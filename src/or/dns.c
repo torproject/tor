@@ -156,7 +156,7 @@ static void dns_slave_main(int fd) {
       if(dns_write_block(fd, "\0\0\0\0", 4) < 0) {
         log(LOG_INFO,"dns_slave_main(): writing to master failed. Exiting.");
         exit(0);
-      }     
+      }
     } else {
       if(dns_write_block(fd, rent->h_addr, rent->h_length) < 0) {
         log(LOG_INFO,"dns_slave_main(): writing to master failed. Exiting.");
@@ -454,10 +454,9 @@ int dns_resolve(connection_t *exitconn) {
 
   strncpy(search.question, exitconn->address, MAX_ADDRESSLEN);
 
-  /* try adding it to the tree. if it's already there it will
-   * return it. */
+  /* check the tree to see if 'question' is already there. */
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
-  if(resolve) { /* already there. free up new_resolve */
+  if(resolve) { /* already there */
     switch(resolve->state) {
       case CACHE_STATE_PENDING:
         /* add us to the pending list */
@@ -472,7 +471,7 @@ int dns_resolve(connection_t *exitconn) {
       case CACHE_STATE_FAILED:
         return -1;
     }
-  } else { /* this was newly added to the tree. ask the dns farm. */
+  } else { /* need to add it */
     resolve = malloc(sizeof(struct cached_resolve));
     memset(resolve, 0, sizeof(struct cached_resolve));
     resolve->state = CACHE_STATE_PENDING;

@@ -8,6 +8,10 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+/* Create a new buf of size MAX_BUF_SIZE. Write a pointer to it
+ * into *buf, write MAX_BUF_SIZE into *buflen, and initialize
+ * *buf_datalen to 0. Return 0 if success, or -1 if malloc fails.
+ */
 int buf_new(char **buf, int *buflen, int *buf_datalen) {
 
   assert(buf && buflen && buf_datalen);
@@ -15,7 +19,7 @@ int buf_new(char **buf, int *buflen, int *buf_datalen) {
   *buf = (char *)malloc(MAX_BUF_SIZE);
   if(!*buf)
     return -1;
-  memset(*buf,0,MAX_BUF_SIZE);
+//  memset(*buf,0,MAX_BUF_SIZE);
   *buflen = MAX_BUF_SIZE;
   *buf_datalen = 0;
 
@@ -26,13 +30,12 @@ void buf_free(char *buf) {
   free(buf);
 }
 
+/* read from socket s, writing onto buf+buf_datalen. If at_most is >= 0 then
+ * read at most 'at_most' bytes, and in any case don't read more than will fit based on buflen.
+ * If read() returns 0, set *reached_eof to 1 and return 0. If you want to tear
+ * down the connection return -1, else return the number of bytes read.
+ */
 int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, int *reached_eof) {
-
-  /* read from socket s, writing onto buf+buf_datalen. If at_most is >= 0 then
-   * read at most 'at_most' bytes, and in any case don't read more than will fit based on buflen.
-   * If read() returns 0, set *reached_eof to 1 and return 0. If you want to tear
-   * down the connection return -1, else return the number of bytes read.
-   */
 
   int read_result;
 
