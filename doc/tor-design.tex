@@ -167,13 +167,78 @@ open problems.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Section{Threat model and background}
+\Section{Background and threat model}
 \label{sec:background}
+
+\SubSection{Related work}
+\label{sec:related-work}
+Modern anonymity designs date to Chaum's Mix-Net\cite{chaum-mix} design of
+1981.  Chaum proposed hiding sender-recipient connections by wrapping
+messages in several layers of public key cryptography, and relaying them
+through a path composed of Mix servers.  Mix servers in turn decrypt, delay,
+and re-order messages, before relay them along the path towards their
+destinations.
+
+Subsequent relay-based anonymity designs have diverged in two principal
+directions.  Some have, such as Babel\cite{babel}, Mixmaster\cite{mixmaster},
+and Mixminion\cite{minion-design}, attempt to maximize anonymity at the cost
+of introducing comparatively large and variable latencies.  Because of this
+decision, such \emph{high-latency} networks are well-suited for anonymous
+email, but introduce too much lag for interactive tasks such as web browsing,
+internet chat, or SSH connections.
+
+Tor belongs to the second category: \emph{low-latency} designs that attempt
+to anonymize interactive network traffic.  Because such traffic tends to
+involve a relatively large numbers of packets, it is difficult to prevent an
+attacker who can eavesdrop entry and exit points from correlating packets
+entering the anonymity network with packets leaving it. Although some
+work has been done to frustrate these attacks, they still...  
+[XXX go on to explain how the design choices implied in low-latency result in
+significantly different designs.]
+
+The simplest low-latency designs are single-hop proxies such as the
+Anonymizer, wherein a single trusted server removes identifying users' data
+before relaying it.  These designs are easy to analyze, but require end-users
+to trust the anonymizing proxy.
+
+More complex are distributed-trust, channel-based anonymizing systems.  In
+these designs, a user establishes one or more medium-term bidirectional
+end-to-end tunnels to exit servers, and uses those tunnels to deliver a
+number of low-latency packets to and from one or more destinations per
+tunnel.  Establishing tunnels is comparatively expensive and typically
+requires public-key cryptography, whereas relaying packets along a tunnel is
+comparatively inexpensive.  Because a tunnel crosses several servers, no
+single server can learn the user's communication partners.
+[XXX give examples.]  
+[XXX Everybody I know except Crowds and gnunet is in this category.  Am I
+right?]
+
+[XXX Should we add a paragraph dividing servers by all-at-once approach to
+  tunnel-building (OR1,Freedom1) versus piecemeal approach
+  (OR2,Anonnet?,Freedom2) ?]
+
+Distributed-trust anonymizing systems differ in how they prevent attackers
+from controlling too many servers and thus compromising too many user paths.
+Some protocols rely on a centrally maintained set of well-known anonymizing
+servers.  Others (such as Tarzan and MorphMix) allow unknown users to run
+servers, while using a limited resource (DHT space for Tarzan; IP space for
+MorphMix) to prevent an attacker from owning too much of the network.
+[XXX what else?  What does (say) crowds do?]
+
+Channel-based anonymizing systems also differ in their use of dummy traffic.
+[XXX]
+
+Finally, several systems provide low-latency anonymity without channel-based
+communication.  Crowds and [XXX] provide anonymity for HTTP requests; [...]
+
+[XXX Mention error recovery?]
+
 
 anonymizer
 pipenet
-freedom
-onion routing
+freedom v1
+freedom v2
+onion routing v1
 isdn-mixes
 crowds
 real-time mixes, web mixes
@@ -184,17 +249,42 @@ gnunet
 rewebbers
 tarzan
 herbivore
+hordes
+cebolla (?)
+
+[XXX Close by mentioning where Tor fits.]
+
+\SubSection{Our threat model}
+\label{subsec:threat-model}
 
 \SubSection{Known attacks against low-latency anonymity systems}
-
-
+\label{subsec:known-attacks}
 
 We discuss each of these attacks in more detail below, along with the
 aspects of the Tor design that provide defense. We provide a summary
 of the attacks and our defenses against them in Section \ref{sec:attacks}.
 
+Passive attacks:
+simple observation,
+timing correlation,
+size correlation,
+option distinguishability,
+
+Active attacks:
+key compromise,
+iterated subpoena,
+run recipient,
+run a hostile node,
+compromise entire path,
+selectively DOS servers,
+introduce timing into messages,
+directory attacks,
+tagging attacks
+
 \Section{Design goals and assumptions}
 \label{sec:assumptions}
+
+[XXX Perhaps the threat model belongs here.]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
