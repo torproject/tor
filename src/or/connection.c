@@ -35,7 +35,7 @@ char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
   { "",                          /* exit, 0 */
     "waiting for dest info",           /* 1 */
     "connecting",                      /* 2 */
-    "open"                             /* 3 */
+    "open",                            /* 3 */
     "resolve failed" },                /* 4 */
   { "ready" }, /* app listener, 0 */
   { "", /* 0 */
