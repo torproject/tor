@@ -15,14 +15,14 @@ ARMA    - arma claims
         - fix sprintf's to snprintf's?
         o Make it work on win32 with no $home
                 o Don't crash.
-	        o Put files someplace reasonable.
+                o Put files someplace reasonable.
         o Why is the first entry of kill -USR1 a router with a 0 key?
-ARMA    . Tors deal appropriately when a newly-verified router has the
+        o Tors deal appropriately when a newly-verified router has the
           same nickname as another router they know about
         X put ip:port:keyhash in intro points, rendezvous points,
           and hidserv descriptors.
         . Make intro points and rendezvous points accept $KEYID in addition
-	  to nicknames.
+          to nicknames.
                 o Specify
                 o Implement parsing
                 - Generate new formats (Not till 007 is dead)
