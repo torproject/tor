@@ -157,6 +157,13 @@
    "moria.mit.edu.onion5gfmjsda-ckd5" (adding 13 characters plus the
    separator).
 
+   [I thought we were going to do something more like "56fmjsda-ckd5.onion",
+   leaving off moria.mit.edu.  This would have the advantage of not confusing
+   users if the domain name part ('moria.mit.edu') doesn't match the key.
+
+   Also, having a separate onion 'virtual TLD' is kinda more in the spirit
+   of DNS as it stands. -NM]
+
    Alice's onion proxy examines hostnames and recognizes when they're
    destined for a hidden server. If so, it decodes the PK, looks it up in
    the DHT, chooses and connects to a meeting place, chooses and connects
