@@ -465,14 +465,14 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
   assert(conn);
 
   if(!connection_speaks_cells(conn)) {
-     log(LOG_DEBUG,"connection_send_destroy(): At an edge. Marking connection for close.");
+     log(LOG_INFO,"connection_send_destroy(): Aci %d: At an edge. Marking connection for close.", aci);
      conn->marked_for_close = 1;
      return 0;
   }
 
   cell.aci = aci;
   cell.command = CELL_DESTROY;
-  log(LOG_DEBUG,"connection_send_destroy(): Sending destroy (aci %d).",aci);
+  log(LOG_INFO,"connection_send_destroy(): Sending destroy (aci %d).",aci);
   return connection_write_cell_to_buf(&cell, conn);
 
 }

@@ -68,13 +68,13 @@ int connection_remove(connection_t *conn) {
   assert(conn);
   assert(nfds>0);
 
+  log(LOG_INFO,"connection_remove(): removing socket %d, nfds now %d",conn->s, nfds-1);
   circuit_about_to_close_connection(conn); /* flush and send destroys for all circuits on this conn */
 
   current_index = conn->poll_index;
   if(current_index == nfds-1) { /* this is the end */
 //    connection_free(conn);
     nfds--;
-    log(LOG_INFO,"connection_remove(): nfds now %d.",nfds);  
     return 0;
   } 
 
@@ -85,8 +85,6 @@ int connection_remove(connection_t *conn) {
   poll_array[current_index].revents = poll_array[nfds].revents;
   connection_array[current_index] = connection_array[nfds];
   connection_array[current_index]->poll_index = current_index;
-
-  log(LOG_INFO,"connection_remove(): nfds now %d.",nfds);
 
   return 0;  
 }
@@ -285,7 +283,7 @@ void check_conn_read(int i) {
     }
 
     if(retval < 0) { /* this connection is broken. remove it */
-      log(LOG_DEBUG,"check_conn_read(): Connection broken, removing."); 
+      log(LOG_INFO,"check_conn_read(): Connection broken, removing."); 
       connection_remove(conn);
       connection_free(conn);
       if(i<nfds) { /* we just replaced the one at i with a new one.
