@@ -1,4 +1,45 @@
 Release notes in progress for 0.0.8:
+pre3:
+  o Changes from 0.0.7.2:
+    - Allow multiple ORs with same nickname in routerlist -- now when
+      people give us one identity key for a nickname, then later
+      another, we don't constantly complain until the first expires.
+    - Remember used bandwidth (both in and out), and publish 15-minute
+      snapshots for the past day into our descriptor.
+    - You can now fetch $DIRURL/running-routers to get just the
+      running-routers line, not the whole descriptor list. (But
+      clients don't use this yet.)
+    - When people mistakenly use Tor as an http proxy, point them
+      at the tor-doc.html rather than the INSTALL.
+    - Remove our mostly unused -- and broken -- hex_encode()
+      function. Use base16_encode() instead. (Thanks to Timo Lindfors
+      for pointing out this bug.)
+    - Rotate onion keys every 12 hours, not every 2 hours, so we have
+      fewer problems with people using the wrong key.
+    - Change the default exit policy to reject the default edonkey,
+      kazaa, gnutella ports.
+    - Add replace_file() to util.[ch] to handle win32's rename().
+
+  o Changes from 0.0.8preX:
+    - Fix two bugs in saving onion keys to disk when rotating, so
+      hopefully we'll get fewer people using old onion keys.
+    - Fix an assert error that was making SocksPolicy not work.
+    - Be willing to expire routers that have an open dirport -- it's
+      just the authoritative dirservers we want to not forget.
+    - Reject tor-resolve requests for .onion addresses early, so we
+      don't build a whole rendezvous circuit and then fail.
+    - When you're warning a server that he's unverified, don't cry
+      wolf unpredictably.
+    - Fix a race condition: don't try to extend onto a connection
+      that's still handshaking.
+    - For servers in clique mode, require the conn to be open before
+      you'll choose it for your path.
+    - Fix some cosmetic bugs about duplicate mark-for-close, lack of
+      end relay cell, etc.
+    - Measure bandwidth capacity over the last 24 hours, not just 12
+    - Bugfix: authoritative dirservers were making and signing a new
+      directory for each client, rather than reusing the cached one.
+
 pre2:
   o Changes from 0.0.7.2:
     - Security fixes:
