@@ -463,22 +463,32 @@ tor_tls_verify(tor_tls *tls)
     return NULL;
   
   now = time(NULL);
-  if (X509_cmp_time(X509_get_notBefore(cert), &now) > 0)
+  if (X509_cmp_time(X509_get_notBefore(cert), &now) > 0) {
+    log_fn(LOG_WARN,"X509_get_notBefore(cert) is in the future");
     goto done;
-  if (X509_cmp_time(X509_get_notAfter(cert), &now) < 0)
+  }
+  if (X509_cmp_time(X509_get_notAfter(cert), &now) < 0) {
+    log_fn(LOG_WARN,"X509_get_notAfter(cert) is in the past");
     goto done;
+  }
   
   /* Get the public key. */
-  if (!(pkey = X509_get_pubkey(cert)))
+  if (!(pkey = X509_get_pubkey(cert))) {
+    log_fn(LOG_WARN,"X509_get_pubkey returned null");
     goto done;
-  if (X509_verify(cert, pkey) <= 0)
+  }
+  if (X509_verify(cert, pkey) <= 0) {
+    log_fn(LOG_WARN,"X509_verify on cert and pkey returned <= 0");
     goto done;
+  }
 
   rsa = EVP_PKEY_get1_RSA(pkey);
   EVP_PKEY_free(pkey);
   pkey = NULL;
-  if (!rsa)
+  if (!rsa) {
+    log_fn(LOG_WARN,"EVP_PKEY_get1_RSA(pkey) returned null");
     goto done;
+  }
 
   r = _crypto_new_pk_env_rsa(rsa);
   rsa = NULL;
