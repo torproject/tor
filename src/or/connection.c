@@ -77,6 +77,8 @@ char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
 static int connection_init_accepted_conn(connection_t *conn);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
 static int connection_receiver_bucket_should_increase(connection_t *conn);
+static int connection_finished_flushing(connection_t *conn);
+static int connection_finished_connecting(connection_t *conn);
 
 /**************************************************************/
 
@@ -775,13 +777,34 @@ int connection_outbuf_too_full(connection_t *conn) {
  * return 0.
  */
 int connection_handle_write(connection_t *conn) {
+  int e, len=sizeof(e);
 
   tor_assert(!connection_is_listener(conn));
 
   conn->timestamp_lastwritten = time(NULL);
 
-  if (connection_speaks_cells(conn) &&
-      conn->state != OR_CONN_STATE_CONNECTING) {
+  /* Sometimes, "writeable" means "connected". */
+  if (connection_state_is_connecting(conn)) {
+    if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0) {
+      /* not yet */
+      if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(conn->s))) {
+        log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
+        /* The reason here only applies to exit connections, but it's
+         * harmless to set it elsewhere. */
+        connection_close_immediate(conn);
+        connection_mark_for_close(conn,END_STREAM_REASON_CONNECTFAILED);
+        if (conn->nickname)
+          router_mark_as_down(conn->nickname);
+        return -1;
+      } else {
+        return 0; /* no change, see if next time is better */
+      }
+    }
+    /* The connection is successful. */
+    return connection_finished_connecting(conn);
+  }
+
+  if (connection_speaks_cells(conn)) {
     if (conn->state == OR_CONN_STATE_HANDSHAKING) {
       connection_stop_writing(conn);
       if(connection_tls_continue_handshake(conn) < 0) {
@@ -827,7 +850,6 @@ int connection_handle_write(connection_t *conn) {
       connection_mark_for_close(conn, END_STREAM_REASON_MISC);
       return -1;
     }
-    /* conns in CONNECTING state will fall through... */
   }
 
   if(!connection_wants_to_flush(conn)) /* it's done flushing */
@@ -1031,6 +1053,24 @@ int connection_state_is_open(connection_t *conn) {
   return 0;
 }
 
+int connection_state_is_connecting(connection_t *conn) {
+  tor_assert(conn);
+
+  if (conn->marked_for_close)
+    return 0;
+  switch (conn->type)
+    {
+    case CONN_TYPE_OR:
+      return conn->state == OR_CONN_STATE_CONNECTING;
+    case CONN_TYPE_EXIT:
+      return conn->state == EXIT_CONN_STATE_CONNECTING;
+    case CONN_TYPE_DIR:
+      return conn->state == DIR_CONN_STATE_CONNECTING;
+    }
+
+  return 0;
+}
+
 /** Write a destroy cell with circ ID <b>circ_id</b> onto OR connection
  * <b>conn</b>.
  *
@@ -1083,7 +1123,7 @@ int connection_process_inbuf(connection_t *conn) {
  * This function just passes conn to the connection-specific
  * connection_*_finished_flushing() function.
  */
-int connection_finished_flushing(connection_t *conn) {
+static int connection_finished_flushing(connection_t *conn) {
 
   tor_assert(conn);
 
@@ -1103,6 +1143,29 @@ int connection_finished_flushing(connection_t *conn) {
       return connection_cpu_finished_flushing(conn);
     default:
       log_fn(LOG_WARN,"got unexpected conn->type %d.", conn->type);
+      return -1;
+  }
+}
+
+/** Called when our attempt to connect() to another server has just
+ * succeeded.
+ *
+ * This function just passes conn to the connection-specific
+ * connection_*_finished_connecting() function.
+ */
+static int connection_finished_connecting(connection_t *conn)
+{
+  tor_assert(conn);
+  switch (conn->type)
+    {
+    case CONN_TYPE_OR:
+      return connection_or_finished_connecting(conn);
+    case CONN_TYPE_EXIT:
+      return connection_edge_finished_connecting(conn);
+    case CONN_TYPE_DIR:
+      return connection_dir_finished_connecting(conn);
+    default:
+      tor_assert(0);
       return -1;
   }
 }

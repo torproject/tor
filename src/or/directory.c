@@ -523,8 +523,8 @@ static int directory_handle_command(connection_t *conn) {
 }
 
 /** Write handler for directory connections; called when all data has
- * been flushed.  Handle a completed connection: close the connection
- * or wait for a response as appropriate.
+ * been flushed.  Close the connection or wait for a response as
+ * appropriate.
  */
 int connection_dir_finished_flushing(connection_t *conn) {
   int e, len=sizeof(e);
@@ -532,24 +532,6 @@ int connection_dir_finished_flushing(connection_t *conn) {
   tor_assert(conn && conn->type == CONN_TYPE_DIR);
 
   switch(conn->state) {
-    case DIR_CONN_STATE_CONNECTING:
-      if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
-        if(!ERRNO_IS_CONN_EINPROGRESS(tor_socket_errno(conn->s))) {
-          log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
-          router_mark_as_down(conn->nickname); /* don't try him again */
-          connection_mark_for_close(conn,0);
-          return -1;
-        } else {
-          return 0; /* no change, see if next time is better */
-        }
-      }
-      /* the connect has finished. */
-
-      log_fn(LOG_INFO,"Dir connection to router %s:%u established.",
-          conn->address,conn->port);
-
-      conn->state = DIR_CONN_STATE_CLIENT_SENDING; /* start flushing conn */
-      return 0;
     case DIR_CONN_STATE_CLIENT_SENDING:
       log_fn(LOG_DEBUG,"client finished sending command.");
       conn->state = DIR_CONN_STATE_CLIENT_READING;
@@ -563,6 +545,20 @@ int connection_dir_finished_flushing(connection_t *conn) {
       log_fn(LOG_WARN,"BUG: called in unexpected state %d.", conn->state);
       return -1;
   }
+  return 0;
+}
+
+/** Connected handler for directory connections: begin sending data to the
+ * server */
+int connection_dir_finished_connecting(connection_t *conn)
+{
+  tor_assert(conn && conn->type == CONN_TYPE_DIR);
+  tor_assert(conn->state == DIR_CONN_STATE_CONNECTING);
+
+  log_fn(LOG_INFO,"Dir connection to router %s:%u established.",
+         conn->address,conn->port);
+
+  conn->state = DIR_CONN_STATE_CLIENT_SENDING; /* start flushing conn */
   return 0;
 }
 
