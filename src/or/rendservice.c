@@ -892,14 +892,13 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
   log_fn(LOG_DEBUG,"beginning to hunt for addr/port");
   if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                     circ->rend_pk_digest,10)) {
+    log_fn(LOG_WARN,"bug: base32 failed");
     return -1;
   }
   service = rend_service_get_by_pk_digest(circ->rend_pk_digest);
   if (!service) {
     log_fn(LOG_WARN, "Couldn't find any service associated with pk %s on rendezvous circuit %d; closing",
            serviceid, circ->n_circ_id);
-    circuit_mark_for_close(circ);
-    connection_mark_for_close(conn, 0/*XXX*/);
     return -1;
   }
   for (i = 0; i < smartlist_len(service->ports); ++i) {
@@ -910,9 +909,8 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
       return 0;
     }
   }
-  log_fn(LOG_WARN, "No virtual port mapping exists for port %d on service %s",
+  log_fn(LOG_INFO, "No virtual port mapping exists for port %d on service %s",
          conn->port,serviceid);
-  connection_mark_for_close(conn, 0/*XXX*/);
   return -1;
 }
 
