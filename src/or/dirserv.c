@@ -178,20 +178,22 @@ dirserv_router_fingerprint_is_known(const routerinfo_t *router)
   }
 }
 
-/** Return true iff any router named <b>nickname</b> is in the fingerprint
- * list. */
+/** Return true iff any router named <b>nickname</b> with <b>digest</b>
+ * is in the verified fingerprint list. */
 static int
 router_nickname_is_approved(const char *nickname, const char *digest)
 {
   int i,j;
   fingerprint_entry_t *ent;
   char fp[FINGERPRINT_LEN+1];
+  char hexdigest[HEX_DIGEST_LEN+1];
   if (!fingerprint_list)
     return 0;
 
-  for (i=j=0;i<DIGEST_LEN;++i,++j) {
-    fp[i]=digest[j];
-    if ((j%4)==3 && j != 19)
+  base16_encode(hexdigest, sizeof(hexdigest), digest, DIGEST_LEN);
+  for (i=j=0;j<HEX_DIGEST_LEN;++i,++j) {
+    fp[i]=hexdigest[j];
+    if ((j%4)==3 && j != 39)
       fp[++i]=' ';
   }
   fp[i]='\0';
