@@ -14,6 +14,8 @@
 
 #include "or.h"
 
+extern int global_role; /* from main.c */
+
 /* private function, to determine whether the current entry in the router list is actually us */
 static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my_or_listenport)
 {
@@ -25,6 +27,11 @@ static int router_is_me(uint32_t or_address, uint16_t or_listenport, uint16_t my
   
   char *addr = NULL;
   int i = 0;
+
+  if(!ROLE_IS_OR(global_role)) {
+    /* we're not an OR. This obviously isn't us. */
+    return 0;
+  }
   
   /* obtain local host information */
   if (gethostname(localhostname,512) < 0) {

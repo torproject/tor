@@ -188,37 +188,44 @@ RETURN VALUE: 0 on success, non-zero on error
       }
    }
 
+   if ( options->Role < 0 || options->Role > 15 )
+   {
+      log(LOG_ERR,"Role option must be an integer between 0 and 15 (inclusive).");
+      code = -1;
+   }
+
    if ( options->RouterFile == NULL )
    {
       log(LOG_ERR,"RouterFile option required, but not found.");
       code = -1;
    }
 
-   if ( options->PrivateKeyFile == NULL )
+   if ( ROLE_IS_OR(options->Role) && options->PrivateKeyFile == NULL )
    {
-      log(LOG_ERR,"PrivateKeyFile option required, but not found.");
+      log(LOG_ERR,"PrivateKeyFile option required for OR, but not found.");
       code = -1;
    }
 
-   if ( options->ORPort < 1 )
+   if ( (options->Role & ROLE_OR_LISTEN) && options->ORPort < 1 )
    {
       log(LOG_ERR,"ORPort option required and must be a positive integer value.");
       code = -1;
    }
 
-   if ( options->OPPort < 1 )
+   if ( (options->Role & ROLE_OP_LISTEN) && options->OPPort < 1 )
    {
       log(LOG_ERR,"OPPort option required and must be a positive integer value.");
       code = -1;
    }
 
-   if ( options->APPort < 1 )
+   if ( (options->Role & ROLE_AP_LISTEN) && options->APPort < 1 )
    {
       log(LOG_ERR,"APPort option required and must be a positive integer value.");
       code = -1;
    }
 
-   if ( options->CoinWeight < 0.0 || options->CoinWeight >= 1.0 )
+   if ( (options->Role & ROLE_AP_LISTEN) &&
+        (options->CoinWeight < 0.0 || options->CoinWeight >= 1.0) )
    {
       log(LOG_ERR,"CoinWeight option must be a value from 0.0 upto 1.0, but not including 1.0.");
       code = -1;
@@ -245,12 +252,6 @@ RETURN VALUE: 0 on success, non-zero on error
    if ( options->LinkPadding != 0 && options->LinkPadding != 1 )
    {
       log(LOG_ERR,"LinkPadding option must be either 0 or 1.");
-      code = -1;
-   }
-
-   if ( options->Role < 0 || options->Role > 15 )
-   {
-      log(LOG_ERR,"Role option must be an integer between 0 and 15 (inclusive).");
       code = -1;
    }
 
