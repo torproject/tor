@@ -409,6 +409,10 @@
 #define CELL_RELAY 3
 #define CELL_DESTROY 4
 
+/* people behind fascist firewalls use only these ports */
+#define REQUIRED_FIREWALL_DIRPORT 80
+#define REQUIRED_FIREWALL_ORPORT 443
+
 /* legal characters in a nickname */
 #define LEGAL_NICKNAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -581,9 +585,10 @@ typedef struct {
                            * bucket per second? */
   uint32_t bandwidthburst; /**< How large is this OR's token bucket? */
   /** How many bytes/s is this router known to handle? */
-  uint32_t advertisedbandwidth;
+  uint32_t bandwidthcapacity;
   struct exit_policy_t *exit_policy; /**< What streams will this OR permit
                                       * to exit? */
+  int uptime; /**< How many seconds the router claims to have been up */
   /* local info */
   int is_running; /**< As far as we know, is this OR currently running? */
   time_t status_set_at; /**< When did we last update is_running? */
@@ -852,6 +857,7 @@ typedef struct {
   int IgnoreVersion; /**< If true, run no matter what versions of Tor the
                       * directory recommends. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
+  int FascistFirewall; /**< Whether to prefer ORs reachable on 80/443. */
   int DirFetchPostPeriod; /**< How often do we fetch new directories
                            * and post server descriptros to the directory
                            * server? */
@@ -1351,8 +1357,8 @@ void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last);
 int init_keys(void);
 crypto_pk_env_t *init_key_from_file(const char *fname);
 void rotate_onion_key(void);
-void router_set_advertised_bandwidth(int bw);
-int router_get_advertised_bandwidth(void);
+void router_set_bandwidth_capacity(int bw);
+int router_get_bandwidth_capacity(void);
 
 void router_retry_connections(void);
 int router_is_clique_mode(routerinfo_t *router);
@@ -1374,7 +1380,8 @@ void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list);
 void router_add_running_routers_to_smartlist(struct smartlist_t *sl);
 int router_nickname_matches(routerinfo_t *router, const char *nickname);
 routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
-                                        struct smartlist_t *excludedsmartlist);
+                                        struct smartlist_t *excludedsmartlist,
+                                        int preferuptime, int preferbandwidth);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_nickname(const char *nickname);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);

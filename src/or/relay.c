@@ -492,15 +492,34 @@ connection_edge_process_relay_cell_not_open(
     connection_t *conn, crypt_path_t *layer_hint) {
   uint32_t addr;
   int reason;
+  routerinfo_t *exitrouter;
 
   if(rh->command == RELAY_COMMAND_END) {
     reason = *(cell->payload+RELAY_HEADER_SIZE);
     /* We have to check this here, since we aren't connected yet. */
     if (rh->length >= 5 && reason == END_STREAM_REASON_EXITPOLICY) {
+      if(conn->type != CONN_TYPE_AP) {
+        log_fn(LOG_WARN,"Got an end because of exitpolicy, but we're not an AP. Closing.");
+        return -1;
+      }
       log_fn(LOG_INFO,"Address %s refused due to exit policy. Retrying.",
              conn->socks_request->address);
       addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+1));
       client_dns_set_entry(conn->socks_request->address, addr);
+
+      /* check if he *ought* to have allowed it */
+      exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
+      if(!exitrouter) {
+        log_fn(LOG_INFO,"Skipping broken circ (exit router vanished)");
+        return 0; /* this circuit is screwed and doesn't know it yet */
+      }
+      if(connection_ap_can_use_exit(conn, exitrouter)) {
+        log_fn(LOG_WARN,"Exitrouter %s seems to be more restrictive than its exit policy. Not using this router as exit for now,", exitrouter->nickname);
+        exit_policy_free(exitrouter->exit_policy);
+        exitrouter->exit_policy = 
+          router_parse_exit_policy_from_string("reject *:*"); 
+      }
+
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
       circuit_detach_stream(circ,conn);
       if(connection_ap_handshake_attach_circuit(conn) >= 0)

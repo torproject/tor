@@ -132,16 +132,16 @@ void rotate_onion_key(void)
 }
 
 /** The latest calculated bandwidth usage for our node. */
-static int advertised_bw = 0;
+static int bw_capacity = 0;
 /** Tuck <b>bw</b> away so we can produce it when somebody
- * calls router_get_advertised_bandwidth() below.
+ * calls router_get_bandwidth_capacity() below.
  */
-void router_set_advertised_bandwidth(int bw) {
-  advertised_bw = bw;
+void router_set_bandwidth_capacity(int bw) {
+  bw_capacity = bw;
 }
 /** Return the value we tucked away above, or zero by default. */
-int router_get_advertised_bandwidth(void) {
-  return advertised_bw;
+int router_get_bandwidth_capacity(void) {
+  return bw_capacity;
 }
 
 /* Read an RSA secret key key from a file that was once named fname_old,
@@ -535,7 +535,7 @@ int router_rebuild_descriptor(void) {
   ri->platform = tor_strdup(platform);
   ri->bandwidthrate = options.BandwidthRate;
   ri->bandwidthburst = options.BandwidthBurst;
-  ri->advertisedbandwidth = router_get_advertised_bandwidth();
+  ri->bandwidthcapacity = router_get_bandwidth_capacity();
   ri->exit_policy = NULL; /* zero it out first */
   router_add_exit_policy_from_config(ri);
   ri->is_trusted_dir = authdir_mode();
@@ -652,7 +652,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     stats_n_seconds_uptime,
     (int) router->bandwidthrate,
     (int) router->bandwidthburst,
-    (int) router->advertisedbandwidth,
+    (int) router->bandwidthcapacity,
     onion_pkey, identity_pkey,
     bandwidth_usage);
 

@@ -207,6 +207,8 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
     config_compare(list, "ExitPolicy",     CONFIG_TYPE_LINELIST, &options->ExitPolicy) ||
     config_compare(list, "ExcludeNodes",   CONFIG_TYPE_STRING, &options->ExcludeNodes) ||
 
+    config_compare(list, "FascistFirewall",CONFIG_TYPE_BOOL, &options->FascistFirewall) ||
+
     config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
 
     config_compare(list, "IgnoreVersion",  CONFIG_TYPE_BOOL, &options->IgnoreVersion) ||
@@ -885,6 +887,7 @@ int config_init_logs(or_options_t *options)
   return 0;
 }
 
+/** XXX008 DOCDOC */
 void
 config_parse_exit_policy(struct config_line_t *cfg,
                          struct exit_policy_t **dest)

@@ -419,7 +419,7 @@ static int decide_if_publishable_server(time_t now) {
   int bw;
 
   bw = rep_hist_bandwidth_assess();
-  router_set_advertised_bandwidth(bw);
+  router_set_bandwidth_capacity(bw);
 
   if(options.ClientOnly)
     return 0;
