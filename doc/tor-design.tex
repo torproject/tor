@@ -51,11 +51,14 @@
 \begin{abstract}
 We present Tor, a connection-based low-latency anonymous communication
 system. It is intended as a successor to Onion Routing
+% how about removing 'intended as'? Simplifying further?
 and addresses many limitations in the original Onion Routing design.
 Tor works in a real-world Internet environment,
+% it's user-space too
 requires little synchronization or coordination between nodes, and
 protects against known anonymity-breaking attacks as well
 as or better than other systems with similar design parameters.
+% and we preseent a big list of open problems at the end
 \end{abstract}
 
 %\begin{center}
@@ -73,8 +76,9 @@ and instant messaging. Clients choose a path through the network and
 build a \emph{virtual circuit}, in which each node in the path knows its
 predecessor and successor, but no others. Traffic flowing down the circuit
 is sent in fixed-size \emph{cells}, which are unwrapped by a symmetric key
-at each node and relayed downstream. The original Onion Routing
-project published several design and analysis papers
+at each node (like the layers of an onion) and relayed downstream. The
+original Onion Routing project published several design and analysis
+papers
 \cite{or-jsac98,or-discex00,or-ih96,or-pet00}. While there was briefly
 a wide area Onion Routing network,
 % how long is briefly? a day, a month? -RD
@@ -603,52 +607,61 @@ shape of the traffic they send and receive.
 \Section{The Tor Design}
 \label{sec:design}
 
-high-level intro: overlay network of onion routers with long-term TLS
-connections.  (Every OR connects to every other.) Users run local
-software (onion proxies) that establish path over network and
-construct virtual circuit.  (USers know about all ORs from Directory.)
-OPs accept TCP streams and multiplex them across virtual circuit.  OR
-on the other side of the cirucuit connects to the destinations of the
-TCP streams and continues to relay TCP sessions.
+The Tor network is an overlay network; each node is called an onion router
+(OR). Onion routers run on normal computers without needing any special
+privileges. Each OR maintains a long-term TLS connection to every other
+OR (although we look at ways to relax this clique-topology assumption in
+section \ref{subsec:restricted-routes}). A subset of the ORs also act as
+directory servers, tracking which routers are currently in the network;
+see section \ref{subsec:dirservers} for directory server details. Users
+run local software called an onion proxy (OP) that fetches directories,
+establishes paths (called \emph{virtual circuits}) over the network,
+and handles connections from the user applications. Onion proxies accept
+TCP streams and multiplex them across the virtual circuit. The onion
+router on the other side of the circuit connects to the destinations of
+the TCP streams and relays data.
 
-Describe connection protocol.  Link-to-link rate limiting.  Link
-padding.
+Section \ref{subsec:cells} discusses the structure of the fixed-size
+\emph{cell} that are the unit of communication in Tor. We describe
+in Section \ref{subsec:circuits} how circuits work, and in Section
+\ref{subsec:circuit-build} how they are built, extended, truncated, and
+destroyed. Section \ref{subsec:tcp} discusses the process of opening
+TCP streams through Tor, and finally Section \ref{subsec:congestion}
+talks about congestion control and fairness issues.
 
-Describe cells.  Control versus Relay.  Cell structure.
+\SubSection{Cells}
 
-Describe how circuits work and how relay cells get passed along,
+4.1 Describe cells.  Control versus Relay.  Cell structure.
+
+4.2 Describe how circuits work and how relay cells get passed along,
 decrypted etc.  This will include mentioning leaky-pipe circuit
 topology and end-to-end integrity checking.  (Mention tagging.)
 
-Describe how circuits get built, extended, truncated.
+4.3 Describe how circuits get built, extended, truncated.
 
-Describe how TCP connections get opened.  (Mention DNS issues)
+4.4 Describe how TCP connections get opened.  (Mention DNS issues)
 Descibe closing TCP connections and 2-END handshake to mirror TCP
 close handshake.
 
-Describe how data is transmitted.
-
-Describe circuit-level and stream-level congestion control issues and
-solutions.
-
+4.5 Describe circuit-level and stream-level
+congestion control issues and solutions.
 Describe circuit-level and stream-level fairness issues; cite Marc's
 anonnet stuff.
 
-Describe DoS prevention.
+\Section{Other design decisions}
 
+\SubSection{Resource management and DoS prevention}
+
+Describe DoS prevention. cookies before tls begins, rate limiting of
+create cells, link-to-link rate limiting, etc.
 Mention twins, what the do, what they can't.
-
 How we should do sequencing and acking like TCP so that we can better
 tolerate lost data cells.
-
-[XXX mention that designers have to choose what you send across your
+Mention that designers have to choose what you send across your
   circuit: wrapped IP packets, wrapped stream data, etc.  [Disspell
-  TCP-over-TCP misconception.]]
-
-[XXX Mention that OR-to-OR connections should be highly reliable.  If
-  they aren't, everything can stall.]
-
-\Section{Other design decisions}
+  TCP-over-TCP misconception.]
+Mention that OR-to-OR connections should be highly reliable.  If
+  they aren't, everything can stall.
 
 \SubSection{Exit policies and abuse}
 \label{subsec:exitpolicies}
@@ -950,10 +963,10 @@ Mention jurisdictional arbitrage.
 
 Pull attacks and defenses into analysis as a subsection
 
-\Section{Maintaining anonymity sets}
+\Section{Maintaining anonymity in Tor}
 \label{sec:maintaining-anonymity}
 
-[Put as much of this as a part of open issuses as is possible.]
+[Put as much of this as a part of open issues as is possible.]
 
 [what's an anonymity set?]
 
