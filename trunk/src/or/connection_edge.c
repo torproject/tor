@@ -31,7 +31,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
     SET_CELL_STREAM_ID(cell, conn->stream_id);
     cell.aci = circ->n_aci;
 
-    if (circuit_deliver_relay_cell_from_edge(&cell, circ, conn->type) < 0) {
+    if (circuit_deliver_relay_cell_from_edge(&cell, circ, conn->type, conn->cpath_layer) < 0) {
       log(LOG_DEBUG,"connection_edge_process_inbuf: circuit_deliver_relay_cell_from_edge failed.  Closing");
       circuit_close(circ);
     }
@@ -82,18 +82,16 @@ int connection_edge_send_command(connection_t *conn, circuit_t *circ, int relay_
   cell.length = RELAY_HEADER_SIZE;
   log(LOG_INFO,"connection_edge_send_command(): delivering %d cell %s.", relay_command, conn->type == CONN_TYPE_AP ? "forward" : "backward");
 
-  if(circuit_deliver_relay_cell_from_edge(&cell, circ, conn->type) < 0) {
-    log(LOG_DEBUG,"connection_edge_send_command(): circuit_deliver_relay_cell failed. Closing.");
+  if(circuit_deliver_relay_cell_from_edge(&cell, circ, conn->type, conn->cpath_layer) < 0) {
+    log(LOG_DEBUG,"connection_edge_send_command(): circuit_deliver_relay_cell_from_edge failed. Closing.");
     circuit_close(circ);
     return 0;
   }
   return 0;
 }
 
-int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, int edge_type) {
-  connection_t *conn;
+int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn, int edge_type) {
   int relay_command;
-  int stream_id;
   static int num_seen=0;
 
   /* an incoming relay cell has arrived */
@@ -101,23 +99,14 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, int edge_t
   assert(cell && circ);
 
   relay_command = CELL_RELAY_COMMAND(*cell);
-  stream_id = CELL_STREAM_ID(*cell);
-  log(LOG_DEBUG,"connection_edge_process_relay_cell(): command %d stream %d", relay_command, stream_id);
+//  log(LOG_DEBUG,"connection_edge_process_relay_cell(): command %d stream %d", relay_command, stream_id);
   num_seen++;
   log(LOG_DEBUG,"connection_edge_process_relay_cell(): Now seen %d relay cells here.", num_seen);
 
   circuit_consider_sending_sendme(circ, edge_type);
 
-  if(edge_type == EDGE_AP)
-    conn = circ->p_conn;
-  else
-    conn = circ->n_conn;
-
-  for( ; conn && conn->stream_id != stream_id; conn = conn->next_stream) ;
-
-  /* now conn is either NULL, in which case we don't recognize the stream_id, or
-   * it is set, in which case cell is talking about this conn.
-   */
+  /* either conn is NULL, in which case we've got a control cell, or else
+   * conn points to the recognized stream. */
 
   if(conn && conn->state != AP_CONN_STATE_OPEN && conn->state != EXIT_CONN_STATE_OPEN) {
     if(conn->type == CONN_TYPE_EXIT && relay_command == RELAY_COMMAND_END) {
@@ -143,7 +132,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, int edge_t
       }
     case RELAY_COMMAND_DATA:
       if(!conn) {
-        log(LOG_DEBUG,"connection_edge_process_relay_cell(): relay cell dropped, unknown stream %d.",stream_id);
+        log(LOG_DEBUG,"connection_edge_process_relay_cell(): relay cell dropped, unknown stream %d.",*(int*)conn->stream_id);
         return 0;
       }
       if((edge_type == EDGE_AP && --conn->n_receive_streamwindow < 0) ||
@@ -172,10 +161,10 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, int edge_t
       return 0;
     case RELAY_COMMAND_END:
       if(!conn) {
-        log(LOG_DEBUG,"connection_edge_process_relay_cell(): end cell dropped, unknown stream %d.",stream_id);
+        log(LOG_DEBUG,"connection_edge_process_relay_cell(): end cell dropped, unknown stream %d.",*(int*)conn->stream_id);
         return 0;
       }
-      log(LOG_DEBUG,"connection_edge_process_relay_cell(): end cell for stream %d. Removing stream.",stream_id);
+      log(LOG_DEBUG,"connection_edge_process_relay_cell(): end cell for stream %d. Removing stream.",*(int*)conn->stream_id);
 
       /* go through and identify who points to conn. remove conn from the list. */
 #if 0
@@ -199,7 +188,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, int edge_t
         return 0;
       }
       if(!conn) {
-        log(LOG_DEBUG,"connection_edge_process_relay_cell(): connected cell dropped, unknown stream %d.",stream_id);
+        log(LOG_DEBUG,"connection_edge_process_relay_cell(): connected cell dropped, unknown stream %d.",*(int*)conn->stream_id);
         break;
       }
       log(LOG_DEBUG,"connection_edge_process_relay_cell(): Connected! Notifying application.");
@@ -209,7 +198,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, int edge_t
       break;
     case RELAY_COMMAND_SENDME:
       if(!conn) {
-        log(LOG_DEBUG,"connection_edge_process_relay_cell(): sendme cell dropped, unknown stream %d.",stream_id);
+        log(LOG_DEBUG,"connection_edge_process_relay_cell(): sendme cell dropped, unknown stream %d.",*(int*)conn->stream_id);
         return 0;
       }
       if(edge_type == EDGE_AP)

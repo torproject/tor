@@ -141,13 +141,14 @@ void onion_pending_remove(circuit_t *circ) {
 
 }
 
-struct relay_queue_t *relay_queue_add(struct relay_queue_t *list, cell_t *cell) {
+struct relay_queue_t *relay_queue_add(struct relay_queue_t *list, cell_t *cell, crypt_path_t *layer_hint) {
   struct relay_queue_t *tmpd, *newd;
 
   newd = malloc(sizeof(struct relay_queue_t));
   memset(newd, 0, sizeof(struct relay_queue_t));
   newd->cell = malloc(sizeof(cell_t));
   memcpy(newd->cell, cell, sizeof(cell_t));
+  newd->layer_hint = layer_hint;
 
   if(!list) {
     return newd;
@@ -167,7 +168,7 @@ void onion_pending_relay_add(circuit_t *circ, cell_t *cell) {
 
   for(tmpo=ol_list; tmpo; tmpo=tmpo->next) {
     if(tmpo->circ == circ) {
-      tmpo->relay_cells = relay_queue_add(tmpo->relay_cells, cell);
+      tmpo->relay_cells = relay_queue_add(tmpo->relay_cells, cell, NULL);
       return;
     }
   }

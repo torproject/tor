@@ -128,7 +128,7 @@
 #define RELAY_COMMAND_CONNECTED 4
 #define RELAY_COMMAND_SENDME 5
 
-#define RELAY_HEADER_SIZE 4
+#define RELAY_HEADER_SIZE 8
 
 #define RELAY_STATE_RESOLVING
 
@@ -195,15 +195,17 @@ typedef uint16_t aci_t;
 typedef struct { 
   aci_t aci; /* Anonymous Connection Identifier */
   unsigned char command;
-  unsigned char length; /* of payload if relay cell, else value of sendme */
+  unsigned char length; /* of payload if relay cell */
   uint32_t seq; /* sequence number */
 
   unsigned char payload[CELL_PAYLOAD_SIZE];
 } cell_t;
 #define CELL_RELAY_COMMAND(c)         (*(uint8_t*)((c).payload))
 #define SET_CELL_RELAY_COMMAND(c,cmd) (*(uint8_t*)((c).payload) = (cmd))
-#define CELL_STREAM_ID(c)             ntohs(*(uint16_t*)((c).payload+2))
-#define SET_CELL_STREAM_ID(c,id)      (*(uint16_t*)((c).payload+2) = htons(id))
+#define STREAM_ID_SIZE 7
+#define SET_CELL_STREAM_ID(c,id)      memcpy((c).payload+1,(id),STREAM_ID_SIZE)
+
+#define ZERO_STREAM "\0\0\0\0\0\0\0\0"
 
 #define SOCKS4_REQUEST_GRANTED          90
 #define SOCKS4_REQUEST_REJECT           91
@@ -265,8 +267,9 @@ struct connection_t {
   uint16_t port;
 
 /* used by exit and ap: */
-  uint16_t stream_id;
+  char stream_id[STREAM_ID_SIZE];
   struct connection_t *next_stream;
+  struct crypt_path_t *cpath_layer; /* a pointer to which node in the circ this conn exits at */
   int n_receive_streamwindow;
   int p_receive_streamwindow;
   int done_sending;
@@ -335,7 +338,7 @@ typedef struct {
   void *next;
 } routerinfo_t;
 
-typedef struct { 
+struct crypt_path_t { 
   char digest2[20]; /* second SHA output for onion_layer_t.keyseed */
   char digest3[20]; /* third SHA output for onion_layer_t.keyseed */
 
@@ -347,13 +350,16 @@ typedef struct {
 #define CPATH_STATE_CLOSED 0
 #define CPATH_STATE_AWAITING_KEY 1
 #define CPATH_STATE_OPEN 2
-  void *next;
-  void *prev; /* doubly linked list */
+  struct crypt_path_t *next;
+  struct crypt_path_t *prev; /* doubly linked list */
 
-} crypt_path_t;
+};
+
+typedef struct crypt_path_t crypt_path_t;
 
 struct relay_queue_t {
   cell_t *cell;
+  crypt_path_t *layer_hint;
   struct relay_queue_t *next;
 };
 
@@ -506,9 +512,13 @@ circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest_ap(void);
 circuit_t *circuit_enumerate_by_naddr_nport(circuit_t *start, uint32_t naddr, uint16_t nport);
 
-int circuit_deliver_relay_cell_from_edge(cell_t *cell, circuit_t *circ, char edge_type);
-int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ, int crypt_type);
-int circuit_crypt(circuit_t *circ, char *in, int inlen, char crypt_type);
+int circuit_deliver_relay_cell_from_edge(cell_t *cell, circuit_t *circ,
+                                         char edge_type, crypt_path_t *layer_hint);
+int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
+                               int cell_direction, crypt_path_t *layer_hint);
+int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
+                crypt_path_t *layer_hint, char *recognized, connection_t **conn);
+int relay_check_recognized(circuit_t *circ, int cell_direction, char *stream, connection_t **conn);
 
 void circuit_resume_edge_reading(circuit_t *circ, int edge_type);
 int circuit_consider_stop_edge_reading(circuit_t *circ, int edge_type);
@@ -645,7 +655,7 @@ int connection_ap_handle_listener_read(connection_t *conn);
 
 int connection_edge_process_inbuf(connection_t *conn);
 int connection_edge_send_command(connection_t *conn, circuit_t *circ, int relay_command);
-int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, int edge_type);
+int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection_t *conn, int edge_type);
 int connection_edge_finished_flushing(connection_t *conn);
 
 /********************************* connection_exit.c ***************************/
@@ -753,7 +763,7 @@ int onion_pending_add(circuit_t *circ);
 int onion_pending_check(void);
 void onion_pending_process_one(void);
 void onion_pending_remove(circuit_t *circ);
-struct relay_queue_t *relay_queue_add(struct relay_queue_t *list, cell_t *cell);
+struct relay_queue_t *relay_queue_add(struct relay_queue_t *list, cell_t *cell, crypt_path_t *layer_hint);
 void onion_pending_relay_add(circuit_t *circ, cell_t *cell);
 
 /* uses a weighted coin with weight cw to choose a route length */

@@ -241,14 +241,14 @@ void command_process_relay_cell(cell_t *cell, connection_t *conn) {
 
   if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
     cell->aci = circ->n_aci; /* switch it */
-    if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_OUT) < 0) {
+    if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_OUT, conn->cpath_layer) < 0) {
       log(LOG_INFO,"command_process_relay_cell(): circuit_deliver_relay_cell (forward) failed. Closing.");
       circuit_close(circ);
       return;
     }
   } else { /* it's an ingoing cell */
     cell->aci = circ->p_aci; /* switch it */
-    if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_IN) < 0) {
+    if(circuit_deliver_relay_cell(cell, circ, CELL_DIRECTION_IN, NULL) < 0) {
       log(LOG_DEBUG,"command_process_relay_cell(): circuit_deliver_relay_cell (backward) failed. Closing.");
       circuit_close(circ);
       return;
