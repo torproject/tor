@@ -213,17 +213,21 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   }
   log_fn(LOG_DEBUG,"The router's cert is valid.");
 
-  if((c=connection_exact_get_by_addr_port(router->addr,router->or_port))) {
-    log_fn(LOG_INFO,"Router %s is already connected on fd %d. Dropping fd %d.", router->nickname, c->s, conn->s);
-    return -1;
+  if (conn->nickname) {
+    /* I initiated this connection. */
+    if (strcmp(conn->nickname, nickname)) {
+      log_fn(options.DirPort ? LOG_WARN : LOG_INFO,
+             "Other side is '%s', but we tried to connect to '%s'",
+             nickname, conn->nickname);
+      return -1;
+    }
+  } else {
+    if((c=connection_exact_get_by_addr_port(router->addr,router->or_port))) {
+      log_fn(LOG_INFO,"Router %s is already connected on fd %d. Dropping fd %d.", router->nickname, c->s, conn->s);
+      return -1;
+    }
+    connection_or_init_conn_from_router(conn,router);
   }
-  if (conn->nickname && strcmp(conn->nickname, nickname)) {
-    log_fn(options.DirPort ? LOG_WARN : LOG_INFO,
-           "Other side is '%s', but we tried to connect to '%s'",
-           nickname, conn->nickname);
-    return -1;
-  }
-  connection_or_init_conn_from_router(conn,router);
 
   if (!options.ORPort) { /* If I'm an OP... */
     conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;

@@ -254,7 +254,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
     if (crypto_pk_generate_key(rsa)<0)
       goto error;
     cert = tor_tls_create_certificate(rsa, identity, nickname, nn2);
-    idcert = tor_tls_create_certificate(rsa, identity, nn2, nn2);
+    idcert = tor_tls_create_certificate(identity, identity, nn2, nn2);
     if (!cert || !idcert) {
       log(LOG_WARN, "Error creating certificate");
       goto error;
@@ -552,6 +552,7 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
   EVP_PKEY *id_pkey = NULL;
   time_t now, t;
   int r = -1;
+
   if (!(cert = SSL_get_peer_certificate(tls->ssl)))
     return -1;
 
