@@ -124,7 +124,7 @@ assumed padding between ORs, and in
 later designs added padding between onion proxies (users) and ORs
 \cite{or-ih96,or-jsac98}.  Tradeoffs between padding protection
 and cost were discussed, and \emph{traffic shaping} algorithms were
-theorized \cite{or-pet00} that provide good security without expensive
+theorized \cite{or-pet00} to provide good security without expensive
 padding, but no concrete padding scheme was suggested.
 Recent research \cite{econymics}
 and deployment experience \cite{freedom21-security} suggest that this
@@ -1242,8 +1242,7 @@ points, informs him of her rendezvous point, and then waits for him
 to connect to the rendezvous point. This extra level of indirection
 helps Bob's introduction points avoid problems associated with serving
 unpopular files directly (for example, if Bob serves
-material that the introduction point's neighbors find objectionable,
-%XXX neighbors is a technical term
+material that the introduction point's community finds objectionable,
 or if Bob's service tends to get attacked by network vandals).
 The extra level of indirection also allows Bob to respond to some requests
 and ignore others.
@@ -1256,9 +1255,7 @@ application integration is described more fully below.
 \item Bob chooses some introduction points, and advertises them on
       the DHT.  He can add more later.
 \item Bob builds a circuit to each of his introduction points,
-      and waits.  No data is yet transmitted.
-% XXX what do we mean No data? Bob obviously tells the IP about
-%     his hash-of-public key, auth scheme, etc
+      and waits.  No more data is transmitted before the first request.
 \item Alice learns about Bob's service out of band (perhaps Bob told her,
       or she found it on a website). She retrieves the details of Bob's
       service from the DHT.
@@ -1272,7 +1269,7 @@ application integration is described more fully below.
       first half of a DH
       handshake. The introduction point sends the message to Bob.
 \item If Bob wants to talk to Alice, he builds a circuit to Alice's
-      RP and provides the rendezvous cookie, the second half of the DH
+      RP and sends the rendezvous cookie, the second half of the DH
       handshake, and a hash of the session
       key they now share. By the same argument as in
       Section~\ref{subsubsec:constructing-a-circuit}, Alice knows she
@@ -1342,13 +1339,13 @@ those users can switch to accessing Bob's service via
 the Tor rendezvous system.
 
 Since Bob's introduction points might themselves be subject to DoS he
-could be faced with a choice between keeping many
+could have to choose between keeping many
 introduction connections open or risking such an attack. In this case,
-similar to the authentication tokens, he can provide selected users
+he can provide selected users
 with a current list and/or future schedule of introduction points that
 are not advertised in the DHT\@. This is most likely to be practical
 if there is a relatively stable and large group of introduction points
-generally available. Alternatively, Bob could give secret public keys
+available. Alternatively, Bob could give secret public keys
 to selected users for consulting the DHT\@. All of these approaches
 have the advantage of limiting exposure even when
 some of the selected high-priority users collude in the DoS\@.
@@ -1460,11 +1457,11 @@ been shown to be effective against SafeWeb \cite{hintz-pet02}.
 %possibility that multiple streams are exiting the circuit at
 %different places concurrently.  
 %   XXX How does that help? Roger and I don't know. -NM
-It may slightly less effective against Tor, since
+It may be less effective against Tor, since
 fingerprinting will be limited to
 the granularity of cells, currently 256 bytes.  Further potential
 defenses include 
-larger cell sizes and/or minimal padding schemes to group websites
+larger cell sizes and/or padding schemes to group websites
 into large sets. But this remains an open problem.  Link
 padding or long-range dummies may also make fingerprints harder to
 detect.\footnote{Note that
@@ -1681,10 +1678,10 @@ blocking of valid requests, however, he should periodically test the
 introduction point by sending it introduction requests, and making
 sure he receives them.
 
-\emph{Compromise a rendezvous point.}  Controlling a rendezvous
-point gains an attacker no more than controlling any other OR along
-a circuit, since all data passing through the rendezvous is protected
-by the session key shared by the client and server.
+\emph{Compromise a rendezvous point.}  A rendezvous
+point is no more sensitive than any other OR on
+a circuit, since all data passing through the rendezvous is encrypted
+with a session key shared by Alice and Bob.
 
 \Section{Open Questions in Low-latency Anonymity}
 \label{sec:maintaining-anonymity}
@@ -1747,8 +1744,8 @@ by batching and re-ordering packets, but it is unclear whether this could
 improve anonymity without introducing so much latency as to render the
 network unusable.
 
-A cascade topology may better defend against traffic confirmation by a
-large adversary through aggregating users, and making padding and
+A cascade topology may better defend against traffic confirmation by
+aggregating users, and making padding and
 mixing more affordable.  Does the hydra topology (many input nodes,
 few output nodes) work better against some adversaries? Are we going
 to get a hydra anyway because most nodes will be middleman nodes?
@@ -1819,11 +1816,11 @@ and possibly better anonymity \cite{econymics}. More nodes means increased
 scalability, and more users can mean more anonymity. We need to continue
 examining the incentive structures for participating in Tor.
 
-\emph{Cover traffic:} Currently Tor avoids cover traffic because its costs
+\emph{Cover traffic:} Currently Tor omits cover traffic because its costs
 in performance and bandwidth are clear, whereas its security benefits are
-not well understood. We must pursue more research on both link-level cover
-traffic and long-range cover traffic to determine some simple padding
-schemes that offer provable protection against our chosen adversary.
+not well understood. We must pursue more research on link-level cover
+traffic and long-range cover traffic to determine whether some simple padding
+method offers provable protection against our chosen adversary.
 
 %%\emph{Offer two relay cell sizes:} Traffic on the Internet tends to be
 %%large for bulk transfers and small for interactive traffic. One cell
@@ -1837,10 +1834,9 @@ On the other hand, forward security is weakened because caches
 constitute a record of retrieved files.  We must find the right
 balance between usability and security.
 
-\emph{Better directory distribution:} %Directory retrieval presents
-%a scaling problem, since 
+\emph{Better directory distribution:}
 Clients currently download a description of
-the entire network state every 15 minutes. As the state grows larger
+the entire network every 15 minutes. As the state grows larger
 and clients more numerous, we may need a solution in which
 clients receive incremental updates to directory state.
 More generally, we must find more
