@@ -1072,16 +1072,95 @@ see Section~\ref{sec:maintaining-anonymity} for more discussion.
 \SubSection{Resource management and DoS prevention}
 \label{subsec:dos}
 
-Describe DoS prevention. cookies before tls begins, rate limiting of
-create cells, link-to-link rate limiting, etc.
-Mention twins, what the do, what they can't.
-How we should do sequencing and acking like TCP so that we can better
-tolerate lost data cells.
-Mention that designers have to choose what you send across your
-  circuit: wrapped IP packets, wrapped stream data, etc.  [Disspell
-  TCP-over-TCP misconception.]
-Mention that OR-to-OR connections should be highly reliable.  If
-  they aren't, everything can stall.
+Providing Tor as a public service provides many opportunities for an
+attacker to mount denial-of-service attacks against the network.  While
+flow control and rate limiting (discussed in
+section~\ref{subsec:congestion}) prevents users from consuming more
+bandwidth than nodes are willing to provide, opportunities remain for
+consume more network resources than their fair share, or to render the
+network unusable for other users.
+
+First of all, there are a number of CPU-consuming denial-of-service
+attacks wherein an attacker can force an OR to perform expensive
+cryptographic operations.  For example, an attacker who sends a
+\emph{create} cell full of junk bytes can force an OR to perform an RSA
+decrypt its half of the Diffie-Helman handshake.  Similarly, an attacker
+fake the start of a TLS handshake, forcing the OR to carry out its
+(comparatively expensive) half of the handshake at no real computational
+cost to the attacker.
+
+To address these attacks, several approaches exist.  First, ORs may
+demand proof-of-computation tokens \cite{hashcash} before beginning new
+TLS handshakes or accepting \emph{create} cells.  So long as these
+tokens are easy to verify and computationally expensive to produce, this
+approach limits the DoS attack multiplier.  Additionally, ORs may limit
+the rate at which they accept create cells and TLS connections, so that
+the computational work of doing so does not drown out the (comparatively
+inexpensive) work of symmetric cryptography needed to keep users'
+packets flowing.  This rate limiting could, however, allows an attacker
+to slow down other users as they build new circuits.
+
+% What about link-to-link rate limiting?
+
+% This paragraph needs more references.
+More worrisome are distributed denial of service attacks wherein an
+attacker uses a large number of compromised hosts throughout the network
+to consume the Tor network's resources.  Although these attacks are not
+new to the networking literature, some proposed approaches are a poor
+fit to anonymous networks.  For example, solutions based on backtracking
+harmful traffic present a significant risk that an anonymity-breaking
+adversary could exploit the backtracking mechanism to compromise users'
+anonymity.  [XXX So, what should we say here? -NM]
+
+% Now would be a good point to talk about twins.   What the do, what
+% they can't.
+
+Attackers also have an opportunity to attack the Tor network by mounting
+attacks on the hosts and network links running it. If an attacker can
+successfully disrupt a single circuit or link along a virtual circuit,
+all currently open streams passing along that part of the circuit
+become unrecoverable, and are closed.  The current Tor design treats
+such attacks as intermittent network failures, and depends on users and
+applications to respond or recover as appropriate.  A possible future
+design could use an end-to-end based TCP-like acknowledgment protocol,
+so that no streams are lost unless the entry or exit point themselves
+are disrupted.  This solution would require more buffering at exits,
+however, and its network properties still need to be investigated. [XXX
+  That sounds really evasive. We should say more.]
+
+%[XXX Mention that OR-to-OR connections should be highly reliable
+%  (whatever that means).  If they aren't, everything can stall.]
+
+%=====================
+% This stuff should go elsewhere.  Probably section 2.
+
+Channel-based anonymity designs must choose which protocol layer to
+anonymize.  They may choose to intercept IP packets directly, and relay
+them whole (stripping the source address) as the contents of their
+anonymous channels [XXX cite an example].  Alternatively, they may
+accept TCP streams and relay the data in those streams along the
+channel, ignoring the breakdown of that data into TCP frames. (Tor takes
+this approach, as does [XXX].)  Finally, they may accept
+application-level protocols (such as HTTP) and relay the application
+requests themselves along their anonymous channels.
+
+This protocol-layer decision represents a compromise between flexibility
+and anonymity.  For example, a system that understands HTTP can strip
+identifying information from those requests; can take advantage of
+caching to limit the number of requests that leave the network; and can
+batch or encode those requests in order to minimize the number of
+connections.  On the other hand, an IP-level anonymizer can handle
+nearly any protocol, even ones unforeseen by their designers.  TCP-level
+anonymity networks like Tor present a middle approach: they are fairly
+application neutral (so long as the application supports, or can be
+tunneled across, TCP), but by treating application connections as data
+streams rather than raw TCP packets, they avoid the well-known
+inefficiencies of tunneling TCP over TCP \cite{tcp-over-tcp-is-bad}.
+% Is there a better tcp-over-tcp-is-bad reference?
+
+%Also mention that weirdo IP trickery requires kernel patches to most
+%operating systems? -NM
+
 
 \SubSection{Exit policies and abuse}
 \label{subsec:exitpolicies}
