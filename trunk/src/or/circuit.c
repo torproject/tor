@@ -805,7 +805,9 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
     /* note also that this will close circuits where the onion has the same
      * router twice in a row in the path. i think that's ok. -RD
      */
-    log_fn(LOG_DEBUG,"Next router not connected. Closing.");
+    struct in_addr in;
+    in.s_addr = htonl(circ->n_addr);
+    log_fn(LOG_DEBUG,"Next router (%s:%d) not connected. Closing.", inet_ntoa(in), circ->n_port);
     /* XXX later we should fail more gracefully here, like with a 'truncated' */
     return -1;
   }
