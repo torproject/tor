@@ -746,11 +746,12 @@ router_resolve_directory(directory_t *dir)
       log_fn(LOG_WARN, "Couldn't resolve router %s; removing",
              dir->routers[i]->address);
       remove = 1;
-      routerinfo_free(dir->routers[i]);
-    } else if (options.Nickname && !strcmp(dir->routers[i]->nickname, options.Nickname)) {
+    } else if (options.Nickname &&
+               !strcmp(dir->routers[i]->nickname, options.Nickname)) {
       remove = 1;
     }
     if (remove) {
+      routerinfo_free(dir->routers[i]);
       dir->routers[i] = dir->routers[--max];
       --dir->n_routers;
       --i;
