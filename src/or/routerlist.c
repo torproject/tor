@@ -426,10 +426,13 @@ int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
       }
     } else {
       /* Address is known */
-      if ( (addr & tmpe->msk) == (tmpe->addr & tmpe->msk) &&
-           (port >= tmpe->prt_min && port <= tmpe->prt_max) ) {
-        /* Exact match for the policy */
-        match = 1;
+      if ((addr & tmpe->msk) == (tmpe->addr & tmpe->msk)) {
+        if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
+          /* Exact match for the policy */
+          match = 1;
+        } else if (!port) {
+          maybe = 1;
+        }
       }
     }
     if (maybe) {
