@@ -272,9 +272,10 @@ special target string "pass", which prevents subsequent rules from being
 considered.
 .TP
 \fBAccountingMaxKB \fR\fInum\fP
-Never send or receive more than \fInum\fP kilobytes in a given
-accounting period (currently, only months are supported).  When the
-number of kilobytes is exhausted, Tor will hibernate until some time
+Never send more than \fInum\fP kilobytes in a given accounting period,
+or receive more than \fInum\fP kilobytes in the period (currently,
+only months are supported).  When the number of kilobytes is exhausted,
+Tor will hibernate until some time
 in the next accounting period.  If you have bandwidth cost issues,
 using this option is preferable to setting a low bandwidth, since it
 provides users with a collection of fast servers that are up some of
@@ -363,6 +364,10 @@ directory, and kill and restart its helper processes if applicable.
 \fBSIGUSR1\fR
 Log statistics about current connections, past connections, and
 throughput.
+.TP
+\fBSIGUSR2\fR
+Switch all logs to loglevel debug. You can go back to the old loglevels
+by sending a SIGHUP.
 .TP
 \fBSIGCHLD\fR
 Tor receives this signal when one of its helper processes has exited,
