@@ -450,7 +450,7 @@ int connection_ap_process_data_cell(cell_t *cell, circuit_t *circ) {
       for(prevconn = circ->p_conn; prevconn->next_topic != conn; prevconn = prevconn->next_topic) ;
       prevconn->next_topic = conn->next_topic;
 #endif
-#if 0
+#ifdef HALF_OPEN
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */
       if (conn->done_receiving)
