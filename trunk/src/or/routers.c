@@ -950,6 +950,7 @@ static void router_free_exit_policy(routerinfo_t *router) {
 void router_add_exit_policy_from_config(routerinfo_t *router) {
   char *s = options.ExitPolicy, *e;
   int last=0;
+  char line[1024];
 
   if(!s) {
     log_fn(LOG_INFO,"No exit policy configured. Ok.");
@@ -962,13 +963,16 @@ void router_add_exit_policy_from_config(routerinfo_t *router) {
 
   for(;;) {
     e = strchr(s,',');
-    if(!e)
+    if(!e) {
       last = 1;
-    else
-      *e = 0;
-    log_fn(LOG_DEBUG,"Adding new entry '%s'",s);
-    if(router_add_exit_policy_from_string(router,s) < 0)
-      log_fn(LOG_WARNING,"Malformed exit policy %s; skipping.", s);
+      strcpy(line,s);
+    } else {
+      memcpy(line,s,e-s);
+      line[e-s] = 0;
+    }
+    log_fn(LOG_DEBUG,"Adding new entry '%s'",line);
+    if(router_add_exit_policy_from_string(router,line) < 0)
+      log_fn(LOG_WARNING,"Malformed exit policy %s; skipping.", line);
     if(last)
       return;
     s = e+1;
