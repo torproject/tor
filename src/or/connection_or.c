@@ -207,8 +207,20 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
  * Return -1 if <b>conn</b> is broken, else return 0.
  */
 int connection_tls_start_handshake(connection_t *conn, int receiving) {
+  int use_no_cert=0;
   conn->state = OR_CONN_STATE_HANDSHAKING;
-  conn->tls = tor_tls_new(conn->s, receiving);
+  if(receiving) { /* check if he's 0.0.7 and I'm unverified */
+    routerinfo_t *him, *me;
+    him = router_get_by_digest(conn->identity_digest);
+    me = router_get_my_routerinfo();
+
+    if(him && !strncmp(him->platform, "Tor 0.0.7", 9) &&
+       (!me || !me->is_verified)) {
+      log_fn(LOG_INFO,"He's running 0.0.7, and I'm unverified. Acting like OP.");
+      use_no_cert = 1;
+    }
+  }
+  conn->tls = tor_tls_new(conn->s, receiving, use_no_cert);
   if(!conn->tls) {
     log_fn(LOG_WARN,"tor_tls_new failed. Closing.");
     return -1;

@@ -126,14 +126,12 @@ void rotate_onion_key(void)
 
 /** The last calculated bandwidth usage for our node. */
 static int advertised_bw = 0;
-
 /** Tuck <b>bw</b> away so we can produce it when somebody
  * calls router_get_advertised_bandwidth() below.
  */
 void router_set_advertised_bandwidth(int bw) {
   advertised_bw = bw;
 }
-
 /** Return the value we tucked away above, or zero by default. */
 int router_get_advertised_bandwidth(void) {
   return advertised_bw;
@@ -142,8 +140,9 @@ int router_get_advertised_bandwidth(void) {
 /* Read an RSA secret key key from a file that was once named fname_old,
  * but is now named fname_new.  Rename the file from old to new as needed.
  */
-crypto_pk_env_t *init_key_from_file_name_changed(const char *fname_old,
-                                                 const char *fname_new)
+static crypto_pk_env_t *
+init_key_from_file_name_changed(const char *fname_old,
+                                const char *fname_new)
 {
   int fs;
 
@@ -532,6 +531,9 @@ int router_rebuild_descriptor(void) {
   ri->exit_policy = NULL; /* zero it out first */
   router_add_exit_policy_from_config(ri);
   ri->is_trusted_dir = authdir_mode();
+  if(desc_routerinfo) /* inherit values */
+    ri->is_verified = desc_routerinfo->is_verified;
+
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
   desc_routerinfo = ri;
