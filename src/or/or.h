@@ -560,8 +560,8 @@ struct circuit_t {
   char rend_service[CRYPTO_SHA1_DIGEST_LEN];
 
   /* Holds rendezvous cookie if purpose is REND_POINT_WAITING or
-   * S_RENDEZVOUSING or C_ESTABLISH_REND. Filled with zeroes otherwise.
-  */
+   * C_ESTABLISH_REND. Filled with zeroes otherwise.
+   */
   char rend_cookie[REND_COOKIE_LEN];
 
   /* Points to spliced circuit if purpose is REND_ESTABLISHED, and circuit
@@ -692,7 +692,9 @@ circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest(connection_t *conn,
                               int must_be_open, int must_be_clean);
-circuit_t *circuit_get_by_service_and_purpose(const char *servid, int purpose);
+circuit_t *circuit_get_next_by_service_and_purpose(circuit_t *circuit,
+                                             const char *servid, int purpose);
+circuit_t *circuit_get_rendezvous(const char *cookie);
 
 void circuit_expire_building(void);
 int circuit_count_building(void);

@@ -111,7 +111,7 @@ Tor Rendezvous Spec
          TS    A timestamp                           [4 octets]
          NI    Number of introduction points         [2 octets]
          Ipt   A list of NUL-terminated OR nicknames [variable]
-         SIG   Signature of above fields             [KL octets]
+         SIG   Signature of above fields             [variable]
 
    KL is the length of PK, in octets.  (Currently, KL must be 128.)
    TS is the number of seconds elapsed since Jan 1, 1970.
@@ -131,7 +131,7 @@ Tor Rendezvous Spec
         KL   Key length                             [2 octets]
         PK   Bob's public key                       [KL octets]
         HS   Hash of session info                   [20 octets]
-        SIG  Signature of above information         [KL octets]
+        SIG  Signature of above information         [variable]
 
    To prevent replay attacks, the HS field contains a SHA-1 hash based on the
    shared secret KH between Bob's OP and the introduction point, as

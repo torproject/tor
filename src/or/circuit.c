@@ -88,7 +88,6 @@ void circuit_close_all_marked()
   }
 }
 
-
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
   circuit_t *circ;
 
@@ -307,19 +306,41 @@ circuit_t *circuit_get_newest(connection_t *conn,
   return NULL;
 }
 
-/* Return the first circuit in global_circuitlist whose rend_service
- * field is servid and whose purpose is purpose. Returns NULL if no circuit
- * is found.
+/* Return the first circuit in global_circuitlist after 'start' whose
+ * rend_service field is servid and whose purpose is purpose. Returns
+ * NULL if no circuit is found.  If 'start' is null, begin at the start of
+ * the list.
  */
-circuit_t *circuit_get_by_service_and_purpose(const char *servid, int purpose)
+circuit_t *circuit_get_next_by_service_and_purpose(circuit_t *start,
+                                        const char *servid, int purpose)
 {
   circuit_t *circ;
-  for(circ=global_circuitlist; circ; circ = circ->next) {
+  if (start == NULL)
+    circ = global_circuitlist;
+  else
+    circ = start->next;
+
+  for( ; circ; circ = circ->next) {
     if (circ->marked_for_close)
       continue;
     if (circ->purpose != purpose)
       continue;
     if (!memcmp(circ->rend_service, servid, REND_COOKIE_LEN))
+      return circ;
+  }
+  return NULL;
+}
+
+/* Return the circuit waiting for a rendezvous with the provided cookie.
+ * Return NULL if no such circuit is found.
+ */
+circuit_t *circuit_get_rendezvous(const char *cookie)
+{
+  circuit_t *circ;
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    if (! circ->marked_for_close &&
+        circ->purpose == CIRCUIT_PURPOSE_REND_POINT_WAITING &&
+        ! memcmp(circ->rend_cookie, cookie, REND_COOKIE_LEN) )
       return circ;
   }
   return NULL;
@@ -516,6 +537,17 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
   }
 
   if(!conn) {
+    if (circ->rend_splice && cell_direction == CELL_DIRECTION_OUT) {
+      assert(circ->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
+      assert(circ->rend_splice->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
+      cell->circ_id = circ->rend_splice->p_circ_id;
+      if (circuit_receive_relay_cell(cell, circ->rend_splice, CELL_DIRECTION_IN)<0) {
+        log_fn(LOG_WARN, "Error relaying cell across rendezvous; closing circuits");
+        circuit_mark_for_close(circ); /* XXXX Do this here, or just return -1? */
+        return -1;
+      }
+      return 0;
+    }
     log_fn(LOG_WARN,"Didn't recognize cell, but circ stops here! Closing circ.");
     return -1;
   }

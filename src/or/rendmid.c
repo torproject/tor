@@ -4,28 +4,193 @@
 
 #include "or.h"
 
+/* Respond to an ESTABLISH_INTRO cell by setting the circuit's purpose and
+ * rendevous service.
+ */
 int
 rend_mid_establish_intro(circuit_t *circ, char *request, int request_len)
 {
+  crypto_pk_env_t *pk = NULL;
+  char buf[20+9];
+  char expected_digest[20];
+  char pk_digest[20];
+  int asn1len;
+  circuit_t *c;
+
+  if (circ->purpose != CIRCUIT_PURPOSE_INTERMEDIATE) {
+    log_fn(LOG_WARN, "Rejecting ESTABLISH_INTRO on non-intermediate circuit");
+    goto err;
+  }
+  if (request_len < 22)
+    goto truncated;
+  /* First 2 bytes: length of asn1-encoded key. */
+  asn1len = get_uint16(request);
+
+  /* Next asn1len bytes: asn1-encoded key. */
+  if (request_len < 22+asn1len)
+    goto truncated;
+  pk = crypto_pk_asn1_decode(request+2, asn1len);
+  if (!pk) {
+    log_fn(LOG_WARN, "Couldn't decode public key");
+    goto err;
+  }
+
+  /* Next 20 bytes: Hash of handshake_digest | "INTRODUCE" */
+  memcpy(buf, circ->handshake_digest, 20);
+  memcpy(buf+20, "INTRODUCE", 9);
+  if (crypto_SHA_digest(buf, 29, expected_digest)<0) {
+    log_fn(LOG_WARN, "Error computing digest");
+    goto err;
+  }
+  if (memcmp(expected_digest, buf+2+asn1len, 20)) {
+    log_fn(LOG_WARN, "Hash of session info was not as expected");
+    goto err;
+  }
+
+  /* Rest of body: signature of previous data */
+  if (crypto_pk_public_checksig_digest(pk, buf, 22+asn1len,
+                          buf+22+asn1len, request_len-(22+asn1len))<0) {
+    log_fn(LOG_WARN, "Incorrect signature on ESTABLISH_INTRO cell; rejecting");
+    goto err;
+  }
+
+  /* The request is valid.  First, compute the hash of Bob's PK.*/
+  if (crypto_pk_get_digest(pk, pk_digest)<0) {
+    log_fn(LOG_WARN, "Couldn't hash public key.");
+    goto err;
+  }
+
+  /* Close any other intro circuits with the same pk. */
+  c = NULL;
+  while ((c = circuit_get_next_by_service_and_purpose(
+                                c,pk_digest,CIRCUIT_PURPOSE_INTRO_POINT))) {
+    circuit_mark_for_close(c);
+  }
+
+  /* Now, set up this circuit. */
+  circ->purpose = CIRCUIT_PURPOSE_INTRO_POINT;
+  memcpy(circ->rend_service, pk_digest, 20);
+
   return 0;
+ truncated:
+  log_fn(LOG_WARN, "Rejecting truncated ESTABLISH_INTRO cell");
+ err:
+  if (pk) crypto_free_pk_env(pk);
+  circuit_mark_for_close(circ);
+  return -1;
 }
 
+/* Process an INTRODUCE1 cell by finding the corresponding introduction
+ * circuit, and relaying the body of the INTRODUCE1 cell inside an
+ * INTRODUCE2 cell.
+ */
 int
 rend_mid_introduce(circuit_t *circ, char *request, int request_len)
 {
+  circuit_t *intro_circ;
+
+  if (request_len < 276) {
+    log_fn(LOG_WARN, "Impossibly short INTRODUCE2 cell; dropping.");
+    goto err;
+  }
+
+  /* The first 20 bytes are all we look at: they have a hash of Bob's PK. */
+  intro_circ = circuit_get_next_by_service_and_purpose(
+                             NULL, request, CIRCUIT_PURPOSE_INTRO_POINT);
+  if (!intro_circ) {
+    log_fn(LOG_WARN,
+           "No introduction circuit matching INTRODUCE2 cell; dropping");
+    goto err;
+  }
+
+  /* Great.  Now we just relay the cell down the circuit. */
+  if (connection_edge_send_command(NULL, intro_circ,
+                                   RELAY_COMMAND_INTRODUCE2,
+                                   request, request_len, NULL)) {
+    log_fn(LOG_WARN, "Unable to send INTRODUCE2 cell to OP.");
+    goto err;
+  }
+
   return 0;
+ err:
+  circuit_mark_for_close(circ); /* Is this right? */
+  return -1;
 }
 
+/* Process an ESTABLISH_RENDEZVOUS cell by settingthe circuit's purpose and
+ * rendezvous cookie.
+ */
 int
 rend_mid_establish_rendezvous(circuit_t *circ, char *request, int request_len)
 {
+  if (circ->purpose != CIRCUIT_PURPOSE_INTERMEDIATE) {
+    log_fn(LOG_WARN, "Tried to establish rendezvous on non-intermediate circuit");
+    goto err;
+  }
+
+  if (request_len != REND_COOKIE_LEN) {
+    log_fn(LOG_WARN, "Invalid length on ESTABLISH_RENDEZVOUS");
+    goto err;
+  }
+
+  if (circuit_get_rendezvous(request)) {
+    log_fn(LOG_WARN, "Duplicate rendezvous cookie in ESTABLISH_RENDEZVOUS");
+    goto err;
+  }
+
+  circ->purpose = CIRCUIT_PURPOSE_REND_POINT_WAITING;
+  memcpy(circ->rend_cookie, request, REND_COOKIE_LEN);
+
   return 0;
+ err:
+  circuit_mark_for_close(circ);
+  return -1;
 }
 
+/* Process a RENDEZVOUS1 cell by looking up the correct rendezvous circuit by its
+ * relaying the cell's body in a RENDEZVOUS2 cell, and connecting the two circuits.
+ */
 int
 rend_mid_rendezvous(circuit_t *circ, char *request, int request_len)
 {
+  circuit_t *rend_circ;
+
+  if (circ->purpose != CIRCUIT_PURPOSE_INTERMEDIATE) {
+    log_fn(LOG_WARN, "Tried to complete rendezvous on non-intermediate circuit");
+    goto err;
+  }
+
+  if (request_len < 20+128+20) {
+    log_fn(LOG_WARN, "Rejecting impossibly short RENDEZVOUS1 cell");
+    goto err;
+  }
+
+  rend_circ = circuit_get_rendezvous(request);
+  if (!rend_circ) {
+    log_fn(LOG_WARN, "Rejecting RENDEZVOUS1 cell with unrecognized rendezvous cookie");
+    goto err;
+  }
+
+  /* Send the RENDEZVOUS2 cell to Alice. */
+  if (connection_edge_send_command(NULL, rend_circ,
+                                   RELAY_COMMAND_RENDEZVOUS2,
+                                   request+20, request_len-20, NULL)) {
+    log_fn(LOG_WARN, "Unable to send RENDEZVOUS2 cell to OP.");
+    goto err;
+  }
+
+  /* Join the circuits. */
+  circ->purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
+  rend_circ->purpose = CIRCUIT_PURPOSE_REND_ESTABLISHED;
+  memset(circ->rend_cookie, 0, 20);
+
+  rend_circ->rend_splice = circ;
+  circ->rend_splice = rend_circ;
+
   return 0;
+ err:
+  circuit_mark_for_close(circ);
+  return -1;
 }
 
 /*
