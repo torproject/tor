@@ -203,7 +203,7 @@ attempts to anonymize TCP streams. Because it does not require patches
 approach has proven valuable to Tor's portability and deployability.
 
 We have implemented most of the above features. Our source code is
-available under a free license, and we believe it to be unencumbered by
+available under a free license, and, as far as we know, is unencumbered by
 patents. We have recently begun deploying a widespread alpha network
 to test the design in practice, to get more experience with usability
 and users, and to provide a research platform for experimenting with
@@ -338,7 +338,8 @@ along the circuit, ignoring the breakdown of that data into TCP frames
 protocols (such as HTTP) and relay the application requests themselves
 along the circuit.  
 Making this protocol-layer decision requires a compromise between flexibility
-and anonymity.  For example, a system that understands HTTP can strip
+and anonymity.  For example, a system that understands HTTP, such as Crowds,
+can strip
 identifying information from those requests, can take advantage of caching
 to limit the number of requests that leave the network, and can batch
 or encode those requests in order to minimize the number of connections.
@@ -441,10 +442,15 @@ attacks. Some approaches, such as running an onion router, may help;
 see Section~\ref{sec:attacks} for more discussion.
 
 \textbf{No protocol normalization:} Tor does not provide \emph{protocol
-normalization} like Privoxy or the Anonymizer. For complex and variable
+normalization} like Privoxy or the Anonymizer. If anonymization from
+the responder is desired for complex and variable
 protocols such as HTTP, Tor must be layered with a filtering proxy such
 as Privoxy to hide differences between clients, and expunge protocol
-features that leak identity. Similarly, Tor does not currently integrate
+features that leak identity. 
+Note that by this separation Tor can also provide connections that
+are anonymous to the network yet authenticated to the responder, for
+example SSH.
+Similarly, Tor does not currently integrate
 tunneling for non-stream-based protocols like UDP; this too must be
 provided by an external service.
 % Actually, tunneling udp over tcp is probably horrible for some apps.
@@ -1170,7 +1176,7 @@ central point.
 Rendezvous points are a building block for \emph{location-hidden
 services} (also known as \emph{responder anonymity}) in the Tor
 network.  Location-hidden services allow Bob to offer a TCP
-service, such as a webserver, without revealing its IP.
+service, such as a webserver, without revealing its IP\@.
 This type of anonymity protects against distributed DoS attacks:
 attackers are forced to attack the onion routing network as a whole
 rather than just Bob's IP.
@@ -1255,8 +1261,22 @@ The authentication tokens can be used to provide selective access:
 important users get tokens to ensure uninterrupted access to the
 service. During normal situations, Bob's service might simply be offered
 directly from mirrors, and Bob gives out tokens to high-priority users. If
-the mirrors are knocked down by distributed DoS attacks, those users
-can switch to accessing Bob's service via the Tor rendezvous system.
+the mirrors are knocked down by distributed DoS attacks or even
+physical attack, those users can switch to accessing Bob's service via
+the Tor rendezvous system.
+
+Since Bob's introduction points might themselves be subject to DoS he
+could be faced with a choice between keeping large numbers of
+introduction connections open or risking such an attack. In this case,
+similar to the authentication tokens, he can provide selected users
+with a current list and/or future schedule of introduction points that
+are not advertised in the DHT\@. This is most likely to be practical
+if there is a relatively stable and large group of introduction points
+generally available. Alternatively, Bob could give secret public keys
+to selected users for consulting the DHT\@. All of these approaches
+have the advantage of limiting the damage that can be done even if
+some of the selected high-priority users colludes in the DoS\@.
+
 
 \SubSection{Integration with user applications}
 
@@ -1278,8 +1298,15 @@ the PK and starts the rendezvous as described in the table above.
 
 \subsection{Previous rendezvous work}
 
-Ian Goldberg developed a similar notion of rendezvous points for
-low-latency anonymity systems \cite{ian-thesis}. His design differs from
+Rendezvous points in low-latency anonymity systems were first
+described for use in ISDN telephony \cite{isdn-mixes,jerichow-jsac98}.
+Later low-latency designs used rendezvous points for hiding location
+of mobile phones and low-power location trackers
+\cite{federrath-ih96,reed-protocols97}.  Rendezvous for low-latency
+Internet connections was suggested in early Onion Routing work
+\cite{or-ih96}; however, the first published design of rendezvous
+points for low-latency Internet connections was by Ian Goldberg
+\cite{ian-thesis}. His design differs from
 ours in three ways. First, Goldberg suggests that Alice should manually
 hunt down a current location of the service via Gnutella; whereas our
 use of CFS makes lookup faster, more robust, and transparent to the
@@ -1464,8 +1491,7 @@ design withstands them.
   other nodes. Its ability to directly DoS a neighbor is now limited
   by bandwidth throttling. Nonetheless, in order to compromise the
   anonymity of the endpoints of a circuit by its observations, a
-  hostile node is only significant if it is immediately adjacent to
-  that endpoint. 
+  hostile node must be immediately adjacent to that endpoint. 
   
 \item \emph{Run multiple hostile nodes.}  If an adversary is able to
   run multiple ORs, and is able to persuade the directory servers
@@ -1605,6 +1631,16 @@ design withstands them.
   point.  But because a service's identity is attached to its public
   key, not its introduction point, the service can simply re-advertise
   itself at a different introduction point.
+  
+\item \emph{Attack multiple introduction points.}  If an attacker is
+  able to disable all of the introduction points for a given service,
+  he can block access to the service. However, re-advertisement of
+  introduction points can still be done secretly so that only
+  high-priority clients know the address of the service's introduction
+  points.  Such selective secret authorizations can also be issued
+  during normal operation so that the attack cannot also prevent their
+  issuance.  In this setting an attack must be able to disable all
+  introduction points for all services to be effective.
 
 \item \emph{Compromise an introduction point.} If an attacker controls
   an introduction point for a service, it can flood the service with
@@ -1633,9 +1669,10 @@ have built a secure low-latency anonymity service.
 
 Many of these open issues are questions of balance.  For example,
 how often should users rotate to fresh circuits?  Too-frequent
-rotation is inefficient and expensive, but too-infrequent rotation
+rotation is inefficient, expensive and may lead to intersection attacks,
+but too-infrequent rotation
 makes the user's traffic linkable.   Instead of opening a fresh
-circuit; clients can also limit linkability exit from a middle point
+circuit; clients can also limit linkability by exiting from a middle point
 of the circuit, or by truncating and re-extending the circuit, but
 more analysis is needed to determine the proper trade-off.
 %[XXX mention predecessor attacks?]
@@ -1684,9 +1721,9 @@ too-frequent updates the directory servers are overloaded.
 %Email from between roger and me to beginning of section above. Fix and move.
 
 Throughout this paper, we have assumed that end-to-end traffic
-analysis will immediately and automatically defeat a low-latency
+confirmation will immediately and automatically defeat a low-latency
 anonymity system. Even high-latency anonymity
-systems can be vulnerable to end-to-end traffic analysis, if the
+systems can be vulnerable to end-to-end traffic confirmation, if the
 traffic volumes are high enough, and if users' habits are sufficiently
 distinct \cite{limits-open,statistical-disclosure}.  \emph{Can
   anything be done to make low-latency systems resist these attacks as
@@ -1730,7 +1767,7 @@ approval by a centralized set of directory servers is no longer
 feasible, what mechanism should be used to prevent adversaries from
 signing up many spurious servers? 
 Second, if clients can no longer have a complete
-picture of the network at all times, how can should they perform
+picture of the network at all times, how can they perform
 discovery while preventing attackers from manipulating or exploiting
 gaps in client knowledge?  Third, if there are too many servers
 for every server to constantly communicate with every other, what kind
@@ -1753,7 +1790,10 @@ greater than the benefits.  Nevertheless, we may still do well to
 consider non-clique topologies.  A cascade topology may provide more
 defense against traffic confirmation.
 % XXX Why would it?   Cite.  -NM
-Does the hydra (many inputs, few outputs) topology work
+%
+% Huh? Do you mean for simple attacks just because of larger anonymity
+% sets? -PS
+Does the hydra topology (many input nodes, few output nodes) work
 better? Are we going to get a hydra anyway because most nodes will be
 middleman nodes?
 
@@ -1843,10 +1883,9 @@ issues remaining to be ironed out. In particular:
 % XXX Agree. -NM
 \item \emph{Implementing location-hidden servers:} While
   Section~\ref{sec:rendezvous} describes a design for rendezvous
-  points and location-hidden servers, these feature has not yet been
-  implemented.  While doing so, will likely encounter additional
-  issues, both in terms of usability and anonymity, that must be
-  resolved.
+  points and location-hidden servers, these features have not yet been
+  implemented.  While doing so we are likely to encounter additional
+  issues that must be resolved, both in terms of usability and anonymity.
 \item \emph{Further specification review:} Although we have a public,
   byte-level specification for the Tor protocols, this protocol has
   not received extensive external review.  We hope that as Tor
@@ -1856,7 +1895,7 @@ issues remaining to be ironed out. In particular:
   gain experience in deploying an anonymizing overlay network, and
   learn from having actual users.  We are now at the point in design
   and development where we can start deploying a wider network.  Once
-  we have are ready for actual users, we will doubtlessly be better
+  we have large numbers of actual users, we will doubtlessly be better
   able to evaluate some of our design decisions, including our
   robustness/latency trade-offs, our performance trade-offs (including
   cell size), our abuse-prevention mechanisms, and
