@@ -370,9 +370,9 @@ int init_keys(void) {
     log_fn(LOG_INFO,"Cached directory %s not present. Ok.",keydir);
   } else {
     if (dirserv_load_from_directory_string(cp) < 0) {
-      log_fn(LOG_ERR, "Cached directory %s is corrupt", keydir);
+      log_fn(LOG_WARN, "Cached directory %s is corrupt, only loaded part of it.", keydir);
       tor_free(cp);
-      return -1;
+      return 0;
     }
     tor_free(cp);
   }
