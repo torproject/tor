@@ -295,7 +295,7 @@ int router_compare_to_my_exit_policy(connection_t *conn) {
                          way we can't get a 'maybe' below. */
 
   return router_compare_addr_to_exit_policy(conn->addr, conn->port, 
-                   desc_routerinfo->exit_policy) == ADDR_POLICY_ACCEPTED;
+                   desc_routerinfo->exit_policy);
     
 }
 

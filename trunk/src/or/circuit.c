@@ -222,7 +222,7 @@ circuit_t *circuit_get_newest(connection_t *conn, int must_be_open) {
         exitrouter = router_get_by_addr_port(circ->cpath->prev->addr, circ->cpath->prev->port);
       else /* not open */
         exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
-      if(!exitrouter || connection_ap_can_use_exit(conn, exitrouter) < 0) {
+      if(!exitrouter || connection_ap_can_use_exit(conn, exitrouter) == ADDR_POLICY_REJECTED) {
         /* can't exit from this router */
         continue;
       }
@@ -305,7 +305,7 @@ int circuit_stream_is_being_handled(connection_t *conn) {
   for(circ=global_circuitlist;circ;circ = circ->next) {
     if(circ->cpath && circ->state != CIRCUIT_STATE_OPEN) {
       exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
-      if(exitrouter && connection_ap_can_use_exit(conn, exitrouter) >= 0)
+      if(exitrouter && connection_ap_can_use_exit(conn, exitrouter) != ADDR_POLICY_REJECTED)
         if(++num >= MIN_CIRCUITS_HANDLING_STREAM)
           return 1;
     }

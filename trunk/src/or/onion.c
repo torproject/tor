@@ -269,12 +269,12 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
       switch (connection_ap_can_use_exit(carray[j], dir->routers[i]))
         {
-        case -1:
+        case ADDR_POLICY_REJECTED:
           log_fn(LOG_DEBUG,"%s (index %d) would reject this stream.",
                  dir->routers[i]->nickname, i);
           break; /* would be rejected; try next connection */
-        case 0:
-        case 1:
+        case ADDR_POLICY_ACCEPTED:
+        case ADDR_POLICY_UNKNOWN:
           ++n_supported[i];
           log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
                  dir->routers[i]->nickname, i, n_supported[i]);
