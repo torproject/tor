@@ -24,6 +24,7 @@ typedef struct tor_tls_st tor_tls;
 #define TOR_TLS_WANTWRITE   -1
 #define TOR_TLS_DONE         0
 
+void tor_tls_free_all(void);
 int tor_tls_context_new(crypto_pk_env_t *rsa, int isServer,
                         const char *nickname, unsigned int key_lifetime);
 tor_tls *tor_tls_new(int sock, int is_server, int use_no_cert);

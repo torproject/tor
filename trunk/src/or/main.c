@@ -1320,6 +1320,7 @@ void tor_free_all(void)
   connection_free_all();
   config_free_all();
   router_free_all_keys();
+  tor_tls_free_all();
   /* stuff in main.c */
   smartlist_free(closeable_connection_lst);
 }
