@@ -259,12 +259,12 @@ int init_keys(void) {
   }
   /* Make sure DataDirectory exists, and is private. */
   datadir = options->DataDirectory;
-  if (check_private_dir(datadir, 1)) {
+  if (check_private_dir(datadir, CPD_CREATE)) {
     return -1;
   }
   /* Check the key directory. */
   tor_snprintf(keydir,sizeof(keydir),"%s/keys", datadir);
-  if (check_private_dir(keydir, 1)) {
+  if (check_private_dir(keydir, CPD_CREATE)) {
     return -1;
   }
   cp = keydir + strlen(keydir); /* End of string. */

@@ -241,9 +241,8 @@ options_act(void) {
     }
   }
 
-/*XXX in options_validate, we should check if this is going to fail */
   /* Ensure data directory is private; create if possible. */
-  if (check_private_dir(options->DataDirectory, 1) != 0) {
+  if (check_private_dir(options->DataDirectory, CPD_CREATE) != 0) {
     log_fn(LOG_ERR, "Couldn't access/create private data directory %s",
            options->DataDirectory);
     return -1;
@@ -1013,6 +1012,13 @@ options_validate(or_options_t *options)
 
   if (normalize_log_options(options))
     return -1;
+
+
+  if (options->DataDirectory &&
+      check_private_dir(options->DataDirectory, CPD_CHECK != 0)) {
+    log_fn(LOG_WARN, "Can't create directory %s", options->DataDirectory);
+    result = -1;
+  }
 
   /* Special case if no options are given. */
   if (!options->Logs) {
