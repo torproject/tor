@@ -321,7 +321,7 @@ directory_initiate_command(const char *address, uint32_t addr,
         /* queue the command on the outbuf */
         directory_send_command(conn, platform, purpose, resource,
                                payload, payload_len);
-        connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
+        connection_watch_events(conn, EV_READ | EV_WRITE);
         /* writable indicates finish, readable indicates broken link,
            error indicates broken link in windowsland. */
     }
@@ -342,7 +342,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     /* queue the command on the outbuf */
     directory_send_command(conn, platform, purpose, resource,
                            payload, payload_len);
-    connection_watch_events(conn, POLLIN | POLLOUT | POLLERR);
+    connection_watch_events(conn, EV_READ | EV_WRITE);
   }
 }
 

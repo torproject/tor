@@ -2435,7 +2435,6 @@ print_cvs_version(void)
   extern const char compat_c_id[];
   extern const char container_c_id[];
   extern const char crypto_c_id[];
-  extern const char fakepoll_c_id[];
   extern const char log_c_id[];
   extern const char torgzip_c_id[];
   extern const char tortls_c_id[];
@@ -2472,7 +2471,6 @@ print_cvs_version(void)
   puts(COMPAT_H_ID);
   puts(CONTAINER_H_ID);
   puts(CRYPTO_H_ID);
-  puts(FAKEPOLL_H_ID);
   puts(LOG_H_ID);
   puts(TORGZIP_H_ID);
   puts(TORINT_H_ID);
@@ -2482,7 +2480,6 @@ print_cvs_version(void)
   puts(compat_c_id);
   puts(container_c_id);
   puts(crypto_c_id);
-  puts(fakepoll_c_id);
   puts(log_c_id);
   puts(torgzip_c_id);
   puts(tortls_c_id);

@@ -40,7 +40,6 @@
 #include <ctype.h>
 #endif
 #include "../common/torint.h"
-#include "../common/fakepoll.h"
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
@@ -96,6 +95,11 @@
 #endif
 #ifdef HAVE_TIME_H
 #include <time.h>
+#endif
+#ifdef HAVE_EVENT_H
+#include <event.h>
+#else
+#error "Tor requires libevent to build."
 #endif
 
 #ifdef MS_WINDOWS
@@ -494,7 +498,9 @@ struct connection_t {
                            * the bandwidth throttler allows reads?
                            */
   int s; /**< Our socket; -1 if this connection is closed. */
-  int poll_index; /**< Index of this conn into the poll_array. */
+  int poll_index; /* XXXX rename. */
+  struct event *read_event; /**< libevent event structure. */
+  struct event *write_event; /**< libevent event structure. */
   int marked_for_close; /**< Boolean: should we close this conn on the next
                          * iteration of the main loop?
                          */
@@ -1380,6 +1386,7 @@ void consider_hibernation(time_t now);
 int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
 int connection_in_array(connection_t *conn);
+void add_connection_to_closeable_list(connection_t *conn);
 
 void get_connection_array(connection_t ***array, int *n);
 

@@ -12,9 +12,31 @@ const char main_c_id[] = "$Id$";
 
 #include "or.h"
 
+/* These signals are defined to help control_singal_act work. */
+#ifndef SIGHUP
+#define SIGHUP 1
+#endif
+#ifndef SIGINT
+#define SIGINT 2
+#endif
+#ifndef SIGUSR1
+#define SIGUSR1 10
+#endif
+#ifndef SIGUSR2
+#define SIGUSR2 12
+#endif
+#ifndef SIGTERM
+#define SIGTERM 15
+#endif
+
 /********* PROTOTYPES **********/
 
 static void dumpstats(int severity); /* log stats */
+static void conn_read_callback(int fd, short event, void *_conn);
+static void conn_write_callback(int fd, short event, void *_conn);
+static void signal_callback(int fd, short events, void *arg);
+static void second_elapsed_callback(int fd, short event, void *args);
+static int conn_close_if_marked(int i);
 
 /********* START VARIABLES **********/
 
@@ -45,21 +67,9 @@ static time_t time_to_fetch_running_routers = 0;
  * poll_array in the same position.  The first nfds elements are valid. */
 static connection_t *connection_array[MAXCONNECTIONS] =
         { NULL };
-
-/** Array of pollfd objects for calls to poll(). */
-static struct pollfd poll_array[MAXCONNECTIONS];
+static smartlist_t *closeable_connection_lst = NULL;
 
 static int nfds=0; /**< Number of connections currently active. */
-
-#ifndef MS_WINDOWS /* do signal stuff only on unix */
-static int please_dumpstats=0; /**< Whether we should dump stats during the loop. */
-static int please_debug=0; /**< Whether we should switch all logs to -l debug. */
-static int please_reset=0; /**< Whether we just got a sighup. */
-static int please_reap_children=0; /**< Whether we should waitpid for exited children. */
-static int please_sigpipe=0; /**< Whether we've caught a sigpipe lately. */
-static int please_shutdown=0; /**< Whether we should slowly shut down Tor. */
-static int please_die=0; /**< Whether we should immediately shut down Tor. */
-#endif /* signal stuff */
 
 /** We set this to 1 when we've fetched a dir, to know whether to complain
  * yet about unrecognized nicknames in entrynodes, exitnodes, etc.
@@ -110,11 +120,12 @@ int connection_add(connection_t *conn) {
   conn->poll_index = nfds;
   connection_array[nfds] = conn;
 
-  poll_array[nfds].fd = conn->s;
-
-  /* zero these out here, because otherwise we'll inherit values from the previously freed one */
-  poll_array[nfds].events = 0;
-  poll_array[nfds].revents = 0;
+  conn->read_event = tor_malloc_zero(sizeof(struct event));
+  conn->write_event = tor_malloc_zero(sizeof(struct event));
+  event_set(conn->read_event, conn->s, EV_READ|EV_PERSIST,
+            conn_read_callback, conn);
+  event_set(conn->write_event, conn->s, EV_WRITE|EV_PERSIST,
+            conn_write_callback, conn);
 
   nfds++;
 
@@ -144,15 +155,31 @@ int connection_remove(connection_t *conn) {
     return 0;
   }
 
+  if (conn->read_event) {
+    event_del(conn->read_event);
+    tor_free(conn->read_event);
+  }
+  if (conn->write_event) {
+    event_del(conn->write_event);
+    tor_free(conn->write_event);
+  }
+
   /* replace this one with the one at the end */
   nfds--;
-  poll_array[current_index].fd = poll_array[nfds].fd;
-  poll_array[current_index].events = poll_array[nfds].events;
-  poll_array[current_index].revents = poll_array[nfds].revents;
   connection_array[current_index] = connection_array[nfds];
   connection_array[current_index]->poll_index = current_index;
 
   return 0;
+}
+
+/** DOCDOC **/
+void
+add_connection_to_closeable_list(connection_t *conn)
+{
+  tor_assert(!smartlist_isin(closeable_connection_lst, conn));
+  tor_assert(conn->marked_for_close);
+
+  smartlist_add(closeable_connection_lst, conn);
 }
 
 /** Return true iff conn is in the current poll array. */
@@ -175,67 +202,150 @@ void get_connection_array(connection_t ***array, int *n) {
 }
 
 /** Set the event mask on <b>conn</b> to <b>events</b>.  (The form of
-* the event mask is as for poll().)
+* the event mask is DOCDOC)
  */
 void connection_watch_events(connection_t *conn, short events) {
-
   tor_assert(conn);
-  tor_assert(conn->poll_index >= 0);
-  tor_assert(conn->poll_index < nfds);
+  tor_assert(conn->read_event);
+  tor_assert(conn->write_event);
 
-  poll_array[conn->poll_index].events = events;
+  if (events & EV_READ) {
+    event_add(conn->read_event, NULL);
+  } else {
+    event_del(conn->read_event);
+  }
+
+  if (events & EV_WRITE) {
+    event_add(conn->write_event, NULL);
+  } else {
+    event_del(conn->write_event);
+  }
 }
 
 /** Return true iff <b>conn</b> is listening for read events. */
 int connection_is_reading(connection_t *conn) {
   tor_assert(conn);
-  tor_assert(conn->poll_index >= 0);
-  return poll_array[conn->poll_index].events & POLLIN;
+
+  /* This isn't 100% documented, but it should work. */
+  return conn->read_event &&
+    (conn->read_event->ev_flags & (EVLIST_INSERTED|EVLIST_ACTIVE));
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any read events. */
 void connection_stop_reading(connection_t *conn) {
   tor_assert(conn);
-  tor_assert(conn->poll_index >= 0);
-  tor_assert(conn->poll_index < nfds);
+  tor_assert(conn->read_event);
 
   log(LOG_DEBUG,"connection_stop_reading() called.");
-  poll_array[conn->poll_index].events &= ~POLLIN;
+  event_del(conn->read_event);
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any read events. */
 void connection_start_reading(connection_t *conn) {
   tor_assert(conn);
-  tor_assert(conn->poll_index >= 0);
-  tor_assert(conn->poll_index < nfds);
-  poll_array[conn->poll_index].events |= POLLIN;
+  tor_assert(conn->read_event);
+
+  event_add(conn->read_event, NULL);
 }
 
 /** Return true iff <b>conn</b> is listening for write events. */
 int connection_is_writing(connection_t *conn) {
-  return poll_array[conn->poll_index].events & POLLOUT;
+  tor_assert(conn);
+
+  /* This isn't 100% documented, but it should work. */
+  return conn->write_event &&
+    (conn->write_event->ev_flags & (EVLIST_INSERTED|EVLIST_ACTIVE));
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any write events. */
 void connection_stop_writing(connection_t *conn) {
   tor_assert(conn);
-  tor_assert(conn->poll_index >= 0);
-  tor_assert(conn->poll_index < nfds);
-  poll_array[conn->poll_index].events &= ~POLLOUT;
+  tor_assert(conn->write_event);
+
+  event_del(conn->write_event);
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any write events. */
 void connection_start_writing(connection_t *conn) {
   tor_assert(conn);
-  tor_assert(conn->poll_index >= 0);
-  tor_assert(conn->poll_index < nfds);
-  poll_array[conn->poll_index].events |= POLLOUT;
+  tor_assert(conn->write_event);
+
+  event_add(conn->write_event, NULL);
 }
 
-/** Called when the connection at connection_array[i] has a read event,
- * or it has pending tls data waiting to be read: checks for validity,
- * catches numerous errors, and dispatches to connection_handle_read.
- */
+/** DOCDOC */
+static void
+close_closeable_connections(void)
+{
+  int i;
+  if (!smartlist_len(closeable_connection_lst))
+    return;
+
+  for (i = 0; i < smartlist_len(closeable_connection_lst); ) {
+    connection_t *conn = smartlist_get(closeable_connection_lst, i);
+    if (!conn_close_if_marked(conn->poll_index))
+      ++i;
+  }
+}
+
+/** DOCDOC */
+static void
+conn_read_callback(int fd, short event, void *_conn)
+{
+  connection_t *conn = _conn;
+  if (conn->marked_for_close)
+    return;
+
+  log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
+
+  assert_connection_ok(conn, time(NULL));
+  assert_all_pending_dns_resolves_ok();
+
+  if (connection_handle_read(conn) < 0) {
+    if (!conn->marked_for_close) {
+#ifndef MS_WINDOWS
+      log_fn(LOG_WARN,"Bug: unhandled error on read for %s connection (fd %d); removing",
+             CONN_TYPE_TO_STRING(conn->type), conn->s);
+#endif
+      connection_mark_for_close(conn);
+    }
+  }
+  assert_connection_ok(conn, time(NULL));
+  assert_all_pending_dns_resolves_ok();
+
+  if (smartlist_len(closeable_connection_lst))
+    close_closeable_connections();
+}
+
+static void conn_write_callback(int fd, short events, void *_conn)
+{
+  connection_t *conn = _conn;
+
+  log_fn(LOG_DEBUG,"socket %d wants to write.",conn->s);
+  if (conn->marked_for_close)
+    return;
+
+  assert_connection_ok(conn, time(NULL));
+  assert_all_pending_dns_resolves_ok();
+
+  if (connection_handle_write(conn) < 0) {
+    if (!conn->marked_for_close) {
+      /* this connection is broken. remove it. */
+      log_fn(LOG_WARN,"Bug: unhandled error on write for %s connection (fd %d); removing",
+             CONN_TYPE_TO_STRING(conn->type), conn->s);
+      conn->has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
+      /* XXX do we need a close-immediate here, so we don't try to flush? */
+      connection_mark_for_close(conn);
+    }
+  }
+  assert_connection_ok(conn, time(NULL));
+  assert_all_pending_dns_resolves_ok();
+
+  if (smartlist_len(closeable_connection_lst))
+    close_closeable_connections();
+}
+
+#if 0
 static void conn_read(int i) {
   connection_t *conn = connection_array[i];
 
@@ -336,6 +446,7 @@ static void conn_write(int i) {
   assert_connection_ok(conn, time(NULL));
   assert_all_pending_dns_resolves_ok();
 }
+#endif
 
 /** If the connection at connection_array[i] is marked for close, then:
  *    - If it has data that it wants to flush, try to flush it.
@@ -343,16 +454,16 @@ static void conn_write(int i) {
  *      true, then leave the connection open and return.
  *    - Otherwise, remove the connection from connection_array and from
  *      all other lists, close it, and free it.
- * If we remove the connection, then call conn_closed_if_marked at the new
- * connection at position i.
+ * Returns 1 if the connection was closed, 0 otherwise.
+ * DOCDOC closeable_list
  */
-static void conn_close_if_marked(int i) {
+static int conn_close_if_marked(int i) {
   connection_t *conn;
   int retval;
 
   conn = connection_array[i];
   if (!conn->marked_for_close)
-    return; /* nothing to see here, move along */
+    return 0; /* nothing to see here, move along */
   assert_connection_ok(conn, time(NULL));
   assert_all_pending_dns_resolves_ok();
 
@@ -378,7 +489,7 @@ static void conn_close_if_marked(int i) {
        conn->hold_open_until_flushed && connection_wants_to_flush(conn)) {
       log_fn(LOG_INFO,"Holding conn (fd %d) open for more flushing.",conn->s);
       /* XXX should we reset timestamp_lastwritten here? */
-      return;
+      return 0;
     }
     if (connection_wants_to_flush(conn)) {
       log_fn(LOG_NOTICE,"Conn (addr %s, fd %d, type %s, state %d) is being closed, but there are still %d bytes we can't write. (Marked at %s:%d)",
@@ -394,14 +505,12 @@ static void conn_close_if_marked(int i) {
   circuit_about_to_close_connection(conn);
   connection_about_to_close_connection(conn);
   connection_remove(conn);
+  smartlist_remove(closeable_connection_lst, conn);
   if (conn->type == CONN_TYPE_EXIT) {
     assert_connection_edge_not_dns_pending(conn);
   }
   connection_free(conn);
-  if (i<nfds) { /* we just replaced the one at i with a new one.
-                  process it too. */
-    conn_close_if_marked(i);
-  }
+  return 1;
 }
 
 /** We've just tried every dirserver we know about, and none of
@@ -731,61 +840,65 @@ static void run_scheduled_events(time_t now) {
    * because if we marked a conn for close and left its socket -1, then
    * we'll pass it to poll/select and bad things will happen.
    */
-  for (i=0;i<nfds;i++)
-    conn_close_if_marked(i);
+  close_closeable_connections();
 }
 
-/** Called every time we're about to call tor_poll.  Increments statistics,
- * and adjusts token buckets.  Returns the number of milliseconds to use for
- * the poll() timeout.
- */
-static int prepare_for_poll(void) {
-  static long current_second = 0; /* from previous calls to gettimeofday */
-  connection_t *conn;
+/** DOCDOC */
+static void second_elapsed_callback(int fd, short event, void *args)
+{
+  static struct event *timeout_event = NULL;
+  static struct timeval one_second;
+  static long current_second = 0;
   struct timeval now;
-  int i;
-
-  tor_gettimeofday(&now);
-
-  if (now.tv_sec > current_second) {
-    /* the second has rolled over. check more stuff. */
-    size_t bytes_written;
-    size_t bytes_read;
-    int seconds_elapsed;
-    bytes_written = stats_prev_global_write_bucket - global_write_bucket;
-    bytes_read = stats_prev_global_read_bucket - global_read_bucket;
-    seconds_elapsed = current_second ? (now.tv_sec - current_second) : 0;
-    stats_n_bytes_read += bytes_read;
-    stats_n_bytes_written += bytes_written;
-    if (accounting_is_enabled(get_options()))
-      accounting_add_bytes(bytes_read, bytes_written, seconds_elapsed);
-    control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
-
-    connection_bucket_refill(&now);
-    stats_prev_global_read_bucket = global_read_bucket;
-    stats_prev_global_write_bucket = global_write_bucket;
-
-    /* if more than 10s have elapsed, probably the clock changed: doesn't count. */
-    if (seconds_elapsed < 10)
-      stats_n_seconds_working += seconds_elapsed;
-
-    assert_all_pending_dns_resolves_ok();
-    run_scheduled_events(now.tv_sec);
-    assert_all_pending_dns_resolves_ok();
-
-    current_second = now.tv_sec; /* remember which second it is, for next time */
+  size_t bytes_written;
+  size_t bytes_read;
+  int seconds_elapsed;
+  if (!timeout_event) {
+    timeout_event = tor_malloc_zero(sizeof(struct event));
+    evtimer_set(timeout_event, second_elapsed_callback, NULL);
+    one_second.tv_sec = 1;
+    one_second.tv_usec = 0;
   }
 
+  /* log_fn(LOG_NOTICE, "Tick."); */
+  tor_gettimeofday(&now);
+
+  /* the second has rolled over. check more stuff. */
+  bytes_written = stats_prev_global_write_bucket - global_write_bucket;
+  bytes_read = stats_prev_global_read_bucket - global_read_bucket;
+  seconds_elapsed = current_second ? (now.tv_sec - current_second) : 0;
+  stats_n_bytes_read += bytes_read;
+  stats_n_bytes_written += bytes_written;
+  if (accounting_is_enabled(get_options()))
+    accounting_add_bytes(bytes_read, bytes_written, seconds_elapsed);
+  control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
+
+  connection_bucket_refill(&now);
+  stats_prev_global_read_bucket = global_read_bucket;
+  stats_prev_global_write_bucket = global_write_bucket;
+
+  /* if more than 10s have elapsed, probably the clock changed: doesn't count. */
+  if (seconds_elapsed < 10)
+    stats_n_seconds_working += seconds_elapsed;
+
+  assert_all_pending_dns_resolves_ok();
+  run_scheduled_events(now.tv_sec);
+  assert_all_pending_dns_resolves_ok();
+
+  current_second = now.tv_sec; /* remember which second it is, for next time */
+
+#if 0
   for (i=0;i<nfds;i++) {
     conn = connection_array[i];
     if (connection_has_pending_tls_data(conn) &&
         connection_is_reading(conn)) {
       log_fn(LOG_DEBUG,"sock %d has pending bytes.",conn->s);
-      return 0; /* has pending bytes to read; don't let poll wait. */
+      return; /* has pending bytes to read; don't let poll wait. */
     }
   }
+#endif
 
-  return (1000 - (now.tv_usec / 1000)); /* how many milliseconds til the next second? */
+  evtimer_add(timeout_event, &one_second);
 }
 
 /** Called when we get a SIGHUP: reload configuration files and keys,
@@ -834,9 +947,7 @@ static int do_hup(void) {
 
 /** Tor main loop. */
 static int do_main_loop(void) {
-  int i;
-  int timeout;
-  int poll_result;
+  int loop_result;
 
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */
@@ -867,6 +978,9 @@ static int do_main_loop(void) {
     cpu_init();
   }
 
+  /* set up once-a-second callback. */
+  second_elapsed_callback(0,0,NULL);
+
   for (;;) {
 #ifdef MS_WINDOWS_SERVICE /* Do service stuff only on windows. */
     if (service_status.dwCurrentState == SERVICE_STOP_PENDING) {
@@ -876,57 +990,12 @@ static int do_main_loop(void) {
       return 0;
     }
 #endif
-#ifndef MS_WINDOWS /* do signal stuff only on unix */
-    if (please_die) {
-      log(LOG_ERR,"Catching signal TERM, exiting cleanly.");
-      tor_cleanup();
-      exit(0);
-    }
-    if (please_shutdown) {
-      if (!server_mode(get_options())) { /* do it now */
-        log(LOG_NOTICE,"Interrupt: exiting cleanly.");
-        tor_cleanup();
-        exit(0);
-      }
-      hibernate_begin_shutdown();
-      please_shutdown = 0;
-    }
-    if (please_sigpipe) {
-      log(LOG_NOTICE,"Caught sigpipe. Ignoring.");
-      please_sigpipe = 0;
-    }
-    if (please_dumpstats) {
-      /* prefer to log it at INFO, but make sure we always see it */
-      dumpstats(get_min_log_level()<LOG_INFO ? get_min_log_level() : LOG_INFO);
-      please_dumpstats = 0;
-    }
-    if (please_debug) {
-      switch_logs_debug();
-      log(LOG_NOTICE,"Caught USR2. Going to loglevel debug.");
-      please_debug = 0;
-    }
-    if (please_reset) {
-      if (do_hup() < 0) {
-        log_fn(LOG_WARN,"Restart failed (config error?). Exiting.");
-        tor_cleanup();
-        exit(1);
-      }
-      please_reset = 0;
-    }
-    if (please_reap_children) {
-      while (waitpid(-1,NULL,WNOHANG) > 0) ; /* keep reaping until no more zombies */
-      please_reap_children = 0;
-    }
-#endif /* signal stuff */
-
-    timeout = prepare_for_poll();
-
     /* poll until we have an event, or the second ends */
-    poll_result = tor_poll(poll_array, nfds, timeout);
+    loop_result = event_dispatch();
 
     /* let catch() handle things like ^c, and otherwise don't worry about it */
-    if (poll_result < 0) {
-      int e = tor_socket_errno(-1);
+    if (loop_result < 0) {
+      int e = errno;
       /* let the program survive things like ^z */
       if (e != EINTR) {
         log_fn(LOG_ERR,"poll failed: %s [%d]",
@@ -940,20 +1009,9 @@ static int do_main_loop(void) {
       }
     }
 
-    /* do all the reads and errors first, so we can detect closed sockets */
-    for (i=0;i<nfds;i++)
-      conn_read(i); /* this also marks broken connections */
-
-    /* then do the writes */
-    for (i=0;i<nfds;i++)
-      conn_write(i);
-
-    /* any of the conns need to be closed now? */
-    for (i=0;i<nfds;i++)
-      conn_close_if_marked(i);
-
     /* refilling buckets and sending cells happens at the beginning of the
      * next iteration of the loop, inside prepare_for_poll()
+     * XXXX No longer so.
      */
   }
 }
@@ -973,19 +1031,19 @@ control_signal_act(int the_signal)
   switch(the_signal)
     {
     case 1:
-      please_reset = 1;
+      signal_callback(0,0,(void*)SIGHUP);
       break;
     case 2:
-      please_shutdown = 1;
+      signal_callback(0,0,(void*)SIGINT);
       break;
     case 10:
-      please_dumpstats = 1;
+      signal_callback(0,0,(void*)SIGUSR1);
       break;
     case 12:
-      please_debug = 1;
+      signal_callback(0,0,(void*)SIGUSR2);
       break;
     case 15:
-      please_die = 1;
+      signal_callback(0,0,(void*)SIGTERM);
       break;
     default:
       return -1;
@@ -993,45 +1051,50 @@ control_signal_act(int the_signal)
   return 0;
 }
 
-/** Unix signal handler. */
-static void catch(int the_signal) {
-
-#ifndef MS_WINDOWS /* do signal stuff only on unix */
-  switch (the_signal) {
-//    case SIGABRT:
+static void signal_callback(int fd, short events, void *arg)
+{
+  int sig = (int) arg;
+  switch (sig)
+    {
     case SIGTERM:
-      please_die = 1;
+      log(LOG_ERR,"Catching signal TERM, exiting cleanly.");
+      tor_cleanup();
+      exit(0);
       break;
     case SIGINT:
-      please_shutdown = 1;
+      if (!server_mode(get_options())) { /* do it now */
+        log(LOG_NOTICE,"Interrupt: exiting cleanly.");
+        tor_cleanup();
+        exit(0);
+      }
+      hibernate_begin_shutdown();
       break;
+#ifdef SIGPIPE
     case SIGPIPE:
-      /* don't log here, since it's possible you got the sigpipe because
-       * your log failed! */
-      please_sigpipe = 1;
+      log(LOG_NOTICE,"Caught sigpipe. Ignoring.");
       break;
-    case SIGHUP:
-      please_reset = 1;
-      break;
+#endif
     case SIGUSR1:
-      please_dumpstats = 1;
+      /* prefer to log it at INFO, but make sure we always see it */
+      dumpstats(get_min_log_level()<LOG_INFO ? get_min_log_level() : LOG_INFO);
       break;
     case SIGUSR2:
-      please_debug = 1;
+      switch_logs_debug();
+      log(LOG_NOTICE,"Caught USR2. Going to loglevel debug.");
       break;
+    case SIGHUP:
+      if (do_hup() < 0) {
+        log_fn(LOG_WARN,"Restart failed (config error?). Exiting.");
+        tor_cleanup();
+        exit(1);
+      }
+      break;
+#ifdef SIGCHLD
     case SIGCHLD:
-      please_reap_children = 1;
+      while (waitpid(-1,NULL,WNOHANG) > 0) ; /* keep reaping until no more zombies */
       break;
-#ifdef SIGXFSZ
-    case SIGXFSZ: /* this happens when write fails with etoobig */
-      break; /* ignore; write will fail and we'll look at errno. */
+    }
 #endif
-    default:
-      log(LOG_WARN,"Caught signal %d that we can't handle??", the_signal);
-      tor_cleanup();
-      exit(1);
-  }
-#endif /* signal stuff */
 }
 
 /** Write all statistics to the log, with log level 'severity'.  Called
@@ -1120,30 +1183,49 @@ static void exit_function(void)
 void handle_signals(int is_parent)
 {
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
-  struct sigaction action;
-  action.sa_flags = 0;
-  sigemptyset(&action.sa_mask);
-
-  action.sa_handler = is_parent ? catch : SIG_IGN;
-  sigaction(SIGINT,  &action, NULL); /* do a controlled slow shutdown */
-  sigaction(SIGTERM, &action, NULL); /* to terminate now */
-  sigaction(SIGPIPE, &action, NULL); /* otherwise sigpipe kills us */
-  sigaction(SIGUSR1, &action, NULL); /* dump stats */
-  sigaction(SIGUSR2, &action, NULL); /* go to loglevel debug */
-  sigaction(SIGHUP,  &action, NULL); /* to reload config, retry conns, etc */
+  int i;
+  static int signals[] = {
+    SIGINT,
+    SIGTERM,
+    SIGPIPE,
+    SIGUSR1,
+    SIGUSR2,
+    SIGHUP,
 #ifdef SIGXFSZ
-  sigaction(SIGXFSZ, &action, NULL); /* handle file-too-big resource exhaustion */
+    SIGXFSZ,
 #endif
-  if (is_parent)
-    sigaction(SIGCHLD, &action, NULL); /* handle dns/cpu workers that exit */
+    SIGCHLD,
+    -1 };
+  static struct event signal_events[16]; /* bigger than it has to be. */
+  if (is_parent) {
+    for (i = 0; signals[i] >= 0; ++i) {
+      signal_set(&signal_events[i], signals[i], signal_callback,
+                 (void*)signals[i]);
+      signal_add(&signal_events[i], NULL);
+    }
+  } else {
+    struct sigaction action;
+    action.sa_flags = 0;
+    sigemptyset(&action.sa_mask);
+    action.sa_handler = SIG_IGN;
+    sigaction(SIGINT,  &action, NULL); /* do a controlled slow shutdown */
+    sigaction(SIGTERM, &action, NULL); /* to terminate now */
+    sigaction(SIGPIPE, &action, NULL); /* otherwise sigpipe kills us */
+    sigaction(SIGUSR1, &action, NULL); /* dump stats */
+    sigaction(SIGUSR2, &action, NULL); /* go to loglevel debug */
+    sigaction(SIGHUP,  &action, NULL); /* to reload config, retry conns, etc */
+#ifdef SIGXFSZ
+    sigaction(SIGXFSZ, &action, NULL); /* handle file-too-big resource exhaustion */
+#endif
 #endif /* signal stuff */
+  }
 }
 
 /** Main entry point for the Tor command-line client.
  */
 static int tor_init(int argc, char *argv[]) {
-
   time_of_process_start = time(NULL);
+  closeable_connection_lst = smartlist_create();
   /* Initialize the history structures. */
   rep_hist_init();
   /* Initialize the service cache. */
@@ -1159,6 +1241,8 @@ static int tor_init(int argc, char *argv[]) {
     return -1;
   }
   atexit(exit_function);
+  event_init(); /* This needs to happen before net stuff. Is it okay if this
+                 * happens before daemonizing? */
 
   if (init_from_config(argc,argv) < 0) {
     log_fn(LOG_ERR,"Reading config failed--see warnings above. For usage, try -h.");
@@ -1195,7 +1279,7 @@ void tor_cleanup(void) {
     accounting_record_bandwidth_usage(time(NULL));
 }
 
-/** Read/create keys as needed, and echo our fingerprint to stdout. */
+/** Read/craete keys as needed, and echo our fingerprint to stdout. */
 static void do_list_fingerprint(void)
 {
   char buf[FINGERPRINT_LEN+1];

@@ -8,7 +8,6 @@ const char compat_c_id[] = "$Id$";
 #define _GNU_SOURCE
 
 #include "orconfig.h"
-#include "fakepoll.h"
 #include "compat.h"
 
 #ifdef MS_WINDOWS

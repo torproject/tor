@@ -203,7 +203,7 @@ int connection_edge_finished_connecting(connection_t *conn)
          conn->address,conn->port);
 
   conn->state = EXIT_CONN_STATE_OPEN;
-  connection_watch_events(conn, POLLIN); /* stop writing, continue reading */
+  connection_watch_events(conn, EV_READ); /* stop writing, continue reading */
   if (connection_wants_to_flush(conn)) /* in case there are any queued relay cells */
     connection_start_writing(conn);
   /* deliver a 'connected' relay cell back through the circuit. */
@@ -949,7 +949,7 @@ connection_exit_connect(connection_t *conn) {
     case 0:
       conn->state = EXIT_CONN_STATE_CONNECTING;
 
-      connection_watch_events(conn, POLLOUT | POLLIN | POLLERR);
+      connection_watch_events(conn, EV_WRITE | EV_READ);
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link in windowsland. */
       return;
@@ -961,7 +961,7 @@ connection_exit_connect(connection_t *conn) {
     log_fn(LOG_WARN,"Bug: newly connected conn had data waiting!");
 //    connection_start_writing(conn);
   }
-  connection_watch_events(conn, POLLIN);
+  connection_watch_events(conn, EV_READ);
 
   /* also, deliver a 'connected' cell back through the circuit. */
   if (connection_edge_is_rendezvous_stream(conn)) { /* rendezvous stream */
