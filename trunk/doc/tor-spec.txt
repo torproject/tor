@@ -693,10 +693,10 @@ The items' formats are as follows:
 
        Same as declaring "port" as this OR's directory port in the 'router'
        line. At most one of dircacheport and the directory port in the router
-       line.
+       line may be non-zero.
 
        [Obsolete; will go away once 0.0.8 is dead. Older version of Tor
-       did poorly when non-authoritative directories has a non-0 directory
+       did poorly when non-authoritative directories has a non-zero directory
        port.  To transition, Tor 0.0.8 used dircacheport for
        nonauthoritative directories.]
 
@@ -707,7 +707,7 @@ The items' formats are as follows:
 
    "family" names NL
 
-       'Names' is a space-separated list of server nicknames.  If two ORs
+       'Names' is a space-separated list of server nicknames. If two ORs
        list one another in their "family" entries, then OPs should treat
        them as a single OR for the purpose of path selection.
 
@@ -720,9 +720,8 @@ The items' formats are as follows:
 
        Declare how much bandwidth the OR has used recently. Usage is divided
        into intervals of NSEC seconds.  The YYYY-MM-DD HH:MM:SS field defines
-       the end of the most recent interval.  The numbers list the number of
+       the end of the most recent interval.  The numbers are the number of
        bytes used in the most recent intervals, ordered from oldest to newest.
-
 
 nickname ::= between 1 and 19 alphanumeric characters, case-insensitive.
 
@@ -751,15 +750,15 @@ descriptors, and a single "directory-signature" item.
 
     "signed-directory"
 
-        Indicates the start of a
+        Indicates the start of a directory.
 
     "published" YYYY-MM-DD HH:MM:SS
 
         The time at which this directory was generated and signed, in GMT.
 
-    "directory-signing-key" 
+    "directory-signing-key"
 
-        The key used to sign this directory; see "signing-key".
+        The key used to sign this directory; see "signing-key" for format.
 
     "recommended-software"  comma-separated-version-list
 
