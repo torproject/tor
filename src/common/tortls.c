@@ -88,7 +88,6 @@ tor_tls_get_error(tor_tls *tls, int r, int extra,
     case SSL_ERROR_SYSCALL:
       if (extra&CATCH_SYSCALL)
 	return _TOR_TLS_SYSCALL;
-      assert(severity != LOG_ERR); /* XXX remove me when the bug is found */
       log(severity, "TLS error: <syscall error> (errno=%d)",errno);
       tls_log_errors(severity, doing);
       return TOR_TLS_ERROR;
@@ -471,11 +470,11 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen)
   int i;
   
   if (!(cert = SSL_get_peer_certificate(tls->ssl))) {
-    log_fn(LOG_ERR, "Peer has no certificate");
+    log_fn(LOG_WARN, "Peer has no certificate");
     return -1;
   }
   if (!(name = X509_get_subject_name(cert))) {
-    log_fn(LOG_ERR, "Peer certificate has no subject name");
+    log_fn(LOG_WARN, "Peer certificate has no subject name");
     return -1;
   }
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef)
@@ -485,7 +484,7 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen)
   if (lenout == -1)
     return -1;
   if (strspn(buf, LEGAL_NICKNAME_CHARACTERS) != lenout) {
-    log_fn(LOG_ERR, "Peer certificate nickname has illegal characters.");
+    log_fn(LOG_WARN, "Peer certificate nickname has illegal characters.");
     return -1;
   }
   return 0;
