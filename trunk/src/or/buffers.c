@@ -58,7 +58,7 @@ int read_to_buf(int s, int at_most, char **buf, int *buflen, int *buf_datalen, i
     }
 #ifdef MS_WINDOWS
     e = correct_socket_errno(s);
-    if(!ERRNO_EAGAIN(errno)) { /* no, it *is* a real error! */
+    if(!ERRNO_EAGAIN(e)) { /* no, it *is* a real error! */
       return -1;
     }
 #endif
@@ -116,7 +116,7 @@ int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datale
     }
 #ifdef MS_WINDOWS
     e = correct_socket_errno(s);
-    if(!ERRNO_EAGAIN(errno)) { /* no, it *is* a real error! */
+    if(!ERRNO_EAGAIN(e)) { /* no, it *is* a real error! */
       return -1;
     }
 #endif
