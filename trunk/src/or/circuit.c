@@ -473,7 +473,7 @@ void circuit_close(circuit_t *circ) {
   assert(circ);
   if(options.APPort) {
     youngest = circuit_get_newest_ap();
-    log_fn(LOG_DEBUG,"youngest %d, circ %d.",youngest, (int)circ);
+    log_fn(LOG_DEBUG,"youngest %d, circ %d.",(int)youngest, (int)circ);
   }
   circuit_remove(circ);
   if(circ->n_conn)

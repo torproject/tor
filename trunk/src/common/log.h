@@ -17,6 +17,8 @@
 #define CHECK_PRINTF(formatIdx, firstArg) 
 #endif 
 
+void log_set_severity(int severity);
+
 /* Outputs a message to stdout and also logs the same message using syslog. */
 void log(int severity, const char *format, ...) CHECK_PRINTF(2,3);
 
