@@ -22,6 +22,9 @@
 #define snprintf _snprintf
 #endif
 
+#define TRUNCATED_STR "\n[truncated]"
+#define TRUNCATED_STR_LEN 12
+
 /** Information for a single logfile; only used in log.c */
 typedef struct logfile_t {
   struct logfile_t *next; /**< Next logfile_t in the linked list. */
@@ -116,8 +119,10 @@ static INLINE void format_msg(char *buf, size_t buf_len,
   }
 
   n += vsnprintf(buf+n,buf_len-n,format,ap);
-  if(n > buf_len)
+  if(n > buf_len) {
     n = buf_len-1;
+    strcpy(buf+n-TRUNCATED_STR_LEN, TRUNCATED_STR);
+  }
   buf[n]='\n';
   buf[n+1]='\0';
 }
