@@ -346,6 +346,34 @@ service.
 .\" UNDOCUMENTED
 .\" ignoreversion
 
+.SH SIGNALS
+Tor catches the following signals:
+.TP
+\fBSIGTERM\fR
+Tor will catch this, clean up and sync to disk if necessary, and exit.
+.TP
+\fBSIGINT\fR
+Tor clients behave as with SIGTERM; but Tor servers will do a controlled
+slow shutdown, closing listeners and waiting 30 seconds before exiting.
+.TP
+\fBSIGHUP\fR
+The signal instructs Tor to reload its configuration, fetch a new
+directory, and kill and restart its helper processes if applicable.
+.TP
+\fBSIGUSR1\fR
+Log statistics about current connections, past connections, and
+throughput.
+.TP
+\fBSIGCHLD\fR
+Tor receives this signal when one of its helper processes has exited,
+so it can clean up.
+.TP
+\fBSIGPIPE\fR
+Tor catches this signal and ignores it.
+.TP
+\fBSIGXFSZ\fR
+If this signal exists on your platform, Tor catches and ignores it.
+
 .SH FILES
 .TP
 .I @CONFDIR@/torrc
