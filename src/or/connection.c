@@ -698,8 +698,8 @@ repeat_connection_package_raw_inbuf:
 
 
   cell.command = CELL_DATA;
-  cell.topic_command = TOPIC_COMMAND_DATA;
-  cell.topic_id = conn->topic_id;
+  SET_CELL_TOPIC_COMMAND(cell, TOPIC_COMMAND_DATA);
+  SET_CELL_TOPIC_ID(cell, conn->topic_id);
   cell.length += TOPIC_HEADER_SIZE;
 
   if(conn->type == CONN_TYPE_EXIT) {
@@ -752,8 +752,8 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_DATA;
-  cell.topic_command = TOPIC_COMMAND_SENDME;
-  cell.topic_id = conn->topic_id;
+  SET_CELL_TOPIC_COMMAND(cell, TOPIC_COMMAND_SENDME);
+  SET_CELL_TOPIC_ID(cell, conn->topic_id);
   cell.length += TOPIC_HEADER_SIZE;
 
   if(edge_type == EDGE_EXIT) { /* we're at an exit */
@@ -860,14 +860,7 @@ cell_pack(char *dest, const cell_t *src)
   *(uint8_t*)(dest+2)  = src->command;
   *(uint8_t*)(dest+3)  = src->length;
   *(uint32_t*)(dest+4) = 0; /* Reserved */
-  if (src->command != CELL_DATA) {
-    memcpy(dest+8, src->payload, CELL_PAYLOAD_SIZE);
-  } else {
-    *(uint8_t*)(dest+8)  = src->topic_command;
-    *(uint8_t*)(dest+9)  = 0;
-    *(uint16_t*)(dest+10) = htons(src->topic_id);
-    memcpy(dest+12, src->payload, CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE);
-  }
+  memcpy(dest+8, src->payload, CELL_PAYLOAD_SIZE);
 }
 
 void
@@ -877,14 +870,7 @@ cell_unpack(cell_t *dest, const char *src)
   dest->command = *(uint8_t*)(src+2);
   dest->length  = *(uint8_t*)(src+3);
   dest->seq     = ntohl(*(uint32_t*)(src+4));
-  if (dest->command != CELL_DATA) {
-    memcpy(dest->payload, src+8, CELL_PAYLOAD_SIZE);
-  } else {
-    dest->topic_command = *(uint8_t*)(src+8);
-    /* zero  = *(uint8_t*)(src+9); */
-    dest->topic_id = ntohs(*(uint16_t*)(src+10));
-    memcpy(dest->payload, src+12, CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE);
-  }
+  memcpy(dest->payload, src+8, CELL_PAYLOAD_SIZE);
 }
 
 /*

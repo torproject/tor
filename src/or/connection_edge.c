@@ -27,8 +27,8 @@ int connection_edge_process_inbuf(connection_t *conn) {
     memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_DATA;
     cell.length = TOPIC_HEADER_SIZE;
-    cell.topic_command = TOPIC_COMMAND_END;
-    cell.topic_id = conn->topic_id;
+    SET_CELL_TOPIC_COMMAND(cell, TOPIC_COMMAND_END);
+    SET_CELL_TOPIC_ID(cell, conn->topic_id);
     cell.aci = circ->n_aci;
 
     if (circuit_deliver_data_cell_from_edge(&cell, circ, conn->type) < 0) {
@@ -76,8 +76,8 @@ int connection_edge_send_command(connection_t *conn, circuit_t *circ, int topic_
   else
     cell.aci = circ->p_aci;
   cell.command = CELL_DATA;
-  cell.topic_command = topic_command;
-  cell.topic_id = conn->topic_id;
+  SET_CELL_TOPIC_COMMAND(cell, topic_command);
+  SET_CELL_TOPIC_ID(cell, conn->topic_id);
 
   cell.length = TOPIC_HEADER_SIZE;
   log(LOG_INFO,"connection_edge_send_command(): delivering %d cell %s.", topic_command, conn->type == CONN_TYPE_AP ? "forward" : "backward");
@@ -100,8 +100,8 @@ int connection_edge_process_data_cell(cell_t *cell, circuit_t *circ, int edge_ty
 
   assert(cell && circ);
 
-  topic_command = cell->topic_command;
-  topic_id = cell->topic_id;
+  topic_command = CELL_TOPIC_COMMAND(*cell);
+  topic_id = CELL_TOPIC_ID(*cell);
   log(LOG_DEBUG,"connection_edge_process_data_cell(): command %d topic %d", topic_command, topic_id);
   num_seen++;
   log(LOG_DEBUG,"connection_edge_process_data_cell(): Now seen %d data cells here.", num_seen);
