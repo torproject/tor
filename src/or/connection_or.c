@@ -6,7 +6,7 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
-#ifndef TOR_TLS
+#ifndef USE_TLS
 static int or_handshake_op_send_keys(connection_t *conn);
 static int or_handshake_op_finished_sending_keys(connection_t *conn);
 
@@ -35,17 +35,18 @@ int connection_or_process_inbuf(connection_t *conn) {
     return -1;
   }
 
+#ifdef USE_TLS
+  assert(conn->state == OR_CONN_STATE_OPEN);
+  return connection_process_cell_from_inbuf(conn);
+#else
 //  log(LOG_DEBUG,"connection_or_process_inbuf(): state %d.",conn->state);
-
   switch(conn->state) {
-#ifndef TOR_TLS
     case OR_CONN_STATE_CLIENT_AUTH_WAIT:
       return or_handshake_client_process_auth(conn);
     case OR_CONN_STATE_SERVER_AUTH_WAIT:
       return or_handshake_server_process_auth(conn);
     case OR_CONN_STATE_SERVER_NONCE_WAIT:
       return or_handshake_server_process_nonce(conn);
-#endif
     case OR_CONN_STATE_OPEN:
       return connection_process_cell_from_inbuf(conn);
     default:
@@ -53,6 +54,7 @@ int connection_or_process_inbuf(connection_t *conn) {
   }
 
   return 0;
+#endif
 }
 
 int connection_or_finished_flushing(connection_t *conn) {
@@ -61,9 +63,13 @@ int connection_or_finished_flushing(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_OR);
 
   switch(conn->state) {
+#ifndef USE_TLS
     case OR_CONN_STATE_OP_SENDING_KEYS:
       return or_handshake_op_finished_sending_keys(conn);
     case OR_CONN_STATE_CLIENT_CONNECTING:
+#else
+    case OR_CONN_STATE_CONNECTING:
+#endif
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
         if(!ERRNO_CONN_EINPROGRESS(errno)){
           /* yuck. kill it. */
@@ -78,6 +84,9 @@ int connection_or_finished_flushing(connection_t *conn) {
       log_fn(LOG_DEBUG,"OR connection to router %s:%u established.",
           conn->address,conn->port);
 
+#ifdef USE_TLS
+      call TLS new, and start the TLS handshake
+#else
       if(options.OnionRouter)
         return or_handshake_client_send_auth(conn);
       else
@@ -98,17 +107,14 @@ int connection_or_finished_flushing(connection_t *conn) {
       conn->state = OR_CONN_STATE_SERVER_NONCE_WAIT;
       connection_watch_events(conn, POLLIN);
       return 0;
+#endif
     case OR_CONN_STATE_OPEN:
-      /* FIXME down the road, we'll clear out circuits that are pending to close */
       connection_stop_writing(conn);
       return 0;
     default:
-      log_fn(LOG_DEBUG,"BUG: called in unexpected state.");
+      log_fn(LOG_ERR,"BUG: called in unexpected state.");
       return 0;
   }
-
-  return 0;
-
 }
 
 /*********************/
@@ -659,7 +665,7 @@ connection_or_set_open(connection_t *conn) {
   connection_watch_events(conn, POLLIN);
 }
 
-#ifndef TOR_TLS
+#ifndef USE_TLS
 static void 
 conn_or_init_crypto(connection_t *conn) {
   //int x;

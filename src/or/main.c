@@ -212,6 +212,10 @@ void connection_watch_events(connection_t *conn, short events) {
   poll_array[conn->poll_index].events = events;
 }
 
+int connection_is_reading(connection_t *conn) {
+  return poll_array[conn->poll_index].events & POLLIN;
+}
+
 void connection_stop_reading(connection_t *conn) {
 
   assert(conn && conn->poll_index < nfds);
@@ -312,8 +316,7 @@ static void check_conn_marked(int i) {
 
 static int prepare_for_poll(void) {
   int i;
-//  connection_t *conn = NULL;
-  connection_t *tmpconn;
+  connection_t *conn;
   struct timeval now; //soonest;
   static long current_second = 0; /* from previous calls to gettimeofday */
   static long time_to_fetch_directory = 0;
@@ -355,37 +358,41 @@ static int prepare_for_poll(void) {
 
     /* do housekeeping for each connection */
     for(i=0;i<nfds;i++) {
-      tmpconn = connection_array[i];
-      if(connection_receiver_bucket_should_increase(tmpconn)) {
-        tmpconn->receiver_bucket += tmpconn->bandwidth;
-//        log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i, tmpconn->receiver_bucket);
+      conn = connection_array[i];
+      if(connection_receiver_bucket_should_increase(conn)) {
+        conn->receiver_bucket += conn->bandwidth;
+//        log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i, conn->receiver_bucket);
       }
 
-      if(tmpconn->wants_to_read == 1 /* it's marked to turn reading back on now */
+      if(conn->wants_to_read == 1 /* it's marked to turn reading back on now */
          && global_read_bucket > 0 /* and we're allowed to read */
-         && tmpconn->receiver_bucket != 0) { /* and either an edge conn or non-empty bucket */
-        tmpconn->wants_to_read = 0;
-        connection_start_reading(tmpconn);
+         && conn->receiver_bucket != 0) { /* and either an edge conn or non-empty bucket */
+        conn->wants_to_read = 0;
+        connection_start_reading(conn);
+	if(conn->wants_to_write == 1) {
+          conn->wants_to_write = 0;
+          connection_start_writing(conn);
+        }
       }
 
       /* check connections to see whether we should send a keepalive, expire, or wait */
-      if(!connection_speaks_cells(tmpconn))
+      if(!connection_speaks_cells(conn))
         continue; /* this conn type doesn't send cells */
-      if(now.tv_sec >= tmpconn->timestamp_lastwritten + options.KeepalivePeriod) {
-        if((!options.OnionRouter && !circuit_get_by_conn(tmpconn)) ||
-           (!connection_state_is_open(tmpconn))) {
+      if(now.tv_sec >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
+        if((!options.OnionRouter && !circuit_get_by_conn(conn)) ||
+           (!connection_state_is_open(conn))) {
           /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
           log(LOG_DEBUG,"prepare_for_poll(): Expiring connection to %d (%s:%d).",
-              i,tmpconn->address, tmpconn->port);
-          tmpconn->marked_for_close = 1;
+              i,conn->address, conn->port);
+          conn->marked_for_close = 1;
         } else {
           /* either a full router, or we've got a circuit. send a padding cell. */
 //          log(LOG_DEBUG,"prepare_for_poll(): Sending keepalive to (%s:%d)",
-//              tmpconn->address, tmpconn->port);
+//              conn->address, conn->port);
           memset(&cell,0,sizeof(cell_t));
           cell.command = CELL_PADDING;
-          if(connection_write_cell_to_buf(&cell, tmpconn) < 0)
-            tmpconn->marked_for_close = 1;
+          if(connection_write_cell_to_buf(&cell, conn) < 0)
+            conn->marked_for_close = 1;
         }
       }
     }
@@ -441,6 +448,10 @@ static int do_main_loop(void) {
     }
     set_signing_privatekey(prkey);
   }
+
+#ifdef USE_TLS
+  make the tls context here 
+#endif
 
   /* start up the necessary connections based on which ports are
    * non-zero. This is where we try to connect to all the other ORs,

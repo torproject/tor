@@ -129,6 +129,7 @@ int flush_buf(int s, char **buf, int *buflen, int *buf_flushlen, int *buf_datale
 //    log_fn(LOG_DEBUG,"flushed %d bytes, %d ready to flush, %d remain.",
 //       write_result,*buf_flushlen,*buf_datalen);
     return *buf_flushlen;
+    /* XXX USE_TLS should change to return write_result like any sane function would */
   }
 }
 
@@ -136,8 +137,9 @@ int flush_buf_tls(tor_tls *tls, char **buf, int *buflen, int *buf_flushlen, int 
 {
   int r;
   assert(tls && *buf && buflen && buf_datalen);
-  if (*buf_flushlen == 0)
-    return 0;
+
+  /* we want to let tls write even if flushlen is zero, because it might
+   * have a partial record pending */
   r = tor_tls_write(tls, *buf, *buf_flushlen);
   if (r < 0) {
     return r;

@@ -92,7 +92,7 @@ connection_t *connection_new(int type) {
   conn->timestamp_lastread = now.tv_sec;
   conn->timestamp_lastwritten = now.tv_sec;
 
-#ifndef TOR_TLS
+#ifndef USE_TLS
   if (connection_speaks_cells(conn)) {
     conn->f_crypto = crypto_new_cipher_env(CONNECTION_CIPHER);
     if (!conn->f_crypto) {
@@ -107,7 +107,6 @@ connection_t *connection_new(int type) {
     }
   }
 #endif
-  conn->done_sending = conn->done_receiving = 0;
   return conn;
 }
 
@@ -123,9 +122,9 @@ void connection_free(connection_t *conn) {
 
   if(connection_speaks_cells(conn)) {
     directory_set_dirty();
-#ifdef TOR_TLS
-    if (conn->SSL)
-      crypt_SSL_free(conn->SSL);
+#ifdef USE_TLS
+    if (conn->tls)
+      tor_tls_free(conn->tls);
 #else
     if (conn->f_crypto)
       crypto_free_cipher_env(conn->f_crypto);
@@ -245,10 +244,8 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   return 0;
 }
 
+/* start all connections that should be up but aren't */
 int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport) {
-
-  /* start all connections that should be up but aren't */
-
   struct sockaddr_in bindaddr; /* where to bind */
 
   if(or_listenport) {
@@ -316,12 +313,13 @@ int connection_handle_read(connection_t *conn) {
         log_fn(LOG_DEBUG,"receiver bucket reached 0 before handshake finished. Closing.");
         return -1;
       }
-      return 0;
   } /* end switch */
+  return 0;
 }
 
+/* return -1 if we want to break conn, else return 0 */
 int connection_read_to_buf(connection_t *conn) {
-  int read_result;
+  int result;
   int at_most;
 
   assert((connection_speaks_cells(conn) && conn->receiver_bucket >= 0) ||
@@ -344,27 +342,51 @@ int connection_read_to_buf(connection_t *conn) {
   if(conn->receiver_bucket >= 0 && at_most > conn->receiver_bucket)
     at_most = conn->receiver_bucket;
 
-  read_result = read_to_buf(conn->s, at_most, &conn->inbuf, &conn->inbuflen,
-                            &conn->inbuf_datalen, &conn->inbuf_reached_eof);
-//  log(LOG_DEBUG,"connection_read_to_buf(): read_to_buf returned %d.",read_result);
-  if(read_result >= 0) {
-    global_read_bucket -= read_result; assert(global_read_bucket >= 0);
-    if(connection_speaks_cells(conn))
-      conn->receiver_bucket -= read_result;
-    if(conn->receiver_bucket == 0 || global_read_bucket == 0) {
-      log_fn(LOG_DEBUG,"buckets (%d, %d) exhausted. Pausing.", global_read_bucket, conn->receiver_bucket);
-      conn->wants_to_read = 1;
-      connection_stop_reading(conn);
-
-      /* If we're not in 'open' state here, then we're never going to finish the
-       * handshake, because we'll never increment the receiver_bucket. But we
-       * can't check for that here, because the buf we just read might have enough
-       * on it to finish the handshake. So we check for that in connection_handle_read().
-       */
+#ifdef USE_TLS
+  if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
+    if(conn->state == OR_CONN_STATE_HANDSHAKING) {
+      result = tor_tls_handshake(conn->tls)
+      if(result == TOR_TLS_DONE) {
+        conn->state = OR_CONN_STATE_OPEN;
+        log_fn(LOG_DEBUG,"tls handshake done, now open.");
+      }
+    } else { /* open, or closing */
+      result = read_to_buf_tls(conn->tls, at_most, &conn->inbuf,
+                                    &conn->inbuflen, &conn->inbuf_datalen);
     }
+
+    switch(result) {
+      case TOR_TLS_ERROR:
+      case TOR_TLS_CLOSE:
+        log_fn(LOG_DEBUG,"tls error. breaking.");
+        return -1; /* XXX deal with close better */
+      case TOR_TLS_WANT_WRITE:
+        connection_start_writing(conn);
+        return 0;
+      case TOR_TLS_WANT_READ: /* we're already reading */
+      case TOR_TLS_DONE: /* no data read, so nothing to process */
+        return 0;
+    }
+  } else
+#endif
+  {
+    result = read_to_buf(conn->s, at_most, &conn->inbuf, &conn->inbuflen,
+                         &conn->inbuf_datalen, &conn->inbuf_reached_eof);
+//  log(LOG_DEBUG,"connection_read_to_buf(): read_to_buf returned %d.",read_result);
+
+    if(result < 0)
+      return -1;
   }
 
-  return read_result;
+  global_read_bucket -= result; assert(global_read_bucket >= 0);
+  if(connection_speaks_cells(conn))
+    conn->receiver_bucket -= result;
+  if(conn->receiver_bucket == 0 || global_read_bucket == 0) {
+    log_fn(LOG_DEBUG,"buckets (%d, %d) exhausted. Pausing.", global_read_bucket, conn->receiver_bucket);
+    conn->wants_to_read = 1;
+    connection_stop_reading(conn);
+  }
+  return 0;
 }
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
@@ -388,9 +410,10 @@ int connection_flush_buf(connection_t *conn) {
                    &conn->outbuf_flushlen, &conn->outbuf_datalen);
 }
 
+/* return -1 if you want to break the conn, else return 0 */
 int connection_handle_write(connection_t *conn) {
   struct timeval now;
-  int retval;
+  int result;
 
   if(connection_is_listener(conn)) {
     log_fn(LOG_DEBUG,"Got a listener socket. Can't happen!");
@@ -400,25 +423,57 @@ int connection_handle_write(connection_t *conn) {
   my_gettimeofday(&now);
   conn->timestamp_lastwritten = now.tv_sec;
 
-#ifdef TOR_TLS
-  if(connection_speaks_cells(conn)) {
-    retval = flush_buf_SSL(conn->SSL, &conn->outbuf, &conn->outbuflen,
-                           &conn->outbuf_flushlen, &conn->outbuf_datalen);
-    ...
+#ifdef USE_TLS
+  if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
+    if(conn->state == OR_CONN_STATE_HANDSHAKING) {
+      result = tor_tls_handshake(conn->tls)
+      if(result == TOR_TLS_DONE) {
+        conn->state = OR_CONN_STATE_OPEN;
+        log_fn(LOG_DEBUG,"tls handshake done, now open.");
+      }
+    } else { /* open, or closing */
+      result = flush_buf_tls(conn->tls, &conn->outbuf, &conn->outbuflen,
+                             &conn->outbuf_flushlen, &conn->outbuf_datalen);
+    }
 
+    switch(result) {
+      case TOR_TLS_ERROR:
+      case TOR_TLS_CLOSE:
+        log_fn(LOG_DEBUG,"tls error. breaking.");
+        return -1; /* XXX deal with close better */
+      case TOR_TLS_WANT_WRITE:
+        /* we're already writing */
+        return 0;
+      case TOR_TLS_WANT_READ:
+        /* Make sure to avoid a loop if the receive buckets are empty. */
+        if(!connection_is_reading(conn)) {
+          connection_stop_writing(conn);
+          conn->wants_to_write = 1;
+          /* we'll start reading again when the next second arrives,
+           * and then also start writing again.
+           */
+        }
+        /* else no problem, we're already reading */
+        return 0;
+      case TOR_TLS_DONE:
+      /* for TOR_TLS_DONE, fall through to check if the flushlen
+       * is empty, so we can stop writing.
+       */  
+    }
   } else
 #endif
   {
-    retval = flush_buf(conn->s, &conn->outbuf, &conn->outbuflen,
-                       &conn->outbuf_flushlen, &conn->outbuf_datalen);
-        /* conns in CONNECTING state will fall through... */
-
-    if(retval == 0) { /* it's done flushing */
-      retval = connection_finished_flushing(conn); /* ...and get handled here. */
-    }
+    if(flush_buf(conn->s, &conn->outbuf, &conn->outbuflen,
+                 &conn->outbuf_flushlen, &conn->outbuf_datalen) < 0)
+      return -1;
+      /* conns in CONNECTING state will fall through... */
   }
 
-  return retval;
+  if(!connection_wants_to_flush(conn)) /* it's done flushing */
+    if(connection_finished_flushing(conn) < 0) /* ...and get handled here. */
+      return -1;
+
+  return 0;
 }
 
 int connection_write_to_buf(char *string, int len, connection_t *conn) {
@@ -496,13 +551,16 @@ int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
  
   cell_pack(n, cellp);
 
+#ifndef USE_TLS
   if(connection_encrypt_cell(n,conn)<0) {
     return -1;
   }
+#endif
 
   return connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
 }
 
+#ifndef USE_TLS
 int connection_encrypt_cell(char *cellp, connection_t *conn) {
   char cryptcell[CELL_NETWORK_SIZE];
 #if 0
@@ -535,6 +593,7 @@ int connection_encrypt_cell(char *cellp, connection_t *conn) {
   memcpy(cellp,cryptcell,CELL_NETWORK_SIZE);
   return 0;
 }
+#endif
 
 int connection_process_inbuf(connection_t *conn) {
 
@@ -705,18 +764,20 @@ int connection_finished_flushing(connection_t *conn) {
 
 int connection_process_cell_from_inbuf(connection_t *conn) {
   /* check if there's a whole cell there.
-   * if yes, pull it off, decrypt it, and process it.
+   * if yes, pull it off, decrypt it if we're not doing TLS, and process it.
    */
-  char crypted[CELL_NETWORK_SIZE];
-  char outbuf[1024];
+  char networkcell[CELL_NETWORK_SIZE];
+  char buf[CELL_NETWORK_SIZE];
 //  int x;
   cell_t cell;
 
   if(conn->inbuf_datalen < CELL_NETWORK_SIZE) /* entire response available? */
     return 0; /* not yet */
 
-  connection_fetch_from_buf(crypted,CELL_NETWORK_SIZE,conn);
-
+#ifdef USE_TLS
+  connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, conn);
+#else
+  connection_fetch_from_buf(networkcell, CELL_NETWORK_SIZE, conn);
 #if 0
   printf("Cell header crypttext: ");
   for(x=0;x<8;x++) {
@@ -725,7 +786,7 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   printf("\n");
 #endif
   /* decrypt */
-  if(crypto_cipher_decrypt(conn->b_crypto,crypted,CELL_NETWORK_SIZE,outbuf)) {
+  if(crypto_cipher_decrypt(conn->b_crypto, networkcell, CELL_NETWORK_SIZE, buf)) {
     log_fn(LOG_ERR,"Decryption failed, dropping.");
     return connection_process_inbuf(conn); /* process the remainder of the buffer */
   }
@@ -737,9 +798,10 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   }
   printf("\n");
 #endif
+#endif
 
-  /* retrieve cell info from outbuf (create the host-order struct from the network-order string) */
-  cell_unpack(&cell, outbuf);
+  /* retrieve cell info from buf (create the host-order struct from the network-order string) */
+  cell_unpack(&cell, buf);
 
 //  log_fn(LOG_DEBUG,"Decrypted cell is of type %u (ACI %u).",cellp->command,cellp->aci);
   command_process_cell(&cell, conn);
