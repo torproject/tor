@@ -1311,8 +1311,8 @@ options_validate(or_options_t *options)
   }
 #endif
 
-  if (options->MaxConn >= MAXCONNECTIONS) {
-    log(LOG_WARN, "MaxConn option must be less than %d in Tor 0.0.9.x.", MAXCONNECTIONS);
+  if (options->MaxConn > MAXCONNECTIONS) {
+    log(LOG_WARN, "MaxConn option must be at most %d.", MAXCONNECTIONS);
     result = -1;
   }
 

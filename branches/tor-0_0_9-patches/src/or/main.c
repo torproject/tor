@@ -41,11 +41,11 @@ static time_t time_to_fetch_running_routers = 0;
 
 /** Array of all open connections; each element corresponds to the element of
  * poll_array in the same position.  The first nfds elements are valid. */
-static connection_t *connection_array[MAXCONNECTIONS] =
+static connection_t *connection_array[MAXCONNECTIONS+1] =
         { NULL };
 
 /** Array of pollfd objects for calls to poll(). */
-static struct pollfd poll_array[MAXCONNECTIONS];
+static struct pollfd poll_array[MAXCONNECTIONS+1];
 
 static int nfds=0; /**< Number of connections currently active. */
 
