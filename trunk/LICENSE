@@ -11,8 +11,9 @@ than OpenSSL.  If you modify this file, you may extend this exception
 to your version of the file, but you are not obligated to do so.  If you
 do not wish to do so, delete this exception statement from your version.
 
-3) Onion routing is patented (in the US only), and you don't have a
-license. We're working on that.
+3) Onion routing is patented (in the US only) by NRL, and you don't
+have a license. You should consult your lawyer to decide whether you
+need a license for this software.
 
 
 
