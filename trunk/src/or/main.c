@@ -337,7 +337,6 @@ int prepare_for_poll(int *timeout) {
     for(i=0;i<nfds;i++) {
       tmpconn = connection_array[i];
       connection_increment_receiver_bucket(tmpconn);
-      connection_array[i]->onions_handled_this_second = 0;
 
       /* check connections to see whether we should send a keepalive, expire, or wait */
       if(!connection_speaks_cells(tmpconn))
@@ -683,7 +682,6 @@ int tor_main(int argc, char *argv[]) {
     }
   }
 
-  init_tracked_tree(); /* initialize the replay detection tree */
   init_cache_tree(); /* initialize the dns resolve tree */
 
   signal (SIGINT,  catch); /* catch kills so we can exit cleanly */

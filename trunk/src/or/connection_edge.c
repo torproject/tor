@@ -23,7 +23,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
     circ = circuit_get_by_conn(conn);
     if (!circ)
       return -1;
-    
+
     memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_RELAY;
     cell.length = RELAY_HEADER_SIZE;
@@ -123,13 +123,12 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       if(edge_type == EDGE_AP) {
         log(LOG_INFO,"connection_edge_process_relay_cell(): relay begin request unsupported. Dropping.");
         return 0;
-      } else {
-        if(conn) {
-          log(LOG_INFO,"connection_edge_process_relay_cell(): begin cell for known stream. Dropping.");
-          return 0;
-        }
-        return connection_exit_begin_conn(cell, circ);
       }
+      if(conn) {
+        log(LOG_INFO,"connection_edge_process_relay_cell(): begin cell for known stream. Dropping.");
+        return 0;
+      }
+      return connection_exit_begin_conn(cell, circ);
     case RELAY_COMMAND_DATA:
       if(!conn) {
         log(LOG_DEBUG,"connection_edge_process_relay_cell(): relay cell dropped, unknown stream %d.",*(int*)conn->stream_id);
@@ -166,14 +165,6 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
       log(LOG_DEBUG,"connection_edge_process_relay_cell(): end cell for stream %d. Removing stream.",*(int*)conn->stream_id);
 
-      /* go through and identify who points to conn. remove conn from the list. */
-#if 0
-      if(conn == circ->p_conn) {
-        circ->p_conn = conn->next_stream;
-      }
-      for(prevconn = circ->p_conn; prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
-      prevconn->next_stream = conn->next_stream;
-#endif
 #ifdef HALF_OPEN
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */
@@ -182,6 +173,23 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
 #endif
       conn->marked_for_close = 1;
       break;
+    case RELAY_COMMAND_EXTEND:
+      if(conn) {
+        log(LOG_INFO,"connection_edge_process_relay_cell(): 'extend' for non-zero stream. Dropping.");
+        return 0;
+      }
+      return circuit_extend(cell, circ);
+    case RELAY_COMMAND_EXTENDED:
+      if(edge_type == EDGE_EXIT) {
+        log(LOG_INFO,"connection_edge_process_relay_cell(): 'extended' unsupported at exit. Dropping.");
+        return 0;
+      }
+      log(LOG_DEBUG,"connection_edge_process_relay_cell(): Got an extended cell! Yay.");
+      if(circuit_finish_handshake(circ, cell->payload+RELAY_HEADER_SIZE) < 0) {
+        log(LOG_INFO,"connection_edge_process_relay_cell(): circuit_finish_handshake failed.");
+        return -1;
+      }
+      return circuit_send_next_onion_skin(circ);
     case RELAY_COMMAND_CONNECTED:
       if(edge_type == EDGE_EXIT) {
         log(LOG_INFO,"connection_edge_process_relay_cell(): 'connected' unsupported at exit. Dropping.");

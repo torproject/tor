@@ -28,8 +28,8 @@ void command_time_process_cell(cell_t *cell, connection_t *conn,
 }
 
 void command_process_cell(cell_t *cell, connection_t *conn) {
-  static int num_create=0, num_relay=0, num_destroy=0, num_sendme=0;
-  static int create_time=0, relay_time=0, destroy_time=0, sendme_time=0;
+  static int num_create=0, num_created=0, num_relay=0, num_destroy=0, num_sendme=0;
+  static int create_time=0, created_time=0, relay_time=0, destroy_time=0, sendme_time=0;
   static long current_second = 0; /* from previous calls to gettimeofday */
   struct timeval now;
 
@@ -39,18 +39,20 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
     /* print stats */
     log(LOG_INFO,"At end of second:"); 
     log(LOG_INFO,"Create:    %d (%d ms)", num_create, create_time/1000);
+    log(LOG_INFO,"Created:   %d (%d ms)", num_created, created_time/1000);
     log(LOG_INFO,"Relay:     %d (%d ms)", num_relay, relay_time/1000);
     log(LOG_INFO,"Destroy:   %d (%d ms)", num_destroy, destroy_time/1000);
     log(LOG_INFO,"Sendme:    %d (%d ms)", num_sendme, sendme_time/1000);
 
     /* zero out stats */
-    num_create = num_relay = num_destroy = num_sendme = 0;
-    create_time = relay_time = destroy_time = sendme_time = 0;
+    num_create = num_created = num_relay = num_destroy = num_sendme = 0;
+    create_time = created_time = relay_time = destroy_time = sendme_time = 0;
 
     /* remember which second it is, for next time */
     current_second = now.tv_sec; 
   }
 
+  log(LOG_DEBUG,"command_process_cell(): Examining cell type %d.", cell->command);
   switch(cell->command) {
     case CELL_PADDING:
       /* do nothing */
@@ -58,6 +60,10 @@ void command_process_cell(cell_t *cell, connection_t *conn) {
     case CELL_CREATE:
       command_time_process_cell(cell, conn, &num_create, &create_time,
                                 command_process_create_cell);
+      break;
+    case CELL_CREATED:
+      command_time_process_cell(cell, conn, &num_created, &created_time,
+                                command_process_created_cell);
       break;
     case CELL_RELAY:
       command_time_process_cell(cell, conn, &num_relay, &relay_time,
@@ -82,60 +88,76 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
 
   circ = circuit_get_by_aci_conn(cell->aci, conn);
 
-  if(circ && circ->state != CIRCUIT_STATE_ONION_WAIT) {
-    log(LOG_DEBUG,"command_process_create_cell(): received CREATE cell, not in onion_wait. Dropping.");
+  if(circ) {
+    log(LOG_DEBUG,"command_process_create_cell(): received CREATE cell for known circ. Dropping.");
     return;
   }
 
-  if(!circ) { /* if it's not there, create it */
-    circ = circuit_new(cell->aci, conn);
-    circ->state = CIRCUIT_STATE_ONION_WAIT;
-    circ->onionlen = ntohl(*(int*)cell->payload);
-    log(LOG_DEBUG,"command_process_create_cell():  Onion length is %u.",circ->onionlen);
-    if(circ->onionlen > 50000 || circ->onionlen < 1) { /* too big or too small */
-      log(LOG_DEBUG,"That's ludicrous. Closing.");
-      circuit_close(circ);
-      return;
-    }
-    circ->onion = malloc(circ->onionlen);
-    if(!circ->onion) { 
-      log(LOG_DEBUG,"command_process_create_cell(): Out of memory. Closing.");
-      circuit_close(circ);
-      return;
-    }
-    if(circ->onionlen < cell->length-4) { /* protect from buffer overflow */
-      log(LOG_DEBUG,"command_process_create_cell(): Onion too small. Closing.");
-      circuit_close(circ);
-      return;
-    }
-    memcpy((void *)circ->onion,(void *)(cell->payload+4),cell->length-4);
-    circ->recvlen = cell->length-4;
-    log(LOG_DEBUG,"command_process_create_cell(): Primary create cell handled, have received %d of %d onion bytes.",
-        circ->recvlen,circ->onionlen);
-
-  } else { /* pull over as much of the onion as we can */
-    if(cell->length + circ->recvlen > circ->onionlen) { /* protect from buffer overflow */
-      log(LOG_DEBUG,"command_process_create_cell(): payload too big for onion. Closing.");
-      circuit_close(circ);
-      return;
-    }
-    memcpy((void *)(circ->onion+circ->recvlen),(void *)cell->payload,cell->length);
-    circ->recvlen += cell->length;
-    log(LOG_DEBUG,"command_process_create_cell(): Secondary create cell handled, have received %d of %d onion bytes (aci %d)",
-        circ->recvlen,circ->onionlen,circ->p_aci);
-  }
-
-  if(circ->recvlen != circ->onionlen) {
-    log(LOG_DEBUG,"command_process_create_cell(): Onion not all here yet. Ok.");
+  circ = circuit_new(cell->aci, conn);
+  circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
+  if(cell->length != 208) {
+    log(LOG_DEBUG,"command_process_create_cell(): Bad cell length %d. Dropping.", cell->length);
+    circuit_close(circ);
     return;
   }
+
+  memcpy(circ->onionskin,cell->payload,cell->length);
 
   /* add it to the pending onions queue, and then return */
-  circ->state = CIRCUIT_STATE_ONION_PENDING;
-
   if(onion_pending_add(circ) < 0) {
-    log(LOG_DEBUG,"command_process_create_cell(): Failed to queue onion. Closing.");
+    log(LOG_DEBUG,"command_process_create_cell(): Failed to queue onionskin. Closing.");
     circuit_close(circ);
+  }
+  log(LOG_DEBUG,"command_process_create_cell(): success: queued onionskin.");
+  return;
+}
+
+void command_process_created_cell(cell_t *cell, connection_t *conn) {
+  circuit_t *circ;
+  cell_t newcell;
+
+  circ = circuit_get_by_aci_conn(cell->aci, conn);
+
+  if(!circ) {
+    log(LOG_DEBUG,"command_process_created_cell(): received CREATED cell for unknown circ. Dropping.");
+    return;
+  }
+
+  if(circ->n_aci != cell->aci) {
+    log(LOG_DEBUG,"command_process_created_cell(): got created cell from OPward? Dropping.");
+    return;
+  }
+  assert(cell->length == 192);
+
+  if(circ->cpath) { /* we're the OP. Handshake this. */
+    log(LOG_DEBUG,"command_process_created_cell(): at OP. Finishing handshake.");
+    if(circuit_finish_handshake(circ, cell->payload) < 0) {
+      log(LOG_INFO,"command_process_created_cell(): circuit_finish_handshake failed.");
+      circuit_close(circ);
+      return;
+    }
+    log(LOG_DEBUG,"command_process_created_cell(): Moving to next skin.");
+    if(circuit_send_next_onion_skin(circ) < 0) {
+      log(LOG_INFO,"command_process_created_cell(): circuit_send_next_onion_skin failed.");
+      circuit_close(circ);
+      return;
+    }
+  } else { /* pack it into an extended relay cell, and send it. */
+    memset(&newcell, 0, sizeof(cell_t));
+    newcell.command = CELL_RELAY;
+    newcell.aci = circ->p_aci;
+    SET_CELL_RELAY_COMMAND(newcell, RELAY_COMMAND_EXTENDED);
+    SET_CELL_STREAM_ID(newcell, ZERO_STREAM);
+
+    newcell.length = RELAY_HEADER_SIZE + cell->length;
+    memcpy(newcell.payload+RELAY_HEADER_SIZE, cell->payload, 192);
+
+    log(LOG_DEBUG,"command_process_created_cell(): Sending extended relay cell.");
+    if(circuit_deliver_relay_cell_from_edge(&newcell, circ, EDGE_EXIT, NULL) < 0) {
+      log(LOG_DEBUG,"command_process_created_cell(): failed to deliver extended cell. Closing.");
+      circuit_close(circ);
+      return;
+    }
   }
   return;
 }
@@ -150,6 +172,7 @@ void command_process_sendme_cell(cell_t *cell, connection_t *conn) {
     return;
   }
 
+#if 0
   if(circ->state == CIRCUIT_STATE_ONION_WAIT) {
     log(LOG_DEBUG,"command_process_sendme_cell(): circuit in onion_wait. Dropping.");
     return;
@@ -158,6 +181,7 @@ void command_process_sendme_cell(cell_t *cell, connection_t *conn) {
     log(LOG_DEBUG,"command_process_sendme_cell(): circuit in or_wait. Dropping.");
     return;
   }
+#endif
 
   /* at this point both circ->n_conn and circ->p_conn are guaranteed to be set */
 
@@ -205,7 +229,7 @@ void command_process_relay_cell(cell_t *cell, connection_t *conn) {
     return;
   }
 
-  if(circ->state == CIRCUIT_STATE_ONION_PENDING) {
+  if(circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
     log(LOG_DEBUG,"command_process_relay_cell(): circuit in create_wait. Queueing relay cell.");
     onion_pending_relay_add(circ, cell);
     return;
@@ -213,22 +237,23 @@ void command_process_relay_cell(cell_t *cell, connection_t *conn) {
 
   if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
     if(--circ->p_receive_circwindow < 0) { /* is it less than 0 after decrement? */
-      log(LOG_INFO,"connection_process_relay_cell(): Too many relay cells for out circuit (aci %d). Closing.", circ->p_aci);
+      log(LOG_INFO,"command_process_relay_cell(): Too many relay cells for out circuit (aci %d). Closing.", circ->p_aci);
       circuit_close(circ);
       return;
     }
-    log(LOG_DEBUG,"connection_process_relay_cell(): p_receive_circwindow for aci %d is %d.",circ->p_aci,circ->p_receive_circwindow);
+    log(LOG_DEBUG,"command_process_relay_cell(): p_receive_circwindow for aci %d is %d.",circ->p_aci,circ->p_receive_circwindow);
   }
 
   if(cell->aci == circ->n_aci) { /* it's an ingoing cell */
     if(--circ->n_receive_circwindow < 0) { /* is it less than 0 after decrement? */
-      log(LOG_INFO,"connection_process_relay_cell(): Too many relay cells for in circuit (aci %d). Closing.", circ->n_aci);
+      log(LOG_INFO,"command_process_relay_cell(): Too many relay cells for in circuit (aci %d). Closing.", circ->n_aci);
       circuit_close(circ);
       return;
     }
-    log(LOG_DEBUG,"connection_process_relay_cell(): n_receive_circwindow for aci %d is %d.",circ->n_aci,circ->n_receive_circwindow);
+    log(LOG_DEBUG,"command_process_relay_cell(): n_receive_circwindow for aci %d is %d.",circ->n_aci,circ->n_receive_circwindow);
   }
 
+#if 0
   if(circ->state == CIRCUIT_STATE_ONION_WAIT) {
     log(LOG_WARNING,"command_process_relay_cell(): circuit in onion_wait. Dropping relay cell.");
     return;
@@ -237,6 +262,7 @@ void command_process_relay_cell(cell_t *cell, connection_t *conn) {
     log(LOG_WARNING,"command_process_relay_cell(): circuit in or_wait. Dropping relay cell.");
     return;
   }
+#endif
   /* circ->p_conn and n_conn are only null if we're at an edge point with no connections yet */
 
   if(cell->aci == circ->p_aci) { /* it's an outgoing cell */
@@ -267,7 +293,7 @@ void command_process_destroy_cell(cell_t *cell, connection_t *conn) {
   }
 
   log(LOG_DEBUG,"command_process_destroy_cell(): Received for aci %d.",cell->aci);
-  if(circ->state == CIRCUIT_STATE_ONION_PENDING) {
+  if(circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
     onion_pending_remove(circ);
   }
 
