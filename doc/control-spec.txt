@@ -412,7 +412,7 @@ the message.
 
 3.19 REDIRECTSTREAM (Type 0x0012)
 
-  Sent form the client to the server. The message body contains two fields:
+  Sent from the client to the server. The message body contains two fields:
       Stream ID [4 octets]
       Address [variable-length, NUL-terminated.]
 
