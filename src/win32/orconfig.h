@@ -124,7 +124,7 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Define to 1 iff unaligned int access is allowed */
+/* Define to 1 iff NULL is represented by a 0 in memory. */
 #define NULL_REP_IS_ZERO_BYTES 1
 
 /* Name of package */
