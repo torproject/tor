@@ -605,6 +605,82 @@ shape of the traffic they send and receive.
 \SubSection{Exit policies and abuse}
 \label{subsec:exitpolicies}
 
+Exit abuse is a serious barrier to wide-scale Tor deployment --- we
+must block or limit attacks and other abuse that users can do through
+the Tor network.
+
+Each onion router's \emph{exit policy} describes to which external
+addresses and ports the router will permit stream connections. On one end
+of the spectrum are \emph{open exit} nodes that will connect anywhere;
+on the other end are \emph{middleman} nodes that only relay traffic to
+other Tor nodes, and \emph{private exit} nodes that only connect locally
+or to addresses internal to that node's organization. This private exit
+node configuration is more secure for clients --- the adversary cannot
+see plaintext traffic leaving the network (e.g. to a webserver), so he
+is less sure of Alice's destination. More generally, nodes can require
+a variety of forms of traffic authentication \cite{onion-discex00}.
+
+Tor offers more reliability than the high-latency fire-and-forget
+anonymous email networks, because the sender opens a TCP stream
+with the remote mail server and receives an explicit confirmation of
+acceptance. But ironically, the private exit node model works poorly for
+email, when Tor nodes are run on volunteer machines that also do other
+things, because it's quite hard to configure mail transport agents so
+normal users can send mail normally, but the Tor process can only deliver
+mail locally. Further, most organizations have specific hosts that will
+deliver mail on behalf of certain IP ranges; Tor operators must be aware
+of these hosts and consider putting them in the Tor exit policy.
+
+The abuse issues on closed (e.g. military) networks are very different
+from the abuse on open networks like the Internet. While these IP-based
+access controls are still commonplace on the Internet, on closed networks,
+nearly all participants will be honest, and end-to-end authentication
+can be assumed for anything important.
+
+Tor is harder than minion because tcp doesn't include an abuse
+address. you could reach inside the http stream and change the agent
+or something, but that's a very specific case and probably won't help
+much anyway.
+And volunteer nodes don't resolve to anonymizer.mit.edu so it never
+even occurs to people that it wasn't you.
+
+Preventing abuse of open exit nodes is an unsolved problem. Princeton's
+CoDeeN project \cite{darkside} gives us a glimpse of what we're in for.
+
+but their solutions, which mainly involve rate limiting and blacklisting
+nodes which do bad things, don't translate directly to Tor. Rate limiting
+still works great, but Tor intentionally separates sender from recipient,
+so it's hard to know which sender was the one who did the bad thing,
+without just making the whole network wide open.
+
+even limiting most nodes to allow http, ssh, and aim to exit and reject
+all other stuff is sketchy, because plenty of abuse can happen over
+port 80. but it's a very good start, because it blocks most things,
+and because people are more used to the concept of port 80 abuse not
+coming from the machine's owner.
+
+we could also run intrusion detection system (IDS) modules at each tor
+node, to dynamically monitor traffic streams for attack signatures. it
+can even react when it sees a signature by closing the stream. but IDS's
+don't actually work most of the time, and besides, how do you write a
+signature for "is sending a mean mail"?
+
+we should run a squid at each exit node, to provide comparable anonymity
+to private exit nodes for cache hits, to speed everything up, and to
+have a buffer for funny stuff coming out of port 80. we could similarly
+have other exit proxies for other protocols, like mail, to check
+delivered mail for being spam.
+
+A mixture of open and restricted exit nodes will allow the most
+flexibility for volunteers running servers. But while a large number
+of middleman nodes is useful to provide a large and robust network,
+a small number of exit nodes still simplifies traffic analysis because
+there are fewer nodes the adversary needs to monitor, and also puts a
+greater burden on the exit nodes.
+The JAP cascade model is really nice because they only need one node to
+take the heat per cascade. On the other hand, a hydra scheme could work
+better (it's still hard to watch all the clients).
+
 \SubSection{Directory Servers}
 \label{subsec:dirservers}
 
@@ -747,7 +823,7 @@ public key to identify the service, an optional initial authentication
 token (the introduction point can do prescreening, eg to block replays),
 and (encrypted to Bob's public key) the location of the meeting point,
 a meeting cookie Bob should tell the meeting point so he gets connected to
-Alice, an optional authentication token so Bob choose whether to respond,
+Alice, an optional authentication token so Bob can choose whether to respond,
 and the first half of a DH key exchange. When Bob connects to the meeting
 place and gets connected to Alice's pipe, his first cell contains the
 other half of the DH key exchange.
