@@ -57,30 +57,37 @@ which ports are specified in the configuration file. You can specify:
 
 3.2. So I can just run a full onion router and join the network?
 
-No. Users should run just an onion proxy. If you start up a full onion
-router, the rest of the routers in the system won't recognize you,
-so they will reject your handshake attempts.
+No. Users should run just an onion proxy. If you have sufficient
+bandwidth (>= 1MBit both ways) you can consider running a router,
+but just to use the network you don't need to.  Note that you won't
+be used by clients much unless you are verified properly by the
+directory administrators (see next question).
 
 3.3. How do I join the network then?
 
 If you just want to use the onion routing network, you can run a proxy
-and you're all set. If you want to run a router, you must convince
-the directory server operators (currently arma@mit.edu) that you're a
-trustworthy and reliable person. From there, the operators add you to
-the directory, which propagates out to the rest of the network. All
-nodes will know about you within a half hour.
+and you're all set. If you want to run a router, you can do so by
+enabling ORPort, which will make your router get used for some things.
+However, in order to get used for everything, you must become a "verified"
+router.  Simply convince the directory server operators (mail
+tor-ops@freehaven.net) that you're a trustworthy and reliable person.
+From there, the operators add you to the directory, which propagates out
+to the rest of the network. All nodes will know about you within a half
+hour.  Once you are verified clients will pick you as entry and exit nodes.
 
-3.4. I want to run a directory server too.
+3.4. Can I just set DirPort and be a directory server?
+
+If you are an onion router and set DirPort then you will serve the
+directory to other clients.  This takes some load off the authoritative
+dirservers.  Your node will not generate its own directory, instead
+it will provide the one it fetched from an authoritative dirserver.
 
 If you run a very reliable node, you plan to be around for a long time,
 and you want to spend some time ensuring that router operators are
-people we know and like, we may want you to run a directory server
-too. We must manually add you to the 'dirservers' file that's part of
+people we know and like, we may want you to run an authoritative directory
+server too. We must manually add you to the 'dirservers' file that's part of
 the distribution; users will only know about you when they upgrade to
-a new version. Of course, you can always just start up your router as a
-directory server too --- but users won't know to ask you for directories,
-and more importantly, you'll never learn from the real directory servers
-about recently joined routers.
+a new version.
 
 
 4. Development.
