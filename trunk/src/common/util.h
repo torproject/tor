@@ -149,10 +149,11 @@ char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate);
 
 #define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
   do {                                                          \
-    int sl_idx, sl_len=smartlist_len(sl);                       \
+    int var ## _sl_idx, var ## _sl_len=smartlist_len(sl);       \
     type var;                                                   \
-    for(sl_idx = 0; sl_idx < sl_len; ++sl_idx) {                \
-      var = smartlist_get((sl),sl_idx);                         \
+    for(var ## _sl_idx = 0; var ## _sl_idx < var ## _sl_len;    \
+        ++var ## _sl_idx) {                                     \
+      var = smartlist_get((sl),var ## _sl_idx);                 \
       do {cmd;} while(0);                                       \
     } } while (0)
 
