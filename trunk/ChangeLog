@@ -1,3 +1,49 @@
+Changes in version 0.0.6 - 2004-05-02
+  o Features:
+    - Hidden services and rendezvous points are implemented. Go to
+      http://6sxoyfb3h2nvok2d.onion/ for an index of currently available
+      hidden services. (This only works via a socks4a proxy such as
+      Privoxy, and currently it's quite slow.)
+    - We now rotate link (tls context) keys and onion keys.
+    - CREATE cells now include oaep padding, so you can tell
+      if you decrypted them correctly.
+    - Retry stream correctly when we fail to connect because of
+      exit-policy-reject (should try another) or can't-resolve-address.
+    - When we hup a dirserver and we've *removed* a server from the
+      approved-routers list, now we remove that server from the
+      in-memory directories too.
+    - Add bandwidthburst to server descriptor.
+    - Directories now say which dirserver signed them.
+    - Use a tor_assert macro that logs failed assertions too.
+    - Since we don't support truncateds much, don't bother sending them;
+      just close the circ.
+    - Fetch randomness from /dev/urandom better (not via fopen/fread)
+    - Better debugging for tls errors
+    - Set Content-Type on the directory and hidserv descriptor.
+    - Remove IVs from cipher code, since AES-ctr has none.
+  o Bugfixes:
+    - Fix an assert trigger for exit nodes that's been plaguing us since
+      the days of 0.0.2prexx (thanks weasel!)
+    - Fix a bug where we were closing tls connections intermittently.
+      It turns out openssl keeps its errors around -- so if an error
+      happens, and you don't ask about it, and then another openssl
+      operation happens and succeeds, and you ask if there was an error,
+      it tells you about the first error.
+    - Fix a bug that's been lurking since 27 may 03 (!)
+      When passing back a destroy cell, we would use the wrong circ id.
+    - Don't crash if a conn that sent a begin has suddenly lost its circuit.
+    - Some versions of openssl have an SSL_pending function that erroneously
+      returns bytes when there is a non-application record pending.
+    - Win32 fixes. Tor now compiles on win32 with no warnings/errors.
+      o We were using an array of length zero in a few places.
+      o Win32's gethostbyname can't resolve an IP to an IP.
+      o Win32's close can't close a socket.
+      o Handle windows socket errors correctly.
+  o Portability:
+    - check for <sys/limits.h> so we build on FreeBSD again, and
+      <machine/limits.h> for NetBSD.
+
+
 Changes in version 0.0.5 - 2004-03-30
   o Install torrc as torrc.sample -- we no longer clobber your
     torrc. (Woo!)
