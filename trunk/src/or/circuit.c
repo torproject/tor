@@ -60,6 +60,7 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
   circuit_t *circ;
 
   circ = tor_malloc_zero(sizeof(circuit_t));
+  circ->magic = CIRCUIT_MAGIC;
 
   circ->timestamp_created = time(NULL);
 
@@ -84,6 +85,7 @@ circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn) {
 
 void circuit_free(circuit_t *circ) {
   assert(circ);
+  assert(circ->magic == CIRCUIT_MAGIC);
   if (circ->n_crypto)
     crypto_free_cipher_env(circ->n_crypto);
   if (circ->p_crypto)
@@ -96,6 +98,7 @@ void circuit_free(circuit_t *circ) {
     tor_free(circ->build_state->chosen_exit);
   tor_free(circ->build_state);
   circuit_free_cpath(circ->cpath);
+  memset(circ, 0xAA, sizeof(circuit_t)); /* poison memory */
   free(circ);
 }
 
@@ -1217,6 +1220,8 @@ void assert_circuit_ok(const circuit_t *c)
 {
   connection_t *conn;
 
+  assert(c);
+  assert(c->magic == CIRCUIT_MAGIC);
   assert(c->n_addr);
   assert(c->n_port);
   assert(c->n_conn);
