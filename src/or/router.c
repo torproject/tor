@@ -465,9 +465,11 @@ int router_compare_to_my_exit_policy(connection_t *conn)
  */
 int router_is_me(routerinfo_t *router)
 {
+  routerinfo_t *me = router_get_my_routerinfo();
   tor_assert(router);
-  /* XXXX008 should compare identity instead? */
-  return options.Nickname && !strcasecmp(router->nickname, options.Nickname);
+  if(!me || memcmp(me->identity_digest, router->identity_digest, DIGEST_LEN))
+    return 0;
+  return 1;
 }
 
 /** Return a routerinfo for this OR, rebuilding a fresh one if
