@@ -20,6 +20,10 @@ pre1:
     - We were starting to daemonize before we opened our logs, so if
       there were any problems opening logs, we would complain to stderr,
       which wouldn't work, and then mysteriously exit.
+    - Fix a rare bug where sometimes a verified OR would connect to us
+      before he'd uploaded his descriptor, which would cause us to
+      assign conn->nickname as though he's unverified. Now we look through
+      the fingerprint list to see if he's there.
 
   o Features:
     - Clients can ask dirservers for /dir.z to get a compressed version
