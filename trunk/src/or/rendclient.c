@@ -263,8 +263,9 @@ rend_client_receive_rendezvous(circuit_t *circ, const char *request, int request
   crypt_path_t *hop;
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
 
-  if(circ->purpose != CIRCUIT_PURPOSE_C_REND_READY ||
-     !circ->build_state->pending_final_cpath) {
+  if( (circ->purpose != CIRCUIT_PURPOSE_C_REND_READY &&
+       circ->purpose != CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
+      || !circ->build_state->pending_final_cpath) {
     log_fn(LOG_WARN,"Got rendezvous2 cell from Bob, but not expecting it. Closing.");
     circuit_mark_for_close(circ);
     return -1;
