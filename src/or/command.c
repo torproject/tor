@@ -57,8 +57,6 @@ static void command_time_process_cell(cell_t *cell, connection_t *conn, int *tim
   *time += time_passed;
 }
 
-#define KEEP_TIMING_STATS 0
-
 /** Process a <b>cell</b> that was just received on <b>conn</b>. Keep internal
  * statistics about how many of each cell we've processed so far
  * this second, and the total number of microseconds it took to
