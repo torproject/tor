@@ -44,10 +44,10 @@ which reveals the downstream node.
 
 2. Connections
 
-   There are two ways to connect to an OR. The first is as an onion
-   proxy (OP), which allows the OP to authenticate the OR without
-   authenticating itself.  The second is as another OR, which allows
-   mutual authentication.
+   There are two ways to connect to an onion router (OR). The first is
+   as an onion proxy (OP), which allows the OP to authenticate the OR
+   without authenticating itself.  The second is as another OR, which
+   allows mutual authentication.
 
    Tor uses TLS for link encryption, using the cipher suite
    "TLS_DHE_RSA_WITH_AES_128_CBC_SHA".  An OR always sends a
@@ -56,7 +56,7 @@ which reveals the downstream node.
    
    All parties receiving certificates must confirm that the public
    key is as it appears in the server directory, and close the
-   connection if it does not.
+   connection if it is not.
 
    Once a TLS connection is established, the two sides send cells
    (specified below) to one another.  Cells are sent serially.  All
@@ -65,9 +65,10 @@ which reveals the downstream node.
    of TLS records should not leak information about the type or
    contents of the cells.
 
-   OR-to-OR connections are never deliberately closed.  OP-to-OR
-   connections are closed when the OP has no more circuits running
-   over a connection, and an amount of time (????) has passed.
+   OR-to-OR connections are never deliberately closed.  An OP should
+   close a connection to an OR if there are no circuits running over
+   the connection, and an amount of time (KeepalivePeriod, defaults to
+   5 minutes) has passed.
 
 3. Cell Packet format
 
