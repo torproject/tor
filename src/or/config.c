@@ -210,6 +210,112 @@ static void config_assign(or_options_t *options, struct config_line *list) {
   }
 }
 
+/* XXX are there any other specifiers we want to give so making
+ * a several-thousand-byte string is less painful? */
+const char default_dirservers_string[] =
+"router moria1 moria.mit.edu 9001 9021 9031 800000\n"
+"platform Tor 0.0.2pre8 on Linux moria.mit.edu 2.4.18-27.7.xbigmem #1 SMP Fri Mar 14 05:08:50 EST 2003 i686\n"
+"published 2003-09-30 23:14:08\n"
+"onion-key\n"
+"-----BEGIN RSA PUBLIC KEY-----\n"
+"MIGJAoGBANoIvHieyHUTzIacbnWOnyTyzGrLOdXqbcjz2GGMxyHEd5K1bO1ZBNHP\n"
+"9i5qLQpN5viFk2K2rEGuG8tFgDEzSWZEtBqv3NVfUdiumdERWMBwlaQ0MVK4C+jf\n"
+"y5gZ8KI3o9ZictgPS1AQF+Kk932/vIHTuRIUKb4ILTnQilNvID0NAgMBAAE=\n"
+"-----END RSA PUBLIC KEY-----\n"
+"link-key\n"
+"-----BEGIN RSA PUBLIC KEY-----\n"
+"MIGJAoGBAPt97bGDd9siVjPd7Xuq2s+amMEOLIj9961aSdP6/OT+BS1Q4TX2dNOX\n"
+"ZNAl63Z2fQISsR81+nfoqRLYCKxhajsD7LRvRTaRwUrWemVqFevmZ4nJrHw6FoU3\n"
+"xNUIHRMA8X2DZ+l5qgnWZb7JU50ohhX5OpMSyysXnik51J8hD5mBAgMBAAE=\n"
+"-----END RSA PUBLIC KEY-----\n"
+"signing-key\n"
+"-----BEGIN RSA PUBLIC KEY-----\n"
+"MIGJAoGBAMHa0ZC/jo2Q2DrwKYF/6ZbmZ27PFYG91u4gUzzmZ/VXLpZ8wNzEV3oW\n"
+"nt+I61048fBiC1frT1/DZ351n2bLSk9zJbB6jyGZJn0380FPRX3+cXyXS0Gq8Ril\n"
+"xkhMQf5XuNFUb8UmYPSOH4WErjvYjKvU+gfjbK/82Jo9SuHpYz+BAgMBAAE=\n"
+"-----END RSA PUBLIC KEY-----\n"
+"router-signature\n"
+"-----BEGIN SIGNATURE-----\n"
+"Td3zb5d6uxO8oYGlmEHGzIdLuVm9s1Afqtm29JvRnnviQ36j6FZPlzPUaMVOUayn\n"
+"Wtz/CbaMj7mHSufpQ68wCLb1lQrtQkn7MkAWcQPIvZjpYh3UrcWrpfm7f/D+nKeN\n"
+"Z7UovF36xhCacjATNHhQNHHZHH6yONwN+Rf/N4kyPHw=\n"
+"-----END SIGNATURE-----\n"
+"\n"
+"router moria2 moria.mit.edu 9002 9022 9032 800000\n"
+"platform Tor 0.0.2pre8 on Linux moria.mit.edu 2.4.18-27.7.xbigmem #1 SMP Fri Mar 14 05:08:50 EST 2003 i686\n"
+"published 2003-09-30 23:14:05\n"
+"onion-key\n"
+"-----BEGIN RSA PUBLIC KEY-----\n"
+"MIGJAoGBAM4Cc/npgYC54XrYLC+grVxJp7PDmNO2DRRJOxKttBBtvLpnR1UaueTi\n"
+"kyknT5kmlx+ihgZF/jmye//2dDUp2+kK/kSkpRV4xnDLXZmed+sNSQxqmm9TtZQ9\n"
+"/hjpxhp5J9HmUTYhntBs+4E4CUKokmrI6oRLoln4SA39AX9QLPcnAgMBAAE=\n"
+"-----END RSA PUBLIC KEY-----\n"
+"link-key\n"
+"-----BEGIN RSA PUBLIC KEY-----\n"
+"MIGJAoGBAN7JVeCIJ7+0ZJew5ScOU58rTUqjGt1Z1Rkursc7WabEb8jno45VZwIs\n"
+"dkjnl31i36KHyyS7kQdHgkvG5EiyZiRipFAcoTaYv3Gvf1No9cXL6IhT3y/37dJ/\n"
+"kFPEMb/G2wdkJCC+D8fMwHBwMuqAg0JGuhoBOz0ArCgK3fq0BLilAgMBAAE=\n"
+"-----END RSA PUBLIC KEY-----\n"
+"signing-key\n"
+"-----BEGIN RSA PUBLIC KEY-----\n"
+"MIGJAoGBAOcrht/y5rkaahfX7sMe2qnpqoPibsjTSJaDvsUtaNP/Bq0MgNDGOR48\n"
+"rtwfqTRff275Edkp/UYw3G3vSgKCJr76/bqOHCmkiZrnPV1zxNfrK18gNw2Cxre0\n"
+"nTA+fD8JQqpPtb8b0SnG9kwy75eS//sRu7TErie2PzGMxrf9LH0LAgMBAAE=\n"
+"-----END RSA PUBLIC KEY-----\n"
+"router-signature\n"
+"-----BEGIN SIGNATURE-----\n"
+"X10a9Oc0LKNYKLDVzjRTIVT3NnE0y+xncllDDHSJSXR97fz3MBHGDqhy0Vgha/fe\n"
+"H/Y2E59oG01lYQ73j3JN+ibsCMtkzJDx2agCpV0LmakAD9ekHrYDWm/S41Ru6kf+\n"
+"PsyHpXlh7cZuGEX4U1pblSDFrQZ9L1vTkpfW+COzEvI=\n"
+"-----END SIGNATURE-----\n"
+"\n"
+"router moria3 moria.mit.edu 9003 9023 9033 800000\n"
+"platform Tor 0.0.2pre8 on Linux moria.mit.edu 2.4.18-27.7.xbigmem #1 SMP Fri Mar 14 05:08:50 EST 2003 i686\n"
+"published 2003-09-30 23:14:07\n"
+"onion-key\n"
+"-----BEGIN RSA PUBLIC KEY-----\n"
+"MIGJAoGBANS6J/Er9fYo03fjUUVesc7We9Z6xIevyDJH39pYS4NUlcr5ExYgSVFJ\n"
+"95aLCNx1x8Rf5YtiBKYuT3plBO/+rfuX+0iAGNkz/y3SlJVGz6aeptU3wN8CkvCL\n"
+"zATEcnl4QSPhHX0wFB9A3t7wZ+Bat1PTI029lax/BkoS9JG5onHPAgMBAAE=\n"
+"-----END RSA PUBLIC KEY-----\n"
+"link-key\n"
+"-----BEGIN RSA PUBLIC KEY-----\n"
+"MIGJAoGBAKUMY8p+7LBu7dEJnOR9HqbfcD6c4/f9GqJt3o29uu4XJPD8z2XGVBik\n"
+"pZBLijhYS6U7GFg0NLR4zBlsLyB8TxHeaz5KJidJjy+BfC01jz1xwVTYDlmGVpc1\n"
+"0mw0Ag0ND6aOQKKhelxhTI3Bf0R9olEXuSUKEWx3EMIz2qhLd9oDAgMBAAE=\n"
+"-----END RSA PUBLIC KEY-----\n"
+"signing-key\n"
+"-----BEGIN RSA PUBLIC KEY-----\n"
+"MIGJAoGBAMqgq83cwzSid2LSvzsn2rvkD8U0tWvqF6PuQAsKP3QHFqtBO+66pnIm\n"
+"CbiY2e6o01tmR47t557LuUCodEc8Blggxjg3ZEzvP42hsGB9LwQbcrU7grPRk0G0\n"
+"IltsOF9TZ+66gCeU7LxExLdAMqT2Tx6VT4IREPJMeNxSiceEjbABAgMBAAE=\n"
+"-----END RSA PUBLIC KEY-----\n"
+"router-signature\n"
+"-----BEGIN SIGNATURE-----\n"
+"GWpK2Ux/UwDaNUHwq+Xn7denyYFGS8SIWwqiMgHyUzc5wj1t2gWubJ/rMyGL59U3\n"
+"o6L/9qV34aa5UyNNBHXwYkxy7ixgPURaRYpAbkQKPU3ew8BgNXG/MNLYllIUkrbb\n"
+"h6G5u8RGbto+Nby/OjIh9TqdgK/B1sOdwAHI/IXiDoY=\n"
+"-----END SIGNATURE-----\n"
+;
+
+/* Call this function when they're using the default torrc but
+ * we can't find it. For now, just hard-code what comes in the
+ * default torrc.
+ */
+static int config_assign_default(or_options_t *options) {
+
+  /* set them up as a client only */
+  options->SocksPort = 9050;
+
+  /* plus give them a dirservers file */
+  if(router_set_routerlist_from_string(default_dirservers_string) < 0) {
+    log_fn(LOG_WARN,"Bug: the default dirservers internal string is corrupt.");
+    return -1;
+  }
+
+  return 0;
+}
+
 /* prints the usage of tor. */
 void print_usage(void) {
   printf("tor -f <torrc> [args]\n"
@@ -289,6 +395,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   static int backup_argc;
   char *previous_pidfile = NULL;
   int previous_runasdaemon = 0;
+  int using_default_torrc;
 
   if(first_load) { /* first time we're called. save commandline args */
     backup_argv = argv;
@@ -318,22 +425,30 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   }
   if(i < argc-1) { /* we found one */
     fname = argv[i+1];
+    using_default_torrc = 0;
   } else { /* didn't find one, try CONFDIR */
     fname = CONFDIR "/torrc";
+    using_default_torrc = 1;
   }
   log(LOG_DEBUG,"Opening config file '%s'",fname);
 
   cf = config_open(fname);
   if(!cf) {
-    log(LOG_WARN, "Unable to open configuration file '%s'.",fname);
-    return -1;
+    if(using_default_torrc == 1) {
+      log(LOG_WARN, "Configuration file '%s' not found. Using defaults.",fname);
+      if(config_assign_default(options) < 0)
+        return -1;
+    } else {
+      log(LOG_WARN, "Unable to open configuration file '%s'.",fname);
+      return -1;
+    }
+  } else { /* it opened successfully. use it. */
+    cl = config_get_lines(cf);
+    if(!cl) return -1;
+    config_assign(options,cl);
+    config_free_lines(cl);
+    config_close(cf);
   }
-
-  cl = config_get_lines(cf);
-  if(!cl) return -1;
-  config_assign(options,cl);
-  config_free_lines(cl);
-  config_close(cf);
 
 /* go through command-line variables too */
   cl = config_get_commandlines(argc,argv);
@@ -368,11 +483,6 @@ int getconfig(int argc, char **argv, or_options_t *options) {
       log(LOG_WARN,"LogLevel must be one of err|warn|info|debug.");
       result = -1;
     }
-  }
-
-  if(options->RouterFile == NULL) {
-    log(LOG_WARN,"RouterFile option required, but not found.");
-    result = -1;
   }
 
   if(options->ORPort < 0) {

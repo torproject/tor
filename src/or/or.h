@@ -810,6 +810,7 @@ void router_get_routerlist(routerlist_t **prouterlist);
 void routerinfo_free(routerinfo_t *router);
 void router_mark_as_down(char *nickname);
 int router_set_routerlist_from_file(char *routerfile);
+int router_set_routerlist_from_string(const char *s);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_router_hash(const char *s, char *digest);
 int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey);
