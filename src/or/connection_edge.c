@@ -152,6 +152,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
       return connection_exit_begin_conn(cell, circ);
     case RELAY_COMMAND_DATA:
+      ++stats_n_data_cells_received;
       if((edge_type == EDGE_AP && --layer_hint->deliver_window < 0) ||
          (edge_type == EDGE_EXIT && --circ->deliver_window < 0)) {
         log_fn(LOG_WARNING,"(relay data) circ deliver_window below 0. Killing.");
@@ -173,6 +174,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
 
 //      printf("New text for buf (%d bytes): '%s'", cell->length - RELAY_HEADER_SIZE, cell->payload + RELAY_HEADER_SIZE);
+      stats_n_data_bytes_received += (cell->length - RELAY_HEADER_SIZE);
       if(connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
                                  cell->length - RELAY_HEADER_SIZE, conn) < 0) {
 /*ENDCLOSE*/    conn->marked_for_close = 1;
@@ -312,6 +314,11 @@ int connection_edge_finished_flushing(connection_t *conn) {
   return 0;
 }
 
+uint64_t stats_n_data_cells_packaged = 0;
+uint64_t stats_n_data_bytes_packaged = 0;
+uint64_t stats_n_data_cells_received = 0;
+uint64_t stats_n_data_bytes_received = 0;
+
 int connection_package_raw_inbuf(connection_t *conn) {
   int amount_to_process;
   cell_t cell;
@@ -350,6 +357,8 @@ repeat_connection_package_raw_inbuf:
   } else {
     cell.length = amount_to_process;
   }
+  stats_n_data_bytes_packaged += cell.length;
+  stats_n_data_cells_packaged += 1;
  
   connection_fetch_from_buf(cell.payload+RELAY_HEADER_SIZE, cell.length, conn);
  

@@ -41,9 +41,9 @@ Short-term:
         o directory includes all routers, up and down
         o add "up" line to directory, listing nicknames
 ARMA    . find an application that uses half-open connections: openssh
-NICK    - instruments ORs to report stats
-          - average cell fullness
-          - average bandwidth used
+        o instruments ORs to report stats
+          o average cell fullness
+          o average bandwidth used
         . integrate rep_ok functions, see what breaks
 ARMA    - configure log files. separate log file, separate severities.
 ARMA    - what assumptions break if we fclose(0) when we daemonize?
