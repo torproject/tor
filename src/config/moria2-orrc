@@ -6,7 +6,7 @@ RouterFile ../config/routers.or
 # Private key
 PrivateKeyFile moria2-private
 
-CoinWeight 0.0
+CoinWeight 0.01
 
 ORPort 9002
 OPPort 9012

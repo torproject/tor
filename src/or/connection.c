@@ -180,6 +180,8 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
   }
   log(LOG_DEBUG,"Connection accepted on socket %d.",news);
 
+  fcntl(news, F_SETFL, O_NONBLOCK); /* set s to non-blocking */
+
   newconn = connection_new(new_type);
   newconn->s = news;
 
