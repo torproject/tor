@@ -136,7 +136,7 @@ static config_var_t config_vars[] = {
   VAR("LogLevel",            LINELIST_S, OldLogOptions,      NULL),
   VAR("LogFile",             LINELIST_S, OldLogOptions,      NULL),
   OBSOLETE("LinkPadding"),
-  VAR("MaxConn",             UINT,     MaxConn,              "1024"),
+  VAR("MaxConn",             UINT,     _MaxConn,             "1024"),
   VAR("MaxOnionsPending",    UINT,     MaxOnionsPending,     "100"),
   VAR("MonthlyAccountingStart",UINT,   _MonthlyAccountingStart,"0"),
   VAR("AccountingMaxKB",     UINT,     _AccountingMaxKB,     "0"),
@@ -287,24 +287,23 @@ options_act(void) {
   close_temp_logs();
   add_callback_log(LOG_NOTICE, LOG_ERR, control_event_logmsg);
 
-  if (options->MaxConn < 1) {
-    log(LOG_WARN, "MaxConn option must be a non-zero positive integer.");
-    return -1;
+  if (options->_MaxConn < 1) {
+    options->_MaxConn = 1024;
   }
 
-  if (set_max_file_descriptors(&options->MaxConn) < 0)
+  if (set_max_file_descriptors(&options->_MaxConn) < 0)
     return -1;
 
 #ifdef USE_FAKE_POLL
-  if (options->MaxConn > 1024) {
+  if (options->_MaxConn > 1024) {
     log(LOG_INFO, "Systems without a working poll() can't set MaxConn higher than 1024 in Tor 0.0.9.x. Capping.");
-    options->MaxConn = 1024;
+    options->_MaxConn = 1024;
   }
 #endif
 
-  if (options->MaxConn > MAXCONNECTIONS) {
-    log(LOG_INFO, "MaxConn option must be at most %d. Capping it.", MAXCONNECTIONS);
-    options->MaxConn = MAXCONNECTIONS;
+  if (options->_MaxConn > MAXCONNECTIONS) {
+    log(LOG_INFO, "MaxConn must be at most %d. Capping it.", MAXCONNECTIONS);
+    options->_MaxConn = MAXCONNECTIONS;
   }
 
   {

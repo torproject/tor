@@ -368,7 +368,7 @@ int set_max_file_descriptors(unsigned int *maxconn) {
     return -1;
   }
   if (rlim.rlim_max < 1024) {
-    log_fn(LOG_WARN,"We need %u file descriptors available, and we're limited to %lu. Please change your ulimit.", 1024, (unsigned long int)rlim.rlim_max);
+    log_fn(LOG_WARN,"We need %u file descriptors available, and we're limited to %lu. Please change your ulimit -n.", 1024, (unsigned long int)rlim.rlim_max);
     return -1;
   }
   if (rlim.rlim_max > rlim.rlim_cur) {

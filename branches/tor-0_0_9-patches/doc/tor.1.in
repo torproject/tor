@@ -69,10 +69,6 @@ rather than connecting directly to any directory servers.
 To keep firewalls from expiring connections, send a padding keepalive
 cell on open connections every NUM seconds. (Default: 5 minutes.)
 .TP
-\fBMaxConn \fR\fINUM\fP
-Maximum number of simultaneous sockets allowed.  You probably don't need
-to adjust this. (Default: 1024)
-.TP
 \fBOutboundBindAddress \fR\fIIP\fP
 Make all outbound connections originate from the IP address specified.  This
 is only useful when you have multiple network interfaces, and you want all
