@@ -703,8 +703,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 
       stats_n_data_bytes_received += rh.length;
       if(conn->type == CONN_TYPE_AP) {
-        log_fn(LOG_DEBUG,"%d: stream size now %d.", conn->s, (int)conn->stream_size);
         conn->stream_size += rh.length;
+        log_fn(LOG_DEBUG,"%d: stream size now %d.", conn->s, (int)conn->stream_size);
       }
       connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
                               rh.length, conn);
