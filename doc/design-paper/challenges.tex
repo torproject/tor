@@ -730,21 +730,17 @@ This is a loss for both Tor
 and Wikipedia: we don't want to compete for (or divvy up) the
 NAT-protected entities of the world.
 
-Worse, many IP blacklists are coarse-grained. Some
-ignore Tor's exit policies, preferring to punish
+Worse, many IP blacklists are coarse-grained: they ignore Tor's exit
+policies, partly because it's easier to implement and partly
+so they can punish
 all Tor nodes. One IP blacklist even bans
 every class C network that contains a Tor node, and recommends banning SMTP
 from these networks even though Tor does not allow SMTP at all.  This
-coarse-grained approach is typically a strategic decision to discourage the
+strategic decision aims to discourage the
 operation of anything resembling an open proxy by encouraging its neighbors
-to shut it down in order to get unblocked themselves.
-%[****Since this is stupid and we oppose it, shouldn't we name names here -pfs]
-%[XXX also, they're making \emph{middleman nodes leave} because they're caught
-% up in the standoff!]
-%[XXX Mention: it's not dumb, it's strategic!]
-%[XXX Mention: for some servops, any blacklist is a blacklist too many,
-%  because it is risky.  (Guy lives in apt _building_ with one IP.)]
-%XXX roger should add more
+to shut it down in order to get unblocked themselves. This pressure even
+affects Tor nodes running in middleman mode (disallowing all exits) when
+those nodes are blacklisted too.
 
 Problems of abuse occur mainly with services such as IRC networks and
 Wikipedia, which rely on IP blocking to ban abusive users.  While at first
