@@ -82,21 +82,6 @@ for others to help in addressing these issues.  We believe that the issues
 described here will be of general interest to projects attempting to build
 and deploy practical, useable anonymity networks in the wild.
 
-% ----------------
-
-Tor research and development has been funded by the U.S.~Navy and DARPA
-for use in securing government
-communications, and by the Electronic Frontier Foundation, for use
-in maintaining civil liberties for ordinary citizens online. The Tor
-protocol is one of the leading choices
-to be the anonymizing layer in the European Union's PRIME directive to
-help maintain privacy in Europe. The University of Dresden in Germany
-has integrated an independent implementation of the Tor protocol into
-their popular Java Anon Proxy anonymizing client. This wide variety of
-interests helps maintain both the stability and the security of the
-network.
-
-
 %While the Tor design paper~\cite{tor-design} gives an overall view its
 %design and goals,
 %this paper describes the policy and technical issues that Tor faces as
@@ -178,6 +163,19 @@ this point the network is sufficiently diverse for further development
 and testing; but of course we always encourage and welcome new servers
 to join the network.
 
+Tor research and development has been funded by the U.S.~Navy and DARPA
+for use in securing government
+communications, and by the Electronic Frontier Foundation, for use
+in maintaining civil liberties for ordinary citizens online. The Tor
+protocol is one of the leading choices
+to be the anonymizing layer in the European Union's PRIME directive to
+help maintain privacy in Europe. The University of Dresden in Germany
+has integrated an independent implementation of the Tor protocol into
+their popular Java Anon Proxy anonymizing client.
+% This wide variety of
+%interests helps maintain both the stability and the security of the
+%network.
+
 \subsubsection{Threat models and design philosophy}
 The ideal Tor network would be practical, useful and and anonymous. When
 trade-offs arise between these properties, Tor's research strategy has been
@@ -192,12 +190,13 @@ latency).  Such research does not typically abandon aspirations towards
 deployability or utility, but instead tries to maximize deployability and
 utility subject to a certain degree of inherent anonymity (inherent because
 usability and practicality affect usage which affects the actual anonymity
-provided by the network \cite{back01,econymics}). We believe that these
-approaches can be promising and useful, but that by focusing on deploying a
-usable system in the wild, Tor helps us experiment with the actual parameters
-of what makes a system ``practical'' for volunteer operators and ``useful''
-for home users, and helps illuminate undernoticed issues which any deployed
-volunteer anonymity network will need to address.}
+provided by the network \cite{back01,econymics}).}
+%{We believe that these
+%approaches can be promising and useful, but that by focusing on deploying a
+%usable system in the wild, Tor helps us experiment with the actual parameters
+%of what makes a system ``practical'' for volunteer operators and ``useful''
+%for home users, and helps illuminate undernoticed issues which any deployed
+%volunteer anonymity network will need to address.}
 Because of this strategy, Tor has a weaker threat model than many anonymity
 designs in the literature.   In particular, because we
 support interactive communications without impractically expensive padding,
@@ -251,34 +250,37 @@ complicating factors:
 
 % XXXX the below paragraph should probably move later, and merge with
 % other discussions of attack-tor-oak5.
-In practice Tor's threat model is based entirely on the goal of
-dispersal and diversity. Murdoch and Danezis describe an attack
-\cite{attack-tor-oak05} that lets an attacker determine the nodes used
-in a circuit; yet s/he cannot identify the initiator or responder,
-e.g., client or web server, through this attack. So the endpoints
-remain secure, which is the goal. It is conceivable that an
-adversary could attack or set up observation of all connections
-to an arbitrary Tor node in only a few minutes.  If such an adversary
-were to exist, s/he could use this probing to remotely identify a node
-for further attack.  Of more likely immediate practical concern
-an adversary with active access to the responder traffic
-wants to keep a circuit alive long enough to attack an identified
-node. Thus it is important to prevent the responding end of the circuit
-from keeping it open indefinitely. 
-Also, someone could identify nodes in this way and if in their
-jurisdiction, immediately get a subpoena (if they even need one)
-telling the node operator(s) that she must retain all the active
-circuit data she now has.
-Further, the enclave model, which had previously looked to be the most
-generally secure, seems particularly threatened by this attack, since
-it identifies endpoints when they're also nodes in the Tor network:
-see Section~\ref{subsec:helper-nodes} for discussion of some ways to
-address this issue.
 
 See \ref{subsec:routing-zones} for discussion of larger
 adversaries and our dispersal goals.
 
+%Murdoch and Danezis describe an attack
+%\cite{attack-tor-oak05} that lets an attacker determine the nodes used
+%in a circuit; yet s/he cannot identify the initiator or responder,
+%e.g., client or web server, through this attack. So the endpoints
+%remain secure, which is the goal. It is conceivable that an
+%adversary could attack or set up observation of all connections
+%to an arbitrary Tor node in only a few minutes.  If such an adversary
+%were to exist, s/he could use this probing to remotely identify a node
+%for further attack.  Of more likely immediate practical concern
+%an adversary with active access to the responder traffic
+%wants to keep a circuit alive long enough to attack an identified
+%node. Thus it is important to prevent the responding end of the circuit
+%from keeping it open indefinitely. 
+%Also, someone could identify nodes in this way and if in their
+%jurisdiction, immediately get a subpoena (if they even need one)
+%telling the node operator(s) that she must retain all the active
+%circuit data she now has.
+%Further, the enclave model, which had previously looked to be the most
+%generally secure, seems particularly threatened by this attack, since
+%it identifies endpoints when they're also nodes in the Tor network:
+%see Section~\ref{subsec:helper-nodes} for discussion of some ways to
+%address this issue.
+
+
 \subsubsection{Distributed trust}
+In practice Tor's threat model is based entirely on the goal of
+dispersal and diversity. 
 Tor's defense lies in having a diverse enough set of servers
 to prevent most real-world
 adversaries from being in the right places to attack users.
