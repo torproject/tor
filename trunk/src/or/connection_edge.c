@@ -758,7 +758,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   *colon = 0;
 
   if(!atoi(colon+1)) { /* bad port */
-    log_fn(LOG_WARN,"relay begin cell has invalid port. Dropping.");
+    log_fn(LOG_WARN,"relay begin cell has invalid port '%s'. Dropping.", colon+1);
     return 0;
   }
 
