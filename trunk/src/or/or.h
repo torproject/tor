@@ -158,8 +158,8 @@
 #define CELL_DESTROY 3
 #define CELL_SENDME 4
 
-#define CELL_PAYLOAD_SIZE 120
-#define CELL_NETWORK_SIZE 128
+#define CELL_PAYLOAD_SIZE 248
+#define CELL_NETWORK_SIZE 256
 
 /* enumeration of types which option values can take */
 #define CONFIG_TYPE_STRING  0
@@ -188,7 +188,7 @@ typedef struct {
   unsigned char command;
   unsigned char length; /* of payload if data cell, else value of sendme */
   uint32_t seq; /* sequence number */
-  unsigned char payload[120];
+  unsigned char payload[CELL_PAYLOAD_SIZE];
 } cell_t;
 
 #define SOCKS4_REQUEST_GRANTED          90
