@@ -20,12 +20,10 @@ extern circuit_t *global_circuitlist;
 
 static int
 circuit_deliver_create_cell(circuit_t *circ, char *payload);
-static cpath_build_state_t *
-onion_new_cpath_build_state(uint8_t purpose, const char *exit_digest);
-static int
-onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
-                   *state, routerinfo_t **router_out);
-static int decide_circ_id_type(char *local_nick, char *remote_nick);
+static cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
+                                                   const char *exit_digest);
+static int onion_extend_cpath(crypt_path_t **head_ptr,
+                       cpath_build_state_t *state, routerinfo_t **router_out);
 static int count_acceptable_routers(smartlist_t *routers);
 
 /** Iterate over values of circ_id, starting from conn-\>next_circ_id,
@@ -342,7 +340,6 @@ void circuit_n_conn_done(connection_t *or_conn, int success) {
 
 static int
 circuit_deliver_create_cell(circuit_t *circ, char *payload) {
-  int circ_id_type;
   cell_t cell;
 
   tor_assert(circ);
