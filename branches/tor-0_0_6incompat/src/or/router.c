@@ -475,9 +475,10 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 
   /* XXXX eventually, don't include link key */
   result = snprintf(s, maxlen,
-                    "router %s %s %d %d %d %d\n"
+                    "router %s %s %d %d %d\n"
                     "platform %s\n"
                     "published %s\n"
+                    "bandwidth %d %d\n"
                     "onion-key\n%s"
                     "signing-key\n%s",
     router->nickname,
@@ -485,10 +486,10 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     router->or_port,
     router->socks_port,
     router->dir_port,
-    (int) router->bandwidthrate,
-/* XXXBC also write bandwidthburst */
     router->platform,
     published,
+    (int) router->bandwidthrate,
+    (int) router->bandwidthburst,
     onion_pkey, identity_pkey);
 
   free(onion_pkey);

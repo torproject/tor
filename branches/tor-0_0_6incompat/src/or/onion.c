@@ -622,7 +622,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
 
   /* set meeting point, meeting cookie, etc here. Leave zero for now. */
   if (crypto_pk_public_hybrid_encrypt(dest_router_key, challenge,
-                                  ONIONSKIN_CHALLENGE_LEN-CIPHER_KEY_LEN,
+                                      DH_KEY_LEN,
                                   onion_skin_out, PK_PKCS1_OAEP_PADDING, 1)<0)
     goto err;
 
