@@ -103,6 +103,8 @@ static struct cached_resolve *newest_cached_resolve = NULL;
  * from the cache. */
 static void purge_expired_resolves(uint32_t now) {
   struct cached_resolve *resolve;
+  struct pending_connection_t *pend;
+  connection_t *pendconn;
 
   /* this is fast because the linked list
    * oldest_cached_resolve is ordered by when they came in.
@@ -112,9 +114,21 @@ static void purge_expired_resolves(uint32_t now) {
     log(LOG_DEBUG,"Forgetting old cached resolve (expires %lu)", (unsigned long)resolve->expire);
     if(resolve->state == CACHE_STATE_PENDING) {
       log_fn(LOG_WARN,"Expiring a dns resolve that's still pending. Forgot to cull it?");
-      /* XXX if resolve->pending_connections is used, then we're probably
-       * introducing bugs by closing resolve without notifying those streams.
-       */
+    }
+    if (resolve->pending_connections) {
+      log_fn(LOG_WARN, "Closing pending connections on expiring DNS resolve!");
+      while (resolve->pending_connections) {
+        pend = resolve->pending_connections;
+        resolve->pending_connections = pend->next;
+        /* Connections should only be pending if they have no socket. */
+        tor_assert(pend->conn->s == -1);
+        pendconn = pend->conn;
+        connection_edge_end(pendconn, END_STREAM_REASON_MISC,
+                            pendconn->cpath_layer);
+        connection_mark_for_close(pendconn);
+        connection_free(pendconn);
+        tor_free(pend);
+      }
     }
     oldest_cached_resolve = resolve->next;
     if(!oldest_cached_resolve) /* if there are no more, */
@@ -141,6 +155,7 @@ int dns_resolve(connection_t *exitconn) {
   struct in_addr in;
   uint32_t now = time(NULL);
   assert_connection_ok(exitconn, 0);
+  tor_assert(exitconn->s == -1);
 
   /* first check if exitconn->address is an IP. If so, we already
    * know the answer. */
@@ -213,6 +228,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
   unsigned char len;
 
   tor_assert(exitconn->state == EXIT_CONN_STATE_RESOLVING);
+  tor_assert(exitconn->s == -1);
 
   spawn_enough_dnsworkers(); /* respawn here, to be sure there are enough */
 
@@ -309,6 +325,8 @@ void assert_all_pending_dns_resolves_ok(void) {
         pend;
         pend = pend->next) {
       assert_connection_ok(pend->conn, 0);
+      tor_assert(pend->conn->s == -1);
+      tor_assert(!connection_in_array(pend->conn));
     }
   }
 }
@@ -343,10 +361,12 @@ void dns_cancel_pending_resolve(char *address) {
     pend->conn->state = EXIT_CONN_STATE_RESOLVEFAILED;
     pendconn = pend->conn; /* don't pass complex things to the
                               connection_mark_for_close macro */
+    tor_assert(pendconn->s == -1);
     if(!pendconn->marked_for_close) {
       connection_edge_end(pendconn, END_STREAM_REASON_MISC, pendconn->cpath_layer);
       connection_mark_for_close(pendconn);
     }
+    connection_free(pendconn);
     resolve->pending_connections = pend->next;
     tor_free(pend);
   }
@@ -429,7 +449,6 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
     pend = resolve->pending_connections;
     assert_connection_ok(pend->conn,time(NULL));
     pend->conn->addr = resolve->addr;
-
 
     if(resolve->state == CACHE_STATE_FAILED) {
       pendconn = pend->conn; /* don't pass complex things to the

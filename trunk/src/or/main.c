@@ -127,6 +127,16 @@ int connection_remove(connection_t *conn) {
   return 0;
 }
 
+/** Return true iff conn is in the current poll array. */
+int connection_in_array(connection_t *conn) {
+  int i;
+  for (i=0; i<nfds; ++i) {
+    if (conn==connection_array[i])
+      return 1;
+  }
+  return 0;
+}
+
 /** Set <b>*array</b> to an array of all connections, and <b>*n</b>
  * to the length of the array. <b>*array</b> and <b>*n</b> must not
  * be modified.
