@@ -184,15 +184,24 @@ send_control_event(uint16_t event, uint16_t len, const char *body)
 {
   connection_t **conns;
   int n_conns, i;
+  size_t buflen;
+  char *buf;
+
+  buflen = len + 2;
+  buf = tor_malloc_zero(buflen);
+  set_uint16(buf, htons(event));
+  memcpy(buf+2, body, len);
 
   get_connection_array(&conns, &n_conns);
   for (i = 0; i < n_conns; ++i) {
     if (conns[i]->type == CONN_TYPE_CONTROL &&
         conns[i]->state == CONTROL_CONN_STATE_OPEN &&
         conns[i]->event_mask & (1<<event)) {
-      send_control_message(conns[i], CONTROL_CMD_EVENT, len, body);
+      send_control_message(conns[i], CONTROL_CMD_EVENT, (uint16_t)(buflen), buf);
     }
   }
+
+  tor_free(buf); 
 }
 
 /** Called when we receive a SETCONF message: parse the body and try
