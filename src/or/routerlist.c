@@ -191,6 +191,32 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
   return dirserver;
 }
 
+void add_nickname_list_to_smartlist(smartlist_t *sl, char *list) {
+  char *start,*end;
+  char nick[MAX_NICKNAME_LEN];
+  routerinfo_t *router;
+
+  while(isspace((int)*list) || *list==',') list++;
+
+  start = list;
+  while(*start) {
+    end=start; while(*end && !isspace((int)*end) && *end != ',') end++;
+    memcpy(nick,start,end-start);
+    nick[end-start] = 0; /* null terminate it */
+    router = router_get_by_nickname(nick);
+    if (router) {
+      if (router->is_running)
+        smartlist_add(sl,router);
+      else
+        log_fn(LOG_INFO,"Nickname list includes '%s' which is known but down.",nick);
+    } else
+      log_fn(has_fetched_directory ? LOG_WARN : LOG_INFO,
+             "Nickname list includes '%s' which isn't a known router.",nick);
+    while(isspace((int)*end) || *end==',') end++;
+    start = end;
+  }
+}
+
 void router_add_running_routers_to_smartlist(smartlist_t *sl) {
   routerinfo_t *router;
   int i;
@@ -205,6 +231,33 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
         connection_twin_get_by_addr_port(router->addr, router->or_port) ))
       smartlist_add(sl, router);
   }
+}
+
+routerinfo_t *router_choose_random_node(routerlist_t *dir, char *preferred, char *excluded)
+{
+  smartlist_t *sl, *excludednodes;
+  routerinfo_t *choice;
+
+  excludednodes = smartlist_create();
+  add_nickname_list_to_smartlist(excludednodes,excluded);
+
+  /* try the nodes in RendNodes first */
+  sl = smartlist_create();
+  add_nickname_list_to_smartlist(sl,preferred);
+  smartlist_subtract(sl,excludednodes);
+  choice = smartlist_choose(sl);
+  smartlist_free(sl);
+  if(!choice) {
+    sl = smartlist_create();
+    router_add_running_routers_to_smartlist(sl);
+    smartlist_subtract(sl,excludednodes);
+    choice = smartlist_choose(sl);
+    smartlist_free(sl);
+  }
+  smartlist_free(excludednodes);
+  if(!choice)
+    log_fn(LOG_WARN,"No available nodes when trying to choose node. Failing.");
+  return choice;
 }
 
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {

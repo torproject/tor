@@ -170,10 +170,13 @@
 #define AP_CONN_STATE_OPEN 8
 #define _AP_CONN_STATE_MAX 8
 
+/* only used if state==CIRCUIT_WAIT */
 #define _AP_PURPOSE_MIN 1
 #define AP_PURPOSE_GENERAL 1
-#define AP_PURPOSE_
-#define _AP_PURPOSE_MAX 1
+#define AP_PURPOSE_RENDDESC_WAIT 2
+#define AP_PURPOSE_RENDPOINT_WAIT 3
+#define AP_PURPOSE_INTROPOINT_WAIT 4
+#define _AP_PURPOSE_MAX 3
 
 #define _DIR_CONN_STATE_MIN 1
 #define DIR_CONN_STATE_CONNECTING 1
@@ -691,7 +694,7 @@ int _circuit_mark_for_close(circuit_t *circ);
 circuit_t *circuit_get_by_circ_id_conn(uint16_t circ_id, connection_t *conn);
 circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest(connection_t *conn,
-                              int must_be_open, int must_be_clean);
+                              int must_be_open, uint8_t conn_purpose);
 circuit_t *circuit_get_next_by_service_and_purpose(circuit_t *circuit,
                                              const char *servid, int purpose);
 circuit_t *circuit_get_rendezvous(const char *cookie);
@@ -972,6 +975,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 /********************************* routerlist.c ***************************/
 
 routerinfo_t *router_pick_directory_server(void);
+routerinfo_t *router_choose_random_node(routerlist_t *dir, char *preferred, char *excluded);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk);
 routerinfo_t *router_get_by_nickname(char *nickname);
@@ -1016,9 +1020,14 @@ void rep_hist_note_connect_succeeded(const char* nickname, time_t when);
 void rep_hist_note_disconnect(const char* nickname, time_t when);
 void rep_hist_note_connection_died(const char* nickname, time_t when);
 void rep_hist_note_extend_succeeded(const char *from_name,
-				    const char *to_name);
+                                    const char *to_name);
 void rep_hist_note_extend_failed(const char *from_name, const char *to_name);
 void rep_hist_dump_stats(time_t now, int severity);
+
+/********************************* rendclient.c ***************************/
+
+void rend_client_desc_fetched(char *query);
+void rend_client_desc_not_fetched(char *query);
 
 /********************************* rendcommon.c ***************************/
 
@@ -1036,6 +1045,7 @@ int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
                                    int *len_out);
 rend_service_descriptor_t *rend_parse_service_descriptor(const char *str, int len);
 int rend_get_service_id(crypto_pk_env_t *pk, char *out);
+int rend_cmp_service_ids(char *one, char *two);
 
 void rend_cache_init(void);
 void rend_cache_clean(void);

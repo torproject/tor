@@ -20,7 +20,7 @@ typedef struct rend_service_port_config_t {
  */
 typedef struct rend_service_t {
   /* Fields specified in config file */
-  char *directory;
+  char *directory; /* where in the filesystem it stores it */
   smartlist_t *ports;
   char *intro_nodes;
   char *intro_exclude_nodes;
