@@ -352,7 +352,7 @@ static void run_scheduled_events(time_t now) {
   connection_ap_expire_beginning();
 
 
-  /* 2c. And expire connections that we've holding open for too long.
+  /* 2c. And expire connections that we've held open for too long.
    */
   connection_expire_held_open();
 

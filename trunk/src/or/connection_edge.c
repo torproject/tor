@@ -12,8 +12,8 @@ static int connection_ap_handshake_process_socks(connection_t *conn);
 static int connection_ap_handshake_attach_circuit(connection_t *conn);
 static int connection_ap_handshake_attach_circuit_helper(connection_t *conn);
 static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
-static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
-                                               int replylen, char success);
+static void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
+                                                int replylen, char success);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 static void connection_edge_consider_sending_sendme(connection_t *conn);
@@ -58,7 +58,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
     /* eof reached, kill it. */
     log_fn(LOG_INFO,"conn (fd %d) reached eof. Closing.", conn->s);
     connection_mark_for_close(conn, END_STREAM_REASON_DONE);
-    return -1;
+    return 0;
 #endif
   }
 
@@ -66,6 +66,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
     case AP_CONN_STATE_SOCKS_WAIT:
       if(connection_ap_handshake_process_socks(conn) < 0) {
         connection_mark_for_close(conn, END_STREAM_REASON_MISC);
+        conn->hold_open_until_flushed = 1;
         return -1;
       }
       return 0;
@@ -95,6 +96,7 @@ int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
          circ_id);
   conn->has_sent_end = 1; /* we're closing the circuit, nothing to send to */
   connection_mark_for_close(conn, END_STREAM_REASON_DESTROY);
+  conn->hold_open_until_flushed = 1;
   return 0;
 }
 
@@ -213,15 +215,18 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
 
   if(conn && conn->state != AP_CONN_STATE_OPEN && conn->state != EXIT_CONN_STATE_OPEN) {
     if(rh.command == RELAY_COMMAND_END) {
-      log_fn(LOG_INFO,"Exit got end (%s) before we're connected. Marking for close.",
+      log_fn(LOG_INFO,"Edge got end (%s) before we're connected. Marking for close.",
         connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, rh.length));
       conn->has_sent_end = 1; /* we just got an 'end', don't need to send one */
       connection_mark_for_close(conn, 0);
+      /* XXX This is where we should check if reason is EXITPOLICY, and reattach */
+      /* XXX here we should send a socks reject back if necessary, and hold
+       * open til flushed */
       return 0;
     }
     if(conn->type == CONN_TYPE_AP && rh.command == RELAY_COMMAND_CONNECTED) {
       if(conn->state != AP_CONN_STATE_CONNECT_WAIT) {
-        log_fn(LOG_WARN,"Got 'connected' while not in state connecting. Dropping.");
+        log_fn(LOG_WARN,"Got 'connected' while not in state connect_wait. Dropping.");
         return 0;
       }
 //      log_fn(LOG_INFO,"Connected! Notifying application.");
@@ -233,10 +238,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       log_fn(LOG_INFO,"'connected' received after %d seconds.",
              (int)(time(NULL) - conn->timestamp_lastread));
       circuit_log_path(LOG_INFO,circ);
-      if(connection_ap_handshake_socks_reply(conn, NULL, 0, 1) < 0) {
-        log_fn(LOG_INFO,"Writing to socks-speaking application failed. Closing.");
-        connection_mark_for_close(conn, END_STREAM_REASON_MISC);
-      }
+      connection_ap_handshake_socks_reply(conn, NULL, 0, 1);
       return 0;
     } else {
       log_fn(LOG_WARN,"Got an unexpected relay command %d, in state %d (%s). Closing.",
@@ -297,6 +299,10 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
       if(rh.length >= 5 &&
          *(cell->payload+RELAY_HEADER_SIZE) == END_STREAM_REASON_EXITPOLICY) {
+
+        /* XXX this will never be reached, since we're in 'connect_wait' state
+         * but this is only reached when we're in 'open' state. Put it higher. */
+
         /* No need to close the connection. We'll hold it open while
          * we try a new exit node.
          * cell->payload+RELAY_HEADER_SIZE+1 holds the destination addr.
@@ -320,11 +326,13 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         /* We just *got* an end; no reason to send one. */
         conn->has_sent_end = 1;
         connection_mark_for_close(conn, 0);
+        conn->hold_open_until_flushed = 1;
       }
 #else
       /* We just *got* an end; no reason to send one. */
       conn->has_sent_end = 1;
       connection_mark_for_close(conn, 0);
+      conn->hold_open_until_flushed = 1;
 #endif
       return 0;
     case RELAY_COMMAND_EXTEND:
@@ -781,13 +789,13 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
   return;
 }
 
-static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
+static void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                                int replylen, char success) {
   char buf[256];
 
   if(replylen) { /* we already have a reply in mind */
     connection_write_to_buf(reply, replylen, conn);
-    return 0;
+    return;
   }
   assert(conn->socks_request);
   if(conn->socks_request->socks_version == 4) {
@@ -810,7 +818,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     connection_write_to_buf(buf,10,conn);
   }
   /* if socks_version isn't 4 or 5, don't send anything */
-  return 0;
+  return;
 }
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {

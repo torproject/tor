@@ -32,7 +32,7 @@ int connection_or_process_inbuf(connection_t *conn) {
   if(conn->inbuf_reached_eof) {
     log_fn(LOG_INFO,"OR connection reached EOF. Closing.");
     connection_mark_for_close(conn,0);
-    return -1;
+    return 0;
   }
 
   if(conn->state != OR_CONN_STATE_OPEN)
