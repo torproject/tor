@@ -24,6 +24,8 @@ pre1:
       before he'd uploaded his descriptor, which would cause us to
       assign conn->nickname as though he's unverified. Now we look through
       the fingerprint list to see if he's there.
+    - Fix a rare assert trigger, where routerinfos for entries in
+      our cpath would expire while we're building the path.
 
   o Features:
     - Clients can ask dirservers for /dir.z to get a compressed version
