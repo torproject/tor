@@ -43,6 +43,8 @@ static const char *CONTROL_COMMANDS[] = {
   "authenticate",
 };
 
+extern or_options_t options;
+
 static uint32_t global_event_mask = 0;
 
 static void update_global_event_mask(void);
@@ -131,17 +133,57 @@ send_control_event(uint16_t event, uint16_t len, const char *body)
   }
 }
 
-static int 
+static int
 handle_control_setconf(connection_t *conn, uint16_t len,
                                   const char *body)
 {
   /* XXXX009 NM */
   return 0;
 }
-static int handle_control_getconf(connection_t *conn, uint16_t len,
+
+static int handle_control_getconf(connection_t *conn, uint16_t body_len,
                                   const char *body)
 {
-  /* XXXX009 NM */
+  smartlist_t *answer_elements = NULL;
+  char *msg = NULL;
+  size_t msg_len;
+
+  if (body[body_len-1] != '\0') {
+    send_control_error(conn, ERR_UNSPECIFIED,
+                       "getconf message body not nul-terminated.");
+    return 0;
+  }
+  /* Now we can be sure that body will end in a nul-terminated string. */
+
+  answer_elements = smartlist_create();
+  while (body_len) {
+    size_t question_len = strlen(body);
+    struct config_line_t *answer = config_get_assigned_option(&options,body);
+    if (!answer) {
+      send_control_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, body);
+      goto done;
+    } else {
+      while (answer) {
+        struct config_line_t *next;
+        smartlist_add(answer_elements, answer->key);
+        smartlist_add(answer_elements, answer->value);
+        next = answer->next;
+        tor_free(answer);
+        answer = next;
+      }
+    }
+    body += question_len+1;
+    body_len -= question_len+1;
+  }
+
+  msg = smartlist_join_strings2(answer_elements, "\0", 1, 0, &msg_len);
+  send_control_message(conn, CONTROL_CMD_CONFVALUE, msg_len, msg);
+
+ done:
+  SMARTLIST_FOREACH(answer_elements, char *, cp, tor_free(cp));
+  smartlist_free(answer_elements);
+  tor_free(msg);
+
   return 0;
 }
 static int handle_control_setevents(connection_t *conn, uint16_t len,
@@ -263,37 +305,63 @@ int connection_control_process_inbuf(connection_t *conn) {
   goto again; /* There might be more data. */
 }
 
-int control_event_circuit_status(circuit_t *circ)
+int control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
 {
+  char *path, *msg;
+  size_t path_len;
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
     return 0;
+  tor_assert(circ);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
-  /* XXXXX009 NM */
+  path = circuit_list_path(circ);
+  path_len = strlen(path);
+  msg = tor_malloc(1+4+path_len+1); /* event, circid, path, NUL. */
+  msg[0] = (uint8_t) tp;
+  set_uint32(msg+1, htonl(circ->global_identifier));
+  strlcpy(msg+5,path,path_len+1);
 
+  send_control_event(EVENT_STREAM_STATUS, (uint16_t)(path_len+6), msg);
+  tor_free(path);
+  tor_free(msg);
   return 0;
 }
 
-int control_event_stream_status(connection_t *conn)
+int control_event_stream_status(connection_t *conn, stream_status_event_t tp)
 {
+  char *msg;
+  size_t len;
   tor_assert(conn->type == CONN_TYPE_AP);
+  tor_assert(conn->socks_request);
 
   if (!EVENT_IS_INTERESTING(EVENT_STREAM_STATUS))
     return 0;
 
-  /* XXXXX009 NM */
+  len = strlen(conn->socks_request->address);
+  msg = tor_malloc(5+len+1);
+  msg[0] = (uint8_t) tp;
+  set_uint32(msg+1, htonl(conn->s)); /* ???? Is this a security problem? */
+  strlcpy(msg+5, conn->socks_request->address, len+1);
 
+  send_control_event(EVENT_STREAM_STATUS, (uint16_t)(5+len+1), msg);
+  tor_free(msg);
   return 0;
 }
 
-int control_event_or_conn_status(connection_t *conn)
+int control_event_or_conn_status(connection_t *conn,or_conn_status_event_t tp)
 {
+  char buf[HEX_DIGEST_LEN+3]; /* status, dollar, identity, NUL */
+  size_t len;
+
   tor_assert(conn->type == CONN_TYPE_OR);
 
   if (!EVENT_IS_INTERESTING(EVENT_OR_CONN_STATUS))
     return 0;
 
-  /* XXXXX009 NM */
-
+  buf[0] = (uint8_t)tp;
+  strlcpy(buf+1,conn->nickname,sizeof(buf)-1);
+  len = strlen(buf+1);
+  send_control_event(EVENT_OR_CONN_STATUS, (uint16_t)(len+1), buf);
   return 0;
 }
 
@@ -311,18 +379,17 @@ int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
   return 0;
 }
 
-int control_event_warning(const char *msg)
+void control_event_logmsg(int severity, const char *msg)
 {
   size_t len;
+  if (severity > LOG_WARN) /* Less important than warning? ignore for now. */
+    return;
   if (!EVENT_IS_INTERESTING(EVENT_WARNING))
-    return 0;
+    return;
 
   len = strlen(msg);
-  send_control_event(EVENT_WARNING, len+1, msg);
-
-  return 0;
+  send_control_event(EVENT_WARNING, (uint16_t)(len+1), msg);
 }
-
 
 /*
   Local Variabls:

@@ -1167,7 +1167,7 @@ int routers_update_status_from_entry(smartlist_t *routers,
         r->status_set_at = time(NULL);
       }
   });
- 
+
   return 0;
 }
 

@@ -521,6 +521,7 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
   ap_conn->deliver_window = STREAMWINDOW_START;
   ap_conn->state = AP_CONN_STATE_CONNECT_WAIT;
   log_fn(LOG_INFO,"Address/port sent, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
+  control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT);
   return 0;
 }
 
@@ -561,6 +562,7 @@ int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
 
   ap_conn->state = AP_CONN_STATE_RESOLVE_WAIT;
   log_fn(LOG_INFO,"Address sent for resolve, ap socket %d, n_circ_id %d",ap_conn->s,circ->n_circ_id);
+  control_event_stream_status(ap_conn, STREAM_EVENT_SENT_RESOLVE);
   return 0;
 }
 
@@ -688,6 +690,9 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                          size_t replylen, int success) {
   char buf[256];
+
+  control_event_stream_status(conn,
+                       success ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED);
 
   if(replylen) { /* we already have a reply in mind */
     connection_write_to_buf(reply, replylen, conn);

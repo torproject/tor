@@ -523,9 +523,9 @@ list_server_status(char **running_routers_out, char **router_status_out)
   });
 
   if (running_routers_out)
-    *running_routers_out = smartlist_join_strings(rr_entries, " ", 0);
+    *running_routers_out = smartlist_join_strings(rr_entries, " ", 0,NULL);
   if (router_status_out)
-    *router_status_out = smartlist_join_strings(rs_entries, " ", 0);
+    *router_status_out = smartlist_join_strings(rs_entries, " ", 0,NULL);
 
   SMARTLIST_FOREACH(rr_entries, char *, cp, tor_free(cp));
   SMARTLIST_FOREACH(rs_entries, char *, cp, tor_free(cp));
@@ -611,7 +611,7 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
       smartlist_split_string(versions, ln->value, ",", 
                              SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     }
-    recommended_versions = smartlist_join_strings(versions,",",0);
+    recommended_versions = smartlist_join_strings(versions,",",0,NULL);
     SMARTLIST_FOREACH(versions,char *,s,tor_free(s));
     smartlist_free(versions);
   }

@@ -198,12 +198,15 @@ void connection_about_to_close_connection(connection_t *conn)
     case CONN_TYPE_OR:
       /* Remember why we're closing this connection. */
       if (conn->state != OR_CONN_STATE_OPEN) {
-        if(connection_or_nonopen_was_started_here(conn))
+        if(connection_or_nonopen_was_started_here(conn)) {
           rep_hist_note_connect_failed(conn->identity_digest, time(NULL));
+          control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
+        }
       } else if (0) { // XXX reason == CLOSE_REASON_UNUSED_OR_CONN) {
         rep_hist_note_disconnect(conn->identity_digest, time(NULL));
       } else if(conn->identity_digest) {
         rep_hist_note_connection_died(conn->identity_digest, time(NULL));
+        control_event_or_conn_status(conn, OR_CONN_EVENT_CLOSED);
       }
       break;
     case CONN_TYPE_AP:
@@ -212,6 +215,8 @@ void connection_about_to_close_connection(connection_t *conn)
         connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
         conn->socks_request->has_finished = 1;
         conn->hold_open_until_flushed = 1;
+      } else {
+        control_event_stream_status(conn, STREAM_EVENT_CLOSED);
       }
       break;
     case CONN_TYPE_EXIT:

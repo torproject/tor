@@ -140,8 +140,9 @@ connection_or_init_conn_from_address(connection_t *conn,
   if (n) {
     conn->nickname = tor_strdup(n);
   } else {
-    conn->nickname = tor_malloc(HEX_DIGEST_LEN+1);
-    base16_encode(conn->nickname, HEX_DIGEST_LEN+1,
+    conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
+    conn->nickname[0] = '$';
+    base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
                   conn->identity_digest, DIGEST_LEN);
   }
   tor_free(conn->address);
@@ -223,10 +224,12 @@ connection_t *connection_or_connect(uint32_t addr, uint16_t port,
   /* set up conn so it's got all the data we need to remember */
   connection_or_init_conn_from_address(conn, addr, port, id_digest);
   conn->state = OR_CONN_STATE_CONNECTING;
+  control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED);
 
   switch(connection_connect(conn, conn->address, addr, port)) {
     case -1:
       router_mark_as_down(conn->identity_digest);
+      control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
       connection_free(conn);
       return NULL;
     case 0:
@@ -376,6 +379,7 @@ connection_tls_finish_handshake(connection_t *conn) {
       log_fn(options.DirPort ? LOG_WARN : LOG_INFO,
              "Other side (%s:%d) is '%s', but we tried to connect to '%s'",
              conn->address, conn->port, nickname, conn->nickname);
+      control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
       return -1;
     }
   } else {
@@ -393,6 +397,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
   /* Note the success */
   rep_hist_note_connect_succeeded(conn->identity_digest, time(NULL));
+  control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED);
   return 0;
 }
 

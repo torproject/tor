@@ -489,6 +489,8 @@ circuit_expire_old_circuits(void)
  */
 void circuit_has_opened(circuit_t *circ) {
 
+  control_event_circuit_status(circ, CIRC_EVENT_BUILT);
+
   switch(circ->purpose) {
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       rend_client_rendcirc_has_opened(circ);
