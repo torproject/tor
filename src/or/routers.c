@@ -194,6 +194,7 @@ void router_forget_router(uint32_t addr, uint16_t port) {
 //  log(LOG_DEBUG,"router_forget_router(): Forgot about router %d:%d",addr,port);
   for(; i<directory->n_routers-1;i++)
     directory->routers[i] = directory->routers[i+1];
+  /* XXX bug, we're not decrementing n_routers here? needs more attention. -RD */
 }
 
 /* load the router list */
