@@ -103,10 +103,11 @@ your security</a>.</p>
 everybody is a <i>client</i>. This means you don't relay traffic for
 anybody but yourself.</p>
 
-<p>If you have less than 1Mbit in both directions, you should stay
-a client. Otherwise, please consider being a server, to help out the
-network. (Currently each server uses 20-150 gigabytes of traffic
-per month; but that may go up.)</p>
+<p>If your computer doesn't have a routable IP address or you're using
+a modem, you should stay a client. Otherwise, please consider being
+a server, to help out the network. (Currently each server uses 20-150
+gigabytes of traffic per month, depending on its capacity and its rate
+limiting configuration.)</p>
 
 <p>Note that you can be a server without allowing users to make
 connections from your computer to the outside world. This is called being
@@ -114,8 +115,9 @@ a middleman server.</p>
 
 <p> Benefits of running a server include:
 <ul>
-<li>Clients are generally limited to 100KB/s, whereas servers can inject
-or receive as much traffic as they want.
+<li>Clients are generally limited to 100KB/s (and in practice, sometimes
+much less), whereas servers can inject or receive as much traffic as
+they want.
 <li>You may get stronger anonymity, since your destination can't know
 whether connections relayed through your computer originated at your
 computer or not.
@@ -219,12 +221,13 @@ service url</a>).</p>
 <h2>Configuring a server</h2>
 
 <p>We're looking for people with reasonably reliable Internet connections,
-that have at least 1Mbit each way. Currently we don't use all of that,
-but we want it available for burst traffic.</p>
+that have at least 20 kilobytes/s each way. If you have more bandwidth
+to offer, that's even better.</p>
 
 <p>To set up a Tor server, do the following steps after installing Tor.
-(These instructions are Unix-centric; let us know if you get it working
-on Windows.)
+(These instructions are Unix-centric; if you're excited about working
+with us to get a Tor server working on Windows, let us know and we'll
+work with you to fix whatever bugs come up.)
 </p>
 
 <ul>
