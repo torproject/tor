@@ -441,7 +441,7 @@ which reveals the downstream node.
 (Unless otherwise noted, tokens on the same line are space-separated.)
 
 Router ::= Router-Line  Date-Line Onion-Key Link-Key Signing-Key  Exit-Policy Router-Signature NL
-Router-Line ::= "router" address ORPort APPort DirPort bandwidth NL
+Router-Line ::= "router" nickname address ORPort APPort DirPort bandwidth NL
 Date-Line ::= "published" YYYY-MM-DD HH:MM:SS NL
 Onion-key ::= "onion-key"  NL  a public key in PEM format   NL
 Link-key ::= "link-key"  NL  a public key in PEM format  NL
@@ -457,9 +457,11 @@ APPort ::=  where the router listens for applications (speaking socks)
 DirPort ::= where the router listens for directory download requests
 bandwidth ::= maximum bandwidth, in bytes/s
 
+nickname ::= between 1 and 32 alphanumeric characters.  case-insensitive.
 
 Example:
-router moria.mit.edu 9001 9021 9031 100000
+router moria1 moria.mit.edu 9001 9021 9031 100000
+published 2003-09-24 19:36:05
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
 7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
