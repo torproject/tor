@@ -212,7 +212,7 @@ test_crypto()
   test_assert(data1 && data2 && data3);
 
   /* Try out RNG. */
-  crypto_seed_rng();
+  test_assert(! crypto_seed_rng());
   crypto_rand(100, data1);
   crypto_rand(100, data2);
   test_memneq(data1,data2,100);
@@ -587,7 +587,7 @@ test_dir_format()
 }
 
 int 
-main(int c, char**v) {
+main(int c, char**v){ 
 #if 0
   or_options_t options; /* command-line and config-file options */
 
