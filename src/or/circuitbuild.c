@@ -238,7 +238,6 @@ again:
 //    || !CIRCUIT_IS_ORIGIN(circ)) { // wtf? -rd
   if (r < 0) {
     log_fn(LOG_INFO,"Generating cpath hop failed.");
-    circuit_mark_for_close(circ);
     return -1;
   }
   if (r == 0)
