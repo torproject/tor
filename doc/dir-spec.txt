@@ -1,0 +1,97 @@
+$Id$
+
+                      Tor network discovery protocol
+
+0. Scope
+
+This document proposes a way of doing more distributed network discovery
+while maintaining some amount of admission control. We don't recommend
+you implement this as-is; it needs more discussion.
+
+Terminology:
+  - Client: The Tor component that chooses paths.
+  - Server: A relay node that passes traffic along.
+
+1. Goals.
+
+We want more decentralized discovery for network topology and status.
+In particular:
+
+1a. We want to let clients learn about new servers from anywhere
+    and build circuits through them if they wish. This means that
+    Tor nodes need to be able to Extend to nodes they don't already
+    know about. This is already implemented, but see the 'Extend policy'
+    issue below.
+
+1b. We want to provide a robust (available) and not-too-centralized
+    mechanism for tracking network status (which nodes are up and working)
+    and admission (which nodes are "recommended" for certain uses).
+
+1c. [optional] We want to permit servers that can't route to all other
+    servers, e.g. because they're behind NAT or otherwise firewalled.
+
+2. Assumptions.
+
+People get the code from us, and they trust us (or our gpg keys, or
+something down the trust chain that's equivalent).
+
+Even if the software allows humans to change the client configuration,
+most of them will use the default that's provided, so we should provide
+one that is the right balance of robust and safe.
+
+Assume that Sybil attackers can produce only a limited number of
+independent-looking nodes.
+
+Roger has only a limited amount of time for approving nodes, and doesn't
+want to be the time bottleneck anyway.
+
+We can trust servers to accurately report their characteristics (uptime,
+capacity, exit policies, etc), as long as we have some mechanism for
+notifying clients when we notice that they're lying.
+
+There exists a "main" core Internet in which most locations can access
+most locations. We'll focus on it first.
+
+3. Some notes on how to achieve.
+
+We ship with S (e.g. 3) seed keys.
+We ship with N (e.g. 20) introducer locations and fingerprints.
+We ship with some set of signed timestamped certs for those introducers.
+
+Introducers serve signed network-status pages, listing their opinions
+of network status and which routers are good.
+
+They also serve descriptors in some way. These don't need to be signed by
+the introducers, since they're self-signed and timestamped by each server.
+
+A DHT is not so appropriate for distributing server descriptors as long
+as we expect each client to plan to collect all of them periodically. It
+would seem that each introducer might as well just keep its own
+big pile of descriptors, and they synchronize (pull) from each other
+periodically. Clients then get network-status pages from a threshold of
+introducers, fetch enough of the server descriptors to make them happy,
+and proceed as now. Anything wrong with this?
+
+Notice that this doesn't preclude other approaches to discovering
+different concurrent Tor networks. For example, a Tor network inside
+China could ship Tor with a different torrc and poof, they're using
+a different set of seed keys and a different set of introducers. Some
+smarter clients could be made to learn about both networks, and be told
+which nodes bridge the networks.
+
+
+
+4. Unresolved:
+  - What new features need to be added to server descriptors so they
+    remain compact yet support new functionality?
+  - How do we compactly describe seeds, introducers, and certs? Does
+    Tor have built-in defaults still, that can be overridden?
+  - How much cert functionality do we want in our PKI? Can we revoke
+    introducers, or is that done by releasing a new version of the code?
+  - By what mechanism will new servers contact the humans who run
+    introducers, so they can be approved?
+  - Is our network growing because of peoples' trust in Roger? Will it
+    grow the same way, or as robustly, or more robustly, with no
+    figurehead?
+  - 'Extend policies' -- middleman doesn't really mean middleman, alas.
+
