@@ -247,7 +247,7 @@ void smartlist_insert(smartlist_t *sl, int idx, void *val)
  * trailing space from each entry.  If
  * <b>flags</b>&amp;SPLIT_IGNORE_BLANK is true, remove any entries of
  * length 0.  If max>0, divide the string into no more than <b>max</b>
- * pieces.
+ * pieces.  If <b>sep</b> is NULL, split on any sequence of horizontal space.
  */
 int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
                            int flags, int max)
@@ -257,7 +257,6 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
 
   tor_assert(sl);
   tor_assert(str);
-  tor_assert(sep);
 
   cp = str;
   while (1) {
@@ -267,15 +266,23 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
 
     if (max>0 && n == max-1) {
       end = strchr(cp,'\0');
-    } else {
+    } else if (sep) {
       end = strstr(cp,sep);
       if (!end)
         end = strchr(cp,'\0');
+    } else {
+      for (end = cp; *end && *end != '\t' && *end != ' '; ++end)
+        ;
     }
+
     if (!*end) {
       next = NULL;
-    } else {
+    } else if (sep) {
       next = end+strlen(sep);
+    } else {
+      next = end+1;
+      while (*next == '\t' || *next == ' ')
+        ++next;
     }
 
     if (flags&SPLIT_SKIP_SPACE) {

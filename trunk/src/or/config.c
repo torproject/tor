@@ -1831,7 +1831,7 @@ config_init_logs(or_options_t *options, int validate_only)
   elts = smartlist_create();
   for (opt = options->Logs; opt; opt = opt->next) {
     int levelMin=LOG_DEBUG, levelMax=LOG_ERR;
-    smartlist_split_string(elts, opt->value, " ",
+    smartlist_split_string(elts, opt->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
     if (smartlist_len(elts) == 0) {
       log_fn(LOG_WARN, "Bad syntax on Log option 'Log %s'", opt->value);
@@ -2045,7 +2045,7 @@ parse_redirect_line(smartlist_t *result, struct config_line_t *line)
 
   r = tor_malloc_zero(sizeof(exit_redirect_t));
   elements = smartlist_create();
-  smartlist_split_string(elements, line->value, " ",
+  smartlist_split_string(elements, line->value, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(elements) != 2) {
     log_fn(LOG_WARN, "Wrong number of elements in RedirectExit line");
@@ -2098,7 +2098,7 @@ parse_dir_server_line(const char *line, int validate_only)
   char digest[DIGEST_LEN];
 
   items = smartlist_create();
-  smartlist_split_string(items, line, " ",
+  smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
   if (smartlist_len(items) < 2) {
     log_fn(LOG_WARN, "Too few arguments to DirServer line.");

@@ -125,7 +125,8 @@ accounting_parse_options(or_options_t *options, int validate_only)
   }
 
   items = smartlist_create();
-  smartlist_split_string(items, v, " ", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK,0);
+  smartlist_split_string(items, v, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK,0);
   if (smartlist_len(items)<2) {
     log_fn(LOG_WARN, "Too few arguments to AccountingStart");
     goto err;
