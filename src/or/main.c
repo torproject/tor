@@ -747,6 +747,7 @@ static void dumpstats(int severity) {
            (int) (stats_n_bytes_read/stats_n_seconds_reading));
 
   rep_hist_dump_stats(now,severity);
+  rend_service_dump_stats(severity);
 }
 
 int network_init(void)

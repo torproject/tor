@@ -684,6 +684,7 @@ void assert_buf_ok(buf_t *buf);
 
 /********************************* circuit.c ***************************/
 
+extern char *circuit_state_to_string[];
 void circuit_add(circuit_t *circ);
 void circuit_remove(circuit_t *circ);
 circuit_t *circuit_new(uint16_t p_circ_id, connection_t *p_conn);
@@ -1111,7 +1112,7 @@ int rend_service_intro_established(circuit_t *circuit, const char *request, int 
 void rend_service_rendezvous_is_ready(circuit_t *circuit);
 int rend_service_introduce(circuit_t *circuit, const char *request, int request_len);
 int rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ);
-
+void rend_service_dump_stats(int severity);
 
 /********************************* rendmid.c *******************************/
 int rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len);

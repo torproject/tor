@@ -732,6 +732,7 @@ int rend_services_init(void) {
     if (rend_encode_service_descriptor(service->desc,
                                        service->private_key,
                                        &desc, &desc_len)<0) {
+
       log_fn(LOG_WARN, "Couldn't encode service descriptor; not uploading");
       continue;
     }
@@ -753,6 +754,36 @@ int rend_services_init(void) {
   smartlist_free(exclude_routers);
 
   return 0;
+}
+
+void
+rend_service_dump_stats(int severity)
+{
+  int i,j;
+  routerinfo_t *router;
+  rend_service_t *service;
+  char *nickname;
+  circuit_t *circ;
+
+  for (i=0; i < smartlist_len(rend_service_list); ++i) {
+    service = smartlist_get(rend_service_list, i);
+    log(severity, "Service configured in %s:", service->directory);
+    for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
+      nickname = smartlist_get(service->intro_nodes, j);
+      router = router_get_by_nickname(smartlist_get(service->intro_nodes,j));
+      if (!router) {
+        log(severity, "  Intro point at %s: unrecognized router",nickname);
+        continue;
+      }
+      circ = find_intro_circuit(router, service->pk_digest);
+      if (!circ) {
+        log(severity, "  Intro point at %s: no circuit",nickname);
+        continue;
+      }
+      log(severity, "  Intro point at %s: circuit is %s",nickname,
+          circuit_state_to_string[circ->state]);
+    }
+  }
 }
 
 /* This is a beginning rendezvous stream. Look up conn->port,
