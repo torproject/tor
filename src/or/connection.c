@@ -875,8 +875,7 @@ int connection_handle_write(connection_t *conn) {
 }
 
 /** Append <b>len</b> bytes of <b>string</b> onto <b>conn</b>'s
- * outbuf, and ask it to start writing. If it's an OR conn, and an
- * entire TLS record is ready, then try to flush it now.
+ * outbuf, and ask it to start writing.
  */
 void connection_write_to_buf(const char *string, int len, connection_t *conn) {
 
@@ -884,33 +883,20 @@ void connection_write_to_buf(const char *string, int len, connection_t *conn) {
     return;
 
   if(write_to_buf(string, len, conn->outbuf) < 0) {
-    log_fn(LOG_WARN,"write_to_buf failed. Closing connection (fd %d).", conn->s);
-    /* XXX should call connection_edge_end() ? */
-    connection_mark_for_close(conn);
+    if(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
+      /* if it failed, it means we have our package/delivery windows set
+         wrong compared to our max outbuf size. close the whole circuit. */
+      log_fn(LOG_WARN,"write_to_buf failed. Closing circuit (fd %d).", conn->s);
+      circuit_mark_for_close(circuit_get_by_conn(conn));
+    } else {
+      log_fn(LOG_WARN,"write_to_buf failed. Closing connection (fd %d).", conn->s);
+      connection_mark_for_close(conn);
+    }
     return;
   }
 
   connection_start_writing(conn);
-#define MIN_TLS_FLUSHLEN 15872
-/* openssl tls record size is 16383, this is close. The goal here is to
- * push data out as soon as we know there's enough for a tls record, so
- * during periods of high load we won't read the entire megabyte from
- * input before pushing any data out. */
-  if(connection_speaks_cells(conn) &&
-     conn->outbuf_flushlen < MIN_TLS_FLUSHLEN &&
-     conn->outbuf_flushlen+len >= MIN_TLS_FLUSHLEN) {
-    len -= (MIN_TLS_FLUSHLEN - conn->outbuf_flushlen);
-    conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
-    if(connection_handle_write(conn) < 0) {
-      log_fn(LOG_WARN,"flushing failed.");
-      return;
-    }
-  }
-  if(len > 0) { /* if there's any left over */
-    conn->outbuf_flushlen += len;
-    connection_start_writing(conn);
-    /* because connection_handle_write() above might have stopped writing */
-  }
+  conn->outbuf_flushlen += len;
 }
 
 /** Return the conn to addr/port that has the most recent
