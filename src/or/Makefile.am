@@ -2,7 +2,7 @@ TESTS = test
 
 noinst_PROGRAMS = test
 
-bin_PROGRAMS = tor
+sbin_PROGRAMS = tor
 
 tor_SOURCES = buffers.c circuit.c command.c connection.c \
              connection_or.c config.c dirserv.c \
