@@ -232,8 +232,8 @@ int tor_strpartition(char *dest, size_t dest_len,
                      part_finish_rule_t rule)
 {
   char *destp;
-  int len_in, len_out, len_ins;
-  int is_even;
+  size_t len_in, len_out, len_ins;
+  int is_even, remaining;
   tor_assert(s && insert && n > 0);
   len_in = strlen(s);
   len_ins = strlen(insert);
@@ -253,14 +253,15 @@ int tor_strpartition(char *dest, size_t dest_len,
   if (dest_len < len_out+1)
     return -1;
   destp = dest;
-  while(len_in) {
+  remaining = len_in;
+  while(remaining) {
     strncpy(destp, s, n);
-    len_in -= n;
-    if (len_in < 0) {
+    remaining -= n;
+    if (remaining < 0) {
       if (rule == ALWAYS_TERMINATE)
-        strcpy(destp+n+len_in,insert);
+        strcpy(destp+n+remaining,insert);
       break;
-    } else if (len_in == 0 && rule == NEVER_TERMINATE) {
+    } else if (remaining == 0 && rule == NEVER_TERMINATE) {
       *(destp+n) = '\0';
       break;
     }
@@ -319,7 +320,7 @@ void set_uint32(char *cp, uint32_t v)
  * result does not need to be deallocated, but repeated calls to
  * hex_str will trash old results.
  */
-const char *hex_str(const char *from, int fromlen)
+const char *hex_str(const char *from, size_t fromlen)
 {
   static char buf[65];
   if (fromlen>(sizeof(buf)-1)/2)
@@ -1543,6 +1544,7 @@ write_str_to_file(const char *fname, const char *str, int bin)
   char tempname[1024];
   int fd;
   size_t len;
+  int result;
   if ((strlcpy(tempname,fname,1024) >= 1024) ||
       (strlcat(tempname,".tmp",1024) >= 1024)) {
     log(LOG_WARN, "Filename %s.tmp too long (>1024 chars)", fname);
@@ -1555,7 +1557,8 @@ write_str_to_file(const char *fname, const char *str, int bin)
     return -1;
   }
   len = strlen(str);
-  if (write_all(fd, str, len, 0) != len) {
+  result = write_all(fd, str, len, 0);
+  if(result < 0 || (size_t)result != len) {
     log(LOG_WARN, "Error writing to %s: %s", tempname, strerror(errno));
     close(fd);
     return -1;
