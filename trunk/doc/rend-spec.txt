@@ -111,7 +111,7 @@ Tor Rendezvous Spec
 
    The first time the OP provides an advertised service, it generates
    a public/private keypair (stored locally).  Periodically, the OP
-   generates service descriptor, containing:
+   generates a service descriptor, containing:
 
          KL    Key length                            [2 octets]
          PK    Bob's public key                      [KL octets]
@@ -123,10 +123,11 @@ Tor Rendezvous Spec
    KL is the length of PK, in octets.  (Currently, KL must be 128.)
    TS is the number of seconds elapsed since Jan 1, 1970.
 
-   The members of Ipt may either be EITHER nicknames, or identity key
-   digests, encoded in hex, and prefixed with a '$'.  Servers must accept
-   both forms.  Before 0.0.7 is obsoleted, servers should only generate the
-   first form.  After, servers should only generate the second form.
+   The members of Ipt may be either (a) nicknames, or (b) identity key
+   digests, encoded in hex, and prefixed with a '$'.  Clients must
+   accept both forms. Services must only generate the second form.
+   Once 0.0.8.1 and 0.0.9pre3-4 are obsoleted, we can drop the first
+   form.
 
    [It's ok for Bob to advertise 0 introduction points. He might want
     to do that if he previously advertised some introduction points,
