@@ -226,8 +226,10 @@ void router_retry_connections(void) {
   routerlist_t *rl;
 
   router_get_routerlist(&rl);
-  for (i=0;i<rl->n_routers;i++) {
-    router = rl->routers[i];
+  for (i=0;i < smartlist_len(rl->routers);i++) {
+    router = smartlist_get(rl->routers, i);
+    if(router_is_me(router))
+      continue;
     if(!connection_exact_get_by_addr_port(router->addr,router->or_port)) {
       /* not in the list */
       log_fn(LOG_DEBUG,"connecting to OR %s:%u.",router->address,router->or_port);
@@ -256,8 +258,8 @@ void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload
   if(!rl)
     return;
 
-  for(i=0;i<rl->n_routers;i++) {
-    router = rl->routers[i];
+  for(i=0; i < smartlist_len(rl->routers); i++) {
+    router = smartlist_get(rl->routers, i);
     if(router->dir_port > 0)
       directory_initiate_command(router, purpose, payload, payload_len);
   }
@@ -310,14 +312,21 @@ static void router_add_exit_policy_from_config(routerinfo_t *router) {
 /* Return false if my exit policy says to allow connection to conn.
  * Else return true.
  */
-int router_compare_to_my_exit_policy(connection_t *conn) {
+int router_compare_to_my_exit_policy(connection_t *conn)
+{
   assert(desc_routerinfo);
   assert(conn->addr); /* make sure it's resolved to something. this
                          way we can't get a 'maybe' below. */
 
-  return router_compare_addr_to_exit_policy(conn->addr, conn->port, 
+  return router_compare_addr_to_exit_policy(conn->addr, conn->port,
                    desc_routerinfo->exit_policy);
 
+}
+
+int router_is_me(routerinfo_t *router)
+{
+  assert(router);
+  return options.Nickname && !strcasecmp(router->nickname, options.Nickname);
 }
 
 routerinfo_t *router_get_my_routerinfo(void)

@@ -469,8 +469,7 @@ typedef struct {
 
 #define MAX_ROUTERS_IN_DIR 1024
 typedef struct {
-  routerinfo_t **routers;
-  int n_routers;
+  smartlist_t *routers;
   char *software_versions;
   time_t published_on;
 } routerlist_t;
@@ -980,6 +979,7 @@ void router_post_to_dirservers(uint8_t purpose, const char *payload, int payload
 int router_compare_to_my_exit_policy(connection_t *conn);
 routerinfo_t *router_get_my_routerinfo(void);
 const char *router_get_my_descriptor(void);
+int router_is_me(routerinfo_t *router);
 int router_rebuild_descriptor(void);
 int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);

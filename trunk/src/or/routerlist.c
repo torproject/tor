@@ -98,7 +98,7 @@ static struct {
   { "ports", K_PORTS, ARGS, NO_OBJ, RTR_ONLY },
   { "bandwidth", K_BANDWIDTH, ARGS, NO_OBJ, RTR_ONLY },
   { "opt", K_OPT, CONCAT_ARGS, OBJ_OK, ANY },
-  
+
   { NULL, -1 }
 };
 
@@ -165,8 +165,8 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
     return NULL;
 
   sl = smartlist_create();
-  for(i=0;i<routerlist->n_routers;i++) {
-    router = routerlist->routers[i];
+  for(i=0;i< smartlist_len(routerlist->routers); i++) {
+    router = smartlist_get(routerlist->routers, i);
     if(router->dir_port > 0 && router->is_running)
       smartlist_add(sl, router);
   }
@@ -179,8 +179,8 @@ static routerinfo_t *router_pick_directory_server_impl(void) {
   log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
   /* no running dir servers found? go through and mark them all as up,
    * and we'll cycle through the list again. */
-  for(i=0;i<routerlist->n_routers;i++) {
-    router = routerlist->routers[i];
+  for(i=0; i < smartlist_len(routerlist->routers); i++) {
+    router = smartlist_get(routerlist->routers, i);
     if(router->dir_port > 0) {
       router->is_running = 1;
       dirserver = router;
@@ -227,8 +227,8 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
   if(!routerlist)
     return;
 
-  for(i=0;i<routerlist->n_routers;i++) {
-    router = routerlist->routers[i];
+  for(i=0;i<smartlist_len(routerlist->routers);i++) {
+    router = smartlist_get(routerlist->routers, i);
     if(router->is_running &&
        (!options.ORPort ||
         connection_twin_get_by_addr_port(router->addr, router->or_port) ))
@@ -279,8 +279,8 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
 
   assert(routerlist);
 
-  for(i=0;i<routerlist->n_routers;i++) {
-    router = routerlist->routers[i];
+  for(i=0;i<smartlist_len(routerlist->routers);i++) {
+    router = smartlist_get(routerlist->routers, i);
     if ((router->addr == addr) && (router->or_port == port))
       return router;
   }
@@ -294,8 +294,8 @@ routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk)
 
   assert(routerlist);
 
-  for(i=0;i<routerlist->n_routers;i++) {
-    router = routerlist->routers[i];
+  for(i=0;i<smartlist_len(routerlist->routers);i++) {
+    router = smartlist_get(routerlist->routers, i);
     if (0 == crypto_pk_cmp_keys(router->link_pkey, pk))
       return router;
   }
@@ -309,14 +309,11 @@ routerinfo_t *router_get_by_nickname(char *nickname)
 
   assert(routerlist);
 
-  for(i=0;i<routerlist->n_routers;i++) {
-    router = routerlist->routers[i];
+  for(i=0;i<smartlist_len(routerlist->routers);i++) {
+    router = smartlist_get(routerlist->routers, i);
     if (0 == strcasecmp(router->nickname, nickname))
       return router;
   }
-  router = router_get_my_routerinfo();
-  if (router && 0 == strcasecmp(router->nickname, nickname))
-    return router;
 
   return NULL;
 }
@@ -353,12 +350,12 @@ void routerinfo_free(routerinfo_t *router)
 
 static void routerlist_free(routerlist_t *rl)
 {
-  int i;
-  for (i = 0; i < rl->n_routers; ++i)
-    routerinfo_free(rl->routers[i]);
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
+                    routerinfo_free(r));
+  smartlist_free(rl->routers);
   tor_free(rl->routers);
   tor_free(rl->software_versions);
-  free(rl);
+  tor_free(rl);
 }
 
 void router_mark_as_down(char *nickname) {
@@ -494,30 +491,35 @@ router_resolve(routerinfo_t *router)
   return 0;
 }
 
-/* Helper function: resolve every router in rl. */
+/* Helper function: resolve every router in rl, and ensure that our own
+ * routerinfo is at the front.
+ */
 static int
 router_resolve_routerlist(routerlist_t *rl)
 {
-  int i, max, remove;
+  int i, remove;
+  routerinfo_t *r;
   if (!rl)
     rl = routerlist;
 
-  max = rl->n_routers;
-  for (i = 0; i < max; ++i) {
+  i = 0;
+  if ((r = router_get_my_routerinfo())) {
+    smartlist_insert(rl->routers, 0, r);
+    ++i;
+  }
+
+  for ( ; i < smartlist_len(rl->routers); ++i) {
     remove = 0;
-    if (router_resolve(rl->routers[i])) {
-      log_fn(LOG_WARN, "Couldn't resolve router %s; not using",
-             rl->routers[i]->address);
+    r = smartlist_get(rl->routers,i);
+    if (router_is_me(r)) {
       remove = 1;
-    } else if (options.Nickname &&
-               !strcmp(rl->routers[i]->nickname, options.Nickname)) {
+    } else if (router_resolve(r)) {
+      log_fn(LOG_WARN, "Couldn't resolve router %s; not using", r->address);
       remove = 1;
     }
     if (remove) {
-      routerinfo_free(rl->routers[i]);
-      rl->routers[i] = rl->routers[--max];
-      --rl->n_routers;
-      --i;
+      routerinfo_free(r);
+      smartlist_del_keeporder(rl->routers, i--);
     }
   }
 
@@ -595,8 +597,8 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
   int i;
   routerinfo_t *router;
 
-  for (i=0;i<routerlist->n_routers;i++) {
-    router = routerlist->routers[i];
+  for (i=0;i<smartlist_len(routerlist->routers);i++) {
+    router = smartlist_get(routerlist->routers, i);
     if (router->is_running && router_compare_addr_to_exit_policy(
              addr, port, router->exit_policy) != ADDR_POLICY_REJECTED)
       return 0; /* this one could be ok. good enough. */
@@ -801,15 +803,14 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
                                  const char **good_nickname_lst)
 {
   routerinfo_t *router;
-  routerinfo_t **rarray;
+  smartlist_t *routers;
   int rarray_len = 0;
   int i;
   const char *end;
 
   assert(s && *s);
 
-  rarray = (routerinfo_t **)
-    tor_malloc((sizeof(routerinfo_t *))*MAX_ROUTERS_IN_DIR);
+  routers = smartlist_create();
 
   while (1) {
     *s = eat_whitespace(*s);
@@ -842,15 +843,14 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
     } else {
       router->is_running = 1; /* start out assuming all dirservers are up */
     }
-    rarray[rarray_len++] = router;
+    smartlist_add(routers, router);
     log_fn(LOG_DEBUG,"just added router #%d.",rarray_len);
   }
 
   if (*dest)
     routerlist_free(*dest);
-  *dest = (routerlist_t *)tor_malloc(sizeof(routerlist_t));
-  (*dest)->routers = rarray;
-  (*dest)->n_routers = rarray_len;
+  *dest = tor_malloc(sizeof(routerlist_t));
+  (*dest)->routers = routers;
   (*dest)->software_versions = NULL;
   return 0;
 }
@@ -860,7 +860,7 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
  * *s so it points to just after the router it just read.
  * mallocs a new router and returns it if all goes well, else returns
  * NULL.
- * 
+ *
  * DOCDOC
  */
 routerinfo_t *router_get_entry_from_string(const char *s,
@@ -1288,7 +1288,7 @@ get_next_token(const char **s, where_syntax where) {
         i = 0;
         done = (*next == '\n');
         allocated = 32;
-        tok->args = (char**)tor_malloc(sizeof(char*)*32);
+        tok->args = tor_malloc(sizeof(char*)*32);
         *s = eat_whitespace_no_nl(next);
         while (**s != '\n' && !done) {
           next = find_whitespace(*s);
@@ -1296,7 +1296,7 @@ get_next_token(const char **s, where_syntax where) {
             done = 1;
           if (i == allocated) {
             allocated *= 2;
-            tok->args = (char**)tor_realloc(tok->args,sizeof(char*)*allocated);
+            tok->args = tor_realloc(tok->args,sizeof(char*)*allocated);
           }
           tok->args[i++] = tor_strndup(*s,next-*s);
           *s = eat_whitespace_no_nl(next+1);
@@ -1308,7 +1308,7 @@ get_next_token(const char **s, where_syntax where) {
         next = strchr(*s, '\n');
         if (!next)
           RET_ERR("Unexpected EOF");
-        tok->args = (char**) tor_malloc(sizeof(char*));
+        tok->args = tor_malloc(sizeof(char*));
         tok->args[0] = tor_strndup(*s,next-*s);
         tok->n_args = 1;
         *s = eat_whitespace_no_nl(next+1);
@@ -1330,8 +1330,8 @@ get_next_token(const char **s, where_syntax where) {
     next = strchr(*s, '\n');
     if (!next) {
       RET_ERR("Unexpected EOF");
-    }    
-    tok->args = (char**) tor_malloc(sizeof(char*));
+    }
+    tok->args = tor_malloc(sizeof(char*));
     tok->args[0] = tor_strndup(*s,next-*s);
     tok->n_args = 1;
     *s = next+1;

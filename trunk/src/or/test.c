@@ -456,6 +456,7 @@ void
 test_util() {
   struct timeval start, end;
   struct tm a_time;
+  smartlist_t *sl;
 
   start.tv_sec = 5;
   start.tv_usec = 5000;
@@ -495,6 +496,26 @@ test_util() {
   a_time.tm_mon = 1;          /* Try a leap year, in feb. */
   a_time.tm_mday = 10;
   test_eq((time_t) 1076393695UL, tor_timegm(&a_time));
+
+
+  /* Test smartlist */
+  sl = smartlist_create();
+  smartlist_add(sl, (void*)1);
+  smartlist_add(sl, (void*)2);
+  smartlist_add(sl, (void*)3);
+  smartlist_add(sl, (void*)4);
+  test_eq(2, (int)smartlist_del_keeporder(sl, 1));
+  smartlist_insert(sl, 1, (void*)22);
+  smartlist_insert(sl, 0, (void*)0);
+  smartlist_insert(sl, 5, (void*)555);
+  test_eq(0,  (int)smartlist_get(sl,0));
+  test_eq(1,  (int)smartlist_get(sl,1));
+  test_eq(22, (int)smartlist_get(sl,2));
+  test_eq(3,  (int)smartlist_get(sl,3));
+  test_eq(4,  (int)smartlist_get(sl,4));
+  test_eq(555, (int)smartlist_get(sl,5));
+  /* XXXX test older functions. */
+  smartlist_free(sl);
 }
 
 static void* _squareAndRemoveK4(const char *key, void*val, void *data)
@@ -790,7 +811,7 @@ test_dir_format()
   test_assert(!dirserv_dump_directory_to_string(buf,8192,pk3));
   cp = buf;
   test_assert(!router_get_routerlist_from_directory_impl(buf, &dir1, pk3));
-  test_eq(2, dir1->n_routers);
+  test_eq(2, smartlist_len(dir1->routers));
   dirserv_free_fingerprint_list();
 
   tor_free(pk1_str);
