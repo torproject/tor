@@ -960,7 +960,7 @@ static int connection_read_to_buf(connection_t *conn, int *max_to_read) {
     at_most = connection_bucket_read_limit(conn);
   }
 
-  if (connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
+  if (connection_speaks_cells(conn) && conn->state > OR_CONN_STATE_PROXY_READING) {
     int pending;
     if (conn->state == OR_CONN_STATE_HANDSHAKING) {
       /* continue handshaking even if global token bucket is empty */
@@ -1108,7 +1108,7 @@ int connection_handle_write(connection_t *conn) {
       return -1;
   }
 
-  if (connection_speaks_cells(conn)) {
+  if (connection_speaks_cells(conn) && conn->state > OR_CONN_STATE_PROXY_READING) {
     if (conn->state == OR_CONN_STATE_HANDSHAKING) {
       connection_stop_writing(conn);
       if (connection_tls_continue_handshake(conn) < 0) {
