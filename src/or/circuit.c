@@ -144,7 +144,7 @@ int circuit_init(circuit_t *circ, int aci_type, onion_layer_t *layer) {
   unsigned char digest1[20];
   unsigned char digest2[20];
   struct timeval start, end;
-  int time_passed;
+  long time_passed;
 
   assert(circ && circ->onion);
 
@@ -518,7 +518,7 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type) {
 
 void circuit_close(circuit_t *circ) {
   connection_t *conn;
-  circuit_t *youngest;
+  circuit_t *youngest=NULL;
 
   assert(circ);
   if(options.APPort)

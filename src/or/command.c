@@ -10,7 +10,7 @@ void command_time_process_cell(cell_t *cell, connection_t *conn,
                                int *num, int *time,
                                void (*func)(cell_t *, connection_t *)) {
   struct timeval start, end;
-  int time_passed; 
+  long time_passed; 
 
   *num += 1;
 
