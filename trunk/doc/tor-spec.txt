@@ -487,24 +487,40 @@ which reveals the downstream node.
    cells, echo their contents to the corresponding TCP stream.  
    [XXX Mention zlib encoding. -NM]
 
-5.2. Closing connections
+5.2. Closing streams
 
    [Note -- TCP streams can only be half-closed for reading.  Our
    Bickford's conversation was incorrect. -NM]
 
+   Because TCP connections can be half-open, we follow an equivalent
+   to TCP's FIN/FIN-ACK/ACK protocol to close streams.
 
-   When one side of the TCP stream is closed, the corresponding edge
-   node sends a RELAY_END cell along the circuit; upon receiving a
-   RELAY_END cell, the edge node closes its side of the corresponding
-   TCP stream (by sending a FIN packet), but continues to accept and
-   package incoming data until both sides of the TCP stream are
-   closed.  At that point, the edge node sends a second RELAY_END
-   cell, and drops its record of the stream.
+   A exit conneection can have a TCP stream in one of three states:
+   'OPEN', 'DONE_PACKAGING', and 'DONE_DELIVERING'.  For the purposes
+   of modeling transitions, we treat 'CLOSED' as a fourth state,
+   although connections in this state are not, in fact, tracked by the
+   onion router.
 
-   For creation and handling of RELAY_EXTEND and RELAY_EXTENDED cells,
-   see section 4.  For creating and handling of RELAY_SENDME cells,
-   see section 6.  
+   A stream begins in the 'OPEN' state.  Upon receiving a 'FIN' from
+   the corresponding TCP connection, the edge node sends a 'RELAY_END'
+   cell along the circuit and changes its state to 'DONE_PACKAGING'.
+   Upon receiving a 'RELAY_END' cell, an edge node sends a 'FIN' to
+   the corresponding TCP connection (e.g., by calling
+   shutdown(SHUT_WR)) and changing its state to 'DONE_DELIVERING'.
 
+   When a stream in already in 'DONE_DELIVERING' receives a 'FIN', it
+   also sends a 'RELAY_END' along the circuit, and changes its state
+   to 'CLOSED'.  When a stream already in 'DONE_PACKAGING' receives a
+   'RELAY_END' cell, it sends a 'FIN' and changes its state to
+   'CLOSED'.
+
+   [Note: Please rename 'RELAY_END2'. :) -NM ]
+
+   If an edge node encounters an error on any stram, it sends a
+   'RELAY_END2' cell along the circuit (if possible) and closes the
+   TCP connection immediately.  If an edge node receives a
+   'RELAY_END2' cell for any stream, it closes the TCP connection
+   completely, and sends nothing along the circuit.
 
 6. Flow control
 
