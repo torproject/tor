@@ -988,7 +988,10 @@ int config_init_logs(or_options_t *options)
   return 0;
 }
 
-/** XXX008 DOCDOC */
+/**
+ * Given a linked list of config lines containing "allow" and "deny" tokens,
+ * parse them and place the result in <b>dest</b>.  Skip malformed lines.
+ */
 void
 config_parse_exit_policy(struct config_line_t *cfg,
                          struct exit_policy_t **dest)

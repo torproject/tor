@@ -906,9 +906,8 @@ static int router_add_exit_policy(routerinfo_t *router,directory_token_t *tok)
   return 0;
 }
 
-/** Given a K_ACCEPT or K_REJECT token and a router, create a new exit_policy_t
- * corresponding to the token, and add it to <b>router</b> */
-/* XXX008 NICK DOCDOC: there is no <b>router</b> */
+/** Given a K_ACCEPT or K_REJECT token and a router, create and return
+ * a new exit_policy_t corresponding to the token. */
 static struct exit_policy_t *
 router_parse_exit_policy(directory_token_t *tok) {
 
