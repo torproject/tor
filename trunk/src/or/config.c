@@ -199,6 +199,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 /* give reasonable values for each option. Defaults to zero. */
   memset(options,0,sizeof(or_options_t));
   options->LogLevel = "info";
+  options->ExitPolicy = "reject 127.0.0.1:*,reject 18.244.0.188:25,accept *:*";
   options->loglevel = LOG_DEBUG;
   options->DataDirectory = NULL;
   options->CoinWeight = 0.1;
