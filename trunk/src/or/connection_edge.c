@@ -385,7 +385,7 @@ connection_ap_detach_retriable(connection_t *conn, circuit_t *circ)
 {
   control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE);
   conn->timestamp_lastread = time(NULL);
-  if (get_options()->ManageConnections) {
+  if (! get_options()->LeaveStreamsUnattached) {
     conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
     circuit_detach_stream(circ,conn);
     return connection_ap_handshake_attach_circuit(conn);
@@ -939,7 +939,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       rep_hist_note_used_port(socks->port, time(NULL)); /* help predict this next time */
       control_event_stream_status(conn, STREAM_EVENT_NEW);
     }
-    if (get_options()->ManageConnections) {
+    if (! get_options()->LeaveStreamsUnattached) {
       conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
       return connection_ap_handshake_attach_circuit(conn);
     } else {

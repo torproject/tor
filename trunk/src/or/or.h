@@ -1063,9 +1063,9 @@ typedef struct {
                                 * the control system. */
   int CookieAuthentication; /**< Boolean: do we enable cookie-based auth for
                              * the control system? */
-  int ManageConnections; /**< Boolean: Does Tor attach new connections to
-                          * circuits itself (1), or does it let the controller
-                          * deal? (0) */
+  int LeaveStreamsUnattached; /**< Boolean: Does Tor attach new streams to
+                          * circuits itself (0), or does it expect a controller
+                          * to cope? (1) */
   int ShutdownWaitLength; /**< When we get a SIGINT and we're a server, how
                            * long do we wait before exiting? */
 } or_options_t;
