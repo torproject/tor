@@ -50,7 +50,7 @@ int connection_exit_finished_flushing(connection_t *conn) {
 
       log(LOG_DEBUG,"connection_exit_finished_flushing(): Connection to %s:%u established.",
           conn->address,conn->port);
-      
+
       conn->state = EXIT_CONN_STATE_OPEN;
       connection_watch_events(conn, POLLIN); /* stop writing, continue reading */
       if(connection_wants_to_flush(conn)) /* in case there are any queued data cells */
@@ -124,8 +124,8 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   log(LOG_DEBUG,"connection_exit_begin_conn(): Creating new exit connection.");
   n_conn = connection_new(CONN_TYPE_EXIT);
   if(!n_conn) {
-    log(LOG_DEBUG,"connection_exit_begin_conn(): connection_new failed. Closing.");
-    return -1;
+    log(LOG_DEBUG,"connection_exit_begin_conn(): connection_new failed. Dropping.");
+    return 0;
   }
 
   cell->payload[0] = 0;
@@ -140,9 +140,9 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   n_conn->n_receive_topicwindow = TOPICWINDOW_START;
   n_conn->p_receive_topicwindow = TOPICWINDOW_START;
   if(connection_add(n_conn) < 0) { /* no space, forget it */
-    log(LOG_DEBUG,"connection_exit_begin_conn(): connection_add failed. Closing.");
+    log(LOG_DEBUG,"connection_exit_begin_conn(): connection_add failed. Dropping.");
     connection_free(n_conn);
-    return -1;
+    return 0;
   }
 
   /* add it into the linked list of topics on this circuit */

@@ -42,7 +42,7 @@
 #include "../common/ss.h"
 #include "../common/version.h"
 
-#define MAXCONNECTIONS 200 /* upper bound on max connections.
+#define MAXCONNECTIONS 1000 /* upper bound on max connections.
                               can be lowered by config file */
 
 #define MAX_BUF_SIZE (640*1024)
@@ -554,7 +554,7 @@ int connection_state_is_open(connection_t *conn);
 int connection_send_destroy(aci_t aci, connection_t *conn);
 int connection_send_connected(aci_t aci, connection_t *conn);
 int connection_encrypt_cell(char *cellp, connection_t *conn);
-int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn);
+int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn);
 
 int connection_process_inbuf(connection_t *conn);
 int connection_package_raw_inbuf(connection_t *conn);

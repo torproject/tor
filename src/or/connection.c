@@ -512,7 +512,7 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
   return connection_write_cell_to_buf(&cell, conn);
 }
 
-int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn) {
+int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
   char networkcell[CELL_NETWORK_SIZE];
   char *n = networkcell;
  
