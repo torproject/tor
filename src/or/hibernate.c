@@ -479,7 +479,7 @@ accounting_set_wakeup_time(void)
     format_local_iso_time(buf4, interval_end_time);
 
     log_fn(LOG_NOTICE, "Configured hibernation.  This interval begins at %s; "
-           "we will hibernate until %s; "
+           "scheduled wake-up time %s; "
            "we expect to stay up until at least %s; "
            "we will start a new interval at %s (all times local)",
            buf1, buf2, buf3, buf4);
