@@ -564,11 +564,11 @@ static int init_from_config(int argc, char **argv) {
     start_daemon(options.DataDirectory);
   }
 
-  close_logs(); /* we'll close, then open with correct loglevel if necessary */
-
   /* Configure the log(s) */
   if (config_init_logs(&options)<0)
     return -1;
+  /* Close the temporary log we used while starting up, if it isn't already
+   * gone. */
   close_temp_logs();
 
   /* Set up our buckets */
