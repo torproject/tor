@@ -802,6 +802,20 @@ entries.
 lists nodes that are connected currently
 speaks http on a socket, spits out directory on request
 
+Directory servers listen on a certain port (the DirPort), and speak a
+limited version of HTTP 1.0. Clients send either GET or POST commands.
+The basic interactions are:
+  "%s %s HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s\r\n\r\n",
+    command, url, content-length, host.
+  Get "/tor/" to fetch a full directory.
+  Get "/tor/dir.z" to fetch a compressed full directory.
+  Get "/tor/running-routers" to fetch a network-status descriptor.
+  Post "/tor/" to post a server descriptor, with the body of the
+    request containing the descriptor.
+
+  "host" is used to specify the address:port of the dirserver, so
+  the request can survive going through http proxies.
+
 A.1. Differences between spec and implementation
 
 - The current specification requires all ORs to have IPv4 addresses, but

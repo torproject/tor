@@ -166,7 +166,7 @@ $Id$
    Bob's OP opens a stream to each directory server's directory port via Tor.
    (He may re-use old circuits for this.)
    Over this stream, Bob's OP makes an HTTP 'POST' request, to the URL
-   '/rendezvous/publish' (relative to the directory server's root),
+   '/tor/rendezvous/publish' (relative to the directory server's root),
    containing as its body Bob's service descriptor.  Upon receiving a
    descriptor, the directory server checks the signature, and discards the
    descriptor if the signature does not match the enclosed public key.  Next,
@@ -199,12 +199,12 @@ $Id$
 
 1.6. Alice's OP retrieves a service descriptor
 
-   Alice opens a stream to a directory server via Tor, and makes an HTTP GET
-   request for the document '/rendezvous/<y>', where '<y> is replaced with the
-   encoding of Bob's public key as described above. (She may re-use old
-   circuits for this.) The directory replies with a 404 HTTP response if
-   it does not recognize <y>, and otherwise returns Bob's most recently
-   uploaded service descriptor.
+   Alice opens a stream to a directory server via Tor, and makes an
+   HTTP GET request for the document '/tor/rendezvous/<y>', where
+   '<y> is replaced with the encoding of Bob's public key as described
+   above. (She may re-use old circuits for this.) The directory replies
+   with a 404 HTTP response if it does not recognize <y>, and otherwise
+   returns Bob's most recently uploaded service descriptor.
 
    If Alice's OP receives a 404 response, it tries the other directory
    servers, and only fails the lookup if none recognizes the public key hash.
