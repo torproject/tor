@@ -6,6 +6,8 @@
 
 #include "or.h"
 
+extern or_options_t options; /* command-line and config-file options */
+
 int buf_new(char **buf, size_t *buflen, size_t *buf_datalen) {
 
   assert(buf && buflen && buf_datalen);
@@ -44,6 +46,13 @@ int read_to_buf(int s, int at_most, char **buf, size_t *buflen, size_t *buf_data
 
   if(at_most == 0)
     return 0; /* we shouldn't read anything */
+
+  if(!options.LinkPadding && at_most > 10*sizeof(cell_t)) {
+    /* if no linkpadding. do a rudimentary round-robin so one
+     * connection can't hog our receiver bucket
+     */
+    at_most = 10*sizeof(cell_t);
+  }
 
 //  log(LOG_DEBUG,"read_to_buf(): reading at most %d bytes.",at_most);
   read_result = read(s, *buf+*buf_datalen, at_most);
