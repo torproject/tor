@@ -532,6 +532,9 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       }
       log_fn(LOG_DEBUG,"Everything is here. Success.");
       strcpy(req->address, socks4_prot == socks4 ? tmpbuf : startaddr);
+      /* XXX on very old netscapes (socks4) the next line triggers an
+       * assert, because next-buf->mem+1 is greater than buf->datalen.
+       */
       buf_remove_from_front(buf, next-buf->mem+1); /* next points to the final \0 on inbuf */
       return 1;
 
