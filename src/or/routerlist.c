@@ -643,11 +643,11 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
   int n_routers, n_names, i, j, running;
   routerinfo_t *router;
   const char *name;
-  if (!routerlist)
+  if (!list)
     return;
-  if (routerlist->published_on >= rr->published_on)
+  if (list->published_on >= rr->published_on)
     return;
-  if (routerlist->running_routers_updated_on >= rr->published_on)
+  if (list->running_routers_updated_on >= rr->published_on)
     return;
 
   n_routers = smartlist_len(list->routers);
@@ -664,7 +664,7 @@ void routerlist_update_from_runningrouters(routerlist_t *list,
     }
     router->is_running = 1; /* arma: is this correct? */
   }
-  routerlist->running_routers_updated_on = rr->published_on;
+  list->running_routers_updated_on = rr->published_on;
   /* XXXX008 Should there also be a list of which are down, so that we
    * don't mark merely unknown routers as down? */
 }
