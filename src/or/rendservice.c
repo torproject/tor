@@ -78,7 +78,7 @@ static void rend_service_free_all(void)
   rend_service_list = smartlist_create();
 }
 
-/** Validate <b>service<b> and add it to rend_service_list if possible.
+/** Validate <b>service</b> and add it to rend_service_list if possible.
  */
 static void add_service(rend_service_t *service)
 {
@@ -894,7 +894,7 @@ rend_service_dump_stats(int severity)
   }
 }
 
-/** Given <b>conn</a>, a rendezvous exit stream, look up the hidden service for
+/** Given <b>conn</b>, a rendezvous exit stream, look up the hidden service for
  * 'circ', and look up the port and address based on conn-\>port.
  * Assign the actual conn-\>addr and conn-\>port. Return -1 if failure,
  * or 0 for success.
