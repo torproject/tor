@@ -156,7 +156,7 @@ rend_client_introduction_acked(circuit_t *circ,
   char *nickname;
 
   if (circ->purpose != CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
-    log_fn(LOG_WARN, "Recieved REND_INTRODUCE_ACK on unexpected circuit %d",
+    log_fn(LOG_WARN, "Received REND_INTRODUCE_ACK on unexpected circuit %d",
            circ->n_circ_id);
     circuit_mark_for_close(circ);
     return -1;

@@ -202,8 +202,10 @@
 /* here's how circ client-side purposes work:
  *   normal circuits are C_GENERAL.
  *   circuits that are c_introducing are either on their way to
- *     becoming open, or they are open but haven't been used yet.
- *     (as soon as they are used, they are destroyed.)
+ *     becoming open, or they are open and waiting for a
+ *     suitable rendcirc before they send the intro.
+ *   circuits that are c_introduce_ack_wait have sent the intro,
+ *     but haven't gotten a response yet.
  *   circuits that are c_establish_rend are either on their way
  *     to becoming open, or they are open and have sent the
  *     establish_rendezvous cell but haven't received an ack.
@@ -216,7 +218,7 @@
  */
 #define CIRCUIT_PURPOSE_C_GENERAL 5 /* normal circuit, with cpath */
 #define CIRCUIT_PURPOSE_C_INTRODUCING 6 /* at Alice, connecting to intro point */
-#define CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT 7 /* at alice, sent INTRODUCE1 to intro point, waiting for ACK/NAK */
+#define CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT 7 /* at Alice, sent INTRODUCE1 to intro point, waiting for ACK/NAK */
 
 #define CIRCUIT_PURPOSE_C_ESTABLISH_REND 8 /* at Alice, waiting for ack */
 #define CIRCUIT_PURPOSE_C_REND_READY 9 /* at Alice, waiting for Bob */
@@ -274,9 +276,6 @@
 
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
-//#define EDGE_EXIT CONN_TYPE_EXIT
-//#define EDGE_AP CONN_TYPE_AP
-//#define CELL_DIRECTION(x) ((x) == EDGE_EXIT ? CELL_DIRECTION_IN : CELL_DIRECTION_OUT)
 
 #ifdef TOR_PERF
 #define CIRCWINDOW_START 10000
@@ -311,32 +310,6 @@
  *         Length                  [2 bytes]
  *         Relay payload           [498 bytes]
  */
-
-#if 0
-#define CELL_RELAY_COMMAND(c)         (*(uint8_t*)((c).payload))
-#define SET_CELL_RELAY_COMMAND(c,cmd) (*(uint8_t*)((c).payload) = (cmd))
-
-#define CELL_RELAY_RECOGNIZED(c)       (ntohs(*(uint16_t*)((c).payload+1)))
-#define SET_CELL_RELAY_RECOGNIZED(c,r) (*(uint16_t*)((c).payload+1) = htons(r))
-
-#define STREAM_ID_SIZE 2
-//#define SET_CELL_STREAM_ID(c,id)      memcpy((c).payload+1,(id),STREAM_ID_SIZE)
-#define CELL_RELAY_STREAM_ID(c)        (ntohs(*(uint16_t*)((c).payload+3)))
-#define SET_CELL_RELAY_STREAM_ID(c,id) (*(uint16_t*)((c).payload+3) = htons(id))
-#define ZERO_STREAM 0
-
-/* integrity is the first 32 bits (in network order) of a sha-1 of all
- * cell payloads that are relay cells that have been sent / delivered
- * to the hop on the * circuit (the integrity is zeroed while doing
- * each calculation)
- */
-#define CELL_RELAY_INTEGRITY(c)       (ntohl(*(uint32_t*)((c).payload+5)))
-#define SET_CELL_RELAY_INTEGRITY(c,i) (*(uint32_t*)((c).payload+5) = htonl(i))
-
-/* relay length is how many bytes are used in the cell payload past relay_header_size */
-#define CELL_RELAY_LENGTH(c)         (ntohs(*(uint16_t*)((c).payload+9)))
-#define SET_CELL_RELAY_LENGTH(c,len) (*(uint16_t*)((c).payload+9) = htons(len))
-#endif
 
 #define CELL_PAYLOAD_SIZE 509
 #define CELL_NETWORK_SIZE 512
@@ -716,8 +689,8 @@ circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *circuit,
                                               const char *servid, uint8_t purpose);
 circuit_t *circuit_get_rendezvous(const char *cookie);
 
-void circuit_expire_building(void);
-int circuit_count_building(void);
+void circuit_expire_building(time_t now);
+int circuit_count_building(uint8_t purpose);
 int circuit_stream_is_being_handled(connection_t *conn);
 void circuit_build_needed_circs(time_t now);
 
@@ -1110,7 +1083,7 @@ int rend_cache_store(char *desc, int desc_len);
 
 int rend_config_services(or_options_t *options);
 int rend_service_init_keys(void);
-int rend_services_init(void);
+void rend_services_init(void);
 
 void rend_service_intro_is_ready(circuit_t *circuit);
 int rend_service_intro_established(circuit_t *circuit, const char *request, int request_len);

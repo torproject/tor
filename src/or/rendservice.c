@@ -662,7 +662,7 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
  *  - Launch circuits to any new intro points.
  *  - Upload a fresh service descriptor if anything has changed.
  */
-int rend_services_init(void) {
+void rend_services_init(void) {
   int i,j,r;
   routerinfo_t *router;
   routerlist_t *rl;
@@ -759,8 +759,6 @@ int rend_services_init(void) {
   }
   smartlist_free(intro_routers);
   smartlist_free(exclude_routers);
-
-  return 0;
 }
 
 void

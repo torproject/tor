@@ -297,9 +297,6 @@ void directory_has_arrived(void) {
   if(options.ORPort) { /* connect to them all */
     router_retry_connections();
   }
-
-  rend_services_init(); /* get bob to initialize all his hidden services */
-
 }
 
 /* Perform regular maintenance tasks for a single connection.  This
@@ -366,7 +363,7 @@ static void run_scheduled_events(time_t now) {
    *    We do this before step 3, so it can try building more if
    *    it's not comfortable with the number of available circuits.
    */
-  circuit_expire_building();
+  circuit_expire_building(now);
 
   /* 2b. Also look at pending streams and prune the ones that 'began'
    *     a long time ago but haven't gotten a 'connected' yet.
@@ -385,8 +382,7 @@ static void run_scheduled_events(time_t now) {
    *    that became dirty more than NewCircuitPeriod seconds ago,
    *    and we make a new circ if there are no clean circuits.
    */
-  if(has_fetched_directory &&
-     (options.SocksPort || options.RunTesting))
+  if(has_fetched_directory)
     circuit_build_needed_circs(now);
 
   /* 4. We do housekeeping for each connection... */
@@ -522,10 +518,7 @@ static int do_hup(void) {
     }
     /* Since we aren't fetching a directory, we won't retry rendezvous points
      * when it gets in.  Try again now. */
-    if (rend_services_init()<0) {
-      log_fn(LOG_ERR,"Error updating rendezvous services");
-      return -1;
-    }
+    rend_services_init();
   } else {
     /* fetch a new directory */
     directory_initiate_command(router_pick_directory_server(),

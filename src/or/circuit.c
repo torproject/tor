@@ -16,6 +16,7 @@ static void circuit_free_cpath_node(crypt_path_t *victim);
 static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type);
 static void circuit_rep_hist_note_result(circuit_t *circ);
 
+void circuit_expire_old_circuits(void);
 static void circuit_is_open(circuit_t *circ);
 static void circuit_build_failed(circuit_t *circ);
 static circuit_t *circuit_establish_circuit(uint8_t purpose, const char *exit_nickname);
@@ -293,10 +294,6 @@ static int circuit_is_acceptable(circuit_t *circ,
   if(conn) {
     /* decide if this circ is suitable for this conn */
 
-//      if(circ->state == CIRCUIT_STATE_OPEN && circ->n_conn) /* open */
-//        exitrouter = router_get_by_addr_port(circ->cpath->prev->addr,
-//                                             circ->cpath->prev->port);
-//      else /* not open */
     /* for rend circs, circ->cpath->prev is not the last router in the
      * circuit, it's the magical extra bob hop. so just check the nickname
      * of the one we meant to finish at.
@@ -442,8 +439,7 @@ circuit_t *circuit_get_rendezvous(const char *cookie)
 
 /* close all circuits that start at us, aren't open, and were born
  * at least MIN_SECONDS_BEFORE_EXPIRING_CIRC seconds ago */
-void circuit_expire_building(void) {
-  int now = time(NULL);
+void circuit_expire_building(time_t now) {
   circuit_t *victim, *circ = global_circuitlist;
 
   while(circ) {
@@ -480,14 +476,15 @@ void circuit_expire_building(void) {
 }
 
 /* count the number of circs starting at us that aren't open */
-int circuit_count_building(void) {
+int circuit_count_building(uint8_t purpose) {
   circuit_t *circ;
   int num=0;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(CIRCUIT_IS_ORIGIN(circ)
-       && circ->state != CIRCUIT_STATE_OPEN
-       && !circ->marked_for_close)
+    if(CIRCUIT_IS_ORIGIN(circ) &&
+       circ->state != CIRCUIT_STATE_OPEN &&
+       circ->purpose == purpose &&
+       !circ->marked_for_close)
       num++;
   }
   return num;
@@ -518,41 +515,65 @@ int circuit_stream_is_being_handled(connection_t *conn) {
   return 0;
 }
 
-void circuit_build_needed_circs(time_t now) {
-  static long time_to_new_circuit = 0;
+static circuit_t *
+circuit_get_youngest_clean_open(uint8_t purpose) {
   circuit_t *circ;
+  circuit_t *youngest=NULL;
 
-  if (options.SocksPort)
-    /* launch a new circ for any pending streams that need one */
-    connection_ap_attach_pending();
+  for(circ=global_circuitlist;circ;circ = circ->next) {
+    if(CIRCUIT_IS_ORIGIN(circ) && circ->state == CIRCUIT_STATE_OPEN &&
+       !circ->marked_for_close && circ->purpose == purpose &&
+       !circ->timestamp_dirty &&
+       (!youngest || youngest->timestamp_created < circ->timestamp_created))
+      youngest = circ;
+  }
+  return youngest;
+}
 
 /* Build a new test circuit every 5 minutes */
 #define TESTING_CIRCUIT_INTERVAL 300
 
-  circ = circuit_get_best(NULL, 1, CIRCUIT_PURPOSE_C_GENERAL);
+/* this function is called once a second. its job is to make sure
+ * all services we offer have enough circuits available. Some
+ * services just want enough circuits for current tasks, whereas
+ * others want a minimum set of idle circuits hanging around.
+ */
+void circuit_build_needed_circs(time_t now) {
+  static long time_to_new_circuit = 0;
+  circuit_t *circ;
+
+  /* launch a new circ for any pending streams that need one */
+  connection_ap_attach_pending();
+
+  /* make sure any hidden services have enough intro points */
+  rend_services_init();
+
+  circ = circuit_get_youngest_clean_open(CIRCUIT_PURPOSE_C_GENERAL);
+
   if(time_to_new_circuit < now) {
-    client_dns_clean();
-    circuit_expire_unused_circuits();
     circuit_reset_failure_count();
-    if(circ && circ->timestamp_dirty) {
-      log_fn(LOG_INFO,"Youngest circuit dirty; launching replacement.");
-      /* make a new circuit */
-      circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
-    } else if (options.RunTesting && circ &&
+    time_to_new_circuit = now + options.NewCircuitPeriod;
+    if(options.SocksPort)
+      client_dns_clean();
+    circuit_expire_old_circuits();
+
+    if(options.RunTesting && circ &&
                circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
       log_fn(LOG_INFO,"Creating a new testing circuit.");
       circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
     }
-    time_to_new_circuit = now + options.NewCircuitPeriod;
-    time_to_new_circuit = now + options.NewCircuitPeriod;
   }
-#define CIRCUIT_MIN_BUILDING 3
-  if(!circ && circuit_count_building() < CIRCUIT_MIN_BUILDING) {
-    /* if there's no open circ, and less than 3 are on the way,
-     * go ahead and try another.
-     */
+
+#define CIRCUIT_MIN_BUILDING_GENERAL 3
+  /* if there's no open circ, and less than 3 are on the way,
+   * go ahead and try another. */
+  if(!circ && circuit_count_building(CIRCUIT_PURPOSE_C_GENERAL)
+              < CIRCUIT_MIN_BUILDING_GENERAL) {
     circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL, NULL);
   }
+
+  /* XXX count idle rendezvous circs and build more */
+
 }
 
 /* update digest from the payload of cell. assign integrity part to cell. */
@@ -1142,7 +1163,7 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
 /* Don't keep more than 10 unused open circuits around. */
 #define MAX_UNUSED_OPEN_CIRCUITS 10
 
-void circuit_expire_unused_circuits(void) {
+void circuit_expire_old_circuits(void) {
   circuit_t *circ;
   time_t now = time(NULL);
   smartlist_t *unused_open_circs;
