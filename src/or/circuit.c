@@ -869,7 +869,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   crypto_dh_free(hop->handshake_state); /* don't need it anymore */
   hop->handshake_state = NULL;
 
-  log_fn(LOG_DEBUG,"hop %d init cipher forward %d, backward %d.", (int)hop, *(int*)keys, *(int*)(keys+16));
+  log_fn(LOG_DEBUG,"hop %d init cipher forward %d, backward %d.", (uint32_t)hop, *(uint32_t*)keys, *(uint32_t*)(keys+16));
   if (!(hop->f_crypto =
         crypto_create_init_cipher(DEFAULT_CIPHER,keys,iv,1))) {
     log(LOG_ERR,"Cipher initialization failed.");
