@@ -526,6 +526,9 @@ struct connection_t {
   char identity_digest[DIGEST_LEN]; /**< Hash of identity_pkey */
   char *nickname; /**< Nickname of OR on other side (if any). */
 
+  /** Nickname of planned exit node -- to be used with .exit support. */
+  char *chosen_exit_name;
+
 /* Used only by OR connections: */
   tor_tls *tls; /**< TLS connection state (OR only.) */
   uint16_t next_circ_id; /**< Which circ_id do we try to use next on
@@ -1223,6 +1226,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
 void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
 
+void parse_socks_policy(void);
 int socks_policy_permits_address(uint32_t addr);
 
 void client_dns_init(void);
@@ -1231,7 +1235,7 @@ int client_dns_incr_failures(const char *address);
 void client_dns_set_entry(const char *address, uint32_t val);
 void client_dns_clean(void);
 void set_exit_redirects(smartlist_t *lst);
-void parse_socks_policy(void);
+int parse_address(char *address);
 
 /********************************* connection_or.c ***************************/
 
@@ -1453,7 +1457,6 @@ int rend_client_receive_rendezvous(circuit_t *circ, const char *request, size_t 
 void rend_client_desc_fetched(char *query, int status);
 
 char *rend_client_get_random_intro(char *query);
-int rend_parse_rendezvous_address(char *address);
 
 int rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc);
 

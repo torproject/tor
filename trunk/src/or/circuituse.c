@@ -706,10 +706,25 @@ circuit_get_open_circ_or_launch(connection_t *conn,
       }
       if (!router_get_by_nickname(exitname)) {
         log_fn(LOG_WARN,"Advertised intro point '%s' is not known. Closing.", exitname);
+        tor_free(exitname);
         return -1;
       }
       /* XXX if we failed, then refetch the descriptor */
       log_fn(LOG_INFO,"Chose %s as intro point for %s.", exitname, conn->rend_query);
+    }
+
+    /* If we have specified a particular exit node for our
+     * connection, then be sure to open a circuit to that exit node.
+     */
+    if(desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+      if (conn->chosen_exit_name) {
+        exitname = tor_strdup(conn->chosen_exit_name);
+        if(!router_get_by_nickname(exitname)) {
+          log_fn(LOG_WARN,"Requested exit point '%s' is not known. Closing.", exitname);
+          tor_free(exitname);
+          return -1;
+        }
+      }
     }
 
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_REND_JOINED)

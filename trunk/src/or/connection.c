@@ -148,6 +148,7 @@ void connection_free(connection_t *conn) {
     buf_free(conn->outbuf);
   }
   tor_free(conn->address);
+  tor_free(conn->chosen_exit_name);
 
   if (connection_speaks_cells(conn)) {
     if (conn->state == OR_CONN_STATE_OPEN)
