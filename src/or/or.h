@@ -1125,6 +1125,7 @@ int dns_resolve(connection_t *exitconn);
 
 int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
+int connection_in_array(connection_t *conn);
 
 void get_connection_array(connection_t ***array, int *n);
 
