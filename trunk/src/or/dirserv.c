@@ -322,12 +322,12 @@ dirserv_add_descriptor(const char **desc)
   }
   if(r==0) {
     char fp[FINGERPRINT_LEN+1];
-    log_fn(LOG_WARN, "Unknown nickname %s (%s:%d). Adding.",
+    log_fn(LOG_INFO, "Unknown nickname %s (%s:%d). Adding.",
            ri->nickname, ri->address, ri->or_port);
     if (crypto_pk_get_fingerprint(ri->identity_pkey, fp) < 0) {
       log_fn(LOG_WARN, "Error computing fingerprint for %s", ri->nickname);
     } else {
-      log_fn(LOG_WARN, "Fingerprint line: %s %s", ri->nickname, fp);
+      log_fn(LOG_INFO, "Fingerprint line: %s %s", ri->nickname, fp);
     }
     verified = 0;
   }
