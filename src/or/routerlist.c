@@ -433,8 +433,8 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
     router = smartlist_get(sl, i);
     this_bw = (router->bandwidthcapacity < router->bandwidthrate) ?
                router->bandwidthcapacity : router->bandwidthrate;
-    if (this_bw > 800000)
-      this_bw = 800000; /* if they claim something huge, don't believe it */
+    if (this_bw > 1000000)
+      this_bw = 1000000; /* if they claim something huge, don't believe it */
     p = tor_malloc(sizeof(uint32_t));
     *p = this_bw;
     smartlist_add(bandwidths, p);
