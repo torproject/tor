@@ -757,7 +757,9 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       return connection_ap_handshake_attach_circuit(conn);
     } else {
       conn->state = AP_CONN_STATE_RENDDESC_WAIT;
-      if(!connection_get_by_type_rendquery(CONN_TYPE_DIR, conn->rend_query)) {
+      if(connection_get_by_type_rendquery(CONN_TYPE_DIR, conn->rend_query)) {
+        log_fn(LOG_INFO,"Would fetch a new renddesc here (for %s), but one is already in progress.", conn->rend_query);
+      } else {
         /* not one already; initiate a dir rend desc lookup */
         directory_initiate_command(router_pick_directory_server(),
                                    DIR_PURPOSE_FETCH_RENDDESC,
