@@ -10,6 +10,8 @@ static int the_directory_is_dirty = 1;
 static char *the_directory = NULL;
 static int the_directory_len = -1;
 
+static int list_running_servers(char **nicknames_out);
+
 /************** Fingerprint handling code ************/
 
 typedef struct fingerprint_entry_t {
@@ -290,6 +292,46 @@ dirserv_init_from_directory_string(const char *dir)
   }
   return 0;
 }
+
+static int 
+list_running_servers(char **nicknames_out)
+{
+  char *nickname_lst[MAX_ROUTERS_IN_DIR];
+  connection_t **connection_array;
+  int n_conns;
+  connection_t *conn;
+  char *cp;
+  int n = 0, i;
+  int length;
+  *nicknames_out = NULL;
+  nickname_lst[n++] = options.Nickname;
+  
+  get_connection_array(&connection_array, &n_conns);
+  for (i = 0; i<n_conns; ++i) {
+    conn = connection_array[i];
+    if (conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN)
+      continue; /* only list successfully handshaked OR's. */
+    if(!conn->nickname) /* it's an OP, don't list it */
+      continue;
+    nickname_lst[n++] = conn->nickname;
+  }
+  length = n + 1; /* spaces + EOS + 1. */
+  for (i = 0; i<n; ++i) {
+    length += strlen(nickname_lst[i]);
+  }
+  *nicknames_out = tor_malloc(length);
+  cp = *nicknames_out;
+  memset(cp,0,length);
+  for (i = 0; i<n; ++i) {
+    if (i)
+      strcat(cp, " ");
+    strcat(cp, nickname_lst[i]);
+    while (*cp) 
+      ++cp;
+  }
+  return 0;
+}
+
 
 int
 dirserv_dump_directory_to_string(char *s, int maxlen,
