@@ -582,7 +582,7 @@ void router_mark_as_down(const char *digest) {
     return;
   log_fn(LOG_DEBUG,"Marking %s as down.",router->nickname);
   if (router_is_me(router))
-    log_fn(LOG_WARN, "We just marked ourself as down.");
+    log_fn(LOG_WARN, "We just marked ourself as down. Are your external addresses reachable?");
   router->is_running = 0;
   router->status_set_at = time(NULL);
 }
