@@ -223,7 +223,8 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   int best_support_idx = -1;
   int best_maybe_support_idx = -1;
   int n_best_support=0, n_best_maybe_support=0;
-  int n_running_routers=0;
+  smartlist_t *sl;
+  routerinfo_t *router;
 
   get_connection_array(&carray, &n_connections);
 
@@ -262,7 +263,6 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
       continue; /* skip routers that reject all */
     }
     n_supported[i] = n_maybe_supported[i] = 0;
-    ++n_running_routers;
     for (j = 0; j < n_connections; ++j) { /* iterate over connections */
       if (carray[j]->type != CONN_TYPE_AP ||
           carray[j]->state != AP_CONN_STATE_CIRCUIT_WAIT ||
@@ -314,63 +314,48 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   /* If any routers definitely support any pending connections, choose one
    * at random. */
   if (best_support > 0) {
-    i = crypto_pseudo_rand_int(n_best_support);
-    /* Iterate over the routers, until we find the i-th one such that
-     * n_supported[j] == best_support
-     */
-    for (j = best_support_idx; j < dir->n_routers; ++j) {
-      if (n_supported[j] == best_support) {
-        if (i)
-          --i;
-        else {
-          tor_free(n_supported); tor_free(n_maybe_supported);
-          log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[j]->nickname);
-          return dir->routers[j];
-        }
-      }
-    }
-    /* This point should never be reached. */
-    assert(0);
+    sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+    for(i = best_support_idx; i < dir->n_routers; i++)
+      if(n_supported[i] == best_support)
+        smartlist_add(sl, dir->routers[i]);
+
+    router = smartlist_choose(sl);
+    smartlist_free(sl);
+    tor_free(n_supported); tor_free(n_maybe_supported);
+    log_fn(LOG_DEBUG, "Chose exit server '%s'", router->nickname);
+    return router;
   }
+
   /* If any routers _maybe_ support pending connections, choose one at
    * random, as above.  */
   if (best_maybe_support > 0) {
-    i = crypto_pseudo_rand_int(n_best_maybe_support);
-    for (j = best_maybe_support_idx; j < dir->n_routers; ++j) {
-      if (n_maybe_supported[j] == best_maybe_support) {
-        if (i)
-          --i;
-        else {
-          tor_free(n_supported); tor_free(n_maybe_supported);
-          log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[j]->nickname);
-          return dir->routers[j];
-        }
-      }
-    }
-    /* This point should never be reached. */
-    assert(0);
+    sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+    for(i = best_maybe_support_idx; i < dir->n_routers; i++)
+      if(n_maybe_supported[i] == best_maybe_support)
+        smartlist_add(sl, dir->routers[i]);
+
+    router = smartlist_choose(sl);
+    smartlist_free(sl);
+    tor_free(n_supported); tor_free(n_maybe_supported);
+    log_fn(LOG_DEBUG, "Chose exit server '%s'", router->nickname);
+    return router;
   }
+
   /* Either there are no pending connections, or no routers even seem to
    * possibly support any of them.  Choose a router at random. */
-  if (!n_running_routers) {
-    log_fn(LOG_WARN, "No exit routers seem to be running; can't choose an exit.");
-    return NULL;
+  sl = smartlist_create(MAX_ROUTERS_IN_DIR);
+  for(i = best_maybe_support_idx; i < dir->n_routers; i++)
+    if(n_supported[i] != -1)
+      smartlist_add(sl, dir->routers[i]);
+
+  router = smartlist_choose(sl);
+  smartlist_free(sl);
+  if(router) {
+    tor_free(n_supported); tor_free(n_maybe_supported);
+    log_fn(LOG_DEBUG, "Chose exit server '%s'", router->nickname);
+    return router;
   }
-  /* Iterate over the routers, till we find the i'th one that has ->is_running
-   * and allows exits. */
-  i = crypto_pseudo_rand_int(n_running_routers);
-  for (j = 0; j < dir->n_routers; ++j) {
-    if (n_supported[j] != -1) {
-      if (i)
-        --i;
-      else {
-        tor_free(n_supported); tor_free(n_maybe_supported);
-        log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[j]->nickname);
-        return dir->routers[j];
-      }
-    }
-  }
-  assert(0);
+  log_fn(LOG_WARN, "No exit routers seem to be running; can't choose an exit.");
   return NULL;
 }
 
