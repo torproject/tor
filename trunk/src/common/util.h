@@ -201,6 +201,9 @@ void tv_addms(struct timeval *a, long ms);
 void tv_add(struct timeval *a, struct timeval *b);
 int tv_cmp(struct timeval *a, struct timeval *b);
 time_t tor_timegm(struct tm *tm);
+#define RFC1123_TIME_LEN 29
+void tor_format_rfc1123_time(char *buf, time_t t);
+int tor_parse_rfc1123_time(const char *buf, time_t *t);
 
 int write_all(int fd, const char *buf, size_t count, int isSocket);
 int read_all(int fd, char *buf, size_t count, int isSocket);

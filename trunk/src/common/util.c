@@ -914,6 +914,57 @@ time_t tor_timegm (struct tm *tm) {
   return ret;
 }
 
+/* strftime is locale-specific, so we need to replace those parts */
+static const char *WEEKDAY_NAMES[] =
+  { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+static const char *MONTH_NAMES[] =
+  { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+void tor_format_rfc1123_time(char *buf, time_t t) {
+  struct tm *tm = gmtime(&t);
+
+  strftime(buf, RFC1123_TIME_LEN+1, "XXX, %d XXX %Y %H:%M:%S GMT", tm);
+  tor_assert(tm->tm_wday >= 0 && tm->tm_wday <= 6);
+  memcpy(buf, WEEKDAY_NAMES[tm->tm_wday], 3);
+  tor_assert(tm->tm_wday >= 0 && tm->tm_mon <= 11);
+  memcpy(buf+8, MONTH_NAMES[tm->tm_mon], 3);
+}
+
+int tor_parse_rfc1123_time(const char *buf, time_t *t) {
+  struct tm tm;
+  char month[4];
+  char weekday[4];
+  int i, m;
+
+  if (strlen(buf) != RFC1123_TIME_LEN)
+    return -1;
+  memset(&tm, 0, sizeof(tm));
+  if (sscanf(buf, "%3s, %d %3s %d %d:%d:%d GMT", weekday,
+             &tm.tm_mday, month, &tm.tm_year, &tm.tm_hour,
+             &tm.tm_min, &tm.tm_sec) < 7) {
+    log_fn(LOG_WARN, "Got invalid RFC1123 time \"%s\"", buf);
+    return -1;
+  }
+
+  m = -1;
+  for (i = 0; i < 12; ++i) {
+    if (!strcmp(month, MONTH_NAMES[i])) {
+      m = i;
+      break;
+    }
+  }
+  if (m<0) {
+    log_fn(LOG_WARN, "Got invalid RFC1123 time \"%s\"", buf);
+    return -1;
+  }
+
+  tm.tm_mon = m;
+  tm.tm_year -= 1900;
+  *t = tor_timegm(&tm);
+  return 0;
+}
+
 /*
  *   Low-level I/O.
  */
