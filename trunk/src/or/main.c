@@ -676,6 +676,7 @@ build_directory(directory_t *dir) {
       continue; /* we only want to list ones that successfully handshaked */
     router = router_get_by_addr_port(conn->addr,conn->port);
     if(!router) {
+      /* XXX this legitimately happens when conn is an OP. How to detect this? */
       log(LOG_ERR,"build_directory(): couldn't find router %d:%d!",
           conn->addr,conn->port);
       continue;
