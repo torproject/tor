@@ -1242,7 +1242,7 @@ int crypto_dh_generate_public(crypto_dh_env_t *dh)
  * as a <b>pubkey_len</b>-byte value into <b>pubkey</b>. Return 0 on
  * success, -1 on failure.  <b>pubkey_len</b> must be \>= DH_BYTES.
  */
-int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
+int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
 {
   int bytes;
   tor_assert(dh);
@@ -1253,7 +1253,8 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
 
   tor_assert(dh->dh->pub_key);
   bytes = BN_num_bytes(dh->dh->pub_key);
-  if (pubkey_len < bytes)
+  tor_assert(bytes >= 0);
+  if (pubkey_len < (size_t)bytes)
     return -1;
 
   memset(pubkey, 0, pubkey_len);
@@ -1275,21 +1276,27 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
  * where || is concatenation.)
  */
 int crypto_dh_compute_secret(crypto_dh_env_t *dh,
-                             const char *pubkey, int pubkey_len,
-                             char *secret_out, int secret_bytes_out)
+                             const char *pubkey, size_t pubkey_len,
+                             char *secret_out, size_t secret_bytes_out)
 {
   unsigned char hash[DIGEST_LEN];
   unsigned char *secret_tmp = NULL;
   BIGNUM *pubkey_bn = NULL;
-  int secret_len;
-  int i;
+  size_t secret_len=0;
+  unsigned int i;
+  int result=0;
   tor_assert(dh);
   tor_assert(secret_bytes_out/DIGEST_LEN <= 255);
 
   if (!(pubkey_bn = BN_bin2bn(pubkey, pubkey_len, NULL)))
     goto error;
   secret_tmp = tor_malloc(crypto_dh_get_bytes(dh)+1);
-  secret_len = DH_compute_key(secret_tmp, pubkey_bn, dh->dh);
+  result = DH_compute_key(secret_tmp, pubkey_bn, dh->dh);
+  if(result < 0) {
+    log_fn(LOG_WARN,"DH_compute_key() failed.");
+    goto error;
+  }
+  secret_len = result;
   /* sometimes secret_len might be less than 128, e.g., 127. that's ok. */
   for (i = 0; i < secret_bytes_out; i += DIGEST_LEN) {
     secret_tmp[secret_len] = (unsigned char) i/DIGEST_LEN;
@@ -1301,14 +1308,18 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
 
   goto done;
  error:
-  secret_len = -1;
+  result = -1;
  done:
   crypto_log_errors(LOG_WARN, "completing DH handshake");
   if (pubkey_bn)
     BN_free(pubkey_bn);
   tor_free(secret_tmp);
-  return secret_len;
+  if(result < 0)
+    return result;
+  else
+    return secret_len;
 }
+
 /** Free a DH key exchange object.
  */
 void crypto_dh_free(crypto_dh_env_t *dh)
@@ -1433,7 +1444,7 @@ int crypto_pseudo_rand_int(unsigned int max) {
  * destlen is too short, or other failure.
  */
 int
-base64_encode(char *dest, int destlen, const char *src, int srclen)
+base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   EVP_ENCODE_CTX ctx;
   int len, ret;
@@ -1457,7 +1468,7 @@ base64_encode(char *dest, int destlen, const char *src, int srclen)
  * destlen is too short, or other failure.
  */
 int
-base64_decode(char *dest, int destlen, const char *src, int srclen)
+base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   EVP_ENCODE_CTX ctx;
   int len, ret;
@@ -1478,9 +1489,9 @@ base64_decode(char *dest, int destlen, const char *src, int srclen)
  * that srclen*8 is a multiple of 5.
  */
 void
-base32_encode(char *dest, int destlen, const char *src, int srclen)
+base32_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
-  int nbits, i, bit, v, u;
+  unsigned int nbits, i, bit, v, u;
   nbits = srclen * 8;
 
   tor_assert((nbits%5) == 0); /* We need an even multiple of 5 bits. */
@@ -1497,7 +1508,7 @@ base32_encode(char *dest, int destlen, const char *src, int srclen)
   dest[i] = '\0';
 }
 
-void base16_encode(char *dest, int destlen, const char *src, int srclen)
+void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   const char *end;
   char *cp;
@@ -1530,7 +1541,7 @@ static INLINE int hex_decode_digit(char c)
     return n-6; /* lowercase */
 }
 
-int base16_decode(char *dest, int destlen, const char *src, int srclen)
+int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   const char *end;
   int v1,v2;

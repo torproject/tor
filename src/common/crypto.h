@@ -92,22 +92,22 @@ int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out);
 int crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out,int add_space);
 int crypto_pk_check_fingerprint_syntax(const char *s);
 
-int base64_encode(char *dest, int destlen, const char *src, int srclen);
-int base64_decode(char *dest, int destlen, const char *src, int srclen);
+int base64_encode(char *dest, size_t destlen, const char *src, size_t srclen);
+int base64_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 #define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz234567"
-void base32_encode(char *dest, int destlen, const char *src, int srclen);
-void base16_encode(char *dest, int destlen, const char *src, int srclen);
-int base16_decode(char *dest, int destlen, const char *src, int srclen);
+void base32_encode(char *dest, size_t destlen, const char *src, size_t srclen);
+void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
+int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 /* Key negotiation */
 crypto_dh_env_t *crypto_dh_new();
 int crypto_dh_get_bytes(crypto_dh_env_t *dh);
 int crypto_dh_generate_public(crypto_dh_env_t *dh);
 int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey_out,
-                         int pubkey_out_len);
+                         size_t pubkey_out_len);
 int crypto_dh_compute_secret(crypto_dh_env_t *dh,
-                             const char *pubkey, int pubkey_len,
-                             char *secret_out, int secret_out_len);
+                             const char *pubkey, size_t pubkey_len,
+                             char *secret_out, size_t secret_out_len);
 void crypto_dh_free(crypto_dh_env_t *dh);
 
 /* symmetric crypto */

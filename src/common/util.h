@@ -110,38 +110,13 @@ unsigned long tor_parse_ulong(const char *s, int base, unsigned long min,
 #define set_uint16(cp,v) do { *(uint16_t*)(cp) = (v); } while (0)
 #define set_uint32(cp,v) do { *(uint32_t*)(cp) = (v); } while (0)
 #else
-#if 1
 uint16_t get_uint16(const char *cp);
 uint32_t get_uint32(const char *cp);
 void set_uint16(char *cp, uint16_t v);
 void set_uint32(char *cp, uint32_t v);
-#else
-#define get_uint16(cp)                          \
-  ( ((*(((uint8_t*)(cp))+0))<<8) +              \
-    ((*(((uint8_t*)(cp))+1))   ) )
-#define get_uint32(cp)                          \
-  ( ((*(((uint8_t*)(cp))+0))<<24) +             \
-    ((*(((uint8_t*)(cp))+1))<<16) +             \
-    ((*(((uint8_t*)(cp))+2))<<8 ) +             \
-    ((*(((uint8_t*)(cp))+3))    ) )
-#define set_uint16(cp,v)                        \
-  do {                                          \
-    uint16_t u16v = (v);                        \
-    *(((uint8_t*)(cp))+0) = (v >> 8)&0xff;      \
-    *(((uint8_t*)(cp))+1) = (v >> 0)&0xff;      \
-  } while (0)
-#define set_uint32(cp,val)                      \
-  do {                                          \
-    uint32_t u32v = (v);                        \
-    *(((uint8_t*)(cp))+0) = s32 >> 24)&0xff;    \
-    *(((uint8_t*)(cp))+1) = s32 >> 16)&0xff;    \
-    *(((uint8_t*)(cp))+2) = s32 >> 8)&0xff;     \
-    *(((uint8_t*)(cp))+3) = s32 >> 0)&0xff;     \
-  } while (0)
-#endif
 #endif
 
-const char *hex_str(const char *from, int fromlen);
+const char *hex_str(const char *from, size_t fromlen);
 
 /** Generic resizeable array. */
 typedef struct smartlist_t smartlist_t;
@@ -182,9 +157,7 @@ int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
 
 /* Map from const char * to void*. Implemented with a splay tree. */
 typedef struct strmap_t strmap_t;
-typedef struct strmap_entry_t strmap_entry_t;
-typedef struct strmap_entry_t strmap_iter_t;
-strmap_t* strmap_new(void);
+typedef struct strmap_entry_t strmap_entry_t; typedef struct strmap_entry_t strmap_iter_t; strmap_t* strmap_new(void);
 void* strmap_set(strmap_t *map, const char *key, void *val);
 void* strmap_get(strmap_t *map, const char *key);
 void* strmap_remove(strmap_t *map, const char *key);
