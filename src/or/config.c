@@ -2257,7 +2257,7 @@ static struct unit_table_t memory_units[] = {
 };
 
 static struct unit_table_t time_units[] = {
-  { "second",  1 },
+  { "second",   1 },
   { "seconds",  1 },
   { "minute",   60 },
   { "minutes",  60 },
