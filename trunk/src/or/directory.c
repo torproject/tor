@@ -229,10 +229,13 @@ static void directory_send_command(connection_t *conn, int purpose,
   switch(purpose) {
     case DIR_PURPOSE_FETCH_DIR:
       tor_assert(payload == NULL);
-      if(use_newer)
+      if(use_newer) {
+        log_fn(LOG_DEBUG, "Asking for compressed directory from server running  %s", router->platform);
         connection_write_to_buf(fetchwholedir_z, strlen(fetchwholedir_z), conn);
-      else
+      } else {
+        log_fn(LOG_DEBUG, "Asking for uncompressed directory from server running  %s", router->platform);
         connection_write_to_buf(fetchwholedir, strlen(fetchwholedir), conn);
+      }
       break;
     case DIR_PURPOSE_FETCH_RUNNING_LIST:
       tor_assert(payload == NULL);
@@ -349,9 +352,9 @@ parse_http_response(char *headers, int *code, char **message, time_t *date,
     const char *enc = NULL;
     SMARTLIST_FOREACH(parsed_headers, const char *, s,
       if (!strcmpstart(s, "Content-Encoding: ")) {
-        enc = s+16; break;
+        enc = s+18; break;
       });
-    if (!enc || strcmp(enc, "identity")) {
+    if (!enc || !strcmp(enc, "identity")) {
       *compression = 0;
     } else if (!strcmp(enc, "deflate") || !strcmp(enc, "x-deflate")) {
       *compression = ZLIB_METHOD;
