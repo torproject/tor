@@ -55,7 +55,8 @@ static int please_debug=0; /**< Whether we should switch all logs to -l debug. *
 static int please_reset=0; /**< Whether we just got a sighup. */
 static int please_reap_children=0; /**< Whether we should waitpid for exited children. */
 static int please_sigpipe=0; /**< Whether we've caught a sigpipe lately. */
-static int please_shutdown=0; /**< Whether we should shut down Tor. */
+static int please_shutdown=0; /**< Whether we should slowly shut down Tor. */
+static int please_die=0; /**< Whether we should immediately shut down Tor. */
 #endif /* signal stuff */
 
 /** We set this to 1 when we've fetched a dir, to know whether to complain
@@ -826,6 +827,11 @@ static int do_main_loop(void) {
     }
 #endif
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
+    if (please_die) {
+      log(LOG_ERR,"Catching signal TERM, exiting cleanly.");
+      tor_cleanup();
+      exit(0);
+    }
     if (please_shutdown) {
       if (!server_mode(get_options())) { /* do it now */
         log(LOG_NOTICE,"Interrupt: exiting cleanly.");
@@ -909,9 +915,8 @@ static void catch(int the_signal) {
   switch (the_signal) {
 //    case SIGABRT:
     case SIGTERM:
-      log(LOG_ERR,"Catching signal %d, exiting cleanly.", the_signal);
-      tor_cleanup();
-      exit(0);
+      please_die = 1;
+      break;
     case SIGINT:
       please_shutdown = 1;
       break;
