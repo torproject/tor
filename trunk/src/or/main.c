@@ -416,7 +416,10 @@ static void run_connection_housekeeping(int i, time_t now) {
  * - We believe we are reachable from the outside.
  */
 static int decide_if_publishable_server(time_t now) {
-  int r;
+  int bw;
+
+  bw = rep_hist_bandwidth_assess(now);
+  router_set_advertised_bandwidth(bw);
 
   if(options.ClientOnly)
     return 0;
@@ -433,12 +436,10 @@ static int decide_if_publishable_server(time_t now) {
     return 0;
   }
 
-  r = rep_hist_bandwidth_assess(now);
 
 
-//  set_advertised_bandwidth(r);
 
-  if(r < MIN_BW_TO_PUBLISH_DESC)
+  if(bw < MIN_BW_TO_PUBLISH_DESC)
     return 0;
   if(options.AuthoritativeDir)
     return 1;
@@ -467,10 +468,13 @@ int server_mode(void) {
   return (options.ORPort != 0);
 }
 
+/** Remember if we've advertised ourselves to the dirservers. */
+static int server_is_advertised=0;
+
 /** Return true iff we have published our descriptor lately.
  */
 int advertised_server_mode(void) {
-  return (options.ORPort != 0);
+  return server_is_advertised;
 }
 
 /** Return true iff we are trying to be a socks proxy. */
@@ -506,8 +510,8 @@ static void run_scheduled_events(time_t now) {
     if (router_rebuild_descriptor()<0) {
       log_fn(LOG_WARN, "Couldn't rebuild router descriptor");
     }
-    /* XXX008 only if advertised_server_mode */
-    router_upload_dir_desc_to_dirservers();
+    if(advertised_server_mode())
+      router_upload_dir_desc_to_dirservers();
   }
 
   /** 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */
@@ -532,8 +536,11 @@ static void run_scheduled_events(time_t now) {
   if(time_to_fetch_directory < now) {
 
     if(decide_if_publishable_server(now)) {
+      server_is_advertised = 1;
       router_rebuild_descriptor();
       router_upload_dir_desc_to_dirservers();
+    } else {
+      server_is_advertised = 0;
     }
 
     routerlist_remove_old_routers(); /* purge obsolete entries */

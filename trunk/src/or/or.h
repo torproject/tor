@@ -1346,6 +1346,8 @@ void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last);
 int init_keys(void);
 crypto_pk_env_t *init_key_from_file(const char *fname);
 void rotate_onion_key(void);
+void router_set_advertised_bandwidth(int bw);
+int router_get_advertised_bandwidth(void);
 
 void router_retry_connections(void);
 int router_is_clique_mode(routerinfo_t *router);
