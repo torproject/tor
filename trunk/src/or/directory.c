@@ -524,6 +524,11 @@ directory_handle_command_get(connection_t *conn, char *headers,
   }
 
   if(!strcmp(url,"/running-routers")) { /* running-routers fetch */
+    if(!authdir_mode()) {
+      /* XXX008 for now, we don't cache running-routers. Reject. */
+      connection_write_to_buf(answer400, strlen(answer400), conn);
+      return 0;
+    }
     dlen = dirserv_get_runningrouters(&cp);
     if(dlen < 0) { /* we failed to create cp */
       connection_write_to_buf(answer503, strlen(answer503), conn);
@@ -542,6 +547,15 @@ directory_handle_command_get(connection_t *conn, char *headers,
     const char *descp;
     int desc_len;
 
+    if(!authdir_mode()) {
+      /* We don't hand out rend descs. In fact, it could be a security
+       * risk, since rend_cache_lookup_desc() below would provide it
+       * if we're gone to the site recently, and 404 if we haven't.
+       *
+       * Reject. */
+      connection_write_to_buf(answer400, strlen(answer400), conn);
+      return 0;
+    }
     switch(rend_cache_lookup_desc(url+strlen(rend_fetch_url), &descp, &desc_len)) {
       case 1: /* valid */
         snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\nContent-Type: application/octet-stream\r\n\r\n",
@@ -579,6 +593,13 @@ directory_handle_command_post(connection_t *conn, char *headers,
   log_fn(LOG_DEBUG,"Received POST command.");
 
   conn->state = DIR_CONN_STATE_SERVER_WRITING;
+
+  if(!authdir_mode()) {
+    /* we just provide cached directories; we don't want to
+     * receive anything. */
+    connection_write_to_buf(answer400, strlen(answer400), conn);
+    return 0;
+  }
 
   if (parse_http_url(headers, &url) < 0) {
     connection_write_to_buf(answer400, strlen(answer400), conn);
