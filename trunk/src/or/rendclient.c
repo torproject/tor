@@ -5,7 +5,7 @@ const char rendclient_c_id[] = "$Id$";
 
 /**
  * \file rendclient.c
- * \brief Client code to access location-hiddenn services.
+ * \brief Client code to access location-hidden services.
  **/
 
 #include "or.h"

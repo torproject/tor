@@ -786,7 +786,7 @@ router_add_to_routerlist(routerinfo_t *router) {
       if (router->is_verified) {
         /* The new verified router replaces the old one; remove the
          * old one.  And carry on to the end of the list, in case
-         * there are more old unverifed routers with this nickname
+         * there are more old unverified routers with this nickname
          */
         /* mark-for-close connections using the old key, so we can
          * make new ones with the new key.

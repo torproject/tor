@@ -81,7 +81,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, size_t request_le
     circuit_mark_for_close(c);
   }
 
-  /* Acknlowedge the request. */
+  /* Acknowledge the request. */
   if (connection_edge_send_command(NULL,circ,
                                    RELAY_COMMAND_INTRO_ESTABLISHED,
                                    "", 0, NULL)<0) {
@@ -199,7 +199,7 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request, size_t reque
     goto err;
   }
 
-  /* Acknlowedge the request. */
+  /* Acknowledge the request. */
   if (connection_edge_send_command(NULL,circ,
                                    RELAY_COMMAND_RENDEZVOUS_ESTABLISHED,
                                    "", 0, NULL)<0) {

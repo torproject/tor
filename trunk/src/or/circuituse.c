@@ -604,7 +604,7 @@ static int did_circs_fail_last_period = 0;
 circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest)
 {
   if (!has_fetched_directory) {
-    log_fn(LOG_DEBUG,"Haven't fetched directory yet; cancelling circuit launch.");
+    log_fn(LOG_DEBUG,"Haven't fetched directory yet; canceling circuit launch.");
     return NULL;
   }
 

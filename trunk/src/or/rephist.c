@@ -18,7 +18,7 @@ typedef struct link_history_t {
   time_t since;
   /** When did we most recently note a change to this link */
   time_t changed;
-  /** How many times did extending from OR1 to OR2 succeeed? */
+  /** How many times did extending from OR1 to OR2 succeed? */
   unsigned long n_extend_ok;
   /** How many times did extending from OR1 to OR2 fail? */
   unsigned long n_extend_fail;
@@ -599,7 +599,7 @@ rep_hist_get_bandwidth_lines(void)
       /* We haven't been through the circular array yet; time starts at i=0.*/
       i = 0;
     else
-      /* We've been arround the array at least once.  The next i to be
+      /* We've been around the array at least once.  The next i to be
          overwritten is the oldest. */
       i = b->next_max_idx;
 
