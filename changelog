@@ -1,9 +1,9 @@
-tor (0.0.1+0.0.2pre25-2) unreleased; urgency=low
+tor (0.0.1+0.0.2pre26-1) unstable; urgency=low
 
-  * UNRELEASED
+  * New upstream release.
   * Mention log and pidfile location in tor.1.
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 10 Mar 2004 16:32:01 +0100
+ -- Peter Palfrader <weasel@debian.org>  Mon, 15 Mar 2004 02:21:29 +0100
 
 tor (0.0.1+0.0.2pre25-1) unstable; urgency=low
 
