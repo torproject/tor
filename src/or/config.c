@@ -97,7 +97,7 @@ static config_var_t config_vars[] = {
   VAR("AllowUnverifiedNodes",CSV,      AllowUnverifiedNodes, "middle,rendezvous"),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "1 MB"),
-  VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "48 MB"),
+  VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "5 MB"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
   VAR("ControlPort",         UINT,     ControlPort,          "0"),
@@ -1414,11 +1414,11 @@ options_validate(or_options_t *options)
     log(LOG_WARN,"BandwidthBurst must be at least equal to BandwidthRate.");
     result = -1;
   }
+#if 0
   if (2*options->BandwidthRate > options->BandwidthBurst) {
     log(LOG_NOTICE,"You have chosen a BandwidthBurst less than twice BandwidthRate. Please consider setting your BandwidthBurst higher (at least %d), to provide better service to the Tor network.", (int)(2*options->BandwidthRate));
-    result = -1;
   }
-
+#endif
 
   if (options->_MonthlyAccountingStart) {
     if (options->AccountingStart) {

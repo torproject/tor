@@ -114,9 +114,11 @@ int connection_or_finished_connecting(connection_t *conn)
  */
 static void
 connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router) {
+  or_options_t *options = get_options();
+
   conn->addr = router->addr;
   conn->port = router->or_port;
-  conn->receiver_bucket = conn->bandwidth = router->bandwidthburst;
+  conn->receiver_bucket = conn->bandwidth = (int)options->BandwidthBurst;
   conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
   crypto_pk_get_digest(conn->identity_pkey, conn->identity_digest);
   conn->nickname = tor_strdup(router->nickname);
