@@ -584,19 +584,19 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       tor_assert(next < buf->mem+buf->datalen);
 
       startaddr = NULL;
-      if (socks4_prot == socks4a && next+1 == buf->mem+buf->datalen) {
-        log_fn(LOG_DEBUG,"socks4: No part of destaddr here yet.");
-        return 0;
-      }
       if (socks4_prot != socks4a && !have_warned_about_unsafe_socks) {
         log_fn(LOG_WARN,"Your application (using socks4 on port %d) is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.", req->port);
 //      have_warned_about_unsafe_socks = 1; // (for now, warn every time)
       }
-      if (socks4_prot == socks4a && next+1 < buf->mem+buf->datalen) {
+      if (socks4_prot == socks4a) {
+        if (next+1 == buf->mem+buf->datalen) {
+          log_fn(LOG_DEBUG,"socks4: No part of destaddr here yet.");
+          return 0;
+        }
         startaddr = next+1;
         next = memchr(startaddr, 0, buf->mem+buf->datalen-startaddr);
         if (!next) {
-          log_fn(LOG_DEBUG,"socks4: Destaddr not here yet.");
+          log_fn(LOG_DEBUG,"socks4: Destaddr not all here yet.");
           return 0;
         }
         if (MAX_SOCKS_ADDR_LEN <= next-startaddr) {
