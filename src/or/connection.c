@@ -2,6 +2,11 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/**
+ * \file connection.c
+ * \brief foo
+ **/
+
 #include "or.h"
 
 /********* START VARIABLES **********/
