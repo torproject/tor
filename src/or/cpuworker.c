@@ -202,10 +202,7 @@ static int cpuworker_main(void *data) {
   connection_free_all(); /* so the child doesn't hold the parent's fd's open */
 #endif
 
-  /* XXXX WINDOWS lock here. */
-  onion_key = crypto_pk_dup_key(get_onion_key());
-  if (get_previous_onion_key())
-    last_onion_key = crypto_pk_dup_key(get_previous_onion_key());
+  dup_onion_keys(&onion_key, &last_onion_key);
 
   for(;;) {
 

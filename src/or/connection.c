@@ -333,7 +333,7 @@ static int connection_create_listener(const char *bindaddress, uint16_t bindport
 
   memset(&bindaddr,0,sizeof(struct sockaddr_in));
   bindaddr.sin_family = AF_INET;
-  bindaddr.sin_port = htons(usePort);
+  bindaddr.sin_port = htons((uint16_t) usePort);
   if(tor_lookup_hostname(hostname, &(bindaddr.sin_addr.s_addr)) != 0) {
     log_fn(LOG_WARN,"Can't resolve BindAddress %s",hostname);
     tor_free(hostname);

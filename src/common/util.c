@@ -1730,6 +1730,56 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
   }
 }
 
+#ifndef MS_WINDOWS
+struct tor_mutex_t {
+};
+tor_mutex_t *tor_mutex_new(void) { return NULL; }
+void tor_mutex_acquire(tor_mutex_t *m) { }
+void tor_mutex_release(tor_mutex_t *m) { }
+void tor_mutex_free(tor_mutex_t *m) { }
+#else
+struct tor_mutex_t {
+  HANDLE handle;
+};
+tor_mutex_t *tor_mutex_new(void) 
+{
+  tor_mutex_t *m;
+  m = tor_malloc_zero(sizeof(tor_mutex_t));
+  m->handle = CreateMutex(NULL, FALSE, NULL);
+  tor_assert(m->handle != NULL);
+  return m;
+}
+void tor_mutex_free(tor_mutex_t *m)
+{
+  CloseHandle(m->handle);
+  tor_free(m);
+}
+void tor_mutex_acquire(tor_mutex_t *m)
+{
+  DWORD r;
+  r = WaitForSingleObject(m->handle, INFINITE);
+  switch (r) {
+    case WAIT_ABANDONED: /* holding thread exited. */
+	case WAIT_OBJECT_0: /* we got the mutex normally. */
+      break;
+    case WAIT_TIMEOUT: /* Should never happen. */
+	  tor_assert(0);
+      break;
+	case WAIT_FAILED:
+      log_fn(LOG_WARN, "Failed to acquire mutex: %d", GetLastError());
+  }
+}
+void tor_mutex_release(tor_mutex_t *m)
+{
+  BOOL r;
+  r = ReleaseMutex(m->handle);
+  if (!r) {
+    log_fn(LOG_WARN, "Failed to release mutex: %d", GetLastError());      
+  }
+}
+
+#endif
+
 /*
   Local Variables:
   mode:c

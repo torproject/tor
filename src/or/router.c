@@ -22,6 +22,7 @@ extern or_options_t options; /* command-line and config-file options */
 
 /** Private keys for this OR.  There is also an SSL key managed by tortls.c.
  */
+static tor_mutex_t *key_lock=NULL;
 static time_t onionkey_set_at=0; /* When was onionkey last changed? */
 static crypto_pk_env_t *onionkey=NULL;
 static crypto_pk_env_t *lastonionkey=NULL;
@@ -31,8 +32,10 @@ static crypto_pk_env_t *identitykey=NULL;
  * to update onionkey correctly, call rotate_onion_key().
  */
 void set_onion_key(crypto_pk_env_t *k) {
+  tor_mutex_acquire(key_lock);
   onionkey = k;
   onionkey_set_at = time(NULL);
+  tor_mutex_release(key_lock);
 }
 
 /** Return the current onion key.  Requires that the onion key has been
@@ -48,6 +51,18 @@ crypto_pk_env_t *get_onion_key(void) {
  */
 crypto_pk_env_t *get_previous_onion_key(void) {
   return lastonionkey;
+}
+
+void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last)
+{
+  tor_assert(key && last);
+  tor_mutex_acquire(key_lock);
+  *key = crypto_pk_dup_key(onionkey);
+  if (lastonionkey)
+	*last = crypto_pk_dup_key(lastonionkey);
+  else
+    *last = NULL;
+  tor_mutex_release(key_lock);
 }
 
 /** Return the time when the onion key was last set.  This is either the time
@@ -96,13 +111,13 @@ void rotate_onion_key(void)
     log(LOG_ERR, "Couldn't write generated key to %s.", fname);
     goto error;
   }
+  tor_mutex_acquire(key_lock);
   if (lastonionkey)
     crypto_free_pk_env(lastonionkey);
-  /* XXXX WINDOWS on windows, we need to protect this next bit with a lock.
-   */
   log_fn(LOG_INFO, "Rotating onion key");
   lastonionkey = onionkey;
   set_onion_key(prkey);
+  tor_mutex_release(key_lock);
   return;
  error:
   log_fn(LOG_WARN, "Couldn't rotate onion key.");
@@ -170,6 +185,9 @@ int init_keys(void) {
   char *cp;
   const char *tmp, *mydesc;
   crypto_pk_env_t *prkey;
+
+  if (!key_lock)
+	key_lock = tor_mutex_new();
 
   /* OP's don't need keys.  Just initialize the TLS context.*/
   if (!options.ORPort) {
@@ -418,7 +436,7 @@ int router_rebuild_descriptor(void) {
   ri->socks_port = options.SocksPort;
   ri->dir_port = options.DirPort;
   ri->published_on = time(NULL);
-  ri->onion_pkey = crypto_pk_dup_key(get_onion_key());
+  ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from main thread */
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
   get_platform_str(platform, sizeof(platform));
   ri->platform = tor_strdup(platform);
