@@ -188,9 +188,9 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   else {
     log_fn(LOG_NOTICE,"No running dirservers known. Not trying. (purpose %d)",
            purpose);
-    if(directconn) {
+    if (directconn) {
       /* remember we tried them all and failed. */
-      directory_all_unreachable(time(NULL)); 
+      directory_all_unreachable(time(NULL));
     }
   }
 }

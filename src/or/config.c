@@ -512,7 +512,7 @@ static config_var_t *config_find_option(const char *key)
 {
   int i;
   size_t keylen = strlen(key);
-  if(!keylen)
+  if (!keylen)
     return NULL; /* if they say "--" on the commandline, it's not an option */
   /* First, check for an exact (case-insensitive) match */
   for (i=0; config_vars[i].name; ++i) {
@@ -1157,7 +1157,7 @@ validate_ports_csv(smartlist_t *sl, char *name) {
   int result = 0;
   tor_assert(name);
 
-  if(!sl)
+  if (!sl)
     return 0;
 
   SMARTLIST_FOREACH(sl, const char *, cp,
