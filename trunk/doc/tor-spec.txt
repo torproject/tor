@@ -1,4 +1,4 @@
-$Id$ 
+$Id$
 
 Tor Spec
 
@@ -24,7 +24,7 @@ EVEN LATER:
 0. Notation:
 
    PK -- a public key.
-   SK -- a private key 
+   SK -- a private key
    K  -- a key for a symmetric cypher
 
    a|b -- concatenation of 'a' with 'b'.
@@ -45,11 +45,14 @@ EVEN LATER:
 
 1. System overview
 
-Tor is a connection-oriented anonymizing communication service. Users
-build a path known as a "virtual circuit" through the network, in which
-each node knows its predecessor and successor, but no others. Traffic
-flowing down the circuit is unwrapped by a symmetric key at each node,
-which reveals the downstream node.
+   Onion Routing is a distributed overlay network designed to anonymize
+   low-latency TCP-based applications such as web browsing, secure shell,
+   and instant messaging. Clients choose a path through the network and
+   build a ``circuit'', in which each node (or ``onion router'' or ``OR'')
+   in the path knows its predecessor and successor, but no other nodes in
+   the circuit.  Traffic flowing down the circuit is sent in fixed-size
+   ``cells'', which are unwrapped by a symmetric key at each node (like
+   the layers of an onion) and relayed downstream.
 
 2. Connections
 
@@ -62,16 +65,16 @@ which reveals the downstream node.
    "TLS_DHE_RSA_WITH_AES_128_CBC_SHA".  An OR always sends a
    self-signed X.509 certificate whose commonName is the server's
    nickname, and whose public key is in the server directory.
-   
+
    All parties receiving certificates must confirm that the public
    key is as it appears in the server directory, and close the
    connection if it is not.
 
    Once a TLS connection is established, the two sides send cells
    (specified below) to one another.  Cells are sent serially.  All
-   cells are 256 bytes long.  Cells may be sent embedded in TLS
+   cells are 512 bytes long.  Cells may be sent embedded in TLS
    records of any size or divided across TLS records, but the framing
-   of TLS records should not leak information about the type or
+   of TLS records must not leak information about the type or
    contents of the cells.
 
    OR-to-OR connections are never deliberately closed.  An OP should
@@ -87,10 +90,8 @@ which reveals the downstream node.
 
         CircID                                [2 bytes]
         Command                               [1 byte]
-        Length                                [1 byte]
-        Sequence number (unused, set to 0)    [4 bytes]
-        Payload (padded with 0 bytes)         [248 bytes]
-                                         [Total size: 256 bytes]
+        Payload (padded with 0 bytes)         [509 bytes]
+                                         [Total size: 512 bytes]
 
    The 'Command' field holds one of the following values:
          0 -- PADDING     (Padding)                 (See Sec 6.2)
@@ -99,26 +100,21 @@ which reveals the downstream node.
          3 -- RELAY       (End-to-end data)         (See Sec 5)
          4 -- DESTROY     (Stop using a circuit)    (See Sec 4)
 
-   The interpretation of 'Length' and 'Payload' depend on the type of
-   the cell.
-      PADDING: Neither field is used.
-      CREATE: Length is 144; the payload contains the first phase of the
-        DH handshake.
-      CREATED: Length is 128; the payload contains the second phase of
-        the DH handshake.
-      RELAY: Length is a value between 8 and 248; the first 'length'
-        bytes of payload contain useful data.
-      DESTROY: Neither field is used.
+   The interpretation of 'Payload' depends on the type of the cell.
+      PADDING: Unused.
+      CREATE:  Payload contains the handshake challenge.
+      CREATED: Payload contains the handshake response.
+      RELAY:   Payload contains the relay header and relay body.
+      DESTROY: Unused.
 
-   Unused fields are filled with 0 bytes.  The payload is padded with
-   0 bytes.
+   The payload is padded with 0 bytes.
 
    PADDING cells are currently used to implement connection
    keepalive.  ORs and OPs send one another a PADDING cell every few
    minutes.
 
-   CREATE and DESTROY cells are used to manage circuits; see section
-   4 below.
+   CREATE, CREATED, and DESTROY cells are used to manage circuits;
+   see section 4 below.
 
    RELAY cells are used to send commands and data along a circuit; see
    section 5 below.
@@ -128,10 +124,11 @@ which reveals the downstream node.
 
 4.1. CREATE and CREATED cells
 
-   Users set up circuits incrementally, one hop at a time. To create
-   a new circuit, users send a CREATE cell to the first node, with the
-   first half of the DH handshake; that node responds with a CREATED cell
-   with the second half of the DH handshake. To extend a circuit past
+   Users set up circuits incrementally, one hop at a time. To create a
+   new circuit, users send a CREATE cell to the first node, with the
+   first half of the DH handshake; that node responds with a CREATED
+   cell with the second half of the DH handshake plus the first 20 bytes
+   of derivative key data (see section 4.2). To extend a circuit past
    the first hop, the user sends an EXTEND relay cell (see section 5)
    which instructs the last node in the circuit to send a CREATE cell
    to extend the circuit.
@@ -139,13 +136,14 @@ which reveals the downstream node.
    The payload for a CREATE cell is an 'onion skin', consisting of:
          RSA-encrypted data            [128 bytes]
          Symmetrically-encrypted data  [16 bytes]
+
    The RSA-encrypted portion contains:
          Symmetric key                 [16 bytes]
          First part of DH data (g^x)   [112 bytes]
    The symmetrically encrypted portion contains:
-         Second part of DH data (g^x)  [16 bytes] 
+         Second part of DH data (g^x)  [16 bytes]
 
-   The two parts of the DH data, once decrypted and concatenated, form
+   The two parts of DH data, once decrypted and concatenated, form
    g^x as calculated by the client.
 
    The relay payload for an EXTEND relay cell consists of:
@@ -154,23 +152,24 @@ which reveals the downstream node.
          Onion skin                    [144 bytes]
 
    The port and address field denote the IPV4 address and port of the
-   next onion router in the circuit.  
+   next onion router in the circuit.
 
 4.2. Setting circuit keys
 
    Once the handshake between the OP and an OR is completed, both
    servers can now calculate g^xy with ordinary DH.  From the base key
-   material g^xy, they compute two 16 byte keys, called Kf and Kb as
-   follows.  First, the server represents g^xy as a big-endian
-   unsigned integer.  Next, the server computes 40 bytes of key data
-   as K = SHA1(g^xy | [00]) | SHA1(g^xy | [01]) where "00" is a single
-   octet whose value is zero, and "01" is a single octet whose value
-   is one.  The first 16 bytes of K form Kf, and the next 16 bytes of
-   K form Kb.  
+   material g^xy, they compute derivate key material as follows.
+   First, the server represents g^xy as a big-endian unsigned integer.
+   Next, the server computes 60 bytes of key data as K = SHA1(g^xy |
+   [00]) | SHA1(g^xy | [01]) | SHA1(g^xy | [02]) where "00" is a single
+   octet whose value is zero, "01" is a single octet whose value is
+   one, etc.  The first 20 bytes of K form KH, the next 16 bytes of K
+   form Kf, and the next 16 bytes of K form Kb.
 
-   Kf is used to encrypt the stream of data going from the OP to the
-   OR, whereas Kb is used to encrypt the stream of data going from the
-   OR to the OP.
+   KH is used in the handshake response to demonstrate knowledge of the
+   computed shared key. Kf is used to encrypt the stream of data going
+   from the OP to the OR, and Kb is used to encrypt the stream of data
+   going from the OR to the OP.
 
 4.3. Creating circuits
 
@@ -193,7 +192,7 @@ which reveals the downstream node.
          the first onion router.
 
       5. Wait until a CREATED cell is received; finish the handshake
-         and extract the forward key Kf_1 and the back key Kb_1.
+         and extract the forward key Kf_1 and the backward key Kb_1.
 
       6. For each subsequent onion router R (R_2 through R_N), extend
          the circuit to R.
@@ -267,7 +266,7 @@ which reveals the downstream node.
    [We'll have to reevaluate this section once we figure out cleaner
     circuit/connection killing conventions. -RD]
 
-4.5. Routing data cells
+4.5. Routing relay cells
 
    When an OR receives a RELAY cell, it checks the cell's circID and
    determines whether it has a corresponding circuit along that
@@ -299,7 +298,7 @@ which reveals the downstream node.
    circuit, the OP encrypts the length and payload fields with AES/CTR as
    follows:
          OP receives data cell:
-            For I=N...1, 
+            For I=N...1,
                 Encrypt with Kb_I.  If the stream ID is a recognized
                 stream for R_I, or if the stream ID is the signaling
                 ID (zero), then stop and process the payload.
@@ -355,7 +354,7 @@ which reveals the downstream node.
    The OP waits for a RELAY_CONNECTED cell before sending any data.
    Once a connection has been established, the OP and exit node
    package stream data in RELAY_DATA cells, and upon receiving such
-   cells, echo their contents to the corresponding TCP stream.  
+   cells, echo their contents to the corresponding TCP stream.
 
    Relay RELAY_DROP cells are long-range dummies; upon receiving such
    a cell, the OR or OP must drop it.
@@ -418,11 +417,11 @@ which reveals the downstream node.
    To control a circuit's bandwidth usage, each OR keeps track of
    two 'windows', consisting of how many RELAY_DATA cells it is
    allowed to package for transmission, and how many RELAY_DATA cells
-   it is willing to deliver to streams outside the network.  
+   it is willing to deliver to streams outside the network.
    Each 'window' value is initially set to 1000 data cells
    in each direction (cells that are not data cells do not affect
    the window).  When an OR is willing to deliver more cells, it sends a
-   RELAY_SENDME cell towards the OP, with Stream ID zero.  When an OR 
+   RELAY_SENDME cell towards the OP, with Stream ID zero.  When an OR
    receives a RELAY_SENDME cell with stream ID zero, it increments its
    packaging window.
 
@@ -430,7 +429,7 @@ which reveals the downstream node.
 
    The OP behaves identically, except that it must track a packaging
    window and a delivery window for every OR in the circuit.
- 
+
    An OR or OP sends cells to increment its delivery window when the
    corresponding window value falls under some threshold (900).
 
