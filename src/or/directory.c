@@ -74,9 +74,6 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
                              size_t payload_len)
 {
   smartlist_t *dirservers;
-
-  routerinfo_t *router;
-  routerlist_t *rl;
   char buf[16];
 
   router_get_trusted_dir_servers(&dirservers);
