@@ -547,7 +547,7 @@ connection_edge_process_relay_cell_not_open(
         conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
         circuit_detach_stream(circ,conn);
         tor_assert(circ->timestamp_dirty);
-        circ->timestamp_dirty -= get_options()->NewCircuitPeriod;
+        circ->timestamp_dirty -= get_options()->MaxCircuitDirtiness;
         /* make sure not to expire/retry the stream quite yet */
         conn->timestamp_lastread = time(NULL);
         if (connection_ap_handshake_attach_circuit(conn) >= 0)

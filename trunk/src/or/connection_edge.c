@@ -281,7 +281,7 @@ void connection_ap_expire_beginning(void) {
      * current streams on it to survive if they can: make it
      * unattractive to use for new streams */
     tor_assert(circ->timestamp_dirty);
-    circ->timestamp_dirty -= options->NewCircuitPeriod;
+    circ->timestamp_dirty -= options->MaxCircuitDirtiness;
     /* give our stream another 15 seconds to try */
     conn->timestamp_lastread += 15;
     /* attaching to a dirty circuit is fine */
@@ -403,14 +403,15 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
         conn->hold_open_until_flushed = 1;
         return 0;
       }
-    }
-
-    if (socks->command == SOCKS_COMMAND_CONNECT && socks->port == 0) {
-      log_fn(LOG_NOTICE,"Application asked to connect to port 0. Refusing.");
-      return -1;
+      rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
+    } else { /* socks->command == SOCKS_COMMAND_CONNECT */
+      if (socks->port == 0) {
+        log_fn(LOG_NOTICE,"Application asked to connect to port 0. Refusing.");
+        return -1;
+      }
+      rep_hist_note_used_port(socks->port, time(NULL)); /* help predict this next time */
     }
     conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-    rep_hist_note_used_port(socks->port, time(NULL)); /* help predict this next time */
     return connection_ap_handshake_attach_circuit(conn);
   } else {
     /* it's a hidden-service request */

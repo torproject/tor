@@ -731,6 +731,8 @@ typedef struct {
   int need_uptime;
   /** Whether every node in the circ must have adequate capacity. */
   int need_capacity;
+  /** Whether the last hop was picked with exiting in mind. */
+  int is_internal;
   /** The crypt_path_t to append after rendezvous: used for rendezvous. */
   struct crypt_path_t *pending_final_cpath;
   /** How many times has building a circuit for this task failed? */
@@ -955,6 +957,8 @@ typedef struct {
                          * them? */
   int NewCircuitPeriod; /**< How long do we use a circuit before building
                          * a new one? */
+  int MaxCircuitDirtiness; /**< Never use circs that were first used more than
+                                this interval ago. */
   uint64_t BandwidthRate; /**< How much bandwidth, on average, are we willing to
                            * use in a second? */
   uint64_t BandwidthBurst; /**< How much bandwidth, at maximum, are we willing to
@@ -1052,7 +1056,7 @@ void circuit_log_path(int severity, circuit_t *circ);
 void circuit_rep_hist_note_result(circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 circuit_t *circuit_establish_circuit(uint8_t purpose, const char *exit_digest,
-                                     int need_uptime, int need_capacity);
+                                     int need_uptime, int need_capacity, int internal);
 void circuit_n_conn_done(connection_t *or_conn, int status);
 int circuit_send_next_onion_skin(circuit_t *circ);
 int circuit_extend(cell_t *cell, circuit_t *circ);
@@ -1063,6 +1067,7 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
 int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
                                         int *need_capacity);
 
+int circuit_append_new_hop(circuit_t *circ, char *nickname, const char *exit_digest);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 
 /********************************* circuitlist.c ***********************/
@@ -1076,8 +1081,8 @@ circuit_t *circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t
 circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
                                          const char *digest, uint8_t purpose);
 circuit_t *circuit_get_rendezvous(const char *cookie);
-int circuit_count_building(uint8_t purpose);
-circuit_t *circuit_get_youngest_clean_open(uint8_t purpose);
+circuit_t *circuit_get_clean_open(uint8_t purpose, int need_uptime,
+                                  int need_capacity, int internal);
 int _circuit_mark_for_close(circuit_t *circ);
 
 #define circuit_mark_for_close(c)                                       \
@@ -1106,9 +1111,9 @@ void circuit_about_to_close_connection(connection_t *conn);
 void circuit_has_opened(circuit_t *circ);
 void circuit_build_failed(circuit_t *circ);
 circuit_t *circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
-                                      int need_uptime, int need_capacity);
+                                      int need_uptime, int need_capacity, int is_internal);
 circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest,
-                                      int need_uptime, int need_capacity);
+                                      int need_uptime, int need_capacity, int is_internal);
 void circuit_reset_failure_count(int timeout);
 int connection_ap_handshake_attach_circuit(connection_t *conn);
 
@@ -1472,8 +1477,13 @@ void rep_hist_note_bytes_written(int num_bytes, time_t when);
 int rep_hist_bandwidth_assess(void);
 char *rep_hist_get_bandwidth_lines(void);
 void rep_history_clean(time_t before);
+
 void rep_hist_note_used_port(uint16_t port, time_t now);
 smartlist_t *rep_hist_get_predicted_ports(time_t now);
+void rep_hist_note_used_hidserv(time_t now, int need_uptime, int need_capacity);
+int rep_hist_get_predicted_hidserv(time_t now, int *need_uptime, int *need_capacity);
+void rep_hist_note_used_resolve(time_t now);
+int rep_hist_get_predicted_resolve(time_t now);
 
 /********************************* rendclient.c ***************************/
 

@@ -93,11 +93,22 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   }
 
   /* write the remaining items into tmp */
+#if 0
   tmp[0] = 1; /* version 1 of the cell format */
-  strncpy(tmp+1, rendcirc->build_state->chosen_exit_name, (MAX_HEX_NICKNAME_LEN+1)); /* nul pads */
+  /* nul pads */
+  strncpy(tmp+1, rendcirc->build_state->chosen_exit_name, (MAX_HEX_NICKNAME_LEN+1));
   memcpy(tmp+1+MAX_HEX_NICKNAME_LEN+1, rendcirc->rend_cookie, REND_COOKIE_LEN);
+#else
+  strncpy(tmp, rendcirc->build_state->chosen_exit_name, (MAX_NICKNAME_LEN+1)); /* nul pads */
+  memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_cookie, REND_COOKIE_LEN);
+#endif
   if (crypto_dh_get_public(cpath->handshake_state,
+#if 0
                            tmp+1+MAX_HEX_NICKNAME_LEN+1+REND_COOKIE_LEN,
+#else
+                           tmp+MAX_NICKNAME_LEN+1+REND_COOKIE_LEN,
+#endif
+
                            DH_KEY_LEN)<0) {
     log_fn(LOG_WARN, "Couldn't extract g^x");
     goto err;
@@ -106,7 +117,11 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   /*XXX maybe give crypto_pk_public_hybrid_encrypt a max_len arg,
    * to avoid buffer overflows? */
   r = crypto_pk_public_hybrid_encrypt(entry->parsed->pk, payload+DIGEST_LEN, tmp,
+#if 0
                            1+MAX_HEX_NICKNAME_LEN+1+REND_COOKIE_LEN+DH_KEY_LEN,
+#else
+                           MAX_NICKNAME_LEN+1+REND_COOKIE_LEN+DH_KEY_LEN,
+#endif
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
     log_fn(LOG_WARN,"hybrid pk encrypt failed.");
@@ -176,11 +191,13 @@ rend_client_introduction_acked(circuit_t *circ,
     /* Locate the rend circ which is waiting to hear about this ack,
      * and tell it.
      */
-    log_fn(LOG_INFO,"Received ack. Telling rend circ.");
+    log_fn(LOG_INFO,"Received ack. Telling rend circ...");
     rendcirc = circuit_get_by_rend_query_and_purpose(
                circ->rend_query, CIRCUIT_PURPOSE_C_REND_READY);
     if (rendcirc) { /* remember the ack */
       rendcirc->purpose = CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED;
+    } else {
+      log_fn(LOG_INFO,"...Found no rend circ. Dropping on the floor.");
     }
     /* close the circuit: we won't need it anymore. */
     circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACKED;
@@ -199,7 +216,8 @@ rend_client_introduction_acked(circuit_t *circ,
       routerinfo_t *r;
       nickname = rend_client_get_random_intro(circ->rend_query);
       tor_assert(nickname);
-      log_fn(LOG_INFO,"Got nack for %s from %s, extending to %s.", circ->rend_query, circ->build_state->chosen_exit_name, nickname);
+      log_fn(LOG_INFO,"Got nack for %s from %s, extending to %s.",
+             circ->rend_query, circ->build_state->chosen_exit_name, nickname);
       if (!(r = router_get_by_nickname(nickname))) {
         log_fn(LOG_WARN, "Advertised intro point '%s' for %s is not known. Closing.",
                nickname, circ->rend_query);
@@ -209,18 +227,8 @@ rend_client_introduction_acked(circuit_t *circ,
       }
       log_fn(LOG_INFO, "Chose new intro point %s for %s (circ %d)",
              nickname, circ->rend_query, circ->n_circ_id);
-      circ->state = CIRCUIT_STATE_BUILDING;
-      tor_free(circ->build_state->chosen_exit_name);
-      /* no need to strdup, since rend_client_get_random_intro() made
-       * it just for us: */
-      circ->build_state->chosen_exit_name = nickname;
-      memcpy(circ->build_state->chosen_exit_digest, r->identity_digest, DIGEST_LEN);
-      ++circ->build_state->desired_path_len;
-      if (circuit_send_next_onion_skin(circ)<0) {
-        log_fn(LOG_WARN, "Couldn't extend circuit to new intro point.");
-        circuit_mark_for_close(circ);
+      if (circuit_append_new_hop(circ, nickname, r->identity_digest) < 0)
         return -1;
-      }
     }
   }
   return 0;
