@@ -6,7 +6,7 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
-static void get_platform_str(char *platform, int len);
+/* exposed for test.c */ void get_platform_str(char *platform, int len);
 
 /************************************************************/
 
@@ -388,7 +388,7 @@ int router_rebuild_descriptor(void) {
   return 0;
 }
 
-static void get_platform_str(char *platform, int len)
+void get_platform_str(char *platform, int len)
 {
   snprintf(platform, len-1, "Tor %s on %s", VERSION, get_uname());
   platform[len-1] = '\0';

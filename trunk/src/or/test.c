@@ -23,6 +23,7 @@ int have_failed = 0;
 int router_get_routerlist_from_directory_impl(
         const char *s, routerlist_t **dest, crypto_pk_env_t *pkey);
 void add_fingerprint_to_dir(const char *nickname, const char *fp);
+void get_platform_str(char *platform, int len);
 
 void
 dump_hex(char *s, int len)
@@ -669,6 +670,7 @@ void
 test_dir_format()
 {
   char buf[8192], buf2[8192];
+  char platform[256];
   char *pk1_str = NULL, *pk2_str = NULL, *pk3_str = NULL, *cp;
   int pk1_str_len, pk2_str_len, pk3_str_len;
   routerinfo_t r1, r2;
@@ -684,6 +686,8 @@ test_dir_format()
   test_assert(! crypto_pk_generate_key(pk2));
   test_assert(! crypto_pk_generate_key(pk3));
 
+  get_platform_str(platform, sizeof(platform));
+
   r1.address = "testaddr1.foo.bar";
   r1.addr = 0xc0a80001u; /* 192.168.0.1 */
   r1.published_on = 0;
@@ -696,6 +700,7 @@ test_dir_format()
   r1.bandwidthrate = r1.bandwidthburst = 1000;
   r1.exit_policy = NULL;
   r1.nickname = "Magri";
+  r1.platform = tor_strdup(platform);
 
   ex1.policy_type = EXIT_POLICY_ACCEPT;
   ex1.string = NULL;
