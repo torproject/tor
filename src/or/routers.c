@@ -771,7 +771,6 @@ routerinfo_t *router_get_entry_from_string(char**s) {
   directory_token_t _tok;
   directory_token_t *tok = &_tok;
   struct tm published;
-
   int t;
 
 #define NEXT_TOKEN()                                                     \
@@ -916,6 +915,7 @@ routerinfo_t *router_get_entry_from_string(char**s) {
     goto err;
   }
   
+  router_release_token(tok); /* free the signature */
   return router;
 
  err:
