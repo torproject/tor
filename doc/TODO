@@ -12,7 +12,7 @@ ARMA    - arma claims
         X Abandoned
 
 Bugs:
-        - When it can't resolve any dirservers, it is useless from then on.
+        o When it can't resolve any dirservers, it is useless from then on.
           We should make it reload the RouterFile if it has no dirservers.
         o Sometimes it picks a middleman node as the exit for a circuit.
         - if you specify a non-dirserver as exitnode or entrynode, when it
@@ -22,7 +22,7 @@ Bugs:
         - fix buffer unit test so it passes
 
 Short-term:
-        - when you hup, rewrite the router.desc file (and maybe others)
+        o when you hup, rewrite the router.desc file (and maybe others)
         - consider handling broken socks4 implementations
         - improve how it behaves when i remove a line from the approved-routers files
         - Make tls connections tls_close intentionally
@@ -49,34 +49,19 @@ Short-term:
                         D Choose path by jurisdiction, etc?
                 o Make relay end cells have failure status and payload attached
         X let non-approved routers handshake.
-        - Dirserver shouldn't put you in running-routers list if you haven't
+        X Dirserver shouldn't put you in running-routers list if you haven't
           uploaded a descriptor recently
-        . migrate to using nickname rather than addr:port for routers
-                o decide_aci_type
-                - generate onion skins
-                  - circuit_send_next_onion_skin
-                  - circuit_extend
-                  - onion_generate_cpath
-                - get_unique_aci_by_addr_port
-                - circ->n_addr and circ->n_port
-                  - circuit_enumerate_by_naddr_nport
-                - cpath layers
-                - connection_or_connect
-                - connection_exact_get_by_addr_port
-                - connection_twin_get_by_addr_port
-                - router_get_by_addr_port
-                - connection_or_init_conn_from_router
-                - tag_pack, tag_unpack, connection_cpu_process_inbuf
-                - directory_initiate_command
-        . Move from onions to ephemeral DH
+        X migrate to using nickname rather than addr:port for routers
+        - migrate to using IPv6 sizes everywhere
+        o Move from onions to ephemeral DH
                 o incremental path building
                 o transition circuit-level sendmes to hop-level sendmes
                 o implement truncate, truncated
                 o move from 192byte DH to 128byte DH, so it isn't so damn slow
-                - exiting from not-last hop
-                        - OP logic to decide to extend/truncate a path
-                        - make sure exiting from the not-last hop works
-                        - logic to find last *open* hop, not last hop, in cpath
+                X exiting from not-last hop
+                        X OP logic to decide to extend/truncate a path
+                        X make sure exiting from the not-last hop works
+                        X logic to find last *open* hop, not last hop, in cpath
         o Remember address and port when beginning. 
         - Extend by nickname/hostname/something, not by IP.
         - Need a relay teardown cell, separate from one-way ends.
