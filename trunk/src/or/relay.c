@@ -623,10 +623,9 @@ connection_edge_process_relay_cell_not_open(
           router_parse_addr_policy_from_string("reject *:*");
       }
 
-      conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-      circuit_detach_stream(circ,conn);
-      if (connection_ap_handshake_attach_circuit(conn) >= 0)
+      if (connection_ap_detach_retriable(conn, circ) >= 0)
         return 0;
+
       log_fn(LOG_INFO,"Giving up on retrying (from exitpolicy); conn can't be handled.");
       /* else, conn will get closed below */
     } else if (rh->length && reason == END_STREAM_REASON_RESOLVEFAILED) {
@@ -640,14 +639,14 @@ connection_edge_process_relay_cell_not_open(
         log_fn(LOG_INFO,"Resolve of '%s' failed, trying again.",
                conn->socks_request->address);
         circuit_log_path(LOG_INFO,circ);
-        conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-        circuit_detach_stream(circ,conn);
         tor_assert(circ->timestamp_dirty);
         circ->timestamp_dirty -= get_options()->MaxCircuitDirtiness;
         /* make sure not to expire/retry the stream quite yet */
         conn->timestamp_lastread = time(NULL);
-        if (connection_ap_handshake_attach_circuit(conn) >= 0)
+
+        if (connection_ap_detach_retriable(conn, circ) >= 0)
           return 0;
+
         /* else, conn will get closed below */
         log_fn(LOG_INFO,"Giving up on retrying (from resolvefailed); conn can't be handled.");
       } else {

@@ -1321,6 +1321,7 @@ int connection_edge_is_rendezvous_stream(connection_t *conn);
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
 void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
+int connection_ap_detach_retriable(connection_t *conn, circuit_t *circ);
 
 void addressmap_init(void);
 void addressmap_clean(time_t now);
@@ -1378,7 +1379,8 @@ typedef enum stream_status_event_t {
   STREAM_EVENT_FAILED       = 3,
   STREAM_EVENT_CLOSED       = 4,
   STREAM_EVENT_NEW          = 5,
-  STREAM_EVENT_NEW_RESOLVE  = 6
+  STREAM_EVENT_NEW_RESOLVE  = 6,
+  STREAM_EVENT_FAILED_RETRIABLE = 7
 } stream_status_event_t;
 
 typedef enum or_conn_status_event_t {

@@ -296,9 +296,6 @@ void connection_ap_expire_beginning(void) {
     connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
     /* un-mark it as ending, since we're going to reuse it */
     conn->has_sent_end = 0;
-    /* move it back into 'pending' state. */
-    conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-    circuit_detach_stream(circ, conn);
     /* kludge to make us not try this circuit again, yet to allow
      * current streams on it to survive if they can: make it
      * unattractive to use for new streams */
@@ -306,8 +303,8 @@ void connection_ap_expire_beginning(void) {
     circ->timestamp_dirty -= options->MaxCircuitDirtiness;
     /* give our stream another 15 seconds to try */
     conn->timestamp_lastread += 15;
-    /* attaching to a dirty circuit is fine */
-    if (connection_ap_handshake_attach_circuit(conn)<0) {
+    /* move it back into 'pending' state, and try to attach. */
+    if (connection_ap_detach_retriable(conn, circ)<0) {
       /* it will never work */
       /* Don't need to send end -- we're not connected */
       conn->has_sent_end = 1;
@@ -341,6 +338,26 @@ void connection_ap_attach_pending(void)
     }
   }
 }
+
+/** DOCDOC
+ * -1 on err, 1 on success, 0 on not-yet-sure.
+ */
+int
+connection_ap_detach_retriable(connection_t *conn, circuit_t *circ)
+{
+  control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE);
+  if (get_options()->ManageConnections) {
+    conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+    circuit_detach_stream(circ,conn);
+    /* Muck with timestamps? */
+    return connection_ap_handshake_attach_circuit(conn);
+  } else {
+    conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
+    circuit_detach_stream(circ,conn);
+    return 0;
+  }
+}
+
 
 /** A client-side struct to remember requests to rewrite addresses
  * to new addresses. These structs make up a tree, with addressmap
@@ -839,7 +856,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
         return 0;
       }
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
-            control_event_stream_status(conn, STREAM_EVENT_NEW_RESOLVE);
+      control_event_stream_status(conn, STREAM_EVENT_NEW_RESOLVE);
     } else { /* socks->command == SOCKS_COMMAND_CONNECT */
       if (socks->port == 0) {
         log_fn(LOG_NOTICE,"Application asked to connect to port 0. Refusing.");
