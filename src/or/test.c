@@ -9,6 +9,21 @@
 #include "../common/test.h"
 
 void
+dump_hex(char *s, int len)
+{
+  static const char TABLE[] = "0123456789ABCDEF";
+  unsigned char *d = s;
+  int i, j, nyb;
+  for(i=0;i<len;++i) {
+    for (j=1;j>=0;--j) {
+      nyb = (((int) d[i]) >> (j*4)) & 0x0f;
+      assert(0<=nyb && nyb <=15);
+      putchar(TABLE[nyb]);
+    }
+  }
+}
+
+void
 setup_directory() {
   char buf[256];
   sprintf(buf, "/tmp/tor_test");
@@ -178,8 +193,8 @@ test_crypto_dh()
   
   memset(s1, 0, CRYPTO_DH_SIZE);
   memset(s2, 0xFF, CRYPTO_DH_SIZE);
-  s1len = crypto_dh_compute_secret(dh1, p2, CRYPTO_DH_SIZE, s1);
-  s2len = crypto_dh_compute_secret(dh2, p1, CRYPTO_DH_SIZE, s2);
+  s1len = crypto_dh_compute_secret(dh1, p2, CRYPTO_DH_SIZE, s1, 50);
+  s2len = crypto_dh_compute_secret(dh2, p1, CRYPTO_DH_SIZE, s2, 50);
   test_assert(s1len > 0);
   test_eq(s1len, s2len);
   test_memeq(s1, s2, s1len);
@@ -443,7 +458,6 @@ test_onion_handshake() {
   
   crypto_dh_free(c_dh);
 
-  /* FIXME sometimes (infrequently) the following fails! Why? */
   if (memcmp(c_keys, s_keys, 40)) {
     puts("Aiiiie");
     exit(1);
