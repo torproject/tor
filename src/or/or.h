@@ -693,6 +693,9 @@ int connection_create_listener(char *bindaddress, uint16_t bindport, int type);
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
 int retry_all_connections(void);
 
+void connection_bucket_init(void);
+void connection_bucket_refill(struct timeval *now);
+
 int connection_handle_read(connection_t *conn);
 int connection_read_to_buf(connection_t *conn);
 

@@ -494,7 +494,7 @@ void connection_bucket_decrement(connection_t *conn, int num_read) {
 /* keep a timeval to know when time has passed enough to refill buckets */
 static struct timeval current_time;
 
-void connection_bucket_init() {
+void connection_bucket_init(void) {
   tor_gettimeofday(&current_time);
   global_read_bucket = options.BandwidthBurst; /* start it at max traffic */
 }
@@ -533,6 +533,7 @@ void connection_bucket_refill(struct timeval *now) {
            conn->state != OR_CONN_STATE_OPEN ||
            conn->receiver_bucket > 0)) {
       /* and either a non-cell conn or a cell conn with non-empty bucket */
+      log_fn(LOG_DEBUG,"waking up conn (fd %d)",conn->s);
       conn->wants_to_read = 0;
       connection_start_reading(conn);
       if(conn->wants_to_write == 1) {
@@ -600,8 +601,10 @@ int connection_read_to_buf(connection_t *conn) {
   at_most = connection_bucket_read_limit(conn);
 
   if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
-    if(conn->state == OR_CONN_STATE_HANDSHAKING)
+    if(conn->state == OR_CONN_STATE_HANDSHAKING) {
+      /* continue handshaking even if global token bucket is empty */
       return connection_tls_continue_handshake(conn);
+    }
 
     /* else open, or closing */
     result = read_to_buf_tls(conn->tls, at_most, conn->inbuf);
@@ -616,7 +619,8 @@ int connection_read_to_buf(connection_t *conn) {
         return 0;
       case TOR_TLS_WANTREAD: /* we're already reading */
       case TOR_TLS_DONE: /* no data read, so nothing to process */
-        return 0;
+        result = 0;
+        break; /* so we call bucket_decrement below */
     }
   } else {
     result = read_to_buf(conn->s, at_most, conn->inbuf,

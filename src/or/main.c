@@ -421,7 +421,8 @@ static int prepare_for_poll(void) {
 
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
-    if(connection_has_pending_tls_data(conn)) {
+    if(connection_has_pending_tls_data(conn) &&
+       connection_is_reading(conn)) {
       log_fn(LOG_DEBUG,"sock %d has pending bytes.",conn->s);
       return 0; /* has pending bytes to read; don't let poll wait. */
     }
