@@ -672,7 +672,7 @@ creating a new circuit, the OP (call her Alice) sends a
 circID C<sub>AB</sub> not currently used on the connection from her to Bob.)
 The <em>create</em> cell's
 payload contains the first half of the Diffie-Hellman handshake
-(g<sup>x</sup>), encrypted to the onion key of the OR (call him Bob). Bob
+(g<sup>x</sup>), encrypted to the onion key of Bob. Bob
 responds with a <em>created</em> cell containing g<sup>y</sup>
 along with a hash of the negotiated key K=g<sup>xy</sup>.
 
