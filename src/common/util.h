@@ -133,7 +133,6 @@ void set_uint32(char *cp, uint32_t v);
 #endif
 #endif
 
-void hex_encode(const char *from, int fromlen, char *to);
 const char *hex_str(const char *from, int fromlen);
 
 /** Generic resizeable array. */

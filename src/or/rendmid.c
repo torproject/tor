@@ -208,7 +208,7 @@ rend_mid_establish_rendezvous(circuit_t *circ, const char *request, int request_
   memcpy(circ->rend_cookie, request, REND_COOKIE_LEN);
 
 
-  hex_encode(request,4,hexid);
+  base16_encode(hexid,9,request,4);
 
   log_fn(LOG_INFO, "Established rendezvous point on circuit %d for cookie %s",
          circ->p_circ_id, hexid);
@@ -230,7 +230,7 @@ rend_mid_rendezvous(circuit_t *circ, const char *request, int request_len)
   char hexid[9];
 
   if (request_len>=4) {
-    hex_encode(request,4,hexid);
+    base16_encode(hexid,9,request,4);
     log_fn(LOG_INFO, "Got request for rendezvous from circuit %d to cookie %s",
            circ->p_circ_id, hexid);
   }
