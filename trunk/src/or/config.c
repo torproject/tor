@@ -126,7 +126,7 @@ static config_var_t config_vars[] = {
   OBSOLETE("LinkPadding"),
   VAR("MaxConn",             UINT,     MaxConn,              "1024"),
   VAR("MaxOnionsPending",    UINT,     MaxOnionsPending,     "100"),
-  VAR("MonthlyAccountingStart",UINT,   AccountingStart,      "0"),
+  VAR("MonthlyAccountingStart",UINT,   AccountingStart,      "1"),
   VAR("AccountingMaxKB",     UINT,     AccountingMaxKB,      "0"),
   VAR("Nickname",            STRING,   Nickname,             NULL),
   VAR("NewCircuitPeriod",    UINT,     NewCircuitPeriod,     "30"),

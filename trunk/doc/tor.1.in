@@ -242,6 +242,20 @@ successfully, no subsequent rules are considered.  You can specify that no
 redirection is to be performed on a given set of addresses by using the
 special target string "pass", which prevents subsequent rules from being
 considered.
+.TP
+\fBAccountingMaxKB \fR\fInum\fP
+Never send or receive more than \fInum\fP kilobytes in a given
+accounting period (currently, only months are supported).  When the
+number of kilobytes is exhausted, Tor will hibernate until some time
+in the next accounting period.  If you have bandwidth cost issues,
+using this option is preferable to setting a low bandwidth, since it
+provides users with a collection of fast servers that are up some of
+the time, which is more useful than a set of slow servers that are
+always "available".
+.TP
+\fBMonthlyAccountingStart \fR\fIday\fP
+Always start the accounting period on the provided day of the month,
+which must be between 1 and 28.  (Defaults to 1.)
 
 .SH DIRECTORY SERVER OPTIONS
 .PP
