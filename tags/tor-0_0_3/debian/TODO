@@ -1,0 +1,9 @@
+Legend:
+        - Not done
+        * Top priority
+        . Partially done
+        o Done
+        D Deferred
+        X Abandoned
+
+- strip debugging symbols when tor is more mature
