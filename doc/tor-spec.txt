@@ -19,7 +19,6 @@ TODO: (very soon)
    K  -- a key for a symmetric cypher
 
    a|b -- concatenation of 'a' with 'b'.
-   a[i:j] -- Bytes 'i' through 'j'-1 (inclusive) of the string a.
 
    All numeric values are encoded in network (big-endian) order.
 
@@ -568,22 +567,20 @@ which reveals the downstream node.
 (Unless otherwise noted, tokens on the same line are space-separated.)
 
 Router ::= Router-Line  Public-Key  Signing-Key?  Exit-Policy NL
-Router-Line ::= "router" address ORPort OPPort APPort DirPort bandwidth
-                NL
+Router-Line ::= "router" address ORPort APPort DirPort bandwidth NL
 Public-key ::= a public key in PEM format   NL
 Signing-Key ::= "signing-key"  NL  signing key in PEM format   NL
 Exit-Policy ::= Exit-Line*
 Exit-Line ::= ("accept"|"reject")  string  NL
 
-ORport ::= port where the router listens for other routers (speaking cells)
-OPPort ::= where the router listens for onion proxies (speaking cells)
+ORport ::= port where the router listens for routers/proxies (speaking cells)
 APPort ::=  where the router listens for applications (speaking socks)
 DirPort ::= where the router listens for directory download requests
 bandwidth ::= maximum bandwidth, in bytes/s
 
 
 Example:
-router moria.mit.edu 9001 9011 9021 9031 100000
+router moria.mit.edu 9001 9021 9031 100000
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
 7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
