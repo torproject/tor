@@ -11,12 +11,18 @@ ARMA    - arma claims
         X Abandoned
 
 For 0.0.9:
-   - bring tor-spec up to date
-   - cache and serve running-routers on other nodes?
-   - pump up periods for fetching things
-   . make loglevels info,debug less noisy
-   - fix dfc/weasel's intro point bug
-   - add goodell's .exit tld
+N&R- bring tor-spec up to date
+N  . cache and serve running-routers on other nodes?
+     . cache running-routers
+     - download running-routers from servers running rc5-cvs or later
+N  - pump up periods for fetching things; figure out how to do this
+     backward-compatibily, so that people who did set dirfetchpostperiod
+     get the right behavior.
+N  - Adapt version parsing code to handle new version scheme; document new
+     version scheme.
+N&R. make loglevels info,debug less noisy
+R  - fix dfc/weasel's intro point bug
+R  - add goodell's .exit tld
 
 Beyond 0.0.9:
    - server descriptor declares min log level, clients avoid servers
