@@ -355,7 +355,7 @@ static void conn_close_if_marked(int i) {
       return;
     }
     if (connection_wants_to_flush(conn)) {
-      log_fn(LOG_NOTICE,"Conn (addr %s, fd %d, type %s, state %d) still wants to flush. Losing %d bytes! (Marked at %s:%d)",
+      log_fn(LOG_NOTICE,"Conn (addr %s, fd %d, type %s, state %d) is being closed, but there are still %d bytes we can't write. (Marked at %s:%d)",
              conn->address, conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state,
              (int)buf_datalen(conn->outbuf), conn->marked_for_close_file,
              conn->marked_for_close);
