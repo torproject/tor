@@ -1576,7 +1576,7 @@ void assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->tls);
   }
 
-  if (CONN_IS_EDGE(conn)) {
+  if (! CONN_IS_EDGE(conn)) {
     tor_assert(!conn->stream_id);
     tor_assert(!conn->next_stream);
     tor_assert(!conn->cpath_layer);
