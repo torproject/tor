@@ -1,5 +1,9 @@
 $Id$
 
+[XXX We need to make nicknames in intro* cells padded to 20
+ bytes, and maybe have a fixed length for nicknames in the
+ descriptor too -RD]
+
 Tor Rendezvous Spec
 
 0. Overview and preliminaries
@@ -115,6 +119,8 @@ Tor Rendezvous Spec
 
    KL is the length of PK, in octets.  (Currently, KL must be 128.)
    TS is the number of seconds elapsed since Jan 1, 1970.
+
+   He must list at least one introduction point.
 
    [Shouldn't the nicknames be hostname:port's instead?  That way, Alice's
    directory servers don't need to know Bob's chosen introduction points.
