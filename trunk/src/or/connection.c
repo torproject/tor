@@ -471,7 +471,7 @@ static int connection_init_accepted_conn(connection_t *conn) {
       conn->state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
       break;
     case CONN_TYPE_CONTROL:
-      /* XXXX009 NM control */
+      conn->state = CONTROL_CONN_STATE_NEEDAUTH;
       break;
   }
   return 0;
@@ -651,7 +651,9 @@ int retry_all_listeners(int force) {
   if (retry_listeners(CONN_TYPE_AP_LISTENER, options.SocksBindAddress,
                       options.SocksPort, "127.0.0.1", force)<0)
     return -1;
-  /* XXXX009 control NM */
+  if (retry_listeners(CONN_TYPE_CONTROL_LISTENER, NULL,
+                      options.ControlPort, "127.0.0.1", force)<0)
+    return -1;
 
   return 0;
 }

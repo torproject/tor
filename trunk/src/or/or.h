@@ -903,6 +903,7 @@ typedef struct {
                              * length (alpha in geometric distribution). */
   int ORPort; /**< Port to listen on for OR connections. */
   int SocksPort; /**< Port to listen on for SOCKS connections. */
+  int ControlPort; /**< Port to listen on for control connections. */
   int DirPort; /**< Port to listen on for directory connections. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
