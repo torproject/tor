@@ -1367,8 +1367,9 @@ options_validate(or_options_t *options)
     log(LOG_WARN,"BandwidthBurst must be less than %d",INT_MAX);
     result = -1;
   }
-  if (options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
-    log(LOG_WARN,"BandwidthRate is set to %d bytes/second. It must be at least %d.", (int)options->BandwidthRate, ROUTER_REQUIRED_MIN_BANDWIDTH);
+  if (server_mode(options) &&
+      options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
+    log(LOG_WARN,"BandwidthRate is set to %d bytes/second. For servers, it must be at least %d.", (int)options->BandwidthRate, ROUTER_REQUIRED_MIN_BANDWIDTH);
     result = -1;
   }
 
