@@ -10,8 +10,9 @@ tor (0.0.1+0.0.2pre20-2) unstable; urgency=low
   * As is the case too often, the INSTALL file not only covers
     installation, but also basic usage and configuration.  Therefore
     include it in the docs dir.
+  * Add a lintian override for the INSTALL file.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 17 Feb 2004 02:26:50 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 17 Feb 2004 02:32:00 +0100
 
 tor (0.0.1+0.0.2pre20-1) unstable; urgency=low
 
