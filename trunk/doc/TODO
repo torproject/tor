@@ -16,8 +16,8 @@ For 0.0.9.6:
    - Audit all changes to bandwidth buckets for integer over/underflow.
 
 For 0.1.0.1-rc:
-R  - write a changelog
-R  o pick the whole path when you start the circuit.
+   o write a changelog
+   o pick the whole path when you start the circuit.
      o and then the controller can call that for extendcircuit
    o finish messing with reachability stuff
    o if we jump in time a lot, then mark our circs and note that we
@@ -29,6 +29,7 @@ R  o pick the whole path when you start the circuit.
      getinfo("network-status") control message can work there.
    - Forward-port changes related to checking sockaddrs set by accept() on OS
      X, once we know what the bug was to begin with.
+   - whine if your socks port is an open proxy.
 
 For 0.1.0.x:
 
