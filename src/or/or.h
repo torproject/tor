@@ -625,7 +625,7 @@ int connection_edge_finished_flushing(connection_t *conn);
 int connection_edge_package_raw_inbuf(connection_t *conn);
 
 void connection_exit_connect(connection_t *conn);
-
+int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
 void connection_ap_attach_pending(void);
 
 extern uint64_t stats_n_data_cells_packaged;
