@@ -55,6 +55,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
 
     connection_fetch_from_buf(buf,LEN_ONION_RESPONSE,conn);
 
+    /* XXX conn->circ might already have been closed. Serious bug. Suck. */
     if(*buf == 0 || conn->circ->p_conn == NULL ||
        onionskin_process(conn->circ, buf+1, buf+1+DH_KEY_LEN) < 0) {
       log_fn(LOG_DEBUG,"decoding onion, onionskin_process, or p_conn failed. Closing.");
