@@ -13,10 +13,10 @@ ARMA    - arma claims
 
 
 For September:
-        - Windows port
-          - works as client
+        . Windows port
+          o works as client
             - deal with pollhup / reached_eof on all platforms
-          - robust as a client
+          . robust as a client
           - works as server
             - can be configured
           - robust as a server
@@ -29,8 +29,8 @@ For September:
             cons of using it, why should I use it, etc.
           - a howto tutorial with examples
           - tutorial: how to set up your own tor network
-            - (need to not hardcore dirservers file in config.c)
-          - correct, update, polish spec
+            - (need to not hardcode dirservers file in config.c)
+          . correct, update, polish spec
           - document the exposed function api?
           - document what we mean by socks.
 
@@ -78,29 +78,106 @@ Other details and small and hard things:
         . Refactor: add own routerinfo to routerlist.  Right now, only
           router_get_by_nickname knows about 'this router', as a hack to
           get circuit_launch_new to do the right thing.
-
-Rendezvous service:
-        - preemptively build and start rendezvous circs
-        - preemptively build n-1 hops of intro circs?
-        - cannibalize general circs?
-        - fix router_get_by_* functions so they can get ourselves too,
-          and audit everything to make sure rend and intro points are
-          just as likely to be us as not.
-
-In the distant future:
         . Scrubbing proxies
                 - Find an smtp proxy?
                 . Get socks4a support into Mozilla
-        - migrate to using IPv6 sizes everywhere
-        - handle half-open tcp conns
         - Extend by nickname/hostname/something, not by IP.
         - Need a relay teardown cell, separate from one-way ends.
         - Make it harder to circumvent bandwidth caps: look at number of bytes
           sent across sockets, not number sent inside TLS stream.
-        - Look at having smallcells and largecells
-        D Advanced directory servers
-                D Automated reputation management
-                D Figure out how to do threshold directory servers
-                D jurisdiction info in dirserver entries? other info?
-        X On the fly compression of each stream
+        - fix router_get_by_* functions so they can get ourselves too,
+          and audit everything to make sure rend and intro points are
+          just as likely to be us as not.
+
+
+
+***************************Future tasks:****************************
+
+Rendezvous and hidden services:
+  make it fast:
+    - preemptively build and start rendezvous circs.
+    - preemptively build n-1 hops of intro circs?
+    - cannibalize general circs?
+  make it reliable:
+    - standby/hotswap/redundant services.
+    - store stuff to disk? dirservers forget service descriptors when
+      they restart; nodes offering hidden services forget their chosen
+      intro points when they restart.
+  make it robust:
+    - auth mechanisms to let midpoint and bob selectively choose
+      connection requests.
+  make it scalable:
+    - right now the hidserv store/lookup system is run by the dirservers;
+      this won't scale.
+
+Tor scalability:
+  Relax clique assumptions.
+  Redesign how directories are handled.
+    - Separate running-routers lookup from descriptor list lookup.
+    - Resolve directory agreement somehow.
+    - Cache directory on all servers.
+  Find and remove bottlenecks
+    - Address linear searches on e.g. circuit and connection lists.
+  Reputation/memory system, so dirservers can measure people,
+    and so other people can verify their measurements.
+    - Need to measure via relay, so it's not distinguishable.
+  Bandwidth-aware path selection. So people with T3's are picked
+    more often than people with DSL.
+  Reliability-aware node selection. So people who are stable are
+    preferred for long-term circuits such as intro and rend circs,
+    and general circs for irc, aim, ssh, etc.
+  Let dissidents get to Tor servers via Tor users. ("Backbone model")
+
+Anonymity improvements:
+  Is abandonding the circuit the only option when an extend fails, or
+    can we do something without impacting anonymity too much?
+  Is exiting from the middle of the circuit always a bad idea?
+  Helper nodes. Decide how to use them to improve safety.
+  DNS resolution: need to make tor support resolve requests. Need to write
+    a script and an interface (including an extension to the socks
+    protocol) so we can ask it to do resolve requests. Need to patch
+    tsocks to intercept gethostbyname, else we'll continue leaking it.
+  Improve path selection algorithms based on routing-zones paper. Be sure
+    to start and end circuits in different ASs. Ideally, consider AS of
+    source and destination -- maybe even enter and exit via nearby AS.
+  Intermediate model, with some delays and mixing.
+  Add defensive dropping regime?
+
+Make it more correct:
+  Handle half-open connections: right now we don't support all TCP
+    streams, at least according to the protocol. But we handle all that
+    we've seen in the wild.
+  Support IPv6.
+
+Efficiency/speed/robustness:
+  Congestion control. Is our current design sufficient once we have heavy
+    use? Need to measure and tweak, or maybe overhaul.
+  Allow small cells and large cells on the same network?
+  Cell buffering and resending. This will allow us to handle broken
+    circuits as long as the endpoints don't break, plus will allow
+    connection (tls session key) rotation.
+  Implement Morphmix, so we can compare its behavior, complexity, etc.
+  Use cpuworker for more heavy lifting.
+    - Signing (and verifying) hidserv descriptors
+    - Signing (and verifying) intro/rend requests
+    - Signing (and verifying) router descriptors
+    - Signing (and verifying) directories
+    - Doing TLS handshake (this is very hard to separate out, though)
+  Buffer size pool: allocate a maximum size for all buffers, not
+    a maximum size for each buffer. So we don't have to give up as
+    quickly (and kill the thickpipe!) when there's congestion.
+  Exit node caching: tie into squid or other caching web proxy.
+  Other transport. HTTP, udp, rdp, airhook, etc. May have to do our own
+    link crypto, unless we can bully openssl into it.
+
+P2P Tor:
+  Do all the scalability stuff above, first.
+  Incentives to relay. Not so hard.
+  Incentives to allow exit. Possibly quite hard.
+  Sybil defenses without having a human bottleneck.
+  How to gather random sample of nodes.
+  How to handle nodelist recommendations.
+  Consider incremental switches: a p2p tor with only 50 users has
+    different anonymity properties than one with 10k users, and should
+    be treated differently.
 
