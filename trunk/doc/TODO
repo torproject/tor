@@ -19,17 +19,27 @@ For 0.0.7:
           o have an allow/deny series for socks
         o break exitpolicy into multiple config lines
         o have the OP forget routers it hasn't heard about in 24 hours
-        . rename/rearrange functions for what file they're in
         D try to break apart the main clump of functions better.
         o rend_services_introduce should check if it's failed a lot
           recently, and not try for a while if so
         o check tor version as soon as you get the recommended-versions
           string, regardless of whether parsing the directory succeeded.
-        - make all ORs serve the directory too.
+NICK    - Check directory signature based on signer ID, not on who
+	  we got it from
+ARMA	- Increase all the scalability constants
 
+For scalability:
+	- Slightly smarter bandwidth management: use link capacity
+	  intelligently.
+	- Handle full buffers without totally borking
+
+For 0.0.8:
+NICK    . rename/rearrange functions for what file they're in
+ARMA    - make all ORs serve the directory too.
+	- Contact info, pgp fingerprint, comments in router desc.
 
 For September:
-        . Windows port
+NICK    . Windows port
           o works as client
             - deal with pollhup / reached_eof on all platforms
           . robust as a client
@@ -50,7 +60,7 @@ For September:
           - document the exposed function api?
           - document what we mean by socks.
 
-        - packages
+NICK    - packages
           - rpm
           - find a long-term rpm maintainer
 
