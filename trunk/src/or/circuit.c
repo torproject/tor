@@ -597,27 +597,42 @@ void circuit_about_to_close_connection(connection_t *conn) {
   } /* end switch */
 }
 
+void circuit_dump_details(int severity, circuit_t *circ, int poll_index,
+                          char *type, int this_circid, int other_circid) {
+  struct crypt_path_t *hop;
+  log(severity,"Conn %d has %s circuit: circID %d (other side %d), state %d (%s), born %d",
+      poll_index, type, this_circid, other_circid, circ->state,
+      circuit_state_to_string[circ->state], (int)circ->timestamp_created);
+  if(circ->cpath) { /* circ starts at this node */
+    if(circ->state == CIRCUIT_STATE_BUILDING)
+      log(severity,"Building: desired len %d, planned exit node %s.",
+          circ->build_state->desired_path_len, circ->build_state->chosen_exit);
+    for(hop=circ->cpath;hop->next != circ->cpath; hop=hop->next)
+      log(severity,"hop: state %d, addr %d, port %d", hop->state, hop->addr, hop->port);
+  }
+}
+
 void circuit_dump_by_conn(connection_t *conn, int severity) {
   circuit_t *circ;
   connection_t *tmpconn;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
     if(circ->p_conn == conn)
-      log(severity, "Conn %d has App-ward circuit:  circID %d (other side %d), state %d (%s)",
-        conn->poll_index, circ->p_circ_id, circ->n_circ_id, circ->state, circuit_state_to_string[circ->state]);
+      circuit_dump_details(severity, circ, conn->poll_index, "App-ward",
+                           circ->p_circ_id, circ->n_circ_id);
     for(tmpconn=circ->p_streams; tmpconn; tmpconn=tmpconn->next_stream) {
       if(tmpconn == conn) {
-        log(severity,"Conn %d has App-ward circuit:  circID %d (other side %d), state %d (%s)",
-          conn->poll_index, circ->p_circ_id, circ->n_circ_id, circ->state, circuit_state_to_string[circ->state]);
+        circuit_dump_details(severity, circ, conn->poll_index, "App-ward",
+                             circ->p_circ_id, circ->n_circ_id);
       }
     }
     if(circ->n_conn == conn)
-      log(severity,"Conn %d has Exit-ward circuit: circID %d (other side %d), state %d (%s)",
-        conn->poll_index, circ->n_circ_id, circ->p_circ_id, circ->state, circuit_state_to_string[circ->state]);
+      circuit_dump_details(severity, circ, conn->poll_index, "Exit-ward",
+                           circ->n_circ_id, circ->p_circ_id);
     for(tmpconn=circ->n_streams; tmpconn; tmpconn=tmpconn->next_stream) {
       if(tmpconn == conn) {
-        log(severity,"Conn %d has Exit-ward circuit: circID %d (other side %d), state %d (%s)",
-          conn->poll_index, circ->n_circ_id, circ->p_circ_id, circ->state, circuit_state_to_string[circ->state]);
+        circuit_dump_details(severity, circ, conn->poll_index, "Exit-ward",
+                             circ->n_circ_id, circ->p_circ_id);
       }
     }
   }
