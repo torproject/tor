@@ -250,10 +250,10 @@ circuit_t *circuit_get_newest(connection_t *conn, int must_be_open) {
   return NULL;
 }
 
-#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 3
+#define MIN_SECONDS_BEFORE_EXPIRING_CIRC 10
 /* circuits that were born at the end of their second might be expired
- * after 3.1 seconds; circuits born at the beginning might be expired
- * after closer to 4 seconds.
+ * after 10.1 seconds; circuits born at the beginning might be expired
+ * after closer to 11 seconds.
  */
 
 /* close all circuits that start at us, aren't open, and were born
@@ -275,6 +275,7 @@ void circuit_expire_building(void) {
       else
         log_fn(LOG_INFO,"Abandoning circ %d (state %d:%s)", victim->n_circ_id,
                victim->state, circuit_state_to_string[victim->state]);
+      circuit_log_path(LOG_INFO,victim);
       circuit_close(victim);
     }
   }
@@ -739,19 +740,26 @@ void circuit_about_to_close_connection(connection_t *conn) {
 void circuit_log_path(int severity, circuit_t *circ) {
   static char b[1024];
   struct crypt_path_t *hop;
+  char *states[] = {"closed", "waiting for keys", "open"};
   routerinfo_t *router;
   assert(circ->cpath);
-  strcpy(b,"Stream is on circ: ");
-  for(hop=circ->cpath;hop->next != circ->cpath; hop=hop->next) {
+
+  sprintf(b,"circ (length %d, exit %s): ",
+          circ->build_state->desired_path_len, circ->build_state->chosen_exit);
+  hop=circ->cpath;
+  do {
     router = router_get_by_addr_port(hop->addr,hop->port);
     if(router) {
-      /* XXX strcat causes buffer overflow */
+      /* XXX strcat allows buffer overflow */
       strcat(b,router->nickname);
-      strcat(b,",");
+      strcat(b,"(");
+      strcat(b,states[hop->state]);
+      strcat(b,"),");
     } else {
       strcat(b,"UNKNOWN,");
     }
-  }
+    hop=hop->next;
+  } while(hop!=circ->cpath);
   log_fn(severity,"%s",b);
 }
 
@@ -1111,6 +1119,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
 
   hop->state = CPATH_STATE_OPEN;
   log_fn(LOG_INFO,"finished");
+  circuit_log_path(LOG_WARN,circ);
   return 0;
 }
 

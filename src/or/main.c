@@ -341,9 +341,9 @@ static void run_scheduled_events(time_t now) {
       }
       time_to_new_circuit = now + options.NewCircuitPeriod;
     }
-#define CIRCUIT_MIN_BUILDING 2
+#define CIRCUIT_MIN_BUILDING 3
     if(!circ && circuit_count_building() < CIRCUIT_MIN_BUILDING) {
-      /* if there's no open circ, and less than 2 are on the way,
+      /* if there's no open circ, and less than 3 are on the way,
        * go ahead and try another.
        */
       circuit_launch_new();
