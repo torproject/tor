@@ -696,11 +696,12 @@ int
 dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
                                      crypto_pk_env_t *private_key)
 {
-  char *cp;
+  char *cp, *eos;
   char digest[20];
   char signature[128];
   int i, written;
   routerinfo_t *router;
+  eos = s+maxlen;
   strncpy(s, 
           "signed-directory\n"
           "client-software x y z\n" /* XXX make this real */
@@ -711,14 +712,13 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   cp = s+i;
   for (i = 0; i < dir->n_routers; ++i) {
     router = dir->routers[i];
-    written = dump_router_to_string(cp, maxlen-i, router);
+    written = dump_router_to_string(cp, eos-cp, router);
 
     if(written < 0) { 
       log(LOG_ERR,"dump_signed_directory_to_string(): tried to exceed string length.");
       cp[maxlen-1] = 0; /* make sure it's null terminated */
       return -1;
     }
-    i += written;
     cp += written;
   }
 
