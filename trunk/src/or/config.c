@@ -165,6 +165,7 @@ static config_var_t config_vars[] = {
   VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
   VAR("RendNodes",           STRING,   RendNodes,            NULL),
   VAR("RendExcludeNodes",    STRING,   RendExcludeNodes,     NULL),
+  VAR("ShutdownWaitLength",  UINT,     ShutdownWaitLength,   "30"),
   VAR("SocksPort",           UINT,     SocksPort,            "9050"),
   VAR("SocksBindAddress",    LINELIST, SocksBindAddress,     NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
