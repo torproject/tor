@@ -430,7 +430,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           req->reply[0] = 5; /* socks5 reply */
           req->reply[1] = 0xFF; /* reject all methods */
           return -1;
-        }          
+        }
         buf_remove_from_front(buf,2+nummethods);/* remove packet from buf */
 
         req->replylen = 2; /* 2 bytes of response */
@@ -461,7 +461,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
                    strlen(tmpbuf)+1,MAX_SOCKS_ADDR_LEN);
             return -1;
           }
-          strcpy(req->addr,tmpbuf);
+          strcpy(req->address,tmpbuf);
           req->port = ntohs(*(uint16_t*)(buf->mem+8));
           buf_remove_from_front(buf, 10);
           return 1;
@@ -475,8 +475,8 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
                    len+1,MAX_SOCKS_ADDR_LEN);
             return -1;
           }
-          memcpy(req->addr,buf->mem+5,len);
-          req->addr[len] = 0;
+          memcpy(req->address,buf->mem+5,len);
+          req->address[len] = 0;
           req->port = ntohs(*(uint16_t*)(buf->mem+5+len));
           buf_remove_from_front(buf, 5+len+2);
           return 1;
@@ -533,7 +533,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
         }
       }
       log_fn(LOG_DEBUG,"Everything is here. Success.");
-      strcpy(req->addr, socks4_prot == socks4 ? tmpbuf : startaddr);
+      strcpy(req->address, socks4_prot == socks4 ? tmpbuf : startaddr);
       buf_remove_from_front(buf, next-buf->mem+1); /* next points to the final \0 on inbuf */
       return 1;
 

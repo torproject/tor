@@ -392,7 +392,10 @@ struct crypt_path_t {
 
 typedef struct crypt_path_t crypt_path_t;
 
-typedef struct cpath_build_state_t cpath_build_state_t;
+typedef struct {
+  int desired_path_len;
+  char *chosen_exit; /* nickname of planned exit node */
+} cpath_build_state_t;
 
 /* struct for a path (circuit) through the network */
 struct circuit_t {
@@ -470,7 +473,7 @@ struct socks_request_t {
   char socks_version;
   int replylen;
   char reply[MAX_SOCKS_REPLY_LEN];
-  char addr[MAX_SOCKS_ADDR_LEN];
+  char address[MAX_SOCKS_ADDR_LEN];
   uint16_t port;
 };
 
@@ -626,6 +629,8 @@ extern uint64_t stats_n_data_cells_packaged;
 extern uint64_t stats_n_data_bytes_packaged;
 extern uint64_t stats_n_data_cells_received;
 extern uint64_t stats_n_data_bytes_received;
+
+void client_dns_init(void);
 
 /********************************* connection_or.c ***************************/
 

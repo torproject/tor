@@ -86,6 +86,8 @@ void circuit_free(circuit_t *circ) {
     crypto_free_cipher_env(circ->n_crypto);
   if (circ->p_crypto)
     crypto_free_cipher_env(circ->p_crypto);
+  if(circ->build_state)
+    tor_free(circ->build_state->chosen_exit);
   tor_free(circ->build_state);
   circuit_free_cpath(circ->cpath);
   free(circ);
@@ -659,7 +661,7 @@ int circuit_establish_circuit(void) {
   circ = circuit_new(0, NULL); /* sets circ->p_circ_id and circ->p_conn */
   circ->state = CIRCUIT_STATE_OR_WAIT;
   circ->build_state = onion_new_cpath_build_state();
-  
+
   if (! circ->build_state) {
     log_fn(LOG_INFO,"Generating cpath length failed.");
     circuit_close(circ);

@@ -5,7 +5,7 @@
 #include "or.h"
 extern or_options_t options; /* command-line and config-file options */
 
-#define MAX_CPUWORKERS 17
+#define MAX_CPUWORKERS 16
 #define MIN_CPUWORKERS 1
 
 #define TAG_LEN 8
@@ -60,10 +60,14 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   if(conn->inbuf_reached_eof) {
     log_fn(LOG_WARN,"Read eof. Worker dying.");
     if(conn->state != CPUWORKER_STATE_IDLE) {
-      /* XXX the circ associated with this cpuworker will wait forever. Oops. */
+      /* the circ associated with this cpuworker will have to wait until
+       * it gets culled in run_connection_housekeeping(), since we have
+       * no way to find out which circ it was. */
+      log_fn(LOG_WARN,"...and leaving a circuit waiting. Oh well.");
       num_cpuworkers_busy--;
     }
     num_cpuworkers--;
+    spawn_enough_cpuworkers(); /* try to regrow. hope we don't end up spinning. */
     return -1;
   }
 
@@ -215,7 +219,6 @@ static void spawn_enough_cpuworkers(void) {
   }
 }
 
-
 static void process_pending_task(connection_t *cpuworker) {
   circuit_t *circ;
 
@@ -233,8 +236,8 @@ static void process_pending_task(connection_t *cpuworker) {
 /* if cpuworker is defined, assert that he's idle, and use him. else,
  * look for an idle cpuworker and use him. if none idle, queue task onto
  * the pending onion list and return.
- * If question_type is CPUWORKER_TASK_ONION then task is a circ, else
- * (something else)
+ * If question_type is CPUWORKER_TASK_ONION then task is a circ.
+ * No other question_types are allowed.
  */
 int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
                         void *task) {
@@ -271,7 +274,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
     connection_write_to_buf(tag, sizeof(tag), cpuworker);
     connection_write_to_buf(circ->onionskin, DH_ONIONSKIN_LEN, cpuworker);
   }
-  return 0;    
+  return 0;
 }
 
 /*
