@@ -638,6 +638,11 @@ static int do_hup(void) {
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 0);
   }
   if(options.ORPort) {
+    /* Restart cpuworker and dnsworker processes, so they get up-to-date
+     * configuration options. */
+    cpuworkers_rotate();
+    dnsworkers_rotate();
+    /* Rebuild fresh descriptor as needed. */
     router_rebuild_descriptor();
     sprintf(keydir,"%s/router.desc", options.DataDirectory);
     log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);

@@ -35,9 +35,11 @@ extern or_options_t options; /* command-line and config-file options */
 #define DNS_RESOLVE_SUCCEEDED 3
 
 /** How many dnsworkers we have running right now. */
-int num_dnsworkers=0;
+static int num_dnsworkers=0;
 /** How many of the running dnsworkers have an assigned task right now. */
-int num_dnsworkers_busy=0;
+static int num_dnsworkers_busy=0;
+/** When did we last rotate the dnsworkers? */
+static time_t last_rotation_time=0;
 
 /** Linked list of connections waiting for a DNS answer. */
 struct pending_connection_t {
@@ -92,6 +94,7 @@ static void init_cache_tree(void) {
 /** Initialize the DNS subsystem; called by the OR process. */
 void dns_init(void) {
   init_cache_tree();
+  last_rotation_time=time(NULL);
   spawn_enough_dnsworkers();
 }
 
@@ -535,8 +538,27 @@ int connection_dns_process_inbuf(connection_t *conn) {
   conn->address = tor_strdup("<idle>");
   conn->state = DNSWORKER_STATE_IDLE;
   num_dnsworkers_busy--;
-
+  if (conn->timestamp_created < last_rotation_time) {
+    connection_mark_for_close(conn);
+    num_dnsworkers--;
+    spawn_enough_dnsworkers();
+  }
   return 0;
+}
+
+/** Close and re-open all idle dnsworkers; schedule busy ones to be closed
+ * and re-opened once they're no longer busy.
+ **/
+void dnsworkers_rotate(void)
+{
+  connection_t *dnsconn;
+  while ((dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER,
+                                                 DNSWORKER_STATE_IDLE))) {
+    connection_mark_for_close(dnsconn);
+    num_dnsworkers--;
+  }
+  last_rotation_time = time(NULL);
+  spawn_enough_dnsworkers();
 }
 
 /** Implementation for DNS workers; this code runs in a separate
