@@ -326,7 +326,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
     return -1;
   }
 
-  /* min key length plus digest length */
+  /* min key length plus digest length plus nickname length */
   if (request_len < 148) {
     log_fn(LOG_WARN, "Got a truncated INTRODUCE2 cell on circ %d",
            circuit->n_circ_id);
@@ -357,9 +357,9 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
     log_fn(LOG_WARN, "Couldn't decrypt INTRODUCE2 cell");
     return -1;
   }
-  ptr=memchr(buf,0,len);
+  ptr=memchr(buf,0,MAX_NICKNAME_LEN+1);
   if (!ptr || ptr == buf) {
-    log_fn(LOG_WARN, "Couldn't find a null-terminated nickname in INTRODUCE2 cell");
+    log_fn(LOG_WARN, "Couldn't find a null-padded nickname in INTRODUCE2 cell");
     return -1;
   }
   if (strspn(buf,LEGAL_NICKNAME_CHARACTERS) != ptr-buf) {
@@ -368,8 +368,8 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   }
   /* Okay, now we know that the nickname is at the start of the buffer. */
   rp_nickname = buf;
-  ++ptr;
-  len -= (ptr-buf);
+  ptr = buf+(MAX_NICKNAME_LEN+1);
+  len -= (MAX_NICKNAME_LEN+1);
   if (len != 20+128) {
     log_fn(LOG_WARN, "Bad length for INTRODUCE2 cell.");
     return -1;
