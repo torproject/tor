@@ -367,6 +367,34 @@ void routerinfo_free(routerinfo_t *router)
   free(router);
 }
 
+routerinfo_t *routerinfo_copy(const routerinfo_t *router)
+{
+  routerinfo_t *r;
+  struct exit_policy_t **e, *tmp;
+
+  r = tor_malloc(sizeof(routerinfo_t));
+  memcpy(r, router, sizeof(routerinfo_t));
+
+  r->address = tor_strdup(r->address);
+  r->nickname = tor_strdup(r->nickname);
+  r->platform = tor_strdup(r->platform);
+  if (r->onion_pkey)
+    r->onion_pkey = crypto_pk_dup_key(r->onion_pkey);
+  if (r->link_pkey)
+    r->link_pkey = crypto_pk_dup_key(r->link_pkey);
+  if (r->identity_pkey)
+    r->identity_pkey = crypto_pk_dup_key(r->identity_pkey);
+  e = &r->exit_policy;
+  while (*e) {
+    tmp = tor_malloc(sizeof(struct exit_policy_t));
+    memcpy(tmp,*e,sizeof(struct exit_policy_t));
+    *e = tmp;
+    (*e)->string = tor_strdup((*e)->string);
+    e = & ((*e)->next);
+  }
+  return r;
+}
+
 static void routerlist_free(routerlist_t *rl)
 {
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
@@ -523,7 +551,7 @@ router_resolve_routerlist(routerlist_t *rl)
 
   i = 0;
   if ((r = router_get_my_routerinfo())) {
-    smartlist_insert(rl->routers, 0, r);
+    smartlist_insert(rl->routers, 0, routerinfo_copy(r));
     ++i;
   }
 
