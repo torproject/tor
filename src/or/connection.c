@@ -223,9 +223,11 @@ void connection_expire_held_open(void)
     /* If we've been holding the connection open, but we haven't written
      * for 15 seconds...
      */
-    if (conn->marked_for_close && conn->hold_open_until_flushed &&
-        now - conn->timestamp_lastwritten >= 15) {
-      conn->hold_open_until_flushed = 0;
+    if (conn->hold_open_until_flushed) {
+      assert(conn->marked_for_close);
+      if (now - conn->timestamp_lastwritten >= 15) {
+        conn->hold_open_until_flushed = 0;
+      }
     }
   }
 }
@@ -847,6 +849,9 @@ void assert_connection_ok(connection_t *conn, time_t now)
   if(conn->outbuf_flushlen > 0) {
     assert(connection_is_writing(conn) || conn->wants_to_write);
   }
+
+  if(conn->hold_open_until_flushed)
+    assert(conn->marked_for_close);
 
   /* XXX check: wants_to_read, wants_to_write, s, poll_index,
    * marked_for_close. */
