@@ -248,6 +248,10 @@ int tor_lookup_hostname(const char *name, uint32_t *addr);
 int parse_addr_port(const char *addrport, char **address, uint32_t *addr,
                     uint16_t *port);
 
+int parse_addr_and_port_range(const char *s, uint32_t *addr_out,
+                              uint32_t *mask_out, uint16_t *port_min_out,
+                              uint16_t *port_max_out);
+
 /* For stupid historical reasons, windows sockets have an independent
  * set of errnos, and an independent way to get them.  Also, you can't
  * always believe WSAEWOULDBLOCK.  Use the macros below to compare
