@@ -1020,7 +1020,7 @@ option_is_same(or_options_t *o1, or_options_t *o2, config_var_t *var)
       log_fn(LOG_ERR,"Internal error: can't compare configuration option '%s'",
              var->name);
       tor_assert(0);
-	  return 0; /* unreached */
+      return 0; /* unreached */
     }
 }
 
