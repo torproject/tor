@@ -105,7 +105,7 @@ int parse_http_response(char *headers, int *code, char **message) {
   int n1, n2;
   assert(headers && code);
 
-  while(isspace(*headers)) headers++; /* tolerate leading whitespace */
+  while(isspace((int)*headers)) headers++; /* tolerate leading whitespace */
 
   if(sscanf(headers, "HTTP/1.%d %d", &n1, &n2) < 2 ||
      (n1 != 0 && n1 != 1) ||

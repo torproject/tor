@@ -164,11 +164,11 @@ static void add_nickname_list_to_smartlist(smartlist_t *sl, char *list) {
   char nick[MAX_NICKNAME_LEN];
   routerinfo_t *router;
 
-  while(isspace(*list) || *list==',') list++;
+  while(isspace((int)*list) || *list==',') list++;
 
   start = list;
   while(*start) {
-    end=start; while(*end && !isspace(*end) && *end != ',') end++;
+    end=start; while(*end && !isspace((int)*end) && *end != ',') end++;
     memcpy(nick,start,end-start);
     nick[end-start] = 0; /* null terminate it */
     router = router_get_by_nickname(nick);
@@ -180,7 +180,7 @@ static void add_nickname_list_to_smartlist(smartlist_t *sl, char *list) {
     } else
       log_fn(has_fetched_directory ? LOG_WARN : LOG_INFO,
              "Nickname list includes '%s' which isn't a known router.",nick);
-    while(isspace(*end) || *end==',') end++;
+    while(isspace((int)*end) || *end==',') end++;
     start = end;
   }
 }
