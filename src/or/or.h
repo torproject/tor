@@ -213,6 +213,9 @@ typedef struct
 
   char *dest_addr;
   uint16_t dest_port;
+
+  char dest_tmp[512];
+  int dest_tmplen;
   
 /* used by OR, to keep state while connect()ing: Kludge. */
 
