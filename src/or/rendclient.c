@@ -98,6 +98,9 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
     return -1;
   }
 
+  /* we don't need it anymore, plus it's been used. send the destroy. */
+  circuit_mark_for_close(introcirc);
+
   return 0;
 err:
   if(parsed)
