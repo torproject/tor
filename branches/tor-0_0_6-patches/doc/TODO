@@ -1,0 +1,106 @@
+
+Legend:
+SPEC!!  - Not specified
+SPEC    - Spec not finalized
+NICK    - nick claims
+ARMA    - arma claims
+        - Not done
+        * Top priority
+        . Partially done
+        o Done
+        D Deferred
+        X Abandoned
+
+
+For September:
+        - Windows port
+          - works as client
+            - deal with pollhup / reached_eof on all platforms
+          - robust as a client
+          - works as server
+            - can be configured
+          - robust as a server
+          - docs for building in win
+          - installer?
+
+        - Docs
+          - FAQ
+          - overview of tor. how does it work, what's it do, pros and
+            cons of using it, why should I use it, etc.
+          - a howto tutorial with examples
+          - tutorial: how to set up your own tor network
+            - (need to not hardcore dirservers file in config.c)
+          - correct, update, polish spec
+          - document the exposed function api?
+          - document what we mean by socks.
+
+        - packages
+          - rpm
+          - find a long-term rpm maintainer
+
+        - code
+          - better warn/info messages
+          - let tor do resolves.
+          - extend socks4 to do resolves?
+          - make script to ask tor for resolves
+          - tsocks
+            - gather patches, submit to maintainer
+            - intercept gethostbyname and others, do resolve via tor
+          - redesign and thorough code revamp, with particular eye toward:
+            - support half-open tcp connections
+            - conn key rotation
+            - other transports -- http, airhook
+            - modular introduction mechanism
+            - allow non-clique topology
+
+Other details and small and hard things:
+        - rend_services_introduce should check if it's failed a lot
+          recently, and not try for a while if so
+        - check tor version as soon as you get the recommended-versions
+          string, regardless of whether parsing the directory succeeded.
+        - tor should be able to have a pool of outgoing IP addresses
+          that it is able to rotate through. (maybe)
+        - tie into squid
+        - buffer size pool, to let a few buffers grow huge or many buffers
+          grow a bit
+        - hidserv offerers shouldn't need to define a SocksPort
+        - when the client fails to pick an intro point for a hidserv,
+          it should refetch the hidserv desc.
+        . should maybe make clients exit(1) when bad things happen?
+          e.g. clock skew.
+        - should retry exitpolicy end streams even if the end cell didn't
+          resolve the address for you
+        - Add '[...truncated]' or similar to truncated log entries (like the directory
+          in connection_dir_process_inbuf()).
+        . Make logs handle it better when writing to them fails.
+        - Dirserver shouldn't put you in running-routers list if you haven't
+          uploaded a descriptor recently
+        . Refactor: add own routerinfo to routerlist.  Right now, only
+          router_get_by_nickname knows about 'this router', as a hack to
+          get circuit_launch_new to do the right thing.
+
+Rendezvous service:
+        - preemptively build and start rendezvous circs
+        - preemptively build n-1 hops of intro circs?
+        - cannibalize general circs?
+        - fix router_get_by_* functions so they can get ourselves too,
+          and audit everything to make sure rend and intro points are
+          just as likely to be us as not.
+
+In the distant future:
+        . Scrubbing proxies
+                - Find an smtp proxy?
+                . Get socks4a support into Mozilla
+        - migrate to using IPv6 sizes everywhere
+        - handle half-open tcp conns
+        - Extend by nickname/hostname/something, not by IP.
+        - Need a relay teardown cell, separate from one-way ends.
+        - Make it harder to circumvent bandwidth caps: look at number of bytes
+          sent across sockets, not number sent inside TLS stream.
+        - Look at having smallcells and largecells
+        D Advanced directory servers
+                D Automated reputation management
+                D Figure out how to do threshold directory servers
+                D jurisdiction info in dirserver entries? other info?
+        X On the fly compression of each stream
+
