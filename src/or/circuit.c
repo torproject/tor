@@ -17,10 +17,10 @@ unsigned long stats_n_relay_cells_delivered = 0;
 static circuit_t *global_circuitlist=NULL;
 
 char *circuit_state_to_string[] = {
-  "receiving the onion",    /* 0 */
-  "waiting to process create", /* 1 */
-  "connecting to firsthop", /* 2 */
-  "open"                    /* 3 */
+  "doing handshakes",        /* 0 */
+  "processing the onion",    /* 1 */
+  "connecting to firsthop",  /* 2 */
+  "open"                     /* 3 */
 };
 
 /********* END VARIABLES ************/
@@ -297,7 +297,6 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
     return 0;
   }
 
-  ++stats_n_relay_cells_relayed;
   /* not recognized. pass it on. */
   if(cell_direction == CELL_DIRECTION_OUT)
     conn = circ->n_conn;
@@ -311,6 +310,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   }
 
   log_fn(LOG_DEBUG,"Passing on unrecognized cell.");
+  ++stats_n_relay_cells_relayed;
   connection_or_write_cell_to_buf(cell, conn);
   return 0;
 }
