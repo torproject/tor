@@ -78,6 +78,7 @@ connection_t *connection_new(int type) {
 
   conn = (connection_t *)tor_malloc(sizeof(connection_t));
   memset(conn,0,sizeof(connection_t)); /* zero it out to start */
+  conn->s = -1; /* give it a default of 'not used' */
 
   conn->type = type;
   if(!connection_is_listener(conn)) { /* listeners never use their buf */
@@ -117,7 +118,7 @@ void connection_free(connection_t *conn) {
   if (conn->nickname) 
     free(conn->nickname);
 
-  if(conn->s > 0) {
+  if(conn->s >= 0) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);
     close(conn->s);
   }

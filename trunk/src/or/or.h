@@ -416,6 +416,8 @@ typedef struct circuit_t circuit_t;
 
 typedef struct {
    char *LogLevel;
+   char *LogFile;
+   char *DebugLogFile;
    char *DataDirectory;
    char *RouterFile;
    char *Nickname;
@@ -423,7 +425,6 @@ typedef struct {
    char *PidFile;
    char *ExitPolicy;
    double CoinWeight;
-   int Daemon;
    int ORPort;
    int APPort;
    int DirPort;
@@ -432,6 +433,7 @@ typedef struct {
    int TrafficShaping;
    int LinkPadding;
    int IgnoreVersion;
+   int RunAsDaemon;
    int DirRebuildPeriod;
    int DirFetchPostPeriod;
    int KeepalivePeriod;
