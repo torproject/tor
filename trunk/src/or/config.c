@@ -593,7 +593,7 @@ static char *get_default_conf_file(void)
   strlcat(path,"\\tor\\torrc",MAX_PATH);
   return path;
 #else
-  return tor_strdup(CONF_DIR "/torrc");
+  return tor_strdup(CONFDIR "/torrc");
 #endif
 }
 
