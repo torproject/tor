@@ -283,6 +283,7 @@ dirserv_add_descriptor(const char **desc)
   const char *cp;
   size_t desc_len;
   time_t now;
+  int verified=1; /* whether we knew its fingerprint already */
 
   if (!descriptor_list)
     descriptor_list = smartlist_create();
@@ -311,22 +312,22 @@ dirserv_add_descriptor(const char **desc)
   }
   /* Okay.  Now check whether the fingerprint is recognized. */
   r = dirserv_router_fingerprint_is_known(ri);
-  if(r<1) {
-    if(r==0) {
-      char fp[FINGERPRINT_LEN+1];
-      log_fn(LOG_WARN, "Unknown nickname %s (%s:%d). Not adding.",
-             ri->nickname, ri->address, ri->or_port);
-      if (crypto_pk_get_fingerprint(ri->identity_pkey, fp) < 0) {
-        log_fn(LOG_WARN, "Error computing fingerprint for %s", ri->nickname);
-      } else {
-        log_fn(LOG_WARN, "Fingerprint line: %s %s", ri->nickname, fp);
-      }
-    } else {
-      log_fn(LOG_WARN, "Known nickname %s, wrong fingerprint. Not adding.", ri->nickname);
-    }
+  if(r==-1) {
+    log_fn(LOG_WARN, "Known nickname %s, wrong fingerprint. Not adding.", ri->nickname);
     routerinfo_free(ri);
     *desc = end;
     return 0;
+  }
+  if(r==0) {
+    char fp[FINGERPRINT_LEN+1];
+    log_fn(LOG_WARN, "Unknown nickname %s (%s:%d). Adding.",
+           ri->nickname, ri->address, ri->or_port);
+    if (crypto_pk_get_fingerprint(ri->identity_pkey, fp) < 0) {
+      log_fn(LOG_WARN, "Error computing fingerprint for %s", ri->nickname);
+    } else {
+      log_fn(LOG_WARN, "Fingerprint line: %s %s", ri->nickname, fp);
+    }
+    verified = 0;
   }
   /* Is there too much clock skew? */
   now = time(NULL);
@@ -378,7 +379,8 @@ dirserv_add_descriptor(const char **desc)
   strncpy(ent->descriptor, start, desc_len);
   ent->descriptor[desc_len] = '\0';
   ent->router = ri;
-  ent->verified = 1; /* XXXX008 support other possibilities. */
+  /* XXX008 is ent->verified useful/used for anything? */
+  ent->verified = verified; /* XXXX008 support other possibilities. */
   smartlist_add(descriptor_list, ent);
 
   *desc = end;
@@ -705,7 +707,7 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
              "directory-signature %s\n"
              "-----BEGIN SIGNATURE-----\n",
              published, cp, options.Nickname);
-  free(cp);
+  tor_free(cp);
   if (router_get_runningrouters_hash(s,digest)) {
     log_fn(LOG_WARN,"couldn't compute digest");
     return -1;
