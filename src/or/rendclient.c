@@ -41,13 +41,11 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
   return 0;
 }
 
-#define LEN_REND_INTRODUCE1 (20+20+20+16+128+42)
-
 int
 rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
   const char *descp;
-  int desc_len;
-  char payload[LEN_REND_INTRODUCE1];
+  int desc_len, payload_len, r;
+  char payload[RELAY_PAYLOAD_SIZE];
   char tmp[20+20+128];
   rend_service_descriptor_t *parsed=NULL;
   crypt_path_t *cpath;
@@ -94,18 +92,21 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
     goto err;
   }
 
-  if(crypto_pk_public_hybrid_encrypt(parsed->pk, tmp,
-                                     20+20+128, payload+20,
-                                     PK_PKCS1_OAEP_PADDING) < 0) {
+  r = crypto_pk_public_hybrid_encrypt(parsed->pk, tmp,
+                                      20+20+128, payload+20,
+                                      PK_PKCS1_OAEP_PADDING);
+  if (r<0) {
     log_fn(LOG_WARN,"hybrid pk encrypt failed.");
     goto err;
   }
+
+  payload_len = 20 + r;
 
   rend_service_descriptor_free(parsed);
 
   if (connection_edge_send_command(NULL, introcirc,
                                    RELAY_COMMAND_INTRODUCE1,
-                                   payload, LEN_REND_INTRODUCE1,
+                                   payload, payload_len,
                                    introcirc->cpath->prev)<0) {
     /* introcirc is already marked for close. leave rendcirc alone. */
     log_fn(LOG_WARN, "Couldn't send INTRODUCE1 cell");

@@ -11,13 +11,12 @@ int
 rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
 {
   crypto_pk_env_t *pk = NULL;
-  char buf[20+9];
-  char expected_digest[20];
-  char pk_digest[20];
+  char buf[DIGEST_LEN+9];
+  char expected_digest[DIGEST_LEN];
+  char pk_digest[DIGEST_LEN];
   int asn1len;
   circuit_t *c;
   char hexid[9];
-  char hexdigest[20*2+1];
 
   log_fn(LOG_INFO,
          "Received an ESTABLISH_INTRO request on circuit %d", circ->p_circ_id);
@@ -26,13 +25,13 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
     log_fn(LOG_WARN, "Rejecting ESTABLISH_INTRO on non-OR or non-edge circuit");
     goto err;
   }
-  if (request_len < 22)
+  if (request_len < 2+DIGEST_LEN)
     goto truncated;
   /* First 2 bytes: length of asn1-encoded key. */
   asn1len = get_uint16(request);
 
   /* Next asn1len bytes: asn1-encoded key. */
-  if (request_len < 22+asn1len)
+  if (request_len < 2+DIGEST_LEN+asn1len)
     goto truncated;
   pk = crypto_pk_asn1_decode(request+2, asn1len);
   if (!pk) {
@@ -40,28 +39,21 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
     goto err;
   }
 
-  /* XXX remove after debuggin */
-  hex_encode(circ->handshake_digest, 20, hexdigest);
-  log_fn(LOG_INFO, "Handshake information is: %s", hexdigest);
-
   /* Next 20 bytes: Hash of handshake_digest | "INTRODUCE" */
-  memcpy(buf, circ->handshake_digest, 20);
-  memcpy(buf+20, "INTRODUCE", 9);
-  if (crypto_digest(buf, 29, expected_digest)<0) {
+  memcpy(buf, circ->handshake_digest, DIGEST_LEN);
+  memcpy(buf+DIGEST_LEN, "INTRODUCE", 9);
+  if (crypto_digest(buf, DIGEST_LEN+9, expected_digest)<0) {
     log_fn(LOG_WARN, "Error computing digest");
     goto err;
   }
-  hex_encode(expected_digest, 20, hexdigest);
-  log_fn(LOG_INFO, "Expected digest is: %s", hexdigest);
-  hex_encode(request+2+asn1len, 20, hexdigest);
-  log_fn(LOG_INFO, "Received digest is: %s", hexdigest);
-  if (memcmp(expected_digest, request+2+asn1len, 20)) {
+  if (memcmp(expected_digest, request+2+asn1len, DIGEST_LEN)) {
     log_fn(LOG_WARN, "Hash of session info was not as expected");
     goto err;
   }
   /* Rest of body: signature of previous data */
-  if (crypto_pk_public_checksig_digest(pk, request, 22+asn1len,
-                           request+22+asn1len, request_len-(22+asn1len))<0) {
+  if (crypto_pk_public_checksig_digest(pk, request, 2+asn1len+DIGEST_LEN,
+                                       request+2+DIGEST_LEN+asn1len,
+                                       request_len-(2+DIGEST_LEN+asn1len))<0) {
     log_fn(LOG_WARN, "Incorrect signature on ESTABLISH_INTRO cell; rejecting");
     goto err;
   }

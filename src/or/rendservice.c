@@ -306,7 +306,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
 {
   char *ptr, *rp_nickname, *r_cookie;
   char buf[RELAY_PAYLOAD_SIZE];
-  char keys[20+CPATH_KEY_MATERIAL_LEN]; /* Holds KH, Df, Db, Kf, Kb */
+  char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN]; /* Holds KH, Df, Db, Kf, Kb */
   rend_service_t *service;
   int len, keylen;
   crypto_dh_env_t *dh = NULL;
@@ -334,14 +334,14 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
     return -1;
   }
 
-  /* first 20 bytes of request is service pk digest */
+  /* first DIGEST_LEN bytes of request is service pk digest */
   service = rend_service_get_by_pk_digest(request);
   if (!service) {
     log_fn(LOG_WARN, "Got an INTRODUCE2 cell for an unrecognized service %s",
            hexid);
     return -1;
   }
-  if (memcmp(circuit->rend_pk_digest, request, 20)) {
+  if (memcmp(circuit->rend_pk_digest, request, DIGEST_LEN)) {
     hex_encode(request, 4, hexid);
     log_fn(LOG_WARN, "Got an INTRODUCE2 cell for the wrong service (%s)",
            hexid);
@@ -349,13 +349,14 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   }
 
   keylen = crypto_pk_keysize(service->private_key);
-  if (request_len < keylen+20) {
+  if (request_len < keylen+DIGEST_LEN) {
     log_fn(LOG_WARN, "PK-encrypted portion of INTRODUCE2 cell was truncated");
     return -1;
   }
   /* Next N bytes is encrypted with service key */
   len = crypto_pk_private_hybrid_decrypt(
-       service->private_key,request,request_len-20,buf, PK_PKCS1_PADDING);
+       service->private_key,request,request_len-DIGEST_LEN,buf,
+       PK_PKCS1_OAEP_PADDING);
   if (len<0) {
     log_fn(LOG_WARN, "Couldn't decrypt INTRODUCE2 cell");
     return -1;
@@ -386,8 +387,8 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
     log_fn(LOG_WARN, "Couldn't build DH state or generate public key");
     goto err;
   }
-  if (crypto_dh_compute_secret(dh, ptr+20, DH_KEY_LEN, keys,
-                               20+CPATH_KEY_MATERIAL_LEN)<0) {
+  if (crypto_dh_compute_secret(dh, ptr+REND_COOKIE_LEN, DH_KEY_LEN, keys,
+                               DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
     log_fn(LOG_WARN, "Couldn't complete DH handshake");
     goto err;
   }
