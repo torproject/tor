@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.9  2002/07/11 19:03:44  montrose
+ * finishing touches. think its ready for integration now.
+ *
  * Revision 1.8  2002/07/11 18:38:15  montrose
  * added new option GlobalRole to getoptions()
  *
@@ -128,6 +131,7 @@ RETURN VALUE: 0 on success, non-zero on error
    /* assign default option values */
 
    bzero(options,sizeof(or_options_t));
+   options->LogLevel = "debug";
    options->loglevel = LOG_DEBUG;
    options->CoinWeight = 0.8;
    options->GlobalRole = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
@@ -147,22 +151,6 @@ RETURN VALUE: 0 on success, non-zero on error
       log(LOG_ERR, "%s: Unable to open configuration file.\n", ConfigFile);
       break;
    case -1:
-      if ( Verbose )                      /* display options upon user request */
-      {
-         printf("LogLevel=%s, GlobalRole=%d\n",
-                options->LogLevel,
-                options->GlobalRole);
-         printf("RouterFile=%s, PrivateKeyFile=%s\n",
-                options->RouterFile,
-                options->PrivateKeyFile);
-         printf("ORPort=%d, OPPort=%d, APPort=%d\n",
-                options->ORPort,options->OPPort,
-                options->APPort);
-         printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d\n",
-                options->CoinWeight,
-                options->MaxConn,
-                options->TrafficShaping);
-      }
       code = 0;
       break;
    default:
@@ -172,6 +160,27 @@ RETURN VALUE: 0 on success, non-zero on error
    }
 
    poptFreeContext(optCon);
+
+   if ( code ) return code;      /* return here if we encountered any problems */
+
+   /* Display options upon user request */
+
+   if ( Verbose )                      
+   {
+      printf("LogLevel=%s, GlobalRole=%d\n",
+             options->LogLevel,
+             options->GlobalRole);
+      printf("RouterFile=%s, PrivateKeyFile=%s\n",
+             options->RouterFile,
+             options->PrivateKeyFile);
+      printf("ORPort=%d, OPPort=%d, APPort=%d\n",
+             options->ORPort,options->OPPort,
+             options->APPort);
+      printf("CoinWeight=%6.4f, MaxConn=%d, TrafficShaping=%d\n",
+             options->CoinWeight,
+             options->MaxConn,
+             options->TrafficShaping);
+   }
 
    /* Validate options */
 
@@ -199,8 +208,6 @@ RETURN VALUE: 0 on success, non-zero on error
          code = -1;
       }
    }
-   else
-      options->loglevel = LOG_DEBUG;   /* default value */
 
    if ( options->RouterFile == NULL )
    {
