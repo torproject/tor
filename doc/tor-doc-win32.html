@@ -1,6 +1,6 @@
 <html>
 <head>
-<title>Tor: an anonymizing overlay network for TCP</title>
+<title>Tor Win32 Install Instructions</title>
 <meta name="Author" content="Roger Dingledine">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta http-equiv="Content-Style-Type" content="text/css">
@@ -49,11 +49,15 @@ not close it.)
 default configuration file, and most people won't need to change any of
 the settings. Tor is now installed.</p>
 
-<p>After installing Tor, you should install <a
+<a name="using"></a>
+<h2>Configuring your applications to use Tor</h2>
+
+<p>After installing Tor, you need to configure your applications to use it.
+The first step is to set up web browsing. Start by installing <a
 href="http://www.privoxy.org/">Privoxy</a> (click on 'recent releases',
 then scroll down to the Win32 installer packages). Privoxy is a filtering
 web proxy that integrates well with Tor. Once it's installed, it should
-appear in your system tray, as pictured below:
+appear in your system tray as a "P" in a circle, as pictured below:
 </p>
 
 <img alt="privoxy icon in the system tray" src="http://tor.freehaven.net/img/GCS_004.jpg" />
@@ -103,9 +107,11 @@ For more troubleshooting suggestions, see <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>.
 </p>
 
-<p>To Torify an application that supports http, just point it at
-Privoxy. To use socks directly, point it at localhost port 9050. For
-applications that support neither socks nor http, take a look at <a
+<p>To Torify an application that supports http, just point it at Privoxy
+(that is, localhost port 8118). To use socks directly (for example, for
+instant messaging, Jabber, IRC, etc), point your application directly at
+Tor (localhost port 9050). For applications that support neither socks
+nor http, take a look at <a
 href="http://www.socks.permeo.com/Download/SocksCapDownload/index.asp">SocksCap</a>,
 <a href="http://www.freecap.ru/eng/">FreeCap</a>,
 or the <a

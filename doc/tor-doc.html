@@ -1,6 +1,6 @@
 <html>
 <head>
-<title>Tor: an anonymizing overlay network for TCP</title>
+<title>Tor Documentation</title>
 <meta name="Author" content="Roger Dingledine">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta http-equiv="Content-Style-Type" content="text/css">
@@ -11,17 +11,10 @@
 
 <h1><a href="http://tor.freehaven.net/">Tor</a> documentation</h1>
 
-<p>The simple version: Tor provides a distributed network of servers
-("onion routers"). Users bounce their TCP streams (web traffic, FTP, SSH,
-etc.) around the routers. This makes it hard for recipients, observers, and
-even the onion routers themselves to track the source of the stream.</p>
-
-<p>The complex version: Onion Routing is a connection-oriented anonymizing
-communication service. Users choose a source-routed path through a set of
-nodes, and negotiate a "virtual circuit" through the network, in which
-each node knows its predecessor and successor, but no others. Traffic
-flowing down the circuit is unwrapped by a symmetric key at each node,
-which reveals the downstream node.</p>
+<p>Tor provides a distributed network of servers ("onion routers"). Users
+bounce their communications (web requests, IM, IRC, SSH, etc.) around
+the routers. This makes it hard for recipients, observers, and even the
+onion routers themselves to track the source of the stream.</p>
 
 <a name="why"></a>
 <h2>Why should I use Tor?</h2>
@@ -133,11 +126,16 @@ server <a href="#server">below</a>.</p>
 <a name="installing"></a>
 <h2>Installing Tor</h2>
 
+<p>Win32 users can use our Tor installer. See <a
+href="tor-doc-win32.html">these instructions</a> for help with
+installing, configuring, and using Tor on Win32.
+</p>
+
 <p>You can get the latest releases <a
 href="http://tor.freehaven.net/dist/">here</a>.</p>
 
 <p>If you got Tor from a tarball, unpack it: <tt>tar xzf
-tor-0.0.9.tar.gz; cd tor-0.0.9</tt>. Run <tt>./configure</tt>, then
+tor-0.0.9.1.tar.gz; cd tor-0.0.9.1</tt>. Run <tt>./configure</tt>, then
 <tt>make</tt>, and then <tt>make install</tt> (as root if necessary). Then
 you can launch tor from the command-line by running <tt>tor</tt>.
 Otherwise, if you got it prepackaged (e.g. in the <a
@@ -146,11 +144,6 @@ href="http://packages.gentoo.org/packages/?category=net-misc;name=tor">Gentoo
 package</a>), these steps are already done for you, and you may
 even already have Tor started in the background (logging to
 /var/log/something).</p>
-
-<p>Win32 users can use our Tor installer. It will run Tor in a dos window
-so you can see its logs and errors. (You can minimize this window, but
-do not close it.)
-</p>
 
 <p>In any case, see the <a href="#client">next section</a> for what to
 <i>do</i> with it now that you've got it running.</p>
@@ -178,9 +171,8 @@ proxy that integrates well with Tor. Add the line <br>
 <tt>forward-socks4a / localhost:9050 .</tt><br>
 (don't forget the dot) to privoxy's config file (you can just add it to the
 top). Then change your browser to http proxy at localhost port 8118.
-(In Mozilla, this is in Edit|Preferences|Advanced|Proxies. In IE, it's
-Tools|Internet Options|Connections|LAN Settings|Advanced.)
-You should also set your SSL proxy (IE calls it "Secure") to the same
+(In Mozilla, this is in Edit|Preferences|Advanced|Proxies.)
+You should also set your SSL proxy to the same
 thing, to hide your SSL traffic. Using privoxy is <b>necessary</b> because
 <a href="http://tor.freehaven.net/cvs/tor/doc/CLIENTS">Mozilla leaks your
 DNS requests when it uses a socks proxy directly</a>. Privoxy also gives
@@ -203,9 +195,11 @@ For more troubleshooting suggestions, see <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>.
 </p>
 
-<p>To Torify an application that supports http, just point it at
-Privoxy. To use socks directly, point it at localhost port 9050. For
-applications that support neither socks nor http, you should look at
+<p>To Torify an application that supports http, just point it at Privoxy
+(that is, localhost port 8118). To use socks directly (for example, for
+instant messaging, Jabber, IRC, etc), point your application directly at
+Tor (localhost port 9050). For applications that support neither socks
+nor http, you should look at
 using <a href="http://tsocks.sourceforge.net/">tsocks</a>
 to dynamically replace the system calls in your program to
 route through Tor. If you want to use socks4a, consider using <a
@@ -213,11 +207,9 @@ href="http://www.dest-unreach.org/socat/">socat</a> (specific instructions
 are on <a href="http://6sxoyfb3h2nvok2d.onion/tor/SocatHelp">this hidden
 service url</a>).</p>
 
-<p>(Windows doesn't have tsocks; instead, you can try
-  <a
-  href="http://www.socks.permeo.com/Download/SocksCapDownload/index.asp">SocksCap</a>
-  or the <a href="http://www.hummingbird.com/products/nc/socks/index.html?cks=y">Hummingbird</a>
-  SOCKS client.)</p>
+<p>(Windows doesn't have tsocks; see the bottom of the
+<a href="tor-doc-win32.html">Win32 instructions</a> for alternatives.)
+</p>
 
 <a name="server"></a>
 <h2>Configuring a server</h2>
