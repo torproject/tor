@@ -479,7 +479,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   }
 
   if(previous_orport == 0 && options->ORPort > 0) {
-    log_fn(LOG_WARN,"During reload, change from ORPort=0 to =%d not allowed. Failing.",options->ORPort);
+    log_fn(LOG_WARN,"During reload, change from ORPort=0 to >0 not allowed. Failing.");
     return -1;
   }
 
