@@ -1377,8 +1377,8 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
-  if (2*options->BandwidthRate >= options->BandwidthBurst) {
-    log(LOG_WARN,"BandwidthBurst must be more than twice BandwidthRate.");
+  if (options->BandwidthRate > options->BandwidthBurst) {
+    log(LOG_WARN,"BandwidthBurst must be at least equal to BandwidthRate.");
     result = -1;
   }
   if (options->BandwidthRate > INT_MAX) {
