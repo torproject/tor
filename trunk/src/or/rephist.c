@@ -378,10 +378,15 @@ static INLINE void advance_obs(bw_array_t *b) {
 /** Add 'n' bytes to the number of bytes in b for second 'when'.
  */
 static INLINE void add_obs(bw_array_t *b, time_t when, int n) {
-  /* If we're currently adding observations for an earlier second than 'when',
-   * advance 'when' by an appropriate number of seconds. */
-  while (when<b->cur_obs_time)
+  /* Don't record data in the past. */
+  if (when<b->cur_obs_time)
+    return;
+  /* If we're currently adding observations for an earlier second than
+   * 'when', advance b->cur_obs_time and b->cur_obs_idx by an
+   * appropriate number of seconds, and do all the other housekeeping */
+  while (when>b->cur_obs_time)
     advance_obs(b);
+
   b->obs[b->cur_obs_idx] += n;
 }
 
