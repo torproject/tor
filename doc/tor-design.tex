@@ -662,7 +662,6 @@ $K_2 = g^{x_2 y_2}$.
 To extend the circuit to a third node or beyond, Alice
 proceeds as above, always telling the last node in the circuit to
 extend one hop further.
-% XXX Briefly mention path selection and path length.
 
 This circuit-level handshake protocol achieves unilateral entity
 authentication (Alice knows she's handshaking with the OR, but
@@ -1707,6 +1706,10 @@ too-frequent updates the directory servers are overloaded.
 
 %[XXX Choosing paths and path lengths: I'm not writing this bit till
 %  Arma's pathselection stuff is in. -NM]
+%Alice always chooses her path to contain at least
+%three nodes unrelated to herself and her destination, choosing the
+%number of nodes beyond the third from a geometric distribution;
+%explain why. -NM
 
 %%%% Roger said that he'd put a path selection paragraph into section
 %%%% 4 that would replace this.
