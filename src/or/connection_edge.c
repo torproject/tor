@@ -825,6 +825,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   if (we_are_hibernating()) {
     connection_edge_end(n_stream, END_STREAM_REASON_EXITPOLICY, n_stream->cpath_layer);
     connection_free(n_stream);
+    return 0;
   }
 
   /* send it off to the gethostbyname farm */
