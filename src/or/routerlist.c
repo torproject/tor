@@ -241,7 +241,7 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
  */
 int router_version_supports_rendezvous(routerinfo_t *router)
 {
-  return (router->platform && 0==strncasecmp(router->platform,"Tor 0.0.5",9));
+  return (router->platform && 0!=strncasecmp(router->platform,"Tor 0.0.5",9));
 }
 
 /* Add every router running a version of Tor too old for rend/intro
