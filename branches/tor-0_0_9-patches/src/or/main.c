@@ -100,7 +100,7 @@ int connection_add(connection_t *conn) {
   tor_assert(conn);
   tor_assert(conn->s >= 0);
 
-  if (nfds >= get_options()->MaxConn-1) {
+  if (nfds >= get_options()->_MaxConn-1) {
     log_fn(LOG_WARN,"Failing because we have %d connections already. Please raise your ulimit -n.", nfds);
     return -1;
   }
@@ -1338,17 +1338,17 @@ int nt_service_install()
   ChangeServiceConfig2(hService, SERVICE_CONFIG_DESCRIPTION, &sdBuff);
 
   /* Start the service, so you don't have to muck with it in the SCM */
-  if(StartService(hService, 0, NULL)) {
+  if (StartService(hService, 0, NULL)) {
     /* Loop until the service has finished attempting to start */
-	while(QueryServiceStatus(hService, &service_status) &&
-		  service_status.dwCurrentState == SERVICE_START_PENDING)
-		  Sleep(500);
+    while (QueryServiceStatus(hService, &service_status) &&
+           service_status.dwCurrentState == SERVICE_START_PENDING)
+      Sleep(500);
 
-	/* Check if it started successfully or not */
+    /* Check if it started successfully or not */
     if(service_status.dwCurrentState == SERVICE_RUNNING)
-   	  printf("Service installed and started successfully.\n");
+      printf("Service installed and started successfully.\n");
     else
-	  printf("Service installed, but failed to start.\n");
+      printf("Service installed, but failed to start.\n");
   }
   else {
     printf("Service installed, but failed to start.\n");
