@@ -62,7 +62,7 @@ void rotate_onion_key(void)
     goto error;
   }
   if (crypto_pk_generate_key(prkey)) {
-    log(LOG_ERR, "Error generating key: %s", crypto_perror());
+    log(LOG_ERR, "Error generating onion key");
     goto error;
   }
   if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
@@ -104,7 +104,7 @@ crypto_pk_env_t *init_key_from_file(const char *fname)
   case FN_NOENT:
     log(LOG_INFO, "No key found in %s; generating fresh key.", fname);
     if (crypto_pk_generate_key(prkey)) {
-      log(LOG_ERR, "Error generating key: %s", crypto_perror());
+      log(LOG_ERR, "Error generating onion key");
       goto error;
     }
     if (crypto_pk_check_key(prkey) <= 0) {

@@ -242,7 +242,6 @@ test_crypto()
   crypto_cipher_env_t *env1, *env2;
   crypto_pk_env_t *pk1, *pk2;
   char *data1, *data2, *data3, *cp;
-  FILE *f;
   int i, j, p, len;
 
   data1 = tor_malloc(1024);
@@ -376,16 +375,11 @@ test_crypto()
                                         PK_PKCS1_OAEP_PADDING));
 
   /* File operations: save and load private key */
-  f = fopen("/tmp/tor_test/pkey1", "wb");
-  test_assert(! crypto_pk_write_private_key_to_file(pk1, f));
-  fclose(f);
-  f = fopen("/tmp/tor_test/pkey1", "rb");
-  test_assert(! crypto_pk_read_private_key_from_file(pk2, f));
-  fclose(f);
-  test_eq(15, crypto_pk_private_decrypt(pk2, data1, 128, data3,
-                                        PK_PKCS1_OAEP_PADDING));
+  test_assert(! crypto_pk_write_private_key_to_filename(pk1,
+                                                    "/tmp/tor_test/pke1y"));
+
   test_assert(! crypto_pk_read_private_key_from_filename(pk2,
-                                               "/tmp/tor_test/pkey1"));
+                                                  "/tmp/tor_test/pke1y"));
   test_eq(15, crypto_pk_private_decrypt(pk2, data1, 128, data3,
                                         PK_PKCS1_OAEP_PADDING));
 
