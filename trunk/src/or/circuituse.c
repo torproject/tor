@@ -991,9 +991,7 @@ connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
              conn->state == AP_CONN_STATE_CONTROLLER_WAIT);
   tor_assert(conn->socks_request);
   tor_assert(circ);
-
-  if (circ->state != CIRCUIT_STATE_OPEN)
-    return 0;
+  tor_assert(circ->state == CIRCUIT_STATE_OPEN);
 
   conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
 

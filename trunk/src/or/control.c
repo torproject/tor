@@ -745,6 +745,10 @@ static int handle_control_attachstream(connection_t *conn, uint32_t len,
     send_control_error(conn, ERR_NO_CIRC, "No circuit found with given ID");
     return 0;
   }
+  if (circ->state != CIRCUIT_STATE_OPEN) {
+    send_control_error(conn, ERR_INTERNAL, "Refuse to attach stream to non-open circ.");
+    return 0;
+  }
   if (connection_ap_handshake_attach_chosen_circuit(ap_conn, circ) != 1) {
     send_control_error(conn, ERR_INTERNAL, "Unable to attach stream.");
     return 0;
