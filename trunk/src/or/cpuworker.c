@@ -267,13 +267,9 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
     cpuworker->state = CPUWORKER_STATE_BUSY_ONION;
     num_cpuworkers_busy++;
 
-    if(connection_write_to_buf(&question_type, 1, cpuworker) < 0 ||
-       connection_write_to_buf(tag, sizeof(tag), cpuworker) < 0 ||
-       connection_write_to_buf(circ->onionskin, DH_ONIONSKIN_LEN, cpuworker) < 0) {
-      log_fn(LOG_WARNING,"Write failed. Closing worker and failing circ.");
-      cpuworker->marked_for_close = 1;
-      return -1;
-    }
+    connection_write_to_buf(&question_type, 1, cpuworker);
+    connection_write_to_buf(tag, sizeof(tag), cpuworker);
+    connection_write_to_buf(circ->onionskin, DH_ONIONSKIN_LEN, cpuworker);
   }
   return 0;    
 }

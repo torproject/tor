@@ -345,8 +345,7 @@ static int prepare_for_poll(void) {
               conn->address, conn->port);
           memset(&cell,0,sizeof(cell_t));
           cell.command = CELL_PADDING;
-          if(connection_write_cell_to_buf(&cell, conn) < 0)
-            conn->marked_for_close = 1;
+          connection_write_cell_to_buf(&cell, conn);
         }
       }
     }

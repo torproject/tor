@@ -90,10 +90,7 @@ static int directory_send_command(connection_t *conn, int command) {
 
   switch(command) {
     case DIR_CONN_STATE_CONNECTING_FETCH:
-      if(connection_write_to_buf(fetchstring, strlen(fetchstring), conn) < 0) {
-        log_fn(LOG_WARNING,"Couldn't write fetch to buffer.");
-        return -1;
-      }
+      connection_write_to_buf(fetchstring, strlen(fetchstring), conn);
       conn->state = DIR_CONN_STATE_CLIENT_SENDING_FETCH;
       break;
     case DIR_CONN_STATE_CONNECTING_UPLOAD:
@@ -104,10 +101,7 @@ static int directory_send_command(connection_t *conn, int command) {
       }
       snprintf(tmp, sizeof(tmp), "POST / HTTP/1.0\r\nContent-Length: %d\r\n\r\n%s",
                strlen(s), s);
-      if(connection_write_to_buf(tmp, strlen(tmp), conn) < 0) {
-        log_fn(LOG_WARNING,"Couldn't write post/descriptor to buffer.");
-        return -1;
-      }
+      connection_write_to_buf(tmp, strlen(tmp), conn);
       conn->state = DIR_CONN_STATE_CLIENT_SENDING_UPLOAD;
       break;
   }
@@ -200,11 +194,8 @@ static int directory_handle_command(connection_t *conn) {
     }
 
     log_fn(LOG_DEBUG,"Dumping directory to client."); 
-    if((connection_write_to_buf(answerstring, strlen(answerstring), conn) < 0) ||
-       (connection_write_to_buf(cp, dlen, conn) < 0)) {
-      log_fn(LOG_WARNING,"Failed to write answerstring+directory to outbuf.");
-      return -1;
-    }
+    connection_write_to_buf(answerstring, strlen(answerstring), conn);
+    connection_write_to_buf(cp, dlen, conn);
     conn->state = DIR_CONN_STATE_SERVER_WRITING;
     return 0;
   }
@@ -218,10 +209,7 @@ static int directory_handle_command(connection_t *conn) {
       return -1; /* XXX should write an http failed code */
     }
     dirserv_get_directory(&cp); /* rebuild and write to disk */
-    if(connection_write_to_buf(answerstring, strlen(answerstring), conn) < 0) {
-      log_fn(LOG_WARNING,"Failed to write answerstring to outbuf.");
-      return -1;
-    }
+    connection_write_to_buf(answerstring, strlen(answerstring), conn);
     conn->state = DIR_CONN_STATE_SERVER_WRITING;
     return 0;
   }

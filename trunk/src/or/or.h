@@ -550,7 +550,7 @@ int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);
 int connection_flush_buf(connection_t *conn);
 int connection_handle_write(connection_t *conn);
-int connection_write_to_buf(const char *string, int len, connection_t *conn);
+void connection_write_to_buf(const char *string, int len, connection_t *conn);
 
 connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
@@ -581,7 +581,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
 int connection_edge_finished_flushing(connection_t *conn);
 
 int connection_package_raw_inbuf(connection_t *conn);
-int connection_consider_sending_sendme(connection_t *conn, int edge_type);
+void connection_consider_sending_sendme(connection_t *conn, int edge_type);
 
 int connection_exit_connect(connection_t *conn);
 
@@ -601,7 +601,7 @@ connection_t *connection_or_connect(routerinfo_t *router);
 int connection_tls_start_handshake(connection_t *conn, int receiving);
 int connection_tls_continue_handshake(connection_t *conn);
 
-int connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn);
+void connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn);
 int connection_process_cell_from_inbuf(connection_t *conn);
 
 /********************************* cpuworker.c *****************************/

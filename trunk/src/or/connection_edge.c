@@ -171,13 +171,9 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
 
 //      printf("New text for buf (%d bytes): '%s'", cell->length - RELAY_HEADER_SIZE, cell->payload + RELAY_HEADER_SIZE);
       stats_n_data_bytes_received += (cell->length - RELAY_HEADER_SIZE);
-      if(connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
-                                 cell->length - RELAY_HEADER_SIZE, conn) < 0) {
-/*ENDCLOSE*/    conn->marked_for_close = 1;
-        return 0;
-      }
-      if(connection_consider_sending_sendme(conn, edge_type) < 0)
-/*ENDCLOSE*/    conn->marked_for_close = 1;
+      connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
+                             cell->length - RELAY_HEADER_SIZE, conn);
+      connection_consider_sending_sendme(conn, edge_type);
       return 0;
     case RELAY_COMMAND_END:
       if(!conn) {
@@ -302,7 +298,8 @@ int connection_edge_finished_flushing(connection_t *conn) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       connection_stop_writing(conn);
-      return connection_consider_sending_sendme(conn, conn->type);
+      connection_consider_sending_sendme(conn, conn->type);
+      return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
       connection_stop_writing(conn);
       return 0;
@@ -403,18 +400,18 @@ repeat_connection_package_raw_inbuf:
   goto repeat_connection_package_raw_inbuf;
 }
 
-int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
+void connection_consider_sending_sendme(connection_t *conn, int edge_type) {
   circuit_t *circ;
   cell_t cell;
  
   if(connection_outbuf_too_full(conn))
-    return 0;
+    return;
  
   circ = circuit_get_by_conn(conn);
   if(!circ) {
     /* this can legitimately happen if the destroy has already arrived and torn down the circuit */
     log_fn(LOG_INFO,"No circuit associated with conn. Skipping.");
-    return 0;
+    return;
   }
  
   memset(&cell, 0, sizeof(cell_t));
@@ -434,11 +431,9 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
     if(circuit_deliver_relay_cell(&cell, circ, CELL_DIRECTION(edge_type), conn->cpath_layer) < 0) {
       log_fn(LOG_WARNING,"circuit_deliver_relay_cell failed. Closing.");
       circuit_close(circ);
-      return 0;
+      return;
     }
   }
- 
-  return 0;
 }
 
 static int connection_ap_handshake_process_socks(connection_t *conn) {
