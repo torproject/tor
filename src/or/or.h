@@ -1054,6 +1054,7 @@ int rend_get_service_id(crypto_pk_env_t *pk, char *out);
 
 void rend_cache_init(void);
 void rend_cache_clean(void);
+int rend_valid_service_id(char *query);
 int rend_cache_lookup(char *query, const char **desc, int *desc_len);
 int rend_cache_store(char *desc, int desc_len);
 

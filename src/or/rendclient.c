@@ -16,9 +16,22 @@ rend_client_introcirc_is_ready(connection_t *apconn, circuit_t *circ)
 void
 rend_client_rendcirc_is_ready(connection_t *apconn, circuit_t *circ)
 {
+  circuit_t *introcirc;
 
+  assert(apconn->purpose == AP_PURPOSE_RENDPOINT_WAIT);
+  assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
+  assert(circ->cpath);
 
-  log_fn(LOG_WARN,"rendcirc is ready");
+  log_fn(LOG_INFO,"rendcirc is ready");
+
+  /* XXX generate a rendezvous cookie, store it in circ */
+  /* store rendcirc in apconn */
+
+  apconn->purpose = AP_PURPOSE_INTROPOINT_WAIT;
+  if (connection_ap_handshake_attach_circuit(apconn) < 0) {
+    log_fn(LOG_WARN,"failed to start intro point. Closing conn.");
+    connection_mark_for_close(apconn,0);
+  }
 }
 
 /* bob sent us a rendezvous cell, join the circs. */
