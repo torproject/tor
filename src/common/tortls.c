@@ -35,6 +35,7 @@ struct tor_tls_st {
 
 /* global tls context, keep it here because nobody else needs to touch it */
 static tor_tls_context *global_tls_context=NULL;
+static int tls_library_is_initialized = 0;
 
 #define _TOR_TLS_SYSCALL    -6
 #define _TOR_TLS_ZERORETURN -5
@@ -64,6 +65,14 @@ tor_tls_get_error(tor_tls *tls, int r, int extra)
   }
 }
 
+static void
+tor_tls_init() {
+  if (!tls_library_is_initialized) {
+    SSL_library_init();
+    tls_library_is_initialized = 1;
+  }
+}
+
 static int always_accept_verify_cb(int preverify_ok, 
                                    X509_STORE_CTX *x509_ctx)
 {
@@ -87,6 +96,8 @@ tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
   int nid;
   int r;
   
+  tor_tls_init();
+
   start_time = time(NULL);
 
   assert(rsa);
@@ -101,10 +112,10 @@ tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
   
   if (!(name = X509_NAME_new()))
     goto error;
-  if ((nid = OBJ_txt2nid("organizationName")) != NID_undef) goto error;
+  if ((nid = OBJ_txt2nid("organizationName")) == NID_undef) goto error;
   if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
                                    "TOR", -1, -1, 0))) goto error;
-  if ((nid = OBJ_txt2nid("commonName")) != NID_undef) goto error;
+  if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
   if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
                                    nickname, -1, -1, 0))) goto error;
   
@@ -171,6 +182,8 @@ tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer)
   tor_tls_context *result;
 
   assert((certfile && rsa) || (!certfile && !rsa));
+
+  tor_tls_init();
 
   result = tor_malloc(sizeof(tor_tls_context));
   result->ctx = NULL;
