@@ -388,11 +388,11 @@ static void run_scheduled_events(time_t now) {
       circuit_reset_failure_count();
       if(circ && circ->timestamp_dirty) {
         log_fn(LOG_INFO,"Youngest circuit dirty; launching replacement.");
-        circuit_launch_new(); /* make a new circuit */
+        circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL); /* make a new circuit */
       } else if (options.RunTesting && circ &&
                  circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
         log_fn(LOG_INFO,"Creating a new testing circuit.");
-        circuit_launch_new();
+        circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL);
       }
       time_to_new_circuit = now + options.NewCircuitPeriod;
     }
@@ -401,7 +401,7 @@ static void run_scheduled_events(time_t now) {
       /* if there's no open circ, and less than 3 are on the way,
        * go ahead and try another.
        */
-      circuit_launch_new();
+      circuit_launch_new(CIRCUIT_PURPOSE_C_GENERAL);
     }
   }
 

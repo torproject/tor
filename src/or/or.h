@@ -689,10 +689,9 @@ void circuit_log_path(int severity, circuit_t *circ);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 
 void circuit_expire_unused_circuits(void);
-int circuit_launch_new(void);
+int circuit_launch_new(uint8_t purpose);
 void circuit_increment_failure_count(void);
 void circuit_reset_failure_count(void);
-int circuit_establish_circuit(void);
 void circuit_n_conn_open(connection_t *or_conn);
 int circuit_send_next_onion_skin(circuit_t *circ);
 int circuit_extend(cell_t *cell, circuit_t *circ);
