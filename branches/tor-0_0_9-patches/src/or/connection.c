@@ -778,7 +778,7 @@ void connection_bucket_refill(struct timeval *now) {
     conn = carray[i];
 
     if (connection_receiver_bucket_should_increase(conn)) {
-      conn->receiver_bucket += conn->bandwidth;
+      conn->receiver_bucket = conn->bandwidth;
       //log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i, conn->receiver_bucket);
     }
 
@@ -813,7 +813,7 @@ static int connection_receiver_bucket_should_increase(connection_t *conn) {
     return 0; /* only open connections play the rate limiting game */
 
   tor_assert(conn->bandwidth > 0);
-  if (conn->receiver_bucket > 9*conn->bandwidth)
+  if (conn->receiver_bucket >= conn->bandwidth)
     return 0;
 
   return 1;
