@@ -9,6 +9,9 @@ pre3:
     - Fix the rest of the bug where a newly started OR would appear
       as unverified even after we've added his fingerprint and hupped
       the dirserver.
+    - Fix a bug from 0.0.7: when read() failed on a stream, we would
+      close it without sending back an end. So 'connection refused'
+      would simply be ignored and the user would get no response.
 
   o Bugfixes on 0.0.9pre2:
     - Serving the cached-on-disk directory to people is bad. We now
