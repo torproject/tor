@@ -1,9 +1,9 @@
 Changes in version 0.0.2pre21 - 2004-02-18
   o New features:
     - There's a ChangeLog file that actually reflects the changelog.
-    - There's a 'torify' script, with an accompanying tor-tsocks.conf,
-      that simplifies the process of using tsocks for tor. Plus it has a
-      man page.
+    - There's a 'torify' wrapper script, with an accompanying
+      tor-tsocks.conf, that simplifies the process of using tsocks for
+      tor. It even has a man page.
     - The tor binary gets installed to sbin rather than bin now.
     - Retry streams where the connected cell hasn't arrived in 15 seconds
     - Clean up exit policy handling -- get the default out of the torrc,                      so we can update it without forcing each server operator to fix
