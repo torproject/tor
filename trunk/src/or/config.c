@@ -55,8 +55,8 @@ static config_abbrev_t config_abbrevs[] = {
   PLURAL(RendNode),
   PLURAL(RendExcludeNode),
   { "l", "Log", 1},
-  { "BandwidthRate", "BandwidthRateBytes", 1},
-  { "BandwidthBurst", "BandwidthBurstBytes", 1},
+  { "BandwidthRate", "BandwidthRateBytes", 0},
+  { "BandwidthBurst", "BandwidthBurstBytes", 0},
   { NULL, NULL , 0},
 };
 #undef PLURAL
