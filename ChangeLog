@@ -168,7 +168,7 @@ Changes in version 0.0.9.7 - 2005-04-01
       creating actual system users.
     - Note where connection-that-hasn't-sent-end was marked, and fix
       a few really loud instances of this harmless bug (it's fixed more
-      in 0.1.0.x.)
+      in 0.1.0.x).
 
 
 Changes in version 0.0.9.6 - 2005-03-24
