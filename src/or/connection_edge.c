@@ -760,7 +760,7 @@ addressmap_register_virtual_address(int type, char *new_address)
     &vent->ipv4_address : &vent->hostname_address;
   if (*addrp) {
     addressmap_entry_t *ent = strmap_get(addressmap, *addrp);
-    if (ent && !strcasecmp(new_address, ent->new_address)) {
+    if (ent && ent->new_address && !strcasecmp(new_address, ent->new_address)) {
       tor_free(new_address);
       return tor_strdup(*addrp);
     } else
@@ -822,7 +822,7 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires, time_t max_expires)
          addressmap_ent_remove(key, val);
          iter = strmap_iter_next_rmv(addressmap,iter);
          continue;
-       } else {
+       } else if (val->new_address) {
          size_t len = strlen(key)+strlen(val->new_address)+2;
          char *line = tor_malloc(len);
          tor_snprintf(line, len, "%s %s", key, val->new_address);
