@@ -19,6 +19,7 @@ const char torgzip_c_id[] = "$Id$";
 #else
 #include <zlib.h>
 #endif
+#include <string.h>
 
 #include "util.h"
 #include "log.h"
@@ -231,10 +232,10 @@ tor_gzip_uncompress(char **out, size_t *out_len,
  */
 int detect_compression_method(const char *in, size_t in_len)
 {
-  if (in_len > 2 && in[0] == 0x1f && in[1] == 0x8b) {
+  if (in_len > 2 && !memcmp(in, "\x1f\x8b", 2)) {
     return GZIP_METHOD;
   } else if (in_len > 2 && (in[0] & 0x0f) == 8 &&
-             get_uint16(in) % 31 == 0) {
+             (get_uint16(in) % 31) == 0) {
     return ZLIB_METHOD;
   } else {
     return 0;
