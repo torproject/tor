@@ -342,6 +342,8 @@ int fetch_from_buf(char *string, size_t string_len, buf_t *buf) {
  *
  *  - If headers or body is NULL, discard that part of the buf.
  *  - If a headers or body doesn't fit in the arg, return -1.
+ *  (We ensure that the headers or body don't exceed max len,
+ *   _even if_ we're planning to discard them.)
  *
  * Else, change nothing and return 0.
  */
@@ -368,11 +370,11 @@ int fetch_from_buf_http(buf_t *buf,
   bodylen = buf->datalen - headerlen;
   log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.", headerlen, bodylen);
 
-  if(headers_out && max_headerlen <= headerlen) {
+  if(max_headerlen <= headerlen) {
     log_fn(LOG_WARN,"headerlen %d larger than %d. Failing.", headerlen, max_headerlen-1);
     return -1;
   }
-  if(body_out && max_bodylen <= bodylen) {
+  if(max_bodylen <= bodylen) {
     log_fn(LOG_WARN,"bodylen %d larger than %d. Failing.", bodylen, max_bodylen-1);
     return -1;
   }

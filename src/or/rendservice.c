@@ -158,7 +158,7 @@ static rend_service_port_config_t *parse_port_config(const char *string)
     /* No addr:port, no addr -- must be port. */
     realport = strtol(string, &endptr, 10);
     if (*endptr) {
-      log_fn(LOG_WARN, "Unparseable of missing port in hidden service port configuration.");
+      log_fn(LOG_WARN, "Unparseable or missing port in hidden service port configuration.");
       return NULL;
     }
     if (realport < 1 || realport > 65535) {
