@@ -979,11 +979,9 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
       r = router_choose_random_node(options.RendNodes, options.RendExcludeNodes,
           NULL, 0, 1, options._AllowUnverified & ALLOW_UNVERIFIED_RENDEZVOUS, 0);
       return r;
-    default:
-      log_fn(LOG_WARN,"unhandled purpose %d", purpose);
-      tor_assert(0);
   }
-  return NULL; /* never reached */
+  log_fn(LOG_WARN,"Unhandled purpose %d", purpose);
+  return NULL;
 }
 
 /** Allocate a cpath_build_state_t, populate it based on

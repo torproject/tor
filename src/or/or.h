@@ -825,7 +825,7 @@ typedef struct exit_redirect_t {
   uint16_t port_max;
 
   uint32_t addr_dest;
-  uint32_t port_dest;
+  uint16_t port_dest;
 } exit_redirect_t;
 
 /** Configuration options for a Tor process */
@@ -917,7 +917,7 @@ typedef struct {
                                        * node families */
   struct config_line_t *RedirectExit; /**< List of config lines for simple
                                        * addr/port redirection */
-  smartlist_t *RedirectExitList; /** List of exit_redirect_t */
+  smartlist_t *RedirectExitList; /**< List of exit_redirect_t */
 } or_options_t;
 
 /* XXX are these good enough defaults? */
