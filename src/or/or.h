@@ -295,7 +295,9 @@ typedef struct {
 typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
 
+#define CONNECTION_MAGIC 0x7C3C304Eu
 struct connection_t {
+  uint32_t magic; /* for memory debugging */
 
   uint8_t type;
   uint8_t state;
@@ -444,7 +446,10 @@ typedef struct {
 } cpath_build_state_t;
 
 /* struct for a path (circuit) through the network */
+#define CIRCUIT_MAGIC 0x35315243u
 struct circuit_t {
+  uint32_t magic; /* for memory debugging. */
+
   uint32_t n_addr;
   uint16_t n_port;
   connection_t *p_conn;

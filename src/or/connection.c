@@ -78,7 +78,9 @@ connection_t *connection_new(int type) {
   time_t now = time(NULL);
 
   conn = tor_malloc_zero(sizeof(connection_t));
+  conn->magic = CONNECTION_MAGIC;
   conn->s = -1; /* give it a default of 'not used' */
+
 
   conn->type = type;
   if(!connection_is_listener(conn)) { /* listeners never use their buf */
@@ -100,6 +102,7 @@ connection_t *connection_new(int type) {
 
 void connection_free(connection_t *conn) {
   assert(conn);
+  assert(conn->magic == CONNECTION_MAGIC);
 
   if(!connection_is_listener(conn)) {
     buf_free(conn->inbuf);
@@ -126,6 +129,7 @@ void connection_free(connection_t *conn) {
     log_fn(LOG_INFO,"closing fd %d.",conn->s);
     close(conn->s);
   }
+  memset(conn, 0xAA, sizeof(connection_t)); /* poison memory */
   free(conn);
 }
 
@@ -748,8 +752,9 @@ int connection_finished_flushing(connection_t *conn) {
 
 void assert_connection_ok(connection_t *conn, time_t now)
 {
-  return;
   assert(conn);
+  assert(conn->magic == CONNECTION_MAGIC);
+  return;
   assert(conn->type >= _CONN_TYPE_MIN);
   assert(conn->type <= _CONN_TYPE_MAX);
 

@@ -99,6 +99,7 @@ int dns_resolve(connection_t *exitconn) {
   struct cached_resolve search;
   struct pending_connection_t *pending_connection;
   uint32_t now = time(NULL);
+  assert_connection_ok(exitconn, 0);
 
   /* first take this opportunity to see if there are any expired
      resolves in the tree.*/
@@ -206,6 +207,7 @@ void dns_cancel_pending_resolve(char *address, connection_t *onlyconn) {
   assert(resolve->pending_connections);
 
   if(onlyconn) {
+    assert_connection_ok(onlyconn,0);
     pend = resolve->pending_connections;
     if(pend->conn == onlyconn) {
       resolve->pending_connections = pend->next;
@@ -297,6 +299,7 @@ static void dns_found_answer(char *address, uint32_t addr) {
 
   while(resolve->pending_connections) {
     pend = resolve->pending_connections;
+    assert_connection_ok(pend->conn,0);
     pend->conn->addr = resolve->addr;
     if(resolve->state == CACHE_STATE_FAILED) {
       if(connection_edge_end(pend->conn, END_STREAM_REASON_RESOLVEFAILED, NULL) < 0)
