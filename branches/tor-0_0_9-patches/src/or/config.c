@@ -420,6 +420,9 @@ config_get_commandlines(int argc, char **argv)
     } else if (!strcmp(argv[i],"--list-fingerprint")) {
       i += 1; /* command-line option. ignore it. */
       continue;
+    } else if (!strcmp(argv[i],"--nt-service")) {
+      i += 1;
+      continue;
     }
 
     new = tor_malloc(sizeof(struct config_line_t));
