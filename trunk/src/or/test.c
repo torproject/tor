@@ -1299,6 +1299,8 @@ main(int c, char**v) {
   rep_hist_init();
   atexit(remove_directory);
 
+  printf("Running Tor unit tests on %s\n", get_uname());
+
 //  puts("========================== Buffers =========================");
   if (0) test_buffers();
   puts("\n========================== Crypto ==========================");
