@@ -200,6 +200,21 @@ char *tor_strndup(const char *s, size_t n) {
   return dup;
 }
 
+/** Remove from the string <b>s</b> every character which appears in
+ * <b>strip</b>.  Return the number of characters removed. */
+int tor_strstrip(char *s, const char *strip)
+{
+  char *read = s;
+  while (*read) {
+    if (strchr(strip, *read)) {
+      ++read;
+    } else {
+      *s++ = *read++;
+    }
+  }
+  *s = '\0';
+  return read-s;
+}
 
 #ifndef UNALIGNED_INT_ACCESS_OK
 /**
