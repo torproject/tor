@@ -114,11 +114,19 @@
 #define CONN_TYPE_DIR_LISTENER 8
 #define CONN_TYPE_DIR 9
 #define CONN_TYPE_DNSWORKER 10
+#define CONN_TYPE_CPUWORKER 11
 
 #define LISTENER_STATE_READY 0
 
 #define DNSWORKER_STATE_IDLE 0
 #define DNSWORKER_STATE_BUSY 1
+
+#define CPUWORKER_STATE_IDLE 0
+#define CPUWORKER_STATE_BUSY_ONION 1
+#define CPUWORKER_STATE_BUSY_HANDSHAKE 2
+
+#define CPUWORKER_TASK_ONION CPUWORKER_STATE_BUSY_ONION
+#define CPUWORKER_TASK_HANDSHAKE CPUWORKER_STATE_BUSY_HANDSHAKE
 
 /* how to read these states:
  * foo_CONN_STATE_bar_baz:
@@ -328,8 +336,8 @@ struct connection_t {
   char nonce[8];
 
 /* Used by worker connections */
-  int num_processed;
- 
+  int num_processed; /* statistics kept by dns worker */
+  struct circuit_t *circ; /* by cpu worker to know who he's working for */
 };
 
 typedef struct connection_t connection_t;
@@ -399,7 +407,7 @@ struct crypt_path_t {
 typedef struct crypt_path_t crypt_path_t;
 
 /* struct for a path (circuit) through the network */
-typedef struct {
+struct circuit_t {
   uint32_t n_addr;
   uint16_t n_port;
   connection_t *p_conn;
@@ -428,7 +436,9 @@ typedef struct {
 //  uint32_t recvlen; /* length of the onion so far */
 
   void *next;
-} circuit_t;
+};
+
+typedef struct circuit_t circuit_t;
 
 struct onion_queue_t {
   circuit_t *circ;
@@ -678,6 +688,15 @@ connection_t *connection_or_connect(routerinfo_t *router);
 int connection_or_create_listener(struct sockaddr_in *bindaddr);
 int connection_or_handle_listener_read(connection_t *conn);
 
+/********************************* cpuworker.c *****************************/
+
+void cpu_init(void);
+int connection_cpu_finished_flushing(connection_t *conn);
+int connection_cpu_process_inbuf(connection_t *conn);
+int cpuworker_main(void *data);
+int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
+                        void *task);
+
 /********************************* directory.c ***************************/
 
 void directory_initiate_fetch(routerinfo_t *router);
@@ -737,9 +756,10 @@ int decide_aci_type(uint32_t local_addr, uint16_t local_port,
                     uint32_t remote_addr, uint16_t remote_port);
 
 int onion_pending_add(circuit_t *circ);
-int onion_pending_check(void);
-void onion_pending_process_one(void);
+circuit_t *onion_next_task(void);
 void onion_pending_remove(circuit_t *circ);
+
+int onionskin_process(circuit_t *circ, unsigned char *payload, unsigned char *keys);
 
 /* uses a weighted coin with weight cw to choose a route length */
 int chooselen(double cw);

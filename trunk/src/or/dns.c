@@ -16,15 +16,15 @@
 #define MIN_DNSWORKERS 3
 #define MAX_IDLE_DNSWORKERS 10
 
-int num_workers=0;
-int num_workers_busy=0;
+int num_dnsworkers=0;
+int num_dnsworkers_busy=0;
 
 static void purge_expired_resolves(uint32_t now);
-static int dns_assign_to_worker(connection_t *exitconn);
+static int assign_to_dnsworker(connection_t *exitconn);
 static void dns_found_answer(char *question, uint32_t answer);
 int dnsworker_main(void *data);
-static int dns_spawn_worker(void);
-static void spawn_enough_workers(void);
+static int spawn_dnsworker(void);
+static void spawn_enough_dnsworkers(void);
 
 struct pending_connection_t {
   struct connection_t *conn;
@@ -60,7 +60,7 @@ static void init_cache_tree(void) {
 
 void dns_init(void) {
   init_cache_tree();
-  spawn_enough_workers();
+  spawn_enough_dnsworkers();
 }
 
 static struct cached_resolve *oldest_cached_resolve = NULL; /* linked list, */
@@ -144,42 +144,42 @@ int dns_resolve(connection_t *exitconn) {
     newest_cached_resolve = resolve;
 
     SPLAY_INSERT(cache_tree, &cache_root, resolve);
-    return dns_assign_to_worker(exitconn);
+    return assign_to_dnsworker(exitconn);
   }
 
   assert(0);
   return 0; /* not reached; keep gcc happy */
 }
 
-static int dns_assign_to_worker(connection_t *exitconn) {
+static int assign_to_dnsworker(connection_t *exitconn) {
   connection_t *dnsconn;
   unsigned char len;
 
-  spawn_enough_workers(); /* respawn here, to be sure there are enough */
+  spawn_enough_dnsworkers(); /* respawn here, to be sure there are enough */
 
   dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
 
   if(!dnsconn) {
-    log(LOG_INFO,"dns_assign_to_worker(): no idle dns workers. Failing.");
+    log_fn(LOG_INFO,"no idle dns workers. Failing.");
     dns_cancel_pending_resolve(exitconn->address, NULL);
     return -1;
   }
 
   dnsconn->address = strdup(exitconn->address);
   dnsconn->state = DNSWORKER_STATE_BUSY;
-  num_workers_busy++;
+  num_dnsworkers_busy++;
 
   len = strlen(dnsconn->address);
   /* FFFF we should have it retry if the first worker bombs out */
   if(connection_write_to_buf(&len, 1, dnsconn) < 0 ||
      connection_write_to_buf(dnsconn->address, len, dnsconn) < 0) {
-    log(LOG_NOTICE,"dns_assign_to_worker(): Write failed. Closing worker and failing resolve.");
+    log_fn(LOG_NOTICE,"Write failed. Closing worker and failing resolve.");
     dnsconn->marked_for_close = 1;
     dns_cancel_pending_resolve(exitconn->address, NULL);
     return -1;
   }
 
-//  log(LOG_DEBUG,"dns_assign_to_worker(): submitted '%s'", exitconn->address);
+//  log_fn(LOG_DEBUG,"submitted '%s'", exitconn->address);
   return 0;
 }
 
@@ -301,9 +301,9 @@ int connection_dns_process_inbuf(connection_t *conn) {
     log(LOG_ERR,"connection_dnsworker_process_inbuf(): Read eof. Worker dying.");
     if(conn->state == DNSWORKER_STATE_BUSY) {
       dns_cancel_pending_resolve(conn->address, NULL);
-      num_workers_busy--;
+      num_dnsworkers_busy--;
     }
-    num_workers--;
+    num_dnsworkers--;
     return -1;
   }
 
@@ -319,7 +319,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
   free(conn->address);
   conn->address = NULL;
   conn->state = DNSWORKER_STATE_IDLE;
-  num_workers_busy--;
+  num_dnsworkers_busy--;
 
   return 0;
 }
@@ -328,8 +328,8 @@ int dnsworker_main(void *data) {
   char question[MAX_ADDRESSLEN];
   unsigned char question_len;
   struct hostent *rent;
-  int fd;
   int *fdarray = data;
+  int fd;
 
   close(fdarray[0]); /* this is the side of the socketpair the parent uses */
   fd = fdarray[1]; /* this side is ours */
@@ -351,14 +351,13 @@ int dnsworker_main(void *data) {
     rent = gethostbyname(question);
     if (!rent) {
       log(LOG_INFO,"dnsworker_main(): Could not resolve dest addr %s. Returning nulls.",question);
-      /* XXX it's conceivable write could return 1 through 3. but that's never gonna happen, right? */
-      if(write(fd, "\0\0\0\0", 4) != 4) {
+      if(write_all(fd, "\0\0\0\0", 4) != 4) {
         log(LOG_INFO,"dnsworker_main(): writing nulls failed. Exiting.");
         spawn_exit();
       }
     } else {
       assert(rent->h_length == 4); /* break to remind us if we move away from ipv4 */
-      if(write(fd, rent->h_addr, 4) != 4) {
+      if(write_all(fd, rent->h_addr, 4) != 4) {
         log(LOG_INFO,"dnsworker_main(): writing answer failed. Exiting.");
         spawn_exit();
       }
@@ -368,7 +367,7 @@ int dnsworker_main(void *data) {
   return 0; /* windows wants this function to return an int */
 }
 
-static int dns_spawn_worker(void) {
+static int spawn_dnsworker(void) {
   int fd[2];
   connection_t *conn;
 
@@ -378,7 +377,7 @@ static int dns_spawn_worker(void) {
   }
 
   spawn_func(dnsworker_main, (void*)fd);
-  log(LOG_DEBUG,"dns_spawn_worker(): just spawned a worker.");
+  log_fn(LOG_DEBUG,"just spawned a worker.");
   close(fd[1]); /* we don't need the worker's side of the pipe */
 
   conn = connection_new(CONN_TYPE_DNSWORKER);
@@ -395,7 +394,7 @@ static int dns_spawn_worker(void) {
   conn->s = fd[0];
 
   if(connection_add(conn) < 0) { /* no space, forget it */
-    log(LOG_INFO,"dns_spawn_worker(): connection_add failed. Giving up.");
+    log_fn(LOG_INFO,"connection_add failed. Giving up.");
     connection_free(conn); /* this closes fd[0] */
     return -1;
   }
@@ -406,12 +405,12 @@ static int dns_spawn_worker(void) {
   return 0; /* success */
 }
 
-static void spawn_enough_workers(void) {
-  int num_workers_needed; /* aim to have 1 more than needed,
+static void spawn_enough_dnsworkers(void) {
+  int num_dnsworkers_needed; /* aim to have 1 more than needed,
                            * but no less than min and no more than max */
   connection_t *dnsconn;
 
-  if(num_workers_busy == MAX_DNSWORKERS) {
+  if(num_dnsworkers_busy == MAX_DNSWORKERS) {
     /* We always want at least one worker idle.
      * So find the oldest busy worker and kill it.
      */
@@ -422,28 +421,28 @@ static void spawn_enough_workers(void) {
     dns_cancel_pending_resolve(dnsconn->address, NULL);
 
     dnsconn->marked_for_close = 1;
-    num_workers_busy--;
+    num_dnsworkers_busy--;
   }
 
-  if(num_workers_busy >= MIN_DNSWORKERS)
-    num_workers_needed = num_workers_busy+1;
+  if(num_dnsworkers_busy >= MIN_DNSWORKERS)
+    num_dnsworkers_needed = num_dnsworkers_busy+1;
   else
-    num_workers_needed = MIN_DNSWORKERS;
+    num_dnsworkers_needed = MIN_DNSWORKERS;
 
-  while(num_workers < num_workers_needed) {
-    if(dns_spawn_worker() < 0) {
-      log(LOG_ERR,"spawn_enough_workers(): spawn failed!");
+  while(num_dnsworkers < num_dnsworkers_needed) {
+    if(spawn_dnsworker() < 0) {
+      log(LOG_ERR,"spawn_enough_dnsworkers(): spawn failed!");
       return;
     }
-    num_workers++;
+    num_dnsworkers++;
   }
 
-  while(num_workers > num_workers_needed+MAX_IDLE_DNSWORKERS) { /* too many idle? */
+  while(num_dnsworkers > num_dnsworkers_needed+MAX_IDLE_DNSWORKERS) { /* too many idle? */
     /* cull excess workers */
     dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
     assert(dnsconn);
     dnsconn->marked_for_close = 1;
-    num_workers--;
+    num_dnsworkers--;
   }
 }
 

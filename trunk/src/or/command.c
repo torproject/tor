@@ -97,13 +97,13 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
 
   memcpy(circ->onionskin,cell->payload,cell->length);
 
-  /* add it to the pending onions queue, and then return */
-  if(onion_pending_add(circ) < 0) {
-    log_fn(LOG_DEBUG,"Failed to queue onionskin. Closing.");
+  /* hand it off to the cpuworkers, and then return */
+  if(assign_to_cpuworker(NULL, CPUWORKER_TASK_ONION, circ) < 0) {
+    log_fn(LOG_DEBUG,"Failed to hand off onionskin. Closing.");
     circuit_close(circ);
+    return;
   }
-  log_fn(LOG_DEBUG,"success: queued onionskin.");
-  return;
+  log_fn(LOG_DEBUG,"success: handed off onionskin.");
 }
 
 void command_process_created_cell(cell_t *cell, connection_t *conn) {
@@ -153,7 +153,6 @@ void command_process_created_cell(cell_t *cell, connection_t *conn) {
       return;
     }
   }
-  return;
 }
 
 void command_process_relay_cell(cell_t *cell, connection_t *conn) {
