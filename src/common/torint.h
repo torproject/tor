@@ -106,6 +106,9 @@ typedef signed int int32_t;
 typedef unsigned int uint32_t;
 #define HAVE_UINT32_T
 #endif
+#ifndef UINT32_MAX
+#define UINT32_MAX 0xffffffffu
+#endif
 #endif
 
 
@@ -117,6 +120,9 @@ typedef signed long int32_t;
 #ifndef HAVE_UINT32_T
 typedef unsigned long uint32_t;
 #define HAVE_UINT32_T
+#ifndef UINT32_MAX
+#define UINT32_MAX 0xfffffffful
+#endif
 #endif
 #elif (SIZEOF_LONG == 8)
 #ifndef HAVE_INT64_T
@@ -126,6 +132,9 @@ typedef signed long int64_t;
 #ifndef HAVE_UINT32_T
 typedef unsigned long uint64_t;
 #define HAVE_UINT32_T
+#endif
+#ifndef UINT64_MAX
+#define UINT64_MAX 0xfffffffffffffffful
 #endif
 #endif
 
@@ -138,6 +147,9 @@ typedef signed long long int64_t;
 typedef unsigned long long uint64_t;
 #define HAVE_UINT64_T
 #endif
+#ifndef UINT64_MAX
+#define UINT64_MAX 0xffffffffffffffffull
+#endif
 #endif
 
 #if (SIZEOF___INT64 == 8)
@@ -148,6 +160,9 @@ typedef signed __int64 int64_t;
 #ifndef HAVE_UINT64_T
 typedef unsigned __int64 uint64_t;
 #define HAVE_UINT64_T
+#endif
+#ifndef UINT64_MAX
+#define UINT64_MAX 0xffffffffffffffffui64
 #endif
 #endif
 

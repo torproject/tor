@@ -58,6 +58,8 @@ long tor_parse_long(const char *s, int base, long min,
                     long max, int *ok, char **next);
 unsigned long tor_parse_ulong(const char *s, int base, unsigned long min,
                               unsigned long max, int *ok, char **next);
+uint64_t tor_parse_uint64(const char *s, int base, uint64_t min,
+                         uint64_t max, int *ok, char **next);
 const char *hex_str(const char *from, size_t fromlen);
 const char *eat_whitespace(const char *s);
 const char *eat_whitespace_no_nl(const char *s);
