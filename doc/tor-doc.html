@@ -244,16 +244,18 @@ href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>
 for details.</li>
 <li>It's fine if the server goes offline sometimes. The directories
 notice this quickly and stop advertising the server. Just try to make
-sure it's not too often, since connections through the server when it
+sure it's not too often, since connections using the server when it
 disconnects will break.</li>
 <li>We can handle servers with dynamic IPs just fine, as long as the
 server itself knows its IP. If your server is behind a NAT and it doesn't
-know its own IP (e.g. it has an IP of 192.168.x.y), then we can't use it
-as a server yet. (If you want to set your Address config option to dyndns
-DNS voodoo and port forward to get around this, feel free. If you write a
-howto, <a href="mailto:tor-volunteer@freehaven.net">even better</a>.)</li>
-<li>Your server will passively estimate and publish its recent capacity.
-Client paths are chosen weighted by this capacity, so high-bandwidth
+know its public IP (e.g. it has an IP of 192.168.x.y), then we can't use it
+as a server yet. (If you want to port forward and set your Address
+config option to use dyndns DNS voodoo to get around this, feel free. If
+you write a howto, <a href="mailto:tor-volunteer@freehaven.net">even
+better</a>.)</li>
+<li>Your server will passively estimate and advertise its recent
+bandwidth capacity.
+Clients choose paths weighted by this capacity, so high-bandwidth
 servers will attract more paths than low-bandwidth ones. That's why
 having even low-bandwidth servers is useful too.</li>
 </ul>
@@ -288,7 +290,9 @@ plus any other addresses or ports your exit policy allows.
 address them.
 </ul>
 
+<p>
 Optionally, we recommend the following steps as well:
+</p>
 
 <ul>
 <li>1. Make a separate user to run the server. If you
