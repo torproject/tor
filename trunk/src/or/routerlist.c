@@ -1008,7 +1008,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   tok->key = NULL; /* Prevent free */
 
   if ((tok = find_first_by_keyword(tokens, K_LINK_KEY))) {
-    log_fn(LOG_INFO, "Skipping obsolete link-key"); goto err;
+    log_fn(LOG_INFO, "Skipping obsolete link-key");
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_SIGNING_KEY))) {
