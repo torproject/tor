@@ -2,11 +2,16 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/**
+ * \file connection_edge.c
+ * \brief Handle edge streams and relay cells.
+ **/
+
 #include "or.h"
 #include "tree.h"
 
 extern or_options_t options; /* command-line and config-file options */
-extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
+extern char *conn_state_to_string[][_CONN_TYPE_MAX+1]; /* from connection.c */
 
 static int connection_ap_handshake_process_socks(connection_t *conn);
 
@@ -17,6 +22,10 @@ static uint32_t client_dns_lookup_entry(const char *address);
 static void client_dns_set_entry(const char *address, uint32_t val);
 static int client_dns_incr_failures(const char *address);
 
+/** Pack the relay_header_t host-order structure <b>src</b> into
+ * network-order in the buffer <b>dest</b>. See tor-spec.txt for details
+ * about the wire format.
+ */
 void relay_header_pack(char *dest, const relay_header_t *src) {
   *(uint8_t*)(dest) = src->command;
 
@@ -26,6 +35,9 @@ void relay_header_pack(char *dest, const relay_header_t *src) {
   set_uint16(dest+9, htons(src->length));
 }
 
+/** Unpack the network-order buffer <b>src</b> into a host-order
+ * relay_header_t structure <b>dest</b>.
+ */
 void relay_header_unpack(relay_header_t *dest, const char *src) {
   dest->command = *(uint8_t*)(src);
 
@@ -35,7 +47,18 @@ void relay_header_unpack(relay_header_t *dest, const char *src) {
   dest->length = ntohs(get_uint16(src+9));
 }
 
-/* mark and return -1 if there was an unexpected error with the conn,
+/** Handle new bytes on conn->inbuf, or notification of eof.
+ *
+ * If there was an EOF, then send an end and mark the connection
+ * for close.
+ *
+ * Otherwise handle it based on state:
+ *   - If it's waiting for socks info, try to read another step of the
+ *     socks handshake out of conn->inbuf.
+ *   - If it's open, then package more relay cells from the stream.
+ *   - Else, leave the bytes on inbuf alone for now.
+ *
+ * Mark and return -1 if there was an unexpected error with the conn,
  * else return 0.
  */
 int connection_edge_process_inbuf(connection_t *conn) {
@@ -98,6 +121,9 @@ int connection_edge_process_inbuf(connection_t *conn) {
   return -1;
 }
 
+/** This edge needs to be closed, because its circuit has closed.
+ * Mark it for close and return 0.
+ */
 int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
   tor_assert(conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT);
 
@@ -111,7 +137,12 @@ int connection_edge_destroy(uint16_t circ_id, connection_t *conn) {
   return 0;
 }
 
-static char *connection_edge_end_reason(char *payload, uint16_t length) {
+/** Translate the <b>payload</b> of length <b>length</b>, which
+ * came from a relay 'end' cell, into a static const string describing
+ * why the stream is closing.
+ */
+static const char *
+connection_edge_end_reason(char *payload, uint16_t length) {
   if(length < 1) {
     log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
     return "MALFORMED";
@@ -133,6 +164,14 @@ static char *connection_edge_end_reason(char *payload, uint16_t length) {
   return "";
 }
 
+/** Send a relay end cell from stream <b>conn</b> to conn's circuit,
+ * with a destination of cpath_layer. (If cpath_layer is NULL, the
+ * destination is the circuit's origin.) Mark the relay end cell as
+ * closing because of <b>reason</b>.
+ *
+ * Return -1 if this function has already been called on this conn,
+ * else return 0.
+ */
 int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer) {
   char payload[5];
   int payload_len=1;
@@ -164,10 +203,10 @@ int connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_lay
   return 0;
 }
 
-/* Make a relay cell out of 'relay_command' and 'payload', and
- * send it onto the open circuit 'circ'. 'fromconn' is the stream
- * that's sending the relay cell, or NULL if it's a control cell,
- * 'cpath_layer' is NULL for OR->OP cells, or the destination hop
+/** Make a relay cell out of <b>relay_command</b> and <b>payload</b>, and
+ * send it onto the open circuit <b>circ</b>. <b>fromconn</b> is the stream
+ * that's sending the relay cell, or NULL if it's a control cell.
+ * <b>cpath_layer</b> is NULL for OR->OP cells, or the destination hop
  * for OP->OR cells.
  *
  * If you can't send the cell, mark the circuit for close and
@@ -217,9 +256,20 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ,
   return 0;
 }
 
+/** How many times will I retry a stream that fails due to DNS
+ * resolve failure?
+ */
 #define MAX_RESOLVE_FAILURES 3
 
-int connection_edge_process_relay_cell_not_open(
+/** An incoming relay cell has arrived from circuit <b>circ</b> to
+ * stream <b>conn</b>.
+ *
+ * The arguments here are the same as in
+ * connection_edge_process_relay_cell() below; this function is called
+ * from there when <b>conn</b> is defined and not in an open state.
+ */
+static int
+connection_edge_process_relay_cell_not_open(
     relay_header_t *rh, cell_t *cell, circuit_t *circ,
     connection_t *conn, crypt_path_t *layer_hint) {
   uint32_t addr;
@@ -293,8 +343,15 @@ int connection_edge_process_relay_cell_not_open(
   return -1;
 }
 
-/* an incoming relay cell has arrived. return -1 if you want to tear down the
- * circuit, else 0. */
+/** An incoming relay cell has arrived on circuit <b>circ</b>. If
+ * <b>conn</b> is NULL this is a control cell, else <b>cell</b> is
+ * destined for <b>conn</b>.
+ *
+ * If <b>layer_hint</b> is defined, then we're the origin of the
+ * circuit, and it specifies the hop that packaged <b>cell</b>.
+ *
+ * Return -1 if you want to tear down the circuit, else 0. 
+ */
 int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                                        connection_t *conn,
                                        crypt_path_t *layer_hint) {
@@ -474,6 +531,20 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   return -1;
 }
 
+/** Connection <b>conn</b> has finished writing and has no bytes left on
+ * its outbuf.
+ *
+ * If it's in state 'connecting', then take a look at the socket, and
+ * take appropriate actions (such as sending back a relay 'connected'
+ * cell) if the connect succeeded.
+ *
+ * If it's in state 'open', stop writing, consider responding with a
+ * sendme, and return.
+ * Otherwise, stop writing and return.
+ *
+ * If <b>conn</b> is broken, mark it for close and return -1, else
+ * return 0.
+ */
 int connection_edge_finished_flushing(connection_t *conn) {
   unsigned char connected_payload[4];
   int e, len=sizeof(e);
@@ -539,6 +610,12 @@ uint64_t stats_n_data_bytes_packaged = 0;
 uint64_t stats_n_data_cells_received = 0;
 uint64_t stats_n_data_bytes_received = 0;
 
+/** While conn->inbuf has an entire relay payload of bytes on it,
+ * and the appropriate package windows aren't empty, grab a cell
+ * and send it down the circuit.
+ *
+ * Return -1 if conn should be marked for close, else return 0.
+ */
 int connection_edge_package_raw_inbuf(connection_t *conn) {
   int amount_to_process, length;
   char payload[CELL_PAYLOAD_SIZE];
@@ -606,7 +683,21 @@ repeat_connection_edge_package_raw_inbuf:
   goto repeat_connection_edge_package_raw_inbuf;
 }
 
+/** How many times do we retry a general-purpose stream (detach it from
+ * one circuit and try another, after we wait a while with no 'connected'
+ * cell) before giving up?
+ */
 #define MAX_STREAM_RETRIES 4
+
+/** Find all general-purpose AP streams in state connect_wait that sent
+ * their begin cell >=15 seconds ago. Detach from their current circuit,
+ * and mark their current circuit as unsuitable for new streams. Then call
+ * connection_ap_handshake_attach_circuit() to attach to a new circuit (if
+ * available) or launch a new one.
+ *
+ * For rendezvous streams, simply give up after 45 seconds (with no
+ * retry attempt).
+ */
 void connection_ap_expire_beginning(void) {
   connection_t **carray;
   connection_t *conn;
@@ -672,7 +763,9 @@ void connection_ap_expire_beginning(void) {
   } /* end for */
 }
 
-/* Tell any APs that are waiting for a new circuit that one is available */
+/** Tell any AP streamss that are waiting for a new circuit that one is
+ * available.
+ */
 void connection_ap_attach_pending(void)
 {
   connection_t **carray;
@@ -694,6 +787,12 @@ void connection_ap_attach_pending(void)
   }
 }
 
+/** Called when we've just received a relay data cell, or when
+ * we've just finished flushing all bytes to stream <b>conn</b>.
+ *
+ * If conn->outbuf is not too full, and our deliver window is
+ * low, send back a suitable number of stream-level sendme cells.
+ */
 static void connection_edge_consider_sending_sendme(connection_t *conn) {
   circuit_t *circ;
 
@@ -719,7 +818,19 @@ static void connection_edge_consider_sending_sendme(connection_t *conn) {
   }
 }
 
-/* return -1 if an unexpected error with conn, else 0. */
+/** connection_edge_process_inbuf() found a conn in state
+ * socks_wait. See if conn->inbuf has the right bytes to proceed with
+ * the socks handshake.
+ *
+ * If the handshake is complete, and it's for a general circuit, then
+ * try to attach it to a circuit (or launch one as needed). If it's for
+ * a rendezvous circuit, then fetch a rendezvous descriptor first (or
+ * attach/launch a circuit if the rendezvous descriptor is already here
+ * and fresh enough).
+ *
+ * Return -1 if an unexpected error with conn (and it should be marked
+ * for close), else return 0.
+ */
 static int connection_ap_handshake_process_socks(connection_t *conn) {
   socks_request_t *socks;
   int sockshere;
@@ -789,10 +900,11 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   return 0;
 }
 
-/* Find an open circ that we're happy with: return 1. if there isn't
- * one, and there isn't one on the way, launch one and return 0. if it
+/** Find an open circ that we're happy with: return 1. If there isn't
+ * one, and there isn't one on the way, launch one and return 0. If it
  * will never work, return -1.
- * write the found or in-progress or launched circ into *circp.
+ *
+ * Write the found or in-progress or launched circ into *circp.
  */
 static int
 circuit_get_open_circ_or_launch(connection_t *conn,
@@ -866,6 +978,10 @@ circuit_get_open_circ_or_launch(connection_t *conn,
   return 0;
 }
 
+/** Attach the AP stream <b>apconn</b> to circ's linked list of
+ * p_streams. Also set apconn's cpath_layer to the last hop in
+ * circ's cpath.
+ */
 void link_apconn_to_circ(connection_t *apconn, circuit_t *circ) {
   /* add it into the linked list of streams on this circuit */
   log_fn(LOG_DEBUG,"attaching new conn to circ. n_circ_id %d.", circ->n_circ_id);
@@ -878,7 +994,7 @@ void link_apconn_to_circ(connection_t *apconn, circuit_t *circ) {
   apconn->cpath_layer = circ->cpath->prev;
 }
 
-/* Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
+/** Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
  * we don't find one: if conn cannot be handled by any known nodes,
  * warn and return -1 (conn needs to die);
  * else launch new circuit (if necessary) and return 0.
@@ -990,8 +1106,8 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   }
 }
 
-/* Iterate over the two bytes of stream_id until we get one that is not
- * already in use. Return 0 if can't get a unique stream_id.
+/** Iterate over the two bytes of stream_id until we get one that is not
+ * already in use; return it. Return 0 if can't get a unique stream_id.
  */
 static uint16_t get_unique_stream_id_by_circ(circuit_t *circ) {
   connection_t *tmpconn;
@@ -1013,7 +1129,11 @@ again:
   return test_stream_id;
 }
 
-/* deliver the destaddr:destport in a relay cell */
+/** Write a relay begin cell, using destaddr and destport from ap_conn's
+ * socks_request field, and send it down circ.
+ *
+ * If ap_conn is broken, mark it for close and return -1. Else return 0.
+ */
 int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
 {
   char payload[CELL_PAYLOAD_SIZE];
@@ -1060,9 +1180,10 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
   return 0;
 }
 
-/* make an ap connection_t, do a socketpair and attach one side
+/** Make an AP connection_t, do a socketpair and attach one side
  * to the conn, connection_add it, initialize it to circuit_wait,
  * and call connection_ap_handshake_attach_circuit(conn) on it.
+ *
  * Return the other end of the socketpair, or -1 if error.
  */
 int connection_ap_make_bridge(char *address, uint16_t port) {
@@ -1115,6 +1236,14 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   return fd[1];
 }
 
+/** Send a socks reply to stream <b>conn</b>, using the appropriate
+ * socks version, etc.
+ *
+ * If <b>reply</b> is defined, then write <b>replylen</b> bytes of it
+ * to conn and return.
+ *
+ * Otherwise, send back a reply based on whether <b>success</b> is 1 or 0.
+ */
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                          int replylen, char success) {
   char buf[256];
@@ -1148,6 +1277,22 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
   return;
 }
 
+/** A relay 'begin' cell has arrived, and either we are an exit hop
+ * for the circuit, or we are the origin and it is a rendezvous begin.
+ *
+ * Launch a new exit connection and initialize things appropriately.
+ *
+ * If it's a rendezvous stream, call connection_exit_connect() on
+ * it.
+ *
+ * For general streams, call dns_resolve() on it first, and only call
+ * connection_exit_connect() if the dns answer is already known.
+ *
+ * Note that we don't call connection_add() on the new stream! We wait
+ * for connection_exit_connect() to do that.
+ *
+ * Return -1 if we want to tear down <b>circ</b>. Else return 0.
+ */
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   connection_t *n_stream;
   relay_header_t rh;
@@ -1241,6 +1386,13 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   return 0;
 }
 
+/** Connect to conn's specified addr and port. If it worked, conn
+ * has now been added to the connection_array.
+ *
+ * Send back a connected cell. Include the resolved IP of the destination
+ * address, but <em>only</em> if it's a general exit stream. (Rendezvous
+ * streams must not reveal what IP they connected to.)
+ */
 void connection_exit_connect(connection_t *conn) {
   unsigned char connected_payload[4];
 
@@ -1290,6 +1442,9 @@ void connection_exit_connect(connection_t *conn) {
   }
 }
 
+/** Return 1 if <b>conn</b> is a rendezvous stream, or 0 if
+ * it is a general stream.
+ */
 int connection_edge_is_rendezvous_stream(connection_t *conn) {
   tor_assert(conn);
   if(*conn->rend_query) /* XXX */
@@ -1297,6 +1452,11 @@ int connection_edge_is_rendezvous_stream(connection_t *conn) {
   return 0;
 }
 
+/** Return 1 if router <b>exit</b> might allow stream <b>conn</b>
+ * to exit from it, or 0 if it definitely will not allow it.
+ * (We might be uncertain if conn's destination address has not yet been
+ * resolved.)
+ */
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
 {
   uint32_t addr;
@@ -1321,19 +1481,31 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
  *     by answering funny things to stream begin requests, and later
  *     other clients would reuse those funny addr's. Hm.
  */
+
+/** A client-side struct to remember the resolved IP (addr) for
+ * a given address. These structs make up a tree, with client_dns_map
+ * below as its root.
+ */
 struct client_dns_entry {
-  uint32_t addr;
-  time_t expires;
-  int n_failures;
+  uint32_t addr; /**< The resolved IP of this entry */
+  time_t expires; /**< At what second does addr expire? */
+  int n_failures; /**< How many times has this entry failed to resolve so far? */
 };
+
+/** How many elements are in the client dns cache currently? */
 static int client_dns_size = 0;
+/** The tree of client-side cached DNS resolves. */
 static strmap_t *client_dns_map = NULL;
 
+/** Initialize client_dns_map and client_dns_size. */
 void client_dns_init(void) {
   client_dns_map = strmap_new();
   client_dns_size = 0;
 }
 
+/** Return the client_dns_entry that corresponds to <b>address</b>.
+ * If it's not there, allocate and return a new entry for <b>address</b>.
+ */
 static struct client_dns_entry *
 _get_or_create_ent(const char *address)
 {
@@ -1348,6 +1520,9 @@ _get_or_create_ent(const char *address)
   return ent;
 }
 
+/** Return the IP associated with <b>address</b>, if we know it
+ * and it's still fresh enough. Otherwise return 0.
+ */
 static uint32_t client_dns_lookup_entry(const char *address)
 {
   struct client_dns_entry *ent;
@@ -1381,6 +1556,10 @@ static uint32_t client_dns_lookup_entry(const char *address)
   }
 }
 
+/** An attempt to resolve <b>address</b> failed at some OR.
+ * Increment the number of resolve failures we have on record
+ * for it, and then return that number.
+ */
 static int client_dns_incr_failures(const char *address)
 {
   struct client_dns_entry *ent;
@@ -1391,6 +1570,11 @@ static int client_dns_incr_failures(const char *address)
   return ent->n_failures;
 }
 
+/** Record the fact that <b>address</b> resolved to <b>val</b>.
+ * We can now use this in subsequent streams in client_dns_lookup_entry(),
+ * so we can more correctly choose a router that will allow <b>address</b>
+ * to exit from him.
+ */
 static void client_dns_set_entry(const char *address, uint32_t val)
 {
   struct client_dns_entry *ent;
@@ -1412,6 +1596,9 @@ static void client_dns_set_entry(const char *address, uint32_t val)
   ent->n_failures = 0;
 }
 
+/** A helper function for client_dns_clean() below. If ent is too old,
+ * then remove it from the tree and return NULL, else return ent.
+ */
 static void* _remove_if_expired(const char *addr,
                                 struct client_dns_entry *ent,
                                 time_t *nowp)
@@ -1425,6 +1612,9 @@ static void* _remove_if_expired(const char *addr,
   }
 }
 
+/** Clean out entries from the client-side DNS cache that were
+ * resolved long enough ago that they are no longer valid.
+ */
 void client_dns_clean(void)
 {
   time_t now;
