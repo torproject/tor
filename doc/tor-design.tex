@@ -1316,7 +1316,7 @@ physical attack, those users can switch to accessing Bob's service via
 the Tor rendezvous system.
 
 Since Bob's introduction points might themselves be subject to DoS he
-could be faced with a choice between keeping large numbers of
+could be faced with a choice between keeping many
 introduction connections open or risking such an attack. In this case,
 similar to the authentication tokens, he can provide selected users
 with a current list and/or future schedule of introduction points that
@@ -1325,7 +1325,7 @@ if there is a relatively stable and large group of introduction points
 generally available. Alternatively, Bob could give secret public keys
 to selected users for consulting the DHT\@. All of these approaches
 have the advantage of limiting the damage that can be done even if
-some of the selected high-priority users colludes in the DoS\@.
+some of the selected high-priority users collude in the DoS\@.
 
 
 \SubSection{Integration with user applications}
@@ -1687,10 +1687,9 @@ design withstands them.
   he can block access to the service. However, re-advertisement of
   introduction points can still be done secretly so that only
   high-priority clients know the address of the service's introduction
-  points.  Such selective secret authorizations can also be issued
-  during normal operation so that the attack cannot also prevent their
-  issuance.  In this setting an attack must be able to disable all
-  introduction points for all services to be effective.
+  points. These selective secret authorizations can also be issued
+  during normal operation. Thus an attacker must disable
+  all possible introduction points.
 
 \item \emph{Compromise an introduction point.} If an attacker controls
   an introduction point for a service, it can flood the service with
@@ -1719,7 +1718,7 @@ have built a secure low-latency anonymity service.
 
 Many of these open issues are questions of balance.  For example,
 how often should users rotate to fresh circuits?  Too-frequent
-rotation is inefficient, expensive and may lead to intersection attacks,
+rotation is inefficient, expensive, and may lead to intersection attacks,
 but too-infrequent rotation
 makes the user's traffic linkable.   Instead of opening a fresh
 circuit; clients can also limit linkability by exiting from a middle point
@@ -1809,7 +1808,7 @@ attacks would remain.  \emph{What can
 %times when Alice is simply not online. Link padding, at the edges or
 %inside the cloud, does not help for this.
 
-In order to scale to large numbers of users, and to prevent an
+In order to scale to many users, and to prevent an
 attacker from observing the whole network at once, it may be necessary
 for low-latency anonymity systems to support far more servers than Tor
 currently anticipates.  This introduces several issues.  First, if
@@ -1945,7 +1944,7 @@ issues remaining to be ironed out. In particular:
   gain experience in deploying an anonymizing overlay network, and
   learn from having actual users.  We are now at the point in design
   and development where we can start deploying a wider network.  Once
-  we have large numbers of actual users, we will doubtlessly be better
+  we have many actual users, we will doubtlessly be better
   able to evaluate some of our design decisions, including our
   robustness/latency trade-offs, our performance trade-offs (including
   cell size), our abuse-prevention mechanisms, and
