@@ -26,6 +26,7 @@ For 0.0.9.3:
    - All tasks marked for 0093 in flyspray.
    - Backport performance improvement (stop calling getttimeofday for
      each cell)
+   o Tor startup script should be installed by default on OSX.
    - Setup instructions for OSX.
    - Server instructions for OSX and Windows operators.
 
