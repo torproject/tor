@@ -197,7 +197,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
 
 /* give reasonable values for each option. Defaults to zero. */
   memset(options,0,sizeof(or_options_t));
-  options->LogLevel = "debug";
+  options->LogLevel = "info";
   options->loglevel = LOG_DEBUG;
   options->DataDirectory = NULL;
   options->CoinWeight = 0.1;
@@ -243,7 +243,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   if(options->LogLevel) {
     if(!strcmp(options->LogLevel,"err"))
       options->loglevel = LOG_ERR;
-    else if(!strcmp(options->LogLevel,"warning"))
+    else if(!strncmp(options->LogLevel,"warn",4))
       options->loglevel = LOG_WARNING;
     else if(!strcmp(options->LogLevel,"info"))
       options->loglevel = LOG_INFO;

@@ -11,6 +11,8 @@ Quickstart version for users:
 6) point your browser to socks4 or socks5 proxy at localhost port
   9050. In mozilla, this is in edit|preferences|advanced|proxies. This
   allows you to test to make sure tor is installed correctly.
+  (If you have a personal firewall, be sure to allow connections to
+  localhost port 9050.)
 7) make sure you've set it up correctly: go to
   http://www.junkbusters.com/cgi-bin/privacy and see what IP it says
   you're coming from. If it works, you should probably go on to step 8,
@@ -22,6 +24,23 @@ Quickstart version for users:
   no socks proxy). This step will give you good html scrubbing as well.
   (See doc/CLIENTS for why direct socks gives you less anonymity.)
 
-If this works for you, you can stop reading. Otherwise, see the README for
-more details.
+*****If this works for you, you can stop reading here******
+
+If you got the source from cvs:
+
+  Run "./autogen.sh", which will run the various auto* programs and then
+  run ./configure for you. From there, start at step 3 in the quickstart
+  list above.
+
+If the quickstart doesn't work for you:
+
+  If you have problems finding libraries, try 
+    CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
+    ./configure
+  rather than simply ./configure.
+
+  Check out the list archives at http://archives.seul.org/or/dev/ and see
+  if somebody else has reported your problem. If not, please subscribe
+  and let us know what you did to fix it, or give us the details and
+  we'll see what we can do.
 
