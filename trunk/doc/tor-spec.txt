@@ -662,7 +662,7 @@ The items' formats are as follows:
 
    "uptime"
 
-      The number of seconds that this OR has been running.
+      The number of seconds that this OR process has been running.
 
    "onion-key" NL a public key in PEM format
 
@@ -689,6 +689,41 @@ The items' formats are as follows:
        The router descriptor is invalid unless the signature is performed
        with the router's identity key.
 
+   "dircacheport" port NL
+
+       Same as declaring "port" as this OR's directory port in the 'router'
+       line. At most one of dircacheport and the directory port in the router
+       line.
+
+       [Obsolete; will go away once 0.0.8 is dead. Older version of Tor
+       did poorly when non-authoritative directories has a non-0 directory
+       port.  To transition, Tor 0.0.8 used dircacheport for
+       nonauthoritative directories.]
+
+   "contact" info NL
+
+       Describes a way to contact the server's administrator, preferably
+       including an email address and a PGP key fingerprint.
+
+   "family" names NL
+
+       'Names' is a space-separated list of server nicknames.  If two ORs
+       list one another in their "family" entries, then OPs should treat
+       them as a single OR for the purpose of path selection.
+
+       For example, if node A's descriptor contains "family B", and node B's
+       descriptor contains "family A", then node A and node B should never
+       be used on the same circuit.
+
+   "read-history" YYYY-MM-DD HH:MM:SS (NSEC s) NUM,NUM,NUM,NUM,NUM... NL
+   "write-history" YYYY-MM-DD HH:MM:SS (NSEC s) NUM,NUM,NUM,NUM,NUM... NL
+
+       Declare how much bandwidth the OR has used recently. Usage is divided
+       into intervals of NSEC seconds.  The YYYY-MM-DD HH:MM:SS field defines
+       the end of the most recent interval.  The numbers list the number of
+       bytes used in the most recent intervals, ordered from oldest to newest.
+
+
 nickname ::= between 1 and 19 alphanumeric characters, case-insensitive.
 
 exitpattern ::= addrspec ":" portspec
@@ -710,9 +745,9 @@ line, they must appear in the "ports" lines.
 
 A Directory begins with a "signed-directory" item, followed by one each of
 the following, in any order: "recommended-software", "published",
-"router-status".  It may include any number of "opt" items.  After these
-items, a directory includes any number of router descriptors, and a single
-"directory-signature" item.
+"router-status", "directory-signing-key".  It may include any number of "opt"
+items.  After these items, a directory includes any number of router
+descriptors, and a single "directory-signature" item.
 
     "signed-directory"
 
@@ -721,6 +756,10 @@ items, a directory includes any number of router descriptors, and a single
     "published" YYYY-MM-DD HH:MM:SS
 
         The time at which this directory was generated and signed, in GMT.
+
+    "directory-signing-key" 
+
+        The key used to sign this directory; see "signing-key".
 
     "recommended-software"  comma-separated-version-list
 
@@ -733,7 +772,7 @@ items, a directory includes any number of router descriptors, and a single
         down.  Every entry consists of an optional "!", followed by either an
         OR's nickname, or "$" followed by a hexadecimal encoding of the hash
         of an OR's identity key.  If the "!" is included, the router is
-        believed to be running; otherwise, it is believed not to be running.
+        believed not to be running; otherwise, it is believed to be running.
         If a router's nickname is given, exactly one router of that nickname
         will appear in the directory, and that router is "approved" by the
         directory server.  If a hashed identity key is given, that OR is not
