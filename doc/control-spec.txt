@@ -73,7 +73,7 @@ the message.
                 incorrect, ill-formed, or impossible value.]
 
         0x0006 Unrecognized byte code
-               [The client tried to set an byte code in the body that
+               [The client tried to set a byte code (in the body) that
                 we don't recognize.]
 
         0x0007 Unauthorized.
