@@ -96,32 +96,33 @@ void circuit_free_cpath(crypt_path_t **cpath, int cpathlen) {
   free(cpath);
 }
 
+/* return 0 if can't get a unique aci. */
 aci_t get_unique_aci_by_addr_port(uint32_t addr, uint16_t port, int aci_type) {
   aci_t test_aci;
   connection_t *conn;
 
+try_again:
   log(LOG_DEBUG,"get_unique_aci_by_addr_port() trying to get a unique aci");
 
   crypto_pseudo_rand(2, (unsigned char *)&test_aci);
 
-  if(aci_type == ACI_TYPE_LOWER)
-    test_aci &= htons(0x00FF);
-  if(aci_type == ACI_TYPE_HIGHER)
-    test_aci &= htons(0xFF00);
+  if(aci_type == ACI_TYPE_LOWER && test_aci >= (2<<15))
+    test_aci -= (2<<15);
+  if(aci_type == ACI_TYPE_HIGHER && test_aci < (2<<15))
+    test_aci += (2<<15);
   /* if aci_type == ACI_BOTH, don't filter any of it */
 
   if(test_aci == 0)
-    return get_unique_aci_by_addr_port(addr, port, aci_type); /* try again */ 
+    goto try_again;
 
   conn = connection_exact_get_by_addr_port(addr,port);
   if(!conn) /* there can't be a conflict -- no connection of that sort yet */
     return test_aci;
 
   if(circuit_get_by_aci_conn(test_aci, conn))
-    return get_unique_aci_by_addr_port(addr, port, aci_type); /* try again */
+    goto try_again;
 
   return test_aci;
-  
 }
 
 int circuit_init(circuit_t *circ, int aci_type) {
@@ -150,6 +151,10 @@ int circuit_init(circuit_t *circ, int aci_type) {
   gettimeofday(&start,NULL);
 
   circ->n_aci = get_unique_aci_by_addr_port(circ->n_addr, circ->n_port, aci_type);
+  if(!circ->n_aci) {
+    log(LOG_ERR,"circuit_init(): failed to get unique aci.");
+    return -1;
+  }
 
   gettimeofday(&end,NULL);
 
