@@ -84,6 +84,7 @@ router_pick_directory_server_impl(int requireauth, int requireothers)
   int i;
   routerinfo_t *router;
   smartlist_t *sl;
+  char buf[16];
 
   if(!routerlist)
     return NULL;
@@ -98,9 +99,11 @@ router_pick_directory_server_impl(int requireauth, int requireothers)
       continue;
     if(requireothers && router_is_me(router))
       continue;
-    if(options.FascistFirewall &&
-       router->dir_port != REQUIRED_FIREWALL_DIRPORT)
-      continue;
+    if(options.FascistFirewall) {
+      sprintf(buf,"%d",router->dir_port);
+      if (!smartlist_string_isin(options.FirewallPorts, buf))
+        continue;
+    }
     smartlist_add(sl, router);
   }
 

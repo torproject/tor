@@ -1112,6 +1112,7 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
 {
   routerinfo_t *r, *choice;
   smartlist_t *excluded = smartlist_create();
+  char buf[16];
 
   if((r = router_get_by_digest(state->chosen_exit_digest)))
     smartlist_add(excluded, r);
@@ -1128,8 +1129,9 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
 
     for(i=0; i < smartlist_len(rl->routers); i++) {
       r = smartlist_get(rl->routers, i);
-      if(r->or_port != REQUIRED_FIREWALL_ORPORT)
-        smartlist_add(excluded, r);
+      sprintf(buf, "%d", r->or_port);
+      if(!smartlist_string_isin(options.FirewallPorts, buf))
+         smartlist_add(excluded, r);
     }
   }
   choice = router_choose_random_node(options.EntryNodes,

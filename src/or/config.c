@@ -17,6 +17,8 @@ typedef enum config_type_t {
   CONFIG_TYPE_INT, /**< An integer */
   CONFIG_TYPE_DOUBLE, /**< A floating-point value */
   CONFIG_TYPE_BOOL, /**< A boolean value, expressed as 0 or 1. */
+  CONFIG_TYPE_CSV, /**< A list of strings, separated by commas and optional
+                    * whitespace. */
   CONFIG_TYPE_LINELIST, /**< Uninterpreted config lines */
 } config_type_t;
 
@@ -126,6 +128,39 @@ static void config_free_lines(struct config_line_t *front) {
   }
 }
 
+/**
+ * Given a list of comma-separated entries, each surrounded by optional
+ * whitespace, insert copies the entries (in order) into lst, without
+ * their surrounding whitespace.
+ */
+static void parse_csv_into_smartlist(smartlist_t *lst, const char *val)
+{
+  const char *cp, *start, *end;
+
+  cp = val;
+  while (1) {
+    while (isspace(*cp))
+      ++cp;
+    start = cp;
+    end = strchr(cp, ',');
+    if (!end)
+      end = strchr(cp, '\0');
+    for (cp=end-1; cp>=start && isspace(*cp); --cp)
+      ;
+    /* Now start points to the first nonspace character of an entry,
+     * end points to the terminator of that entry,
+     * and cp points to the last nonspace character of an entry. */
+    tor_assert(start <= cp);
+    tor_assert(cp <= end);
+    tor_assert(*end == '\0' || *end == ',');
+    tor_assert((!isspace(*start) && !isspace(*cp)) || start==cp);
+    smartlist_add(lst, tor_strndup(start, cp-start));
+    if (!*end)
+      break;
+    cp = end+1;
+  }
+}
+
 /** Search the linked list <b>c</b> for any option whose key is <b>key</b>.
  * If such an option is found, interpret it as of type <b>type</b>, and store
  * the result in <b>arg</b>.  If the option is misformatted, log a warning and
@@ -163,6 +198,14 @@ static int config_compare(struct config_line_t *c, const char *key, config_type_
       break;
     case CONFIG_TYPE_DOUBLE:
       *(double *)arg = atof(c->value);
+      break;
+    case CONFIG_TYPE_CSV:
+      if (arg) {
+        SMARTLIST_FOREACH((smartlist_t*)arg, char *, cp, tor_free(cp));
+        smartlist_free((smartlist_t*)arg);
+      }
+      arg = smartlist_create();
+      parse_csv_into_smartlist(arg, c->value);
       break;
     case CONFIG_TYPE_LINELIST:
       /* Note: this reverses the order that the lines appear in.  That's
@@ -210,6 +253,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
     config_compare(list, "ExcludeNodes",   CONFIG_TYPE_STRING, &options->ExcludeNodes) ||
 
     config_compare(list, "FascistFirewall",CONFIG_TYPE_BOOL, &options->FascistFirewall) ||
+    config_compare(list, "FirewallPorts",CONFIG_TYPE_CSV, &options->FirewallPorts) ||
 
     config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
 
@@ -529,6 +573,8 @@ static void free_options(or_options_t *options) {
   config_free_lines(options->DirBindAddress);
   config_free_lines(options->ExitPolicy);
   config_free_lines(options->SocksPolicy);
+  SMARTLIST_FOREACH(options->FirewallPorts, char *, cp, tor_free(cp));
+  smartlist_free(options->FirewallPorts);
 }
 
 /** Set <b>options</b> to hold reasonable defaults for most options. */
@@ -561,6 +607,7 @@ static void init_options(or_options_t *options) {
   options->BandwidthBurst = 10000000; /* max burst on the token bucket */
   options->NumCpus = 1;
   options->RendConfigLines = NULL;
+  options->FirewallPorts = NULL;
 }
 
 /** Read a configuration file into <b>options</b>, finding the configuration
@@ -752,6 +799,21 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   if(options->AuthoritativeDir && options->ClientOnly) {
     log(LOG_WARN,"Running as authoritative directory, but ClientOnly also set.");
     result = -1;
+  }
+
+  if(options->FascistFirewall && !options->FirewallPorts) {
+    options->FirewallPorts = smartlist_create();
+    smartlist_add(options->FirewallPorts, "80");
+    smartlist_add(options->FirewallPorts, "443");
+  }
+  if(options->FirewallPorts) {
+    SMARTLIST_FOREACH(options->FirewallPorts, const char *, cp,
+    { i = atoi(cp); 
+      if (i < 1 || i > 65535) {
+        log(LOG_WARN, "Port %s out of range in FirewallPorts", cp);
+        result=-1;
+      }
+    });
   }
 
   if(options->SocksPort >= 1 &&
