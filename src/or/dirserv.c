@@ -420,13 +420,13 @@ dirserv_add_descriptor(const char **desc, const char **msg)
     }
     /* We don't have a newer one; we'll update this one. */
     log_fn(LOG_INFO,"Dirserv updating desc for nickname '%s'",ri->nickname);
-    *msg = verified?"Verified server updated":"Unverified server updated (Have you sent us your key fingerprint?)";
+    *msg = verified?"Verified server updated":"Unverified server updated. (Have you sent us your key fingerprint?)";
     free_descriptor_entry(ent);
     smartlist_del_keeporder(descriptor_list, found);
   } else {
     /* Add at the end. */
     log_fn(LOG_INFO,"Dirserv adding desc for nickname '%s'",ri->nickname);
-    *msg = verified?"Verified server added":"Unverified server added (Have you sent us your key fingerprint?)";
+    *msg = verified?"Verified server added":"Unverified server added. (Have you sent us your key fingerprint?)";
   }
 
   ent = tor_malloc(sizeof(descriptor_entry_t));
