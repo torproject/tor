@@ -1,3 +1,12 @@
+tor (0.0.1+0.0.2pre22-1) unstable; urgency=low
+
+  * New upstream release.
+  * Upstream has moved tor back to usr/bin, but we will keep it in
+    usr/sbin.  That's the right place and it doesn't break my tab
+    completion there.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 27 Feb 2004 01:59:09 +0100
+
 tor (0.0.1+0.0.2pre21-1) unstable; urgency=low
 
   * New upstream release.
