@@ -68,7 +68,7 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
   cp += 2;
   for (i=0; i < desc->n_intro_points; ++i) {
     ipoint = (char*)desc->intro_points[i];
-    strcpy(cp, ipoint);
+    strlcpy(cp, ipoint, *len_out-(cp-*str_out));
     cp += strlen(ipoint)+1;
   }
   i = crypto_pk_private_sign_digest(key, *str_out, cp-*str_out, cp);

@@ -419,7 +419,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       return 0;
     }
 
-    strcpy(conn->rend_query, socks->address); /* this strcpy is safe -RD */
+    strlcpy(conn->rend_query, socks->address, sizeof(conn->rend_query));
     log_fn(LOG_INFO,"Got a hidden service request for ID '%s'", conn->rend_query);
     /* see if we already have it cached */
     r = rend_cache_lookup_entry(conn->rend_query, &entry);
@@ -594,7 +594,8 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   /* leave version at zero, so the socks_reply is empty */
   conn->socks_request->socks_version = 0;
   conn->socks_request->has_finished = 0; /* waiting for 'connected' */
-  strcpy(conn->socks_request->address, address);
+  strlcpy(conn->socks_request->address, address,
+          sizeof(conn->socks_request->address));
   conn->socks_request->port = port;
   conn->socks_request->command = SOCKS_COMMAND_CONNECT;
 
@@ -775,7 +776,8 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
     log_fn(LOG_DEBUG,"begin is for rendezvous. configuring stream.");
     n_stream->address = tor_strdup("(rendezvous)");
     n_stream->state = EXIT_CONN_STATE_CONNECTING;
-    strcpy(n_stream->rend_query, circ->rend_query);
+    strlcpy(n_stream->rend_query, circ->rend_query,
+            sizeof(n_stream->rend_query));
     tor_assert(connection_edge_is_rendezvous_stream(n_stream));
     assert_circuit_ok(circ);
     if(rend_service_set_connection_addr_port(n_stream, circ) < 0) {

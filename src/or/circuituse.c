@@ -717,7 +717,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     if(circ &&
        (desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL)) {
       /* then write the service_id into circ */
-      strcpy(circ->rend_query, conn->rend_query);
+      strlcpy(circ->rend_query, conn->rend_query, sizeof(circ->rend_query));
     }
   }
   if(!circ)

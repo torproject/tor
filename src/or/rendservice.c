@@ -459,7 +459,8 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   memcpy(launched->rend_pk_digest, circuit->rend_pk_digest,
          DIGEST_LEN);
   memcpy(launched->rend_cookie, r_cookie, REND_COOKIE_LEN);
-  strcpy(launched->rend_query, service->service_id);
+  strlcpy(launched->rend_query, service->service_id,
+          sizeof(launched->rend_query));
   launched->build_state->pending_final_cpath = cpath =
     tor_malloc_zero(sizeof(crypt_path_t));
 
@@ -539,7 +540,8 @@ rend_service_launch_establish_intro(rend_service_t *service, const char *nicknam
            nickname);
     return -1;
   }
-  strcpy(launched->rend_query, service->service_id);
+  strlcpy(launched->rend_query, service->service_id,
+          sizeof(launched->rend_query));
   memcpy(launched->rend_pk_digest, service->pk_digest, DIGEST_LEN);
 
   return 0;

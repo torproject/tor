@@ -476,7 +476,7 @@ list_single_server_status(descriptor_entry_t *desc, int is_live,
     *cp++ = '!';
   }
   if (desc->verified) {
-    strcpy(cp, desc->nickname);
+    strlcpy(cp, desc->nickname, sizeof(buf)-(cp-buf));
     cp += strlen(cp);
     if (!rr_format)
       *cp++ = '=';
