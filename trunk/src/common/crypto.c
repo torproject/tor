@@ -1175,7 +1175,7 @@ static BIGNUM *dh_param_g = NULL;
 
 /** Initialize dh_param_p and dh_param_g if they are not already
  * set. */
-static void init_dh_param() {
+static void init_dh_param(void) {
   BIGNUM *p, *g;
   int r;
   if (dh_param_p && dh_param_g)
@@ -1366,7 +1366,7 @@ void crypto_dh_free(crypto_dh_env_t *dh)
 /** Seed OpenSSL's random number generator with DIGEST_LEN bytes from the
  * operating system.  Return 0 on suuccess, -1 on failure.
  */
-int crypto_seed_rng()
+int crypto_seed_rng(void)
 {
 #ifdef MS_WINDOWS
   static int provider_set = 0;
