@@ -369,7 +369,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   }
 
   /* min key length plus digest length plus nickname length */
-  if (request_len < DIGEST_LEN+REND_COOKIE_LEN+(HEX_DIGEST_LEN+2)+
+  if (request_len < DIGEST_LEN+REND_COOKIE_LEN+(MAX_NICKNAME_LEN+1)+
       DH_KEY_LEN+42){
     log_fn(LOG_WARN, "Got a truncated INTRODUCE2 cell on circ %d",
            circuit->n_circ_id);
