@@ -13,16 +13,11 @@
 void log(int severity, const char *format, ...);
 
 #ifdef __GNUC__
-#ifdef __APPLE_CPP__
+void _log_fn(int severity, const char *funcname, const char *format, ...);
 #define log_fn(severity, args...) \
-  log((severity), __PRETTY_FUNCTION__ "(): " args)
-#else
-#define log_fn(severity, format, args...) \
-  log((severity), "%s(): " format, __PRETTY_FUNCTION__ , ##args)
-#endif
+  _log_fn(severity, __PRETTY_FUNCTION__, args)
 #else
 #define log_fn log
-#define log_fnf log
 #endif
 
 # define __LOG_H

@@ -42,36 +42,50 @@ size_t sev_to_string(char *buf, int max, int severity) {
   return strlen(buf)+1;
 }
 
-/* Outputs a message to stdout */
-void log(int severity, const char *format, ...)
+static void 
+logv(int severity, const char *funcname, const char *format, va_list ap)
 {
   static int loglevel = LOG_DEBUG;
   char buf[201];
   time_t t;
-  va_list ap;
   struct timeval now;
-
+  
   if (format) {
 
-    if(gettimeofday(&now,NULL) < 0)
+    if (severity > loglevel)
+      return;
+    if (gettimeofday(&now,NULL) < 0)
       return;
 
-    va_start(ap,format);
-  
-    if (severity <= loglevel)
-    {
-      t = time(NULL);
-      strftime(buf, 200, "%b %d %H:%M:%S", localtime(&t));
-      printf("%s.%.3ld ", buf, (long)now.tv_usec / 1000);
-      sev_to_string(buf, 200, severity);
-      printf("[%s] ", buf);
-      vprintf(format,ap);
-      printf("\n");
-    }
-    
-    va_end(ap);
-  }
-  else
+    t = time(NULL);
+    strftime(buf, 200, "%b %d %H:%M:%S", localtime(&t));
+    printf("%s.%.3ld ", buf, (long)now.tv_usec / 1000);
+    sev_to_string(buf, 200, severity);
+    printf("[%s] ", buf);
+    if (funcname)
+      printf("%s(): ", funcname);
+    vprintf(format,ap);
+    printf("\n");
+  } else
     loglevel = severity;
+
 }
+
+/* Outputs a message to stdout */
+void log(int severity, const char *format, ...)
+{
+  va_list ap;
+  va_start(ap,format);
+  logv(severity, NULL, format, ap);
+  va_end(ap);
+}
+
+void _log_fn(int severity, const char *fn, const char *format, ...)
+{
+  va_list ap;
+  va_start(ap,format);
+  logv(severity, fn, format, ap);
+  va_end(ap);
+}
+
 
