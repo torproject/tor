@@ -329,12 +329,12 @@ circuit_t *circuit_get_newest(connection_t *conn,
 }
 
 /* Return the first circuit in global_circuitlist after 'start' whose
- * rend_service field is servid and whose purpose is purpose. Returns
+ * rend_pk_digest field is 'digest' and whose purpose is purpose. Returns
  * NULL if no circuit is found.  If 'start' is null, begin at the start of
  * the list.
  */
-circuit_t *circuit_get_next_by_service_and_purpose(circuit_t *start,
-                                        const char *servid, int purpose)
+circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *start,
+                                         const char *digest, int purpose)
 {
   circuit_t *circ;
   if (start == NULL)
@@ -347,7 +347,7 @@ circuit_t *circuit_get_next_by_service_and_purpose(circuit_t *start,
       continue;
     if (circ->purpose != purpose)
       continue;
-    if (!memcmp(circ->rend_service, servid, CRYPTO_SHA1_DIGEST_LEN))
+    if (!memcmp(circ->rend_pk_digest, digest, CRYPTO_SHA1_DIGEST_LEN))
       return circ;
   }
   return NULL;

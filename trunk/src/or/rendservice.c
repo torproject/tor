@@ -340,7 +340,7 @@ rend_service_introduce(circuit_t *circuit, char *request, int request_len)
     log_fn(LOG_WARN, "Got an INTRODUCE2 cell for an unrecognized service");
     return -1;
   }
-  if (!memcmp(circuit->rend_service, request, 20)) {
+  if (!memcmp(circuit->rend_pk_digest, request, 20)) {
     log_fn(LOG_WARN, "Got an INTRODUCE2 cell for the wrong service");
     return -1;
   }
@@ -398,7 +398,8 @@ rend_service_introduce(circuit_t *circuit, char *request, int request_len)
   }
   assert(launched->build_state);
   /* Fill in the circuit's state. */
-  memcpy(launched->rend_service, circuit->rend_service,CRYPTO_SHA1_DIGEST_LEN);
+  memcpy(launched->rend_pk_digest, circuit->rend_pk_digest,
+         CRYPTO_SHA1_DIGEST_LEN);
   memcpy(launched->rend_cookie, r_cookie, REND_COOKIE_LEN);
   launched->build_state->pending_final_cpath = cpath =
     tor_malloc_zero(sizeof(crypt_path_t));
@@ -431,7 +432,7 @@ rend_service_launch_establish_intro(rend_service_t *service, char *nickname)
            nickname);
     return -1;
   }
-  memcpy(launched->rend_service, service->pk_digest, CRYPTO_SHA1_DIGEST_LEN);
+  memcpy(launched->rend_pk_digest, service->pk_digest, CRYPTO_SHA1_DIGEST_LEN);
 
   return 0;
 }
@@ -449,7 +450,7 @@ rend_service_intro_is_ready(circuit_t *circuit)
 
   assert(circuit->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
   assert(circuit->cpath);
-  service = rend_service_get_by_pk_digest(circuit->rend_service);
+  service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);
   if (!service) {
     log_fn(LOG_WARN, "Internal error: unrecognized service ID on introduction circuit");
     goto err;
@@ -499,7 +500,7 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
   hop = circuit->build_state->pending_final_cpath;
   assert(hop);
 
-  service = rend_service_get_by_pk_digest(circuit->rend_service);
+  service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);
   if (!service) {
     log_fn(LOG_WARN, "Internal error: unrecognized service ID on introduction circuit");
     goto err;
@@ -567,7 +568,7 @@ int rend_services_init(void) {
         goto remove_point;
       circ = NULL;
       found = 1;
-      while ((circ = circuit_get_next_by_service_and_purpose(
+      while ((circ = circuit_get_next_by_pk_and_purpose(
                                                 circ,service->pk_digest,
                                                 CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
         assert(circ->cpath);
