@@ -5,14 +5,24 @@
 #ifndef __OR_H
 #define __OR_H
 
+#include "orconfig.h"
+#undef VERSION
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
 #include <netdb.h>
 #include <ctype.h>
+#ifdef HAVE_SYS_POLL_H
 #include <sys/poll.h>
+#elif HAVE_POLL_H
+#include <poll.h>
+#else
+#include "../common/fakepoll.h"
+#endif
 #include <sys/types.h>
 #include <sys/fcntl.h>
 #include <sys/ioctl.h>

@@ -508,7 +508,7 @@ int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
     return 0;
 }
 
-int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, size_t fromlen, unsigned char *to)
+int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to)
 {
   int tolen;
   
@@ -517,7 +517,7 @@ int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, size_t 
   return !(EVP_EncryptUpdate((EVP_CIPHER_CTX *)env->aux, to, &tolen, from, fromlen));
 }
 
-int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, size_t fromlen, unsigned char *to)
+int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to)
 {
   int tolen;
   

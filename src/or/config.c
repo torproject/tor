@@ -10,7 +10,19 @@
  */
 
 #include "or.h"
-#include <libgen.h>
+#include <string.h>
+
+const char * 
+basename(const char *filename)
+{
+  char *result;
+  /* XXX This won't work on windows. */
+  result = strrchr(filename, '/');
+  if (result)
+    return result;
+  else
+    return filename;
+}
 
 /* loads the configuration file */
 int getconfig(char *conf_filename, config_opt_t *options)

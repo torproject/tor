@@ -8,8 +8,11 @@
 /*
  * Changes :
  * $Log$
- * Revision 1.1  2002/06/26 22:45:50  arma
- * Initial revision
+ * Revision 1.2  2002/09/03 18:44:23  nickm
+ * Port to MacOS X
+ *
+ * Revision 1.1.1.1  2002/06/26 22:45:50  arma
+ * initial commit: current code
  *
  * Revision 1.6  2002/03/03 00:06:45  mp292
  * Modifications to support re-transmission.
@@ -38,6 +41,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "utils.h"
 #include "log.h"
