@@ -198,13 +198,19 @@ TODO: (very soon)
          DH data (g^y)                 [128 bytes]
          Derivative key data (KH)      [20 bytes]   <see 4.2 below>
 
-   The CircID for a CREATE cell is an arbitrarily chosen 2-byte
-   integer, selected by the node (OP or OR) that sends the CREATE
-   cell.  To prevent CircID collisions, when one OR sends a CREATE
-   cell to another, it chooses from only one half of the possible
-   values based on the ORs' nicknames: if the sending OR has a
-   lexicographically earlier nickname, it chooses a CircID with a high
-   bit of 0; otherwise, it chooses a CircID with a high bit of 1.
+   The CircID for a CREATE cell is an arbitrarily chosen 2-byte integer,
+   selected by the node (OP or OR) that sends the CREATE cell.  To prevent
+   CircID collisions, when one OR sends a CREATE cell to another, it chooses
+   from only one half of the possible values based on the ORs' public
+   identity keys: if the sending OR has a lower key, it chooses a CircID with
+   an MSB of 0; otherwise, it chooses a CircID with an MSB of 1.
+
+   Public keys are compared numerically by modulus.
+
+   (Older versions of Tor compared OR nicknames, and did it in a broken and
+   unreliable way.  To support versions of Tor earlier than 0.0.9pre6,
+   implementations should notice when the other side of a connection is
+   sending CREATE cells with the "wrong" MSG, and switch accordingly.)
 
 4.2. Setting circuit keys
 

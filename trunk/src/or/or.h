@@ -150,8 +150,10 @@
  * In seconds. */
 #define ROUTER_MAX_AGE (60*60*24)
 
-#define CIRC_ID_TYPE_LOWER 0
-#define CIRC_ID_TYPE_HIGHER 1
+typedef enum {
+  CIRC_ID_TYPE_LOWER=0,
+  CIRC_ID_TYPE_HIGHER=1
+} circ_id_type_t;
 
 #define _CONN_TYPE_MIN 3
 /** Type for sockets listening for OR connections. */
@@ -534,6 +536,9 @@ struct connection_t {
                         * add 'bandwidth' to this, capping it at 10*bandwidth.
                         * (OPEN ORs only)
                         */
+  circ_id_type_t circ_id_type; /**< When we send CREATE cells along this
+                                * connection, which half of the space should
+                                * we use? */
 
 /* Used only by DIR and AP connections: */
   char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we

@@ -139,6 +139,22 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
     return;
   }
 
+  /* If the high bit of the circuit ID is not as expected, then switch
+   * which half of the space we'll use for our own CREATE cells.
+   *
+   * This can happen because Tor 0.0.9pre5 and earlier decide which
+   * half to use based on nickname, and we now use identity keys.
+   */
+  if ((cell->circ_id & (1<<15)) && conn->circ_id_type == CIRC_ID_TYPE_HIGHER) {
+    log_fn(LOG_INFO, "Got a high circuit ID from %s (%d); switching to low circuit IDs.",
+           conn->nickname, conn->s);
+    conn->circ_id_type = CIRC_ID_TYPE_LOWER;
+  } else if (!(cell->circ_id & (1<<15)) && conn->circ_id_type == CIRC_ID_TYPE_LOWER) {
+    log_fn(LOG_INFO, "Got a low circuit ID from %s (%d); switching to high circuit IDs.",
+           conn->nickname, conn->s);
+    conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
+  }
+
   circ = circuit_new(cell->circ_id, conn);
   circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
   circ->purpose = CIRCUIT_PURPOSE_OR;

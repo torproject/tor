@@ -35,14 +35,14 @@ static int count_acceptable_routers(smartlist_t *routers);
  *
  * Return it, or 0 if can't get a unique circ_id.
  */
-static uint16_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type) {
+static uint16_t get_unique_circ_id_by_conn(connection_t *conn) {
   uint16_t test_circ_id;
   int attempts=0;
   uint16_t high_bit;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_OR);
-  high_bit = (circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
+  high_bit = (conn->circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
   do {
     /* Sequentially iterate over test_circ_id=1...1<<15-1 until we find a
      * circID such that (high_bit|test_circ_id) is not already used. */
@@ -359,9 +359,7 @@ circuit_deliver_create_cell(circuit_t *circ, char *payload) {
    * Solution: switch to identity-based comparison, but if we get
    * any circuits in the wrong half of the space, switch.
    */
-  circ_id_type = decide_circ_id_type(get_options()->Nickname,
-                                     circ->n_conn->nickname);
-  circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn, circ_id_type);
+  circ->n_circ_id = get_unique_circ_id_by_conn(circ->n_conn);
   if(!circ->n_circ_id) {
     log_fn(LOG_WARN,"failed to get unique circID.");
     return -1;
@@ -695,27 +693,6 @@ int circuit_truncated(circuit_t *circ, crypt_path_t *layer) {
   log_fn(LOG_INFO, "finished");
   return 0;
 #endif
-}
-
-/** Decide whether the first bit of the circuit ID will be
- * 0 or 1, to avoid conflicts where each side randomly chooses
- * the same circuit ID.
- *
- * Return CIRC_ID_TYPE_LOWER if local_nick is NULL, or if
- * local_nick is lexographically smaller than remote_nick.
- * Else return CIRC_ID_TYPE_HIGHER.
- */
-static int decide_circ_id_type(char *local_nick, char *remote_nick) {
-  int result;
-
-  tor_assert(remote_nick);
-  if(!local_nick)
-    return CIRC_ID_TYPE_LOWER;
-  result = strcasecmp(local_nick, remote_nick);
-  tor_assert(result);
-  if(result < 0)
-    return CIRC_ID_TYPE_LOWER;
-  return CIRC_ID_TYPE_HIGHER;
 }
 
 /** Given a response payload and keys, initialize, then send a created
