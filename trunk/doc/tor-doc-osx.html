@@ -71,16 +71,14 @@ configuration for Tor has been installed as part of the installer package.
 <p>After installing Tor, you need to configure your applications to use
 it. The first step is to set up web browsing.
 Change your browser to HTTP proxy at localhost port 8118.
-(That's where Privoxy listens.) For Safari you need to change your
-Network Settings. Other web browers allow you to change proxy settings
-individually.</p>
+(That's where Privoxy listens.)
+In Mozilla, this is in Mozilla|Preferences|Advanced|Proxies.
+In Firefox it's Firefox|Preferences|General|ConnectionSettings.
+You should set both your Web Proxy (HTTP) and your Secure Web Proxy
+(HTTPS or SSL) to localhost port 8118, to hide your SSL traffic too.
 
-<p>In Mozilla, this is in Mozilla|Preferences|Advanced|Proxies.
-In Firefox it's Firefox|Preferences|General|ConnectionSettings</p>
-
-<P>You should set both your Web Proxy (HTTP) and your Secure Web Proxy
-(HTTPS) to the same thing, to hide your SSL traffic. For Safari, this
-looks something like:</p>
+<p>If you want to use Tor with Safari, you need to change your
+Network Settings. The process looks something like:</p>
 
 <img alt="LAN settings in IE"
 src="http://tor.eff.org/img/screenshot-osx-choose-network.png"
@@ -118,9 +116,11 @@ what IP it says you're coming from. (If it's down, you can try the
 site instead.)</p>
 
 <p>
-If you have a personal firewall, be sure to allow local connections to
-port 8118 and port 9050. If your firewall blocks outgoing connections,
-punch a hole so it can connect to TCP ports 80, 443, and 9001-9033.
+If you have a personal firewall that limits your computer's ability
+to connect to itself, be sure to allow connections from your local
+applications to
+local port 8118 and port 9050. If your firewall blocks outgoing connections,
+punch a hole so it can connect to at least TCP ports 80, 443, and 9001-9033.
 For more troubleshooting suggestions, see <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>.
 </p>

@@ -91,7 +91,7 @@ src="http://tor.eff.org/img/screenshot-win32-privoxy-edit.jpg" />
 In Mozilla, this is in Edit|Preferences|Advanced|Proxies. In IE, it's
 Tools|Internet Options|Connections|LAN Settings|Advanced.
 You should also set your SSL proxy (IE calls it "Secure") to the same
-thing, to hide your SSL traffic. In IE, this looks something like:</p>
+thing, to hide your SSL traffic too. In IE, this looks something like:</p>
 
 <img alt="LAN settings in IE"
 src="http://tor.eff.org/img/screenshot-win32-ie-lan.jpg" />
@@ -111,9 +111,11 @@ what IP it says you're coming from. (If it's down, you can try the
 site instead.)</p>
 
 <p>
-If you have a personal firewall, be sure to allow local connections to
-port 8118 and port 9050. If your firewall blocks outgoing connections,
-punch a hole so it can connect to TCP ports 80, 443, and 9001-9033.
+If you have a personal firewall that limits your computer's ability
+to connect to itself, be sure to allow connections from your local
+applications to
+local port 8118 and port 9050. If your firewall blocks outgoing connections,
+punch a hole so it can connect to at least TCP ports 80, 443, and 9001-9033.
 For more troubleshooting suggestions, see <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>.
 </p>
