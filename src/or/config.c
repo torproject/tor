@@ -128,39 +128,6 @@ static void config_free_lines(struct config_line_t *front) {
   }
 }
 
-/**
- * Given a list of comma-separated entries, each surrounded by optional
- * whitespace, insert copies of the entries (in order) into lst, without
- * their surrounding whitespace.
- */
-static void parse_csv_into_smartlist(smartlist_t *lst, const char *val)
-{
-  const char *cp, *start, *end;
-
-  cp = val;
-  while (1) {
-    while (isspace(*cp))
-      ++cp;
-    start = cp;
-    end = strchr(cp, ',');
-    if (!end)
-      end = strchr(cp, '\0');
-    for (cp=end-1; cp>=start && isspace(*cp); --cp)
-      ;
-    /* Now start points to the first nonspace character of an entry,
-     * end points to the terminator of that entry,
-     * and cp points to the last nonspace character of an entry. */
-    tor_assert(start <= cp);
-    tor_assert(cp <= end);
-    tor_assert(*end == '\0' || *end == ',');
-    tor_assert((!isspace(*start) && !isspace(*cp)) || start==cp);
-    smartlist_add(lst, tor_strndup(start, cp-start+1));
-    if (!*end)
-      break;
-    cp = end+1;
-  }
-}
-
 /** Search the linked list <b>c</b> for any option whose key is <b>key</b>.
  * If such an option is found, interpret it as of type <b>type</b>, and store
  * the result in <b>arg</b>.  If the option is misformatted, log a warning and
@@ -202,7 +169,7 @@ static int config_compare(struct config_line_t *c, const char *key, config_type_
     case CONFIG_TYPE_CSV:
       if(*(smartlist_t**)arg == NULL)
         *(smartlist_t**)arg = smartlist_create();
-      parse_csv_into_smartlist(*(smartlist_t**)arg, c->value);
+      smartlist_split_string(*(smartlist_t**)arg, c->value, ",", 1);
       break;
     case CONFIG_TYPE_LINELIST:
       /* Note: this reverses the order that the lines appear in.  That's

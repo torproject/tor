@@ -158,6 +158,9 @@ void *smartlist_del(smartlist_t *sl, int idx);
 void *smartlist_del_keeporder(smartlist_t *sl, int idx);
 void smartlist_insert(smartlist_t *sl, int idx, void *val);
 int smartlist_len(const smartlist_t *sl);
+int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
+  int skipSpace);
+
 #define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
   do {                                                          \
     int sl_idx, sl_len=smartlist_len(sl);                       \

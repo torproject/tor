@@ -481,6 +481,46 @@ void smartlist_insert(smartlist_t *sl, int idx, void *val)
   }
 }
 
+/**
+ * Split a string <b>str</b> along all occurences of <b>sep</b>, adding the
+ * split strings, in order, to <b>sl</b>.  If <b>skipSpace</b> is true,
+ * remove initial and trailing space from each entry.
+ */
+int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
+                           int skipSpace)
+{
+  const char *cp, *end, *next;
+  int n = 0;
+
+  tor_assert(sl && str && sep);
+
+  cp = str;
+  while (1) {
+    if (skipSpace) {
+      while (isspace(*cp)) ++cp;
+    }
+    end = strstr(cp,sep);
+    if (!end) {
+      end = strchr(cp,'\0');
+      next = NULL;
+    } else {
+      next = end+strlen(sep);
+    }
+
+    if (skipSpace) {
+      while (end > cp && isspace(*(end-1)))
+        --end;
+    }
+    smartlist_add(sl, tor_strndup(cp, end-cp));
+    ++n;
+    if (!next)
+      break;
+    cp = next;
+  }
+
+  return n;
+}
+
 /* Splay-tree implementation of string-to-void* map
  */
 struct strmap_entry_t {
