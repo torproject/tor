@@ -635,11 +635,10 @@ int connection_dir_handle_listener_read(connection_t *conn);
 
 /********************************* dns.c ***************************/
 
+void dns_init(void);
 int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
-void dns_init(void);
 int dns_resolve(connection_t *exitconn);
-int dns_master_start(void);
 
 /********************************* main.c ***************************/
 
@@ -656,6 +655,7 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 
 connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_state(int type, int state);
+connection_t *connection_get_by_type_state_lastwritten(int type, int state);
 
 void connection_watch_events(connection_t *conn, short events);
 void connection_stop_reading(connection_t *conn);

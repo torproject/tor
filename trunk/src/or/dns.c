@@ -20,7 +20,8 @@ int num_workers=0;
 int num_workers_busy=0;
 
 static int dns_assign_to_worker(connection_t *exitconn);
-static int dns_found_answer(char *question, uint32_t answer);
+static void dns_cancel_pending_resolve(char *question);
+static void dns_found_answer(char *question, uint32_t answer);
 static void dnsworker_main(int fd);
 static int dns_spawn_worker(void);
 static void spawn_enough_workers(void);
@@ -62,6 +63,9 @@ void dns_init(void) {
   spawn_enough_workers();
 }
 
+static struct cached_resolve *oldest_cached_resolve = NULL; /* linked list, */
+static struct cached_resolve *newest_cached_resolve = NULL; /* oldest to newest */
+
 /* See if the question 'exitconn->address' has been answered. if so,
  * if resolve valid, put it into exitconn->addr and exec to
  * connection_exit_connect. If resolve failed, return -1.
@@ -76,10 +80,24 @@ int dns_resolve(connection_t *exitconn) {
   struct cached_resolve *resolve;
   struct cached_resolve search;
   struct pending_connection_t *pending_connection;
+  uint32_t now = time(NULL);
 
+  /* first take this opportunity to see if there are any expired
+   * resolves in the tree. this is fast because the linked list
+   * oldest_cached_resolve is ordered by when they came in.
+   */
+  while(oldest_cached_resolve && (oldest_cached_resolve->expire < now)) {
+    resolve = oldest_cached_resolve;
+    log(LOG_DEBUG,"Forgetting old cached resolve (expires %d)", resolve->expire);
+    oldest_cached_resolve = resolve->next;
+    if(!oldest_cached_resolve) /* if there are no more, */
+      newest_cached_resolve = NULL; /* then make sure the list's tail knows that too */
+    SPLAY_REMOVE(cache_tree, &cache_root, resolve);
+    free(resolve);
+  }
+
+  /* now check the tree to see if 'question' is already there. */
   strncpy(search.question, exitconn->address, MAX_ADDRESSLEN);
-
-  /* check the tree to see if 'question' is already there. */
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(resolve) { /* already there */
     switch(resolve->state) {
@@ -100,6 +118,8 @@ int dns_resolve(connection_t *exitconn) {
     resolve = tor_malloc(sizeof(struct cached_resolve));
     memset(resolve, 0, sizeof(struct cached_resolve));
     resolve->state = CACHE_STATE_PENDING;
+    resolve->expire = now + 100; /* XXX for testing. when we're confident, switch it back */
+//    resolve->expire = now + 86400; /* now + 1 day */
     strncpy(resolve->question, exitconn->address, MAX_ADDRESSLEN);
 
     /* add us to the pending list */
@@ -107,6 +127,14 @@ int dns_resolve(connection_t *exitconn) {
     pending_connection->conn = exitconn;
     pending_connection->next = resolve->pending_connections;
     resolve->pending_connections = pending_connection;
+
+    /* add us to the linked list of resolves */
+    if (!oldest_cached_resolve) {
+      oldest_cached_resolve = resolve;
+    } else {
+      newest_cached_resolve->next = resolve;
+    }
+    newest_cached_resolve = resolve;
 
     SPLAY_INSERT(cache_tree, &cache_root, resolve);
     return dns_assign_to_worker(exitconn);
@@ -126,6 +154,7 @@ static int dns_assign_to_worker(connection_t *exitconn) {
 
   if(!dnsconn) {
     log(LOG_INFO,"dns_assign_to_worker(): no idle dns workers. Failing.");
+    dns_cancel_pending_resolve(exitconn->address);
     return -1;
   }
 
@@ -139,6 +168,7 @@ static int dns_assign_to_worker(connection_t *exitconn) {
      connection_write_to_buf(dnsconn->address, len, dnsconn) < 0) {
     log(LOG_NOTICE,"dns_assign_to_worker(): Write failed. Closing worker and failing resolve.");
     dnsconn->marked_for_close = 1;
+    dns_cancel_pending_resolve(exitconn->address);
     return -1;
   }
 
@@ -146,7 +176,51 @@ static int dns_assign_to_worker(connection_t *exitconn) {
   return 0;
 }
 
-static int dns_found_answer(char *question, uint32_t answer) {
+static void dns_cancel_pending_resolve(char *question) {
+  struct pending_connection_t *pend;
+  struct cached_resolve search;
+  struct cached_resolve *resolve, *tmp;
+
+  strncpy(search.question, question, MAX_ADDRESSLEN);
+
+  resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
+  if(!resolve) {
+    log_fn(LOG_ERR,"Answer to unasked question '%s'? Dropping.", question);
+    return;
+  }
+
+  assert(resolve->state == CACHE_STATE_PENDING);
+
+  /* mark all pending connections to fail */
+  while(resolve->pending_connections) {
+    pend = resolve->pending_connections;
+    pend->conn->marked_for_close = 1;
+    resolve->pending_connections = pend->next;
+    free(pend);
+  }
+
+  /* remove resolve from the linked list */
+  if(resolve == oldest_cached_resolve) {
+    oldest_cached_resolve = resolve->next;
+    if(oldest_cached_resolve == NULL)
+      newest_cached_resolve = NULL;
+  } else {
+    /* FFFF make it a doubly linked list if this becomes too slow */
+    for(tmp=oldest_cached_resolve; tmp && tmp->next != resolve; tmp=tmp->next) ;
+    assert(tmp); /* it's got to be in the list, or we screwed up somewhere else */
+    tmp->next = resolve->next; /* unlink it */
+
+    if(newest_cached_resolve == resolve)
+      newest_cached_resolve = tmp;
+  }
+
+  /* remove resolve from the tree */
+  SPLAY_REMOVE(cache_tree, &cache_root, resolve);
+
+  free(resolve);
+}
+
+static void dns_found_answer(char *question, uint32_t answer) {
   struct pending_connection_t *pend;
   struct cached_resolve search;
   struct cached_resolve *resolve;
@@ -155,8 +229,8 @@ static int dns_found_answer(char *question, uint32_t answer) {
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if(!resolve) {
-    log(LOG_ERR,"dns_found_answer(): Answer to unasked question '%s'? Dropping.", question);
-    return 0;
+    log_fn(LOG_ERR,"Answer to unasked question '%s'? Dropping.", question);
+    return;
   }
 
   assert(resolve->state == CACHE_STATE_PENDING);
@@ -166,7 +240,7 @@ static int dns_found_answer(char *question, uint32_t answer) {
    */
   if(resolve->state != CACHE_STATE_PENDING) {
     log(LOG_ERR,"dns_found_answer(): BUG: resolve '%s' in state %d (not pending). Dropping.",question, resolve->state);
-    return 0;
+    return;
   }
 
   resolve->answer = ntohl(answer);
@@ -184,7 +258,6 @@ static int dns_found_answer(char *question, uint32_t answer) {
     resolve->pending_connections = pend->next;
     free(pend);
   }
-  return 0;
 }
 
 /******************************************************************/
@@ -202,7 +275,8 @@ int connection_dns_process_inbuf(connection_t *conn) {
 
   if(conn->inbuf_reached_eof) {
     log(LOG_ERR,"connection_dnsworker_process_inbuf(): Read eof. Worker dying.");
-    /* XXX if the dns request is pending, go through and either repeat or mark it failed */
+    if(conn->state == DNSWORKER_STATE_BUSY)
+      dns_cancel_pending_resolve(conn->address);
     return -1;
   }
 
@@ -320,16 +394,20 @@ static void spawn_enough_workers(void) {
     /* We always want at least one worker idle.
      * So find the oldest busy worker and kill it.
      */
+    dnsconn = connection_get_by_type_state_lastwritten(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_BUSY);
+    assert(dnsconn);
 
+    /* tell the exit connection that it's failed */
+    dns_cancel_pending_resolve(dnsconn->address);
+
+    dnsconn->marked_for_close = 1;
+    num_workers_busy--;
   }
 
   if(num_workers_busy >= MIN_DNSWORKERS)
     num_workers_needed = num_workers_busy+1;
   else
     num_workers_needed = MIN_DNSWORKERS;
-
-  if(num_workers_needed >= MAX_DNSWORKERS)
-    num_workers_needed = MAX_DNSWORKERS;
 
   while(num_workers < num_workers_needed) {
     if(dns_spawn_worker() < 0) {
