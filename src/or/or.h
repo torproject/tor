@@ -461,6 +461,8 @@ typedef struct {
 
   int is_running;
 
+  char *platform;
+
   /* link info */
   uint32_t bandwidthrate;
   uint32_t bandwidthburst;
@@ -996,6 +998,8 @@ routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk);
 routerinfo_t *router_get_by_nickname(char *nickname);
 void router_get_routerlist(routerlist_t **prouterlist);
 void routerinfo_free(routerinfo_t *router);
+int router_version_supports_rendezvous(routerinfo_t *router);
+void router_add_nonrendezvous_to_list(smartlist_t *sl);
 void router_mark_as_down(char *nickname);
 int router_set_routerlist_from_file(char *routerfile);
 int router_set_routerlist_from_string(const char *s);

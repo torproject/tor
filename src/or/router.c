@@ -6,6 +6,8 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
+static void get_platform_str(char *platform, int len);
+
 /************************************************************/
 
 /* private keys */
@@ -353,6 +355,7 @@ const char *router_get_my_descriptor(void) {
 int router_rebuild_descriptor(void) {
   routerinfo_t *ri;
   struct in_addr addr;
+  char platform[256];
   if (!tor_inet_aton(options.Address, &addr)) {
     log_fn(LOG_ERR, "options.Address didn't hold an IP.");
     return -1;
@@ -369,6 +372,8 @@ int router_rebuild_descriptor(void) {
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key());
   ri->link_pkey = crypto_pk_dup_key(get_link_key());
   ri->identity_pkey = crypto_pk_dup_key(get_identity_key());
+  get_platform_str(platform, sizeof(platform));
+  ri->platform = tor_strdup(platform);
   ri->bandwidthrate = options.BandwidthRate;
   ri->bandwidthburst = options.BandwidthBurst;
   ri->exit_policy = NULL; /* zero it out first */
@@ -401,7 +406,6 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   char *link_pkey;
   char *identity_pkey;
   struct in_addr in;
-  char platform[256];
   char digest[20];
   char signature[128];
   char published[32];
@@ -414,8 +418,6 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   const char *cp;
   routerinfo_t *ri_tmp;
 #endif
-
-  get_platform_str(platform, sizeof(platform));
 
   if (crypto_pk_cmp_keys(ident_key, router->identity_pkey)) {
     log_fn(LOG_WARN,"Tried to sign a router with a private key that didn't match router's public key!");
@@ -455,7 +457,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     router->dir_port,
     (int) router->bandwidthrate,
 /* XXXBC also write bandwidthburst */
-    platform,
+    router->platform,
     published,
     onion_pkey, link_pkey, identity_pkey);
 

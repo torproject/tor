@@ -236,6 +236,24 @@ void router_add_running_routers_to_smartlist(smartlist_t *sl) {
   }
 }
 
+/* Return 0 if router is running a version of Tor too old to be a
+ * rendezvous/introduction point.  Return 1 otherwise.
+ */
+int router_version_supports_rendezvous(routerinfo_t *router)
+{
+  return (router->platform && 0==strncasecmp(router->platform,"Tor 0.0.5",9));
+}
+
+/* Add every router running a version of Tor too old for rend/intro
+   points to sl.
+ */
+void router_add_nonrendezvous_to_list(smartlist_t *sl)
+{
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
+                    if (!router_version_supports_rendezvous(r))
+                      smartlist_add(sl,r));
+}
+
 /* Pick a random node from preferred if possible, else from all of dir.
  * Never pick a node in excluded.
  * If excludedsmartlist is defined, never pick a node in it either.
@@ -333,6 +351,7 @@ void routerinfo_free(routerinfo_t *router)
 
   tor_free(router->address);
   tor_free(router->nickname);
+  tor_free(router->platform);
   if (router->onion_pkey)
     crypto_free_pk_env(router->onion_pkey);
   if (router->link_pkey)
@@ -988,6 +1007,10 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   router->identity_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
 
+  if ((tok = find_first_by_keyword(tokens, K_PLATFORM))) {
+    router->platform = tor_strdup(tok->args[0]);
+  }
+
   exit_policy_tokens = find_all_exitpolicy(tokens);
   SMARTLIST_FOREACH(exit_policy_tokens, directory_token_t *, t,
                     if (router_add_exit_policy(router,t)<0) {
@@ -1022,6 +1045,9 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   if (!router->bandwidthrate) {
     log_fn(LOG_WARN,"bandwidthrate unreadable or 0. Failing.");
     goto err;
+  }
+  if (!router->platform) {
+    router->platform = tor_strdup("<unknown>");
   }
 
 #if XXXBC

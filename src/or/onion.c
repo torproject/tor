@@ -337,7 +337,16 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
 {
   if(purpose == CIRCUIT_PURPOSE_C_GENERAL)
     return choose_good_exit_server_general(dir);
-  else
+  else if (purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
+           purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
+    smartlist_t *obsolete_routers;
+    routerinfo_t *r;
+    obsolete_routers = smartlist_create();
+    router_add_nonrendezvous_to_list(obsolete_routers);
+    r = router_choose_random_node(dir, options.RendNodes, options.RendExcludeNodes, NULL);
+    smartlist_free(obsolete_routers);
+    return r;
+  } else
     return router_choose_random_node(dir, options.RendNodes, options.RendExcludeNodes, NULL);
 }
 
