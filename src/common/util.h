@@ -24,7 +24,15 @@
  * calling assert() normally.
  */
 #ifdef NDEBUG
-#define tor_assert(expr) do {} while (0)
+/* Nobody should ever want to build with NDEBUG set.  99% of your asserts will
+ * be outside the critical path anyway, so it's silly to disable bugchecking
+ * throughout the entire program just because a few asserts are slowing you
+ * down.  Profile, optimize the critical path, and keep debugging on.
+ *
+ * And I'm not just saying that because some of our asserts check
+ * security-critical properties.
+ */
+#error "Sorry; we don't support building with NDEBUG."
 #else
 #define tor_assert(expr) do {                                 \
  if (!(expr)) {                                               \
