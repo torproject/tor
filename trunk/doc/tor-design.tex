@@ -1379,39 +1379,16 @@ we make the
 simplifying assumption that all participants agree on the set of
 directory servers. Second, while Mixminion needs to predict node
 behavior, Tor only needs a threshold consensus of the current
-state of the network.
-
-% XXXX Do we really want this next part?  It isn't really sound, and
-% XXXX we haven't implemented it. -NM
-Tor directory servers build a consensus directory through a simple
-four-round broadcast protocol.  In round one, each server dates and
-signs its current opinion, and broadcasts it to the other directory
-servers; then in round two, each server rebroadcasts all the signed
-opinions it has received.  At this point all directory servers check
-to see whether any server has signed multiple opinions in the same
-period. Such a server is either broken or cheating, so the protocol
-stops and notifies the administrators, who either remove the cheater
-or wait for the broken server to be fixed.  If there are no
-discrepancies, each directory server then locally computes an algorithm
-(described below)
-on the set of opinions, resulting in a uniform shared directory. In
-round three servers sign this directory and broadcast it; and finally
-in round four the servers rebroadcast the directory and all the
-signatures.  If any directory server drops out of the network, its
-signature is not included on the final directory.
-
-The rebroadcast steps ensure that a directory server is heard by
-either all of the other servers or none of them, even when some links
-are down (assuming that any two directory servers can talk directly or
-via a third). Broadcasts are feasible because there are relatively few
-directory servers (currently 3, but we expect as many as 9 as the network
-scales). Computing the shared directory locally is a straightforward
-threshold voting process: we include an OR if a majority of directory
-servers believe it to be good.
+state of the network. Third, we assume that we can fall back to the
+human administrators to discover and resolve problems when a concensus
+directory cannot be reached. Since there are relatively few directory
+servers (currently 3, but we expect as many as 9 as the network scales),
+we can afford operations like broadcast to simplify the consensus-building
+protocol.
 
 To avoid attacks where a router connects to all the directory servers
 but refuses to relay traffic from other routers, the directory servers
-must build circuits and use them to anonymously test router
+must also build circuits and use them to anonymously test router
 reliability~\cite{mix-acc}. Unfortunately, this defense is not yet
 designed or
 implemented.
