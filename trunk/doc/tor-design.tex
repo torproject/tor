@@ -514,7 +514,7 @@ each of these attacks.
 The Tor network is an overlay network; each onion router (OR)
 runs as a normal
 user-level process without any special privileges.
-Each onion router maintains a long-term TLS \cite{TLS}
+Each onion router maintains a TLS \cite{TLS}
 connection to every other onion router.
 %(We discuss alternatives to this clique-topology assumption in
 %Section~\ref{sec:maintaining-anonymity}.)
@@ -530,16 +530,16 @@ router on the other side
 of the circuit connects to the destinations of
 the TCP streams and relays data.
 
-Each onion router uses three public keys: a long-term identity key, a
-short-term onion key, and a short-term link key.  The identity
+Each onion router maintains a long-term identity key and a short-term
+onion key. The identity
 key is used to sign TLS certificates, to sign the OR's \emph{router
 descriptor} (a summary of its keys, address, bandwidth, exit policy,
 and so on), and (by directory servers) to sign directories. Changing
 the identity key of a router is considered equivalent to creating a
 new router. The onion key is used to decrypt requests
-from users to set up a circuit and negotiate ephemeral keys. Finally,
-link keys are used by the TLS protocol when communicating between
-onion routers. Each short-term key is rotated periodically and
+from users to set up a circuit and negotiate ephemeral keys. Additionally,
+the TLS protocol also establishes a short-term link key when communicating
+between onion routers. Each short-term key is rotated periodically and
 independently, to limit the impact of key compromise.
 
 Section~\ref{subsec:cells} presents the fixed-size
@@ -578,7 +578,7 @@ padding); \emph{create} or \emph{created} (used to set up a new circuit);
 and \emph{destroy} (to tear down a circuit).
 
 Relay cells have an additional header (the relay header) after the
-cell header, containing a stream identifier (many streams can
+cell header, containing a streamID (stream identifier: many streams can
 be multiplexed over a circuit); an end-to-end checksum for integrity
 checking; the length of the relay payload; and a relay command.
 The entire contents of the relay header and the relay cell payload
@@ -769,15 +769,17 @@ now accepts data from the application's TCP stream, packaging it into
 the chosen OR.
 
 There's a catch to using SOCKS, however---some applications pass the
-alphanumeric hostname to the proxy, while others resolve it into an IP
-address first and then pass the IP address to the proxy.  If the
-application does DNS resolution first, Alice will thereby
-reveal her destination to the DNS server.  Common applications
+alphanumeric hostname to the Tor client, while others resolve it into
+an IP address first and then pass the IP address to the Tor client. If
+the application does DNS resolution first, Alice will thereby reveal her
+destination to the remote DNS server, rather than sending the hostname
+through the Tor network to be resolved at the far end. Common applications
 like Mozilla and SSH have this flaw.
 
 In the case of Mozilla, the flaw is easy to address: the filtering HTTP
-proxy called Privoxy does the SOCKS call safely, and Mozilla talks to
-Privoxy safely. But a portable general solution, such as is needed for
+proxy called Privoxy gives a hostname to the Tor client, so Alice's
+computer never does DNS resolution.
+But a portable general solution, such as is needed for
 SSH, is
 an open problem. Modifying or replacing the local nameserver
 can be invasive, brittle, and not portable. Forcing the resolver
@@ -807,18 +809,16 @@ Because the old Onion Routing design used a stream cipher, traffic was
 vulnerable to a malleability attack: though the attacker could not
 decrypt cells, any changes to encrypted data
 would create corresponding changes to the data leaving the network.
-(Even an external adversary could do this, despite link encryption, by
-inverting bits on the wire.)
-
 This weakness allowed an adversary to change a padding cell to a destroy
 cell; change the destination address in a \emph{relay begin} cell to the
 adversary's webserver; or change an FTP command from
-{\tt dir} to {\tt rm~*}. Any OR or external adversary
-along the circuit could introduce such corruption in a stream, if it
-knew or could guess the encrypted content.
+{\tt dir} to {\tt rm~*}. Any adversary who could guess the encrypted
+content could introduce such corruption in a stream. (Even an external
+adversary could do this, because the link encryption similarly used a
+stream cipher.)
 
-Tor prevents external adversaries from mounting this attack by
-using TLS on its links, which provides integrity checking.
+Tor uses TLS on its links---its integrity checking
+prevents external adversaries from mounting this attack.
 Addressing the insider malleability attack, however, is
 more complex.
 
@@ -828,7 +828,7 @@ EAX \cite{eax}, but there are some problems. First, these approaches
 impose a message-expansion overhead at each hop, and so we would have to
 either leak the path length or waste bytes by padding to a maximum
 path length. Second, these solutions can only verify traffic coming
-from Alice: ORs would not be able to include suitable hashes for
+from Alice: ORs would not be able to produce suitable hashes for
 the intermediate hops, since the ORs on a circuit do not know the
 other ORs' session keys. Third, we have already accepted that our design
 is vulnerable to end-to-end timing attacks; tagging attacks performed
@@ -978,12 +978,14 @@ fake the start of a TLS handshake, forcing the OR to carry out its
 (comparatively expensive) half of the handshake at no real computational
 cost to the attacker.
 
-Several approaches exist to address these attacks. First, ORs may
+We have not yet implemented any defenses for these attacks, but several
+approaches are possible. First, ORs can
 require clients to solve a puzzle \cite{puzzles-tls} while beginning new
 TLS handshakes or accepting \emph{create} cells.  So long as these
 tokens are easy to verify and computationally expensive to produce, this
-approach limits the attack multiplier.  Additionally, ORs may limit
-the rate at which they accept create cells and TLS connections, so that
+approach limits the attack multiplier.  Additionally, ORs can limit
+the rate at which they accept \emph{create} cells and TLS connections,
+so that
 the computational work of processing them does not drown out the
 symmetric cryptography operations that keep cells
 flowing.  This rate limiting could, however, allow an attacker
@@ -993,8 +995,8 @@ to slow down other users when they build new circuits.
 
 Adversaries can also attack the Tor network's hosts and network
 links. Disrupting a single circuit or link breaks all streams passing
-along that part of the circuit. Indeed, this same loss of service
-occurs when a router crashes or its operator restarts it. The current
+along that part of the circuit. Users similarly lose service
+when a router crashes or its operator restarts it. The current
 Tor design treats such attacks as intermittent network failures, and
 depends on users and applications to respond or recover as appropriate. A
 future design could use an end-to-end TCP-like acknowledgment protocol,
@@ -1040,9 +1042,11 @@ nodes that only connect to a local host or network.  Using a private
 exit (if one exists) is a more secure way for a client to connect to a
 given host or network---an external adversary cannot eavesdrop traffic
 between the private exit and the final destination, and so is less sure of
-Alice's destination and activities. Most onion routers will function as
+Alice's destination and activities. Most onion routers in the current
+network function as
 \emph{restricted exits} that permit connections to the world at large,
-but prevent access to certain abuse-prone addresses and services.
+but prevent access to certain abuse-prone addresses and services such
+as SMTP.
 Additionally, in some cases the OR can authenticate clients to
 prevent exit abuse without harming anonymity \cite{or-discex00}.
 
@@ -1052,12 +1056,13 @@ prevent exit abuse without harming anonymity \cite{or-discex00}.
 %nearly all participants will be honest, and end-to-end authentication
 %can be assumed for important traffic.
 
-Many administrators will use port restrictions to support only a
+Many administrators use port restrictions to support only a
 limited set of services, such as HTTP, SSH, or AIM.
 This is not a complete solution, of course, since abuse opportunities for these
 protocols are still well known.
 
-A further solution may be to use proxies to clean traffic for certain
+We have not yet encountered any abuse in the deployed network, but if
+we do we should consider using proxies to clean traffic for certain
 protocols as it leaves the network.  For example, much abusive HTTP
 behavior (such as exploiting buffer overflows or well-known script
 vulnerabilities) can be detected in a straightforward manner.
@@ -1112,12 +1117,11 @@ state. Such \emph{partitioning attacks} on client knowledge help an
 adversary to efficiently deploy resources
 against a target \cite{minion-design}.
 
-
 Tor uses a small group of redundant, well-known onion routers to
 track changes in network topology and node state, including keys and
 exit policies.  Each such \emph{directory server} acts as an HTTP
-server, so participants can fetch current network state and router
-lists, and so other ORs can upload
+server, so clients (circuit initiators) can fetch current network state
+and router lists, and so other ORs can upload
 state information.  Onion routers periodically publish signed
 statements of their state to each directory server. The directory servers
 combine this state information with their own views of network liveness,
@@ -1125,6 +1129,8 @@ and generate a signed description (a \emph{directory}) of the entire
 network state. Client software is
 pre-loaded with a list of the directory servers and their keys,
 to bootstrap each client's view of the network.
+% XXX this means that clients will be forced to upgrade as the
+% XXX dirservers change or get compromised. argue that this is ok.
 
 When a directory server receives a signed statement for an OR, it
 checks whether the OR's identity key is recognized. Directory
@@ -1183,7 +1189,8 @@ servers believe it to be good.
 To avoid attacks where a router connects to all the directory servers
 but refuses to relay traffic from other routers, the directory servers
 must build circuits and use them to anonymously test router reliability
-\cite{mix-acc}.
+\cite{mix-acc}. Unfortunately, this defense is not yet designed or
+implemented.
 
 Using directory servers is simpler and more flexible than flooding.
 Flooding is expensive, and complicates the analysis when we
@@ -1201,10 +1208,10 @@ central point.
 Rendezvous points are a building block for \emph{location-hidden
 services} (also known as \emph{responder anonymity}) in the Tor
 network.  Location-hidden services allow Bob to offer a TCP
-service, such as a webserver, without revealing its IP address.
+service, such as a webserver, without revealing his IP address.
 This type of anonymity protects against distributed DoS attacks:
-attackers are forced to attack the onion routing network as a whole
-rather than just Bob's IP address.
+attackers are forced to attack the onion routing network
+because they do not know Bob's IP address.
 
 Our design for location-hidden servers has the following goals.
 \textbf{Access-controlled:} Bob needs a way to filter incoming requests,
@@ -1817,7 +1824,9 @@ network.
 \emph{Incentives:} Volunteers who run nodes are rewarded with publicity
 and possibly better anonymity \cite{econymics}. More nodes means increased
 scalability, and more users can mean more anonymity. We need to continue
-examining the incentive structures for participating in Tor.
+examining the incentive structures for participating in Tor. Further,
+we need to explore more approaches to limiting abuse, and understand
+why most people don't bother using privacy systems.
 
 \emph{Cover traffic:} Currently Tor omits cover traffic---its costs
 in performance and bandwidth are clear but its security benefits are
@@ -1831,7 +1840,8 @@ method offers provable protection against our chosen adversary.
 % This should go in the spec and todo, but not the paper yet. -RD
 
 \emph{Caching at exit nodes:} Perhaps each exit node should run a
-caching web proxy, to improve anonymity for cached pages (Alice's request never
+caching web proxy \cite{shsm03}, to improve anonymity for cached pages
+(Alice's request never
 leaves the Tor network), to improve speed, and to reduce bandwidth cost.
 On the other hand, forward security is weakened because caches
 constitute a record of retrieved files.  We must find the right
@@ -1851,8 +1861,8 @@ Section~\ref{sec:rendezvous} has not yet been implemented.  While doing
 so we are likely to encounter additional issues that must be resolved,
 both in terms of usability and anonymity.
 
-\emph{Further specification review:} Although have a public
-byte-level specification for the Tor protocols \cite{tor-spec}, it needs
+\emph{Further specification review:} Our public
+byte-level specification \cite{tor-spec} needs
 extensive external review.  We hope that as Tor
 is more widely deployed, more people will examine its
 specification.
