@@ -327,13 +327,15 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   crypto_dh_env_t *dh = NULL;
   circuit_t *launched = NULL;
   crypt_path_t *cpath = NULL;
-  char hexid[9];
+  char serviceid[REND_SERVICE_ID_LEN+1];
   char hexcookie[9];
 
-  hex_encode(circuit->rend_pk_digest, 4, hexid);
-
+  if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
+                    circuit->rend_pk_digest,10)) {
+    return -1;
+  }
   log_fn(LOG_INFO, "Received INTRODUCE2 cell for service %s on circ %d",
-         hexid, circuit->n_circ_id);
+         serviceid, circuit->n_circ_id);
 
   if (circuit->purpose != CIRCUIT_PURPOSE_S_INTRO) {
     log_fn(LOG_WARN, "Got an INTRODUCE2 over a non-introduction circuit %d",
@@ -353,13 +355,15 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   service = rend_service_get_by_pk_digest(request);
   if (!service) {
     log_fn(LOG_WARN, "Got an INTRODUCE2 cell for an unrecognized service %s",
-           hexid);
+           serviceid);
     return -1;
   }
   if (memcmp(circuit->rend_pk_digest, request, DIGEST_LEN)) {
-    hex_encode(request, 4, hexid);
+    if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1, request, 10)) {
+      return -1;
+    }
     log_fn(LOG_WARN, "Got an INTRODUCE2 cell for the wrong service (%s)",
-           hexid);
+           serviceid);
     return -1;
   }
 
@@ -413,11 +417,11 @@ rend_service_introduce(circuit_t *circuit, const char *request, int request_len)
   launched = circuit_launch_new(CIRCUIT_PURPOSE_S_CONNECT_REND, rp_nickname);
   log_fn(LOG_INFO,
         "Accepted intro; launching circuit to '%s' (cookie %s) for service %s",
-         rp_nickname, hexcookie, hexid);
+         rp_nickname, hexcookie, serviceid);
   if (!launched) {
     log_fn(LOG_WARN,
            "Can't launch circuit to rendezvous point '%s' for service %s",
-           rp_nickname, hexid);
+           rp_nickname, serviceid);
     return -1;
   }
   assert(launched->build_state);
@@ -448,13 +452,9 @@ static int
 rend_service_launch_establish_intro(rend_service_t *service, char *nickname)
 {
   circuit_t *launched;
-  char hexid[9];
 
-  assert(service && nickname);
-
-  hex_encode(service->pk_digest, 4, hexid);
   log_fn(LOG_INFO, "Launching circuit to introduction point %s for service %s",
-         nickname, hexid);
+         nickname, service->service_id);
 
   launched = circuit_launch_new(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, nickname);
   if (!launched) {
@@ -478,22 +478,26 @@ rend_service_intro_is_ready(circuit_t *circuit)
   int len, r;
   char buf[RELAY_PAYLOAD_SIZE];
   char auth[DIGEST_LEN + 9];
-  char hexid[9];
+  char serviceid[REND_SERVICE_ID_LEN+1];
 
   assert(circuit->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
   assert(CIRCUIT_IS_ORIGIN(circuit) && circuit->cpath);
 
-  hex_encode(circuit->rend_pk_digest, 4, hexid);
+  if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
+                    circuit->rend_pk_digest,10)) {
+    assert(0);
+  }
+
   service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);
   if (!service) {
     log_fn(LOG_WARN, "Unrecognized service ID %s on introduction circuit %d",
-           hexid, circuit->n_circ_id);
+           serviceid, circuit->n_circ_id);
     goto err;
   }
 
   log_fn(LOG_INFO,
          "Established circuit %d as introduction point for service %s",
-         circuit->n_circ_id, hexid);
+         circuit->n_circ_id, serviceid);
 
   /* Build the payload for a RELAY_ESTABLISH_INTRO cell. */
   len = crypto_pk_asn1_encode(service->private_key, buf+2,
@@ -516,7 +520,7 @@ rend_service_intro_is_ready(circuit_t *circuit)
                                    buf, len, circuit->cpath->prev)<0) {
     log_fn(LOG_WARN,
            "Couldn't send introduction request for service %s on circuit %d",
-           hexid, circuit->n_circ_id);
+           serviceid, circuit->n_circ_id);
     goto err;
   }
 
@@ -550,7 +554,7 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
   rend_service_t *service;
   char buf[RELAY_PAYLOAD_SIZE];
   crypt_path_t *hop;
-  char hexid[9];
+  char serviceid[REND_SERVICE_ID_LEN+1];
   char hexcookie[9];
 
   assert(circuit->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
@@ -559,12 +563,15 @@ rend_service_rendezvous_is_ready(circuit_t *circuit)
   hop = circuit->build_state->pending_final_cpath;
   assert(hop);
 
-  hex_encode(circuit->rend_pk_digest, 4, hexid);
   hex_encode(circuit->rend_cookie, 4, hexcookie);
+  if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
+                    circuit->rend_pk_digest,10)) {
+    assert(0);
+  }
 
   log_fn(LOG_INFO,
        "Done building circuit %d to rendezvous with cookie %s for service %s",
-         circuit->n_circ_id, hexcookie, hexid);
+         circuit->n_circ_id, hexcookie, serviceid);
 
   service = rend_service_get_by_pk_digest(circuit->rend_pk_digest);
   if (!service) {
@@ -796,14 +803,17 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
   rend_service_t *service;
   int i;
   rend_service_port_config_t *p;
-  char hexid[9];
+  char serviceid[REND_SERVICE_ID_LEN];
 
   assert(circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
-  hex_encode(circ->rend_pk_digest, 4, hexid);
+  if (base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
+                    circ->rend_pk_digest,10)) {
+    return -1;
+  }
   service = rend_service_get_by_pk_digest(circ->rend_pk_digest);
   if (!service) {
     log_fn(LOG_WARN, "Couldn't find any service associated with pk %s on rendezvous circuit %d; closing",
-           hexid, circ->n_circ_id);
+           serviceid, circ->n_circ_id);
     circuit_mark_for_close(circ);
     connection_mark_for_close(conn, 0/*XXX*/);
   }
@@ -816,7 +826,7 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
     }
   }
   log_fn(LOG_WARN, "No virtual port mapping exists for port %d on service %s",
-         conn->port, hexid);
+         conn->port,serviceid);
   connection_mark_for_close(conn, 0/*XXX*/);
   return -1;
 }
