@@ -31,8 +31,10 @@ R       - figure out enclaves, e.g. so we know what to recommend that people
 N       - let tor servers use proxies for port 80 exits
           - Use generic port redirector for IP/bits:Port->IP:Port .
           - Make use of them when we're doing exit connections.
-R       - We should set things in options to NULL, not rely on memset(...0)
+        X We should set things in options to NULL, not rely on memset(...0)
           being equivalent.
+          o We should check for memset(0) setting things to NULL with autoconf,
+	    and then rely on it in the code.
         - Once we have a trusted directory on port 80, stop falling back to
           forbidden ports when fascistfirewall blocks all good dirservers.
 
