@@ -364,6 +364,10 @@ int connection_state_is_open(connection_t *conn) {
 
 void connection_send_cell(connection_t *conn) {
   cell_t cell;
+  int bytes_in_full_flushlen;
+
+  /* this function only gets called if options.LinkPadding is 1 */
+  assert(options.LinkPadding == 1);
 
   assert(conn);
 
@@ -385,7 +389,17 @@ void connection_send_cell(connection_t *conn) {
   }
 #endif
 
-#if 1 /* experimental code, that sends padding cells too. 'probably' works :) */
+  connection_increment_send_timeval(conn); /* update when we'll send the next cell */
+
+  bytes_in_full_flushlen = conn->bandwidth / 100; /* 10ms worth */
+  if(bytes_in_full_flushlen < 10*sizeof(cell_t))
+    bytes_in_full_flushlen = 10*sizeof(cell_t); /* but at least 10 cells worth */
+
+  if(conn->outbuf_flushlen > bytes_in_full_flushlen - sizeof(cell_t)) {
+    /* if we would exceed bytes_in_full_flushlen by adding a new cell */
+    return;
+  }
+
   if(conn->outbuf_datalen - conn->outbuf_flushlen < sizeof(cell_t)) {
     /* we need to queue a padding cell first */
     memset(&cell,0,sizeof(cell_t));
@@ -395,9 +409,7 @@ void connection_send_cell(connection_t *conn) {
 
   conn->outbuf_flushlen += sizeof(cell_t); /* instruct it to send a cell */
   connection_watch_events(conn, POLLOUT | POLLIN);
-#endif
 
-  connection_increment_send_timeval(conn); /* update when we'll send the next cell */
 }
 
 void connection_increment_send_timeval(connection_t *conn) {
