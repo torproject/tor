@@ -1,4 +1,13 @@
 Changes so far in 0.0.9:
+rc2:
+  o Bugfixes on 0.0.9rc1:
+    - I broke socks5 support while fixing the eof bug.
+    - Allow unitless bandwidths and intervals; they default to bytes
+      and seconds.
+    - New servers don't start out hibernating; they are active until
+      they run out of bytes, so they have a better estimate of how
+      long it takes, and so their operators can know they're working.
+
 rc1:
   o Bugfixes on 0.0.8.1:
     - Finally fix a bug that's been plaguing us for a year:
