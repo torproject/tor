@@ -175,6 +175,13 @@ int all_directory_servers_down(void) {
   return 1;
 }
 
+/** Add all the friends of <b>router</b> to the smartlist <b>sl</b>.
+ */
+void routerlist_add_friends(smartlist_t *sl, routerinfo_t *router) {
+
+
+}
+
 /** Given a comma-and-whitespace separated list of nicknames, see which
  * nicknames in <b>list</b> name routers in our routerlist that are
  * currently running.  Add the routerinfos for those routers to <b>sl</b>.

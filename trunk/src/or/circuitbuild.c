@@ -1074,14 +1074,19 @@ static routerinfo_t *choose_good_middle_server(cpath_build_state_t *state,
 
   log_fn(LOG_DEBUG, "Contemplating intermediate hop: random choice.");
   excluded = smartlist_create();
-  if((r = router_get_by_digest(state->chosen_exit_digest)))
+  if((r = router_get_by_digest(state->chosen_exit_digest))) {
     smartlist_add(excluded, r);
-  if((r = routerlist_find_my_routerinfo()))
+    routerlist_add_friends(excluded, r);
+  }
+  if((r = routerlist_find_my_routerinfo())) {
     smartlist_add(excluded, r);
+    routerlist_add_friends(excluded, r);
+  }
   for (i = 0, cpath = head; i < cur_len; ++i, cpath=cpath->next) {
     r = router_get_by_digest(cpath->identity_digest);
     tor_assert(r);
     smartlist_add(excluded, r);
+    routerlist_add_friends(excluded, r);
   }
   choice = router_choose_random_node("", options.ExcludeNodes, excluded,
            0, 1, options._AllowUnverified & ALLOW_UNVERIFIED_MIDDLE, 0);
@@ -1095,10 +1100,14 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
   smartlist_t *excluded = smartlist_create();
   char buf[16];
 
-  if((r = router_get_by_digest(state->chosen_exit_digest)))
+  if((r = router_get_by_digest(state->chosen_exit_digest))) {
     smartlist_add(excluded, r);
-  if((r = routerlist_find_my_routerinfo()))
+    routerlist_add_friends(excluded, r);
+  }
+  if((r = routerlist_find_my_routerinfo())) {
     smartlist_add(excluded, r);
+    routerlist_add_friends(excluded, r);
+  }
   if(options.FascistFirewall) {
     /* exclude all ORs that listen on the wrong port */
     routerlist_t *rl;
