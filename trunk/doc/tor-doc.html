@@ -144,15 +144,11 @@ tor-0.0.9.tar.gz; cd tor-0.0.9</tt>. Run <tt>./configure</tt>, then
 <tt>make</tt>, and then <tt>make install</tt> (as root if necessary). Then
 you can launch tor from the command-line by running <tt>tor</tt>.</p>
 
-<p>If you got Tor from the Win32 .exe file, you
-can just click-click it (you may need to install <a
-href="http://www.slproweb.com/products/Win32OpenSSL.html">OpenSSL
-0.9.7</a> first, if you get an error about missing
-libeay32.dll.) You might also want to run Tor in a dos window,
-so you can see its logs, and see its error messages if it
-crashes. If you don't want the default configuration, fetch the <a
-href="http://tor.freehaven.net/cvs/tor/src/config/torrc.sample.in">torrc</a>, edit it,
-and use <tt>tor.exe -f torrc</tt>.</p>
+<p>Win32 users can use our Tor installer. It will run Tor in a dos window,
+so you can see its logs, and see its error messages if it exits. If you
+don't want the default configuration, it comes with a torrc file that
+you can edit.
+</p>
 
 <p>Otherwise, if you got it prepackaged (e.g. in the <a
 href="http://packages.debian.org/tor">Debian package</a> or <a
