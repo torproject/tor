@@ -57,7 +57,7 @@
 #endif
 
 #ifdef MS_WINDOWS
-#define tor_close_socket(s) socketclose(s)
+#define tor_close_socket(s) closesocket(s)
 #else
 #define tor_close_socket(s) close(s)
 #endif
