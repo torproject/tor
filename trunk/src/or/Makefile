@@ -11,7 +11,7 @@ LDFLAGS = $(LIB) $(LIBS)
 all:	${OBJ} ${PROGS}
 
 or:	${OBJ}
-	gcc -o or $(CFLAGS) *.o ../common/*.o -lcrypto
+	gcc -o or $(CFLAGS) *.o ../common/*.o -lcrypto -lpopt
 
 clean:
 	rm -f *.o ${PROGS}

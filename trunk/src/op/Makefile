@@ -17,7 +17,7 @@ depend:
 	makedepend -- ${CFLAGS} -- ${SRC}
 
 ${PROGS}:	${OBJ}
-	$(LINK.c) -o $@ $(OBJ) ../common/log.o ../common/config.o ../common/onion.o ../common/utils.o ../common/cell.o ../common/scheduler.o
+	$(LINK.c) -o $@ $(OBJ) ../common/log.o ../common/config.o ../common/onion.o ../common/utils.o ../common/cell.o ../common/scheduler.o -lpopt
 
 # DO NOT DELETE
 

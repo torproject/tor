@@ -17,7 +17,7 @@ depend:
 	makedepend -- ${CFLAGS} -- ${SRC}
 
 httpap:	${OBJ}
-	$(LINK.c) -o $@ $(OBJ) ../common/log.o ../common/config.o ../common/utils.o
+	$(LINK.c) -o $@ $(OBJ) ../common/log.o ../common/config.o ../common/utils.o -lpopt
 
 # DO NOT DELETE
 
