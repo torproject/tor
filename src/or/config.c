@@ -604,6 +604,11 @@ config_get_assigned_option(or_options_t *options, const char *key)
       else
         result->value = tor_strdup("");
       break;
+    case CONFIG_TYPE_OBSOLETE:
+      log_fn(LOG_WARN,"You asked me for the value of an obsolete config option %s.", key);
+      tor_free(result->key);
+      tor_free(result);
+      return NULL;
     default:
       tor_free(result->key);
       tor_free(result);
@@ -915,6 +920,10 @@ options_dup(or_options_t *old)
 
   newopts = tor_malloc_zero(sizeof(or_options_t));
   for (i=0; config_vars[i].name; ++i) {
+    if(config_vars[i].type == CONFIG_TYPE_LINELIST_S)
+      continue;
+    if(config_vars[i].type == CONFIG_TYPE_OBSOLETE)
+      continue;
     line = config_get_assigned_option(old, config_vars[i].name);
     if (line) {
       if (config_assign(newopts, line, 0) < 0) {
