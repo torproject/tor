@@ -82,7 +82,7 @@ static link_history_t *get_link_history(const char *from_id,
   if (!orhist)
     return NULL;
   base16_encode(to_hexid, HEX_DIGEST_LEN+1, to_id, DIGEST_LEN);
-  if (!strcmp(hexid, "0000000000000000000000000000000000000000"))
+  if (!strcmp(to_hexid, "0000000000000000000000000000000000000000"))
     return NULL;
   lhist = (link_history_t*) strmap_get(orhist->link_history_map, to_hexid);
   if (!lhist) {
