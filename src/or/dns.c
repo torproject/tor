@@ -291,8 +291,11 @@ int connection_dns_process_inbuf(connection_t *conn) {
 
   if(conn->inbuf_reached_eof) {
     log(LOG_ERR,"connection_dnsworker_process_inbuf(): Read eof. Worker dying.");
-    if(conn->state == DNSWORKER_STATE_BUSY)
+    if(conn->state == DNSWORKER_STATE_BUSY) {
       dns_cancel_pending_resolve(conn->address, NULL);
+      num_workers_busy--;
+    }
+    num_workers--;
     return -1;
   }
 
