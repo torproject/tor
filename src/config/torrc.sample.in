@@ -5,6 +5,10 @@
 #
 # On Windows, Tor will look for the configuration file in someplace like
 # "Application Data\tor\torrc" or "Application Data\<username>\tor\torrc"
+#
+# With the default Mac OS X installer, Tor will look in ~/.tor/torrc or
+# /Library/Tor/torrc
+
 
 ## Replace this with "SocksPort 0" if you plan to run Tor only as a
 ## server, and not make any local application connections yourself.
