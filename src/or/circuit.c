@@ -907,6 +907,9 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
   }
 }
 
+/* Expire unused testing circuits after 10 minutes. */
+#define TESTING_CIRCUIT_MAX_AGE 600
+
 void circuit_expire_unused_circuits(void) {
   circuit_t *circ, *tmpcirc;
   time_t now = time(NULL);
@@ -915,9 +918,18 @@ void circuit_expire_unused_circuits(void) {
   while(circ) {
     tmpcirc = circ;
     circ = circ->next;
-    if(tmpcirc->timestamp_dirty &&
-       tmpcirc->timestamp_dirty + options.NewCircuitPeriod < now &&
-       !tmpcirc->p_conn && !tmpcirc->p_streams && !tmpcirc->marked_for_close) {
+    /* If the circuit has been dirty for too long, and there are no streams
+     * on it, mark it for close.
+     * If we are creating test circuits, and the circuit is old, and has
+     * no streams, shut it down even if it isn't dirty.
+     */
+    if(((tmpcirc->timestamp_dirty &&
+         tmpcirc->timestamp_dirty + options.NewCircuitPeriod < now) ||
+        (options.RunTesting &&
+         tmpcirc->timestamp_created + TESTING_CIRCUIT_MAX_AGE < now))
+       && !tmpcirc->p_conn
+       && !tmpcirc->p_streams
+       && !tmpcirc->marked_for_close) {
       log_fn(LOG_DEBUG,"Closing n_circ_id %d",tmpcirc->n_circ_id);
       circuit_mark_for_close(tmpcirc);
     }
@@ -932,7 +944,7 @@ static int n_circuit_failures = 0;
 /* Return -1 if you aren't going to try to make a circuit, 0 if you did try. */
 int circuit_launch_new(void) {
 
-  if(!options.SocksPort) /* we're not an application proxy. no need for circuits. */
+  if(!(options.SocksPort||options.RunTesting)) /* no need for circuits. */
     return -1;
 
   if(n_circuit_failures > 5) { /* too many failed circs in a row. don't try. */

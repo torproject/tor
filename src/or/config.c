@@ -201,7 +201,8 @@ static int config_assign(or_options_t *options, struct config_line *list) {
 
     config_compare(list, "TrafficShaping", CONFIG_TYPE_BOOL, &options->TrafficShaping) ||
 
-    config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User)
+    config_compare(list, "User",           CONFIG_TYPE_STRING, &options->User) ||
+    config_compare(list, "RunTesting",     CONFIG_TYPE_BOOL, &options->RunTesting)
     ) {
       /* then we're ok. it matched something. */
     } else {

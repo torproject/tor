@@ -544,6 +544,7 @@ typedef struct {
   int BandwidthBurst;
   int NumCpus;
   int loglevel;
+  int RunTesting;
 } or_options_t;
 
 /* XXX are these good enough defaults? */

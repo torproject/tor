@@ -243,11 +243,8 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   }
   if (!options.ORPort) { /* If I'm an OP... */
     conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
-    circuit_n_conn_open(conn); /* send the pending creates, if any. */
-    /* XXXX ORs may need to send creates for test circuits; "I am an OR"
-     * doesn't mean "I have no pending creates", right?
-     */
   }
+  circuit_n_conn_open(conn); /* send the pending creates, if any. */
   /* Note the success */
   rep_hist_note_connect_succeeded(nickname, time(NULL));
   return 0;
