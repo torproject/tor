@@ -49,20 +49,20 @@ R  o Reset uptime when IP changes.
  Functionality
 N  . Implement pending controller features.
     o Stubs for new functions.
-    . GETINFO
+    o GETINFO
       o Version
       o Descriptor list
       o Individual descriptors
         o Need to remember descriptors for all routers.
         o Replace everything else that remembers serverdescs with
           routerinfo.
-      - List of address mappings
+      o List of address mappings
     o POSTDESCRIPTOR
-    . MAPADDRESS
+    o MAPADDRESS
       o Map A->B.
       o Map DontCare->B.
         o Reuse mappings when asked to map DontCare->B for the same B.
-          - But only when the DontCare is of the same type. :/
+          o But only when the DontCare is of the same type. :/
     o Way to handle overlong messages
       o Specify fragmented format
       o Implement fragmented format
@@ -70,8 +70,9 @@ N  . Implement pending controller features.
     o Better stream IDs
     o Stream status changed: "new" state.
     - EXTENDCIRCUIT <depends on revised circ selection stuff.>
-    - ATTACHSTREAM 
-      - Make streams have an 'unattached and unattachable' state.
+    - ATTACHSTREAM
+      - Make streams have an 'unattached and not-automatically-attachable'
+        state.
       - Add support to put new streams into this state rather than try to
         attach them automatically.  ("Hidden" config option.)
       - Time out never-attached streams.

@@ -1320,6 +1320,7 @@ void addressmap_register(const char *address, char *new_address, time_t expires)
 int client_dns_incr_failures(const char *address);
 void client_dns_set_addressmap(const char *address, uint32_t val, const char *exitname);
 char *addressmap_register_virtual_address(int type, char *new_address);
+void addressmap_get_mappings(smartlist_t *sl, time_t min_expires, time_t max_expires);
 
 void parse_socks_policy(void);
 void free_socks_policy(void);
