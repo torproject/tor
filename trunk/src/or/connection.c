@@ -655,7 +655,8 @@ int connection_send_destroy(circ_id_t circ_id, connection_t *conn) {
   if(!connection_speaks_cells(conn)) {
      log_fn(LOG_INFO,"CircID %d: At an edge. Marking connection for close.", 
             circ_id);
-     connection_edge_end(conn, END_STREAM_REASON_DESTROY, conn->cpath_layer);
+     if(connection_edge_end(conn, END_STREAM_REASON_DESTROY, conn->cpath_layer) < 0)
+       log_fn(LOG_WARN,"1: I called connection_edge_end redundantly.");
      /* if they already sent a destroy, they know. XXX can just close? */
      return 0;
   }
