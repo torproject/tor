@@ -45,6 +45,9 @@ N  - Make millisecond accuracy work on win32
      it a chance to flush. right answer is to do the socks reply manually
      in each appropriate case, and then about-to-close-connection can
      simply warn us if we forgot one.
+   - Solve the MSVC nuisance where __FILE__ contains the full path.
+     People are getting confused about why their errors are coming from
+     C:\Documents and Settings\Nick Mathewson\My Documents\src\tor .
 
 Tier two:
 
