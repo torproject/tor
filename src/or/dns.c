@@ -264,6 +264,9 @@ void connection_dns_remove(connection_t *conn)
   struct cached_resolve search;
   struct cached_resolve *resolve;
 
+  tor_assert(conn->type == CONN_TYPE_EXIT);
+  tor_assert(conn->state == EXIT_CONN_STATE_RESOLVING);
+
   strncpy(search.address, conn->address, MAX_ADDRESSLEN);
   search.address[MAX_ADDRESSLEN-1] = 0;
 
