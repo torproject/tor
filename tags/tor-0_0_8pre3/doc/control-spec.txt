@@ -1,0 +1,153 @@
+$Id$
+
+                            TC: A Tor control protocol
+
+0. Scope
+
+(8 Aug 2004) This document describes an implementation-specific protocol to
+be implemented in a future version of Tor.  It is not part of the Tor onion
+routing protocol.
+
+The protocol described in this document is used for other programs (such as
+frontend user-interfaces) to communicate with a locally running Tor protocol.
+
+We're trying to be pretty extensible here, but not infinitely
+forward-compatible.
+
+1. Protocol outline
+
+TC is a bidirectional message-based protocol.  It assumes an underlying
+stream for communication between a controlling process (the "client") and
+a Tor process (the "server").  The stream may be implemented via TCP,
+TLS-over-TCP, a Unix pipe, or so on.  For security, the stream should not be
+observable by untrusted parties.
+
+In TC, the client and server send typed variable-length messages to one
+another over the underlying stream.  By default, all messages from the server
+are in response to messages from the client.  Some client requests, however,
+will cause the server to send messages to the client indefinitely far into
+the future.
+
+Servers respond to messages in the order they're received.
+
+2. Message format
+
+The messages take the following format:
+
+   Length [2 octets; big-endian]
+   Type   [2 octets; big-endian]
+   Body   [Length octets]
+
+Upon encountering a recognized Type, implementations behave as described in
+section 3 below.  If the type is not recognized, servers respond with an
+"STAT" message (code UNRECOGNIZED; see 3.1 below), and clients simply ignore
+the message.
+
+3. Message types
+
+3.1. ERROR (Type 0x0000)
+
+  Sent in response to a message that could not be processed as requested.
+
+  The body of the message begins with a 2-byte error code.  The following
+  values are defined:
+        0x0000 Unspecified error
+        0x0001 Unrecognized message type
+        0x0002 Unrecognized configuration key
+        0x0003 Invalid configuration value
+        0x0004 Unrecognized event code
+        0x0005 Unauthorized user
+        0x0006 Failed authentication attempt
+
+3.2. DONE (Type 0x0001)
+
+  Sent from server to client in response to a request that was successfully
+  completed, with no more information needed.  The body is empty.
+
+3.3. SETCONF (Type 0x0002)
+
+  Change the value of a configuration variable. The body contains
+  two nul-terminated strings: a configuration key and a configuration value.
+  The server behaves as though it had just read the key-value pair in its
+  configuration file.  The server responds with a DONE message on success,
+  or an ERROR message on failure.
+
+3.4. GETCONF (Type 0x0003)
+
+  Request the value of a configuration variable.  The body contains a
+  nul-terminated string for a configuration key.  The server replies with a
+  CONFVALUE message 
+
+3.5. CONFVALUE (Type 0x0004)
+
+  Sent in response to a GETCONF message; contains a nul-terminated key string
+  and a nul-terminated value string.
+
+3.6. SETEVENTS (Type 0x0005)
+
+  Request the server to inform the client about interesting events.
+  The body contains a list of 2-byte event codes (see "event" below).
+  Sending SETEVENTS with an empty body turns off all event reporting.
+
+  The server responds with a DONE message on success, and an ERROR message
+  if one of the event codes isn't recognized.  (On error, the list of active
+  event codes isn't changed.)
+
+3.7. EVENT (Type 0x0006)
+
+  Sent from the server to the client when an event has occurred, and the
+  client has requested that kind of event.  The body contains a 2-byte
+  event code, followed by additional event-dependent information.  Event
+  codes are:
+      0x0001 -- Circuit status changed
+
+                Status [1 octet]
+                   (Launched=0,Built=1,Extended=2,Failed=3,Closed=4)
+                Circuit ID [4 octets]
+                   (Must be unique to Tor process/time)
+                Path [NUL-terminated comma-separated string]
+                   (For extended/failed, is the portion of the path that is
+                   built)
+
+      0x0002 -- Stream status changed
+
+                Status [1 octet]
+                   (Sent connect=0,sent resolve=1,succeeded=2,failed=3,
+                    closed=4)
+                Stream ID [4 octets]
+                   (Must be unique to Tor process/time)
+                Target (NUL-terminated address-port string]
+
+      0x0003 -- OR Connection status changed
+
+                Status [1 octet]
+                   (Launched=0,connected=1,failed=2,closed=3)
+                OR nickname/identity [NUL-terminated]
+
+      0x0004 -- Bandwidth used in last N seconds. (N=1? 5?)
+
+                Bytes read [4 octets]
+                Bytes written [4 octets]
+
+      0x0005 -- Warning/error occurred
+
+                Message [NUL-terminated]
+
+3.8. AUTHENTICATE (Type 0x0007)
+
+  Sent from the client to the server.  Contains a 'magic cookie' to prove
+  that client is really the admin for this Tor process.  The server responds
+  with DONE or ERROR.
+
+4. Implementation notes
+
+On Unix, we should use a named pipe on the fs and use filesystem privileges
+to authenticate.  On Win32, a password/magic cookie may be in order.
+
+-----------
+(for emacs)
+  Local Variables:
+  mode:text
+  indent-tabs-mode:nil
+  fill-column:77
+  End:

@@ -1,0 +1,637 @@
+Release notes in progress for 0.0.8:
+pre3:
+  o Changes from 0.0.7.2:
+    - Allow multiple ORs with same nickname in routerlist -- now when
+      people give us one identity key for a nickname, then later
+      another, we don't constantly complain until the first expires.
+    - Remember used bandwidth (both in and out), and publish 15-minute
+      snapshots for the past day into our descriptor.
+    - You can now fetch $DIRURL/running-routers to get just the
+      running-routers line, not the whole descriptor list. (But
+      clients don't use this yet.)
+    - When people mistakenly use Tor as an http proxy, point them
+      at the tor-doc.html rather than the INSTALL.
+    - Remove our mostly unused -- and broken -- hex_encode()
+      function. Use base16_encode() instead. (Thanks to Timo Lindfors
+      for pointing out this bug.)
+    - Rotate onion keys every 12 hours, not every 2 hours, so we have
+      fewer problems with people using the wrong key.
+    - Change the default exit policy to reject the default edonkey,
+      kazaa, gnutella ports.
+    - Add replace_file() to util.[ch] to handle win32's rename().
+
+  o Changes from 0.0.8preX:
+    - Fix two bugs in saving onion keys to disk when rotating, so
+      hopefully we'll get fewer people using old onion keys.
+    - Fix an assert error that was making SocksPolicy not work.
+    - Be willing to expire routers that have an open dirport -- it's
+      just the authoritative dirservers we want to not forget.
+    - Reject tor-resolve requests for .onion addresses early, so we
+      don't build a whole rendezvous circuit and then fail.
+    - When you're warning a server that he's unverified, don't cry
+      wolf unpredictably.
+    - Fix a race condition: don't try to extend onto a connection
+      that's still handshaking.
+    - For servers in clique mode, require the conn to be open before
+      you'll choose it for your path.
+    - Fix some cosmetic bugs about duplicate mark-for-close, lack of
+      end relay cell, etc.
+    - Measure bandwidth capacity over the last 24 hours, not just 12
+    - Bugfix: authoritative dirservers were making and signing a new
+      directory for each client, rather than reusing the cached one.
+
+pre2:
+  o Changes from 0.0.7.2:
+    - Security fixes:
+      - Check directory signature _before_ you decide whether you're
+        you're running an obsolete version and should exit.
+      - Check directory signature _before_ you parse the running-routers
+        list to decide who's running or verified.
+    - Bugfixes and features:
+      - Check return value of fclose while writing to disk, so we don't
+        end up with broken files when servers run out of disk space.
+      - Log a warning if the user uses an unsafe socks variant, so people
+        are more likely to learn about privoxy or socat.
+      - Dirservers now include RFC1123-style dates in the HTTP headers,
+        which one day we will use to better detect clock skew.
+
+  o Changes from 0.0.8pre1:
+    - Make it compile without warnings again on win32.
+    - Log a warning if you're running an unverified server, to let you
+      know you might want to get it verified.
+    - Only pick a default nickname if you plan to be a server.
+
+pre1:
+  o Bugfixes:
+    - Made our unit tests compile again on OpenBSD 3.5, and tor
+      itself compile again on OpenBSD on a sparc64.
+    - We were neglecting milliseconds when logging on win32, so
+      everything appeared to happen at the beginning of each second.
+
+  o Protocol changes:
+    - 'Extend' relay cell payloads now include the digest of the
+      intended next hop's identity key. Now we can verify that we're
+      extending to the right router, and also extend to routers we
+      hadn't heard of before.
+
+  o Features:
+    - Tor nodes can now act as relays (with an advertised ORPort)
+      without being manually verified by the dirserver operators.
+      - Uploaded descriptors of unverified routers are now accepted
+        by the dirservers, and included in the directory.
+      - Verified routers are listed by nickname in the running-routers
+        list; unverified routers are listed as "$<fingerprint>".
+      - We now use hash-of-identity-key in most places rather than
+        nickname or addr:port, for improved security/flexibility.
+      - To avoid Sybil attacks, paths still use only verified servers.
+        But now we have a chance to play around with hybrid approaches.
+      - Nodes track bandwidth usage to estimate capacity (not used yet).
+      - ClientOnly option for nodes that never want to become servers.
+    - Directory caching.
+      - "AuthoritativeDir 1" option for the official dirservers.
+      - Now other nodes (clients and servers) will cache the latest
+        directory they've pulled down.
+      - They can enable their DirPort to serve it to others.
+      - Clients will pull down a directory from any node with an open
+        DirPort, and check the signature/timestamp correctly.
+      - Authoritative dirservers now fetch directories from other
+        authdirservers, to stay better synced.
+      - Running-routers list tells who's down also, along with noting
+        if they're verified (listed by nickname) or unverified (listed
+        by hash-of-key).
+      - Allow dirservers to serve running-router list separately.
+        This isn't used yet.
+    - ORs connect-on-demand to other ORs
+      - If you get an extend cell to an OR you're not connected to,
+        connect, handshake, and forward the create cell.
+      - The authoritative dirservers stay connected to everybody,
+        and everybody stays connected to 0.0.7 servers, but otherwise
+        clients/servers expire unused connections after 5 minutes.
+    - When servers get a sigint, they delay 30 seconds (refusing new
+      connections) then exit. A second sigint causes immediate exit.
+    - File and name management:
+      - Look for .torrc if no CONFDIR "torrc" is found.
+      - If no datadir is defined, then choose, make, and secure ~/.tor
+        as datadir.
+      - If torrc not found, exitpolicy reject *:*.
+      - Expands ~/ in filenames to $HOME/ (but doesn't yet expand ~arma).
+      - If no nickname is defined, derive default from hostname.
+      - Rename secret key files, e.g. identity.key -> secret_id_key,
+        to discourage people from mailing their identity key to tor-ops.
+    - Refuse to build a circuit before the directory has arrived --
+      it won't work anyway, since you won't know the right onion keys
+      to use.
+    - Try other dirservers immediately if the one you try is down. This
+      should tolerate down dirservers better now.
+    - Parse tor version numbers so we can do an is-newer-than check
+      rather than an is-in-the-list check.
+    - New socks command 'resolve', to let us shim gethostbyname()
+      locally.
+      - A 'tor_resolve' script to access the socks resolve functionality.
+      - A new socks-extensions.txt doc file to describe our
+        interpretation and extensions to the socks protocols.
+    - Add a ContactInfo option, which gets published in descriptor.
+    - Publish OR uptime in descriptor (and thus in directory) too.
+    - Write tor version at the top of each log file
+    - New docs in the tarball:
+      - tor-doc.html.
+      - Document that you should proxy your SSL traffic too.
+
+
+Changes in version 0.0.7.2 - 2004-07-07
+  o A better fix for the 0.0.0.0 problem, that will hopefully
+    eliminate the remaining related assertion failures.
+
+
+Changes in version 0.0.7.1 - 2004-07-04
+  o When an address resolves to 0.0.0.0, treat it as a failed resolve,
+    since internally we use 0.0.0.0 to signify "not yet resolved".
+
+
+Changes in version 0.0.7 - 2004-06-07
+  o Fixes for crashes and other obnoxious bugs:
+    - Fix an epipe bug: sometimes when directory connections failed
+      to connect, we would give them a chance to flush before closing
+      them.
+    - When we detached from a circuit because of resolvefailed, we
+      would immediately try the same circuit twice more, and then
+      give up on the resolve thinking we'd tried three different
+      exit nodes.
+    - Limit the number of intro circuits we'll attempt to build for a
+      hidden service per 15-minute period.
+    - Check recommended-software string *early*, before actually parsing
+      the directory. Thus we can detect an obsolete version and exit,
+      even if the new directory format doesn't parse.
+  o Fixes for security bugs:
+    - Remember which nodes are dirservers when you startup, and if a
+      random OR enables his dirport, don't automatically assume he's
+      a trusted dirserver.
+  o Other bugfixes:
+    - Directory connections were asking the wrong poll socket to
+      start writing, and not asking themselves to start writing.
+    - When we detached from a circuit because we sent a begin but
+      didn't get a connected, we would use it again the first time;
+      but after that we would correctly switch to a different one.
+    - Stop warning when the first onion decrypt attempt fails; they
+      will sometimes legitimately fail now that we rotate keys.
+    - Override unaligned-access-ok check when $host_cpu is ia64 or
+      arm. Apparently they allow it but the kernel whines.
+    - Dirservers try to reconnect periodically too, in case connections
+      have failed.
+    - Fix some memory leaks in directory servers.
+    - Allow backslash in Win32 filenames.
+    - Made Tor build complain-free on FreeBSD, hopefully without
+      breaking other BSD builds. We'll see.
+    - Check directory signatures based on name of signer, not on whom
+      we got the directory from. This will let us cache directories more
+      easily.
+    - Rotate dnsworkers and cpuworkers on SIGHUP, so they get new config
+      settings too.
+  o Features:
+    - Doxygen markup on all functions and global variables.
+    - Make directory functions update routerlist, not replace it. So
+      now directory disagreements are not so critical a problem.
+    - Remove the upper limit on number of descriptors in a dirserver's
+      directory (not that we were anywhere close).
+    - Allow multiple logfiles at different severity ranges.
+    - Allow *BindAddress to specify ":port" rather than setting *Port
+      separately. Allow multiple instances of each BindAddress config
+      option, so you can bind to multiple interfaces if you want.
+    - Allow multiple exit policy lines, which are processed in order.
+      Now we don't need that huge line with all the commas in it.
+    - Enable accept/reject policies on SOCKS connections, so you can bind
+      to 0.0.0.0 but still control who can use your OP.
+    - Updated the man page to reflect these features.
+
+
+Changes in version 0.0.6.2 - 2004-05-16
+  o Our integrity-checking digest was checking only the most recent cell,
+    not the previous cells like we'd thought.
+    Thanks to Stefan Mark for finding the flaw!
+
+
+Changes in version 0.0.6.1 - 2004-05-06
+  o Fix two bugs in our AES counter-mode implementation (this affected
+    onion-level stream encryption, but not TLS-level). It turns
+    out we were doing something much more akin to a 16-character
+    polyalphabetic cipher. Oops.
+    Thanks to Stefan Mark for finding the flaw!
+  o Retire moria3 as a directory server, and add tor26 as a directory
+    server.
+
+
+Changes in version 0.0.6 - 2004-05-02
+  o Features:
+    - Hidden services and rendezvous points are implemented. Go to
+      http://6sxoyfb3h2nvok2d.onion/ for an index of currently available
+      hidden services. (This only works via a socks4a proxy such as
+      Privoxy, and currently it's quite slow.)
+    - We now rotate link (tls context) keys and onion keys.
+    - CREATE cells now include oaep padding, so you can tell
+      if you decrypted them correctly.
+    - Retry stream correctly when we fail to connect because of
+      exit-policy-reject (should try another) or can't-resolve-address.
+    - When we hup a dirserver and we've *removed* a server from the
+      approved-routers list, now we remove that server from the
+      in-memory directories too.
+    - Add bandwidthburst to server descriptor.
+    - Directories now say which dirserver signed them.
+    - Use a tor_assert macro that logs failed assertions too.
+    - Since we don't support truncateds much, don't bother sending them;
+      just close the circ.
+    - Fetch randomness from /dev/urandom better (not via fopen/fread)
+    - Better debugging for tls errors
+    - Set Content-Type on the directory and hidserv descriptor.
+    - Remove IVs from cipher code, since AES-ctr has none.
+  o Bugfixes:
+    - Fix an assert trigger for exit nodes that's been plaguing us since
+      the days of 0.0.2prexx (thanks weasel!)
+    - Fix a bug where we were closing tls connections intermittently.
+      It turns out openssl keeps its errors around -- so if an error
+      happens, and you don't ask about it, and then another openssl
+      operation happens and succeeds, and you ask if there was an error,
+      it tells you about the first error.
+    - Fix a bug that's been lurking since 27 may 03 (!)
+      When passing back a destroy cell, we would use the wrong circ id.
+    - Don't crash if a conn that sent a begin has suddenly lost its circuit.
+    - Some versions of openssl have an SSL_pending function that erroneously
+      returns bytes when there is a non-application record pending.
+    - Win32 fixes. Tor now compiles on win32 with no warnings/errors.
+      o We were using an array of length zero in a few places.
+      o Win32's gethostbyname can't resolve an IP to an IP.
+      o Win32's close can't close a socket.
+      o Handle windows socket errors correctly.
+  o Portability:
+    - check for <sys/limits.h> so we build on FreeBSD again, and
+      <machine/limits.h> for NetBSD.
+
+
+Changes in version 0.0.5 - 2004-03-30
+  o Install torrc as torrc.sample -- we no longer clobber your
+    torrc. (Woo!)
+  o Fix mangled-state bug in directory fetching (was causing sigpipes).
+  o Only build circuits after we've fetched the directory: clients were
+    using only the directory servers before they'd fetched a directory.
+    This also means longer startup time; so it goes.
+  o Fix an assert trigger where an OP would fail to handshake, and we'd
+    expect it to have a nickname.
+  o Work around a tsocks bug: do a socks reject when AP connection dies
+    early, else tsocks goes into an infinite loop.
+  o Hold socks connection open until reply is flushed (if possible)
+  o Make exit nodes resolve IPs to IPs immediately, rather than asking
+    the dns farm to do it.
+  o Fix c99 aliasing warnings in rephist.c
+  o Don't include server descriptors that are older than 24 hours in the
+    directory.
+  o Give socks 'reject' replies their whole 15s to attempt to flush,
+    rather than seeing the 60s timeout and assuming the flush had failed.
+  o Clean automake droppings from the cvs repository
+  o Add in a 'notice' log level for things the operator should hear
+    but that aren't warnings
+
+
+Changes in version 0.0.4 - 2004-03-26
+  o When connecting to a dirserver or OR and the network is down,
+    we would crash.
+
+
+Changes in version 0.0.3 - 2004-03-26
+  o Warn and fail if server chose a nickname with illegal characters
+  o Port to Solaris and Sparc:
+    - include missing header fcntl.h
+    - have autoconf find -lsocket -lnsl automatically
+    - deal with hardware word alignment
+    - make uname() work (solaris has a different return convention)
+    - switch from using signal() to sigaction()
+  o Preliminary work on reputation system:
+    - Keep statistics on success/fail of connect attempts; they're published
+      by kill -USR1 currently.
+    - Add a RunTesting option to try to learn link state by creating test
+      circuits, even when SocksPort is off.
+    - Remove unused open circuits when there are too many.
+
+
+Changes in version 0.0.2 - 2004-03-19
+    - Include strlcpy and strlcat for safer string ops
+    - define INADDR_NONE so we compile (but still not run) on solaris
+
+
+Changes in version 0.0.2pre27 - 2004-03-14
+  o Bugfixes:
+    - Allow internal tor networks (we were rejecting internal IPs,
+      now we allow them if they're set explicitly).
+    - And fix a few endian issues.
+
+
+Changes in version 0.0.2pre26 - 2004-03-14
+  o New features:
+    - If a stream times out after 15s without a connected cell, don't
+      try that circuit again: try a new one.
+    - Retry streams at most 4 times. Then give up.
+    - When a dirserver gets a descriptor from an unknown router, it
+      logs its fingerprint (so the dirserver operator can choose to
+      accept it even without mail from the server operator).
+    - Inform unapproved servers when we reject their descriptors.
+    - Make tor build on Windows again. It works as a client, who knows
+      about as a server.
+    - Clearer instructions in the torrc for how to set up a server.
+    - Be more efficient about reading fd's when our global token bucket
+      (used for rate limiting) becomes empty.
+  o Bugfixes:
+    - Stop asserting that computers always go forward in time. It's
+      simply not true.
+    - When we sent a cell (e.g. destroy) and then marked an OR connection
+      expired, we might close it before finishing a flush if the other
+      side isn't reading right then.
+    - Don't allow dirservers to start if they haven't defined
+      RecommendedVersions
+    - We were caching transient dns failures. Oops.
+    - Prevent servers from publishing an internal IP as their address.
+    - Address a strcat vulnerability in circuit.c
+
+
+Changes in version 0.0.2pre25 - 2004-03-04
+  o New features:
+    - Put the OR's IP in its router descriptor, not its fqdn. That way
+      we'll stop being stalled by gethostbyname for nodes with flaky dns,
+      e.g. poblano.
+  o Bugfixes:
+    - If the user typed in an address that didn't resolve, the server
+      crashed.
+
+
+Changes in version 0.0.2pre24 - 2004-03-03
+  o Bugfixes:
+    - Fix an assertion failure in dns.c, where we were trying to dequeue
+      a pending dns resolve even if it wasn't pending
+    - Fix a spurious socks5 warning about still trying to write after the
+      connection is finished.
+    - Hold certain marked_for_close connections open until they're finished
+      flushing, rather than losing bytes by closing them too early.
+    - Correctly report the reason for ending a stream
+    - Remove some duplicate calls to connection_mark_for_close
+    - Put switch_id and start_daemon earlier in the boot sequence, so it
+      will actually try to chdir() to options.DataDirectory
+    - Make 'make test' exit(1) if a test fails; fix some unit tests
+    - Make tor fail when you use a config option it doesn't know about,
+      rather than warn and continue.
+    - Make --version work
+    - Bugfixes on the rpm spec file and tor.sh, so it's more up to date
+
+
+Changes in version 0.0.2pre23 - 2004-02-29
+  o New features:
+    - Print a statement when the first circ is finished, so the user
+      knows it's working.
+    - If a relay cell is unrecognized at the end of the circuit,
+      send back a destroy. (So attacks to mutate cells are more
+      clearly thwarted.)
+    - New config option 'excludenodes' to avoid certain nodes for circuits.
+    - When it daemonizes, it chdir's to the DataDirectory rather than "/",
+      so you can collect coredumps there.
+ o Bugfixes:
+    - Fix a bug in tls flushing where sometimes data got wedged and
+      didn't flush until more data got sent. Hopefully this bug was
+      a big factor in the random delays we were seeing.
+    - Make 'connected' cells include the resolved IP, so the client
+      dns cache actually gets populated.
+    - Disallow changing from ORPort=0 to ORPort>0 on hup.
+    - When we time-out on a stream and detach from the circuit, send an
+      end cell down it first.
+    - Only warn about an unknown router (in exitnodes, entrynodes,
+      excludenodes) after we've fetched a directory.
+
+
+Changes in version 0.0.2pre22 - 2004-02-26
+  o New features:
+    - Servers publish less revealing uname information in descriptors.
+    - More memory tracking and assertions, to crash more usefully when
+      errors happen.
+    - If the default torrc isn't there, just use some default defaults.
+      Plus provide an internal dirservers file if they don't have one.
+    - When the user tries to use Tor as an http proxy, give them an http
+      501 failure explaining that we're a socks proxy.
+    - Dump a new router.desc on hup, to help confused people who change
+      their exit policies and then wonder why router.desc doesn't reflect
+      it.
+    - Clean up the generic tor.sh init script that we ship with.
+  o Bugfixes:
+    - If the exit stream is pending on the resolve, and a destroy arrives,
+      then the stream wasn't getting removed from the pending list. I
+      think this was the one causing recent server crashes.
+    - Use a more robust poll on OSX 10.3, since their poll is flaky.
+    - When it couldn't resolve any dirservers, it was useless from then on.
+      Now it reloads the RouterFile (or default dirservers) if it has no
+      dirservers.
+    - Move the 'tor' binary back to /usr/local/bin/ -- it turns out
+      many users don't even *have* a /usr/local/sbin/.
+
+
+Changes in version 0.0.2pre21 - 2004-02-18
+  o New features:
+    - There's a ChangeLog file that actually reflects the changelog.
+    - There's a 'torify' wrapper script, with an accompanying
+      tor-tsocks.conf, that simplifies the process of using tsocks for
+      tor. It even has a man page.
+    - The tor binary gets installed to sbin rather than bin now.
+    - Retry streams where the connected cell hasn't arrived in 15 seconds
+    - Clean up exit policy handling -- get the default out of the torrc,
+      so we can update it without forcing each server operator to fix
+      his/her torrc.
+    - Allow imaps and pop3s in default exit policy
+  o Bugfixes:
+    - Prevent picking middleman nodes as the last node in the circuit
+
+
+Changes in version 0.0.2pre20 - 2004-01-30
+  o New features:
+    - We now have a deb package, and it's in debian unstable. Go to
+      it, apt-getters. :)
+    - I've split the TotalBandwidth option into BandwidthRate (how many
+      bytes per second you want to allow, long-term) and
+      BandwidthBurst (how many bytes you will allow at once before the cap
+      kicks in).  This better token bucket approach lets you, say, set
+      BandwidthRate to 10KB/s and BandwidthBurst to 10MB, allowing good
+      performance while not exceeding your monthly bandwidth quota.
+    - Push out a tls record's worth of data once you've got it, rather
+      than waiting until you've read everything waiting to be read. This
+      may improve performance by pipelining better. We'll see.
+    - Add an AP_CONN_STATE_CONNECTING state, to allow streams to detach
+      from failed circuits (if they haven't been connected yet) and attach
+      to new ones.
+    - Expire old streams that haven't managed to connect. Some day we'll
+      have them reattach to new circuits instead.
+
+  o Bugfixes:
+    - Fix several memory leaks that were causing servers to become bloated
+      after a while.
+    - Fix a few very rare assert triggers. A few more remain.
+    - Setuid to User _before_ complaining about running as root.
+
+
+Changes in version 0.0.2pre19 - 2004-01-07
+  o Bugfixes:
+    - Fix deadlock condition in dns farm. We were telling a child to die by
+      closing the parent's file descriptor to him. But newer children were
+      inheriting the open file descriptor from the parent, and since they
+      weren't closing it, the socket never closed, so the child never read
+      eof, so he never knew to exit. Similarly, dns workers were holding
+      open other sockets, leading to all sorts of chaos.
+    - New cleaner daemon() code for forking and backgrounding.
+    - If you log to a file, it now prints an entry at the top of the
+      logfile so you know it's working.
+    - The onionskin challenge length was 30 bytes longer than necessary.
+    - Started to patch up the spec so it's not quite so out of date.
+
+
+Changes in version 0.0.2pre18 - 2004-01-02
+  o Bugfixes:
+    - Fix endian issues with the 'integrity' field in the relay header.
+    - Fix a potential bug where connections in state
+      AP_CONN_STATE_CIRCUIT_WAIT might unexpectedly ask to write.
+
+
+Changes in version 0.0.2pre17 - 2003-12-30
+  o Bugfixes:
+    - Made --debuglogfile (or any second log file, actually) work.
+    - Resolved an edge case in get_unique_circ_id_by_conn where a smart
+      adversary could force us into an infinite loop.
+
+  o Features:
+    - Each onionskin handshake now includes a hash of the computed key,
+      to prove the server's identity and help perfect forward secrecy.
+    - Changed cell size from 256 to 512 bytes (working toward compatibility
+      with MorphMix).
+    - Changed cell length to 2 bytes, and moved it to the relay header.
+    - Implemented end-to-end integrity checking for the payloads of
+      relay cells.
+    - Separated streamid from 'recognized' (otherwise circuits will get
+      messed up when we try to have streams exit from the middle). We
+      use the integrity-checking to confirm that a cell is addressed to
+      this hop.
+    - Randomize the initial circid and streamid values, so an adversary who
+      breaks into a node can't learn how many circuits or streams have
+      been made so far.
+
+
+Changes in version 0.0.2pre16 - 2003-12-14
+  o Bugfixes:
+    - Fixed a bug that made HUP trigger an assert
+    - Fixed a bug where a circuit that immediately failed wasn't being
+      counted as a failed circuit in counting retries.
+
+  o Features:
+    - Now we close the circuit when we get a truncated cell: otherwise we're
+      open to an anonymity attack where a bad node in the path truncates
+      the circuit and then we open streams at him.
+    - Add port ranges to exit policies
+    - Add a conservative default exit policy
+    - Warn if you're running tor as root
+    - on HUP, retry OR connections and close/rebind listeners
+    - options.EntryNodes: try these nodes first when picking the first node
+    - options.ExitNodes: if your best choices happen to include any of
+      your preferred exit nodes, you choose among just those preferred
+      exit nodes.
+    - options.ExcludedNodes: nodes that are never picked in path building
+
+
+Changes in version 0.0.2pre15 - 2003-12-03
+  o Robustness and bugfixes:
+    - Sometimes clients would cache incorrect DNS resolves, which would
+      really screw things up.
+    - An OP that goes offline would slowly leak all its sockets and stop
+      working.
+    - A wide variety of bugfixes in exit node selection, exit policy
+      handling, and processing pending streams when a new circuit is
+      established.
+    - Pick nodes for a path only from those the directory says are up
+    - Choose randomly from all running dirservers, not always the first one
+    - Increase allowed http header size for directory fetch.
+    - Stop writing to stderr (if we're daemonized it will be closed).
+    - Enable -g always, so cores will be more useful to me.
+    - Switch "-lcrypto -lssl" to "-lssl -lcrypto" for broken distributions.
+
+  o Documentation:
+    - Wrote a man page. It lists commonly used options.
+
+  o Configuration:
+    - Change default loglevel to warn.
+    - Make PidFile default to null rather than littering in your CWD.
+    - OnionRouter config option is now obsolete. Instead it just checks
+      ORPort>0.
+    - Moved to a single unified torrc file for both clients and servers.
+
+
+Changes in version 0.0.2pre14 - 2003-11-29
+  o Robustness and bugfixes:
+    - Force the admin to make the DataDirectory himself
+      - to get ownership/permissions right
+      - so clients no longer make a DataDirectory and then never use it
+    - fix bug where a client who was offline for 45 minutes would never
+      pull down a directory again
+    - fix (or at least hide really well) the dns assert bug that was
+      causing server crashes
+    - warnings and improved robustness wrt clockskew for certs
+    - use the native daemon(3) to daemonize, when available
+    - exit if bind() fails
+    - exit if neither socksport nor orport is defined
+    - include our own tor_timegm (Win32 doesn't have its own)
+    - bugfix for win32 with lots of connections
+    - fix minor bias in PRNG
+    - make dirserver more robust to corrupt cached directory
+
+  o Documentation:
+    - Wrote the design document (woo)
+
+  o Circuit building and exit policies:
+    - Circuits no longer try to use nodes that the directory has told them
+      are down.
+    - Exit policies now support bitmasks (18.0.0.0/255.0.0.0) and
+      bitcounts (18.0.0.0/8).
+    - Make AP connections standby for a circuit if no suitable circuit
+      exists, rather than failing
+    - Circuits choose exit node based on addr/port, exit policies, and
+      which AP connections are standing by
+    - Bump min pathlen from 2 to 3
+    - Relay end cells have a payload to describe why the stream ended.
+    - If the stream failed because of exit policy, try again with a new
+      circuit.
+    - Clients have a dns cache to remember resolved addresses.
+    - Notice more quickly when we have no working circuits
+
+  o Configuration:
+    - APPort is now called SocksPort
+    - SocksBindAddress, ORBindAddress, DirBindAddress let you configure
+      where to bind
+    - RecommendedVersions is now a config variable rather than
+      hardcoded (for dirservers)
+    - Reloads config on HUP
+    - Usage info on -h or --help
+    - If you set User and Group config vars, it'll setu/gid to them.
+
+Changes in version 0.0.2pre13 - 2003-10-19
+  o General stability:
+    - SSL_write no longer fails when it returns WANTWRITE and the number
+      of bytes in the buf has changed by the next SSL_write call.
+    - Fix segfault fetching directory when network is down
+    - Fix a variety of minor memory leaks
+    - Dirservers reload the fingerprints file on HUP, so I don't have
+      to take down the network when I approve a new router
+    - Default server config file has explicit Address line to specify fqdn
+
+  o Buffers:
+    - Buffers grow and shrink as needed (Cut process size from 20M to 2M)
+    - Make listener connections not ever alloc bufs
+
+  o Autoconf improvements:
+    - don't clobber an external CFLAGS in ./configure
+    - Make install now works
+    - create var/lib/tor on make install
+    - autocreate a tor.sh initscript to help distribs
+    - autocreate the torrc and sample-server-torrc with correct paths
+
+  o Log files and Daemonizing now work:
+    - If --DebugLogFile is specified, log to it at -l debug
+    - If --LogFile is specified, use it instead of commandline
+    - If --RunAsDaemon is set, tor forks and backgrounds on startup
+

@@ -1,0 +1,66 @@
+
+    Part one: Overview and explanation
+
+Because tor is an application-level proxy, it needs client-side support
+from every client program that wants to use it. (This is different from
+systems like Freedom, which used a single client-side program to capture
+all packets and redirect them to the Freedom network.) Client applications
+need two general classes of modifications to be compatible with tor:
+
+1) Whenever they call connect(), they instead should connect() to the
+local onion proxy and tell it "address and port". The onion proxy will
+itself make a connection to "address and port", and then the client
+application can talk through that socket as if it's directly connected. To
+support as many applications as possible, tor uses the common "socks"
+protocol which does exactly the above. So applications with socks support
+will support tor without needing any modifications.
+
+2) Applications must not call gethostbyname() to resolve an address
+they intend to later connect() to via onion routing. gethostbyname()
+contacts the dns server of the target machine -- thus giving away the
+fact that you intend to make an anonymous connection to it.
+
+To clarify, I need to explain more about the socks protocol. Socks
+comes in three flavors: 4, 4a, and 5. The socks4 protocol basically
+uses IP and port -- so it is unsuitable because of the gethostbyname()
+issue above. Socks4a is a slight modification to the socks4 protocol,
+whereby you can specify an IP of 0.0.0.x to signal the socks server
+that you will instead be sending a hostname (fqdn). So applications with
+socks4a support are all set. Socks5, on the other hand, allows the client
+to specify "address type" and then an address -- so some applications
+choose to supply an IP and others choose to supply a hostname. If the
+application uses socks5 you must investigate further to decide whether
+it's leaking anonymity.
+
+
+    Part two: using tsocks to transparently replace library calls
+
+tsocks (available from http://tsocks.sourceforge.net/ or from your
+favorite apt-get equivalent) allows you to run a program as normal,
+but it replaces the system calls for connect() to connect to the socks
+server first and then pass it your destination info. In our case the
+socks server is a tor process (running either locally or elsewhere).
+In general this works quite well for command-line processes like finger,
+ssh, etc. But there are a couple of catches: A) tsocks doesn't intercept
+calls to gethostbyname. So unless you specify an IP rather than hostname,
+you'll be giving yourself away. B) Programs which are suid don't let you
+intercept the system calls -- ssh falls into this category. But you can
+make a local copy of ssh and use that. C) Probably tsocks doesn't behave
+well for behemoths like Mozilla.
+
+
+    Part three: applications which support tor correctly
+
+[this section is outdated and wrong. we should tie it into the main
+tor-doc.html one day.]
+
+http: Mozilla: set your socks4 proxy to be the onion proxy (but see above)
+      privoxy: set your socks4a proxy to be the onion proxy
+      wget: run privoxy, and then add the line
+        "http_proxy=http://localhost:8118" to your ~/.wgetrc.
+ssh: tsocks ssh arma@18.244.0.188
+ftp: tsocks wget ftp://18.244.0.188/quux.tar --passive
+     Mozilla: set your socks4 proxy to be the onion proxy
+
+
+
