@@ -171,7 +171,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
 
   if(!dnsconn) {
     log_fn(LOG_WARN,"no idle dns workers. Failing.");
-    dns_cancel_pending_resolve(exitconn->address, NULL);
+    dns_cancel_pending_resolve(exitconn->address);
     return -1;
   }
 
@@ -192,12 +192,53 @@ static int assign_to_dnsworker(connection_t *exitconn) {
 }
 
 
+void connection_dns_remove(connection_t *conn)
+{
+  struct pending_connection_t *pend, *victim;
+  struct cached_resolve search;
+  struct cached_resolve *resolve;
+
+  strncpy(search.address, conn->address, MAX_ADDRESSLEN);
+  search.address[MAX_ADDRESSLEN-1] = 0;
+
+  resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
+  if(!resolve) {
+    log_fn(LOG_WARN,"Address '%s' is not pending. Dropping.", conn->address);
+    return;
+  }
+
+  assert(resolve->pending_connections);
+  assert_connection_ok(conn,0);
+
+  pend = resolve->pending_connections;
+
+  if(pend->conn == conn) {
+    resolve->pending_connections = pend->next;
+    free(pend);
+    log_fn(LOG_DEBUG, "Connection (fd %d) no longer waiting for resolve of '%s'",
+           conn->s, conn->address);
+    return;
+  } else {
+    for( ; pend->next; pend = pend->next) {
+      if(pend->next->conn == conn) {
+        victim = pend->next;
+        pend->next = victim->next;
+        free(victim);
+        log_fn(LOG_DEBUG, "Connection (fd %d) no longer waiting for resolve of '%s'",
+               conn->s, conn->address);
+        return; /* more are pending */
+      }
+    }
+    assert(0); /* not reachable unless onlyconn not in pending list */
+  }
+}
+
 /* If onlyconn is NULL, cancel all pending connections. If onlyconn is
  * defined, then remove onlyconn from the pending list.  Does not cancel the
  * resolve itself, or remove the 'struct cached_resolve' from the cache.
  */
-void dns_cancel_pending_resolve(char *address, connection_t *onlyconn) {
-  struct pending_connection_t *pend, *victim;
+void dns_cancel_pending_resolve(char *address) {
+  struct pending_connection_t *pend;
   struct cached_resolve search;
   struct cached_resolve *resolve, *tmp;
 
@@ -212,40 +253,38 @@ void dns_cancel_pending_resolve(char *address, connection_t *onlyconn) {
 
   assert(resolve->pending_connections);
 
-  if(onlyconn) {
-    assert_connection_ok(onlyconn,0);
+  /* mark all pending connections to fail */
+  log_fn(LOG_DEBUG, "Failing all connections waiting on DNS resolve of '%s'",
+         address);
+  while(resolve->pending_connections) {
     pend = resolve->pending_connections;
-    if(pend->conn == onlyconn) {
-      resolve->pending_connections = pend->next;
-      free(pend);
-      if(resolve->pending_connections) {/* more pending, don't cancel it */
-        log_fn(LOG_DEBUG, "Connection (fd %d) no longer waiting for resolve of '%s'",
-               onlyconn->s, address);
-      }
-    } else {
-      for( ; pend->next; pend = pend->next) {
-        if(pend->next->conn == onlyconn) {
-          victim = pend->next;
-          pend->next = victim->next;
-          free(victim);
-          log_fn(LOG_DEBUG, "Connection (fd %d) no longer waiting for resolve of '%s'",
-                 onlyconn->s, address);
-          return; /* more are pending */
-        }
-      }
-      assert(0); /* not reachable unless onlyconn not in pending list */
-    }
-  } else {
-    /* mark all pending connections to fail */
-    log_fn(LOG_DEBUG, "Failing all connections waiting on DNS resolve of '%s'",
-           address);
-    while(resolve->pending_connections) {
-      pend = resolve->pending_connections;
-      connection_mark_for_close(pend->conn, END_STREAM_REASON_MISC);
-      resolve->pending_connections = pend->next;
-      free(pend);
-    }
+    /* This calls dns_cancel_pending_resolve, which removes pend
+     * from the list, so we don't have to do it.  Beware of
+     * modify-while-iterating bugs hereabouts! */
+    connection_mark_for_close(pend->conn, END_STREAM_REASON_MISC);
+    assert(resolve->pending_connections != pend);
   }
+
+  /* remove resolve from the linked list */
+  if(resolve == oldest_cached_resolve) {
+    oldest_cached_resolve = resolve->next;
+    if(oldest_cached_resolve == NULL)
+      newest_cached_resolve = NULL;
+  } else {
+    /* FFFF make it a doubly linked list if this becomes too slow */
+    for(tmp=oldest_cached_resolve; tmp && tmp->next != resolve; tmp=tmp->next) ;
+    assert(tmp); /* it's got to be in the list, or we screwed up somewhere else */
+    tmp->next = resolve->next; /* unlink it */
+
+    if(newest_cached_resolve == resolve)
+      newest_cached_resolve = tmp;
+  }
+
+  /* remove resolve from the tree */
+  SPLAY_REMOVE(cache_tree, &cache_root, resolve);
+
+  free(resolve);
+
 }
 
 static void dns_found_answer(char *address, uint32_t addr) {
@@ -315,7 +354,7 @@ int connection_dns_process_inbuf(connection_t *conn) {
   if(conn->inbuf_reached_eof) {
     log_fn(LOG_WARN,"Read eof. Worker dying.");
     if(conn->state == DNSWORKER_STATE_BUSY) {
-      dns_cancel_pending_resolve(conn->address, NULL);
+      dns_cancel_pending_resolve(conn->address);
       num_dnsworkers_busy--;
     }
     num_dnsworkers--;

@@ -182,14 +182,14 @@ _connection_mark_for_close(connection_t *conn, char reason)
     case CONN_TYPE_EXIT:
     case CONN_TYPE_AP:
       if (conn->state == EXIT_CONN_STATE_RESOLVING)
-        dns_cancel_pending_resolve(conn->address, conn);
+        connection_dns_remove(conn);
       if (!conn->has_sent_end && reason &&
           connection_edge_end(conn, reason, conn->cpath_layer) < 0)
         return -1;
       break;
     case CONN_TYPE_DNSWORKER:
       if (conn->state == DNSWORKER_STATE_BUSY) {
-        dns_cancel_pending_resolve(conn->address, NULL);
+        dns_cancel_pending_resolve(conn->address);
       }
       break;
     default:
