@@ -43,6 +43,21 @@ char *tor_strndup(const char *s, size_t n);
 #define tor_free(p) do {if(p) {free(p); (p)=NULL;}} while(0)
 void tor_strlower(char *s);
 
+#ifdef UNALIGNED_ACCESS_OK
+/* XXX Not actually used yet, but would probably be faster on non-sun
+ * hardare.
+ */
+#define get_uint16(cp) (*(uint16_t*)(cp))
+#define get_uint32(cp) (*(uint32_t*)(cp))
+#define set_uint16(cp,v) do { *(uint16_t)(cp) = (v) } while (0)
+#define set_uint32(cp,v) do { *(uint32_t)(cp) = (v) } while (0)
+#else
+uint16_t get_uint16(char *cp);
+uint32_t get_uint32(char *cp);
+void set_uint16(char *cp, uint16_t v);
+void set_uint32(char *cp, uint32_t v);
+#endif
+
 typedef struct {
   void **list;
   int num_used;
