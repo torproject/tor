@@ -220,13 +220,17 @@ Bind to this port to listen for connections from Tor clients and servers.
 \fBorbindaddress \fR\fIIP\fP
 Bind to this address to listen for connections from Tor clients and servers. (Default: 0.0.0.0)
 .TP
-\fBredirectexit \fR\fIpattern address:port\fP
+\fBredirectexit \fR\fIpattern target\fP
 Whenever an outgoing connection tries to connect to one of a given set
-of addresses, connect to \fIaddress:port\fP instead.  The address
+of addresses, connect to \fItarget\fP (an \fIaddress:port\fP pair) instead.
+The address
 pattern is given in the same format as for an exit policy.  The
 address translation applies after exit policies are applied.  Multiple
 \fBredirectexit\fP options can be used: once any one has matched
-successfully, no subsequent rules are considered.
+successfully, no subsequent rules are considered.  You can specify that no
+redirection is to be performed on a given set of addresses by using the
+special target string "pass", which prevents subsequent rules from being
+considered.
 
 .SH DIRECTORY SERVER OPTIONS
 .PP

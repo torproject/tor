@@ -824,6 +824,7 @@ typedef struct exit_redirect_t {
   uint16_t port_min;
   uint16_t port_max;
 
+  int is_redirect;
   uint32_t addr_dest;
   uint16_t port_dest;
 } exit_redirect_t;

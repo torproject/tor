@@ -901,11 +901,13 @@ void connection_exit_connect(connection_t *conn) {
       if ((addr&r->mask)==(r->addr&r->mask) &&
           (r->port_min <= port) && (port <= r->port_max)) {
         struct in_addr in;
-        addr = r->addr_dest;
-        port = r->port_dest;
-        in.s_addr = htonl(addr);
-        log_fn(LOG_DEBUG, "Redirecting connection from %s:%d to %s:%d",
-               conn->address, conn->port, inet_ntoa(in), port);
+        if (r->is_redirect) {
+          addr = r->addr_dest;
+          port = r->port_dest;
+          in.s_addr = htonl(addr);
+          log_fn(LOG_DEBUG, "Redirecting connection from %s:%d to %s:%d",
+                 conn->address, conn->port, inet_ntoa(in), port);
+        }
         break;
       }
     });

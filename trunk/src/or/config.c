@@ -1106,10 +1106,15 @@ static int parse_redirect_line(or_options_t *options,
     log_fn(LOG_WARN, "Error parsing source address in RedirectExit line");
     goto err;
   }
-  if (parse_addr_port(smartlist_get(elements,1),NULL,&r->addr_dest,
-                      &r->port_dest)) {
-    log_fn(LOG_WARN, "Error parseing dest address in RedirectExit line");
-    goto err;
+  if (0==strcasecmp(smartlist_get(elements,1), "pass")) {
+    r->is_redirect = 0;
+  } else {
+    if (parse_addr_port(smartlist_get(elements,1),NULL,&r->addr_dest,
+                             &r->port_dest)) {
+      log_fn(LOG_WARN, "Error parseing dest address in RedirectExit line");
+      goto err;
+    }
+    r->is_redirect = 1;
   }
 
   goto done;
