@@ -102,12 +102,12 @@ int crypto_SHA_digest(const unsigned char *m, int len, unsigned char *digest);
 crypto_digest_env_t *crypto_new_digest_env(int type);
 void crypto_digest_free(crypto_digest_env_t *digest);
 void crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
-			     size_t len);
+                             size_t len);
 void crypto_digest_get_digest(crypto_digest_env_t *digest,
-			      char *out, size_t out_len);
-crypto_digest_env_t *crypto_digest_copy(const crypto_digest_env_t *digest);
+                              char *out, size_t out_len);
+crypto_digest_env_t *crypto_digest_dup(const crypto_digest_env_t *digest);
 void crypto_digest_assign(crypto_digest_env_t *into,
-			  const crypto_digest_env_t *from);
+                          const crypto_digest_env_t *from);
 
 /* random numbers */
 int crypto_seed_rng();
