@@ -1,8 +1,9 @@
 tor (0.0.9.2-X) UNRELEASED; urgency=low
 
   * Add a watch file.
+  * Forward port patches (so they apply to current cvs).
 
- -- Peter Palfrader <weasel@debian.org>  Sun,  9 Jan 2005 03:29:36 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sun,  9 Jan 2005 03:30:06 +0100
 
 tor (0.0.9.2-1) unstable; urgency=low
 
