@@ -329,7 +329,7 @@ handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
   {
     int recognized = config_option_is_recognized(q);
     if (!recognized) {
-      send_control_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, body);
+      send_control_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, q);
       goto done;
     } else {
       struct config_line_t *answer = config_get_assigned_option(options,q);
@@ -508,7 +508,7 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
       } else if (!is_plausible_address(to)) {
         log_fn(LOG_WARN,"Skipping invalid argument '%s' in MapAddress msg",to);
       } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
-        char *addr = addressmap_register_virtual_address(
+        const char *addr = addressmap_register_virtual_address(
                strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
                tor_strdup(to));
         if (!addr) {
@@ -518,7 +518,6 @@ handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
           size_t anslen = strlen(addr)+strlen(to)+2;
           char *ans = tor_malloc(anslen);
           tor_snprintf(ans, anslen, "%s %s", addr, to);
-          tor_free(addr);
           smartlist_add(reply, ans);
         }
       } else {
@@ -555,6 +554,10 @@ handle_getinfo_helper(const char *question, char **answer)
     *answer = tor_strdup(VERSION);
   } else if (!strcmpstart(question, "desc/id/")) {
     routerinfo_t *ri = router_get_by_hexdigest(question+strlen("desc/id/"));
+    if (ri && ri->signed_descriptor)
+      *answer = tor_strdup(ri->signed_descriptor);
+  } else if (!strcmpstart(question, "desc/name/")) {
+    routerinfo_t *ri = router_get_by_nickname(question+strlen("desc/name/"));
     if (ri && ri->signed_descriptor)
       *answer = tor_strdup(ri->signed_descriptor);
   } else if (!strcmp(question, "network-status")) {
