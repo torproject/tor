@@ -658,7 +658,7 @@ build_directory(directory_t *dir) {
     return -1;
   }
   if (my_routerinfo) {
-    log(LOG_INFO, "build_directory(): adding self (%d:%d)", 
+    log(LOG_INFO, "build_directory(): adding self (%s:%d)", 
         my_routerinfo->address, my_routerinfo->or_port);
     routers[n++] = my_routerinfo;
   }
@@ -675,7 +675,7 @@ build_directory(directory_t *dir) {
           conn->addr,conn->port);
       continue;
     }
-    log(LOG_INFO, "build_directory(): adding router (%d:%d)",
+    log(LOG_INFO, "build_directory(): adding router (%s:%d)",
         router->address, router->or_port);
     routers[n++] = router;
   }
