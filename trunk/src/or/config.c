@@ -193,7 +193,7 @@ static int config_assign(or_options_t *options, struct config_line_t *list) {
     config_compare(list, "BandwidthRate",  CONFIG_TYPE_INT, &options->BandwidthRate) ||
     config_compare(list, "BandwidthBurst", CONFIG_TYPE_INT, &options->BandwidthBurst) ||
 
-    config_compare(list, "ContactInfo", CONFIG_TYPE_STRING, &options->ContactInfo) ||
+    config_compare(list, "ContactInfo",    CONFIG_TYPE_STRING, &options->ContactInfo) ||
 
     config_compare(list, "DebugLogFile",   CONFIG_TYPE_STRING, &options->DebugLogFile) ||
     config_compare(list, "DataDirectory",  CONFIG_TYPE_STRING, &options->DataDirectory) ||
@@ -470,6 +470,7 @@ static int resolve_my_address(or_options_t *options) {
 /** Release storage held by <b>options</b> */
 static void free_options(or_options_t *options) {
   config_free_lines(options->LogOptions);
+  tor_free(options->ContactInfo);
   tor_free(options->DebugLogFile);
   tor_free(options->DataDirectory);
   tor_free(options->RouterFile);
