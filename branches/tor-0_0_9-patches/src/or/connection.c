@@ -443,6 +443,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   char addrbuf[256];
   /* length of the remote address. Must be an int, since accept() needs that. */
   int remotelen=256;
+  tor_assert(remotelen >= sizeof(struct sockaddr_in));
   memset(addrbuf, 0, sizeof(addrbuf));
 
   news = accept(conn->s,(struct sockaddr *)addrbuf,&remotelen);
@@ -479,7 +480,11 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
     if (getsockname(news, (struct sockaddr*)addrbuf, &remotelen)<0) {
       log_fn(LOG_WARN, "getsockname() failed.");
     } else {
-      check_sockaddr_in((struct sockaddr*)addrbuf, remotelen, LOG_WARN);
+      if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen, LOG_WARN)<0) {
+        log_fn(LOG_WARN,"Something's wrong with this conn. Closing it.");
+        tor_close_socket(news);
+        return 0;
+      }
     }
   }
 
