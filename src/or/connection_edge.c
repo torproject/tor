@@ -876,7 +876,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   conn_age = time(NULL) - conn->timestamp_created;
   if(conn_age > 60) {
     /* XXX make this cleaner than '60' */
-    log_fn(LOG_WARN,"Giving up on attached circ (%d sec old).", conn_age);
+    log_fn(LOG_WARN,"Giving up on unattached conn (%d sec old).", conn_age);
     connection_mark_for_close(conn, 0);
   }
 
@@ -890,7 +890,8 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
     /* We have found a suitable circuit for our conn. Hurray. */
 
-    log_fn(LOG_DEBUG,"Attaching apconn to general circ (%d sec old).", conn_age);
+    log_fn(LOG_DEBUG,"Attaching apconn to general circ %d (stream %d sec old).",
+           circ->n_circ_id, conn_age);
     /* here, print the circ's path. so people can figure out which circs are sucking. */
     circuit_log_path(LOG_INFO,circ);
 
@@ -915,7 +916,8 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
     if(retval > 0) {
       /* one is already established, attach */
-      log_fn(LOG_INFO,"rend joined circ already here. attaching. (%d sec old)", conn_age);
+      log_fn(LOG_INFO,"rend joined circ %d already here. attaching. (stream %d sec old)",
+             rendcirc->n_circ_id, conn_age);
       link_apconn_to_circ(conn, rendcirc);
       if(connection_ap_handshake_send_begin(conn, rendcirc) < 0)
         return 0; /* already marked, let them fade away */
@@ -923,7 +925,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
     }
 
     if(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
-      log_fn(LOG_INFO,"pending-join circ already here, with intro ack. Stalling. (%d sec old)", conn_age);
+      log_fn(LOG_INFO,"pending-join circ %d already here, with intro ack. Stalling. (stream %d sec old)", rendcirc->n_circ_id, conn_age);
       return 0;
     }
 
@@ -934,19 +936,22 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
     if(retval > 0) {
       /* one has already sent the intro. keep waiting. */
-      log_fn(LOG_INFO,"Intro circ present and awaiting ack. Stalling. (%d sec old)", conn_age);
+      log_fn(LOG_INFO,"Intro circ %d present and awaiting ack (rend %d). Stalling. (stream %d sec old)",
+             introcirc->n_circ_id, rendcirc->n_circ_id, conn_age);
       return 0;
     }
 
     /* now both rendcirc and introcirc are defined, and neither is finished */
 
     if(rendcirc->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
-      log_fn(LOG_INFO,"ready rend circ already here (no intro-ack yet). (%d sec old)", conn_age);
+      log_fn(LOG_INFO,"ready rend circ %d already here (no intro-ack yet on intro %d). (stream %d sec old)",
+             rendcirc->n_circ_id, introcirc->n_circ_id, conn_age);
       /* look around for any new intro circs that should introduce */
 
       assert(introcirc->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
       if(introcirc->state == CIRCUIT_STATE_OPEN) {
-        log_fn(LOG_INFO,"found open intro circ; sending introduction. (%d sec old)", conn_age);
+        log_fn(LOG_INFO,"found open intro circ %d (rend %d); sending introduction. (stream %d sec old)",
+               introcirc->n_circ_id, rendcirc->n_circ_id, conn_age);
         /* XXX here we should cannibalize the rend circ if it's a zero service id */
         if(rend_client_send_introduction(introcirc, rendcirc) < 0) {
           return -1;
@@ -959,7 +964,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
       }
     }
 
-    log_fn(LOG_INFO,"Intro and rend circs are not both ready. Stalling conn. (%d sec old)", conn_age);
+    log_fn(LOG_INFO,"Intro (%d) and rend (%d) circs are not both ready. Stalling conn. (%d sec old)", introcirc->n_circ_id, rendcirc->n_circ_id, conn_age);
     return 0;
   }
 }
