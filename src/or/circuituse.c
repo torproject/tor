@@ -14,6 +14,7 @@ extern or_options_t options; /* command-line and config-file options */
 /********* START VARIABLES **********/
 
 extern circuit_t *global_circuitlist; /* from circuitlist.c */
+extern int has_fetched_directory; /* from main.c */
 
 /********* END VARIABLES ************/
 
@@ -590,6 +591,11 @@ static int n_circuit_failures = 0;
 
 circuit_t *circuit_launch_by_identity(uint8_t purpose, const char *exit_digest)
 {
+  if (!has_fetched_directory) {
+    log_fn(LOG_DEBUG,"Haven't fetched directory yet; cancelling circuit launch.");
+    return NULL;
+  }
+
   if (n_circuit_failures > MAX_CIRCUIT_FAILURES) {
     /* too many failed circs in a row. don't try. */
 //    log_fn(LOG_INFO,"%d failures so far, not trying.",n_circuit_failures);
