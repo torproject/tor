@@ -409,6 +409,10 @@ int fetch_from_buf_http(buf_t *buf,
   return 1;
 }
 
+/** If the user connects with socks4 or the wrong variant of socks5,
+ * then log one warning to let him know that it might be unwise. */
+static int have_warned_about_unsafe_socks = 0;
+
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"
@@ -480,6 +484,10 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           log_fn(LOG_DEBUG,"socks5: ipv4 address type");
           if(buf->datalen < 10) /* ip/port there? */
             return 0; /* not yet */
+          if(!have_warned_about_unsafe_socks) {
+            log_fn(LOG_WARN,"Your application is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.");
+//            have_warned_about_unsafe_socks = 1; // (for now, warn every time)
+          }
           destip = ntohl(*(uint32_t*)(buf->mem+4));
           in.s_addr = htonl(destip);
           tmpbuf = inet_ntoa(in);
@@ -556,6 +564,10 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
       }
 
       startaddr = next+1;
+      if(socks4_prot != socks4a && !have_warned_about_unsafe_socks) {
+        log_fn(LOG_WARN,"Your application is giving Tor only an IP address. Applications that do DNS resolves themselves may leak information. Consider using Socks4A (e.g. via privoxy or socat) instead.");
+//      have_warned_about_unsafe_socks = 1; // (for now, warn every time)
+      }
       if(socks4_prot == socks4a) {
         next = memchr(startaddr, 0, buf->mem+buf->datalen-startaddr);
         if(!next) {
