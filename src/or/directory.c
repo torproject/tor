@@ -290,16 +290,6 @@ int connection_dir_finished_flushing(connection_t *conn) {
   return 0;
 }
 
-int connection_dir_create_listener(struct sockaddr_in *bindaddr) {
-  log_fn(LOG_DEBUG,"starting");
-  return connection_create_listener(bindaddr, CONN_TYPE_DIR_LISTENER);
-}
-
-int connection_dir_handle_listener_read(connection_t *conn) {
-  log(LOG_INFO,"Dir: Received a connection request. Waiting for command.");
-  return connection_handle_listener_read(conn, CONN_TYPE_DIR, DIR_CONN_STATE_COMMAND_WAIT);
-} 
-
 /*
   Local Variables:
   mode:c

@@ -159,16 +159,6 @@ int ap_handshake_socks_reply(connection_t *conn, char result) {
   return connection_flush_buf(conn); /* try to flush it, in case we're about to close the conn */
 }
 
-int connection_ap_create_listener(struct sockaddr_in *bindaddr) {
-  log_fn(LOG_DEBUG,"starting");
-  return connection_create_listener(bindaddr, CONN_TYPE_AP_LISTENER);
-}
-
-int connection_ap_handle_listener_read(connection_t *conn) {
-  log(LOG_NOTICE,"AP: Received a connection request. Waiting for socksinfo.");
-  return connection_handle_listener_read(conn, CONN_TYPE_AP, AP_CONN_STATE_SOCKS_WAIT);
-} 
-
 /*
   Local Variables:
   mode:c

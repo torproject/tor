@@ -17,8 +17,8 @@ static int or_handshake_server_process_auth(connection_t *conn);
 static int or_handshake_server_process_nonce(connection_t *conn);
 
 static void conn_or_init_crypto(connection_t *conn);
-#endif
 static void connection_or_set_open(connection_t *conn);
+#endif
 
 /*
  *
@@ -85,7 +85,8 @@ int connection_or_finished_flushing(connection_t *conn) {
           conn->address,conn->port);
 
 #ifdef USE_TLS
-      call TLS new, and start the TLS handshake
+      if(connection_tls_start_handshake(conn) < 0)
+        return -1;
 #else
       if(options.OnionRouter)
         return or_handshake_client_send_auth(conn);
@@ -182,7 +183,11 @@ connection_t *connection_or_connect(routerinfo_t *router) {
       connection_watch_events(conn, POLLIN | POLLOUT | POLLERR); 
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link on windows */
+#ifdef USE_TLS
+      conn->state = OR_CONN_STATE_CONNECTING;
+#else
       conn->state = OR_CONN_STATE_CLIENT_CONNECTING;
+#endif
       return conn;
     }
   }
@@ -198,9 +203,14 @@ connection_t *connection_or_connect(routerinfo_t *router) {
   log(LOG_DEBUG,"connection_or_connect() : Connection to router %s:%u established.",
       router->address, router->or_port);
 
+#ifdef USE_TLS
+  if(connection_tls_start_handshake(conn) >= 0)
+    return conn;
+#else
   if((options.OnionRouter && or_handshake_client_send_auth(conn) >= 0) ||
      (!options.OnionRouter && or_handshake_op_send_keys(conn) >= 0))
     return conn; /* success! */
+#endif
 
   /* failure */
   connection_remove(conn);
@@ -210,17 +220,7 @@ connection_t *connection_or_connect(routerinfo_t *router) {
 
 /* ********************************** */
 
-int connection_or_create_listener(struct sockaddr_in *bindaddr) {
-  log(LOG_DEBUG,"connection_create_or_listener starting");
-  return connection_create_listener(bindaddr, CONN_TYPE_OR_LISTENER);
-}
-
-int connection_or_handle_listener_read(connection_t *conn) {
-  log(LOG_NOTICE,"OR: Received a connection request. Attempting to authenticate.");
-  return connection_handle_listener_read(conn, CONN_TYPE_OR, OR_CONN_STATE_SERVER_AUTH_WAIT);
-}
-
-/* ***************** */
+#ifndef USE_TLS
 /* Helper functions to implement handshaking */
 
 #define FLAGS_LEN 2
@@ -237,7 +237,7 @@ or_handshake_op_send_keys(connection_t *conn) {
 
   assert(conn && conn->type == CONN_TYPE_OR);
 
-  conn->bandwidth = DEFAULT_BANDWIDTH_OP;
+  conn->bandwidth = DEFAULT_BANDWIDTH_OP; /* XXX USE_TLS */
 
   /* generate random keys */
   if(crypto_cipher_generate_key(conn->f_crypto) ||
@@ -520,7 +520,7 @@ or_handshake_server_process_auth(connection_t *conn) {
     crypto_cipher_set_key(conn->b_crypto,buf+14);
     crypto_cipher_set_key(conn->f_crypto,buf+30);
 
-    conn->bandwidth = router->bandwidth;
+    conn->bandwidth = router->bandwidth; /* XXX USE_TLS and below */
 
     /* copy all relevant info to conn */
     conn->addr = router->addr, conn->port = router->or_port;
@@ -665,7 +665,6 @@ connection_or_set_open(connection_t *conn) {
   connection_watch_events(conn, POLLIN);
 }
 
-#ifndef USE_TLS
 static void 
 conn_or_init_crypto(connection_t *conn) {
   //int x;
