@@ -372,6 +372,8 @@ tor_tls_context_new(crypto_pk_env_t *identity,
     tor_free(global_tls_context);
   }
   global_tls_context = result;
+  if (rsa)
+    crypto_free_pk_env(rsa);
   return 0;
 
  error:
