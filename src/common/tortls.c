@@ -265,7 +265,7 @@ tor_tls_write(tor_tls *tls, char *cp, int n)
 
 /* Perform initial handshake on 'tls'.  When finished, returns
  * TOR_TLS_DONE.  On failure, returns TOR_TLS_ERROR, TOR_TLS_WANTREAD,
- * or TOR_TLS_WANNTWRITE.
+ * or TOR_TLS_WANTWRITE.
  */
 int
 tor_tls_handshake(tor_tls *tls)
