@@ -558,16 +558,16 @@ Every router descriptor MUST start with a "router" Item; MUST end with a
 "router-signature" Item and an extra NL; and MUST contain exactly one
 instance of each of the following Items: "published" "onion-key" "link-key"
 "signing-key".  Additionally, a router descriptor MAY contain any number of
-"accept", "reject", and "opt" Items.
+"accept", "reject", and "opt" Items.  Other than "router" and
+"router-signature", the items may appear in any order.
 
 The items' formats are as follows:
-   "router" nickname address (ORPort SocksPort DirPort bandwidth)?
+   "router" nickname address (ORPort SocksPort DirPort)?
    "ports" ORPort SocksPort DirPort
-   "bandwidth" bandwidth
+   "bandwidth" bandwidth-avg bandwidth-burst
    "platform" string
    "published" YYYY-MM-DD HH:MM:SS
    "onion-key" NL a public key in PEM format
-   "link-key" NL a public key in PEM format
    "signing-key" NL a public key in PEM format
    "accept" string
    "reject" string
@@ -578,7 +578,8 @@ The items' formats are as follows:
 ORport ::= port where the router listens for routers/proxies (speaking cells)
 SocksPort ::=  where the router listens for applications (speaking socks)
 DirPort ::= where the router listens for directory download requests
-bandwidth ::= maximum bandwidth, in bytes/s
+bandwidth-avg ::= maximum average bandwidth, in bytes/s
+bandwidth-burst ::= maximum bandwidth spike, in bytes/s
 nickname ::= between 1 and 19 alphanumeric characters, case-insensitive.
 
 Bandwidth and ports are required; if they are not included in the router
@@ -589,12 +590,15 @@ line, they must appear in "bandwidth" and "ports" lines.
 7.2. Directory format
 
 A Directory begins with a "signed-directory" item, followed by one each of
-the following, in any order: "recommended-software".  It may include any
-number of "opt" items.  After these items, a directory includes any number
-of router descriptors, and a singer "directory-signature" item.
+the following, in any order: "recommended-software", "published",
+"running-routers".  It may include any number of "opt" items.  After these
+items, a directory includes any number of router descriptors, and a singer
+"directory-signature" item.
 
     "signed-directory"
+    "published" YYYY-MM-DD HH:MM:SS
     "recommended-software"  comma-separated-version-list
+    "running-routers" comma-separated-nickname-list
     "directory-signature" NL Signature
 
 Note:  The router descriptor for the directory server must appear first.
