@@ -1026,8 +1026,9 @@ void assert_connection_ok(connection_t *conn, time_t now)
   } else {
     assert(!conn->socks_request);
   }
-  if(conn->type != CONN_TYPE_DIR) {
-    assert(!conn->purpose); /* only used for dir types currently */
+  if(conn->type != CONN_TYPE_DIR &&
+     conn->type != CONN_TYPE_AP) {
+    assert(!conn->purpose); /* only used for dir and ap types currently */
   }
 
   switch(conn->type)

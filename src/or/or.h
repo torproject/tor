@@ -176,7 +176,7 @@
 #define AP_PURPOSE_RENDDESC_WAIT 2
 #define AP_PURPOSE_RENDPOINT_WAIT 3
 #define AP_PURPOSE_INTROPOINT_WAIT 4
-#define _AP_PURPOSE_MAX 3
+#define _AP_PURPOSE_MAX 4
 
 #define _DIR_CONN_STATE_MIN 1
 #define DIR_CONN_STATE_CONNECTING 1
@@ -699,7 +699,7 @@ circuit_t *circuit_get_by_conn(connection_t *conn);
 circuit_t *circuit_get_newest(connection_t *conn,
                               int must_be_open, uint8_t conn_purpose);
 circuit_t *circuit_get_next_by_pk_and_purpose(circuit_t *circuit,
-                                             const char *servid, int purpose);
+                                              const char *servid, uint8_t purpose);
 circuit_t *circuit_get_rendezvous(const char *cookie);
 
 void circuit_expire_building(void);
