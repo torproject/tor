@@ -529,9 +529,10 @@ router_parse_runningrouters(const char *str)
   for (i=0;i<tok->n_args;++i) {
     smartlist_add(new_list->running_routers, tok->args[i]);
   }
+  tok->n_args = 0; /* Don't free the elements of tok->args. */
 
   if (!(tok = find_first_by_keyword(tokens, K_DIRECTORY_SIGNATURE))) {
-    log_fn(LOG_WARN, "Missing signature on directory");
+    log_fn(LOG_WARN, "Missing signature on running-routers");
     goto err;
   }
   declared_key = find_dir_signing_key(str);

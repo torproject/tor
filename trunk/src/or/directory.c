@@ -140,10 +140,10 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
     });
 }
 
-/** Start a connection to a random running directory server, using
- * connection purpose 'purpose' requesting 'payload' (length
- * 'payload_len').  The purpose should be one of
- * 'DIR_PURPOSE_FETCH_DIR' or 'DIR_PURPOSE_FETCH_RENDDESC'.
+/** Start a connection to a random running directory server, using connection
+ * purpose 'purpose' requesting 'payload' (length 'payload_len').  The purpose
+ * should be one of 'DIR_PURPOSE_FETCH_DIR' or 'DIR_PURPOSE_FETCH_RENDDESC' or
+ * 'DIR_PURPOSE_FETCH_RUNNING_LIST.'
  */
 void
 directory_get_from_dirserver(uint8_t purpose, const char *resource)
@@ -163,6 +163,9 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource)
         ds = router_pick_trusteddirserver(1, get_options()->FascistFirewall);
       }
     }
+  } else if (purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
+    /* right now, running-routers isn't cached, so ask a trusted directory */
+    ds = router_pick_trusteddirserver(0, get_options()->FascistFirewall);
   } else { // (purpose == DIR_PURPOSE_FETCH_RENDDESC)
     /* only ask authdirservers, any of them will do */
     /* Never use fascistfirewall; we're going via Tor. */
@@ -241,6 +244,9 @@ directory_initiate_command(const char *address, uint32_t addr,
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       log_fn(LOG_DEBUG,"initiating hidden-service descriptor upload");
       break;
+    case DIR_PURPOSE_FETCH_RUNNING_LIST:
+      log_fn(LOG_DEBUG,"initiating running-routers fetch");
+      break;
     default:
       log_fn(LOG_ERR, "Unrecognized directory connection purpose.");
       tor_assert(0);
@@ -270,7 +276,8 @@ directory_initiate_command(const char *address, uint32_t addr,
   conn->state = DIR_CONN_STATE_CONNECTING;
 
   if(purpose == DIR_PURPOSE_FETCH_DIR ||
-     purpose == DIR_PURPOSE_UPLOAD_DIR) {
+     purpose == DIR_PURPOSE_UPLOAD_DIR ||
+     purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
     /* then we want to connect directly */
     switch(connection_connect(conn, conn->address, addr, dir_port)) {
       case -1:
