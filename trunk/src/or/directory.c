@@ -635,7 +635,7 @@ connection_dir_client_reached_eof(connection_t *conn)
         log_fn(LOG_WARN,"http status 400 (bad request) response from dirserver '%s'. Malformed server descriptor?", conn->address);
         break;
       case 403:
-        log_fn(LOG_WARN,"http status 403 (unapproved server) response from dirserver '%s'. Is your clock skewed? Have you mailed us your identity fingerprint? Are you using the right key? See README.", conn->address);
+        log_fn(LOG_WARN,"http status 403 (unapproved server) response from dirserver '%s'. Is your clock skewed? Have you mailed us your key fingerprint? Are you using the right key? See http://tor.eff.org/doc/tor-doc.html#server.", conn->address);
         break;
       default:
         log_fn(LOG_WARN,"http status %d response unrecognized (server '%s').", status_code, conn->address);
