@@ -44,7 +44,7 @@ Tor's extensions to the SOCKS protocol
   resolved) or a success response.  In the case of success, the address is
   stored in the portion of the SOCKS response reserved for remote IP address.
 
-  (We support RESOLVE in SOCKS4A too, even though it is unnecessary.)
+  (We support RESOLVE in SOCKS4 too, even though it is unnecessary.)
 
 3. HTTP-resistance
 
