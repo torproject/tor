@@ -1,10 +1,7 @@
-mutiny suggests: if none of the ports is defined maybe it shouldn't start.
-aaron got a crash in tor_timegm in tzset on os x, with -l warn but not with -l debug.
-Oct 25 04:29:17.017 [warn] directory_initiate_command(): No running dirservers known. This is really bad.
 rename ACI to CircID
 rotate tls-level connections -- make new ones, expire old ones.
 dirserver shouldn't put you in running-routers list if you haven't
-  uploading a descriptor recently
+  uploaded a descriptor recently
 look at having smallcells and largecells
 separate trying to rebuild a circuit because you have none from trying to rebuild a
   circuit because the current one is stale
@@ -32,9 +29,9 @@ ARMA    - arma claims
 Short-term:
         . integrate rep_ok functions, see what breaks
         - update tor faq
-        . obey SocksBindAddress, ORBindAddress
+        o obey SocksBindAddress, ORBindAddress
         - warn if we're running as root
-        - make connection_flush_buf() more obviously obsolete
+        o make connection_flush_buf() more obviously obsolete
         . let hup reread the config file, eg so we can get new exit
           policies without restarting
         - use times(2) rather than gettimeofday to measure how long it
@@ -78,7 +75,7 @@ Short-term:
                         - make sure exiting from the not-last hop works
                         - logic to find last *open* hop, not last hop, in cpath
                         - choose exit nodes by exit policies
-        - Remember address and port when resolving. 
+        - Remember address and port when beginning. 
         - Extend by nickname/hostname/something, not by IP.
 
 On-going

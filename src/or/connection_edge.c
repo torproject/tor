@@ -578,7 +578,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
 
   if(replylen) { /* we already have a reply in mind */
     connection_write_to_buf(reply, replylen, conn);
-    return connection_flush_buf(conn); /* try to flush it */
+    return flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen); /* try to flush it */
   }
   if(conn->socks_version == 4) {
     memset(buf,0,SOCKS4_NETWORK_LEN);
@@ -587,7 +587,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     buf[1] = (success ? SOCKS4_GRANTED : SOCKS4_REJECT);
     /* leave version, destport, destip zero */
     connection_write_to_buf(buf, SOCKS4_NETWORK_LEN, conn);
-    return connection_flush_buf(conn); /* try to flush it */
+    return flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen); /* try to flush it */
   }
   if(conn->socks_version == 5) {
     buf[0] = 5; /* version 5 */
@@ -598,7 +598,7 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
     buf[3] = 1; /* ipv4 addr */
     memset(buf+4,0,6); /* XXX set external addr/port to 0, see what breaks */
     connection_write_to_buf(buf,10,conn);
-    return connection_flush_buf(conn); /* try to flush it */
+    return flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen); /* try to flush it */
   }
   return 0; /* if socks_version isn't 4 or 5, don't send anything */
 }

@@ -560,7 +560,6 @@ int connection_find_on_inbuf(char *string, int len, connection_t *conn);
 
 int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);
-int connection_flush_buf(connection_t *conn);
 int connection_handle_write(connection_t *conn);
 void connection_write_to_buf(const char *string, int len, connection_t *conn);
 
