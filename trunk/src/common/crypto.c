@@ -344,13 +344,6 @@ int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env, const char *k
 
   tor_assert(env && keyfile);
 
-#if 0
-  if(strspn(keyfile,CONFIG_LEGAL_FILENAME_CHARACTERS) != strlen(keyfile)) {
-    /* filename contains nonlegal characters */
-    return -1;
-  }
-#endif
-
   /* open the keyfile */
   f_pr=fopen(keyfile,"rb");
   if (!f_pr)

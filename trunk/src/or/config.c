@@ -28,33 +28,11 @@ typedef enum config_type_t {
 /** Largest allowed config line */
 #define CONFIG_LINE_T_MAXLEN 4096
 
-#if 0
-static FILE *config_open(const unsigned char *filename);
-static int config_close(FILE *f);
-#endif
 static struct config_line_t *config_get_commandlines(int argc, char **argv);
 static struct config_line_t *config_get_lines(FILE *f);
 static void config_free_lines(struct config_line_t *front);
 static int config_compare(struct config_line_t *c, const char *key, config_type_t type, void *arg);
 static int config_assign(or_options_t *options, struct config_line_t *list);
-
-#if 0
-/** Open a configuration file for reading */
-static FILE *config_open(const unsigned char *filename) {
-  tor_assert(filename);
-  if (strspn(filename,CONFIG_LEGAL_FILENAME_CHARACTERS) != strlen(filename)) {
-    /* filename has illegal letters */
-    return NULL;
-  }
-  return fopen(filename, "r");
-}
-
-/** Close the configuration file */
-static int config_close(FILE *f) {
-  tor_assert(f);
-  return fclose(f);
-}
-#endif
 
 /** Helper: Read a list of configuration options from the command line. */
 static struct config_line_t *config_get_commandlines(int argc, char **argv) {
