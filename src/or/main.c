@@ -529,7 +529,7 @@ static void run_scheduled_events(time_t now) {
     last_rotated_certificate = now;
   if (last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
     log_fn(LOG_INFO,"Rotating tls context.");
-    if (tor_tls_context_new(get_identity_key(), 1, get_options()->Nickname,
+    if (tor_tls_context_new(get_identity_key(), 1, options->Nickname,
                             MAX_SSL_KEY_LIFETIME) < 0) {
       log_fn(LOG_WARN, "Error reinitializing TLS context");
     }
@@ -540,7 +540,8 @@ static void run_scheduled_events(time_t now) {
 
   /** 1c. If we have to change the accounting interval or record
    * bandwidth used in this accounting interval, do so. */
-  accounting_run_housekeeping(now);
+  if (options->AccountingMaxKB)
+    accounting_run_housekeeping(now);
 
   /** 2. Every DirFetchPostPeriod seconds, we get a new directory and upload
    *    our descriptor (if we've passed our internal checks). */
@@ -576,7 +577,7 @@ static void run_scheduled_events(time_t now) {
     }
     rend_cache_clean(); /* should this go elsewhere? */
 
-    time_to_fetch_directory = now + get_options()->DirFetchPostPeriod;
+    time_to_fetch_directory = now + options->DirFetchPostPeriod;
   }
 
   /** 3a. Every second, we examine pending circuits and prune the
@@ -657,7 +658,8 @@ static int prepare_for_poll(void) {
     seconds_elapsed = current_second ? (now.tv_sec - current_second) : 0;
     stats_n_bytes_read += bytes_read;
     stats_n_bytes_written += bytes_written;
-    accounting_add_bytes(bytes_read, bytes_written, seconds_elapsed);
+    if (get_options()->AccountingMaxKB)
+      accounting_add_bytes(bytes_read, bytes_written, seconds_elapsed);
     control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
 
     connection_bucket_refill(&now);
@@ -818,7 +820,8 @@ static int do_main_loop(void) {
   }
 
   /* Set up accounting */
-  configure_accounting(time(NULL));
+  if (get_options()->AccountingMaxKB)
+    configure_accounting(time(NULL));
 
   /* load the routers file, or assign the defaults. */
   if(router_reload_router_list()) {

@@ -169,7 +169,6 @@ reset_accounting(time_t now) {
   n_seconds_active_in_interval = 0;
 }
 
-
 static INLINE int time_to_record_bandwidth_usage(time_t now)
 {
   /* Note every 5 minutes */
@@ -179,11 +178,6 @@ static INLINE int time_to_record_bandwidth_usage(time_t now)
   static uint64_t last_read_bytes_noted = 0;
   static uint64_t last_written_bytes_noted = 0;
   static time_t last_time_noted = 0;
-
-  /* ???? Maybe only do this if accountingmaxkb is set ?
-  if (!get_options()->AccountingMaxKB)
-    return 0;
-  */
 
   if (last_time_noted + NOTE_INTERVAL <= now ||
       last_read_bytes_noted + NOTE_BYTES <= n_bytes_read_in_interval ||
@@ -240,6 +234,9 @@ accounting_set_wakeup_time(void)
 
   n_days_to_consider = n_days_in_interval - n_days_to_exhaust_bw;
 
+  /* XXX can we simplify this just by picking a random (non-deterministic)
+   * time to be up? If we go down and come up, then we pick a new one. Is
+   * that good enough? -RD */
   while (((unsigned char)digest[0]) > n_days_to_consider)
     crypto_digest(digest, digest, DIGEST_LEN);
 
