@@ -200,10 +200,12 @@ static int connection_tls_finish_handshake(connection_t *conn) {
            conn->address, conn->port);
     return -1;
   }
-  log_fn(LOG_DEBUG, "Other side claims to be '%s'", nickname);
+  log_fn(LOG_DEBUG, "Other side (%s:%d) claims to be '%s'", conn->address,
+         conn->port, nickname);
   router = router_get_by_nickname(nickname);
   if (!router) {
-    log_fn(LOG_INFO, "Unrecognized router with nickname '%s'", nickname);
+    log_fn(LOG_INFO, "Unrecognized router with nickname '%s' at %s:%d",
+           nickname, conn->address, conn->port);
     return -1;
   }
   if(tor_tls_verify(conn->tls, router->identity_pkey)<0) {
@@ -217,8 +219,8 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     /* I initiated this connection. */
     if (strcasecmp(conn->nickname, nickname)) {
       log_fn(options.DirPort ? LOG_WARN : LOG_INFO,
-             "Other side is '%s', but we tried to connect to '%s'",
-             nickname, conn->nickname);
+             "Other side (%s:%d) is '%s', but we tried to connect to '%s'",
+             conn->address, conn->port, nickname, conn->nickname);
       return -1;
     }
   } else {
