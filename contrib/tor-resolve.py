@@ -40,7 +40,7 @@ def socks5ResolveRequest(hostname):
     port = 0
     atype = 0x03
     reqheader = struct.pack("!BBBB",version, command, rsv, atype)
-    portstr = struct.pach("!H",port)
+    portstr = struct.pack("!H",port)
     return "%s%s\0%s"%(reqheader,hostname,port)
 def socks5ParseResponse(r):
     if len(r)<8: return None
