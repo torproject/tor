@@ -271,9 +271,9 @@ static void router_add_exit_policy_from_config(routerinfo_t *router) {
     e = strchr(s,',');
     if(!e) {
       last = 1;
-      strncpy(line,s,1023); 
+      strncpy(line,s,1023);
     } else {
-      memcpy(line,s, ((e-s)<1023)?(e-s):1023); 
+      memcpy(line,s, ((e-s)<1023)?(e-s):1023);
       line[e-s] = 0;
     }
     line[1023]=0;

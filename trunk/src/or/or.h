@@ -106,7 +106,7 @@
 
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 #define MAX_NICKNAME_LEN 32
-#define MAX_DIR_SIZE 50000 /* XXX, big enough? */
+#define MAX_DIR_SIZE 500000
 
 #define MAX_DNS_ENTRY_AGE (15*60)
 
@@ -532,8 +532,8 @@ int flush_buf_tls(tor_tls *tls, buf_t *buf, int *buf_flushlen);
 int write_to_buf(const char *string, int string_len, buf_t *buf);
 int fetch_from_buf(char *string, int string_len, buf_t *buf);
 int fetch_from_buf_http(buf_t *buf,
-                        char *headers_out, int max_headerlen,
-                        char *body_out, int max_bodylen);
+                        char **headers_out, int max_headerlen,
+                        char **body_out, int max_bodylen);
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
 
 /********************************* circuit.c ***************************/

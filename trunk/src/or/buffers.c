@@ -321,7 +321,7 @@ int fetch_from_buf(char *string, int string_len, buf_t *buf) {
  * If a) the headers include a Content-Length field and all bytes in
  * the body are present, or b) there's no Content-Length field and
  * all headers are present, then:
- *   copy headers and body into the supplied args (and null terminate
+ *   strdup headers and body into the supplied args (and null terminate
  *   them), remove them from buf, and return 1.
  *   (If headers or body is NULL, discard that part of the buf.)
  *   If a headers or body doesn't fit in the arg, return -1.
@@ -329,8 +329,8 @@ int fetch_from_buf(char *string, int string_len, buf_t *buf) {
  * Else, change nothing and return 0.
  */
 int fetch_from_buf_http(buf_t *buf,
-                        char *headers_out, int max_headerlen,
-                        char *body_out, int max_bodylen) {
+                        char **headers_out, int max_headerlen,
+                        char **body_out, int max_bodylen) {
   char *headers, *body;
   int i;
   int headerlen, bodylen, contentlen;
@@ -346,7 +346,7 @@ int fetch_from_buf_http(buf_t *buf,
   body = buf->mem+i;
   headerlen = body-headers; /* includes the CRLFCRLF */
   bodylen = buf->datalen - headerlen;
-  log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.",headerlen,bodylen);
+  log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.", headerlen, bodylen);
 
   if(headers_out && max_headerlen <= headerlen) {
     log_fn(LOG_WARN,"headerlen %d larger than %d. Failing.", headerlen, max_headerlen-1);
@@ -373,12 +373,14 @@ int fetch_from_buf_http(buf_t *buf,
   }
   /* all happy. copy into the appropriate places, and return 1 */
   if(headers_out) {
-    memcpy(headers_out,buf->mem,headerlen);
-    headers_out[headerlen] = 0; /* null terminate it */
+    *headers_out = tor_malloc(headerlen+1);
+    memcpy(*headers_out,buf->mem,headerlen);
+    *headers_out[headerlen] = 0; /* null terminate it */
   }
   if(body_out) {
-    memcpy(body_out,buf->mem+headerlen,bodylen);
-    body_out[bodylen] = 0; /* null terminate it */
+    *body_out = tor_malloc(bodylen+1);
+    memcpy(*body_out,buf->mem+headerlen,bodylen);
+    *body_out[bodylen] = 0; /* null terminate it */
   }
   buf_remove_from_front(buf, headerlen+bodylen);
   return 1;
