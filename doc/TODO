@@ -10,42 +10,6 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-
-0.0.9pre5:
-   o add hibernation stuff to man page
-   X split init_keys() into stuff that happens once and stuff
-     that can happen many times. call the many-time stuff from
-     options_act. maybe this is just 6 and 6b. what about 7?
-   o "tor --list-fingerprint" to print fingerprint and exit.
-   o add and document DirPolicy config option
-   o Replace syslog/debuglogfile/logfile/loglevel with a new option,
-     "log (minlevel)?-(maxlevel)? (syslog|stderr|stdout|file (.*))".
-   o Replace running-routers with a router-status line that can be used
-     without a list of router descriptors.
-   o Add a log handler that sends stuff to syslog.
-   o Deprecate unofficial configuration abbrevs; make official abbrevs
-     only official on the command line.
-   o per-month byte allowances.
-     o Based on bandwidth and per-month allowance, choose a
-       window within month to be up.  Stay up until allowance is
-       used.  Adjust next month's window based on outcome.  Hibernate
-       when we're not up.
-     o Hibernate means "stop accepting connections, and start sleeping"
-       Implement hibernation.  Have a separate
-       about-to-start-hibernating state implemented in similar way to
-       will shut-down-in-30-seconds state.
-   o Rendezvous service bug: can we nail it down?
-   o Make watchdogged clients check cached-directory mtime to avoid
-     fetching directory in a tight loop.
-   o Pure C tor_resolve
-     o Implement it; socks4a only is fine for now.
-     o Make it build on win32
-     o Make it not link with zlib and openssl.
-   o Implement control-spec.txt
-     o Implement protocol
-     o Implement setconfig
-     o Specify and implement a commitconfig command.
-
 0.0.9pre6:
    - Oct 20 16:45:10.237 [warn] parse_addr_port(): Port '0' out of range
    o clean up parse_*_policy code
@@ -73,6 +37,7 @@ R  - Review website; make important info more prominent.
 
 
 Beyond 0.0.9:
+   - weasel wants to say 50GB rather than 50000000.
    - allow transition from ORPort to !ORPort, and back
 R  . bandwidth buckets for write as well as read.
    - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
