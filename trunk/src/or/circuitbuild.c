@@ -118,6 +118,7 @@ circuit_list_path(circuit_t *circ, int verbose)
 
   s = smartlist_join_strings(elements, verbose?" ":",", 0, NULL);
   SMARTLIST_FOREACH(elements, char*, cp, tor_free(cp));
+  smartlist_free(elements);
   return s;
 }
 

@@ -338,8 +338,11 @@ tor_tls_context_new(crypto_pk_env_t *identity,
     if (!client_only) {
       if (cert && !SSL_CTX_use_certificate(*ctx,cert))
         goto error;
+      X509_free(cert); /* We just added a reference to cert. */
+      cert=NULL;
       if (idcert && !SSL_CTX_add_extra_chain_cert(*ctx,idcert))
         goto error;
+      idcert=NULL; /* The context now owns the reference to idcert */
     }
     SSL_CTX_set_session_cache_mode(*ctx, SSL_SESS_CACHE_OFF);
     if (isServer && !client_only) {
@@ -350,10 +353,8 @@ tor_tls_context_new(crypto_pk_env_t *identity,
         goto error;
       EVP_PKEY_free(pkey);
       pkey = NULL;
-      if (cert) {
-        if (!SSL_CTX_check_private_key(*ctx))
-          goto error;
-      }
+      if (!SSL_CTX_check_private_key(*ctx))
+        goto error;
     }
     dh = crypto_dh_new();
     SSL_CTX_set_tmp_dh(*ctx, _crypto_dh_env_get_dh(dh));
@@ -393,7 +394,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   if (cert)
     X509_free(cert);
   if (idcert)
-    X509_free(cert);
+    X509_free(idcert);
   return -1;
 }
 
@@ -614,12 +615,12 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, size_t buflen)
     log_fn(LOG_WARN, "Peer certificate nickname has illegal characters.");
     goto error;
   }
+  X509_free(cert);
+
   return 0;
  error:
   if (cert)
     X509_free(cert);
-  if (name)
-    X509_NAME_free(name);
   return -1;
 }
 
