@@ -39,7 +39,7 @@ AllowUnverifiedNodes middle,rendezvous
 # and uses the given addresses to connect to the trusted directory
 # servers.
 DirServer 18.244.0.188:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441
-DirServer 18.244.0.188:9032 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF
+DirServer 18.244.0.114:80 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF
 DirServer 62.116.124.106:9030 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D
 
 ##################### Below is just for servers #####################
