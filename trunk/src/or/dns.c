@@ -2,6 +2,11 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/* See http://elvin.dstc.com/ListArchive/elvin-dev/archive/2001/09/msg00027.html
+ * for some approaches to asynchronous dns. We will want to switch once one of
+ * them becomes more commonly available.
+ */
+
 #include "or.h"
 #include "tree.h"
 
