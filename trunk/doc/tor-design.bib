@@ -568,14 +568,6 @@ full_papers/rao/rao.pdf}},
   note = {\url{http://www.firstmonday.dk/issues/issue2/remailers/}},
 }
 
-@Misc{remailer-history-old,
-   author =      {Tim May},
-   title =       {Description of early remailer history},
-   howpublished = {E-mail archived at
-                  \url{http://www.inet-one.com/cypherpunks/dir.1996.08.29-1996.09.04/
-                       msg00431.html}},
-}
-
 @Article{chaum-mix,
    author =      {David Chaum},
    title =       {Untraceable electronic mail, return addresses, and digital pseudo-nyms},
@@ -598,12 +590,6 @@ full_papers/rao/rao.pdf}},
   note =        {\newline \url{http://www.scs.cs.nyu.edu/~dm/}},
 }
 
-@Misc{timmay,
-   author =      {Tim May},
-   title =       {Cyphernomicon},
-   note =        {\newline \url{http://www2.pro-ns.net/~crypto/cyphernomicon.html}},
-}
-
 @misc{neochaum,
    author =      {Tim May},
    title =       {Payment mixes for anonymity}, 
@@ -611,28 +597,10 @@ full_papers/rao/rao.pdf}},
                   \url{http://\newline www.inet-one.com/cypherpunks/dir.2000.02.28-2000.03.05/msg00334.html}},
 }
 
-@misc{pidaho,
-   author =      {Joel McNamara},
-   title =       {{P}rivate {I}daho},
-   note =        {\newline \url{http://www.eskimo.com/~joelm/pi.html}},
-}
-
-@misc{potato,
-   author =      {RProcess},
-   title =       {{P}otato {S}oftware}, 
-   note =        {\newline \url{http://www.skuz.net/potatoware/}},
-}
-
 @misc{helsingius, 
    author =      {J. Helsingius},
    title =       {{\tt anon.penet.fi} press release}, 
    note =        {\newline \url{http://www.penet.fi/press-english.html}},
-}
-
-@misc{mix-stats,
-   author =      {Christian Mock},
-   title =       {Mixmaster Stats ({A}ustria)}, 
-   note =        {\newline \url{http://www.tahina.priv.at/~cm/stats/mlist2.html}},
 }
 
 @InProceedings{garay97secure,
@@ -691,49 +659,11 @@ full_papers/rao/rao.pdf}},
    year =        {1997},
 }
 
-@Misc{freedom,
-   author =      {Zero Knowledge Systems}, 
-   title =       {Freedom Version 2 White Papers},
-   note =        {\newline \url{http://www.freedom.net/info/whitepapers/}},
-}
-
-
-@Misc{recovery,
-   author =      {Miguel Castro and Barbara Liskov}, 
-   title =       {Proactive Recovery in a Byzantine-Fault-Tolerant System},
-   note =        {\newline \url{http://www.pmg.lcs.mit.edu/~castro/application/recovery.pdf}},
-}
-
 @Misc{advogato,
    author =      {Raph Levien}, 
    title =       {Advogato's Trust Metric},
    note =        {\newline \url{http://www.advogato.org/trust-metric.html}},
 }
-
-@Misc{rabin-ida,
-   author =      {Michael O. Rabin},
-   title =       {Efficient Dispersal of Information for security, load balancing,
-                  and fault tolerance},
-   booktitle =   {Journal of the ACM},
-   year =        {1989},
-   volume =      {36},
-   number =      {2},
-   series =      {335--348},
-   month =       {April},
-}
-
-@PhdThesis{malkin-thesis,
-   author =      {Tal Malkin},
-   school =      {{MIT}},
-   title =       {Private {I}nformation {R}etrieval},
-   year =        {2000},
-   note =        {\newline \url{http://toc.lcs.mit.edu/~tal/pubs.html}}
-}
-
-@Misc{zks,
-   title =       {Zero {K}nowledge {S}ystems},
-   note =        {\newline \url{http://www.freedom.net/}},
-}  
 
 @InProceedings{publius,
    author =      {Marc Waldman and Aviel Rubin and Lorrie Cranor}, 
@@ -753,6 +683,24 @@ full_papers/rao/rao.pdf}},
    month =       {November},
    day =         {21},
    note =        {\newline \url{http://www.freedom.net/products/whitepapers/white11.html}},
+}
+
+@techreport{freedom21-security,
+  title = {Freedom Systems 2.1 Security Issues and Analysis}, 
+  author = {Adam Back and Ian Goldberg and Adam Shostack}, 
+  institution = {Zero Knowledge Systems, {Inc.}}, 
+  year = {2001}, 
+  month = {May}, 
+  type = {White Paper}, 
+}
+
+@inproceedings{cfs:sosp01,
+  title = {Wide-area cooperative storage with {CFS}},
+  author = {Frank Dabek and M. Frans Kaashoek and David Karger and Robert Morris and Ion Stoica},
+  booktitle = {Proceedings of the 18th {ACM} {S}ymposium on {O}perating {S}ystems {P}rinciples ({SOSP} '01)},
+  year = {2001},
+  month = {October},
+  address = {Chateau Lake Louise, Banff, Canada},
 }
 
 @Article{raghavan87randomized,
@@ -878,6 +826,31 @@ full_papers/rao/rao.pdf}},
   pages =	 {58--70},
   year =	 2002,
   publisher =	 {IEEE CS}
+}
+
+@phdthesis{ian-thesis,
+  title = {A Pseudonymous Communications Infrastructure for the Internet}, 
+  author = {Ian Goldberg}, 
+  school = {UC Berkeley}, 
+  year = {2000}, 
+  month = {December}, 
+}
+
+@inproceedings{wright02,
+  title = {An Analysis of the Degradation of Anonymous Protocols}, 
+  author = {Matthew Wright and Micah Adler and Brian Neil Levine and Clay Shields}, 
+  booktitle = {Proceedings of the Network and Distributed Security Symposium - {NDSS} '02}, 
+  year = {2002}, 
+  month = {February}, 
+  publisher = {IEEE}, 
+}
+
+@inproceedings{wright03,
+  title = {Defending Anonymous Communication Against Passive Logging Attacks}, 
+  author = {Matthew Wright and Micah Adler and Brian Neil Levine and Clay Shields}, 
+  booktitle = {Proceedings of the 2003 IEEE Symposium on Security and Privacy}, 
+  year = {2003}, 
+  month = {May}, 
 }
 
 %%% Local Variables: 
