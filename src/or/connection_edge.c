@@ -482,7 +482,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
       if(connection_wants_to_flush(conn)) /* in case there are any queued relay cells */
         connection_start_writing(conn);
       /* deliver a 'connected' relay cell back through the circuit. */
-      if(*conn->rend_query) { /* rendezvous stream */
+      if(connection_edge_is_rendezvous_stream(conn)) {
         if(connection_edge_send_command(conn, circuit_get_by_conn(conn),
            RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
           return 0; /* circuit is closed, don't continue */
@@ -775,7 +775,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
     return 1; /* we're happy */
   }
 
-  if(!*conn->rend_query) { /* general purpose circ */
+  if(!connection_edge_is_rendezvous_stream(conn)) { /* general purpose circ */
     addr = client_dns_lookup_entry(conn->socks_request->address);
     if(router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
       log_fn(LOG_WARN,"No Tor server exists that allows exit to %s:%d. Rejecting.",
@@ -853,7 +853,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   assert(conn->socks_request);
 
-  if(!*conn->rend_query) { /* we're a general conn */
+  if(!connection_edge_is_rendezvous_stream(conn)) { /* we're a general conn */
     circuit_t *circ=NULL;
 
     /* find the circuit that we should use, if there is one. */
@@ -1168,7 +1168,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
 void connection_exit_connect(connection_t *conn) {
   unsigned char connected_payload[4];
 
-  if (!*conn->rend_query &&
+  if (!connection_edge_is_rendezvous_stream(conn) &&
       router_compare_to_my_exit_policy(conn) == ADDR_POLICY_REJECTED) {
     log_fn(LOG_INFO,"%s:%d failed exit policy. Closing.", conn->address, conn->port);
     connection_mark_for_close(conn, END_STREAM_REASON_EXITPOLICY);
@@ -1200,7 +1200,7 @@ void connection_exit_connect(connection_t *conn) {
   connection_watch_events(conn, POLLIN);
 
   /* also, deliver a 'connected' cell back through the circuit. */
-  if(*conn->rend_query) { /* rendezvous stream */
+  if(connection_edge_is_rendezvous_stream(conn)) { /* rendezvous stream */
     /* don't send an address back! */
     connection_edge_send_command(conn, circuit_get_by_conn(conn), RELAY_COMMAND_CONNECTED,
                                  NULL, 0, conn->cpath_layer);
@@ -1222,6 +1222,13 @@ connection_exit_set_rendezvous_addr_port(connection_t *conn) {
 
   conn->addr = 0x7F000001u; /* 127.0.0.1, host order */
 
+  return 0;
+}
+
+int connection_edge_is_rendezvous_stream(connection_t *conn) {
+  assert(conn);
+  if(*conn->rend_query) /* XXX */
+    return 1;
   return 0;
 }
 

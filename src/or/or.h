@@ -858,6 +858,7 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                          int replylen, char success);
 
 void connection_exit_connect(connection_t *conn);
+int connection_edge_is_rendezvous_stream(connection_t *conn);
 int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit);
 void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
