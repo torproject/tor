@@ -637,6 +637,9 @@ static void catch(int the_signal) {
     case SIGTERM:
     case SIGINT:
       log(LOG_ERR,"Catching signal %d, exiting cleanly.", the_signal);
+      /* we don't care if there was an error when we unlink,
+         nothing we could do about it anyways */
+      unlink(options.PidFile);
       exit(0);
     case SIGHUP:
       please_reset = 1;
@@ -724,6 +727,18 @@ void daemonize(void) {
 #endif
 }
 
+void write_pidfile(char *filename) {
+  FILE *pidfile;
+
+  if ((pidfile = fopen(filename, "w")) == NULL) {
+    log_fn(LOG_WARNING, "unable to open %s for writing: %s", filename,
+           strerror(errno));
+  } else {
+    fprintf(pidfile, "%d", getpid());
+    fclose(pidfile);
+  }
+}
+
 int tor_main(int argc, char *argv[]) {
 
   if(getconfig(argc,argv,&options)) {
@@ -733,6 +748,9 @@ int tor_main(int argc, char *argv[]) {
   log_set_severity(options.loglevel);     /* assign logging severity level from options */
   global_read_bucket = options.TotalBandwidth; /* start it at 1 second of traffic */
   stats_prev_global_read_bucket = global_read_bucket;
+
+  /* write our pid to the pid file */
+  write_pidfile(options.PidFile);
 
   if(options.Daemon)
     daemonize();
