@@ -9,8 +9,9 @@
 #include "orconfig.h"
 #include "fakepoll.h"
 
-#ifdef USE_FAKE_POLL
+#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -27,15 +28,26 @@
 #include <winsock.h>
 #endif
 
-/* by default, windows handles only 64 fd's */
-#if defined(MS_WINDOWS) && !defined(FD_SETSIZE)
-#define FD_SETSIZE MAXCONNECTIONS
-#endif
-
 #include <assert.h>
 #include <stdlib.h>
 #include "util.h"
 #include "log.h"
+
+#ifndef USE_FAKE_POLL
+int
+tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
+{
+        int i;
+        for (i=0;i<nfds;++i) {
+                tor_assert(ufds[i].fd >= 0);
+        }
+        return poll(ufds,nfds,timeout);
+}
+#else
+/* by default, windows handles only 64 fd's */
+#if defined(MS_WINDOWS) && !defined(FD_SETSIZE)
+#define FD_SETSIZE MAXCONNECTIONS
+#endif
 
 int
 tor_poll(struct pollfd *ufds, unsigned int nfds, int timeout)
