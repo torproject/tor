@@ -7,8 +7,11 @@ tor (0.0.1+0.0.2pre20-2) unstable; urgency=low
   * There's an upstream ChangeLog file now.  Enjoy!
   * Add a README.privoxy file that explains how to setup privoxy to
     go over tor.
+  * As is the case too often, the INSTALL file not only covers
+    installation, but also basic usage and configuration.  Therefore
+    include it in the docs dir.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 17 Feb 2004 02:17:04 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 17 Feb 2004 02:26:50 +0100
 
 tor (0.0.1+0.0.2pre20-1) unstable; urgency=low
 
