@@ -1394,10 +1394,6 @@ options_validate(or_options_t *options)
     result = -1;
   }
 
-  if (2*options->BandwidthRate >= options->BandwidthBurst) {
-    log(LOG_WARN,"BandwidthBurst must be more than twice BandwidthRate.");
-    result = -1;
-  }
   if (options->BandwidthRate > INT_MAX) {
     log(LOG_WARN,"BandwidthRate must be less than %d",INT_MAX);
     result = -1;
@@ -1411,6 +1407,15 @@ options_validate(or_options_t *options)
     log(LOG_WARN,"BandwidthRate is set to %d bytes/second. For servers, it must be at least %d.", (int)options->BandwidthRate, ROUTER_REQUIRED_MIN_BANDWIDTH*2);
     result = -1;
   }
+  if (options->BandwidthRate > options->BandwidthBurst) {
+    log(LOG_WARN,"BandwidthBurst must be at least equal to BandwidthRate.");
+    result = -1;
+  }
+  if (2*options->BandwidthRate > options->BandwidthBurst) {
+    log(LOG_NOTICE,"You have chosen a BandwidthBurst less than twice BandwidthRate. Please consider setting your BandwidthBurst higher (at least %d), to provide better service to the Tor network.", (int)(2*options->BandwidthRate));
+    result = -1;
+  }
+
 
   if (options->_MonthlyAccountingStart) {
     if (options->AccountingStart) {
