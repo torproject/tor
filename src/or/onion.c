@@ -207,7 +207,7 @@ static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
   num_acceptable_routers = count_acceptable_routers(rarray, rarray_len);
 
   if(num_acceptable_routers < 2) {
-    log_fn(LOG_INFO,"Not enough acceptable routers. Failing.");
+    log_fn(LOG_INFO,"Not enough acceptable routers. Discarding this circuit.");
     return -1;
   }
 
@@ -459,7 +459,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     choice = router_get_by_nickname(state->chosen_exit);
     smartlist_free(excludednodes);
     if(!choice) {
-      log_fn(LOG_WARN,"Our chosen exit %s is no longer in the directory? Failing.",
+      log_fn(LOG_WARN,"Our chosen exit %s is no longer in the directory? Discarding this circuit.",
              state->chosen_exit);
       return -1;
     }
@@ -482,7 +482,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     }
     smartlist_free(excludednodes);
     if(!choice) {
-      log_fn(LOG_WARN,"No acceptable routers while picking entry node. Failing.");
+      log_fn(LOG_WARN,"No acceptable routers while picking entry node. Discarding this circuit.");
       return -1;
     }
   } else {
@@ -500,7 +500,7 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
     smartlist_free(sl);
     smartlist_free(excludednodes);
     if(!choice) {
-      log_fn(LOG_WARN,"No acceptable routers while picking intermediate node. Failing.");
+      log_fn(LOG_WARN,"No acceptable routers while picking intermediate node. Discarding this circuit.");
       return -1;
     }
   }
