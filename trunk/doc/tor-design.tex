@@ -170,8 +170,6 @@ anonymity against a realistic adversary, we leave these strategies out.
   allows traffic to exit the circuit from the middle---thus
   frustrating traffic shape and volume attacks based on observing exit
   points.
-%Or something like that. hm. Tone this down maybe? Or support it. -RD
-%How's that? -PS
 
 \item \textbf{Congestion control:} Earlier anonymity designs do not
 address traffic bottlenecks. Unfortunately, typical approaches to load
@@ -344,7 +342,7 @@ build the anonymous channel all at once, using a layered ``onion'' of
 public-key encrypted messages, each layer of which provides a set of session
 keys and the address of the next server in the channel.  Tor as described
 herein, later designs of Freedom, and AnonNet \cite{anonnet} build the
-channel in stages, extending it one hop at a time, Amongst other things, this
+channel in stages, extending it one hop at a time. This approach
 makes perfect forward secrecy feasible.
 
 Distributed-trust anonymizing systems differ in how they prevent attackers
@@ -375,12 +373,12 @@ has also been designed for other types of systems, including
 ISDN \cite{isdn-mixes}, and mobile applications such as telephones and
 active badging systems \cite{federrath-ih96,reed-protocols97}.
 
-Some systems, such as Crowds \cite{crowds-tissec}, do not rely changing the
+Some systems, such as Crowds \cite{crowds-tissec}, do not rely on changing the
 appearance of packets to hide the path; rather they try to prevent an
-intermediary from knowing when whether it is talking to an ultimate
-initiator, or just another intermediary.  Crowds uses no public-key
+intermediary from knowing whether it is talking to an initiator
+or just another intermediary.  Crowds uses no public-key
 encryption, but the responder and all data are visible to all
-nodes on the path so that anonymity of connection initiator depends on
+nodes on the path; so anonymity of the connection initiator depends on
 filtering all identifying information from the data stream. Crowds only
 supports HTTP traffic.
 
@@ -439,14 +437,21 @@ Tor's evolution.
   for every protocol).  This requirement also precludes systems in which
   users who do not benefit from anonymity are required to run special
   software in order to communicate with anonymous parties.
+% XXX Our rendezvous points require clients to use our software to get to
+%     the location-hidden servers.
+%     Or at least, they require somebody near the client-side running our
+%     software. We haven't worked out the details of keeping it transparent
+%     for Alice if she's using some other http proxy somewhere. I guess the
+%     external http proxy should route through a Tor client, which automatically
+%     translates the foo.onion address? -RD
 \item[Usability:] A hard-to-use system has fewer users---and because
   anonymity systems hide users among users, a system with fewer users
-  provides less anonymity.  Thus, usability is not only a convenience, but is
-  a security requirement for anonymity systems.  In order to be usable, Tor
+  provides less anonymity.  Usability is not only a convenience for Tor:
+  it is a security requirement \cite{econymics,back01}. Tor
   should work with most of a user's unmodified applications; shouldn't
   introduce prohibitive delays; and should require the user to make as few
   configuration decisions as possible.
-\item[Flexibility:] Third, the protocol must be flexible and
+\item[Flexibility:] The protocol must be flexible and
   well-specified, so that it can serve as a test-bed for future research in
   low-latency anonymity systems.  Many of the open problems in low-latency
   anonymity networks (such as generating dummy traffic, or preventing
@@ -468,31 +473,34 @@ Tor's evolution.
 \end{description}
 
 \subsection{Non-goals}
-In favoring conservative, deployable designs, we have explicitly deferred a
-number of goals---not because they are undesirable in anonymity systems---but
-these goals are either solved elsewhere, or present an area of active
-research lacking a generally accepted solution.
+In favoring conservative, deployable designs, we have explicitly deferred
+a number of goals. Many of these goals are desirable in anonymity systems,
+but we choose to defer them either because they are solved elsewhere,
+or because they present an area of active research lacking a generally
+accepted solution.
 
 \begin{description}
-\item[Not Peer-to-peer:] Unlike Tarzan or Morphmix, Tor does not attempt to
+\item[Not Peer-to-peer:] Tarzan and Morphmix aim to
   scale to completely decentralized peer-to-peer environments with thousands
   of short-lived servers, many of which may be controlled by an adversary.
+  Because of the many open problems in this approach, Tor uses a more
+  conservative design.
 \item[Not secure against end-to-end attacks:] Tor does not claim to provide a
-  definitive solution to end-to-end timing or intersection attacks for users
-  who do not run their own Onion Routers.
-  % Mention would-be approaches. -NM
-  % Does that mean we do claim to solve intersection attack for
-  % the enclave-firewall model? -RD
-  % I don't think we should. -NM
+  definitive solution to end-to-end timing or intersection attacks. Some
+  approaches, such as running an onion router, may help; see Section
+  \ref{sec:analysis} for more discussion.
 \item[No protocol normalization:] Tor does not provide \emph{protocol
   normalization} like Privoxy or the Anonymizer.  In order to make clients
-  indistinguishable when they complex and variable protocols such as HTTP,
+  indistinguishable when they use complex and variable protocols such as HTTP,
   Tor must be layered with a filtering proxy such as Privoxy to hide
   differences between clients, expunge protocol features that leak identity,
   and so on.  Similarly, Tor does not currently integrate tunneling for
-  non-stream-based protocols; this too must be provided by an external
-  service.
-\item[Not steganographic:] Tor does doesn't try to conceal which users are
+  non-stream-based protocols like UDP; this too must be provided by
+  an external service.
+% Actually, tunneling udp over tcp is probably horrible for some apps.
+% Should this get its own non-goal bulletpoint? The motivation for
+% non-goal-ness would be burden on clients / portability.
+\item[Not steganographic:] Tor does not try to conceal which users are
   sending or receiving communications; it only tries to conceal whom they are
   communicating with.
 \end{description}
@@ -500,8 +508,8 @@ research lacking a generally accepted solution.
 \SubSection{Adversary Model}
 \label{subsec:adversary-model}
 
-Although a global passive adversary is the most commonly assumed when
-analyzing theoretical anonymity designs, like all practical low-latency
+A global passive adversary is the most commonly assumed when
+analyzing theoretical anonymity designs. But like all practical low-latency
 systems, Tor is not secure against this adversary.  Instead, we assume an
 adversary that is weaker than global with respect to distribution, but that
 is not merely passive.  Our threat model expands on that from
@@ -577,10 +585,12 @@ is not merely passive.  Our threat model expands on that from
 %% Tor-node retains the same signature keys and other private
 %% state-information as the component it replaces).
 
-First, we assume most directory servers are honest, reliable, accurate, and
-trustworthy.  That is, we assume that users periodically cross-check server
-directories, and that they always have access to at least one directory
-server that they trust.
+First, we assume that a threshold of directory servers are honest,
+reliable, accurate, and trustworthy.
+%% the rest of this isn't needed, if dirservers do threshold concensus dirs
+%  To augment this, users can periodically cross-check 
+%directories from each directory server (trust, but verify).
+%, and that they always have access to at least one directory server that they trust.
 
 Second, we assume that somewhere between ten percent and twenty
 percent\footnote{In some circumstances---for example, if the Tor network is
@@ -901,6 +911,7 @@ The attacker must be able to guess all previous bytes between Alice
 and Bob on that circuit (including the pseudorandomness from the key
 negotiation), plus the bytes in the current cell, to remove or modify the
 cell. The computational overhead isn't so bad, compared to doing an AES
+% XXX We never say we use AES. Say it somewhere above?
 crypt at each hop in the circuit. We use only four bytes per cell to
 minimize overhead; the chance that an adversary will correctly guess a
 valid hash, plus the payload the current cell, is acceptly low, given
@@ -1166,7 +1177,7 @@ can upload their router descriptors.
     rotation (link, onion, identity); Everybody already know directory
     keys; how to approve new nodes (advogato, sybil, captcha (RTT));
     policy for handling connections with unknown ORs; diff-based
-    retrieval; diff-based consesus; separate liveness from descriptor
+    retrieval; diff-based consensus; separate liveness from descriptor
     list]]
 
 Of course, a variety of attacks remain. An adversary who controls a
@@ -1197,7 +1208,10 @@ techniques \cite{castro-liskov}.
 But this library, while more efficient than previous Byzantine agreement
 systems, is still complex and heavyweight for our purposes: we only need
 to compute a single algorithm, and we do not require strict in-order
-computation steps. The Tor directory servers build a consensus directory
+computation steps. Indeed, the complexity of Byzantine agreement protocols
+threatens our security, because users cannot easily understand it and
+thus have less trust in the directory servers. The Tor directory servers
+build a consensus directory
 through a simple four-round broadcast protocol. First, each server signs
 and broadcasts its current opinion to the other directory servers; each
 server then rebroadcasts all the signed opinions it has received. At this
@@ -1227,6 +1241,11 @@ are not a performance bottleneck when we have many users, and also they
 won't aid traffic analysis by forcing clients to periodically announce
 their existence to any central point.
 % Mention Hydra as an example of non-clique topologies. -NM, from RD
+
+% also find some place to integrate that dirservers have to actually
+% lay test circuits and use them, otherwise routers could connect to
+% the dirservers but discard all other traffic.
+% in some sense they're like reputation servers in \cite{mix-acc} -RD
 
 \Section{Rendezvous points: location privacy}
 \label{sec:rendezvous}
