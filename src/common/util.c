@@ -33,7 +33,7 @@ void *tor_malloc_zero(size_t size) {
 
 void *tor_realloc(void *ptr, size_t size) {
   void *result;
-  
+
   result = realloc(ptr, size);
   if (!result) {
     log_fn(LOG_ERR, "Out of memory. Dying.");
@@ -61,6 +61,46 @@ char *tor_strndup(const char *s, size_t n) {
   strncpy(dup, s, n);
   dup[n] = 0;
   return dup;
+}
+
+/*
+ * A simple smartlist interface to make an unordered list of acceptable
+ * nodes and then choose a random one.
+ * smartlist_create() mallocs the list, _free() frees the list,
+ * _add() adds an element, _remove() removes an element if it's there,
+ * _choose() returns a random element.
+ */
+
+smartlist_t *smartlist_create(int max_elements) {
+  smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
+  sl->list = tor_malloc(sizeof(void *) * max_elements);
+  sl->num_used = 0;
+  sl->max = max_elements;
+  return sl;
+}
+
+void smartlist_free(smartlist_t *sl) {
+  free(sl->list);
+  free(sl);
+}
+
+/* add element to the list, but only if there's room */
+void smartlist_add(smartlist_t *sl, void *element) {
+  if(sl->num_used < sl->max)
+    sl->list[sl->num_used++] = element;
+}
+
+void smartlist_remove(smartlist_t *sl, void *element) {
+  int i;
+  for(i=0; i < sl->num_used; i++)
+    if(sl->list[i] == element)
+      sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
+}
+
+void *smartlist_choose(smartlist_t *sl) {
+  if(sl->num_used)
+    return sl->list[crypto_pseudo_rand_int(sl->num_used)];
+  return NULL; /* no elements to choose from */
 }
 
 /*
@@ -234,11 +274,11 @@ int read_all(int fd, char *buf, size_t count) {
 void set_socket_nonblocking(int socket)
 {
 #ifdef MS_WINDOWS
-	/* Yes means no and no means yes.  Do you not want to be nonblocking? */
-	int nonblocking = 0;
-	ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
+  /* Yes means no and no means yes.  Do you not want to be nonblocking? */
+  int nonblocking = 0;
+  ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
 #else
-	fcntl(socket, F_SETFL, O_NONBLOCK);
+  fcntl(socket, F_SETFL, O_NONBLOCK);
 #endif
 }
 
@@ -378,7 +418,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
         if (listener != -1)
             close(listener);
         if (connector != -1)
-	    close(connector);
+            close(connector);
         if (acceptor != -1)
             close(acceptor);
         errno = save_errno;
@@ -514,7 +554,7 @@ char *read_file_to_str(const char *filename) {
     log_fn(LOG_WARN,"Filename %s contains illegal characters.",filename);
     return NULL;
   }
-  
+
   if(stat(filename, &statbuf) < 0) {
     log_fn(LOG_INFO,"Could not stat %s.",filename);
     return NULL;
@@ -616,11 +656,11 @@ get_uname(void)
   }
   return uname_result;
 }
-      
+
 void daemonize(void) {
 #ifdef HAVE_DAEMON
   if (daemon(0 /* chdir to / */,
-	     0 /* Redirect std* to /dev/null */)) {
+             0 /* Redirect std* to /dev/null */)) {
     log_fn(LOG_ERR, "Daemon returned an error: %s", strerror(errno));
     exit(1);
   }

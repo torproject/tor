@@ -39,6 +39,18 @@ char *tor_strdup(const char *s);
 char *tor_strndup(const char *s, size_t n);
 #define tor_free(p) do {if(p) {free(p); (p)=NULL;}} while(0)
 
+typedef struct {
+  void **list;
+  int num_used;
+  int max;
+} smartlist_t;
+
+smartlist_t *smartlist_create(int max_elements);
+void smartlist_free(smartlist_t *sl);
+void smartlist_add(smartlist_t *sl, void *element);
+void smartlist_remove(smartlist_t *sl, void *element);
+void *smartlist_choose(smartlist_t *sl);
+
 const char *eat_whitespace(const char *s);
 const char *eat_whitespace_no_nl(const char *s);
 const char *find_whitespace(const char *s);
