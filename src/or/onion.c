@@ -351,12 +351,13 @@ static routerinfo_t *choose_good_exit_server(directory_t *dir)
       if (i) {
         --i;
       } else {
+        log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[i]->nickname);
         return dir->routers[j];
       }
     }
   }
-  log_fn(LOG_DEBUG, "Chose exit server '%s'", dir->routers[i]->nickname);
-  return dir->routers[i];
+  assert(0);
+  return NULL;
 }
 
 cpath_build_state_t *onion_new_cpath_build_state(void) {
