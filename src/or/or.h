@@ -22,15 +22,10 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <assert.h>
-
-#include <openssl/err.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <openssl/evp.h>
-#include <openssl/rand.h>
+#include <time.h>
 
 #include "../common/config.h"
-#include "../common/key.h"
+#include "../common/crypto.h"
 #include "../common/log.h"
 #include "../common/ss.h"
 #include "../common/version.h"
@@ -169,12 +164,8 @@ typedef struct
   struct timeval send_timeval; /* for determining when to send the next cell */
 
   /* link encryption */
-  unsigned char f_session_key[8];
-  unsigned char b_session_key[8];
-  unsigned char f_session_iv[8];
-  unsigned char b_session_iv[8];
-  EVP_CIPHER_CTX f_ctx;
-  EVP_CIPHER_CTX b_ctx;
+  crypto_cipher_env_t *f_crypto;
+  crypto_cipher_env_t *b_crypto;
 
 //  struct timeval lastsend; /* time of last transmission to the client */
 //  struct timeval interval; /* transmission interval */
@@ -193,7 +184,7 @@ typedef struct
   
 /* used by OR, to keep state while connect()ing: Kludge. */
 
-  RSA *prkey;
+  crypto_pk_env_t *prkey;
   struct sockaddr_in local;
 
 #if 0 /* obsolete, we now use conn->bandwidth */
@@ -203,7 +194,7 @@ typedef struct
 #endif
 
   char *address; /* strdup into this, because free_connection frees it */
-  RSA *pkey; /* public RSA key for the other side */
+  crypto_pk_env_t *pkey; /* public RSA key for the other side */
 
   char nonce[8];
  
@@ -219,7 +210,7 @@ typedef struct
   uint16_t op_port;
   uint16_t ap_port;
  
-  RSA *pkey; /* public RSA key */
+  crypto_pk_env_t *pkey; /* public RSA key */
  
   /* link info */
   uint32_t min;
@@ -242,13 +233,9 @@ typedef struct
   char digest2[20]; /* second SHA output for onion_layer_t.keyseed */
   char digest3[20]; /* third SHA output for onion_layer_t.keyseed */
 
-  /* IVs */
-  char f_iv[16];
-  char b_iv[16];
-
-  /* cipher contexts */
-  EVP_CIPHER_CTX f_ctx;
-  EVP_CIPHER_CTX b_ctx;
+  /* crypto environments */
+  crypto_cipher_env_t *f_crypto;
+  crypto_cipher_env_t *b_crypto;
   
 } crypt_path_t;
 
@@ -272,14 +259,8 @@ typedef struct
   unsigned char p_f; /* crypto functions */
   unsigned char n_f;
 
-  unsigned char p_key[16]; /* crypto keys */
-  unsigned char n_key[16];
-
-  unsigned char p_iv[16]; /* initialization vectors */
-  unsigned char n_iv[16];
-
-  EVP_CIPHER_CTX p_ctx; /* cipher context */
-  EVP_CIPHER_CTX n_ctx;
+  crypto_cipher_env_t *p_crypto; /* crypto environments */
+  crypto_cipher_env_t *n_crypto;
 
   crypt_path_t **cpath;
   size_t cpathlen; 
@@ -415,14 +396,14 @@ connection_t *connection_new(int type);
 
 void connection_free(connection_t *conn);
 
-int connection_create_listener(RSA *prkey, struct sockaddr_in *local, int type);
+int connection_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local, int type);
 
 int connection_handle_listener_read(connection_t *conn, int new_type, int new_state);
 
 /* start all connections that should be up but aren't */
 int retry_all_connections(int role, routerinfo_t **router_array, int rarray_len,
-		  RSA *prkey, uint16_t or_port, uint16_t op_port, uint16_t ap_port);
-connection_t *connection_connect_to_router_as_op(routerinfo_t *router, RSA *prkey, uint16_t local_or_port);
+		  crypto_pk_env_t *prkey, uint16_t or_port, uint16_t op_port, uint16_t ap_port);
+connection_t *connection_connect_to_router_as_op(routerinfo_t *router, crypto_pk_env_t *prkey, uint16_t local_or_port);
 
 int connection_read_to_buf(connection_t *conn);
 
@@ -475,7 +456,7 @@ int connection_ap_process_data_cell(cell_t *cell, connection_t *conn);
 
 int connection_ap_finished_flushing(connection_t *conn);
 
-int connection_ap_create_listener(RSA *prkey, struct sockaddr_in *local);
+int connection_ap_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local);
 
 int connection_ap_handle_listener_read(connection_t *conn);
 
@@ -496,7 +477,7 @@ int connection_op_process_inbuf(connection_t *conn);
 
 int connection_op_finished_flushing(connection_t *conn);
 
-int connection_op_create_listener(RSA *prkey, struct sockaddr_in *local);
+int connection_op_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local);
 
 int connection_op_handle_listener_read(connection_t *conn);
 
@@ -516,11 +497,11 @@ int or_handshake_client_send_auth(connection_t *conn);
 int or_handshake_server_process_auth(connection_t *conn);
 int or_handshake_server_process_nonce(connection_t *conn);
 
-connection_t *connect_to_router_as_or(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local);
-connection_t *connection_or_connect_as_or(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local);
-connection_t *connection_or_connect_as_op(routerinfo_t *router, RSA *prkey, struct sockaddr_in *local);
+connection_t *connect_to_router_as_or(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local);
+connection_t *connection_or_connect_as_or(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local);
+connection_t *connection_or_connect_as_op(routerinfo_t *router, crypto_pk_env_t *prkey, struct sockaddr_in *local);
 
-int connection_or_create_listener(RSA *prkey, struct sockaddr_in *local);
+int connection_or_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local);
 int connection_or_handle_listener_read(connection_t *conn);
 
 /********************************* main.c ***************************/
@@ -529,7 +510,7 @@ int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
 void connection_set_poll_socket(connection_t *conn);
 
-int pkey_cmp(RSA *a, RSA *b);
+int pkey_cmp(crypto_pk_env_t *a, crypto_pk_env_t *b);
 connection_t *connection_twin_get_by_addr_port(uint32_t addr, uint16_t port);
 connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port);
 
@@ -578,10 +559,10 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
 
 /* encrypts 128 bytes of the onion with the specified public key, the rest with 
  * DES OFB with the key as defined in the outter layer */
-unsigned char *encrypt_onion(onion_layer_t *onion, uint32_t onionlen, RSA *pkey);
+unsigned char *encrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_env_t *pkey);
 
 /* decrypts the first 128 bytes using RSA and prkey, decrypts the rest with DES OFB with key1 */
-unsigned char *decrypt_onion(onion_layer_t *onion, uint32_t onionlen, RSA *prkey);
+unsigned char *decrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_env_t *prkey);
 
 /* delete first n bytes of the onion and pads the end with n bytes of random data */
 void pad_onion(unsigned char *onion, uint32_t onionlen, size_t n);

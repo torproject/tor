@@ -62,7 +62,7 @@ void delete_routerlist(routerinfo_t *list)
   {
     tmp=list->next;
     free((void *)list->address);
-    RSA_free(list->pkey);
+    crypto_free_pk_env(list->pkey);
     free((void *)list);
     list = tmp;
   }
@@ -275,9 +275,8 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp, uint16_t or_listenport
 			
 			log(LOG_DEBUG,"getrouters():Reading the key ...");
 			/* read the public key into router->pkey */
-			router->pkey=NULL;
-			router->pkey = PEM_read_RSAPublicKey(rf,&router->pkey,NULL,NULL);
-			if (!router->pkey) /* something went wrong */
+			router->pkey = crypto_new_pk_env(CRYPTO_PK_RSA);
+			if (crypto_pk_read_public_key(router->pkey, rf)) /* something went wrong */
 			{
 			  log(LOG_ERR,"Could not read public key for router %s:%u.", 
 			      router->address,router->or_port);
@@ -289,12 +288,12 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp, uint16_t or_listenport
 			}
 			else /* read the key */
 			{
-			  log(LOG_DEBUG,"getrouters():Public key size = %u.", RSA_size(router->pkey));
-			  if (RSA_size(router->pkey) != 128) /* keys MUST be 1024 bits in size */
+			  log(LOG_DEBUG,"getrouters():Public key size = %u.", crypto_pk_keysize(router->pkey));
+			  if (crypto_pk_keysize(router->pkey) != 128) /* keys MUST be 1024 bits in size */
 			  {
 			    log(LOG_ERR,"Key for router %s:%u is not 1024 bits. All keys must be exactly 1024 bits long.",router->address,router->or_port);
 			    free((void *)router->address);
-			    RSA_free(router->pkey);
+			    crypto_free_pk_env(router->pkey);
 			    free((void *)router);
 			    fclose(rf);
 			    delete_routerlist(routerlist);
@@ -316,13 +315,13 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp, uint16_t or_listenport
 			  {
 			    log(LOG_DEBUG,"getrouters(): This entry is actually me. Ignoring.");
 			    free((void *)router->address);
-			    RSA_free(router->pkey);
+			    crypto_free_pk_env(router->pkey);
 			    free((void *)router);
 			  }
 			  else /* router_is_me() returned an error */
 			  {
 			    free((void *)router->address);
-			    RSA_free(router->pkey);
+			    crypto_free_pk_env(router->pkey);
 			    free((void *)router);
 			    fclose(rf);
 			    delete_routerlist(routerlist);

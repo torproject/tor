@@ -21,8 +21,8 @@ static cell_t *new_create_cell(uint16_t aci, unsigned char length, unsigned char
     c->seq = 0;
     
     memcpy((void *)c->payload, (void *)buf, length);
-    retval = RAND_pseudo_bytes((unsigned char *)(c->payload+length),CELL_PAYLOAD_SIZE-length);
-    if (retval == -1) /* RAND_pseudo_bytes() error */
+    retval = crypto_pseudo_rand(CELL_PAYLOAD_SIZE-length, (unsigned char *)(c->payload+length));
+    if (retval) /* RAND_pseudo_bytes() error */
     {
       free((void *)c);
       return NULL;

@@ -33,6 +33,7 @@ int connection_op_process_inbuf(connection_t *conn) {
 int op_handshake_process_keys(connection_t *conn) {
   int retval;
   int x;
+  unsigned char iv[16];
 
   /* key exchange message */
   unsigned char auth_cipher[128];
@@ -51,12 +52,12 @@ int op_handshake_process_keys(connection_t *conn) {
   log(LOG_DEBUG,"op_handshake_process_keys() : Received auth.");
 
   /* decrypt response */
-  retval = RSA_private_decrypt(128,auth_cipher,auth_plain,conn->prkey,RSA_PKCS1_PADDING);
+  retval = crypto_pk_private_decrypt(conn->prkey, auth_cipher, 128, auth_plain,RSA_PKCS1_PADDING);
   if (retval == -1)
   { 
     log(LOG_ERR,"Decrypting keys from new OP failed.");
     log(LOG_DEBUG,"op_handshake_process_keys() : Reason : %s.",
-        ERR_reason_error_string(ERR_get_error()));
+        crypto_perror());
     return -1;
   }
 
@@ -64,25 +65,24 @@ int op_handshake_process_keys(connection_t *conn) {
 
   conn->bandwidth = ntohl(*((uint32_t *)auth_plain));
 
-  memcpy(conn->b_session_key, auth_plain+4, 8);
-  memcpy(conn->f_session_key, auth_plain+12, 8);
+  crypto_cipher_set_key(conn->b_crypto, auth_plain+4);
+  crypto_cipher_set_key(conn->f_crypto, auth_plain+12);
   printf("f_session_key: ");
   for(x=0;x<8;x++) {
-    printf("%d ",conn->f_session_key[x]);
+    printf("%d ",conn->f_crypto->key[x]);
   }
   printf("\nb_session_key: ");
   for(x=0;x<8;x++) {
-    printf("%d ",conn->b_session_key[x]);
+    printf("%d ",conn->b_crypto->key[x]);
   }
   printf("\n");
+  
+  memset((void *)iv, 0, 16);
+  crypto_cipher_set_key(conn->b_crypto, iv);
+  crypto_cipher_set_key(conn->f_crypto, iv);
 
-  memset((void *)conn->f_session_iv, 0, 8);
-  memset((void *)conn->b_session_iv, 0, 8);
-
-  EVP_CIPHER_CTX_init(&conn->f_ctx);
-  EVP_CIPHER_CTX_init(&conn->b_ctx);
-  EVP_EncryptInit(&conn->b_ctx, EVP_des_ofb(), conn->b_session_key, conn->b_session_iv);
-  EVP_DecryptInit(&conn->f_ctx, EVP_des_ofb(), conn->f_session_key, conn->f_session_iv);
+  crypto_cipher_encrypt_init_cipher(conn->b_crypto);
+  crypto_cipher_decrypt_init_cipher(conn->f_crypto);
 
   conn->state = OP_CONN_STATE_OPEN;
   connection_init_timeval(conn);
@@ -109,7 +109,7 @@ int connection_op_finished_flushing(connection_t *conn) {
 
 }
 
-int connection_op_create_listener(RSA *prkey, struct sockaddr_in *local) {
+int connection_op_create_listener(crypto_pk_env_t *prkey, struct sockaddr_in *local) {
   log(LOG_DEBUG,"connection_create_op_listener starting");
   return connection_create_listener(prkey, local, CONN_TYPE_OP_LISTENER);
 }
