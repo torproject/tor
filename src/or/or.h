@@ -1019,6 +1019,8 @@ typedef struct {
                            * use in a second? */
   uint64_t BandwidthBurst; /**< How much bandwidth, at maximum, are we willing to
                             * use in a second? */
+  uint64_t MaxAdvertisedBandwidth; /**< How much bandwidth are we willing to
+                                    * tell people we have? */
   int NumCpus; /**< How many CPUs should we try to use? */
   int RunTesting; /**< If true, create testing circuits to measure how well the
                    * other ORs are running. */
