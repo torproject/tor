@@ -199,6 +199,8 @@ weasel's graph of \# nodes and of bandwidth, ideally from week 0.
 Tor doesn't try to provide steg (but see Sec \ref{china}), or
 the other non-goals listed in tor-design.
 
+[arma will do this part]
+
 Tor is not the only anonymity system that aims to be practical and useful.
 Commercial single-hop proxies~\cite{anonymizer}, as well as unsecured
 open proxies around the Internet~\cite{open-proxies}, can provide good
@@ -286,6 +288,8 @@ issue.
 see \ref{subsec:routing-zones} for discussion of larger
 adversaries and our dispersal goals.
 
+[this section will get written once the rest of the paper is farther along]
+
 \section{Crossroads: Policy issues}
 \label{sec:crossroads-policy}
 
@@ -308,21 +312,24 @@ to dissuade them.
 
 With this image issue in mind, here we discuss the Tor user base and
 Tor's interaction with other services on the Internet.
+\subsection{Image and reputability}
 
+Image: substantial non-infringing uses. Image is a security parameter,
+since it impacts user base and perceived sustainability.
 
-\subsection{Usability}
+grab reputability paragraphs from usability.tex [arma will do this]
 
-Usability: fc03 paper was great, except the lower latency you are the
-less useful it seems it is.
 A Tor gui, how jap's gui is nice but does not reflect the security
 they provide.
 Public perception, and thus advertising, is a security parameter.
 
+good uses are kept private, bad uses are publicized. not good.
 
-\subsection{Image, usability, and sustainability}
+users do not correlate to anonymity. arma will do this.
 
-Image: substantial non-infringing uses. Image is a security parameter,
-since it impacts user base and perceived sustainability.
+\subsection{Usability and bandwidth and sustainability and incentives}
+
+low-pain-threshold users go away until all users are willing to use it
 
 Sustainability. Previous attempts have been commercial which we think
 adds a lot of unnecessary complexity and accountability. Freedom didn't
@@ -330,9 +337,16 @@ collect enough money to pay its servers; JAP bandwidth is supported by
 continued money, and they periodically ask what they will do when it
 dries up.
 
-good uses are kept private, bad uses are publicized. not good.
+"outside of academia, jap has just lost, permanently"
+
+Usability: fc03 paper was great, except the lower latency you are the
+less useful it seems it is.
+
+[nick will write this section]
 
 \subsection{Tor and file-sharing}
+
+[nick will write this section]
 
 Bittorrent and dmca. Should we add an IDS to autodetect protocols and
 snipe them?
@@ -431,6 +445,8 @@ with SSNs.
 
 \subsection{Other}
 
+[Once you build a generic overlay network, everybody wants to use it.]
+
 Tor's scope: How much should Tor aim to do? Applications that leak
 data: we can say they're not our problem, but they're somebody's problem.
 Also, the more widely deployed Tor becomes, the more people who need a
@@ -443,8 +459,10 @@ by implementing the Morphmix-specific node discovery and path selection
 pieces. On the other hand, we could easily get distracted building a
 general-purpose overlay library, and we're only a few developers.
 
-Should we allow revocation of anonymity if a threshold of
-servers want to?
+[arma will work on this]
+
+%Should we allow revocation of anonymity if a threshold of
+%servers want to?
 
 Logging. Making logs not revealing. A happy coincidence that verbose
 logging is our \#2 performance bottleneck. Is there a way to detect
@@ -527,9 +545,13 @@ required to get this lower is going to be extremely hard. It's worth
 considering how hard it would be to accept the fixed (higher) latency
 and improve the protection we get from it.
 
-% can somebody besides arma flesh this section out?
+[nick will work on this]
 
-%\subsection{The DNS problem in practice}
+\subsection{Application support: socks doesn't solve all our problems}
+
+socks4a isn't everywhere. the dns problem. etc.
+
+nick will work on this.
 
 \subsection{Measuring performance and capacity}
 
@@ -543,12 +565,24 @@ How can we collect stats better? Note weasel's smokeping, at
 http://seppia.noreply.org/cgi-bin/smokeping.cgi?target=Tor
 which probably gives george and steven enough info to break tor?
 
-\subsection{Plausible deniability}
+[nick will work on this section, unless arma gets there first]
+
+\subsection{Anonymity benefits for running a server}
 
 Does running a server help you or harm you? George's Oakland attack.
-Plausible deniability -- without even running your traffic through Tor! We
-have to pick the path length so adversary can't distinguish client from
+
+Plausible deniability -- without even running your traffic through Tor!
+But nobody knows about Tor, and the legal situation is fuzzy, so this
+isn't very true really.
+
+We have to pick the path length so adversary can't distinguish client from
 server (how many hops is good?).
+
+in practice, plausible deniability is hypothetical and doesn't seem very
+convincing. if ISPs find the activity antisocial, they don't care *why*
+your computer is doing that behavior.
+
+[arma will write this section]
 
 \subsection{Helper nodes}
 
@@ -559,7 +593,24 @@ especially active attacks to induce churn.
 Do general DoS attacks have anonymity implications? See e.g. Adam
 Back's IH paper, but I think there's more to be pointed out here.
 
+Game theory for helper nodes: if Alice offers a hidden service on a
+server (enclave model), and nobody ever uses helper nodes, then against
+George+Steven's attack she's totally nailed. If only Alice uses a helper
+node, then she's still identified as the source of the data. If everybody
+uses a helper node (including Alice), then the attack identifies the
+helper node and also Alice, and knows which one is which. If everybody
+uses a helper node (but not Alice), then the attacker figures the real
+source was a client that is using Alice as a helper node. [How's my
+logic here?]
+
+point to routing-zones section re: helper nodes to defend against
+big stuff.
+
+[nick will write this section]
+
 \subsection{Location-hidden services}
+
+[arma will write this section]
 
 Survivable services are new in practice, yes? Hidden services seem
 less hidden than we'd like, since they stay in one place and get used
@@ -568,7 +619,25 @@ that using Tor as a building block for Free Haven is going to be really
 hard. Also, they're brittle in terms of intersection and observation
 attacks. Would be nice to have hot-swap services, but hard to design.
 
+people are using hidden services as a poor man's vpn and firewall-buster.
+rather than playing with dyndns and trying to pierce holes in their
+firewall (say, so they can ssh in from the outside), they run a hidden
+service on the inside and then rendezvous with that hidden service
+externally.
+
+in practice, sites like bloggers without borders (www.b19s.org) are
+running tor servers but more important are advertising a hidden-service
+address on their front page. doing this can provide increased robustness
+if they used the dual-IP approach we describe in tor-design, but in
+practice they do it to a) increase visibility of the tor project and their
+support for privacy, and b) to offer a way for their users, using vanilla
+software, to get end-to-end encryption and end-to-end authentication to
+their website.
+
+
 \subsection{Trust and discovery}
+
+[arma will edit this and expand/retract it]
 
 The published Tor design adopted a deliberately simplistic design for
 authorizing new nodes and informing clients about servers and their status.
@@ -635,33 +704,6 @@ trust decisions than the Tor developers.
 %on what threats we have in mind. Really decentralized if your threat is
 %RIAA; less so if threat is to application data or individuals or...
 
-
-Game theory for helper nodes: if Alice offers a hidden service on a
-server (enclave model), and nobody ever uses helper nodes, then against
-George+Steven's attack she's totally nailed. If only Alice uses a helper
-node, then she's still identified as the source of the data. If everybody
-uses a helper node (including Alice), then the attack identifies the
-helper node and also Alice, and knows which one is which. If everybody
-uses a helper node (but not Alice), then the attacker figures the real
-source was a client that is using Alice as a helper node. [How's my
-logic here?]
-
-people are using hidden services as a poor man's vpn and firewall-buster.
-rather than playing with dyndns and trying to pierce holes in their
-firewall (say, so they can ssh in from the outside), they run a hidden
-service on the inside and then rendezvous with that hidden service
-externally.
-
-in practice, sites like bloggers without borders (www.b19s.org) are
-running tor servers but more important are advertising a hidden-service
-address on their front page. doing this can provide increased robustness
-if they used the dual-IP approach we describe in tor-design, but in
-practice they do it to a) increase visibility of the tor project and their
-support for privacy, and b) to offer a way for their users, using vanilla
-software, to get end-to-end encryption and end-to-end authentication to
-their website.
-
-
 \section{Crossroads: Scaling}
 %\label{sec:crossroads-scaling}
 %P2P + anonymity issues:
@@ -681,7 +723,13 @@ we must learn to track and predict performance.  Finally, in order to get
 a large set of servers in the first place, we must address incentives
 for users to carry traffic for others (see Section incentives).
 
-\subsection{Incentives}
+\subsection{Incentives by Design}
+
+[nick will try to make this section shorter and more to the point.]
+
+[most of the technical incentive schemes in the literature introduce
+anonymity issues which we don't understand yet, and we seem to be doing
+ok without them]
 
 There are three behaviors we need to encourage for each server: relaying
 traffic; providing good throughput and reliability while doing it;
@@ -751,6 +799,9 @@ to discourage bad service without opening Alice up as much to attacks.
 
 \subsection{Peer-to-peer / practical issues}
 
+[leave this section for now, and make sure things here are covered
+elsewhere.]
+
 Making use of servers with little bandwidth. How to handle hammering by
 certain applications.
 
@@ -764,6 +815,8 @@ style doesn't work because we don't want just *one* path. Point to
 Geoff's stuff.
 
 \subsection{ISP-class adversaries}
+
+[arma will write this]
 
 Routing-zones. It seems that our threat model comes down to diversity and
 dispersal. But hard for Alice to know how to act. Many questions remain.
@@ -818,6 +871,8 @@ help address censorship; we wish them luck.
 %\cite{infranet}
 
 \subsection{Non-clique topologies}
+
+[nick will try to shrink this section]
 
 Because of its threat model that is substantially weaker than high
 latency mixnets, Tor is actually in a potentially better position to
@@ -909,6 +964,14 @@ they are running clients.
 \section{The Future}
 \label{sec:conclusion}
 
+we should put random thoughts here until there are enough for a
+conclusion.
+
+will our sustainability approach work? we'll see.
+
+"These are difficult and open questions, yet choosing not to solve them
+means leaving most users to a less secure network or no anonymizing
+network at all."
 
 \bibliographystyle{plain} \bibliography{tor-design}
 
@@ -921,14 +984,19 @@ they are running clients.
 %\put(3,1){\makebox(0,0)[c]{\epsfig{figure=graphnodes,width=6in}}}
 %\end{picture}
 \mbox{\epsfig{figure=graphnodes,width=5in}}
-\caption{Number of servers over time. Lowest line is number of exit nodes that allow connections to port 80. Middle line is total number of verified (registered) servers. The line above that represents servers that are not yet registered.}
+\caption{Number of servers over time. Lowest line is number of exit
+nodes that allow connections to port 80. Middle line is total number of
+verified (registered) servers. The line above that represents servers
+that are not yet registered.}
 \label{fig:graphnodes}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \mbox{\epsfig{figure=graphtraffic,width=5in}}
-\caption{The sum of traffic reported by each server over time. The bottom pair show average throughput, and the top pair represent the largest 15 minute burst in each 4 hour period.}
+\caption{The sum of traffic reported by each server over time. The bottom
+pair show average throughput, and the top pair represent the largest 15
+minute burst in each 4 hour period.}
 \label{fig:graphtraffic}
 \end{figure}
 
