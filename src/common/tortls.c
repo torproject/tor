@@ -361,7 +361,7 @@ tor_tls_write(tor_tls *tls, char *cp, int n)
   if(tls->wantwrite_n) {
     /* if WANTWRITE last time, we must use the _same_ n as before */
     assert(n >= tls->wantwrite_n);
-    log_fn(LOG_INFO,"resuming pending-write, (%d to flush, reusing %d)",
+    log_fn(LOG_DEBUG,"resuming pending-write, (%d to flush, reusing %d)",
            n, tls->wantwrite_n);
     n = tls->wantwrite_n;
     tls->wantwrite_n = 0;
