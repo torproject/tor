@@ -766,7 +766,6 @@ int write_bytes_to_file(const char *fname, const char *str, size_t len,
 {
   char tempname[1024];
   int fd;
-  size_t len;
   int result;
   if ((strlcpy(tempname,fname,1024) >= 1024) ||
       (strlcat(tempname,".tmp",1024) >= 1024)) {
