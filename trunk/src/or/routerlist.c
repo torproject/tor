@@ -176,7 +176,7 @@ router_pick_directory_server_impl(int requireothers, int fascistfirewall,
   sl = smartlist_create();
   for (i=0;i< smartlist_len(routerlist->routers); i++) {
     router = smartlist_get(routerlist->routers, i);
-    if (!router->is_running || !router->dir_port)
+    if (!router->is_running || !router->dir_port || !router->is_verified)
       continue;
     if (requireothers && router_is_me(router))
       continue;
