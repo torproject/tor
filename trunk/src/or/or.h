@@ -537,7 +537,6 @@ connection_t *connection_new(int type);
 void connection_free(connection_t *conn);
 
 int connection_create_listener(struct sockaddr_in *bindaddr, int type);
-int connection_handle_listener_read(connection_t *conn, int new_type);
 
 int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_t port);
 int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
@@ -564,6 +563,10 @@ connection_t *connection_get_by_type_state_lastwritten(int type, int state);
 int connection_receiver_bucket_should_increase(connection_t *conn);
 
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
+#define connection_has_pending_tls_data(conn) \
+  ((conn)->type == CONN_TYPE_OR && \
+   (conn)->state == OR_CONN_STATE_OPEN && \
+   tor_tls_get_pending_bytes(conn->tls))
 int connection_is_listener(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 
@@ -584,8 +587,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
                                        int edge_type, crypt_path_t *layer_hint);
 int connection_edge_finished_flushing(connection_t *conn);
 
-int connection_package_raw_inbuf(connection_t *conn);
-void connection_consider_sending_sendme(connection_t *conn, int edge_type);
+int connection_edge_package_raw_inbuf(connection_t *conn);
 
 int connection_exit_connect(connection_t *conn);
 
@@ -605,8 +607,7 @@ connection_t *connection_or_connect(routerinfo_t *router);
 int connection_tls_start_handshake(connection_t *conn, int receiving);
 int connection_tls_continue_handshake(connection_t *conn);
 
-void connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn);
-int connection_process_cell_from_inbuf(connection_t *conn);
+void connection_or_write_cell_to_buf(const cell_t *cellp, connection_t *conn);
 
 /********************************* cpuworker.c *****************************/
 

@@ -68,6 +68,7 @@ char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
 /********* END VARIABLES ************/
 
 static int connection_init_accepted_conn(connection_t *conn);
+static int connection_handle_listener_read(connection_t *conn, int new_type);
 
 /**************************************************************/
 
@@ -162,7 +163,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
   return 0;
 }
 
-int connection_handle_listener_read(connection_t *conn, int new_type) {
+static int connection_handle_listener_read(connection_t *conn, int new_type) {
   int news; /* the new socket */
   connection_t *newconn;
   struct sockaddr_in remote; /* information about the remote peer when connecting to other routers */
@@ -645,7 +646,7 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
   cell.aci = aci;
   cell.command = CELL_DESTROY;
   log_fn(LOG_INFO,"Sending destroy (aci %d).",aci);
-  connection_write_cell_to_buf(&cell, conn);
+  connection_or_write_cell_to_buf(&cell, conn);
   return 0;
 }
 

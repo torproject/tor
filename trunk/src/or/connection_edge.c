@@ -13,6 +13,8 @@ static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
                                                int replylen, char success);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
+static void connection_edge_consider_sending_sendme(connection_t *conn, 
+                                                    int edge_type);
 
 int connection_edge_process_inbuf(connection_t *conn) {
 
@@ -43,7 +45,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
 /*ENDCLOSE*/  return connection_ap_handshake_process_socks(conn);
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
-      if(connection_package_raw_inbuf(conn) < 0)
+      if(connection_edge_package_raw_inbuf(conn) < 0)
 /*ENDCLOSE*/  return -1;
       return 0;
     case EXIT_CONN_STATE_CONNECTING:
@@ -167,7 +169,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       stats_n_data_bytes_received += (cell->length - RELAY_HEADER_SIZE);
       connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
                              cell->length - RELAY_HEADER_SIZE, conn);
-      connection_consider_sending_sendme(conn, edge_type);
+      connection_edge_consider_sending_sendme(conn, edge_type);
       return 0;
     case RELAY_COMMAND_END:
       if(!conn) {
@@ -252,7 +254,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       conn->package_window += STREAMWINDOW_INCREMENT;
       log_fn(LOG_DEBUG,"stream-level sendme, packagewindow now %d.", conn->package_window);
       connection_start_reading(conn);
-      connection_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
+      connection_edge_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
       break;
     default:
       log_fn(LOG_WARNING,"unknown relay command %d.",relay_command);
@@ -295,7 +297,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
       connection_stop_writing(conn);
-      connection_consider_sending_sendme(conn, conn->type);
+      connection_edge_consider_sending_sendme(conn, conn->type);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
       connection_stop_writing(conn);
@@ -312,7 +314,7 @@ uint64_t stats_n_data_bytes_packaged = 0;
 uint64_t stats_n_data_cells_received = 0;
 uint64_t stats_n_data_bytes_received = 0;
 
-int connection_package_raw_inbuf(connection_t *conn) {
+int connection_edge_package_raw_inbuf(connection_t *conn) {
   int amount_to_process, length;
   char payload[CELL_PAYLOAD_SIZE];
   circuit_t *circ;
@@ -320,7 +322,7 @@ int connection_package_raw_inbuf(connection_t *conn) {
   assert(conn);
   assert(!connection_speaks_cells(conn));
  
-repeat_connection_package_raw_inbuf:
+repeat_connection_edge_package_raw_inbuf:
  
   circ = circuit_get_by_conn(conn);
   if(!circ) {
@@ -376,10 +378,10 @@ repeat_connection_package_raw_inbuf:
   log_fn(LOG_DEBUG,"conn->package_window is now %d",conn->package_window);
  
   /* handle more if there's more, or return 0 if there isn't */
-  goto repeat_connection_package_raw_inbuf;
+  goto repeat_connection_edge_package_raw_inbuf;
 }
 
-void connection_consider_sending_sendme(connection_t *conn, int edge_type) {
+static void connection_edge_consider_sending_sendme(connection_t *conn, int edge_type) {
   circuit_t *circ;
   cell_t cell;
  

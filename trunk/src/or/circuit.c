@@ -264,7 +264,7 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
   }
 
   log_fn(LOG_DEBUG,"Passing on unrecognized cell.");
-  connection_write_cell_to_buf(cell, conn);
+  connection_or_write_cell_to_buf(cell, conn);
   return 0;
 }
 
@@ -409,11 +409,11 @@ void circuit_resume_edge_reading(circuit_t *circ, int edge_type, crypt_path_t *l
     if((edge_type == EDGE_EXIT && conn->package_window > 0) ||
        (edge_type == EDGE_AP   && conn->package_window > 0 && conn->cpath_layer == layer_hint)) {
       connection_start_reading(conn);
-      connection_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
+      connection_edge_package_raw_inbuf(conn); /* handle whatever might still be on the inbuf */
 
       /* If the circuit won't accept any more data, return without looking
        * at any more of the streams. Any connections that should be stopped
-       * have already been stopped by connection_package_raw_inbuf. */
+       * have already been stopped by connection_edge_package_raw_inbuf. */
       if(circuit_consider_stop_edge_reading(circ, edge_type, layer_hint))
         return;
     }
@@ -733,7 +733,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
       return -1;
     }
 
-    connection_write_cell_to_buf(&cell, circ->n_conn);
+    connection_or_write_cell_to_buf(&cell, circ->n_conn);
 
     circ->cpath->state = CPATH_STATE_AWAITING_KEYS;
     circ->state = CIRCUIT_STATE_BUILDING;
@@ -837,7 +837,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
 
   memcpy(newcell.payload, cell->payload+RELAY_HEADER_SIZE+6, DH_ONIONSKIN_LEN);
 
-  connection_write_cell_to_buf(&newcell, circ->n_conn);
+  connection_or_write_cell_to_buf(&newcell, circ->n_conn);
   return 0;
 }
 

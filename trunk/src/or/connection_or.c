@@ -7,6 +7,7 @@
 extern or_options_t options; /* command-line and config-file options */
 
 static int connection_tls_finish_handshake(connection_t *conn);
+static int connection_or_process_cell_from_inbuf(connection_t *conn);
 
 /**************************************************************/
 
@@ -39,7 +40,7 @@ int connection_or_process_inbuf(connection_t *conn) {
 
   if(conn->state != OR_CONN_STATE_OPEN)
     return 0; /* don't do anything */
-  return connection_process_cell_from_inbuf(conn);
+  return connection_or_process_cell_from_inbuf(conn);
 }
 
 int connection_or_finished_flushing(connection_t *conn) {
@@ -252,9 +253,11 @@ static int connection_tls_finish_handshake(connection_t *conn) {
 
 /* ********************************** */
 
-void connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
+void connection_or_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
   char networkcell[CELL_NETWORK_SIZE];
   char *n = networkcell;
+
+  assert(connection_speaks_cells(conn));
 
   cell_pack(n, cellp);
  
@@ -262,7 +265,7 @@ void connection_write_cell_to_buf(const cell_t *cellp, connection_t *conn) {
 }
 
 /* if there's a whole cell there, pull it off and process it. */
-int connection_process_cell_from_inbuf(connection_t *conn) {
+static int connection_or_process_cell_from_inbuf(connection_t *conn) {
   char buf[CELL_NETWORK_SIZE];
   cell_t cell;
 
@@ -277,7 +280,9 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   cell_unpack(&cell, buf);
  
   command_process_cell(&cell, conn);
- 
+
+  /* CLEAR Shouldn't this be connection_or_process_inbuf at least? Or maybe
+     just use a loop?  If not, doc why not. */
   return connection_process_inbuf(conn); /* process the remainder of the buffer */
 }
 

@@ -103,6 +103,10 @@ void connection_set_poll_socket(connection_t *conn) {
   poll_array[conn->poll_index].fd = conn->s;
 }
 
+/* Remove the current function from the global list, and remove the
+ * corresponding poll entry.  Calling this function will shift the last
+ * connection (if any) into the position occupied by conn.
+ */
 int connection_remove(connection_t *conn) {
   int current_index;
 
@@ -185,10 +189,8 @@ static void conn_read(int i) {
   /* see http://www.greenend.org.uk/rjk/2001/06/poll.html for
    * discussion of POLLIN vs POLLHUP */
   if(!(poll_array[i].revents & (POLLIN|POLLHUP|POLLERR)))
-    if(!connection_speaks_cells(conn) ||
-       conn->state != OR_CONN_STATE_OPEN ||
-       !connection_is_reading(conn) ||
-       !tor_tls_get_pending_bytes(conn->tls)) 
+    if(!connection_is_reading(conn) ||
+       !connection_has_pending_tls_data(conn))
       return; /* this conn should not read */
 
   log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
@@ -233,7 +235,7 @@ static void conn_write(int i) {
   } else assert_connection_ok(conn, time(NULL));
 }
 
-static void check_conn_marked(int i) {
+static void conn_close_if_marked(int i) {
   connection_t *conn;
 
   conn = connection_array[i];
@@ -255,115 +257,139 @@ static void check_conn_marked(int i) {
     connection_free(conn);
     if(i<nfds) { /* we just replaced the one at i with a new one.
                     process it too. */
-      check_conn_marked(i);
+      conn_close_if_marked(i);
     }
   }
 }
 
-static int prepare_for_poll(void) {
-  int i;
-  connection_t *conn;
-  struct timeval now;
-  static long current_second = 0; /* from previous calls to gettimeofday */
+/* Perform regulare maintenance tasks for a single connection.  This
+ * function gets run once per second per connection by run_housekeeping.
+ */
+static void run_connection_housekeeping(int i, time_t now) {
+  cell_t cell;
+  connection_t *conn = connection_array[i];
+  if(connection_receiver_bucket_should_increase(conn)) {
+    conn->receiver_bucket += conn->bandwidth;
+    //        log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i, conn->receiver_bucket);
+  }
+
+  if(conn->wants_to_read == 1 /* it's marked to turn reading back on now */
+     && global_read_bucket > 0 /* and we're allowed to read */
+     && (!connection_speaks_cells(conn) || conn->receiver_bucket > 0)) {
+    /* and either a non-cell conn or a cell conn with non-empty bucket */
+    conn->wants_to_read = 0;
+    connection_start_reading(conn);
+    if(conn->wants_to_write == 1) {
+      conn->wants_to_write = 0;
+      connection_start_writing(conn);
+    }
+  }
+  
+  /* check connections to see whether we should send a keepalive, expire, or wait */
+  if(!connection_speaks_cells(conn))
+    return;
+
+  if(now >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
+    if((!options.OnionRouter && !circuit_get_by_conn(conn)) ||
+       (!connection_state_is_open(conn))) {
+      /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
+      log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
+             i,conn->address, conn->port);
+      conn->marked_for_close = 1;
+    } else {
+      /* either a full router, or we've got a circuit. send a padding cell. */
+      log_fn(LOG_DEBUG,"Sending keepalive to (%s:%d)",
+             conn->address, conn->port);
+      memset(&cell,0,sizeof(cell_t));
+      cell.command = CELL_PADDING;
+      connection_or_write_cell_to_buf(&cell, conn);
+    }
+  }
+}
+
+/* Perform regular maintenance tasks.  This function gets run once per
+ * second by prepare_for_poll.
+ */
+static void run_scheduled_events(time_t now) {
   static long time_to_fetch_directory = 0;
   static long time_to_new_circuit = 0;
-  cell_t cell;
   circuit_t *circ;
+  int i;
+
+  /* 1. Every DirFetchPostPeriod seconds, we get a new directory and upload
+   *    our descriptor (if any). */
+  if(time_to_fetch_directory < now) {
+    /* it's time to fetch a new directory and/or post our descriptor */
+    if(options.OnionRouter) {
+      router_rebuild_descriptor();
+      router_upload_desc_to_dirservers();
+    }
+    if(!options.DirPort) {
+      /* NOTE directory servers do not currently fetch directories.
+       * Hope this doesn't bite us later. */
+      directory_initiate_command(router_pick_directory_server(),
+                                 DIR_CONN_STATE_CONNECTING_FETCH);
+    }
+    time_to_fetch_directory = now + options.DirFetchPostPeriod;
+  }
+
+  /* 2. Every NewCircuitPeriod seconds, we expire old ciruits and make a 
+   *    new one as needed.
+   */
+  if(options.APPort && time_to_new_circuit < now) {
+    circuit_expire_unused_circuits();
+    circuit_launch_new(-1); /* tell it to forget about previous failures */
+    circ = circuit_get_newest_open();
+    if(!circ || circ->dirty) {
+      log_fn(LOG_INFO,"Youngest circuit %s; launching replacement.", circ ? "dirty" : "missing");
+      circuit_launch_new(0); /* make an onion and lay the circuit */
+    }
+    time_to_new_circuit = now + options.NewCircuitPeriod;
+  }
+  
+  /* 3. Every second, we check how much bandwidth we've consumed and 
+   *    increment global_read_bucket.
+   */
+  stats_n_bytes_read += stats_prev_global_read_bucket-global_read_bucket;
+  if(global_read_bucket < 9*options.TotalBandwidth) {
+    global_read_bucket += options.TotalBandwidth;
+    log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
+  }
+  stats_prev_global_read_bucket = global_read_bucket;
+  
+
+  /* 4. We do houskeeping for each connection... */
+  for(i=0;i<nfds;i++) {
+    run_connection_housekeeping(i, now);
+  }
+
+  /* 5. and blow away any connections that need to die. can't do this later
+   * because we might open up a circuit and not realize we're about to cull
+   * the connection it's running over.
+   */
+  for(i=0;i<nfds;i++)
+    conn_close_if_marked(i);
+}
+
+static int prepare_for_poll(void) {
+  static long current_second = 0; /* from previous calls to gettimeofday */
+  connection_t *conn;
+  struct timeval now;
+  int i;
 
   tor_gettimeofday(&now);
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
     ++stats_n_seconds_reading;
-
-    if(time_to_fetch_directory < now.tv_sec) {
-      /* it's time to fetch a new directory and/or post our descriptor */
-      if(options.OnionRouter) {
-        router_rebuild_descriptor();
-        router_upload_desc_to_dirservers();
-      }
-      if(!options.DirPort) {
-        /* NOTE directory servers do not currently fetch directories.
-         * Hope this doesn't bite us later. */
-        directory_initiate_command(router_pick_directory_server(),
-                                   DIR_CONN_STATE_CONNECTING_FETCH);
-      }
-      time_to_fetch_directory = now.tv_sec + options.DirFetchPostPeriod;
-    }
-
-    if(options.APPort && time_to_new_circuit < now.tv_sec) {
-      circuit_expire_unused_circuits();
-      circuit_launch_new(-1); /* tell it to forget about previous failures */
-      circ = circuit_get_newest_open();
-      if(!circ || circ->dirty) {
-        log_fn(LOG_INFO,"Youngest circuit %s; launching replacement.", circ ? "dirty" : "missing");
-        circuit_launch_new(0); /* make an onion and lay the circuit */
-      }
-      time_to_new_circuit = now.tv_sec + options.NewCircuitPeriod;
-    }
-
-    stats_n_bytes_read += stats_prev_global_read_bucket-global_read_bucket;
-    if(global_read_bucket < 9*options.TotalBandwidth) {
-      global_read_bucket += options.TotalBandwidth;
-      log_fn(LOG_DEBUG,"global_read_bucket now %d.", global_read_bucket);
-    }
-    stats_prev_global_read_bucket = global_read_bucket;
-
-    /* do housekeeping for each connection */
-    for(i=0;i<nfds;i++) {
-      conn = connection_array[i];
-      if(connection_receiver_bucket_should_increase(conn)) {
-        conn->receiver_bucket += conn->bandwidth;
-//        log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i, conn->receiver_bucket);
-      }
-
-      if(conn->wants_to_read == 1 /* it's marked to turn reading back on now */
-         && global_read_bucket > 0 /* and we're allowed to read */
-         && (!connection_speaks_cells(conn) || conn->receiver_bucket > 0)) {
-         /* and either a non-cell conn or a cell conn with non-empty bucket */
-        conn->wants_to_read = 0;
-        connection_start_reading(conn);
-	if(conn->wants_to_write == 1) {
-          conn->wants_to_write = 0;
-          connection_start_writing(conn);
-        }
-      }
-
-      /* check connections to see whether we should send a keepalive, expire, or wait */
-      if(!connection_speaks_cells(conn))
-        continue; /* this conn type doesn't send cells */
-      if(now.tv_sec >= conn->timestamp_lastwritten + options.KeepalivePeriod) {
-        if((!options.OnionRouter && !circuit_get_by_conn(conn)) ||
-           (!connection_state_is_open(conn))) {
-          /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
-          log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
-              i,conn->address, conn->port);
-          conn->marked_for_close = 1;
-        } else {
-          /* either a full router, or we've got a circuit. send a padding cell. */
-          log_fn(LOG_DEBUG,"Sending keepalive to (%s:%d)",
-              conn->address, conn->port);
-          memset(&cell,0,sizeof(cell_t));
-          cell.command = CELL_PADDING;
-          connection_write_cell_to_buf(&cell, conn);
-        }
-      }
-    }
-    /* blow away any connections that need to die. can't do this later
-     * because we might open up a circuit and not realize we're about to cull
-     * the connection it's running over.
-     */
-    for(i=0;i<nfds;i++)
-      check_conn_marked(i); 
+    run_scheduled_events(now.tv_sec);
 
     current_second = now.tv_sec; /* remember which second it is, for next time */
   }
 
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
-    if(connection_speaks_cells(conn) &&
-       connection_state_is_open(conn) &&
-       tor_tls_get_pending_bytes(conn->tls)) {
+    if(connection_has_pending_tls_data(conn)) {
       log_fn(LOG_DEBUG,"sock %d has pending bytes.",conn->s);
       return 0; /* has pending bytes to read; don't let poll wait. */
     }
@@ -621,7 +647,7 @@ static int do_main_loop(void) {
 
     /* any of the conns need to be closed now? */
     for(i=0;i<nfds;i++)
-      check_conn_marked(i); 
+      conn_close_if_marked(i); 
 
     /* refilling buckets and sending cells happens at the beginning of the
      * next iteration of the loop, inside prepare_for_poll()
