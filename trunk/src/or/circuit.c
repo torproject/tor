@@ -205,18 +205,45 @@ circuit_t *circuit_get_by_conn(connection_t *conn) {
   return NULL;
 }
 
-circuit_t *circuit_get_newest_open(void) {
-  circuit_t *circ, *bestcirc=NULL;
+/* Find the newest circ that conn can use, preferably one which is
+ * dirty and not too old.
+ * If !conn, return newest open.
+ */
+circuit_t *circuit_get_newest_open(connection_t *conn) {
+  circuit_t *circ, *newest=NULL, *leastdirty=NULL;
 
   for(circ=global_circuitlist;circ;circ = circ->next) {
-    if(circ->cpath && circ->state == CIRCUIT_STATE_OPEN && circ->n_conn && (!bestcirc ||
-      bestcirc->timestamp_created < circ->timestamp_created)) {
-      log_fn(LOG_DEBUG,"Choosing circuit %s:%d:%d.", circ->n_conn->address, circ->n_port, circ->n_circ_id);
-      assert(circ->n_circ_id);
-      bestcirc = circ;
+    if(conn && connection_ap_can_use_exit(conn,
+       router_get_by_addr_port(circ->cpath->prev->addr, circ->cpath->prev->port)) < 0) {
+      log_fn(LOG_DEBUG,"Skipping %s:%d:%d because we couldn't exit there.",
+             circ->n_conn->address, circ->n_port, circ->n_circ_id);
+      continue;
+    }
+    if(circ->cpath && circ->state == CIRCUIT_STATE_OPEN && circ->n_conn) {
+      if(!newest || newest->timestamp_created < circ->timestamp_created) {
+        assert(circ->n_circ_id);
+        newest = circ;
+      }
+      if(conn && circ->timestamp_dirty &&
+         (!leastdirty || leastdirty->timestamp_dirty < circ->timestamp_dirty)) {
+        assert(circ->n_circ_id);
+        leastdirty = circ;
+      }
     }
   }
-  return bestcirc;
+
+  if(leastdirty &&
+     leastdirty->timestamp_dirty+options.NewCircuitPeriod > time(NULL)) {
+    log_fn(LOG_DEBUG,"Choosing in-use circuit %s:%d:%d.",
+           leastdirty->n_conn->address, leastdirty->n_port, leastdirty->n_circ_id);
+    return leastdirty;
+  }
+  if(newest) {
+    log_fn(LOG_DEBUG,"Choosing circuit %s:%d:%d.",
+           newest->n_conn->address, newest->n_port, newest->n_circ_id);
+    return newest;
+  }
+  return NULL;
 }
 
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
@@ -491,13 +518,8 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t
 
 void circuit_close(circuit_t *circ) {
   connection_t *conn;
-  circuit_t *youngest=NULL;
 
   assert(circ);
-  if(options.SocksPort) {
-    youngest = circuit_get_newest_open();
-    log_fn(LOG_DEBUG,"youngest %d, circ %d.",(int)youngest, (int)circ);
-  }
   circuit_remove(circ);
   if(circ->n_conn)
     connection_send_destroy(circ->n_circ_id, circ->n_conn);
@@ -508,11 +530,6 @@ void circuit_close(circuit_t *circ) {
     connection_send_destroy(circ->n_circ_id, circ->p_conn);
   for(conn=circ->p_streams; conn; conn=conn->next_stream) {
     connection_send_destroy(circ->p_circ_id, conn); 
-  }
-  if(options.SocksPort && youngest == circ) { /* check this after we've sent the destroys, to reduce races */
-    /* our current circuit just died. Launch another one pronto. */
-    log_fn(LOG_INFO,"Youngest circuit dying. Launching a replacement.");
-    circuit_launch_new(1);
   }
   circuit_free(circ);
 }
@@ -606,15 +623,15 @@ void circuit_dump_by_conn(connection_t *conn, int severity) {
 
 void circuit_expire_unused_circuits(void) {
   circuit_t *circ, *tmpcirc;
-  circuit_t *youngest;
-
-  youngest = circuit_get_newest_open();
+  time_t now = time(NULL);
 
   circ = global_circuitlist;
   while(circ) {
     tmpcirc = circ;
     circ = circ->next;
-    if(tmpcirc != youngest && !tmpcirc->p_conn && !tmpcirc->p_streams) {
+    if(tmpcirc->timestamp_dirty &&
+       tmpcirc->timestamp_dirty + options.NewCircuitPeriod < now &&
+       !tmpcirc->p_conn && !tmpcirc->p_streams) {
       log_fn(LOG_DEBUG,"Closing n_circ_id %d",tmpcirc->n_circ_id);
       circuit_close(tmpcirc);
     }
@@ -624,34 +641,33 @@ void circuit_expire_unused_circuits(void) {
 /* failure_status code: negative means reset failures to 0. Other values mean
  * add that value to the current number of failures, then if we don't have too
  * many failures on record, try to make a new circuit.
+ *
+ * Return -1 if you aren't going to try to make a circuit, 0 if you did try.
  */
-void circuit_launch_new(int failure_status) {
+int circuit_launch_new(int failure_status) {
   static int failures=0;
 
   if(!options.SocksPort) /* we're not an application proxy. no need for circuits. */
-    return;
+    return -1;
 
   if(failure_status == -1) { /* I was called because a circuit succeeded */
     failures = 0;
-    return;
+    return -1;
   }
 
   failures += failure_status;
 
-retry_circuit:
-
   if(failures > 5) {
-    log_fn(LOG_INFO,"Giving up for now, %d failures.", failures);
-    return;
+    return -1;
   }
 
   if(circuit_establish_circuit() < 0) {
     failures++;
-    goto retry_circuit;
+    return 0;
   }
 
   failures = 0;
-  return;
+  return 0;
 }
 
 int circuit_establish_circuit(void) {
