@@ -1,7 +1,7 @@
 Changes in version 0.0.9.4 - 2005-02-03
   o Bugfixes on 0.0.9:
     - Fix an assert bug that took down most of our servers: when
-      a server claims to have 500 GB of bandwidthburst, don't
+      a server claims to have 1 GB of bandwidthburst, don't
       freak out.
     - Don't crash as badly if we have spawned the max allowed number
       of dnsworkers, or we're out of file descriptors.
