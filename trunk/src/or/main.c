@@ -55,6 +55,11 @@ int has_fetched_directory=0;
  * entry to inform the user that Tor is working. */
 int has_completed_circuit=0;
 
+#ifdef MS_WINDOWS
+SERVICE_STATUS service_status;
+SERVICE_STATUS_HANDLE hStatus;
+#endif
+
 /********* END VARIABLES ************/
 
 /****************************************************************************
@@ -699,7 +704,11 @@ static int do_main_loop(void) {
   }
 
   for(;;) {
-#ifndef MS_WINDOWS /* do signal stuff only on unix */
+#ifdef MS_WINDOWS /* Do service stuff only on windows. */
+        if (service_status.dwCurrentState != SERVICE_RUNNING) {
+      return 0;
+    } 
+#else /* do signal stuff only on unix */
     if(please_dumpstats) {
       /* prefer to log it at INFO, but make sure we always see it */
       dumpstats(get_min_log_level()>LOG_INFO ? get_min_log_level() : LOG_INFO);
@@ -922,12 +931,79 @@ void tor_cleanup(void) {
   crypto_global_cleanup();
 }
 
+#ifdef MS_WINDOWS
+void nt_service_control(DWORD request)
+{
+  switch (request) {
+    case SERVICE_CONTROL_STOP:
+        case SERVICE_CONTROL_SHUTDOWN:
+          log(LOG_ERR, "Got stop/shutdown request; shutting down cleanly.");
+      service_status.dwWin32ExitCode = 0;
+          service_status.dwCurrentState = SERVICE_STOPPED;
+          return;
+  }
+  SetServiceStatus(hStatus, &service_status);     
+}
+
+void nt_service_body(int argc, char **argv)
+{
+  int err;
+  FILE *f;
+  f = fopen("d:\\foo.txt", "w");
+  fprintf(f, "POINT 1\n");
+  fclose(f);
+  service_status.dwServiceType = SERVICE_WIN32;
+  service_status.dwCurrentState = SERVICE_START_PENDING;
+  service_status.dwControlsAccepted = 
+        SERVICE_ACCEPT_STOP |
+                SERVICE_ACCEPT_SHUTDOWN;
+  service_status.dwWin32ExitCode = 0;
+  service_status.dwServiceSpecificExitCode = 0;
+  service_status.dwCheckPoint = 0;
+  service_status.dwWaitHint = 0;
+  hStatus = RegisterServiceCtrlHandler("Tor", (LPHANDLER_FUNCTION) nt_service_control);
+  if (hStatus == 0) {
+        // failed;
+        return;
+  }
+  err = tor_init(argc, argv); // refactor this part out of tor_main and do_main_loop
+  if (err) {
+        // failed.
+        service_status.dwCurrentState = SERVICE_STOPPED;
+        service_status.dwWin32ExitCode = -1;
+    SetServiceStatus(hStatus, &service_status);
+        return;
+  }
+  service_status.dwCurrentState = SERVICE_RUNNING;
+  SetServiceStatus(hStatus, &service_status);
+  do_main_loop();
+  tor_cleanup();
+  return;
+}
+
+void nt_service_main(void)
+{
+  SERVICE_TABLE_ENTRY table[2];
+  table[0].lpServiceName = "Tor";
+  table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)nt_service_body;
+  table[1].lpServiceName = NULL;
+  table[1].lpServiceProc = NULL;
+  if (!StartServiceCtrlDispatcher(table))
+          printf("Error was %d\n",GetLastError());
+}
+#endif
+
 int tor_main(int argc, char *argv[]) {
+#ifdef MS_WINDOWS_SERVICE
+  nt_service_main();
+  return 0;
+#else
   if (tor_init(argc, argv)<0)
     return -1;
   do_main_loop();
   tor_cleanup();
   return -1;
+#endif
 }
 
 /*
