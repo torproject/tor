@@ -396,6 +396,11 @@ void dns_cancel_pending_resolve(char *address) {
     return;
   }
 
+  if (!resolve->pending_connections) {
+    /* XXX this should never trigger, but sometimes it does */
+    log_fn(LOG_WARN,"Bug: Address '%s' is pending but has no pending connections!", address);
+    return;
+  }
   tor_assert(resolve->pending_connections);
 
   /* mark all pending connections to fail */
