@@ -66,8 +66,8 @@ struct crypto_cipher_env_t
 static INLINE int
 crypto_cipher_iv_length(int type) {
   /*
-  printf("%d -> %d IV\n",type, EVP_CIPHER_iv_length(
-						  crypto_cipher_evp_cipher(type,0)));
+  printf("%d -> %d IV\n",type,
+         EVP_CIPHER_iv_length(crypto_cipher_evp_cipher(type,0)));
   */
   switch(type)
     {
@@ -83,8 +83,8 @@ crypto_cipher_iv_length(int type) {
 static INLINE int
 crypto_cipher_key_length(int type) {
   /*
-  printf("%d -> %d\n",type, EVP_CIPHER_key_length(
-						  crypto_cipher_evp_cipher(type,0)));
+  printf("%d -> %d\n",type,
+         EVP_CIPHER_key_length(crypto_cipher_evp_cipher(type,0)));
   */
   switch(type)
     {
@@ -618,7 +618,7 @@ int crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *from, int fro
   switch(env->type) {
     case CRYPTO_PK_RSA:
       return RSA_public_decrypt(fromlen, from, to, (RSA *)env->key,
-			      RSA_PKCS1_PADDING);
+                                RSA_PKCS1_PADDING);
     default:
       return -1;
   }
@@ -633,7 +633,7 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromle
       if (!(((RSA*)env->key)->p))
         return -1;
       return RSA_private_encrypt(fromlen, from, to, (RSA *)env->key,
-			       RSA_PKCS1_PADDING);
+                                 RSA_PKCS1_PADDING);
     default:
       return -1;
   }
@@ -830,7 +830,7 @@ struct crypto_digest_env_t {
 };
 
 crypto_digest_env_t *
-crypto_digest_new_env(int type)
+crypto_new_digest_env(int type)
 {
   crypto_digest_env_t *r;
   assert(type == CRYPTO_SHA1_DIGEST);
@@ -840,7 +840,7 @@ crypto_digest_new_env(int type)
 }
 
 void
-crypto_digest_free(crypto_digest_env_t *digest) {
+crypto_free_digest_env(crypto_digest_env_t *digest) {
   assert(digest);
   tor_free(digest);
 }
@@ -902,14 +902,14 @@ static void init_dh_param() {
       2^1536 - 2^1472 - 1 + 2^64 * { [2^1406 pi] + 741804 }
   */
   r = BN_hex2bn(&p,
-		"FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
-		"29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
-		"EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"
-		"E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
-		"EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D"
-		"C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F"
-		"83655D23DCA3AD961C62F356208552BB9ED529077096966D"
-		"670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF");
+                "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
+                "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
+                "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"
+                "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
+                "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D"
+                "C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F"
+                "83655D23DCA3AD961C62F356208552BB9ED529077096966D"
+                "670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF");
 #endif
 
   /* This is from rfc2409, section 6.2.  It's a safe prime, and
@@ -918,11 +918,11 @@ static void init_dh_param() {
   */
   /* See also rfc 3536 */
   r = BN_hex2bn(&p,
-		"FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
-		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
-		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
-		"A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
-		"49286651ECE65381FFFFFFFFFFFFFFFF");
+                "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
+                "8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
+                "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
+                "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
+                "49286651ECE65381FFFFFFFFFFFFFFFF");
   assert(r);
 
   r = BN_set_word(g, 2);
@@ -982,8 +982,8 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, int pubkey_len)
 #undef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
 int crypto_dh_compute_secret(crypto_dh_env_t *dh,
-			     char *pubkey, int pubkey_len,
-			     char *secret_out, int secret_bytes_out)
+                             char *pubkey, int pubkey_len,
+                             char *secret_out, int secret_bytes_out)
 {
   unsigned char hash[20];
   unsigned char *secret_tmp = NULL;
@@ -997,6 +997,7 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
     goto error;
   secret_tmp = tor_malloc(crypto_dh_get_bytes(dh)+1);
   secret_len = DH_compute_key(secret_tmp, pubkey_bn, dh->dh);
+  assert(secret_len == crypto_dh_get_bytes(dh));
   for (i = 0; i < secret_bytes_out; i += 20) {
     secret_tmp[secret_len] = (unsigned char) i/20;
     if (crypto_SHA_digest(secret_tmp, secret_len+1, hash))
