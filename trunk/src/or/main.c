@@ -376,7 +376,8 @@ void directory_has_arrived(time_t now) {
    * seconds after the directory we had when we started.
    */
   if (!time_to_fetch_directory)
-    time_to_fetch_directory = now + options->DirFetchPostPeriod;
+    /*XXX *5 is unreasonable.  We should have separate options for these cases.*/
+    time_to_fetch_directory = now + options->DirFetchPostPeriod*5;
 
   if (server_mode(options) &&
       !we_are_hibernating()) { /* connect to the appropriate routers */
@@ -512,6 +513,8 @@ static void run_scheduled_events(time_t now) {
   static time_t last_rotated_certificate = 0;
   static time_t time_to_check_listeners = 0;
   static time_t time_to_check_descriptor = 0;
+  static time_t time_to_force_upload_descriptor = 0;
+  static time_t time_to_fetch_running_routers = 0;
   or_options_t *options = get_options();
   int i;
 
@@ -560,14 +563,6 @@ static void run_scheduled_events(time_t now) {
    *    force-upload our descriptor (if we've passed our internal
    *    checks). */
   if(time_to_fetch_directory < now) {
-    if(decide_if_publishable_server(now)) {
-      server_is_advertised = 1;
-      router_rebuild_descriptor(1);
-      router_upload_dir_desc_to_dirservers(1);
-    } else {
-      server_is_advertised = 0;
-    }
-
     /* purge obsolete entries */
     routerlist_remove_old_routers(ROUTER_MAX_AGE);
 
@@ -582,15 +577,37 @@ static void run_scheduled_events(time_t now) {
     }
 
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL);
+    /*XXX *5 is unreasonable.  We should have separate options for these cases.*/
+    time_to_fetch_directory = now + options->DirFetchPostPeriod*5;
+    time_to_fetch_running_routers = now + options->DirFetchPostPeriod;
+  }
+
+  if (time_to_fetch_running_routers < now) {
+    if (!authdir_mode(options)) {
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL);
+    }
+    time_to_fetch_running_routers = now + options->DirFetchPostPeriod;
+  }
+
+  if (time_to_force_upload_descriptor < now) {
+    /*XXX Separate option for this, too. */
+    time_to_force_upload_descriptor = now + options->DirFetchPostPeriod;
+    if(decide_if_publishable_server(now)) {
+      server_is_advertised = 1;
+      router_rebuild_descriptor(1);
+      router_upload_dir_desc_to_dirservers(1);
+    } else {
+      server_is_advertised = 0;
+    }
 
     if(!we_are_hibernating()) {
       /* Force an upload of our rend descriptors every DirFetchPostPeriod seconds. */
       rend_services_upload(1);
       last_uploaded_services = now;
     }
-    rend_cache_clean(); /* should this go elsewhere? */
+    rend_cache_clean(); /* this should go elsewhere? */
 
-    time_to_fetch_directory = now + options->DirFetchPostPeriod;
+    time_to_force_upload_descriptor = now + options->DirFetchPostPeriod;
   }
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
