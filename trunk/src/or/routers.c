@@ -669,7 +669,7 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   NEXT_TOK();
   TOK_IS(K_RECOMMENDED_SOFTWARE, "recommended-software");
   if (tok.val.cmd.n_args != 1) {
-    log_fn(LOG_WARNING, "Invalid recommded-software line");
+    log_fn(LOG_WARNING, "Invalid recommended-software line");
     goto err;
   }
   versions = strdup(tok.val.cmd.args[0]);
@@ -677,7 +677,7 @@ int router_get_dir_from_string_impl(char *s, directory_t **dest,
   NEXT_TOK();
   TOK_IS(K_RUNNING_ROUTERS, "running-routers");
   n_good_nicknames = tok.val.cmd.n_args;
-  memcpy(good_nickname_lst, tok.val.cmd.args, n_good_nicknames);
+  memcpy(good_nickname_lst, tok.val.cmd.args, n_good_nicknames*sizeof(char *));
 
   if (router_get_list_from_string_impl(&s, &new_dir,
                                        n_good_nicknames, good_nickname_lst)) {
