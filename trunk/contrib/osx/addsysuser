@@ -25,8 +25,9 @@ fi
 home=/Users/$username
 # defhome is what goes into NetInfo
 defhome="/Network/Servers/MyServer/Users"
-#echo "Determining next available uid (please be patient)..."
-uiddef=`nidump passwd / | cut -d: -f3 | sort -n | tail -n 1`
+#echo "Determining next available system uid (please be patient)..."
+# Uids over 500 are for system users.
+uiddef=`nidump passwd / | cut -d: -f3 | sort -n | grep -v '^[56789]..' |grep -v '^....$' | tail -n 1`
 uiddef=`echo $uiddef + 1 |bc`
 echo Creating account for $username...
 niutil -create / /users/$username
