@@ -520,20 +520,24 @@ init_options(or_options_t *options)
   options->NumCpus = 1;
 }
 
-static char *
-get_default_conf_file(void)
-{
 #ifdef MS_WINDOWS
+static char *get_windows_conf_root(void)
+{
+  static int is_set = 0;
+  static char path[MAX_PATH+1];
+
   LPITEMIDLIST idl;
   IMalloc *m;
   HRESULT result;
-  char *path = tor_malloc(MAX_PATH);
+
+  if (is_set)
+    return path;
+  
   /* Find X:\documents and settings\username\applicatation data\ .
    * We would use SHGetSpecialFolder path, but that wasn't added until IE4.
    */
   if (!SUCCEEDED(SHGetSpecialFolderLocation(NULL, CSIDL_APPDATA,
                                             &idl))) {
-    tor_free(path);
     return NULL;
   }
   /* Convert the path from an "ID List" (whatever that is!) to a path. */
@@ -545,9 +549,19 @@ get_default_conf_file(void)
     m->lpVtbl->Release(m);
   }
   if (!SUCCEEDED(result)) {
-    tor_free(path);
     return NULL;
   }
+  is_set = 1;
+  return path;
+}
+#endif
+
+static char *
+get_default_conf_file(void)
+{
+#ifdef MS_WINDOWS
+  char *path = tor_malloc(MAX_PATH);
+  strlcpy(path, get_windows_conf_root(), MAX_PATH);
   strlcat(path,"\\tor\\torrc",MAX_PATH);
   return path;
 #else
@@ -1178,9 +1192,7 @@ get_data_directory(or_options_t *options)
 #ifdef MS_WINDOWS
     char *p;
     p = tor_malloc(MAX_PATH);
-    if (!SUCCEEDED(SHGetSpecialFolderPath(NULL, p, CSIDL_APPDATA, 1))) {
-      strlcpy(p,CONFDIR, MAX_PATH);
-    }
+    strlcpy(p,get_windows_conf_root(),MAX_PATH);
     strlcat(p,"\\tor",MAX_PATH);
     options->DataDirectory = p;
     return p;
