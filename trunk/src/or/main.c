@@ -757,7 +757,7 @@ static int do_hup(void) {
   }
   if(authdir_mode()) {
     /* reload the approved-routers file */
-    snprintf(keydir,sizeof(keydir),"%s/approved-routers", get_data_directory(&options));
+    tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", get_data_directory(&options));
     log_fn(LOG_INFO,"Reloading approved fingerprints from %s...",keydir);
     if(dirserv_parse_fingerprint_file(keydir) < 0) {
       log_fn(LOG_WARN, "Error reloading fingerprints. Continuing with old list.");
@@ -772,7 +772,7 @@ static int do_hup(void) {
     dnsworkers_rotate();
     /* Rebuild fresh descriptor as needed. */
     router_rebuild_descriptor();
-    snprintf(keydir,sizeof(keydir),"%s/router.desc", get_data_directory(&options));
+    tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", get_data_directory(&options));
     log_fn(LOG_INFO,"Dumping descriptor to %s...",keydir);
     if (write_str_to_file(keydir, router_get_my_descriptor(), 0)) {
       return -1;

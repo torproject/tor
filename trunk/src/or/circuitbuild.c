@@ -76,20 +76,20 @@ void circuit_log_path(int severity, circuit_t *circ) {
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
   tor_assert(circ->cpath);
 
-  snprintf(s, sizeof(buf)-1, "circ (length %d, exit %s): ",
+  tor_snprintf(s, sizeof(buf)-1, "circ (length %d, exit %s): ",
           circ->build_state->desired_path_len, circ->build_state->chosen_exit_name);
   hop=circ->cpath;
   do {
     s = buf + strlen(buf);
     router = router_get_by_digest(hop->identity_digest);
     if(router) {
-      snprintf(s, sizeof(buf) - (s - buf), "%s(%s) ",
+      tor_snprintf(s, sizeof(buf) - (s - buf), "%s(%s) ",
                router->nickname, states[hop->state]);
     } else {
       if(circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
-        snprintf(s, sizeof(buf) - (s - buf), "(rendjoin hop)");
+        tor_snprintf(s, sizeof(buf) - (s - buf), "(rendjoin hop)");
       } else {
-        snprintf(s, sizeof(buf) - (s - buf), "UNKNOWN ");
+        tor_snprintf(s, sizeof(buf) - (s - buf), "UNKNOWN ");
       }
     }
     hop=hop->next;
@@ -1105,7 +1105,7 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
 
     for(i=0; i < smartlist_len(rl->routers); i++) {
       r = smartlist_get(rl->routers, i);
-      snprintf(buf, sizeof(buf), "%d", r->or_port);
+      tor_snprintf(buf, sizeof(buf), "%d", r->or_port);
       if(!smartlist_string_isin(options.FirewallPorts, buf))
          smartlist_add(excluded, r);
     }

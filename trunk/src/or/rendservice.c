@@ -309,7 +309,7 @@ int rend_service_load_keys(void)
       log_fn(LOG_WARN, "Directory name too long: '%s'", s->directory);
       return -1;
     }
-    snprintf(buf, sizeof(buf),"%s.onion\n", s->service_id);
+    tor_snprintf(buf, sizeof(buf),"%s.onion\n", s->service_id);
     if (write_str_to_file(fname,buf,0)<0)
       return -1;
   }

@@ -299,7 +299,7 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   SSL_CTX **ctx;
   if (!nickname)
     nickname = "null";
-  snprintf(nn2, sizeof(nn2), "%s <identity>", nickname);
+  tor_snprintf(nn2, sizeof(nn2), "%s <identity>", nickname);
 
   tor_tls_init();
 

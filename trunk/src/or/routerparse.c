@@ -1032,7 +1032,7 @@ router_parse_exit_policy(directory_token_t *tok) {
   newe = tor_malloc_zero(sizeof(struct exit_policy_t));
 
   newe->string = tor_malloc(8+strlen(arg));
-  snprintf(newe->string, 8+strlen(arg), "%s %s",
+  tor_snprintf(newe->string, 8+strlen(arg), "%s %s",
            (tok->tp == K_REJECT) ? "reject" : "accept", arg);
   newe->policy_type = (tok->tp == K_REJECT) ? EXIT_POLICY_REJECT
     : EXIT_POLICY_ACCEPT;
