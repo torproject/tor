@@ -3,7 +3,8 @@ Changes in version 0.0.9.5 - 2005-02-22
     - Fix an assert race at exit nodes when resolve requests fail.
     - Stop picking unverified dir mirrors--it only leads to misery.
     - Patch from Dmitry Bely so Tor runs better as a service under
-      the win32 SYSTEM account.
+      the win32 SYSTEM account.  Service support is still not compiled
+      into the executable by default.
     - Make tor-resolve actually work (?) on Win32.
     - Fix a sign bug when getrlimit claims to have 4+ billion
       file descriptors available.
