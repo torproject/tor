@@ -252,7 +252,7 @@ static void conn_read(int i) {
      * should be a &&.
      */
     if (!connection_is_reading(conn) ||
-       !connection_has_pending_tls_data(conn))
+        !connection_has_pending_tls_data(conn))
       return; /* this conn should not read */
 
   log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
@@ -263,15 +263,15 @@ static void conn_read(int i) {
   if (
     /* XXX does POLLHUP also mean it's definitely broken? */
 #ifdef MS_WINDOWS
-    (poll_array[i].revents & POLLERR) ||
+      (poll_array[i].revents & POLLERR) ||
 #endif
-    connection_handle_read(conn) < 0) {
-      if (!conn->marked_for_close) {
-        /* this connection is broken. remove it */
-        log_fn(LOG_WARN,"Unhandled error on read for %s connection (fd %d); removing",
-               CONN_TYPE_TO_STRING(conn->type), conn->s);
-        connection_mark_for_close(conn);
-      }
+      connection_handle_read(conn) < 0) {
+    if (!conn->marked_for_close) {
+      /* this connection is broken. remove it */
+      log_fn(LOG_WARN,"Unhandled error on read for %s connection (fd %d); removing",
+             CONN_TYPE_TO_STRING(conn->type), conn->s);
+      connection_mark_for_close(conn);
+    }
   }
   assert_connection_ok(conn, time(NULL));
   assert_all_pending_dns_resolves_ok();
@@ -411,8 +411,8 @@ static void run_connection_housekeeping(int i, time_t now) {
 
   /* Expire any directory connections that haven't sent anything for 5 min */
   if (conn->type == CONN_TYPE_DIR &&
-     !conn->marked_for_close &&
-     conn->timestamp_lastwritten + 5*60 < now) {
+      !conn->marked_for_close &&
+      conn->timestamp_lastwritten + 5*60 < now) {
     log_fn(LOG_INFO,"Expiring wedged directory conn (fd %d, purpose %d)", conn->s, conn->purpose);
     connection_mark_for_close(conn);
     return;
@@ -421,12 +421,12 @@ static void run_connection_housekeeping(int i, time_t now) {
   /* If we haven't written to an OR connection for a while, then either nuke
      the connection or send a keepalive, depending. */
   if (connection_speaks_cells(conn) &&
-     now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
+      now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     if ((!connection_state_is_open(conn)) ||
-       (we_are_hibernating() && !circuit_get_by_conn(conn)) ||
-       (!clique_mode(options) && !circuit_get_by_conn(conn) &&
-       (!router || !server_mode(options) || !router_is_clique_mode(router)))) {
+        (we_are_hibernating() && !circuit_get_by_conn(conn)) ||
+        (!clique_mode(options) && !circuit_get_by_conn(conn) &&
+        (!router || !server_mode(options) || !router_is_clique_mode(router)))) {
       /* our handshake has expired; we're hibernating;
        * or we have no circuits and we're both either OPs or normal ORs,
        * then kill it. */
@@ -727,7 +727,7 @@ static int prepare_for_poll(void) {
   for (i=0;i<nfds;i++) {
     conn = connection_array[i];
     if (connection_has_pending_tls_data(conn) &&
-       connection_is_reading(conn)) {
+        connection_is_reading(conn)) {
       log_fn(LOG_DEBUG,"sock %d has pending bytes.",conn->s);
       return 0; /* has pending bytes to read; don't let poll wait. */
     }
@@ -1174,24 +1174,23 @@ void nt_service_body(int argc, char **argv)
   service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
   service_status.dwCurrentState = SERVICE_START_PENDING;
   service_status.dwControlsAccepted =
-        SERVICE_ACCEPT_STOP |
-                SERVICE_ACCEPT_SHUTDOWN;
+        SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
   service_status.dwWin32ExitCode = 0;
   service_status.dwServiceSpecificExitCode = 0;
   service_status.dwCheckPoint = 0;
   service_status.dwWaitHint = 1000;
   hStatus = RegisterServiceCtrlHandler(GENSRV_SERVICENAME, (LPHANDLER_FUNCTION) nt_service_control);
   if (hStatus == 0) {
-        // failed;
-        return;
+    // failed;
+    return;
   }
   err = tor_init(backup_argc, backup_argv); // refactor this part out of tor_main and do_main_loop
   if (err) {
-        // failed.
-        service_status.dwCurrentState = SERVICE_STOPPED;
-        service_status.dwWin32ExitCode = -1;
+    // failed.
+    service_status.dwCurrentState = SERVICE_STOPPED;
+    service_status.dwWin32ExitCode = -1;
     SetServiceStatus(hStatus, &service_status);
-        return;
+    return;
   }
   service_status.dwCurrentState = SERVICE_RUNNING;
   SetServiceStatus(hStatus, &service_status);
@@ -1280,13 +1279,13 @@ int nt_service_install()
   }
 
   if ((hService = CreateService(hSCManager, GENSRV_SERVICENAME, GENSRV_DISPLAYNAME,
-    SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START,
-    SERVICE_ERROR_IGNORE, command, NULL, NULL,
-    NULL, NULL, NULL)) == NULL) {
-      printf("Failed: CreateService()\n");
-      CloseServiceHandle(hSCManager);
-      free(command);
-      return 0;
+                                SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS,
+                                SERVICE_DEMAND_START, SERVICE_ERROR_IGNORE, command,
+                                NULL, NULL, NULL, NULL, NULL)) == NULL) {
+    printf("Failed: CreateService()\n");
+    CloseServiceHandle(hSCManager);
+    free(command);
+    return 0;
   }
 
   CloseServiceHandle(hService);

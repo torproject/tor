@@ -213,12 +213,12 @@ int connection_edge_finished_connecting(connection_t *conn)
   /* deliver a 'connected' relay cell back through the circuit. */
   if (connection_edge_is_rendezvous_stream(conn)) {
     if (connection_edge_send_command(conn, circuit_get_by_conn(conn),
-                                    RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
+                                     RELAY_COMMAND_CONNECTED, NULL, 0, conn->cpath_layer) < 0)
       return 0; /* circuit is closed, don't continue */
   } else {
     *(uint32_t*)connected_payload = htonl(conn->addr);
     if (connection_edge_send_command(conn, circuit_get_by_conn(conn),
-         RELAY_COMMAND_CONNECTED, connected_payload, 4, conn->cpath_layer) < 0)
+        RELAY_COMMAND_CONNECTED, connected_payload, 4, conn->cpath_layer) < 0)
       return 0; /* circuit is closed, don't continue */
   }
   tor_assert(conn->package_window > 0);
@@ -515,7 +515,7 @@ int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ)
   log_fn(LOG_DEBUG,"Sending relay cell to begin stream %d.",ap_conn->stream_id);
 
   if (connection_edge_send_command(ap_conn, circ, RELAY_COMMAND_BEGIN,
-                               payload, payload_len, ap_conn->cpath_layer) < 0)
+                                   payload, payload_len, ap_conn->cpath_layer) < 0)
     return -1; /* circuit is closed, don't continue */
 
   ap_conn->package_window = STREAMWINDOW_START;
@@ -1000,8 +1000,8 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
     return tor_version_as_new_as(exit->platform, "0.0.9pre1");
   }
   addr = client_dns_lookup_entry(conn->socks_request->address);
-  if (router_compare_addr_to_addr_policy(addr,
-     conn->socks_request->port, exit->exit_policy) < 0)
+  if (router_compare_addr_to_addr_policy(addr, conn->socks_request->port,
+                                         exit->exit_policy) < 0)
     return 0;
   return 1;
 }

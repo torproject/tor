@@ -317,10 +317,12 @@ circuit_get_youngest_clean_open(uint8_t purpose) {
   circuit_t *youngest=NULL;
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (CIRCUIT_IS_ORIGIN(circ) && circ->state == CIRCUIT_STATE_OPEN &&
-       !circ->marked_for_close && circ->purpose == purpose &&
-       !circ->timestamp_dirty &&
-       (!youngest || youngest->timestamp_created < circ->timestamp_created))
+    if (CIRCUIT_IS_ORIGIN(circ) &&
+        circ->state == CIRCUIT_STATE_OPEN &&
+        !circ->marked_for_close &&
+        circ->purpose == purpose &&
+        !circ->timestamp_dirty &&
+        (!youngest || youngest->timestamp_created < circ->timestamp_created))
       youngest = circ;
   }
   return youngest;

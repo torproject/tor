@@ -277,14 +277,14 @@ directory_initiate_command(const char *address, uint32_t addr,
   conn->state = DIR_CONN_STATE_CONNECTING;
 
   if (purpose == DIR_PURPOSE_FETCH_DIR ||
-     purpose == DIR_PURPOSE_UPLOAD_DIR ||
-     purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
+      purpose == DIR_PURPOSE_UPLOAD_DIR ||
+      purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
     /* then we want to connect directly */
     switch (connection_connect(conn, conn->address, addr, dir_port)) {
       case -1:
         router_mark_as_down(conn->identity_digest); /* don't try him again */
         if (purpose == DIR_PURPOSE_FETCH_DIR &&
-           !all_trusted_directory_servers_down()) {
+            !all_trusted_directory_servers_down()) {
           log_fn(LOG_INFO,"Giving up on dirserver '%s'; trying another.", conn->address);
           directory_get_from_dirserver(purpose, NULL);
         }
@@ -475,8 +475,8 @@ parse_http_response(const char *headers, int *code, time_t *date,
   while (isspace((int)*headers)) headers++; /* tolerate leading whitespace */
 
   if (sscanf(headers, "HTTP/1.%d %d", &n1, &n2) < 2 ||
-     (n1 != 0 && n1 != 1) ||
-     (n2 < 100 || n2 >= 600)) {
+      (n1 != 0 && n1 != 1) ||
+      (n2 < 100 || n2 >= 600)) {
     log_fn(LOG_WARN,"Failed to parse header '%s'",headers);
     return -1;
   }
@@ -538,8 +538,8 @@ connection_dir_client_reached_eof(connection_t *conn)
   int compression;
 
   switch (fetch_from_buf_http(conn->inbuf,
-                             &headers, MAX_HEADERS_SIZE,
-                             &body, &body_len, MAX_DIR_SIZE)) {
+                              &headers, MAX_HEADERS_SIZE,
+                              &body, &body_len, MAX_DIR_SIZE)) {
     case -1: /* overflow */
       log_fn(LOG_WARN,"'fetch' response too large. Failing.");
       return -1;
@@ -550,7 +550,7 @@ connection_dir_client_reached_eof(connection_t *conn)
   }
 
   if (parse_http_response(headers, &status_code, &date_header,
-                         &compression) < 0) {
+                          &compression) < 0) {
     log_fn(LOG_WARN,"Unparseable headers. Closing.");
     tor_free(body); tor_free(headers);
     return -1;
@@ -782,7 +782,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
   }
 
   if (!strcmp(url,"/tor/running-routers") ||
-     !strcmp(url,"/tor/running-routers.z")) { /* running-routers fetch */
+      !strcmp(url,"/tor/running-routers.z")) { /* running-routers fetch */
     int deflated = !strcmp(url,"/tor/dir.z");
     tor_free(url);
     if (!authdir_mode(get_options())) {
@@ -926,8 +926,8 @@ static int directory_handle_command(connection_t *conn) {
   tor_assert(conn->type == CONN_TYPE_DIR);
 
   switch (fetch_from_buf_http(conn->inbuf,
-                             &headers, MAX_HEADERS_SIZE,
-                             &body, &body_len, MAX_BODY_SIZE)) {
+                              &headers, MAX_HEADERS_SIZE,
+                              &body, &body_len, MAX_BODY_SIZE)) {
     case -1: /* overflow */
       log_fn(LOG_WARN,"Invalid input. Closing.");
       return -1;

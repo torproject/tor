@@ -353,8 +353,8 @@ void assert_connection_edge_not_dns_pending(connection_t *conn) {
 
   SPLAY_FOREACH(resolve, cache_tree, &cache_root) {
     for (pend = resolve->pending_connections;
-        pend;
-        pend = pend->next) {
+         pend;
+         pend = pend->next) {
       tor_assert(pend->conn != conn);
     }
   }
@@ -368,8 +368,8 @@ void assert_all_pending_dns_resolves_ok(void) {
 
   SPLAY_FOREACH(resolve, cache_tree, &cache_root) {
     for (pend = resolve->pending_connections;
-        pend;
-        pend = pend->next) {
+         pend;
+         pend = pend->next) {
       assert_connection_ok(pend->conn, 0);
       tor_assert(pend->conn->s == -1);
       tor_assert(!connection_in_array(pend->conn));

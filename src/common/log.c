@@ -105,7 +105,7 @@ static int log_tor_version(logfile_t *lf, int reset)
   tor_snprintf(buf+n, sizeof(buf)-n,
                "Tor %s opening %slog file.\n", VERSION, is_new?"new ":"");
   if (fputs(buf, lf->file) == EOF ||
-     fflush(lf->file) == EOF) /* error */
+      fflush(lf->file) == EOF) /* error */
     return -1; /* failed */
   return 0;
 }
@@ -189,7 +189,7 @@ logv(int severity, const char *funcname, const char *format, va_list ap)
       continue;
     }
     if (fputs(buf, lf->file) == EOF ||
-       fflush(lf->file) == EOF) { /* error */
+        fflush(lf->file) == EOF) { /* error */
       /* don't log the error! Blow away this log entry and continue. */
       logfile_t *victim = lf;
       lf = victim->next;

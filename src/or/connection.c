@@ -713,11 +713,11 @@ static void connection_consider_empty_buckets(connection_t *conn) {
     return;
   }
   if (connection_speaks_cells(conn) &&
-     conn->state == OR_CONN_STATE_OPEN &&
-     conn->receiver_bucket == 0) {
-      log_fn(LOG_DEBUG,"receiver bucket exhausted. Pausing.");
-      conn->wants_to_read = 1;
-      connection_stop_reading(conn);
+      conn->state == OR_CONN_STATE_OPEN &&
+      conn->receiver_bucket == 0) {
+    log_fn(LOG_DEBUG,"receiver bucket exhausted. Pausing.");
+    conn->wants_to_read = 1;
+    connection_stop_reading(conn);
   }
 }
 
@@ -757,12 +757,12 @@ void connection_bucket_refill(struct timeval *now) {
     }
 
     if (conn->wants_to_read == 1 /* it's marked to turn reading back on now */
-       && global_read_bucket > 0 /* and we're allowed to read */
-       && global_write_bucket > 0 /* and we're allowed to write (XXXX,
-                                   * not the best place to check this.) */
-       && (!connection_speaks_cells(conn) ||
-           conn->state != OR_CONN_STATE_OPEN ||
-           conn->receiver_bucket > 0)) {
+        && global_read_bucket > 0 /* and we're allowed to read */
+        && global_write_bucket > 0 /* and we're allowed to write (XXXX,
+                                    * not the best place to check this.) */
+        && (!connection_speaks_cells(conn) ||
+            conn->state != OR_CONN_STATE_OPEN ||
+            conn->receiver_bucket > 0)) {
       /* and either a non-cell conn or a cell conn with non-empty bucket */
       log_fn(LOG_DEBUG,"waking up conn (fd %d)",conn->s);
       conn->wants_to_read = 0;
@@ -839,7 +839,7 @@ loop_again:
        /* XXX I suspect pollerr may make Windows not get to this point. :( */
        router_mark_as_down(conn->identity_digest);
        if (conn->purpose == DIR_PURPOSE_FETCH_DIR &&
-          !all_trusted_directory_servers_down()) {
+           !all_trusted_directory_servers_down()) {
          log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->address);
          directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL);
        }
@@ -1117,7 +1117,7 @@ connection_t *connection_exact_get_by_addr_port(uint32_t addr, uint16_t port) {
   for (i=0;i<n;i++) {
     conn = carray[i];
     if (conn->addr == addr && conn->port == port && !conn->marked_for_close &&
-       (!best || best->timestamp_created < conn->timestamp_created))
+        (!best || best->timestamp_created < conn->timestamp_created))
       best = conn;
   }
   return best;
@@ -1134,9 +1134,9 @@ connection_t *connection_get_by_identity_digest(const char *digest, int type)
     conn = carray[i];
     if (conn->type != type)
       continue;
-    if (!memcmp(conn->identity_digest, digest, DIGEST_LEN)
-        && !conn->marked_for_close
-        && (!best || best->timestamp_created < conn->timestamp_created))
+    if (!memcmp(conn->identity_digest, digest, DIGEST_LEN) &&
+        !conn->marked_for_close &&
+        (!best || best->timestamp_created < conn->timestamp_created))
       best = conn;
   }
   return best;
@@ -1207,8 +1207,8 @@ connection_t *connection_get_by_type_rendquery(int type, const char *rendquery) 
   for (i=0;i<n;i++) {
     conn = carray[i];
     if (conn->type == type &&
-       !conn->marked_for_close &&
-       !rend_cmp_service_ids(rendquery, conn->rend_query))
+        !conn->marked_for_close &&
+        !rend_cmp_service_ids(rendquery, conn->rend_query))
       return conn;
   }
   return NULL;
@@ -1217,9 +1217,9 @@ connection_t *connection_get_by_type_rendquery(int type, const char *rendquery) 
 /** Return 1 if <b>conn</b> is a listener conn, else return 0. */
 int connection_is_listener(connection_t *conn) {
   if (conn->type == CONN_TYPE_OR_LISTENER ||
-     conn->type == CONN_TYPE_AP_LISTENER ||
-     conn->type == CONN_TYPE_DIR_LISTENER ||
-     conn->type == CONN_TYPE_CONTROL_LISTENER)
+      conn->type == CONN_TYPE_AP_LISTENER ||
+      conn->type == CONN_TYPE_DIR_LISTENER ||
+      conn->type == CONN_TYPE_CONTROL_LISTENER)
     return 1;
   return 0;
 }
@@ -1234,9 +1234,9 @@ int connection_state_is_open(connection_t *conn) {
     return 0;
 
   if ((conn->type == CONN_TYPE_OR && conn->state == OR_CONN_STATE_OPEN) ||
-     (conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN) ||
-     (conn->type == CONN_TYPE_EXIT && conn->state == EXIT_CONN_STATE_OPEN) ||
-     (conn->type == CONN_TYPE_CONTROL && conn->state ==CONTROL_CONN_STATE_OPEN))
+      (conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN) ||
+      (conn->type == CONN_TYPE_EXIT && conn->state == EXIT_CONN_STATE_OPEN) ||
+      (conn->type == CONN_TYPE_CONTROL && conn->state ==CONTROL_CONN_STATE_OPEN))
     return 1;
 
   return 0;

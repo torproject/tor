@@ -114,7 +114,7 @@ dirserv_parse_fingerprint_file(const char *fname)
       continue;
     }
     if (strlen(fingerprint) != FINGERPRINT_LEN ||
-       !crypto_pk_check_fingerprint_syntax(fingerprint)) {
+        !crypto_pk_check_fingerprint_syntax(fingerprint)) {
       log_fn(LOG_WARN, "Invalid fingerprint (nickname '%s', fingerprint %s). Skipping.",
              nickname, fingerprint);
       continue;

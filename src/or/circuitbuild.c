@@ -281,7 +281,7 @@ circuit_t *circuit_establish_circuit(uint8_t purpose,
   }
 
   if (onion_extend_cpath(&circ->cpath, circ->build_state, &firsthop)<0 ||
-     !CIRCUIT_IS_ORIGIN(circ)) {
+      !CIRCUIT_IS_ORIGIN(circ)) {
     log_fn(LOG_INFO,"Generating first cpath hop failed.");
     circuit_mark_for_close(circ);
     return NULL;
@@ -345,9 +345,9 @@ void circuit_n_conn_done(connection_t *or_conn, int status) {
     if (circ->marked_for_close)
       continue;
     if (!circ->n_conn &&
-       circ->n_addr == or_conn->addr &&
-       circ->n_port == or_conn->port &&
-       !memcmp(or_conn->identity_digest, circ->n_conn_id_digest, DIGEST_LEN)) {
+        circ->n_addr == or_conn->addr &&
+        circ->n_port == or_conn->port &&
+        !memcmp(or_conn->identity_digest, circ->n_conn_id_digest, DIGEST_LEN)) {
       tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
       if (!status) { /* or_conn failed; close circ */
         log_fn(LOG_INFO,"or_conn failed. Closing circ.");
@@ -434,8 +434,8 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     }
 
     if (onion_skin_create(router->onion_pkey,
-                         &(circ->cpath->handshake_state),
-                         payload) < 0) {
+                          &(circ->cpath->handshake_state),
+                          payload) < 0) {
       log_fn(LOG_WARN,"onion_skin_create (first hop) failed.");
       return -1;
     }
@@ -486,7 +486,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     /* send it to hop->prev, because it will transfer
      * it to a create cell and then send to hop */
     if (connection_edge_send_command(NULL, circ, RELAY_COMMAND_EXTEND,
-                               payload, payload_len, hop->prev) < 0)
+                                     payload, payload_len, hop->prev) < 0)
       return 0; /* circuit is closed */
 
     hop->state = CPATH_STATE_AWAITING_KEYS;
@@ -607,7 +607,7 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
     return -1;
   }
   if (!(cpath->b_crypto =
-     crypto_create_init_cipher(key_data+(2*DIGEST_LEN)+CIPHER_KEY_LEN,0))) {
+        crypto_create_init_cipher(key_data+(2*DIGEST_LEN)+CIPHER_KEY_LEN,0))) {
     log(LOG_WARN,"backward cipher initialization failed.");
     return -1;
   }
@@ -651,7 +651,7 @@ int circuit_finish_handshake(circuit_t *circ, char *reply) {
   tor_assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
   if (onion_skin_client_handshake(hop->handshake_state, reply, keys,
-                                 DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
+                                  DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
     log_fn(LOG_WARN,"onion_skin_client_handshake failed.");
     return -1;
   }
@@ -879,7 +879,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
       continue; /* skip routers that are known to be down */
     }
     if (!router->is_verified &&
-       (!(options->_AllowUnverified & ALLOW_UNVERIFIED_EXIT) ||
+        (!(options->_AllowUnverified & ALLOW_UNVERIFIED_EXIT) ||
          router_is_unreliable_router(router, 1, 1))) {
       /* if it's unverified, and either we don't want it or it's unsuitable */
       n_supported[i] = -1;
@@ -894,7 +894,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
       continue; /* skip routers that reject all */
     }
     if (smartlist_len(preferredentries)==1 &&
-       router == (routerinfo_t*)smartlist_get(preferredentries, 0)) {
+        router == (routerinfo_t*)smartlist_get(preferredentries, 0)) {
       n_supported[i] = -1;
       log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- it's our only preferred entry node.", router->nickname, i);
       continue;
