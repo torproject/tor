@@ -621,8 +621,9 @@ char *read_file_to_str(const char *filename) {
 }
 
 /* read lines from f (no more than maxlen-1 bytes each) until we
- * get one with a well-formed "key value".
- * point *key to the first word in line, point *value to the second.
+ * get a non-whitespace line. If it isn't of the form "key value"
+ * (value can have spaces), return -1.
+ * Point *key to the first word in line, point *value * to the second.
  * Put a \0 at the end of key, remove everything at the end of value
  * that is whitespace or comment.
  * Return 1 if success, 0 if no more lines, -1 if error.
@@ -661,8 +662,8 @@ try_next_line:
 
   if(!*end || !*value) { /* only a key on this line. no value. */
     *end = 0;
-    log_fn(LOG_WARN,"Line has keyword '%s' but no value. Skipping.",key);
-    goto try_next_line;
+    log_fn(LOG_WARN,"Line has keyword '%s' but no value. Failing.",key);
+    return -1;
   }
   *end = 0; /* null it out */
 
