@@ -308,6 +308,7 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   conn->state = OR_CONN_STATE_OPEN;
   directory_set_dirty();
   connection_watch_events(conn, POLLIN);
+  log_fn(LOG_DEBUG,"tls handshake done. verifying.");
   if(options.OnionRouter) { /* I'm an OR */
     if(tor_tls_peer_has_cert(conn->tls)) { /* it's another OR */
       pk = tor_tls_verify(conn->tls);
@@ -368,7 +369,6 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     conn->bandwidth = DEFAULT_BANDWIDTH_OP;
     circuit_n_conn_open(conn); /* send the pending create */
   }
-  log_fn(LOG_DEBUG,"tls handshake done, now open.");
   return 0;
 }
 #endif

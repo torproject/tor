@@ -36,7 +36,8 @@ int connection_or_process_inbuf(connection_t *conn) {
   }
 
 #ifdef USE_TLS
-  assert(conn->state == OR_CONN_STATE_OPEN);
+  if(conn->state != OR_CONN_STATE_OPEN)
+    return 0; /* don't do anything */
   return connection_process_cell_from_inbuf(conn);
 #else
 //  log(LOG_DEBUG,"connection_or_process_inbuf(): state %d.",conn->state);
@@ -81,7 +82,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       }
       /* the connect has finished. */
 
-      log_fn(LOG_DEBUG,"OR connection to router %s:%u established.",
+      log_fn(LOG_DEBUG,"OR connect() to router %s:%u finished.",
           conn->address,conn->port);
 
 #ifdef USE_TLS
