@@ -1,6 +1,5 @@
 ;tor.nsi - A basic win32 installer for Tor
 ; Originally written by J Doe.
-; Copyright 2004 Roger Dingledine, Nick Mathewson
 ; See LICENSE for licencing information
 ;-----------------------------------------
 ;
@@ -9,13 +8,13 @@
 
 !include "MUI.nsh"
 
-!define VERSION "0.0.9pre4"
+!define VERSION "0.0.9pre6-cvs"
 !define INSTALLER "tor-${VERSION}-win32.exe"
 !define WEBSITE "http://freehaven.net/tor/"
 
-!define LICENSE "..\..\License"
+!define LICENSE "..\LICENSE"
 ;BIN is where it expects to find tor.exe, libeay32.dll, ssleay32.dll
-!define BIN "..\..\bin"
+!define BIN "..\bin"
 
 SetCompressor lzma
 ;SetCompressor zlib
@@ -82,7 +81,7 @@ Section "Tor" Tor
       Delete $configdir\torrc
       Goto +2
          StrCpy $configfile "torrc.sample"
-   File /oname=$configfile "..\config\torrc.sample.in"
+   File /oname=$configfile "..\..\src\config\torrc.sample"
 SectionEnd
 
 Section "OpenSSL 0.9.7d" OpenSSL
@@ -93,7 +92,20 @@ SectionEnd
 
 Section "Documents" Docs
    SetOutPath "$INSTDIR\Documents"
-   File "..\..\doc\*.*"
+   File "..\doc\CLIENTS"
+   File "..\doc\tor-spec.txt"
+   File "..\doc\FAQ"
+   File "..\doc\HACKING"
+   File "..\doc\rend-spec.txt"
+   File "..\doc\control-spec.txt"
+   File "..\doc\tor-doc.html"
+   File "..\doc\tor-doc.css"
+   File "..\doc\tor-resolve.html"
+   File "..\doc\tor-reference.html"
+   File "..\doc\tor-design.pdf"
+   File "..\README"
+   File "..\AUTHORS"
+   File "..\ChangeLog"
 SectionEnd
 
 SubSection /e "Shortcuts" Shortcuts
