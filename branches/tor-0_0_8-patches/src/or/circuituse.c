@@ -334,6 +334,8 @@ void circuit_detach_stream(circuit_t *circ, connection_t *conn) {
 
   tor_assert(circ && conn);
 
+  conn->cpath_layer = NULL; /* make sure we don't keep a stale pointer */
+
   if(conn == circ->p_streams) {
     circ->p_streams = conn->next_stream;
     return;
