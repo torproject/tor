@@ -293,9 +293,38 @@ void *smartlist_del(smartlist_t *sl, int idx)
   sl->list[idx] = sl->list[--sl->num_used];
   return old;
 }
+void *smartlist_del_keeporder(smartlist_t *sl, int idx)
+{
+  void *old;
+  assert(sl && idx>=0 && idx < sl->num_used);
+  old = sl->list[idx];
+  --sl->num_used;
+  if (idx < sl->num_used)
+    memmove(sl->list+idx, sl->list+idx+1, sizeof(void*)*(sl->num_used-idx));
+  return old;
+}
 int smartlist_len(smartlist_t *sl)
 {
   return sl->num_used;
+}
+void smartlist_insert(smartlist_t *sl, int idx, void *val)
+{
+  assert(sl && idx >= 0 && idx <= sl->num_used);
+  if (idx == sl->num_used) {
+    smartlist_add(sl, val);
+  } else {
+    /* Ensure sufficient capacity */
+    if (sl->num_used >= sl->capacity) {
+      sl->capacity *= 2;
+      sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
+    }
+    /* Move other elements away */
+    if (idx < sl->num_used)
+      memmove(sl->list + idx + 1, sl->list + idx,
+              sizeof(void*)*(sl->num_used-idx));
+    sl->num_used++;
+    sl->list[idx] = val;
+  }
 }
 
 /*

@@ -96,7 +96,7 @@ connection_t *connection_or_connect(routerinfo_t *router) {
 
   assert(router);
 
-  if(options.Nickname && !strcmp(router->nickname,options.Nickname)) {
+  if(router_is_me(router)) {
     log_fn(LOG_WARN,"You asked me to connect to myself! Failing.");
     return NULL;
   }

@@ -12,7 +12,7 @@ void add_nickname_list_to_smartlist(smartlist_t *sl, char *list);
 
 extern or_options_t options; /* command-line and config-file options */
 
-static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len);
+static int count_acceptable_routers(smartlist_t *routers);
 
 int decide_circ_id_type(char *local_nick, char *remote_nick) {
   int result;
@@ -160,11 +160,11 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
 
 extern int has_fetched_directory;
 
-static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
+static int new_route_len(double cw, smartlist_t *routers) {
   int num_acceptable_routers;
   int routelen;
 
-  assert((cw >= 0) && (cw < 1) && rarray); /* valid parameters */
+  assert((cw >= 0) && (cw < 1) && routers); /* valid parameters */
 
 #ifdef TOR_PERF
   routelen = 2;
@@ -177,9 +177,10 @@ static int new_route_len(double cw, routerinfo_t **rarray, int rarray_len) {
       break;
   }
 #endif
-  log_fn(LOG_DEBUG,"Chosen route length %d (%d routers available).",routelen, rarray_len);
+  log_fn(LOG_DEBUG,"Chosen route length %d (%d routers available).",routelen,
+         smartlist_len(routers));
 
-  num_acceptable_routers = count_acceptable_routers(rarray, rarray_len);
+  num_acceptable_routers = count_acceptable_routers(routers);
 
   if(num_acceptable_routers < 2) {
     log_fn(LOG_INFO,"Not enough acceptable routers (%d). Discarding this circuit.",
@@ -227,18 +228,19 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
    * router (n_supported[i]). (We can't be sure about cases where we
    * don't know the IP address of the pending connection.)
    */
-  n_supported = tor_malloc(sizeof(int)*dir->n_routers);
-  for (i = 0; i < dir->n_routers; ++i) { /* iterate over routers */
-    if(!dir->routers[i]->is_running) {
+  n_supported = tor_malloc(sizeof(int)*smartlist_len(dir->routers));
+  for (i = 0; i < smartlist_len(dir->routers); ++i) { /* iterate over routers */
+    router = smartlist_get(dir->routers, i);
+    if(!router->is_running) {
       n_supported[i] = -1;
       log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- directory says it's not running.",
-             dir->routers[i]->nickname, i);
+             router->nickname, i);
       continue; /* skip routers that are known to be down */
     }
-    if(router_exit_policy_rejects_all(dir->routers[i])) {
+    if(router_exit_policy_rejects_all(router)) {
       n_supported[i] = -1;
       log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- it rejects all.",
-             dir->routers[i]->nickname, i);
+             router->nickname, i);
       continue; /* skip routers that reject all */
     }
     n_supported[i] = 0;
@@ -248,17 +250,17 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
           carray[j]->marked_for_close ||
           circuit_stream_is_being_handled(carray[j]))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
-      switch (connection_ap_can_use_exit(carray[j], dir->routers[i]))
+      switch (connection_ap_can_use_exit(carray[j], router))
         {
         case ADDR_POLICY_REJECTED:
           log_fn(LOG_DEBUG,"%s (index %d) would reject this stream.",
-                 dir->routers[i]->nickname, i);
+                 router->nickname, i);
           break; /* would be rejected; try next connection */
         case ADDR_POLICY_ACCEPTED:
         case ADDR_POLICY_UNKNOWN:
           ++n_supported[i];
           log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
-                 dir->routers[i]->nickname, i, n_supported[i]);
+                 router->nickname, i, n_supported[i]);
         }
     } /* End looping over connections. */
     if (n_supported[i] > best_support) {
@@ -266,7 +268,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
        * and goodness, and start counting how many routers are this good. */
       best_support = n_supported[i]; n_best_support=1;
       log_fn(LOG_DEBUG,"%s is new best supported option so far.",
-             dir->routers[i]->nickname);
+             router->nickname);
     } else if (n_supported[i] == best_support) {
       /* If this router is _as good_ as the best one, just increment the
        * count of equally good routers.*/
@@ -287,9 +289,9 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
   /* If any routers definitely support any pending connections, choose one
    * at random. */
   if (best_support > 0) {
-    for (i = 0; i < dir->n_routers; i++)
+    for (i = 0; i < smartlist_len(dir->routers); i++)
       if (n_supported[i] == best_support)
-        smartlist_add(sl, dir->routers[i]);
+        smartlist_add(sl, smartlist_get(dir->routers, i));
 
     smartlist_subtract(sl,excludedexits);
     if (smartlist_overlap(sl,preferredexits))
@@ -301,9 +303,9 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
     if (best_support == -1) {
       log(LOG_WARN, "All routers are down or middleman -- choosing a doomed exit at random.");
     }
-    for(i = 0; i < dir->n_routers; i++)
+    for(i = 0; i < smartlist_len(dir->routers); i++)
       if(n_supported[i] != -1)
-        smartlist_add(sl, dir->routers[i]);
+        smartlist_add(sl, smartlist_get(dir->routers, i));
 
     smartlist_subtract(sl,excludedexits);
     if (smartlist_overlap(sl,preferredexits))
@@ -339,7 +341,7 @@ cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
   routerinfo_t *exit;
 
   router_get_routerlist(&rl);
-  r = new_route_len(options.PathlenCoinWeight, rl->routers, rl->n_routers);
+  r = new_route_len(options.PathlenCoinWeight, rl->routers);
   if (r < 0)
     return NULL;
   info = tor_malloc_zero(sizeof(cpath_build_state_t));
@@ -359,26 +361,30 @@ cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
   return info;
 }
 
-static int count_acceptable_routers(routerinfo_t **rarray, int rarray_len) {
-  int i, j;
+static int count_acceptable_routers(smartlist_t *routers) {
+  int i, j, n;
   int num=0;
   connection_t *conn;
+  routerinfo_t *r, *r2;
 
-  for(i=0;i<rarray_len;i++) {
+  n = smartlist_len(routers);
+  for(i=0;i<n;i++) {
     log_fn(LOG_DEBUG,"Contemplating whether router %d is a new option...",i);
-    if(rarray[i]->is_running == 0) {
+    r = smartlist_get(routers, i);
+    if(r->is_running == 0) {
       log_fn(LOG_DEBUG,"Nope, the directory says %d is not running.",i);
       goto next_i_loop;
     }
     if(options.ORPort) {
-      conn = connection_exact_get_by_addr_port(rarray[i]->addr, rarray[i]->or_port);
+      conn = connection_exact_get_by_addr_port(r->addr, r->or_port);
       if(!conn || conn->type != CONN_TYPE_OR || conn->state != OR_CONN_STATE_OPEN) {
         log_fn(LOG_DEBUG,"Nope, %d is not connected.",i);
         goto next_i_loop;
       }
     }
     for(j=0;j<i;j++) {
-      if(!crypto_pk_cmp_keys(rarray[i]->onion_pkey, rarray[j]->onion_pkey)) {
+      r2 = smartlist_get(routers, j);
+      if(!crypto_pk_cmp_keys(r->onion_pkey, r2->onion_pkey)) {
         /* these guys are twins. so we've already counted him. */
         log_fn(LOG_DEBUG,"Nope, %d is a twin of %d.",i,j);
         goto next_i_loop;

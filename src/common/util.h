@@ -113,6 +113,8 @@ void *smartlist_choose(smartlist_t *sl);
 void *smartlist_get(smartlist_t *sl, int idx);
 void *smartlist_set(smartlist_t *sl, int idx, void *val);
 void *smartlist_del(smartlist_t *sl, int idx);
+void *smartlist_del_keeporder(smartlist_t *sl, int idx);
+void smartlist_insert(smartlist_t *sl, int idx, void *val);
 int smartlist_len(smartlist_t *sl);
 #define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
   do {                                                          \
