@@ -10,7 +10,6 @@
 
 #include "orconfig.h"
 
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -74,7 +73,6 @@ tor_gzip_compress(char **out, size_t *out_len,
   if (deflateInit2(stream, Z_BEST_COMPRESSION, Z_DEFLATED,
 		   method_bits(method),
 		   8, Z_DEFAULT_STRATEGY) != Z_OK) {
-    printf("Z");
     log_fn(LOG_WARN, "Error from deflateInit2: %s",
 	   stream->msg?stream->msg:"<no message>");
     goto err;
@@ -199,6 +197,11 @@ tor_gzip_uncompress(char **out, size_t *out_len,
     goto err;
   }
   tor_free(stream);
+
+  /* NUL-terminate output. */
+  if (out_size == *out_len)
+    *out = tor_realloc(*out, out_size + 1);
+  (*out)[*out_len] = '\0';
 
   return 0;
  err:
