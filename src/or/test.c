@@ -968,7 +968,7 @@ test_dir_format()
   options.Nickname = "DirServer";
   test_assert(!dirserv_dump_directory_to_string(buf,8192,pk3));
   cp = buf;
-  test_assert(!router_parse_routerlist_from_directory(buf, &dir1, pk3));
+  test_assert(!router_parse_routerlist_from_directory(buf, &dir1, pk3, 1));
   test_eq(2, smartlist_len(dir1->routers));
   dirserv_free_fingerprint_list();
 
