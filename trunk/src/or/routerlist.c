@@ -218,8 +218,7 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_unverified)
 /** How many seconds a router must be up before we'll use it for
  * reliability-critical node positions.
  */
-#define ROUTER_REQUIRED_MIN_UPTIME 0
- /* XXX008 change this once we parse router->uptime */
+#define ROUTER_REQUIRED_MIN_UPTIME 3600 /* an hour */
 
 static void
 routerlist_sl_remove_unreliable_routers(smartlist_t *sl)
