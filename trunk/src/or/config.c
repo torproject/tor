@@ -1013,13 +1013,6 @@ options_validate(or_options_t *options)
   if (normalize_log_options(options))
     return -1;
 
-
-  if (options->DataDirectory &&
-      check_private_dir(options->DataDirectory, CPD_CHECK != 0)) {
-    log_fn(LOG_WARN, "Can't create directory %s", options->DataDirectory);
-    result = -1;
-  }
-
   /* Special case if no options are given. */
   if (!options->Logs) {
     options->Logs = config_line_prepend(NULL, "Log", "notice-err stdout");
@@ -1237,10 +1230,7 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val) {
     return -1;
   }
 
-  if ((old->DataDirectory &&
-       (!new_val->DataDirectory ||
-        strcmp(old->DataDirectory,new_val->DataDirectory)!=0)) ||
-      (!old->DataDirectory && new_val->DataDirectory)) {
+  if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
     log_fn(LOG_WARN,"During reload, changing DataDirectory (%s->%s) is not allowed. Failing.", old->DataDirectory, new_val->DataDirectory);
     return -1;
   }
@@ -1879,11 +1869,15 @@ normalize_data_directory(or_options_t *options) {
 
 static int
 validate_data_directory(or_options_t *options) {
-  if(normalize_data_directory(options) < 0)
+  if (normalize_data_directory(options) < 0)
     return -1;
   tor_assert(options->DataDirectory);
   if (strlen(options->DataDirectory) > (512-128)) {
     log_fn(LOG_ERR, "DataDirectory is too long.");
+    return -1;
+  }
+  if (check_private_dir(options->DataDirectory, CPD_CHECK != 0)) {
+    log_fn(LOG_WARN, "Can't create directory %s", options->DataDirectory);
     return -1;
   }
   return 0;
