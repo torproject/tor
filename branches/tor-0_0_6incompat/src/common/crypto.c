@@ -127,13 +127,18 @@ RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env)
 }
 
 /* used by tortls.c */
-EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env)
+EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private)
 {
   RSA *key = NULL;
   EVP_PKEY *pkey = NULL;
   assert(env->key);
-  if (!(key = RSAPrivateKey_dup(env->key)))
-    goto error;
+  if (private) {
+    if (!(key = RSAPrivateKey_dup(env->key)))
+      goto error;
+  } else {
+    if (!(key = RSAPublicKey_dup(env->key)))
+      goto error;
+  }
   if (!(pkey = EVP_PKEY_new()))
     goto error;
   if (!(EVP_PKEY_assign_RSA(pkey, key)))

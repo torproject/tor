@@ -84,7 +84,6 @@ void connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *route
   conn->port = router->or_port;
   conn->receiver_bucket = conn->bandwidth = router->bandwidthburst;
   conn->onion_pkey = crypto_pk_dup_key(router->onion_pkey);
-  conn->link_pkey = crypto_pk_dup_key(router->link_pkey);
   conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
   conn->nickname = tor_strdup(router->nickname);
   tor_free(conn->address);
@@ -178,7 +177,6 @@ int connection_tls_continue_handshake(connection_t *conn) {
 }
 
 static int connection_tls_finish_handshake(connection_t *conn) {
-  crypto_pk_env_t *pk;
   routerinfo_t *router;
   char nickname[MAX_NICKNAME_LEN+1];
   connection_t *c;
@@ -203,36 +201,23 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     return -1;
   }
   log_fn(LOG_DEBUG, "Other side claims to be '%s'", nickname);
-  pk = tor_tls_verify(conn->tls);
-  if(!pk) {
+  router = router_get_by_nickname(nickname);
+  if (!router) {
+    log_fn(LOG_INFO, "Unrecognized router with nickname '%s'", nickname);
+    return -1;
+  }
+  if(tor_tls_verify(conn->tls, router->identity_pkey)<0) {
     log_fn(LOG_WARN,"Other side '%s' (%s:%d) has a cert but it's invalid. Closing.",
            nickname, conn->address, conn->port);
     return -1;
   }
-  router = router_get_by_link_pk(pk);
-  if (!router) {
-    log_fn(LOG_INFO,"Unrecognized public key from peer '%s' (%s:%d). Closing.",
-           nickname, conn->address, conn->port);
-    crypto_free_pk_env(pk);
+  log_fn(LOG_DEBUG,"The router's cert is valid.");
+
+  if((c=connection_exact_get_by_addr_port(router->addr,router->or_port))) {
+    log_fn(LOG_INFO,"Router %s is already connected on fd %d. Dropping fd %d.", router->nickname, c->s, conn->s);
     return -1;
   }
-  if(conn->link_pkey) { /* I initiated this connection. */
-    if(crypto_pk_cmp_keys(conn->link_pkey, pk)) {
-      log_fn(LOG_WARN,"We connected to '%s' (%s:%d) but he gave us a different key. Closing.",
-             nickname, conn->address, conn->port);
-      crypto_free_pk_env(pk);
-      return -1;
-    }
-    log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
-  } else {
-    if((c=connection_exact_get_by_addr_port(router->addr,router->or_port))) {
-      log_fn(LOG_INFO,"Router %s is already connected on fd %d. Dropping fd %d.", router->nickname, c->s, conn->s);
-      crypto_free_pk_env(pk);
-      return -1;
-    }
-    connection_or_init_conn_from_router(conn, router);
-  }
-  crypto_free_pk_env(pk);
+
   if (strcmp(conn->nickname, nickname)) {
     log_fn(options.DirPort ? LOG_WARN : LOG_INFO,
            "Other side claims to be '%s', but we expected '%s'",

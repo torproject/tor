@@ -575,9 +575,6 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
 [16 bytes] Symmetric key for encrypting blob past RSA
 [112 bytes] g^x part 1 (inside the RSA)
 [16 bytes] g^x part 2 (symmetrically encrypted)
-[ 6 bytes] Meeting point (IP/port)
-[ 8 bytes] Meeting cookie
-[16 bytes] End-to-end authentication [optional]
 
  * Stores the DH private key into handshake_state_out for later completion
  * of the handshake.
@@ -603,7 +600,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   pkbytes = crypto_pk_keysize(dest_router_key);
   assert(dhbytes == 128);
   assert(pkbytes == 128);
-  challenge = tor_malloc_zero(ONIONSKIN_CHALLENGE_LEN-CIPHER_KEY_LEN);
+  challenge = tor_malloc_zero(DH_KEY_LEN);
 
   if (crypto_dh_get_public(dh, challenge, dhbytes))
     goto err;
@@ -625,8 +622,8 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
 
   /* set meeting point, meeting cookie, etc here. Leave zero for now. */
   if (crypto_pk_public_hybrid_encrypt(dest_router_key, challenge,
-                                      ONIONSKIN_CHALLENGE_LEN-CIPHER_KEY_LEN,
-                                      onion_skin_out, PK_NO_PADDING, 1)<0)
+                                  ONIONSKIN_CHALLENGE_LEN-CIPHER_KEY_LEN,
+                                  onion_skin_out, PK_PKCS1_OAEP_PADDING, 1)<0)
     goto err;
 
   tor_free(challenge);
@@ -647,6 +644,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
 int
 onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes */
                             crypto_pk_env_t *private_key,
+                            crypto_pk_env_t *prev_private_key,
                             char *handshake_reply_out, /* ONIONSKIN_REPLY_LEN bytes */
                             char *key_out,
                             int key_out_len)
@@ -655,11 +653,28 @@ onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes *
   crypto_dh_env_t *dh = NULL;
   int len;
   char *key_material=NULL;
+  int i;
+  crypto_pk_env_t *k;
 
-  if (crypto_pk_private_hybrid_decrypt(private_key,
-                                       onion_skin, ONIONSKIN_CHALLENGE_LEN,
-                                       challenge, PK_NO_PADDING)<0)
+  len = -1;
+  for (i=0;i<2;++i) {
+    k = i==0?private_key:prev_private_key;
+    if (!k)
+      break;
+    len = crypto_pk_private_hybrid_decrypt(k,
+                                           onion_skin, ONIONSKIN_CHALLENGE_LEN,
+                                           challenge, PK_PKCS1_OAEP_PADDING);
+    if (len>0)
+      break;
+  }
+  if (len<0) {
+    log_fn(LOG_WARN, "Couldn't decrypt onionskin");
     goto err;
+  } else if (len != DH_KEY_LEN) {
+    log_fn(LOG_WARN, "Unexpected onionskin length after decryption: %d",
+           len);
+    goto err;
+  }
 
   dh = crypto_dh_new();
   if (crypto_dh_get_public(dh, handshake_reply_out, DH_KEY_LEN))

@@ -30,7 +30,7 @@ typedef enum {
   K_SIGNED_DIRECTORY,
   K_SIGNING_KEY,
   K_ONION_KEY,
-  K_LINK_KEY,
+  K_LINK_KEY, /* XXXX obsolete */
   K_ROUTER_SIGNATURE,
   K_PUBLISHED,
   K_RUNNING_ROUTERS,
@@ -305,21 +305,6 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
-routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk)
-{
-  int i;
-  routerinfo_t *router;
-
-  assert(routerlist);
-
-  for(i=0;i<smartlist_len(routerlist->routers);i++) {
-    router = smartlist_get(routerlist->routers, i);
-    if (0 == crypto_pk_cmp_keys(router->link_pkey, pk))
-      return router;
-  }
-  return NULL;
-}
-
 routerinfo_t *router_get_by_nickname(char *nickname)
 {
   int i;
@@ -354,8 +339,6 @@ void routerinfo_free(routerinfo_t *router)
   tor_free(router->platform);
   if (router->onion_pkey)
     crypto_free_pk_env(router->onion_pkey);
-  if (router->link_pkey)
-    crypto_free_pk_env(router->link_pkey);
   if (router->identity_pkey)
     crypto_free_pk_env(router->identity_pkey);
   while (router->exit_policy) {
@@ -380,8 +363,6 @@ routerinfo_t *routerinfo_copy(const routerinfo_t *router)
   r->platform = tor_strdup(r->platform);
   if (r->onion_pkey)
     r->onion_pkey = crypto_pk_dup_key(r->onion_pkey);
-  if (r->link_pkey)
-    r->link_pkey = crypto_pk_dup_key(r->link_pkey);
   if (r->identity_pkey)
     r->identity_pkey = crypto_pk_dup_key(r->identity_pkey);
   e = &r->exit_policy;
@@ -949,7 +930,7 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   }
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
-  router->onion_pkey = router->identity_pkey = router->link_pkey = NULL;
+  router->onion_pkey = router->identity_pkey = NULL;
   ports_set = bw_set = 0;
 
   if (tok->n_args == 2 || tok->n_args == 6) {
@@ -1020,12 +1001,9 @@ routerinfo_t *router_get_entry_from_string(const char *s,
   router->onion_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
 
-  if (!(tok = find_first_by_keyword(tokens, K_LINK_KEY))) {
-    log_fn(LOG_WARN, "Missing onion key"); goto err;
+  if ((tok = find_first_by_keyword(tokens, K_LINK_KEY))) {
+    log_fn(LOG_INFO, "Skipping obsolete link-key"); goto err;
   }
-  /* XXX Check key length */
-  router->link_pkey = tok->key;
-  tok->key = NULL; /* Prevent free */
 
   if (!(tok = find_first_by_keyword(tokens, K_SIGNING_KEY))) {
     log_fn(LOG_WARN, "Missing onion key"); goto err;

@@ -650,7 +650,7 @@ test_onion_handshake() {
   /* server handshake */
   memset(s_buf, 0, ONIONSKIN_REPLY_LEN);
   memset(s_keys, 0, 40);
-  test_assert(! onion_skin_server_handshake(c_buf, pk, s_buf, s_keys, 40));
+  test_assert(! onion_skin_server_handshake(c_buf, pk, NULL, s_buf, s_keys, 40));
 
   /* client handshake 2 */
   memset(c_keys, 0, 40);
@@ -701,7 +701,6 @@ test_dir_format()
   r1.dir_port = 9003;
   r1.onion_pkey = pk1;
   r1.identity_pkey = pk2;
-  r1.link_pkey = pk3;
   r1.bandwidthrate = r1.bandwidthburst = 1000;
   r1.exit_policy = NULL;
   r1.nickname = "Magri";
@@ -727,7 +726,6 @@ test_dir_format()
   r2.dir_port = 0;
   r2.onion_pkey = pk2;
   r2.identity_pkey = pk1;
-  r2.link_pkey = pk2;
   r2.bandwidthrate = r2.bandwidthburst = 3000;
   r2.exit_policy = &ex1;
   r2.nickname = "Fred";
@@ -749,8 +747,6 @@ test_dir_format()
          "published 1970-01-01 00:00:00\n"
          "onion-key\n");
   strcat(buf2, pk1_str);
-  strcat(buf2, "link-key\n");
-  strcat(buf2, pk3_str);
   strcat(buf2, "signing-key\n");
   strcat(buf2, pk2_str);
   strcat(buf2, "router-signature\n");
@@ -769,7 +765,6 @@ test_dir_format()
   test_eq(rp1->bandwidthrate, r1.bandwidthrate);
 //  test_eq(rp1->bandwidthburst, r1.bandwidthburst);
   test_assert(crypto_pk_cmp_keys(rp1->onion_pkey, pk1) == 0);
-  test_assert(crypto_pk_cmp_keys(rp1->link_pkey, pk3) == 0);
   test_assert(crypto_pk_cmp_keys(rp1->identity_pkey, pk2) == 0);
   test_assert(rp1->exit_policy == NULL);
 

@@ -377,7 +377,6 @@ struct connection_t {
                   * strdup into this, because free_connection frees it
                   */
   crypto_pk_env_t *onion_pkey; /* public RSA key for the other side's onions */
-  crypto_pk_env_t *link_pkey; /* public RSA key for the other side's TLS */
   crypto_pk_env_t *identity_pkey; /* public RSA key for the other side's signing */
   char *nickname;
 
@@ -441,7 +440,6 @@ typedef struct {
   time_t published_on;
 
   crypto_pk_env_t *onion_pkey; /* public RSA key for onions */
-  crypto_pk_env_t *link_pkey;  /* public RSA key for TLS */
   crypto_pk_env_t *identity_pkey;  /* public RSA key for signing */
 
   int is_running;
@@ -488,8 +486,10 @@ struct crypt_path_t {
 };
 
 #define DH_KEY_LEN DH_BYTES
-#define ONIONSKIN_CHALLENGE_LEN (16+DH_KEY_LEN)
-#define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+20)
+#define ONIONSKIN_CHALLENGE_LEN (PKCS1_OAEP_PADDING_OVERHEAD+\
+                                 CIPHER_KEY_LEN+\
+                                 DH_KEY_LEN)
+#define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+DIGEST_LEN)
 #define REND_COOKIE_LEN DIGEST_LEN
 
 typedef struct crypt_path_t crypt_path_t;
@@ -878,6 +878,7 @@ void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn);
 /********************************* cpuworker.c *****************************/
 
 void cpu_init(void);
+void cpuworkers_rotate(void);
 int connection_cpu_finished_flushing(connection_t *conn);
 int connection_cpu_process_inbuf(connection_t *conn);
 int cpuworker_main(void *data);
@@ -944,6 +945,7 @@ int onion_skin_create(crypto_pk_env_t *router_key,
 
 int onion_skin_server_handshake(char *onion_skin,
                                 crypto_pk_env_t *private_key,
+                                crypto_pk_env_t *prev_private_key,
                                 char *handshake_reply_out,
                                 char *key_out,
                                 int key_out_len);
@@ -960,11 +962,12 @@ cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
 
 void set_onion_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_onion_key(void);
+crypto_pk_env_t *get_previous_onion_key(void);
 void set_identity_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_identity_key(void);
-crypto_pk_env_t *get_link_key(void);
 int init_keys(void);
 crypto_pk_env_t *init_key_from_file(const char *fname);
+void rotate_onion_key(void);
 
 void router_retry_connections(void);
 void router_upload_dir_desc_to_dirservers(void);
@@ -985,7 +988,6 @@ routerinfo_t *router_choose_random_node(routerlist_t *dir,
                                         char *preferred, char *excluded,
                                         struct smartlist_t *excludedsmartlist);
 routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
-routerinfo_t *router_get_by_link_pk(crypto_pk_env_t *pk);
 routerinfo_t *router_get_by_nickname(char *nickname);
 void router_get_routerlist(routerlist_t **prouterlist);
 void routerinfo_free(routerinfo_t *router);

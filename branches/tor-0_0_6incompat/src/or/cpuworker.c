@@ -12,8 +12,9 @@ extern or_options_t options; /* command-line and config-file options */
 #define LEN_ONION_QUESTION (1+TAG_LEN+ONIONSKIN_CHALLENGE_LEN)
 #define LEN_ONION_RESPONSE (1+TAG_LEN+ONIONSKIN_REPLY_LEN+40+32)
 
-int num_cpuworkers=0;
-int num_cpuworkers_busy=0;
+static int num_cpuworkers=0;
+static int num_cpuworkers_busy=0;
+static time_t last_rotation_time=0;
 
 int cpuworker_main(void *data);
 static int spawn_cpuworker(void);
@@ -21,6 +22,7 @@ static void spawn_enough_cpuworkers(void);
 static void process_pending_task(connection_t *cpuworker);
 
 void cpu_init(void) {
+  last_rotation_time=time(NULL);
   spawn_enough_cpuworkers();
 }
 
@@ -45,6 +47,18 @@ static void tag_unpack(char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ
 
   in.s_addr = htonl(*addr);
   log_fn(LOG_DEBUG,"onion was from %s:%d, circ_id %d.", inet_ntoa(in), *port, *circ_id);
+}
+
+void cpuworkers_rotate(void)
+{
+  connection_t *cpuworker;
+  while ((cpuworker = connection_get_by_type_state(CONN_TYPE_CPUWORKER,
+                                                   CPUWORKER_STATE_IDLE))) {
+    connection_mark_for_close(cpuworker,0);
+    --num_cpuworkers;
+  }
+  last_rotation_time = time(NULL);
+  spawn_enough_cpuworkers();
 }
 
 int connection_cpu_process_inbuf(connection_t *conn) {
@@ -111,7 +125,13 @@ int connection_cpu_process_inbuf(connection_t *conn) {
 done_processing:
   conn->state = CPUWORKER_STATE_IDLE;
   num_cpuworkers_busy--;
-  process_pending_task(conn);
+  if (conn->timestamp_created < last_rotation_time) {
+    connection_mark_for_close(conn,0);
+    num_cpuworkers--;
+    spawn_enough_cpuworkers();
+  } else {
+    process_pending_task(conn);
+  }
   return 0;
 }
 
@@ -126,6 +146,7 @@ int cpuworker_main(void *data) {
   unsigned char reply_to_proxy[ONIONSKIN_REPLY_LEN];
   unsigned char buf[LEN_ONION_RESPONSE];
   char tag[TAG_LEN];
+  crypto_pk_env_t *onion_key = NULL, *last_onion_key = NULL;
 
   close(fdarray[0]); /* this is the side of the socketpair the parent uses */
   fd = fdarray[1]; /* this side is ours */
@@ -133,27 +154,32 @@ int cpuworker_main(void *data) {
   connection_free_all(); /* so the child doesn't hold the parent's fd's open */
 #endif
 
+  /* XXXX WINDOWS lock here. */
+  onion_key = crypto_pk_dup_key(get_onion_key());
+  if (get_previous_onion_key())
+    last_onion_key = crypto_pk_dup_key(get_previous_onion_key());
+
   for(;;) {
 
     if(recv(fd, &question_type, 1, 0) != 1) {
 //      log_fn(LOG_ERR,"read type failed. Exiting.");
       log_fn(LOG_INFO,"cpuworker exiting because tor process died.");
-      spawn_exit();
+      goto end;
     }
     assert(question_type == CPUWORKER_TASK_ONION);
 
     if(read_all(fd, tag, TAG_LEN, 1) != TAG_LEN) {
       log_fn(LOG_ERR,"read tag failed. Exiting.");
-      spawn_exit();
+      goto end;
     }
 
     if(read_all(fd, question, ONIONSKIN_CHALLENGE_LEN, 1) != ONIONSKIN_CHALLENGE_LEN) {
       log_fn(LOG_ERR,"read question failed. Exiting.");
-      spawn_exit();
+      goto end;
     }
 
     if(question_type == CPUWORKER_TASK_ONION) {
-      if(onion_skin_server_handshake(question, get_onion_key(),
+      if(onion_skin_server_handshake(question, onion_key, last_onion_key,
         reply_to_proxy, keys, 40+32) < 0) {
         /* failure */
         log_fn(LOG_WARN,"onion_skin_server_handshake failed.");
@@ -173,6 +199,12 @@ int cpuworker_main(void *data) {
       log_fn(LOG_DEBUG,"finished writing response.");
     }
   }
+ end:
+  if (onion_key)
+    crypto_free_pk_env(onion_key);
+  if (last_onion_key)
+    crypto_free_pk_env(last_onion_key);
+  spawn_exit();
   return 0; /* windows wants this function to return an int */
 }
 
@@ -263,7 +295,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
       return 0;
     }
 
-    if(!cpuworker)
+    if (!cpuworker)
       cpuworker = connection_get_by_type_state(CONN_TYPE_CPUWORKER, CPUWORKER_STATE_IDLE);
 
     assert(cpuworker);
