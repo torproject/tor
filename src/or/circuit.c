@@ -554,13 +554,13 @@ void circuit_about_to_close_connection(connection_t *conn) {
       circ->n_streams = conn->next_stream;
       goto send_end;
     }
-    for(prevconn = circ->p_streams; prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
-    if(prevconn->next_stream) {
+    for(prevconn = circ->p_streams; prevconn && prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
+    if(prevconn && prevconn->next_stream) {
       prevconn->next_stream = conn->next_stream;
       goto send_end;
     }
-    for(prevconn = circ->n_streams; prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
-    if(prevconn->next_stream) {
+    for(prevconn = circ->n_streams; prevconn && prevconn->next_stream && prevconn->next_stream != conn; prevconn = prevconn->next_stream) ;
+    if(prevconn && prevconn->next_stream) {
       prevconn->next_stream = conn->next_stream;
       goto send_end;
     }
