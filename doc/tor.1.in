@@ -128,7 +128,9 @@ A list of preferred nodes to use for the rendezvous point, if possible.
 A list of nodes to never use when choosing a rendezvous point.
 .TP
 \fBsocksport \fR\fIPORT\fP
-Bind to this port to listen for connections from socks-speaking applications.
+Bind to this port to listen for connections from SOCKS-speaking applications.
+Set this to 0 if you don't want to allow application connections. (Default:
+9050)
 .TP
 \fBsocksbindaddress \fR\fIIP\fP
 Bind to this address to listen for connections from socks-speaking applications. (Default: 127.0.0.1) You can also specify a port (e.g. 192.168.0.1:9100). This directive can be specified multiple times to bind to multiple addresses/ports.
