@@ -325,14 +325,14 @@ int init_keys(void) {
   snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
   log_fn(LOG_INFO,"Dumping fingerprint to %s...",keydir);
   tor_assert(strlen(options.Nickname) <= MAX_NICKNAME_LEN);
-  strcpy(fingerprint, options.Nickname);
-  strcat(fingerprint, " ");
+  strlcpy(fingerprint, options.Nickname, sizeof(fingerprint));
+  strlcat(fingerprint, " ", sizeof(fingerprint));
   if (crypto_pk_get_fingerprint(get_identity_key(),
                                 fingerprint+strlen(fingerprint), 1)<0) {
     log_fn(LOG_ERR, "Error computing fingerprint");
     return -1;
   }
-  strcat(fingerprint, "\n");
+  strlcat(fingerprint, "\n", sizeof(fingerprint));
   if (write_str_to_file(keydir, fingerprint, 0))
     return -1;
   if(!authdir_mode())
@@ -717,7 +717,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
       /* There is no port set; write ":*" */
       if (written > maxlen-4)
         return -1;
-      strcat(s+written, ":*\n");
+      strlcat(s+written, ":*\n", maxlen-written);
       written += 3;
     } else if (tmpe->prt_min == tmpe->prt_max) {
       /* There is only one port; write ":80". */
@@ -741,7 +741,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     return -1;
 
   /* Sign the directory */
-  strcat(s+written, "router-signature\n");
+  strlcat(s+written, "router-signature\n", maxlen-written);
   written += strlen(s+written);
   s[written] = '\0';
   if (router_get_router_hash(s, digest) < 0)
@@ -751,14 +751,14 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     log_fn(LOG_WARN, "Error signing digest");
     return -1;
   }
-  strcat(s+written, "-----BEGIN SIGNATURE-----\n");
+  strlcat(s+written, "-----BEGIN SIGNATURE-----\n", maxlen-written);
   written += strlen(s+written);
   if (base64_encode(s+written, maxlen-written, signature, 128) < 0) {
     log_fn(LOG_WARN, "Couldn't base64-encode signature");
     return -1;
   }
   written += strlen(s+written);
-  strcat(s+written, "-----END SIGNATURE-----\n");
+  strlcat(s+written, "-----END SIGNATURE-----\n", maxlen-written);
   written += strlen(s+written);
 
   if (written > maxlen-2)
