@@ -129,7 +129,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
 
   s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) { 
-    log_fn(LOG_ERR,"Socket creation failed.");
+    log_fn(LOG_WARNING,"Socket creation failed.");
     return -1;
   }
 
@@ -137,12 +137,12 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
 
   if(bind(s,(struct sockaddr *)bindaddr,sizeof(*bindaddr)) < 0) {
     perror("bind ");
-    log(LOG_ERR,"Could not bind to port %u.",ntohs(bindaddr->sin_port));
+    log(LOG_WARNING,"Could not bind to port %u.",ntohs(bindaddr->sin_port));
     return -1;
   }
 
   if(listen(s,SOMAXCONN) < 0) {
-    log(LOG_ERR,"Could not listen on port %u.",ntohs(bindaddr->sin_port));
+    log(LOG_WARNING,"Could not listen on port %u.",ntohs(bindaddr->sin_port));
     return -1;
   }
 
@@ -150,7 +150,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
 
   conn = connection_new(type);
   if(!conn) {
-    log_fn(LOG_DEBUG,"connection_new failed. Giving up.");
+    log_fn(LOG_WARNING,"connection_new failed. Giving up.");
     return -1;
   }
   conn->s = s;
@@ -158,7 +158,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
   conn->bandwidth = -1;
 
   if(connection_add(conn) < 0) { /* no space, forget it */
-    log_fn(LOG_DEBUG,"connection_add failed. Giving up.");
+    log_fn(LOG_WARNING,"connection_add failed. Giving up.");
     connection_free(conn);
     return -1;
   }
@@ -172,7 +172,6 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
 }
 
 int connection_handle_listener_read(connection_t *conn, int new_type) {
-
   int news; /* the new socket */
   connection_t *newconn;
   struct sockaddr_in remote; /* information about the remote peer when connecting to other routers */
@@ -193,7 +192,7 @@ int connection_handle_listener_read(connection_t *conn, int new_type) {
 #endif
     }
     /* else there was a real error. */
-    log_fn(LOG_ERR,"accept() failed. Closing.");
+    log_fn(LOG_WARNING,"accept() failed. Closing listener.");
     return -1;
   }
   log(LOG_INFO,"Connection accepted on socket %d (child of fd %d).",news, conn->s);
@@ -201,6 +200,10 @@ int connection_handle_listener_read(connection_t *conn, int new_type) {
   set_socket_nonblocking(news);
 
   newconn = connection_new(new_type);
+  if(!newconn) {
+    log_fn(LOG_WARNING,"connection_new failed. Giving up.");
+    return 0;
+  }
   newconn->s = news;
 
   if(!connection_speaks_cells(newconn)) {
@@ -230,9 +233,7 @@ static int connection_init_accepted_conn(connection_t *conn) {
 
   switch(conn->type) {
     case CONN_TYPE_OR:
-      if(connection_tls_start_handshake(conn, 1) < 0)
-        return -1;
-      break;
+      return connection_tls_start_handshake(conn, 1);
     case CONN_TYPE_AP:
       conn->state = AP_CONN_STATE_SOCKS_WAIT;
       break;
@@ -247,7 +248,7 @@ int connection_tls_start_handshake(connection_t *conn, int receiving) {
   conn->state = OR_CONN_STATE_HANDSHAKING;
   conn->tls = tor_tls_new(conn->s, receiving);
   if(!conn->tls) {
-    log_fn(LOG_ERR,"tor_tls_new failed. Closing.");
+    log_fn(LOG_WARNING,"tor_tls_new failed. Closing.");
     return -1;
   }
   connection_start_reading(conn);
@@ -261,7 +262,7 @@ static int connection_tls_continue_handshake(connection_t *conn) {
   switch(tor_tls_handshake(conn->tls)) {
     case TOR_TLS_ERROR:
     case TOR_TLS_CLOSE:
-      log_fn(LOG_DEBUG,"tls error. breaking.");
+      log_fn(LOG_INFO,"tls error. breaking.");
       return -1;
     case TOR_TLS_DONE:
      return connection_tls_finish_handshake(conn);
@@ -288,25 +289,25 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     if(tor_tls_peer_has_cert(conn->tls)) { /* it's another OR */
       pk = tor_tls_verify(conn->tls);
       if(!pk) {
-        log_fn(LOG_INFO,"Other side has a cert but it's bad. Closing.");
+        log_fn(LOG_WARNING,"Other side has a cert but it's invalid. Closing.");
         return -1;
       }
       router = router_get_by_link_pk(pk);
       if (!router) {
-        log_fn(LOG_INFO,"Unrecognized public key from peer. Closing.");
+        log_fn(LOG_WARNING,"Unrecognized public key from peer. Closing.");
         crypto_free_pk_env(pk);
         return -1;
       }
       if(conn->link_pkey) { /* I initiated this connection. */
         if(crypto_pk_cmp_keys(conn->link_pkey, pk)) {
-          log_fn(LOG_INFO,"We connected to '%s' but he gave us a different key. Closing.", router->nickname);
+          log_fn(LOG_WARNING,"We connected to '%s' but he gave us a different key. Closing.", router->nickname);
           crypto_free_pk_env(pk);
           return -1;
         }
         log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
       } else {
         if(connection_exact_get_by_addr_port(router->addr,router->or_port)) {
-          log_fn(LOG_INFO,"That router is already connected. Dropping.");
+          log_fn(LOG_INFO,"Router %s is already connected. Dropping.", router->nickname);
           return -1;
         }
         connection_or_init_conn_from_router(conn, router);
@@ -317,22 +318,22 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     }
   } else { /* I'm a client */
     if(!tor_tls_peer_has_cert(conn->tls)) { /* it's a client too?! */
-      log_fn(LOG_INFO,"Neither peer sent a cert! Closing.");
+      log_fn(LOG_WARNING,"Neither peer sent a cert! Closing.");
       return -1;
     }
     pk = tor_tls_verify(conn->tls);
     if(!pk) {
-      log_fn(LOG_INFO,"Other side has a cert but it's bad. Closing.");
+      log_fn(LOG_WARNING,"Other side has a cert but it's invalid. Closing.");
       return -1;
     }
     router = router_get_by_link_pk(pk);
     if (!router) {
-      log_fn(LOG_INFO,"Unrecognized public key from peer. Closing.");
+      log_fn(LOG_WARNING,"Unrecognized public key from peer. Closing.");
       crypto_free_pk_env(pk);
       return -1;
     }
     if(crypto_pk_cmp_keys(conn->link_pkey, pk)) {
-      log_fn(LOG_INFO,"We connected to '%s' but he gave us a different key. Closing.", router->nickname);
+      log_fn(LOG_WARNING,"We connected to '%s' but he gave us a different key. Closing.", router->nickname);
       crypto_free_pk_env(pk);
       return -1;
     }
@@ -355,7 +356,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
 
   s=socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
-    log_fn(LOG_ERR,"Error creating network socket.");
+    log_fn(LOG_WARNING,"Error creating network socket.");
     return -1;
   }
   set_socket_nonblocking(s);
@@ -371,7 +372,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
     if(!ERRNO_CONN_EINPROGRESS(errno)) {
       /* yuck. kill it. */
       perror("connect");
-      log_fn(LOG_DEBUG,"Connect failed.");
+      log_fn(LOG_INFO,"Connect() to %s:%u failed.",address,port);
       return -1;
     } else {
       /* it's in progress. set state appropriately and return. */
@@ -382,7 +383,7 @@ int connection_connect(connection_t *conn, char *address, uint32_t addr, uint16_
   }
 
   /* it succeeded. we're connected. */
-  log_fn(LOG_DEBUG,"Connection to %s:%u established.",address,port);
+  log_fn(LOG_INFO,"Connection to %s:%u established.",address,port);
   conn->s = s;
   return 1;
 }
@@ -455,7 +456,7 @@ int connection_handle_read(connection_t *conn) {
     return -1;
   }
   if(!connection_state_is_open(conn) && conn->receiver_bucket == 0) {
-    log_fn(LOG_DEBUG,"receiver bucket reached 0 before handshake finished. Closing.");
+    log_fn(LOG_WARNING,"receiver bucket reached 0 before handshake finished. Closing.");
     return -1;
   }
   return 0;
@@ -498,7 +499,7 @@ int connection_read_to_buf(connection_t *conn) {
     switch(result) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
-        log_fn(LOG_DEBUG,"tls error. breaking.");
+        log_fn(LOG_INFO,"tls error. breaking.");
         return -1; /* XXX deal with close better */
       case TOR_TLS_WANTWRITE:
         connection_start_writing(conn);
@@ -557,7 +558,7 @@ int connection_handle_write(connection_t *conn) {
   struct timeval now;
 
   if(connection_is_listener(conn)) {
-    log_fn(LOG_DEBUG,"Got a listener socket. Can't happen!");
+    log_fn(LOG_WARNING,"Got a listener socket. Can't happen!");
     return -1;
   }
 
@@ -574,7 +575,7 @@ int connection_handle_write(connection_t *conn) {
     switch(flush_buf_tls(conn->tls, conn->outbuf, &conn->outbuf_flushlen)) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
-        log_fn(LOG_DEBUG,"tls error. breaking.");
+        log_fn(LOG_INFO,"tls error. breaking.");
         return -1; /* XXX deal with close better */
       case TOR_TLS_WANTWRITE:
         log_fn(LOG_DEBUG,"wanted write.");
@@ -696,7 +697,7 @@ int connection_process_inbuf(connection_t *conn) {
     case CONN_TYPE_CPUWORKER:
       return connection_cpu_process_inbuf(conn); 
     default:
-      log_fn(LOG_DEBUG,"got unexpected conn->type.");
+      log_fn(LOG_WARNING,"got unexpected conn->type %d.", conn->type);
       return -1;
   }
 }
@@ -720,7 +721,7 @@ int connection_finished_flushing(connection_t *conn) {
     case CONN_TYPE_CPUWORKER:
       return connection_cpu_finished_flushing(conn);
     default:
-      log_fn(LOG_DEBUG,"got unexpected conn->type.");
+      log_fn(LOG_WARNING,"got unexpected conn->type %d.", conn->type);
       return -1;
   }
 }

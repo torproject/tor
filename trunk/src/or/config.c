@@ -163,7 +163,7 @@ static int config_compare(struct config_line *c, char *key, int type, void *arg)
     case CONFIG_TYPE_BOOL:
       i = atoi(c->value);
       if (i != 0 && i != 1) {
-        log(LOG_ERR, "Boolean keyword '%s' expects 0 or 1", c->key);
+        log(LOG_WARNING, "Boolean keyword '%s' expects 0 or 1", c->key);
         return 0;
       }
       *(int *)arg = i;
@@ -259,7 +259,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   log(LOG_DEBUG,"Opening config file '%s'",fname);
 
   cf = config_open(fname);
-  if(!cf) { /* it's defined but not there. that's no good. */
+  if(!cf) {
     log(LOG_ERR, "Unable to open configuration file '%s'.",fname);
     return -1;
   }

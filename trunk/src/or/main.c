@@ -79,7 +79,7 @@ crypto_pk_env_t *get_identity_key(void) {
 int connection_add(connection_t *conn) {
 
   if(nfds >= options.MaxConn-1) {
-    log(LOG_INFO,"connection_add(): failing because nfds is too high.");
+    log(LOG_WARNING,"connection_add(): failing because nfds is too high.");
     return -1;
   }
   
@@ -302,7 +302,7 @@ static void conn_write(int i) {
   assert_connection_ok(conn, time(NULL));
 
   if(connection_handle_write(conn) < 0) { /* this connection is broken. remove it. */
-    log_fn(LOG_DEBUG,"%s connection broken, removing.", conn_type_to_string[conn->type]);
+    log_fn(LOG_INFO,"%s connection broken, removing.", conn_type_to_string[conn->type]);
     connection_remove(conn);
     connection_free(conn);
     if(i<nfds) { /* we just replaced the one at i with a new one. process it too. */
@@ -317,7 +317,7 @@ static void check_conn_marked(int i) {
   conn = connection_array[i];
   assert_connection_ok(conn, time(NULL));
   if(conn->marked_for_close) {
-    log_fn(LOG_DEBUG,"Cleaning up connection.");
+    log_fn(LOG_INFO,"Cleaning up connection (fd %d).",conn->s);
     if(conn->s >= 0) { /* might be an incomplete edge connection */
       /* FIXME there's got to be a better way to check for this -- and make other checks? */
       if(connection_speaks_cells(conn)) {
@@ -407,7 +407,7 @@ static int prepare_for_poll(void) {
         if((!options.OnionRouter && !circuit_get_by_conn(conn)) ||
            (!connection_state_is_open(conn))) {
           /* we're an onion proxy, with no circuits; or our handshake has expired. kill it. */
-          log_fn(LOG_DEBUG,"Expiring connection to %d (%s:%d).",
+          log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
               i,conn->address, conn->port);
           conn->marked_for_close = 1;
         } else {
@@ -667,7 +667,7 @@ static int do_main_loop(void) {
       /* fetch a new directory */
       if(options.DirPort) {
         if(router_get_list_from_file(options.RouterFile) < 0) {
-          log(LOG_ERR,"Error reloading router list. Continuing with old list.");
+          log(LOG_WARNING,"Error reloading router list. Continuing with old list.");
         }
       } else {
         directory_initiate_command(router_pick_directory_server(), DIR_CONN_STATE_CONNECTING_FETCH);
@@ -723,7 +723,7 @@ static void catch(int the_signal) {
 //    case SIGABRT:
     case SIGTERM:
     case SIGINT:
-      log(LOG_NOTICE,"Catching signal %d, exiting cleanly.", the_signal);
+      log(LOG_ERR,"Catching signal %d, exiting cleanly.", the_signal);
       exit(0);
     case SIGHUP:
       please_reset = 1;
@@ -735,7 +735,7 @@ static void catch(int the_signal) {
       please_reap_children = 1;
       break;
     default:
-      log(LOG_ERR,"Caught signal %d that we can't handle??", the_signal);
+      log(LOG_WARNING,"Caught signal %d that we can't handle??", the_signal);
   }
 #endif /* signal stuff */
 }
@@ -781,19 +781,19 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 
   if(crypto_pk_write_public_key_to_string(router->onion_pkey,
                                           &onion_pkey,&onion_pkeylen)<0) {
-    log_fn(LOG_ERR,"write onion_pkey to string failed!");
+    log_fn(LOG_WARNING,"write onion_pkey to string failed!");
     return -1;
   }
 
   if(crypto_pk_write_public_key_to_string(router->identity_pkey,
                                           &identity_pkey,&identity_pkeylen)<0) {
-    log_fn(LOG_ERR,"write identity_pkey to string failed!");
+    log_fn(LOG_WARNING,"write identity_pkey to string failed!");
     return -1;
   }
 
   if(crypto_pk_write_public_key_to_string(router->link_pkey,
                                           &link_pkey,&link_pkeylen)<0) {
-    log_fn(LOG_ERR,"write link_pkey to string failed!");
+    log_fn(LOG_WARNING,"write link_pkey to string failed!");
     return -1;
   }
   
@@ -812,7 +812,7 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   free(link_pkey);
   free(identity_pkey);
 
-  if(result < 0 || result > maxlen) {
+  if(result < 0 || result >= maxlen) {
     /* apparently different glibcs do different things on snprintf error.. so check both */
     return -1;
   }
@@ -838,13 +838,14 @@ int dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     return -1;
 
   if (crypto_pk_private_sign(ident_key, digest, 20, signature) < 0) {
-    log_fn(LOG_ERR, "Error signing digest");
+    log_fn(LOG_WARNING, "Error signing digest");
     return -1;
   }
   strcat(s+written, "-----BEGIN SIGNATURE-----\n");
   written += strlen(s+written);
   if (base64_encode(s+written, maxlen-written, signature, 128) < 0) {
-    log_fn(LOG_ERR, "Couldn't base64-encode signature");
+    log_fn(LOG_WARNING, "Couldn't base64-encode signature");
+    /* XXX Nick: do we really mean to fall through here? */
   }
   written += strlen(s+written);
   strcat(s+written, "-----END SIGNATURE-----\n");
@@ -881,7 +882,7 @@ build_directory(directory_t *dir) {
     router = router_get_by_addr_port(conn->addr,conn->port);
     if(!router) {
       /* XXX this legitimately happens when conn is an OP. How to detect this? */
-      log(LOG_ERR,"build_directory(): couldn't find router %d:%d!",
+      log(LOG_INFO,"build_directory(): couldn't find router %d:%d!",
           conn->addr,conn->port);
       continue;
     }
@@ -900,7 +901,7 @@ dump_signed_directory_to_string(char *s, int maxlen,
 {
   directory_t dir;
   if (build_directory(&dir)) {
-    log(LOG_ERR,"dump_signed_directory_to_string(): build_directory failed.");
+    log(LOG_WARNING,"dump_signed_directory_to_string(): build_directory failed.");
     return -1;
   }
   return dump_signed_directory_to_string_impl(s, maxlen, &dir, private_key);
@@ -933,7 +934,7 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
     written = dump_router_to_string(cp, eos-cp, router, private_key);
 
     if(written < 0) { 
-      log(LOG_ERR,"dump_signed_directory_to_string(): tried to exceed string length.");
+      log(LOG_WARNING,"dump_signed_directory_to_string(): tried to exceed string length.");
       cp[maxlen-1] = 0; /* make sure it's null terminated */
       free(dir->routers);
       return -1;
@@ -951,11 +952,11 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   cp = s + i;
   
   if (crypto_SHA_digest(s, i, digest)) {
-    log(LOG_ERR,"dump_signed_directory_to_string(): couldn't compute digest");
+    log(LOG_WARNING,"dump_signed_directory_to_string(): couldn't compute digest");
     return -1;
   }
   if (crypto_pk_private_sign(private_key, digest, 20, signature) < 0) {
-    log(LOG_ERR,"dump_signed_directory_to_string(): couldn't sign digest");
+    log(LOG_WARNING,"dump_signed_directory_to_string(): couldn't sign digest");
     return -1;
   }
   
@@ -965,7 +966,7 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   i = strlen(s);
   cp = s+i;
   if (base64_encode(cp, maxlen-i, signature, 128) < 0) {
-    log_fn(LOG_ERR," couldn't base64-encode signature");
+    log_fn(LOG_WARNING," couldn't base64-encode signature");
     return -1;
   }
 
@@ -974,7 +975,7 @@ dump_signed_directory_to_string_impl(char *s, int maxlen, directory_t *dir,
   strncat(cp, "-----END SIGNATURE-----\n", maxlen-i);
   i = strlen(s);
   if (i == maxlen) {
-    log(LOG_ERR,"dump_signed_directory_to_string(): tried to exceed string length.");
+    log(LOG_WARNING,"dump_signed_directory_to_string(): tried to exceed string length.");
     return -1;
   }
 
@@ -994,7 +995,7 @@ static int init_descriptor(void) {
   char localhostname[256];
 
   if(gethostname(localhostname,sizeof(localhostname)) < 0) {
-    log_fn(LOG_ERR,"Error obtaining local hostname");
+    log_fn(LOG_WARNING,"Error obtaining local hostname");
     return -1;
   }
   ri = tor_malloc(sizeof(routerinfo_t));
@@ -1013,7 +1014,7 @@ static int init_descriptor(void) {
     routerinfo_free(desc_routerinfo);
   desc_routerinfo = ri;
   if (dump_router_to_string(descriptor, 8192, ri, get_identity_key())<0) {
-    log_fn(LOG_ERR, "Couldn't dump router to string.");
+    log_fn(LOG_WARNING, "Couldn't dump router to string.");
     return -1;
   }
   return 0;

@@ -31,7 +31,7 @@ int connection_or_process_inbuf(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_OR);
 
   if(conn->inbuf_reached_eof) {
-    log_fn(LOG_DEBUG,"conn reached eof. Closing.");
+    log_fn(LOG_INFO,"conn reached eof. Closing.");
     return -1;
   }
 
@@ -57,16 +57,17 @@ int connection_or_finished_flushing(connection_t *conn) {
       }
       /* the connect has finished. */
 
-      log_fn(LOG_DEBUG,"OR connect() to router %s:%u finished.",
+      log_fn(LOG_INFO,"OR connect() to router %s:%u finished.",
           conn->address,conn->port);
 
       if(connection_tls_start_handshake(conn, 0) < 0)
         return -1;
+      return 0;
     case OR_CONN_STATE_OPEN:
       connection_stop_writing(conn);
       return 0;
     default:
-      log_fn(LOG_ERR,"BUG: called in unexpected state.");
+      log_fn(LOG_WARNING,"BUG: called in unexpected state.");
       return 0;
   }
 }
@@ -91,7 +92,7 @@ connection_t *connection_or_connect(routerinfo_t *router) {
   assert(router);
 
   if(router_is_me(router->addr, router->or_port)) {
-    /* this is me! don't connect to me. */
+    /* this is me! don't connect to me. XXX use nickname/key */
     log(LOG_DEBUG,"connection_or_connect(): This is me. Skipping.");
     return NULL;
   }
@@ -104,6 +105,7 @@ connection_t *connection_or_connect(routerinfo_t *router) {
 
   conn = connection_new(CONN_TYPE_OR);
   if(!conn) {
+    log_fn(LOG_WARNING,"connection_new failed; skipping.");
     return NULL;
   }
 

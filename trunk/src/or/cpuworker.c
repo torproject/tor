@@ -31,14 +31,9 @@ int connection_cpu_finished_flushing(connection_t *conn) {
 }
 
 static void tag_pack(char *tag, uint32_t addr, uint16_t port, aci_t aci) {
-  struct in_addr in;
-
   *(uint32_t *)tag = addr;
   *(uint16_t *)(tag+4) = port;
   *(aci_t *)(tag+6) = aci;
-
-  in.s_addr = htonl(addr);
-  log_fn(LOG_DEBUG,"onion was from %s:%d, aci %d.", inet_ntoa(in), port, aci);
 }
 
 static void tag_unpack(char *tag, uint32_t *addr, uint16_t *port, aci_t *aci) {
@@ -63,7 +58,7 @@ int connection_cpu_process_inbuf(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_CPUWORKER);
 
   if(conn->inbuf_reached_eof) {
-    log_fn(LOG_ERR,"Read eof. Worker dying.");
+    log_fn(LOG_WARNING,"Read eof. Worker dying.");
     if(conn->state != CPUWORKER_STATE_IDLE) {
       /* XXX the circ associated with this cpuworker will wait forever. Oops. */
       num_cpuworkers_busy--;
@@ -87,17 +82,17 @@ int connection_cpu_process_inbuf(connection_t *conn) {
       circ = circuit_get_by_aci_conn(aci, p_conn);
 
     if(!circ) {
-      log_fn(LOG_DEBUG,"processed onion for a circ that's gone. Dropping.");
+      log_fn(LOG_INFO,"processed onion for a circ that's gone. Dropping.");
       goto done_processing;
     }
     assert(circ->p_conn);
     if(*buf == 0) {
-      log_fn(LOG_DEBUG,"decoding onionskin failed. Closing.");
+      log_fn(LOG_WARNING,"decoding onionskin failed. Closing.");
       circuit_close(circ);
       goto done_processing;
     }
     if(onionskin_answer(circ, buf+1+TAG_LEN, buf+1+TAG_LEN+DH_KEY_LEN) < 0) {
-      log_fn(LOG_DEBUG,"onionskin_answer failed. Closing.");
+      log_fn(LOG_WARNING,"onionskin_answer failed. Closing.");
       circuit_close(circ);
       goto done_processing;
     }
@@ -131,18 +126,18 @@ int cpuworker_main(void *data) {
   for(;;) {
 
     if(read(fd, &question_type, 1) != 1) {
-      log_fn(LOG_INFO,"read type failed. Exiting.");
+      log_fn(LOG_ERR,"read type failed. Exiting.");
       spawn_exit();
     }
     assert(question_type == CPUWORKER_TASK_ONION);
 
     if(read_all(fd, tag, TAG_LEN) != TAG_LEN) {
-      log_fn(LOG_INFO,"read tag failed. Exiting.");
+      log_fn(LOG_ERR,"read tag failed. Exiting.");
       spawn_exit();
     }
 
     if(read_all(fd, question, DH_ONIONSKIN_LEN) != DH_ONIONSKIN_LEN) {
-      log_fn(LOG_INFO,"read question failed. Exiting.");
+      log_fn(LOG_ERR,"read question failed. Exiting.");
       spawn_exit();
     }
 
@@ -150,18 +145,18 @@ int cpuworker_main(void *data) {
       if(onion_skin_server_handshake(question, get_onion_key(),
         reply_to_proxy, keys, 32) < 0) {
         /* failure */
-        log_fn(LOG_ERR,"onion_skin_server_handshake failed.");
+        log_fn(LOG_WARNING,"onion_skin_server_handshake failed.");
         memset(buf,0,LEN_ONION_RESPONSE); /* send all zeros for failure */
       } else {
         /* success */
-        log_fn(LOG_DEBUG,"onion_skin_server_handshake succeeded.");
+        log_fn(LOG_INFO,"onion_skin_server_handshake succeeded.");
         buf[0] = 1; /* 1 means success */
         memcpy(buf+1,tag,TAG_LEN);
         memcpy(buf+1+TAG_LEN,reply_to_proxy,DH_KEY_LEN);
         memcpy(buf+1+TAG_LEN+DH_KEY_LEN,keys,32);
       }
       if(write_all(fd, buf, LEN_ONION_RESPONSE) != LEN_ONION_RESPONSE) {
-        log_fn(LOG_INFO,"writing response buf failed. Exiting.");
+        log_fn(LOG_ERR,"writing response buf failed. Exiting.");
         spawn_exit();
       }
       log_fn(LOG_DEBUG,"finished writing response.");
@@ -198,7 +193,7 @@ static int spawn_cpuworker(void) {
   conn->address = strdup("localhost");
 
   if(connection_add(conn) < 0) { /* no space, forget it */
-    log_fn(LOG_INFO,"connection_add failed. Giving up.");
+    log_fn(LOG_WARNING,"connection_add failed. Giving up.");
     connection_free(conn); /* this closes fd[0] */
     return -1;
   }
@@ -219,7 +214,7 @@ static void spawn_enough_cpuworkers(void) {
 
   while(num_cpuworkers < num_cpuworkers_needed) {
     if(spawn_cpuworker() < 0) {
-      log_fn(LOG_ERR,"spawn failed!");
+      log_fn(LOG_WARNING,"spawn failed!");
       return;
     }
     num_cpuworkers++;
@@ -238,7 +233,7 @@ static void process_pending_task(connection_t *cpuworker) {
   if(!circ)
     return;
   if(assign_to_cpuworker(cpuworker, CPUWORKER_TASK_ONION, circ) < 0)
-    log_fn(LOG_DEBUG,"assign_to_cpuworker failed. Ignoring.");
+    log_fn(LOG_WARNING,"assign_to_cpuworker failed. Ignoring.");
 }
 
 /* if cpuworker is defined, assert that he's idle, and use him. else,
@@ -270,7 +265,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
     assert(cpuworker);
 
     if(!circ->p_conn) {
-      log_fn(LOG_DEBUG,"circ->p_conn gone. Failing circ.");
+      log_fn(LOG_INFO,"circ->p_conn gone. Failing circ.");
       return -1;
     }
     tag_pack(tag, circ->p_conn->addr, circ->p_conn->port, circ->p_aci);
@@ -281,7 +276,7 @@ int assign_to_cpuworker(connection_t *cpuworker, unsigned char question_type,
     if(connection_write_to_buf(&question_type, 1, cpuworker) < 0 ||
        connection_write_to_buf(tag, sizeof(tag), cpuworker) < 0 ||
        connection_write_to_buf(circ->onionskin, DH_ONIONSKIN_LEN, cpuworker) < 0) {
-      log_fn(LOG_NOTICE,"Write failed. Closing worker and failing circ.");
+      log_fn(LOG_WARNING,"Write failed. Closing worker and failing circ.");
       cpuworker->marked_for_close = 1;
       return -1;
     }

@@ -221,7 +221,7 @@ int write_to_buf(const char *string, int string_len, buf_t *buf) {
   /* this is the point where you would grow the buffer, if you want to */
 
   if (string_len + buf->datalen > buf->len) { /* we're out of luck */
-    log_fn(LOG_DEBUG, "buflen too small. Time to implement growing dynamic bufs.");
+    log_fn(LOG_WARNING, "buflen too small. Time to implement growing dynamic bufs.");
     return -1;
   }
 
@@ -280,11 +280,11 @@ int fetch_from_buf_http(buf_t *buf,
   log_fn(LOG_DEBUG,"headerlen %d, bodylen %d.",headerlen,bodylen);
 
   if(headers_out && max_headerlen <= headerlen) {
-    log_fn(LOG_DEBUG,"headerlen %d larger than %d. Failing.", headerlen, max_headerlen-1);
+    log_fn(LOG_WARNING,"headerlen %d larger than %d. Failing.", headerlen, max_headerlen-1);
     return -1;
   }
   if(body_out && max_bodylen <= bodylen) {
-    log_fn(LOG_DEBUG,"bodylen %d larger than %d. Failing.", bodylen, max_bodylen-1);
+    log_fn(LOG_WARNING,"bodylen %d larger than %d. Failing.", bodylen, max_bodylen-1);
     return -1;
   }
 
@@ -346,33 +346,33 @@ int fetch_from_buf_socks(buf_t *buf,
   socks4_info.destip = ntohl(*(uint32_t*)(buf->buf+4));
 
   if(socks4_info.version != 4) {
-    log_fn(LOG_NOTICE,"Unrecognized version %d.",socks4_info.version);
+    log_fn(LOG_WARNING,"Unrecognized version %d.",socks4_info.version);
     return -1;
   }
 
   if(socks4_info.command != 1) { /* not a connect? we don't support it. */
-    log_fn(LOG_NOTICE,"command %d not '1'.",socks4_info.command);
+    log_fn(LOG_WARNING,"command %d not '1'.",socks4_info.command);
     return -1;
   }
 
   port = socks4_info.destport;
   if(!port) {
-    log_fn(LOG_NOTICE,"Port is zero.");
+    log_fn(LOG_WARNING,"Port is zero.");
     return -1;
   }
 
   if(!socks4_info.destip) {
-    log_fn(LOG_NOTICE,"DestIP is zero.");
+    log_fn(LOG_WARNING,"DestIP is zero.");
     return -1;
   }
 
   if(socks4_info.destip >> 8) {
     struct in_addr in;
-    log_fn(LOG_NOTICE,"destip not in form 0.0.0.x.");
+    log_fn(LOG_DEBUG,"destip not in form 0.0.0.x.");
     in.s_addr = htonl(socks4_info.destip);
     tmpbuf = inet_ntoa(in);
     if(max_addrlen <= strlen(tmpbuf)) {
-      log_fn(LOG_DEBUG,"socks4 addr too long.");
+      log_fn(LOG_WARNING,"socks4 addr too long.");
       return -1;
     }
     log_fn(LOG_DEBUG,"Successfully read destip (%s)", tmpbuf);
@@ -393,7 +393,7 @@ int fetch_from_buf_socks(buf_t *buf,
       return 0;
     }
     if(max_addrlen <= next-startaddr) {
-      log_fn(LOG_DEBUG,"Destaddr not here yet.");
+      log_fn(LOG_WARNING,"Destaddr too long.");
       return -1;
     }
   }
