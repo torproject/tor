@@ -63,7 +63,7 @@ crypto_cipher_key_length(int type) {
     }
 }
 
-static inline EVP_CIPHER *
+static inline const EVP_CIPHER *
 crypto_cipher_evp_cipher(int type, int enc) {
   switch(type) 
     {
