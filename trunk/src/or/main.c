@@ -19,8 +19,8 @@ static int init_from_config(int argc, char **argv);
 /* declared in connection.c */
 extern char *conn_state_to_string[][_CONN_TYPE_MAX+1];
 
-or_options_t options; /**< command-line and config-file options */
-int global_read_bucket; /**< max number of bytes I can read this second */
+or_options_t options; /**< Command-line and config-file options. */
+int global_read_bucket; /**< Max number of bytes I can read this second. */
 
 /** What was the read bucket before the last call to prepare_for_pool?
  * (used to determine how many bytes we've read). */
@@ -38,12 +38,12 @@ static connection_t *connection_array[MAXCONNECTIONS] =
 /** Array of pollfd objects for calls to poll(). */
 static struct pollfd poll_array[MAXCONNECTIONS];
 
-static int nfds=0; /**< number of connections currently active */
+static int nfds=0; /**< Number of connections currently active. */
 
 #ifndef MS_WINDOWS /* do signal stuff only on unix */
-static int please_dumpstats=0; /**< whether we should dump stats during the loop */
-static int please_reset=0; /**< whether we just got a sighup */
-static int please_reap_children=0; /**< whether we should waitpid for exited children */
+static int please_dumpstats=0; /**< Whether we should dump stats during the loop. */
+static int please_reset=0; /**< Whether we just got a sighup. */
+static int please_reap_children=0; /**< Whether we should waitpid for exited children. */
 #endif /* signal stuff */
 
 /** We set this to 1 when we've fetched a dir, to know whether to complain

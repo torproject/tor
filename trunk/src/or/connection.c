@@ -12,9 +12,9 @@
 
 /********* START VARIABLES **********/
 
-extern or_options_t options; /**< command-line and config-file options */
+extern or_options_t options; /* command-line and config-file options */
 
-/** Array of strings to make conn-\>type human-readable */
+/** Array of strings to make conn-\>type human-readable. */
 char *conn_type_to_string[] = {
   "",            /* 0 */
   "OP listener", /* 1 */
@@ -30,7 +30,7 @@ char *conn_type_to_string[] = {
   "CPU worker",  /* 11 */
 };
 
-/** Array of string arrays to make {conn-\>type,conn-\>state} human-readable */
+/** Array of string arrays to make {conn-\>type,conn-\>state} human-readable. */
 char *conn_state_to_string[][_CONN_TYPE_MAX+1] = {
   { NULL }, /* no type associated with 0 */
   { NULL }, /* op listener, obsolete */

@@ -1,4 +1,4 @@
-/* Copyright 2003 Roger Dingledine. */
+/* Copyright 2003-2004 Roger Dingledine. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 
@@ -11,27 +11,27 @@
  **/
 
 #include "or.h"
-extern or_options_t options; /**< command-line and config-file options */
+extern or_options_t options; /* command-line and config-file options */
 
-/** The maximum number of cpuworker processes we will keep around */
+/** The maximum number of cpuworker processes we will keep around. */
 #define MAX_CPUWORKERS 16
-/** The minimum number of cpuworker processes we will keep around */
+/** The minimum number of cpuworker processes we will keep around. */
 #define MIN_CPUWORKERS 1
 
-/** The tag specifies which circuit this onionskin was from */
+/** The tag specifies which circuit this onionskin was from. */
 #define TAG_LEN 8
 /** How many bytes are sent from tor to the cpuworker? */
 #define LEN_ONION_QUESTION (1+TAG_LEN+ONIONSKIN_CHALLENGE_LEN)
 /** How many bytes are sent from the cpuworker back to tor? */
 #define LEN_ONION_RESPONSE (1+TAG_LEN+ONIONSKIN_REPLY_LEN+40+32)
 
-/** How many cpuworkers we have running right now */
+/** How many cpuworkers we have running right now. */
 static int num_cpuworkers=0;
-/** How many of the running cpuworkers have an assigned task right now */
+/** How many of the running cpuworkers have an assigned task right now. */
 static int num_cpuworkers_busy=0;
 /** We need to spawn new cpuworkers whenever we rotate the onion keys
  * on platforms where execution contexts==processes.  This variable stores
- * the last time we got a key rotation event.*/
+ * the last time we got a key rotation event. */
 static time_t last_rotation_time=0;
 
 int cpuworker_main(void *data);
@@ -312,7 +312,7 @@ static void spawn_enough_cpuworkers(void) {
   }
 }
 
-/** Take a pending task from the queue and assign it to 'cpuworker' */
+/** Take a pending task from the queue and assign it to 'cpuworker'. */
 static void process_pending_task(connection_t *cpuworker) {
   circuit_t *circ;
 

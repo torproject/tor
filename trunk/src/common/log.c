@@ -23,15 +23,15 @@
 
 /** Information for a single logfile; only used in log.c */
 typedef struct logfile_t {
-  struct logfile_t *next; /**< Next logfile_t in the linked list */
-  const char *filename; /**< Filename to open */
-  FILE *file; /**< Stream to receive log messages */
+  struct logfile_t *next; /**< Next logfile_t in the linked list. */
+  const char *filename; /**< Filename to open. */
+  FILE *file; /**< Stream to receive log messages. */
   int needs_close; /**< Boolean: true if the stream gets closed on shutdown. */
   int loglevel; /**< Lowest severity level to send to this stream. */
   int max_loglevel; /**< Highest severity level to send to this stream. */
 } logfile_t;
 
-/** Helper: map a log severity to descriptive string */
+/** Helper: map a log severity to descriptive string. */
 static INLINE const char *sev_to_string(int severity) {
   switch(severity) {
     case LOG_DEBUG:   return "debug";
@@ -43,7 +43,7 @@ static INLINE const char *sev_to_string(int severity) {
   }
 }
 
-/** Linked list of logfile_t */
+/** Linked list of logfile_t. */
 static logfile_t *logfiles = NULL;
 
 /** Helper: Format a log message into a fixed-sized buffer. (This is
@@ -126,7 +126,7 @@ void _log(int severity, const char *format, ...)
   va_end(ap);
 }
 
-/** Output a message to the log, prefixed with a function name <b>fn</b> */
+/** Output a message to the log, prefixed with a function name <b>fn</b>. */
 void _log_fn(int severity, const char *fn, const char *format, ...)
 {
   va_list ap;
@@ -135,7 +135,7 @@ void _log_fn(int severity, const char *fn, const char *format, ...)
   va_end(ap);
 }
 
-/** Close all open log files */
+/** Close all open log files. */
 void close_logs()
 {
   logfile_t *victim;
@@ -178,7 +178,7 @@ void add_stream_log(int loglevel, const char *name, FILE *stream)
 /**
  * Add a log handler to send messages to <b>filename</b>. If opening
  * the logfile fails, -1 is returned and errno is set appropriately
- * (by fopen)
+ * (by fopen).
  */
 int add_file_log(int loglevel, const char *filename)
 {

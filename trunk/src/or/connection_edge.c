@@ -1487,7 +1487,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
  * below as its root.
  */
 struct client_dns_entry {
-  uint32_t addr; /**< The resolved IP of this entry */
+  uint32_t addr; /**< The resolved IP of this entry. */
   time_t expires; /**< At what second does addr expire? */
   int n_failures; /**< How many times has this entry failed to resolve so far? */
 };

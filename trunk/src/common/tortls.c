@@ -38,18 +38,18 @@ typedef struct tor_tls_context_st {
 } tor_tls_context;
 
 /** Holds a SSL object and its associated data.  Members are only
- * accessed from within tortls.c
+ * accessed from within tortls.c.
  */
 struct tor_tls_st {
-  SSL *ssl; /**< An OpenSSL SSL object */
-  int socket; /**< The underlying file descriptor for this TLS connection */
+  SSL *ssl; /**< An OpenSSL SSL object. */
+  int socket; /**< The underlying file descriptor for this TLS connection. */
   enum {
     TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
     TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED
   } state; /**< The current SSL state, depending on which operations have
             * completed successfully. */
   int isServer;
-  int wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last time */
+  int wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last time. */
 };
 
 static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
@@ -59,7 +59,7 @@ static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                         unsigned int lifetime);
 
 /** Global tls context. We keep it here because nobody else needs to
- * touch it */
+ * touch it. */
 static tor_tls_context *global_tls_context = NULL;
 /** True iff tor_tls_init() has been called. */
 static int tls_library_is_initialized = 0;

@@ -9,9 +9,9 @@
 
 #include "or.h"
 
-extern or_options_t options; /**< command-line and config-file options */
+extern or_options_t options; /* command-line and config-file options */
 
-/** keep statistics about how many of each type of cell we've received */
+/** Keep statistics about how many of each type of cell we've received. */
 unsigned long stats_n_padding_cells_processed = 0;
 unsigned long stats_n_create_cells_processed = 0;
 unsigned long stats_n_created_cells_processed = 0;
