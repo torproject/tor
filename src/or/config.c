@@ -245,6 +245,7 @@ config_assign(or_options_t *options, struct config_line_t *list)
       config_compare(list, "FascistFirewall",CONFIG_TYPE_BOOL, &options->FascistFirewall) ||
       config_compare(list, "FirewallPorts",CONFIG_TYPE_CSV, &options->FirewallPorts) ||
       config_compare(list, "MyFamily",      CONFIG_TYPE_STRING, &options->MyFamily) ||
+      config_compare(list, "NodeFamily",    CONFIG_TYPE_LINELIST, &options->NodeFamilies) ||
 
       config_compare(list, "Group",          CONFIG_TYPE_STRING, &options->Group) ||
 
@@ -477,6 +478,7 @@ free_options(or_options_t *options)
   config_free_lines(options->SocksPolicy);
   config_free_lines(options->DirServers);
   config_free_lines(options->RecommendedVersions);
+  config_free_lines(options->NodeFamilies);
   if (options->FirewallPorts) {
     SMARTLIST_FOREACH(options->FirewallPorts, char *, cp, tor_free(cp));
     smartlist_free(options->FirewallPorts);
@@ -519,6 +521,7 @@ init_options(or_options_t *options)
   options->FirewallPorts = NULL;
   options->DirServers = NULL;
   options->MyFamily = NULL;
+  options->NodeFamilies = NULL;
 }
 
 static char *
@@ -560,7 +563,7 @@ get_default_conf_file(void)
  * nicknames, or NULL. Return 0 on success. Warn and return -1 on failure.
  */
 static int check_nickname_list(const char *lst, const char *name)
-{ 
+{
   int r = 0;
   smartlist_t *sl;
 
@@ -576,7 +579,7 @@ static int check_nickname_list(const char *lst, const char *name)
       }
     });
   SMARTLIST_FOREACH(sl, char *, s, tor_free(s));
-  smartlist_free(sl); 
+  smartlist_free(sl);
   return r;
 }
 
@@ -876,7 +879,11 @@ getconfig(int argc, char **argv, or_options_t *options)
     return -1;
   if (check_nickname_list(options->MyFamily, "MyFamily"))
     return -1;
-  
+  for (cl = options->NodeFamilies; cl; cl = cl->next) {
+    if (check_nickname_list(cl->value, "NodeFamily"))
+      return -1;
+  }
+
   clear_trusted_dir_servers();
   if (!options->DirServers) {
     add_default_trusted_dirservers();
@@ -890,7 +897,6 @@ getconfig(int argc, char **argv, or_options_t *options)
   if (rend_config_services(options) < 0) {
     result = -1;
   }
-
   return result;
 }
 
