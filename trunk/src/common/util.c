@@ -92,19 +92,6 @@ void smartlist_add(smartlist_t *sl, void *element) {
     log_fn(LOG_WARN,"We've already got %d elements, discarding.",sl->max);
 }
 
-#if 0
-void smartlist_remove(smartlist_t *sl, void *element) {
-  int i;
-  if(element == NULL)
-    return;
-  for(i=0; i < sl->num_used; i++)
-    if(sl->list[i] == element) {
-      sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
-      i--; /* so we process the new i'th element */
-    }
-}
-#endif
-
 int smartlist_isin(smartlist_t *sl, void *element) {
   int i;
   for(i=0; i < sl->num_used; i++)
