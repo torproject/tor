@@ -48,6 +48,7 @@ directory_send_command(connection_t *conn, const char *platform,
                        int purpose, const char *resource,
                        const char *payload, size_t payload_len);
 static int directory_handle_command(connection_t *conn);
+static int body_is_plausible(const char *body, size_t body_len);
 
 /********* START VARIABLES **********/
 
@@ -483,7 +484,10 @@ parse_http_url(char *headers, char **url)
  * "HTTP/1.\%d \%d\%s\r\n...".
  * If it's well-formed, assign *<b>code</b>, point  and return 0.
  * If <b>date</b> is provided, set *date to the Date header in the
- * http headers, or 0 if no such header is found.
+ * http headers, or 0 if no such header is found.  If <b>compression</b>
+ * is provided, set *<b>compression</b> to the compression method given
+ * in the Content-Encoding header, or 0 if no such header is found, or -1
+ * if the value of the header is not recognized.
  * Otherwise, return -1.
  */
 static int
@@ -534,14 +538,35 @@ parse_http_response(const char *headers, int *code, time_t *date,
     } else if (!strcmp(enc, "gzip") || !strcmp(enc, "x-gzip")) {
       *compression = GZIP_METHOD;
     } else {
-      log_fn(LOG_WARN, "Unrecognized content encoding: '%s'", enc);
-      *compression = 0;
+      log_fn(LOG_INFO, "Unrecognized content encoding: '%s'", enc);
+      *compression = -1;
     }
   }
   SMARTLIST_FOREACH(parsed_headers, char *, s, tor_free(s));
   smartlist_free(parsed_headers);
 
   return 0;
+}
+
+/** Return true iff <b>body</b> doesn't start with a plausible router or
+ * running-list or directory opening.  This is a sign of possible compression.
+ **/
+static int
+body_is_plausible(const char *body, size_t len)
+{
+  int i;
+  if (len < 32)
+    return 0;
+  if (!strcmpstart(body,"router") ||
+      !strcmpstart(body,"signed-directory") ||
+      !strcmpstart(body,"network-status") ||
+      !strcmpstart(body,"running-routers"))
+    return 1;
+  for (i=0;i<32;++i) {
+    if (!isprint(body[i]) && !isspace(body[i]))
+      return 0;
+  }
+  return 1;
 }
 
 /** We are a client, and we've finished reading the server's
@@ -560,6 +585,7 @@ connection_dir_client_reached_eof(connection_t *conn)
   time_t now, date_header=0;
   int delta;
   int compression;
+  int plausible;
 
   switch (fetch_from_buf_http(conn->inbuf,
                               &headers, MAX_HEADERS_SIZE,
@@ -592,17 +618,55 @@ connection_dir_client_reached_eof(connection_t *conn)
     }
   }
 
-  if (compression != 0) {
-    char *new_body;
-    size_t new_len;
-    if (tor_gzip_uncompress(&new_body, &new_len, body, body_len, compression)) {
+  plausible = body_is_plausible(body, body_len);
+  if (compression || !plausible) {
+    char *new_body = NULL;
+    size_t new_len = 0;
+    int guessed = detect_compression_method(body, body_len);
+    if (compression <= 0 || guessed != compression) {
+      /* Tell the user if we don't believe what we're told about compression.*/
+      const char *description1, *description2;
+      if (compression == ZLIB_METHOD)
+        description1 = "as deflated";
+      else if (compression = GZIP_METHOD)
+        description1 = "as gzipped";
+      else if (compression == 0)
+        description1 = "as uncompressed";
+      else
+        description1 = "with an unknown Content-Encoding";
+      if (guessed == ZLIB_METHOD)
+        description2 = "deflated";
+      else if (guessed == GZIP_METHOD)
+        description2 = "gzipped";
+      else if (!plausible)
+        description2 = "confusing binary junk";
+      else
+        description2 = "uncompressed";
+
+      log_fn(LOG_INFO, "HTTP body from server '%s' was labeled %s,"
+             "but it seems to be %s.%s",
+             conn->address, description1, description2,
+             (compression>0 && guessed>0)?"  Trying both.":"");
+    }
+    /* Try declared compression first if we can. */
+    if (compression > 0)
+      tor_gzip_uncompress(&new_body, &new_len, body, body_len, compression);
+    /* Okay, if that didn't work, and we think that it was compressed
+     * differently, try that. */
+    if (!new_body && guessed > 0 && compression != guessed)
+      tor_gzip_uncompress(&new_body, &new_len, body, body_len, guessed);
+    /* If we're pretty sure that we have a compressed directory, and
+     * we didn't manage to uncompress it, then warn and bail. */
+    if (!plausible && !new_body) {
       log_fn(LOG_WARN, "Unable to decompress HTTP body (server '%s').", conn->address);
       tor_free(body); tor_free(headers);
       return -1;
     }
-    tor_free(body);
-    body = new_body;
-    body_len = new_len;
+    if (new_body) {
+      tor_free(body);
+      body = new_body;
+      body_len = new_len;
+    }
   }
 
   if (conn->purpose == DIR_PURPOSE_FETCH_DIR) {

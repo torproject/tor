@@ -11,7 +11,9 @@
 #define __TORGZIP_H
 #define TORGZIP_H_ID "$Id$"
 
-typedef enum { GZIP_METHOD=1, ZLIB_METHOD=2 } compress_method_t;
+typedef enum {
+  GZIP_METHOD=1, ZLIB_METHOD=2, UNKNOWN_METHOD=3
+} compress_method_t;
 
 int
 tor_gzip_compress(char **out, size_t *out_len,
@@ -23,5 +25,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
                     compress_method_t method);
 
 int is_gzip_supported(void);
+
+int detect_compression_method(const char *in, size_t in_len);
 
 #endif
