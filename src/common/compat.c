@@ -72,10 +72,6 @@ const char compat_c_id[] = "$Id$";
 #include "log.h"
 #include "util.h"
 
-#ifdef TOR_IS_MULTITHREADED
-#include <openssl/crypto.h>
-#endif
-
 /* Inline the strl functions if the platform doesn't have them. */
 #ifndef HAVE_STRLCPY
 #include "strlcpy.c"
@@ -537,7 +533,7 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
 #ifdef HAVE_GETHOSTBYNAME_R
     ent = gethostbyname_r(name);
 #else
-    struct hostent *ent;
+    ent = gethostbyname(name);
 #endif
     if (ent) {
       /* break to remind us if we move away from IPv4 */
