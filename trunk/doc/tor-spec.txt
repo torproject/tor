@@ -278,11 +278,18 @@ which reveals the downstream node.
 4.2. Setting circuit keys
 
    Once the handshake between the OP and an OR is completed, both
-   servers can now calculate g^xy with ordinary DH.  They divide the
-   last 32 bytes of this shared secret into two 16-byte keys, the
-   first of which (called Kf) is used to encrypt the stream of data
-   going from the OP to the OR, and second of which (called Kb) is
-   used to encrypt the stream of data going from the OR to the OP.
+   servers can now calculate g^xy with ordinary DH.  From the base key
+   material g^xy, they compute two 16 byte keys, called Kf and Kb as
+   follows.  First, the server represents g^xy as a big-endian
+   unsigned integer.  Next, the server computes 40 bytes of key data
+   as K = SHA1(g^xy | [00]) | SHA1(g^xy | [01]) where "00" is a single
+   octet whose value is zero, and "01" is a single octet whose value
+   is one.  The first 16 bytes of K form Kf, and the next 16 bytes of
+   K form Kb.  
+
+   Kf is used to encrypt the stream of data going from the OP to the
+   OR, whereas Kb is used to encrypt the stream of data going from the
+   OR to the OP.
 
 4.3. Creating circuits
 
