@@ -1,3 +1,9 @@
+tor (0.0.7.2+0.0.8pre3-2) unstable; urgency=low
+
+  * Install design paper in usr/share/doc/tor, not usr/share/doc.  Ooops.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 11 Aug 2004 06:51:34 +0200
+
 tor (0.0.7.2+0.0.8pre3-1) unstable; urgency=low
 
   * New upstream (pre)release.
