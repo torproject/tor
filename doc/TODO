@@ -24,6 +24,9 @@ N  - Get win32 servers working, or find out why it isn't happening now.
 
 ************************ For Post 0.0.9 *****************************
 
+https proxy for OR CONNECT stuff
+choose entry node to be one you're already connected to?
+
 Tier one:
    o Move to our new version system.
    - Changes for forward compatibility
