@@ -1,2 +1,25 @@
 README
 ------
+
+> ./autogen.sh 
+
+runs auto* and then ./configure
+
+It should be all you need to do to get working Makefiles on your
+platform, whatever your platform is. :)
+
+Then just do 
+
+> make
+
+Roger:
+
+The summary is that I'm requiring all developers to have auto*
+(aclocal, autoconf, automake) installed on their machine.
+
+Since different versions of auto* generate vastly different output,
+I'm going to leave its output out of the repository. This means that
+whenever you check out a repository, you need to run auto* to generate
+a configure file, then run ./configure to get a Makefile, then build.
+
+
