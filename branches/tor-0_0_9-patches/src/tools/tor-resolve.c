@@ -181,6 +181,11 @@ main(int argc, char **argv)
   if (!n_args)
     usage();
 
+  if (!strcmp(arg[0],"--version")) {
+    printf("Tor version %s.\n",VERSION);
+    return 0;
+  }
+
   if (!strcmp("-v", arg[0])) {
     add_stream_log(LOG_DEBUG, LOG_ERR, "<stderr>", stderr);
     ++arg; --n_args;
@@ -208,6 +213,11 @@ main(int argc, char **argv)
     fprintf(stderr, "%s is a hidden service; those don't have IP addresses.\n\n"
        "To connect to a hidden service, you need to send the hostname to Tor;\n"
        "we suggest SOCKS 4a.\n", arg[0]);
+    return 1;
+  }
+
+  if (network_init()<0) {
+    log_fn(LOG_ERR,"Error initializing network; exiting.");
     return 1;
   }
 
