@@ -384,13 +384,17 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
 
     if (socks->command == SOCKS_COMMAND_RESOLVE) {
       uint32_t answer;
+      struct in_addr in;
       /* Reply to resolves immediately if we can. */
       if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
         log_fn(LOG_WARN,"Address to be resolved is too large. Failing.");
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
         return -1;
       }
-      answer = htonl(client_dns_lookup_entry(socks->address));
+      if (tor_inet_aton(socks->address, &in)) /* see if it's an IP already */
+        answer = ntohl(in.s_addr);
+      if (!answer && !conn->chosen_exit_name) /* if it's not .exit, check cache */
+        answer = htonl(client_dns_lookup_entry(socks->address));
       if (answer) {
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
                                                (char*)&answer);
