@@ -7,7 +7,7 @@ Standards-Version: 3.6.1
 
 Package: tor
 Architecture: any
-Depends: ${shlibs:Depends}, adduser, tsocks
+Depends: ${shlibs:Depends}, adduser, tsocks, python
 Recommends: privoxy, socat
 Suggests: mixmaster, mixminion, anon-proxy
 Description: anonymizing overlay network for TCP

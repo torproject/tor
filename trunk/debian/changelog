@@ -1,3 +1,9 @@
+tor (0.0.8-NOTRELEASED) NOTRELEASED; urgency=low
+
+  * Depend on python as we now have a python script: tor_resolve
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 23 Jul 2004 00:27:33 +0200
+
 tor (0.0.7.2-1) unstable; urgency=medium
 
   * New upstream release.
