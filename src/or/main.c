@@ -307,8 +307,7 @@ int prepare_for_poll(int *timeout) {
   cell_t cell;
   circuit_t *circ;
 
-  if(gettimeofday(&now,NULL) < 0)
-    return -1;
+  my_gettimeofday(&now);
 
   if(now.tv_sec > current_second) { /* the second has rolled over. check more stuff. */
 
@@ -535,8 +534,7 @@ void dumpstats(void) { /* dump stats to stdout */
   extern char *conn_state_to_string[][15];
 
   printf("Dumping stats:\n");
-  if(gettimeofday(&now,NULL) < 0)
-    return ;
+  my_gettimeofday(&now);
 
   for(i=0;i<nfds;i++) {
     conn = connection_array[i];
