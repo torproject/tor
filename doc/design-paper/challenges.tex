@@ -380,9 +380,14 @@ transporting arbitrary IP packets, and also supported
 pseudonymity in addition to anonymity; but it has
 a different approach to sustainability (collecting money from users
 and paying ISPs to run Tor nodes), and was eventually shut down due to financial
-load.  Finally,
-more scalable peer-to-peer designs like Tarzan~\cite{tarzan:ccs02} and
-MorphMix~\cite{morphmix:fc04} have been proposed in the literature, but
+load.  Finally, %potentially more scalable
+% [I had added 'potentially' because the scalability of these designs
+% is not established, and I am uncomfortable making the
+% bolder unmodified assertion. Roger took 'potentially' out.
+% Here's an attempt at more neutral wording -pfs]
+peer-to-peer designs that are intended to be more scalable,
+for example Tarzan~\cite{tarzan:ccs02} and
+MorphMix~\cite{morphmix:fc04}, have been proposed in the literature but
 have not been fielded. These systems differ somewhat
 in threat model and presumably practical resistance to threats.
 Note that MorphMix differs from Tor only in
@@ -889,7 +894,9 @@ prevent individual machines within the enclave from running Tor
 clients~\cite{or-jsac98,or-discex00}.
 
 Of course, Tor's default path length of
-three is insufficient for these enclaves, since the entry or exit
+three is insufficient for these enclaves, since the entry and/or exit
+% [edit war: without the ``and/'' the natural reading here
+% is aut rather than vel. And the use of the plural verb does not work -pfs]
 themselves are sensitive. Tor thus increments path length by one
 for each sensitive endpoint in the circuit.
 Enclaves also help to protect against end-to-end attacks, since it's
