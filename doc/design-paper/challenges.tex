@@ -189,7 +189,7 @@ seems overkill (and/or insecure) based on the threat model we've picked.
 \section{Threat model}
 
 discuss $\frac{c^2}{n^2}$, except how in practice the chance of owning
-the last hop is not c/n since that doesn't take the destination (website)
+the last hop is not $c/n$ since that doesn't take the destination (website)
 into account. so in cases where the adversary does not also control the
 final destination we're in good shape, but if he *does* then we'd be better
 off with a system that lets each hop choose a path.
@@ -702,6 +702,66 @@ adversary.
 \cite{koepsell-wpes2004}
 \cite{advogato}
 \cite{berkman}
+
+\subsection{Non-clique topologies}
+
+Because of its threat model that is substantially weaker than high
+latency mixnets, Tor is actually in a potentially better position to
+scale at least initially. The issues for scaling include how many
+neighbors can nodes support and how many users (alternatively how much
+application traffic capacity) can the network handle for each new node
+that comes into the network. This depends on many things, most notably
+the traffic capacity of the new nodes.  We can observe, however, that
+adding a tor node of any feasible bandwidth will increase the traffic
+capacity of the network. This means that, as a first step to scaling,
+we can focus on the interconnectivity of the nodes, followed by
+directories, discovery, etc.
+
+By reducing the connectivity of the network we increase the total
+number of nodes that the network can contain. Anonymity implications
+of restricted routes for mix networks has already been explored by
+Danezis~\cite{danezis-pets03}.  That paper explicitly considered only
+traffic analysis resistance provided by the network and sidestepped
+questions of traffic confirmation resistance. But, Tor is designed
+only to resist traffic confirmation. For this and other reasons, we
+cannot simply adopt his mixnet results to onion routing networks.  If
+an attacker gains minimal increase in the likelyhood of compromising
+the endpoints of a Tor circuit through a sparse network (vs.\ a clique
+on the same node set), then the restriction will have had minimal
+impact on the anonymity provided by that network.
+
+As Danezis noted, what is wanted is an expander graph, i.e., a graph
+in which any subgraph of nodes is likely to have lots of nodes as
+neighbors. For Tor we can be a bit more specific. As long as most
+(non-enclave) circuits have three nodes, then ideally any pair of nodes
+should be linked to every node in the network with high probability.
+
+I need to work out some numbers here: Consider networks of 100,
+200, 500, and 1000 nodes with this property. Figure out the savings
+in connectivity in each case. Consider also reducing the probability.
+Something to do tomorrow.
+
+Need to tell some story a la the FC02 paper about assigning the
+links in the graph. Also tomorrow or so.
+
+This approach does not take different node bandwidth into account. We
+could consider a clique of high bandwidth/high reliability nodes that
+is connected to all nodes in the network. All circuits would then go
+through this `backbone'. This simplifies many issues but makes the
+expected minimum path length four. On the other hand, it is not
+likely that there will be substantial increase in network latency
+given that the added hop will always be between high bandwidth nodes.
+
+Directories need not be too much more of a problem. They can list the
+Top tier nodes, then for each of those, to which nodes they are
+connected.  For non-enclave purposes, it is enough to download the top
+tier list and a few of those below it.  Lots of threat issues here,
+can address them with witness connections or other means. (E.g., does
+it make sense to favor the nodes that are listed by more than one node
+at the top?)
+
+
+
 
 \section{The Future}
 \label{sec:conclusion}
