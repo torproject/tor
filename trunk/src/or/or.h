@@ -873,7 +873,6 @@ void client_dns_clean(void);
 int connection_or_process_inbuf(connection_t *conn);
 int connection_or_finished_flushing(connection_t *conn);
 
-void connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router);
 connection_t *connection_or_connect(routerinfo_t *router);
 
 int connection_tls_start_handshake(connection_t *conn, int receiving);
