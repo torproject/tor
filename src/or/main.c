@@ -1011,7 +1011,7 @@ static void dumpstats(int severity) {
 /** Called before we make any calls to network-related functions.
  * (Some operating systems require their network libraries to be
  * initialized.) */
-static int network_init(void)
+int network_init(void)
 {
 #ifdef MS_WINDOWS
   /* This silly exercise is necessary before windows will allow gethostbyname to work.

@@ -4,6 +4,7 @@
 /* $Id$ */
 const char test_c_id[] = "$Id$";
 
+#include "orconfig.h"
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
@@ -12,8 +13,10 @@ const char test_c_id[] = "$Id$";
 #ifdef MS_WINDOWS
 /* For mkdir() */
 #include <direct.h>
-#endif
+#else
 #include <dirent.h>
+#endif
+
 #include "or.h"
 #include "../common/test.h"
 #include "../common/torgzip.h"
@@ -34,10 +37,12 @@ setup_directory(void)
   int r;
   if (is_setup) return;
 
-  tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d", (int) getpid());
 #ifdef MS_WINDOWS
+  // XXXX
+  tor_snprintf(temp_dir, sizeof(temp_dir), "c:\\windows\\temp\\tor_test_%d", (int)getpid()); 
   r = mkdir(temp_dir);
 #else
+  tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d", (int) getpid());
   r = mkdir(temp_dir, 0700);
 #endif
   if (r) {
@@ -60,6 +65,35 @@ get_fname(const char *name)
 static void
 remove_directory(void)
 {
+#ifdef MS_WINDOWS
+  char *pattern;
+  HANDLE handle;
+  WIN32_FIND_DATA findData;
+
+  setup_directory();
+  pattern = tor_malloc(strlen(temp_dir)+16);
+  tor_snprintf(pattern, strlen(temp_dir)+16, "%s\\*", temp_dir);
+  handle = FindFirstFile(pattern, &findData);
+  if (handle == INVALID_HANDLE_VALUE) {
+    perror("Can't remove");
+    return;
+  }
+  while(1) {
+    size_t dlen = strlen(findData.cFileName)+strlen(temp_dir)+16;
+    char *deleteable = tor_malloc(dlen);
+    tor_snprintf(deleteable, dlen, "%s\\%s", temp_dir, findData.cFileName);
+    unlink(deleteable);
+    tor_free(deleteable);
+    if (!FindNextFile(handle, &findData)) {
+      if (GetLastError() != ERROR_NO_MORE_FILES) {
+        perror("error reading dir");
+      }
+      break;
+    }
+  }
+  FindClose(handle);
+  tor_free(pattern);
+#else
   DIR *dirp;
   struct dirent *de;
   setup_directory();
@@ -78,6 +112,7 @@ remove_directory(void)
 #endif
   }
   closedir(dirp);
+#endif
   rmdir(temp_dir);
 }
 
@@ -1239,6 +1274,7 @@ test_rend_fns(void)
 int
 main(int c, char**v) {
   or_options_t *options = tor_malloc_zero(sizeof(or_options_t));
+  network_init();
   options_init(options);
   set_options(options);
 
