@@ -70,10 +70,9 @@ which reveals the downstream node.
 
         (If client is an OP)
            The number 1 to signify OP handshake [2 bytes]
-           Maximum bandwidth (bytes/s)          [4 bytes]
            Forward link key [K_f]               [16 bytes]
            Backward link key [K_b]              [16 bytes]
-                                             [Total: 38 bytes]
+                                             [Total: 34 bytes]
 
         (If client is an OR)
            The number 2 to signify OR handshake [2 bytes]
@@ -83,8 +82,7 @@ which reveals the downstream node.
            The server's published port          [2 bytes]
            The forward key [K_f]                [16 bytes]
            The backward key [K_b]               [16 bytes]
-           The maximum bandwidth (bytes/s)      [4 bytes]
-                                             [Total: 50 bytes] 
+                                             [Total: 46 bytes] 
 
         The client then RSA-encrypts [M] with the server's public key
         and PKCS1 padding to give an encrypted message.
@@ -98,9 +96,9 @@ which reveals the downstream node.
         The OR waits for 128 bytes of data, and decrypts the resulting
         data with its private key, checking the PKCS1 padding. If
         the padding is invalid, it closes the connection. If the tag
-        indicates the client is an OP, and the message is 38 bytes long,
+        indicates the client is an OP, and the message is 34 bytes long,
         it performs step 2a. If the tag indicates the client is an OR,
-        and the message is 50 bytes long, it performs step 2b. Else,
+        and the message is 46 bytes long, it performs step 2b. Else,
         it closes the connection.
 
      2a. If client is an OP:
@@ -122,12 +120,9 @@ which reveals the downstream node.
 
         The server then creates a server authentication message [M2] as
         follows: 
-               Modified client authentication         [48 bytes]
+               Client's handshake [M]                 [44 bytes]
                A random nonce [N]                     [8 bytes]
-                                                  [Total: 56 bytes]
-        The client authentication is generated from M by replacing
-        the client's preferred bandwidth [B_c] with the server's
-        preferred bandwidth [B_s], if B_s < B_c. 
+                                                  [Total: 52 bytes]
 
         The server encrypts M2 with the client's public key (found
         from the list of known routers), using PKCS1 padding.
@@ -139,15 +134,14 @@ which reveals the downstream node.
 
         Once the client has received 128 bytes, it decrypts them with
         its public key, and checks the PKCS1 padding.  If the padding
-        is invalid, or the decrypted message's length is other than 56
+        is invalid, or the decrypted message's length is other than 52
         bytes, the client closes the TCP connection.
 
         The client checks that the addresses and keys in the reply
         message are the same as the ones it originally sent.  If not,
         it closes the TCP connection.
 
-        The client updates the connection's bandwidth to that set by
-        the server, and generates the following authentication message [M3]:
+        The client generates the following authentication message [M3]:
            The client's published IPV4 address    [4 bytes]
            The client's published port            [2 bytes]
            The server's published IPV4 address    [4 bytes]
@@ -510,18 +504,11 @@ which reveals the downstream node.
 
 6.1. Link throttling
 
-   As discussed above in section 2.1, ORs and OPs negotiate a maximum
-   bandwidth upon startup.  The communicants only read up to that
-   number of bytes per second on average, though they may use mechanisms
-   to handle spikes (eg token buckets).
-
-   [This isn't true anymore. Each node has a total bandwidth it's willing
-    to accept from all nodes per second; it ignores negotiated
-    per-connection bandwidths. -RD]
+   Each node should do appropriate bandwidth throttling to keep its
+   user happy.
 
    Communicants rely on TCP's default flow control to push back when they
-   stop reading, so nodes that don't obey this bandwidth limit can't do
-   too much damage.
+   stop reading.
 
 6.2. Link padding
 
