@@ -66,9 +66,15 @@ int has_fetched_directory=0;
  * entry to inform the user that Tor is working. */
 int has_completed_circuit=0;
 
+/* #define MS_WINDOWS_SERVICE */
 #ifdef MS_WINDOWS_SERVICE
+#include <tchar.h>
+#define GENSRV_SERVICENAME  TEXT("tor-009pre6")
+#define GENSRV_DISPLAYNAME  TEXT("Tor 0.0.9 pre6 Win32 Service")
 SERVICE_STATUS service_status;
 SERVICE_STATUS_HANDLE hStatus;
+static char **backup_argv;
+static int backup_argc;
 #endif
 
 #define CHECK_DESCRIPTOR_INTERVAL 60
@@ -816,7 +822,10 @@ static int do_main_loop(void) {
 
   for(;;) {
 #ifdef MS_WINDOWS_SERVICE /* Do service stuff only on windows. */
-    if (service_status.dwCurrentState != SERVICE_RUNNING) {
+    if (service_status.dwCurrentState == SERVICE_STOP_PENDING) {
+      service_status.dwWin32ExitCode = 0;
+      service_status.dwCurrentState = SERVICE_STOPPED;
+      SetServiceStatus(hStatus, &service_status);
       return 0;
     }
 #endif
@@ -1150,8 +1159,7 @@ void nt_service_control(DWORD request)
     case SERVICE_CONTROL_STOP:
         case SERVICE_CONTROL_SHUTDOWN:
           log(LOG_ERR, "Got stop/shutdown request; shutting down cleanly.");
-      service_status.dwWin32ExitCode = 0;
-          service_status.dwCurrentState = SERVICE_STOPPED;
+          service_status.dwCurrentState = SERVICE_STOP_PENDING;
           return;
   }
   SetServiceStatus(hStatus, &service_status);
@@ -1161,10 +1169,7 @@ void nt_service_body(int argc, char **argv)
 {
   int err;
   FILE *f;
-  f = fopen("d:\\foo.txt", "w");
-  fprintf(f, "POINT 1\n");
-  fclose(f);
-  service_status.dwServiceType = SERVICE_WIN32;
+  service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
   service_status.dwCurrentState = SERVICE_START_PENDING;
   service_status.dwControlsAccepted =
         SERVICE_ACCEPT_STOP |
@@ -1172,13 +1177,13 @@ void nt_service_body(int argc, char **argv)
   service_status.dwWin32ExitCode = 0;
   service_status.dwServiceSpecificExitCode = 0;
   service_status.dwCheckPoint = 0;
-  service_status.dwWaitHint = 0;
-  hStatus = RegisterServiceCtrlHandler("Tor", (LPHANDLER_FUNCTION) nt_service_control);
+  service_status.dwWaitHint = 1000;
+  hStatus = RegisterServiceCtrlHandler(GENSRV_SERVICENAME, (LPHANDLER_FUNCTION) nt_service_control);
   if (hStatus == 0) {
         // failed;
         return;
   }
-  err = tor_init(argc, argv); // refactor this part out of tor_main and do_main_loop
+  err = tor_init(backup_argc, backup_argv); // refactor this part out of tor_main and do_main_loop
   if (err) {
         // failed.
         service_status.dwCurrentState = SERVICE_STOPPED;
@@ -1196,17 +1201,154 @@ void nt_service_body(int argc, char **argv)
 void nt_service_main(void)
 {
   SERVICE_TABLE_ENTRY table[2];
-  table[0].lpServiceName = "Tor";
+  DWORD result = 0;
+  table[0].lpServiceName = GENSRV_SERVICENAME;
   table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)nt_service_body;
   table[1].lpServiceName = NULL;
   table[1].lpServiceProc = NULL;
-  if (!StartServiceCtrlDispatcher(table))
-          printf("Error was %d\n",GetLastError());
+  if (!StartServiceCtrlDispatcher(table)) {
+    result = GetLastError();
+    printf("Error was %d\n",result);
+    if (result == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
+      if (tor_init(backup_argc, backup_argv) < 0)
+        return;
+      switch (get_options()->command) {
+      case CMD_RUN_TOR:
+        do_main_loop();
+        break;
+      case CMD_LIST_FINGERPRINT:
+        do_list_fingerprint();
+        break;
+      case CMD_HASH_PASSWORD:
+        do_hash_password();
+        break;
+      default:
+        log_fn(LOG_ERR, "Illegal command number %d: internal error.", get_options()->command);
+      }
+      tor_cleanup();
+    }
+  }
+}
+
+int nt_service_install()
+{
+  /* XXXX Problems with NT services:
+   * 1. The configuration file needs to be in the same directory as the .exe
+   * 2. The exe and the configuration file can't be on any directory path
+   *    that contains a space.
+   * 3. Ideally, there should be one EXE that can either run as a
+   *    separate process (as now) or that can install and run itself
+   *    as an NT service.  I have no idea how hard this is.
+   *
+   * Notes about develiping NT services:
+   *
+   * 1. Don't count on your CWD. If an abolute path is not given, the
+   *    fopen() function goes wrong.
+   * 2. The parameters given to the nt_service_body() function differ
+   *    from those given to main() function.
+   */
+
+  SC_HANDLE hSCManager = NULL;
+  SC_HANDLE hService = NULL;
+  TCHAR szPath[_MAX_PATH];
+  TCHAR szDrive[_MAX_DRIVE];
+  TCHAR szDir[_MAX_DIR];
+  char cmd1[] = " -f ";
+  char cmd2[] = "\\torrc";
+  char *command;
+  int len = 0;
+
+  if (0 == GetModuleFileName(NULL, szPath, MAX_PATH))
+    return 0;
+
+  _tsplitpath(szPath, szDrive, szDir, NULL, NULL);
+  len = _MAX_PATH + strlen(cmd1) + _MAX_DRIVE + _MAX_DIR + strlen(cmd2);
+  command = tor_malloc(len);
+
+  strlcpy(command, szPath, len);
+  strlcat(command, " -f ", len);
+  strlcat(command, szDrive, len);
+  strlcat(command, szDir, len);
+  strlcat(command, "\\torrc", len);
+
+  if ((hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CREATE_SERVICE)) == NULL) {
+    printf("Failed: OpenSCManager()\n");
+    free(command);
+    return 0;
+  }
+
+  if((hService = CreateService(hSCManager, GENSRV_SERVICENAME, GENSRV_DISPLAYNAME,
+    SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START,
+    SERVICE_ERROR_IGNORE, command, NULL, NULL,
+    NULL, NULL, NULL)) == NULL) {
+      printf("Failed: CreateService()\n");
+      CloseServiceHandle(hSCManager);
+      free(command);
+      return 0;
+  }
+
+  CloseServiceHandle(hService);
+  CloseServiceHandle(hSCManager);
+  free(command);
+
+  printf("Install service successfully\n");
+
+  return 0;
+}
+
+int nt_service_remove()
+{
+  SC_HANDLE hSCManager = NULL;
+  SC_HANDLE hService = NULL;
+  SERVICE_STATUS service_status;
+  BOOL result = FALSE;
+
+  if ((hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CREATE_SERVICE)) == NULL) {
+    printf("Failed: OpenSCManager()\n");
+    return 0;
+  }
+
+  if ((hService = OpenService(hSCManager, GENSRV_SERVICENAME, SERVICE_ALL_ACCESS)) == NULL) {
+    printf("Failed: OpenService()\n");
+    CloseServiceHandle(hSCManager);
+  }
+
+  result = ControlService(hService, SERVICE_CONTROL_STOP, &service_status);
+  if (result) {
+    while (QueryServiceStatus(hService, &service_status))
+    {
+      if(service_status.dwCurrentState == SERVICE_STOP_PENDING)
+        Sleep(500);
+      else
+        break;
+    }
+    if (DeleteService(hService))
+      printf("Remove service successfully\n");
+    else
+      printf("Failed: DeleteService()\n");
+  } else {
+    result = DeleteService(hService);
+    if (result)
+      printf("Remove service successfully\n");
+    else
+      printf("Failed: DeleteService()\n");
+  }
+
+  CloseServiceHandle(hService);
+  CloseServiceHandle(hSCManager);
+
+  return 0;
 }
 #endif
 
 int tor_main(int argc, char *argv[]) {
 #ifdef MS_WINDOWS_SERVICE
+  backup_argv = argv;
+  backup_argc = argc;
+  if((argc >= 2) && !strcmp(argv[1], "-install"))
+    return nt_service_install();
+  if((argc >= 2) && !strcmp(argv[1], "-remove"))
+    return nt_service_remove();
   nt_service_main();
   return 0;
 #else
