@@ -165,6 +165,8 @@ static void conn_read(int i) {
        !connection_has_pending_tls_data(conn))
       return; /* this conn should not read */
 
+  if (conn->marked_for_close)
+    return;
   log_fn(LOG_DEBUG,"socket %d wants to read.",conn->s);
 
   assert_connection_ok(conn, time(NULL));
@@ -174,18 +176,15 @@ static void conn_read(int i) {
 #ifdef MS_WINDOWS
       (poll_array[i].revents & POLLERR) ||
 #endif
-    connection_handle_read(conn) < 0)
+      (connection_handle_read(conn) < 0 && !conn->marked_for_close))
     {
       /* this connection is broken. remove it */
-      log_fn(LOG_INFO,"%s connection broken, removing.",
-             conn_type_to_string[conn->type]);
-      connection_remove(conn);
-      connection_free(conn);
-      if(i<nfds) {
-        /* we just replaced the one at i with a new one. process it too. */
-        conn_read(i);
-      }
-    } else assert_connection_ok(conn, time(NULL));
+      /* XXX This shouldn't ever happen anymore. */
+      log_fn(LOG_ERR,"Unhandled error on read for %s connection (fd %d); removing",
+             conn_type_to_string[conn->type], conn->s);
+      connection_mark_for_close(conn,0);
+    }
+    assert_connection_ok(conn, time(NULL));
 }
 
 static void conn_write(int i) {
@@ -195,18 +194,19 @@ static void conn_write(int i) {
     return; /* this conn doesn't want to write */
 
   conn = connection_array[i];
+  if (conn->marked_for_close)
+    return;
   log_fn(LOG_DEBUG,"socket %d wants to write.",conn->s);
 
   assert_connection_ok(conn, time(NULL));
 
-  if(connection_handle_write(conn) < 0) { /* this connection is broken. remove it. */
-    log_fn(LOG_INFO,"%s connection broken, removing.", conn_type_to_string[conn->type]);
-    connection_remove(conn);
-    connection_free(conn);
-    if(i<nfds) { /* we just replaced the one at i with a new one. process it too. */
-        conn_write(i);
-    }
-  } else assert_connection_ok(conn, time(NULL));
+  if(connection_handle_write(conn) < 0 && !conn->marked_for_close) {
+    /* this connection is broken. remove it. */
+    log_fn(LOG_ERR,"Unhandled error on read for %s connection (fd %d); removing",
+           conn_type_to_string[conn->type], conn->s);
+    connection_mark_for_close(conn,0);
+  }
+  assert_connection_ok(conn, time(NULL));
 }
 
 static void conn_close_if_marked(int i) {
@@ -555,7 +555,7 @@ static int do_main_loop(void) {
 
     /* do all the reads and errors first, so we can detect closed sockets */
     for(i=0;i<nfds;i++)
-      conn_read(i); /* this also blows away broken connections */
+      conn_read(i); /* this also marks broken connections */
 
     /* then do the writes */
     for(i=0;i<nfds;i++)

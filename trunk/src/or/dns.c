@@ -331,7 +331,8 @@ int connection_dns_process_inbuf(connection_t *conn) {
       num_dnsworkers_busy--;
     }
     num_dnsworkers--;
-    return -1;
+    connection_mark_for_close(conn,0);
+    return 0;
   }
 
   assert(conn->state == DNSWORKER_STATE_BUSY);

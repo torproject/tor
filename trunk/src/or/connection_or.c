@@ -7,7 +7,7 @@
 extern or_options_t options; /* command-line and config-file options */
 
 static int connection_tls_finish_handshake(connection_t *conn);
-static int connection_or_process_cell_from_inbuf(connection_t *conn);
+static int connection_or_process_cells_from_inbuf(connection_t *conn);
 
 /**************************************************************/
 
@@ -30,25 +30,28 @@ int connection_or_process_inbuf(connection_t *conn) {
   assert(conn && conn->type == CONN_TYPE_OR);
 
   if(conn->inbuf_reached_eof) {
-    log_fn(LOG_INFO,"conn reached eof. Closing.");
+    log_fn(LOG_INFO,"OR connection reached EOF. Closing.");
+    connection_mark_for_close(conn,0);
     return -1;
   }
 
   if(conn->state != OR_CONN_STATE_OPEN)
     return 0; /* don't do anything */
-  return connection_or_process_cell_from_inbuf(conn);
+  return connection_or_process_cells_from_inbuf(conn);
 }
 
 int connection_or_finished_flushing(connection_t *conn) {
   int e, len=sizeof(e);
 
   assert(conn && conn->type == CONN_TYPE_OR);
+  assert_connection_ok(conn,0);
 
   switch(conn->state) {
     case OR_CONN_STATE_CONNECTING:
       if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0)  { /* not yet */
         if(!ERRNO_CONN_EINPROGRESS(errno)){
           log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
+          connection_mark_for_close(conn,0);
           return -1;
         } else {
           return 0; /* no change, see if next time is better */
@@ -59,14 +62,17 @@ int connection_or_finished_flushing(connection_t *conn) {
       log_fn(LOG_INFO,"OR connect() to router %s:%u finished.",
           conn->address,conn->port);
 
-      if(connection_tls_start_handshake(conn, 0) < 0)
+      if(connection_tls_start_handshake(conn, 0) < 0) {
+        /* TLS handhaking error of some kind. */
+        connection_mark_for_close(conn,0);
         return -1;
+      }
       return 0;
     case OR_CONN_STATE_OPEN:
       connection_stop_writing(conn);
       return 0;
     default:
-      log_fn(LOG_WARN,"BUG: called in unexpected state.");
+      log_fn(LOG_WARN,"BUG: called in unexpected state %d",conn->state);
       return 0;
   }
 }
@@ -254,7 +260,7 @@ void connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn) {
 }
 
 /* if there's a whole cell there, pull it off and process it. */
-static int connection_or_process_cell_from_inbuf(connection_t *conn) {
+static int connection_or_process_cells_from_inbuf(connection_t *conn) {
   char buf[CELL_NETWORK_SIZE];
   cell_t cell;
 

@@ -68,7 +68,8 @@ int connection_cpu_process_inbuf(connection_t *conn) {
     }
     num_cpuworkers--;
     spawn_enough_cpuworkers(); /* try to regrow. hope we don't end up spinning. */
-    return -1;
+    connection_mark_for_close(conn,0);
+    return 0;
   }
 
   if(conn->state == CPUWORKER_STATE_BUSY_ONION) {

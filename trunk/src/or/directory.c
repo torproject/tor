@@ -107,9 +107,11 @@ int connection_dir_process_inbuf(connection_t *conn) {
                                    NULL, 0, &directory, MAX_DIR_SIZE)) {
           case -1: /* overflow */
             log_fn(LOG_WARN,"'fetch' response too large. Failing.");
+            connection_mark_for_close(conn,0);
             return -1;
           case 0:
             log_fn(LOG_INFO,"'fetch' response not all here, but we're at eof. Closing.");
+            connection_mark_for_close(conn,0);
             return -1;
           /* case 1, fall through */
         }
@@ -119,6 +121,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
         if(directorylen == 0) {
           log_fn(LOG_INFO,"Empty directory. Ignoring.");
           free(directory);
+          connection_mark_for_close(conn,0);
           return -1;
         }
         if(router_set_routerlist_from_directory(directory, conn->identity_pkey) < 0){
@@ -130,13 +133,16 @@ int connection_dir_process_inbuf(connection_t *conn) {
           router_retry_connections();
         }
         free(directory);
-        return -1;
+        connection_mark_for_close(conn,0);
+        return 0;
       case DIR_CONN_STATE_CLIENT_READING_UPLOAD:
         /* XXX make sure there's a 200 OK on the buffer */
         log_fn(LOG_INFO,"eof while reading upload response. Finished.");
-        return -1;
+        connection_mark_for_close(conn,0);
+        return 0;
       default:
         log_fn(LOG_INFO,"conn reached eof, not reading. Closing.");
+        connection_mark_for_close(conn,0);
         return -1;
     }
   }
@@ -236,6 +242,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
         if(!ERRNO_CONN_EINPROGRESS(errno)) {
           log_fn(LOG_DEBUG,"in-progress connect failed. Removing.");
           router_mark_as_down(conn->nickname); /* don't try him again */
+          connection_mark_for_close(conn,0);
           return -1;
         } else {
           return 0; /* no change, see if next time is better */
@@ -259,7 +266,8 @@ int connection_dir_finished_flushing(connection_t *conn) {
       return 0;
     case DIR_CONN_STATE_SERVER_WRITING:
       log_fn(LOG_INFO,"Finished writing server response. Closing.");
-      return -1; /* kill it */
+      connection_mark_for_close(conn,0);
+      return 0;
     default:
       log_fn(LOG_WARN,"BUG: called in unexpected state %d.", conn->state);
       return -1;

@@ -305,10 +305,10 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       conn->done_sending = 1;
       shutdown(conn->s, 1); /* XXX check return; refactor NM */
       if (conn->done_receiving) {
-        connection_mark_for_close(conn, 0);
+        connection_mark_for_close(conn, END_STREAM_REASON_DONE);
       }
 #else
-      connection_mark_for_close(conn, 0);
+      connection_mark_for_close(conn, END_STREAM_REASON_DONE);
 #endif
       return 0;
     case RELAY_COMMAND_EXTEND:
@@ -395,6 +395,7 @@ int connection_edge_finished_flushing(connection_t *conn) {
         if(!ERRNO_CONN_EINPROGRESS(errno)) {
           /* yuck. kill it. */
           log_fn(LOG_DEBUG,"in-progress exit connect failed. Removing.");
+          connection_mark_for_close(conn, END_STREAM_REASON_CONNECTFAILED);
           return -1;
         } else {
           log_fn(LOG_DEBUG,"in-progress exit connect still waiting.");
