@@ -149,7 +149,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
 }
 
 static int directory_handle_command(connection_t *conn) {
-  char headers[1024];
+  char headers[2048];
   char body[50000]; /* XXX */
   size_t dlen;
   const char *cp;
