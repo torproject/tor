@@ -482,7 +482,7 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, const unsigned char *from, int 
 
 /* Return 0 if sig is a correct signature for SHA1(data).  Else return -1.
  */
-int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const unsigned char *data, int datalen, unsigned char *sig, int siglen)
+int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const unsigned char *data, int datalen, const unsigned char *sig, int siglen)
 {
   char digest[DIGEST_LEN];
   char buf[PK_BYTES+1];
