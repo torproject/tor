@@ -80,6 +80,9 @@ void
 directory_get_from_dirserver(uint8_t purpose, const char *payload,
                              int payload_len)
 {
+  /* FFFF we might pass pick_directory_server a boolean to prefer
+   * picking myself for some purposes, or prefer picking not myself
+   * for other purposes. */
   directory_initiate_command(router_pick_directory_server(),
                              purpose, payload, payload_len);
 }
@@ -498,6 +501,10 @@ directory_handle_command_get(connection_t *conn, char *headers,
 
   if(!strcmp(url,"/running-routers")) { /* running-routers fetch */
     dlen = dirserv_get_runningrouters(&cp);
+    if(dlen < 0) { /* we failed to create cp */
+      connection_write_to_buf(answer503, strlen(answer503), conn);
+      return 0;
+    }
 
     snprintf(tmp, sizeof(tmp), "HTTP/1.0 200 OK\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
              (int)dlen);

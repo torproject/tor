@@ -285,14 +285,16 @@ int init_keys(void) {
   if(!cp) {
     log_fn(LOG_INFO,"Cached directory %s not present. Ok.",keydir);
   } else {
-    if(options.AuthoritativeDir && dirserv_load_from_directory_string(cp) < 0){
-      log_fn(LOG_ERR, "Cached directory %s is corrupt", keydir);
-      tor_free(cp);
-      return -1;
+    if(options.AuthoritativeDir)
+      if(dirserv_load_from_directory_string(cp) < 0){
+        log_fn(LOG_ERR, "Cached directory %s is corrupt", keydir);
+        tor_free(cp);
+        return -1;
+      }
+    } else {
+      /* set time to 1 so it will be replaced on first download. */
+      dirserv_set_cached_directory(cp, 1);
     }
-    /* set time to 1 so it will be replaced on first download.
-     */
-    dirserv_set_cached_directory(cp, 1);
     tor_free(cp);
   }
   /* success */
