@@ -536,11 +536,11 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
     struct hostent hostent;
     int r;
     r = gethostbyname_r(name, &hostent, buf, sizeof(buf), &ent, &err);
-#elif defined(HAVE_GETHOSTBYNAME_R_5_ARG);
+#elif defined(HAVE_GETHOSTBYNAME_R_5_ARG)
     char buf[2048];
     struct hostent hostent;
     ent = gethostbyname_r(name, &hostent, buf, sizeof(buf), &err);
-#elif defined(HAVE_GETHOSTBYNAME_R_3_ARG);
+#elif defined(HAVE_GETHOSTBYNAME_R_3_ARG)
     struct hostent_data data;
     struct hostent hent;
     memset(&data, 0, sizeof(data));
