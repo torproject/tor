@@ -11,6 +11,8 @@ ARMA    - arma claims
         X Abandoned
 
       0.0.9pre4:
+        - Don't use FascistFirewall if you're going via Tor, or if
+          you're going via HttpProxy.
         - make RecommendedVersions a CONFIG_TYPE_LINELIST option
 R       . bandwidth buckets for write as well as read.
 N       - Handle rendezvousing with unverified nodes.
