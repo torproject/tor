@@ -1307,8 +1307,9 @@ int dirserv_dump_directory_to_string(char *s, size_t maxlen,
                                      crypto_pk_env_t *private_key);
 void directory_set_dirty(void);
 size_t dirserv_get_directory(const char **cp, int compress);
-size_t dirserv_get_runningrouters(const char **rr);
-void dirserv_set_cached_directory(const char *directory, time_t when);
+size_t dirserv_get_runningrouters(const char **rr, int compress);
+void dirserv_set_cached_directory(const char *directory, time_t when,
+                                  int is_running_routers);
 
 /********************************* dns.c ***************************/
 

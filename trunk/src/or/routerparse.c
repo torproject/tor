@@ -390,7 +390,7 @@ router_parse_routerlist_from_directory(const char *str,
   if(!get_options()->AuthoritativeDir) {
     /* Now that we know the signature is okay, and we have a
      * publication time, cache the directory. */
-    dirserv_set_cached_directory(str, published_on);
+    dirserv_set_cached_directory(str, published_on, 0);
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_RECOMMENDED_SOFTWARE))) {
@@ -475,6 +475,7 @@ router_parse_routerlist_from_directory(const char *str,
   return r;
 }
 
+/* DOCDOC */
 running_routers_t *
 router_parse_runningrouters(const char *str)
 {
@@ -512,6 +513,12 @@ router_parse_runningrouters(const char *str)
   tor_assert(tok->n_args == 1);
   if (parse_iso_time(tok->args[0], &published_on) < 0) {
      goto err;
+  }
+
+  if(!get_options()->AuthoritativeDir) {
+    /* Now that we know the signature is okay, and we have a
+     * publication time, cache the list. */
+    dirserv_set_cached_directory(str, published_on, 1);
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_ROUTER_STATUS))) {
