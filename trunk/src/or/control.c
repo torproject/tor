@@ -37,7 +37,7 @@
 #define CONTROL_CMD_SETEVENTS    0x0005
 #define CONTROL_CMD_EVENT        0x0006
 #define CONTROL_CMD_AUTHENTICATE 0x0007
-#define CONTROL_CMD_SAFECONF     0x0008
+#define CONTROL_CMD_SAVECONF     0x0008
 #define _CONTROL_CMD_MAX_RECOGNIZED 0x0008
 
 /* Recognized error codes. */
@@ -440,7 +440,7 @@ connection_control_process_inbuf(connection_t *conn) {
       if (handle_control_authenticate(conn, body_len, body))
         return -1;
       break;
-    case CONTROL_CMD_SAFECONF:
+    case CONTROL_CMD_SAVECONF:
       if (handle_control_saveconf(conn, body_len, body))
         return -1;
       break;
