@@ -124,7 +124,7 @@ static void circuit_free(circuit_t *circ) {
   }
 
   memset(circ, 0xAA, sizeof(circuit_t)); /* poison memory */
-  free(circ);
+  tor_free(circ);
 }
 
 /** Deallocate space associated with the linked list <b>cpath</b>. */
@@ -158,7 +158,7 @@ void circuit_free_cpath_node(crypt_path_t *victim) {
     crypto_free_digest_env(victim->b_digest);
   if(victim->handshake_state)
     crypto_dh_free(victim->handshake_state);
-  free(victim);
+  tor_free(victim);
 }
 
 /** Return a circ such that:

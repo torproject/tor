@@ -275,7 +275,7 @@ static void free_descriptor_entry(descriptor_entry_t *desc)
   tor_free(desc->descriptor);
   tor_free(desc->nickname);
   routerinfo_free(desc->router);
-  free(desc);
+  tor_free(desc);
 }
 
 /** Release all storage that the dirserv is holding for server
@@ -594,7 +594,7 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
            "running-routers %s\n\n",
            published, options.RecommendedVersions, cp);
 
-  free(cp);
+  tor_free(cp);
   i = strlen(s);
   cp = s+i;
 
@@ -749,7 +749,7 @@ static int dirserv_regenerate_directory(void)
     tor_cleanup();
     exit(0);
   }
-  free(new_directory);
+  tor_free(new_directory);
   if(get_data_directory(&options)) {
     snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
     if(write_str_to_file(filename,the_directory,0) < 0) {
