@@ -15,6 +15,7 @@ extern or_options_t options; /* command-line and config-file options */
 static int the_directory_is_dirty = 1;
 
 static int list_running_servers(char **nicknames_out);
+static void directory_remove_unrecognized(void);
 
 /************** Fingerprint handling code ************/
 
@@ -98,6 +99,8 @@ dirserv_parse_fingerprint_file(const char *fname)
     memcpy(fingerprint_list, fingerprint_list_tmp,
            sizeof(fingerprint_entry_t)*n_fingerprints_tmp);
     n_fingerprints = n_fingerprints_tmp;
+    /* Delete any routers whose fingerprints we no longer recognize */
+    directory_remove_unrecognized();
     return 0;
   }
   /* error */
@@ -163,6 +166,7 @@ typedef struct descriptor_entry_t {
   time_t published;
   size_t desc_len;
   char *descriptor;
+  routerinfo_t *router;
 } descriptor_entry_t;
 
 static descriptor_entry_t *descriptor_list[MAX_ROUTERS_IN_DIR];
@@ -172,6 +176,7 @@ static void free_descriptor_entry(descriptor_entry_t *desc)
 {
   tor_free(desc->descriptor);
   tor_free(desc->nickname);
+  routerinfo_free(desc->router);
   free(desc);
 }
 
@@ -293,11 +298,25 @@ dirserv_add_descriptor(const char **desc)
   (*desc_ent_ptr)->descriptor = tor_malloc(desc_len+1);
   strncpy((*desc_ent_ptr)->descriptor, start, desc_len);
   (*desc_ent_ptr)->descriptor[desc_len] = '\0';
+  (*desc_ent_ptr)->router = ri;
   *desc = end;
   directory_set_dirty();
 
-  routerinfo_free(ri);
   return 1;
+}
+
+static void
+directory_remove_unrecognized(void)
+{
+  int i;
+  for (i = 0; i < n_descriptors; ++i) {
+    if (dirserv_router_fingerprint_is_known(descriptor_list[i]->router)<=0) {
+      log(LOG_INFO, "Router %s is no longer recognized",
+          descriptor_list[i]->nickname);
+      free_descriptor_entry(descriptor_list[i]);
+      descriptor_list[i--] = descriptor_list[--n_descriptors];
+    }
+  }
 }
 
 void
