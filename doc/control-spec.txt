@@ -42,6 +42,13 @@ section 3 below.  If the type is not recognized, servers respond with a
 "STAT" message (code UNRECOGNIZED; see 3.1 below), and clients simply ignore
 the message.
 
+2.1. Types and encodings
+
+  All numbers are given in big-endian (network) order.
+
+  OR identities are given in hexadecimal, in the same format as identity key
+  fingerprints, but without spaces; see tor-spec.txt for more information.
+
 3. Message types
 
 3.1. ERROR (Type 0x0000)
@@ -134,10 +141,6 @@ the message.
   virtual keyword to get all HiddenServiceDir, HiddenServicePort,
   HiddenServiceNodes, and HiddenServiceExcludeNodes option settings.
 
-  As another exception, the controller can getconf the "version" string,
-  and Tor will return a string describing its version number. Setconf on
-  "version" will not work.
-
 3.5. CONFVALUE (Type 0x0004)
 
   Sent in response to a GETCONF message; contains a list of "Key Value\n"
@@ -197,7 +200,7 @@ the message.
       0x0006 -- New descriptors available
 
                 OR List [NUL-terminated, comma-delimited list of
-                    OR nickname/identity]
+                    OR identity]
 
 3.8. AUTHENTICATE (Type 0x0007)
 
@@ -216,13 +219,13 @@ the message.
   Sent from the client to the server. The body contains one byte that
   indicates the action the client wishes the server to take.
 
-      0x01 -- Reload: reload config items, refetch directory.
-      0x02 -- Controlled shutdown: if server is an OP, exit immediately.
-              If it's an OR, close listeners and exit after 30 seconds.
-      0x10 -- Dump stats: log information about open connections and
-              circuits.
-      0x12 -- Debug: switch all open logs to loglevel debug.
-      0x15 -- Immediate shutdown: clean up and exit now.
+       1 (0x01) -- Reload: reload config items, refetch directory.
+       2 (0x02) -- Controlled shutdown: if server is an OP, exit immediately.
+                   If it's an OR, close listeners and exit after 30 seconds.
+      10 (0x0A) -- Dump stats: log information about open connections and
+                   circuits.
+      12 (0x0C) -- Debug: switch all open logs to loglevel debug.
+      15 (0x0F) -- Immediate shutdown: clean up and exit now.
 
   The server responds with DONE if the signal is recognized (or simply
   closes the socket if it was asked to close immediately), else ERROR.
@@ -231,33 +234,28 @@ the message.
 
   [Proposal; not finalized]
 
-  Sent from the client to the server.  The body contains:
-     Original address type [1 octet]
-     Original address [Variable length]
-     Replacement address type [1 octet]
-     Replacement address [Variable length]
+  Sent from the client to the server.  The body contains a sequence of
+  address mappings, each consisting of the address to be mapped, a single
+  space, the replacement address, and a NL character.
 
-  Addresses types can be:
-     [0x01] for an IPv4 address (4 octets)
-     [0x02] for an IPv6 address (16 octets)
-     [0x03] for a hostname (variable-length, NUL-terminated)
+  Addresses may be IPv4 addresses, IPv6 addresses, or hostnames.
 
   The client sends this message to the server in order to tell it that future
   SOCKS requests for connections to the original address should be replaced
   with connections to the specified replacement address.  If the addresses
   are well-formed, and the server is able to fulfill the request, the server
-  replies with a single ADDRESSMAPPED message containing the source and
-  destination addresses.  If request is malformed, the server replies with
-  a syntax error message.  The server can't fulfill the request, it replies
-  with an internal ERROR message.
+  replies with a single DONE message containing the source and destination
+  addresses.  If request is malformed, the server replies with a syntax error
+  message.  The server can't fulfill the request, it replies with an internal
+  ERROR message.
 
   The client may decline to provide a body for the original address, and
-  instead send a special null address (0.0.0.0 for IPv4, ::0 for IPv6, or
-  "."  for hostname).  This signifies that the server should choose the
-  original address itself, and return that address in the ADDRESSMAPPED
-  message.  The server should ensure that an element of address space
-  that is unlikely to be in actual use.  If there is already an address
-  mapped to the destination address, the server may reuse that mapping.
+  instead send a special null address (0.0.0.0 for IPv4, ::0 for IPv6, or "."
+  for hostname).  This signifies that the server should choose the original
+  address itself, and return that address in the DONE message.  The server
+  should ensure that an element of address space that is unlikely to be in
+  actual use.  If there is already an address mapped to the destination
+  address, the server may reuse that mapping.
 
   If the original address is already mapped to a different address, the old
   mapping is removed.  If the original address and the destination address
@@ -279,22 +277,42 @@ the message.
   [XXXX When, if ever, can mappings expire?  Should they expire?]
   [XXXX What addresses, if any, are safe to use?]
 
-3.12 ADDRESSMAPPED (Type 0x000B)
+3.12 GETINFO (Type 0x000B)
 
   [Proposal; not finalized]
 
-  Same format as MAPADDRESS.
+  Sent from the client to the server.  The message body is as for GETCONF:
+  one or more NL-terminated strings.  The server replies with an INFOVALUE
+  message.
 
-  This message is sent from the server to the client in response to a
-  MAPADDRESS or GETALLMAPPINGS message.
+  Unlike GETCONF, this message is used for data that are not stored in the
+  Tor configuration file, but instead.
 
-3.13 GETALLMAPPINGS (Type 0x000C)
+  Recognized key and their values include:
+
+    "version" -- The version of the server's software, including the name
+      of the software. (example: "Tor 0.0.9.4")
+
+    "desc/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest server
+      descriptor for a given OR, NUL-terminated.  If no such OR is known, the
+      corresponding value is an empty string.
+
+    "desc/all-ids" -- a comma-separated list of all known OR identities.
+
+    "addr-mappings" -- a NL-terminated list of address mappings, each in
+      the form of "from-address" SP "to-address".
+
+3.13 INFOVALUE (Type 0x000C)
 
   [Proposal; not finalized]
 
-  Sent from the client to the server.  The server replies by sending an
-  ADDRESSMAPPED message for each current address mapping set by MAPADDRESS or
-  otherwise, followed by a DONE message.
+  Sent from the server to the client in response to a GETINFO message.
+  Contains one or more items of the format:
+
+     Key          [(NUL-terminated string)]
+     Value        [(NUL-terminated string)]
+
+  The keys match those given in the GETINFO message.
 
 3.14 EXTENDCIRCUIT (Type 0x000D)
 
@@ -306,7 +324,7 @@ the message.
 
   This request takes one of two forms: either the Circuit ID is zero, in
   which case it is a request for the server to build a new circuit according
-  to the specified path, or the Circuit ID is nonzero, in which case it is a 
+  to the specified path, or the Circuit ID is nonzero, in which case it is a
   request for the server to extend an existing circuit with that ID according
   to the specified path.
 
@@ -326,29 +344,7 @@ the message.
   associated with the specified circuit.  Each stream may be associated with
   at most one circuit, and multiple streams may share the same circuit.
 
-3.16 GETDESCRIPTOR (Type 0x000F)
-
-  [Proposal; not finalized]
-
-  Sent from the client to the server.  The message body contains one field:
-      OR nickname/identity [NUL-terminated]
-
-  This message informs the server that it should send to the client a
-  complete descriptor corresponding to the specified router.  If the router
-  field is non-empty, and the server has a descriptor for the router
-  specified, then the server should return the descriptor in the body of its
-  DONE message:
-      Descriptor [NUL-terminated string]
-
-  (If the server does not have a descriptor for the router specified, then
-  it should return an error.)
-
-  If the GETDESCRIPTOR message contains an empty body, then the server
-  should interpret the message as a request to send its list of descriptors.
-  The server then provides this list  in the body of its DONE message:
-      OR List [NUL-terminated, comma-delimited list of OR nickname/identity]
-
-4.16 POSTDESCRIPTOR (Type 0x0010)
+3.16 POSTDESCRIPTOR (Type 0x000F)
 
   [Proposal; not finalized]
 
@@ -361,7 +357,7 @@ the message.
   fields, including fields for its nickname and identity.
 
   If there is an error in parsing the descriptor, or if the server rejects
-  the descriptor for any reason, the server should send an appropriate error
+  the descriptor for any reason, the server must send an appropriate error
   message.
 
 4. Implementation notes
