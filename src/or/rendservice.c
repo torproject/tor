@@ -394,7 +394,7 @@ rend_service_introduce(circuit_t *circuit, const char *request, size_t request_l
   }
   /* Next N bytes is encrypted with service key */
   r = crypto_pk_private_hybrid_decrypt(
-       service->private_key,request+DIGEST_LEN,request_len-DIGEST_LEN,buf,
+       service->private_key,buf,request+DIGEST_LEN,request_len-DIGEST_LEN,
        PK_PKCS1_OAEP_PADDING,1);
   if (r<0) {
     log_fn(LOG_WARN, "Couldn't decrypt INTRODUCE2 cell");
@@ -592,10 +592,10 @@ rend_service_intro_has_opened(circuit_t *circuit)
   len += 2;
   memcpy(auth, circuit->cpath->prev->handshake_digest, DIGEST_LEN);
   memcpy(auth+DIGEST_LEN, "INTRODUCE", 9);
-  if (crypto_digest(auth, DIGEST_LEN+9, buf+len))
+  if (crypto_digest(buf+len, auth, DIGEST_LEN+9))
     goto err;
   len += 20;
-  r = crypto_pk_private_sign_digest(service->private_key, buf, len, buf+len);
+  r = crypto_pk_private_sign_digest(service->private_key, buf+len, buf, len);
   if (r<0) {
     log_fn(LOG_WARN, "Couldn't sign introduction request");
     goto err;

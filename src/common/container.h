@@ -21,7 +21,7 @@ int smartlist_string_isin(const smartlist_t *sl, const char *element);
 int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
-void *smartlist_choose(const smartlist_t *sl);
+/* smartlist_choose() is defined in crypto.[ch] */
 void *smartlist_get(const smartlist_t *sl, int idx);
 void *smartlist_set(smartlist_t *sl, int idx, void *val);
 void *smartlist_del(smartlist_t *sl, int idx);

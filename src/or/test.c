@@ -274,8 +274,8 @@ test_crypto(void)
 
   /* Try out RNG. */
   test_assert(! crypto_seed_rng());
-  crypto_rand(100, data1);
-  crypto_rand(100, data2);
+  crypto_rand(data1, 100);
+  crypto_rand(data2, 100);
   test_memneq(data1,data2,100);
 
 #if 0
@@ -287,7 +287,7 @@ test_crypto(void)
   for(i = 0; i < 1024; ++i) {
     data1[i] = (char) i*73;
   }
-  crypto_cipher_encrypt(env1, data1, 1024, data2);
+  crypto_cipher_encrypt(env1, data2, data1, 1024);
   test_memeq(data1, data2, 1024);
   crypto_free_cipher_env(env1);
 #endif
@@ -309,25 +309,25 @@ test_crypto(void)
   crypto_cipher_decrypt_init_cipher(env2);
 
   /* Try encrypting 512 chars. */
-  crypto_cipher_encrypt(env1, data1, 512, data2);
-  crypto_cipher_decrypt(env2, data2, 512, data3);
+  crypto_cipher_encrypt(env1, data2, data1, 512);
+  crypto_cipher_decrypt(env2, data3, data2, 512);
   test_memeq(data1, data3, 512);
   test_memneq(data1, data2, 512);
 
   /* Now encrypt 1 at a time, and get 1 at a time. */
   for (j = 512; j < 560; ++j) {
-    crypto_cipher_encrypt(env1, data1+j, 1, data2+j);
+    crypto_cipher_encrypt(env1, data2+j, data1+j, 1);
   }
   for (j = 512; j < 560; ++j) {
-    crypto_cipher_decrypt(env2, data2+j, 1, data3+j);
+    crypto_cipher_decrypt(env2, data3+j, data2+j, 1);
   }
   test_memeq(data1, data3, 560);
   /* Now encrypt 3 at a time, and get 5 at a time. */
   for (j = 560; j < 1024-5; j += 3) {
-    crypto_cipher_encrypt(env1, data1+j, 3, data2+j);
+    crypto_cipher_encrypt(env1, data2+j, data1+j, 3);
   }
   for (j = 560; j < 1024-5; j += 5) {
-    crypto_cipher_decrypt(env2, data2+j, 5, data3+j);
+    crypto_cipher_decrypt(env2, data3+j, data2+j, 5);
   }
   test_memeq(data1, data3, 1024-5);
   /* Now make sure that when we encrypt with different chunk sizes, we get
@@ -340,7 +340,7 @@ test_crypto(void)
   crypto_cipher_set_key(env2, crypto_cipher_get_key(env1));
   crypto_cipher_encrypt_init_cipher(env2);
   for (j = 0; j < 1024-16; j += 17) {
-    crypto_cipher_encrypt(env2, data1+j, 17, data3+j);
+    crypto_cipher_encrypt(env2, data3+j, data1+j, 17);
   }
   for (j= 0; j < 1024-16; ++j) {
     if (data2[j] != data3[j]) {
@@ -355,7 +355,7 @@ test_crypto(void)
   /* XXXX Look up some test vectors for the ciphers and make sure we match. */
 
   /* Test SHA-1 with a test vector from the specification. */
-  i = crypto_digest("abc", 3, data1);
+  i = crypto_digest(data1, "abc", 3);
   test_memeq(data1,
              "\xA9\x99\x3E\x36\x47\x06\x81\x6A\xBA\x3E\x25\x71\x78"
              "\x50\xC2\x6C\x9C\xD0\xD8\x9D", 20);
@@ -386,25 +386,25 @@ test_crypto(void)
   test_eq(128, crypto_pk_keysize(pk1));
   test_eq(128, crypto_pk_keysize(pk2));
 
-  test_eq(128, crypto_pk_public_encrypt(pk2, "Hello whirled.", 15, data1,
+  test_eq(128, crypto_pk_public_encrypt(pk2, data1, "Hello whirled.", 15,
                                         PK_PKCS1_OAEP_PADDING));
-  test_eq(128, crypto_pk_public_encrypt(pk1, "Hello whirled.", 15, data2,
+  test_eq(128, crypto_pk_public_encrypt(pk1, data2, "Hello whirled.", 15,
                                         PK_PKCS1_OAEP_PADDING));
   /* oaep padding should make encryption not match */
   test_memneq(data1, data2, 128);
-  test_eq(15, crypto_pk_private_decrypt(pk1, data1, 128, data3,
+  test_eq(15, crypto_pk_private_decrypt(pk1, data3, data1, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
   test_streq(data3, "Hello whirled.");
   memset(data3, 0, 1024);
-  test_eq(15, crypto_pk_private_decrypt(pk1, data2, 128, data3,
+  test_eq(15, crypto_pk_private_decrypt(pk1, data3, data2, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
   test_streq(data3, "Hello whirled.");
   /* Can't decrypt with public key. */
-  test_eq(-1, crypto_pk_private_decrypt(pk2, data2, 128, data3,
+  test_eq(-1, crypto_pk_private_decrypt(pk2, data3, data2, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
   /* Try again with bad padding */
   memcpy(data2+1, "XYZZY", 5);  /* This has fails ~ once-in-2^40 */
-  test_eq(-1, crypto_pk_private_decrypt(pk1, data2, 128, data3,
+  test_eq(-1, crypto_pk_private_decrypt(pk1, data3, data2, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
 
   /* File operations: save and load private key */
@@ -413,17 +413,17 @@ test_crypto(void)
 
   test_assert(! crypto_pk_read_private_key_from_filename(pk2,
                                                          get_fname("pkey1")));
-  test_eq(15, crypto_pk_private_decrypt(pk2, data1, 128, data3,
+  test_eq(15, crypto_pk_private_decrypt(pk2, data3, data1, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
 
   /* Now try signing. */
   strcpy(data1, "Ossifrage");
-  test_eq(128, crypto_pk_private_sign(pk1, data1, 10, data2));
-  test_eq(10, crypto_pk_public_checksig(pk1, data2, 128, data3));
+  test_eq(128, crypto_pk_private_sign(pk1, data2, data1, 10));
+  test_eq(10, crypto_pk_public_checksig(pk1, data3, data2, 128));
   test_streq(data3, "Ossifrage");
   /* Try signing digests. */
-  test_eq(128, crypto_pk_private_sign_digest(pk1, data1, 10, data2));
-  test_eq(20, crypto_pk_public_checksig(pk1, data2, 128, data3));
+  test_eq(128, crypto_pk_private_sign_digest(pk1, data2, data1, 10));
+  test_eq(20, crypto_pk_public_checksig(pk1, data3, data2, 128));
   test_eq(0, crypto_pk_public_checksig_digest(pk1, data1, 10, data2, 128));
   test_eq(-1, crypto_pk_public_checksig_digest(pk1, data1, 11, data2, 128));
   /*XXXX test failed signing*/
@@ -437,7 +437,7 @@ test_crypto(void)
   test_assert(crypto_pk_cmp_keys(pk1,pk2) == 0);
 
   /* Try with hybrid encryption wrappers. */
-  crypto_rand(1024, data1);
+  crypto_rand(data1, 1024);
   for (i = 0; i < 3; ++i) {
     for (j = 85; j < 140; ++j) {
       memset(data2,0,1024);
@@ -446,9 +446,9 @@ test_crypto(void)
         continue;
       p = (i==0)?PK_NO_PADDING:
         (i==1)?PK_PKCS1_PADDING:PK_PKCS1_OAEP_PADDING;
-      len = crypto_pk_public_hybrid_encrypt(pk1,data1,j,data2,p,0);
+      len = crypto_pk_public_hybrid_encrypt(pk1,data2,data1,j,p,0);
       test_assert(len>=0);
-      len = crypto_pk_private_hybrid_decrypt(pk1,data2,len,data3,p,1);
+      len = crypto_pk_private_hybrid_decrypt(pk1,data3,data2,len,p,1);
       test_eq(len,j);
       test_memeq(data1,data3,j);
     }

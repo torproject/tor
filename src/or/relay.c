@@ -113,8 +113,8 @@ static int relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
 
   relay_header_unpack(&rh, in);
 //  log_fn(LOG_DEBUG,"before crypt: %d",rh.recognized);
-  if(( encrypt_mode && crypto_cipher_encrypt(cipher, in, CELL_PAYLOAD_SIZE, out)) ||
-     (!encrypt_mode && crypto_cipher_decrypt(cipher, in, CELL_PAYLOAD_SIZE, out))) {
+  if(( encrypt_mode && crypto_cipher_encrypt(cipher, out, in, CELL_PAYLOAD_SIZE)) ||
+     (!encrypt_mode && crypto_cipher_decrypt(cipher, out, in, CELL_PAYLOAD_SIZE))) {
     log_fn(LOG_WARN,"Error during relay encryption");
     return -1;
   }

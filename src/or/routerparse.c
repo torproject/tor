@@ -654,7 +654,7 @@ static int check_directory_signature(const char *digest,
 
   tor_assert(_pkey);
 
-  if (crypto_pk_public_checksig(_pkey, tok->object_body, 128, signed_digest)
+  if (crypto_pk_public_checksig(_pkey, signed_digest, tok->object_body, 128)
       != 20) {
     log_fn(LOG_WARN, "Error reading directory: invalid signature.");
     return -1;
@@ -903,8 +903,8 @@ routerinfo_t *router_parse_entry_from_string(const char *s,
     log_fn(LOG_WARN, "Bad object type or length on router signature");
     goto err;
   }
-  if ((t=crypto_pk_public_checksig(router->identity_pkey, tok->object_body,
-                                   128, signed_digest)) != 20) {
+  if ((t=crypto_pk_public_checksig(router->identity_pkey, signed_digest,
+                                   tok->object_body, 128)) != 20) {
     log_fn(LOG_WARN, "Invalid signature %d",t); goto err;
   }
   if (memcmp(digest, signed_digest, 20)) {
@@ -1377,7 +1377,7 @@ static int router_get_hash_impl(const char *s, char *digest,
   }
   ++end;
 
-  if (crypto_digest(start, end-start, digest)) {
+  if (crypto_digest(digest, start, end-start)) {
     log_fn(LOG_WARN,"couldn't compute digest");
     return -1;
   }

@@ -31,7 +31,7 @@ rend_client_send_establish_rendezvous(circuit_t *circ)
   tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND);
   log_fn(LOG_INFO, "Sending an ESTABLISH_RENDEZVOUS cell");
 
-  if (crypto_rand(REND_COOKIE_LEN, circ->rend_cookie)<0) {
+  if (crypto_rand(circ->rend_cookie, REND_COOKIE_LEN) < 0) {
     log_fn(LOG_WARN, "Couldn't get random cookie");
     circuit_mark_for_close(circ);
     return -1;
@@ -113,13 +113,12 @@ rend_client_send_introduction(circuit_t *introcirc, circuit_t *rendcirc) {
 
   /*XXX maybe give crypto_pk_public_hybrid_encrypt a max_len arg,
    * to avoid buffer overflows? */
-  r = crypto_pk_public_hybrid_encrypt(entry->parsed->pk, tmp,
+  r = crypto_pk_public_hybrid_encrypt(entry->parsed->pk, payload+DIGEST_LEN, tmp,
 #if 0
                            1+MAX_HEX_NICKNAME_LEN+1+REND_COOKIE_LEN+DH_KEY_LEN,
 #else
                            MAX_NICKNAME_LEN+1+REND_COOKIE_LEN+DH_KEY_LEN,
 #endif
-                                      payload+DIGEST_LEN,
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
     log_fn(LOG_WARN,"hybrid pk encrypt failed.");

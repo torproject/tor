@@ -589,7 +589,9 @@ crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *env) {
  * write the result to <b>to</b>, and return the number of bytes
  * written.  On failure, return -1.
  */
-int crypto_pk_public_encrypt(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to, int padding)
+int
+crypto_pk_public_encrypt(crypto_pk_env_t *env, unsigned char *to,
+                         const unsigned char *from, int fromlen, int padding)
 {
   int r;
   tor_assert(env);
@@ -610,7 +612,10 @@ int crypto_pk_public_encrypt(crypto_pk_env_t *env, const unsigned char *from, in
  * write the result to <b>to</b>, and return the number of bytes
  * written.  On failure, return -1.
  */
-int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to, int padding, int warnOnFailure)
+int
+crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *to,
+                          const unsigned char *from, int fromlen,
+                          int padding, int warnOnFailure)
 {
   int r;
   tor_assert(env);
@@ -636,7 +641,9 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, const unsigned char *from, i
  * signed data to <b>to</b>, and return the number of bytes written.
  * On failure, return -1.
  */
-int crypto_pk_public_checksig(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
+int
+crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *to,
+                          const unsigned char *from, int fromlen)
 {
   int r;
   tor_assert(env);
@@ -651,12 +658,48 @@ int crypto_pk_public_checksig(crypto_pk_env_t *env, const unsigned char *from, i
   return r;
 }
 
+/** Check a siglen-byte long signature at <b>sig</b> against
+ * <b>datalen</b> bytes of data at <b>data</b>, using the public key
+ * in <b>env</b>. Return 0 if <b>sig</b> is a correct signature for
+ * SHA1(data).  Else return -1.
+ */
+int
+crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const unsigned char *data,
+                                 int datalen, const unsigned char *sig, int siglen)
+{
+  char digest[DIGEST_LEN];
+  char buf[PK_BYTES+1];
+  int r;
+
+  tor_assert(env);
+  tor_assert(data);
+  tor_assert(sig);
+
+  if (crypto_digest(digest,data,datalen)<0) {
+    log_fn(LOG_WARN, "couldn't compute digest");
+    return -1;
+  }
+  r = crypto_pk_public_checksig(env,buf,sig,siglen);
+  if (r != DIGEST_LEN) {
+    log_fn(LOG_WARN, "Invalid signature");
+    return -1;
+  }
+  if (memcmp(buf, digest, DIGEST_LEN)) {
+    log_fn(LOG_WARN, "Signature mismatched with digest.");
+    return -1;
+  }
+
+  return 0;
+}
+
 /** Sign <b>fromlen</b> bytes of data from <b>from</b> with the private key in
  * <b>env</b>, using PKCS1 padding.  On success, write the signature to
  * <b>to</b>, and return the number of bytes written.  On failure, return
  * -1.
  */
-int crypto_pk_private_sign(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
+int
+crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *to,
+                       const unsigned char *from, int fromlen)
 {
   int r;
   tor_assert(env);
@@ -674,49 +717,19 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, const unsigned char *from, int 
   return r;
 }
 
-/** Check a siglen-byte long signature at <b>sig</b> against
- * <b>datalen</b> bytes of data at <b>data</b>, using the public key
- * in <b>env</b>. Return 0 if <b>sig</b> is a correct signature for
- * SHA1(data).  Else return -1.
- */
-int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const unsigned char *data, int datalen, const unsigned char *sig, int siglen)
-{
-  char digest[DIGEST_LEN];
-  char buf[PK_BYTES+1];
-  int r;
-
-  tor_assert(env);
-  tor_assert(data);
-  tor_assert(sig);
-
-  if (crypto_digest(data,datalen,digest)<0) {
-    log_fn(LOG_WARN, "couldn't compute digest");
-    return -1;
-  }
-  r = crypto_pk_public_checksig(env,sig,siglen,buf);
-  if (r != DIGEST_LEN) {
-    log_fn(LOG_WARN, "Invalid signature");
-    return -1;
-  }
-  if (memcmp(buf, digest, DIGEST_LEN)) {
-    log_fn(LOG_WARN, "Signature mismatched with digest.");
-    return -1;
-  }
-
-  return 0;
-}
-
 /** Compute a SHA1 digest of <b>fromlen</b> bytes of data stored at
  * <b>from</b>; sign the data with the private key in <b>env</b>, and
  * store it in <b>to</b>.  Return the number of bytes written on
  * success, and -1 on failure.
  */
-int crypto_pk_private_sign_digest(crypto_pk_env_t *env, const unsigned char *from, int fromlen, unsigned char *to)
+int
+crypto_pk_private_sign_digest(crypto_pk_env_t *env, unsigned char *to,
+                              const unsigned char *from, int fromlen)
 {
   char digest[DIGEST_LEN];
-  if (crypto_digest(from,fromlen,digest)<0)
+  if (crypto_digest(digest,from,fromlen)<0)
     return -1;
-  return crypto_pk_private_sign(env,digest,DIGEST_LEN,to);
+  return crypto_pk_private_sign(env,to,digest,DIGEST_LEN);
 }
 
 
@@ -738,8 +751,9 @@ int crypto_pk_private_sign_digest(crypto_pk_env_t *env, const unsigned char *fro
  *     the source data encrypted in AES-CTR mode with the symmetric key.
  */
 int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
+                                    unsigned char *to,
                                     const unsigned char *from,
-                                    int fromlen, unsigned char *to,
+                                    int fromlen,
                                     int padding, int force)
 {
   int overhead, pkeylen, outlen, r, symlen;
@@ -758,7 +772,7 @@ int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
 
   if (!force && fromlen+overhead <= pkeylen) {
     /* It all fits in a single encrypt. */
-    return crypto_pk_public_encrypt(env,from,fromlen,to,padding);
+    return crypto_pk_public_encrypt(env,to,from,fromlen,padding);
   }
   cipher = crypto_new_cipher_env();
   if (!cipher) return -1;
@@ -780,13 +794,12 @@ int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
   /* Length of symmetrically encrypted data. */
   symlen = fromlen-(pkeylen-overhead-CIPHER_KEY_LEN);
 
-  outlen = crypto_pk_public_encrypt(env,buf,pkeylen-overhead,to,padding);
+  outlen = crypto_pk_public_encrypt(env,to,buf,pkeylen-overhead,padding);
   if (outlen!=pkeylen) {
     goto err;
   }
-  r = crypto_cipher_encrypt(cipher,
-                            from+pkeylen-overhead-CIPHER_KEY_LEN, symlen,
-                            to+outlen);
+  r = crypto_cipher_encrypt(cipher, to+outlen,
+                            from+pkeylen-overhead-CIPHER_KEY_LEN, symlen);
 
   if (r<0) goto err;
   memset(buf, 0, sizeof(buf));
@@ -800,8 +813,9 @@ int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
 
 /** Invert crypto_pk_public_hybrid_encrypt. */
 int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
+                                     unsigned char *to,
                                      const unsigned char *from,
-                                     int fromlen, unsigned char *to,
+                                     int fromlen,
                                      int padding, int warnOnFailure)
 {
   int overhead, pkeylen, outlen, r;
@@ -812,9 +826,9 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   pkeylen = crypto_pk_keysize(env);
 
   if (fromlen <= pkeylen) {
-    return crypto_pk_private_decrypt(env,from,fromlen,to,padding,warnOnFailure);
+    return crypto_pk_private_decrypt(env,to,from,fromlen,padding,warnOnFailure);
   }
-  outlen = crypto_pk_private_decrypt(env,from,pkeylen,buf,padding,warnOnFailure);
+  outlen = crypto_pk_private_decrypt(env,buf,from,pkeylen,padding,warnOnFailure);
   if (outlen<0) {
     log_fn(warnOnFailure?LOG_WARN:LOG_INFO, "Error decrypting public-key data");
     return -1;
@@ -829,8 +843,7 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   }
   memcpy(to,buf+CIPHER_KEY_LEN,outlen-CIPHER_KEY_LEN);
   outlen -= CIPHER_KEY_LEN;
-  r = crypto_cipher_decrypt(cipher, from+pkeylen, fromlen-pkeylen,
-                            to+outlen);
+  r = crypto_cipher_decrypt(cipher, to+outlen, from+pkeylen, fromlen-pkeylen);
   if (r<0)
     goto err;
   memset(buf,0,sizeof(buf));
@@ -912,7 +925,7 @@ int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
     free(buf);
     return -1;
   }
-  if (crypto_digest(buf, len, digest_out) < 0) {
+  if (crypto_digest(digest_out, buf, len) < 0) {
     free(buf);
     return -1;
   }
@@ -975,7 +988,7 @@ int crypto_cipher_generate_key(crypto_cipher_env_t *env)
 {
   tor_assert(env);
 
-  return crypto_rand(CIPHER_KEY_LEN, env->key);
+  return crypto_rand(env->key, CIPHER_KEY_LEN);
 }
 
 /** Set the symmetric key for the cipher in <b>env</b> to the first
@@ -1028,7 +1041,9 @@ int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env)
  * <b>env</b>; on success, store the result to <b>to</b> and return 0.
  * On failure, return -1.
  */
-int crypto_cipher_encrypt(crypto_cipher_env_t *env, const unsigned char *from, unsigned int fromlen, unsigned char *to)
+int
+crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *to,
+                      const unsigned char *from, unsigned int fromlen)
 {
   tor_assert(env);
   tor_assert(env->cipher);
@@ -1044,7 +1059,9 @@ int crypto_cipher_encrypt(crypto_cipher_env_t *env, const unsigned char *from, u
  * <b>env</b>; on success, store the result to <b>to</b> and return 0.
  * On failure, return -1.
  */
-int crypto_cipher_decrypt(crypto_cipher_env_t *env, const unsigned char *from, unsigned int fromlen, unsigned char *to)
+int
+crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *to,
+                      const unsigned char *from, unsigned int fromlen)
 {
   tor_assert(env);
   tor_assert(from);
@@ -1079,7 +1096,7 @@ crypto_cipher_advance(crypto_cipher_env_t *env, long delta)
  * <b>m</b>.  Write the DIGEST_LEN byte result into <b>digest</b>.
  * Return 0 on suuccess, -1 on failure.
  */
-int crypto_digest(const unsigned char *m, int len, unsigned char *digest)
+int crypto_digest(unsigned char *digest, const unsigned char *m, int len)
 {
   tor_assert(m);
   tor_assert(digest);
@@ -1300,7 +1317,7 @@ int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
 /** Given a DH key exchange object, and our peer's value of g^y (as a
  * <b>pubkey_len</b>-byte value in <b>pubkey</b>) generate
  * <b>secret_bytes_out</b> bytes of shared key material and write them
- * to <b>secret_out</b>.  Return the number of bytes generated on suuccess,
+ * to <b>secret_out</b>.  Return the number of bytes generated on success,
  * or -1 on failure.
  *
  * (We generate key material by computing
@@ -1332,7 +1349,7 @@ int crypto_dh_compute_secret(crypto_dh_env_t *dh,
   /* sometimes secret_len might be less than 128, e.g., 127. that's ok. */
   for (i = 0; i < secret_bytes_out; i += DIGEST_LEN) {
     secret_tmp[secret_len] = (unsigned char) i/DIGEST_LEN;
-    if (crypto_digest(secret_tmp, secret_len+1, hash))
+    if (crypto_digest(hash, secret_tmp, secret_len+1))
       goto error;
     memcpy(secret_out+i, hash, MIN(DIGEST_LEN, secret_bytes_out-i));
   }
@@ -1428,7 +1445,7 @@ int crypto_seed_rng(void)
 /** Write n bytes of strong random data to <b>to</b>. Return 0 on
  * success, -1 on failure.
  */
-int crypto_rand(unsigned int n, unsigned char *to)
+int crypto_rand(unsigned char *to, unsigned int n)
 {
   int r;
   tor_assert(to);
@@ -1441,7 +1458,7 @@ int crypto_rand(unsigned int n, unsigned char *to)
 /** Write n bytes of pseudorandom data to <b>to</b>. Return 0 on
  * success, -1 on failure.
  */
-void crypto_pseudo_rand(unsigned int n, unsigned char *to)
+void crypto_pseudo_rand(unsigned char *to, unsigned int n)
 {
   tor_assert(to);
   if (RAND_pseudo_bytes(to, n) == -1) {
@@ -1465,7 +1482,7 @@ int crypto_pseudo_rand_int(unsigned int max) {
    */
   cutoff = UINT_MAX - (UINT_MAX%max);
   while(1) {
-    crypto_pseudo_rand(sizeof(val), (unsigned char*) &val);
+    crypto_pseudo_rand((unsigned char*) &val, sizeof(val));
     if (val < cutoff)
       return val % max;
   }
@@ -1550,7 +1567,6 @@ base32_encode(char *dest, size_t destlen, const char *src, size_t srclen)
   }
   dest[i] = '\0';
 }
-
 
 /*
   Local Variables:

@@ -67,6 +67,8 @@ const char *eat_whitespace(const char *s);
 const char *eat_whitespace_no_nl(const char *s);
 const char *find_whitespace(const char *s);
 
+void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
+int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 /* Time helpers */
 long tv_udiff(struct timeval *start, struct timeval *end);
