@@ -1482,16 +1482,16 @@ need for this approach, when
 the German government successfully ordered them to add a backdoor to
 all of their nodes \cite{jap-backdoor}.
 
-\emph{Run a recipient.} By running a webserver, an adversary
+\emph{Run a recipient.} An adversary running a webserver
 trivially learns the timing patterns of users connecting to it, and
-can introduce arbitrary patterns in its responses.  This can greatly
-facilitate end-to-end attacks: If the adversary can induce
+can introduce arbitrary patterns in its responses.
+End-to-end attacks become easier: if the adversary can induce
 users to connect to his webserver (perhaps by advertising
-content targeted at those users), she now holds one end of their
-connection.  Additionally, there is a danger that the application
-protocols and associated programs can be induced to reveal
-information about the initiator. Tor does not aim to solve this latter problem;
-we depend on Privoxy and similar protocol cleaners.
+content targeted to those users), she now holds one end of their
+connection.  There is also a danger that application
+protocols and associated programs can be induced to reveal information
+about the initiator. Tor depends on Privoxy and similar protocol cleaners
+to solve this latter problem.
   
 \emph{Run an onion proxy.} It is expected that end users will
 nearly always run their own local onion proxy. However, in some
@@ -1507,44 +1507,27 @@ by attacking non-observed nodes to shut them down, reduce
 their reliability, or persuade users that they are not trustworthy.
 The best defense here is robustness.
   
-\emph{Run a hostile node.}  In addition to being a
-local observer, an isolated hostile node can create circuits through
-itself, or alter traffic patterns to affect traffic at
-other nodes. (Its ability to directly DoS a neighbor is now limited
-by bandwidth throttling.) Nonetheless, in order to compromise the
-anonymity of a circuit by its observations, a
-hostile node must be immediately adjacent to both endpoints.
-If an adversary can
+\emph{Run a hostile OR.}  In addition to being a local observer,
+an isolated hostile node can create circuits through itself, or alter
+traffic patterns to affect traffic at other nodes. Nonetheless, a hostile
+node must be immediately adjacent to both endpoints to compromise the
+anonymity of a circuit. If an adversary can
 run multiple ORs, and can persuade the directory servers
 that those ORs are trustworthy and independent, then occasionally
 some user will choose one of those ORs for the start and another
-as the end of a circuit.  When this happens, the user's
-anonymity is compromised for those circuits.  If an adversary
+as the end of a circuit. If an adversary
 controls $m>1$ out of $N$ nodes, he should be able to correlate at most 
 $\left(\frac{m}{N}\right)^2$ of the traffic in this way---although an 
 adversary
 could possibly attract a disproportionately large amount of traffic
-by running an OR with an unusually permissive exit policy.
-
-%% Duplicate.
-%
-%\emph{Run a hostile directory server.} Directory servers control
-%admission to the network. However, because the network directory
-%must be signed by a majority of servers, the threat of a single
-%hostile server is minimized.
-  
-\emph{Selectively DoS a Tor node.} As noted, neighbors are
-bandwidth limited; however, it is possible to open enough
-circuits converging at a single onion router to
-overwhelm its network connection, CPU, or both.
-% We aim to address something like this attack with our congestion
-% control algorithm.
+by running an OR with an unusually permissive exit policy, or by
+degrading the reliability of other routers.
 
 \emph{Introduce timing into messages.} This is simply a stronger
 version of passive timing attacks already discussed earlier.
   
 \emph{Tagging attacks.} A hostile node could ``tag'' a
-cell by altering it. This would render it unreadable, but if the
+cell by altering it. If the
 stream were, for example, an unencrypted request to a Web site,
 the garbled content coming out at the appropriate time would confirm
 the association. However, integrity checks on cells prevent
@@ -1552,7 +1535,7 @@ this attack.
 
 \emph{Replace contents of unauthenticated protocols.}  When
 relaying an unauthenticated protocol like HTTP, a hostile exit node 
-can impersonate the target server.  Thus clients
+can impersonate the target server. Clients
 should prefer protocols with end-to-end authentication.
 
 \emph{Replay attacks.} Some anonymity protocols are vulnerable
@@ -1560,11 +1543,11 @@ to replay attacks.  Tor is not; replaying one side of a handshake
 will result in a different negotiated session key, and so the rest
 of the recorded session can't be used.  
 
-\emph{Smear attacks.} An attacker could use the Tor network to
-engage in socially disapproved acts, so as to try to bring the
-entire network into disrepute and get its operators to shut it down.
-Exit policies can help reduce the possibilities for abuse, but
-ultimately, the network will require volunteers who can tolerate
+\emph{Smear attacks.} An attacker could use the Tor network for
+socially disapproved acts, to bring the
+network into disrepute and get its operators to shut it down.
+Exit policies reduce the possibilities for abuse, but
+ultimately the network will require volunteers who can tolerate
 some political heat.
 
 \emph{Distribute hostile code.} An attacker could trick users
@@ -1573,7 +1556,7 @@ their connections---or worse, could trick ORs into running weakened
 software that provided users with less anonymity.  We address this
 problem (but do not solve it completely) by signing all Tor releases
 with an official public key, and including an entry in the directory
-listing which versions are currently believed to be secure.  To
+that lists which versions are currently believed to be secure.  To
 prevent an attacker from subverting the official release itself
 (through threats, bribery, or insider attacks), we provide all
 releases in source code form, encourage source audits, and
