@@ -539,7 +539,7 @@ router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
   TOK_IS(K_RUNNING_ROUTERS, "running-routers");
   n_good_nicknames = N_ARGS;
   memcpy(good_nickname_lst, ARGS, n_good_nicknames*sizeof(char *));
-  N_ARGS = 0; /* Don't free the strings in good_nickname_lst. */
+  N_ARGS = 0; /* Don't free the strings in good_nickname_lst yet. */
 
   /* Read the router list from s, advancing s up past the end of the last
    * router. */
@@ -548,6 +548,9 @@ router_get_routerlist_from_directory_impl(const char *s, routerlist_t **dest,
                                        (const char**)good_nickname_lst)) {
     log_fn(LOG_WARN, "Error reading routers from directory");
     goto err;
+  }
+  for (i = 0; i < n_good_nicknames; ++i) {
+    tor_free(good_nickname_lst[i]); /* now free them */
   }
   new_dir->software_versions = versions; versions = NULL;
   new_dir->published_on = published_on;
@@ -1142,6 +1145,7 @@ _router_get_next_token(const char **s, directory_token_t *tok) {
             if (*next == '\n')
               done = 1;
             tok->val.cmd.args[i++] = tor_strndup(*s,next-*s);
+            /* XXX this line (the strndup) is the memory leak. */
             *s = eat_whitespace_no_nl(next+1);
           }
           tok->val.cmd.n_args = i;
