@@ -603,7 +603,14 @@ int
 tor_tls_get_pending_bytes(tor_tls *tls)
 {
   tor_assert(tls);
+#if OPENSSL_VERSION_NUMBER < 0x0090700fl
+  if (tls->ssl->rstate == SSL_ST_READ_BODY)
+    return 0;
+  if (tls->ssl->s3->rrec.type != SSL3_RT_APPLICATION_DATA)
+    return 0;
+#endif
   return SSL_pending(tls->ssl);
+
 }
 
 /* Return the number of bytes read across the underlying socket. */
