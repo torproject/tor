@@ -192,6 +192,8 @@ static void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "PrivateKeyFile", CONFIG_TYPE_STRING, &options->PrivateKeyFile) ||
     config_compare(list, "SigningPrivateKeyFile", CONFIG_TYPE_STRING, &options->SigningPrivateKeyFile) ||
     config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
+    config_compare(list, "CertFile",       CONFIG_TYPE_STRING, &options->CertFile) ||
+    config_compare(list, "Nickname",       CONFIG_TYPE_STRING, &options->Nickname) ||
 
     /* int options */
     config_compare(list, "MaxConn",         CONFIG_TYPE_INT, &options->MaxConn) ||
@@ -244,6 +246,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->NewCircuitPeriod = 60; /* once a minute */
   options->TotalBandwidth = 800000; /* at most 800kB/s total sustained incoming */
   options->NumCpus = 1;
+  options->CertFile = "default.cert";
 //  options->ReconnectPeriod = 6001;
 
 /* get config lines from /etc/torrc and assign them */
@@ -350,6 +353,11 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   if(options->OnionRouter && options->PrivateKeyFile == NULL) {
     log(LOG_ERR,"PrivateKeyFile option required for OnionRouter, but not found.");
     result = -1;
+  }
+
+  if(options->OnionRouter && options->Nickname == NULL) {
+    log_fn(LOG_ERR,"Nickname required for OnionRouter, but not found.");
+    return -1;
   }
 
   if(options->DirPort > 0 && options->SigningPrivateKeyFile == NULL) {

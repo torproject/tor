@@ -439,6 +439,8 @@ typedef struct {
    char *RouterFile;
    char *SigningPrivateKeyFile;
    char *PrivateKeyFile;
+   char *CertFile;
+   char *Nickname;
    double CoinWeight;
    int Daemon;
    int ORPort;
