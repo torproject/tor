@@ -101,7 +101,7 @@ int crypto_SHA_digest(unsigned char *m, int len, unsigned char *digest);
 int crypto_seed_rng();
 int crypto_rand(unsigned int n, unsigned char *to);
 void crypto_pseudo_rand(unsigned int n, unsigned char *to);
-int crypto_pseudo_rand_int(int max);
+int crypto_pseudo_rand_int(unsigned int max);
 
 /* errors */
 char *crypto_perror();

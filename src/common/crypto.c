@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
+#include <limits.h>
 
 #include "crypto.h"
 #include "../or/or.h"
@@ -1008,14 +1009,21 @@ void crypto_pseudo_rand(unsigned int n, unsigned char *to)
   }
 }
 
-int crypto_pseudo_rand_int(int max) {
+int crypto_pseudo_rand_int(unsigned int max) {
   unsigned int val;
-  crypto_pseudo_rand(sizeof(val), (unsigned char*) &val);
-  /* Bug: Low values are _slightly_ favored over high values because
-   * ((unsigned)-1)%max != max-1 .  This shouldn't matter if max is
-   * significantly smaller than ((unsigned)-1).
-   **/
-  return val % max;
+  unsigned int cutoff;
+  assert(max < UINT_MAX);
+
+  /* We ignore any values that are >= 'cutoff,' to avoid biasing the
+   * distribution with clipping at the upper end of unsigned int's
+   * range.
+   */
+  cutoff = UINT_MAX - (UINT_MAX%max);
+  while(1) {
+    crypto_pseudo_rand(sizeof(val), (unsigned char*) &val);
+    if (val < cutoff)
+      return val % max;
+  }
 }
 
 /* errors */
