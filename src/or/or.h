@@ -96,11 +96,6 @@
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
-#ifdef HAVE_EVENT_H
-#include <event.h>
-#else
-#error "Tor requires libevent to build."
-#endif
 
 #ifdef MS_WINDOWS
 #if (_MSC_VER <= 1300)
@@ -117,6 +112,12 @@
 #include <direct.h>
 #include <windows.h>
 #define snprintf _snprintf
+#endif
+
+#ifdef HAVE_EVENT_H
+#include <event.h>
+#else
+#error "Tor requires libevent to build."
 #endif
 
 #include "../common/crypto.h"
