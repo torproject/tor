@@ -279,7 +279,7 @@ config_assign(or_options_t *options, struct config_line_t *list)
       config_compare(list, "RouterFile",     CONFIG_TYPE_STRING, &options->RouterFile) ||
       config_compare(list, "RunAsDaemon",    CONFIG_TYPE_BOOL, &options->RunAsDaemon) ||
       config_compare(list, "RunTesting",     CONFIG_TYPE_BOOL, &options->RunTesting) ||
-      config_compare(list, "RecommendedVersions",CONFIG_TYPE_STRING, &options->RecommendedVersions) ||
+      config_compare(list, "RecommendedVersions",CONFIG_TYPE_LINELIST, &options->RecommendedVersions) ||
       config_compare(list, "RendNodes",      CONFIG_TYPE_STRING, &options->RendNodes) ||
       config_compare(list, "RendExcludeNodes",CONFIG_TYPE_STRING, &options->RendExcludeNodes) ||
 
@@ -466,7 +466,6 @@ free_options(or_options_t *options)
   tor_free(options->RendNodes);
   tor_free(options->RendExcludeNodes);
   tor_free(options->OutboundBindAddress);
-  tor_free(options->RecommendedVersions);
   tor_free(options->User);
   tor_free(options->Group);
   tor_free(options->HttpProxy);
@@ -477,6 +476,7 @@ free_options(or_options_t *options)
   config_free_lines(options->ExitPolicy);
   config_free_lines(options->SocksPolicy);
   config_free_lines(options->DirServers);
+  config_free_lines(options->RecommendedVersions);
   if (options->FirewallPorts) {
     SMARTLIST_FOREACH(options->FirewallPorts, char *, cp, tor_free(cp));
     smartlist_free(options->FirewallPorts);

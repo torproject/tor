@@ -559,6 +559,7 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
 {
   char *cp, *eos;
   char *identity_pkey; /* Identity key, DER64-encoded. */
+  char *recommended_versions;
   char digest[20];
   char signature[128];
   char published[33];
@@ -589,6 +590,20 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
     }
   }
 #endif
+
+  {
+    smartlist_t *versions;
+    struct config_line_t *ln;
+    versions = smartlist_create();
+    for (ln = options.RecommendedVersions; ln; ln = ln->next) {
+      smartlist_split_string(versions, ln->value, ",", 
+                             SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+    }
+    recommended_versions = smartlist_join_strings(versions,",",0);
+    SMARTLIST_FOREACH(versions,char *,s,tor_free(s));
+    smartlist_free(versions);
+  }
+  
   dirserv_remove_old_servers(ROUTER_MAX_AGE);
   published_on = time(NULL);
   format_iso_time(published, published_on);
@@ -598,7 +613,7 @@ dirserv_dump_directory_to_string(char *s, size_t maxlen,
            "recommended-software %s\n"
            "running-routers %s\n"
            "opt dir-signing-key %s\n\n",
-           published, options.RecommendedVersions, cp, identity_pkey);
+           published, recommended_versions, cp, identity_pkey);
 
   tor_free(cp);
   tor_free(identity_pkey);
