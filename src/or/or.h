@@ -542,7 +542,6 @@ typedef struct {
   crypto_pk_env_t *onion_pkey; /**< Public RSA key for onions. */
   crypto_pk_env_t *identity_pkey;  /**< Public RSA key for signing. */
 
-  int is_running; /**< As far as we know, is this OR currently running? */
 
   char *platform; /**< What software/operating system is this OR using? */
 
@@ -552,6 +551,10 @@ typedef struct {
   uint32_t bandwidthburst; /**< How large is this OR's token bucket? */
   struct exit_policy_t *exit_policy; /**< What streams will this OR permit
                                       * to exit? */
+  /* local info */
+  int is_running; /**< As far as we know, is this OR currently running? */
+  int is_trusted_dir; /**< Do we trust this OR as a directory server? */
+
 } routerinfo_t;
 
 #define MAX_ROUTERS_IN_DIR 1024
@@ -561,7 +564,9 @@ typedef struct {
   smartlist_t *routers;
   /** Which versions of tor are recommended by this directory? */
   char *software_versions;
-  /** When was this directory published? */
+  /** When was the most recent directory that contributed to this list
+   * published?
+   */
   time_t published_on;
 } routerlist_t;
 
@@ -1284,12 +1289,13 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port);
 routerinfo_t *router_get_by_nickname(char *nickname);
 void router_get_routerlist(routerlist_t **prouterlist);
 void routerlist_free(routerlist_t *routerlist);
+void routerlist_clear_trusted_directories(void);
 void routerinfo_free(routerinfo_t *router);
 routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_mark_as_down(char *nickname);
-int router_set_routerlist_from_file(char *routerfile);
-int router_set_routerlist_from_string(const char *s);
-int router_set_routerlist_from_directory(const char *s, crypto_pk_env_t *pkey);
+int router_load_routerlist_from_file(char *routerfile, int trusted);
+int router_load_routerlist_from_string(const char *s, int trusted);
+int router_load_routerlist_from_directory(const char *s,crypto_pk_env_t *pkey);
 int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
                                        struct exit_policy_t *policy);
 #define ADDR_POLICY_ACCEPTED 0

@@ -566,7 +566,7 @@ size_t dirserv_get_directory(const char **directory)
      * necessary, but safe is better than sorry. */
     new_directory = tor_strdup(the_directory);
     /* use a new copy of the dir, since get_dir_from_string scribbles on it */
-    if (router_set_routerlist_from_directory(new_directory, get_identity_key())) {
+    if (router_load_routerlist_from_directory(new_directory, get_identity_key())) {
       log_fn(LOG_ERR, "We just generated a directory we can't parse. Dying.");
       exit(0);
     }
