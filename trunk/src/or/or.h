@@ -1434,7 +1434,7 @@ void directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
                                        const char *payload, size_t payload_len);
 
 int parse_http_response(const char *headers, int *code, time_t *date,
-                        int *compression);
+                        int *compression, char **response);
 
 int connection_dir_reached_eof(connection_t *conn);
 int connection_dir_process_inbuf(connection_t *conn);

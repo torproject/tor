@@ -56,6 +56,7 @@ static int
 connection_or_read_proxy_response(connection_t *conn) {
 
   char *headers;
+  char *reason=NULL;
   int status_code;
   time_t date_header;
   int compression;
@@ -73,26 +74,31 @@ connection_or_read_proxy_response(connection_t *conn) {
   }
 
   if (parse_http_response(headers, &status_code, &date_header,
-                          &compression) < 0) {
+                          &compression, &reason) < 0) {
     log_fn(LOG_WARN,"Unparseable headers (connecting to '%s'). Closing.",
            conn->address);
     tor_free(headers);
     return -1;
   }
+  if (!reason) reason = tor_strdup("[no reason given]");
 
   if (status_code == 200) {
-    log_fn(LOG_INFO,"https connect successful (to '%s')! Launching tls.",
-           conn->address);
+    log_fn(LOG_INFO,
+           "HTTPS connect to '%s' successful! (200 \"%s\") Starting TLS.",
+           conn->address, reason);
+    tor_free(reason);
     if (connection_tls_start_handshake(conn, 0) < 0) {
       /* TLS handshaking error of some kind. */
       connection_mark_for_close(conn);
+
       return -1;
     }
     return 0;
   }
   /* else, bad news on the status code */
-  log_fn(LOG_WARN,"The https proxy sent back a bad status code %d. Closing.",
-         status_code);
+  log_fn(LOG_WARN,"The https proxy sent back an unexpected status code %d (\"%s\"). Closing.",
+         status_code, reason);
+  tor_free(reason);
   connection_mark_for_close(conn);
   return -1;
 }

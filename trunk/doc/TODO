@@ -21,12 +21,11 @@ R  o pick the whole path when you start the circuit.
    o finish messing with reachability stuff
    o if we jump in time a lot, then mark our circs and note that we
      haven't made a circ yet.
-
-actually give http reason phrases to dir clients, so they know why
-  they're rejected.
-controller should have an event to learn about new addressmappings?
-how do ulimits work on win32, anyway?
-have a separate config option which caps bandwidth-to-advertise.
+   o actually give http reason phrases to dir clients, so they know why
+     they're rejected.
+   - controller should have an event to learn about new addressmappings?
+   - how do ulimits work on win32, anyway?
+   - have a separate config option which caps bandwidth-to-advertise.
 
 For 0.1.0.x:
 
@@ -97,6 +96,7 @@ R     - revised circ selection stuff.
       o Time out never-attached streams.
       o If we never get a CONNECTED back, we should put the stream back in
         CONTROLLER_WAIT, not in CIRCUIT_WAIT.
+      - Add a way for the controller to say, "Hey, nuke this stream."
     - Tests for new controller features
 R o HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
     other ORs.)
