@@ -871,6 +871,12 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   assert(conn->socks_request);
 
+  if(conn->timestamp_created < time(NULL)-60) {
+    /* XXX make this cleaner than '60' */
+    log_fn(LOG_WARN,"Giving up on attached circ (60s late).");
+    connection_mark_for_close(conn, 0);
+  }
+
   if(!connection_edge_is_rendezvous_stream(conn)) { /* we're a general conn */
     circuit_t *circ=NULL;
 
@@ -941,8 +947,10 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
         if(rend_client_send_introduction(introcirc, rendcirc) < 0) {
           return -1;
         }
-        if(!rendcirc->timestamp_dirty)
-          rendcirc->timestamp_dirty = time(NULL);
+        assert(!rendcirc->timestamp_dirty);
+        rendcirc->timestamp_dirty = time(NULL);
+        assert(!introcirc->timestamp_dirty);
+        introcirc->timestamp_dirty = time(NULL);
         return 0;
       }
     }
