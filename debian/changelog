@@ -1,6 +1,5 @@
-tor (0.0.8+0.0.9pre5-2) unreleased; urgency=low
+tor (0.0.8+0.0.9pre5-2) unstable; urgency=low
 
-  * unreleased.
   * Symlink tor(8) manpage to torrc(5).
   * Make logs readable by the system administrators (group adm).
   * Point to /var/log/tor (the directory) instead of a single
