@@ -49,13 +49,13 @@ ARMA    . find an application that uses half-open connections: openssh
           o average cell fullness
           o average bandwidth used
         . integrate rep_ok functions, see what breaks
-ARMA    - configure log files. separate log file, separate severities.
-ARMA    - what assumptions break if we fclose(0) when we daemonize?
+        o configure log files. separate log file, separate severities.
+        o what assumptions break if we fclose(0) when we daemonize?
         o make buffer struct elements opaque outside buffers.c
 ARMA    . Go through log messages, reduce confusing error messages.
 ARMA    . make the logs include more info (fd, etc)
-ARMA    . add log convention to the HACKING file
-        - make 'make install' do the right thing
+        o add log convention to the HACKING file
+        . make 'make install' do the right thing
         o change binary name to tor
         o change config files so you look at commandline, else look in
           /etc/torrc. no cascading.
@@ -147,7 +147,7 @@ SPEC!!          D Figure out how to do threshold directory servers
                 . Get socks4a support into Mozilla
         . Get tor to act like a socks server
                 o socks4, socks4a
-ARMA            - socks5
+                o socks5
 SPEC!!          - Handle socks commands other than connect, eg, bind?
         . Develop rendezvous points
                 o Design
@@ -183,7 +183,7 @@ NICK    . Daemonize and package
                         o BSD
                         . Solaris
                         o Cygwin
-                        o Win32
+                        . Win32
                         o OS X
                 - deal with pollhup / reached_eof on all platforms
                 o openssl randomness
