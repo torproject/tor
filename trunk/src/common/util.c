@@ -231,10 +231,10 @@ int tor_strpartition(char *dest, size_t dest_len,
                      const char *s, const char *insert, size_t n,
                      part_finish_rule_t rule)
 {
-  tor_assert(s && insert && n > 0);
   char *destp;
   int len_in, len_out, len_ins;
   int is_even;
+  tor_assert(s && insert && n > 0);
   len_in = strlen(s);
   len_ins = strlen(insert);
   len_out = len_in + (len_in/n)*len_ins;
