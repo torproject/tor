@@ -8,7 +8,7 @@
 
 \setlength{\textwidth}{6in}
 \setlength{\textheight}{8in}
-\setlength{\topmargin}{0in}
+\setlength{\topmargin}{.5in}
 \setlength{\oddsidemargin}{1cm}
 \setlength{\evensidemargin}{1cm}
 
@@ -31,7 +31,7 @@ Paul Syverson\inst{2}}
 Naval Research Lab \email{<syverson@itd.nrl.navy.mil>}}
 
 \maketitle
-%\pagestyle{empty}
+\pagestyle{plain}
 
 \begin{abstract}
   There are many unexpected or unexpectedly difficult obstacles to
@@ -491,7 +491,7 @@ bandwidth requirements, leading to an overall much smaller user base. But
 cf.\ Section \ref{subsec:mid-latency}.} Therefore, since under this threat
 model the number of concurrent users does not seem to have much impact
 on the anonymity provided, we suggest that JAP's anonymity meter is not
-correctly communicating security levels to its users.
+accurately communicating security levels to its users.
 
 % because more users don't help anonymity much, we need to rely more
 % on other incentive schemes, both policy-based (see sec x) and
@@ -924,14 +924,14 @@ One of the paradoxes with engineering an anonymity network is that we'd like
 to learn as much as we can about how traffic flows so we can improve the
 network, but we want to prevent others from learning how traffic flows in
 order to trace users' connections through the network.  Furthermore, many
-mechanisms that help Tor run efficiently (such as having clients choose nodes
-based on their capacities) require measurements about the network.
+mechanisms that help Tor run efficiently
+require measurements about the network.
 
-Currently, nodes record their bandwidth use in 15-minute intervals and
-include this information in the descriptors they upload to the directory.
-They also try to deduce their own available bandwidth (based on how
-much traffic they have been able to transfer recently) and upload this
-information as well.
+Currently, nodes try to deduce their own available bandwidth (based on how
+much traffic they have been able to transfer recently) and include this
+information in the descriptors they upload to the directory. Clients
+choose servers weighted by their bandwidth, neglecting really slow
+servers and capping the influence of really fast ones.
 
 This is, of course, eminently cheatable.  A malicious node can get a
 disproportionate amount of traffic simply by claiming to have more bandwidth
@@ -1320,8 +1320,8 @@ our location diversity to add far-flung nodes in continents like Asia
 or South America.
 
 Many open questions remain. First, it will be an immense engineering
-challenge to get an entire BGP routing table to each Tor client, or at
-least summarize it sufficiently. Without a local copy, clients won't be
+challenge to get an entire BGP routing table to each Tor client, or to
+summarize it sufficiently. Without a local copy, clients won't be
 able to safely predict what ASes will be traversed on the various paths
 through the Tor network to the final destination. Tarzan~\cite{tarzan:ccs02}
 and MorphMix~\cite{morphmix:fc04} suggest that we compare IP prefixes to
@@ -1330,10 +1330,11 @@ many of the Mixmaster nodes that share a single AS have entirely different
 IP prefixes. When the network has scaled to thousands of nodes, does IP
 prefix comparison become a more useful approximation?
 %
-Second, can take advantage of caching certain content at the exit nodes, to
-limit the number of requests that need to leave the network at all.
-what about taking advantage of caches like akamai's or googles? what
-about treating them as adversaries?
+Second, we can take advantage of caching certain content at the
+exit nodes, to limit the number of requests that need to leave the
+network at all. What about taking advantage of caches like Akamai or
+Google~\cite{shsm03}? (Note that they're also well-positioned as global
+adversaries.)
 %
 Third, if we follow the paper's recommendations and tailor path selection
 to avoid choosing endpoints in similar locations, how much are we hurting
@@ -1344,9 +1345,9 @@ Lastly, can we use this knowledge to figure out which gaps in our network
 would most improve our robustness to this class of attack, and go recruit
 new nodes with those ASes in mind?
 
-Tor's security relies in large part on the dispersal properties of its
-network. We need to be more aware of the anonymity properties of various
-approaches we can make better design decisions in the future.
+%Tor's security relies in large part on the dispersal properties of its
+%network. We need to be more aware of the anonymity properties of various
+%approaches so we can make better design decisions in the future.
 
 \subsection{The China problem}
 \label{subsec:china}
@@ -1473,20 +1474,36 @@ they are running clients.
 \section{The Future}
 \label{sec:conclusion}
 
-we should put random thoughts here until there are enough for a
-conclusion.
+Tor is the largest and most diverse low-latency anonymity network
+available, but we are still in the beginning stages of deployment. Several
+major questions remain.
 
-will our sustainability approach work? we'll see.
+First, will our volunteer-based approach to sustainability work in the
+long term? As we add more features and destabilize the network, the
+developers spend a lot of time keeping the server operators happy. Even
+though Tor is free software, the network would likely stagnate and die at
+this stage if the developers stopped actively working on it. We may get
+an unexpected boon from the fact that we're a general-purpose overlay
+network: as Tor grows more popular, other groups who need an overlay
+network on the Internet are starting to adapt Tor to their needs.
 
-Applications that leak data: we can say they're not our problem, but
-they're somebody's problem.
-The more widely deployed Tor becomes, the more people who need a
-deployed overlay network tell us they'd like to use us if only we added
-the following more features.
+Second, Tor is only one of many components that preserve privacy online.
+To keep identifying information out of application traffic, we must build
+more and better protocol-aware proxies that are usable by ordinary people.
 
-"These are difficult and open questions, yet choosing not to solve them
+Third, we need to gain a reputation for social good, and learn how to
+coexist with the variety of Internet services and their established
+authentication mechanisms. We can't just keep escalating the blacklist
+standoff forever.
+
+Fourth, as described in Section~\ref{sec:scaling}, the current Tor
+architecture does not scale even to handle current user demand. We must
+find designs and incentives to let clients relay traffic too, without
+sacrificing too much anonymity.
+
+These are difficult and open questions, yet choosing not to solve them
 means leaving most users to a less secure network or no anonymizing
-network at all."
+network at all.
 
 \bibliographystyle{plain} \bibliography{tor-design}
 
@@ -1500,22 +1517,25 @@ network at all."
 %\put(3,1){\makebox(0,0)[c]{\epsfig{figure=graphnodes,width=6in}}}
 %\end{picture}
 \mbox{\epsfig{figure=graphnodes,width=5in}}
-\caption{Number of Tor nodes over time. Lowest line is number of exit
+\caption{Number of Tor nodes over time, through January 2005. Lowest
+line is number of exit
 nodes that allow connections to port 80. Middle line is total number of
 verified (registered) Tor nodes. The line above that represents nodes
-that are not yet registered.}
+that are running but not yet registered.}
 \label{fig:graphnodes}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \mbox{\epsfig{figure=graphtraffic,width=5in}}
-\caption{The sum of traffic reported by each node over time. The bottom
+\caption{The sum of traffic reported by each node over time, through
+January 2005. The bottom
 pair show average throughput, and the top pair represent the largest 15
 minute burst in each 4 hour period.}
 \label{fig:graphtraffic}
 \end{figure}
 
+\end{document}
 
 Making use of nodes with little bandwidth, or high latency/packet loss.
 
@@ -1523,6 +1543,4 @@ Running Tor nodes behind NATs, behind great-firewalls-of-China, etc.
 Restricted routes. How to propagate to everybody the topology? BGP
 style doesn't work because we don't want just *one* path. Point to
 Geoff's stuff.
-
-\end{document}
 
