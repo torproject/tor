@@ -114,6 +114,10 @@ static void circuit_free_cpath_node(crypt_path_t *victim) {
     crypto_free_cipher_env(victim->f_crypto);
   if(victim->b_crypto)
     crypto_free_cipher_env(victim->b_crypto);
+  if(victim->f_digest)
+    crypto_free_digest_env(victim->f_digest);
+  if(victim->b_digest)
+    crypto_free_digest_env(victim->b_digest);
   if(victim->handshake_state)
     crypto_dh_free(victim->handshake_state);
   free(victim);
@@ -319,6 +323,12 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
 
   if(recognized) {
     if(cell_direction == CELL_DIRECTION_OUT) {
+#if 0
+       if(relay_update_digest(circ->n_digest, cell) < 0) {
+        log_fn(LOG_WARN,"outgoing cell failed integrity check. Closing circ.");
+        return -1;
+      }
+#endif
       ++stats_n_relay_cells_delivered;
       log_fn(LOG_DEBUG,"Sending to exit.");
       if (connection_edge_process_relay_cell(cell, circ, conn, EDGE_EXIT, NULL) < 0) {
@@ -327,6 +337,12 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
       }
     }
     if(cell_direction == CELL_DIRECTION_IN) {
+#if 0
+      if(relay_update_digest(layer_hint->p_digest, cell) < 0) {
+        log_fn(LOG_WARN,"outgoing cell failed integrity check. Closing circ.");
+        return -1;
+      }
+#endif
       ++stats_n_relay_cells_delivered;
       log_fn(LOG_DEBUG,"Sending to AP.");
       if (connection_edge_process_relay_cell(cell, circ, conn, EDGE_AP, layer_hint) < 0) {
@@ -365,7 +381,8 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
   assert(inlen < 256);
 
   if(cell_direction == CELL_DIRECTION_IN) { 
-    if(circ->cpath) { /* we're at the beginning of the circuit. We'll want to do layered crypts. */
+    if(circ->cpath) { /* we're at the beginning of the circuit.
+                         We'll want to do layered crypts. */
       thishop = circ->cpath;
       if(thishop->state != CPATH_STATE_OPEN) {
         log_fn(LOG_WARN,"Relay cell before first created cell?");
@@ -845,7 +862,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_CREATE;
     cell.circ_id = circ->n_circ_id;
-    cell.length = DH_ONIONSKIN_LEN;
+    cell.length = ONIONSKIN_CHALLENGE_LEN;
 
     if(onion_skin_create(circ->n_conn->onion_pkey, &(circ->cpath->handshake_state), cell.payload) < 0) {
       log_fn(LOG_WARN,"onion_skin_create (first hop) failed.");
@@ -883,7 +900,7 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_EXTEND);
     SET_CELL_STREAM_ID(cell, ZERO_STREAM);
 
-    cell.length = RELAY_HEADER_SIZE + 6 + DH_ONIONSKIN_LEN;
+    cell.length = RELAY_HEADER_SIZE + 6 + ONIONSKIN_CHALLENGE_LEN;
     *(uint32_t*)(cell.payload+RELAY_HEADER_SIZE) = htonl(hop->addr);
     *(uint16_t*)(cell.payload+RELAY_HEADER_SIZE+4) = htons(hop->port);
     if(onion_skin_create(router->onion_pkey, &(hop->handshake_state), cell.payload+RELAY_HEADER_SIZE+6) < 0) {
@@ -954,9 +971,10 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   memset(&newcell, 0, sizeof(cell_t));
   newcell.command = CELL_CREATE;
   newcell.circ_id = circ->n_circ_id;
-  newcell.length = DH_ONIONSKIN_LEN;
+  newcell.length = ONIONSKIN_CHALLENGE_LEN;
 
-  memcpy(newcell.payload, cell->payload+RELAY_HEADER_SIZE+6, DH_ONIONSKIN_LEN);
+  memcpy(newcell.payload, cell->payload+RELAY_HEADER_SIZE+6,
+         ONIONSKIN_CHALLENGE_LEN);
 
   connection_or_write_cell_to_buf(&newcell, circ->n_conn);
   return 0;

@@ -103,7 +103,7 @@ static void command_process_create_cell(cell_t *cell, connection_t *conn) {
 
   circ = circuit_new(cell->circ_id, conn);
   circ->state = CIRCUIT_STATE_ONIONSKIN_PENDING;
-  if(cell->length != DH_ONIONSKIN_LEN) {
+  if(cell->length != ONIONSKIN_CHALLENGE_LEN) {
     log_fn(LOG_WARN,"Bad cell length %d. Dropping.", cell->length);
     circuit_close(circ);
     return;
@@ -135,7 +135,7 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
     circuit_close(circ);
     return;
   }
-  assert(cell->length == DH_KEY_LEN);
+  assert(cell->length == ONIONSKIN_REPLY_LEN);
 
   if(circ->cpath) { /* we're the OP. Handshake this. */
     log_fn(LOG_DEBUG,"at OP. Finishing handshake.");
@@ -153,7 +153,7 @@ static void command_process_created_cell(cell_t *cell, connection_t *conn) {
   } else { /* pack it into an extended relay cell, and send it. */
     log_fn(LOG_INFO,"Converting created cell to extended relay cell, sending.");
     connection_edge_send_command(NULL, circ, RELAY_COMMAND_EXTENDED,
-                                 cell->payload, DH_KEY_LEN, NULL);
+                                 cell->payload, cell->length, NULL);
   }
 }
 
