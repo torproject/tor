@@ -10,7 +10,7 @@ Architecture: any
 Depends: ${shlibs:Depends}, adduser
 Recommends: privoxy, tsocks
 Suggests: mixmaster, mixminion, anon-proxy
-Description: anonymous communication system
+Description: anonymizing overlay network for TCP
  Tor is a connection-based low-latency anonymous communication system which
  addresses many flaws in the original onion routing design.
  .
