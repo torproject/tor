@@ -696,8 +696,9 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   char *s, *cp;
   char digest[DIGEST_LEN];
   char signature[PK_BYTES];
-  int i, len;
+  int i;
   char published[33];
+  size_t len;
   time_t published_on;
 
   len = 1024+(MAX_HEX_NICKNAME_LEN+2)*smartlist_len(descriptor_list);

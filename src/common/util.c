@@ -1641,7 +1641,7 @@ void finish_daemon(void)
 }
 #else
 /* defined(MS_WINDOWS) */
-void start_daemon(char *cp) {}
+void start_daemon(const char *cp) {}
 void finish_daemon(void) {}
 #endif
 

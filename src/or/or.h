@@ -1094,7 +1094,7 @@ int connection_ap_handshake_send_resolve(connection_t *ap_conn, circuit_t *circ)
 
 int connection_ap_make_bridge(char *address, uint16_t port);
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
-                                         int replylen, char success);
+                                         int replylen, int success);
 void connection_ap_handshake_socks_resolved(connection_t *conn,
                                             int answer_type,
                                             int answer_len,
