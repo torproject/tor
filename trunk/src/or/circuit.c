@@ -473,7 +473,7 @@ void circuit_expire_building(time_t now) {
     /* some debug logs, to help track bugs */
     if(victim->purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
        victim->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
-      if(victim->timestamp_dirty)
+      if(!victim->timestamp_dirty)
         log_fn(LOG_DEBUG,"Considering %sopen purp %d to %s (clean).",
                victim->state == CIRCUIT_STATE_OPEN ? "" : "non",
                victim->purpose, victim->build_state->chosen_exit);
