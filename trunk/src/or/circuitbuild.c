@@ -1080,16 +1080,16 @@ static routerinfo_t *choose_good_middle_server(cpath_build_state_t *state,
   excluded = smartlist_create();
   if((r = router_get_by_digest(state->chosen_exit_digest))) {
     smartlist_add(excluded, r);
-    routerlist_add_friends(excluded, r);
+    routerlist_add_family(excluded, r);
   }
   if((r = routerlist_find_my_routerinfo())) {
     smartlist_add(excluded, r);
-    routerlist_add_friends(excluded, r);
+    routerlist_add_family(excluded, r);
   }
   for (i = 0, cpath = head; i < cur_len; ++i, cpath=cpath->next) {
     if((r = router_get_by_digest(cpath->identity_digest))) {
       smartlist_add(excluded, r);
-      routerlist_add_friends(excluded, r);
+      routerlist_add_family(excluded, r);
     }
   }
   choice = router_choose_random_node("", options.ExcludeNodes, excluded,
@@ -1106,11 +1106,11 @@ static routerinfo_t *choose_good_entry_server(cpath_build_state_t *state)
 
   if((r = router_get_by_digest(state->chosen_exit_digest))) {
     smartlist_add(excluded, r);
-    routerlist_add_friends(excluded, r);
+    routerlist_add_family(excluded, r);
   }
   if((r = routerlist_find_my_routerinfo())) {
     smartlist_add(excluded, r);
-    routerlist_add_friends(excluded, r);
+    routerlist_add_family(excluded, r);
   }
   if(options.FascistFirewall) {
     /* exclude all ORs that listen on the wrong port */

@@ -552,6 +552,13 @@ int router_rebuild_descriptor(void) {
   ri->is_trusted_dir = authdir_mode();
   if(desc_routerinfo) /* inherit values */
     ri->is_verified = desc_routerinfo->is_verified;
+  if (options.MyFamily) {
+    ri->declared_family = smartlist_create();
+    smartlist_split_string(ri->declared_family, options.MyFamily, ",",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  } else {
+    ri->declared_family = NULL;
+  }
 
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
@@ -600,6 +607,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   int result=0;
   struct exit_policy_t *tmpe;
   char *bandwidth_usage;
+  char *family_line;
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
   char *s_tmp, *s_dup;
   const char *cp;
@@ -639,6 +647,16 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   /* How busy have we been? */
   bandwidth_usage = rep_hist_get_bandwidth_lines();
 
+  if (router->declared_family && smartlist_len(router->declared_family)) {
+    char *s = smartlist_join_strings(router->declared_family, " ", 0);
+    size_t n = strlen(s) + strlen("opt family ") + 2; /* 1 for \n, 1 for \0. */
+    family_line = tor_malloc(n);
+    snprintf(family_line, n, "opt family %s\n", s);
+    tor_free(s);
+  } else {
+    family_line = tor_strdup("");
+  }
+
   /* Generate the easy portion of the router descriptor. */
   result = snprintf(s, maxlen,
                     "router %s %s %d %d %d\n"
@@ -648,7 +666,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "opt uptime %ld\n"
                     "bandwidth %d %d %d\n"
                     "onion-key\n%s"
-                    "signing-key\n%s%s",
+                    "signing-key\n%s%s%s",
     router->nickname,
     router->address,
     router->or_port,
@@ -665,7 +683,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     (int) router->bandwidthburst,
     (int) router->bandwidthcapacity,
     onion_pkey, identity_pkey,
-    bandwidth_usage);
+    family_line, bandwidth_usage);
 
   tor_free(onion_pkey);
   tor_free(identity_pkey);

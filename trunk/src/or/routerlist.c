@@ -225,11 +225,28 @@ int all_trusted_directory_servers_down(void) {
   return 1;
 }
 
-/** Add all the friends of <b>router</b> to the smartlist <b>sl</b>.
+/** Add all the family of <b>router</b> to the smartlist <b>sl</b>.
  */
-void routerlist_add_friends(smartlist_t *sl, routerinfo_t *router) {
+void routerlist_add_family(smartlist_t *sl, routerinfo_t *router) {
+  routerinfo_t *r;
 
-
+  if (!router->declared_family)
+    return;
+  
+  /* Add every r such that router declares familyhip with r, and r
+   * declares familyhip with router. */
+  SMARTLIST_FOREACH(router->declared_family, const char *, n,
+    {
+      if (!(r = router_get_by_nickname(n)))
+        continue;
+      if (!r->declared_family)
+        continue;
+      SMARTLIST_FOREACH(r->declared_family, const char *, n2,
+        {
+          if (router_nickname_matches(router, n2))
+            smartlist_add(sl, r);
+        });
+    });
 }
 
 /** Given a comma-and-whitespace separated list of nicknames, see which
@@ -583,6 +600,10 @@ void routerinfo_free(routerinfo_t *router)
     crypto_free_pk_env(router->onion_pkey);
   if (router->identity_pkey)
     crypto_free_pk_env(router->identity_pkey);
+  if (router->declared_family) {
+    SMARTLIST_FOREACH(router->declared_family, char *, s, tor_free(s));
+    smartlist_free(router->declared_family);
+  }
   exit_policy_free(router->exit_policy);
   tor_free(router);
 }
@@ -610,6 +631,11 @@ routerinfo_t *routerinfo_copy(const routerinfo_t *router)
     *e = tmp;
     (*e)->string = tor_strdup((*e)->string);
     e = & ((*e)->next);
+  }
+  if (r->declared_family) {
+    r->declared_family = smartlist_create();
+    SMARTLIST_FOREACH(router->declared_family, const char *, s,
+                      smartlist_add(r->declared_family, tor_strdup(s)));
   }
   return r;
 }
