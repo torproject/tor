@@ -1334,7 +1334,10 @@ write_str_to_file(const char *fname, const char *str)
     fclose(file);
     return -1;
   }
-  fclose(file);
+  if (fclose(file) == EOF) {
+    log(LOG_WARN,"Error flushing to %s: %s", tempname, strerror(errno));
+    return -1;
+  }
 
 #ifdef MS_WINDOWS
   /* On Windows, rename doesn't replace.  We could call ReplaceFile, but
