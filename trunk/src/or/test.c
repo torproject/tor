@@ -1157,6 +1157,22 @@ test_dir_format(void)
   test_eq(VER_RELEASE, ver1.status);
   test_eq(999, ver1.patchlevel);
   test_eq(IS_NOT_CVS, ver1.cvs);
+  test_eq(0, tor_version_parse("0.1.2.4-alpha", &ver1));
+  test_eq(0, ver1.major);
+  test_eq(1, ver1.minor);
+  test_eq(2, ver1.micro);
+  test_eq(4, ver1.patchlevel);
+  test_eq(VER_RELEASE, ver1.status);
+  test_eq(IS_NOT_CVS, ver1.cvs);
+  test_streq("alpha", ver1.status_tag);
+  test_eq(0, tor_version_parse("0.1.2.4", &ver1));
+  test_eq(0, ver1.major);
+  test_eq(1, ver1.minor);
+  test_eq(2, ver1.micro);
+  test_eq(4, ver1.patchlevel);
+  test_eq(VER_RELEASE, ver1.status);
+  test_eq(IS_NOT_CVS, ver1.cvs);
+  test_streq("", ver1.status_tag);
 
   /* make sure is_obsolete_version() works */
   test_eq(1, is_obsolete_version("0.0.1", "Tor 0.0.2"));
