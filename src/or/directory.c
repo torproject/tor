@@ -66,6 +66,8 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
 
   for(i=0; i < smartlist_len(rl->routers); i++) {
     router = smartlist_get(rl->routers, i);
+    /* Note: this posts our descriptor to ourselves, if we're an
+     * authdirserver. But I think that's ok. */
     if(router->is_trusted_dir)
       directory_initiate_command(router, purpose, payload, payload_len);
   }

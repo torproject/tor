@@ -302,12 +302,13 @@ int check_software_version_against_directory(const char *directory,
     return -1;
   } else {
     fflush(0);
+    tor_cleanup();
     exit(0);
     return -1; /* never reached */
   }
 }
 
-/** Parse a directory from <b>s</b> and, when done, store the
+/** Parse a directory from <b>str</b> and, when done, store the
  * resulting routerlist in *<b>dest</b>, freeing the old value if necessary.
  * If <b>pkey</b> is provided, we check the directory signature with pkey.
  */
