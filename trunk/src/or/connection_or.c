@@ -1,3 +1,6 @@
+/* Copyright 2001,2002 Roger Dingledine, Matej Pfajfar. */
+/* See LICENSE for licensing information */
+/* $Id$ */
 
 #include "or.h"
 
@@ -17,7 +20,7 @@ int connection_or_process_inbuf(connection_t *conn) {
     return -1;
   }
 
-  log(LOG_DEBUG,"connection_or_process_inbuf(): state %d.",conn->state);
+//  log(LOG_DEBUG,"connection_or_process_inbuf(): state %d.",conn->state);
 
   switch(conn->state) {
     case OR_CONN_STATE_CLIENT_AUTH_WAIT:
@@ -84,6 +87,7 @@ int connection_or_finished_flushing(connection_t *conn) {
       log(LOG_DEBUG,"connection_or_finished_flushing(): client finished sending nonce.");
       conn_or_init_crypto(conn);
       conn->state = OR_CONN_STATE_OPEN;
+      connection_init_timeval(conn);
       connection_watch_events(conn, POLLIN);
       return 0;
     case OR_CONN_STATE_SERVER_SENDING_AUTH:
@@ -148,7 +152,7 @@ connection_t *connection_or_connect(routerinfo_t *router, RSA *prkey, struct soc
   /* set up conn so it's got all the data we need to remember */
   conn->addr = router->addr, conn->port = router->or_port; /* NOTE we store or_port here always */
   conn->prkey = prkey;
-  conn->min = router->min, conn->max = router->max;
+  conn->bandwidth = router->min; /* kludge, should make a router->bandwidth and use that */
   conn->pkey = router->pkey;
   conn->address = strdup(router->address);
   memcpy(&conn->local,local,sizeof(struct sockaddr_in));
@@ -316,6 +320,7 @@ int or_handshake_op_finished_sending_keys(connection_t *conn) {
   conn_or_init_crypto(conn);
 
   conn->state = OR_CONN_STATE_OPEN;
+  connection_init_timeval(conn);
   connection_watch_events(conn, POLLIN); /* give it a default, tho the ap_handshake call may change it */
   ap_handshake_n_conn_open(conn); /* send the pending onion */
   return 0;
@@ -367,8 +372,7 @@ int or_handshake_client_send_auth(connection_t *conn) {
   char buf[44];
   char cipher[128];
 
-  if (!conn)
-    return -1;
+  assert(conn);
 
   /* generate random keys */
   if(!RAND_bytes(conn->f_session_key,8) ||
@@ -385,10 +389,8 @@ int or_handshake_client_send_auth(connection_t *conn) {
   memcpy(buf+10, (void *)&conn->port, 2); /* remote port */
   memcpy(buf+12,conn->f_session_key,8); /* keys */
   memcpy(buf+20,conn->b_session_key,8);
-  *((uint32_t *)(buf+28)) = htonl(conn->min); /* min link utilisation */
-  *((uint32_t *)(buf+32)) = htonl(conn->max); /* maximum link utilisation */
+  *((uint32_t *)(buf+28)) = htonl(conn->bandwidth); /* max link utilisation */
   log(LOG_DEBUG,"or_handshake_client_send_auth() : Generated first authentication message.");
-
 
   /* encrypt message */
   retval = RSA_public_encrypt(36,buf,cipher,conn->pkey,RSA_PKCS1_PADDING);
@@ -429,7 +431,7 @@ int or_handshake_client_send_auth(connection_t *conn) {
 int or_handshake_client_process_auth(connection_t *conn) {
   char buf[128]; /* only 44 of this is expected to be used */
   char cipher[128];
-  uint32_t min,max;
+  uint32_t bandwidth;
   int retval;
 
   assert(conn);
@@ -474,15 +476,10 @@ int or_handshake_client_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_client_process_auth() : Response valid.");
 
   /* update link info */
-  min = *(uint32_t *)(buf+28);
-  max = *(uint32_t *)(buf+32);
-  min = ntohl(min);
-  max = ntohl(max);
+  bandwidth = ntohl(*(uint32_t *)(buf+28));
 
-  if (conn->min > min)
-    conn->min = min;
-  if (conn->max > max)
-    conn->max = max;
+  if (conn->bandwidth > bandwidth)
+    conn->bandwidth = bandwidth;
 
   /* reply is just local addr/port, remote addr/port, nonce */
   memcpy(buf+12, buf+36, 8);
@@ -519,6 +516,7 @@ int or_handshake_client_process_auth(connection_t *conn) {
   log(LOG_DEBUG,"or_handshake_client_process_auth(): Finished sending nonce.");
   conn_or_init_crypto(conn);
   conn->state = OR_CONN_STATE_OPEN;
+  connection_init_timeval(conn);
   connection_watch_events(conn, POLLIN);
   return connection_process_inbuf(conn); /* process the rest of the inbuf */
 
@@ -539,7 +537,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
   uint32_t addr;
   uint16_t port;
 
-  uint32_t min,max;
+  uint32_t bandwidth;
   routerinfo_t *router;
 
   assert(conn);
@@ -593,18 +591,12 @@ int or_handshake_server_process_auth(connection_t *conn) {
   memcpy(conn->f_session_key,buf+20,8);
 
   /* update link info */
-  min = *(uint32_t *)(buf+28);
-  max = *(uint32_t *)(buf+32);
-  min = ntohl(min);
-  max = ntohl(max);
+  bandwidth = ntohl(*(uint32_t *)(buf+28));
 
-  conn->min = router->min;
-  conn->max = router->max;
+  conn->bandwidth = router->min; /* FIXME, should make a router->bandwidth and use that */
 
-  if (conn->min > min)
-    conn->min = min;
-  if (conn->max > max)
-    conn->max = max;
+  if (conn->bandwidth > bandwidth)
+    conn->bandwidth = bandwidth;
 
   /* copy all relevant info to conn */
   conn->addr = router->addr, conn->port = router->or_port;
@@ -622,8 +614,7 @@ int or_handshake_server_process_auth(connection_t *conn) {
 
   /* generate message */
   memcpy(buf+36,conn->nonce,8); /* append the nonce to the end of the message */
-  *(uint32_t *)(buf+28) = htonl(conn->min); /* send min link utilisation */
-  *(uint32_t *)(buf+32) = htonl(conn->max); /* send max link utilisation */
+  *(uint32_t *)(buf+28) = htonl(conn->bandwidth); /* send max link utilisation */
 
   /* encrypt message */
   retval = RSA_public_encrypt(44,buf,cipher,conn->pkey,RSA_PKCS1_PADDING);
@@ -709,6 +700,7 @@ int or_handshake_server_process_nonce(connection_t *conn) {
 
   conn_or_init_crypto(conn);
   conn->state = OR_CONN_STATE_OPEN;
+  connection_init_timeval(conn);
   connection_watch_events(conn, POLLIN);
   return connection_process_inbuf(conn); /* process the rest of the inbuf */
 

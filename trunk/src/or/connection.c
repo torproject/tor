@@ -1,7 +1,12 @@
+/* Copyright 2001,2002 Roger Dingledine, Matej Pfajfar. */
+/* See LICENSE for licensing information */
+/* $Id$ */
 
 #include "or.h"
 
 /********* START VARIABLES **********/
+
+extern or_options_t options; /* command-line and config-file options */
 
 #if 0
 /* these are now out of date :( -RD */
@@ -38,6 +43,34 @@ char *conn_state_to_string[][10] = {
 
 /********* END VARIABLES ************/
 
+/**************************************************************/
+
+int tv_cmp(struct timeval *a, struct timeval *b) {
+        if (a->tv_sec > b->tv_sec)
+                return 1;
+        if (a->tv_sec < b->tv_sec)
+                return -1;
+        if (a->tv_usec > b->tv_usec)
+                return 1;
+        if (a->tv_usec < b->tv_usec)
+                return -1;
+        return 0;
+}
+
+void tv_add(struct timeval *a, struct timeval *b) {
+        a->tv_usec += b->tv_usec;
+        a->tv_sec += b->tv_sec + (a->tv_usec / 1000000);
+        a->tv_usec %= 1000000;
+}
+
+void tv_addms(struct timeval *a, long ms) {
+        a->tv_usec += (ms * 1000) % 1000000;
+        a->tv_sec += ((ms * 1000) / 1000000) + (a->tv_usec / 1000000);
+        a->tv_usec %= 1000000;
+}
+
+/**************************************************************/
+
 connection_t *connection_new(int type) {
   connection_t *conn;
 
@@ -51,6 +84,8 @@ connection_t *connection_new(int type) {
      buf_new(&conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen) < 0)
     return NULL;
 
+  conn->receiver_bucket = 10240; /* should be enough to do the handshake */
+  conn->bandwidth = conn->receiver_bucket / 10; /* give it a default */
   return conn;
 }
 
@@ -245,7 +280,26 @@ connection_t *connection_connect_to_router_as_op(routerinfo_t *router, RSA *prke
 }
 
 int connection_read_to_buf(connection_t *conn) {
-  return read_to_buf(conn->s, &conn->inbuf, &conn->inbuflen, &conn->inbuf_datalen, &conn->inbuf_reached_eof);
+  int read_result;
+
+  read_result = read_to_buf(conn->s, conn->receiver_bucket, &conn->inbuf, &conn->inbuflen,
+                            &conn->inbuf_datalen, &conn->inbuf_reached_eof);
+  log(LOG_DEBUG,"connection_read_to_buf(): read_to_buf returned %d.",read_result);
+  if(read_result >= 0) {
+    conn->receiver_bucket -= read_result;
+    if(conn->receiver_bucket <= 0) {
+
+      connection_stop_reading(conn);
+
+      /* If we're not in 'open' state here, then we're never going to finish the
+       * handshake, because we'll never increment the receiver_bucket. But we
+       * can't check for that here, because the buf we just read might have enough
+       * on it to finish the handshake. So we check for that in check_conn_read().
+       */
+    }
+  }
+
+  return read_result;
 }
 
 int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
@@ -253,14 +307,112 @@ int connection_fetch_from_buf(char *string, int len, connection_t *conn) {
 }
 
 int connection_flush_buf(connection_t *conn) {
-  return flush_buf(conn->s, &conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen);
+  return flush_buf(conn->s, &conn->outbuf, &conn->outbuflen, &conn->outbuf_flushlen, &conn->outbuf_datalen);
 }
 
 int connection_write_to_buf(char *string, int len, connection_t *conn) {
   if(!len)
     return 0;
-  connection_watch_events(conn, POLLOUT | POLLIN);
+
+  if( (conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_OR) ||
+      (!connection_state_is_open(conn)) ||
+      (options.LinkPadding == 0) ) {
+    /* connection types other than or and op, or or/op not in 'open' state, should flush immediately */
+    /* also flush immediately if we're not doing LinkPadding, since otherwise it will never flush */
+    connection_watch_events(conn, POLLOUT | POLLIN);
+    conn->outbuf_flushlen += len;
+  }
+
   return write_to_buf(string, len, &conn->outbuf, &conn->outbuflen, &conn->outbuf_datalen);
+}
+
+int connection_receiver_bucket_should_increase(connection_t *conn) {
+  assert(conn);
+
+  if(conn->receiver_bucket > 10*conn->bandwidth)
+    return 0;
+
+  return 1;
+}
+
+void connection_increment_receiver_bucket (connection_t *conn) {
+  assert(conn);
+
+  if(connection_receiver_bucket_should_increase(conn)) {
+    /* yes, the receiver_bucket can become overfull here. But not by much. */
+    conn->receiver_bucket += conn->bandwidth*1.1;
+    if(connection_state_is_open(conn)) {
+      /* if we're in state 'open', then start reading again */
+      connection_start_reading(conn);
+    }
+  }
+}
+
+int connection_state_is_open(connection_t *conn) {
+  assert(conn);
+
+  if((conn->type == CONN_TYPE_OR && conn->state == OR_CONN_STATE_OPEN) ||
+     (conn->type == CONN_TYPE_OP && conn->state == OP_CONN_STATE_OPEN) ||
+     (conn->type == CONN_TYPE_AP && conn->state == AP_CONN_STATE_OPEN) ||
+     (conn->type == CONN_TYPE_EXIT && conn->state == EXIT_CONN_STATE_OPEN))
+    return 1;
+
+  return 0;
+}
+
+void connection_send_cell(connection_t *conn) {
+  cell_t cell;
+
+  assert(conn);
+
+  if(conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_OP) {
+    /* this conn doesn't speak cells. do nothing. */
+    return;
+  }
+
+  if(!connection_state_is_open(conn)) {
+    /* it's not in 'open' state, all data should already be waiting to be flushed */
+    assert(conn->outbuf_datalen == conn->outbuf_flushlen);
+    return;
+  }
+
+#if 0 /* use to send evenly spaced cells, but not padding */
+  if(conn->outbuf_datalen - conn->outbuf_flushlen >= sizeof(cell_t)) {
+    conn->outbuf_flushlen += sizeof(cell_t); /* instruct it to send a cell */
+    connection_watch_events(conn, POLLOUT | POLLIN);
+  }
+#endif
+
+#if 1 /* experimental code, that sends padding cells too. 'probably' works :) */
+  if(conn->outbuf_datalen - conn->outbuf_flushlen < sizeof(cell_t)) {
+    /* we need to queue a padding cell first */
+    memset(&cell,0,sizeof(cell_t));
+    cell.command = CELL_PADDING;
+    connection_write_cell_to_buf(&cell, conn);
+  }
+
+  conn->outbuf_flushlen += sizeof(cell_t); /* instruct it to send a cell */
+  connection_watch_events(conn, POLLOUT | POLLIN);
+#endif
+
+  connection_increment_send_timeval(conn); /* update when we'll send the next cell */
+}
+
+void connection_increment_send_timeval(connection_t *conn) {
+  /* add "1000000 * sizeof(cell_t) / conn->bandwidth" microseconds to conn->send_timeval */
+  /* FIXME should perhaps use ceil() of this. For now I simply add 1. */
+
+  tv_addms(&conn->send_timeval, 1+1000 * sizeof(cell_t) / conn->bandwidth);
+}
+
+void connection_init_timeval(connection_t *conn) {
+
+  assert(conn);
+
+  if(gettimeofday(&conn->send_timeval,NULL) < 0)
+    return;
+
+  connection_increment_send_timeval(conn);
 }
 
 int connection_send_destroy(aci_t aci, connection_t *conn) {
@@ -275,6 +427,8 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
      conn->marked_for_close = 1;
      return 0;
   }
+
+  assert(conn->type == CONN_TYPE_OR);
 
   cell.aci = aci;
   cell.command = CELL_DESTROY;
@@ -291,7 +445,6 @@ int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn) {
   }
 
   return connection_write_to_buf((char *)cellp, sizeof(cell_t), conn);
-
 }
 
 int connection_encrypt_cell_header(cell_t *cellp, connection_t *conn) {
@@ -300,22 +453,26 @@ int connection_encrypt_cell_header(cell_t *cellp, connection_t *conn) {
   int x;
   char *px;
 
+#if 0
   printf("Sending: Cell header plaintext: ");
   px = (char *)cellp;
   for(x=0;x<8;x++) {
     printf("%u ",px[x]);
   } 
   printf("\n");
+#endif
 
   if(!EVP_EncryptUpdate(&conn->f_ctx, newheader, &newsize, (char *)cellp, 8)) {
     log(LOG_ERR,"Could not encrypt data for connection %s:%u.",conn->address,ntohs(conn->port));
     return -1;
   }
+#if 0
   printf("Sending: Cell header crypttext: ");
   for(x=0;x<8;x++) {
     printf("%u ",newheader[x]);
   }
   printf("\n");
+#endif
 
   memcpy(cellp,newheader,8);
   return 0;
@@ -430,22 +587,26 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
     return -1;
   }
 
+#if 0
   printf("Cell header crypttext: ");
   for(x=0;x<8;x++) {
     printf("%u ",crypted[x]);
   }
   printf("\n");
+#endif
   /* decrypt */
   if(!EVP_DecryptUpdate(&conn->b_ctx,(unsigned char *)outbuf,&outlen,crypted,8)) {
     log(LOG_ERR,"connection_process_cell_from_inbuf(): Decryption failed, dropping.");
     return connection_process_inbuf(conn); /* process the remainder of the buffer */
   }
   log(LOG_DEBUG,"connection_process_cell_from_inbuf(): Cell decrypted (%d bytes).",outlen);
+#if 0
   printf("Cell header plaintext: ");
   for(x=0;x<8;x++) {
     printf("%u ",outbuf[x]);
   }
   printf("\n");
+#endif
 
   /* copy the rest of the cell */
   memcpy((char *)outbuf+8, (char *)crypted+8, sizeof(cell_t)-8);

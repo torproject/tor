@@ -1,3 +1,6 @@
+/* Copyright 2001,2002 Roger Dingledine, Matej Pfajfar. */
+/* See LICENSE for licensing information */
+/* $Id$ */
 
 /* buffers.c */
 
@@ -21,17 +24,29 @@ void buf_free(char *buf) {
   free(buf);
 }
 
-int read_to_buf(int s, char **buf, size_t *buflen, size_t *buf_datalen, int *reached_eof) {
+int read_to_buf(int s, int at_most, char **buf, size_t *buflen, size_t *buf_datalen, int *reached_eof) {
 
-  /* grab from s, put onto buf, return how many bytes read */
+  /* read from socket s, writing onto buf+buf_datalen. Read at most
+   * 'at_most' bytes, and also don't read more than will fit based on buflen.
+   * If read() returns 0, set *reached_eof to 1 and return 0. If you want to tear
+   * down the connection return -1, else return the number of bytes read.
+   */
 
   int read_result;
 
-  assert(buf && *buf && buflen && buf_datalen && reached_eof && (s>=0));
+  assert(buf && *buf && buflen && buf_datalen && reached_eof && (s>=0) && (at_most >= 0));
 
   /* this is the point where you would grow the buffer, if you want to */
 
-  read_result = read(s, *buf+*buf_datalen, *buflen - *buf_datalen);
+  if(*buflen - *buf_datalen < at_most)
+    at_most = *buflen - *buf_datalen; /* take the min of the two */
+    /* (note that this only modifies at_most inside this function) */
+
+  if(at_most == 0)
+    return 0; /* we shouldn't read anything */
+
+  log(LOG_DEBUG,"read_to_buf(): reading at most %d bytes.",at_most);
+  read_result = read(s, *buf+*buf_datalen, at_most);
   if (read_result < 0) {
     if(errno!=EAGAIN) { /* it's a real error */
       return -1;
@@ -49,22 +64,24 @@ int read_to_buf(int s, char **buf, size_t *buflen, size_t *buf_datalen, int *rea
 
 }
 
-int flush_buf(int s, char **buf, size_t *buflen, size_t *buf_datalen) {
+int flush_buf(int s, char **buf, size_t *buflen, size_t *buf_flushlen, size_t *buf_datalen) {
 
   /* push from buf onto s
    * then memmove to front of buf
-   * return -1 or how many bytes remain on the buf */
+   * return -1 or how many bytes remain to be flushed */
 
   int write_result;
 
-  assert(buf && *buf && buflen && buf_datalen && (s>=0));
+  assert(buf && *buf && buflen && buf_flushlen && buf_datalen && (s>=0) && (*buf_flushlen <= *buf_datalen));
 
-  if(*buf_datalen == 0) /* nothing to flush */
+  if(*buf_flushlen == 0) /* nothing to flush */
     return 0;
 
   /* this is the point where you would grow the buffer, if you want to */
 
-  write_result = write(s, *buf, *buf_datalen);
+  write_result = write(s, *buf, *buf_flushlen > 10240 ? 10240 : *buf_flushlen);
+    /* try to flush at most 10240 bytes at a time. otherwise write() can hang for
+     * quite a while trying to get it all out. that's bad. */
   if (write_result < 0) {
     if(errno!=EAGAIN) { /* it's a real error */
       return -1;
@@ -73,11 +90,12 @@ int flush_buf(int s, char **buf, size_t *buflen, size_t *buf_datalen) {
     return 0;
   } else {
     *buf_datalen -= write_result;
+    *buf_flushlen -= write_result;
     memmove(*buf, *buf+write_result, *buf_datalen);
-    log(LOG_DEBUG,"flush_buf(): flushed %d bytes, %d remain.",write_result,*buf_datalen);
-    return *buf_datalen;
+    log(LOG_DEBUG,"flush_buf(): flushed %d bytes, %d ready to flush, %d remain.",
+        write_result,*buf_flushlen,*buf_datalen);
+    return *buf_flushlen;
   }
-
 }
 
 int write_to_buf(char *string, size_t string_len,

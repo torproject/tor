@@ -1,3 +1,6 @@
+/* Copyright 2001,2002 Roger Dingledine, Matej Pfajfar. */
+/* See LICENSE for licensing information */
+/* $Id$ */
 
 #include "or.h"
 
@@ -40,8 +43,7 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
   if(!circ) { /* if it's not there, create it */
     circ = circuit_new(cell->aci, conn);
     circ->state = CIRCUIT_STATE_OPEN_WAIT;
-    memcpy((void *)&circ->onionlen,(void *)cell->payload, 4);
-    circ->onionlen = ntohl(circ->onionlen);
+    circ->onionlen = ntohl(*(int*)cell->payload);
     log(LOG_DEBUG,"command_process_create_cell():  Onion length is %u.",circ->onionlen);
     if(circ->onionlen > 50000 || circ->onionlen < 1) { /* too big or too small */
       log(LOG_DEBUG,"That's ludicrous. Closing.");

@@ -1,4 +1,5 @@
-/* Copyright (c) 2002 Roger Dingledine.  See LICENSE for licensing information */
+/* Copyright 2001,2002 Roger Dingledine, Matej Pfajfar. */
+/* See LICENSE for licensing information */
 /* $Id$ */
 
 #ifndef __OR_H
@@ -38,8 +39,8 @@
 #define MAXCONNECTIONS 200 /* upper bound on max connections.
 			      can be overridden by config file */
 
-#define MAX_BUF_SIZE (64*1024)
-#define DEFAULT_BANDWIDTH_OP 1
+#define MAX_BUF_SIZE (640*1024)
+#define DEFAULT_BANDWIDTH_OP 1024
 
 #define ACI_TYPE_LOWER 0
 #define ACI_TYPE_HIGHER 1
@@ -130,16 +131,19 @@ typedef struct
   int inbuf_reached_eof;
 
   char *outbuf;
-  size_t outbuflen;
-  size_t outbuf_datalen;
+  size_t outbuflen; /* how many bytes are allocated for the outbuf? */
+  size_t outbuf_flushlen; /* how much data should we try to flush from the outbuf? */
+  size_t outbuf_datalen; /* how much data is there total on the outbuf? */
 
 //  uint16_t aci; /* anonymous connection identifier */
 
 /* used by OR and OP: */
 
   uint32_t bandwidth; /* connection bandwidth */
-  int window_sent; /* how many cells can i still send? */
-  int window_received; /* how many cells do i still expect to receive? */
+  int receiver_bucket; /* when this hits 0, stop receiving. Every second we
+		       	* add 'bandwidth' to this, capping it at 10*bandwidth.
+		       	*/
+  struct timeval send_timeval; /* for determining when to send the next cell */
 
   /* link encryption */
   unsigned char f_session_key[8];
@@ -169,9 +173,11 @@ typedef struct
   RSA *prkey;
   struct sockaddr_in local;
 
-   /* link info */
+#if 0 /* obsolete, we now use conn->bandwidth */
+  /* link info */
   uint32_t min;
   uint32_t max;
+#endif
 
   char *address; /* strdup into this, because free_connection frees it */
   RSA *pkey; /* public RSA key for the other side */
@@ -295,7 +301,8 @@ typedef struct
    int APPort;
    int MaxConn;
    int TrafficShaping;
-   int GlobalRole;
+   int LinkPadding;
+   int Role;
    int loglevel;
 } or_options_t;
 
@@ -303,24 +310,16 @@ typedef struct
     /* all the function prototypes go here */
 
 
-/********************************* args.c ***************************/
-
-/* print help*/
-void print_usage();
-
-/* get command-line arguments */
-int getargs(int argc,char *argv[], char *args,char **conf_filename, int *loglevel);
-
 /********************************* buffers.c ***************************/
 
 int buf_new(char **buf, size_t *buflen, size_t *buf_datalen);
 
 void buf_free(char *buf);
 
-int read_to_buf(int s, char **buf, size_t *buflen, size_t *buf_datalen, int *reached_eof);
+int read_to_buf(int s, int at_most, char **buf, size_t *buflen, size_t *buf_datalen, int *reached_eof);
   /* grab from s, put onto buf, return how many bytes read */
 
-int flush_buf(int s, char **buf, size_t *buflen, size_t *buf_datalen);
+int flush_buf(int s, char **buf, size_t *buflen, size_t *buf_flushlen, size_t *buf_datalen);
   /* push from buf onto s
    * then memmove to front of buf
    * return -1 or how many bytes remain on the buf */
@@ -384,6 +383,8 @@ int getoptions(int argc, char **argv, or_options_t *options);
 
 /********************************* connection.c ***************************/
 
+int tv_cmp(struct timeval *a, struct timeval *b);
+
 connection_t *connection_new(int type);
 
 void connection_free(connection_t *conn);
@@ -404,6 +405,16 @@ int connection_fetch_from_buf(char *string, int len, connection_t *conn);
 int connection_flush_buf(connection_t *conn);
 
 int connection_write_to_buf(char *string, int len, connection_t *conn);
+void connection_send_cell(connection_t *conn);
+
+int connection_receiver_bucket_should_increase(connection_t *conn);
+void connection_increment_receiver_bucket (connection_t *conn);
+
+void connection_increment_send_timeval(connection_t *conn);
+void connection_init_timeval(connection_t *conn);
+
+int connection_state_is_open(connection_t *conn);
+
 int connection_send_destroy(aci_t aci, connection_t *conn);
 int connection_encrypt_cell_header(cell_t *cellp, connection_t *conn);
 int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn);
@@ -500,12 +511,15 @@ routerinfo_t *router_get_first_in_route(unsigned int *route, size_t routelen);
 connection_t *connect_to_router_as_op(routerinfo_t *router);
 
 void connection_watch_events(connection_t *conn, short events);
+void connection_stop_reading(connection_t *conn);
+void connection_start_reading(connection_t *conn);
 
 void check_conn_read(int i);
 void check_conn_marked(int i);
 void check_conn_write(int i);
 
-void check_conn_hup(int i);
+int prepare_for_poll(int *timeout);
+void increment_receiver_buckets(void);
 
 int do_main_loop(void);
 
