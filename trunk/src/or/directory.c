@@ -80,11 +80,27 @@ void
 directory_get_from_dirserver(uint8_t purpose, const char *payload,
                              int payload_len)
 {
-  /* FFFF we might pass pick_directory_server a boolean to prefer
-   * picking myself for some purposes, or prefer picking not myself
-   * for other purposes. */
-  directory_initiate_command(router_pick_directory_server(),
-                             purpose, payload, payload_len);
+  routerinfo_t *ds;
+
+  if (purpose == DIR_PURPOSE_FETCH_DIR) {
+    if (server_mode()) {
+      /* only ask authdirservers, don't ask myself */
+      ds = router_pick_directory_server(1, 1);
+    } else {
+      /* anybody with a non-zero dirport will do */
+      ds = router_pick_directory_server(0, 1);
+    }
+  } else { // (purpose == DIR_PURPOSE_FETCH_RENDDESC)
+    /* only ask authdirservers, any of them will do */
+    ds = router_pick_directory_server(1, 0);
+  }
+
+  if (!ds) { /* no viable dirserver found */
+    log_fn(LOG_WARN,"No running dirservers known. Not trying. (purpose %d)", purpose);
+    return;
+  }
+
+  directory_initiate_command(ds, purpose, payload, payload_len);
 }
 
 /** Launch a new connection to the directory server <b>router</b> to upload or
@@ -101,6 +117,9 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
                            const char *payload, int payload_len)
 {
   connection_t *conn;
+
+  tor_assert(router);
+  tor_assert(router->dir_port);
 
   switch (purpose)
     {
@@ -120,13 +139,6 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
       log_fn(LOG_ERR, "Unrecognized directory connection purpose.");
       tor_assert(0);
     }
-
-  if (!router) { /* i guess they didn't have one in mind for me to use */
-    log_fn(LOG_WARN,"No running dirservers known. Not trying. (purpose %d)", purpose);
-    return;
-  }
-
-  tor_assert(router->dir_port);
 
   conn = connection_new(CONN_TYPE_DIR);
 
@@ -169,7 +181,7 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
     }
   } else { /* we want to connect via tor */
     /* make an AP connection
-     *   populate it and add it at the right state
+     * populate it and add it at the right state
      * socketpair and hook up both sides
      */
     conn->s = connection_ap_make_bridge(conn->address, conn->port);
@@ -297,7 +309,7 @@ parse_http_response(char *headers, int *code, char **message)
  * will take care of marking the connection for close.
  */
 static int
-connection_dir_client_finished_reading(connection_t *conn)
+connection_dir_client_reached_eof(connection_t *conn)
 {
   char *body;
   char *headers;
@@ -445,7 +457,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
       return -1;
     }
 
-    retval = connection_dir_client_finished_reading(conn);
+    retval = connection_dir_client_reached_eof(conn);
     connection_mark_for_close(conn);
     return retval;
   } /* endif 'reached eof' */

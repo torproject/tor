@@ -1355,7 +1355,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 
 /********************************* routerlist.c ***************************/
 
-routerinfo_t *router_pick_directory_server(void);
+routerinfo_t *router_pick_directory_server(int requireauth, int requireothers);
 int all_directory_servers_down(void);
 struct smartlist_t;
 void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list);
