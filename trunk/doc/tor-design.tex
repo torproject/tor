@@ -116,24 +116,8 @@ relies on the filtering features of privacy-enhancing
 application-level proxies such as Privoxy \cite{privoxy}, without trying
 to duplicate those features itself.
 
-\item \textbf{Many TCP streams can share one circuit:} The
-original Onion Routing design built a separate circuit for each
-application-level request.  This hurt performance by requiring
-multiple public key operations for every request, and also presented
-a threat to anonymity from building so many different circuits; see
-Section~\ref{sec:maintaining-anonymity}.  Tor multiplexes multiple TCP
-streams along each virtual circuit to improve efficiency and anonymity.
-
-\item \textbf{Leaky-pipe circuit topology:} Through in-band signaling
-within the circuit, Tor initiators can direct traffic to nodes partway
-down the circuit. This novel approach allows for long-range
-padding to frustrate traffic shape and volume attacks at the initiator
-\cite{defensive-dropping}, and 
-also allows traffic to exit the circuit from the middle---thus
-frustrating traffic shape and volume attacks based on observing the end
-of the circuit.
-
-\item \textbf{No mixing, padding, or traffic shaping:} The original Onion
+\item \textbf{No mixing, padding, or traffic shaping yet:} The original
+Onion
 Routing design called for batching and reordering the cells arriving from
 each source. It also included padding between onion routers and, in a
 later design, between onion proxies (that is, users) and onion routers
@@ -147,6 +131,23 @@ padding is still vulnerable \cite{defensive-dropping}. Thus, until we
 have a proven and convenient design for traffic shaping or low-latency
 mixing that will improve anonymity against a realistic adversary, we
 leave these strategies out.
+
+\item \textbf{Many TCP streams can share one circuit:} The
+original Onion Routing design built a separate circuit for each
+application-level request.  This hurt performance by requiring
+multiple public key operations for every request, and also presented
+a threat to anonymity from building so many different circuits; see
+Section~\ref{sec:maintaining-anonymity}.  Tor multiplexes multiple TCP
+streams along each virtual circuit to improve efficiency and anonymity.
+
+\item \textbf{Leaky-pipe circuit topology:} Through in-band signaling
+within the circuit, Tor initiators can direct traffic to nodes partway
+down the circuit. This novel approach allows for long-range padding if
+future research indicates that it can frustrate traffic shape and volume
+attacks at the initiator \cite{defensive-dropping}, and
+also allows traffic to exit the circuit from the middle---again possibly
+frustrating traffic shape and volume attacks based on observing the end
+of the circuit.
 
 \item \textbf{Congestion control:} Earlier anonymity designs do not
 address traffic bottlenecks. Unfortunately, typical approaches to
@@ -237,16 +238,19 @@ the cost of introducing comparatively large and variable latencies,
 including {\bf Babel} \cite{babel}, {\bf Mixmaster}
 \cite{mixmaster-spec}, and
 {\bf Mixminion} \cite{minion-design}.  Because of this
-decision, these \emph{high-latency} networks are well-suited for anonymous
-email, but introduce too much lag for interactive tasks like web browsing,
+decision, these \emph{high-latency} networks resist strong global
+adversaries,
+but introduce too much lag for interactive tasks like web browsing,
 internet chat, or SSH connections.
 
 Tor belongs to the second category: \emph{low-latency} designs that
 attempt to anonymize interactive network traffic. These systems handle
-a variety of bidirectional protocols. They also provide more convenient
-mail delivery than the high-latency fire-and-forget anonymous email
-networks, because the remote mail server provides explicit delivery
-confirmation. But because these designs typically
+a variety of bidirectional protocols.
+% They also provide more convenient
+%mail delivery than the high-latency fire-and-forget anonymous email
+%networks, because the remote mail server provides explicit delivery
+%confirmation.
+But because these designs typically
 involve many packets that must be delivered quickly, it is
 difficult for them to prevent an attacker who can eavesdrop both ends of the
 communication from correlating the timing and volume
@@ -482,7 +486,7 @@ suspicion that Alice is
 talking to Bob if the timing and volume patterns of the traffic on the
 connection are distinct enough; active attackers can induce timing
 signatures on the traffic to \emph{force} distinct patterns. Tor
-does not address these \emph{traffic confirmation} attacks.
+does not yet address these \emph{traffic confirmation} attacks.
 Rather, we aim to prevent \emph{traffic
 analysis} attacks, where the adversary uses traffic patterns to learn
 which points in the network he should attack.
@@ -793,8 +797,8 @@ Privoxy safely. But a portable general solution, such as is needed for
 SSH, is
 an open problem. Modifying or replacing the local nameserver
 can be invasive, brittle, and not portable. Forcing the resolver
-library to do its resolution via TCP rather than UDP is
-hard to do right, and also has portability problems. We could provide a
+library to do resolution via TCP rather than UDP is
+hard, and also has portability problems. We could provide a
 tool similar to \emph{dig} to perform a private lookup through the
 Tor network. Our current answer is to encourage the use of
 privacy-aware proxies like Privoxy wherever possible.
@@ -1370,7 +1374,7 @@ acknowledge his existence.
 \Section{Attacks and Defenses}
 \label{sec:attacks}
 
-% XXX In sec4 we should talk about bandwidth classes, which will
+% XXX In sec9 we should talk about bandwidth classes, which will
 %     enable us to accept a lot more ORs than if we continue to
 %     require 10mbit connections for all ORs. -RD
 
@@ -1380,21 +1384,18 @@ design withstands them.
 
 \subsubsection*{Passive attacks}
 
-\emph{Observing user traffic patterns.} Observations of connection
-between a user and her first onion router will not reveal to whom
-the user is connecting or what information is being sent. It will
-reveal patterns of user traffic (both sent and received). Simple
-profiling of user connection patterns is not generally possible,
-however, because multiple application streams may be operating
-simultaneously or in series over a single circuit. Thus, further
-processing is necessary to discern even these usage patterns.
+\emph{Observing user traffic patterns.} Observing the connection
+from the user will not reveal her destination or data, but it will
+reveal traffic patterns (both sent and received). Profiling via user
+connection patterns is hampered because multiple application streams may
+be operating simultaneously or in series over a single circuit. Thus,
+further processing is necessary to discern even these usage patterns.
   
-\emph{Observing user content.} At the user end, content is
-encrypted; however, connections from the network to arbitrary
-websites may not be. Further, a responding website may itself be
-hostile. Filtering content is not a primary goal of
-Onion Routing; nonetheless, Tor can directly make use of Privoxy and
-related filtering services to anonymize application data streams.
+\emph{Observing user content.} While content at the user end is encrypted,
+connections to responders may not be (further, the responding website
+itself may be hostile). Filtering content is not a primary goal of Onion
+Routing; nonetheless, Tor can directly use Privoxy and related
+filtering services to anonymize application data streams.
 
 \emph{Option distinguishability.} Configuration options can be a
 source of distinguishable patterns. In general there is economic
@@ -1523,12 +1524,6 @@ $\left(\frac{m}{N}\right)^2$ of the traffic in this way---although an
 adversary
 could possibly attract a disproportionately large amount of traffic
 by running an exit node with an unusually permissive exit policy.
-
-\emph{Compromise entire path.} Anyone compromising both
-endpoints of a circuit can confirm this with high probability. If
-the entire path is compromised, this becomes a certainty; however,
-the added benefit to the adversary of such an attack is small in
-relation to the difficulty.
 
 \emph{Run a hostile directory server.} Directory servers control
 admission to the network. However, because the network directory
@@ -1676,18 +1671,17 @@ by the session key shared by the client and server.
 % There must be a better intro than this! -NM
 In addition to the open problems discussed in
 Section~\ref{subsec:non-goals}, many other questions remain to be
-solved by future research before we can be confident that we
-have built a secure low-latency anonymity service.
+solved by future research before we can be confident of our security.
 
 Many of these open issues are questions of balance.  For example,
 how often should users rotate to fresh circuits?  Too-frequent
-rotation is inefficient, expensive, and may lead to intersection attacks,
+rotation is inefficient, expensive, and may lead to intersection attacks
+and predecessor attacks \cite{wright03},
 but too-infrequent rotation
-makes the user's traffic linkable.   Instead of opening a fresh
-circuit; clients can also limit linkability by exiting from a middle point
-of the circuit, or by truncating and re-extending the circuit, but
+makes the user's traffic linkable.   Along with opening a fresh
+circuit, clients can also limit linkability by exiting from a middle point
+of the circuit, or by truncating and re-extending the circuit; but
 more analysis is needed to determine the proper trade-off.
-%[XXX mention predecessor attacks?]
 
 A similar question surrounds timing of directory operations:
 how often should directories be updated?  With too-infrequent
@@ -1696,7 +1690,6 @@ too-frequent updates the directory servers are overloaded.
 
 %do different exit policies at different exit nodes trash anonymity sets,
 %or not mess with them much?
-%
 %% Why would they?  By routing traffic to certain nodes preferentially?
 
 %[XXX Choosing paths and path lengths: I'm not writing this bit till
