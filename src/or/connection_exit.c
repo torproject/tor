@@ -164,7 +164,7 @@ int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ) {
   connection_t *conn;
   int topic_command;
   int topic_id;
-  static num_seen=0;
+  static int num_seen=0;
 
   /* an outgoing data cell has arrived */
 
