@@ -16,8 +16,10 @@ tor (0.0.8+0.0.9pre5-2) unstable; urgency=low
   * Remove /usr/bin/tor-control.py from the binary package, it is
     not really useful yet, and wasn't meant to be installed by
     default.
+  * Change init startup script to properly deal with tor
+    printing stuff on startup.
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 12 Nov 2004 18:20:04 +0100
+ -- Peter Palfrader <weasel@debian.org>  Fri, 12 Nov 2004 18:30:50 +0100
 
 tor (0.0.8+0.0.9pre5-1) unstable; urgency=low
 
