@@ -373,10 +373,11 @@ static void run_connection_housekeeping(int i, time_t now) {
     routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     if((!connection_state_is_open(conn)) ||
        (!clique_mode() && !circuit_get_by_conn(conn) &&
-       (!router || !server_mode() || strncmp(router->platform, "Tor 0.0.7", 9)))) {
+       (!router || !server_mode() || !router_is_clique_mode(router)))) {
       /* our handshake has expired;
        * or we're not an authdirserver, we have no circuits, and
-       *   either he's an OP, we're an OP, or we're both ORs and he's running 0.0.8,
+       *   either he's an OP, we're an OP, or we're both ORs and he's
+       *   running 0.0.8 and he's not an authdirserver,
        * then kill it. */
       log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
              i,conn->address, conn->port);

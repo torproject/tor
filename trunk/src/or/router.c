@@ -368,6 +368,14 @@ void router_retry_connections(void) {
   }
 }
 
+int router_is_clique_mode(routerinfo_t *router) {
+  if(router->is_trusted_dir)
+    return 1;
+  if(!strncmp(router->platform, "Tor 0.0.7", 9))
+    return 1;
+  return 0;
+}
+
 /*
  * OR descriptor generation.
  */
