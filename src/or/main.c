@@ -638,9 +638,8 @@ void directory_has_arrived(time_t now, char *identity_digest) {
   if (identity_digest) { /* if this is us, then our dirport is reachable */
     routerinfo_t *router = router_get_by_digest(identity_digest);
     if (!router) // XXX
-      log_fn(LOG_WARN,"Roger, router_get_by_digest doesn't find me.");
+      log_fn(LOG_WARN,"Bug: router_get_by_digest doesn't find me.");
     if (router && router_is_me(router)) {
-      log_fn(LOG_NOTICE,"Your DirPort is reachable from the outside. Excellent.");
       router_dirport_found_reachable();
     }
   }
