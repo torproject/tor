@@ -26,7 +26,6 @@ char *circuit_state_to_string[] = {
 /********* END VARIABLES ************/
 
 void circuit_add(circuit_t *circ) {
-
   if(!global_circuitlist) { /* first one */
     global_circuitlist = circ;
     circ->next = NULL;
@@ -34,7 +33,6 @@ void circuit_add(circuit_t *circ) {
     circ->next = global_circuitlist;
     global_circuitlist = circ;
   }
-
 }
 
 void circuit_remove(circuit_t *circ) {
@@ -126,19 +124,25 @@ static void circuit_free_cpath_node(crypt_path_t *victim) {
 /* return 0 if can't get a unique circ_id. */
 static circ_id_t get_unique_circ_id_by_conn(connection_t *conn, int circ_id_type) {
   circ_id_t test_circ_id;
+  int attempts=0;
   uint16_t high_bit;
-  assert(conn && conn->type == CONN_TYPE_OR);
 
+  assert(conn && conn->type == CONN_TYPE_OR);
   high_bit = (circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
   do {
-    /* Sequentially iterate over test_circ_id=1...1<<15-1 until we find an
+    /* Sequentially iterate over test_circ_id=1...1<<15-1 until we find a
      * circID such that (high_bit|test_circ_id) is not already used. */
-    /* XXX Will loop forever if all circ_id's in our range are used.
-     * This matters because it's an external DoS vulnerability. */
     test_circ_id = conn->next_circ_id++;
     if (test_circ_id == 0 || test_circ_id >= 1<<15) {
       test_circ_id = 1;
       conn->next_circ_id = 2;
+    }
+    if(++attempts > 1<<15) {
+      /* Make sure we don't loop forever if all circ_id's are used. This
+       * matters because it's an external DoS vulnerability.
+       */
+      log_fn(LOG_WARN,"No unused circ IDs. Failing.");
+      return 0;
     }
     test_circ_id |= high_bit;
   } while(circuit_get_by_circ_id_conn(test_circ_id, conn));
