@@ -2,14 +2,14 @@ TESTS = test
 
 noinst_PROGRAMS = test
 
-bin_PROGRAMS = or
+bin_PROGRAMS = tor
 
-or_SOURCES = buffers.c circuit.c command.c connection.c \
+tor_SOURCES = buffers.c circuit.c command.c connection.c \
              connection_or.c config.c \
              onion.c routers.c directory.c dns.c connection_edge.c \
              cpuworker.c main.c tor_main.c
 
-or_LDADD = ../common/libor.a
+tor_LDADD = ../common/libor.a
 
 test_SOURCES = buffers.c circuit.c command.c connection.c \
              connection_or.c config.c \
