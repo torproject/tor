@@ -200,7 +200,7 @@ void connection_about_to_close_connection(connection_t *conn)
 
   if (conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_EXIT) {
     if (!conn->has_sent_end)
-      log_fn(LOG_WARN,"Edge connection hasn't sent end yet? Bug.");
+      log_fn(LOG_WARN,"Bug: Edge connection hasn't sent end yet?");
   }
 
   switch (conn->type) {
@@ -266,7 +266,7 @@ void connection_close_immediate(connection_t *conn)
 {
   assert_connection_ok(conn,0);
   if (conn->s < 0) {
-    log_fn(LOG_WARN,"Attempt to close already-closed connection.");
+    log_fn(LOG_WARN,"Bug: Attempt to close already-closed connection.");
     return;
   }
   if (conn->outbuf_flushlen) {
@@ -290,7 +290,7 @@ _connection_mark_for_close(connection_t *conn)
   assert_connection_ok(conn,0);
 
   if (conn->marked_for_close) {
-    log(LOG_WARN, "Double mark-for-close on connection.");
+    log(LOG_WARN, "Bug: Double mark-for-close on connection.");
     return -1;
   }
 
@@ -326,7 +326,7 @@ void connection_expire_held_open(void)
     if (conn->hold_open_until_flushed) {
       tor_assert(conn->marked_for_close);
       if (now - conn->timestamp_lastwritten >= 15) {
-        log_fn(LOG_WARN,"Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %d).",
+        log_fn(LOG_NOTICE,"Giving up on marked_for_close conn that's been flushing for 15s (fd %d, type %s, state %d).",
                conn->s, CONN_TYPE_TO_STRING(conn->type), conn->state);
         conn->hold_open_until_flushed = 0;
       }
@@ -429,7 +429,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
       return 0; /* he hung up before we could accept(). that's fine. */
     } else if (ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e)) {
-      log_fn(LOG_WARN,"accept failed: %s. Dropping incoming connection.",
+      log_fn(LOG_NOTICE,"accept failed: %s. Dropping incoming connection.",
              tor_socket_strerror(e));
       return 0;
     }
@@ -447,7 +447,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   if (new_type == CONN_TYPE_AP) {
     /* check sockspolicy to see if we should accept it */
     if (socks_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
-      log_fn(LOG_WARN,"Denying socks connection from untrusted address %s.",
+      log_fn(LOG_NOTICE,"Denying socks connection from untrusted address %s.",
              inet_ntoa(remote.sin_addr));
       tor_close_socket(news);
       return 0;
@@ -456,7 +456,7 @@ static int connection_handle_listener_read(connection_t *conn, int new_type) {
   if (new_type == CONN_TYPE_DIR) {
     /* check dirpolicy to see if we should accept it */
     if (dir_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
-      log_fn(LOG_WARN,"Denying dir connection from address %s.",
+      log_fn(LOG_NOTICE,"Denying dir connection from address %s.",
              inet_ntoa(remote.sin_addr));
       tor_close_socket(news);
       return 0;
@@ -650,7 +650,7 @@ static int retry_listeners(int type, struct config_line_t *cfg,
       return 0;
 
     /* Otherwise, warn the user and relaunch. */
-    log_fn(LOG_WARN,"We have %d %s(s) open, but we want %d; relaunching.",
+    log_fn(LOG_NOTICE,"We have %d %s(s) open, but we want %d; relaunching.",
            have, conn_type_to_string[type], want);
   }
 
@@ -1329,7 +1329,7 @@ static int connection_process_inbuf(connection_t *conn, int package_partial) {
     case CONN_TYPE_CONTROL:
       return connection_control_process_inbuf(conn);
     default:
-      log_fn(LOG_WARN,"got unexpected conn type %d.", conn->type);
+      log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
       return -1;
   }
 }
@@ -1361,7 +1361,7 @@ static int connection_finished_flushing(connection_t *conn) {
     case CONN_TYPE_CONTROL:
       return connection_control_finished_flushing(conn);
     default:
-      log_fn(LOG_WARN,"got unexpected conn type %d.", conn->type);
+      log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
       return -1;
   }
 }
@@ -1384,7 +1384,7 @@ static int connection_finished_connecting(connection_t *conn)
     case CONN_TYPE_DIR:
       return connection_dir_finished_connecting(conn);
     default:
-      log_fn(LOG_WARN,"got unexpected conn type %d.", conn->type);
+      log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
       return -1;
   }
 }
@@ -1406,7 +1406,7 @@ static int connection_reached_eof(connection_t *conn)
     case CONN_TYPE_CONTROL:
       return connection_control_reached_eof(conn);
     default:
-      log_fn(LOG_WARN,"got unexpected conn type %d.", conn->type);
+      log_fn(LOG_WARN,"Bug: got unexpected conn type %d.", conn->type);
       return -1;
   }
 }

@@ -572,7 +572,7 @@ void
 control_event_logmsg(int severity, const char *msg)
 {
   size_t len;
-  if (severity > LOG_WARN) /* Less important than warning? ignore for now. */
+  if (severity > LOG_NOTICE) /* Less important than notice? ignore for now. */
     return;
   if (!EVENT_IS_INTERESTING(EVENT_WARNING))
     return;

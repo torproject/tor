@@ -92,7 +92,7 @@ int connection_edge_process_inbuf(connection_t *conn, int package_partial) {
                       conn_state_to_string[conn->type][conn->state]);
       return 0;
   }
-  log_fn(LOG_WARN,"Got unexpected state %d. Closing.",conn->state);
+  log_fn(LOG_WARN,"Bug: Got unexpected state %d. Closing.",conn->state);
   connection_edge_end(conn, END_STREAM_REASON_MISC, conn->cpath_layer);
   connection_mark_for_close(conn);
   return -1;
@@ -130,7 +130,7 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
   circuit_t *circ;
 
   if (conn->has_sent_end) {
-    log_fn(LOG_WARN,"It appears I've already sent the end. Are you calling me twice?");
+    log_fn(LOG_WARN,"Bug: Calling connection_edge_end on an already ended stream?");
     return -1;
   }
 
@@ -252,14 +252,14 @@ void connection_ap_expire_beginning(void) {
       continue;
     circ = circuit_get_by_conn(conn);
     if (!circ) { /* it's vanished? */
-      log_fn(LOG_WARN,"Conn is waiting (address %s), but lost its circ.",
+      log_fn(LOG_INFO,"Conn is waiting (address %s), but lost its circ.",
              conn->socks_request->address);
       connection_mark_for_close(conn);
       continue;
     }
     if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
       if (now - conn->timestamp_lastread > 45) {
-        log_fn(LOG_WARN,"Rend stream is %d seconds late. Giving up on address '%s'.",
+        log_fn(LOG_NOTICE,"Rend stream is %d seconds late. Giving up on address '%s'.",
                (int)(now - conn->timestamp_lastread), conn->socks_request->address);
         connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
         connection_mark_for_close(conn);
@@ -269,7 +269,7 @@ void connection_ap_expire_beginning(void) {
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
     log_fn(LOG_NOTICE,"Stream is %d seconds late on address '%s'. Retrying.",
            (int)(now - conn->timestamp_lastread), conn->socks_request->address);
-    circuit_log_path(LOG_WARN, circ);
+    circuit_log_path(LOG_NOTICE, circ);
     /* send an end down the circuit */
     connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
     /* un-mark it as ending, since we're going to reuse it */
@@ -406,7 +406,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     }
 
     if (socks->command == SOCKS_COMMAND_CONNECT && socks->port == 0) {
-      log_fn(LOG_WARN,"Application asked to connect to port 0. Refusing.");
+      log_fn(LOG_NOTICE,"Application asked to connect to port 0. Refusing.");
       return -1;
     }
     conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
@@ -958,7 +958,7 @@ connection_exit_connect(connection_t *conn) {
 
   conn->state = EXIT_CONN_STATE_OPEN;
   if (connection_wants_to_flush(conn)) { /* in case there are any queued data cells */
-    log_fn(LOG_WARN,"tell roger: newly connected conn had data waiting!");
+    log_fn(LOG_WARN,"Bug: newly connected conn had data waiting!");
 //    connection_start_writing(conn);
   }
   connection_watch_events(conn, POLLIN);
@@ -1066,7 +1066,7 @@ int socks_policy_permits_address(uint32_t addr)
   else if (a==0)
     return 1;
   tor_assert(a==1);
-  log_fn(LOG_WARN, "Got unexpected 'maybe' answer from socks policy");
+  log_fn(LOG_WARN, "Bug: Got unexpected 'maybe' answer from socks policy");
   return 0;
 }
 

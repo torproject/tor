@@ -117,7 +117,7 @@ static void purge_expired_resolves(uint32_t now) {
     resolve = oldest_cached_resolve;
     log(LOG_DEBUG,"Forgetting old cached resolve (expires %lu)", (unsigned long)resolve->expire);
     if (resolve->state == CACHE_STATE_PENDING) {
-      log_fn(LOG_WARN,"Expiring a dns resolve that's still pending. Forgot to cull it?");
+      log_fn(LOG_WARN,"Bug: Expiring a dns resolve that's still pending. Forgot to cull it?");
     }
     if (resolve->pending_connections) {
       log_fn(LOG_WARN, "Closing pending connections on expiring DNS resolve!");
@@ -316,7 +316,7 @@ void connection_dns_remove(connection_t *conn)
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if (!resolve) {
-    log_fn(LOG_WARN,"Address '%s' is not pending. Dropping.", conn->address);
+    log_fn(LOG_NOTICE,"Address '%s' is not pending. Dropping.", conn->address);
     return;
   }
 
@@ -392,7 +392,7 @@ void dns_cancel_pending_resolve(char *address) {
 
   resolve = SPLAY_FIND(cache_tree, &cache_root, &search);
   if (!resolve) {
-    log_fn(LOG_WARN,"Address '%s' is not pending. Dropping.", address);
+    log_fn(LOG_NOTICE,"Address '%s' is not pending. Dropping.", address);
     return;
   }
 
@@ -475,7 +475,7 @@ static void dns_found_answer(char *address, uint32_t addr, char outcome) {
   if (resolve->state != CACHE_STATE_PENDING) {
     /* XXXX Maybe update addr? or check addr for consistency? Or let
      * VALID replace FAILED? */
-    log_fn(LOG_WARN, "Resolved '%s' which was already resolved; ignoring",
+    log_fn(LOG_NOTICE, "Resolved '%s' which was already resolved; ignoring",
            address);
     tor_assert(resolve->pending_connections == NULL);
     return;
@@ -784,7 +784,7 @@ static void spawn_enough_dnsworkers(void) {
 
   while (num_dnsworkers > num_dnsworkers_busy+MAX_IDLE_DNSWORKERS) { /* too many idle? */
     /* cull excess workers */
-    log_fn(LOG_WARN,"%d of %d dnsworkers are idle. Killing one.",
+    log_fn(LOG_NOTICE,"%d of %d dnsworkers are idle. Killing one.",
            num_dnsworkers-num_dnsworkers_needed, num_dnsworkers);
     dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER, DNSWORKER_STATE_IDLE);
     tor_assert(dnsconn);

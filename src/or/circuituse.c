@@ -721,7 +721,7 @@ circuit_get_open_circ_or_launch(connection_t *conn,
   if (!is_resolve && !connection_edge_is_rendezvous_stream(conn)) {
     addr = client_dns_lookup_entry(conn->socks_request->address);
     if (router_exit_policy_all_routers_reject(addr, conn->socks_request->port)) {
-      log_fn(LOG_WARN,"No Tor server exists that allows exit to %s:%d. Rejecting.",
+      log_fn(LOG_NOTICE,"No Tor server exists that allows exit to %s:%d. Rejecting.",
              conn->socks_request->address, conn->socks_request->port);
       return -1;
     }
@@ -824,7 +824,7 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
 
   conn_age = time(NULL) - conn->timestamp_created;
   if (conn_age > CONN_AP_MAX_ATTACH_DELAY) {
-    log_fn(LOG_WARN,"Giving up on unattached conn (%d sec old).", conn_age);
+    log_fn(LOG_NOTICE,"Giving up on unattached conn (%d sec old).", conn_age);
     return -1;
   }
 
