@@ -151,8 +151,10 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
         connection_watch_events(conn, POLLIN);
 	return 0;
       }
-      log(LOG_DEBUG,"connection_exit_process_cell(): in connecting_wait, but I've already received everything. Closing.");
-      return -1;
+      else {
+	log(LOG_DEBUG,"connection_exit_process_cell(): in connecting_wait, but I've already received everything. Closing.");
+	return -1;
+      }
     case EXIT_CONN_STATE_CONNECTING:
       log(LOG_DEBUG,"connection_exit_process_cell(): Data receiving while connecting. Queueing.");
       retval = connection_write_to_buf(cell->payload, cell->length, conn);
