@@ -401,6 +401,11 @@ therefore not
 require modifying applications; should not introduce prohibitive delays;
 and should require the user to make as few configuration decisions
 as possible.
+Platform support is also an important factor in both usability and
+deployability. Tor currently runs on linux, Windows, and assorted
+BSDs (including MacOS X).
+%XXX Did I forget any? We need to say this somewhere. It's a big deal
+%XXX so should it instead be at the beginning and/or end? -PS
 
 \textbf{Flexibility:} The protocol must be flexible and well-specified,
 so that it can serve as a test-bed for future research in low-latency
@@ -465,7 +470,7 @@ compromise some fraction of the onion routers on the network.
 
 In low-latency anonymity systems that use layered encryption, the
 adversary's typical goal is to observe both the initiator and the
-receiver. Passive attackers can confirm a suspicion that Alice is
+responder. Passive attackers can confirm a suspicion that Alice is
 talking to Bob if the timing and volume patterns of the traffic on the
 connection are distinct enough; active attackers can induce timing
 signatures on the traffic to \emph{force} distinct patterns. Tor provides
@@ -508,8 +513,8 @@ The Tor network is an overlay network; each node is called an onion router
 any special
 privileges.  Currently, each OR maintains a long-term TLS \cite{TLS}
 connection to every other
-OR.  (We examine some ways to relax this clique-topology assumption in
-Section~\ref{subsec:restricted-routes}.) A subset of the ORs also act as
+OR.  (We further discuss this clique-topology assumption in
+Section~\ref{sec:maintaining-anonymity}.) A subset of the ORs also act as
 directory servers, tracking which routers are in the network;
 see Section~\ref{subsec:dirservers} for directory server details.
 Each user
@@ -614,20 +619,27 @@ to each other through a given exit node. Also, because circuits are built
 in the background, OPs can recover from failed circuit creation
 without delaying streams and thereby harming user experience.
 
+Because we are using in-band signalling, in theory a cell layer could
+randomly decrypt to a valid relay command and stream identifier
+causing any of several errors depending what the command and
+identifier are. It is possible to use encoding schemes that entirely
+prevent this. However, we currently rely simply on the very low
+probability of such a collision given our stream identifier size of
+seven bytes, plus one byte for the command.
+
 \subsubsection{Constructing a circuit}
 \label{subsubsec:constructing-a-circuit}
 
 %XXXX Discuss what happens with circIDs here.
 
-Users construct a circuit incrementally, negotiating a symmetric key with
-each OR on the circuit, one hop at a time. To begin creating a new
-circuit, the user
-(call her Alice) sends a \emph{create} cell to the first node in her
-chosen path. This cell's payload contains the first half of the
-Diffie-Hellman handshake ($g^x$), encrypted to the onion key of the OR (call
-him Bob). Bob responds with a \emph{created} cell containing the second
-half of the DH handshake, along with a hash of the negotiated key
-$K=g^{xy}$.
+A User's OP constructs a circuit incrementally, negotiating a
+symmetric key with each OR on the circuit, one hop at a time. To begin
+creating a new circuit, the OP (call her Alice) sends a
+\emph{create} cell to the first node in her chosen path. This cell's
+payload contains the first half of the Diffie-Hellman handshake
+($g^x$), encrypted to the onion key of the OR (call him Bob). Bob
+responds with a \emph{created} cell containing the second half of the
+DH handshake, along with a hash of the negotiated key $K=g^{xy}$.
 
 Once the circuit has been established, Alice and Bob can send one
 another relay cells encrypted with the negotiated
@@ -672,8 +684,8 @@ and who came up with $y$. We use PK encryption in the first step
 signature in the second step) because a single cell is too small to
 hold both a public key and a signature. Preliminary analysis with the
 NRL protocol analyzer \cite{meadows96} shows the above protocol to be
-secure (including providing PFS) under the traditional Dolev-Yao
-model.
+secure (including providing perfect forward secrecy) under the
+traditional Dolev-Yao model.
 
 \subsubsection{Relay cells}
 Once Alice has established the circuit (so she shares keys with each
@@ -728,7 +740,7 @@ address and port, it asks the OP (via SOCKS) to make the connection. The
 OP chooses the newest open circuit (or creates one if none is available),
 chooses a suitable OR on that circuit to be the exit node (usually the
 last node, but maybe others due to exit policy conflicts; see
-Section~\ref{sec:exit-policies}), chooses a new random stream ID for
+Section~\ref{subsec:exitpolicies}), chooses a new random stream ID for
 this stream,
 and delivers a relay begin cell to that exit node. It uses a stream ID
 of zero for the begin cell (so the OR will recognize it), and the relay
@@ -777,10 +789,12 @@ This weakness allowed an adversary to change a padding cell to a destroy
 cell; change the destination address in a relay begin cell to the
 adversary's webserver; or change a user on an ftp connection from
 typing ``dir'' to typing ``delete~*''. Any node or external adversary
-along the circuit could introduce such corruption in a stream.
+along the circuit could introduce such corruption in a stream---if it
+knew or could guess the encrypted content.
 
 Tor prevents external adversaries from mounting this attack simply by
-using TLS. Addressing the insider malleability attack, however, is
+using TLS, which provides integrity checking.
+Addressing the insider malleability attack, however, is
 more complex.
 
 We could do integrity checking of the relay cells at each hop, either
@@ -804,7 +818,7 @@ negotiation), plus the bytes in the current cell, to remove or modify the
 cell. Attacks on SHA-1 where the adversary can incrementally add to a
 hash to produce a new valid hash don't work,
 because all hashes are end-to-end encrypted across the circuit.
-The computational overhead isn't so bad, compared to doing an AES
+The computational overhead is minimal compared to doing an AES
 crypt at each hop in the circuit. We use only four bytes per cell to
 minimize overhead; the chance that an adversary will correctly guess a
 valid hash, plus the payload the current cell, is acceptly low, given
@@ -831,7 +845,7 @@ uses all the remaining bandwidth. We solve this by dividing the number
 of tokens in the bucket by the number of connections that want to read,
 and reading at most that number of bytes from each connection. We iterate
 this procedure until the number of tokens in the bucket is under some
-threshold (eg 10KB), at which point we greedily read from connections.
+threshold (e.g., 10KB), at which point we greedily read from connections.
 
 Because the Tor protocol generates roughly the same number of outgoing
 bytes as incoming bytes, it is sufficient in practice to rate-limit
@@ -891,7 +905,7 @@ reaches 0, it stops reading from streams destined for that OR.
 The stream-level congestion control mechanism is similar to the
 circuit-level mechanism above. ORs and OPs use relay sendme cells
 to implement end-to-end flow control for individual streams across
-circuits. Each stream begins with a package window (e.g. 500 cells),
+circuits. Each stream begins with a package window (e.g., 500 cells),
 and increments the window by a fixed value (50) upon receiving a relay
 sendme cell. Rather than always returning a relay sendme cell as soon
 as enough cells have arrived, the stream-level congestion control also
@@ -900,8 +914,8 @@ stream; it sends a relay sendme only when the number of bytes pending
 to be flushed is under some threshold (currently 10 cells worth).
 
 Currently, non-data relay cells do not affect the windows. Thus we
-avoid potential deadlock issues, e.g. because a stream can't send a
-relay sendme cell because its packaging window is empty.
+avoid potential deadlock issues, for example, arising because a stream
+can't send a relay sendme cell when its packaging window is empty.
 
 % XXX Bad heading
 \subsubsection{Needs more research}
@@ -965,6 +979,46 @@ require investigation.
 \SubSection{Exit policies and abuse}
 \label{subsec:exitpolicies}
 
+
+Tor offers more reliability than the high-latency fire-and-forget
+anonymous email networks, because the sender opens a TCP stream
+with the remote mail server and receives an explicit confirmation of
+acceptance. But ironically, the private exit node model works poorly for
+email, when Tor nodes are run on volunteer machines that also do other
+things, because it's quite hard to configure mail transport agents so
+normal users can send mail normally, but the Tor process can only deliver
+mail locally. Further, most organizations have specific hosts that will
+deliver mail on behalf of certain IP ranges; Tor operators must be aware
+of these hosts and consider putting them in the Tor exit policy.
+
+The abuse issues on closed (e.g. military) networks are different
+from the abuse on open networks like the Internet. While these IP-based
+access controls are still commonplace on the Internet, on closed networks,
+nearly all participants will be honest, and end-to-end authentication
+can be assumed for anything important.
+
+Tor is harder than minion because TCP doesn't include an abuse
+address. you could reach inside the http stream and change the agent
+or something, but that's a specific case and probably won't help
+much anyway.
+And volunteer nodes don't resolve to anonymizer.mit.edu so it never
+even occurs to people that it wasn't you.
+
+Preventing abuse of open exit nodes is an unsolved problem. Princeton's
+CoDeeN project \cite{darkside} gives us a glimpse of what we're in for.
+% This is more speculative than a description of our design. 
+
+but their solutions, which mainly involve rate limiting and blacklisting
+nodes which do bad things, don't translate directly to Tor. Rate limiting
+still works great, but Tor intentionally separates sender from recipient,
+so it's hard to know which sender was the one who did the bad thing,
+without just making the whole network wide open.
+
+even limiting most nodes to allow http, ssh, and aim to exit and reject
+all other stuff is sketchy, because plenty of abuse can happen over
+port 80. but it's a surprisingly good start, because it blocks most things,
+and because people are more used to the concept of port 80 abuse not
+=======
 %XXX originally, we planned to put the "users only know the hostname,
 %    not the IP, but exit policies are by IP" problem here too. Worth
 %    while still? -RD
@@ -1015,6 +1069,7 @@ limited set of well-known services, such as HTTP, SSH, or AIM.
 This is not a complete solution, since abuse opportunities for these
 protocols are still well known. Nonetheless, the benefits are real,
 since administrators seem used to the concept of port 80 abuse not
+>>>>>>> 1.79
 coming from the machine's owner.
 
 A further solution may be to use proxies to clean traffic for certain
@@ -1860,6 +1915,7 @@ issues remaining to be ironed out. In particular:
 % Matej Pfajfar, Andrei Serjantov, Marc Rennhard for design discussions
 % Bram Cohen for congestion control discussions
 % Adam Back for suggesting telescoping circuits
+% Cathy Meadows for formal analysis of candidate extend DH protocols
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
