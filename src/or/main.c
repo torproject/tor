@@ -355,6 +355,7 @@ static void run_scheduled_events(time_t now) {
    *  necessary.
    */
   if (options.ORPort && get_onion_key_set_at()+MIN_ONION_KEY_LIFETIME < now) {
+    log_fn(LOG_INFO,"Rotating onion key.");
     rotate_onion_key();
     cpuworkers_rotate();
     if (router_rebuild_descriptor()<0) {
@@ -367,6 +368,7 @@ static void run_scheduled_events(time_t now) {
   if (!last_rotated_certificate)
     last_rotated_certificate = now;
   if (options.ORPort && last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
+    log_fn(LOG_INFO,"Rotating tls context.");
     if (tor_tls_context_new(get_identity_key(), 1, options.Nickname,
                             MAX_SSL_KEY_LIFETIME) < 0) {
       log_fn(LOG_WARN, "Error reinitializing TLS context");
