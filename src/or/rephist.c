@@ -237,7 +237,7 @@ void rep_hist_dump_stats(time_t now, int severity)
   double uptime;
   char buffer[2048];
   size_t len;
-  int r;
+  int ret;
   unsigned long upt, downt;
   routerinfo_t *r;
 
@@ -281,13 +281,13 @@ void rep_hist_dump_stats(time_t now, int severity)
 
         link_history = (link_history_t*) link_history_p;
         
-        r = tor_snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
+        ret = tor_snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
                         link_history->n_extend_ok,
                         link_history->n_extend_ok+link_history->n_extend_fail);
-        if (r<0)
+        if (ret<0)
           break;
         else
-          len += r;
+          len += ret;
       }
       log(severity, "%s", buffer);
     }
