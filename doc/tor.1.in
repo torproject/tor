@@ -168,7 +168,8 @@ Set an entrance policy for this server, to limit who can connect to the socks po
 The following options are useful only for servers (that is, if \fBORPort\fP is non-zero):
 .TP
 \fBAddress \fR\fIaddress\fP
-The IP or fqdn of this server (e.g. moria.mit.edu).
+The IP or fqdn of this server (e.g. moria.mit.edu). You can leave this
+unset, and Tor will guess your IP.
 .TP
 \fBContactInfo \fR\fIemail address\fP
 Administrative contact information for server.
