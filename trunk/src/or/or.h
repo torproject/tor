@@ -927,6 +927,12 @@ typedef struct {
   struct config_line_t *RedirectExit; /**< List of config lines for simple
                                        * addr/port redirection */
   smartlist_t *RedirectExitList; /**< List of exit_redirect_t */
+  int AccountingStart; /**< At what offset within the accounting interval
+                        * do we begin measuring?  (Currently only day-of-month
+                        * is supported.) */
+  int AccountingMaxKB; /**< How many KB do we allow per accounting
+                        * interval before hibernation?  0 for "never
+                        * hibernate." */
 } or_options_t;
 
 /* XXX are these good enough defaults? */
@@ -1263,6 +1269,11 @@ int proxy_mode(void);
 
 void handle_signals(int is_parent);
 void tor_cleanup(void);
+
+int accounting_hard_limit_reached(void);
+int accounting_soft_limit_reached(void);
+time_t accounting_get_wakeup_time(void);
+int accounting_should_hibernate(void);
 
 int tor_main(int argc, char *argv[]);
 

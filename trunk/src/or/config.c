@@ -112,6 +112,8 @@ static config_var_t config_vars[] = {
   OBSOLETE("LinkPadding"),
   VAR("MaxConn",             UINT,     MaxConn),
   VAR("MaxOnionsPending",    UINT,     MaxOnionsPending),
+  VAR("MonthlyAccountingStart",UINT,   AccountingStart),
+  VAR("AccountingMaxKB",     UINT,     AccountingMaxKB),
   VAR("Nickname",            STRING,   Nickname),
   VAR("NewCircuitPeriod",    UINT,     NewCircuitPeriod),
   VAR("NumCpus",             UINT,     NumCpus),
@@ -384,7 +386,7 @@ config_assign(or_options_t *options, struct config_line_t *list)
       return -1;
     list = list->next;
   }
-
+  
   return 0;
 }
 
@@ -959,6 +961,15 @@ getconfig(int argc, char **argv, or_options_t *options)
 
   if (options->KeepalivePeriod < 1) {
     log(LOG_WARN,"KeepalivePeriod option must be positive.");
+    result = -1;
+  }
+
+  if (options->AccountingStart < 0 || options->AccountingStart > 31) {
+    log(LOG_WARN,"Monthy accounting must start on a day of the month, and no months have %d days.",
+        options->AccountingStart);
+    result = -1;
+  } else if (options->AccountingStart > 28) {
+    log(LOG_WARN,"Not every month has %d days.",options->AccountingStart);
     result = -1;
   }
 
