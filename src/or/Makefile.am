@@ -4,7 +4,8 @@ noinst_PROGRAMS = test
 
 bin_PROGRAMS = tor
 
-tor_SOURCES = buffers.c circuit.c command.c config.c \
+tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
+	circuituse.c command.c config.c \
 	connection.c connection_edge.c connection_or.c \
 	cpuworker.c directory.c dirserv.c dns.c main.c \
 	onion.c relay.c rendcommon.c rendclient.c rendmid.c \
@@ -13,7 +14,8 @@ tor_SOURCES = buffers.c circuit.c command.c config.c \
 
 tor_LDADD = ../common/libor.a
 
-test_SOURCES = buffers.c circuit.c command.c config.c \
+test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
+	circuituse.c command.c config.c \
 	connection.c connection_edge.c connection_or.c \
 	cpuworker.c directory.c dirserv.c dns.c main.c \
 	onion.c relay.c rendcommon.c rendclient.c rendmid.c \
