@@ -315,6 +315,8 @@ Tor Rendezvous Spec
    port, based on the configuration of the service connected to the circuit,
    and opens a TCP stream.  From then on, Bob's OP treats the stream as an
    ordinary exit connection.
+   [ Except he doesn't include addr in the connected cell or the end
+     cell. -RD]
 
    Alice MAY send multiple RELAY_BEGIN cells along the circuit, to open
    multiple streams to Bob.  Alice SHOULD NOT send RELAY_BEGIN cells for any
