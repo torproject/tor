@@ -59,7 +59,7 @@ void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last)
   tor_mutex_acquire(key_lock);
   *key = crypto_pk_dup_key(onionkey);
   if (lastonionkey)
-	*last = crypto_pk_dup_key(lastonionkey);
+    *last = crypto_pk_dup_key(lastonionkey);
   else
     *last = NULL;
   tor_mutex_release(key_lock);
@@ -187,7 +187,7 @@ int init_keys(void) {
   crypto_pk_env_t *prkey;
 
   if (!key_lock)
-	key_lock = tor_mutex_new();
+    key_lock = tor_mutex_new();
 
   /* OP's don't need keys.  Just initialize the TLS context.*/
   if (!options.ORPort) {
