@@ -54,6 +54,8 @@ For September:
             - allow non-clique topology
 
 Other details and small and hard things:
+        - rend_services_introduce should check if it's failed a lot
+          recently, and not try for a while if so
         - check tor version as soon as you get the recommended-versions
           string, regardless of whether parsing the directory succeeded.
         - tor should be able to have a pool of outgoing IP addresses
