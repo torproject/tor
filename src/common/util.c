@@ -18,12 +18,9 @@
 #include "log.h"
 #include "crypto.h"
 
-/* XXXX probably some of these are unneeded. find out which. */
 #ifdef MS_WINDOWS
 #include <io.h>
-#include <process.h>
 #include <direct.h>
-#include <windows.h>
 #endif
 
 #ifdef HAVE_CTYPE_H
@@ -89,6 +86,9 @@
 
 #ifndef O_BINARY
 #define O_BINARY 0
+#endif
+#ifndef O_TEXT
+#define O_TEXT 0
 #endif
 
 /* =====
@@ -809,7 +809,7 @@ int write_bytes_to_file(const char *fname, const char *str, size_t len,
     log(LOG_WARN, "Filename %s.tmp too long (>1024 chars)", fname);
     return -1;
   }
-  if ((fd = open(tempname, O_WRONLY|O_CREAT|O_TRUNC|(bin?O_BINARY:0), 0600))
+  if ((fd = open(tempname, O_WRONLY|O_CREAT|O_TRUNC|(bin?O_BINARY:O_TEXT), 0600))
       < 0) {
     log(LOG_WARN, "Couldn't open %s for writing: %s", tempname,
         strerror(errno));
@@ -848,7 +848,7 @@ char *read_file_to_str(const char *filename, int bin) {
     return NULL;
   }
 
-  fd = open(filename,O_RDONLY|(bin?O_BINARY:0),0);
+  fd = open(filename,O_RDONLY|(bin?O_BINARY:O_TEXT),0);
   if (fd<0) {
     log_fn(LOG_WARN,"Could not open %s.",filename);
     return NULL;
@@ -877,11 +877,9 @@ char *read_file_to_str(const char *filename, int bin) {
   }
 #ifdef MS_WINDOWS
   if (!bin && strchr(string, '\r')) {
-    if (strchr(string, '\r')) {
-      log_fn(LOG_DEBUG, "We didn't convert CRLF to LF as well as we hoped when reading %s. Coping.",
-             filename);  
-      tor_strstrip(string, "\r");
-    }
+    log_fn(LOG_DEBUG, "We didn't convert CRLF to LF as well as we hoped when reading %s. Coping.",
+           filename);  
+    tor_strstrip(string, "\r");
   }
 #endif
   close(fd);
