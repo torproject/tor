@@ -866,12 +866,7 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
       connection_exit_connect(n_stream);
       return 0;
     case -1: /* resolve failed */
-      log_fn(LOG_INFO,"Resolve failed (%s).", n_stream->address);
-      if (!n_stream->marked_for_close) {
-        connection_edge_end(n_stream, END_STREAM_REASON_RESOLVEFAILED,
-                            n_stream->cpath_layer);
-      }
-      connection_free(n_stream);
+      /* n_stream got freed. don't touch it. */
       break;
     case 0: /* resolve added to pending list */
       /* add it into the linked list of resolving_streams on this circuit */
@@ -916,8 +911,7 @@ int connection_exit_begin_resolve(cell_t *cell, circuit_t *circ) {
   switch (dns_resolve(dummy_conn)) {
     case 1: /* The result was cached; a resolved cell was sent. */
     case -1:
-      circuit_detach_stream(circuit_get_by_conn(dummy_conn), dummy_conn);
-      connection_free(dummy_conn);
+      /* dummy_conn got freed, don't touch it */
       return 0;
     case 0: /* resolve added to pending list */
       assert_circuit_ok(circ);

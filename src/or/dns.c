@@ -194,7 +194,7 @@ insert_resolve(struct cached_resolve *r)
 
 /** See if we have a cache entry for <b>exitconn</b>-\>address. if so,
  * if resolve valid, put it into <b>exitconn</b>-\>addr and return 1.
- * If resolve failed, return -1.
+ * If resolve failed, unlink exitconn if needed, free it, and return -1.
  *
  * Else, if seen before and pending, add conn to the pending list,
  * and return 0.
@@ -207,6 +207,7 @@ int dns_resolve(connection_t *exitconn) {
   struct cached_resolve search;
   struct pending_connection_t *pending_connection;
   struct in_addr in;
+  circuit_t *circ;
   uint32_t now = time(NULL);
   assert_connection_ok(exitconn, 0);
   tor_assert(exitconn->s == -1);
@@ -250,6 +251,10 @@ int dns_resolve(connection_t *exitconn) {
                exitconn->s, exitconn->address);
         if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
           send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
+        circ = circuit_get_by_conn(exitconn);
+        if (circ)
+          circuit_detach_stream(circ, exitconn);
+        connection_free(exitconn);
         return -1;
     }
     tor_assert(0);
@@ -288,7 +293,7 @@ static int assign_to_dnsworker(connection_t *exitconn) {
     log_fn(LOG_WARN,"no idle dns workers. Failing.");
     if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
       send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
-    dns_cancel_pending_resolve(exitconn->address); /* also sends end */
+    dns_cancel_pending_resolve(exitconn->address); /* also sends end and frees! */
     return -1;
   }
 

@@ -694,7 +694,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       tor_free(body); tor_free(headers);
       return -1;
     }
-    if (router_load_routerlist_from_directory(body, NULL, skewed, 0) < 0) {
+    if (router_load_routerlist_from_directory(body, NULL, !skewed, 0) < 0) {
       log_fn(LOG_NOTICE,"I failed to parse the directory I fetched from %s:%d. Ignoring.", conn->address, conn->port);
     } else {
       log_fn(LOG_INFO,"updated routers.");
