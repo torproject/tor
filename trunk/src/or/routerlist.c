@@ -275,13 +275,16 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
 }
 
 /** Return a random running router from the routerlist.  If any node
- * named in <b>preferred</b> is available, pick one of those.  Never pick a
- * node named in <b>excluded</b>, or whose routerinfo is in
- * <b>excludedsmartlist</b>, even if they are the only nodes available.
+ * named in <b>preferred</b> is available, pick one of those.  Never
+ * pick a node named in <b>excluded</b>, or whose routerinfo is in
+ * <b>excludedsmartlist</b>, even if they are the only nodes
+ * available.  If <b>strict</b> is true, never pick any node besides
+ * those in <b>preferred</b>.
  */
 routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
                                         smartlist_t *excludedsmartlist,
-                                        int preferuptime, int preferbandwidth)
+                                        int preferuptime, int preferbandwidth,
+                                        int strict)
 {
   smartlist_t *sl, *excludednodes;
   routerinfo_t *choice;
@@ -302,7 +305,7 @@ routerinfo_t *router_choose_random_node(char *preferred, char *excluded,
   else
     choice = smartlist_choose(sl);
   smartlist_free(sl);
-  if(!choice) {
+  if(!choice && !strict) {
     sl = smartlist_create();
     router_add_running_routers_to_smartlist(sl);
     smartlist_subtract(sl,excludednodes);

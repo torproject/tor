@@ -72,6 +72,14 @@ A list of preferred nodes to use for the last hop in the circuit, if possible.
 \fBexcludenodes \fR\fInickname,nickname,...\fP
 A list of nodes to never use when building a circuit.
 .TP
+\fBstrictexitnodes \fR\fI0|1\fP
+If 1, Tor will never use any nodes besides those listed in "exitnodes" for
+the last hop of a circuit.
+.TP
+\fBstrictentrynodes \fR\fI0|1\fP
+If 1, Tor will never use any nodes besides those listed in "entrynodes" for
+the first hop of a circuit.
+.TP
 \fBnewcircuitperiod \fR\fINUM\fP
 Every NUM seconds consider whether to build a new circuit. (Default: 60)
 .TP
