@@ -46,7 +46,7 @@
                               can be lowered by config file */
 
 #define MAX_BUF_SIZE (640*1024)
-#define DEFAULT_BANDWIDTH_OP 102400
+#define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 
 #define ACI_TYPE_LOWER 0
 #define ACI_TYPE_HIGHER 1
