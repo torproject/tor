@@ -18,7 +18,7 @@ static INLINE const char *sev_to_string(int severity) {
   switch(severity) {
     case LOG_DEBUG:   return "debug";
     case LOG_INFO:    return "info";
-    case LOG_WARNING: return "warn";
+    case LOG_WARN:    return "warn";
     case LOG_ERR:     return "err";
     default:          assert(0); return "UNKNOWN";
   }

@@ -215,7 +215,7 @@ tor_tls_context_new(crypto_pk_env_t *rsa,
   if (rsa) {
     cert = tor_tls_create_certificate(rsa, nickname);
     if (!cert) {
-      log(LOG_WARNING, "Error creating certificate");
+      log(LOG_WARN, "Error creating certificate");
       return -1;
     }
   }
@@ -415,7 +415,7 @@ tor_tls_shutdown(tor_tls *tls)
        */
       if (tls->state == TOR_TLS_ST_GOTCLOSE || 
 	  tls->state == TOR_TLS_ST_SENTCLOSE) {
-	log(LOG_WARNING, 
+	log(LOG_WARN, 
 	    "TLS returned \"half-closed\" value while already half-closed");
 	return TOR_TLS_ERROR;
       }
