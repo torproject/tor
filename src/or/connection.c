@@ -581,6 +581,7 @@ connection_t *connection_get_by_type_state(int type, int state) {
   connection_t *conn;
   connection_t **carray;
  
+  get_connection_array(&carray,&n);
   for(i=0;i<n;i++) {
     conn = carray[i];
     if(conn->type == type && conn->state == state && !conn->marked_for_close)
@@ -594,6 +595,7 @@ connection_t *connection_get_by_type_state_lastwritten(int type, int state) {
   connection_t *conn, *best=NULL;
   connection_t **carray;
  
+  get_connection_array(&carray,&n);
   for(i=0;i<n;i++) {
     conn = carray[i];
     if(conn->type == type && conn->state == state && !conn->marked_for_close)
