@@ -235,7 +235,8 @@ static void directory_send_command(connection_t *conn, int purpose,
       break;
     case DIR_PURPOSE_UPLOAD_DIR:
       tor_assert(payload);
-      snprintf(tmp, sizeof(tmp), "POST /tor/ HTTP/1.0\r\nContent-Length: %d\r\n\r\n",
+      snprintf(tmp, sizeof(tmp), "POST %s/ HTTP/1.0\r\nContent-Length: %d\r\n\r\n",
+               strcmpstart(router->platform, "Tor 0.0.8") ? "/tor" : "",
                payload_len);
       connection_write_to_buf(tmp, strlen(tmp), conn);
       connection_write_to_buf(payload, payload_len, conn);
@@ -595,6 +596,7 @@ directory_handle_command_get(connection_t *conn, char *headers,
     connection_write_to_buf(answer400, strlen(answer400), conn);
     return 0;
   }
+  log_fn(LOG_INFO,"rewritten url as '%s'.", url);
 
   if(!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir.z")) { /* directory fetch */
     int deflated = !strcmp(url,"/tor/dir.z");
@@ -710,7 +712,7 @@ directory_handle_command_post(connection_t *conn, char *headers,
     connection_write_to_buf(answer400, strlen(answer400), conn);
     return 0;
   }
-  log_fn(LOG_INFO,"url '%s' posted to us.", url);
+  log_fn(LOG_INFO,"rewritten url as '%s'.", url);
 
   if(!strcmp(url,"/tor/")) { /* server descriptor post */
     cp = body;
