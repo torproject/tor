@@ -124,7 +124,6 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_CREATED;
   cell.circ_id = circ->p_circ_id;
-  cell.length = ONIONSKIN_REPLY_LEN;
 
   circ->state = CIRCUIT_STATE_OPEN;
 

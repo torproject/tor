@@ -190,8 +190,6 @@
 #define RELAY_COMMAND_TRUNCATED 9
 #define RELAY_COMMAND_DROP 10
 
-#define RELAY_HEADER_SIZE 8
-
 #define END_STREAM_REASON_MISC 1
 #define END_STREAM_REASON_RESOLVEFAILED 2
 #define END_STREAM_REASON_CONNECTFAILED 3
@@ -225,9 +223,6 @@
 #define CELL_RELAY 3
 #define CELL_DESTROY 4
 
-#define CELL_PAYLOAD_SIZE 248
-#define CELL_NETWORK_SIZE 256
-
 /* legal characters in a filename */
 #define CONFIG_LEGAL_FILENAME_CHARACTERS "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_/"
 /* legal characters in a nickname */
@@ -237,27 +232,45 @@
 
 typedef uint16_t circ_id_t;
 
-/* cell definition */
-typedef struct { 
-  circ_id_t circ_id;
-  unsigned char command;
-  unsigned char length; /* of payload if relay cell */
-  uint32_t seq; /* sequence number */
+/*
+ * Relay payload:
+ *         Relay command           [1 byte]
+ *         Stream ID               [7 bytes]
+ *         Partial SHA-1           [4 bytes]
+ *         Length                  [2 bytes]
+ *         Relay payload           [495 bytes]
+ */
 
-  unsigned char payload[CELL_PAYLOAD_SIZE];
-} cell_t;
 #define CELL_RELAY_COMMAND(c)         (*(uint8_t*)((c).payload))
 #define SET_CELL_RELAY_COMMAND(c,cmd) (*(uint8_t*)((c).payload) = (cmd))
+
 #define STREAM_ID_SIZE 7
 #define SET_CELL_STREAM_ID(c,id)      memcpy((c).payload+1,(id),STREAM_ID_SIZE)
+#define ZERO_STREAM "\0\0\0\0\0\0\0"
+
 #define CELL_RELAY_COMMAND_END_REASON(c) (*(uint8_t)((c).payload+1))
 
-#define ZERO_STREAM "\0\0\0\0\0\0\0\0"
+/* relay length is how many bytes are used in the cell payload past relay_header_size */
+#define CELL_RELAY_LENGTH(c)         (*(uint16_t*)((c).payload+1+STREAM_ID_SIZE+4))
+#define SET_CELL_RELAY_LENGTH(c,len) (*(uint16_t*)((c).payload+1+STREAM_ID_SIZE+4) = (len))
+
+#define CELL_PAYLOAD_SIZE 509
+#define CELL_NETWORK_SIZE 512
+
+/* cell definition */
+typedef struct {
+  circ_id_t circ_id;
+  unsigned char command;
+  unsigned char payload[CELL_PAYLOAD_SIZE];
+} cell_t;
+
+#define RELAY_HEADER_SIZE (1+STREAM_ID_SIZE+4+2)
+#define RELAY_PAYLOAD_SIZE (CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE)
 
 typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
 
-struct connection_t { 
+struct connection_t {
 
   uint8_t type;
   uint8_t state;
@@ -476,6 +489,7 @@ typedef struct {
   int loglevel;
 } or_options_t;
 
+/* XXX are these good enough defaults? */
 #define MAX_SOCKS_REPLY_LEN 256
 /* Not 256; addresses must fit in a begin cell. */
 #define MAX_SOCKS_ADDR_LEN 200

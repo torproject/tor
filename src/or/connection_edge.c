@@ -75,7 +75,7 @@ int connection_edge_process_inbuf(connection_t *conn) {
   return 0;
 }
 
-char *connection_edge_end_reason(char *payload, unsigned char length) {
+static char *connection_edge_end_reason(char *payload, uint16_t length) {
   if(length < 1) {
     log_fn(LOG_WARN,"End cell arrived with length 0. Should be at least 1.");
     return "MALFORMED";
@@ -155,7 +155,7 @@ int connection_edge_send_command(connection_t *fromconn, circuit_t *circ, int re
   else
     SET_CELL_STREAM_ID(cell, fromconn->stream_id);
 
-  cell.length = RELAY_HEADER_SIZE + payload_len;
+  SET_CELL_RELAY_LENGTH(cell, payload_len);
   if(payload_len) {
     memcpy(cell.payload+RELAY_HEADER_SIZE,payload,payload_len);
   }
@@ -191,7 +191,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
   if(conn && conn->state != AP_CONN_STATE_OPEN && conn->state != EXIT_CONN_STATE_OPEN) {
     if(conn->type == CONN_TYPE_EXIT && relay_command == RELAY_COMMAND_END) {
       log_fn(LOG_INFO,"Exit got end (%s) before we're connected. Marking for close.",
-        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, cell->length));
+        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, CELL_RELAY_LENGTH(*cell)));
       if(conn->state == EXIT_CONN_STATE_RESOLVING) {
         log_fn(LOG_INFO,"...and informing resolver we don't want the answer anymore.");
         dns_cancel_pending_resolve(conn->address, conn);
@@ -248,19 +248,19 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
       }
 
 //      printf("New text for buf (%d bytes): '%s'", cell->length - RELAY_HEADER_SIZE, cell->payload + RELAY_HEADER_SIZE);
-      stats_n_data_bytes_received += (cell->length - RELAY_HEADER_SIZE);
+      stats_n_data_bytes_received += CELL_RELAY_LENGTH(*cell);
       connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
-                              cell->length - RELAY_HEADER_SIZE, conn);
+                              CELL_RELAY_LENGTH(*cell), conn);
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case RELAY_COMMAND_END:
       if(!conn) {
         log_fn(LOG_INFO,"end cell (%s) dropped, unknown stream %d.",
-          connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, cell->length),
+          connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, CELL_RELAY_LENGTH(*cell)),
           *(int*)conn->stream_id);
         return 0;
       }
-      if(cell->length-RELAY_HEADER_SIZE >= 5 &&
+      if(CELL_RELAY_LENGTH(*cell) >= 5 &&
          *(cell->payload+RELAY_HEADER_SIZE) == END_STREAM_REASON_EXITPOLICY) {
         /* No need to close the connection. We'll hold it open while
          * we try a new exit node.
@@ -281,7 +281,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         }
       }
       log_fn(LOG_INFO,"end cell (%s) for stream %d. Removing stream.",
-        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, cell->length),
+        connection_edge_end_reason(cell->payload+RELAY_HEADER_SIZE, CELL_RELAY_LENGTH(*cell)),
         *(int*)conn->stream_id);
 
 #ifdef HALF_OPEN
@@ -347,7 +347,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         return 0;
       }
       log_fn(LOG_INFO,"Connected! Notifying application.");
-      if (cell->length-RELAY_HEADER_SIZE == 4) {
+      if (CELL_RELAY_LENGTH(*cell) >= 4) {
         addr = ntohl(*(uint32_t*)(cell->payload + RELAY_HEADER_SIZE));
         client_dns_set_entry(conn->socks_request->address, addr);
       }
@@ -444,45 +444,45 @@ int connection_edge_package_raw_inbuf(connection_t *conn) {
   int amount_to_process, length;
   char payload[CELL_PAYLOAD_SIZE];
   circuit_t *circ;
- 
+
   assert(conn);
   assert(!connection_speaks_cells(conn));
- 
+
 repeat_connection_edge_package_raw_inbuf:
- 
+
   circ = circuit_get_by_conn(conn);
   if(!circ) {
     log_fn(LOG_INFO,"conn has no circuits! Closing.");
     return -1;
   }
- 
+
   if(circuit_consider_stop_edge_reading(circ, conn->type, conn->cpath_layer))
     return 0;
- 
+
   if(conn->package_window <= 0) {
     log_fn(LOG_WARN,"called with package_window %d. Tell Roger.", conn->package_window);
     connection_stop_reading(conn);
     return 0;
   }
- 
+
   amount_to_process = buf_datalen(conn->inbuf);
- 
+
   if(!amount_to_process)
     return 0;
- 
-  if(amount_to_process > CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE) {
-    length = CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE;
+
+  if(amount_to_process > RELAY_PAYLOAD_SIZE) {
+    length = RELAY_PAYLOAD_SIZE;
   } else {
     length = amount_to_process;
   }
   stats_n_data_bytes_packaged += length;
   stats_n_data_cells_packaged += 1;
- 
+
   connection_fetch_from_buf(payload, length, conn);
 
-  log_fn(LOG_DEBUG,"(%d) Packaging %d bytes (%d waiting).",conn->s,length,
+  log_fn(LOG_DEBUG,"(%d) Packaging %d bytes (%d waiting).", conn->s, length,
          (int)buf_datalen(conn->inbuf));
- 
+
   if(connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
                                payload, length, conn->cpath_layer) < 0)
     return 0; /* circuit is closed, don't continue */
@@ -495,7 +495,7 @@ repeat_connection_edge_package_raw_inbuf:
     assert(conn->cpath_layer->package_window > 0);
     conn->cpath_layer->package_window--;
   }
- 
+
   if(--conn->package_window <= 0) { /* is it 0 after decrement? */
     connection_stop_reading(conn);
     log_fn(LOG_DEBUG,"conn->package_window reached 0.");
@@ -503,7 +503,7 @@ repeat_connection_edge_package_raw_inbuf:
     return 0; /* don't process the inbuf any more */
   }
   log_fn(LOG_DEBUG,"conn->package_window is now %d",conn->package_window);
- 
+
   /* handle more if there's more, or return 0 if there isn't */
   goto repeat_connection_edge_package_raw_inbuf;
 }
@@ -740,7 +740,7 @@ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
    */
 
   if(!memchr(cell->payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE,0,
-             cell->length-RELAY_HEADER_SIZE-STREAM_ID_SIZE)) {
+             CELL_RELAY_LENGTH(*cell)-STREAM_ID_SIZE)) {
     log_fn(LOG_WARN,"relay begin cell has no \\0. Dropping.");
     return 0;
   }

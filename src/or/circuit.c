@@ -303,23 +303,17 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint) {
   connection_t *conn=NULL;
   char recognized=0;
-  char buf[1+CELL_PAYLOAD_SIZE];
 
   assert(cell && circ);
   assert(cell_direction == CELL_DIRECTION_OUT || cell_direction == CELL_DIRECTION_IN); 
 
-  buf[0] = cell->length;
-  memcpy(buf+1, cell->payload, CELL_PAYLOAD_SIZE);
-
   log_fn(LOG_DEBUG,"direction %d, streamid %d before crypt.", cell_direction, *(int*)(cell->payload+1));
 
-  if(relay_crypt(circ, buf, 1+CELL_PAYLOAD_SIZE, cell_direction, &layer_hint, &recognized, &conn) < 0) {
+  if(relay_crypt(circ, cell->payload, CELL_PAYLOAD_SIZE, cell_direction,
+                 &layer_hint, &recognized, &conn) < 0) {
     log_fn(LOG_WARN,"relay crypt failed. Dropping connection.");
     return -1;
   }
-
-  cell->length = buf[0];
-  memcpy(cell->payload, buf+1, CELL_PAYLOAD_SIZE);
 
   if(recognized) {
     if(cell_direction == CELL_DIRECTION_OUT) {
@@ -374,11 +368,11 @@ int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
 int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
                 crypt_path_t **layer_hint, char *recognized, connection_t **conn) {
   crypt_path_t *thishop;
-  char out[256];
+  char out[CELL_NETWORK_SIZE];
 
   assert(circ && in && recognized && conn);
 
-  assert(inlen < 256);
+  assert(inlen < CELL_NETWORK_SIZE);
 
   if(cell_direction == CELL_DIRECTION_IN) { 
     if(circ->cpath) { /* we're at the beginning of the circuit.
@@ -391,16 +385,16 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
       do { /* Remember: cpath is in forward order, that is, first hop first. */
         assert(thishop);
 
-        log_fn(LOG_DEBUG,"before decrypt: %d",*(int*)(in+2));
+        log_fn(LOG_DEBUG,"before decrypt: %d",*(int*)(in+1));
         /* decrypt */
         if(crypto_cipher_decrypt(thishop->b_crypto, in, inlen, out)) {
           log_fn(LOG_WARN,"Error performing onion decryption: %s", crypto_perror());
           return -1;
         }
         memcpy(in,out,inlen);
-        log_fn(LOG_DEBUG,"after decrypt: %d",*(int*)(in+2));
+        log_fn(LOG_DEBUG,"after decrypt: %d",*(int*)(in+1));
 
-        if( (*recognized = relay_check_recognized(circ, cell_direction, in+2, conn))) {
+        if( (*recognized = relay_check_recognized(circ, cell_direction, in+1, conn))) {
           *layer_hint = thishop;
           return 0;
         }
@@ -411,14 +405,14 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
       return 0;
     } else { /* we're in the middle. Just one crypt. */
 
-      log_fn(LOG_DEBUG,"before encrypt: %d",*(int*)(in+2));
+      log_fn(LOG_DEBUG,"before encrypt: %d",*(int*)(in+1));
       if(crypto_cipher_encrypt(circ->p_crypto, in, inlen, out)) {
         log_fn(LOG_WARN,"Onion encryption failed for circID %u: %s",
                circ->p_circ_id, crypto_perror());
         return -1;
       }
       memcpy(in,out,inlen);
-      log_fn(LOG_DEBUG,"after encrypt: %d",*(int*)(in+2));
+      log_fn(LOG_DEBUG,"after encrypt: %d",*(int*)(in+1));
 
       log_fn(LOG_DEBUG,"Skipping recognized check, because we're not the OP.");
       /* don't check for recognized. only the OP can recognize a stream on the way back. */
@@ -432,13 +426,13 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
       do {
         assert(thishop);
 
-        log_fn(LOG_DEBUG,"before encrypt: %d",*(int*)(in+2));
+        log_fn(LOG_DEBUG,"before encrypt: %d",*(int*)(in+1));
         if(crypto_cipher_encrypt(thishop->f_crypto, in, inlen, out)) {
           log_fn(LOG_WARN,"Error performing encryption: %s", crypto_perror());
           return -1;
         }
         memcpy(in,out,inlen);
-        log_fn(LOG_DEBUG,"after encrypt: %d",*(int*)(in+2));
+        log_fn(LOG_DEBUG,"after encrypt: %d",*(int*)(in+1));
 
         thishop = thishop->prev;
       } while(thishop != circ->cpath->prev);
@@ -451,7 +445,7 @@ int relay_crypt(circuit_t *circ, char *in, int inlen, char cell_direction,
       }
       memcpy(in,out,inlen);
 
-      if( (*recognized = relay_check_recognized(circ, cell_direction, in+2, conn)))
+      if( (*recognized = relay_check_recognized(circ, cell_direction, in+1, conn)))
         return 0;
 
     }
@@ -556,8 +550,8 @@ int circuit_consider_sending_sendme(circuit_t *circ, int edge_type, crypt_path_t
   cell.command = CELL_RELAY;
   SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_SENDME);
   SET_CELL_STREAM_ID(cell, ZERO_STREAM);
+  SET_CELL_RELAY_LENGTH(cell, 0);
 
-  cell.length = RELAY_HEADER_SIZE;
   if(edge_type == EDGE_AP) { /* i'm the AP */
     cell.circ_id = circ->n_circ_id;
     while(layer_hint->deliver_window < CIRCWINDOW_START-CIRCWINDOW_INCREMENT) {
@@ -862,7 +856,6 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     memset(&cell, 0, sizeof(cell_t));
     cell.command = CELL_CREATE;
     cell.circ_id = circ->n_circ_id;
-    cell.length = ONIONSKIN_CHALLENGE_LEN;
 
     if(onion_skin_create(circ->n_conn->onion_pkey, &(circ->cpath->handshake_state), cell.payload) < 0) {
       log_fn(LOG_WARN,"onion_skin_create (first hop) failed.");
@@ -899,11 +892,12 @@ int circuit_send_next_onion_skin(circuit_t *circ) {
     cell.circ_id = circ->n_circ_id;
     SET_CELL_RELAY_COMMAND(cell, RELAY_COMMAND_EXTEND);
     SET_CELL_STREAM_ID(cell, ZERO_STREAM);
+    SET_CELL_RELAY_LENGTH(cell, 6+ONIONSKIN_CHALLENGE_LEN);
 
-    cell.length = RELAY_HEADER_SIZE + 6 + ONIONSKIN_CHALLENGE_LEN;
     *(uint32_t*)(cell.payload+RELAY_HEADER_SIZE) = htonl(hop->addr);
     *(uint16_t*)(cell.payload+RELAY_HEADER_SIZE+4) = htons(hop->port);
-    if(onion_skin_create(router->onion_pkey, &(hop->handshake_state), cell.payload+RELAY_HEADER_SIZE+6) < 0) {
+    if(onion_skin_create(router->onion_pkey, &(hop->handshake_state),
+                         cell.payload+RELAY_HEADER_SIZE+6) < 0) {
       log_fn(LOG_WARN,"onion_skin_create failed.");
       return -1;
     }
@@ -971,7 +965,6 @@ int circuit_extend(cell_t *cell, circuit_t *circ) {
   memset(&newcell, 0, sizeof(cell_t));
   newcell.command = CELL_CREATE;
   newcell.circ_id = circ->n_circ_id;
-  newcell.length = ONIONSKIN_CHALLENGE_LEN;
 
   memcpy(newcell.payload, cell->payload+RELAY_HEADER_SIZE+6,
          ONIONSKIN_CHALLENGE_LEN);
