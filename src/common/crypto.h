@@ -13,6 +13,7 @@
 #define CRYPTO_CIPHER_DES 1
 #define CRYPTO_CIPHER_RC4 2
 #define CRYPTO_CIPHER_3DES 3
+#define CRYPTO_CIPHER_AES_CTR 4
 
 #define CRYPTO_PK_RSA 0
 
@@ -92,6 +93,9 @@ int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env);
 
 int crypto_cipher_encrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to);
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, unsigned char *from, unsigned int fromlen, unsigned char *to);
+
+/* only implemented for CRYPTO_CIPHER_AES_CTR */
+int crypto_cipher_advance(crypto_cipher_env_t *env, long delta);
 
 /* convenience function: wraps crypto_create_crypto_env, set_key, set_iv, and init. */
 crypto_cipher_env_t *crypto_create_init_cipher(int cipher_type, char *key, char *iv, int encrypt_mode);
