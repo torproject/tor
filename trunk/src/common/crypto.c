@@ -108,9 +108,14 @@ crypto_cipher_evp_cipher(int type, int enc) {
     }
 }
 
+static int _crypto_global_initialized = 0;
+
 int crypto_global_init() 
 {
-  ERR_load_crypto_strings();
+  if (!_crypto_global_initialized) {
+      ERR_load_crypto_strings();
+      _crypto_global_initialized = 1;
+  }
   return 0;
 }
 

@@ -46,10 +46,10 @@ EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env);
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
 
 static void
-tls_log_error(int severity, const char *doing, int err)
+tls_log_error(int severity, const char *doing)
 {
-  const char *msg = (const char*)ERR_reason_error_string(err);
-  if (!err) msg = "(null)";
+  const char *msg = (const char*)ERR_reason_error_string(ERR_get_error());
+  if (!msg) msg = "(null)";
   if (doing) {
     log(severity, "TLS error while %s: %s", doing, msg);
   } else {
@@ -71,14 +71,14 @@ tor_tls_get_error(tor_tls *tls, int r, int extra,
       return TOR_TLS_WANTWRITE;
     case SSL_ERROR_SYSCALL:
       /* This is oververbose XXX */
-      tls_log_error(severity, doing, err);
+      tls_log_error(severity, doing);
       return extra ? _TOR_TLS_SYSCALL : TOR_TLS_ERROR;
     case SSL_ERROR_ZERO_RETURN:
       /* This is oververbose XXX */
-      tls_log_error(severity, doing, err);
+      tls_log_error(severity, doing);
       return extra ? _TOR_TLS_ZERORETURN : TOR_TLS_ERROR;
     default:
-      tls_log_error(severity, doing, err);
+      tls_log_error(severity, doing);
       return TOR_TLS_ERROR;
   }
 }
@@ -87,7 +87,9 @@ static void
 tor_tls_init() {
   if (!tls_library_is_initialized) {
     SSL_library_init();
+    SSL_load_error_strings();
     crypto_global_init();
+    OpenSSL_add_all_algorithms();
     tls_library_is_initialized = 1;
   }
 }
@@ -155,7 +157,7 @@ tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
     goto error;
   if (!(PEM_write_bio_X509(out, x509)))
     goto error;
-  
+
   r = 0;
   goto done;
  error:
@@ -181,7 +183,7 @@ tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
 /* Some people are running OpenSSL before 0.9.7, but we aren't.  
  * We can support AES and 3DES.
  */
-#define CIPHER_LIST (TLS1_TXT_DHE_RSA_WITH_AES_128_SHA \
+#define CIPHER_LIST (TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":" \
 		     SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
 #else
 /* We're running OpenSSL before 0.9.7. We only support 3DES. */
@@ -354,7 +356,7 @@ tor_tls_handshake(tor_tls *tls)
   }
   return r;
 }
-
+  
 /* Shut down an open tls connection 'tls'.  When finished, returns
  * TOR_TLS_DONE.  On failure, returns TOR_TLS_ERROR, TOR_TLS_WANTREAD,
  * or TOR_TLS_WANTWRITE.
