@@ -1615,6 +1615,8 @@ void add_nickname_list_to_smartlist(struct smartlist_t *sl, const char *list, in
 int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 routerinfo_t *routerlist_find_my_routerinfo(void);
 int router_nickname_matches(routerinfo_t *router, const char *nickname);
+int exit_policy_implicitly_allows_local_networks(addr_policy_t *policy,
+                                                 int warn);
 
 /** How many seconds a router must be up before we'll use it for
  * reliability-critical node positions.

@@ -1480,6 +1480,7 @@ options_validate(or_options_t *options)
     log_fn(LOG_WARN, "Error in Exit Policy entry.");
     result = -1;
   }
+  exit_policy_implicitly_allows_local_networks(addr_policy, 1);
   if (config_parse_addr_policy(options->DirPolicy, &addr_policy)) {
     log_fn(LOG_WARN, "Error in DirPolicy entry.");
     result = -1;
