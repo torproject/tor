@@ -11,7 +11,7 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-      0.0.9:
+      0.0.9pre1:
         o Fix OutboundBindAddress
         o Config defaults should be consistent with config file and no
           config file.
@@ -23,54 +23,51 @@ ARMA    - arma claims
         o investigate sctp for alternate transport.
         o Document all undocumented options, or mark them as undocumented
           in the source.
+        o Bail out early if datadirectory is NULL.
 R       . bandwidth buckets for write as well as read.
         . Cached-directory changes:
           o make clients store the cached-directory to disk,
           o and use it when they startup, so they don't need to bootstrap
             from the authdirservers every time they start.
-          - also, once we've reduced authdirserver entries to config
+          D also, once we've reduced authdirserver entries to config
             lines, we can have lines that list cacheddirservers too.
         . compress the directory.
           o Implement gzip/zlib wrappers
           o Compress directories as they're cached/generated
             o When requested, give a compressed directory.
             o Decompress incoming HTTP based on Content-Encoding
-            - Once dirservers are running new code, make clients
-              request compressed directories.  (Alternative: Switch
-              to HTTP/1.1 and use Allowed-Encoding.  Is that really
-              what we want?)
+N           - Once dirservers are running new code, make clients
+              request compressed directories.
 N       - switch dirservers entries to config lines.
 N       - add three default dirplaces if we parse the whole torrc and
           no dirplaces are specified.
 N       - allow yourself to build circuits immediately if you have a
           recent cached directory
-N       - let tor clients use http proxies for dir fetching
-          - have a config entry to specify where to go
+N       - Handle rendezvousing with unverified nodes.
+          - Specify: Stick rendezvous point's key in INTRODUCE cell.
+            Bob should _always_ use key from INTRODUCE cell.
+          - Implement.
+N       - node 'groups' that are known to be in the same zone of control.
+          - Nodes can list their coadministrated nodes.
+            - If A lists B, it only counts if B also lists A
+          - Users can list other coadministrated nodes if they like.
+          . Never choose two coadministrated nodes in the same circuit.
+R       - figure out enclaves, e.g. so we know what to recommend that people
+          do, and so running a tor server on your website is helpful.
+          - Do enclaves for same IP only.
+          - Resolve first, then if IP is an OR, connect to next guy.
+N       - let tor servers use proxies for port 80 exits
+          - Use generic port redirector for IP/bits:Port->IP:Port .
+          - Make use of them when we're doing exit connections.
+
+      0.0.9pre2:
 N       - per-month byte allowances.
           - Based on bandwidth and per-month allowance, choose a
             window within month to be up.  Stay up until allowance is
             used.  Adjust next month's window based on outcome.  Hibernate
             when we're not up.
           - Hibernate means "stop accepting connections, and start sleeping"
-N       - Handle rendezvousing with unverified nodes.
-          - Specify: Stick rendezvous point's key in INTRODUCE cell.
-            Bob should _always_ use key from INTRODUCE cell.
-          - Implement.
-N       - Bail out early if datadirectory is NULL.
 N       - Pure C tor_resolve
-N       - node 'groups' that are known to be in the same zone of control.
-          - Nodes can list their coadministrated nodes.
-          - Users can list other coadministrated nodes if they like.
-          - Never choose two coadministrated nodes in the same circuit.
-R       - figure out enclaves, e.g. so we know what to recommend that people
-          do, and so running a tor server on your website is helpful.
-          - Do enclaves for same IP only.
-          - Resolve first, then if IP is an OR, connect to next guy.
-N       - let tor servers use http proxies for port 80 exits
-          - For squid, privoxy, etc on exitconnections.
-          - (Don't need full HTTP proxy support; assume Host: header
-            is set correctly.)  Use generic port redirector for
-            IP/bits:Port->IP:Port .
 N       - the user interface interface
           - Skeleton only.
           - Implement parts along with trivial fun gui.
@@ -80,6 +77,9 @@ N       - add ipv6 support.
 R       - learn from ben about his openssl-reinitialization-trick to
           rotate tls keys without making new connections.
           - (Roger grabs Ben next time he sees him on IRC) 
+
+        D let tor clients use http proxies for dir fetching
+          - have a config entry to specify where to go
         D nt services on win32.
 
       0.0.8:
