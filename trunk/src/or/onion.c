@@ -2,25 +2,38 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+/**
+ * \file onion.c
+ * \brief Functions to handle onion parsing/creation and handle cpaths.
+ **/
+
 #include "or.h"
 
-/* prototypes for smartlist operations from routerlist.h
+/** prototypes for smartlist operations from routerlist.h
  * they're here to prevent precedence issues with the .h files
  */
 void router_add_running_routers_to_smartlist(smartlist_t *sl);
 void add_nickname_list_to_smartlist(smartlist_t *sl, char *list);
 
-extern or_options_t options; /* command-line and config-file options */
+extern or_options_t options; /**< command-line and config-file options */
 
 static int count_acceptable_routers(smartlist_t *routers);
 
+/** Decide whether the first bit of the circuit ID will be
+ * 0 or 1, to avoid conflicts where each side randomly chooses
+ * the same circuit ID.
+ *
+ * Return CIRC_ID_TYPE_LOWER if local_nick is NULL, or if
+ * local_nick is lexographically smaller than remote_nick.
+ * Else return CIRC_ID_TYPE_HIGHER.
+ */
 int decide_circ_id_type(char *local_nick, char *remote_nick) {
   int result;
 
   tor_assert(remote_nick);
   if(!local_nick)
     return CIRC_ID_TYPE_LOWER;
-  result = strcmp(local_nick, remote_nick);
+  result = strcasecmp(local_nick, remote_nick);
   tor_assert(result);
   if(result < 0)
     return CIRC_ID_TYPE_LOWER;
@@ -32,11 +45,15 @@ struct onion_queue_t {
   struct onion_queue_t *next;
 };
 
-/* global (within this file) variables used by the next few functions */
+/** global (within this file) variables used by the next few functions */
 static struct onion_queue_t *ol_list=NULL;
 static struct onion_queue_t *ol_tail=NULL;
+/** length of ol_list */
 static int ol_length=0;
 
+/** Add <b>circ</b> to the end of ol_list and return 0, except
+ * if ol_list is too long, in which case do nothing and return -1.
+ */
 int onion_pending_add(circuit_t *circ) {
   struct onion_queue_t *tmp;
 
@@ -69,6 +86,9 @@ int onion_pending_add(circuit_t *circ) {
 
 }
 
+/** Remove the first item from ol_list and return it, or return
+ * NULL if the list is empty.
+ */
 circuit_t *onion_next_task(void) {
   circuit_t *circ;
 
@@ -83,8 +103,8 @@ circuit_t *onion_next_task(void) {
   return circ;
 }
 
-/* go through ol_list, find the onion_queue_t element which points to
- * circ, remove and free that element. leave circ itself alone.
+/** Go through ol_list, find the onion_queue_t element which points to
+ * circ, remove and free that element. Leave circ itself alone.
  */
 void onion_pending_remove(circuit_t *circ) {
   struct onion_queue_t *tmpo, *victim;
@@ -120,7 +140,9 @@ void onion_pending_remove(circuit_t *circ) {
   free(victim);
 }
 
-/* given a response payload and keys, initialize, then send a created cell back */
+/** Given a response payload and keys, initialize, then send a created
+ * cell back.
+ */
 int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys) {
   cell_t cell;
   crypt_path_t *tmp_cpath;
@@ -158,8 +180,14 @@ int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *key
   return 0;
 }
 
-extern int has_fetched_directory;
+extern int has_fetched_directory; /**< from main.c */
 
+/** Choose a length for a circuit of purpose <b>purpose</b>.
+ * Default length is 3 + the number of endpoints that would give something
+ * away. If the routerlist <b>routers</b> doesn't have enough routers
+ * to handle the desired path length, return as large a path length as
+ * is feasible, except if it's less than 2, in which case return -1.
+ */
 static int new_route_len(double cw, uint8_t purpose, smartlist_t *routers) {
   int num_acceptable_routers;
   int routelen;
@@ -210,6 +238,14 @@ static int new_route_len(double cw, uint8_t purpose, smartlist_t *routers) {
   return routelen;
 }
 
+/** Return a pointer to a suitable router to be the exit node for the
+ * general-purpose circuit we're about to build.
+ *
+ * Look through the connection array, and choose a router that maximizes
+ * the number of pending streams that can exit from this router.
+ *
+ * Return NULL if we can't find any suitable routers.
+ */
 static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
 {
   int *n_supported;
@@ -346,6 +382,16 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
   return NULL;
 }
 
+/** Return a pointer to a suitable router to be the exit node for the
+ * circuit of purpose <b>purpose</b> that we're about to build (or NULL
+ * if no router is suitable).
+ *
+ * For general-purpose circuits, pass it off to
+ * choose_good_exit_server_general()
+ *
+ * For client-side rendezvous circuits, choose a random node, weighted
+ * toward the preferences in 'options'.
+ */
 static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
 {
   routerinfo_t *r;
@@ -362,6 +408,10 @@ static routerinfo_t *choose_good_exit_server(uint8_t purpose, routerlist_t *dir)
   return NULL; /* never reached */
 }
 
+/** Allocate a cpath_build_state_t, populate it based on
+ * <b>purpose</b> and <b>exit_nickname</b> (if specified), and
+ * return it.
+ */
 cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
                                                  const char *exit_nickname) {
   routerlist_t *rl;
@@ -390,6 +440,10 @@ cpath_build_state_t *onion_new_cpath_build_state(uint8_t purpose,
   return info;
 }
 
+/** Return the number of routers in <b>routers</b> that are currently up
+ * and available for building circuits through. Count sets of twins only
+ * once.
+ */
 static int count_acceptable_routers(smartlist_t *routers) {
   int i, j, n;
   int num=0;
@@ -429,6 +483,9 @@ static int count_acceptable_routers(smartlist_t *routers) {
   return num;
 }
 
+/** Go through smartlist <b>sl</b> of routers, and remove all elements that
+ * have the same onion key as twin.
+ */
 static void remove_twins_from_smartlist(smartlist_t *sl, routerinfo_t *twin) {
   int i;
   routerinfo_t *r;
@@ -444,6 +501,10 @@ static void remove_twins_from_smartlist(smartlist_t *sl, routerinfo_t *twin) {
   }
 }
 
+/** Add <b>new_hop</b> to the end of the doubly-linked-list <b>head_ptr</b>.
+ *
+ * This function is used to extend cpath by another hop.
+ */
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
 {
   if (*head_ptr) {
@@ -457,7 +518,12 @@ void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
   }
 }
 
-int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, routerinfo_t **router_out)
+/** Choose a suitable next hop in the cpath <b>head_ptr</b>,
+ * based on <b>state</b>. Add the hop info to head_ptr, and return a
+ * pointer to the chosen router in <b>router_out</b>.
+ */
+int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t
+                       *state, routerinfo_t **router_out)
 {
   int cur_len;
   crypt_path_t *cpath, *hop;
@@ -568,12 +634,13 @@ int onion_extend_cpath(crypt_path_t **head_ptr, cpath_build_state_t *state, rout
 
 /*----------------------------------------------------------------------*/
 
-/* Given a router's 128 byte public key,
-   stores the following in onion_skin_out:
-[16 bytes] Symmetric key for encrypting blob past RSA
-[112 bytes] g^x part 1 (inside the RSA)
-[16 bytes] g^x part 2 (symmetrically encrypted)
-
+/** Given a router's 128 byte public key,
+ * stores the following in onion_skin_out:
+ *   - [42 bytes] OAEP padding
+ *   - [16 bytes] Symmetric key for encrypting blob past RSA
+ *   - [70 bytes] g^x part 1 (inside the RSA)
+ *   - [58 bytes] g^x part 2 (symmetrically encrypted)
+ *
  * Stores the DH private key into handshake_state_out for later completion
  * of the handshake.
  *
@@ -634,7 +701,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   return -1;
 }
 
-/* Given an encrypted DH public key as generated by onion_skin_create,
+/** Given an encrypted DH public key as generated by onion_skin_create,
  * and the private key for this onion router, generate the reply (128-byte
  * DH plus the first 20 bytes of shared key material), and store the
  * next key_out_len bytes of key material in key_out.
@@ -717,7 +784,7 @@ onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes *
   return -1;
 }
 
-/* Finish the client side of the DH handshake.
+/** Finish the client side of the DH handshake.
  * Given the 128 byte DH reply + 20 byte hash as generated by
  * onion_skin_server_handshake and the handshake state generated by
  * onion_skin_create, verify H(K) with the first 20 bytes of shared
