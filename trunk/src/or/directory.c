@@ -150,7 +150,7 @@ directory_initiate_command(routerinfo_t *router, uint8_t purpose,
     switch(connection_connect(conn, conn->address, conn->addr, conn->port)) {
       case -1:
         router_mark_as_down(conn->identity_digest); /* don't try him again */
-        if(purpose == DIR_PURPOSE_FETCH_DIR && !all_directory_servers_down) {
+        if(purpose == DIR_PURPOSE_FETCH_DIR && !all_directory_servers_down()) {
           log_fn(LOG_INFO,"Giving up on dirserver %s; trying another.", conn->nickname);
           directory_get_from_dirserver(purpose, payload, payload_len);
         }
