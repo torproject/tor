@@ -15,7 +15,7 @@ static void circuit_rep_hist_note_result(circuit_t *circ);
 
 static void circuit_is_ready(circuit_t *circ);
 static void circuit_failed(circuit_t *circ);
-static int circuit_establish_circuit(uint8_t purpose);
+static circuit_t *circuit_establish_circuit(uint8_t purpose);
 
 unsigned long stats_n_relay_cells_relayed = 0;
 unsigned long stats_n_relay_cells_delivered = 0;
@@ -1051,21 +1051,19 @@ static void circuit_failed(circuit_t *circ) {
  */
 static int n_circuit_failures = 0;
 
-/* Return -1 if you aren't going to try to make a circuit, 0 if you did try. */
-int circuit_launch_new(uint8_t purpose) {
+/* Launch a new circuit and return a pointer to it. Return NULL if you failed. */
+circuit_t *circuit_launch_new(uint8_t purpose) {
 
   if(!(options.SocksPort||options.RunTesting)) /* no need for circuits. */
-    return -1;
+    return NULL;
 
   if(n_circuit_failures > 5) { /* too many failed circs in a row. don't try. */
 //    log_fn(LOG_INFO,"%d failures so far, not trying.",n_circuit_failures);
-    return -1;
+    return NULL;
   }
 
   /* try a circ. if it fails, circuit_mark_for_close will increment n_circuit_failures */
-  circuit_establish_circuit(purpose);
-
-  return 0;
+  return circuit_establish_circuit(purpose);
 }
 
 void circuit_increment_failure_count(void) {
@@ -1077,7 +1075,7 @@ void circuit_reset_failure_count(void) {
   n_circuit_failures = 0;
 }
 
-static int circuit_establish_circuit(uint8_t purpose) {
+static circuit_t *circuit_establish_circuit(uint8_t purpose) {
   routerinfo_t *firsthop;
   connection_t *n_conn;
   circuit_t *circ;
@@ -1090,14 +1088,14 @@ static int circuit_establish_circuit(uint8_t purpose) {
   if (! circ->build_state) {
     log_fn(LOG_INFO,"Generating cpath length failed.");
     circuit_mark_for_close(circ);
-    return -1;
+    return NULL;
   }
 
   onion_extend_cpath(&circ->cpath, circ->build_state, &firsthop);
   if(!circ->cpath) {
     log_fn(LOG_INFO,"Generating first cpath hop failed.");
     circuit_mark_for_close(circ);
-    return -1;
+    return NULL;
   }
 
   /* now see if we're already connected to the first OR in 'route' */
@@ -1111,7 +1109,7 @@ static int circuit_establish_circuit(uint8_t purpose) {
     if(options.ORPort) { /* we would be connected if he were up. and he's not. */
       log_fn(LOG_INFO,"Route's firsthop isn't connected.");
       circuit_mark_for_close(circ);
-      return -1;
+      return NULL;
     }
 
     if(!n_conn) { /* launch the connection */
@@ -1119,14 +1117,15 @@ static int circuit_establish_circuit(uint8_t purpose) {
       if(!n_conn) { /* connect failed, forget the whole thing */
         log_fn(LOG_INFO,"connect to firsthop failed. Closing.");
         circuit_mark_for_close(circ);
-        return -1;
+        return NULL;
       }
     }
 
     log_fn(LOG_DEBUG,"connecting in progress (or finished). Good.");
-    return 0; /* return success. The onion/circuit/etc will be taken care of automatically
-               * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
-               */
+    /* return success. The onion/circuit/etc will be taken care of automatically
+     * (may already have been) whenever n_conn reaches OR_CONN_STATE_OPEN.
+     */
+    return circ;
   } else { /* it (or a twin) is already open. use it. */
     circ->n_addr = n_conn->addr;
     circ->n_port = n_conn->port;
@@ -1135,10 +1134,10 @@ static int circuit_establish_circuit(uint8_t purpose) {
     if(circuit_send_next_onion_skin(circ) < 0) {
       log_fn(LOG_INFO,"circuit_send_next_onion_skin failed.");
       circuit_mark_for_close(circ);
-      return -1;
+      return NULL;
     }
   }
-  return 0;
+  return circ;
 }
 
 /* find circuits that are waiting on me, if any, and get them to send the onion */

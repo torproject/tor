@@ -281,8 +281,11 @@ void directory_has_arrived(void) {
 
   log_fn(LOG_INFO, "We now have a directory.");
 
+  /* just for testing */
   directory_initiate_command(router_pick_directory_server(),
                              DIR_PURPOSE_FETCH_HIDSERV, "foo", 3);
+
+  rend_services_init(); /* get bob to initialize all his hidden services */
 
 }
 
@@ -332,7 +335,7 @@ static void run_scheduled_events(time_t now) {
     /* it's time to fetch a new directory and/or post our descriptor */
     if(options.ORPort) {
       router_rebuild_descriptor();
-      router_upload_desc_to_dirservers();
+      router_upload_dir_desc_to_dirservers();
     }
     if(!options.DirPort) {
       /* NOTE directory servers do not currently fetch directories.
@@ -574,7 +577,7 @@ static int do_main_loop(void) {
 
   if(options.ORPort) {
     cpu_init(); /* launch cpuworkers. Need to do this *after* we've read the onion key. */
-    router_upload_desc_to_dirservers(); /* upload our descriptor to all dirservers */
+    router_upload_dir_desc_to_dirservers(); /* upload our descriptor to all dirservers */
   }
 
   /* start up the necessary connections based on which ports are
