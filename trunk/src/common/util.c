@@ -82,7 +82,7 @@ tv_udiff(struct timeval *start, struct timeval *end)
   udiff = secdiff*1000000L + (end->tv_usec - start->tv_usec);
   if(udiff < 0) {
     log_fn(LOG_INFO, "start (%ld.%ld) is after end (%ld.%ld). Returning 0.",
-           start->tv_sec, start->tv_usec, end->tv_sec, end->tv_usec);
+           (long)start->tv_sec, (long)start->tv_usec, (long)end->tv_sec, (long)end->tv_usec);
     return 0;
   }
   return udiff;
@@ -215,7 +215,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     int acceptor = -1;
     struct sockaddr_in listen_addr;
     struct sockaddr_in connect_addr;
-    size_t size;
+    int size;
     
     if (protocol
 #ifdef AF_UNIX
