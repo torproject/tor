@@ -36,7 +36,7 @@
 #define strncasecmp strnicmp
 #define strcasecmp stricmp
 #define INLINE __inline
-#define _ARRAYSIZE(x) (((x)==0)?1:0)
+#define _ARRAYSIZE(x) (((x)==0)?1:(x))
 /* Windows compilers before VC7 don't have __FUNCTION__. */
 #if _MSC_VER < 1300
 #define __FUNCTION__ "???"
