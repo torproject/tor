@@ -911,11 +911,13 @@ static int router_add_exit_policy(routerinfo_t *router,
   address = arg;
   mask = strchr(arg,'/');
   port = strchr(mask?mask:arg,':');
-  if(!port)
-    goto policy_read_failed;
+  /* Break 'arg' into separate strings.  'arg' was already strdup'd by 
+   * _router_get_next_token, so it's safe to modify.
+   */
   if (mask)
     *mask++ = 0;
-  *port++ = 0;
+  if (port)
+    *port++ = 0;
 
   if (strcmp(address, "*") == 0) {
     newe->addr = 0;
@@ -945,7 +947,7 @@ static int router_add_exit_policy(routerinfo_t *router,
       goto policy_read_failed;
     }
   }
-  if (strcmp(port, "*") == 0) {
+  if (!port || strcmp(port, "*") == 0) {
     newe->prt_min = 1;
     newe->prt_max = 65535;
   } else {
