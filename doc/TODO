@@ -10,7 +10,7 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-For 0.0.9.5:
+For 0.0.9.6:
    - Server instructions for OSX and Windows operators.
    - Audit all changes to bandwidth buckets for integer over/underflow.
 
@@ -38,7 +38,7 @@ R  - Reset uptime when IP/ORPort/... changes.
 
  Functionality
 N - Implement pending controller features.
-R - HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
+R . HTTPS proxy for OR CONNECT stuff. (For outgoing SSL connections to
     other ORs.)
   - Changes for forward compatibility
 N   - If a version is later than the last in its series, but a version
