@@ -463,6 +463,50 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   return r;
 }
 
+int crypto_pk_DER64_encode_key(crypto_pk_env_t *env, char **out)
+{
+  int len;
+  char *s, *sp;
+  tor_assert(env && out);
+  len = i2d_RSAPublicKey(env->key, NULL);
+  if (len < 0) {
+    return -1;
+  }
+  s = sp = tor_malloc(len+1);
+  i2d_RSAPublicKey(env->key, &sp); /* modifies sp */
+  *out = tor_malloc(len * 2); /* too long, but safe. */
+  if (base64_encode(*out, len*2, s, len) < 0) {
+    log_fn(LOG_WARN, "Error base64-encoding DER-encoded key");
+    tor_free(*out);
+    tor_free(s);
+    return -1;
+  }
+  tor_free(s);
+  return len;
+}
+
+int crypto_pk_DER64_decode_key(crypto_pk_env_t *env, const char *in)
+{
+  char *buf, *bufp;
+  RSA *rsa;
+  int len;
+  tor_assert(env && in);
+  len = strlen(in);
+  buf = bufp = tor_malloc(len+1);
+  if (base64_decode(buf, len+1, in, len)<0) {
+    tor_free(buf);
+    log_fn(LOG_WARN,"Error base-64 decoding key");
+    return -1;
+  }
+  rsa = d2i_RSAPublicKey(NULL, &bufp, strlen(buf));
+  tor_free(buf);
+  if (!rsa)
+    return -1;
+  if (env->key) RSA_free(env->key);
+  env->key = rsa;
+  return 0;
+}
+
 /** Return true iff <b>env</b> has a valid key.
  */
 int crypto_pk_check_key(crypto_pk_env_t *env)
@@ -837,14 +881,16 @@ int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
 
 /** Given a private or public key <b>pk</b>, put a fingerprint of the
  * public key into <b>fp_out</b> (must have at least FINGERPRINT_LEN+1 bytes of
- * space).
+ * space).  
  *
  * Fingerprints are computed as the SHA1 digest of the ASN.1 encoding
  * of the public key, converted to hexadecimal, in upper case, with a
  * space after every four digits.
+ *
+ * If <b>add_space</b> is false, omit the spaces.
  */
 int
-crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out)
+crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out, int add_space)
 {
   unsigned char *bufp;
   unsigned char digest[DIGEST_LEN];
@@ -857,13 +903,17 @@ crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out)
   for (i = 0; i < DIGEST_LEN; ++i) {
     sprintf(bufp,"%02X",digest[i]);
     bufp += 2;
-    if (i%2 && i != 19) {
-      *bufp++ = ' ';
+    if (add_space) {
+      if (i%2 && i != 19) {
+        *bufp++ = ' ';
+      }
     }
   }
   *bufp = '\0';
-  tor_assert(strlen(buf) == FINGERPRINT_LEN);
-  tor_assert(crypto_pk_check_fingerprint_syntax(buf));
+  if (add_space) {
+    tor_assert(strlen(buf) == FINGERPRINT_LEN);
+    tor_assert(crypto_pk_check_fingerprint_syntax(buf));
+  }
   strcpy(fp_out, buf);
   return 0;
 }

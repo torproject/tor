@@ -86,7 +86,7 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
 int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len);
 crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len);
 int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out);
-int crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out);
+int crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out,int add_space);
 int crypto_pk_check_fingerprint_syntax(const char *s);
 
 int base64_encode(char *dest, int destlen, const char *src, int srclen);
