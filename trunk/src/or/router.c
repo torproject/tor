@@ -321,23 +321,9 @@ const char *router_get_my_descriptor(void) {
 
 int router_rebuild_descriptor(void) {
   routerinfo_t *ri;
-  char localhostname[256];
-  char *address = options.Address;
 
-  if(!address) { /* if not specified in config, we find a default */
-    if(gethostname(localhostname,sizeof(localhostname)) < 0) {
-      log_fn(LOG_WARN,"Error obtaining local hostname");
-      return -1;
-    }
-    address = localhostname;
-    if(!strchr(address,'.')) {
-      log_fn(LOG_WARN,"fqdn '%s' has only one element. Misconfigured machine?",address);
-      log_fn(LOG_WARN,"Try setting the Address line in your config file.");
-      return -1;
-    }
-  }
-  ri = tor_malloc(sizeof(routerinfo_t));
-  ri->address = tor_strdup(address);
+  ri = tor_malloc_zero(sizeof(routerinfo_t));
+  ri->address = tor_strdup(options.Address);
   ri->nickname = tor_strdup(options.Nickname);
   /* No need to set addr. */
   ri->or_port = options.ORPort;

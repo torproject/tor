@@ -377,7 +377,8 @@ router_resolve(routerinfo_t *router)
 
   rent = (struct hostent *)gethostbyname(router->address);
   if (!rent) {
-    log_fn(LOG_WARN,"Could not get address for router %s.",router->address);
+    log_fn(LOG_WARN,"Could not get address for router %s (%s).",
+           router->address, router->nickname);
     return -1;
   }
   assert(rent->h_length == 4);
