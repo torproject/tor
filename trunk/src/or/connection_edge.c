@@ -945,8 +945,10 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
     return strncmp(exit->platform, "Tor 0.0.7", 9) ? 1 : 0;
   }
   addr = client_dns_lookup_entry(conn->socks_request->address);
-  return router_compare_addr_to_exit_policy(addr,
-           conn->socks_request->port, exit->exit_policy);
+  if(router_compare_addr_to_exit_policy(addr,
+     conn->socks_request->port, exit->exit_policy) < 0)
+    return 0;
+  return 1;
 }
 
 /** A helper function for socks_policy_permits_address() below.

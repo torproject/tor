@@ -82,7 +82,7 @@ static int circuit_is_acceptable(circuit_t *circ,
       if (!strncmp(exitrouter->platform, "Tor 0.0.7", 9))
         return 0;
     } else if(purpose == CIRCUIT_PURPOSE_C_GENERAL) {
-      if(connection_ap_can_use_exit(conn, exitrouter) == ADDR_POLICY_REJECTED) {
+      if(!connection_ap_can_use_exit(conn, exitrouter)) {
         /* can't exit from this router */
         return 0;
       }
@@ -268,7 +268,7 @@ int circuit_stream_is_being_handled(connection_t *conn) {
        (!circ->timestamp_dirty ||
         circ->timestamp_dirty + options.NewCircuitPeriod < now)) {
       exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
-      if(exitrouter && connection_ap_can_use_exit(conn, exitrouter) != ADDR_POLICY_REJECTED)
+      if(exitrouter && connection_ap_can_use_exit(conn, exitrouter))
         if(++num >= MIN_CIRCUITS_HANDLING_STREAM)
           return 1;
     }
