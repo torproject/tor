@@ -48,8 +48,7 @@ void directory_initiate_command(routerinfo_t *router, int command) {
   switch(connection_connect(conn, router->address, router->addr, router->dir_port)) {
     case -1:
       router_mark_as_down(conn->nickname); /* don't try him again */
-      connection_remove(conn);
-      connection_free(conn);
+      connection_mark_for_close(conn, 0);
       return;
     case 0:
       connection_set_poll_socket(conn);
@@ -63,8 +62,7 @@ void directory_initiate_command(routerinfo_t *router, int command) {
 
   connection_set_poll_socket(conn);
   if(directory_send_command(conn, command) < 0) {
-    connection_remove(conn);
-    connection_free(conn);
+    connection_mark_for_close(conn, 0);
   }
 }
 
