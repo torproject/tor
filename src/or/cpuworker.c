@@ -220,10 +220,16 @@ static int cpuworker_main(void *data) {
   dup_onion_keys(&onion_key, &last_onion_key);
 
   for (;;) {
+    int r;
 
-    if (recv(fd, &question_type, 1, 0) != 1) {
+    if ((r = recv(fd, &question_type, 1, 0)) != 1) {
 //      log_fn(LOG_ERR,"read type failed. Exiting.");
-      log_fn(LOG_INFO,"cpuworker exiting because tor process closed connection (either rotated keys or died).");
+      if (r == 0) {
+        log_fn(LOG_INFO,"CPU worker exiting because Tor process closed connection (either rotated keys or died).");
+      } else {
+        log_fn(LOG_INFO,"CPU worker editing because of error on connection To Tor process.");
+        log_fn(LOG_INFO,"(Error on %d was %s)", fd, tor_socket_strerror(tor_socket_errno(fd)));
+      }
       goto end;
     }
     tor_assert(question_type == CPUWORKER_TASK_ONION);
