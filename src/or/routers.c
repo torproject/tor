@@ -56,7 +56,7 @@ int learn_my_address(struct sockaddr_in *me) {
   memset(me,0,sizeof(struct sockaddr_in));
   me->sin_family = AF_INET;
   memcpy((void *)&me->sin_addr,(void *)localhost->h_addr,sizeof(struct in_addr));
-  me->sin_port = htons(options.ORPort);
+  me->sin_port = htons((uint16_t) options.ORPort);
   log_fn(LOG_DEBUG,"chose address as '%s'.",inet_ntoa(me->sin_addr));
   if (!strncmp("127.",inet_ntoa(me->sin_addr), 4) &&
       strcasecmp(localhostname, "localhost")) {

@@ -28,12 +28,17 @@
 int
 poll(struct pollfd *ufds, unsigned int nfds, int timeout)
 {
-	int idx, maxfd, fd, r;
+	unsigned int idx, maxfd, fd;
+	int r;
 	fd_set readfds, writefds, exceptfds;
+#ifdef USING_FAKE_TIMEVAL
+#undef timeval
+#undef tv_sec
+#undef tv_usec
+#endif
 	struct timeval _timeout;
 	_timeout.tv_sec = timeout/1000;
 	_timeout.tv_usec = (timeout%1000)*1000;
-	
 	FD_ZERO(&readfds);
 	FD_ZERO(&writefds);
 	FD_ZERO(&exceptfds);
