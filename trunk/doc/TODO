@@ -62,7 +62,9 @@ N  . Implement pending controller features.
     o MAPADDRESS
       o Map A->B.
       o Map DontCare->B.
-    - Way to handle overlong messages?
+    o Way to handle overlong messages
+      o Specify fragmented format
+      o Implement fragmented format
     - Event for "new descriptors"
     o Better stream IDs
     - EXTENDCIRCUIT <depends on revised circ selection stuff.>
