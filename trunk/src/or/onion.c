@@ -310,7 +310,6 @@ static int onion_process(circuit_t *circ) {
 int chooselen(double cw)
 {
   int len = 2;
-  int retval = 0;
   uint8_t coin;
   
   if ((cw < 0) || (cw >= 1)) /* invalid parameter */

@@ -670,7 +670,7 @@ repeat_connection_package_raw_inbuf:
    *       compressing.
    *    2) 
    */
-  len = connection_compress_from_buf(cell.payload,
+  len = connection_compress_from_buf(cell.payload+TOPIC_HEADER_SIZE,
                                      CELL_PAYLOAD_SIZE - TOPIC_HEADER_SIZE,
                                      conn, Z_SYNC_FLUSH);
   if (len < 0)
@@ -684,7 +684,8 @@ repeat_connection_package_raw_inbuf:
     cell.length = amount_to_process;
   }
 
-  if(connection_fetch_from_buf(cell.payload, cell.length, conn) < 0)
+  if(connection_fetch_from_buf(cell.payload+TOPIC_HEADER_SIZE, 
+                               cell.length, conn) < 0)
     return -1;
 #endif
 
