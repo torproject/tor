@@ -12,6 +12,8 @@ ARMA    - arma claims
         X Abandoned
 
 Bugs:
+        - When it can't resolve any dirservers, it is useless from then on.
+          We should make it reload the RouterFile if it has no dirservers.
         o Sometimes it picks a middleman node as the exit for a circuit.
         - if you specify a non-dirserver as exitnode or entrynode, when it
           makes the first few circuits it hasn't yet fetched the directory,
