@@ -12,8 +12,8 @@ the distant future, stuff may have changed.)
   Read the README file first, so you can get familiar with the basics of
   installing and running an onion router.
 
-  Then, skim some of the introductory materials in tor-spec.txt,
-  tor-design.tex, and the Tor FAQ to learn more about how the Tor protocol
+  Then, skim some of the introductory materials in tor-design.pdf,
+  tor-spec.txt, and the Tor FAQ to learn more about how the Tor protocol
   is supposed to work.  This document will assume you know about Cells,
   Circuits, Streams, Connections, Onion Routers, and Onion Proxies.
 
@@ -180,7 +180,7 @@ the distant future, stuff may have changed.)
    A circuit_t structure fills two roles.  First, a circuit_t links two
    connections together: either an edge connection and an OR connection,
    or two OR connections.  (When joined to an OR connection, a circuit_t
-   affects only cells sent to a particular ACI on that connection.  When
+   affects only cells sent to a particular circID on that connection.  When
    joined to an edge connection, a circuit_t affects all data.)
 
    Second, a circuit_t holds the cipher keys and state for sending data
