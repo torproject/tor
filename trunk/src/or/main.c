@@ -462,7 +462,7 @@ static int do_main_loop(void) {
       }
     }
 
-    if(tor_tls_context_new(certfile, get_privatekey(), 1) < 0) {
+    if(tor_tls_context_new(options.CertFile, get_privatekey(), 1) < 0) {
       log_fn(LOG_ERR,"Error creating tls context.");
       return -1;
     }

@@ -131,7 +131,7 @@
 #define CPUWORKER_TASK_ONION CPUWORKER_STATE_BUSY_ONION
 #define CPUWORKER_TASK_HANDSHAKE CPUWORKER_STATE_BUSY_HANDSHAKE
 
-#ifndef TOR_TLS
+#ifndef USE_TLS
 /* how to read these states:
  * foo_CONN_STATE_bar_baz:
  * "I am acting as a bar, currently in stage baz of talking with a foo."
@@ -303,7 +303,7 @@ struct connection_t {
   crypto_pk_env_t *pkey; /* public RSA key for the other side */
 
 /* Used only by OR connections: */
-#ifdef TOR_TLS
+#ifdef USE_TLS
   tor_tls *tls;
 #else
   /* link encryption */
@@ -578,7 +578,10 @@ void connection_free(connection_t *conn);
 
 int connection_create_listener(struct sockaddr_in *bindaddr, int type);
 
-int connection_handle_listener_read(connection_t *conn, int new_type, int new_state);
+int connection_handle_listener_read(connection_t *conn, int new_type);
+
+int connection_tls_start_handshake(connection_t *conn);
+int connection_tls_continue_handshake(connection_t *conn);
 
 /* start all connections that should be up but aren't */
 int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport);
@@ -631,10 +634,6 @@ int ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ);
 
 int ap_handshake_socks_reply(connection_t *conn, char result);
 
-int connection_ap_create_listener(struct sockaddr_in *bindaddr);
-
-int connection_ap_handle_listener_read(connection_t *conn);
-
 /********************************* connection_edge.c ***************************/
 
 int connection_edge_process_inbuf(connection_t *conn);
@@ -649,27 +648,12 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 
 int connection_exit_connect(connection_t *conn);
 
-/********************************* connection_op.c ***************************/
-
-int op_handshake_process_keys(connection_t *conn);
-
-int connection_op_process_inbuf(connection_t *conn);
-
-int connection_op_finished_flushing(connection_t *conn);
-
-int connection_op_create_listener(struct sockaddr_in *bindaddr);
-
-int connection_op_handle_listener_read(connection_t *conn);
-
 /********************************* connection_or.c ***************************/
 
 int connection_or_process_inbuf(connection_t *conn);
 int connection_or_finished_flushing(connection_t *conn);
 
 connection_t *connection_or_connect(routerinfo_t *router);
-
-int connection_or_create_listener(struct sockaddr_in *bindaddr);
-int connection_or_handle_listener_read(connection_t *conn);
 
 /********************************* cpuworker.c *****************************/
 
@@ -690,8 +674,6 @@ int connection_dir_process_inbuf(connection_t *conn);
 int directory_handle_command(connection_t *conn);
 int directory_handle_reading(connection_t *conn);
 int connection_dir_finished_flushing(connection_t *conn);
-int connection_dir_create_listener(struct sockaddr_in *bindaddr);
-int connection_dir_handle_listener_read(connection_t *conn);
 
 /********************************* dns.c ***************************/
 

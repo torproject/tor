@@ -68,6 +68,7 @@ char *conn_state_to_string[][15] = {
 
 /********* END VARIABLES ************/
 
+static int connection_init_accepted_conn(connection_t *conn);
 
 /**************************************************************/
 
@@ -183,7 +184,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
     return -1;
   }
 
-  log_fn(LOG_DEBUG,"Listening on port %u.",ntohs(bindaddr->sin_port));
+  log_fn(LOG_DEBUG,"%s listening on port %u.",conn_type_to_string[type], ntohs(bindaddr->sin_port));
 
   conn->state = LISTENER_STATE_READY;
   connection_start_reading(conn);
@@ -191,7 +192,7 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type) {
   return 0;
 }
 
-int connection_handle_listener_read(connection_t *conn, int new_type, int new_state) {
+int connection_handle_listener_read(connection_t *conn, int new_type) {
 
   int news; /* the new socket */
   connection_t *newconn;
@@ -237,12 +238,73 @@ int connection_handle_listener_read(connection_t *conn, int new_type, int new_st
     return 0; /* no need to tear down the parent */
   }
 
-  log(LOG_DEBUG,"connection_handle_listener_read(): socket %d entered state %d.",newconn->s, new_state);
-  newconn->state = new_state;
-  connection_start_reading(newconn);
-
+  if(connection_init_accepted_conn(newconn) < 0) {
+    connection_free(newconn);
+    return 0;
+  }
   return 0;
 }
+
+static int connection_init_accepted_conn(connection_t *conn) {
+
+  connection_start_reading(conn);
+
+  switch(conn->type) {
+    case CONN_TYPE_OR:
+#ifdef USE_TLS
+      if(connection_tls_start_handshake(conn) < 0)
+        return -1;
+#else
+      conn->state = OR_CONN_STATE_SERVER_AUTH_WAIT;
+#endif
+      break;
+    case CONN_TYPE_AP:
+      conn->state = AP_CONN_STATE_SOCKS_WAIT;
+      break;
+    case CONN_TYPE_DIR:
+      conn->state = DIR_CONN_STATE_COMMAND_WAIT;
+      break;
+  }
+  return 0;
+}
+
+#ifdef USE_TLS
+int connection_tls_start_handshake(connection_t *conn) {
+  conn->state = OR_CONN_STATE_HANDSHAKING;
+  conn->tls = tor_tls_new(conn->s, options.OnionRouter);
+  if(!conn->tls) {
+    log_fn(LOG_ERR,"tor_tls_new failed. Closing.");
+    return -1;
+  }
+  connection_start_reading(conn);
+  if(connection_tls_continue_handshake(conn) < 0)
+    return -1;
+  return 0;
+}
+
+int connection_tls_continue_handshake(connection_t *conn) {
+  switch(tor_tls_handshake(conn->tls)) {
+    case TOR_TLS_ERROR:
+    case TOR_TLS_CLOSE:
+      log_fn(LOG_DEBUG,"tls error. breaking.");
+      return -1;
+    case TOR_TLS_DONE:
+      conn->state = OR_CONN_STATE_OPEN;
+      directory_set_dirty();
+      connection_watch_events(conn, POLLIN);
+      if(!options.OnionRouter)
+        circuit_n_conn_open(conn); /* send the pending create */
+      log_fn(LOG_DEBUG,"tls handshake done, now open.");
+      return 0;
+    case TOR_TLS_WANTWRITE:
+      connection_start_writing(conn);
+      return 0;
+    case TOR_TLS_WANTREAD: /* handshaking conns are *always* reading */
+      return 0;
+  }
+  return 0;
+}
+#endif
 
 /* start all connections that should be up but aren't */
 int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport) {
@@ -259,14 +321,14 @@ int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16
   if(or_listenport) {
     bindaddr.sin_port = htons(or_listenport);
     if(!connection_get_by_type(CONN_TYPE_OR_LISTENER)) {
-      connection_or_create_listener(&bindaddr);
+      connection_create_listener(&bindaddr, CONN_TYPE_OR_LISTENER);
     }
   }
 
   if(dir_listenport) {
     bindaddr.sin_port = htons(dir_listenport);
     if(!connection_get_by_type(CONN_TYPE_DIR_LISTENER)) {
-      connection_dir_create_listener(&bindaddr);
+      connection_create_listener(&bindaddr, CONN_TYPE_DIR_LISTENER);
     }
   }
  
@@ -274,7 +336,7 @@ int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16
     bindaddr.sin_port = htons(ap_listenport);
     bindaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); /* the AP listens only on localhost! */
     if(!connection_get_by_type(CONN_TYPE_AP_LISTENER)) {
-      connection_ap_create_listener(&bindaddr);
+      connection_create_listener(&bindaddr, CONN_TYPE_AP_LISTENER);
     }
   }
 
@@ -289,31 +351,30 @@ int connection_handle_read(connection_t *conn) {
 
   switch(conn->type) {
     case CONN_TYPE_OR_LISTENER:
-      return connection_or_handle_listener_read(conn);
+      return connection_handle_listener_read(conn, CONN_TYPE_OR);
     case CONN_TYPE_AP_LISTENER:
-      return connection_ap_handle_listener_read(conn);
+      return connection_handle_listener_read(conn, CONN_TYPE_AP);
     case CONN_TYPE_DIR_LISTENER:
-      return connection_dir_handle_listener_read(conn);
-    default:
+      return connection_handle_listener_read(conn, CONN_TYPE_DIR);
+  }
 
-      if(connection_read_to_buf(conn) < 0) {
-        if(conn->type == CONN_TYPE_DIR && conn->state == DIR_CONN_STATE_CONNECTING) {
-           /* it's a directory server and connecting failed: forget about this router */
-           /* XXX I suspect pollerr may make Windows not get to this point. :( */
-           router_forget_router(conn->addr,conn->port); 
-             /* FIXME i don't think router_forget_router works. */
-        }
-        return -1;
-      }
-      if(connection_process_inbuf(conn) < 0) {
-        //log_fn(LOG_DEBUG,"connection_process_inbuf returned %d.",retval);
-        return -1;
-      }
-      if(!connection_state_is_open(conn) && conn->receiver_bucket == 0) {
-        log_fn(LOG_DEBUG,"receiver bucket reached 0 before handshake finished. Closing.");
-        return -1;
-      }
-  } /* end switch */
+  if(connection_read_to_buf(conn) < 0) {
+    if(conn->type == CONN_TYPE_DIR && conn->state == DIR_CONN_STATE_CONNECTING) {
+       /* it's a directory server and connecting failed: forget about this router */
+       /* XXX I suspect pollerr may make Windows not get to this point. :( */
+       router_forget_router(conn->addr,conn->port); 
+         /* FIXME i don't think router_forget_router works. */
+    }
+    return -1;
+  }
+  if(connection_process_inbuf(conn) < 0) {
+    //log_fn(LOG_DEBUG,"connection_process_inbuf returned %d.",retval);
+    return -1;
+  }
+  if(!connection_state_is_open(conn) && conn->receiver_bucket == 0) {
+    log_fn(LOG_DEBUG,"receiver bucket reached 0 before handshake finished. Closing.");
+    return -1;
+  }
   return 0;
 }
 
@@ -344,26 +405,22 @@ int connection_read_to_buf(connection_t *conn) {
 
 #ifdef USE_TLS
   if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
-    if(conn->state == OR_CONN_STATE_HANDSHAKING) {
-      result = tor_tls_handshake(conn->tls)
-      if(result == TOR_TLS_DONE) {
-        conn->state = OR_CONN_STATE_OPEN;
-        log_fn(LOG_DEBUG,"tls handshake done, now open.");
-      }
-    } else { /* open, or closing */
-      result = read_to_buf_tls(conn->tls, at_most, &conn->inbuf,
-                                    &conn->inbuflen, &conn->inbuf_datalen);
-    }
+    if(conn->state == OR_CONN_STATE_HANDSHAKING)
+      return connection_tls_continue_handshake(conn);
+
+    /* else open, or closing */
+    result = read_to_buf_tls(conn->tls, at_most, &conn->inbuf,
+                             &conn->inbuflen, &conn->inbuf_datalen);
 
     switch(result) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
         log_fn(LOG_DEBUG,"tls error. breaking.");
         return -1; /* XXX deal with close better */
-      case TOR_TLS_WANT_WRITE:
+      case TOR_TLS_WANTWRITE:
         connection_start_writing(conn);
         return 0;
-      case TOR_TLS_WANT_READ: /* we're already reading */
+      case TOR_TLS_WANTREAD: /* we're already reading */
       case TOR_TLS_DONE: /* no data read, so nothing to process */
         return 0;
     }
@@ -413,7 +470,6 @@ int connection_flush_buf(connection_t *conn) {
 /* return -1 if you want to break the conn, else return 0 */
 int connection_handle_write(connection_t *conn) {
   struct timeval now;
-  int result;
 
   if(connection_is_listener(conn)) {
     log_fn(LOG_DEBUG,"Got a listener socket. Can't happen!");
@@ -425,26 +481,20 @@ int connection_handle_write(connection_t *conn) {
 
 #ifdef USE_TLS
   if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
-    if(conn->state == OR_CONN_STATE_HANDSHAKING) {
-      result = tor_tls_handshake(conn->tls)
-      if(result == TOR_TLS_DONE) {
-        conn->state = OR_CONN_STATE_OPEN;
-        log_fn(LOG_DEBUG,"tls handshake done, now open.");
-      }
-    } else { /* open, or closing */
-      result = flush_buf_tls(conn->tls, &conn->outbuf, &conn->outbuflen,
-                             &conn->outbuf_flushlen, &conn->outbuf_datalen);
-    }
+    if(conn->state == OR_CONN_STATE_HANDSHAKING)
+      return connection_tls_continue_handshake(conn);
 
-    switch(result) {
+    /* else open, or closing */
+    switch(flush_buf_tls(conn->tls, &conn->outbuf, &conn->outbuflen,
+                         &conn->outbuf_flushlen, &conn->outbuf_datalen)) {
       case TOR_TLS_ERROR:
       case TOR_TLS_CLOSE:
         log_fn(LOG_DEBUG,"tls error. breaking.");
         return -1; /* XXX deal with close better */
-      case TOR_TLS_WANT_WRITE:
+      case TOR_TLS_WANTWRITE:
         /* we're already writing */
         return 0;
-      case TOR_TLS_WANT_READ:
+      case TOR_TLS_WANTREAD:
         /* Make sure to avoid a loop if the receive buckets are empty. */
         if(!connection_is_reading(conn)) {
           connection_stop_writing(conn);
@@ -766,7 +816,9 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   /* check if there's a whole cell there.
    * if yes, pull it off, decrypt it if we're not doing TLS, and process it.
    */
+#ifndef USE_TLS
   char networkcell[CELL_NETWORK_SIZE];
+#endif
   char buf[CELL_NETWORK_SIZE];
 //  int x;
   cell_t cell;
