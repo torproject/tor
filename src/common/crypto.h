@@ -100,6 +100,7 @@ crypto_cipher_env_t *crypto_create_init_cipher(int cipher_type, char *key, char 
 int crypto_SHA_digest(unsigned char *m, int len, unsigned char *digest);
 
 /* random numbers */
+int crypto_seed_rng();
 int crypto_rand(unsigned int n, unsigned char *to);
 int crypto_pseudo_rand(unsigned int n, unsigned char *to);
 
