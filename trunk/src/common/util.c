@@ -1453,6 +1453,27 @@ try_next_line:
   return 1;
 }
 
+/** Expand any homedir prefix on 'filename'; return a newly allocated
+ * string. */
+char *expand_filename(const char *filename)
+{
+  tor_assert(filename);
+  if (!strncmp(filename,"~/",2)) {
+    const char *home = getenv("HOME");
+    char *result;
+    if (!home) {
+      log_fn(LOG_ERR, "Couldn't find $HOME environment variable while expanding %s", filename);
+      return NULL;
+    }
+    /* minus two characters for ~/, plus one for /, plus one for NUL. */
+    result = tor_malloc(strlen(home)+strlen(filename)+16);
+    sprintf(result,"%s/%s",home,filename+2);
+    return result;
+  } else {
+    return tor_strdup(filename);
+  }
+}
+
 /** Return true iff <b>ip</b> (in host order) is an IP reserved to localhost,
  * or reserved for local networks by RFC 1918.
  */
