@@ -50,6 +50,9 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
                             # listen on a port other than the one we
                             # advertised.
 
+# Uncomment this to mirror the directory for others (please do)
+#DirPort 9030
+
 ## A comma-separated list of exit policies. If you want to *replace*
 ## the default exit policy, end this with either a reject *:* or an
 ## accept *:*. Otherwise, you're *augmenting* (prepending to) the
