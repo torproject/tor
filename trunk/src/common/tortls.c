@@ -602,19 +602,39 @@ tor_tls_get_peer_cert_nickname(tor_tls *tls, char *buf, int buflen)
 }
 
 /** If the provided tls connection is authenticated and has a
- * certificate that is currently valid and is correctly signed by
- * <b>identity_key</b>, return 0.  Else, return -1.
+ * certificate that is currently valid and signed, then set
+ * *<b>identity_key</b> to the identity certificate's key and return
+ * 0.  Else, return -1.
  */
 int
-tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
+tor_tls_verify(tor_tls *tls, crypto_pk_env_t **identity_key)
 {
-  X509 *cert = NULL;
+  X509 *cert = NULL, *id_cert = NULL;
+  STACK_OF(X509) *chain = NULL;
   EVP_PKEY *id_pkey = NULL;
+  RSA *rsa;
   time_t now, t;
-  int r = -1;
+  int r = -1, i;
+
+  *identity_key = NULL;
 
   if (!(cert = SSL_get_peer_certificate(tls->ssl)))
-    return -1;
+    goto done;
+  if (!(chain = SSL_get_peer_cert_chain(tls->ssl)))
+    goto done;
+  if (sk_X509_num(chain) != 2) {
+    log_fn(LOG_WARN,"Unexpected number of certificates in chain");
+    goto done;
+  }
+  for (i=0; i<2; ++i) {
+    id_cert = sk_X509_value(chain, i);
+    if (X509_cmp(id_cert, cert) != 0)
+      break;
+  }
+  if (!id_cert) {
+    log_fn(LOG_WARN,"No distinct identity certificate found");
+    goto done;
+  }
 
   now = time(NULL);
   t = now + CERT_ALLOW_SKEW;
@@ -628,13 +648,17 @@ tor_tls_verify(tor_tls *tls, crypto_pk_env_t *identity_key)
     goto done;
   }
 
-  /* Get the public key. */
-  if (!(id_pkey = _crypto_pk_env_get_evp_pkey(identity_key,0)) ||
+  if (!(id_pkey = X509_get_pubkey(id_cert)) ||
       X509_verify(cert, id_pkey) <= 0) {
     log_fn(LOG_WARN,"X509_verify on cert and pkey returned <= 0");
     tls_log_errors(LOG_WARN,"verifying certificate");
     goto done;
   }
+
+  rsa = EVP_PKEY_get1_RSA(id_pkey);
+  if (!rsa)
+    goto done;
+  *identity_key = _crypto_new_pk_env_rsa(rsa);
 
   r = 0;
 

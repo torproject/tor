@@ -155,10 +155,12 @@ connection_or_init_conn_from_address(connection_t *conn,
 connection_t *connection_or_connect(uint32_t addr, uint16_t port,
                                     const char *id_digest) {
   connection_t *conn;
+  routerinfo_t *me;
 
   tor_assert(id_digest);
 
-  if(server_mode() && 0) { /* XXX008 if I'm an OR and id_digest is my digest */
+  if(server_mode() && (me=router_get_my_routerinfo()) &&
+     !memcmp(me->identity_digest, id_digest,DIGEST_LEN)) {
     log_fn(LOG_WARN,"Request to connect to myself! Failing.");
     return NULL;
   }
@@ -267,6 +269,7 @@ connection_tls_finish_handshake(connection_t *conn) {
   routerinfo_t *router;
   char nickname[MAX_NICKNAME_LEN+1];
   connection_t *c;
+  crypto_pk_env_t *identity_rcvd=NULL;
 
   conn->state = OR_CONN_STATE_OPEN;
   connection_watch_events(conn, POLLIN);
@@ -298,12 +301,18 @@ connection_tls_finish_handshake(connection_t *conn) {
            nickname, conn->address, conn->port);
     return -1;
   }
-  if(tor_tls_verify(conn->tls, router->identity_pkey)<0) {
+  if(tor_tls_verify(conn->tls, &identity_rcvd)<0) {
     log_fn(LOG_WARN,"Other side '%s' (%s:%d) has a cert but it's invalid. Closing.",
            nickname, conn->address, conn->port);
     return -1;
   }
   log_fn(LOG_DEBUG,"The router's cert is valid.");
+  if(crypto_pk_cmp_keys(identity_rcvd, router->identity_pkey) != 0) {
+    crypto_free_pk_env(identity_rcvd);
+    log_fn(LOG_WARN, "Identity key not as expected for %s", nickname);
+    return -1;
+  }
+  crypto_free_pk_env(identity_rcvd);
 
   /* XXXX008 This isn't right; fix this one we launch by identity digest
    * XXXX008 rather than by nickname */

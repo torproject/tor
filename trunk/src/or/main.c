@@ -473,14 +473,6 @@ int advertised_server_mode(void) {
   return (options.ORPort != 0);
 }
 
-/** Return true iff we are trying to be an exit server.
- */
-int exit_server_mode(void) {
-  /* XXX008 NM: non-exit servers still answer resolve requests, right? How
-   * is this to be used? */
-  return (options.ORPort != 0);
-}
-
 /** Return true iff we are trying to be a socks proxy. */
 int proxy_mode(void) {
   return (options.SocksPort != 0);
@@ -747,7 +739,7 @@ static int do_hup(void) {
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate();
-    if (exit_server_mode())
+    if (server_mode())
       dnsworkers_rotate();
     /* Rebuild fresh descriptor as needed. */
     router_rebuild_descriptor();
@@ -1011,7 +1003,7 @@ int tor_init(int argc, char *argv[]) {
     log_fn(LOG_WARN,"You are running Tor as root. You don't need to, and you probably shouldn't.");
 #endif
 
-  if(exit_server_mode()) { /* only spawn dns handlers if we're a router */
+  if(server_mode()) { /* only spawn dns handlers if we're a router */
     dns_init(); /* initialize the dns resolve tree, and spawn workers */
   }
   if(proxy_mode()) {
