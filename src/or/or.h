@@ -817,6 +817,9 @@ routerinfo_t *router_get_entry_from_string(const char **s);
 int router_add_exit_policy_from_string(routerinfo_t *router, const char *s);
 int router_compare_addr_to_exit_policy(uint32_t addr, uint16_t port,
                                        struct exit_policy_t *policy);
+#define ADDR_POLICY_ACCEPTED 0
+#define ADDR_POLICY_REJECTED -1
+#define ADDR_POLICY_UNKNOWN 1
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port);
 int router_exit_policy_rejects_all(routerinfo_t *router);
 
