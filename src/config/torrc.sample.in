@@ -22,18 +22,18 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 ## Other choices (not advised) are entry,exit,introduction.
 AllowUnverifiedNodes middle,rendezvous
 
-## Logs go to stdout unless redirected by something else, like one of
-## the below lines.
+## Logs go to stdout at level "notice" unless redirected by something
+## else, like one of the below lines.
 ## Send all messages of level 'warn' or higher to @LOCALSTATEDIR@/log/tor/warnings.log
 #Log warn file @LOCALSTATEDIR@/log/tor/warnings.log
 ## Send all debug and info messages to @LOCALSTATEDIR@/log/tor/debug.log
 #Log debug-info file @LOCALSTATEDIR@/log/tor/debug.log
-## Send all debug messages ONLY to @LOCALSTATEDIR@/log/tor/debug.log
+## Send ONLY debug messages to @LOCALSTATEDIR@/log/tor/debug.log
 #Log debug-debug file @LOCALSTATEDIR@/log/tor/debug.log
 ## To use the system log instead of Tor's logfiles, uncomment these lines:
 #Log notice syslog
 ## To send all messages to stderr:
-#Log debug-err stderr
+#Log debug stderr
 
 ## Uncomment this to start the process in the background... or use
 ## --runasdaemon 1 on the command line.
