@@ -181,6 +181,7 @@ static int connection_tls_finish_handshake(connection_t *conn) {
   crypto_pk_env_t *pk;
   routerinfo_t *router;
   char nickname[MAX_NICKNAME_LEN+1];
+  connection_t *c;
 
   conn->state = OR_CONN_STATE_OPEN;
   directory_set_dirty();
@@ -224,8 +225,8 @@ static int connection_tls_finish_handshake(connection_t *conn) {
     }
     log_fn(LOG_DEBUG,"The router's pk matches the one we meant to connect to. Good.");
   } else {
-    if(connection_exact_get_by_addr_port(router->addr,router->or_port)) {
-      log_fn(LOG_INFO,"Router %s is already connected. Dropping.", router->nickname);
+    if((c=connection_exact_get_by_addr_port(router->addr,router->or_port))) {
+      log_fn(LOG_INFO,"Router %s is already connected on fd %d. Dropping fd %d.", router->nickname, c->s, conn->s);
       crypto_free_pk_env(pk);
       return -1;
     }
