@@ -301,7 +301,7 @@ void check_conn_marked(int i) {
 
 int prepare_for_poll(int *timeout) {
   int i;
-  int need_to_refill_buckets = 0;
+  int need_to_wake_soon = 0;
   connection_t *conn = NULL;
   connection_t *tmpconn;
   struct timeval now, soonest;
@@ -371,28 +371,32 @@ int prepare_for_poll(int *timeout) {
   }
   assert(*timeout >= 0);
   /* blow away any connections that need to die. can't do this later
-   * because we might open up a circuit and not realize it.
+   * because we might open up a circuit and not realize it we're about to cull it.
    */
   for(i=0;i<nfds;i++)
     check_conn_marked(i); 
 
-  /* check if we need to refill buckets */
+  /* check if we need to refill buckets or zero out any per-second stats */
   for(i=0;i<nfds;i++) {
-    if(connection_receiver_bucket_should_increase(connection_array[i])) {
-      need_to_refill_buckets = 1;
+    if(connection_receiver_bucket_should_increase(connection_array[i]) ||
+       connection_array[i]->onions_handled_this_second) {
+      need_to_wake_soon = 1;
       break;
     }
   }
 
-  if(need_to_refill_buckets) {
+  if(need_to_wake_soon) {
     if(now.tv_sec > current_second) { /* the second has already rolled over! */
 //      log(LOG_DEBUG,"prepare_for_poll(): The second has rolled over, immediately refilling.");
-      for(i=0;i<nfds;i++)
+      for(i=0;i<nfds;i++) {
         connection_increment_receiver_bucket(connection_array[i]);
+        connection_array[i]->onions_handled_this_second = 0;
+      }
       current_second = now.tv_sec; /* remember which second it is, for next time */
+    } else {
+      /* this timeout is definitely sooner than any of the above ones */
+      *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
     }
-    /* this timeout is definitely sooner than any of the above ones */
-    *timeout = 1000 - (now.tv_usec / 1000); /* how many milliseconds til the next second? */
   }
 
   if(options.LinkPadding) {

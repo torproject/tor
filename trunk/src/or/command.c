@@ -4,6 +4,8 @@
 
 #include "or.h"
 
+extern or_options_t options; /* command-line and config-file options */
+
 void command_process_cell(cell_t *cell, connection_t *conn) {
 
   switch(cell->command) {
@@ -128,6 +130,14 @@ void command_process_create_cell(cell_t *cell, connection_t *conn) {
 
   /* we're all ready to go now. */ 
   circ->state = CIRCUIT_STATE_OPEN;
+
+  conn->onions_handled_this_second++;
+  log(LOG_DEBUG,"command_process_create_cell(): Processing onion %d for this second.",conn->onions_handled_this_second);
+  if(conn->onions_handled_this_second > options.OnionsPerSecond) {
+    log(LOG_DEBUG,"command_process_create_cell(): Received too many onions (now %d) this second. Closing.", conn->onions_handled_this_second);
+    circuit_close(circ);
+    return;
+  }
 
   if(process_onion(circ, conn) < 0) {
     log(LOG_DEBUG,"command_process_create_cell(): Onion processing failed. Closing.");

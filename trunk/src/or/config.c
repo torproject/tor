@@ -181,6 +181,7 @@ void config_assign(or_options_t *options, struct config_line *list) {
     config_compare(list, "DirRebuildPeriod",CONFIG_TYPE_INT, &options->DirRebuildPeriod) ||
     config_compare(list, "DirFetchPeriod",  CONFIG_TYPE_INT, &options->DirFetchPeriod) ||
     config_compare(list, "KeepalivePeriod", CONFIG_TYPE_INT, &options->KeepalivePeriod) ||
+    config_compare(list, "OnionsPerSecond", CONFIG_TYPE_INT, &options->OnionsPerSecond) ||
 
     /* float options */
     config_compare(list, "CoinWeight",     CONFIG_TYPE_DOUBLE, &options->CoinWeight)
@@ -213,6 +214,7 @@ int getconfig(int argc, char **argv, or_options_t *options) {
   options->DirRebuildPeriod = 600;
   options->DirFetchPeriod = 6000;
   options->KeepalivePeriod = 300;
+  options->OnionsPerSecond = 50;
 //  options->ReconnectPeriod = 6001;
   options->Role = ROLE_OR_LISTEN | ROLE_OR_CONNECT_ALL | ROLE_OP_LISTEN | ROLE_AP_LISTEN;
 
