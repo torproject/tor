@@ -1013,6 +1013,7 @@ int crypto_pseudo_rand_int(unsigned int max) {
   unsigned int val;
   unsigned int cutoff;
   assert(max < UINT_MAX);
+  assert(max > 0); /* don't div by 0 */
 
   /* We ignore any values that are >= 'cutoff,' to avoid biasing the
    * distribution with clipping at the upper end of unsigned int's
