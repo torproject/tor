@@ -257,10 +257,9 @@ Tor Rendezvous Spec
 1.9. Introduction: From the Introduction Point to Bob's OP
 
    If the Introduction Point recognizes PK_ID as a public key which has
-   established a circuit for introductions as in 1.3 above, it sends the
-   encrypted portion of the cell in a new RELAY_INTRODUCE2 cell down the
-   corresponding circuit.  (If the PK_ID is unrecognized, the
-   RELAY_INTRODUCE1 cell is discarded.)
+   established a circuit for introductions as in 1.3 above, it sends the body
+   of the cell in a new RELAY_INTRODUCE2 cell down the corresponding circuit.
+   (If the PK_ID is unrecognized, the RELAY_INTRODUCE1 cell is discarded.)
 
    When Bob's OP receives the RELAY_INTRODUCE2 cell, it decrypts it with
    the private key for the corresponding hidden service, and extracts the
