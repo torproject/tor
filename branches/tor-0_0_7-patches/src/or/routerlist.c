@@ -481,7 +481,8 @@ int router_load_routerlist_from_directory(const char *s,
 static int
 router_resolve(routerinfo_t *router)
 {
-  if (tor_lookup_hostname(router->address, &router->addr) != 0) {
+  if (tor_lookup_hostname(router->address, &router->addr) != 0
+      || !router->addr) {
     log_fn(LOG_WARN,"Could not get address for router %s (%s).",
            router->address, router->nickname);
     return -1;

@@ -585,6 +585,7 @@ static int dnsworker_main(void *data) {
   uint32_t ip;
   int *fdarray = data;
   int fd;
+  int result;
 
   tor_close_socket(fdarray[0]); /* this is the side of the socketpair the parent uses */
   fd = fdarray[1]; /* this side is ours */
@@ -606,7 +607,11 @@ static int dnsworker_main(void *data) {
     }
     address[address_len] = 0; /* null terminate it */
 
-    switch (tor_lookup_hostname(address, &ip)) {
+    result = tor_lookup_hostname(address, &ip);
+    /* Make 0.0.0.0 an error, so that we can use "0" to mean "no addr") */
+    if (!ip)
+      result = -1;
+    switch (result) {
       case 1:
         log_fn(LOG_INFO,"Could not resolve dest addr %s (transient).",address);
         answer[0] = DNS_RESOLVE_FAILED_TRANSIENT;
