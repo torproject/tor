@@ -247,14 +247,14 @@ options_act(void) {
   for (cl = options->DirServers; cl; cl = cl->next) {
     if (parse_dir_server_line(cl->value, 0)<0) {
       log_fn(LOG_ERR,
-             "Previously validated DirServer line could not be added!");
+             "Bug: Previously validated DirServer line could not be added!");
       return -1;
     }
   }
 
   if (rend_config_services(options, 0)<0) {
     log_fn(LOG_ERR,
-           "Previously validated hidden services line could not be added!");
+           "Bug: Previously validated hidden services line could not be added!");
     return -1;
   }
 
@@ -325,7 +325,7 @@ options_act(void) {
 
   /* reload keys as needed for rendezvous services. */
   if (rend_service_load_keys()<0) {
-    log_fn(LOG_ERR,"Error reloading rendezvous service keys");
+    log_fn(LOG_ERR,"Error loading rendezvous service keys");
     return -1;
   }
 
