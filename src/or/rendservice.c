@@ -895,6 +895,7 @@ rend_service_set_connection_addr_port(connection_t *conn, circuit_t *circ)
            serviceid, circ->n_circ_id);
     circuit_mark_for_close(circ);
     connection_mark_for_close(conn, 0/*XXX*/);
+    return -1;
   }
   for (i = 0; i < smartlist_len(service->ports); ++i) {
     p = smartlist_get(service->ports, i);
