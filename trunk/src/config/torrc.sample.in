@@ -7,6 +7,29 @@ RouterFile @CONFDIR@/dirservers
 # Comment out if you don't want to allow applications to connect.
 SocksPort 9050
 SocksBindAddress 127.0.0.1 # accept connections only from localhost
+#SocksBindAddress 192.168.0.1:9100 # listen on a chosen IP/port
+
+# Exit policies to allow/deny SOCKS requests based on IP.  By default,
+# we accept all requests to SocksBindAddress.
+#
+#SocksPolicy accept 192.168.0.1/16:*
+#SocksPolicy reject *:*
+
+# By default, we send log messages to the command line.  If you want
+# them to go somewhere else, uncomment one or more of these example
+# configurations.
+### Send all messages of level 'warn' or higher to /var/log/tor/warnings
+#LogFile /var/log/tor/warnings
+#LogLevel warn
+### Send all debug and info messages to /var/log/tor/debug
+#LogFile /var/log/tor/debug
+#LogLevel debug-info
+### Send all debug messages ONLY to /var/log/tor/debug
+#LogFile /var/log/tor/debug
+#LogLevel debug-debug
+
+# Uncomment this to start the process in the background
+#RunAsDaemon 1
 
 ##################### Below is just for servers #####################
 
@@ -22,12 +45,18 @@ SocksBindAddress 127.0.0.1 # accept connections only from localhost
 
 #ORPort 9001 # where to listen for tor connections
 #ORBindAddress 0.0.0.0 # accept connections from anywhere
+#ORBindAddress 0.0.0.0:9090 # accept connections from anywhere, and 
+                            # listen on a port other than the one we
+                            # advertised.
+
 
 ## A comma-separated list of exit policies. If you want to *replace*
 ## the default exit policy, end this with either a reject *:* or an
 ## accept *:*. Otherwise, you're *augmenting* (prepending to) the
 ## default exit policy. Leave commented to just use the default.
-#ExitPolicy accept *:6660-6667,reject *:*
+#ExitPolicy accept *:6660-6667
+#ExitPolicy reject 192.168.0.1:*
+#ExitPolicy reject *:*
 
 ##################### Below is just for location-hidden services ###
 
