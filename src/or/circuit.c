@@ -1159,7 +1159,7 @@ static void circuit_build_failed(circuit_t *circ) {
     case CIRCUIT_PURPOSE_C_INTRODUCING:
       /* at Alice, connecting to intro point */
       /* Don't increment failure count, since Bob may have picked
-       * the inttroduction point badly */
+       * the introduction point maliciously */
       /* Alice will pick a new intro point when this one dies, if
        * the stream in question still cares. No need to act here. */
       break;
@@ -1174,11 +1174,11 @@ static void circuit_build_failed(circuit_t *circ) {
     case CIRCUIT_PURPOSE_S_CONNECT_REND:
       /* at Bob, connecting to rend point */
       /* Don't increment failure count, since Alice may have picked
-       * the rendezvous point badly */
+       * the rendezvous point maliciously */
       log_fn(LOG_INFO,"Couldn't connect to Alice's chosen rend point %s. Sucks to be Alice.", circ->build_state->chosen_exit);
       break;
     default:
-      /* Other cases are impossible, since this function is only caused with
+      /* Other cases are impossible, since this function is only called with
        * unbuilt circuits. */
       assert(0);
   }
