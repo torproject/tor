@@ -695,6 +695,7 @@ static void init_dh_param() {
   g = BN_new();
   assert(p && g);
 
+#if 0 
   /* This is from draft-ietf-ipsec-ike-modp-groups-05.txt.  It's a safe
      prime, and supposedly it equals:
       2^1536 - 2^1472 - 1 + 2^64 * { [2^1406 pi] + 741804 }
@@ -708,6 +709,18 @@ static void init_dh_param() {
 		"C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F"
 		"83655D23DCA3AD961C62F356208552BB9ED529077096966D"
 		"670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF");
+#endif
+
+  /* This is from rfc2409, section 6.2.  It's a safe prime, and
+     supposedly it equals:
+        2^1024 - 2^960 - 1 + 2^64 * { [2^894 pi] + 129093 }.
+  */
+  r = BN_hex2bn(&p,
+		"FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
+		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
+		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
+		"A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
+		"49286651ECE65381FFFFFFFFFFFFFFFF");
   assert(r);
 
   r = BN_set_word(g, 2);

@@ -54,9 +54,9 @@ SPEC!!  D Non-clique topologies
                 - Consider taking the master out of the loop?
         . Directory servers
                 D Automated reputation management
-NICK            - Include key in source; sign directories
+NICK            . Include key in source; sign directories
                 - Add versions to code
-NICK            - Have directories list recommended-versions
+NICK            . Have directories list recommended-versions
                         - Quit if running the wrong version
                         - Command-line option to override quit
                 . Add more information to directory server entries
@@ -131,7 +131,7 @@ NICK                    . OS X
                 o incremental path building
                 - transition circuit-level sendmes to hop-level sendmes
                 - implement truncate, truncated
-NICK            - move from 192byte DH to 128byte DH, so it isn't so damn slow
+                o move from 192byte DH to 128byte DH, so it isn't so damn slow
                 - exiting from not-last hop
                         - OP logic to decide to extend/truncate a path
                         - make sure exiting from the not-last hop works
