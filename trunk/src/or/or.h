@@ -549,7 +549,7 @@ tracked_onion_t *id_tracked_onion(unsigned char *onion, uint32_t onionlen, track
 
 /********************************* routers.c ***************************/
 
-routerinfo_t **getrouters(char *routerfile, size_t *listlenp);
+routerinfo_t **getrouters(char *routerfile, size_t *listlenp, uint16_t or_listenport);
 void delete_routerlist(routerinfo_t *list);
 /* create an NULL-terminated array of pointers pointing to elements of a router list */
 routerinfo_t **make_rarray(routerinfo_t* list, size_t *listlenp);
