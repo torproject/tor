@@ -12,8 +12,6 @@ ARMA    - arma claims
         X Abandoned
 
 
-        o Use a stronger cipher
-                o aes now, by including the code ourselves
         . streams / circuits
                 o Implement streams
                 o Rotate circuits after N minutes?
@@ -22,7 +20,7 @@ NICK            . Handle half-open connections
                         o Figure out what causes connections to close, standardize
                           when we mark a connection vs when we tear it down
                 o Look at what ssl does to keep from mutating data streams
-                - Reduce streamid footprint from 7 bytes to 3 bytes
+ARMA            - Reduce streamid footprint from 7 bytes to 3 bytes
                         - Check for collisions in streamid (now possible with
                           just 3 bytes), and back up & replace with padding if so
                 - Use the 3 saved bytes to put pseudorandomness in each cell
@@ -32,9 +30,6 @@ NICK            . Handle half-open connections
                 - Consider moving length into the stream header too
                 - Spec the stream_id stuff. Clarify that nobody on the backward
                   stream should look at stream_id.
-        X On the fly compression of each stream
-        o Clean up the event loop (optimize and sanitize)
-ARMA    o Remove that awful concept of 'roles'
 ARMA    . Exit policies
                 o Spec how to write the exit policies
                 - Path selection algorithms
@@ -50,24 +45,6 @@ SPEC!!  D Non-clique topologies
         . Appropriate logging
                 - Come up with convention for what log level means what
                 - Make code follow convention
-        o Terminology
-                o Circuits, topics, cells stay named that
-                o 'Connection' gets divided, or renamed, or something?
-        o DNS farm
-                o Distribute queries onto the farm, get answers
-                o Preemptively grow a new worker before he's needed
-                o Prune workers when too many are idle
-                o DNS cache   
-                        o Clear DNS cache over time  
-                        D Honor DNS TTL info (how??)
-                o Have strategy when all workers are busy
-                o Keep track of which connections are in dns_wait
-                o Need to cache positives/negatives on the tor side
-                        o Keep track of which queries have been asked
-                o Better error handling when
-                        o An address doesn't resolve
-                        o We have max workers running
-                o Consider taking the master out of the loop?
         . Put CPU workers in separate processes
                 o Handle multiple cpu workers (one for each cpu, plus one)
                 o Queue for pending tasks if all workers full
@@ -104,7 +81,6 @@ SPEC!!          - Handle socks commands other than connect, eg, bind?
         . Develop rendezvous points
                 . Spec (still needs step-by-step instructions)
                 - Implement
-        D Implement reply onions
         D Deploy and manage open source development site.
         . Documentation
                 o Discussion of socks, tsocks, etc
@@ -146,16 +122,9 @@ NICK    . Daemonize and package
         D Move away from openssl
                 o Abstract out crypto calls
                 D Look at nss, others? Just include code?
-        o Clean up the number of places that get to look at prkey
         . Clearer bandwidth management 
                 - Do we want to remove bandwidth from OR handshakes?
                 - What about OP handshakes?
-        o Total rate limiting
-        o Look at OR handshake in more detail
-                o Spec it
-                o Merge OR and OP handshakes
-                o rearrange connection_or so it doesn't suck so much to read
-                D Periodic link key rotation. Spec?
         - More flexibility in node addressing
                 D Support IPv6 rather than just 4
                 - Handle multihomed servers (config variable to set IP)
@@ -169,5 +138,39 @@ NICK    . Daemonize and package
                         - make sure exiting from the not-last hop works
                         - logic to find last *open* hop, not last hop, in cpath
                         - choose exit nodes by exit policies
+
+Older (done) todo stuff:
+
+        o Use a stronger cipher
+                o aes now, by including the code ourselves
+        X On the fly compression of each stream
+        o Clean up the event loop (optimize and sanitize)
+        o Remove that awful concept of 'roles'
+        o Terminology
+                o Circuits, topics, cells stay named that
+                o 'Connection' gets divided, or renamed, or something?
+        o DNS farm
+                o Distribute queries onto the farm, get answers
+                o Preemptively grow a new worker before he's needed
+                o Prune workers when too many are idle
+                o DNS cache   
+                        o Clear DNS cache over time  
+                        D Honor DNS TTL info (how??)
+                o Have strategy when all workers are busy
+                o Keep track of which connections are in dns_wait
+                o Need to cache positives/negatives on the tor side
+                        o Keep track of which queries have been asked
+                o Better error handling when
+                        o An address doesn't resolve
+                        o We have max workers running
+                o Consider taking the master out of the loop?
+        D Implement reply onions
+        o Total rate limiting
+        o Look at OR handshake in more detail
+                o Spec it
+                o Merge OR and OP handshakes
+                o rearrange connection_or so it doesn't suck so much to read
+                D Periodic link key rotation. Spec?
         o wrap malloc with something that explodes when it fails
+        o Clean up the number of places that get to look at prkey
 
