@@ -28,7 +28,7 @@ rend_mid_establish_intro(circuit_t *circ, const char *request, int request_len)
   if (request_len < 2+DIGEST_LEN)
     goto truncated;
   /* First 2 bytes: length of asn1-encoded key. */
-  asn1len = get_uint16(request);
+  asn1len = ntohs(get_uint16(request));
 
   /* Next asn1len bytes: asn1-encoded key. */
   if (request_len < 2+DIGEST_LEN+asn1len)

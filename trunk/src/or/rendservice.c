@@ -498,7 +498,7 @@ rend_service_intro_is_ready(circuit_t *circuit)
   /* Build the payload for a RELAY_ESTABLISH_INTRO cell. */
   len = crypto_pk_asn1_encode(service->private_key, buf+2,
                               RELAY_PAYLOAD_SIZE-2);
-  set_uint16(buf, len);
+  set_uint16(buf, htons(len));
   len += 2;
   memcpy(auth, circuit->cpath->prev->handshake_digest, DIGEST_LEN);
   memcpy(auth+DIGEST_LEN, "INTRODUCE", 9);

@@ -42,14 +42,14 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
     *len_out += strlen(desc->intro_points[i]) + 1;
   }
   cp = *str_out = tor_malloc(*len_out);
-  set_uint16(cp, (uint16_t)asn1len);
+  set_uint16(cp, htons((uint16_t)asn1len));
   cp += 2;
   memcpy(cp, buf, asn1len);
   tor_free(buf);
   cp += asn1len;
-  set_uint32(cp, (uint32_t)desc->timestamp);
+  set_uint32(cp, htonl((uint32_t)desc->timestamp));
   cp += 4;
-  set_uint16(cp, (uint16_t)desc->n_intro_points);
+  set_uint16(cp, htons((uint16_t)desc->n_intro_points));
   cp += 2;
   for (i=0; i < desc->n_intro_points; ++i) {
     ipoint = (char*)desc->intro_points[i];
@@ -79,17 +79,17 @@ rend_service_descriptor_t *rend_parse_service_descriptor(
   cp = str;
   end = str+len;
   if (end-cp < 2) goto truncated;
-  asn1len = get_uint16(cp);
+  asn1len = ntohs(get_uint16(cp));
   cp += 2;
   if (end-cp < asn1len) goto truncated;
   result->pk = crypto_pk_asn1_decode(cp, asn1len);
   if (!result->pk) goto truncated;
   cp += asn1len;
   if (end-cp < 4) goto truncated;
-  result->timestamp = (time_t) get_uint32(cp);
+  result->timestamp = (time_t) ntohl(get_uint32(cp));
   cp += 4;
   if (end-cp < 2) goto truncated;
-  result->n_intro_points = get_uint16(cp);
+  result->n_intro_points = ntohs(get_uint16(cp));
   result->intro_points = tor_malloc_zero(sizeof(char*)*result->n_intro_points);
   cp += 2;
   for (i=0;i<result->n_intro_points;++i) {
