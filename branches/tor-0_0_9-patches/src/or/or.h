@@ -125,7 +125,9 @@
 
 /** Upper bound on maximum simultaneous connections; can be lowered by
  * config file. */
+#ifndef MAXCONNECTIONS
 #define MAXCONNECTIONS 15000
+#endif
 
 #define DEFAULT_BANDWIDTH_OP (1024 * 1000)
 #define MAX_NICKNAME_LEN 19
