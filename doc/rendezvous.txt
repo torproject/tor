@@ -1,80 +1,79 @@
                   How to make rendezvous points work
                                1-11Jun2003
 
-1. Overview
-
-   This document provides a design overview for rendezvous points, as
-   discussed by Nick and Roger after Discex.  
+0. Overview
 
    Rendezvous points are an implementation of server anonymity /
    location-hidden servers in the onion routing network.  There are
    three components needed for rendezvous points:
 
    A) A means for the client ("Alice") to tell a server ("Bob") where
-      to contact her in order to establish a connection.  (Notification)
+      to contact her in order to establish a connection. (Introduction)
    B) A means for Bob to contact Alice to actually establish the
       connection, and for them to communicate later. (Meeting)
    C) Necessary glue code so that Alice can view webpages on a
       location-hidden webserver, and Bob can run a location-hidden
       server with minimal invasive changes. (Application)
 
-   We'll tackle these in order.  In all cases, I'll assume that both
-   Alice and Bob have local OPs.
+   We'll tackle these in order.  In all cases, we'll assume that both
+   Alice and Bob run local OPs.
 
-2. Notification service
+1. Introduction service
 
    Bob wants to learn about client requests for communication, but
    wants to avoid responding unnecessarily to unauthorized clients.
    Bob's proxy opens a circuit, and tells some onion router on that
    circuit to expect incoming connections, and notify Bob of them.
 
-   When establishing such a notification point, Bob provides the onion
-   router with a public "notification" key.  The hash of this public
+   When establishing such an introduction point, Bob provides the onion
+   router with a public "introduction" key.  The hash of this public
    key uniquely identifies Bob, and prevents anybody else from
-   usurping Bob's notification point in the future.  Additionally, Bob
-   can use the same public key to establish a notification point on
+   usurping Bob's introduction point in the future.  Additionally, Bob
+   can use the same public key to establish an introduction point on
    another OR, and Alice can still be confident that Bob is the same
    server.
-  
-   (The set-up-a-notification-point command should come via a
-   RELAY_BIND_NOTIFICATION cell. This cell creates a new stream on the
-   circuit from Bob to the notification point.)
 
-   ORs that support notification run a notification service on a
+   (The set-up-an-introduction-point command should come via a
+   RELAY_BIND_INTRODUCTION cell. This cell creates a new stream on the
+   circuit from Bob to the introduction point.)
+
+   ORs that support introduction run an introduction service on a
    separate port.  When Alice wants to notify Bob of a meeting point,
-   she connects (directly or via Tor) to the notification port, and
+   she connects (directly or via Tor) to the introduction port, and
    sends the following:
-   
+
      MEETING REQUEST
-        Encrypted with server's public key:
-           Hash of Bob's public key (identifies which Bob to notify)
-           Initial authentication [optional]
-        Encrypted with Bob's public key:
-           Meeting point
-           Meeting cookie
-           End-to-end forward key
-	   End-to-end backward key
-           End-to-end authentication [optional]
-           
-   [Add a Nonce or some kind of replay prevention mechanism? -NM]
-   [Should this use DH instead? -NM]
+        RSA-OAEP encrypted with server's public key:
+[20 bytes] Hash of Bob's public key (identifies which Bob to notify)
+[ 0 bytes] Initial authentication [optional]
+        RSA encrypted with Bob's public key:
+[16 bytes] Symmetric key for encrypting blob past RSA
+[ 6 bytes] Meeting point (IP/port)
+[ 8 bytes] Meeting cookie
+[ 0 bytes] End-to-end authentication [optional]
+[98 bytes] g^x part 1 (inside the RSA)
+[30 bytes] g^x part 2 (symmetrically encrypted)
+
 
    The meeting point and meeting cookie allow Bob to contact Alice and
    prove his identity; the end-to-end authentication enables Bob to 
    decide whether to talk to Alice; the initial authentication enables
-   the meeting point to pre-screen notification requests before
+   the meeting point to pre-screen introduction requests before
    sending them to Bob.  (See 3 for a discussion of meeting points;
    see 2.1 for a proposed authentication mechanism.)
 
-   When the notification point receives a valid meeting request, it
-   sends the portion encrypted with Bob's public key along the stream
-   created by Bob's RELAY_BIND_NOTIFICATION.  Bob then, at his
+   The authentication steps are the appropriate places for the
+   introduction server or Bob to do replay prevention, if desired.
+
+   When the introduction point receives a valid meeting request, it
+   sends the portion intended for Bob along the stream
+   created by Bob's RELAY_BIND_INTRODUCTION.  Bob then, at his
    discretion, connects to Alice's meeting point.
 
-2.1. Proposed authentication for notification services
+1.1. An example authentication scheme for introduction services
 
    Bob makes two short-term secrets SB and SN, and tells the
-   notification point about SN.  Bob gives Alice a cookie consisting
+   introduction point about SN.  Bob gives Alice a cookie consisting
    of A,B,C such that H(A|SB)=B and H(A|SN)=C.  Alice's initial
    authentication is <A,C>; Alice's end-to-end authentication is <A,B>.
 
@@ -83,25 +82,24 @@
 
    [Maybe] Each 'A' has an expiration time built in to it.
 
-3. Meeting points
+2. Meeting points
 
    For Bob to actually reply to Alice, Alice first establishes a
    circuit to an onion router R, and sends a RELAY_BIND_MEETING cell
-   to that onion router.  The RELAY_BIND_MEETING cell contains a 
+   to that onion router.  The RELAY_BIND_MEETING cell contains a
    'Meeting cookie' (MC) that Bob can use to authenticate to R.  R
    remembers the cookie and associates it with Alice.
 
-   Later, Bob also routes to R and sends R a RELAY_JOIN_MEETING cell
-   with the meeting cookie MC.  After this point, R routes all traffic
-   from Bob's circuit or Alice's circuit as if the two circuits were
-   joined: any RELAY cells that are not for a recognized topic are
-   passed down Alice or Bob's circuit.
-   
-   To prevent R from reading their traffic, Alice and Bob use the two
-   end-to-end keys in Alice's original notification to Bob: Bob uses
-   the 'forward' key and Alice the 'backward' key.  (These keys are
-   used in addition to the series of encryption keys already in use on
-   Alice and Bob's circuits.)
+   Later, Bob also routes to R and sends R a RELAY_JOIN_MEETING cell with
+   the meeting cookie MC.  After this point, R routes all traffic from
+   Bob's circuit or Alice's circuit as if the two circuits were joined:
+   any RELAY cells that are not for a recognized topic are passed down
+   Alice or Bob's circuit.  Bob's first cell to Alice contains g^y.
+
+   To prevent R from reading their traffic, Alice and Bob derive two
+   end-to-end keys from g^{xy}, and they each treat R as just another
+   hop on the circuit.  (These keys are used in addition to the series
+   of encryption keys already in use on Alice and Bob's circuits.)
 
    Bob's OP accepts RELAY_BEGIN, RELAY_DATA, RELAY_END, and
    RELAY_SENDME cells from Alice.  Alice's OP accepts RELAY_DATA,
@@ -111,28 +109,56 @@
 
    Alice and Bob's OPs disallow CREATE or RELAY_EXTEND cells as usual.
 
-4. Application interface
+3. Application interface
 
-4.1. Application interface: client side
+3.1. Application interface: server side
 
-   Because we require that the client interface remain a SOCKS proxy,
-   we can't have clients explicitly connect to Bob.  Instead, we have
-   the OP map DNS addresses used by the client to the
-       <Notification point, Bob's PK, Authentication> 
-   tuples needed to establish a connection to Bob.
+   Bob has a service that he wants to offer to the world but keep its
+   location hidden.  He configures his local OP to know about this
+   service, including the following data:
 
-   [We had earlier hoped encode this information into the DNS address,
-    but that won't work.  The data needed will be at least ~1024 bits
-    long (for Bob's public key).  You'd need over 197 characters to
-    encode a blob that long, and you'd wind up triggering pathological
-    cases in a lot of client code. -NM]
+     Local IP and port of the service
+     Strategy for choosing introduction points
+       (for now, just randomly pick among the ORs offering it)
+     Strategy for user authentication
+       (for now, just accept all users)
+     Public (RSA) key (one for each service Bob offers)
 
-   I propose that the client OP receive this mapping information
-   outside of the Tor protocol: either from true out-of-band entry, or
-   from protocol-specific transmission.
+   Bob chooses a set of N Introduction servers on which to advertise
+   his service.
 
-   (For example of protocol-specific, an HTTP server could include
-   notification information in reply headers, or cookies, or
-   something.)
+   We assume the existence of a robust decentralized efficient lookup
+   system (call it "DHT"). Bob publishes
+     * Bob's Public Key for that service
+     * Timestamp
+     * Introduction server 0 ... Introduction server N
+     (All signed by Bob's Public Key)
+   into DHT, indexed by the hash of Bob's Public Key. Bob should
+   periodically republish his introduction information with a new
+   timestamp (and possibly with new/different introduction servers if
+   he wants), so Alice can trust that DHT is giving her an up-to-date
+   version.
 
+3.2. Application interface: client side
+
+   We require that the client interface remain a SOCKS proxy, and we
+   require that Alice shouldn't have to modify her applications. Thus
+   we encode all of the necessary information into the hostname that
+   Alice uses (eg when clicking on a url in her browser, etc).
+
+   To establish a connection to Bob, Alice needs to know an Introduction
+   point, Bob's PK, and some authentication cookie. Because encoding this
+   information into the hostname will be too long for a typical hostname,
+   we instead use a layer of indirection. We encode a hash of Bob's PK
+   (10 bytes is sufficient since we're not worrying about collisions),
+   and also the authentication token (empty for now). Thus at a bit more
+   than 6 bits encoded per character (assuming only alphanumeric and
+   hyphen), we transform the hostname "moria.mit.edu" into the hostname
+   "moria.mit.edu.onion5gfmjsda-ckd5" (adding 13 characters plus the
+   separator).
+
+   Alice's onion proxy examines hostnames and recognizes when they're
+   destined for a hidden server. If so, it decodes the PK, looks it up in
+   the DHT, chooses and connects to a meeting place, chooses and connects
+   to one of Bob's introduction servers, and then waits to hear from Bob.
 
