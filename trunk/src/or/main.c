@@ -11,7 +11,6 @@ const char main_c_id[] = "$Id$";
  **/
 
 #include "or.h"
-#include "orconfig.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
 #endif
