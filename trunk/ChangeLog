@@ -27,12 +27,20 @@ pre3:
     - Make the dirservers file obsolete.
       - Include a dir-signing-key token in directories to tell the
         parsing entity which key is being used to sign.
-      - New config option "Dirserver %s:%d [fingerprint]". If no
-        dirservers specified, default to moria1,moria2,tor26.
+      - Remove the built-in bulky default dirservers string.
+      - New config option "Dirserver %s:%d [fingerprint]", which can be
+        repeated as many times as needed. If no dirservers specified,
+        default to moria1,moria2,tor26.
+    - Make moria2 advertise a dirport of 80, so people behind firewalls
+      will be able to get a directory.
     - Http proxy support
       - Dirservers translate requests for http://%s:%d/x to /x
       - You can specify "HttpProxy %s[:%d]" and all dir fetches will
         be routed through this host.
+      - Clients ask for /tor/x rather than /x for new enough dirservers.
+        This way we can one day coexist peacefully with apache.
+      - Clients specify a "Host: %s%d" http header, to be compatible
+        with more proxies, and so running squid on an exit node can work.
 
 pre2:
   o Bugfixes on pre1:
