@@ -17,8 +17,8 @@ typedef struct tor_tls_st tor_tls;
 #define TOR_TLS_DONE         0
 
 int tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname);
-tor_tls_context *tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer);
-tor_tls *tor_tls_new(tor_tls_context *ctx, int sock, int isServer);
+int tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer);
+tor_tls *tor_tls_new(int sock, int isServer);
 void tor_tls_free(tor_tls *tls);
 int tor_tls_read(tor_tls *tls, char *cp, int len);
 int tor_tls_write(tor_tls *tls, char *cp, int n);

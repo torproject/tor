@@ -32,6 +32,9 @@ struct tor_tls_st {
   int isServer;
 };
 
+/* global tls context, keep it here because nobody else needs to touch it */
+static tor_tls_context *global_tls_context=NULL;
+
 #define _TOR_TLS_SYSCALL    -6
 #define _TOR_TLS_ZERORETURN -5
 
@@ -82,6 +85,7 @@ tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
 
   assert(rsa && rsa->type == CRYPTO_PK_RSA);
   if (!(_rsa = RSAPrivateKey_dup((RSA*)rsa->key)))
+    /* XXX we have a crypto_pk_dup_key(), it's a shame we can't use it here */
     return -1;
   if (!(pkey = EVP_PKEY_new()))
     return -1;
@@ -130,9 +134,9 @@ tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
 /* Create a new TLS context.  If we are going to be using it as a
  * server, it must have isServer set to true, certfile set to a
  * filename for a certificate file, and RSA set to the private key
- * used for that certificate.
+ * used for that certificate. Return -1 if failure, else 0.
  */
-tor_tls_context *
+int
 tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer)
 {
   crypto_dh_env_t *dh = NULL;
@@ -145,28 +149,28 @@ tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer)
 
   result = tor_malloc(sizeof(tor_tls_context));
   if (!(result->ctx = SSL_CTX_new(TLSv1_method())))
-    return NULL;
+    return -1;
   /* XXXX This should use AES, but we'll need to require OpenSSL 0.9.7 first */
   if (!SSL_CTX_set_cipher_list(result->ctx, TLS1_TXT_DHE_DSS_WITH_RC4_128_SHA))
                                /* TLS1_TXT_DHE_RSA_WITH_AES_128_SHA)) */
-    return NULL;
+    return -1;
   if (certfile && !SSL_CTX_use_certificate_file(result->ctx,certfile,
                                                 SSL_FILETYPE_PEM))
-    return NULL;
+    return -1;
   SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
   if (rsa) {
     if (!(_rsa = RSAPrivateKey_dup((RSA*)rsa->key)))
-      return NULL;
+      return -1;
     if (!(pkey = EVP_PKEY_new()))
-      return NULL;
+      return -1;
     if (!EVP_PKEY_assign_RSA(pkey, _rsa))
-      return NULL;
+      return -1;
     if (!SSL_CTX_use_PrivateKey(result->ctx, pkey))
-      return NULL;
+      return -1;
     EVP_PKEY_free(pkey);
     if (certfile) {
       if (!SSL_CTX_check_private_key(result->ctx))
-        return NULL;
+        return -1;
     }
   }
   dh = crypto_dh_new();
@@ -175,17 +179,19 @@ tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer)
   SSL_CTX_set_verify(result->ctx, SSL_VERIFY_PEER, 
                      always_accept_verify_cb);
   
-  return result;
+  global_tls_context = result;
+  return 0;
 }
 
 /* Create a new TLS object from a TLS context, a filedescriptor, and 
  * a flag to determine whether it is functioning as a server.
  */
 tor_tls *
-tor_tls_new(tor_tls_context *ctx, int sock, int isServer)
+tor_tls_new(int sock, int isServer)
 {
   tor_tls *result = tor_malloc(sizeof(tor_tls));
-  if (!(result->ssl = SSL_new(ctx->ctx)))
+  assert(global_tls_context); /* make sure somebody made it first */
+  if (!(result->ssl = SSL_new(global_tls_context->ctx)))
     return NULL;
   result->socket = sock;
   SSL_set_fd(result->ssl, sock);
@@ -322,3 +328,4 @@ tor_tls_shutdown(tor_tls *tls)
     return err;
   }
 }
+
