@@ -612,7 +612,6 @@ onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes *
 {
   char challenge[ONIONSKIN_CHALLENGE_LEN];
   crypto_dh_env_t *dh = NULL;
-  crypto_cipher_env_t *cipher = NULL;
   int len;
   char *key_material=NULL;
 
@@ -655,12 +654,10 @@ onion_skin_server_handshake(char *onion_skin, /* ONIONSKIN_CHALLENGE_LEN bytes *
 #endif
 
   tor_free(key_material);
-  crypto_free_cipher_env(cipher);
   crypto_dh_free(dh);
   return 0;
  err:
   tor_free(key_material);
-  if (cipher) crypto_free_cipher_env(cipher);
   if (dh) crypto_dh_free(dh);
 
   return -1;
