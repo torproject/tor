@@ -199,4 +199,4 @@
 #define UNALIGNED_INT_ACCESS_OK
 
 /* Version number of package */
-#define VERSION "0.0.9pre6-cvs"
+#define VERSION "0.0.9pre6"
