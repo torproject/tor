@@ -165,7 +165,7 @@ top). Then change your browser to http proxy at localhost port 8118.
 You should also set your SSL proxy to the same
 thing, to hide your SSL traffic. Using privoxy is <b>necessary</b> because
 <a href="http://tor.freehaven.net/cvs/tor/doc/CLIENTS">Mozilla leaks your
-DNS requests when it uses a socks proxy directly</a>. Privoxy also gives
+DNS requests when it uses a SOCKS proxy directly</a>. Privoxy also gives
 you good html scrubbing.</p>
 
 <p>To test if it's working, go to <a
@@ -180,19 +180,19 @@ port 8118 and port 9050. If your firewall blocks outgoing connections,
 punch a hole so it can connect to TCP ports 80, 443, and 9001-9033.
 <!--If you're
 using Safari as your browser, keep in mind that OS X before 10.3 claims
-to support socks but does not. -->
+to support SOCKS but does not. -->
 For more troubleshooting suggestions, see <a
 href="http://wiki.noreply.org/wiki/TheOnionRouter/TorFAQ">the FAQ</a>.
 </p>
 
 <p>To Torify an application that supports http, just point it at Privoxy
-(that is, localhost port 8118). To use socks directly (for example, for
+(that is, localhost port 8118). To use SOCKS directly (for example, for
 instant messaging, Jabber, IRC, etc), point your application directly at
-Tor (localhost port 9050). For applications that support neither socks
+Tor (localhost port 9050). For applications that support neither SOCKS
 nor http, you should look at
 using <a href="http://tsocks.sourceforge.net/">tsocks</a>
 to dynamically replace the system calls in your program to
-route through Tor. If you want to use socks4a, consider using <a
+route through Tor. If you want to use SOCKS 4A, consider using <a
 href="http://www.dest-unreach.org/socat/">socat</a> (specific instructions
 are on <a href="http://6sxoyfb3h2nvok2d.onion/tor/SocatHelp">this hidden
 service url</a>).</p>
@@ -323,7 +323,7 @@ in /usr/local/etc/tor/), and edit the middle part. Then run Tor. It will
 create each HiddenServiceDir you have configured, and it will create a
 'hostname' file which specifies the url (xyz.onion) for that service. You
 can tell people the url, and they can connect to it via their Tor client,
-assuming they're using a proxy (such as Privoxy) that speaks socks4a.</p>
+assuming they're using a proxy (such as Privoxy) that speaks SOCKS 4A.</p>
 
 <a name="own-network"></a>
 <h2>Setting up your own network</h2>

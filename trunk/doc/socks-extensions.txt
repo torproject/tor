@@ -48,7 +48,7 @@ Tor's extensions to the SOCKS protocol
 
 3. HTTP-resistance
 
-  Tor checks the first byte of each socks request to see whether it looks
+  Tor checks the first byte of each SOCKS request to see whether it looks
   more like an HTTP request (that is, it starts with a "G", "H", or "P").  If
   so, Tor returns a small webpage, telling the user that his/her browser is
   misconfigured.  This is helpful for the many users who mistakenly try to
