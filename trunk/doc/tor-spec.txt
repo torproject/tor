@@ -31,6 +31,7 @@ protocols.
 
    [We will move to AES once we can assume everybody will have it. -RD]
 
+
 1. System overview
 
 Tor is a connection-oriented anonymizing communication service. Users
@@ -38,7 +39,6 @@ build a path known as a "virtual circuit" through the network, in which
 each node knows its predecessor and successor, but no others. Traffic
 flowing down the circuit is unwrapped by a symmetric key at each node,
 which reveals the downstream node.
-
 
 
 2. Connections
@@ -217,6 +217,7 @@ which reveals the downstream node.
     TOPIC_COMMAND_BEGIN cell to www.slashdot.org:80 , I can change the
     address and port to point to a machine I control. -NM]
 
+
 3. Cell Packet format
 
    The basic unit of communication for onion routers and onion
@@ -261,9 +262,10 @@ which reveals the downstream node.
    RELAY cells are used to send commands and data along a circuit; see
    section 5 below.
 
+
 4. Circuit management
 
-4.1. Setting up circuits
+4.1. CREATE and CREATED cells
 
    Users set up circuits incrementally, one hop at a time. To create
    a new circuit, users send a CREATE cell to the first node, with the
@@ -273,71 +275,71 @@ which reveals the downstream node.
    which instructs the last node in the circuit to send a CREATE cell
    to extend the circuit.
 
-   CREATE cells contain the following:
+   The payload for a CREATE cell is an 'onion skin', consisting of:
+         RSA-encrypted data            [128 bytes]
+         Symmetrically-encrypted data  [16 bytes]
+   The RSA-encrypted portion contains:
+         Symmetric key                 [16 bytes]
+         First part of DH data (g^x)   [112 bytes]
+   The symmetrically encrypted portion contains:
+         Second part of DH data (g^x)  [16 bytes] 
 
-         [this stuff now wrong; haven't fixed the rest of the file either.]
+   The two parts of the DH data, once decrypted and concatenated, form
+   g^x as calculated by the client.
 
-         Version                  [1 byte]
-         Port                     [2 bytes]
-         Address                  [4 bytes]
-         Expiration time          [4 bytes]
-         Key seed material        [16 bytes]
-                             [Total: 27 bytes]
+   The relay payload for an EXTEND relay cell consists of:
+         Address                       [4 bytes]
+         Port                          [2 bytes]
+         Onion skin                    [144 bytes]
 
-     The port and address field denote the IPV4 address and port of
-     the next onion router in the circuit, or are set to 0 for the
-     last hop.
+   The port and address field denote the IPV4 address and port of the
+   next onion router in the circuit.  
 
-     The expiration time is a number of seconds since the epoch (1
-     Jan 1970); by default, it is set to the current time plus one
-     day.
+4.2. Setting circuit keys
 
-   When constructing an onion to create a circuit from OR_1,
-   OR_2... OR_N,  the onion creator performs the following steps:
+   Once the handshake between the OP and an OR is completed, both
+   servers can now calculate g^xy with ordinary DH.  They divide the
+   last 32 bytes of this shared secret into two 16-byte keys, the
+   first of which (called Kf) is used to encrypt the stream of data
+   going from the OP to the OR, and second of which (called Kb) is
+   used to encrypt the stream of data going from the OR to the OP.
 
-      1. Let M = 100 random bytes.
+4.3. Creating circuits   
 
-      2. For I=N downto 1:
-  
-         A. Create an onion layer L, setting Version=2,
-            ExpirationTime=now + 1 day, and Seed=16 random bytes.
+   When creating a circuit through the network, the circuit creator
+   performs the following steps:
 
-            If I=N, set Port=Address=0.  Else, set Port and Address to
-            the IPV4 port and address of OR_{I+1}.
+      1. Choose a chain of N onion routers (R_1...R_N) to constitute
+         the path, such that no router appears in the path twice.
 
-         B. Let M = L | M.
+      2. If not already connected to the first router in the chain,
+         open a new connection to that router.
 
-         C. Let K1_I = SHA1(Seed).
-            Let K2_I = SHA1(K1_I).
-            Let K3_I = SHA1(K2_I).
+      3. Choose an ACI not already in use on the connection with the
+         first router in the chain.  If our address/port pair is
+         numerically higher than the address/port pair of the other
+         side, then let the high bit of the ACI be 1, else 0.
 
-         D. Encrypt the first 128 bytes of M with the RSA key of
-            OR_I, using no padding.  Encrypt the remaining portion of
-            M with 3DES/OFB, using K1_I as a key and an all-0 IV.
+      4. Send a CREATE cell along the connection, to be received by
+         the first onion router.
 
-      3. M is now the onion.
+      5. Wait until a CREATED cell is received; finish the handshake
+         and extract the forward key Kf_1 and the back key Kb_1.
 
-  To create a connection using the onion M, an OP or OR performs the
-  following steps:
+      6. For each subsequent onion router R (R_2 through R_N), extend
+         the circuit to R.
 
-       1. If not already connected to the first router in the chain,
-          open a new connection to that router.
+   To extend the circuit by a single onion router R_M, the circuit
+   creator performs these steps:
 
-       2. Choose an ACI not already in use on the connection with the
-          first router in the chain.  If our address/port pair is
-          numerically higher than the address/port pair of the other
-          side, then let the high bit of the ACI be 1, else 0.
+      1. Create an onion skin, encrypting the RSA-encrypted part with
+         R's public key.
 
-       3. To send M over the wire, prepend a 4-byte integer containing
-          Len(M).  Call the result M'.  Let N=ceil(Len(M')/248).
-          Divide M' into N chunks, such that:
-             Chunk_I = M'[(I-1)*248:I*248]  for 1 <= I <= N-1
-             Chunk_N = M'[(N-1)*248:Len(M')]
+      2. Encrypt and send the onion skin in a RELAY_CREATE cell along
+         the circuit (see section 5).
 
-       4. Send N CREATE cells along the connection, setting the ACI
-          on each to the selected ACI, setting the payload on each to
-          the corresponding 'Chunk_I', and setting the length on each
-          to the length of the payload.
+      3. When a RELAY_CREATED cell is received, calculate the shared
+         keys.  The circuit is now extended.
 
    Upon receiving a CREATE cell along a connection, an OR performs
    the following steps:
@@ -370,14 +372,29 @@ which reveals the downstream node.
           choose a different ACI for this circuit on the connection
           with the next OR.)
 
-   As an optimization, OR implementations may delay processing onions
+   When an onion router receives an EXTEND relay cell, it sends a
+   CREATE cell to the next onion router, with the enclosed onion skin
+   as its payload.  The initiating onion router chooses some random
+   ACI not yet used on the connection between the two onion routers.
+
+   Some time after receiving a create cell, an onion router completes
+   the DH handshake, and replies with a CREATED cell, containing g^y
+   as its [128 byte] payload.  Upon receiving a CREATED cell, an onion
+   router packs it payload into a CREATED relay cell (see section 5),
+   and sends that cell up the circuit.  Upon receiving the CREATED
+   relay cell, the OP can retrieve g^y.
+
+   (As an optimization, OR implementations may delay processing onions
    until a break in traffic allows time to do so without harming
-   network latency too greatly.
+   network latency too greatly.)
 
 4.2. Tearing down circuits
 
+   [Note: this section is untouched; the code doesn't seem to match
+   what I remembered discussing.  Let's sort it out. -NM]
+
    Circuits are torn down when an unrecoverable error occurs along
-   the circuit, or when all topics on a circuit are closed and the
+   the circuit, or when all streams on a circuit are closed and the
    circuit's intended lifetime is over.
 
    To tear down a circuit, an OR or OP sends a DESTROY cell with that
@@ -394,55 +411,73 @@ which reveals the downstream node.
 
 4.3. Routing data cells
 
-   When an OR receives a DATA cell, it checks the cell's ACI and
+   When an OR receives a RELAY cell, it checks the cell's ACI and
    determines whether it has a corresponding circuit along that
-   connection.  If not, the OR drops the DATA cell.
+   connection.  If not, the OR drops the RELAY cell.
 
    Otherwise, if the OR is not at the OP edge of the circuit (that is,
    either an 'exit node' or a non-edge node), it de/encrypts the length
    field and the payload with 3DES/OFB, as follows:
-        'Forward' data cell (same direction as onion):
-            Use K2 as key; encrypt.
-        'Back' data cell (opposite direction from onion):
-            Use K3 as key; decrypt.
+        'Forward' relay cell (same direction as CREATE):
+            Use Kf as key; encrypt.
+        'Back' relay cell (opposite direction from CREATE):
+            Use Kb as key; decrypt.
+   If the OR recognizes the stream ID on the cell (it is either the ID
+   of an open stream or the signaling ID, zero), the OR processes the
+   contents of the relay cell.  Otherwise, it passes the decrypted
+   relay cell along the circuit.  [What if the circuit doesn't go any
+   farther?]
 
-   Otherwise, if the data cell has arrived to the OP edge of the circuit,
-   the OP de/encrypts the length and payload fields with 3DES/OFB as
+
+   Otherwise, if the data cell is coming from the OP edge of the
+   circuit, the OP decrypts the length and payload fields with 3DES/OFB as
    follows:
-         OP sends data cell:
-            For I=1...N, decrypt with K2_I.
-         OP receives data cell:
-            For I=N...1, encrypt with K3_I.
+         OP sends data cell to node R_M:
+            For I=1...M, decrypt with Kf_I.
 
-   Edge nodes process the length and payload fields of DATA cells as
-   described in section 5 below.
+   Otherwise, if the data cell is arriving at the OP edge if the
+   circuit, the OP encrypts the length and payload fields with 3DES/OFB as
+   follows:
+         OP receives data cell:
+            For I=N...1, 
+                Encrypt with Kb_I.  If the stream ID is a recognized
+                stream for R_I, or if the stream ID is the signaling
+                ID, zero, then process the payload.
+
+   For more information, see section 5 below.
 
 5. Application connections and stream management
 
 5.1. Streams
 
-   Within a circuit, the OP and the exit node use the contents of DATA
-   packets to tunnel TCP connections ("Topics") across circuits.
-   These connections are initiated by the OP.
+   Within a circuit, the OP and the exit node use the contents of
+   RELAY packets to tunnel end-to-end commands and TCP connections
+   ("Streams") across circuits.  End-to-end commands can be initiated
+   by either edge; streams are initiated by the OP.
 
-   The first 4 bytes of each data cell are reserved as follows:
-         Topic command           [1 byte]
-         Unused, set to 0.       [1 byte]
-         Topic ID                [2 bytes]
+   The first 8 bytes of each relay cell are reserved as follows:
+         Relay command           [1 byte]
+         Stream ID               [7 bytes]
 
-   The recognized topic commands are:
-         1 -- TOPIC_BEGIN
-         2 -- TOPIC_DATA
-         3 -- TOPIC_END
-         4 -- TOPIC_CONNECTED
-         5 -- TOPIC_SENDME
+   The recognized relay commands are:
+         1 -- RELAY_BEGIN
+         2 -- RELAY_DATA
+         3 -- RELAY_END
+         4 -- RELAY_CONNECTED
+         5 -- RELAY_SENDME
+         6 -- RELAY_EXTEND
+         7 -- RELAY_EXTENDED
 
-   All DATA cells pertaining to the same tunneled connection have the
-   same topic ID.
+   All RELAY cells pertaining to the same tunneled stream have the
+   same stream ID.  Stream ID's are chosen randomly by the OP.  A
+   stream ID is considered "recognized" on a circuit C by an OP or an
+   OR if it already has an existing stream established on that
+   circuit, or if the stream ID is equal to the signaling stream ID,
+   which is all zero: [00 00 00 00 00 00 00]
 
    To create a new anonymized TCP connection, the OP sends a
-   TOPIC_BEGIN data cell with a payload encoding the address and port
-   of the destination host.  The payload format is:
+   RELAY_BEGIN data cell with a payload encoding the address and port
+   of the destination host.  The stream ID is zero.  The payload format is:
          ADDRESS | ':' | PORT | '\000'
    where ADDRESS may be a DNS hostname, or an IPv4 address in
    dotted-quad format; and where PORT is encoded in decimal.
@@ -450,28 +485,32 @@ which reveals the downstream node.
    Upon receiving this packet, the exit node resolves the address as
    necessary, and opens a new TCP connection to the target port.  If
    the address cannot be resolved, or a connection can't be
-   established, the exit node replies with a TOPIC_END cell.
-   Otherwise, the exit node replies with a TOPIC_CONNECTED cell.
+   established, the exit node replies with a RELAY_END cell.
+   Otherwise, the exit node replies with a RELAY_CONNECTED cell.
 
-   The OP waits for a TOPIC_CONNECTED cell before sending any data.
+   The OP waits for a RELAY_CONNECTED cell before sending any data.
    Once a connection has been established, the OP and exit node
-   package stream data in TOPIC_DATA cells, and upon receiving such
+   package stream data in RELAY_DATA cells, and upon receiving such
    cells, echo their contents to the corresponding TCP stream.  
    [XXX Mention zlib encoding. -NM]
 
    When one side of the TCP stream is closed, the corresponding edge
-   node sends a TOPIC_END cell along the circuit; upon receiving a
-   TOPIC_END cell, the edge node closes the corresponding TCP stream.
-
+   node sends a RELAY_END cell along the circuit; upon receiving a
+   RELAY_END cell, the edge node closes the corresponding TCP stream.
    [This should probably become:
 
    When one side of the TCP stream is closed, the corresponding edge
-   node sends a TOPIC_END cell along the circuit; upon receiving a
-   TOPIC_END cell, the edge node closes its side of the corresponding
+   node sends a RELAY_END cell along the circuit; upon receiving a
+   RELAY_END cell, the edge node closes its side of the corresponding
    TCP stream (by sending a FIN packet), but continues to accept and
    package incoming data until both sides of the TCP stream are
-   closed.  At that point, the edge node sends a second TOPIC_END
+   closed.  At that point, the edge node sends a second RELAY_END
    cell, and drops its record of the topic. -NM]
+
+   For creation and handling of RELAY_EXTEND and RELAY_EXTENDED cells,
+   see section 4.  For creating and handling of RELAY_SENDME cells,
+   see section 6.  
+
 
 6. Flow control
 
@@ -497,10 +536,19 @@ which reveals the downstream node.
 6.3. Circuit flow control
 
    To control a circuit's bandwidth usage, each node keeps track of
-   how many data cells it is allowed to send to the next hop in the
-   circuit. This 'window' value is initially set to 1000 data cells
+   two 'windows', consisting of how many RELAY_DATA cells it is
+   allowed to package for transmission, and how many RELAY_DATA cells
+   it is willing to deliver to a stream outside the network.  
+   Each 'window' value is initially set to 500 data cells
    in each direction (cells that are not data cells do not affect
-   the window). Each edge node on a circuit sends a SENDME cell
+   the window).
+
+   [Note: I'm not touching the rest of this section... it looks in the
+   code as if RELAY_COMMAND_SENDME is now doing double duty for both
+   stream flow control and circuit flow control.  I thought we wanted
+   two different notions of windows. -NM]
+
+   Each edge node on a circuit sends a SENDME cell
    (with length=100) every time it has received 100 data cells on the
    circuit. When a node receives a SENDME cell for a circuit, it increases
    the circuit's window in the corresponding direction (that is, for
@@ -517,30 +565,65 @@ which reveals the downstream node.
 
 6.4. Topic flow control
 
-   Edge nodes use TOPIC_SENDME data cells to implement end-to-end flow
+   Edge nodes use RELAY_SENDME data cells to implement end-to-end flow
    control for individual connections across circuits. As with circuit
    flow control, edge nodes begin with a window of cells (500) per
    topic, and increment the window by a fixed value (50) upon receiving
-   a TOPIC_SENDME data cell. Edge nodes initiate TOPIC_SENDME data
+   a RELAY_SENDME data cell. Edge nodes initiate TOPIC_SENDME data
    cells when both a) the window is <= 450, and b) there are less than
    ten cell payloads remaining to be flushed at that edge.
+
 
 7. Directories and routers
 
 7.1. Router descriptor format.
 
-Line format : address ORPort OPPort APPort DirPort bandwidth(bytes/s)
-followed by the router's public key.
-ORport is where the router listens for other routers (speaking cells)
-OPPort is where the router listens for onion proxies (speaking cells)
-APPort is where the router listens for applications (speaking socks)
-DirPort is where the router listens for directory download requests
+(Unless otherwise noted, tokens on the same line are space-separated.)
+
+Router ::= Router-Line  Public-Key  Signing-Key?  Exit-Policy NL
+Router-Line ::= "router" address ORPort OPPort APPort DirPort bandwidth
+                NL
+Public-key ::= a public key in PEM format   NL
+Signing-Key ::= "signing-key"  NL  signing key in PEM format   NL
+Exit-Policy ::= Exit-Line*
+Exit-Line ::= ("accept"|"reject")  string  NL
+
+ORport ::= port where the router listens for other routers (speaking cells)
+OPPort ::= where the router listens for onion proxies (speaking cells)
+APPort ::=  where the router listens for applications (speaking socks)
+DirPort ::= where the router listens for directory download requests
+bandwidth ::= maximum bandwidth, in bytes/s
+
 
 Example:
-moria.mit.edu 9001 9011 9021 9031 100000
+router moria.mit.edu 9001 9011 9021 9031 100000
 -----BEGIN RSA PUBLIC KEY-----
 MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
 7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
 nZ7kVMRoiXCbjL6VAtNa4Zy1Af/GOm0iCIDpholeujQ95xew7rQnAgMA//8=
 -----END RSA PUBLIC KEY-----
+signing-key
+-----BEGIN RSA PUBLIC KEY-----
+7BvovoY3z4zk63NZVBErgKQUDkn3pp8n83xZgEf4GI27gdWIIwaBjEimuJlEY+7K
+MIGJAoGBAMBBuk1sYxEg5jLAJy86U3GGJ7EGMSV7yoA6mmcsEVU3pwTUrpbpCmwS
+f/GOm0iCIDpholeujQ95xew7rnZ7kVMRoiXCbjL6VAtNa4Zy1AQnAgMA//8=
+-----END RSA PUBLIC KEY-----
+reject 18.0.0.0/24
+
+Note: The extra newline at the end of the router block is intentional.
+
+7.2. Directory format
+
+Directory ::= Directory-Header  Directory-Router  Router*  Signature
+Directory-Header ::= "signed-directory" NL Software-Line NL
+Software-Line: "recommended-software"  comma-separated-version-list
+Directory-Router ::= Router
+Signature ::= "directory-signature" NL "-----BEGIN SIGNATURE-----" NL
+              Base-64-encoded-signature NL "-----END SIGNATURE-----" NL
+
+Note:  The router block for the directory server must appear first.
+The signature is computed by computing the SHA-1 hash of the
+directory, from the characters "signed-directory", through the newline
+after "directory-signature".  This digest is then padded with PKCS.1,
+and signed with the directory server's signing key.
 
