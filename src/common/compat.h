@@ -69,10 +69,12 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #define U64_PRINTF_ARG(a) (a)
 #define U64_SCANF_ARG(a) (a)
 #define U64_FORMAT "%I64u"
+#define U64_LITERAL(n) (n ## ui64)
 #else
 #define U64_PRINTF_ARG(a) ((long long unsigned int)a)
 #define U64_SCANF_ARG(a) ((long long unsigned int*)a)
 #define U64_FORMAT "%llu"
+#define U64_LITERAL(n) (n ## llu)
 #endif
 
 int tor_snprintf(char *str, size_t size, const char *format, ...)

@@ -95,7 +95,7 @@ static void accounting_set_wakeup_time(void);
  * hibernate, return 1, else return 0.
  */
 int accounting_is_enabled(or_options_t *options) {
-  if (options->AccountingMaxKB)
+  if (options->AccountingMax)
     return 1;
   return 0;
 }
@@ -205,13 +205,13 @@ static void
 update_expected_bandwidth(void)
 {
   uint64_t used;
-  uint32_t max_configured = (get_options()->BandwidthRateBytes * 60);
+  uint32_t max_configured = (get_options()->BandwidthRate * 60);
 
   if (n_seconds_active_in_interval < 1800) {
     /* If we haven't gotten enough data last interval, guess that
      * we'll be used at our maximum capacity.  This is unlikely to be
      * so, but it will give us an okay first estimate, and we'll stay
-     * up until we send MaxKB kilobytes.  Next interval, we'll choose
+     * up until we send Max ytes.  Next interval, we'll choose
      * our starting time based on how much we sent this interval.
      */
     expected_bandwidth_usage = max_configured;
@@ -302,7 +302,7 @@ accounting_set_wakeup_time(void)
 
   if (expected_bandwidth_usage)
     n_days_to_exhaust_bw =
-      (get_options()->AccountingMaxKB/expected_bandwidth_usage)/(24*60);
+      (get_options()->AccountingMax/expected_bandwidth_usage)/(24*60);
   else
     n_days_to_exhaust_bw = 1;
 
@@ -442,7 +442,7 @@ read_bandwidth_usage(void)
 static int
 hibernate_hard_limit_reached(void)
 {
-  uint64_t hard_limit = get_options()->AccountingMaxKB<<10;
+  uint64_t hard_limit = get_options()->AccountingMax;
   if (!hard_limit)
     return 0;
   return n_bytes_read_in_interval >= hard_limit
@@ -453,7 +453,7 @@ hibernate_hard_limit_reached(void)
  * to send/receive this interval. */
 static int hibernate_soft_limit_reached(void)
 {
-  uint64_t soft_limit = (uint64_t) ((get_options()->AccountingMaxKB<<10) * .99);
+  uint64_t soft_limit = (uint64_t) ((get_options()->AccountingMax) * .99);
   if (!soft_limit)
     return 0;
   return n_bytes_read_in_interval >= soft_limit
@@ -582,7 +582,7 @@ hibernate_end_time_elapsed(time_t now)
  * to start/stop hibernating.
  */
 void consider_hibernation(time_t now) {
-  int accounting_enabled = get_options()->AccountingMaxKB != 0;
+  int accounting_enabled = get_options()->AccountingMax != 0;
   char buf[ISO_TIME_LEN+1];
 
   /* If we're in 'exiting' mode, then we just shut down after the interval
