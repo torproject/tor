@@ -581,7 +581,6 @@ int connection_create_listener(struct sockaddr_in *bindaddr, int type);
 int connection_handle_listener_read(connection_t *conn, int new_type);
 
 int connection_tls_start_handshake(connection_t *conn);
-int connection_tls_continue_handshake(connection_t *conn);
 
 /* start all connections that should be up but aren't */
 int retry_all_connections(uint16_t or_listenport, uint16_t ap_listenport, uint16_t dir_listenport);

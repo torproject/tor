@@ -69,6 +69,8 @@ char *conn_state_to_string[][15] = {
 /********* END VARIABLES ************/
 
 static int connection_init_accepted_conn(connection_t *conn);
+static int connection_tls_continue_handshake(connection_t *conn);
+static int connection_tls_finish_handshake(connection_t *conn);
 
 /**************************************************************/
 
@@ -282,26 +284,52 @@ int connection_tls_start_handshake(connection_t *conn) {
   return 0;
 }
 
-int connection_tls_continue_handshake(connection_t *conn) {
+static int connection_tls_continue_handshake(connection_t *conn) {
   switch(tor_tls_handshake(conn->tls)) {
     case TOR_TLS_ERROR:
     case TOR_TLS_CLOSE:
       log_fn(LOG_DEBUG,"tls error. breaking.");
       return -1;
     case TOR_TLS_DONE:
-      conn->state = OR_CONN_STATE_OPEN;
-      directory_set_dirty();
-      connection_watch_events(conn, POLLIN);
-      if(!options.OnionRouter)
-        circuit_n_conn_open(conn); /* send the pending create */
-      log_fn(LOG_DEBUG,"tls handshake done, now open.");
-      return 0;
+     return connection_tls_finish_handshake(conn);
     case TOR_TLS_WANTWRITE:
       connection_start_writing(conn);
       return 0;
     case TOR_TLS_WANTREAD: /* handshaking conns are *always* reading */
       return 0;
   }
+  return 0;
+}
+
+static int connection_tls_finish_handshake(connection_t *conn) {
+  crypto_pk_env_t *pk;
+  routerinfo_t *router;
+
+  conn->state = OR_CONN_STATE_OPEN;
+  directory_set_dirty();
+  connection_watch_events(conn, POLLIN);
+  if(options.OnionRouter) { /* I'm an OR */
+    if(tor_tls_peer_has_cert(conn->tls)) { /* it's another OR */
+      pk = tor_tls_verify(conn->tls);
+      if(!pk) {
+        log_fn(LOG_INFO,"Other side has a cert but it's bad. Closing.");
+        return -1;
+      }
+      router = look up which router I just connected to. /* XXX */
+      conn->bandwidth = router->bandwidth;
+      conn->addr = router->addr, conn->port = router->or_port;
+      conn->pkey = crypto_pk_dup_key(router->pkey);
+      if(conn->address)
+        free(conn->address);
+      conn->address = strdup(router->address);
+    } else { /* it's an OP */
+      conn->bandwidth = DEFAULT_BANDWIDTH_OP;
+    }
+  } else { /* I'm a client */
+    conn->bandwidth = DEFAULT_BANDWIDTH_OP;
+    circuit_n_conn_open(conn); /* send the pending create */
+  }
+  log_fn(LOG_DEBUG,"tls handshake done, now open.");
   return 0;
 }
 #endif
@@ -481,8 +509,10 @@ int connection_handle_write(connection_t *conn) {
 
 #ifdef USE_TLS
   if(connection_speaks_cells(conn) && conn->state != OR_CONN_STATE_CONNECTING) {
-    if(conn->state == OR_CONN_STATE_HANDSHAKING)
+    if(conn->state == OR_CONN_STATE_HANDSHAKING) {
+      connection_stop_writing(conn);
       return connection_tls_continue_handshake(conn);
+    }
 
     /* else open, or closing */
     switch(flush_buf_tls(conn->tls, &conn->outbuf, &conn->outbuflen,

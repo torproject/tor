@@ -237,7 +237,7 @@ or_handshake_op_send_keys(connection_t *conn) {
 
   assert(conn && conn->type == CONN_TYPE_OR);
 
-  conn->bandwidth = DEFAULT_BANDWIDTH_OP; /* XXX USE_TLS */
+  conn->bandwidth = DEFAULT_BANDWIDTH_OP;
 
   /* generate random keys */
   if(crypto_cipher_generate_key(conn->f_crypto) ||
@@ -520,7 +520,7 @@ or_handshake_server_process_auth(connection_t *conn) {
     crypto_cipher_set_key(conn->b_crypto,buf+14);
     crypto_cipher_set_key(conn->f_crypto,buf+30);
 
-    conn->bandwidth = router->bandwidth; /* XXX USE_TLS and below */
+    conn->bandwidth = router->bandwidth;
 
     /* copy all relevant info to conn */
     conn->addr = router->addr, conn->port = router->or_port;
