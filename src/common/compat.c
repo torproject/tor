@@ -497,7 +497,6 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
    * something.
    */
   struct in_addr iaddr;
-  struct hostent *ent;
   tor_assert(addr);
   if (!*name) {
     /* Empty address is an error. */
@@ -507,7 +506,34 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
     memcpy(addr, &iaddr.s_addr, 4);
     return 0;
   } else {
-    ent = gethostbyname(name);
+#ifdef HAVE_GETADDRINFO
+    int err;
+    struct addrinfo *res, *res_p;
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = PF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    err = getaddrinfo(name, NULL, &hints, &res);
+    if (!err) {
+      for (res_p = res; res_p; res_p = res_p->ai_next) {
+        if (res_p->ai_family == PF_INET &&
+            res_p->ai_addrlen == 4) {
+          memcpy(addr, res_p->ai_addr, 4);
+          freeaddrinfo(res);
+          return 0;
+        }
+      }
+      return -1;
+    }
+
+    return (err == EAI_AGAIN) ? 1 : -1;
+#else
+    struct hostent *ent;
+#ifdef HAVE_GETHOSTBYNAME_R
+    ent = gethostbyname_r(name);
+#else
+    struct hostent *ent;
+#endif
     if (ent) {
       /* break to remind us if we move away from IPv4 */
       tor_assert(ent->h_length == 4);
@@ -519,6 +545,7 @@ int tor_lookup_hostname(const char *name, uint32_t *addr)
     return (WSAGetLastError() == WSATRY_AGAIN) ? 1 : -1;
 #else
     return (h_errno == TRY_AGAIN) ? 1 : -1;
+#endif
 #endif
   }
 }
