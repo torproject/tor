@@ -558,7 +558,7 @@ dirserv_dump_directory_to_string(char *s, unsigned int maxlen,
     return -1;
   dirserv_remove_old_servers(ROUTER_MAX_AGE);
   published_on = time(NULL);
-  strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&published_on));
+  format_iso_time(published, published_on);
   snprintf(s, maxlen,
            "signed-directory\n"
            "published %s\n"
@@ -706,7 +706,7 @@ static int generate_runningrouters(crypto_pk_env_t *private_key)
   if (list_running_servers(&cp))
     return -1;
   published_on = time(NULL);
-  strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&published_on));
+  format_iso_time(published, published_on);
   sprintf(s, "network-status\n"
              "published %s\n"
              "running-routers %s\n"

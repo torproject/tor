@@ -327,26 +327,37 @@ typedef struct bw_array_t {
   int total_obs; /**< Total for all members of obs except obs[cur_obs_idx] */
   int max_total; /**< Largest value that total_obs has taken on in the current
                   * period. */
+  int total_in_period; /**< Total bytes transferred in the current period. */
 
   /** When does the next period begin? */
   time_t next_period;
   /** Where in 'maxima' should the maximum bandwidth usage for the current
    * period be stored? */
   int next_max_idx;
-  /** Circular array of the maximum bandwidth usage for the last NUM_TOTALS
-   * periods */
+  /** How many values in maxima/totals have been set ever? */
+  int num_maxes_set;
+  /** Circular array of the maximum
+   * bandwidth-per-NUM_SECS_ROLLING_MEASURE usage for the last
+   * NUM_TOTALS periods */
   int maxima[NUM_TOTALS];
+  /** Circular array of the total bandwidth usage for the last NUM_TOTALS
+   * periods */
+  int totals[NUM_TOTALS];
 } bw_array_t;
 
 /** Shift the current period of b forward by one.
  */
 static void commit_max(bw_array_t *b) {
+  /* Store total from current period. */
+  b->totals[b->next_max_idx] = b->total_in_period;
   /* Store maximum from current period. */
   b->maxima[b->next_max_idx++] = b->max_total;
   /* Advance next_period and next_max_idx */
   b->next_period += NUM_SECS_BW_SUM_INTERVAL;
   if (b->next_max_idx == NUM_TOTALS)
     b->next_max_idx = 0;
+  if (b->num_maxes_set < NUM_TOTALS)
+    ++b->num_maxes_set;
   /* Reset max_total. */
   b->max_total = 0;
 }
@@ -388,6 +399,7 @@ static INLINE void add_obs(bw_array_t *b, time_t when, int n) {
     advance_obs(b);
 
   b->obs[b->cur_obs_idx] += n;
+  b->total_in_period += n;
 }
 
 /** Allocate, initialize, and return a new bw_array.
@@ -463,7 +475,7 @@ static int find_largest_max(bw_array_t *b)
  *
  * Return the smaller of these sums, divided by NUM_SECS_ROLLING_MEASURE.
  */
-int rep_hist_bandwidth_assess(time_t when) {
+int rep_hist_bandwidth_assess(void) {
   int w,r;
   r = find_largest_max(read_array);
   w = find_largest_max(write_array);
@@ -474,6 +486,42 @@ int rep_hist_bandwidth_assess(time_t when) {
 
   return 0;
 }
+
+/**
+ * DOCDOC
+ */
+char *rep_hist_get_bandwidth_lines(void)
+{
+  char *buf, *cp;
+  char t[ISO_TIME_LEN+1];
+  int r, i, n;
+  bw_array_t *b;
+  size_t len;
+
+  /* opt (read|write)history yyyy-mm-dd HH:MM:SS n,n,n,n,n... */
+  len = (60+12*NUM_TOTALS)*2;
+  buf = tor_malloc_zero(len);
+  cp = buf;
+  for (r=0;r<2;++r) {
+    b = r?read_array:write_array;
+    format_iso_time(t, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
+    sprintf(cp, "opt %s-history %s (%d s)", r?"read":"write", t,
+            NUM_SECS_BW_SUM_INTERVAL);
+    cp += strlen(cp);
+    for (i=b->num_maxes_set+1,n=0; n<b->num_maxes_set; ++n,++i) {
+      if (i >= NUM_TOTALS) i -= NUM_TOTALS;
+      if (n==(b->num_maxes_set-1))
+        sprintf(cp, "%d", b->totals[i]);
+      else
+        sprintf(cp, "%d,", b->totals[i]);
+      cp += strlen(cp);
+    }
+    strcat(cp, "\n");
+    ++cp;
+  }
+  return buf;
+}
+
 
 /*
   Local Variables:

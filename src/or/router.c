@@ -581,6 +581,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   int written;
   int result=0;
   struct exit_policy_t *tmpe;
+  char *bandwidth_usage;
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
   char *s_tmp, *s_dup;
   const char *cp;
@@ -615,8 +616,11 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
   }
 
   /* Encode the publication time. */
-  strftime(published, 32, "%Y-%m-%d %H:%M:%S", gmtime(&router->published_on));
+  format_iso_time(published, router->published_on);
 
+  /* How busy have we been? */
+  bandwidth_usage = rep_hist_get_bandwidth_lines();
+  
   /* Generate the easy portion of the router descriptor. */
   result = snprintf(s, maxlen,
                     "router %s %s %d %d %d\n"
@@ -626,7 +630,7 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
                     "opt uptime %ld\n"
                     "bandwidth %d %d %d\n"
                     "onion-key\n%s"
-                    "signing-key\n%s",
+                    "signing-key\n%s%s",
     router->nickname,
     router->address,
     router->or_port,
@@ -642,7 +646,8 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
     (int) router->bandwidthrate,
     (int) router->bandwidthburst,
     (int) router->advertisedbandwidth,
-    onion_pkey, identity_pkey);
+    onion_pkey, identity_pkey,
+    bandwidth_usage);
 
   tor_free(onion_pkey);
   tor_free(identity_pkey);
