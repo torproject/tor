@@ -661,7 +661,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       else
         description2 = "uncompressed";
 
-      log_fn(LOG_INFO, "HTTP body from server '%s' was labeled %s,"
+      log_fn(LOG_INFO, "HTTP body from server '%s' was labeled %s, "
              "but it seems to be %s.%s",
              conn->address, description1, description2,
              (compression>0 && guessed>0)?"  Trying both.":"");
