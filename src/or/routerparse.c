@@ -1319,7 +1319,7 @@ static int router_get_hash_impl(const char *s, char *digest,
     log_fn(LOG_WARN,"couldn't find \"%s\"",end_str);
     return -1;
   }
-  end = strchr(end, '\n');
+  end = strchr(end+strlen(end_str), '\n');
   if (!end) {
     log_fn(LOG_WARN,"couldn't find EOL");
     return -1;
