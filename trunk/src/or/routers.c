@@ -1083,7 +1083,8 @@ int router_compare_to_exit_policy(connection_t *conn) {
     assert(tmpe->port);
 
     log_fn(LOG_DEBUG,"Considering exit policy %s:%s",tmpe->address, tmpe->port);
-    if(inet_aton(tmpe->address,&in) == 0) { /* malformed IP. reject. */
+    if(strcmp(tmpe->address,"*") &&
+       inet_aton(tmpe->address,&in) == 0) { /* malformed IP. reject. */
       log_fn(LOG_WARNING,"Malformed IP %s in exit policy. Rejecting.",tmpe->address);
       return -1;
     }
@@ -1286,8 +1287,6 @@ int router_dump_router_to_string(char *s, int maxlen, routerinfo_t *router,
 
   return written+1;
 }
-
-
 
 /*
   Local Variables:
