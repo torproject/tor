@@ -129,9 +129,9 @@ int write_to_buf(char *string, int string_len,
 }
 
 int fetch_from_buf(char *string, int string_len,
-                 char **buf, int *buflen, int *buf_datalen) {
+                   char **buf, int *buflen, int *buf_datalen) {
 
-  /* if there is string_len bytes in buf, write them onto string,
+  /* if there are string_len bytes in buf, write them onto string,
    * then memmove buf back (that is, remove them from buf) */
 
   assert(string && buf && *buf && buflen && buf_datalen);
@@ -145,5 +145,27 @@ int fetch_from_buf(char *string, int string_len,
   *buf_datalen -= string_len;
   memmove(*buf, *buf+string_len, *buf_datalen);
   return *buf_datalen;
+}
+
+int find_on_inbuf(char *string, int string_len,
+                  char *buf, int buf_datalen) {
+  /* find first instance of needle 'string' on haystack 'buf'. return how
+   * many bytes from the beginning of buf to the end of string.
+   * If it's not there, return -1.
+   */
+
+  char *location;
+  char *last_possible = buf + buf_datalen - string_len;
+
+  assert(string && string_len > 0 && buf);
+
+  if(buf_datalen < string_len)
+    return -1;
+
+  for(location = buf; location <= last_possible; location++)
+    if((*location == *string) && !memcmp(location+1, string+1, string_len-1))
+      return location-buf+string_len;
+
+  return -1;
 }
 

@@ -12,8 +12,10 @@ extern or_options_t options; /* command-line and config-file options */
 
 static char the_directory[MAX_DIR_SIZE+1];
 static int directorylen=0;
+static int reading_headers=0;
 
-static char getstring[] = "GET / HTTP/1.0\n\r";
+static char getstring[] = "GET / HTTP/1.0\r\n\r\n";
+static char answerstring[] = "HTTP/1.0 200 OK\r\n\r\n";
 
 /********* END VARIABLES ************/
 
@@ -22,10 +24,13 @@ void directory_initiate_fetch(routerinfo_t *router) {
   struct sockaddr_in router_addr;
   int s;
 
-  log(LOG_DEBUG,"directory_initiate_fetch(): initiating directory fetch");
-
   if(!router) /* i guess they didn't have one in mind for me to use */
     return;
+
+  if(connection_get_by_type(CONN_TYPE_DIR)) /* there's already a fetch running */
+    return;
+
+  log(LOG_DEBUG,"directory_initiate_fetch(): initiating directory fetch");
 
   conn = connection_new(CONN_TYPE_DIR);
   if(!conn)
@@ -107,7 +112,7 @@ int directory_send_command(connection_t *conn) {
 void directory_rebuild(void) {
 
   dump_directory_to_string(the_directory, MAX_DIR_SIZE);
-  log(LOG_DEBUG,"New directory:\n'%s'",the_directory);  
+  log(LOG_DEBUG,"New directory:\n%s",the_directory);  
   directorylen = strlen(the_directory);
 
 }
@@ -155,6 +160,7 @@ int connection_dir_process_inbuf(connection_t *conn) {
 }
 
 int directory_handle_command(connection_t *conn) {
+  char buf[15];
 
   assert(conn && conn->type == CONN_TYPE_DIR);
 
@@ -163,7 +169,14 @@ int directory_handle_command(connection_t *conn) {
     return 0; /* not yet */
   }
 
-  /* for now, don't bother reading it. */
+  if(connection_fetch_from_buf(buf,strlen(getstring),conn) < 0) {
+    return -1;    
+  }
+
+  if(strncasecmp(buf,getstring,strlen("GET / HTTP/"))) {
+    log(LOG_DEBUG,"directory_handle_command(): Command doesn't seem to be a get. Closing,");
+    return -1;
+  }
 
   if(directorylen == 0) {
     log(LOG_DEBUG,"directory_handle_command(): My directory is empty. Closing.");
@@ -171,7 +184,8 @@ int directory_handle_command(connection_t *conn) {
   }
 
   log(LOG_DEBUG,"directory_handle_command(): Dumping directory to client."); 
-  if(connection_write_to_buf(the_directory, directorylen, conn) < 0) {
+  if((connection_write_to_buf(answerstring, strlen(answerstring), conn) < 0) ||
+     (connection_write_to_buf(the_directory, directorylen, conn) < 0)) {
     log(LOG_DEBUG,"directory_handle_command(): my outbuf is full. Oops.");
     return -1;
   }
@@ -182,8 +196,23 @@ int directory_handle_command(connection_t *conn) {
 
 int directory_handle_reading(connection_t *conn) {
   int amt;
+  char *headers;
 
   assert(conn && conn->type == CONN_TYPE_DIR);
+
+  if(reading_headers) {
+    amt = connection_find_on_inbuf("\r\n\r\n", 4, conn);
+    if(amt < 0) /* not there yet */
+      return 0;
+    headers = malloc(amt+1);
+    if(connection_fetch_from_buf(headers,amt,conn) < 0) {
+      log(LOG_DEBUG,"directory_handle_reading(): fetch_from_buf failed (reading headers).");
+      return -1;
+    }
+    headers[amt] = 0; /* null terminate it, */
+    free(headers); /* and then throw it away */
+    reading_headers = 0;
+  }
 
   amt = conn->inbuf_datalen;
 
@@ -196,7 +225,7 @@ int directory_handle_reading(connection_t *conn) {
     amt, directorylen);
 
   if(connection_fetch_from_buf(the_directory+directorylen,amt,conn) < 0) {
-    log(LOG_DEBUG,"directory_handle_reading(): fetch_from_buf failed.");
+    log(LOG_DEBUG,"directory_handle_reading(): fetch_from_buf failed (reading dir).");
     return -1;    
   }
 
@@ -233,6 +262,7 @@ int connection_dir_finished_flushing(connection_t *conn) {
     case DIR_CONN_STATE_SENDING_COMMAND:
       log(LOG_DEBUG,"connection_dir_finished_flushing(): client finished sending command.");
       directorylen = 0;
+      reading_headers = 1;
       conn->state = DIR_CONN_STATE_READING;
       connection_watch_events(conn, POLLIN);
       return 0;
