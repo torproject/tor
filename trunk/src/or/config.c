@@ -320,7 +320,7 @@ add_default_trusted_dirservers(void)
 
 /** Set <b>options</b> to a reasonable default.
  *
- * Call this function when we can't find any torrc config file.
+ * Call this function before we parse the torrc file.
  */
 static int
 config_assign_defaults(or_options_t *options)
@@ -333,7 +333,7 @@ config_assign_defaults(or_options_t *options)
   smartlist_add(options->AllowUnverifiedNodes, "rendezvous");
 
   config_free_lines(options->ExitPolicy);
-  options->ExitPolicy = config_line_prepend(NULL, "ExitPolicy", "reject *:*");
+  options->ExitPolicy = NULL;
 
   return 0;
 }
