@@ -392,6 +392,10 @@ int check_whether_ports_reachable(void) {
 
 void consider_testing_reachability(void) {
   routerinfo_t *me = router_get_my_routerinfo();
+  if (!me) {
+    log_fn(LOG_WARN,"Bug: router_get_my_routerinfo() did not find my routerinfo?");
+    return;
+  }
 
   if (!can_reach_or_port) {
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 0, 1);
