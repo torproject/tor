@@ -139,6 +139,8 @@ static int check_directory_signature(const char *digest,
                                      crypto_pk_env_t *pkey,
                                      crypto_pk_env_t *declared_key);
 static crypto_pk_env_t *find_dir_signing_key(const char *str);
+/* static */ int is_obsolete_version(const char *myversion,
+                                     const char *versionlist);
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
  * <b>s</b>.  Return 0 on success, nonzero on failure.

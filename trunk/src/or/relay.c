@@ -30,9 +30,6 @@ circuit_resume_edge_reading_helper(connection_t *conn,
                                    crypt_path_t *layer_hint);
 static int
 circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
-void connection_edge_consider_sending_sendme(connection_t *conn);
-
-
 
 /** Stats: how many relay cells have originated at this hop, or have
  * been relayed onward (not recognized at this hop)?

@@ -83,6 +83,7 @@ static int connection_finished_flushing(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
 static int connection_read_to_buf(connection_t *conn);
 static int connection_process_inbuf(connection_t *conn);
+static int connection_bucket_read_limit(connection_t *conn);
 
 /**************************************************************/
 
@@ -642,7 +643,7 @@ int retry_all_listeners(int force) {
 extern int global_read_bucket, global_write_bucket;
 
 /** How many bytes at most can we read onto this connection? */
-int connection_bucket_read_limit(connection_t *conn) {
+static int connection_bucket_read_limit(connection_t *conn) {
   int at_most;
 
   /* do a rudimentary round-robin so one circuit can't hog a connection */

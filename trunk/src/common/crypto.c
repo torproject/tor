@@ -93,6 +93,13 @@ struct crypto_dh_env_t {
   DH *dh;
 };
 
+/* Prototypes for functions only used by tortls.c */
+crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
+RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env);
+EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
+DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
+
+
 /** Return the number of bytes added by padding method <b>padding</b>.
  */
 static INLINE int

@@ -44,9 +44,10 @@
   do { log_fn(LOG_ERR, "Error while %s: %s", act,           \
               tor_socket_strerror(tor_socket_errno(_s))); } while(0)
 
-int build_socks4a_resolve_request(char **out,
-                                  const char *username,
-                                  const char *hostname)
+static int 
+build_socks4a_resolve_request(char **out,
+			      const char *username,
+			      const char *hostname)
 {
   size_t len;
   tor_assert(out);
@@ -65,8 +66,9 @@ int build_socks4a_resolve_request(char **out,
   return len;
 }
 
-int parse_socks4a_resolve_response(const char *response, size_t len,
-                                   uint32_t *addr_out)
+static int 
+parse_socks4a_resolve_response(const char *response, size_t len,
+			       uint32_t *addr_out)
 {
   uint8_t status;
   tor_assert(response);
@@ -86,8 +88,9 @@ int parse_socks4a_resolve_response(const char *response, size_t len,
   return 0;
 }
 
-int do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
-               uint32_t *result_addr)
+static int 
+do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
+	   uint32_t *result_addr)
 {
   int s;
   struct sockaddr_in socksaddr;
@@ -149,7 +152,8 @@ int do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   return 0;
 }
 
-void usage(void)
+static void 
+usage(void)
 {
   puts("Syntax: tor-resolve [-v] hostname [sockshost:socksport]");
   exit(1);

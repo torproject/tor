@@ -24,6 +24,8 @@ static int list_server_status(char **running_routers_out,
                               char **router_status_out);
 static void directory_remove_unrecognized(void);
 static int dirserv_regenerate_directory(void);
+/* Should be static; exposed for testing */
+void add_fingerprint_to_dir(const char *nickname, const char *fp);
 
 /************** Fingerprint handling code ************/
 
