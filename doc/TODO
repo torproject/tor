@@ -10,56 +10,21 @@ ARMA    - arma claims
         D Deferred
         X Abandoned
 
-0.0.9pre6:
-   o clients now have certs, which means we warn when their certs have
-     incorrect times. we need to stop that.
-   o Oct 20 16:45:10.237 [warn] parse_addr_port(): Port '0' out of range
-   o clean up parse_*_policy code
-     o when you hup, they're not getting re-parsed
-     o stop calling a *_policy an exit_policy_t
-   o Regenerate our server descriptor when a relevant option is changed from
-     control.c.
-   o Writing out the machine-readable torrc file
-     o Function to check whether an option has changed.
-     o Function to generate the contents for a torrc file.
-     o Function to safely replace a torrc file.
-   o fix print_usage()
-   o Download and use running-routers
-     o Code to download running-routers
-     o Decouple DirFetchPeriod, StatusFetchPeriod, DirPostPeriod.
-     o Do we really want to send the clients to the authdirservers for
-       running-routers so often?
-R  - document signals in man page
-   o Check for hibernation on startup, hup, etc.
-N  . Test hibernation a lot.
-   o Document all undocumented configuration options.
-     o Accounting
-     o Control interface authentication
-   o RPMs
-     o Merge changes from jbash
-     o Figure out versioning
-   o Windows installer
-     o Make installer get built
-     o Write script to correct windows versions.
-     o Call script to correct windows versions as appropriate.
-     o Make the text documentation use windows-style newlines.
-     o Make torrc.sample say to put torrc into application data\tor
-   o Review website; make important info more prominent.
-   o merge in the contributed tor.sh
-
-Beyond 0.0.9:
-   - controller should have 'getinfo' command to query about rephist,
-     about rendezvous status, etc.
+Tor 0.0.9rc1:
    - Weasel wants to say 50GB rather than 50000000 in config ints.
    - Nick wants to say "1 hour" instead of 3600 in config ints.
    - Better hibernation flexibility
      - Add hibernation intervals for weeks, days.
      - Start at a time other than 0:00 GMT.
+   - Integrate NT service patch
+   - make loglevels info,debug less noisy
+
+Beyond 0.0.9:
+   - controller should have 'getinfo' command to query about rephist,
+     about rendezvous status, etc.
    - allow transition from ORPort to !ORPort, and back
 R  . bandwidth buckets for write as well as read.
    - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
-   o Check getrlimit(RLIMIT_[N]OFILE), sysconf(OPEN_MAX) on start-up, and
-     warn if we're running as a server with a low limit.
    - Implement If-Modified-Since for directories.
    - Make more configuration variables into CSVs.
 N  - Handle rendezvousing with unverified nodes.
@@ -85,7 +50,6 @@ R  - learn from ben about his openssl-reinitialization-trick to
      extend-data cells can be extend requests.
    - have a pool of circuits available, cannibalize them
      for your purposes (e.g. rendezvous, etc).
-   D nt services on win32.
    - Once we have a trusted directory on port 80, stop falling back to
      forbidden ports when fascistfirewall blocks all good dirservers.
 
@@ -95,7 +59,6 @@ R  - learn from ben about his openssl-reinitialization-trick to
            o Specify
            o Implement parsing
            - Generate new formats (Not till 007 is dead)
-   - make loglevel info less noisy
    - Facility to automatically choose long-term helper nodes; perhaps
      on by default for hidden services.
    o Make command-line strict about checking options; make only certain
