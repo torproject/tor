@@ -347,8 +347,6 @@ static void run_connection_housekeeping(int i, time_t now) {
      !conn->marked_for_close &&
      conn->timestamp_lastwritten + 5*60 < now) {
     log_fn(LOG_WARN,"Expiring wedged directory conn (fd %d, purpose %d)", conn->s, conn->purpose);
-    /* XXXX This next check may help isolate where the pesky EPIPE bug
-     * really occurs. */
     if (connection_wants_to_flush(conn)) {
       if(flush_buf(conn->s, conn->outbuf, &conn->outbuf_flushlen) < 0) {
         log_fn(LOG_WARN,"flushing expired directory conn failed.");
@@ -752,7 +750,7 @@ static void catch(int the_signal) {
         unlink(options.PidFile);
       exit(0);
     case SIGPIPE:
-      log(LOG_WARN,"Bug: caught sigpipe. Ignoring.");
+      log(LOG_INFO,"Caught sigpipe. Ignoring.");
       break;
     case SIGHUP:
       please_reset = 1;
