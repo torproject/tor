@@ -31,6 +31,10 @@ Do you want to run a tor server?
   in your DataDirectory is your 'fingerprint' file. Mail it to
   tor-ops@freehaven.net.
 
+  Please also tell us in that mail who you are, so we know whom to contact
+  if there's any problem.  Also describe what kind of connectivity the new
+  server will have.  If possible PGP sign your mail.
+
   NOTE: You won't be able to use tor as a client or server
   in this configuration until you've been added to the directory
   and can authenticate to the other nodes.
