@@ -187,7 +187,7 @@ static int write_configuration_file(const char *fname, or_options_t *options);
 
 /** Command-line and config-file options. */
 static or_options_t *global_options=NULL;
-/** Name of ost recently read torrc file. */
+/** Name of most recently read torrc file. */
 static char *config_fname = NULL;
 
 /** Return the currently configured options. */
@@ -325,7 +325,7 @@ options_act(void) {
     smin = config_dump_options(options, 1);
     smax = config_dump_options(options, 0);
     log_fn(LOG_DEBUG, "These are our options:\n%s",smax);
-    log_fn(LOG_DEBUGS, "We changed these options:\n%s",smin);
+    log_fn(LOG_DEBUG, "We changed these options:\n%s",smin);
     tor_free(smin);
     tor_free(smax);
   }
@@ -2081,16 +2081,25 @@ static int
 write_configuration_file(const char *fname, or_options_t *options)
 {
   char fn_tmp[1024];
-  char *new_val=NULL, *new_conf=NULL;
+  char *old_val=NULL, *new_val=NULL, *new_conf=NULL;
   int rename_old = 0, r;
   size_t len;
 
-  if (fname && file_status(fname) == FN_FILE) {
-    char *old_val = read_file_to_str(fname, 0);
-    if (strcmpstart(old_val, GENERATED_FILE_PREFIX)) {
-      rename_old = 1;
+  if (fname) {
+    switch (file_status(fname)) {
+      case FN_FILE:
+        old_val = read_file_to_str(fname, 0);
+        if (strcmpstart(old_val, GENERATED_FILE_PREFIX)) {
+          rename_old = 1;
+        }
+        tor_free(old_val);
+        break;
+      case FN_NOENT:
+        break;
+      default:
+        log_fn(LOG_WARN,"Config file %s is not a file? Failing.", fname);
+        return -1;
     }
-    tor_free(old_val);
   }
 
   if (!(new_conf = config_dump_options(options, 1))) {
@@ -2109,7 +2118,7 @@ write_configuration_file(const char *fname, or_options_t *options)
         log_fn(LOG_WARN, "Filename too long");
         goto err;
       }
-      if (file_status(fn_tmp) != FN_FILE)
+      if (file_status(fn_tmp) == FN_NOENT)
         break;
       ++i;
     }

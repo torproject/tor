@@ -373,11 +373,10 @@ handle_control_saveconf(connection_t *conn, uint16_t len,
                         const char *body)
 {
   if (save_current_config()<0) {
-    send_control_done(conn);
-  } else {
     send_control_error(conn, ERR_INTERNAL,
                        "Unable to write configuration to disk.");
   }
+  send_control_done(conn);
   return 0;
 }
 
