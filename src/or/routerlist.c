@@ -20,7 +20,7 @@ extern or_options_t options; /**< command-line and config-file options */
 
 /* static function prototypes */
 static routerinfo_t *
-router_pick_directory_server_impl(int requireauth, int preferothers);
+router_pick_directory_server_impl(int requireauth, int requireothers, int fascistfirewall);
 static void mark_all_authdirservers_up(void);
 static int router_resolve_routerlist(routerlist_t *dir);
 
@@ -47,15 +47,15 @@ extern int has_fetched_directory; /**< from main.c */
 routerinfo_t *router_pick_directory_server(int requireauth, int requireothers) {
   routerinfo_t *choice;
 
-  choice = router_pick_directory_server_impl(requireauth, requireothers);
+  choice = router_pick_directory_server_impl(requireauth, requireothers, options.FascistFirewall);
   if(choice)
     return choice;
 
   log_fn(LOG_INFO,"No dirservers are reachable. Trying them all again.");
-  /* mark all authdirservers are up again */
+  /* mark all authdirservers as up again */
   mark_all_authdirservers_up();
   /* try again */
-  choice = router_pick_directory_server_impl(requireauth, requireothers);
+  choice = router_pick_directory_server_impl(requireauth, requireothers, 0);
   if(choice)
     return choice;
 
@@ -71,7 +71,7 @@ routerinfo_t *router_pick_directory_server(int requireauth, int requireothers) {
       return NULL;
   }
   /* give it one last try */
-  choice = router_pick_directory_server_impl(requireauth, requireothers);
+  choice = router_pick_directory_server_impl(requireauth, requireothers, 0);
   return choice;
 }
 
@@ -79,7 +79,7 @@ routerinfo_t *router_pick_directory_server(int requireauth, int requireothers) {
  * it has to be a trusted server. If requireothers, it cannot be us.
  */
 static routerinfo_t *
-router_pick_directory_server_impl(int requireauth, int requireothers)
+router_pick_directory_server_impl(int requireauth, int requireothers, int fascistfirewall)
 {
   int i;
   routerinfo_t *router;
@@ -99,7 +99,7 @@ router_pick_directory_server_impl(int requireauth, int requireothers)
       continue;
     if(requireothers && router_is_me(router))
       continue;
-    if(options.FascistFirewall) {
+    if(fascistfirewall) {
       sprintf(buf,"%d",router->dir_port);
       if (!smartlist_string_isin(options.FirewallPorts, buf))
         continue;
