@@ -317,93 +317,165 @@ int fetch_from_buf_http(buf_t *buf,
   return 1;
 }
 
-/* There is a (possibly incomplete) socks handshake on *buf, of the
- * forms
- *   socks4: "socksheader || username\0".
- *   socks4a: "socksheader || username\0 || destaddr\0".
+/* There is a (possibly incomplete) socks handshake on buf, of one
+ * of the forms
+ *   socks4: "socksheader username\0"
+ *   socks4a: "socksheader username\0 destaddr\0"
+ *   socks5 phase one: "version #methods methods"
+ *   socks5 phase two: "version command 0 addresstype..."
  * If it's a complete and valid handshake, and destaddr fits in addr_out,
  *   then pull the handshake off the buf, assign to addr_out and port_out,
  *   and return 1.
  * If it's invalid or too big, return -1.
- * Else it's not all there yet, change nothing and return 0.
+ * Else it's not all there yet, leave buf alone and return 0.
+ * If you want to specify the socks reply, write it into *reply
+ *   and set *replylen, else leave *replylen alone.
+ * If returning 0 or -1, *addr_out and *port_out are undefined.
  */
-int fetch_from_buf_socks(buf_t *buf,
+int fetch_from_buf_socks(buf_t *buf, char *socks_version,
+                         char *reply, int *replylen,
                          char *addr_out, int max_addrlen,
                          uint16_t *port_out) {
-  socks4_t socks4_info;
+  unsigned char len;
   char *tmpbuf=NULL;
-  uint16_t port;
-  enum {socks4, socks4a } socks_prot = socks4a;
+  uint32_t destip;
+  enum {socks4, socks4a} socks4_prot = socks4a;
   char *next, *startaddr;
+  struct in_addr in;
 
-  if(buf->datalen < sizeof(socks4_t)) /* basic info available? */
-    return 0; /* not yet */
-
-  /* an inlined socks4_unpack() */
-  socks4_info.version = (unsigned char) *(buf->buf);
-  socks4_info.command = (unsigned char) *(buf->buf+1);
-  socks4_info.destport = ntohs(*(uint16_t*)(buf->buf+2));
-  socks4_info.destip = ntohl(*(uint32_t*)(buf->buf+4));
-
-  if(socks4_info.version != 4) {
-    log_fn(LOG_WARNING,"Unrecognized version %d.",socks4_info.version);
-    return -1;
-  }
-
-  if(socks4_info.command != 1) { /* not a connect? we don't support it. */
-    log_fn(LOG_WARNING,"command %d not '1'.",socks4_info.command);
-    return -1;
-  }
-
-  port = socks4_info.destport;
-  if(!port) {
-    log_fn(LOG_WARNING,"Port is zero.");
-    return -1;
-  }
-
-  if(!socks4_info.destip) {
-    log_fn(LOG_WARNING,"DestIP is zero.");
-    return -1;
-  }
-
-  if(socks4_info.destip >> 8) {
-    struct in_addr in;
-    log_fn(LOG_DEBUG,"destip not in form 0.0.0.x.");
-    in.s_addr = htonl(socks4_info.destip);
-    tmpbuf = inet_ntoa(in);
-    if(max_addrlen <= strlen(tmpbuf)) {
-      log_fn(LOG_WARNING,"socks4 addr too long.");
-      return -1;
-    }
-    log_fn(LOG_DEBUG,"Successfully read destip (%s)", tmpbuf);
-    socks_prot = socks4;
-  }
-
-  next = memchr(buf->buf+SOCKS4_NETWORK_LEN, 0, buf->datalen);
-  if(!next) {
-    log_fn(LOG_DEBUG,"Username not here yet.");
+  if(buf->datalen < 2) /* version and another byte */
     return 0;
-  }
+  switch(*(buf->buf)) { /* which version of socks? */
 
-  startaddr = next+1;
-  if(socks_prot == socks4a) {
-    next = memchr(startaddr, 0, buf->buf+buf->datalen-startaddr);
-    if(!next) {
-      log_fn(LOG_DEBUG,"Destaddr not here yet.");
-      return 0;
-    }
-    if(max_addrlen <= next-startaddr) {
-      log_fn(LOG_WARNING,"Destaddr too long.");
+    case 5: /* socks5 */
+
+      if(*socks_version != 5) { /* we need to negotiate a method */
+        unsigned char nummethods = (unsigned char)*(buf->buf+1);
+        assert(!*socks_version);
+        log_fn(LOG_DEBUG,"socks5: learning offered methods");
+        if(buf->datalen < 2+nummethods)
+          return 0;
+        if(!nummethods || !memchr(buf->buf+2, 0, nummethods)) {
+          log_fn(LOG_WARNING,"socks5: offered methods don't include 'no auth'. Rejecting.");
+          *replylen = 2; /* 2 bytes of response */
+          *reply = 5; /* socks5 reply */
+          *(reply+1) = 0xFF; /* reject all methods */
+          return -1;
+        }          
+        buf->datalen -= (2+nummethods); /* remove packet from buf */
+        memmove(buf->buf, buf->buf + 2 + nummethods, buf->datalen);
+
+        *replylen = 2; /* 2 bytes of response */
+        *reply = 5; /* socks5 reply */
+        *(reply+1) = 0; /* choose the 'no auth' method */
+        *socks_version = 5; /* remember that we've already negotiated auth */
+        log_fn(LOG_DEBUG,"socks5: accepted method 0");
+        return 0;
+      }
+      /* we know the method; read in the request */
+      log_fn(LOG_DEBUG,"socks5: checking request");
+      if(buf->datalen < 8) /* basic info plus >=2 for addr plus 2 for port */
+        return 0; /* not yet */
+      if(*(buf->buf+1) != 1) { /* not a connect? we don't support it. */
+        log_fn(LOG_WARNING,"socks5: command %d not '1'.",*(buf->buf+1));
+        return -1;
+      }
+      switch(*(buf->buf+3)) { /* address type */
+        case 1: /* IPv4 address */
+          log_fn(LOG_DEBUG,"socks5: ipv4 address type");
+          if(buf->datalen < 10) /* ip/port there? */
+            return 0; /* not yet */
+          destip = ntohl(*(uint32_t*)(buf->buf+4));
+          in.s_addr = htonl(destip);
+          tmpbuf = inet_ntoa(in);
+          if(strlen(tmpbuf)+1 > max_addrlen) {
+            log_fn(LOG_WARNING,"socks5 IP takes %d bytes, which doesn't fit in %d",
+                   strlen(tmpbuf)+1,max_addrlen);
+            return -1;
+          }
+          strcpy(addr_out,tmpbuf);
+          *port_out = ntohs(*(uint16_t*)(buf->buf+8));
+          buf->datalen -= 10;
+          memmove(buf->buf, buf->buf+10, buf->datalen);
+          return 1;
+        case 3: /* fqdn */
+          log_fn(LOG_DEBUG,"socks5: fqdn address type");
+          len = (unsigned char)*(buf->buf+4);
+          if(buf->datalen < 7+len) /* addr/port there? */
+            return 0; /* not yet */
+          if(len+1 > max_addrlen) {
+            log_fn(LOG_WARNING,"socks5 hostname is %d bytes, which doesn't fit in %d",
+                   len+1,max_addrlen);
+            return -1;
+          }
+          memcpy(addr_out,buf->buf+5,len);
+          addr_out[len] = 0;
+          *port_out = ntohs(*(uint16_t*)(buf->buf+5+len));
+          buf->datalen -= (5+len+2);
+          memmove(buf->buf, buf->buf+(5+len+2), buf->datalen);
+          return 1;
+        default: /* unsupported */
+          log_fn(LOG_WARNING,"socks5: unsupported address type %d",*(buf->buf+3));
+          return -1;
+      }
+      assert(0);
+    case 4: /* socks4 */
+
+       *socks_version = 4;
+      if(buf->datalen < SOCKS4_NETWORK_LEN) /* basic info available? */
+        return 0; /* not yet */
+
+      if(*(buf->buf+1) != 1) { /* not a connect? we don't support it. */
+        log_fn(LOG_WARNING,"socks4: command %d not '1'.",*(buf->buf+1));
+        return -1;
+      }
+
+      *port_out = ntohs(*(uint16_t*)(buf->buf+2));
+      destip = ntohl(*(uint32_t*)(buf->buf+4));
+      if(!*port_out || !destip) {
+        log_fn(LOG_WARNING,"socks4: Port or DestIP is zero.");
+        return -1;
+      }
+      if(destip >> 8) {
+        log_fn(LOG_DEBUG,"socks4: destip not in form 0.0.0.x.");
+        in.s_addr = htonl(destip);
+        tmpbuf = inet_ntoa(in);
+        if(strlen(tmpbuf)+1 > max_addrlen) {
+          log_fn(LOG_WARNING,"socks4 addr (%d bytes) too long.", strlen(tmpbuf));
+          return -1;
+        }
+        log_fn(LOG_DEBUG,"socks4: successfully read destip (%s)", tmpbuf);
+        socks4_prot = socks4;
+      }
+
+      next = memchr(buf->buf+SOCKS4_NETWORK_LEN, 0, buf->datalen);
+      if(!next) {
+        log_fn(LOG_DEBUG,"Username not here yet.");
+        return 0;
+      }
+
+      startaddr = next+1;
+      if(socks4_prot == socks4a) {
+        next = memchr(startaddr, 0, buf->buf+buf->datalen-startaddr);
+        if(!next) {
+          log_fn(LOG_DEBUG,"Destaddr not here yet.");
+          return 0;
+        }
+        if(max_addrlen <= next-startaddr) {
+          log_fn(LOG_WARNING,"Destaddr too long.");
+          return -1;
+        }
+      }
+      log_fn(LOG_DEBUG,"Everything is here. Success.");
+      strcpy(addr_out, socks4_prot == socks4 ? tmpbuf : startaddr);
+      buf->datalen -= (next-buf->buf+1); /* next points to the final \0 on inbuf */
+      memmove(buf->buf, next+1, buf->datalen);
+      return 1;
+
+    default: /* version is not socks4 or socks5 */
+      log_fn(LOG_WARNING,"Socks version %d not recognized.",*(buf->buf));
       return -1;
-    }
   }
-  log_fn(LOG_DEBUG,"Everything is here. Success.");
-  *port_out = port; 
-  strcpy(addr_out, socks_prot == socks4 ? tmpbuf : startaddr);
-  buf->datalen -= (next-buf->buf+1); /* next points to the final \0 on inbuf */
-  memmove(buf->buf, next+1, buf->datalen);
-//  log_fn(LOG_DEBUG,"buf_datalen is now %d:'%s'",*buf_datalen,buf);
-  return 1;
 }
 
 /*

@@ -678,13 +678,13 @@ static void dumpstats(void) { /* dump stats to stdout */
     circuit_dump_by_conn(conn); /* dump info about all the circuits using this conn */
     printf("\n");
   }
-  printf("Cells processed: % 10lud padding\n"
-         "                 % 10lud create\n"
-         "                 % 10lud created\n"
-         "                 % 10lud relay\n"
-         "                        (% 10lud relayed)\n"
-         "                        (% 10lud delivered)\n"
-         "                 % 10lud destroy\n",
+  printf("Cells processed: %10lud padding\n"
+         "                 %10lud create\n"
+         "                 %10lud created\n"
+         "                 %10lud relay\n"
+         "                        (%10lud relayed)\n"
+         "                        (%10lud delivered)\n"
+         "                 %10lud destroy\n",
          stats_n_padding_cells_processed,
          stats_n_create_cells_processed,
          stats_n_created_cells_processed,

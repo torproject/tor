@@ -9,14 +9,10 @@ extern or_options_t options; /* command-line and config-file options */
 static int connection_ap_handshake_process_socks(connection_t *conn);
 static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *circ,
                                               char *destaddr, uint16_t destport);
-static int connection_ap_handshake_socks_reply(connection_t *conn, char result);
+static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
+                                               int replylen, char success);
 
 static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
-
-#define SOCKS4_REQUEST_GRANTED          90
-#define SOCKS4_REQUEST_REJECT           91
-#define SOCKS4_REQUEST_IDENT_FAILED     92
-#define SOCKS4_REQUEST_IDENT_CONFLICT   93
 
 int connection_edge_process_inbuf(connection_t *conn) {
 
@@ -242,7 +238,7 @@ int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ, connection
         break;
       }
       log_fn(LOG_INFO,"Connected! Notifying application.");
-      if(connection_ap_handshake_socks_reply(conn, SOCKS4_REQUEST_GRANTED) < 0) {
+      if(connection_ap_handshake_socks_reply(conn, NULL, 0, 1) < 0) {
 /*ENDCLOSE*/    conn->marked_for_close = 1;
       }
       break;
@@ -307,6 +303,9 @@ int connection_edge_finished_flushing(connection_t *conn) {
     case EXIT_CONN_STATE_OPEN:
       connection_stop_writing(conn);
       return connection_consider_sending_sendme(conn, conn->type);
+    case AP_CONN_STATE_SOCKS_WAIT:
+      connection_stop_writing(conn);
+      return 0;
     default:
       log_fn(LOG_WARNING,"BUG: called in unexpected state.");
       return -1;
@@ -445,23 +444,29 @@ int connection_consider_sending_sendme(connection_t *conn, int edge_type) {
 static int connection_ap_handshake_process_socks(connection_t *conn) {
   circuit_t *circ;
   char destaddr[200]; /* XXX why 200? but not 256, because it won't fit in a cell */
+  char reply[256];
   uint16_t destport;
+  int replylen=0;
+  int sockshere;
 
   assert(conn);
 
   log_fn(LOG_DEBUG,"entered.");
 
-  switch(fetch_from_buf_socks(conn->inbuf,
-                              destaddr, sizeof(destaddr), &destport)) {
-    case -1:
+  sockshere = fetch_from_buf_socks(conn->inbuf, &conn->socks_version, reply, &replylen,
+                                   destaddr, sizeof(destaddr), &destport);
+  if(sockshere == -1 || sockshere == 0) {
+    if(replylen) { /* we should send reply back */
+      log_fn(LOG_DEBUG,"reply is already set for us. Using it.");
+      connection_ap_handshake_socks_reply(conn, reply, replylen, 0);
+    } else if(sockshere == -1) { /* send normal reject */
       log_fn(LOG_WARNING,"Fetching socks handshake failed. Closing.");
-      connection_ap_handshake_socks_reply(conn, SOCKS4_REQUEST_REJECT);
-      return -1;
-    case 0:
-      log_fn(LOG_DEBUG,"Fetching socks handshake, not all here yet. Ignoring.");
-      return 0;
-    /* case 1, fall through */
-  }
+      connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
+    } else {
+      log_fn(LOG_DEBUG,"socks handshake not all here yet.");
+    }
+    return sockshere;
+  } /* else socks handshake is done, continue processing */
 
   /* find the circuit that we should use, if there is one. */
   circ = circuit_get_newest_open();
@@ -521,26 +526,43 @@ static int connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t *
   return 0;
 }
 
-static int connection_ap_handshake_socks_reply(connection_t *conn, char result) {
-  char buf[SOCKS4_NETWORK_LEN];
+static int connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
+                                               int replylen, char success) {
+  char buf[256];
 
-  assert(conn);
-
-  /* an inlined socks4_pack() */
-  memset(buf,0,sizeof(buf));
-  buf[1] = result; /* command */
-  /* leave version, destport, destip zero */
-
-  if(connection_write_to_buf(buf, sizeof(buf), conn) < 0)
-    return -1;
-  return connection_flush_buf(conn); /* try to flush it, in case we're about to close the conn */
+  if(replylen) { /* we already have a reply in mind */
+    connection_write_to_buf(reply, replylen, conn);
+    return connection_flush_buf(conn); /* try to flush it */
+  }
+  if(conn->socks_version == 4) {
+    memset(buf,0,SOCKS4_NETWORK_LEN);
+#define SOCKS4_GRANTED          90
+#define SOCKS4_REJECT           91
+    buf[1] = (success ? SOCKS4_GRANTED : SOCKS4_REJECT);
+    /* leave version, destport, destip zero */
+    connection_write_to_buf(buf, SOCKS4_NETWORK_LEN, conn);
+    return connection_flush_buf(conn); /* try to flush it */
+  }
+  if(conn->socks_version == 5) {
+    buf[0] = 5; /* version 5 */
+#define SOCKS5_SUCCESS          0
+#define SOCKS5_GENERIC_ERROR    1
+    buf[1] = success ? SOCKS5_SUCCESS : SOCKS5_GENERIC_ERROR;
+    buf[2] = 0;
+    buf[3] = 1; /* ipv4 addr */
+    memset(buf+4,0,6); /* XXX set external addr/port to 0, see what breaks */
+    connection_write_to_buf(buf,10,conn);
+    return connection_flush_buf(conn); /* try to flush it */
+  }
+  assert(0);
 }
 
 /*ENDCLOSE*/ static int connection_exit_begin_conn(cell_t *cell, circuit_t *circ) {
   connection_t *n_stream;
   char *colon;
 
-  if(!memchr(cell->payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE,0,cell->length-RELAY_HEADER_SIZE-STREAM_ID_SIZE)) {
+  if(!memchr(cell->payload+RELAY_HEADER_SIZE+STREAM_ID_SIZE,0,
+             cell->length-RELAY_HEADER_SIZE-STREAM_ID_SIZE)) {
     log_fn(LOG_WARNING,"relay begin cell has no \\0. Dropping.");
     return 0;
   }
