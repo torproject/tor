@@ -32,9 +32,8 @@ _connection_mark_unattached_ap(connection_t *conn, int endreason,
   conn->has_sent_end = 1; /* no circ yet */
 
   if (conn->marked_for_close) {
-      log(LOG_WARN,"Duplicate call to connection_mark_unattached_ap at %s:%d (first marked at %s:%d)",
-          file, line,
-          conn->marked_for_close_file,conn->marked_for_close);
+    /* This call will warn as appropriate. */
+    _connection_mark_for_close(conn, line, file);
     return;
   }
 
@@ -52,9 +51,7 @@ _connection_mark_unattached_ap(connection_t *conn, int endreason,
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,0,NULL);
   }
 
-  _connection_mark_for_close(conn);
-  conn->marked_for_close_file = file;
-  conn->marked_for_close = line;
+  _connection_mark_for_close(conn, line, file);
   conn->hold_open_until_flushed = 1;
 }
 
