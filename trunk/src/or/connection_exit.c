@@ -53,9 +53,9 @@ int connection_exit_finished_flushing(connection_t *conn) {
       if(connection_wants_to_flush(conn)) /* in case there are any queued data cells */
         connection_start_writing(conn);
       connection_start_reading(conn);
-
-      /* also, deliver a 'connected' cell back through the circuit. */
-      return connection_exit_send_connected(conn);
+      return
+        connection_exit_send_connected(conn) || /* deliver a 'connected' cell back through the circuit. */
+        connection_process_inbuf(conn); /* in case the server has written anything */
     case EXIT_CONN_STATE_OPEN:
       /* FIXME down the road, we'll clear out circuits that are pending to close */
       connection_stop_writing(conn);
@@ -174,6 +174,7 @@ int connection_exit_process_data_cell(cell_t *cell, connection_t *conn) {
           log(LOG_NOTICE,"connection_exit_process_data_cell(): tell roger: newly connected conn had data waiting!");
 //          connection_start_writing(conn);
         }
+//        connection_process_inbuf(conn);
         connection_watch_events(conn, POLLIN);
 
         /* also, deliver a 'connected' cell back through the circuit. */
