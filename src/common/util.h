@@ -11,6 +11,9 @@
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
 
 #if _MSC_VER > 1300
 #include <winsock2.h>
@@ -149,7 +152,7 @@ long tv_udiff(struct timeval *start, struct timeval *end);
 void tv_addms(struct timeval *a, long ms);
 void tv_add(struct timeval *a, struct timeval *b);
 int tv_cmp(struct timeval *a, struct timeval *b);
-time_t tor_timegm (struct tm *tm);
+time_t tor_timegm(struct tm *tm);
 
 int write_all(int fd, const char *buf, size_t count, int isSocket);
 int read_all(int fd, char *buf, size_t count, int isSocket);
