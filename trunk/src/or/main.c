@@ -714,7 +714,8 @@ static void run_scheduled_events(time_t now) {
     /* also, check religiously for reachability, if it's within the first
      * 20 minutes of our uptime. */
     if (server_mode(options) &&
-        stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT)
+        stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
+        !we_are_hibernating())
       consider_testing_reachability();
   }
 
@@ -811,6 +812,7 @@ static void second_elapsed_callback(int fd, short event, void *args)
   stats_prev_global_write_bucket = global_write_bucket;
 
   if (server_mode(options) &&
+      !we_are_hibernating() &&
       !check_whether_ports_reachable() &&
       stats_n_seconds_working / TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT !=
       (stats_n_seconds_working+seconds_elapsed) /
