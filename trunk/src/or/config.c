@@ -265,7 +265,7 @@ void init_options(or_options_t *options) {
   options->MaxConn = 900;
   options->DirFetchPostPeriod = 600;
   options->KeepalivePeriod = 300;
-  options->MaxOnionsPending = 10;
+  options->MaxOnionsPending = 100;
   options->NewCircuitPeriod = 60; /* once a minute */
   options->TotalBandwidth = 800000; /* at most 800kB/s total sustained incoming */
   options->NumCpus = 1;
