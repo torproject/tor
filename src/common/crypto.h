@@ -20,6 +20,8 @@
 
 #define CRYPTO_SHA1_DIGEST 0
 
+#define CRYPTO_SHA1_DIGEST_LEN 20
+
 typedef struct crypto_pk_env_t crypto_pk_env_t;
 typedef struct crypto_cipher_env_t crypto_cipher_env_t;
 typedef struct crypto_digest_env_t crypto_digest_env_t;
@@ -58,11 +60,15 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, unsigned char *from, int fro
 int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
 int crypto_pk_public_checksig(crypto_pk_env_t *env, unsigned char *from, int fromlen, unsigned char *to);
 #define FINGERPRINT_LEN 49
+int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len);
+crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len);
+int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out);
 int crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out);
 int crypto_pk_check_fingerprint_syntax(const char *s);
 
 int base64_encode(char *dest, int destlen, const char *src, int srclen);
 int base64_decode(char *dest, int destlen, const char *src, int srclen);
+int base32_encode(char *dest, int destlen, const char *src, int srclen);
 
 /* Key negotiation */
 typedef struct crypto_dh_env_st {

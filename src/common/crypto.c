@@ -644,29 +644,68 @@ int crypto_pk_private_sign(crypto_pk_env_t *env, unsigned char *from, int fromle
   }
 }
 
-/* Given a private or public key pk, put a fingerprint of the
- * public key into fp_out.
+/* Encode the public portion of 'pk' into 'dest'.  Return -1 on error,
+ * or the number of characters used on success.
  */
-int
-crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out)
+int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
+{
+  int len;
+  len = i2d_RSAPublicKey((RSA*)pk->key, NULL);
+  if (len < 0 || len > dest_len)
+    return -1;
+  len = i2d_RSAPublicKey((RSA*)pk->key, (unsigned char**)&dest);
+  if (len < 0)
+    return -1;
+  return len;
+}
+
+/* Decode an ASN1-encoded public key from str.
+ */
+crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, int len)
+{
+  RSA *rsa;
+  rsa = d2i_RSAPublicKey(NULL, (const unsigned char**)&str, len);
+  if (!rsa)
+    return NULL; /* XXXX log openssl error */
+  return _crypto_new_pk_env_rsa(rsa);
+}
+
+/* Given a private or public key pk, put a SHA1 hash of the public key into
+ * digest_out (must have 20 bytes of space).
+ */
+int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
 {
   unsigned char *buf, *bufp;
-  unsigned char digest[20];
   int len;
-  int i;
   assert(pk->type == CRYPTO_PK_RSA);
   len = i2d_RSAPublicKey((RSA*)pk->key, NULL);
   if (len < 0)
     return -1;
-  if (len<FINGERPRINT_LEN+1) len = FINGERPRINT_LEN+1;
   buf = bufp = tor_malloc(len+1);
   len = i2d_RSAPublicKey((RSA*)pk->key, &bufp);
   if (len < 0) {
     free(buf);
     return -1;
   }
-  if (crypto_SHA_digest(buf, len, digest) < 0) {
+  if (crypto_SHA_digest(buf, len, digest_out) < 0) {
     free(buf);
+    return -1;
+  }
+  return 0;
+}
+
+/* Given a private or public key pk, put a fingerprint of the
+ * public key into fp_out (must have at least FINGERPRINT_LEN+1 bytes of
+ * space).
+ */
+int
+crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out)
+{
+  unsigned char *bufp;
+  unsigned char digest[20];
+  unsigned char buf[FINGERPRINT_LEN+1];
+  int i;
+  if (crypto_pk_get_digest(pk, digest)) {
     return -1;
   }
   bufp = buf;
@@ -681,7 +720,6 @@ crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out)
   assert(strlen(buf) == FINGERPRINT_LEN);
   assert(crypto_pk_check_fingerprint_syntax(buf));
   strcpy(fp_out, buf);
-  free(buf);
   return 0;
 }
 
@@ -1172,4 +1210,31 @@ base64_decode(char *dest, int destlen, const char *src, int srclen)
   EVP_DecodeFinal(&ctx, dest, &ret);
   ret += len;
   return ret;
+}
+
+static const char BASE32_CHARS[] = "abcdefghijklmnopqrstuvwxyz012345";
+
+int
+base32_encode(char *dest, int destlen, const char *src, int srclen)
+{
+  int nbits, i, bit, v, u;
+  nbits = srclen * 8;
+
+  if ((nbits%5) != 0)
+    /* We need an even multiple of 5 bits. */
+    return -1;
+  if ((nbits/5)+1 < destlen)
+    /* Not enough space. */
+    return -1;
+
+  for (i=0,bit=0; bit < nbits; ++i, bit+=5) {
+    /* set v to the 16-bit value starting at src[bits/8], 0-padded. */
+    v = ((unsigned char)src[bit/8]) << 8;
+    if (bit+5<nbits) v += src[(bit/8)+1];
+    /* set u to the 5-bit value at the bit'th bit of src. */
+    u = (v >> (11-(bit%8))) & 0x1F;
+    dest[i] = BASE32_CHARS[u];
+  }
+  dest[i] = '\0';
+  return 0;
 }

@@ -408,6 +408,14 @@ test_crypto()
   test_streq(data3, "Ossifrage");
   /*XXXX test failed signing*/
 
+  /* Try encoding */
+  crypto_free_pk_env(pk2);
+  pk2 = NULL;
+  i = crypto_pk_asn1_encode(pk1, data1, 1024);
+  test_assert(i>0);
+  pk2 = crypto_pk_asn1_decode(data1, i);
+  test_assert(crypto_pk_cmp_keys(pk1,pk2) == 0);
+
   crypto_free_pk_env(pk1);
   crypto_free_pk_env(pk2);
 
@@ -421,11 +429,18 @@ test_crypto()
   test_eq(j, 71);
   test_assert(data2[i] == '\0');
 
+  /* Base32 tests */
+  strcpy(data1, "5chrs");
+  /* bit pattern is:  [35 63 68 72 73] ->
+   *        [00110101 01100011 01101000 01110010 01110011]
+   * By 5s: [00110 10101 10001 10110 10000 11100 10011 10011]
+   */
+  i = base32_encode(data2, 9, data1, 5);
+  test_streq(data2, "gvrwq2tt");
 
   free(data1);
   free(data2);
   free(data3);
-
 }
 
 void
