@@ -474,12 +474,13 @@ list_running_servers(char **nicknames_out)
 
   get_connection_array(&connection_array, &n_conns);
   for (i = 0; i<n_conns; ++i) {
-    char *name;
+    char *name, *cp;
     conn = connection_array[i];
     if (conn->type != CONN_TYPE_OR || !conn->nickname)
       continue; /* only list ORs. */
-    if (router_nickname_is_approved(conn->nickname, conn->identity_digest)) {
-      name = tor_strdup(conn->nickname);
+    cp = dirserv_get_nickname_by_digest(conn->identity_digest);
+    if (cp) {
+      name = tor_strdup(cp);
     } else {
       name = tor_malloc(HEX_DIGEST_LEN+2);
       *name = '$';
