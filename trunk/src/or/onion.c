@@ -156,15 +156,15 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, size_t rarray_len, siz
 
     choice = choice % (rarray_len);
     log(LOG_DEBUG,"new_route(): Contemplating router %u.",choice);
-    while(choice == oldchoice ||
+    if(choice == oldchoice ||
       (oldchoice < rarray_len && !pkey_cmp(rarray[choice]->pkey, rarray[oldchoice]->pkey)) ||
       !connection_twin_get_by_addr_port(rarray[choice]->addr, rarray[choice]->or_port)) {
       /* Same router as last choice, or router twin,
        *   or no routers with that key are connected to us.
        * Try again. */
       log(LOG_DEBUG,"new_route(): Picked a router %d that won't work as next hop.",choice);
-      choice++;
-      choice = choice % (rarray_len);
+      i--;
+      continue;  
     }
     log(LOG_DEBUG,"new_route(): Chosen router %u for hop %u.",choice,i);
     oldchoice = choice;
