@@ -6,3 +6,8 @@
 # This is a POSIX shell fragment
 #
 RUN_DAEMON="yes"
+
+#
+# Uncomment this if you want to get coredumps
+#
+# ulimit -c unlimited
