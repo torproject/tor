@@ -549,6 +549,7 @@ int find_on_inbuf(char *string, int string_len, buf_t *buf);
 buf_t *buf_new();
 buf_t *buf_new_with_capacity(size_t size);
 void buf_free(buf_t *buf);
+void buf_clear(buf_t *buf);
 
 size_t buf_datalen(const buf_t *buf);
 size_t buf_capacity(const buf_t *buf);
@@ -637,7 +638,7 @@ int getconfig(int argc, char **argv, or_options_t *options);
 connection_t *connection_new(int type);
 void connection_free(connection_t *conn);
 void connection_free_all(void);
-
+void connection_close_immediate(connection_t *conn);
 int _connection_mark_for_close(connection_t *conn, char reason);
 
 #define connection_mark_for_close(c,r)                                  \

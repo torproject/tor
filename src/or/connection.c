@@ -141,6 +141,22 @@ void connection_free_all(void) {
     connection_free(carray[i]);
 }
 
+/* Close the underlying socket for conn, so we don't try to flush it.
+ * Must be used in conjunction with connection_mark_for_close
+ */
+void connection_close_immediate(connection_t *conn)
+{
+  assert_connection_ok(conn,0);
+  if (conn->s < 0) {
+    log_fn(LOG_WARN,"Attempt to close already-closed connection.");
+    return;
+  }
+  close(conn->s);
+  conn->s = -1;
+  buf_clear(conn->outbuf);
+  conn->outbuf_flushlen = 0;
+}
+
 int
 _connection_mark_for_close(connection_t *conn, char reason)
 {
@@ -355,8 +371,7 @@ static void listener_close_if_present(int type) {
          type == CONN_TYPE_DIR_LISTENER);
   conn = connection_get_by_type(type);
   if (conn) {
-    close(conn->s);
-    conn->s = -1;
+    connection_close_immediate(conn);
     connection_mark_for_close(conn,0);
   }
 }
@@ -414,9 +429,7 @@ int connection_handle_read(connection_t *conn) {
        router_mark_as_down(conn->nickname);
     }
     /* There's a read error; kill the connection.*/
-    /* XXX This is the place. We need to somehow indicate to
-     * conn that it should never try to flush, or do anything
-     * with conn->s but close it. */
+    connection_close_immediate(conn); /* Don't flush; connection is dead. */
     connection_mark_for_close(conn, END_STREAM_REASON_MISC);
     return -1;
   }
