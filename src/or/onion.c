@@ -496,7 +496,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
     layer.expire = (uint32_t)(time(NULL) + 86400); /* NOW + 1 day */
   
     /* Key Seed Material */
-    if(crypto_rand(16, layer.keyseed)) { /* error */
+    if(crypto_rand(ONION_KEYSEED_LEN, layer.keyseed)) { /* error */
       log(LOG_ERR,"Error generating random data.");
       goto error;
     }
@@ -678,7 +678,7 @@ int decrypt_onion(unsigned char *onion, uint32_t onionlen, crypto_pk_env_t *prke
   }
   log(LOG_DEBUG,"decrypt_onion() : RSA decryption complete.");
     
-  onion_unpack(layer, onion);
+  onion_unpack(layer, tmpbuf);
 
   /* get key1 = SHA1(KeySeed) */
   if (crypto_SHA_digest(layer->keyseed,16,digest)) {
@@ -791,7 +791,7 @@ static int find_tracked_onion(unsigned char *onion, uint32_t onionlen) {
   
   /* this is a new onion. add it to the list. */
 
-  to->expire = ntohl(*(uint32_t *)(onion+8)); /* set the expiration date */
+  to->expire = ntohl(*(uint32_t *)(onion+7)); /* set the expiration date */
   to->next = NULL;
 
   if (!head_tracked_onions) {
@@ -811,11 +811,13 @@ onion_pack(char *dest, onion_layer_t *src)
 {
   assert((src->version & 0x80) == 0);
   
-  *(uint8_t*)dest = src->version;
+  *(uint8_t*)(dest) = src->version;
   *(uint16_t*)(dest+1) = htons(src->port);
   *(uint32_t*)(dest+3) = htonl(src->addr);
   *(uint32_t*)(dest+7) = htonl(src->expire);
   memcpy(dest+11, src->keyseed, ONION_KEYSEED_LEN);
+  log(LOG_DEBUG,"onion_pack(): version %d, port %d, addr %s, expire %u", src->version, src->port,
+    inet_ntoa(*((struct in_addr *)(dest+3))), src->expire);
 }
 
 void
@@ -826,6 +828,9 @@ onion_unpack(onion_layer_t *dest, char *src)
   dest->addr = ntohl(*(uint32_t*)(src+3));
   dest->expire = ntohl(*(uint32_t*)(src+7));
   memcpy(dest->keyseed, src+11, ONION_KEYSEED_LEN);
+
+  log(LOG_DEBUG,"onion_unpack(): version %d, port %d, addr %s, expire %u", dest->version, dest->port,
+    inet_ntoa(*((struct in_addr *)(src+3))), dest->expire);
 }
 
 /*
