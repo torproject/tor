@@ -8,6 +8,9 @@
 /*
  * Changes :
  * $Log$
+ * Revision 1.10  2002/07/15 16:42:27  montrose
+ * corrected some string literals
+ *
  * Revision 1.9  2002/07/11 19:03:44  montrose
  * finishing touches. think its ready for integration now.
  *
@@ -111,9 +114,9 @@ RETURN VALUE: 0 on success, non-zero on error
       { "ORPort",          'p',  POPT_ARG_INT,     &options->ORPort,
          0, "onion router port",                               "<port>" },
       { "PrivateKeyFile",  'k',  POPT_ARG_STRING,  &options->PrivateKeyFile,
-         0, "maximum number of incoming connections",          "<max>" },
+         0, "maximum number of incoming connections",          "<file>" },
       { "RouterFile",      'r',  POPT_ARG_STRING,  &options->RouterFile,
-         0, "local port on which the onion proxy is running",  "<port>" },
+         0, "local port on which the onion proxy is running",  "<file>" },
       { "TrafficShaping",  't',  POPT_ARG_INT,     &options->TrafficShaping,
          0, "which traffic shaping policy to use",             "<policy>" },
       { "GlobalRole",      'g',  POPT_ARG_INT,     &options->GlobalRole,
@@ -241,7 +244,7 @@ RETURN VALUE: 0 on success, non-zero on error
 
    if ( options->CoinWeight < 0.0 || options->CoinWeight >= 1.0 )
    {
-      log(LOG_ERR,"CoinWeight option must a value from 0.0 upto 1.0, but not including 1.0.");
+      log(LOG_ERR,"CoinWeight option must be a value from 0.0 upto 1.0, but not including 1.0.");
       code = -1;
    }
 
