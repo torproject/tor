@@ -42,7 +42,7 @@ static or_history_t *get_or_history(const char* nickname)
  * the second, creating it if necessary.
  */
 static link_history_t *get_link_history(const char *from_name,
-					const char *to_name)
+                                        const char *to_name)
 {
   or_history_t *orhist;
   link_history_t *lhist;
@@ -152,7 +152,7 @@ void rep_hist_note_connection_died(const char* nickname, time_t when)
  * the OR 'to_name'.
  */
 void rep_hist_note_extend_succeeded(const char *from_name,
-				    const char *to_name)
+                                    const char *to_name)
 {
   link_history_t *hist;
   /* log_fn(LOG_WARN, "EXTEND SUCCEEDED: %s->%s",from_name,to_name); */
@@ -204,23 +204,23 @@ void rep_hist_dump_stats(time_t now, int severity)
     }
     log(severity,
         "OR %s: %ld/%ld good connections; uptime %ld/%ld sec (%.2f%%)",
-	name1,
-	or_history->n_conn_ok, or_history->n_conn_fail+or_history->n_conn_ok,
+        name1,
+        or_history->n_conn_ok, or_history->n_conn_fail+or_history->n_conn_ok,
         upt, upt+downt, uptime*100.0);
 
     strcpy(buffer, "    Good extend attempts: ");
     len = strlen(buffer);
     for (lhist_it = strmap_iter_init(or_history->link_history_map);
-	 !strmap_iter_done(lhist_it);
-	 lhist_it = strmap_iter_next(or_history->link_history_map, lhist_it)) {
+         !strmap_iter_done(lhist_it);
+         lhist_it = strmap_iter_next(or_history->link_history_map, lhist_it)) {
       strmap_iter_get(lhist_it, &name2, &link_history_p);
       link_history = (link_history_t*) link_history_p;
       len += snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
-		      link_history->n_extend_ok,
-		      link_history->n_extend_ok+link_history->n_extend_fail);
+                      link_history->n_extend_ok,
+                      link_history->n_extend_ok+link_history->n_extend_fail);
       if (len >= 2048) {
-	buffer[2047]='\0';
-	break;
+        buffer[2047]='\0';
+        break;
       }
     }
     log(severity, buffer);
