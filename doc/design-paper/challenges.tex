@@ -704,7 +704,7 @@ Internet with vandalism, rude mail, and so on.
 %hate mails via hotmail, attacks, etc.]
 Our initial answer to this situation was to use ``exit policies''
 to allow individual Tor nodes to block access to specific IP/port ranges.
-This approach was meant to make operators more willing to run Tor by allowing
+This approach aims to make operators more willing to run Tor by allowing
 them to prevent their nodes from being used for abusing particular
 services.  For example, all Tor nodes currently block SMTP (port 25), in
 order to avoid being used to send spam.
@@ -915,88 +915,49 @@ reduce usability. Further, if we let clients label certain circuits as
 mid-latency as they are constructed, we could handle both types of traffic
 on the same network, giving users a choice between speed and security.
 
-\subsection{Running a Tor node, path length, and helper nodes}
+\subsection{Enclaves and helper nodes}
 \label{subsec:helper-nodes}
 
-It has been thought for some time that the best anonymity protection
-comes from running your own node~\cite{tor-design,or-pet00}.
-(In fact, this was the only option in the earliest Onion Routing
-design~\cite{or-ih96}.)  While the first implementation
-had a fixed path length of five nodes, first generation
-Onion Routing design included random length routes chosen
-to simultaneously maximize efficiency and unpredictability in routes.
-If one followed Tor's three node default
-path length, an enclave-to-enclave communication (in which the entry and
-exit nodes were run by enclaves themselves)
-would be completely compromised by the
-middle node. Thus for enclave-to-enclave communication, four is the fewest
-number of nodes that preserves the $\frac{c^2}{n^2}$ degree of protection
-in any setting.
+It has long been thought that the best anonymity comes from running your
+own node~\cite{tor-design,or-pet00}. This is called using Tor in an
+\emph{enclave} configuration. Of course, Tor's default path length of
+three is insufficient for these enclaves, since the entry and/or exit
+themselves are sensitive. Tor thus increments the path length by one
+for each sensitive endpoint in the circuit.
+Enclaves also help to protect against end-to-end attacks, since it's
+possible that traffic coming from the node has simply been relayed from
+elsewhere. However, if the node has recognizable behavior patterns,
+an attacker who runs nodes in the network can triangulate over time to
+gain confidence that it is in fact originating the traffic. Wright et
+al.~\cite{wright03} introduce the notion of a \emph{helper node}---a
+single fixed entry node for each user---to combat this \emph{predecessor
+attack}.
 
-The attack in~\cite{attack-tor-oak05}, however,
-shows that simply adding to the
-path length may not protect usage of an enclave protecting node.  A
-hostile web server can observe interference with latency of its own
-communication to nodes  to determine all of the nodes in a three node Tor
-path (although not their order).
-It is reasonable to think that this attack can be easily extended to
-longer paths should those be used; nonetheless there may be some
-advantage to random path length. If the number of nodes is unknown,
-then the adversary would need to send streams to all the nodes in the
-network and analyze the resulting latency from them to be reasonably
-certain that it has not missed the first node in the circuit. Also,
-the attack does not identify the order of nodes in a route, so the
-longer the route, the greater the uncertainty about which node might
-be first. It may be possible to extend the attack to learn the route
-node order, but this has not been explored.
-If so, the incompleteness uncertainty engendered by random lengths would
-remain, but once the complete set of nodes in the route were identified
-the initiating node would also be identified.
+However, the attack in~\cite{attack-tor-oak05} shows that simply adding
+to the path length, or using a helper node, may not protect an enclave
+node. A hostile web server can send constant interference traffic to
+all nodes in the network, and learn which nodes are involved in the
+circuit (though at least in the current attack, he can't learn their
+order). Using randomized path lengths may help some, since the attacker
+will never be certain he has identified all nodes in the path, but as
+long as the network remains small this attack will still be feasible.
 
-Another way to reduce the threats to both enclaves and simple Tor
-clients is to have helper nodes. Helper nodes were introduced
-in~\cite{wright03} as a suggested means of protecting the identity
-of the initiator of a communication in various anonymity protocols.
-The idea is to use a single trusted node as the first one you go to,
-that way an attacker cannot ever attack the first nodes you connect
-to and do some form of intersection attack. This will not affect the
-interference attack at all if the attacker can time latencies to
-both the helper node and the enclave node.
-
-\medskip
-\noindent
-{\bf Helper nodes.}
-Tor can only provide anonymity against an attacker if that attacker can't
-monitor the user's entry and exit on the Tor network.  But since Tor
-currently chooses entry and exit points randomly and changes them frequently,
-a patient attacker who controls a single entry and a single exit is sure to
-eventually break some circuits of frequent users who consider those nodes.
-(We assume that users are as concerned about statistical profiling as about
-the anonymity any particular connection.  That is, it is almost as bad to
-leak the fact that Alice {\it sometimes} talks to Bob as it is to leak the times
-when Alice is {\it actually} talking to Bob.)
-
-
-One solution to this problem is to use ``helper nodes''~\cite{wright02,wright03}---to
-have each client choose a few fixed nodes for critical positions in her
-circuits.  That is, Alice might choose some node H1 as her preferred
-entry, so that unless the attacker happens to control or observe her
-connection to H1, her circuits will remain anonymous.  If H1 is compromised,
-Alice is vunerable as before.  But now, at least, she has a chance of
-not being profiled.
-(Choosing fixed exit nodes is less useful, since the connection from the exit
-node to Alice's destination will be seen not only by the exit but by the
-destination.  Even if Alice chooses a good fixed exit node, she may
-nevertheless connect to a hostile website.)
-
-There are still obstacles remaining before helper nodes can be implemented.
-For one, the litereature does not describe how to choose helpers from a list
+Helper nodes also help Tor clients, because choosing entry and exit points
+randomly and changing them frequently allows an attacker who controls
+even a few nodes to eventually link some of their destinations. The goal
+is to take the risk once and for all about choosing a bad entry node,
+rather than taking a new risk for each new circuit. (Choosing fixed
+exit nodes is less useful, since even an honest exit node still doesn't
+protect against a hostile website.) But obstacles still remain before
+we can implement helper nodes.
+For one, the literature does not describe how to choose helpers from a list
 of nodes that changes over time.  If Alice is forced to choose a new entry
-helper every $d$ days, she can expect to choose a compromised node around
+helper every $d$ days and $c$ of the $n$ nodes are bad, she can expect
+to choose a compromised node around
 every $dc/n$ days. Statistically over time this approach only helps
 if she is better at choosing honest helper nodes than at choosing
 honest nodes.  Worse, an attacker with the ability to DoS nodes could
-force their users to switch helper nodes more frequently and/or to remove
+force users to switch helper nodes more frequently and/or remove
 other candidate helpers.
 
 %Do general DoS attacks have anonymity implications? See e.g. Adam
@@ -1016,6 +977,8 @@ other candidate helpers.
 % Not sure about the logic.  For the attack to work with helper nodes, the
 %attacker needs to guess that Alice is running the hidden service, right?
 %Otherwise, how can he know to measure her traffic specifically? -NM
+%
+% In the Murdoch-Danezis attack, the adversary measures all servers. -RD
 
 %point to routing-zones section re: helper nodes to defend against
 %big stuff.
@@ -1023,10 +986,9 @@ other candidate helpers.
 \subsection{Location-hidden services}
 \label{subsec:hidden-services}
 
-While most of the discussions above have been about forward anonymity
-with Tor, it also provides support for \emph{rendezvous points}, which
+Tor's \emph{rendezvous points}
 let users provide TCP services to other Tor users without revealing
-their location. Since this feature is relatively recent, we describe here
+the service's location. Since this feature is relatively recent, we describe here
 a couple of our early observations from its deployment.
 
 First, our implementation of hidden services seems less hidden than we'd
@@ -1042,7 +1004,7 @@ provide the service and loss of any one location does not imply a
 change in service, would help foil intersection and observation attacks
 where an adversary monitors availability of a hidden service and also
 monitors whether certain users or servers are online. The design
-challenges in providing these services without otherwise compromising
+challenges in providing such services without otherwise compromising
 the hidden service's anonymity remain an open problem;
 however, see~\cite{move-ndss05}.
 
@@ -1054,7 +1016,7 @@ and rather than playing with dyndns and trying to pierce holes in their
 firewall, they run a hidden service on the inside and then rendezvous
 with that hidden service externally.
 
-Also, sites like Bloggers Without Borders (www.b19s.org) are advertising
+News sites like Bloggers Without Borders (www.b19s.org) are advertising
 a hidden-service address on their front page. Doing this can provide
 increased robustness if they use the dual-IP approach we describe
 in~\cite{tor-design},
@@ -1495,7 +1457,7 @@ standoff forever.
 %
 Fourth, the current Tor
 architecture does not scale even to handle current user demand. We must
-find designs and incentives to let clients relay traffic too, without
+find designs and incentives to let some clients relay traffic too, without
 sacrificing too much anonymity.
 
 These are difficult and open questions, yet choosing not to solve them
