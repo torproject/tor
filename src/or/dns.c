@@ -540,7 +540,15 @@ static int dns_found_answer(char *question, uint32_t answer, uint32_t valid) {
     return 0;
   }
 
-  assert(resolve->state == CACHE_STATE_PENDING);
+//  assert(resolve->state == CACHE_STATE_PENDING);
+  /* XXX this is a bug which hasn't been found yet. Probably something
+   * about slaves answering questions when they're not supposed to, and
+   * reusing the old question.
+   */
+  if(resolve->state != CACHE_STATE_PENDING) {
+    log(LOG_ERR,"dns_found_answer(): BUG: resolve '%s' in state %d (not pending). Dropping.",question, resolve->state);
+    return 0;
+  }
 
   resolve->answer = ntohl(answer);
   if(valid)
