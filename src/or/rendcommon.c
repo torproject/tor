@@ -177,12 +177,27 @@ void rend_cache_clean(void)
   }
 }
 
+/* return 1 if query is a valid service id, else return 0. */
+int rend_valid_service_id(char *query) {
+  if(strlen(query) != REND_SERVICE_ID_LEN)
+    return 0;
+
+  /* XXXX also check for bad chars. */
+  return 1;
+}
+
+/* 'query' is a base-32'ed service id. If it's malformed, return -1.
+ * Else look it up.
+ *   If it is found, point *desc to it, and write its length into
+ *   *desc_len, and return 1.
+ *   If it is not found, return 0.
+ */
 int rend_cache_lookup(char *query, const char **desc, int *desc_len)
 {
   rend_cache_entry_t *e;
   assert(rend_cache);
-  if (strlen(query) != REND_SERVICE_ID_LEN)
-    return -1; /* XXXX also check for bad chars. */
+  if (!rend_valid_service_id(query))
+    return -1;
   e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, query);
   if (!e)
     return 0;
@@ -191,6 +206,9 @@ int rend_cache_lookup(char *query, const char **desc, int *desc_len)
   return 1;
 }
 
+/* Calculate desc's service id, and store it.
+ * Return -1 if it's malformed or otherwise rejected, else return 0.
+ */
 int rend_cache_store(char *desc, int desc_len)
 {
   rend_cache_entry_t *e;
@@ -251,8 +269,17 @@ int rend_cache_store(char *desc, int desc_len)
  * Else return -1 and change nothing.
  */
 int rend_parse_rendezvous_address(char *address) {
+  char *s;
 
+  s = strchr(address,'.');
+  if(!s) return -1; /* no dot */
+  if(strcmp(s+1,"onion")) return -1; /* not .onion */
 
+  *s = 0; /* null terminate it */
+  if(rend_valid_service_id(address))
+    return 0; /* success */
+  /* otherwise, return to previous state and return -1 */
+  *s = '.';
   return -1;
 }
 
