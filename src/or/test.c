@@ -642,6 +642,22 @@ test_util(void) {
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
+  smartlist_split_string(sl, " ab\tc \td ef  ", NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  test_eq(4, smartlist_len(sl));
+  test_streq("ab", smartlist_get(sl,0));
+  test_streq("c", smartlist_get(sl,1));
+  test_streq("d", smartlist_get(sl,2));
+  test_streq("ef", smartlist_get(sl,3));
+  smartlist_split_string(sl, "ghi\tj", NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  test_eq(6, smartlist_len(sl));
+  test_streq("ghi", smartlist_get(sl,4));
+  test_streq("j", smartlist_get(sl,5));
+
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
   smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   test_eq(3, smartlist_len(sl));
   test_streq("z", smartlist_get(sl, 0));
