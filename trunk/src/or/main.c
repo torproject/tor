@@ -870,7 +870,7 @@ void exit_function(void)
 
 /** Main entry point for the Tor command-line client.
  */
-int tor_main(int argc, char *argv[]) {
+int tor_init(int argc, char *argv[]) {
 
   /* give it somewhere to log to initially */
   add_temp_log();
@@ -878,7 +878,7 @@ int tor_main(int argc, char *argv[]) {
 
   if (network_init()<0) {
     log_fn(LOG_ERR,"Error initializing network; exiting.");
-    return 1;
+    return -1;
   }
   atexit(exit_function);
 
@@ -915,8 +915,18 @@ int tor_main(int argc, char *argv[]) {
 
   crypto_global_init();
   crypto_seed_rng();
-  do_main_loop();
+  return 0;
+}
+
+void tor_cleanup(void) {
   crypto_global_cleanup();
+}
+
+int tor_main(int argc, char *argv[]) {
+  if (tor_init(argc, argv)<0)
+    return -1;
+  do_main_loop();
+  tor_cleanup();
   return -1;
 }
 
