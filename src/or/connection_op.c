@@ -59,13 +59,14 @@ int op_handshake_process_keys(connection_t *conn) {
         crypto_perror());
     return -1;
   }
+  /* XXXX Check length */
 
   log(LOG_DEBUG,"Successfully decrypted keys from new OP.");
 
   conn->bandwidth = ntohl(*((uint32_t *)auth_plain));
 
   crypto_cipher_set_key(conn->b_crypto, auth_plain+4);
-  crypto_cipher_set_key(conn->f_crypto, auth_plain+12);
+  crypto_cipher_set_key(conn->f_crypto, auth_plain+20);
 #if 0
   printf("f_session_key: ");
   for(x=0;x<8;x++) {
