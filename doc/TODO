@@ -32,6 +32,8 @@ Short-term:
         - consider handling broken socks4 implementations
         - improve how it behaves when i remove a line from the approved-routers files
         - Make tls connections tls_close intentionally
+        - Add '[...truncated]' or similar to truncated log entries (like the directory
+          in connection_dir_process_inbuf()).
         o Rename ACI to circID
         . integrate rep_ok functions, see what breaks
         - update tor faq
