@@ -5,9 +5,13 @@ import socket
 import struct
 import sys
 
-MSG_TYPE_SETCONF = 0x0002
-MSG_TYPE_GETCONF = 0x0003
-MSG_TYPE_AUTH    = 0x0007
+MSG_TYPE_SETCONF   = 0x0002
+MSG_TYPE_GETCONF   = 0x0003
+MSG_TYPE_SETEVENTS = 0x0005
+MSG_TYPE_AUTH      = 0x0007
+
+EVENT_TYPE_BANDWIDTH = 0x0004
+EVENT_TYPE_WARN      = 0x0005
 
 def parseHostAndPort(h):
     host, port = "localhost", 9051
@@ -57,14 +61,31 @@ def set_option(s,msg):
   length,type,body = receive_message(s)
   return
 
+def get_event(s,events):
+  eventbody = struct.pack("!H", events)
+  s.sendall(pack_message(MSG_TYPE_SETEVENTS,eventbody))
+  length,type,body = receive_message(s)
+  return
+
+def listen_for_events(s):
+  while(1):
+    length,type,body = receive_message(s)
+  return
+
 def do_main_loop(host,port):
   print "host is %s:%d"%(host,port)
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   s.connect((host,port))
   authenticate(s)
   get_option(s,"nickname")
-  set_option(s,"runasdaemon 1")
-#  get_option(s,"DirFetchPostPeriod\n")
+  get_option(s,"DirFetchPostPeriod\n")
+  set_option(s,"1")
+  set_option(s,"bandwidthburstbytes 100000")
+#  set_option(s,"runasdaemon 1")
+#  get_event(s,EVENT_TYPE_WARN)
+  get_event(s,EVENT_TYPE_BANDWIDTH)
+
+  listen_for_events(s)
 
   return
 
