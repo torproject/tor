@@ -746,85 +746,6 @@ static void dumpstats(int severity) {
            (int) (stats_n_bytes_read/stats_n_seconds_reading));
 }
 
-void daemonize(void) {
-#ifndef MS_WINDOWS
-  /* Fork; parent exits. */
-  if (fork())
-    exit(0);
-
-  /* Create new session; make sure we never get a terminal */
-  setsid();
-  if (fork())
-    exit(0);
-
-  chdir("/");
-  umask(000);
-
-  fclose(stdin);
-  fclose(stdout);
-  fclose(stderr);
-#endif
-}
-
-void write_pidfile(char *filename) {
-#ifndef MS_WINDOWS
-  FILE *pidfile;
-
-  if ((pidfile = fopen(filename, "w")) == NULL) {
-    log_fn(LOG_WARN, "unable to open %s for writing: %s", filename,
-           strerror(errno));
-  } else {
-    fprintf(pidfile, "%d", getpid());
-    fclose(pidfile);
-  }
-#endif
-}
-
-int switch_user(char *user) {
-#ifndef MS_WINDOWS
-  int status;
-  struct passwd *pw = NULL;
-
-  pw = getpwnam(user);
-  if(pw == NULL) {
-    log_fn(LOG_ERR,"User '%s' not found.", user);
-    return -1;
-  }
-  status = setuid(pw->pw_uid);
-  if (status != 0) {
-    log_fn(LOG_ERR,"Error setting UID: %s", strerror(errno));
-    return -1;
-  }
-  status = setgid(pw->pw_gid);
-  if (status != 0) {
-    log_fn(LOG_ERR,"Error setting GID: %s", strerror(errno));
-    return -1;
-  }
-
-  return 0;
-#endif
-}
-
-int switch_group(char *group) {
-#ifndef MS_WINDOWS
-  int status;
-  struct group *gr = NULL;
-
-  gr = getgrnam(group);
-  if(gr == NULL) {
-    log_fn(LOG_ERR,"Group '%s' not found.", group);
-    return -1;
-  }
-  status = setgid(gr->gr_gid);
-  if (status != 0) {
-    log_fn(LOG_ERR,"Error setting GID: %s", strerror(errno));
-    return -1;
-  }
-
-  return 0;
-#endif
-}
-
 int tor_main(int argc, char *argv[]) {
 
   /* give it somewhere to log to initially */
@@ -849,15 +770,9 @@ int tor_main(int argc, char *argv[]) {
   /* write our pid to the pid file */
   write_pidfile(options.PidFile);
 
-  /* now that we've written the pid file, we can switch the user and group */
-  if(options.User) {
-    if(switch_user(options.User) != 0) {
-      return -1;
-    }
-  }
-
-  if(options.Group) {
-    if(switch_group(options.Group) != 0) {
+  /* now that we've written the pid file, we can switch the user and group. */
+  if(options.User || options.Group) {
+    if(switch_id(options.User, options.Group) != 0) {
       return -1;
     }
   }
