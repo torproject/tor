@@ -1402,9 +1402,7 @@ options_validate(or_options_t *options)
   }
 
   if (options->HashedControlPassword) {
-    char buf[S2K_SPECIFIER_LEN+DIGEST_LEN];
-    if (base64_decode(buf,sizeof(buf),options->HashedControlPassword,
-                      strlen(options->HashedControlPassword)!=sizeof(buf))) {
+    if (decode_hashed_password(NULL, options->HashedControlPassword)<0) {
       log_fn(LOG_WARN,"Bad HashedControlPassword: wrong length or bad base64");
       result = -1;
     }
