@@ -662,7 +662,7 @@ int parse_iso_time(const char *cp, time_t *t) {
           hour > 23 || minute > 59 || second > 61) {
         log_fn(LOG_WARN, "Published time was nonsensical"); return -1;
   }
-  st_tm.tm_year = year;
+  st_tm.tm_year = year-1900;
   st_tm.tm_mon = month-1;
   st_tm.tm_mday = day;
   st_tm.tm_hour = hour;
