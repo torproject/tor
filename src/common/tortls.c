@@ -135,12 +135,13 @@ tor_tls_write_certificate(char *certfile, crypto_pk_env_t *rsa, char *nickname)
 tor_tls_context *
 tor_tls_context_new(char *certfile, crypto_pk_env_t *rsa, int isServer)
 {
-  assert(!rsa || rsa->type == CRYPTO_PK_RSA);
-  assert((certfile && rsa) || (!certfile && !rsa));
   crypto_dh_env_t *dh = NULL;
   RSA *_rsa = NULL;
   EVP_PKEY *pkey = NULL;
   tor_tls_context *result;
+
+  assert(!rsa || rsa->type == CRYPTO_PK_RSA);
+  assert((certfile && rsa) || (!certfile && !rsa));
 
   result = tor_malloc(sizeof(tor_tls_context));
   if (!(result->ctx = SSL_CTX_new(TLSv1_method())))
