@@ -526,11 +526,12 @@ privileges.  Currently, each OR maintains a long-term TLS \cite{TLS}
 connection to every other
 OR.  (We examine some ways to relax this clique-topology assumption in
 Section~\ref{subsec:restricted-routes}.) A subset of the ORs also act as
-directory servers, tracking which routers are currently in the network;
-see Section~\ref{subsec:dirservers} for directory server details. Users
-run local software called an onion proxy (OP) to fetch directories,
+directory servers, tracking which routers are in the network;
+see Section~\ref{subsec:dirservers} for directory server details.
+Each user
+runs local software called an onion proxy (OP) to fetch directories,
 establish paths (called \emph{virtual circuits}) across the network,
-and handle connections from user applications. Onion proxies accept
+and handle connections from user applications.  These onion proxies accept
 TCP streams and multiplex them across the virtual circuit. The onion
 router on the other side 
 % I don't mean other side, I mean wherever it is on the circuit. But
@@ -547,8 +548,8 @@ the identity key of a router is considered equivalent to creating a
 new router. The onion (decryption) key is used for decrypting requests
 from users to set up a circuit and negotiate ephemeral keys. Finally,
 link keys are used by the TLS protocol when communicating between
-onion routers.  We discuss rotating these keys in
-Section~\ref{subsec:rotating-keys}.
+onion routers.  Both short-term keys are rotated periodically and
+independantly, to limit the impact of compromised keys.
 
 Section~\ref{subsec:cells} discusses the structure of the fixed-size
 \emph{cells} that are the unit of communication in Tor. We describe
@@ -561,34 +562,39 @@ fairness issues.
 \SubSection{Cells}
 \label{subsec:cells}
 
-% I think we should describe connections before cells. -NM
+ORs communicate with one another, and with users' OPs, via TLS
+connections with ephemeral keys.  This prevents an attacker from
+impersonating an OR, conceals the contents of the connection with
+perfect forward secrecy, and prevents an attacker from modifying data
+on the wire.
 
-Traffic passes from one OR to another, or between a user's OP and an OR,
-in fixed-size cells. Each cell is 256 bytes (but see
-Section~\ref{sec:conclusion}
-for a discussion of allowing large cells and small cells on the same
-network), and consists of a header and a payload. The header includes an
-anonymous circuit identifier (ACI) that specifies which circuit the
-% Should we replace ACI with circID ? What is this 'anonymous circuit'
-% thing anyway? -RD
-cell refers to
-(many circuits can be multiplexed over the single TCP connection between
-ORs or between an OP and an OR), and a command to describe what to do
-with the cell's payload. Cells are either \emph{control} cells, which are
-interpreted by the node that receives them, or \emph{relay} cells,
-which carry end-to-end stream data. Controls cells can be one of:
+Traffic passes along these connections in fixed-size cells.  Each cell
+is 256 bytes (but see Section~\ref{sec:conclusion} for a discussion of
+allowing large cells and small cells on the same network), and
+consists of a header and a payload. The header includes a circuit
+identifier (circID) that specifies which circuit the cell refers to
+(many circuits are be multiplexed over the single TLS connection), and
+a command to describe what to do with the cell's payload.  (Circuit
+identifiers are connection-specific; a single circuit has a different
+circID on each connection it uses.)
+% XXX Say that each OR can have many circuits with same circID, so
+% XXX long as they're on different connections, and that ORs know 
+% XXX which circIDs/connection pairs are linked by a circuit.
+Based on their command, cells are either \emph{control} cells, which are
+always interpreted by the node that receives them, or \emph{relay} cells,
+which carry end-to-end stream data.   The controls cells commands are:
 \emph{padding} (currently used for keepalive, but also usable for link
 padding); \emph{create} or \emph{created} (used to set up a new circuit);
-or \emph{destroy} (to tear down a circuit).
-% We need to say that ACIs are connection-specific: each circuit has
-% a different ACI along each connection. -NM
-% agreed -RD
+and \emph{destroy} (to tear down a circuit).
 
 Relay cells have an additional header (the relay header) after the
 cell header, containing the stream identifier (many streams can
 be multiplexed over a circuit); an end-to-end checksum for integrity
-checking; the length of the relay payload; and a relay command. Relay
-commands can be one of: \emph{relay
+checking; the length of the relay payload; and a relay command.  
+% XXX Mention _here_ that relay headers are {en|de}crypted as they
+% XXX progress along the circuit.
+The
+relay commands are: \emph{relay
 data} (for data flowing down the stream), \emph{relay begin} (to open a
 stream), \emph{relay end} (to close a stream cleanly), \emph{relay
 teardown} (to close a broken stream), \emph{relay connected}
@@ -599,7 +605,7 @@ and to acknowledge), \emph{relay truncate} and \emph{relay truncated}
 sendme} (used for congestion control), and \emph{relay drop} (used to
 implement long-range dummies).
 
-We describe each of these cell types in more detail below.
+We describe each of these cell types and commands in more detail below.
 
 \SubSection{Circuits and streams}
 \label{subsec:circuits}
@@ -614,41 +620,60 @@ open many TCP streams.
 
 In Tor, each circuit can be shared by many TCP streams.  To avoid
 delays, users construct circuits preemptively.  To limit linkability
-among the streams, users rotate connections by building a new circuit
+among their streams, users' OPs build a new circuit
 periodically if the previous one has been used,
-and expire old used circuits that are no longer in use. Tor considers
-making a new circuit once a minute: thus
+and expire old used circuits that no longer have any open streams.  
+OPs consider making a new circuit once a minute: thus
 even heavy users spend a negligible amount of time and CPU in
 building circuits, but only a limited number of requests can be linked
-to each other by a given exit node. Also, because circuits are built
-in the background, failed routers do not affect user experience.
+to each other through a given exit node. Also, because circuits are built
+in the background, OPs can recover from failed circuit creation
+without delaying streams and thereby harming user experience.
 
 \subsubsection{Constructing a circuit}
 \label{subsubsec:constructing-a-circuit}
 
+%XXXX Discuss what happens with circIDs here.
+
 Users construct a circuit incrementally, negotiating a symmetric key with
-each hop one at a time. To begin creating a new circuit, the user
+each OR on the circuit, one hop at a time. To begin creating a new
+circuit, the user
 (call her Alice) sends a \emph{create} cell to the first node in her
-chosen path. The cell's payload is the first half of the
-Diffie-Hellman handshake, encrypted to the onion key of the OR (call
+chosen path. This cell's payload contains the first half of the
+Diffie-Hellman handshake ($g^x$), encrypted to the onion key of the OR (call
 him Bob). Bob responds with a \emph{created} cell containing the second
 half of the DH handshake, along with a hash of the negotiated key
 $K=g^{xy}$.
 
-To extend a circuit past the first hop, Alice sends a \emph{relay extend}
-cell to the last node in the circuit, specifying the address of the new
-OR and an encrypted $g^x$ for it. That node copies the half-handshake
-into a \emph{create} cell, and passes it to the new OR to extend the
-circuit. When it responds with a \emph{created} cell, the penultimate OR
-copies the payload into a \emph{relay extended} cell and passes it back.
-% Nick: please fix my "that OR" pronouns -RD
+Once the circuit has been established, Alice and Bob can send one
+another relay cells encrypted with the negotiated
+key.\footnote{Actually, the negotiated key is used to derive two
+  symmetric keys: one for each direction.}  More detail is given in
+the next section.
 
-The onion-level handshake protocol achieves unilateral entity
-authentication (Alice knows she's handshaking with Bob, Bob doesn't
-care who is opening the circuit---Alice has no key and is trying to
-remain anonymous) and unilateral key authentication (Alice and Bob
-agree on a key, and Alice knows Bob is the only other person who should
-know it). We also want perfect forward secrecy and key freshness.
+To extend the circuit further, Alice sends a \emph{relay extend} cell
+to Bob, specifying the address of the next OR (call her Carol), and
+an encrypted $g^{x_2}$ for her.  Bob copies the half-handshake into a
+\emph{create} cell, and passes it to Carol to extend the circuit.
+When Carol responds with a \emph{created} cell, Bob wraps the payload
+into a \emph{relay extended} cell and passes it back to Alice.  Now
+the circuit is extended to Carol, and Alice and Carol share a common key
+$K_2 = g^{x_2 y_2}$.
+
+In order to extend the circuit to a third node or beyond, Alice
+proceeds as above, always telling the last node in the circuit to
+extend one hop further.
+% XXX Briefly mention path selection.
+
+This circuit-level handshake protocol achieves unilateral entity
+authentication (Alice knows she's handshaking with Bob/Carol, but
+Bob/Carol doesn't care who is opening the circuit---Alice has no key
+and is trying to remain anonymous) and unilateral key authentication
+(Alice and Bob/Carol agree on a key, and Alice knows Bob/Carol is the
+only other person who should know it). It also achieves forward
+secrecy and key freshness.  Formally, the protocol is as follows
+(Where $E_{PK_{Bob}}(\cdot)$ is encryption with Bob's public key,
+$H$ is a secure hash function, and $|$ is concatenation.)
 
 \begin{equation}
 \begin{aligned}
@@ -657,20 +682,28 @@ know it). We also want perfect forward secrecy and key freshness.
 \end{aligned}
 \end{equation}
 
-The second step shows both that it was Bob
-who received $g^x$, and that it was Bob who came up with $y$. We use
-PK encryption in the first step (rather than, say, using the first two
-steps of STS, which has a signature in the second step) because we
-don't have enough room in a single cell for a public key and also a
-signature. Preliminary analysis with the NRL protocol analyzer \cite{meadows96}
-shows the above protocol to be secure (including providing PFS) under the
-traditional Dolev-Yao model.
+In the second step, Bob proves that it was he who who received $g^x$,
+and who came up with $y$. We use PK encryption in the first step
+(rather than, say, using the first two steps of STS, which has a
+signature in the second step) because a single cell is too small to
+hold both a public key and a signature. Preliminary analysis with the
+NRL protocol analyzer \cite{meadows96} shows the above protocol to be
+secure (including providing PFS) under the traditional Dolev-Yao
+model.
 
 \subsubsection{Relay cells}
-Once Alice has established the circuit (so she shares a key with each
+Once Alice has established the circuit (so she shares keys with each
 OR on the circuit), she can send relay cells.
-The stream ID in the relay header indicates to which stream the cell belongs.
-A relay cell can be addressed to any of the ORs on the circuit. To
+% XXX Describe _here_ what happens with relay cells that are not 
+% XXX targeted at a given node; how they're decrypted; how they're
+% XXX encrypted.  The easiest expository order should probably be: What ORs
+% XXX Do With Unrecognized Streams; What Alice Does To Build Relay
+% XXX Cells; What ORs Do With Streams They Recognize.
+Recall that every relay header has a stream ID in the relay header
+that indicates to
+which stream the cell belongs.
+This stream ID allows a relay cell to be addressed to any of the ORs
+on the circuit. To
 construct a relay cell addressed to a given OR, Alice iteratively
 encrypts the cell payload (that is, the relay header and payload)
 with the symmetric key of each hop up to that OR. Then, at each hop
@@ -685,18 +718,22 @@ Alice may choose different exit points because of their exit policies,
 or to keep the ORs from knowing that two streams
 originate at the same person.
 
-To tear down a circuit, Alice sends a destroy control cell. Each OR
-in the circuit receives the destroy cell, closes all open streams on
-that circuit, and passes a new destroy cell forward. But since circuits
+To tear down a whole circuit, Alice sends a \emph{destroy} control
+cell. Each OR
+in the circuit receives the \emph{destroy} cell, closes all open streams on
+that circuit, and passes a new \emph{destroy} cell forward. But since circuits
 can be built incrementally, they can also be torn down incrementally:
 Alice can instead send a relay truncate cell to a node along the circuit. That
-node will send a destroy cell forward, and reply with an acknowledgment
-(relay truncated). Alice might truncate her circuit so she can extend it
+node will send a \emph{destroy} cell forward, and reply with an acknowledgment
+(a \emph{relay truncated} cell).  Alice might truncate her circuit so
+she can extend it
 to different nodes without signaling to the first few nodes (or somebody
 observing them) that she is changing her circuit. That is, nodes in the
-middle are not even aware that the circuit was truncated, because the
-relay cells are encrypted. Similarly, if a node on the circuit goes down,
-the adjacent node can send a relay truncated back to Alice. Thus the
+middle of a truncated are not even aware when the circuit is
+truncated, because they see only the encrypted relay cells.
+Similarly, if a node on the circuit goes down,
+the adjacent node can send a \emph{relay truncated} cell back to
+Alice.  Thus the
 ``break a node and see which circuits go down'' attack is weakened.
 
 \SubSection{Opening and closing streams}
@@ -882,6 +919,7 @@ Currently, non-data relay cells do not affect the windows. Thus we
 avoid potential deadlock issues, e.g. because a stream can't send a
 relay sendme cell because its packaging window is empty.
 
+% XXX Bad heading
 \subsubsection{Needs more research}
 
 We don't need to reimplement full TCP windows (with sequence numbers,
@@ -1892,6 +1930,7 @@ issues remaining to be ironed out. In particular:
   robustness/latency trade-offs, our performance trade-offs (including
   cell size), our abuse-prevention mechanisms, and
   our overall usability.
+% XXX large and small cells on same network.
 % XXX work with morphmix spec
 \end{tightlist}
 
@@ -1933,6 +1972,8 @@ issues remaining to be ironed out. In particular:
 %     Hyphens are for multi-part words; en dashs imply movement or
 %        opposition (The Alice--Bob connection); and em dashes are
 %        for punctuation---like that.
+%     A relay cell; a control cell; a \emph{create} cell; a
+%     \emph{relay truncated} cell.  Never ``a \emph{relay truncated}.''
 %
 %     'Substitute ``Damn'' every time you're inclined to write ``very;'' your
 %     editor will delete it and the writing will be just as it should be.'
