@@ -221,7 +221,7 @@ unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int 
       /* 0 bit */
       layer->zero = 0;
       /* version */
-      layer->version = VERSION;
+      layer->version = OR_VERSION;
       /* Back F + Forw F both use DES OFB*/
       layer->backf = ONION_DEFAULT_CIPHER;
       layer->forwf = ONION_DEFAULT_CIPHER;

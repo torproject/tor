@@ -1,9 +1,10 @@
 
 Dependencies:
 
-  You're going to need openssl (0.9.6 will work fine, possibly 0.9.5 also)
-  and popt installed. If you're on Linux, everything will probably work
-  fine. If you're not, you're on your own (but let us know how it goes).
+  You're going to need openssl (0.9.5 or later) and popt (1.6 or later).
+  If you're on Linux, everything will probably work fine. OS X and BSD
+  (but see below under troubleshooting) now work too. Let us know if
+  you get it working elsewhere.
 
 If you got the source from cvs:
 
@@ -21,7 +22,7 @@ If this doesn't work for you / troubleshooting:
   If you couldn't find popt (eg you're on BSD), try
     CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" \
     ./configure
-  rather than simply ./configure.
+  rather than simply ./configure. And install popt if you don't have it.
 
   Check out the list archives at http://archives.seul.org/or/dev/ and see
   if somebody else has reported your problem. If not, please subscribe
@@ -31,16 +32,17 @@ If this doesn't work for you / troubleshooting:
 Once you've got it compiled:
 
   It's a bit hard to figure out what to do with the binaries. If you
-  want to just run a local onion proxy, go into src/config and look at
-  the oprc file. You can run an onion proxy by "../or/or -f oprc". In
-  another window, run something like "../httpap/httpap -f httpaprc -p
-  9051". See below for how to use it.
+  want to run a local onion proxy (that is, you're a user, not a node
+  operator), go into src/config and look at the oprc file. You can run an
+  onion proxy by "../or/or -f oprc". In another window, run something like
+  "../httpap/httpap -f httpaprc2 -p 9051". See below for how to use it.
 
-  If you want to set up your own test network, go into src/config/ and
-  look at the routers.or file. Also in that directory are public and
-  private keys for various nodes (*-public, *-private) and configuration
-  files for the nodes (*-orrc). You can generate your own keypairs with
-  the orkeygen program, or use the provided ones for testing.
+  If you want to set up your own test network (that is, act like you're
+  a full set of node operators), go into src/config/ and look at the
+  routers.or file. Also in that directory are public and private keys for
+  various nodes (*-public, *-private) and configuration files for the
+  nodes (*-orrc). You can generate your own keypairs with the orkeygen
+  program, or use the provided ones for testing.
 
   Once you've got your config files ready, you're ready to start up your
   network. I recommend using a screen session (man screen), or some
@@ -61,6 +63,9 @@ How to use it:
     http_proxy=localhost:9051
   Then you can do things like "wget seul.org" and watch as it downloads
   from the onion routing network.
+  (You can set your Mozilla/etc to use localhost:9051 as a proxy, and it
+  will work -- but it will work even better if you tell your Mozilla to
+  speak only HTTP 1.0 (the http proxy we include doesn't do 1.1 yet.))
 
   For fun, you can wget a very large file (a megabyte or more), and
   then ^z the wget a little bit in. The onion routers will continue

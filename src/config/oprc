@@ -1,7 +1,7 @@
 # Configuration file for or
 
 # List of routers
-RouterFile ../config/routers.or
+RouterFile ../config/routers.op
 
 # Private key
 #PrivateKeyFile moria1-private
