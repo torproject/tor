@@ -33,26 +33,31 @@ Tor is a low-latency anonymous communication overlay network designed
 to be practical and usable for protecting TCP streams over the
 Internet~\cite{tor-design}. We have been operating a publicly deployed
 Tor network since October 2003 that has grown to over a hundred volunteer
-nodes and carries over 70 megabits per second of average traffic.
+nodes and carries an average over 70 megabits of traffic per second.
 
 Tor has a weaker threat model than many anonymity designs in the
-literature, because we aim primarily to provide a
-practical and useful network. Given that fixed assumption, we then
+literature, because our foremost goal is to deploy
+practical and useful network for interactive (low-latency) communications.
+Subject to this restriction, we try
 provide as much anonymity as we can. In particular, because we
-want to support interactive communications, we fall prey to a variety
+support interactive communications without impractically expensive padding,
+we fall prey to a variety
 of intra-network~\cite{danezis-oakland,flow-correlation04,bar} and
-end-to-end~\cite{danezis-pet2004,SS03} anonymity breaking attacks.
+end-to-end~\cite{danezis-pet2004,SS03} anonymity-breaking attacks.
 
-Tor's defense lies in having a diverse enough network that its adversaries
-are unlikely to be in the right places to attack both ends of a user's
-stream. Specifically,
+Tor defends against a user against adversaries so long as they are unable to
+observe her connections as they enter and leave the Tor network.
+Therefore, Tor's
+defense lies in having a diverse enough network to prevent adversaries
+that are unlikely to be in the right places to attack users.
+Specifically,
 Tor aims to resist observers and insiders by distributing each transaction
 over several nodes in the network.  This ``distributed trust'' approach
 means the Tor network can be safely operated and used by a wide variety
 of mutually distrustful users, providing more sustainability and security
-than previous attempts at anonymizing networks.
+than some previous attempts at anonymizing networks.
 The Tor network has a broad range of users, including ordinary citizens
-who want to avoid being profiled for targeted advertisements, corporations
+concerned about their privacy, corporations
 who don't want to reveal information to their competitors, and law
 enforcement and government intelligence agencies who need
 to do operations on the Internet without being noticed.
@@ -68,6 +73,23 @@ has integrated an independent implementation of the Tor protocol into
 their popular Java Anon Proxy anonymizing client. This wide variety of
 interests helps maintain both the stability and the security of the
 network.
+
+Tor's principal research strategy in attempting to deploy a network that
+practical, useful, and anonymous, has been to insist, when trade-offs arise
+between these properties, on remaining useful enough to attract as many users
+as possible, and practical enough to support them.  Subject to these
+constraints, we aim to maximize anonymity.  This is not the only possible
+direction in anonymity research: designs exist that provide more anonymity
+than Tor at the expense of significantly increased resource requirements, or
+decreased flexibility in application support (typically because of increased
+latency).  Such research does not typically abandon aspirations towards
+deployability or utility, but instead tries to maximize deployability and
+utility subject to a certain degree of anonymity.  We believe that these
+approaches can be promising and useful, but that by focusing on deploying a
+usable system in the wild, Tor helps us experiment with the actual parameters
+of what makes a system ``practical'' for volunteer operators and ``useful''
+for home users, and helps illuminate undernoticed issues which any deployed
+volunteer anonymity network will need to address.
 
 While~\cite{tor-design} gives an overall view of the Tor design and goals,
 this paper describes the policy and technical issues that Tor faces are
@@ -127,9 +149,12 @@ identity.
 %censorship. Nobody would be able to determine who was offering the site,
 %and nobody who offered the site would know who was posting to it.
 
-tor works for tcp on socks (see section \ref{subsec:tcp-vs-ip}). it
-only anonymizes the channel, so you need application-level scrubbers
-like privoxy.
+Tor attempts to anonymize the transport layer, not the application layer, so
+application protocols that include personally identifying information need
+additional application-level scrubbing proxies, such as
+Privoxy~\cite{privoxy} for HTTP.  Furthermore, Tor does not permit arbitrary
+IP packets; it only anonymizes TCP and DNS, and only supports cconnections
+SOCKS (see section \ref{subsec:tcp-vs-ip}).
 
 Tor differs from other deployed systems for traffic analysis resistance
 in its security and flexibility.  Mix networks such as
@@ -202,11 +227,46 @@ seems overkill (and/or insecure) based on the threat model we've picked.
 
 \section{Threat model}
 
-discuss $\frac{c^2}{n^2}$, except how in practice the chance of owning
-the last hop is not $c/n$ since that doesn't take the destination (website)
-into account. so in cases where the adversary does not also control the
-final destination we're in good shape, but if he *does* then we'd be better
-off with a system that lets each hop choose a path.
+Tor does not attempt to defend against a global observer.  Any adversary who
+can see a user's connection to the Tor network, and who can see the
+corresponding connection as it exits the Tor network, can use the timing
+correlation between the two connections to confirm the user's chosen
+communication partners.  Defeating this attack would seem to require
+introducing a prohibitive degree of traffic padding between the user and the
+network, or introducing an unacceptable degree of latency (but see
+\ref{subsec:mid-latency} below).  Thus, Tor only
+attempts to defend against external observers who can observe both sides of a
+user's connection.
+
+Against internal attackers, who sign up Tor servers, the situation is more
+complicated.  In the simplest case, if an adversary has compromised $c$ of
+$n$ servers on the Tor network, then the adversary will be able to compromise
+a random circuit with probability $\frac{c^2}{n^2}$ (since the circuit
+initiator chooses hops randomly).  But there are
+complicating factors:
+\begin{tightlist}
+\item If the user continues to build random circuits over time, an adversary
+  is pretty certain to see a statistical sample of the user's traffic, and
+  thereby can build an increasingly accurate profile of her behavior.  (See
+  \ref{subsec:helper-nodes} for possible solutions.)
+\item If an adversary controls a popular service outside of the Tor network,
+  he can be certain of observing all connections to that service; he
+  therefore will trace connections to that service with probability
+  $\frac{c}{n}$.
+\item Users do not in fact choose servers with uniform probability; they
+  favor servers with high bandwidth, and exit servers that permit connections
+  to their favorite services.
+\end{tightlist}
+
+%discuss $\frac{c^2}{n^2}$, except how in practice the chance of owning
+%the last hop is not $c/n$ since that doesn't take the destination (website)
+%into account. so in cases where the adversary does not also control the
+%final destination we're in good shape, but if he *does* then we'd be better
+%off with a system that lets each hop choose a path.
+%
+%Isn't it more accurate to say ``If the adversary _always_ controls the final
+% dest, we would be just as well off with such as system.'' ?  If not, why
+% not? -nm
 
 in practice tor's threat model is based entirely on the goal of dispersal
 and diversity. george and steven describe an attack \cite{draft} that
@@ -234,15 +294,14 @@ from the outside. They only have a limited number of ISPs from which to
 launch their attacks, and they found that the defenders were recognizing
 attacks because they came from the same IP space. These engineers wanted
 to use Tor to hide their tracks. First, from a technical standpoint,
-Tor does not support the variety of IP packets they would like to use in
+Tor does not support the variety of IP packets one would like to use in
 such attacks (see Section \ref{subsec:ip-vs-tcp}). But aside from this,
 we also decided that it would probably be poor precedent to encourage
-such use -- even legal use that improves national security -- and managed
+such use---even legal use that improves national security---and managed
 to dissuade them.
 
 With this image issue in mind, here we discuss the Tor user base and
 Tor's interaction with other services on the Internet.
-
 
 
 \subsection{Usability}
@@ -446,6 +505,7 @@ than we think. We certainly wouldn't mind if Tor one day is able to
 transport a greater variety of protocols.
 
 \subsection{Mid-latency}
+\label{subsec:mid-latency}
 
 Mid-latency. Can we do traffic shape to get any defense against George's
 PET2004 paper? Will padding or long-range dummies do anything then? Will
