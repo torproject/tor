@@ -51,6 +51,9 @@ well for behemoths like Mozilla.
 
     Part three: applications which support tor correctly
 
+[this section is outdated and wrong. we should tie it into the main
+tor-doc.html one day.]
+
 http: Mozilla: set your socks4 proxy to be the onion proxy (but see above)
       privoxy: set your socks4a proxy to be the onion proxy
       wget: run privoxy, and then add the line
