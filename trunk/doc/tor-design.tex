@@ -945,7 +945,7 @@ their bandwidth usage.  To accomodate them, Tor servers use a token
 bucket approach to limit the number of bytes they
 receive. Tokens are added to the bucket each second (when the bucket is
 full, new tokens are discarded.) Each token represents permission to
-receive one byte from the network --- to receive a byte, the connection
+receive one byte from the network---to receive a byte, the connection
 must remove a token from the bucket. Thus if the bucket is empty, that
 connection must wait until more tokens arrive. The number of tokens we
 add enforces a long-term average rate of incoming bytes, while still
@@ -1202,6 +1202,9 @@ Similarly, one could run automatic spam filtering software (such as
 SpamAssassin) on email exiting the OR network.  A generic
 intrusion detection system (IDS) could be adapted to these purposes.
 
+[XXX Mention possibility of filtering spam-like habits--e.g., many
+  recipients. -NM]
+
 ORs may also choose to rewrite exiting traffic in order to append
 headers or other information to indicate that the traffic has passed
 through an anonymity service.  This approach is commonly used, to some
@@ -1298,7 +1301,7 @@ and are discussed more in section~\ref{sec:maintaining-anonymity}.
   
 Of course, a variety of attacks remain. An adversary who controls a
 directory server can track certain clients by providing different
-information --- perhaps by listing only nodes under its control
+information---perhaps by listing only nodes under its control
 as working, or by informing only certain clients about a given
 node. Moreover, an adversary without control of a directory server can
 still exploit differences among client knowledge. If Eve knows that
@@ -1705,7 +1708,11 @@ them.
   will have discarded the necessary information before the attack can
   be completed.  (Thanks to the perfect forward secrecy of session
   keys, the attacker cannot cannot force nodes to decrypt recorded
-  traffic once the circuits have been closed.)
+  traffic once the circuits have been closed.)  Additionally, building
+  circuits that cross jurisdictions can make legal coercion
+  harder---this phenomenon is commonly called ``jurisdictional
+  arbitrage.''
+
   
 \item \emph{Run a recipient.} By running a Web server, an adversary
   trivially learns the timing patterns of those connecting to it, and
@@ -1748,8 +1755,10 @@ them.
   some user will choose one of those ORs for the start and another of
   those ORs as the end of a circuit.  When this happens, the user's
   anonymity is compromised for those circuits.  If an adversary can
-  control $m$ out of $N$ nodes, he will be able to correlate at most 
-  $\frac{m}{N}$ of the traffic in this way.
+  control $m$ out of $N$ nodes, he should be able to correlate at most 
+  $\frac{m}{N}$ of the traffic in this way---although an adersary
+  could possibly attract a disproportionately large amount of traffic
+  by running an exit node with an unusually permisssive exit policy.
 
 \item \emph{Compromise entire path.} Anyone compromising both
   endpoints of a circuit can confirm this with high probability. If
@@ -1781,37 +1790,23 @@ them.
   the association. However, integrity checks on cells prevent
   this attack from succeeding.
 
-[XXXX Damn it's 5:10. So, I'm stopping here. Good luck with what's left
-tonight. Hopefully less than it looks. -PS]
+\item \emph{Replace contents of unauthenticated protocols.}  When a
+  relaying an unauthenticated protocol like HTTP, a hostile exit node 
+  can impersonate the target server.  Thus, whenever possible, clients
+  should prefer protocols with end-to-end authentication.
 
+\item \emph{Replay attacks.} Some anonymity protocols are vulnerable
+  to replay attacks.  Tor is not; replaying one side of a handshake
+  will result in a different negotiated session key, and so the rest
+  of the recorded session can't be used.  
+  % ``NonSSL Anonymizer''?
 
-\item sub of the above on exit policy\\
-Partitioning based on exit policy.
-
-Run a rare exit server/something other people won't allow.
-
-DOS three of the 4 who would allow a certain exit.
-
-
-
-Subcase of running a hostile node: 
-the exit node can change the content you're getting to try to
-trick you. similarly, when it rejects you due to exit policy,
-it could give you a bad IP that sends you somewhere else.
-\item \emph{replaying traffic} Can't in Tor. NonSSL anonymizer.
-
-\item Do bad things with the Tor network, so we are hated and
-get shut down. Now the user you want to watch has to use anonymizer.
-
-Exit policy's are a start.
-
-\item Send spam through the network. Exit policy (no open relay) and
-  rate limiting. We won't send to more than 8 people at a time.  See
-  section 5.1.
-
-we rely on DNS being globally consistent. if people in africa resolve
-IPs differently, then asking to extend a circuit to a certain IP can
-give away your origin.
+\item \emph{Smear attacks.} An attacker could use the Tor network to
+  engage in socially dissapproved acts, so as to try to bring the
+  entire network into disrepute and get its operators to shut it down.
+  Exit policies can help reduce the possibilities for abuse, but
+  ultimately, the network will require volunteers who can tolerate
+  some political heat.
 \end{tightlist}
 
 \subsubsection*{Directory attacks}
@@ -1829,17 +1824,6 @@ keys)
 \item foo
 \end{tightlist}
 
-
-
-Basic 
-
-How well do we resist chosen adversary?
-
-How well do we meet stated goals?
-
-Mention jurisdictional arbitrage.
-
-Pull attacks and defenses into analysis as a subsection
 
 \Section{Open Questions in Low-latency Anonymity}
 \label{sec:maintaining-anonymity}
@@ -2099,6 +2083,10 @@ issues remaining to be ironed out. In particular:
 %     'Authorizating' sounds great, but it isn't a word.
 %     'First, second, third', not 'Firstly, secondly, thirdly'.
 %     'circuit', not 'channel'
+%     Typography: no space on either side of an em dash---ever.
+%     Hyphens are for multi-part words; en dashs imply movement or
+%        opposition (The Alice--Bob connection); and em dashes are
+%        for punctuation---like that.
 %
 %     'Substitute ``Damn'' every time you're inclined to write ``very;'' your
 %     editor will delete it and the writing will be just as it should be.'

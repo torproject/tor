@@ -63,6 +63,8 @@ Short-term:
                         - make sure exiting from the not-last hop works
                         - logic to find last *open* hop, not last hop, in cpath
                         - choose exit nodes by exit policies
+        - Remember address and port when resolving. 
+        - Extend by nickname/hostname/something, not by IP.
 
 On-going
         . Better comments for functions!
