@@ -42,13 +42,14 @@
 
 /* Recognized error codes. */
 #define ERR_UNSPECIFIED             0x0000
-#define ERR_UNRECOGNIZED_TYPE       0x0001
-#define ERR_UNRECOGNIZED_CONFIG_KEY 0x0002
-#define ERR_INVALID_CONFIG_VALUE    0x0003
-#define ERR_UNRECOGNIZED_EVENT_CODE 0x0004
-#define ERR_UNAUTHORIZED_USER       0x0005
-#define ERR_FAILED_AUTHENTICATION   0x0006
-#define ERR_FAILED_SAVECONF         0x0007
+#define ERR_INTERNAL                0x0001
+#define ERR_UNRECOGNIZED_TYPE       0x0002
+#define ERR_SYNTAX                  0x0003
+#define ERR_UNRECOGNIZED_CONFIG_KEY 0x0004
+#define ERR_INVALID_CONFIG_VALUE    0x0005
+#define ERR_UNRECOGNIZED_EVENT_CODE 0x0006
+#define ERR_UNAUTHORIZED            0x0007
+#define ERR_REJECTED_AUTHENTICATION 0x0008
 
 /* Recongized asynchonous event types. */
 #define _EVENT_MIN            0x0001
@@ -199,18 +200,24 @@ send_control_event(uint16_t event, uint16_t len, const char *body)
 static int
 handle_control_setconf(connection_t *conn, uint16_t len, char *body)
 {
+  int r;
   struct config_line_t *lines=NULL;
   or_options_t *options = get_options();
 
   if (config_get_lines(body, &lines) < 0) {
     log_fn(LOG_WARN,"Controller gave us config lines we can't parse.");
-    send_control_error(conn, ERR_UNSPECIFIED, "Couldn't parse configuration");
+    send_control_error(conn, ERR_SYNTAX, "Couldn't parse configuration");
     return 0;
   }
 
-  if (config_trial_assign(&options, lines, 1) < 0) {
+  if ((r=config_trial_assign(&options, lines, 1)) < 0) {
     log_fn(LOG_WARN,"Controller gave us config lines that didn't validate.");
-    send_control_error(conn, ERR_UNSPECIFIED, "Configuration was invalid");
+    if (e==-1) {
+      send_control_error(conn, ERR_UNRECOGNNIZED_CONFIG_KEY,
+                         "Unrecognized option");
+    } else {
+      send_control_error(conn, ERR_INVALID_CONFIG_VALUE,"Invalid option value");
+    }
     config_free_lines(lines);
     return 0;
   }
@@ -281,7 +288,7 @@ handle_control_setevents(connection_t *conn, uint16_t len, const char *body)
   uint16_t event_code;
   uint32_t event_mask = 0;
   if (len % 2) {
-    send_control_error(conn, ERR_UNSPECIFIED,
+    send_control_error(conn, ERR_SYNTAX,
                        "Odd number of bytes in setevents message");
     return 0;
   }
@@ -338,7 +345,7 @@ handle_control_authenticate(connection_t *conn, uint16_t len, const char *body)
   }
 
  err:
-  send_control_error(conn, ERR_FAILED_AUTHENTICATION,"Authentication failed");
+  send_control_error(conn, ERR_REJECTED_AUTHENTICATION,"Authentication failed");
   return 0;
  ok:
   log_fn(LOG_INFO, "Authenticated control connection (%d)", conn->s);
@@ -351,7 +358,7 @@ static int
 handle_control_saveconf(connection_t *conn, uint16_t len,
                         const char *body)
 {
-  send_control_error(conn, ERR_FAILED_SAVECONF, "Not implemented");
+  send_control_error(conn, ERR_INTERNAL, "Not implemented");
   return 0;
 }
 
@@ -386,6 +393,7 @@ connection_control_process_inbuf(connection_t *conn) {
   switch(fetch_from_buf_control(conn->inbuf, &body_len, &command_type, &body))
     {
     case -1:
+      tor_free(body);
       log_fn(LOG_WARN, "Error in control command. Failing.");
       return -1;
     case 0:
@@ -404,7 +412,7 @@ connection_control_process_inbuf(connection_t *conn) {
       command_type != CONTROL_CMD_AUTHENTICATE) {
     log_fn(LOG_WARN, "Rejecting '%s' command; authentication needed.",
            control_cmd_to_string(command_type));
-    send_control_error(conn, ERR_UNAUTHORIZED_USER, "Authentication required");
+    send_control_error(conn, ERR_UNAUTHORIZED, "Authentication required");
     tor_free(body);
     goto again;
   }
