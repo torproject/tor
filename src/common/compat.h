@@ -124,7 +124,7 @@ int tor_socketpair(int family, int type, int protocol, int fd[2]);
 #define ERRNO_IS_EINPROGRESS(e)      ((e) == WSAEINPROGRESS)
 /** Return true if e is EINPROGRESS or the local equivalent as returned by
  * a call to connect(). */
-#define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == WSAEINPROGRESS || (e)== WSAEINVAL)
+#define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == WSAEINPROGRESS || (e)== WSAEINVAL || (e) == WSAEWOULDBLOCK)
 /** Return true if e is EAGAIN or another error indicating that a call to
  * accept() has no pending connections to return. */
 #define ERRNO_IS_ACCEPT_EAGAIN(e)    ERRNO_IS_EAGAIN(e)
