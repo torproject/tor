@@ -403,15 +403,20 @@ static int init_from_config(int argc, char **argv) {
   close_logs(); /* we'll close, then open with correct loglevel if necessary */
   if(!options.LogFile && !options.RunAsDaemon)
     add_stream_log(options.loglevel, "<stdout>", stdout);
-  if(options.LogFile)
+  if(options.LogFile) {
     if (add_file_log(options.loglevel, options.LogFile) != 0) {
       /* opening the log file failed!  Use stderr and log a warning */
       add_stream_log(options.loglevel, "<stderr>", stderr);
       log_fn(LOG_WARN, "Cannot write to LogFile '%s': %s.", options.LogFile, strerror(errno));
     }
-  if(options.DebugLogFile)
+    log_fn(LOG_WARN, "Successfully opened LogFile '%s', redirecting output.",
+           options.LogFile);
+  }
+  if(options.DebugLogFile) {
     if (add_file_log(LOG_DEBUG, options.DebugLogFile) != 0)
-      log_fn(LOG_WARN, "Cannot write to DebugLogFile '%s': %s.", options.LogFile, strerror(errno));
+      log_fn(LOG_WARN, "Cannot write to DebugLogFile '%s': %s.", options.DebugLogFile, strerror(errno));
+    log_fn(LOG_DEBUG, "Successfully opened DebugLogFile '%s'.", options.DebugLogFile);
+  }
 
   global_read_bucket = options.TotalBandwidth; /* start it at 1 second of traffic */
   stats_prev_global_read_bucket = global_read_bucket;
