@@ -46,7 +46,9 @@ const char control_c_id[] = "$Id$";
 #define CONTROL_CMD_EXTENDCIRCUIT  0x000D
 #define CONTROL_CMD_ATTACHSTREAM   0x000E
 #define CONTROL_CMD_POSTDESCRIPTOR 0x000F
-#define _CONTROL_CMD_MAX_RECOGNIZED 0x000F
+#define CONTROL_CMD_FRAGMENTHEADER 0x0010
+#define CONTROL_CMD_FRAGMENT       0x0011
+#define _CONTROL_CMD_MAX_RECOGNIZED 0x0011
 
 /* Recognized error codes. */
 #define ERR_UNSPECIFIED             0x0000
@@ -89,7 +91,9 @@ static const char * CONTROL_COMMANDS[_CONTROL_CMD_MAX_RECOGNIZED+1] = {
   "infovalue",
   "extendcircuit",
   "attachstream",
-  "postdescriptor"
+  "postdescriptor",
+  "fragmentheader",
+  "fragment",
 };
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -115,33 +119,33 @@ static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
 static void update_global_event_mask(void);
 static void send_control_message(connection_t *conn, uint16_t type,
-                                 uint16_t len, const char *body);
+                                 uint32_t len, const char *body);
 static void send_control_done(connection_t *conn);
 static void send_control_done2(connection_t *conn, const char *msg, size_t len);
 static void send_control_error(connection_t *conn, uint16_t error,
                                const char *message);
-static void send_control_event(uint16_t event, uint16_t len, const char *body);
-static int handle_control_setconf(connection_t *conn, uint16_t len,
+static void send_control_event(uint16_t event, uint32_t len, const char *body);
+static int handle_control_setconf(connection_t *conn, uint32_t len,
                                   char *body);
-static int handle_control_getconf(connection_t *conn, uint16_t len,
+static int handle_control_getconf(connection_t *conn, uint32_t len,
                                   const char *body);
-static int handle_control_setevents(connection_t *conn, uint16_t len,
+static int handle_control_setevents(connection_t *conn, uint32_t len,
                                     const char *body);
-static int handle_control_authenticate(connection_t *conn, uint16_t len,
+static int handle_control_authenticate(connection_t *conn, uint32_t len,
                                        const char *body);
-static int handle_control_saveconf(connection_t *conn, uint16_t len,
+static int handle_control_saveconf(connection_t *conn, uint32_t len,
                                    const char *body);
-static int handle_control_signal(connection_t *conn, uint16_t len,
+static int handle_control_signal(connection_t *conn, uint32_t len,
                                  const char *body);
-static int handle_control_mapaddress(connection_t *conn, uint16_t len,
+static int handle_control_mapaddress(connection_t *conn, uint32_t len,
                                      const char *body);
-static int handle_control_getinfo(connection_t *conn, uint16_t len,
+static int handle_control_getinfo(connection_t *conn, uint32_t len,
                                   const char *body);
-static int handle_control_extendcircuit(connection_t *conn, uint16_t len,
+static int handle_control_extendcircuit(connection_t *conn, uint32_t len,
                                         const char *body);
-static int handle_control_attachstream(connection_t *conn, uint16_t len,
+static int handle_control_attachstream(connection_t *conn, uint32_t len,
                                         const char *body);
-static int handle_control_postdescriptor(connection_t *conn, uint16_t len,
+static int handle_control_postdescriptor(connection_t *conn, uint32_t len,
                                          const char *body);
 
 /** Given a possibly invalid message type code <b>cmd</b>, return a
@@ -172,18 +176,38 @@ static void update_global_event_mask(void)
 /** Send a message of type <b>type</b> containing <b>len</b> bytes
  * from <b>body</b> along the control connection <b>conn</b> */
 static void
-send_control_message(connection_t *conn, uint16_t type, uint16_t len,
+send_control_message(connection_t *conn, uint16_t type, uint32_t len,
                      const char *body)
 {
-  char buf[4];
+  char buf[10];
   tor_assert(conn);
   tor_assert(len || !body);
   tor_assert(type <= _CONTROL_CMD_MAX_RECOGNIZED);
-  set_uint16(buf, htons(len));
-  set_uint16(buf+2, htons(type));
-  connection_write_to_buf(buf, 4, conn);
-  if (len)
-    connection_write_to_buf(body, len, conn);
+  if (len < 65536) {
+    set_uint16(buf, htons(len));
+    set_uint16(buf+2, htons(type));
+    connection_write_to_buf(buf, 4, conn);
+    if (len)
+      connection_write_to_buf(body, len, conn);
+  } else {
+    set_uint16(buf, htons(65535));
+    set_uint16(buf+2, htons(CONTROL_CMD_FRAGMENTHEADER));
+    set_uint16(buf+4, htons(type));
+    set_uint32(buf+6, htonl(len));
+    connection_write_to_buf(buf, 10, conn);
+    connection_write_to_buf(body, 65535-6, conn);
+    len -= (65535-6);
+    body += (65535-6);
+    while (len) {
+      size_t chunklen = (len<65535)?len:65535;
+      set_uint16(buf, htons((uint16_t)chunklen));
+      set_uint16(buf+2, htons(CONTROL_CMD_FRAGMENT));
+      connection_write_to_buf(buf, 4, conn);
+      connection_write_to_buf(body, chunklen, conn);
+      len -= chunklen;
+      body += chunklen;
+    }
+  }
 }
 
 /** Send a "DONE" message down the control connection <b>conn</b> */
@@ -216,7 +240,7 @@ send_control_error(connection_t *conn, uint16_t error, const char *message)
  * <b>len</b> bytes in <b>body</b> to every control connection that
  * is interested in it. */
 static void
-send_control_event(uint16_t event, uint16_t len, const char *body)
+send_control_event(uint16_t event, uint32_t len, const char *body)
 {
   connection_t **conns;
   int n_conns, i;
@@ -233,7 +257,7 @@ send_control_event(uint16_t event, uint16_t len, const char *body)
     if (conns[i]->type == CONN_TYPE_CONTROL &&
         conns[i]->state == CONTROL_CONN_STATE_OPEN &&
         conns[i]->event_mask & (1<<event)) {
-      send_control_message(conns[i], CONTROL_CMD_EVENT, (uint16_t)(buflen), buf);
+      send_control_message(conns[i], CONTROL_CMD_EVENT, buflen, buf);
     }
   }
 
@@ -243,7 +267,7 @@ send_control_event(uint16_t event, uint16_t len, const char *body)
 /** Called when we receive a SETCONF message: parse the body and try
  * to update our configuration.  Reply with a DONE or ERROR message. */
 static int
-handle_control_setconf(connection_t *conn, uint16_t len, char *body)
+handle_control_setconf(connection_t *conn, uint32_t len, char *body)
 {
   int r;
   struct config_line_t *lines=NULL;
@@ -278,7 +302,7 @@ handle_control_setconf(connection_t *conn, uint16_t len, char *body)
 /** Called when we receive a GETCONF message.  Parse the request, and
  * reply with a CONFVALUE or an ERROR message */
 static int
-handle_control_getconf(connection_t *conn, uint16_t body_len, const char *body)
+handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
 {
   smartlist_t *questions = NULL;
   smartlist_t *answers = NULL;
@@ -332,7 +356,7 @@ handle_control_getconf(connection_t *conn, uint16_t body_len, const char *body)
 /** Called when we get a SETEVENTS message: update conn->event_mask,
  * and reply with DONE or ERROR. */
 static int
-handle_control_setevents(connection_t *conn, uint16_t len, const char *body)
+handle_control_setevents(connection_t *conn, uint32_t len, const char *body)
 {
   uint16_t event_code;
   uint32_t event_mask = 0;
@@ -382,7 +406,7 @@ decode_hashed_password(char *buf, const char *hashed)
  * OPEN.  Reply with DONE or ERROR.
  */
 static int
-handle_control_authenticate(connection_t *conn, uint16_t len, const char *body)
+handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
 {
   or_options_t *options = get_options();
   if (options->CookieAuthentication) {
@@ -421,7 +445,7 @@ handle_control_authenticate(connection_t *conn, uint16_t len, const char *body)
 }
 
 static int
-handle_control_saveconf(connection_t *conn, uint16_t len,
+handle_control_saveconf(connection_t *conn, uint32_t len,
                         const char *body)
 {
   if (save_current_config()<0) {
@@ -434,7 +458,7 @@ handle_control_saveconf(connection_t *conn, uint16_t len,
 }
 
 static int
-handle_control_signal(connection_t *conn, uint16_t len,
+handle_control_signal(connection_t *conn, uint32_t len,
                       const char *body)
 {
   if (len != 1) {
@@ -449,7 +473,7 @@ handle_control_signal(connection_t *conn, uint16_t len,
 }
 
 static int
-handle_control_mapaddress(connection_t *conn, uint16_t len, const char *body)
+handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
 {
   smartlist_t *elts;
   smartlist_t *lines;
@@ -478,8 +502,9 @@ handle_control_mapaddress(connection_t *conn, uint16_t len, const char *body)
           log_fn(LOG_WARN,
                  "Unable to allocate address for '%s' in AdressMap msg", line);
         } else {
-          char *ans = tor_malloc(strlen(addr)+strlen(to)+2);
-          tor_snprintf(ans, "%s %s", addr, to);
+          size_t anslen = strlen(addr)+strlen(to)+2;
+          char *ans = tor_malloc(anslen);
+          tor_snprintf(ans, anslen, "%s %s", addr, to);
           addressmap_register(addr, tor_strdup(to), 0);
           smartlist_add(reply, ans);
         }
@@ -542,7 +567,7 @@ handle_getinfo_helper(const char *question)
 }
 
 static int
-handle_control_getinfo(connection_t *conn, uint16_t len, const char *body)
+handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
 {
   smartlist_t *questions = NULL;
   smartlist_t *answers = NULL;
@@ -574,7 +599,7 @@ handle_control_getinfo(connection_t *conn, uint16_t len, const char *body)
 
   msg = smartlist_join_strings2(answers, "\0", 1, 1, &msg_len);
   send_control_message(conn, CONTROL_CMD_INFOVALUE,
-                       (uint16_t)msg_len, msg_len?msg:NULL);
+                       msg_len, msg_len?msg:NULL);
 
  done:
   if (answers) SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
@@ -586,20 +611,20 @@ handle_control_getinfo(connection_t *conn, uint16_t len, const char *body)
   return 0;
 }
 static int
-handle_control_extendcircuit(connection_t *conn, uint16_t len,
+handle_control_extendcircuit(connection_t *conn, uint32_t len,
                              const char *body)
 {
   send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
   return 0;
 }
-static int handle_control_attachstream(connection_t *conn, uint16_t len,
+static int handle_control_attachstream(connection_t *conn, uint32_t len,
                                         const char *body)
 {
   send_control_error(conn,ERR_UNRECOGNIZED_TYPE,"not yet implemented");
   return 0;
 }
 static int
-handle_control_postdescriptor(connection_t *conn, uint16_t len,
+handle_control_postdescriptor(connection_t *conn, uint32_t len,
                               const char *body)
 {
   if (router_load_single_router(body)<0) {
@@ -634,7 +659,8 @@ int connection_control_reached_eof(connection_t *conn) {
  */
 int
 connection_control_process_inbuf(connection_t *conn) {
-  uint16_t body_len, command_type;
+  uint32_t body_len;
+  uint16_t command_type;
   char *body;
 
   tor_assert(conn);
@@ -726,6 +752,10 @@ connection_control_process_inbuf(connection_t *conn) {
       send_control_error(conn, ERR_UNRECOGNIZED_TYPE,
                          "Command type only valid from server to tor client");
       break;
+    case CONTROL_CMD_FRAGMENTHEADER:
+    case CONTROL_CMD_FRAGMENT:
+      log_fn(LOG_WARN, "Recieved command fragment out of order; ignoring.");
+      send_control_error(conn, ERR_SYNTAX, "Bad fragmentation on command.");
     default:
       log_fn(LOG_WARN, "Received unrecognized command type %d; ignoring.",
              (int)command_type);
@@ -756,7 +786,7 @@ control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
   set_uint32(msg+1, htonl(circ->global_identifier));
   strlcpy(msg+5,path,path_len+1);
 
-  send_control_event(EVENT_CIRCUIT_STATUS, (uint16_t)(path_len+6), msg);
+  send_control_event(EVENT_CIRCUIT_STATUS, (uint32_t)(path_len+6), msg);
   tor_free(path);
   tor_free(msg);
   return 0;
@@ -784,7 +814,7 @@ control_event_stream_status(connection_t *conn, stream_status_event_t tp)
   set_uint32(msg+1, htonl(conn->global_identifier));
   strlcpy(msg+5, buf, len+1);
 
-  send_control_event(EVENT_STREAM_STATUS, (uint16_t)(5+len+1), msg);
+  send_control_event(EVENT_STREAM_STATUS, (uint32_t)(5+len+1), msg);
   tor_free(msg);
   return 0;
 }
@@ -805,7 +835,7 @@ control_event_or_conn_status(connection_t *conn,or_conn_status_event_t tp)
   buf[0] = (uint8_t)tp;
   strlcpy(buf+1,conn->nickname,sizeof(buf)-1);
   len = strlen(buf+1);
-  send_control_event(EVENT_OR_CONN_STATUS, (uint16_t)(len+1), buf);
+  send_control_event(EVENT_OR_CONN_STATUS, (uint32_t)(len+1), buf);
   return 0;
 }
 
@@ -837,7 +867,7 @@ control_event_logmsg(int severity, const char *msg)
     return;
 
   len = strlen(msg);
-  send_control_event(EVENT_WARNING, (uint16_t)(len+1), msg);
+  send_control_event(EVENT_WARNING, (uint32_t)(len+1), msg);
 }
 
 /** Choose a random authentication cookie and write it to disk.

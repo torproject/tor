@@ -1100,7 +1100,7 @@ int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, size_t max_headerlen,
                         char **body_out, size_t *body_used, size_t max_bodylen);
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req);
-int fetch_from_buf_control(buf_t *buf, uint16_t *len_out, uint16_t *type_out,
+int fetch_from_buf_control(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
                            char **body_out);
 
 void assert_buf_ok(buf_t *buf);

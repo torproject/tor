@@ -645,20 +645,24 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
   }
 }
 
+
+#define CONTROL_CMD_FRAGMENTHEADER 0x0010
+#define CONTROL_CMD_FRAGMENT       0x0011
 /** If there is a complete control message waiting on buf, then store
  * its contents into *<b>type_out</b>, store its body's length into
  * *<b>len_out</b>, allocate and store a string for its body into
- * *<b>body_out</b>, and return -1.  (body_out will always be NUL-terminated,
+ * *<b>body_out</b>, and return 1.  (body_out will always be NUL-terminated,
  * even if the control message body doesn't end with NUL.)
  *
  * If there is not a complete control message waiting, return 0.
  *
  * Return -1 on error.
  */
-int fetch_from_buf_control(buf_t *buf, uint16_t *len_out, uint16_t *type_out,
+int fetch_from_buf_control(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
                            char **body_out)
 {
-  uint16_t len;
+  uint32_t msglen;
+  uint16_t type;
 
   tor_assert(buf);
   tor_assert(len_out);
@@ -668,23 +672,82 @@ int fetch_from_buf_control(buf_t *buf, uint16_t *len_out, uint16_t *type_out,
   if (buf->datalen < 4)
     return 0;
 
-  len = ntohs(get_uint16(buf->mem));
-  if (buf->datalen < 4 + (unsigned)len)
+  msglen = ntohs(get_uint16(buf->mem));
+  if (buf->datalen < 4 + (unsigned)msglen)
     return 0;
 
-  *len_out = len;
-  *type_out = ntohs(get_uint16(buf->mem+2));
-  if (len) {
-    *body_out = tor_malloc(len+1);
-    memcpy(*body_out, buf->mem+4, len);
-    (*body_out)[len] = '\0';
+  type = ntohs(get_uint16(buf->mem+2));
+  if (type != CONTROL_CMD_FRAGMENTHEADER) {
+    *len_out = msglen;
+    *type_out = type;
+    if (msglen) {
+      *body_out = tor_malloc(msglen+1);
+      memcpy(*body_out, buf->mem+4, msglen);
+      (*body_out)[msglen] = '\0';
+    } else {
+      *body_out = NULL;
+    }
+    buf_remove_from_front(buf, 4+msglen);
+
+    return 1;
   } else {
-    *body_out = NULL;
+    uint32_t totallen, sofar;
+    char *cp, *endp, *outp;
+
+    /* Okay, we have a fragmented message.  Is it all here? */
+    if (msglen < 6)
+      return -1;
+    type = htons(get_uint16(buf->mem+4));
+    totallen = htonl(get_uint32(buf->mem+6));
+    if (totallen < 65536)
+      return -1;
+
+    if (buf->datalen<4+6+totallen)
+      /* The data can't possibly be here yet, no matter how well it's packed.*/
+      return 0;
+
+    /* Count how much data is really here. */
+    sofar = msglen-6;
+    cp = buf->mem+4+msglen;
+    endp = buf->mem+buf->datalen;
+    while (sofar < totallen) {
+      if ((endp-cp)<4)
+        return 0; /* Fragment header not all here. */
+      msglen = ntohs(get_uint16(cp));
+      if (ntohs(get_uint16(cp+2) != CONTROL_CMD_FRAGMENT))
+        return -1; /* Missing fragment message; error. */
+      if ((endp-cp) < 4+msglen)
+        return 0; /* Fragment not all here. */
+      sofar += msglen;
+      cp += (4+msglen);
+    }
+    if (sofar > totallen)
+      return -1; /* Fragments add to more than expected; error. */
+
+    /* Okay, everything is here. */
+    *len_out = totallen;
+    *type_out = type;
+    *body_out = tor_malloc(totallen+1);
+
+    /* copy FRAGMENTED packet contents. */
+    msglen = ntohs(get_uint16(buf->mem));
+    if (msglen>6)
+      memcpy(*body_out,buf->mem+4+6,msglen-6);
+    sofar = msglen-6;
+    outp = *body_out+sofar;
+    cp = buf->mem+4+msglen;
+    while (sofar < totallen) {
+      msglen = ntohs(get_uint16(cp));
+      memcpy(outp,cp+4,msglen);
+      outp += msglen;
+      cp += 4+msglen;
+      sofar -= msglen;
+    }
+    (*body_out)[totallen]='\0';
+
+    return 1;
   }
 
-  buf_remove_from_front(buf, 4+len);
-
-  return 1;
 }
 
 /** Log an error and exit if <b>buf</b> is corrupted.

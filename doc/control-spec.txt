@@ -51,6 +51,11 @@ the message.
 
 3. Message types
 
+  Message types are drawn from the following ranges:
+
+  0x0000-0xEFFF   : Reserved for use by official versions of this spec.
+  0xF000-0xFFFF   : Unallocated; usable by unofficial extensions.
+
 3.1. ERROR (Type 0x0000)
 
   Sent in response to a message that could not be processed as requested.
@@ -232,8 +237,6 @@ the message.
 
 3.11. MAPADDRESS (Type 0x000A)
 
-  [Proposal; not finalized]
-
   Sent from the client to the server.  The body contains a sequence of
   address mappings, each consisting of the address to be mapped, a single
   space, the replacement address, and a NL character.
@@ -279,8 +282,6 @@ the message.
 
 3.12 GETINFO (Type 0x000B)
 
-  [Proposal; not finalized]
-
   Sent from the client to the server.  The message body is as for GETCONF:
   one or more NL-terminated strings.  The server replies with an INFOVALUE
   message.
@@ -303,8 +304,6 @@ the message.
       the form of "from-address" SP "to-address".
 
 3.13 INFOVALUE (Type 0x000C)
-
-  [Proposal; not finalized]
 
   Sent from the server to the client in response to a GETINFO message.
   Contains one or more items of the format:
@@ -359,6 +358,32 @@ the message.
   If there is an error in parsing the descriptor, or if the server rejects
   the descriptor for any reason, the server must send an appropriate error
   message.
+
+3.17 FRAGMENTHEADER (Type 0x0010)
+
+  [Proposal; not finalized]
+
+  Sent in either direction.  Used to encapsulate messages longer than 65535
+  bytes long.
+
+      Underlying type [2 bytes]
+      Total Length    [4 bytes]
+      Data            [Rest of message]
+
+  A FRAGMENTHEADER message MUST be followed immediately by a number of
+  FRAGMENT messages, such that lengths of the "Data" fields of the
+  FRAGMENTHEADER and FRAGMENT messages add to the "Total Length" field of the
+  FRAGMENTHEADER message.
+
+  Implementations MUST NOT fragment messages of length less than 65536 bytes.
+  Implementations MUST be able to process fragmented messages that not
+  optimally packed.
+
+3.18 FRAGMENT (Type 0x0011)
+
+  [Proposal; not finalized]
+
+      Data           [Entire message]
 
 4. Implementation notes
 
