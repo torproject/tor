@@ -470,7 +470,8 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   len = BIO_get_mem_data(bio, &cp);
   tor_assert(len >= 0);
   s = tor_malloc(len+1);
-  strlcpy(s, cp, len+1);
+  memcpy(s, cp, len);
+  s[len]='\0';
   r = write_str_to_file(fname, s, 0);
   BIO_free(bio);
   free(s);
