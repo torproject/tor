@@ -34,7 +34,12 @@ N  - Check for hibernation on startup, hup, etc.
 N  - RPMs
      o Merge changes from jbash
      - Figure out versioning
-N  - Windows installer
+N  . Windows installer
+     o Make installer get built
+     o Write script to correct windows versions.
+     - Call script to correct windows versions as appropriate.
+     - Make the text documentation use windows-style newlines.
+     - Make torrc.sample say to put torrc into application data\tor
 R  - Review website; make important info more prominent.
 R  - merge in the contributed tor.sh
 
