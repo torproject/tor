@@ -1,4 +1,74 @@
 Changes so far in 0.0.9:
+pre5:
+  o Bugfixes on 0.0.9pre4:
+    - Fix a seg fault in unit tests (doesn't affect main program).
+    - Fix an assert bug where a hidden service provider would fail if
+      the first hop of his rendezvous circuit was down.
+    - Hidden service operators now correctly handle version 1 style
+      INTRODUCE1 cells (nobody generates them still, so not a critical
+      bug).
+    - If do_hup fails, actually notice.
+    - Handle more errnos from accept() without closing the listener.
+      Some OpenBSD machines were closing their listeners because
+      they ran out of file descriptors.
+    - Send resolve cells to exit routers that are running a new
+      enough version of the resolve code to work right.
+    - Better handling of winsock includes on non-MSV win32 compilers.
+    - Some people had wrapped their tor client/server in a script
+      that would restart it whenever it died. This did not play well
+      with our "shut down if your version is obsolete" code. Now people
+      don't fetch a new directory if their local cached version is
+      recent enough.
+    - Make our autogen.sh work on ksh as well as bash.
+
+  o Major Features:
+    - Hibernation: New config option "AccountingMaxKB" lets you
+      set how many KB per month you want to allow your server to
+      consume. Rather than spreading those bytes out evenly over the
+      month, we instead hibernate for most of the month and pop up
+      at a deterministic time, work until the bytes are consumed, then
+      hibernate again. Config option "MonthlyAccountingStart" lets you
+      specify which day of the month your billing cycle starts on.
+    - Control interface: a separate program can now talk to your
+      client/server over a socket, and get/set config options, receive
+      notifications of circuits and streams starting/finishing/dying,
+      bandwidth used, etc. The next step is to get some GUIs working.
+      Let us know if you want to help out.
+    - Ship a contrib/tor-control.py as an example script to interact
+      with the control port.
+    - "tor --hash-password zzyxz" will output a salted password for
+      use in authenticating to the control interface.
+    - New log format in config:
+      "Log minsev[-maxsev] stdout|stderr|syslog" or
+      "Log minsev[-maxsev] file /foo"
+
+  o Minor Features:
+    - DirPolicy config option, to let people reject incoming addresses
+      from their dirserver.
+    - "tor --list-fingerprint" will list your identity key fingerprint
+      and then exit.
+    - Add "pass" target for RedirectExit, to make it easier to break
+      out of a sequence of RedirectExit rules.
+    - Clients now generate a TLS cert too, in preparation for having
+      them act more like real nodes.
+    - Ship src/win32/ in the tarball, so people can use it to build.
+    - Make old win32 fall back to CWD if SHGetSpecialFolderLocation
+      is broken.
+    - New "router-status" line in directory, to better bind each verified
+      nickname to its identity key.
+    - Deprecate unofficial config option abbreviations, and abbreviations
+      not on the command line.
+    - Add a pure-C tor-resolve implementation.
+    - Use getrlimit and friends to ensure we can reach MaxConn (currently
+      1024) file descriptors.
+
+  o Code security improvements, inspired by Ilja:
+    - Replace sprintf with snprintf. (I think they were all safe, but
+      hey.)
+    - Replace strcpy/strncpy with strlcpy in more places.
+    - Avoid strcat; use snprintf or strlcat instead.
+    - snprintf wrapper with consistent (though not C99) overflow behavior.
+
 pre4:
   o Bugfixes on 0.0.9pre3:
     - Ignore fascistfirewall when uploading/downloading hidden service
