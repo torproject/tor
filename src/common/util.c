@@ -163,8 +163,8 @@ void *smartlist_choose(smartlist_t *sl) {
 const char *eat_whitespace(const char *s) {
   assert(s);
 
-  while(isspace(*s) || *s == '#') {
-    while(isspace(*s))
+  while(isspace((int)*s) || *s == '#') {
+    while(isspace((int)*s))
       s++;
     if(*s == '#') { /* read to a \n or \0 */
       while(*s && *s != '\n')
@@ -186,7 +186,7 @@ const char *eat_whitespace_no_nl(const char *s) {
 const char *find_whitespace(const char *s) {
   assert(s);
 
-  while(*s && !isspace(*s) && *s != '#')
+  while(*s && !isspace((int)*s) && *s != '#')
     s++;
 
   return s;
@@ -672,18 +672,18 @@ try_next_line:
   do {
     *s = 0;
     s--;
-  } while (s >= line && isspace(*s));
+  } while (s >= line && isspace((int)*s));
 
   key = line;
-  while(isspace(*key))
+  while(isspace((int)*key))
     key++;
   if(*key == 0)
     goto try_next_line; /* this line has nothing on it */
   end = key;
-  while(*end && !isspace(*end))
+  while(*end && !isspace((int)*end))
     end++;
   value = end;
-  while(*value && isspace(*value))
+  while(*value && isspace((int)*value))
     value++;
 
   if(!*end || !*value) { /* only a key on this line. no value. */

@@ -691,9 +691,9 @@ crypto_pk_check_fingerprint_syntax(const char *s)
   int i;
   for (i = 0; i < FINGERPRINT_LEN; ++i) {
     if ((i%5) == 4) {
-      if (!isspace(s[i])) return 0;
+      if (!isspace((int)s[i])) return 0;
     } else {
-      if (!isxdigit(s[i])) return 0;
+      if (!isxdigit((int)s[i])) return 0;
     }
   }
   if (s[FINGERPRINT_LEN]) return 0;
