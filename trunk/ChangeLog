@@ -1,4 +1,36 @@
 Changes so far in 0.0.9:
+pre3:
+  o Bugfixes on 0.0.8.1:
+    - Better torrc example lines for dirbindaddress and orbindaddress.
+    - Improved bounds checking on parsed ints (e.g. config options and
+      the ones we find in directories.)
+    - Better handling of size_t vs int, so we're more robust on 64
+      bit platforms.
+    - Fix the rest of the bug where a newly started OR would appear
+      as unverified even after we've added his fingerprint and hupped
+      the dirserver.
+
+  o Bugfixes on 0.0.9pre2:
+    - Serving the cached-on-disk directory to people is bad. We now
+      provide no directory until we've fetched a fresh one.
+    - Workaround for bug on windows where cached-directories get crlf
+      corruption.
+    - Make get_default_conf_file() work on older windows too.
+    - If we write a *:* exit policy line in the descriptor, don't write
+      any more exit policy lines.
+
+  o Features:
+    - Use only 0.0.9pre1 and later servers for resolve cells.
+    - Make the dirservers file obsolete.
+      - Include a dir-signing-key token in directories to tell the
+        parsing entity which key is being used to sign.
+      - New config option "Dirserver %s:%d [fingerprint]". If no
+        dirservers specified, default to moria1,moria2,tor26.
+    - Http proxy support
+      - Dirservers translate requests for http://%s:%d/x to /x
+      - You can specify "HttpProxy %s[:%d]" and all dir fetches will
+        be routed through this host.
+
 pre2:
   o Bugfixes on pre1:
     - Make fetching a cached directory work for 64-bit platforms too.
@@ -9,10 +41,7 @@ pre1:
     - Stop using separate defaults for no-config-file and
       empty-config-file. Now you have to explicitly turn off SocksPort,
       if you don't want it open.
-    - Fix a bug in OutboundBindAddress so it (hopefully) works.
     - Improve man page to mention more of the 0.0.8 features.
-    - Fix a rare seg fault for people running hidden services on
-      intermittent connections.
     - Change our file IO stuff (especially wrt OpenSSL) so win32 is
       happier.
     - Fix more dns related bugs: send back resolve_failed and end cells
@@ -29,8 +58,6 @@ pre1:
       before he'd uploaded his descriptor, which would cause us to
       assign conn->nickname as though he's unverified. Now we look through
       the fingerprint list to see if he's there.
-    - Fix a rare assert trigger, where routerinfos for entries in
-      our cpath would expire while we're building the path.
 
   o Features:
     - Clients can ask dirservers for /dir.z to get a compressed version
@@ -49,6 +76,22 @@ pre1:
       than once per minute
     - Protect dirservers from overzealous descriptor uploading -- wait
       10 seconds after directory gets dirty, before regenerating.
+
+
+Changes in version 0.0.8.1 - 2004-10-13
+  o Bugfixes:
+    - Fix a rare assert trigger, where routerinfos for entries in
+      our cpath would expire while we're building the path.
+    - Fix a bug in OutboundBindAddress so it (hopefully) works.
+    - Fix a rare seg fault for people running hidden services on
+      intermittent connections.
+    - Fix a bug in parsing opt keywords with objects.
+    - Fix a stale pointer assert bug when a stream detaches and
+      reattaches.
+    - Fix a string format vulnerability (probably not exploitable)
+      in reporting stats locally.
+    - Fix an assert trigger: sometimes launching circuits can fail
+      immediately, e.g. because too many circuits have failed recently.
 
 
 Changes in version 0.0.8 - 2004-08-25
