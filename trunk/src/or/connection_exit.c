@@ -164,6 +164,7 @@ int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ) {
   connection_t *conn;
   int topic_command;
   int topic_id;
+  static num_seen=0;
 
   /* an outgoing data cell has arrived */
 
@@ -173,6 +174,8 @@ int connection_exit_process_data_cell(cell_t *cell, circuit_t *circ) {
   *cell->payload = 0;
   topic_id = *(uint32_t *)cell->payload;
   log(LOG_DEBUG,"connection_exit_process_data_cell(): command %d topic %d", topic_command, topic_id);
+  num_seen++;
+  log(LOG_DEBUG,"connection_exit_process_data_cell(): Now seen %d data cells here.", num_seen);
 
   circuit_consider_sending_sendme(circ, EDGE_EXIT);
 
