@@ -1192,7 +1192,8 @@ void running_routers_free(running_routers_t *rr)
   tor_free(rr);
 }
 
-/** DOCDOC*/
+/** We've just got a running routers list in <b>rr</b>; update the
+ * status of the routers in <b>list</b>, and cache <b>rr</b> */
 void
 routerlist_set_runningrouters(routerlist_t *list, running_routers_t *rr)
 {
@@ -1389,6 +1390,7 @@ add_trusted_dir_server(const char *address, uint16_t port, const char *digest)
   smartlist_add(trusted_dir_servers, ent);
 }
 
+/** Remove all members from the list of trusted dir servers. */
 void clear_trusted_dir_servers(void)
 {
   if (trusted_dir_servers) {

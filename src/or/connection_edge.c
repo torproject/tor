@@ -162,7 +162,10 @@ connection_edge_end(connection_t *conn, char reason, crypt_path_t *cpath_layer)
   return 0;
 }
 
-/** DOCDOC **/
+/** An error has just occured on an operation on an edge connection
+ * <b>conn</b>.  Extract the errno; convert it to an end reason, and send
+ * an appropriate relay end cell to <b>cpath_layer</b>.
+ **/
 int
 connection_edge_end_errno(connection_t *conn, crypt_path_t *cpath_layer)
 {
@@ -265,7 +268,15 @@ void connection_ap_expire_beginning(void) {
     conn = carray[i];
     if (conn->type != CONN_TYPE_AP)
       continue;
-    if (conn->state != AP_CONN_STATE_RESOLVE_WAIT &&
+    if (conn->state == AP_CONN_STATE_CONTROLLER_WAIT) {
+      if (now - conn->timestamp_lastread >= 120) {
+        log_fn(LOG_NOTICE, "Closing unattached stream.");
+        connection_mark_for_close(conn);
+      }
+      continue;
+    }
+
+    else if (conn->state != AP_CONN_STATE_RESOLVE_WAIT &&
         conn->state != AP_CONN_STATE_CONNECT_WAIT)
       continue;
     if (now - conn->timestamp_lastread < 15)
@@ -338,17 +349,21 @@ void connection_ap_attach_pending(void)
   }
 }
 
-/** DOCDOC
- * -1 on err, 1 on success, 0 on not-yet-sure.
+/** The AP connection <b>conn</b> has just failed while attaching or
+ * sending a BEGIN or resolving on <b>circ</b>, but another circuit
+ * might work.  Detach the circuit, and either reattach it, launch a
+ * new circuit, tell the controller, or give up as a appropriate.
+ *
+ * Returns -1 on err, 1 on success, 0 on not-yet-sure.
  */
 int
 connection_ap_detach_retriable(connection_t *conn, circuit_t *circ)
 {
   control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE);
+  conn->timestamp_lastread = time(NULL);
   if (get_options()->ManageConnections) {
     conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
     circuit_detach_stream(circ,conn);
-    /* Muck with timestamps? */
     return connection_ap_handshake_attach_circuit(conn);
   } else {
     conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
@@ -678,7 +693,15 @@ addressmap_get_virtual_address(int type)
   }
 }
 
-/* DOCDOC */
+/** A controller has requested that we map some address of type
+ * <b>type</b> to the address <b>new_address</b>.  Choose an address
+ * that is unlikely to be used, and map it, and return it in a newly
+ * allocated string.  If another address of the same type is already
+ * mapped to <b>new_address</b>, try to return a copy of that address.
+ *
+ * The string in <b>new_address</b> may be freed, or inserted into a map
+ * as appropriate.
+ **/
 char *
 addressmap_register_virtual_address(int type, char *new_address)
 {
@@ -720,7 +743,7 @@ address_is_invalid_destination(const char *address) {
   return 0;
 }
 
-/* Iterate over all address mapings which have exipry times between
+/** Iterate over all address mapings which have exipry times between
  * min_expires and max_expires, inclusive.  If sl is provided, add an
  * "old-addr new-addr" string to sl for each mapping.  If sl is NULL,
  * remove the mappings.
@@ -779,19 +802,23 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   log_fn(LOG_DEBUG,"entered.");
 
   sockshere = fetch_from_buf_socks(conn->inbuf, socks);
-  if (sockshere == -1 || sockshere == 0) {
-    if (socks->replylen) { /* we should send reply back */
-      log_fn(LOG_DEBUG,"reply is already set for us. Using it.");
-      connection_ap_handshake_socks_reply(conn, socks->reply, socks->replylen, 0);
-      socks->replylen = 0; /* zero it out so we can do another round of negotiation */
-    } else if (sockshere == -1) { /* send normal reject */
-      log_fn(LOG_WARN,"Fetching socks handshake failed. Closing.");
-      connection_ap_handshake_socks_reply(conn, NULL, 0, -1);
+  if (sockshere == 0) {
+    if (socks->replylen) {
+      connection_write_to_buf(socks->reply, socks->replylen, conn);
     } else {
       log_fn(LOG_DEBUG,"socks handshake not all here yet.");
     }
-    if (sockshere == -1)
-      socks->has_finished = 1;
+    return 0;
+  } else if (sockshere == -1) {
+    if (socks->replylen) { /* we should send reply back */
+      log_fn(LOG_DEBUG,"reply is already set for us. Using it.");
+      connection_ap_handshake_socks_reply(conn, socks->reply, socks->replylen,
+                                          SOCKS5_GENERAL_ERROR);
+      socks->replylen = 0; /* zero it out so we can do another round of negotiation */
+    } else {
+      log_fn(LOG_WARN,"Fetching socks handshake failed. Closing.");
+      connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_GENERAL_ERROR);
+    }
     return sockshere;
   } /* else socks handshake is done, continue processing */
 
@@ -1080,7 +1107,11 @@ int connection_ap_make_bridge(char *address, uint16_t port) {
   return fd[1];
 }
 
-/* DOCDOC */
+/** Send an answer to an AP connection that has requested a DNS lookup
+ * via SOCKS.  The type should be one of RESOLVED_TYPE_(IPV4|IPV6) or
+ * -1 for unreachable; the answer should be in the format specified
+ * in the socks extensions document.
+ **/
 void connection_ap_handshake_socks_resolved(connection_t *conn,
                                             int answer_type,
                                             size_t answer_len,
@@ -1132,15 +1163,15 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
     }
   }
   connection_ap_handshake_socks_reply(conn, buf, replylen,
-                                      (answer_type == RESOLVED_TYPE_IPV4 ||
-                                      answer_type == RESOLVED_TYPE_IPV6) ? 1 : -1);
+          (answer_type == RESOLVED_TYPE_IPV4 ||
+           answer_type == RESOLVED_TYPE_IPV6) ?
+                               SOCKS5_SUCCEEDED : SOCKS5_HOST_UNREACHABLE);
   conn->socks_request->has_finished = 1;
 }
 
 /** Send a socks reply to stream <b>conn</b>, using the appropriate
- * socks version, etc.
- *
- * Status can be 1 (succeeded), -1 (failed), or 0 (not sure yet).
+ * socks version, etc, and mark <b>conn</b> as completed with SOCKS
+ * handshaking.
  *
  * If <b>reply</b> is defined, then write <b>replylen</b> bytes of it
  * to conn and return, else reply based on <b>status</b>.
@@ -1148,32 +1179,34 @@ void connection_ap_handshake_socks_resolved(connection_t *conn,
  * If <b>reply</b> is undefined, <b>status</b> can't be 0.
  */
 void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
-                                         size_t replylen, int status) {
+                                         size_t replylen,
+                                         socks5_reply_status_t status) {
   char buf[256];
 
-  if (status) /* it's either 1 or -1 */
-    control_event_stream_status(conn,
-                       status==1 ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED);
+  control_event_stream_status(conn,
+     status==SOCKS5_SUCCEEDED ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED);
 
-  if (replylen) { /* we already have a reply in mind */
-    connection_write_to_buf(reply, replylen, conn);
+  tor_assert(conn->socks_request);
+  if (conn->socks_request->has_finished) {
+    log_fn(LOG_WARN, "Harmless bug: duplicate calls to connection_ap_handshake_socks_reply.");
     return;
   }
-  tor_assert(conn->socks_request);
-  tor_assert(status == 1 || status == -1);
+  if (replylen) { /* we already have a reply in mind */
+    connection_write_to_buf(reply, replylen, conn);
+    conn->socks_request->has_finished = 1;
+    return;
+  }
   if (conn->socks_request->socks_version == 4) {
     memset(buf,0,SOCKS4_NETWORK_LEN);
 #define SOCKS4_GRANTED          90
 #define SOCKS4_REJECT           91
-    buf[1] = (status==1 ? SOCKS4_GRANTED : SOCKS4_REJECT);
+    buf[1] = (status==SOCKS5_SUCCEEDED ? SOCKS4_GRANTED : SOCKS4_REJECT);
     /* leave version, destport, destip zero */
     connection_write_to_buf(buf, SOCKS4_NETWORK_LEN, conn);
   }
   if (conn->socks_request->socks_version == 5) {
     buf[0] = 5; /* version 5 */
-#define SOCKS5_SUCCESS          0
-#define SOCKS5_GENERIC_ERROR    1
-    buf[1] = status==1 ? SOCKS5_SUCCESS : SOCKS5_GENERIC_ERROR;
+    buf[1] = (char)status;
     buf[2] = 0;
     buf[3] = 1; /* ipv4 addr */
     memset(buf+4,0,6); /* Set external addr/port to 0.
@@ -1182,6 +1215,7 @@ void connection_ap_handshake_socks_reply(connection_t *conn, char *reply,
   }
   /* If socks_version isn't 4 or 5, don't send anything.
    * This can happen in the case of AP bridges. */
+  conn->socks_request->has_finished = 1;
   return;
 }
 

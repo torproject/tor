@@ -926,7 +926,10 @@ control_event_logmsg(int severity, const char *msg)
   send_control_event(EVENT_WARNING, (uint32_t)(len+1), msg);
 }
 
-/** DOCDOC */
+/** Called whenever we receive new router descriptors: tell any
+ * interested control connections.  <b>routers</b> is a list of
+ * DIGEST_LEN-byte identity digests.
+ */
 int control_event_descriptors_changed(smartlist_t *routers)
 {
   size_t len;

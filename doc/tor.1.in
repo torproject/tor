@@ -114,11 +114,14 @@ security.
 \fBDirFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
 Every time the specified period elapses, Tor downloads a directory.
 A directory contains a signed list of all known servers as well as
-their current liveness status.  (Default: 1 hour)
+their current liveness status. A value of "0 seconds" tells Tor to choose an
+appropriate default. (Default: 1 hour for clients, 20 minutes for servers.)
 .TP
-\fBStatusFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
-Every time the specified period elapses, Tor downloads signed status
-information about the current state of known servers.  (Default: 20 minutes.)
+\fBStatusFetchPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP Every time the
+specified period elapses, Tor downloads signed status information about the
+current state of known servers.  A value of "0 seconds" tells Tor to choose
+an appropriate default. (Default: 30 minutes for clients, 15 minutes for
+servers.)  (Default: 20 minutes.)
 .TP
 \fBRendPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
 Every time the specified period elapses, Tor uploads any rendezvous

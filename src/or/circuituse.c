@@ -975,7 +975,9 @@ consider_recording_trackhost(connection_t *conn, circuit_t *circ) {
                       time(NULL) + options->TrackHostExitsExpire);
 }
 
-/* DOCDOC. Return as for connection_ap_handshake_attach_chosen_circuit. */
+/** Attempt to attach the connection <b>conn</b> to <b>circ</b>, and
+ * send a begin or resolve cell as appropriate.  Return values for
+ * connection_ap_handshake_attach_chosen_circuit. */
 int
 connection_ap_handshake_attach_chosen_circuit(connection_t *conn,
                                               circuit_t *circ)

@@ -346,8 +346,6 @@ the message.
 
 3.15 ATTACHSTREAM (Type 0x000E)
 
-  [Proposal; not finalized]
-
   Sent from the client to the server.  The message body contains two fields:
       Stream ID [4 octets]
       Circuit ID [4 octets]
@@ -367,8 +365,6 @@ the message.
 
 3.16 POSTDESCRIPTOR (Type 0x000F)
 
-  [Proposal; not finalized]
-
   Sent from the client to the server.  The message body contains one field:
       Descriptor [NUL-terminated string]
 
@@ -383,10 +379,8 @@ the message.
 
 3.17 FRAGMENTHEADER (Type 0x0010)
 
-  [Proposal; not finalized]
-
   Sent in either direction.  Used to encapsulate messages longer than 65535
-  bytes long.
+  bytes in length.
 
       Underlying type [2 bytes]
       Total Length    [4 bytes]
@@ -403,9 +397,11 @@ the message.
 
 3.18 FRAGMENT (Type 0x0011)
 
-  [Proposal; not finalized]
-
       Data           [Entire message]
+
+  See FRAGMENTHEADER for more information
+
+3.19 
 
 4. Implementation notes
 

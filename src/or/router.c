@@ -57,6 +57,9 @@ crypto_pk_env_t *get_previous_onion_key(void) {
   return lastonionkey;
 }
 
+/** Store a copy of the current onion key into *<b>key</b>, and a copy
+ * of the most recent onion key into *<b>last</b>.
+ */
 void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last)
 {
   tor_assert(key);
@@ -516,6 +519,8 @@ void router_retry_connections(void) {
   }
 }
 
+/** Return true iff this OR should try to keep connections open to all
+ * other ORs. */
 int router_is_clique_mode(routerinfo_t *router) {
   if (router_digest_is_trusted_dir(router->identity_digest))
     return 1;
@@ -533,8 +538,9 @@ static int desc_is_dirty = 1;
 /** Boolean: do we need to regenerate the above? */
 static int desc_needs_upload = 0;
 
-/** OR only: try to upload our signed descriptor to all the directory servers
- * we know about. DOCDOC force
+/** OR only: If <b>force</b> is true, or we haven't uploaded this
+ * descriptor successfully yet, try to upload our signed descriptor to
+ * all the directory servers we know about.
  */
 void router_upload_dir_desc_to_dirservers(int force) {
   const char *s;
@@ -630,8 +636,9 @@ const char *router_get_my_descriptor(void) {
   return desc_routerinfo->signed_descriptor;
 }
 
-/** Rebuild a fresh routerinfo and signed server descriptor for this
- * OR.  Return 0 on success, -1 on error. DOCDOC force
+/** If <b>force</b> is true, or our descriptor is out-of-date, rebuild
+ * a fresh routerinfo and signed server descriptor for this OR.
+ * Return 0 on success, -1 on error.
  */
 int router_rebuild_descriptor(int force) {
   routerinfo_t *ri;
@@ -694,7 +701,7 @@ int router_rebuild_descriptor(int force) {
   return 0;
 }
 
-/** DOCDOC */
+/** Call when the current descriptor is out of date. */
 void
 mark_my_descriptor_dirty(void)
 {
@@ -919,6 +926,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   return written+1;
 }
 
+/** Return true iff <b>s</b> is a legally valid server nickname. */
 int is_legal_nickname(const char *s)
 {
   size_t len;
@@ -927,6 +935,8 @@ int is_legal_nickname(const char *s)
   return len > 0 && len <= MAX_NICKNAME_LEN &&
     strspn(s,LEGAL_NICKNAME_CHARACTERS)==len;
 }
+/** Return true iff <b>s</b> is a legally valid server nickname or
+ * hex-encoded identity-key digest. */
 int is_legal_nickname_or_hexdigest(const char *s)
 {
   size_t len;
@@ -938,6 +948,7 @@ int is_legal_nickname_or_hexdigest(const char *s)
   return len == HEX_DIGEST_LEN+1 && strspn(s+1,HEX_CHARACTERS)==len-1;
 }
 
+/** Release all resources held in router keys. */
 void router_free_all_keys(void)
 {
   if (onionkey)

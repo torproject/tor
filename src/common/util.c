@@ -1288,6 +1288,10 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
   return -1;
 }
 
+/** Given an IPv4 address <b>in</b> (in network order, as usual),
+ * write it as a string into the <b>buf_len</b>-byte buffer in
+ * <b>buf</b>.
+ */
 int
 tor_inet_ntoa(struct in_addr *in, char *buf, size_t buf_len)
 {
@@ -1299,7 +1303,8 @@ tor_inet_ntoa(struct in_addr *in, char *buf, size_t buf_len)
                       (int)(uint8_t)((a    )&0xff));
 }
 
-/* DOCDOC */
+/* Return true iff <b>name</b> looks like it might be a hostname or IP
+ * address of some kind. */
 int
 is_plausible_address(const char *name)
 {
@@ -1437,4 +1442,3 @@ void write_pidfile(char *filename) {
   }
 #endif
 }
-

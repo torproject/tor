@@ -541,7 +541,9 @@ router_parse_routerlist_from_directory(const char *str,
   return r;
 }
 
-/* DOCDOC */
+/** Read a signed router status statement from <b>str</b>.  On
+ * success, return it, and cache the original string if
+ * <b>write_to_cache</b> is set.  Otherwise, return NULL.  */
 running_routers_t *
 router_parse_runningrouters(const char *str, int write_to_cache)
 {
