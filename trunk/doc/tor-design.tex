@@ -96,8 +96,8 @@ Routing design:
 \item \textbf{Perfect forward secrecy:} The original Onion Routing
 design was vulnerable to a single hostile node recording traffic and
 later compromising successive nodes in the circuit and forcing them
-% XXX Problem: at this point, readers don't know what an onion is.
-to decrypt it.  Rather than using a single onion to lay each circuit,
+to decrypt it. Rather than using a single multiply encrypted data
+structure (an \emph{onion}) to lay each circuit,
 Tor now uses an incremental or \emph{telescoping} path-building design,
 where the initiator negotiates session keys with each successive hop in
 the circuit.  Once these keys are deleted, subsequently compromised nodes
@@ -106,7 +106,7 @@ is no longer necessary, and the process of building circuits is more
 reliable, since the initiator knows when a hop fails and can then try
 extending to a new node.
 
-\item \textbf{Separation of protocol cleaning from anonymity:}
+\item \textbf{Separation of ``protocol cleaning'' from anonymity:}
 The original Onion Routing design required a separate ``application
 proxy'' for each supported application protocol---most of which were
 never written, so many applications were never supported.  Tor uses the
@@ -269,7 +269,7 @@ about who is talking to whom.
 The simplest low-latency designs are single-hop proxies such as the
 {\bf Anonymizer} \cite{anonymizer}, wherein a single trusted server strips the
 data's origin before relaying it.  These designs are easy to
-analyze, but require users to trust the anonymizing proxy. 
+analyze, but users must trust the anonymizing proxy. 
 Concentrating the traffic to a single point increases the anonymity set
 (the people a given user is hiding among), but can make traffic
 analysis easier: an adversary need only eavesdrop on the proxy to observe
@@ -314,6 +314,7 @@ encryption, so any node on a circuit can read that circuit's traffic.
 {\bf Hordes} \cite{hordes-jcs} is based on Crowds but also uses multicast
 responses to hide the initiator. {\bf Herbivore} \cite{herbivore} and
 {\bf P5} \cite{p5} go even further, requiring broadcast.
+% XXX This should be $P^5$ in bold. How to do it? -RD
 These systems are designed primarily for communication between peers,
 although Herbivore users can make external connections by
 requesting a peer to serve as a proxy.
@@ -402,7 +403,7 @@ it is a security requirement \cite{econymics,back01}. Tor should
 therefore not
 require modifying applications; should not introduce prohibitive delays;
 and should require users to make as few configuration decisions
-as possible.  Finally, Tor should be easily implemented on all commonly
+as possible.  Finally, Tor should be easily implemented on all common
 platforms; we cannot require users to change their operating system in order
 to be anonymous.  (The current Tor implementation runs on Windows and
 assorted Unix clones including Linux, FreeBSD, and MacOS X.)
@@ -480,11 +481,9 @@ responder. By observing both ends, passive attackers can confirm a
 suspicion that Alice is 
 talking to Bob if the timing and volume patterns of the traffic on the
 connection are distinct enough; active attackers can induce timing
-signatures on the traffic to \emph{force} distinct patterns. Tor provides
-some defenses against these \emph{traffic confirmation} attacks, for
-example by encouraging users to run their own onion routers, but it does
-% XXX More P2P issues here. -NM
-not provide complete protection. Rather, we aim to prevent \emph{traffic
+signatures on the traffic to \emph{force} distinct patterns. Tor
+does not address these \emph{traffic confirmation} attacks.
+Rather, we aim to prevent \emph{traffic
 analysis} attacks, where the adversary uses traffic patterns to learn
 which points in the network he should attack.
 
