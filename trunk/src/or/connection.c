@@ -495,15 +495,15 @@ int connection_send_destroy(aci_t aci, connection_t *conn) {
 
 int connection_write_cell_to_buf(cell_t *cellp, connection_t *conn) {
  
-  if(connection_encrypt_cell_header(cellp,conn)<0) {
+  if(connection_encrypt_cell(cellp,conn)<0) {
     return -1;
   }
 
   return connection_write_to_buf((char *)cellp, sizeof(cell_t), conn);
 }
 
-int connection_encrypt_cell_header(cell_t *cellp, connection_t *conn) {
-  char newheader[8];
+int connection_encrypt_cell(cell_t *cellp, connection_t *conn) {
+  cell_t newcell;
 #if 0
   int x;
   char *px;
@@ -516,8 +516,8 @@ int connection_encrypt_cell_header(cell_t *cellp, connection_t *conn) {
   printf("\n");
 #endif
 
-  if(crypto_cipher_encrypt(conn->f_crypto, (char *)cellp, 8, newheader)) {
-    log(LOG_ERR,"Could not encrypt data for connection %s:%u.",conn->address,conn->port);
+  if(crypto_cipher_encrypt(conn->f_crypto, (char *)cellp, sizeof(cell_t), &newcell)) {
+    log(LOG_ERR,"Could not encrypt cell for connection %s:%u.",conn->address,conn->port);
     return -1;
   }
 #if 0
@@ -528,7 +528,7 @@ int connection_encrypt_cell_header(cell_t *cellp, connection_t *conn) {
   printf("\n");
 #endif
 
-  memcpy(cellp,newheader,8);
+  memcpy(cellp,&newcell,sizeof(cell_t));
   return 0;
 }
 
@@ -697,7 +697,7 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
   printf("\n");
 #endif
   /* decrypt */
-  if(crypto_cipher_decrypt(conn->b_crypto,crypted,8,(unsigned char *)outbuf)) {
+  if(crypto_cipher_decrypt(conn->b_crypto,crypted,sizeof(cell_t),(unsigned char *)outbuf)) {
     log(LOG_ERR,"connection_process_cell_from_inbuf(): Decryption failed, dropping.");
     return connection_process_inbuf(conn); /* process the remainder of the buffer */
   }
@@ -711,7 +711,7 @@ int connection_process_cell_from_inbuf(connection_t *conn) {
 #endif
 
   /* copy the rest of the cell */
-  memcpy((char *)outbuf+8, (char *)crypted+8, sizeof(cell_t)-8);
+//  memcpy((char *)outbuf+8, (char *)crypted+8, sizeof(cell_t)-8);
   cellp = (cell_t *)outbuf;
 //  log(LOG_DEBUG,"connection_process_cell_from_inbuf(): Decrypted cell is of type %u (ACI %u).",cellp->command,cellp->aci);
   command_process_cell(cellp, conn);
