@@ -1785,13 +1785,15 @@ config_init_logs(or_options_t *options, int validate_only)
       ok = 0; goto cleanup;
     }
     if (!strcasecmp(smartlist_get(elts,1), "stdout")) {
-      if (!validate_only)
+      if (!validate_only) {
         add_stream_log(levelMin, levelMax, "<stdout>", stdout);
-      close_temp_logs();
+        close_temp_logs();
+      }
     } else if (!strcasecmp(smartlist_get(elts,1), "stderr")) {
-      if (!validate_only)
+      if (!validate_only) {
         add_stream_log(levelMin, levelMax, "<stderr>", stderr);
-      close_temp_logs();
+        close_temp_logs();
+      }
     } else if (!strcasecmp(smartlist_get(elts,1), "syslog")) {
 #ifdef HAVE_SYSLOG_H
       if (!validate_only)
