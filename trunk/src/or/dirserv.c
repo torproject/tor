@@ -750,7 +750,6 @@ size_t dirserv_get_directory(const char **directory, int compress)
 static int dirserv_regenerate_directory(void)
 {
   char *new_directory;
-  char filename[512];
 
   new_directory = tor_malloc(MAX_DIR_SIZE);
   if (dirserv_dump_directory_to_string(new_directory, MAX_DIR_SIZE,
@@ -783,12 +782,6 @@ static int dirserv_regenerate_directory(void)
     exit(0);
   }
   tor_free(new_directory);
-  if(get_data_directory(&options)) {
-    tor_snprintf(filename,sizeof(filename),"%s/cached-directory", get_data_directory(&options));
-    if(write_str_to_file(filename,the_directory,0) < 0) {
-      log_fn(LOG_WARN, "Couldn't write cached directory to disk. Ignoring.");
-    }
-  }
   the_directory_is_dirty = 0;
 
   return 0;

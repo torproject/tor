@@ -31,6 +31,9 @@ static uint64_t stats_n_bytes_read = 0;
 static uint64_t stats_n_bytes_written = 0;
 /** How many seconds have we been running? */
 long stats_n_seconds_uptime = 0;
+/** When do we next download a directory? */
+static time_t time_to_fetch_directory = 0;
+
 
 /** Array of all open connections; each element corresponds to the element of
  * poll_array in the same position.  The first nfds elements are valid. */
@@ -359,11 +362,16 @@ static void conn_close_if_marked(int i) {
 }
 
 /** This function is called whenever we successfully pull down a directory */
-void directory_has_arrived(void) {
+void directory_has_arrived(time_t now) {
 
   log_fn(LOG_INFO, "A directory has arrived.");
 
   has_fetched_directory=1;
+  /* Don't try to upload or download anything for DirFetchPostPeriod
+   * seconds after the directory we had when we started.
+   */
+  if (!time_to_fetch_directory)
+    time_to_fetch_directory = now + options.DirFetchPostPeriod;
 
   if(server_mode()) { /* connect to the appropriate routers */
     router_retry_connections();
@@ -496,7 +504,6 @@ int proxy_mode(void) {
  * second by prepare_for_poll.
  */
 static void run_scheduled_events(time_t now) {
-  static long time_to_fetch_directory = 0;
   static time_t last_uploaded_services = 0;
   static time_t last_rotated_certificate = 0;
   static time_t time_to_check_listeners = 0;
