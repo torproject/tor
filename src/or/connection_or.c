@@ -215,6 +215,8 @@ int connection_or_handle_listener_read(connection_t *conn) {
 #define FLAGS_LEN 2
 #define BANDWIDTH_LEN 4
 #define KEY_LEN 16
+#define ADDR_LEN 4
+#define PORT_LEN 2
 #define PKEY_LEN 128
 
 static int 
