@@ -963,9 +963,14 @@ static void dumpstats(int severity) {
                 (stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
   if (stats_n_seconds_uptime)
-    log(severity,"Average bandwidth used: %llu/%ld = %d bytes/sec",
-           (unsigned long long) stats_n_bytes_read, stats_n_seconds_uptime,
-           (int) (stats_n_bytes_read/stats_n_seconds_uptime));
+    log(severity,
+#ifdef MS_WINDOWS
+        "Average bandwidth used: %I64u/%ld = %d bytes/sec",
+#else
+        "Average bandwidth used: %llu/%ld = %d bytes/sec",
+#endif
+        stats_n_bytes_read, stats_n_seconds_uptime,
+        (int) (stats_n_bytes_read/stats_n_seconds_uptime));
 
   rep_hist_dump_stats(now,severity);
   rend_service_dump_stats(severity);
