@@ -182,18 +182,18 @@ routerinfo_t *router_get_by_addr_port(uint32_t addr, uint16_t port) {
   return NULL;
 }
 
-routerinfo_t *router_get_first_in_route(unsigned int *route, size_t routelen) {
+routerinfo_t *router_get_first_in_route(unsigned int *route, int routelen) {
   return router_array[route[routelen-1]];
 }
 
 /* a wrapper around new_route. put all these in routers.c perhaps? */
-unsigned int *router_new_route(size_t *rlen) {
-  return new_route(options.CoinWeight, router_array,rarray_len, rlen);
+unsigned int *router_new_route(int *routelen) {
+  return new_route(options.CoinWeight, router_array, rarray_len, routelen);
 }
 
 /* a wrapper around create_onion */
-unsigned char *router_create_onion(unsigned int *route, size_t routelen, size_t *lenp, crypt_path_t **cpathp) {
-  return create_onion(router_array,rarray_len,route,routelen,lenp,cpathp);
+unsigned char *router_create_onion(unsigned int *route, int routelen, int *len, crypt_path_t **cpath) {
+  return create_onion(router_array,rarray_len,route,routelen,len,cpath);
 }
 
 

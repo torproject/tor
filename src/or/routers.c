@@ -74,7 +74,7 @@ void delete_routerlist(routerinfo_t *list)
 /* create a NULL-terminated array of pointers pointing to elements of a router list */
 /* this is done in two passes through the list - inefficient but irrelevant as this is
  * only done once when op/or start up */
-routerinfo_t **make_rarray(routerinfo_t* list, size_t *len)
+routerinfo_t **make_rarray(routerinfo_t* list, int *len)
 {
   routerinfo_t *tmp=NULL;
   int listlen = 0;
@@ -116,7 +116,7 @@ routerinfo_t **make_rarray(routerinfo_t* list, size_t *len)
 }
 
 /* load the router list */
-routerinfo_t **getrouters(char *routerfile, size_t *lenp, uint16_t or_listenport)
+routerinfo_t **getrouters(char *routerfile, int *len, uint16_t or_listenport)
 {
   int retval = 0;
   char *retp = NULL;
@@ -128,7 +128,7 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp, uint16_t or_listenport
   char *errtest; /* detecting errors in strtoul() calls */
   struct hostent *rent;
 
-  assert(routerfile && lenp);
+  assert(routerfile && len);
   
   if (strcspn(routerfile,CONFIG_LEGAL_FILENAME_CHARACTERS) != 0) {
     log(LOG_ERR,"Filename %s contains illegal characters.",routerfile);
@@ -414,6 +414,6 @@ routerinfo_t **getrouters(char *routerfile, size_t *lenp, uint16_t or_listenport
   }
   
   fclose(rf);
-  return make_rarray(routerlist, lenp);
+  return make_rarray(routerlist, len);
 }
 

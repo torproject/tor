@@ -80,7 +80,7 @@ void circuit_free(circuit_t *circ) {
   free(circ);
 }
 
-void circuit_free_cpath(crypt_path_t **cpath, size_t cpathlen) {
+void circuit_free_cpath(crypt_path_t **cpath, int cpathlen) {
   int i;
 
   for(i=0;i<cpathlen;i++)
@@ -296,7 +296,7 @@ int circuit_deliver_data_cell(cell_t *cell, circuit_t *circ, connection_t *conn,
   return connection_write_cell_to_buf(cell, conn);
 }
 
-int circuit_crypt(circuit_t *circ, char *in, size_t inlen, char crypt_type) {
+int circuit_crypt(circuit_t *circ, char *in, int inlen, char crypt_type) {
   char *out;
   int i;
   crypt_path_t *thishop;

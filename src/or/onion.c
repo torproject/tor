@@ -92,23 +92,21 @@ int chooselen(double cw)
  * int cw is the coin weight to use when choosing the route 
  * order of routers is from last to first
  */
-unsigned int *new_route(double cw, routerinfo_t **rarray, size_t rarray_len, size_t *rlen)
+unsigned int *new_route(double cw, routerinfo_t **rarray, int rarray_len, int *routelen)
 {
-  int routelen = 0;
   int i, j;
   int num_acceptable_routers = 0;
-  int retval = 0;
   unsigned int *route = NULL;
   unsigned int oldchoice, choice;
   
-  assert((cw >= 0) && (cw < 1) && (rarray) && (rlen) ); /* valid parameters */
+  assert((cw >= 0) && (cw < 1) && (rarray) && (routelen) ); /* valid parameters */
 
-  routelen = chooselen(cw);
-  if (routelen == -1) {
+  *routelen = chooselen(cw);
+  if (*routelen == -1) {
     log(LOG_ERR,"Choosing route length failed.");
     return NULL;
   }
-  log(LOG_DEBUG,"new_route(): Chosen route length %d.",routelen);
+  log(LOG_DEBUG,"new_route(): Chosen route length %d.",*routelen);
 
   for(i=0;i<rarray_len;i++) {
     log(LOG_DEBUG,"Contemplating whether router %d is any good...",i);
@@ -128,28 +126,27 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, size_t rarray_len, siz
     next_i_loop:
   }
       
-  if(num_acceptable_routers < routelen) {
-    log(LOG_DEBUG,"new_route(): Cutting routelen from %d to %d.",routelen, num_acceptable_routers);
-    routelen = num_acceptable_routers;
+  if(num_acceptable_routers < *routelen) {
+    log(LOG_DEBUG,"new_route(): Cutting routelen from %d to %d.",*routelen, num_acceptable_routers);
+    *routelen = num_acceptable_routers;
   }
 
-  if(routelen < 1) {
+  if(*routelen < 1) {
     log(LOG_ERR,"new_route(): Didn't find any acceptable routers. Failing.");
     return NULL;
   }
 
   /* allocate memory for the new route */
-  route = (unsigned int *)malloc(routelen * sizeof(unsigned int));
+  route = (unsigned int *)malloc(*routelen * sizeof(unsigned int));
   if (!route) {
     log(LOG_ERR,"Memory allocation failed.");
     return NULL;
   }
  
   oldchoice = rarray_len;
-  for(i=0;i<routelen;i++) {
+  for(i=0;i<*routelen;i++) {
     log(LOG_DEBUG,"new_route(): Choosing hop %u.",i);
-    retval = crypto_pseudo_rand(sizeof(unsigned int),(unsigned char *)&choice);
-    if (retval) {
+    if(crypto_pseudo_rand(sizeof(unsigned int),(unsigned char *)&choice)) {
       free((void *)route);
       return NULL;
     }
@@ -171,31 +168,30 @@ unsigned int *new_route(double cw, routerinfo_t **rarray, size_t rarray_len, siz
     route[i] = choice;
   }
    
-  *rlen = routelen;
   return route;
 }
 
-/* creates a new onion from route, stores it and its length into bufp and lenp respectively */
-unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned int *route, size_t routelen, size_t *lenp, crypt_path_t **cpathp)
+/* creates a new onion from route, stores it and its length into buf and len respectively */
+unsigned char *create_onion(routerinfo_t **rarray, int rarray_len, unsigned int *route, int routelen, int *len, crypt_path_t **cpath)
 {
   int i,j;
   int retval = 0;
   onion_layer_t *layer = NULL;
   crypt_path_t *hop = NULL;
   unsigned char *retbuf = NULL;
-  unsigned char *bufp;
+  unsigned char *buf;
   routerinfo_t *router;
   unsigned char iv[16];
 
-  assert(rarray && route && lenp && routelen);
+  assert(rarray && route && len && routelen);
 
     /* calculate the size of the onion */
-    *lenp = routelen * 28 + 100; /* 28 bytes per layer + 100 bytes padding for the innermost layer */
-    log(LOG_DEBUG,"create_onion() : Size of the onion is %u.",*lenp);
+    *len = routelen * 28 + 100; /* 28 bytes per layer + 100 bytes padding for the innermost layer */
+    log(LOG_DEBUG,"create_onion() : Size of the onion is %u.",*len);
     
     /* allocate memory for the onion */
-    bufp = (unsigned char *)malloc(*lenp);
-    if (!bufp)
+    buf = (unsigned char *)malloc(*len);
+    if (!buf)
     {
       log(LOG_ERR,"Error allocating memory.");
       return NULL;
@@ -207,7 +203,7 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
       log(LOG_DEBUG,"create_onion() : %u : %s:%u, %u/%u",routelen-retval,inet_ntoa(*((struct in_addr *)&((rarray[route[retval]])->addr))),ntohs((rarray[route[retval]])->or_port),(rarray[route[retval]])->pkey,crypto_pk_keysize((rarray[route[retval]])->pkey));
     }
     
-    layer = (onion_layer_t *)(bufp + *lenp - 128); /* pointer to innermost layer */
+    layer = (onion_layer_t *)(buf + *len - 128); /* pointer to innermost layer */
     /* create the onion layer by layer, starting with the innermost */
     for (i=0;i<routelen;i++)
     {
@@ -242,16 +238,16 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
       if (retval) /* error */
       {
 	log(LOG_ERR,"Error generating random data.");
-	free((void *)bufp);
-	if (cpathp)
+	free((void *)buf);
+	if (cpath)
 	{
 	  for (j=0;j<i;j++) {
-	    if (cpathp[i]->f_crypto)
-	      crypto_free_cipher_env(cpathp[i]->f_crypto);
-	    if (cpathp[i]->b_crypto)
-	      crypto_free_cipher_env(cpathp[i]->b_crypto);
+	    if (cpath[i]->f_crypto)
+	      crypto_free_cipher_env(cpath[i]->f_crypto);
+	    if (cpath[i]->b_crypto)
+	      crypto_free_cipher_env(cpath[i]->b_crypto);
 	    
-	    free((void *)cpathp[i]);
+	    free((void *)cpath[i]);
 	  }
 	}
 	return NULL;
@@ -259,25 +255,25 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
       log(LOG_DEBUG,"create_onion() : Onion layer %u built : %u, %u, %u, %s, %u.",i+1,layer->zero,layer->backf,layer->forwf,inet_ntoa(*((struct in_addr *)&layer->addr)),ntohs(layer->port));
       
       /* build up the crypt_path */
-      if (cpathp)
+      if (cpath)
       {
-	cpathp[i] = (crypt_path_t *)malloc(sizeof(crypt_path_t));
-	if (!cpathp[i])
+	cpath[i] = (crypt_path_t *)malloc(sizeof(crypt_path_t));
+	if (!cpath[i])
 	{
 	  log(LOG_ERR,"Error allocating memory.");
-	  free((void *)bufp);
+	  free((void *)buf);
           for (j=0;j<i;j++) {
-	    if (cpathp[i]->f_crypto)
-	      crypto_free_cipher_env(cpathp[i]->f_crypto);
-	    if (cpathp[i]->b_crypto)
-	      crypto_free_cipher_env(cpathp[i]->b_crypto);
+	    if (cpath[i]->f_crypto)
+	      crypto_free_cipher_env(cpath[i]->f_crypto);
+	    if (cpath[i]->b_crypto)
+	      crypto_free_cipher_env(cpath[i]->b_crypto);
 	    
-	    free((void *)cpathp[i]);
+	    free((void *)cpath[i]);
 	  }
 	}
       
 	log(LOG_DEBUG,"create_onion() : Building hop %u of crypt path.",i+1);
-	hop = cpathp[i];
+	hop = cpath[i];
 	/* set crypto functions */
 	hop->backf = layer->backf;
 	hop->forwf = layer->forwf;
@@ -309,13 +305,13 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
 	if (!hop->f_crypto) /* cipher initialization failed */
 	{
 	  log(LOG_ERR,"Could not create a crypto environment.");
-	  free((void *)bufp);
+	  free((void *)buf);
 	  for (j=0;j<i;j++) {
-	    if (cpathp[i]->f_crypto)
-	      crypto_free_cipher_env(cpathp[i]->f_crypto);
-	    if (cpathp[i]->b_crypto)
-	      crypto_free_cipher_env(cpathp[i]->b_crypto);
-	    free((void *)cpathp[i]);
+	    if (cpath[i]->f_crypto)
+	      crypto_free_cipher_env(cpath[i]->f_crypto);
+	    if (cpath[i]->b_crypto)
+	      crypto_free_cipher_env(cpath[i]->b_crypto);
+	    free((void *)cpath[i]);
 	  }
 	  return NULL;
 	}
@@ -323,13 +319,13 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
 	if (crypto_cipher_set_key(hop->f_crypto, hop->digest3) || 
 	    crypto_cipher_set_iv(hop->f_crypto, iv)) {
 	  log(LOG_ERR,"Could not initialize the crypto engine.");
-          free((void *)bufp);
+          free((void *)buf);
 	  for (j=0;j<i;j++) {
-	    if (cpathp[i]->f_crypto)
-	      crypto_free_cipher_env(cpathp[i]->f_crypto);
-	    if (cpathp[i]->b_crypto)
-	      crypto_free_cipher_env(cpathp[i]->b_crypto);
-	    free((void *)cpathp[i]);
+	    if (cpath[i]->f_crypto)
+	      crypto_free_cipher_env(cpath[i]->f_crypto);
+	    if (cpath[i]->b_crypto)
+	      crypto_free_cipher_env(cpath[i]->b_crypto);
+	    free((void *)cpath[i]);
 	  }
 	  return NULL;
 	}
@@ -349,13 +345,13 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
 	if (!hop->b_crypto) /* cipher initialization failed */
 	{
 	  log(LOG_ERR,"Could not create a crypto environment.");
-	  free((void *)bufp);
+	  free((void *)buf);
 	  for (j=0;j<i;j++) {
-	    if (cpathp[i]->f_crypto)
-	      crypto_free_cipher_env(cpathp[i]->f_crypto);
-	    if (cpathp[i]->b_crypto)
-	      crypto_free_cipher_env(cpathp[i]->b_crypto);
-	    free((void *)cpathp[i]);
+	    if (cpath[i]->f_crypto)
+	      crypto_free_cipher_env(cpath[i]->f_crypto);
+	    if (cpath[i]->b_crypto)
+	      crypto_free_cipher_env(cpath[i]->b_crypto);
+	    free((void *)cpath[i]);
 	  }
 	  return NULL;
 	}
@@ -363,13 +359,13 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
 	if (crypto_cipher_set_key(hop->b_crypto, hop->digest2) || 
 	    crypto_cipher_set_iv(hop->b_crypto, iv)) {
 	  log(LOG_ERR,"Could not initialize the crypto engine.");
-          free((void *)bufp);
+          free((void *)buf);
 	  for (j=0;j<i;j++) {
-	    if (cpathp[i]->f_crypto)
-	      crypto_free_cipher_env(cpathp[i]->f_crypto);
-	    if (cpathp[i]->b_crypto)
-	      crypto_free_cipher_env(cpathp[i]->b_crypto);
-	    free((void *)cpathp[i]);
+	    if (cpath[i]->f_crypto)
+	      crypto_free_cipher_env(cpath[i]->f_crypto);
+	    if (cpath[i]->b_crypto)
+	      crypto_free_cipher_env(cpath[i]->b_crypto);
+	    free((void *)cpath[i]);
 	  }
 	  return NULL;
 	}
@@ -377,13 +373,13 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
         /* initialize */
 	if (crypto_cipher_encrypt_init_cipher(hop->f_crypto) || crypto_cipher_decrypt_init_cipher(hop->b_crypto)) {
 	  log(LOG_ERR,"Could not initialize the crypto engine.");
-	  free((void *)bufp);
+	  free((void *)buf);
 	  for (j=0;j<i;j++) {
-	    if (cpathp[i]->f_crypto)
-	      crypto_free_cipher_env(cpathp[i]->f_crypto);
-	    if (cpathp[i]->b_crypto)
-	      crypto_free_cipher_env(cpathp[i]->b_crypto);
-	    free((void *)cpathp[i]);
+	    if (cpath[i]->f_crypto)
+	      crypto_free_cipher_env(cpath[i]->f_crypto);
+	    if (cpath[i]->b_crypto)
+	      crypto_free_cipher_env(cpath[i]->b_crypto);
+	    free((void *)cpath[i]);
 	  }
 	  return NULL;
 	}
@@ -398,15 +394,15 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
 	if (retval) /* error */
 	{
 	  log(LOG_ERR,"Error generating pseudo-random data.");
-	  free((void *)bufp);
-	  if (cpathp)
+	  free((void *)buf);
+	  if (cpath)
 	  {
 	    for (j=0;j<i;j++) {
-	      if (cpathp[i]->f_crypto)
-		crypto_free_cipher_env(cpathp[i]->f_crypto);
-	      if (cpathp[i]->b_crypto)
-		crypto_free_cipher_env(cpathp[i]->b_crypto);
-	      free((void *)cpathp[i]);
+	      if (cpath[i]->f_crypto)
+		crypto_free_cipher_env(cpath[i]->f_crypto);
+	      if (cpath[i]->b_crypto)
+		crypto_free_cipher_env(cpath[i]->b_crypto);
+	      free((void *)cpath[i]);
 	    }
 	  }
 	  return NULL;
@@ -419,15 +415,15 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
       if (!retbuf)
       {
 	log(LOG_ERR,"Error encrypting onion layer.");
-	free((void *)bufp);
-	if (cpathp)
+	free((void *)buf);
+	if (cpath)
 	{
 	  for (j=0;j<i;j++) {
-	    if (cpathp[i]->f_crypto)
-	      crypto_free_cipher_env(cpathp[i]->f_crypto);
-	    if (cpathp[i]->b_crypto)
-	      crypto_free_cipher_env(cpathp[i]->b_crypto);
-	    free((void *)cpathp[i]);
+	    if (cpath[i]->f_crypto)
+	      crypto_free_cipher_env(cpath[i]->f_crypto);
+	    if (cpath[i]->b_crypto)
+	      crypto_free_cipher_env(cpath[i]->b_crypto);
+	    free((void *)cpath[i]);
 	  }
 	}
 	return NULL;
@@ -435,10 +431,10 @@ unsigned char *create_onion(routerinfo_t **rarray, size_t rarray_len, unsigned i
       log(LOG_DEBUG,"create_onion() : Encrypted layer.");
       
       /* calculate pointer to next layer */
-      layer = (onion_layer_t *)(bufp + (routelen-i-2)*sizeof(onion_layer_t));
+      layer = (onion_layer_t *)(buf + (routelen-i-2)*sizeof(onion_layer_t));
     }
 
-    return bufp;
+    return buf;
 }
 
 /* encrypts 128 bytes of the onion with the specified public key, the rest with 
@@ -624,7 +620,7 @@ unsigned char *decrypt_onion(onion_layer_t *onion, uint32_t onionlen, crypto_pk_
 }
 
 /* delete first n bytes of the onion and pads the end with n bytes of random data */
-void pad_onion(unsigned char *onion, uint32_t onionlen, size_t n)
+void pad_onion(unsigned char *onion, uint32_t onionlen, int n)
 {
   if (onion) /* valid parameter */
   {
