@@ -249,16 +249,34 @@ void circuit_expire_building(time_t now) {
   }
 }
 
-/** How many circuits do we want simultaneously in-progress to handle
- * a given stream?
+/** Remove any elements in <b>needed_ports</b> that are handled by an
+ * open or in-progress circuit.
  */
-#define MIN_CIRCUITS_HANDLING_STREAM 2
+void
+circuit_remove_handled_ports(smartlist_t *needed_ports) {
+  int i;
+  uint16_t port;
+  char *portstring;
 
-/** Return 1 if at least MIN_CIRCUITS_HANDLING_STREAM non-open
- * general-purpose circuits will have an acceptable exit node for
- * conn. Else return 0.
+  for (i = 0; i < smartlist_len(needed_ports); ++i) {
+    portstring = smartlist_get(needed_ports, i);
+    port = *(uint16_t*)(portstring);
+    tor_assert(port);
+    if (circuit_stream_is_being_handled(NULL, port, 2)) {
+//      log_fn(LOG_DEBUG,"Port %d is already being handled; removing.", port);
+      smartlist_del(needed_ports, i--);
+      tor_free(portstring);
+    } else {
+      log_fn(LOG_DEBUG,"Port %d is not handled.", port);
+    }
+  }
+}
+
+/** Return 1 if at least <b>min</b> general-purpose circuits will have
+ * an acceptable exit node for conn if conn is defined, else for "*:port".
+ * Else return 0.
  */
-int circuit_stream_is_being_handled(connection_t *conn) {
+int circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min) {
   circuit_t *circ;
   routerinfo_t *exitrouter;
   int num=0;
@@ -266,15 +284,19 @@ int circuit_stream_is_being_handled(connection_t *conn) {
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
-        circ->state != CIRCUIT_STATE_OPEN &&
         !circ->marked_for_close &&
         circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
         (!circ->timestamp_dirty ||
          circ->timestamp_dirty + get_options()->NewCircuitPeriod < now)) {
       exitrouter = router_get_by_digest(circ->build_state->chosen_exit_digest);
-      if (exitrouter && connection_ap_can_use_exit(conn, exitrouter))
-        if (++num >= MIN_CIRCUITS_HANDLING_STREAM)
+      if (exitrouter &&
+          ((conn && connection_ap_can_use_exit(conn, exitrouter)) ||
+           (!conn &&
+            router_compare_addr_to_addr_policy(0, port, exitrouter->exit_policy) !=
+              ADDR_POLICY_REJECTED))) {
+        if (++num >= min)
           return 1;
+      }
     }
   }
   return 0;
@@ -316,6 +338,7 @@ void circuit_build_needed_circs(time_t now) {
     }
   }
 
+#if 0
 /** How many simultaneous in-progress general-purpose circuits do we
  * want to be building at once, if there are no open general-purpose
  * circuits?
@@ -325,6 +348,14 @@ void circuit_build_needed_circs(time_t now) {
    * go ahead and try another. */
   if (!circ && circuit_count_building(CIRCUIT_PURPOSE_C_GENERAL)
                < CIRCUIT_MIN_BUILDING_GENERAL) {
+    circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL);
+  }
+#endif
+
+  /* if we know of a port that's been requested recently and no
+   * circuit is currently available that can handle it, start one
+   * for that too. */
+  if (!circuit_all_predicted_ports_handled(now)) {
     circuit_launch_by_identity(CIRCUIT_PURPOSE_C_GENERAL, NULL);
   }
 
@@ -471,12 +502,19 @@ circuit_expire_old_circuits(void)
     } else if (!circ->timestamp_dirty && CIRCUIT_IS_ORIGIN(circ) &&
                circ->state == CIRCUIT_STATE_OPEN &&
                circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
-      /* Also, gather a list of open unused general circuits that we created.
-       * Because we add elements to the front of global_circuitlist,
-       * the last elements of unused_open_circs will be the oldest
-       * ones.
-       */
-      smartlist_add(unused_open_circs, circ);
+#define CIRCUIT_UNUSED_CIRC_TIMEOUT 3600 /* an hour */
+      if (circ->timestamp_created + CIRCUIT_UNUSED_CIRC_TIMEOUT < now) {
+        log_fn(LOG_DEBUG,"Closing circuit that has been unused for %d seconds.",
+               (int)(now - circ->timestamp_created));
+        circuit_mark_for_close(circ);
+      } else {
+        /* Also, gather a list of open unused general circuits that we created.
+         * Because we add elements to the front of global_circuitlist,
+         * the last elements of unused_open_circs will be the oldest
+         * ones.
+         */
+        smartlist_add(unused_open_circs, circ);
+      }
     }
   }
   for (i = MAX_UNUSED_OPEN_CIRCUITS; i < smartlist_len(unused_open_circs); ++i) {

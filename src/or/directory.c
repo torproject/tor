@@ -582,7 +582,7 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (conn->purpose == DIR_PURPOSE_FETCH_DIR) {
     /* fetch/process the directory to learn about new routers. */
-    log_fn(LOG_INFO,"Received directory (size %d):\n%s", (int)body_len, body);
+    log_fn(LOG_INFO,"Received directory (size %d)", (int)body_len);
     if (status_code == 503 || body_len == 0) {
       log_fn(LOG_INFO,"Empty directory. Ignoring.");
       tor_free(body); tor_free(headers);
@@ -606,7 +606,7 @@ connection_dir_client_reached_eof(connection_t *conn)
     running_routers_t *rrs;
     routerlist_t *rl;
     /* just update our list of running routers, if this list is new info */
-    log_fn(LOG_INFO,"Received running-routers list (size %d):\n%s", (int)body_len, body);
+    log_fn(LOG_INFO,"Received running-routers list (size %d)", (int)body_len);
     if (status_code != 200) {
       log_fn(LOG_WARN,"Received http status code %d from dirserver. Failing.",
              status_code);

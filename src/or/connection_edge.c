@@ -405,6 +405,7 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
       return -1;
     }
     conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+    rep_hist_note_used_port(socks->port, time(NULL)); /* help predict this next time */
     return connection_ap_handshake_attach_circuit(conn);
   } else {
     /* it's a hidden-service request */
@@ -1016,7 +1017,7 @@ int connection_ap_can_use_exit(connection_t *conn, routerinfo_t *exit)
   } else {
     addr = client_dns_lookup_entry(conn->socks_request->address);
     if (router_compare_addr_to_addr_policy(addr, conn->socks_request->port,
-                                           exit->exit_policy) < 0)
+          exit->exit_policy) == ADDR_POLICY_REJECTED)
       return 0;
   }
   return 1;

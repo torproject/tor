@@ -11,6 +11,7 @@ const char rephist_c_id[] = "$Id$";
 #include "or.h"
 
 static void bw_arrays_init(void);
+static void predicted_ports_init(void);
 
 /** History of an OR-\>OR link. */
 typedef struct link_history_t {
@@ -133,6 +134,7 @@ void rep_hist_init(void)
 {
   history_map = strmap_new();
   bw_arrays_init();
+  predicted_ports_init();
 }
 
 /** Remember that an attempt to connect to the OR with identity digest
@@ -615,5 +617,80 @@ rep_hist_get_bandwidth_lines(void)
     ++cp;
   }
   return buf;
+}
+
+/** A list of port numbers that have been used recently. */
+static smartlist_t *predicted_ports_list=NULL;
+/** The corresponding most recently used time for each port. */
+static smartlist_t *predicted_ports_times=NULL;
+
+static void add_predicted_port(uint16_t port, time_t now) {
+  uint16_t *tmp_port = tor_malloc(sizeof(uint16_t));
+  time_t *tmp_time = tor_malloc(sizeof(time_t));
+  *tmp_port = port;
+  *tmp_time = now;
+  smartlist_add(predicted_ports_list, tmp_port);
+  smartlist_add(predicted_ports_times, tmp_time);
+}
+
+static void predicted_ports_init(void) {
+  predicted_ports_list = smartlist_create();
+  predicted_ports_times = smartlist_create();
+  add_predicted_port(80, time(NULL)); /* add one to kickstart us */
+}
+
+/** Remember that <b>port</b> has been asked for as of time <b>now</b>.
+ * This is used for predicting what sorts of streams we'll make in the
+ * future and making circuits to anticipate that.
+ */
+void rep_hist_note_used_port(uint16_t port, time_t now) {
+  int i;
+  uint16_t *tmp_port;
+  time_t *tmp_time;
+
+  tor_assert(predicted_ports_list);
+  tor_assert(predicted_ports_times);
+
+  if(!port) /* record nothing */
+    return;
+
+  for (i = 0; i < smartlist_len(predicted_ports_list); ++i) {
+    tmp_port = smartlist_get(predicted_ports_list, i);
+    tmp_time = smartlist_get(predicted_ports_times, i);
+    if (*tmp_port == port) {
+      *tmp_time = now;
+      return;
+    }
+  }
+  /* it's not there yet; we need to add it */
+  add_predicted_port(port, now);
+}
+
+#define PREFERRED_PORTS_RELEVANCE_TIME (6*3600) /* 6 hours */
+
+/** Allocate and return a string of space-separated port numbers that
+ * are likely to be asked for in the near future.
+ */
+char *rep_hist_get_predicted_ports(time_t now) {
+  int i;
+  uint16_t *tmp_port;
+  time_t *tmp_time;
+
+  tor_assert(predicted_ports_list);
+  tor_assert(predicted_ports_times);
+
+  /* clean out obsolete entries */
+  for (i = 0; i < smartlist_len(predicted_ports_list); ++i) {
+    tmp_time = smartlist_get(predicted_ports_times, i);
+    if (*tmp_time + PREFERRED_PORTS_RELEVANCE_TIME < now) {
+      tmp_port = smartlist_get(predicted_ports_list, i);
+      smartlist_del(predicted_ports_list, i);
+      smartlist_del(predicted_ports_times, i);
+      tor_free(tmp_port);
+      tor_free(tmp_time);
+      i--;
+    }
+  }
+  return smartlist_join_strings(predicted_ports_list, " ", 0, NULL);
 }
 

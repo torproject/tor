@@ -1048,6 +1048,7 @@ int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse);
 int circuit_finish_handshake(circuit_t *circ, char *reply);
 int circuit_truncated(circuit_t *circ, crypt_path_t *layer);
 int onionskin_answer(circuit_t *circ, unsigned char *payload, unsigned char *keys);
+int circuit_all_predicted_ports_handled(time_t now);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 
 /********************************* circuitlist.c ***********************/
@@ -1082,7 +1083,8 @@ void assert_circuit_ok(const circuit_t *c);
 /********************************* circuituse.c ************************/
 
 void circuit_expire_building(time_t now);
-int circuit_stream_is_being_handled(connection_t *conn);
+void circuit_remove_handled_ports(smartlist_t *needed_ports);
+int circuit_stream_is_being_handled(connection_t *conn, uint16_t port, int min);
 void circuit_build_needed_circs(time_t now);
 void circuit_detach_stream(circuit_t *circ, connection_t *conn);
 void circuit_about_to_close_connection(connection_t *conn);
@@ -1447,6 +1449,8 @@ void rep_hist_note_bytes_written(int num_bytes, time_t when);
 int rep_hist_bandwidth_assess(void);
 char *rep_hist_get_bandwidth_lines(void);
 void rep_history_clean(time_t before);
+void rep_hist_note_used_port(uint16_t port, time_t now);
+char *rep_hist_get_predicted_ports(time_t now);
 
 /********************************* rendclient.c ***************************/
 
