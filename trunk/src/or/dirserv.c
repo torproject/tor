@@ -251,7 +251,7 @@ dirserv_add_descriptor(const char **desc)
   }
   
   (*desc_ent_ptr) = tor_malloc(sizeof(descriptor_entry_t));
-  (*desc_ent_ptr)->nickname = ri->nickname;
+  (*desc_ent_ptr)->nickname = strdup(ri->nickname);
   (*desc_ent_ptr)->published = ri->published_on;
   (*desc_ent_ptr)->desc_len = desc_len;
   (*desc_ent_ptr)->descriptor = tor_malloc(desc_len+1);
@@ -444,3 +444,4 @@ size_t dirserv_get_directory(const char **directory)
   *directory = the_directory;
   return the_directory_len;
 }
+
