@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleGetInfoString</key>
-	<string>Tor Startup Script (experimental)</string>
+	<string>Tor Startup Script</string>
 	<key>CFBundleName</key>
 	<string>Tor Startup Script</string>
 	<key>CFBundleSortVersionString</key>
