@@ -233,8 +233,8 @@ int connection_edge_finished_connecting(connection_t *conn)
  */
 #define MAX_STREAM_RETRIES 4
 
-/** Find all general-purpose AP streams in state connect_wait that sent
- * their begin cell >=15 seconds ago. Detach from their current circuit,
+/** Find all general-purpose AP streams waiting for a response that sent
+ * their begin/resolve cell >=15 seconds ago. Detach from their current circuit,
  * and mark their current circuit as unsuitable for new streams. Then call
  * connection_ap_handshake_attach_circuit() to attach to a new circuit (if
  * available) or launch a new one.
@@ -254,7 +254,9 @@ void connection_ap_expire_beginning(void) {
 
   for (i = 0; i < n; ++i) {
     conn = carray[i];
-    if (conn->type != CONN_TYPE_AP ||
+    if (conn->type != CONN_TYPE_AP)
+      continue;
+    if (conn->state != AP_CONN_STATE_RESOLVE_WAIT &&
         conn->state != AP_CONN_STATE_CONNECT_WAIT)
       continue;
     if (now - conn->timestamp_lastread < 15)
@@ -262,7 +264,7 @@ void connection_ap_expire_beginning(void) {
     conn->num_retries++;
     circ = circuit_get_by_conn(conn);
     if (!circ) { /* it's vanished? */
-      log_fn(LOG_INFO,"Conn is in connect-wait, but lost its circ.");
+      log_fn(LOG_INFO,"Conn is waiting, but lost its circ.");
       connection_mark_for_close(conn);
       continue;
     }
@@ -278,12 +280,12 @@ void connection_ap_expire_beginning(void) {
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
     if (conn->num_retries >= MAX_STREAM_RETRIES) {
       log_fn(LOG_WARN,"Stream is %d seconds late. Giving up.",
-             15*conn->num_retries);
+             15*conn->num_retries); /* XXX this number is not accurate */
       circuit_log_path(LOG_WARN, circ);
       connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
       connection_mark_for_close(conn);
     } else {
-      log_fn(LOG_WARN,"Stream is %d seconds late. Retrying.",
+      log_fn(LOG_NOTICE,"Stream is %d seconds late. Retrying.",
              (int)(now - conn->timestamp_lastread));
       circuit_log_path(LOG_WARN, circ);
       /* send an end down the circuit */
@@ -354,7 +356,6 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
   socks_request_t *socks;
   int sockshere;
   hostname_type_t addresstype;
-  routerinfo_t *router;
 
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_AP);
@@ -414,17 +415,6 @@ static int connection_ap_handshake_process_socks(connection_t *conn) {
     }
     conn->chosen_exit_name = tor_strdup(s+1);
     *s = 0;
-    router = router_get_by_nickname(conn->chosen_exit_name);
-    if(!router) {
-      log_fn(LOG_WARN,"Requested exit point '%s' is not known. Closing.",
-             conn->chosen_exit_name);
-      return -1;
-    }
-    if (!connection_ap_can_use_exit(conn, router)) {
-      log_fn(LOG_WARN, "Requested exit point '%s' would refuse request. Closing.",
-             conn->chosen_exit_name);
-      return -1;
-    }
   }
 
   if (addresstype != ONION_HOSTNAME) {

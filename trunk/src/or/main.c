@@ -565,7 +565,7 @@ static void run_scheduled_events(time_t now) {
     }
     last_rotated_certificate = now;
     /* XXXX We should rotate TLS connections as well; this code doesn't change
-     * XXXX them at all. */
+     *      them at all. */
   }
 
   /** 1c. If we have to change the accounting interval or record

@@ -794,6 +794,20 @@ int connection_ap_handshake_attach_circuit(connection_t *conn) {
   if (!connection_edge_is_rendezvous_stream(conn)) { /* we're a general conn */
     circuit_t *circ=NULL;
 
+    if (conn->chosen_exit_name) {
+      routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name);
+      if(!router) {
+        log_fn(LOG_WARN,"Requested exit point '%s' is not known. Closing.",
+               conn->chosen_exit_name);
+        return -1;
+      }
+      if (!connection_ap_can_use_exit(conn, router)) {
+        log_fn(LOG_WARN, "Requested exit point '%s' would refuse request. Closing.",
+               conn->chosen_exit_name);
+        return -1;
+      }
+    }
+
     /* find the circuit that we should use, if there is one. */
     retval = circuit_get_open_circ_or_launch(conn, CIRCUIT_PURPOSE_C_GENERAL, &circ);
     if (retval < 1)
