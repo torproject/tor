@@ -473,7 +473,7 @@ int fetch_from_buf_socks(buf_t *buf, char *socks_version,
       return 1;
 
     default: /* version is not socks4 or socks5 */
-      log_fn(LOG_WARN,"Socks version %d not recognized.",*(buf->buf));
+      log_fn(LOG_WARN,"Socks version %d not recognized. (Tor is not an httpd proxy.)",*(buf->buf));
       return -1;
   }
 }
