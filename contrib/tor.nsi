@@ -31,7 +31,7 @@
 
 !include "MUI.nsh"
 
-!define VERSION "0.0.9rc5-cvs"
+!define VERSION "0.0.9rc5"
 !define INSTALLER "tor-${VERSION}-win32.exe"
 !define WEBSITE "http://freehaven.net/tor/"
 
