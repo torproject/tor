@@ -23,8 +23,8 @@ Short-term:
         o also write a file with the identity key fingerprint in it
         o router generates descriptor: flesh out router_get_my_descriptor()
         o Routers sign descriptors with identity key
-NICK    - routers put version number in descriptor
-NICK    - routers should maybe have `uname -a` in descriptor?
+        o routers put version number in descriptor
+	o routers should maybe have `uname -a` in descriptor?
         o Give nicknames to routers
                 o in config
                 o in descriptors
@@ -33,13 +33,13 @@ NICK    - routers should maybe have `uname -a` in descriptor?
                 D when it changes
         o change tls stuff so certs don't get written to disk, or read from disk
         o make directory.c 'thread'safe
-NICK    - dirserver parses descriptor
-        - dirserver checks signature
+        o dirserver parses descriptor
+        o dirserver checks signature
         D client checks signature?
-NICK    - dirserver writes directory to file
-          - reads that file upon boot
-NICK    - directory includes all routers, up and down
-NICK    - add "up" line to directory, listing nicknames
+        o dirserver writes directory to file
+          o reads that file upon boot
+        o directory includes all routers, up and down
+        o add "up" line to directory, listing nicknames
 ARMA    . find an application that uses half-open connections: openssh
 NICK    - instruments ORs to report stats
           - average cell fullness
