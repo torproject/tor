@@ -6,7 +6,7 @@
 
 extern or_options_t options; /* command-line and config-file options */
 
-static int relay_crypt(circuit_t *circ, cell_t *cell, char cell_direction,
+static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
                 crypt_path_t **layer_hint, char *recognized);
 static connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction);
 static void circuit_free_cpath_node(crypt_path_t *victim);
@@ -488,7 +488,7 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
 }
 
 /* wrap this into receive_relay_cell one day */
-static int relay_crypt(circuit_t *circ, cell_t *cell, char cell_direction,
+static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
                        crypt_path_t **layer_hint, char *recognized) {
   crypt_path_t *thishop;
   relay_header_t rh;

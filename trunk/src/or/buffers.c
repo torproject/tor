@@ -433,7 +433,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req) {
           log_fn(LOG_WARN,"socks5: offered methods don't include 'no auth'. Rejecting.");
           req->replylen = 2; /* 2 bytes of response */
           req->reply[0] = 5; /* socks5 reply */
-          req->reply[1] = 0xFF; /* reject all methods */
+          req->reply[1] = '\xFF'; /* reject all methods */
           return -1;
         }
         buf_remove_from_front(buf,2+nummethods);/* remove packet from buf */

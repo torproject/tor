@@ -283,7 +283,7 @@ time_t tor_timegm (struct tm *tm) {
 /* a wrapper for write(2) that makes sure to write all count bytes.
  * Only use if fd is a blocking fd. */
 int write_all(int fd, const char *buf, size_t count) {
-  int written = 0;
+  size_t written = 0;
   int result;
 
   while(written != count) {
@@ -298,7 +298,7 @@ int write_all(int fd, const char *buf, size_t count) {
 /* a wrapper for read(2) that makes sure to read all count bytes.
  * Only use if fd is a blocking fd. */
 int read_all(int fd, char *buf, size_t count) {
-  int numread = 0;
+  size_t numread = 0;
   int result;
 
   while(numread != count) {
@@ -507,6 +507,7 @@ file_status_t file_status(const char *fname)
    0.  Else returns -1. */
 int check_private_dir(const char *dirname, int create)
 {
+  int r;
   struct stat st;
   if (stat(dirname, &st)) {
     if (errno != ENOENT) {
@@ -519,7 +520,12 @@ int check_private_dir(const char *dirname, int create)
       return -1;
     }
     log(LOG_INFO, "Creating directory %s", dirname);
-    if (mkdir(dirname, 0700)) {
+#ifdef MS_WINDOWS
+	r = mkdir(dirname);
+#else
+	r = mkdir(dirname, 0700);
+#endif
+    if (r) {
       log(LOG_WARN, "Error creating directory %s: %s", dirname,
           strerror(errno));
       return -1;
@@ -531,6 +537,7 @@ int check_private_dir(const char *dirname, int create)
     log(LOG_WARN, "%s is not a directory", dirname);
     return -1;
   }
+#ifndef MS_WINDOWS
   if (st.st_uid != getuid()) {
     log(LOG_WARN, "%s is not owned by this UID (%d)", dirname, (int)getuid());
     return -1;
@@ -545,6 +552,7 @@ int check_private_dir(const char *dirname, int create)
       return 0;
     }
   }
+#endif
   return 0;
 }
 
@@ -787,7 +795,7 @@ void finish_daemon(void)
 }
 #else
 /* defined(MS_WINDOWS) */
-void start_daemon(void) {}
+void start_daemon(char *cp) {}
 void finish_daemon(void) {}
 #endif
 
@@ -855,3 +863,22 @@ int switch_id(char *user, char *group) {
   return -1;
 }
 
+int tor_inet_aton(const char *c, struct in_addr* addr)
+{
+#ifndef MS_WINDOWS
+  /* XXXX WWWW Should be HAVE_INET_ATON */
+  return inet_aton(c, addr);
+#else
+  uint32_t r;
+  assert(c && addr);
+  if (strcmp(c, "255.255.255.255") == 0) {
+	addr->s_addr = 0xFFFFFFFFu;
+	return 1;
+  }
+  r = inet_addr(c);
+  if (r == INADDR_NONE)
+	return 0;
+  addr->s_addr = r;
+  return 1;
+#endif
+}

@@ -145,3 +145,6 @@
 
 /* Version number of package */
 #define VERSION "0.0.2pre6"
+
+/* XXXX WWWW */
+#define CONFDIR ""

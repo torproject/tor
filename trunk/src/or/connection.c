@@ -258,7 +258,7 @@ int connection_create_listener(char *bindaddress, uint16_t bindport, int type) {
     return -1;
   }
 
-  setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+  setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one, sizeof(one));
 
   if(bind(s,(struct sockaddr *)&bindaddr,sizeof(bindaddr)) < 0) {
     log_fn(LOG_WARN,"Could not bind to port %u: %s",bindport,strerror(errno));
@@ -418,21 +418,24 @@ int retry_all_connections(void) {
 
   if(options.ORPort) {
     listener_close_if_present(CONN_TYPE_OR_LISTENER);
-    if(connection_create_listener(options.ORBindAddress, options.ORPort,
+    if(connection_create_listener(options.ORBindAddress, 
+		                          (uint16_t) options.ORPort,
                                   CONN_TYPE_OR_LISTENER) < 0)
       return -1;
   }
 
   if(options.DirPort) {
     listener_close_if_present(CONN_TYPE_DIR_LISTENER);
-    if(connection_create_listener(options.DirBindAddress, options.DirPort,
+    if(connection_create_listener(options.DirBindAddress, 
+		                          (uint16_t) options.DirPort,
                                   CONN_TYPE_DIR_LISTENER) < 0)
       return -1;
   }
 
   if(options.SocksPort) {
     listener_close_if_present(CONN_TYPE_AP_LISTENER);
-    if(connection_create_listener(options.SocksBindAddress, options.SocksPort,
+    if(connection_create_listener(options.SocksBindAddress, 
+		                          (uint16_t) options.SocksPort,
                                   CONN_TYPE_AP_LISTENER) < 0)
       return -1;
   }

@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib libeay32.lib ssleay32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /libpath:"d:\openssl\lib\vc"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib wsock32.lib libeay32.lib ssleay32.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/tor.exe" /pdbtype:sept /libpath:"d:\openssl\lib\vc"
 
 !ENDIF 
 
@@ -111,19 +111,15 @@ SOURCE=..\..\src\or\connection.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\or\connection_ap.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\or\connection_edge.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\or\connection_exit.c
+SOURCE=..\..\src\or\connection_or.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\or\connection_or.c
+SOURCE=..\..\src\or\cpuworker.c
 # End Source File
 # Begin Source File
 
@@ -132,6 +128,10 @@ SOURCE=..\..\src\common\crypto.c
 # Begin Source File
 
 SOURCE=..\..\src\or\directory.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\or\dirserv.c
 # End Source File
 # Begin Source File
 
@@ -155,11 +155,19 @@ SOURCE=..\..\src\or\onion.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\or\routers.c
+SOURCE=..\..\src\or\router.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\or\routerlist.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\src\or\tor_main.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\common\tortls.c
 # End Source File
 # Begin Source File
 
@@ -200,6 +208,10 @@ SOURCE=..\..\src\common\test.h
 # Begin Source File
 
 SOURCE=..\..\src\common\torint.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\common\tortls.h
 # End Source File
 # Begin Source File
 
