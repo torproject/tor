@@ -1020,7 +1020,7 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port) {
 /** Return true iff <b>router</b> does not permit exit streams.
  */
 int router_exit_policy_rejects_all(routerinfo_t *router) {
-  return router_compare_addr_to_addr_policy(0, 0, router->exit_policy)
+  return router_compare_addr_to_addr_policy(0, 1, router->exit_policy)
     == ADDR_POLICY_REJECTED;
 }
 
