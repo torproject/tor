@@ -154,7 +154,7 @@ char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate);
     for(var ## _sl_idx = 0; var ## _sl_idx < var ## _sl_len;    \
         ++var ## _sl_idx) {                                     \
       var = smartlist_get((sl),var ## _sl_idx);                 \
-      do {cmd;} while(0);                                       \
+      cmd;                                                      \
     } } while (0)
 
 /* Map from const char * to void*. Implemented with a splay tree. */
