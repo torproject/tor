@@ -233,7 +233,8 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
   for (i = 0; i < n_connections; ++i) {
     if (carray[i]->type == CONN_TYPE_AP &&
         carray[i]->state == AP_CONN_STATE_CIRCUIT_WAIT &&
-        !carray[i]->marked_for_close)
+        !carray[i]->marked_for_close &&
+        !circuit_stream_is_being_handled(carray[i]))
       ++n_pending_connections;
   }
   log_fn(LOG_DEBUG, "Choosing exit node; %d connections are pending",
@@ -265,7 +266,8 @@ static routerinfo_t *choose_good_exit_server(routerlist_t *dir)
     for (j = 0; j < n_connections; ++j) { /* iterate over connections */
       if (carray[j]->type != CONN_TYPE_AP ||
           carray[j]->state != AP_CONN_STATE_CIRCUIT_WAIT ||
-          carray[j]->marked_for_close)
+          carray[j]->marked_for_close ||
+          circuit_stream_is_being_handled(carray[j]))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
       switch (connection_ap_can_use_exit(carray[j], dir->routers[i])) 
         {

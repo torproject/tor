@@ -275,6 +275,26 @@ int circuit_count_building(void) {
   return num;
 }
 
+#define MIN_CIRCUITS_HANDLING_STREAM 2
+/* return 1 if at least MIN_CIRCUITS_HANDLING_STREAM non-open circuits
+ * will have an acceptable exit node for conn. Else return 0.
+ */
+int circuit_stream_is_being_handled(connection_t *conn) {
+  circuit_t *circ;
+  routerinfo_t *exitrouter;
+  int num=0;
+
+  for(circ=global_circuitlist;circ;circ = circ->next) {
+    if(circ->cpath && circ->state != CIRCUIT_STATE_OPEN) {
+      exitrouter = router_get_by_nickname(circ->build_state->chosen_exit);
+      if(exitrouter && connection_ap_can_use_exit(conn, exitrouter) >= 0)
+        if(++num >= MIN_CIRCUITS_HANDLING_STREAM)
+          return 1;
+    }
+  }
+  return 0;
+}
+
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint) {
   connection_t *conn=NULL;

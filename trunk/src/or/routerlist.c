@@ -698,7 +698,7 @@ router_get_list_from_string_impl(const char **s, routerlist_t **dest,
 
 
 /* Helper function: reads a single router entry from *s, and advances
- * updates *s so it points to just after the router it just read.
+ * *s so it points to just after the router it just read.
  * mallocs a new router and returns it if all goes well, else returns
  * NULL.
  */

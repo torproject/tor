@@ -517,6 +517,7 @@ circuit_t *circuit_get_newest(connection_t *conn, int must_be_open);
 
 void circuit_expire_building(void);
 int circuit_count_building(void);
+int circuit_stream_is_being_handled(connection_t *conn);
 
 int circuit_deliver_relay_cell(cell_t *cell, circuit_t *circ,
                                int cell_direction, crypt_path_t *layer_hint);
