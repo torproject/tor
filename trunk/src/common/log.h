@@ -36,7 +36,7 @@ void close_logs();
 void reset_logs();
 
 /* Outputs a message to stdout */
-void log(int severity, const char *format, ...) CHECK_PRINTF(2,3);
+void _log(int severity, const char *format, ...) CHECK_PRINTF(2,3);
 
 #ifdef __GNUC__
 void _log_fn(int severity, const char *funcname, const char *format, ...)
@@ -44,8 +44,9 @@ void _log_fn(int severity, const char *funcname, const char *format, ...)
 #define log_fn(severity, args...) \
   _log_fn(severity, __PRETTY_FUNCTION__, args)
 #else
-#define log_fn log
+#define log_fn _log
 #endif
+#define log _log /* hack it so we don't conflict with log() as much */
 
 # define __LOG_H
 #endif

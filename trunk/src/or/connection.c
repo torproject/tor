@@ -351,8 +351,6 @@ int connection_read_to_buf(connection_t *conn) {
       at_most = 10*(CELL_PAYLOAD_SIZE - RELAY_HEADER_SIZE);
     }
 
-    at_most = 103; /* an unusual number, to force bugs into the open */
-
     if(at_most > global_read_bucket)
       at_most = global_read_bucket;
   }

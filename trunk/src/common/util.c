@@ -61,7 +61,6 @@ long
 tv_udiff(struct timeval *start, struct timeval *end)
 {
   long udiff;
-  long end_usec = end->tv_usec;
   long secdiff = end->tv_sec - start->tv_sec;
 
   if (secdiff+1 > LONG_MAX/1000000) {
@@ -69,9 +68,10 @@ tv_udiff(struct timeval *start, struct timeval *end)
     return LONG_MAX;
   }
 
-  udiff = secdiff*1000000L + (end_usec - start->tv_usec);
+  udiff = secdiff*1000000L + (end->tv_usec - start->tv_usec);
   if(udiff < 0) {
-    log_fn(LOG_WARNING, "start is after end. Returning 0.");
+    log_fn(LOG_INFO, "start (%ld.%ld) is after end (%ld.%ld). Returning 0.",
+           start->tv_sec, start->tv_usec, end->tv_sec, end->tv_usec);
     return 0;
   }
   return udiff;
