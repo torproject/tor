@@ -535,6 +535,10 @@ void connection_ap_expire_beginning(void) {
       if(connection_ap_handshake_attach_circuit(conn)<0) {
         /* it will never work */
         conn->has_sent_end = 1; /* Don't need to send end -- why? */
+/* XXX you're right, there's a bug. we should send an end cell
+ * above, right before circuit_detach_stream. But if attach_circuit()
+ * fails, then in fact we should mark without sending an end, because
+ * we're not connected to anything. -RD */
         connection_mark_for_close(conn, 0);
       }
     }
@@ -557,7 +561,8 @@ void connection_ap_attach_pending(void)
       continue;
     if(connection_ap_handshake_attach_circuit(conn) < 0) {
       /* it will never work */
-      conn->has_sent_end = 1; /* why? */
+      conn->has_sent_end = 1; /* because there is no 'other end' of the stream */
+/* (XXX maybe has_sent_end should be called no_need_to_send_end or something) */
       connection_mark_for_close(conn,0);
     }
   }
@@ -723,6 +728,7 @@ static void connection_ap_handshake_send_begin(connection_t *ap_conn, circuit_t 
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
+    ap_conn->has_sent_end = 1; /* there is no 'other side' yet */
     connection_mark_for_close(ap_conn, 0);
     return;
   }

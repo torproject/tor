@@ -273,6 +273,9 @@ static void run_connection_housekeeping(int i, time_t now) {
       log_fn(LOG_INFO,"Expiring connection to %d (%s:%d).",
              i,conn->address, conn->port);
       connection_mark_for_close(conn,0); /* Suppress end ??? */
+/* XXX there's no concept of 'suppressing end' here, because it's an OR
+ * connection, and there's no such thing as an end cell for an OR
+ * connection. -RD */
     } else {
       /* either a full router, or we've got a circuit. send a padding cell. */
       log_fn(LOG_DEBUG,"Sending keepalive to (%s:%d)",
@@ -543,7 +546,7 @@ static int do_main_loop(void) {
     /* let catch() handle things like ^c, and otherwise don't worry about it */
     if(poll_result < 0) {
       if(errno != EINTR) { /* let the program survive things like ^z */
-        log_fn(LOG_ERR,"poll failed.");
+        log_fn(LOG_ERR,"poll failed: %s",strerror(errno));
         return -1;
       } else {
         log_fn(LOG_DEBUG,"poll interrupted.");
