@@ -666,12 +666,14 @@ void rep_hist_note_used_port(uint16_t port, time_t now) {
   add_predicted_port(port, now);
 }
 
-#define PREFERRED_PORTS_RELEVANCE_TIME (6*3600) /* 6 hours */
+#define PREDICTED_PORTS_RELEVANCE_TIME (6*3600) /* 6 hours */
 
-/** Allocate and return a string of space-separated port numbers that
+/** Return a pointer to the list of port numbers that
  * are likely to be asked for in the near future.
+ *
+ * The caller promises not to mess with it.
  */
-char *rep_hist_get_predicted_ports(time_t now) {
+smartlist_t *rep_hist_get_predicted_ports(time_t now) {
   int i;
   uint16_t *tmp_port;
   time_t *tmp_time;
@@ -682,8 +684,9 @@ char *rep_hist_get_predicted_ports(time_t now) {
   /* clean out obsolete entries */
   for (i = 0; i < smartlist_len(predicted_ports_list); ++i) {
     tmp_time = smartlist_get(predicted_ports_times, i);
-    if (*tmp_time + PREFERRED_PORTS_RELEVANCE_TIME < now) {
+    if (*tmp_time + PREDICTED_PORTS_RELEVANCE_TIME < now) {
       tmp_port = smartlist_get(predicted_ports_list, i);
+      log_fn(LOG_DEBUG, "Expiring predicted port %d", *tmp_port);
       smartlist_del(predicted_ports_list, i);
       smartlist_del(predicted_ports_times, i);
       tor_free(tmp_port);
@@ -691,6 +694,6 @@ char *rep_hist_get_predicted_ports(time_t now) {
       i--;
     }
   }
-  return smartlist_join_strings(predicted_ports_list, " ", 0, NULL);
+  return predicted_ports_list;
 }
 

@@ -788,19 +788,25 @@ static int new_route_len(double cw, uint8_t purpose, smartlist_t *routers) {
   return routelen;
 }
 
-/** Fetch the list of predicted ports, turn it into a smartlist of
- * strings, remove the ones that are already handled by an
+/** Fetch the list of predicted ports, dup it into a smartlist of
+ * uint16_t's, remove the ones that are already handled by an
  * existing circuit, and return it.
  */
 static smartlist_t *
 circuit_get_unhandled_ports(time_t now) {
-  char *pp = rep_hist_get_predicted_ports(now);
-  smartlist_t *needed_ports = smartlist_create();
-  smartlist_split_string(needed_ports, pp, " ", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  tor_free(pp);
+  smartlist_t *source = rep_hist_get_predicted_ports(now);
+  smartlist_t *dest = smartlist_create();
+  uint16_t *tmp;
+  int i;
 
-  circuit_remove_handled_ports(needed_ports);
-  return needed_ports;
+  for (i = 0; i < smartlist_len(source); ++i) {
+    tmp = tor_malloc(sizeof(uint16_t));
+    memcpy(tmp, smartlist_get(source, i), sizeof(uint16_t));
+    smartlist_add(dest, tmp);
+  }
+
+  circuit_remove_handled_ports(dest);
+  return dest;
 }
 
 /** Return 1 if we already have circuits present or on the way for
@@ -811,7 +817,7 @@ circuit_all_predicted_ports_handled(time_t now) {
   int enough;
   smartlist_t *sl = circuit_get_unhandled_ports(now);
   enough = (smartlist_len(sl) == 0);
-  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(sl, uint16_t *, cp, tor_free(cp));
   smartlist_free(sl);
   return enough;
 }
@@ -1000,7 +1006,7 @@ static routerinfo_t *choose_good_exit_server_general(routerlist_t *dir)
       if (router)
         break;
     }
-    SMARTLIST_FOREACH(needed_ports, char *, cp, tor_free(cp));
+    SMARTLIST_FOREACH(needed_ports, uint16_t *, cp, tor_free(cp));
     smartlist_free(needed_ports);
   }
 
