@@ -952,8 +952,13 @@ int router_add_exit_policy_from_string(routerinfo_t *router,
   directory_token_t tok;
   char *tmp, *cp;
   int r;
+  int len;
 
-  tmp = cp = tor_strdup(s);
+  len = strlen(s);
+  tmp = cp = tor_malloc(len+2);
+  strcpy(tmp, s);
+  tmp[len]='\n';
+  tmp[len+1]='\0';
   if (router_get_next_token(&cp, &tok)) {
     log_fn(LOG_WARNING, "Error reading exit policy: %s", tok.val.error);
     free(tmp);
